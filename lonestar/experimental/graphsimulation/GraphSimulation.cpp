@@ -17,9 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+/**
+ * @file GraphSimulation.cpp
+ *
+ * Contains implementations of functions defined in GraphSimulation.h as well
+ * as various helpers for those functions.
+ */
+
 #include "GraphSimulation.h"
 #include "galois/substrate/PerThreadStorage.h"
 
+/**
+ * @todo doxygen
+ */
 template <typename QG, typename DG, typename W>
 void matchLabel(QG& qG, DG& dG, W& w) {
   galois::do_all(
@@ -49,6 +59,9 @@ void matchLabel(QG& qG, DG& dG, W& w) {
       galois::loopname("MatchLabel"));
 }
 
+/**
+ * @todo doxygen
+ */
 template <typename QG>
 bool existEmptyLabelMatchQGNode(QG& qG) {
   for (auto qn : qG) {
@@ -62,6 +75,9 @@ bool existEmptyLabelMatchQGNode(QG& qG) {
   return false;
 }
 
+/**
+ * @todo doxygen
+ */
 template <bool useLimit, bool useWindow, bool queryNodeHasMoreThan2Edges>
 void matchNodesOnce(Graph& qG, Graph& dG,
                     galois::InsertBag<Graph::GraphNode>* cur,
@@ -574,6 +590,9 @@ void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
   }
 }
 
+/**
+ * @todo doxygen
+ */
 template <bool useWindow>
 void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
                         uint32_t action, uint32_t neighborLabel,
@@ -634,6 +653,7 @@ size_t countMatchedNodes(Graph& graph) {
   return numMatched.reduce();
 }
 
+// note right now it's doing the exact same thing as countMatchedNodes above
 size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node) {
   galois::GAccumulator<size_t> numMatched;
   // do not count the same node twice (multiple edges to the same node)

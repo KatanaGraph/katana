@@ -17,6 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+/**
+ * @file PythonGraph.cpp
+ *
+ * Implementations for AttributedGraph construction/modification
+ * declared in PythonGraph.h.
+ */
+
 #include "PythonGraph.h"
 
 #include <iostream>
@@ -27,9 +34,6 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
-/*************************************
- * APIs for GaloisRuntime
- *************************************/
 void initGaloisRuntime() {
   static galois::SharedMemSys* G;
   if (G != NULL)
@@ -43,9 +47,10 @@ void setNumThreads(int numThreads) {
 
 int getNumThreads() { return galois::getActiveThreads(); }
 
-/*************************************
- * APIs for PythonGraph
- *************************************/
+//////////////////////////////////////////
+// APIs for PythonGraph
+//////////////////////////////////////////
+
 AttributedGraph* createGraph() {
   AttributedGraph* g = new AttributedGraph();
   return g;
@@ -199,35 +204,3 @@ void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, char* key,
 size_t getNumNodes(AttributedGraph* g) { return g->graph.size(); }
 
 size_t getNumEdges(AttributedGraph* g) { return g->graph.sizeEdges(); }
-
-// void setNodeAttr(AttributedGraph *g, GNode n, const KeyAltTy key, const
-// ValAltTy val) {
-//  g->getData(n).attr[key] = val;
-//}
-//
-// const ValAltTy getNodeAttr(AttributedGraph *g, GNode n, const KeyAltTy key) {
-//  return const_cast<ValAltTy>(g->getData(n).attr[key].c_str());
-//}
-//
-// void removeNodeAttr(AttributedGraph *g, GNode n, const KeyAltTy key) {
-//  g->getData(n).attr.erase(key);
-//}
-
-// void setEdgeAttr(AttributedGraph *g, Edge e, const KeyAltTy key, const
-// ValAltTy val) {
-//  auto ei = g->findEdge(e.src, e.dst);
-//  assert(ei != g.edge_end(e.src));
-//  g->getEdgeData(ei)[key] = val;
-//}
-
-// const ValAltTy getEdgeAttr(AttributedGraph *g, Edge e, const KeyAltTy key) {
-//  auto ei = g->findEdge(e.src, e.dst);
-//  assert(ei != g.edge_end(e.src));
-//  return const_cast<ValAltTy>(g->getEdgeData(ei)[key].c_str());
-//}
-
-// void removeEdgeAttr(AttributedGraph *g, Edge e, const KeyAltTy key) {
-//  auto ei = g->findEdge(e.src, e.dst);
-//  assert(ei != g.edge_end(e.src));
-//  g->getEdgeData(ei).erase(key);
-//}

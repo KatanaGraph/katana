@@ -163,6 +163,100 @@ size_t getNumNodes(AttributedGraph* g);
  */
 size_t getNumEdges(AttributedGraph* g);
 
+///////
+// New Functions Added for Incremental Graph Construction
+///////
+
+/**
+ * Resizes existing node attribute vectors to a new size.
+ * @param g Graph to change
+ * @param nodeCount new size of node attribute vectors. Should be larger than
+ * current size
+ */
+void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
+
+/**
+ * Add a new node attribute map with a particular size. Does nothing if key
+ * already exists.
+ * @param g Graph to change
+ * @param key Attribute name
+ * @param nodeCount size of map
+ */
+void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount);
+
+/**
+ * Resizes the node names map in an attributed graph.
+ * @param g Graph to change
+ * @param nodeCount Size to change to. Should be at least as big as the
+ * original size of the map.
+ */
+void resizeNodeNames(AttributedGraph* g, uint32_t nodeCount);
+
+/**
+ * Checks if a node with a particular uuid exists in the graph
+ * @param g Graph to check
+ * @param uuid UUID to check existince of
+ * @returns 1 if it exists in the graph, 0 otherwise
+ */
+uint32_t nodeExists(AttributedGraph* g, uint32_t uuid);
+
+/**
+ * Set a node in the AttributedGraph ONLY for the CSR; do not update any
+ * metadata maps of the graph. Graph memory should have been allocated
+ * already.
+ * @param g Graph to set node in
+ * @param nodeIndex Node index to set/change
+ * @param uuid unique ID of node
+ * @param label Label to give node
+ */
+void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+                uint32_t label);
+
+/**
+ * Set a node in the AttributedGraph ONLY for the metadata (node indices and node
+ * name); do not touch the LC CSR representation of the graph.
+ * @param g Graph to set node in
+ * @param nodeIndex Node index to set/change
+ * @param uuid unique ID of node
+ * @param name Name to give node (e.g. name of a process)
+ */
+void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+                     char* name);
+
+/**
+ * Get the UUID of a node from its node index. Assumes that the nodeIndex is
+ * valid (i.e. if not, program will crash or return an invalid value).
+ * @param g Graph to check
+ * @param nodeIndex node index to get UUID of
+ */
+uint32_t getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex);
+
+/**
+ * Copy all the edges of a certain node from a source CSR graph to the dest CSR
+ * graph in the AttributedGraphs. Also copies edge attribute data to the dest
+ * AttGraph.
+ * @param destGraph graph to copy to
+ * @param srcGraph graph to copy from
+ * @param nodeIndex index of the node to copy from srcGraph
+ * @param edgeIndex index to start copying to in the destGraph
+ */
+uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
+                         uint32_t nodeIndex, uint64_t edgeIndex);
+
+/**
+ * Swaps the inner CSRs of 2 AttributedGraphs.
+ * @param g1 graph 1
+ * @param g2 graph 2
+ */
+void swapCSR(AttributedGraph* g1, AttributedGraph* g2);
+
+/**
+ * Swap the edge attributes map of 2 AttributedGraphs
+ * @param g1 graph 1
+ * @param g2 graph 2
+ */
+void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Graph simulation related calls
 ////////////////////////////////////////////////////////////////////////////////

@@ -204,3 +204,101 @@ void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, char* key,
 size_t getNumNodes(AttributedGraph* g) { return g->graph.size(); }
 
 size_t getNumEdges(AttributedGraph* g) { return g->graph.sizeEdges(); }
+
+///////
+// New Functions Added for Incremental Graph Construction
+///////
+
+void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount) {
+  auto& attributes = g->nodeAttributes;
+
+  for (auto& keyVal : attributes) {
+    assert(keyVal.second.size() <= nodeCount);
+    (keyVal.second).resize(nodeCount);
+  }
+}
+
+void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount) {
+  auto& attributes = g->nodeAttributes;
+  if (attributes.find(key) == attributes.end()) {
+    attributes[key] = std::vector<std::string>();
+    attributes[key].resize(nodeCount);
+  }
+}
+
+void resizeNodeNames(AttributedGraph* g, uint32_t nodeCount) {
+  auto& toResize = g->nodeNames;
+  assert(toResize.size() <= nodeCount);
+  toResize.resize(nodeCount);
+}
+
+uint32_t nodeExists(AttributedGraph* g, uint32_t uuid) {
+  if (g->nodeIndices.find(uuid) != g->nodeIndices.end()) {
+    return 1u;
+  } else {
+    return 0u;
+  }
+}
+
+void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+                uint32_t label) {
+  auto& nd                = g->graph.getData(nodeIndex);
+  nd.label                = label;
+  nd.id                   = uuid;
+}
+
+void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+                     char* nodeName) {
+  g->nodeIndices[uuid]    = nodeIndex;
+  g->nodeNames[nodeIndex] = nodeName;
+}
+
+uint32_t getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
+  auto& nd = g->graph.getData(nodeIndex);
+  return nd.id;
+}
+
+uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
+                         uint32_t nodeIndex, uint64_t edgeIndex) {
+  Graph& dst = destGraph->graph;
+  Graph& src = srcGraph->graph;
+
+  // copy edges + data
+  uint64_t curEdgeIndex = edgeIndex;
+  for (auto e : src.edges(nodeIndex)) {
+    uint32_t edgeDst = src.getEdgeDst(e);
+    auto& data = src.getEdgeData(e);
+
+    dst.constructEdge(curEdgeIndex, edgeDst,
+                      EdgeData(data.label, data.timestamp));
+    curEdgeIndex++;
+  }
+
+  // copy edge attributes
+  uint64_t firstEdge = *(src.edge_begin(nodeIndex));
+  uint64_t lastEdge = *(src.edge_end(nodeIndex));
+  auto& attributes = destGraph->edgeAttributes;
+
+  for (auto& keyValue : srcGraph->edgeAttributes) {
+    curEdgeIndex = edgeIndex;
+    std::string key = keyValue.first;
+    for (uint64_t i = firstEdge; i < lastEdge; i++) {
+      if (attributes.find(key) == attributes.end()) {
+        attributes[key] = std::vector<std::string>();
+        attributes[key].resize(destGraph->graph.sizeEdges());
+      }
+      attributes[key][curEdgeIndex] = keyValue.second[i];
+
+      curEdgeIndex++;
+    }
+  }
+  return (lastEdge - firstEdge);
+}
+
+void swapCSR(AttributedGraph* g1, AttributedGraph* g2) {
+  swap(g1->graph, g2->graph);
+}
+
+void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2) {
+  std::swap(g1->edgeAttributes, g2->edgeAttributes);
+}

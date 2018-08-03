@@ -24,6 +24,36 @@ Galois is released under the BSD-3-Clause license.
 Building Galois
 ===========================
 
+Running With RIPE
+--------------
+
+Clone from the repository.
+
+`git clone git@git.tc.bbn.com:lhoang/galois-tc.git`
+
+You get a galois-tc directory.
+
+Create a build directory. Go into it.
+
+`mkdir build; cd build`
+
+Check the Galois README to make sure all dependencies are satisfied.
+Once verified, use CMake to setup build in the build directory. Make sure
+that the USE_EXP flag is set for CMake.
+
+`CC=gcc CXX=g++ cmake -DUSE_EXP=1 ../galois-tc`
+
+Once cmake completes, in this build directory, go into lonestar/experimental/python.
+
+`cd lonestar/experimental/python`
+
+Run make here: it will produce the libgalois_python.so file in the same directory.
+
+`make -j`
+
+Now that you have this file, you can follow the README present in 
+ripe/graph_construction/python/galois for the rest of the setup.
+
 Dependencies
 --------------
 

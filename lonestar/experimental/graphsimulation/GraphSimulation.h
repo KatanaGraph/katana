@@ -35,8 +35,6 @@
 struct Node {
   //! Label on node. Maximum of 32 node labels.
   uint32_t label;
-  //! ID of node
-  uint32_t id;
   //! Matched status of node represented in bits. Max of 64 matched in query
   //! graph.
   //! @todo make matched a dynamic bitset
@@ -67,7 +65,7 @@ struct EdgeData {
  */
 struct MatchedNode {
   //! ID of matched node
-  uint32_t id;
+  const char* id;
   // const char* label;
   //! Name for matched node
   const char* name;
@@ -122,7 +120,10 @@ struct AttributedGraph {
   std::vector<std::string> edgeLabelNames;      //!< maps ID to Name
   std::map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
   //! maps node UUID/ID to index/GraphNode
-  std::map<uint32_t, uint32_t> nodeIndices;
+  std::map<std::string, uint32_t> nodeIndices;
+  //! maps node index to UUID
+  std::vector<std::string> index2UUID;
+
   //! actual names of nodes
   std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
                                       // does not do deep-copy

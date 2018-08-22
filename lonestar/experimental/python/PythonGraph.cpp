@@ -67,6 +67,7 @@ void saveGraph(AttributedGraph* g, char* filename) {
   oarch << g->edgeLabelNames;
   oarch << g->edgeLabelIDs;
   oarch << g->nodeIndices;
+  oarch << g->index2UUID;
   oarch << g->nodeNames;
   size_t size = g->nodeAttributes.size();
   oarch << size;
@@ -92,6 +93,7 @@ void loadGraph(AttributedGraph* g, char* filename) {
   iarch >> g->edgeLabelNames;
   iarch >> g->edgeLabelIDs;
   iarch >> g->nodeIndices;
+  iarch >> g->index2UUID;
   iarch >> g->nodeNames;
   size_t size;
   iarch >> size;
@@ -118,24 +120,29 @@ void printGraph(AttributedGraph* g) {
   auto& nodeNames      = g->nodeNames;
   auto sourceLabelID   = g->nodeLabelIDs["process"];
   uint64_t numEdges    = 0;
+
   for (auto src : graph) {
     auto& srcData = graph.getData(src);
+    // only print if source is a process
     if (srcData.label != sourceLabelID)
       continue;
-    // auto& srcLabel = nodeLabelNames[srcData.label];
-    auto& srcName = nodeNames[src];
+    auto& srcLabel = g->nodeLabelNames[srcData.label];
+    auto& srcName  = nodeNames[src];
     for (auto e : graph.edges(src)) {
       auto dst      = graph.getEdgeDst(e);
       auto& dstData = graph.getData(dst);
+
       if ((dstData.label == sourceLabelID) && (dst < src))
         continue;
-      // auto& dstLabel = nodeLabelNames[dstData.label];
+
+      auto& dstLabel      = g->nodeLabelNames[dstData.label];
       auto& dstName       = nodeNames[dst];
       auto& ed            = graph.getEdgeData(e);
       auto& edgeLabel     = edgeLabelNames[ed.label];
       auto& edgeTimestamp = ed.timestamp;
       std::cout << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
-                << dstName << std::endl;
+                << dstName << " (" << srcLabel << ", " << dstLabel << ")" <<
+                std::endl;
       ++numEdges;
     }
   }
@@ -150,6 +157,7 @@ void allocateGraph(AttributedGraph* g, size_t numNodes, size_t numEdges,
   g->nodeLabelNames.resize(numNodeLabels);
   assert(numEdgeLabels <= 32);
   g->edgeLabelNames.resize(numEdgeLabels);
+  g->index2UUID.resize(numNodes);
   g->nodeNames.resize(numNodes);
 }
 
@@ -157,12 +165,12 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
   g->graph.fixEndEdge(nodeIndex, edgeIndex);
 }
 
-void setNode(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
              uint32_t label, char* nodeName) {
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = label;
-  nd.id                   = uuid;
   g->nodeIndices[uuid]    = nodeIndex;
+  g->index2UUID[nodeIndex] = uuid;
   g->nodeNames[nodeIndex] = nodeName;
 }
 
@@ -209,6 +217,34 @@ size_t getNumEdges(AttributedGraph* g) { return g->graph.sizeEdges(); }
 // New Functions Added for Incremental Graph Construction
 ///////
 
+uint32_t addNodeLabel(AttributedGraph* g, char* name) {
+    auto foundValue = g->nodeLabelIDs.find(name);
+    // already exists; return it
+    if (foundValue != g->nodeLabelIDs.end()) {
+      return foundValue->second;
+    // doesn't exist: append to existing vector + return new label
+    } else {
+      uint32_t newLabel = g->nodeLabelNames.size();
+      g->nodeLabelNames.emplace_back(name);
+      g->nodeLabelIDs[name] = newLabel;
+      return newLabel;
+    }
+}
+
+uint32_t addEdgeLabel(AttributedGraph* g, char* name) {
+    auto foundValue = g->edgeLabelIDs.find(name);
+    // already exists; return it
+    if (foundValue != g->edgeLabelIDs.end()) {
+      return foundValue->second;
+    // doesn't exist: append to existing vector + return new label
+    } else {
+      uint32_t newLabel = g->edgeLabelNames.size();
+      g->edgeLabelNames.emplace_back(name);
+      g->edgeLabelIDs[name] = newLabel;
+      return newLabel;
+    }
+}
+
 void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount) {
   auto& attributes = g->nodeAttributes;
 
@@ -226,13 +262,14 @@ void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount) {
   }
 }
 
-void resizeNodeNames(AttributedGraph* g, uint32_t nodeCount) {
-  auto& toResize = g->nodeNames;
-  assert(toResize.size() <= nodeCount);
-  toResize.resize(nodeCount);
+void resizeNodeMetadata(AttributedGraph* g, uint32_t nodeCount) {
+  assert(g->nodeNames.size() <= nodeCount);
+  g->nodeNames.resize(nodeCount);
+  assert(g->index2UUID.size() <= nodeCount);
+  g->index2UUID.resize(nodeCount);
 }
 
-uint32_t nodeExists(AttributedGraph* g, uint32_t uuid) {
+uint32_t nodeExists(AttributedGraph* g, char* uuid) {
   if (g->nodeIndices.find(uuid) != g->nodeIndices.end()) {
     return 1u;
   } else {
@@ -240,22 +277,30 @@ uint32_t nodeExists(AttributedGraph* g, uint32_t uuid) {
   }
 }
 
-void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t label) {
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = label;
-  nd.id                   = uuid;
 }
 
-void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                      char* nodeName) {
   g->nodeIndices[uuid]    = nodeIndex;
+  g->index2UUID[nodeIndex] = uuid;
   g->nodeNames[nodeIndex] = nodeName;
 }
 
-uint32_t getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
+uint32_t getIndexFromUUID(AttributedGraph* g, char* uuid) {
+  return g->nodeIndices[uuid];
+}
+
+const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
+  return g->index2UUID[nodeIndex].c_str();
+}
+
+uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex) {
   auto& nd = g->graph.getData(nodeIndex);
-  return nd.id;
+  return nd.label;
 }
 
 uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,

@@ -103,7 +103,7 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex);
  * @param label Label to give node
  * @param name Name to give node (e.g. name of a process)
  */
-void setNode(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
              uint32_t label, char* name);
 /**
  * Assign a node label string to a particular integer (for mapping purposes).
@@ -168,6 +168,24 @@ size_t getNumEdges(AttributedGraph* g);
 ///////
 
 /**
+ * Node label add that returns the label for a string if it already
+ * exists/a correct label for the string.
+ * @param g Graph to save mapping to
+ * @param name String to be associated with the integer label
+ * @returns Integer that string is ultimately mapped to
+ */
+uint32_t addNodeLabel(AttributedGraph* g, char* name);
+
+/**
+ * Edge label add that returns the label for a string if it already
+ * exists/a correct label for the string.
+ * @param g Graph to save mapping to
+ * @param name String to be associated with the integer label
+ * @returns Integer that string is ultimately mapped to
+ */
+uint32_t addEdgeLabel(AttributedGraph* g, char* name);
+
+/**
  * Resizes existing node attribute vectors to a new size.
  * @param g Graph to change
  * @param nodeCount new size of node attribute vectors. Should be larger than
@@ -177,7 +195,8 @@ void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
 
 /**
  * Add a new node attribute map with a particular size. Does nothing if key
- * already exists.
+ * already exists (assumption is resizeNodeAttributeMap will be called before
+ * this function).
  * @param g Graph to change
  * @param key Attribute name
  * @param nodeCount size of map
@@ -185,12 +204,12 @@ void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
 void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount);
 
 /**
- * Resizes the node names map in an attributed graph.
+ * Resizes the node maps in an attributed graph.
  * @param g Graph to change
  * @param nodeCount Size to change to. Should be at least as big as the
  * original size of the map.
  */
-void resizeNodeNames(AttributedGraph* g, uint32_t nodeCount);
+void resizeNodeMetadata(AttributedGraph* g, uint32_t nodeCount);
 
 /**
  * Checks if a node with a particular uuid exists in the graph
@@ -198,7 +217,7 @@ void resizeNodeNames(AttributedGraph* g, uint32_t nodeCount);
  * @param uuid UUID to check existince of
  * @returns 1 if it exists in the graph, 0 otherwise
  */
-uint32_t nodeExists(AttributedGraph* g, uint32_t uuid);
+uint32_t nodeExists(AttributedGraph* g, char* uuid);
 
 /**
  * Set a node in the AttributedGraph ONLY for the CSR; do not update any
@@ -209,7 +228,7 @@ uint32_t nodeExists(AttributedGraph* g, uint32_t uuid);
  * @param uuid unique ID of node
  * @param label Label to give node
  */
-void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t label);
 
 /**
@@ -220,8 +239,16 @@ void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
  * @param uuid unique ID of node
  * @param name Name to give node (e.g. name of a process)
  */
-void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
+void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                      char* name);
+
+/**
+ * Get the index of a node from its UUID (assumes uuid is valid)
+ * @param g Graph to check
+ * @param uuid unique ID of node
+ * @returns Node index of uuid
+ */
+uint32_t getIndexFromUUID(AttributedGraph* g, char* uuid);
 
 /**
  * Get the UUID of a node from its node index. Assumes that the nodeIndex is
@@ -229,7 +256,15 @@ void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, uint32_t uuid,
  * @param g Graph to check
  * @param nodeIndex node index to get UUID of
  */
-uint32_t getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex);
+const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex);
+
+/**
+ * Get the node label of a particular node
+ * @param g Graph to check
+ * @param nodeIndex Node index to check
+ * @returns Node label on node at provided index
+ */
+uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex);
 
 /**
  * Copy all the edges of a certain node from a source CSR graph to the dest CSR
@@ -261,7 +296,7 @@ void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2);
 // Graph simulation related calls
 ////////////////////////////////////////////////////////////////////////////////
 
-// todo doxygen all of the things below
+// TODO doxygen all of the things below
 
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
@@ -283,54 +318,54 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
                                           EventLimit limit, EventWindow window);
 
-size_t processesReadFromFile(AttributedGraph* dataGraph, uint32_t file_uuid,
+size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
                              EventWindow window);
-size_t processesWroteToFile(AttributedGraph* dataGraph, uint32_t file_uuid,
+size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
                             EventWindow window);
 size_t processesReadFromNetwork(AttributedGraph* dataGraph,
-                                uint32_t network_uuid, EventWindow window);
+                                char* network_uuid, EventWindow window);
 size_t processesWroteToNetwork(AttributedGraph* dataGraph,
-                               uint32_t network_uuid, EventWindow window);
+                               char* network_uuid, EventWindow window);
 size_t processesReadFromRegistry(AttributedGraph* dataGraph,
-                                 uint32_t registry_uuid, EventWindow window);
+                                 char* registry_uuid, EventWindow window);
 size_t processesWroteToRegistry(AttributedGraph* dataGraph,
-                                uint32_t registry_uuid, EventWindow window);
-size_t processesReadFromMemory(AttributedGraph* dataGraph, uint32_t memory_uuid,
+                                char* registry_uuid, EventWindow window);
+size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
                                EventWindow window);
-size_t processesWroteToMemory(AttributedGraph* dataGraph, uint32_t memory_uuid,
+size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
                               EventWindow window);
 
-size_t filesReadByProcess(AttributedGraph* dataGraph, uint32_t process_uuid,
+size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                           EventWindow window);
-size_t filesWrittenByProcess(AttributedGraph* dataGraph, uint32_t process_uuid,
+size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
-size_t networksReadByProcess(AttributedGraph* dataGraph, uint32_t process_uuid,
+size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
 size_t networksWrittenByProcess(AttributedGraph* dataGraph,
-                                uint32_t process_uuid, EventWindow window);
+                                char* process_uuid, EventWindow window);
 size_t registriesReadByProcess(AttributedGraph* dataGraph,
-                               uint32_t process_uuid, EventWindow window);
+                               char* process_uuid, EventWindow window);
 size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
-                                  uint32_t process_uuid, EventWindow window);
-size_t memoriesReadByProcess(AttributedGraph* dataGraph, uint32_t process_uuid,
+                                  char* process_uuid, EventWindow window);
+size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
 size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
-                                uint32_t process_uuid, EventWindow window);
+                                char* process_uuid, EventWindow window);
 
 void reportGraphSimulation(AttributedGraph& queryGraph,
                            AttributedGraph& dataGraph, char* outputFile);
 
 void returnMatchedNodes(AttributedGraph& graph, MatchedNode* matchedNodes);
 void reportMatchedNodes(AttributedGraph& graph, char* outputFile);
-void returnMatchedNeighbors(AttributedGraph& graph, uint32_t uuid,
+void returnMatchedNeighbors(AttributedGraph& graph, char* uuid,
                             MatchedNode* matchedNeighbors);
-void reportMatchedNeighbors(AttributedGraph& graph, uint32_t uuid,
+void reportMatchedNeighbors(AttributedGraph& graph, char* uuid,
                             char* outputFile);
 void returnMatchedEdges(AttributedGraph& graph, MatchedEdge* matchedEdges);
 void reportMatchedEdges(AttributedGraph& graph, char* outputFile);
-void returnMatchedNeighborEdges(AttributedGraph& graph, uint32_t uuid,
+void returnMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
                                 MatchedEdge* matchedEdges);
-void reportMatchedNeighborEdges(AttributedGraph& graph, uint32_t uuid,
+void reportMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
                                 char* outputFile);
 } // extern "C"
 

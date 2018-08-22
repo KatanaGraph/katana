@@ -61,11 +61,11 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
   for (auto n : graph) {
     auto& src      = graph.getData(n);
     auto& srcLabel = nodeLabelNames[rightmostSetBitPos(src.label)];
-    auto& srcName  = nodeNames[src.id];
+    auto& srcName  = nodeNames[n];
     for (auto e : graph.edges(n)) {
       auto& dst           = graph.getData(graph.getEdgeDst(e));
       auto& dstLabel      = nodeLabelNames[rightmostSetBitPos(dst.label)];
-      auto& dstName       = nodeNames[dst.id];
+      auto& dstName       = nodeNames[graph.getEdgeDst(e)];
       auto& ed            = graph.getEdgeData(e);
       auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
       auto& edgeTimestamp = ed.timestamp;
@@ -79,8 +79,8 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
               auto qDst = qgraph.getEdgeDst(qe);
               mask      = (1 << qDst);
               if (dst.matched & mask) {
-                auto& qSrcName = qnodeNames[qgraph.getData(qn).id];
-                auto& qDstName = qnodeNames[qgraph.getData(qDst).id];
+                auto& qSrcName = qnodeNames[qn];
+                auto& qDstName = qnodeNames[qDst];
                 os << srcLabel << " " << srcName << " (" << qSrcName << ") "
                    << edgeLabel << " " << dstLabel << " " << dstName << " ("
                    << qDstName << ") "
@@ -108,7 +108,7 @@ void returnMatchedNodes(AttributedGraph& dataGraph, MatchedNode* matchedNodes) {
   for (auto n : graph) {
     auto& data = graph.getData(n);
     if (data.matched) {
-      matchedNodes[i].id = data.id;
+      matchedNodes[i].id = dataGraph.index2UUID[n].c_str();
       // matchedNodes[i].label = nodeLabelNames[data.label].c_str();
       matchedNodes[i].name = nodeNames[n].c_str();
       ++i;
@@ -136,7 +136,10 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
   for (auto n : graph) {
     auto& data = graph.getData(n);
     if (data.matched) {
+      // print node names
       os << nodeLabelNames[data.label] << " " << nodeNames[n] << std::endl;
+      // print uuid instead
+      //os << nodeLabelNames[data.label] << " " << dataGraph.index2UUID[n] << std::endl;
     }
   }
 
@@ -145,7 +148,7 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
   }
 }
 
-void returnMatchedNeighbors(AttributedGraph& dataGraph, uint32_t uuid,
+void returnMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
                             MatchedNode* matchedNeighbors) {
   Graph& graph = dataGraph.graph;
   // auto& nodeLabelNames = dataGraph.nodeLabelNames;
@@ -156,7 +159,7 @@ void returnMatchedNeighbors(AttributedGraph& dataGraph, uint32_t uuid,
   for (auto n : graph) {
     auto& data = graph.getData(n);
     if (data.matched) {
-      matchedNeighbors[i].id = data.id;
+      matchedNeighbors[i].id = dataGraph.index2UUID[n].c_str();
       // matchedNeighbors[i].label = nodeLabelNames[data.label].c_str();
       matchedNeighbors[i].name = nodeNames[n].c_str();
       ++i;
@@ -164,7 +167,7 @@ void returnMatchedNeighbors(AttributedGraph& dataGraph, uint32_t uuid,
   }
 }
 
-void reportMatchedNeighbors(AttributedGraph& dataGraph, uint32_t uuid,
+void reportMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
                             char* outputFile) {
   Graph& graph         = dataGraph.graph;
   auto& nodeLabelNames = dataGraph.nodeLabelNames;
@@ -220,14 +223,14 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
         matchedEdges[i].label     = edgeLabelNames[eData.label].c_str();
         if ((dstData.label != sourceLabelID) ||
             ((srcData.label == sourceLabelID) && (src < dst))) {
-          matchedEdges[i].caused_by.id   = srcData.id;
+          matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
           matchedEdges[i].caused_by.name = nodeNames[src].c_str();
-          matchedEdges[i].acted_on.id    = dstData.id;
+          matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
           matchedEdges[i].acted_on.name  = nodeNames[dst].c_str();
         } else {
-          matchedEdges[i].caused_by.id   = dstData.id;
+          matchedEdges[i].caused_by.id   = g.index2UUID[dst].c_str();
           matchedEdges[i].caused_by.name = nodeNames[dst].c_str();
-          matchedEdges[i].acted_on.id    = srcData.id;
+          matchedEdges[i].acted_on.id    = g.index2UUID[src].c_str();
           matchedEdges[i].acted_on.name  = nodeNames[src].c_str();
         }
         ++i;
@@ -289,7 +292,7 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
   }
 }
 
-void returnMatchedNeighborEdges(AttributedGraph& g, uint32_t uuid,
+void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
                                 MatchedEdge* matchedEdges) {
   Graph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;
@@ -311,14 +314,14 @@ void returnMatchedNeighborEdges(AttributedGraph& g, uint32_t uuid,
       matchedEdges[i].label     = edgeLabelNames[eData.label].c_str();
       if ((dstData.label != sourceLabelID) ||
           ((srcData.label == sourceLabelID) && (src < dst))) {
-        matchedEdges[i].caused_by.id   = srcData.id;
+        matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
         matchedEdges[i].caused_by.name = nodeNames[src].c_str();
-        matchedEdges[i].acted_on.id    = dstData.id;
+        matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
         matchedEdges[i].acted_on.name  = nodeNames[dst].c_str();
       } else {
-        matchedEdges[i].caused_by.id   = dstData.id;
+        matchedEdges[i].caused_by.id   = g.index2UUID[dst].c_str();
         matchedEdges[i].caused_by.name = nodeNames[dst].c_str();
-        matchedEdges[i].acted_on.id    = srcData.id;
+        matchedEdges[i].acted_on.id    = g.index2UUID[src].c_str();
         matchedEdges[i].acted_on.name  = nodeNames[src].c_str();
       }
       ++i;
@@ -326,7 +329,7 @@ void returnMatchedNeighborEdges(AttributedGraph& g, uint32_t uuid,
   }
 }
 
-void reportMatchedNeighborEdges(AttributedGraph& g, uint32_t uuid,
+void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
                                 char* outputFile) {
   Graph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;

@@ -298,6 +298,14 @@ void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2);
 
 // TODO doxygen all of the things below
 
+/**
+ * Wrapper call to graph simulation call on LC_CSR Graph.
+ *
+ * @todo doxygen limit and window
+ * @param queryGraph pattern graph to match
+ * @param dataGraph graph to match pattern to
+ * @returns Number of matched edges from graph simulation.
+ */
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window);

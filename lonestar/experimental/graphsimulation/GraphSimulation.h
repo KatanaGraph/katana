@@ -136,23 +136,53 @@ struct AttributedGraph {
 };
 
 /**
+ * Reset matched status on all nodes to 0
+ *
+ * @param graph Graph to reset matched status on
+ */
+void resetMatchedStatus(Graph& graph);
+
+/**
  * @todo doxygen
  */
 void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
                         EventWindow window, bool queryNodeHasMoreThan2Edges);
 /**
- * @todo doxygen
+ * Look for nodes with repeated actions in the graph.
+ *
+ * @param graph Graph to check for repeated action
+ * @param nodeLabel Only consider edges on nodes with the specified label
+ * @param action Action (i.e. edge label) to look for repeats of
+ * @param window Time window to consider when pattern matching (may be
+ * valid or invalid)
  */
 void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
                                   uint32_t action, EventWindow window);
 /**
- * @todo doxygen
+ * Look for a node that has 2 actions on 2 specific types of nodes.
+ *
+ * @param graph Graph to check for repeated action
+ * @param nodeLabel Only consider edges on nodes with the specified label
+ * @param action1 1st action (i.e. edge label) to look for
+ * @param dstNodeLabel1 required label for destination of 1st action
+ * @param action2 2nd action (i.e. edge label) to look for
+ * @param dstNodeLabel2 required label for destination of 2nd action
+ * @param window Time window to consider when pattern matching (may be
+ * valid or invalid)
  */
 void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
                              uint32_t dstNodeLabel1, uint32_t action2,
                              uint32_t dstNodeLabel2, EventWindow window);
 /**
- * @todo doxygen
+ * Look for neighbors of a specified node connected by a specified action.
+ *
+ * @param graph Graph to check for repeated action
+ * @param node Node to match neighbors of
+ * @param nodeLabel Passed in as sanity check: node should have nodeLabel
+ * @param action Action (i.e. edge label) to look for
+ * @param neighborLabel Label that must be on neighbor to produce a match
+ * @param window Time window to consider when pattern matching (may be
+ * valid or invalid)
  */
 void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
                     uint32_t action, uint32_t neighborLabel,

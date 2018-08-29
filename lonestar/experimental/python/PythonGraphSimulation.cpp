@@ -31,6 +31,7 @@ size_t findFilesWithMultipleWrites(AttributedGraph* dataGraph,
   if ((dataGraph->nodeLabelIDs.find("file") == dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -50,6 +51,7 @@ size_t findProcessesWithReadFileWriteNetwork(AttributedGraph* dataGraph,
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -72,6 +74,7 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -114,6 +117,7 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
        dataGraph->edgeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -158,6 +162,7 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
        dataGraph->edgeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -211,6 +216,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
        dataGraph->edgeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -248,6 +254,7 @@ size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->nodeLabelIDs.find("file") == dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -266,6 +273,7 @@ size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
       (dataGraph->nodeLabelIDs.find("file") == dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -284,6 +292,7 @@ size_t processesReadFromNetwork(AttributedGraph* dataGraph,
       (dataGraph->nodeLabelIDs.find("network") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -303,6 +312,7 @@ size_t processesWroteToNetwork(AttributedGraph* dataGraph,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -321,6 +331,7 @@ size_t processesReadFromRegistry(AttributedGraph* dataGraph,
       (dataGraph->nodeLabelIDs.find("registry") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -340,6 +351,7 @@ size_t processesWroteToRegistry(AttributedGraph* dataGraph,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -358,6 +370,7 @@ size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
       (dataGraph->nodeLabelIDs.find("memory") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -377,6 +390,7 @@ size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -394,6 +408,7 @@ size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->nodeLabelIDs.find("file") == dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -412,6 +427,7 @@ size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
       (dataGraph->nodeLabelIDs.find("file") == dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -430,6 +446,7 @@ size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
       (dataGraph->nodeLabelIDs.find("network") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -449,6 +466,7 @@ size_t networksWrittenByProcess(AttributedGraph* dataGraph,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -467,6 +485,7 @@ size_t registriesReadByProcess(AttributedGraph* dataGraph,
       (dataGraph->nodeLabelIDs.find("registry") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -486,6 +505,7 @@ size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -504,6 +524,7 @@ size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
       (dataGraph->nodeLabelIDs.find("memory") ==
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("READ") == dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 
@@ -523,6 +544,7 @@ size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
        dataGraph->nodeLabelIDs.end()) ||
       (dataGraph->edgeLabelIDs.find("WRITE") ==
        dataGraph->edgeLabelIDs.end())) {
+    resetMatchedStatus(dataGraph->graph);
     return 0;
   }
 

@@ -324,6 +324,15 @@ void matchNodesOnce(Graph& qG, Graph& dG,
       galois::loopname("MatchNeighbors"));
 }
 
+void resetMatchedStatus(Graph& graph) {
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   auto& data   = graph.getData(n);
+                   data.matched = 0; // matches to none
+                 },
+                 galois::loopname("ResetMatched"));
+}
+
 void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
                         EventWindow window, bool queryNodeHasMoreThan2Edges) {
   using WorkQueue = galois::InsertBag<Graph::GraphNode>;
@@ -480,12 +489,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
 void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
                                   uint32_t action, EventWindow window) {
   // initialize matched
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data   = graph.getData(n);
-                   data.matched = 0; // matches to none
-                 },
-                 galois::loopname("InitMatched"));
+  resetMatchedStatus(graph);
 
   // match nodes
   if (window.valid) {
@@ -573,12 +577,7 @@ void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
                              uint32_t dstNodeLabel1, uint32_t action2,
                              uint32_t dstNodeLabel2, EventWindow window) {
   // initialize matched
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data   = graph.getData(n);
-                   data.matched = 0; // matches to none
-                 },
-                 galois::loopname("InitMatched"));
+  resetMatchedStatus(graph);
 
   // match nodes
   if (window.valid) {
@@ -594,7 +593,7 @@ void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
  * @todo doxygen
  */
 template <bool useWindow>
-void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
+void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
                         uint32_t action, uint32_t neighborLabel,
                         EventWindow window) {
   galois::do_all(
@@ -622,12 +621,7 @@ void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
                     uint32_t action, uint32_t neighborLabel,
                     EventWindow window) {
   // initialize matched
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data   = graph.getData(n);
-                   data.matched = 0; // matches to none
-                 },
-                 galois::loopname("InitMatched"));
+  resetMatchedStatus(graph);
 
   // match destinations of node
   assert(graph.getData(node).label == nodeLabel);

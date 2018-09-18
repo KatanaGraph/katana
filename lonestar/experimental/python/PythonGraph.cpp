@@ -118,28 +118,27 @@ void printGraph(AttributedGraph* g) {
   // auto& nodeLabelNames = g->nodeLabelNames;
   auto& edgeLabelNames = g->edgeLabelNames;
   auto& nodeNames      = g->nodeNames;
-  auto sourceLabelID   = g->nodeLabelIDs["process"];
+  uint32_t sourceLabelID   = 1 << g->nodeLabelIDs["process"];
   uint64_t numEdges    = 0;
 
   for (auto src : graph) {
     auto& srcData = graph.getData(src);
     // only print if source is a process
-    if (srcData.label != sourceLabelID)
-      continue;
-    auto& srcLabel = g->nodeLabelNames[srcData.label];
+    if ((srcData.label & sourceLabelID) != sourceLabelID) continue;
+    auto& srcLabel = g->nodeLabelNames[rightmostSetBitPos(srcData.label)];
     auto& srcName  = nodeNames[src];
     for (auto e : graph.edges(src)) {
       auto dst      = graph.getEdgeDst(e);
       auto& dstData = graph.getData(dst);
 
-      if ((dstData.label == sourceLabelID) && (dst < src))
+      if (((dstData.label & sourceLabelID) == sourceLabelID) && (dst < src))
         continue;
 
-      auto& dstLabel      = g->nodeLabelNames[dstData.label];
-      auto& dstName       = nodeNames[dst];
-      auto& ed            = graph.getEdgeData(e);
-      auto& edgeLabel     = edgeLabelNames[ed.label];
-      auto& edgeTimestamp = ed.timestamp;
+      auto& dstLabel   = g->nodeLabelNames[rightmostSetBitPos(dstData.label)];
+      auto& dstName        = nodeNames[dst];
+      auto& ed             = graph.getEdgeData(e);
+      auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed.label)];
+      auto& edgeTimestamp  = ed.timestamp;
       std::cout << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
                 << dstName << " (" << srcLabel << ", " << dstLabel << ")" <<
                 std::endl;
@@ -165,23 +164,34 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
   g->graph.fixEndEdge(nodeIndex, edgeIndex);
 }
 
+void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
+                uint32_t labelBitPosition, char* name) {
+  auto& nd                  = g->graph.getData(nodeIndex);
+  nd.label                  = 1 << labelBitPosition;
+  g->nodeIndices[uuid]      = nodeIndex;
+  g->index2UUID[nodeIndex]  = uuid;
+  g->nodeNames[nodeIndex]   = name;
+}
+
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-             uint32_t label, char* nodeName) {
-  auto& nd                = g->graph.getData(nodeIndex);
-  nd.label                = label;
-  g->nodeIndices[uuid]    = nodeIndex;
-  g->index2UUID[nodeIndex] = uuid;
-  g->nodeNames[nodeIndex] = nodeName;
+             uint32_t label, char* name) {
+  auto& nd                  = g->graph.getData(nodeIndex);
+  nd.label                  = label;
+  g->nodeIndices[uuid]      = nodeIndex;
+  g->index2UUID[nodeIndex]  = uuid;
+  g->nodeNames[nodeIndex]   = name;
 }
 
-void setNodeLabel(AttributedGraph* g, uint32_t label, char* name) {
-  g->nodeLabelNames[label] = name;
-  g->nodeLabelIDs[name]    = label;
+void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
+                          char* name) {
+  g->nodeLabelNames[labelBitPosition] = name;
+  g->nodeLabelIDs[name]               = labelBitPosition;
 }
 
-void setEdgeLabel(AttributedGraph* g, uint32_t label, char* name) {
-  g->edgeLabelNames[label] = name;
-  g->edgeLabelIDs[name]    = label;
+void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
+                          char* name) {
+  g->edgeLabelNames[labelBitPosition] = name;
+  g->edgeLabelIDs[name]               = labelBitPosition;
 }
 
 void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
@@ -192,6 +202,13 @@ void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
     attributes[key].resize(g->graph.size());
   }
   attributes[key][nodeIndex] = value;
+}
+
+void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
+                      uint32_t dstNodeIndex, uint32_t labelBitPosition,
+                      uint64_t timestamp) {
+  g->graph.constructEdge(edgeIndex, dstNodeIndex,
+                         EdgeData(1 << labelBitPosition, timestamp));
 }
 
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
@@ -217,12 +234,12 @@ size_t getNumEdges(AttributedGraph* g) { return g->graph.sizeEdges(); }
 // New Functions Added for Incremental Graph Construction
 ///////
 
-uint32_t addNodeLabel(AttributedGraph* g, char* name) {
+uint32_t addNodeLabelMetadata(AttributedGraph* g, char* name) {
     auto foundValue = g->nodeLabelIDs.find(name);
     // already exists; return it
     if (foundValue != g->nodeLabelIDs.end()) {
       return foundValue->second;
-    // doesn't exist: append to existing vector + return new label
+    // doesn't exist: append to existing vector + return new label bit position
     } else {
       uint32_t newLabel = g->nodeLabelNames.size();
       g->nodeLabelNames.emplace_back(name);
@@ -231,12 +248,12 @@ uint32_t addNodeLabel(AttributedGraph* g, char* name) {
     }
 }
 
-uint32_t addEdgeLabel(AttributedGraph* g, char* name) {
+uint32_t addEdgeLabelMetadata(AttributedGraph* g, char* name) {
     auto foundValue = g->edgeLabelIDs.find(name);
     // already exists; return it
     if (foundValue != g->edgeLabelIDs.end()) {
       return foundValue->second;
-    // doesn't exist: append to existing vector + return new label
+    // doesn't exist: append to existing vector + return new label bit position
     } else {
       uint32_t newLabel = g->edgeLabelNames.size();
       g->edgeLabelNames.emplace_back(name);
@@ -277,6 +294,13 @@ uint32_t nodeExists(AttributedGraph* g, char* uuid) {
   }
 }
 
+void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
+                   uint32_t labelBitPosition) {
+  auto& nd                = g->graph.getData(nodeIndex);
+  nd.label                = 1 << labelBitPosition;
+}
+
+
 void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t label) {
   auto& nd                = g->graph.getData(nodeIndex);
@@ -314,6 +338,7 @@ uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
     uint32_t edgeDst = src.getEdgeDst(e);
     auto& data = src.getEdgeData(e);
 
+    // uses non-new variant of construct edge i.e. direct copy of label
     dst.constructEdge(curEdgeIndex, edgeDst,
                       EdgeData(data.label, data.timestamp));
     curEdgeIndex++;

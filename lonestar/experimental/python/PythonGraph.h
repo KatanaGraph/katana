@@ -28,6 +28,13 @@
 #define GALOIS_PYTHON_GRAPH_H
 #include "../graphsimulation/GraphSimulation.h"
 
+/**
+ * Gets position of rightmost set bit from 0 to 31.
+ * @param n number to get rightmost set bit of
+ * @returns position of rightmost set bit, zero-indexed
+ */
+unsigned rightmostSetBitPos(uint32_t n);
+
 extern "C" {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +101,20 @@ void allocateGraph(AttributedGraph* g, size_t numNodes, size_t numEdges,
  * @param edgeIndex edge ID of last edge belonging to the specified node
  */
 void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex);
+
+/**
+ * Set a new node in the AttributedGraph with ONE label specified with a bit
+ * position. Graph memory should have been allocated already.
+ *
+ * @param g Graph to set node in
+ * @param nodeIndex Node ID to set/change
+ * @param uuid unique ID to node
+ * @param labelBitPosition bit position to set label of
+ * @param name Name to give node (e.g. name of a process)
+ */
+void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
+                uint32_t labelBitPosition, char* name);
+
 /**
  * Set a node in the AttributedGraph. Graph memory should have been allocated
  * already.
@@ -106,20 +127,21 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex);
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
              uint32_t label, char* name);
 /**
- * Assign a node label string to a particular integer (for mapping purposes).
+ * Assign a node label string to a particular bit position (for mapping purposes).
  *
  * @param g Graph to save mapping to
- * @param label Integer to map to a particular string
+ * @param labelBitPosition Bit position to map to a particular string
  * @param name String to be associated with the integer label
  */
-void setNodeLabel(AttributedGraph* g, uint32_t label, char* name);
+void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition, char* name);
 /**
- * Assign a edge label string to a particular integer (for mapping purposes).
+ * Assign a edge label string to a particular bit position (for mapping purposes).
  * @param g Graph to save mapping to
- * @param label Integer to map to a particular string
+ * @param labelBitPosition Bit position to map to a particular string
  * @param name String to be associated with the integer label
  */
-void setEdgeLabel(AttributedGraph* g, uint32_t label, char* name);
+void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition, char* name);
+
 /**
  * Label a node with a value for a particular attribute.
  * @param g Graph to label
@@ -129,9 +151,28 @@ void setEdgeLabel(AttributedGraph* g, uint32_t label, char* name);
  */
 void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
                       char* value);
+
 /**
- * Construct an edge in the AttributedGraph. Graph memory should have already
- * been allocated.
+ * Construct an edge in the AttributedGraph for the first time, i.e. it only
+ * has a SINGLE edge label specified by bit position to set.
+ * Graph memory should have already been allocated.
+ *
+ * @param g Graph to construct edge in
+ * @param edgeIndex edge ID to construct
+ * @param dstNodeIndex destination of edge to construct (source is implicit
+ * from edgeID)
+ * @param labelBitPosition Bit position to set on label of the edge
+ * @param timestamp Timestamp to give edge
+ */
+void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
+                      uint32_t dstNodeIndex, uint32_t labelBitPosition,
+                      uint64_t timestamp);
+
+/**
+ * Construct an edge in the AttributedGraph using an existing label (i.e.
+ * label is set directly as passed in).
+ * Graph memory should have already been allocated.
+ *
  * @param g Graph to construct edge in
  * @param edgeIndex edge ID to construct
  * @param dstNodeIndex destination of edge to construct (source is implicit
@@ -172,18 +213,18 @@ size_t getNumEdges(AttributedGraph* g);
  * exists/a correct label for the string.
  * @param g Graph to save mapping to
  * @param name String to be associated with the integer label
- * @returns Integer that string is ultimately mapped to
+ * @returns Bit position that string is ultimately mapped to
  */
-uint32_t addNodeLabel(AttributedGraph* g, char* name);
+uint32_t addNodeLabelMetadata(AttributedGraph* g, char* name);
 
 /**
  * Edge label add that returns the label for a string if it already
  * exists/a correct label for the string.
  * @param g Graph to save mapping to
  * @param name String to be associated with the integer label
- * @returns Integer that string is ultimately mapped to
+ * @returns Bit position that string is ultimately mapped to
  */
-uint32_t addEdgeLabel(AttributedGraph* g, char* name);
+uint32_t addEdgeLabelMetadata(AttributedGraph* g, char* name);
 
 /**
  * Resizes existing node attribute vectors to a new size.
@@ -218,6 +259,19 @@ void resizeNodeMetadata(AttributedGraph* g, uint32_t nodeCount);
  * @returns 1 if it exists in the graph, 0 otherwise
  */
 uint32_t nodeExists(AttributedGraph* g, char* uuid);
+
+/**
+ * Set a node in the AttributedGraph ONLY for the CSR for a SINGLE label
+ * by specifying bit position to set; do not update any
+ * metadata maps of the graph. Graph memory should have been allocated
+ * already.
+ * @param g Graph to set node in
+ * @param nodeIndex Node index to set/change
+ * @param uuid unique ID of node
+ * @param labelBitPosition Bit position to set on label of the node
+ */
+void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
+                   uint32_t labelBitPosition);
 
 /**
  * Set a node in the AttributedGraph ONLY for the CSR; do not update any
@@ -259,10 +313,12 @@ uint32_t getIndexFromUUID(AttributedGraph* g, char* uuid);
 const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex);
 
 /**
- * Get the node label of a particular node
+ * Get the node label of a particular node. Calling end will have to interpret
+ * the set bits.
  * @param g Graph to check
  * @param nodeIndex Node index to check
- * @returns Node label on node at provided index
+ * @returns Node label on node at provided index. Note that the calling end
+ * will have to interpret the set bits.
  */
 uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex);
 

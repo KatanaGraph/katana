@@ -74,8 +74,7 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
         if (src.matched & mask) {
           for (auto qe : qgraph.edges(qn)) {
             auto& qeData = qgraph.getEdgeData(qe);
-            if (qeData.label ==
-                ed.label) { // query could be any or multiple labels
+            if ((qeData.label & ed.label) == ed.label) {
               auto qDst = qgraph.getEdgeDst(qe);
               mask      = (1 << qDst);
               if (dst.matched & mask) {
@@ -137,7 +136,8 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
     auto& data = graph.getData(n);
     if (data.matched) {
       // print node names
-      os << nodeLabelNames[data.label] << " " << nodeNames[n] << std::endl;
+      os << nodeLabelNames[rightmostSetBitPos(data.label)] << " "
+         << nodeNames[n] << std::endl;
       // print uuid instead
       //os << nodeLabelNames[data.label] << " " << dataGraph.index2UUID[n] << std::endl;
     }
@@ -189,7 +189,8 @@ void reportMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
   for (auto n : graph) {
     auto& data = graph.getData(n);
     if (data.matched) {
-      os << nodeLabelNames[data.label] << " " << nodeNames[n] << std::endl;
+      os << nodeLabelNames[rightmostSetBitPos(data.label)] << " "
+         << nodeNames[n] << std::endl;
     }
   }
 
@@ -220,9 +221,9 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
         matchedEdges[i].timestamp = eData.timestamp;
-        matchedEdges[i].label     = edgeLabelNames[eData.label].c_str();
-        if ((dstData.label != sourceLabelID) ||
-            ((srcData.label == sourceLabelID) && (src < dst))) {
+        matchedEdges[i].label     = edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+        if (((dstData.label & sourceLabelID) != sourceLabelID) ||
+            (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
           matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
           matchedEdges[i].caused_by.name = nodeNames[src].c_str();
           matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
@@ -273,10 +274,10 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
         auto& dstName       = nodeNames[dst];
-        auto& edgeLabel     = edgeLabelNames[eData.label];
+        auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData.label)];
         auto& edgeTimestamp = eData.timestamp;
-        if ((dstData.label != sourceLabelID) ||
-            ((srcData.label == sourceLabelID) && (src < dst))) {
+        if (((dstData.label & sourceLabelID) != sourceLabelID) ||
+            (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
           os << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
              << dstName << std::endl;
         } else {
@@ -311,9 +312,10 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
       // auto& dstLabel = nodeLabelNames[dstData.label];
       auto& eData               = graph.getEdgeData(e);
       matchedEdges[i].timestamp = eData.timestamp;
-      matchedEdges[i].label     = edgeLabelNames[eData.label].c_str();
-      if ((dstData.label != sourceLabelID) ||
-          ((srcData.label == sourceLabelID) && (src < dst))) {
+      matchedEdges[i].label     =
+          edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+      if (((dstData.label & sourceLabelID) != sourceLabelID) ||
+          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
         matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
         matchedEdges[i].caused_by.name = nodeNames[src].c_str();
         matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
@@ -360,10 +362,10 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
       // auto& dstLabel = nodeLabelNames[dstData.label];
       auto& dstName       = nodeNames[dst];
       auto& ed            = graph.getEdgeData(e);
-      auto& edgeLabel     = edgeLabelNames[ed.label];
+      auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
       auto& edgeTimestamp = ed.timestamp;
-      if ((dstData.label != sourceLabelID) ||
-          ((srcData.label == sourceLabelID) && (src < dst))) {
+      if (((dstData.label & sourceLabelID) != sourceLabelID) ||
+          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
         os << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
            << dstName << std::endl;
       } else {

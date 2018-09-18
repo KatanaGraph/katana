@@ -40,8 +40,7 @@ void matchLabel(QG& qG, DG& dG, W& w) {
         for (auto qn : qG) {
           assert(qn < 64); // because matched is 64-bit
           auto& qData = qG.getData(qn);
-          if (qData.label ==
-              dData.label) { // TODO: query could be any or multiple labels
+          if ((qData.label & dData.label) == dData.label) {
             if (!qData.matched) {
               qData.matched = 1;
             }
@@ -116,9 +115,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
               // label
               for (auto qe : qG.edges(qn)) {
                 auto qeData = qG.getEdgeData(qe);
-                if (qeData.label ==
-                    deData
-                        .label) { // TODO: query could be any or multiple labels
+                if ((qeData.label & deData.label) == deData.label) {
                   auto qDst      = qG.getEdgeDst(qe);
                   auto& dDstData = dG.getData(dG.getEdgeDst(de));
                   if (dDstData.matched & (1 << qDst)) {
@@ -199,8 +196,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                                 // time-span of interest
                     }
                   }
-                  if (qeData.label == deData.label) { // TODO: query could be
-                                                      // any or multiple labels
+                  if ((qeData.label & deData.label) == deData.label) {
                     auto& dDstData = dG.getData(dG.getEdgeDst(de));
                     if (dDstData.matched & (1 << qDst)) {
                       if ((qPrevEdgeTimestamp <= qeData.timestamp) ==
@@ -242,8 +238,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                                 // time-span of interest
                     }
                   }
-                  if (qeData.label == deData.label) { // TODO: query could be
-                                                      // any or multiple labels
+                  if ((qeData.label & deData.label) == deData.label) {
                     auto dDst      = dG.getEdgeDst(de);
                     auto& dDstData = dG.getData(dDst);
                     if (dDstData.matched & (1 << qDst)) {
@@ -260,9 +255,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
 
                         for (auto& de2 : dG.edges(dn)) {
                           auto& deData2 = dG.getEdgeData(de2);
-                          if (qeData2.label ==
-                              deData2.label) { // TODO: query could be any or
-                                               // multiple labels
+                          if ((qeData2.label & deData2.label) == deData2.label) {
                             auto dDst2      = dG.getEdgeDst(de2);
                             auto& dDstData2 = dG.getData(dDst2);
                             if (dDstData2.matched & (1 << qDst2)) {
@@ -322,6 +315,23 @@ void matchNodesOnce(Graph& qG, Graph& dG,
         }
       },
       galois::loopname("MatchNeighbors"));
+}
+
+
+uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
+  return 1u << g.nodeLabelIDs[nodeLabel];
+}
+
+uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
+  return 1u << g.edgeLabelIDs[edgeLabel];
+}
+
+bool nodeLabelExists(AttributedGraph& g, const std::string& nodeLabel) {
+  return (g.nodeLabelIDs.find(nodeLabel) != g.nodeLabelIDs.end());
+}
+
+bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel) {
+  return (g.edgeLabelIDs.find(edgeLabel) != g.edgeLabelIDs.end());
 }
 
 void resetMatchedStatus(Graph& graph) {
@@ -410,8 +420,7 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
                 auto& deData = dG.getEdgeData(de);
                 auto dDst    = dG.getEdgeDst(de);
                 if (dn < dDst) { // match only one of the symmetric edges
-                  if (qeData.label == deData.label) { // TODO: query could be
-                                                      // any or multiple labels
+                  if ((qeData.label & deData.label) == deData.label) {
                     auto& dDstData = dG.getData(dDst);
                     if (dDstData.matched & (1 << qDst)) {
                       deData.matched |= 1 << *qe;
@@ -432,7 +441,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
   galois::do_all(galois::iterate(graph.begin(), graph.end()),
                  [&](auto n) {
                    auto& data = graph.getData(n);
-                   if (data.label == nodeLabel) {
+                   if ((data.label & nodeLabel) == nodeLabel) {
                      unsigned numActions   = 0;
                      Graph::GraphNode prev = 0;
                      for (auto e : graph.edges(n)) {
@@ -444,7 +453,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                                      // time-span of interest
                          }
                        }
-                       if (eData.label == action) {
+                       if ((eData.label & action) == action) {
                          ++numActions;
                          if (numActions == 1) {
                            prev = graph.getEdgeDst(e);
@@ -474,7 +483,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                                      // time-span of interest
                          }
                        }
-                       if (eData.label == action) {
+                       if ((eData.label & action) == action) {
                          eData.matched = 1;
                          auto dst      = graph.getEdgeDst(e);
                          auto& dstData = graph.getData(dst);
@@ -507,7 +516,7 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
   galois::do_all(galois::iterate(graph.begin(), graph.end()),
                  [&](auto n) {
                    auto& data = graph.getData(n);
-                   if (data.label == nodeLabel) {
+                   if ((data.label & nodeLabel) == nodeLabel) {
                      bool foundAction1 = false;
                      bool foundAction2 = false;
                      for (auto e : graph.edges(n)) {
@@ -519,15 +528,15 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
                                      // time-span of interest
                          }
                        }
-                       bool mayAction1 = (eData.label == action1);
-                       bool mayAction2 = (eData.label == action2);
+                       bool mayAction1 = ((eData.label & action1) == action1);
+                       bool mayAction2 = ((eData.label & action2) == action2);
                        if (mayAction1 || mayAction2) {
                          auto dst      = graph.getEdgeDst(e);
                          auto& dstData = graph.getData(dst);
-                         if (mayAction1 && (dstData.label == dstNodeLabel1)) {
+                         if (mayAction1 && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)) {
                            foundAction1 = true;
                          } else if (mayAction2 &&
-                                    (dstData.label == dstNodeLabel2)) {
+                                    ((dstData.label & dstNodeLabel2) == dstNodeLabel2)) {
                            foundAction2 = true;
                          }
                        }
@@ -553,16 +562,16 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
                                      // time-span of interest
                          }
                        }
-                       bool mayAction1 = (eData.label == action1);
-                       bool mayAction2 = (eData.label == action2);
+                       bool mayAction1 = ((eData.label & action1) == action1);
+                       bool mayAction2 = ((eData.label & action2) == action2);
                        if (mayAction1 || mayAction2) {
                          auto dst      = graph.getEdgeDst(e);
                          auto& dstData = graph.getData(dst);
-                         if (mayAction1 && (dstData.label == dstNodeLabel1)) {
+                         if (mayAction1 && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)) {
                            eData.matched = 1;
                            dstData.matched |= 2; // atomicity not required
                          } else if (mayAction2 &&
-                                    (dstData.label == dstNodeLabel2)) {
+                                    ((dstData.label & dstNodeLabel2) == dstNodeLabel2)) {
                            eData.matched = 1;
                            dstData.matched |= 4; // atomicity not required
                          }
@@ -602,11 +611,11 @@ void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
         auto& eData = graph.getEdgeData(e);
         if (!useWindow || ((eData.timestamp <= window.endTime) &&
                            (eData.timestamp >= window.startTime))) {
-          if (eData.label == action) {
+          if ((eData.label & action) == action) {
             eData.matched = 1;
             auto dst      = graph.getEdgeDst(e);
             auto& dstData = graph.getData(dst);
-            if (dstData.label == neighborLabel) {
+            if ((dstData.label & neighborLabel) == neighborLabel) {
               dstData.matched |= 1; // atomicity not required
             }
           }
@@ -624,7 +633,7 @@ void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
   resetMatchedStatus(graph);
 
   // match destinations of node
-  assert(graph.getData(node).label == nodeLabel);
+  assert((graph.getData(node).label & nodeLabel) == nodeLabel);
   if (window.valid) {
     matchNeighborsDsts<true>(graph, node, nodeLabel, action, neighborLabel,
                              window);

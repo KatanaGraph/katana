@@ -136,6 +136,48 @@ struct AttributedGraph {
 };
 
 /**
+ * Return an integer with the bit representing the specified node label set.
+ * Assumes the label actually exists, else undefined behavior.
+ *
+ * @param g Graph to get label from
+ * @param nodeLabel Node label to get mask for
+ * @returns A number with the bit representing the specified label set for use
+ * in bitmasks.
+ * @todo make more robust
+ */
+uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel);
+
+/**
+ * Return an integer with the bit representing the specified edge label set.
+ * Assumes the label actually exists, else undefined behavior.
+ *
+ * @param g Graph to get label from
+ * @param nodeLabel Edge label to get mask for
+ * @returns A number with the bit representing the specified label set for use
+ * in bitmasks.
+ * @todo make more robust
+ */
+uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel);
+
+/**
+ * Checks graph to see if specified node label is defined for the graph.
+ *
+ * @param g Graph to check
+ * @param nodeLabel label to check existence of
+ * @returns true if the specified node label is defined for the graph
+ */
+bool nodeLabelExists(AttributedGraph& g, const std::string& nodeLabel);
+
+/**
+ * Checks graph to see if specified edge label is defined for the graph.
+ *
+ * @param g Graph to check
+ * @param edgeLabel label to check existence of
+ * @returns true if the specified edge label is defined for the graph
+ */
+bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel);
+
+/**
  * Reset matched status on all nodes to 0
  *
  * @param graph Graph to reset matched status on

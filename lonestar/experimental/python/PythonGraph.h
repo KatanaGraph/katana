@@ -348,6 +348,26 @@ void swapCSR(AttributedGraph* g1, AttributedGraph* g2);
  */
 void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2);
 
+/**
+ * Adds a new label to the node at the specified index.
+ *
+ * @param g Graph to alter
+ * @param nodeIndex Node index to set/change
+ * @param labelBitPosition Bit position to add on label of the node
+ */
+void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
+                 uint32_t labelBitPosition);
+
+/**
+ * Merge provided label with existing label at specified node index.
+ *
+ * @param g Graph to alter
+ * @param nodeIndex Node index to set/change
+ * @param labelToMerge Label to "or" with existing label
+ */
+void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
+                 uint32_t labelToMerge);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Graph simulation related calls
 ////////////////////////////////////////////////////////////////////////////////

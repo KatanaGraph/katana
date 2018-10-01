@@ -372,3 +372,15 @@ void swapCSR(AttributedGraph* g1, AttributedGraph* g2) {
 void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2) {
   std::swap(g1->edgeAttributes, g2->edgeAttributes);
 }
+
+void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
+                 uint32_t labelBitPosition) {
+  auto& nd                = g->graph.getData(nodeIndex);
+  nd.label                = nd.label | (1 << labelBitPosition);
+}
+
+void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
+                 uint32_t labelToMerge) {
+  auto& nd                = g->graph.getData(nodeIndex);
+  nd.label                = nd.label | labelToMerge;
+}

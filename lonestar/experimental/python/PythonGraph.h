@@ -382,6 +382,12 @@ void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
  * @param dataGraph graph to match pattern to
  * @returns Number of matched edges from graph simulation.
  */
+size_t matchQuery(AttributedGraph* dataGraph,
+                EventLimit limit,
+                EventWindow window,
+                MatchedEdge* queryEdges,
+                size_t numQueryEdges);
+
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window);

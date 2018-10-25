@@ -2,6 +2,7 @@ add_library(galois_python SHARED
   PythonGraph.cpp
   PythonGraphReport.cpp
   PythonGraphSimulation.cpp
+  PythonGraphQuery.cpp
   ../graphsimulation/GraphSimulation.cpp
   #AnalyzeBFS.cpp
   #SearchSubgraph.cpp

@@ -24,6 +24,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
                 EventWindow window,
                 MatchedEdge* queryEdges,
                 size_t numQueryEdges) {
+  //getNodeLabelMask(*dataGraph, "process;network");
   // build node types and prefix sum of edges
   size_t numQueryNodes = 0;
   std::vector<const char*> nodeTypes;

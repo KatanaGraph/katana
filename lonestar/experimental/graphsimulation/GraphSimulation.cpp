@@ -319,7 +319,24 @@ void matchNodesOnce(Graph& qG, Graph& dG,
 
 
 uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
-  return 1u << g.nodeLabelIDs[nodeLabel];
+  if (nodeLabel.find(";") != std::string::npos) {
+    // no semicolon = only 1 node label
+    return 1u << g.nodeLabelIDs[nodeLabel];
+  } else {
+    // semicolon = multiple node labels; split and create mask
+    uint32_t labelMask = 0;
+
+    std::istringstream tokenStream(nodeLabel);
+    std::string token;
+    std::getline(tokenStream, token, ';');
+
+    while (token != "") {
+      galois::gPrint(token, "\n");
+      labelMask |= 1u << g.nodeLabelIDs[token];
+      std::getline(tokenStream, token, ';');
+    }
+    return labelMask;
+  }
 }
 
 uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {

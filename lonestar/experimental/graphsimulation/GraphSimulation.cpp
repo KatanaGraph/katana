@@ -318,14 +318,20 @@ void matchNodesOnce(Graph& qG, Graph& dG,
 }
 
 
-uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
+std::pair<bool, uint32_t> getNodeLabelMask(AttributedGraph& g,
+                                           const std::string& nodeLabel) {
   if (nodeLabel.find(";") == std::string::npos) {
     // no semicolon = only 1 node label
     if (nodeLabel != "any") {
-      return 1u << g.nodeLabelIDs[nodeLabel];
+      // see if label exists
+      if (g.nodeLabelIDs.find(nodeLabel) != g.nodeLabelIDs.end()) {
+        return std::make_pair(true, 1u << g.nodeLabelIDs[nodeLabel]);
+      } else {
+        return std::make_pair(false, 0);
+      }
     } else {
       // any string = match everything; return string of all 0s
-      return 0;
+      return std::make_pair(true, 0);
     }
   } else {
     // semicolon = multiple node labels; split and create mask
@@ -336,19 +342,29 @@ uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
 
     // loop through semi-colon separated labels
     while (std::getline(tokenStream, token, ';')) {
-      labelMask |= 1u << g.nodeLabelIDs[token];
+      if (g.nodeLabelIDs.find(token) != g.nodeLabelIDs.end()) {
+        labelMask |= 1u << g.nodeLabelIDs[token];
+      } else {
+        // one label not found; get out
+        return std::make_pair(false, 0);
+      }
     }
 
-    return labelMask;
+    return std::make_pair(true, labelMask);
   }
 }
 
-uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
+std::pair<bool, uint32_t> getEdgeLabelMask(AttributedGraph& g,
+                                           const std::string& edgeLabel) {
   if (edgeLabel != "ANY") {
-    return 1u << g.edgeLabelIDs[edgeLabel];
+    if (g.edgeLabelIDs.find(edgeLabel) != g.edgeLabelIDs.end()) {
+      return std::make_pair(true, 1u << g.edgeLabelIDs[edgeLabel]);
+    } else {
+      return std::make_pair(false, 0);
+    }
   } else {
     // all 0s = match anything
-    return 0;
+    return std::make_pair(true, 0);
   }
 }
 

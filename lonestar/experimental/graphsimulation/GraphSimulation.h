@@ -141,11 +141,12 @@ struct AttributedGraph {
  *
  * @param g Graph to get label from
  * @param nodeLabel Node label to get mask for
- * @returns A number with the bit representing the specified label set for use
+ * @returns Boolean saying if a node label is valid +
+ * A number with the bit representing the specified label set for use
  * in bitmasks.
- * @todo make more robust
  */
-uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel);
+std::pair<bool, uint32_t> getNodeLabelMask(AttributedGraph& g,
+                                           const std::string& nodeLabel);
 
 /**
  * Return an integer with the bit representing the specified edge label set.
@@ -153,11 +154,12 @@ uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel);
  *
  * @param g Graph to get label from
  * @param nodeLabel Edge label to get mask for
- * @returns A number with the bit representing the specified label set for use
+ * @returns Boolean saying if a node label is valid +
+ * A number with the bit representing the specified label set for use
  * in bitmasks.
- * @todo make more robust
  */
-uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel);
+std::pair<bool, uint32_t> getEdgeLabelMask(AttributedGraph& g,
+                                           const std::string& edgeLabel);
 
 /**
  * Checks graph to see if specified node label is defined for the graph.

@@ -191,6 +191,13 @@ void resetMatchedStatus(Graph& graph);
  */
 void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
                         EventWindow window, bool queryNodeHasMoreThan2Edges);
+
+/**
+ * @todo doxygen
+ */
+void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       uint32_t matchedQueryNode);
+
 /**
  * Look for nodes with repeated actions in the graph.
  *

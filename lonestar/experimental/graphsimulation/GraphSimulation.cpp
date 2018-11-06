@@ -317,6 +317,9 @@ void matchNodesOnce(Graph& qG, Graph& dG,
       galois::loopname("MatchNeighbors"));
 }
 
+void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       uint32_t matchedQueryNode) {
+}
 
 std::pair<bool, uint32_t> getNodeLabelMask(AttributedGraph& g,
                                            const std::string& nodeLabel) {

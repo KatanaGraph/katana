@@ -28,6 +28,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
   size_t numQueryNodes = 0;
   std::vector<const char*> nodeTypes;
   std::vector<size_t> prefixSum;
+  std::vector<std::pair<size_t, size_t>> starPairs;
+
   for (size_t j = 0; j < numQueryEdges; ++j) {
     size_t srcID = std::stoi(queryEdges[j].caused_by.id);
     size_t dstID = std::stoi(queryEdges[j].acted_on.id);
@@ -52,9 +54,17 @@ size_t matchQuery(AttributedGraph* dataGraph,
       assert(nodeTypes[dstID] == queryEdges[j].acted_on.name);
     }
 
-    prefixSum[srcID]++;
-    prefixSum[dstID]++;
+    if (std::string(queryEdges[j].label) != "*") {
+      prefixSum[srcID]++;
+      prefixSum[dstID]++;
+    } else {
+      starPairs.push_back(std::make_pair(srcID, dstID));
+    }
   }
+
+  // ignore edges that have the star label
+  numQueryEdges -= starPairs.size();
+
   for (size_t i = 1; i < numQueryNodes; ++i) {
     prefixSum[i] += prefixSum[i-1];
   }
@@ -65,6 +75,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   prefixSum[0] = 0;
 
   // check for trivial absence of query
+  // node label checking
   for (size_t i = 0; i < numQueryNodes; ++i) {
     assert(nodeTypes[i] != NULL);
     if (!getNodeLabelMask(*dataGraph, nodeTypes[i]).first) {
@@ -73,11 +84,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
       return 0;
     }
   }
+  // edge label checking
   for (size_t j = 0; j < numQueryEdges; ++j) {
-    if (!getEdgeLabelMask(*dataGraph, queryEdges[j].label).first) {
-      // query edge label does not exist in the data graph
-      resetMatchedStatus(dataGraph->graph);
-      return 0;
+    if (std::string(queryEdges[j].label) != "*") {
+      if (!getEdgeLabelMask(*dataGraph, queryEdges[j].label).first) {
+        // query edge label does not exist in the data graph
+        resetMatchedStatus(dataGraph->graph);
+        return 0;
+      }
     }
   }
 
@@ -89,12 +103,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.getData(i).label = getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
-    size_t srcID = std::stoi(queryEdges[j].caused_by.id);
-    size_t dstID = std::stoi(queryEdges[j].acted_on.id);
-    queryGraph.constructEdge(prefixSum[srcID]++, dstID,
-        EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
-    queryGraph.constructEdge(prefixSum[dstID]++, srcID,
-        EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+    if (std::string(queryEdges[j].label) != "*") {
+      size_t srcID = std::stoi(queryEdges[j].caused_by.id);
+      size_t dstID = std::stoi(queryEdges[j].acted_on.id);
+      queryGraph.constructEdge(prefixSum[srcID]++, dstID,
+          EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+      queryGraph.constructEdge(prefixSum[dstID]++, srcID,
+          EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+    }
   }
   for (size_t i = 0; i < numQueryNodes; ++i) {
     queryGraph.fixEndEdge(i, prefixSum[i]);
@@ -102,6 +118,17 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
   // run graph simulation
   runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+
+  // do extra handling if * edges were used in the query edges
+  if (starPairs.size() > 0) {
+    uint32_t currentStar = numQueryNodes;
+    for (std::pair<size_t, size_t>& sdPair : starPairs) {
+      findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
+                        currentStar);
+      currentStar++;
+    }
+    runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+  }
+
   return countMatchedEdges(dataGraph->graph);
 }
-

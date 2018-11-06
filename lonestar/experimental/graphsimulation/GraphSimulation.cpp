@@ -321,7 +321,12 @@ void matchNodesOnce(Graph& qG, Graph& dG,
 uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
   if (nodeLabel.find(";") == std::string::npos) {
     // no semicolon = only 1 node label
-    return 1u << g.nodeLabelIDs[nodeLabel];
+    if (nodeLabel != "any") {
+      return 1u << g.nodeLabelIDs[nodeLabel];
+    } else {
+      // any string = match everything; return string of all 0s
+      return 0;
+    }
   } else {
     // semicolon = multiple node labels; split and create mask
     uint32_t labelMask = 0;
@@ -339,7 +344,12 @@ uint32_t getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
 }
 
 uint32_t getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
-  return 1u << g.edgeLabelIDs[edgeLabel];
+  if (edgeLabel != "ANY") {
+    return 1u << g.edgeLabelIDs[edgeLabel];
+  } else {
+    // all 0s = match anything
+    return 0;
+  }
 }
 
 bool nodeLabelExists(AttributedGraph& g, const std::string& nodeLabel) {

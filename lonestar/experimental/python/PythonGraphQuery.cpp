@@ -69,17 +69,21 @@ size_t matchQuery(AttributedGraph* dataGraph,
     assert(nodeTypes[i] != NULL);
     if (dataGraph->nodeLabelIDs.find(nodeTypes[i]) ==
        dataGraph->nodeLabelIDs.end()) {
-      // query node label does not exist in the data graph
-      resetMatchedStatus(dataGraph->graph);
-      return 0;
+      if (std::string(nodeTypes[i]) != "any") {
+        // query node label does not exist in the data graph
+        resetMatchedStatus(dataGraph->graph);
+        return 0;
+      }
     }
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
     if (dataGraph->edgeLabelIDs.find(queryEdges[j].label) ==
        dataGraph->edgeLabelIDs.end()) {
-      // query edge label does not exist in the data graph
-      resetMatchedStatus(dataGraph->graph);
-      return 0;
+      if (std::string(queryEdges[j].label) != "ANY") {
+        // query edge label does not exist in the data graph
+        resetMatchedStatus(dataGraph->graph);
+        return 0;
+      }
     }
   }
 

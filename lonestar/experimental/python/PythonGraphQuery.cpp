@@ -67,23 +67,17 @@ size_t matchQuery(AttributedGraph* dataGraph,
   // check for trivial absence of query
   for (size_t i = 0; i < numQueryNodes; ++i) {
     assert(nodeTypes[i] != NULL);
-    if (dataGraph->nodeLabelIDs.find(nodeTypes[i]) ==
-       dataGraph->nodeLabelIDs.end()) {
-      if (std::string(nodeTypes[i]) != "any") {
-        // query node label does not exist in the data graph
-        resetMatchedStatus(dataGraph->graph);
-        return 0;
-      }
+    if (!getNodeLabelMask(*dataGraph, nodeTypes[i]).first) {
+      // query node label does not exist in the data graph
+      resetMatchedStatus(dataGraph->graph);
+      return 0;
     }
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
-    if (dataGraph->edgeLabelIDs.find(queryEdges[j].label) ==
-       dataGraph->edgeLabelIDs.end()) {
-      if (std::string(queryEdges[j].label) != "ANY") {
-        // query edge label does not exist in the data graph
-        resetMatchedStatus(dataGraph->graph);
-        return 0;
-      }
+    if (!getEdgeLabelMask(*dataGraph, queryEdges[j].label).first) {
+      // query edge label does not exist in the data graph
+      resetMatchedStatus(dataGraph->graph);
+      return 0;
     }
   }
 

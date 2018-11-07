@@ -457,6 +457,13 @@ void returnMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
                                 MatchedEdge* matchedEdges);
 void reportMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
                                 char* outputFile);
+
+/**
+ * Prints various graph statistics.
+ * @param graph Graph to get stats on
+ */
+void reportGraphStats(AttributedGraph& graph);
+
 } // extern "C"
 
 #endif // GALOIS_PYTHON_GRAPH_H

@@ -379,3 +379,45 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
     ofs.close();
   }
 }
+
+void reportGraphStats(AttributedGraph& g) {
+  galois::gPrint("GRAPH STATS\n");
+  galois::gPrint("----------------------------------------------------------------------\n");
+  galois::gPrint("Number of Nodes: ", g.graph.size(), "\n");
+  galois::gPrint("Number of Edges: ", g.graph.sizeEdges(), "\n\n");
+
+  // print all node label names
+  galois::gPrint("Node Labels:\n");
+  galois::gPrint("------------------------------\n");
+  for (std::string nLabel : g.nodeLabelNames) {
+    galois::gPrint(nLabel, ", ");
+  }
+
+  galois::gPrint("\n\n");
+
+  // print all edge label names
+  galois::gPrint("Edge Labels:\n");
+  galois::gPrint("------------------------------\n");
+  for (std::string eLabel : g.edgeLabelNames) {
+    galois::gPrint(eLabel, ", ");
+  }
+  galois::gPrint("\n\n");
+
+  // print all node attribute names
+  galois::gPrint("Node Attributes:\n");
+  galois::gPrint("------------------------------\n");
+  for (auto& nLabel : g.nodeAttributes) {
+    galois::gPrint(nLabel.first, ", ");
+  }
+  galois::gPrint("\n\n");
+
+  // print all edge attribute names
+  galois::gPrint("Edge Attributes:\n");
+  galois::gPrint("------------------------------\n");
+  for (auto& eLabel : g.edgeAttributes) {
+    galois::gPrint(eLabel.first, ", ");
+  }
+  galois::gPrint("\n");
+
+  galois::gPrint("----------------------------------------------------------------------\n");
+}

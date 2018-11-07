@@ -317,10 +317,6 @@ void matchNodesOnce(Graph& qG, Graph& dG,
       galois::loopname("MatchNeighbors"));
 }
 
-void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       uint32_t matchedQueryNode) {
-}
-
 std::pair<bool, uint32_t> getNodeLabelMask(AttributedGraph& g,
                                            const std::string& nodeLabel) {
   if (nodeLabel.find(";") == std::string::npos) {
@@ -478,6 +474,113 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
         }
       },
       galois::loopname("MatchNeighborEdges"));
+}
+
+void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       uint32_t matchedQueryNode) {
+  galois::LargeArray<std::atomic<uint32_t>> parent;
+  parent.allocateInterleaved(graph.size());
+  uint32_t infinity = std::numeric_limits<uint32_t>::max();
+
+  using WorkQueue = galois::InsertBag<Graph::GraphNode>;
+  WorkQueue w[2];
+  WorkQueue* cur  = &w[0];
+  WorkQueue* next = &w[1];
+
+  // add source nodes to the work-list
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   parent[n] = infinity;
+
+                   auto& data   = graph.getData(n);
+                   uint64_t mask = (1 << srcQueryNode);
+                   if (data.matched & mask) {
+                     next->push_back(n);
+                   }
+                 },
+                 galois::loopname("ResetParent"));
+
+  auto sizeNext = std::distance(next->begin(), next->end());
+
+  // loop until no more data nodes are left to traverse
+  while (sizeNext > 0) {
+    std::swap(cur, next);
+    next->clear();
+
+    // traverse edges
+    galois::do_all(
+        galois::iterate(*cur),
+        [&](auto n) {
+          for (auto edge : graph.edges(n)) {
+            auto dst = graph.getEdgeDst(edge);
+            if (parent[dst] == infinity) {
+              auto& dstData = graph.getData(dst);
+              uint64_t mask = (1 << srcQueryNode);
+              if (!(dstData.matched & mask)) {
+                if (parent[dst].compare_exchange_strong(infinity, n, std::memory_order_relaxed)) {
+                  mask = (1 << dstQueryNode);
+                  if (!(dstData.matched & mask)) {
+                    next->push_back(dst);
+                  }
+                }
+              }
+            }
+          }
+        },
+        galois::loopname("TraverseEdges"));
+
+    sizeNext = std::distance(next->begin(), next->end());
+  }
+
+  // add destination nodes to the work-list or un-match destination nodes
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   auto& data = graph.getData(n);
+                   uint64_t mask = (1 << dstQueryNode);
+                   if (data.matched & mask) {
+                     if (parent[n] == infinity) {
+                       data.matched &= ~mask; // no longer a match
+                     } else {
+                       next->push_back(n);
+                     }
+                   }
+                 },
+                 galois::loopname("MatchDestination"));
+
+
+  // back traverse edges
+  galois::do_all(
+      galois::iterate(*next),
+      [&](auto n) {
+        uint32_t prev = parent[n];
+        while ((parent[prev] != infinity) || (parent[prev] != prev)) {
+          uint32_t temp = parent[prev];
+          if (parent[prev].compare_exchange_weak(temp, infinity, std::memory_order_relaxed)) {
+            auto& data = graph.getData(prev);
+            data.matched |= 1 << matchedQueryNode;
+            prev = temp;
+          }
+        }
+        auto& srcData = graph.getData(prev);
+        uint64_t mask = (1 << srcQueryNode);
+        if (srcData.matched & mask) {
+          parent[prev] = prev;
+        }
+      },
+      galois::loopname("BackTraverseEdges"));
+
+  // un-match source nodes
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   auto& data = graph.getData(n);
+                   uint64_t mask = (1 << srcQueryNode);
+                   if (data.matched & mask) {
+                     if (parent[n] == infinity) {
+                       data.matched &= ~mask; // no longer a match
+                     }
+                   }
+                 },
+                 galois::loopname("MatchSource"));
 }
 
 template <bool useWindow>

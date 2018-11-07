@@ -384,22 +384,36 @@ void resetMatchedStatus(Graph& graph) {
                  galois::loopname("ResetMatched"));
 }
 
-void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
-                        EventWindow window, bool queryNodeHasMoreThan2Edges) {
+void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
+                        EventLimit limit, EventWindow window,
+                        bool queryNodeHasMoreThan2Edges) {
   using WorkQueue = galois::InsertBag<Graph::GraphNode>;
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
 
-  matchLabel(qG, dG, *next);
-  if (existEmptyLabelMatchQGNode(qG)) {
-    galois::do_all(galois::iterate(dG.begin(), dG.end()),
-                   [&qG, &dG, &w](auto dn) {
-                     auto& dData   = dG.getData(dn);
-                     dData.matched = 0; // matches to none
-                   },
-                   galois::loopname("ResetMatched"));
-    return;
+  if (reinitialize) {
+    matchLabel(qG, dG, *next);
+    if (existEmptyLabelMatchQGNode(qG)) {
+      galois::do_all(galois::iterate(dG.begin(), dG.end()),
+                     [&qG, &dG, &w](auto dn) {
+                       auto& dData   = dG.getData(dn);
+                       dData.matched = 0; // matches to none
+                     },
+                     galois::loopname("ResetMatched"));
+      return;
+    }
+  } else {
+    galois::do_all(
+        galois::iterate(dG.begin(), dG.end()),
+        [&](auto dn) {
+          auto& dData = dG.getData(dn);
+
+          if (dData.matched) {
+            next->push_back(dn);
+          }
+        },
+        galois::loopname("ReinsertMatchedNodes"));
   }
 
   auto sizeCur  = std::distance(cur->begin(), cur->end());
@@ -443,28 +457,31 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
     sizeCur  = std::distance(cur->begin(), cur->end());
     sizeNext = std::distance(next->begin(), next->end());
   }
+}
 
-  // match the edges
+void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
   galois::do_all(
-      galois::iterate(*cur),
-      [&dG, &qG, cur, next](auto dn) {
+      galois::iterate(dG.begin(), dG.end()),
+      [&](auto dn) {
         auto& dData = dG.getData(dn);
 
-        for (auto qn : qG) { // multiple matches
-          uint64_t mask = (1 << qn);
-          if (dData.matched & mask) {
-            for (auto qe : qG.edges(qn)) {
-              auto qeData = qG.getEdgeData(qe);
-              auto qDst   = qG.getEdgeDst(qe);
+        if (dData.matched) {
+          for (auto qn : qG) { // multiple matches
+            uint64_t mask = (1 << qn);
+            if (dData.matched & mask) {
+              for (auto qe : qG.edges(qn)) {
+                auto qeData = qG.getEdgeData(qe);
+                auto qDst   = qG.getEdgeDst(qe);
 
-              for (auto de : dG.edges(dn)) {
-                auto& deData = dG.getEdgeData(de);
-                auto dDst    = dG.getEdgeDst(de);
-                if (dn < dDst) { // match only one of the symmetric edges
-                  if ((qeData.label & deData.label) == qeData.label) {
-                    auto& dDstData = dG.getData(dDst);
-                    if (dDstData.matched & (1 << qDst)) {
-                      deData.matched |= 1 << *qe;
+                for (auto de : dG.edges(dn)) {
+                  auto& deData = dG.getEdgeData(de);
+                  auto dDst    = dG.getEdgeDst(de);
+                  if (dn < dDst) { // match only one of the symmetric edges
+                    if ((qeData.label & deData.label) == qeData.label) {
+                      auto& dDstData = dG.getData(dDst);
+                      if (dDstData.matched & (1 << qDst)) {
+                        deData.matched |= 1 << *qe;
+                      }
                     }
                   }
                 }
@@ -474,6 +491,12 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
         }
       },
       galois::loopname("MatchNeighborEdges"));
+}
+
+void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
+                        EventWindow window, bool queryNodeHasMoreThan2Edges) {
+  matchNodesUsingGraphSimulation(qG, dG, true, limit, window, queryNodeHasMoreThan2Edges);
+  matchEdgesAfterGraphSimulation(qG, dG);
 }
 
 void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,

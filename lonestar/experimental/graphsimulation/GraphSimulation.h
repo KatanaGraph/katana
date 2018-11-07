@@ -186,6 +186,12 @@ bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel);
  */
 void resetMatchedStatus(Graph& graph);
 
+void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
+                        EventLimit limit, EventWindow window,
+                        bool queryNodeHasMoreThan2Edges);
+
+void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
+
 /**
  * @todo doxygen
  */

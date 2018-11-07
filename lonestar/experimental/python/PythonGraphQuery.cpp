@@ -116,17 +116,19 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.fixEndEdge(i, prefixSum[i]);
   }
 
-  // run graph simulation
-  runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
-
-  // do extra handling if * edges were used in the query edges
+  // do special handling if * edges were used in the query edges
   if (starPairs.size() > 0) {
+    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit, window, false);
     uint32_t currentStar = numQueryNodes;
     for (std::pair<size_t, size_t>& sdPair : starPairs) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
                         currentStar);
       currentStar++;
     }
+    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, false, limit, window, false);
+    matchEdgesAfterGraphSimulation(queryGraph, dataGraph->graph);
+  } else {
+    // run graph simulation
     runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
   }
 

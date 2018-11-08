@@ -63,12 +63,12 @@ size_t matchQuery(AttributedGraph* dataGraph,
   }
 
   // ignore edges that have the star label
-  numQueryEdges -= starPairs.size();
+  auto actualNumQueryEdges = numQueryEdges - starPairs.size();
 
   for (size_t i = 1; i < numQueryNodes; ++i) {
     prefixSum[i] += prefixSum[i-1];
   }
-  assert(prefixSum[numQueryNodes - 1] == (numQueryEdges * 2));
+  assert(prefixSum[numQueryNodes - 1] == (actualNumQueryEdges * 2));
   for (size_t i = numQueryNodes - 1; i >= 1; --i) {
     prefixSum[i] = prefixSum[i-1];
   }
@@ -97,7 +97,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
   // build query graph
   Graph queryGraph;
-  queryGraph.allocateFrom(numQueryNodes, numQueryEdges * 2);
+  queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges * 2);
   queryGraph.constructNodes();
   for (size_t i = 0; i < numQueryNodes; ++i) {
     queryGraph.getData(i).label = getNodeLabelMask(*dataGraph, nodeTypes[i]).second;

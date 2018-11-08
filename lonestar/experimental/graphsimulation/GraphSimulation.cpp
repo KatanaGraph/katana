@@ -92,14 +92,14 @@ void matchNodesOnce(Graph& qG, Graph& dG,
         auto& matchedEdges = *matchedEdgesPerThread.getLocal();
 
         for (auto qn : qG) { // multiple matches
+          size_t num_qEdges =
+              std::distance(qG.edge_begin(qn), qG.edge_end(qn));
           uint64_t mask = (1 << qn);
-          if (dData.matched & mask) {
+          if ((num_qEdges > 0) && (dData.matched & mask)) {
             // match children links
             // TODO: sort data edges by timestamp
             // Assumption: query edges are sorted by timestamp
             matchedEdges.clear();
-            size_t num_qEdges =
-                std::distance(qG.edge_begin(qn), qG.edge_end(qn));
             matchedEdges.resize(num_qEdges);
             for (auto de : dG.edges(dn)) {
               auto& deData = dG.getEdgeData(de);

@@ -500,7 +500,7 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
 }
 
 void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       uint32_t matchedQueryNode) {
+                       uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> parent;
   parent.allocateInterleaved(graph.size());
   const uint32_t infinity = std::numeric_limits<uint32_t>::max();
@@ -576,20 +576,30 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
   galois::do_all(
       galois::iterate(*next),
       [&](auto n) {
-        uint32_t prev = parent[n];
-        while ((parent[prev] != infinity) && (parent[prev] != prev)) {
-          uint32_t temp = parent[prev];
-          if (parent[prev].compare_exchange_weak(temp, infinity,
+        uint32_t pred = n;
+        while ((parent[pred] != infinity) && (parent[pred] != pred)) {
+          uint32_t succ = parent[pred];
+          if (parent[pred].compare_exchange_weak(succ, infinity,
                 std::memory_order_relaxed)) {
-            auto& data = graph.getData(prev);
-            data.matched |= 1 << matchedQueryNode;
-            prev = temp;
+            if (pred != n) {
+              auto& data = graph.getData(pred);
+              data.matched |= 1 << matchedQueryNode;
+            }
+            for (auto edge : graph.edges(pred)) {
+              auto dst = graph.getEdgeDst(edge);
+              if (dst == succ) {
+                auto& edgeData = graph.getEdgeData(edge);
+                edgeData.matched |= 1 << *edge;
+                break;
+              }
+            }
+            pred = succ;
           }
         }
-        auto& srcData = graph.getData(prev);
+        auto& srcData = graph.getData(pred);
         uint64_t mask = (1 << srcQueryNode);
         if (srcData.matched & mask) {
-          parent[prev] = prev;
+          parent[pred] = pred;
         }
       },
       galois::loopname("BackTraverseEdges"));

@@ -503,7 +503,7 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
                        uint32_t matchedQueryNode) {
   galois::LargeArray<std::atomic<uint32_t>> parent;
   parent.allocateInterleaved(graph.size());
-  uint32_t infinity = std::numeric_limits<uint32_t>::max();
+  const uint32_t infinity = std::numeric_limits<uint32_t>::max();
 
   using WorkQueue = galois::InsertBag<Graph::GraphNode>;
   WorkQueue w[2];
@@ -536,11 +536,13 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
         [&](auto n) {
           for (auto edge : graph.edges(n)) {
             auto dst = graph.getEdgeDst(edge);
-            if (parent[dst] == infinity) {
+            uint32_t old_parent_dst = parent[dst];
+            if (old_parent_dst == infinity) {
               auto& dstData = graph.getData(dst);
               uint64_t mask = (1 << srcQueryNode);
               if (!(dstData.matched & mask)) {
-                if (parent[dst].compare_exchange_strong(infinity, n, std::memory_order_relaxed)) {
+                if (parent[dst].compare_exchange_strong(old_parent_dst, n,
+                      std::memory_order_relaxed)) {
                   mask = (1 << dstQueryNode);
                   if (!(dstData.matched & mask)) {
                     next->push_back(dst);
@@ -570,15 +572,15 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
                  },
                  galois::loopname("MatchDestination"));
 
-
   // back traverse edges
   galois::do_all(
       galois::iterate(*next),
       [&](auto n) {
         uint32_t prev = parent[n];
-        while ((parent[prev] != infinity) || (parent[prev] != prev)) {
+        while ((parent[prev] != infinity) && (parent[prev] != prev)) {
           uint32_t temp = parent[prev];
-          if (parent[prev].compare_exchange_weak(temp, infinity, std::memory_order_relaxed)) {
+          if (parent[prev].compare_exchange_weak(temp, infinity,
+                std::memory_order_relaxed)) {
             auto& data = graph.getData(prev);
             data.matched |= 1 << matchedQueryNode;
             prev = temp;

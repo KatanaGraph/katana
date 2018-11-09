@@ -101,6 +101,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   queryGraph.constructNodes();
   for (size_t i = 0; i < numQueryNodes; ++i) {
     queryGraph.getData(i).label = getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
+    queryGraph.getData(i).matched = queryGraph.getData(i).label;
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
     if (std::string(queryEdges[j].label) != "*") {

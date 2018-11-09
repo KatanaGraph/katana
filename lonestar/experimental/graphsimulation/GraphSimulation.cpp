@@ -27,12 +27,14 @@
 #include "GraphSimulation.h"
 #include "galois/substrate/PerThreadStorage.h"
 
+// query.label: bitwise-OR of tags that should MATCH and tags that should NOT-MATCH
+// query.matched: tags that should MATCH
 bool matchNodeLabel(Node& query, Node& data) {
-  return ((query.label & data.label) == query.label);
+  return ((query.label & data.label) == query.matched);
 }
 
 bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
-  return ((query.label & data.label) == query.label);
+  return ((query.label & data.label) == query.matched);
 }
 
 /**

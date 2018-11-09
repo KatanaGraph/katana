@@ -27,6 +27,14 @@
 #include "GraphSimulation.h"
 #include "galois/substrate/PerThreadStorage.h"
 
+bool matchNodeLabel(Node& query, Node& data) {
+  return ((query.label & data.label) == query.label);
+}
+
+bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
+  return ((query.label & data.label) == query.label);
+}
+
 /**
  * @todo doxygen
  */
@@ -40,7 +48,7 @@ void matchLabel(QG& qG, DG& dG, W& w) {
         for (auto qn : qG) {
           assert(qn < 64); // because matched is 64-bit
           auto& qData = qG.getData(qn);
-          if ((qData.label & dData.label) == qData.label) {
+          if (matchNodeLabel(qData, dData)) {
             if (!qData.matched) {
               qData.matched = 1;
             }
@@ -115,7 +123,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
               // label
               for (auto qe : qG.edges(qn)) {
                 auto qeData = qG.getEdgeData(qe);
-                if ((qeData.label & deData.label) == qeData.label) {
+                if (matchEdgeLabel(qeData, deData)) {
                   auto qDst      = qG.getEdgeDst(qe);
                   auto& dDstData = dG.getData(dG.getEdgeDst(de));
                   if (dDstData.matched & (1 << qDst)) {
@@ -196,7 +204,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                                 // time-span of interest
                     }
                   }
-                  if ((qeData.label & deData.label) == qeData.label) {
+                  if (matchEdgeLabel(qeData, deData)) {
                     auto& dDstData = dG.getData(dG.getEdgeDst(de));
                     if (dDstData.matched & (1 << qDst)) {
                       if ((qPrevEdgeTimestamp <= qeData.timestamp) ==
@@ -238,7 +246,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                                 // time-span of interest
                     }
                   }
-                  if ((qeData.label & deData.label) == qeData.label) {
+                  if (matchEdgeLabel(qeData, deData)) {
                     auto dDst      = dG.getEdgeDst(de);
                     auto& dDstData = dG.getData(dDst);
                     if (dDstData.matched & (1 << qDst)) {
@@ -255,7 +263,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
 
                         for (auto& de2 : dG.edges(dn)) {
                           auto& deData2 = dG.getEdgeData(de2);
-                          if ((qeData2.label & deData2.label) == qeData2.label) {
+                          if (matchEdgeLabel(qeData2, deData2)) {
                             auto dDst2      = dG.getEdgeDst(de2);
                             auto& dDstData2 = dG.getData(dDst2);
                             if (dDstData2.matched & (1 << qDst2)) {
@@ -477,7 +485,7 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
                   auto& deData = dG.getEdgeData(de);
                   auto dDst    = dG.getEdgeDst(de);
                   if (dn < dDst) { // match only one of the symmetric edges
-                    if ((qeData.label & deData.label) == qeData.label) {
+                    if (matchEdgeLabel(qeData, deData)) {
                       auto& dDstData = dG.getData(dDst);
                       if (dDstData.matched & (1 << qDst)) {
                         deData.matched |= 1 << *qe;

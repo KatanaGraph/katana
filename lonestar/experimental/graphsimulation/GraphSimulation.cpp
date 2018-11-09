@@ -38,7 +38,12 @@ bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
 }
 
 /**
- * @todo doxygen
+ * Match query nodes with nodes in the data graph.
+ *
+ * @param qG Query graph
+ * @param dG Data graph
+ * @param w matched data nodes added to a worklist for later processing
+ * @param queryMatched bitset of querying status
  */
 template <typename QG, typename DG, typename W>
 void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched) {
@@ -68,7 +73,11 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched) {
 }
 
 /**
- * @todo doxygen
+ * Checks to see if any query nodes were unmatched
+ *
+ * @param qG query graph
+ * @param queryMatched matched status of query nodes
+ * @returns true if there is an unmatched query node
  */
 template <typename QG>
 bool existEmptyLabelMatchQGNode(QG& qG, std::vector<bool>& queryMatched) {
@@ -403,6 +412,8 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   if (reinitialize) {
     std::vector<bool> queryMatched;
     matchLabel(qG, dG, *next, queryMatched);
+    // see if a query node remained unmatched; if so, reset match status on data
+    // nodes and return
     if (existEmptyLabelMatchQGNode(qG, queryMatched)) {
       galois::do_all(galois::iterate(dG.begin(), dG.end()),
                      [&qG, &dG, &w](auto dn) {
@@ -413,6 +424,7 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
       return;
     }
   } else {
+    // already have matched labels on data graphs
     galois::do_all(
         galois::iterate(dG.begin(), dG.end()),
         [&](auto dn) {

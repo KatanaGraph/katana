@@ -107,10 +107,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
     if (std::string(queryEdges[j].label) != "*") {
       size_t srcID = std::stoi(queryEdges[j].caused_by.id);
       size_t dstID = std::stoi(queryEdges[j].acted_on.id);
-      queryGraph.constructEdge(prefixSum[srcID]++, dstID,
+      queryGraph.constructEdge(prefixSum[srcID], dstID,
           EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
-      queryGraph.constructEdge(prefixSum[dstID]++, srcID,
+      auto& edge1 = queryGraph.getEdgeData(prefixSum[srcID]++);
+      edge1.matched = edge1.label;
+      queryGraph.constructEdge(prefixSum[dstID], srcID,
           EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+      auto& edge2 = queryGraph.getEdgeData(prefixSum[dstID]++);
+      edge2.matched = edge2.label;
     }
   }
   for (size_t i = 0; i < numQueryNodes; ++i) {

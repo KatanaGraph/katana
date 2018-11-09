@@ -100,23 +100,34 @@ size_t matchQuery(AttributedGraph* dataGraph,
   queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges * 2);
   queryGraph.constructNodes();
   for (size_t i = 0; i < numQueryNodes; ++i) {
-    queryGraph.getData(i).label = getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
-    queryGraph.getData(i).matched = queryGraph.getData(i).label;
+    // first is the "YES" query, second is the "NO" query
+    std::pair<uint32_t, uint32_t> masks =
+      getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
+    queryGraph.getData(i).label = masks.first | masks.second;
+    queryGraph.getData(i).matched = masks.first;
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
     if (std::string(queryEdges[j].label) != "*") {
       size_t srcID = std::stoi(queryEdges[j].caused_by.id);
       size_t dstID = std::stoi(queryEdges[j].acted_on.id);
+
+      std::pair<uint32_t, uint32_t> edgeMasks =
+        getEdgeLabelMask(*dataGraph, queryEdges[j].label).second;
+      uint32_t fullQuery = edgeMasks.first | edgeMasks.second;
+
+      // symmetric edge; construct in both directions
       queryGraph.constructEdge(prefixSum[srcID], dstID,
-          EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+                               EdgeData(fullQuery, queryEdges[j].timestamp));
       auto& edge1 = queryGraph.getEdgeData(prefixSum[srcID]++);
-      edge1.matched = edge1.label;
+      edge1.matched = edgeMasks.first;
+
       queryGraph.constructEdge(prefixSum[dstID], srcID,
-          EdgeData(getEdgeLabelMask(*dataGraph, queryEdges[j].label).second, queryEdges[j].timestamp));
+                               EdgeData(fullQuery, queryEdges[j].timestamp));
       auto& edge2 = queryGraph.getEdgeData(prefixSum[dstID]++);
-      edge2.matched = edge2.label;
+      edge2.matched = edgeMasks.first;
     }
   }
+
   for (size_t i = 0; i < numQueryNodes; ++i) {
     queryGraph.fixEndEdge(i, prefixSum[i]);
   }

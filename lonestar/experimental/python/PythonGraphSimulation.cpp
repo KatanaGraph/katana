@@ -35,8 +35,8 @@ size_t findFilesWithMultipleWrites(AttributedGraph* dataGraph,
   }
 
   matchNodeWithRepeatedActions(dataGraph->graph,
-                               getNodeLabelMask(*dataGraph, "file").second,
-                               getEdgeLabelMask(*dataGraph, "WRITE").second,
+                               getNodeLabelMask(*dataGraph, "file").second.first,
+                               getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                                window);
   return countMatchedEdges(dataGraph->graph);
 }
@@ -56,11 +56,11 @@ size_t findProcessesWithReadFileWriteNetwork(AttributedGraph* dataGraph,
   }
 
   matchNodeWithTwoActions(dataGraph->graph,
-                          getNodeLabelMask(*dataGraph, "process").second,
-                          getEdgeLabelMask(*dataGraph, "READ").second,
-                          getNodeLabelMask(*dataGraph, "file").second,
-                          getEdgeLabelMask(*dataGraph, "WRITE").second,
-                          getNodeLabelMask(*dataGraph, "network").second,
+                          getNodeLabelMask(*dataGraph, "process").second.first,
+                          getEdgeLabelMask(*dataGraph, "READ").second.first,
+                          getNodeLabelMask(*dataGraph, "file").second.first,
+                          getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                          getNodeLabelMask(*dataGraph, "network").second.first,
                           window);
   return countMatchedEdges(dataGraph->graph);
 }
@@ -84,22 +84,22 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 
-  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 0));
+  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
   queryGraph.fixEndEdge(0, 1);
 
-  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "file").second;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 1));
+  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "file").second.first;
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 1));
   queryGraph.fixEndEdge(1, 3);
 
-  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 1));
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 2));
+  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 1));
+  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 2));
   queryGraph.fixEndEdge(2, 5);
 
-  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "network").second;
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 2));
+  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "network").second.first;
+  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
@@ -127,24 +127,24 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 
-  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 0));
+  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
   queryGraph.fixEndEdge(0, 1);
 
-  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 1));
+  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
   queryGraph.fixEndEdge(1, 3);
 
-  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 1));
+  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
   queryGraph.constructEdge(4, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(2, 5);
 
-  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second;
+  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(5, 2,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
@@ -172,34 +172,34 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.allocateFrom(6, 10);
   queryGraph.constructNodes();
 
-  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 0));
+  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
   queryGraph.fixEndEdge(0, 1);
 
-  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 1));
+  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
   queryGraph.fixEndEdge(1, 3);
 
-  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 1));
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 2));
+  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
+  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 2));
   queryGraph.fixEndEdge(2, 5);
 
-  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second, 2));
-  queryGraph.constructEdge(6, 4, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 3));
+  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 2));
+  queryGraph.constructEdge(6, 4, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 3));
   queryGraph.fixEndEdge(3, 7);
 
-  queryGraph.getData(4).label = getNodeLabelMask(*dataGraph, "file").second;
-  queryGraph.constructEdge(7, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 3));
+  queryGraph.getData(4).label = getNodeLabelMask(*dataGraph, "file").second.first;
+  queryGraph.constructEdge(7, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 3));
   queryGraph.constructEdge(8, 5,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 4));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 4));
   queryGraph.fixEndEdge(4, 9);
 
-  queryGraph.getData(5).label = getNodeLabelMask(*dataGraph, "process").second;
+  queryGraph.getData(5).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(9, 4,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 4));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 4));
   queryGraph.fixEndEdge(5, 10);
 
   runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
@@ -226,24 +226,24 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 
-  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "file").second;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 0));
-  queryGraph.constructEdge(1, 2, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second, 1));
+  queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "file").second.first;
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
+  queryGraph.constructEdge(1, 2, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first, 1));
   queryGraph.constructEdge(2, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(0, 3);
 
-  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(3, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second, 0));
+  queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(3, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
   queryGraph.fixEndEdge(1, 4);
 
-  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second;
-  queryGraph.constructEdge(4, 0, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second, 1));
+  queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
+  queryGraph.constructEdge(4, 0, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first, 1));
   queryGraph.fixEndEdge(2, 5);
 
-  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second;
+  queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(5, 0,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulation(queryGraph, dataGraph->graph, limit, window, true);
@@ -261,9 +261,9 @@ size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[file_uuid],
-                 getNodeLabelMask(*dataGraph, "file").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "file").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[file_uuid]);
 }
@@ -280,9 +280,9 @@ size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[file_uuid],
-                 getNodeLabelMask(*dataGraph, "file").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "file").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[file_uuid]);
 }
@@ -299,9 +299,9 @@ size_t processesReadFromNetwork(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[network_uuid],
-                 getNodeLabelMask(*dataGraph, "network").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "network").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[network_uuid]);
 }
@@ -319,9 +319,9 @@ size_t processesWroteToNetwork(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[network_uuid],
-                 getNodeLabelMask(*dataGraph, "network").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "network").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[network_uuid]);
 }
@@ -338,9 +338,9 @@ size_t processesReadFromRegistry(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[registry_uuid],
-                 getNodeLabelMask(*dataGraph, "registry").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "registry").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[registry_uuid]);
 }
@@ -358,9 +358,9 @@ size_t processesWroteToRegistry(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[registry_uuid],
-                 getNodeLabelMask(*dataGraph, "registry").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "registry").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[registry_uuid]);
 }
@@ -377,9 +377,9 @@ size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[memory_uuid],
-                 getNodeLabelMask(*dataGraph, "memory").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "memory").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[memory_uuid]);
 }
@@ -397,9 +397,9 @@ size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[memory_uuid],
-                 getNodeLabelMask(*dataGraph, "memory").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "process").second, window);
+                 getNodeLabelMask(*dataGraph, "memory").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "process").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[memory_uuid]);
 }
@@ -415,9 +415,9 @@ size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "file").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "file").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -434,9 +434,9 @@ size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "file").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "file").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -453,9 +453,9 @@ size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "network").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "network").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -473,9 +473,9 @@ size_t networksWrittenByProcess(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "network").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "network").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -492,9 +492,9 @@ size_t registriesReadByProcess(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "registry").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "registry").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -512,9 +512,9 @@ size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "registry").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "registry").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -531,9 +531,9 @@ size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "READ").second,
-                 getNodeLabelMask(*dataGraph, "memory").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "READ").second.first,
+                 getNodeLabelMask(*dataGraph, "memory").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }
@@ -551,9 +551,9 @@ size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
   }
 
   matchNeighbors(dataGraph->graph, dataGraph->nodeIndices[process_uuid],
-                 getNodeLabelMask(*dataGraph, "process").second,
-                 getEdgeLabelMask(*dataGraph, "WRITE").second,
-                 getNodeLabelMask(*dataGraph, "memory").second, window);
+                 getNodeLabelMask(*dataGraph, "process").second.first,
+                 getEdgeLabelMask(*dataGraph, "WRITE").second.first,
+                 getNodeLabelMask(*dataGraph, "memory").second.first, window);
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
 }

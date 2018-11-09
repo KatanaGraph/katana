@@ -334,53 +334,95 @@ void matchNodesOnce(Graph& qG, Graph& dG,
       galois::loopname("MatchNeighbors"));
 }
 
-std::pair<bool, uint32_t> getNodeLabelMask(AttributedGraph& g,
-                                           const std::string& nodeLabel) {
+std::pair<bool, std::pair<uint32_t, uint32_t>>
+getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
   if (nodeLabel.find(";") == std::string::npos) {
     // no semicolon = only 1 node label
     if (nodeLabel != "any") {
+      bool notMode = false;
+      std::string label = nodeLabel;
+      // trim out the ~ sign
+      if (nodeLabel.find("~") == 0) {
+        notMode = true;
+        label = nodeLabel.substr(1);
+      }
+
       // see if label exists
-      if (g.nodeLabelIDs.find(nodeLabel) != g.nodeLabelIDs.end()) {
-        return std::make_pair(true, 1u << g.nodeLabelIDs[nodeLabel]);
+      if (g.nodeLabelIDs.find(label) != g.nodeLabelIDs.end()) {
+        if (!notMode) {
+          return std::make_pair(true,
+                                std::make_pair(1u << g.nodeLabelIDs[label], 0));
+        } else {
+          return std::make_pair(true,
+                                std::make_pair(0, 1u << g.nodeLabelIDs[label]));
+        }
       } else {
-        return std::make_pair(false, 0);
+        // bad label; exit
+        return std::make_pair(false, std::make_pair(0, 0));
       }
     } else {
       // any string = match everything; return string of all 0s
-      return std::make_pair(true, 0);
+      return std::make_pair(true, std::make_pair(0, 0));
     }
   } else {
     // semicolon = multiple node labels; split and create mask
     uint32_t labelMask = 0;
+    uint32_t notLabelMask = 0;
 
     std::istringstream tokenStream(nodeLabel);
     std::string token;
 
     // loop through semi-colon separated labels
     while (std::getline(tokenStream, token, ';')) {
+      bool notMode = false;
+      // trim out the ~ sign
+      if (token.find("~") == 0) {
+        notMode = true;
+        token = token.substr(1);
+      }
+
       if (g.nodeLabelIDs.find(token) != g.nodeLabelIDs.end()) {
-        labelMask |= 1u << g.nodeLabelIDs[token];
+        // mark bit based on ~ token
+        if (!notMode) {
+          labelMask |= 1u << g.nodeLabelIDs[token];
+        } else {
+          notLabelMask |= 1u << g.nodeLabelIDs[token];
+        }
       } else {
         // one label not found; get out
-        return std::make_pair(false, 0);
+        return std::make_pair(false, std::make_pair(0, 0));
       }
     }
 
-    return std::make_pair(true, labelMask);
+    return std::make_pair(true, std::make_pair(labelMask, notLabelMask));
   }
 }
 
-std::pair<bool, uint32_t> getEdgeLabelMask(AttributedGraph& g,
-                                           const std::string& edgeLabel) {
+std::pair<bool, std::pair<uint32_t, uint32_t>>
+getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
   if (edgeLabel != "ANY") {
-    if (g.edgeLabelIDs.find(edgeLabel) != g.edgeLabelIDs.end()) {
-      return std::make_pair(true, 1u << g.edgeLabelIDs[edgeLabel]);
+    bool notMode = false;
+    std::string label = edgeLabel;
+    // trim out the ~ sign
+    if (edgeLabel.find("~") == 0) {
+      notMode = true;
+      label = edgeLabel.substr(1);
+    }
+
+    if (g.edgeLabelIDs.find(label) != g.edgeLabelIDs.end()) {
+      if (!notMode) {
+        return std::make_pair(true,
+                              std::make_pair(1u << g.edgeLabelIDs[label], 0));
+      } else {
+        return std::make_pair(true,
+                              std::make_pair(0, 1u << g.edgeLabelIDs[label]));
+      }
     } else {
-      return std::make_pair(false, 0);
+      return std::make_pair(false, std::make_pair(0, 0));
     }
   } else {
     // all 0s = match anything
-    return std::make_pair(true, 0);
+    return std::make_pair(true, std::make_pair(0, 0));
   }
 }
 

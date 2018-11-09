@@ -41,19 +41,18 @@ bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
  * @todo doxygen
  */
 template <typename QG, typename DG, typename W>
-void matchLabel(QG& qG, DG& dG, W& w) {
+void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched) {
+  queryMatched.resize(qG.size(), false);
   galois::do_all(
       galois::iterate(dG.begin(), dG.end()),
-      [&qG, &dG, &w](auto dn) {
+      [&](auto dn) {
         auto& dData   = dG.getData(dn);
         dData.matched = 0; // matches to none
         for (auto qn : qG) {
           assert(qn < 64); // because matched is 64-bit
           auto& qData = qG.getData(qn);
           if (matchNodeLabel(qData, dData)) {
-            if (!qData.matched) {
-              qData.matched = 1;
-            }
+            queryMatched[qn] = true;
             if (!dData.matched) {
               w.push_back(dn);
             }
@@ -72,10 +71,9 @@ void matchLabel(QG& qG, DG& dG, W& w) {
  * @todo doxygen
  */
 template <typename QG>
-bool existEmptyLabelMatchQGNode(QG& qG) {
+bool existEmptyLabelMatchQGNode(QG& qG, std::vector<bool>& queryMatched) {
   for (auto qn : qG) {
-    auto& qData = qG.getData(qn);
-    if (!qData.matched) {
+    if (!queryMatched[qn]) {
       // std::cout << "No label matched for query node " << qData.id <<
       // std::endl;
       return true;
@@ -403,8 +401,9 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   WorkQueue* next = &w[1];
 
   if (reinitialize) {
-    matchLabel(qG, dG, *next);
-    if (existEmptyLabelMatchQGNode(qG)) {
+    std::vector<bool> queryMatched;
+    matchLabel(qG, dG, *next, queryMatched);
+    if (existEmptyLabelMatchQGNode(qG, queryMatched)) {
       galois::do_all(galois::iterate(dG.begin(), dG.end()),
                      [&qG, &dG, &w](auto dn) {
                        auto& dData   = dG.getData(dn);

@@ -204,7 +204,7 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = g.nodeLabelIDs["process"];
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
 
   size_t i = 0;
   for (auto src : graph) {
@@ -245,7 +245,7 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = g.nodeLabelIDs["process"];
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
 
   std::streambuf* buf;
   std::ofstream ofs;
@@ -299,7 +299,7 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = g.nodeLabelIDs["process"];
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
   auto src             = g.nodeIndices[uuid];
 
   size_t i      = 0;
@@ -337,7 +337,7 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = g.nodeLabelIDs["process"];
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
   auto src             = g.nodeIndices[uuid];
 
   std::streambuf* buf;

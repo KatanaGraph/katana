@@ -22,7 +22,7 @@
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window) {
-  runGraphSimulation(queryGraph->graph, dataGraph->graph, limit, window, true);
+  runGraphSimulationOld(queryGraph->graph, dataGraph->graph, limit, window, true);
   return countMatchedEdges(dataGraph->graph);
 }
 
@@ -102,7 +102,7 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
-  runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+  runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
   return countMatchedEdges(dataGraph->graph);
 }
 
@@ -147,7 +147,7 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
                            EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
-  runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+  runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
   return countMatchedEdges(dataGraph->graph);
 }
 
@@ -202,7 +202,7 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
                            EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 4));
   queryGraph.fixEndEdge(5, 10);
 
-  runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+  runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
   return countMatchedEdges(dataGraph->graph);
 }
 
@@ -246,7 +246,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
                            EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
   queryGraph.fixEndEdge(3, 6);
 
-  runGraphSimulation(queryGraph, dataGraph->graph, limit, window, true);
+  runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, true);
   return countMatchedEdges(dataGraph->graph);
 }
 

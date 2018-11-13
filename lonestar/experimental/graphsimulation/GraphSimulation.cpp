@@ -46,7 +46,9 @@ bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
  * @param queryMatched bitset of querying status
  */
 template <typename QG, typename DG, typename W>
-void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched) {
+void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
+                std::vector<std::string>& nodeContains,
+                std::vector<std::string>& nodeNames) {
   queryMatched.resize(qG.size(), false);
   galois::do_all(
       galois::iterate(dG.begin(), dG.end()),
@@ -57,11 +59,23 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched) {
           assert(qn < 64); // because matched is 64-bit
           auto& qData = qG.getData(qn);
           if (matchNodeLabel(qData, dData)) {
-            queryMatched[qn] = true;
-            if (!dData.matched) {
-              w.push_back(dn);
+            if (nodeContains.size() == 0 || nodeContains[qn] == "") {
+              queryMatched[qn] = true;
+              if (!dData.matched) {
+                w.push_back(dn);
+              }
+              dData.matched |= 1 << qn; // multiple matches
+            } else {
+              std::string dataName = nodeNames[dn];
+              if (dataName.find(nodeContains[qn]) != std::string::npos) {
+                // TODO reduce code duplication
+                queryMatched[qn] = true;
+                if (!dData.matched) {
+                  w.push_back(dn);
+                }
+                dData.matched |= 1 << qn; // multiple matches
+              }
             }
-            dData.matched |= 1 << qn; // multiple matches
           }
         }
         for (auto de : dG.edges(dn)) {
@@ -444,8 +458,10 @@ void resetMatchedStatus(Graph& graph) {
 }
 
 void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
-                        EventLimit limit, EventWindow window,
-                        bool queryNodeHasMoreThan2Edges) {
+                                    EventLimit limit, EventWindow window,
+                                    bool queryNodeHasMoreThan2Edges,
+                                    std::vector<std::string>& nodeContains,
+                                    std::vector<std::string>& nodeNames) {
   using WorkQueue = galois::InsertBag<Graph::GraphNode>;
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
@@ -453,7 +469,7 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
 
   if (reinitialize) {
     std::vector<bool> queryMatched;
-    matchLabel(qG, dG, *next, queryMatched);
+    matchLabel(qG, dG, *next, queryMatched, nodeContains, nodeNames);
     // see if a query node remained unmatched; if so, reset match status on data
     // nodes and return
     if (existEmptyLabelMatchQGNode(qG, queryMatched)) {
@@ -556,9 +572,22 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
       galois::loopname("MatchNeighborEdges"));
 }
 
+void runGraphSimulationOld(Graph& qG, Graph& dG, EventLimit limit,
+                           EventWindow window, bool queryNodeHasMoreThan2Edges) {
+  std::vector<std::string> dummy1;
+  std::vector<std::string> dummy2;
+  matchNodesUsingGraphSimulation(qG, dG, true, limit, window,
+                                 queryNodeHasMoreThan2Edges, dummy1, dummy2);
+  matchEdgesAfterGraphSimulation(qG, dG);
+}
+
 void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
-                        EventWindow window, bool queryNodeHasMoreThan2Edges) {
-  matchNodesUsingGraphSimulation(qG, dG, true, limit, window, queryNodeHasMoreThan2Edges);
+                        EventWindow window, bool queryNodeHasMoreThan2Edges,
+                        std::vector<std::string>& nodeContains,
+                        std::vector<std::string>& nodeNames) {
+  matchNodesUsingGraphSimulation(qG, dG, true, limit, window,
+                                 queryNodeHasMoreThan2Edges, nodeContains,
+                                 nodeNames);
   matchEdgesAfterGraphSimulation(qG, dG);
 }
 

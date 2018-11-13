@@ -20,19 +20,25 @@
 #include "PythonGraph.h"
 
 size_t matchQuery(AttributedGraph* dataGraph,
-                EventLimit limit,
-                EventWindow window,
-                MatchedEdge* queryEdges,
-                size_t numQueryEdges) {
+                  EventLimit limit,
+                  EventWindow window,
+                  MatchedEdge* queryEdges,
+                  size_t numQueryEdges,
+                  const char** filters) {
   // build node types and prefix sum of edges
   size_t numQueryNodes = 0;
   std::vector<const char*> nodeTypes;
+  std::vector<std::string> nodeContains;
   std::vector<size_t> prefixSum;
   std::vector<std::pair<size_t, size_t>> starPairs;
 
   for (size_t j = 0; j < numQueryEdges; ++j) {
+    // ids of nodes of this edge
     size_t srcID = std::stoi(queryEdges[j].caused_by.id);
     size_t dstID = std::stoi(queryEdges[j].acted_on.id);
+    // grab strings to filter nodes against
+    std::string s1 = std::string(filters[2 * j]);
+    std::string s2 = std::string(filters[2 * j + 1]);
 
     if (srcID >= numQueryNodes) {
       numQueryNodes = srcID + 1;
@@ -41,8 +47,10 @@ size_t matchQuery(AttributedGraph* dataGraph,
       numQueryNodes = dstID + 1;
     }
     nodeTypes.resize(numQueryNodes, NULL);
+    nodeContains.resize(numQueryNodes, "");
     prefixSum.resize(numQueryNodes, 0);
 
+    // node types check
     if (nodeTypes[srcID] == NULL) {
       nodeTypes[srcID] = queryEdges[j].caused_by.name;
     } else {
@@ -53,6 +61,17 @@ size_t matchQuery(AttributedGraph* dataGraph,
     } else {
       assert(nodeTypes[dstID] == queryEdges[j].acted_on.name);
     }
+    // node contains check
+    if (nodeContains[srcID] == "") {
+      nodeContains[srcID] = s1;
+    } else {
+      assert(nodeContains[srcID] == s1);
+    }
+    if (nodeContains[dstID] == "") {
+      nodeContains[dstID] = s2;
+    } else {
+      assert(nodeContains[dstID] == s2);
+    }
 
     if (std::string(queryEdges[j].label) != "*") {
       prefixSum[srcID]++;
@@ -60,6 +79,10 @@ size_t matchQuery(AttributedGraph* dataGraph,
     } else {
       starPairs.push_back(std::make_pair(srcID, dstID));
     }
+  }
+
+  for (std::string i : nodeContains) {
+    galois::gDebug("Contains ", i, "\n");
   }
 
   // ignore edges that have the star label
@@ -134,7 +157,9 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
   // do special handling if * edges were used in the query edges
   if (starPairs.size() > 0) {
-    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit, window, false);
+    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit,
+                                   window, false, nodeContains,
+                                   dataGraph->nodeNames);
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starPairs) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
@@ -142,11 +167,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
                         actualNumQueryEdges + currentStar);
       currentStar++;
     }
-    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, false, limit, window, false);
+    matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, false, limit,
+                                   window, false, nodeContains,
+                                   dataGraph->nodeNames);
     matchEdgesAfterGraphSimulation(queryGraph, dataGraph->graph);
   } else {
     // run graph simulation
-    runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false);
+    runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false, nodeContains,
+                       dataGraph->nodeNames);
   }
 
   return countMatchedEdges(dataGraph->graph);

@@ -188,15 +188,25 @@ void resetMatchedStatus(Graph& graph);
 
 void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
                         EventLimit limit, EventWindow window,
-                        bool queryNodeHasMoreThan2Edges);
+                        bool queryNodeHasMoreThan2Edges,
+                        std::vector<std::string>& nodeContains,
+                        std::vector<std::string>& nodeNames);
 
 void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
 
 /**
  * @todo doxygen
  */
+void runGraphSimulationOld(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
+                           EventWindow window, bool queryNodeHasMoreThan2Edges);
+
+/**
+ * @todo doxygen
+ */
 void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
-                        EventWindow window, bool queryNodeHasMoreThan2Edges);
+                        EventWindow window, bool queryNodeHasMoreThan2Edges,
+                        std::vector<std::string>& nodeContains,
+                        std::vector<std::string>& nodeNames);
 
 /**
  * @todo doxygen

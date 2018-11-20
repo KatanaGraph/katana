@@ -215,6 +215,12 @@ void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQuer
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
+ * @todo doxygen
+ */
+void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
+
+/**
  * Look for nodes with repeated actions in the graph.
  *
  * @param graph Graph to check for repeated action

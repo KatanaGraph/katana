@@ -710,6 +710,104 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
                  galois::loopname("MatchSource"));
 }
 
+void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
+  galois::LargeArray<std::atomic<uint32_t>> visited; // require only 2 bits
+  visited.allocateInterleaved(graph.size());
+
+  using WorkQueue = galois::InsertBag<Graph::GraphNode>;
+  WorkQueue w[2];
+  WorkQueue* cur  = &w[0];
+  WorkQueue* next = &w[1];
+
+  // add source and destination nodes to the work-list
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   visited[n] = 0;
+
+                   auto& data   = graph.getData(n);
+                   uint64_t mask = (1 << srcQueryNode);
+                   if (data.matched & mask) {
+                     visited[n] |= 1; // 1st bit
+                     next->push_back(n);
+                   }
+                   mask = (1 << dstQueryNode);
+                   if (data.matched & mask) {
+                     visited[n] |= 2; // 2nd bit
+                     next->push_back(n);
+                   }
+                 },
+                 galois::loopname("ResetVisited"));
+
+  auto sizeNext = std::distance(next->begin(), next->end());
+
+  // loop until no more data nodes are left to traverse
+  while (sizeNext > 0) {
+    std::swap(cur, next);
+    next->clear();
+
+    // traverse edges
+    galois::do_all(
+        galois::iterate(*cur),
+        [&](auto n) {
+          for (auto edge : graph.edges(n)) {
+            auto dst = graph.getEdgeDst(edge);
+            uint32_t old_visited_dst = visited[dst];
+            while ((old_visited_dst & visited[n]) != visited[n]) {
+              uint32_t new_visited_dst = old_visited_dst | visited[n];
+              if (visited[dst].compare_exchange_weak(old_visited_dst, new_visited_dst,
+                    std::memory_order_relaxed)) {
+                next->push_back(dst);
+              }
+            }
+          }
+        },
+        galois::loopname("TraverseEdges"));
+
+    sizeNext = std::distance(next->begin(), next->end());
+  }
+
+  // match visited nodes and edges : can be merged with the above do_all?
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   if (visited[n] == 3) {
+                     auto& data = graph.getData(n);
+                     uint64_t srcMask = (1 << srcQueryNode);
+                     uint64_t dstMask = (1 << dstQueryNode);
+                     if (!(data.matched & srcMask) && !(data.matched & dstMask)) {
+                       data.matched |= 1 << matchedQueryNode;
+                     }
+                     for (auto edge : graph.edges(n)) {
+                       auto dst = graph.getEdgeDst(edge);
+                       if (visited[dst] == 3) {
+                         auto& edgeData = graph.getEdgeData(edge);
+                         edgeData.matched |= 1 << matchedQueryEdge;
+                       }
+                     }
+                   }
+                 },
+                 galois::loopname("MatchNodesInPath"));
+
+  // un-match source and destination nodes
+  galois::do_all(galois::iterate(graph.begin(), graph.end()),
+                 [&](auto n) {
+                   auto& data = graph.getData(n);
+                   uint64_t mask = (1 << srcQueryNode);
+                   if (data.matched & mask) {
+                     if (visited[n] != 3) {
+                       data.matched &= ~mask; // no longer a match
+                     }
+                   }
+                   mask = (1 << dstQueryNode);
+                   if (data.matched & mask) {
+                     if (visited[n] != 3) {
+                       data.matched &= ~mask; // no longer a match
+                     }
+                   }
+                 },
+                 galois::loopname("MatchSourceDestination"));
+}
+
 template <bool useWindow>
 void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                                       uint32_t action, EventWindow window) {

@@ -750,6 +750,8 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
     galois::do_all(
         galois::iterate(*cur),
         [&](auto n) {
+          uint64_t srcMask = (1 << srcQueryNode);
+          uint64_t dstMask = (1 << dstQueryNode);
           for (auto edge : graph.edges(n)) {
             auto dst = graph.getEdgeDst(edge);
             uint32_t old_visited_dst = visited[dst];
@@ -757,7 +759,11 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
               uint32_t new_visited_dst = old_visited_dst | visited[n];
               if (visited[dst].compare_exchange_weak(old_visited_dst, new_visited_dst,
                     std::memory_order_relaxed)) {
-                next->push_back(dst);
+                auto& data = graph.getData(dst);
+                // do not add source or destination to the work-list again
+                if (!(data.matched & srcMask) && !(data.matched & dstMask)) {
+                  next->push_back(dst);
+                }
               }
             }
           }
@@ -788,7 +794,7 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
                  },
                  galois::loopname("MatchNodesInPath"));
 
-  // un-match source and destination nodes
+  // un-match source and destination nodes : can be merged with the above do_all?
   galois::do_all(galois::iterate(graph.begin(), graph.end()),
                  [&](auto n) {
                    auto& data = graph.getData(n);

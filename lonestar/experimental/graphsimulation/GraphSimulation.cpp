@@ -681,7 +681,7 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
               auto dst = graph.getEdgeDst(edge);
               if (dst == succ) {
                 auto& edgeData = graph.getEdgeData(edge);
-                edgeData.matched |= 1 << *edge;
+                edgeData.matched |= 1 << matchedQueryEdge;
                 break;
               }
             }

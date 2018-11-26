@@ -31,6 +31,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   std::vector<std::string> nodeContains;
   std::vector<size_t> prefixSum;
   std::vector<std::pair<size_t, size_t>> starPairs;
+  std::vector<std::pair<uint32_t, uint32_t>> starPairsRestrictions;
 
   for (size_t j = 0; j < numQueryEdges; ++j) {
     // ids of nodes of this edge
@@ -73,7 +74,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
       assert(nodeContains[dstID] == s2);
     }
 
-    if (std::string(queryEdges[j].label) != "*") {
+    // check if query edge is a * edge
+    if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
       prefixSum[srcID]++;
       prefixSum[dstID]++;
     } else {
@@ -98,7 +100,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   prefixSum[0] = 0;
 
   // check for trivial absence of query
-  // node label checking
+  // node label checking; make sure labels exist
   for (size_t i = 0; i < numQueryNodes; ++i) {
     assert(nodeTypes[i] != NULL);
     if (!getNodeLabelMask(*dataGraph, nodeTypes[i]).first) {
@@ -107,16 +109,44 @@ size_t matchQuery(AttributedGraph* dataGraph,
       return 0;
     }
   }
-  // edge label checking
+
+  // TODO refactor code below
+  // edge label checking; make sure labels exist
   for (size_t j = 0; j < numQueryEdges; ++j) {
-    if (std::string(queryEdges[j].label) != "*") {
+    std::string curEdge = std::string(queryEdges[j].label);
+    if (curEdge.find("*") == std::string::npos) {
       if (!getEdgeLabelMask(*dataGraph, queryEdges[j].label).first) {
         // query edge label does not exist in the data graph
         resetMatchedStatus(dataGraph->graph);
         return 0;
       }
+    } else {
+      // * label: check if there are restrictions on it (i.e. only traverse
+      // certain edges)
+      if (curEdge.find("=") != std::string::npos) {
+        // *=... means restrictions exist; get them
+        std::string restrictions = curEdge.substr(2);
+        std::pair<bool, std::pair<uint32_t, uint32_t>> edgeResult =
+            getEdgeLabelMask(*dataGraph, restrictions);
+
+        galois::gPrint("* Restrictions ", restrictions, "\n");
+
+        if (!edgeResult.first) {
+          resetMatchedStatus(dataGraph->graph);
+          return 0;
+        }
+
+        // pass existence check: save mask
+        starPairsRestrictions.push_back(edgeResult.second);
+      } else {
+        // no restrictions, 0, 0 means match anything
+        starPairsRestrictions.emplace_back(std::make_pair(0, 0));
+      }
     }
   }
+
+  // make sure pairs are even
+  GALOIS_ASSERT(starPairs.size() == starPairsRestrictions.size());
 
   // build query graph
   Graph queryGraph;
@@ -130,7 +160,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.getData(i).matched = masks.first;
   }
   for (size_t j = 0; j < numQueryEdges; ++j) {
-    if (std::string(queryEdges[j].label) != "*") {
+    if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
       size_t srcID = std::stoi(queryEdges[j].caused_by.id);
       size_t dstID = std::stoi(queryEdges[j].acted_on.id);
 

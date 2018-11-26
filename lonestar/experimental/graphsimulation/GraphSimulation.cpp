@@ -371,8 +371,12 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
                                 std::make_pair(0, 1u << g.nodeLabelIDs[label]));
         }
       } else {
-        // bad label; exit
-        return std::make_pair(false, std::make_pair(0, 0));
+        // bad label; fine if in not mode, bad otherwise
+        if (!notMode) {
+          return std::make_pair(false, std::make_pair(0, 0));
+        } else {
+          return std::make_pair(true, std::make_pair(0, 0));
+        }
       }
     } else {
       // any string = match everything; return string of all 0s
@@ -403,8 +407,10 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
           notLabelMask |= 1u << g.nodeLabelIDs[token];
         }
       } else {
-        // one label not found; get out
-        return std::make_pair(false, std::make_pair(0, 0));
+        // label not found; get out if not in not mode, else keep going
+        if (!notMode) {
+          return std::make_pair(false, std::make_pair(0, 0));
+        }
       }
     }
 
@@ -432,10 +438,15 @@ getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
                               std::make_pair(0, 1u << g.edgeLabelIDs[label]));
       }
     } else {
-      return std::make_pair(false, std::make_pair(0, 0));
+      // bad label; fine if in not mode, bad otherwise
+      if (!notMode) {
+        return std::make_pair(false, std::make_pair(0, 0));
+      } else {
+        return std::make_pair(true, std::make_pair(0, 0));
+      }
     }
   } else {
-    // all 0s = match anything
+    // ANY; return all 0s = match anything
     return std::make_pair(true, std::make_pair(0, 0));
   }
 }

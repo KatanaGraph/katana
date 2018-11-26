@@ -420,34 +420,73 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
 
 std::pair<bool, std::pair<uint32_t, uint32_t>>
 getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
-  if (edgeLabel != "ANY") {
-    bool notMode = false;
-    std::string label = edgeLabel;
-    // trim out the ~ sign
-    if (edgeLabel.find("~") == 0) {
-      notMode = true;
-      label = edgeLabel.substr(1);
-    }
+  if (edgeLabel.find(";") == std::string::npos) {
+    if (edgeLabel != "ANY") {
+      bool notMode = false;
+      std::string label = edgeLabel;
+      // trim out the ~ sign
+      if (edgeLabel.find("~") == 0) {
+        notMode = true;
+        label = edgeLabel.substr(1);
+      }
 
-    if (g.edgeLabelIDs.find(label) != g.edgeLabelIDs.end()) {
-      if (!notMode) {
-        return std::make_pair(true,
-                              std::make_pair(1u << g.edgeLabelIDs[label], 0));
+      if (g.edgeLabelIDs.find(label) != g.edgeLabelIDs.end()) {
+        if (!notMode) {
+          return std::make_pair(true,
+                                std::make_pair(1u << g.edgeLabelIDs[label], 0));
+        } else {
+          return std::make_pair(true,
+                                std::make_pair(0, 1u << g.edgeLabelIDs[label]));
+        }
       } else {
-        return std::make_pair(true,
-                              std::make_pair(0, 1u << g.edgeLabelIDs[label]));
+        // bad label; fine if in not mode, bad otherwise
+        if (!notMode) {
+          return std::make_pair(false, std::make_pair(0, 0));
+        } else {
+          return std::make_pair(true, std::make_pair(0, 0));
+        }
       }
     } else {
-      // bad label; fine if in not mode, bad otherwise
-      if (!notMode) {
-        return std::make_pair(false, std::make_pair(0, 0));
-      } else {
-        return std::make_pair(true, std::make_pair(0, 0));
-      }
+      // ANY; return all 0s = match anything
+      return std::make_pair(true, std::make_pair(0, 0));
     }
   } else {
-    // ANY; return all 0s = match anything
-    return std::make_pair(true, std::make_pair(0, 0));
+    // found ; means multiedge specification: used for restricting * path
+    // searches
+
+    // semicolon = multiple node labels; split and create mask
+    uint32_t labelMask = 0;
+    uint32_t notLabelMask = 0;
+
+    std::istringstream tokenStream(edgeLabel);
+    std::string token;
+
+    // loop through semi-colon separated labels
+    while (std::getline(tokenStream, token, ';')) {
+      galois::gPrint(token, "\n");
+      bool notMode = false;
+      // trim out the ~ sign
+      if (token.find("~") == 0) {
+        notMode = true;
+        token = token.substr(1);
+      }
+
+      if (g.edgeLabelIDs.find(token) != g.edgeLabelIDs.end()) {
+        // mark bit based on ~ token
+        if (!notMode) {
+          labelMask |= 1u << g.edgeLabelIDs[token];
+        } else {
+          notLabelMask |= 1u << g.edgeLabelIDs[token];
+        }
+      } else {
+        // label not found; get out if not in not mode, else keep going
+        if (!notMode) {
+          return std::make_pair(false, std::make_pair(0, 0));
+        }
+      }
+    }
+
+    return std::make_pair(true, std::make_pair(labelMask, notLabelMask));
   }
 }
 

@@ -58,6 +58,7 @@ struct EdgeData {
    * @param t Timestamp of action
    */
   EdgeData(uint32_t l, uint64_t t) : label(l), timestamp(t), matched(0) {}
+  EdgeData(uint32_t l, uint64_t t, uint64_t m) : label(l), timestamp(t), matched(m) {}
 };
 
 /**
@@ -212,12 +213,14 @@ void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
  * @todo doxygen
  */
 void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       EdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
  * @todo doxygen
  */
 void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
+                       EdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**

@@ -31,7 +31,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   std::vector<std::string> nodeContains;
   std::vector<size_t> prefixSum;
   std::vector<std::pair<size_t, size_t>> starPairs;
-  std::vector<std::pair<uint32_t, uint32_t>> starPairsRestrictions;
+  std::vector<EdgeData> starPairsRestrictions;
 
   for (size_t j = 0; j < numQueryEdges; ++j) {
     // ids of nodes of this edge
@@ -137,10 +137,12 @@ size_t matchQuery(AttributedGraph* dataGraph,
         }
 
         // pass existence check: save mask
-        starPairsRestrictions.push_back(edgeResult.second);
+        uint32_t label = edgeResult.second.first | edgeResult.second.second;
+        uint64_t matched = edgeResult.second.first;
+        starPairsRestrictions.emplace_back(label, 0, matched);
       } else {
         // no restrictions, 0, 0 means match anything
-        starPairsRestrictions.emplace_back(std::make_pair(0, 0));
+        starPairsRestrictions.emplace_back(0, 0, 0);
       }
     }
   }
@@ -166,18 +168,15 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
       std::pair<uint32_t, uint32_t> edgeMasks =
         getEdgeLabelMask(*dataGraph, queryEdges[j].label).second;
-      uint32_t fullQuery = edgeMasks.first | edgeMasks.second;
+      uint32_t label = edgeMasks.first | edgeMasks.second;
+      uint64_t matched = edgeMasks.first;
 
       // symmetric edge; construct in both directions
-      queryGraph.constructEdge(prefixSum[srcID], dstID,
-                               EdgeData(fullQuery, queryEdges[j].timestamp));
-      auto& edge1 = queryGraph.getEdgeData(prefixSum[srcID]++);
-      edge1.matched = edgeMasks.first;
+      queryGraph.constructEdge(prefixSum[srcID]++, dstID,
+                               EdgeData(label, queryEdges[j].timestamp, matched));
 
-      queryGraph.constructEdge(prefixSum[dstID], srcID,
-                               EdgeData(fullQuery, queryEdges[j].timestamp));
-      auto& edge2 = queryGraph.getEdgeData(prefixSum[dstID]++);
-      edge2.matched = edgeMasks.first;
+      queryGraph.constructEdge(prefixSum[dstID]++, srcID,
+                               EdgeData(label, queryEdges[j].timestamp, matched));
     }
   }
 
@@ -193,6 +192,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starPairs) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
+                        starPairsRestrictions[currentStar],
                         numQueryNodes + currentStar,
                         actualNumQueryEdges + currentStar);
       currentStar++;

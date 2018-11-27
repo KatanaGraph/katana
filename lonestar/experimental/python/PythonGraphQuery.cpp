@@ -30,8 +30,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
   std::vector<const char*> nodeTypes;
   std::vector<std::string> nodeContains;
   std::vector<size_t> prefixSum;
-  std::vector<std::pair<size_t, size_t>> starPairs;
-  std::vector<EdgeData> starPairsRestrictions;
+  std::vector<std::pair<size_t, size_t>> starEdgeList;
+  std::vector<EdgeData> starEdgeData;
 
   for (size_t j = 0; j < numQueryEdges; ++j) {
     // ids of nodes of this edge
@@ -79,7 +79,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
       prefixSum[srcID]++;
       prefixSum[dstID]++;
     } else {
-      starPairs.push_back(std::make_pair(srcID, dstID));
+      starEdgeList.push_back(std::make_pair(srcID, dstID));
     }
   }
 
@@ -88,7 +88,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   }
 
   // ignore edges that have the star label
-  auto actualNumQueryEdges = numQueryEdges - starPairs.size();
+  auto actualNumQueryEdges = numQueryEdges - starEdgeList.size();
 
   for (size_t i = 1; i < numQueryNodes; ++i) {
     prefixSum[i] += prefixSum[i-1];
@@ -139,16 +139,16 @@ size_t matchQuery(AttributedGraph* dataGraph,
         // pass existence check: save mask
         uint32_t label = edgeResult.second.first | edgeResult.second.second;
         uint64_t matched = edgeResult.second.first;
-        starPairsRestrictions.emplace_back(label, 0, matched);
+        starEdgeData.emplace_back(label, 0, matched);
       } else {
         // no restrictions, 0, 0 means match anything
-        starPairsRestrictions.emplace_back(0, 0, 0);
+        starEdgeData.emplace_back(0, 0, 0);
       }
     }
   }
 
   // make sure pairs are even
-  GALOIS_ASSERT(starPairs.size() == starPairsRestrictions.size());
+  GALOIS_ASSERT(starEdgeList.size() == starEdgeData.size());
 
   // build query graph
   Graph queryGraph;
@@ -185,14 +185,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
   }
 
   // do special handling if * edges were used in the query edges
-  if (starPairs.size() > 0) {
+  if (starEdgeList.size() > 0) {
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
     uint32_t currentStar = 0;
-    for (std::pair<size_t, size_t>& sdPair : starPairs) {
+    for (std::pair<size_t, size_t>& sdPair : starEdgeList) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
-                        starPairsRestrictions[currentStar],
+                        starEdgeData[currentStar],
                         numQueryNodes + currentStar,
                         actualNumQueryEdges + currentStar);
       currentStar++;

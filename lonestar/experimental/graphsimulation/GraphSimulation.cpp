@@ -734,9 +734,11 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
             for (auto edge : graph.edges(pred)) {
               auto dst = graph.getEdgeDst(edge);
               if (dst == succ) {
-                auto& edgeData = graph.getEdgeData(edge);
-                edgeData.matched |= 1 << matchedQueryEdge;
-                break;
+                auto& deData = graph.getEdgeData(edge);
+                if (matchEdgeLabel(qeData, deData)) {
+                  deData.matched |= 1 << matchedQueryEdge;
+                  break;
+                }
               }
             }
             pred = succ;

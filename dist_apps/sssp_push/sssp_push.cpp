@@ -23,6 +23,9 @@
 #include "galois/gstl.h"
 #include "DistBenchStart.h"
 #include "galois/DReducible.h"
+#ifdef __GALOIS_HET_ASYNC__
+#include "galois/DTerminationDetector.h"
+#endif
 #include "galois/runtime/Tracer.h"
 
 #ifdef __GALOIS_HET_CUDA__
@@ -45,6 +48,11 @@ static cll::opt<unsigned int> maxIterations("maxIterations",
 static cll::opt<unsigned long long>
     src_node("startNode", // not uint64_t due to a bug in llvm cl
              cll::desc("ID of the source node"), cll::init(0));
+
+static cll::opt<uint32_t>
+    delta("delta",
+             cll::desc("Shift value for the delta step (default value 0)"),
+             cll::init(0));
 
 /******************************************************************************/
 /* Graph structure declarations + other initialization */
@@ -162,13 +170,23 @@ struct FirstItr_SSSP {
 };
 
 struct SSSP {
+  uint32_t local_priority;
   Graph* graph;
-  galois::DGAccumulator<unsigned int>& DGAccumulator_accum;
+#ifdef __GALOIS_HET_ASYNC__
+  using DGAccumulatorTy = galois::DGTerminator<unsigned int>;
+#else
+  using DGAccumulatorTy = galois::DGAccumulator<unsigned int>;
+#endif
 
-  SSSP(Graph* _graph, galois::DGAccumulator<unsigned int>& _dga)
-      : graph(_graph), DGAccumulator_accum(_dga) {}
+  DGAccumulatorTy& DGAccumulator_accum;
+  galois::GAccumulator<uint32_t>& work_items;
 
-  void static go(Graph& _graph, galois::DGAccumulator<unsigned int>& dga) {
+  SSSP(uint32_t _local_priority, Graph* _graph, 
+      DGAccumulatorTy& _dga, galois::GAccumulator<uint32_t>& _work_items)
+      : local_priority(_local_priority), graph(_graph), 
+      DGAccumulator_accum(_dga), work_items(_work_items) {}
+
+  void static go(Graph& _graph, DGAccumulatorTy& dga) {
     using namespace galois::worklists;
 
     FirstItr_SSSP::go(_graph);
@@ -177,60 +195,82 @@ struct SSSP {
 
     const auto& nodesWithEdges = _graph.allNodesWithEdgesRange();
 
+    uint32_t priority;
+    if (delta == 0) priority = std::numeric_limits<uint32_t>::max();
+    else priority = 0;
+    galois::GAccumulator<uint32_t> work_items;
+
     do {
+
+      //if (work_items.reduce() == 0) 
+      priority += delta;
+
       _graph.set_num_round(_num_iterations);
       dga.reset();
+      work_items.reset();
 #ifdef __GALOIS_HET_CUDA__
       if (personality == GPU_CUDA) {
         std::string impl_str("SSSP_" + (_graph.get_run_identifier()));
         galois::StatTimer StatTimer_cuda(impl_str.c_str(), REGION_NAME);
         StatTimer_cuda.start();
         unsigned int __retval = 0;
-        SSSP_nodesWithEdges_cuda(__retval, cuda_ctx);
+        unsigned int __retval2 = 0;
+        SSSP_nodesWithEdges_cuda(__retval, __retval2, priority, cuda_ctx);
         dga += __retval;
+        work_items += __retval2;
         StatTimer_cuda.stop();
       } else if (personality == CPU)
 #endif
       {
         galois::do_all(
-            galois::iterate(nodesWithEdges), SSSP{&_graph, dga},
+            galois::iterate(nodesWithEdges), SSSP{priority, &_graph, dga, work_items},
             galois::no_stats(),
             galois::loopname(_graph.get_run_identifier("SSSP").c_str()),
             galois::steal());
       }
 
+#ifdef __GALOIS_HET_ASYNC__
+      _graph.sync<writeDestination, readSource, Reduce_min_dist_current,
+                  Broadcast_dist_current, Bitset_dist_current, true>("SSSP");
+#else
       _graph.sync<writeDestination, readSource, Reduce_min_dist_current,
                   Broadcast_dist_current, Bitset_dist_current>("SSSP");
+#endif
 
       galois::runtime::reportStat_Tsum(
           "SSSP", "NumWorkItems_" + (_graph.get_run_identifier()),
-          (unsigned long)dga.read_local());
+          (unsigned long)work_items.reduce());
       ++_num_iterations;
-    } while ((_num_iterations < maxIterations) &&
+    } while (
+#ifndef __GALOIS_HET_ASYNC__
+             (_num_iterations < maxIterations) &&
+#endif
              dga.reduce(_graph.get_run_identifier()));
 
-    if (galois::runtime::getSystemNetworkInterface().ID == 0) {
-      galois::runtime::reportStat_Single(
-          "SSSP", "NumIterations_" + std::to_string(_graph.get_run_num()),
-          (unsigned long)_num_iterations);
-    }
+    galois::runtime::reportStat_Tmax(
+        "SSSP", "NumIterations_" + std::to_string(_graph.get_run_num()),
+        (unsigned long)_num_iterations);
   }
 
   void operator()(GNode src) const {
     NodeData& snode = graph->getData(src);
 
     if (snode.dist_old > snode.dist_current) {
-      snode.dist_old = snode.dist_current;
-
       DGAccumulator_accum += 1;
 
-      for (auto jj : graph->edges(src)) {
-        GNode dst         = graph->getEdgeDst(jj);
-        auto& dnode       = graph->getData(dst);
-        uint32_t new_dist = graph->getEdgeData(jj) + snode.dist_current;
-        uint32_t old_dist = galois::atomicMin(dnode.dist_current, new_dist);
-        if (old_dist > new_dist)
-          bitset_dist_current.set(dst);
+      if (local_priority > snode.dist_current) {
+        snode.dist_old = snode.dist_current;
+
+        work_items += 1;
+
+        for (auto jj : graph->edges(src)) {
+          GNode dst         = graph->getEdgeDst(jj);
+          auto& dnode       = graph->getData(dst);
+          uint32_t new_dist = graph->getEdgeData(jj) + snode.dist_current;
+          uint32_t old_dist = galois::atomicMin(dnode.dist_current, new_dist);
+          if (old_dist > new_dist)
+            bitset_dist_current.set(dst);
+        }
       }
     }
   }
@@ -347,7 +387,11 @@ int main(int argc, char** argv) {
   galois::runtime::getHostBarrier().wait();
 
   // accumulators for use in operators
+#ifdef __GALOIS_HET_ASYNC__
+  galois::DGTerminator<unsigned int> DGAccumulator_accum;
+#else
   galois::DGAccumulator<unsigned int> DGAccumulator_accum;
+#endif
   galois::DGAccumulator<uint64_t> DGAccumulator_sum;
   galois::DGAccumulator<uint64_t> dg_avge;
   galois::DGReduceMax<uint32_t> m;

@@ -90,6 +90,10 @@ protected:
   //! Memory usage tracker
   MemUsageTracker memUsageTracker;
 
+  //! Number of inflight sends and receives
+  std::atomic<size_t> inflightSends;
+  std::atomic<size_t> inflightRecvs;
+
 #ifdef __GALOIS_BARE_MPI_COMMUNICATION__
 public:
   //! Wrapper that calls into increment mem usage on the memory usage tracker
@@ -135,7 +139,7 @@ public:
   //! tag (tag) and some data (buf)
   //! on the receiver, buf will be returned on a receiveTagged(tag)
   //! buf is invalidated by this operation
-  virtual void sendTagged(uint32_t dest, uint32_t tag, SendBuffer& buf) = 0;
+  virtual void sendTagged(uint32_t dest, uint32_t tag, SendBuffer& buf, int type = 0) = 0;
 
   //! Send a message to all hosts.  A message is simply a
   //! landing pad (recv) and some data (buf)
@@ -159,10 +163,16 @@ public:
 
   //! Receive a tagged message
   virtual optional_t<std::pair<uint32_t, RecvBuffer>>
-  recieveTagged(uint32_t tag, std::unique_lock<substrate::SimpleLock>* rlg) = 0;
+  recieveTagged(uint32_t tag, std::unique_lock<substrate::SimpleLock>* rlg, int type = 0) = 0;
 
   //! move send buffers out to network
   virtual void flush() = 0;
+
+  //! @returns true if any send is in progress or is pending to be enqueued
+  virtual bool anyPendingSends() = 0;
+
+  //! @returns true if any receive is in progress or is pending to be dequeued
+  virtual bool anyPendingReceives() = 0;
 
   //! Get how many bytes were sent
   //! @returns num bytes sent
@@ -193,12 +203,21 @@ extern uint32_t evilPhase;
 //! Get the network interface
 //! @returns network interface
 NetworkInterface& getSystemNetworkInterface();
+
+namespace internal {
+  //! Deletes the system network interface (if it exists).
+  void destroySystemNetworkInterface();
+}
+
 //! Gets this host's ID
 //! @returns ID of this host
 uint32_t getHostID();
 
 //! Returns a BufferedNetwork interface
 NetworkInterface& makeNetworkBuffered();
+
+//! Returns a LCINetwork interface
+NetworkInterface& makeNetworkLCI();
 
 //! Returns a host barrier, which is a regular MPI-Like Barrier for all hosts.
 //! @warning Should not be called within a parallel region; assumes only one

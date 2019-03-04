@@ -16,6 +16,7 @@ function(distApp name)
   app(${name} ${name}/gen.cpp DISTSAFE)
   target_link_libraries(${name} galois_dist distbench)
   target_include_directories(${name} PUBLIC ${CMAKE_SOURCE_DIR}/libdist/include)
+  #target_compile_definitions(${name} PRIVATE MORE_COMM_STATS=1)
 
   if(ENABLE_HETERO_GALOIS)
     target_compile_definitions(${name} PRIVATE __GALOIS_HET_CUDA__=1)
@@ -35,8 +36,20 @@ endfunction()
 #distAppNoGPU(bc_pull)
 #distAppNoGPU(sgd_pull)
 
-distAppNoGPU(pr_bc_opt)
 distAppNoGPU(pr_bc)
+distAppNoGPU(pr_bc_v2)
+distAppNoGPU(pr_bc_opt)
+distAppNoGPU(pr_bc_opt_v3)
+distAppNoGPU(pr_bc_opt_v4)
+distAppNoGPU(pr_bc_opt_v5)
+distAppNoGPU(pr_bc_opt_v6)
+distAppNoGPU(pr_bc_opt_v7)
+distAppNoGPU(pr_bc_opt_v8)
+distAppNoGPU(pr_bc_opt_v9)
+
+distAppNoGPU(debug_bc_level)
+
+distAppNoGPU(vector_map_micro)
 
 # inefficient version of prbc where entire vector is synchronized
 #app(pr_bc_vecsync pr_bc/gen.cpp DISTSAFE)

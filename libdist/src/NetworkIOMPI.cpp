@@ -68,11 +68,11 @@ private:
   struct mpiMessage {
     uint32_t host;
     uint32_t tag;
-    std::vector<uint8_t> data;
+    vTy data;
     MPI_Request req;
     // mpiMessage(message&& _m, MPI_Request _req) : m(std::move(_m)), req(_req)
     // {}
-    mpiMessage(uint32_t host, uint32_t tag, std::vector<uint8_t>&& data)
+    mpiMessage(uint32_t host, uint32_t tag, vTy&& data)
         : host(host), tag(tag), data(std::move(data)) {}
     mpiMessage(uint32_t host, uint32_t tag, size_t len)
         : host(host), tag(tag), data(len) {}
@@ -86,8 +86,11 @@ private:
 
     galois::runtime::MemUsageTracker& memUsageTracker;
 
-    sendQueueTy(galois::runtime::MemUsageTracker& tracker)
-        : memUsageTracker(tracker) {}
+    std::atomic<size_t>& inflightSends;
+
+    sendQueueTy(galois::runtime::MemUsageTracker& tracker,
+        std::atomic<size_t>& sends)
+        : memUsageTracker(tracker), inflightSends(sends) {}
 
     void complete() {
       while (!inflight.empty()) {
@@ -99,6 +102,7 @@ private:
         if (flag) {
           memUsageTracker.decrementMemUsage(f.data.size());
           inflight.pop_front();
+          --inflightSends;
         } else
           break;
       }
@@ -109,8 +113,13 @@ private:
       auto& f = inflight.back();
       galois::runtime::trace("MPI SEND", f.host, f.tag, f.data.size(),
                              galois::runtime::printVec(f.data));
+#ifdef __GALOIS_HET_ASYNC__
+      int rv = MPI_Issend(f.data.data(), f.data.size(), MPI_BYTE, f.host, f.tag,
+                         MPI_COMM_WORLD, &f.req);
+#else
       int rv = MPI_Isend(f.data.data(), f.data.size(), MPI_BYTE, f.host, f.tag,
                          MPI_COMM_WORLD, &f.req);
+#endif
       handleError(rv);
     }
   };
@@ -124,8 +133,11 @@ private:
 
     galois::runtime::MemUsageTracker& memUsageTracker;
 
-    recvQueueTy(galois::runtime::MemUsageTracker& tracker)
-        : memUsageTracker(tracker) {}
+    std::atomic<size_t>& inflightRecvs;
+
+    recvQueueTy(galois::runtime::MemUsageTracker& tracker,
+        std::atomic<size_t>& recvs)
+        : memUsageTracker(tracker), inflightRecvs(recvs) {}
 
     // FIXME: Does synchronous recieves overly halt forward progress?
     void probe() {
@@ -136,6 +148,7 @@ private:
                           &status);
       handleError(rv);
       if (flag) {
+        ++inflightRecvs;
         int nbytes;
         rv = MPI_Get_count(&status, MPI_BYTE, &nbytes);
         handleError(rv);
@@ -181,9 +194,11 @@ public:
    * @param [out] ID this machine's host id
    * @param [out] NUM total number of hosts in the system
    */
-  NetworkIOMPI(galois::runtime::MemUsageTracker& tracker, uint32_t& ID,
-               uint32_t& NUM)
-      : NetworkIO(tracker), sendQueue(tracker), recvQueue(tracker) {
+  NetworkIOMPI(galois::runtime::MemUsageTracker& tracker, 
+      std::atomic<size_t>& sends, std::atomic<size_t>& recvs, 
+      uint32_t& ID, uint32_t& NUM)
+      : NetworkIO(tracker, sends, recvs),
+        sendQueue(tracker, inflightSends), recvQueue(tracker, inflightRecvs) {
     auto p = getIDAndHostNum();
     ID     = p.first;
     NUM    = p.second;
@@ -206,7 +221,7 @@ public:
       recvQueue.done.pop_front();
       return msg;
     }
-    return message{~0U, 0, std::vector<uint8_t>()};
+    return message{~0U, 0, vTy()};
   }
 
   /**
@@ -219,9 +234,9 @@ public:
 }; // end NetworkIOMPI class
 
 std::tuple<std::unique_ptr<galois::runtime::NetworkIO>, uint32_t, uint32_t>
-galois::runtime::makeNetworkIOMPI(galois::runtime::MemUsageTracker& tracker) {
+galois::runtime::makeNetworkIOMPI(galois::runtime::MemUsageTracker& tracker, std::atomic<size_t>& sends, std::atomic<size_t>& recvs) {
   uint32_t ID, NUM;
   std::unique_ptr<galois::runtime::NetworkIO> n{
-      new NetworkIOMPI(tracker, ID, NUM)};
+      new NetworkIOMPI(tracker, sends, recvs, ID, NUM)};
   return std::make_tuple(std::move(n), ID, NUM);
 }

@@ -23,7 +23,6 @@
 AigWriter::AigWriter() {}
 
 AigWriter::AigWriter(std::string path) {
-  this->path = path;
   setFile(path);
 }
 
@@ -74,7 +73,7 @@ void AigWriter::writeLatchesAag(Aig& aig) {
   for (aig::GNode latchNode : aig.getLatchNodes()) {
     aig::NodeData& latchNodeData =
         aigGraph.getData(latchNode, galois::MethodFlag::READ);
-    aigerFile << latchNodeData.id << " ";
+    aigerFile << latchNodeData.id * 2 << " ";
     auto inEdge         = aigGraph.in_edge_begin(latchNode);
     bool inEdgePolarity = aigGraph.getEdgeData(inEdge);
     aig::GNode inNode   = aigGraph.getEdgeDst(inEdge);
@@ -82,10 +81,10 @@ void AigWriter::writeLatchesAag(Aig& aig) {
         aigGraph.getData(inNode, galois::MethodFlag::READ);
     // bool initState = latchNode->getInitialValue(); // FIXME;
     if (inEdgePolarity) {
-      aigerFile << inNodeData.id << std::endl;
+      aigerFile << inNodeData.id * 2 << std::endl;
       // aigerFile << inNodeData.id << " " << initState << std::endl;
     } else {
-      aigerFile << inNodeData.id + 1 << std::endl;
+      aigerFile << (inNodeData.id * 2) + 1 << std::endl;
       // aigerFile << inNodeData.id + 1 << " " << initState << std::endl;
     }
   }
@@ -114,6 +113,9 @@ void AigWriter::writeAndsAag(Aig& aig) {
   std::stack<aig::GNode> stack;
 
   aig.computeTopologicalSortForAnds(stack);
+
+	//std::cout << "size: " << aig.getNumAnds() << std::endl;
+	//std::cout << "stack size: " << stack.size() << std::endl;
 
   aig::Graph& graph = aig.getGraph();
 
@@ -186,10 +188,10 @@ void AigWriter::writeLatchesAig(Aig& aig) {
         aigGraph.getData(inNode, galois::MethodFlag::READ);
     // bool initState = latchNode->getInitialValue(); // FIXME;
     if (inEdgePolarity) {
-      aigerFile << inNodeData.id << std::endl;
+      aigerFile << inNodeData.id * 2 << std::endl;
       // aigerFile << inNodeData.id + 1 << " " << initState << std::endl;
     } else {
-      aigerFile << inNodeData.id + 1 << std::endl;
+      aigerFile << (inNodeData.id * 2) + 1 << std::endl;
       // aigerFile << inNodeData.id + 1 << " " << initState << std::endl;
     }
   }

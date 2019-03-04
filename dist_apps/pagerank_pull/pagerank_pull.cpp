@@ -20,8 +20,11 @@
 #include "galois/DistGalois.h"
 #include "DistBenchStart.h"
 #include "galois/gstl.h"
-#include "galois/runtime/Tracer.h"
 #include "galois/DReducible.h"
+#ifdef __GALOIS_HET_ASYNC__
+#include "galois/DTerminationDetector.h"
+#endif
+#include "galois/runtime/Tracer.h"
 
 #ifdef __GALOIS_HET_CUDA__
 #include "pagerank_pull_cuda.h"
@@ -47,6 +50,16 @@ static cll::opt<unsigned int>
     maxIterations("maxIterations",
                   cll::desc("Maximum iterations: Default 1000"),
                   cll::init(1000));
+
+static cll::opt<float>
+    delta("delta",
+             cll::desc("Shift value for the delta step (default value 0)"), 
+             cll::init(0));
+
+static cll::opt<float>
+    maxRatio("maxRatio",
+             cll::desc("Maximum target ratio (0 to 1) of active nodes in a round to all nodes (default value 1)"), 
+             cll::init(1));
 
 /******************************************************************************/
 /* Graph structure declarations + other initialization */
@@ -152,16 +165,28 @@ struct InitializeGraph {
 struct PageRank_delta {
   const float& local_alpha;
   cll::opt<float>& local_tolerance;
+  const float& local_priority;
   Graph* graph;
 
-  galois::DGAccumulator<unsigned int>& DGAccumulator_accum;
+#ifdef __GALOIS_HET_ASYNC__
+  using DGAccumulatorTy = galois::DGTerminator<unsigned int>;
+#else
+  using DGAccumulatorTy = galois::DGAccumulator<unsigned int>;
+#endif
+
+  DGAccumulatorTy& DGAccumulator_accum;
+  galois::GAccumulator<uint32_t>& work_items;
 
   PageRank_delta(const float& _local_alpha, cll::opt<float>& _local_tolerance,
-                 Graph* _graph, galois::DGAccumulator<unsigned int>& _dga)
+                 const float& _local_priority,
+                 Graph* _graph, DGAccumulatorTy& _dga,
+                 galois::GAccumulator<uint32_t>& _work_items)
       : local_alpha(_local_alpha), local_tolerance(_local_tolerance),
-        graph(_graph), DGAccumulator_accum(_dga) {}
+        local_priority(_local_priority),
+        graph(_graph), DGAccumulator_accum(_dga), work_items(_work_items) {}
 
-  void static go(Graph& _graph, galois::DGAccumulator<unsigned int>& dga) {
+  void static go(Graph& _graph, DGAccumulatorTy& dga,
+      galois::GAccumulator<uint32_t>& work_items, float& priority) {
     const auto& allNodes = _graph.allNodesRange();
 
 #ifdef __GALOIS_HET_CUDA__
@@ -170,13 +195,15 @@ struct PageRank_delta {
       galois::StatTimer StatTimer_cuda(impl_str.c_str(), REGION_NAME);
       StatTimer_cuda.start();
       unsigned int __retval = 0;
-      PageRank_delta_allNodes_cuda(__retval, alpha, tolerance, cuda_ctx);
+      unsigned int __retval2 = 0;
+      PageRank_delta_allNodes_cuda(__retval, __retval2, priority, alpha, tolerance, cuda_ctx);
       dga += __retval;
+      work_items += __retval2;
       StatTimer_cuda.stop();
     } else if (personality == CPU)
 #endif
       galois::do_all(galois::iterate(allNodes.begin(), allNodes.end()),
-                     PageRank_delta{alpha, tolerance, &_graph, dga},
+                     PageRank_delta{alpha, tolerance, priority, &_graph, dga, work_items},
                      galois::no_stats(),
                      galois::loopname(
                          _graph.get_run_identifier("PageRank_delta").c_str()));
@@ -187,12 +214,15 @@ struct PageRank_delta {
     sdata.delta = 0;
 
     if (sdata.residual > this->local_tolerance) {
-      sdata.value += sdata.residual;
-      if (sdata.nout > 0) {
-        sdata.delta = sdata.residual * (1 - local_alpha) / sdata.nout;
-        DGAccumulator_accum += 1;
+      DGAccumulator_accum += 1;
+      if (sdata.residual > this->local_priority) {
+        sdata.value += sdata.residual;
+        work_items += 1;
+        if (sdata.nout > 0) {
+          sdata.delta = sdata.residual * (1 - local_alpha) / sdata.nout;
+        }
+        sdata.residual = 0;
       }
-      sdata.residual = 0;
     }
   }
 };
@@ -202,18 +232,33 @@ struct PageRank_delta {
 struct PageRank {
   Graph* graph;
 
+#ifdef __GALOIS_HET_ASYNC__
+  using DGAccumulatorTy = galois::DGTerminator<unsigned int>;
+#else
+  using DGAccumulatorTy = galois::DGAccumulator<unsigned int>;
+#endif
+
   PageRank(Graph* _graph) : graph(_graph) {}
 
-  void static go(Graph& _graph, galois::DGAccumulator<unsigned int>& dga) {
+  void static go(Graph& _graph, DGAccumulatorTy& dga) {
     unsigned _num_iterations   = 0;
     const auto& nodesWithEdges = _graph.allNodesWithEdgesRange();
 
     // unsigned int reduced = 0;
 
+    float priority = delta;
+    if (maxRatio > 1) maxRatio = 1;
+    galois::GAccumulator<uint32_t> work_items;
+    uint32_t prev_work_items = 0;
+
     do {
+      if (prev_work_items == 0) priority -= delta;
+      else if (prev_work_items > (maxRatio * _graph.size())) priority += delta;
+
       _graph.set_num_round(_num_iterations);
       dga.reset();
-      PageRank_delta::go(_graph, dga);
+      work_items.reset();
+      PageRank_delta::go(_graph, dga, work_items, priority);
       // reset residual on mirrors
       _graph.reset_mirrorField<Reduce_add_residual>();
 
@@ -231,22 +276,29 @@ struct PageRank {
             galois::no_stats(),
             galois::loopname(_graph.get_run_identifier("PageRank").c_str()));
 
-      _graph.sync<writeSource, readAny, Reduce_add_residual, Broadcast_residual,
+#ifdef __GALOIS_HET_ASYNC__
+      _graph.sync<writeSource, readDestination, Reduce_add_residual, Broadcast_residual,
+                  Bitset_residual, true>("PageRank");
+#else
+      _graph.sync<writeSource, readDestination, Reduce_add_residual, Broadcast_residual,
                   Bitset_residual>("PageRank");
+#endif
 
+      prev_work_items = work_items.reduce();
       galois::runtime::reportStat_Tsum(
           REGION_NAME, "NumWorkItems_" + (_graph.get_run_identifier()),
-          (unsigned long)dga.read_local());
+          (unsigned long)prev_work_items);
 
       ++_num_iterations;
-    } while ((_num_iterations < maxIterations) &&
+    } while (
+#ifndef __GALOIS_HET_ASYNC__
+             (_num_iterations < maxIterations) &&
+#endif
              dga.reduce(_graph.get_run_identifier()));
 
-    if (galois::runtime::getSystemNetworkInterface().ID == 0) {
-      galois::runtime::reportStat_Single(
-          REGION_NAME, "NumIterations_" + std::to_string(_graph.get_run_num()),
-          (unsigned long)_num_iterations);
-    }
+    galois::runtime::reportStat_Tmax(
+        REGION_NAME, "NumIterations_" + std::to_string(_graph.get_run_num()),
+        (unsigned long)_num_iterations);
   }
 
   // Pull deltas from neighbor nodes, then add to self-residual
@@ -429,7 +481,11 @@ int main(int argc, char** argv) {
   InitializeGraph::go(*hg);
   galois::runtime::getHostBarrier().wait();
 
+#ifdef __GALOIS_HET_ASYNC__
+  galois::DGTerminator<unsigned int> PageRank_accum;
+#else
   galois::DGAccumulator<unsigned int> PageRank_accum;
+#endif
 
   galois::DGAccumulator<float> DGA_sum;
   galois::DGAccumulator<float> DGA_sum_residual;

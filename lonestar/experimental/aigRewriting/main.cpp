@@ -19,8 +19,10 @@
 
 #include "parsers/AigParser.h"
 #include "writers/AigWriter.h"
+#include "writers/BlifWriter.h"
 #include "subjectgraph/aig/Aig.h"
 #include "algorithms/CutManager.h"
+#include "algorithms/PriorityCutManager.h"
 #include "algorithms/NPNManager.h"
 #include "algorithms/RewriteManager.h"
 #include "algorithms/PreCompGraphManager.h"
@@ -35,17 +37,18 @@ using namespace std::chrono;
 void aigRewriting(aig::Aig& aig, std::string& fileName, int nThreads,
                   int verbose);
 void kcut(aig::Aig& aig, std::string& fileName, int nThreads, int verbose);
+void prioritycut(aig::Aig& aig, std::string& fileName, int nThreads, int verbose);
 void rdCut(aig::Aig& aig, std::string& fileName, int nThreads, int verbose);
 std::string getFileName(std::string path);
 
 int main(int argc, char* argv[]) {
 
-  galois::SharedMemSys
-      G; // shared-memory system object initializes global variables for galois
+	// shared-memory system object initializes global variables for galois
+  galois::SharedMemSys G;
 
   if (argc < 3) {
     std::cout << "Mandatory arguments: <nThreads> <AigInputFile>" << std::endl;
-    std::cout << "Optional arguments: -v (verrbose)" << std::endl;
+    std::cout << "Optional arguments: -v (verbose)" << std::endl;
     exit(1);
   }
 
@@ -75,8 +78,7 @@ int main(int argc, char* argv[]) {
     std::cout << "|L|: " << aigParser.getL() << std::endl;
     std::cout << "|O|: " << aigParser.getO() << std::endl;
     std::cout << "|A|: " << aigParser.getA() << std::endl;
-    std::cout << "|E|: " << aigParser.getE() << " (outgoing edges)"
-              << std::endl;
+    std::cout << "|E|: " << aigParser.getE() << " (outgoing edges)" << std::endl;
   }
 
   // std::vector< int > levelHistogram = aigParser.getLevelHistogram();
@@ -85,11 +87,26 @@ int main(int argc, char* argv[]) {
   //	std::cout << i++ << ": " << value << std::endl;
   //}
 
-  aigRewriting(aig, fileName, nThreads, verbose);
+  //aigRewriting(aig, fileName, nThreads, verbose);
 
-  // kcut( aig, fileName, nThreads, verbose );
+  //kcut( aig, fileName, nThreads, verbose );
+
+	//aig.resetAllNodeCounters();
+  
+	prioritycut( aig, fileName, nThreads, verbose );
 
   // rdCut( aig, fileName, nThreads, verbose );
+  
+ 	// TEST WRITE AIG //
+  //std::cout << "Writing final AIG file..." << std::endl;
+  //AigWriter aigWriter(fileName + "_rewritten.aig");
+  //aigWriter.writeAig(aig);
+
+	//AigWriter aigWriter(fileName + "_rewritten.aag");
+  //aigWriter.writeAag(aig);
+
+  // TEST WRITE DOT //
+  //aig.writeDot( fileName + "_rewritten.dot", aig.toDot() );
 
   return 0;
 }
@@ -132,7 +149,8 @@ void aigRewriting(aig::Aig& aig, std::string& fileName, int nThreads,
   // RWMan
   algorithm::RewriteManager rwtMan(aig, cutMan, npnMan, pcgMan, triesNGraphs,
                                    useZeros, updateLevel);
-  algorithm::runRewriteOperator(rwtMan);
+ 
+	algorithm::runRewriteOperator(rwtMan);
 
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   long double rewriteTime = duration_cast<microseconds>(t2 - t1).count();
@@ -154,6 +172,8 @@ void aigRewriting(aig::Aig& aig, std::string& fileName, int nThreads,
   std::cout << "Writing final AIG file..." << std::endl;
   AigWriter aigWriter(fileName + "_rewritten.aig");
   aigWriter.writeAig(aig);
+	//AigWriter aigWriter(fileName + "_rewritten.aag");
+  //aigWriter.writeAag(aig);
 
   // WRITE DOT //
   // aig.writeDot( fileName + "_rewritten.dot", aig.toDot() );
@@ -191,12 +211,65 @@ void kcut(aig::Aig& aig, std::string& fileName, int nThreads, int verbose) {
 
   if (verbose >= 1) {
     std::cout << "################ Results ################## " << std::endl;
-    // cutMan.printAllCuts();
+    //cutMan.printAllCuts();
     // cutMan.printRuntimes();
     cutMan.printCutStatistics();
     std::cout << "Size: " << aig.getNumAnds() << std::endl;
     std::cout << "Depth: " << aig.getDepth() << std::endl;
     std::cout << "Runtime (us): " << kcutTime << std::endl;
+  }
+}
+
+void prioritycut(aig::Aig& aig, std::string& fileName, int nThreads, int verbose) {
+
+  int numThreads = galois::setActiveThreads(nThreads);
+
+  int K = 6, C = 12;
+  bool compTruth = true;
+
+  if (verbose == 1) {
+    std::cout << "############# Configurations ############## " << std::endl;
+    std::cout << "K: " << K << std::endl;
+    std::cout << "C: " << C << std::endl;
+    std::cout << "CompTruth: " << (compTruth ? "yes" : "no") << std::endl;
+    std::cout << "nThreads: " << numThreads << std::endl;
+  }
+
+  long double kcutTime = 0;
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+  algorithm::PriCutManager cutMan(aig, K, C, numThreads, compTruth);
+  algorithm::runKPriCutOperator(cutMan);
+
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  kcutTime = duration_cast<microseconds>(t2 - t1).count();
+
+	BlifWriter blifWriter( fileName + "_mapped.blif" );
+	blifWriter.writeNetlist( aig, cutMan );
+
+  if (verbose == 0) {
+    std::cout << fileName << ";" << K << ";" << C << ";" << compTruth << ";"
+              << aig.getNumAnds() << ";" << aig.getDepth() << ";" 
+							<< cutMan.getNumLUTs() << ";" << cutMan.getNumLevels() << ";"
+							<< numThreads << ";" << kcutTime << std::endl;
+  }
+
+  if (verbose >= 1) {
+    std::cout << "################ Results ################## " << std::endl;
+		//cutMan.printCovering();
+    //cutMan.printAllCuts();
+    //cutMan.printBestCuts();
+    // cutMan.printRuntimes();
+    cutMan.printCutStatistics();
+    std::cout << "AIG Size: " << aig.getNumAnds() << std::endl;
+    std::cout << "AIG Depth: " << aig.getDepth() << std::endl;
+    std::cout << "LUT Size: " << cutMan.getNumLUTs() << std::endl;
+    std::cout << "LUT Depth: " << cutMan.getNumLevels() << std::endl;
+
+    std::cout << "Runtime (us): " << kcutTime << std::endl;
+
+	  // WRITE DOT //
+  	//aig.writeDot( fileName + ".dot", aig.toDot() );
   }
 }
 

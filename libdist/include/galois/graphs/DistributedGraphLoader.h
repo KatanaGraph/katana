@@ -30,9 +30,13 @@
 
 #include "galois/graphs/DistributedGraph_EdgeCut.h"
 #include "galois/graphs/DistributedGraph_CartesianCut.h"
+#include "galois/graphs/DistributedGraph_CartesianCutOld.h"
 #include "galois/graphs/DistributedGraph_HybridCut.h"
 #include "galois/graphs/DistributedGraph_JaggedCut.h"
 #include "galois/graphs/DistributedGraph_CustomEdgeCut.h"
+#include "galois/graphs/Generic.h"
+#include "galois/graphs/NewGeneric.h"
+#include "galois/graphs/GenericPartitioners.h"
 
 /*******************************************************************************
  * Supported partitioning schemes
@@ -48,11 +52,22 @@ enum PARTITIONING_SCHEME {
   HIVC,                  //!< incoming hybrid vertex cut
   BOARD2D_VCUT,          //!< checkerboard cut
   CART_VCUT,             //!< cartesian vertex cut
+  CART_VCUT_IEC,         //!< cartesian vertex cut using iec
+  CART_VCUT_OLD,             //!< cartesian vertex cut
   JAGGED_CYCLIC_VCUT,    //!< cyclic jagged cut
   JAGGED_BLOCKED_VCUT,   //!< blocked jagged cut
   OVER_DECOMPOSE_2_VCUT, //!< overdecompose cvc by 2
   OVER_DECOMPOSE_4_VCUT, //!< overdecompose cvc by 4
-  CEC                    //!< custom edge cut
+  CEC,                    //!< custom edge cut
+  GCVC,                    //!< generic cvc
+  GHOVC,                    //!< generic hovc
+  GHIVC,                    //!< generic hivc
+  GOEC,                    //!< generic oec
+  GINGER_O,                    //!< Ginger, outgoing
+  GINGER_I,                    //!< Ginger, incoming
+  FENNEL_O,                   //!< Fennel, oec
+  FENNEL_I,                    //!< Fennel, iec
+  SUGAR_O                    //!< Sugar, oec
 };
 
 /**
@@ -75,6 +90,10 @@ inline const char* EnumToString(PARTITIONING_SCHEME e) {
     return "board2d_vcut";
   case CART_VCUT:
     return "cvc";
+  case CART_VCUT_IEC:
+    return "cvc_iec";
+  case CART_VCUT_OLD:
+    return "cvc_old";
   case JAGGED_CYCLIC_VCUT:
     return "jcvc";
   case JAGGED_BLOCKED_VCUT:
@@ -85,6 +104,24 @@ inline const char* EnumToString(PARTITIONING_SCHEME e) {
     return "od4vc";
   case CEC:
     return "cec";
+  case GCVC:
+    return "gcvc";
+  case GHOVC:
+    return "ghovc";
+  case GHIVC:
+    return "ghivc";
+  case GOEC:
+    return "goec";
+  case GINGER_O:
+    return "ginger-oec";
+  case GINGER_I:
+    return "ginger-iec";
+  case FENNEL_O:
+    return "fennel-oec";
+  case FENNEL_I:
+    return "fennel-iec";
+  case SUGAR_O:
+    return "sugar-oec";
   default:
     GALOIS_DIE("Unsupported partition");
   }
@@ -203,6 +240,10 @@ constructTwoWayGraph(std::vector<unsigned>& scaleFactor) {
   //  return new Graph_cartesianCut(inputFile, partFolder, net.ID, net.Num,
   //                                scaleFactor, false,
   //                               readFromFile, localGraphFileName);
+  // case CART_VCUT_IEC:
+  //  return new Graph_cartesianCut(inputFileTranspose, partFolder, net.ID, net.Num,
+  //                                scaleFactor, true,
+  //                               readFromFile, localGraphFileName);
   // case JAGGED_CYCLIC_VCUT:
   //  return new Graph_jaggedCut(inputFile, partFolder, net.ID, net.Num,
   //                                scaleFactor, false);
@@ -245,14 +286,22 @@ constructSymmetricGraph(std::vector<unsigned>& scaleFactor) {
   typedef DistGraphEdgeCut<NodeData, EdgeData> Graph_edgeCut;
   typedef DistGraphHybridCut<NodeData, EdgeData> Graph_vertexCut;
   typedef DistGraphCartesianCut<NodeData, EdgeData> Graph_cartesianCut;
-  typedef DistGraphCartesianCut<NodeData, EdgeData, true> Graph_checkerboardCut;
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData> Graph_cartesianCutOld;
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, true> Graph_checkerboardCut;
   typedef DistGraphJaggedCut<NodeData, EdgeData> Graph_jaggedCut;
   typedef DistGraphJaggedCut<NodeData, EdgeData, true> Graph_jaggedBlockedCut;
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, false, 2>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, false, 2>
       Graph_cartesianCut_overDecomposeBy2;
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, false, 4>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, false, 4>
       Graph_cartesianCut_overDecomposeBy4;
   typedef DistGraphCustomEdgeCut<NodeData, EdgeData> Graph_customEdgeCut;
+  using GenericCVC = DistGraphGeneric<NodeData, EdgeData, GenericCVC>;
+  using GenericHVC = DistGraphGeneric<NodeData, EdgeData, GenericHVC>;
+  using GenericEC = DistGraphGeneric<NodeData, EdgeData, NoCommunication>;
+  using Ginger = NewDistGraphGeneric<NodeData, EdgeData, GingerP>;
+  using Fennel = NewDistGraphGeneric<NodeData, EdgeData, FennelP>;
+  using Sugar = NewDistGraphGeneric<NodeData, EdgeData, SugarP>;
+
   auto& net = galois::runtime::getSystemNetworkInterface();
 
   switch (partitionScheme) {
@@ -270,9 +319,14 @@ constructSymmetricGraph(std::vector<unsigned>& scaleFactor) {
     return new Graph_checkerboardCut(inputFile, partFolder, net.ID, net.Num,
                                      scaleFactor, false);
   case CART_VCUT:
+  case CART_VCUT_IEC:
     return new Graph_cartesianCut(inputFile, partFolder, net.ID, net.Num,
                                   scaleFactor, false, readFromFile,
                                   localGraphFileName);
+  case CART_VCUT_OLD:
+    return new Graph_cartesianCutOld(inputFile, partFolder, net.ID, net.Num,
+                                     scaleFactor, false, readFromFile,
+                                     localGraphFileName);
   case JAGGED_CYCLIC_VCUT:
     return new Graph_jaggedCut(inputFile, partFolder, net.ID, net.Num,
                                scaleFactor, false);
@@ -288,6 +342,27 @@ constructSymmetricGraph(std::vector<unsigned>& scaleFactor) {
   case CEC:
     return new Graph_customEdgeCut(inputFile, partFolder, net.ID, net.Num,
                                    scaleFactor, vertexIDMapFileName, false);
+  case GCVC:
+    return new GenericCVC(inputFile, net.ID, net.Num, false,
+                          readFromFile, localGraphFileName);
+  case GHOVC:
+  case GHIVC:
+    return new GenericHVC(inputFile, net.ID, net.Num, false);
+
+  case GOEC:
+    return new GenericEC(inputFile, net.ID, net.Num, false);
+
+  case GINGER_O:
+  case GINGER_I:
+    return new Ginger(inputFile, net.ID, net.Num, false);
+
+  case FENNEL_O:
+  case FENNEL_I:
+    return new Fennel(inputFile, net.ID, net.Num, false);
+
+  case SUGAR_O:
+    return new Sugar(inputFile, net.ID, net.Num, false);
+
   default:
     GALOIS_DIE("Error: partition scheme specified is invalid");
     return nullptr;
@@ -316,16 +391,24 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
   typedef DistGraphHybridCut<NodeData, EdgeData> Graph_vertexCut;
   typedef DistGraphCartesianCut<NodeData, EdgeData>
       Graph_cartesianCut; // assumes push-style
-  typedef DistGraphCartesianCut<NodeData, EdgeData, true>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData>
+      Graph_cartesianCutOld;
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, true>
       Graph_checkerboardCut; // assumes push-style
   typedef DistGraphJaggedCut<NodeData, EdgeData>
       Graph_jaggedCut; // assumes push-style
   typedef DistGraphJaggedCut<NodeData, EdgeData, true>
       Graph_jaggedBlockedCut; // assumes push-style
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, false, 2>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, false, 2>
       Graph_cartesianCut_overDecomposeBy2;
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, false, 4>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, false, 4>
       Graph_cartesianCut_overDecomposeBy4;
+  using GenericCVC = DistGraphGeneric<NodeData, EdgeData, GenericCVC>;
+  using GenericHVC = DistGraphGeneric<NodeData, EdgeData, GenericHVC>;
+  using GenericEC = DistGraphGeneric<NodeData, EdgeData, NoCommunication>;
+  using Ginger = NewDistGraphGeneric<NodeData, EdgeData, GingerP>;
+  using Fennel = NewDistGraphGeneric<NodeData, EdgeData, FennelP>;
+  using Sugar = NewDistGraphGeneric<NodeData, EdgeData, SugarP>;
 
   auto& net = galois::runtime::getSystemNetworkInterface();
 
@@ -372,6 +455,21 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
     return new Graph_cartesianCut(inputFile, partFolder, net.ID, net.Num,
                                   scaleFactor, false, readFromFile,
                                   localGraphFileName);
+  case CART_VCUT_IEC:
+    if (inputFileTranspose.size()) {
+      return new Graph_cartesianCut(inputFileTranspose, partFolder, net.ID, net.Num,
+                                    scaleFactor, true, readFromFile,
+                                    localGraphFileName);
+    } else {
+      GALOIS_DIE("Error: attempting cvc incoming cut without "
+                 "transpose graph");
+      break;
+    }
+
+  case CART_VCUT_OLD:
+    return new Graph_cartesianCutOld(inputFile, partFolder, net.ID, net.Num,
+                                     scaleFactor, false, readFromFile,
+                                     localGraphFileName);
   case JAGGED_CYCLIC_VCUT:
     return new Graph_jaggedCut(inputFile, partFolder, net.ID, net.Num,
                                scaleFactor, false);
@@ -387,6 +485,50 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
   case CEC:
     return new Graph_customEdgeCut(inputFile, partFolder, net.ID, net.Num,
                                    scaleFactor, vertexIDMapFileName, false);
+  case GCVC:
+    return new GenericCVC(inputFile, net.ID, net.Num, false, readFromFile,
+                          localGraphFileName);
+
+  case GHOVC:
+    return new GenericHVC(inputFile, net.ID, net.Num, false);
+
+  case GHIVC:
+    if (inputFileTranspose.size()) {
+      return new GenericHVC(inputFileTranspose, net.ID, net.Num, true);
+    } else {
+      GALOIS_DIE("Error: attempting generic incoming hybrid cut without "
+                 "transpose graph");
+      break;
+    }
+
+  case GOEC:
+    return new GenericEC(inputFile, net.ID, net.Num, false);
+
+  case GINGER_O:
+    return new Ginger(inputFile, net.ID, net.Num, false);
+
+  case GINGER_I:
+    if (inputFileTranspose.size()) {
+      return new Ginger(inputFileTranspose, net.ID, net.Num, true);
+    } else {
+      GALOIS_DIE("Error: attempting Ginger without transpose graph");
+      break;
+    }
+
+  case FENNEL_O:
+    return new Fennel(inputFile, net.ID, net.Num, false);
+
+  case FENNEL_I:
+    if (inputFileTranspose.size()) {
+      return new Fennel(inputFileTranspose, net.ID, net.Num, true);
+    } else {
+      GALOIS_DIE("Error: attempting Fennel incoming without transpose graph");
+      break;
+    }
+
+  case SUGAR_O:
+    return new Sugar(inputFile, net.ID, net.Num, false);
+
   default:
     GALOIS_DIE("Error: partition scheme specified is invalid");
     return nullptr;
@@ -413,10 +555,11 @@ DistGraph<NodeData, EdgeData>*
 constructGraph(std::vector<unsigned>& scaleFactor) {
   typedef DistGraphEdgeCut<NodeData, EdgeData> Graph_edgeCut;
   typedef DistGraphHybridCut<NodeData, EdgeData> Graph_vertexCut;
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false,
-                                true>
+  typedef DistGraphCartesianCut<NodeData, EdgeData, true>
       Graph_cartesianCut; // assumes pull-style
-  typedef DistGraphCartesianCut<NodeData, EdgeData, true,
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, true>
+      Graph_cartesianCutOld;
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, true,
                                 true>
       Graph_checkerboardCut; // assumes pull-style
   typedef DistGraphJaggedCut<NodeData, EdgeData, false,
@@ -425,11 +568,18 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
   typedef DistGraphJaggedCut<NodeData, EdgeData, true,
                              true>
       Graph_jaggedBlockedCut; // assumes pull-style
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, true, 2>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, true, 2>
       Graph_cartesianCut_overDecomposeBy2; // assumes pull-style
-  typedef DistGraphCartesianCut<NodeData, EdgeData, false, true, 4>
+  typedef DistGraphCartesianCutOld<NodeData, EdgeData, false, true, 4>
       Graph_cartesianCut_overDecomposeBy4; // assumes pull-style
   typedef DistGraphCustomEdgeCut<NodeData, EdgeData> Graph_customEdgeCut;
+  using GenericCVC = DistGraphGeneric<NodeData, EdgeData, GenericCVCColumnFlip>;
+  using GenericHVC = DistGraphGeneric<NodeData, EdgeData, GenericHVC>;
+  using GenericEC = DistGraphGeneric<NodeData, EdgeData, NoCommunication>;
+  using Ginger = NewDistGraphGeneric<NodeData, EdgeData, GingerP>;
+  using Fennel = NewDistGraphGeneric<NodeData, EdgeData, FennelP>;
+  using Sugar = NewDistGraphGeneric<NodeData, EdgeData, SugarColumnFlipP>;
+
   auto& net = galois::runtime::getSystemNetworkInterface();
 
   // 1 host = no concept of cut; just load from edgeCut
@@ -488,6 +638,10 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
     }
 
   case CART_VCUT:
+    return new Graph_cartesianCut(inputFile, partFolder, net.ID,
+                                  net.Num, scaleFactor, true, readFromFile,
+                                  localGraphFileName);
+  case CART_VCUT_IEC:
     if (inputFileTranspose.size()) {
       return new Graph_cartesianCut(inputFileTranspose, partFolder, net.ID,
                                     net.Num, scaleFactor, false, readFromFile,
@@ -496,6 +650,10 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
       GALOIS_DIE("Error: (cvc) iterate over in-edges without transpose graph");
       break;
     }
+  case CART_VCUT_OLD:
+    return new Graph_cartesianCutOld(inputFile, partFolder, net.ID,
+                                     net.Num, scaleFactor, true, readFromFile,
+                                     localGraphFileName);
   case JAGGED_CYCLIC_VCUT:
     if (inputFileTranspose.size()) {
       return new Graph_jaggedCut(inputFileTranspose, partFolder, net.ID,
@@ -538,9 +696,55 @@ constructGraph(std::vector<unsigned>& scaleFactor) {
                                      false);
     } else {
       GALOIS_DIE(
-          "Error: (od4vc) iterate over in-edges without transpose graph");
+          "Error: (cec) iterate over in-edges without transpose graph");
       break;
     }
+
+  case GCVC:
+    // read regular partition and then flip it
+    return new GenericCVC(inputFile, net.ID, net.Num, true, readFromFile,
+                          localGraphFileName);
+
+  case GHOVC:
+    return new GenericHVC(inputFile, net.ID, net.Num, true);
+
+  case GHIVC:
+    if (inputFileTranspose.size()) {
+      return new GenericHVC(inputFileTranspose, net.ID, net.Num, false);
+    } else {
+      GALOIS_DIE("Error: attempting generic incoming hybrid cut without "
+                 "transpose graph");
+      break;
+    }
+
+  case GOEC:
+    return new GenericEC(inputFile, net.ID, net.Num, true);
+
+  case GINGER_O:
+    return new Ginger(inputFile, net.ID, net.Num, true);
+
+  case GINGER_I:
+    if (inputFileTranspose.size()) {
+      return new Ginger(inputFileTranspose, net.ID, net.Num, false);
+    } else {
+      GALOIS_DIE("Error: attempting Ginger without transpose graph");
+      break;
+    }
+
+  case FENNEL_O:
+    return new Fennel(inputFile, net.ID, net.Num, true);
+
+  case FENNEL_I:
+    if (inputFileTranspose.size()) {
+      return new Fennel(inputFileTranspose, net.ID, net.Num, false);
+    } else {
+      GALOIS_DIE("Error: attempting Fennel incoming without transpose graph");
+      break;
+    }
+
+  case SUGAR_O:
+    return new Sugar(inputFile, net.ID, net.Num, true);
+
   default:
     GALOIS_DIE("Error: partition scheme specified is invalid");
     return nullptr;

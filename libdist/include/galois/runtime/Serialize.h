@@ -41,6 +41,7 @@
 #include <galois/gdeque.h>
 #include <galois/DynamicBitset.h>
 #include <galois/AtomicWrapper.h>
+#include <galois/PODResizeableArray.h>
 #include "galois/CopyableTuple.h"
 #include "galois/Bag.h"
 
@@ -57,7 +58,8 @@ class SerializeBuffer {
   friend DeSerializeBuffer;
 
   //! type of data buffer
-  using vTy = std::vector<uint8_t>;
+  //using vTy = std::vector<uint8_t>;
+  using vTy = galois::PODResizeableArray<uint8_t>;
   //! the actual data stored in this buffer
   vTy bufdata;
 
@@ -98,6 +100,10 @@ public:
     return retval;
   }
 
+  void resize(size_t bytes) {
+    bufdata.resize(bytes);
+  }
+
   /**
    * Reserve more space in the serialize buffer.
    *
@@ -108,7 +114,7 @@ public:
   //! Returns a pointer to the data stored in this serialize buffer
   const uint8_t* linearData() const { return bufdata.data(); }
   //! Returns vector of data stored in this serialize buffer
-  std::vector<uint8_t>& getVec() { return bufdata; }
+  vTy& getVec() { return bufdata; }
 
   //! Returns an iterator to the beginning of the data in this serialize buffer
   vTy::const_iterator begin() const { return bufdata.cbegin(); }
@@ -143,8 +149,11 @@ public:
 class DeSerializeBuffer {
   //! Access to serialize buffer
   friend SerializeBuffer;
+  //! type of data buffer
+  //using vTy = std::vector<uint8_t>;
+  using vTy = galois::PODResizeableArray<uint8_t>;
   //! the actual data stored in this buffer
-  std::vector<uint8_t> bufdata;
+  vTy bufdata;
   int offset;
 
 public:
@@ -155,12 +164,12 @@ public:
   //! Move constructor
   //! @param v vector to act as deserialize buffer
   //! @param start offset to start saving data into
-  DeSerializeBuffer(std::vector<uint8_t>&& v, uint32_t start = 0)
+  DeSerializeBuffer(vTy&& v, uint32_t start = 0)
       : bufdata(std::move(v)), offset(start) {}
 
   //! Constructor that takes an existing vector to use as the deserialize
   //! buffer
-  explicit DeSerializeBuffer(std::vector<uint8_t>& data) {
+  explicit DeSerializeBuffer(vTy& data) {
     bufdata.swap(data);
     offset = 0;
   }
@@ -234,7 +243,7 @@ public:
 
   //! Get the underlying vector storing the data of the deserialize
   //! buffer
-  std::vector<uint8_t>& getVec() { return bufdata; }
+  vTy& getVec() { return bufdata; }
 
   //! Get a pointer to the underlying data of the deserialize buffer
   void* linearData() { return &bufdata[0]; }
@@ -331,6 +340,17 @@ size_t gSizedSeq(const Seq& seq) {
  */
 template <typename T, typename Alloc>
 inline size_t gSizedObj(const std::vector<T, Alloc>& data) {
+  return gSizedSeq(data);
+}
+
+/**
+ * Returns the size needed to store the elements a PODResizeableArray in a serialize
+ * buffer.
+ *
+ * @returns size needed to store a PODResizeableArray into a serialize buffer
+ */
+template <typename T>
+inline size_t gSizedObj(const galois::PODResizeableArray<T>& data) {
   return gSizedSeq(data);
 }
 
@@ -569,6 +589,19 @@ inline void gSerializeObj(SerializeBuffer& buf,
     gSerializeLinearSeq(buf, data);
   else
     gSerializeSeq(buf, data);
+}
+
+/**
+ * Serialize a PODResizeableArray into a buffer, choosing to do a memcopy or
+ * to serialize each element individually depending on data.
+ *
+ * @param [in,out] buf Serialize buffer to serialize into
+ * @param [in] data PODResizeableArray to serialize
+ */
+template <typename T>
+inline void gSerializeObj(SerializeBuffer& buf,
+                          const galois::PODResizeableArray<T>& data) {
+  gSerializeLinearSeq(buf, data);
 }
 
 /**
@@ -915,6 +948,17 @@ void gDeserializeObj(DeSerializeBuffer& buf, std::vector<T, Alloc>& data) {
     gDeserializeLinearSeq(buf, data);
   else
     gDeserializeSeq(buf, data);
+}
+
+/**
+ * Deserialize into a PODResizeableArray
+ *
+ * @param buf [in,out] Buffer to deserialize from
+ * @param data [in,out] PODResizeableArray to deserialize into
+ */
+template <typename T>
+void gDeserializeObj(DeSerializeBuffer& buf, galois::PODResizeableArray<T>& data) {
+  gDeserializeLinearSeq(buf, data);
 }
 
 /**

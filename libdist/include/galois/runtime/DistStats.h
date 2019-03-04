@@ -28,12 +28,18 @@
 #define GALOIS_RUNTIME_DIST_STATS_H
 
 //! Turn on if you want more distributed stats to be printed
+#ifndef MORE_DIST_STATS
 #define MORE_DIST_STATS 0
+#endif
 //! Turn on if you want more communication statistics to be printed
+#ifndef MORE_COMM_STATS
 #define MORE_COMM_STATS 0
+#endif
 //! Turn on if you want per-bulk-synchronous parallel timers to be printed
 //! (otherwise all rounds are under 1 timer)
+#ifndef DIST_PER_ROUND_TIMER
 #define DIST_PER_ROUND_TIMER 0
+#endif
 
 #include "galois/runtime/Statistics.h"
 #include "galois/runtime/Network.h"
@@ -196,47 +202,47 @@ class DistStatManager : public galois::runtime::StatManager {
     using Base = internal::BasicStatMap<HostStat<T>>;
 
 #if __GNUC__ < 5
-    static const char* htotalName(const StatTotal::Type& type){
+    static const char* htotalName(const StatTotal::Type& type) {
 #else
     static constexpr const char* htotalName(const StatTotal::Type& type) {
 #endif
-        switch (type) {
-          case StatTotal::SINGLE : return "HOST_0";
-  case StatTotal::TSUM:
-    return "HSUM";
-  case StatTotal::TAVG:
-    return "HAVG";
-  case StatTotal::TMIN:
-    return "HMIN";
-  case StatTotal::TMAX:
-    return "HMAX";
-  default:
-    std::abort();
-    return nullptr;
-  }
-}
+      switch (type) {
+        case StatTotal::SINGLE : return "HOST_0";
+        case StatTotal::TSUM:
+          return "HSUM";
+        case StatTotal::TAVG:
+          return "HAVG";
+        case StatTotal::TMIN:
+          return "HMIN";
+        case StatTotal::TMAX:
+          return "HMAX";
+        default:
+          std::abort();
+          return nullptr;
+      }
+    }
 
     void print(std::ostream& out) const {
-  for (auto i = Base::cbegin(), end_i = Base::cend(); i != end_i; ++i) {
-    out << StatManager::statKind<T>() << SEP << galois::runtime::getHostID()
-        << SEP;
-    out << Base::region(i) << SEP << Base::category(i) << SEP;
+      for (auto i = Base::cbegin(), end_i = Base::cend(); i != end_i; ++i) {
+        out << StatManager::statKind<T>() << SEP << galois::runtime::getHostID()
+            << SEP;
+        out << Base::region(i) << SEP << Base::category(i) << SEP;
 
-    const HostStat<T>& hs = Base::stat(i);
+        const HostStat<T>& hs = Base::stat(i);
 
-    out << htotalName(hs.totalTy()) << SEP << hs.total();
-    out << std::endl;
+        out << htotalName(hs.totalTy()) << SEP << hs.total();
+        out << std::endl;
 
-    if (DistStatManager::printingHostVals()) {
-      hs.printHostVals(out, Base::region(i), Base::category(i));
+        if (DistStatManager::printingHostVals()) {
+          hs.printHostVals(out, Base::region(i), Base::category(i));
+        }
+
+        if (StatManager::printingThreadVals()) {
+          hs.printThreadVals(out, Base::region(i), Base::category(i));
+        }
+      }
     }
-
-    if (StatManager::printingThreadVals()) {
-      hs.printThreadVals(out, Base::region(i), Base::category(i));
-    }
-  }
-}
-}; // namespace runtime
+  }; // struct dist stat combiner
 
 DistStatCombiner<int64_t> intDistStats;
 DistStatCombiner<double> fpDistStats;
@@ -266,6 +272,7 @@ virtual void printStats(std::ostream& out);
 public:
 //! Dist stat manager constructor
 DistStatManager(const std::string& outfile = "");
+~DistStatManager();
 
 /**
  * Adds a statistic to the statistics manager.

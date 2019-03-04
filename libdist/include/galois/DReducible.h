@@ -55,7 +55,7 @@ class DGAccumulator {
    */
   inline void reduce_lwci() {
     lc_alreduce(&local_mdata, &global_mdata, sizeof(Ty),
-                &galois::runtime::internal::ompi_op_sum<Ty>, mv);
+                &galois::runtime::internal::ompi_op_sum<Ty>, lc_col_ep);
   }
 #else
   /**
@@ -169,7 +169,7 @@ public:
   Ty reduce(std::string runID = std::string()) {
     std::string timer_str("ReduceDGAccum_" + runID);
 
-    galois::CondStatTimer<MORE_DIST_STATS> reduceTimer(timer_str.c_str(),
+    galois::CondStatTimer<MORE_COMM_STATS> reduceTimer(timer_str.c_str(),
                                                        "DGReducible");
     reduceTimer.start();
 
@@ -210,7 +210,7 @@ class DGReduceMax {
    */
   inline void reduce_lwci() {
     lc_alreduce(&local_mdata, &global_mdata, sizeof(Ty),
-                &galois::runtime::internal::ompi_op_max<Ty>, mv);
+                &galois::runtime::internal::ompi_op_max<Ty>, lc_col_ep);
   }
 #else
   /**
@@ -305,7 +305,7 @@ public:
   Ty reduce(std::string runID = std::string()) {
     std::string timer_str("ReduceDGReduceMax_" + runID);
 
-    galois::CondStatTimer<MORE_DIST_STATS> reduceTimer(timer_str.c_str(),
+    galois::CondStatTimer<MORE_COMM_STATS> reduceTimer(timer_str.c_str(),
                                                        "DGReduceMax");
 
     reduceTimer.start();
@@ -345,7 +345,7 @@ class DGReduceMin {
    */
   inline void reduce_lwci() {
     lc_alreduce(&local_mdata, &global_mdata, sizeof(Ty),
-                &galois::runtime::internal::ompi_op_min<Ty>, mv);
+                &galois::runtime::internal::ompi_op_min<Ty>, lc_col_ep);
   }
 #else
   /**
@@ -441,7 +441,7 @@ public:
   Ty reduce(std::string runID = std::string()) {
     std::string timer_str("ReduceDGReduceMin_" + runID);
 
-    galois::CondStatTimer<MORE_DIST_STATS> reduceTimer(timer_str.c_str(),
+    galois::CondStatTimer<MORE_COMM_STATS> reduceTimer(timer_str.c_str(),
                                                        "DGReduceMin");
 
     reduceTimer.start();

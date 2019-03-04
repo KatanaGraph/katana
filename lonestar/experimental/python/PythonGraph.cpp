@@ -384,3 +384,188 @@ void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = nd.label | labelToMerge;
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Functions for Removing Data
+////////////////////////////////////////////////////////////////////////////////
+
+void unmatchAll(AttributedGraph* g) {
+  Graph& actualGraph = g->graph;
+
+  galois::do_all(
+    galois::iterate(actualGraph.begin(), actualGraph.end()),
+    [&] (auto node) {
+      Node& nd = actualGraph.getData(node);
+      nd.matched = 0;
+
+      auto curEdge = actualGraph.edge_begin(node);
+      auto end = actualGraph.edge_end(node);
+      for (; curEdge < end; curEdge++) {
+        EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+        curEdgeData.matched = 0;
+      }
+    },
+    galois::steal(),
+    galois::no_stats()
+  );
+}
+
+uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
+                  uint32_t labelBitPosition, uint64_t timestamp) {
+  Graph& actualGraph = g->graph;
+
+  // get src index and dst index
+  uint32_t srcIndex = g->nodeIndices[srcUUID];
+  uint32_t dstIndex = g->nodeIndices[dstUUID];
+
+  uint32_t removed = 0;
+
+  // get edges of source, find edge with dst (if it exists)
+  auto curEdge = actualGraph.edge_begin(srcIndex);
+  auto end = actualGraph.edge_end(srcIndex);
+
+  for (; curEdge < end; curEdge++) {
+    uint32_t curDest = actualGraph.getEdgeDst(curEdge);
+
+    if (curDest == dstIndex) {
+      // get this edge's metadata to see if it matches what we know
+      EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+
+      // step 1: check for it not already being marked dead
+      if (curEdgeData.matched == 0) {
+        // step 2: check for matching timestamp
+        if (curEdgeData.timestamp == timestamp) {
+          // step 3: check label to make sure it has what we want
+          if ((curEdgeData.label & (1u << labelBitPosition)) != 0) {
+            // match found; mark dead and break (assumption is that we won't
+            // see another exact match again...)
+            curEdgeData.matched = 1;
+            removed = 1;
+            break;
+          } else {
+            // here for debugging purposes TODO switch to gDebug later?
+            //galois::gPrint("Label match failure ", labelBitPosition, " ",
+            //               1u << labelBitPosition, " ", curEdgeData.label, "\n");
+          }
+        }
+      }
+    }
+  }
+
+  return removed;
+}
+
+uint32_t nodeRemovalPass(AttributedGraph* g) {
+  Graph& actualGraph = g->graph;
+  galois::GAccumulator<uint32_t> deadNodes;
+  deadNodes.reset();
+
+  galois::do_all(
+    galois::iterate(actualGraph.begin(), actualGraph.end()),
+    [&] (auto node) {
+      Node& nd = actualGraph.getData(node);
+      nd.matched = 0;
+
+      auto curEdge = actualGraph.edge_begin(node);
+      auto end = actualGraph.edge_end(node);
+      //galois::gPrint("num edges of ", node, " is ", end - curEdge, "\n");
+      bool dead = true;
+      // what about in edges? the idea is that all edges are symmetric, so
+      // if my outgoing edge is dead, so is the corresponding incoming edge
+      for (; curEdge < end; curEdge++) {
+        //uint32_t curDest = actualGraph.getEdgeDst(curEdge);
+        EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+        //galois::gPrint(node, " ", curDest, " label ", curEdgeData.label,
+        //               " stamp ", curEdgeData.timestamp, " dead ",
+        //               curEdgeData.matched, "\n");
+        if (curEdgeData.matched != 1) {
+          dead = false;
+          break;
+        }
+      }
+      if (dead) {
+        //galois::gPrint("node ", node, " id ", g->index2UUID[node], " is dead\n");
+        nd.matched = 1;
+        deadNodes += 1;
+      } else {
+        //galois::gPrint("node ", node, " id ", g->index2UUID[node], " is alive\n");
+      }
+    },
+    galois::steal(),
+    galois::no_stats()
+  );
+  return deadNodes.reduce();
+}
+
+AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
+                               uint64_t newEdgeCount) {
+
+  AttributedGraph* newGraph = createGraph();
+
+  // swap over things we can reuse without issue
+  std::swap(newGraph->nodeLabelNames, g->nodeLabelNames);
+  std::swap(newGraph->nodeLabelIDs, g->nodeLabelIDs);
+  std::swap(newGraph->edgeLabelNames, g->edgeLabelNames);
+  std::swap(newGraph->edgeLabelIDs, g->edgeLabelIDs);
+
+
+  // delete older graph
+  deleteGraph(g);
+
+  return newGraph;
+
+  //Graph graph;
+  //std::vector<std::string> nodeLabelNames;      //!< maps ID to Name
+  //std::map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
+  //std::vector<std::string> edgeLabelNames;      //!< maps ID to Name
+  //std::map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
+  ////! maps node UUID/ID to index/GraphNode
+  //std::map<std::string, uint32_t> nodeIndices;
+  ////! maps node index to UUID
+  //std::vector<std::string> index2UUID;
+
+  ////! actual names of nodes
+  //std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
+  //                                    // does not do deep-copy
+  //// custom attributes: maps from an attribute name to a vector that contains
+  //// the attribute for each node/edge
+  ////! attribute name (example: file) to vector of names for that attribute
+  //std::map<std::string, std::vector<std::string>> nodeAttributes;
+  ////! edge attribute name to vector of names for that attribute
+  //std::map<std::string, std::vector<std::string>> edgeAttributes;
+
+  // at this point, it's a matter of copying things over to a new graph and
+  // returning it instead of older graph
+
+
+  // create new attributed graph
+
+  // uuid to index can also stay; remap/remove? remap can occur in parallel,
+  // remove needs to occur serially (can make serial pass over graph and
+  // kill everything)
+  // index2uuid can be done in parallel
+  // node names done in parallel
+
+  // node and edge attributes slightly more tricky?
+
+
+  // offsets to track per thread
+  // 1) offset into old graph
+  // 2) CURRENT offset into new graph (to copy things over)
+  // for these 2 things, need the EDGES offsets as well
+  // how to get all of the above?
+  // has to be some assumption that edges iterated in same order (reasonable
+  // to make)
+
+  // each thread gets prefix sum of how many edges it has to read
+  // how many edges it will actually keep
+  // how many nodes it will actually keep
+  // thread start locations all known by all threads since static partition
+
+  // load balance may become an issue?
+
+  // on second pass, each thread knows where to start saving thigns
+  // when it saves/copies something, increment a counter
+}

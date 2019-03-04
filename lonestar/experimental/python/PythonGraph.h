@@ -368,6 +368,34 @@ void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
 void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
                  uint32_t labelToMerge);
 
+////////////////////////////////////////
+// Removal Calls/Helpers
+////////////////////////////////////////
+
+/**
+ * Changes the matched field on all nodes and all edges to 0.
+ */
+void unmatchAll(AttributedGraph* g);
+
+/**
+ * Mark an edge as dead (assumes not dead has a marking of 0).
+ *
+ * @param g Graph to alter
+ * @param srcUUID ID of source
+ * @param dstUUID ID of destination
+ * @param labelBitPosition Bit position of label on edge
+ * @param timestamp Timestamp to match on edge
+ */
+uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
+                  uint32_t labelBitPosition, uint64_t timestamp);
+
+/**
+ * Mark node as if all edges are dead (assumes not dead has a marking of 0).
+ *
+ * @param g Graph to alter
+ */
+uint32_t nodeRemovalPass(AttributedGraph* g);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Graph simulation related calls
 ////////////////////////////////////////////////////////////////////////////////

@@ -117,11 +117,11 @@ struct AttributedGraph {
   //! Graph structure class
   Graph graph;
   std::vector<std::string> nodeLabelNames;      //!< maps ID to Name
-  std::map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
+  std::unordered_map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
   std::vector<std::string> edgeLabelNames;      //!< maps ID to Name
-  std::map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
+  std::unordered_map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
   //! maps node UUID/ID to index/GraphNode
-  std::map<std::string, uint32_t> nodeIndices;
+  std::unordered_map<std::string, uint32_t> nodeIndices;
   //! maps node index to UUID
   std::vector<std::string> index2UUID;
 
@@ -131,9 +131,9 @@ struct AttributedGraph {
   // custom attributes: maps from an attribute name to a vector that contains
   // the attribute for each node/edge
   //! attribute name (example: file) to vector of names for that attribute
-  std::map<std::string, std::vector<std::string>> nodeAttributes;
+  std::unordered_map<std::string, std::vector<std::string>> nodeAttributes;
   //! edge attribute name to vector of names for that attribute
-  std::map<std::string, std::vector<std::string>> edgeAttributes;
+  std::unordered_map<std::string, std::vector<std::string>> edgeAttributes;
 };
 
 /**

@@ -63,24 +63,59 @@ void saveGraph(AttributedGraph* g, char* filename) {
   boost::archive::binary_oarchive oarch(file);
   g->graph.serializeGraph(oarch);
   oarch << g->nodeLabelNames;
-  oarch << g->nodeLabelIDs;
+
+  size_t size = g->nodeLabelIDs.size();
+  oarch << size;
+  for (auto& pair : g->nodeLabelIDs) {
+    oarch << pair.first;
+    oarch << pair.second;
+  }
+
   oarch << g->edgeLabelNames;
-  oarch << g->edgeLabelIDs;
-  oarch << g->nodeIndices;
+
+  size = g->edgeLabelIDs.size();
+  oarch << size;
+  for (auto& pair : g->edgeLabelIDs) {
+    oarch << pair.first;
+    oarch << pair.second;
+  }
+
+  size = g->nodeIndices.size();
+  oarch << size;
+  for (auto& pair : g->nodeIndices) {
+    oarch << pair.first;
+    oarch << pair.second;
+  }
+
   oarch << g->index2UUID;
   oarch << g->nodeNames;
-  size_t size = g->nodeAttributes.size();
+
+  // node/edge attributes
+  size = g->nodeAttributes.size();
   oarch << size;
   for (auto& pair : g->nodeAttributes) {
     oarch << pair.first;
     oarch << pair.second;
   }
+
   size = g->edgeAttributes.size();
   oarch << size;
   for (auto& pair : g->edgeAttributes) {
     oarch << pair.first;
     oarch << pair.second;
   }
+
+  // test prints
+  //for (auto& pair : g->nodeLabelIDs) {
+  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(), pair.second);
+  //}
+  //for (auto& pair : g->nodeAttributes) {
+  //  printf("pair first is %s\n", pair.first.c_str());
+  //  for (auto s : pair.second) {
+  //    printf("  - %s\n", s.c_str());
+  //  }
+  //}
+
   file.close();
 }
 
@@ -89,27 +124,75 @@ void loadGraph(AttributedGraph* g, char* filename) {
   boost::archive::binary_iarchive iarch(file);
   g->graph.deSerializeGraph(iarch);
   iarch >> g->nodeLabelNames;
-  iarch >> g->nodeLabelIDs;
-  iarch >> g->edgeLabelNames;
-  iarch >> g->edgeLabelIDs;
-  iarch >> g->nodeIndices;
-  iarch >> g->index2UUID;
-  iarch >> g->nodeNames;
+
+  // node label IDs
   size_t size;
   iarch >> size;
+  g->nodeLabelIDs.reserve(size);
+  for (size_t i = 0; i < size; ++i) {
+    std::string key;
+    uint32_t value;
+    iarch >> key;
+    iarch >> value;
+    g->nodeLabelIDs[key] = value;
+  }
+
+  iarch >> g->edgeLabelNames;
+
+  // edge label IDs
+  iarch >> size;
+  g->edgeLabelIDs.reserve(size);
+  for (size_t i = 0; i < size; ++i) {
+    std::string key;
+    uint32_t value;
+    iarch >> key;
+    iarch >> value;
+    g->edgeLabelIDs[key] = value;
+  }
+
+  // node indices
+  iarch >> size;
+  g->nodeIndices.reserve(size);
+  for (size_t i = 0; i < size; ++i) {
+    std::string key;
+    uint32_t value;
+    iarch >> key;
+    iarch >> value;
+    g->nodeIndices[key] = value;
+  }
+
+  iarch >> g->index2UUID;
+  iarch >> g->nodeNames;
+
+  iarch >> size;
+  g->nodeAttributes.reserve(size);
   for (size_t i = 0; i < size; ++i) {
     std::string key;
     iarch >> key;
     g->nodeAttributes[key] = std::vector<std::string>();
     iarch >> g->nodeAttributes[key];
   }
+
   iarch >> size;
+  g->edgeAttributes.reserve(size);
   for (size_t i = 0; i < size; ++i) {
     std::string key;
     iarch >> key;
     g->edgeAttributes[key] = std::vector<std::string>();
     iarch >> g->edgeAttributes[key];
   }
+
+  // test prints
+  //for (auto& pair : g->nodeLabelIDs) {
+  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(), pair.second);
+  //}
+  //for (auto& pair : g->nodeAttributes) {
+  //  printf("pair first is %s\n", pair.first.c_str());
+  //  for (auto s : pair.second) {
+  //    printf("  - %s\n", s.c_str());
+  //  }
+  //}
+
   file.close();
 }
 
@@ -503,13 +586,11 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
                                uint64_t newEdgeCount) {
 
   AttributedGraph* newGraph = createGraph();
-
   // swap over things we can reuse without issue
   std::swap(newGraph->nodeLabelNames, g->nodeLabelNames);
   std::swap(newGraph->nodeLabelIDs, g->nodeLabelIDs);
   std::swap(newGraph->edgeLabelNames, g->edgeLabelNames);
   std::swap(newGraph->edgeLabelIDs, g->edgeLabelIDs);
-
 
   // delete older graph
   deleteGraph(g);
@@ -517,10 +598,6 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
   return newGraph;
 
   //Graph graph;
-  //std::vector<std::string> nodeLabelNames;      //!< maps ID to Name
-  //std::map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
-  //std::vector<std::string> edgeLabelNames;      //!< maps ID to Name
-  //std::map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
   ////! maps node UUID/ID to index/GraphNode
   //std::map<std::string, uint32_t> nodeIndices;
   ////! maps node index to UUID

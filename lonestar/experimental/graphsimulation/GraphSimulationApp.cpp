@@ -56,43 +56,33 @@ static cll::opt<std::string> outputFile("o", cll::desc("[match output]"));
 
 template <typename G>
 void initializeQueryGraph(G& g, uint32_t labelCount) {
-  uint32_t i = 0;
-  for (auto n : g) {
-    g.getData(n).id = i++;
-  }
-
   galois::do_all(
-      galois::iterate(g), [&g, labelCount](typename Graph::GraphNode n) {
+      galois::iterate(g),
+      [&g, labelCount](typename Graph::GraphNode n) {
         auto& data   = g.getData(n);
         data.matched = 0; // matches to none
-        data.label   = data.id % labelCount;
-        auto edgeid  = data.id;
+        data.label   = 0; // TODO random label
+        uint32_t edgeid = 0;
         for (auto e : g.edges(n)) {
           auto& eData     = g.getEdgeData(e);
           eData.label     = edgeid % labelCount; // TODO: change to random
-          eData.timestamp = edgeid;
-          ++edgeid;
+          eData.timestamp = 0; // TODO random timestamp
         }
       });
 }
 
 template <typename G>
 void initializeDataGraph(G& g, uint32_t labelCount) {
-  uint32_t i = 0;
-  for (auto n : g) {
-    g.getData(n).id = i++;
-  }
-
   galois::do_all(
-      galois::iterate(g), [&g, labelCount](typename Graph::GraphNode n) {
+      galois::iterate(g.begin(), g.end()),
+      [&g, labelCount](typename Graph::GraphNode n) {
         auto& data  = g.getData(n);
-        data.label  = data.id % labelCount; // TODO: change to random
-        auto edgeid = data.id;
+        data.label  = 0; // TODO: change to random
+        uint32_t edgeid = 0;
         for (auto e : g.edges(n)) {
           auto& eData     = g.getEdgeData(e);
           eData.label     = edgeid % labelCount; // TODO: change to random
-          eData.timestamp = edgeid;
-          ++edgeid;
+          eData.timestamp = 0; // TODO random
         }
       });
 }
@@ -117,9 +107,12 @@ int main(int argc, char** argv) {
   galois::StatTimer SimT("GraphSimulation");
   SimT.start();
 
+  EventLimit dummy1;
+  EventWindow dummy2;
+
   switch (simType) {
   case Simulation::graph:
-    runGraphSimulation(qG, dG);
+    runGraphSimulationOld(qG, dG, dummy1, dummy2, false);
     break;
   case Simulation::dual:
     //    runDualSimulation();
@@ -133,7 +126,9 @@ int main(int argc, char** argv) {
   }
 
   SimT.stop();
-  reportGraphSimulation(qG, dG, outputFile);
+  // This isn't included in this at all (it's in PythonGraph.h); additionally,
+  // it takes attributed graphs, not LC_CSR Graphs
+  //reportGraphSimulation(qG, dG, outputFile);
 
   T.stop();
 

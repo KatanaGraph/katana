@@ -390,6 +390,17 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
                   uint32_t labelBitPosition, uint64_t timestamp);
 
 /**
+ * Given a graph with nodes/edges that need to be removed marked, compress the
+ * graph by removing such nodes/edges and revising graph metadata accordingly.
+ *
+ * @param g Graph to compress
+ * @param nodesRemoved Number of nodes that need to be removed
+ * @param edgesRemoved Number of edges that need to be removed
+ */
+AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved
+                               uint64_t edgesRemoved);
+
+/**
  * Mark node as if all edges are dead (assumes not dead has a marking of 0).
  *
  * @param g Graph to alter

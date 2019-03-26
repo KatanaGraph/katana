@@ -25,6 +25,7 @@
  */
 
 #include "PythonGraph.h"
+#include "galois/DynamicBitset.h"
 
 #include <iostream>
 #include <fstream>
@@ -582,9 +583,8 @@ uint32_t nodeRemovalPass(AttributedGraph* g) {
   return deadNodes.reduce();
 }
 
-AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
-                               uint64_t newEdgeCount) {
-
+AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
+                               uint64_t edgesRemoved) {
   AttributedGraph* newGraph = createGraph();
   // swap over things we can reuse without issue
   std::swap(newGraph->nodeLabelNames, g->nodeLabelNames);
@@ -592,17 +592,101 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
   std::swap(newGraph->edgeLabelNames, g->edgeLabelNames);
   std::swap(newGraph->edgeLabelIDs, g->edgeLabelIDs);
 
+  auto& actualGraph = g->graph;
+  size_t oldNumNodes = actualGraph.size();
+  size_t oldNumEdges = actualGraph.sizeEdges();
+  size_t newNumNodes = oldNumNodes - nodesRemoved;
+  size_t newNumEdges = oldNumEdges - edgesRemoved;
+
+  // allocate space for new CSR and construct it
+  Graph& newCSR = newGraph->graph;
+  newCSR.allocateFrom(newNumNodes, newNumEdges);
+  newCSR.constructNodes();
+
+  // prepare new LC CSR graph
+  uint32_t activeThreadCount = galois::getActiveThreads();
+
+  // figure out which nodes need to be killed
+  galois::DynamicBitSet nodesToRemove;
+  nodesToRemove.resize(oldNumNodes);
+
+  // allocate vectors for storing thread start points for later processing
+  std::vector<uint32_t> nodesToHandlePerThread;
+  nodesToHandlePerThread.resize(activeThreadCount, 0);
+  std::vector<uint64_t> edgesToHandlePerThread;
+  edgesToHandlePerThread.resize(activeThreadCount, 0);
+
+  // determine node/edge start points for each thread by counting dead nodes
+  // and edges
+  galois::on_each(
+    [&] (unsigned tid, unsigned nthreads) {
+      size_t beginNode;
+      size_t endNode;
+      std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
+                                       oldNumNodes, tid, nthreads);
+
+      for (size_t n = beginNode; n < endNode; n++) {
+        auto& nodeData = actualGraph.getData(n);
+
+        if (nodeData.matched) {
+          nodesToRemove.set(n);
+        } else {
+          // loop over edges, determine how many this thread needs to work with
+          nodesToHandlePerThread[tid] += 1;
+
+          for (auto e : actualGraph.edges(n)) {
+            auto& data = actualGraph.getEdgeData(e);
+
+            // not matched means not deleted edge
+            if (!data.matched) {
+              edgesToHandlePerThread[tid] += 1;
+            }
+          }
+        }
+      }
+    }
+  );
+
+  // thread level node/edge prefix sum summation
+  uint32_t tNSum = 0;
+  uint32_t tESum = 0;
+  for (size_t i = 0; i < activeThreadCount; i++) {
+    tNSum += nodesToHandlePerThread[i];
+    tESum += edgesToHandlePerThread[i];
+  }
+
+  GALOIS_ASSERT(tNSum == newNumNodes, "new num nodes doesn't match found");
+  GALOIS_ASSERT(tESum == newNumEdges, "new num edges doesn't match found");
+
+  std::vector<uint32_t> indicesToRemove = nodesToRemove.getOffsets();
+  uint32_t numNodesToRemove = indicesToRemove.size();
+
+  GALOIS_ASSERT(nodesRemoved == numNodesToRemove,
+                "nodes to remove doesn't match argument nodes to remove ",
+                numNodesToRemove, " ", nodesRemoved);
+
+  // swap over the map from old graph, then remove uuids/indices that don't exist
+  // anymore
+  galois::gPrint("Removing removed nodes from UUID to index map\n");
+  std::swap(newGraph->nodeIndices, g->nodeIndices);
+  for (uint32_t i : indicesToRemove) {
+    // get UUID, remove from map
+    size_t removed = newGraph->nodeIndices.erase(g->index2UUID[i]);
+    GALOIS_ASSERT(removed);
+  }
+  GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes);
+  // at this point, need to remap old UUIDs to new index in graph
+
   // delete older graph
   deleteGraph(g);
 
-  return newGraph;
+  printf("Graph compression complete\n");
 
-  //Graph graph;
+  return newGraph;
   ////! maps node UUID/ID to index/GraphNode
   //std::map<std::string, uint32_t> nodeIndices;
   ////! maps node index to UUID
   //std::vector<std::string> index2UUID;
-
   ////! actual names of nodes
   //std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
   //                                    // does not do deep-copy
@@ -613,21 +697,6 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
   ////! edge attribute name to vector of names for that attribute
   //std::map<std::string, std::vector<std::string>> edgeAttributes;
 
-  // at this point, it's a matter of copying things over to a new graph and
-  // returning it instead of older graph
-
-
-  // create new attributed graph
-
-  // uuid to index can also stay; remap/remove? remap can occur in parallel,
-  // remove needs to occur serially (can make serial pass over graph and
-  // kill everything)
-  // index2uuid can be done in parallel
-  // node names done in parallel
-
-  // node and edge attributes slightly more tricky?
-
-
   // offsets to track per thread
   // 1) offset into old graph
   // 2) CURRENT offset into new graph (to copy things over)
@@ -635,14 +704,11 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t newNodeCount,
   // how to get all of the above?
   // has to be some assumption that edges iterated in same order (reasonable
   // to make)
-
   // each thread gets prefix sum of how many edges it has to read
   // how many edges it will actually keep
   // how many nodes it will actually keep
   // thread start locations all known by all threads since static partition
-
   // load balance may become an issue?
-
   // on second pass, each thread knows where to start saving thigns
   // when it saves/copies something, increment a counter
 }

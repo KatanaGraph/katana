@@ -124,7 +124,6 @@ struct AttributedGraph {
   std::unordered_map<std::string, uint32_t> nodeIndices;
   //! maps node index to UUID
   std::vector<std::string> index2UUID;
-
   //! actual names of nodes
   std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
                                       // does not do deep-copy

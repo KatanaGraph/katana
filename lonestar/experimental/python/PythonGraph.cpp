@@ -675,7 +675,56 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
     GALOIS_ASSERT(removed);
   }
   GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes);
-  // at this point, need to remap old UUIDs to new index in graph
+  // at this point, need to remap old UUIDs to new index in graph; do in later loop
+
+  // allocate memory for new node structures in compressed graph
+  newGraph->index2UUID.resize(newNumNodes);
+  newGraph->nodeNames.resize(newNumNodes);
+  // setup attributes structures; set up keys and vectors
+  // nodes
+  for (auto keyIter = g->nodeAttributes.begin();
+       keyIter != g->nodeAttributes.end();
+       keyIter++) {
+    std::string key = keyIter->first;
+    galois::gPrint(key, "\n");
+    newGraph->nodeAttributes[key].resize(newNumNodes);
+  }
+  // edges
+  for (auto keyIter = g->edgeAttributes.begin();
+       keyIter != g->edgeAttributes.end();
+       keyIter++) {
+    std::string key = keyIter->first;
+    newGraph->edgeAttributes[key].resize(newNumEdges);
+  }
+
+  //galois::on_each(
+  //  [&] (unsigned tid, unsigned nthreads) {
+  //    size_t beginNode;
+  //    size_t endNode;
+  //    std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
+  //                                     oldNumNodes, tid, nthreads);
+
+  //    for (size_t n = beginNode; n < endNode; n++) {
+  //      auto& nodeData = actualGraph.getData(n);
+
+  //      if (nodeData.matched) {
+  //        nodesToRemove.set(n);
+  //      } else {
+  //        // loop over edges, determine how many this thread needs to work with
+  //        nodesToHandlePerThread[tid] += 1;
+
+  //        for (auto e : actualGraph.edges(n)) {
+  //          auto& data = actualGraph.getEdgeData(e);
+
+  //          // not matched means not deleted edge
+  //          if (!data.matched) {
+  //            edgesToHandlePerThread[tid] += 1;
+  //          }
+  //        }
+  //      }
+  //    }
+  //  }
+  //);
 
   // delete older graph
   deleteGraph(g);

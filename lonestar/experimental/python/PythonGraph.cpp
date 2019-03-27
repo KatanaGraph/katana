@@ -32,6 +32,7 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/serialization/unordered_map.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
@@ -65,46 +66,15 @@ void saveGraph(AttributedGraph* g, char* filename) {
   g->graph.serializeGraph(oarch);
   oarch << g->nodeLabelNames;
 
-  size_t size = g->nodeLabelIDs.size();
-  oarch << size;
-  for (auto& pair : g->nodeLabelIDs) {
-    oarch << pair.first;
-    oarch << pair.second;
-  }
-
+  oarch << g->nodeLabelIDs;
   oarch << g->edgeLabelNames;
-
-  size = g->edgeLabelIDs.size();
-  oarch << size;
-  for (auto& pair : g->edgeLabelIDs) {
-    oarch << pair.first;
-    oarch << pair.second;
-  }
-
-  size = g->nodeIndices.size();
-  oarch << size;
-  for (auto& pair : g->nodeIndices) {
-    oarch << pair.first;
-    oarch << pair.second;
-  }
-
+  oarch << g->edgeLabelIDs;
+  oarch << g->nodeIndices;
   oarch << g->index2UUID;
   oarch << g->nodeNames;
-
   // node/edge attributes
-  size = g->nodeAttributes.size();
-  oarch << size;
-  for (auto& pair : g->nodeAttributes) {
-    oarch << pair.first;
-    oarch << pair.second;
-  }
-
-  size = g->edgeAttributes.size();
-  oarch << size;
-  for (auto& pair : g->edgeAttributes) {
-    oarch << pair.first;
-    oarch << pair.second;
-  }
+  oarch << g->nodeAttributes;
+  oarch << g->edgeAttributes;
 
   // test prints
   //for (auto& pair : g->nodeLabelIDs) {
@@ -127,61 +97,16 @@ void loadGraph(AttributedGraph* g, char* filename) {
   iarch >> g->nodeLabelNames;
 
   // node label IDs
-  size_t size;
-  iarch >> size;
-  g->nodeLabelIDs.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    std::string key;
-    uint32_t value;
-    iarch >> key;
-    iarch >> value;
-    g->nodeLabelIDs[key] = value;
-  }
-
+  iarch >> g->nodeLabelIDs;
   iarch >> g->edgeLabelNames;
-
   // edge label IDs
-  iarch >> size;
-  g->edgeLabelIDs.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    std::string key;
-    uint32_t value;
-    iarch >> key;
-    iarch >> value;
-    g->edgeLabelIDs[key] = value;
-  }
-
+  iarch >> g->edgeLabelIDs;
   // node indices
-  iarch >> size;
-  g->nodeIndices.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    std::string key;
-    uint32_t value;
-    iarch >> key;
-    iarch >> value;
-    g->nodeIndices[key] = value;
-  }
-
+  iarch >> g->nodeIndices;
   iarch >> g->index2UUID;
   iarch >> g->nodeNames;
-
-  iarch >> size;
-  g->nodeAttributes.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    std::string key;
-    iarch >> key;
-    g->nodeAttributes[key] = std::vector<std::string>();
-    iarch >> g->nodeAttributes[key];
-  }
-
-  iarch >> size;
-  g->edgeAttributes.reserve(size);
-  for (size_t i = 0; i < size; ++i) {
-    std::string key;
-    iarch >> key;
-    g->edgeAttributes[key] = std::vector<std::string>();
-    iarch >> g->edgeAttributes[key];
-  }
+  iarch >> g->nodeAttributes;
+  iarch >> g->edgeAttributes;
 
   // test prints
   //for (auto& pair : g->nodeLabelIDs) {
@@ -500,6 +425,11 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
                   uint32_t labelBitPosition, uint64_t timestamp) {
   Graph& actualGraph = g->graph;
 
+  if (g->nodeIndices.find(srcUUID) == g->nodeIndices.end() ||
+      g->nodeIndices.find(dstUUID) == g->nodeIndices.end()) {
+    return 0;
+  }
+
   // get src index and dst index
   uint32_t srcIndex = g->nodeIndices[srcUUID];
   uint32_t dstIndex = g->nodeIndices[dstUUID];
@@ -674,7 +604,10 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
     size_t removed = newGraph->nodeIndices.erase(g->index2UUID[i]);
     GALOIS_ASSERT(removed);
   }
-  GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes);
+
+  GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes,
+                "indices size is ", newGraph->nodeIndices.size(),
+                " new num nodes is ", newNumNodes);
   // at this point, need to remap old UUIDs to new index in graph; do in later loop
 
   // allocate memory for new node structures in compressed graph
@@ -686,7 +619,6 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
        keyIter != g->nodeAttributes.end();
        keyIter++) {
     std::string key = keyIter->first;
-    galois::gPrint(key, "\n");
     newGraph->nodeAttributes[key].resize(newNumNodes);
   }
   // edges
@@ -703,24 +635,57 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   //    size_t endNode;
   //    std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
   //                                     oldNumNodes, tid, nthreads);
+  //    // get node and edge array starting points
+  //    uint32_t curNode;
+  //    uint32_t curEdge;
+  //    if (tid != 0) {
+  //      curNode = nodesToHandlePerThread[tid - 1];
+  //      curEdge = edgesToHandlePerThread[tid - 1];
+  //    } else {
+  //      curNode = 0;
+  //      curEdge = 0;
+  //    }
 
   //    for (size_t n = beginNode; n < endNode; n++) {
   //      auto& nodeData = actualGraph.getData(n);
 
-  //      if (nodeData.matched) {
-  //        nodesToRemove.set(n);
-  //      } else {
-  //        // loop over edges, determine how many this thread needs to work with
-  //        nodesToHandlePerThread[tid] += 1;
+  //      // if not dead, we need to do some processing
+  //      if (!nodeData.matched) {
+  //        // first, update uuid/index maps
+  //        std::string myUUID = g->index2UUID[n];
+  //        newGraph->nodeIndices[myUUID] = curNode;
+  //        newGraph->index2UUID[curNode] = myUUID;
+
+  //        // next, node attribute map
+  //        for (auto keyIter = g->nodeAttributes.begin();
+  //             keyIter != g->nodeAttributes.end();
+  //             keyIter++) {
+  //          std::string key = keyIter->first;
+  //          std::vector<std::string>& attrs = keyIter->second;
+  //          newGraph->nodeAttributes[key][curNode] = attrs[curNode];
+  //        }
+
 
   //        for (auto e : actualGraph.edges(n)) {
   //          auto& data = actualGraph.getEdgeData(e);
-
-  //          // not matched means not deleted edge
-  //          if (!data.matched) {
-  //            edgesToHandlePerThread[tid] += 1;
-  //          }
+  //          // if not dead, work to do
+  //          //if (!data.matched) {
+  //          //  // copy edge attributes
+  //          //  for (auto keyIter = g->edgeAttributes.begin();
+  //          //       keyIter != g->edgeAttributes.end();
+  //          //       keyIter++) {
+  //          //    std::string key = keyIter->first;
+  //          //    newGraph->edgeAttributes[key].resize(newNumEdges);
+  //          //  }
+  //          //  curEdge++;
+  //          //}
   //        }
+
+  //        // finally, copy/construct node once edge end is known
+  //        newGraph->graph.fixEndEdge(curNode, curEdge);
+  //        newGraph->graph.getData(curNode) = nodeData;
+
+  //        curNode++; // increment node count
   //      }
   //    }
   //  }

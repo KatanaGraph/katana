@@ -61,6 +61,16 @@ AttributedGraph* createGraph() {
 void deleteGraph(AttributedGraph* g) { delete g; }
 
 void saveGraph(AttributedGraph* g, char* filename) {
+  // test prints
+  //for (auto d : g->graph) {
+  //  galois::gPrint(d, " ", g->index2UUID[d], "\n");
+
+  //  for (auto e : g->graph.edges(d)) {
+  //    auto bleh = g->graph.getEdgeDst(e);
+  //    galois::gPrint("     ", "to ", bleh, " ", g->index2UUID[bleh], "\n");
+  //  }
+  //}
+
   std::ofstream file(filename, std::ios::out | std::ios::binary);
   boost::archive::binary_oarchive oarch(file);
   g->graph.serializeGraph(oarch);
@@ -394,8 +404,6 @@ void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
   nd.label                = nd.label | labelToMerge;
 }
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // Functions for Removing Data
 ////////////////////////////////////////////////////////////////////////////////
@@ -588,6 +596,12 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   GALOIS_ASSERT(tNSum == newNumNodes, "new num nodes doesn't match found");
   GALOIS_ASSERT(tESum == newNumEdges, "new num edges doesn't match found");
 
+  // prefix sum nodes/edges
+  for (size_t i = 1; i < activeThreadCount; i++) {
+    nodesToHandlePerThread[i] += nodesToHandlePerThread[i - 1];
+    edgesToHandlePerThread[i] += edgesToHandlePerThread[i - 1];
+  }
+
   std::vector<uint32_t> indicesToRemove = nodesToRemove.getOffsets();
   uint32_t numNodesToRemove = indicesToRemove.size();
 
@@ -629,100 +643,93 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
     newGraph->edgeAttributes[key].resize(newNumEdges);
   }
 
-  //galois::on_each(
-  //  [&] (unsigned tid, unsigned nthreads) {
-  //    size_t beginNode;
-  //    size_t endNode;
-  //    std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
-  //                                     oldNumNodes, tid, nthreads);
-  //    // get node and edge array starting points
-  //    uint32_t curNode;
-  //    uint32_t curEdge;
-  //    if (tid != 0) {
-  //      curNode = nodesToHandlePerThread[tid - 1];
-  //      curEdge = edgesToHandlePerThread[tid - 1];
-  //    } else {
-  //      curNode = 0;
-  //      curEdge = 0;
-  //    }
+  galois::on_each(
+    [&] (unsigned tid, unsigned nthreads) {
+      size_t beginNode;
+      size_t endNode;
+      std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
+                                       oldNumNodes, tid, nthreads);
+      // get node and edge array starting points
+      uint32_t curNode;
+      uint32_t curEdge;
+      if (tid != 0) {
+        curNode = nodesToHandlePerThread[tid - 1];
+        curEdge = edgesToHandlePerThread[tid - 1];
+      } else {
+        curNode = 0;
+        curEdge = 0;
+      }
 
-  //    for (size_t n = beginNode; n < endNode; n++) {
-  //      auto& nodeData = actualGraph.getData(n);
+      for (size_t n = beginNode; n < endNode; n++) {
+        auto& nodeData = actualGraph.getData(n);
 
-  //      // if not dead, we need to do some processing
-  //      if (!nodeData.matched) {
-  //        // first, update uuid/index maps
-  //        std::string myUUID = g->index2UUID[n];
-  //        newGraph->nodeIndices[myUUID] = curNode;
-  //        newGraph->index2UUID[curNode] = myUUID;
+        // if not dead, we need to do some processing
+        if (!nodeData.matched) {
+          // first, update uuid/index maps
+          std::string myUUID = g->index2UUID[n];
+          newGraph->nodeIndices[myUUID] = curNode;
+          newGraph->index2UUID[curNode] = myUUID;
 
-  //        // next, node attribute map
-  //        for (auto keyIter = g->nodeAttributes.begin();
-  //             keyIter != g->nodeAttributes.end();
-  //             keyIter++) {
-  //          std::string key = keyIter->first;
-  //          std::vector<std::string>& attrs = keyIter->second;
-  //          newGraph->nodeAttributes[key][curNode] = attrs[curNode];
-  //        }
+          // next, node attribute map
+          for (auto keyIter = g->nodeAttributes.begin();
+               keyIter != g->nodeAttributes.end();
+               keyIter++) {
+            std::string key = keyIter->first;
+            std::vector<std::string>& attrs = keyIter->second;
+            newGraph->nodeAttributes[key][curNode] = attrs[n];
+          }
 
+          // node names
+          newGraph->nodeNames[curNode] = g->nodeNames[n];
 
-  //        for (auto e : actualGraph.edges(n)) {
-  //          auto& data = actualGraph.getEdgeData(e);
-  //          // if not dead, work to do
-  //          //if (!data.matched) {
-  //          //  // copy edge attributes
-  //          //  for (auto keyIter = g->edgeAttributes.begin();
-  //          //       keyIter != g->edgeAttributes.end();
-  //          //       keyIter++) {
-  //          //    std::string key = keyIter->first;
-  //          //    newGraph->edgeAttributes[key].resize(newNumEdges);
-  //          //  }
-  //          //  curEdge++;
-  //          //}
-  //        }
+          for (auto e : actualGraph.edges(n)) {
+            auto& data = actualGraph.getEdgeData(e);
+            // if not dead, work to do
+            if (!data.matched) {
+              // copy edge attributes
+              for (auto keyIter = g->edgeAttributes.begin();
+                   keyIter != g->edgeAttributes.end();
+                   keyIter++) {
+                std::string key = keyIter->first;
+                std::vector<std::string>& attrs = keyIter->second;
+                newGraph->edgeAttributes[key][curEdge] = attrs[*e];
+              }
+              // construct edge
+              newCSR.constructEdge(curEdge, actualGraph.getEdgeDst(e));
+              // copy edge data
+              newCSR.getEdgeData(curEdge) = data;
+              curEdge++;
+            }
+          }
 
-  //        // finally, copy/construct node once edge end is known
-  //        newGraph->graph.fixEndEdge(curNode, curEdge);
-  //        newGraph->graph.getData(curNode) = nodeData;
+          // set node end in CSR
+          newCSR.fixEndEdge(curNode, curEdge);
+          // copy node data
+          newCSR.getData(curNode) = nodeData;
 
-  //        curNode++; // increment node count
-  //      }
-  //    }
-  //  }
-  //);
+          curNode++; // increment node count
+        }
+      }
+
+      // sanity checks
+      GALOIS_ASSERT(curNode == nodesToHandlePerThread[tid], tid, " ",
+                    curNode, " ", nodesToHandlePerThread[tid]);
+      GALOIS_ASSERT(curEdge == edgesToHandlePerThread[tid], tid, " ",
+                    curEdge, " ", edgesToHandlePerThread[tid]);
+    }
+  );
+
+  // other sanity checks; comment out in production code
+  for (auto d : newGraph->graph) {
+    std::string myUUID = newGraph->index2UUID[d];
+    GALOIS_ASSERT(newGraph->nodeIndices[myUUID] == d,
+                  newGraph->nodeIndices[myUUID], " ", d);
+  }
 
   // delete older graph
   deleteGraph(g);
-
   printf("Graph compression complete\n");
 
+  unmatchAll(newGraph);
   return newGraph;
-  ////! maps node UUID/ID to index/GraphNode
-  //std::map<std::string, uint32_t> nodeIndices;
-  ////! maps node index to UUID
-  //std::vector<std::string> index2UUID;
-  ////! actual names of nodes
-  //std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
-  //                                    // does not do deep-copy
-  //// custom attributes: maps from an attribute name to a vector that contains
-  //// the attribute for each node/edge
-  ////! attribute name (example: file) to vector of names for that attribute
-  //std::map<std::string, std::vector<std::string>> nodeAttributes;
-  ////! edge attribute name to vector of names for that attribute
-  //std::map<std::string, std::vector<std::string>> edgeAttributes;
-
-  // offsets to track per thread
-  // 1) offset into old graph
-  // 2) CURRENT offset into new graph (to copy things over)
-  // for these 2 things, need the EDGES offsets as well
-  // how to get all of the above?
-  // has to be some assumption that edges iterated in same order (reasonable
-  // to make)
-  // each thread gets prefix sum of how many edges it has to read
-  // how many edges it will actually keep
-  // how many nodes it will actually keep
-  // thread start locations all known by all threads since static partition
-  // load balance may become an issue?
-  // on second pass, each thread knows where to start saving thigns
-  // when it saves/copies something, increment a counter
 }

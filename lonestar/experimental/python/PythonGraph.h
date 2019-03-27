@@ -397,7 +397,7 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
  * @param nodesRemoved Number of nodes that need to be removed
  * @param edgesRemoved Number of edges that need to be removed
  */
-AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved
+AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
                                uint64_t edgesRemoved);
 
 /**

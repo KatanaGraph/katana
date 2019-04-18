@@ -413,6 +413,15 @@ uint32_t nodeRemovalPass(AttributedGraph* g);
 
 // TODO doxygen all of the things below
 
+void compileCypherQuery(const char* cypherQueryStr, const char* outputFileName);
+
+size_t matchQuery(AttributedGraph* dataGraph,
+                  EventLimit limit,
+                  EventWindow window,
+                  MatchedEdge* queryEdges,
+                  size_t numQueryEdges,
+                  const char** filters);
+
 /**
  * Wrapper call to graph simulation call on LC_CSR Graph.
  *
@@ -421,13 +430,6 @@ uint32_t nodeRemovalPass(AttributedGraph* g);
  * @param dataGraph graph to match pattern to
  * @returns Number of matched edges from graph simulation.
  */
-size_t matchQuery(AttributedGraph* dataGraph,
-                  EventLimit limit,
-                  EventWindow window,
-                  MatchedEdge* queryEdges,
-                  size_t numQueryEdges,
-                  const char** filters);
-
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window);

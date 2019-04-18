@@ -14,3 +14,8 @@ add_executable(cypher_compiler CypherCompiler.cpp)
 add_dependencies(cypher_compiler cypher_parser)
 target_link_libraries(cypher_compiler ${CYPHER_PARSER_LIBRARY})
 target_include_directories(cypher_compiler PUBLIC ${CYPHER_PARSER_INCLUDE})
+
+add_library(cypher_compile CypherCompiler.cpp)
+add_dependencies(cypher_compile cypher_parser)
+target_link_libraries(cypher_compile ${CYPHER_PARSER_LIBRARY})
+target_include_directories(cypher_compile PUBLIC ${CYPHER_PARSER_INCLUDE})

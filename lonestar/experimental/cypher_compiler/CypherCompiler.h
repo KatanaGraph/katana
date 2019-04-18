@@ -64,9 +64,6 @@ class CypherCompiler {
         return 0;
     }
 
-public:
-    CypherCompiler(std::ostream& ostream) : numLabels(0), os(ostream) {}
-
     int compile_ast(const cypher_parse_result_t *ast)
     {
         for (unsigned int i = 0; i < ast->nroots; ++i)
@@ -77,5 +74,43 @@ public:
             }
         }
         return 0;
+    }
+public:
+    CypherCompiler(std::ostream& ostream) : numLabels(0), os(ostream) {}
+
+    int compile(const char* queryStr)
+    {
+        cypher_parse_result_t *result = cypher_parse(queryStr, 
+                NULL, NULL, CYPHER_PARSE_ONLY_STATEMENTS);
+
+        if (result == NULL)
+        {
+            std::cerr << "Critical failure in parsing the cypher query\n";
+            return EXIT_FAILURE;
+        }
+
+        auto nerrors = cypher_parse_result_nerrors(result);
+
+#ifdef CYPHER_DEBUG
+        std::cout << "Parsed " << cypher_parse_result_nnodes(result) << " AST nodes\n";
+        std::cout << "Read " << cypher_parse_result_ndirectives(result) << " statements\n";
+        std::cout << "Encountered " << nerrors << " errors\n";
+        if (nerrors == 0) {
+            cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
+        }
+#endif
+
+        if (nerrors == 0) {
+            compile_ast(result);
+        }
+
+        cypher_parse_result_free(result);
+        
+        if (nerrors != 0) {
+            std::cerr << "Parsing the cypher query failed with " << nerrors << " errors \n";
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
     }
 };

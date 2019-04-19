@@ -30,15 +30,23 @@ class CypherCompiler {
                 os << cypher_ast_label_get_name(label);
                 os << ",";
                 auto nameNode = cypher_ast_node_pattern_get_identifier(element);
-                auto name = cypher_ast_identifier_get_name(nameNode);
-                os << getID(name);
+                if (nameNode != NULL) {
+                    auto name = cypher_ast_identifier_get_name(nameNode);
+                    os << getID(name);
+                } else {
+                    os << numLabels++;
+                }
             } else if (element_type == CYPHER_AST_REL_PATTERN) {
                 auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
                 os << cypher_ast_reltype_get_name(reltype);
                 os << ",";
                 auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
-                auto name = cypher_ast_identifier_get_name(nameNode);
-                os << getID(name);
+                if (nameNode != NULL) {
+                    auto name = cypher_ast_identifier_get_name(nameNode);
+                    os << getID(name);
+                } else {
+                    os << numLabels++;
+                }
             }
             if (i != nelements - 1) {
                 os << ",";

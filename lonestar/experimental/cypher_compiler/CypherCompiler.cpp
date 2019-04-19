@@ -3,15 +3,6 @@
 
 #define drakon
 
-void compileCypherQuery(const char* cypherQueryStr, const char* outputFileName)
-{
-    std::ofstream ofile;
-    ofile.open(outputFileName);
-    CypherCompiler cc(ofile);
-    cc.compile(cypherQueryStr);
-    ofile.close();
-}
-
 int main(int argc, char *argv[])
 {
     std::string queryStr;

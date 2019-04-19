@@ -18,6 +18,17 @@
  */
 
 #include "PythonGraph.h"
+#include "../cypher_compiler/CypherCompiler.h"
+#include <fstream>
+
+void compileCypherQuery(const char* cypherQueryStr, const char* outputFileName)
+{
+    std::ofstream ofile;
+    ofile.open(outputFileName);
+    CypherCompiler cc(ofile);
+    cc.compile(cypherQueryStr);
+    ofile.close();
+}
 
 size_t matchQuery(AttributedGraph* dataGraph,
                   EventLimit limit,

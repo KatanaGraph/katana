@@ -20,12 +20,15 @@ target_include_directories(galois_python PUBLIC
   ${CMAKE_SOURCE_DIR}/libgalois/experimental/include
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_link_libraries(galois_python cypher_compile)
 target_link_libraries(galois_python ${Boost_SERIALIZATION_LIBRARY_RELEASE})
 set_target_properties (galois_python PROPERTIES 
   INTERFACE_POSITION_INDEPENDENT_CODE On 
   POSITION_INDEPENDENT_CODE On
 )
+
+add_dependencies(galois_python cypher_parser)
+target_link_libraries(galois_python ${CYPHER_PARSER_LIBRARY})
+target_include_directories(galois_python PUBLIC ${CYPHER_PARSER_INCLUDE})
 
 if (USE_VTUNE)
   find_package(VTune)

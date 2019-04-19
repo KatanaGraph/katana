@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <iostream>
 
+#define CYPHER_DEBUG
+
 class CypherCompiler {
     unsigned numLabels;
     std::ostream& os;
@@ -80,6 +82,8 @@ public:
 
     int compile(const char* queryStr)
     {
+        std::cout << "Query: " << queryStr << "\n";
+
         cypher_parse_result_t *result = cypher_parse(queryStr, 
                 NULL, NULL, CYPHER_PARSE_ONLY_STATEMENTS);
 

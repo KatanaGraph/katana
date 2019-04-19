@@ -55,12 +55,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
     if (nodeTypes[srcID] == NULL) {
       nodeTypes[srcID] = queryEdges[j].caused_by.name;
     } else {
-      assert(nodeTypes[srcID] == queryEdges[j].caused_by.name);
+      assert(std::string(nodeTypes[srcID]) ==
+               std::string(queryEdges[j].caused_by.name));
     }
     if (nodeTypes[dstID] == NULL) {
       nodeTypes[dstID] = queryEdges[j].acted_on.name;
     } else {
-      assert(nodeTypes[dstID] == queryEdges[j].acted_on.name);
+      assert(std::string(nodeTypes[dstID]) ==
+               std::string(queryEdges[j].acted_on.name));
     }
     // node contains check
     if (nodeContains[srcID] == "") {

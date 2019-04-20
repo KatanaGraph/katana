@@ -50,7 +50,7 @@ class CypherCompiler {
             os << cypher_ast_label_get_name(label);
             os << ",";
         } else {
-            os << "ANY,";
+            os << "any,";
         }
         auto nameNode = cypher_ast_node_pattern_get_identifier(element);
         if (nameNode != NULL) {

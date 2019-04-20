@@ -11,19 +11,19 @@ class CypherCompiler {
     unsigned numNodeIDs;
     unsigned numEdgeIDs;
     std::ostream& os;
-    std::unordered_map<std::string, std::string> nodeIDs;
-    std::unordered_map<std::string, std::string> edgeIDs;
+    std::unordered_map<std::string, unsigned> nodeIDs;
+    std::unordered_map<std::string, unsigned> edgeIDs;
     
-    std::string getNodeID(std::string str) {
+    unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
-            nodeIDs[str] = std::to_string(numNodeIDs++);
+            nodeIDs[str] = numNodeIDs++;
         }
         return nodeIDs[str];
     }
 
-    std::string getEdgeID(std::string str) {
+    unsigned getEdgeID(std::string str) {
         if (edgeIDs.find(str) == edgeIDs.end()) {
-            edgeIDs[str] = std::to_string(numEdgeIDs++);
+            edgeIDs[str] = numEdgeIDs++;
         }
         return edgeIDs[str];
     }

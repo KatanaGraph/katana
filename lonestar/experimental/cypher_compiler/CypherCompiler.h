@@ -15,6 +15,7 @@ class CypherCompiler {
     std::unordered_map<const cypher_astnode_t*, unsigned> anonNodeIDs;
     std::unordered_map<std::string, unsigned> edgeIDs;
     std::unordered_map<const cypher_astnode_t*, unsigned> anonEdgeIDs;
+    std::unordered_map<std::string, std::string> contains;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -44,7 +45,7 @@ class CypherCompiler {
         return anonEdgeIDs[node];
     }
 
-    void compile_ast_node_pattern_path(const cypher_astnode_t *element) {
+    void compile_node_pattern_path(const cypher_astnode_t *element) {
         auto label = cypher_ast_node_pattern_get_label(element, 0);
         if (label != NULL) {
             os << cypher_ast_label_get_name(label);
@@ -56,12 +57,17 @@ class CypherCompiler {
         if (nameNode != NULL) {
             auto name = cypher_ast_identifier_get_name(nameNode);
             os << getNodeID(name);
+            os << ",";
+            if (contains.find(name) != contains.end()) {
+              os << contains[name];
+            }
         } else {
             os << getAnonNodeID(element);
+            os << ",";
         }
     }
 
-    void compile_ast_rel_pattern_path(const cypher_astnode_t *element) {
+    void compile_rel_pattern_path(const cypher_astnode_t *element) {
         auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
         if (reltype != NULL) {
             os << cypher_ast_reltype_get_name(reltype);
@@ -88,31 +94,74 @@ class CypherCompiler {
             auto element = cypher_ast_pattern_path_get_element(ast, i - 1);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_ast_node_pattern_path(element);
+            compile_node_pattern_path(element);
           } 
           os << ",";
           { // relation
             auto element = cypher_ast_pattern_path_get_element(ast, i);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_REL_PATTERN);
-            compile_ast_rel_pattern_path(element);
+            compile_rel_pattern_path(element);
           } 
           os << ",";
           { // destination
             auto element = cypher_ast_pattern_path_get_element(ast, i + 1);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_ast_node_pattern_path(element);
+            compile_node_pattern_path(element);
           } 
           os << "\n";
         }
         return 0;
     }
 
+    void compile_binary_operator(const cypher_astnode_t *ast)
+    {
+      auto op = cypher_ast_binary_operator_get_operator(ast);
+      auto arg1 = cypher_ast_binary_operator_get_argument1(ast);
+      auto arg2 = cypher_ast_binary_operator_get_argument2(ast);
+      if (op == CYPHER_OP_AND) {
+        compile_expression(arg1);
+        compile_expression(arg2);
+      } else if (op == CYPHER_OP_CONTAINS) {
+        auto arg1_type = cypher_astnode_type(arg1);
+        auto arg2_type = cypher_astnode_type(arg2);
+        if ((arg1_type == CYPHER_AST_PROPERTY_OPERATOR) &&
+           (arg2_type == CYPHER_AST_STRING)) {
+          auto prop_id = cypher_ast_property_operator_get_expression(arg1);
+          auto prop_name = cypher_ast_property_operator_get_prop_name(arg1);
+          if ((prop_id != NULL) && (prop_name != NULL)) {
+            auto name = cypher_ast_prop_name_get_value(prop_name);
+            if (!strcmp(name, "name")) {
+              auto id = cypher_ast_identifier_get_name(prop_id);
+              auto value = cypher_ast_string_get_value(arg2);
+              assert(contains.find(id) == contains.end());
+              contains[id] = value;
+            }
+          }
+        }
+      }
+    }
+
+    void compile_expression(const cypher_astnode_t *ast)
+    {
+        auto type = cypher_astnode_type(ast);
+        if (type == CYPHER_AST_BINARY_OPERATOR) {
+          compile_binary_operator(ast);
+        }
+    }
+
     int compile_ast_node(const cypher_astnode_t *ast)
     {
         auto type = cypher_astnode_type(ast);
-        if (type == CYPHER_AST_PATTERN_PATH) {
+        if (type == CYPHER_AST_MATCH) {
+            auto predicate = cypher_ast_match_get_predicate(ast);
+            if (predicate != NULL) compile_expression(predicate);
+
+            auto pattern = cypher_ast_match_get_pattern(ast);
+            if (pattern != NULL) return compile_ast_node(pattern);
+            else return 0;
+        } else if (type == CYPHER_AST_PATTERN_PATH) {
             return compile_pattern_path(ast);
         }
 

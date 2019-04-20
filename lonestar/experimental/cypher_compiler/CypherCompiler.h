@@ -8,15 +8,24 @@
 #define CYPHER_DEBUG
 
 class CypherCompiler {
-    unsigned numLabels;
+    unsigned numNodeIDs;
+    unsigned numEdgeIDs;
     std::ostream& os;
-    std::unordered_map<std::string, std::string> nameID;
+    std::unordered_map<std::string, std::string> nodeIDs;
+    std::unordered_map<std::string, std::string> edgeIDs;
     
-    std::string getID(std::string str) {
-        if (nameID.find(str) == nameID.end()) {
-            nameID[str] = std::to_string(numLabels++);
+    std::string getNodeID(std::string str) {
+        if (nodeIDs.find(str) == nodeIDs.end()) {
+            nodeIDs[str] = std::to_string(numNodeIDs++);
         }
-        return nameID[str];
+        return nodeIDs[str];
+    }
+
+    std::string getEdgeID(std::string str) {
+        if (edgeIDs.find(str) == edgeIDs.end()) {
+            edgeIDs[str] = std::to_string(numEdgeIDs++);
+        }
+        return edgeIDs[str];
     }
 
     int compile_pattern_path(const cypher_astnode_t *ast)
@@ -32,9 +41,9 @@ class CypherCompiler {
                 auto nameNode = cypher_ast_node_pattern_get_identifier(element);
                 if (nameNode != NULL) {
                     auto name = cypher_ast_identifier_get_name(nameNode);
-                    os << getID(name);
+                    os << getNodeID(name);
                 } else {
-                    os << numLabels++;
+                    os << numNodeIDs++;
                 }
             } else if (element_type == CYPHER_AST_REL_PATTERN) {
                 auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
@@ -43,9 +52,9 @@ class CypherCompiler {
                 auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
                 if (nameNode != NULL) {
                     auto name = cypher_ast_identifier_get_name(nameNode);
-                    os << getID(name);
+                    os << getEdgeID(name);
                 } else {
-                    os << numLabels++;
+                    os << numEdgeIDs++;
                 }
             }
             if (i != nelements - 1) {
@@ -85,8 +94,9 @@ class CypherCompiler {
         }
         return 0;
     }
+
 public:
-    CypherCompiler(std::ostream& ostream) : numLabels(0), os(ostream) {}
+    CypherCompiler(std::ostream& ostream) : numNodeIDs(0), numEdgeIDs(0), os(ostream) {}
 
     int compile(const char* queryStr)
     {

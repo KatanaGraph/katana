@@ -28,48 +28,68 @@ class CypherCompiler {
         return edgeIDs[str];
     }
 
+    void compile_ast_node_pattern_path(const cypher_astnode_t *element) {
+        auto label = cypher_ast_node_pattern_get_label(element, 0);
+        if (label != NULL) {
+            os << cypher_ast_label_get_name(label);
+            os << ",";
+        } else {
+            os << "ANY,";
+        }
+        auto nameNode = cypher_ast_node_pattern_get_identifier(element);
+        if (nameNode != NULL) {
+            auto name = cypher_ast_identifier_get_name(nameNode);
+            os << getNodeID(name);
+        } else {
+            os << numNodeIDs++;
+        }
+    }
+
+    void compile_ast_rel_pattern_path(const cypher_astnode_t *element) {
+        auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
+        if (reltype != NULL) {
+            os << cypher_ast_reltype_get_name(reltype);
+            os << ",";
+        } else {
+            os << "ANY,";
+        }
+        auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
+        if (nameNode != NULL) {
+            auto name = cypher_ast_identifier_get_name(nameNode);
+            os << getEdgeID(name);
+        } else {
+            os << numEdgeIDs++;
+        }
+    }
+
     int compile_pattern_path(const cypher_astnode_t *ast)
     {
         unsigned int nelements = cypher_ast_pattern_path_nelements(ast);
-        for (unsigned int i = 0; i < nelements; ++i) {
+        assert(nelements > 2);
+        assert((nelements % 2) == 1); // odd number of elements
+        for (unsigned int i = 1; i < nelements; i+=2) {
+          { // source
+            auto element = cypher_ast_pattern_path_get_element(ast, i - 1);
+            auto element_type = cypher_astnode_type(element);
+            assert(element_type == CYPHER_AST_NODE_PATTERN);
+            compile_ast_node_pattern_path(element);
+          } 
+          os << ",";
+          { // relation
             auto element = cypher_ast_pattern_path_get_element(ast, i);
             auto element_type = cypher_astnode_type(element);
-            if (element_type == CYPHER_AST_NODE_PATTERN) {
-                auto label = cypher_ast_node_pattern_get_label(element, 0);
-                if (label != NULL) {
-                    os << cypher_ast_label_get_name(label);
-                    os << ",";
-                } else {
-                    os << "ANY,";
-                }
-                auto nameNode = cypher_ast_node_pattern_get_identifier(element);
-                if (nameNode != NULL) {
-                    auto name = cypher_ast_identifier_get_name(nameNode);
-                    os << getNodeID(name);
-                } else {
-                    os << numNodeIDs++;
-                }
-            } else if (element_type == CYPHER_AST_REL_PATTERN) {
-                auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
-                if (reltype != NULL) {
-                    os << cypher_ast_reltype_get_name(reltype);
-                    os << ",";
-                } else {
-                    os << "ANY,";
-                }
-                auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
-                if (nameNode != NULL) {
-                    auto name = cypher_ast_identifier_get_name(nameNode);
-                    os << getEdgeID(name);
-                } else {
-                    os << numEdgeIDs++;
-                }
-            }
-            if (i != nelements - 1) {
-                os << ",";
-            }
+            assert(element_type == CYPHER_AST_REL_PATTERN);
+            compile_ast_rel_pattern_path(element);
+          } 
+          os << ",";
+          { // destination
+            auto element = cypher_ast_pattern_path_get_element(ast, i + 1);
+            auto element_type = cypher_astnode_type(element);
+            assert(element_type == CYPHER_AST_NODE_PATTERN);
+            compile_ast_node_pattern_path(element);
+          } 
+          os << "\n";
         }
-        os << "\n";
         return 0;
     }
 

@@ -12,7 +12,9 @@ class CypherCompiler {
     unsigned numEdgeIDs;
     std::ostream& os;
     std::unordered_map<std::string, unsigned> nodeIDs;
+    std::unordered_map<const cypher_astnode_t*, unsigned> anonNodeIDs;
     std::unordered_map<std::string, unsigned> edgeIDs;
+    std::unordered_map<const cypher_astnode_t*, unsigned> anonEdgeIDs;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -20,12 +22,26 @@ class CypherCompiler {
         }
         return nodeIDs[str];
     }
+    
+    unsigned getAnonNodeID(const cypher_astnode_t* node) {
+        if (anonNodeIDs.find(node) == anonNodeIDs.end()) {
+            anonNodeIDs[node] = numNodeIDs++;
+        }
+        return anonNodeIDs[node];
+    }
 
     unsigned getEdgeID(std::string str) {
         if (edgeIDs.find(str) == edgeIDs.end()) {
             edgeIDs[str] = numEdgeIDs++;
         }
         return edgeIDs[str];
+    }
+
+    unsigned getAnonEdgeID(const cypher_astnode_t* node) {
+        if (anonEdgeIDs.find(node) == anonEdgeIDs.end()) {
+            anonEdgeIDs[node] = numEdgeIDs++;
+        }
+        return anonEdgeIDs[node];
     }
 
     void compile_ast_node_pattern_path(const cypher_astnode_t *element) {
@@ -41,7 +57,7 @@ class CypherCompiler {
             auto name = cypher_ast_identifier_get_name(nameNode);
             os << getNodeID(name);
         } else {
-            os << numNodeIDs++;
+            os << getAnonNodeID(element);
         }
     }
 
@@ -58,7 +74,7 @@ class CypherCompiler {
             auto name = cypher_ast_identifier_get_name(nameNode);
             os << getEdgeID(name);
         } else {
-            os << numEdgeIDs++;
+            os << getAnonEdgeID(element);
         }
     }
 

@@ -16,6 +16,7 @@ class CypherCompiler {
     std::unordered_map<std::string, unsigned> edgeIDs;
     std::unordered_map<const cypher_astnode_t*, unsigned> anonEdgeIDs;
     std::unordered_map<std::string, std::string> contains;
+    std::unordered_map<std::string, uint32_t> timestamps;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -78,9 +79,13 @@ class CypherCompiler {
         auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
         if (nameNode != NULL) {
             auto name = cypher_ast_identifier_get_name(nameNode);
-            os << getEdgeID(name);
+            if (timestamps.find(name) != timestamps.end()) {
+              os << timestamps[name];
+            } else {
+              os << std::numeric_limits<uint32_t>::max();
+            }
         } else {
-            os << getAnonEdgeID(element);
+            os << std::numeric_limits<uint32_t>::max();
         }
     }
 
@@ -143,11 +148,72 @@ class CypherCompiler {
       }
     }
 
+    void compile_comparison(const cypher_astnode_t *ast)
+    {
+      if (cypher_ast_comparison_get_length(ast) == 1) {
+        auto arg1 = cypher_ast_comparison_get_argument(ast, 0);
+        auto arg2 = cypher_ast_comparison_get_argument(ast, 1);
+        auto arg1_type = cypher_astnode_type(arg1);
+        auto arg2_type = cypher_astnode_type(arg2);
+        if ((arg1_type == CYPHER_AST_PROPERTY_OPERATOR) &&
+           (arg2_type == CYPHER_AST_PROPERTY_OPERATOR)) {
+          auto prop_name1 = cypher_ast_property_operator_get_prop_name(arg1);
+          auto prop_name2 = cypher_ast_property_operator_get_prop_name(arg2);
+          if ((prop_name1 != NULL) && (prop_name2 != NULL)) {
+            auto name1 = cypher_ast_prop_name_get_value(prop_name1);
+            auto name2 = cypher_ast_prop_name_get_value(prop_name2);
+            if (!strcmp(name1, "time") && !strcmp(name2, "time")) {
+              auto prop_id1 = cypher_ast_property_operator_get_expression(arg1);
+              auto prop_id2 = cypher_ast_property_operator_get_expression(arg2);
+              auto id1 = cypher_ast_identifier_get_name(prop_id1);
+              auto id2 = cypher_ast_identifier_get_name(prop_id2);
+
+              auto op = cypher_ast_comparison_get_operator(ast, 0);
+              // TODO: make it more general - topological sort among all timestamp constraints
+              if ((op == CYPHER_OP_LT) || (op == CYPHER_OP_LTE)) {
+                if (timestamps.find(id1) == timestamps.end()) {
+                  if (timestamps.find(id2) == timestamps.end()) {
+                    timestamps[id1] = 5;
+                    timestamps[id2] = 10;
+                  } else {
+                    timestamps[id1] = timestamps[id2] - 1;
+                  }
+                } else {
+                  if (timestamps.find(id2) == timestamps.end()) {
+                    timestamps[id2] = timestamps[id1] + 1;
+                  } else {
+                    assert(timestamps[id1] <= timestamps[id2]);
+                  }
+                }
+              } else if ((op == CYPHER_OP_GT) || (op == CYPHER_OP_GTE)) {
+                if (timestamps.find(id1) == timestamps.end()) {
+                  if (timestamps.find(id2) == timestamps.end()) {
+                    timestamps[id1] = 10;
+                    timestamps[id2] = 5;
+                  } else {
+                    timestamps[id1] = timestamps[id2] + 1;
+                  }
+                } else {
+                  if (timestamps.find(id2) == timestamps.end()) {
+                    timestamps[id2] = timestamps[id1] - 1;
+                  } else {
+                    assert(timestamps[id1] >= timestamps[id2]);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     void compile_expression(const cypher_astnode_t *ast)
     {
         auto type = cypher_astnode_type(ast);
         if (type == CYPHER_AST_BINARY_OPERATOR) {
           compile_binary_operator(ast);
+        } else if (type == CYPHER_AST_COMPARISON) {
+          compile_comparison(ast);
         }
     }
 

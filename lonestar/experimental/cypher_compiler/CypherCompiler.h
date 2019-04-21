@@ -17,6 +17,7 @@ class CypherCompiler {
     std::unordered_map<const cypher_astnode_t*, unsigned> anonEdgeIDs;
     std::unordered_map<std::string, std::string> contains;
     std::unordered_map<std::string, uint32_t> timestamps;
+    std::unordered_map<std::string, std::string> labels;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -47,16 +48,28 @@ class CypherCompiler {
     }
 
     void compile_node_pattern_path(const cypher_astnode_t *element) {
+        auto nameNode = cypher_ast_node_pattern_get_identifier(element);
+        std::string name = "";
+        if (nameNode != NULL) {
+            name = cypher_ast_identifier_get_name(nameNode);
+        }
+
         auto label = cypher_ast_node_pattern_get_label(element, 0);
-        if (label != NULL) {
+        if ((label != NULL) || (labels.find(name) != labels.end())) {
+          if (label != NULL) {
             os << cypher_ast_label_get_name(label);
-            os << ",";
+          }
+          if (labels.find(name) != labels.end()) {
+            if (label != NULL) {
+              os << ";";
+            }
+            os << labels[name];
+          }
+          os << ",";
         } else {
             os << "any,";
         }
-        auto nameNode = cypher_ast_node_pattern_get_identifier(element);
         if (nameNode != NULL) {
-            auto name = cypher_ast_identifier_get_name(nameNode);
             os << getNodeID(name);
             os << ",";
             if (contains.find(name) != contains.end()) {
@@ -207,6 +220,33 @@ class CypherCompiler {
       }
     }
 
+    void compile_labels_operator(const cypher_astnode_t *ast, std::string prefix = "")
+    {
+      auto labels_id = cypher_ast_labels_operator_get_expression(ast);
+      auto id = cypher_ast_identifier_get_name(labels_id);
+      for (unsigned int i = 0; i < cypher_ast_labels_operator_nlabels(ast); ++i) {
+        auto label = cypher_ast_labels_operator_get_label(ast, i);
+        auto name = cypher_ast_label_get_name(label);
+        if (labels.find(id) == labels.end()) {
+          labels[id] = prefix + name;
+        } else {
+          labels[id] += ";" + prefix + name; // TODO: fix assumption of AND
+        }
+      }
+    }
+
+    void compile_unary_operator(const cypher_astnode_t *ast)
+    {
+      auto op = cypher_ast_unary_operator_get_operator(ast);
+      if (op == CYPHER_OP_NOT) {
+        auto arg = cypher_ast_unary_operator_get_argument(ast);
+        auto arg_type = cypher_astnode_type(arg);
+        if (arg_type == CYPHER_AST_LABELS_OPERATOR) {
+          compile_labels_operator(arg, "~");
+        }
+      }
+    }
+
     void compile_expression(const cypher_astnode_t *ast)
     {
         auto type = cypher_astnode_type(ast);
@@ -214,6 +254,10 @@ class CypherCompiler {
           compile_binary_operator(ast);
         } else if (type == CYPHER_AST_COMPARISON) {
           compile_comparison(ast);
+        } else if (type == CYPHER_AST_UNARY_OPERATOR) {
+          compile_unary_operator(ast);
+        } else if (type == CYPHER_AST_LABELS_OPERATOR) {
+          compile_labels_operator(ast);
         }
     }
 

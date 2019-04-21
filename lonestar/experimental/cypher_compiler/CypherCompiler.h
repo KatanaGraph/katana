@@ -57,13 +57,17 @@ class CypherCompiler {
             name = cypher_ast_identifier_get_name(nameNode);
         }
 
-        auto label = cypher_ast_node_pattern_get_label(element, 0);
-        if ((label != NULL) || (labels.find(name) != labels.end())) {
-          if (label != NULL) {
+        auto nlabels = cypher_ast_node_pattern_nlabels(element);
+        if ((nlabels > 0) || (labels.find(name) != labels.end())) {
+          for (unsigned int i = 0; i < nlabels; ++i) {
+            if (i > 0) {
+              os << ";";
+            }
+            auto label = cypher_ast_node_pattern_get_label(element, i);
             os << cypher_ast_label_get_name(label);
           }
           if (labels.find(name) != labels.end()) {
-            if (label != NULL) {
+            if (nlabels > 0) {
               os << ";";
             }
             os << labels[name];

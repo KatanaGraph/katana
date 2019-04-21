@@ -18,7 +18,9 @@ class CypherCompiler {
     std::unordered_map<std::string, std::string> contains;
     std::unordered_map<std::string, uint32_t> timestamps;
     std::unordered_map<std::string, std::string> labels;
+    std::unordered_map<std::string, std::string> pathConstraints;
     bool shortestPath;
+    std::string namedPath;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -50,7 +52,7 @@ class CypherCompiler {
 
     void compile_node_pattern_path(const cypher_astnode_t *element) {
         auto nameNode = cypher_ast_node_pattern_get_identifier(element);
-        std::string name = "";
+        std::string name;
         if (nameNode != NULL) {
             name = cypher_ast_identifier_get_name(nameNode);
         }
@@ -83,18 +85,32 @@ class CypherCompiler {
     }
 
     void compile_rel_pattern_path(const cypher_astnode_t *element) {
+        auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
+        std::string name;
+        if (nameNode != NULL) {
+            name = cypher_ast_identifier_get_name(nameNode);
+        }
+
         auto varlength = cypher_ast_rel_pattern_get_varlength(element);
         if (varlength != NULL) {
           auto start = cypher_ast_range_get_start(varlength);
           auto end = cypher_ast_range_get_end(varlength);
           if ((start == NULL) || (end == NULL)) {
-            std::cout << "var length\n";
             if (shortestPath) {
-              os << "*,";
+              os << "*";
               shortestPath = false;
             } else {
-              os << "**,"; // all paths; TODO: modify runtime to handle it
+              os << "**"; // all paths; TODO: modify runtime to handle it
             }
+            if (pathConstraints.find(namedPath) != pathConstraints.end()) {
+              os << "=";
+              os << pathConstraints[namedPath];
+              namedPath.clear();
+            } else if (pathConstraints.find(name) != pathConstraints.end()) {
+              os << "=";
+              os << pathConstraints[name];
+            }
+            os << ",";
           }
         } else {
           auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
@@ -105,9 +121,7 @@ class CypherCompiler {
               os << "ANY,";
           }
         }
-        auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
         if (nameNode != NULL) {
-            auto name = cypher_ast_identifier_get_name(nameNode);
             if (timestamps.find(name) != timestamps.end()) {
               os << timestamps[name];
             } else {
@@ -263,6 +277,57 @@ class CypherCompiler {
       }
     }
 
+    void compile_list_comprehension(const cypher_astnode_t *ast, std::string prefix = "")
+    {
+      auto list_id = cypher_ast_list_comprehension_get_identifier(ast);
+      auto id = cypher_ast_identifier_get_name(list_id);
+      auto new_id = id;
+
+      auto expression = cypher_ast_list_comprehension_get_expression(ast);
+      auto exp_type = cypher_astnode_type(expression);
+      if (exp_type == CYPHER_AST_APPLY_OPERATOR) {
+        //auto exp_fn = cypher_ast_apply_operator_get_func_name(expression);
+        // assume function is inverse of the other
+        auto arg = cypher_ast_apply_operator_get_argument(expression, 0);
+        auto arg_type = cypher_astnode_type(arg);
+        if (arg_type == CYPHER_AST_IDENTIFIER) {
+          new_id = cypher_ast_identifier_get_name(arg);
+        }
+      } else if (exp_type == CYPHER_AST_IDENTIFIER) {
+        new_id = cypher_ast_identifier_get_name(expression);
+      }
+
+      auto predicate = cypher_ast_list_comprehension_get_predicate(ast);
+      auto pred_type = cypher_astnode_type(predicate);
+      if (pred_type == CYPHER_AST_BINARY_OPERATOR) {
+        auto op = cypher_ast_binary_operator_get_operator(predicate);
+        if (op == CYPHER_OP_EQUAL) {
+          auto arg1 = cypher_ast_binary_operator_get_argument1(predicate);
+          auto arg2 = cypher_ast_binary_operator_get_argument2(predicate);
+          auto arg1_type = cypher_astnode_type(arg1);
+          auto arg2_type = cypher_astnode_type(arg2);
+          if (arg1_type == CYPHER_AST_APPLY_OPERATOR) {
+            //auto arg1_fn = cypher_ast_apply_operator_get_func_name(arg1);
+            // assume function is inverse of the other
+            auto arg = cypher_ast_apply_operator_get_argument(arg1, 0);
+            auto arg_type = cypher_astnode_type(arg);
+            if (arg_type == CYPHER_AST_IDENTIFIER) {
+              if (!strcmp(id, cypher_ast_identifier_get_name(arg))) {
+                if (arg2_type == CYPHER_AST_STRING) {
+                  pathConstraints[new_id] = prefix + cypher_ast_string_get_value(arg2);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    void compile_none(const cypher_astnode_t *ast)
+    {
+      compile_list_comprehension(ast, "~");
+    }
+
     void compile_expression(const cypher_astnode_t *ast)
     {
         auto type = cypher_astnode_type(ast);
@@ -274,6 +339,8 @@ class CypherCompiler {
           compile_unary_operator(ast);
         } else if (type == CYPHER_AST_LABELS_OPERATOR) {
           compile_labels_operator(ast);
+        } else if (type == CYPHER_AST_NONE) {
+          compile_none(ast);
         }
     }
 
@@ -293,6 +360,12 @@ class CypherCompiler {
             shortestPath = true;
             assert(cypher_ast_shortest_path_is_single(ast));
             return compile_ast_node(cypher_ast_shortest_path_get_path(ast));
+        } else if (type == CYPHER_AST_NAMED_PATH) {
+            auto named_id = cypher_ast_named_path_get_identifier(ast);
+            namedPath = cypher_ast_identifier_get_name(named_id);
+
+            auto path = cypher_ast_named_path_get_path(ast);
+            return compile_ast_node(path);
         }
 
         for (unsigned int i = 0; i < cypher_astnode_nchildren(ast); ++i)

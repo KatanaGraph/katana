@@ -94,6 +94,7 @@ class CypherCompiler {
         if (nameNode != NULL) {
             name = cypher_ast_identifier_get_name(nameNode);
         }
+        auto nlabels = cypher_ast_rel_pattern_nreltypes(element);
 
         auto varlength = cypher_ast_rel_pattern_get_varlength(element);
         if (varlength != NULL) {
@@ -113,18 +114,24 @@ class CypherCompiler {
             } else if (pathConstraints.find(name) != pathConstraints.end()) {
               os << "=";
               os << pathConstraints[name];
+            } else if (nlabels > 0) {
+              os << "=";
             }
-            os << ",";
-          }
-        } else {
-          auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
-          if (reltype != NULL) {
-              os << cypher_ast_reltype_get_name(reltype);
-              os << ",";
-          } else {
-              os << "ANY,";
           }
         }
+        if (nlabels > 0) {
+          for (unsigned int i = 0; i < nlabels; ++i) {
+            if (i > 0) {
+              os << ";";
+            }
+            auto label = cypher_ast_rel_pattern_get_reltype(element, i);
+            os << cypher_ast_reltype_get_name(label);
+          }
+        }
+        if ((varlength == NULL) && (nlabels == 0)) {
+          os << "ANY";
+        }
+        os << ",";
         if (nameNode != NULL) {
             if (timestamps.find(name) != timestamps.end()) {
               os << timestamps[name];

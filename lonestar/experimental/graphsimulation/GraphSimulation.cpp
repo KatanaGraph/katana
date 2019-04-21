@@ -128,8 +128,6 @@ void matchNodesOnce(Graph& qG, Graph& dG,
           uint64_t mask = (1 << qn);
           if ((num_qEdges > 0) && (dData.matched & mask)) {
             // match children links
-            // TODO: sort data edges by timestamp
-            // Assumption: query edges are sorted by timestamp
             matchedEdges.clear();
             matchedEdges.resize(num_qEdges);
             for (auto de : dG.edges(dn)) {
@@ -166,15 +164,38 @@ void matchNodesOnce(Graph& qG, Graph& dG,
               }
             }
             if (matched) { // check if it matches query timestamp order
-              uint64_t prev = matchedEdges[0][0];
-              for (size_t j = 1; j < matchedEdges[0].size(); ++j) {
-                uint64_t cur = matchedEdges[0][j];
-                if (cur < prev) {
-                  prev = cur;
-                }
+              VecTy queryEdgeOrder;
+              VecTy queryTimestamps;
+              for (auto qe : qG.edges(qn)) {
+                auto qeData = qG.getEdgeData(qe);
+                queryTimestamps.push_back(qeData.timestamp);
               }
-              matchedEdges[0].clear();
-              for (size_t i = 1; i < matchedEdges.size(); ++i) {
+              size_t edgeID = 0;
+              uint64_t prev = 0;
+              while (prev != std::numeric_limits<uint32_t>::max()) {
+                uint64_t next = std::numeric_limits<uint32_t>::max();
+                size_t minEdgeID = 0;
+                for (size_t i = 0; i < queryTimestamps.size(); ++i) {
+                  uint64_t cur = queryTimestamps[i];
+                  if (cur != std::numeric_limits<uint32_t>::max()) {
+                    if (cur >= prev) {
+                      if (cur < next) {
+                        next = cur;
+                        minEdgeID = edgeID;
+                      }
+                    }
+                  }
+                  ++edgeID;
+                }
+                if (next != std::numeric_limits<uint32_t>::max()) {
+                  queryEdgeOrder.push_back(minEdgeID);
+                  queryTimestamps[minEdgeID] = std::numeric_limits<uint32_t>::max();
+                }
+                prev = next;
+              }
+              prev = 0;
+              for (size_t k = 0; k < queryEdgeOrder.size(); ++k) {
+                size_t i = queryEdgeOrder[k];
                 uint64_t next = std::numeric_limits<uint64_t>::max();
                 for (size_t j = 0; j < matchedEdges[i].size(); ++j) {
                   uint64_t cur = matchedEdges[i][j];
@@ -184,7 +205,6 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                     }
                   }
                 }
-                // Assumption: query edges are sorted by timestamp
                 if ((next == std::numeric_limits<uint64_t>::max()) ||
                     (next < prev)) {
                   matched = false;

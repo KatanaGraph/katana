@@ -18,6 +18,7 @@ class CypherCompiler {
     std::unordered_map<std::string, std::string> contains;
     std::unordered_map<std::string, uint32_t> timestamps;
     std::unordered_map<std::string, std::string> labels;
+    bool shortestPath;
     
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
@@ -82,12 +83,27 @@ class CypherCompiler {
     }
 
     void compile_rel_pattern_path(const cypher_astnode_t *element) {
-        auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
-        if (reltype != NULL) {
-            os << cypher_ast_reltype_get_name(reltype);
-            os << ",";
+        auto varlength = cypher_ast_rel_pattern_get_varlength(element);
+        if (varlength != NULL) {
+          auto start = cypher_ast_range_get_start(varlength);
+          auto end = cypher_ast_range_get_end(varlength);
+          if ((start == NULL) || (end == NULL)) {
+            std::cout << "var length\n";
+            if (shortestPath) {
+              os << "*,";
+              shortestPath = false;
+            } else {
+              os << "**,"; // all paths; TODO: modify runtime to handle it
+            }
+          }
         } else {
-            os << "ANY,";
+          auto reltype = cypher_ast_rel_pattern_get_reltype(element, 0);
+          if (reltype != NULL) {
+              os << cypher_ast_reltype_get_name(reltype);
+              os << ",";
+          } else {
+              os << "ANY,";
+          }
         }
         auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
         if (nameNode != NULL) {
@@ -273,6 +289,10 @@ class CypherCompiler {
             else return 0;
         } else if (type == CYPHER_AST_PATTERN_PATH) {
             return compile_pattern_path(ast);
+        } else if (type == CYPHER_AST_SHORTEST_PATH) {
+            shortestPath = true;
+            assert(cypher_ast_shortest_path_is_single(ast));
+            return compile_ast_node(cypher_ast_shortest_path_get_path(ast));
         }
 
         for (unsigned int i = 0; i < cypher_astnode_nchildren(ast); ++i)
@@ -299,7 +319,8 @@ class CypherCompiler {
     }
 
 public:
-    CypherCompiler(std::ostream& ostream) : numNodeIDs(0), numEdgeIDs(0), os(ostream) {}
+    CypherCompiler(std::ostream& ostream) : 
+      numNodeIDs(0), numEdgeIDs(0), os(ostream), shortestPath(false) {}
 
     int compile(const char* queryStr)
     {

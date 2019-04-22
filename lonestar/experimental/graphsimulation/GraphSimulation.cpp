@@ -170,7 +170,6 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                 auto qeData = qG.getEdgeData(qe);
                 queryTimestamps.push_back(qeData.timestamp);
               }
-              size_t edgeID = 0;
               uint64_t prev = 0;
               while (prev != std::numeric_limits<uint32_t>::max()) {
                 uint64_t next = std::numeric_limits<uint32_t>::max();
@@ -181,11 +180,10 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                     if (cur >= prev) {
                       if (cur < next) {
                         next = cur;
-                        minEdgeID = edgeID;
+                        minEdgeID = i;
                       }
                     }
                   }
-                  ++edgeID;
                 }
                 if (next != std::numeric_limits<uint32_t>::max()) {
                   queryEdgeOrder.push_back(minEdgeID);

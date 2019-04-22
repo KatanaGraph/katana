@@ -142,7 +142,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
         std::pair<bool, std::pair<uint32_t, uint32_t>> edgeResult =
             getEdgeLabelMask(*dataGraph, restrictions);
 
-        galois::gPrint("* Restrictions ", restrictions, "\n");
+        galois::gDebug("* Restrictions ", restrictions, "\n");
 
         if (!edgeResult.first) {
           resetMatchedStatus(dataGraph->graph);

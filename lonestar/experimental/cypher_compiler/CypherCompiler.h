@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <iostream>
 
-#define CYPHER_DEBUG
-
 class CypherCompiler {
     unsigned numNodeIDs;
     unsigned numEdgeIDs;
@@ -434,14 +432,15 @@ public:
 
         auto nerrors = cypher_parse_result_nerrors(result);
 
-#ifdef CYPHER_DEBUG
-        std::cout << "Parsed " << cypher_parse_result_nnodes(result) << " AST nodes\n";
-        std::cout << "Read " << cypher_parse_result_ndirectives(result) << " statements\n";
-        std::cout << "Encountered " << nerrors << " errors\n";
-        if (nerrors == 0) {
-            cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
+        static bool skip = galois::substrate::EnvCheck("GALOIS_DEBUG_SKIP");
+        if (!skip) {
+          std::cout << "Parsed " << cypher_parse_result_nnodes(result) << " AST nodes\n";
+          std::cout << "Read " << cypher_parse_result_ndirectives(result) << " statements\n";
+          std::cout << "Encountered " << nerrors << " errors\n";
+          if (nerrors == 0) {
+              cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
+          }
         }
-#endif
 
         if (nerrors == 0) {
             compile_ast(result);

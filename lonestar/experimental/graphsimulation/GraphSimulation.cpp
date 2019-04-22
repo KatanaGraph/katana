@@ -363,6 +363,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
           next->push_back(dn);
         }
       },
+      galois::steal(),
       galois::loopname("MatchNeighbors"));
 }
 

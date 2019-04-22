@@ -419,28 +419,27 @@ public:
 
     int compile(const char* queryStr)
     {
-        std::cout << "Query: " << queryStr << "\n";
+        galois::gDebug("Query:\n", queryStr, "\n");
 
         cypher_parse_result_t *result = cypher_parse(queryStr, 
                 NULL, NULL, CYPHER_PARSE_ONLY_STATEMENTS);
 
         if (result == NULL)
         {
-            std::cerr << "Critical failure in parsing the cypher query\n";
+            galois::gError("Critical failure in parsing the cypher query\n");
             return EXIT_FAILURE;
         }
 
         auto nerrors = cypher_parse_result_nerrors(result);
 
-        static bool skip = galois::substrate::EnvCheck("GALOIS_DEBUG_SKIP");
-        if (!skip) {
-          std::cout << "Parsed " << cypher_parse_result_nnodes(result) << " AST nodes\n";
-          std::cout << "Read " << cypher_parse_result_ndirectives(result) << " statements\n";
-          std::cout << "Encountered " << nerrors << " errors\n";
-          if (nerrors == 0) {
-              cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
-          }
+#ifndef NDEBUG
+        std::cout << "Parsed " << cypher_parse_result_nnodes(result) << " AST nodes\n";
+        std::cout << "Read " << cypher_parse_result_ndirectives(result) << " statements\n";
+        std::cout << "Encountered " << nerrors << " errors\n";
+        if (nerrors == 0) {
+            cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
         }
+#endif
 
         if (nerrors == 0) {
             compile_ast(result);
@@ -449,7 +448,7 @@ public:
         cypher_parse_result_free(result);
         
         if (nerrors != 0) {
-            std::cerr << "Parsing the cypher query failed with " << nerrors << " errors \n";
+            galois::gError("Parsing the cypher query failed with ", nerrors, " errors\n");
             return EXIT_FAILURE;
         }
 

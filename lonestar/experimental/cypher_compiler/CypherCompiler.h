@@ -4,11 +4,11 @@
 #include <assert.h>
 #include <unordered_map>
 #include <iostream>
+#include "../graphsimulation/GraphSimulation.h"
 
 class CypherCompiler {
     unsigned numNodeIDs;
     unsigned numEdgeIDs;
-    std::ostream& os;
     std::unordered_map<std::string, unsigned> nodeIDs;
     std::unordered_map<const cypher_astnode_t*, unsigned> anonNodeIDs;
     std::unordered_map<std::string, unsigned> edgeIDs;
@@ -19,7 +19,23 @@ class CypherCompiler {
     std::unordered_map<std::string, std::string> pathConstraints;
     bool shortestPath;
     std::string namedPath;
+
+    std::vector<MatchedEdge> ir;
+    std::vector<const char *> filters;
     
+    char* str_to_cstr(std::string str) {
+      char* cstr = new char[str.length() + 1];
+      strcpy(cstr, str.c_str());
+      return cstr;
+    }
+
+    char* str_to_cstr(unsigned int id) {
+      std::string str = std::to_string(id);
+      char* cstr = new char[str.length() + 1];
+      strcpy(cstr, str.c_str());
+      return cstr;
+    }
+
     unsigned getNodeID(std::string str) {
         if (nodeIDs.find(str) == nodeIDs.end()) {
             nodeIDs[str] = numNodeIDs++;
@@ -48,7 +64,9 @@ class CypherCompiler {
         return anonEdgeIDs[node];
     }
 
-    void compile_node_pattern_path(const cypher_astnode_t *element) {
+    void compile_node_pattern_path(const cypher_astnode_t *element, MatchedNode& mn) {
+        std::string strName, strID;
+
         auto nameNode = cypher_ast_node_pattern_get_identifier(element);
         std::string name;
         if (nameNode != NULL) {
@@ -59,34 +77,40 @@ class CypherCompiler {
         if ((nlabels > 0) || (labels.find(name) != labels.end())) {
           for (unsigned int i = 0; i < nlabels; ++i) {
             if (i > 0) {
-              os << ";";
+              strName += ";";
             }
             auto label = cypher_ast_node_pattern_get_label(element, i);
-            os << cypher_ast_label_get_name(label);
+            strName += cypher_ast_label_get_name(label);
           }
           if (labels.find(name) != labels.end()) {
             if (nlabels > 0) {
-              os << ";";
+              strName += ";";
             }
-            os << labels[name];
+            strName += labels[name];
           }
-          os << ",";
         } else {
-            os << "any,";
+            strName += "any";
         }
         if (nameNode != NULL) {
-            os << getNodeID(name);
-            os << ",";
+            strID += std::to_string(getNodeID(name));
             if (contains.find(name) != contains.end()) {
-              os << contains[name];
+              filters.push_back(str_to_cstr(contains[name]));
+            } else {
+              filters.push_back(str_to_cstr(""));
             }
         } else {
-            os << getAnonNodeID(element);
-            os << ",";
+            strID += std::to_string(getAnonNodeID(element));
+            filters.push_back(str_to_cstr(""));
         }
+
+        mn.id = str_to_cstr(strID);
+        mn.name = str_to_cstr(strName);
     }
 
     void compile_rel_pattern_path(const cypher_astnode_t *element) {
+        uint64_t timestamp;
+        std::string label;
+
         auto nameNode = cypher_ast_rel_pattern_get_identifier(element);
         std::string name;
         if (nameNode != NULL) {
@@ -101,56 +125,63 @@ class CypherCompiler {
           auto end = cypher_ast_range_get_end(varlength);
           if ((start == NULL) || (end == NULL)) {
             if (shortestPath) {
-              os << "*";
+              label += "*";
               shortestPath = false;
             } else {
-              os << "**"; // all paths; TODO: modify runtime to handle it
+              label += "**"; // all paths; TODO: modify runtime to handle it
             }
             if (pathConstraints.find(namedPath) != pathConstraints.end()) {
-              os << "=";
-              os << pathConstraints[namedPath];
+              label += "=";
+              label += pathConstraints[namedPath];
               namedPath.clear();
             } else if (pathConstraints.find(name) != pathConstraints.end()) {
-              os << "=";
-              os << pathConstraints[name];
+              label += "=";
+              label += pathConstraints[name];
             } else if (nlabels > 0) {
-              os << "=";
+              label += "=";
             }
           } else if (start == end) {
             repeat = atoi(cypher_ast_integer_get_valuestr(start));
           }
         }
-        for (unsigned int r = 0; r < repeat; ++r) {
-          if (r > 0) {
-            os << ",any,";
-            os << getAnonNodeID(element);
-            os << ",\n";
-            os << "any,";
-            os << getAnonNodeID(element);
-            os << ",,";
-          }
-          if (nlabels > 0) {
-            for (unsigned int i = 0; i < nlabels; ++i) {
-              if (i > 0) {
-                os << ";";
-              }
-              auto label = cypher_ast_rel_pattern_get_reltype(element, i);
-              os << cypher_ast_reltype_get_name(label);
+        if (nlabels > 0) {
+          for (unsigned int i = 0; i < nlabels; ++i) {
+            if (i > 0) {
+              label += ";";
             }
+            auto reltype = cypher_ast_rel_pattern_get_reltype(element, i);
+            label += cypher_ast_reltype_get_name(reltype);
           }
-          if (((varlength == NULL) || (repeat > 1)) && (nlabels == 0)) {
-            os << "ANY";
-          }
-          os << ",";
-          if (nameNode != NULL) {
-              if (timestamps.find(name) != timestamps.end()) {
-                os << timestamps[name];
-              } else {
-                os << std::numeric_limits<uint32_t>::max();
-              }
-          } else {
-              os << std::numeric_limits<uint32_t>::max();
-          }
+        }
+        if (((varlength == NULL) || (repeat > 1)) && (nlabels == 0)) {
+          label += "ANY";
+        }
+
+        if (nameNode != NULL) {
+            if (timestamps.find(name) != timestamps.end()) {
+              timestamp = timestamps[name];
+            } else {
+              timestamp = std::numeric_limits<uint32_t>::max();
+            }
+        } else {
+            timestamp = std::numeric_limits<uint32_t>::max();
+        }
+
+        ir.back().label = str_to_cstr(label);
+        ir.back().timestamp = timestamp;
+
+        for (unsigned int r = 1; r < repeat; ++r) {
+          ir.back().acted_on.id = str_to_cstr(getAnonNodeID(element));
+          ir.back().acted_on.name = str_to_cstr("any");
+          filters.push_back(str_to_cstr(""));
+
+          ir.emplace_back();
+          ir.back().caused_by.id = str_to_cstr(getAnonNodeID(element));
+          ir.back().caused_by.name = str_to_cstr("any");
+          filters.push_back(str_to_cstr(""));
+
+          ir.back().label = str_to_cstr(label);
+          ir.back().timestamp = timestamp;
         }
     }
 
@@ -160,27 +191,25 @@ class CypherCompiler {
         assert(nelements > 2);
         assert((nelements % 2) == 1); // odd number of elements
         for (unsigned int i = 1; i < nelements; i+=2) {
+          ir.emplace_back();
           { // source
             auto element = cypher_ast_pattern_path_get_element(ast, i - 1);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_node_pattern_path(element);
+            compile_node_pattern_path(element, ir.back().caused_by);
           } 
-          os << ",";
           { // relation
             auto element = cypher_ast_pattern_path_get_element(ast, i);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_REL_PATTERN);
             compile_rel_pattern_path(element);
           } 
-          os << ",";
           { // destination
             auto element = cypher_ast_pattern_path_get_element(ast, i + 1);
             auto element_type = cypher_astnode_type(element);
             assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_node_pattern_path(element);
+            compile_node_pattern_path(element, ir.back().acted_on);
           } 
-          os << "\n";
         }
         return 0;
     }
@@ -413,12 +442,39 @@ class CypherCompiler {
         return 0;
     }
 
+    void init() {
+      numNodeIDs = 0;
+      numEdgeIDs = 0;
+      nodeIDs.clear();
+      anonNodeIDs.clear();
+      edgeIDs.clear();
+      anonEdgeIDs.clear();
+      contains.clear();
+      timestamps.clear();
+      labels.clear();
+      pathConstraints.clear();
+      shortestPath = false;
+      namedPath.clear();
+
+      ir.clear();
+      filters.clear();
+    }
+
 public:
-    CypherCompiler(std::ostream& ostream) : 
-      numNodeIDs(0), numEdgeIDs(0), os(ostream), shortestPath(false) {}
+    CypherCompiler() {}
+
+    auto& getIR() {
+      return ir;
+    }
+
+    auto& getFilters() {
+      return filters;
+    }
 
     int compile(const char* queryStr)
     {
+        init();
+
         galois::gDebug("Query:\n", queryStr, "\n");
 
         cypher_parse_result_t *result = cypher_parse(queryStr, 

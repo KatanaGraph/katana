@@ -413,7 +413,10 @@ uint32_t nodeRemovalPass(AttributedGraph* g);
 
 // TODO doxygen all of the things below
 
-void compileCypherQuery(const char* cypherQueryStr, const char* outputFileName);
+size_t matchCypherQuery(AttributedGraph* dataGraph,
+                        EventLimit limit,
+                        EventWindow window,
+                        const char* cypherQueryStr);
 
 size_t matchQuery(AttributedGraph* dataGraph,
                   EventLimit limit,

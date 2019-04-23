@@ -23,7 +23,8 @@
  * Contains definitions of graph related structures for graph simluation in
  * Galois, most notably the AttributedGraph structure.
  */
-
+#ifndef GALOIS_GRAPH_SIMULATION_H
+#define GALOIS_GRAPH_SIMULATION_H
 #include "galois/Galois.h"
 #include "galois/graphs/LCGraph.h"
 
@@ -286,3 +287,5 @@ size_t countMatchedEdges(Graph& graph);
  * @returns Number of matched edges in the graph
  */
 size_t countMatchedNeighborEdges(Graph& graph, Graph::GraphNode node);
+
+#endif // GALOIS_GRAPH_SIMULATION_H

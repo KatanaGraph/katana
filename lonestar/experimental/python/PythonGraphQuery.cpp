@@ -19,15 +19,49 @@
 
 #include "PythonGraph.h"
 #include "../cypher_compiler/CypherCompiler.h"
+#include "galois/Timer.h"
 #include <fstream>
 
-void compileCypherQuery(const char* cypherQueryStr, const char* outputFileName)
+void printIR(std::vector<MatchedEdge>& ir, std::vector<const char*> filters) {
+  std::ofstream out(".temp_ir.q");
+  for (size_t i = 0; i < ir.size(); ++i) {
+    out << ir[i].caused_by.name << ",";
+    out << ir[i].caused_by.id << ",";
+    out << filters[2 * i] << ",";
+    out << ir[i].label << ",";
+    out << ir[i].timestamp << ",";
+    out << ir[i].acted_on.name << ",";
+    out << ir[i].acted_on.id << ",";
+    out << filters[2 * i + 1] << "\n";
+  }
+  out.close();
+} 
+
+size_t matchCypherQuery(AttributedGraph* dataGraph,
+                        EventLimit limit,
+                        EventWindow window,
+                        const char* cypherQueryStr)
 {
-    std::ofstream ofile;
-    ofile.open(outputFileName);
-    CypherCompiler cc(ofile);
+    galois::Timer ct, mt;
+
+    ct.start();
+    CypherCompiler cc;
     cc.compile(cypherQueryStr);
-    ofile.close();
+    ct.stop();
+
+#ifndef NDEBUG
+    printIR(cc.getIR(), cc.getFilters());
+#endif
+
+    mt.start();
+    size_t numMatchedEdges = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data());
+    cc.getIR().clear();
+    cc.getFilters().clear();
+    mt.stop();
+
+    galois::gPrint("Compiling time: ", ct.get_usec() / 1000.0f, " ms\n");
+    galois::gPrint("Matching time: ", mt.get_usec() / 1000.0f, " ms\n");
+    return numMatchedEdges;
 }
 
 size_t matchQuery(AttributedGraph* dataGraph,

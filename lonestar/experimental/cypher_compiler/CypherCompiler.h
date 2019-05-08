@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <unordered_map>
 #include <iostream>
+#include <stack>
 #include "../graphsimulation/GraphSimulation.h"
 
 class CypherCompiler {
@@ -22,6 +23,7 @@ class CypherCompiler {
 
     std::vector<MatchedEdge> ir;
     std::vector<const char *> filters;
+    std::stack<bool> bin_op; // true => AND, false => OR
     
     char* str_to_cstr(std::string str) {
       char* cstr = new char[str.length() + 1];
@@ -220,9 +222,42 @@ class CypherCompiler {
       auto arg1 = cypher_ast_binary_operator_get_argument1(ast);
       auto arg2 = cypher_ast_binary_operator_get_argument2(ast);
       if (op == CYPHER_OP_AND) {
+        bin_op.push(true);
         compile_expression(arg1);
         compile_expression(arg2);
+        bin_op.pop();
+      } else if (op == CYPHER_OP_OR) {
+        bin_op.push(false);
+        compile_expression(arg1);
+        compile_expression(arg2);
+        bin_op.pop();
       } else if (op == CYPHER_OP_CONTAINS) {
+        auto arg1_type = cypher_astnode_type(arg1);
+        auto arg2_type = cypher_astnode_type(arg2);
+        if ((arg1_type == CYPHER_AST_PROPERTY_OPERATOR) &&
+           (arg2_type == CYPHER_AST_STRING)) {
+          auto prop_id = cypher_ast_property_operator_get_expression(arg1);
+          auto prop_name = cypher_ast_property_operator_get_prop_name(arg1);
+          if ((prop_id != NULL) && (prop_name != NULL)) {
+            auto name = cypher_ast_prop_name_get_value(prop_name);
+            if (!strcmp(name, "name")) {
+              auto id = cypher_ast_identifier_get_name(prop_id);
+              auto value = cypher_ast_string_get_value(arg2);
+              if (contains.find(id) == contains.end()) {
+                contains[id] = std::string("(.*") + value + ".*)";
+              } else {
+                if (bin_op.top()) {
+                  contains[id] = std::string("(?=.*") + value + ".*)" 
+                                  + contains[id];
+                } else {
+                  contains[id] = std::string("(.*") + value + ".*)|" 
+                                  + contains[id];
+                }
+              }
+            }
+          }
+        }
+      } else if (op == CYPHER_OP_REGEX) {
         auto arg1_type = cypher_astnode_type(arg1);
         auto arg2_type = cypher_astnode_type(arg2);
         if ((arg1_type == CYPHER_AST_PROPERTY_OPERATOR) &&

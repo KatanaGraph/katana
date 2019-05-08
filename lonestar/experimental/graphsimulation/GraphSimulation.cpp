@@ -26,6 +26,7 @@
 
 #include "GraphSimulation.h"
 #include "galois/substrate/PerThreadStorage.h"
+#include <regex>
 
 // query.label: bitwise-OR of tags that should MATCH and tags that should NOT-MATCH
 // query.matched: tags that should MATCH
@@ -67,7 +68,9 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
               dData.matched |= 1 << qn; // multiple matches
             } else {
               std::string dataName = nodeNames[dn];
-              if (dataName.find(nodeContains[qn]) != std::string::npos) {
+              std::regex e(nodeContains[qn], std::regex_constants::ECMAScript);
+              if (std::regex_match(dataName, e)) {
+              // if (dataName.find(nodeContains[qn]) != std::string::npos) {
                 // TODO reduce code duplication
                 queryMatched[qn] = true;
                 if (!dData.matched) {

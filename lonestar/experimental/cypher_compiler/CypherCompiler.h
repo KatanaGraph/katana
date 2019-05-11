@@ -216,7 +216,7 @@ class CypherCompiler {
         return 0;
     }
 
-    void compile_binary_operator(const cypher_astnode_t *ast)
+    void compile_binary_operator(const cypher_astnode_t *ast, bool negate = false)
     {
       auto op = cypher_ast_binary_operator_get_operator(ast);
       auto arg1 = cypher_ast_binary_operator_get_argument1(ast);
@@ -244,9 +244,16 @@ class CypherCompiler {
               auto id = cypher_ast_identifier_get_name(prop_id);
               auto value = cypher_ast_string_get_value(arg2);
               if (contains.find(id) == contains.end()) {
-                contains[id] = std::string("(.*") + value + ".*)";
+                if (negate) {
+                  contains[id] = std::string("((?!") + value + ").)*";
+                } else {
+                  contains[id] = std::string("(.*") + value + ".*)";
+                }
               } else {
-                if (bin_op.top()) {
+                if (negate) {
+                  contains[id] = std::string("((?!") + value + ").)*"
+                                  + contains[id];
+                } else if (bin_op.top()) {
                   contains[id] = std::string("(?=.*") + value + ".*)" 
                                   + contains[id];
                 } else {
@@ -270,7 +277,11 @@ class CypherCompiler {
               auto id = cypher_ast_identifier_get_name(prop_id);
               auto value = cypher_ast_string_get_value(arg2);
               assert(contains.find(id) == contains.end());
-              contains[id] = value;
+              if (negate) {
+                contains[id] = std::string("((?!") + value + ").)*";
+              } else {
+                contains[id] = value;
+              }
             }
           }
         }
@@ -359,6 +370,8 @@ class CypherCompiler {
         auto arg_type = cypher_astnode_type(arg);
         if (arg_type == CYPHER_AST_LABELS_OPERATOR) {
           compile_labels_operator(arg, "~");
+        } else if (arg_type == CYPHER_AST_BINARY_OPERATOR) {
+          compile_binary_operator(arg, true);
         }
       }
     }

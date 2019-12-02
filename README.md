@@ -30,10 +30,6 @@ Building Galois
 Running With RIPE
 --------------
 
-```Shell
-git clone -b release-5.0 https://github.com/IntelligentSoftwareSystems/Galois
-```
-
 `git clone git@git.tc.bbn.com:lhoang/galois-tc.git`
 
 You get a galois-tc directory.

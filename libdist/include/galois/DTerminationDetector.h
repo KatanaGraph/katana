@@ -64,6 +64,7 @@ public:
   DGTerminator() {
     reinitialize();
     initiate_snapshot();
+    reset();
   }
 
   void reinitialize() {
@@ -141,7 +142,7 @@ public:
     lc_ialreduce(&snapshot, &global_snapshot, sizeof(Ty),
                  &galois::runtime::internal::ompi_op_max<Ty>, lc_col_ep, &snapshot_request);
 #else
-    MPI_Iallreduce(&snapshot, &global_snapshot, 1, MPI::UNSIGNED_LONG, MPI_MAX,
+    MPI_Iallreduce(&snapshot, &global_snapshot, 1, MPI_UNSIGNED_LONG, MPI_MAX,
                   MPI_COMM_WORLD, &snapshot_request);
 #endif
   }
@@ -164,7 +165,7 @@ public:
     }
     if (!active) { // check pending receives after checking snapshot
       active = net.anyPendingReceives();
-      if (active) galois::gDebug("[", net.ID, "] pending receive \n");
+      if (active) galois::gDebug("[", net.ID, "] pending receive");
     }
     if (active) {
       work_done = true;
@@ -175,14 +176,14 @@ public:
           work_done = false;
           prev_snapshot = snapshot;
           ++snapshot;
-          galois::gDebug("[", net.ID, "] work done, taking snapshot ", snapshot, " \n");
+          galois::gDebug("[", net.ID, "] work done, taking snapshot ", snapshot);
           initiate_snapshot();
         } else if (prev_snapshot != snapshot) {
           prev_snapshot = snapshot;
-          galois::gDebug("[", net.ID, "] no work done, taking snapshot ", snapshot, " \n");
+          galois::gDebug("[", net.ID, "] no work done, taking snapshot ", snapshot);
           initiate_snapshot();
         } else {
-          galois::gDebug("[", net.ID, "] terminating ", snapshot, " \n");
+          galois::gDebug("[", net.ID, "] terminating ", snapshot);
           reinitialize(); // for next async phase
           return true;
         }

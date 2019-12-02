@@ -35,12 +35,16 @@
 #include <string>
 #include <map>
 #include <type_traits>
+
+#include <sys/resource.h>
+#include <sys/time.h>
+
 /**
  * TODO:
  * Print intra host stats with per-thread details and inter-host stats with
  per-host details
  * print to 2 files if supporting R format
- * libdist implements an addToStat with host ID and manages inter-host stats and
+ * dist implements an addToStat with host ID and manages inter-host stats and
  their combining
 
  */
@@ -145,39 +149,17 @@ public:
   }
 };
 
-template <typename _UNUSED = void>
-struct StatTotalImpl {
+namespace {
+  static constexpr const char* StatTotalNames[] = {"SINGLE", "TMIN", "TMAX",
+                                                   "TSUM", "TAVG"};
+}
+
+struct StatTotal {
 
   enum Type { SINGLE = 0, TMIN, TMAX, TSUM, TAVG };
 
-  // TODO: remove
-  // static constexpr bool isValidInt(int v) {
-  // return (v >= SINGLE && v <= TAVG);
-  // }
-  //
-  // static constexpr Type fromInt(int v) {
-  // assert(isValidInt(v) && "Invalid int value for enum Type");
-  //
-  // switch(v) {
-  // case 0: return SINGLE;
-  // case 1: return TMIN;
-  // case 2: return TMAX;
-  // case 3: return TSUM;
-  // case 4: return TAVG;
-  // default: std::abort(); return SINGLE;
-  // }
-  // }
-
-  static constexpr const char* NAMES[] = {"SINGLE", "TMIN", "TMAX", "TSUM",
-                                          "TAVG"};
-
-  static const char* str(const Type& t) { return NAMES[t]; }
+  static const char* str(const Type& t) { return StatTotalNames[t]; }
 };
-
-template <typename _UNUSED>
-constexpr const char* StatTotalImpl<_UNUSED>::NAMES[];
-
-using StatTotal = StatTotalImpl<>;
 
 namespace internal {
 
@@ -755,6 +737,12 @@ void reportParam(const S1& region, const S2& category, const V& value) {
 }
 
 void setStatFile(const std::string& f);
+
+
+//! Reports maximum resident set size and page faults stats using
+//! rusage
+//! @param id Identifier to prefix stat with in statistics output
+void reportRUsage(const std::string& id);
 
 // TODO: switch to gstl::Str in here
 //! Reports Galois system memory stats for all threads

@@ -30,7 +30,9 @@ Building Galois
 Running With RIPE
 --------------
 
-Clone from the repository.
+```Shell
+git clone -b release-5.0 https://github.com/IntelligentSoftwareSystems/Galois
+```
 
 `git clone git@git.tc.bbn.com:lhoang/galois-tc.git`
 
@@ -76,7 +78,7 @@ Here are the dependencies for the optional features:
 - Linux HUGE_PAGES support (please see [www.kernel.org/doc/Documentation/vm/hugetlbpage.txt](https://www.kernel.org/doc/Documentation/vm/hugetlbpage.txt)). Performance will most likely degrade without HUGE_PAGES
   enabled. Galois uses 2MB huge page size and relies on the kernel configuration to set aside a large amount of 2MB pages. For example, our performance testing machine (4x14 cores, 192GB RAM) is configured to support up to 65536 2MB pages:
   ```Shell
-  cat /proc/mem_info | fgrep Huge
+  cat /proc/meminfo | fgrep Huge
   AnonHugePages:    104448 kB
   HugePages_Total:   65536
   HugePages_Free:    65536
@@ -87,7 +89,7 @@ Here are the dependencies for the optional features:
    
 - libnuma support. Performance may degrade without it. Please install
   libnuma-dev on Debian like systems, and numactl-dev on Red Hat like systems. 
-- Doxygen (>= 1.8.5) for compiling documentation as webpages or latex files
+- Doxygen (>= 1.8.5) for compiling documentation as webpages or latex files 
 - PAPI (>= 5.2.0.0 ) for profiling sections of code
 - Vtune (>= 2017 ) for profiling sections of code
 - MPICH2 (>= 3.2) if you are interested in building and running distributed system
@@ -96,18 +98,17 @@ Here are the dependencies for the optional features:
 - Eigen (3.3.1 works for us) for some matrix-completion app variants
 
 
-Compiling Galois
---------------------------
+Compiling and Testing Galois
+----------------------------
 We use CMake. Let's assume that SRC_DIR is the directory where the source code for Galois resides, and you wish to build galois in some BUILD_DIR. Run the following commands to set up a build directory:
 
 ```Shell
 SRC_DIR=`pwd` # Or top-level Galois source dir
 BUILD_DIR=<path-to-your-build-dir>
-mkdir -p $BUILD_DIR; cd $BUILD_DIR; cmake $SRC_DIR
+mkdir -p $BUILD_DIR; cd $BUILD_DIR; cmake -DCMAKE_BUILD_TYPE=Release $SRC_DIR
 ```
 
-By default, cmake sets up a "Release" build. You can also set up a "Debug" build,
-as follows:
+You can also set up a "Debug" build by running the following instead of the last command above:
 
 ```Shell
 mkdir -p $BUILD_DIR; cd $BUILD_DIR; cmake -DCMAKE_BUILD_TYPE=Debug $SRC_DIR
@@ -120,23 +121,25 @@ cd $BUILD_DIR/lonestar/<app-dir-name>; make -j
 ```
 
 You can also build everything by running `make -j` in the top-level of build directory, but that may
-take a lot of time and will download additional files.
+take a lot of time.
 
-More esoteric systems may require a toolchain file; check `../cmake/Toolchain`
-if there is a file corresponding to your system. If so, use the following
-CMake command:
+Setting the `BUILD_SHARED_LIBS` to `ON` when calling CMake will make the core runtime library be built as a shared object instead of a static library.
+
+Once the core library has been built, it can be installed by running
 
 ```Shell
-cmake -C ${SRC_DIR}/cmake/Toolchain/${platform}-tryrunresults.cmake \
-  -DCMAKE_TOOLCHAIN_FILE=${SRC_DIR}/cmake/Toolchain/${platform}.cmake ${SRC_DIR}
+make install
 ```
 
+The apps will not be installed by default.
 
-Running Galois Applications
-=============================
-
-Inputs
--------
+The tests for the core runtime will be built by default when you run `make` with no target specified.
+They can be built specifically by running
+```Shell
+cd $BUILD_DIR/test
+make -j
+make test
+```
 
 We provide a few sample inputs that can be downloaded by running:
 
@@ -144,9 +147,24 @@ We provide a few sample inputs that can be downloaded by running:
 make input
 ```
 
-'make input' will download a big (~2GB) tar-ball of inputs  and extract it to
-`$BUILD_DIR/inputs/reference` directory. The tar-ball is downloaded to
+`make input` will download a tarball of inputs  and extract it to
+`$BUILD_DIR/inputs/small_inputs` directory. The tarball is downloaded to
 `$BUILD_DIR/inputs`
+
+Most of the Galois apps have corresponding tests.
+These tests depend on downloading the reference inputs and building the corresponding apps and test binaries.
+Once the reference inputs have been downloaded and everything has been built, the tests for the core library and all the apps can be run by running
+```Shell
+make test
+```
+in the root build directory.
+
+
+Running Galois Applications
+=============================
+
+Graph Format
+------------
 
 Many Galois/Lonestar applications work with graphs. We store graphs in a binary format
 called *galois graph file* 
@@ -157,7 +175,7 @@ You can build graph-convert as follows:
 ```Shell
 cd $BUILD_DIR
 make graph-convert
-./tools/graph-convert --help
+./tools/graph-convert/graph-convert --help
 ```
 
 Other applications, such as Delaunay Mesh Refinement may read special file formats
@@ -179,7 +197,7 @@ Please refer to the manual for details on stats.
 Running Distributed Galois
 ---------
 
-Please refer to `dist_apps/README.md` for more details on
+Please refer to `lonestardist/README.md` for more details on
 running distributed benchmarks.
 
 Documentation
@@ -206,8 +224,8 @@ Source-Tree Organization
 - `libgalois` contains the source code for the shared-memory Galois library, e.g., runtime, graphs, worklists, etc. 
 - `lonestar` contains the Lonestar benchmark applications and tutorial examples for Galois
 - `libdist` contains the source code for the distributed-memory and heterogeneous Galois library
-- `dist_apps` contains the source code for the distributed-memory and heterogeneous
-  benchmark applications. Please refer to `dist_apps/README.md` for instructions on
+- `lonestardist` contains the source code for the distributed-memory and heterogeneous
+  benchmark applications. Please refer to `lonestardist/README.md` for instructions on
   building and running these apps. 
 - `tools` contains various helper programs such as graph-converter to convert
   between graph file formats and graph-stats to print graph properties

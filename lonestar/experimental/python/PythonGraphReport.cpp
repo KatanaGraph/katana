@@ -273,8 +273,8 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
         auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
-        auto& dstName       = nodeNames[dst];
-        auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData.label)];
+        auto& dstName              = nodeNames[dst];
+        std::string& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData.label)];
         auto& edgeTimestamp = eData.timestamp;
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
             (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {

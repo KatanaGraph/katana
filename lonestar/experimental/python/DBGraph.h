@@ -42,8 +42,8 @@ class DBGraph {
    */
   DBGraph() {
     attGraph = new AttributedGraph;
-    numNodeLabels = 3;
-    numEdgeLabels = 3;
+    numNodeLabels = 1;
+    numEdgeLabels = 1;
   }
 
   /**
@@ -108,7 +108,7 @@ class DBGraph {
     // Unfortunately must be done serially as it messes with maps which are
     // not thread safe
     for (size_t i = 0; i < numNodes; i++) {
-      std::string id = std::to_string(i);
+      std::string id = "ID" + std::to_string(i);
       strcpy(dummy, id.c_str());
       // node labels are round-robin
       setNewNode(attGraph, i, dummy, i % numNodeLabels, dummy);
@@ -123,16 +123,19 @@ class DBGraph {
     for (size_t i = 0; i < numEdges; i++) {
       // fill out edge data as edge destinations already come from gr file
       // TODO timestamps currently grow with edge index i
-      lcGraph.setEdgeData(i, EdgeData(i % numEdgeLabels, i));
+      lcGraph.setEdgeData(i, EdgeData(1 << (i % numEdgeLabels), i));
     }
 
     // TODO edge attributes
   }
 
-  size_t runCypherQuery(const std::string cypherQueryStr) {
-    return matchCypherQuery(attGraph, EventLimit(), EventWindow(),
-                            cypherQueryStr.c_str());
-
+  size_t runCypherQuery(const std::string cypherQueryStr, std::string outputFile="matched.edges") {
+    size_t mEdgeCount = matchCypherQuery(attGraph, EventLimit(), EventWindow(),
+                                         cypherQueryStr.c_str());
+    char dummy[100];
+    strcpy(dummy, outputFile.c_str());
+    reportMatchedEdges(*attGraph, dummy);
+    return mEdgeCount;
   }
 };
 

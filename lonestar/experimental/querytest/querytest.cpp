@@ -32,6 +32,10 @@ static cll::opt<std::string>
 static cll::opt<std::string>
     query(cll::Positional, cll::desc("Cypher query"), cll::Required);
 
+// TODO get this to work
+//static cll::opt<std::string>
+//    edgefile(cll::Positional, cll::desc("Cypher query"), cll::Required);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -49,7 +53,7 @@ int main(int argc, char** argv) {
   // 3 node labels: n1, n2, n3
   // 3 edge labels: e1, e2, e3
   // timestamps on edges are increasing order
-  galois::gPrint("matched edges ", testGraph.runCypherQuery(query), "\n");
+  galois::gPrint("Num matched edges ", testGraph.runCypherQuery(query), "\n");
 
   return 0;
 }

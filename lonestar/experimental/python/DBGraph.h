@@ -128,6 +128,12 @@ class DBGraph {
 
     // TODO edge attributes
   }
+
+  size_t runCypherQuery(const std::string cypherQueryStr) {
+    return matchCypherQuery(attGraph, EventLimit(), EventWindow(),
+                            cypherQueryStr.c_str());
+
+  }
 };
 
 } // graph namepsace

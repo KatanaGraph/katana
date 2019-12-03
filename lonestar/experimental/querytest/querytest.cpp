@@ -29,6 +29,10 @@ namespace cll = llvm::cl;
 static cll::opt<std::string>
     filename(cll::Positional, cll::desc("<input graph>"), cll::Required);
 
+static cll::opt<std::string>
+    query(cll::Positional, cll::desc("Cypher query"), cll::Required);
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +44,12 @@ int main(int argc, char** argv) {
   // test reading
   galois::graphs::DBGraph testGraph;
   testGraph.readGr(filename);
+
+  // current assumptions of the graph
+  // 3 node labels: n1, n2, n3
+  // 3 edge labels: e1, e2, e3
+  // timestamps on edges are increasing order
+  galois::gPrint("matched edges ", testGraph.runCypherQuery(query), "\n");
 
   return 0;
 }

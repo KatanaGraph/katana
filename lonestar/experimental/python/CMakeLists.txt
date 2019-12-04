@@ -11,11 +11,10 @@ add_library(galois_python SHARED
   #Auxiliary.cpp
   #Reachability.cpp
   #Coarsen.cpp
-  $<TARGET_OBJECTS:gllvm_obj>
   $<TARGET_OBJECTS:galois_shmem_obj> 
 )
+
 target_include_directories(galois_python PUBLIC 
-  ${CMAKE_SOURCE_DIR}/libllvm/include
   ${CMAKE_SOURCE_DIR}/libgalois/include
   ${CMAKE_SOURCE_DIR}/libgalois/experimental/include
   ${CMAKE_CURRENT_SOURCE_DIR}
@@ -52,7 +51,6 @@ endif()
 
 #app(python_graph_test test.cpp)
 #target_include_directories(python_graph_test PUBLIC 
-#  ${CMAKE_SOURCE_DIR}/libllvm/include
 #  ${CMAKE_SOURCE_DIR}/libgalois/include
 #  ${CMAKE_SOURCE_DIR}/libgalois/experimental/include
 #  ${CMAKE_CURRENT_SOURCE_DIR}

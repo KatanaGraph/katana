@@ -30,12 +30,18 @@ static cll::opt<std::string>
     filename(cll::Positional, cll::desc("<input graph>"), cll::Required);
 
 static cll::opt<std::string>
-    query(cll::Positional, cll::desc("Cypher query"), cll::Required);
+    query("query", cll::desc("Cypher query"), cll::init(""));
 
-// TODO get this to work
+// TODO get this to work; requires library end to accept argument to where for
+// output
 //static cll::opt<std::string>
 //    edgefile(cll::Positional, cll::desc("Cypher query"), cll::Required);
+//
 
+static cll::opt<std::string> queryFile("queryFile",
+                               cll::desc("File containing Cypher query to run"
+                                         "; takes precedence over query string"),
+                               cll::init(""));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -53,7 +59,21 @@ int main(int argc, char** argv) {
   // 3 node labels: n1, n2, n3
   // 3 edge labels: e1, e2, e3
   // timestamps on edges are increasing order
-  galois::gPrint("Num matched edges ", testGraph.runCypherQuery(query), "\n");
+  if (queryFile != "" ) {
+    // read file into a std::string
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    // TODO check if opened successfully (good C practice to do so)
+    std::ifstream queryStream(queryFile);
+    std::stringstream querySS;
+    // putting into string stream lets you pull a string out of it
+    querySS << queryStream.rdbuf();
+
+    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(querySS.str()));
+  } else if (query != "") {
+    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(query));
+  } else {
+    galois::gInfo("No query specified");
+  }
 
   return 0;
 }

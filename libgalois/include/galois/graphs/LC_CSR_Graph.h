@@ -791,6 +791,7 @@ public:
     assert(numBytesToLoad == 0);
   }
 
+  //! Set the edge data for a specified edge; assumes memory already allocated
   void setEdgeData(uint64_t e, const typename EdgeData::value_type& val) {
     edgeData.set(e, val);
   }

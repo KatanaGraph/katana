@@ -4,13 +4,6 @@ add_library(galois_python SHARED
   PythonGraphSimulation.cpp
   PythonGraphQuery.cpp
   ../graphsimulation/GraphSimulation.cpp
-  #AnalyzeBFS.cpp
-  #SearchSubgraph.cpp
-  #PageRank.cpp
-  #Filter.cpp
-  #Auxiliary.cpp
-  #Reachability.cpp
-  #Coarsen.cpp
   $<TARGET_OBJECTS:galois_shmem_obj> 
 )
 

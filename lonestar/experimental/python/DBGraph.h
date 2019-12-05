@@ -21,6 +21,7 @@
 
 #include "PythonGraph.h"
 #include "galois/graphs/OfflineGraph.h"
+#include "galois/graphs/BufferedGraph.h"
 
 namespace galois {
 namespace graphs {
@@ -33,8 +34,73 @@ class DBGraph {
   //! Underlying attribute graph
   AttributedGraph* attGraph = nullptr;
 
-  size_t numNodeLabels;
-  size_t numEdgeLabels;
+  //! number of different node labels
+  size_t numNodeLabels = 0;
+  //! number of different edge labels
+  size_t numEdgeLabels = 0;
+
+  /**
+   * Setup the different node and edge labels in the attributed graph; assumes
+   * it is already allocated.
+   */
+  void setupNodeEdgeLabels() {
+    // create node/edge labels and save them
+    char dummy[10]; // assumption that labels won't get to 8+ digits
+    for (size_t i = 0; i < numNodeLabels; i++) {
+      std::string thisLabel = "n";
+      thisLabel = thisLabel + std::to_string(i);
+      strcpy(dummy, thisLabel.c_str());
+      setNodeLabelMetadata(attGraph, i, dummy);
+    }
+    for (size_t i = 0; i < numEdgeLabels; i++) {
+      std::string thisLabel = "e";
+      thisLabel = thisLabel + std::to_string(i);
+      strcpy(dummy, thisLabel.c_str());
+      setEdgeLabelMetadata(attGraph, i, dummy);
+    }
+  }
+
+  /**
+   * Returns number of edges per vertex if you consider each edge as a
+   * symmetric edge in an array where the number of edges for vertex
+   * i is in array[i + 1] (array[0] is 0)
+   *
+   * @param graphTopology Topology of original graph in a buffered graph
+   * @returns Array of edges counts where array[i + 1] is number of edges
+   * for vertex i
+   */
+  std::vector<uint64_t> getSymmetricEdgeCounts(
+    galois::graphs::BufferedGraph<void>& graphTopology
+  ) {
+    // allocate vector where counts will be stored
+    std::vector<uint64_t> edgeCounts;
+    // + 1 so that it can be used as a counter for how many edges have been
+    // added for a particular vertex
+    edgeCounts.resize(graphTopology.size() + 1, 0);
+
+    // loop over all edges, add to that vertex's edge counts for each endpoint
+    // (ignore self loops)
+    galois::do_all(
+      galois::iterate(0u, graphTopology.size()),
+      [&] (uint32_t vertexID) {
+        for (auto i = graphTopology.edgeBegin(vertexID);
+             i < graphTopology.edgeEnd(vertexID);
+             i++) {
+          uint64_t dst = graphTopology.edgeDestination(*i);
+          if (vertexID != dst) {
+            // src increment
+            __sync_add_and_fetch(&(edgeCounts[vertexID + 1]), 1);
+            // dest increment
+            __sync_add_and_fetch(&(edgeCounts[dst + 1]), 1);
+          }
+        }
+      },
+      galois::steal(),
+      galois::loopname("GetSymmetricEdgeCounts")
+    );
+
+    return edgeCounts;
+  }
 
  public:
   /**
@@ -53,6 +119,59 @@ class DBGraph {
     if (attGraph) {
       delete attGraph;
     }
+  }
+
+  /**
+   * Given graph topology, construct the attributed graph by making the read
+   * in graph symmetric and ignoring self loops. Differs from readGr in that
+   * the original graph isn't just read in directly (graph simulation at
+   * time of writing this comment expects a symmetric graph with no self
+   * loops.
+   */
+  void constructDataGraph(const std::string filename) {
+    // first, load graph topology
+    galois::graphs::BufferedGraph<void> graphTopology;
+    graphTopology.loadGraph(filename);
+
+
+    galois::GAccumulator<uint64_t> keptEdgeCountAccumulator;
+    keptEdgeCountAccumulator.reset();
+    // next, count the number of edges we want to keep (i.e. ignore the self
+    // loops)
+    galois::do_all(
+      galois::iterate(0u, graphTopology.size()),
+      [&] (uint32_t vertexID) {
+        for (auto i = graphTopology.edgeBegin(vertexID);
+             i < graphTopology.edgeEnd(vertexID);
+             i++) {
+          uint64_t dst = graphTopology.edgeDestination(*i);
+          if (vertexID != dst) {
+            keptEdgeCountAccumulator += 1;
+          }
+        }
+      },
+      galois::steal(), // steal due to edge imbalance among nodes
+      galois::loopname("CountKeptEdges")
+    );
+
+    uint64_t keptEdgeCount = keptEdgeCountAccumulator.reduce();
+
+    galois::gDebug("Kept edge count is ", keptEdgeCount, " compared to "
+                   "original ", graphTopology.sizeEdges());
+
+    // need to double edge count since symmetric version of graph
+    uint64_t finalEdgeCount = keptEdgeCount * 2;
+
+    // allocate the memory for the new graph
+    allocateGraph(attGraph, graphTopology.size(), finalEdgeCount, numNodeLabels,
+                  numEdgeLabels);
+
+    // need to count how many edges for each vertex in the symmetric version of
+    // graph
+    std::vector<uint64_t> edgeCountsPerVertex =
+        getSymmetricEdgeCounts(graphTopology);
+
+    // first, create the graph topology
   }
 
   //! Reads graph topology into attributed graph, then sets up its metadata.
@@ -87,22 +206,12 @@ class DBGraph {
 
     // Topology now exists: need to create the metadata mappings and such
     // TODO
-    
-    // create node/edge labels and save them
-    char dummy[10]; // assumption that labels won't get to 8+ digits
-    for (size_t i = 0; i < numNodeLabels; i++) {
-      std::string thisLabel = "n";
-      thisLabel = thisLabel + std::to_string(i);
-      strcpy(dummy, thisLabel.c_str());
-      setNodeLabelMetadata(attGraph, i, dummy);
-    }
-    for (size_t i = 0; i < numEdgeLabels; i++) {
-      std::string thisLabel = "e";
-      thisLabel = thisLabel + std::to_string(i);
-      strcpy(dummy, thisLabel.c_str());
-      setEdgeLabelMetadata(attGraph, i, dummy);
-    }
 
+    // create node/edge labels and save them
+    setupNodeEdgeLabels();
+
+
+    char dummy[30];
     // set node metadata: uuid is node id as a string and name is also just
     // node id
     // Unfortunately must be done serially as it messes with maps which are
@@ -129,9 +238,12 @@ class DBGraph {
     // TODO edge attributes
   }
 
-  size_t runCypherQuery(const std::string cypherQueryStr, std::string outputFile="matched.edges") {
+  size_t runCypherQuery(const std::string cypherQueryStr,
+                        std::string outputFile="matched.edges") {
+    // run the query
     size_t mEdgeCount = matchCypherQuery(attGraph, EventLimit(), EventWindow(),
                                          cypherQueryStr.c_str());
+    // save matched edges to a file
     char dummy[100];
     strcpy(dummy, outputFile.c_str());
     reportMatchedEdges(*attGraph, dummy);

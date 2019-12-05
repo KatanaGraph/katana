@@ -43,7 +43,7 @@ class DBGraph {
    * Setup the different node and edge labels in the attributed graph; assumes
    * it is already allocated.
    */
-  void setupNodeEdgeLabels() {
+  void setupNodeEdgeLabelsMeta() {
     // create node/edge labels and save them
     char dummy[10]; // assumption that labels won't get to 8+ digits
     for (size_t i = 0; i < numNodeLabels; i++) {
@@ -58,6 +58,24 @@ class DBGraph {
       strcpy(dummy, thisLabel.c_str());
       setEdgeLabelMetadata(attGraph, i, dummy);
     }
+  }
+
+  void setupNodes(uint32_t numNodes) {
+    char dummy[30];
+    // set node metadata: uuid is node id as a string and name is also just
+    // node id
+    // Unfortunately must be done serially as it messes with maps which are
+    // not thread safe
+    for (size_t i = 0; i < numNodes; i++) {
+      std::string id = "ID" + std::to_string(i);
+      strcpy(dummy, id.c_str());
+      // TODO node labels are round-robin; make this more controllable?
+      setNewNode(attGraph, i, dummy, i % numNodeLabels, dummy);
+    }
+
+    // TODO node may have more than one label; can add randomly?
+
+    // TODO node attributes
   }
 
   /**
@@ -166,12 +184,25 @@ class DBGraph {
     allocateGraph(attGraph, graphTopology.size(), finalEdgeCount, numNodeLabels,
                   numEdgeLabels);
 
+    ////////////////////////////////////////////////////////////////////////////
+    // NODE TOPOLOGY
+    ////////////////////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // EDGE TOPOLOGY
+    ////////////////////////////////////////////////////////////////////////////
+
     // need to count how many edges for each vertex in the symmetric version of
     // graph
     std::vector<uint64_t> edgeCountsPerVertex =
         getSymmetricEdgeCounts(graphTopology);
 
-    // first, create the graph topology
+    // prefix sum the edge counts
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Finishing up
+    ////////////////////////////////////////////////////////////////////////////
   }
 
   //! Reads graph topology into attributed graph, then sets up its metadata.
@@ -205,27 +236,10 @@ class DBGraph {
     ////////////////////////////////////////////////////////////////////////////
 
     // Topology now exists: need to create the metadata mappings and such
-    // TODO
 
     // create node/edge labels and save them
-    setupNodeEdgeLabels();
-
-
-    char dummy[30];
-    // set node metadata: uuid is node id as a string and name is also just
-    // node id
-    // Unfortunately must be done serially as it messes with maps which are
-    // not thread safe
-    for (size_t i = 0; i < numNodes; i++) {
-      std::string id = "ID" + std::to_string(i);
-      strcpy(dummy, id.c_str());
-      // node labels are round-robin
-      setNewNode(attGraph, i, dummy, i % numNodeLabels, dummy);
-    }
-
-    // TODO node may have more than one label; can add randomly?
-
-    // TODO node attributes
+    setupNodeEdgeLabelsMeta();
+    setupNodes(numNodes);
 
     // edges; TODO may require symmetric since that's current assumption
     // of AttributedGraph

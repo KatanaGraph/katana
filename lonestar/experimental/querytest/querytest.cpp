@@ -51,9 +51,11 @@ int main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url);
 
-  // test reading
   galois::graphs::DBGraph testGraph;
-  testGraph.readGr(filename);
+  // graph is autoamtically made symmetric and treates every directed edge
+  // as an undirected edge (i.e. edges will be doubled)
+  // Also removes self loops
+  testGraph.constructDataGraph(filename);
 
   // current assumptions of the graph
   // 3 node labels: n1, n2, n3

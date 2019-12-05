@@ -151,7 +151,6 @@ class DBGraph {
     galois::graphs::BufferedGraph<void> graphTopology;
     graphTopology.loadGraph(filename);
 
-
     galois::GAccumulator<uint64_t> keptEdgeCountAccumulator;
     keptEdgeCountAccumulator.reset();
     // next, count the number of edges we want to keep (i.e. ignore the self
@@ -180,14 +179,21 @@ class DBGraph {
     // need to double edge count since symmetric version of graph
     uint64_t finalEdgeCount = keptEdgeCount * 2;
 
+    ////////////////////////////////////////////////////////////////////////////
+    // META SETUP
+    ////////////////////////////////////////////////////////////////////////////
+
     // allocate the memory for the new graph
     allocateGraph(attGraph, graphTopology.size(), finalEdgeCount, numNodeLabels,
                   numEdgeLabels);
+
+    setupNodeEdgeLabelsMeta();
 
     ////////////////////////////////////////////////////////////////////////////
     // NODE TOPOLOGY
     ////////////////////////////////////////////////////////////////////////////
 
+    setupNodes(graphTopology.size());
 
     ////////////////////////////////////////////////////////////////////////////
     // EDGE TOPOLOGY
@@ -198,7 +204,63 @@ class DBGraph {
     std::vector<uint64_t> edgeCountsPerVertex =
         getSymmetricEdgeCounts(graphTopology);
 
-    // prefix sum the edge counts
+    // prefix sum the edge counts; this will tell us where we can write
+    // new edges of a particular vertex
+    for (size_t i = 1; i < edgeCountsPerVertex.size(); i++) {
+      edgeCountsPerVertex[i] += edgeCountsPerVertex[i - 1];
+    }
+
+    // fix edge end points
+    galois::do_all(
+      galois::iterate(0u, graphTopology.size()),
+      [&] (uint32_t vertexID) {
+        fixEndEdge(attGraph, vertexID, edgeCountsPerVertex[vertexID + 1]);
+      },
+      galois::loopname("EdgeEndpointFixing")
+    );
+
+    // loop over edges of a graph, add 2 edges for each one in original topology
+    // (again, ignore self loops)
+    galois::do_all(
+      galois::iterate(0u, graphTopology.size()),
+      [&] (uint32_t vertexID) {
+        for (auto i = graphTopology.edgeBegin(vertexID);
+             i < graphTopology.edgeEnd(vertexID);
+             i++) {
+          uint64_t edgeID = *i;
+          // label to use for this edge pointing both ways
+          // TODO now it's a round robin assignment, may need to change later
+          unsigned labelBit = edgeID % numEdgeLabels;
+          // TODO for now timestamp is original edge id
+          uint64_t timestamp = edgeID;
+          uint64_t dst = graphTopology.edgeDestination(*i);
+
+          // check if not a self loop
+          if (vertexID != dst) {
+            // get forward edge id
+            uint64_t forwardEdge = __sync_fetch_and_add(
+              &(edgeCountsPerVertex[vertexID]), 1);
+            // set forward
+            constructNewEdge(attGraph, forwardEdge, dst, labelBit, timestamp);
+
+            // get backward edge id
+            uint64_t backwardEdge = __sync_fetch_and_add(
+              &(edgeCountsPerVertex[dst]), 1);
+            // set backward
+            constructNewEdge(attGraph, backwardEdge, vertexID, labelBit,
+                             timestamp);
+          }
+        }
+      },
+      galois::steal(), // steal due to edge imbalance among nodes
+      galois::loopname("ConstructSymEdges")
+    );
+
+    // TODO edge attributes and other labels?
+
+    GALOIS_ASSERT(edgeCountsPerVertex[graphTopology.size() - 1] ==
+                  finalEdgeCount);
+    galois::gInfo("Data graph construction from GR complete");
 
     ////////////////////////////////////////////////////////////////////////////
     // Finishing up
@@ -207,8 +269,6 @@ class DBGraph {
 
   //! Reads graph topology into attributed graph, then sets up its metadata.
   void readGr(const std::string filename) {
-    // assumes AttGraph is already allocated
-
     ////////////////////////////////////////////////////////////////////////////
     // Graph topology loading
     ////////////////////////////////////////////////////////////////////////////

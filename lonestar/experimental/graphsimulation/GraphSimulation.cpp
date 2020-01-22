@@ -244,13 +244,14 @@ void matchQuerySlowerNoMatchFasterMatch() {
 }
 #endif
 
-template <bool useLimit>
+template <bool inEdges, bool useLimit>
 void matchQueryTimestampOrder(Graph& qG, Graph& dG, 
     EventLimit limit, 
     uint32_t qn, VecVecTy& matchedEdges, bool& matched) {
   VecTy queryEdgeOrder;
   VecTy queryTimestamps;
-  for (auto qe : qG.edges(qn)) {
+  auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
+  for (auto qe : qEdges) {
     auto qeData = qG.getEdgeData(qe);
     queryTimestamps.push_back(qeData.timestamp);
   }
@@ -304,18 +305,23 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
   }
 }
 
-template <bool useLimit, bool useWindow>
+template <bool inEdges, bool useLimit, bool useWindow>
 bool matchQueryEdge(Graph& qG, Graph& dG, 
     EventLimit limit, EventWindow window,
     uint32_t qn, uint32_t dn, VecVecTy& matchedEdges) {
   bool matched = true;
-  size_t num_qEdges =
-      std::distance(qG.edge_begin(qn), qG.edge_end(qn));
+  size_t num_qEdges;
+  if (inEdges) {
+    num_qEdges = std::distance(qG.in_edge_begin(qn), qG.in_edge_end(qn));
+  } else {
+    num_qEdges = std::distance(qG.edge_begin(qn), qG.edge_end(qn));
+  }
   if (num_qEdges > 0) {
     // match children links
     matchedEdges.clear();
     matchedEdges.resize(num_qEdges);
-    for (auto de : dG.edges(dn)) {
+    auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
+    for (auto de : dEdges) {
       auto& deData = dG.getEdgeData(de);
       if (useWindow) {
         if ((deData.timestamp > window.endTime) ||
@@ -326,7 +332,8 @@ bool matchQueryEdge(Graph& qG, Graph& dG,
       }
       size_t edgeID = 0;
       // Assumption: each query edge of this query node has a different label
-      for (auto qe : qG.edges(qn)) {
+      auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
+      for (auto qe : qEdges) {
         auto qeData = qG.getEdgeData(qe);
         if (matchEdgeLabel(qeData, deData)) {
           auto qDst      = qG.getEdgeDst(qe);
@@ -346,7 +353,7 @@ bool matchQueryEdge(Graph& qG, Graph& dG,
       }
     }
     if (matched) { // check if it matches query timestamp order
-      matchQueryTimestampOrder<useLimit>(qG, dG, 
+      matchQueryTimestampOrder<inEdges, useLimit>(qG, dG, 
         limit,
         qn, matchedEdges, matched);
     }
@@ -373,7 +380,11 @@ void matchNodesOnce(Graph& qG, Graph& dG,
           uint64_t mask = (1 << qn);
           if (dData.matched & mask) {
             bool matched = 
-              matchQueryEdge<useLimit, useWindow>(qG, dG,
+              matchQueryEdge<true, useLimit, useWindow>(qG, dG,
+                limit, window,  
+                qn, dn, matchedEdges)
+              && 
+              matchQueryEdge<false, useLimit, useWindow>(qG, dG,
                 limit, window,  
                 qn, dn, matchedEdges);
             // remove qn from dn

@@ -258,6 +258,8 @@ class DBGraph {
 
     // TODO edge attributes and other labels?
 
+    attGraph->graph.constructIncomingEdges();
+
     GALOIS_ASSERT(edgeCountsPerVertex[graphTopology.size() - 1] ==
                   finalEdgeCount);
     galois::gInfo("Data graph construction from GR complete");

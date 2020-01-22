@@ -231,6 +231,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.fixEndEdge(i, prefixSum[i]);
   }
 
+  queryGraph.constructIncomingEdges();
+
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit,

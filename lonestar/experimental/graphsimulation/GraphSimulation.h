@@ -103,8 +103,10 @@ struct EventWindow {
 };
 
 //! Graph typedef
-using Graph = galois::graphs::LC_CSR_Graph<Node, EdgeData>::
-                with_no_lockable<true>::type::with_numa_alloc<true>::type;
+using Graph = galois::graphs::B_LC_CSR_Graph<Node, EdgeData, false, true, true>;
+// using Graph = galois::graphs::B_LC_CSR_Graph<Node, EdgeData>::
+//                 with_no_lockable<true>::type::
+//                 with_numa_alloc<true>::type;
 //! Graph node typedef
 using GNode = Graph::GraphNode;
 

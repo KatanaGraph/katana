@@ -108,6 +108,252 @@ bool existEmptyLabelMatchQGNode(QG& qG, std::vector<bool>& queryMatched) {
   return false;
 }
 
+typedef galois::gstl::Vector<uint64_t> VecTy;
+typedef galois::gstl::Vector<VecTy> VecVecTy;
+
+#ifdef SLOW_NO_MATCH_FAST_MATCH
+void matchQuerySlowerNoMatchFasterMatch() {
+  if (queryNodeHasMoreThan2Edges) {
+    uint64_t qPrevEdgeTimestamp = 0;
+    uint64_t dPrevEdgeTimestamp = 0;
+    for (auto qe : qG.edges(qn)) {
+      auto qeData = qG.getEdgeData(qe);
+      auto qDst   = qG.getEdgeDst(qe);
+
+      bool matched = false;
+      uint64_t dNextEdgeTimestamp =
+          std::numeric_limits<uint64_t>::max();
+      for (auto de : dG.edges(dn)) {
+        auto& deData = dG.getEdgeData(de);
+        if (useWindow) {
+          if ((deData.timestamp > window.endTime) ||
+              (deData.timestamp < window.startTime)) {
+            continue; // skip this edge since it is not in the
+                      // time-span of interest
+          }
+        }
+        if (matchEdgeLabel(qeData, deData)) {
+          auto& dDstData = dG.getData(dG.getEdgeDst(de));
+          if (dDstData.matched & (1 << qDst)) {
+            if ((qPrevEdgeTimestamp <= qeData.timestamp) ==
+                (dPrevEdgeTimestamp <= deData.timestamp)) {
+              if (dNextEdgeTimestamp > deData.timestamp) {
+                dNextEdgeTimestamp =
+                    deData.timestamp; // minimum of matched edges
+              }
+              matched = true;
+            }
+          }
+        }
+      }
+
+      // remove qn from dn when we have an unmatched edge
+      if (!matched) {
+        dData.matched &= ~mask;
+        break;
+      }
+
+      qPrevEdgeTimestamp = qeData.timestamp;
+      dPrevEdgeTimestamp = dNextEdgeTimestamp;
+    }
+  } else {
+    // assume query graph has at the most 2 edges for any node
+    auto qe1  = qG.edge_begin(qn);
+    auto qend = qG.edge_end(qn);
+    if (qe1 != qend) {
+      auto& qeData = qG.getEdgeData(qe1);
+      auto qDst    = qG.getEdgeDst(qe1);
+
+      bool matched = false;
+      for (auto& de : dG.edges(dn)) {
+        auto& deData = dG.getEdgeData(de);
+        if (useWindow) {
+          if ((deData.timestamp > window.endTime) ||
+              (deData.timestamp < window.startTime)) {
+            continue; // skip this edge since it is not in the
+                      // time-span of interest
+          }
+        }
+        if (matchEdgeLabel(qeData, deData)) {
+          auto dDst      = dG.getEdgeDst(de);
+          auto& dDstData = dG.getData(dDst);
+          if (dDstData.matched & (1 << qDst)) {
+
+            auto qe2 = qe1 + 1;
+            if (qe2 == qend) { // only 1 edge
+              matched = true;
+              break;
+            } else {
+              assert((qe2 + 1) == qend);
+              // match the second edge
+              auto& qeData2 = qG.getEdgeData(qe2);
+              auto qDst2    = qG.getEdgeDst(qe2);
+
+              for (auto& de2 : dG.edges(dn)) {
+                auto& deData2 = dG.getEdgeData(de2);
+                if (matchEdgeLabel(qeData2, deData2)) {
+                  auto dDst2      = dG.getEdgeDst(de2);
+                  auto& dDstData2 = dG.getData(dDst2);
+                  if (dDstData2.matched & (1 << qDst2)) {
+                    assert(qeData.timestamp != qeData2.timestamp);
+                    if (useWindow) {
+                      if ((deData2.timestamp > window.endTime) ||
+                          (deData2.timestamp < window.startTime)) {
+                        continue; // skip this edge since it is not in
+                                  // the time-span of interest
+                      }
+                    }
+                    if ((qeData.timestamp <= qeData2.timestamp) ==
+                        (deData.timestamp <= deData2.timestamp)) {
+                      if (useLimit) {
+                        if (std::abs(deData.timestamp -
+                                      deData2.timestamp) >
+                            limit.time) {
+                          continue; // skip this sequence of events
+                                    // because too much time has
+                                    // lapsed between them
+                        }
+                      }
+#ifdef UNIQUE_QUERY_NODES
+                      if ((qDst != qDst2) == (dDst != dDst2)) {
+#endif
+                        matched = true;
+                        break;
+#ifdef UNIQUE_QUERY_NODES
+                      }
+#endif
+                    }
+                  }
+                }
+              }
+
+              if (matched)
+                break;
+            }
+          }
+        }
+      }
+
+      // remove qn from dn when we have an unmatched edge
+      if (!matched) {
+        dData.matched &= ~mask;
+        break;
+      }
+    }
+  }
+}
+#endif
+
+template <bool useLimit>
+void matchQueryTimestampOrder(Graph& qG, Graph& dG, 
+    EventLimit limit, 
+    uint32_t qn, VecVecTy& matchedEdges, bool& matched) {
+  VecTy queryEdgeOrder;
+  VecTy queryTimestamps;
+  for (auto qe : qG.edges(qn)) {
+    auto qeData = qG.getEdgeData(qe);
+    queryTimestamps.push_back(qeData.timestamp);
+  }
+  uint64_t prev = 0;
+  while (prev != std::numeric_limits<uint32_t>::max()) {
+    uint64_t next = std::numeric_limits<uint32_t>::max();
+    size_t minEdgeID = 0;
+    for (size_t i = 0; i < queryTimestamps.size(); ++i) {
+      uint64_t cur = queryTimestamps[i];
+      if (cur != std::numeric_limits<uint32_t>::max()) {
+        if (cur >= prev) {
+          if (cur < next) {
+            next = cur;
+            minEdgeID = i;
+          }
+        }
+      }
+    }
+    if (next != std::numeric_limits<uint32_t>::max()) {
+      queryEdgeOrder.push_back(minEdgeID);
+      queryTimestamps[minEdgeID] = std::numeric_limits<uint32_t>::max();
+    }
+    prev = next;
+  }
+  prev = 0;
+  for (size_t k = 0; k < queryEdgeOrder.size(); ++k) {
+    size_t i = queryEdgeOrder[k];
+    uint64_t next = std::numeric_limits<uint64_t>::max();
+    for (size_t j = 0; j < matchedEdges[i].size(); ++j) {
+      uint64_t cur = matchedEdges[i][j];
+      if (cur >= prev) {
+        if (cur < next) {
+          next = cur;
+        }
+      }
+    }
+    if ((next == std::numeric_limits<uint64_t>::max()) ||
+        (next < prev)) {
+      matched = false;
+      break;
+    }
+    if (useLimit) {
+      if ((next - prev) >
+          limit.time) {  // TODO: imprecise - fix this
+        matched = false; // skip this sequence of events because too
+                          // much time has lapsed between them
+      }
+    }
+    prev = next;
+    matchedEdges[i].clear();
+  }
+}
+
+template <bool useLimit, bool useWindow>
+bool matchQueryEdge(Graph& qG, Graph& dG, 
+    EventLimit limit, EventWindow window,
+    uint32_t qn, uint32_t dn, VecVecTy& matchedEdges) {
+  bool matched = true;
+  size_t num_qEdges =
+      std::distance(qG.edge_begin(qn), qG.edge_end(qn));
+  if (num_qEdges > 0) {
+    // match children links
+    matchedEdges.clear();
+    matchedEdges.resize(num_qEdges);
+    for (auto de : dG.edges(dn)) {
+      auto& deData = dG.getEdgeData(de);
+      if (useWindow) {
+        if ((deData.timestamp > window.endTime) ||
+            (deData.timestamp < window.startTime)) {
+          continue; // skip this edge since it is not in the time-span
+                    // of interest
+        }
+      }
+      size_t edgeID = 0;
+      // Assumption: each query edge of this query node has a different label
+      for (auto qe : qG.edges(qn)) {
+        auto qeData = qG.getEdgeData(qe);
+        if (matchEdgeLabel(qeData, deData)) {
+          auto qDst      = qG.getEdgeDst(qe);
+          auto& dDstData = dG.getData(dG.getEdgeDst(de));
+          if (dDstData.matched & (1 << qDst)) {
+            matchedEdges[edgeID].push_back(deData.timestamp);
+          }
+        }
+        ++edgeID;
+      }
+    }
+    // Assumption: each query edge of this query node has a different label
+    for (size_t i = 0; i < matchedEdges.size(); ++i) {
+      if (matchedEdges[i].size() == 0) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) { // check if it matches query timestamp order
+      matchQueryTimestampOrder<useLimit>(qG, dG, 
+        limit,
+        qn, matchedEdges, matched);
+    }
+  }
+  return matched;
+}
+
 /**
  * @todo doxygen
  */
@@ -116,8 +362,6 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                     galois::InsertBag<Graph::GraphNode>* cur,
                     galois::InsertBag<Graph::GraphNode>* next, EventLimit limit,
                     EventWindow window) {
-  typedef galois::gstl::Vector<uint64_t> VecTy;
-  typedef galois::gstl::Vector<VecTy> VecVecTy;
   galois::substrate::PerThreadStorage<VecVecTy> matchedEdgesPerThread;
   galois::do_all(
       galois::iterate(*cur),
@@ -126,238 +370,17 @@ void matchNodesOnce(Graph& qG, Graph& dG,
         auto& matchedEdges = *matchedEdgesPerThread.getLocal();
 
         for (auto qn : qG) { // multiple matches
-          size_t num_qEdges =
-              std::distance(qG.edge_begin(qn), qG.edge_end(qn));
           uint64_t mask = (1 << qn);
-          if ((num_qEdges > 0) && (dData.matched & mask)) {
-            // match children links
-            matchedEdges.clear();
-            matchedEdges.resize(num_qEdges);
-            for (auto de : dG.edges(dn)) {
-              auto& deData = dG.getEdgeData(de);
-              if (useWindow) {
-                if ((deData.timestamp > window.endTime) ||
-                    (deData.timestamp < window.startTime)) {
-                  continue; // skip this edge since it is not in the time-span
-                            // of interest
-                }
-              }
-              size_t edgeID = 0;
-              // Assumption: each query edge of this query node has a different
-              // label
-              for (auto qe : qG.edges(qn)) {
-                auto qeData = qG.getEdgeData(qe);
-                if (matchEdgeLabel(qeData, deData)) {
-                  auto qDst      = qG.getEdgeDst(qe);
-                  auto& dDstData = dG.getData(dG.getEdgeDst(de));
-                  if (dDstData.matched & (1 << qDst)) {
-                    matchedEdges[edgeID].push_back(deData.timestamp);
-                  }
-                }
-                ++edgeID;
-              }
-            }
-            // Assumption: each query edge of this query node has a different
-            // label
-            bool matched = true;
-            for (size_t i = 0; i < matchedEdges.size(); ++i) {
-              if (matchedEdges[i].size() == 0) {
-                matched = false;
-                break;
-              }
-            }
-            if (matched) { // check if it matches query timestamp order
-              VecTy queryEdgeOrder;
-              VecTy queryTimestamps;
-              for (auto qe : qG.edges(qn)) {
-                auto qeData = qG.getEdgeData(qe);
-                queryTimestamps.push_back(qeData.timestamp);
-              }
-              uint64_t prev = 0;
-              while (prev != std::numeric_limits<uint32_t>::max()) {
-                uint64_t next = std::numeric_limits<uint32_t>::max();
-                size_t minEdgeID = 0;
-                for (size_t i = 0; i < queryTimestamps.size(); ++i) {
-                  uint64_t cur = queryTimestamps[i];
-                  if (cur != std::numeric_limits<uint32_t>::max()) {
-                    if (cur >= prev) {
-                      if (cur < next) {
-                        next = cur;
-                        minEdgeID = i;
-                      }
-                    }
-                  }
-                }
-                if (next != std::numeric_limits<uint32_t>::max()) {
-                  queryEdgeOrder.push_back(minEdgeID);
-                  queryTimestamps[minEdgeID] = std::numeric_limits<uint32_t>::max();
-                }
-                prev = next;
-              }
-              prev = 0;
-              for (size_t k = 0; k < queryEdgeOrder.size(); ++k) {
-                size_t i = queryEdgeOrder[k];
-                uint64_t next = std::numeric_limits<uint64_t>::max();
-                for (size_t j = 0; j < matchedEdges[i].size(); ++j) {
-                  uint64_t cur = matchedEdges[i][j];
-                  if (cur >= prev) {
-                    if (cur < next) {
-                      next = cur;
-                    }
-                  }
-                }
-                if ((next == std::numeric_limits<uint64_t>::max()) ||
-                    (next < prev)) {
-                  matched = false;
-                  break;
-                }
-                if (useLimit) {
-                  if ((next - prev) >
-                      limit.time) {  // TODO: imprecise - fix this
-                    matched = false; // skip this sequence of events because too
-                                     // much time has lapsed between them
-                  }
-                }
-                prev = next;
-                matchedEdges[i].clear();
-              }
-            }
+          if (dData.matched & mask) {
+            bool matched = 
+              matchQueryEdge<useLimit, useWindow>(qG, dG,
+                limit, window,  
+                qn, dn, matchedEdges);
             // remove qn from dn
             if (!matched) {
               dData.matched &= ~mask;
             }
-        // TODO: add support for dst-id inequality
-
-#ifdef SLOW_NO_MATCH_FAST_MATCH
-            if (queryNodeHasMoreThan2Edges) {
-              uint64_t qPrevEdgeTimestamp = 0;
-              uint64_t dPrevEdgeTimestamp = 0;
-              for (auto qe : qG.edges(qn)) {
-                auto qeData = qG.getEdgeData(qe);
-                auto qDst   = qG.getEdgeDst(qe);
-
-                bool matched = false;
-                uint64_t dNextEdgeTimestamp =
-                    std::numeric_limits<uint64_t>::max();
-                for (auto de : dG.edges(dn)) {
-                  auto& deData = dG.getEdgeData(de);
-                  if (useWindow) {
-                    if ((deData.timestamp > window.endTime) ||
-                        (deData.timestamp < window.startTime)) {
-                      continue; // skip this edge since it is not in the
-                                // time-span of interest
-                    }
-                  }
-                  if (matchEdgeLabel(qeData, deData)) {
-                    auto& dDstData = dG.getData(dG.getEdgeDst(de));
-                    if (dDstData.matched & (1 << qDst)) {
-                      if ((qPrevEdgeTimestamp <= qeData.timestamp) ==
-                          (dPrevEdgeTimestamp <= deData.timestamp)) {
-                        if (dNextEdgeTimestamp > deData.timestamp) {
-                          dNextEdgeTimestamp =
-                              deData.timestamp; // minimum of matched edges
-                        }
-                        matched = true;
-                      }
-                    }
-                  }
-                }
-
-                // remove qn from dn when we have an unmatched edge
-                if (!matched) {
-                  dData.matched &= ~mask;
-                  break;
-                }
-
-                qPrevEdgeTimestamp = qeData.timestamp;
-                dPrevEdgeTimestamp = dNextEdgeTimestamp;
-              }
-            } else {
-              // assume query graph has at the most 2 edges for any node
-              auto qe1  = qG.edge_begin(qn);
-              auto qend = qG.edge_end(qn);
-              if (qe1 != qend) {
-                auto& qeData = qG.getEdgeData(qe1);
-                auto qDst    = qG.getEdgeDst(qe1);
-
-                bool matched = false;
-                for (auto& de : dG.edges(dn)) {
-                  auto& deData = dG.getEdgeData(de);
-                  if (useWindow) {
-                    if ((deData.timestamp > window.endTime) ||
-                        (deData.timestamp < window.startTime)) {
-                      continue; // skip this edge since it is not in the
-                                // time-span of interest
-                    }
-                  }
-                  if (matchEdgeLabel(qeData, deData)) {
-                    auto dDst      = dG.getEdgeDst(de);
-                    auto& dDstData = dG.getData(dDst);
-                    if (dDstData.matched & (1 << qDst)) {
-
-                      auto qe2 = qe1 + 1;
-                      if (qe2 == qend) { // only 1 edge
-                        matched = true;
-                        break;
-                      } else {
-                        assert((qe2 + 1) == qend);
-                        // match the second edge
-                        auto& qeData2 = qG.getEdgeData(qe2);
-                        auto qDst2    = qG.getEdgeDst(qe2);
-
-                        for (auto& de2 : dG.edges(dn)) {
-                          auto& deData2 = dG.getEdgeData(de2);
-                          if (matchEdgeLabel(qeData2, deData2)) {
-                            auto dDst2      = dG.getEdgeDst(de2);
-                            auto& dDstData2 = dG.getData(dDst2);
-                            if (dDstData2.matched & (1 << qDst2)) {
-                              assert(qeData.timestamp != qeData2.timestamp);
-                              if (useWindow) {
-                                if ((deData2.timestamp > window.endTime) ||
-                                    (deData2.timestamp < window.startTime)) {
-                                  continue; // skip this edge since it is not in
-                                            // the time-span of interest
-                                }
-                              }
-                              if ((qeData.timestamp <= qeData2.timestamp) ==
-                                  (deData.timestamp <= deData2.timestamp)) {
-                                if (useLimit) {
-                                  if (std::abs(deData.timestamp -
-                                               deData2.timestamp) >
-                                      limit.time) {
-                                    continue; // skip this sequence of events
-                                              // because too much time has
-                                              // lapsed between them
-                                  }
-                                }
-#ifdef UNIQUE_QUERY_NODES
-                                if ((qDst != qDst2) == (dDst != dDst2)) {
-#endif
-                                  matched = true;
-                                  break;
-#ifdef UNIQUE_QUERY_NODES
-                                }
-#endif
-                              }
-                            }
-                          }
-                        }
-
-                        if (matched)
-                          break;
-                      }
-                    }
-                  }
-                }
-
-                // remove qn from dn when we have an unmatched edge
-                if (!matched) {
-                  dData.matched &= ~mask;
-                  break;
-                }
-              }
-            }
-#endif
+            // TODO: add support for dst-id inequality
           }
         }
 

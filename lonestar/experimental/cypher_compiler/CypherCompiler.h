@@ -193,24 +193,35 @@ class CypherCompiler {
         assert(nelements > 2);
         assert((nelements % 2) == 1); // odd number of elements
         for (unsigned int i = 1; i < nelements; i+=2) {
+          auto rel = cypher_ast_pattern_path_get_element(ast, i);
+          auto rel_type = cypher_astnode_type(rel);
+          assert(rel_type == CYPHER_AST_REL_PATTERN);
+          auto direction = cypher_ast_rel_pattern_get_direction(rel);
+
+          auto first = cypher_ast_pattern_path_get_element(ast, i - 1);
+          auto first_type = cypher_astnode_type(first);
+          assert(first_type == CYPHER_AST_NODE_PATTERN);
+
+          auto second = cypher_ast_pattern_path_get_element(ast, i + 1);
+          auto second_type = cypher_astnode_type(second);
+          assert(second_type == CYPHER_AST_NODE_PATTERN);
+
           ir.emplace_back();
-          { // source
-            auto element = cypher_ast_pattern_path_get_element(ast, i - 1);
-            auto element_type = cypher_astnode_type(element);
-            assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_node_pattern_path(element, ir.back().caused_by);
+          if (direction == CYPHER_REL_OUTBOUND) { // source
+            compile_node_pattern_path(first, ir.back().caused_by);
+            compile_rel_pattern_path(rel);
+            compile_node_pattern_path(second, ir.back().acted_on);
+          } else { 
+            compile_node_pattern_path(first, ir.back().acted_on);
+            compile_rel_pattern_path(rel);
+            compile_node_pattern_path(second, ir.back().caused_by);
           } 
-          { // relation
-            auto element = cypher_ast_pattern_path_get_element(ast, i);
-            auto element_type = cypher_astnode_type(element);
-            assert(element_type == CYPHER_AST_REL_PATTERN);
-            compile_rel_pattern_path(element);
-          } 
-          { // destination
-            auto element = cypher_ast_pattern_path_get_element(ast, i + 1);
-            auto element_type = cypher_astnode_type(element);
-            assert(element_type == CYPHER_AST_NODE_PATTERN);
-            compile_node_pattern_path(element, ir.back().acted_on);
+
+          if (direction == CYPHER_REL_BIDIRECTIONAL) {
+            ir.emplace_back(); 
+            compile_node_pattern_path(first, ir.back().caused_by);
+            compile_rel_pattern_path(rel);
+            compile_node_pattern_path(second, ir.back().acted_on);
           } 
         }
         return 0;

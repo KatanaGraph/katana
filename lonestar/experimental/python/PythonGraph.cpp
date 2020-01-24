@@ -100,6 +100,40 @@ void saveGraph(AttributedGraph* g, char* filename) {
   file.close();
 }
 
+void saveEdgeList(AttributedGraph* g, char* filename) {
+  Graph& graph = g->graph;
+  std::ofstream file(filename);
+  std::ofstream nodeFile("nodelabels.nodes");
+  uint32_t maxNodeLabel = 0;
+  uint32_t maxEdgeLabel = 0;
+
+  for (uint32_t src : graph) {
+    uint32_t srcLabel = rightmostSetBitPos(graph.getData(src).label);
+    if (srcLabel > maxNodeLabel) {
+      maxNodeLabel = srcLabel;
+    }
+
+    nodeFile << src << "," << srcLabel << "\n";
+
+    for (auto e : graph.edges(src)) {
+      uint32_t dst        = graph.getEdgeDst(e);
+      auto& ed            = graph.getEdgeData(e);
+      uint32_t edgeLabel  = rightmostSetBitPos(ed.label);
+      // track max edge label
+      if (edgeLabel > maxEdgeLabel) {
+        maxEdgeLabel = edgeLabel;
+      }
+      // output edge to file with a single lab3el
+      file << src << " " << dst << " " << edgeLabel << "\n";
+    }
+  }
+  // max edge label: number of labels is 1 + that
+  printf("# of node labels is %u\n", maxNodeLabel + 1);
+  printf("# of edge labels is %u\n", maxEdgeLabel + 1);
+  file.close();
+  nodeFile.close();
+}
+
 void loadGraph(AttributedGraph* g, char* filename) {
   std::ifstream file(filename, std::ios::in | std::ios::binary);
   boost::archive::binary_iarchive iarch(file);

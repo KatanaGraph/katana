@@ -73,6 +73,12 @@ void deleteGraph(AttributedGraph* g);
  */
 void saveGraph(AttributedGraph* g, char* filename);
 /**
+ * Outputs an edge list from the attributed graph.
+ * Ignores vertex labels and only chooses a single label from the
+ * edge to output. Also ignores vertex/edge attributes.
+ */
+void saveEdgeList(AttributedGraph* g, char* filename);
+/**
  * Load an AttributedGraph from disk for use.
  * @param g Graph object to load into
  * @param filename Name of serialized graph on disk to load

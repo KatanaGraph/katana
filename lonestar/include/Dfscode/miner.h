@@ -5,23 +5,25 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "embedding.h"
+typedef std::deque<DFS> DFSQueue;
+typedef galois::InsertBag<DFS> PatternQueue;
+typedef galois::substrate::PerThreadStorage<LocalStatus> Status;
 
 class Miner {
 public:
 	std::vector<LabEdge> edge_list;
-	Miner(Graph *g, unsigned k, unsigned minsup, int num_threads, bool show = false) {
+	Miner(Graph *g, unsigned size) {
 		this->graph = g;
 		minimal_support = minsup;
-		max_size = k;
-		nthreads = num_threads;
-		show_output = show;
+		max_level = size;
+		nthreads = numThreads;
 		for(int i = 0; i < nthreads; i++) {
 			frequent_patterns_count.push_back(0);
 			std::vector<std::deque<DFS> > tmp;
-			dfs_task_queue.push_back(tmp);
+			//dfs_task_queue.push_back(tmp);
 		}
 		construct_edgelist();
-#ifdef ENABLE_LB
+		#ifdef ENABLE_LB
 		for(int i = 0; i < nthreads; i++) {
 			dfs_task_queue_shared.push_back(tmp);
 			thread_is_working.push_back(false);
@@ -29,7 +31,16 @@ public:
 		}
 		task_split_threshold = 2;
 		init_lb();
-#endif
+		#endif
+		for(size_t i = 0; i < status.size(); i++) {
+			status.getLocal(i)->frequent_patterns_count = 0;
+			status.getLocal(i)->thread_id = i;
+			#ifdef ENABLE_LB
+			status.getLocal(i)->task_split_level = 0;
+			status.getLocal(i)->embeddings_regeneration_level = 0;
+			status.getLocal(i)->is_running = true;
+			#endif
+		}
 	}
 	virtual ~Miner() {}
 	// returns the total number of frequent patterns
@@ -41,22 +52,82 @@ public:
 	}
 	void construct_edgelist() {
 		unsigned eid = 0;
-		for (Graph::iterator it = graph->begin(); it != graph->end(); it ++) {
-			GNode src = *it;
-			//auto& src_label = graph->getData(src);
-			Graph::edge_iterator first = graph->edge_begin(src);
-			Graph::edge_iterator last = graph->edge_end(src);
-			// foe each edge of this vertex
-			for (auto e = first; e != last; ++ e) {
+		for (auto src : *graph) {
+			for (auto e : graph->edges(src)) {
 				GNode dst = graph->getEdgeDst(e);
 				auto& elabel = graph->getEdgeData(e);
-				//auto& dst_label = graph->getData(dst);
 				LabEdge edge(src, dst, elabel, eid);
 				edge_list.push_back(edge);
 				eid ++;
 			}
 		}
 		assert(edge_list.size() == graph->sizeEdges());
+	}
+	void init_dfscode() {
+		int single_edge_dfscodes = 0;
+		int num_embeddings = 0;
+		for (auto src : *graph) {
+			auto& src_label = graph->getData(src);
+			for (auto e : graph->edges(src)) {
+				GNode dst = graph->getEdgeDst(e);
+				auto elabel = graph->getEdgeData(e);
+				auto& dst_label = graph->getData(dst);
+				if (src_label <= dst_label) { // when src_label == dst_label (the edge will be added twice since the input graph is symmetrized)
+					if (pattern_map.count(src_label) == 0 || pattern_map[src_label].count(elabel) == 0 || pattern_map[src_label][elabel].count(dst_label) == 0)
+						single_edge_dfscodes++;
+					LabEdge *eptr = &(edge_list[*e]);
+					pattern_map[src_label][elabel][dst_label].push(2, eptr, 0); // single-edge embedding: (num_vertices, edge, pointer_to_parent_embedding)
+					num_embeddings ++;
+				}
+			}
+		}
+		int dfscodes_per_thread = (int) ceil((single_edge_dfscodes * 1.0) / numThreads);
+		std::cout << "num_single_edge_patterns = " << single_edge_dfscodes << "\n";
+		if (show) std::cout << "dfscodes_per_thread = " << dfscodes_per_thread << std::endl; 
+		if (show) std::cout << "num_embeddings = " << num_embeddings << std::endl; 
+		// for each single-edge pattern, generate a DFS code and push it into the task queue
+		for(EmbeddingList_iterator3 fromlabel = pattern_map.begin(); fromlabel != pattern_map.end(); ++fromlabel) {
+			for(EmbeddingList_iterator2 elabel = fromlabel->second.begin(); elabel != fromlabel->second.end(); ++elabel) {
+				for(EmbeddingList_iterator1 tolabel = elabel->second.begin(); tolabel != elabel->second.end(); ++tolabel) {
+					DFS dfs(0, 1, fromlabel->first, elabel->first, tolabel->first);
+					task_queue.push_back(dfs);
+				} // for tolabel
+			} // for elabel
+		} // for fromlabel
+	}
+
+	void process() {
+		init_dfscode(); // insert single-edge patterns into the queue
+		galois::do_all(galois::iterate(task_queue),
+			[&](const DFS& dfs) {
+				LocalStatus *ls = status.getLocal();
+				ls->current_dfs_level = 0;
+				std::deque<DFS> tmp;
+				ls->dfs_task_queue.push_back(tmp);
+				ls->dfs_task_queue[0].push_back(dfs);
+				ls->DFS_CODE.push(0, 1, dfs.fromlabel, dfs.elabel, dfs.tolabel);
+				grow(pattern_map[dfs.fromlabel][dfs.elabel][dfs.tolabel], 1, *ls);
+				ls->DFS_CODE.pop();
+				#ifdef ENABLE_LB
+				int tid = galois::substrate::ThreadPool::getTID();
+				if(ls->dfs_task_queue[0].size() == 0 && !miner.all_threads_idle()) {
+					bool succeed = miner.try_task_stealing(ls);
+					if (succeed) {
+						ls->embeddings_regeneration_level = 0;
+						miner.set_regen_level(tid, 0);
+					}
+				}
+				#endif
+			},
+			galois::chunk_size<CHUNK_SIZE>(), galois::steal(), galois::no_conflicts(),
+			galois::loopname("FSM-DFS")
+		);
+	}
+	void print_output() {
+		size_t total = 0;
+		for(int i = 0; i < numThreads; i++)
+			total += status.getLocal(i)->frequent_patterns_count;
+		std::cout << "\n\tnum_frequent_patterns (minsup=" << minsup << "): " << total << "\n\n";
 	}
 #ifdef ENABLE_LB
 	void init_lb() {
@@ -274,10 +345,12 @@ public:
 		if (is_min(status) == false) return; // check if this pattern is canonical: minimal DFSCode
 		status.frequent_patterns_count ++;
 		// list frequent patterns here!!!
-		if(show_output) {
-			std::cout << status.DFS_CODE.to_string(false) << ": " << sup << std::endl;
-			for (auto it = emb_list.begin(); it != emb_list.end(); it++) std::cout << "\t" << it->to_string_all() << std::endl;
+		if (debug) {
+			std::cout << status.DFS_CODE.to_string(false) << ": sup = " << sup;
+			std::cout << ", num_embeddings = " << emb_list.size() << "\n";
+			//for (auto it = emb_list.begin(); it != emb_list.end(); it++) std::cout << "\t" << it->to_string_all() << std::endl;
 		}
+		if (dfs_level == max_level) return;
 		const RMPath &rmpath = status.DFS_CODE.buildRMPath(); // build the right-most path of this pattern
 		LabelT minlabel = status.DFS_CODE[0].fromlabel; 
 		VeridT maxtoc = status.DFS_CODE[rmpath[0]].to; // right-most vertex
@@ -286,63 +359,63 @@ public:
 		EdgeList edges;
 		status.current_dfs_level = dfs_level;
 		// take each embedding in the embedding list, do backward and forward extension
-		for(size_t n = 0; n < emb_list.size(); ++n) {
+		for (size_t n = 0; n < emb_list.size(); ++n) {
 			Embedding *cur = &emb_list[n];
 			unsigned emb_size = cur->num_vertices;
 			History history(cur);
 			// backward
-			for(size_t i = rmpath.size() - 1; i >= 1; --i) {
+			for (size_t i = rmpath.size() - 1; i >= 1; --i) {
 				LabEdge *e = get_backward(*graph, edge_list, history[rmpath[i]], history[rmpath[0]], history);
 				if(e) new_bck_root[status.DFS_CODE[rmpath[i]].from][e->elabel].push(emb_size, e, cur);
 			}
 			// pure forward
 			if (get_forward_pure(*graph, edge_list, history[rmpath[0]], minlabel, history, edges)) {
 				for (EdgeList::iterator it = edges.begin(); it != edges.end(); ++it) {
-					if (emb_size + 1 <= max_size)
+					//if (emb_size + 1 <= max_size)
 						new_fwd_root[maxtoc][(*it)->elabel][graph->getData((*it)->to)].push(emb_size+1, *it, cur);
 				}
 			}
 			// backtracked forward
-			for(size_t i = 0; i < rmpath.size(); ++i) {
-				if(get_forward_rmpath(*graph, edge_list, history[rmpath[i]], minlabel, history, edges)) {
-					for(EdgeList::iterator it = edges.begin(); it != edges.end(); ++it) {
-						if (emb_size + 1 <= max_size)
+			for (size_t i = 0; i < rmpath.size(); ++i) {
+				if (get_forward_rmpath(*graph, edge_list, history[rmpath[i]], minlabel, history, edges)) {
+					for (EdgeList::iterator it = edges.begin(); it != edges.end(); ++it) {
+						//if (emb_size + 1 <= max_size)
 							new_fwd_root[status.DFS_CODE[rmpath[i]].from][(*it)->elabel][graph->getData((*it)->to)].push(emb_size+1, *it, cur);
 					} // for it
 				} // if
 			} // for i
 		} // for n
 		std::deque<DFS> tmp;
-		if(status.dfs_task_queue.size() <= dfs_level) {
+		if (status.dfs_task_queue.size() <= dfs_level) {
 			status.dfs_task_queue.push_back(tmp);
 		}
 		// insert all extended subgraphs into the task queue
 		// backward
-		for(EmbeddingList_iterator2 to = new_bck_root.begin(); to != new_bck_root.end(); ++to) {
-			for(EmbeddingList_iterator1 elabel = to->second.begin(); elabel != to->second.end(); ++elabel) {
+		for (EmbeddingList_iterator2 to = new_bck_root.begin(); to != new_bck_root.end(); ++to) {
+			for (EmbeddingList_iterator1 elabel = to->second.begin(); elabel != to->second.end(); ++elabel) {
 				DFS dfs(maxtoc, to->first, (LabelT)-1, elabel->first, (LabelT)-1);
 				status.dfs_task_queue[dfs_level].push_back(dfs);
 			}
 		}
 		// forward
-		for(EmbeddingList_riterator3 from = new_fwd_root.rbegin(); from != new_fwd_root.rend(); ++from) {
-			for(EmbeddingList_iterator2 elabel = from->second.begin(); elabel != from->second.end(); ++elabel) {
-				for(EmbeddingList_iterator1 tolabel = elabel->second.begin(); tolabel != elabel->second.end(); ++tolabel) {
+		for (EmbeddingList_riterator3 from = new_fwd_root.rbegin(); from != new_fwd_root.rend(); ++from) {
+			for (EmbeddingList_iterator2 elabel = from->second.begin(); elabel != from->second.end(); ++elabel) {
+				for (EmbeddingList_iterator1 tolabel = elabel->second.begin(); tolabel != elabel->second.end(); ++tolabel) {
 					DFS dfs(from->first, maxtoc + 1, (LabelT)-1, elabel->first, tolabel->first);
 					status.dfs_task_queue[dfs_level].push_back(dfs);
 				}
 			}
 		}
 		// grow to the next level
-		while(status.dfs_task_queue[dfs_level].size() > 0) {
+		while (status.dfs_task_queue[dfs_level].size() > 0) {
 			#ifdef ENABLE_LB
-			if(nthreads > 1) threads_load_balance(status);
+			if (nthreads > 1) threads_load_balance(status);
 			#endif
 			DFS dfs = status.dfs_task_queue[dfs_level].front();
 			status.dfs_task_queue[dfs_level].pop_front();
 			status.current_dfs_level = dfs_level;
 			status.DFS_CODE.push(dfs.from, dfs.to, dfs.fromlabel, dfs.elabel, dfs.tolabel);
-			if(dfs.is_backward())
+			if (dfs.is_backward())
 				grow(new_bck_root[dfs.to][dfs.elabel], dfs_level + 1, status);
 			else
 				grow(new_fwd_root[dfs.from][dfs.elabel][dfs.tolabel], dfs_level + 1, status);
@@ -372,7 +445,7 @@ public:
 					EdgeList edges;
 					if(get_forward(*graph, edge_list, status.DFS_CODE, history, edges)) {
 						for(EdgeList::iterator it = edges.begin(); it != edges.end(); ++it)
-							if (emb_size + 1 <= max_size)
+							//if (emb_size + 1 <= max_size)
 								new_root.push(emb_size+1, *it, cur);
 					}
 				}
@@ -387,11 +460,13 @@ public:
 protected:
 	Graph *graph;
 	int nthreads;
+	Status status;
 	unsigned minimal_support;
-	unsigned max_size;
-	bool show_output;
+	unsigned max_level;
+	PatternMap3D pattern_map; // mapping patterns to their embedding list
+	PatternQueue task_queue; // task queue holding the DFScodes of patterns
 	std::vector<int> frequent_patterns_count;
-	std::vector<std::vector<std::deque<DFS> > > dfs_task_queue;       //keep the sibling extensions for each level and for each thread
+	//std::vector<std::vector<std::deque<DFS> > > dfs_task_queue;       //keep the sibling extensions for each level and for each thread
 #ifdef ENABLE_LB
 	typedef enum {WORK_REQUEST = 0, WORK_RESPONSE = 1} REQUEST_TYPE;
 	galois::substrate::SimpleLock simple_lock;
@@ -432,6 +507,19 @@ protected:
 	// check whether a DFSCode is minimal or not, i.e. canonical check (minimal DFSCode is canonical)
 	bool is_min(LocalStatus &status) {
 		if(status.DFS_CODE.size() == 1) return true;
+		/*
+		if (status.DFS_CODE.size() == 2) {
+			if (status.DFS_CODE[1].from == 1) {
+				if (status.DFS_CODE[0].fromlabel <= status.DFS_CODE[1].tolabel) return true;
+			} else {
+				assert(status.DFS_CODE[1].from == 0);
+				if (status.DFS_CODE[0].fromlabel == status.DFS_CODE[0].tolabel) return false;
+				if (status.DFS_CODE[0].tolabel == status.DFS_CODE[1].tolabel && status.DFS_CODE[0].fromlabel < status.DFS_CODE[1].tolabel) return true;
+				if (status.DFS_CODE[0].tolabel <  status.DFS_CODE[1].tolabel) return true;
+			}
+			return false;
+		}
+		*/
 		status.DFS_CODE.toGraph(status.GRAPH_IS_MIN);
 		status.DFS_CODE_IS_MIN.clear();
 		PatternMap3D root;

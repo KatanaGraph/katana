@@ -124,7 +124,6 @@ size_t matchQuery(AttributedGraph* dataGraph,
     // check if query edge is a * edge
     if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
       prefixSum[srcID]++;
-      prefixSum[dstID]++;
     } else {
       starEdgeList.push_back(std::make_pair(srcID, dstID));
     }
@@ -140,7 +139,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   for (size_t i = 1; i < numQueryNodes; ++i) {
     prefixSum[i] += prefixSum[i-1];
   }
-  assert(prefixSum[numQueryNodes - 1] == (actualNumQueryEdges * 2));
+  assert(prefixSum[numQueryNodes - 1] == actualNumQueryEdges);
   for (size_t i = numQueryNodes - 1; i >= 1; --i) {
     prefixSum[i] = prefixSum[i-1];
   }
@@ -199,7 +198,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
   // build query graph
   Graph queryGraph;
-  queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges * 2);
+  queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges);
   queryGraph.constructNodes();
   for (size_t i = 0; i < numQueryNodes; ++i) {
     // first is the "YES" query, second is the "NO" query
@@ -218,11 +217,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
       uint32_t label = edgeMasks.first | edgeMasks.second;
       uint64_t matched = edgeMasks.first;
 
-      // symmetric edge; construct in both directions
       queryGraph.constructEdge(prefixSum[srcID]++, dstID,
-                               EdgeData(label, queryEdges[j].timestamp, matched));
-
-      queryGraph.constructEdge(prefixSum[dstID]++, srcID,
                                EdgeData(label, queryEdges[j].timestamp, matched));
     }
   }

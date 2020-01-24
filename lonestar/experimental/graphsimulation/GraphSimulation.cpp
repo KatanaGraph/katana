@@ -661,14 +661,14 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
                 for (auto de : dG.edges(dn)) {
                   auto& deData = dG.getEdgeData(de);
                   auto dDst    = dG.getEdgeDst(de);
-                  if (dn < dDst) { // match only one of the symmetric edges
+                  //if (dn < dDst) { // match only one of the symmetric edges
                     if (matchEdgeLabel(qeData, deData)) {
                       auto& dDstData = dG.getData(dDst);
                       if (dDstData.matched & (1 << qDst)) {
                         deData.matched |= 1 << *qe;
                       }
                     }
-                  }
+                  //}
                 }
               }
             }

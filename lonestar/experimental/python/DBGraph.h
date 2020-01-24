@@ -79,15 +79,15 @@ class DBGraph {
   }
 
   /**
-   * Returns number of edges per vertex if you consider each edge as a
-   * symmetric edge in an array where the number of edges for vertex
+   * Returns number of edges per vertex 
+   * where the number of edges for vertex
    * i is in array[i + 1] (array[0] is 0)
    *
    * @param graphTopology Topology of original graph in a buffered graph
    * @returns Array of edges counts where array[i + 1] is number of edges
    * for vertex i
    */
-  std::vector<uint64_t> getSymmetricEdgeCounts(
+  std::vector<uint64_t> getEdgeCounts(
     galois::graphs::BufferedGraph<void>& graphTopology
   ) {
     // allocate vector where counts will be stored
@@ -96,7 +96,7 @@ class DBGraph {
     // added for a particular vertex
     edgeCounts.resize(graphTopology.size() + 1, 0);
 
-    // loop over all edges, add to that vertex's edge counts for each endpoint
+    // loop over all edges, add to that source vertex's edge counts for each endpoint
     // (ignore self loops)
     galois::do_all(
       galois::iterate(0u, graphTopology.size()),
@@ -108,13 +108,11 @@ class DBGraph {
           if (vertexID != dst) {
             // src increment
             __sync_add_and_fetch(&(edgeCounts[vertexID + 1]), 1);
-            // dest increment
-            __sync_add_and_fetch(&(edgeCounts[dst + 1]), 1);
           }
         }
       },
       galois::steal(),
-      galois::loopname("GetSymmetricEdgeCounts")
+      galois::loopname("GetEdgeCounts")
     );
 
     return edgeCounts;
@@ -140,11 +138,8 @@ class DBGraph {
   }
 
   /**
-   * Given graph topology, construct the attributed graph by making the read
-   * in graph symmetric and ignoring self loops. Differs from readGr in that
-   * the original graph isn't just read in directly (graph simulation at
-   * time of writing this comment expects a symmetric graph with no self
-   * loops.
+   * Given graph topology, construct the attributed graph by 
+   * ignoring self loops.
    */
   void constructDataGraph(const std::string filename) {
     // first, load graph topology
@@ -176,8 +171,7 @@ class DBGraph {
     galois::gDebug("Kept edge count is ", keptEdgeCount, " compared to "
                    "original ", graphTopology.sizeEdges());
 
-    // need to double edge count since symmetric version of graph
-    uint64_t finalEdgeCount = keptEdgeCount * 2;
+    uint64_t finalEdgeCount = keptEdgeCount;
 
     ////////////////////////////////////////////////////////////////////////////
     // META SETUP
@@ -199,10 +193,9 @@ class DBGraph {
     // EDGE TOPOLOGY
     ////////////////////////////////////////////////////////////////////////////
 
-    // need to count how many edges for each vertex in the symmetric version of
-    // graph
+    // need to count how many edges for each vertex in the graph
     std::vector<uint64_t> edgeCountsPerVertex =
-        getSymmetricEdgeCounts(graphTopology);
+        getEdgeCounts(graphTopology);
 
     // prefix sum the edge counts; this will tell us where we can write
     // new edges of a particular vertex
@@ -242,18 +235,11 @@ class DBGraph {
               &(edgeCountsPerVertex[vertexID]), 1);
             // set forward
             constructNewEdge(attGraph, forwardEdge, dst, labelBit, timestamp);
-
-            // get backward edge id
-            uint64_t backwardEdge = __sync_fetch_and_add(
-              &(edgeCountsPerVertex[dst]), 1);
-            // set backward
-            constructNewEdge(attGraph, backwardEdge, vertexID, labelBit,
-                             timestamp);
           }
         }
       },
       galois::steal(), // steal due to edge imbalance among nodes
-      galois::loopname("ConstructSymEdges")
+      galois::loopname("ConstructEdges")
     );
 
     // TODO edge attributes and other labels?
@@ -303,8 +289,7 @@ class DBGraph {
     setupNodeEdgeLabelsMeta();
     setupNodes(numNodes);
 
-    // edges; TODO may require symmetric since that's current assumption
-    // of AttributedGraph
+    // edges
     for (size_t i = 0; i < numEdges; i++) {
       // fill out edge data as edge destinations already come from gr file
       // TODO timestamps currently grow with edge index i

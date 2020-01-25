@@ -42,6 +42,16 @@ public:
 	}
 
 	bool toAdd(unsigned n, const BaseEmbedding &emb, VertexId dst, unsigned pos) {
+		// hack pos to find if dst is destination or source 
+		// TODO: find a better way to pass this info
+		bool source = false;
+		if (pos >= n) {
+			pos -= n;
+			source = true;
+		}
+		assert(pos < n);
+
+
 		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 		if (debug) {
 			VertexId src = emb.get_vertex(pos);
@@ -58,7 +68,19 @@ public:
 		// if this vertex already exists in the embedding
 		for (unsigned i = 0; i < n; ++i) if (dst == emb.get_vertex(i)) return false;
 
-		// check the connectivity with previous vertices in the embedding
+		if (source) pos += n;
+		// check the backward connectivity with previous vertices in the embedding
+		for (auto e : query_graph->in_edges(next_qnode)) {
+			VertexId q_dst = query_graph->getEdgeDst(e);
+			unsigned q_order = matching_order_map[q_dst];
+			if (q_order < n && q_order != pos) {
+				VertexId d_vertex = emb.get_vertex(q_order);
+				//if (debug && n == 3 && pos == 1 && emb.get_vertex(pos) == 3 && dst == 5) std:: cout << "\t\t d_vedrtex = " << d_vertex << "\n";
+				if (!is_connected(d_vertex, dst)) return false;
+			}
+		}
+		if (source) pos -= n;
+		// check the forward connectivity with previous vertices in the embedding
 		for (auto e : query_graph->edges(next_qnode)) {
 			VertexId q_dst = query_graph->getEdgeDst(e);
 			unsigned q_order = matching_order_map[q_dst];
@@ -68,6 +90,7 @@ public:
 				if (!is_connected(dst, d_vertex)) return false;
 			}
 		}
+
 		if (debug) std::cout << "\t extending with vertex " << dst << "\n";
 		return true;
 	}
@@ -81,8 +104,10 @@ public:
 				// get next query vertex
 				VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 				
-				// for each neighbor of the next query vertex in the query graph
-				for (auto q_edge : query_graph->edges(next_qnode)) {
+				bool found_neighbor = false;
+				
+				// for each incoming neighbor of the next query vertex in the query graph
+				for (auto q_edge : query_graph->in_edges(next_qnode)) {
 					VertexId q_dst = query_graph->getEdgeDst(q_edge);
 					unsigned q_order = matching_order_map[q_dst]; // using query vertex id to get its matching order
 
@@ -91,7 +116,7 @@ public:
 						// get the matched data vertex
 						VertexId d_vertex = emb.get_vertex(q_order);
 
-						// each neighbor of d_vertex is a candidate
+						// each outgoing neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->edges(d_vertex)) {
 							GNode d_dst = graph->getEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, q_order)) {
@@ -109,8 +134,43 @@ public:
 								}
 							}
 						}
+						found_neighbor = true;
 						break;
 					}
+				}
+
+				if (!found_neighbor) {
+				// for each outgoing neighbor of the next query vertex in the query graph
+				for (auto q_edge : query_graph->edges(next_qnode)) {
+					VertexId q_dst = query_graph->getEdgeDst(q_edge);
+					unsigned q_order = matching_order_map[q_dst]; // using query vertex id to get its matching order
+
+					// pick a neighbor that is already visited
+					if (q_order < n) {
+						// get the matched data vertex
+						VertexId d_vertex = emb.get_vertex(q_order);
+
+						// each incoming neighbor of d_vertex is a candidate
+						for (auto d_edge : graph->in_edges(d_vertex)) {
+							GNode d_dst = graph->getEdgeDst(d_edge);
+							if (toAdd(n, emb, d_dst, q_order+n)) {
+								if (n < max_size-1) { // generate a new embedding and add it to the next queue
+									BaseEmbedding new_emb(emb);
+									new_emb.push_back(d_dst);
+									out_queue.push_back(new_emb);
+								} else {
+									if (show) {
+										BaseEmbedding new_emb(emb);
+										new_emb.push_back(d_dst);
+										std::cout << "Found embedding: " << new_emb << "\n";
+									}
+									total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
+								}
+							}
+						}
+						break;
+					}
+				}
 				}
 			},
 			galois::chunk_size<CHUNK_SIZE>(), 

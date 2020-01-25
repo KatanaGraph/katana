@@ -49,7 +49,8 @@ static cll::opt<unsigned> debug("d", cll::desc("print out the frequent patterns 
 static cll::opt<unsigned> minsup("ms", cll::desc("minimum support (default value 0)"), cll::init(0));
 typedef galois::graphs::LC_CSR_Graph<uint32_t, uint32_t>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
 #else
-typedef galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
+// typedef galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
+typedef galois::graphs::B_LC_CSR_Graph<uint32_t, void, false, true, true> Graph;
 #endif
 typedef Graph::GraphNode GNode;
 

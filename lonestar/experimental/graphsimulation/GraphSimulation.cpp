@@ -252,7 +252,7 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
   VecTy queryTimestamps;
   auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
   for (auto qe : qEdges) {
-    auto qeData = qG.getEdgeData(qe);
+    auto qeData = inEdges ? qG.getInEdgeData(qe) : qG.getEdgeData(qe);
     queryTimestamps.push_back(qeData.timestamp);
   }
   uint64_t prev = 0;

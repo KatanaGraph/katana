@@ -322,7 +322,7 @@ bool matchQueryEdge(Graph& qG, Graph& dG,
     matchedEdges.resize(num_qEdges);
     auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
     for (auto de : dEdges) {
-      auto& deData = dG.getEdgeData(de);
+      auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
       if (useWindow) {
         if ((deData.timestamp > window.endTime) ||
             (deData.timestamp < window.startTime)) {
@@ -334,10 +334,11 @@ bool matchQueryEdge(Graph& qG, Graph& dG,
       // Assumption: each query edge of this query node has a different label
       auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
       for (auto qe : qEdges) {
-        auto qeData = qG.getEdgeData(qe);
+        auto qeData = inEdges ? qG.getInEdgeData(qe) : qG.getEdgeData(qe);
         if (matchEdgeLabel(qeData, deData)) {
-          auto qDst      = qG.getEdgeDst(qe);
-          auto& dDstData = dG.getData(dG.getEdgeDst(de));
+          auto qDst      = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
+          auto dDst      = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
+          auto& dDstData = dG.getData(dDst);
           if (dDstData.matched & (1 << qDst)) {
             matchedEdges[edgeID].push_back(deData.timestamp);
           }

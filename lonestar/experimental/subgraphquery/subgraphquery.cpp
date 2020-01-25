@@ -71,7 +71,7 @@ public:
 		if (source) pos += n;
 		// check the backward connectivity with previous vertices in the embedding
 		for (auto e : query_graph->in_edges(next_qnode)) {
-			VertexId q_dst = query_graph->getEdgeDst(e);
+			VertexId q_dst = query_graph->getInEdgeDst(e);
 			unsigned q_order = matching_order_map[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
@@ -108,7 +108,7 @@ public:
 				
 				// for each incoming neighbor of the next query vertex in the query graph
 				for (auto q_edge : query_graph->in_edges(next_qnode)) {
-					VertexId q_dst = query_graph->getEdgeDst(q_edge);
+					VertexId q_dst = query_graph->getInEdgeDst(q_edge);
 					unsigned q_order = matching_order_map[q_dst]; // using query vertex id to get its matching order
 
 					// pick a neighbor that is already visited
@@ -152,7 +152,7 @@ public:
 
 						// each incoming neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->in_edges(d_vertex)) {
-							GNode d_dst = graph->getEdgeDst(d_edge);
+							GNode d_dst = graph->getInEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, q_order+n)) {
 								if (n < max_size-1) { // generate a new embedding and add it to the next queue
 									BaseEmbedding new_emb(emb);

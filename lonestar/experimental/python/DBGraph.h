@@ -258,49 +258,49 @@ class DBGraph {
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  //! Reads graph topology into attributed graph, then sets up its metadata.
-  void readGr(const std::string filename) {
-    ////////////////////////////////////////////////////////////////////////////
-    // Graph topology loading
-    ////////////////////////////////////////////////////////////////////////////
-    // use offline graph for metadata things
-    galois::graphs::OfflineGraph og(filename);
-    size_t numNodes = og.size();
-    size_t numEdges = og.sizeEdges();
+  ////! Reads graph topology into attributed graph, then sets up its metadata.
+  //void readGr(const std::string filename) {
+  //  ////////////////////////////////////////////////////////////////////////////
+  //  // Graph topology loading
+  //  ////////////////////////////////////////////////////////////////////////////
+  //  // use offline graph for metadata things
+  //  galois::graphs::OfflineGraph og(filename);
+  //  size_t numNodes = og.size();
+  //  size_t numEdges = og.sizeEdges();
 
-    // allocate the graph + node/edge labels
-    allocateGraph(attGraph, numNodes, numEdges, numNodeLabels, numEdgeLabels);
+  //  // allocate the graph + node/edge labels
+  //  allocateGraph(attGraph, numNodes, numEdges, numNodeLabels, numEdgeLabels);
 
-    // open file, pass to LCCSR to directly load topology
-    int fd = open(filename.c_str(), O_RDONLY);
-    if (fd == -1) GALOIS_SYS_DIE("failed opening ", "'", filename, "', LC_CSR");
-		Graph& lcGraph = attGraph->graph;
-    lcGraph.readGraphTopology(fd, numNodes, numEdges);
-    // file done, close it
-    close(fd);
+  //  // open file, pass to LCCSR to directly load topology
+  //  int fd = open(filename.c_str(), O_RDONLY);
+  //  if (fd == -1) GALOIS_SYS_DIE("failed opening ", "'", filename, "', LC_CSR");
+	//	Graph& lcGraph = attGraph->graph;
+  //  lcGraph.readGraphTopology(fd, numNodes, numEdges);
+  //  // file done, close it
+  //  close(fd);
 
-    // TODO problem: directly loading graph does not work as querying code
-    // currently assume undirected graph; fix this later
+  //  // TODO problem: directly loading graph does not work as querying code
+  //  // currently assume undirected graph; fix this later
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Metadata setup
-    ////////////////////////////////////////////////////////////////////////////
+  //  ////////////////////////////////////////////////////////////////////////////
+  //  // Metadata setup
+  //  ////////////////////////////////////////////////////////////////////////////
 
-    // Topology now exists: need to create the metadata mappings and such
+  //  // Topology now exists: need to create the metadata mappings and such
 
-    // create node/edge labels and save them
-    setupNodeEdgeLabelsMeta();
-    setupNodes(numNodes);
+  //  // create node/edge labels and save them
+  //  setupNodeEdgeLabelsMeta();
+  //  setupNodes(numNodes);
 
-    // edges
-    for (size_t i = 0; i < numEdges; i++) {
-      // fill out edge data as edge destinations already come from gr file
-      // TODO timestamps currently grow with edge index i
-      lcGraph.setEdgeData(i, EdgeData(1 << (i % numEdgeLabels), i));
-    }
+  //  // edges
+  //  for (size_t i = 0; i < numEdges; i++) {
+  //    // fill out edge data as edge destinations already come from gr file
+  //    // TODO timestamps currently grow with edge index i
+  //    lcGraph.setEdgeData(i, EdgeData(1 << (i % numEdgeLabels), i));
+  //  }
 
-    // TODO edge attributes
-  }
+  //  // TODO edge attributes
+  //}
 
   size_t runCypherQuery(const std::string cypherQueryStr,
                         std::string outputFile="matched.edges") {

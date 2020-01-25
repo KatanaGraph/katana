@@ -88,7 +88,7 @@ class DBGraph {
    * for vertex i
    */
   std::vector<uint64_t> getEdgeCounts(
-    galois::graphs::BufferedGraph<void>& graphTopology
+    galois::graphs::BufferedGraph<uint32_t>& graphTopology
   ) {
     // allocate vector where counts will be stored
     std::vector<uint64_t> edgeCounts;
@@ -141,9 +141,10 @@ class DBGraph {
    * Given graph topology, construct the attributed graph by 
    * ignoring self loops.
    */
-  void constructDataGraph(const std::string filename) {
+  void constructDataGraph(const std::string filename, bool useWeights=true) {
     // first, load graph topology
-    galois::graphs::BufferedGraph<void> graphTopology;
+    // NOTE: assumes weighted
+    galois::graphs::BufferedGraph<uint32_t> graphTopology;
     graphTopology.loadGraph(filename);
 
     galois::GAccumulator<uint64_t> keptEdgeCountAccumulator;
@@ -222,8 +223,10 @@ class DBGraph {
              i++) {
           uint64_t edgeID = *i;
           // label to use for this edge pointing both ways
-          // TODO now it's a round robin assignment, may need to change later
-          unsigned labelBit = edgeID % numEdgeLabels;
+          // commented out part here is random edge label assignment 
+          //unsigned labelBit = edgeID % numEdgeLabels;
+          unsigned labelBit = graphTopology.edgeData(edgeID);
+
           // TODO for now timestamp is original edge id
           uint64_t timestamp = edgeID;
           uint64_t dst = graphTopology.edgeDestination(*i);

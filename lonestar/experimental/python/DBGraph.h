@@ -47,13 +47,13 @@ class DBGraph {
     // create node/edge labels and save them
     char dummy[10]; // assumption that labels won't get to 8+ digits
     for (size_t i = 0; i < numNodeLabels; i++) {
-      std::string thisLabel = "n";
+      std::string thisLabel = "";
       thisLabel = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
       setNodeLabelMetadata(attGraph, i, dummy);
     }
     for (size_t i = 0; i < numEdgeLabels; i++) {
-      std::string thisLabel = "e";
+      std::string thisLabel = "";
       thisLabel = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
       setEdgeLabelMetadata(attGraph, i, dummy);
@@ -148,7 +148,9 @@ class DBGraph {
     graphTopology.loadGraph(filename);
 
     galois::GAccumulator<uint64_t> keptEdgeCountAccumulator;
+    galois::GReduceMax<uint64_t> maxLabels;
     keptEdgeCountAccumulator.reset();
+    maxLabels.reset();
     // next, count the number of edges we want to keep (i.e. ignore the self
     // loops)
     galois::do_all(
@@ -161,11 +163,16 @@ class DBGraph {
           if (vertexID != dst) {
             keptEdgeCountAccumulator += 1;
           }
+          maxLabels.update(graphTopology.edgeData(*i));
         }
       },
       galois::steal(), // steal due to edge imbalance among nodes
       galois::loopname("CountKeptEdges")
     );
+
+    numEdgeLabels = maxLabels.reduce() + 1;
+    galois::gInfo("Edge label count is ", numEdgeLabels);
+
 
     uint64_t keptEdgeCount = keptEdgeCountAccumulator.reduce();
 

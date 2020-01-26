@@ -45,14 +45,18 @@ static cll::opt<unsigned> k("k", cll::desc("max number of vertices in k-clique (
 #endif
 static cll::opt<unsigned> show("s", cll::desc("print out the details"), cll::init(0));
 static cll::opt<unsigned> debug("d", cll::desc("print out the frequent patterns for debugging"), cll::init(0));
+#ifdef USE_QUERY_GRAPH_TYPE
+// typedef galois::graphs::B_LC_CSR_Graph<uint32_t, void, false, true, true> Graph;
+#include "QueryGraph.h"
+#else 
 #ifdef EDGE_INDUCED
 static cll::opt<unsigned> minsup("ms", cll::desc("minimum support (default value 0)"), cll::init(0));
 typedef galois::graphs::LC_CSR_Graph<uint32_t, uint32_t>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
 #else
-// typedef galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
-typedef galois::graphs::B_LC_CSR_Graph<uint32_t, void, false, true, true> Graph;
+typedef galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<true>::type ::with_no_lockable<true>::type Graph;
 #endif
 typedef Graph::GraphNode GNode;
+#endif
 
 #ifdef USE_DFS
 #ifdef EDGE_INDUCED

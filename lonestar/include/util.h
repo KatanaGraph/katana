@@ -6,7 +6,11 @@
 
 void print_graph(Graph &graph) {
 	for (GNode n : graph) {
+#ifdef USE_QUERY_GRAPH_TYPE
+		std::cout << "vertex " << n << ": label = " << graph.getData(n).label << " edgelist = [ ";
+#else
 		std::cout << "vertex " << n << ": label = " << graph.getData(n) << " edgelist = [ ";
+#endif
 		for (auto e : graph.edges(n))
 			std::cout << graph.getEdgeDst(e) << " ";
 		std::cout << "]" << std::endl;
@@ -28,10 +32,15 @@ void genGraph(MGraph &mg, Graph &g) {
 	g.allocateFrom(mg.num_vertices(), mg.num_edges());
 	g.constructNodes();
 	for (size_t i = 0; i < mg.num_vertices(); i++) {
+#ifdef USE_QUERY_GRAPH_TYPE
+		g.getData(i).label = mg.get_label(i);
+#else
 		g.getData(i) = mg.get_label(i);
-		auto row_begin = mg.get_offset(i);
+#endif
 		auto row_end = mg.get_offset(i+1);
 		g.fixEndEdge(i, row_end);
+#ifndef USE_QUERY_GRAPH_TYPE
+		auto row_begin = mg.get_offset(i);
 		for (auto offset = row_begin; offset < row_end; offset ++) {
 			#ifdef ENABLE_LABEL
 				//g.constructEdge(offset, mg.get_dest(offset), mg.get_weight(offset));
@@ -40,6 +49,7 @@ void genGraph(MGraph &mg, Graph &g) {
 				g.constructEdge(offset, mg.get_dest(offset), 0);
 			#endif
 		}
+#endif
 	}
 }
 // relabel vertices by descending degree order (do not apply to weighted graphs)
@@ -70,6 +80,7 @@ void DegreeRanking(Graph &og, Graph &g) {
 	galois::do_all(galois::iterate(og.begin(), og.end()), [&](const auto& src) {
 		auto row_begin = offsets[src];
 		g.fixEndEdge(src, row_begin+degrees[src]);
+#ifndef USE_QUERY_GRAPH_TYPE
 		IndexT offset = 0;
 		for (auto e : og.edges(src)) {
 			auto dst = og.getEdgeDst(e);
@@ -77,8 +88,11 @@ void DegreeRanking(Graph &og, Graph &g) {
 			offset ++;
 		}
 		assert(offset == degrees[src]);
+#endif
 	}, galois::chunk_size<CHUNK_SIZE>(), galois::steal(), galois::loopname("ConstructNewGraph"));
+#ifndef USE_QUERY_GRAPH_TYPE
 	g.sortAllEdgesByDst();
+#endif
 }
 
 unsigned orientation(Graph &og, Graph &g) {
@@ -109,9 +123,14 @@ unsigned orientation(Graph &og, Graph &g) {
 	g.constructNodes();
 
 	galois::do_all(galois::iterate(og.begin(), og.end()), [&](const auto& src) {
+#ifdef USE_QUERY_GRAPH_TYPE
+		g.getData(src).label = 0;
+#else
 		g.getData(src) = 0;
+#endif
 		auto row_begin = offsets[src];
 		g.fixEndEdge(src, row_begin+new_degrees[src]);
+#ifndef USE_QUERY_GRAPH_TYPE
 		IndexT offset = 0;
 		for (auto e : og.edges(src)) {
 			auto dst = og.getEdgeDst(e);
@@ -121,9 +140,12 @@ unsigned orientation(Graph &og, Graph &g) {
 			}
 		}
 		assert(offset == new_degrees[src]);
+#endif
 	}, galois::chunk_size<CHUNK_SIZE>(), galois::steal(), galois::loopname("ConstructNewGraph"));
 
+#ifndef USE_QUERY_GRAPH_TYPE
 	g.sortAllEdgesByDst();
+#endif
 	return max_degree;
 }
 
@@ -152,7 +174,11 @@ unsigned read_graph(Graph &graph, std::string filetype, std::string filename, bo
 		} else {
 			galois::graphs::readGraph(graph, filename);
 			galois::do_all(galois::iterate(graph.begin(), graph.end()), [&](const auto& vid) {
+#ifdef USE_QUERY_GRAPH_TYPE
+				graph.getData(vid).label = 1;
+#else
 				graph.getData(vid) = 1;
+#endif
 				//for (auto e : graph.edges(n)) graph.getEdgeData(e) = 1;
 			}, galois::chunk_size<CHUNK_SIZE>(), galois::steal(), galois::loopname("assignVertexLabels"));
 			std::vector<unsigned> degrees(graph.size());

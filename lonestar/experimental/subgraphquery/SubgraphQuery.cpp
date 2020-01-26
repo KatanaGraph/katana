@@ -6,7 +6,9 @@
 #define CHUNK_SIZE 256
 #define USE_BASE_TYPES
 #define USE_QUERY_GRAPH
+#define USE_QUERY_GRAPH_TYPE
 #include "pangolin.h"
+#include "GraphSimulation.h"
 
 //#define CLR_BLACK 0
 //#define CLR_GRAY 1
@@ -51,7 +53,6 @@ public:
 		}
 		assert(pos < n);
 
-
 		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 		if (debug) {
 			VertexId src = emb.get_vertex(pos);
@@ -61,6 +62,8 @@ public:
 
 		// the first vertex should always has the smallest id (if it is not special)
 		if (!fv && dst <= emb.get_vertex(0)) return false;
+		
+		if (!matchNodeLabel(query_graph->getData(next_qnode), graph->getData(dst))) return false;
 
 		// if the degree is smaller than that of its corresponding query vertex
 		if (get_degree(graph, dst) < get_degree(query_graph, next_qnode)) return false;
@@ -103,7 +106,7 @@ public:
 
 				// get next query vertex
 				VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
-				
+
 				bool found_neighbor = false;
 				
 				// for each incoming neighbor of the next query vertex in the query graph
@@ -214,6 +217,7 @@ int main(int argc, char** argv) {
 	VertexId curr_qnode = miner.get_query_vertex(0);
 	EmbeddingQueueType queue, queue2;
 	for (size_t i = 0; i < data_graph.size(); ++i) {
+		if (!matchNodeLabel(query_graph.getData(curr_qnode), data_graph.getData(i))) continue;
 		if(get_degree(data_graph, i) < get_degree(query_graph, curr_qnode)) continue;
 		EmbeddingType emb;
 		emb.push_back(i);

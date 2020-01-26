@@ -19,6 +19,7 @@
 
 #include "PythonGraph.h"
 #include "CypherCompiler.h"
+#include "SubgraphQuery.h"
 #include "galois/Timer.h"
 #include <fstream>
 

@@ -4,7 +4,6 @@ add_library(cypher_galois SHARED
   PythonGraphSimulation.cpp
   PythonGraphQuery.cpp
   GraphSimulation.cpp
-  SubgraphQuery.cpp
   $<TARGET_OBJECTS:galois_shmem_obj> 
   $<TARGET_OBJECTS:gllvm_obj> 
 )

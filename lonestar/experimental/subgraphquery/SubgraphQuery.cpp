@@ -17,6 +17,15 @@ const char* name = "Subgraph Query";
 const char* desc = "Listing occurrences of a given labeled pattern in a labeled graph using BFS extension";
 const char* url  = 0;
 
+template <bool afterGraphSimulation>
+bool pruneNode(Graph* queryGraph, GNode& queryNodeID, Node& dataNode) {
+	if (afterGraphSimulation) {
+		return !(dataNode.matched & (1 << queryNodeID));
+	} else {
+		return !matchNodeLabel(queryGraph->getData(queryNodeID), dataNode);
+	}
+}
+
 class AppMiner : public VertexMiner {
 protected:
 	Graph *query_graph;
@@ -63,7 +72,7 @@ public:
 		// the first vertex should always has the smallest id (if it is not special)
 		if (!fv && dst <= emb.get_vertex(0)) return false;
 		
-		if (!matchNodeLabel(query_graph->getData(next_qnode), graph->getData(dst))) return false;
+		if (pruneNode<false>(query_graph, next_qnode, graph->getData(dst))) return false;
 
 		// if the degree is smaller than that of its corresponding query vertex
 		if (get_degree(graph, dst) < get_degree(query_graph, next_qnode)) return false;
@@ -217,7 +226,7 @@ int main(int argc, char** argv) {
 	VertexId curr_qnode = miner.get_query_vertex(0);
 	EmbeddingQueueType queue, queue2;
 	for (size_t i = 0; i < data_graph.size(); ++i) {
-		if (!matchNodeLabel(query_graph.getData(curr_qnode), data_graph.getData(i))) continue;
+		if (pruneNode<false>(&query_graph, curr_qnode, data_graph.getData(i))) continue;
 		if(get_degree(data_graph, i) < get_degree(query_graph, curr_qnode)) continue;
 		EmbeddingType emb;
 		emb.push_back(i);

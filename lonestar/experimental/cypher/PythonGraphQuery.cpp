@@ -18,7 +18,7 @@
  */
 
 #include "PythonGraph.h"
-#include "../cypher_compiler/CypherCompiler.h"
+#include "CypherCompiler.h"
 #include "galois/Timer.h"
 #include <fstream>
 

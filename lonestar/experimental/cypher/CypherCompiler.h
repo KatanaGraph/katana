@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <stack>
-#include "../graphsimulation/GraphSimulation.h"
+#include "GraphSimulation.h"
 
 class CypherCompiler {
     unsigned numNodeIDs;

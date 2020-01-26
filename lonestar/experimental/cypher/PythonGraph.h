@@ -26,7 +26,7 @@
 
 #ifndef GALOIS_PYTHON_GRAPH_H
 #define GALOIS_PYTHON_GRAPH_H
-#include "../graphsimulation/GraphSimulation.h"
+#include "GraphSimulation.h"
 
 /**
  * Gets position of rightmost set bit from 0 to 31.

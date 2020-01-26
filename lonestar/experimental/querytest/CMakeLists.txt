@@ -5,4 +5,4 @@ target_include_directories(querytest PUBLIC
   ${CMAKE_SOURCE_DIR}/lonestar/experimental/graphsimulation
 )
 
-target_link_libraries(querytest galois_python)
+target_link_libraries(querytest cypher_galois)

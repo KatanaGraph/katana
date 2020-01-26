@@ -250,6 +250,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     // run graph simulation
     runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false, nodeContains,
                        dataGraph->nodeNames);
+    subgraphQuery<true>(queryGraph, dataGraph->graph);
   }
 
   return countMatchedEdges(dataGraph->graph);

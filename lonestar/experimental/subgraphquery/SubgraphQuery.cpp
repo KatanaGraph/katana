@@ -13,9 +13,9 @@
 //#define CLR_BLACK 0
 //#define CLR_GRAY 1
 //#define CLR_WHITE 2
-const char* name = "Subgraph Query";
-const char* desc = "Listing occurrences of a given labeled pattern in a labeled graph using BFS extension";
-const char* url  = 0;
+// const char* name = "Subgraph Query";
+// const char* desc = "Listing occurrences of a given labeled pattern in a labeled graph using BFS extension";
+// const char* url  = 0;
 
 template <bool afterGraphSimulation>
 bool pruneNode(Graph* queryGraph, GNode& queryNodeID, Node& dataNode) {
@@ -200,28 +200,12 @@ unsigned get_degree(Graph &g, VertexId vid) {
 	return std::distance(g.edge_begin(vid), g.edge_end(vid));
 }
 
-int main(int argc, char** argv) {
-	galois::SharedMemSys G;
-	LonestarStart(argc, argv, name, desc, url);
-	Graph data_graph, query_graph;
-	bool need_dag = false;
-	#ifdef USE_DAG
-	galois::gPrint("Orientation enabled, using DAG\n");
-	need_dag = true;
-	#endif
-	galois::StatTimer Tinitial("GraphReadingTime");
-	Tinitial.start();
-	read_graph(data_graph, filetype, filename, need_dag);
-	read_graph(query_graph, filetype, query_graph_filename, need_dag);
-	Tinitial.stop();
-	std::cout << "Data_graph: num_vertices " << data_graph.size() << " num_edges " << data_graph.sizeEdges() << "\n";
-	std::cout << "Query_graph: num_vertices " << query_graph.size() << " num_edges " << query_graph.sizeEdges() << "\n";
-
+void subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	ResourceManager rm;
 	AppMiner miner(&data_graph, &query_graph);
 	miner.init();
 
-	galois::StatTimer Tcomp("Compute");
+	galois::StatTimer Tcomp("Pangolin");
 	Tcomp.start();
 	VertexId curr_qnode = miner.get_query_vertex(0);
 	EmbeddingQueueType queue, queue2;
@@ -243,6 +227,5 @@ int main(int argc, char** argv) {
 	}
 	Tcomp.stop();
 	miner.print_output();
-	std::cout << "\n\t" << rm.get_peak_memory() << "\n\n";
 }
 

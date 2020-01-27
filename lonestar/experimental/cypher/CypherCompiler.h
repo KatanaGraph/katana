@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cypher-parser.h>
 #include <astnode.h>
 #include <result.h>

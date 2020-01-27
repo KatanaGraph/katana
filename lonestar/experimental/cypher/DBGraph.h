@@ -220,8 +220,7 @@ class DBGraph {
       galois::loopname("EdgeEndpointFixing")
     );
 
-    // loop over edges of a graph, add 2 edges for each one in original topology
-    // (again, ignore self loops)
+    // loop over edges of a graph, add edges (again, ignore self loops)
     galois::do_all(
       galois::iterate(0u, graphTopology.size()),
       [&] (uint32_t vertexID) {
@@ -254,7 +253,54 @@ class DBGraph {
 
     // TODO edge attributes and other labels?
 
+    //galois::gInfo("incoming before");
+    //for (unsigned i = 0; i < attGraph->graph.size(); i++) {
+    //  for (auto j = attGraph->graph.edge_begin(i);
+    //       j != attGraph->graph.edge_end(i);
+    //       j++) {
+    //    galois::gInfo(i, " ", attGraph->graph.getEdgeDst(j), " ",
+    //                  attGraph->graph.getEdgeData(j).label);
+    //  }
+    //}
+
+    // at this point graph is constructed: sort outgoing edges
+    attGraph->graph.sortAllEdgesByDst();
+
+    //galois::gInfo("incoming after");
+    //for (unsigned i = 0; i < attGraph->graph.size(); i++) {
+    //  for (auto j = attGraph->graph.edge_begin(i);
+    //       j != attGraph->graph.edge_end(i);
+    //       j++) {
+    //    galois::gInfo(i, " ", attGraph->graph.getEdgeDst(j), " ",
+    //                  attGraph->graph.getEdgeData(j).label);
+    //  }
+    //}
+
+    // construct incoming edges, then sort them
     attGraph->graph.constructIncomingEdges();
+
+    //galois::gInfo("incoming before");
+    //for (unsigned i = 0; i < attGraph->graph.size(); i++) {
+    //  for (auto j = attGraph->graph.in_edge_begin(i);
+    //       j != attGraph->graph.in_edge_end(i);
+    //       j++) {
+    //    galois::gInfo(i, " ", attGraph->graph.getInEdgeDst(j), " ",
+    //                  attGraph->graph.getInEdgeData(j).label);
+    //  }
+    //}
+
+    // sort incoming edges by destination
+    attGraph->graph.sortAllInEdgesByDst();
+
+    //galois::gInfo("incoming after");
+    //for (unsigned i = 0; i < attGraph->graph.size(); i++) {
+    //  for (auto j = attGraph->graph.in_edge_begin(i);
+    //       j != attGraph->graph.in_edge_end(i);
+    //       j++) {
+    //    galois::gInfo(i, " ", attGraph->graph.getInEdgeDst(j), " ",
+    //                  attGraph->graph.getInEdgeData(j).label);
+    //  }
+    //}
 
     GALOIS_ASSERT(edgeCountsPerVertex[graphTopology.size() - 1] ==
                   finalEdgeCount);

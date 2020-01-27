@@ -56,14 +56,14 @@ size_t matchCypherQuery(AttributedGraph* dataGraph,
 #endif
 
     mt.start();
-    size_t numMatchedEdges = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data(), useGraphSimulation);
+    size_t numMatches = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data(), useGraphSimulation);
     cc.getIR().clear();
     cc.getFilters().clear();
     mt.stop();
 
     galois::gPrint("Compiling time: ", ct.get_usec() / 1000.0f, " ms\n");
     galois::gPrint("Matching time: ", mt.get_usec() / 1000.0f, " ms\n");
-    return numMatchedEdges;
+    return numMatches;
 }
 
 size_t matchQuery(AttributedGraph* dataGraph,
@@ -250,14 +250,13 @@ size_t matchQuery(AttributedGraph* dataGraph,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
     matchEdgesAfterGraphSimulation(queryGraph, dataGraph->graph);
+    return countMatchedEdges(dataGraph->graph);
   } else if (useGraphSimulation) {
     // run graph simulation
     runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false, nodeContains,
                        dataGraph->nodeNames);
-    subgraphQuery<true>(queryGraph, dataGraph->graph);
+    return subgraphQuery<true>(queryGraph, dataGraph->graph);
   } else {
-    subgraphQuery<false>(queryGraph, dataGraph->graph);
+    return subgraphQuery<false>(queryGraph, dataGraph->graph);
   }
-
-  return countMatchedEdges(dataGraph->graph);
 }

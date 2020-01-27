@@ -245,7 +245,7 @@ public:
 };
 
 template <bool afterGraphSimulation>
-void subgraphQuery(Graph& query_graph, Graph& data_graph) {
+size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	ResourceManager rm;
 	AppMiner<afterGraphSimulation> miner(&data_graph, &query_graph);
 	miner.init();
@@ -254,6 +254,6 @@ void subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	Tcomp.start();
 	miner.exec();
 	Tcomp.stop();
-	miner.print_output();
+	return miner.get_total_count();
 }
 

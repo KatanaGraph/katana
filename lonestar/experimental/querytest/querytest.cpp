@@ -74,9 +74,9 @@ int main(int argc, char** argv) {
     // putting into string stream lets you pull a string out of it
     querySS << queryStream.rdbuf();
 
-    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(querySS.str(), !skipGraphSimulation));
+    galois::gInfo("Num matched subgraphs ", testGraph.runCypherQuery(querySS.str(), !skipGraphSimulation));
   } else if (query != "") {
-    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(query, !skipGraphSimulation));
+    galois::gInfo("Num matched subgraphs ", testGraph.runCypherQuery(query, !skipGraphSimulation));
   } else {
     galois::gInfo("No query specified");
   }

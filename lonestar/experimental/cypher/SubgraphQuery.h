@@ -10,6 +10,26 @@
 #define USE_QUERY_GRAPH_TYPE
 #include "pangolin.h"
 #include "GraphSimulation.h"
+#include <algorithm>
+
+class OrderVertices {
+	Graph& graph;
+
+	uint32_t totalDegree(VertexId v) {
+		uint32_t num_edges = std::distance(graph.in_edge_begin(v), graph.in_edge_end(v));
+		num_edges += std::distance(graph.edge_begin(v), graph.edge_end(v));
+		return num_edges;
+	}
+
+public:
+	OrderVertices(Graph& g) : graph(g) {}
+
+	bool operator() (VertexId left, VertexId right) {
+		if (totalDegree(left) >= totalDegree(right)) 
+			return true;
+		return false;
+	}
+};
 
 template <bool afterGraphSimulation>
 class AppMiner : public VertexMiner {
@@ -32,6 +52,15 @@ public:
 		set_num_patterns(1);
 		matchingOrderToVertexMap.resize(max_size);
 		vertexToMatchingOrderMap.resize(max_size);
+
+		for (VertexId i = 0; i < query_graph->size(); ++i) {
+			matchingOrderToVertexMap[i] = i;
+		}
+		OrderVertices orderQueryVertices(*query_graph);
+		std::sort(matchingOrderToVertexMap.begin(), matchingOrderToVertexMap.end(), orderQueryVertices);
+		for (VertexId i = 0; i < query_graph->size(); ++i) {
+			vertexToMatchingOrderMap[matchingOrderToVertexMap[i]] = i;
+		}
 	}
 
 	bool pruneNode(Graph* queryGraph, GNode& queryNodeID, Node& dataNode) {

@@ -29,6 +29,7 @@ struct EdgeData {
    * @param l Type of action this edge represents
    * @param t Timestamp of action
    */
+  EdgeData() : label(0), timestamp(0), matched(0) {}
   EdgeData(uint32_t l, uint64_t t) : label(l), timestamp(t), matched(0) {}
   EdgeData(uint32_t l, uint64_t t, uint64_t m) : label(l), timestamp(t), matched(m) {}
 };

@@ -422,14 +422,16 @@ uint32_t nodeRemovalPass(AttributedGraph* g);
 size_t matchCypherQuery(AttributedGraph* dataGraph,
                         EventLimit limit,
                         EventWindow window,
-                        const char* cypherQueryStr);
+                        const char* cypherQueryStr,
+                        bool useGraphSimulation);
 
 size_t matchQuery(AttributedGraph* dataGraph,
                   EventLimit limit,
                   EventWindow window,
                   MatchedEdge* queryEdges,
                   size_t numQueryEdges,
-                  const char** filters);
+                  const char** filters,
+                  bool useGraphSimulation);
 
 /**
  * Wrapper call to graph simulation call on LC_CSR Graph.

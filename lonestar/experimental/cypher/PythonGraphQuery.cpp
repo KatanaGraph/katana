@@ -41,7 +41,8 @@ void printIR(std::vector<MatchedEdge>& ir, std::vector<const char*> filters) {
 size_t matchCypherQuery(AttributedGraph* dataGraph,
                         EventLimit limit,
                         EventWindow window,
-                        const char* cypherQueryStr)
+                        const char* cypherQueryStr, 
+                        bool useGraphSimulation)
 {
     galois::Timer ct, mt;
 
@@ -55,7 +56,7 @@ size_t matchCypherQuery(AttributedGraph* dataGraph,
 #endif
 
     mt.start();
-    size_t numMatchedEdges = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data());
+    size_t numMatchedEdges = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data(), useGraphSimulation);
     cc.getIR().clear();
     cc.getFilters().clear();
     mt.stop();
@@ -70,7 +71,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
                   EventWindow window,
                   MatchedEdge* queryEdges,
                   size_t numQueryEdges,
-                  const char** filters) {
+                  const char** filters, 
+                  bool useGraphSimulation) {
   // build node types and prefix sum of edges
   size_t numQueryNodes = 0;
   std::vector<const char*> nodeTypes;
@@ -231,6 +233,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
+    assert(useGraphSimulation);
+
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
@@ -246,11 +250,13 @@ size_t matchQuery(AttributedGraph* dataGraph,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
     matchEdgesAfterGraphSimulation(queryGraph, dataGraph->graph);
-  } else {
+  } else if (useGraphSimulation) {
     // run graph simulation
     runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false, nodeContains,
                        dataGraph->nodeNames);
     subgraphQuery<true>(queryGraph, dataGraph->graph);
+  } else {
+    subgraphQuery<false>(queryGraph, dataGraph->graph);
   }
 
   return countMatchedEdges(dataGraph->graph);

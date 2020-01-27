@@ -42,6 +42,11 @@ static cll::opt<std::string> queryFile("queryFile",
                                          "; takes precedence over query string"),
                                cll::init(""));
 
+static cll::opt<bool> skipGraphSimulation("skipGraphSimulation",
+                      cll::desc("Do not use graph simulation "
+                                "(default false)"),
+                      cll::init(false));
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,9 +74,9 @@ int main(int argc, char** argv) {
     // putting into string stream lets you pull a string out of it
     querySS << queryStream.rdbuf();
 
-    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(querySS.str()));
+    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(querySS.str(), !skipGraphSimulation));
   } else if (query != "") {
-    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(query));
+    galois::gInfo("Num matched edges ", testGraph.runCypherQuery(query, !skipGraphSimulation));
   } else {
     galois::gInfo("No query specified");
   }

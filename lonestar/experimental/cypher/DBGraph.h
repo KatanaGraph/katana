@@ -310,10 +310,13 @@ class DBGraph {
   //}
 
   size_t runCypherQuery(const std::string cypherQueryStr,
+                        bool useGraphSimulation,
                         std::string outputFile="matched.edges") {
     // run the query
-    size_t mEdgeCount = matchCypherQuery(attGraph, EventLimit(), EventWindow(),
-                                         cypherQueryStr.c_str());
+    size_t mEdgeCount = matchCypherQuery(attGraph, 
+                          EventLimit(), EventWindow(),
+                          cypherQueryStr.c_str(),
+                          useGraphSimulation);
     // save matched edges to a file
     char dummy[100];
     strcpy(dummy, outputFile.c_str());

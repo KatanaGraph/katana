@@ -38,6 +38,10 @@ protected:
 	std::vector<VertexId> matchingOrderToVertexMap;
 	std::vector<VertexId> vertexToMatchingOrderMap;
 
+	unsigned get_in_degree(Graph *g, VertexId vid) {
+		return std::distance(g->in_edge_begin(vid), g->in_edge_end(vid));
+	}
+
 public:
 	AppMiner(Graph *g) : VertexMiner(g) {}
 	
@@ -91,14 +95,12 @@ public:
 			std::cout << "\t n = " << n << ", pos = " << pos << ", src = " << src << ", dst = " << dst << "\n";
 			//std::cout << ", deg(d) = " << get_degree(graph, dst) << ", deg(q) = " << get_degree(query_graph, pos+1);
 		}
-
-		// the first vertex should always has the smallest id 
-		if (dst <= emb.get_vertex(0)) return false;
 		
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
 		// if the degree is smaller than that of its corresponding query vertex
 		if (get_degree(graph, dst) < get_degree(query_graph, next_qnode)) return false;
+		if (get_in_degree(graph, dst) < get_in_degree(query_graph, next_qnode)) return false;
 
 		// if this vertex already exists in the embedding
 		for (unsigned i = 0; i < n; ++i) if (dst == emb.get_vertex(i)) return false;
@@ -110,7 +112,7 @@ public:
 			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
-				//if (debug && n == 3 && pos == 1 && emb.get_vertex(pos) == 3 && dst == 5) std:: cout << "\t\t d_vedrtex = " << d_vertex << "\n";
+				if (debug) std:: cout << "\t\t in d_vertex = " << d_vertex << "\n";
 				if (!is_connected(d_vertex, dst)) return false;
 			}
 		}
@@ -121,7 +123,7 @@ public:
 			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
-				//if (debug && n == 3 && pos == 1 && emb.get_vertex(pos) == 3 && dst == 5) std:: cout << "\t\t d_vedrtex = " << d_vertex << "\n";
+				if (debug) std:: cout << "\t\t out d_vertex = " << d_vertex << "\n";
 				if (!is_connected(dst, d_vertex)) return false;
 			}
 		}

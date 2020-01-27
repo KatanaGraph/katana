@@ -110,6 +110,7 @@ protected:
 	std::vector<unsigned> degrees;
 	std::vector<BYTE> is_wedge; // indicate a 3-vertex embedding is a wedge or chain (v0-cntered or v1-centered)
 
+	#ifndef USE_QUERY_GRAPH_TYPE
 	#ifdef USE_QUERY_GRAPH
 	std::vector<VertexId> matching_order;
 	std::vector<VertexId> matching_order_map;
@@ -137,6 +138,7 @@ protected:
 		}
 		ifile.close();
 	}
+	#endif
 	#endif
 	template <typename EmbeddingTy = VertexEmbedding>
 	inline bool is_vertexInduced_automorphism(unsigned n, const EmbeddingTy& emb, unsigned idx, VertexId dst) {

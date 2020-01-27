@@ -15,6 +15,8 @@ template <bool afterGraphSimulation>
 class AppMiner : public VertexMiner {
 protected:
 	Graph *query_graph;
+	std::vector<VertexId> matchingOrderToVertexMap;
+	std::vector<VertexId> vertexToMatchingOrderMap;
 
 public:
 	AppMiner(Graph *g) : VertexMiner(g) {}
@@ -25,13 +27,11 @@ public:
 	~AppMiner() {}
 	
 	void init() {
-		assert(k > 2);
+		assert(query_graph->size() > 2);
 		set_max_size(query_graph->size());
 		set_num_patterns(1);
-		matching_order.resize(max_size);
-		matching_order_map.resize(max_size);
-		automorph_group_id.resize(max_size);
-		read_presets();
+		matchingOrderToVertexMap.resize(max_size);
+		vertexToMatchingOrderMap.resize(max_size);
 	}
 
 	bool pruneNode(Graph* queryGraph, GNode& queryNodeID, Node& dataNode) {
@@ -63,8 +63,8 @@ public:
 			//std::cout << ", deg(d) = " << get_degree(graph, dst) << ", deg(q) = " << get_degree(query_graph, pos+1);
 		}
 
-		// the first vertex should always has the smallest id (if it is not special)
-		if (!fv && dst <= emb.get_vertex(0)) return false;
+		// the first vertex should always has the smallest id 
+		if (dst <= emb.get_vertex(0)) return false;
 		
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
@@ -78,7 +78,7 @@ public:
 		// check the backward connectivity with previous vertices in the embedding
 		for (auto e : query_graph->in_edges(next_qnode)) {
 			VertexId q_dst = query_graph->getInEdgeDst(e);
-			unsigned q_order = matching_order_map[q_dst];
+			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
 				//if (debug && n == 3 && pos == 1 && emb.get_vertex(pos) == 3 && dst == 5) std:: cout << "\t\t d_vedrtex = " << d_vertex << "\n";
@@ -89,7 +89,7 @@ public:
 		// check the forward connectivity with previous vertices in the embedding
 		for (auto e : query_graph->edges(next_qnode)) {
 			VertexId q_dst = query_graph->getEdgeDst(e);
-			unsigned q_order = matching_order_map[q_dst];
+			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
 				//if (debug && n == 3 && pos == 1 && emb.get_vertex(pos) == 3 && dst == 5) std:: cout << "\t\t d_vedrtex = " << d_vertex << "\n";
@@ -115,7 +115,7 @@ public:
 				// for each incoming neighbor of the next query vertex in the query graph
 				for (auto q_edge : query_graph->in_edges(next_qnode)) {
 					VertexId q_dst = query_graph->getInEdgeDst(q_edge);
-					unsigned q_order = matching_order_map[q_dst]; // using query vertex id to get its matching order
+					unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
 
 					// pick a neighbor that is already visited
 					if (q_order < n) {
@@ -149,7 +149,7 @@ public:
 				// for each outgoing neighbor of the next query vertex in the query graph
 				for (auto q_edge : query_graph->edges(next_qnode)) {
 					VertexId q_dst = query_graph->getEdgeDst(q_edge);
-					unsigned q_order = matching_order_map[q_dst]; // using query vertex id to get its matching order
+					unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
 
 					// pick a neighbor that is already visited
 					if (q_order < n) {
@@ -186,7 +186,7 @@ public:
 	}
 
 	VertexId get_query_vertex(unsigned id) { 
-		return matching_order[id]; 
+		return matchingOrderToVertexMap[id]; 
 	}
 
 	void exec() {

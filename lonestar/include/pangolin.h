@@ -31,6 +31,7 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 namespace cll = llvm::cl;
+#ifndef USE_QUERY_GRAPH_TYPE
 static cll::opt<std::string> filetype(cll::Positional, cll::desc("<filetype: txt,adj,mtx,gr>"), cll::Required);
 static cll::opt<std::string> filename(cll::Positional, cll::desc("<filename: unsymmetrized graph>"), cll::Required);
 static cll::opt<unsigned> num_trials("n", cll::desc("perform n trials (default value 1)"), cll::init(1));
@@ -42,6 +43,7 @@ static cll::opt<unsigned> fv("fv", cll::desc("first vertex is special"), cll::in
 #endif
 #ifndef TRIANGLE
 static cll::opt<unsigned> k("k", cll::desc("max number of vertices in k-clique (default value 3)"), cll::init(3));
+#endif
 #endif
 static cll::opt<unsigned> show("s", cll::desc("print out the details"), cll::init(0));
 static cll::opt<unsigned> debug("d", cll::desc("print out the frequent patterns for debugging"), cll::init(0));

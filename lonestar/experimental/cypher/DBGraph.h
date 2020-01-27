@@ -317,10 +317,6 @@ class DBGraph {
                           EventLimit(), EventWindow(),
                           cypherQueryStr.c_str(),
                           useGraphSimulation);
-    // save matched edges to a file
-    char dummy[100];
-    strcpy(dummy, outputFile.c_str());
-    reportMatchedEdges(*attGraph, dummy);
     return mEdgeCount;
   }
 };

@@ -250,10 +250,9 @@ size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	AppMiner<afterGraphSimulation> miner(&data_graph, &query_graph);
 	miner.init();
 
-	galois::StatTimer Tcomp("Pangolin");
-	Tcomp.start();
+	galois::StatTimer miningTime("PatternMiningTime");
+	miningTime.start();
 	miner.exec();
-	Tcomp.stop();
+	miningTime.stop();
 	return miner.get_total_count();
 }
-

@@ -108,6 +108,9 @@ protected:
 	Graph *graph;
 	unsigned max_size;
 	std::vector<unsigned> degrees;
+	#ifdef USE_QUERY_GRAPH_TYPE
+	std::vector<unsigned> indegrees;
+	#endif
 	std::vector<BYTE> is_wedge; // indicate a 3-vertex embedding is a wedge or chain (v0-cntered or v1-centered)
 
 	#ifndef USE_QUERY_GRAPH_TYPE
@@ -215,8 +218,14 @@ protected:
 	}
 	void degree_counting() {
 		degrees.resize(graph->size());
+#ifdef USE_QUERY_GRAPH_TYPE
+		indegrees.resize(graph->size());
+#endif
 		galois::do_all(galois::iterate(graph->begin(), graph->end()), [&] (GNode v) {
 			degrees[v] = std::distance(graph->edge_begin(v), graph->edge_end(v));
+#ifdef USE_QUERY_GRAPH_TYPE
+			indegrees[v] = std::distance(graph->in_edge_begin(v), graph->in_edge_end(v));
+#endif
 		}, galois::loopname("DegreeCounting"));
 	}
 	inline unsigned intersect_merge(unsigned src, unsigned dst) {

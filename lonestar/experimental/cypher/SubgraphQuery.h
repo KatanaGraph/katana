@@ -50,13 +50,14 @@ protected:
 		}
 	}
 
+	template <bool inEdges>
 	inline bool near_search(unsigned key, EdgeData& label, Graph::edge_iterator mid, Graph::edge_iterator begin, Graph::edge_iterator end) {
 		auto temp = mid + 1;
 		unsigned value;
 		while (temp != end) {
-			value = graph->getEdgeDst(temp);
+			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
 			if (value == key) {
-				auto& edgeData = graph->getEdgeData(temp);
+				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
 				if (matchEdgeLabel(label, edgeData)) {
 					return true;
 				}
@@ -67,9 +68,9 @@ protected:
 		}
 		temp = mid - 1;
 		while (temp != begin) {
-			value = graph->getEdgeDst(temp);
+			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
 			if (value == key) {
-				auto& edgeData = graph->getEdgeData(temp);
+				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
 				if (matchEdgeLabel(label, edgeData)) {
 					return true;
 				}
@@ -79,9 +80,9 @@ protected:
 			temp--;
 		}
 		if (temp == begin) {
-			value = graph->getEdgeDst(temp);
+			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
 			if (value == key) {
-				auto& edgeData = graph->getEdgeData(temp);
+				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
 				if (matchEdgeLabel(label, edgeData)) {
 					return true;
 				}
@@ -90,19 +91,20 @@ protected:
 		return false;
 	}
 
+	template <bool inEdges>
 	inline bool binary_search_with_label(unsigned key, EdgeData& label, Graph::edge_iterator begin, Graph::edge_iterator end) {
 		Graph::edge_iterator l = begin;
 		Graph::edge_iterator r = end-1;
 		while (r >= l) {
 			Graph::edge_iterator mid = l + (r - l) / 2;
-			unsigned value = graph->getEdgeDst(mid);
+			unsigned value = inEdges ? graph->getInEdgeDst(mid) : graph->getEdgeDst(mid);
 			if (value == key) {
-				auto& edgeData = graph->getEdgeData(mid);
+				auto& edgeData = inEdges ? graph->getInEdgeData(mid) : graph->getEdgeData(mid);
 				if (matchEdgeLabel(label, edgeData)) {
 					return true;
 				} else {
 #ifdef GRAPH_HAS_MULTI_EDGES
-					return near_search(key, label, mid, begin, end);
+					return near_search<inEdges>(key, label, mid, begin, end);
 #else
 					return false;
 #endif
@@ -116,14 +118,19 @@ protected:
 
 	// check if vertex a is connected to vertex b in a directed, labeled graph
 	inline bool is_connected_with_label(unsigned a, unsigned b, EdgeData& label) {
-		if (degrees[a] == 0 || degrees[b] == 0) return false;
+		if (degrees[a] == 0 || indegrees[b] == 0) return false;
 		unsigned key = b;
 		unsigned search = a;
-		// TODO: optimize for direction
+		if (degrees[a] > indegrees[b]) {
+			key = a;
+			search = b;
+			auto begin = graph->in_edge_begin(search, galois::MethodFlag::UNPROTECTED);
+			auto end = graph->in_edge_end(search, galois::MethodFlag::UNPROTECTED);
+			return binary_search_with_label<true>(key, label, begin, end);
+		} 
 		auto begin = graph->edge_begin(search, galois::MethodFlag::UNPROTECTED);
 		auto end = graph->edge_end(search, galois::MethodFlag::UNPROTECTED);
-		// return serial_search(key, begin, end);
-		return binary_search_with_label(key, label, begin, end);
+		return binary_search_with_label<false>(key, label, begin, end);
 	}
 
 public:

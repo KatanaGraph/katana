@@ -311,15 +311,17 @@ protected:
 	// check if vertex a is connected to vertex b in a undirected graph
 	inline bool is_connected(unsigned a, unsigned b) {
 		if (degrees[a] == 0 || degrees[b] == 0) return false;
-		unsigned key = a;
-		unsigned search = b;
-		if (degrees[a] < degrees[b]) {
-			key = b;
-			search = a;
+		unsigned key = b;
+		unsigned search = a;
+#ifndef USE_QUERY_GRAPH_TYPE
+		if (degrees[a] > degrees[b]) {
+			key = a;
+			search = b;
 		} 
+#endif
 		auto begin = graph->edge_begin(search, galois::MethodFlag::UNPROTECTED);
 		auto end = graph->edge_end(search, galois::MethodFlag::UNPROTECTED);
-		//return serial_search(key, begin, end);
+		// return serial_search(key, begin, end);
 		return binary_search(key, begin, end);
 	}
 	inline int is_connected_dag(unsigned key, unsigned search) {

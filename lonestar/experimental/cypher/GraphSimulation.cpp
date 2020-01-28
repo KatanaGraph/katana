@@ -546,6 +546,10 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   galois::runtime::reportStat_Tmax("GraphSimulation",
       "NumRounds",
       (unsigned long)numRounds);
+
+  galois::runtime::reportStat_Tmax("GraphSimulation",
+      "RemovedNodes",
+      (unsigned long)100*(dG.size() - sizeCur)/dG.size());
 }
 
 std::pair<bool, std::pair<uint32_t, uint32_t>>

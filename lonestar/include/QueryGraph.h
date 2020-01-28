@@ -19,8 +19,10 @@ struct Node {
 struct EdgeData {
   //! Label on the edge (like the type of action). Max of 32 edge labels.
   uint32_t label;
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   //! Timestamp of action the edge represents. Range is limited.
   uint64_t timestamp;
+#endif
   //! Matched status on the edge represented in bits. Max of 64 matched in
   //! query graph.
   uint64_t matched;
@@ -29,9 +31,15 @@ struct EdgeData {
    * @param l Type of action this edge represents
    * @param t Timestamp of action
    */
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   EdgeData() : label(0), timestamp(0), matched(0) {}
   EdgeData(uint32_t l, uint64_t t) : label(l), timestamp(t), matched(0) {}
   EdgeData(uint32_t l, uint64_t t, uint64_t m) : label(l), timestamp(t), matched(m) {}
+#else 
+  EdgeData() : label(0), matched(0) {}
+  EdgeData(uint32_t l) : label(l), matched(0) {}
+  EdgeData(uint32_t l, uint64_t m) : label(l), matched(m) {}
+#endif
 };
 
 //! Graph typedef

@@ -192,8 +192,11 @@ void printGraph(AttributedGraph* g) {
       auto& dstName        = nodeNames[dst];
       auto& ed             = graph.getEdgeData(e);
       auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed.label)];
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp  = ed.timestamp;
-      std::cout << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
+      std::cout << edgeTimestamp << ", ";
+#endif
+      std::cout << srcName << ", " << edgeLabel << ", "
                 << dstName << " (" << srcLabel << ", " << dstLabel << ")" <<
                 std::endl;
       ++numEdges;
@@ -262,12 +265,22 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
                       uint32_t dstNodeIndex, uint32_t labelBitPosition,
                       uint64_t timestamp) {
   g->graph.constructEdge(edgeIndex, dstNodeIndex,
-                         EdgeData(1 << labelBitPosition, timestamp));
+                         EdgeData(1 << labelBitPosition
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                         , timestamp));
+#else
+                         ));
+#endif
 }
 
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
                    uint32_t dstNodeIndex, uint32_t label, uint64_t timestamp) {
-  g->graph.constructEdge(edgeIndex, dstNodeIndex, EdgeData(label, timestamp));
+  g->graph.constructEdge(edgeIndex, dstNodeIndex, EdgeData(label
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , timestamp));
+#else
+    ));
+#endif
 }
 
 void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, char* key,
@@ -393,8 +406,12 @@ uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
     auto& data = src.getEdgeData(e);
 
     // uses non-new variant of construct edge i.e. direct copy of label
-    dst.constructEdge(curEdgeIndex, edgeDst,
-                      EdgeData(data.label, data.timestamp));
+    dst.constructEdge(curEdgeIndex, edgeDst, EdgeData(data.label
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                      , data.timestamp));
+#else
+                      ));
+#endif
     curEdgeIndex++;
   }
 
@@ -492,8 +509,10 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
 
       // step 1: check for it not already being marked dead
       if (curEdgeData.matched == 0) {
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         // step 2: check for matching timestamp
         if (curEdgeData.timestamp == timestamp) {
+#endif
           // step 3: check label to make sure it has what we want
           if ((curEdgeData.label & (1u << labelBitPosition)) != 0) {
             // match found; mark dead and break (assumption is that we won't
@@ -506,7 +525,9 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
             //galois::gPrint("Label match failure ", labelBitPosition, " ",
             //               1u << labelBitPosition, " ", curEdgeData.label, "\n");
           }
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         }
+#endif
       }
     }
   }

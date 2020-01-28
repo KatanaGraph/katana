@@ -68,7 +68,9 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
       auto& dstName       = nodeNames[graph.getEdgeDst(e)];
       auto& ed            = graph.getEdgeData(e);
       auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp = ed.timestamp;
+#endif
       for (auto qn : qgraph) {
         uint64_t mask = (1 << qn);
         if (src.matched & mask) {
@@ -83,7 +85,10 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
                 os << srcLabel << " " << srcName << " (" << qSrcName << ") "
                    << edgeLabel << " " << dstLabel << " " << dstName << " ("
                    << qDstName << ") "
-                   << " at " << edgeTimestamp << std::endl;
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                   << " at " << edgeTimestamp 
+#endif
+                   << std::endl;
                 break;
               }
             }
@@ -220,7 +225,9 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
         auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         matchedEdges[i].timestamp = eData.timestamp;
+#endif
         matchedEdges[i].label     = edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
             (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
@@ -275,13 +282,21 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
         // auto& dstLabel = nodeLabelNames[dstData.label];
         auto& dstName              = nodeNames[dst];
         std::string& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData.label)];
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         auto& edgeTimestamp = eData.timestamp;
+#endif
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
             (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
-          os << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
-             << dstName << std::endl;
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+          os << edgeTimestamp << ", "; 
+#endif
+          os << srcName << ", " << edgeLabel << ", "
+            << dstName << std::endl;
         } else {
-          os << edgeTimestamp << ", " << dstName << ", " << edgeLabel << ", "
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+          os << edgeTimestamp << ", ";
+#endif
+          os << dstName << ", " << edgeLabel << ", "
              << srcName << std::endl;
         }
       }
@@ -311,7 +326,9 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
     if (dstData.matched) {
       // auto& dstLabel = nodeLabelNames[dstData.label];
       auto& eData               = graph.getEdgeData(e);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       matchedEdges[i].timestamp = eData.timestamp;
+#endif
       matchedEdges[i].label     =
           edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
       if (((dstData.label & sourceLabelID) != sourceLabelID) ||
@@ -363,13 +380,21 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
       auto& dstName       = nodeNames[dst];
       auto& ed            = graph.getEdgeData(e);
       auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp = ed.timestamp;
+#endif
       if (((dstData.label & sourceLabelID) != sourceLabelID) ||
           (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
-        os << edgeTimestamp << ", " << srcName << ", " << edgeLabel << ", "
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+        os << edgeTimestamp << ", ";
+#endif
+        os << srcName << ", " << edgeLabel << ", "
            << dstName << std::endl;
       } else {
-        os << edgeTimestamp << ", " << dstName << ", " << edgeLabel << ", "
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+        os << edgeTimestamp << ", ";
+#endif
+        os << dstName << ", " << edgeLabel << ", "
            << srcName << std::endl;
       }
     }

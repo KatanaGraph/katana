@@ -186,10 +186,18 @@ size_t matchQuery(AttributedGraph* dataGraph,
         // pass existence check: save mask
         uint32_t label = edgeResult.second.first | edgeResult.second.second;
         uint64_t matched = edgeResult.second.first;
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         starEdgeData.emplace_back(label, 0, matched);
+#else
+        starEdgeData.emplace_back(label, matched);
+#endif
       } else {
         // no restrictions, 0, 0 means match anything
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         starEdgeData.emplace_back(0, 0, 0);
+#else
+        starEdgeData.emplace_back(0, 0);
+#endif
       }
     }
   }
@@ -219,7 +227,11 @@ size_t matchQuery(AttributedGraph* dataGraph,
       uint64_t matched = edgeMasks.first;
 
       queryGraph.constructEdge(prefixSum[srcID]++, dstID,
-                               EdgeData(label, queryEdges[j].timestamp, matched));
+                               EdgeData(label, 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                               queryEdges[j].timestamp, 
+#endif
+                               matched));
     }
   }
 

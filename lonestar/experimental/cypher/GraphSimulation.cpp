@@ -493,7 +493,7 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   auto sizeCur  = std::distance(cur->begin(), cur->end());
   auto sizeNext = std::distance(next->begin(), next->end());
 
-  size_t numRounds = 1;
+  size_t numRounds = 0;
 
   // loop until no more data nodes are removed
   while (sizeCur != sizeNext) {
@@ -541,6 +541,10 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
     sizeCur  = std::distance(cur->begin(), cur->end());
     sizeNext = std::distance(next->begin(), next->end());
     ++numRounds;
+
+    galois::runtime::reportStat_Tmax("GraphSimulation",
+        "RemovedNodes_Round" + std::to_string(numRounds),
+        (unsigned long)100*(dG.size() - sizeNext)/dG.size());
   }
 
   galois::runtime::reportStat_Tmax("GraphSimulation",

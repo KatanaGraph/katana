@@ -109,6 +109,7 @@ bool existEmptyLabelMatchQGNode(QG& qG, std::vector<bool>& queryMatched) {
 }
 
 typedef galois::gstl::Vector<uint64_t> VecTy;
+typedef galois::gstl::Vector<bool> VecBoolTy;
 typedef galois::gstl::Vector<VecTy> VecVecTy;
 
 #ifdef SLOW_NO_MATCH_FAST_MATCH
@@ -312,7 +313,12 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     EventLimit limit, EventWindow window,
 #endif
-    uint32_t qn, uint32_t dn, VecVecTy& matchedEdges) {
+    uint32_t qn, uint32_t dn, 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    VecVecTy& matchedEdges) {
+#else
+    VecBoolTy& matchedEdges) {
+#endif
   bool matched = true;
   size_t num_qEdges;
   if (inEdges) {
@@ -324,10 +330,10 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
     // match children links
     matchedEdges.clear();
     matchedEdges.resize(num_qEdges);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP 
     auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
     for (auto de : dEdges) {
       auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       if (useWindow) {
         if ((deData.timestamp > window.endTime) ||
             (deData.timestamp < window.startTime)) {
@@ -335,7 +341,6 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
                     // of interest
         }
       }
-#endif
       size_t edgeID = 0;
       // Assumption: each query edge of this query node has a different label
       auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
@@ -346,11 +351,7 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
           auto dDst      = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
           auto& dDstData = dG.getData(dDst);
           if (dDstData.matched & (1 << qDst)) {
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
             matchedEdges[edgeID].push_back(deData.timestamp);
-#else
-            matchedEdges[edgeID].push_back(dDst);
-#endif
           }
         }
         ++edgeID;
@@ -363,12 +364,35 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
         break;
       }
     }
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     if (matched) { // check if it matches query timestamp order
       matchQueryTimestampOrder<inEdges, useLimit>(qG, dG, 
         limit,
         qn, matchedEdges, matched);
     }
+#else
+    size_t numMatchedEdges = 0;
+    auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
+    auto qEdgeBegin = inEdges ? qG.in_edge_begin(qn) : qG.edge_begin(qn);
+    for (auto de : dEdges) {
+      auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
+      for (size_t edgeID = 0; edgeID < num_qEdges; ++edgeID) {
+        if (matchedEdges[edgeID] == true) continue;
+        auto qe = qEdgeBegin + edgeID;
+        auto qeData = inEdges ? qG.getInEdgeData(qe) : qG.getEdgeData(qe);
+        if (matchEdgeLabel(qeData, deData)) {
+          auto qDst      = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
+          auto dDst      = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
+          auto& dDstData = dG.getData(dDst);
+          if (dDstData.matched & (1 << qDst)) {
+            matchedEdges[edgeID] = true;
+            ++numMatchedEdges;
+            break;
+          }
+        }
+      }
+      if (numMatchedEdges == num_qEdges) break;
+    }
+    if (numMatchedEdges < num_qEdges) return false;
 #endif
   }
   return matched;
@@ -385,7 +409,11 @@ void matchNodesOnce(Graph& qG, Graph& dG,
                     , EventLimit limit, EventWindow window
 #endif
                     ) {
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   galois::substrate::PerThreadStorage<VecVecTy> matchedEdgesPerThread;
+#else
+  galois::substrate::PerThreadStorage<VecBoolTy> matchedEdgesPerThread;
+#endif
   galois::do_all(
       galois::iterate(*cur),
       [&](auto dn) {

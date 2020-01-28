@@ -277,8 +277,13 @@ public:
 						// get the matched data vertex
 						VertexId d_vertex = emb.get_vertex(q_order);
 
+						auto qeData = query_graph->getEdgeData(q_edge);
+
 						// each incoming neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->in_edges(d_vertex)) {
+							auto deData = graph->getInEdgeData(d_edge);
+        					if (!matchEdgeLabel(qeData, deData)) continue;
+
 							GNode d_dst = graph->getInEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, q_order+n)) {
 								if (n < max_size-1) { // generate a new embedding and add it to the next queue

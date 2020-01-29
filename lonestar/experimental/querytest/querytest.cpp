@@ -47,6 +47,11 @@ static cll::opt<bool> skipGraphSimulation("skipGraphSimulation",
                                 "(default false)"),
                       cll::init(false));
 
+static cll::opt<uint32_t> numPages("numPages",
+                      cll::desc("Number of pages to pre-alloc "
+                                "(default 2500)"),
+                      cll::init(2500));
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,6 +65,9 @@ int main(int argc, char** argv) {
   // as an undirected edge (i.e. edges will be doubled)
   // Also removes self loops
   testGraph.constructDataGraph(filename);
+
+  galois::preAlloc(numPages);
+  galois::reportPageAlloc("MeminfoPre");
 
   // current assumptions of the graph
   // 3 node labels: n1, n2, n3
@@ -80,6 +88,8 @@ int main(int argc, char** argv) {
   } else {
     galois::gInfo("No query specified");
   }
+
+  galois::reportPageAlloc("MeminfoPost");
 
   return 0;
 }

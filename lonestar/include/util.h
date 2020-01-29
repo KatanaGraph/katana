@@ -7,7 +7,11 @@
 void print_graph(Graph &graph) {
 	for (GNode n : graph) {
 #ifdef USE_QUERY_GRAPH_TYPE
-		std::cout << "vertex " << n << ": label = " << graph.getData(n).label << " edgelist = [ ";
+		std::cout << "vertex " << n 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+			<< ": label = " << graph.getData(n).label 
+#endif
+			<< " edgelist = [ ";
 #else
 		std::cout << "vertex " << n << ": label = " << graph.getData(n) << " edgelist = [ ";
 #endif
@@ -33,7 +37,9 @@ void genGraph(MGraph &mg, Graph &g) {
 	g.constructNodes();
 	for (size_t i = 0; i < mg.num_vertices(); i++) {
 #ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 		g.getData(i).label = mg.get_label(i);
+#endif
 #else
 		g.getData(i) = mg.get_label(i);
 #endif
@@ -124,7 +130,9 @@ unsigned orientation(Graph &og, Graph &g) {
 
 	galois::do_all(galois::iterate(og.begin(), og.end()), [&](const auto& src) {
 #ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 		g.getData(src).label = 0;
+#endif
 #else
 		g.getData(src) = 0;
 #endif
@@ -175,7 +183,9 @@ unsigned read_graph(Graph &graph, std::string filetype, std::string filename, bo
 			galois::graphs::readGraph(graph, filename);
 			galois::do_all(galois::iterate(graph.begin(), graph.end()), [&](const auto& vid) {
 #ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 				graph.getData(vid).label = 1;
+#endif
 #else
 				graph.getData(vid) = 1;
 #endif

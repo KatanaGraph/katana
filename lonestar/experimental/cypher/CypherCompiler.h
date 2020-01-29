@@ -196,17 +196,14 @@ class CypherCompiler {
         assert((nelements % 2) == 1); // odd number of elements
         for (unsigned int i = 1; i < nelements; i+=2) {
           auto rel = cypher_ast_pattern_path_get_element(ast, i);
-          auto rel_type = cypher_astnode_type(rel);
-          assert(rel_type == CYPHER_AST_REL_PATTERN);
+          assert(cypher_astnode_type(rel) == CYPHER_AST_REL_PATTERN);
           auto direction = cypher_ast_rel_pattern_get_direction(rel);
 
           auto first = cypher_ast_pattern_path_get_element(ast, i - 1);
-          auto first_type = cypher_astnode_type(first);
-          assert(first_type == CYPHER_AST_NODE_PATTERN);
+          assert(cypher_astnode_type(first) == CYPHER_AST_NODE_PATTERN);
 
           auto second = cypher_ast_pattern_path_get_element(ast, i + 1);
-          auto second_type = cypher_astnode_type(second);
-          assert(second_type == CYPHER_AST_NODE_PATTERN);
+          assert(cypher_astnode_type(second) == CYPHER_AST_NODE_PATTERN);
 
           ir.emplace_back();
           if (direction == CYPHER_REL_OUTBOUND) { // source

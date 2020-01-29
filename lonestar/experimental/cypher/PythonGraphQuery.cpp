@@ -146,6 +146,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   }
   prefixSum[0] = 0;
 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   // check for trivial absence of query
   // node label checking; make sure labels exist
   for (size_t i = 0; i < numQueryNodes; ++i) {
@@ -156,6 +157,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
       return 0;
     }
   }
+#endif
 
   // TODO refactor code below
   // edge label checking; make sure labels exist
@@ -211,6 +213,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   Graph queryGraph;
   queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges);
   queryGraph.constructNodes();
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   for (size_t i = 0; i < numQueryNodes; ++i) {
     // first is the "YES" query, second is the "NO" query
     std::pair<uint32_t, uint32_t> masks =
@@ -218,6 +221,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.getData(i).label = masks.first | masks.second;
     queryGraph.getData(i).matched = masks.first;
   }
+#endif
   for (size_t j = 0; j < numQueryEdges; ++j) {
     if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
       size_t srcID = std::stoi(queryEdges[j].caused_by.id);

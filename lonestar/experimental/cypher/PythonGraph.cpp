@@ -108,7 +108,12 @@ void saveEdgeList(AttributedGraph* g, char* filename) {
   uint32_t maxEdgeLabel = 0;
 
   for (uint32_t src : graph) {
-    uint32_t srcLabel = rightmostSetBitPos(graph.getData(src).label);
+    uint32_t srcLabel = 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+      rightmostSetBitPos(graph.getData(src).label);
+#else
+      0;
+#endif
     if (srcLabel > maxNodeLabel) {
       maxNodeLabel = srcLabel;
     }
@@ -172,23 +177,38 @@ void printGraph(AttributedGraph* g) {
   // auto& nodeLabelNames = g->nodeLabelNames;
   auto& edgeLabelNames = g->edgeLabelNames;
   auto& nodeNames      = g->nodeNames;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   uint32_t sourceLabelID   = 1 << g->nodeLabelIDs["process"];
+#endif
   uint64_t numEdges    = 0;
 
   for (auto src : graph) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
     auto& srcData = graph.getData(src);
     // only print if source is a process
     if ((srcData.label & sourceLabelID) != sourceLabelID) continue;
     auto& srcLabel = g->nodeLabelNames[rightmostSetBitPos(srcData.label)];
+#else
+    auto srcLabel = 0;
+#endif
     auto& srcName  = nodeNames[src];
     for (auto e : graph.edges(src)) {
       auto dst      = graph.getEdgeDst(e);
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       auto& dstData = graph.getData(dst);
 
-      if (((dstData.label & sourceLabelID) == sourceLabelID) && (dst < src))
+      if (((dstData.label & sourceLabelID) == sourceLabelID) &&
+#else
+      if (
+#endif
+        (dst < src))
         continue;
 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       auto& dstLabel   = g->nodeLabelNames[rightmostSetBitPos(dstData.label)];
+#else
+      auto dstLabel = 0;
+#endif
       auto& dstName        = nodeNames[dst];
       auto& ed             = graph.getEdgeData(e);
       auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed.label)];
@@ -223,8 +243,10 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
 
 void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t labelBitPosition, char* name) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                  = g->graph.getData(nodeIndex);
   nd.label                  = 1 << labelBitPosition;
+#endif
   g->nodeIndices[uuid]      = nodeIndex;
   g->index2UUID[nodeIndex]  = uuid;
   g->nodeNames[nodeIndex]   = name;
@@ -232,8 +254,10 @@ void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
 
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
              uint32_t label, char* name) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                  = g->graph.getData(nodeIndex);
   nd.label                  = label;
+#endif
   g->nodeIndices[uuid]      = nodeIndex;
   g->index2UUID[nodeIndex]  = uuid;
   g->nodeNames[nodeIndex]   = name;
@@ -363,15 +387,19 @@ uint32_t nodeExists(AttributedGraph* g, char* uuid) {
 
 void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                    uint32_t labelBitPosition) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = 1 << labelBitPosition;
+#endif
 }
 
 
 void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t label) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = label;
+#endif
 }
 
 void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
@@ -390,8 +418,12 @@ const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
 }
 
 uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd = g->graph.getData(nodeIndex);
   return nd.label;
+#else
+  return 0;
+#endif
 }
 
 uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
@@ -446,14 +478,18 @@ void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2) {
 
 void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
                  uint32_t labelBitPosition) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = nd.label | (1 << labelBitPosition);
+#endif
 }
 
 void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
                  uint32_t labelToMerge) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = nd.label | labelToMerge;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////

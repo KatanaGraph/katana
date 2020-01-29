@@ -5,8 +5,10 @@
  * Node data type.
  */
 struct Node {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   //! Label on node. Maximum of 32 node labels.
   uint32_t label;
+#endif
   //! Matched status of node represented in bits. Max of 64 matched in query
   //! graph.
   //! @todo make matched a dynamic bitset

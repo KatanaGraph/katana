@@ -102,6 +102,7 @@ bool matchNodeLabel(Node& query, Node& data);
 
 bool matchEdgeLabel(EdgeData& query, EdgeData& data);
 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 /**
  * Return an integer with the bit representing the specified node label set.
  * Assumes the label actually exists, else undefined behavior.
@@ -114,6 +115,7 @@ bool matchEdgeLabel(EdgeData& query, EdgeData& data);
  */
 std::pair<bool, std::pair<uint32_t, uint32_t>>
 getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel);
+#endif
 
 /**
  * Return an integer with the bit representing the specified edge label set.

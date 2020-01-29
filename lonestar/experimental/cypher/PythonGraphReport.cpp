@@ -55,16 +55,26 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
   Graph& qgraph        = qG.graph;
   auto& qnodeNames     = qG.nodeNames;
   Graph& graph         = dG.graph;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dG.nodeLabelNames;
+#endif
   auto& edgeLabelNames = dG.edgeLabelNames;
   auto& nodeNames      = dG.nodeNames;
   for (auto n : graph) {
     auto& src      = graph.getData(n);
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
     auto& srcLabel = nodeLabelNames[rightmostSetBitPos(src.label)];
+#else
+    auto srcLabel = 0;
+#endif
     auto& srcName  = nodeNames[n];
     for (auto e : graph.edges(n)) {
       auto& dst           = graph.getData(graph.getEdgeDst(e));
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       auto& dstLabel      = nodeLabelNames[rightmostSetBitPos(dst.label)];
+#else
+      auto dstLabel = 0;
+#endif
       auto& dstName       = nodeNames[graph.getEdgeDst(e)];
       auto& ed            = graph.getEdgeData(e);
       auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
@@ -122,7 +132,9 @@ void returnMatchedNodes(AttributedGraph& dataGraph, MatchedNode* matchedNodes) {
 
 void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
   Graph& graph         = dataGraph.graph;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dataGraph.nodeLabelNames;
+#endif
   auto& nodeNames      = dataGraph.nodeNames;
 
   std::streambuf* buf;
@@ -141,8 +153,11 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
     auto& data = graph.getData(n);
     if (data.matched) {
       // print node names
-      os << nodeLabelNames[rightmostSetBitPos(data.label)] << " "
-         << nodeNames[n] << std::endl;
+      os << 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+      nodeLabelNames[rightmostSetBitPos(data.label)] << " " <<
+#endif
+      nodeNames[n] << std::endl;
       // print uuid instead
       //os << nodeLabelNames[data.label] << " " << dataGraph.index2UUID[n] << std::endl;
     }
@@ -175,7 +190,9 @@ void returnMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
 void reportMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
                             char* outputFile) {
   Graph& graph         = dataGraph.graph;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dataGraph.nodeLabelNames;
+#endif
   auto& nodeNames      = dataGraph.nodeNames;
 
   std::streambuf* buf;
@@ -194,8 +211,11 @@ void reportMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
   for (auto n : graph) {
     auto& data = graph.getData(n);
     if (data.matched) {
-      os << nodeLabelNames[rightmostSetBitPos(data.label)] << " "
-         << nodeNames[n] << std::endl;
+      os << 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+        nodeLabelNames[rightmostSetBitPos(data.label)] << " " <<
+#endif
+        nodeNames[n] << std::endl;
     }
   }
 
@@ -209,7 +229,9 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
+#endif
 
   size_t i = 0;
   for (auto src : graph) {
@@ -225,15 +247,21 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
 #endif
       {
         auto dst      = graph.getEdgeDst(e);
-        auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         matchedEdges[i].timestamp = eData.timestamp;
 #endif
         matchedEdges[i].label     = edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+        auto& dstData = graph.getData(dst);
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
-            (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
+            (((srcData.label & sourceLabelID) == sourceLabelID) && 
+            (src < dst))) 
+#else
+        if (src < dst)
+#endif
+        {
           matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
           matchedEdges[i].caused_by.name = nodeNames[src].c_str();
           matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
@@ -255,7 +283,9 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
+#endif
 
   std::streambuf* buf;
   std::ofstream ofs;
@@ -283,7 +313,6 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
 #endif
       {
         auto dst      = graph.getEdgeDst(e);
-        auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
         auto& dstName              = nodeNames[dst];
@@ -291,8 +320,14 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         auto& edgeTimestamp = eData.timestamp;
 #endif
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+        auto& dstData = graph.getData(dst);
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
-            (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
+            (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst)))
+#else
+        if (src < dst)
+#endif
+        {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
           os << edgeTimestamp << ", "; 
 #endif
@@ -320,11 +355,13 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
   auto src             = g.nodeIndices[uuid];
 
   size_t i      = 0;
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& srcData = graph.getData(src);
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
+#endif
   // auto& srcLabel = nodeLabelNames[srcData.label];
   for (auto e : graph.edges(src)) {
     auto dst      = graph.getEdgeDst(e);
@@ -337,8 +374,13 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
 #endif
       matchedEdges[i].label     =
           edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       if (((dstData.label & sourceLabelID) != sourceLabelID) ||
-          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
+          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst)))
+#else
+      if (src < dst)
+#endif
+      {
         matchedEdges[i].caused_by.id   = g.index2UUID[src].c_str();
         matchedEdges[i].caused_by.name = nodeNames[src].c_str();
         matchedEdges[i].acted_on.id    = g.index2UUID[dst].c_str();
@@ -360,7 +402,6 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
-  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
   auto src             = g.nodeIndices[uuid];
 
   std::streambuf* buf;
@@ -375,7 +416,10 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
 
   std::ostream os(buf);
 
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& srcData = graph.getData(src);
+  auto sourceLabelID   = getNodeLabelMask(g, "process").second.first;
+#endif
   // auto& srcLabel = nodeLabelNames[srcData.label];
   auto& srcName = nodeNames[src];
   for (auto e : graph.edges(src)) {
@@ -389,8 +433,13 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp = ed.timestamp;
 #endif
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       if (((dstData.label & sourceLabelID) != sourceLabelID) ||
-          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst))) {
+          (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst)))
+#else
+      if (src < dst)
+#endif
+      {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         os << edgeTimestamp << ", ";
 #endif

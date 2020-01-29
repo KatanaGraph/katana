@@ -469,12 +469,14 @@ void unmatchAll(AttributedGraph* g) {
       Node& nd = actualGraph.getData(node);
       nd.matched = 0;
 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto curEdge = actualGraph.edge_begin(node);
       auto end = actualGraph.edge_end(node);
       for (; curEdge < end; curEdge++) {
         EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
         curEdgeData.matched = 0;
       }
+#endif
     },
     galois::steal(),
     galois::no_stats()
@@ -507,9 +509,9 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
       // get this edge's metadata to see if it matches what we know
       EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       // step 1: check for it not already being marked dead
       if (curEdgeData.matched == 0) {
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         // step 2: check for matching timestamp
         if (curEdgeData.timestamp == timestamp) {
 #endif
@@ -517,7 +519,9 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
           if ((curEdgeData.label & (1u << labelBitPosition)) != 0) {
             // match found; mark dead and break (assumption is that we won't
             // see another exact match again...)
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
             curEdgeData.matched = 1;
+#endif
             removed = 1;
             break;
           } else {
@@ -527,14 +531,15 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
           }
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         }
-#endif
       }
+#endif
     }
   }
 
   return removed;
 }
 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 uint32_t nodeRemovalPass(AttributedGraph* g) {
   Graph& actualGraph = g->graph;
   galois::GAccumulator<uint32_t> deadNodes;
@@ -789,3 +794,4 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   unmatchAll(newGraph);
   return newGraph;
 }
+#endif

@@ -23,7 +23,11 @@ size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window) {
   runGraphSimulationOld(queryGraph->graph, dataGraph->graph, limit, window, true);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findFilesWithMultipleWrites(AttributedGraph* dataGraph,
@@ -38,7 +42,11 @@ size_t findFilesWithMultipleWrites(AttributedGraph* dataGraph,
                                getNodeLabelMask(*dataGraph, "file").second.first,
                                getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                                window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findProcessesWithReadFileWriteNetwork(AttributedGraph* dataGraph,
@@ -62,7 +70,11 @@ size_t findProcessesWithReadFileWriteNetwork(AttributedGraph* dataGraph,
                           getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                           getNodeLabelMask(*dataGraph, "network").second.first,
                           window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
@@ -85,25 +97,59 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.constructNodes();
 
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(0, 1);
 
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "file").second.first;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 1));
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(1, 3);
 
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 1));
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 2));
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(2, 5);
 
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "network").second.first;
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 2));
+  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
@@ -128,27 +174,61 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
   queryGraph.constructNodes();
 
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(0, 1);
 
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(1, 3);
 
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.constructEdge(4, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(2, 5);
 
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(5, 2,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
@@ -173,37 +253,91 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.constructNodes();
 
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(0, 1);
 
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 0));
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
+  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(1, 3);
 
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 1));
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 2));
+  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(2, 5);
 
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first, 2));
-  queryGraph.constructEdge(6, 4, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 3));
+  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 2));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(6, 4, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 3));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(3, 7);
 
   queryGraph.getData(4).label = getNodeLabelMask(*dataGraph, "file").second.first;
-  queryGraph.constructEdge(7, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 3));
+  queryGraph.constructEdge(7, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 3));
+#else
+    ));
+#endif
   queryGraph.constructEdge(8, 5,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 4));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 4));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(4, 9);
 
   queryGraph.getData(5).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(9, 4,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 4));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 4));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(5, 10);
 
   runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, false);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
@@ -227,27 +361,61 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
   queryGraph.constructNodes();
 
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "file").second.first;
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
-  queryGraph.constructEdge(1, 2, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first, 1));
+  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
+  queryGraph.constructEdge(1, 2, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.constructEdge(2, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(0, 3);
 
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(3, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first, 0));
+  queryGraph.constructEdge(3, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 0));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(1, 4);
 
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
-  queryGraph.constructEdge(4, 0, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first, 1));
+  queryGraph.constructEdge(4, 0, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+    , 1));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(2, 5);
 
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
   queryGraph.constructEdge(5, 0,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first, 2));
+                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+                           , 2));
+#else
+    ));
+#endif
   queryGraph.fixEndEdge(3, 6);
 
   runGraphSimulationOld(queryGraph, dataGraph->graph, limit, window, true);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedEdges(dataGraph->graph);
+#else
+  return countMatchedNodes(dataGraph->graph);
+#endif
 }
 
 size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
@@ -264,8 +432,13 @@ size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
                  getNodeLabelMask(*dataGraph, "file").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[file_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[file_uuid]);
+#endif
 }
 
 size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
@@ -283,8 +456,13 @@ size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
                  getNodeLabelMask(*dataGraph, "file").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[file_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[file_uuid]);
+#endif
 }
 
 size_t processesReadFromNetwork(AttributedGraph* dataGraph,
@@ -302,8 +480,13 @@ size_t processesReadFromNetwork(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "network").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[network_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[network_uuid]);
+#endif
 }
 
 size_t processesWroteToNetwork(AttributedGraph* dataGraph,
@@ -322,8 +505,13 @@ size_t processesWroteToNetwork(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "network").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[network_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[network_uuid]);
+#endif
 }
 
 size_t processesReadFromRegistry(AttributedGraph* dataGraph,
@@ -341,8 +529,13 @@ size_t processesReadFromRegistry(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "registry").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[registry_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[registry_uuid]);
+#endif
 }
 
 size_t processesWroteToRegistry(AttributedGraph* dataGraph,
@@ -361,8 +554,13 @@ size_t processesWroteToRegistry(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "registry").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[registry_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[registry_uuid]);
+#endif
 }
 
 size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
@@ -380,8 +578,13 @@ size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
                  getNodeLabelMask(*dataGraph, "memory").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[memory_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[memory_uuid]);
+#endif
 }
 
 size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
@@ -400,8 +603,13 @@ size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
                  getNodeLabelMask(*dataGraph, "memory").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "process").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[memory_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[memory_uuid]);
+#endif
 }
 
 size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
@@ -418,8 +626,13 @@ size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "file").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
@@ -437,8 +650,13 @@ size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "file").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
@@ -456,8 +674,13 @@ size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "network").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t networksWrittenByProcess(AttributedGraph* dataGraph,
@@ -476,8 +699,13 @@ size_t networksWrittenByProcess(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "network").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t registriesReadByProcess(AttributedGraph* dataGraph,
@@ -495,8 +723,13 @@ size_t registriesReadByProcess(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "registry").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
@@ -515,8 +748,13 @@ size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "registry").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
@@ -534,8 +772,13 @@ size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "READ").second.first,
                  getNodeLabelMask(*dataGraph, "memory").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }
 
 size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
@@ -554,6 +797,11 @@ size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
                  getNodeLabelMask(*dataGraph, "process").second.first,
                  getEdgeLabelMask(*dataGraph, "WRITE").second.first,
                  getNodeLabelMask(*dataGraph, "memory").second.first, window);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return countMatchedNeighborEdges(dataGraph->graph,
                                    dataGraph->nodeIndices[process_uuid]);
+#else 
+  return countMatchedNeighbors(dataGraph->graph,
+                                   dataGraph->nodeIndices[process_uuid]);
+#endif
 }

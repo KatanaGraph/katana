@@ -220,7 +220,10 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
     // auto& srcLabel = nodeLabelNames[srcData.label];
     for (auto e : graph.edges(src)) {
       auto eData = graph.getEdgeData(e);
-      if (eData.matched) {
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+      if (eData.matched) 
+#endif
+      {
         auto dst      = graph.getEdgeDst(e);
         auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
@@ -275,7 +278,10 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
     auto& srcName = nodeNames[src];
     for (auto e : graph.edges(src)) {
       auto eData = graph.getEdgeData(e);
-      if (eData.matched) {
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+      if (eData.matched) 
+#endif
+      {
         auto dst      = graph.getEdgeDst(e);
         auto& dstData = graph.getData(dst);
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;

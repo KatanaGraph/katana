@@ -159,7 +159,9 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
                         std::vector<std::string>& nodeContains,
                         std::vector<std::string>& nodeNames);
 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
+#endif
 
 /**
  * @todo doxygen
@@ -241,6 +243,8 @@ size_t countMatchedNodes(Graph& graph);
  * @warning Right now it literally does the same thing as countMatchedNodes
  */
 size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node);
+
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 /**
  * Get the number of matched edges in the graph.
  * @param graph Graph to count matched edges in
@@ -253,5 +257,6 @@ size_t countMatchedEdges(Graph& graph);
  * @returns Number of matched edges in the graph
  */
 size_t countMatchedNeighborEdges(Graph& graph, Graph::GraphNode node);
+#endif
 
 #endif // GALOIS_GRAPH_SIMULATION_H

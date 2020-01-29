@@ -184,19 +184,21 @@ size_t matchQuery(AttributedGraph* dataGraph,
         }
 
         // pass existence check: save mask
-        uint32_t label = edgeResult.second.first | edgeResult.second.second;
-        uint64_t matched = edgeResult.second.first;
+        uint32_t label = edgeResult.second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+          | edgeResult.second.second;
+        uint64_t matched = edgeResult.second.first;
         starEdgeData.emplace_back(label, 0, matched);
 #else
-        starEdgeData.emplace_back(label, matched);
+        ;
+        starEdgeData.emplace_back(label);
 #endif
       } else {
         // no restrictions, 0, 0 means match anything
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         starEdgeData.emplace_back(0, 0, 0);
 #else
-        starEdgeData.emplace_back(0, 0);
+        starEdgeData.emplace_back(0);
 #endif
       }
     }
@@ -223,15 +225,18 @@ size_t matchQuery(AttributedGraph* dataGraph,
 
       std::pair<uint32_t, uint32_t> edgeMasks =
         getEdgeLabelMask(*dataGraph, queryEdges[j].label).second;
-      uint32_t label = edgeMasks.first | edgeMasks.second;
+      uint32_t label = edgeMasks.first;
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+      label |= edgeMasks.second;
       uint64_t matched = edgeMasks.first;
+#endif
 
       queryGraph.constructEdge(prefixSum[srcID]++, dstID,
-                               EdgeData(label, 
+                               EdgeData(label 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                               queryEdges[j].timestamp, 
+                               , queryEdges[j].timestamp, matched
 #endif
-                               matched));
+                               ));
     }
   }
 
@@ -262,9 +267,14 @@ size_t matchQuery(AttributedGraph* dataGraph,
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, false, limit,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     matchEdgesAfterGraphSimulation(queryGraph, dataGraph->graph);
     simulationTime.stop();
     return countMatchedEdges(dataGraph->graph);
+#else
+    simulationTime.stop();
+    return countMatchedNodes(dataGraph->graph);
+#endif
   } else if (useGraphSimulation) {
     // run graph simulation
     simulationTime.start();

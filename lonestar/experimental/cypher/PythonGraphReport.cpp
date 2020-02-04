@@ -77,7 +77,7 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
 #endif
       auto& dstName       = nodeNames[graph.getEdgeDst(e)];
       auto& ed            = graph.getEdgeData(e);
-      auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
+      auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed)];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp = ed.timestamp;
 #endif
@@ -86,7 +86,7 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
         if (src.matched & mask) {
           for (auto qe : qgraph.edges(qn)) {
             auto& qeData = qgraph.getEdgeData(qe);
-            if ((qeData.label & ed.label) == qeData.label) {
+            if ((qeData & ed) == qeData) {
               auto qDst = qgraph.getEdgeDst(qe);
               mask      = (1 << qDst);
               if (dst.matched & mask) {
@@ -252,7 +252,7 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         matchedEdges[i].timestamp = eData.timestamp;
 #endif
-        matchedEdges[i].label     = edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+        matchedEdges[i].label     = edgeLabelNames[rightmostSetBitPos(eData)].c_str();
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
         auto& dstData = graph.getData(dst);
         if (((dstData.label & sourceLabelID) != sourceLabelID) ||
@@ -316,7 +316,7 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
         // if ((dstData.label == sourceLabelID) && (dst < src)) continue;
         // auto& dstLabel = nodeLabelNames[dstData.label];
         auto& dstName              = nodeNames[dst];
-        std::string& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData.label)];
+        std::string& edgeLabel     = edgeLabelNames[rightmostSetBitPos(eData)];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         auto& edgeTimestamp = eData.timestamp;
 #endif
@@ -373,7 +373,7 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
       matchedEdges[i].timestamp = eData.timestamp;
 #endif
       matchedEdges[i].label     =
-          edgeLabelNames[rightmostSetBitPos(eData.label)].c_str();
+          edgeLabelNames[rightmostSetBitPos(eData)].c_str();
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       if (((dstData.label & sourceLabelID) != sourceLabelID) ||
           (((srcData.label & sourceLabelID) == sourceLabelID) && (src < dst)))
@@ -429,7 +429,7 @@ void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
       // auto& dstLabel = nodeLabelNames[dstData.label];
       auto& dstName       = nodeNames[dst];
       auto& ed            = graph.getEdgeData(e);
-      auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed.label)];
+      auto& edgeLabel     = edgeLabelNames[rightmostSetBitPos(ed)];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp = ed.timestamp;
 #endif

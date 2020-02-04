@@ -123,7 +123,7 @@ void saveEdgeList(AttributedGraph* g, char* filename) {
     for (auto e : graph.edges(src)) {
       uint32_t dst        = graph.getEdgeDst(e);
       auto& ed            = graph.getEdgeData(e);
-      uint32_t edgeLabel  = rightmostSetBitPos(ed.label);
+      uint32_t edgeLabel  = rightmostSetBitPos(ed);
       // track max edge label
       if (edgeLabel > maxEdgeLabel) {
         maxEdgeLabel = edgeLabel;
@@ -211,7 +211,7 @@ void printGraph(AttributedGraph* g) {
 #endif
       auto& dstName        = nodeNames[dst];
       auto& ed             = graph.getEdgeData(e);
-      auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed.label)];
+      auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed)];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto& edgeTimestamp  = ed.timestamp;
       std::cout << edgeTimestamp << ", ";
@@ -438,7 +438,7 @@ uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
     auto& data = src.getEdgeData(e);
 
     // uses non-new variant of construct edge i.e. direct copy of label
-    dst.constructEdge(curEdgeIndex, edgeDst, EdgeData(data.label
+    dst.constructEdge(curEdgeIndex, edgeDst, EdgeData(data
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                       , data.timestamp));
 #else
@@ -552,7 +552,7 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
         if (curEdgeData.timestamp == timestamp) {
 #endif
           // step 3: check label to make sure it has what we want
-          if ((curEdgeData.label & (1u << labelBitPosition)) != 0) {
+          if ((curEdgeData & (1u << labelBitPosition)) != 0) {
             // match found; mark dead and break (assumption is that we won't
             // see another exact match again...)
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP

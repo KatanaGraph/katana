@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
   LonestarStart(argc, argv, name, desc, url);
 
   galois::graphs::DBGraph testGraph;
-  // graph is autoamtically made symmetric and treates every directed edge
+  // graph is automatically made symmetric and treats every directed edge
   // as an undirected edge (i.e. edges will be doubled)
   // Also removes self loops
   testGraph.constructDataGraph(filename);

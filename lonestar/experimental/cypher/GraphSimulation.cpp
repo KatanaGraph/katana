@@ -30,7 +30,7 @@
 
 // query.label: bitwise-OR of tags that should MATCH and tags that should NOT-MATCH
 // query.matched: tags that should MATCH
-bool matchNodeLabel(Node& query, Node& data) {
+bool matchNodeLabel(const Node& query, const Node& data) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   return ((query.label & data.label) == query.matched);
 #else
@@ -38,11 +38,11 @@ bool matchNodeLabel(Node& query, Node& data) {
 #endif
 }
 
-bool matchEdgeLabel(EdgeData& query, EdgeData& data) {
+bool matchEdgeLabel(const EdgeData& query, const EdgeData& data) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return ((query.label & data.label) == query.matched);
 #else
-  return ((query.label & data.label) == query.label);
+  return ((query & data) == query);
 #endif
 }
 
@@ -1042,7 +1042,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                          }
                        }
 #endif
-                       if ((eData.label & action) == action) {
+                       if ((eData & action) == action) {
                          ++numActions;
                          if (numActions == 1) {
                            prev = graph.getEdgeDst(e);
@@ -1074,7 +1074,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                          }
                        }
 #endif
-                       if ((eData.label & action) == action) {
+                       if ((eData & action) == action) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                          eData.matched = 1;
 #endif
@@ -1126,8 +1126,8 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
                          }
                        }
 #endif
-                       bool mayAction1 = ((eData.label & action1) == action1);
-                       bool mayAction2 = ((eData.label & action2) == action2);
+                       bool mayAction1 = ((eData & action1) == action1);
+                       bool mayAction2 = ((eData & action2) == action2);
                        if (mayAction1 || mayAction2) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
                          auto dst      = graph.getEdgeDst(e);
@@ -1171,8 +1171,8 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
                          }
                        }
 #endif
-                       bool mayAction1 = ((eData.label & action1) == action1);
-                       bool mayAction2 = ((eData.label & action2) == action2);
+                       bool mayAction1 = ((eData & action1) == action1);
+                       bool mayAction2 = ((eData & action2) == action2);
                        if (mayAction1 || mayAction2) {
                          auto dst      = graph.getEdgeDst(e);
                          auto& dstData = graph.getData(dst);
@@ -1233,7 +1233,7 @@ void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
         if (!useWindow || ((eData.timestamp <= window.endTime) &&
                            (eData.timestamp >= window.startTime))) {
 #endif
-          if ((eData.label & action) == action) {
+          if ((eData & action) == action) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
             eData.matched = 1;
 #endif

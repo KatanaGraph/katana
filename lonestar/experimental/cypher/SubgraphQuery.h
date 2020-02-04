@@ -24,7 +24,7 @@ class OrderVertices {
 public:
 	OrderVertices(Graph& g) : graph(g) {}
 
-	bool operator() (VertexId left, VertexId right) {
+	bool operator() (VertexId left, const VertexId right) {
 		if (totalDegree(left) >= totalDegree(right))
 			return true;
 		return false;
@@ -38,11 +38,19 @@ protected:
 	std::vector<VertexId> matchingOrderToVertexMap;
 	std::vector<VertexId> vertexToMatchingOrderMap;
 
-	unsigned get_in_degree(Graph *g, VertexId vid) {
+	unsigned get_in_degree(Graph *g, const VertexId vid) {
 		return std::distance(g->in_edge_begin(vid), g->in_edge_end(vid));
 	}
 
-	bool pruneNode(Graph* queryGraph, GNode& queryNodeID, Node& dataNode) {
+	unsigned get_in_degree(Graph *g, const VertexId vid, const EdgeData& label) {
+		return std::distance(g->in_edge_begin(vid, label), g->in_edge_end(vid, label));
+	}
+
+	unsigned get_degree(Graph *g, const VertexId vid, const EdgeData& label) {
+		return std::distance(g->edge_begin(vid, label), g->edge_end(vid, label));
+	}
+
+	bool pruneNode(Graph* queryGraph, const GNode& queryNodeID, Node& dataNode) {
 		if (afterGraphSimulation) {
 			return !(dataNode.matched & (1 << queryNodeID));
 		} else {
@@ -50,65 +58,28 @@ protected:
 		}
 	}
 
-	template <bool inEdges>
-	inline bool near_search(unsigned key, EdgeData& label, Graph::edge_iterator mid, Graph::edge_iterator begin, Graph::edge_iterator end) {
-		auto temp = mid + 1;
-		unsigned value;
-		while (temp != end) {
-			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
-			if (value == key) {
-				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
-				if (matchEdgeLabel(label, edgeData)) {
-					return true;
-				}
-			} else {
-				return false;
-			}
-			temp++;
-		}
-		temp = mid - 1;
-		while (temp != begin) {
-			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
-			if (value == key) {
-				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
-				if (matchEdgeLabel(label, edgeData)) {
-					return true;
-				}
-			} else {
-				return false;
-			}
-			temp--;
-		}
-		if (temp == begin) {
-			value = inEdges ? graph->getInEdgeDst(temp) : graph->getEdgeDst(temp);
-			if (value == key) {
-				auto& edgeData = inEdges ? graph->getInEdgeData(temp) : graph->getEdgeData(temp);
-				if (matchEdgeLabel(label, edgeData)) {
-					return true;
-				}
-			}
-		}
+	bool pruneNodeUsingDegree(Graph* graph, const GNode& nodeID, Graph* queryGraph, const GNode& queryNodeID) {
+		// if the degree is smaller than that of its corresponding query vertex
+		if (VertexMiner::get_degree(graph, nodeID) < VertexMiner::get_degree(query_graph, queryNodeID)) return true;
+		if (get_in_degree(graph, nodeID) < get_in_degree(query_graph, queryNodeID)) return true;
+		// TODO: below applies only if there are no multiple labels on edges
+		// for (auto deData : graph->data_range()) {
+		// 	if (get_degree(graph, nodeID, *deData) < get_degree(query_graph, queryNodeID, *deData)) return true;
+		// 	if (get_in_degree(graph, nodeID, *deData) < get_in_degree(query_graph, queryNodeID, *deData)) return true;
+		// }
 		return false;
 	}
 
 	template <bool inEdges>
-	inline bool binary_search_with_label(unsigned key, EdgeData& label, Graph::edge_iterator begin, Graph::edge_iterator end) {
+	inline bool directed_binary_search(unsigned key, 
+		Graph::edge_iterator begin, Graph::edge_iterator end) {
 		Graph::edge_iterator l = begin;
 		Graph::edge_iterator r = end-1;
 		while (r >= l) {
 			Graph::edge_iterator mid = l + (r - l) / 2;
 			unsigned value = inEdges ? graph->getInEdgeDst(mid) : graph->getEdgeDst(mid);
 			if (value == key) {
-				auto& edgeData = inEdges ? graph->getInEdgeData(mid) : graph->getEdgeData(mid);
-				if (matchEdgeLabel(label, edgeData)) {
-					return true;
-				} else {
-#ifdef GRAPH_HAS_MULTI_EDGES
-					return near_search<inEdges>(key, label, mid, begin, end);
-#else
-					return false;
-#endif
-				}
+				return true;
 			}
 			if (value < key) l = mid + 1;
 			else r = mid - 1;
@@ -117,20 +88,20 @@ protected:
 	}
 
 	// check if vertex a is connected to vertex b in a directed, labeled graph
-	inline bool is_connected_with_label(unsigned a, unsigned b, EdgeData& label) {
+	inline bool is_connected_with_label(unsigned a, unsigned b, const EdgeData& label) {
 		if (degrees[a] == 0 || indegrees[b] == 0) return false;
 		unsigned key = b;
 		unsigned search = a;
 		if (degrees[a] > indegrees[b]) {
 			key = a;
 			search = b;
-			auto begin = graph->in_edge_begin(search, galois::MethodFlag::UNPROTECTED);
-			auto end = graph->in_edge_end(search, galois::MethodFlag::UNPROTECTED);
-			return binary_search_with_label<true>(key, label, begin, end);
+			auto begin = graph->in_edge_begin(search, label);
+			auto end = graph->in_edge_end(search, label);
+			return directed_binary_search<true>(key, begin, end);
 		} 
-		auto begin = graph->edge_begin(search, galois::MethodFlag::UNPROTECTED);
-		auto end = graph->edge_end(search, galois::MethodFlag::UNPROTECTED);
-		return binary_search_with_label<false>(key, label, begin, end);
+		auto begin = graph->edge_begin(search, label);
+		auto end = graph->edge_end(search, label);
+		return directed_binary_search<false>(key, begin, end);
 	}
 
 public:
@@ -162,7 +133,7 @@ public:
 		return true;
 	}
 
-	bool toAdd(unsigned n, const BaseEmbedding &emb, VertexId dst, unsigned pos) {
+	bool toAdd(unsigned n, const BaseEmbedding &emb, const VertexId dst, unsigned pos) {
 		// hack pos to find if dst is destination or source
 		// TODO: find a better way to pass this info
 		bool source = false;
@@ -182,8 +153,7 @@ public:
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
 		// if the degree is smaller than that of its corresponding query vertex
-		if (get_degree(graph, dst) < get_degree(query_graph, next_qnode)) return false;
-		if (get_in_degree(graph, dst) < get_in_degree(query_graph, next_qnode)) return false;
+		if (pruneNodeUsingDegree(graph, dst, query_graph, next_qnode)) return false;
 
 		// if this vertex already exists in the embedding
 		for (unsigned i = 0; i < n; ++i) if (dst == emb.get_vertex(i)) return false;
@@ -197,7 +167,16 @@ public:
 				VertexId d_vertex = emb.get_vertex(q_order);
 				if (debug) std:: cout << "\t\t in d_vertex = " << d_vertex << "\n";
 				auto qeData = query_graph->getInEdgeData(e);
-				if (!is_connected_with_label(d_vertex, dst, qeData)) return false;
+				bool connected = false;
+				for (auto deData : graph->data_range())
+				{
+					if (matchEdgeLabel(qeData, *deData) &&
+						is_connected_with_label(d_vertex, dst, *deData)) {
+						connected = true;
+						break;
+					}
+				}
+				if (!connected) return false;
 			}
 		}
 		if (source) pos -= n;
@@ -209,7 +188,16 @@ public:
 				VertexId d_vertex = emb.get_vertex(q_order);
 				if (debug) std:: cout << "\t\t out d_vertex = " << d_vertex << "\n";
 				auto qeData = query_graph->getEdgeData(e);
-				if (!is_connected_with_label(dst, d_vertex, qeData)) return false;
+				bool connected = false;
+				for (auto deData : graph->data_range())
+				{
+					if (matchEdgeLabel(qeData, *deData) &&
+						is_connected_with_label(dst, d_vertex, *deData)) {
+						connected = true;
+						break;
+					}
+				}
+				if (!connected) return false;
 			}
 		}
 
@@ -240,10 +228,12 @@ public:
 
 						auto qeData = query_graph->getInEdgeData(q_edge);
 
+						for (auto deData : graph->data_range())
+						{
+        				if (!matchEdgeLabel(qeData, *deData)) continue;
+
 						// each outgoing neighbor of d_vertex is a candidate
-						for (auto d_edge : graph->edges(d_vertex)) {
-							auto deData = graph->getEdgeData(d_edge);
-        					if (!matchEdgeLabel(qeData, deData)) continue;
+						for (auto d_edge : graph->edges(d_vertex, *deData)) {
 
 							GNode d_dst = graph->getEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, q_order)) {
@@ -261,6 +251,8 @@ public:
 								}
 							}
 						}
+						}
+
 						found_neighbor = true;
 						break;
 					}
@@ -279,10 +271,12 @@ public:
 
 						auto qeData = query_graph->getEdgeData(q_edge);
 
+						for (auto deData : graph->data_range())
+						{
+        				if (!matchEdgeLabel(qeData, *deData)) continue;
+
 						// each incoming neighbor of d_vertex is a candidate
-						for (auto d_edge : graph->in_edges(d_vertex)) {
-							auto deData = graph->getInEdgeData(d_edge);
-        					if (!matchEdgeLabel(qeData, deData)) continue;
+						for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
 
 							GNode d_dst = graph->getInEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, q_order+n)) {
@@ -300,6 +294,8 @@ public:
 								}
 							}
 						}
+						}
+
 						break;
 					}
 				}
@@ -320,7 +316,7 @@ public:
 		EmbeddingQueueType queue, queue2;
 		for (size_t i = 0; i < graph->size(); ++i) {
 			if (pruneNode(query_graph, curr_qnode, graph->getData(i))) continue;
-			if(get_degree(graph, i) < get_degree(query_graph, curr_qnode)) continue;
+			if (pruneNodeUsingDegree(graph, i, query_graph, curr_qnode)) continue;
 			EmbeddingType emb;
 			emb.push_back(i);
 			queue.push_back(emb);

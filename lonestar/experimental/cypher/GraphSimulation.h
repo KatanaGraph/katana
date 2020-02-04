@@ -98,9 +98,9 @@ struct AttributedGraph {
   std::unordered_map<std::string, std::vector<std::string>> edgeAttributes;
 };
 
-bool matchNodeLabel(Node& query, Node& data);
+bool matchNodeLabel(const Node& query, const Node& data);
 
-bool matchEdgeLabel(EdgeData& query, EdgeData& data);
+bool matchEdgeLabel(const EdgeData& query, const EdgeData& data);
 
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 /**

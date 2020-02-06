@@ -235,7 +235,7 @@ public:
   edge_iterator edge_begin(GraphNode N, const EdgeTy& data,
                               MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
       for (edge_iterator ii = raw_begin(N, data), ee = raw_end(N, data); ii != ee;
            ++ii) {
         BaseGraph::acquireNode(BaseGraph::edgeDst[*ii], mflag);
@@ -305,7 +305,7 @@ public:
   edge_iterator in_edge_begin(GraphNode N, const EdgeTy& data,
                               MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
       for (edge_iterator ii = in_raw_begin(N, data), ee = in_raw_end(N, data); ii != ee;
            ++ii) {
         BaseGraph::acquireNode(DerivedGraph::inEdgeDst[*ii], mflag);

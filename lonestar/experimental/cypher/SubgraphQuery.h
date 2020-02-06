@@ -337,13 +337,19 @@ public:
 	void exec() {
 		VertexId curr_qnode = get_query_vertex(0);
 		EmbeddingQueueType queue, queue2;
-		for (size_t i = 0; i < graph->size(); ++i) {
-			if (pruneNode(query_graph, curr_qnode, graph->getData(i))) continue;
-			if (pruneNodeUsingDegree(graph, i, query_graph, curr_qnode)) continue;
-			EmbeddingType emb;
-			emb.push_back(i);
-			queue.push_back(emb);
-		}
+
+		galois::do_all(galois::iterate(graph->begin(), graph->end()),
+			[&](GNode n) { 
+				if (!pruneNode(query_graph, curr_qnode, graph->getData(n)) && 
+					!pruneNodeUsingDegree(graph, n, query_graph, curr_qnode)) { 
+					EmbeddingType emb;
+					emb.push_back(n);
+					queue.push_back(emb);
+				}
+			},
+			galois::loopname("EmbeddingInit")
+			);
+
 		unsigned level = 1;
 		while(true) {
 			if (show) queue.printout_embeddings(level, debug);

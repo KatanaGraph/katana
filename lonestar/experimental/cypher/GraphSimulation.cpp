@@ -42,7 +42,11 @@ bool matchEdgeLabel(const EdgeData& query, const EdgeData& data) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return ((query.label & data.label) == query.matched);
 #else
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
   return ((query & data) == query);
+#else
+  return (query == data);
+#endif
 #endif
 }
 

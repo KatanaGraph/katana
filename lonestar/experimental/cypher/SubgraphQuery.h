@@ -60,13 +60,15 @@ protected:
 
 	bool pruneNodeUsingDegree(Graph* graph, const GNode& nodeID, Graph* queryGraph, const GNode& queryNodeID) {
 		// if the degree is smaller than that of its corresponding query vertex
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 		if (VertexMiner::get_degree(graph, nodeID) < VertexMiner::get_degree(query_graph, queryNodeID)) return true;
 		if (get_in_degree(graph, nodeID) < get_in_degree(query_graph, queryNodeID)) return true;
-		// TODO: below applies only if there are no multiple labels on edges
-		// for (auto deData : graph->data_range()) {
-		// 	if (get_degree(graph, nodeID, *deData) < get_degree(query_graph, queryNodeID, *deData)) return true;
-		// 	if (get_in_degree(graph, nodeID, *deData) < get_in_degree(query_graph, queryNodeID, *deData)) return true;
-		// }
+#else
+		for (auto qeData : query_graph->data_range()) {
+			if (get_degree(graph, nodeID, *qeData) < get_degree(query_graph, queryNodeID, *qeData)) return true;
+			if (get_in_degree(graph, nodeID, *qeData) < get_in_degree(query_graph, queryNodeID, *qeData)) return true;
+		}
+#endif
 		return false;
 	}
 
@@ -167,6 +169,7 @@ public:
 				VertexId d_vertex = emb.get_vertex(q_order);
 				if (debug) std:: cout << "\t\t in d_vertex = " << d_vertex << "\n";
 				auto qeData = query_graph->getInEdgeData(e);
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
 				for (auto deData : graph->data_range())
 				{
@@ -177,6 +180,11 @@ public:
 					}
 				}
 				if (!connected) return false;
+#else
+				if (!is_connected_with_label(d_vertex, dst, qeData)) {
+					return false;
+				}
+#endif
 			}
 		}
 		if (source) pos -= n;
@@ -188,6 +196,7 @@ public:
 				VertexId d_vertex = emb.get_vertex(q_order);
 				if (debug) std:: cout << "\t\t out d_vertex = " << d_vertex << "\n";
 				auto qeData = query_graph->getEdgeData(e);
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
 				for (auto deData : graph->data_range())
 				{
@@ -198,6 +207,11 @@ public:
 					}
 				}
 				if (!connected) return false;
+#else
+				if (!is_connected_with_label(dst, d_vertex, qeData)) {
+					return false;
+				}
+#endif
 			}
 		}
 
@@ -228,10 +242,14 @@ public:
 
 						auto qeData = query_graph->getInEdgeData(q_edge);
 
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 						for (auto deData : graph->data_range())
 						{
         				if (!matchEdgeLabel(qeData, *deData)) continue;
-
+#else
+						{
+						auto deData = &qeData;
+#endif
 						// each outgoing neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->edges(d_vertex, *deData)) {
 
@@ -271,9 +289,14 @@ public:
 
 						auto qeData = query_graph->getEdgeData(q_edge);
 
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 						for (auto deData : graph->data_range())
 						{
         				if (!matchEdgeLabel(qeData, *deData)) continue;
+#else
+						{
+						auto deData = &qeData;
+#endif
 
 						// each incoming neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->in_edges(d_vertex, *deData)) {

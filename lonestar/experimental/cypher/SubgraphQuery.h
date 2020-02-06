@@ -362,9 +362,12 @@ public:
 
 template <bool afterGraphSimulation>
 size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
+	galois::StatTimer initTime("MiningInitTime");
+	initTime.start();
 	ResourceManager rm;
 	AppMiner<afterGraphSimulation> miner(&data_graph, &query_graph);
 	miner.init();
+	initTime.stop();
 
 	galois::StatTimer miningTime("PatternMiningTime");
 	miningTime.start();

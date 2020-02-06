@@ -146,11 +146,9 @@ public:
 		assert(pos < n);
 
 		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
-		if (debug) {
-			VertexId src = emb.get_vertex(pos);
-			std::cout << "\t n = " << n << ", pos = " << pos << ", src = " << src << ", dst = " << dst << "\n";
-			//std::cout << ", deg(d) = " << get_degree(graph, dst) << ", deg(q) = " << get_degree(query_graph, pos+1);
-		}
+
+		galois::gDebug("n = ", n, ", pos = ", pos, ", src = ", emb.get_vertex(pos), ", dst = ", dst, "\n");
+		//galois::gDebug(", deg(d) = ", get_degree(graph, dst), ", deg(q) = ", get_degree(query_graph, pos+1));
 
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
@@ -167,7 +165,7 @@ public:
 			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
-				if (debug) std:: cout << "\t\t in d_vertex = " << d_vertex << "\n";
+				galois::gDebug("in d_vertex = ", d_vertex, "\n");
 				auto qeData = query_graph->getInEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
@@ -194,7 +192,7 @@ public:
 			unsigned q_order = vertexToMatchingOrderMap[q_dst];
 			if (q_order < n && q_order != pos) {
 				VertexId d_vertex = emb.get_vertex(q_order);
-				if (debug) std:: cout << "\t\t out d_vertex = " << d_vertex << "\n";
+				galois::gDebug("out d_vertex = ", d_vertex, "\n");
 				auto qeData = query_graph->getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
@@ -215,15 +213,17 @@ public:
 			}
 		}
 
-		if (debug) std::cout << "\t extending with vertex " << dst << "\n";
+		galois::gDebug("\t extending with vertex ", dst, "\n");
 		return true;
 	}
 
+	template <bool printEmbeddings = false>
 	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
+
 		galois::do_all(galois::iterate(in_queue),
 			[&](const BaseEmbedding& emb) {
 				unsigned n = emb.size();
-				if (debug) std::cout << "current embedding: " << emb << "\n";
+				galois::gDebug("current embedding: ", emb, "\n");
 
 				// get next query vertex
 				VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
@@ -260,10 +260,10 @@ public:
 									new_emb.push_back(d_dst);
 									out_queue.push_back(new_emb);
 								} else {
-									if (show) {
+									if (printEmbeddings) {
 										BaseEmbedding new_emb(emb);
 										new_emb.push_back(d_dst);
-										std::cout << "Found embedding: " << new_emb << "\n";
+										galois::gPrint("Found embedding: ", new_emb, "\n");
 									}
 									total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
 								}
@@ -308,10 +308,10 @@ public:
 									new_emb.push_back(d_dst);
 									out_queue.push_back(new_emb);
 								} else {
-									if (show) {
+									if (printEmbeddings) {
 										BaseEmbedding new_emb(emb);
 										new_emb.push_back(d_dst);
-										std::cout << "Found embedding: " << new_emb << "\n";
+										galois::gPrint("Found embedding: ", new_emb, "\n");
 									}
 									total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
 								}
@@ -334,6 +334,7 @@ public:
 		return matchingOrderToVertexMap[id];
 	}
 
+	template <bool printEmbeddings = false>
 	void exec() {
 		VertexId curr_qnode = get_query_vertex(0);
 		EmbeddingQueueType queue, queue2;
@@ -351,9 +352,9 @@ public:
 			);
 
 		unsigned level = 1;
-		while(true) {
-			if (show) queue.printout_embeddings(level, debug);
-			extend_vertex(queue, queue2);
+		while(queue.begin() != queue.end()) {
+			if (printEmbeddings) queue.printout_embeddings(level, debug);
+			extend_vertex<printEmbeddings>(queue, queue2);
 			if (level == query_graph->size()-1) break; // if embedding size = k, done
 			queue.swap(queue2);
 			queue2.clear();
@@ -362,7 +363,7 @@ public:
 	}
 
 	void print_output() {
-		std::cout << "\n\ttotal_num_subgraphs = " << get_total_count() << "\n";
+		galois::gDebug("\ntotal_num_subgraphs = ", get_total_count(), "\n");
 	}
 };
 
@@ -377,7 +378,11 @@ size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
 
 	galois::StatTimer miningTime("PatternMiningTime");
 	miningTime.start();
-	miner.exec();
+	if (show) {
+		miner.template exec<true>();
+	} else {
+		miner.template exec<false>();
+	}
 	miningTime.stop();
 	return miner.get_total_count();
 }

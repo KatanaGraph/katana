@@ -308,6 +308,16 @@ public:
   }
 
   /**
+   * @param N node to get in-degree for
+   * @param mflag how safe the acquire should be
+   * @returns In-degree of node N
+   */
+  auto
+  in_degree(GraphNode N) const {
+    return std::distance(in_raw_begin(N), in_raw_end(N));
+  }
+
+  /**
    * Given an edge id for in edges, get the destination of the edge
    *
    * @param ni edge id

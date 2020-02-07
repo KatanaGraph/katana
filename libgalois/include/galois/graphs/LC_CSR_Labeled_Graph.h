@@ -270,6 +270,27 @@ public:
   }
 
   /**
+   * @param N node to get degree for
+   * @param data label to get degree of
+   * @param mflag how safe the acquire should be
+   * @returns Degree of node N
+   */
+  auto
+  degree(GraphNode N, const EdgeTy& data) const {
+    return std::distance(raw_begin(N, data), raw_end(N, data));
+  }
+
+  /**
+   * @param N node to get degree for
+   * @param mflag how safe the acquire should be
+   * @returns Degree of node N
+   */
+  auto
+  degree(GraphNode N) const {
+    return std::distance(raw_begin(N), raw_end(N));
+  }
+
+  /**
    * Grabs in edge beginning without lock/safety.
    *
    * @param N node to get edge beginning of
@@ -339,16 +360,37 @@ public:
                                          in_edge_end(N, data, mflag));
   }
 
-  data_iterator data_begin() {
+  /**
+   * @param N node to get in-degree for
+   * @param data label to get in-degree of
+   * @param mflag how safe the acquire should be
+   * @returns In-degree of node N
+   */
+  auto
+  in_degree(GraphNode N, const EdgeTy& data) const {
+    return std::distance(in_raw_begin(N, data), in_raw_end(N, data));
+  }
+
+  /**
+   * @param N node to get in-degree for
+   * @param mflag how safe the acquire should be
+   * @returns In-degree of node N
+   */
+  auto
+  in_degree(GraphNode N) const {
+    return std::distance(in_raw_begin(N), in_raw_end(N));
+  }
+
+  data_iterator data_begin() const {
     return edgeIndexToLabelMap.cbegin();
   }
 
-  data_iterator data_end() {
+  data_iterator data_end() const {
     return edgeIndexToLabelMap.cend();
   }
 
   runtime::iterable<NoDerefIterator<data_iterator>>
-  data_range() {
+  data_range() const {
     return internal::make_no_deref_range(data_begin(), data_end());
   }
 

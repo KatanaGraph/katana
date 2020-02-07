@@ -462,6 +462,16 @@ public:
                                          edge_end(N, mflag));
   }
 
+  /**
+   * @param N node to get degree for
+   * @param mflag how safe the acquire should be
+   * @returns Degree of node N
+   */
+  auto
+  degree(GraphNode N) const {
+    return std::distance(raw_begin(N), raw_end(N));
+  }
+
   runtime::iterable<NoDerefIterator<edge_iterator>>
   out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return edges(N, mflag);

@@ -38,17 +38,6 @@ protected:
 	std::vector<VertexId> matchingOrderToVertexMap;
 	std::vector<VertexId> vertexToMatchingOrderMap;
 
-	unsigned get_in_degree(Graph *g, const VertexId vid) {
-		return std::distance(g->in_edge_begin(vid), g->in_edge_end(vid));
-	}
-
-	unsigned get_in_degree(Graph *g, const VertexId vid, const EdgeData& label) {
-		return std::distance(g->in_edge_begin(vid, label), g->in_edge_end(vid, label));
-	}
-
-	unsigned get_degree(Graph *g, const VertexId vid, const EdgeData& label) {
-		return std::distance(g->edge_begin(vid, label), g->edge_end(vid, label));
-	}
 
 	bool pruneNode(Graph* queryGraph, const GNode& queryNodeID, Node& dataNode) {
 		if (afterGraphSimulation) {
@@ -61,12 +50,12 @@ protected:
 	bool pruneNodeUsingDegree(Graph* graph, const GNode& nodeID, Graph* queryGraph, const GNode& queryNodeID) {
 		// if the degree is smaller than that of its corresponding query vertex
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-		if (VertexMiner::get_degree(graph, nodeID) < VertexMiner::get_degree(query_graph, queryNodeID)) return true;
-		if (get_in_degree(graph, nodeID) < get_in_degree(query_graph, queryNodeID)) return true;
+		if (graph->degree(nodeID) < query_graph->degree(queryNodeID)) return true;
+		if (graph->in_degree(nodeID) < query_graph->in_degree(queryNodeID)) return true;
 #else
 		for (auto qeData : query_graph->data_range()) {
-			if (get_degree(graph, nodeID, *qeData) < get_degree(query_graph, queryNodeID, *qeData)) return true;
-			if (get_in_degree(graph, nodeID, *qeData) < get_in_degree(query_graph, queryNodeID, *qeData)) return true;
+			if (graph->degree(nodeID, *qeData) < query_graph->degree(queryNodeID, *qeData)) return true;
+			if (graph->in_degree(nodeID, *qeData) < query_graph->in_degree(queryNodeID, *qeData)) return true;
 		}
 #endif
 		return false;
@@ -143,7 +132,7 @@ public:
  		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 
 		galois::gDebug("n = ", n, ", pos = ", neighbors[index].first, ", src = ", emb.get_vertex(neighbors[index].first), ", dst = ", dst, "\n");
-		//galois::gDebug(", deg(d) = ", get_degree(graph, dst), ", deg(q) = ", get_degree(query_graph, pos+1));
+		//galois::gDebug(", deg(d) = ", graph->degree(dst), ", deg(q) = ", query_graph->degree(pos+1));
 
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
@@ -269,9 +258,9 @@ public:
 				VertexId d_vertex = emb.get_vertex(q_order);
 				size_t numEdges;
 				if (numInNeighbors > i) {
-					numEdges = get_degree(graph, d_vertex, qeData);
+					numEdges = graph->degree(d_vertex, qeData);
 				} else {
-					numEdges = get_in_degree(graph, d_vertex, qeData);
+					numEdges = graph->in_degree(d_vertex, qeData);
 				}
 				if (numEdges < numCandidates) {
 					numCandidates = numEdges;

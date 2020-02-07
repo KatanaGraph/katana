@@ -205,12 +205,16 @@ public:
 		return true;
 	}
 
-	template <bool printEmbeddings = false>
-	void addEmbedding(unsigned n, const BaseEmbedding &emb, const VertexId dst, BaseEmbeddingQueue &out_queue) {
+	template <bool DFS, bool printEmbeddings = false>
+	void addEmbedding(unsigned n, const BaseEmbedding &emb, const VertexId dst, NeighborsTy& neighbors, unsigned& numInNeighbors, BaseEmbeddingQueue &out_queue) {
 		if (n < max_size-1) { // generate a new embedding and add it to the next queue
 			BaseEmbedding new_emb(emb);
 			new_emb.push_back(dst);
-			out_queue.push_back(new_emb);
+			if (DFS) {
+				process_embedding<DFS, printEmbeddings>(new_emb, neighbors, numInNeighbors, out_queue);
+			} else {
+				out_queue.push_back(new_emb);
+			}
 		} else {
 			if (printEmbeddings) {
 				BaseEmbedding new_emb(emb);
@@ -278,10 +282,15 @@ public:
 		return index;
 	}
 
-	template <bool printEmbeddings = false>
-	void process_embedding(const BaseEmbedding& emb, const NeighborsTy& neighbors, const unsigned numInNeighbors, BaseEmbeddingQueue &out_queue) {
+	template <bool DFS, bool printEmbeddings = false>
+	void process_embedding(const BaseEmbedding& emb, NeighborsTy& neighbors, unsigned numInNeighbors, BaseEmbeddingQueue &out_queue) {
 		galois::gDebug("current embedding: ", emb, "\n");
 		unsigned n = emb.size();
+
+		if (DFS) {
+			neighbors.clear();
+			constructNeighbors(n, neighbors, numInNeighbors);
+		}
 
 		// pick the neighbor with the least number of candidates/edges
 		unsigned index = pickNeighbor(emb, neighbors, numInNeighbors);
@@ -301,7 +310,7 @@ public:
 				for (auto d_edge : graph->edges(d_vertex, *deData)) {
 					GNode d_dst = graph->getEdgeDst(d_edge);
 					if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-						addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
+						addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors, numInNeighbors, out_queue);
 					}
 				}
 			}
@@ -317,24 +326,26 @@ public:
 				for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
 					GNode d_dst = graph->getInEdgeDst(d_edge);
 					if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-						addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
+						addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors, numInNeighbors, out_queue);
 					}
 				}
 			}
 		}
 	}
 
-	template <bool printEmbeddings = false>
+	template <bool DFS, bool printEmbeddings = false>
 	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
 
-		unsigned n = in_queue.begin()->size();
 		unsigned numInNeighbors;
 		NeighborsTy neighbors;
-		constructNeighbors(n, neighbors, numInNeighbors);
+		if (!DFS) {
+			unsigned n = in_queue.begin()->size();
+			constructNeighbors(n, neighbors, numInNeighbors);
+		}
 
 		galois::do_all(galois::iterate(in_queue),
 			[&](const BaseEmbedding& emb) {
-				process_embedding<printEmbeddings>(emb, neighbors, numInNeighbors, out_queue);
+				process_embedding<DFS, printEmbeddings>(emb, neighbors, numInNeighbors, out_queue);
 			},
 			galois::chunk_size<CHUNK_SIZE>(),
 			galois::steal(),
@@ -346,7 +357,7 @@ public:
 		return matchingOrderToVertexMap[id];
 	}
 
-	template <bool printEmbeddings = false>
+	template <bool DFS, bool printEmbeddings = false>
 	void exec() {
 		VertexId curr_qnode = get_query_vertex(0);
 		EmbeddingQueueType queue, queue2;
@@ -362,15 +373,19 @@ public:
 			},
 			galois::loopname("EmbeddingInit")
 			);
-
-		unsigned level = 1;
-		while(queue.begin() != queue.end()) {
-			if (printEmbeddings) queue.printout_embeddings(level, debug);
-			extend_vertex<printEmbeddings>(queue, queue2);
-			if (level == query_graph->size()-1) break; // if embedding size = k, done
-			queue.swap(queue2);
-			queue2.clear();
-			level++;
+		
+		if (DFS) {
+			extend_vertex<true, printEmbeddings>(queue, queue2);
+		} else {
+			unsigned level = 1;
+			while(queue.begin() != queue.end()) {
+				if (printEmbeddings) queue.printout_embeddings(level, debug);
+				extend_vertex<false, printEmbeddings>(queue, queue2);
+				if (level == query_graph->size()-1) break; // if embedding size = k, done
+				queue.swap(queue2);
+				queue2.clear();
+				level++;
+			}
 		}
 	}
 
@@ -391,9 +406,9 @@ size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	galois::StatTimer miningTime("PatternMiningTime");
 	miningTime.start();
 	if (show) {
-		miner.template exec<true>();
+		miner.template exec<false, true>();
 	} else {
-		miner.template exec<false>();
+		miner.template exec<false, false>();
 	}
 	miningTime.stop();
 	return miner.get_total_count();

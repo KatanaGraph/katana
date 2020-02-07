@@ -206,6 +206,22 @@ public:
 	}
 
 	template <bool printEmbeddings = false>
+	void addEmbedding(unsigned n, const BaseEmbedding &emb, const VertexId dst, BaseEmbeddingQueue &out_queue) {
+		if (n < max_size-1) { // generate a new embedding and add it to the next queue
+			BaseEmbedding new_emb(emb);
+			new_emb.push_back(dst);
+			out_queue.push_back(new_emb);
+		} else {
+			if (printEmbeddings) {
+				BaseEmbedding new_emb(emb);
+				new_emb.push_back(dst);
+				galois::gPrint("Found embedding: ", new_emb, "\n");
+			}
+			total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
+		}
+	}
+
+	template <bool printEmbeddings = false>
 	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
 		galois::StatTimer queryTime("MiningQueryProcessingTime");
 		queryTime.start();
@@ -285,18 +301,7 @@ public:
 						for (auto d_edge : graph->edges(d_vertex, *deData)) {
 							GNode d_dst = graph->getEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-								if (n < max_size-1) { // generate a new embedding and add it to the next queue
-									BaseEmbedding new_emb(emb);
-									new_emb.push_back(d_dst);
-									out_queue.push_back(new_emb);
-								} else {
-									if (printEmbeddings) {
-										BaseEmbedding new_emb(emb);
-										new_emb.push_back(d_dst);
-										galois::gPrint("Found embedding: ", new_emb, "\n");
-									}
-									total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
-								}
+								addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
 							}
 						}
 					}
@@ -312,18 +317,7 @@ public:
 						for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
 							GNode d_dst = graph->getInEdgeDst(d_edge);
 							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-								if (n < max_size-1) { // generate a new embedding and add it to the next queue
-									BaseEmbedding new_emb(emb);
-									new_emb.push_back(d_dst);
-									out_queue.push_back(new_emb);
-								} else {
-									if (printEmbeddings) {
-										BaseEmbedding new_emb(emb);
-										new_emb.push_back(d_dst);
-										galois::gPrint("Found embedding: ", new_emb, "\n");
-									}
-									total_num += 1; // if size = max_size, no need to add to the queue, just accumulate
-								}
+								addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
 							}
 						}
 					}

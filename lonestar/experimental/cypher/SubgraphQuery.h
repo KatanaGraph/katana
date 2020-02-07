@@ -138,7 +138,7 @@ public:
 		return true;
 	}
 
-	bool toAdd(unsigned n, const BaseEmbedding &emb, const VertexId dst, unsigned index, NeighborsTy& neighbors, unsigned numInNeighbors) {
+	bool toAdd(unsigned n, const BaseEmbedding &emb, const VertexId dst, unsigned index, const NeighborsTy& neighbors, unsigned numInNeighbors) {
 
  		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 
@@ -221,16 +221,10 @@ public:
 		}
 	}
 
-	template <bool printEmbeddings = false>
-	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
-		galois::StatTimer queryTime("MiningQueryProcessingTime");
-		queryTime.start();
-		unsigned n = in_queue.begin()->size();
-
+	void constructNeighbors(unsigned n, NeighborsTy& neighbors, unsigned& numInNeighbors) {
 		// get next query vertex
 		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 
-		NeighborsTy neighbors;
 		// for each incoming neighbor of the next query vertex in the query graph
 		for (auto q_edge : query_graph->in_edges(next_qnode)) {
 			VertexId q_dst = query_graph->getInEdgeDst(q_edge);
@@ -242,7 +236,7 @@ public:
 				neighbors.push_back(std::make_pair(q_order, qeData));
 			}
 		}
-		unsigned numInNeighbors = neighbors.size();
+		numInNeighbors = neighbors.size();
 		// for each outgoing neighbor of the next query vertex in the query graph
 		for (auto q_edge : query_graph->edges(next_qnode)) {
 			VertexId q_dst = query_graph->getEdgeDst(q_edge);
@@ -255,73 +249,92 @@ public:
 			}
 		}
 		assert(neighbors.size() > 0);
-		queryTime.stop();
+	}
+
+	unsigned pickNeighbor(const BaseEmbedding& emb, const NeighborsTy& neighbors, const unsigned numInNeighbors) {
+		// pick the neighbor with the least number of candidates/edges
+		unsigned index;
+		if (neighbors.size() < 3) { // TODO: make this configurable
+			index = 0;
+		} else {
+			index = neighbors.size();
+			size_t numCandidates = graph->size(); // conservative upper limit
+			for (unsigned i = 0; i < neighbors.size(); ++i) {
+				auto q_order = neighbors[i].first;
+				auto qeData = neighbors[i].second;
+				VertexId d_vertex = emb.get_vertex(q_order);
+				size_t numEdges;
+				if (numInNeighbors > i) {
+					numEdges = get_degree(graph, d_vertex, qeData);
+				} else {
+					numEdges = get_in_degree(graph, d_vertex, qeData);
+				}
+				if (numEdges < numCandidates) {
+					numCandidates = numEdges;
+					index = i;
+				}
+			}
+		}
+		return index;
+	}
+
+	template <bool printEmbeddings = false>
+	void process_embedding(const BaseEmbedding& emb, const NeighborsTy& neighbors, const unsigned numInNeighbors, BaseEmbeddingQueue &out_queue) {
+		galois::gDebug("current embedding: ", emb, "\n");
+		unsigned n = emb.size();
+
+		// pick the neighbor with the least number of candidates/edges
+		unsigned index = pickNeighbor(emb, neighbors, numInNeighbors);
+		auto q_order = neighbors.at(index).first;
+		auto qeData = neighbors.at(index).second;
+		VertexId d_vertex = emb.get_vertex(q_order);
+
+		if (numInNeighbors > index) {
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
+			for (auto deData : graph->data_range()) {
+				if (!matchEdgeLabel(qeData, *deData)) continue;
+#else
+			{
+				auto deData = &qeData;
+#endif
+				// each outgoing neighbor of d_vertex is a candidate
+				for (auto d_edge : graph->edges(d_vertex, *deData)) {
+					GNode d_dst = graph->getEdgeDst(d_edge);
+					if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
+						addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
+					}
+				}
+			}
+		} else {
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
+			for (auto deData : graph->data_range()) {
+				if (!matchEdgeLabel(qeData, *deData)) continue;
+#else
+			{
+				auto deData = &qeData;
+#endif
+				// each incoming neighbor of d_vertex is a candidate
+				for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
+					GNode d_dst = graph->getInEdgeDst(d_edge);
+					if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
+						addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
+					}
+				}
+			}
+		}
+	}
+
+	template <bool printEmbeddings = false>
+	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
+
+		unsigned n = in_queue.begin()->size();
+		unsigned numInNeighbors;
+		NeighborsTy neighbors;
+		constructNeighbors(n, neighbors, numInNeighbors);
 
 		galois::do_all(galois::iterate(in_queue),
 			[&](const BaseEmbedding& emb) {
-				galois::gDebug("current embedding: ", emb, "\n");
-				assert(n == emb.size());
-
-				// pick the neighbor with the least number of candidates/edges
-				unsigned index;
-				if (neighbors.size() < 3) { // TODO: make this configurable
-					index = 0;
-				} else {
-					index = neighbors.size();
-					size_t numCandidates = graph->size(); // conservative upper limit
-					for (unsigned i = 0; i < neighbors.size(); ++i) {
-						auto q_order = neighbors[i].first;
-						auto qeData = neighbors[i].second;
-						VertexId d_vertex = emb.get_vertex(q_order);
-						size_t numEdges;
-						if (numInNeighbors > i) {
-							numEdges = get_degree(graph, d_vertex, qeData);
-						} else {
-							numEdges = get_in_degree(graph, d_vertex, qeData);
-						}
-						if (numEdges < numCandidates) {
-							numCandidates = numEdges;
-							index = i;
-						}
-					}
-				}
-				auto q_order = neighbors[index].first;
-				auto qeData = neighbors[index].second;
-				VertexId d_vertex = emb.get_vertex(q_order);
-
-				if (numInNeighbors > index) {
-#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-					for (auto deData : graph->data_range()) {
-        				if (!matchEdgeLabel(qeData, *deData)) continue;
-#else
-					{
-						auto deData = &qeData;
-#endif
-						// each outgoing neighbor of d_vertex is a candidate
-						for (auto d_edge : graph->edges(d_vertex, *deData)) {
-							GNode d_dst = graph->getEdgeDst(d_edge);
-							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-								addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
-							}
-						}
-					}
-				} else {
-#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-					for (auto deData : graph->data_range()) {
-        				if (!matchEdgeLabel(qeData, *deData)) continue;
-#else
-					{
-						auto deData = &qeData;
-#endif
-						// each incoming neighbor of d_vertex is a candidate
-						for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
-							GNode d_dst = graph->getInEdgeDst(d_edge);
-							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
-								addEmbedding<printEmbeddings>(n, emb, d_dst, out_queue);
-							}
-						}
-					}
-				}
+				process_embedding<printEmbeddings>(emb, neighbors, numInNeighbors, out_queue);
 			},
 			galois::chunk_size<CHUNK_SIZE>(),
 			galois::steal(),

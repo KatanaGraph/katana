@@ -107,6 +107,8 @@ protected:
 	}
 
 public:
+	using NeighborsTy = galois::gstl::Vector<std::pair<unsigned, EdgeData>>;
+
 	AppMiner(Graph *g) : VertexMiner(g) {}
 
 	AppMiner(Graph* dgraph, Graph* qgraph)
@@ -125,6 +127,7 @@ public:
 			matchingOrderToVertexMap[i] = i;
 		}
 		OrderVertices orderQueryVertices(*query_graph);
+		// FIXTHIS as it may lead to unconnected subgraphs
 		std::sort(matchingOrderToVertexMap.begin(), matchingOrderToVertexMap.end(), orderQueryVertices);
 		for (VertexId i = 0; i < query_graph->size(); ++i) {
 			vertexToMatchingOrderMap[matchingOrderToVertexMap[i]] = i;
@@ -135,19 +138,11 @@ public:
 		return true;
 	}
 
-	bool toAdd(unsigned n, const BaseEmbedding &emb, const VertexId dst, unsigned pos) {
-		// hack pos to find if dst is destination or source
-		// TODO: find a better way to pass this info
-		bool source = false;
-		if (pos >= n) {
-			pos -= n;
-			source = true;
-		}
-		assert(pos < n);
+	bool toAdd(unsigned n, const BaseEmbedding &emb, const VertexId dst, unsigned index, NeighborsTy& neighbors, unsigned numInNeighbors) {
 
-		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
+ 		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
 
-		galois::gDebug("n = ", n, ", pos = ", pos, ", src = ", emb.get_vertex(pos), ", dst = ", dst, "\n");
+		galois::gDebug("n = ", n, ", pos = ", neighbors[index].first, ", src = ", emb.get_vertex(neighbors[index].first), ", dst = ", dst, "\n");
 		//galois::gDebug(", deg(d) = ", get_degree(graph, dst), ", deg(q) = ", get_degree(query_graph, pos+1));
 
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
@@ -158,15 +153,16 @@ public:
 		// if this vertex already exists in the embedding
 		for (unsigned i = 0; i < n; ++i) if (dst == emb.get_vertex(i)) return false;
 
-		if (source) pos += n;
-		// check the backward connectivity with previous vertices in the embedding
-		for (auto e : query_graph->in_edges(next_qnode)) {
-			VertexId q_dst = query_graph->getInEdgeDst(e);
-			unsigned q_order = vertexToMatchingOrderMap[q_dst];
-			if (q_order < n && q_order != pos) {
-				VertexId d_vertex = emb.get_vertex(q_order);
+		for (unsigned i = 0; i < neighbors.size(); ++i) {
+			if (i == index) continue;
+
+			auto q_order = neighbors[i].first;
+			auto qeData = neighbors[i].second;
+			VertexId d_vertex = emb.get_vertex(q_order);
+
+	 		if (numInNeighbors > index) {
+				// check the backward connectivity with previous vertices in the embedding
 				galois::gDebug("in d_vertex = ", d_vertex, "\n");
-				auto qeData = query_graph->getInEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
 				for (auto deData : graph->data_range())
@@ -183,17 +179,9 @@ public:
 					return false;
 				}
 #endif
-			}
-		}
-		if (source) pos -= n;
-		// check the forward connectivity with previous vertices in the embedding
-		for (auto e : query_graph->edges(next_qnode)) {
-			VertexId q_dst = query_graph->getEdgeDst(e);
-			unsigned q_order = vertexToMatchingOrderMap[q_dst];
-			if (q_order < n && q_order != pos) {
-				VertexId d_vertex = emb.get_vertex(q_order);
+			} else {
+				// check the forward connectivity with previous vertices in the embedding
 				galois::gDebug("out d_vertex = ", d_vertex, "\n");
-				auto qeData = query_graph->getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
 				bool connected = false;
 				for (auto deData : graph->data_range())
@@ -219,42 +207,84 @@ public:
 
 	template <bool printEmbeddings = false>
 	inline void extend_vertex(BaseEmbeddingQueue &in_queue, BaseEmbeddingQueue &out_queue) {
+		galois::StatTimer queryTime("MiningQueryProcessingTime");
+		queryTime.start();
+		unsigned n = in_queue.begin()->size();
+
+		// get next query vertex
+		VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
+
+		NeighborsTy neighbors;
+		// for each incoming neighbor of the next query vertex in the query graph
+		for (auto q_edge : query_graph->in_edges(next_qnode)) {
+			VertexId q_dst = query_graph->getInEdgeDst(q_edge);
+			unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
+
+			// pick a neighbor that is already visited
+			if (q_order < n) {
+				auto qeData = query_graph->getInEdgeData(q_edge);
+				neighbors.push_back(std::make_pair(q_order, qeData));
+			}
+		}
+		unsigned numInNeighbors = neighbors.size();
+		// for each outgoing neighbor of the next query vertex in the query graph
+		for (auto q_edge : query_graph->edges(next_qnode)) {
+			VertexId q_dst = query_graph->getEdgeDst(q_edge);
+			unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
+
+			// pick a neighbor that is already visited
+			if (q_order < n) {
+				auto qeData = query_graph->getEdgeData(q_edge);
+				neighbors.push_back(std::make_pair(q_order, qeData));
+			}
+		}
+		assert(neighbors.size() > 0);
+		queryTime.stop();
 
 		galois::do_all(galois::iterate(in_queue),
 			[&](const BaseEmbedding& emb) {
-				unsigned n = emb.size();
 				galois::gDebug("current embedding: ", emb, "\n");
+				assert(n == emb.size());
 
-				// get next query vertex
-				VertexId next_qnode = get_query_vertex(n); // using matching order to get query vertex id
-
-				bool found_neighbor = false;
-
-				// for each incoming neighbor of the next query vertex in the query graph
-				for (auto q_edge : query_graph->in_edges(next_qnode)) {
-					VertexId q_dst = query_graph->getInEdgeDst(q_edge);
-					unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
-
-					// pick a neighbor that is already visited
-					if (q_order < n) {
-						// get the matched data vertex
+				// pick the neighbor with the least number of candidates/edges
+				unsigned index;
+				if (neighbors.size() < 3) { // TODO: make this configurable
+					index = 0;
+				} else {
+					index = neighbors.size();
+					size_t numCandidates = graph->size(); // conservative upper limit
+					for (unsigned i = 0; i < neighbors.size(); ++i) {
+						auto q_order = neighbors[i].first;
+						auto qeData = neighbors[i].second;
 						VertexId d_vertex = emb.get_vertex(q_order);
+						size_t numEdges;
+						if (numInNeighbors > i) {
+							numEdges = get_degree(graph, d_vertex, qeData);
+						} else {
+							numEdges = get_in_degree(graph, d_vertex, qeData);
+						}
+						if (numEdges < numCandidates) {
+							numCandidates = numEdges;
+							index = i;
+						}
+					}
+				}
+				auto q_order = neighbors[index].first;
+				auto qeData = neighbors[index].second;
+				VertexId d_vertex = emb.get_vertex(q_order);
 
-						auto qeData = query_graph->getInEdgeData(q_edge);
-
+				if (numInNeighbors > index) {
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-						for (auto deData : graph->data_range())
-						{
+					for (auto deData : graph->data_range()) {
         				if (!matchEdgeLabel(qeData, *deData)) continue;
 #else
-						{
+					{
 						auto deData = &qeData;
 #endif
 						// each outgoing neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->edges(d_vertex, *deData)) {
-
 							GNode d_dst = graph->getEdgeDst(d_edge);
-							if (toAdd(n, emb, d_dst, q_order)) {
+							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
 								if (n < max_size-1) { // generate a new embedding and add it to the next queue
 									BaseEmbedding new_emb(emb);
 									new_emb.push_back(d_dst);
@@ -269,40 +299,19 @@ public:
 								}
 							}
 						}
-						}
-
-						found_neighbor = true;
-						break;
 					}
-				}
-
-				if (!found_neighbor) {
-				// for each outgoing neighbor of the next query vertex in the query graph
-				for (auto q_edge : query_graph->edges(next_qnode)) {
-					VertexId q_dst = query_graph->getEdgeDst(q_edge);
-					unsigned q_order = vertexToMatchingOrderMap[q_dst]; // using query vertex id to get its matching order
-
-					// pick a neighbor that is already visited
-					if (q_order < n) {
-						// get the matched data vertex
-						VertexId d_vertex = emb.get_vertex(q_order);
-
-						auto qeData = query_graph->getEdgeData(q_edge);
-
+				} else {
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-						for (auto deData : graph->data_range())
-						{
+					for (auto deData : graph->data_range()) {
         				if (!matchEdgeLabel(qeData, *deData)) continue;
 #else
-						{
+					{
 						auto deData = &qeData;
 #endif
-
 						// each incoming neighbor of d_vertex is a candidate
 						for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
-
 							GNode d_dst = graph->getInEdgeDst(d_edge);
-							if (toAdd(n, emb, d_dst, q_order+n)) {
+							if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
 								if (n < max_size-1) { // generate a new embedding and add it to the next queue
 									BaseEmbedding new_emb(emb);
 									new_emb.push_back(d_dst);
@@ -317,11 +326,7 @@ public:
 								}
 							}
 						}
-						}
-
-						break;
 					}
-				}
 				}
 			},
 			galois::chunk_size<CHUNK_SIZE>(),

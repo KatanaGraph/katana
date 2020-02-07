@@ -248,7 +248,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     queryGraph.fixEndEdge(i, prefixSum[i]);
   }
 
-  queryGraph.constructIncomingEdges();
+  queryGraph.constructAndSortIndex();
   compileTime.stop();
 
 	galois::StatTimer simulationTime("GraphSimulationTime");

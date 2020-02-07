@@ -143,7 +143,7 @@ void loadGraph(AttributedGraph* g, char* filename) {
   std::ifstream file(filename, std::ios::in | std::ios::binary);
   boost::archive::binary_iarchive iarch(file);
   g->graph.deSerializeGraph(iarch);
-  g->graph.constructIncomingEdges();
+  g->graph.constructAndSortIndex();
   iarch >> g->nodeLabelNames;
 
   // node label IDs

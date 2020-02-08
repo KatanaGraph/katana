@@ -47,20 +47,6 @@ protected:
 		}
 	}
 
-	bool pruneNodeUsingDegree(Graph* graph, const GNode& nodeID, Graph* queryGraph, const GNode& queryNodeID) {
-		// if the degree is smaller than that of its corresponding query vertex
-#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-		if (graph->degree(nodeID) < query_graph->degree(queryNodeID)) return true;
-		if (graph->in_degree(nodeID) < query_graph->in_degree(queryNodeID)) return true;
-#else
-		for (auto qeData : query_graph->data_range()) {
-			if (graph->degree(nodeID, *qeData) < query_graph->degree(queryNodeID, *qeData)) return true;
-			if (graph->in_degree(nodeID, *qeData) < query_graph->in_degree(queryNodeID, *qeData)) return true;
-		}
-#endif
-		return false;
-	}
-
 	template <bool inEdges>
 	inline bool directed_binary_search(unsigned key, 
 		Graph::edge_iterator begin, Graph::edge_iterator end) {
@@ -137,7 +123,7 @@ public:
 		if (pruneNode(query_graph, next_qnode, graph->getData(dst))) return false;
 
 		// if the degree is smaller than that of its corresponding query vertex
-		if (pruneNodeUsingDegree(graph, dst, query_graph, next_qnode)) return false;
+		if (!matchNodeDegree(*query_graph, next_qnode, *graph, dst)) return false;
 
 		// if this vertex already exists in the embedding
 		for (unsigned i = 0; i < n; ++i) if (dst == emb.get_vertex(i)) return false;
@@ -354,7 +340,7 @@ public:
 		galois::do_all(galois::iterate(graph->begin(), graph->end()),
 			[&](GNode n) { 
 				if (!pruneNode(query_graph, curr_qnode, graph->getData(n)) && 
-					!pruneNodeUsingDegree(graph, n, query_graph, curr_qnode)) { 
+					matchNodeDegree(*query_graph, curr_qnode, *graph, n)) { 
 					EmbeddingType emb;
 					emb.push_back(n);
 					queue.push_back(emb);

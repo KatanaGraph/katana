@@ -100,6 +100,8 @@ struct AttributedGraph {
 
 bool matchNodeLabel(const Node& query, const Node& data);
 
+bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Graph& dataGraph, const GNode& dataNodeID);
+
 bool matchEdgeLabel(const EdgeData& query, const EdgeData& data);
 
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL

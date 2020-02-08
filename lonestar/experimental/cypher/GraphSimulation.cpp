@@ -38,6 +38,20 @@ bool matchNodeLabel(const Node& query, const Node& data) {
 #endif
 }
 
+bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Graph& dataGraph, const GNode& dataNodeID) {
+  // if the degree is smaller than that of its corresponding query vertex
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
+  if (dataGraph.degree(dataNodeID) < queryGraph.degree(queryNodeID)) return false;
+  if (dataGraph.in_degree(dataNodeID) < queryGraph.in_degree(queryNodeID)) return false;
+#else
+  for (auto qeData : queryGraph.data_range()) {
+    if (dataGraph.degree(dataNodeID, *qeData) < queryGraph.degree(queryNodeID, *qeData)) return false;
+    if (dataGraph.in_degree(dataNodeID, *qeData) < queryGraph.in_degree(queryNodeID, *qeData)) return false;
+  }
+#endif
+  return true;
+}
+
 bool matchEdgeLabel(const EdgeData& query, const EdgeData& data) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return ((query.label & data.label) == query.matched);
@@ -62,14 +76,19 @@ template <typename QG, typename DG, typename W>
 void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
                 std::vector<std::string>& nodeContains,
                 std::vector<std::string>& nodeNames) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryMatched.resize(qG.size(), false);
+#else
+  queryMatched.resize(qG.size(), true);
+#endif
+  assert(qG.size() <= 64); // because matched is 64-bit
   galois::do_all(
       galois::iterate(dG.begin(), dG.end()),
       [&](auto dn) {
         auto& dData   = dG.getData(dn);
         dData.matched = 0; // matches to none
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
         for (auto qn : qG) {
-          assert(qn < 64); // because matched is 64-bit
           auto& qData = qG.getData(qn);
           if (matchNodeLabel(qData, dData)) {
             if (nodeContains.size() == 0 || nodeContains[qn] == "") {
@@ -93,6 +112,16 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
             }
           }
         }
+#else
+        for (auto qn : qG) {
+          if (matchNodeDegree(qG, qn, dG, dn)) {
+            if (!dData.matched) {
+              w.push_back(dn);
+            }
+            dData.matched |= 1 << qn; // multiple matches
+          }
+        }
+#endif
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         for (auto de : dG.edges(dn)) {
           auto& deData   = dG.getEdgeData(de);
@@ -100,6 +129,7 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
         }
 #endif
       },
+      galois::steal(),
       galois::loopname("MatchLabel"));
 }
 
@@ -114,8 +144,7 @@ template <typename QG>
 bool existEmptyLabelMatchQGNode(QG& qG, std::vector<bool>& queryMatched) {
   for (auto qn : qG) {
     if (!queryMatched[qn]) {
-      // std::cout << "No label matched for query node " << qData.id <<
-      // std::endl;
+      galois::gDebug("No label matched for query node ", qn, "\n");
       return true;
     }
   }
@@ -334,17 +363,17 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
     VecBoolTy& matchedEdges) {
 #endif
   bool matched = true;
-  size_t num_qEdges;
+  uint32_t num_qEdges;
   if (inEdges) {
-    num_qEdges = std::distance(qG.in_edge_begin(qn), qG.in_edge_end(qn));
+    num_qEdges = qG.in_degree(qn);
   } else {
-    num_qEdges = std::distance(qG.edge_begin(qn), qG.edge_end(qn));
+    num_qEdges = qG.degree(qn);
   }
   if (num_qEdges > 0) {
     // match children links
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP 
     matchedEdges.clear();
     matchedEdges.resize(num_qEdges);
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP 
     auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
     for (auto de : dEdges) {
       auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
@@ -355,7 +384,7 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
                     // of interest
         }
       }
-      size_t edgeID = 0;
+      uint32_t edgeID = 0;
       // Assumption: each query edge of this query node has a different label
       auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
       for (auto qe : qEdges) {
@@ -372,7 +401,7 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
       }
     }
     // Assumption: each query edge of this query node has a different label
-    for (size_t i = 0; i < matchedEdges.size(); ++i) {
+    for (uint32_t i = 0; i < matchedEdges.size(); ++i) {
       if (matchedEdges[i].size() == 0) {
         matched = false;
         break;
@@ -384,12 +413,15 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
         qn, matchedEdges, matched);
     }
 #else
-    size_t numMatchedEdges = 0;
+#ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
+    matchedEdges.clear();
+    matchedEdges.resize(num_qEdges);
+    uint32_t numMatchedEdges = 0;
     auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
     auto qEdgeBegin = inEdges ? qG.in_edge_begin(qn) : qG.edge_begin(qn);
     for (auto de : dEdges) {
       auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
-      for (size_t edgeID = 0; edgeID < num_qEdges; ++edgeID) {
+      for (uint32_t edgeID = 0; edgeID < num_qEdges; ++edgeID) {
         if (matchedEdges[edgeID] == true) continue;
         auto qe = qEdgeBegin + edgeID;
         auto qeData = inEdges ? qG.getInEdgeData(qe) : qG.getEdgeData(qe);
@@ -407,6 +439,34 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
       if (numMatchedEdges == num_qEdges) break;
     }
     if (numMatchedEdges < num_qEdges) return false;
+#else
+    for (auto qeData : qG.data_range()) {
+      uint32_t qDegree = inEdges ? qG.in_degree(qn, *qeData) : qG.degree(qn, *qeData);
+      if (qDegree > 0) {
+        matchedEdges.clear();
+        matchedEdges.resize(qDegree);
+        uint32_t numMatchedEdges = 0;
+        auto dEdges = inEdges ? dG.in_edges(dn, *qeData) : dG.edges(dn, *qeData);
+        auto qEdgeBegin = inEdges ? qG.in_edge_begin(qn, *qeData) : qG.edge_begin(qn, *qeData);
+        for (auto de : dEdges) {
+          auto dDst = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
+          auto& dDstData = dG.getData(dDst);
+          for (uint32_t edgeID = 0; edgeID < qDegree; ++edgeID) {
+            if (matchedEdges[edgeID] == true) continue;
+            auto qe = qEdgeBegin + edgeID;
+            auto qDst = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
+            if (dDstData.matched & (1 << qDst)) {
+              matchedEdges[edgeID] = true;
+              ++numMatchedEdges;
+              break; // FIXTHIS: this could lead to imprecise results
+            }
+          }
+          if (numMatchedEdges == qDegree) break;
+        }
+        if (numMatchedEdges < qDegree) return false;
+      }
+    }
+#endif
 #endif
   }
   return matched;
@@ -475,7 +535,7 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
-
+ 
   if (reinitialize) {
     std::vector<bool> queryMatched;
     matchLabel(qG, dG, *next, queryMatched, nodeContains, nodeNames);
@@ -507,7 +567,12 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   auto sizeCur  = std::distance(cur->begin(), cur->end());
   auto sizeNext = std::distance(next->begin(), next->end());
 
-  size_t numRounds = 0;
+  uint32_t numRounds = 0;
+
+  galois::runtime::reportStat_Tmax("GraphSimulation",
+      "RemovedNodes_Round" + std::to_string(numRounds),
+      (unsigned long)100*(dG.size() - sizeNext)/dG.size());
+    
 
   // loop until no more data nodes are removed
   while (sizeCur != sizeNext) {

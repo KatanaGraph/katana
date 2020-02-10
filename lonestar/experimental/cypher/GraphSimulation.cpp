@@ -73,7 +73,9 @@ bool matchEdgeLabel(const EdgeData& query, const EdgeData& data) {
  * @param queryMatched bitset of querying status
  */
 template <typename QG, typename DG, typename W>
-void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
+void matchLabel(QG& qG, DG& dG, W& w,
+                galois::GAccumulator<uint32_t>& workItems, 
+                std::vector<bool>& queryMatched,
                 std::vector<std::string>& nodeContains,
                 std::vector<std::string>& nodeNames) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
@@ -95,6 +97,7 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
               queryMatched[qn] = true;
               if (!dData.matched) {
                 w.push_back(dn);
+                workItems += 1;
               }
               dData.matched |= 1 << qn; // multiple matches
             } else {
@@ -106,6 +109,7 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
                 queryMatched[qn] = true;
                 if (!dData.matched) {
                   w.push_back(dn);
+                  workItems += 1;
                 }
                 dData.matched |= 1 << qn; // multiple matches
               }
@@ -117,6 +121,7 @@ void matchLabel(QG& qG, DG& dG, W& w, std::vector<bool>& queryMatched,
           if (matchNodeDegree(qG, qn, dG, dn)) {
             if (!dData.matched) {
               w.push_back(dn);
+              workItems += 1;
             }
             dData.matched |= 1 << qn; // multiple matches
           }
@@ -478,7 +483,8 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
 template <bool useLimit, bool useWindow, bool queryNodeHasMoreThan2Edges>
 void matchNodesOnce(Graph& qG, Graph& dG,
                     galois::InsertBag<Graph::GraphNode>* cur,
-                    galois::InsertBag<Graph::GraphNode>* next 
+                    galois::InsertBag<Graph::GraphNode>* next,
+                    galois::GAccumulator<uint32_t>& workItems 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                     , EventLimit limit, EventWindow window
 #endif
@@ -520,6 +526,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
         // keep dn for next round
         if (dData.matched) {
           next->push_back(dn);
+          workItems += 1;
         }
       },
       galois::steal(),
@@ -535,10 +542,12 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
+  galois::GAccumulator<uint32_t> workItems;
  
   if (reinitialize) {
     std::vector<bool> queryMatched;
-    matchLabel(qG, dG, *next, queryMatched, nodeContains, nodeNames);
+    workItems.reset();
+    matchLabel(qG, dG, *next, workItems, queryMatched, nodeContains, nodeNames);
     // see if a query node remained unmatched; if so, reset match status on data
     // nodes and return
     if (existEmptyLabelMatchQGNode(qG, queryMatched)) {
@@ -564,61 +573,61 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
         galois::loopname("ReinsertMatchedNodes"));
   }
 
-  auto sizeCur  = std::distance(cur->begin(), cur->end());
-  auto sizeNext = std::distance(next->begin(), next->end());
+  uint32_t sizeCur  = 0;
+  uint32_t sizeNext = workItems.reduce();
 
   uint32_t numRounds = 0;
 
   galois::runtime::reportStat_Tmax("GraphSimulation",
       "RemovedNodes_Round" + std::to_string(numRounds),
       (unsigned long)100*(dG.size() - sizeNext)/dG.size());
-    
 
   // loop until no more data nodes are removed
   while (sizeCur != sizeNext) {
     std::swap(cur, next);
     next->clear();
+    workItems.reset();
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     if (limit.valid) {
       if (window.valid) {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<true, true, true>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<true, true, true>(qG, dG, cur, next, workItems, limit, window);
         } else {
-          matchNodesOnce<true, true, false>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<true, true, false>(qG, dG, cur, next, workItems, limit, window);
         }
       } else {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<true, false, true>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<true, false, true>(qG, dG, cur, next, workItems, limit, window);
         } else {
-          matchNodesOnce<true, false, false>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<true, false, false>(qG, dG, cur, next, workItems, limit, window);
         }
       }
     } else {
       if (window.valid) {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<false, true, true>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<false, true, true>(qG, dG, cur, next, workItems, limit, window);
         } else {
-          matchNodesOnce<false, true, false>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<false, true, false>(qG, dG, cur, next, workItems, limit, window);
         }
       } else {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<false, false, true>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<false, false, true>(qG, dG, cur, next, workItems, limit, window);
         } else {
-          matchNodesOnce<false, false, false>(qG, dG, cur, next, limit, window);
+          matchNodesOnce<false, false, false>(qG, dG, cur, next, workItems, limit, window);
         }
       }
     }
 #else
     if (queryNodeHasMoreThan2Edges) {
-      matchNodesOnce<false, false, true>(qG, dG, cur, next);
+      matchNodesOnce<false, false, true>(qG, dG, cur, next, workItems);
     } else {
-      matchNodesOnce<false, false, false>(qG, dG, cur, next);
+      matchNodesOnce<false, false, false>(qG, dG, cur, next, workItems);
     }
 #endif
 
-    sizeCur  = std::distance(cur->begin(), cur->end());
-    sizeNext = std::distance(next->begin(), next->end());
+    sizeCur = sizeNext;
+    sizeNext = workItems.reduce();
     ++numRounds;
 
     galois::runtime::reportStat_Tmax("GraphSimulation",

@@ -161,6 +161,7 @@ protected:
   EdgeIndData edgeIndData;
   EdgeDst edgeDst;
   EdgeData edgeData;
+  std::vector<uint32_t> savedDegrees;
 
   uint64_t numNodes;
   uint64_t numEdges;
@@ -1074,6 +1075,38 @@ public:
       auto r = divideByNode(0, 1, tid, total).first;
       this->setLocalRange(*r.first, *r.second);
     });
+  }
+
+  /**
+   * Save degrees into an array; used if degrees need to be accessed quickly
+   * (1 memory access instead of 2 from subtracting begin and end)
+   */
+  void degreeCounting() {
+    if (this->savedDegrees.size() == 0) {
+      this->savedDegrees.resize(numNodes);
+      galois::do_all(
+          galois::iterate(this->begin(), this->end()),
+          [&](unsigned v) {
+            this->savedDegrees[v] = std::distance(this->edge_begin(v), this->edge_end(v));
+          },
+          galois::loopname("DegreeCounting"));
+    }
+  }
+
+  /**
+   * Return pointer to raw data stored in degree counting
+   */
+  uint32_t* getSavedDegreePointer() {
+    assert(this->savedDegrees.size() > 0);
+    return this->savedDegrees.data();
+  }
+
+  /**
+   * Return saved degree saved from degreeCounting
+   */
+  uint32_t getSavedDegree(uint32_t id) {
+    assert(this->savedDegrees.size() > 0);
+    return this->savedDegrees[id];
   }
 };
 

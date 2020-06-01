@@ -10,7 +10,7 @@ namespace util {
 void print_graph(Graph& graph) {
   for (GNode n : graph) {
     std::cout << "vertex " << n << ": label = " << graph.getData(n)
-              << ": degree = " << graph.get_degree(n) << " edgelist = [ ";
+              << ": degree = " << graph.getSavedDegree(n) << " edgelist = [ ";
     for (auto e : graph.edges(n))
       std::cout << graph.getEdgeDst(e) << " ";
     std::cout << "]" << std::endl;

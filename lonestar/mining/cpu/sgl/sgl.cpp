@@ -23,7 +23,7 @@ public:
     // "\n";
     if (!fv && dst <= emb.get_vertex(0))
       return false;
-    if (g.get_degree(dst) < pattern.get_degree(n))
+    if (g.getSavedDegree(dst) < pattern.getSavedDegree(n))
       return false;
     for (unsigned i = 0; i < n; ++i)
       if (dst == emb.get_vertex(i))

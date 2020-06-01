@@ -26,8 +26,8 @@ public:
   // unsigned read_graph(std::string filename);
   unsigned read_graph(std::string filetype, std::string filename) {
     max_degree = util::read_graph(graph, filetype, filename, enable_dag);
-    graph.degree_counting();
-    degrees = graph.degrees;
+    graph.degreeCounting();
+    degrees = graph.getSavedDegreePointer();
     std::cout << "Input graph: num_vertices " << graph.size() << " num_edges "
               << graph.sizeEdges() << "\n";
     // util::print_graph(graph);
@@ -47,7 +47,7 @@ public:
     size_t offset = 0;
     for (size_t i = 0; i < m; i++) {
       outfile << offset << "\n";
-      offset += graph.get_degree(i);
+      offset += graph.getSavedDegree(i);
     }
     for (size_t i = 0; i < m; i++) {
       for (auto e : graph.edges(i)) {
@@ -61,7 +61,7 @@ public:
   unsigned read_pattern(std::string filename, std::string filetype = "gr",
                         bool symmetric = false) {
     unsigned max_deg = util::read_graph(pattern, filetype, filename, false);
-    pattern.degree_counting();
+    pattern.degreeCounting();
     auto nv = pattern.size();
     auto ne = pattern.sizeEdges();
     std::cout << "Pattern graph: num_vertices " << nv << " num_edges " << ne
@@ -183,7 +183,7 @@ protected:
         return true;
     return false;
   }
-  unsigned get_degree(Graph* g, VertexId vid) {
+  unsigned getSavedDegree(Graph* g, VertexId vid) {
     return std::distance(g->edge_begin(vid), g->edge_end(vid));
   }
   inline unsigned intersect_merge(unsigned src, unsigned dst) {

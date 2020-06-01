@@ -64,11 +64,11 @@ protected:
     return all_connected;
   }
   static inline bool is_connected(Graph& g, unsigned a, unsigned b) {
-    if (g.get_degree(a) == 0 || g.get_degree(b) == 0)
+    if (g.getSavedDegree(a) == 0 || g.getSavedDegree(b) == 0)
       return false;
     unsigned key    = a;
     unsigned search = b;
-    if (g.get_degree(a) < g.get_degree(b)) {
+    if (g.getSavedDegree(a) < g.getSavedDegree(b)) {
       key    = b;
       search = a;
     }
@@ -77,7 +77,7 @@ protected:
     return binary_search(g, key, begin, end);
   }
   static inline int is_connected_dag(Graph& g, unsigned key, unsigned search) {
-    if (g.get_degree(search) == 0)
+    if (g.getSavedDegree(search) == 0)
       return false;
     auto begin = g.edge_begin(search);
     auto end   = g.edge_end(search);

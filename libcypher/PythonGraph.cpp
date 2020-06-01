@@ -242,7 +242,7 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
 }
 
 void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                uint32_t labelBitPosition, char* name) {
+                uint32_t GALOIS_UNUSED(labelBitPosition), char* name) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                  = g->graph.getData(nodeIndex);
   nd.label                  = 1 << labelBitPosition;
@@ -253,7 +253,7 @@ void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
 }
 
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-             uint32_t label, char* name) {
+             uint32_t GALOIS_UNUSED(label), char* name) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                  = g->graph.getData(nodeIndex);
   nd.label                  = label;
@@ -287,7 +287,7 @@ void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
 
 void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
                       uint32_t dstNodeIndex, uint32_t labelBitPosition,
-                      uint64_t timestamp) {
+                      uint64_t GALOIS_UNUSED(timestamp)) {
   g->graph.constructEdge(edgeIndex, dstNodeIndex,
                          EdgeData(1 << labelBitPosition
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
@@ -298,7 +298,7 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
 }
 
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
-                   uint32_t dstNodeIndex, uint32_t label, uint64_t timestamp) {
+                   uint32_t dstNodeIndex, uint32_t label, uint64_t GALOIS_UNUSED(timestamp)) {
   g->graph.constructEdge(edgeIndex, dstNodeIndex, EdgeData(label
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , timestamp));
@@ -385,8 +385,8 @@ uint32_t nodeExists(AttributedGraph* g, char* uuid) {
   }
 }
 
-void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                   uint32_t labelBitPosition) {
+void setNewNodeCSR(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
+                   uint32_t GALOIS_UNUSED(labelBitPosition)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = 1 << labelBitPosition;
@@ -394,8 +394,8 @@ void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
 }
 
 
-void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                uint32_t label) {
+void setNodeCSR(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
+                uint32_t GALOIS_UNUSED(label)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = label;
@@ -417,7 +417,7 @@ const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
   return g->index2UUID[nodeIndex].c_str();
 }
 
-uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex) {
+uint32_t getNodeLabel(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd = g->graph.getData(nodeIndex);
   return nd.label;
@@ -476,16 +476,16 @@ void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2) {
   std::swap(g1->edgeAttributes, g2->edgeAttributes);
 }
 
-void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
-                 uint32_t labelBitPosition) {
+void addNewLabel(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex),
+                 uint32_t GALOIS_UNUSED(labelBitPosition)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = nd.label | (1 << labelBitPosition);
 #endif
 }
 
-void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
-                 uint32_t labelToMerge) {
+void mergeLabels(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex),
+                 uint32_t GALOIS_UNUSED(labelToMerge)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd                = g->graph.getData(nodeIndex);
   nd.label                = nd.label | labelToMerge;
@@ -520,7 +520,7 @@ void unmatchAll(AttributedGraph* g) {
 }
 
 uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
-                  uint32_t labelBitPosition, uint64_t timestamp) {
+                  uint32_t labelBitPosition, uint64_t GALOIS_UNUSED(timestamp)) {
   Graph& actualGraph = g->graph;
 
   if (g->nodeIndices.find(srcUUID) == g->nodeIndices.end() ||

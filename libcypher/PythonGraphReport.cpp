@@ -168,7 +168,7 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
   }
 }
 
-void returnMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
+void returnMatchedNeighbors(AttributedGraph& dataGraph, char*,
                             MatchedNode* matchedNeighbors) {
   Graph& graph = dataGraph.graph;
   // auto& nodeLabelNames = dataGraph.nodeLabelNames;
@@ -187,7 +187,7 @@ void returnMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
   }
 }
 
-void reportMatchedNeighbors(AttributedGraph& dataGraph, char* uuid,
+void reportMatchedNeighbors(AttributedGraph& dataGraph, char*,
                             char* outputFile) {
   Graph& graph         = dataGraph.graph;
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL

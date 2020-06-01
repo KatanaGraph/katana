@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -79,9 +79,9 @@ struct EventWindow {
 struct AttributedGraph {
   //! Graph structure class
   Graph graph;
-  std::vector<std::string> nodeLabelNames;      //!< maps ID to Name
+  std::vector<std::string> nodeLabelNames;                //!< maps ID to Name
   std::unordered_map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
-  std::vector<std::string> edgeLabelNames;      //!< maps ID to Name
+  std::vector<std::string> edgeLabelNames;                //!< maps ID to Name
   std::unordered_map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
   //! maps node UUID/ID to index/GraphNode
   std::unordered_map<std::string, uint32_t> nodeIndices;
@@ -100,7 +100,8 @@ struct AttributedGraph {
 
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data);
 
-bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Graph& dataGraph, const GNode& dataNodeID);
+bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID,
+                     const Graph& dataGraph, const GNode& dataNodeID);
 
 bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data);
 
@@ -158,10 +159,10 @@ bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel);
 void resetMatchedStatus(Graph& graph);
 
 void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
-                        EventLimit limit, EventWindow window,
-                        bool queryNodeHasMoreThan2Edges,
-                        std::vector<std::string>& nodeContains,
-                        std::vector<std::string>& nodeNames);
+                                    EventLimit limit, EventWindow window,
+                                    bool queryNodeHasMoreThan2Edges,
+                                    std::vector<std::string>& nodeContains,
+                                    std::vector<std::string>& nodeNames);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
@@ -170,8 +171,9 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
 /**
  * @todo doxygen
  */
-void runGraphSimulationOld(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
-                           EventWindow window, bool queryNodeHasMoreThan2Edges);
+void runGraphSimulationOld(Graph& queryGraph, Graph& dataGraph,
+                           EventLimit limit, EventWindow window,
+                           bool queryNodeHasMoreThan2Edges);
 
 /**
  * @todo doxygen
@@ -184,16 +186,16 @@ void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
 /**
  * @todo doxygen
  */
-void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       QueryEdgeData queryEdgeData,
+void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode,
+                       uint32_t dstQueryNode, QueryEdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
  * @todo doxygen
  */
-void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       QueryEdgeData queryEdgeData,
-                       uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
+void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode,
+                  uint32_t dstQueryNode, QueryEdgeData queryEdgeData,
+                  uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
  * Look for nodes with repeated actions in the graph.

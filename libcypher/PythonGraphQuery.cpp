@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -38,36 +38,32 @@ void printIR(std::vector<MatchedEdge>& ir, std::vector<const char*> filters) {
   out.close();
 }
 
-size_t matchCypherQuery(AttributedGraph* dataGraph,
-                        EventLimit limit,
-                        EventWindow window,
-                        const char* cypherQueryStr,
-                        bool useGraphSimulation)
-{
-	  galois::StatTimer compileTime("CypherCompileTime");
+size_t matchCypherQuery(AttributedGraph* dataGraph, EventLimit limit,
+                        EventWindow window, const char* cypherQueryStr,
+                        bool useGraphSimulation) {
+  galois::StatTimer compileTime("CypherCompileTime");
 
-    compileTime.start();
-    CypherCompiler cc;
-    cc.compile(cypherQueryStr);
-    compileTime.stop();
+  compileTime.start();
+  CypherCompiler cc;
+  cc.compile(cypherQueryStr);
+  compileTime.stop();
 
 #ifndef NDEBUG
-    printIR(cc.getIR(), cc.getFilters());
+  printIR(cc.getIR(), cc.getFilters());
 #endif
 
-    size_t numMatches = matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(), cc.getFilters().data(), useGraphSimulation);
-    cc.getIR().clear();
-    cc.getFilters().clear();
+  size_t numMatches =
+      matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(),
+                 cc.getFilters().data(), useGraphSimulation);
+  cc.getIR().clear();
+  cc.getFilters().clear();
 
-    return numMatches;
+  return numMatches;
 }
 
-size_t matchQuery(AttributedGraph* dataGraph,
-                  EventLimit limit,
-                  EventWindow window,
-                  MatchedEdge* queryEdges,
-                  size_t numQueryEdges,
-                  const char** filters,
+size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
+                  EventWindow window, MatchedEdge* queryEdges,
+                  size_t numQueryEdges, const char** filters,
                   bool useGraphSimulation) {
   // build node types and prefix sum of edges
   size_t numQueryNodes = 0;
@@ -138,11 +134,11 @@ size_t matchQuery(AttributedGraph* dataGraph,
   auto actualNumQueryEdges = numQueryEdges - starEdgeList.size();
 
   for (size_t i = 1; i < numQueryNodes; ++i) {
-    prefixSum[i] += prefixSum[i-1];
+    prefixSum[i] += prefixSum[i - 1];
   }
   assert(prefixSum[numQueryNodes - 1] == actualNumQueryEdges);
   for (size_t i = numQueryNodes - 1; i >= 1; --i) {
-    prefixSum[i] = prefixSum[i-1];
+    prefixSum[i] = prefixSum[i - 1];
   }
   prefixSum[0] = 0;
 
@@ -188,11 +184,11 @@ size_t matchQuery(AttributedGraph* dataGraph,
         // pass existence check: save mask
         uint32_t label = edgeResult.second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-          | edgeResult.second.second;
+                         | edgeResult.second.second;
         uint64_t matched = edgeResult.second.first;
         starEdgeData.emplace_back(label, 0, matched);
 #else
-        ;
+            ;
         starEdgeData.emplace_back(label);
 #endif
       } else {
@@ -217,8 +213,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
   for (size_t i = 0; i < numQueryNodes; ++i) {
     // first is the "YES" query, second is the "NO" query
     std::pair<uint32_t, uint32_t> masks =
-      getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
-    queryGraph.getData(i).label = masks.first | masks.second;
+        getNodeLabelMask(*dataGraph, nodeTypes[i]).second;
+    queryGraph.getData(i).label   = masks.first | masks.second;
     queryGraph.getData(i).matched = masks.first;
   }
 #endif
@@ -228,7 +224,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
       size_t dstID = std::stoi(queryEdges[j].acted_on.id);
 
       std::pair<uint32_t, uint32_t> edgeMasks =
-        getEdgeLabelMask(*dataGraph, queryEdges[j].label).second;
+          getEdgeLabelMask(*dataGraph, queryEdges[j].label).second;
       uint32_t label = edgeMasks.first;
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       label |= edgeMasks.second;
@@ -238,9 +234,10 @@ size_t matchQuery(AttributedGraph* dataGraph,
       queryGraph.constructEdge(prefixSum[srcID]++, dstID,
                                QueryEdgeData(label
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                               , queryEdges[j].timestamp, matched
+                                             ,
+                                             queryEdges[j].timestamp, matched
 #endif
-                               ));
+                                             ));
     }
   }
 
@@ -251,7 +248,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   queryGraph.constructAndSortIndex();
   compileTime.stop();
 
-	galois::StatTimer simulationTime("GraphSimulationTime");
+  galois::StatTimer simulationTime("GraphSimulationTime");
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
     assert(useGraphSimulation);
@@ -263,8 +260,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starEdgeList) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second,
-                        starEdgeData[currentStar],
-                        numQueryNodes + currentStar,
+                        starEdgeData[currentStar], numQueryNodes + currentStar,
                         actualNumQueryEdges + currentStar);
       currentStar++;
     }
@@ -282,8 +278,8 @@ size_t matchQuery(AttributedGraph* dataGraph,
   } else if (useGraphSimulation) {
     // run graph simulation
     simulationTime.start();
-    runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false, nodeContains,
-                       dataGraph->nodeNames);
+    runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false,
+                       nodeContains, dataGraph->nodeNames);
     simulationTime.stop();
     return subgraphQuery<true>(queryGraph, dataGraph->graph);
   } else {

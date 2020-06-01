@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -130,23 +130,27 @@ void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
  * @param label Label to give node
  * @param name Name to give node (e.g. name of a process)
  */
-void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-             uint32_t label, char* name);
+void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid, uint32_t label,
+             char* name);
 /**
- * Assign a node label string to a particular bit position (for mapping purposes).
+ * Assign a node label string to a particular bit position (for mapping
+ * purposes).
  *
  * @param g Graph to save mapping to
  * @param labelBitPosition Bit position to map to a particular string
  * @param name String to be associated with the integer label
  */
-void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition, char* name);
+void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
+                          char* name);
 /**
- * Assign a edge label string to a particular bit position (for mapping purposes).
+ * Assign a edge label string to a particular bit position (for mapping
+ * purposes).
  * @param g Graph to save mapping to
  * @param labelBitPosition Bit position to map to a particular string
  * @param name String to be associated with the integer label
  */
-void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition, char* name);
+void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
+                          char* name);
 
 /**
  * Label a node with a value for a particular attribute.
@@ -292,8 +296,8 @@ void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t label);
 
 /**
- * Set a node in the AttributedGraph ONLY for the metadata (node indices and node
- * name); do not touch the LC CSR representation of the graph.
+ * Set a node in the AttributedGraph ONLY for the metadata (node indices and
+ * node name); do not touch the LC CSR representation of the graph.
  * @param g Graph to set node in
  * @param nodeIndex Node index to set/change
  * @param uuid unique ID of node
@@ -371,8 +375,7 @@ void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
  * @param nodeIndex Node index to set/change
  * @param labelToMerge Label to "or" with existing label
  */
-void mergeLabels(AttributedGraph*g, uint32_t nodeIndex,
-                 uint32_t labelToMerge);
+void mergeLabels(AttributedGraph* g, uint32_t nodeIndex, uint32_t labelToMerge);
 
 ////////////////////////////////////////
 // Removal Calls/Helpers
@@ -419,18 +422,13 @@ uint32_t nodeRemovalPass(AttributedGraph* g);
 
 // TODO doxygen all of the things below
 
-size_t matchCypherQuery(AttributedGraph* dataGraph,
-                        EventLimit limit,
-                        EventWindow window,
-                        const char* cypherQueryStr,
+size_t matchCypherQuery(AttributedGraph* dataGraph, EventLimit limit,
+                        EventWindow window, const char* cypherQueryStr,
                         bool useGraphSimulation);
 
-size_t matchQuery(AttributedGraph* dataGraph,
-                  EventLimit limit,
-                  EventWindow window,
-                  MatchedEdge* queryEdges,
-                  size_t numQueryEdges,
-                  const char** filters,
+size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
+                  EventWindow window, MatchedEdge* queryEdges,
+                  size_t numQueryEdges, const char** filters,
                   bool useGraphSimulation);
 
 /**
@@ -465,14 +463,14 @@ size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
                              EventWindow window);
 size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
                             EventWindow window);
-size_t processesReadFromNetwork(AttributedGraph* dataGraph,
-                                char* network_uuid, EventWindow window);
-size_t processesWroteToNetwork(AttributedGraph* dataGraph,
-                               char* network_uuid, EventWindow window);
+size_t processesReadFromNetwork(AttributedGraph* dataGraph, char* network_uuid,
+                                EventWindow window);
+size_t processesWroteToNetwork(AttributedGraph* dataGraph, char* network_uuid,
+                               EventWindow window);
 size_t processesReadFromRegistry(AttributedGraph* dataGraph,
                                  char* registry_uuid, EventWindow window);
-size_t processesWroteToRegistry(AttributedGraph* dataGraph,
-                                char* registry_uuid, EventWindow window);
+size_t processesWroteToRegistry(AttributedGraph* dataGraph, char* registry_uuid,
+                                EventWindow window);
 size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
                                EventWindow window);
 size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
@@ -484,16 +482,16 @@ size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
 size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
-size_t networksWrittenByProcess(AttributedGraph* dataGraph,
-                                char* process_uuid, EventWindow window);
-size_t registriesReadByProcess(AttributedGraph* dataGraph,
-                               char* process_uuid, EventWindow window);
+size_t networksWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
+                                EventWindow window);
+size_t registriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
+                               EventWindow window);
 size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
                                   char* process_uuid, EventWindow window);
 size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
                              EventWindow window);
-size_t memoriesWrittenByProcess(AttributedGraph* dataGraph,
-                                char* process_uuid, EventWindow window);
+size_t memoriesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
+                                EventWindow window);
 
 void reportGraphSimulation(AttributedGraph& queryGraph,
                            AttributedGraph& dataGraph, char* outputFile);

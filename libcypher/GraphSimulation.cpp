@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -28,8 +28,8 @@
 #include "galois/substrate/PerThreadStorage.h"
 #include <regex>
 
-// query.label: bitwise-OR of tags that should MATCH and tags that should NOT-MATCH
-// query.matched: tags that should MATCH
+// query.label: bitwise-OR of tags that should MATCH and tags that should
+// NOT-MATCH query.matched: tags that should MATCH
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   return ((query.label & data.label) == query.matched);
@@ -38,15 +38,22 @@ bool matchNodeLabel(const QueryNode& query, const QueryNode& data) {
 #endif
 }
 
-bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Graph& dataGraph, const GNode& dataNodeID) {
+bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID,
+                     const Graph& dataGraph, const GNode& dataNodeID) {
   // if the degree is smaller than that of its corresponding query vertex
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
-  if (dataGraph.degree(dataNodeID) < queryGraph.degree(queryNodeID)) return false;
-  if (dataGraph.in_degree(dataNodeID) < queryGraph.in_degree(queryNodeID)) return false;
+  if (dataGraph.degree(dataNodeID) < queryGraph.degree(queryNodeID))
+    return false;
+  if (dataGraph.in_degree(dataNodeID) < queryGraph.in_degree(queryNodeID))
+    return false;
 #else
   for (auto qeData : queryGraph.data_range()) {
-    if (dataGraph.degree(dataNodeID, *qeData) < queryGraph.degree(queryNodeID, *qeData)) return false;
-    if (dataGraph.in_degree(dataNodeID, *qeData) < queryGraph.in_degree(queryNodeID, *qeData)) return false;
+    if (dataGraph.degree(dataNodeID, *qeData) <
+        queryGraph.degree(queryNodeID, *qeData))
+      return false;
+    if (dataGraph.in_degree(dataNodeID, *qeData) <
+        queryGraph.in_degree(queryNodeID, *qeData))
+      return false;
   }
 #endif
   return true;
@@ -73,8 +80,7 @@ bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data) {
  * @param queryMatched bitset of querying status
  */
 template <typename QG, typename DG, typename W>
-void matchLabel(QG& qG, DG& dG, W& w,
-                galois::GAccumulator<uint32_t>& workItems, 
+void matchLabel(QG& qG, DG& dG, W& w, galois::GAccumulator<uint32_t>& workItems,
                 std::vector<bool>& queryMatched,
                 std::vector<std::string>& nodeContains,
                 std::vector<std::string>& nodeNames) {
@@ -104,7 +110,7 @@ void matchLabel(QG& qG, DG& dG, W& w,
               std::string dataName = nodeNames[dn];
               std::regex e(nodeContains[qn], std::regex_constants::ECMAScript);
               if (std::regex_match(dataName, e)) {
-              // if (dataName.find(nodeContains[qn]) != std::string::npos) {
+                // if (dataName.find(nodeContains[qn]) != std::string::npos) {
                 // TODO reduce code duplication
                 queryMatched[qn] = true;
                 if (!dData.matched) {
@@ -134,8 +140,7 @@ void matchLabel(QG& qG, DG& dG, W& w,
         }
 #endif
       },
-      galois::steal(),
-      galois::loopname("MatchLabel"));
+      galois::steal(), galois::loopname("MatchLabel"));
 }
 
 /**
@@ -169,9 +174,8 @@ void matchQuerySlowerNoMatchFasterMatch() {
       auto qeData = qG.getEdgeData(qe);
       auto qDst   = qG.getEdgeDst(qe);
 
-      bool matched = false;
-      uint64_t dNextEdgeTimestamp =
-          std::numeric_limits<uint64_t>::max();
+      bool matched                = false;
+      uint64_t dNextEdgeTimestamp = std::numeric_limits<uint64_t>::max();
       for (auto de : dG.edges(dn)) {
         auto& deData = dG.getEdgeData(de);
         if (useWindow) {
@@ -255,8 +259,7 @@ void matchQuerySlowerNoMatchFasterMatch() {
                     if ((qeData.timestamp <= qeData2.timestamp) ==
                         (deData.timestamp <= deData2.timestamp)) {
                       if (useLimit) {
-                        if (std::abs(deData.timestamp -
-                                      deData2.timestamp) >
+                        if (std::abs(deData.timestamp - deData2.timestamp) >
                             limit.time) {
                           continue; // skip this sequence of events
                                     // because too much time has
@@ -295,9 +298,9 @@ void matchQuerySlowerNoMatchFasterMatch() {
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 template <bool inEdges, bool useLimit>
-void matchQueryTimestampOrder(Graph& qG, Graph& dG, 
-    EventLimit limit, 
-    uint32_t qn, VecVecTy& matchedEdges, bool& matched) {
+void matchQueryTimestampOrder(Graph& qG, Graph& dG, EventLimit limit,
+                              uint32_t qn, VecVecTy& matchedEdges,
+                              bool& matched) {
   VecTy queryEdgeOrder;
   VecTy queryTimestamps;
   auto qEdges = inEdges ? qG.in_edges(qn) : qG.edges(qn);
@@ -307,14 +310,14 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
   }
   uint64_t prev = 0;
   while (prev != std::numeric_limits<uint32_t>::max()) {
-    uint64_t next = std::numeric_limits<uint32_t>::max();
+    uint64_t next    = std::numeric_limits<uint32_t>::max();
     size_t minEdgeID = 0;
     for (size_t i = 0; i < queryTimestamps.size(); ++i) {
       uint64_t cur = queryTimestamps[i];
       if (cur != std::numeric_limits<uint32_t>::max()) {
         if (cur >= prev) {
           if (cur < next) {
-            next = cur;
+            next      = cur;
             minEdgeID = i;
           }
         }
@@ -328,7 +331,7 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
   }
   prev = 0;
   for (size_t k = 0; k < queryEdgeOrder.size(); ++k) {
-    size_t i = queryEdgeOrder[k];
+    size_t i      = queryEdgeOrder[k];
     uint64_t next = std::numeric_limits<uint64_t>::max();
     for (size_t j = 0; j < matchedEdges[i].size(); ++j) {
       uint64_t cur = matchedEdges[i][j];
@@ -338,16 +341,14 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
         }
       }
     }
-    if ((next == std::numeric_limits<uint64_t>::max()) ||
-        (next < prev)) {
+    if ((next == std::numeric_limits<uint64_t>::max()) || (next < prev)) {
       matched = false;
       break;
     }
     if (useLimit) {
-      if ((next - prev) >
-          limit.time) {  // TODO: imprecise - fix this
+      if ((next - prev) > limit.time) { // TODO: imprecise - fix this
         matched = false; // skip this sequence of events because too
-                          // much time has lapsed between them
+                         // much time has lapsed between them
       }
     }
     prev = next;
@@ -357,15 +358,15 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG,
 #endif
 
 template <bool inEdges, bool useLimit, bool useWindow>
-bool matchQueryEdges(Graph& qG, Graph& dG, 
+bool matchQueryEdges(Graph& qG, Graph& dG,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-    EventLimit limit, EventWindow window,
+                     EventLimit limit, EventWindow window,
 #endif
-    uint32_t qn, uint32_t dn, 
+                     uint32_t qn, uint32_t dn,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-    VecVecTy& matchedEdges) {
+                     VecVecTy& matchedEdges) {
 #else
-    VecBoolTy& matchedEdges) {
+                     VecBoolTy& matchedEdges) {
 #endif
   bool matched = true;
   uint32_t num_qEdges;
@@ -376,7 +377,7 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
   }
   if (num_qEdges > 0) {
     // match children links
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP 
+#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     matchedEdges.clear();
     matchedEdges.resize(num_qEdges);
     auto dEdges = inEdges ? dG.in_edges(dn) : dG.edges(dn);
@@ -413,9 +414,8 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
       }
     }
     if (matched) { // check if it matches query timestamp order
-      matchQueryTimestampOrder<inEdges, useLimit>(qG, dG, 
-        limit,
-        qn, matchedEdges, matched);
+      matchQueryTimestampOrder<inEdges, useLimit>(qG, dG, limit, qn,
+                                                  matchedEdges, matched);
     }
 #else
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
@@ -427,12 +427,13 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
     for (auto de : dEdges) {
       auto& deData = inEdges ? dG.getInEdgeData(de) : dG.getEdgeData(de);
       for (uint32_t edgeID = 0; edgeID < num_qEdges; ++edgeID) {
-        if (matchedEdges[edgeID] == true) continue;
+        if (matchedEdges[edgeID] == true)
+          continue;
         auto qe = qEdgeBegin + edgeID;
         auto qeData = inEdges ? qG.getInEdgeData(qe) : qG.getEdgeData(qe);
         if (matchEdgeLabel(qeData, deData)) {
-          auto qDst      = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
-          auto dDst      = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
+          auto qDst = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
+          auto dDst = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
           auto& dDstData = dG.getData(dDst);
           if (dDstData.matched & (1 << qDst)) {
             matchedEdges[edgeID] = true;
@@ -441,24 +442,30 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
           }
         }
       }
-      if (numMatchedEdges == num_qEdges) break;
+      if (numMatchedEdges == num_qEdges)
+        break;
     }
-    if (numMatchedEdges < num_qEdges) return false;
+    if (numMatchedEdges < num_qEdges)
+      return false;
 #else
     for (auto qeData : qG.data_range()) {
-      uint32_t qDegree = inEdges ? qG.in_degree(qn, *qeData) : qG.degree(qn, *qeData);
+      uint32_t qDegree =
+          inEdges ? qG.in_degree(qn, *qeData) : qG.degree(qn, *qeData);
       if (qDegree > 0) {
         matchedEdges.clear();
         matchedEdges.resize(qDegree);
         uint32_t numMatchedEdges = 0;
-        auto dEdges = inEdges ? dG.in_edges(dn, *qeData) : dG.edges(dn, *qeData);
-        auto qEdgeBegin = inEdges ? qG.in_edge_begin(qn, *qeData) : qG.edge_begin(qn, *qeData);
+        auto dEdges =
+            inEdges ? dG.in_edges(dn, *qeData) : dG.edges(dn, *qeData);
+        auto qEdgeBegin = inEdges ? qG.in_edge_begin(qn, *qeData)
+                                  : qG.edge_begin(qn, *qeData);
         for (auto de : dEdges) {
-          auto dDst = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
+          auto dDst      = inEdges ? dG.getInEdgeDst(de) : dG.getEdgeDst(de);
           auto& dDstData = dG.getData(dDst);
           for (uint32_t edgeID = 0; edgeID < qDegree; ++edgeID) {
-            if (matchedEdges[edgeID] == true) continue;
-            auto qe = qEdgeBegin + edgeID;
+            if (matchedEdges[edgeID] == true)
+              continue;
+            auto qe   = qEdgeBegin + edgeID;
             auto qDst = inEdges ? qG.getInEdgeDst(qe) : qG.getEdgeDst(qe);
             if (dDstData.matched & (1 << qDst)) {
               matchedEdges[edgeID] = true;
@@ -466,9 +473,11 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
               break; // FIXTHIS: this could lead to imprecise results
             }
           }
-          if (numMatchedEdges == qDegree) break;
+          if (numMatchedEdges == qDegree)
+            break;
         }
-        if (numMatchedEdges < qDegree) return false;
+        if (numMatchedEdges < qDegree)
+          return false;
       }
     }
 #endif
@@ -484,11 +493,12 @@ template <bool useLimit, bool useWindow, bool queryNodeHasMoreThan2Edges>
 void matchNodesOnce(Graph& qG, Graph& dG,
                     galois::InsertBag<Graph::GraphNode>* cur,
                     galois::InsertBag<Graph::GraphNode>* next,
-                    galois::GAccumulator<uint32_t>& workItems 
+                    galois::GAccumulator<uint32_t>& workItems
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                    , EventLimit limit, EventWindow window
+                    ,
+                    EventLimit limit, EventWindow window
 #endif
-                    ) {
+) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   galois::substrate::PerThreadStorage<VecVecTy> matchedEdgesPerThread;
 #else
@@ -503,18 +513,19 @@ void matchNodesOnce(Graph& qG, Graph& dG,
         for (auto qn : qG) { // multiple matches
           uint64_t mask = (1 << qn);
           if (dData.matched & mask) {
-            bool matched = 
-              matchQueryEdges<true, useLimit, useWindow>(qG, dG,
+            bool matched =
+                matchQueryEdges<true, useLimit, useWindow>(qG, dG,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                limit, window,  
+                                                           limit, window,
 #endif
-                qn, dn, matchedEdges)
-              && 
-              matchQueryEdges<false, useLimit, useWindow>(qG, dG,
+                                                           qn, dn,
+                                                           matchedEdges) &&
+                matchQueryEdges<false, useLimit, useWindow>(qG, dG,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                limit, window,  
+                                                            limit, window,
 #endif
-                qn, dn, matchedEdges);
+                                                            qn, dn,
+                                                            matchedEdges);
             // remove qn from dn
             if (!matched) {
               dData.matched &= ~mask;
@@ -529,8 +540,7 @@ void matchNodesOnce(Graph& qG, Graph& dG,
           workItems += 1;
         }
       },
-      galois::steal(),
-      galois::loopname("MatchNeighbors"));
+      galois::steal(), galois::loopname("MatchNeighbors"));
 }
 
 void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
@@ -543,7 +553,7 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
   galois::GAccumulator<uint32_t> workItems;
- 
+
   if (reinitialize) {
     std::vector<bool> queryMatched;
     workItems.reset();
@@ -551,12 +561,13 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
     // see if a query node remained unmatched; if so, reset match status on data
     // nodes and return
     if (existEmptyLabelMatchQGNode(qG, queryMatched)) {
-      galois::do_all(galois::iterate(dG.begin(), dG.end()),
-                     [&qG, &dG, &w](auto dn) {
-                       auto& dData   = dG.getData(dn);
-                       dData.matched = 0; // matches to none
-                     },
-                     galois::loopname("ResetMatched"));
+      galois::do_all(
+          galois::iterate(dG.begin(), dG.end()),
+          [&qG, &dG, &w](auto dn) {
+            auto& dData   = dG.getData(dn);
+            dData.matched = 0; // matches to none
+          },
+          galois::loopname("ResetMatched"));
       return;
     }
   } else {
@@ -578,9 +589,9 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
 
   uint32_t numRounds = 0;
 
-  galois::runtime::reportStat_Tmax("GraphSimulation",
-      "RemovedNodes_Round" + std::to_string(numRounds),
-      (unsigned long)100*(dG.size() - sizeNext)/dG.size());
+  galois::runtime::reportStat_Tmax(
+      "GraphSimulation", "RemovedNodes_Round" + std::to_string(numRounds),
+      (unsigned long)100 * (dG.size() - sizeNext) / dG.size());
 
   // loop until no more data nodes are removed
   while (sizeCur != sizeNext) {
@@ -592,29 +603,37 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
     if (limit.valid) {
       if (window.valid) {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<true, true, true>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<true, true, true>(qG, dG, cur, next, workItems, limit,
+                                           window);
         } else {
-          matchNodesOnce<true, true, false>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<true, true, false>(qG, dG, cur, next, workItems, limit,
+                                            window);
         }
       } else {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<true, false, true>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<true, false, true>(qG, dG, cur, next, workItems, limit,
+                                            window);
         } else {
-          matchNodesOnce<true, false, false>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<true, false, false>(qG, dG, cur, next, workItems,
+                                             limit, window);
         }
       }
     } else {
       if (window.valid) {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<false, true, true>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<false, true, true>(qG, dG, cur, next, workItems, limit,
+                                            window);
         } else {
-          matchNodesOnce<false, true, false>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<false, true, false>(qG, dG, cur, next, workItems,
+                                             limit, window);
         }
       } else {
         if (queryNodeHasMoreThan2Edges) {
-          matchNodesOnce<false, false, true>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<false, false, true>(qG, dG, cur, next, workItems,
+                                             limit, window);
         } else {
-          matchNodesOnce<false, false, false>(qG, dG, cur, next, workItems, limit, window);
+          matchNodesOnce<false, false, false>(qG, dG, cur, next, workItems,
+                                              limit, window);
         }
       }
     }
@@ -626,22 +645,21 @@ void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
     }
 #endif
 
-    sizeCur = sizeNext;
+    sizeCur  = sizeNext;
     sizeNext = workItems.reduce();
     ++numRounds;
 
-    galois::runtime::reportStat_Tmax("GraphSimulation",
-        "RemovedNodes_Round" + std::to_string(numRounds),
-        (unsigned long)100*(dG.size() - sizeNext)/dG.size());
+    galois::runtime::reportStat_Tmax(
+        "GraphSimulation", "RemovedNodes_Round" + std::to_string(numRounds),
+        (unsigned long)100 * (dG.size() - sizeNext) / dG.size());
   }
 
-  galois::runtime::reportStat_Tmax("GraphSimulation",
-      "NumRounds",
-      (unsigned long)numRounds);
+  galois::runtime::reportStat_Tmax("GraphSimulation", "NumRounds",
+                                   (unsigned long)numRounds);
 
-  galois::runtime::reportStat_Tmax("GraphSimulation",
-      "RemovedNodes",
-      (unsigned long)100*(dG.size() - sizeCur)/dG.size());
+  galois::runtime::reportStat_Tmax("GraphSimulation", "RemovedNodes",
+                                   (unsigned long)100 * (dG.size() - sizeCur) /
+                                       dG.size());
 }
 
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
@@ -650,12 +668,12 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
   if (nodeLabel.find(";") == std::string::npos) {
     // no semicolon = only 1 node label
     if (nodeLabel != "any") {
-      bool notMode = false;
+      bool notMode      = false;
       std::string label = nodeLabel;
       // trim out the ~ sign
       if (nodeLabel.find("~") == 0) {
         notMode = true;
-        label = nodeLabel.substr(1);
+        label   = nodeLabel.substr(1);
       }
 
       // see if label exists
@@ -681,7 +699,7 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
     }
   } else {
     // semicolon = multiple node labels; split and create mask
-    uint32_t labelMask = 0;
+    uint32_t labelMask    = 0;
     uint32_t notLabelMask = 0;
 
     std::istringstream tokenStream(nodeLabel);
@@ -693,7 +711,7 @@ getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel) {
       // trim out the ~ sign
       if (token.find("~") == 0) {
         notMode = true;
-        token = token.substr(1);
+        token   = token.substr(1);
       }
 
       if (g.nodeLabelIDs.find(token) != g.nodeLabelIDs.end()) {
@@ -720,12 +738,12 @@ std::pair<bool, std::pair<uint32_t, uint32_t>>
 getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
   if (edgeLabel.find(";") == std::string::npos) {
     if (edgeLabel != "ANY") {
-      bool notMode = false;
+      bool notMode      = false;
       std::string label = edgeLabel;
       // trim out the ~ sign
       if (edgeLabel.find("~") == 0) {
         notMode = true;
-        label = edgeLabel.substr(1);
+        label   = edgeLabel.substr(1);
       }
 
       if (g.edgeLabelIDs.find(label) != g.edgeLabelIDs.end()) {
@@ -753,7 +771,7 @@ getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
     // searches
 
     // semicolon = multiple node labels; split and create mask
-    uint32_t labelMask = 0;
+    uint32_t labelMask    = 0;
     uint32_t notLabelMask = 0;
 
     std::istringstream tokenStream(edgeLabel);
@@ -766,7 +784,7 @@ getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel) {
       // trim out the ~ sign
       if (token.find("~") == 0) {
         notMode = true;
-        token = token.substr(1);
+        token   = token.substr(1);
       }
 
       if (g.edgeLabelIDs.find(token) != g.edgeLabelIDs.end()) {
@@ -797,12 +815,13 @@ bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel) {
 }
 
 void resetMatchedStatus(Graph& graph) {
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data   = graph.getData(n);
-                   data.matched = 0; // matches to none
-                 },
-                 galois::loopname("ResetMatched"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data   = graph.getData(n);
+        data.matched = 0; // matches to none
+      },
+      galois::loopname("ResetMatched"));
 }
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
@@ -823,13 +842,13 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
                 for (auto de : dG.edges(dn)) {
                   auto& deData = dG.getEdgeData(de);
                   auto dDst    = dG.getEdgeDst(de);
-                  //if (dn < dDst) { // match only one of the symmetric edges
-                    if (matchEdgeLabel(qeData, deData)) {
-                      auto& dDstData = dG.getData(dDst);
-                      if (dDstData.matched & (1 << qDst)) {
-                        deData.matched |= 1 << *qe;
-                      }
+                  // if (dn < dDst) { // match only one of the symmetric edges
+                  if (matchEdgeLabel(qeData, deData)) {
+                    auto& dDstData = dG.getData(dDst);
+                    if (dDstData.matched & (1 << qDst)) {
+                      deData.matched |= 1 << *qe;
                     }
+                  }
                   //}
                 }
               }
@@ -842,12 +861,13 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
 #endif
 
 void runGraphSimulationOld(Graph& qG, Graph& dG, EventLimit limit,
-                           EventWindow window, bool queryNodeHasMoreThan2Edges) {
+                           EventWindow window,
+                           bool queryNodeHasMoreThan2Edges) {
   std::vector<std::string> dummy1;
   std::vector<std::string> dummy2;
   matchNodesUsingGraphSimulation(qG, dG, true, limit, window,
                                  queryNodeHasMoreThan2Edges, dummy1, dummy2);
-  //matchEdgesAfterGraphSimulation(qG, dG);
+  // matchEdgesAfterGraphSimulation(qG, dG);
 }
 
 void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
@@ -857,11 +877,11 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
   matchNodesUsingGraphSimulation(qG, dG, true, limit, window,
                                  queryNodeHasMoreThan2Edges, nodeContains,
                                  nodeNames);
-  //matchEdgesAfterGraphSimulation(qG, dG);
+  // matchEdgesAfterGraphSimulation(qG, dG);
 }
 
-void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       QueryEdgeData qeData,
+void findShortestPaths(Graph& graph, uint32_t srcQueryNode,
+                       uint32_t dstQueryNode, QueryEdgeData qeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> parent;
   parent.allocateInterleaved(graph.size());
@@ -873,17 +893,18 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
   WorkQueue* next = &w[1];
 
   // add source nodes to the work-list
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   parent[n] = infinity;
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        parent[n] = infinity;
 
-                   auto& data   = graph.getData(n);
-                   uint64_t mask = (1 << srcQueryNode);
-                   if (data.matched & mask) {
-                     next->push_back(n);
-                   }
-                 },
-                 galois::loopname("ResetParent"));
+        auto& data    = graph.getData(n);
+        uint64_t mask = (1 << srcQueryNode);
+        if (data.matched & mask) {
+          next->push_back(n);
+        }
+      },
+      galois::loopname("ResetParent"));
 
   auto sizeNext = std::distance(next->begin(), next->end());
 
@@ -899,14 +920,14 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
           for (auto edge : graph.edges(n)) {
             auto deData = graph.getEdgeData(edge);
             if (matchEdgeLabel(qeData, deData)) {
-              auto dst = graph.getEdgeDst(edge);
+              auto dst                = graph.getEdgeDst(edge);
               uint32_t old_parent_dst = parent[dst];
               if (old_parent_dst == infinity) {
                 auto& dstData = graph.getData(dst);
                 uint64_t mask = (1 << srcQueryNode);
                 if (!(dstData.matched & mask)) {
-                  if (parent[dst].compare_exchange_strong(old_parent_dst, n,
-                        std::memory_order_relaxed)) {
+                  if (parent[dst].compare_exchange_strong(
+                          old_parent_dst, n, std::memory_order_relaxed)) {
                     mask = (1 << dstQueryNode);
                     if (!(dstData.matched & mask)) {
                       next->push_back(dst);
@@ -923,19 +944,20 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
   }
 
   // add destination nodes to the work-list or un-match destination nodes
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   uint64_t mask = (1 << dstQueryNode);
-                   if (data.matched & mask) {
-                     if (parent[n] == infinity) {
-                       data.matched &= ~mask; // no longer a match
-                     } else {
-                       next->push_back(n);
-                     }
-                   }
-                 },
-                 galois::loopname("MatchDestination"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data    = graph.getData(n);
+        uint64_t mask = (1 << dstQueryNode);
+        if (data.matched & mask) {
+          if (parent[n] == infinity) {
+            data.matched &= ~mask; // no longer a match
+          } else {
+            next->push_back(n);
+          }
+        }
+      },
+      galois::loopname("MatchDestination"));
 
   // back traverse edges
   galois::do_all(
@@ -945,7 +967,7 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
         while ((parent[pred] != infinity) && (parent[pred] != pred)) {
           uint32_t succ = parent[pred];
           if (parent[pred].compare_exchange_weak(succ, infinity,
-                std::memory_order_relaxed)) {
+                                                 std::memory_order_relaxed)) {
             if (pred != n) {
               auto& data = graph.getData(pred);
               data.matched |= 1 << matchedQueryNode;
@@ -974,22 +996,23 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
       galois::loopname("BackTraverseEdges"));
 
   // un-match source nodes
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   uint64_t mask = (1 << srcQueryNode);
-                   if (data.matched & mask) {
-                     if (parent[n] == infinity) {
-                       data.matched &= ~mask; // no longer a match
-                     }
-                   }
-                 },
-                 galois::loopname("MatchSource"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data    = graph.getData(n);
+        uint64_t mask = (1 << srcQueryNode);
+        if (data.matched & mask) {
+          if (parent[n] == infinity) {
+            data.matched &= ~mask; // no longer a match
+          }
+        }
+      },
+      galois::loopname("MatchSource"));
 }
 
 void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       QueryEdgeData qeData,
-                       uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
+                  QueryEdgeData qeData, uint32_t matchedQueryNode,
+                  uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> visited; // require only 2 bits
   visited.allocateInterleaved(graph.size());
 
@@ -999,23 +1022,24 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
   WorkQueue* next = &w[1];
 
   // add source and destination nodes to the work-list
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   visited[n] = 0;
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        visited[n] = 0;
 
-                   auto& data   = graph.getData(n);
-                   uint64_t mask = (1 << srcQueryNode);
-                   if (data.matched & mask) {
-                     visited[n] |= 1; // 1st bit
-                     next->push_back(n);
-                   }
-                   mask = (1 << dstQueryNode);
-                   if (data.matched & mask) {
-                     visited[n] |= 2; // 2nd bit
-                     next->push_back(n);
-                   }
-                 },
-                 galois::loopname("ResetVisited"));
+        auto& data    = graph.getData(n);
+        uint64_t mask = (1 << srcQueryNode);
+        if (data.matched & mask) {
+          visited[n] |= 1; // 1st bit
+          next->push_back(n);
+        }
+        mask = (1 << dstQueryNode);
+        if (data.matched & mask) {
+          visited[n] |= 2; // 2nd bit
+          next->push_back(n);
+        }
+      },
+      galois::loopname("ResetVisited"));
 
   auto sizeNext = std::distance(next->begin(), next->end());
 
@@ -1033,12 +1057,13 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
           for (auto edge : graph.edges(n)) {
             auto deData = graph.getEdgeData(edge);
             if (matchEdgeLabel(qeData, deData)) {
-              auto dst = graph.getEdgeDst(edge);
+              auto dst                 = graph.getEdgeDst(edge);
               uint32_t old_visited_dst = visited[dst];
               while ((old_visited_dst & visited[n]) != visited[n]) {
                 uint32_t new_visited_dst = old_visited_dst | visited[n];
-                if (visited[dst].compare_exchange_weak(old_visited_dst, new_visited_dst,
-                      std::memory_order_relaxed)) {
+                if (visited[dst].compare_exchange_weak(
+                        old_visited_dst, new_visited_dst,
+                        std::memory_order_relaxed)) {
                   auto& data = graph.getData(dst);
                   // do not add source or destination to the work-list again
                   if (!(data.matched & srcMask) && !(data.matched & dstMask)) {
@@ -1055,115 +1080,120 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
   }
 
   // match visited nodes and edges : can be merged with the above do_all?
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   if (visited[n] == 3) {
-                     auto& data = graph.getData(n);
-                     uint64_t srcMask = (1 << srcQueryNode);
-                     uint64_t dstMask = (1 << dstQueryNode);
-                     if (!(data.matched & srcMask) && !(data.matched & dstMask)) {
-                       data.matched |= 1 << matchedQueryNode;
-                     }
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        if (visited[n] == 3) {
+          auto& data       = graph.getData(n);
+          uint64_t srcMask = (1 << srcQueryNode);
+          uint64_t dstMask = (1 << dstQueryNode);
+          if (!(data.matched & srcMask) && !(data.matched & dstMask)) {
+            data.matched |= 1 << matchedQueryNode;
+          }
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                     for (auto edge : graph.edges(n)) {
-                       auto dst = graph.getEdgeDst(edge);
-                       if (visited[dst] == 3) {
-                         auto& edgeData = graph.getEdgeData(edge);
-                         edgeData.matched |= 1 << matchedQueryEdge;
-                       }
-                     }
+          for (auto edge : graph.edges(n)) {
+            auto dst = graph.getEdgeDst(edge);
+            if (visited[dst] == 3) {
+              auto& edgeData = graph.getEdgeData(edge);
+              edgeData.matched |= 1 << matchedQueryEdge;
+            }
+          }
 #endif
-                   }
-                 },
-                 galois::loopname("MatchNodesInPath"));
+        }
+      },
+      galois::loopname("MatchNodesInPath"));
 
-  // un-match source and destination nodes : can be merged with the above do_all?
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   uint64_t mask = (1 << srcQueryNode);
-                   if (data.matched & mask) {
-                     if (visited[n] != 3) {
-                       data.matched &= ~mask; // no longer a match
-                     }
-                   }
-                   mask = (1 << dstQueryNode);
-                   if (data.matched & mask) {
-                     if (visited[n] != 3) {
-                       data.matched &= ~mask; // no longer a match
-                     }
-                   }
-                 },
-                 galois::loopname("MatchSourceDestination"));
+  // un-match source and destination nodes : can be merged with the above
+  // do_all?
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data    = graph.getData(n);
+        uint64_t mask = (1 << srcQueryNode);
+        if (data.matched & mask) {
+          if (visited[n] != 3) {
+            data.matched &= ~mask; // no longer a match
+          }
+        }
+        mask = (1 << dstQueryNode);
+        if (data.matched & mask) {
+          if (visited[n] != 3) {
+            data.matched &= ~mask; // no longer a match
+          }
+        }
+      },
+      galois::loopname("MatchSourceDestination"));
 }
 
 template <bool useWindow>
 void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
                                       uint32_t action, EventWindow window) {
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                   if ((data.label & nodeLabel) == nodeLabel) 
+        if ((data.label & nodeLabel) == nodeLabel)
 #endif
-                   {
-                     unsigned numActions   = 0;
-                     Graph::GraphNode prev = 0;
-                     for (auto e : graph.edges(n)) {
-                       auto& eData = graph.getEdgeData(e);
+        {
+          unsigned numActions   = 0;
+          Graph::GraphNode prev = 0;
+          for (auto e : graph.edges(n)) {
+            auto& eData = graph.getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                       if (useWindow) {
-                         if ((eData.timestamp > window.endTime) ||
-                             (eData.timestamp < window.startTime)) {
-                           continue; // skip this edge since it is not in the
-                                     // time-span of interest
-                         }
-                       }
+            if (useWindow) {
+              if ((eData.timestamp > window.endTime) ||
+                  (eData.timestamp < window.startTime)) {
+                continue; // skip this edge since it is not in the
+                          // time-span of interest
+              }
+            }
 #endif
-                       if ((eData & action) == action) {
-                         ++numActions;
-                         if (numActions == 1) {
-                           prev = graph.getEdgeDst(e);
-                         } else {
-                           if (prev != graph.getEdgeDst(e)) {
-                             data.matched = 1;
-                             break;
-                           }
-                         }
-                       }
-                     }
-                   }
-                 },
-                 galois::loopname("MatchNodes"));
+            if ((eData & action) == action) {
+              ++numActions;
+              if (numActions == 1) {
+                prev = graph.getEdgeDst(e);
+              } else {
+                if (prev != graph.getEdgeDst(e)) {
+                  data.matched = 1;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      },
+      galois::loopname("MatchNodes"));
 
   // match destination of matched nodes
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   if (data.matched & 1) {
-                     for (auto e : graph.edges(n)) {
-                       auto& eData = graph.getEdgeData(e);
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
+        if (data.matched & 1) {
+          for (auto e : graph.edges(n)) {
+            auto& eData = graph.getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                       if (useWindow) {
-                         if ((eData.timestamp > window.endTime) ||
-                             (eData.timestamp < window.startTime)) {
-                           continue; // skip this edge since it is not in the
-                                     // time-span of interest
-                         }
-                       }
+            if (useWindow) {
+              if ((eData.timestamp > window.endTime) ||
+                  (eData.timestamp < window.startTime)) {
+                continue; // skip this edge since it is not in the
+                          // time-span of interest
+              }
+            }
 #endif
-                       if ((eData & action) == action) {
+            if ((eData & action) == action) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                         eData.matched = 1;
+              eData.matched = 1;
 #endif
-                         auto dst      = graph.getEdgeDst(e);
-                         auto& dstData = graph.getData(dst);
-                         dstData.matched |= 2; // atomicity not required
-                       }
-                     }
-                   }
-                 },
-                 galois::loopname("MatchNodesDsts"));
+              auto dst      = graph.getEdgeDst(e);
+              auto& dstData = graph.getData(dst);
+              dstData.matched |= 2; // atomicity not required
+            }
+          }
+        }
+      },
+      galois::loopname("MatchNodesDsts"));
 }
 
 void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
@@ -1184,100 +1214,102 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
                                  uint32_t action1, uint32_t dstNodeLabel1,
                                  uint32_t action2, uint32_t dstNodeLabel2,
                                  EventWindow window) {
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                   if ((data.label & nodeLabel) == nodeLabel) 
+        if ((data.label & nodeLabel) == nodeLabel)
 #endif
-                   {
-                     bool foundAction1 = false;
-                     bool foundAction2 = false;
-                     for (auto e : graph.edges(n)) {
-                       auto& eData = graph.getEdgeData(e);
+        {
+          bool foundAction1 = false;
+          bool foundAction2 = false;
+          for (auto e : graph.edges(n)) {
+            auto& eData = graph.getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                       if (useWindow) {
-                         if ((eData.timestamp > window.endTime) ||
-                             (eData.timestamp < window.startTime)) {
-                           continue; // skip this edge since it is not in the
-                                     // time-span of interest
-                         }
-                       }
+            if (useWindow) {
+              if ((eData.timestamp > window.endTime) ||
+                  (eData.timestamp < window.startTime)) {
+                continue; // skip this edge since it is not in the
+                          // time-span of interest
+              }
+            }
 #endif
-                       bool mayAction1 = ((eData & action1) == action1);
-                       bool mayAction2 = ((eData & action2) == action2);
-                       if (mayAction1 || mayAction2) {
+            bool mayAction1 = ((eData & action1) == action1);
+            bool mayAction2 = ((eData & action2) == action2);
+            if (mayAction1 || mayAction2) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                         auto dst      = graph.getEdgeDst(e);
-                         auto& dstData = graph.getData(dst);
+              auto dst      = graph.getEdgeDst(e);
+              auto& dstData = graph.getData(dst);
 #endif
-                         if (mayAction1 
+              if (mayAction1
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                          && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)
+                  && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)
 #endif
-                          ) {
-                           foundAction1 = true;
-                         } else if (mayAction2 
+              ) {
+                foundAction1 = true;
+              } else if (mayAction2
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                          && ((dstData.label & dstNodeLabel2) == dstNodeLabel2)
+                         && ((dstData.label & dstNodeLabel2) == dstNodeLabel2)
 #endif
-                          ) {
-                           foundAction2 = true;
-                         }
-                       }
-                     }
-                     if (foundAction1 && foundAction2) {
-                       data.matched = 1;
-                     }
-                   }
-                 },
-                 galois::loopname("MatchNodes"));
+              ) {
+                foundAction2 = true;
+              }
+            }
+          }
+          if (foundAction1 && foundAction2) {
+            data.matched = 1;
+          }
+        }
+      },
+      galois::loopname("MatchNodes"));
 
   // match destination of matched nodes
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   if (data.matched & 1) {
-                     for (auto e : graph.edges(n)) {
-                       auto& eData = graph.getEdgeData(e);
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
+        if (data.matched & 1) {
+          for (auto e : graph.edges(n)) {
+            auto& eData = graph.getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                       if (useWindow) {
-                         if ((eData.timestamp > window.endTime) ||
-                             (eData.timestamp < window.startTime)) {
-                           continue; // skip this edge since it is not in the
-                                     // time-span of interest
-                         }
-                       }
+            if (useWindow) {
+              if ((eData.timestamp > window.endTime) ||
+                  (eData.timestamp < window.startTime)) {
+                continue; // skip this edge since it is not in the
+                          // time-span of interest
+              }
+            }
 #endif
-                       bool mayAction1 = ((eData & action1) == action1);
-                       bool mayAction2 = ((eData & action2) == action2);
-                       if (mayAction1 || mayAction2) {
-                         auto dst      = graph.getEdgeDst(e);
-                         auto& dstData = graph.getData(dst);
-                         if (mayAction1 
+            bool mayAction1 = ((eData & action1) == action1);
+            bool mayAction2 = ((eData & action2) == action2);
+            if (mayAction1 || mayAction2) {
+              auto dst      = graph.getEdgeDst(e);
+              auto& dstData = graph.getData(dst);
+              if (mayAction1
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                          && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)
+                  && ((dstData.label & dstNodeLabel1) == dstNodeLabel1)
 #endif
-                          ) {
+              ) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                           eData.matched = 1;
+                eData.matched = 1;
 #endif
-                           dstData.matched |= 2; // atomicity not required
-                         } else if (mayAction2 
+                dstData.matched |= 2; // atomicity not required
+              } else if (mayAction2
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-                          && ((dstData.label & dstNodeLabel2) == dstNodeLabel2)
+                         && ((dstData.label & dstNodeLabel2) == dstNodeLabel2)
 #endif
-                          ) {
+              ) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                           eData.matched = 1;
+                eData.matched = 1;
 #endif
-                           dstData.matched |= 4; // atomicity not required
-                         }
-                       }
-                     }
-                   }
-                 },
-                 galois::loopname("MatchNodesDsts"));
+                dstData.matched |= 4; // atomicity not required
+              }
+            }
+          }
+        }
+      },
+      galois::loopname("MatchNodesDsts"));
 }
 
 void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
@@ -1318,7 +1350,7 @@ void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
             auto dst      = graph.getEdgeDst(e);
             auto& dstData = graph.getData(dst);
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-            if ((dstData.label & neighborLabel) == neighborLabel) 
+            if ((dstData.label & neighborLabel) == neighborLabel)
 #endif
             {
               dstData.matched |= 1; // atomicity not required
@@ -1354,14 +1386,15 @@ void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
 
 size_t countMatchedNodes(Graph& graph) {
   galois::GAccumulator<size_t> numMatched;
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   if (data.matched) {
-                     numMatched += 1;
-                   }
-                 },
-                 galois::loopname("CountMatchedNodes"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
+        if (data.matched) {
+          numMatched += 1;
+        }
+      },
+      galois::loopname("CountMatchedNodes"));
   return numMatched.reduce();
 }
 
@@ -1369,33 +1402,35 @@ size_t countMatchedNodes(Graph& graph) {
 size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node) {
   galois::GAccumulator<size_t> numMatched;
   // do not count the same node twice (multiple edges to the same node)
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   if (data.matched) {
-                     numMatched += 1;
-                   }
-                 },
-                 galois::loopname("CountMatchedNeighbors"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
+        if (data.matched) {
+          numMatched += 1;
+        }
+      },
+      galois::loopname("CountMatchedNeighbors"));
   return numMatched.reduce();
 }
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 size_t countMatchedEdges(Graph& graph) {
   galois::GAccumulator<size_t> numMatched;
-  galois::do_all(galois::iterate(graph.begin(), graph.end()),
-                 [&](auto n) {
-                   auto& data = graph.getData(n);
-                   if (data.matched) {
-                     for (auto e : graph.edges(n)) {
-                       auto eData = graph.getEdgeData(e);
-                       if (eData.matched) {
-                         numMatched += 1;
-                       }
-                     }
-                   }
-                 },
-                 galois::loopname("CountMatchedEdges"));
+  galois::do_all(
+      galois::iterate(graph.begin(), graph.end()),
+      [&](auto n) {
+        auto& data = graph.getData(n);
+        if (data.matched) {
+          for (auto e : graph.edges(n)) {
+            auto eData = graph.getEdgeData(e);
+            if (eData.matched) {
+              numMatched += 1;
+            }
+          }
+        }
+      },
+      galois::loopname("CountMatchedEdges"));
   return numMatched.reduce();
 }
 

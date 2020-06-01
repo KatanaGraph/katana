@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -62,7 +62,7 @@ void deleteGraph(AttributedGraph* g) { delete g; }
 
 void saveGraph(AttributedGraph* g, char* filename) {
   // test prints
-  //for (auto d : g->graph) {
+  // for (auto d : g->graph) {
   //  galois::gPrint(d, " ", g->index2UUID[d], "\n");
 
   //  for (auto e : g->graph.edges(d)) {
@@ -87,10 +87,11 @@ void saveGraph(AttributedGraph* g, char* filename) {
   oarch << g->edgeAttributes;
 
   // test prints
-  //for (auto& pair : g->nodeLabelIDs) {
-  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(), pair.second);
+  // for (auto& pair : g->nodeLabelIDs) {
+  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(),
+  //  pair.second);
   //}
-  //for (auto& pair : g->nodeAttributes) {
+  // for (auto& pair : g->nodeAttributes) {
   //  printf("pair first is %s\n", pair.first.c_str());
   //  for (auto s : pair.second) {
   //    printf("  - %s\n", s.c_str());
@@ -108,11 +109,11 @@ void saveEdgeList(AttributedGraph* g, char* filename) {
   uint32_t maxEdgeLabel = 0;
 
   for (uint32_t src : graph) {
-    uint32_t srcLabel = 
+    uint32_t srcLabel =
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-      rightmostSetBitPos(graph.getData(src).label);
+        rightmostSetBitPos(graph.getData(src).label);
 #else
-      0;
+        0;
 #endif
     if (srcLabel > maxNodeLabel) {
       maxNodeLabel = srcLabel;
@@ -121,9 +122,9 @@ void saveEdgeList(AttributedGraph* g, char* filename) {
     nodeFile << src << "," << srcLabel << "\n";
 
     for (auto e : graph.edges(src)) {
-      uint32_t dst        = graph.getEdgeDst(e);
-      auto& ed            = graph.getEdgeData(e);
-      uint32_t edgeLabel  = rightmostSetBitPos(ed);
+      uint32_t dst       = graph.getEdgeDst(e);
+      auto& ed           = graph.getEdgeData(e);
+      uint32_t edgeLabel = rightmostSetBitPos(ed);
       // track max edge label
       if (edgeLabel > maxEdgeLabel) {
         maxEdgeLabel = edgeLabel;
@@ -159,10 +160,11 @@ void loadGraph(AttributedGraph* g, char* filename) {
   iarch >> g->edgeAttributes;
 
   // test prints
-  //for (auto& pair : g->nodeLabelIDs) {
-  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(), pair.second);
+  // for (auto& pair : g->nodeLabelIDs) {
+  //  printf("nodelabel pair first is %s second %u\n", pair.first.c_str(),
+  //  pair.second);
   //}
-  //for (auto& pair : g->nodeAttributes) {
+  // for (auto& pair : g->nodeAttributes) {
   //  printf("pair first is %s\n", pair.first.c_str());
   //  for (auto s : pair.second) {
   //    printf("  - %s\n", s.c_str());
@@ -178,22 +180,23 @@ void printGraph(AttributedGraph* g) {
   auto& edgeLabelNames = g->edgeLabelNames;
   auto& nodeNames      = g->nodeNames;
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  uint32_t sourceLabelID   = 1 << g->nodeLabelIDs["process"];
+  uint32_t sourceLabelID = 1 << g->nodeLabelIDs["process"];
 #endif
-  uint64_t numEdges    = 0;
+  uint64_t numEdges = 0;
 
   for (auto src : graph) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
     auto& srcData = graph.getData(src);
     // only print if source is a process
-    if ((srcData.label & sourceLabelID) != sourceLabelID) continue;
+    if ((srcData.label & sourceLabelID) != sourceLabelID)
+      continue;
     auto& srcLabel = g->nodeLabelNames[rightmostSetBitPos(srcData.label)];
 #else
     auto srcLabel = 0;
 #endif
-    auto& srcName  = nodeNames[src];
+    auto& srcName = nodeNames[src];
     for (auto e : graph.edges(src)) {
-      auto dst      = graph.getEdgeDst(e);
+      auto dst = graph.getEdgeDst(e);
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
       auto& dstData = graph.getData(dst);
 
@@ -201,24 +204,23 @@ void printGraph(AttributedGraph* g) {
 #else
       if (
 #endif
-        (dst < src))
+          (dst < src))
         continue;
 
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-      auto& dstLabel   = g->nodeLabelNames[rightmostSetBitPos(dstData.label)];
+      auto& dstLabel = g->nodeLabelNames[rightmostSetBitPos(dstData.label)];
 #else
       auto dstLabel = 0;
 #endif
-      auto& dstName        = nodeNames[dst];
-      auto& ed             = graph.getEdgeData(e);
-      auto& edgeLabel  = edgeLabelNames[rightmostSetBitPos(ed)];
+      auto& dstName   = nodeNames[dst];
+      auto& ed        = graph.getEdgeData(e);
+      auto& edgeLabel = edgeLabelNames[rightmostSetBitPos(ed)];
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-      auto& edgeTimestamp  = ed.timestamp;
+      auto& edgeTimestamp = ed.timestamp;
       std::cout << edgeTimestamp << ", ";
 #endif
-      std::cout << srcName << ", " << edgeLabel << ", "
-                << dstName << " (" << srcLabel << ", " << dstLabel << ")" <<
-                std::endl;
+      std::cout << srcName << ", " << edgeLabel << ", " << dstName << " ("
+                << srcLabel << ", " << dstLabel << ")" << std::endl;
       ++numEdges;
     }
   }
@@ -244,23 +246,23 @@ void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
 void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t GALOIS_UNUSED(labelBitPosition), char* name) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                  = g->graph.getData(nodeIndex);
-  nd.label                  = 1 << labelBitPosition;
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = 1 << labelBitPosition;
 #endif
-  g->nodeIndices[uuid]      = nodeIndex;
-  g->index2UUID[nodeIndex]  = uuid;
-  g->nodeNames[nodeIndex]   = name;
+  g->nodeIndices[uuid]     = nodeIndex;
+  g->index2UUID[nodeIndex] = uuid;
+  g->nodeNames[nodeIndex]  = name;
 }
 
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
              uint32_t GALOIS_UNUSED(label), char* name) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                  = g->graph.getData(nodeIndex);
-  nd.label                  = label;
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = label;
 #endif
-  g->nodeIndices[uuid]      = nodeIndex;
-  g->index2UUID[nodeIndex]  = uuid;
-  g->nodeNames[nodeIndex]   = name;
+  g->nodeIndices[uuid]     = nodeIndex;
+  g->index2UUID[nodeIndex] = uuid;
+  g->nodeNames[nodeIndex]  = name;
 }
 
 void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
@@ -291,19 +293,23 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
   g->graph.constructEdge(edgeIndex, dstNodeIndex,
                          QueryEdgeData(1 << labelBitPosition
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                         , timestamp));
+                                       ,
+                                       timestamp));
 #else
-                         ));
+                                       ));
 #endif
 }
 
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
-                   uint32_t dstNodeIndex, uint32_t label, uint64_t GALOIS_UNUSED(timestamp)) {
-  g->graph.constructEdge(edgeIndex, dstNodeIndex, QueryEdgeData(label
+                   uint32_t dstNodeIndex, uint32_t label,
+                   uint64_t GALOIS_UNUSED(timestamp)) {
+  g->graph.constructEdge(edgeIndex, dstNodeIndex,
+                         QueryEdgeData(label
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-    , timestamp));
+                                       ,
+                                       timestamp));
 #else
-    ));
+                                       ));
 #endif
 }
 
@@ -326,31 +332,31 @@ size_t getNumEdges(AttributedGraph* g) { return g->graph.sizeEdges(); }
 ///////
 
 uint32_t addNodeLabelMetadata(AttributedGraph* g, char* name) {
-    auto foundValue = g->nodeLabelIDs.find(name);
-    // already exists; return it
-    if (foundValue != g->nodeLabelIDs.end()) {
-      return foundValue->second;
+  auto foundValue = g->nodeLabelIDs.find(name);
+  // already exists; return it
+  if (foundValue != g->nodeLabelIDs.end()) {
+    return foundValue->second;
     // doesn't exist: append to existing vector + return new label bit position
-    } else {
-      uint32_t newLabel = g->nodeLabelNames.size();
-      g->nodeLabelNames.emplace_back(name);
-      g->nodeLabelIDs[name] = newLabel;
-      return newLabel;
-    }
+  } else {
+    uint32_t newLabel = g->nodeLabelNames.size();
+    g->nodeLabelNames.emplace_back(name);
+    g->nodeLabelIDs[name] = newLabel;
+    return newLabel;
+  }
 }
 
 uint32_t addEdgeLabelMetadata(AttributedGraph* g, char* name) {
-    auto foundValue = g->edgeLabelIDs.find(name);
-    // already exists; return it
-    if (foundValue != g->edgeLabelIDs.end()) {
-      return foundValue->second;
+  auto foundValue = g->edgeLabelIDs.find(name);
+  // already exists; return it
+  if (foundValue != g->edgeLabelIDs.end()) {
+    return foundValue->second;
     // doesn't exist: append to existing vector + return new label bit position
-    } else {
-      uint32_t newLabel = g->edgeLabelNames.size();
-      g->edgeLabelNames.emplace_back(name);
-      g->edgeLabelIDs[name] = newLabel;
-      return newLabel;
-    }
+  } else {
+    uint32_t newLabel = g->edgeLabelNames.size();
+    g->edgeLabelNames.emplace_back(name);
+    g->edgeLabelIDs[name] = newLabel;
+    return newLabel;
+  }
 }
 
 void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount) {
@@ -385,28 +391,29 @@ uint32_t nodeExists(AttributedGraph* g, char* uuid) {
   }
 }
 
-void setNewNodeCSR(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
+void setNewNodeCSR(AttributedGraph* GALOIS_UNUSED(g),
+                   uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
                    uint32_t GALOIS_UNUSED(labelBitPosition)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                = g->graph.getData(nodeIndex);
-  nd.label                = 1 << labelBitPosition;
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = 1 << labelBitPosition;
 #endif
 }
 
-
-void setNodeCSR(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
+void setNodeCSR(AttributedGraph* GALOIS_UNUSED(g),
+                uint32_t GALOIS_UNUSED(nodeIndex), char* GALOIS_UNUSED(uuid),
                 uint32_t GALOIS_UNUSED(label)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                = g->graph.getData(nodeIndex);
-  nd.label                = label;
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = label;
 #endif
 }
 
 void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                      char* nodeName) {
-  g->nodeIndices[uuid]    = nodeIndex;
+  g->nodeIndices[uuid]     = nodeIndex;
   g->index2UUID[nodeIndex] = uuid;
-  g->nodeNames[nodeIndex] = nodeName;
+  g->nodeNames[nodeIndex]  = nodeName;
 }
 
 uint32_t getIndexFromUUID(AttributedGraph* g, char* uuid) {
@@ -417,7 +424,8 @@ const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex) {
   return g->index2UUID[nodeIndex].c_str();
 }
 
-uint32_t getNodeLabel(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex)) {
+uint32_t getNodeLabel(AttributedGraph* GALOIS_UNUSED(g),
+                      uint32_t GALOIS_UNUSED(nodeIndex)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nd = g->graph.getData(nodeIndex);
   return nd.label;
@@ -435,25 +443,27 @@ uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
   uint64_t curEdgeIndex = edgeIndex;
   for (auto e : src.edges(nodeIndex)) {
     uint32_t edgeDst = src.getEdgeDst(e);
-    auto& data = src.getEdgeData(e);
+    auto& data       = src.getEdgeData(e);
 
     // uses non-new variant of construct edge i.e. direct copy of label
-    dst.constructEdge(curEdgeIndex, edgeDst, QueryEdgeData(data
+    dst.constructEdge(curEdgeIndex, edgeDst,
+                      QueryEdgeData(data
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-                      , data.timestamp));
+                                    ,
+                                    data.timestamp));
 #else
-                      ));
+                                    ));
 #endif
     curEdgeIndex++;
   }
 
   // copy edge attributes
   uint64_t firstEdge = *(src.edge_begin(nodeIndex));
-  uint64_t lastEdge = *(src.edge_end(nodeIndex));
-  auto& attributes = destGraph->edgeAttributes;
+  uint64_t lastEdge  = *(src.edge_end(nodeIndex));
+  auto& attributes   = destGraph->edgeAttributes;
 
   for (auto& keyValue : srcGraph->edgeAttributes) {
-    curEdgeIndex = edgeIndex;
+    curEdgeIndex    = edgeIndex;
     std::string key = keyValue.first;
     for (uint64_t i = firstEdge; i < lastEdge; i++) {
       if (attributes.find(key) == attributes.end()) {
@@ -476,19 +486,21 @@ void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2) {
   std::swap(g1->edgeAttributes, g2->edgeAttributes);
 }
 
-void addNewLabel(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex),
+void addNewLabel(AttributedGraph* GALOIS_UNUSED(g),
+                 uint32_t GALOIS_UNUSED(nodeIndex),
                  uint32_t GALOIS_UNUSED(labelBitPosition)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                = g->graph.getData(nodeIndex);
-  nd.label                = nd.label | (1 << labelBitPosition);
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = nd.label | (1 << labelBitPosition);
 #endif
 }
 
-void mergeLabels(AttributedGraph* GALOIS_UNUSED(g), uint32_t GALOIS_UNUSED(nodeIndex),
+void mergeLabels(AttributedGraph* GALOIS_UNUSED(g),
+                 uint32_t GALOIS_UNUSED(nodeIndex),
                  uint32_t GALOIS_UNUSED(labelToMerge)) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  auto& nd                = g->graph.getData(nodeIndex);
-  nd.label                = nd.label | labelToMerge;
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = nd.label | labelToMerge;
 #endif
 }
 
@@ -500,27 +512,26 @@ void unmatchAll(AttributedGraph* g) {
   Graph& actualGraph = g->graph;
 
   galois::do_all(
-    galois::iterate(actualGraph.begin(), actualGraph.end()),
-    [&] (auto node) {
-      QueryNode& nd = actualGraph.getData(node);
-      nd.matched = 0;
+      galois::iterate(actualGraph.begin(), actualGraph.end()),
+      [&](auto node) {
+        QueryNode& nd = actualGraph.getData(node);
+        nd.matched    = 0;
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-      auto curEdge = actualGraph.edge_begin(node);
-      auto end = actualGraph.edge_end(node);
-      for (; curEdge < end; curEdge++) {
-        QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
-        curEdgeData.matched = 0;
-      }
+        auto curEdge = actualGraph.edge_begin(node);
+        auto end     = actualGraph.edge_end(node);
+        for (; curEdge < end; curEdge++) {
+          QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+          curEdgeData.matched        = 0;
+        }
 #endif
-    },
-    galois::steal(),
-    galois::no_stats()
-  );
+      },
+      galois::steal(), galois::no_stats());
 }
 
 uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
-                  uint32_t labelBitPosition, uint64_t GALOIS_UNUSED(timestamp)) {
+                  uint32_t labelBitPosition,
+                  uint64_t GALOIS_UNUSED(timestamp)) {
   Graph& actualGraph = g->graph;
 
   if (g->nodeIndices.find(srcUUID) == g->nodeIndices.end() ||
@@ -536,7 +547,7 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
 
   // get edges of source, find edge with dst (if it exists)
   auto curEdge = actualGraph.edge_begin(srcIndex);
-  auto end = actualGraph.edge_end(srcIndex);
+  auto end     = actualGraph.edge_end(srcIndex);
 
   for (; curEdge < end; curEdge++) {
     uint32_t curDest = actualGraph.getEdgeDst(curEdge);
@@ -562,8 +573,9 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
             break;
           } else {
             // here for debugging purposes TODO switch to gDebug later?
-            //galois::gPrint("Label match failure ", labelBitPosition, " ",
-            //               1u << labelBitPosition, " ", curEdgeData.label, "\n");
+            // galois::gPrint("Label match failure ", labelBitPosition, " ",
+            //               1u << labelBitPosition, " ", curEdgeData.label,
+            //               "\n");
           }
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
         }
@@ -582,39 +594,39 @@ uint32_t nodeRemovalPass(AttributedGraph* g) {
   deadNodes.reset();
 
   galois::do_all(
-    galois::iterate(actualGraph.begin(), actualGraph.end()),
-    [&] (auto node) {
-      QueryNode& nd = actualGraph.getData(node);
-      nd.matched = 0;
+      galois::iterate(actualGraph.begin(), actualGraph.end()),
+      [&](auto node) {
+        QueryNode& nd = actualGraph.getData(node);
+        nd.matched    = 0;
 
-      auto curEdge = actualGraph.edge_begin(node);
-      auto end = actualGraph.edge_end(node);
-      //galois::gPrint("num edges of ", node, " is ", end - curEdge, "\n");
-      bool dead = true;
-      // what about in edges? the idea is that all edges are symmetric, so
-      // if my outgoing edge is dead, so is the corresponding incoming edge
-      for (; curEdge < end; curEdge++) {
-        //uint32_t curDest = actualGraph.getEdgeDst(curEdge);
-        QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
-        //galois::gPrint(node, " ", curDest, " label ", curEdgeData.label,
-        //               " stamp ", curEdgeData.timestamp, " dead ",
-        //               curEdgeData.matched, "\n");
-        if (curEdgeData.matched != 1) {
-          dead = false;
-          break;
+        auto curEdge = actualGraph.edge_begin(node);
+        auto end     = actualGraph.edge_end(node);
+        // galois::gPrint("num edges of ", node, " is ", end - curEdge, "\n");
+        bool dead = true;
+        // what about in edges? the idea is that all edges are symmetric, so
+        // if my outgoing edge is dead, so is the corresponding incoming edge
+        for (; curEdge < end; curEdge++) {
+          // uint32_t curDest = actualGraph.getEdgeDst(curEdge);
+          QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+          // galois::gPrint(node, " ", curDest, " label ", curEdgeData.label,
+          //               " stamp ", curEdgeData.timestamp, " dead ",
+          //               curEdgeData.matched, "\n");
+          if (curEdgeData.matched != 1) {
+            dead = false;
+            break;
+          }
         }
-      }
-      if (dead) {
-        //galois::gPrint("node ", node, " id ", g->index2UUID[node], " is dead\n");
-        nd.matched = 1;
-        deadNodes += 1;
-      } else {
-        //galois::gPrint("node ", node, " id ", g->index2UUID[node], " is alive\n");
-      }
-    },
-    galois::steal(),
-    galois::no_stats()
-  );
+        if (dead) {
+          // galois::gPrint("node ", node, " id ", g->index2UUID[node], " is
+          // dead\n");
+          nd.matched = 1;
+          deadNodes += 1;
+        } else {
+          // galois::gPrint("node ", node, " id ", g->index2UUID[node], " is
+          // alive\n");
+        }
+      },
+      galois::steal(), galois::no_stats());
   return deadNodes.reduce();
 }
 
@@ -627,7 +639,7 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   std::swap(newGraph->edgeLabelNames, g->edgeLabelNames);
   std::swap(newGraph->edgeLabelIDs, g->edgeLabelIDs);
 
-  auto& actualGraph = g->graph;
+  auto& actualGraph  = g->graph;
   size_t oldNumNodes = actualGraph.size();
   size_t oldNumEdges = actualGraph.sizeEdges();
   size_t newNumNodes = oldNumNodes - nodesRemoved;
@@ -653,34 +665,32 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
 
   // determine node/edge start points for each thread by counting dead nodes
   // and edges
-  galois::on_each(
-    [&] (unsigned tid, unsigned nthreads) {
-      size_t beginNode;
-      size_t endNode;
-      std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
-                                       oldNumNodes, tid, nthreads);
+  galois::on_each([&](unsigned tid, unsigned nthreads) {
+    size_t beginNode;
+    size_t endNode;
+    std::tie(beginNode, endNode) =
+        galois::block_range((size_t)0u, oldNumNodes, tid, nthreads);
 
-      for (size_t n = beginNode; n < endNode; n++) {
-        auto& nodeData = actualGraph.getData(n);
+    for (size_t n = beginNode; n < endNode; n++) {
+      auto& nodeData = actualGraph.getData(n);
 
-        if (nodeData.matched) {
-          nodesToRemove.set(n);
-        } else {
-          // loop over edges, determine how many this thread needs to work with
-          nodesToHandlePerThread[tid] += 1;
+      if (nodeData.matched) {
+        nodesToRemove.set(n);
+      } else {
+        // loop over edges, determine how many this thread needs to work with
+        nodesToHandlePerThread[tid] += 1;
 
-          for (auto e : actualGraph.edges(n)) {
-            auto& data = actualGraph.getEdgeData(e);
+        for (auto e : actualGraph.edges(n)) {
+          auto& data = actualGraph.getEdgeData(e);
 
-            // not matched means not deleted edge
-            if (!data.matched) {
-              edgesToHandlePerThread[tid] += 1;
-            }
+          // not matched means not deleted edge
+          if (!data.matched) {
+            edgesToHandlePerThread[tid] += 1;
           }
         }
       }
     }
-  );
+  });
 
   // thread level node/edge prefix sum summation
   uint32_t tNSum = 0;
@@ -700,14 +710,14 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   }
 
   std::vector<uint32_t> indicesToRemove = nodesToRemove.getOffsets();
-  uint32_t numNodesToRemove = indicesToRemove.size();
+  uint32_t numNodesToRemove             = indicesToRemove.size();
 
   GALOIS_ASSERT(nodesRemoved == numNodesToRemove,
                 "nodes to remove doesn't match argument nodes to remove ",
                 numNodesToRemove, " ", nodesRemoved);
 
-  // swap over the map from old graph, then remove uuids/indices that don't exist
-  // anymore
+  // swap over the map from old graph, then remove uuids/indices that don't
+  // exist anymore
   galois::gPrint("Removing removed nodes from UUID to index map\n");
   std::swap(newGraph->nodeIndices, g->nodeIndices);
   for (uint32_t i : indicesToRemove) {
@@ -716,10 +726,11 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
     GALOIS_ASSERT(removed);
   }
 
-  GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes,
-                "indices size is ", newGraph->nodeIndices.size(),
-                " new num nodes is ", newNumNodes);
-  // at this point, need to remap old UUIDs to new index in graph; do in later loop
+  GALOIS_ASSERT(newGraph->nodeIndices.size() == newNumNodes, "indices size is ",
+                newGraph->nodeIndices.size(), " new num nodes is ",
+                newNumNodes);
+  // at this point, need to remap old UUIDs to new index in graph; do in later
+  // loop
 
   // allocate memory for new node structures in compressed graph
   newGraph->index2UUID.resize(newNumNodes);
@@ -727,94 +738,88 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   // setup attributes structures; set up keys and vectors
   // nodes
   for (auto keyIter = g->nodeAttributes.begin();
-       keyIter != g->nodeAttributes.end();
-       keyIter++) {
+       keyIter != g->nodeAttributes.end(); keyIter++) {
     std::string key = keyIter->first;
     newGraph->nodeAttributes[key].resize(newNumNodes);
   }
   // edges
   for (auto keyIter = g->edgeAttributes.begin();
-       keyIter != g->edgeAttributes.end();
-       keyIter++) {
+       keyIter != g->edgeAttributes.end(); keyIter++) {
     std::string key = keyIter->first;
     newGraph->edgeAttributes[key].resize(newNumEdges);
   }
 
-  galois::on_each(
-    [&] (unsigned tid, unsigned nthreads) {
-      size_t beginNode;
-      size_t endNode;
-      std::tie(beginNode, endNode) = galois::block_range((size_t)0u,
-                                       oldNumNodes, tid, nthreads);
-      // get node and edge array starting points
-      uint32_t curNode;
-      uint32_t curEdge;
-      if (tid != 0) {
-        curNode = nodesToHandlePerThread[tid - 1];
-        curEdge = edgesToHandlePerThread[tid - 1];
-      } else {
-        curNode = 0;
-        curEdge = 0;
-      }
-
-      for (size_t n = beginNode; n < endNode; n++) {
-        auto& nodeData = actualGraph.getData(n);
-
-        // if not dead, we need to do some processing
-        if (!nodeData.matched) {
-          // first, update uuid/index maps
-          std::string myUUID = g->index2UUID[n];
-          newGraph->nodeIndices[myUUID] = curNode;
-          newGraph->index2UUID[curNode] = myUUID;
-
-          // next, node attribute map
-          for (auto keyIter = g->nodeAttributes.begin();
-               keyIter != g->nodeAttributes.end();
-               keyIter++) {
-            std::string key = keyIter->first;
-            std::vector<std::string>& attrs = keyIter->second;
-            newGraph->nodeAttributes[key][curNode] = attrs[n];
-          }
-
-          // node names
-          newGraph->nodeNames[curNode] = g->nodeNames[n];
-
-          for (auto e : actualGraph.edges(n)) {
-            auto& data = actualGraph.getEdgeData(e);
-            // if not dead, work to do
-            if (!data.matched) {
-              // copy edge attributes
-              for (auto keyIter = g->edgeAttributes.begin();
-                   keyIter != g->edgeAttributes.end();
-                   keyIter++) {
-                std::string key = keyIter->first;
-                std::vector<std::string>& attrs = keyIter->second;
-                newGraph->edgeAttributes[key][curEdge] = attrs[*e];
-              }
-              // construct edge
-              newCSR.constructEdge(curEdge, actualGraph.getEdgeDst(e));
-              // copy edge data
-              newCSR.getEdgeData(curEdge) = data;
-              curEdge++;
-            }
-          }
-
-          // set node end in CSR
-          newCSR.fixEndEdge(curNode, curEdge);
-          // copy node data
-          newCSR.getData(curNode) = nodeData;
-
-          curNode++; // increment node count
-        }
-      }
-
-      // sanity checks
-      GALOIS_ASSERT(curNode == nodesToHandlePerThread[tid], tid, " ",
-                    curNode, " ", nodesToHandlePerThread[tid]);
-      GALOIS_ASSERT(curEdge == edgesToHandlePerThread[tid], tid, " ",
-                    curEdge, " ", edgesToHandlePerThread[tid]);
+  galois::on_each([&](unsigned tid, unsigned nthreads) {
+    size_t beginNode;
+    size_t endNode;
+    std::tie(beginNode, endNode) =
+        galois::block_range((size_t)0u, oldNumNodes, tid, nthreads);
+    // get node and edge array starting points
+    uint32_t curNode;
+    uint32_t curEdge;
+    if (tid != 0) {
+      curNode = nodesToHandlePerThread[tid - 1];
+      curEdge = edgesToHandlePerThread[tid - 1];
+    } else {
+      curNode = 0;
+      curEdge = 0;
     }
-  );
+
+    for (size_t n = beginNode; n < endNode; n++) {
+      auto& nodeData = actualGraph.getData(n);
+
+      // if not dead, we need to do some processing
+      if (!nodeData.matched) {
+        // first, update uuid/index maps
+        std::string myUUID            = g->index2UUID[n];
+        newGraph->nodeIndices[myUUID] = curNode;
+        newGraph->index2UUID[curNode] = myUUID;
+
+        // next, node attribute map
+        for (auto keyIter = g->nodeAttributes.begin();
+             keyIter != g->nodeAttributes.end(); keyIter++) {
+          std::string key                        = keyIter->first;
+          std::vector<std::string>& attrs        = keyIter->second;
+          newGraph->nodeAttributes[key][curNode] = attrs[n];
+        }
+
+        // node names
+        newGraph->nodeNames[curNode] = g->nodeNames[n];
+
+        for (auto e : actualGraph.edges(n)) {
+          auto& data = actualGraph.getEdgeData(e);
+          // if not dead, work to do
+          if (!data.matched) {
+            // copy edge attributes
+            for (auto keyIter = g->edgeAttributes.begin();
+                 keyIter != g->edgeAttributes.end(); keyIter++) {
+              std::string key                        = keyIter->first;
+              std::vector<std::string>& attrs        = keyIter->second;
+              newGraph->edgeAttributes[key][curEdge] = attrs[*e];
+            }
+            // construct edge
+            newCSR.constructEdge(curEdge, actualGraph.getEdgeDst(e));
+            // copy edge data
+            newCSR.getEdgeData(curEdge) = data;
+            curEdge++;
+          }
+        }
+
+        // set node end in CSR
+        newCSR.fixEndEdge(curNode, curEdge);
+        // copy node data
+        newCSR.getData(curNode) = nodeData;
+
+        curNode++; // increment node count
+      }
+    }
+
+    // sanity checks
+    GALOIS_ASSERT(curNode == nodesToHandlePerThread[tid], tid, " ", curNode,
+                  " ", nodesToHandlePerThread[tid]);
+    GALOIS_ASSERT(curEdge == edgesToHandlePerThread[tid], tid, " ", curEdge,
+                  " ", edgesToHandlePerThread[tid]);
+  });
 
   // other sanity checks; comment out in production code
   for (auto d : newGraph->graph) {

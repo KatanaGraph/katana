@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2019, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -48,13 +48,13 @@ class DBGraph {
     char dummy[10]; // assumption that labels won't get to 8+ digits
     for (size_t i = 0; i < numNodeLabels; i++) {
       std::string thisLabel = "";
-      thisLabel = thisLabel + std::to_string(i);
+      thisLabel             = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
       setNodeLabelMetadata(attGraph, i, dummy);
     }
     for (size_t i = 0; i < numEdgeLabels; i++) {
       std::string thisLabel = "";
-      thisLabel = thisLabel + std::to_string(i);
+      thisLabel             = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
       setEdgeLabelMetadata(attGraph, i, dummy);
     }
@@ -79,7 +79,7 @@ class DBGraph {
   }
 
   /**
-   * Returns number of edges per vertex 
+   * Returns number of edges per vertex
    * where the number of edges for vertex
    * i is in array[i + 1] (array[0] is 0)
    *
@@ -87,43 +87,39 @@ class DBGraph {
    * @returns Array of edges counts where array[i + 1] is number of edges
    * for vertex i
    */
-  std::vector<uint64_t> getEdgeCounts(
-    galois::graphs::BufferedGraph<uint32_t>& graphTopology
-  ) {
+  std::vector<uint64_t>
+  getEdgeCounts(galois::graphs::BufferedGraph<uint32_t>& graphTopology) {
     // allocate vector where counts will be stored
     std::vector<uint64_t> edgeCounts;
     // + 1 so that it can be used as a counter for how many edges have been
     // added for a particular vertex
     edgeCounts.resize(graphTopology.size() + 1, 0);
 
-    // loop over all edges, add to that source vertex's edge counts for each endpoint
-    // (ignore self loops)
+    // loop over all edges, add to that source vertex's edge counts for each
+    // endpoint (ignore self loops)
     galois::do_all(
-      galois::iterate(0u, graphTopology.size()),
-      [&] (uint32_t vertexID) {
-        for (auto i = graphTopology.edgeBegin(vertexID);
-             i < graphTopology.edgeEnd(vertexID);
-             i++) {
-          uint64_t dst = graphTopology.edgeDestination(*i);
-          if (vertexID != dst) {
-            // src increment
-            __sync_add_and_fetch(&(edgeCounts[vertexID + 1]), 1);
+        galois::iterate(0u, graphTopology.size()),
+        [&](uint32_t vertexID) {
+          for (auto i = graphTopology.edgeBegin(vertexID);
+               i < graphTopology.edgeEnd(vertexID); i++) {
+            uint64_t dst = graphTopology.edgeDestination(*i);
+            if (vertexID != dst) {
+              // src increment
+              __sync_add_and_fetch(&(edgeCounts[vertexID + 1]), 1);
+            }
           }
-        }
-      },
-      galois::steal(),
-      galois::loopname("GetEdgeCounts")
-    );
+        },
+        galois::steal(), galois::loopname("GetEdgeCounts"));
 
     return edgeCounts;
   }
 
- public:
+public:
   /**
    * Setup meta parameters
    */
   DBGraph() {
-    attGraph = new AttributedGraph;
+    attGraph      = new AttributedGraph;
     numNodeLabels = 1;
     numEdgeLabels = 1;
   }
@@ -138,10 +134,10 @@ class DBGraph {
   }
 
   /**
-   * Given graph topology, construct the attributed graph by 
+   * Given graph topology, construct the attributed graph by
    * ignoring self loops.
    */
-  void constructDataGraph(const std::string filename, bool useWeights=true) {
+  void constructDataGraph(const std::string filename, bool useWeights = true) {
     // first, load graph topology
     // NOTE: assumes weighted
     galois::graphs::BufferedGraph<uint32_t> graphTopology;
@@ -154,30 +150,29 @@ class DBGraph {
     // next, count the number of edges we want to keep (i.e. ignore the self
     // loops)
     galois::do_all(
-      galois::iterate(0u, graphTopology.size()),
-      [&] (uint32_t vertexID) {
-        for (auto i = graphTopology.edgeBegin(vertexID);
-             i < graphTopology.edgeEnd(vertexID);
-             i++) {
-          uint64_t dst = graphTopology.edgeDestination(*i);
-          if (vertexID != dst) {
-            keptEdgeCountAccumulator += 1;
+        galois::iterate(0u, graphTopology.size()),
+        [&](uint32_t vertexID) {
+          for (auto i = graphTopology.edgeBegin(vertexID);
+               i < graphTopology.edgeEnd(vertexID); i++) {
+            uint64_t dst = graphTopology.edgeDestination(*i);
+            if (vertexID != dst) {
+              keptEdgeCountAccumulator += 1;
+            }
+            maxLabels.update(graphTopology.edgeData(*i));
           }
-          maxLabels.update(graphTopology.edgeData(*i));
-        }
-      },
-      galois::steal(), // steal due to edge imbalance among nodes
-      galois::loopname("CountKeptEdges")
-    );
+        },
+        galois::steal(), // steal due to edge imbalance among nodes
+        galois::loopname("CountKeptEdges"));
 
     numEdgeLabels = maxLabels.reduce() + 1;
     galois::gInfo("Edge label count is ", numEdgeLabels);
 
-
     uint64_t keptEdgeCount = keptEdgeCountAccumulator.reduce();
 
-    galois::gDebug("Kept edge count is ", keptEdgeCount, " compared to "
-                   "original ", graphTopology.sizeEdges());
+    galois::gDebug("Kept edge count is ", keptEdgeCount,
+                   " compared to "
+                   "original ",
+                   graphTopology.sizeEdges());
 
     uint64_t finalEdgeCount = keptEdgeCount;
 
@@ -202,8 +197,7 @@ class DBGraph {
     ////////////////////////////////////////////////////////////////////////////
 
     // need to count how many edges for each vertex in the graph
-    std::vector<uint64_t> edgeCountsPerVertex =
-        getEdgeCounts(graphTopology);
+    std::vector<uint64_t> edgeCountsPerVertex = getEdgeCounts(graphTopology);
 
     // prefix sum the edge counts; this will tell us where we can write
     // new edges of a particular vertex
@@ -213,43 +207,40 @@ class DBGraph {
 
     // fix edge end points
     galois::do_all(
-      galois::iterate(0u, graphTopology.size()),
-      [&] (uint32_t vertexID) {
-        fixEndEdge(attGraph, vertexID, edgeCountsPerVertex[vertexID + 1]);
-      },
-      galois::loopname("EdgeEndpointFixing")
-    );
+        galois::iterate(0u, graphTopology.size()),
+        [&](uint32_t vertexID) {
+          fixEndEdge(attGraph, vertexID, edgeCountsPerVertex[vertexID + 1]);
+        },
+        galois::loopname("EdgeEndpointFixing"));
 
     // loop over edges of a graph, add edges (again, ignore self loops)
     galois::do_all(
-      galois::iterate(0u, graphTopology.size()),
-      [&] (uint32_t vertexID) {
-        for (auto i = graphTopology.edgeBegin(vertexID);
-             i < graphTopology.edgeEnd(vertexID);
-             i++) {
-          uint64_t edgeID = *i;
-          // label to use for this edge pointing both ways
-          // commented out part here is random edge label assignment 
-          //unsigned labelBit = edgeID % numEdgeLabels;
-          unsigned labelBit = graphTopology.edgeData(edgeID);
+        galois::iterate(0u, graphTopology.size()),
+        [&](uint32_t vertexID) {
+          for (auto i = graphTopology.edgeBegin(vertexID);
+               i < graphTopology.edgeEnd(vertexID); i++) {
+            uint64_t edgeID = *i;
+            // label to use for this edge pointing both ways
+            // commented out part here is random edge label assignment
+            // unsigned labelBit = edgeID % numEdgeLabels;
+            unsigned labelBit = graphTopology.edgeData(edgeID);
 
-          // TODO for now timestamp is original edge id
-          uint64_t timestamp = edgeID;
-          uint64_t dst = graphTopology.edgeDestination(*i);
+            // TODO for now timestamp is original edge id
+            uint64_t timestamp = edgeID;
+            uint64_t dst       = graphTopology.edgeDestination(*i);
 
-          // check if not a self loop
-          if (vertexID != dst) {
-            // get forward edge id
-            uint64_t forwardEdge = __sync_fetch_and_add(
-              &(edgeCountsPerVertex[vertexID]), 1);
-            // set forward
-            constructNewEdge(attGraph, forwardEdge, dst, labelBit, timestamp);
+            // check if not a self loop
+            if (vertexID != dst) {
+              // get forward edge id
+              uint64_t forwardEdge =
+                  __sync_fetch_and_add(&(edgeCountsPerVertex[vertexID]), 1);
+              // set forward
+              constructNewEdge(attGraph, forwardEdge, dst, labelBit, timestamp);
+            }
           }
-        }
-      },
-      galois::steal(), // steal due to edge imbalance among nodes
-      galois::loopname("ConstructEdges")
-    );
+        },
+        galois::steal(), // steal due to edge imbalance among nodes
+        galois::loopname("ConstructEdges"));
 
     // TODO edge attributes and other labels?
 
@@ -266,7 +257,7 @@ class DBGraph {
   }
 
   ////! Reads graph topology into attributed graph, then sets up its metadata.
-  //void readGr(const std::string filename) {
+  // void readGr(const std::string filename) {
   //  ////////////////////////////////////////////////////////////////////////////
   //  // Graph topology loading
   //  ////////////////////////////////////////////////////////////////////////////
@@ -280,8 +271,9 @@ class DBGraph {
 
   //  // open file, pass to LCCSR to directly load topology
   //  int fd = open(filename.c_str(), O_RDONLY);
-  //  if (fd == -1) GALOIS_SYS_DIE("failed opening ", "'", filename, "', LC_CSR");
-	//	Graph& lcGraph = attGraph->graph;
+  //  if (fd == -1) GALOIS_SYS_DIE("failed opening ", "'", filename, "',
+  //  LC_CSR");
+  //	Graph& lcGraph = attGraph->graph;
   //  lcGraph.readGraphTopology(fd, numNodes, numEdges);
   //  // file done, close it
   //  close(fd);
@@ -311,17 +303,16 @@ class DBGraph {
 
   size_t runCypherQuery(const std::string cypherQueryStr,
                         bool useGraphSimulation,
-                        std::string outputFile="matched.edges") {
+                        std::string outputFile = "matched.edges") {
     // run the query
-    size_t mEdgeCount = matchCypherQuery(attGraph, 
-                          EventLimit(), EventWindow(),
-                          cypherQueryStr.c_str(),
-                          useGraphSimulation);
+    size_t mEdgeCount =
+        matchCypherQuery(attGraph, EventLimit(), EventWindow(),
+                         cypherQueryStr.c_str(), useGraphSimulation);
     return mEdgeCount;
   }
 };
 
-} // graph namepsace
-} // galois namepsace
+} // namespace graphs
+} // namespace galois
 
 #endif

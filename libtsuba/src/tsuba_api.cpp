@@ -54,6 +54,23 @@ static int DoWriteS3(const char* filename, const uint8_t* buf, uint64_t size) {
   return S3UploadOverwrite(bucket, object, buf, size);
 }
 
+static int DoWriteS3Sync(const char* filename, const uint8_t* buf,
+                         uint64_t size) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3UploadOverwriteSync(bucket, object, buf, size);
+}
+
+static int DoWriteS3Async(const char* filename, const uint8_t* buf,
+                          uint64_t size) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3UploadOverwriteAsync(bucket, object, buf, size);
+}
+
+static int DoWriteS3AsyncFinish(const char* filename) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3UploadOverwriteAsyncFinish(bucket, object);
+}
+
 static uint8_t* AllocAndReadS3(const char* filename, uint64_t begin,
                                uint64_t size) {
   auto* ret = MmapCast<uint8_t>(size, PROT_READ | PROT_WRITE,
@@ -131,19 +148,52 @@ EXPORT_SYM int TsubaOpen(const char* uri) {
   return S3Open(bucket_name, object_name);
 }
 
+// Return 1: This is an S3 URL
+// Otherwise process as file and return 0 for success and -1 for fail
+static int S3OrDoFile(const char* uri, const uint8_t* data, uint64_t size) {
+  if (TsubaIsUri(uri))
+    return 1;
+  std::ofstream ofile(uri);
+  if (!ofile.good()) {
+    return -1;
+  }
+  ofile.write(reinterpret_cast<const char*>(data), size); /* NOLINT */
+  if (!ofile.good()) {
+    return -1;
+  }
+  return 0;
+}
+
 EXPORT_SYM int TsubaStore(const char* uri, const uint8_t* data, uint64_t size) {
+  int ret = S3OrDoFile(uri, data, size);
+  if (ret) {
+    ret = DoWriteS3(uri, data, size);
+  }
+  return ret;
+}
+
+EXPORT_SYM int TsubaStoreSync(const char* uri, const uint8_t* data,
+                              uint64_t size) {
+  int ret = S3OrDoFile(uri, data, size);
+  if (ret) {
+    ret = DoWriteS3Sync(uri, data, size);
+  }
+  return ret;
+}
+
+EXPORT_SYM int TsubaStoreAsync(const char* uri, const uint8_t* data,
+                               uint64_t size) {
+  int ret = S3OrDoFile(uri, data, size);
+  if (ret) {
+    ret = DoWriteS3Async(uri, data, size);
+  }
+  return ret;
+}
+EXPORT_SYM int TsubaStoreAsyncFinish(const char* uri) {
   if (!TsubaIsUri(uri)) {
-    std::ofstream ofile(uri);
-    if (!ofile.good()) {
-      return -1;
-    }
-    ofile.write(reinterpret_cast<const char*>(data), size); /* NOLINT */
-    if (!ofile.good()) {
-      return -1;
-    }
     return 0;
   }
-  return DoWriteS3(uri, data, size);
+  return DoWriteS3AsyncFinish(uri);
 }
 
 EXPORT_SYM int TsubaPeek(const char* filename, uint8_t* result_buffer,

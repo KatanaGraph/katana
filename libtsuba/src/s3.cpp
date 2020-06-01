@@ -32,15 +32,8 @@ static constexpr const uint64_t kS3BufSize    = MB(5);
 static constexpr const uint64_t kNumS3Threads = 36;
 
 std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor;
-
-int S3Init() {
-  Aws::InitAPI(sdk_options);
-  executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
-      kAwsTag, kNumS3Threads);
-  return 0;
-}
-
-void S3Fini() { Aws::ShutdownAPI(sdk_options); }
+// Initialize in S3Init
+static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
 
 static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
   Aws::Client::ClientConfiguration cfg;
@@ -48,6 +41,22 @@ static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
   cfg.region         = region ? region : kDefaultS3Region;
   cfg.executor       = executor;
   return Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
+}
+
+int S3Init() {
+  Aws::InitAPI(sdk_options);
+  executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
+      kAwsTag, kNumS3Threads);
+  // Need context for async uploads
+  async_s3_client = GetS3Client();
+  return 0;
+}
+
+void S3Fini() { Aws::ShutdownAPI(sdk_options); }
+
+static inline std::string BucketAndObject(std::string bucket,
+                                          std::string object) {
+  return bucket + "/" + object;
 }
 
 std::pair<std::string, std::string> S3SplitUri(const std::string& uri) {
@@ -124,6 +133,7 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
   std::vector<SegmentedBufferView::BufPart> parts(bufView.begin(),
                                                   bufView.end());
   if (parts.empty()) {
+    std::cerr << "Parts empty, returning" << std::endl;
     return 0;
   }
   std::vector<std::string> part_e_tags(parts.size());
@@ -163,7 +173,7 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
           (void)(request);
           (void)(context);
           if (outcome.IsSuccess()) {
-            std::unique_lock<std::mutex> lk(m);
+            std::lock_guard<std::mutex> lk(m);
             part_e_tags[i] = outcome.GetResult().GetETag();
             finished++;
             cv.notify_one();
@@ -201,6 +211,103 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
               << error.GetMessage() << std::endl;
     return -1;
   }
+  return 0;
+}
+
+int S3UploadOverwriteSync(const std::string& bucket, const std::string& object,
+                          const uint8_t* data, uint64_t size) {
+  auto s3_client = GetS3Client();
+  // std::cerr << "S3UploadOverwriteSync: " << bucket << "/" << object
+  // <<std::endl;
+  // Set up request
+  Aws::S3::Model::PutObjectRequest object_request;
+
+  object_request.SetBucket(bucket);
+  object_request.SetKey(object);
+  auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
+      kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
+  auto preallocatedStreamReader =
+      Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
+
+  object_request.SetBody(preallocatedStreamReader);
+  object_request.SetContentType("application/octet-stream");
+
+  auto outcome = s3_client->PutObject(object_request);
+  if (!outcome.IsSuccess()) {
+    /* TODO there are likely some errors we can handle gracefully
+     * i.e., with retries */
+    const auto& error = outcome.GetError();
+    std::cerr << "ERROR: " << error.GetExceptionName() << ": "
+              << error.GetMessage() << std::endl;
+    abort();
+  }
+  return 0;
+}
+
+static std::unordered_map<std::string, bool> bnodone;
+static std::mutex bnomutex;
+static std::condition_variable bnocv;
+
+int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
+                           const uint8_t* data, uint64_t size) {
+  // std::cerr << "S3UploadOverwriteAsync: " << bucket << "/" << object
+  // <<std::endl;
+  // Set up request
+  Aws::S3::Model::PutObjectRequest object_request;
+
+  object_request.SetBucket(bucket);
+  object_request.SetKey(object);
+  auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
+      kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
+  auto preallocatedStreamReader =
+      Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
+
+  object_request.SetBody(preallocatedStreamReader);
+  object_request.SetContentType("application/octet-stream");
+
+  std::string bno = BucketAndObject(bucket, object);
+  {
+    std::lock_guard<std::mutex> lck(bnomutex);
+    bnodone[bno] = false;
+  }
+
+  // Copy bno because it is going out of scope
+  auto callback = [&,
+                   bno](const Aws::S3::S3Client* /*client*/,
+                        const Aws::S3::Model::PutObjectRequest& /*request*/,
+                        const Aws::S3::Model::PutObjectOutcome& outcome,
+                        const std::shared_ptr<
+                            const Aws::Client::AsyncCallerContext>& /*ctx*/) {
+    if (outcome.IsSuccess()) {
+      std::lock_guard<std::mutex> lck(bnomutex);
+      bnodone[bno] = true;
+      // Notify does not require lock
+      bnocv.notify_one();
+    } else {
+      /* TODO there are likely some errors we can handle gracefully
+       * i.e., with retries */
+      const auto& error = outcome.GetError();
+      std::cerr << "ERROR: " << error.GetExceptionName() << ": "
+                << error.GetMessage() << std::endl;
+      abort();
+    }
+  };
+  async_s3_client->PutObjectAsync(object_request, callback);
+
+  return 0;
+}
+
+int S3UploadOverwriteAsyncFinish(const std::string& bucket,
+                                 const std::string& object) {
+  std::string bno = BucketAndObject(bucket, object);
+  // std::cerr << "S3UploadOverwriteAsyncFinish bno: " << bno << std::endl;
+  if (bnodone.find(bno) == bnodone.end()) {
+    std::cerr << "XXX S3UploadOverwriteAsyncFinish bno not present: " << bno
+              << std::endl;
+    return -1;
+  }
+  std::unique_lock<std::mutex> lck(bnomutex);
+  bnocv.wait(lck, [&] { return bnodone[bno]; });
   return 0;
 }
 
@@ -256,7 +363,6 @@ int S3DownloadRange(const std::string& bucket, const std::string& object,
 
   std::mutex m;
   std::condition_variable cv;
-
   uint64_t finished = 0;
   auto callback =
       [&](const Aws::S3::S3Client* /*clnt*/,

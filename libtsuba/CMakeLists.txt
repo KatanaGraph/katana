@@ -4,6 +4,7 @@ set(sources
 )
 
 add_library(tsuba STATIC ${sources})
+add_subdirectory(tests)
 
 # The conan generated package name is aws-sdk-cpp while the
 # package name when built from source is AWSSDK.

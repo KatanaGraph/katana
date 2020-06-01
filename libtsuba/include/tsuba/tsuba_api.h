@@ -32,6 +32,14 @@ void TsubaMunmap(uint8_t* ptr);
 /* Take whatever is in @data and put it a the file called @uri */
 int TsubaStore(const char* uri, const uint8_t* data, uint64_t size);
 
+/* Take whatever is in @data and put it a the file called @uri */
+int TsubaStoreSync(const char* uri, const uint8_t* data, uint64_t size);
+
+/* Take whatever is in @data and start putting it a the file called @uri */
+int TsubaStoreAsync(const char* uri, const uint8_t* data, uint64_t size);
+/* Make sure put has occurred, and wait if it hasn't */
+int TsubaStoreAsyncFinish(const char* uri);
+
 /* read a (probably small) part of the file into a caller defined buffer */
 int TsubaPeek(const char* filename, uint8_t* result_buffer, uint64_t begin,
               uint64_t size);

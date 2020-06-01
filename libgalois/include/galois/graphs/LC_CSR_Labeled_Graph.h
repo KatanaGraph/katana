@@ -1,13 +1,13 @@
 #pragma once
 
 
-#include "galois/graphs/B_LC_CSR_Graph.h"
+#include "galois/graphs/LC_CSR_CSC_Graph.h"
 
 namespace galois {
 namespace graphs {
 
 /**
- * A B_LC_CSR_Graph specialized for edge labels.
+ * A LC_CSR_CSC_Graph specialized for edge labels.
  *
  * @tparam NodeTy type of the node data
  * @tparam EdgeTy type of the edge data
@@ -25,15 +25,15 @@ template <typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
           bool HasNoLockable = false, bool UseNumaAlloc = false,
           bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
 class LC_CSR_Labeled_Graph
-    : public B_LC_CSR_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable, UseNumaAlloc,
+    : public LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable, UseNumaAlloc,
                           HasOutOfLineLockable, FileEdgeTy> {
   // typedef to make it easier to read
   //! Typedef referring to base LC_CSR_Graph
   using BaseGraph = LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
                                  HasOutOfLineLockable, FileEdgeTy>;
-  //! Typedef referring to the derived B_LC_CSR_Graph class
+  //! Typedef referring to the derived LC_CSR_CSC_Graph class
   using DerivedGraph =
-      B_LC_CSR_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
+      LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
                      UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
   //! Typedef referring to this class itself
   using ThisGraph =

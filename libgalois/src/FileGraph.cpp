@@ -1,7 +1,7 @@
 /*
- * This file belongs to the Galois project, a C++ library for exploiting parallelism.
- * The code is being released under the terms of the 3-Clause BSD License (a
- * copy is located in LICENSE.txt at the top-level directory).
+ * This file belongs to the Galois project, a C++ library for exploiting
+ * parallelism. The code is being released under the terms of the 3-Clause BSD
+ * License (a copy is located in LICENSE.txt at the top-level directory).
  *
  * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
@@ -196,7 +196,7 @@ static size_t rawBlockSize(size_t numNodes, size_t numEdges,
     bytes += sizeof(uint64_t) * numEdges;
     // no padding necessary in version 2 TODO verify this
   } else {
-    GALOIS_DIE("graph version not set", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 
   bytes += sizeofEdgeData * numEdges;
@@ -231,7 +231,7 @@ void* FileGraph::fromArrays(uint64_t* out_idx, uint64_t num_nodes, void* outs,
   } else if (oGraphVersion == 2) {
     *fptr++ = convert_htole64(2);
   } else {
-    GALOIS_DIE("unknown file version to fromArrays", oGraphVersion);
+    GALOIS_DIE("unknown file version: ", oGraphVersion);
   }
   *fptr++ = convert_htole64(sizeof_edge_data);
   *fptr++ = convert_htole64(num_nodes);
@@ -313,8 +313,7 @@ void FileGraph::fromFile(const std::string& filename) {
 #ifdef MAP_POPULATE
   _MAP_BASE |= MAP_POPULATE;
 #endif
-  void* base = mmap_big(nullptr, buf.st_size, PROT_READ,
-                        _MAP_BASE, fd, 0);
+  void* base = mmap_big(nullptr, buf.st_size, PROT_READ, _MAP_BASE, fd, 0);
   if (base == MAP_FAILED)
     GALOIS_SYS_DIE("failed reading ", "'", filename, "'");
   mappings.push_back({base, static_cast<size_t>(buf.st_size)});
@@ -410,7 +409,7 @@ void FileGraph::partFromFile(const std::string& filename, NodeRange nrange,
              edgeOffset * sizeof(uint64_t);
     outs = loadFromOffset(fd, offset, length, mappings);
   } else {
-    GALOIS_DIE("unknown file version at partFromFile", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 
   edgeData = 0;
@@ -487,8 +486,8 @@ auto FileGraph::divideByNode(size_t nodeSize, size_t edgeSize, size_t id,
       dummy_scale_factor, edgeOffset);
 }
 
-auto FileGraph::divideByEdge(size_t nodeSize, size_t edgeSize, size_t id,
-                             size_t total) -> std::pair<NodeRange, EdgeRange> {
+auto FileGraph::divideByEdge(size_t, size_t, size_t id, size_t total)
+    -> std::pair<NodeRange, EdgeRange> {
   size_t size  = numEdges;
   size_t block = (size + total - 1) / total;
   size_t aa    = block * id;
@@ -554,7 +553,7 @@ uint64_t FileGraph::getEdgeIdx(GraphNode src, GraphNode dst) {
 
     return ~static_cast<uint64_t>(0);
   } else {
-    GALOIS_DIE("unknown file version at getEdgeIdx", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 }
 
@@ -621,7 +620,7 @@ void* FileGraph::raw_neighbor_begin(GraphNode N) {
   } else if (graphVersion == 2) {
     return &(((uint64_t*)outs)[*edge_begin(N)]);
   } else {
-    GALOIS_DIE("unknown file version at raw_neighbor_begin", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 
   return nullptr;
@@ -633,7 +632,7 @@ void* FileGraph::raw_neighbor_end(GraphNode N) {
   } else if (graphVersion == 2) {
     return &(((uint64_t*)outs)[*edge_end(N)]);
   } else {
-    GALOIS_DIE("unknown file version at raw_neighbor_end", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 
   return nullptr;
@@ -676,7 +675,7 @@ FileGraph::GraphNode FileGraph::getEdgeDst(edge_iterator it) {
     numBytesReadEdgeDst += 8;
     return convert_le64toh(((uint64_t*)outs)[*it]);
   } else {
-    GALOIS_DIE("unknown file version at getEdgeDst", graphVersion);
+    GALOIS_DIE("unknown file version: ", graphVersion);
   }
 
   return -1;

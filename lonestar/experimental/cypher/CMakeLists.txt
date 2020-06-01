@@ -13,6 +13,7 @@ target_include_directories(cypher_galois PUBLIC
   ${CMAKE_SOURCE_DIR}/libgalois/experimental/include
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
 target_link_libraries(cypher_galois ${Boost_SERIALIZATION_LIBRARY_RELEASE} lonestar)
 set_target_properties (cypher_galois PROPERTIES 
   INTERFACE_POSITION_INDEPENDENT_CODE On 

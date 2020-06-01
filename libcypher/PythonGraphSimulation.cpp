@@ -115,7 +115,7 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(0, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
@@ -126,13 +126,13 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "file").second.first;
 #endif
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(1, 0, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
     ));
 #endif
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(2, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
@@ -143,13 +143,13 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(3, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
     ));
 #endif
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(4, 3, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 2));
 #else
@@ -160,7 +160,7 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "network").second.first;
 #endif
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(5, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 2));
 #else
@@ -200,7 +200,7 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
 #endif
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(0, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
@@ -211,13 +211,13 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(1, 0, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
     ));
 #endif
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(2, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
@@ -228,14 +228,14 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
 #endif
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(3, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
     ));
 #endif
   queryGraph.constructEdge(4, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 2));
 #else
@@ -247,7 +247,7 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
   queryGraph.constructEdge(5, 2,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 2));
 #else
@@ -287,7 +287,7 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "network").second.first;
 #endif
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(0, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
@@ -298,13 +298,13 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(1, 0, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(1, 0, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
     ));
 #endif
-  queryGraph.constructEdge(2, 2, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(2, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
@@ -315,13 +315,13 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "file").second.first;
 #endif
-  queryGraph.constructEdge(3, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(3, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
     ));
 #endif
-  queryGraph.constructEdge(4, 3, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(4, 3, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 2));
 #else
@@ -332,13 +332,13 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(5, 2, EdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
+  queryGraph.constructEdge(5, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "READ").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 2));
 #else
     ));
 #endif
-  queryGraph.constructEdge(6, 4, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(6, 4, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 3));
 #else
@@ -349,14 +349,14 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(4).label = getNodeLabelMask(*dataGraph, "file").second.first;
 #endif
-  queryGraph.constructEdge(7, 3, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(7, 3, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 3));
 #else
     ));
 #endif
   queryGraph.constructEdge(8, 5,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 4));
 #else
@@ -368,7 +368,7 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
   queryGraph.getData(5).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
   queryGraph.constructEdge(9, 4,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 4));
 #else
@@ -407,20 +407,20 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(0).label = getNodeLabelMask(*dataGraph, "file").second.first;
 #endif
-  queryGraph.constructEdge(0, 1, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(0, 1, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
     ));
 #endif
-  queryGraph.constructEdge(1, 2, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
+  queryGraph.constructEdge(1, 2, QueryEdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
     ));
 #endif
   queryGraph.constructEdge(2, 3,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 2));
 #else
@@ -431,7 +431,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(1).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(3, 0, EdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
+  queryGraph.constructEdge(3, 0, QueryEdgeData(getEdgeLabelMask(*dataGraph, "WRITE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 0));
 #else
@@ -442,7 +442,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   queryGraph.getData(2).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
-  queryGraph.constructEdge(4, 0, EdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
+  queryGraph.constructEdge(4, 0, QueryEdgeData(getEdgeLabelMask(*dataGraph, "CHMOD").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , 1));
 #else
@@ -454,7 +454,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
   queryGraph.getData(3).label = getNodeLabelMask(*dataGraph, "process").second.first;
 #endif
   queryGraph.constructEdge(5, 0,
-                           EdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
+                           QueryEdgeData(getEdgeLabelMask(*dataGraph, "EXECUTE").second.first
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                            , 2));
 #else

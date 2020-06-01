@@ -36,12 +36,12 @@ void printIR(std::vector<MatchedEdge>& ir, std::vector<const char*> filters) {
     out << filters[2 * i + 1] << "\n";
   }
   out.close();
-} 
+}
 
 size_t matchCypherQuery(AttributedGraph* dataGraph,
                         EventLimit limit,
                         EventWindow window,
-                        const char* cypherQueryStr, 
+                        const char* cypherQueryStr,
                         bool useGraphSimulation)
 {
 	  galois::StatTimer compileTime("CypherCompileTime");
@@ -67,7 +67,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
                   EventWindow window,
                   MatchedEdge* queryEdges,
                   size_t numQueryEdges,
-                  const char** filters, 
+                  const char** filters,
                   bool useGraphSimulation) {
   // build node types and prefix sum of edges
   size_t numQueryNodes = 0;
@@ -75,7 +75,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
   std::vector<std::string> nodeContains;
   std::vector<size_t> prefixSum;
   std::vector<std::pair<size_t, size_t>> starEdgeList;
-  std::vector<EdgeData> starEdgeData;
+  std::vector<QueryEdgeData> starEdgeData;
   galois::StatTimer compileTime("IRCompileTime");
 
   compileTime.start();
@@ -236,7 +236,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
 #endif
 
       queryGraph.constructEdge(prefixSum[srcID]++, dstID,
-                               EdgeData(label 
+                               QueryEdgeData(label
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                                , queryEdges[j].timestamp, matched
 #endif
@@ -262,7 +262,7 @@ size_t matchQuery(AttributedGraph* dataGraph,
                                    dataGraph->nodeNames);
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starEdgeList) {
-      findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second, 
+      findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second,
                         starEdgeData[currentStar],
                         numQueryNodes + currentStar,
                         actualNumQueryEdges + currentStar);

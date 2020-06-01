@@ -26,7 +26,7 @@
 #ifndef GALOIS_GRAPH_SIMULATION_H
 #define GALOIS_GRAPH_SIMULATION_H
 #include "galois/Galois.h"
-#include "QueryGraph.h"
+#include "galois/graphs/QueryGraph.h"
 
 #include <string>
 
@@ -98,11 +98,11 @@ struct AttributedGraph {
   std::unordered_map<std::string, std::vector<std::string>> edgeAttributes;
 };
 
-bool matchNodeLabel(const Node& query, const Node& data);
+bool matchNodeLabel(const QueryNode& query, const QueryNode& data);
 
 bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Graph& dataGraph, const GNode& dataNodeID);
 
-bool matchEdgeLabel(const EdgeData& query, const EdgeData& data);
+bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data);
 
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
 /**
@@ -185,14 +185,14 @@ void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
  * @todo doxygen
  */
 void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       EdgeData queryEdgeData,
+                       QueryEdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
  * @todo doxygen
  */
 void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       EdgeData queryEdgeData,
+                       QueryEdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**

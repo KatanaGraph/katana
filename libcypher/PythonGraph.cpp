@@ -289,7 +289,7 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
                       uint32_t dstNodeIndex, uint32_t labelBitPosition,
                       uint64_t GALOIS_UNUSED(timestamp)) {
   g->graph.constructEdge(edgeIndex, dstNodeIndex,
-                         EdgeData(1 << labelBitPosition
+                         QueryEdgeData(1 << labelBitPosition
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                          , timestamp));
 #else
@@ -299,7 +299,7 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
 
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
                    uint32_t dstNodeIndex, uint32_t label, uint64_t GALOIS_UNUSED(timestamp)) {
-  g->graph.constructEdge(edgeIndex, dstNodeIndex, EdgeData(label
+  g->graph.constructEdge(edgeIndex, dstNodeIndex, QueryEdgeData(label
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     , timestamp));
 #else
@@ -438,7 +438,7 @@ uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
     auto& data = src.getEdgeData(e);
 
     // uses non-new variant of construct edge i.e. direct copy of label
-    dst.constructEdge(curEdgeIndex, edgeDst, EdgeData(data
+    dst.constructEdge(curEdgeIndex, edgeDst, QueryEdgeData(data
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                       , data.timestamp));
 #else
@@ -502,14 +502,14 @@ void unmatchAll(AttributedGraph* g) {
   galois::do_all(
     galois::iterate(actualGraph.begin(), actualGraph.end()),
     [&] (auto node) {
-      Node& nd = actualGraph.getData(node);
+      QueryNode& nd = actualGraph.getData(node);
       nd.matched = 0;
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       auto curEdge = actualGraph.edge_begin(node);
       auto end = actualGraph.edge_end(node);
       for (; curEdge < end; curEdge++) {
-        EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+        QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
         curEdgeData.matched = 0;
       }
 #endif
@@ -543,7 +543,7 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
 
     if (curDest == dstIndex) {
       // get this edge's metadata to see if it matches what we know
-      EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+      QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
       // step 1: check for it not already being marked dead
@@ -584,7 +584,7 @@ uint32_t nodeRemovalPass(AttributedGraph* g) {
   galois::do_all(
     galois::iterate(actualGraph.begin(), actualGraph.end()),
     [&] (auto node) {
-      Node& nd = actualGraph.getData(node);
+      QueryNode& nd = actualGraph.getData(node);
       nd.matched = 0;
 
       auto curEdge = actualGraph.edge_begin(node);
@@ -595,7 +595,7 @@ uint32_t nodeRemovalPass(AttributedGraph* g) {
       // if my outgoing edge is dead, so is the corresponding incoming edge
       for (; curEdge < end; curEdge++) {
         //uint32_t curDest = actualGraph.getEdgeDst(curEdge);
-        EdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
+        QueryEdgeData& curEdgeData = actualGraph.getEdgeData(curEdge);
         //galois::gPrint(node, " ", curDest, " label ", curEdgeData.label,
         //               " stamp ", curEdgeData.timestamp, " dead ",
         //               curEdgeData.matched, "\n");

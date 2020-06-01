@@ -303,7 +303,7 @@ class DBGraph {
   //  for (size_t i = 0; i < numEdges; i++) {
   //    // fill out edge data as edge destinations already come from gr file
   //    // TODO timestamps currently grow with edge index i
-  //    lcGraph.setEdgeData(i, EdgeData(1 << (i % numEdgeLabels), i));
+  //    lcGraph.setEdgeData(i, QueryEdgeData(1 << (i % numEdgeLabels), i));
   //  }
 
   //  // TODO edge attributes

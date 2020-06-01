@@ -5,7 +5,7 @@
 /**
  * Node data type.
  */
-struct Node {
+struct QueryNode {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   //! Label on node. Maximum of 32 node labels.
   uint32_t label;
@@ -20,7 +20,7 @@ struct Node {
  * Edge data type
  */
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-struct EdgeData {
+struct QueryEdgeData {
   //! Label on the edge (like the type of action). Max of 32 edge labels.
   uint32_t label;
   //! Timestamp of action the edge represents. Range is limited.
@@ -41,12 +41,12 @@ struct EdgeData {
 #else
 // EdgeData() : label(0) {}
 // EdgeData(uint32_t l) : label(l) {}
-typedef uint32_t EdgeData;
+typedef uint32_t QueryEdgeData;
 #endif
 
 //! Graph typedef
 using Graph =
-    galois::graphs::LC_CSR_Labeled_Graph<Node, EdgeData, false, true, true>;
+    galois::graphs::LC_CSR_Labeled_Graph<QueryNode, QueryEdgeData, false, true, true>;
 // using Graph = galois::graphs::B_LC_CSR_Graph<Node, EdgeData>::
 //                 with_no_lockable<true>::type::
 //                 with_numa_alloc<true>::type;

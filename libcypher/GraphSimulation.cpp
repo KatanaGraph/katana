@@ -30,7 +30,7 @@
 
 // query.label: bitwise-OR of tags that should MATCH and tags that should NOT-MATCH
 // query.matched: tags that should MATCH
-bool matchNodeLabel(const Node& query, const Node& data) {
+bool matchNodeLabel(const QueryNode& query, const QueryNode& data) {
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   return ((query.label & data.label) == query.matched);
 #else
@@ -52,7 +52,7 @@ bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID, const Gr
   return true;
 }
 
-bool matchEdgeLabel(const EdgeData& query, const EdgeData& data) {
+bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data) {
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
   return ((query.label & data.label) == query.matched);
 #else
@@ -861,7 +861,7 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
 }
 
 void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       EdgeData qeData,
+                       QueryEdgeData qeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> parent;
   parent.allocateInterleaved(graph.size());
@@ -988,7 +988,7 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNod
 }
 
 void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                       EdgeData qeData,
+                       QueryEdgeData qeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> visited; // require only 2 bits
   visited.allocateInterleaved(graph.size());

@@ -38,7 +38,7 @@ protected:
 	std::vector<VertexId> vertexToMatchingOrderMap;
 
 
-	bool pruneNode(Graph* queryGraph, const GNode& queryNodeID, Node& dataNode) {
+	bool pruneNode(Graph* queryGraph, const GNode& queryNodeID, QueryNode& dataNode) {
 		if (afterGraphSimulation) {
 			return !(dataNode.matched & (1 << queryNodeID));
 		} else {
@@ -64,7 +64,7 @@ protected:
 	}
 
 	// check if vertex a is connected to vertex b in a directed, labeled graph
-	inline bool is_connected_with_label(unsigned a, unsigned b, const EdgeData& label) {
+	inline bool is_connected_with_label(unsigned a, unsigned b, const QueryEdgeData& label) {
 		if (degrees[a] == 0 || indegrees[b] == 0) return false;
 		unsigned key = b;
 		unsigned search = a;
@@ -81,7 +81,7 @@ protected:
 	}
 
 public:
-	using NeighborsTy = galois::gstl::Vector<std::pair<unsigned, EdgeData>>;
+	using NeighborsTy = galois::gstl::Vector<std::pair<unsigned, QueryEdgeData>>;
 
 	AppMiner(Graph *g) : VertexMiner(g) {}
 

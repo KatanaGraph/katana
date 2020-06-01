@@ -34,16 +34,18 @@ struct EdgeData {
    */
   EdgeData() : label(0), timestamp(0), matched(0) {}
   EdgeData(uint32_t l, uint64_t t) : label(l), timestamp(t), matched(0) {}
-  EdgeData(uint32_t l, uint64_t t, uint64_t m) : label(l), timestamp(t), matched(m) {}
+  EdgeData(uint32_t l, uint64_t t, uint64_t m)
+      : label(l), timestamp(t), matched(m) {}
 };
 #else
-  // EdgeData() : label(0) {}
-  // EdgeData(uint32_t l) : label(l) {}
+// EdgeData() : label(0) {}
+// EdgeData(uint32_t l) : label(l) {}
 typedef uint32_t EdgeData;
 #endif
 
 //! Graph typedef
-using Graph = galois::graphs::LC_CSR_Labeled_Graph<Node, EdgeData, false, true, true>;
+using Graph =
+    galois::graphs::LC_CSR_Labeled_Graph<Node, EdgeData, false, true, true>;
 // using Graph = galois::graphs::B_LC_CSR_Graph<Node, EdgeData>::
 //                 with_no_lockable<true>::type::
 //                 with_numa_alloc<true>::type;

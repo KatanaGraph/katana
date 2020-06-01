@@ -243,9 +243,21 @@ public:
     assert(el.size() == g.sizeEdges());
     num_edges_ = el.size();
     labels_.resize(num_vertices_);
+#ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+    for (size_t i = 0; i < num_vertices_; i++) {
+      labels_[i] = g.getData(i).label;
+    }
+#else
+    for (size_t i = 0; i < num_vertices_; i++) {
+      labels_[i] = 0;
+    }
+#endif
+#else
     for (size_t i = 0; i < num_vertices_; i++) {
       labels_[i] = g.getData(i);
     }
+#endif
     MakeGraphFromEL();
   }
   void print_graph() {

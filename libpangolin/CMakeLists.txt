@@ -34,3 +34,8 @@ if (GALOIS_ENABLE_GPU)
 
   target_link_libraries(pangolin_gpu INTERFACE galois_shmem galois_gpu)
 endif()
+
+# uses query graph; note that this means regular pangolin apps may not function
+if (GALOIS_ENABLE_CYPHER)
+  target_compile_definitions(pangolin PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
+endif()

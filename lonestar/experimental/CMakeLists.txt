@@ -1,15 +1,3 @@
-set(CYPHER_PARSER_ROOT "${CMAKE_SOURCE_DIR}/libcypher-parser")
-set(CYPHER_PARSER_INCLUDE "${CYPHER_PARSER_ROOT}/lib/src")
-set(CYPHER_PARSER_LIBRARY "${CYPHER_PARSER_ROOT}/lib/src/.libs/libcypher-parser.a")
-add_custom_command(
-  OUTPUT ${CYPHER_PARSER_LIBRARY}
-  WORKING_DIRECTORY ${CYPHER_PARSER_ROOT}
-  COMMAND ./autogen.sh
-  COMMAND ./configure CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} CFLAGS='-fPIC'
-  COMMAND make 
-)
-add_custom_target(cypher_parser DEPENDS ${CYPHER_PARSER_LIBRARY})
-
 add_subdirectory(barneshut)
 #add_subdirectory(barneshut)
 #add_subdirectory(bc-inner)
@@ -49,7 +37,6 @@ add_subdirectory(python)
 #add_subdirectory(lefdef_SPRoute)
 #add_subdirectory(detailedrouter)
 add_subdirectory(gatesizing)
-add_subdirectory(cypher)
 add_subdirectory(triangles_exp)
 add_subdirectory(independentset)
 add_subdirectory(surveypropagation)

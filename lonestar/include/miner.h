@@ -113,36 +113,6 @@ protected:
 	#endif
 	std::vector<BYTE> is_wedge; // indicate a 3-vertex embedding is a wedge or chain (v0-cntered or v1-centered)
 
-	#ifndef USE_QUERY_GRAPH_TYPE
-	#ifdef USE_QUERY_GRAPH
-	std::vector<VertexId> matching_order;
-	std::vector<VertexId> matching_order_map;
-	std::vector<VertexId> automorph_group_id;
-	// Read the preset file to hardcode the presets
-	void read_presets() {
-		std::ifstream ifile;
-		ifile.open(preset_filename);
-		if (!ifile) printf("Error in reading file %s\n", preset_filename.c_str());
-		VertexId x;
-		for (size_t i = 0; i< max_size; ++i) {
-			ifile >> x;
-			matching_order[i] = x;
-			if(debug) std::cout << "matching_order[" << i << "] = " << x << "\n";
-		}
-		for (size_t i = 0; i < max_size; ++i) {
-			ifile >> x;
-			matching_order_map[i] = x;
-			if(debug) std::cout << "matching_map[" << i << "] = " << x << "\n";
-		}
-		for (size_t i = 0; i < max_size; ++i) {
-			ifile >> x;
-			automorph_group_id[i] = x;
-			if(debug) std::cout << "automorph_group_id[" << i << "] = " << x << "\n";
-		}
-		ifile.close();
-	}
-	#endif
-	#endif
 	template <typename EmbeddingTy = VertexEmbedding>
 	inline bool is_vertexInduced_automorphism(unsigned n, const EmbeddingTy& emb, unsigned idx, VertexId dst) {
 		//unsigned n = emb.size();

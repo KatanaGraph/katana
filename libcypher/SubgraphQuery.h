@@ -6,7 +6,6 @@
 //#define USE_EMB_LIST
 #define CHUNK_SIZE 256
 #define USE_BASE_TYPES
-#define USE_QUERY_GRAPH
 #define USE_QUERY_GRAPH_TYPE
 #include "pangolin.h"
 #include "GraphSimulation.h"

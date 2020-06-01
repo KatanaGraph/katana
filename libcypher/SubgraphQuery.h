@@ -372,14 +372,14 @@ template <bool afterGraphSimulation>
 size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
 	galois::StatTimer initTime("MiningInitTime");
 	initTime.start();
-	ResourceManager rm;
 	AppMiner<afterGraphSimulation> miner(&data_graph, &query_graph);
 	miner.init();
 	initTime.stop();
 
+  bool showEmbed = false;
 	galois::StatTimer miningTime("PatternMiningTime");
 	miningTime.start();
-	if (show) {
+	if (showEmbed) {
 		miner.template exec<false, true>();
 	} else {
 		miner.template exec<false, false>();

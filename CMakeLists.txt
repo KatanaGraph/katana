@@ -24,6 +24,7 @@ endif()
 ###### Distributed-heterogeneous features ######
 set(GALOIS_ENABLE_DIST OFF CACHE BOOL "Enable distributed features")
 set(GALOIS_ENABLE_GPU OFF CACHE BOOL "Enable heterogeneous features")
+set(GALOIS_ENABLE_CYPHER OFF CACHE BOOL "Enable Cypher/query graph library support")
 set(CUDA_CAPABILITY "3.7,6.1" CACHE STRING "Comma-separated CUDA capability version numbers")
 set(GALOIS_COMM_STATS OFF CACHE BOOL "Report more detailed statistics of communication")
 ###### General features ######
@@ -214,6 +215,9 @@ if (GALOIS_ENABLE_GPU)
   add_subdirectory(libgpu)
 endif()
 add_subdirectory(libpangolin)
+if (GALOIS_ENABLE_CYPHER)
+  add_subdirectory(libcypher)
+endif()
 
 # Applications (apps)
 add_subdirectory(lonestar)

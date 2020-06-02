@@ -36,6 +36,9 @@ if (GALOIS_ENABLE_GPU)
 endif()
 
 # uses query graph; note that this means regular pangolin apps may not function
-if (GALOIS_ENABLE_CYPHER)
-  target_compile_definitions(pangolin PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
-endif()
+#if (GALOIS_ENABLE_CYPHER)
+#  target_compile_definitions(pangolin PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
+#  if (GALOIS_ENABLE_GPU)
+#    target_compile_definitions(pangolin_gpu PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
+#  endif()
+#endif()

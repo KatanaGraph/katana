@@ -52,9 +52,9 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
 
   std::ostream os(buf);
 
-  Graph& qgraph    = qG.graph;
-  auto& qnodeNames = qG.nodeNames;
-  Graph& graph     = dG.graph;
+  QueryGraph& qgraph = qG.graph;
+  auto& qnodeNames   = qG.nodeNames;
+  QueryGraph& graph  = dG.graph;
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dG.nodeLabelNames;
 #endif
@@ -114,7 +114,7 @@ void reportGraphSimulation(AttributedGraph& qG, AttributedGraph& dG,
 }
 
 void returnMatchedNodes(AttributedGraph& dataGraph, MatchedNode* matchedNodes) {
-  Graph& graph = dataGraph.graph;
+  QueryGraph& graph = dataGraph.graph;
   // auto& nodeLabelNames = dataGraph.nodeLabelNames;
   auto& nodeNames = dataGraph.nodeNames;
 
@@ -131,7 +131,7 @@ void returnMatchedNodes(AttributedGraph& dataGraph, MatchedNode* matchedNodes) {
 }
 
 void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
-  Graph& graph = dataGraph.graph;
+  QueryGraph& graph = dataGraph.graph;
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dataGraph.nodeLabelNames;
 #endif
@@ -171,7 +171,7 @@ void reportMatchedNodes(AttributedGraph& dataGraph, char* outputFile) {
 
 void returnMatchedNeighbors(AttributedGraph& dataGraph, char*,
                             MatchedNode* matchedNeighbors) {
-  Graph& graph = dataGraph.graph;
+  QueryGraph& graph = dataGraph.graph;
   // auto& nodeLabelNames = dataGraph.nodeLabelNames;
   auto& nodeNames = dataGraph.nodeNames;
 
@@ -190,7 +190,7 @@ void returnMatchedNeighbors(AttributedGraph& dataGraph, char*,
 
 void reportMatchedNeighbors(AttributedGraph& dataGraph, char*,
                             char* outputFile) {
-  Graph& graph = dataGraph.graph;
+  QueryGraph& graph = dataGraph.graph;
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
   auto& nodeLabelNames = dataGraph.nodeLabelNames;
 #endif
@@ -226,7 +226,7 @@ void reportMatchedNeighbors(AttributedGraph& dataGraph, char*,
 }
 
 void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
-  Graph& graph = g.graph;
+  QueryGraph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
@@ -280,7 +280,7 @@ void returnMatchedEdges(AttributedGraph& g, MatchedEdge* matchedEdges) {
 }
 
 void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
-  Graph& graph = g.graph;
+  QueryGraph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
@@ -350,7 +350,7 @@ void reportMatchedEdges(AttributedGraph& g, char* outputFile) {
 
 void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
                                 MatchedEdge* matchedEdges) {
-  Graph& graph = g.graph;
+  QueryGraph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;
@@ -396,7 +396,7 @@ void returnMatchedNeighborEdges(AttributedGraph& g, char* uuid,
 
 void reportMatchedNeighborEdges(AttributedGraph& g, char* uuid,
                                 char* outputFile) {
-  Graph& graph = g.graph;
+  QueryGraph& graph = g.graph;
   // auto& nodeLabelNames = g.nodeLabelNames;
   auto& edgeLabelNames = g.edgeLabelNames;
   auto& nodeNames      = g.nodeNames;

@@ -78,7 +78,7 @@ struct EventWindow {
  */
 struct AttributedGraph {
   //! Graph structure class
-  Graph graph;
+  QueryGraph graph;
   std::vector<std::string> nodeLabelNames;                //!< maps ID to Name
   std::unordered_map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
   std::vector<std::string> edgeLabelNames;                //!< maps ID to Name
@@ -100,8 +100,9 @@ struct AttributedGraph {
 
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data);
 
-bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID,
-                     const Graph& dataGraph, const GNode& dataNodeID);
+bool matchNodeDegree(const QueryGraph& queryGraph,
+                     const QueryGNode& queryNodeID, const QueryGraph& dataGraph,
+                     const QueryGNode& dataNodeID);
 
 bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data);
 
@@ -156,44 +157,46 @@ bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel);
  *
  * @param graph Graph to reset matched status on
  */
-void resetMatchedStatus(Graph& graph);
+void resetMatchedStatus(QueryGraph& graph);
 
-void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
-                                    EventLimit limit, EventWindow window,
+void matchNodesUsingGraphSimulation(QueryGraph& qG, QueryGraph& dG,
+                                    bool reinitialize, EventLimit limit,
+                                    EventWindow window,
                                     bool queryNodeHasMoreThan2Edges,
                                     std::vector<std::string>& nodeContains,
                                     std::vector<std::string>& nodeNames);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG);
+void matchEdgesAfterGraphSimulation(QueryGraph& qG, QueryGraph& dG);
 #endif
 
 /**
  * @todo doxygen
  */
-void runGraphSimulationOld(Graph& queryGraph, Graph& dataGraph,
+void runGraphSimulationOld(QueryGraph& queryGraph, QueryGraph& dataGraph,
                            EventLimit limit, EventWindow window,
                            bool queryNodeHasMoreThan2Edges);
 
 /**
  * @todo doxygen
  */
-void runGraphSimulation(Graph& queryGraph, Graph& dataGraph, EventLimit limit,
-                        EventWindow window, bool queryNodeHasMoreThan2Edges,
+void runGraphSimulation(QueryGraph& queryGraph, QueryGraph& dataGraph,
+                        EventLimit limit, EventWindow window,
+                        bool queryNodeHasMoreThan2Edges,
                         std::vector<std::string>& nodeContains,
                         std::vector<std::string>& nodeNames);
 
 /**
  * @todo doxygen
  */
-void findShortestPaths(Graph& dataGraph, uint32_t srcQueryNode,
+void findShortestPaths(QueryGraph& dataGraph, uint32_t srcQueryNode,
                        uint32_t dstQueryNode, QueryEdgeData queryEdgeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
  * @todo doxygen
  */
-void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode,
+void findAllPaths(QueryGraph& dataGraph, uint32_t srcQueryNode,
                   uint32_t dstQueryNode, QueryEdgeData queryEdgeData,
                   uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
@@ -206,7 +209,7 @@ void findAllPaths(Graph& dataGraph, uint32_t srcQueryNode,
  * @param window Time window to consider when pattern matching (may be
  * valid or invalid)
  */
-void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
+void matchNodeWithRepeatedActions(QueryGraph& graph, uint32_t nodeLabel,
                                   uint32_t action, EventWindow window);
 /**
  * Look for a node that has 2 actions on 2 specific types of nodes.
@@ -220,9 +223,10 @@ void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
  * @param window Time window to consider when pattern matching (may be
  * valid or invalid)
  */
-void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
-                             uint32_t dstNodeLabel1, uint32_t action2,
-                             uint32_t dstNodeLabel2, EventWindow window);
+void matchNodeWithTwoActions(QueryGraph& graph, uint32_t nodeLabel,
+                             uint32_t action1, uint32_t dstNodeLabel1,
+                             uint32_t action2, uint32_t dstNodeLabel2,
+                             EventWindow window);
 /**
  * Look for neighbors of a specified node connected by a specified action.
  *
@@ -234,8 +238,8 @@ void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
  * @param window Time window to consider when pattern matching (may be
  * valid or invalid)
  */
-void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
-                    uint32_t action, uint32_t neighborLabel,
+void matchNeighbors(QueryGraph& graph, QueryGraph::GraphNode node,
+                    uint32_t nodeLabel, uint32_t action, uint32_t neighborLabel,
                     EventWindow window);
 
 /**
@@ -243,12 +247,12 @@ void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
  * @param graph Graph to count matched nodes in
  * @returns Number of matched nodes in the graph
  */
-size_t countMatchedNodes(Graph& graph);
+size_t countMatchedNodes(QueryGraph& graph);
 /**
  * Get the number of matched neighbors of a node in the graph.
  * @warning Right now it literally does the same thing as countMatchedNodes
  */
-size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node);
+size_t countMatchedNeighbors(QueryGraph& graph, QueryGraph::GraphNode node);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 /**
@@ -256,13 +260,13 @@ size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node);
  * @param graph Graph to count matched edges in
  * @returns Number of matched edges in the graph
  */
-size_t countMatchedEdges(Graph& graph);
+size_t countMatchedEdges(QueryGraph& graph);
 /**
  * Get the number of matched edges of a particular node in the graph.
  * @param graph Graph to count matched edges in
  * @returns Number of matched edges in the graph
  */
-size_t countMatchedNeighborEdges(Graph& graph, Graph::GraphNode node);
+size_t countMatchedNeighborEdges(QueryGraph& graph, QueryGraph::GraphNode node);
 #endif
 
 #endif // GALOIS_GRAPH_SIMULATION_H

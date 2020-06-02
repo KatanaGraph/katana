@@ -110,7 +110,7 @@ size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
     return 0;
   }
 
-  Graph queryGraph;
+  QueryGraph queryGraph;
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 
@@ -217,7 +217,7 @@ size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
     return 0;
   }
 
-  Graph queryGraph;
+  QueryGraph queryGraph;
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 
@@ -324,7 +324,7 @@ size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
     return 0;
   }
 
-  Graph queryGraph;
+  QueryGraph queryGraph;
   queryGraph.allocateFrom(6, 10);
   queryGraph.constructNodes();
 
@@ -478,7 +478,7 @@ size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
     return 0;
   }
 
-  Graph queryGraph;
+  QueryGraph queryGraph;
   queryGraph.allocateFrom(4, 6);
   queryGraph.constructNodes();
 

@@ -12,7 +12,7 @@
 #include <algorithm>
 
 class OrderVertices {
-  Graph& graph;
+  QueryGraph& graph;
 
   uint32_t totalDegree(VertexId v) {
     uint32_t num_edges =
@@ -22,7 +22,7 @@ class OrderVertices {
   }
 
 public:
-  OrderVertices(Graph& g) : graph(g) {}
+  OrderVertices(QueryGraph& g) : graph(g) {}
 
   bool operator()(VertexId left, const VertexId right) {
     if (totalDegree(left) >= totalDegree(right))
@@ -34,11 +34,11 @@ public:
 template <bool afterGraphSimulation>
 class AppMiner : public VertexMiner {
 protected:
-  Graph* query_graph;
+  QueryGraph* query_graph;
   std::vector<VertexId> matchingOrderToVertexMap;
   std::vector<VertexId> vertexToMatchingOrderMap;
 
-  bool pruneNode(Graph* queryGraph, const GNode& queryNodeID,
+  bool pruneNode(QueryGraph* queryGraph, const QueryGNode& queryNodeID,
                  QueryNode& dataNode) {
     if (afterGraphSimulation) {
       return !(dataNode.matched & (1 << queryNodeID));
@@ -48,12 +48,13 @@ protected:
   }
 
   template <bool inEdges>
-  inline bool directed_binary_search(unsigned key, Graph::edge_iterator begin,
-                                     Graph::edge_iterator end) {
-    Graph::edge_iterator l = begin;
-    Graph::edge_iterator r = end - 1;
+  inline bool directed_binary_search(unsigned key,
+                                     QueryGraph::edge_iterator begin,
+                                     QueryGraph::edge_iterator end) {
+    QueryGraph::edge_iterator l = begin;
+    QueryGraph::edge_iterator r = end - 1;
     while (r >= l) {
-      Graph::edge_iterator mid = l + (r - l) / 2;
+      QueryGraph::edge_iterator mid = l + (r - l) / 2;
       unsigned value =
           inEdges ? graph->getInEdgeDst(mid) : graph->getEdgeDst(mid);
       if (value == key) {
@@ -89,9 +90,9 @@ protected:
 public:
   using NeighborsTy = galois::gstl::Vector<std::pair<unsigned, QueryEdgeData>>;
 
-  AppMiner(Graph* g) : VertexMiner(g) {}
+  AppMiner(QueryGraph* g) : VertexMiner(g) {}
 
-  AppMiner(Graph* dgraph, Graph* qgraph)
+  AppMiner(QueryGraph* dgraph, QueryGraph* qgraph)
       : VertexMiner(dgraph), query_graph(qgraph) {}
 
   ~AppMiner() {}
@@ -317,7 +318,7 @@ public:
 #endif
         // each outgoing neighbor of d_vertex is a candidate
         for (auto d_edge : graph->edges(d_vertex, *deData)) {
-          GNode d_dst = graph->getEdgeDst(d_edge);
+          QueryGNode d_dst = graph->getEdgeDst(d_edge);
           if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
             addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors,
                                                numInNeighbors, out_queue);
@@ -335,7 +336,7 @@ public:
 #endif
         // each incoming neighbor of d_vertex is a candidate
         for (auto d_edge : graph->in_edges(d_vertex, *deData)) {
-          GNode d_dst = graph->getInEdgeDst(d_edge);
+          QueryGNode d_dst = graph->getInEdgeDst(d_edge);
           if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
             addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors,
                                                numInNeighbors, out_queue);
@@ -377,7 +378,7 @@ public:
 
     galois::do_all(
         galois::iterate(graph->begin(), graph->end()),
-        [&](GNode n) {
+        [&](QueryGNode n) {
           if (!pruneNode(query_graph, curr_qnode, graph->getData(n)) &&
               matchNodeDegree(*query_graph, curr_qnode, *graph, n)) {
             EmbeddingType emb;
@@ -410,7 +411,7 @@ public:
 };
 
 template <bool afterGraphSimulation>
-size_t subgraphQuery(Graph& query_graph, Graph& data_graph) {
+size_t subgraphQuery(QueryGraph& query_graph, QueryGraph& data_graph) {
   galois::StatTimer initTime("MiningInitTime");
   initTime.start();
   AppMiner<afterGraphSimulation> miner(&data_graph, &query_graph);

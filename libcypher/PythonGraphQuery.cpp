@@ -206,7 +206,7 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
   GALOIS_ASSERT(starEdgeList.size() == starEdgeData.size());
 
   // build query graph
-  Graph queryGraph;
+  QueryGraph queryGraph;
   queryGraph.allocateFrom(numQueryNodes, actualNumQueryEdges);
   queryGraph.constructNodes();
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL

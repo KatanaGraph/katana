@@ -44,11 +44,9 @@ struct QueryEdgeData {
 typedef uint32_t QueryEdgeData;
 #endif
 
-//! Graph typedef
-using Graph =
-    galois::graphs::LC_CSR_Labeled_Graph<QueryNode, QueryEdgeData, false, true, true>;
-// using Graph = galois::graphs::B_LC_CSR_Graph<Node, EdgeData>::
-//                 with_no_lockable<true>::type::
-//                 with_numa_alloc<true>::type;
+//! QueryGraph typedef
+using QueryGraph =
+    galois::graphs::LC_CSR_Labeled_Graph<QueryNode, QueryEdgeData, false, true,
+                                         true>;
 //! Graph node typedef
-using GNode = Graph::GraphNode;
+using QueryGNode = QueryGraph::GraphNode;

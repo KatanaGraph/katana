@@ -38,8 +38,9 @@ bool matchNodeLabel(const QueryNode& query, const QueryNode& data) {
 #endif
 }
 
-bool matchNodeDegree(const Graph& queryGraph, const GNode& queryNodeID,
-                     const Graph& dataGraph, const GNode& dataNodeID) {
+bool matchNodeDegree(const QueryGraph& queryGraph,
+                     const QueryGNode& queryNodeID, const QueryGraph& dataGraph,
+                     const QueryGNode& dataNodeID) {
   // if the degree is smaller than that of its corresponding query vertex
 #ifdef USE_QUERY_GRAPH_WITH_MULTIPLEXING_EDGE_LABELS
   if (dataGraph.degree(dataNodeID) < queryGraph.degree(queryNodeID))
@@ -298,7 +299,7 @@ void matchQuerySlowerNoMatchFasterMatch() {
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 template <bool inEdges, bool useLimit>
-void matchQueryTimestampOrder(Graph& qG, Graph& dG, EventLimit limit,
+void matchQueryTimestampOrder(QueryGraph& qG, QueryGraph& dG, EventLimit limit,
                               uint32_t qn, VecVecTy& matchedEdges,
                               bool& matched) {
   VecTy queryEdgeOrder;
@@ -358,7 +359,7 @@ void matchQueryTimestampOrder(Graph& qG, Graph& dG, EventLimit limit,
 #endif
 
 template <bool inEdges, bool useLimit, bool useWindow>
-bool matchQueryEdges(Graph& qG, Graph& dG,
+bool matchQueryEdges(QueryGraph& qG, QueryGraph& dG,
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                      EventLimit limit, EventWindow window,
 #endif
@@ -490,9 +491,9 @@ bool matchQueryEdges(Graph& qG, Graph& dG,
  * @todo doxygen
  */
 template <bool useLimit, bool useWindow, bool queryNodeHasMoreThan2Edges>
-void matchNodesOnce(Graph& qG, Graph& dG,
-                    galois::InsertBag<Graph::GraphNode>* cur,
-                    galois::InsertBag<Graph::GraphNode>* next,
+void matchNodesOnce(QueryGraph& qG, QueryGraph& dG,
+                    galois::InsertBag<QueryGraph::GraphNode>* cur,
+                    galois::InsertBag<QueryGraph::GraphNode>* next,
                     galois::GAccumulator<uint32_t>& workItems
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
                     ,
@@ -543,12 +544,13 @@ void matchNodesOnce(Graph& qG, Graph& dG,
       galois::steal(), galois::loopname("MatchNeighbors"));
 }
 
-void matchNodesUsingGraphSimulation(Graph& qG, Graph& dG, bool reinitialize,
-                                    EventLimit limit, EventWindow window,
+void matchNodesUsingGraphSimulation(QueryGraph& qG, QueryGraph& dG,
+                                    bool reinitialize, EventLimit limit,
+                                    EventWindow window,
                                     bool queryNodeHasMoreThan2Edges,
                                     std::vector<std::string>& nodeContains,
                                     std::vector<std::string>& nodeNames) {
-  using WorkQueue = galois::InsertBag<Graph::GraphNode>;
+  using WorkQueue = galois::InsertBag<QueryGraph::GraphNode>;
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
@@ -814,7 +816,7 @@ bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel) {
   return (g.edgeLabelIDs.find(edgeLabel) != g.edgeLabelIDs.end());
 }
 
-void resetMatchedStatus(Graph& graph) {
+void resetMatchedStatus(QueryGraph& graph) {
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
       [&](auto n) {
@@ -825,7 +827,7 @@ void resetMatchedStatus(Graph& graph) {
 }
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
+void matchEdgesAfterGraphSimulation(QueryGraph& qG, QueryGraph& dG) {
   galois::do_all(
       galois::iterate(dG.begin(), dG.end()),
       [&](auto dn) {
@@ -860,7 +862,7 @@ void matchEdgesAfterGraphSimulation(Graph& qG, Graph& dG) {
 }
 #endif
 
-void runGraphSimulationOld(Graph& qG, Graph& dG, EventLimit limit,
+void runGraphSimulationOld(QueryGraph& qG, QueryGraph& dG, EventLimit limit,
                            EventWindow window,
                            bool queryNodeHasMoreThan2Edges) {
   std::vector<std::string> dummy1;
@@ -870,7 +872,7 @@ void runGraphSimulationOld(Graph& qG, Graph& dG, EventLimit limit,
   // matchEdgesAfterGraphSimulation(qG, dG);
 }
 
-void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
+void runGraphSimulation(QueryGraph& qG, QueryGraph& dG, EventLimit limit,
                         EventWindow window, bool queryNodeHasMoreThan2Edges,
                         std::vector<std::string>& nodeContains,
                         std::vector<std::string>& nodeNames) {
@@ -880,14 +882,14 @@ void runGraphSimulation(Graph& qG, Graph& dG, EventLimit limit,
   // matchEdgesAfterGraphSimulation(qG, dG);
 }
 
-void findShortestPaths(Graph& graph, uint32_t srcQueryNode,
+void findShortestPaths(QueryGraph& graph, uint32_t srcQueryNode,
                        uint32_t dstQueryNode, QueryEdgeData qeData,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> parent;
   parent.allocateInterleaved(graph.size());
   const uint32_t infinity = std::numeric_limits<uint32_t>::max();
 
-  using WorkQueue = galois::InsertBag<Graph::GraphNode>;
+  using WorkQueue = galois::InsertBag<QueryGraph::GraphNode>;
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
@@ -1010,13 +1012,13 @@ void findShortestPaths(Graph& graph, uint32_t srcQueryNode,
       galois::loopname("MatchSource"));
 }
 
-void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
-                  QueryEdgeData qeData, uint32_t matchedQueryNode,
-                  uint32_t matchedQueryEdge) {
+void findAllPaths(QueryGraph& graph, uint32_t srcQueryNode,
+                  uint32_t dstQueryNode, QueryEdgeData qeData,
+                  uint32_t matchedQueryNode, uint32_t matchedQueryEdge) {
   galois::LargeArray<std::atomic<uint32_t>> visited; // require only 2 bits
   visited.allocateInterleaved(graph.size());
 
-  using WorkQueue = galois::InsertBag<Graph::GraphNode>;
+  using WorkQueue = galois::InsertBag<QueryGraph::GraphNode>;
   WorkQueue w[2];
   WorkQueue* cur  = &w[0];
   WorkQueue* next = &w[1];
@@ -1126,7 +1128,7 @@ void findAllPaths(Graph& graph, uint32_t srcQueryNode, uint32_t dstQueryNode,
 }
 
 template <bool useWindow>
-void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
+void matchNodeWithRepeatedActionsSelf(QueryGraph& graph, uint32_t nodeLabel,
                                       uint32_t action, EventWindow window) {
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
@@ -1136,8 +1138,8 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
         if ((data.label & nodeLabel) == nodeLabel)
 #endif
         {
-          unsigned numActions   = 0;
-          Graph::GraphNode prev = 0;
+          unsigned numActions        = 0;
+          QueryGraph::GraphNode prev = 0;
           for (auto e : graph.edges(n)) {
             auto& eData = graph.getEdgeData(e);
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
@@ -1196,7 +1198,7 @@ void matchNodeWithRepeatedActionsSelf(Graph& graph, uint32_t nodeLabel,
       galois::loopname("MatchNodesDsts"));
 }
 
-void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
+void matchNodeWithRepeatedActions(QueryGraph& graph, uint32_t nodeLabel,
                                   uint32_t action, EventWindow window) {
   // initialize matched
   resetMatchedStatus(graph);
@@ -1210,7 +1212,7 @@ void matchNodeWithRepeatedActions(Graph& graph, uint32_t nodeLabel,
 }
 
 template <bool useWindow>
-void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
+void matchNodeWithTwoActionsSelf(QueryGraph& graph, uint32_t nodeLabel,
                                  uint32_t action1, uint32_t dstNodeLabel1,
                                  uint32_t action2, uint32_t dstNodeLabel2,
                                  EventWindow window) {
@@ -1312,9 +1314,10 @@ void matchNodeWithTwoActionsSelf(Graph& graph, uint32_t nodeLabel,
       galois::loopname("MatchNodesDsts"));
 }
 
-void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
-                             uint32_t dstNodeLabel1, uint32_t action2,
-                             uint32_t dstNodeLabel2, EventWindow window) {
+void matchNodeWithTwoActions(QueryGraph& graph, uint32_t nodeLabel,
+                             uint32_t action1, uint32_t dstNodeLabel1,
+                             uint32_t action2, uint32_t dstNodeLabel2,
+                             EventWindow window) {
   // initialize matched
   resetMatchedStatus(graph);
 
@@ -1332,7 +1335,7 @@ void matchNodeWithTwoActions(Graph& graph, uint32_t nodeLabel, uint32_t action1,
  * @todo doxygen
  */
 template <bool useWindow>
-void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
+void matchNeighborsDsts(QueryGraph& graph, QueryGraph::GraphNode node, uint32_t,
                         uint32_t action, uint32_t neighborLabel,
                         EventWindow window) {
   galois::do_all(
@@ -1365,8 +1368,8 @@ void matchNeighborsDsts(Graph& graph, Graph::GraphNode node, uint32_t,
       galois::loopname("MatchNodesDsts"));
 }
 
-void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
-                    uint32_t action, uint32_t neighborLabel,
+void matchNeighbors(QueryGraph& graph, QueryGraph::GraphNode node,
+                    uint32_t nodeLabel, uint32_t action, uint32_t neighborLabel,
                     EventWindow window) {
   // initialize matched
   resetMatchedStatus(graph);
@@ -1384,7 +1387,7 @@ void matchNeighbors(Graph& graph, Graph::GraphNode node, uint32_t nodeLabel,
   }
 }
 
-size_t countMatchedNodes(Graph& graph) {
+size_t countMatchedNodes(QueryGraph& graph) {
   galois::GAccumulator<size_t> numMatched;
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
@@ -1399,7 +1402,7 @@ size_t countMatchedNodes(Graph& graph) {
 }
 
 // note right now it's doing the exact same thing as countMatchedNodes above
-size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node) {
+size_t countMatchedNeighbors(QueryGraph& graph, QueryGraph::GraphNode node) {
   galois::GAccumulator<size_t> numMatched;
   // do not count the same node twice (multiple edges to the same node)
   galois::do_all(
@@ -1415,7 +1418,7 @@ size_t countMatchedNeighbors(Graph& graph, Graph::GraphNode node) {
 }
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-size_t countMatchedEdges(Graph& graph) {
+size_t countMatchedEdges(QueryGraph& graph) {
   galois::GAccumulator<size_t> numMatched;
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
@@ -1434,7 +1437,8 @@ size_t countMatchedEdges(Graph& graph) {
   return numMatched.reduce();
 }
 
-size_t countMatchedNeighborEdges(Graph& graph, Graph::GraphNode node) {
+size_t countMatchedNeighborEdges(QueryGraph& graph,
+                                 QueryGraph::GraphNode node) {
   galois::GAccumulator<size_t> numMatched;
   galois::do_all(
       galois::iterate(graph.edges(node).begin(), graph.edges(node).end()),

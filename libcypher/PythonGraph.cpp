@@ -102,7 +102,7 @@ void saveGraph(AttributedGraph* g, char* filename) {
 }
 
 void saveEdgeList(AttributedGraph* g, char* filename) {
-  Graph& graph = g->graph;
+  QueryGraph& graph = g->graph;
   std::ofstream file(filename);
   std::ofstream nodeFile("nodelabels.nodes");
   uint32_t maxNodeLabel = 0;
@@ -175,7 +175,7 @@ void loadGraph(AttributedGraph* g, char* filename) {
 }
 
 void printGraph(AttributedGraph* g) {
-  Graph& graph = g->graph;
+  QueryGraph& graph = g->graph;
   // auto& nodeLabelNames = g->nodeLabelNames;
   auto& edgeLabelNames = g->edgeLabelNames;
   auto& nodeNames      = g->nodeNames;
@@ -436,8 +436,8 @@ uint32_t getNodeLabel(AttributedGraph* GALOIS_UNUSED(g),
 
 uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
                          uint32_t nodeIndex, uint64_t edgeIndex) {
-  Graph& dst = destGraph->graph;
-  Graph& src = srcGraph->graph;
+  QueryGraph& dst = destGraph->graph;
+  QueryGraph& src = srcGraph->graph;
 
   // copy edges + data
   uint64_t curEdgeIndex = edgeIndex;
@@ -509,7 +509,7 @@ void mergeLabels(AttributedGraph* GALOIS_UNUSED(g),
 ////////////////////////////////////////////////////////////////////////////////
 
 void unmatchAll(AttributedGraph* g) {
-  Graph& actualGraph = g->graph;
+  QueryGraph& actualGraph = g->graph;
 
   galois::do_all(
       galois::iterate(actualGraph.begin(), actualGraph.end()),
@@ -532,7 +532,7 @@ void unmatchAll(AttributedGraph* g) {
 uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
                   uint32_t labelBitPosition,
                   uint64_t GALOIS_UNUSED(timestamp)) {
-  Graph& actualGraph = g->graph;
+  QueryGraph& actualGraph = g->graph;
 
   if (g->nodeIndices.find(srcUUID) == g->nodeIndices.end() ||
       g->nodeIndices.find(dstUUID) == g->nodeIndices.end()) {
@@ -589,7 +589,7 @@ uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 uint32_t nodeRemovalPass(AttributedGraph* g) {
-  Graph& actualGraph = g->graph;
+  QueryGraph& actualGraph = g->graph;
   galois::GAccumulator<uint32_t> deadNodes;
   deadNodes.reset();
 
@@ -646,7 +646,7 @@ AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
   size_t newNumEdges = oldNumEdges - edgesRemoved;
 
   // allocate space for new CSR and construct it
-  Graph& newCSR = newGraph->graph;
+  QueryGraph& newCSR = newGraph->graph;
   newCSR.allocateFrom(newNumNodes, newNumEdges);
   newCSR.constructNodes();
 

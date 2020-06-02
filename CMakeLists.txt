@@ -216,7 +216,7 @@ if (GALOIS_ENABLE_GPU)
 endif()
 add_subdirectory(libpangolin)
 if (GALOIS_ENABLE_CYPHER)
-  add_subdirectory(libcypher)
+  add_subdirectory(libquery)
 endif()
 
 # Applications (apps)

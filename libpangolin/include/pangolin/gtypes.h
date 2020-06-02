@@ -31,7 +31,7 @@ typedef galois::gstl::Vector<IntSet> IntSets;
 // typedef std::set<int> IntSet;
 // typedef std::vector<IntSet> IntSets;
 
-using Graph = galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<
+using PangolinGraph = galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<
           true>::type ::with_no_lockable<true>::type;
 
-typedef Graph::GraphNode GNode;
+typedef PangolinGraph::GraphNode GNode;

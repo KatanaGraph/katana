@@ -19,7 +19,7 @@
 #ifndef _GALOIS_DB_GRAPH_
 #define _GALOIS_DB_GRAPH_
 
-#include "PythonGraph.h"
+#include "querying/PythonGraph.h"
 #include "galois/graphs/OfflineGraph.h"
 #include "galois/graphs/BufferedGraph.h"
 

@@ -17,9 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "PythonGraph.h"
-#include "CypherCompiler.h"
-#include "SubgraphQuery.h"
+#include "querying/PythonGraph.h"
+#include "querying/CypherCompiler.h"
+#include "querying/SubgraphQuery.h"
 #include "galois/Timer.h"
 #include <fstream>
 

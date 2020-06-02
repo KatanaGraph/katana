@@ -1,13 +1,15 @@
 #pragma once
 
-#include <cypher-parser.h>
-#include <astnode.h>
-#include <result.h>
 #include <assert.h>
 #include <unordered_map>
 #include <iostream>
 #include <stack>
-#include "GraphSimulation.h"
+#include "querying/GraphSimulation.h"
+// cypher parser includes
+#include <cypher-parser.h>
+#include <astnode.h>
+#include <result.h>
+
 
 class CypherCompiler {
   unsigned numNodeIDs;

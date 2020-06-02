@@ -24,7 +24,7 @@
  * as various helpers for those functions.
  */
 
-#include "GraphSimulation.h"
+#include "querying/GraphSimulation.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include <regex>
 

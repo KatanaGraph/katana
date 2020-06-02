@@ -24,7 +24,7 @@
  * declared in PythonGraph.h.
  */
 
-#include "PythonGraph.h"
+#include "querying/PythonGraph.h"
 #include "galois/DynamicBitset.h"
 
 #include <iostream>

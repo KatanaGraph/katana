@@ -8,7 +8,7 @@
 #define USE_BASE_TYPES
 #define USE_QUERY_GRAPH_TYPE
 #include "pangolin.h"
-#include "GraphSimulation.h"
+#include "querying/GraphSimulation.h"
 #include <algorithm>
 
 class OrderVertices {

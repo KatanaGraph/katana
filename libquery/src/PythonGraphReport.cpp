@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "PythonGraph.h"
+#include "querying/PythonGraph.h"
 
 #include <iostream>
 #include <fstream>

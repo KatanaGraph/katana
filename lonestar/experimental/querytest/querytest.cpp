@@ -8,8 +8,8 @@
 
 #include "Lonestar/BoilerPlate.h"
 
-// Querying all included by this
-#include "DBGraph.h"
+// Querying all included by this single header
+#include "querying/DBGraph.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Benchmark metadata

@@ -11,16 +11,16 @@ add_custom_command(
 add_custom_target(cypher_parser DEPENDS ${CYPHER_PARSER_LIBRARY})
 
 add_library(galois_query SHARED 
-  PythonGraph.cpp
-  PythonGraphReport.cpp
-  PythonGraphSimulation.cpp
-  PythonGraphQuery.cpp
-  GraphSimulation.cpp
+  src/PythonGraph.cpp
+  src/PythonGraphReport.cpp
+  src/PythonGraphSimulation.cpp
+  src/PythonGraphQuery.cpp
+  src/GraphSimulation.cpp
 )
 
 target_include_directories(galois_query PUBLIC 
   ${CMAKE_SOURCE_DIR}/libgalois/include
-  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(galois_query ${Boost_SERIALIZATION_LIBRARY_RELEASE} lonestar)

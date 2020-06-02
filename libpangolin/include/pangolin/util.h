@@ -9,8 +9,16 @@ namespace util {
 
 void print_graph(PangolinGraph& graph) {
   for (GNode n : graph) {
+#ifdef USE_QUERY_GRAPH_TYPE
+    std::cout << "vertex " << n
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+              << ": label = " << graph.getData(n).label
+#endif
+              << " edgelist = [ ";
+#else
     std::cout << "vertex " << n << ": label = " << graph.getData(n)
               << ": degree = " << graph.getSavedDegree(n) << " edgelist = [ ";
+#endif
     for (auto e : graph.edges(n))
       std::cout << graph.getEdgeDst(e) << " ";
     std::cout << "]" << std::endl;
@@ -21,13 +29,22 @@ void genGraph(MGraph& mg, PangolinGraph& g) {
   g.allocateFrom(mg.num_vertices(), mg.num_edges());
   g.constructNodes();
   for (size_t i = 0; i < mg.num_vertices(); i++) {
-    g.getData(i)   = mg.get_label(i);
-    auto row_begin = mg.get_offset(i);
-    auto row_end   = mg.get_offset(i + 1);
+#ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+    g.getData(i).label = mg.get_label(i);
+#endif
+#else
+    g.getData(i)       = mg.get_label(i);
+    auto row_begin     = mg.get_offset(i);
+#endif
+    auto row_end = mg.get_offset(i + 1);
     g.fixEndEdge(i, row_end);
+
+#ifndef USE_QUERY_GRAPH_TYPE
     for (auto offset = row_begin; offset < row_end; offset++) {
       g.constructEdge(offset, mg.get_dest(offset), 0);
     }
+#endif
   }
 }
 // relabel vertices by descending degree order (do not apply to weighted graphs)
@@ -64,6 +81,7 @@ void DegreeRanking(PangolinGraph& og, PangolinGraph& g) {
       [&](const auto& src) {
         auto row_begin = offsets[src];
         g.fixEndEdge(src, row_begin + degrees[src]);
+#ifndef USE_QUERY_GRAPH_TYPE
         IndexT offset = 0;
         for (auto e : og.edges(src)) {
           auto dst = og.getEdgeDst(e);
@@ -71,9 +89,12 @@ void DegreeRanking(PangolinGraph& og, PangolinGraph& g) {
           offset++;
         }
         assert(offset == degrees[src]);
+#endif
       },
       galois::loopname("ConstructNewGraph"));
+#ifndef USE_QUERY_GRAPH_TYPE
   g.sortAllEdgesByDst();
+#endif
 }
 
 unsigned orientation(PangolinGraph& og, PangolinGraph& g) {
@@ -117,9 +138,16 @@ unsigned orientation(PangolinGraph& og, PangolinGraph& g) {
   galois::do_all(
       galois::iterate(og.begin(), og.end()),
       [&](const auto& src) {
+#ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+        g.getData(src).label = 0;
+#endif
+#else
         g.getData(src) = 0;
+#endif
         auto row_begin = offsets[src];
         g.fixEndEdge(src, row_begin + new_degrees[src]);
+#ifndef USE_QUERY_GRAPH_TYPE
         IndexT offset = 0;
         for (auto e : og.edges(src)) {
           auto dst = og.getEdgeDst(e);
@@ -130,10 +158,13 @@ unsigned orientation(PangolinGraph& og, PangolinGraph& g) {
           }
         }
         assert(offset == new_degrees[src]);
+#endif
       },
       galois::loopname("ConstructNewGraph"));
 
+#ifndef USE_QUERY_GRAPH_TYPE
   g.sortAllEdgesByDst();
+#endif
   Tdag.stop();
   return max_degree;
 }
@@ -166,8 +197,15 @@ unsigned read_graph(PangolinGraph& graph, std::string filetype,
       galois::graphs::readGraph(graph, filename);
       galois::do_all(
           galois::iterate(graph.begin(), graph.end()),
-          [&](const auto& vid) {
+          // unused label because it may be unused if USE_QUERY_TYPE is on
+          [&](const auto& GALOIS_UNUSED(vid)) {
+#ifdef USE_QUERY_GRAPH_TYPE
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+            graph.getData(vid).label = 1;
+#endif
+#else
             graph.getData(vid) = 1;
+#endif
             // for (auto e : graph.edges(n)) graph.getEdgeData(e) = 1;
           },
           galois::loopname("assignVertexLabels"));

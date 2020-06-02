@@ -1087,7 +1087,8 @@ public:
       galois::do_all(
           galois::iterate(this->begin(), this->end()),
           [&](unsigned v) {
-            this->savedDegrees[v] = std::distance(this->edge_begin(v), this->edge_end(v));
+            this->savedDegrees[v] =
+                std::distance(this->edge_begin(v), this->edge_end(v));
           },
           galois::loopname("DegreeCounting"));
     }

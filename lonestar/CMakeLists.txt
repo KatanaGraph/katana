@@ -184,6 +184,10 @@ if(GALOIS_ENABLE_DIST)
   endfunction()
 endif()
 
+if(GALOIS_ENABLE_CYPHER)
+  add_subdirectory(querying)
+endif()
+
 add_subdirectory(liblonestar)
 
 add_subdirectory(tutorial_examples)

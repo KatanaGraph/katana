@@ -137,7 +137,8 @@ public:
    * Given graph topology, construct the attributed graph by
    * ignoring self loops.
    */
-  void constructDataGraph(const std::string filename, bool useWeights = true) {
+  //void constructDataGraph(const std::string filename, bool useWeights = true) {
+  void constructDataGraph(const std::string filename) {
     // first, load graph topology
     // NOTE: assumes weighted
     galois::graphs::BufferedGraph<uint32_t> graphTopology;
@@ -303,7 +304,7 @@ public:
 
   size_t runCypherQuery(const std::string cypherQueryStr,
                         bool useGraphSimulation,
-                        std::string outputFile = "matched.edges") {
+                        std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
     // run the query
     size_t mEdgeCount =
         matchCypherQuery(attGraph, EventLimit(), EventWindow(),

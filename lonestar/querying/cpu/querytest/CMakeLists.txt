@@ -1,3 +1,3 @@
 add_executable(querytest querytest.cpp)
-
 target_link_libraries(querytest galois_query)
+target_compile_definitions(querytest PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)

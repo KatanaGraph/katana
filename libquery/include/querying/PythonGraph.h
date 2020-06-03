@@ -3,7 +3,7 @@
  * parallelism. The code is being released under the terms of the 3-Clause BSD
  * License (a copy is located in LICENSE.txt at the top-level directory).
  *
- * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
+ * Copyright (C) 2020, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
  * SOFTWARE AND DOCUMENTATION, INCLUDING ANY WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR ANY PARTICULAR PURPOSE, NON-INFRINGEMENT AND WARRANTIES OF
@@ -45,12 +45,14 @@ extern "C" {
  * Galois libraries.
  */
 void initGaloisRuntime();
+
 /**
  * Set number of threads Galois will run with.
  *
  * @param numThreads New number of threads to run with
  */
 void setNumThreads(int numThreads);
+
 /**
  * Get currently set number of threads to run with.
  */
@@ -61,29 +63,34 @@ int getNumThreads();
  * @returns pointer to newly created graph
  */
 AttributedGraph* createGraph();
+
 /**
  * Frees memory involved with an AttributedGraph
  * @param g AttributedGraph to free
  */
 void deleteGraph(AttributedGraph* g);
+
 /**
  * Serialize the AttributedGraph onto disk for later use.
  * @param g Graph to save
  * @param filename Name to save serialized graph on disk to
  */
 void saveGraph(AttributedGraph* g, char* filename);
+
 /**
  * Outputs an edge list from the attributed graph.
  * Ignores vertex labels and only chooses a single label from the
  * edge to output. Also ignores vertex/edge attributes.
  */
 void saveEdgeList(AttributedGraph* g, char* filename);
+
 /**
  * Load an AttributedGraph from disk for use.
  * @param g Graph object to load into
  * @param filename Name of serialized graph on disk to load
  */
 void loadGraph(AttributedGraph* g, char* filename);
+
 /**
  * Prints out the data in an AttributedGraph for debugging purposes.
  * @param g Graph to print
@@ -442,56 +449,6 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
 size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
                                     AttributedGraph* dataGraph,
                                     EventLimit limit, EventWindow window);
-
-size_t findFilesWithMultipleWrites(AttributedGraph* dataGraph,
-                                   EventWindow window);
-size_t findProcessesWithReadFileWriteNetwork(AttributedGraph* dataGraph,
-                                             EventWindow window);
-size_t findProcessesWritingNetworkIndirectly(AttributedGraph* dataGraph,
-                                             EventLimit limit,
-                                             EventWindow window);
-size_t findProcessesOriginatingFromNetwork(AttributedGraph* dataGraph,
-                                           EventLimit limit,
-                                           EventWindow window);
-size_t findProcessesOriginatingFromNetworkIndirectly(AttributedGraph* dataGraph,
-                                                     EventLimit limit,
-                                                     EventWindow window);
-size_t findProcessesExecutingModifiedFile(AttributedGraph* dataGraph,
-                                          EventLimit limit, EventWindow window);
-
-size_t processesReadFromFile(AttributedGraph* dataGraph, char* file_uuid,
-                             EventWindow window);
-size_t processesWroteToFile(AttributedGraph* dataGraph, char* file_uuid,
-                            EventWindow window);
-size_t processesReadFromNetwork(AttributedGraph* dataGraph, char* network_uuid,
-                                EventWindow window);
-size_t processesWroteToNetwork(AttributedGraph* dataGraph, char* network_uuid,
-                               EventWindow window);
-size_t processesReadFromRegistry(AttributedGraph* dataGraph,
-                                 char* registry_uuid, EventWindow window);
-size_t processesWroteToRegistry(AttributedGraph* dataGraph, char* registry_uuid,
-                                EventWindow window);
-size_t processesReadFromMemory(AttributedGraph* dataGraph, char* memory_uuid,
-                               EventWindow window);
-size_t processesWroteToMemory(AttributedGraph* dataGraph, char* memory_uuid,
-                              EventWindow window);
-
-size_t filesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                          EventWindow window);
-size_t filesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                             EventWindow window);
-size_t networksReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                             EventWindow window);
-size_t networksWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                                EventWindow window);
-size_t registriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                               EventWindow window);
-size_t registriesWrittenByProcess(AttributedGraph* dataGraph,
-                                  char* process_uuid, EventWindow window);
-size_t memoriesReadByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                             EventWindow window);
-size_t memoriesWrittenByProcess(AttributedGraph* dataGraph, char* process_uuid,
-                                EventWindow window);
 
 void reportGraphSimulation(AttributedGraph& queryGraph,
                            AttributedGraph& dataGraph, char* outputFile);

@@ -3,7 +3,7 @@
  * parallelism. The code is being released under the terms of the 3-Clause BSD
  * License (a copy is located in LICENSE.txt at the top-level directory).
  *
- * Copyright (C) 2019, The University of Texas at Austin. All rights reserved.
+ * Copyright (C) 2020, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
  * SOFTWARE AND DOCUMENTATION, INCLUDING ANY WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR ANY PARTICULAR PURPOSE, NON-INFRINGEMENT AND WARRANTIES OF
@@ -60,6 +60,11 @@ class DBGraph {
     }
   }
 
+  /**
+   * Setup node data.
+   *
+   * For now it just sets up the metadata; labels and attributes are a TODO
+   */
   void setupNodes(uint32_t numNodes) {
     char dummy[30];
     // set node metadata: uuid is node id as a string and name is also just
@@ -79,8 +84,7 @@ class DBGraph {
   }
 
   /**
-   * Returns number of edges per vertex
-   * where the number of edges for vertex
+   * Returns number of edges per vertex where the number of edges for vertex
    * i is in array[i + 1] (array[0] is 0)
    *
    * @param graphTopology Topology of original graph in a buffered graph
@@ -135,7 +139,7 @@ public:
 
   /**
    * Given graph topology, construct the attributed graph by
-   * ignoring self loops.
+   * ignoring self loops. Note that multiedges are allowed.
    */
   //void constructDataGraph(const std::string filename, bool useWeights = true) {
   void constructDataGraph(const std::string filename) {
@@ -171,8 +175,7 @@ public:
     uint64_t keptEdgeCount = keptEdgeCountAccumulator.reduce();
 
     galois::gDebug("Kept edge count is ", keptEdgeCount,
-                   " compared to "
-                   "original ",
+                   " compared to original ",
                    graphTopology.sizeEdges());
 
     uint64_t finalEdgeCount = keptEdgeCount;
@@ -253,59 +256,18 @@ public:
     galois::gInfo("Data graph construction from GR complete");
 
     ////////////////////////////////////////////////////////////////////////////
-    // Finishing up
+    // Finish
     ////////////////////////////////////////////////////////////////////////////
   }
 
-  ////! Reads graph topology into attributed graph, then sets up its metadata.
-  // void readGr(const std::string filename) {
-  //  ////////////////////////////////////////////////////////////////////////////
-  //  // Graph topology loading
-  //  ////////////////////////////////////////////////////////////////////////////
-  //  // use offline graph for metadata things
-  //  galois::graphs::OfflineGraph og(filename);
-  //  size_t numNodes = og.size();
-  //  size_t numEdges = og.sizeEdges();
-
-  //  // allocate the graph + node/edge labels
-  //  allocateGraph(attGraph, numNodes, numEdges, numNodeLabels, numEdgeLabels);
-
-  //  // open file, pass to LCCSR to directly load topology
-  //  int fd = open(filename.c_str(), O_RDONLY);
-  //  if (fd == -1) GALOIS_SYS_DIE("failed opening ", "'", filename, "',
-  //  LC_CSR");
-  //	Graph& lcGraph = attGraph->graph;
-  //  lcGraph.readGraphTopology(fd, numNodes, numEdges);
-  //  // file done, close it
-  //  close(fd);
-
-  //  // TODO problem: directly loading graph does not work as querying code
-  //  // currently assume undirected graph; fix this later
-
-  //  ////////////////////////////////////////////////////////////////////////////
-  //  // Metadata setup
-  //  ////////////////////////////////////////////////////////////////////////////
-
-  //  // Topology now exists: need to create the metadata mappings and such
-
-  //  // create node/edge labels and save them
-  //  setupNodeEdgeLabelsMeta();
-  //  setupNodes(numNodes);
-
-  //  // edges
-  //  for (size_t i = 0; i < numEdges; i++) {
-  //    // fill out edge data as edge destinations already come from gr file
-  //    // TODO timestamps currently grow with edge index i
-  //    lcGraph.setEdgeData(i, QueryEdgeData(1 << (i % numEdgeLabels), i));
-  //  }
-
-  //  // TODO edge attributes
-  //}
-
+  /**
+   * Given a Cypher query string, run it on the underlying data graph using
+   * graph simulation (or not) and the Pangolin engine.
+   */
   size_t runCypherQuery(const std::string cypherQueryStr,
                         bool useGraphSimulation,
                         std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
-    // run the query
+    // run the query, get number of matched edges
     size_t mEdgeCount =
         matchCypherQuery(attGraph, EventLimit(), EventWindow(),
                          cypherQueryStr.c_str(), useGraphSimulation);

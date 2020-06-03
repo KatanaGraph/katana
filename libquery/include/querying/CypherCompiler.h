@@ -10,7 +10,6 @@
 #include <astnode.h>
 #include <result.h>
 
-
 class CypherCompiler {
   unsigned numNodeIDs;
   unsigned numEdgeIDs;

@@ -18,14 +18,15 @@ add_library(galois_query SHARED
   src/GraphSimulation.cpp
 )
 
+target_compile_definitions(galois_query PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
+
 target_include_directories(galois_query PUBLIC 
   ${CMAKE_SOURCE_DIR}/libgalois/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(galois_query ${Boost_SERIALIZATION_LIBRARY_RELEASE} lonestar)
 add_dependencies(galois_query cypher_parser)
-target_link_libraries(galois_query ${CYPHER_PARSER_LIBRARY})
+target_link_libraries(galois_query ${Boost_SERIALIZATION_LIBRARY_RELEASE} lonestar pangolin ${CYPHER_PARSER_LIBRARY})
 target_include_directories(galois_query PUBLIC ${CYPHER_PARSER_INCLUDE})
 
 if (CMAKE_HAVE_PTHREAD_H)

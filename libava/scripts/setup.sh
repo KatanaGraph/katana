@@ -21,7 +21,7 @@ git clone https://github.com/utcs-scea/ava.git
 cd $SCRIPTPATH/../ava
 
 echo "Cloning ava/llvm..."
-git checkout 6cfc3c8e5c58dfba
+git checkout 38ff7bf54c365a4b
 git submodule init
 git submodule update --recursive
 
@@ -45,7 +45,3 @@ case "$(uname)" in
     sudo apt install -y libclang-7-dev clang-7 indent libglib2.0-dev
     ;;
 esac
-
-echo "Generating API remoting stubs (test)..."
-cd $SCRIPTPATH/..
-./ava/cava/nwcc specs/cuda_10_1.c -I /usr/local/cuda-10.1/include -I ava/cava/headers `pkg-config --cflags glib-2.0`

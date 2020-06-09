@@ -16,6 +16,7 @@ add_library(galois_query SHARED
   src/PythonGraphSimulation.cpp
   src/PythonGraphQuery.cpp
   src/GraphSimulation.cpp
+  src/LDBCReader.cpp
 )
 
 target_compile_definitions(galois_query PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)

@@ -22,6 +22,9 @@
  *
  * Contains declarations for the Galois runtime, functions to modify an
  * AttributedGraph, and graph simulation functions.
+ *
+ * @todo if we're not using cython anymore to interface, may be worth
+ * cleaning up code to use namespaces and the like
  */
 
 #ifndef GALOIS_PYTHON_GRAPH_H

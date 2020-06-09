@@ -266,13 +266,13 @@ void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
 }
 
 void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
-                          char* name) {
+                          const char* name) {
   g->nodeLabelNames[labelBitPosition] = name;
   g->nodeLabelIDs[name]               = labelBitPosition;
 }
 
 void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
-                          char* name) {
+                          const char* name) {
   g->edgeLabelNames[labelBitPosition] = name;
   g->edgeLabelIDs[name]               = labelBitPosition;
 }

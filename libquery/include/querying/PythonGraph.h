@@ -151,7 +151,7 @@ void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid, uint32_t label,
  * @param name String to be associated with the integer label
  */
 void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
-                          char* name);
+                          const char* name);
 /**
  * Assign a edge label string to a particular bit position (for mapping
  * purposes).
@@ -160,7 +160,7 @@ void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
  * @param name String to be associated with the integer label
  */
 void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
-                          char* name);
+                          const char* name);
 
 /**
  * Label a node with a value for a particular attribute.

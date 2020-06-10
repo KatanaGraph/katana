@@ -31,6 +31,10 @@ class LDBCReader {
   using LDBCNodeType = uint32_t;
   //! type of global ids
   using GIDType = uint32_t;
+  //! edge index type
+  using EdgeIndex = uint64_t;
+  //! map from an ldbc lid to graph's gid
+  using GIDMap = std::unordered_map<LDBCNodeType, GIDType>;
 
   //! Underlying attribute graph
   AttributedGraph attGraph;
@@ -41,29 +45,29 @@ class LDBCReader {
   //! Total number of nodes to expect during reading
   GIDType totalNodes;
   //! Total number of edges to expect during reading
-  GIDType totalEdges;
+  EdgeIndex totalEdges;
 
   //! mapping organization ids to graph's gid
-  std::unordered_map<LDBCNodeType, GIDType> organization2GID;
+  GIDMap organization2GID;
   //! mapping place ids to graph's gid
-  std::unordered_map<LDBCNodeType, GIDType> place2GID;
+  GIDMap place2GID;
   //! mapping tag ids to graph's gid
-  std::unordered_map<LDBCNodeType, GIDType> tag2GID;
+  GIDMap tag2GID;
   //! mapping tag class ids to graph's gid
-  std::unordered_map<LDBCNodeType, GIDType> tagClass2GID;
+  GIDMap tagClass2GID;
 
   //! Files in the static directory that represent vertices
+  //! Note the order it is laid out here is very important as it determines
+  //! the order in which edges must be added to the graph as well
   std::vector<std::string> staticNodes{
       "static/organisation_0_0.csv", "static/place_0_0.csv",
       "static/tag_0_0.csv", "static/tagclass_0_0.csv"};
-
   //! Files in the static directory that represent edges
   std::vector<std::string> staticEdges{
       "static/organisation_isLocatedIn_place_0_0.csv",
       "static/place_isPartOf_place_0_0.csv",
       "static/tag_hasType_tagclass_0_0.csv",
       "static/tagclass_isSubclassOf_tagclass_0_0.csv"};
-
   // note that original files have label names all lowercased: reason for
   // uppercase first letter is that the LDBC cypher queries all use
   // upper case first letters
@@ -72,19 +76,48 @@ class LDBCReader {
   std::vector<std::string> nodeLabelNames{
       "Place",   "City",       "Country", "Continent", "Organisation",
       "Company", "University", "Tag",     "TagClass"};
-
   // TODO dynamics
   //! names of edge labels in this dataset
   std::vector<std::string> edgeLabelNames{"isSubclassOf", "hasType",
                                           "isLocatedIn", "isPartOf"};
-
   // TODO dynamics
   //! names of node attributes in this dataset
   std::vector<std::string> nodeAttributeNames{"id", "name", "url"};
-
   // TODO dynamics
   //! names of edge attributes in this dataset
   std::vector<std::string> edgeAttributeNames{};
+
+  //! Struct for holding edges read from disk in-memory
+  struct SimpleReadEdge {
+    GIDType src;
+    GIDType dest;
+    uint32_t edgeLabel;
+
+    SimpleReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel)
+        : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
+  };
+
+  //! enums for all the difference kinds of node labels
+  enum NodeLabel { NL_ORG, NL_PLACE, NL_TAG, NL_TAGCLASS };
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  GIDMap& getGIDMap(NodeLabel nodeType) {
+    switch (nodeType) {
+    case NL_ORG:
+      return organization2GID;
+    case NL_PLACE:
+      return place2GID;
+    case NL_TAG:
+      return tag2GID;
+    case NL_TAGCLASS:
+      return tagClass2GID;
+    default:
+      GALOIS_DIE("invalid GIDMap type ", nodeType);
+      // shouldn't get here
+      return organization2GID;
+    }
+  }
 
   /**
    * Tag attributes with their type
@@ -95,23 +128,36 @@ class LDBCReader {
    * Parse the organization file: get label (company/university) and save
    * to node + save name and url to attributes as well.
    */
-  void parseOrganizationCSV(std::string filepath);
+  void parseOrganizationCSV(const std::string filepath);
 
   /**
    * Parse the place file: get label (country/city/continent) and save
    * to node + save name and url to attributes as well.
    */
-  void parsePlaceCSV(std::string filepath);
+  void parsePlaceCSV(const std::string filepath);
 
   /**
    * Parse the tag file: id, name, url
    */
-  void parseTagCSV(std::string filepath);
+  void parseTagCSV(const std::string filepath);
 
   /**
    * Parse the tag class file: id, name, url
    */
-  void parseTagClassCSV(std::string filepath);
+  void parseTagClassCSV(const std::string filepath);
+
+  /**
+   * Parse a simple edge CSV (2 columns, source|destination)
+   * @param filepath Path to edge CSV
+   * @param edgeType Edge label to give edges parsed by this file
+   * @param nodeFrom Source node label
+   * @param nodeTo Edge node label
+   */
+  void parseSimpleEdgeCSV(const std::string filepath,
+                          const std::string edgeType, NodeLabel nodeFrom,
+                          NodeLabel nodeTo, GIDType gidOffset,
+                          std::vector<EdgeIndex>& edgesPerNode,
+                          std::vector<SimpleReadEdge>& readEdges);
 
 public:
   /**

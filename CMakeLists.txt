@@ -24,6 +24,7 @@ endif()
 ###### Distributed-heterogeneous features ######
 set(GALOIS_ENABLE_DIST OFF CACHE BOOL "Enable distributed features")
 set(GALOIS_CUDA_CAPABILITY "" CACHE STRING "Semi-colon list of CUDA compute capability version numbers to enable GPU features") # e.g., "3.7;6.1"
+set(GALOIS_ENABLE_AVA OFF CACHE BOOL "Enable AvA-backed CUDA API remoting")
 set(GALOIS_COMM_STATS OFF CACHE BOOL "Report more detailed statistics of communication")
 ###### General features ######
 set(GALOIS_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
@@ -222,6 +223,14 @@ if (GALOIS_ENABLE_GPU)
     add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-gencode=arch=compute_${GENCODE},code=sm_${GENCODE}>")
   endforeach()
 
+  if (GALOIS_ENABLE_AVA)
+    if (NOT CMAKE_CUDA_RUNTIME_LIBRARY OR CMAKE_CUDA_RUNTIME_LIBRARY STREQUAL Shared)
+      set(CMAKE_CUDA_RUNTIME_LIBRARY Shared)
+      add_subdirectory(libava)
+    else()
+      message(FATAL_ERROR "CUDA runtime library must be dynamically linked. Found CMAKE_CUDA_RUNTIME_LIBRARY=${CMAKE_CUDA_RUNTIME_LIBRARY}.")
+    endif()
+  endif()
   add_subdirectory(libgpu)
 endif()
 add_subdirectory(libpangolin)

@@ -70,6 +70,16 @@ struct EventWindow {
   EventWindow() : valid(false) {}
 };
 
+enum AttributedType {
+  AT_INT32,
+  AT_STRING,
+  AT_LONGSTRING,
+  AT_DATE,
+  AT_DATETIME,
+  AT_TEXT,
+  AT_LONGSTRINGARRAY
+};
+
 /**
  * Wrapped graph that contains metadata maps explaining what the compressed
  * data stored in the graph proper mean. For example, instead of storing
@@ -94,8 +104,12 @@ struct AttributedGraph {
   // the attribute for each node/edge
   //! attribute name (example: file) to vector of names for that attribute
   std::unordered_map<std::string, std::vector<std::string>> nodeAttributes;
+  //! type for a node attribute
+  std::unordered_map<std::string, AttributedType> nodeAttributeTypes;
   //! edge attribute name to vector of names for that attribute
   std::unordered_map<std::string, std::vector<std::string>> edgeAttributes;
+  //! type for an edge attribute
+  std::unordered_map<std::string, AttributedType> edgeAttributeTypes;
 };
 
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data);

@@ -280,6 +280,15 @@ void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
  */
 void addNodeAttributeMap(AttributedGraph* g, const char* key,
                          uint32_t nodeCount);
+/**
+ * Designates some node attribute as having some type
+ *
+ * @param g Graph to change
+ * @param key Node attribute name
+ * @param t Type to designate
+ */
+void addNodeAttributeType(AttributedGraph* g, const char* key,
+                          AttributedType t);
 
 /**
  * Add a new edge attribute map with a particular size. Does nothing if key
@@ -291,6 +300,16 @@ void addNodeAttributeMap(AttributedGraph* g, const char* key,
  */
 void addEdgeAttributeMap(AttributedGraph* g, const char* key,
                          uint32_t edgeCount);
+
+/**
+ * Designates some edge attribute as having some type
+ *
+ * @param g Graph to change
+ * @param key Edge attribute name
+ * @param t Type to designate
+ */
+void addEdgeAttributeType(AttributedGraph* g, const char* key,
+                          AttributedType t);
 
 /**
  * Resizes the node maps in an attributed graph.

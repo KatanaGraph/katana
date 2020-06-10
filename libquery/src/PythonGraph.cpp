@@ -396,6 +396,12 @@ void addNodeAttributeMap(AttributedGraph* g, const char* key,
   }
 }
 
+void addNodeAttributeType(AttributedGraph* g, const char* key,
+                          AttributedType t) {
+  auto& attributes = g->nodeAttributeTypes;
+  attributes[key]  = t;
+}
+
 void addEdgeAttributeMap(AttributedGraph* g, const char* key,
                          uint32_t edgeCount) {
   auto& attributes = g->edgeAttributes;
@@ -403,6 +409,12 @@ void addEdgeAttributeMap(AttributedGraph* g, const char* key,
     attributes[key] = std::vector<std::string>();
     attributes[key].resize(edgeCount);
   }
+}
+
+void addEdgeAttributeType(AttributedGraph* g, const char* key,
+                          AttributedType t) {
+  auto& attributes = g->edgeAttributeTypes;
+  attributes[key]  = t;
 }
 
 void resizeNodeMetadata(AttributedGraph* g, uint32_t nodeCount) {

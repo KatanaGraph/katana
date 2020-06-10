@@ -81,6 +81,11 @@ class LDBCReader {
   std::vector<std::string> edgeAttributeNames{};
 
   /**
+   * Tag attributes with their type
+   */
+  void setupAttributeTypes();
+
+  /**
    * Parse the organization file: get label (company/university) and save
    * to node + save name and url to attributes as well.
    */

@@ -15,11 +15,11 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
 
   // Steps to setting up an attributed graph's metadata
   // (1) allocate memory for it
-  galois::gInfo("allocating memory for graph");
+  galois::gInfo("Allocating memory for graph");
   allocateGraph(attGraphPointer, this->totalNodes, this->totalEdges,
                 nodeLabelCount, edgeLabelCount);
   // (2) Initialize node and edge label memory/metadata
-  galois::gInfo("allocating memory for node and edge labels");
+  galois::gInfo("Allocating memory for node and edge labels");
   for (size_t i = 0; i < nodeLabelCount; i++) {
     setNodeLabelMetadata(attGraphPointer, i, this->nodeLabelNames[i].c_str());
   }
@@ -30,7 +30,7 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   // note; node/edge *attributes* are initialized when you set them later
   // if not already initialized; init here to make code easier to understand
   // if debugging
-  galois::gInfo("allocating memory for node and edge attributes");
+  galois::gInfo("Allocating memory for node and edge attributes");
   for (std::string nAttribute : this->nodeAttributeNames) {
     addNodeAttributeMap(attGraphPointer, nAttribute.c_str(), this->totalNodes);
   }
@@ -38,10 +38,12 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
     addEdgeAttributeMap(attGraphPointer, eAttribute.c_str(), this->totalEdges);
   }
 
+  this->setupAttributeTypes();
+
   // the graph object at this point should no longer need to allocate any
   // extra memory; any additional memory use at this point is for runtime/
-  // parsing of the LDBC
-  galois::gInfo("Meta-level memory allocation complete");
+  // parsing of the LDBC/actual attributes which are stored as strings
+  galois::gInfo("Meta-level preparation complete");
 
   // after metadata initialized, need to setup data and links of underlying
   // CSR graph; this will be done as files get parsed
@@ -50,6 +52,30 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   // nodeIndices: will not be using them since (1) there are no uuids in this
   // dataset and (2) name is now stored as an attribute and not a separate
   // thing (because not all nodes necessarily have a single name)
+}
+
+void LDBCReader::setupAttributeTypes() {
+  galois::gInfo("Tagging attributes with types");
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  // looping over them via the array rather than hardcode setting them so
+  // that it's easier to make sure the ones we want are handled (e.g.
+  // if I add a new attribute and try to run, it will fail if I haven't
+  // handled it here rather than silently cause issues later)
+  for (std::string attName : this->nodeAttributeNames) {
+    if (attName == "id" || attName == "name" || attName == "url") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_LONGSTRING);
+    } else {
+      GALOIS_DIE("unhandled node attribute type");
+    }
+  }
+
+  for (std::string attName : this->edgeAttributeNames) {
+    if (attName == "id" || attName == "name" || attName == "url") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_LONGSTRING);
+    } else {
+      GALOIS_DIE("unhandled edge attribute type");
+    }
+  }
 }
 
 void LDBCReader::parseOrganizationCSV(std::string filepath) {

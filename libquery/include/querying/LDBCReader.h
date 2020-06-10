@@ -21,9 +21,6 @@
 
 #include "querying/PythonGraph.h"
 
-// TODO figure out how this will end up working with all these typedefs
-//#define USE_QUERY_GRAPH_WITH_NODE_LABEL
-
 /**
  *
  * Requires CsvComposite generation
@@ -79,10 +76,15 @@ class LDBCReader {
   //! names of node attributes in this dataset
   std::vector<std::string> nodeAttributeNames{"id", "name", "url"};
 
+  // TODO dynamics
+  //! names of edge attributes in this dataset
+  std::vector<std::string> edgeAttributeNames{};
+
   /**
-   * Parse the organization file
+   * Parse the organization file: get label (company/university) and save
+   * to node + save name and url to attributes as well.
    */
-  void parseOrganization(std::string filepath);
+  void parseOrganizationCSV(std::string filepath);
 
 public:
   /**

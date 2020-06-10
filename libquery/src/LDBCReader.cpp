@@ -220,12 +220,120 @@ void LDBCReader::parsePlaceCSV(std::string filepath) {
                 this->gidOffset);
 }
 
+void LDBCReader::parseTagCSV(std::string filepath) {
+  galois::StatTimer timer("ParseTagCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing tag file at ", filepath);
+  // open file
+  std::ifstream tagFile(filepath);
+  // read header
+  std::string header;
+  std::getline(tagFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t tagIndex = this->attGraph.nodeLabelIDs["Tag"];
+  galois::gDebug("tag: ", tagIndex);
+  // create tag label
+  uint32_t tagLabel = (1 << tagIndex);
+
+  // read the rest of the file
+  std::string curLine;
+  std::string oID;
+  std::string oName;
+  std::string oURL;
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  while (std::getline(tagFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse place line
+    // id|name|url
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, oID, '|');
+    std::getline(tokenString, oName, '|');
+    std::getline(tokenString, oURL, '|');
+    // galois::gDebug(oID, " ", oName, " ", oURL);
+
+    // place lid to gid mapping save
+    tag2GID[std::stoul(oID)] = thisGID;
+    // set tag label
+    setNodeLabel(attGraphPointer, thisGID, tagLabel);
+    // save all 3 parsed fields to attributes
+    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed, " in the tag CSV; total so far is ",
+                this->gidOffset);
+}
+
+void LDBCReader::parseTagClassCSV(std::string filepath) {
+  galois::StatTimer timer("ParseTagClassCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing tag class file at ", filepath);
+  // open file
+  std::ifstream tagClassFile(filepath);
+  // read header
+  std::string header;
+  std::getline(tagClassFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t tagClassIndex = this->attGraph.nodeLabelIDs["TagClass"];
+  galois::gDebug("tagclass: ", tagClassIndex);
+  // create tag label
+  uint32_t tagClassLabel = (1 << tagClassIndex);
+
+  // read the rest of the file
+  std::string curLine;
+  std::string oID;
+  std::string oName;
+  std::string oURL;
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  while (std::getline(tagClassFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse place line
+    // id|name|url
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, oID, '|');
+    std::getline(tokenString, oName, '|');
+    std::getline(tokenString, oURL, '|');
+    // galois::gDebug(oID, " ", oType, " ", oName);
+
+    // place lid to gid mapping save
+    tagClass2GID[std::stoul(oID)] = thisGID;
+    // set tag label
+    setNodeLabel(attGraphPointer, thisGID, tagClassLabel);
+    // save all 3 parsed fields to attributes
+    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed,
+                " in the tag class CSV; total so far is ", this->gidOffset);
+}
+
 void LDBCReader::staticParsing() {
   for (std::string curFile : this->staticNodes) {
     if (curFile.find("organisation") != std::string::npos) {
       this->parseOrganizationCSV(ldbcDirectory + "/" + curFile);
     } else if (curFile.find("place") != std::string::npos) {
       this->parsePlaceCSV(ldbcDirectory + "/" + curFile);
+    } else if (curFile.find("tag_") != std::string::npos) {
+      this->parseTagCSV(ldbcDirectory + "/" + curFile);
+    } else if (curFile.find("tagclass_") != std::string::npos) {
+      this->parseTagClassCSV(ldbcDirectory + "/" + curFile);
+    } else {
+      GALOIS_DIE("invalid/unparsable static node file ", curFile);
     }
   }
 }

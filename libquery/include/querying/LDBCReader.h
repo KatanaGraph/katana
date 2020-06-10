@@ -45,6 +45,8 @@ class LDBCReader {
 
   //! mapping organization ids to graph's gid
   std::unordered_map<LDBCNodeType, GIDType> organization2GID;
+  //! mapping place ids to graph's gid
+  std::unordered_map<LDBCNodeType, GIDType> place2GID;
 
   //! Files in the static directory that represent vertices
   std::vector<std::string> staticNodes{
@@ -90,6 +92,12 @@ class LDBCReader {
    * to node + save name and url to attributes as well.
    */
   void parseOrganizationCSV(std::string filepath);
+
+  /**
+   * Parse the place file: get label (country/city/continent) and save
+   * to node + save name and url to attributes as well.
+   */
+  void parsePlaceCSV(std::string filepath);
 
 public:
   /**

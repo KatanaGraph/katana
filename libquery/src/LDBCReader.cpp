@@ -146,10 +146,86 @@ void LDBCReader::parseOrganizationCSV(std::string filepath) {
                 " in the organization CSV; total so far is ", this->gidOffset);
 }
 
+void LDBCReader::parsePlaceCSV(std::string filepath) {
+  galois::StatTimer timer("ParsePlaceCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing place file at ", filepath);
+  // open file
+  std::ifstream placeFile(filepath);
+  // read header
+  std::string header;
+  std::getline(placeFile, header);
+
+  // get the labels for place and its subtypes
+  // assumption here is that they exist and will be found
+  // TODO error checking
+  uint32_t placeIndex     = this->attGraph.nodeLabelIDs["Place"];
+  uint32_t cityIndex      = this->attGraph.nodeLabelIDs["City"];
+  uint32_t countryIndex   = this->attGraph.nodeLabelIDs["Country"];
+  uint32_t continentIndex = this->attGraph.nodeLabelIDs["Continent"];
+
+  galois::gDebug("place: ", placeIndex, " city: ", cityIndex,
+                 " country: ", countryIndex, " continent: ", continentIndex);
+
+  // create the labels for the 3 types of nodes in this file
+  uint32_t cityLabel      = (1 << placeIndex) & (1 << cityIndex);
+  uint32_t countryLabel   = (1 << placeIndex) & (1 << countryIndex);
+  uint32_t continentLabel = (1 << placeIndex) & (1 << continentIndex);
+
+  // read the rest of the file
+  std::string curLine;
+  std::string oID;
+  std::string oName;
+  std::string oURL;
+  std::string oType;
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  while (std::getline(placeFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse place line
+    // id|name|url|type
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, oID, '|');
+    std::getline(tokenString, oName, '|');
+    std::getline(tokenString, oURL, '|');
+    std::getline(tokenString, oType, '|');
+    // galois::gDebug(oID, " ", oType, " ", oName, " ", oURL);
+
+    // place lid to gid mapping save
+    place2GID[std::stoul(oID)] = thisGID;
+
+    // in addition to being an place, it is also whatever type
+    // is listed in the file
+    if (oType.compare("country") == 0) {
+      setNodeLabel(attGraphPointer, thisGID, countryLabel);
+    } else if (oType.compare("city") == 0) {
+      setNodeLabel(attGraphPointer, thisGID, cityLabel);
+    } else if (oType.compare("continent") == 0) {
+      setNodeLabel(attGraphPointer, thisGID, continentLabel);
+    } else {
+      GALOIS_DIE("invalid place type ", oType);
+    }
+
+    // finally, save all 3 parsed fields to attributes
+    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed, " in the place CSV; total so far is ",
+                this->gidOffset);
+}
+
 void LDBCReader::staticParsing() {
   for (std::string curFile : this->staticNodes) {
     if (curFile.find("organisation") != std::string::npos) {
       this->parseOrganizationCSV(ldbcDirectory + "/" + curFile);
+    } else if (curFile.find("place") != std::string::npos) {
+      this->parsePlaceCSV(ldbcDirectory + "/" + curFile);
     }
   }
 }

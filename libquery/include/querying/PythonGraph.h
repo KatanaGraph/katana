@@ -110,6 +110,12 @@ void printGraph(AttributedGraph* g);
  */
 void allocateGraph(AttributedGraph* g, size_t numNodes, size_t numEdges,
                    size_t numNodeLabels, size_t numEdgeLabels);
+
+//! Same as allocateGraph except it doesn't allocate memory for unused
+//! uuid/names metadata + initializes attribute types
+void allocateGraphLDBC(AttributedGraph* g, size_t numNodes, size_t numEdges,
+                       size_t numNodeLabels, size_t numEdgeLabels);
+
 /**
  * Set the end edge for a particular node in the CSR representation.
  * @param g Graph to change
@@ -142,6 +148,16 @@ void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
  */
 void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid, uint32_t label,
              char* name);
+
+/**
+ * Assign a node label to a node.
+ *
+ * @param g Graph to save mapping to
+ * @param nodeIndex Node to save mapping to
+ * @param label Label to give node
+ */
+void setNodeLabel(AttributedGraph* g, uint32_t nodeIndex, uint32_t label);
+
 /**
  * Assign a node label string to a particular bit position (for mapping
  * purposes).
@@ -169,8 +185,8 @@ void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
  * @param key Attribute name
  * @param value Value of the attribute to give the node
  */
-void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
-                      char* value);
+void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, const char* key,
+                      const char* value);
 
 /**
  * Construct an edge in the AttributedGraph for the first time, i.e. it only
@@ -262,7 +278,19 @@ void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
  * @param key Attribute name
  * @param nodeCount size of map
  */
-void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount);
+void addNodeAttributeMap(AttributedGraph* g, const char* key,
+                         uint32_t nodeCount);
+
+/**
+ * Add a new edge attribute map with a particular size. Does nothing if key
+ * already exists .
+ *
+ * @param g Graph to change
+ * @param key Attribute name
+ * @param edgeCount size of map
+ */
+void addEdgeAttributeMap(AttributedGraph* g, const char* key,
+                         uint32_t edgeCount);
 
 /**
  * Resizes the node maps in an attributed graph.

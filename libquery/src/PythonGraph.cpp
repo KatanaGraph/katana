@@ -239,6 +239,16 @@ void allocateGraph(AttributedGraph* g, size_t numNodes, size_t numEdges,
   g->nodeNames.resize(numNodes);
 }
 
+void allocateGraphLDBC(AttributedGraph* g, size_t numNodes, size_t numEdges,
+                       size_t numNodeLabels, size_t numEdgeLabels) {
+  g->graph.allocateFrom(numNodes, numEdges);
+  g->graph.constructNodes();
+  assert(numNodeLabels <= 32);
+  g->nodeLabelNames.resize(numNodeLabels);
+  assert(numEdgeLabels <= 32);
+  g->edgeLabelNames.resize(numEdgeLabels);
+}
+
 void fixEndEdge(AttributedGraph* g, uint32_t nodeIndex, uint64_t edgeIndex) {
   g->graph.fixEndEdge(nodeIndex, edgeIndex);
 }
@@ -265,6 +275,15 @@ void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
   g->nodeNames[nodeIndex]  = name;
 }
 
+void setNodeLabel(AttributedGraph* GALOIS_UNUSED(g),
+                  uint32_t GALOIS_UNUSED(nodeIndex),
+                  uint32_t GALOIS_UNUSED(label)) {
+#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
+  auto& nd = g->graph.getData(nodeIndex);
+  nd.label = label;
+#endif
+}
+
 void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
                           const char* name) {
   g->nodeLabelNames[labelBitPosition] = name;
@@ -277,8 +296,8 @@ void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
   g->edgeLabelIDs[name]               = labelBitPosition;
 }
 
-void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, char* key,
-                      char* value) {
+void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, const char* key,
+                      const char* value) {
   auto& attributes = g->nodeAttributes;
   if (attributes.find(key) == attributes.end()) {
     attributes[key] = std::vector<std::string>();
@@ -368,11 +387,21 @@ void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount) {
   }
 }
 
-void addNodeAttributeMap(AttributedGraph* g, char* key, uint32_t nodeCount) {
+void addNodeAttributeMap(AttributedGraph* g, const char* key,
+                         uint32_t nodeCount) {
   auto& attributes = g->nodeAttributes;
   if (attributes.find(key) == attributes.end()) {
     attributes[key] = std::vector<std::string>();
     attributes[key].resize(nodeCount);
+  }
+}
+
+void addEdgeAttributeMap(AttributedGraph* g, const char* key,
+                         uint32_t edgeCount) {
+  auto& attributes = g->edgeAttributes;
+  if (attributes.find(key) == attributes.end()) {
+    attributes[key] = std::vector<std::string>();
+    attributes[key].resize(edgeCount);
   }
 }
 

@@ -433,8 +433,8 @@ void LDBCReader::constructCSRSimpleEdges(
   galois::do_all(
       galois::iterate((size_t)0, edgesPerNode.size()),
       [&](size_t nodeIndex) {
-        galois::gDebug("Node ", nodeIndex + gidOffset, " edges stop at ",
-                       edgesPerNode[nodeIndex]);
+        // galois::gDebug("Node ", nodeIndex + gidOffset, " edges stop at ",
+        //               edgesPerNode[nodeIndex]);
         fixEndEdge(attGraphPointer, nodeIndex + gidOffset,
                    edgesPerNode[nodeIndex]);
       },
@@ -468,8 +468,9 @@ void LDBCReader::constructCSRSimpleEdges(
           insertionPoint = __sync_fetch_and_add(&firstNodeOffset, 1);
         }
 
-        galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert ",
-                       insertionPoint);
+        // galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert
+        // ",
+        //               insertionPoint);
         // TODO last arg is timestamp; what to do about it?
         constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
       },
@@ -540,7 +541,15 @@ void LDBCReader::staticParsing() {
       ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
       "isLocatedIn", NL_ORG, NL_PLACE);
   // next is place edges
-  //this->parseAndConstructSimpleEdges(
-  //    ldbcDirectory + "/" + "static/place_isPartOf_place_0_0.csv",
-  //    "isLocatedIn", NL_ORG, NL_PLACE);
+  this->parseAndConstructSimpleEdges(ldbcDirectory + "/" +
+                                         "static/place_isPartOf_place_0_0.csv",
+                                     "isPartOf", NL_PLACE, NL_PLACE);
+  // then tag
+  this->parseAndConstructSimpleEdges(ldbcDirectory + "/" +
+                                         "static/tag_hasType_tagclass_0_0.csv",
+                                     "hasType", NL_TAG, NL_TAGCLASS);
+  // then tag class
+  this->parseAndConstructSimpleEdges(
+      ldbcDirectory + "/" + "static/tagclass_isSubclassOf_tagclass_0_0.csv",
+      "isSubclassOf", NL_TAGCLASS, NL_TAGCLASS);
 }

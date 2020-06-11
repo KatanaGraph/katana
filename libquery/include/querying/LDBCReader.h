@@ -211,9 +211,10 @@ public:
   LDBCReader(std::string _ldbcDirectory, GIDType _numNodes, uint64_t _numEdges);
 
   /**
-   * Parses the "static" nodes/edges of the dataset
+   * Parses the "static" nodes/edges of the dataset. First parses all nodes,
+   * then parses all edges of those nodes.
    *
-   * @todo more details on what exactly occurs
+   * Node classes in this include organization, place, tag, and tag class
    */
   void staticParsing();
 };

@@ -103,6 +103,15 @@ ava_type(struct cudaPointerAttributes) {
     ava_field(hostPointer) ava_opaque;
 };
 
+struct cudaResourceDesc_x {
+    enum cudaResourceType resType;
+    void *devPtr;
+    struct cudaChannelFormatDesc desc;
+    size_t width;
+    size_t height;
+    size_t pitchInBytes;
+};
+
 /* APIs needed for a minimal program */
 
 char CUDARTAPI
@@ -779,6 +788,88 @@ cudaMemGetInfo(size_t *_free, size_t *total)
     }
     ava_argument(total) {
         ava_out; ava_buffer(1);
+    }
+}
+
+__host__ cudaError_t CUDARTAPI
+cudaCreateTextureObject(cudaTextureObject_t *pTexObject,
+                        const struct cudaResourceDesc *pResDesc,
+                        const struct cudaTextureDesc *pTexDesc,
+                        const struct cudaResourceViewDesc *pResViewDesc)
+{
+    ava_argument(pTexObject) {
+        ava_out; ava_buffer(1);
+        ava_element ava_handle;
+    }
+    ava_argument(pResDesc) {
+        ava_in; ava_buffer(1);
+        ava_type_cast(const struct cudaResourceDesc_x *);
+    }
+    ava_argument(pTexDesc) {
+        ava_in; ava_buffer(1);
+    }
+    ava_argument(pResViewDesc) {
+        ava_in; ava_buffer(1);
+    }
+}
+
+ava_utility cudaError_t __helper_func_get_attributes(struct cudaFuncAttributes *attr,
+                                                     struct fatbin_function *func,
+                                                     const void *hostFun)
+{
+    if (func == NULL) {
+        DEBUG_PRINT("func is NULL, hostFun=%lx\n", (uintptr_t)hostFun);
+        return (cudaError_t) cudaErrorInvalidDeviceFunction;
+    }
+
+    if (func->hostfunc != hostFun) {
+        fprintf(stderr, "search host func %p -> stored %p (device func %p)\n",
+                hostFun, (void *)func->hostfunc, (void *)func->cufunc);
+    }
+    else {
+        DEBUG_PRINT("matched host func %p -> device func %p\n", hostFun, (void *)func->cufunc);
+    }
+
+    CUresult ret;
+    ret = cuFuncGetAttribute((int *)&attr->sharedSizeBytes,
+                             CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, func->cufunc);
+    ret = cuFuncGetAttribute((int *)&attr->constSizeBytes,
+                             CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES, func->cufunc);
+    ret = cuFuncGetAttribute((int *)&attr->localSizeBytes,
+                             CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES, func->cufunc);
+    ret = cuFuncGetAttribute(&attr->maxThreadsPerBlock,
+                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, func->cufunc);
+    ret = cuFuncGetAttribute(&attr->numRegs,
+                             CU_FUNC_ATTRIBUTE_NUM_REGS, func->cufunc);
+    ret = cuFuncGetAttribute(&attr->ptxVersion,
+                             CU_FUNC_ATTRIBUTE_PTX_VERSION, func->cufunc);
+    ret = cuFuncGetAttribute(&attr->binaryVersion,
+                             CU_FUNC_ATTRIBUTE_BINARY_VERSION, func->cufunc);
+    attr->cacheModeCA = 0;
+    ret = cuFuncGetAttribute(&attr->maxDynamicSharedSizeBytes,
+                             CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, func->cufunc);
+    ret = cuFuncGetAttribute(&attr->preferredShmemCarveout,
+                             CU_FUNC_ATTRIBUTE_PREFERRED_SHARED_MEMORY_CARVEOUT, func->cufunc);
+
+    return (cudaError_t) ret;
+}
+
+__host__ __cudart_builtin__ cudaError_t CUDARTAPI
+cudaFuncGetAttributes(struct cudaFuncAttributes *attr, const void *func)
+{
+    ava_disable_native_call;
+
+    ava_argument(attr) {
+        ava_out; ava_buffer(1);
+    }
+    ava_argument(func) {
+        ava_opaque;
+    }
+
+    cudaError_t ret;
+    if (ava_is_worker) {
+        ret = __helper_func_get_attributes(attr, ava_metadata(func)->func, func);
+        return ret;
     }
 }
 

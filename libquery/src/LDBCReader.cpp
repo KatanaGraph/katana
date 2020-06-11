@@ -4,8 +4,8 @@
 
 LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
                        uint64_t _numEdges)
-    : ldbcDirectory(_ldbcDirectory), gidOffset(0), totalNodes(_numNodes),
-      totalEdges(_numEdges) {
+    : ldbcDirectory(_ldbcDirectory), gidOffset(0), finishedNodes(0),
+      addedEdges(0), totalNodes(_numNodes), totalEdges(_numEdges) {
   // count node/edge labels (pre-defined as we know what we need
   // from the ldbc file)
   size_t nodeLabelCount = this->nodeLabelNames.size();
@@ -64,6 +64,7 @@ LDBCReader::GIDMap& LDBCReader::getGIDMap(NodeLabel nodeType) {
     return this->tag2GID;
   case NL_TAGCLASS:
     return this->tagClass2GID;
+  // TODO the new classes
   default:
     GALOIS_DIE("invalid GIDMap type ", nodeType);
     // shouldn't get here
@@ -79,18 +80,39 @@ void LDBCReader::setupAttributeTypes() {
   // if I add a new attribute and try to run, it will fail if I haven't
   // handled it here rather than silently cause issues later)
   for (std::string attName : this->nodeAttributeNames) {
-    if (attName == "id" || attName == "name" || attName == "url") {
+    if (attName == "id" || attName == "name" || attName == "url" ||
+        attName == "title") {
       addNodeAttributeType(attGraphPointer, attName.c_str(), AT_LONGSTRING);
+    } else if (attName == "creationDate") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_DATETIME);
+    } else if (attName == "firstName" || attName == "lastName" ||
+               attName == "gender" || attName == "browserUsed" ||
+               attName == "locationIP" || attName == "language" ||
+               attName == "imageFile") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_STRING);
+    } else if (attName == "birthday") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_DATE);
+    } else if (attName == "email") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(),
+                           AT_LONGSTRINGARRAY);
+    } else if (attName == "speaks") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_STRINGARRAY);
+    } else if (attName == "content") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_TEXT);
+    } else if (attName == "length") {
+      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_INT32);
     } else {
-      GALOIS_DIE("unhandled node attribute type");
+      GALOIS_DIE("unhandled node attribute type ", attName);
     }
   }
 
   for (std::string attName : this->edgeAttributeNames) {
-    if (attName == "id" || attName == "name" || attName == "url") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_LONGSTRING);
+    if (attName == "classYear" || attName == "workFrom") {
+      addEdgeAttributeType(attGraphPointer, attName.c_str(), AT_INT32);
+    } else if (attName == "creationDate" || attName == "joinDate") {
+      addEdgeAttributeType(attGraphPointer, attName.c_str(), AT_DATETIME);
     } else {
-      GALOIS_DIE("unhandled edge attribute type");
+      GALOIS_DIE("unhandled edge attribute type ", attName);
     }
   }
 }
@@ -511,19 +533,12 @@ void LDBCReader::parseAndConstructSimpleEdges(const std::string filepath,
 }
 
 void LDBCReader::staticParsing() {
-  for (std::string curFile : this->staticNodes) {
-    if (curFile.find("organisation") != std::string::npos) {
-      this->parseOrganizationCSV(ldbcDirectory + "/" + curFile);
-    } else if (curFile.find("place") != std::string::npos) {
-      this->parsePlaceCSV(ldbcDirectory + "/" + curFile);
-    } else if (curFile.find("tag_") != std::string::npos) {
-      this->parseTagCSV(ldbcDirectory + "/" + curFile);
-    } else if (curFile.find("tagclass_") != std::string::npos) {
-      this->parseTagClassCSV(ldbcDirectory + "/" + curFile);
-    } else {
-      GALOIS_DIE("invalid/unparsable static node file ", curFile);
-    }
-  }
+  // parse static nodes
+  this->parseOrganizationCSV(ldbcDirectory + "/" +
+                             "static/organisation_0_0.csv");
+  this->parsePlaceCSV(ldbcDirectory + "/" + "static/place_0_0.csv");
+  this->parseTagCSV(ldbcDirectory + "/" + "static/tag_0_0.csv");
+  this->parseTagClassCSV(ldbcDirectory + "/" + "static/tagclass_0_0.csv");
 
   // sanity check node label to position mappings
   for (auto mapIter = this->nodeLabel2Position.begin();

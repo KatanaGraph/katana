@@ -77,6 +77,7 @@ enum AttributedType {
   AT_DATE,
   AT_DATETIME,
   AT_TEXT,
+  AT_STRINGARRAY,
   AT_LONGSTRINGARRAY
 };
 

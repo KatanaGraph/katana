@@ -48,7 +48,18 @@ class LDBCReader {
         : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
   };
   //! enums for all the difference kinds of node labels
-  enum NodeLabel { NL_ORG, NL_PLACE, NL_TAG, NL_TAGCLASS };
+  //! granularity is based on the split of tags on disk rather than on
+  //! the scheme itself
+  enum NodeLabel {
+    NL_ORG,
+    NL_PLACE,
+    NL_TAG,
+    NL_TAGCLASS,
+    NL_PERSON,
+    NL_COMMENT,
+    NL_POST,
+    NL_FORUM
+  };
 
   //! Underlying attribute graph
   AttributedGraph attGraph;
@@ -74,31 +85,37 @@ class LDBCReader {
   GIDMap tag2GID;
   //! mapping tag class ids to graph's gid
   GIDMap tagClass2GID;
+  //! mapping person ids to graph's gid
+  GIDMap person2GID;
+  //! mapping comment ids to graph's gid
+  GIDMap comment2GID;
+  //! mapping post ids to graph's gid
+  GIDMap post2GID;
+  //! mapping forum ids to graph's gid
+  GIDMap forum2GID;
 
-  //! Files in the static directory that represent vertices
-  //! Note the order it is laid out here is very important as it determines
-  //! the order in which edges must be added to the graph as well
-  std::vector<std::string> staticNodes{
-      "static/organisation_0_0.csv", "static/place_0_0.csv",
-      "static/tag_0_0.csv", "static/tagclass_0_0.csv"};
   // note that original files have label names all lowercased: reason for
   // uppercase first letter is that the LDBC cypher queries all use
   // upper case first letters
-  // TODO dynamics
   //! strings for node labels in this dataset
   std::vector<std::string> nodeLabelNames{
       "Place",   "City",       "Country", "Continent", "Organisation",
-      "Company", "University", "Tag",     "TagClass"};
-  // TODO dynamics
+      "Company", "University", "Tag",     "TagClass",  "Person",
+      "Forum",   "Message",    "Post",    "Comment"};
   //! names of edge labels in this dataset
-  std::vector<std::string> edgeLabelNames{"isSubclassOf", "hasType",
-                                          "isLocatedIn", "isPartOf"};
-  // TODO dynamics
+  std::vector<std::string> edgeLabelNames{
+      "isSubclassOf", "hasType",   "isLocatedIn",  "isPartOf",    "hasInterest",
+      "hasTag",       "studyAt",   "workAt",       "knows",       "likes",
+      "hasCreator",   "hasMember", "hasModerator", "containerOf", "replyOf"};
   //! names of node attributes in this dataset
-  std::vector<std::string> nodeAttributeNames{"id", "name", "url"};
-  // TODO dynamics
+  std::vector<std::string> nodeAttributeNames{
+      "id",          "name",       "url",      "creationDate", "firstName",
+      "lastName",    "gender",     "birthday", "email",        "speaks",
+      "browserUsed", "locationIP", "title",    "language",     "imageFile",
+      "content",     "length"};
   //! names of edge attributes in this dataset
-  std::vector<std::string> edgeAttributeNames{};
+  std::vector<std::string> edgeAttributeNames{"classYear", "workFrom",
+                                              "creationDate", "joinDate"};
 
   //! Denotes region of nodes in graph that belongs to nodes of a certain type
   struct NodeLabelPosition {
@@ -113,7 +130,7 @@ class LDBCReader {
   //! Maps from a node label type to the region of nodes in the GID
   std::unordered_map<NodeLabel, NodeLabelPosition> nodeLabel2Position;
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
   /**
    * Given a NodeLabel enum, return the lid -> gid map associated with it

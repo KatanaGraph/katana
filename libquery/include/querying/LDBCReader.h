@@ -111,22 +111,10 @@ class LDBCReader {
 
   ////////////////////////////////////////////////////////////////////////////////
 
-  GIDMap& getGIDMap(NodeLabel nodeType) {
-    switch (nodeType) {
-    case NL_ORG:
-      return organization2GID;
-    case NL_PLACE:
-      return place2GID;
-    case NL_TAG:
-      return tag2GID;
-    case NL_TAGCLASS:
-      return tagClass2GID;
-    default:
-      GALOIS_DIE("invalid GIDMap type ", nodeType);
-      // shouldn't get here
-      return organization2GID;
-    }
-  }
+  /**
+   * Given a NodeLabel enum, return the lid -> gid map associated with it
+   */
+  GIDMap& getGIDMap(NodeLabel nodeType);
 
   /**
    * Tag attributes with their type

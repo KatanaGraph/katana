@@ -54,6 +54,23 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   // thing (because not all nodes necessarily have a single name)
 }
 
+LDBCReader::GIDMap& LDBCReader::getGIDMap(NodeLabel nodeType) {
+  switch (nodeType) {
+  case NL_ORG:
+    return this->organization2GID;
+  case NL_PLACE:
+    return this->place2GID;
+  case NL_TAG:
+    return this->tag2GID;
+  case NL_TAGCLASS:
+    return this->tagClass2GID;
+  default:
+    GALOIS_DIE("invalid GIDMap type ", nodeType);
+    // shouldn't get here
+    return this->organization2GID;
+  }
+}
+
 void LDBCReader::setupAttributeTypes() {
   galois::gInfo("Tagging attributes with types");
   AttributedGraph* attGraphPointer = &(this->attGraph);

@@ -56,6 +56,8 @@ class LDBCReader {
   std::string ldbcDirectory;
   //! Nodes that have been read so far
   GIDType gidOffset;
+  //! Edges that have been added to CSR so far
+  EdgeIndex addedEdges;
   //! Total number of nodes to expect during reading
   GIDType totalNodes;
   //! Total number of edges to expect during reading
@@ -164,6 +166,11 @@ class LDBCReader {
                             NodeLabel nodeTo, GIDType gidOffset,
                             std::vector<EdgeIndex>& edgesPerNode,
                             std::vector<SimpleReadEdge>& readEdges);
+
+  void constructCSRSimpleEdges(GIDType gidOffset, size_t numReadEdges,
+                               std::vector<EdgeIndex>& edgesPerNode,
+                               std::vector<SimpleReadEdge>& readEdges);
+
   /**
    * Parses the edges of the organization node label; only one file,
    * organization -> place

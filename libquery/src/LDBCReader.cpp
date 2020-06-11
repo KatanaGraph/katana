@@ -410,6 +410,70 @@ size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
   return linesParsed;
 }
 
+void LDBCReader::constructCSRSimpleEdges(
+    GIDType gidOffset, size_t numReadEdges,
+    std::vector<EdgeIndex>& edgesPerNode,
+    std::vector<SimpleReadEdge>& readEdges) {
+  ////////////////////////////////////////
+  // Get edge endpoints
+  ////////////////////////////////////////
+  // partial sum on edge array to get node edgepoints
+  galois::ParallelSTL::partial_sum(edgesPerNode.begin(), edgesPerNode.end(),
+                                   edgesPerNode.begin());
+  // make sure numReadEdges matches last count on prefix sum
+  GALOIS_ASSERT(edgesPerNode.back() == numReadEdges);
+
+  // add edges already read to prefix sum vector to get correct edge endpoints
+  std::transform(edgesPerNode.begin(), edgesPerNode.end(), edgesPerNode.begin(),
+                 [&](EdgeIndex& v) { return v + this->addedEdges; });
+  // fix the end edges on the CSR
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  galois::do_all(
+      galois::iterate((size_t)0, edgesPerNode.size()),
+      [&](size_t nodeIndex) {
+        galois::gDebug("Node ", nodeIndex + gidOffset, " edges stop at ",
+                       edgesPerNode[nodeIndex]);
+        fixEndEdge(attGraphPointer, nodeIndex + gidOffset,
+                   edgesPerNode[nodeIndex]);
+      },
+      galois::loopname("FixEndEdgeSimple"), galois::no_stats());
+
+  ////////////////////////////////////////
+  // add edges proper
+  ////////////////////////////////////////
+  // this var is to track how many edges have been added to first node of this
+  // set; the vector is used for all other edges
+  EdgeIndex firstNodeOffset = this->addedEdges;
+  // loop over the read edges
+  galois::do_all(
+      galois::iterate(readEdges),
+      [&](SimpleReadEdge e) {
+        GIDType src        = e.src;
+        GIDType dest       = e.dest;
+        GIDType label      = e.edgeLabel;
+        GIDType localSrcID = src - gidOffset;
+
+        // get insertion point
+        EdgeIndex insertionPoint;
+        // if here is to determine where to check to current insertion point for
+        // the node
+        if (localSrcID != 0) {
+          // -1 to account for node 0 not being part of this vector
+          insertionPoint =
+              __sync_fetch_and_add(&(edgesPerNode[localSrcID - 1]), 1);
+        } else {
+          // 0th node of this set = use firstNodeOffset
+          insertionPoint = __sync_fetch_and_add(&firstNodeOffset, 1);
+        }
+
+        galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert ",
+                       insertionPoint);
+        // TODO last arg is timestamp; what to do about it?
+        constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
+      },
+      galois::loopname("SaveSimpleEdges"), galois::no_stats());
+}
+
 void LDBCReader::constructOrganizationEdges() {
   // get position data
   NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_ORG);
@@ -429,10 +493,10 @@ void LDBCReader::constructOrganizationEdges() {
       "isLocatedIn", NL_ORG, NL_PLACE, gidOffset, edgesPerNode, readEdges);
   // galois::gPrint(readEdges[0].src, " ", readEdges[0].dest, " ",
   // readEdges[0].edgeLabel, "\n");
-  galois::gInfo("dummy use for ", numReadEdges);
 
   // construct the edges in the underlying CSR of attributed graph
-  // TODO
+  this->constructCSRSimpleEdges(gidOffset, numReadEdges, edgesPerNode,
+                                readEdges);
 }
 
 void LDBCReader::staticParsing() {

@@ -35,6 +35,17 @@ class LDBCReader {
   using EdgeIndex = uint64_t;
   //! map from an ldbc lid to graph's gid
   using GIDMap = std::unordered_map<LDBCNodeType, GIDType>;
+  //! Struct for holding edges read from disk in-memory
+  struct SimpleReadEdge {
+    GIDType src;
+    GIDType dest;
+    uint32_t edgeLabel;
+
+    SimpleReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel)
+        : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
+  };
+  //! enums for all the difference kinds of node labels
+  enum NodeLabel { NL_ORG, NL_PLACE, NL_TAG, NL_TAGCLASS };
 
   //! Underlying attribute graph
   AttributedGraph attGraph;
@@ -72,7 +83,7 @@ class LDBCReader {
   // uppercase first letter is that the LDBC cypher queries all use
   // upper case first letters
   // TODO dynamics
-  //! names of node labels in this dataset
+  //! strings for node labels in this dataset
   std::vector<std::string> nodeLabelNames{
       "Place",   "City",       "Country", "Continent", "Organisation",
       "Company", "University", "Tag",     "TagClass"};
@@ -87,18 +98,16 @@ class LDBCReader {
   //! names of edge attributes in this dataset
   std::vector<std::string> edgeAttributeNames{};
 
-  //! Struct for holding edges read from disk in-memory
-  struct SimpleReadEdge {
-    GIDType src;
-    GIDType dest;
-    uint32_t edgeLabel;
-
-    SimpleReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel)
-        : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
+  //! Denotes region of nodes in graph that belongs to nodes of a certain type
+  struct NodeLabelPosition {
+    //! starting point of region
+    GIDType offset;
+    //! number of nodes associated with the node type
+    GIDType count;
   };
+  //! Maps from a node label type to the region of nodes in the GID
+  std::unordered_map<NodeLabel, NodeLabelPosition> nodeLabel2Position;
 
-  //! enums for all the difference kinds of node labels
-  enum NodeLabel { NL_ORG, NL_PLACE, NL_TAG, NL_TAGCLASS };
 
   ////////////////////////////////////////////////////////////////////////////////
 

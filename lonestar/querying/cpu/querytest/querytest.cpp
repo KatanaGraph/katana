@@ -58,7 +58,7 @@ static cll::opt<uint32_t> numPages("numPages",
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, filename.c_str());
+  LonestarStart(argc, argv, name, desc, url, &filename);
 
   galois::graphs::DBGraph testGraph;
   // graph is automatically made symmetric and treats every directed edge

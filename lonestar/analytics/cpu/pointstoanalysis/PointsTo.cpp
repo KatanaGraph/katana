@@ -747,7 +747,8 @@ public:
                 ctx.push(this->ocd.getFinalRepresentative(*dst));
             }
           },
-          galois::loopname("PointsToMainUpdateLoop"), galois::no_conflicts(),
+          galois::loopname("PointsToMainUpdateLoop"),
+          galois::disable_conflict_detection(),
           galois::wl<galois::worklists::PerSocketChunkFIFO<8>>());
 
       galois::gDebug("No of points-to facts computed = ", countPointsToFacts());
@@ -796,7 +797,7 @@ void runPTA(PTAClass& pta, Alloc& nodeAllocator) {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, nullptr, inputFile.c_str());
+  LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

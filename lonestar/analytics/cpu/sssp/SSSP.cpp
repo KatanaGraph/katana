@@ -157,7 +157,7 @@ void deltaStepAlgo(Graph& graph, GNode source, const P& pushWrap,
         }
       },
       galois::wl<OBIMTy>(UpdateRequestIndexer{stepShift}),
-      galois::no_conflicts(), galois::loopname("SSSP"));
+      galois::disable_conflict_detection(), galois::loopname("SSSP"));
 
   if (TRACK_WORK) {
     //! [report self-defined stats]
@@ -350,7 +350,7 @@ void topoTileAlgo(Graph& graph, const GNode& source) {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, inputFile.c_str());
+  LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

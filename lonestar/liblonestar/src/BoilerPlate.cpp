@@ -34,6 +34,13 @@ llvm::cl::opt<std::string> statFile(
     llvm::cl::desc("ouput file to print stats to (default value empty)"),
     llvm::cl::init(""));
 
+//! Flag that forces user to be aware that they should be passing in a
+//! symmetric graph.
+llvm::cl::opt<bool>
+    symmetricGraph("symmetricGraph",
+                   llvm::cl::desc("Specify that the input graph is symmetric"),
+                   llvm::cl::init(false));
+
 static void LonestarPrintVersion(llvm::raw_ostream& out) {
   out << "LoneStar Benchmark Suite v" << galois::getVersion() << " ("
       << galois::getRevision() << ")\n";
@@ -47,7 +54,7 @@ void LonestarStart(int argc, char** argv) {
 
 //! initialize lonestar benchmark
 void LonestarStart(int argc, char** argv, const char* app, const char* desc,
-                   const char* url, const char* input) {
+                   const char* url, llvm::cl::opt<std::string>* input) {
   llvm::cl::SetVersionPrinter(LonestarPrintVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv);
   numThreads = galois::setActiveThreads(numThreads);
@@ -81,7 +88,7 @@ void LonestarStart(int argc, char** argv, const char* app, const char* desc,
   galois::runtime::reportParam("(NULL)", "Threads", numThreads);
   galois::runtime::reportParam("(NULL)", "Hosts", 1);
   if (input) {
-    galois::runtime::reportParam("(NULL)", "Input", input);
+    galois::runtime::reportParam("(NULL)", "Input", input->getValue());
   }
 
   char name[256];

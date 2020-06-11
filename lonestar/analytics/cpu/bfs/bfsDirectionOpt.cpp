@@ -381,7 +381,8 @@ void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
           }
         }
       },
-      galois::wl<WL>(), galois::loopname("runBFS"), galois::no_conflicts());
+      galois::wl<WL>(), galois::loopname("runBFS"),
+      galois::disable_conflict_detection());
 }
 
 template <bool CONCURRENT>
@@ -404,7 +405,7 @@ void runAlgo(Graph& graph, const GNode& source, const uint32_t runID) {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, inputFile.c_str());
+  LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

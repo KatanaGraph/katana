@@ -52,6 +52,7 @@ static cll::opt<unsigned int>
     reportNode("reportNode",
                cll::desc("Node to report distance to (default value 1)"),
                cll::init(1));
+
 // static cll::opt<unsigned int> stepShiftw("delta",
 // cll::desc("Shift value for the deltastep"),
 // cll::init(10));
@@ -230,7 +231,8 @@ void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
           }
         }
       },
-      galois::wl<WL>(), galois::loopname("runBFS"), galois::no_conflicts());
+      galois::wl<WL>(), galois::loopname("runBFS"),
+      galois::disable_conflict_detection());
 
   if (TRACK_WORK) {
     galois::runtime::reportStat_Single("BFS", "BadWork", BadWork.reduce());
@@ -317,7 +319,7 @@ void runAlgo(Graph& graph, const GNode& source) {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, inputFile.c_str());
+  LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

@@ -95,8 +95,9 @@ void asyncPageRank(Graph& graph) {
           }
         }
       },
-      galois::loopname("PushResidualAsync"), galois::no_conflicts(),
-      galois::no_stats(), galois::wl<WL>());
+      galois::loopname("PushResidualAsync"),
+      galois::disable_conflict_detection(), galois::no_stats(),
+      galois::wl<WL>());
 }
 
 void syncPageRank(Graph& graph) {
@@ -188,7 +189,7 @@ void syncPageRank(Graph& graph) {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, inputFile.c_str());
+  LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

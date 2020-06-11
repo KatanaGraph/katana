@@ -38,7 +38,7 @@ static cll::opt<uint64_t> numEdges("numEdges",
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, ldbcDir.c_str());
+  LonestarStart(argc, argv, name, desc, url, &ldbcDir);
 
   LDBCReader reader(ldbcDir, numNodes, numEdges);
   reader.staticParsing();

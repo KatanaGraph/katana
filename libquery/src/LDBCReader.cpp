@@ -353,12 +353,12 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   this->nodeLabel2Position.try_emplace(NL_TAGCLASS, beginOffset, nodesParsed);
 }
 
-void LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
-                                    const std::string edgeType,
-                                    NodeLabel nodeFrom, NodeLabel nodeTo,
-                                    GIDType gidOffset,
-                                    std::vector<EdgeIndex>& edgesPerNode,
-                                    std::vector<SimpleReadEdge>& readEdges) {
+size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
+                                      const std::string edgeType,
+                                      NodeLabel nodeFrom, NodeLabel nodeTo,
+                                      GIDType gidOffset,
+                                      std::vector<EdgeIndex>& edgesPerNode,
+                                      std::vector<SimpleReadEdge>& readEdges) {
   galois::StatTimer timer("ParseSimpleEdgeTime");
   timer.start();
 
@@ -377,6 +377,9 @@ void LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
   // get gid maps
   GIDMap& srcMap  = getGIDMap(nodeFrom);
   GIDMap& destMap = getGIDMap(nodeTo);
+  // src gid bounds for correct execution (this is an assumption the code
+  // makes that should always hold)
+  GIDType rightBound = gidOffset + edgesPerNode.size();
 
   // read the file
   std::string curLine;
@@ -390,8 +393,11 @@ void LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
     std::getline(tokenString, src, '|');
     std::getline(tokenString, dest, '|');
     // get gids of source and dest
-    GIDType srcGID  = srcMap[std::stoul(src)];
+    GIDType srcGID = srcMap[std::stoul(src)];
+    // make sure src GID is in bounds of this label class
+    GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound);
     GIDType destGID = destMap[std::stoul(dest)];
+
     // increment edge count of src gid by one
     edgesPerNode[srcGID - gidOffset]++;
     // save src, dest, and edge label to in-memory edgelist
@@ -400,6 +406,33 @@ void LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
 
   timer.stop();
   galois::gInfo("Parsed ", linesParsed, " edges");
+
+  return linesParsed;
+}
+
+void LDBCReader::constructOrganizationEdges() {
+  // get position data
+  NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_ORG);
+  GIDType gidOffset               = positionData.offset;
+  GIDType numLabeledNodes         = positionData.count;
+
+  // construct vector to hold edge counts of each node
+  std::vector<EdgeIndex> edgesPerNode;
+  edgesPerNode.assign(numLabeledNodes, 0);
+  // vector to hold read edges in memory (so that only one pass over file on
+  // storage is necessary)
+  std::vector<SimpleReadEdge> readEdges;
+
+  // read the edges into memory + get num edges per node
+  size_t numReadEdges = this->parseSimpleEdgeCSV(
+      ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
+      "isLocatedIn", NL_ORG, NL_PLACE, gidOffset, edgesPerNode, readEdges);
+  // galois::gPrint(readEdges[0].src, " ", readEdges[0].dest, " ",
+  // readEdges[0].edgeLabel, "\n");
+  galois::gInfo("dummy use for ", numReadEdges);
+
+  // construct the edges in the underlying CSR of attributed graph
+  // TODO
 }
 
 void LDBCReader::staticParsing() {
@@ -424,7 +457,10 @@ void LDBCReader::staticParsing() {
                    mapIter->second.count);
   }
 
-  // There must be an order in which edges are processed:
-  for (std::string curFile : this->staticEdges) {
-  }
+  // GIDType nodesWithProcessedEdges = 0;
+  // There must be an order in which edges are processed: same order as
+  // node read order
+  // therefore, hard code handle files to read
+  // first is organization
+  this->constructOrganizationEdges();
 }

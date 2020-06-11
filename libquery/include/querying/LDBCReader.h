@@ -76,12 +76,6 @@ class LDBCReader {
   std::vector<std::string> staticNodes{
       "static/organisation_0_0.csv", "static/place_0_0.csv",
       "static/tag_0_0.csv", "static/tagclass_0_0.csv"};
-  //! Files in the static directory that represent edges
-  std::vector<std::string> staticEdges{
-      "static/organisation_isLocatedIn_place_0_0.csv",
-      "static/place_isPartOf_place_0_0.csv",
-      "static/tag_hasType_tagclass_0_0.csv",
-      "static/tagclass_isSubclassOf_tagclass_0_0.csv"};
   // note that original files have label names all lowercased: reason for
   // uppercase first letter is that the LDBC cypher queries all use
   // upper case first letters
@@ -149,17 +143,32 @@ class LDBCReader {
   void parseTagClassCSV(const std::string filepath);
 
   /**
-   * Parse a simple edge CSV (2 columns, source|destination)
+   * Parse a simple edge CSV (2 columns, source|destination). Edges with
+   * other attributes should not use this function.
+   *
    * @param filepath Path to edge CSV
    * @param edgeType Edge label to give edges parsed by this file
    * @param nodeFrom Source node label
    * @param nodeTo Edge node label
+   * @param gidOffset GID offset for source node class (i.e. at what gid
+   * do nodes of that class start)
+   * @param[input,output] edgesPerNode array that tracks how many edges each
+   * node of the source class has
+   * @param[input,output] readEdges Contains the edges read from disk
+   * with labels
+   *
+   * @return Number of edges parsed from the file
    */
-  void parseSimpleEdgeCSV(const std::string filepath,
-                          const std::string edgeType, NodeLabel nodeFrom,
-                          NodeLabel nodeTo, GIDType gidOffset,
-                          std::vector<EdgeIndex>& edgesPerNode,
-                          std::vector<SimpleReadEdge>& readEdges);
+  size_t parseSimpleEdgeCSV(const std::string filepath,
+                            const std::string edgeType, NodeLabel nodeFrom,
+                            NodeLabel nodeTo, GIDType gidOffset,
+                            std::vector<EdgeIndex>& edgesPerNode,
+                            std::vector<SimpleReadEdge>& readEdges);
+  /**
+   * Parses the edges of the organization node label; only one file,
+   * organization -> place
+   */
+  void constructOrganizationEdges();
 
 public:
   /**

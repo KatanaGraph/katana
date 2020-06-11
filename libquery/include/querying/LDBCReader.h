@@ -56,6 +56,9 @@ class LDBCReader {
   std::string ldbcDirectory;
   //! Nodes that have been read so far
   GIDType gidOffset;
+  //! All nodes with GIDs before finished nodes are finalized (i.e., edges
+  //! all exist)
+  GIDType finishedNodes;
   //! Edges that have been added to CSR so far
   EdgeIndex addedEdges;
   //! Total number of nodes to expect during reading
@@ -167,6 +170,20 @@ class LDBCReader {
                             std::vector<EdgeIndex>& edgesPerNode,
                             std::vector<SimpleReadEdge>& readEdges);
 
+  /**
+   * Construct the edges in the underlying CSR graph. Should not
+   * use if an edge has additional attributes.
+   *
+   * Should handle all edges associated with a node label class.
+   *
+   * @param gidOffset First node that this edge set should include;
+   * first node of the label class
+   * @param numReadEdges Number of edges to be added; should be
+   * equal to number of edges in readEdges vector
+   * @param edgesPerNode Vector telling me how many edges a particular
+   * node in this node label class contains.
+   * @param readEdges Actual edges to be added to CSR
+   */
   void constructCSRSimpleEdges(GIDType gidOffset, size_t numReadEdges,
                                std::vector<EdgeIndex>& edgesPerNode,
                                std::vector<SimpleReadEdge>& readEdges);

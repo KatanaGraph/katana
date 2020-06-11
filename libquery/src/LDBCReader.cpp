@@ -414,6 +414,8 @@ void LDBCReader::constructCSRSimpleEdges(
     GIDType gidOffset, size_t numReadEdges,
     std::vector<EdgeIndex>& edgesPerNode,
     std::vector<SimpleReadEdge>& readEdges) {
+  GALOIS_ASSERT(readEdges.size() == numReadEdges);
+
   ////////////////////////////////////////
   // Get edge endpoints
   ////////////////////////////////////////
@@ -472,6 +474,11 @@ void LDBCReader::constructCSRSimpleEdges(
         constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
       },
       galois::loopname("SaveSimpleEdges"), galois::no_stats());
+
+  // increment number of edges that have been added to the CSR
+  this->addedEdges += numReadEdges;
+  // this set of edges should have handled all nodes too; update finishedNodes
+  this->finishedNodes += edgesPerNode.size();
 }
 
 void LDBCReader::constructOrganizationEdges() {
@@ -479,6 +486,10 @@ void LDBCReader::constructOrganizationEdges() {
   NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_ORG);
   GIDType gidOffset               = positionData.offset;
   GIDType numLabeledNodes         = positionData.count;
+
+  // check to make sure GID offset is equivalent to finishedNodes, i.e. up
+  // to this point all edges are handled
+  GALOIS_ASSERT(gidOffset == this->finishedNodes);
 
   // construct vector to hold edge counts of each node
   std::vector<EdgeIndex> edgesPerNode;
@@ -491,9 +502,6 @@ void LDBCReader::constructOrganizationEdges() {
   size_t numReadEdges = this->parseSimpleEdgeCSV(
       ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
       "isLocatedIn", NL_ORG, NL_PLACE, gidOffset, edgesPerNode, readEdges);
-  // galois::gPrint(readEdges[0].src, " ", readEdges[0].dest, " ",
-  // readEdges[0].edgeLabel, "\n");
-
   // construct the edges in the underlying CSR of attributed graph
   this->constructCSRSimpleEdges(gidOffset, numReadEdges, edgesPerNode,
                                 readEdges);
@@ -527,4 +535,6 @@ void LDBCReader::staticParsing() {
   // therefore, hard code handle files to read
   // first is organization
   this->constructOrganizationEdges();
+  // next is place edges
+  // this->constructPlaceEdges();
 }

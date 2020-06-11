@@ -126,6 +126,7 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
   std::string oURL;
   AttributedGraph* attGraphPointer = &(this->attGraph);
   size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
   while (std::getline(orgFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -161,6 +162,9 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
   GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
   galois::gInfo("Parsed ", nodesParsed,
                 " in the organization CSV; total so far is ", this->gidOffset);
+
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_ORG, beginOffset, nodesParsed);
 }
 
 void LDBCReader::parsePlaceCSV(const std::string filepath) {
@@ -198,6 +202,7 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
   std::string oType;
   AttributedGraph* attGraphPointer = &(this->attGraph);
   size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
   while (std::getline(placeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -235,6 +240,9 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
   GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
   galois::gInfo("Parsed ", nodesParsed, " in the place CSV; total so far is ",
                 this->gidOffset);
+
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_PLACE, beginOffset, nodesParsed);
 }
 
 void LDBCReader::parseTagCSV(const std::string filepath) {
@@ -261,6 +269,7 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
   std::string oURL;
   AttributedGraph* attGraphPointer = &(this->attGraph);
   size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
   while (std::getline(tagFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -286,6 +295,8 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
   GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
   galois::gInfo("Parsed ", nodesParsed, " in the tag CSV; total so far is ",
                 this->gidOffset);
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_TAG, beginOffset, nodesParsed);
 }
 
 void LDBCReader::parseTagClassCSV(const std::string filepath) {
@@ -312,6 +323,7 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   std::string oURL;
   AttributedGraph* attGraphPointer = &(this->attGraph);
   size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
   while (std::getline(tagClassFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -337,6 +349,8 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
   galois::gInfo("Parsed ", nodesParsed,
                 " in the tag class CSV; total so far is ", this->gidOffset);
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_TAGCLASS, beginOffset, nodesParsed);
 }
 
 void LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
@@ -401,6 +415,13 @@ void LDBCReader::staticParsing() {
     } else {
       GALOIS_DIE("invalid/unparsable static node file ", curFile);
     }
+  }
+
+  // sanity check node label to position mappings
+  for (auto mapIter = this->nodeLabel2Position.begin();
+       mapIter != this->nodeLabel2Position.end(); mapIter++) {
+    galois::gDebug(mapIter->first, " ", mapIter->second.offset, " ",
+                   mapIter->second.count);
   }
 
   // There must be an order in which edges are processed:

@@ -37,10 +37,13 @@ class LDBCReader {
   using GIDMap = std::unordered_map<LDBCNodeType, GIDType>;
   //! Struct for holding edges read from disk in-memory
   struct SimpleReadEdge {
+    //! source of edge
     GIDType src;
+    //! dest of edge
     GIDType dest;
+    //! Label on edge; set bits indicate which labels edge has
     uint32_t edgeLabel;
-
+    //! simple constructor that just initializes fields
     SimpleReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel)
         : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
   };
@@ -104,10 +107,12 @@ class LDBCReader {
     GIDType offset;
     //! number of nodes associated with the node type
     GIDType count;
+    //! simple constructor that just initializes both fields
+    NodeLabelPosition(GIDType _offset, GIDType _count)
+        : offset(_offset), count(_count) {}
   };
   //! Maps from a node label type to the region of nodes in the GID
   std::unordered_map<NodeLabel, NodeLabelPosition> nodeLabel2Position;
-
 
   ////////////////////////////////////////////////////////////////////////////////
 

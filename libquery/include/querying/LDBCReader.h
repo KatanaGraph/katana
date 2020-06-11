@@ -165,6 +165,13 @@ class LDBCReader {
   void parseTagClassCSV(const std::string filepath);
 
   /**
+   * Parse the person file:
+   * creation|deletion|id|firstName|lastName|gender|birthday|locationIP|browser|
+   * language|email
+   */
+  void parsePersonCSV(const std::string filepath);
+
+  /**
    * Parse a simple edge CSV (2 columns, source|destination). Edges with
    * other attributes should not use this function.
    *
@@ -234,6 +241,17 @@ public:
    * Node classes in this include organization, place, tag, and tag class
    */
   void staticParsing();
+
+  /**
+   * Parses the "dynamic" nodes/edges of the dataset. First parses all nodes,
+   * then parses all edges of those nodes. One major differnece with the
+   * static parsing is that edges for a node class are scattered across
+   * multiple files; this requires reading all such files before adding
+   * the edges to the underlying CSR.
+   *
+   * Node classes in this include person, forum, comment, post.
+   */
+  void dynamicParsing();
 };
 
 #endif

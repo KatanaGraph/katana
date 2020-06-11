@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 
   LDBCReader reader(ldbcDir, numNodes, numEdges);
   reader.staticParsing();
+  reader.dynamicParsing();
 
   return 0;
 }

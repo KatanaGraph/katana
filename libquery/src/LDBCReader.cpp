@@ -375,6 +375,94 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   this->nodeLabel2Position.try_emplace(NL_TAGCLASS, beginOffset, nodesParsed);
 }
 
+void LDBCReader::parsePersonCSV(const std::string filepath) {
+  galois::StatTimer timer("ParsePersonCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing person file at ", filepath);
+  // open file
+  std::ifstream nodeFile(filepath);
+  // read header
+  std::string header;
+  std::getline(nodeFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t personIndex = this->attGraph.nodeLabelIDs["Person"];
+  galois::gDebug("person: ", personIndex);
+  // create tag label
+  uint32_t personLabel = (1 << personIndex);
+
+  // read the rest of the file
+  std::string curLine;
+
+  // fields of the person file in order
+  std::string fCreation;
+  std::string fDeletion;
+  std::string fID;
+  std::string fFirstName;
+  std::string fLastName;
+  std::string fGender;
+  std::string fBirthday;
+  std::string fLocationIP;
+  std::string fBrowser;
+  std::string fLanguage;
+  std::string fMail;
+
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
+
+  while (std::getline(nodeFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse person line
+    // creation|deletion|id|firstName|lastName|gender|birthday|locationIP|
+    // browser|language|email
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, fCreation, '|');
+    std::getline(tokenString, fDeletion, '|');
+    std::getline(tokenString, fID, '|');
+    std::getline(tokenString, fFirstName, '|');
+    std::getline(tokenString, fLastName, '|');
+    std::getline(tokenString, fGender, '|');
+    std::getline(tokenString, fBirthday, '|');
+    std::getline(tokenString, fLocationIP, '|');
+    std::getline(tokenString, fBrowser, '|');
+    std::getline(tokenString, fLanguage, '|');
+    std::getline(tokenString, fMail, '|');
+
+    // galois::gInfo(fCreation, "|", fDeletion, "|", fID, "|", fFirstName, "|",
+    //              fLastName, "|", fGender, "|", fBirthday, "|", fLocationIP,
+    //              "|", fBrowser, "|", fLanguage, "|", fMail);
+
+    // place lid to gid mapping save
+    person2GID[std::stoul(fID)] = thisGID;
+    // set label
+    setNodeLabel(attGraphPointer, thisGID, personLabel);
+
+    // save parsed fields into attributes
+    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                     fCreation.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "firstName", fFirstName.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "lastName", fLastName.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "gender", fGender.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "birthday", fBirthday.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "email", fMail.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "speaks", fLanguage.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "browserUsed", fBrowser.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "locationIP",
+                     fLocationIP.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed, " in the person CSV; total so far is ",
+                this->gidOffset);
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_PERSON, beginOffset, nodesParsed);
+}
+
 size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
                                       const std::string edgeType,
                                       NodeLabel nodeFrom, NodeLabel nodeTo,
@@ -547,10 +635,10 @@ void LDBCReader::staticParsing() {
                    mapIter->second.count);
   }
 
-  // GIDType nodesWithProcessedEdges = 0;
   // There must be an order in which edges are processed: same order as
   // node read order
   // therefore, hard code handle files to read
+
   // first is organization
   this->parseAndConstructSimpleEdges(
       ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
@@ -567,4 +655,18 @@ void LDBCReader::staticParsing() {
   this->parseAndConstructSimpleEdges(
       ldbcDirectory + "/" + "static/tagclass_isSubclassOf_tagclass_0_0.csv",
       "isSubclassOf", NL_TAGCLASS, NL_TAGCLASS);
+}
+
+void LDBCReader::dynamicParsing() {
+  // get all nodes in memory first in this order: person, forum
+  // post, comment
+  this->parsePersonCSV(ldbcDirectory + "/" + "dynamic/person_0_0.csv");
+
+  // handle all person outgoing edges
+
+  // handle all forum outgoing edges
+
+  // handle all post outgoing edges
+
+  // handle all comment outgoing edges
 }

@@ -481,9 +481,12 @@ void LDBCReader::constructCSRSimpleEdges(
   this->finishedNodes += edgesPerNode.size();
 }
 
-void LDBCReader::constructOrganizationEdges() {
+void LDBCReader::parseAndConstructSimpleEdges(const std::string filepath,
+                                              const std::string edgeType,
+                                              NodeLabel nodeFrom,
+                                              NodeLabel nodeTo) {
   // get position data
-  NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_ORG);
+  NodeLabelPosition& positionData = this->nodeLabel2Position.at(nodeFrom);
   GIDType gidOffset               = positionData.offset;
   GIDType numLabeledNodes         = positionData.count;
 
@@ -500,8 +503,7 @@ void LDBCReader::constructOrganizationEdges() {
 
   // read the edges into memory + get num edges per node
   size_t numReadEdges = this->parseSimpleEdgeCSV(
-      ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
-      "isLocatedIn", NL_ORG, NL_PLACE, gidOffset, edgesPerNode, readEdges);
+      filepath, edgeType, nodeFrom, nodeTo, gidOffset, edgesPerNode, readEdges);
   // construct the edges in the underlying CSR of attributed graph
   this->constructCSRSimpleEdges(gidOffset, numReadEdges, edgesPerNode,
                                 readEdges);
@@ -534,7 +536,11 @@ void LDBCReader::staticParsing() {
   // node read order
   // therefore, hard code handle files to read
   // first is organization
-  this->constructOrganizationEdges();
+  this->parseAndConstructSimpleEdges(
+      ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
+      "isLocatedIn", NL_ORG, NL_PLACE);
   // next is place edges
-  // this->constructPlaceEdges();
+  //this->parseAndConstructSimpleEdges(
+  //    ldbcDirectory + "/" + "static/place_isPartOf_place_0_0.csv",
+  //    "isLocatedIn", NL_ORG, NL_PLACE);
 }

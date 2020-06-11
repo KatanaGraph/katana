@@ -189,10 +189,18 @@ class LDBCReader {
                                std::vector<SimpleReadEdge>& readEdges);
 
   /**
-   * Parses the edges of the organization node label; only one file,
-   * organization -> place
+   * Parses the edges of some file and construct them; only works if
+   * (1) edges have no attributes and (2) all edges of a label class are in a
+   * single file and not multiple files
+   *
+   * @param filepath Edge file to parse
+   * @param edgeType Label of edge present in the parsed file
+   * @param nodeFrom Source node label
+   * @param nodeTo Edge node label
    */
-  void constructOrganizationEdges();
+  void parseAndConstructSimpleEdges(const std::string filepath,
+                                    const std::string edgeType,
+                                    NodeLabel nodeFrom, NodeLabel nodeTo);
 
 public:
   /**

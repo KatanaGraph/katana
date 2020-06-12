@@ -64,7 +64,14 @@ LDBCReader::GIDMap& LDBCReader::getGIDMap(NodeLabel nodeType) {
     return this->tag2GID;
   case NL_TAGCLASS:
     return this->tagClass2GID;
-  // TODO the new classes
+  case NL_PERSON:
+    return this->person2GID;
+  case NL_COMMENT:
+    return this->comment2GID;
+  case NL_POST:
+    return this->post2GID;
+  case NL_FORUM:
+    return this->forum2GID;
   default:
     GALOIS_DIE("invalid GIDMap type ", nodeType);
     // shouldn't get here
@@ -685,12 +692,10 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
   this->nodeLabel2Position.try_emplace(NL_COMMENT, beginOffset, nodesParsed);
 }
 
-size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
-                                      const std::string edgeType,
-                                      NodeLabel nodeFrom, NodeLabel nodeTo,
-                                      GIDType gidOffset,
-                                      std::vector<EdgeIndex>& edgesPerNode,
-                                      std::vector<SimpleReadEdge>& readEdges) {
+size_t LDBCReader::parseSimpleEdgeCSV(
+    const std::string filepath, const std::string edgeType, NodeLabel nodeFrom,
+    NodeLabel nodeTo, GIDType gidOffset, std::vector<EdgeIndex>& edgesPerNode,
+    std::vector<SimpleReadEdge>& readEdges, const size_t skipColumns = 0) {
   galois::StatTimer timer("ParseSimpleEdgeTime");
   timer.start();
 
@@ -721,13 +726,23 @@ size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
   while (std::getline(edgeFile, curLine)) {
     linesParsed++;
     std::stringstream tokenString(curLine);
+
+    // columns to skip per line as necessary for some files
+    if (skipColumns > 0) {
+      // read data into src that will be overwritten later
+      for (size_t i = 0; i < skipColumns; i++) {
+        std::getline(tokenString, src, '|');
+      }
+    }
     // src|dst
     std::getline(tokenString, src, '|');
     std::getline(tokenString, dest, '|');
     // get gids of source and dest
     GIDType srcGID = srcMap[std::stoul(src)];
     // make sure src GID is in bounds of this label class
-    GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound);
+    GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound,
+                  "left: ", gidOffset, " right: ", rightBound,
+                  " offender: ", srcGID);
     GIDType destGID = destMap[std::stoul(dest)];
 
     // increment edge count of src gid by one
@@ -842,6 +857,82 @@ void LDBCReader::parseAndConstructSimpleEdges(const std::string filepath,
                                 readEdges);
 }
 
+void LDBCReader::parseAndConstructPersonEdges() {
+  // get position data
+  NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_PERSON);
+  GIDType gidOffset               = positionData.offset;
+  GIDType numLabeledNodes         = positionData.count;
+
+  // check to make sure GID offset is equivalent to finishedNodes, i.e. up
+  // to this point all edges are handled
+  GALOIS_ASSERT(gidOffset == this->finishedNodes);
+
+  // construct vector to hold edge counts of each node
+  std::vector<EdgeIndex> edgesPerNode;
+  edgesPerNode.assign(numLabeledNodes, 0);
+  // vectors to hold read edges in memory (so that only one pass over file on
+  // storage is necessary); one type has no attribute, the other one does
+  std::vector<SimpleReadEdge> readSimpleEdges;
+  std::vector<AttributedReadEdge> readAttEdges;
+
+  // files that need to be read for person edges and their to-from mappings
+  std::vector<std::string> simpleFiles{
+      "/dynamic/person_hasInterest_tag_0_0.csv",
+      "/dynamic/person_isLocatedIn_place_0_0.csv"};
+
+  std::vector<std::string> attributedFiles{
+      "/dynamic/person_knows_person_0_0.csv",
+      "/dynamic/person_likes_comment_0_0.csv",
+      "/dynamic/person_likes_post_0_0.csv",
+      "/dynamic/person_studyAt_organisation_0_0.csv",
+      "/dynamic/person_workAt_organisation_0_0.csv"};
+
+  // edge types for both
+  std::vector<std::string> simpleEdgeTypes{"hasInterest", "isLocatedIn"};
+  std::vector<std::string> attributedEdgeTypes{"knows", "likes", "likes",
+                                               "studyAt", "workAt"};
+  // name of the attribute on the attributed edge
+  std::vector<std::string> attributeOnEdge{
+      "creationDate", "creationDate", "creationDate", "classYear", "workFrom"};
+
+  // initialize edge src/dest classes; note that order is important
+  std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
+  simpleMappings[0] = std::move(std::make_pair(NL_PERSON, NL_TAG));
+  simpleMappings[1] = std::move(std::make_pair(NL_PERSON, NL_PLACE));
+  std::vector<ToFromMapping> attributedMappings(attributedFiles.size());
+  attributedMappings[0] = std::move(std::make_pair(NL_PERSON, NL_PERSON));
+  attributedMappings[1] = std::move(std::make_pair(NL_PERSON, NL_COMMENT));
+  attributedMappings[2] = std::move(std::make_pair(NL_PERSON, NL_POST));
+  attributedMappings[3] = std::move(std::make_pair(NL_PERSON, NL_ORG));
+  attributedMappings[4] = std::move(std::make_pair(NL_PERSON, NL_ORG));
+  // setup metadata that tells us how to parse each attribute edge file
+  // (has to be hardcoded; headers are not consistent/wrong)
+  std::vector<ParseMetadata> attributeHowToParse(attributedFiles.size());
+  // create|delete|src|dest
+  attributeHowToParse[0] = std::move(std::make_tuple(4, 2, 0));
+  // create|src|dest
+  attributeHowToParse[1] = std::move(std::make_tuple(3, 1, 0));
+  // create|src|dest
+  attributeHowToParse[2] = std::move(std::make_tuple(3, 1, 0));
+  // create|delete|src|dest|classyear
+  attributeHowToParse[3] = std::move(std::make_tuple(5, 2, 4));
+  // create|delete|src|dest|workfrom
+  attributeHowToParse[4] = std::move(std::make_tuple(5, 2, 4));
+
+  for (size_t i = 0; i < simpleFiles.size(); i++) {
+    std::string& toRead    = simpleFiles[i];
+    std::string& edgeType  = simpleEdgeTypes[i];
+    ToFromMapping& mapping = simpleMappings[i];
+    // skips first 2 columns of each: creation and deletion time
+    // creation|deletion|src|dst
+    this->parseSimpleEdgeCSV(ldbcDirectory + toRead, edgeType, mapping.first,
+                             mapping.second, gidOffset, edgesPerNode,
+                             readSimpleEdges, 2);
+  }
+
+  // construct both simple and attributed edges
+}
+
 void LDBCReader::staticParsing() {
   // parse static nodes
   this->parseOrganizationCSV(ldbcDirectory + "/" +
@@ -888,7 +979,7 @@ void LDBCReader::dynamicParsing() {
   this->parseCommentCSV(ldbcDirectory + "/" + "dynamic/comment_0_0.csv");
 
   // handle all person outgoing edges
-
+  this->parseAndConstructPersonEdges();
   // handle all forum outgoing edges
 
   // handle all post outgoing edges

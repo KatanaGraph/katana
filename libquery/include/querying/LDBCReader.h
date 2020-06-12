@@ -47,6 +47,26 @@ class LDBCReader {
     SimpleReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel)
         : src(_src), dest(_dest), edgeLabel(_edgeLabel) {}
   };
+  //! Struct for holding edges read that include an attribute from disk
+  //! in-memory
+  struct AttributedReadEdge {
+    //! source of edge
+    GIDType src;
+    //! dest of edge
+    GIDType dest;
+    //! Label on edge; set bits indicate which labels edge has
+    uint32_t edgeLabel;
+    //! Attribute on edge
+    std::string attribute;
+    //! Attribute name
+    std::string& attributeName;
+    //! constructor that just initializes fields
+    AttributedReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel,
+                       std::string&& _attribute, std::string& _attributeName)
+        : src(_src), dest(_dest), edgeLabel(_edgeLabel), attribute(_attribute),
+          attributeName(_attributeName) {}
+  };
+
   //! enums for all the difference kinds of node labels
   //! granularity is based on the split of tags on disk rather than on
   //! the scheme itself
@@ -60,6 +80,11 @@ class LDBCReader {
     NL_POST,
     NL_FORUM
   };
+  //! Two node labels that represent the source and dest type of an edge
+  using ToFromMapping = std::pair<NodeLabel, NodeLabel>;
+  //! num columns, source start column, attribute column; 0-indexed
+  //! used to specify how to parse a file
+  using ParseMetadata = std::tuple<size_t, size_t, size_t>;
 
   //! Underlying attribute graph
   AttributedGraph attGraph;
@@ -195,7 +220,8 @@ class LDBCReader {
 
   /**
    * Parse a simple edge CSV (2 columns, source|destination). Edges with
-   * other attributes should not use this function.
+   * other attributes should not use this function. There is an argument
+   * that allows for skipping prefix columns if necessary.
    *
    * @param filepath Path to edge CSV
    * @param edgeType Edge label to give edges parsed by this file
@@ -207,6 +233,7 @@ class LDBCReader {
    * node of the source class has
    * @param[input,output] readEdges Contains the edges read from disk
    * with labels
+   * @param skipColumns number of columns to skip on each line
    *
    * @return Number of edges parsed from the file
    */
@@ -214,7 +241,8 @@ class LDBCReader {
                             const std::string edgeType, NodeLabel nodeFrom,
                             NodeLabel nodeTo, GIDType gidOffset,
                             std::vector<EdgeIndex>& edgesPerNode,
-                            std::vector<SimpleReadEdge>& readEdges);
+                            std::vector<SimpleReadEdge>& readEdges,
+                            const size_t skipColumns);
 
   /**
    * Construct the edges in the underlying CSR graph. Should not
@@ -247,6 +275,12 @@ class LDBCReader {
   void parseAndConstructSimpleEdges(const std::string filepath,
                                     const std::string edgeType,
                                     NodeLabel nodeFrom, NodeLabel nodeTo);
+
+  /**
+   * Parses all edge files of outgoing edges for the person node class
+   * and adds the edges to the underlying CSR graph.
+   */
+  void parseAndConstructPersonEdges();
 
 public:
   /**

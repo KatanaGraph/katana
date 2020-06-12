@@ -332,8 +332,8 @@ void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
 #endif
 }
 
-void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, char* key,
-                      char* value) {
+void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
+                      const char* value) {
   auto& attributes = g->edgeAttributes;
   if (attributes.find(key) == attributes.end()) {
     attributes[key] = std::vector<std::string>();

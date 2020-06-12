@@ -225,8 +225,8 @@ void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
  * @param key Attribute name
  * @param value Value of the attribute to give the edge
  */
-void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, char* key,
-                      char* value);
+void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
+                      const char* value);
 /**
  * Gets the number of nodes in the graph.
  * @param g Graph to get nodes of

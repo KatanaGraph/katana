@@ -4,8 +4,19 @@
 # from the CI scripts under .github/workflows. Feel free to adjust these
 # instructions for your distribution of choice.
 
+set -eu
+
+EXPECTED_RELEASE="bionic"
+RELEASE=$(lsb_release --codename | awk '{print $2}')
+
+if [[ "${RELEASE}" != "${EXPECTED_RELEASE}" ]]
+then
+  echo "This script was intended for ${EXPECTED_RELEASE} (you have ${RELEASE}) exiting!"
+  exit 1
+fi
+
 # installing g{cc,++}-9
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test 
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update
 sudo apt install gcc-9 g++-9
 

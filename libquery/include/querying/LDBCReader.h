@@ -59,10 +59,11 @@ class LDBCReader {
     //! Attribute on edge
     std::string attribute;
     //! Attribute name
-    std::string& attributeName;
+    const std::string& attributeName;
     //! constructor that just initializes fields
     AttributedReadEdge(GIDType _src, GIDType _dest, uint32_t _edgeLabel,
-                       std::string&& _attribute, std::string& _attributeName)
+                       std::string&& _attribute,
+                       const std::string& _attributeName)
         : src(_src), dest(_dest), edgeLabel(_edgeLabel), attribute(_attribute),
           attributeName(_attributeName) {}
   };
@@ -301,11 +302,32 @@ class LDBCReader {
    */
   size_t parseEdgeCSVSpecified(const std::string filepath,
                                const std::string edgeType, NodeLabel nodeFrom,
-                               NodeLabel nodeTo, GIDType gidOffset,
-                               ParseMetadata howToRead,
-                               std::string& attributeName,
+                               NodeLabel nodeTo, const GIDType gidOffset,
+                               const ParseMetadata howToRead,
+                               const std::string& attributeName,
                                std::vector<EdgeIndex>& edgesPerNode,
                                std::vector<AttributedReadEdge>& readAttEdges);
+
+  /**
+   * Given data on what files to parse and how to parse them, do the parsing
+   * and save the read edges to memory + count how many edges per node
+   * there are in this batch
+   *
+   * @todo doc
+   */
+  size_t doParse(const GIDType gidOffset,
+                 const std::vector<std::string>& simpleFiles,
+                 const std::vector<std::string>& simpleEdgeTypes,
+                 const std::vector<ToFromMapping>& simpleMappings,
+                 const std::vector<std::string>& attributedFiles,
+                 const std::vector<std::string>& attributedEdgeTypes,
+                 const std::vector<ToFromMapping>& attributedMappings,
+                 const std::vector<ParseMetadata>& attributeHowToParse,
+                 const std::vector<std::string>& attributeOnEdge,
+                 std::vector<EdgeIndex>& edgesPerNode,
+                 std::vector<SimpleReadEdge>& readSimpleEdges,
+                 std::vector<AttributedReadEdge>& readAttEdges,
+                 const size_t simpleColumnsSkipped);
 
   /**
    * Parses all edge files of outgoing edges for the person node class

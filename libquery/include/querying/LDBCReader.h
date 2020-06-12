@@ -182,6 +182,12 @@ class LDBCReader {
   void parseForumCSV(const std::string filepath);
 
   /**
+   * Parse the post file:
+   * creation|id|image|locationIP|browser|language|content|length
+   */
+  void parsePostCSV(const std::string filepath);
+
+  /**
    * Parse a simple edge CSV (2 columns, source|destination). Edges with
    * other attributes should not use this function.
    *

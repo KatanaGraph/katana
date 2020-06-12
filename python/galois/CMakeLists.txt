@@ -22,9 +22,10 @@ install(
 )
 
 install(
-  TARGETS galois_shmem 
+  TARGETS galois_shmem
   PUBLIC_HEADER DESTINATION include
   ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
   INCLUDES DESTINATION include
 )
 

@@ -57,25 +57,25 @@ cdef void printValuePR(Graph *g):
 # Operator for computing outdegree of nodes in the Graph
 #
 cdef void computeOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray, GNode n) nogil:
-    cdef: 
+    cdef:
         LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
         LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
         GNode dst
         #NodeTy *dst_data
-        
+
     ii = g[0].edge_begin(n)
     ei = g[0].edge_end(n)
     while ii != ei:
             dst = g[0].getEdgeDst(ii)
             largeArray[0][<size_t>dst].fetch_add(1)
             preincrement(ii)
-    
+
 #
 # Operator for assigning outdegree of nodes in the Graph
 #
 cdef void assignOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray, GNode n) nogil:
     cdef NodeTy *src_data
-        
+
     src_data = &g[0].getData(n)
     src_data.nout = largeArray[0][<size_t>n].load()
 #
@@ -83,7 +83,7 @@ cdef void assignOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray, 
 # Main callsite for computing outdegree of nodes in the Graph
 #
 cdef void computeOutDeg(Graph *graph):
-    cdef: 
+    cdef:
         uint64_t numNodes = graph[0].size()
         LargeArray[atomuint64_t] largeArray
 
@@ -101,7 +101,7 @@ cdef void computeOutDeg(Graph *graph):
 # Operator for PageRank
 #
 cdef void pagerankPullTopo_operator(Graph *g, GReduceMax[float] *max_delta, GNode n) nogil:
-    cdef: 
+    cdef:
         LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
         LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
         GNode dst
@@ -126,7 +126,7 @@ cdef void pagerankPullTopo_operator(Graph *g, GReduceMax[float] *max_delta, GNod
 # Pagerank routine: Loop till convergence
 #
 cdef void pagerankPullTopo(Graph *graph, uint32_t max_iterations) nogil:
-    cdef: 
+    cdef:
         GReduceMax[float] max_delta
         float delta = 0
         uint32_t iteration = 0
@@ -144,35 +144,30 @@ cdef void pagerankPullTopo(Graph *graph, uint32_t max_iterations) nogil:
         if(delta <= TOLERANCE or iteration >= max_iterations):
             break
         max_delta.reset();
-    
+
     T.stop()
     gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")
     if(iteration >= max_iterations):
         gPrint(b"WARNING : failed to converge in ", iteration, b" iterations\n")
-    
+
 
 #
 # Main callsite for Pagerank
-#   
+#
 def pagerank(int numThreads, uint32_t max_iterations, string filename):
-    ## Hack: Need a better way to initialize shared
-    ## memory runtime.
-    sys = new SharedMemSys()
     cdef int new_numThreads = setActiveThreads(numThreads)
     gPrint(b"Running Pagerank on : ", filename, b"\n")
     if new_numThreads != numThreads:
         print("Warning, using fewer threads than requested")
-    
+
     print("Using {0} thread(s).".format(new_numThreads))
     cdef Graph graph
-    
+
     ## Read the CSR format of graph
     ## directly from disk.
     graph.readGraphFromGRFile(filename)
-    
+
     InitializePR(&graph)
     computeOutDeg(&graph)
     pagerankPullTopo(&graph, max_iterations)
     #printValuePR(&graph)
-    
-   

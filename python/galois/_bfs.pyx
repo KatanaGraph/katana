@@ -19,7 +19,7 @@ cdef void printValue(Graph_CSR *g):
     for n in range(numNodes):
         data = &g[0].getData(n)
         gPrint(b"\t", data[0], b"\n")
-         
+
 ##############################################################################
 ## Bfs implementation
 ###########################################################################
@@ -28,7 +28,7 @@ cdef void printValue(Graph_CSR *g):
 #
 cdef void Initialize(Graph_CSR *g, unsigned long source):
     cdef unsigned long numNodes = g[0].size()
-    cdef: 
+    cdef:
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ii
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ei
         uint32_t *data
@@ -41,18 +41,18 @@ cdef void Initialize(Graph_CSR *g, unsigned long source):
             gPrint(b"Srouce\n")
         else:
             data[0] = numNodes
-        
+
 
 #
 # BFS Operator to be executed on each Graph node
 #
 cdef void bfs_operator(Graph_CSR *g, bool *work_done, GNodeCSR n, UserContext[GNodeCSR] &ctx) nogil:
-    cdef: 
+    cdef:
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ii
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ei
         uint32_t *src_data
         uint32_t *dst_data
-    src_data = &g[0].getData(n)    
+    src_data = &g[0].getData(n)
     ii = g[0].edge_begin(n)
     ei = g[0].edge_end(n)
     while ii != ei:
@@ -61,11 +61,11 @@ cdef void bfs_operator(Graph_CSR *g, bool *work_done, GNodeCSR n, UserContext[GN
                 src_data[0] = dst_data[0] + 1
                 work_done[0] = 1
             preincrement(ii)
-            
+
 cdef void bfs_pull_topo(Graph_CSR *graph):
     cdef bool work_done = 1
     cdef Timer T
-    rounds = 0; 
+    rounds = 0;
     while(work_done):
         rounds += 1;
         print("starting for_each")
@@ -86,14 +86,14 @@ cdef void bfs_pull_topo(Graph_CSR *graph):
 # BFS sync operator to be executed on each Graph node
 #
 cdef void bfs_sync_operator(Graph_CSR *g, InsertBag[GNodeCSR] *next, int nextLevel, GNodeCSR n) nogil:
-    cdef: 
+    cdef:
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ii
         LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ei
         uint32_t *src_data
         uint32_t *dst_data
         uint32_t numNodes = g[0].size()
         GNodeCSR dst
-    src_data = &g[0].getData(n)    
+    src_data = &g[0].getData(n)
     ii = g[0].edge_begin(n)
     ei = g[0].edge_end(n)
     while ii != ei:
@@ -103,13 +103,13 @@ cdef void bfs_sync_operator(Graph_CSR *g, InsertBag[GNodeCSR] *next, int nextLev
                 dst_data[0] = nextLevel
                 next[0].push(dst)
             preincrement(ii)
-            
+
 cdef void bfs_sync(Graph_CSR *graph, GNodeCSR source):
     cdef:
         Timer T
         InsertBag[GNodeCSR] curr, next
         uint32_t nextLevel = 0;
-    
+
     next.push(source)
     T.start()
     while(not next.empty()):
@@ -121,11 +121,11 @@ cdef void bfs_sync(Graph_CSR *graph, GNodeCSR source):
                      bind_leading(&bfs_sync_operator, graph, &next, nextLevel), no_pushes(), steal(),
                      loopname("bfs_sync"))
     T.stop()
-    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")        
+    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")
     print("Number of rounds : ", nextLevel, "\n")
 
 cdef void not_visited_operator(Graph_CSR *graph, atomuint32_t *notVisited, GNodeCSR n):
-    cdef: 
+    cdef:
         uint32_t *data
         uint32_t numNodes = graph[0].size()
     data = &graph[0].getData(n)
@@ -133,7 +133,7 @@ cdef void not_visited_operator(Graph_CSR *graph, atomuint32_t *notVisited, GNode
         notVisited[0].fetch_add(1)
 
 cdef void max_dist_operator(Graph_CSR *graph, GReduceMax[uint32_t] *maxDist , GNodeCSR n):
-    cdef: 
+    cdef:
         uint32_t *data
         uint32_t numNodes = graph[0].size()
     data = &graph[0].getData(n)
@@ -142,7 +142,7 @@ cdef void max_dist_operator(Graph_CSR *graph, GReduceMax[uint32_t] *maxDist , GN
 
 
 cdef bool verify_bfs(Graph_CSR *graph, GNodeCSR source):
-    cdef: 
+    cdef:
         atomuint32_t notVisited
         uint32_t *data
         GReduceMax[uint32_t] maxDist;
@@ -150,7 +150,7 @@ cdef bool verify_bfs(Graph_CSR *graph, GNodeCSR source):
     data = &graph[0].getData(source)
     if(data[0] is not 0):
         gPrint(b"ERROR: source has non-zero dist value == ", data[0], b"\n")
-    
+
     notVisited.store(0)
     with nogil:
         do_all(iterate(graph[0]),
@@ -168,19 +168,16 @@ cdef bool verify_bfs(Graph_CSR *graph, GNodeCSR source):
     gPrint(b"Max distance : ", maxDist.reduce(), b"\n")
 #
 # Main callsite for Bfs
-#        
+#
 def bfs(int numThreads, unsigned long source, string filename):
-    ## Hack: Need a better way to initialize shared
-    ## memory runtime.
-    sys = new SharedMemSys()
     cdef int new_numThreads = setActiveThreads(numThreads)
     gPrint(b"Hello this is gprint\n")
     if new_numThreads != numThreads:
         print("Warning, using fewer threads than requested")
-    
+
     print("Using {0} thread(s).".format(new_numThreads))
     cdef Graph_CSR graph
-    
+
     ## Read the CSR format of graph
     ## directly from disk.
     graph.readGraphFromGRFile(filename)
@@ -191,6 +188,3 @@ def bfs(int numThreads, unsigned long source, string filename):
     bfs_sync(&graph, <GNodeCSR>source)
     verify_bfs(&graph, <GNodeCSR>source)
     gPrint(b"Node 1 has dist : ", graph.getData(1), b"\n")
-    
-
-

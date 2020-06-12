@@ -162,7 +162,7 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName, " ", oURL);
 
     // organization lid to gid mapping save
-    organization2GID[std::stoul(oID)] = thisGID;
+    this->organization2GID[std::stoul(oID)] = thisGID;
 
     // in addition to being an organization, it is also whatever type
     // is listed in the file
@@ -238,7 +238,7 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName, " ", oURL);
 
     // place lid to gid mapping save
-    place2GID[std::stoul(oID)] = thisGID;
+    this->place2GID[std::stoul(oID)] = thisGID;
 
     // in addition to being an place, it is also whatever type
     // is listed in the file
@@ -304,7 +304,7 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oName, " ", oURL);
 
     // place lid to gid mapping save
-    tag2GID[std::stoul(oID)] = thisGID;
+    this->tag2GID[std::stoul(oID)] = thisGID;
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagLabel);
     // save all 3 parsed fields to attributes
@@ -358,7 +358,7 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName);
 
     // place lid to gid mapping save
-    tagClass2GID[std::stoul(oID)] = thisGID;
+    this->tagClass2GID[std::stoul(oID)] = thisGID;
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagClassLabel);
     // save all 3 parsed fields to attributes
@@ -436,7 +436,7 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
     //              "|", fBrowser, "|", fLanguage, "|", fMail);
 
     // place lid to gid mapping save
-    person2GID[std::stoul(fID)] = thisGID;
+    this->person2GID[std::stoul(fID)] = thisGID;
     // set label
     setNodeLabel(attGraphPointer, thisGID, personLabel);
 
@@ -461,6 +461,70 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
                 this->gidOffset);
   // adds position info for this class of labels
   this->nodeLabel2Position.try_emplace(NL_PERSON, beginOffset, nodesParsed);
+}
+
+void LDBCReader::parseForumCSV(const std::string filepath) {
+  galois::StatTimer timer("ParseForumCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing forum file at ", filepath);
+  // open file
+  std::ifstream nodeFile(filepath);
+  // read header
+  std::string header;
+  std::getline(nodeFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t forumIndex = this->attGraph.nodeLabelIDs["Forum"];
+  galois::gDebug("forum: ", forumIndex);
+  // create tag label
+  uint32_t forumLabel = (1 << forumIndex);
+
+  // read the rest of the file
+  std::string curLine;
+
+  // fields of the forum file in order
+  std::string fCreation;
+  std::string fID;
+  std::string fTitle;
+  std::string fType;
+
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
+
+  while (std::getline(nodeFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse forum line
+    // creation|id|title|type
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, fCreation, '|');
+    std::getline(tokenString, fID, '|');
+    std::getline(tokenString, fTitle, '|');
+    std::getline(tokenString, fType, '|');
+
+    // galois::gInfo(fCreation, "|", fID, "|", fTitle, "|", fType);
+
+    // place lid to gid mapping save
+    this->forum2GID[std::stoul(fID)] = thisGID;
+    // set label
+    setNodeLabel(attGraphPointer, thisGID, forumLabel);
+
+    // save parsed fields into attributes
+    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                     fCreation.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "title", fTitle.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    // fType is ignored
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed, " in the forum CSV; total so far is ",
+                this->gidOffset);
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_FORUM, beginOffset, nodesParsed);
 }
 
 size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
@@ -661,6 +725,7 @@ void LDBCReader::dynamicParsing() {
   // get all nodes in memory first in this order: person, forum
   // post, comment
   this->parsePersonCSV(ldbcDirectory + "/" + "dynamic/person_0_0.csv");
+  this->parseForumCSV(ldbcDirectory + "/" + "dynamic/forum_0_0.csv");
 
   // handle all person outgoing edges
 

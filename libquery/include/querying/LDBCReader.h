@@ -168,8 +168,18 @@ class LDBCReader {
    * Parse the person file:
    * creation|deletion|id|firstName|lastName|gender|birthday|locationIP|browser|
    * language|email
+   *
+   * deletion is ignored
    */
   void parsePersonCSV(const std::string filepath);
+
+  /**
+   * Parse the forum file:
+   * creation|id|title|type
+   *
+   * type is ignored
+   */
+  void parseForumCSV(const std::string filepath);
 
   /**
    * Parse a simple edge CSV (2 columns, source|destination). Edges with

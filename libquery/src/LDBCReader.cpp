@@ -915,7 +915,7 @@ size_t LDBCReader::parseEdgeCSVSpecified(
         std::getline(tokenString, dummy, '|');
       }
     }
-    galois::gInfo(src, " ", dest, " attribute ", attribute);
+    // galois::gInfo(src, " ", dest, " attribute ", attribute);
 
     // get gids of source and dest
     GIDType srcGID = srcMap[std::stoul(src)];
@@ -1009,11 +1009,16 @@ void LDBCReader::parseAndConstructPersonEdges() {
                              mapping.second, gidOffset, edgesPerNode,
                              readSimpleEdges, 2);
   }
-  //  this->parseEdgeCSVSpecified(ldbcDirectory + attributedFiles[0],
-  //  attributedEdgeTypes[0], attributedMappings[0].first,
-  //                           attributedMappings[0].second, gidOffset,
-  //                           attributeHowToParse[0], attributeOnEdge[0],
-  //                           edgesPerNode, readAttEdges);
+  for (size_t i = 0; i < attributedFiles.size(); i++) {
+    std::string& toRead        = attributedFiles[i];
+    std::string& edgeType      = attributedEdgeTypes[i];
+    ToFromMapping& mapping     = attributedMappings[i];
+    ParseMetadata& parseInfo   = attributeHowToParse[i];
+    std::string& attributeName = attributeOnEdge[i];
+    this->parseEdgeCSVSpecified(ldbcDirectory + toRead, edgeType, mapping.first,
+                                mapping.second, gidOffset, parseInfo,
+                                attributeName, edgesPerNode, readAttEdges);
+  }
 
   // construct both simple and attributed edges
 }

@@ -762,6 +762,7 @@ void LDBCReader::constructCSREdges(
     std::vector<EdgeIndex>& edgesPerNode,
     std::vector<SimpleReadEdge>& readEdges,
     std::vector<AttributedReadEdge>& readAttEdges) {
+  galois::gInfo("Constructing ", numReadEdges, " in the CSR");
   GALOIS_ASSERT((readEdges.size() + readAttEdges.size()) == numReadEdges);
 
   ////////////////////////////////////////
@@ -816,9 +817,8 @@ void LDBCReader::constructCSREdges(
           insertionPoint = __sync_fetch_and_add(&firstNodeOffset, 1);
         }
 
-        // galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert
-        // ",
-        //               insertionPoint);
+        // galois::gDebug(src, " ", dest, " ", label, " insert ",
+        // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
         constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
       },
@@ -845,9 +845,8 @@ void LDBCReader::constructCSREdges(
           insertionPoint = __sync_fetch_and_add(&firstNodeOffset, 1);
         }
 
-        // galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert
-        // ",
-        //               insertionPoint);
+        // galois::gDebug(src, " ", dest, " ", label, " insert ",
+        // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
         constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
 
@@ -1063,6 +1062,8 @@ void LDBCReader::parseAndConstructPersonEdges() {
 
   galois::gInfo("Person nodes have a total of ", totalEdges, " outgoing edges");
   // construct both simple and attributed edges
+  this->constructCSREdges(gidOffset, totalEdges, edgesPerNode, readSimpleEdges,
+                          readAttEdges);
 }
 
 void LDBCReader::staticParsing() {
@@ -1117,4 +1118,7 @@ void LDBCReader::dynamicParsing() {
   // handle all post outgoing edges
 
   // handle all comment outgoing edges
+
+  galois::gInfo("Total of ", this->finishedNodes, " and ", this->addedEdges,
+                " edges");
 }

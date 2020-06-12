@@ -757,11 +757,12 @@ size_t LDBCReader::parseSimpleEdgeCSV(
   return linesParsed;
 }
 
-void LDBCReader::constructCSRSimpleEdges(
+void LDBCReader::constructCSREdges(
     GIDType gidOffset, size_t numReadEdges,
     std::vector<EdgeIndex>& edgesPerNode,
-    std::vector<SimpleReadEdge>& readEdges) {
-  GALOIS_ASSERT(readEdges.size() == numReadEdges);
+    std::vector<SimpleReadEdge>& readEdges,
+    std::vector<AttributedReadEdge>& readAttEdges) {
+  GALOIS_ASSERT((readEdges.size() + readAttEdges.size()) == numReadEdges);
 
   ////////////////////////////////////////
   // Get edge endpoints
@@ -823,6 +824,42 @@ void LDBCReader::constructCSRSimpleEdges(
       },
       galois::loopname("SaveSimpleEdges"), galois::no_stats());
 
+  galois::do_all(
+      galois::iterate(readAttEdges),
+      [&](AttributedReadEdge& e) {
+        GIDType src        = e.src;
+        GIDType dest       = e.dest;
+        GIDType label      = e.edgeLabel;
+        GIDType localSrcID = src - gidOffset;
+
+        // get insertion point
+        EdgeIndex insertionPoint;
+        // if here is to determine where to check to current insertion point for
+        // the node
+        if (localSrcID != 0) {
+          // -1 to account for node 0 not being part of this vector
+          insertionPoint =
+              __sync_fetch_and_add(&(edgesPerNode[localSrcID - 1]), 1);
+        } else {
+          // 0th node of this set = use firstNodeOffset
+          insertionPoint = __sync_fetch_and_add(&firstNodeOffset, 1);
+        }
+
+        // galois::gDebug(src, " ", dest, " ", label, " ", localSrcID, " insert
+        // ",
+        //               insertionPoint);
+        // TODO last arg is timestamp; what to do about it?
+        constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
+
+        // handle attribute to save as well
+        std::string& attributeName = e.attributeName;
+        std::string& attribute     = e.attribute;
+        // TODO make sure attribute name already exists when inserting
+        setEdgeAttribute(attGraphPointer, insertionPoint, attributeName.c_str(),
+                         attribute.c_str());
+      },
+      galois::loopname("SaveAttributedEdges"), galois::no_stats());
+
   // increment number of edges that have been added to the CSR
   this->addedEdges += numReadEdges;
   // this set of edges should have handled all nodes too; update finishedNodes
@@ -852,9 +889,11 @@ void LDBCReader::parseAndConstructSimpleEdges(const std::string filepath,
   // read the edges into memory + get num edges per node
   size_t numReadEdges = this->parseSimpleEdgeCSV(
       filepath, edgeType, nodeFrom, nodeTo, gidOffset, edgesPerNode, readEdges);
+  // dummy vector to pass to construct function
+  std::vector<AttributedReadEdge> dummy;
   // construct the edges in the underlying CSR of attributed graph
-  this->constructCSRSimpleEdges(gidOffset, numReadEdges, edgesPerNode,
-                                readEdges);
+  this->constructCSREdges(gidOffset, numReadEdges, edgesPerNode, readEdges,
+                          dummy);
 }
 
 size_t LDBCReader::parseEdgeCSVSpecified(
@@ -999,15 +1038,17 @@ void LDBCReader::parseAndConstructPersonEdges() {
   // create|delete|src|dest|workfrom
   attributeHowToParse[4] = std::move(std::make_tuple(5, 2, 4));
 
+  size_t totalEdges = 0;
+
   for (size_t i = 0; i < simpleFiles.size(); i++) {
     std::string& toRead    = simpleFiles[i];
     std::string& edgeType  = simpleEdgeTypes[i];
     ToFromMapping& mapping = simpleMappings[i];
     // skips first 2 columns of each: creation and deletion time
     // creation|deletion|src|dst
-    this->parseSimpleEdgeCSV(ldbcDirectory + toRead, edgeType, mapping.first,
-                             mapping.second, gidOffset, edgesPerNode,
-                             readSimpleEdges, 2);
+    totalEdges += this->parseSimpleEdgeCSV(
+        ldbcDirectory + toRead, edgeType, mapping.first, mapping.second,
+        gidOffset, edgesPerNode, readSimpleEdges, 2);
   }
   for (size_t i = 0; i < attributedFiles.size(); i++) {
     std::string& toRead        = attributedFiles[i];
@@ -1015,11 +1056,12 @@ void LDBCReader::parseAndConstructPersonEdges() {
     ToFromMapping& mapping     = attributedMappings[i];
     ParseMetadata& parseInfo   = attributeHowToParse[i];
     std::string& attributeName = attributeOnEdge[i];
-    this->parseEdgeCSVSpecified(ldbcDirectory + toRead, edgeType, mapping.first,
-                                mapping.second, gidOffset, parseInfo,
-                                attributeName, edgesPerNode, readAttEdges);
+    totalEdges += this->parseEdgeCSVSpecified(
+        ldbcDirectory + toRead, edgeType, mapping.first, mapping.second,
+        gidOffset, parseInfo, attributeName, edgesPerNode, readAttEdges);
   }
 
+  galois::gInfo("Person nodes have a total of ", totalEdges, " outgoing edges");
   // construct both simple and attributed edges
 }
 

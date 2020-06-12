@@ -245,8 +245,7 @@ class LDBCReader {
                             const size_t skipColumns);
 
   /**
-   * Construct the edges in the underlying CSR graph. Should not
-   * use if an edge has additional attributes.
+   * Construct the edges in the underlying CSR graph.
    *
    * Should handle all edges associated with a node label class.
    *
@@ -257,10 +256,12 @@ class LDBCReader {
    * @param edgesPerNode Vector telling me how many edges a particular
    * node in this node label class contains.
    * @param readEdges Actual edges to be added to CSR
+   * @param readAttEdges Edges with attributes to be added to CSR
    */
-  void constructCSRSimpleEdges(GIDType gidOffset, size_t numReadEdges,
-                               std::vector<EdgeIndex>& edgesPerNode,
-                               std::vector<SimpleReadEdge>& readEdges);
+  void constructCSREdges(GIDType gidOffset, size_t numReadEdges,
+                         std::vector<EdgeIndex>& edgesPerNode,
+                         std::vector<SimpleReadEdge>& readEdges,
+                         std::vector<AttributedReadEdge>& readAttEdges);
 
   /**
    * Parses the edges of some file and construct them; only works if

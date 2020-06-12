@@ -188,6 +188,12 @@ class LDBCReader {
   void parsePostCSV(const std::string filepath);
 
   /**
+   * Parse the comment file:
+   * creation|id|locationIP|browser|content|length
+   */
+  void parseCommentCSV(const std::string filepath);
+
+  /**
    * Parse a simple edge CSV (2 columns, source|destination). Edges with
    * other attributes should not use this function.
    *

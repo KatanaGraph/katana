@@ -578,7 +578,8 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
     std::getline(tokenString, fLength, '|');
 
     // galois::gInfo(fCreation, "|", fID, "|", fImageFile, "|", fLocationIP,
-    // "|", fBrowser, "|", fLanguage, "|", fContent, "|", fLength);
+    // "|",
+    //              fBrowser, "|", fLanguage, "|", fContent, "|", fLength);
 
     // place lid to gid mapping save
     this->post2GID[std::stoul(fID)] = thisGID;
@@ -597,6 +598,8 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
     // post specific
     setNodeAttribute(attGraphPointer, thisGID, "language", fLanguage.c_str());
     setNodeAttribute(attGraphPointer, thisGID, "imageFile", fImageFile.c_str());
+
+    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -605,6 +608,81 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
                 this->gidOffset);
   // adds position info for this class of labels
   this->nodeLabel2Position.try_emplace(NL_POST, beginOffset, nodesParsed);
+}
+
+void LDBCReader::parseCommentCSV(const std::string filepath) {
+  galois::StatTimer timer("ParseCommentCSVTime");
+  timer.start();
+
+  galois::gInfo("Parsing comment file at ", filepath);
+  // open file
+  std::ifstream nodeFile(filepath);
+  // read header
+  std::string header;
+  std::getline(nodeFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t messageIndex = this->attGraph.nodeLabelIDs["Message"];
+  uint32_t commentIndex = this->attGraph.nodeLabelIDs["Comment"];
+  galois::gDebug("message: ", messageIndex, " comment: ", commentIndex);
+  // create label
+  uint32_t commentLabel = (1 << commentIndex) & (1 << messageIndex);
+
+  // read the rest of the file
+  std::string curLine;
+
+  // fields of the post file in order
+  std::string fCreation;
+  std::string fID;
+  std::string fLocationIP;
+  std::string fBrowser;
+  std::string fContent;
+  std::string fLength;
+
+  AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed               = 0;
+  GIDType beginOffset              = this->gidOffset;
+
+  while (std::getline(nodeFile, curLine)) {
+    GIDType thisGID = this->gidOffset++;
+    nodesParsed++;
+    // parse comment line
+    // creation|id|locationIP|browser|content|length
+    std::stringstream tokenString(curLine);
+    std::getline(tokenString, fCreation, '|');
+    std::getline(tokenString, fID, '|');
+    std::getline(tokenString, fLocationIP, '|');
+    std::getline(tokenString, fBrowser, '|');
+    std::getline(tokenString, fContent, '|');
+    std::getline(tokenString, fLength, '|');
+
+    // galois::gInfo(fCreation, "|", fID, "|", fLocationIP, "|", fBrowser, "|",
+    //              fContent, "|", fLength);
+
+    // place lid to gid mapping save
+    this->comment2GID[std::stoul(fID)] = thisGID;
+    // set label
+    setNodeLabel(attGraphPointer, thisGID, commentLabel);
+
+    // save parsed fields into attributes
+    // message specific
+    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                     fCreation.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "browserUsed", fBrowser.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "locationIP",
+                     fLocationIP.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "content", fContent.c_str());
+    setNodeAttribute(attGraphPointer, thisGID, "length", fLength.c_str());
+
+    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+  }
+
+  timer.stop();
+  GALOIS_ASSERT(this->gidOffset <= this->totalNodes);
+  galois::gInfo("Parsed ", nodesParsed, " in the comment CSV; total so far is ",
+                this->gidOffset);
+  // adds position info for this class of labels
+  this->nodeLabel2Position.try_emplace(NL_COMMENT, beginOffset, nodesParsed);
 }
 
 size_t LDBCReader::parseSimpleEdgeCSV(const std::string filepath,
@@ -807,6 +885,7 @@ void LDBCReader::dynamicParsing() {
   this->parsePersonCSV(ldbcDirectory + "/" + "dynamic/person_0_0.csv");
   this->parseForumCSV(ldbcDirectory + "/" + "dynamic/forum_0_0.csv");
   this->parsePostCSV(ldbcDirectory + "/" + "dynamic/post_0_0.csv");
+  this->parseCommentCSV(ldbcDirectory + "/" + "dynamic/comment_0_0.csv");
 
   // handle all person outgoing edges
 

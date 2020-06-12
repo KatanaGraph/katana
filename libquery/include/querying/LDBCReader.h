@@ -277,6 +277,36 @@ class LDBCReader {
                                     NodeLabel nodeFrom, NodeLabel nodeTo);
 
   /**
+   * Parse a specified attributed edge CSV, counts edges read, and saves
+   * read edges into memory. Arguments to function specify how to read the CSV
+   * e.g., columns to read, attribute name to save, etc.
+   *
+   * @warning The function only supports reading ONE attribute from the CSV
+   *
+   * @param filepath Edge file to parse
+   * @param edgeType Label of edge present in the parsed file
+   * @param nodeFrom Source node label
+   * @param nodeTo Edge node label
+   * @param gidOffset GID offset for source node class (i.e. at what gid
+   * do nodes of that class start)
+   * @param howToRead Tuple specifying num of columns and columns to read in the
+   * CSV
+   * @param attributeName Reference to string that has the name of the attribute
+   * to read in this CSV
+   * @param edgesPerNode Vector telling me how many edges a particular node has
+   * @param readAttEdges Vector to store newly read attributed edges into
+   *
+   * @returns Number of edges/lines parsed
+   */
+  size_t parseEdgeCSVSpecified(const std::string filepath,
+                               const std::string edgeType, NodeLabel nodeFrom,
+                               NodeLabel nodeTo, GIDType gidOffset,
+                               ParseMetadata howToRead,
+                               std::string& attributeName,
+                               std::vector<EdgeIndex>& edgesPerNode,
+                               std::vector<AttributedReadEdge>& readAttEdges);
+
+  /**
    * Parses all edge files of outgoing edges for the person node class
    * and adds the edges to the underlying CSR graph.
    */

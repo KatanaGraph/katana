@@ -857,6 +857,86 @@ void LDBCReader::parseAndConstructSimpleEdges(const std::string filepath,
                                 readEdges);
 }
 
+size_t LDBCReader::parseEdgeCSVSpecified(
+    const std::string filepath, const std::string edgeType, NodeLabel nodeFrom,
+    NodeLabel nodeTo, GIDType gidOffset, ParseMetadata howToRead,
+    std::string& attributeName, std::vector<EdgeIndex>& edgesPerNode,
+    std::vector<AttributedReadEdge>& readAttEdges) {
+  galois::StatTimer timer("ParseEdgeCSVSpecifiedTime");
+  timer.start();
+
+  galois::gInfo("Parsing attributed edge file at ", filepath);
+  // open file
+  std::ifstream edgeFile(filepath);
+  // read/ignore header
+  std::string header;
+  std::getline(edgeFile, header);
+
+  // TODO error checking for non-existence
+  uint32_t edgeTypeIndex = this->attGraph.edgeLabelIDs[edgeType];
+  galois::gDebug("edgeclass: ", edgeTypeIndex);
+  // create tag label
+  uint32_t edgeLabel = (1 << edgeTypeIndex);
+  // get gid maps
+  GIDMap& srcMap  = getGIDMap(nodeFrom);
+  GIDMap& destMap = getGIDMap(nodeTo);
+  // src gid bounds for correct execution (this is an assumption the code
+  // makes that should always hold)
+  GIDType rightBound = gidOffset + edgesPerNode.size();
+
+  size_t numColumns = std::get<0>(howToRead);
+  size_t srcStart   = std::get<1>(howToRead);
+  size_t attColumn  = std::get<2>(howToRead);
+
+  // read the file
+  std::string curLine;
+  std::string src;
+  std::string dest;
+  std::string attribute;
+  std::string dummy;
+  size_t linesParsed = 0;
+
+  while (std::getline(edgeFile, curLine)) {
+    linesParsed++;
+    std::stringstream tokenString(curLine);
+
+    for (size_t i = 0; i < numColumns; i++) {
+      if (i == attColumn) {
+        // get the attribute
+        std::getline(tokenString, attribute, '|');
+      } else if (i == srcStart) {
+        // read source and dest (assumption is that they are in successive
+        // columns)
+        std::getline(tokenString, src, '|');
+        std::getline(tokenString, dest, '|');
+        // addition increment to account for fact that we are reading 2 lines
+        i++;
+      } else {
+        std::getline(tokenString, dummy, '|');
+      }
+    }
+    galois::gInfo(src, " ", dest, " attribute ", attribute);
+
+    // get gids of source and dest
+    GIDType srcGID = srcMap[std::stoul(src)];
+    // make sure src GID is in bounds of this label class
+    GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound,
+                  "left: ", gidOffset, " right: ", rightBound,
+                  " offender: ", srcGID);
+    GIDType destGID = destMap[std::stoul(dest)];
+    // increment edge count of src gid by one
+    edgesPerNode[srcGID - gidOffset]++;
+
+    // save edge to read edges
+    readAttEdges.emplace_back(srcGID, destGID, edgeLabel, std::move(attribute),
+                              attributeName);
+  }
+
+  timer.stop();
+  galois::gInfo("Parsed ", linesParsed, " edges");
+  return linesParsed;
+}
+
 void LDBCReader::parseAndConstructPersonEdges() {
   // get position data
   NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_PERSON);
@@ -929,6 +1009,11 @@ void LDBCReader::parseAndConstructPersonEdges() {
                              mapping.second, gidOffset, edgesPerNode,
                              readSimpleEdges, 2);
   }
+  //  this->parseEdgeCSVSpecified(ldbcDirectory + attributedFiles[0],
+  //  attributedEdgeTypes[0], attributedMappings[0].first,
+  //                           attributedMappings[0].second, gidOffset,
+  //                           attributeHowToParse[0], attributeOnEdge[0],
+  //                           edgesPerNode, readAttEdges);
 
   // construct both simple and attributed edges
 }

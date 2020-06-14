@@ -74,15 +74,11 @@ class Workers {
 };
 
 // TODO: group into a class
-char worker_path[PATH_MAX];
 int num_assigned_app = 0;
 int total_gpu_num = 1;
-int manager_port = 3333;
-int worker_port_base = 4000;
 unsigned worker_pool_size = 1;
-int worker_pool_enabled = 1;
 
-inline int get_worker_port(int id) { return worker_port_base + id; }
+inline int get_worker_port(int id) { return 4000 + id; }
 
 int get_gpu_id_from_uuid(
     const std::vector<std::string> &visible_cuda_device_uuid,
@@ -118,24 +114,8 @@ void reply_to_guestlib(int client_fd, int assigned_worker_port) {
   send_socket(client_fd, &response, sizeof(struct command_base));
 }
 
-void spawn_worker(int gpu_id,
-                  const std::vector<std::string> &visible_cuda_device,
-                  const std::vector<std::string> &visible_cuda_device_uuid,
-                  int worker_port_min, int worker_port_max) {
-  char str_port[20], str_port_max[20];
-  sprintf(str_port, "%d", worker_port_min);
-  sprintf(str_port_max, "%d", worker_port_max);
-
-  char *gpu_uuid = (char *)visible_cuda_device_uuid[gpu_id].c_str();
-  fprintf(stderr, "[manager] Spawn new worker port=%s-%s on GPU-%d UUID=%s\n",
-          str_port, str_port_max, gpu_id, gpu_uuid);
-
-  char *const argv_list[] = {(char *)"worker", str_port, NULL};
-  char *const envp_list[] = {(char *)visible_cuda_device[gpu_id].c_str(),
-                             (char *)"AVA_CHANNEL=TCP", NULL};
-  if (execvpe(worker_path, argv_list, envp_list) < 0) {
-    perror("execv worker");
-  }
+void spawn_worker() {
+  // TODO: send spawn request to daemon
 }
 
 void handle_guestlib(int client_fd,
@@ -151,6 +131,8 @@ void handle_guestlib(int client_fd,
 
   struct command_base msg;
 
+  visible_cuda_device.size();
+
   /* get guestlib info */
   recv_socket(client_fd, &msg, sizeof(struct command_base));
   switch (msg.command_type) {
@@ -165,7 +147,7 @@ void handle_guestlib(int client_fd,
 
       /* Assign a worker to the guestlib and get its port */
       assigned_worker_port = idle_workers[gpu_id].dequeue();
-      if (worker_pool_enabled && assigned_worker_port != 0) {
+      if (assigned_worker_port != 0) {
         /* Respond guestlib and spawn a new idle worker */
         reply_to_guestlib(client_fd, assigned_worker_port);
         close(client_fd);
@@ -176,8 +158,7 @@ void handle_guestlib(int client_fd,
         child = fork();
         if (child == 0) {
           close(listen_fd);
-          spawn_worker(gpu_id, visible_cuda_device, visible_cuda_device_uuid,
-                       worker_port, worker_port);
+          spawn_worker();
         } else {
           // TODO: acknowledge worker's initialization
           idle_workers[gpu_id].enqueue(worker_port);
@@ -189,8 +170,7 @@ void handle_guestlib(int client_fd,
         if (child == 0) {
           close(listen_fd);
           close(client_fd);
-          spawn_worker(gpu_id, visible_cuda_device, visible_cuda_device_uuid,
-                       worker_port, worker_port);
+          spawn_worker();
         } else {
           // TODO: acknowledge worker's initialization
           reply_to_guestlib(client_fd, worker_port);
@@ -205,83 +185,64 @@ void handle_guestlib(int client_fd,
   }
 }
 
-int main(int argc, char *argv[]) {
+class ManagerConfig {
+public:
+  static int const DefaultManagerPort;
+  static int const DefaultWorkerPoolSize;
+
+  ManagerConfig(int mp = DefaultManagerPort, int wps  = DefaultWorkerPoolSize) :
+    manager_port(mp), worker_pool_size(wps) {}
+
+  void print() {
+    std::cerr << "* Manager port: " << manager_port << std::endl
+      << "* API server pool size: " << worker_pool_size << std::endl;
+  }
+
+  int manager_port;
+  int worker_pool_size;
+
+  std::vector<std::string> visible_cuda_device;
+  std::vector<std::string> visible_cuda_device_uuid;
+};
+
+int const ManagerConfig::DefaultManagerPort = 3333;
+int const ManagerConfig::DefaultWorkerPoolSize = 3;
+
+ManagerConfig *parse_arguments(int argc, char *argv[]) {
   int c;
   opterr = 0;
-  char *config_file_name = NULL;
-  const char *worker_relative_path = "../generated/worker";
-  while ((c = getopt(argc, argv, "f:w:m:p:n:")) != -1) {
+  int manager_port = ManagerConfig::DefaultManagerPort;
+  int worker_pool_size = ManagerConfig::DefaultWorkerPoolSize;
+
+  while ((c = getopt(argc, argv, "m:n:")) != -1) {
     switch (c) {
-    case 'f':
-      config_file_name = optarg;
-      break;
-    case 'w':
-      worker_relative_path = optarg;
-      break;
     case 'm':
       manager_port = (uint32_t)atoi(optarg);
-      break;
-    case 'p':
-      worker_port_base = (uint32_t)atoi(optarg);
       break;
     case 'n':
       worker_pool_size = (uint32_t)atoi(optarg);
       break;
     default:
-      fprintf(stderr, "Usage: %s <-f config_file_name> "
-                      "[-w worker_path {../worker}] "
-                      "[-m manager_port {3333}] "
-                      "[-p worker_port_base {4000}] "
-                      "[-n worker_pool_size {1}]\n",
-              argv[0]);
+      fprintf(stderr, "Usage: %s "
+                      "[-m manager_port {%d}] "
+                      "[-n worker_pool_size {%d}]\n",
+              argv[0], ManagerConfig::DefaultManagerPort, ManagerConfig::DefaultWorkerPoolSize);
       exit(EXIT_FAILURE);
     }
   }
-  if (config_file_name == NULL) {
-    fprintf(stderr, "-f is mandatory. Please specify config file name\n");
-    exit(EXIT_FAILURE);
-  }
-  if (!realpath(worker_relative_path, worker_path)) {
-    fprintf(stderr, "Worker binary (%s) not found. -w is optional\n", worker_relative_path);
-    exit(EXIT_FAILURE);
-  }
-  fprintf(stderr, "* Manager port: %d\n", manager_port);
-  fprintf(stderr, "* API server: %s\n", worker_path);
 
-  std::ifstream config_file(config_file_name);
+  auto config = new ManagerConfig(manager_port, worker_pool_size);
+  return config;
+}
+
+int main(int argc, char *argv[]) {
+  auto config = parse_arguments(argc, argv);
+  config->print();
+
+  // BELOW HAS NOT BEEN UPDATED
+
   std::vector<std::string> visible_cuda_device;
   std::vector<std::string> visible_cuda_device_uuid;
-  std::string line;
-  nvmlReturn_t ret = nvmlInit();
-  if (ret != NVML_SUCCESS) {
-    fprintf(stderr, "fail to get device by uuid: %s\n", nvmlErrorString(ret));
-    exit(-1);
-  }
-  while (std::getline(config_file, line)) {
-    nvmlDevice_t dev;
-    nvmlMemory_t mem = {};
-    char *line_cstr = (char *)line.c_str();
-    char *pchr = strchr(line_cstr, '=');
-
-    fprintf(stderr, "* GPU-%lu UUID is %s\n", visible_cuda_device.size(),
-            pchr + 1);
-    ret = nvmlDeviceGetHandleByUUID(pchr + 1, &dev);
-    if (ret != NVML_SUCCESS) {
-      fprintf(stderr, "fail to get device by uuid: %s\n", nvmlErrorString(ret));
-      exit(-1);
-    }
-    ret = nvmlDeviceGetMemoryInfo(dev, &mem);
-    if (ret != NVML_SUCCESS) {
-      fprintf(stderr, "fail to get device by uuid: %s\n", nvmlErrorString(ret));
-      exit(-1);
-    }
-    visible_cuda_device.push_back(line);
-    visible_cuda_device_uuid.push_back(pchr + 1);
-  }
-
-  /* parse environment variables */
-  worker_pool_enabled = 1;
-  printf("* worker pool: %s\n", "always");
 
   /* setup signal handler */
   if ((original_sigint_handler = signal(SIGINT, sigint_handler)) == SIG_ERR)
@@ -307,19 +268,16 @@ int main(int argc, char *argv[]) {
   Workers *idle_workers = new Workers[total_gpu_num];
 
   /* Spawn worker pool for each GPU. */
-  if (worker_pool_enabled) {
-    for (int i = 0; i < total_gpu_num; i++) {
-      for (unsigned j = 0; j < worker_pool_size; j++) {
-        worker_port = get_worker_port(worker_id);
-        idle_workers[i].enqueue(worker_port);
+  for (int i = 0; i < total_gpu_num; i++) {
+    for (unsigned j = 0; j < worker_pool_size; j++) {
+      worker_port = get_worker_port(worker_id);
+      idle_workers[i].enqueue(worker_port);
 
-        child = fork();
-        if (child == 0) {
-          spawn_worker(i, visible_cuda_device, visible_cuda_device_uuid,
-                       worker_port, worker_port);
-        }
-        worker_id++;
+      child = fork();
+      if (child == 0) {
+        spawn_worker();
       }
+      worker_id++;
     }
   }
 
@@ -334,7 +292,7 @@ int main(int argc, char *argv[]) {
   }
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(manager_port);
+  address.sin_port = htons(config->manager_port);
 
   if (bind(listen_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
     perror("bind failed");

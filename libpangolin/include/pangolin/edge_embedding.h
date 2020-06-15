@@ -32,8 +32,8 @@ std::ostream& operator<<(std::ostream& strm,
   }
   strm << "(";
   for (unsigned index = 0; index < emb.size() - 1; ++index)
-    std::cout << emb.get_element(index) << ", ";
-  std::cout << emb.get_element(emb.size() - 1);
+    strm << emb.get_element(index) << ", ";
+  strm << emb.get_element(emb.size() - 1);
   strm << ")";
   return strm;
 }

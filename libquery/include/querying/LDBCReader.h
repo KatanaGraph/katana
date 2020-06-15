@@ -366,6 +366,12 @@ private:
    */
   void parseAndConstructPostEdges();
 
+  /**
+   * Parses all edge files of outgoing edges for the comment node class
+   * and adds the edges to the underlying CSR graph.
+   */
+  void parseAndConstructCommentEdges();
+
 public:
   /**
    * Constructor takes directory location and expected nodes/edges. Allocates

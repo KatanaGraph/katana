@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/mman.h>
+#include <nvml.h>
+#include <grpc++/grpc++.h>
 
 #include <atomic>
 #include <fstream>
@@ -18,13 +20,15 @@
 #include <algorithm>
 #include <iostream>
 #include <future>
+#include <memory>
 #include <queue>
 #include <string>
 #include <thread>
 #include <queue>
 #include <mutex>
-#include <nvml.h>
 
+#include "manager_service.grpc.fb.h"
+#include "manager_service_generated.h"
 #include "common/cmd_channel_impl.h"
 #include "common/cmd_handler.h"
 #include "common/socket.h"
@@ -208,6 +212,8 @@ public:
 int const ManagerConfig::DefaultManagerPort = 3333;
 int const ManagerConfig::DefaultWorkerPoolSize = 3;
 
+ManagerConfig *config;
+
 ManagerConfig *parse_arguments(int argc, char *argv[]) {
   int c;
   opterr = 0;
@@ -235,9 +241,86 @@ ManagerConfig *parse_arguments(int argc, char *argv[]) {
   return config;
 }
 
+class DaemonServiceClient {
+public:
+  DaemonServiceClient(std::shared_ptr<grpc::Channel> channel)
+    : stub_(DaemonService::NewStub(channel)) {}
+
+  std::vector<std::string> SpawnWorker(int spawn_num, std::string daemon_ip = "0.0.0.0") {
+    /* Build message. */
+    flatbuffers::grpc::MessageBuilder mb;
+    auto request_offset = CreateWorkerSpawnRequest(mb, spawn_num);
+    mb.Finish(request_offset);
+    auto request_msg = mb.ReleaseMessage<WorkerSpawnRequest>();
+
+    /* Send request. */
+    flatbuffers::grpc::Message<WorkerSpawnReply> response_msg;
+    grpc::ClientContext context;
+    auto status = stub_->SpawnWorker(&context, request_msg, &response_msg);
+
+    /* Parse response. */
+    std::vector<std::string> worker_address;
+    if (status.ok()) {
+      const WorkerSpawnReply *response = response_msg.GetRoot();
+      auto wa = response->worker_address();
+      for (auto addr_offset : *wa) {
+        std::string _wa = daemon_ip + ":" + addr_offset->str();
+        std::cerr << "Register API server at " << _wa << std::endl;
+        worker_address.push_back(_wa);
+      }
+    } else {
+      std::cerr << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    }
+    return worker_address;
+  }
+
+private:
+  std::unique_ptr<DaemonService::Stub> stub_;
+};
+
+class ManagerServiceImpl final : public ManagerService::Service {
+  virtual grpc::Status RegisterDaemon(
+      grpc::ServerContext *context,
+      const flatbuffers::grpc::Message<DaemonRegisterRequest> *request_msg,
+      flatbuffers::grpc::Message<DaemonRegisterReply> *response_msg) override {
+    const DaemonRegisterRequest *request = request_msg->GetRoot();
+    std::string peer_address = context->peer().substr(context->peer().find(':') + 1);
+    const std::string daemon_ip = peer_address.substr(0, peer_address.find(':'));
+    const std::string daemon_address = daemon_ip + ":" + request->daemon_address()->str();
+    std::cerr << "Register spawn daemon at " << daemon_address << std::endl;
+
+    /* Request daemon to spawn an API server pool. */
+    auto channel = grpc::CreateChannel(daemon_address, grpc::InsecureChannelCredentials());
+    auto client = new DaemonServiceClient(channel);
+    std::vector<std::string> worker_address =
+      client->SpawnWorker(config->worker_pool_size, daemon_ip);;
+
+    /* Register daemon and its API servers in a global table */
+    // TODO
+
+    return grpc::Status::OK;
+  }
+};
+
+void run_manager_service(ManagerConfig *config) {
+  std::string server_address("0.0.0.0:" + std::to_string(config->manager_port));
+  ManagerServiceImpl service;
+
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  std::cerr << "Manager Service listening on " << server_address << std::endl;
+  server->Wait();
+}
+
 int main(int argc, char *argv[]) {
-  auto config = parse_arguments(argc, argv);
+  config = parse_arguments(argc, argv);
   config->print();
+
+  std::thread server_thread(run_manager_service, config);
+  server_thread.join();
 
   // BELOW HAS NOT BEEN UPDATED
 
@@ -308,7 +391,6 @@ int main(int argc, char *argv[]) {
     std::async(std::launch::async | std::launch::deferred, handle_guestlib,
                client_fd, visible_cuda_device, visible_cuda_device_uuid,
                &idle_workers[0]);
-
   } while (1);
 
   return 0;

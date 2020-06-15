@@ -4,23 +4,30 @@
 #include <string.h>
 #include <unistd.h>
 #include <nvml.h>
+#include <grpc++/grpc++.h>
 
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
+
+#include "manager_service.grpc.fb.h"
+#include "manager_service_generated.h"
 
 class DaemonConfig {
 public:
   static std::string const DefaultManagerAddress;
+  static int const DefaultDaemonPort;
   static int const DefaultWorkerPortBase;
 
   DaemonConfig(std::string cf, std::string wp,
-      std::string ma = DefaultManagerAddress, int wpb = DefaultWorkerPortBase) :
-    config_file(cf), worker_path(wp), manager_address(ma), worker_port_base(wpb) {}
+      std::string ma = DefaultManagerAddress, int dp = DefaultDaemonPort, int wpb = DefaultWorkerPortBase) :
+    config_file(cf), worker_path(wp), manager_address(ma), daemon_port(dp), worker_port_base(wpb) {}
 
   void print() {
     std::cerr << "* Manager address: " << manager_address << std::endl
+      << "* Daemon port: " << daemon_port << std::endl
       << "* API server: " << worker_path << std::endl
       << "* Total GPU: " << visible_cuda_device.size() << std::endl;
     for (unsigned i = 0; i < visible_cuda_device_uuid.size(); ++i)
@@ -30,6 +37,7 @@ public:
   std::string config_file;
   std::string worker_path;
   std::string manager_address;
+  int daemon_port;
   int worker_port_base;
 
   std::vector<std::string> visible_cuda_device;
@@ -37,6 +45,7 @@ public:
 };
 
 std::string const DaemonConfig::DefaultManagerAddress = "0.0.0.0:3333";
+int const DaemonConfig::DefaultDaemonPort= 3334;
 int const DaemonConfig::DefaultWorkerPortBase = 4000;
 
 DaemonConfig *parse_arguments(int argc, char *argv[]) {
@@ -46,9 +55,10 @@ DaemonConfig *parse_arguments(int argc, char *argv[]) {
   const char *worker_relative_path = NULL;
   char worker_path[PATH_MAX];
   std::string manager_address = DaemonConfig::DefaultManagerAddress;
+  int daemon_port = DaemonConfig::DefaultDaemonPort;
   int worker_port_base = DaemonConfig::DefaultWorkerPortBase;
 
-  while ((c = getopt(argc, argv, "f:w:m:p:")) != -1) {
+  while ((c = getopt(argc, argv, "f:w:m:p:b:")) != -1) {
     switch (c) {
     case 'f':
       config_file_name = optarg;
@@ -60,14 +70,19 @@ DaemonConfig *parse_arguments(int argc, char *argv[]) {
       manager_address = optarg;
       break;
     case 'p':
-      worker_port_base = (uint32_t)atoi(optarg);
+      daemon_port = atoi(optarg);
+      break;
+    case 'b':
+      worker_port_base = atoi(optarg);
       break;
     default:
       fprintf(stderr, "Usage: %s <-f config_file_name> "
                       "<-w worker_path {./worker}> "
                       "[-m manager_address {%s}] "
-                      "[-p worker_port_base {%d}]\n",
-              argv[0], DaemonConfig::DefaultManagerAddress.c_str(), DaemonConfig::DefaultWorkerPortBase);
+                      "[-p daemon_port {%d}] "
+                      "[-b worker_port_base {%d}]\n",
+              argv[0], DaemonConfig::DefaultManagerAddress.c_str(),
+              DaemonConfig::DefaultDaemonPort, DaemonConfig::DefaultWorkerPortBase);
       exit(EXIT_FAILURE);
     }
   }
@@ -85,7 +100,8 @@ DaemonConfig *parse_arguments(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  auto config = new DaemonConfig(config_file_name, worker_path, manager_address, worker_port_base);
+  auto config = new DaemonConfig(config_file_name, worker_path, manager_address,
+      daemon_port, worker_port_base);
   return config;
 }
 
@@ -122,10 +138,84 @@ void parse_config_file(DaemonConfig *config) {
   }
 }
 
+class DaemonServiceImpl final : public DaemonService::Service {
+  virtual grpc::Status SpawnWorker(
+      grpc::ServerContext *context,
+      const flatbuffers::grpc::Message<WorkerSpawnRequest> *request_msg,
+      flatbuffers::grpc::Message<WorkerSpawnReply> *response_msg) override {
+    const WorkerSpawnRequest *request = request_msg->GetRoot();
+    std::cerr << "Request to spawn " << request->spawn_num() << " API servers" << std::endl;
+
+    std::vector<flatbuffers::Offset<flatbuffers::String>> worker_address;
+    flatbuffers::grpc::MessageBuilder mb;
+
+    /* Spawn API servers. */
+    // TODO
+    auto ao = mb.CreateString("port_number");
+    worker_address.push_back(ao);
+
+    auto vo = mb.CreateVector(worker_address.empty() ? nullptr : &worker_address[0],
+        worker_address.size());
+    auto response_offset = CreateWorkerSpawnReply(mb, vo);
+    mb.Finish(response_offset);
+    *response_msg = mb.ReleaseMessage<WorkerSpawnReply>();
+
+    return grpc::Status::OK;
+  }
+};
+
+void run_daemon_service(DaemonConfig *config) {
+  std::string server_address("0.0.0.0:" + std::to_string(config->daemon_port));
+  DaemonServiceImpl service;
+
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  std::cerr << "Daemon Service listening on " << server_address << std::endl;
+  server->Wait();
+}
+
+class ManagerServiceClient {
+public:
+  ManagerServiceClient(std::shared_ptr<grpc::Channel> channel)
+    : stub_(ManagerService::NewStub(channel)) {}
+
+  grpc::Status RegisterDaemon(const std::string &self_address) {
+    /* Build message. */
+    flatbuffers::grpc::MessageBuilder mb;
+    auto sa_offset = mb.CreateString(self_address);
+    auto request_offset = CreateDaemonRegisterRequest(mb, sa_offset);
+    mb.Finish(request_offset);
+    auto request_msg = mb.ReleaseMessage<DaemonRegisterRequest>();
+
+    /* Send request. */
+    grpc::ClientContext context;
+    auto status = stub_->RegisterDaemon(&context, request_msg, nullptr);
+    if (!status.ok()) {
+      std::cerr << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    }
+    return status;
+  }
+
+private:
+  std::unique_ptr<ManagerService::Stub> stub_;
+};
+
 int main(int argc, char *argv[]) {
   auto config = parse_arguments(argc, argv);
   parse_config_file(config);
   config->print();
+
+  std::thread server_thread(run_daemon_service, config);
+
+  /* Register daemon. */
+  auto channel = grpc::CreateChannel(config->manager_address, grpc::InsecureChannelCredentials());
+  auto client = new ManagerServiceClient(channel);
+  auto status = client->RegisterDaemon(std::to_string(config->daemon_port));
+
+  server_thread.join();
 
   return 0;
 }

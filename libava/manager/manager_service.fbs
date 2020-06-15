@@ -1,11 +1,22 @@
 table DaemonRegisterRequest {
-  message:string;
+  daemon_address:string; /* Currently contains only the port */
 }
 
 table DaemonRegisterReply {
-  spawn_num:int;
 }
 
 rpc_service ManagerService {
   RegisterDaemon(DaemonRegisterRequest): DaemonRegisterReply;
+}
+
+table WorkerSpawnRequest {
+  spawn_num:int;
+}
+
+table WorkerSpawnReply {
+  worker_address:[string]; /* Currently contains only the port */
+}
+
+rpc_service DaemonService {
+  SpawnWorker(WorkerSpawnRequest): WorkerSpawnReply;
 }

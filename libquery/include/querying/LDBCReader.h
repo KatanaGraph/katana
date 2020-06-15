@@ -313,7 +313,23 @@ class LDBCReader {
    * and save the read edges to memory + count how many edges per node
    * there are in this batch
    *
-   * @todo doc
+   * @param gidOffset Offset into the class of nodes being handled by this
+   * function
+   * @param simpleFiles Relative paths of files to parse that are simple,
+   * i.e. src/dest only with columns to skip in beginning
+   * @param simpleEdgeTypes edge type for each file in simpleFiles
+   * @param simpleMappings src/dest labels of edge being read in
+   * @param attributedFiles Relative paths of edges files with an attribute
+   * @param attributedEdgeTypes Edge type for each file in attributedFiles
+   * @param attributedMappings src/dest labels for attributed file edges
+   * @param attributeHowToParse Metadata specifying how to handle columns for
+   * attributed files
+   * @param attributeOnEdge Name of the attribute on the edge of a att. file
+   * @param edgesPerNode Vector telling me how many edges a particular node has
+   * @param readSimpleEdges Buffer of edges read from simple files
+   * @param readAttEdges Buffer of edges read from attributed edge files
+   * @param simpleColumnsSkipped Number of columns to skip from beginning when
+   * reading a simple edge file to get to the src/dest columns
    */
   size_t doParse(const GIDType gidOffset,
                  const std::vector<std::string>& simpleFiles,

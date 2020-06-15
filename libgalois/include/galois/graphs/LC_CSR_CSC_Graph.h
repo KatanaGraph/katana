@@ -95,7 +95,6 @@ protected:
       typename std::conditional<EdgeDataByValue, EdgeData, EdgeIndData>::type;
   //! The data for the reverse edges
   EdgeDataRep inEdgeData;
-  std::vector<uint32_t> savedInDegrees;
 
   //! redefinition of the edge sort iterator in LC_CSR_Graph
   using edge_sort_iterator =
@@ -440,33 +439,19 @@ public:
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Save degrees into an array; used if degrees need to be accessed quickly
+   * Returns in-degrees in a vector; useful if in-degrees need to be accessed quickly
    * (1 memory access instead of 2 from subtracting begin and end).
-   *
-   * Includes indegree as well.
    */
-  void degreeCounting() {
-    if (this->savedDegrees.size() == 0 || this->savedInDegrees.size() == 0) {
-      this->savedDegrees.resize(BaseGraph::numNodes);
-      this->savedInDegrees.resize(BaseGraph::numNodes);
-      galois::do_all(
-          galois::iterate(this->begin(), this->end()),
-          [&](unsigned v) {
-            this->savedDegrees[v] =
-                std::distance(this->edge_begin(v), this->edge_end(v));
-            this->savedInDegrees[v] =
-                std::distance(this->in_edge_begin(v), this->in_edge_end(v));
-          },
-          galois::loopname("DegreeCounting"));
-    }
-  }
-
-  /**
-   * Return pointer to raw data stored in degree counting for in degrees
-   */
-  uint32_t* getSavedInDegreePointer() {
-    assert(this->savedInDegrees.size() > 0);
-    return this->savedInDegrees.data();
+  auto countInDegrees() {
+    gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
+    galois::do_all(
+        galois::iterate(this->begin(), this->end()),
+        [&](unsigned v) {
+          savedInDegrees[v] =
+              std::distance(this->in_edge_begin(v), this->in_edge_end(v));
+        },
+        galois::loopname("InDegreeCounting"));
+    return savedInDegrees;
   }
 };
 

@@ -6,9 +6,6 @@
 #include "galois/graphs/LCGraph.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/SimpleLock.h"
-#ifdef GALOIS_USE_QUERY_GRAPH_TYPE
-#include "galois/graphs/QueryGraph.h"
-#endif
 
 #ifndef LARGE_SIZE
 typedef galois::gstl::Vector<BYTE> ByteList;
@@ -34,7 +31,6 @@ typedef galois::gstl::Vector<IntSet> IntSets;
 // typedef std::set<int> IntSet;
 // typedef std::vector<IntSet> IntSets;
 
-#ifndef GALOIS_USE_QUERY_GRAPH_TYPE
 class PangolinGraph
     : public galois::graphs::LC_CSR_Graph<uint32_t, void>::with_numa_alloc<
           true>::type ::with_no_lockable<true>::type {
@@ -51,9 +47,6 @@ public:
   }
   uint32_t get_degree(uint32_t n) { return degrees[n]; }
 };
-#else
-using PangolinGraph = QueryGraph;
-#endif
 
 // TODO change GNode to somethign else as there is potential for name conflict
 typedef PangolinGraph::GraphNode GNode;

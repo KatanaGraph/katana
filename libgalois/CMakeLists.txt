@@ -18,6 +18,7 @@ set(sources
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
+        src/ErrorCode.cpp
         src/EnvCheck.cpp
         src/FileGraph.cpp
         src/FileView.cpp

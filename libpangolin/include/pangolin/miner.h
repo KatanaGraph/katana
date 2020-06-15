@@ -61,7 +61,7 @@ public:
   unsigned read_pattern(std::string filename, std::string filetype = "gr",
                         bool symmetric = false) {
     unsigned max_deg = util::read_graph(pattern, filetype, filename, false);
-    pattern.degreeCounting();
+    pattern.degree_counting();
     auto nv = pattern.size();
     auto ne = pattern.sizeEdges();
     std::cout << "Pattern graph: num_vertices " << nv << " num_edges " << ne

@@ -351,6 +351,12 @@ class LDBCReader {
    */
   void parseAndConstructPersonEdges();
 
+  /**
+   * Parses all edge files of outgoing edges for the forum node class
+   * and adds the edges to the underlying CSR graph.
+   */
+  void parseAndConstructForumEdges();
+
 public:
   /**
    * Constructor takes directory location and expected nodes/edges. Allocates

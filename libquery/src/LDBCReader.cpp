@@ -744,6 +744,7 @@ size_t LDBCReader::parseSimpleEdgeCSV(
                   "left: ", gidOffset, " right: ", rightBound,
                   " offender: ", srcGID);
     GIDType destGID = destMap[std::stoul(dest)];
+    galois::gDebug(srcGID, " ", destGID);
 
     // increment edge count of src gid by one
     edgesPerNode[srcGID - gidOffset]++;
@@ -1088,6 +1089,69 @@ void LDBCReader::parseAndConstructPersonEdges() {
                           readAttEdges);
 }
 
+void LDBCReader::parseAndConstructForumEdges() {
+  // get position data
+  NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_FORUM);
+  GIDType gidOffset               = positionData.offset;
+  GIDType numLabeledNodes         = positionData.count;
+
+  // check to make sure GID offset is equivalent to finishedNodes, i.e. up
+  // to this point all edges are handled
+  GALOIS_ASSERT(gidOffset == this->finishedNodes);
+
+  // construct vector to hold edge counts of each node
+  std::vector<EdgeIndex> edgesPerNode;
+  edgesPerNode.assign(numLabeledNodes, 0);
+  // vectors to hold read edges in memory (so that only one pass over file on
+  // storage is necessary); one type has no attribute, the other one does
+  std::vector<SimpleReadEdge> readSimpleEdges;
+  std::vector<AttributedReadEdge> readAttEdges;
+
+  // files that need to be read for person edges and their to-from mappings
+  std::vector<std::string> simpleFiles{
+      "/dynamic/forum_hasModerator_person_0_0.csv",
+      "/dynamic/forum_hasTag_tag_0_0.csv",
+      "/dynamic/forum_containerOf_post_0_0.csv"};
+
+  std::vector<std::string> attributedFiles{
+      "/dynamic/forum_hasMember_person_0_0.csv"};
+
+  // edge types for both
+  std::vector<std::string> simpleEdgeTypes{"hasModerator", "hasTag",
+                                           "containerOf"};
+  std::vector<std::string> attributedEdgeTypes{"hasMember"};
+
+  // name of the attribute on the attributed edge
+  std::vector<std::string> attributeOnEdge{"joinDate"};
+
+  // initialize edge src/dest classes; note that order is important
+  std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
+  simpleMappings[0] = std::move(std::make_pair(NL_FORUM, NL_PERSON));
+  simpleMappings[1] = std::move(std::make_pair(NL_FORUM, NL_TAG));
+  simpleMappings[2] = std::move(std::make_pair(NL_FORUM, NL_PLACE));
+  std::vector<ToFromMapping> attributedMappings(attributedFiles.size());
+  attributedMappings[0] = std::move(std::make_pair(NL_FORUM, NL_PERSON));
+
+  // setup metadata that tells us how to parse each attribute edge file
+  // (has to be hardcoded; headers are not consistent/wrong)
+  std::vector<ParseMetadata> attributeHowToParse(attributedFiles.size());
+  // creation|src|dst|type|joindate(?)
+  attributeHowToParse[0] = std::move(std::make_tuple(5, 1, 4));
+
+  size_t totalEdges = 0;
+
+  // skip 1 column: create|src|dst
+  totalEdges = this->doParse(
+      gidOffset, simpleFiles, simpleEdgeTypes, simpleMappings, attributedFiles,
+      attributedEdgeTypes, attributedMappings, attributeHowToParse,
+      attributeOnEdge, edgesPerNode, readSimpleEdges, readAttEdges, 1);
+
+  galois::gInfo("Forum nodes have a total of ", totalEdges, " outgoing edges");
+  // construct both simple and attributed edges
+  this->constructCSREdges(gidOffset, totalEdges, edgesPerNode, readSimpleEdges,
+                          readAttEdges);
+}
+
 void LDBCReader::staticParsing() {
   // parse static nodes
   this->parseOrganizationCSV(ldbcDirectory + "/" +
@@ -1136,6 +1200,7 @@ void LDBCReader::dynamicParsing() {
   // handle all person outgoing edges
   this->parseAndConstructPersonEdges();
   // handle all forum outgoing edges
+  this->parseAndConstructForumEdges();
 
   // handle all post outgoing edges
 

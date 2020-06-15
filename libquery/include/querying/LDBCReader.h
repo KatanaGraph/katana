@@ -360,6 +360,12 @@ private:
    */
   void parseAndConstructForumEdges();
 
+  /**
+   * Parses all edge files of outgoing edges for the post node class
+   * and adds the edges to the underlying CSR graph.
+   */
+  void parseAndConstructPostEdges();
+
 public:
   /**
    * Constructor takes directory location and expected nodes/edges. Allocates

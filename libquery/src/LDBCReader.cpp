@@ -1170,6 +1170,59 @@ void LDBCReader::parseAndConstructForumEdges() {
                           readAttEdges);
 }
 
+void LDBCReader::parseAndConstructPostEdges() {
+  // get position data
+  NodeLabelPosition& positionData = this->nodeLabel2Position.at(NL_POST);
+  GIDType gidOffset               = positionData.offset;
+  GIDType numLabeledNodes         = positionData.count;
+
+  // check to make sure GID offset is equivalent to finishedNodes, i.e. up
+  // to this point all edges are handled
+  GALOIS_ASSERT(gidOffset == this->finishedNodes);
+
+  // construct vector to hold edge counts of each node
+  std::vector<EdgeIndex> edgesPerNode;
+  edgesPerNode.assign(numLabeledNodes, 0);
+  // vectors to hold read edges in memory (so that only one pass over file on
+  // storage is necessary); one type has no attribute, the other one does
+  std::vector<SimpleReadEdge> readSimpleEdges;
+  std::vector<AttributedReadEdge> readAttEdges;
+
+  // files that need to be read for person edges and their to-from mappings
+  std::vector<std::string> simpleFiles{
+      "/dynamic/post_hasCreator_person_0_0.csv",
+      "/dynamic/post_hasTag_tag_0_0.csv",
+      "/dynamic/post_isLocatedIn_place_0_0.csv"};
+
+  // edge types for both
+  std::vector<std::string> simpleEdgeTypes{"hasCreator", "hasTag",
+                                           "isLocatedIn"};
+  // initialize edge src/dest classes; note that order is important
+  std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
+  simpleMappings[0] = std::move(std::make_pair(NL_POST, NL_PERSON));
+  simpleMappings[1] = std::move(std::make_pair(NL_POST, NL_TAG));
+  simpleMappings[2] = std::move(std::make_pair(NL_POST, NL_PLACE));
+
+  // post edge have no attributed edge files
+  std::vector<std::string> attributedFiles;
+  std::vector<std::string> attributedEdgeTypes;
+  std::vector<std::string> attributeOnEdge;
+  std::vector<ToFromMapping> attributedMappings;
+  std::vector<ParseMetadata> attributeHowToParse;
+
+  size_t totalEdges = 0;
+  // skip 1 column: create|src|dst
+  totalEdges = this->doParse(
+      gidOffset, simpleFiles, simpleEdgeTypes, simpleMappings, attributedFiles,
+      attributedEdgeTypes, attributedMappings, attributeHowToParse,
+      attributeOnEdge, edgesPerNode, readSimpleEdges, readAttEdges, 1);
+
+  galois::gInfo("Post nodes have a total of ", totalEdges, " outgoing edges");
+  // construct both simple and attributed edges
+  this->constructCSREdges(gidOffset, totalEdges, edgesPerNode, readSimpleEdges,
+                          readAttEdges);
+}
+
 void LDBCReader::staticParsing() {
   // parse static nodes
   this->parseOrganizationCSV(ldbcDirectory + "/" +
@@ -1219,8 +1272,8 @@ void LDBCReader::dynamicParsing() {
   this->parseAndConstructPersonEdges();
   // handle all forum outgoing edges
   this->parseAndConstructForumEdges();
-
   // handle all post outgoing edges
+  this->parseAndConstructPostEdges();
 
   // handle all comment outgoing edges
 

@@ -107,9 +107,15 @@ class SubgraphQueryMiner {
     VertexId next_qnode =
         get_query_vertex(n); // using matching order to get query vertex id
 
-    galois::gDebug("n = ", n, ", pos = ", neighbors[index].first,
-                   ", src = ", emb.get_vertex(neighbors[index].first),
-                   ", dst = ", dst, "\n");
+    if (numInNeighbors > index) {
+      galois::gDebug("n = ", n, ", pos = ", neighbors[index].first,
+                    ", src = ", emb.get_vertex(neighbors[index].first),
+                    ", dst = ", dst, "\n");
+    } else {
+      galois::gDebug("n = ", n, ", pos = ", neighbors[index].first,
+                    ", dst = ", emb.get_vertex(neighbors[index].first),
+                    ", src = ", dst, "\n");
+    }
     // galois::gDebug(", deg(d) = ", dataGraph.degree(dst), ", deg(q) = ",
     // queryGraph.degree(pos+1));
 
@@ -124,6 +130,8 @@ class SubgraphQueryMiner {
     for (unsigned i = 0; i < n; ++i)
       if (dst == emb.get_vertex(i))
         return false;
+
+    galois::gDebug("Checking connectivity for vertex ", dst, "...\n");
 
     for (unsigned i = 0; i < neighbors.size(); ++i) {
       if (i == index)
@@ -208,6 +216,7 @@ class SubgraphQueryMiner {
     // get next query vertex
     VertexId next_qnode =
         get_query_vertex(n); // using matching order to get query vertex id
+    galois::gDebug("Neighbors for level ", n, ":\n");
 
     // for each incoming neighbor of the next query vertex in the query graph
     for (auto q_edge : queryGraph.in_edges(next_qnode)) {
@@ -220,6 +229,7 @@ class SubgraphQueryMiner {
       if (q_order < n) {
         auto qeData = queryGraph.getInEdgeData(q_edge);
         neighbors.push_back(std::make_pair(q_order, qeData));
+        galois::gDebug(q_order, ",", qeData, "\n");
       }
     }
     numInNeighbors = neighbors.size();
@@ -234,6 +244,7 @@ class SubgraphQueryMiner {
       if (q_order < n) {
         auto qeData = queryGraph.getEdgeData(q_edge);
         neighbors.push_back(std::make_pair(q_order, qeData));
+        galois::gDebug(q_order, ",", qeData, "\n");
       }
     }
     assert(neighbors.size() > 0);
@@ -264,6 +275,7 @@ class SubgraphQueryMiner {
         }
       }
     }
+    galois::gDebug("Picked neighbor: ", index, "\n");
     return index;
   }
 
@@ -271,7 +283,7 @@ class SubgraphQueryMiner {
   void process_embedding(const EmbeddingType& emb, NeighborsTy& neighbors,
                          unsigned numInNeighbors,
                          EmbeddingQueueType& out_queue) {
-    galois::gDebug("current embedding: ", emb, "\n");
+    galois::gDebug("Current embedding: ", emb, "\n");
     unsigned n = emb.size();
 
     if (DFS) {
@@ -368,8 +380,10 @@ public:
     // FIXTHIS as it may lead to unconnected subgraphs
     std::sort(matchingOrderToVertexMap.begin(), matchingOrderToVertexMap.end(),
               orderQueryVertices);
+    galois::gDebug("Matching Order:\n");
     for (VertexId i = 0; i < queryGraph.size(); ++i) {
       vertexToMatchingOrderMap[matchingOrderToVertexMap[i]] = i;
+      galois::gDebug(matchingOrderToVertexMap[i], "\n");
     }
   }
 

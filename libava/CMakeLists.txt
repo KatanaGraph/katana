@@ -16,7 +16,7 @@ FetchContent_Declare(ava
 FetchContent_GetProperties(ava)
 if(NOT ava_POPULATED)
   FetchContent_Populate(ava)
-  add_subdirectory(manager)
+  add_subdirectory(manager/superbuild)
 endif()
 
 ExternalProject_Add(ava_llvm

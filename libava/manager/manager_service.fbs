@@ -1,0 +1,11 @@
+table DaemonRegisterRequest {
+  message:string;
+}
+
+table DaemonRegisterReply {
+  spawn_num:int;
+}
+
+rpc_service ManagerService {
+  RegisterDaemon(DaemonRegisterRequest): DaemonRegisterReply;
+}

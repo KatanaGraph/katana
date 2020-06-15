@@ -2,6 +2,21 @@
 // TODO figure out how this will end up working with all these typedefs
 //#define USE_QUERY_GRAPH_WITH_NODE_LABEL
 
+// namespace for various helper functions
+namespace internal {
+LDBCReader::GIDType getGID(LDBCReader::GIDMap& map2Query,
+                           LDBCReader::LDBCNodeType key) {
+  auto gidEntry = map2Query.find(key);
+  if (gidEntry != map2Query.end()) {
+    return gidEntry->second;
+  } else {
+    GALOIS_DIE(key, " not found in gid mappping");
+    // shouldn't get here
+    return 0;
+  }
+}
+}; // namespace internal
+
 LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
                        uint64_t _numEdges)
     : ldbcDirectory(_ldbcDirectory), gidOffset(0), finishedNodes(0),
@@ -738,13 +753,16 @@ size_t LDBCReader::parseSimpleEdgeCSV(
     std::getline(tokenString, src, '|');
     std::getline(tokenString, dest, '|');
     // get gids of source and dest
-    GIDType srcGID = srcMap[std::stoul(src)];
+    GIDType srcGID = internal::getGID(srcMap, std::stoul(src));
+
     // make sure src GID is in bounds of this label class
     GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound,
                   "left: ", gidOffset, " right: ", rightBound,
                   " offender: ", srcGID);
-    GIDType destGID = destMap[std::stoul(dest)];
-    galois::gDebug(srcGID, " ", destGID);
+
+    GIDType destGID = internal::getGID(destMap, std::stoul(dest));
+
+    /// galois::gDebug(srcGID, " ", destGID);
 
     // increment edge count of src gid by one
     edgesPerNode[srcGID - gidOffset]++;
@@ -957,12 +975,12 @@ size_t LDBCReader::parseEdgeCSVSpecified(
     // galois::gInfo(src, " ", dest, " attribute ", attribute);
 
     // get gids of source and dest
-    GIDType srcGID = srcMap[std::stoul(src)];
+    GIDType srcGID = internal::getGID(srcMap, std::stoul(src));
     // make sure src GID is in bounds of this label class
     GALOIS_ASSERT(srcGID >= gidOffset && srcGID < rightBound,
                   "left: ", gidOffset, " right: ", rightBound,
                   " offender: ", srcGID);
-    GIDType destGID = destMap[std::stoul(dest)];
+    GIDType destGID = internal::getGID(destMap, std::stoul(dest));
     // increment edge count of src gid by one
     edgesPerNode[srcGID - gidOffset]++;
 
@@ -1128,7 +1146,7 @@ void LDBCReader::parseAndConstructForumEdges() {
   std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
   simpleMappings[0] = std::move(std::make_pair(NL_FORUM, NL_PERSON));
   simpleMappings[1] = std::move(std::make_pair(NL_FORUM, NL_TAG));
-  simpleMappings[2] = std::move(std::make_pair(NL_FORUM, NL_PLACE));
+  simpleMappings[2] = std::move(std::make_pair(NL_FORUM, NL_POST));
   std::vector<ToFromMapping> attributedMappings(attributedFiles.size());
   attributedMappings[0] = std::move(std::make_pair(NL_FORUM, NL_PERSON));
 

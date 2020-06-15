@@ -26,15 +26,18 @@
  * Requires CsvComposite generation
  */
 class LDBCReader {
+public:
   // type def-ing them here in case they grow past 32 bytes
   //! type of global ids found in ldbc files
-  using LDBCNodeType = uint32_t;
+  using LDBCNodeType = uint64_t;
   //! type of global ids
   using GIDType = uint32_t;
   //! edge index type
   using EdgeIndex = uint64_t;
   //! map from an ldbc lid to graph's gid
   using GIDMap = std::unordered_map<LDBCNodeType, GIDType>;
+
+private:
   //! Struct for holding edges read from disk in-memory
   struct SimpleReadEdge {
     //! source of edge

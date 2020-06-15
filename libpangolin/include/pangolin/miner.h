@@ -47,7 +47,7 @@ public:
     size_t offset = 0;
     for (size_t i = 0; i < m; i++) {
       outfile << offset << "\n";
-      offset += graph.getSavedDegree(i);
+      offset += graph.get_degree(i);
     }
     for (size_t i = 0; i < m; i++) {
       for (auto e : graph.edges(i)) {

@@ -17,7 +17,7 @@ void print_graph(PangolinGraph& graph) {
               << " edgelist = [ ";
 #else
     std::cout << "vertex " << n << ": label = " << graph.getData(n)
-              << ": degree = " << graph.getSavedDegree(n) << " edgelist = [ ";
+              << ": degree = " << graph.get_degree(n) << " edgelist = [ ";
 #endif
     for (auto e : graph.edges(n))
       std::cout << graph.getEdgeDst(e) << " ";

@@ -733,6 +733,15 @@ cudaEventCreate(cudaEvent_t *event)
 }
 
 __host__ __cudart_builtin__ cudaError_t CUDARTAPI
+cudaEventCreateWithFlags(cudaEvent_t *event, unsigned int flags)
+{
+    ava_argument(event) {
+        ava_out; ava_buffer(1);
+        ava_element ava_handle;
+    }
+}
+
+__host__ __cudart_builtin__ cudaError_t CUDARTAPI
 cudaEventRecord(cudaEvent_t event, cudaStream_t stream)
 {
     ava_argument(event) ava_handle;
@@ -872,6 +881,23 @@ cudaFuncGetAttributes(struct cudaFuncAttributes *attr, const void *func)
         return ret;
     }
 }
+
+__host__ __cudart_builtin__ cudaError_t CUDARTAPI
+cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(int *numBlocks,
+    const void *func, int blockSize, size_t dynamicSMemSize, unsigned int flags)
+{
+    ava_unsupported;
+    // TODO: translate func
+    ava_argument(numBlocks) {
+      ava_out; ava_buffer(1);
+    }
+    ava_argument(func) {
+        ava_opaque;
+    }
+}
+
+__host__ __cudart_builtin__ cudaError_t CUDARTAPI
+cudaPeekAtLastError(void);
 
 /* CUDA driver API */
 

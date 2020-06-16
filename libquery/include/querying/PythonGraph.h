@@ -189,6 +189,16 @@ void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, const char* key,
                       const char* value);
 
 /**
+ * Label a node with a value for a particular existing attribute.
+ * @param g Graph to label
+ * @param nodeIndex node ID to give the attribute
+ * @param key Attribute name
+ * @param value Value of the attribute to give the node
+ */
+void setExistingNodeAttribute(AttributedGraph* g, uint32_t nodeIndex,
+                              const char* key, const char* value);
+
+/**
  * Construct an edge in the AttributedGraph for the first time, i.e. it only
  * has a SINGLE edge label specified by bit position to set.
  * Graph memory should have already been allocated.
@@ -227,6 +237,17 @@ void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
  */
 void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
                       const char* value);
+
+/**
+ * Label an edge with a value for a particular existing attribute.
+ * @param g Graph to label
+ * @param edgeIndex edge ID to give the attribute
+ * @param key Attribute name
+ * @param value Value of the attribute to give the edge
+ */
+void setExistingEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex,
+                              const char* key, const char* value);
+
 /**
  * Gets the number of nodes in the graph.
  * @param g Graph to get nodes of

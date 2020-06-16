@@ -306,6 +306,15 @@ void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, const char* key,
   attributes[key][nodeIndex] = value;
 }
 
+void setExistingNodeAttribute(AttributedGraph* g, uint32_t nodeIndex,
+                              const char* key, const char* value) {
+  auto& attributes = g->nodeAttributes;
+  if (attributes.find(key) == attributes.end()) {
+    GALOIS_DIE("node attribute ", key, "doesn't already exist");
+  }
+  attributes[key][nodeIndex] = value;
+}
+
 void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
                       uint32_t dstNodeIndex, uint32_t labelBitPosition,
                       uint64_t GALOIS_UNUSED(timestamp)) {
@@ -338,6 +347,15 @@ void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
   if (attributes.find(key) == attributes.end()) {
     attributes[key] = std::vector<std::string>();
     attributes[key].resize(g->graph.sizeEdges());
+  }
+  attributes[key][edgeIndex] = value;
+}
+
+void setExistingEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex,
+                              const char* key, const char* value) {
+  auto& attributes = g->edgeAttributes;
+  if (attributes.find(key) == attributes.end()) {
+    GALOIS_DIE("edge attribute ", key, "doesn't already exist");
   }
   attributes[key][edgeIndex] = value;
 }

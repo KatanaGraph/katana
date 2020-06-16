@@ -16,7 +16,7 @@ public:
 };
 
 class Workers {
- public:
+public:
   void enqueue(std::string worker_address, std::string uuid = "") {
     this->mtx.lock();
     this->worker_queue.push({worker_address, uuid});
@@ -42,8 +42,8 @@ class Workers {
     return size;
   }
 
- private:
-  std::queue<std::pair<std::string, std::string> > worker_queue;
+private:
+  std::queue<std::pair<std::string, std::string>> worker_queue;
   std::mutex mtx;
 };
 
@@ -53,7 +53,8 @@ class DaemonInfo {
 public:
   void print_gpu_info() {
     for (auto gi : gpu_info)
-      std::cerr << "- " << gi.uuid << " (" << (gi.free_memory >> 20) << " MB)\n";
+      std::cerr << "- " << gi.uuid << " (" << (gi.free_memory >> 20)
+                << " MB)\n";
   }
 
   DaemonServiceClient* client;

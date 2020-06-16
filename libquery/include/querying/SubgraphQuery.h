@@ -131,7 +131,7 @@ class SubgraphQueryMiner {
       auto qeData       = neighbors[i].second;
       VertexId d_vertex = emb.get_vertex(q_order);
 
-      if (numInNeighbors > index) {
+      if (numInNeighbors > i) {
         // check the backward connectivity with previous vertices in the
         // embedding
         galois::gDebug("Checking if ", dst, " is an outgoing neighbor of ", d_vertex, "...\n");

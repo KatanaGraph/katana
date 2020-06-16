@@ -1,17 +1,20 @@
 #include <linux/limits.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <nvml.h>
 #include <grpc++/grpc++.h>
 
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "manager.h"
 #include "manager_service.grpc.fb.h"
 #include "manager_service_generated.h"
 
@@ -27,11 +30,12 @@ public:
 
   void print() {
     std::cerr << "* Manager address: " << manager_address << std::endl
-      << "* Daemon port: " << daemon_port << std::endl
-      << "* API server: " << worker_path << std::endl
-      << "* Total GPU: " << visible_cuda_device.size() << std::endl;
-    for (unsigned i = 0; i < visible_cuda_device_uuid.size(); ++i)
-      std::cerr << "  - GPU-" << i << " UUID is " << visible_cuda_device_uuid[i] << std::endl;
+              << "* Daemon port: " << daemon_port << std::endl
+              << "* API server: " << worker_path << std::endl
+              << "* API server base port: " << worker_port_base << std::endl
+              << "* Total GPU: " << visible_cuda_devices.size() << std::endl;
+    for (unsigned i = 0; i < visible_cuda_devices.size(); ++i)
+      std::cerr << "  - GPU-" << i << " UUID is " << visible_cuda_devices[i].uuid << std::endl;
   }
 
   std::string config_file;
@@ -40,19 +44,20 @@ public:
   int daemon_port;
   int worker_port_base;
 
-  std::vector<std::string> visible_cuda_device;
-  std::vector<std::string> visible_cuda_device_uuid;
+  std::vector<GpuInfo> visible_cuda_devices;
 };
 
-std::string const DaemonConfig::DefaultManagerAddress = "0.0.0.0:3333";
-int const DaemonConfig::DefaultDaemonPort= 3334;
-int const DaemonConfig::DefaultWorkerPortBase = 4000;
+std::string const DaemonConfig::DefaultManagerAddress = "0.0.0.0:3334";
+int const DaemonConfig::DefaultDaemonPort             = 3335;
+int const DaemonConfig::DefaultWorkerPortBase         = 4000;
 
-DaemonConfig *parse_arguments(int argc, char *argv[]) {
+DaemonConfig* config;
+
+DaemonConfig* parse_arguments(int argc, char* argv[]) {
   int c;
   opterr = 0;
-  char *config_file_name = NULL;
-  const char *worker_relative_path = NULL;
+  char* config_file_name           = NULL;
+  const char* worker_relative_path = NULL;
   char worker_path[PATH_MAX];
   std::string manager_address = DaemonConfig::DefaultManagerAddress;
   int daemon_port = DaemonConfig::DefaultDaemonPort;
@@ -105,7 +110,7 @@ DaemonConfig *parse_arguments(int argc, char *argv[]) {
   return config;
 }
 
-void parse_config_file(DaemonConfig *config) {
+void parse_config_file(DaemonConfig* config) {
   std::ifstream config_file(config->config_file);
   std::string line;
   nvmlReturn_t ret = nvmlInit();
@@ -118,8 +123,8 @@ void parse_config_file(DaemonConfig *config) {
   while (std::getline(config_file, line)) {
     nvmlDevice_t dev;
     nvmlMemory_t mem = {};
-    char *line_cstr = (char *)line.c_str();
-    char *pchr = strchr(line_cstr, '=');
+    char* line_cstr = (char*)line.c_str();
+    char* pchr = strchr(line_cstr, '=');
 
     ret = nvmlDeviceGetHandleByUUID(pchr + 1, &dev);
     if (ret != NVML_SUCCESS) {
@@ -133,26 +138,47 @@ void parse_config_file(DaemonConfig *config) {
       exit(-1);
     }
 
-    config->visible_cuda_device.push_back(line);
-    config->visible_cuda_device_uuid.push_back(pchr + 1);
+    config->visible_cuda_devices.push_back({pchr + 1, mem.free});
   }
 }
 
 class DaemonServiceImpl final : public DaemonService::Service {
+public:
+  DaemonServiceImpl() : DaemonService::Service() {
+    worker_id.store(0);
+  }
+
   virtual grpc::Status SpawnWorker(
-      grpc::ServerContext *context,
-      const flatbuffers::grpc::Message<WorkerSpawnRequest> *request_msg,
-      flatbuffers::grpc::Message<WorkerSpawnReply> *response_msg) override {
-    const WorkerSpawnRequest *request = request_msg->GetRoot();
-    std::cerr << "Request to spawn " << request->spawn_num() << " API servers" << std::endl;
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<WorkerSpawnRequest>* request_msg,
+      flatbuffers::grpc::Message<WorkerSpawnReply>* response_msg) override {
+    const WorkerSpawnRequest* request = request_msg->GetRoot();
+    std::vector<int>count;
+    for (auto cnt : *request->count())
+      count.push_back(cnt);
+    std::vector<std::string> uuid;
+    int idx = 0;
+    for (auto uu : *request->uuid()) {
+      uuid.push_back(uu->str());
+      std::cerr << "Request to spawn " << count[idx] << " API servers on " << uuid[idx] << std::endl;
+      ++idx;
+    }
+
+    if(count.empty() || count.size() != uuid.size()) {
+      grpc::Status status(grpc::StatusCode::INVALID_ARGUMENT, "Mismatched count and uuid vectors");
+      return status;
+    }
 
     std::vector<flatbuffers::Offset<flatbuffers::String>> worker_address;
     flatbuffers::grpc::MessageBuilder mb;
 
     /* Spawn API servers. */
-    // TODO
-    auto ao = mb.CreateString("port_number");
-    worker_address.push_back(ao);
+    for (unsigned i = 0; i < count.size(); ++i)
+      for (int j = 0; j < count[i]; ++j) {
+        int port = spawn_worker(uuid[i]);
+        auto ao = mb.CreateString(std::to_string(port));
+        worker_address.push_back(ao);
+      }
 
     auto vo = mb.CreateVector(worker_address.empty() ? nullptr : &worker_address[0],
         worker_address.size());
@@ -162,9 +188,37 @@ class DaemonServiceImpl final : public DaemonService::Service {
 
     return grpc::Status::OK;
   }
+
+private:
+  int get_worker_port() {
+    return config->worker_port_base + worker_id.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  int spawn_worker(std::string uuid) {
+    int port = get_worker_port();
+    std:: cerr << "Spawn API server at port=" << port
+               << " UUID=" << uuid << std::endl;
+
+    if (fork())
+      return port;
+
+    std::string visible_dev = "CUDA_VISIBLE_DEVICES=" + uuid;
+    char* const argv_list[] = {(char *)"worker",
+                               (char *)std::to_string(port).c_str(),
+                               NULL};
+    char* const envp_list[] = {(char *)visible_dev.c_str(),
+                               (char *)"AVA_CHANNEL=TCP",
+                               NULL};
+    if (execvpe(config->worker_path.c_str(), argv_list, envp_list) < 0)
+      perror("execv worker");
+    /* Never reach here. */
+    return port;
+  }
+
+  std::atomic<int> worker_id;
 };
 
-void run_daemon_service(DaemonConfig *config) {
+void run_daemon_service(DaemonConfig* config) {
   std::string server_address("0.0.0.0:" + std::to_string(config->daemon_port));
   DaemonServiceImpl service;
 
@@ -182,10 +236,18 @@ public:
     : stub_(ManagerService::NewStub(channel)) {}
 
   grpc::Status RegisterDaemon(const std::string &self_address) {
-    /* Build message. */
+    /* Build message with daemon address and GPU info. */
     flatbuffers::grpc::MessageBuilder mb;
     auto sa_offset = mb.CreateString(self_address);
-    auto request_offset = CreateDaemonRegisterRequest(mb, sa_offset);
+    std::vector<uint64_t> fm;
+    std::vector<flatbuffers::Offset<flatbuffers::String>> uuid;
+    for (auto gpuinfo : config->visible_cuda_devices) {
+      fm.push_back(gpuinfo.free_memory);
+      uuid.push_back(mb.CreateString(gpuinfo.uuid));
+    }
+    auto fm_offset = mb.CreateVector(fm.empty() ? nullptr : &fm[0], fm.size());
+    auto uu_offset = mb.CreateVector(uuid.empty() ? nullptr : &uuid[0], uuid.size());
+    auto request_offset = CreateDaemonRegisterRequest(mb, sa_offset, fm_offset, uu_offset);
     mb.Finish(request_offset);
     auto request_msg = mb.ReleaseMessage<DaemonRegisterRequest>();
 
@@ -203,8 +265,8 @@ private:
   std::unique_ptr<ManagerService::Stub> stub_;
 };
 
-int main(int argc, char *argv[]) {
-  auto config = parse_arguments(argc, argv);
+int main(int argc, char* argv[]) {
+  config = parse_arguments(argc, argv);
   parse_config_file(config);
   config->print();
 

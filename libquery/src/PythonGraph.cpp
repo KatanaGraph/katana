@@ -60,7 +60,7 @@ AttributedGraph* createGraph() {
 
 void deleteGraph(AttributedGraph* g) { delete g; }
 
-void saveGraph(AttributedGraph* g, char* filename) {
+void saveGraph(AttributedGraph* g, const char* filename) {
   // test prints
   // for (auto d : g->graph) {
   //  galois::gPrint(d, " ", g->index2UUID[d], "\n");
@@ -84,7 +84,9 @@ void saveGraph(AttributedGraph* g, char* filename) {
   oarch << g->nodeNames;
   // node/edge attributes
   oarch << g->nodeAttributes;
+  oarch << g->nodeAttributeTypes;
   oarch << g->edgeAttributes;
+  oarch << g->edgeAttributeTypes;
 
   // test prints
   // for (auto& pair : g->nodeLabelIDs) {
@@ -140,7 +142,7 @@ void saveEdgeList(AttributedGraph* g, char* filename) {
   nodeFile.close();
 }
 
-void loadGraph(AttributedGraph* g, char* filename) {
+void loadGraph(AttributedGraph* g, const char* filename) {
   std::ifstream file(filename, std::ios::in | std::ios::binary);
   boost::archive::binary_iarchive iarch(file);
   g->graph.deSerializeGraph(iarch);
@@ -157,7 +159,9 @@ void loadGraph(AttributedGraph* g, char* filename) {
   iarch >> g->index2UUID;
   iarch >> g->nodeNames;
   iarch >> g->nodeAttributes;
+  iarch >> g->nodeAttributeTypes;
   iarch >> g->edgeAttributes;
+  iarch >> g->edgeAttributeTypes;
 
   // test prints
   // for (auto& pair : g->nodeLabelIDs) {

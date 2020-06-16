@@ -78,7 +78,7 @@ void deleteGraph(AttributedGraph* g);
  * @param g Graph to save
  * @param filename Name to save serialized graph on disk to
  */
-void saveGraph(AttributedGraph* g, char* filename);
+void saveGraph(AttributedGraph* g, const char* filename);
 
 /**
  * Outputs an edge list from the attributed graph.
@@ -92,7 +92,7 @@ void saveEdgeList(AttributedGraph* g, char* filename);
  * @param g Graph object to load into
  * @param filename Name of serialized graph on disk to load
  */
-void loadGraph(AttributedGraph* g, char* filename);
+void loadGraph(AttributedGraph* g, const char* filename);
 
 /**
  * Prints out the data in an AttributedGraph for debugging purposes.

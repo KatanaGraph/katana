@@ -141,7 +141,8 @@ public:
    * Given graph topology, construct the attributed graph by
    * ignoring self loops. Note that multiedges are allowed.
    */
-  //void constructDataGraph(const std::string filename, bool useWeights = true) {
+  // void constructDataGraph(const std::string filename, bool useWeights = true)
+  // {
   void constructDataGraph(const std::string filename) {
     // first, load graph topology
     // NOTE: assumes weighted
@@ -175,8 +176,7 @@ public:
     uint64_t keptEdgeCount = keptEdgeCountAccumulator.reduce();
 
     galois::gDebug("Kept edge count is ", keptEdgeCount,
-                   " compared to original ",
-                   graphTopology.sizeEdges());
+                   " compared to original ", graphTopology.sizeEdges());
 
     uint64_t finalEdgeCount = keptEdgeCount;
 
@@ -264,9 +264,9 @@ public:
    * Given a Cypher query string, run it on the underlying data graph using
    * graph simulation (or not) and the Pangolin engine.
    */
-  size_t runCypherQuery(const std::string cypherQueryStr,
-                        bool useGraphSimulation,
-                        std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
+  size_t
+  runCypherQuery(const std::string cypherQueryStr, bool useGraphSimulation,
+                 std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
     // run the query, get number of matched edges
     size_t mEdgeCount =
         matchCypherQuery(attGraph, EventLimit(), EventWindow(),

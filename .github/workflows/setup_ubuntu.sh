@@ -20,8 +20,6 @@ apt install -yq clang-10 clang++-10 clang-format-10 clang-tidy-10 llvm-10-dev
 
 update-alternatives --verbose --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 90
 update-alternatives --verbose --install /usr/bin/clang clang /usr/bin/clang-10 90
-update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
-update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
 
 pip3 install --upgrade pip setuptools
 pip3 install conan==1.24

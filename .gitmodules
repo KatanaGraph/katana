@@ -8,5 +8,5 @@
 	path = bliss
 	url = https://github.com/chenxuhao/bliss.git
 [submodule "libcypher-parser"]
-	path = libcypher-parser
+	path = external/libcypher-parser
 	url = https://github.com/cleishm/libcypher-parser.git

@@ -1,4 +1,4 @@
-set(CYPHER_PARSER_ROOT "${CMAKE_SOURCE_DIR}/libcypher-parser")
+set(CYPHER_PARSER_ROOT "${CMAKE_SOURCE_DIR}/external/libcypher-parser")
 set(CYPHER_PARSER_INCLUDE "${CYPHER_PARSER_ROOT}/lib/src")
 set(CYPHER_PARSER_LIBRARY "${CYPHER_PARSER_ROOT}/lib/src/.libs/libcypher-parser.a")
 add_custom_command(

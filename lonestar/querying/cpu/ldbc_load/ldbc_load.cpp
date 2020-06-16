@@ -41,8 +41,7 @@ int main(int argc, char** argv) {
   LonestarStart(argc, argv, name, desc, url, &ldbcDir);
 
   LDBCReader reader(ldbcDir, numNodes, numEdges);
-  reader.staticParsing();
-  reader.dynamicParsing();
+  reader.parseAndSave("test.cygr");
 
   return 0;
 }

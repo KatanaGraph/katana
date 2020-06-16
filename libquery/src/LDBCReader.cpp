@@ -16,6 +16,11 @@ uint32_t getLabelID(std::unordered_map<std::string, uint32_t>& labelIDs,
   }
 }
 
+// TODO setnode/edgeattribute make sure attribute eexists before inserting
+// TODO save graph to disk
+// TODO attributed graph loader directly from disk without BAE INTERFACE
+// TODO neo4j import fix
+
 //! Given a gid map and key/value, insert; dies if key already exists
 //! (i.e. must have unique keys)
 void insertGIDMap(LDBCReader::GIDMap& map2Insert, LDBCReader::LDBCNodeType key,
@@ -225,9 +230,9 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
     }
 
     // finally, save all 3 parsed fields to attributes
-    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -306,9 +311,9 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
     }
 
     // finally, save all 3 parsed fields to attributes
-    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -360,9 +365,9 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagLabel);
     // save all 3 parsed fields to attributes
-    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -414,9 +419,9 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagClassLabel);
     // save all 3 parsed fields to attributes
-    setNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -493,18 +498,24 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
     setNodeLabel(attGraphPointer, thisGID, personLabel);
 
     // save parsed fields into attributes
-    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                     fCreation.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "firstName", fFirstName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "lastName", fLastName.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "gender", fGender.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "birthday", fBirthday.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "email", fMail.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "speaks", fLanguage.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "browserUsed", fBrowser.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                     fLocationIP.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                             fCreation.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "firstName",
+                             fFirstName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "lastName",
+                             fLastName.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "gender",
+                             fGender.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "birthday",
+                             fBirthday.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "email", fMail.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "speaks",
+                             fLanguage.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
+                             fBrowser.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
+                             fLocationIP.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -564,10 +575,10 @@ void LDBCReader::parseForumCSV(const std::string filepath) {
     setNodeLabel(attGraphPointer, thisGID, forumLabel);
 
     // save parsed fields into attributes
-    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                     fCreation.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "title", fTitle.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                             fCreation.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "title", fTitle.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
     // fType is ignored
   }
 
@@ -641,18 +652,23 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
 
     // save parsed fields into attributes
     // message specific
-    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                     fCreation.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "browserUsed", fBrowser.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                     fLocationIP.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "content", fContent.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "length", fLength.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                             fCreation.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
+                             fBrowser.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
+                             fLocationIP.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "content",
+                             fContent.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "length",
+                             fLength.c_str());
     // post specific
-    setNodeAttribute(attGraphPointer, thisGID, "language", fLanguage.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "imageFile", fImageFile.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "language",
+                             fLanguage.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "imageFile",
+                             fImageFile.c_str());
 
-    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -720,15 +736,18 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
 
     // save parsed fields into attributes
     // message specific
-    setNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                     fCreation.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "browserUsed", fBrowser.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                     fLocationIP.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "content", fContent.c_str());
-    setNodeAttribute(attGraphPointer, thisGID, "length", fLength.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
+                             fCreation.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
+                             fBrowser.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
+                             fLocationIP.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "content",
+                             fContent.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "length",
+                             fLength.c_str());
 
-    setNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -905,8 +924,8 @@ void LDBCReader::constructCSREdges(
         const std::string& attributeName = e.attributeName;
         std::string& attribute           = e.attribute;
         // TODO make sure attribute name already exists when inserting
-        setEdgeAttribute(attGraphPointer, insertionPoint, attributeName.c_str(),
-                         attribute.c_str());
+        setExistingEdgeAttribute(attGraphPointer, insertionPoint,
+                                 attributeName.c_str(), attribute.c_str());
       },
       galois::loopname("SaveAttributedEdges"), galois::no_stats());
 

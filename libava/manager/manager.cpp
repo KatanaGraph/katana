@@ -14,19 +14,17 @@
 #include <nvml.h>
 #include <grpc++/grpc++.h>
 
-#include <atomic>
-#include <fstream>
-#include <vector>
 #include <algorithm>
-#include <iostream>
+#include <fstream>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <queue>
 #include <string>
 #include <thread>
-#include <queue>
-#include <mutex>
+#include <vector>
 
+#include "manager.h"
 #include "manager_service.grpc.fb.h"
 #include "manager_service_generated.h"
 #include "common/cmd_channel_impl.h"
@@ -34,159 +32,14 @@
 #include "common/socket.h"
 
 int listen_fd;
-std::atomic<int> worker_id(1);
-GHashTable *worker_info;
 
 __sighandler_t original_sigint_handler = SIG_DFL;
 
 void sigint_handler(int signo) {
-  if (listen_fd > 0) close(listen_fd);
+  if (listen_fd > 0)
+    close(listen_fd);
   signal(signo, original_sigint_handler);
   raise(signo);
-}
-
-class Workers {
- public:
-  void enqueue(int port) {
-    this->mtx.lock();
-    this->worker_queue.push(port);
-    this->mtx.unlock();
-  }
-
-  int dequeue() {
-    this->mtx.lock();
-    int ret = 0;
-    if (this->worker_queue.size() > 0) {
-      ret = this->worker_queue.front();
-      this->worker_queue.pop();
-    }
-    this->mtx.unlock();
-    return ret;
-  }
-
-  unsigned int size() {
-    unsigned int size;
-    this->mtx.lock();
-    size = this->worker_queue.size();
-    this->mtx.unlock();
-    return size;
-  }
-
- private:
-  std::queue<int> worker_queue;
-  std::mutex mtx;
-};
-
-// TODO: group into a class
-int num_assigned_app = 0;
-int total_gpu_num = 1;
-unsigned worker_pool_size = 1;
-
-inline int get_worker_port(int id) { return 4000 + id; }
-
-int get_gpu_id_from_uuid(
-    const std::vector<std::string> &visible_cuda_device_uuid,
-    const char *gpu_uuid) {
-  int gpu_id;
-  auto itr = std::find(visible_cuda_device_uuid.begin(),
-                       visible_cuda_device_uuid.end(), std::string(gpu_uuid));
-
-  /* gpu_uuid is a correct UUID */
-  if (itr != visible_cuda_device_uuid.end()) {
-    gpu_id = itr - visible_cuda_device_uuid.begin();
-    fprintf(stderr, "[manager] GPU UUID matches index %d\n", gpu_id);
-  }
-  /* gpu_uuid is a GPU index */
-  else if (strlen(gpu_uuid) > 0 && strlen(gpu_uuid) < 2) {
-    gpu_id = atoi(gpu_uuid);
-  }
-  /* Otherwise use round-robin */
-  else {
-    gpu_id = (num_assigned_app++) % total_gpu_num;
-  }
-
-  return gpu_id;
-}
-
-void reply_to_guestlib(int client_fd, int assigned_worker_port) {
-  struct command_base response;
-  uintptr_t *worker_port;
-
-  response.api_id = INTERNAL_API;
-  worker_port = (uintptr_t *)response.reserved_area;
-  *worker_port = assigned_worker_port;
-  send_socket(client_fd, &response, sizeof(struct command_base));
-}
-
-void spawn_worker() {
-  // TODO: send spawn request to daemon
-}
-
-void handle_guestlib(int client_fd,
-                     const std::vector<std::string> &visible_cuda_device,
-                     const std::vector<std::string> &visible_cuda_device_uuid,
-                     Workers *idle_workers) {
-  pid_t child;
-
-  int worker_port;
-  int assigned_worker_port;
-  int gpu_id = 0;
-  char *gpu_uuid = "";
-
-  struct command_base msg;
-
-  visible_cuda_device.size();
-
-  /* get guestlib info */
-  recv_socket(client_fd, &msg, sizeof(struct command_base));
-  switch (msg.command_type) {
-    case NW_NEW_APPLICATION:
-      /* Get GPU UUID */
-      gpu_uuid = (char *)msg.reserved_area;
-      printf("[manager] Receive request for GPU UUID = %s\n",
-             strlen(gpu_uuid) ? gpu_uuid : "[NULL]");
-
-      /* Lookup GPU index */
-      gpu_id = get_gpu_id_from_uuid(visible_cuda_device_uuid, gpu_uuid);
-
-      /* Assign a worker to the guestlib and get its port */
-      assigned_worker_port = idle_workers[gpu_id].dequeue();
-      if (assigned_worker_port != 0) {
-        /* Respond guestlib and spawn a new idle worker */
-        reply_to_guestlib(client_fd, assigned_worker_port);
-        close(client_fd);
-
-        if (idle_workers[gpu_id].size() > worker_pool_size - 1) break;
-
-        worker_port = get_worker_port(worker_id++);
-        child = fork();
-        if (child == 0) {
-          close(listen_fd);
-          spawn_worker();
-        } else {
-          // TODO: acknowledge worker's initialization
-          idle_workers[gpu_id].enqueue(worker_port);
-        }
-      } else {
-        /* Spawn a new idle worker and let guestlib retry */
-        worker_port = get_worker_port(worker_id++);
-        child = fork();
-        if (child == 0) {
-          close(listen_fd);
-          close(client_fd);
-          spawn_worker();
-        } else {
-          // TODO: acknowledge worker's initialization
-          reply_to_guestlib(client_fd, worker_port);
-          close(client_fd);
-        }
-      }
-      break;
-
-    default:
-      printf("[manager] Wrong message type\n");
-      close(client_fd);
-  }
 }
 
 class ManagerConfig {
@@ -197,24 +50,27 @@ public:
   ManagerConfig(int mp = DefaultManagerPort, int wps  = DefaultWorkerPoolSize) :
     manager_port(mp), worker_pool_size(wps) {}
 
+  ~ManagerConfig() {
+    for (auto daemon : daemons)
+      delete daemon;
+  }
+
   void print() {
     std::cerr << "* Manager port: " << manager_port << std::endl
-      << "* API server pool size: " << worker_pool_size << std::endl;
+              << "* API server pool size: " << worker_pool_size << std::endl;
   }
 
   int manager_port;
   int worker_pool_size;
-
-  std::vector<std::string> visible_cuda_device;
-  std::vector<std::string> visible_cuda_device_uuid;
+  std::vector<DaemonInfo*> daemons;
 };
 
-int const ManagerConfig::DefaultManagerPort = 3333;
+int const ManagerConfig::DefaultManagerPort = 3334;
 int const ManagerConfig::DefaultWorkerPoolSize = 3;
 
-ManagerConfig *config;
+ManagerConfig* config;
 
-ManagerConfig *parse_arguments(int argc, char *argv[]) {
+ManagerConfig* parse_arguments(int argc, char *argv[]) {
   int c;
   opterr = 0;
   int manager_port = ManagerConfig::DefaultManagerPort;
@@ -246,10 +102,17 @@ public:
   DaemonServiceClient(std::shared_ptr<grpc::Channel> channel)
     : stub_(DaemonService::NewStub(channel)) {}
 
-  std::vector<std::string> SpawnWorker(int spawn_num, std::string daemon_ip = "0.0.0.0") {
+  std::vector<std::string> SpawnWorker(std::vector<int>& count,
+                                       std::vector<std::string>& uuid,
+                                       std::string daemon_ip = "0.0.0.0") {
     /* Build message. */
     flatbuffers::grpc::MessageBuilder mb;
-    auto request_offset = CreateWorkerSpawnRequest(mb, spawn_num);
+    std::vector<flatbuffers::Offset<flatbuffers::String>> _uuid;
+    for (auto uu : uuid)
+      _uuid.push_back(mb.CreateString(uu));
+    auto cnt_offset = mb.CreateVector(&count[0], count.size());
+    auto uu_offset  = mb.CreateVector(&_uuid[0], _uuid.size());
+    auto request_offset = CreateWorkerSpawnRequest(mb, cnt_offset, uu_offset);
     mb.Finish(request_offset);
     auto request_msg = mb.ReleaseMessage<WorkerSpawnRequest>();
 
@@ -261,7 +124,7 @@ public:
     /* Parse response. */
     std::vector<std::string> worker_address;
     if (status.ok()) {
-      const WorkerSpawnReply *response = response_msg.GetRoot();
+      const WorkerSpawnReply* response = response_msg.GetRoot();
       auto wa = response->worker_address();
       for (auto addr_offset : *wa) {
         std::string _wa = daemon_ip + ":" + addr_offset->str();
@@ -281,29 +144,55 @@ private:
 
 class ManagerServiceImpl final : public ManagerService::Service {
   virtual grpc::Status RegisterDaemon(
-      grpc::ServerContext *context,
-      const flatbuffers::grpc::Message<DaemonRegisterRequest> *request_msg,
-      flatbuffers::grpc::Message<DaemonRegisterReply> *response_msg) override {
-    const DaemonRegisterRequest *request = request_msg->GetRoot();
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<DaemonRegisterRequest>* request_msg,
+      flatbuffers::grpc::Message<DaemonRegisterReply>* response_msg) override {
+    const DaemonRegisterRequest* request = request_msg->GetRoot();
     std::string peer_address = context->peer().substr(context->peer().find(':') + 1);
     const std::string daemon_ip = peer_address.substr(0, peer_address.find(':'));
     const std::string daemon_address = daemon_ip + ":" + request->daemon_address()->str();
     std::cerr << "Register spawn daemon at " << daemon_address << std::endl;
 
-    /* Request daemon to spawn an API server pool. */
-    auto channel = grpc::CreateChannel(daemon_address, grpc::InsecureChannelCredentials());
-    auto client = new DaemonServiceClient(channel);
-    std::vector<std::string> worker_address =
-      client->SpawnWorker(config->worker_pool_size, daemon_ip);;
+    /* Register GPU information in a global table */
+    auto daemon_info = new DaemonInfo();
+    daemon_info->ip = daemon_ip;
+    for (auto uu_offset : *(request->uuid()))
+      daemon_info->gpu_info.push_back({uu_offset->str(), 0});
+    int idx = 0;
+    for (auto fm : *(request->free_memory())) {
+      daemon_info->gpu_info[idx].free_memory = fm;
+      ++idx;
+    }
+    daemon_info->print_gpu_info();
+    config->daemons.push_back(daemon_info);
 
-    /* Register daemon and its API servers in a global table */
-    // TODO
+    /* Request daemon to spawn an API server pool.
+     * Currently each API server can see only one GPU, and every GPU has
+     * `config->worker_pool_size` API servers running on it. */
+    auto channel = grpc::CreateChannel(daemon_address, grpc::InsecureChannelCredentials());
+    daemon_info->client = new DaemonServiceClient(channel);
+    std::vector<int> count;
+    std::vector<std::string> uuid;
+    for (auto gi : daemon_info->gpu_info) {
+      count.push_back(config->worker_pool_size);
+      uuid.push_back(gi.uuid);
+    }
+    std::vector<std::string> worker_address =
+      daemon_info->client->SpawnWorker(count, uuid, daemon_ip);
+
+    /* Register API servers in a global table */
+    int k = 0;
+    for (unsigned i = 0; i < count.size(); ++i)
+      for (int j = 0; j < count[i]; ++j) {
+        daemon_info->workers.enqueue(worker_address[k], uuid[i]);
+        ++k;
+      }
 
     return grpc::Status::OK;
   }
 };
 
-void run_manager_service(ManagerConfig *config) {
+void run_manager_service(ManagerConfig* config) {
   std::string server_address("0.0.0.0:" + std::to_string(config->manager_port));
   ManagerServiceImpl service;
 
@@ -315,83 +204,129 @@ void run_manager_service(ManagerConfig *config) {
   server->Wait();
 }
 
-int main(int argc, char *argv[]) {
-  config = parse_arguments(argc, argv);
-  config->print();
+void reply_to_guestlib(int client_fd, std::string worker_address) {
+  struct command_base response;
+  uintptr_t* worker_port;
+  int assigned_worker_port = std::stoi(worker_address.substr(worker_address.find(':') + 1));
 
-  std::thread server_thread(run_manager_service, config);
-  server_thread.join();
+  response.api_id = INTERNAL_API;
+  worker_port = (uintptr_t*)response.reserved_area;
+  *worker_port = assigned_worker_port;
+  send_socket(client_fd, &response, sizeof(struct command_base));
+}
 
-  // BELOW HAS NOT BEEN UPDATED
+void handle_guestlib(int client_fd, ManagerConfig *config) {
+  struct command_base msg;
 
-  std::vector<std::string> visible_cuda_device;
-  std::vector<std::string> visible_cuda_device_uuid;
+  /* get guestlib info */
+  recv_socket(client_fd, &msg, sizeof(struct command_base));
+  switch (msg.command_type) {
+  case NW_NEW_APPLICATION:
+    /* API server assignment policy.
+     *
+     * Currently it is assumed that every API server is running on only one GPU.
+     * The policy simply assigns an available API server to the application;
+     * if no idle API server exists, the manager requests a daemon to spawn
+     * a new API server.
+     *
+     * The manager has the information of the free GPU memory on each GPU node,
+     * while this information is not currently used as we need annotations of every
+     * application's GPU usage or retrieve GPU usage dynamically.
+     *
+     * `config->daemons` should be protected with locks in case of hot-plugged
+     * spawn daemons. For now it is assumed that all daemons have been spawned
+     * before any guestlib connects in.
+     */
+    for (auto daemon : config->daemons) {
+      auto assigned_worker = daemon->workers.dequeue();
+      if (!assigned_worker.first.empty()) {
+        /* Find an idle API server, respond guestlib and spawn a new idle worker. */
+        reply_to_guestlib(client_fd, assigned_worker.first);
+        close(client_fd);
 
-  /* setup signal handler */
+        std::vector<int> count = {1};
+        std::vector<std::string> uuid = {assigned_worker.second};
+        std::vector<std::string> worker_address =
+          daemon->client->SpawnWorker(count, uuid, daemon->ip);
+        daemon->workers.enqueue(worker_address[0], assigned_worker.second);
+        return;
+      }
+    }
+
+    /* No idle API server was found, spawn a new API server.
+     * Currently, we constantly spawn the new API server on the first GPU of the
+     * first GPU node.
+     */
+    {
+      std::vector<int> count = {1};
+      std::vector<std::string> uuid = {config->daemons[0]->gpu_info[0].uuid};
+      std::vector<std::string> worker_address =
+        config->daemons[0]->client->SpawnWorker(count, uuid, config->daemons[0]->ip);
+      reply_to_guestlib(client_fd, worker_address[0]);
+      close(client_fd);
+    }
+    break;
+
+  default:
+    std::cerr << "Received unrecognized message " << msg.command_type
+              << " from guestlib" << std::endl;
+    close(client_fd);
+  }
+}
+
+/**
+ * This routine functions as the traditional AvA manager, listening on a hard-coded
+ * port WORKER_MANAGER_PORT (3333). The guestlib connects to this port to request
+ * for the API server.
+ * We are getting rid of those hard-coded configurations, but this waits for some
+ * AvA upstream changes. The final goal is to merge this into the ManagerService
+ * gRPC routine.
+ */
+void start_traditional_manager() {
+  struct sockaddr_in address;
+  int addrlen = sizeof(address);
+  int opt     = 1;
+  int client_fd;
+
+  /* Setup signal handler. */
   if ((original_sigint_handler = signal(SIGINT, sigint_handler)) == SIG_ERR)
     printf("failed to catch SIGINT\n");
 
-  /* setup worker info hash table */
-  worker_info =
-      g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, free);
-
-  /* initialize TCP socket */
-  struct sockaddr_in address;
-  int addrlen = sizeof(address);
-  int opt = 1;
-  int client_fd;
-  pid_t child;
-  int worker_port;
-
-  /* GPU information */
-  total_gpu_num = visible_cuda_device.size();
-  fprintf(stderr, "* total GPU: %d\n", total_gpu_num);
-
-  /* Worker information, each GPU has a pool of pre-spawned workers */
-  Workers *idle_workers = new Workers[total_gpu_num];
-
-  /* Spawn worker pool for each GPU. */
-  for (int i = 0; i < total_gpu_num; i++) {
-    for (unsigned j = 0; j < worker_pool_size; j++) {
-      worker_port = get_worker_port(worker_id);
-      idle_workers[i].enqueue(worker_port);
-
-      child = fork();
-      if (child == 0) {
-        spawn_worker();
-      }
-      worker_id++;
-    }
-  }
-
-  /* Start manager TCP server */
+  /* Initialize TCP socket. */
   if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
     perror("socket");
   }
-  // Forcefully attaching socket to the manager port
   if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                  sizeof(opt))) {
     perror("setsockopt");
   }
-  address.sin_family = AF_INET;
+  address.sin_family      = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(config->manager_port);
+  address.sin_port        = htons(WORKER_MANAGER_PORT);
 
-  if (bind(listen_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+  if (bind(listen_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
     perror("bind failed");
   }
   if (listen(listen_fd, 10) < 0) {
     perror("listen");
   }
 
-  /* polling new applications */
+  /* Polling new applications. */
   do {
     client_fd =
-        accept(listen_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-    std::async(std::launch::async | std::launch::deferred, handle_guestlib,
-               client_fd, visible_cuda_device, visible_cuda_device_uuid,
-               &idle_workers[0]);
+        accept(listen_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+    std::async(std::launch::async | std::launch::deferred,
+        handle_guestlib, client_fd, config);
   } while (1);
+}
+
+int main(int argc, char* argv[]) {
+  config = parse_arguments(argc, argv);
+  config->print();
+
+  std::thread server_thread(run_manager_service, config);
+  start_traditional_manager();
+  server_thread.join();
 
   return 0;
 }

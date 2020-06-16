@@ -17,15 +17,15 @@ public:
 
 class Workers {
  public:
-  void enqueue(int port, std::string uuid = "") {
+  void enqueue(std::string worker_address, std::string uuid = "") {
     this->mtx.lock();
-    this->worker_queue.push({port, uuid});
+    this->worker_queue.push({worker_address, uuid});
     this->mtx.unlock();
   }
 
-  std::pair<int, std::string> dequeue() {
+  std::pair<std::string, std::string> dequeue() {
     this->mtx.lock();
-    std::pair<int, std::string> ret;
+    std::pair<std::string, std::string> ret;
     if (this->worker_queue.size() > 0) {
       ret = this->worker_queue.front();
       this->worker_queue.pop();
@@ -43,7 +43,7 @@ class Workers {
   }
 
  private:
-  std::queue<std::pair<int, std::string> > worker_queue;
+  std::queue<std::pair<std::string, std::string> > worker_queue;
   std::mutex mtx;
 };
 

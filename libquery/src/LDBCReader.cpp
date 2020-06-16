@@ -812,7 +812,7 @@ size_t LDBCReader::parseSimpleEdgeCSV(
 
     GIDType destGID = internal::getGID(destMap, std::stoul(dest));
 
-    /// galois::gDebug(srcGID, " ", destGID);
+    // galois::gDebug(srcGID, " ", destGID);
 
     // increment edge count of src gid by one
     edgesPerNode[srcGID - gidOffset]++;
@@ -889,7 +889,7 @@ void LDBCReader::constructCSREdges(
         // galois::gDebug(src, " ", dest, " ", label, " insert ",
         // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
-        constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
+        constructEdge(attGraphPointer, insertionPoint, dest, label, 0);
       },
       galois::loopname("SaveSimpleEdges"), galois::no_stats());
 
@@ -917,7 +917,7 @@ void LDBCReader::constructCSREdges(
         // galois::gDebug(src, " ", dest, " ", label, " insert ",
         // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
-        constructNewEdge(attGraphPointer, insertionPoint, dest, label, 0);
+        constructEdge(attGraphPointer, insertionPoint, dest, label, 0);
 
         // handle attribute to save as well
         const std::string& attributeName = e.attributeName;

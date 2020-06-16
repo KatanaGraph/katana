@@ -301,7 +301,7 @@ class SubgraphQueryMiner {
         for (auto d_edge : dataGraph.edges(d_vertex, *deData)) {
           QueryGNode d_dst = dataGraph.getEdgeDst(d_edge);
           galois::gDebug("Checking outgoing neighbor of ", d_vertex, ": ", d_dst, "...\n");
-          if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
+          if (toAdd(n, emb, index, d_dst, neighbors, numInNeighbors)) {
             addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors,
                                                numInNeighbors, out_queue);
           }
@@ -320,7 +320,7 @@ class SubgraphQueryMiner {
         for (auto d_edge : dataGraph.in_edges(d_vertex, *deData)) {
           QueryGNode d_dst = dataGraph.getInEdgeDst(d_edge);
           galois::gDebug("Checking incoming neighbor ", d_vertex, ": ", d_dst, "...\n");
-          if (toAdd(n, emb, d_dst, index, neighbors, numInNeighbors)) {
+          if (toAdd(n, emb, index, d_dst, neighbors, numInNeighbors)) {
             addEmbedding<DFS, printEmbeddings>(n, emb, d_dst, neighbors,
                                                numInNeighbors, out_queue);
           }

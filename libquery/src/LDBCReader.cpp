@@ -16,6 +16,18 @@ uint32_t getLabelID(std::unordered_map<std::string, uint32_t>& labelIDs,
   }
 }
 
+//! Given a gid map and key/value, insert; dies if key already exists
+//! (i.e. must have unique keys)
+void insertGIDMap(LDBCReader::GIDMap& map2Insert, LDBCReader::LDBCNodeType key,
+                  LDBCReader::GIDType value) {
+  // first is iterator, second is bool
+  auto insertResult = map2Insert.insert_or_assign(key, value);
+  // if it was false, it  means lid already existed in map
+  if (!insertResult.second) {
+    GALOIS_DIE(key, " was already mapped to some GID once before");
+  }
+}
+
 //! Given a gid map and a key, get the key from the map; kills program if key
 //! doesn't exist in the map (i.e., using this => key must exist)
 LDBCReader::GIDType getGID(LDBCReader::GIDMap& map2Query,
@@ -200,7 +212,7 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName, " ", oURL);
 
     // organization lid to gid mapping save
-    this->organization2GID[std::stoul(oID)] = thisGID;
+    internal::insertGIDMap(organization2GID, std::stoul(oID), thisGID);
 
     // in addition to being an organization, it is also whatever type
     // is listed in the file
@@ -279,7 +291,7 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName, " ", oURL);
 
     // place lid to gid mapping save
-    this->place2GID[std::stoul(oID)] = thisGID;
+    internal::insertGIDMap(place2GID, std::stoul(oID), thisGID);
 
     // in addition to being an place, it is also whatever type
     // is listed in the file
@@ -344,7 +356,7 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oName, " ", oURL);
 
     // place lid to gid mapping save
-    this->tag2GID[std::stoul(oID)] = thisGID;
+    internal::insertGIDMap(tag2GID, std::stoul(oID), thisGID);
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagLabel);
     // save all 3 parsed fields to attributes
@@ -398,7 +410,7 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
     // galois::gDebug(oID, " ", oType, " ", oName);
 
     // place lid to gid mapping save
-    this->tagClass2GID[std::stoul(oID)] = thisGID;
+    internal::insertGIDMap(tagClass2GID, std::stoul(oID), thisGID);
     // set tag label
     setNodeLabel(attGraphPointer, thisGID, tagClassLabel);
     // save all 3 parsed fields to attributes
@@ -476,7 +488,7 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
     //              "|", fBrowser, "|", fLanguage, "|", fMail);
 
     // place lid to gid mapping save
-    this->person2GID[std::stoul(fID)] = thisGID;
+    internal::insertGIDMap(person2GID, std::stoul(fID), thisGID);
     // set label
     setNodeLabel(attGraphPointer, thisGID, personLabel);
 
@@ -547,7 +559,7 @@ void LDBCReader::parseForumCSV(const std::string filepath) {
     // galois::gInfo(fCreation, "|", fID, "|", fTitle, "|", fType);
 
     // place lid to gid mapping save
-    this->forum2GID[std::stoul(fID)] = thisGID;
+    internal::insertGIDMap(forum2GID, std::stoul(fID), thisGID);
     // set label
     setNodeLabel(attGraphPointer, thisGID, forumLabel);
 
@@ -623,7 +635,7 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
     //              fBrowser, "|", fLanguage, "|", fContent, "|", fLength);
 
     // place lid to gid mapping save
-    this->post2GID[std::stoul(fID)] = thisGID;
+    internal::insertGIDMap(post2GID, std::stoul(fID), thisGID);
     // set label
     setNodeLabel(attGraphPointer, thisGID, postLabel);
 
@@ -702,7 +714,7 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
     //              fContent, "|", fLength);
 
     // place lid to gid mapping save
-    this->comment2GID[std::stoul(fID)] = thisGID;
+    internal::insertGIDMap(comment2GID, std::stoul(fID), thisGID);
     // set label
     setNodeLabel(attGraphPointer, thisGID, commentLabel);
 

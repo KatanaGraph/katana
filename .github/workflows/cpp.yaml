@@ -190,7 +190,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DGALOIS_ENABLE_DIST=on \
           -DUSE_ARCH=none \
-          -DGRAPH_LOCATION=$HOME/.cache/graph/inputs
+          -DGALOIS_GRAPH_LOCATION=$HOME/.cache/graph/inputs
     - name: build
       run: |
         cmake --build $HOME/build --parallel 4

@@ -1,9 +1,23 @@
 #include "querying/LDBCReader.h"
-// TODO figure out how this will end up working with all these typedefs
-//#define USE_QUERY_GRAPH_WITH_NODE_LABEL
-
 // namespace for various helper functions
 namespace internal {
+// TODO this function and one below are pretty much the same aside from
+// a few things; merge them
+//! Given map + key, get value; key must exist else die
+uint32_t getLabelID(std::unordered_map<std::string, uint32_t>& labelIDs,
+                    std::string key) {
+  auto entry = labelIDs.find(key);
+  if (entry != labelIDs.end()) {
+    return entry->second;
+  } else {
+    GALOIS_DIE(key, " not found in label id mapping");
+    // shouldn't get here
+    return 0;
+  }
+}
+
+//! Given a gid map and a key, get the key from the map; kills program if key
+//! doesn't exist in the map (i.e., using this => key must exist)
 LDBCReader::GIDType getGID(LDBCReader::GIDMap& map2Query,
                            LDBCReader::LDBCNodeType key) {
   auto gidEntry = map2Query.find(key);
@@ -152,10 +166,12 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
 
   // get the label for organization and its subtypes
   // assumption here is that they exist and will be found
-  // TODO error checking
-  uint32_t orgIndex     = this->attGraph.nodeLabelIDs["Organisation"];
-  uint32_t uniIndex     = this->attGraph.nodeLabelIDs["University"];
-  uint32_t companyIndex = this->attGraph.nodeLabelIDs["Company"];
+  uint32_t orgIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Organisation");
+  uint32_t uniIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "University");
+  uint32_t companyIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Company");
   galois::gDebug("org: ", orgIndex, " uni: ", uniIndex,
                  " comp: ", companyIndex);
   // create the labels for the 2 possible types of nodes in this file
@@ -224,11 +240,14 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
 
   // get the labels for place and its subtypes
   // assumption here is that they exist and will be found
-  // TODO error checking
-  uint32_t placeIndex     = this->attGraph.nodeLabelIDs["Place"];
-  uint32_t cityIndex      = this->attGraph.nodeLabelIDs["City"];
-  uint32_t countryIndex   = this->attGraph.nodeLabelIDs["Country"];
-  uint32_t continentIndex = this->attGraph.nodeLabelIDs["Continent"];
+  uint32_t placeIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Place");
+  uint32_t cityIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "City");
+  uint32_t countryIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Country");
+  uint32_t continentIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Continent");
 
   galois::gDebug("place: ", placeIndex, " city: ", cityIndex,
                  " country: ", countryIndex, " continent: ", continentIndex);
@@ -300,8 +319,7 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
   std::string header;
   std::getline(tagFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t tagIndex = this->attGraph.nodeLabelIDs["Tag"];
+  uint32_t tagIndex = internal::getLabelID(this->attGraph.nodeLabelIDs, "Tag");
   galois::gDebug("tag: ", tagIndex);
   // create tag label
   uint32_t tagLabel = (1 << tagIndex);
@@ -354,8 +372,8 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   std::string header;
   std::getline(tagClassFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t tagClassIndex = this->attGraph.nodeLabelIDs["TagClass"];
+  uint32_t tagClassIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "TagClass");
   galois::gDebug("tagclass: ", tagClassIndex);
   // create tag label
   uint32_t tagClassLabel = (1 << tagClassIndex);
@@ -408,8 +426,8 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
   std::string header;
   std::getline(nodeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t personIndex = this->attGraph.nodeLabelIDs["Person"];
+  uint32_t personIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Person");
   galois::gDebug("person: ", personIndex);
   // create label
   uint32_t personLabel = (1 << personIndex);
@@ -496,8 +514,8 @@ void LDBCReader::parseForumCSV(const std::string filepath) {
   std::string header;
   std::getline(nodeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t forumIndex = this->attGraph.nodeLabelIDs["Forum"];
+  uint32_t forumIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Forum");
   galois::gDebug("forum: ", forumIndex);
   // create label
   uint32_t forumLabel = (1 << forumIndex);
@@ -560,9 +578,10 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
   std::string header;
   std::getline(nodeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t messageIndex = this->attGraph.nodeLabelIDs["Message"];
-  uint32_t postIndex    = this->attGraph.nodeLabelIDs["Post"];
+  uint32_t messageIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Message");
+  uint32_t postIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Post");
   galois::gDebug("message: ", messageIndex, " post: ", postIndex);
   // create label
   uint32_t postLabel = (1 << postIndex) & (1 << messageIndex);
@@ -643,9 +662,10 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
   std::string header;
   std::getline(nodeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t messageIndex = this->attGraph.nodeLabelIDs["Message"];
-  uint32_t commentIndex = this->attGraph.nodeLabelIDs["Comment"];
+  uint32_t messageIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Message");
+  uint32_t commentIndex =
+      internal::getLabelID(this->attGraph.nodeLabelIDs, "Comment");
   galois::gDebug("message: ", messageIndex, " comment: ", commentIndex);
   // create label
   uint32_t commentLabel = (1 << commentIndex) & (1 << messageIndex);
@@ -721,8 +741,8 @@ size_t LDBCReader::parseSimpleEdgeCSV(
   std::string header;
   std::getline(edgeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t edgeTypeIndex = this->attGraph.edgeLabelIDs[edgeType];
+  uint32_t edgeTypeIndex =
+      internal::getLabelID(this->attGraph.edgeLabelIDs, edgeType);
   galois::gDebug("edgeclass: ", edgeTypeIndex);
   // create tag label
   uint32_t edgeLabel = (1 << edgeTypeIndex);
@@ -929,8 +949,8 @@ size_t LDBCReader::parseEdgeCSVSpecified(
   std::string header;
   std::getline(edgeFile, header);
 
-  // TODO error checking for non-existence
-  uint32_t edgeTypeIndex = this->attGraph.edgeLabelIDs[edgeType];
+  uint32_t edgeTypeIndex =
+      internal::getLabelID(this->attGraph.edgeLabelIDs, edgeType);
   galois::gDebug("edgeclass: ", edgeTypeIndex);
   // create tag label
   uint32_t edgeLabel = (1 << edgeTypeIndex);

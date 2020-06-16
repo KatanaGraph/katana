@@ -372,14 +372,6 @@ private:
    */
   void parseAndConstructCommentEdges();
 
-public:
-  /**
-   * Constructor takes directory location and expected nodes/edges. Allocates
-   * the memory required so only 1 pass through the files will be necessary
-   * Initializes memory for node/edge labels and attributes.
-   */
-  LDBCReader(std::string _ldbcDirectory, GIDType _numNodes, uint64_t _numEdges);
-
   /**
    * Parses the "static" nodes/edges of the dataset. First parses all nodes,
    * then parses all edges of those nodes.
@@ -398,6 +390,22 @@ public:
    * Node classes in this include person, forum, comment, post.
    */
   void dynamicParsing();
+
+public:
+  /**
+   * Constructor takes directory location and expected nodes/edges. Allocates
+   * the memory required so only 1 pass through the files will be necessary
+   * Initializes memory for node/edge labels and attributes.
+   */
+  LDBCReader(std::string _ldbcDirectory, GIDType _numNodes, uint64_t _numEdges);
+
+  /**
+   * Parses entire LDBC directory and serializes the attributed graph to disk
+   * to the specified file.
+   *
+   * @param outputFile Name of serialized AttributedGraph
+   */
+  void parseAndSave(std::string outputFile);
 };
 
 #endif

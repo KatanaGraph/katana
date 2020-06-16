@@ -16,7 +16,6 @@ uint32_t getLabelID(std::unordered_map<std::string, uint32_t>& labelIDs,
   }
 }
 
-// TODO setnode/edgeattribute make sure attribute eexists before inserting
 // TODO save graph to disk
 // TODO attributed graph loader directly from disk without BAE INTERFACE
 // TODO neo4j import fix
@@ -1333,6 +1332,9 @@ void LDBCReader::parseAndConstructCommentEdges() {
 }
 
 void LDBCReader::staticParsing() {
+  galois::StatTimer timer("StaticParseTime");
+  timer.start();
+
   // parse static nodes
   this->parseOrganizationCSV(ldbcDirectory + "/" +
                              "static/organisation_0_0.csv");
@@ -1367,9 +1369,12 @@ void LDBCReader::staticParsing() {
   this->parseAndConstructSimpleEdges(
       ldbcDirectory + "/" + "static/tagclass_isSubclassOf_tagclass_0_0.csv",
       "isSubclassOf", NL_TAGCLASS, NL_TAGCLASS);
+  timer.stop();
 }
 
 void LDBCReader::dynamicParsing() {
+  galois::StatTimer timer("DynamicParseTime");
+  timer.start();
   // get all nodes in memory first in this order: person, forum
   // post, comment
   this->parsePersonCSV(ldbcDirectory + "/" + "dynamic/person_0_0.csv");
@@ -1388,4 +1393,16 @@ void LDBCReader::dynamicParsing() {
 
   galois::gInfo("Total of ", this->finishedNodes, " and ", this->addedEdges,
                 " edges");
+  timer.stop();
+}
+
+void LDBCReader::parseAndSave(std::string outputFile) {
+  // parse the static and dynamic directories
+  this->staticParsing();
+  this->dynamicParsing();
+  galois::StatTimer timer("GraphSavingTimer");
+  timer.start();
+  // save graph to disk
+  saveGraph(&(this->attGraph), outputFile.c_str());
+  timer.stop();
 }

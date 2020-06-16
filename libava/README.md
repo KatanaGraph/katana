@@ -38,20 +38,34 @@ Then running `make` will build everything.
 Configuration
 =============
 
-AvA manager requires a GPU ID list file as input.
+AvA spawn daemon requires a GPU ID list file as input.
 `${KATANA_SOURCE_DIR}/libava/manager/gpu_example.conf` is an example.
 The GPU UUID can be parsed from `nvidia -L` command.
 
 Use AvA
 =======
 
-In `${KATANA_BUILD_DIR}/libava/manager`, start the AvA manager by the following
-command. This requirement of the working directory will be removed in the next
-version.
+Assume we are at `${KATANA_BUILD_DIR}`.
+Start the AvA manager by the following command (which runs the manager service
+at port `3334` and sets the API server pool size to `2`).
+Note that the port `3333` is reserved by the manager in the current version, used
+for guestlib's connection.
 
 ```Shell
-AVA_CHANNEL="TCP" AVA_WPOOL="TRUE" ./manager -f gpu.conf
+./libava/manager/manager -m 3334 -n 2
 ```
+
+Open another terminal, start the AvA spawn daemon on the local machine (as
+this example) or a remote GPU server:
+
+```Shell
+./libava/manager/spawn_daemon -f gpu.conf -w libava/generated/worker -m 0.0.0.0:3334
+```
+
+The daemon's port can be set with `-p 3335`, and the API server's base port can be set
+with `-b 4000`.
+The daemon will display and register the GPU information in the manager.
+The manager will also request it to spawn an API server pool on every GPU.
 
 Then the application can be started by loading AvA's generated CUDA library.
 In the build directory (`${KATANA_BUILD_DIR}`):

@@ -69,6 +69,11 @@ class CypherCompiler {
     return anonEdgeIDs[node];
   }
 
+  /**
+   * Compile a node in a pattern path.
+   *
+   * @param element root of pattern path node
+   */
   void compile_node_pattern_path(const cypher_astnode_t* element,
                                  MatchedNode& mn) {
     std::string strName, strID;
@@ -191,40 +196,66 @@ class CypherCompiler {
     }
   }
 
+  /**
+   * Compile a pattern path which is found in a MATCH, MERGE, or CREATE
+   * clause.
+   *
+   * Pattern paths are node patterns connected by rel patterns.
+   *
+   * Current implementation assumes that it will be in a MATCH clause;
+   * TODO make it work with the rest eventually.
+   * @param ast Root of the pattern path AST
+   */
   int compile_pattern_path(const cypher_astnode_t* ast) {
     unsigned int nelements = cypher_ast_pattern_path_nelements(ast);
-    assert(nelements > 2);
-    assert((nelements % 2) == 1); // odd number of elements
-    for (unsigned int i = 1; i < nelements; i += 2) {
-      auto rel = cypher_ast_pattern_path_get_element(ast, i);
-      assert(cypher_astnode_type(rel) == CYPHER_AST_REL_PATTERN);
-      auto direction = cypher_ast_rel_pattern_get_direction(rel);
 
-      auto first = cypher_ast_pattern_path_get_element(ast, i - 1);
-      assert(cypher_astnode_type(first) == CYPHER_AST_NODE_PATTERN);
+    if (nelements > 2) {
+      // if greater than 2, it means it must have an edge and another
+      // node; such constructions must ultimately have an odd number of
+      // elements else there will be a disconnected node
+      assert((nelements % 2) == 1); // odd number of elements
 
-      auto second = cypher_ast_pattern_path_get_element(ast, i + 1);
-      assert(cypher_astnode_type(second) == CYPHER_AST_NODE_PATTERN);
+      // + 2 because we're interested in edges, which are every other element
+      for (unsigned int i = 1; i < nelements; i += 2) {
+        // get edge and its direction
+        auto rel = cypher_ast_pattern_path_get_element(ast, i);
+        assert(cypher_astnode_type(rel) == CYPHER_AST_REL_PATTERN);
+        auto direction = cypher_ast_rel_pattern_get_direction(rel);
 
-      ir.emplace_back();
-      if (direction == CYPHER_REL_OUTBOUND) { // source
-        compile_node_pattern_path(first, ir.back().caused_by);
-        compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, ir.back().acted_on);
-      } else {
-        compile_node_pattern_path(first, ir.back().acted_on);
-        compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, ir.back().caused_by);
+        // get the 2 nodes connected by the edge
+        auto first = cypher_ast_pattern_path_get_element(ast, i - 1);
+        assert(cypher_astnode_type(first) == CYPHER_AST_NODE_PATTERN);
+        auto second = cypher_ast_pattern_path_get_element(ast, i + 1);
+        assert(cypher_astnode_type(second) == CYPHER_AST_NODE_PATTERN);
+
+        ir.emplace_back(); // create memory for the edge
+
+        // fill in nodes of edge based on direction
+        if (direction == CYPHER_REL_OUTBOUND) { // source
+          compile_node_pattern_path(first, ir.back().caused_by);
+          compile_rel_pattern_path(rel);
+          compile_node_pattern_path(second, ir.back().acted_on);
+        } else {
+          compile_node_pattern_path(first, ir.back().acted_on);
+          compile_rel_pattern_path(rel);
+          compile_node_pattern_path(second, ir.back().caused_by);
+        }
+
+        // if edge was bidirectional, create the node in the other direction
+        if (direction == CYPHER_REL_BIDIRECTIONAL) {
+          ir.emplace_back();
+          compile_node_pattern_path(first, ir.back().caused_by);
+          compile_rel_pattern_path(rel);
+          compile_node_pattern_path(second, ir.back().acted_on);
+        }
       }
-
-      if (direction == CYPHER_REL_BIDIRECTIONAL) {
-        ir.emplace_back();
-        compile_node_pattern_path(first, ir.back().caused_by);
-        compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, ir.back().acted_on);
-      }
+      return 0;
+    } else {
+      // single node pattern path
+      GALOIS_DIE("TODO single node pattern path not yet implemented");
+      // shouldn't even get here
+      return -1;
     }
-    return 0;
   }
 
   void compile_binary_operator(const cypher_astnode_t* ast,
@@ -452,18 +483,34 @@ class CypherCompiler {
     }
   }
 
+  /**
+   * Recursively handle an AST node and its children.
+   *
+   * @param ast Root of tree to handle
+   */
   int compile_ast_node(const cypher_astnode_t* ast) {
+    // get the type of the node
     auto type = cypher_astnode_type(ast);
+
+    // handle differently based on what the type is
     if (type == CYPHER_AST_MATCH) {
+      // match has the following up for grabs
+      // - pattern
+      // - predicate
+      // - optional tag
+      // get predicate if it exists (i.e. WHERE ...)
       auto predicate = cypher_ast_match_get_predicate(ast);
       if (predicate != NULL)
         compile_expression(predicate);
 
       auto pattern = cypher_ast_match_get_pattern(ast);
-      if (pattern != NULL)
+      if (pattern != NULL) {
+        // match on the pattern
         return compile_ast_node(pattern);
-      else
+      } else {
+        // shouldn't get here; means that the match has nothing to match on
         return 0;
+      }
     } else if (type == CYPHER_AST_PATTERN_PATH) {
       return compile_pattern_path(ast);
     } else if (type == CYPHER_AST_SHORTEST_PATH) {
@@ -487,8 +534,17 @@ class CypherCompiler {
     return 0;
   }
 
+  /**
+   * Descend children of root AST and recursively process them.
+   *
+   * Depth first search based descent on the tree.
+   *
+   * @param ast Result of some parse from the cypher
+   */
   int compile_ast(const cypher_parse_result_t* ast) {
+    // loop over roots
     for (unsigned int i = 0; i < ast->nroots; ++i) {
+      // handle each root recursively
       if (compile_ast_node(ast->roots[i]) < 0) {
         return -1;
       }
@@ -524,7 +580,7 @@ public:
   int compile(const char* queryStr) {
     init();
 
-    galois::gDebug("Query:\n", queryStr, "\n");
+    galois::gDebug("Query:\n", queryStr);
 
     cypher_parse_result_t* result =
         cypher_parse(queryStr, NULL, NULL, CYPHER_PARSE_ONLY_STATEMENTS);
@@ -536,26 +592,27 @@ public:
 
     auto nerrors = cypher_parse_result_nerrors(result);
 
+    galois::gDebug("Parsed ", cypher_parse_result_nnodes(result), " AST nodes");
+    galois::gDebug("Read ", cypher_parse_result_ndirectives(result),
+                   " statements");
+    galois::gDebug("Encountered ", nerrors, " errors");
 #ifndef NDEBUG
-    std::cout << "Parsed " << cypher_parse_result_nnodes(result)
-              << " AST nodes\n";
-    std::cout << "Read " << cypher_parse_result_ndirectives(result)
-              << " statements\n";
-    std::cout << "Encountered " << nerrors << " errors\n";
     if (nerrors == 0) {
       cypher_parse_result_fprint_ast(result, stdout, 0, NULL, 0);
     }
 #endif
 
     if (nerrors == 0) {
+      // take ast, change it to a query graph
       compile_ast(result);
     }
-
+    // free memory used by parser
     cypher_parse_result_free(result);
+    galois::gInfo("Cypher query compilation complete");
 
     if (nerrors != 0) {
       galois::gError("Parsing the cypher query failed with ", nerrors,
-                     " errors\n");
+                     " errors");
       return EXIT_FAILURE;
     }
 

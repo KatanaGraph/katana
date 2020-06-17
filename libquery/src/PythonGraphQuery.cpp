@@ -43,6 +43,7 @@ size_t matchCypherQuery(AttributedGraph* dataGraph, EventLimit limit,
                         bool useGraphSimulation) {
   galois::StatTimer compileTime("CypherCompileTime");
 
+  // parse query, get AST
   compileTime.start();
   CypherCompiler cc;
   cc.compile(cypherQueryStr);
@@ -52,6 +53,10 @@ size_t matchCypherQuery(AttributedGraph* dataGraph, EventLimit limit,
   printIR(cc.getIR(), cc.getFilters());
 #endif
 
+  // do actual matching
+  // the things passed from the compiler are the following:
+  // - edges of a query graph
+  // - filters on nodes (contains)
   size_t numMatches =
       matchQuery(dataGraph, limit, window, cc.getIR().data(), cc.getIR().size(),
                  cc.getFilters().data(), useGraphSimulation);
@@ -66,6 +71,8 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
                   size_t numQueryEdges, const char** filters,
                   bool useGraphSimulation) {
   // build node types and prefix sum of edges
+  // tracks number of nodes to be constructed in the query graph; unknown
+  // until all query edges are looped over
   size_t numQueryNodes = 0;
   std::vector<const char*> nodeTypes;
   std::vector<std::string> nodeContains;
@@ -75,14 +82,18 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
   galois::StatTimer compileTime("IRCompileTime");
 
   compileTime.start();
+  // loop through all edges parsed from compiler and do bookkeeping
   for (size_t j = 0; j < numQueryEdges; ++j) {
     // ids of nodes of this edge
+    // assumes that the id is an int
     size_t srcID = std::stoi(queryEdges[j].caused_by.id);
     size_t dstID = std::stoi(queryEdges[j].acted_on.id);
     // grab strings to filter nodes against
     std::string s1 = std::string(filters[2 * j]);
     std::string s2 = std::string(filters[2 * j + 1]);
 
+    // allocate more memory for nodes if node ids go past what we currently
+    // have
     if (srcID >= numQueryNodes) {
       numQueryNodes = srcID + 1;
     }
@@ -93,7 +104,7 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
     nodeContains.resize(numQueryNodes, "");
     prefixSum.resize(numQueryNodes, 0);
 
-    // node types check
+    // node types check: save node types for each id
     if (nodeTypes[srcID] == NULL) {
       nodeTypes[srcID] = queryEdges[j].caused_by.name;
     } else {
@@ -106,7 +117,8 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
       // assert(std::string(nodeTypes[dstID]) ==
       //          std::string(queryEdges[j].acted_on.name));
     }
-    // node contains check
+
+    // node contains check; save string filters for each node
     if (nodeContains[srcID] == "") {
       nodeContains[srcID] = s1;
     } else {
@@ -118,8 +130,9 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
       assert(nodeContains[dstID] == s2);
     }
 
-    // check if query edge is a * edge
+    // check if query edge is a * edge; if not, do degree management
     if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
+      // not found; increment edge count on this node by 1
       prefixSum[srcID]++;
     } else {
       starEdgeList.push_back(std::make_pair(srcID, dstID));
@@ -127,24 +140,30 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
   }
 
   for (std::string i : nodeContains) {
-    galois::gDebug("Contains ", i, "\n");
+    // debug print for limitations on nodes
+    galois::gDebug("Contains ", i);
   }
 
-  // ignore edges that have the star label
+  // ignore edges that have the star label when constructing query graph
   auto actualNumQueryEdges = numQueryEdges - starEdgeList.size();
 
+  // get number of edges per node
   for (size_t i = 1; i < numQueryNodes; ++i) {
     prefixSum[i] += prefixSum[i - 1];
   }
   assert(prefixSum[numQueryNodes - 1] == actualNumQueryEdges);
+  // shift prefix sum to the right; the result is an array that gives the
+  // starting point for where to write new edges for a particular vertex
   for (size_t i = numQueryNodes - 1; i >= 1; --i) {
     prefixSum[i] = prefixSum[i - 1];
   }
   prefixSum[0] = 0;
 
+  // do some trivial checking to make sure we even need to bother matching
+
 #ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-  // check for trivial absence of query
-  // node label checking; make sure labels exist
+  // check for trivial absence of query by node label checking; make sure
+  // labels exist; if they don't, it's an easy no match
   for (size_t i = 0; i < numQueryNodes; ++i) {
     assert(nodeTypes[i] != NULL);
     if (!getNodeLabelMask(*dataGraph, nodeTypes[i]).first) {
@@ -156,7 +175,8 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
 #endif
 
   // TODO refactor code below
-  // edge label checking; make sure labels exist
+  // edge label checking to  make sure labels exist in the graph; if not,
+  // easy no match
   for (size_t j = 0; j < numQueryEdges; ++j) {
     std::string curEdge = std::string(queryEdges[j].label);
     if (curEdge.find("*") == std::string::npos) {
@@ -248,15 +268,19 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
   queryGraph.constructAndSortIndex();
   compileTime.stop();
 
+  // at this point query graph is constructed; can do matching using it
+
   galois::StatTimer simulationTime("GraphSimulationTime");
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
     assert(useGraphSimulation);
 
     simulationTime.start();
+    // first, match query graph without star
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, true, limit,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
+    // handle stars
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starEdgeList) {
       findShortestPaths(dataGraph->graph, sdPair.first, sdPair.second,
@@ -264,6 +288,8 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
                         actualNumQueryEdges + currentStar);
       currentStar++;
     }
+    // rematch taking star into account (handling star should have limited scope
+    // of possible matches)
     matchNodesUsingGraphSimulation(queryGraph, dataGraph->graph, false, limit,
                                    window, false, nodeContains,
                                    dataGraph->nodeNames);
@@ -276,7 +302,7 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
     return countMatchedNodes(dataGraph->graph);
 #endif
   } else if (useGraphSimulation) {
-    // run graph simulation
+    // run graph simulation before running the subgraph querying
     simulationTime.start();
     runGraphSimulation(queryGraph, dataGraph->graph, limit, window, false,
                        nodeContains, dataGraph->nodeNames);

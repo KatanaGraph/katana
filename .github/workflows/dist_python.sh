@@ -12,12 +12,18 @@ BASE="$(cd $(dirname $0); pwd)"
 PLAT=manylinux2014_x86_64
 LEAST_PYBIN=/opt/python/cp35-cp35m/bin
 
+yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+
 yum install -y -q \
   ccache \
   devtoolset-9-libatomic-devel \
   llvm7.0-devel \
   llvm7.0-static \
   openmpi-devel
+
+yum install -y -q --enablerepo=epel \
+  arrow-devel \
+  parquet-devel
 
 ln -s "${LEAST_PYBIN}/conan" /usr/local/bin/conan
 "${BASE}/setup_conan.sh"

@@ -8,7 +8,6 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
   GIT_TAG 38ff7bf54c365a4b
-  GIT_SUBMODULES_RECURSE ON
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )

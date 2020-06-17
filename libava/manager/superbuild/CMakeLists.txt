@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 include(ExternalProject)
 
-set(EXTERNAL_BINARY_DIR ${CMAKE_BINARY_DIR}/third_party)
+set(EXTERNAL_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party)
 
 # Builds absl project from the git submodule.
 ExternalProject_Add(absl
@@ -47,7 +47,7 @@ ExternalProject_Add(protobuf
 # Builds zlib project from the git submodule.
 ExternalProject_Add(zlib
   PREFIX zlib
-  GIT_REPOSITORY https://github.com/madler/zlib
+  GIT_REPOSITORY https://github.com/madler/zlib.git
   SOURCE_DIR "${EXTERNAL_BINARY_DIR}/src/zlib"
   CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_BINARY_DIR}/zlib
@@ -67,7 +67,6 @@ ExternalProject_Add(grpc
   PREFIX grpc
   GIT_REPOSITORY https://github.com/grpc/grpc.git
   GIT_TAG v1.15.1
-  GIT_SUBMODULES_RECURSE ON
   SOURCE_DIR "${EXTERNAL_BINARY_DIR}/src/grpc"
   CMAKE_CACHE_ARGS
         -DgRPC_INSTALL:BOOL=ON
@@ -93,8 +92,8 @@ ExternalProject_Add(flatbuffers
   GIT_TAG v1.12.0
   SOURCE_DIR "${EXTERNAL_BINARY_DIR}/src/flatbuffers"
   CMAKE_CACHE_ARGS
-        -DGRPC_INSTALL_PATH=${EXTERNAL_BINARY_DIR}/grpc
-        -DPROTOBUF_DOWNLOAD_PATH=${EXTERNAL_BINARY_DIR}/src/protobuf
+        -DGRPC_INSTALL_PATH:PATH=${EXTERNAL_BINARY_DIR}/grpc
+        -DPROTOBUF_DOWNLOAD_PATH:PATH=${EXTERNAL_BINARY_DIR}/src/protobuf
         -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_BINARY_DIR}/flatbuffers
   DEPENDS protobuf grpc
 )

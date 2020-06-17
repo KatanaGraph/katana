@@ -1,9 +1,10 @@
-#ifndef __LIBAVA_MANAGER_MANAGER_H__
-#define __LIBAVA_MANAGER_MANAGER_H__
+#ifndef LIBAVA_MANAGER_MANAGER_H_
+#define LIBAVA_MANAGER_MANAGER_H_
 
 #include <stdint.h>
 
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -11,56 +12,56 @@
 
 class GpuInfo {
 public:
-  std::string uuid;
-  uint64_t free_memory;
+  std::string uuid_;
+  uint64_t free_memory_;
 };
 
 class Workers {
 public:
-  void enqueue(std::string worker_address, std::string uuid = "") {
-    this->mtx.lock();
-    this->worker_queue.push({worker_address, uuid});
-    this->mtx.unlock();
+  void Enqueue(std::string worker_address, std::string uuid = "") {
+    this->mtx_.lock();
+    this->worker_queue_.push({worker_address, uuid});
+    this->mtx_.unlock();
   }
 
-  std::pair<std::string, std::string> dequeue() {
-    this->mtx.lock();
+  std::pair<std::string, std::string> Dequeue() {
+    this->mtx_.lock();
     std::pair<std::string, std::string> ret;
-    if (this->worker_queue.size() > 0) {
-      ret = this->worker_queue.front();
-      this->worker_queue.pop();
+    if (this->worker_queue_.size() > 0) {
+      ret = this->worker_queue_.front();
+      this->worker_queue_.pop();
     }
-    this->mtx.unlock();
+    this->mtx_.unlock();
     return ret;
   }
 
-  unsigned int size() {
+  unsigned int Size() {
     unsigned int size;
-    this->mtx.lock();
-    size = this->worker_queue.size();
-    this->mtx.unlock();
+    this->mtx_.lock();
+    size = this->worker_queue_.size();
+    this->mtx_.unlock();
     return size;
   }
 
 private:
-  std::queue<std::pair<std::string, std::string>> worker_queue;
-  std::mutex mtx;
+  std::queue<std::pair<std::string, std::string>> worker_queue_;
+  std::mutex mtx_;
 };
 
 class DaemonServiceClient;
 
 class DaemonInfo {
 public:
-  void print_gpu_info() {
-    for (auto gi : gpu_info)
-      std::cerr << "- " << gi.uuid << " (" << (gi.free_memory >> 20)
+  void PrintGpuInfo() {
+    for (auto const& gi : gpu_info_)
+      std::cerr << "- " << gi.uuid_ << " (" << (gi.free_memory_ >> 20)
                 << " MB)\n";
   }
 
-  DaemonServiceClient* client;
-  std::string ip;
-  std::vector<GpuInfo> gpu_info;
-  Workers workers;
+  std::unique_ptr<DaemonServiceClient> client_;
+  std::string ip_;
+  std::vector<GpuInfo> gpu_info_;
+  Workers workers_;
 };
 
-#endif
+#endif // LIBAVA_MANAGER_MANAGER_H_

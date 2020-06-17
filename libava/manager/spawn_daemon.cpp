@@ -20,39 +20,39 @@
 
 class DaemonConfig {
 public:
-  static std::string const DefaultManagerAddress;
-  static int const DefaultDaemonPort;
-  static int const DefaultWorkerPortBase;
+  static std::string const kDefaultManagerAddress;
+  static int const kDefaultDaemonPort;
+  static int const kDefaultWorkerPortBase;
 
   DaemonConfig(std::string cf, std::string wp,
-               std::string ma = DefaultManagerAddress,
-               int dp = DefaultDaemonPort, int wpb = DefaultWorkerPortBase)
-      : config_file(cf), worker_path(wp), manager_address(ma), daemon_port(dp),
-        worker_port_base(wpb) {}
+               std::string ma = kDefaultManagerAddress,
+               int dp = kDefaultDaemonPort, int wpb = kDefaultWorkerPortBase)
+      : config_file_(cf), worker_path_(wp), manager_address_(ma),
+        daemon_port_(dp), worker_port_base_(wpb) {}
 
-  void print() {
-    std::cerr << "* Manager address: " << manager_address << std::endl
-              << "* Daemon port: " << daemon_port << std::endl
-              << "* API server: " << worker_path << std::endl
-              << "* API server base port: " << worker_port_base << std::endl
-              << "* Total GPU: " << visible_cuda_devices.size() << std::endl;
-    for (unsigned i = 0; i < visible_cuda_devices.size(); ++i)
+  void Print() {
+    std::cerr << "* Manager address: " << manager_address_ << std::endl
+              << "* Daemon port: " << daemon_port_ << std::endl
+              << "* API server: " << worker_path_ << std::endl
+              << "* API server base port: " << worker_port_base_ << std::endl
+              << "* Total GPU: " << visible_cuda_devices_.size() << std::endl;
+    for (unsigned i = 0; i < visible_cuda_devices_.size(); ++i)
       std::cerr << "  - GPU-" << i << " UUID is "
-                << visible_cuda_devices[i].uuid << std::endl;
+                << visible_cuda_devices_[i].uuid_ << std::endl;
   }
 
-  std::string config_file;
-  std::string worker_path;
-  std::string manager_address;
-  int daemon_port;
-  int worker_port_base;
+  std::string config_file_;
+  std::string worker_path_;
+  std::string manager_address_;
+  int daemon_port_;
+  int worker_port_base_;
 
-  std::vector<GpuInfo> visible_cuda_devices;
+  std::vector<GpuInfo> visible_cuda_devices_;
 };
 
-std::string const DaemonConfig::DefaultManagerAddress = "0.0.0.0:3334";
-int const DaemonConfig::DefaultDaemonPort             = 3335;
-int const DaemonConfig::DefaultWorkerPortBase         = 4000;
+std::string const DaemonConfig::kDefaultManagerAddress = "0.0.0.0:3334";
+int const DaemonConfig::kDefaultDaemonPort             = 3335;
+int const DaemonConfig::kDefaultWorkerPortBase         = 4000;
 
 DaemonConfig* config;
 
@@ -62,9 +62,9 @@ DaemonConfig* parse_arguments(int argc, char* argv[]) {
   char* config_file_name           = NULL;
   const char* worker_relative_path = NULL;
   char worker_path[PATH_MAX];
-  std::string manager_address = DaemonConfig::DefaultManagerAddress;
-  int daemon_port             = DaemonConfig::DefaultDaemonPort;
-  int worker_port_base        = DaemonConfig::DefaultWorkerPortBase;
+  std::string manager_address = DaemonConfig::kDefaultManagerAddress;
+  int daemon_port             = DaemonConfig::kDefaultDaemonPort;
+  int worker_port_base        = DaemonConfig::kDefaultWorkerPortBase;
 
   while ((c = getopt(argc, argv, "f:w:m:p:b:")) != -1) {
     switch (c) {
@@ -90,9 +90,9 @@ DaemonConfig* parse_arguments(int argc, char* argv[]) {
               "[-m manager_address {%s}] "
               "[-p daemon_port {%d}] "
               "[-b worker_port_base {%d}]\n",
-              argv[0], DaemonConfig::DefaultManagerAddress.c_str(),
-              DaemonConfig::DefaultDaemonPort,
-              DaemonConfig::DefaultWorkerPortBase);
+              argv[0], DaemonConfig::kDefaultManagerAddress.c_str(),
+              DaemonConfig::kDefaultDaemonPort,
+              DaemonConfig::kDefaultWorkerPortBase);
       exit(EXIT_FAILURE);
     }
   }
@@ -118,7 +118,7 @@ DaemonConfig* parse_arguments(int argc, char* argv[]) {
 }
 
 void parse_config_file(DaemonConfig* config) {
-  std::ifstream config_file(config->config_file);
+  std::ifstream config_file(config->config_file_);
   std::string line;
   nvmlReturn_t ret = nvmlInit();
 
@@ -145,13 +145,13 @@ void parse_config_file(DaemonConfig* config) {
       exit(-1);
     }
 
-    config->visible_cuda_devices.push_back({pchr + 1, mem.free});
+    config->visible_cuda_devices_.push_back({pchr + 1, mem.free});
   }
 }
 
 class DaemonServiceImpl final : public DaemonService::Service {
 public:
-  DaemonServiceImpl() : DaemonService::Service() { worker_id.store(0); }
+  DaemonServiceImpl() : DaemonService::Service() { worker_id_.store(0); }
 
   virtual grpc::Status SpawnWorker(
       grpc::ServerContext* context,
@@ -163,7 +163,7 @@ public:
       count.push_back(cnt);
     std::vector<std::string> uuid;
     int idx = 0;
-    for (auto uu : *request->uuid()) {
+    for (auto const& uu : *request->uuid()) {
       uuid.push_back(uu->str());
       std::cerr << "Request to spawn " << count[idx] << " API servers on "
                 << uuid[idx] << std::endl;
@@ -182,7 +182,7 @@ public:
     /* Spawn API servers. */
     for (unsigned i = 0; i < count.size(); ++i)
       for (int j = 0; j < count[i]; ++j) {
-        int port = spawn_worker(uuid[i]);
+        int port = SpawnWorker(uuid[i]);
         auto ao  = mb.CreateString(std::to_string(port));
         worker_address.push_back(ao);
       }
@@ -198,13 +198,13 @@ public:
   }
 
 private:
-  int get_worker_port() {
-    return config->worker_port_base +
-           worker_id.fetch_add(1, std::memory_order_relaxed);
+  int GetWorkerPort() {
+    return config->worker_port_base_ +
+           worker_id_.fetch_add(1, std::memory_order_relaxed);
   }
 
-  int spawn_worker(std::string uuid) {
-    int port = get_worker_port();
+  int SpawnWorker(std::string uuid) {
+    int port = GetWorkerPort();
     std::cerr << "Spawn API server at port=" << port << " UUID=" << uuid
               << std::endl;
 
@@ -216,17 +216,17 @@ private:
                                (char*)std::to_string(port).c_str(), NULL};
     char* const envp_list[] = {(char*)visible_dev.c_str(),
                                (char*)"AVA_CHANNEL=TCP", NULL};
-    if (execvpe(config->worker_path.c_str(), argv_list, envp_list) < 0)
+    if (execvpe(config->worker_path_.c_str(), argv_list, envp_list) < 0)
       perror("execv worker");
     /* Never reach here. */
     return port;
   }
 
-  std::atomic<int> worker_id;
+  std::atomic<int> worker_id_;
 };
 
 void run_daemon_service(DaemonConfig* config) {
-  std::string server_address("0.0.0.0:" + std::to_string(config->daemon_port));
+  std::string server_address("0.0.0.0:" + std::to_string(config->daemon_port_));
   DaemonServiceImpl service;
 
   grpc::ServerBuilder builder;
@@ -248,9 +248,9 @@ public:
     auto sa_offset = mb.CreateString(self_address);
     std::vector<uint64_t> fm;
     std::vector<flatbuffers::Offset<flatbuffers::String>> uuid;
-    for (auto gpuinfo : config->visible_cuda_devices) {
-      fm.push_back(gpuinfo.free_memory);
-      uuid.push_back(mb.CreateString(gpuinfo.uuid));
+    for (auto const& gpuinfo : config->visible_cuda_devices_) {
+      fm.push_back(gpuinfo.free_memory_);
+      uuid.push_back(mb.CreateString(gpuinfo.uuid_));
     }
     auto fm_offset = mb.CreateVector(fm.empty() ? nullptr : &fm[0], fm.size());
     auto uu_offset =
@@ -277,15 +277,15 @@ private:
 int main(int argc, char* argv[]) {
   config = parse_arguments(argc, argv);
   parse_config_file(config);
-  config->print();
+  config->Print();
 
   std::thread server_thread(run_daemon_service, config);
 
   /* Register daemon. */
-  auto channel = grpc::CreateChannel(config->manager_address,
+  auto channel = grpc::CreateChannel(config->manager_address_,
                                      grpc::InsecureChannelCredentials());
   auto client  = new ManagerServiceClient(channel);
-  auto status  = client->RegisterDaemon(std::to_string(config->daemon_port));
+  auto status  = client->RegisterDaemon(std::to_string(config->daemon_port_));
 
   server_thread.join();
 

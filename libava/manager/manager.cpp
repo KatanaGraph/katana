@@ -1,6 +1,5 @@
 #include <errno.h>
 #include <fcntl.h>
-#include <glib.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <signal.h>
@@ -44,37 +43,32 @@ void sigint_handler(int signo) {
 
 class ManagerConfig {
 public:
-  static int const DefaultManagerPort;
-  static int const DefaultWorkerPoolSize;
+  static int const kDefaultManagerPort;
+  static int const kDefaultWorkerPoolSize;
 
-  ManagerConfig(int mp = DefaultManagerPort, int wps = DefaultWorkerPoolSize)
-      : manager_port(mp), worker_pool_size(wps) {}
+  ManagerConfig(int mp = kDefaultManagerPort, int wps = kDefaultWorkerPoolSize)
+      : manager_port_(mp), worker_pool_size_(wps) {}
 
-  ~ManagerConfig() {
-    for (auto daemon : daemons)
-      delete daemon;
+  void Print() {
+    std::cerr << "* Manager port: " << manager_port_ << std::endl
+              << "* API server pool size: " << worker_pool_size_ << std::endl;
   }
 
-  void print() {
-    std::cerr << "* Manager port: " << manager_port << std::endl
-              << "* API server pool size: " << worker_pool_size << std::endl;
-  }
-
-  int manager_port;
-  int worker_pool_size;
-  std::vector<DaemonInfo*> daemons;
+  int manager_port_;
+  int worker_pool_size_;
+  std::vector<std::unique_ptr<DaemonInfo>> daemons_;
 };
 
-int const ManagerConfig::DefaultManagerPort    = 3334;
-int const ManagerConfig::DefaultWorkerPoolSize = 3;
+int const ManagerConfig::kDefaultManagerPort    = 3334;
+int const ManagerConfig::kDefaultWorkerPoolSize = 3;
 
 ManagerConfig* config;
 
 ManagerConfig* parse_arguments(int argc, char* argv[]) {
   int c;
   opterr               = 0;
-  int manager_port     = ManagerConfig::DefaultManagerPort;
-  int worker_pool_size = ManagerConfig::DefaultWorkerPoolSize;
+  int manager_port     = ManagerConfig::kDefaultManagerPort;
+  int worker_pool_size = ManagerConfig::kDefaultWorkerPoolSize;
 
   while ((c = getopt(argc, argv, "m:n:")) != -1) {
     switch (c) {
@@ -89,8 +83,8 @@ ManagerConfig* parse_arguments(int argc, char* argv[]) {
               "Usage: %s "
               "[-m manager_port {%d}] "
               "[-n worker_pool_size {%d}]\n",
-              argv[0], ManagerConfig::DefaultManagerPort,
-              ManagerConfig::DefaultWorkerPoolSize);
+              argv[0], ManagerConfig::kDefaultManagerPort,
+              ManagerConfig::kDefaultWorkerPoolSize);
       exit(EXIT_FAILURE);
     }
   }
@@ -110,7 +104,7 @@ public:
     /* Build message. */
     flatbuffers::grpc::MessageBuilder mb;
     std::vector<flatbuffers::Offset<flatbuffers::String>> _uuid;
-    for (auto uu : uuid)
+    for (auto const& uu : uuid)
       _uuid.push_back(mb.CreateString(uu));
     auto cnt_offset     = mb.CreateVector(&count[0], count.size());
     auto uu_offset      = mb.CreateVector(&_uuid[0], _uuid.size());
@@ -128,7 +122,7 @@ public:
     if (status.ok()) {
       const WorkerSpawnReply* response = response_msg.GetRoot();
       auto wa                          = response->worker_address();
-      for (auto addr_offset : *wa) {
+      for (auto const& addr_offset : *wa) {
         std::string _wa = daemon_ip + ":" + addr_offset->str();
         std::cerr << "Register API server at " << _wa << std::endl;
         worker_address.push_back(_wa);
@@ -159,47 +153,49 @@ class ManagerServiceImpl final : public ManagerService::Service {
     std::cerr << "Register spawn daemon at " << daemon_address << std::endl;
 
     /* Register GPU information in a global table */
-    auto daemon_info = new DaemonInfo();
-    daemon_info->ip  = daemon_ip;
-    for (auto uu_offset : *(request->uuid()))
-      daemon_info->gpu_info.push_back({uu_offset->str(), 0});
+    std::unique_ptr<DaemonInfo> daemon_info(new DaemonInfo());
+    daemon_info->ip_ = daemon_ip;
+    for (auto const& uu_offset : *(request->uuid()))
+      daemon_info->gpu_info_.push_back({uu_offset->str(), 0});
     int idx = 0;
     for (auto fm : *(request->free_memory())) {
-      daemon_info->gpu_info[idx].free_memory = fm;
+      daemon_info->gpu_info_[idx].free_memory_ = fm;
       ++idx;
     }
-    daemon_info->print_gpu_info();
-    config->daemons.push_back(daemon_info);
+    daemon_info->PrintGpuInfo();
 
     /* Request daemon to spawn an API server pool.
      * Currently each API server can see only one GPU, and every GPU has
-     * `config->worker_pool_size` API servers running on it. */
+     * `config->worker_pool_sizea_` API servers running on it. */
     auto channel =
         grpc::CreateChannel(daemon_address, grpc::InsecureChannelCredentials());
-    daemon_info->client = new DaemonServiceClient(channel);
+    daemon_info->client_ =
+        std::unique_ptr<DaemonServiceClient>(new DaemonServiceClient(channel));
     std::vector<int> count;
     std::vector<std::string> uuid;
-    for (auto gi : daemon_info->gpu_info) {
-      count.push_back(config->worker_pool_size);
-      uuid.push_back(gi.uuid);
+    for (auto const& gi : daemon_info->gpu_info_) {
+      count.push_back(config->worker_pool_size_);
+      uuid.push_back(gi.uuid_);
     }
     std::vector<std::string> worker_address =
-        daemon_info->client->SpawnWorker(count, uuid, daemon_ip);
+        daemon_info->client_->SpawnWorker(count, uuid, daemon_ip);
 
     /* Register API servers in a global table */
     int k = 0;
     for (unsigned i = 0; i < count.size(); ++i)
       for (int j = 0; j < count[i]; ++j) {
-        daemon_info->workers.enqueue(worker_address[k], uuid[i]);
+        daemon_info->workers_.Enqueue(worker_address[k], uuid[i]);
         ++k;
       }
 
+    config->daemons_.push_back(std::move(daemon_info));
     return grpc::Status::OK;
   }
 };
 
 void run_manager_service(ManagerConfig* config) {
-  std::string server_address("0.0.0.0:" + std::to_string(config->manager_port));
+  std::string server_address("0.0.0.0:" +
+                             std::to_string(config->manager_port_));
   ManagerServiceImpl service;
 
   grpc::ServerBuilder builder;
@@ -240,12 +236,12 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
      * while this information is not currently used as we need annotations of
      * every application's GPU usage or retrieve GPU usage dynamically.
      *
-     * `config->daemons` should be protected with locks in case of hot-plugged
+     * `config->daemons_` should be protected with locks in case of hot-plugged
      * spawn daemons. For now it is assumed that all daemons have been spawned
      * before any guestlib connects in.
      */
-    for (auto daemon : config->daemons) {
-      auto assigned_worker = daemon->workers.dequeue();
+    for (auto const& daemon : config->daemons_) {
+      auto assigned_worker = daemon->workers_.Dequeue();
       if (!assigned_worker.first.empty()) {
         /* Find an idle API server, respond guestlib and spawn a new idle
          * worker. */
@@ -255,8 +251,8 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
         std::vector<int> count        = {1};
         std::vector<std::string> uuid = {assigned_worker.second};
         std::vector<std::string> worker_address =
-            daemon->client->SpawnWorker(count, uuid, daemon->ip);
-        daemon->workers.enqueue(worker_address[0], assigned_worker.second);
+            daemon->client_->SpawnWorker(count, uuid, daemon->ip_);
+        daemon->workers_.Enqueue(worker_address[0], assigned_worker.second);
         return;
       }
     }
@@ -267,10 +263,10 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
      */
     {
       std::vector<int> count        = {1};
-      std::vector<std::string> uuid = {config->daemons[0]->gpu_info[0].uuid};
+      std::vector<std::string> uuid = {config->daemons_[0]->gpu_info_[0].uuid_};
       std::vector<std::string> worker_address =
-          config->daemons[0]->client->SpawnWorker(count, uuid,
-                                                  config->daemons[0]->ip);
+          config->daemons_[0]->client_->SpawnWorker(count, uuid,
+                                                    config->daemons_[0]->ip_);
       reply_to_guestlib(client_fd, worker_address[0]);
       close(client_fd);
     }
@@ -330,7 +326,7 @@ void start_traditional_manager() {
 
 int main(int argc, char* argv[]) {
   config = parse_arguments(argc, argv);
-  config->print();
+  config->Print();
 
   std::thread server_thread(run_manager_service, config);
   start_traditional_manager();

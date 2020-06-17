@@ -123,6 +123,7 @@ public:
    * Setup meta parameters
    */
   DBGraph() {
+    // TODO unique ptr
     attGraph      = new AttributedGraph;
     numNodeLabels = 1;
     numEdgeLabels = 1;
@@ -258,6 +259,30 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // Finish
     ////////////////////////////////////////////////////////////////////////////
+  }
+
+  /**
+   * Load an attributed graph save prior from disk into memory.
+   *
+   * @param graphOnDisk graph to load from disk into memory
+   */
+  void loadSerializedAttributedGraph(const std::string graphOnDisk) {
+    loadGraph(this->attGraph, graphOnDisk.c_str());
+    reportGraphStats(*this->attGraph);
+    // ignore setting numNodeLabels/numEdgeLabels; only used by the other
+    // construction interface which is unnecessary if you use a serial
+    // attributed graph directly
+    // QueryGraph& asdf = this->attGraph->graph;
+    // galois::do_all(galois::iterate((size_t)0, asdf.size()),
+    //  [&] (auto N) {
+    //    for (auto e : asdf.edges(N)) {
+    //      auto& data = asdf.getEdgeData(e);
+    //      if (data > 1024) {
+    //      galois::gPrint(data, "\n");
+    //      }
+    //    }
+    //  }
+    //);
   }
 
   /**

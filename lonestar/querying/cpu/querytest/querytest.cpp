@@ -37,6 +37,11 @@ static cll::opt<std::string>
 //    edgefile(cll::Positional, cll::desc("Cypher query"), cll::Required);
 //
 
+static cll::opt<bool> isAttributedGraph("isAttributedGraph",
+                      cll::desc("Specifies that the passed in file is an attributed graph on disk "
+                                "(default false)"),
+                      cll::init(false));
+
 static cll::opt<std::string> queryFile("queryFile",
                                cll::desc("File containing Cypher query to run"
                                          "; takes precedence over query string"),
@@ -46,6 +51,7 @@ static cll::opt<bool> skipGraphSimulation("skipGraphSimulation",
                       cll::desc("Do not use graph simulation "
                                 "(default false)"),
                       cll::init(false));
+
 
 static cll::opt<uint32_t> numPages("numPages",
                       cll::desc("Number of pages to pre-alloc "
@@ -64,7 +70,11 @@ int main(int argc, char** argv) {
   // graph is automatically made symmetric and treats every directed edge
   // as an undirected edge (i.e. edges will be doubled)
   // Also removes self loops
-  testGraph.constructDataGraph(filename);
+  if (!isAttributedGraph) {
+    testGraph.constructDataGraph(filename);
+  } else {
+    testGraph.loadSerializedAttributedGraph(filename);
+  }
 
   galois::preAlloc(numPages);
   galois::reportPageAlloc("MeminfoPre");

@@ -24,7 +24,9 @@ class CypherCompiler {
   bool shortestPath;
   std::string namedPath;
 
+  //! set of edges that comprises the query graph
   std::vector<MatchedEdge> ir;
+  //! string filters
   std::vector<const char*> filters;
   std::stack<bool> bin_op; // true => AND, false => OR
 

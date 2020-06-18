@@ -20,6 +20,7 @@ add_library(galois_query SHARED
 )
 
 target_compile_definitions(galois_query PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)
+target_compile_definitions(galois_query PRIVATE USE_QUERY_GRAPH_WITH_NODE_LABEL=1)
 
 target_include_directories(galois_query PUBLIC 
   ${CMAKE_SOURCE_DIR}/libgalois/include

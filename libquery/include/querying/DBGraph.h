@@ -275,12 +275,14 @@ public:
     // QueryGraph& asdf = this->attGraph->graph;
     // galois::do_all(galois::iterate((size_t)0, asdf.size()),
     //  [&] (auto N) {
-    //    for (auto e : asdf.edges(N)) {
-    //      auto& data = asdf.getEdgeData(e);
-    //      if (data > 1024) {
-    //      galois::gPrint(data, "\n");
-    //      }
+    //    //unsigned test = rightmostSetBitPos(asdf.getData(N).label);
+    //    uint32_t l = asdf.getData(N).label;
+    //    if (l > 0) {
+    //      galois::gPrint("label on ", N, " ",  l, "\n");
     //    }
+    //    //for (auto e : asdf.edges(N)) {
+    //    //  auto& data = asdf.getEdgeData(e);
+    //    //}
     //  }
     //);
   }

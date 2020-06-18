@@ -71,7 +71,43 @@ def check_results(masterFile, otherFiles, tolerance,
 
   return (offset, errors, mrows, global_error_squared, num_nodes);
 
-def main(masterFile, allFiles_arr, tolerance, mean_tolerance):
+"""Called if first column is a string (other version casts into a long which
+is errorneous if string"""
+def check_results_string_column(masterFile, otherFiles, tolerance, 
+  offset, errors, mrows, global_error_squared, num_nodes):
+
+  with open(masterFile) as mfile, open(otherFiles) as ofile:
+    mfile.seek(offset)
+
+    for line2 in ofile:
+      line1 = mfile.readline()
+      offset = offset + len(line1)
+
+      split_line1 = line1.split(' ')
+      split_line2 = line2.split(' ')
+
+      if (split_line1[0] == ''):
+        print("ERROR: output longer than input")
+        return (0, errors, mrows)
+
+      if (split_line1[0] == split_line2[0]):
+        # absolute value of difference in fields
+        field_difference = abs(float(split_line1[1]) - float(split_line2[1]))
+        global_error_squared += (field_difference ** 2)
+        num_nodes += 1
+
+        if (field_difference > tolerance):
+          print "NOT MATCHED \n";
+          print line1;
+          print line2;
+          errors = errors + 1;
+      else:
+        print "OFFSET MISMATCH: ", split_line1[0], split_line2[0]
+        return (-1, errors, mrows, global_error_squared, num_nodes);
+
+  return (offset, errors, mrows, global_error_squared, num_nodes);
+
+def main(masterFile, allFiles_arr, tolerance, mean_tolerance, stringcolumn):
   offset = 0
   errors = 0
   mrows = 0
@@ -81,7 +117,10 @@ def main(masterFile, allFiles_arr, tolerance, mean_tolerance):
   for i in range(0 , len(allFiles_arr)):
     print allFiles_arr[i]
     print offset
-    offset, errors, mrows, global_error_squared, num_nodes = check_results(masterFile, allFiles_arr[i], tolerance, offset, errors, mrows, global_error_squared, num_nodes)
+    if not stringcolumn:
+      offset, errors, mrows, global_error_squared, num_nodes = check_results(masterFile, allFiles_arr[i], tolerance, offset, errors, mrows, global_error_squared, num_nodes)
+    else :
+      offset, errors, mrows, global_error_squared, num_nodes = check_results_string_column(masterFile, allFiles_arr[i], tolerance, offset, errors, mrows, global_error_squared, num_nodes)
     if (offset == -1):
       break
 
@@ -125,6 +164,8 @@ if __name__ == "__main__":
                       help='delete the generated output files')
   parser.add_argument('-mean_tolerance', '-m', type=float, nargs=1, default=0.0001,
                       help='tolerance for root mean square error')
+  parser.add_argument('-stringcolumn', '-c', type=bool, nargs=1, default=False,
+                      help='true if first column is a string')
 
   arg = sys.argv
   parsed_arguments = parser.parse_args()
@@ -153,9 +194,10 @@ if __name__ == "__main__":
 
   tolerance = parsed_arguments.tolerance
   mean_tolerance = parsed_arguments.mean_tolerance
+  sc = parsed_arguments.stringcolumn
 
   print("Starting comparison...")
-  ret = main(masterFile, allFiles_arr, tolerance, mean_tolerance)
+  ret = main(masterFile, allFiles_arr, tolerance, mean_tolerance, sc)
 
   if parsed_arguments.sort:
     os.system("rm -f .output_log")

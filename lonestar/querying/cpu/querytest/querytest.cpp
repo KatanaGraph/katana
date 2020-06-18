@@ -87,10 +87,14 @@ int main(int argc, char** argv) {
   // 3 edge labels: e1, e2, e3
   // timestamps on edges are increasing order
   if (queryFile != "") {
+    galois::gInfo("Reading query file ", queryFile);
     // read file into a std::string
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     // TODO check if opened successfully (good C practice to do so)
     std::ifstream queryStream(queryFile);
+    if (!queryStream.is_open()) {
+      GALOIS_DIE("failed to open query file ", queryFile);
+    }
     std::stringstream querySS;
     // putting into string stream lets you pull a string out of it
     querySS << queryStream.rdbuf();

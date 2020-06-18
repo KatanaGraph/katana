@@ -1,0 +1,29 @@
+table DaemonRegisterRequest {
+  daemon_address:string; /* Currently contains only the port */
+  free_memory:[ulong];
+  uuid:[string];
+}
+
+table DaemonRegisterReply {
+}
+
+rpc_service ManagerService {
+  RegisterDaemon(DaemonRegisterRequest): DaemonRegisterReply;
+}
+
+table WorkerSpawnRequest {
+  count:[int];
+  uuid:[string];
+}
+
+table WorkerSpawnReply {
+  /**
+   * Currently contains only the port. The ports retain the order of
+   * the request's uuid.
+   */
+  worker_address:[string];
+}
+
+rpc_service DaemonService {
+  SpawnWorker(WorkerSpawnRequest): WorkerSpawnReply;
+}

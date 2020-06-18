@@ -8,7 +8,6 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
   GIT_TAG 38ff7bf54c365a4b
-  GIT_SUBMODULES_RECURSE ON
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )
@@ -16,7 +15,7 @@ FetchContent_Declare(ava
 FetchContent_GetProperties(ava)
 if(NOT ava_POPULATED)
   FetchContent_Populate(ava)
-  add_subdirectory(manager)
+  add_subdirectory(manager/superbuild)
 endif()
 
 ExternalProject_Add(ava_llvm

@@ -56,6 +56,11 @@ static cll::opt<bool>
                      "listOfQueries argument (default false)"),
            cll::init(false));
 
+static cll::opt<std::string>
+    outputLocation("outputLocation",
+           cll::desc("Location (directory) to write output if output is true"),
+           cll::init("./"));
+
 static cll::opt<bool>
     skipGraphSimulation("skipGraphSimulation",
                         cll::desc("Do not use graph simulation "
@@ -130,7 +135,7 @@ int main(int argc, char** argv) {
       GALOIS_DIE("failed to open query list file ", listOfQueries);
     }
 
-    std::ofstream outputFile("queries.count");
+    std::ofstream outputFile(outputLocation + "/queries.count");
 
     std::string curQueryFile;
     while (std::getline(queryFiles, curQueryFile)) {
@@ -157,7 +162,7 @@ int main(int argc, char** argv) {
 
   // TODO make this work regardless of how you pass in your queries
   if (listOfQueries != "" && output) {
-    galois::gInfo("Query counts saved to queries.count");
+    galois::gInfo("Query counts saved to ", outputLocation, "/queries.count");
   }
 
   totalTime.stop();

@@ -10,3 +10,4 @@
 [submodule "libcypher-parser"]
 	path = external/libcypher-parser
 	url = https://github.com/cleishm/libcypher-parser.git
+	ignore = dirty

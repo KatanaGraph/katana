@@ -44,6 +44,12 @@ static cll::opt<bool> isAttributedGraph(
         "(default false)"),
     cll::init(false));
 
+static cll::opt<std::string> listOfQueries(
+    "listOfQueries",
+    cll::desc("File containing a list of files with Cypher queries to "
+              "run takes highest precedence of all input methods"),
+    cll::init(""));
+
 static cll::opt<std::string>
     queryFile("queryFile",
               cll::desc("File containing Cypher query to run"
@@ -70,23 +76,27 @@ int main(int argc, char** argv) {
   LonestarStart(argc, argv, name, desc, url, &filename);
 
   galois::graphs::DBGraph testGraph;
-  // graph is automatically made symmetric and treats every directed edge
-  // as an undirected edge (i.e. edges will be doubled)
-  // Also removes self loops
   if (!isAttributedGraph) {
+    // current assumptions of the graph if not using an attributed graph
+    // 3 node labels: n1, n2, n3
+    // 3 edge labels: e1, e2, e3
+    // timestamps on edges are increasing order
+    // graph is automatically made symmetric and treats every directed edge
+    // as an undirected edge (i.e. edges will be doubled)
+    // Also removes self loops
     testGraph.constructDataGraph(filename);
   } else {
+    // uses an attributed graph saved on disk via the interface present in
+    // attributed graph
     testGraph.loadSerializedAttributedGraph(filename);
   }
 
   galois::preAlloc(numPages);
   galois::reportPageAlloc("MeminfoPre");
 
-  // current assumptions of the graph
-  // 3 node labels: n1, n2, n3
-  // 3 edge labels: e1, e2, e3
-  // timestamps on edges are increasing order
-  if (queryFile != "") {
+  if (listOfQueries != "") {
+    // TODO
+  } else if (queryFile != "") {
     galois::gInfo("Reading query file ", queryFile);
     // read file into a std::string
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring

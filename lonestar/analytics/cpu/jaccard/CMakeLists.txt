@@ -1,0 +1,6 @@
+add_executable(jaccard jaccard.cpp)
+add_dependencies(apps jaccard)
+target_link_libraries(jaccard PRIVATE Galois::shmem lonestar)
+install(TARGETS jaccard DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
+add_test_scale(small1 jaccard "${BASEINPUT}/reference/structured/rome99.gr")
+# add_test_scale(small2 jaccard "${BASEINPUT}/scalefree/rmat15.gr")

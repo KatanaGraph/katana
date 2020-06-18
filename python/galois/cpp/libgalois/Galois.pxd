@@ -4,7 +4,7 @@ from libc.stdint cimport *
 
 # Declaration from "Galois/Threads.h"
 
-#ctypedef uint64_t size_t 
+#ctypedef uint64_t size_t
 
 # Hack to make auto return type for galois::iterate work.
 # It may be necessary to write a wrapper header around for_each,
@@ -62,11 +62,24 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
 cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
     cdef cppclass MethodFlag:
         pass
-    
+
     cdef MethodFlag FLAG_UNPROTECTED "galois::MethodFlag::UNPROTECTED"
     cdef MethodFlag FLAG_WRITE "galois::MethodFlag::WRITE"
     cdef MethodFlag FLAG_READ "galois::MethodFlag::READ"
     cdef MethodFlag FLAG_INTERNAL_MASK "galois::MethodFlag::INTERNAL_MASK"
     cdef MethodFlag PREVIOUS "galois::MethodFlag::PREVIOUS"
 
-    
+
+
+cdef extern from "galois/runtime/Iterable.h" namespace "galois::runtime" nogil:
+    cppclass iterable[it]:
+        it begin()
+        it end()
+
+cdef extern from "galois/NoDerefIterator.h" namespace "galois" nogil:
+    cppclass NoDerefIterator[it]:
+        bint operator==(NoDerefIterator[it])
+        bint operator!=(NoDerefIterator[it])
+        NoDerefIterator[it] operator++()
+        NoDerefIterator[it] operator--()
+        it operator*()

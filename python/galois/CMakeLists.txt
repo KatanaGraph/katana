@@ -16,8 +16,13 @@ add_library(_pagerank MODULE ${PAGERANK_SOURCES})
 python_extension_module(_pagerank)
 target_link_libraries(_pagerank Galois::shmem)
 
+add_cython_target(_jaccard _jaccard.pyx shmem.pyx CXX OUTPUT_VAR JACCARD_SOURCES)
+add_library(_jaccard MODULE ${JACCARD_SOURCES})
+python_extension_module(_jaccard)
+target_link_libraries(_jaccard Galois::shmem)
+
 install(
-  TARGETS shmem _bfs _pagerank
+  TARGETS shmem _bfs _pagerank _jaccard
   LIBRARY DESTINATION python/galois
 )
 

@@ -191,8 +191,8 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
   galois::gDebug("org: ", orgIndex, " uni: ", uniIndex,
                  " comp: ", companyIndex);
   // create the labels for the 2 possible types of nodes in this file
-  uint32_t uniLabel     = (1 << orgIndex) & (1 << uniIndex);
-  uint32_t companyLabel = (1 << orgIndex) & (1 << companyIndex);
+  uint32_t uniLabel     = (1 << orgIndex) | (1 << uniIndex);
+  uint32_t companyLabel = (1 << orgIndex) | (1 << companyIndex);
 
   // read the rest of the file
   std::string curLine;
@@ -269,9 +269,9 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
                  " country: ", countryIndex, " continent: ", continentIndex);
 
   // create the labels for the 3 types of nodes in this file
-  uint32_t cityLabel      = (1 << placeIndex) & (1 << cityIndex);
-  uint32_t countryLabel   = (1 << placeIndex) & (1 << countryIndex);
-  uint32_t continentLabel = (1 << placeIndex) & (1 << continentIndex);
+  uint32_t cityLabel      = (1 << placeIndex) | (1 << cityIndex);
+  uint32_t countryLabel   = (1 << placeIndex) | (1 << countryIndex);
+  uint32_t continentLabel = (1 << placeIndex) | (1 << continentIndex);
 
   // read the rest of the file
   std::string curLine;
@@ -606,7 +606,7 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
       internal::getLabelID(this->attGraph.nodeLabelIDs, "Post");
   galois::gDebug("message: ", messageIndex, " post: ", postIndex);
   // create label
-  uint32_t postLabel = (1 << postIndex) & (1 << messageIndex);
+  uint32_t postLabel = (1 << postIndex) | (1 << messageIndex);
 
   // read the rest of the file
   std::string curLine;
@@ -695,7 +695,7 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
       internal::getLabelID(this->attGraph.nodeLabelIDs, "Comment");
   galois::gDebug("message: ", messageIndex, " comment: ", commentIndex);
   // create label
-  uint32_t commentLabel = (1 << commentIndex) & (1 << messageIndex);
+  uint32_t commentLabel = (1 << commentIndex) | (1 << messageIndex);
 
   // read the rest of the file
   std::string curLine;

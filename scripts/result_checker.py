@@ -183,13 +183,14 @@ if __name__ == "__main__":
     sortstr += " -o .output_log"
     os.system(sortstr)
 
-  if parsed_arguments.delete:
-    rmstr = "rm -f"
-    for f in allFiles_arr:
-      rmstr += " " + f
-    os.system(rmstr)
 
   if parsed_arguments.sort:
+    # delete old args first
+    if parsed_arguments.delete:
+      rmstr = "rm -f"
+      for f in allFiles_arr:
+        rmstr += " " + f
+      os.system(rmstr)
     allFiles_arr = ['.output_log']
 
   tolerance = parsed_arguments.tolerance
@@ -199,8 +200,11 @@ if __name__ == "__main__":
   print("Starting comparison...")
   ret = main(masterFile, allFiles_arr, tolerance, mean_tolerance, sc)
 
-  if parsed_arguments.sort:
-    os.system("rm -f .output_log")
+  if parsed_arguments.delete:
+    rmstr = "rm -f"
+    for f in allFiles_arr:
+      rmstr += " " + f
+    os.system(rmstr)
 
   if ret:
     sys.exit(1)

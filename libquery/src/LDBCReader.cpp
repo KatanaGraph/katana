@@ -1112,9 +1112,9 @@ void LDBCReader::parseAndConstructPersonEdges() {
       "/dynamic/person_workAt_organisation_0_0.csv"};
 
   // edge types for both
-  std::vector<std::string> simpleEdgeTypes{"hasInterest", "isLocatedIn"};
-  std::vector<std::string> attributedEdgeTypes{"knows", "likes", "likes",
-                                               "studyAt", "workAt"};
+  std::vector<std::string> simpleEdgeTypes{"HAS_INTEREST", "IS_LOCATED_IN"};
+  std::vector<std::string> attributedEdgeTypes{"KNOWS", "LIKES", "LIKES",
+                                               "STUDY_AT", "WORK_AT"};
   // name of the attribute on the attributed edge
   std::vector<std::string> attributeOnEdge{
       "creationDate", "creationDate", "creationDate", "classYear", "workFrom"};
@@ -1185,9 +1185,9 @@ void LDBCReader::parseAndConstructForumEdges() {
       "/dynamic/forum_hasMember_person_0_0.csv"};
 
   // edge types for both
-  std::vector<std::string> simpleEdgeTypes{"hasModerator", "hasTag",
-                                           "containerOf"};
-  std::vector<std::string> attributedEdgeTypes{"hasMember"};
+  std::vector<std::string> simpleEdgeTypes{"HAS_MODERATOR", "HAS_TAG",
+                                           "CONTAINER_OF"};
+  std::vector<std::string> attributedEdgeTypes{"HAS_MEMBER"};
 
   // name of the attribute on the attributed edge
   std::vector<std::string> attributeOnEdge{"joinDate"};
@@ -1245,8 +1245,8 @@ void LDBCReader::parseAndConstructPostEdges() {
       "/dynamic/post_isLocatedIn_place_0_0.csv"};
 
   // edge types for both
-  std::vector<std::string> simpleEdgeTypes{"hasCreator", "hasTag",
-                                           "isLocatedIn"};
+  std::vector<std::string> simpleEdgeTypes{"HAS_CREATOR", "HAS_TAG",
+                                           "IS_LOCATED_IN"};
   // initialize edge src/dest classes; note that order is important
   std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
   simpleMappings[0] = std::move(std::make_pair(NL_POST, NL_PERSON));
@@ -1300,8 +1300,8 @@ void LDBCReader::parseAndConstructCommentEdges() {
       "/dynamic/comment_replyOf_post_0_0.csv"};
 
   // edge types for both
-  std::vector<std::string> simpleEdgeTypes{"hasCreator", "hasTag",
-                                           "isLocatedIn", "replyOf", "replyOf"};
+  std::vector<std::string> simpleEdgeTypes{
+      "HAS_CREATOR", "HAS_TAG", "IS_LOCATED_IN", "REPLY_OF", "REPLY_OF"};
   // initialize edge src/dest classes; note that order is important
   std::vector<ToFromMapping> simpleMappings(simpleFiles.size());
   simpleMappings[0] = std::move(std::make_pair(NL_COMMENT, NL_PERSON));
@@ -1356,19 +1356,19 @@ void LDBCReader::staticParsing() {
   // first is organization
   this->parseAndConstructSimpleEdges(
       ldbcDirectory + "/" + "static/organisation_isLocatedIn_place_0_0.csv",
-      "isLocatedIn", NL_ORG, NL_PLACE);
+      "IS_LOCATED_IN", NL_ORG, NL_PLACE);
   // next is place edges
   this->parseAndConstructSimpleEdges(ldbcDirectory + "/" +
                                          "static/place_isPartOf_place_0_0.csv",
-                                     "isPartOf", NL_PLACE, NL_PLACE);
+                                     "IS_PART_OF", NL_PLACE, NL_PLACE);
   // then tag
   this->parseAndConstructSimpleEdges(ldbcDirectory + "/" +
                                          "static/tag_hasType_tagclass_0_0.csv",
-                                     "hasType", NL_TAG, NL_TAGCLASS);
+                                     "HAS_TYPE", NL_TAG, NL_TAGCLASS);
   // then tag class
   this->parseAndConstructSimpleEdges(
       ldbcDirectory + "/" + "static/tagclass_isSubclassOf_tagclass_0_0.csv",
-      "isSubclassOf", NL_TAGCLASS, NL_TAGCLASS);
+      "IS_SUBCLASS_OF", NL_TAGCLASS, NL_TAGCLASS);
   timer.stop();
 }
 

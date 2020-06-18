@@ -133,9 +133,10 @@ private:
       "Forum",   "Message",    "Post",    "Comment"};
   //! names of edge labels in this dataset
   std::vector<std::string> edgeLabelNames{
-      "isSubclassOf", "hasType",   "isLocatedIn",  "isPartOf",    "hasInterest",
-      "hasTag",       "studyAt",   "workAt",       "knows",       "likes",
-      "hasCreator",   "hasMember", "hasModerator", "containerOf", "replyOf"};
+      "IS_SUBCLASS_OF", "HAS_TYPE",     "IS_LOCATED_IN", "IS_PART_OF",
+      "HAS_INTEREST",   "HAS_TAG",      "STUDY_AT",      "WORK_AT",
+      "KNOWS",          "LIKES",        "HAS_CREATOR",   "HAS_MEMBER",
+      "HAS_MODERATOR",  "CONTAINER_OF", "REPLY_OF"};
   //! names of node attributes in this dataset
   std::vector<std::string> nodeAttributeNames{
       "id",          "name",       "url",      "creationDate", "firstName",

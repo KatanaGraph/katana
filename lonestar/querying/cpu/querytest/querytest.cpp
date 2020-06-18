@@ -15,8 +15,8 @@
 // Benchmark metadata
 ////////////////////////////////////////////////////////////////////////////////
 
-static const char* name = "DBGraph Testing";
-static const char* desc = "Testing DBGraph";
+static const char* name = "Query Test";
+static const char* desc = "Run queries on a given property graph";
 static const char* url  = "";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -30,12 +30,6 @@ static cll::opt<std::string>
 
 static cll::opt<std::string> query("query", cll::desc("Cypher query"),
                                    cll::init(""));
-
-// TODO get this to work; requires library end to accept argument to where for
-// output
-// static cll::opt<std::string>
-//    edgefile(cll::Positional, cll::desc("Cypher query"), cll::Required);
-//
 
 static cll::opt<bool> isAttributedGraph(
     "isAttributedGraph",
@@ -71,6 +65,26 @@ static cll::opt<uint32_t> numPages("numPages",
 // Main
 ////////////////////////////////////////////////////////////////////////////////
 
+//! given file with query, run query and return number of matches
+size_t processQueryFile(galois::graphs::DBGraph& testGraph,
+                        std::string fileToProcess) {
+  galois::gInfo("Reading query file ", fileToProcess);
+  // read file into a std::string
+  // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+  std::ifstream queryStream(fileToProcess);
+  if (!queryStream.is_open()) {
+    GALOIS_DIE("failed to open query file ", fileToProcess);
+  }
+  std::stringstream querySS;
+  // putting into string stream lets you pull a string out of it
+  querySS << queryStream.rdbuf();
+
+  size_t numMatch =
+      testGraph.runCypherQuery(querySS.str(), !skipGraphSimulation);
+  galois::gInfo("Num matched subgraphs ", numMatch);
+  return numMatch;
+}
+
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &filename);
@@ -95,22 +109,18 @@ int main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPre");
 
   if (listOfQueries != "") {
-    // TODO
-  } else if (queryFile != "") {
-    galois::gInfo("Reading query file ", queryFile);
-    // read file into a std::string
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    std::ifstream queryStream(queryFile);
-    if (!queryStream.is_open()) {
-      GALOIS_DIE("failed to open query file ", queryFile);
+    galois::gInfo("Reading list of query files ", listOfQueries);
+    std::ifstream queryFiles(listOfQueries);
+    if (!queryFiles.is_open()) {
+      GALOIS_DIE("failed to open query list file ", listOfQueries);
     }
-    std::stringstream querySS;
-    // putting into string stream lets you pull a string out of it
-    querySS << queryStream.rdbuf();
 
-    galois::gInfo(
-        "Num matched subgraphs ",
-        testGraph.runCypherQuery(querySS.str(), !skipGraphSimulation));
+    std::string curQueryFile;
+    while (std::getline(queryFiles, curQueryFile)) {
+      processQueryFile(testGraph, curQueryFile);
+    }
+  } else if (queryFile != "") {
+    processQueryFile(testGraph, queryFile);
   } else if (query != "") {
     galois::gInfo("Num matched subgraphs ",
                   testGraph.runCypherQuery(query, !skipGraphSimulation));

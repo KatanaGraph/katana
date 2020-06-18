@@ -53,6 +53,12 @@ struct MatchedEdge {
   MatchedNode caused_by;
   //! target of edge's action
   MatchedNode acted_on;
+  // TODO very hacky way to do singletons, revamp later
+  //! if non-zero, this edge only represents a single node
+  char singleton;
+
+  //! default constructor, notably to init singleton to 0
+  MatchedEdge() : timestamp(0), label(NULL), singleton(0) {}
 };
 
 //! Time-limit of consecutive events (inclusive)

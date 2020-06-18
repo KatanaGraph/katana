@@ -50,6 +50,10 @@ class CypherCompiler {
     return nodeIDs[str];
   }
 
+  /**
+   * Given a pointer to some AST node, find its ID (if it exists), else create
+   * a mapping for it
+   */
   unsigned getAnonNodeID(const cypher_astnode_t* node) {
     if (anonNodeIDs.find(node) == anonNodeIDs.end()) {
       anonNodeIDs[node] = numNodeIDs++;
@@ -57,6 +61,10 @@ class CypherCompiler {
     return anonNodeIDs[node];
   }
 
+  /**
+   * Given a string rperesdenting some edge, find its id (if it exists),
+   * else create mapping for it
+   */
   unsigned getEdgeID(std::string str) {
     if (edgeIDs.find(str) == edgeIDs.end()) {
       edgeIDs[str] = numEdgeIDs++;
@@ -72,9 +80,12 @@ class CypherCompiler {
   }
 
   /**
-   * Compile a node in a pattern path.
+   * Compile a node pattern from a pattern path.
    *
-   * @param element root of pattern path node
+   * TODO not necessarily required from a pattern path
+   *
+   * @param element node pattern AST node
+   * @param mn Matched node structure to save results of parse to (id, name)
    */
   void compile_node_pattern_path(const cypher_astnode_t* element,
                                  MatchedNode& mn) {
@@ -86,8 +97,14 @@ class CypherCompiler {
       name = cypher_ast_identifier_get_name(nameNode);
     }
 
+    // loop through all labels on ast node and compile the label string for
+    // the node
     auto nlabels = cypher_ast_node_pattern_nlabels(element);
     if ((nlabels > 0) || (labels.find(name) != labels.end())) {
+      // TODO there seems to be an assumption here that only one or
+      // the other holds but not both: otherwise strName can grow
+      // pretty large and may have duplicates depending on what is saved in the
+      // labels map
       for (unsigned int i = 0; i < nlabels; ++i) {
         if (i > 0) {
           strName += ";";
@@ -95,6 +112,7 @@ class CypherCompiler {
         auto label = cypher_ast_node_pattern_get_label(element, i);
         strName += cypher_ast_label_get_name(label);
       }
+
       if (labels.find(name) != labels.end()) {
         if (nlabels > 0) {
           strName += ";";
@@ -104,8 +122,11 @@ class CypherCompiler {
     } else {
       strName += "any";
     }
+
+    // save an identifier of the node
     if (nameNode != NULL) {
       strID += std::to_string(getNodeID(name));
+      // find if there's a limit on this name and save it
       if (contains.find(name) != contains.end()) {
         filters.push_back(str_to_cstr(contains[name]));
       } else {
@@ -116,7 +137,9 @@ class CypherCompiler {
       filters.push_back(str_to_cstr(""));
     }
 
+    // identifier of node
     mn.id   = str_to_cstr(strID);
+    // strName has the labels of the node as a semicolon separated string
     mn.name = str_to_cstr(strName);
   }
 
@@ -255,8 +278,14 @@ class CypherCompiler {
     } else {
       // single node pattern path
       GALOIS_DIE("TODO single node pattern path not yet implemented");
-      // shouldn't even get here
-      return -1;
+      ir.emplace_back();
+      auto only = cypher_ast_pattern_path_get_element(ast, 0);
+      compile_node_pattern_path(only, ir.back().caused_by);
+      // mark the edge as a singleton
+      ir.back().singleton = 1;
+      // TODO problem; there are some other places in the code that assume
+      // that nodes are always added 2 at a time (e.g. see filters)
+      return 0;
     }
   }
 

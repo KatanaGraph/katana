@@ -1,7 +1,5 @@
 project(ava-manager C CXX CUDA)
 
-set(CMAKE_CXX_STANDARD 11)
-
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 

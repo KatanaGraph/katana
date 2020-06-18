@@ -54,9 +54,9 @@ std::string const DaemonConfig::kDefaultManagerAddress = "0.0.0.0:3334";
 int const DaemonConfig::kDefaultDaemonPort             = 3335;
 int const DaemonConfig::kDefaultWorkerPortBase         = 4000;
 
-DaemonConfig* config;
+std::shared_ptr<DaemonConfig> config;
 
-DaemonConfig* parse_arguments(int argc, char* argv[]) {
+std::shared_ptr<DaemonConfig> parse_arguments(int argc, char* argv[]) {
   int c;
   opterr                           = 0;
   char* config_file_name           = NULL;
@@ -112,12 +112,12 @@ DaemonConfig* parse_arguments(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  auto config = new DaemonConfig(config_file_name, worker_path, manager_address,
-                                 daemon_port, worker_port_base);
-  return config;
+  return std::make_shared<DaemonConfig>(config_file_name, worker_path,
+                                        manager_address, daemon_port,
+                                        worker_port_base);
 }
 
-void parse_config_file(DaemonConfig* config) {
+void parseConfigFile(std::shared_ptr<DaemonConfig> config) {
   std::ifstream config_file(config->config_file_);
   std::string line;
   nvmlReturn_t ret = nvmlInit();
@@ -225,7 +225,7 @@ private:
   std::atomic<int> worker_id_;
 };
 
-void run_daemon_service(DaemonConfig* config) {
+void runDaemonService(std::shared_ptr<DaemonConfig> config) {
   std::string server_address("0.0.0.0:" + std::to_string(config->daemon_port_));
   DaemonServiceImpl service;
 
@@ -276,15 +276,15 @@ private:
 
 int main(int argc, char* argv[]) {
   config = parse_arguments(argc, argv);
-  parse_config_file(config);
+  parseConfigFile(config);
   config->Print();
 
-  std::thread server_thread(run_daemon_service, config);
+  std::thread server_thread(runDaemonService, config);
 
   /* Register daemon. */
   auto channel = grpc::CreateChannel(config->manager_address_,
                                      grpc::InsecureChannelCredentials());
-  auto client  = new ManagerServiceClient(channel);
+  auto client  = std::make_unique<ManagerServiceClient>(channel);
   auto status  = client->RegisterDaemon(std::to_string(config->daemon_port_));
 
   server_thread.join();

@@ -62,9 +62,9 @@ public:
 int const ManagerConfig::kDefaultManagerPort    = 3334;
 int const ManagerConfig::kDefaultWorkerPoolSize = 3;
 
-ManagerConfig* config;
+std::shared_ptr<ManagerConfig> config;
 
-ManagerConfig* parse_arguments(int argc, char* argv[]) {
+std::shared_ptr<ManagerConfig> parse_arguments(int argc, char* argv[]) {
   int c;
   opterr               = 0;
   int manager_port     = ManagerConfig::kDefaultManagerPort;
@@ -89,8 +89,7 @@ ManagerConfig* parse_arguments(int argc, char* argv[]) {
     }
   }
 
-  auto config = new ManagerConfig(manager_port, worker_pool_size);
-  return config;
+  return std::make_shared<ManagerConfig>(manager_port, worker_pool_size);
 }
 
 class DaemonServiceClient {
@@ -153,7 +152,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
     std::cerr << "Register spawn daemon at " << daemon_address << std::endl;
 
     /* Register GPU information in a global table */
-    std::unique_ptr<DaemonInfo> daemon_info(new DaemonInfo());
+    auto daemon_info = std::make_unique<DaemonInfo>();
     daemon_info->ip_ = daemon_ip;
     for (auto const& uu_offset : *(request->uuid()))
       daemon_info->gpu_info_.push_back({uu_offset->str(), 0});
@@ -169,8 +168,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
      * `config->worker_pool_sizea_` API servers running on it. */
     auto channel =
         grpc::CreateChannel(daemon_address, grpc::InsecureChannelCredentials());
-    daemon_info->client_ =
-        std::unique_ptr<DaemonServiceClient>(new DaemonServiceClient(channel));
+    daemon_info->client_ = std::make_unique<DaemonServiceClient>(channel);
     std::vector<int> count;
     std::vector<std::string> uuid;
     for (auto const& gi : daemon_info->gpu_info_) {
@@ -193,7 +191,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
   }
 };
 
-void run_manager_service(ManagerConfig* config) {
+void runManagerService(std::shared_ptr<ManagerConfig> config) {
   std::string server_address("0.0.0.0:" +
                              std::to_string(config->manager_port_));
   ManagerServiceImpl service;
@@ -206,7 +204,7 @@ void run_manager_service(ManagerConfig* config) {
   server->Wait();
 }
 
-void reply_to_guestlib(int client_fd, std::string worker_address) {
+void replyToGuestlib(int client_fd, std::string worker_address) {
   struct command_base response;
   uintptr_t* worker_port;
   int assigned_worker_port =
@@ -218,7 +216,7 @@ void reply_to_guestlib(int client_fd, std::string worker_address) {
   send_socket(client_fd, &response, sizeof(struct command_base));
 }
 
-void handle_guestlib(int client_fd, ManagerConfig* config) {
+void handleGuestlib(int client_fd, std::shared_ptr<ManagerConfig> config) {
   struct command_base msg;
 
   /* get guestlib info */
@@ -245,7 +243,7 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
       if (!assigned_worker.first.empty()) {
         /* Find an idle API server, respond guestlib and spawn a new idle
          * worker. */
-        reply_to_guestlib(client_fd, assigned_worker.first);
+        replyToGuestlib(client_fd, assigned_worker.first);
         close(client_fd);
 
         std::vector<int> count        = {1};
@@ -259,7 +257,7 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
 
     /* No idle API server was found, spawn a new API server.
      * Currently, we constantly spawn the new API server on the first GPU of the
-     * first GPU node.
+     * first GPU node (which is assumed to exist).
      */
     {
       std::vector<int> count        = {1};
@@ -267,7 +265,8 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
       std::vector<std::string> worker_address =
           config->daemons_[0]->client_->SpawnWorker(count, uuid,
                                                     config->daemons_[0]->ip_);
-      reply_to_guestlib(client_fd, worker_address[0]);
+      replyToGuestlib(client_fd,
+                      worker_address.empty() ? "0.0.0.0:0" : worker_address[0]);
       close(client_fd);
     }
     break;
@@ -286,7 +285,7 @@ void handle_guestlib(int client_fd, ManagerConfig* config) {
  * configurations, but this waits for some AvA upstream changes. The final goal
  * is to merge this into the ManagerService gRPC routine.
  */
-void start_traditional_manager() {
+void startTraditionalManager() {
   struct sockaddr_in address;
   int addrlen = sizeof(address);
   int opt     = 1;
@@ -319,7 +318,7 @@ void start_traditional_manager() {
   do {
     client_fd =
         accept(listen_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-    std::async(std::launch::async | std::launch::deferred, handle_guestlib,
+    std::async(std::launch::async | std::launch::deferred, handleGuestlib,
                client_fd, config);
   } while (1);
 }
@@ -328,8 +327,8 @@ int main(int argc, char* argv[]) {
   config = parse_arguments(argc, argv);
   config->Print();
 
-  std::thread server_thread(run_manager_service, config);
-  start_traditional_manager();
+  std::thread server_thread(runManagerService, config);
+  startTraditionalManager();
   server_thread.join();
 
   return 0;

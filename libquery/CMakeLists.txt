@@ -11,6 +11,7 @@ add_custom_command(
 add_custom_target(cypher_parser DEPENDS ${CYPHER_PARSER_LIBRARY})
 
 add_library(galois_query SHARED 
+  src/CypherCompiler.cpp
   src/PythonGraph.cpp
   src/PythonGraphReport.cpp
   src/PythonGraphSimulation.cpp

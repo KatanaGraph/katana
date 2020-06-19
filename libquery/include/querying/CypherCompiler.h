@@ -11,6 +11,8 @@
 #include <result.h>
 
 class CypherCompiler {
+  using ASTNode = const cypher_astnode_t*;
+
   unsigned numNodeIDs;
   unsigned numEdgeIDs;
   std::unordered_map<std::string, unsigned> nodeIDs;
@@ -30,12 +32,14 @@ class CypherCompiler {
   std::vector<const char*> filters;
   std::stack<bool> bin_op; // true => AND, false => OR
 
+  // TODO memory leaks; no free of the char *
   char* str_to_cstr(std::string str) {
     char* cstr = new char[str.length() + 1];
     strcpy(cstr, str.c_str());
     return cstr;
   }
 
+  // TODO memory leaks; no free of the char *
   char* str_to_cstr(unsigned int id) {
     std::string str = std::to_string(id);
     char* cstr      = new char[str.length() + 1];
@@ -138,11 +142,12 @@ class CypherCompiler {
     }
 
     // identifier of node
-    mn.id   = str_to_cstr(strID);
+    mn.id = str_to_cstr(strID);
     // strName has the labels of the node as a semicolon separated string
     mn.name = str_to_cstr(strName);
   }
 
+  //! Processes an edge between 2 nodes in a pattern path
   void compile_rel_pattern_path(const cypher_astnode_t* element) {
     uint64_t timestamp;
     std::string label;
@@ -515,6 +520,40 @@ class CypherCompiler {
   }
 
   /**
+   * Handle a projection node
+   */
+  int compile_ast_projection(const cypher_astnode_t*) {
+    // TODO
+    return -1;
+  }
+
+  /**
+   * Handle a return node
+   *
+   * TODO there are a variety of things a return node can have under it; for
+   * now just handle projections
+   */
+  int compile_ast_return(const cypher_astnode_t* returnAST) {
+    // get number of projections and handle each separately
+    unsigned numProjections = cypher_ast_return_nprojections(returnAST);
+    for (unsigned i = 0; i < numProjections; i++) {
+      ASTNode projectionAST = cypher_ast_return_get_projection(returnAST, i);
+      int result            = this->compile_ast_projection(projectionAST);
+      if (result < 0) {
+        galois::gDebug("projection under return AST failed to parse");
+        return -1;
+      }
+    }
+
+    // TODO
+    // handle DISTINCT
+    // handle ORDER BY
+    // handle LIMIT
+    // handle SKIP
+    return 0;
+  }
+
+  /**
    * Recursively handle an AST node and its children.
    *
    * @param ast Root of tree to handle
@@ -523,8 +562,11 @@ class CypherCompiler {
     // get the type of the node
     auto type = cypher_astnode_type(ast);
 
+    // TODO seems like
+
     // handle differently based on what the type is
     if (type == CYPHER_AST_MATCH) {
+      galois::gDebug("Compiling AST node match");
       // match has the following up for grabs
       // - pattern
       // - predicate
@@ -543,22 +585,34 @@ class CypherCompiler {
         return 0;
       }
     } else if (type == CYPHER_AST_PATTERN_PATH) {
+      galois::gDebug("Compiling AST pattern path");
       return compile_pattern_path(ast);
     } else if (type == CYPHER_AST_SHORTEST_PATH) {
+      galois::gDebug("Compiling AST node shortest path");
       shortestPath = true;
       assert(cypher_ast_shortest_path_is_single(ast));
       return compile_ast_node(cypher_ast_shortest_path_get_path(ast));
     } else if (type == CYPHER_AST_NAMED_PATH) {
+      galois::gDebug("Compiling AST node named path");
       auto named_id = cypher_ast_named_path_get_identifier(ast);
       namedPath     = cypher_ast_identifier_get_name(named_id);
 
       auto path = cypher_ast_named_path_get_path(ast);
       return compile_ast_node(path);
+    } else if (type == CYPHER_AST_RETURN) {
+      galois::gDebug("Compiling AST node return");
+      return compile_ast_return(ast);
     }
 
+    // note: seems that assumption is that you only hit the below children
+    // loop if there is no way to process the current ast node
+    galois::gDebug("Compiling children nodes");
     for (unsigned int i = 0; i < cypher_astnode_nchildren(ast); ++i) {
+      // TODO maybe track descent level to make debug statements more
+      // easily parseable?
       const cypher_astnode_t* child = cypher_astnode_get_child(ast, i);
       if (compile_ast_node(child) < 0) {
+        // error
         return -1;
       }
     }
@@ -575,6 +629,7 @@ class CypherCompiler {
   int compile_ast(const cypher_parse_result_t* ast) {
     // loop over roots
     for (unsigned int i = 0; i < ast->nroots; ++i) {
+      galois::gDebug("Handling root ", i);
       // handle each root recursively
       if (compile_ast_node(ast->roots[i]) < 0) {
         return -1;

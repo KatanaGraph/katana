@@ -45,3 +45,12 @@ apt install -yq clang-10 clang++-10 clang-format-10 clang-tidy-10 llvm-10-dev
 # make clang-{tidy,format}-10 the default
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
 sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
+
+#       Setup conan assuming you want build as a subdirectory in repository root
+# .github/workflows/setup_conan.sh
+# mkdir build
+# conan install -if ./build --build=missing config
+
+#    Run cmake in build
+# cd build
+# cmake ../ -DCMAKE_TOOLCHAIN_FILE=./conan_paths.cmake -DGALOIS_ENABLE_DIST=on

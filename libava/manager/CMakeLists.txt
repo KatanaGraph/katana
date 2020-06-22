@@ -56,7 +56,7 @@ add_compile_options(-Wall -Wextra -pedantic -Wno-write-strings)
 include_directories(${AVA_UNPACK_LOCATION}/include)
 add_executable(manager
   manager.cpp
-  ${AVA_UNPACK_LOCATION}/common/socket.c
+  ${AVA_UNPACK_LOCATION}/common/socket.cpp
   ${manager_service_grpc_srcs}
 )
 target_link_libraries(manager

@@ -46,25 +46,9 @@ for pybin in /opt/python/*/bin; do
   unset GALOIS_CMAKE_ARGS
 done
 
-# Extract any included .so files so we can help auditwheel find them.
-# TODO: This is a total hack. The .so files should probably be built separately.
-#  This hack actually results in the .so files appearing twice in the resulting whl.
-(
-    mkdir /tmp/wheelhouse/lib
-    cd /tmp/wheelhouse/lib
-    for whl in /tmp/wheelhouse/*.whl; do
-        # TODO: This will overwrite .so files with the same name in multiple wheels.
-        #  I am assuming that this is safe since any data .so files are python version independent.
-        unzip -oj "$whl" '*.data/data/lib/*.so'
-    done
-)
+# auditwheel use is disabled because it will break jupyter use.
+# TODO: Replace it with a better way to package galois as a whole
 
-# Provide the build library path to auditwheel so it can properly add libgalois_shmem.so
-export LD_LIBRARY_PATH=/tmp/wheelhouse/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-
-# Add and patch .so files required by the python extensions in the whl
-for whl in /tmp/wheelhouse/*.whl; do
-  auditwheel repair "$whl" --plat ${PLAT} -w "${OUTPUT_DIR}"
-done
+cp /tmp/wheelhouse/*.whl "${OUTPUT_DIR}"
 
 "${LEAST_PYBIN}/python" "${SOURCE_DIR}/setup.py" sdist -d "${OUTPUT_DIR}"

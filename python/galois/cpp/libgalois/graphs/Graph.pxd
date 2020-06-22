@@ -1,3 +1,4 @@
+# distutils: extra_compile_args=["-std=c++17"]
 
 from libcpp.string cimport string
 from ..Galois cimport MethodFlag, iterable, NoDerefIterator
@@ -35,6 +36,7 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
             bint operator!=(iterator)
             iterator operator++()
             iterator operator--()
+            GraphNode operator*()
 
         edge_iterator edge_begin(GraphNode)
         edge_iterator edge_end(GraphNode)
@@ -48,7 +50,7 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         edge_data& getEdgeData(edge_iterator)
         edge_data& getEdgeData(edge_iterator, MethodFlag)
 
-        GraphNode createNode(node_data)
+        GraphNode createNode(...)
         void addNode(GraphNode)
         edge_iterator addEdge(GraphNode, GraphNode)
 
@@ -56,8 +58,8 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
 
         LC_CSR_Graph()
         cppclass GraphNode:
-            pass
             bint operator==(unsigned long)
+            bint operator==(GraphNode)
 
         cppclass edge_iterator:
             bint operator==(edge_iterator)

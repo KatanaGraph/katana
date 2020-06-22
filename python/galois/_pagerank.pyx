@@ -1,6 +1,7 @@
 # cython: cdivision = True
 
 from galois.shmem cimport *
+from galois.shmem import *
 from cython.operator cimport preincrement, dereference as deref
 
 ctypedef atomic[uint32_t] atomuint32_t
@@ -36,9 +37,7 @@ cdef uint32_t MAX_ITER = 1000;
 cdef void InitializePR(Graph *g):
     cdef unsigned long numNodes = g[0].size()
     cdef NodeTy *data
-    gPrint(b"Number of nodes : ", numNodes, b"\n")
     for n in range(numNodes):
-        #gPrint(n,"\n")
         data = &g[0].getData(n)
         data[0].rank = INIT_RESIDUAL
         data[0].nout = 0
@@ -46,29 +45,22 @@ cdef void InitializePR(Graph *g):
 cdef void printValuePR(Graph *g):
     cdef unsigned long numNodes = g[0].size()
     cdef NodeTy *data
-    gPrint(b"Number of nodes : ", numNodes, b"\n")
+    print("Number of nodes:", numNodes)
     for n in range(numNodes):
-        #gPrint(n,"\n")
         data = &g[0].getData(n)
-        #if(data[0].nout.load() > 0):
-        gPrint(data[0].rank, b"\n")
+        print(data[0].rank)
 
 #
 # Operator for computing outdegree of nodes in the Graph
 #
 cdef void computeOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray, GNode n) nogil:
     cdef:
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
         GNode dst
-        #NodeTy *dst_data
 
-    ii = g[0].edge_begin(n)
-    ei = g[0].edge_end(n)
-    while ii != ei:
-            dst = g[0].getEdgeDst(ii)
-            largeArray[0][<size_t>dst].fetch_add(1)
-            preincrement(ii)
+    edges = g.edges(n)
+    for ii in edges:
+        dst = g.getEdgeDst(ii)
+        largeArray[0][<size_t>dst].fetch_add(1)
 
 #
 # Operator for assigning outdegree of nodes in the Graph
@@ -76,24 +68,24 @@ cdef void computeOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray,
 cdef void assignOutDeg_operator(Graph *g, LargeArray[atomuint64_t] *largeArray, GNode n) nogil:
     cdef NodeTy *src_data
 
-    src_data = &g[0].getData(n)
+    src_data = &g.getData(n)
     src_data.nout = largeArray[0][<size_t>n].load()
-#
+
 #
 # Main callsite for computing outdegree of nodes in the Graph
 #
 cdef void computeOutDeg(Graph *graph):
     cdef:
-        uint64_t numNodes = graph[0].size()
+        uint64_t numNodes = graph.size()
         LargeArray[atomuint64_t] largeArray
 
     largeArray.allocateInterleaved(numNodes)
     with nogil:
-        do_all(iterate(graph[0].begin(), graph[0].end()),
+        do_all(iterate(graph.begin(), graph.end()),
                         bind_leading(&computeOutDeg_operator, graph, &largeArray), steal(),
                         loopname("ComputeDegree"))
 
-        do_all(iterate(graph[0].begin(), graph[0].end()),
+        do_all(iterate(graph.begin(), graph.end()),
                         bind_leading(&assignOutDeg_operator, graph, &largeArray))
 
 
@@ -102,21 +94,17 @@ cdef void computeOutDeg(Graph *graph):
 #
 cdef void pagerankPullTopo_operator(Graph *g, GReduceMax[float] *max_delta, GNode n) nogil:
     cdef:
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
         GNode dst
         NodeTy *dst_data
         NodeTy *src_data
         float sum = 0
         float value = 0
         float diff = 0;
-    ii = g[0].edge_begin(n, FLAG_UNPROTECTED)
-    ei = g[0].edge_end(n, FLAG_UNPROTECTED)
-    src_data = &g[0].getData(n)
-    while ii != ei:
-            dst_data = &g[0].getData(g[0].getEdgeDst(ii), FLAG_UNPROTECTED)
-            sum += dst_data[0].rank / dst_data[0].nout
-            preincrement(ii)
+    src_data = &g.getData(n)
+    edges = g.edges(n, FLAG_UNPROTECTED)
+    for ii in edges:
+        dst_data = &g.getData(g.getEdgeDst(ii), FLAG_UNPROTECTED)
+        sum += dst_data[0].rank / dst_data[0].nout
     value = sum * ALPHA + (1.0 - ALPHA)
     diff = fabs(value - src_data[0].rank);
     src_data[0].rank = value
@@ -125,7 +113,7 @@ cdef void pagerankPullTopo_operator(Graph *g, GReduceMax[float] *max_delta, GNod
 #
 # Pagerank routine: Loop till convergence
 #
-cdef void pagerankPullTopo(Graph *graph, uint32_t max_iterations) nogil:
+cdef void pagerankPullTopo(Graph *graph, uint32_t max_iterations):
     cdef:
         GReduceMax[float] max_delta
         float delta = 0
@@ -133,41 +121,42 @@ cdef void pagerankPullTopo(Graph *graph, uint32_t max_iterations) nogil:
         Timer T
 
     T.start()
-    while(1):
+    while True:
         with nogil:
-            do_all(iterate(graph[0].begin(), graph[0].end()),
+            do_all(iterate(graph.begin(), graph.end()),
                         bind_leading(&pagerankPullTopo_operator, graph, &max_delta), steal(),
                         loopname("PageRank"))
 
         delta = max_delta.reduce()
         iteration += 1
-        if(delta <= TOLERANCE or iteration >= max_iterations):
+        if delta <= TOLERANCE or iteration >= max_iterations:
             break
         max_delta.reset();
 
     T.stop()
-    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")
+    print("Elapsed time:", T.get(), "milliseconds.")
     if(iteration >= max_iterations):
-        gPrint(b"WARNING : failed to converge in ", iteration, b" iterations\n")
+        print("WARNING: failed to converge in", iteration, "iterations")
 
 
 #
 # Main callsite for Pagerank
 #
-def pagerank(int numThreads, uint32_t max_iterations, string filename):
-    cdef int new_numThreads = setActiveThreads(numThreads)
-    gPrint(b"Running Pagerank on : ", filename, b"\n")
-    if new_numThreads != numThreads:
-        print("Warning, using fewer threads than requested")
-
-    print("Using {0} thread(s).".format(new_numThreads))
+cdef class pagerank:
     cdef Graph graph
 
-    ## Read the CSR format of graph
-    ## directly from disk.
-    graph.readGraphFromGRFile(filename)
+    def __init__(self, uint32_t max_iterations, filename):
+        self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
 
-    InitializePR(&graph)
-    computeOutDeg(&graph)
-    pagerankPullTopo(&graph, max_iterations)
-    #printValuePR(&graph)
+        InitializePR(&self.graph)
+        computeOutDeg(&self.graph)
+        pagerankPullTopo(&self.graph, max_iterations)
+
+    cpdef getData(self, int i):
+        return self.graph.getData(i).rank
+
+    def __getitem__(self, int i):
+        return self.getData(i)
+
+    def __len__(self):
+        return self.graph.size()

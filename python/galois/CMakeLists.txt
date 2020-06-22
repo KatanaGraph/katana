@@ -1,28 +1,74 @@
-include_directories(cpp)
+include_directories(..)
+
+# A function for generating the complex Cython files easily
+set(SOURCE_DIRECTORY_GENERATED_FILE_WARNING "in the SOURCE DIRECTORY! (This is to work around limitations in the Cython cmake interface.)")
+# TODO: Avoid this messy "generated code in the source directory" issue.
+message(STATUS "Generating pxd/pyx files ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}")
+
+function(generate_cython_file FILE)
+  set(options)
+  set(options1)
+  set(optionsmany DEPENDS)
+  cmake_parse_arguments(_args "${options}" "${options1}" "${optionsmany}" ${ARGN})
+  add_custom_command(
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../generate-from-jinja.py ${CMAKE_CURRENT_SOURCE_DIR} ${FILE}.jinja > ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
+    DEPENDS ${FILE}.jinja ${_args_DEPENDS}
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
+    COMMENT "Generating ${FILE} ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}"
+    )
+endfunction()
+
+function(generate_cython_source BASE)
+  set(options)
+  set(options1)
+  set(optionsmany DEPENDS)
+  cmake_parse_arguments(_args "${options}" "${options1}" "${optionsmany}" ${ARGN})
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${BASE}.pxd.jinja)
+    generate_cython_file(${BASE}.pxd DEPENDS ${_args_DEPENDS})
+    # HACK: Explicitly install the generated pxd since the Cython target will not pick it up.
+    install(
+      FILES ${BASE}.pxd
+      DESTINATION python/galois
+      )
+    add_custom_target (${BASE}_pxd DEPENDS ${BASE}.pxd)
+  endif()
+  generate_cython_file(${BASE}.pyx DEPENDS ${_args_DEPENDS})
+endfunction()
 
 add_cython_target(shmem shmem.pyx CXX OUTPUT_VAR GALOIS_SOURCES)
 add_library(shmem MODULE ${GALOIS_SOURCES})
 python_extension_module(shmem)
 target_link_libraries(shmem Galois::shmem)
 
+generate_cython_source(graphs DEPENDS graphs.instantiations.jinja)
+add_cython_target(graphs graphs.pyx CXX OUTPUT_VAR GRAPHS_SOURCES)
+add_library(graphs MODULE ${GRAPHS_SOURCES})
+python_extension_module(graphs)
+add_dependencies(graphs graphs_pxd)
+target_link_libraries(graphs Galois::shmem)
+
 # Avoid collisions with existing application targets with the same name.
-add_cython_target(_bfs _bfs.pyx shmem.pyx CXX OUTPUT_VAR BFS_SOURCES)
+# The expected public names (without _) are provided using pure python modules.
+add_cython_target(_bfs _bfs.pyx CXX OUTPUT_VAR BFS_SOURCES)
 add_library(_bfs MODULE ${BFS_SOURCES})
 python_extension_module(_bfs)
+add_dependencies(_bfs graphs)
 target_link_libraries(_bfs Galois::shmem)
 
-add_cython_target(_pagerank _pagerank.pyx shmem.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
+add_cython_target(_pagerank _pagerank.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
 add_library(_pagerank MODULE ${PAGERANK_SOURCES})
 python_extension_module(_pagerank)
+add_dependencies(_pagerank graphs)
 target_link_libraries(_pagerank Galois::shmem)
 
-add_cython_target(_jaccard _jaccard.pyx shmem.pyx CXX OUTPUT_VAR JACCARD_SOURCES)
+add_cython_target(_jaccard _jaccard.pyx CXX OUTPUT_VAR JACCARD_SOURCES)
 add_library(_jaccard MODULE ${JACCARD_SOURCES})
 python_extension_module(_jaccard)
+add_dependencies(_jaccard graphs)
 target_link_libraries(_jaccard Galois::shmem)
 
 install(
-  TARGETS shmem _bfs _pagerank _jaccard
+  TARGETS shmem graphs _bfs _pagerank _jaccard
   LIBRARY DESTINATION python/galois
 )
 

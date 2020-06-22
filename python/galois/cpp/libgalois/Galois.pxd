@@ -1,4 +1,6 @@
 # distutils: language=c++
+# distutils: extra_compile_args=["-std=c++17"]
+
 from libcpp cimport bool
 from libc.stdint cimport *
 
@@ -15,7 +17,7 @@ cdef extern from * nogil:
 
 cdef extern from "galois/Galois.h" namespace "galois" nogil:
     unsigned int setActiveThreads(unsigned int)
-    void gPrint(...)
+    
     cppclass UserContext[T]:
         pass
 
@@ -61,15 +63,13 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
 
 cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
     cdef cppclass MethodFlag:
-        pass
+        bint operator==(MethodFlag)
 
     cdef MethodFlag FLAG_UNPROTECTED "galois::MethodFlag::UNPROTECTED"
     cdef MethodFlag FLAG_WRITE "galois::MethodFlag::WRITE"
     cdef MethodFlag FLAG_READ "galois::MethodFlag::READ"
     cdef MethodFlag FLAG_INTERNAL_MASK "galois::MethodFlag::INTERNAL_MASK"
     cdef MethodFlag PREVIOUS "galois::MethodFlag::PREVIOUS"
-
-
 
 cdef extern from "galois/runtime/Iterable.h" namespace "galois::runtime" nogil:
     cppclass iterable[it]:

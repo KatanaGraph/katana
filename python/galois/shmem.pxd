@@ -1,10 +1,13 @@
+# distutils: language=c++
+# distutils: extra_compile_args=["-std=c++17"]
+
 from cython.operator cimport preincrement, dereference as deref
-from libgalois.Galois cimport UserContext, iterate, for_each, setActiveThreads, SharedMemSys, loopname, disable_conflict_detection, no_pushes, gPrint, do_all, GReduceMax, InsertBag, steal
-from libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED
-from libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph
-from libgalois.graphs.ReadGraph cimport readGraph
-from libgalois.Timer cimport Timer
-from libstd.atomic cimport atomic
+from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, GReduceMax, InsertBag, steal
+from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED
+from .cpp.libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph
+from .cpp.libgalois.graphs.ReadGraph cimport readGraph
+from .cpp.libgalois.Timer cimport Timer
+from .cpp.libstd.atomic cimport atomic
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
@@ -32,9 +35,9 @@ cdef extern from * nogil:
     # to create a one-line macro that can be used like a function.
     # The expected use is bind_leading(function, args).
     cdef void *bind_leading "[](auto f, auto&&... bound_args){return [=](auto&&... pars){return f(bound_args..., pars...);};}"(...)
-    # Similar thing to invoke a function and return an integer.
-    # Useful for verifying that this approach works.
-    cdef int invoke "[](auto f, auto&&... args){return f(args...);}"(...)
+    # # Similar thing to invoke a function and return an integer.
+    # # Useful for verifying that this approach works.
+    # cdef int invoke "[](auto f, auto&&... args){return f(args...);}"(...)
 
 #cdef int myfunc(int a, int b, int c):
 #    return a + b + c

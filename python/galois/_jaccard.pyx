@@ -1,8 +1,8 @@
 # cython: cdivision = True
 
 from galois.shmem cimport *
-import galois.shmem
-from libgalois.Galois cimport FLAG_UNPROTECTED
+from galois.graphs cimport LC_CSR_Graph_Directed_double_void
+from .cpp.libgalois.Galois cimport FLAG_UNPROTECTED
 from cython.operator cimport preincrement, dereference as deref
 from libcpp.unordered_set cimport unordered_set
 
@@ -34,7 +34,7 @@ cdef void jaccard_operator(Graph_CSR *g, unordered_set[GNodeCSR] *n1_neighbors, 
     n2_data[0] = similarity
 
 
-cdef void jaccard(Graph_CSR *g, GNodeCSR key_node):
+cdef void jaccard_c(Graph_CSR *g, GNodeCSR key_node):
     cdef:
         Timer T
         unordered_set[GNodeCSR] key_neighbors
@@ -51,37 +51,25 @@ cdef void jaccard(Graph_CSR *g, GNodeCSR key_node):
                steal(),
                loopname("jaccard"))
         T.stop()
-    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")
 
 
 cdef void printValue(Graph_CSR *g):
     cdef unsigned long numNodes = g[0].size()
     cdef double *data
-    gPrint(b"Number of nodes : ", numNodes, b"\n")
+    print("Number of nodes:", numNodes)
     i = 0
     for n in range(numNodes):
         data = &g[0].getData(n)
         if data[0] > 0:
-            gPrint(b"\t", n, b", ", data[0], b"\n")
+            print("\t", n, ", ", data[0])
             i += 1
             if i > 100:
-                gPrint(b"\t...\n")
+                print("\t...")
                 break
 
 
 #
 # Main callsite
 #
-def run_jaccard(int numThreads, string filename, unsigned int key_node):
-    cdef int new_numThreads = setActiveThreads(numThreads)
-    if new_numThreads != numThreads:
-        print("Warning, using fewer threads than requested")
-
-    print("Using {0} thread(s).".format(new_numThreads))
-    cdef Graph_CSR graph
-
-    ## Read the CSR format of graph
-    ## directly from disk.
-    graph.readGraphFromGRFile(filename)
-    jaccard(&graph, <GNodeCSR> key_node)
-    printValue(&graph)
+def jaccard(LC_CSR_Graph_Directed_double_void graph, unsigned int key_node):
+    jaccard_c(&graph.underlying, <GNodeCSR> key_node)

@@ -201,7 +201,10 @@ add_custom_target(lib)
 add_custom_target(apps)
 
 # Core libraries (lib)
+
+add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
+
 add_subdirectory(libgalois)
 if (GALOIS_ENABLE_DIST)
   find_package(MPI REQUIRED)

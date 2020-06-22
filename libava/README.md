@@ -71,7 +71,7 @@ Then the application can be started by loading AvA's generated CUDA library.
 In the build directory (`${KATANA_BUILD_DIR}`):
 
 ```Shell
-LD_LIBRARY_PATH=libava/generated AVA_CHANNEL=TCP AVA_WPOOL=TRUE AVA_WORKER_ADDR=localhost \
+LD_LIBRARY_PATH=libava/generated:libava/ava-bin/third_party/grpc/lib AVA_MANAGER_ADDR=0.0.0.0:3334 \
 ./lonestar/analytics/pagerank/pagerank-gpu inputs/stanford/communities/DBLP/com-dblp.wgt32.sym.gr.triangles
 ```
 

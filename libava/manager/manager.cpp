@@ -64,7 +64,7 @@ int const ManagerConfig::kDefaultWorkerPoolSize = 3;
 
 std::shared_ptr<ManagerConfig> config;
 
-std::shared_ptr<ManagerConfig> parse_arguments(int argc, char* argv[]) {
+std::shared_ptr<ManagerConfig> parseArguments(int argc, char* argv[]) {
   int c;
   opterr               = 0;
   int manager_port     = ManagerConfig::kDefaultManagerPort;
@@ -189,40 +189,54 @@ class ManagerServiceImpl final : public ManagerService::Service {
     config->daemons_.push_back(std::move(daemon_info));
     return grpc::Status::OK;
   }
-};
 
-void runManagerService(std::shared_ptr<ManagerConfig> config) {
-  std::string server_address("0.0.0.0:" +
-                             std::to_string(config->manager_port_));
-  ManagerServiceImpl service;
+  virtual grpc::Status AssignWorker(
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<WorkerAssignRequest>* request_msg,
+      flatbuffers::grpc::Message<WorkerAssignReply>* response_msg) override {
+    const WorkerAssignRequest* request = request_msg->GetRoot();
+    int worker_count                   = request->worker_count();
+    int gpu_count                      = request->gpu_count();
+    std::vector<uint64_t> gpu_mem;
+    if (request->gpu_mem()) {
+      for (auto const& gm : *(request->gpu_mem())) {
+        std::cerr << "Request GPU with " << (gm >> 20) << " MB free memory"
+                  << std::endl;
+        gpu_mem.push_back(gm);
+      }
+    }
+    if (gpu_mem.size() != (size_t)gpu_count)
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "Mismatched gpu_count and gpu_mem vector");
 
-  grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service);
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  std::cerr << "Manager Service listening on " << server_address << std::endl;
-  server->Wait();
-}
+    std::vector<std::string> assigned_workers =
+        DoAssignWorker(worker_count, gpu_count, gpu_mem);
+    if (assigned_workers.empty())
+      return grpc::Status(
+          grpc::StatusCode::UNAVAILABLE,
+          "Failed to assign API servers: insufficient resource");
 
-void replyToGuestlib(int client_fd, std::string worker_address) {
-  struct command_base response;
-  uintptr_t* worker_port;
-  int assigned_worker_port =
-      std::stoi(worker_address.substr(worker_address.find(':') + 1));
+    /* Return assigned API servers. */
+    std::vector<flatbuffers::Offset<flatbuffers::String>> worker_address;
+    flatbuffers::grpc::MessageBuilder mb;
+    for (auto const& worker : assigned_workers)
+      worker_address.push_back(mb.CreateString(worker));
+    auto wa_offset = mb.CreateVector(&worker_address[0], worker_address.size());
+    auto response_offset = CreateWorkerAssignReply(mb, wa_offset);
+    mb.Finish(response_offset);
+    *response_msg = mb.ReleaseMessage<WorkerAssignReply>();
 
-  response.api_id = INTERNAL_API;
-  worker_port     = (uintptr_t*)response.reserved_area;
-  *worker_port    = assigned_worker_port;
-  send_socket(client_fd, &response, sizeof(struct command_base));
-}
+    return grpc::Status::OK;
+  }
 
-void handleGuestlib(int client_fd, std::shared_ptr<ManagerConfig> config) {
-  struct command_base msg;
+private:
+  std::vector<std::string> DoAssignWorker(int worker_count, int gpu_count,
+                                          std::vector<uint64_t>& gpu_mem) {
+    std::vector<std::string> assigned_workers;
 
-  /* get guestlib info */
-  recv_socket(client_fd, &msg, sizeof(struct command_base));
-  switch (msg.command_type) {
-  case NW_NEW_APPLICATION:
+    /* If resource is insufficient, return an empty vector. */
+    // TODO
+
     /* API server assignment policy.
      *
      * Currently it is assumed that every API server is running on only one GPU.
@@ -239,19 +253,20 @@ void handleGuestlib(int client_fd, std::shared_ptr<ManagerConfig> config) {
      * before any guestlib connects in.
      */
     for (auto const& daemon : config->daemons_) {
-      auto assigned_worker = daemon->workers_.Dequeue();
-      if (!assigned_worker.first.empty()) {
+      auto worker = daemon->workers_.Dequeue();
+      if (!worker.first.empty()) {
         /* Find an idle API server, respond guestlib and spawn a new idle
          * worker. */
-        replyToGuestlib(client_fd, assigned_worker.first);
-        close(client_fd);
+        std::cerr << "[" << __func__ << "] Assign " << worker.first
+                  << std::endl;
+        assigned_workers.push_back(worker.first);
 
         std::vector<int> count        = {1};
-        std::vector<std::string> uuid = {assigned_worker.second};
+        std::vector<std::string> uuid = {worker.second};
         std::vector<std::string> worker_address =
             daemon->client_->SpawnWorker(count, uuid, daemon->ip_);
-        daemon->workers_.Enqueue(worker_address[0], assigned_worker.second);
-        return;
+        daemon->workers_.Enqueue(worker_address[0], worker.second);
+        return assigned_workers;
       }
     }
 
@@ -259,76 +274,38 @@ void handleGuestlib(int client_fd, std::shared_ptr<ManagerConfig> config) {
      * Currently, we constantly spawn the new API server on the first GPU of the
      * first GPU node (which is assumed to exist).
      */
-    {
-      std::vector<int> count        = {1};
-      std::vector<std::string> uuid = {config->daemons_[0]->gpu_info_[0].uuid_};
-      std::vector<std::string> worker_address =
-          config->daemons_[0]->client_->SpawnWorker(count, uuid,
-                                                    config->daemons_[0]->ip_);
-      replyToGuestlib(client_fd,
-                      worker_address.empty() ? "0.0.0.0:0" : worker_address[0]);
-      close(client_fd);
-    }
-    break;
+    std::vector<int> count        = {1};
+    std::vector<std::string> uuid = {config->daemons_[0]->gpu_info_[0].uuid_};
+    std::vector<std::string> worker_address =
+        config->daemons_[0]->client_->SpawnWorker(count, uuid,
+                                                  config->daemons_[0]->ip_);
+    assigned_workers.push_back(worker_address.empty() ? "0.0.0.0:0"
+                                                      : worker_address[0]);
+    std::cerr << "[" << __func__ << "] Assign " << assigned_workers.back()
+              << std::endl;
 
-  default:
-    std::cerr << "Received unrecognized message " << msg.command_type
-              << " from guestlib" << std::endl;
-    close(client_fd);
+    return assigned_workers;
   }
-}
+};
 
-/**
- * This routine functions as the traditional AvA manager, listening on a
- * hard-coded port WORKER_MANAGER_PORT (3333). The guestlib connects to this
- * port to request for the API server. We are getting rid of those hard-coded
- * configurations, but this waits for some AvA upstream changes. The final goal
- * is to merge this into the ManagerService gRPC routine.
- */
-void startTraditionalManager() {
-  struct sockaddr_in address;
-  int addrlen = sizeof(address);
-  int opt     = 1;
-  int client_fd;
+void runManagerService(std::shared_ptr<ManagerConfig> config) {
+  std::string server_address("0.0.0.0:" +
+                             std::to_string(config->manager_port_));
+  ManagerServiceImpl service;
 
-  /* Setup signal handler. */
-  if ((original_sigint_handler = signal(SIGINT, sigint_handler)) == SIG_ERR)
-    printf("failed to catch SIGINT\n");
-
-  /* Initialize TCP socket. */
-  if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-    perror("socket");
-  }
-  if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                 sizeof(opt))) {
-    perror("setsockopt");
-  }
-  address.sin_family      = AF_INET;
-  address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port        = htons(WORKER_MANAGER_PORT);
-
-  if (bind(listen_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-    perror("bind failed");
-  }
-  if (listen(listen_fd, 10) < 0) {
-    perror("listen");
-  }
-
-  /* Polling new applications. */
-  do {
-    client_fd =
-        accept(listen_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-    std::async(std::launch::async | std::launch::deferred, handleGuestlib,
-               client_fd, config);
-  } while (1);
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  std::cerr << "Manager Service listening on " << server_address << std::endl;
+  server->Wait();
 }
 
 int main(int argc, char* argv[]) {
-  config = parse_arguments(argc, argv);
+  config = parseArguments(argc, argv);
   config->Print();
 
   std::thread server_thread(runManagerService, config);
-  startTraditionalManager();
   server_thread.join();
 
   return 0;

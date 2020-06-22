@@ -46,6 +46,7 @@ set(GALOIS_NUM_TEST_GPUS "0" CACHE STRING "Number of test GPUs to use (on a sing
 set(GALOIS_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(GALOIS_USE_BARE_MPI OFF CACHE BOOL "Use MPI directly (no dedicated network-runtime thread)")
 set(GALOIS_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical cores)")
+set(GALOIS_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
 if(NOT GALOIS_NUM_TEST_THREADS)
   cmake_host_system_information(RESULT GALOIS_NUM_TEST_THREADS QUERY NUMBER_OF_PHYSICAL_CORES)
@@ -57,6 +58,16 @@ endif()
 ###### Configure (users don't need to go beyond here) ######
 
 include(CTest)
+
+###### Install dependencies ######
+
+if(GALOIS_AUTO_CONAN)
+  include(cmake/Modules/conan.cmake)
+  conan_cmake_run(CONANFILE config/conanfile.txt
+                  BASIC_SETUP CMAKE_TARGETS
+                  BUILD missing)
+  include("${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
+endif()
 
 ###### Configure compiler ######
 

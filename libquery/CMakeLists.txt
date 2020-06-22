@@ -14,7 +14,6 @@ add_library(galois_query SHARED
   src/CypherCompiler.cpp
   src/PythonGraph.cpp
   src/PythonGraphReport.cpp
-  src/PythonGraphSimulation.cpp
   src/PythonGraphQuery.cpp
   src/GraphSimulation.cpp
   src/LDBCReader.cpp

@@ -509,18 +509,6 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
                   size_t numQueryEdges, const char** filters,
                   bool useGraphSimulation);
 
-/**
- * Wrapper call to graph simulation call on LC_CSR Graph.
- *
- * @todo doxygen limit and window
- * @param queryGraph pattern graph to match
- * @param dataGraph graph to match pattern to
- * @returns Number of matched edges from graph simulation.
- */
-size_t runAttributedGraphSimulation(AttributedGraph* queryGraph,
-                                    AttributedGraph* dataGraph,
-                                    EventLimit limit, EventWindow window);
-
 void reportGraphSimulation(AttributedGraph& queryGraph,
                            AttributedGraph& dataGraph, char* outputFile);
 

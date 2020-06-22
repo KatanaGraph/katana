@@ -3,7 +3,7 @@
  * parallelism. The code is being released under the terms of the 3-Clause BSD
  * License (a copy is located in LICENSE.txt at the top-level directory).
  *
- * Copyright (C) 2018, The University of Texas at Austin. All rights reserved.
+ * Copyright (C) 2020, The University of Texas at Austin. All rights reserved.
  * UNIVERSITY EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES CONCERNING THIS
  * SOFTWARE AND DOCUMENTATION, INCLUDING ANY WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR ANY PARTICULAR PURPOSE, NON-INFRINGEMENT AND WARRANTIES OF
@@ -156,30 +156,15 @@ std::pair<bool, std::pair<uint32_t, uint32_t>>
 getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel);
 
 /**
- * Checks graph to see if specified node label is defined for the graph.
- *
- * @param g Graph to check
- * @param nodeLabel label to check existence of
- * @returns true if the specified node label is defined for the graph
- */
-bool nodeLabelExists(AttributedGraph& g, const std::string& nodeLabel);
-
-/**
- * Checks graph to see if specified edge label is defined for the graph.
- *
- * @param g Graph to check
- * @param edgeLabel label to check existence of
- * @returns true if the specified edge label is defined for the graph
- */
-bool edgeLabelExists(AttributedGraph& g, const std::string& edgeLabel);
-
-/**
  * Reset matched status on all nodes to 0
  *
  * @param graph Graph to reset matched status on
  */
 void resetMatchedStatus(QueryGraph& graph);
 
+/**
+ * TODO doxygen
+ */
 void matchNodesUsingGraphSimulation(QueryGraph& qG, QueryGraph& dG,
                                     bool reinitialize, EventLimit limit,
                                     EventWindow window,
@@ -188,15 +173,9 @@ void matchNodesUsingGraphSimulation(QueryGraph& qG, QueryGraph& dG,
                                     std::vector<std::string>& nodeNames);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
+//! TODO doxygen
 void matchEdgesAfterGraphSimulation(QueryGraph& qG, QueryGraph& dG);
 #endif
-
-/**
- * @todo doxygen
- */
-void runGraphSimulationOld(QueryGraph& queryGraph, QueryGraph& dataGraph,
-                           EventLimit limit, EventWindow window,
-                           bool queryNodeHasMoreThan2Edges);
 
 /**
  * @todo doxygen
@@ -215,65 +194,12 @@ void findShortestPaths(QueryGraph& dataGraph, uint32_t srcQueryNode,
                        uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
 
 /**
- * @todo doxygen
- */
-void findAllPaths(QueryGraph& dataGraph, uint32_t srcQueryNode,
-                  uint32_t dstQueryNode, QueryEdgeData queryEdgeData,
-                  uint32_t matchedQueryNode, uint32_t matchedQueryEdge);
-
-/**
- * Look for nodes with repeated actions in the graph.
- *
- * @param graph Graph to check for repeated action
- * @param nodeLabel Only consider edges on nodes with the specified label
- * @param action Action (i.e. edge label) to look for repeats of
- * @param window Time window to consider when pattern matching (may be
- * valid or invalid)
- */
-void matchNodeWithRepeatedActions(QueryGraph& graph, uint32_t nodeLabel,
-                                  uint32_t action, EventWindow window);
-/**
- * Look for a node that has 2 actions on 2 specific types of nodes.
- *
- * @param graph Graph to check for repeated action
- * @param nodeLabel Only consider edges on nodes with the specified label
- * @param action1 1st action (i.e. edge label) to look for
- * @param dstNodeLabel1 required label for destination of 1st action
- * @param action2 2nd action (i.e. edge label) to look for
- * @param dstNodeLabel2 required label for destination of 2nd action
- * @param window Time window to consider when pattern matching (may be
- * valid or invalid)
- */
-void matchNodeWithTwoActions(QueryGraph& graph, uint32_t nodeLabel,
-                             uint32_t action1, uint32_t dstNodeLabel1,
-                             uint32_t action2, uint32_t dstNodeLabel2,
-                             EventWindow window);
-/**
- * Look for neighbors of a specified node connected by a specified action.
- *
- * @param graph Graph to check for repeated action
- * @param node Node to match neighbors of
- * @param nodeLabel Passed in as sanity check: node should have nodeLabel
- * @param action Action (i.e. edge label) to look for
- * @param neighborLabel Label that must be on neighbor to produce a match
- * @param window Time window to consider when pattern matching (may be
- * valid or invalid)
- */
-void matchNeighbors(QueryGraph& graph, QueryGraph::GraphNode node,
-                    uint32_t nodeLabel, uint32_t action, uint32_t neighborLabel,
-                    EventWindow window);
-
-/**
  * Get the number of matched nodes in the graph.
  * @param graph Graph to count matched nodes in
  * @returns Number of matched nodes in the graph
  */
 size_t countMatchedNodes(QueryGraph& graph);
-/**
- * Get the number of matched neighbors of a node in the graph.
- * @warning Right now it literally does the same thing as countMatchedNodes
- */
-size_t countMatchedNeighbors(QueryGraph& graph, QueryGraph::GraphNode node);
+
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 /**
@@ -282,12 +208,6 @@ size_t countMatchedNeighbors(QueryGraph& graph, QueryGraph::GraphNode node);
  * @returns Number of matched edges in the graph
  */
 size_t countMatchedEdges(QueryGraph& graph);
-/**
- * Get the number of matched edges of a particular node in the graph.
- * @param graph Graph to count matched edges in
- * @returns Number of matched edges in the graph
- */
-size_t countMatchedNeighborEdges(QueryGraph& graph, QueryGraph::GraphNode node);
 #endif
 
 #endif // GALOIS_GRAPH_SIMULATION_H

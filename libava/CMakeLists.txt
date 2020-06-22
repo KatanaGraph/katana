@@ -7,17 +7,18 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
-  GIT_TAG d30fddf983550473
+  GIT_TAG fd4f4094f1a2e986
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
-  PATCH_COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/specs/CMakeLists.patch >> ${AVA_UNPACK_LOCATION}/cava/CMakeLists.txt
 )
 
 FetchContent_GetProperties(ava)
 if(NOT ava_POPULATED)
   FetchContent_Populate(ava)
-  message(STATUS "Configuring and building boost immediately")
-
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/specs/cava_patch/CMakeLists.txt DESTINATION ${AVA_UNPACK_LOCATION}/cava/)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/specs)
+  file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/specs/cuda_10_1.c ${CMAKE_CURRENT_BINARY_DIR}/specs/cuda_10_1.c SYMBOLIC)
+  file(CREATE_LINK ${AVA_CAVA_LOCATION}/headers ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/headers SYMBOLIC)
   add_subdirectory(manager/superbuild)
 endif()
 
@@ -29,9 +30,9 @@ ExternalProject_Add(ava-bin
   INSTALL_COMMAND ""
 )
 
-ExternalProject_Add_Step(ava_bin link
-  COMMAND mkdir -p generated && \
-          ln -f -s ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/katana_cuda_nw/libguestlib.so generated/libcudart.so.10.1 && \
+ExternalProject_Add_Step(ava-bin link
+  COMMAND mkdir -p generated &&
+          ln -f -s ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/katana_cuda_nw/libguestlib.so generated/libcudart.so.10.1 &&
           ln -f -s ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/katana_cuda_nw/worker generated/worker
   DEPENDEES install
 )

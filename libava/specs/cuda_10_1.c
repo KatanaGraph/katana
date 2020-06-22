@@ -8,7 +8,7 @@ ava_export_qualifier();
 
 /**
  * Compile by
- * ./nwcc samples/cudart.nw.c -I /usr/local/cuda-10.0/include -I headers `pkg-config --cflags glib-2.0`
+ * ./nwcc samples/cudart.nw.c -I /usr/local/cuda-10.1/include -I headers `pkg-config --cflags glib-2.0`
  */
 
 ava_non_transferable_types {

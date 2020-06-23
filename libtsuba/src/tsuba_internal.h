@@ -5,9 +5,6 @@
 #include <thread>
 #include <cstdint>
 
-/* NOLINTNEXTLINE */
-#define EXPORT_SYM extern "C" __attribute__((__visibility__("default")))
-
 constexpr const uint64_t kKBShift = 10;
 constexpr const uint64_t kMBShift = 20;
 constexpr const uint64_t kGBShift = 30;

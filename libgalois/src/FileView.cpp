@@ -15,28 +15,28 @@ FileView::~FileView() { Unbind(); }
 
 void FileView::Unbind() {
   if (valid_) {
-    TsubaMunmap(map_start_);
+    tsuba::Munmap(map_start_);
     valid_ = false;
   }
 }
 
 int FileView::Bind(const std::string& filename) {
-  TsubaStatBuf buf;
-  int err = TsubaStat(filename.c_str(), &buf);
+  tsuba::StatBuf buf;
+  int err = tsuba::Stat(filename, &buf);
   if (err) {
     return err;
   }
 
-  return Bind(filename, 0, TsubaRoundUpToBlock(buf.size));
+  return Bind(filename, 0, tsuba::RoundUpToBlock(buf.size));
 }
 
 int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   assert(begin < end);
-  uint64_t file_off    = TsubaRoundDownToBlock(begin);
-  uint64_t map_size    = TsubaRoundUpToBlock(end - file_off);
+  uint64_t file_off    = tsuba::RoundDownToBlock(begin);
+  uint64_t map_size    = tsuba::RoundUpToBlock(end - file_off);
   uint64_t region_size = end - begin;
 
-  uint8_t* ptr = TsubaMmap(filename.c_str(), file_off, map_size);
+  uint8_t* ptr = tsuba::Mmap(filename, file_off, map_size);
   if (!ptr) {
     return -1;
   }
@@ -44,7 +44,7 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   map_size_     = map_size;
   region_size_  = region_size;
   map_start_    = ptr;
-  region_start_ = ptr + (begin & TSUBA_BLOCK_OFFSET_MASK); /* NOLINT */
+  region_start_ = ptr + (begin & tsuba::kBlockOffsetMask); /* NOLINT */
   valid_        = true;
   return 0;
 }

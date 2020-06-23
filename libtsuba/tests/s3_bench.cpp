@@ -14,7 +14,7 @@
 #include <string>
 #include <iomanip>
 
-#include "tsuba/tsuba_api.h"
+#include "tsuba/tsuba.h"
 
 constexpr static const char* const output_fmt =
     "%24s (%4d) %7ld us/op %4ld ms/op\n";
@@ -184,7 +184,7 @@ void test_s3_objs(int fd_batch, const uint8_t* data, uint64_t size) {
   struct timespec start = now();
   for (int i = 0; i < fd_batch; ++i) {
     std::string s3url = sstr(s3_url_base, fillstr(i, 4));
-    int tsubaret      = TsubaStore(s3url.c_str(), data, size);
+    int tsubaret      = tsuba::Store(s3url, data, size);
     if (tsubaret != 0) {
       std::cerr << "Tsuba bad return " << tsubaret << std::endl;
       perror("s3");
@@ -206,7 +206,7 @@ void test_s3_objs_sync(int fd_batch, const uint8_t* data, uint64_t size) {
   struct timespec start = now();
   for (int i = 0; i < fd_batch; ++i) {
     // Current API rejects empty writes
-    int tsubaret = TsubaStoreSync(s3urls[i].c_str(), data, size);
+    int tsubaret = tsuba::StoreSync(s3urls[i], data, size);
     if (tsubaret != 0) {
       std::cerr << "Tsuba store sync bad return " << tsubaret << std::endl;
     }
@@ -227,12 +227,12 @@ void test_s3_objs_async_one(int fd_batch, const uint8_t* data, uint64_t size) {
   struct timespec start = now();
   for (int i = 0; i < fd_batch; ++i) {
     // Current API rejects empty writes
-    int tsubaret = TsubaStoreAsync(s3urls[i].c_str(), data, size);
+    int tsubaret = tsuba::StoreAsync(s3urls[i], data, size);
     if (tsubaret != 0) {
       std::cerr << "Tsuba store async bad return " << tsubaret << std::endl;
     }
     // Only 1 outstanding store at a time
-    TsubaStoreAsyncFinish(s3urls[i].c_str());
+    tsuba::StoreAsyncFinish(s3urls[i]);
   }
   long us = timespec_to_us(timespec_sub(now(), start));
   printf(output_fmt, "S3 async create one", fd_batch, (us / fd_batch),
@@ -251,15 +251,15 @@ void test_s3_objs_async_batch(int fd_batch, const uint8_t* data,
   struct timespec start = now();
   for (int i = 0; i < fd_batch; ++i) {
     // Current API rejects empty writes
-    int tsubaret = TsubaStoreAsync(s3urls[i].c_str(), data, size);
+    int tsubaret = tsuba::StoreAsync(s3urls[i], data, size);
     if (tsubaret != 0) {
       std::cerr << "Tsuba store async bad return " << tsubaret << std::endl;
     }
   }
   for (int i = 0; i < fd_batch; ++i) {
-    int ret = TsubaStoreAsyncFinish(s3urls[i].c_str());
+    int ret = tsuba::StoreAsyncFinish(s3urls[i]);
     if (ret != 0) {
-      std::cerr << "TsubaStoreAsyncFinish bad return " << ret << std::endl;
+      std::cerr << "tsuba::StoreAsyncFinish bad return " << ret << std::endl;
     }
   }
   long us = timespec_to_us(timespec_sub(now(), start));
@@ -295,7 +295,7 @@ struct {
 };
 
 int main() {
-  TsubaInit(); // Done in Galois code
+  tsuba::Init(); // Done in Galois code
   for (unsigned long i = 0; i < sizeof(arr) / sizeof(arr[0]); ++i) {
     init_data(arr[i].data, arr[i].size);
   }

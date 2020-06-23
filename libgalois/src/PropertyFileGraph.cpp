@@ -25,7 +25,7 @@
 
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
-#include "tsuba/tsuba_api.h"
+#include "tsuba/tsuba.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -225,7 +225,7 @@ WriteTable(const arrow::Table& table,
 
     std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
 
-    int err = TsubaStore(next_path.c_str(), buf->data(), buf->size());
+    int err = tsuba::Store(next_path, buf->data(), buf->size());
     if (err) {
       return galois::ErrorCode::InvalidArgument;
     }
@@ -447,8 +447,8 @@ WriteTopology(const galois::graphs::GraphTopology& topology,
   }
 
   fs::path t_path = NewPath(dir, "topology");
-  int err = TsubaStore(t_path.c_str(), reinterpret_cast<uint8_t*>(mmapper.ptr),
-                       mmapper.size);
+  int err = tsuba::Store(t_path, reinterpret_cast<uint8_t*>(mmapper.ptr),
+                         mmapper.size);
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }
@@ -634,7 +634,7 @@ WriteMetadata(const galois::graphs::MetadataImpl& metadata,
 
   std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
 
-  int err = TsubaStore(path.c_str(), buf->data(), buf->size());
+  int err = tsuba::Store(path, buf->data(), buf->size());
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }

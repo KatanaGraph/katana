@@ -1,6 +1,6 @@
 #include "DistBench/Output.h"
 #include "galois/runtime/Network.h"
-#include "tsuba/tsuba_api.h"
+#include "tsuba/tsuba.h"
 
 #include <parquet/arrow/writer.h>
 #include <iomanip>
@@ -55,7 +55,7 @@ void writeOutput(const std::string& dir, arrow::Table& table) {
   std::string filename = makeOutputFilename(dir);
 
   int err = 0;
-  if ((err = TsubaStore(filename.c_str(), buf->data(), buf->size())) != 0) {
+  if ((err = tsuba::Store(filename, buf->data(), buf->size())) != 0) {
     GALOIS_DIE("store", err);
   }
 }

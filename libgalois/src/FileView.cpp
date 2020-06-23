@@ -20,6 +20,16 @@ void FileView::Unbind() {
   }
 }
 
+int FileView::Bind(const std::string& filename) {
+  TsubaStatBuf buf;
+  int err = TsubaStat(filename.c_str(), &buf);
+  if (err) {
+    return err;
+  }
+
+  return Bind(filename, 0, TsubaRoundUpToBlock(buf.size));
+}
+
 int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   assert(begin < end);
   uint64_t file_off    = TsubaRoundDownToBlock(begin);
@@ -35,6 +45,7 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   region_size_  = region_size;
   map_start_    = ptr;
   region_start_ = ptr + (begin & TSUBA_BLOCK_OFFSET_MASK); /* NOLINT */
+  valid_        = true;
   return 0;
 }
 

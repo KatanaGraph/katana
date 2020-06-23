@@ -38,7 +38,8 @@ static uint8_t* MmapLocalFile(const char* filename, uint64_t begin,
   if (fd < 0) {
     return nullptr;
   }
-  auto* ret = MmapCast<uint8_t>(size, PROT_READ, MAP_SHARED, fd, begin);
+  auto* ret =
+      MmapCast<uint8_t>(size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, begin);
   close(fd);
   return ret;
 }

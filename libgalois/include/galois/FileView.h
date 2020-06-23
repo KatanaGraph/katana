@@ -44,6 +44,8 @@ public:
   inline int Bind(const std::string& filename, uint64_t stop) {
     return Bind(filename, 0, stop);
   }
+  int Bind(const std::string& filename);
+
   void Unbind();
 
   template <typename T>

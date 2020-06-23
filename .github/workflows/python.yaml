@@ -72,7 +72,7 @@ jobs:
     - name: package
       if: startsWith(matrix.os, 'macOS-')
       run: |
-        brew install ccache conan openmpi llvm
+        brew install apache-arrow ccache conan llvm openmpi 
         export PATH=$PATH:/usr/local/opt/llvm/bin
         .github/workflows/dist_python_macos.sh
 

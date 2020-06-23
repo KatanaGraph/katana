@@ -43,23 +43,6 @@ extern "C" {
 ////////////////////////////////////////////////////////////////////////////////
 // API for Galois runtime
 ////////////////////////////////////////////////////////////////////////////////
-/**
- * Galois runtime initialization. Must be called before running anything from
- * Galois libraries.
- */
-void initGaloisRuntime();
-
-/**
- * Set number of threads Galois will run with.
- *
- * @param numThreads New number of threads to run with
- */
-void setNumThreads(int numThreads);
-
-/**
- * Get currently set number of threads to run with.
- */
-int getNumThreads();
 
 /**
  * Creates a new AttributedGraph.
@@ -79,13 +62,6 @@ void deleteGraph(AttributedGraph* g);
  * @param filename Name to save serialized graph on disk to
  */
 void saveGraph(AttributedGraph* g, const char* filename);
-
-/**
- * Outputs an edge list from the attributed graph.
- * Ignores vertex labels and only chooses a single label from the
- * edge to output. Also ignores vertex/edge attributes.
- */
-void saveEdgeList(AttributedGraph* g, char* filename);
 
 /**
  * Load an AttributedGraph from disk for use.
@@ -138,18 +114,6 @@ void setNewNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
                 uint32_t labelBitPosition, char* name);
 
 /**
- * Set a node in the AttributedGraph. Graph memory should have been allocated
- * already.
- * @param g Graph to set node in
- * @param nodeIndex Node ID to set/change
- * @param uuid unique ID to node
- * @param label Label to give node
- * @param name Name to give node (e.g. name of a process)
- */
-void setNode(AttributedGraph* g, uint32_t nodeIndex, char* uuid, uint32_t label,
-             char* name);
-
-/**
  * Assign a node label to a node.
  *
  * @param g Graph to save mapping to
@@ -177,16 +141,6 @@ void setNodeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
  */
 void setEdgeLabelMetadata(AttributedGraph* g, uint32_t labelBitPosition,
                           const char* name);
-
-/**
- * Label a node with a value for a particular attribute.
- * @param g Graph to label
- * @param nodeIndex node ID to give the attribute
- * @param key Attribute name
- * @param value Value of the attribute to give the node
- */
-void setNodeAttribute(AttributedGraph* g, uint32_t nodeIndex, const char* key,
-                      const char* value);
 
 /**
  * Label a node with a value for a particular existing attribute.
@@ -228,15 +182,6 @@ void constructNewEdge(AttributedGraph* g, uint64_t edgeIndex,
  */
 void constructEdge(AttributedGraph* g, uint64_t edgeIndex,
                    uint32_t dstNodeIndex, uint32_t label, uint64_t timestamp);
-/**
- * Label an edge with a value for a particular attribute.
- * @param g Graph to label
- * @param edgeIndex edge ID to give the attribute
- * @param key Attribute name
- * @param value Value of the attribute to give the edge
- */
-void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
-                      const char* value);
 
 /**
  * Label an edge with a value for a particular existing attribute.
@@ -248,48 +193,6 @@ void setEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex, const char* key,
 void setExistingEdgeAttribute(AttributedGraph* g, uint32_t edgeIndex,
                               const char* key, const char* value);
 
-/**
- * Gets the number of nodes in the graph.
- * @param g Graph to get nodes of
- * @returns Number of nodes in the graph
- */
-size_t getNumNodes(AttributedGraph* g);
-/**
- * Gets the number of edges in the graph.
- * @param g Graph to get edges of
- * @returns Number of edges in the graph
- */
-size_t getNumEdges(AttributedGraph* g);
-
-///////
-// New Functions Added for Incremental Graph Construction
-///////
-
-/**
- * Node label add that returns the label for a string if it already
- * exists/a correct label for the string.
- * @param g Graph to save mapping to
- * @param name String to be associated with the integer label
- * @returns Bit position that string is ultimately mapped to
- */
-uint32_t addNodeLabelMetadata(AttributedGraph* g, char* name);
-
-/**
- * Edge label add that returns the label for a string if it already
- * exists/a correct label for the string.
- * @param g Graph to save mapping to
- * @param name String to be associated with the integer label
- * @returns Bit position that string is ultimately mapped to
- */
-uint32_t addEdgeLabelMetadata(AttributedGraph* g, char* name);
-
-/**
- * Resizes existing node attribute vectors to a new size.
- * @param g Graph to change
- * @param nodeCount new size of node attribute vectors. Should be larger than
- * current size
- */
-void resizeNodeAttributeMap(AttributedGraph* g, uint32_t nodeCount);
 
 /**
  * Add a new node attribute map with a particular size. Does nothing if key
@@ -332,167 +235,6 @@ void addEdgeAttributeMap(AttributedGraph* g, const char* key,
 void addEdgeAttributeType(AttributedGraph* g, const char* key,
                           AttributedType t);
 
-/**
- * Resizes the node maps in an attributed graph.
- * @param g Graph to change
- * @param nodeCount Size to change to. Should be at least as big as the
- * original size of the map.
- */
-void resizeNodeMetadata(AttributedGraph* g, uint32_t nodeCount);
-
-/**
- * Checks if a node with a particular uuid exists in the graph
- * @param g Graph to check
- * @param uuid UUID to check existince of
- * @returns 1 if it exists in the graph, 0 otherwise
- */
-uint32_t nodeExists(AttributedGraph* g, char* uuid);
-
-/**
- * Set a node in the AttributedGraph ONLY for the CSR for a SINGLE label
- * by specifying bit position to set; do not update any
- * metadata maps of the graph. Graph memory should have been allocated
- * already.
- * @param g Graph to set node in
- * @param nodeIndex Node index to set/change
- * @param uuid unique ID of node
- * @param labelBitPosition Bit position to set on label of the node
- */
-void setNewNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                   uint32_t labelBitPosition);
-
-/**
- * Set a node in the AttributedGraph ONLY for the CSR; do not update any
- * metadata maps of the graph. Graph memory should have been allocated
- * already.
- * @param g Graph to set node in
- * @param nodeIndex Node index to set/change
- * @param uuid unique ID of node
- * @param label Label to give node
- */
-void setNodeCSR(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                uint32_t label);
-
-/**
- * Set a node in the AttributedGraph ONLY for the metadata (node indices and
- * node name); do not touch the LC CSR representation of the graph.
- * @param g Graph to set node in
- * @param nodeIndex Node index to set/change
- * @param uuid unique ID of node
- * @param name Name to give node (e.g. name of a process)
- */
-void setNodeMetadata(AttributedGraph* g, uint32_t nodeIndex, char* uuid,
-                     char* name);
-
-/**
- * Get the index of a node from its UUID (assumes uuid is valid)
- * @param g Graph to check
- * @param uuid unique ID of node
- * @returns Node index of uuid
- */
-uint32_t getIndexFromUUID(AttributedGraph* g, char* uuid);
-
-/**
- * Get the UUID of a node from its node index. Assumes that the nodeIndex is
- * valid (i.e. if not, program will crash or return an invalid value).
- * @param g Graph to check
- * @param nodeIndex node index to get UUID of
- */
-const char* getUUIDFromIndex(AttributedGraph* g, uint32_t nodeIndex);
-
-/**
- * Get the node label of a particular node. Calling end will have to interpret
- * the set bits.
- * @param g Graph to check
- * @param nodeIndex Node index to check
- * @returns Node label on node at provided index. Note that the calling end
- * will have to interpret the set bits.
- */
-uint32_t getNodeLabel(AttributedGraph* g, uint32_t nodeIndex);
-
-/**
- * Copy all the edges of a certain node from a source CSR graph to the dest CSR
- * graph in the AttributedGraphs. Also copies edge attribute data to the dest
- * AttGraph.
- * @param destGraph graph to copy to
- * @param srcGraph graph to copy from
- * @param nodeIndex index of the node to copy from srcGraph
- * @param edgeIndex index to start copying to in the destGraph
- */
-uint64_t copyEdgesOfNode(AttributedGraph* destGraph, AttributedGraph* srcGraph,
-                         uint32_t nodeIndex, uint64_t edgeIndex);
-
-/**
- * Swaps the inner CSRs of 2 AttributedGraphs.
- * @param g1 graph 1
- * @param g2 graph 2
- */
-void swapCSR(AttributedGraph* g1, AttributedGraph* g2);
-
-/**
- * Swap the edge attributes map of 2 AttributedGraphs
- * @param g1 graph 1
- * @param g2 graph 2
- */
-void swapEdgeAttributes(AttributedGraph* g1, AttributedGraph* g2);
-
-/**
- * Adds a new label to the node at the specified index.
- *
- * @param g Graph to alter
- * @param nodeIndex Node index to set/change
- * @param labelBitPosition Bit position to add on label of the node
- */
-void addNewLabel(AttributedGraph* g, uint32_t nodeIndex,
-                 uint32_t labelBitPosition);
-
-/**
- * Merge provided label with existing label at specified node index.
- *
- * @param g Graph to alter
- * @param nodeIndex Node index to set/change
- * @param labelToMerge Label to "or" with existing label
- */
-void mergeLabels(AttributedGraph* g, uint32_t nodeIndex, uint32_t labelToMerge);
-
-////////////////////////////////////////
-// Removal Calls/Helpers
-////////////////////////////////////////
-
-/**
- * Changes the matched field on all nodes and all edges to 0.
- */
-void unmatchAll(AttributedGraph* g);
-
-/**
- * Mark an edge as dead (assumes not dead has a marking of 0).
- *
- * @param g Graph to alter
- * @param srcUUID ID of source
- * @param dstUUID ID of destination
- * @param labelBitPosition Bit position of label on edge
- * @param timestamp Timestamp to match on edge
- */
-uint64_t killEdge(AttributedGraph* g, char* srcUUID, char* dstUUID,
-                  uint32_t labelBitPosition, uint64_t timestamp);
-
-/**
- * Given a graph with nodes/edges that need to be removed marked, compress the
- * graph by removing such nodes/edges and revising graph metadata accordingly.
- *
- * @param g Graph to compress
- * @param nodesRemoved Number of nodes that need to be removed
- * @param edgesRemoved Number of edges that need to be removed
- */
-AttributedGraph* compressGraph(AttributedGraph* g, uint32_t nodesRemoved,
-                               uint64_t edgesRemoved);
-
-/**
- * Mark node as if all edges are dead (assumes not dead has a marking of 0).
- *
- * @param g Graph to alter
- */
-uint32_t nodeRemovalPass(AttributedGraph* g);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Graph simulation related calls

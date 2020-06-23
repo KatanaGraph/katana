@@ -61,7 +61,7 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
 //TODO: get error status from TsubUnmap via Unbind to return useful status?
 arrow::Status FileView::Close() {
   Unbind();
-  return arrow::Status(arrow::StatusCode::OK, "Closed FileView");
+  return arrow::Status(arrow::StatusCode::OK);
 }
 
 arrow::Result<long int> FileView::Tell() const {
@@ -74,7 +74,7 @@ bool FileView::closed() const {
 
 arrow::Status FileView::Seek(int64_t seek_to) {
   cursor_ = seek_to;
-  return arrow::Status(arrow::StatusCode::OK, "Seek successful!");
+  return arrow::Status(arrow::StatusCode::OK);
 }
 
 arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {

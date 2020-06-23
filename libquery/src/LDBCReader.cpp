@@ -61,8 +61,8 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   // Steps to setting up an attributed graph's metadata
   // (1) allocate memory for it
   galois::gInfo("Allocating memory for graph");
-  allocateGraph(attGraphPointer, this->totalNodes, this->totalEdges,
-                nodeLabelCount, edgeLabelCount);
+  allocateGraphLDBC(attGraphPointer, this->totalNodes, this->totalEdges,
+                    nodeLabelCount, edgeLabelCount);
   // (2) Initialize node and edge label memory/metadata
   galois::gInfo("Allocating memory for node and edge labels");
   for (size_t i = 0; i < nodeLabelCount; i++) {

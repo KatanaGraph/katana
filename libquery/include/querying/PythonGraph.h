@@ -241,7 +241,6 @@ void addEdgeAttributeType(AttributedGraph* g, const char* key,
 ////////////////////////////////////////////////////////////////////////////////
 
 // TODO doxygen all of the things below
-
 size_t matchCypherQuery(AttributedGraph* dataGraph, EventLimit limit,
                         EventWindow window, const char* cypherQueryStr,
                         bool useGraphSimulation);
@@ -250,22 +249,6 @@ size_t matchQuery(AttributedGraph* dataGraph, EventLimit limit,
                   EventWindow window, MatchedEdge* queryEdges,
                   size_t numQueryEdges, const char** filters,
                   bool useGraphSimulation);
-
-void reportGraphSimulation(AttributedGraph& queryGraph,
-                           AttributedGraph& dataGraph, char* outputFile);
-
-void returnMatchedNodes(AttributedGraph& graph, MatchedNode* matchedNodes);
-void reportMatchedNodes(AttributedGraph& graph, char* outputFile);
-void returnMatchedNeighbors(AttributedGraph& graph, char* uuid,
-                            MatchedNode* matchedNeighbors);
-void reportMatchedNeighbors(AttributedGraph& graph, char* uuid,
-                            char* outputFile);
-void returnMatchedEdges(AttributedGraph& graph, MatchedEdge* matchedEdges);
-void reportMatchedEdges(AttributedGraph& graph, char* outputFile);
-void returnMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
-                                MatchedEdge* matchedEdges);
-void reportMatchedNeighborEdges(AttributedGraph& graph, char* uuid,
-                                char* outputFile);
 
 /**
  * Prints various graph statistics.

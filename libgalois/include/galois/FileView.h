@@ -50,7 +50,7 @@ public:
   }
   int Bind(const std::string& filename);
 
-  void Unbind();
+  int Unbind();
 
   template <typename T>
   const T* ptr() const {
@@ -59,7 +59,7 @@ public:
 
   uint64_t size() const { return region_size_; }
 
-///////////// Begin arrow::io::RandomAccessFile methods ////////////////////////
+  ///// Begin arrow::io::RandomAccessFile methods ///////
 
   virtual arrow::Status Close();
   virtual arrow::Result<long int> Tell() const;
@@ -69,7 +69,7 @@ public:
   virtual arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t);
   virtual arrow::Result<long int> GetSize();
 
-///////////// End arrow::io::RandomAccessFile methods //////////////////////////
+  ///// End arrow::io::RandomAccessFile methods ///////
 };
 
 } /* namespace galois */

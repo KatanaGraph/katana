@@ -31,7 +31,13 @@ static constexpr const char* kDefaultS3Region = "us-east-1";
 static constexpr const char* kAwsTag          = "TsubaS3Client";
 static constexpr const char* kTmpTag          = "/tmp/tsuba_s3.";
 static const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
-static constexpr const uint64_t kS3BufSize    = MB(5);
+// TODO: Find good buffer sizes
+//   Minimum buffer size for multi-part uploads is 5MB, but maximum
+//   number of parts in multi-part is 10,000. So 48.8GB total at 5MB
+// https://docs.aws.amazon.com/AmazonS3/latest/dev/qfacts.html
+static constexpr const uint64_t kS3BufSize = MB(5);
+// TODO: How to set this number?  Base it on cores on machines and/or memory
+// use?
 static constexpr const uint64_t kNumS3Threads = 36;
 
 // Initialized in S3Init
@@ -256,12 +262,11 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
   return 0;
 }
 
-int S3UploadOverwriteSync(const std::string& bucket, const std::string& object,
-                          const uint8_t* data, uint64_t size) {
+int S3PutSingleSync(const std::string& bucket, const std::string& object,
+                    const uint8_t* data, uint64_t size) {
   auto s3_client = GetS3Client();
   // std::cerr << "S3UploadOverwriteSync: " << bucket << "/" << object
-  // <<std::endl;
-  // Set up request
+  // <<std::endl; Set up request
   Aws::S3::Model::PutObjectRequest object_request;
 
   object_request.SetBucket(ToAwsString(bucket));
@@ -286,15 +291,244 @@ int S3UploadOverwriteSync(const std::string& bucket, const std::string& object,
   return 0;
 }
 
+enum Xfer {
+  kXfer_1 = 1532, // Ready to start
+  kXfer_2,        // CreateMulti pending
+  kXfer_3,        // Xfer started
+  kXfer_4,        // Xfer finished, completion pending
+};
+struct PutMulti {
+  // Modify xfer_ with lock held.  Only code for that Xfer state should
+  // read/write data.
+  enum Xfer xfer_;
+  std::vector<SegmentedBufferView::BufPart> parts_;
+  std::future<Aws::S3::Model::CreateMultipartUploadOutcome> create_fut_;
+  std::future<Aws::S3::Model::CompleteMultipartUploadOutcome> outcome_fut_;
+  std::vector<std::string> part_e_tags_;
+  uint64_t finished_{0UL};
+  std::string upload_id_{""};
+  PutMulti(
+      enum Xfer xfer, SegmentedBufferView::iterator first,
+      SegmentedBufferView::iterator last,
+      std::future<Aws::S3::Model::CreateMultipartUploadOutcome>&& create_fut,
+      std::vector<std::string> part_e_tags)
+      : xfer_(xfer), parts_(first, last), create_fut_(std::move(create_fut)),
+        part_e_tags_(part_e_tags){};
+};
+
+static std::unordered_map<std::string, PutMulti> xferm;
+static std::mutex xfer_mutex;
+static std::condition_variable xfer_cv;
+
+int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
+                     const uint8_t* data, uint64_t size) {
+  // TODO: Check total size is less than 5TB
+  // TODO: If we fix kS3BufSize at MB(5), then check size less than 48.8GB
+  if (size == 0) {
+    // Info
+    std::cerr << "Zero size PutMultiAsync, doing sync\n";
+    return S3PutSingleSync(bucket, object, data, size);
+  }
+
+  Aws::S3::Model::CreateMultipartUploadRequest createMpRequest;
+  createMpRequest.WithBucket(bucket);
+  createMpRequest.WithContentType("application/octet-stream");
+  createMpRequest.WithKey(object);
+
+  SegmentedBufferView bufView(0, (uint8_t*)data, size, kS3BufSize);
+
+  std::string bno = BucketAndObject(bucket, object);
+  {
+    std::lock_guard<std::mutex> lk(xfer_mutex);
+    for (auto it = xferm.find(bno); it != xferm.end();) {
+      if (it->second.xfer_ != kXfer_1) {
+        std::cerr << bno << " PutMultiAsync1 before previous finished\n";
+        std::cerr << bno << " PutMultiAsync1 but state is " << it->second.xfer_
+                  << std::endl;
+      }
+      assert(it->second.xfer_ == kXfer_1);
+    }
+    std::vector<std::string> part_e_tags(bufView.NumSegments());
+    // I say verily, C++ is an effective emetic
+    xferm.emplace(
+        std::piecewise_construct, std::forward_as_tuple(bno),
+        std::forward_as_tuple(
+            kXfer_2, bufView.begin(), bufView.end(),
+            async_s3_client->CreateMultipartUploadCallable(createMpRequest),
+            part_e_tags));
+  }
+  return 0;
+}
+
+int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
+  std::string bno = BucketAndObject(bucket, object);
+  // Standard says we can keep a pointer to value that remains valid even if
+  // iterator is invalidated.  Iterators can be invalidated because of "rehash"
+  // https://en.cppreference.com/w/cpp/container/unordered_map (Iterator
+  // invalidation)
+  PutMulti* pm{nullptr};
+  {
+    std::lock_guard<std::mutex> lk(xfer_mutex);
+    auto it = xferm.find(bno);
+    assert(it != xferm.end()); // MultiAsyncXfer called without MultiAsyncStart
+    if (it->second.xfer_ != kXfer_2) {
+      std::cerr << bno << " PutMultiAsync2 but state is " << it->second.xfer_
+                << std::endl;
+    }
+    assert(it->second.xfer_ == kXfer_2);
+    it->second.xfer_ = kXfer_3;
+    pm               = &it->second;
+  }
+  auto createMpResponse = pm->create_fut_.get(); // Blocking call
+  if (!createMpResponse.IsSuccess()) {
+    std::cerr
+        << "Transfer Failed to create a multi-part upload request. Bucket: ["
+        << bucket << "] with Key: [" << object << "]. "
+        << createMpResponse.GetError() << std::endl;
+    return -1;
+  }
+
+  std::string local_upload_id;
+  pm->upload_id_ = createMpResponse.GetResult().GetUploadId();
+
+  Aws::S3::Model::CompletedMultipartUpload completedUpload;
+  for (unsigned i = 0; i < pm->parts_.size(); ++i) {
+    auto& part         = pm->parts_[i];
+    auto lengthToWrite = part.end - part.start;
+    auto streamBuf     = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
+        kAwsTag, part.dest, static_cast<size_t>(lengthToWrite));
+    auto preallocatedStreamReader =
+        Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
+    Aws::S3::Model::UploadPartRequest uploadPartRequest;
+
+    uploadPartRequest.WithBucket(bucket)
+        .WithContentLength(static_cast<long long>(lengthToWrite))
+        .WithKey(object)
+        .WithPartNumber(i + 1) /* part numbers start at 1 */
+        .WithUploadId(pm->upload_id_);
+
+    uploadPartRequest.SetBody(preallocatedStreamReader);
+    uploadPartRequest.SetContentType("application/octet-stream");
+
+    // Copy bno because it is going out of scope
+    auto callback = [&,
+                     bno](const Aws::S3::S3Client* /*client*/,
+                          const Aws::S3::Model::UploadPartRequest& /*request*/,
+                          const Aws::S3::Model::UploadPartOutcome& outcome,
+                          const std::shared_ptr<
+                              const Aws::Client::AsyncCallerContext>& /*ctx*/) {
+      if (outcome.IsSuccess()) {
+        std::unordered_map<std::string, PutMulti>::iterator it;
+        {
+          std::lock_guard<std::mutex> lk(xfer_mutex);
+          it = xferm.find(bno);
+          // MultiAsyncXfer called without MultiAsyncStart
+          assert(it != xferm.end());
+          if (it->second.xfer_ != kXfer_3) {
+            std::cerr << bno << " PutMultiAsyncXfer but state is "
+                      << it->second.xfer_ << std::endl;
+          }
+          assert(it->second.xfer_ == kXfer_3);
+          it->second.part_e_tags_[i] = outcome.GetResult().GetETag();
+          it->second.finished_++;
+        }
+        // Notify does not require lock
+        xfer_cv.notify_one();
+      } else {
+        /* TODO there are likely some errors we can handle gracefully
+         * i.e., with retries */
+        const auto& error = outcome.GetError();
+        std::cerr << "ERROR: " << error.GetExceptionName() << ": "
+                  << error.GetMessage() << std::endl;
+        abort();
+      }
+    };
+    async_s3_client->UploadPartAsync(uploadPartRequest, callback);
+  }
+
+  return 0;
+}
+
+int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
+  std::string bno = BucketAndObject(bucket, object);
+  PutMulti* pm{nullptr};
+  {
+    std::unique_lock<std::mutex> lk(xfer_mutex);
+    auto it = xferm.find(bno);
+    assert(it != xferm.end()); // MultiAsyncXfer called without MultiAsyncStart
+    pm = &it->second;
+    if (pm->xfer_ != kXfer_3) {
+      std::cerr << bno << " PutMultiAsync3 but state is " << it->second.xfer_
+                << std::endl;
+    }
+    assert(pm->xfer_ == kXfer_3);
+    xfer_cv.wait(lk, [&] { return pm->finished_ >= pm->parts_.size(); });
+    pm->xfer_ = kXfer_4;
+  }
+
+  Aws::S3::Model::CompletedMultipartUpload completedUpload;
+  for (unsigned i = 0; i < pm->part_e_tags_.size(); ++i) {
+    Aws::S3::Model::CompletedPart completedPart;
+    completedPart.WithPartNumber(i + 1).WithETag(pm->part_e_tags_[i]);
+    completedUpload.AddParts(completedPart);
+  }
+
+  Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
+  completeMultipartUploadRequest.WithBucket(bucket)
+      .WithKey(object)
+      .WithUploadId(pm->upload_id_)
+      .WithMultipartUpload(completedUpload);
+
+  pm->outcome_fut_ = async_s3_client->CompleteMultipartUploadCallable(
+      completeMultipartUploadRequest);
+
+  return 0;
+}
+
+int S3PutMultiAsyncFinish(const std::string& bucket,
+                          const std::string& object) {
+  std::string bno = BucketAndObject(bucket, object);
+  PutMulti* pm{nullptr};
+  {
+    std::lock_guard<std::mutex> lk(xfer_mutex);
+    auto it = xferm.find(bno);
+    assert(it != xferm.end()); // MultiAsyncXfer called without MultiAsyncStart
+    pm = &it->second;
+    if (it->second.xfer_ != kXfer_4) {
+      std::cerr << bno << " PutMultiAsync3 but state is " << it->second.xfer_
+                << std::endl;
+    }
+    assert(it->second.xfer_ == kXfer_4);
+  }
+
+  auto completeUploadOutcome = pm->outcome_fut_.get(); // Blocking call
+
+  // MultiStagePut is complete
+  {
+    std::lock_guard<std::mutex> lk(xfer_mutex);
+    auto it = xferm.find(bno);
+    assert(it != xferm.end()); // MultiAsyncXfer called without MultiAsyncStart
+    it->second.xfer_ = kXfer_1;
+  }
+
+  if (!completeUploadOutcome.IsSuccess()) {
+    std::cerr << "Failed to complete multipart upload" << std::endl;
+    const auto& error = completeUploadOutcome.GetError();
+    std::cerr << "UPLOAD ERROR: " << error.GetExceptionName() << ": "
+              << error.GetMessage() << std::endl;
+    return -1;
+  }
+  return 0;
+}
+
 static std::unordered_map<std::string, bool> bnodone;
 static std::mutex bnomutex;
 static std::condition_variable bnocv;
 
-int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
-                           const uint8_t* data, uint64_t size) {
+int S3PutSingleAsync(const std::string& bucket, const std::string& object,
+                     const uint8_t* data, uint64_t size) {
   // std::cerr << "S3UploadOverwriteAsync: " << bucket << "/" << object
-  // <<std::endl;
-  // Set up request
+  // <<std::endl; Set up request
   Aws::S3::Model::PutObjectRequest object_request;
 
   object_request.SetBucket(ToAwsString(bucket));
@@ -309,7 +543,7 @@ int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
 
   std::string bno = BucketAndObject(bucket, object);
   {
-    std::lock_guard<std::mutex> lck(bnomutex);
+    std::lock_guard<std::mutex> lk(bnomutex);
     bnodone[bno] = false;
   }
 
@@ -321,7 +555,7 @@ int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
                         const std::shared_ptr<
                             const Aws::Client::AsyncCallerContext>& /*ctx*/) {
     if (outcome.IsSuccess()) {
-      std::lock_guard<std::mutex> lck(bnomutex);
+      std::lock_guard<std::mutex> lk(bnomutex);
       bnodone[bno] = true;
       // Notify does not require lock
       bnocv.notify_one();
@@ -339,8 +573,8 @@ int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
   return 0;
 }
 
-int S3UploadOverwriteAsyncFinish(const std::string& bucket,
-                                 const std::string& object) {
+int S3PutSingleAsyncFinish(const std::string& bucket,
+                           const std::string& object) {
   std::string bno = BucketAndObject(bucket, object);
   // std::cerr << "S3UploadOverwriteAsyncFinish bno: " << bno << std::endl;
   if (bnodone.find(bno) == bnodone.end()) {
@@ -348,8 +582,8 @@ int S3UploadOverwriteAsyncFinish(const std::string& bucket,
               << std::endl;
     return -1;
   }
-  std::unique_lock<std::mutex> lck(bnomutex);
-  bnocv.wait(lck, [&] { return bnodone[bno]; });
+  std::unique_lock<std::mutex> lk(bnomutex);
+  bnocv.wait(lk, [&] { return bnodone[bno]; });
   return 0;
 }
 

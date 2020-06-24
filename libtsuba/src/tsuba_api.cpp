@@ -60,18 +60,36 @@ static int DoWriteS3(const std::string& filename, const uint8_t* buf,
 static int DoWriteS3Sync(const std::string& filename, const uint8_t* buf,
                          uint64_t size) {
   auto [bucket, object] = S3SplitUri(filename);
-  return S3UploadOverwriteSync(bucket, object, buf, size);
+  return S3PutSingleSync(bucket, object, buf, size);
 }
 
 static int DoWriteS3Async(const std::string& filename, const uint8_t* buf,
                           uint64_t size) {
   auto [bucket, object] = S3SplitUri(filename);
-  return S3UploadOverwriteAsync(bucket, object, buf, size);
+  return S3PutSingleAsync(bucket, object, buf, size);
 }
 
 static int DoWriteS3AsyncFinish(const std::string& filename) {
   auto [bucket, object] = S3SplitUri(filename);
-  return S3UploadOverwriteAsyncFinish(bucket, object);
+  return S3PutSingleAsyncFinish(bucket, object);
+}
+
+static int DoWriteS3MultiAsync1(const std::string& filename, const uint8_t* buf,
+                                uint64_t size) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3PutMultiAsync1(bucket, object, buf, size);
+}
+static int DoWriteS3MultiAsync2(const std::string& filename) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3PutMultiAsync2(bucket, object);
+}
+static int DoWriteS3MultiAsync3(const std::string& filename) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3PutMultiAsync3(bucket, object);
+}
+static int DoWriteS3MultiAsyncFinish(const std::string& filename) {
+  auto [bucket, object] = S3SplitUri(filename);
+  return S3PutMultiAsyncFinish(bucket, object);
 }
 
 static uint8_t* AllocAndReadS3(const std::string& filename, uint64_t begin,
@@ -203,6 +221,34 @@ int StoreAsyncFinish(const std::string& uri) {
   }
   return DoWriteS3AsyncFinish(uri);
 }
+
+int StoreMultiAsync1(const std::string& uri, const uint8_t* data, uint64_t size) {
+  int ret = S3OrDoFile(uri, data, size);
+  if (ret) {
+    ret = DoWriteS3MultiAsync1(uri, data, size);
+  }
+  return ret;
+}
+int StoreMultiAsync2(const std::string& uri) {
+  if (!IsUri(uri)) {
+    return 0;
+  }
+  return DoWriteS3MultiAsync2(uri);
+}
+int StoreMultiAsync3(const std::string& uri) {
+  if (!IsUri(uri)) {
+    return 0;
+  }
+  return DoWriteS3MultiAsync3(uri);
+}
+
+int StoreMultiAsyncFinish(const std::string& uri) {
+  if (!IsUri(uri)) {
+    return 0;
+  }
+  return DoWriteS3MultiAsyncFinish(uri);
+}
+
 
 int Peek(const std::string& filename, uint8_t* result_buffer, uint64_t begin,
          uint64_t size) {

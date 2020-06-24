@@ -747,7 +747,7 @@ size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
     // first, match query graph without star
-    subgraphQuery<false>(queryGraph, this->graph);
+    subgraphQuery(queryGraph, this->graph);
 
     // handle stars
     uint32_t currentStar = 0;
@@ -760,16 +760,15 @@ size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
 
     // rematch taking star into account (handling star should have limited scope
     // of possible matches)
-    subgraphQuery<false>(queryGraph, this->graph);
+    subgraphQuery(queryGraph, this->graph);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-    matchEdgesAfterGraphSimulation(queryGraph, this->graph);
     return countMatchedEdges(this->graph);
 #else
     return countMatchedNodes(this->graph);
 #endif
   } else {
-    return subgraphQuery<false>(queryGraph, this->graph);
+    return subgraphQuery(queryGraph, this->graph);
   }
 }
 

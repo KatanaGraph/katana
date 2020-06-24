@@ -18,13 +18,13 @@
  */
 
 /**
- * @file GraphSimulation.h
+ * @file Matching.h
  *
- * Contains definitions of functions/structs for graph simluation.
+ * Contains definitions of functions/structs for graph matching.
 
  */
-#ifndef GALOIS_GRAPH_SIMULATION_H
-#define GALOIS_GRAPH_SIMULATION_H
+#ifndef GALOIS_MATCHING_H
+#define GALOIS_MATCHING_H
 #include "galois/graphs/QueryGraph.h"
 #include <string>
 
@@ -56,21 +56,6 @@ struct MatchedEdge {
   MatchedEdge() : timestamp(0), label(NULL) {}
 };
 
-//! Time-limit of consecutive events (inclusive)
-struct EventLimit {
-  bool valid;
-  uint64_t time; // inclusive
-  EventLimit() : valid(false) {}
-};
-
-//! Time-span of all events (inclusive)
-struct EventWindow {
-  bool valid;
-  uint64_t startTime; // inclusive
-  uint64_t endTime;   // inclusive
-  EventWindow() : valid(false) {}
-};
-
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data);
 
 bool matchNodeDegree(const QueryGraph& queryGraph,
@@ -85,30 +70,6 @@ bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data);
  * @param graph Graph to reset matched status on
  */
 void resetMatchedStatus(QueryGraph& graph);
-
-/**
- * TODO doxygen
- */
-void matchNodesUsingGraphSimulation(QueryGraph& qG, QueryGraph& dG,
-                                    bool reinitialize, EventLimit limit,
-                                    EventWindow window,
-                                    bool queryNodeHasMoreThan2Edges,
-                                    std::vector<std::string>& nodeContains,
-                                    std::vector<std::string>& nodeNames);
-
-#ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-//! TODO doxygen
-void matchEdgesAfterGraphSimulation(QueryGraph& qG, QueryGraph& dG);
-#endif
-
-/**
- * @todo doxygen
- */
-void runGraphSimulation(QueryGraph& queryGraph, QueryGraph& dataGraph,
-                        EventLimit limit, EventWindow window,
-                        bool queryNodeHasMoreThan2Edges,
-                        std::vector<std::string>& nodeContains,
-                        std::vector<std::string>& nodeNames);
 
 /**
  * @todo doxygen
@@ -133,4 +94,4 @@ size_t countMatchedNodes(QueryGraph& graph);
 size_t countMatchedEdges(QueryGraph& graph);
 #endif
 
-#endif // GALOIS_GRAPH_SIMULATION_H
+#endif // GALOIS_MATCHING_H

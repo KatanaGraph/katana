@@ -293,7 +293,7 @@ public:
 
   /**
    * Given a Cypher query string, run it on the underlying data graph using
-   * graph simulation (or not) and the Pangolin engine.
+   * the Pangolin engine.
    */
   size_t
   runCypherQuery(const std::string cypherQueryStr,

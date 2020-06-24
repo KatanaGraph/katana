@@ -249,11 +249,13 @@ uint8_t* Mmap(const std::string& filename, uint64_t begin, uint64_t size) {
   return it->second.ptr();
 }
 
-void Munmap(uint8_t* ptr) {
+int Munmap(uint8_t* ptr) {
   std::lock_guard<std::mutex> guard(allocated_memory_mutex);
   if (allocated_memory.erase(ptr) != 1) {
     std::cerr << "WARNING: passed unknown pointer to tsuba_munmap" << std::endl;
+    return -22; // EINVAL
   }
+  return 0;
 }
 
 } /* namespace tsuba */

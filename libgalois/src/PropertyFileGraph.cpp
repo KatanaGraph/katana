@@ -118,19 +118,16 @@ LoadTable(const std::string& expected_name, const fs::path& file_path) {
   // TODO(ddn): parallelize reading
   // TODO(ddn): use custom NUMA allocator
 
-  arrow::fs::LocalFileSystem fs;
-
-  auto open_result = fs.OpenInputFile(file_path);
-  if (!open_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", open_result.status());
-    return galois::ErrorCode::ArrowError;
+  auto fv = std::make_shared<galois::FileView>(galois::FileView());
+  int err = fv->Bind(file_path);
+  if (err) {
+    return galois::ErrorCode::InvalidArgument;
   }
 
-  std::shared_ptr<arrow::io::RandomAccessFile> f = open_result.ValueOrDie();
   std::unique_ptr<parquet::arrow::FileReader> reader;
 
   auto open_file_result =
-      parquet::arrow::OpenFile(f, arrow::default_memory_pool(), &reader);
+      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
   if (!open_file_result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", open_file_result);
     return galois::ErrorCode::ArrowError;
@@ -495,17 +492,13 @@ MakeProperties(std::vector<std::string>&& values) {
 /// are used to encode lists of values.
 outcome::std_result<galois::graphs::MetadataImpl>
 ReadMetadata(const std::string& metadata_path) {
-  arrow::fs::LocalFileSystem fs;
-
-  auto open_result = fs.OpenInputFile(metadata_path);
-  if (!open_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", open_result.status());
-    return galois::ErrorCode::ArrowError;
+  auto fv = std::make_shared<galois::FileView>(galois::FileView());
+  int err = fv->Bind(metadata_path);
+  if (err) {
+    return galois::ErrorCode::InvalidArgument;
   }
 
-  std::shared_ptr<arrow::io::RandomAccessFile> f = open_result.ValueOrDie();
-
-  std::shared_ptr<parquet::FileMetaData> md = parquet::ReadMetaData(f);
+  std::shared_ptr<parquet::FileMetaData> md = parquet::ReadMetaData(fv);
   const std::shared_ptr<const arrow::KeyValueMetadata>& kv_metadata =
       md->key_value_metadata();
 

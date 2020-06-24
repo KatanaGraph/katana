@@ -41,7 +41,7 @@ int Open(const std::string& uri);
  * return value will be aligned to tsuba_block_size as well
  */
 uint8_t* Mmap(const std::string& filename, uint64_t begin, uint64_t size);
-void Munmap(uint8_t* ptr);
+int Munmap(uint8_t* ptr);
 
 /* Take whatever is in @data and put it a file called @uri */
 int Store(const std::string& uri, const uint8_t* data, uint64_t size);

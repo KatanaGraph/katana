@@ -1,11 +1,12 @@
 # distutils: language=c++
+# distutils: extra_compile_args=["-std=c++17"]
+
 from libcpp cimport bool
 from libc.stdint cimport *
-from libstd.atomic cimport atomic
 
 # Declaration from "Galois/Threads.h"
 
-#ctypedef uint64_t size_t 
+#ctypedef uint64_t size_t
 
 # Hack to make auto return type for galois::iterate work.
 # It may be necessary to write a wrapper header around for_each,
@@ -16,10 +17,9 @@ cdef extern from * nogil:
 
 cdef extern from "galois/Galois.h" namespace "galois" nogil:
     unsigned int setActiveThreads(unsigned int)
-    void gPrint(...)
+    
     cppclass UserContext[T]:
         pass
-        void push(...)
 
     void for_each(...)
     void do_all(...)
@@ -61,21 +61,25 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
         void allocateBlocked(size_t)
         T &operator[](size_t)
 
-
-    #### Atomic Helpers ####
-cdef extern from "galois/AtomicHelpers.h" namespace "galois" nogil:
-    const T atomicMin[T](atomic[T]&, const T)
-    const uint32_t atomicMin[uint32_t](atomic[uint32_t]&, const uint32_t)
-
 cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
     cdef cppclass MethodFlag:
-        pass
-    
+        bint operator==(MethodFlag)
+
     cdef MethodFlag FLAG_UNPROTECTED "galois::MethodFlag::UNPROTECTED"
     cdef MethodFlag FLAG_WRITE "galois::MethodFlag::WRITE"
     cdef MethodFlag FLAG_READ "galois::MethodFlag::READ"
     cdef MethodFlag FLAG_INTERNAL_MASK "galois::MethodFlag::INTERNAL_MASK"
     cdef MethodFlag PREVIOUS "galois::MethodFlag::PREVIOUS"
 
-    
+cdef extern from "galois/runtime/Iterable.h" namespace "galois::runtime" nogil:
+    cppclass iterable[it]:
+        it begin()
+        it end()
 
+cdef extern from "galois/NoDerefIterator.h" namespace "galois" nogil:
+    cppclass NoDerefIterator[it]:
+        bint operator==(NoDerefIterator[it])
+        bint operator!=(NoDerefIterator[it])
+        NoDerefIterator[it] operator++()
+        NoDerefIterator[it] operator--()
+        it operator*()

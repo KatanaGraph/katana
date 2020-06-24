@@ -1,6 +1,7 @@
+# distutils: extra_compile_args=["-std=c++17"]
 
 from libcpp.string cimport string
-from ..Galois cimport MethodFlag
+from ..Galois cimport MethodFlag, iterable, NoDerefIterator
 
 # Fake types to work around Cython's lack of support
 # for non-type template parameters.
@@ -35,6 +36,7 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
             bint operator!=(iterator)
             iterator operator++()
             iterator operator--()
+            GraphNode operator*()
 
         edge_iterator edge_begin(GraphNode)
         edge_iterator edge_end(GraphNode)
@@ -45,16 +47,19 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         GraphNode getEdgeDst(edge_iterator)
         node_data& getData(GraphNode)
 
-        GraphNode createNode(node_data)
+        edge_data& getEdgeData(edge_iterator)
+        edge_data& getEdgeData(edge_iterator, MethodFlag)
+
+        GraphNode createNode(...)
         void addNode(GraphNode)
-        void addEdge(GraphNode, GraphNode)
+        edge_iterator addEdge(GraphNode, GraphNode)
 
     cppclass LC_CSR_Graph[node_data, edge_data, is_directed]:
 
         LC_CSR_Graph()
         cppclass GraphNode:
-            pass
             bint operator==(unsigned long)
+            bint operator==(GraphNode)
 
         cppclass edge_iterator:
             bint operator==(edge_iterator)
@@ -67,6 +72,12 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
             bint operator!=(iterator)
             iterator operator++()
             iterator operator--()
+            GraphNode operator*()
+
+        iterable[NoDerefIterator[edge_iterator]] edges(GraphNode)
+        iterable[NoDerefIterator[edge_iterator]] edges(unsigned long)
+        iterable[NoDerefIterator[edge_iterator]] edges(GraphNode, MethodFlag)
+        iterable[NoDerefIterator[edge_iterator]] edges(unsigned long, MethodFlag)
 
         edge_iterator edge_begin(GraphNode)
         edge_iterator edge_end(GraphNode)
@@ -82,6 +93,8 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         iterator begin()
         iterator end()
 
+        edge_iterator findEdge(GraphNode, GraphNode)
+
         GraphNode getEdgeDst(edge_iterator)
         node_data& getData(GraphNode)
         node_data& getData(GraphNode, MethodFlag)
@@ -89,6 +102,5 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         node_data& getData(unsigned long, MethodFlag)
         void readGraphFromGRFile(string filename)
         unsigned long size()
-        edge_data getEdgeData(edge_iterator)
-        edge_data getEdgeData(edge_iterator, MethodFlag)
-
+        edge_data& getEdgeData(edge_iterator)
+        edge_data& getEdgeData(edge_iterator, MethodFlag)

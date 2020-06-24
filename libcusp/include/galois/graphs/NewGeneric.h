@@ -27,6 +27,8 @@
 #ifndef _GALOIS_DIST_NEWGENERIC_H
 #define _GALOIS_DIST_NEWGENERIC_H
 
+#include "galois/OutIndexView.h"
+#include "galois/PartialGraphView.h"
 #include "galois/graphs/DistributedGraph.h"
 #include "galois/DReducible.h"
 #include <optional>
@@ -43,8 +45,8 @@ namespace graphs {
  * @todo fully document and clean up code
  * @warning not meant for public use + not fully documented yet
  */
-template <typename NodeTy, typename EdgeTy, typename Partitioner>
-class NewDistGraphGeneric : public DistGraph<NodeTy, EdgeTy> {
+template <typename NodeTy, typename EdgeDataTy, typename Partitioner>
+class NewDistGraphGeneric : public DistGraph<NodeTy, EdgeDataTy> {
   //! size used to buffer edge sends during partitioning
   constexpr static unsigned edgePartitionSendBufSize = 8388608;
   constexpr static const char* const GRNAME          = "dGraph_Generic";
@@ -77,7 +79,7 @@ class NewDistGraphGeneric : public DistGraph<NodeTy, EdgeTy> {
 
 public:
   //! typedef for base DistGraph class
-  using base_DistGraph = DistGraph<NodeTy, EdgeTy>;
+  using base_DistGraph = DistGraph<NodeTy, EdgeDataTy>;
 
 private:
   virtual unsigned getHostIDImpl(uint64_t gid) const {
@@ -165,8 +167,7 @@ public:
       uint32_t edgeStateRounds       = 1)
       : base_DistGraph(host, _numHosts), _edgeStateRounds(edgeStateRounds) {
     galois::runtime::reportParam("dGraph", "GenericPartitioner", "0");
-    galois::CondStatTimer<MORE_DIST_STATS> Tgraph_construct(
-        "GraphPartitioningTime", GRNAME);
+    galois::StatTimer Tgraph_construct("GraphPartitioningTime", GRNAME);
     Tgraph_construct.start();
 
     if (readFromFile) {
@@ -178,9 +179,16 @@ public:
       return;
     }
 
-    galois::graphs::OfflineGraph g(filename);
-    base_DistGraph::numGlobalNodes = g.size();
-    base_DistGraph::numGlobalEdges = g.sizeEdges();
+    galois::Timer node_dist_timer;
+    node_dist_timer.start();
+    OutIndexView g(filename);
+    if (g.Bind())
+      GALOIS_SYS_DIE("[", base_DistGraph::id, "] bind failed!\n");
+    if (g.gr_view()->header_.version_ != 1)
+      GALOIS_SYS_DIE("[", base_DistGraph::id,
+                     "] CUSP only supports version 1!\n");
+    base_DistGraph::numGlobalNodes = g.num_nodes();
+    base_DistGraph::numGlobalEdges = g.num_edges();
     std::vector<unsigned> dummy;
     // not actually getting masters, but getting assigned readers for nodes
     if (masterBlockFile == "") {
@@ -189,6 +197,9 @@ public:
       galois::gInfo("Getting reader assignment from file");
       base_DistGraph::readersFromFile(g, masterBlockFile);
     }
+    node_dist_timer.stop();
+    galois::gPrint("[", base_DistGraph::id, "] Master distribution time : ",
+                   node_dist_timer.get_usec() / 1000000.0f, " seconds\n");
 
     graphPartitioner = std::make_unique<Partitioner>(
         host, _numHosts, base_DistGraph::numGlobalNodes,
@@ -197,11 +208,7 @@ public:
     graphPartitioner->saveGIDToHost(base_DistGraph::gid2host);
 
     uint64_t nodeBegin = base_DistGraph::gid2host[base_DistGraph::id].first;
-    typename galois::graphs::OfflineGraph::edge_iterator edgeBegin =
-        g.edge_begin(nodeBegin);
-    uint64_t nodeEnd = base_DistGraph::gid2host[base_DistGraph::id].second;
-    typename galois::graphs::OfflineGraph::edge_iterator edgeEnd =
-        g.edge_begin(nodeEnd);
+    uint64_t nodeEnd   = base_DistGraph::gid2host[base_DistGraph::id].second;
 
     // signifies how many outgoing edges a particular host should expect from
     // this host
@@ -223,15 +230,17 @@ public:
     // phase 0
 
     galois::gPrint("[", base_DistGraph::id, "] Starting graph reading.\n");
-    galois::graphs::BufferedGraph<EdgeTy> bufGraph;
+    galois::graphs::BufferedGraph<EdgeDataTy> bufGraph;
     bufGraph.resetReadCounters();
     galois::StatTimer graphReadTimer("GraphReading", GRNAME);
     graphReadTimer.start();
-    bufGraph.loadPartialGraph(filename, nodeBegin, nodeEnd, *edgeBegin,
-                              *edgeEnd, base_DistGraph::numGlobalNodes,
-                              base_DistGraph::numGlobalEdges);
+    galois::PartialGraphView<EdgeDataTy, edge_v1_t> pview(std::move(g));
+    /* bind reads and loads the required edge slice */
+    pview.Bind(nodeBegin, nodeEnd);
+    bufGraph.loadPartialGraph(pview);
     graphReadTimer.stop();
-    galois::gPrint("[", base_DistGraph::id, "] Reading graph complete.\n");
+    galois::gPrint("[", base_DistGraph::id, "] Reading graph complete, time: ",
+                   graphReadTimer.get_usec() / 1000000.0f, " seconds\n");
 
     if (graphPartitioner->masterAssignPhase()) {
       // loop over all nodes, determine where neighbors are, assign masters
@@ -357,7 +366,8 @@ public:
     base_DistGraph::initializeSpecificRanges();
 
     Tgraph_construct.stop();
-    galois::gPrint("[", base_DistGraph::id, "] Graph construction complete.\n");
+    galois::gPrint("[", base_DistGraph::id, "] Graph construction time : ",
+                   Tgraph_construct.get_usec() / 1000000.0f, " seconds\n");
 
     // report state rounds
     if (base_DistGraph::id == 0) {
@@ -368,7 +378,7 @@ public:
 
 private:
   galois::runtime::SpecificRange<boost::counting_iterator<size_t>>
-  getSpecificThreadRange(galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+  getSpecificThreadRange(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                          std::vector<uint32_t>& assignedThreadRanges,
                          uint64_t startNode, uint64_t endNode) {
     galois::StatTimer threadRangeTime("Phase0ThreadRangeTime");
@@ -416,7 +426,7 @@ private:
    * host has read (and therefore must sync with me)
    */
   // steps 1 and 2 of neighbor location setup: memory allocation, bitset setting
-  void phase0BitsetSetup(galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+  void phase0BitsetSetup(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                          galois::DynamicBitSet& ghosts) {
     galois::StatTimer bitsetSetupTimer("Phase0BitsetSetup", GRNAME);
     bitsetSetupTimer.start();
@@ -1246,7 +1256,7 @@ private:
    * assignments BSP style or asynchronous style. Note regardless of which
    * is chosen there is a barrier at the end of master assignment.
    */
-  void phase0(galois::graphs::BufferedGraph<EdgeTy>& bufGraph, bool async,
+  void phase0(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph, bool async,
               const uint32_t stateRounds) {
     galois::DynamicBitSet ghosts;
     galois::gstl::Vector<galois::gstl::Vector<uint32_t>>
@@ -1466,7 +1476,7 @@ private:
                                        bufGraph.getNodeOffset());
   }
 
-  void edgeCutInspection(galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+  void edgeCutInspection(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                          galois::StatTimer& inspectionTimer,
                          uint64_t edgeOffset,
                          galois::gstl::Vector<uint64_t>& prefixSumOfEdges) {
@@ -1604,7 +1614,7 @@ private:
             typename std::enable_if<!std::is_void<
                 typename GraphTy::edge_data_type>::value>::type* = nullptr>
   void edgeCutLoad(GraphTy& graph,
-                   galois::graphs::BufferedGraph<EdgeTy>& bGraph) {
+                   galois::graphs::BufferedGraph<EdgeDataTy>& bGraph) {
     if (base_DistGraph::id == 0) {
       galois::gPrint("Loading edge-data while creating edges\n");
     }
@@ -1656,7 +1666,7 @@ private:
             typename std::enable_if<std::is_void<
                 typename GraphTy::edge_data_type>::value>::type* = nullptr>
   void edgeCutLoad(GraphTy& graph,
-                   galois::graphs::BufferedGraph<EdgeTy>& bGraph) {
+                   galois::graphs::BufferedGraph<EdgeDataTy>& bGraph) {
     if (base_DistGraph::id == 0) {
       galois::gPrint("Loading edge-data while creating edges\n");
     }
@@ -1703,7 +1713,7 @@ private:
    * @param[in,out] hasIncomingEdge indicates which nodes (that need to be
    * created)on a host have incoming edges
    */
-  void edgeInspection(galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+  void edgeInspection(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                       std::vector<std::vector<uint64_t>>& numOutgoingEdges,
                       std::vector<galois::DynamicBitSet>& hasIncomingEdge,
                       galois::StatTimer& inspectionTimer) {
@@ -1758,7 +1768,7 @@ private:
    * @param[in,out] hostHasOutgoing bitset tracking which hosts have outgoing
    * edges from this host
    */
-  void assignEdges(galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+  void assignEdges(galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                    std::vector<std::vector<uint64_t>>& numOutgoingEdges,
                    std::vector<galois::DynamicBitSet>& hasIncomingEdge,
                    galois::DynamicBitSet& hostHasOutgoing) {
@@ -2574,7 +2584,7 @@ private:
 
   template <typename GraphTy>
   void loadEdges(GraphTy& graph,
-                 galois::graphs::BufferedGraph<EdgeTy>& bufGraph) {
+                 galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph) {
     if (base_DistGraph::id == 0) {
       if (std::is_void<typename GraphTy::edge_data_type>::value) {
         fprintf(stderr, "Loading void edge-data while creating edges.\n");
@@ -2615,7 +2625,7 @@ private:
             typename std::enable_if<!std::is_void<
                 typename GraphTy::edge_data_type>::value>::type* = nullptr>
   void sendEdges(GraphTy& graph,
-                 galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+                 galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                  std::atomic<uint32_t>& receivedNodes) {
     using DstVecType = std::vector<std::vector<uint64_t>>;
     using DataVecType =
@@ -2772,7 +2782,7 @@ private:
             typename std::enable_if<std::is_void<
                 typename GraphTy::edge_data_type>::value>::type* = nullptr>
   void sendEdges(GraphTy& graph,
-                 galois::graphs::BufferedGraph<EdgeTy>& bufGraph,
+                 galois::graphs::BufferedGraph<EdgeDataTy>& bufGraph,
                  std::atomic<uint32_t>& receivedNodes) {
     using DstVecType      = std::vector<std::vector<uint64_t>>;
     using SendBufferVecTy = std::vector<galois::runtime::SendBuffer>;
@@ -2987,9 +2997,9 @@ private:
 };
 
 // make GRNAME visible to public
-template <typename NodeTy, typename EdgeTy, typename Partitioner>
-constexpr const char* const
-    galois::graphs::NewDistGraphGeneric<NodeTy, EdgeTy, Partitioner>::GRNAME;
+template <typename NodeTy, typename EdgeDataTy, typename Partitioner>
+constexpr const char* const galois::graphs::NewDistGraphGeneric<
+    NodeTy, EdgeDataTy, Partitioner>::GRNAME;
 
 } // end namespace graphs
 } // end namespace galois

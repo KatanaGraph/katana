@@ -25,6 +25,7 @@ endif()
 set(GALOIS_ENABLE_CYPHER OFF CACHE BOOL "Enable Cypher/query graph library support")
 set(GALOIS_ENABLE_DIST OFF CACHE BOOL "Enable distributed features")
 set(GALOIS_CUDA_CAPABILITY "" CACHE STRING "Semi-colon list of CUDA compute capability version numbers to enable GPU features") # e.g., "3.7;6.1"
+set(GALOIS_ENABLE_AVA OFF CACHE BOOL "Enable AvA-backed CUDA API remoting")
 set(GALOIS_COMM_STATS OFF CACHE BOOL "Report more detailed statistics of communication")
 ###### General features ######
 set(GALOIS_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
@@ -46,6 +47,7 @@ set(GALOIS_NUM_TEST_GPUS "0" CACHE STRING "Number of test GPUs to use (on a sing
 set(GALOIS_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(GALOIS_USE_BARE_MPI OFF CACHE BOOL "Use MPI directly (no dedicated network-runtime thread)")
 set(GALOIS_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical cores)")
+set(GALOIS_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 
 if(NOT GALOIS_NUM_TEST_THREADS)
   cmake_host_system_information(RESULT GALOIS_NUM_TEST_THREADS QUERY NUMBER_OF_PHYSICAL_CORES)
@@ -57,6 +59,16 @@ endif()
 ###### Configure (users don't need to go beyond here) ######
 
 include(CTest)
+
+###### Install dependencies ######
+
+if(GALOIS_AUTO_CONAN)
+  include(cmake/Modules/conan.cmake)
+  conan_cmake_run(CONANFILE config/conanfile.txt
+                  BASIC_SETUP CMAKE_TARGETS
+                  BUILD missing)
+  include("${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
+endif()
 
 ###### Configure compiler ######
 
@@ -78,6 +90,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   endif()
 
   add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra>")
+
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9)
+    # Avoid warnings from openmpi
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-cast-function-type>")
+    # Avoid warnings from boost::counting_iterator (1.71.0)
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-copy>")
+  endif()
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
@@ -195,6 +214,7 @@ add_custom_target(apps)
 
 # Core libraries (lib)
 add_subdirectory(libsupport)
+add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
 add_subdirectory(libpygalois)
 if (GALOIS_ENABLE_DIST)
@@ -211,6 +231,14 @@ if (GALOIS_ENABLE_GPU)
     add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-gencode=arch=compute_${GENCODE},code=sm_${GENCODE}>")
   endforeach()
 
+  if (GALOIS_ENABLE_AVA)
+    if (NOT CMAKE_CUDA_RUNTIME_LIBRARY OR CMAKE_CUDA_RUNTIME_LIBRARY STREQUAL Shared)
+      set(CMAKE_CUDA_RUNTIME_LIBRARY Shared)
+      add_subdirectory(libava)
+    else()
+      message(FATAL_ERROR "CUDA runtime library must be dynamically linked. Found CMAKE_CUDA_RUNTIME_LIBRARY=${CMAKE_CUDA_RUNTIME_LIBRARY}.")
+    endif()
+  endif()
   add_subdirectory(libgpu)
 endif()
 add_subdirectory(libpangolin)

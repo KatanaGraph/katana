@@ -18,22 +18,25 @@ set(sources
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
+        src/ErrorCode.cpp
         src/EnvCheck.cpp
         src/FileGraph.cpp
         src/FileGraphParallel.cpp
+        src/FileView.cpp
         src/gIO.cpp
         src/GraphHelpers.cpp
         src/HWTopo.cpp
         src/Mem.cpp
         src/NumaMem.cpp
         src/OCFileGraph.cpp
+        src/OutIndexView.cpp
         src/PageAlloc.cpp
-        src/PagePool.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp
         src/PerThreadStorage.cpp
         src/PreAlloc.cpp
         src/Profile.cpp
+        src/PropertyFileGraph.cpp
         src/PtrLock.cpp
         src/SharedMem.cpp
         src/SharedMemSys.cpp
@@ -84,8 +87,17 @@ if (SCHED_SETAFFINITY_FOUND)
   target_link_libraries(galois_shmem PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
 endif()
 
-target_link_libraries(galois_shmem INTERFACE pygalois)
+find_package(Arrow CONFIG REQUIRED)
+if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 0.18)
+  message(FATAL_ERROR "libarrow must be version 0.17.*; found ${ARROW_VERSION} instead")
+endif()
+get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
+find_package(Parquet HINTS ${ARROW_CONFIG_DIR})
+target_link_libraries(galois_shmem PUBLIC arrow_shared parquet_shared)
+
+target_link_libraries(galois_shmem PRIVATE tsuba)
 target_link_libraries(galois_shmem PRIVATE Threads::Threads)
+target_link_libraries(galois_shmem PUBLIC galois_support)
 
 if (CMAKE_HAVE_PTHREAD_H)
   target_compile_definitions(galois_shmem PRIVATE GALOIS_HAVE_PTHREAD)

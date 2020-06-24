@@ -1,0 +1,189 @@
+{# -*- mode: cython -*- -#}
+{# This Jinja2 generates the cython definitions for Galois graph data structures -#}
+# cython: cdivision = True
+
+# THIS FILE IS GENERATED. Make changes to graphs.pyx.jinja
+
+import cython
+from galois.shmem cimport *
+from .cpp.libgalois cimport Galois
+from .cpp.libgalois.Galois cimport MethodFlag
+from .cpp.libgalois.graphs cimport Graph
+from cython.operator cimport preincrement, dereference as deref
+from cpython cimport PyObject
+from cpython.ref cimport Py_DECREF, Py_XDECREF, Py_INCREF
+
+cdef class _MethodFlag:
+    @staticmethod
+    cdef fromValue(MethodFlag u):
+        f = <_MethodFlag>_MethodFlag.__new__(_MethodFlag)
+        f.underlying = u
+        return f
+
+    def __repr__(self):
+        if self.underlying == Galois.FLAG_READ:
+            return "READ"
+        elif self.underlying == Galois.FLAG_WRITE:
+            return "WRITE"
+        elif self.underlying == Galois.FLAG_UNPROTECTED:
+            return "UNPROTECTED"
+        elif self.underlying == Galois.FLAG_INTERNAL_MASK:
+            return "INTERNAL_MASK"
+        elif self.underlying == Galois.PREVIOUS:
+            return "PREVIOUS"
+
+READ = _MethodFlag.fromValue(Galois.FLAG_READ)
+WRITE = _MethodFlag.fromValue(Galois.FLAG_WRITE)
+UNPROTECTED = _MethodFlag.fromValue(Galois.FLAG_UNPROTECTED)
+INTERNAL_MASK = _MethodFlag.fromValue(Galois.FLAG_INTERNAL_MASK)
+PREVIOUS = _MethodFlag.fromValue(Galois.PREVIOUS)
+
+{% macro wrap_LC_CSR_Graph_related_classes(template_name, node_type, edge_type, directed_arg) -%}
+@cython.freelist(8)
+cdef class LC_CSR_Graph_{{template_name}}_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = <unsigned int>deref(self.it)
+        preincrement(self.it)
+        return v
+
+@cython.freelist(8)
+cdef class LC_CSR_Graph_{{template_name}}_Edge:
+    pass
+
+@cython.freelist(8)
+cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = <LC_CSR_Graph_{{template_name}}_Edge>LC_CSR_Graph_{{template_name}}_Edge.__new__(LC_CSR_Graph_{{template_name}}_Edge)
+        v.edge = self.it
+        v.graph = self.graph
+        preincrement(self.it)
+        return v
+
+@cython.freelist(8)
+cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterable:
+    def __iter__(self):
+        i =  LC_CSR_Graph_{{template_name}}_Edge_Iterator()
+        i.graph = self.graph
+        i.it = self.graph.underlying.edge_begin(self.node, self.flag)
+        i.end = self.graph.underlying.edge_end(self.node, self.flag)
+        return i
+{%- endmacro %}
+
+{% macro LC_CSR_Graph_type_independent_methods(template_name) -%}
+     def __iter__(self):
+        i = <LC_CSR_Graph_{{template_name}}_Iterator>LC_CSR_Graph_{{template_name}}_Iterator.__new__(LC_CSR_Graph_{{template_name}}_Iterator)
+        i.graph = self
+        i.it = self.underlying.begin()
+        i.end = self.underlying.end()
+        return i
+
+    def edges(self, unsigned int node, _MethodFlag flag=WRITE):
+        i = <LC_CSR_Graph_{{template_name}}_Edge_Iterable>LC_CSR_Graph_{{template_name}}_Edge_Iterable.__new__(LC_CSR_Graph_{{template_name}}_Edge_Iterable)
+        i.graph = self
+        i.node = node
+        i.flag = flag.underlying
+        return i
+
+    def getEdgeDst(self, LC_CSR_Graph_{{template_name}}_Edge edge):
+        n = self.underlying.getEdgeDst(edge.edge)
+        return <unsigned int>n
+
+    def readGraphFromGRFile(self, filename):
+        return self.underlying.readGraphFromGRFile(bytes(filename, "utf-8"))
+
+    def __len__(self):
+        return self.underlying.size()
+{%- endmacro %}
+
+{% macro wrap_LC_CSR_Graph_PyObject(template_name, directed_arg) -%}
+{{wrap_LC_CSR_Graph_related_classes(template_name, "PyObjectP", "PyObjectP", directed_arg)}}
+cdef class LC_CSR_Graph_{{template_name}}:
+    {{LC_CSR_Graph_type_independent_methods(template_name)}}
+
+    def __dealloc__(self):
+        for n in self.underlying:
+            Py_XDECREF(self.underlying.getData(n))
+
+    def getData(self, unsigned int node):
+        d = &self.underlying.getData(node)
+        if d[0] is NULL:
+            d[0] = <PyObject*>None
+            Py_INCREF(None)
+            return None
+        return <object>d[0]
+
+    def setData(self, unsigned int node, data):
+        d = &self.underlying.getData(node)
+        Py_XDECREF(d[0])
+        d[0] = <PyObject*>data
+        Py_INCREF(data)
+
+    def getEdgeData(self, LC_CSR_Graph_{{template_name}}_Edge edge):
+        d = &self.underlying.getEdgeData(edge.edge)
+        if d[0] is NULL:
+            d[0] = <PyObject*>None
+            Py_INCREF(None)
+            return None
+        return <object>d[0]
+
+    def setEdgeData(self, LC_CSR_Graph_{{template_name}}_Edge edge, data):
+        d = &self.underlying.getEdgeData(edge.edge)
+        Py_XDECREF(d[0])
+        d[0] = <PyObject*>data
+        Py_INCREF(data)
+{% endmacro %}
+
+{% macro wrap_LC_CSR_Graph_primitive(template_name, node_type, edge_type, directed_arg) -%}
+{{wrap_LC_CSR_Graph_related_classes(template_name, node_type, edge_type, directed_arg)}}
+cdef class LC_CSR_Graph_{{template_name}}:
+    {{LC_CSR_Graph_type_independent_methods(template_name)}}
+
+    def getData(self, unsigned int node):
+        {%- if node_type == "void" %}
+        return None
+        {%- else %}
+        d = &self.underlying.getData(node)
+        return d[0]
+        {%- endif %}
+
+    def setData(self, unsigned int node, data):
+        {%- if node_type == "void" %}
+        pass
+        {%- else %}
+        d = &self.underlying.getData(node)
+        d[0] = <{{node_type}}>data
+        {%- endif %}
+
+    def getEdgeData(self, LC_CSR_Graph_{{template_name}}_Edge edge):
+        {%- if edge_type == "void" %}
+        return None
+        {%- else %}
+        d = &self.underlying.getEdgeData(edge.edge)
+        return d[0]
+        {%- endif %}
+
+    def setEdgeData(self, LC_CSR_Graph_{{template_name}}_Edge edge, data):
+        {%- if edge_type == "void" %}
+        pass
+        {%- else %}
+        d = &self.underlying.getEdgeData(edge.edge)
+        d[0] = <{{edge_type}}>data
+        {%- endif %}
+{% endmacro %}
+       
+{% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}
+{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_true")}}
+LC_CSR_Graph_Directed_primitive[("{{node_type}}", "{{edge_type}}")] = LC_CSR_Graph_Directed_{{node_type}}_{{edge_type}}
+
+{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_false")}}
+LC_CSR_Graph_Undirected_primitive[("{{node_type}}", "{{edge_type}}")] = LC_CSR_Graph_Undirected_{{node_type}}_{{edge_type}}
+{% endmacro %}
+
+LC_CSR_Graph_Directed_primitive = {}
+LC_CSR_Graph_Undirected_primitive = {}
+
+{% include "graphs.instantiations.jinja" %}

@@ -28,11 +28,10 @@
 
 #include <fstream>
 
-#include <boost/iterator/counting_iterator.hpp>
-
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/Reduction.h"
+#include "galois/PartialGraphView.h"
 
 namespace galois {
 namespace graphs {
@@ -123,6 +122,33 @@ private:
   }
 
   /**
+   * Load the out indices (i.e. where a particular node's edges begin in the
+   * array of edges) from the file.
+   *
+   * @param graphFile loaded file for the graph
+   * @param nodeStart the first node to load
+   * @param numNodesToLoad number of nodes to load
+   */
+  void
+  loadOutIndex(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+    if (numLocalNodes == 0) {
+      return;
+    }
+
+    assert(outIndexBuffer == nullptr);
+    outIndexBuffer = (uint64_t*)malloc(sizeof(uint64_t) * numLocalNodes);
+
+    if (outIndexBuffer == nullptr) {
+      GALOIS_DIE("Failed to allocate memory for out index buffer.");
+    }
+
+    // position to start of contiguous chunk of nodes to read
+    nodeOffset = *view.node_begin();
+    memcpy(outIndexBuffer, &view.out_index()[nodeOffset],
+           sizeof(uint64_t) * numLocalNodes);
+  }
+
+  /**
    * Load the edge destination information from the file.
    *
    * @param graphFile loaded file for the graph
@@ -161,6 +187,23 @@ private:
     assert(numBytesToLoad == 0);
     // save edge offset of this graph for later use
     edgeOffset = edgeStart;
+  }
+
+  void
+  loadEdgeDest(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+    if (numLocalEdges == 0) {
+      return;
+    }
+
+    assert(edgeDestBuffer == nullptr);
+    edgeDestBuffer = (uint32_t*)malloc(sizeof(uint32_t) * numLocalEdges);
+
+    if (edgeDestBuffer == nullptr) {
+      GALOIS_DIE("Failed to allocate memory for edge dest buffer.");
+    }
+
+    edgeOffset = *view.edge_begin();
+    memcpy(edgeDestBuffer, view.edges(), sizeof(uint32_t) * numLocalEdges);
   }
 
   /**
@@ -221,6 +264,29 @@ private:
     assert(numBytesToLoad == 0);
   }
 
+  template <
+      typename EdgeType,
+      typename std::enable_if<!std::is_void<EdgeType>::value>::type* = nullptr>
+  void
+  loadEdgeData(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+    galois::gDebug("Loading edge data");
+
+    if (numLocalEdges == 0) {
+      return;
+    }
+
+    assert(edgeDataBuffer == nullptr);
+    sz_t buffer_size = sizeof(EdgeDataType) * numLocalEdges;
+    edgeDataBuffer   = (EdgeDataType*)malloc(buffer_size);
+
+    if (edgeDataBuffer == nullptr) {
+      GALOIS_DIE("Failed to allocate memory for edge data buffer.");
+    }
+
+    // position after nodes + edges
+    memcpy(edgeDataBuffer, view.edge_data(), buffer_size);
+  }
+
   /**
    * Load edge data function for when the edge data type is void, i.e.
    * no edge data to load.
@@ -233,6 +299,15 @@ private:
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
   void loadEdgeData(std::ifstream&, uint64_t, uint64_t, uint64_t, uint64_t) {
+    galois::gDebug("Not loading edge data");
+    // do nothing (edge data is void, i.e. no edge data)
+  }
+
+  template <
+      typename EdgeType,
+      typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
+  void loadEdgeData(const galois::PartialGraphView<EdgeDataType, uint32_t>&
+                        GALOIS_UNUSED(view)) {
     galois::gDebug("Not loading edge data");
     // do nothing (edge data is void, i.e. no edge data)
   }
@@ -371,6 +446,25 @@ public:
     graphLoaded = true;
 
     graphFile.close();
+  }
+
+  void loadPartialGraph(
+      const galois::PartialGraphView<EdgeDataType, edge_v1_t>& view) {
+    if (graphLoaded) {
+      GALOIS_DIE("Cannot load an buffered graph more than once.");
+    }
+
+    globalSize     = view.out_index().num_nodes();
+    globalEdgeSize = view.out_index().num_edges();
+    numLocalNodes  = view.node_end() - view.node_begin();
+    numLocalEdges  = view.edge_end() - view.edge_begin();
+
+    loadOutIndex(view);
+    loadEdgeDest(view);
+
+    // may or may not do something depending on EdgeDataType
+    loadEdgeData<EdgeDataType>(view);
+    graphLoaded = true;
   }
 
   //! Edge iterator typedef

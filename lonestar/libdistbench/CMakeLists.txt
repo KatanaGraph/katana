@@ -4,3 +4,4 @@ target_include_directories(distbench PUBLIC
 )
 
 target_link_libraries(distbench Galois::cusp Galois::gluon LLVMSupport)
+target_link_libraries(distbench tsuba)

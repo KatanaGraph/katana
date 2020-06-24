@@ -1,0 +1,58 @@
+{# -*- mode: cython -*- -#}
+{# This Jinja2 generates the cython declarations for Galois graph data structures -#}
+# distutils: language=c++
+# distutils: extra_compile_args=["-std=c++17"]
+
+# THIS FILE IS GENERATED. Make changes to graphs.pxd.jinja
+
+from galois.shmem cimport *
+from .cpp.libgalois cimport Galois
+from .cpp.libgalois.Galois cimport MethodFlag
+from .cpp.libgalois.graphs cimport Graph
+from cpython cimport PyObject
+
+ctypedef PyObject* PyObjectP
+
+cdef class _MethodFlag:
+    cdef MethodFlag underlying
+    @staticmethod
+    cdef fromValue(MethodFlag u)
+
+{% macro wrap_LC_CSR_Graph_related_classes(template_name, node_type, edge_type, directed_arg) -%}
+cdef class LC_CSR_Graph_{{template_name}}_Iterator:
+    cdef LC_CSR_Graph_{{template_name}} graph
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}].iterator it
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}].iterator end
+
+cdef class LC_CSR_Graph_{{template_name}}_Edge:
+    cdef LC_CSR_Graph_{{template_name}} graph
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}].edge_iterator edge
+
+cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterator:
+    cdef LC_CSR_Graph_{{template_name}} graph
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}].edge_iterator it
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}].edge_iterator end
+
+cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterable:
+    cdef LC_CSR_Graph_{{template_name}} graph
+    cdef unsigned int node
+    cdef MethodFlag flag
+{% endmacro %}
+
+{% macro wrap_LC_CSR_Graph_primitive(template_name, node_type, edge_type, directed_arg) -%}
+{{wrap_LC_CSR_Graph_related_classes(template_name, node_type, edge_type, directed_arg)}}
+cdef class LC_CSR_Graph_{{template_name}}:
+    cdef Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}] underlying
+{% endmacro %}
+
+{% macro wrap_LC_CSR_Graph_PyObject(template_name, directed_arg) -%}
+{{wrap_LC_CSR_Graph_primitive(template_name, "PyObjectP", "PyObjectP", directed_arg)}}
+{%- endmacro %}
+
+{% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}
+{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_true")}}
+{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_false")}}
+{% endmacro %}
+
+{% include "graphs.instantiations.jinja" %}
+    

@@ -1,0 +1,241 @@
+name: C/C++ CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ###################################################################
+  # lint
+  ###################################################################
+  lint:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-18.04
+        build_type:
+        - Debug
+    steps:
+    - uses: actions/checkout@v2
+
+    ###
+    # Caching between builds
+    ###
+    - name: Cache conan packages
+      uses: actions/cache@v1
+      with:
+        key: ${{runner.os}}-conan-${{hashFiles('config/conanfile.txt')}}
+        path: ~/.conan/data
+    - name: Cache ccache objects
+      uses: actions/cache@v1
+      with:
+        key: ${{runner.os}}-ccache-${{matrix.build_type}}
+        restore-keys: |
+          ${{runner.os}}-ccache-
+        path: ~/.ccache
+
+    ###
+    # Install platform-level dependencies (OS-specific)
+    ###
+    - name: install dependencies
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        sudo -H .github/workflows/setup_ubuntu.sh
+    - name: pre-build
+      run: mkdir -p $HOME/build
+    - name: install C++ dependencies
+      run: |
+        .github/workflows/setup_conan.sh
+        conan install -if $HOME/build --build=missing config
+
+    - name: check formating
+      run: CLANG_FORMAT=clang-format-10 scripts/check_format.sh .
+
+    ###
+    # Standard CMake build process
+    ###
+    - name: configure
+      run: |
+        cmake -S . -B $HOME/build \
+          -DCMAKE_INSTALL_PREFIX=/tmp \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_INSTALL_PREFIX=/tmp \
+          -DCMAKE_TOOLCHAIN_FILE=$HOME/build/conan_paths.cmake \
+          -DCXX_CLANG_TIDY=clang-tidy-10 \
+          -DGALOIS_ENABLE_DIST=on
+    - name: build
+      run: true || cmake --build $HOME/build --parallel 4
+
+  ###################################################################
+  # build_and_test
+  ###################################################################
+  build_and_test:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-18.04
+        # - macOS-latest
+        build_type:
+        - Debug
+        - Release
+        - Sanitizer
+        cxx:
+        - g++
+        - clang++
+        # Only build and test the following configurations a subset of
+        # configurations to reduce the total number of concurrent jobs.
+        #
+        # The key "include" exists but only allows for the refinement of an
+        # existing matrix "job" (i.e., point in the product space) by adding
+        # more variables. Fallback to "exclude".
+        exclude:
+        - os: macOS-latest
+          cxx: clang++
+        - os: macOS-latest
+          build_type: Sanitizer
+        - os: ubuntu-18.04
+          build_type: Sanitizer
+          cxx: g++
+        - os: ubuntu-18.04
+          build_type: Debug
+          cxx: clang++
+    steps:
+    - uses: actions/checkout@v2
+
+    ###
+    # Caching between builds
+    ###
+    - name: Cache conan packages
+      uses: actions/cache@v1
+      with:
+        key: ${{runner.os}}-conan-${{hashFiles('config/conanfile.txt')}}
+        path: ~/.conan/data
+    - name: Cache ccache objects
+      uses: actions/cache@v1
+      with:
+        key: ${{runner.os}}-ccache-${{matrix.build_type}}
+        restore-keys: |
+          ${{runner.os}}-ccache-
+        path: ~/.ccache
+    - name: Cache graph inputs
+      uses: actions/cache@v1
+      with:
+        key: generic-cache-graph
+        path: ~/.cache/graph
+
+
+    ###
+    # Install platform-level dependencies (OS-specific)
+    ###
+    - name: install dependencies
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        sudo -H .github/workflows/setup_ubuntu.sh
+
+        sudo sysctl -w kernel.core_pattern=$HOME/build/dumps/core.%e.%p.%h.%t
+    - name: install dependencies
+      if: startsWith(matrix.os, 'macOS-')
+      run: |
+        brew install apache-arrow ccache conan llvm openmpi
+
+        sudo sysctl -w kern.corefile=$HOME/build/dumps/core.%N.%P.%H.%I
+    - name: pre-build
+      run: |
+        set -x
+        mkdir -p $HOME/build/dumps
+
+        GRAPH_FILE="$HOME/.cache/graph/inputs.tar.gz"
+        GRAPH_LOCATION="$HOME/.cache/graph/inputs"
+        INPUT_URL="http://iss.ices.utexas.edu/projects/galois/downloads/small_inputs_for_lonestar_test.tar.gz"
+        mkdir -p "$(dirname $GRAPH_FILE)"
+        if [[ ! -f "$GRAPH_FILE.timestamp" ]]; then
+          touch -t 197001010000 "$GRAPH_FILE.timestamp"
+        fi
+        curl -fL --time-cond "$GRAPH_FILE.timestamp" --output "$GRAPH_FILE" "$INPUT_URL"
+        if [[ "$GRAPH_FILE" -nt "$GRAPH_FILE.timestamp" ]]; then
+          rm -rf "$GRAPH_LOCATION"
+          mkdir -p "$GRAPH_LOCATION"
+          tar -C "$GRAPH_LOCATION" -xz -f "$GRAPH_FILE"
+          touch -r "$GRAPH_FILE" "$GRAPH_FILE.timestamp"
+        fi
+    - name: install C++ dependencies
+      run: |
+        .github/workflows/setup_conan.sh
+        conan install -if $HOME/build --build=missing config
+
+    ###
+    # Standard CMake build process
+    ###
+    - name: configure
+      run: |
+        [[ -f /proc/cpuinfo ]] && cat /proc/cpuinfo
+
+        case ${{matrix.os}} in
+          macOS-*) export PATH=$PATH:/usr/local/opt/llvm/bin ;;
+          *) ;;
+        esac
+
+        case ${{matrix.cxx}} in
+          clang*) CC=clang ;;
+          g*)     CC=gcc   ;;
+        esac
+
+        case ${{matrix.build_type}} in
+          Sanitize)
+            SANITIZER="Address;Undefined"
+            BUILD_TYPE=Debug
+            ;;
+          *)
+            BUILD_TYPE=${{matrix.build_type}}
+            SANITIZER=""
+          ;;
+        esac
+
+        cmake -S . -B $HOME/build \
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DCMAKE_INSTALL_PREFIX=/tmp \
+          -DCMAKE_TOOLCHAIN_FILE=$HOME/build/conan_paths.cmake \
+          -DCMAKE_CXX_COMPILER=${{matrix.cxx}} \
+          -DCMAKE_C_COMPILER=$CC \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DGALOIS_ENABLE_DIST=on \
+          -DGALOIS_USE_SANITIZER="$SANITIZER" \
+          -DUSE_ARCH=none \
+          -DGALOIS_GRAPH_LOCATION=$HOME/.cache/graph/inputs
+    - name: build
+      run: |
+        cmake --build $HOME/build --parallel 4
+    - name: install
+      run: cmake --install $HOME/build
+
+    - name: test
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        ulimit -c unlimited
+        cd $HOME/build && ctest -V --label-regex quick --parallel 4
+
+    # MacOS tests seem to run into CI host level failures that are hard to
+    # reproduce locally. Rerun them for now.
+    - name: test
+      if: startsWith(matrix.os, 'macOS-')
+      run: |
+        ulimit -c unlimited
+        cd $HOME/build && ctest -V --label-regex quick --parallel 1 --repeat until-pass:2
+
+    # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
+    # not seem to be expanded, so hard code HOME for now.
+    - name: upload build and test dumps
+      uses: actions/upload-artifact@v1
+      if: failure() && startsWith(matrix.os, 'ubuntu-')
+      with:
+        name: build-dump-${{matrix.os}}
+        path: /home/runner/build
+    - name: upload build and test dumps
+      uses: actions/upload-artifact@v1
+      if: failure() && startsWith(matrix.os, 'macOS-')
+      with:
+        name: build-dump-${{matrix.os}}
+        path: /Users/runner/build

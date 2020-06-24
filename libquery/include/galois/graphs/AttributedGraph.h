@@ -283,13 +283,12 @@ public:
   // TODO doxygen all of the things below
   // TODO maybe move these somewhere else rather than have them as funcs
   // here
-  size_t matchCypherQuery(EventLimit limit, EventWindow window,
-                          const char* cypherQueryStr, bool useGraphSimulation);
+  size_t matchCypherQuery(const char* cypherQueryStr);
 
-  size_t matchQuery(EventLimit limit, EventWindow window,
-                    std::vector<MatchedNode>& queryNodes,
-                    MatchedEdge* queryEdges, size_t numQueryEdges,
-                    const char** filters, bool useGraphSimulation);
+private:
+  size_t matchQuery(std::vector<MatchedNode>& queryNodes,
+                    std::vector<MatchedEdge>& queryEdges,
+                    std::vector<const char *>& filters);
 };
 } // namespace galois::graphs
 #endif

@@ -164,21 +164,21 @@ void CypherCompiler::compile_rel_pattern_path(CypherASTNode element) {
     timestamp = std::numeric_limits<uint32_t>::max();
   }
 
-  this->ir.back().label     = str_to_cstr(label);
-  this->ir.back().timestamp = timestamp;
+  this->queryEdges.back().label     = str_to_cstr(label);
+  this->queryEdges.back().timestamp = timestamp;
 
   for (unsigned int r = 1; r < repeat; ++r) {
-    this->ir.back().acted_on.id   = str_to_cstr(getAnonNodeID(element));
-    this->ir.back().acted_on.name = str_to_cstr("any");
+    this->queryEdges.back().acted_on.id   = str_to_cstr(getAnonNodeID(element));
+    this->queryEdges.back().acted_on.name = str_to_cstr("any");
     this->filters.push_back(str_to_cstr(""));
 
-    this->ir.emplace_back();
-    this->ir.back().caused_by.id   = str_to_cstr(getAnonNodeID(element));
-    this->ir.back().caused_by.name = str_to_cstr("any");
+    this->queryEdges.emplace_back();
+    this->queryEdges.back().caused_by.id   = str_to_cstr(getAnonNodeID(element));
+    this->queryEdges.back().caused_by.name = str_to_cstr("any");
     this->filters.push_back(str_to_cstr(""));
 
-    this->ir.back().label     = str_to_cstr(label);
-    this->ir.back().timestamp = timestamp;
+    this->queryEdges.back().label     = str_to_cstr(label);
+    this->queryEdges.back().timestamp = timestamp;
   }
 }
 
@@ -204,33 +204,33 @@ int CypherCompiler::compile_pattern_path(CypherASTNode ast) {
       auto second = cypher_ast_pattern_path_get_element(ast, i + 1);
       assert(cypher_astnode_type(second) == CYPHER_AST_NODE_PATTERN);
 
-      this->ir.emplace_back(); // create memory for the edge
+      this->queryEdges.emplace_back(); // create memory for the edge
 
       // fill in nodes of edge based on direction
       if (direction == CYPHER_REL_OUTBOUND) { // source
-        compile_node_pattern_path(first, this->ir.back().caused_by);
+        compile_node_pattern_path(first, this->queryEdges.back().caused_by);
         compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, this->ir.back().acted_on);
+        compile_node_pattern_path(second, this->queryEdges.back().acted_on);
       } else {
-        compile_node_pattern_path(first, this->ir.back().acted_on);
+        compile_node_pattern_path(first, this->queryEdges.back().acted_on);
         compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, this->ir.back().caused_by);
+        compile_node_pattern_path(second, this->queryEdges.back().caused_by);
       }
 
       // if edge was bidirectional, create the node in the other direction
       if (direction == CYPHER_REL_BIDIRECTIONAL) {
-        this->ir.emplace_back();
-        compile_node_pattern_path(first, this->ir.back().caused_by);
+        this->queryEdges.emplace_back();
+        compile_node_pattern_path(first, this->queryEdges.back().caused_by);
         compile_rel_pattern_path(rel);
-        compile_node_pattern_path(second, this->ir.back().acted_on);
+        compile_node_pattern_path(second, this->queryEdges.back().acted_on);
       }
     }
     return 0;
   } else {
     // single node pattern path
-    this->qNodes.emplace_back();
+    this->queryNodes.emplace_back();
     auto node = cypher_ast_pattern_path_get_element(ast, 0);
-    compile_node_pattern_path(node, this->qNodes.back());
+    compile_node_pattern_path(node, this->queryNodes.back());
     return 0;
   }
 }
@@ -572,7 +572,7 @@ void CypherCompiler::init() {
   this->pathConstraints.clear();
   this->shortestPath = false;
   this->namedPath.clear();
-  this->ir.clear();
+  this->queryEdges.clear();
   this->filters.clear();
 }
 

@@ -514,7 +514,7 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
   compileTime.stop();
 
 #ifndef NDEBUG
-  printIR(cc.getIR(), cc.getFilters());
+  printIR(cc.getQueryEdges(), cc.getFilters());
 #endif
 
   // do actual matching
@@ -522,10 +522,10 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
   // - edges of a query graph
   // - filters on nodes (contains)
   size_t numMatches =
-      this->matchQuery(limit, window, cc.getQNodes(), 
-                       cc.getIR().data(), cc.getIR().size(),
+      this->matchQuery(limit, window, cc.getQueryNodes(), 
+                       cc.getQueryEdges().data(), cc.getQueryEdges().size(),
                        cc.getFilters().data(), useGraphSimulation);
-  cc.getIR().clear();
+  cc.getQueryEdges().clear();
   cc.getFilters().clear();
 
   return numMatches;

@@ -49,11 +49,11 @@ sudo apt install -yq clang-10 clang++-10 clang-format-10 clang-tidy-10 llvm-10-d
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
 sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
 
-#       Setup conan assuming you want build as a subdirectory in repository root
-# .github/workflows/setup_conan.sh
-# mkdir build
-# conan install -if ./build --build=missing config
+# install conan, without sudo should install locally $HOME/.local/bin
+pip3 install conan
+.github/workflows/setup_conan.sh
 
-#    Run cmake in build
+# If you want a build directory that is a subdir of Katana root
+# mkdir build
 # cd build
-# cmake ../ -DCMAKE_TOOLCHAIN_FILE=./conan_paths.cmake -DGALOIS_ENABLE_DIST=on
+# cmake ../ -DGALOIS_AUTO_CONAN=on -DGALOIS_ENABLE_DIST=on

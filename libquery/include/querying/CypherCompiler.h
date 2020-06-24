@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <stack>
-#include "querying/GraphSimulation.h"
+#include "querying/Matching.h"
 // cypher parser includes
 #include <cypher-parser.h>
 #include <astnode.h>

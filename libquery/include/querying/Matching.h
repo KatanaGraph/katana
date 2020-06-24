@@ -18,13 +18,13 @@
  */
 
 /**
- * @file GraphSimulation.h
+ * @file Matching.h
  *
- * Contains definitions of functions/structs for graph simluation.
+ * Contains definitions of functions/structs for graph matching.
 
  */
-#ifndef GALOIS_GRAPH_SIMULATION_H
-#define GALOIS_GRAPH_SIMULATION_H
+#ifndef GALOIS_MATCHING_H
+#define GALOIS_MATCHING_H
 #include "galois/graphs/QueryGraph.h"
 #include <string>
 
@@ -94,4 +94,4 @@ size_t countMatchedNodes(QueryGraph& graph);
 size_t countMatchedEdges(QueryGraph& graph);
 #endif
 
-#endif // GALOIS_GRAPH_SIMULATION_H
+#endif // GALOIS_MATCHING_H

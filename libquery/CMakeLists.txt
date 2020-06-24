@@ -13,7 +13,7 @@ add_custom_target(cypher_parser DEPENDS ${CYPHER_PARSER_LIBRARY})
 add_library(galois_query SHARED 
   src/AttributedGraph.cpp
   src/CypherCompiler.cpp
-  src/GraphSimulation.cpp
+  src/Matching.cpp
   src/LDBCReader.cpp
 )
 

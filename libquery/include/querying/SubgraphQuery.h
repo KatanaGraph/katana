@@ -4,7 +4,7 @@
 #include "pangolin/base_embedding.h"
 #include "pangolin/embedding_queue.h"
 #include "galois/graphs/QueryGraph.h"
-#include "querying/GraphSimulation.h"
+#include "querying/Matching.h"
 #include <algorithm>
 
 #define QUERY_CHUNK_SIZE 256

@@ -18,13 +18,13 @@
  */
 
 /**
- * @file GraphSimulation.cpp
+ * @file Matching.cpp
  *
- * Contains implementations of functions defined in GraphSimulation.h as well
+ * Contains implementations of functions defined in Matching.h as well
  * as various helpers for those functions.
  */
 
-#include "querying/GraphSimulation.h"
+#include "querying/Matching.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include <regex>
 

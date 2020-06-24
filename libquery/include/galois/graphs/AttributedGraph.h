@@ -21,7 +21,7 @@
 #define GALOIS_CYPHER_GRAPH
 
 #include "galois/graphs/QueryGraph.h"
-#include "querying/GraphSimulation.h"
+#include "querying/Matching.h"
 
 // TODO find a better place to put this
 /**

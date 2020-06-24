@@ -763,7 +763,6 @@ size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
     subgraphQuery<false>(queryGraph, this->graph);
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
-    matchEdgesAfterGraphSimulation(queryGraph, this->graph);
     return countMatchedEdges(this->graph);
 #else
     return countMatchedNodes(this->graph);

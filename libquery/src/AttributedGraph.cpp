@@ -502,9 +502,7 @@ void AttributedGraph::reportGraphStats() {
                  "---------\n");
 }
 
-size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
-                                         const char* cypherQueryStr,
-                                         bool useGraphSimulation) {
+size_t AttributedGraph::matchCypherQuery(const char* cypherQueryStr) {
   galois::StatTimer compileTime("CypherCompileTime");
 
   // parse query, get AST
@@ -514,7 +512,7 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
   compileTime.stop();
 
 #ifndef NDEBUG
-  printIR(cc.getIR(), cc.getFilters());
+  printIR(cc.getQueryEdges(), cc.getFilters());
 #endif
 
   // do actual matching
@@ -522,20 +520,16 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
   // - edges of a query graph
   // - filters on nodes (contains)
   size_t numMatches =
-      this->matchQuery(limit, window, cc.getQNodes(), 
-                       cc.getIR().data(), cc.getIR().size(),
-                       cc.getFilters().data(), useGraphSimulation);
-  cc.getIR().clear();
+      this->matchQuery(cc.getQueryNodes(), cc.getQueryEdges(), cc.getFilters());
+  cc.getQueryEdges().clear();
   cc.getFilters().clear();
 
   return numMatches;
 }
 
-size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
-                                   std::vector<MatchedNode>& queryNodes,
-                                   MatchedEdge* queryEdges,
-                                   size_t numQueryEdges, const char** filters,
-                                   bool useGraphSimulation) {
+size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
+                                   std::vector<MatchedEdge>& queryEdges,
+                                   std::vector<const char *>& filters) {
   // build node types and prefix sum of edges
   // tracks number of nodes to be constructed in the query graph; unknown
   // until all query edges are looped over
@@ -550,7 +544,7 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
   compileTime.start();
 
   // loop through the nodes only if no edges exist
-  if (numQueryEdges == 0) {
+  if (queryEdges.size() == 0) {
     numQueryNodes = queryNodes.size();
     nodeTypes.resize(numQueryNodes, NULL);
     nodeContains.resize(numQueryNodes, "");
@@ -563,7 +557,7 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
   }
 
   // loop through all edges parsed from compiler and do bookkeeping
-  for (size_t j = 0; j < numQueryEdges; ++j) {
+  for (size_t j = 0; j < queryEdges.size(); ++j) {
     // ids of nodes of this edge
     // assumes that the id is an int
     size_t srcID = std::stoi(queryEdges[j].caused_by.id);
@@ -625,7 +619,7 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
   }
 
   // ignore edges that have the star label when constructing query graph
-  auto actualNumQueryEdges = numQueryEdges - starEdgeList.size();
+  auto actualNumQueryEdges = queryEdges.size() - starEdgeList.size();
 
   // get number of edges per node
   for (size_t i = 1; i < numQueryNodes; ++i) {
@@ -657,7 +651,7 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
   // TODO refactor code below
   // edge label checking to  make sure labels exist in the graph; if not,
   // easy no match
-  for (size_t j = 0; j < numQueryEdges; ++j) {
+  for (size_t j = 0; j < queryEdges.size(); ++j) {
     std::string curEdge = std::string(queryEdges[j].label);
     if (curEdge.find("*") == std::string::npos) {
       if (!this->getEdgeLabelMask(queryEdges[j].label).first) {
@@ -718,7 +712,7 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
     queryGraph.getData(i).matched = masks.first;
   }
 #endif
-  for (size_t j = 0; j < numQueryEdges; ++j) {
+  for (size_t j = 0; j < queryEdges.size(); ++j) {
     if (std::string(queryEdges[j].label).find("*") == std::string::npos) {
       size_t srcID = std::stoi(queryEdges[j].caused_by.id);
       size_t dstID = std::stoi(queryEdges[j].acted_on.id);
@@ -750,15 +744,11 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
 
   // at this point query graph is constructed; can do matching using it
 
-  galois::StatTimer simulationTime("GraphSimulationTime");
   // do special handling if * edges were used in the query edges
   if (starEdgeList.size() > 0) {
-    assert(useGraphSimulation);
-
-    simulationTime.start();
     // first, match query graph without star
-    matchNodesUsingGraphSimulation(queryGraph, this->graph, true, limit, window,
-                                   false, nodeContains, this->nodeNames);
+    subgraphQuery<false>(queryGraph, this->graph);
+
     // handle stars
     uint32_t currentStar = 0;
     for (std::pair<size_t, size_t>& sdPair : starEdgeList) {
@@ -767,26 +757,17 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
                         actualNumQueryEdges + currentStar);
       currentStar++;
     }
+
     // rematch taking star into account (handling star should have limited scope
     // of possible matches)
-    matchNodesUsingGraphSimulation(queryGraph, this->graph, false, limit,
-                                   window, false, nodeContains,
-                                   this->nodeNames);
+    subgraphQuery<false>(queryGraph, this->graph);
+
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
     matchEdgesAfterGraphSimulation(queryGraph, this->graph);
-    simulationTime.stop();
     return countMatchedEdges(this->graph);
 #else
-    simulationTime.stop();
     return countMatchedNodes(this->graph);
 #endif
-  } else if (useGraphSimulation) {
-    // run graph simulation before running the subgraph querying
-    simulationTime.start();
-    runGraphSimulation(queryGraph, this->graph, limit, window, false,
-                       nodeContains, this->nodeNames);
-    simulationTime.stop();
-    return subgraphQuery<true>(queryGraph, this->graph);
   } else {
     return subgraphQuery<false>(queryGraph, this->graph);
   }

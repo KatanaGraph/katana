@@ -296,12 +296,10 @@ public:
    * graph simulation (or not) and the Pangolin engine.
    */
   size_t
-  runCypherQuery(const std::string cypherQueryStr, bool useGraphSimulation,
+  runCypherQuery(const std::string cypherQueryStr,
                  std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
     // run the query, get number of matched edges
-    size_t mEdgeCount = this->attGraph->matchCypherQuery(
-        EventLimit(), EventWindow(), cypherQueryStr.c_str(),
-        useGraphSimulation);
+    size_t mEdgeCount = this->attGraph->matchCypherQuery(cypherQueryStr.c_str());
     return mEdgeCount;
   }
 };

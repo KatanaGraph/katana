@@ -27,9 +27,9 @@ class CypherCompiler {
 
   //! set of nodes that comprises the query graph
   // Currently, used only when there are no edges in the query graph
-  std::vector<MatchedNode> qNodes;
+  std::vector<MatchedNode> queryNodes;
   //! set of edges that comprises the query graph
-  std::vector<MatchedEdge> ir;
+  std::vector<MatchedEdge> queryEdges;
   //! string filters
   std::vector<const char*> filters;
   std::stack<bool> bin_op; // true => AND, false => OR
@@ -124,9 +124,9 @@ class CypherCompiler {
 public:
   CypherCompiler() {}
 
-  auto& getQNodes() { return qNodes; }
+  auto& getQueryNodes() { return queryNodes; }
 
-  auto& getIR() { return ir; }
+  auto& getQueryEdges() { return queryEdges; }
 
   auto& getFilters() { return filters; }
 

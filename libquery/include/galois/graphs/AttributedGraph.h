@@ -287,6 +287,7 @@ public:
                           const char* cypherQueryStr, bool useGraphSimulation);
 
   size_t matchQuery(EventLimit limit, EventWindow window,
+                    std::vector<MatchedNode>& queryNodes,
                     MatchedEdge* queryEdges, size_t numQueryEdges,
                     const char** filters, bool useGraphSimulation);
 };

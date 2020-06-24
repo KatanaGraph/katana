@@ -25,6 +25,9 @@ class CypherCompiler {
   bool shortestPath;
   std::string namedPath;
 
+  //! set of nodes that comprises the query graph
+  // Currently, used only when there are no edges in the query graph
+  std::vector<MatchedNode> qNodes;
   //! set of edges that comprises the query graph
   std::vector<MatchedEdge> ir;
   //! string filters
@@ -120,6 +123,8 @@ class CypherCompiler {
 
 public:
   CypherCompiler() {}
+
+  auto& getQNodes() { return qNodes; }
 
   auto& getIR() { return ir; }
 

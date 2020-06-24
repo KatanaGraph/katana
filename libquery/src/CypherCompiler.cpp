@@ -228,14 +228,9 @@ int CypherCompiler::compile_pattern_path(CypherASTNode ast) {
     return 0;
   } else {
     // single node pattern path
-    GALOIS_DIE("TODO single node pattern path not yet implemented");
-    this->ir.emplace_back();
-    auto only = cypher_ast_pattern_path_get_element(ast, 0);
-    compile_node_pattern_path(only, this->ir.back().caused_by);
-    // mark the edge as a singleton
-    this->ir.back().singleton = 1;
-    // TODO problem; there are some other places in the code that assume
-    // that nodes are always added 2 at a time (e.g. see filters)
+    this->qNodes.emplace_back();
+    auto node = cypher_ast_pattern_path_get_element(ast, 0);
+    compile_node_pattern_path(node, this->qNodes.back());
     return 0;
   }
 }

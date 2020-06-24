@@ -522,7 +522,8 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
   // - edges of a query graph
   // - filters on nodes (contains)
   size_t numMatches =
-      this->matchQuery(limit, window, cc.getIR().data(), cc.getIR().size(),
+      this->matchQuery(limit, window, cc.getQNodes(), 
+                       cc.getIR().data(), cc.getIR().size(),
                        cc.getFilters().data(), useGraphSimulation);
   cc.getIR().clear();
   cc.getFilters().clear();
@@ -531,6 +532,7 @@ size_t AttributedGraph::matchCypherQuery(EventLimit limit, EventWindow window,
 }
 
 size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
+                                   std::vector<MatchedNode>& queryNodes,
                                    MatchedEdge* queryEdges,
                                    size_t numQueryEdges, const char** filters,
                                    bool useGraphSimulation) {
@@ -546,6 +548,20 @@ size_t AttributedGraph::matchQuery(EventLimit limit, EventWindow window,
   galois::StatTimer compileTime("IRCompileTime");
 
   compileTime.start();
+
+  // loop through the nodes only if no edges exist
+  if (numQueryEdges == 0) {
+    numQueryNodes = queryNodes.size();
+    nodeTypes.resize(numQueryNodes, NULL);
+    nodeContains.resize(numQueryNodes, "");
+    prefixSum.resize(numQueryNodes, 0);
+
+    assert(numQueryNodes == 1);
+    size_t id = std::stoi(queryNodes[0].id);
+    nodeTypes[id] = queryNodes[0].name;
+    nodeContains[id] = std::string(filters[0]);
+  }
+
   // loop through all edges parsed from compiler and do bookkeeping
   for (size_t j = 0; j < numQueryEdges; ++j) {
     // ids of nodes of this edge

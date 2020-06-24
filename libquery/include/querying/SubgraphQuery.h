@@ -504,8 +504,10 @@ public:
               matchNodeDegree(queryGraph, curr_qnode, dataGraph, n)) {
             // create an embedding for each matched node
             EmbeddingType emb;
-            emb.push_back(n);
-            queue.push_back(emb);
+            NeighborsTy neighbors;
+            unsigned numInNeighbors;
+            addEmbedding<false, printEmbeddings>(n, emb, n, neighbors,
+                                               numInNeighbors, queue);
           }
         },
         galois::loopname("EmbeddingInit"));

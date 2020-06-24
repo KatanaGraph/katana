@@ -114,7 +114,7 @@ ctest -L quick
 ```
 
 This runs code tests locally on your machine.  Most of the tests require sample
-graphs. You can get them with `make inputs`.
+graphs. You can get them with `make input`.
 
 # Some Helpful tools
 

@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "galois/Platform.h"
+
 #include "tsuba/tsuba.h"
 #include "s3.h"
 #include "tsuba_internal.h"
@@ -24,7 +26,7 @@ namespace tsuba {
 
 template <typename T>
 static T* MmapCast(size_t size, int prot, int flags, int fd, off_t off) {
-  void* ret = mmap(nullptr, size, prot, flags, fd, off);
+  void* ret = galois::MmapPopulate(nullptr, size, prot, flags, fd, off);
   if (ret == MAP_FAILED) {
     perror("mmap");
     return nullptr;
@@ -38,8 +40,7 @@ static uint8_t* MmapLocalFile(const std::string& filename, uint64_t begin,
   if (fd < 0) {
     return nullptr;
   }
-  auto* ret =
-      MmapCast<uint8_t>(size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, begin);
+  auto* ret = MmapCast<uint8_t>(size, PROT_READ, MAP_SHARED, fd, begin);
   close(fd);
   return ret;
 }

@@ -25,6 +25,7 @@
 
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
+#include "galois/Platform.h"
 #include "tsuba/tsuba.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
@@ -386,8 +387,8 @@ LoadTopology(const fs::path& topology_path,
 class MMapper {
 public:
   MMapper(size_t s) {
-    void* p = mmap(nullptr, s, PROT_READ | PROT_WRITE,
-                   MAP_ANONYMOUS | MAP_POPULATE | MAP_PRIVATE, -1, 0);
+    void* p = galois::MmapPopulate(nullptr, s, PROT_READ | PROT_WRITE,
+                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (p == MAP_FAILED) {
       perror("mmap");
       p = nullptr;

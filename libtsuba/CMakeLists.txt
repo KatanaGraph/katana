@@ -4,6 +4,8 @@ set(sources
 )
 
 add_library(tsuba STATIC ${sources})
+target_link_libraries(tsuba galois_support)
+
 add_subdirectory(tests)
 
 # The conan generated package name is aws-sdk-cpp while the

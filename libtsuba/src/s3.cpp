@@ -115,6 +115,7 @@ int S3Open(const std::string& bucket, const std::string& object) {
       Aws::Transfer::TransferManager::Create(transfer_config);
 
   std::vector<char> tmpname(kTmpTag.begin(), kTmpTag.end());
+  tmpname.emplace_back('\0');
   int fd = mkstemp(tmpname.data());
   auto downloadHandle =
       transfer_manager->DownloadFile(bucket, object, tmpname.data());

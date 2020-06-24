@@ -8,16 +8,16 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "galois/OutIndexView.h"
-#include "galois/FileView.h"
 #include "galois/graphs/GraphHelpers.h"
+#include "tsuba/FileView.h"
 
 namespace galois {
 
 template <typename EdgeData, typename Edge>
 class PartialGraphView {
   OutIndexView outidx_;
-  FileView edge_file_;
-  FileView edge_data_file_;
+  tsuba::FileView edge_file_;
+  tsuba::FileView edge_data_file_;
   uint64_t first_node_;
   uint64_t last_node_;
   const Edge* edges_;

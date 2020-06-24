@@ -20,7 +20,6 @@ target_include_directories(galois_dist_async PUBLIC
 
 target_link_libraries(galois_dist_async PUBLIC MPI::MPI_CXX)
 target_link_libraries(galois_dist_async PUBLIC galois_shmem)
-target_link_libraries(galois_dist_async PRIVATE tsuba)
 
 target_compile_definitions(galois_dist_async PRIVATE GALOIS_SUPPORT_ASYNC=1)
 

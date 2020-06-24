@@ -63,7 +63,7 @@ void TestRoundTrip() {
     GALOIS_LOG_FATAL("writing result: {}", write_result.error());
   }
 
-  outcome::std_result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
+  galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
       make_result = galois::graphs::PropertyFileGraph::Make(meta_file);
   fs::remove_all(temp_dir);
   if (!make_result) {

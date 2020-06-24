@@ -7,7 +7,7 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "galois/graphs/GraphHelpers.h"
-#include "galois/FileView.h"
+#include "tsuba/FileView.h"
 
 namespace galois {
 
@@ -34,7 +34,7 @@ struct GRPrefix {
 };
 
 class OutIndexView {
-  FileView file_;
+  tsuba::FileView file_;
   std::string filename_;
   const GRPrefix* gr_view_;
 

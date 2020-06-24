@@ -1,4 +1,5 @@
 #include "querying/LDBCReader.h"
+
 // namespace for various helper functions
 namespace internal {
 // TODO this function and one below are pretty much the same aside from
@@ -15,10 +16,6 @@ uint32_t getLabelID(std::unordered_map<std::string, uint32_t>& labelIDs,
     return 0;
   }
 }
-
-// TODO save graph to disk
-// TODO attributed graph loader directly from disk without BAE INTERFACE
-// TODO neo4j import fix
 
 //! Given a gid map and key/value, insert; dies if key already exists
 //! (i.e. must have unique keys)
@@ -56,20 +53,20 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   size_t nodeLabelCount = this->nodeLabelNames.size();
   size_t edgeLabelCount = this->edgeLabelNames.size();
 
-  AttributedGraph* attGraphPointer = &(this->attGraph);
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
 
   // Steps to setting up an attributed graph's metadata
   // (1) allocate memory for it
   galois::gInfo("Allocating memory for graph");
-  allocateGraphLDBC(attGraphPointer, this->totalNodes, this->totalEdges,
-                    nodeLabelCount, edgeLabelCount);
+  attGraphPointer->allocateGraphLDBC(this->totalNodes, this->totalEdges,
+                                     nodeLabelCount, edgeLabelCount);
   // (2) Initialize node and edge label memory/metadata
   galois::gInfo("Allocating memory for node and edge labels");
   for (size_t i = 0; i < nodeLabelCount; i++) {
-    setNodeLabelMetadata(attGraphPointer, i, this->nodeLabelNames[i].c_str());
+    attGraphPointer->setNodeLabelMetadata(i, this->nodeLabelNames[i].c_str());
   }
   for (size_t i = 0; i < edgeLabelCount; i++) {
-    setEdgeLabelMetadata(attGraphPointer, i, this->edgeLabelNames[i].c_str());
+    attGraphPointer->setEdgeLabelMetadata(i, this->edgeLabelNames[i].c_str());
   }
   // (3) Initialize node and edge attribute memory/metadata
   // note; node/edge *attributes* are initialized when you set them later
@@ -77,10 +74,10 @@ LDBCReader::LDBCReader(std::string _ldbcDirectory, GIDType _numNodes,
   // if debugging
   galois::gInfo("Allocating memory for node and edge attributes");
   for (std::string nAttribute : this->nodeAttributeNames) {
-    addNodeAttributeMap(attGraphPointer, nAttribute.c_str(), this->totalNodes);
+    attGraphPointer->addNodeAttributeMap(nAttribute.c_str(), this->totalNodes);
   }
   for (std::string eAttribute : this->edgeAttributeNames) {
-    addEdgeAttributeMap(attGraphPointer, eAttribute.c_str(), this->totalEdges);
+    attGraphPointer->addEdgeAttributeMap(eAttribute.c_str(), this->totalEdges);
   }
 
   this->setupAttributeTypes();
@@ -126,7 +123,7 @@ LDBCReader::GIDMap& LDBCReader::getGIDMap(NodeLabel nodeType) {
 
 void LDBCReader::setupAttributeTypes() {
   galois::gInfo("Tagging attributes with types");
-  AttributedGraph* attGraphPointer = &(this->attGraph);
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
   // looping over them via the array rather than hardcode setting them so
   // that it's easier to make sure the ones we want are handled (e.g.
   // if I add a new attribute and try to run, it will fail if I haven't
@@ -134,25 +131,25 @@ void LDBCReader::setupAttributeTypes() {
   for (std::string attName : this->nodeAttributeNames) {
     if (attName == "id" || attName == "name" || attName == "url" ||
         attName == "title") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_LONGSTRING);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_LONGSTRING);
     } else if (attName == "creationDate") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_DATETIME);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_DATETIME);
     } else if (attName == "firstName" || attName == "lastName" ||
                attName == "gender" || attName == "browserUsed" ||
                attName == "locationIP" || attName == "language" ||
                attName == "imageFile") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_STRING);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_STRING);
     } else if (attName == "birthday") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_DATE);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_DATE);
     } else if (attName == "email") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(),
-                           AT_LONGSTRINGARRAY);
+      attGraphPointer->addNodeAttributeType(attName.c_str(),
+                                            AT_LONGSTRINGARRAY);
     } else if (attName == "speaks") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_STRINGARRAY);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_STRINGARRAY);
     } else if (attName == "content") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_TEXT);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_TEXT);
     } else if (attName == "length") {
-      addNodeAttributeType(attGraphPointer, attName.c_str(), AT_INT32);
+      attGraphPointer->addNodeAttributeType(attName.c_str(), AT_INT32);
     } else {
       GALOIS_DIE("unhandled node attribute type ", attName);
     }
@@ -160,9 +157,9 @@ void LDBCReader::setupAttributeTypes() {
 
   for (std::string attName : this->edgeAttributeNames) {
     if (attName == "classYear" || attName == "workFrom") {
-      addEdgeAttributeType(attGraphPointer, attName.c_str(), AT_INT32);
+      attGraphPointer->addEdgeAttributeType(attName.c_str(), AT_INT32);
     } else if (attName == "creationDate" || attName == "joinDate") {
-      addEdgeAttributeType(attGraphPointer, attName.c_str(), AT_DATETIME);
+      attGraphPointer->addEdgeAttributeType(attName.c_str(), AT_DATETIME);
     } else {
       GALOIS_DIE("unhandled edge attribute type ", attName);
     }
@@ -200,9 +197,9 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
   std::string oType;
   std::string oName;
   std::string oURL;
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
   while (std::getline(orgFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -221,17 +218,17 @@ void LDBCReader::parseOrganizationCSV(const std::string filepath) {
     // in addition to being an organization, it is also whatever type
     // is listed in the file
     if (oType.compare("company") == 0) {
-      setNodeLabel(attGraphPointer, thisGID, companyLabel);
+      attGraphPointer->setNodeLabel(thisGID, companyLabel);
     } else if (oType.compare("university") == 0) {
-      setNodeLabel(attGraphPointer, thisGID, uniLabel);
+      attGraphPointer->setNodeLabel(thisGID, uniLabel);
     } else {
       GALOIS_DIE("invalid organization type ", oType);
     }
 
     // finally, save all 3 parsed fields to attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", oID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "name", oName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -279,9 +276,9 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
   std::string oName;
   std::string oURL;
   std::string oType;
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
   while (std::getline(placeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -300,19 +297,19 @@ void LDBCReader::parsePlaceCSV(const std::string filepath) {
     // in addition to being an place, it is also whatever type
     // is listed in the file
     if (oType.compare("country") == 0) {
-      setNodeLabel(attGraphPointer, thisGID, countryLabel);
+      attGraphPointer->setNodeLabel(thisGID, countryLabel);
     } else if (oType.compare("city") == 0) {
-      setNodeLabel(attGraphPointer, thisGID, cityLabel);
+      attGraphPointer->setNodeLabel(thisGID, cityLabel);
     } else if (oType.compare("continent") == 0) {
-      setNodeLabel(attGraphPointer, thisGID, continentLabel);
+      attGraphPointer->setNodeLabel(thisGID, continentLabel);
     } else {
       GALOIS_DIE("invalid place type ", oType);
     }
 
     // finally, save all 3 parsed fields to attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", oID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "name", oName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -345,9 +342,9 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
   std::string oID;
   std::string oName;
   std::string oURL;
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
   while (std::getline(tagFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -362,11 +359,11 @@ void LDBCReader::parseTagCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(tag2GID, std::stoul(oID), thisGID);
     // set tag label
-    setNodeLabel(attGraphPointer, thisGID, tagLabel);
+    attGraphPointer->setNodeLabel(thisGID, tagLabel);
     // save all 3 parsed fields to attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", oID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "name", oName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -399,9 +396,9 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
   std::string oID;
   std::string oName;
   std::string oURL;
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
   while (std::getline(tagClassFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
     nodesParsed++;
@@ -416,11 +413,11 @@ void LDBCReader::parseTagClassCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(tagClass2GID, std::stoul(oID), thisGID);
     // set tag label
-    setNodeLabel(attGraphPointer, thisGID, tagClassLabel);
+    attGraphPointer->setNodeLabel(thisGID, tagClassLabel);
     // save all 3 parsed fields to attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", oID.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "name", oName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "url", oURL.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", oID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "name", oName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "url", oURL.c_str());
   }
 
   timer.stop();
@@ -464,9 +461,9 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
   std::string fLanguage;
   std::string fMail;
 
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
 
   while (std::getline(nodeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
@@ -494,27 +491,27 @@ void LDBCReader::parsePersonCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(person2GID, std::stoul(fID), thisGID);
     // set label
-    setNodeLabel(attGraphPointer, thisGID, personLabel);
+    attGraphPointer->setNodeLabel(thisGID, personLabel);
 
     // save parsed fields into attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                             fCreation.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "firstName",
-                             fFirstName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "lastName",
-                             fLastName.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "gender",
-                             fGender.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "birthday",
-                             fBirthday.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "email", fMail.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "speaks",
-                             fLanguage.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
-                             fBrowser.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                             fLocationIP.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "creationDate",
+                                              fCreation.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "firstName",
+                                              fFirstName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "lastName",
+                                              fLastName.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "gender",
+                                              fGender.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "birthday",
+                                              fBirthday.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "email", fMail.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "speaks",
+                                              fLanguage.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "browserUsed",
+                                              fBrowser.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "locationIP",
+                                              fLocationIP.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -551,9 +548,9 @@ void LDBCReader::parseForumCSV(const std::string filepath) {
   std::string fTitle;
   std::string fType;
 
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
 
   while (std::getline(nodeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
@@ -571,13 +568,13 @@ void LDBCReader::parseForumCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(forum2GID, std::stoul(fID), thisGID);
     // set label
-    setNodeLabel(attGraphPointer, thisGID, forumLabel);
+    attGraphPointer->setNodeLabel(thisGID, forumLabel);
 
     // save parsed fields into attributes
-    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                             fCreation.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "title", fTitle.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "creationDate",
+                                              fCreation.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "title", fTitle.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", fID.c_str());
     // fType is ignored
   }
 
@@ -621,9 +618,9 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
   std::string fContent;
   std::string fLength;
 
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
 
   while (std::getline(nodeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
@@ -647,27 +644,27 @@ void LDBCReader::parsePostCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(post2GID, std::stoul(fID), thisGID);
     // set label
-    setNodeLabel(attGraphPointer, thisGID, postLabel);
+    attGraphPointer->setNodeLabel(thisGID, postLabel);
 
     // save parsed fields into attributes
     // message specific
-    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                             fCreation.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
-                             fBrowser.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                             fLocationIP.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "content",
-                             fContent.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "length",
-                             fLength.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "creationDate",
+                                              fCreation.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "browserUsed",
+                                              fBrowser.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "locationIP",
+                                              fLocationIP.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "content",
+                                              fContent.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "length",
+                                              fLength.c_str());
     // post specific
-    setExistingNodeAttribute(attGraphPointer, thisGID, "language",
-                             fLanguage.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "imageFile",
-                             fImageFile.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "language",
+                                              fLanguage.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "imageFile",
+                                              fImageFile.c_str());
 
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -708,9 +705,9 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
   std::string fContent;
   std::string fLength;
 
-  AttributedGraph* attGraphPointer = &(this->attGraph);
-  size_t nodesParsed               = 0;
-  GIDType beginOffset              = this->gidOffset;
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
+  size_t nodesParsed                               = 0;
+  GIDType beginOffset                              = this->gidOffset;
 
   while (std::getline(nodeFile, curLine)) {
     GIDType thisGID = this->gidOffset++;
@@ -731,22 +728,22 @@ void LDBCReader::parseCommentCSV(const std::string filepath) {
     // place lid to gid mapping save
     internal::insertGIDMap(comment2GID, std::stoul(fID), thisGID);
     // set label
-    setNodeLabel(attGraphPointer, thisGID, commentLabel);
+    attGraphPointer->setNodeLabel(thisGID, commentLabel);
 
     // save parsed fields into attributes
     // message specific
-    setExistingNodeAttribute(attGraphPointer, thisGID, "creationDate",
-                             fCreation.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "browserUsed",
-                             fBrowser.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "locationIP",
-                             fLocationIP.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "content",
-                             fContent.c_str());
-    setExistingNodeAttribute(attGraphPointer, thisGID, "length",
-                             fLength.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "creationDate",
+                                              fCreation.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "browserUsed",
+                                              fBrowser.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "locationIP",
+                                              fLocationIP.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "content",
+                                              fContent.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "length",
+                                              fLength.c_str());
 
-    setExistingNodeAttribute(attGraphPointer, thisGID, "id", fID.c_str());
+    attGraphPointer->setExistingNodeAttribute(thisGID, "id", fID.c_str());
   }
 
   timer.stop();
@@ -847,14 +844,14 @@ void LDBCReader::constructCSREdges(
   std::transform(edgesPerNode.begin(), edgesPerNode.end(), edgesPerNode.begin(),
                  [&](EdgeIndex& v) { return v + this->addedEdges; });
   // fix the end edges on the CSR
-  AttributedGraph* attGraphPointer = &(this->attGraph);
+  galois::graphs::AttributedGraph* attGraphPointer = &(this->attGraph);
   galois::do_all(
       galois::iterate((size_t)0, edgesPerNode.size()),
       [&](size_t nodeIndex) {
         // galois::gDebug("Node ", nodeIndex + gidOffset, " edges stop at ",
         //               edgesPerNode[nodeIndex]);
-        fixEndEdge(attGraphPointer, nodeIndex + gidOffset,
-                   edgesPerNode[nodeIndex]);
+        attGraphPointer->fixEndEdge(nodeIndex + gidOffset,
+                                    edgesPerNode[nodeIndex]);
       },
       galois::loopname("FixEndEdgeSimple"), galois::no_stats());
 
@@ -889,7 +886,7 @@ void LDBCReader::constructCSREdges(
         // galois::gDebug(src, " ", dest, " ", label, " insert ",
         // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
-        constructEdge(attGraphPointer, insertionPoint, dest, label, 0);
+        attGraphPointer->constructEdge(insertionPoint, dest, label, 0);
       },
       galois::loopname("SaveSimpleEdges"), galois::no_stats());
 
@@ -917,14 +914,14 @@ void LDBCReader::constructCSREdges(
         // galois::gDebug(src, " ", dest, " ", label, " insert ",
         // insertionPoint);
         // TODO last arg is timestamp; what to do about it?
-        constructEdge(attGraphPointer, insertionPoint, dest, label, 0);
+        attGraphPointer->constructEdge(insertionPoint, dest, label, 0);
 
         // handle attribute to save as well
         const std::string& attributeName = e.attributeName;
         std::string& attribute           = e.attribute;
         // TODO make sure attribute name already exists when inserting
-        setExistingEdgeAttribute(attGraphPointer, insertionPoint,
-                                 attributeName.c_str(), attribute.c_str());
+        attGraphPointer->setExistingEdgeAttribute(
+            insertionPoint, attributeName.c_str(), attribute.c_str());
       },
       galois::loopname("SaveAttributedEdges"), galois::no_stats());
 
@@ -1403,6 +1400,6 @@ void LDBCReader::parseAndSave(std::string outputFile) {
   galois::StatTimer timer("GraphSavingTimer");
   timer.start();
   // save graph to disk
-  saveGraph(&(this->attGraph), outputFile.c_str());
+  this->attGraph.saveGraph(outputFile.c_str());
   timer.stop();
 }

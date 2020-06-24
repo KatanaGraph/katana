@@ -19,7 +19,7 @@
 #ifndef GALOIS_LDBCREADER
 #define GALOIS_LDBCREADER
 
-#include "querying/PythonGraph.h"
+#include "galois/graphs/AttributedGraph.h"
 
 /**
  *
@@ -91,7 +91,7 @@ private:
   using ParseMetadata = std::tuple<size_t, size_t, size_t>;
 
   //! Underlying attribute graph
-  AttributedGraph attGraph;
+  galois::graphs::AttributedGraph attGraph;
   //! Path to the generated ldbc social network data
   std::string ldbcDirectory;
   //! Nodes that have been read so far

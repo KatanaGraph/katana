@@ -20,14 +20,12 @@
 /**
  * @file GraphSimulation.h
  *
- * Contains definitions of graph related structures for graph simluation in
- * Galois, most notably the AttributedGraph structure.
+ * Contains definitions of functions/structs for graph simluation.
+
  */
 #ifndef GALOIS_GRAPH_SIMULATION_H
 #define GALOIS_GRAPH_SIMULATION_H
-#include "galois/Galois.h"
 #include "galois/graphs/QueryGraph.h"
-
 #include <string>
 
 /**
@@ -76,49 +74,6 @@ struct EventWindow {
   EventWindow() : valid(false) {}
 };
 
-enum AttributedType {
-  AT_INT32,
-  AT_STRING,
-  AT_LONGSTRING,
-  AT_DATE,
-  AT_DATETIME,
-  AT_TEXT,
-  AT_STRINGARRAY,
-  AT_LONGSTRINGARRAY
-};
-
-/**
- * Wrapped graph that contains metadata maps explaining what the compressed
- * data stored in the graph proper mean. For example, instead of storing
- * node types directly on the Graph, an int (which maps to a node type)
- * is stored on the node data.
- */
-struct AttributedGraph {
-  //! Graph structure class
-  QueryGraph graph;
-  std::vector<std::string> nodeLabelNames;                //!< maps ID to Name
-  std::unordered_map<std::string, uint32_t> nodeLabelIDs; //!< maps Name to ID
-  std::vector<std::string> edgeLabelNames;                //!< maps ID to Name
-  std::unordered_map<std::string, uint32_t> edgeLabelIDs; //!< maps Name to ID
-  //! maps node UUID/ID to index/GraphNode
-  std::unordered_map<std::string, uint32_t> nodeIndices;
-  //! maps node index to UUID
-  std::vector<std::string> index2UUID;
-  //! actual names of nodes
-  std::vector<std::string> nodeNames; // cannot use LargeArray because serialize
-                                      // does not do deep-copy
-  // custom attributes: maps from an attribute name to a vector that contains
-  // the attribute for each node/edge
-  //! attribute name (example: file) to vector of names for that attribute
-  std::unordered_map<std::string, std::vector<std::string>> nodeAttributes;
-  //! type for a node attribute
-  std::unordered_map<std::string, AttributedType> nodeAttributeTypes;
-  //! edge attribute name to vector of names for that attribute
-  std::unordered_map<std::string, std::vector<std::string>> edgeAttributes;
-  //! type for an edge attribute
-  std::unordered_map<std::string, AttributedType> edgeAttributeTypes;
-};
-
 bool matchNodeLabel(const QueryNode& query, const QueryNode& data);
 
 bool matchNodeDegree(const QueryGraph& queryGraph,
@@ -126,34 +81,6 @@ bool matchNodeDegree(const QueryGraph& queryGraph,
                      const QueryGNode& dataNodeID);
 
 bool matchEdgeLabel(const QueryEdgeData& query, const QueryEdgeData& data);
-
-#ifdef USE_QUERY_GRAPH_WITH_NODE_LABEL
-/**
- * Return an integer with the bit representing the specified node label set.
- * Assumes the label actually exists, else undefined behavior.
- *
- * @param g Graph to get label from
- * @param nodeLabel Node label to get mask for
- * @returns Boolean saying if a node label is valid +
- * A number with the bit representing the specified label set for use
- * in bitmasks + a number with bit representing labels NOT to match
- */
-std::pair<bool, std::pair<uint32_t, uint32_t>>
-getNodeLabelMask(AttributedGraph& g, const std::string& nodeLabel);
-#endif
-
-/**
- * Return an integer with the bit representing the specified edge label set.
- * Assumes the label actually exists, else undefined behavior.
- *
- * @param g Graph to get label from
- * @param nodeLabel Edge label to get mask for
- * @returns Boolean saying if a node label is valid +
- * A number with the bit representing the specified label set for use
- * in bitmasks + a number with bit representing labels NOT to match
- */
-std::pair<bool, std::pair<uint32_t, uint32_t>>
-getEdgeLabelMask(AttributedGraph& g, const std::string& edgeLabel);
 
 /**
  * Reset matched status on all nodes to 0
@@ -199,7 +126,6 @@ void findShortestPaths(QueryGraph& dataGraph, uint32_t srcQueryNode,
  * @returns Number of matched nodes in the graph
  */
 size_t countMatchedNodes(QueryGraph& graph);
-
 
 #ifdef USE_QUERY_GRAPH_WITH_TIMESTAMP
 /**

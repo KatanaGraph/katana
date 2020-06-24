@@ -19,9 +19,11 @@
 #ifndef _GALOIS_DB_GRAPH_
 #define _GALOIS_DB_GRAPH_
 
-#include "querying/PythonGraph.h"
+#include "galois/graphs/AttributedGraph.h"
 #include "galois/graphs/OfflineGraph.h"
 #include "galois/graphs/BufferedGraph.h"
+
+// @todo remove need for this file completely
 
 namespace galois {
 namespace graphs {
@@ -50,13 +52,13 @@ class DBGraph {
       std::string thisLabel = "";
       thisLabel             = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
-      setNodeLabelMetadata(attGraph, i, dummy);
+      this->attGraph->setNodeLabelMetadata(i, dummy);
     }
     for (size_t i = 0; i < numEdgeLabels; i++) {
       std::string thisLabel = "";
       thisLabel             = thisLabel + std::to_string(i);
       strcpy(dummy, thisLabel.c_str());
-      setEdgeLabelMetadata(attGraph, i, dummy);
+      this->attGraph->setEdgeLabelMetadata(i, dummy);
     }
   }
 
@@ -75,7 +77,7 @@ class DBGraph {
       std::string id = "ID" + std::to_string(i);
       strcpy(dummy, id.c_str());
       // TODO node labels are round-robin; make this more controllable?
-      setNewNode(attGraph, i, dummy, i % numNodeLabels, dummy);
+      this->attGraph->setNewNode(i, dummy, i % numNodeLabels, dummy);
     }
 
     // TODO node may have more than one label; can add randomly?
@@ -124,17 +126,17 @@ public:
    */
   DBGraph() {
     // TODO unique ptr
-    attGraph      = new AttributedGraph;
-    numNodeLabels = 1;
-    numEdgeLabels = 1;
+    this->attGraph = new AttributedGraph;
+    numNodeLabels  = 1;
+    numEdgeLabels  = 1;
   }
 
   /**
    * Destroy attributed graph object
    */
   ~DBGraph() {
-    if (attGraph) {
-      delete attGraph;
+    if (this->attGraph) {
+      delete this->attGraph;
     }
   }
 
@@ -186,8 +188,8 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     // allocate the memory for the new graph
-    allocateGraph(attGraph, graphTopology.size(), finalEdgeCount, numNodeLabels,
-                  numEdgeLabels);
+    this->attGraph->allocateGraph(graphTopology.size(), finalEdgeCount,
+                                  numNodeLabels, numEdgeLabels);
 
     setupNodeEdgeLabelsMeta();
 
@@ -214,7 +216,8 @@ public:
     galois::do_all(
         galois::iterate(0u, graphTopology.size()),
         [&](uint32_t vertexID) {
-          fixEndEdge(attGraph, vertexID, edgeCountsPerVertex[vertexID + 1]);
+          this->attGraph->fixEndEdge(vertexID,
+                                     edgeCountsPerVertex[vertexID + 1]);
         },
         galois::loopname("EdgeEndpointFixing"));
 
@@ -240,7 +243,8 @@ public:
               uint64_t forwardEdge =
                   __sync_fetch_and_add(&(edgeCountsPerVertex[vertexID]), 1);
               // set forward
-              constructNewEdge(attGraph, forwardEdge, dst, labelBit, timestamp);
+              this->attGraph->constructNewEdge(forwardEdge, dst, labelBit,
+                                               timestamp);
             }
           }
         },
@@ -267,8 +271,8 @@ public:
    * @param graphOnDisk graph to load from disk into memory
    */
   void loadSerializedAttributedGraph(const std::string graphOnDisk) {
-    loadGraph(this->attGraph, graphOnDisk.c_str());
-    reportGraphStats(*this->attGraph);
+    this->attGraph->loadGraph(graphOnDisk.c_str());
+    this->attGraph->reportGraphStats();
     // ignore setting numNodeLabels/numEdgeLabels; only used by the other
     // construction interface which is unnecessary if you use a serial
     // attributed graph directly
@@ -295,9 +299,9 @@ public:
   runCypherQuery(const std::string cypherQueryStr, bool useGraphSimulation,
                  std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
     // run the query, get number of matched edges
-    size_t mEdgeCount =
-        matchCypherQuery(attGraph, EventLimit(), EventWindow(),
-                         cypherQueryStr.c_str(), useGraphSimulation);
+    size_t mEdgeCount = this->attGraph->matchCypherQuery(
+        EventLimit(), EventWindow(), cypherQueryStr.c_str(),
+        useGraphSimulation);
     return mEdgeCount;
   }
 };

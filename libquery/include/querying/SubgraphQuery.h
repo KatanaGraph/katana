@@ -9,6 +9,8 @@
 
 #define QUERY_CHUNK_SIZE 256
 
+// @todo create a cpp file for this
+
 //! Ordering class: true if left vertex has higher degree than right vertex
 //! what this ends up doing is putting high degree vertices first
 class OrderVertices {

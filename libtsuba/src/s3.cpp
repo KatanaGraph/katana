@@ -31,22 +31,58 @@ static const std::string_view kTmpTag("/tmp/tsuba_s3.XXXXXX");
 static constexpr const uint64_t kS3BufSize    = MB(5);
 static constexpr const uint64_t kNumS3Threads = 36;
 
-std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> executor;
-// Initialize in S3Init
+// Initialized in S3Init
+static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
+    default_executor;
 static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
 
-static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
-  Aws::Client::ClientConfiguration cfg;
-  const char* region = std::getenv("KATANA_AWS_REGION");
-  cfg.region         = region ? region : kDefaultS3Region;
-  cfg.executor       = executor;
+/// GetS3Client returns a configured S3 client.
+///
+/// The client pulls its configuration from the environment using the same
+/// environment variables and configuration paths as the AWS CLI, although with
+/// a subset of the configurability.
+///
+/// The AWS region is determined by:
+///
+/// 1. The region associated with the default profile in $HOME/.aws/config The
+///    location configuration file can be overriden by env[AWS_CONFIG_FILE].
+/// 2. Otherwise, env[AWS_DEFAULT_REGION]
+/// 3. Otherwise, us-east-1
+///
+/// The credentials are determined by:
+///
+/// 1. The credentials associcated with the default profile in
+/// $HOME/.aws/credentials
+/// 2. Otherwise, the machine account if in EC2
+static inline std::shared_ptr<Aws::S3::S3Client>
+GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
+                executor) {
+  Aws::Client::ClientConfiguration cfg("default");
+
+  const char* region = std::getenv("AWS_DEFAULT_REGION");
+  if (region) {
+    cfg.region = region;
+  }
+
+  if (cfg.region.empty()) {
+    // The AWS SDK says the default region is us-east-1 but it appears we need
+    // to set it ourselves.
+    cfg.region = kDefaultS3Region;
+  }
+
+  cfg.executor = executor;
   return Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
+}
+
+static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
+  return GetS3Client(default_executor);
 }
 
 int S3Init() {
   Aws::InitAPI(sdk_options);
-  executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
-      kAwsTag, kNumS3Threads);
+  default_executor =
+      Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
+          kAwsTag, kNumS3Threads);
   // Need context for async uploads
   async_s3_client = GetS3Client();
   return 0;
@@ -54,8 +90,8 @@ int S3Init() {
 
 void S3Fini() { Aws::ShutdownAPI(sdk_options); }
 
-static inline std::string BucketAndObject(std::string bucket,
-                                          std::string object) {
+static inline std::string BucketAndObject(const std::string& bucket,
+                                          const std::string& object) {
   return bucket + "/" + object;
 }
 
@@ -69,11 +105,9 @@ std::pair<std::string, std::string> S3SplitUri(const std::string& uri) {
 }
 
 int S3Open(const std::string& bucket, const std::string& object) {
-  Aws::Client::ClientConfiguration cfg;
-  cfg.region     = kDefaultS3Region;
-  auto s3_client = Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
   auto executor =
       Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(kAwsTag, 1);
+  auto s3_client = GetS3Client(executor);
 
   Aws::Transfer::TransferManagerConfiguration transfer_config(executor.get());
   transfer_config.s3Client = s3_client;

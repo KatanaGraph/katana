@@ -362,11 +362,6 @@ jobs:
       run: |
         [[ -f /proc/cpuinfo ]] && cat /proc/cpuinfo
 
-        case ${{matrix.os}} in
-          macOS-*) export PATH=$PATH:/usr/local/opt/llvm/bin ;;
-          *) ;;
-        esac
-
         case ${{matrix.cxx}} in
           clang*) CC=clang ;;
           g*)     CC=gcc   ;;

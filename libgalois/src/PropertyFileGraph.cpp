@@ -8,7 +8,7 @@
 #include <parquet/arrow/writer.h>
 #include <parquet/file_reader.h>
 
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include <parquet/metadata.h>
 #include <parquet/properties.h>
 #include <sys/mman.h>
@@ -34,7 +34,7 @@ static const char* node_property_name_key = "kg.v1.node_property.name";
 static const char* edge_property_path_key = "kg.v1.edge_property.path";
 static const char* edge_property_name_key = "kg.v1.edge_property.name";
 
-namespace fs = std::filesystem;
+namespace fs = boost::filesystem;
 
 // TODO(ddn): add appropriate error codes, package Arrow errors better
 
@@ -119,7 +119,7 @@ LoadTable(const std::string& expected_name, const fs::path& file_path) {
   // TODO(ddn): use custom NUMA allocator
 
   auto fv = std::make_shared<galois::FileView>(galois::FileView());
-  int err = fv->Bind(file_path);
+  int err = fv->Bind(file_path.string());
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }
@@ -192,7 +192,7 @@ WriteTable(const arrow::Table& table,
     fs::path next_path = NewPath(dir, schema->field(i)->name());
 
     // Metadata paths should relative to dir
-    next_paths.emplace_back(next_path.filename());
+    next_paths.emplace_back(next_path.filename().string());
 
     std::shared_ptr<arrow::Table> column = arrow::Table::Make(
         arrow::schema({schema->field(i)}), {table.column(i)});
@@ -223,7 +223,7 @@ WriteTable(const arrow::Table& table,
 
     std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
 
-    int err = tsuba::Store(next_path, buf->data(), buf->size());
+    int err = tsuba::Store(next_path.string(), buf->data(), buf->size());
     if (err) {
       return galois::ErrorCode::InvalidArgument;
     }
@@ -365,7 +365,7 @@ LoadTopology(const fs::path& topology_path,
              galois::FileView* topology_file_storage) {
 
   galois::FileView f;
-  int err = f.Bind(topology_path);
+  int err = f.Bind(topology_path.string());
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }
@@ -445,13 +445,13 @@ WriteTopology(const galois::graphs::GraphTopology& topology,
   }
 
   fs::path t_path = NewPath(dir, "topology");
-  int err = tsuba::Store(t_path, reinterpret_cast<uint8_t*>(mmapper.ptr),
-                         mmapper.size);
+  int err         = tsuba::Store(t_path.string(),
+                         reinterpret_cast<uint8_t*>(mmapper.ptr), mmapper.size);
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }
 
-  return t_path.filename();
+  return t_path.filename().string();
 }
 
 outcome::std_result<std::vector<PropertyMetadata>>
@@ -628,7 +628,7 @@ WriteMetadata(const galois::graphs::MetadataImpl& metadata,
 
   std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
 
-  int err = tsuba::Store(path, buf->data(), buf->size());
+  int err = tsuba::Store(path.string(), buf->data(), buf->size());
   if (err) {
     return galois::ErrorCode::InvalidArgument;
   }
@@ -753,7 +753,7 @@ galois::graphs::PropertyFileGraph::Write(const std::string& metadata_path) {
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
 
-  std::filesystem::path m_path{metadata_path};
+  fs::path m_path{metadata_path};
   fs::path dir = m_path.parent_path();
 
   metadata_->metadata_dir = dir;

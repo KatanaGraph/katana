@@ -3,7 +3,9 @@
 
 #include <cstdlib> // mkdtemp
 
-#include <filesystem>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
                                         const std::vector<int32_t>& data) {
@@ -63,13 +65,13 @@ void TestRoundTrip() {
   GALOIS_LOG_WARN("creating temp file {}", meta_file);
 
   if (!write_result) {
-    std::filesystem::remove_all(temp_dir);
+    fs::remove_all(temp_dir);
     GALOIS_LOG_FATAL("writing result: {}", write_result.error());
   }
 
   outcome::std_result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
       make_result = galois::graphs::PropertyFileGraph::Make(meta_file);
-  std::filesystem::remove_all(temp_dir);
+  fs::remove_all(temp_dir);
   if (!make_result) {
     GALOIS_LOG_FATAL("making result: {}", make_result.error());
   }

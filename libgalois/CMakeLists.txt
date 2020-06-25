@@ -77,9 +77,15 @@ if (TARGET Boost::Boost)
   # manually.
   get_target_property(include_dirs Boost::Boost INTERFACE_INCLUDE_DIRECTORIES)
   target_include_directories(galois_shmem PUBLIC ${include_dirs})
+
+  # Conan doesn't seem to generate separate targets for each boost component;
+  # link against them all.
+  target_link_libraries(galois_shmem PRIVATE Boost::Boost)
 else()
   # Standard CMake Boost module
   target_link_libraries(galois_shmem PUBLIC Boost::boost)
+
+  target_link_libraries(galois_shmem PRIVATE Boost::filesystem)
 endif()
 
 if (SCHED_SETAFFINITY_FOUND)
@@ -92,7 +98,8 @@ if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL
   message(FATAL_ERROR "libarrow must be version 0.17.*; found ${ARROW_VERSION} instead")
 endif()
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
-find_package(Parquet HINTS ${ARROW_CONFIG_DIR})
+find_package(Parquet CONFIG REQUIRED HINTS ${ARROW_CONFIG_DIR})
+
 target_link_libraries(galois_shmem PUBLIC arrow_shared parquet_shared)
 
 target_link_libraries(galois_shmem PRIVATE tsuba)

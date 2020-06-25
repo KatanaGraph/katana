@@ -84,7 +84,8 @@ jobs:
         - Sanitizer
         cxx:
         - g++
-        - clang++
+        - g++-9
+        - clang++-10
         # Only build and test the following configurations a subset of
         # configurations to reduce the total number of concurrent jobs.
         #
@@ -93,15 +94,23 @@ jobs:
         # more variables. Fallback to "exclude".
         exclude:
         - os: macOS-latest
-          cxx: clang++
+          cxx: clang++-10
+        - os: macOS-latest
+          cxx: g++-9
         - os: macOS-latest
           build_type: Sanitizer
+        - os: ubuntu-18.04
+          build_type: Sanitizer
+          cxx: g++-9
         - os: ubuntu-18.04
           build_type: Sanitizer
           cxx: g++
         - os: ubuntu-18.04
           build_type: Debug
-          cxx: clang++
+          cxx: g++-9
+        - os: ubuntu-18.04
+          build_type: Debug
+          cxx: clang++-10
     steps:
     - uses: actions/checkout@v2
 
@@ -178,15 +187,26 @@ jobs:
           *) ;;
         esac
 
-        case ${{matrix.cxx}} in
+        CXX="${{matrix.cxx}}"
+
+        VER="${CXX/*-/}"
+        if [[ "$VER" == "$CXX" ]]; then
+          VER=""
+        else
+          VER="-$VER"
+        fi
+
+        case "$CXX" in
           clang*) CC=clang ;;
           g*)     CC=gcc   ;;
         esac
 
+        CC="${CC}${VER}"
+
         case ${{matrix.build_type}} in
           Sanitize)
+            BUILD_TYPE=Release
             SANITIZER="Address;Undefined"
-            BUILD_TYPE=Debug
             ;;
           *)
             BUILD_TYPE=${{matrix.build_type}}
@@ -198,8 +218,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
           -DCMAKE_INSTALL_PREFIX=/tmp \
           -DCMAKE_TOOLCHAIN_FILE=$HOME/build/conan_paths.cmake \
-          -DCMAKE_CXX_COMPILER=${{matrix.cxx}} \
-          -DCMAKE_C_COMPILER=$CC \
+          -DCMAKE_CXX_COMPILER="$CXX" \
+          -DCMAKE_C_COMPILER="$CC" \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DGALOIS_ENABLE_DIST=on \
           -DGALOIS_USE_SANITIZER="$SANITIZER" \

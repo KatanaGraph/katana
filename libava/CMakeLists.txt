@@ -7,7 +7,7 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
-  GIT_TAG 8a4022bfc8595014
+  GIT_TAG 71d2fc1fd63904ba
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )
@@ -18,6 +18,7 @@ if(NOT ava_POPULATED)
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/specs/cava_patch/CMakeLists.txt DESTINATION ${AVA_UNPACK_LOCATION}/cava/)
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/specs)
   file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/specs/cuda_10_1.c ${CMAKE_CURRENT_BINARY_DIR}/specs/cuda_10_1.c SYMBOLIC)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated)
   file(CREATE_LINK ${AVA_CAVA_LOCATION}/headers ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/headers SYMBOLIC)
   add_subdirectory(manager/superbuild)
 endif()

@@ -49,10 +49,10 @@ public:
   ManagerConfig(int mp = kDefaultManagerPort, int wps = kDefaultWorkerPoolSize)
       : manager_port_(mp), worker_pool_size_(wps) {}
 
-  std::shared_ptr<DaemonInfo> FindDaemonByIp(std::string ip) {
+  DaemonInfo* FindDaemonByIp(std::string ip) {
     for (auto& d : daemons_) {
       if (d->ip_ == ip)
-        return d;
+        return d.get();
     }
     return nullptr;
   }
@@ -64,7 +64,7 @@ public:
 
   int manager_port_;
   int worker_pool_size_;
-  std::vector<std::shared_ptr<DaemonInfo>> daemons_;
+  std::vector<std::unique_ptr<DaemonInfo>> daemons_;
 };
 
 int const ManagerConfig::kDefaultManagerPort    = 3334;
@@ -174,7 +174,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
      * 5. Every `WorkerInfo` contains the API server's address, used GPU memory
      * size. Other attributes: a raw pointer to its parent `GpuListEntry`.
      */
-    auto daemon_info = std::make_shared<DaemonInfo>();
+    auto daemon_info = std::make_unique<DaemonInfo>();
     std::vector<std::shared_ptr<GpuListEntry>> gpu_entries;
     daemon_info->ip_ = daemon_ip;
     for (auto const& uu_offset : *(request->uuid())) {
@@ -207,7 +207,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
         daemon_info->client_->SpawnWorker(count, uuid, daemon_ip);
 
     /* Register API servers in a global table */
-    int k = 0;
+    unsigned k = 0;
     for (unsigned i = 0; i < count.size(); ++i)
       for (int j = 0; j < count[i]; ++j) {
         if (k >= worker_address.size())
@@ -217,7 +217,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
         ++k;
       }
 
-    config->daemons_.push_back(daemon_info);
+    config->daemons_.push_back(std::move(daemon_info));
     return grpc::Status::OK;
   }
 

@@ -38,26 +38,27 @@ public:
 
 class WorkerQueue {
 private:
-  std::queue<std::shared_ptr<WorkerInfo>> worker_queue_;
+  std::queue<std::unique_ptr<WorkerInfo>> worker_queue_;
   std::mutex mtx_;
 
 public:
   void Enqueue(std::string worker_address, uint64_t mem_size = 0) {
     const std::lock_guard<std::mutex> guard(mtx_);
-    auto worker_info = std::make_shared<WorkerInfo>(worker_address, mem_size);
-    worker_queue_.push(worker_info);
+    auto worker_info = std::make_unique<WorkerInfo>(worker_address, mem_size);
+    worker_queue_.push(std::move(worker_info));
   }
 
-  void Enqueue(std::shared_ptr<WorkerInfo> worker_info) {
+  void Enqueue(std::unique_ptr<WorkerInfo>& worker_info) {
     const std::lock_guard<std::mutex> guard(mtx_);
-    worker_queue_.push(worker_info);
+    worker_queue_.push(std::move(worker_info));
   }
 
-  std::shared_ptr<WorkerInfo> Dequeue() {
-    std::shared_ptr<WorkerInfo> ret;
+  std::unique_ptr<WorkerInfo> Dequeue() {
+    std::unique_ptr<WorkerInfo> ret;
     const std::lock_guard<std::mutex> guard(mtx_);
     if (worker_queue_.size() > 0) {
-      ret = worker_queue_.front();
+      /// ret = std::make_unique<WorkerInfo>(std::move(worker_queue_.front()));
+      ret = std::move(worker_queue_.front());
       worker_queue_.pop();
     }
     return ret;
@@ -73,19 +74,19 @@ public:
 
 class WorkerSet {
 private:
-  std::set<std::shared_ptr<WorkerInfo>> worker_set_;
+  std::set<std::unique_ptr<WorkerInfo>> worker_set_;
   std::mutex mtx_;
 
 public:
   void Insert(std::string worker_address, uint64_t mem_size = 0) {
     const std::lock_guard<std::mutex> guard(mtx_);
-    auto worker_info = std::make_shared<WorkerInfo>(worker_address, mem_size);
-    worker_set_.insert(worker_info);
+    auto worker_info = std::make_unique<WorkerInfo>(worker_address, mem_size);
+    worker_set_.insert(std::move(worker_info));
   }
 
-  void Insert(std::shared_ptr<WorkerInfo> worker_info) {
+  void Insert(std::unique_ptr<WorkerInfo>& worker_info) {
     const std::lock_guard<std::mutex> guard(mtx_);
-    worker_set_.insert(worker_info);
+    worker_set_.insert(std::move(worker_info));
   }
 
   uint64_t Remove(std::string address) {
@@ -130,11 +131,11 @@ public:
 
   void AddIdleWorker(std::string address) { idle_workers_.Enqueue(address); }
 
-  std::shared_ptr<WorkerInfo> PopIdleWorker() {
+  std::unique_ptr<WorkerInfo> PopIdleWorker() {
     return idle_workers_.Dequeue();
   }
 
-  void AddBusyWorker(std::shared_ptr<WorkerInfo> worker_info,
+  void AddBusyWorker(std::unique_ptr<WorkerInfo>& worker_info,
                      uint64_t used_memory = 0) {
     if (used_memory)
       worker_info->used_memory_ = used_memory;

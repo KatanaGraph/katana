@@ -7,7 +7,7 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
-  GIT_TAG fd4f4094f1a2e986
+  GIT_TAG 8a4022bfc8595014
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )

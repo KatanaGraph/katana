@@ -42,6 +42,15 @@ AvA spawn daemon requires a GPU ID list file as input.
 `${KATANA_SOURCE_DIR}/libava/manager/gpu_example.conf` is an example.
 The GPU UUID can be parsed from `nvidia -L` command.
 
+The guestlib requires a configuration file at `/etc/ava/guest.conf`. The details of the
+entries can be found at [AvA's official repository](https://github.com/yuhc/ava/tree/master/config).
+
+```json
+channel = "TCP";
+manager_address = "0.0.0.0:3334";
+gpu_memory = [1024L];
+```
+
 Use AvA
 =======
 

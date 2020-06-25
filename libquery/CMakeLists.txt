@@ -27,7 +27,7 @@ target_include_directories(galois_query PUBLIC
 )
 
 add_dependencies(galois_query cypher_parser)
-target_link_libraries(galois_query ${Boost_SERIALIZATION_LIBRARY_RELEASE} lonestar pangolin ${CYPHER_PARSER_LIBRARY})
+target_link_libraries(galois_query ${Boost_LIBS} lonestar pangolin ${CYPHER_PARSER_LIBRARY})
 target_include_directories(galois_query PUBLIC ${CYPHER_PARSER_INCLUDE})
 
 if (CMAKE_HAVE_PTHREAD_H)

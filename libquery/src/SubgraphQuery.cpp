@@ -499,7 +499,7 @@ public:
             EmbeddingType emb;
             NeighborsTy neighbors;
             unsigned numInNeighbors;
-            addEmbedding<false, printEmbeddings>(n, emb, n, neighbors,
+            addEmbedding<false, printEmbeddings>(0, emb, n, neighbors,
                                                numInNeighbors, queue);
           }
         },

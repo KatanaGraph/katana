@@ -7,7 +7,7 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
-  GIT_TAG 38ff7bf54c365a4b
+  GIT_TAG 71d2fc1fd63904ba
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )
@@ -15,33 +15,25 @@ FetchContent_Declare(ava
 FetchContent_GetProperties(ava)
 if(NOT ava_POPULATED)
   FetchContent_Populate(ava)
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/specs/cava_patch/CMakeLists.txt DESTINATION ${AVA_UNPACK_LOCATION}/cava/)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/specs)
+  file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/specs/cuda_10_1.c ${CMAKE_CURRENT_BINARY_DIR}/specs/cuda_10_1.c SYMBOLIC)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated)
+  file(CREATE_LINK ${AVA_CAVA_LOCATION}/headers ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/headers SYMBOLIC)
   add_subdirectory(manager/superbuild)
 endif()
 
-ExternalProject_Add(ava_llvm
-  BINARY_DIR ${AVA_LLVM_LOCATION}/build
+ExternalProject_Add(ava-bin
+  BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ava-bin
   DOWNLOAD_COMMAND ""
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ${AVA_UNPACK_LOCATION}/llvm/llvm
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} ${AVA_UNPACK_LOCATION}
   BUILD_COMMAND make -j4
   INSTALL_COMMAND ""
 )
 
-find_package(Python3 COMPONENTS Interpreter)
-find_package(LLVM 7.0 CONFIG REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_search_module(GLIB2 REQUIRED glib-2.0)
-ExternalProject_Add_Step(ava_llvm nwcc
-  COMMAND ${AVA_CAVA_LOCATION}/nwcc ${CMAKE_CURRENT_SOURCE_DIR}/specs/cuda_10_1.c -I /usr/local/cuda-10.1/include -I ${AVA_CAVA_LOCATION}/headers ${GLIB2_CFLAGS}
-  WORKING_DIRECTORY ${AVA_CAVA_LOCATION}
-  ALWAYS ON
+ExternalProject_Add_Step(ava-bin link
+  COMMAND mkdir -p generated &&
+          ln -f -s ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/katana_cuda_nw/libguestlib.so generated/libcudart.so.10.1 &&
+          ln -f -s ${CMAKE_CURRENT_BINARY_DIR}/ava-bin/generated/katana_cuda_nw/worker generated/worker
   DEPENDEES install
-)
-ExternalProject_Add_Step(ava_llvm compile
-  COMMAND make clean && make -j2 R=1
-  WORKING_DIRECTORY ${AVA_CAVA_LOCATION}/katana_cuda_nw
-  DEPENDEES nwcc
-)
-ExternalProject_Add_Step(ava_llvm link
-  COMMAND mkdir -p generated && ln -f -s ${AVA_CAVA_LOCATION}/katana_cuda_nw/libguestlib.so generated/libcudart.so.10.1 && ln -f -s ${AVA_CAVA_LOCATION}/katana_cuda_nw/worker generated/worker
-  DEPENDEES compile
 )

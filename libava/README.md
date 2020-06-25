@@ -42,6 +42,15 @@ AvA spawn daemon requires a GPU ID list file as input.
 `${KATANA_SOURCE_DIR}/libava/manager/gpu_example.conf` is an example.
 The GPU UUID can be parsed from `nvidia -L` command.
 
+The guestlib requires a configuration file at `/etc/ava/guest.conf`. The details of the
+entries can be found at [AvA's official repository](https://github.com/yuhc/ava/tree/master/config).
+
+```json
+channel = "TCP";
+manager_address = "0.0.0.0:3334";
+gpu_memory = [1024L];
+```
+
 Use AvA
 =======
 
@@ -71,7 +80,7 @@ Then the application can be started by loading AvA's generated CUDA library.
 In the build directory (`${KATANA_BUILD_DIR}`):
 
 ```Shell
-LD_LIBRARY_PATH=libava/generated AVA_CHANNEL=TCP AVA_WPOOL=TRUE AVA_WORKER_ADDR=localhost \
+LD_LIBRARY_PATH=libava/generated:libava/ava-bin/third_party/grpc/lib AVA_MANAGER_ADDR=0.0.0.0:3334 \
 ./lonestar/analytics/pagerank/pagerank-gpu inputs/stanford/communities/DBLP/com-dblp.wgt32.sym.gr.triangles
 ```
 

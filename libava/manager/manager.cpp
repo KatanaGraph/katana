@@ -49,6 +49,14 @@ public:
   ManagerConfig(int mp = kDefaultManagerPort, int wps = kDefaultWorkerPoolSize)
       : manager_port_(mp), worker_pool_size_(wps) {}
 
+  DaemonInfo* FindDaemonByIp(std::string ip) {
+    for (auto& d : daemons_) {
+      if (d->ip_ == ip)
+        return d.get();
+    }
+    return nullptr;
+  }
+
   void Print() {
     std::cerr << "* Manager port: " << manager_port_ << std::endl
               << "* API server pool size: " << worker_pool_size_ << std::endl;
@@ -64,7 +72,7 @@ int const ManagerConfig::kDefaultWorkerPoolSize = 3;
 
 std::shared_ptr<ManagerConfig> config;
 
-std::shared_ptr<ManagerConfig> parse_arguments(int argc, char* argv[]) {
+std::shared_ptr<ManagerConfig> parseArguments(int argc, char* argv[]) {
   int c;
   opterr               = 0;
   int manager_port     = ManagerConfig::kDefaultManagerPort;
@@ -151,16 +159,36 @@ class ManagerServiceImpl final : public ManagerService::Service {
         daemon_ip + ":" + request->daemon_address()->str();
     std::cerr << "Register spawn daemon at " << daemon_address << std::endl;
 
-    /* Register GPU information in a global table */
+    /**
+     * Register GPU information in a global table.
+     * 1. Every GPU server has a `DaemonInfo`.
+     * 2. Every daemon has a `GpuList`, consisting of a number of
+     * `GpuListEntry`. Other attributes: IP address.
+     * 3. Every `GpuListEntry` has a (pooled) idle `Worker` queue, a (running)
+     * busy `Worker` queue and a `GpuInfo`. (Busy `Worker` queue: the daemon
+     * monitors the API server's termination and reports it to the manager. The
+     * manager looks up the API server in this queue by the daemon's IP, GPU's
+     * UUID and API server's address.) Other attributes: a raw pointer to its
+     * `DaemonInfo` and a raw pointer to its `GpuList`.
+     * 4. Every `GpuInfo` contains the GPU's UUID and free memory size.
+     * 5. Every `WorkerInfo` contains the API server's address, used GPU memory
+     * size. Other attributes: a raw pointer to its parent `GpuListEntry`.
+     */
     auto daemon_info = std::make_unique<DaemonInfo>();
+    std::vector<std::shared_ptr<GpuListEntry>> gpu_entries;
     daemon_info->ip_ = daemon_ip;
-    for (auto const& uu_offset : *(request->uuid()))
-      daemon_info->gpu_info_.push_back({uu_offset->str(), 0});
+    for (auto const& uu_offset : *(request->uuid())) {
+      auto entry = std::make_shared<GpuListEntry>(daemon_info.get(),
+                                                  &daemon_info->gpu_list_);
+      entry->SetUuid(uu_offset->str());
+      gpu_entries.push_back(entry);
+    }
     int idx = 0;
     for (auto fm : *(request->free_memory())) {
-      daemon_info->gpu_info_[idx].free_memory_ = fm;
+      gpu_entries[idx]->SetFreeMemory(fm);
       ++idx;
     }
+    daemon_info->gpu_list_.AddEntries(gpu_entries);
     daemon_info->PrintGpuInfo();
 
     /* Request daemon to spawn an API server pool.
@@ -171,23 +199,246 @@ class ManagerServiceImpl final : public ManagerService::Service {
     daemon_info->client_ = std::make_unique<DaemonServiceClient>(channel);
     std::vector<int> count;
     std::vector<std::string> uuid;
-    for (auto const& gi : daemon_info->gpu_info_) {
+    for (auto const& entry : gpu_entries) {
       count.push_back(config->worker_pool_size_);
-      uuid.push_back(gi.uuid_);
+      uuid.push_back(entry->GetUuid());
     }
     std::vector<std::string> worker_address =
         daemon_info->client_->SpawnWorker(count, uuid, daemon_ip);
 
     /* Register API servers in a global table */
-    int k = 0;
+    unsigned k = 0;
     for (unsigned i = 0; i < count.size(); ++i)
       for (int j = 0; j < count[i]; ++j) {
-        daemon_info->workers_.Enqueue(worker_address[k], uuid[i]);
+        if (k >= worker_address.size())
+          break;
+        daemon_info->gpu_list_.GetEntryAtIndex(i)->AddIdleWorker(
+            worker_address[k]);
         ++k;
       }
 
     config->daemons_.push_back(std::move(daemon_info));
     return grpc::Status::OK;
+  }
+
+  virtual grpc::Status AssignWorker(
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<WorkerAssignRequest>* request_msg,
+      flatbuffers::grpc::Message<WorkerAssignReply>* response_msg) override {
+    const WorkerAssignRequest* request = request_msg->GetRoot();
+    int worker_count                   = request->worker_count();
+    int gpu_count                      = request->gpu_count();
+    std::vector<uint64_t> gpu_mem;
+    if (request->gpu_mem()) {
+      for (auto const& gm : *(request->gpu_mem())) {
+        std::cerr << "[" << context->peer() << "] Request GPU with "
+                  << (gm >> 20) << " MB free memory" << std::endl;
+        gpu_mem.push_back(gm);
+      }
+    }
+    if (gpu_mem.size() != (size_t)gpu_count)
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "Mismatched gpu_count and gpu_mem vector");
+
+    std::vector<std::string> assigned_workers =
+        DoAssignWorker(worker_count, gpu_mem);
+    if (assigned_workers.empty())
+      return grpc::Status(
+          grpc::StatusCode::UNAVAILABLE,
+          "Failed to assign API servers: insufficient resource");
+
+    /* Return assigned API servers. */
+    std::vector<flatbuffers::Offset<flatbuffers::String>> worker_address;
+    flatbuffers::grpc::MessageBuilder mb;
+    for (auto const& worker : assigned_workers)
+      worker_address.push_back(mb.CreateString(worker));
+    auto wa_offset = mb.CreateVector(&worker_address[0], worker_address.size());
+    auto response_offset = CreateWorkerAssignReply(mb, wa_offset);
+    mb.Finish(response_offset);
+    *response_msg = mb.ReleaseMessage<WorkerAssignReply>();
+
+    return grpc::Status::OK;
+  }
+
+  virtual grpc::Status NotifyWorkerExit(
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<WorkerExitNotifyRequest>* request_msg,
+      flatbuffers::grpc::Message<WorkerExitNotifyReply>* response_msg)
+      override {
+    const WorkerExitNotifyRequest* request = request_msg->GetRoot();
+    std::string peer_address =
+        context->peer().substr(context->peer().find(':') + 1);
+    const std::string worker_ip =
+        peer_address.substr(0, peer_address.find(':'));
+    const std::string worker_address =
+        worker_ip + ":" + request->worker_address()->str();
+    const std::string gpu_uuid = request->uuid()->str();
+    std::cerr << "API server (" << gpu_uuid << ") at " << worker_address
+              << " has exit" << std::endl;
+
+    /* Find daemon. */
+    auto daemon_info = config->FindDaemonByIp(worker_ip);
+    if (!daemon_info)
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "Invalid API server address");
+
+    /* Find GPU. */
+    auto entry = daemon_info->gpu_list_.FindEntryByUuid(gpu_uuid);
+
+    /* Reclaim GPU memory. */
+    entry->RemoveBusyWorker(worker_address);
+    entry->PrintGpuInfo();
+    return grpc::Status::OK;
+  }
+
+private:
+  std::vector<std::string> DoAssignWorker(int worker_count,
+                                          std::vector<uint64_t>& gpu_mem) {
+    std::vector<std::string> assigned_workers;
+    if (gpu_mem.empty())
+      return assigned_workers;
+
+    /**
+     * Rule 1:
+     * `@worker_count` is not used in this policy, but may be used as a hint for
+     * other policies.
+     *
+     * API server assignment policy.
+     * Rule 2:
+     * The policy assigns `@gpu_count` API servers to the application.
+     * Rule 3:
+     * Every API server can see only one GPU on the node. Two assigned API
+     * servers may see the same GPU (provisioning).
+     *
+     * GPU assignment policy.
+     * Rule 4:
+     * GPUs on the same node are preferred than GPUs distributed on multiple
+     * nodes. The nodes (daemons) are checked in the round-robin order.
+     * Rule 5:
+     * Under Rule 4, If the GPU memory is enough, the GPU with fewer running API
+     * servers will be assigned first.
+     * Rule 6:
+     * Under Rule 5, the GPU with more available memory will be assigned first.
+     *
+     * Pooling.
+     * Rule 7.
+     * After assigning an API server on a GPU, the manager shall request to
+     * replenish the API server pool on that GPU. If no idle API server exists
+     * on the GPU, the manager requests the daemon to spawn a new API server.
+     *
+     * Data structure.
+     * The manager has the information of the free GPU memory on each GPU node,
+     * and saves it in a list of available GPUs. The GPU list is sorted by the
+     * number of running API servers on the GPUs, or by the available memory if
+     * the numbers are the same. The GPU list is protected by a big
+     * lock--daemons may add new GPUs to the list and applications may request
+     * to consume GPUs from the list concurrently. The lock can be
+     * finer-granularity.
+     *
+     * Algorithm.
+     * The input `@gpu_mem` is sorted and the request with larger GPU memory is
+     * processed first.
+     * For each requested GPU, the algorithm iterates the GPU list to find a GPU
+     * with enough memory. Then the GPU's available memory is updated, and the
+     * GPU list is resorted (it can be done by an O(N) bubble sort, or simply by
+     * std::sort whose performance is also close to O(N)). If there is no such
+     * available GPU, all updates to the GPU list are revoked, and an empty
+     * `@worker_address` vector is returned to the application.
+     *
+     * Oversubscription.
+     * The GPU memory oversubscription can be supported with CUDA UVM. The
+     * method is to implement `cudaMalloc` with `cudaMallocManaged` on the API
+     * server. This is a
+     * TODO task.
+     */
+
+    size_t gpu_count         = gpu_mem.size();
+    std::vector<uint64_t> gm = gpu_mem;
+    std::sort(gm.begin(), gm.end(), std::greater<uint64_t>());
+
+    std::vector<std::shared_ptr<GpuListEntry>> assigned_entries;
+    unsigned daemon_idx = 0;
+    for (unsigned i = 0; i < gpu_count; ++i) {
+      std::shared_ptr<GpuListEntry> entry;
+      while (!entry && daemon_idx < config->daemons_.size()) {
+        entry =
+            config->daemons_[daemon_idx]->gpu_list_.FindEntryAndReserveMemory(
+                gm[i]);
+        if (!entry)
+          ++daemon_idx;
+        else
+          entry->PrintGpuInfo();
+      }
+
+      /* Revoke any request cannot be satisfied. */
+      if (!entry) {
+        for (unsigned j = 0; j < assigned_entries.size(); ++j) {
+          auto entry = assigned_entries[j];
+          entry->GetGpuList()->RevokeEntryWithMemory(entry, gm[j]);
+        }
+        assigned_entries.clear();
+        break;
+      } else
+        assigned_entries.push_back(entry);
+    }
+
+    /* If the resource is insufficient, return an empty vector. */
+    if (assigned_entries.empty())
+      return assigned_workers;
+
+    /* Assign an API server from each entry. */
+    for (unsigned i = 0; i < gpu_count; ++i) {
+      auto entry  = assigned_entries[i];
+      auto worker = entry->PopIdleWorker();
+      if (worker) {
+        /* Found an idle API server, insert it into the list and spawn a new
+         * idle API server. */
+        std::string address = worker->GetAddress();
+        std::cerr << "[" << __func__ << "] Assign pooled " << address
+                  << std::endl;
+        entry->AddBusyWorker(worker, gm[i]);
+        assigned_workers.push_back(address);
+
+        // TODO: may need to spawn asynchronously.
+        std::vector<int> count        = {1};
+        std::vector<std::string> uuid = {entry->GetUuid()};
+        std::vector<std::string> new_worker_address =
+            entry->GetDaemon()->client_->SpawnWorker(count, uuid,
+                                                     entry->GetDaemon()->ip_);
+        entry->AddIdleWorker(new_worker_address[0]);
+      } else {
+        /* No idle API server was found, spawn a new API server. */
+        std::vector<int> count        = {1};
+        std::vector<std::string> uuid = {entry->GetUuid()};
+        std::vector<std::string> new_worker_address =
+            entry->GetDaemon()->client_->SpawnWorker(count, uuid,
+                                                     entry->GetDaemon()->ip_);
+        if (new_worker_address.empty()) {
+          std::cerr << "[" << __func__
+                    << "] Unexpected: failed to spawn new API server on GPU ("
+                    << entry->GetUuid() << ") at " << entry->GetDaemon()->ip_
+                    << std::endl;
+          new_worker_address.push_back("0.0.0.0:0");
+        }
+
+        entry->AddBusyWorker(new_worker_address[0], gm[i]);
+        assigned_workers.push_back(new_worker_address[0]);
+        std::cerr << "[" << __func__ << "] Assign " << assigned_workers.back()
+                  << std::endl;
+      }
+    }
+
+    /* Restore the order of the assigned worker. This is an O(N^2) method; can
+     * replace with any O(N) algorithm. */
+    std::vector<std::string> returned_workers(gpu_count);
+    for (unsigned i = 0; i < gpu_count; ++i) {
+      for (unsigned j = 0; j < gpu_count; ++j)
+        if (gm[i] == gpu_mem[j] && returned_workers[j].empty()) {
+          returned_workers[j] = assigned_workers[i];
+          break;
+        }
+    }
+    return returned_workers;
   }
 };
 
@@ -204,131 +455,11 @@ void runManagerService(std::shared_ptr<ManagerConfig> config) {
   server->Wait();
 }
 
-void replyToGuestlib(int client_fd, std::string worker_address) {
-  struct command_base response;
-  uintptr_t* worker_port;
-  int assigned_worker_port =
-      std::stoi(worker_address.substr(worker_address.find(':') + 1));
-
-  response.api_id = INTERNAL_API;
-  worker_port     = (uintptr_t*)response.reserved_area;
-  *worker_port    = assigned_worker_port;
-  send_socket(client_fd, &response, sizeof(struct command_base));
-}
-
-void handleGuestlib(int client_fd, std::shared_ptr<ManagerConfig> config) {
-  struct command_base msg;
-
-  /* get guestlib info */
-  recv_socket(client_fd, &msg, sizeof(struct command_base));
-  switch (msg.command_type) {
-  case NW_NEW_APPLICATION:
-    /* API server assignment policy.
-     *
-     * Currently it is assumed that every API server is running on only one GPU.
-     * The policy simply assigns an available API server to the application;
-     * if no idle API server exists, the manager requests a daemon to spawn
-     * a new API server.
-     *
-     * The manager has the information of the free GPU memory on each GPU node,
-     * while this information is not currently used as we need annotations of
-     * every application's GPU usage or retrieve GPU usage dynamically.
-     *
-     * `config->daemons_` should be protected with locks in case of hot-plugged
-     * spawn daemons. For now it is assumed that all daemons have been spawned
-     * before any guestlib connects in.
-     */
-    for (auto const& daemon : config->daemons_) {
-      auto assigned_worker = daemon->workers_.Dequeue();
-      if (!assigned_worker.first.empty()) {
-        /* Find an idle API server, respond guestlib and spawn a new idle
-         * worker. */
-        replyToGuestlib(client_fd, assigned_worker.first);
-        close(client_fd);
-
-        std::vector<int> count        = {1};
-        std::vector<std::string> uuid = {assigned_worker.second};
-        std::vector<std::string> worker_address =
-            daemon->client_->SpawnWorker(count, uuid, daemon->ip_);
-        daemon->workers_.Enqueue(worker_address[0], assigned_worker.second);
-        return;
-      }
-    }
-
-    /* No idle API server was found, spawn a new API server.
-     * Currently, we constantly spawn the new API server on the first GPU of the
-     * first GPU node (which is assumed to exist).
-     */
-    {
-      std::vector<int> count        = {1};
-      std::vector<std::string> uuid = {config->daemons_[0]->gpu_info_[0].uuid_};
-      std::vector<std::string> worker_address =
-          config->daemons_[0]->client_->SpawnWorker(count, uuid,
-                                                    config->daemons_[0]->ip_);
-      replyToGuestlib(client_fd,
-                      worker_address.empty() ? "0.0.0.0:0" : worker_address[0]);
-      close(client_fd);
-    }
-    break;
-
-  default:
-    std::cerr << "Received unrecognized message " << msg.command_type
-              << " from guestlib" << std::endl;
-    close(client_fd);
-  }
-}
-
-/**
- * This routine functions as the traditional AvA manager, listening on a
- * hard-coded port WORKER_MANAGER_PORT (3333). The guestlib connects to this
- * port to request for the API server. We are getting rid of those hard-coded
- * configurations, but this waits for some AvA upstream changes. The final goal
- * is to merge this into the ManagerService gRPC routine.
- */
-void startTraditionalManager() {
-  struct sockaddr_in address;
-  int addrlen = sizeof(address);
-  int opt     = 1;
-  int client_fd;
-
-  /* Setup signal handler. */
-  if ((original_sigint_handler = signal(SIGINT, sigint_handler)) == SIG_ERR)
-    printf("failed to catch SIGINT\n");
-
-  /* Initialize TCP socket. */
-  if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-    perror("socket");
-  }
-  if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                 sizeof(opt))) {
-    perror("setsockopt");
-  }
-  address.sin_family      = AF_INET;
-  address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port        = htons(WORKER_MANAGER_PORT);
-
-  if (bind(listen_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-    perror("bind failed");
-  }
-  if (listen(listen_fd, 10) < 0) {
-    perror("listen");
-  }
-
-  /* Polling new applications. */
-  do {
-    client_fd =
-        accept(listen_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-    std::async(std::launch::async | std::launch::deferred, handleGuestlib,
-               client_fd, config);
-  } while (1);
-}
-
 int main(int argc, char* argv[]) {
-  config = parse_arguments(argc, argv);
+  config = parseArguments(argc, argv);
   config->Print();
 
   std::thread server_thread(runManagerService, config);
-  startTraditionalManager();
   server_thread.join();
 
   return 0;

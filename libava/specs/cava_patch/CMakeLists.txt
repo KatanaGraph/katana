@@ -16,7 +16,12 @@ ExternalProject_Add(cava
   PREFIX ava-llvm
   BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/build
   DOWNLOAD_COMMAND ""
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                                     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+                                     -DCMAKE_C_COMPILER_WORKS=ON
+                                     -DCMAKE_CXX_COMPILER_WORKS=ON
+                                     -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
   BUILD_COMMAND make -j4
   INSTALL_COMMAND ""
 )

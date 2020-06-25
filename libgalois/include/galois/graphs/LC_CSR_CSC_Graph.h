@@ -439,8 +439,8 @@ public:
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Returns in-degrees in a vector; useful if in-degrees need to be accessed quickly
-   * (1 memory access instead of 2 from subtracting begin and end).
+   * Returns in-degrees in a vector; useful if in-degrees need to be accessed
+   * quickly (1 memory access instead of 2 from subtracting begin and end).
    */
   auto countInDegrees() {
     gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);

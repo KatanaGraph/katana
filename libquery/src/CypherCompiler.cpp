@@ -173,7 +173,7 @@ void CypherCompiler::compile_rel_pattern_path(CypherASTNode element) {
     this->filters.push_back(str_to_cstr(""));
 
     this->queryEdges.emplace_back();
-    this->queryEdges.back().caused_by.id   = str_to_cstr(getAnonNodeID(element));
+    this->queryEdges.back().caused_by.id = str_to_cstr(getAnonNodeID(element));
     this->queryEdges.back().caused_by.name = str_to_cstr("any");
     this->filters.push_back(str_to_cstr(""));
 

@@ -299,7 +299,8 @@ public:
   runCypherQuery(const std::string cypherQueryStr,
                  std::string GALOIS_UNUSED(outputFile) = "matched.edges") {
     // run the query, get number of matched edges
-    size_t mEdgeCount = this->attGraph->matchCypherQuery(cypherQueryStr.c_str());
+    size_t mEdgeCount =
+        this->attGraph->matchCypherQuery(cypherQueryStr.c_str());
     return mEdgeCount;
   }
 };

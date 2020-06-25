@@ -56,10 +56,10 @@ static cll::opt<bool>
                      "listOfQueries argument (default false)"),
            cll::init(false));
 
-static cll::opt<std::string>
-    outputLocation("outputLocation",
-           cll::desc("Location (directory) to write output if output is true"),
-           cll::init("./"));
+static cll::opt<std::string> outputLocation(
+    "outputLocation",
+    cll::desc("Location (directory) to write output if output is true"),
+    cll::init("./"));
 
 static cll::opt<uint32_t> numPages("numPages",
                                    cll::desc("Number of pages to pre-alloc "
@@ -87,8 +87,7 @@ size_t processQueryFile(galois::graphs::DBGraph& testGraph,
 
   galois::StatTimer timer((queryName + "_Timer").c_str());
   timer.start();
-  size_t numMatch =
-      testGraph.runCypherQuery(querySS.str());
+  size_t numMatch = testGraph.runCypherQuery(querySS.str());
   timer.stop();
 
   galois::gInfo("Num matched subgraphs ", numMatch);
@@ -101,7 +100,6 @@ int main(int argc, char** argv) {
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
-
 
   galois::graphs::DBGraph testGraph;
   if (!isAttributedGraph) {
@@ -146,8 +144,7 @@ int main(int argc, char** argv) {
   } else if (queryFile != "") {
     processQueryFile(testGraph, queryFile);
   } else if (query != "") {
-    galois::gInfo("Num matched subgraphs ",
-                  testGraph.runCypherQuery(query));
+    galois::gInfo("Num matched subgraphs ", testGraph.runCypherQuery(query));
   } else {
     galois::gInfo("No query specified");
   }

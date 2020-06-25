@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "galois/graphs/LC_CSR_CSC_Graph.h"
 
 namespace galois {
@@ -25,8 +24,8 @@ template <typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
           bool HasNoLockable = false, bool UseNumaAlloc = false,
           bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
 class LC_CSR_Labeled_Graph
-    : public LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable, UseNumaAlloc,
-                          HasOutOfLineLockable, FileEdgeTy> {
+    : public LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
+                              UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy> {
   // typedef to make it easier to read
   //! Typedef referring to base LC_CSR_Graph
   using BaseGraph = LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
@@ -34,15 +33,16 @@ class LC_CSR_Labeled_Graph
   //! Typedef referring to the derived LC_CSR_CSC_Graph class
   using DerivedGraph =
       LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
-                     UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
+                       UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
   //! Typedef referring to this class itself
   using ThisGraph =
       LC_CSR_Labeled_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
-                     UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
+                           UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
 
 public:
   //! Graph node typedef
   using GraphNode = uint32_t;
+
 protected:
   // retypedefs of base class
   //! large array for edge data
@@ -51,13 +51,13 @@ protected:
   using EdgeDst = LargeArray<uint32_t>;
   //! large array for edge index data
   using EdgeIndData = LargeArray<uint64_t>;
+
 public:
   //! iterator for edges
   using edge_iterator =
       boost::counting_iterator<typename EdgeIndData::value_type>;
   //! iterator for data
-  using data_iterator =
-      typename std::vector<EdgeTy>::const_iterator;
+  using data_iterator = typename std::vector<EdgeTy>::const_iterator;
   //! reference to edge data
   using edge_data_reference = typename EdgeData::reference;
 
@@ -76,36 +76,37 @@ protected:
 
   void constructEdgeLabelIndex() {
     galois::substrate::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
-    galois::do_all(galois::iterate((size_t)0, this->size()),
-                   [&](GraphNode N) { 
-                       for (auto e : edges(N)) {
-                           auto& data = this->getEdgeData(e);
-                           edgeLabels.getLocal()->insert(data);
-                       }
-                       for (auto e : in_edges(N)) {
-                           auto& data = this->getInEdgeData(e);
-                           edgeLabels.getLocal()->insert(data);
-                       }
-                    },
-                   galois::no_stats(), galois::steal());
-    
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [&](GraphNode N) {
+          for (auto e : edges(N)) {
+            auto& data = this->getEdgeData(e);
+            edgeLabels.getLocal()->insert(data);
+          }
+          for (auto e : in_edges(N)) {
+            auto& data = this->getInEdgeData(e);
+            edgeLabels.getLocal()->insert(data);
+          }
+        },
+        galois::no_stats(), galois::steal());
+
     // ordered map
     std::map<EdgeTy, uint32_t> sortedMap;
     for (uint32_t i = 0; i < galois::runtime::activeThreads; ++i) {
-        auto& edgeLabelsSet = *edgeLabels.getRemote(i);
-        for (auto edgeLabel : edgeLabelsSet) {
-            sortedMap[edgeLabel] = 1;
-        }
+      auto& edgeLabelsSet = *edgeLabels.getRemote(i);
+      for (auto edgeLabel : edgeLabelsSet) {
+        sortedMap[edgeLabel] = 1;
+      }
     }
 
     // unordered map
     numEdgeLabels = 0;
     for (auto edgeLabelPair : sortedMap) {
-        edgeLabelToIndexMap[edgeLabelPair.first] = numEdgeLabels++;
-        edgeIndexToLabelMap.push_back(edgeLabelPair.first);
+      edgeLabelToIndexMap[edgeLabelPair.first] = numEdgeLabels++;
+      edgeIndexToLabelMap.push_back(edgeLabelPair.first);
     }
-   }
-  
+  }
+
   void constructEdgeIndDataLabeled() {
     size_t size = BaseGraph::size() * numEdgeLabels;
     if (UseNumaAlloc) {
@@ -114,33 +115,36 @@ protected:
       edgeIndDataLabeled.allocateInterleaved(size);
     }
 
-    galois::do_all(galois::iterate((size_t)0, this->size()),
-                   [&](GraphNode N) { 
-                      auto offset = N * this->numEdgeLabels;
-                      uint32_t index = 0;
-                      for (auto e : edges(N)) {
-                        auto& data = this->getEdgeData(e);
-                        while (data != edgeIndexToLabelMap[index]) {
-                          this->edgeIndDataLabeled[offset + index] = *e;
-                          index++;
-                          assert(index < this->numEdgeLabels);
-                        }
-                      }
-                      auto e = edge_end(N);
-                      while (index < this->numEdgeLabels) {
-                        this->edgeIndDataLabeled[offset + index] = *e;
-                        index++;
-                      }
-                    },
-                   galois::no_stats(), galois::steal());
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [&](GraphNode N) {
+          auto offset    = N * this->numEdgeLabels;
+          uint32_t index = 0;
+          for (auto e : edges(N)) {
+            auto& data = this->getEdgeData(e);
+            while (data != edgeIndexToLabelMap[index]) {
+              this->edgeIndDataLabeled[offset + index] = *e;
+              index++;
+              assert(index < this->numEdgeLabels);
+            }
+          }
+          auto e = edge_end(N);
+          while (index < this->numEdgeLabels) {
+            this->edgeIndDataLabeled[offset + index] = *e;
+            index++;
+          }
+        },
+        galois::no_stats(), galois::steal());
 
     // for (size_t i = 0; i < BaseGraph::size(); ++i) {
     //   for (size_t j = 0; j < numEdgeLabels; ++j) {
-    //     galois::gDebug("Vertex index ", i, " Label ", edgeIndexToLabelMap.at(j), " Out edge offset ", edgeIndDataLabeled[i * numEdgeLabels + j], "\n");
+    //     galois::gDebug("Vertex index ", i, " Label ",
+    //     edgeIndexToLabelMap.at(j), " Out edge offset ", edgeIndDataLabeled[i
+    //     * numEdgeLabels + j], "\n");
     //   }
     // }
   }
-  
+
   void constructInEdgeIndDataLabeled() {
     size_t size = BaseGraph::size() * numEdgeLabels;
     if (UseNumaAlloc) {
@@ -149,29 +153,32 @@ protected:
       inEdgeIndDataLabeled.allocateInterleaved(size);
     }
 
-    galois::do_all(galois::iterate((size_t)0, this->size()),
-                   [&](GraphNode N) { 
-                      auto offset = N * this->numEdgeLabels;
-                      uint32_t index = 0;
-                      for (auto e : in_edges(N)) {
-                        auto& data = this->getInEdgeData(e);
-                        while (data != edgeIndexToLabelMap[index]) {
-                          this->inEdgeIndDataLabeled[offset + index] = *e;
-                          index++;
-                          assert(index < this->numEdgeLabels);
-                        }
-                      }
-                      auto e = in_edge_end(N);
-                      while (index < this->numEdgeLabels) {
-                        this->inEdgeIndDataLabeled[offset + index] = *e;
-                        index++;
-                      }
-                    },
-                   galois::no_stats(), galois::steal());
-  
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [&](GraphNode N) {
+          auto offset    = N * this->numEdgeLabels;
+          uint32_t index = 0;
+          for (auto e : in_edges(N)) {
+            auto& data = this->getInEdgeData(e);
+            while (data != edgeIndexToLabelMap[index]) {
+              this->inEdgeIndDataLabeled[offset + index] = *e;
+              index++;
+              assert(index < this->numEdgeLabels);
+            }
+          }
+          auto e = in_edge_end(N);
+          while (index < this->numEdgeLabels) {
+            this->inEdgeIndDataLabeled[offset + index] = *e;
+            index++;
+          }
+        },
+        galois::no_stats(), galois::steal());
+
     // for (size_t i = 0; i < BaseGraph::size(); ++i) {
     //   for (size_t j = 0; j < numEdgeLabels; ++j) {
-    //     galois::gDebug("Vertex index ", i, " Label ", edgeIndexToLabelMap.at(j)," In edge offset ", inEdgeIndDataLabeled[i * numEdgeLabels + j], "\n");
+    //     galois::gDebug("Vertex index ", i, " Label ",
+    //     edgeIndexToLabelMap.at(j)," In edge offset ", inEdgeIndDataLabeled[i
+    //     * numEdgeLabels + j], "\n");
     //   }
     // }
   }
@@ -188,16 +195,16 @@ public:
   // Access functions
   /////////////////////////////////////////////////////////////////////////////
 
-  using BaseGraph::raw_begin;
-  using BaseGraph::raw_end;
   using BaseGraph::edge_begin;
   using BaseGraph::edge_end;
   using BaseGraph::edges;
-  using DerivedGraph::in_raw_begin;
-  using DerivedGraph::in_raw_end;
+  using BaseGraph::raw_begin;
+  using BaseGraph::raw_end;
   using DerivedGraph::in_edge_begin;
   using DerivedGraph::in_edge_end;
   using DerivedGraph::in_edges;
+  using DerivedGraph::in_raw_begin;
+  using DerivedGraph::in_raw_end;
 
   /**
    * Grabs edge beginning without lock/safety.
@@ -233,11 +240,11 @@ public:
    * @returns Iterator to first edge of node N
    */
   edge_iterator edge_begin(GraphNode N, const EdgeTy& data,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+                           MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
-      for (edge_iterator ii = raw_begin(N, data), ee = raw_end(N, data); ii != ee;
-           ++ii) {
+      for (edge_iterator ii = raw_begin(N, data), ee = raw_end(N, data);
+           ii != ee; ++ii) {
         BaseGraph::acquireNode(BaseGraph::edgeDst[*ii], mflag);
       }
     }
@@ -252,7 +259,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Iterator to end of edges of node N (i.e. first edge of N+1)
    */
-  edge_iterator edge_end(GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator edge_end(GraphNode N, const EdgeTy& data,
+                         MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     return raw_end(N, data);
   }
@@ -275,8 +283,7 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Degree of node N
    */
-  auto
-  degree(GraphNode N, const EdgeTy& data) const {
+  auto degree(GraphNode N, const EdgeTy& data) const {
     return std::distance(raw_begin(N, data), raw_end(N, data));
   }
 
@@ -285,8 +292,7 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Degree of node N
    */
-  auto
-  degree(GraphNode N) const {
+  auto degree(GraphNode N) const {
     return std::distance(raw_begin(N), raw_end(N));
   }
 
@@ -327,8 +333,8 @@ public:
                               MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
-      for (edge_iterator ii = in_raw_begin(N, data), ee = in_raw_end(N, data); ii != ee;
-           ++ii) {
+      for (edge_iterator ii = in_raw_begin(N, data), ee = in_raw_end(N, data);
+           ii != ee; ++ii) {
         BaseGraph::acquireNode(DerivedGraph::inEdgeDst[*ii], mflag);
       }
     }
@@ -343,7 +349,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Iterator to end of in edges of node N (i.e. first in edge of N+1)
    */
-  edge_iterator in_edge_end(GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator in_edge_end(GraphNode N, const EdgeTy& data,
+                            MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     return in_raw_end(N, data);
   }
@@ -355,7 +362,8 @@ public:
    * @returns Range to in edges of node N
    */
   runtime::iterable<NoDerefIterator<edge_iterator>>
-  in_edges(GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
+  in_edges(GraphNode N, const EdgeTy& data,
+           MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(in_edge_begin(N, data, mflag),
                                          in_edge_end(N, data, mflag));
   }
@@ -366,8 +374,7 @@ public:
    * @param mflag how safe the acquire should be
    * @returns In-degree of node N
    */
-  auto
-  in_degree(GraphNode N, const EdgeTy& data) const {
+  auto in_degree(GraphNode N, const EdgeTy& data) const {
     return std::distance(in_raw_begin(N, data), in_raw_end(N, data));
   }
 
@@ -376,21 +383,15 @@ public:
    * @param mflag how safe the acquire should be
    * @returns In-degree of node N
    */
-  auto
-  in_degree(GraphNode N) const {
+  auto in_degree(GraphNode N) const {
     return std::distance(in_raw_begin(N), in_raw_end(N));
   }
 
-  data_iterator data_begin() const {
-    return edgeIndexToLabelMap.cbegin();
-  }
+  data_iterator data_begin() const { return edgeIndexToLabelMap.cbegin(); }
 
-  data_iterator data_end() const {
-    return edgeIndexToLabelMap.cend();
-  }
+  data_iterator data_end() const { return edgeIndexToLabelMap.cend(); }
 
-  runtime::iterable<NoDerefIterator<data_iterator>>
-  data_range() const {
+  runtime::iterable<NoDerefIterator<data_iterator>> data_range() const {
     return internal::make_no_deref_range(data_begin(), data_end());
   }
 
@@ -399,19 +400,23 @@ public:
   /////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Sorts outgoing edges of a node. Comparison is over 
+   * Sorts outgoing edges of a node. Comparison is over
    * getEdgeData(e) and then getEdgeDst(e).
    */
-  void sortEdgesByDataThenDst(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  void sortEdgesByDataThenDst(GraphNode N,
+                              MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     typedef EdgeSortValue<GraphNode, EdgeTy> EdgeSortVal;
     std::sort(BaseGraph::edge_sort_begin(N), BaseGraph::edge_sort_end(N),
               [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
                 auto& data1 = e1.get();
                 auto& data2 = e2.get();
-                if (data1 < data2) return true;
-                else if (data1 > data2) return false;
-                else return e1.dst < e2.dst;
+                if (data1 < data2)
+                  return true;
+                else if (data1 > data2)
+                  return false;
+                else
+                  return e1.dst < e2.dst;
               });
   }
 
@@ -420,34 +425,37 @@ public:
    * getEdgeData(e) and then getEdgeDst(e).
    */
   void sortAllEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(galois::iterate((size_t)0, this->size()),
-                   [=](GraphNode N) { this->sortEdgesByDataThenDst(N, mflag); },
-                   galois::no_stats(), galois::steal());
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [=](GraphNode N) { this->sortEdgesByDataThenDst(N, mflag); },
+        galois::no_stats(), galois::steal());
   }
 
   /**
-   * Sorts outgoing edges of a node. Comparison is over 
+   * Sorts outgoing edges of a node. Comparison is over
    * getEdgeData(e) and then getEdgeDst(e).
    */
-  void sortInEdgesByDataThenDst(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  void sortInEdgesByDataThenDst(GraphNode N,
+                                MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     // depending on value/ref the type of EdgeSortValue changes
-    using EdgeSortVal =
-      EdgeSortValue<GraphNode,
-                    typename std::conditional<EdgeDataByValue, EdgeTy,
-                                              uint64_t>::type>;
+    using EdgeSortVal = EdgeSortValue<
+        GraphNode,
+        typename std::conditional<EdgeDataByValue, EdgeTy, uint64_t>::type>;
 
-    std::sort(DerivedGraph::in_edge_sort_begin(N), DerivedGraph::in_edge_sort_end(N),
+    std::sort(DerivedGraph::in_edge_sort_begin(N),
+              DerivedGraph::in_edge_sort_end(N),
               [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
-                auto data1 = EdgeDataByValue ? 
-                  e1.get() :
-                  BaseGraph::edgeData[e1.get()];
-                auto data2 = EdgeDataByValue ? 
-                  e2.get() :
-                  BaseGraph::edgeData[e2.get()];
-                if (data1 < data2) return true;
-                else if (data1 > data2) return false;
-                else return e1.dst < e2.dst;
+                auto data1 =
+                    EdgeDataByValue ? e1.get() : BaseGraph::edgeData[e1.get()];
+                auto data2 =
+                    EdgeDataByValue ? e2.get() : BaseGraph::edgeData[e2.get()];
+                if (data1 < data2)
+                  return true;
+                else if (data1 > data2)
+                  return false;
+                else
+                  return e1.dst < e2.dst;
               });
   }
 
@@ -456,9 +464,10 @@ public:
    * getEdgeData(e) and then getEdgeDst(e).
    */
   void sortAllInEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(galois::iterate((size_t)0, this->size()),
-                   [=](GraphNode N) { this->sortInEdgesByDataThenDst(N, mflag); },
-                   galois::no_stats(), galois::steal());
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [=](GraphNode N) { this->sortInEdgesByDataThenDst(N, mflag); },
+        galois::no_stats(), galois::steal());
   }
 
   void constructAndSortIndex() {
@@ -495,7 +504,6 @@ public:
     constructEdgeIndDataLabeled();
     constructInEdgeIndDataLabeled();
   }
-
 };
 
 } // namespace graphs

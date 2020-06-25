@@ -288,7 +288,7 @@ public:
 private:
   size_t matchQuery(std::vector<MatchedNode>& queryNodes,
                     std::vector<MatchedEdge>& queryEdges,
-                    std::vector<const char *>& filters);
+                    std::vector<const char*>& filters);
 };
 } // namespace galois::graphs
 #endif

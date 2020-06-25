@@ -500,7 +500,7 @@ public:
             NeighborsTy neighbors;
             unsigned numInNeighbors;
             addEmbedding<false, printEmbeddings>(0, emb, n, neighbors,
-                                               numInNeighbors, queue);
+                                                 numInNeighbors, queue);
           }
         },
         galois::loopname("EmbeddingInit"));

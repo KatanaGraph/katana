@@ -529,7 +529,7 @@ size_t AttributedGraph::matchCypherQuery(const char* cypherQueryStr) {
 
 size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
                                    std::vector<MatchedEdge>& queryEdges,
-                                   std::vector<const char *>& filters) {
+                                   std::vector<const char*>& filters) {
   // build node types and prefix sum of edges
   // tracks number of nodes to be constructed in the query graph; unknown
   // until all query edges are looped over
@@ -551,8 +551,8 @@ size_t AttributedGraph::matchQuery(std::vector<MatchedNode>& queryNodes,
     prefixSum.resize(numQueryNodes, 0);
 
     assert(numQueryNodes == 1);
-    size_t id = std::stoi(queryNodes[0].id);
-    nodeTypes[id] = queryNodes[0].name;
+    size_t id        = std::stoi(queryNodes[0].id);
+    nodeTypes[id]    = queryNodes[0].name;
     nodeContains[id] = std::string(filters[0]);
   }
 

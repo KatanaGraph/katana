@@ -5,9 +5,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <nvml.h>
+#include <sys/wait.h>
 #include <grpc++/grpc++.h>
 
 #include <atomic>
+#include <future>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -17,6 +19,8 @@
 #include "manager.h"
 #include "manager_service.grpc.fb.h"
 #include "manager_service_generated.h"
+
+class ManagerServiceClient;
 
 class DaemonConfig {
 public:
@@ -46,6 +50,7 @@ public:
   std::string manager_address_;
   int daemon_port_;
   int worker_port_base_;
+  std::unique_ptr<ManagerServiceClient> client_;
 
   std::vector<GpuInfo> visible_cuda_devices_;
 };
@@ -149,6 +154,63 @@ void parseConfigFile(std::shared_ptr<DaemonConfig> config) {
   }
 }
 
+class ManagerServiceClient {
+public:
+  ManagerServiceClient(std::shared_ptr<grpc::Channel> channel)
+      : stub_(ManagerService::NewStub(channel)) {}
+
+  grpc::Status RegisterDaemon(const std::string& self_address) {
+    /* Build message with daemon address and GPU info. */
+    flatbuffers::grpc::MessageBuilder mb;
+    auto sa_offset = mb.CreateString(self_address);
+    std::vector<uint64_t> fm;
+    std::vector<flatbuffers::Offset<flatbuffers::String>> uuid;
+    for (auto const& gpuinfo : config->visible_cuda_devices_) {
+      fm.push_back(gpuinfo.free_memory_);
+      uuid.push_back(mb.CreateString(gpuinfo.uuid_));
+    }
+    auto fm_offset = mb.CreateVector(fm.empty() ? nullptr : &fm[0], fm.size());
+    auto uu_offset =
+        mb.CreateVector(uuid.empty() ? nullptr : &uuid[0], uuid.size());
+    auto request_offset =
+        CreateDaemonRegisterRequest(mb, sa_offset, fm_offset, uu_offset);
+    mb.Finish(request_offset);
+    auto request_msg = mb.ReleaseMessage<DaemonRegisterRequest>();
+
+    /* Send request. */
+    grpc::ClientContext context;
+    auto status = stub_->RegisterDaemon(&context, request_msg, nullptr);
+    if (!status.ok()) {
+      std::cerr << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    }
+    return status;
+  }
+
+  grpc::Status NotifyWorkerExit(const int worker_port, const std::string uuid) {
+    /* Build message. */
+    flatbuffers::grpc::MessageBuilder mb;
+    auto wa_offset = mb.CreateString(std::to_string(worker_port));
+    auto uu_offset = mb.CreateString(uuid);
+    auto request_offset =
+        CreateWorkerExitNotifyRequest(mb, wa_offset, uu_offset);
+    mb.Finish(request_offset);
+    auto request_msg = mb.ReleaseMessage<WorkerExitNotifyRequest>();
+
+    /* Send request. */
+    grpc::ClientContext context;
+    auto status = stub_->NotifyWorkerExit(&context, request_msg, nullptr);
+    if (!status.ok()) {
+      std::cerr << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    }
+    return status;
+  }
+
+private:
+  std::unique_ptr<ManagerService::Stub> stub_;
+};
+
 class DaemonServiceImpl final : public DaemonService::Service {
 public:
   DaemonServiceImpl() : DaemonService::Service() { worker_id_.store(0); }
@@ -208,8 +270,13 @@ private:
     std::cerr << "Spawn API server at port=" << port << " UUID=" << uuid
               << std::endl;
 
-    if (fork())
+    pid_t child_pid = fork();
+    if (child_pid) {
+      auto child_monitor = std::make_shared<std::thread>(
+          MonitorWorkerExit, this, child_pid, port, uuid);
+      worker_monitor_map_.insert({port, child_monitor});
       return port;
+    }
 
     std::string visible_dev = "CUDA_VISIBLE_DEVICES=" + uuid;
     char* const argv_list[] = {(char*)"worker",
@@ -222,7 +289,17 @@ private:
     return port;
   }
 
+  static void MonitorWorkerExit(DaemonServiceImpl* service, pid_t child_pid,
+                                int port, std::string uuid) {
+    pid_t ret = waitpid(child_pid, NULL, 0);
+    std::cerr << "API server (" << uuid << ") at :" << port
+              << " has exit (waitpid=" << ret << ")" << std::endl;
+    config->client_->NotifyWorkerExit(port, uuid);
+    service->worker_monitor_map_.erase(port);
+  }
+
   std::atomic<int> worker_id_;
+  std::map<int, std::shared_ptr<std::thread>> worker_monitor_map_;
 };
 
 void runDaemonService(std::shared_ptr<DaemonConfig> config) {
@@ -237,43 +314,6 @@ void runDaemonService(std::shared_ptr<DaemonConfig> config) {
   server->Wait();
 }
 
-class ManagerServiceClient {
-public:
-  ManagerServiceClient(std::shared_ptr<grpc::Channel> channel)
-      : stub_(ManagerService::NewStub(channel)) {}
-
-  grpc::Status RegisterDaemon(const std::string& self_address) {
-    /* Build message with daemon address and GPU info. */
-    flatbuffers::grpc::MessageBuilder mb;
-    auto sa_offset = mb.CreateString(self_address);
-    std::vector<uint64_t> fm;
-    std::vector<flatbuffers::Offset<flatbuffers::String>> uuid;
-    for (auto const& gpuinfo : config->visible_cuda_devices_) {
-      fm.push_back(gpuinfo.free_memory_);
-      uuid.push_back(mb.CreateString(gpuinfo.uuid_));
-    }
-    auto fm_offset = mb.CreateVector(fm.empty() ? nullptr : &fm[0], fm.size());
-    auto uu_offset =
-        mb.CreateVector(uuid.empty() ? nullptr : &uuid[0], uuid.size());
-    auto request_offset =
-        CreateDaemonRegisterRequest(mb, sa_offset, fm_offset, uu_offset);
-    mb.Finish(request_offset);
-    auto request_msg = mb.ReleaseMessage<DaemonRegisterRequest>();
-
-    /* Send request. */
-    grpc::ClientContext context;
-    auto status = stub_->RegisterDaemon(&context, request_msg, nullptr);
-    if (!status.ok()) {
-      std::cerr << status.error_code() << ": " << status.error_message()
-                << std::endl;
-    }
-    return status;
-  }
-
-private:
-  std::unique_ptr<ManagerService::Stub> stub_;
-};
-
 int main(int argc, char* argv[]) {
   config = parse_arguments(argc, argv);
   parseConfigFile(config);
@@ -282,10 +322,11 @@ int main(int argc, char* argv[]) {
   std::thread server_thread(runDaemonService, config);
 
   /* Register daemon. */
-  auto channel = grpc::CreateChannel(config->manager_address_,
+  auto channel    = grpc::CreateChannel(config->manager_address_,
                                      grpc::InsecureChannelCredentials());
-  auto client  = std::make_unique<ManagerServiceClient>(channel);
-  auto status  = client->RegisterDaemon(std::to_string(config->daemon_port_));
+  config->client_ = std::make_unique<ManagerServiceClient>(channel);
+  auto status =
+      config->client_->RegisterDaemon(std::to_string(config->daemon_port_));
 
   server_thread.join();
 

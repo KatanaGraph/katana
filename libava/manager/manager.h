@@ -245,6 +245,18 @@ public:
     mtx_.unlock();
   }
 
+  std::shared_ptr<GpuListEntry> FindEntryByUuid(std::string uuid) {
+    std::shared_ptr<GpuListEntry> ret;
+    mtx_.lock();
+    for (const auto& entry : gpu_list_)
+      if (entry->GetUuid() == uuid) {
+        ret = entry;
+        break;
+      }
+    mtx_.unlock();
+    return ret;
+  }
+
   void Sort() {
     mtx_.lock();
     UnlockedSort();

@@ -32,9 +32,18 @@ table DaemonRegisterRequest {
 table DaemonRegisterReply {
 }
 
+table WorkerExitNotifyRequest {
+  worker_address:string; /* Currently contains only the port */
+  uuid:string;
+}
+
+table WorkerExitNotifyReply {
+}
+
 rpc_service ManagerService {
   RegisterDaemon(DaemonRegisterRequest): DaemonRegisterReply;
   AssignWorker(WorkerAssignRequest): WorkerAssignReply;
+  NotifyWorkerExit(WorkerExitNotifyRequest): WorkerExitNotifyReply;
 }
 
 table WorkerSpawnRequest {

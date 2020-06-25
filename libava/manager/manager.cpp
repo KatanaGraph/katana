@@ -49,6 +49,14 @@ public:
   ManagerConfig(int mp = kDefaultManagerPort, int wps = kDefaultWorkerPoolSize)
       : manager_port_(mp), worker_pool_size_(wps) {}
 
+  std::shared_ptr<DaemonInfo> FindDaemonByIp(std::string ip) {
+    for (auto& d : daemons_) {
+      if (d->ip_ == ip)
+        return d;
+    }
+    return nullptr;
+  }
+
   void Print() {
     std::cerr << "* Manager port: " << manager_port_ << std::endl
               << "* API server pool size: " << worker_pool_size_ << std::endl;
@@ -56,7 +64,7 @@ public:
 
   int manager_port_;
   int worker_pool_size_;
-  std::vector<std::unique_ptr<DaemonInfo>> daemons_;
+  std::vector<std::shared_ptr<DaemonInfo>> daemons_;
 };
 
 int const ManagerConfig::kDefaultManagerPort    = 3334;
@@ -166,7 +174,7 @@ class ManagerServiceImpl final : public ManagerService::Service {
      * 5. Every `WorkerInfo` contains the API server's address, used GPU memory
      * size. Other attributes: a raw pointer to its parent `GpuListEntry`.
      */
-    auto daemon_info = std::make_unique<DaemonInfo>();
+    auto daemon_info = std::make_shared<DaemonInfo>();
     std::vector<std::shared_ptr<GpuListEntry>> gpu_entries;
     daemon_info->ip_ = daemon_ip;
     for (auto const& uu_offset : *(request->uuid())) {
@@ -202,12 +210,14 @@ class ManagerServiceImpl final : public ManagerService::Service {
     int k = 0;
     for (unsigned i = 0; i < count.size(); ++i)
       for (int j = 0; j < count[i]; ++j) {
+        if (k >= worker_address.size())
+          break;
         daemon_info->gpu_list_.GetEntryAtIndex(i)->AddIdleWorker(
             worker_address[k]);
         ++k;
       }
 
-    config->daemons_.push_back(std::move(daemon_info));
+    config->daemons_.push_back(daemon_info);
     return grpc::Status::OK;
   }
 
@@ -247,6 +257,37 @@ class ManagerServiceImpl final : public ManagerService::Service {
     mb.Finish(response_offset);
     *response_msg = mb.ReleaseMessage<WorkerAssignReply>();
 
+    return grpc::Status::OK;
+  }
+
+  virtual grpc::Status NotifyWorkerExit(
+      grpc::ServerContext* context,
+      const flatbuffers::grpc::Message<WorkerExitNotifyRequest>* request_msg,
+      flatbuffers::grpc::Message<WorkerExitNotifyReply>* response_msg)
+      override {
+    const WorkerExitNotifyRequest* request = request_msg->GetRoot();
+    std::string peer_address =
+        context->peer().substr(context->peer().find(':') + 1);
+    const std::string worker_ip =
+        peer_address.substr(0, peer_address.find(':'));
+    const std::string worker_address =
+        worker_ip + ":" + request->worker_address()->str();
+    const std::string gpu_uuid = request->uuid()->str();
+    std::cerr << "API server (" << gpu_uuid << ") at " << worker_address
+              << " has exit" << std::endl;
+
+    /* Find daemon. */
+    auto daemon_info = config->FindDaemonByIp(worker_ip);
+    if (!daemon_info)
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "Invalid API server address");
+
+    /* Find GPU. */
+    auto entry = daemon_info->gpu_list_.FindEntryByUuid(gpu_uuid);
+
+    /* Reclaim GPU memory. */
+    entry->RemoveBusyWorker(worker_address);
+    entry->PrintGpuInfo();
     return grpc::Status::OK;
   }
 

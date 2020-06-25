@@ -6,6 +6,7 @@ add_dependencies(lib galois_support)
 set(sources
         src/GetEnv.cpp
         src/Logging.cpp
+        src/FileSystem.cpp
 )
 
 target_sources(galois_support PRIVATE ${sources})
@@ -20,6 +21,14 @@ if (fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")
 endif()
 target_link_libraries(galois_support fmt::fmt)
+
+if (TARGET Boost::Boost)
+  target_link_libraries(galois_support Boost::Boost)
+else()
+  # Standard CMake Boost module, shorten the link time if we can
+  target_link_libraries(galois_support Boost::boost)
+  target_link_libraries(galois_support Boost::filesystem)
+endif()
 
 add_subdirectory(test)
 

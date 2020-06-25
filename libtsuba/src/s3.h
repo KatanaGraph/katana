@@ -4,11 +4,14 @@
 #include <string>
 #include <cstdint>
 
+#include "galois/Result.h"
+
 namespace tsuba {
 
 int S3Init();
 void S3Fini();
-int S3Open(const std::string& bucket, const std::string& object);
+galois::Result<int> S3Open(const std::string& bucket,
+                           const std::string& object);
 uint64_t S3GetSize(const std::string& bucket, const std::string& object,
                    uint64_t* size);
 

@@ -1,3 +1,5 @@
+#include "s3.h"
+
 #include <memory>
 #include <regex>
 #include <string_view>
@@ -16,8 +18,9 @@
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
 
+#include "galois/FileSystem.h"
+#include "galois/Result.h"
 #include "tsuba_internal.h"
-#include "s3.h"
 #include "SegmentedBufferView.h"
 
 namespace tsuba {
@@ -26,8 +29,8 @@ static Aws::SDKOptions sdk_options;
 
 static constexpr const char* kDefaultS3Region = "us-east-1";
 static constexpr const char* kAwsTag          = "TsubaS3Client";
+static constexpr const char* kTmpTag          = "/tmp/tsuba_s3.";
 static const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
-static const std::string_view kTmpTag("/tmp/tsuba_s3.XXXXXX");
 static constexpr const uint64_t kS3BufSize    = MB(5);
 static constexpr const uint64_t kNumS3Threads = 36;
 
@@ -104,7 +107,8 @@ std::pair<std::string, std::string> S3SplitUri(const std::string& uri) {
   return std::make_pair(sub_match[1], sub_match[2]);
 }
 
-int S3Open(const std::string& bucket, const std::string& object) {
+galois::Result<int> S3Open(const std::string& bucket,
+                           const std::string& object) {
   auto executor =
       Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(kAwsTag, 1);
   auto s3_client = GetS3Client(executor);
@@ -114,16 +118,19 @@ int S3Open(const std::string& bucket, const std::string& object) {
   auto transfer_manager =
       Aws::Transfer::TransferManager::Create(transfer_config);
 
-  std::vector<char> tmpname(kTmpTag.begin(), kTmpTag.end());
-  tmpname.emplace_back('\0');
-  int fd = mkstemp(tmpname.data());
+  auto open_result = galois::OpenUniqueFile(kTmpTag);
+  if (!open_result) {
+    return open_result.error();
+  }
+  auto [tmp_name, fd] = open_result.value();
+
   auto downloadHandle =
-      transfer_manager->DownloadFile(bucket, object, tmpname.data());
+      transfer_manager->DownloadFile(bucket, object, tmp_name);
   downloadHandle->WaitUntilFinished();
 
   assert(downloadHandle->GetBytesTotalSize() ==
          downloadHandle->GetBytesTransferred());
-  unlink(tmpname.data());
+  unlink(tmp_name.c_str());
   return fd;
 }
 

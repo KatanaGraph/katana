@@ -1,7 +1,6 @@
 #include "galois/Logging.h"
+#include "galois/FileSystem.h"
 #include "galois/graphs/PropertyFileGraph.h"
-
-#include <cstdlib> // mkdtemp
 
 #include <boost/filesystem.hpp>
 
@@ -48,14 +47,9 @@ void TestRoundTrip() {
   auto add_edge_result = g->AddEdgeProperties(edge_table);
   GALOIS_LOG_ASSERT(add_edge_result);
 
-  const std::string tmpl = "/tmp/propertyfilegraph-XXXXXX";
-  std::vector<char> my_tmpl(tmpl.begin(), tmpl.end());
-  my_tmpl.emplace_back('\0');
-  char* temp_dir = mkdtemp(my_tmpl.data());
-  if (temp_dir == nullptr) {
-    perror("mkdtemp");
-  }
-  GALOIS_LOG_ASSERT(temp_dir != nullptr);
+  auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
+  GALOIS_LOG_ASSERT(unique_result);
+  std::string temp_dir(std::move(unique_result.value()));
 
   std::string meta_file{temp_dir};
   meta_file += "/meta";

@@ -1,12 +1,13 @@
-#ifndef KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
-#define KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
+#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
+#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
 
 #include <string>
 
 #include <arrow/api.h>
 #include "galois/graphs/PropertyFileGraph.h"
 
-namespace convert {
+namespace galois {
+
 enum SourceType { GRAPHML, JSON, CSV };
 enum SourceDatabase { NONE, NEO4J, MONGODB };
 enum ImportDataType { STRING, INT64, INT32, DOUBLE, FLOAT, BOOLEAN };
@@ -34,6 +35,6 @@ GraphComponents convertNeo4jCSV(const std::string& inputFilename);
 void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
                                     const std::string& dir);
 
-} // end of namespace convert
+} // end of namespace galois
 
 #endif

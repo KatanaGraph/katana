@@ -1,6 +1,7 @@
 #include "graph-properties-convert.h"
 
 #include <llvm/Support/CommandLine.h>
+
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
 
@@ -13,31 +14,28 @@ static cll::opt<std::string>
     outputDirectory(cll::Positional,
                     cll::desc("<local ouput directory/s3 directory>"),
                     cll::Required);
-static cll::opt<convert::SourceType>
+static cll::opt<galois::SourceType>
     type(cll::desc("Input file type:"),
-         cll::values(clEnumValN(convert::SourceType::GRAPHML, "graphml",
+         cll::values(clEnumValN(galois::SourceType::GRAPHML, "graphml",
                                 "source file is of type GraphML"),
-                     clEnumValN(convert::SourceType::JSON, "json",
+                     clEnumValN(galois::SourceType::JSON, "json",
                                 "source file is of type JSON"),
-                     clEnumValN(convert::SourceType::CSV, "csv",
+                     clEnumValN(galois::SourceType::CSV, "csv",
                                 "source file is of type CSV")),
          cll::Required);
-static cll::opt<convert::SourceDatabase>
+static cll::opt<galois::SourceDatabase>
     database(cll::desc("Database the data was exported from:"),
-             cll::values(clEnumValN(convert::SourceDatabase::NEO4J, "neo4j",
+             cll::values(clEnumValN(galois::SourceDatabase::NEO4J, "neo4j",
                                     "source data came from Neo4j"),
-                         clEnumValN(convert::SourceDatabase::MONGODB, "mongodb",
+                         clEnumValN(galois::SourceDatabase::MONGODB, "mongodb",
                                     "source data came from mongodb")),
-             cll::init(convert::SourceDatabase::NONE));
-
-namespace convert {
-namespace main {
+             cll::init(galois::SourceDatabase::NONE));
 
 void parseWild() {
   switch (type) {
-  case convert::SourceType::GRAPHML: {
-    auto graph = convert::convertGraphML(inputFilename);
-    convert::convertToPropertyGraphAndWrite(graph, outputDirectory);
+  case galois::SourceType::GRAPHML: {
+    auto graph = galois::convertGraphML(inputFilename);
+    galois::convertToPropertyGraphAndWrite(graph, outputDirectory);
     break;
   }
   default: {
@@ -47,25 +45,24 @@ void parseWild() {
 }
 
 void parseNeo4j() {
-  convert::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
+  galois::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
   switch (type) {
-  case convert::SourceType::GRAPHML:
-    graph = convert::convertGraphML(inputFilename);
+  case galois::SourceType::GRAPHML:
+    graph = galois::convertGraphML(inputFilename);
     break;
-  case convert::SourceType::JSON:
-    graph = convert::convertNeo4jJSON(inputFilename);
+  case galois::SourceType::JSON:
+    graph = galois::convertNeo4jJSON(inputFilename);
     break;
-  case convert::SourceType::CSV:
-    graph = convert::convertNeo4jCSV(inputFilename);
+  case galois::SourceType::CSV:
+    graph = galois::convertNeo4jCSV(inputFilename);
     break;
   }
-  convert::convertToPropertyGraphAndWrite(graph, outputDirectory);
+  galois::convertToPropertyGraphAndWrite(graph, outputDirectory);
 }
 
 void parseMongodb() {
   switch (type) {
-  case convert::SourceType::JSON: // convertMongoDB(inputFilename,
-                                  // outputDirectory);
+  case galois::SourceType::JSON:
     GALOIS_LOG_WARN("MongoDB importing is under development");
     break;
   default:
@@ -73,21 +70,18 @@ void parseMongodb() {
   }
 }
 
-} // end of namespace main
-} // end of namespace convert
-
 int main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   switch (database) {
-  case convert::SourceDatabase::NONE:
-    convert::main::parseWild();
+  case galois::SourceDatabase::NONE:
+    parseWild();
     break;
-  case convert::SourceDatabase::NEO4J:
-    convert::main::parseNeo4j();
+  case galois::SourceDatabase::NEO4J:
+    parseNeo4j();
     break;
-  case convert::SourceDatabase::MONGODB:
-    convert::main::parseMongodb();
+  case galois::SourceDatabase::MONGODB:
+    parseMongodb();
     break;
   }
 }

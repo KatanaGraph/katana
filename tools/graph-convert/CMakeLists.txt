@@ -49,22 +49,18 @@ install(TARGETS graph-convert-huge
 
 
 
-find_package(fmt REQUIRED)
 find_package(LibXml2 2.9.4 REQUIRED)
 
-add_library(graph-properties-convert-lib SHARED graph-properties-convert.cpp)
+add_library(graph-properties-convert-commmon STATIC graph-properties-convert.cpp)
 # -Wno-unkown-pragmas needed for dependency csv
-target_compile_options(graph-properties-convert-lib PRIVATE -Wno-unknown-pragmas)
-target_include_directories(graph-properties-convert-lib PRIVATE ${PROJECT_SOURCE_DIR}/external/csv-parser/single_include)
-target_link_libraries(graph-properties-convert-lib PRIVATE Boost::Boost)
-target_link_libraries(graph-properties-convert-lib PRIVATE LibXml2::LibXml2)
-target_link_libraries(graph-properties-convert-lib PRIVATE tsuba)
-target_link_libraries(graph-properties-convert-lib PRIVATE galois_shmem)
+target_compile_options(graph-properties-convert-commmon PRIVATE -Wno-unknown-pragmas)
+target_include_directories(graph-properties-convert-commmon PRIVATE ${PROJECT_SOURCE_DIR}/external/csv-parser/single_include)
+target_link_libraries(graph-properties-convert-commmon PRIVATE LibXml2::LibXml2)
+target_link_libraries(graph-properties-convert-commmon PUBLIC galois_shmem)
 
 add_executable(graph-properties-convert graph-properties-convert-main.cpp)
-target_link_libraries(graph-properties-convert PRIVATE galois_shmem)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
-target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-lib)
+target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-commmon)
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets
   DESTINATION "${CMAKE_INSTALL_BINDIR}"

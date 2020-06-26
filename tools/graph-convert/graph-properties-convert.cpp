@@ -29,9 +29,12 @@
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
 #include "galois/graphs/PropertyFileGraph.h"
-#include "tsuba/tsuba.h"
+#include "galois/SharedMemSys.h"
 
-namespace convert {
+namespace {
+
+using galois::GraphComponents;
+using galois::ImportDataType;
 
 typedef std::vector<std::shared_ptr<arrow::ArrayBuilder>> ArrayBuilders;
 typedef std::vector<std::shared_ptr<arrow::StringBuilder>> StringBuilders;
@@ -536,702 +539,46 @@ void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
   }
 }
 
-void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
-                                    const std::string& dir) {
-  galois::graphs::PropertyFileGraph graph;
-
-  auto result = graph.SetTopology(*graphComps.topology);
-  if (!result) {
-    GALOIS_LOG_FATAL("Error adding topology");
-  }
-
-  if (graphComps.nodeProperties->num_columns() > 0) {
-    result = graph.AddNodeProperties(graphComps.nodeProperties);
-    if (!result) {
-      GALOIS_LOG_FATAL("Error adding node properties");
-    }
-  }
-  if (graphComps.nodeLabels->num_columns() > 0) {
-    result = graph.AddNodeProperties(graphComps.nodeLabels);
-    if (!result) {
-      GALOIS_LOG_FATAL("Error adding node labels");
-    }
-  }
-  if (graphComps.edgeProperties->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graphComps.edgeProperties);
-    if (!result) {
-      GALOIS_LOG_FATAL("Error adding edge properties");
-    }
-  }
-  if (graphComps.edgeTypes->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graphComps.edgeTypes);
-    if (!result) {
-      GALOIS_LOG_FATAL("Error adding edge types");
-    }
-  }
-
-  tsuba::Init();
-  std::string metaFile = dir + "/meta";
-  result               = graph.Write(metaFile);
-  if (!result) {
-    GALOIS_LOG_FATAL("Error writing to fs");
-  }
-  tsuba::Fini();
-}
-
-template <typename T>
-std::vector<T> parseNumberList(std::string rawList) {
-  std::vector<T> list;
-
-  if (rawList.front() == '[' && rawList.back() == ']') {
-    rawList.erase(0, 1);
-    rawList.erase(rawList.length() - 1, 1);
-  } else {
-    GALOIS_LOG_ERROR("The provided list was not properly formatted");
-    return list; // TODO throw better error
-  }
-  std::vector<std::string> elems;
-  boost::split(elems, rawList, boost::is_any_of(","));
-
-  for (std::string s : elems) {
-    std::istringstream iss(s);
-    T elem;
-    iss >> elem;
-    list.push_back(elem);
-  }
-
-  return list;
-}
-
-std::vector<std::string> parseStringList(std::string rawList) {
-  std::vector<std::string> list;
-
-  if (rawList.size() >= 2 && rawList.front() == '[' && rawList.back() == ']') {
-    rawList.erase(0, 1);
-    rawList.erase(rawList.length() - 1, 1);
-  } else {
-    GALOIS_LOG_ERROR("The provided list was not properly formatted");
-    return list; // TODO throw better error
-  }
-
-  const char* charList = rawList.c_str();
-  // parse the list
-  for (size_t i = 0; i < rawList.size();) {
-    bool firstQuoteFound   = false;
-    bool foundEndOfElem    = false;
-    size_t startOfElem     = i;
-    int consecutiveSlashes = 0;
-
-    // parse the field
-    for (; !foundEndOfElem && i < rawList.size(); i++) {
-      // if second quote not escaped then end of element reached
-      if (charList[i] == '\"') {
-        if (consecutiveSlashes % 2 == 0) {
-          if (!firstQuoteFound) {
-            firstQuoteFound = true;
-            startOfElem     = i + 1;
-          } else if (firstQuoteFound) {
-            foundEndOfElem = true;
-          }
-        }
-        consecutiveSlashes = 0;
-      } else if (charList[i] == '\\') {
-        consecutiveSlashes++;
-      } else {
-        consecutiveSlashes = 0;
-      }
-    }
-    size_t endOfElem  = i - 1;
-    size_t elemLength = endOfElem - startOfElem;
-
-    if (endOfElem <= startOfElem) {
-      list.push_back("");
-    } else {
-
-      std::string elemRough(&charList[startOfElem], elemLength);
-      std::string elem("");
-      elem.reserve(elemRough.size());
-      size_t currIndex = 0;
-      size_t nextSlash = elemRough.find_first_of('\\');
-
-      while (nextSlash != std::string::npos) {
-        elem.append(elemRough.begin() + currIndex,
-                    elemRough.begin() + nextSlash);
-
-        switch (elemRough[nextSlash + 1]) {
-        case 'n':
-          elem.append("\n");
-          break;
-        case '\\':
-          elem.append("\\");
-          break;
-        case 'r':
-          elem.append("\r");
-          break;
-        case '0':
-          elem.append("\0");
-          break;
-        case 'b':
-          elem.append("\b");
-          break;
-        case '\'':
-          elem.append("\'");
-          break;
-        case '\"':
-          elem.append("\"");
-          break;
-        case 't':
-          elem.append("\t");
-          break;
-        case 'f':
-          elem.append("\f");
-          break;
-        case 'v':
-          elem.append("\v");
-          break;
-        case '\xFF':
-          elem.append("\xFF");
-          break;
-        default:
-          GALOIS_LOG_WARN("Unhandled escape character: {}",
-                          elemRough[nextSlash + 1]);
-        }
-
-        currIndex = nextSlash + 2;
-        nextSlash = elemRough.find_first_of('\\', currIndex);
-      }
-      elem.append(elemRough.begin() + currIndex, elemRough.end());
-
-      list.push_back(elem);
-    }
-  }
-
-  return list;
-}
-
-/* Extract header from CSV file
- *
- */
 std::pair<std::vector<std::string>, std::vector<size_t>>
-extractHeaderCSV(const std::string& infilename, ArrowFields* nodeSchemaVector,
+extractHeaderCSV(csv::CSVReader* reader, ArrowFields* nodeSchemaVector,
                  StringBuilders* nodeColumnBuilders,
                  ArrowFields* edgeSchemaVector,
                  StringBuilders* edgeColumnBuilders,
                  std::unordered_map<size_t, size_t>* nodeKeys,
                  std::unordered_map<size_t, size_t>* edgeKeys) {
-  std::ifstream file(infilename);
-  std::vector<std::string> headers;
+
+  std::vector<std::string> headers = reader->get_col_names();
   std::vector<size_t> positions;
   positions.resize(5, 0);
 
-  if (file) {
-    std::string line;
-    // get headers
-    if (std::getline(file, line)) {
-      boost::split(headers, line, boost::is_any_of(","));
-
-      bool nodeHeaders = true;
-      for (size_t i = 0; i < headers.size(); i++) {
-        // trim "" around header
-        headers[i].erase(0, 1);
-        headers[i].erase(headers[i].length() - 1);
-        if (headers[i] == std::string("_id")) {
-          positions[0] = i;
-        } else if (headers[i] == std::string("_labels")) {
-          positions[1] = i;
-        } else if (headers[i] == std::string("_start")) {
-          positions[2] = i;
-          nodeHeaders  = false;
-        } else if (headers[i] == std::string("_end")) {
-          positions[3] = i;
-          nodeHeaders  = false;
-        } else if (headers[i] == std::string("_type")) {
-          positions[4] = i;
-          nodeHeaders  = false;
-        } else {
-          if (nodeHeaders) {
-            nodeSchemaVector->push_back(
-                arrow::field(headers[i], arrow::utf8()));
-            nodeColumnBuilders->push_back(
-                std::make_shared<arrow::StringBuilder>());
-            nodeKeys->insert(std::pair<size_t, size_t>(i, nodeKeys->size()));
-          } else {
-            edgeSchemaVector->push_back(
-                arrow::field(headers[i], arrow::utf8()));
-            edgeColumnBuilders->push_back(
-                std::make_shared<arrow::StringBuilder>());
-            edgeKeys->insert(std::pair<size_t, size_t>(i, edgeKeys->size()));
-          }
-        }
+  bool nodeHeaders = true;
+  for (size_t i = 0; i < headers.size(); i++) {
+    if (headers[i] == std::string("_id")) {
+      positions[0] = i;
+    } else if (headers[i] == std::string("_labels")) {
+      positions[1] = i;
+    } else if (headers[i] == std::string("_start")) {
+      positions[2] = i;
+      nodeHeaders  = false;
+    } else if (headers[i] == std::string("_end")) {
+      positions[3] = i;
+      nodeHeaders  = false;
+    } else if (headers[i] == std::string("_type")) {
+      positions[4] = i;
+      nodeHeaders  = false;
+    } else {
+      if (nodeHeaders) {
+        nodeSchemaVector->push_back(arrow::field(headers[i], arrow::utf8()));
+        nodeColumnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+        nodeKeys->insert(std::pair<size_t, size_t>(i, nodeKeys->size()));
+      } else {
+        edgeSchemaVector->push_back(arrow::field(headers[i], arrow::utf8()));
+        edgeColumnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+        edgeKeys->insert(std::pair<size_t, size_t>(i, edgeKeys->size()));
       }
     }
-    file.close();
-  } else {
-    GALOIS_LOG_FATAL("Could not open file");
   }
   return std::pair(headers, positions);
-}
-
-/* Example neo4j CSV:
- * "_id","_labels","born","name","released","tagline","title","_start","_end","_type","roles","text"
- * "0",":Movie","","","1999","Welcome to the Real World","The Matrix",,,,,
- * "1",":Person","1964","Keanu Reeves","","","",,,,,
- * ,,,,,,,"1","0","ACTED_IN","[""Neo""]",""
- *
- * The first line contains a csv header line
- * All data is quoted even null properties for that object type, i.e. Keanu
- * Reaves is a node so has a "" tagline value All data of the other type is left
- * empty, i.e. Keanu Reaves is a node so has null for roles and text values The
- * required fields are for nodes: _id, _labels; for edges: _start, _end, _type
- */
-GraphComponents convertNeo4jCSV(const std::string& infilename) {
-  ArrowFields nodeSchemaVector;
-  StringBuilders nodeColumnBuilders;
-  ArrowFields edgeSchemaVector;
-  StringBuilders edgeColumnBuilders;
-
-  std::unordered_map<std::string, size_t> labelIndices;
-  std::unordered_map<std::string, size_t> typeIndices;
-
-  ArrowFields nodeLabelSchemaVector;
-  BooleanBuilders nodeLabelColumnBuilders;
-  ArrowFields edgeTypeSchemaVector;
-  BooleanBuilders edgeTypeColumnBuilders;
-
-  std::vector<bool> nodeLabelNull;
-  std::vector<bool> edgeTypeNull;
-
-  std::unordered_map<std::string, size_t> nodeIndexes;
-
-  // node's start of edge lists
-  std::vector<uint64_t> out_indices_;
-  // edge list of destinations
-  std::vector<uint32_t> out_dests_;
-  // list of sources of edges
-  std::vector<uint32_t> sources;
-  // list of destinations of edges
-  std::vector<uint32_t> destinations;
-
-  std::unordered_map<size_t, size_t> nodeKeys;
-  std::unordered_map<size_t, size_t> edgeKeys;
-
-  auto headerInfo     = extractHeaderCSV(infilename, &nodeSchemaVector,
-                                     &nodeColumnBuilders, &edgeSchemaVector,
-                                     &edgeColumnBuilders, &nodeKeys, &edgeKeys);
-  auto headers        = headerInfo.first;
-  size_t id_index     = headerInfo.second[0];
-  size_t labels_index = headerInfo.second[1];
-  size_t start_index  = headerInfo.second[2];
-  size_t end_index    = headerInfo.second[3];
-  size_t type_index   = headerInfo.second[4];
-
-  csv::CSVReader reader(infilename);
-
-  size_t nodes = 0;
-  size_t edges = 0;
-
-  std::vector<std::string> fields;
-  for (csv::CSVRow& row : reader) {
-    for (csv::CSVField& field : row) {
-      std::string value = field.get<>();
-
-      fields.push_back(value);
-    }
-    // deal with nodes
-    if (fields[id_index].length() > 0) {
-      nodeIndexes.insert(
-          std::pair<std::string, size_t>(fields[id_index], nodeIndexes.size()));
-
-      // extract labels
-      if (fields[labels_index].length() > 0) {
-        std::vector<std::string> labels;
-        // erase prepended ':' if it exists
-        std::string data = fields[labels_index];
-        if (data.front() == ':') {
-          data.erase(0, 1);
-        }
-        boost::split(labels, data, boost::is_any_of(":"));
-
-        // add labels if they exists
-        if (labels.size() > 0) {
-          for (std::string label : labels) {
-            auto entry = labelIndices.find(label);
-
-            // if label does not already exist, add a column
-            if (entry == labelIndices.end()) {
-              addFalseColumnBuilder(label, &labelIndices,
-                                    &nodeLabelColumnBuilders,
-                                    &nodeLabelSchemaVector, arrow::boolean(),
-                                    &nodeLabelNull, nodes);
-              entry = labelIndices.find(label);
-            }
-            auto st = nodeLabelColumnBuilders[entry->second]->Append(true);
-            if (!st.ok()) {
-              GALOIS_LOG_FATAL("Error adding value to arrow array builder");
-            }
-            nodeLabelNull[entry->second] = false;
-          }
-        }
-        addFalsesToBuilderAndReset(&nodeLabelColumnBuilders, &nodeLabelNull);
-      }
-      // extract properties
-      for (auto i : nodeKeys) {
-        if (fields[i.first].length() > 0) {
-          auto st = nodeColumnBuilders[i.second]->Append(
-              fields[i.first].c_str(), fields[i.first].length());
-          if (!st.ok()) {
-            GALOIS_LOG_FATAL("Error adding value to arrow array builder");
-          }
-        } else {
-          auto st = nodeColumnBuilders[i.second]->AppendNull();
-          if (!st.ok()) {
-            GALOIS_LOG_FATAL("Error adding null to arrow array builder");
-          }
-        }
-      }
-      out_indices_.push_back(0);
-      nodes++;
-    }
-    // deal with edges
-    else if (fields[start_index].length() > 0 &&
-             fields[end_index].length() > 0) {
-      auto srcEntry  = nodeIndexes.find(fields[start_index]);
-      auto destEntry = nodeIndexes.find(fields[end_index]);
-
-      bool validEdge =
-          srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
-      if (validEdge) {
-        sources.push_back(srcEntry->second);
-        destinations.push_back(destEntry->second);
-        out_indices_[srcEntry->second]++;
-      }
-      if (validEdge) {
-        for (auto i : edgeKeys) {
-          if (fields[i.first].length() > 0) {
-            auto st = edgeColumnBuilders[i.second]->Append(
-                fields[i.first].c_str(), fields[i.first].length());
-            if (!st.ok()) {
-              GALOIS_LOG_FATAL("Error adding value to arrow array builder");
-            }
-          } else {
-            auto st = edgeColumnBuilders[i.second]->AppendNull();
-            if (!st.ok()) {
-              GALOIS_LOG_FATAL("Error adding null to arrow array builder");
-            }
-          }
-        }
-
-        // add edge's type
-        std::string type = fields[type_index];
-        if (type.length() > 0) {
-          auto key = typeIndices.find(type);
-          // if property does not already exist, add a column
-          if (key == typeIndices.end()) {
-            addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
-                                  &edgeTypeSchemaVector, arrow::boolean(),
-                                  &edgeTypeNull, edges);
-            key = typeIndices.find(type);
-          }
-
-          auto st = edgeTypeColumnBuilders[key->second]->Append(true);
-          if (!st.ok()) {
-            GALOIS_LOG_FATAL("Error adding value to arrow array builder");
-          }
-          edgeTypeNull[key->second] = false;
-        }
-        addFalsesToBuilderAndReset(&edgeTypeColumnBuilders, &edgeTypeNull);
-        edges++;
-      }
-    }
-    fields.clear();
-  }
-  out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
-
-  auto edgesTables = buildFinalEdges(
-      &edgeColumnBuilders, &edgeSchemaVector, &edgeTypeColumnBuilders,
-      &edgeTypeSchemaVector, &out_indices_, &out_dests_, sources, destinations);
-  auto finalEdgeTable = edgesTables.first;
-  auto finalTypeTable = edgesTables.second;
-
-  auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
-  auto finalLabelTable =
-      buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
-
-  // build topology
-  auto topology = std::make_shared<galois::graphs::GraphTopology>();
-  arrow::Status st;
-  std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
-      std::make_shared<arrow::UInt64Builder>();
-  st = topologyIndicesBuilder->AppendValues(out_indices_);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building topology arrow array");
-  }
-  std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
-      std::make_shared<arrow::UInt32Builder>();
-  st = topologyDestsBuilder->AppendValues(out_dests_);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building topology arrow array");
-  }
-
-  st = topologyIndicesBuilder->Finish(&topology->out_indices);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building arrow array for topology");
-  }
-  st = topologyDestsBuilder->Finish(&topology->out_dests);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building arrow array for topology");
-  }
-
-  return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
-                         finalTypeTable, topology};
-}
-
-/* Example neo4j JSON:
- * {"type":"node","id":"2","labels":["Person"],"properties":{"born":1967,"name":"Carrie-Anne
- * Moss"}}
- * {"id":"0","type":"relationship","label":"ACTED_IN","properties":{"roles":["Neo"]},"start":{"id":"1","labels":["Person"]},"end":{"id":"0","labels":["Movie"]}}
- *
- * Each node/edge of the graph is represented as a separate JSON object
- * with the fields: id, type, label/labels, properties(contains key value pairs
- * for the objects properties) Edges contain the addition fields: start, end
- */
-GraphComponents convertNeo4jJSON(const std::string& infilename) {
-  std::ifstream file(infilename);
-  if (file) {
-    std::unordered_map<std::string, size_t> nodeKeys;
-    std::unordered_map<std::string, size_t> edgeKeys;
-
-    ArrowFields nodeSchemaVector;
-    StringBuilders nodeColumnBuilders;
-    ArrowFields edgeSchemaVector;
-    StringBuilders edgeColumnBuilders;
-
-    std::unordered_map<std::string, size_t> labelIndices;
-    std::unordered_map<std::string, size_t> typeIndices;
-
-    ArrowFields nodeLabelSchemaVector;
-    BooleanBuilders nodeLabelColumnBuilders;
-    ArrowFields edgeTypeSchemaVector;
-    BooleanBuilders edgeTypeColumnBuilders;
-
-    std::vector<bool> nodePropertyNull;
-    std::vector<bool> edgePropertyNull;
-    std::vector<bool> nodeLabelNull;
-    std::vector<bool> edgeTypeNull;
-
-    std::unordered_map<std::string, size_t> nodeIndexes;
-
-    // node's start of edge lists
-    std::vector<uint64_t> out_indices_;
-    // edge list of destinations
-    std::vector<uint32_t> out_dests_;
-    // list of sources of edges
-    std::vector<uint32_t> sources;
-    // list of destinations of edges
-    std::vector<uint32_t> destinations;
-
-    int64_t nodes = 0;
-    int64_t edges = 0;
-
-    std::string line;
-    while (std::getline(file, line)) {
-      std::stringstream ss(line);
-
-      boost::property_tree::ptree root;
-      boost::property_tree::read_json(ss, root);
-
-      std::string type = root.get<std::string>("type", "");
-      // verify child "properties" exists
-      boost::optional<boost::property_tree::ptree&> child =
-          root.get_child_optional("properties");
-      if (type == std::string("node")) {
-        boost::optional<boost::property_tree::ptree&> idChild =
-            root.get_child_optional("id");
-        bool validNode = false;
-        if (idChild) {
-          // add node's id
-          std::string id = root.get<std::string>("id");
-          validNode      = id.size() > 0;
-          if (validNode) {
-            nodeIndexes.insert(
-                std::pair<std::string, size_t>(id, nodeIndexes.size()));
-            out_indices_.push_back(0);
-          }
-        }
-        if (validNode) {
-          if (child) {
-            // iterate over all node's properties
-            for (boost::property_tree::ptree::value_type& prop :
-                 root.get_child("properties")) {
-              std::string propName  = prop.first;
-              std::string propValue = prop.second.data();
-
-              auto key = nodeKeys.find(propName);
-              // if property does not already exist, add a column
-              if (key == nodeKeys.end()) {
-                addColumnBuilder(propName, &nodeKeys, &nodeColumnBuilders,
-                                 &nodeSchemaVector, arrow::utf8(),
-                                 &nodePropertyNull, nodes);
-                key = nodeKeys.find(propName);
-              }
-
-              auto st = nodeColumnBuilders[key->second]->Append(
-                  propValue.c_str(), propValue.length());
-              if (!st.ok()) {
-                GALOIS_LOG_FATAL("Error adding value to arrow array");
-              }
-              nodePropertyNull[key->second] = false;
-            }
-          }
-          boost::optional<boost::property_tree::ptree&> labels =
-              root.get_child_optional("labels");
-          if (labels) {
-            // iterate over all node's labels
-            for (boost::property_tree::ptree::value_type& label :
-                 root.get_child("labels")) {
-              std::string propValue = label.second.data();
-
-              auto key = labelIndices.find(propValue);
-              // if property does not already exist, add a column
-              if (key == labelIndices.end()) {
-                addFalseColumnBuilder(propValue, &labelIndices,
-                                      &nodeLabelColumnBuilders,
-                                      &nodeLabelSchemaVector, arrow::boolean(),
-                                      &nodeLabelNull, nodes);
-                key = labelIndices.find(propValue);
-              }
-
-              auto st = nodeLabelColumnBuilders[key->second]->Append(true);
-              if (!st.ok()) {
-                GALOIS_LOG_FATAL("Error adding value to arrow array");
-              }
-              nodeLabelNull[key->second] = false;
-            }
-          }
-
-          addNullsToBuilderAndReset(&nodeColumnBuilders, &nodePropertyNull);
-          addFalsesToBuilderAndReset(&nodeLabelColumnBuilders, &nodeLabelNull);
-          nodes++;
-        }
-      } else if (type == std::string("relationship")) {
-        boost::optional<boost::property_tree::ptree&> srcChild =
-            root.get_child_optional("start.id");
-        boost::optional<boost::property_tree::ptree&> destChild =
-            root.get_child_optional("end.id");
-        bool validEdge = false;
-        if (srcChild && destChild) {
-          std::string source = root.get<std::string>("start.id");
-          std::string target = root.get<std::string>("end.id");
-
-          validEdge = source.size() > 0 && target.size() > 0;
-          if (validEdge) {
-            auto srcEntry  = nodeIndexes.find(source);
-            auto destEntry = nodeIndexes.find(target);
-
-            validEdge =
-                srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
-            if (validEdge) {
-              sources.push_back(srcEntry->second);
-              destinations.push_back(destEntry->second);
-              out_indices_[srcEntry->second]++;
-            }
-          }
-        }
-        if (validEdge) {
-          if (child) {
-            // iterate over all relationship's properties
-            for (boost::property_tree::ptree::value_type& prop :
-                 root.get_child("properties")) {
-              std::string propName  = prop.first;
-              std::string propValue = prop.second.data();
-
-              auto key = edgeKeys.find(propName);
-              // if property does not already exist, add a column
-              if (key == edgeKeys.end()) {
-                addColumnBuilder(propName, &edgeKeys, &edgeColumnBuilders,
-                                 &edgeSchemaVector, arrow::utf8(),
-                                 &edgePropertyNull, edges);
-                key = edgeKeys.find(propName);
-              }
-
-              auto st = edgeColumnBuilders[key->second]->Append(
-                  propValue.c_str(), propValue.length());
-              if (!st.ok()) {
-                GALOIS_LOG_FATAL("Error adding value to arrow array");
-              }
-              edgePropertyNull[key->second] = false;
-            }
-          }
-          boost::optional<boost::property_tree::ptree&> label =
-              root.get_child_optional("label");
-          if (label) {
-            // add edge's type
-            std::string type = root.get<std::string>("label");
-
-            auto key = typeIndices.find(type);
-            // if property does not already exist, add a column
-            if (key == typeIndices.end()) {
-              addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
-                                    &edgeTypeSchemaVector, arrow::boolean(),
-                                    &edgeTypeNull, edges);
-              key = typeIndices.find(type);
-            }
-
-            auto st = edgeTypeColumnBuilders[key->second]->Append(true);
-            if (!st.ok()) {
-              GALOIS_LOG_FATAL("Error adding value to arrow array");
-            }
-            edgeTypeNull[key->second] = false;
-          }
-
-          addNullsToBuilderAndReset(&edgeColumnBuilders, &edgePropertyNull);
-          addFalsesToBuilderAndReset(&edgeTypeColumnBuilders, &edgeTypeNull);
-          edges++;
-        }
-      }
-    }
-    out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
-
-    auto edgesTables =
-        buildFinalEdges(&edgeColumnBuilders, &edgeSchemaVector,
-                        &edgeTypeColumnBuilders, &edgeTypeSchemaVector,
-                        &out_indices_, &out_dests_, sources, destinations);
-    auto finalEdgeTable = edgesTables.first;
-    auto finalTypeTable = edgesTables.second;
-
-    auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
-    auto finalLabelTable =
-        buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
-
-    // build topology
-    auto topology = std::make_shared<galois::graphs::GraphTopology>();
-    arrow::Status st;
-    std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
-        std::make_shared<arrow::UInt64Builder>();
-    st = topologyIndicesBuilder->AppendValues(out_indices_);
-    if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error building topology");
-    }
-    std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
-        std::make_shared<arrow::UInt32Builder>();
-    st = topologyDestsBuilder->AppendValues(out_dests_);
-    if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error building topology");
-    }
-
-    st = topologyIndicesBuilder->Finish(&topology->out_indices);
-    if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error building arrow array for topology");
-    }
-    st = topologyDestsBuilder->Finish(&topology->out_dests);
-    if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error building arrow array for topology");
-    }
-
-    return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
-                           finalTypeTable, topology};
-  }
-  GALOIS_LOG_FATAL("Error opening file: {}", infilename);
 }
 
 // extract the type from an attr.type or attr.list attribute from a key element
@@ -1721,9 +1068,15 @@ void processGraphGraphML(
   out_dests_->resize(edges, std::numeric_limits<uint32_t>::max());
 }
 
-/*
- * Convert a GraphML file into katana form via PropertyFileGraph
- */
+} // end of unnamed namespace
+
+namespace galois {
+
+/// convertGraphML converts a GraphML file into katana form
+///
+/// \param infilename path to source graphml file
+/// \returns arrow tables of node properties/labels, edge properties/types, and
+/// csr topology
 GraphComponents convertGraphML(const std::string& infilename) {
   xmlTextReaderPtr reader;
   int ret = 0;
@@ -1849,4 +1202,526 @@ GraphComponents convertGraphML(const std::string& infilename) {
                          finalTypeTable, topology};
 }
 
-} // end of namespace convert
+/// convertNeo4jJSON converts a json file exported from neo4j into katana form
+///
+/// Example neo4j JSON:
+/// {"type":"node","id":"2","labels":["Person"],"properties":{"born":1967,"name":"Carrie-Anne
+/// Moss"}}
+/// {"id":"0","type":"relationship","label":"ACTED_IN","properties":{"roles":["Neo"]},"start":{"id":"1","labels":["Person"]},"end":{"id":"0","labels":["Movie"]}}
+///
+/// Each node/edge of the graph is represented as a separate JSON object
+/// with the fields: id, type, label/labels, properties(contains key value pairs
+/// for the objects properties) Edges contain the addition fields: start, end
+///
+/// \param infilename path to source json file
+/// \returns arrow tables of node properties/labels, edge properties/types, and
+/// csr topology
+GraphComponents convertNeo4jJSON(const std::string& infilename) {
+  std::ifstream file(infilename);
+  if (file) {
+    std::unordered_map<std::string, size_t> nodeKeys;
+    std::unordered_map<std::string, size_t> edgeKeys;
+
+    ArrowFields nodeSchemaVector;
+    StringBuilders nodeColumnBuilders;
+    ArrowFields edgeSchemaVector;
+    StringBuilders edgeColumnBuilders;
+
+    std::unordered_map<std::string, size_t> labelIndices;
+    std::unordered_map<std::string, size_t> typeIndices;
+
+    ArrowFields nodeLabelSchemaVector;
+    BooleanBuilders nodeLabelColumnBuilders;
+    ArrowFields edgeTypeSchemaVector;
+    BooleanBuilders edgeTypeColumnBuilders;
+
+    std::vector<bool> nodePropertyNull;
+    std::vector<bool> edgePropertyNull;
+    std::vector<bool> nodeLabelNull;
+    std::vector<bool> edgeTypeNull;
+
+    std::unordered_map<std::string, size_t> nodeIndexes;
+
+    // node's start of edge lists
+    std::vector<uint64_t> out_indices_;
+    // edge list of destinations
+    std::vector<uint32_t> out_dests_;
+    // list of sources of edges
+    std::vector<uint32_t> sources;
+    // list of destinations of edges
+    std::vector<uint32_t> destinations;
+
+    int64_t nodes = 0;
+    int64_t edges = 0;
+
+    std::string line;
+    while (std::getline(file, line)) {
+      std::stringstream ss(line);
+
+      boost::property_tree::ptree root;
+      boost::property_tree::read_json(ss, root);
+
+      std::string type = root.get<std::string>("type", "");
+      // verify child "properties" exists
+      boost::optional<boost::property_tree::ptree&> child =
+          root.get_child_optional("properties");
+      if (type == std::string("node")) {
+        boost::optional<boost::property_tree::ptree&> idChild =
+            root.get_child_optional("id");
+        bool validNode = false;
+        if (idChild) {
+          // add node's id
+          std::string id = root.get<std::string>("id");
+          validNode      = id.size() > 0;
+          if (validNode) {
+            nodeIndexes.insert(
+                std::pair<std::string, size_t>(id, nodeIndexes.size()));
+            out_indices_.push_back(0);
+          }
+        }
+        if (validNode) {
+          if (child) {
+            // iterate over all node's properties
+            for (boost::property_tree::ptree::value_type& prop :
+                 root.get_child("properties")) {
+              std::string propName  = prop.first;
+              std::string propValue = prop.second.data();
+
+              auto key = nodeKeys.find(propName);
+              // if property does not already exist, add a column
+              if (key == nodeKeys.end()) {
+                addColumnBuilder(propName, &nodeKeys, &nodeColumnBuilders,
+                                 &nodeSchemaVector, arrow::utf8(),
+                                 &nodePropertyNull, nodes);
+                key = nodeKeys.find(propName);
+              }
+
+              auto st = nodeColumnBuilders[key->second]->Append(
+                  propValue.c_str(), propValue.length());
+              if (!st.ok()) {
+                GALOIS_LOG_FATAL("Error adding value to arrow array");
+              }
+              nodePropertyNull[key->second] = false;
+            }
+          }
+          boost::optional<boost::property_tree::ptree&> labels =
+              root.get_child_optional("labels");
+          if (labels) {
+            // iterate over all node's labels
+            for (boost::property_tree::ptree::value_type& label :
+                 root.get_child("labels")) {
+              std::string propValue = label.second.data();
+
+              auto key = labelIndices.find(propValue);
+              // if property does not already exist, add a column
+              if (key == labelIndices.end()) {
+                addFalseColumnBuilder(propValue, &labelIndices,
+                                      &nodeLabelColumnBuilders,
+                                      &nodeLabelSchemaVector, arrow::boolean(),
+                                      &nodeLabelNull, nodes);
+                key = labelIndices.find(propValue);
+              }
+
+              auto st = nodeLabelColumnBuilders[key->second]->Append(true);
+              if (!st.ok()) {
+                GALOIS_LOG_FATAL("Error adding value to arrow array");
+              }
+              nodeLabelNull[key->second] = false;
+            }
+          }
+
+          addNullsToBuilderAndReset(&nodeColumnBuilders, &nodePropertyNull);
+          addFalsesToBuilderAndReset(&nodeLabelColumnBuilders, &nodeLabelNull);
+          nodes++;
+        }
+      } else if (type == std::string("relationship")) {
+        boost::optional<boost::property_tree::ptree&> srcChild =
+            root.get_child_optional("start.id");
+        boost::optional<boost::property_tree::ptree&> destChild =
+            root.get_child_optional("end.id");
+        bool validEdge = false;
+        if (srcChild && destChild) {
+          std::string source = root.get<std::string>("start.id");
+          std::string target = root.get<std::string>("end.id");
+
+          validEdge = source.size() > 0 && target.size() > 0;
+          if (validEdge) {
+            auto srcEntry  = nodeIndexes.find(source);
+            auto destEntry = nodeIndexes.find(target);
+
+            validEdge =
+                srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
+            if (validEdge) {
+              sources.push_back(srcEntry->second);
+              destinations.push_back(destEntry->second);
+              out_indices_[srcEntry->second]++;
+            }
+          }
+        }
+        if (validEdge) {
+          if (child) {
+            // iterate over all relationship's properties
+            for (boost::property_tree::ptree::value_type& prop :
+                 root.get_child("properties")) {
+              std::string propName  = prop.first;
+              std::string propValue = prop.second.data();
+
+              auto key = edgeKeys.find(propName);
+              // if property does not already exist, add a column
+              if (key == edgeKeys.end()) {
+                addColumnBuilder(propName, &edgeKeys, &edgeColumnBuilders,
+                                 &edgeSchemaVector, arrow::utf8(),
+                                 &edgePropertyNull, edges);
+                key = edgeKeys.find(propName);
+              }
+
+              auto st = edgeColumnBuilders[key->second]->Append(
+                  propValue.c_str(), propValue.length());
+              if (!st.ok()) {
+                GALOIS_LOG_FATAL("Error adding value to arrow array");
+              }
+              edgePropertyNull[key->second] = false;
+            }
+          }
+          boost::optional<boost::property_tree::ptree&> label =
+              root.get_child_optional("label");
+          if (label) {
+            // add edge's type
+            std::string type = root.get<std::string>("label");
+
+            auto key = typeIndices.find(type);
+            // if property does not already exist, add a column
+            if (key == typeIndices.end()) {
+              addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
+                                    &edgeTypeSchemaVector, arrow::boolean(),
+                                    &edgeTypeNull, edges);
+              key = typeIndices.find(type);
+            }
+
+            auto st = edgeTypeColumnBuilders[key->second]->Append(true);
+            if (!st.ok()) {
+              GALOIS_LOG_FATAL("Error adding value to arrow array");
+            }
+            edgeTypeNull[key->second] = false;
+          }
+
+          addNullsToBuilderAndReset(&edgeColumnBuilders, &edgePropertyNull);
+          addFalsesToBuilderAndReset(&edgeTypeColumnBuilders, &edgeTypeNull);
+          edges++;
+        }
+      }
+    }
+    out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
+
+    auto edgesTables =
+        buildFinalEdges(&edgeColumnBuilders, &edgeSchemaVector,
+                        &edgeTypeColumnBuilders, &edgeTypeSchemaVector,
+                        &out_indices_, &out_dests_, sources, destinations);
+    auto finalEdgeTable = edgesTables.first;
+    auto finalTypeTable = edgesTables.second;
+
+    auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
+    auto finalLabelTable =
+        buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
+
+    // build topology
+    auto topology = std::make_shared<galois::graphs::GraphTopology>();
+    arrow::Status st;
+    std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+        std::make_shared<arrow::UInt64Builder>();
+    st = topologyIndicesBuilder->AppendValues(out_indices_);
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error building topology");
+    }
+    std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+        std::make_shared<arrow::UInt32Builder>();
+    st = topologyDestsBuilder->AppendValues(out_dests_);
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error building topology");
+    }
+
+    st = topologyIndicesBuilder->Finish(&topology->out_indices);
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error building arrow array for topology");
+    }
+    st = topologyDestsBuilder->Finish(&topology->out_dests);
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error building arrow array for topology");
+    }
+
+    return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
+                           finalTypeTable, topology};
+  }
+  GALOIS_LOG_FATAL("Error opening file: {}", infilename);
+}
+
+/// convertNeo4jCSV converts a csv file exported from neo4j into katana form
+///
+/// Example neo4j CSV:
+/// "_id","_labels","born","name","released","tagline","title","_start","_end","_type","roles","text"
+/// "0",":Movie","","","1999","Welcome to the Real World","The Matrix",,,,,
+/// "1",":Person","1964","Keanu Reeves","","","",,,,,
+/// ,,,,,,,"1","0","ACTED_IN","[""Neo""]",""
+///
+/// The first line contains a csv header line
+/// All data is quoted even null properties for that object type, i.e. Keanu
+/// Reaves is a node so has a "" tagline value All data of the other type is
+/// left empty, i.e. Keanu Reaves is a node so has null for roles and text
+/// values The required fields are for nodes: _id, _labels; for edges: _start,
+/// _end, _type
+///
+/// \param infilename path to source csv file
+/// \returns arrow tables of node properties/labels, edge properties/types, and
+/// csr topology
+GraphComponents convertNeo4jCSV(const std::string& infilename) {
+  ArrowFields nodeSchemaVector;
+  StringBuilders nodeColumnBuilders;
+  ArrowFields edgeSchemaVector;
+  StringBuilders edgeColumnBuilders;
+
+  std::unordered_map<std::string, size_t> labelIndices;
+  std::unordered_map<std::string, size_t> typeIndices;
+
+  ArrowFields nodeLabelSchemaVector;
+  BooleanBuilders nodeLabelColumnBuilders;
+  ArrowFields edgeTypeSchemaVector;
+  BooleanBuilders edgeTypeColumnBuilders;
+
+  std::vector<bool> nodeLabelNull;
+  std::vector<bool> edgeTypeNull;
+
+  std::unordered_map<std::string, size_t> nodeIndexes;
+
+  // node's start of edge lists
+  std::vector<uint64_t> out_indices_;
+  // edge list of destinations
+  std::vector<uint32_t> out_dests_;
+  // list of sources of edges
+  std::vector<uint32_t> sources;
+  // list of destinations of edges
+  std::vector<uint32_t> destinations;
+
+  std::unordered_map<size_t, size_t> nodeKeys;
+  std::unordered_map<size_t, size_t> edgeKeys;
+
+  csv::CSVReader reader(infilename);
+
+  auto headerInfo     = extractHeaderCSV(&reader, &nodeSchemaVector,
+                                     &nodeColumnBuilders, &edgeSchemaVector,
+                                     &edgeColumnBuilders, &nodeKeys, &edgeKeys);
+  auto headers        = headerInfo.first;
+  size_t id_index     = headerInfo.second[0];
+  size_t labels_index = headerInfo.second[1];
+  size_t start_index  = headerInfo.second[2];
+  size_t end_index    = headerInfo.second[3];
+  size_t type_index   = headerInfo.second[4];
+
+  size_t nodes = 0;
+  size_t edges = 0;
+
+  std::vector<std::string> fields;
+  for (csv::CSVRow& row : reader) {
+    for (csv::CSVField& field : row) {
+      std::string value = field.get<>();
+
+      fields.push_back(value);
+    }
+    // deal with nodes
+    if (fields[id_index].length() > 0) {
+      nodeIndexes.insert(
+          std::pair<std::string, size_t>(fields[id_index], nodeIndexes.size()));
+
+      // extract labels
+      if (fields[labels_index].length() > 0) {
+        std::vector<std::string> labels;
+        // erase prepended ':' if it exists
+        std::string data = fields[labels_index];
+        if (data.front() == ':') {
+          data.erase(0, 1);
+        }
+        boost::split(labels, data, boost::is_any_of(":"));
+
+        // add labels if they exists
+        if (labels.size() > 0) {
+          for (std::string label : labels) {
+            auto entry = labelIndices.find(label);
+
+            // if label does not already exist, add a column
+            if (entry == labelIndices.end()) {
+              addFalseColumnBuilder(label, &labelIndices,
+                                    &nodeLabelColumnBuilders,
+                                    &nodeLabelSchemaVector, arrow::boolean(),
+                                    &nodeLabelNull, nodes);
+              entry = labelIndices.find(label);
+            }
+            auto st = nodeLabelColumnBuilders[entry->second]->Append(true);
+            if (!st.ok()) {
+              GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+            }
+            nodeLabelNull[entry->second] = false;
+          }
+        }
+        addFalsesToBuilderAndReset(&nodeLabelColumnBuilders, &nodeLabelNull);
+      }
+      // extract properties
+      for (auto i : nodeKeys) {
+        if (fields[i.first].length() > 0) {
+          auto st = nodeColumnBuilders[i.second]->Append(
+              fields[i.first].c_str(), fields[i.first].length());
+          if (!st.ok()) {
+            GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+          }
+        } else {
+          auto st = nodeColumnBuilders[i.second]->AppendNull();
+          if (!st.ok()) {
+            GALOIS_LOG_FATAL("Error adding null to arrow array builder");
+          }
+        }
+      }
+      out_indices_.push_back(0);
+      nodes++;
+    }
+    // deal with edges
+    else if (fields[start_index].length() > 0 &&
+             fields[end_index].length() > 0) {
+      auto srcEntry  = nodeIndexes.find(fields[start_index]);
+      auto destEntry = nodeIndexes.find(fields[end_index]);
+
+      bool validEdge =
+          srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
+      if (validEdge) {
+        sources.push_back(srcEntry->second);
+        destinations.push_back(destEntry->second);
+        out_indices_[srcEntry->second]++;
+      }
+      if (validEdge) {
+        for (auto i : edgeKeys) {
+          if (fields[i.first].length() > 0) {
+            auto st = edgeColumnBuilders[i.second]->Append(
+                fields[i.first].c_str(), fields[i.first].length());
+            if (!st.ok()) {
+              GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+            }
+          } else {
+            auto st = edgeColumnBuilders[i.second]->AppendNull();
+            if (!st.ok()) {
+              GALOIS_LOG_FATAL("Error adding null to arrow array builder");
+            }
+          }
+        }
+
+        // add edge's type
+        std::string type = fields[type_index];
+        if (type.length() > 0) {
+          auto key = typeIndices.find(type);
+          // if property does not already exist, add a column
+          if (key == typeIndices.end()) {
+            addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
+                                  &edgeTypeSchemaVector, arrow::boolean(),
+                                  &edgeTypeNull, edges);
+            key = typeIndices.find(type);
+          }
+
+          auto st = edgeTypeColumnBuilders[key->second]->Append(true);
+          if (!st.ok()) {
+            GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+          }
+          edgeTypeNull[key->second] = false;
+        }
+        addFalsesToBuilderAndReset(&edgeTypeColumnBuilders, &edgeTypeNull);
+        edges++;
+      }
+    }
+    fields.clear();
+  }
+  out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
+
+  auto edgesTables = buildFinalEdges(
+      &edgeColumnBuilders, &edgeSchemaVector, &edgeTypeColumnBuilders,
+      &edgeTypeSchemaVector, &out_indices_, &out_dests_, sources, destinations);
+  auto finalEdgeTable = edgesTables.first;
+  auto finalTypeTable = edgesTables.second;
+
+  auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
+  auto finalLabelTable =
+      buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
+
+  // build topology
+  auto topology = std::make_shared<galois::graphs::GraphTopology>();
+  arrow::Status st;
+  std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+      std::make_shared<arrow::UInt64Builder>();
+  st = topologyIndicesBuilder->AppendValues(out_indices_);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error building topology arrow array");
+  }
+  std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+      std::make_shared<arrow::UInt32Builder>();
+  st = topologyDestsBuilder->AppendValues(out_dests_);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error building topology arrow array");
+  }
+
+  st = topologyIndicesBuilder->Finish(&topology->out_indices);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error building arrow array for topology");
+  }
+  st = topologyDestsBuilder->Finish(&topology->out_dests);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error building arrow array for topology");
+  }
+
+  return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
+                         finalTypeTable, topology};
+}
+
+/// convertToPropertyGraphAndWrite formally builds katana form via
+/// PropertyFileGraph from imported components and writes the result to target
+/// directory
+///
+/// \param graphComps imported components to convert into a PropertyFileGraph
+/// \param dir local FS directory or s3 directory to write PropertyFileGraph to
+void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
+                                    const std::string& dir) {
+  galois::graphs::PropertyFileGraph graph;
+
+  auto result = graph.SetTopology(*graphComps.topology);
+  if (!result) {
+    GALOIS_LOG_FATAL("Error adding topology");
+  }
+
+  if (graphComps.nodeProperties->num_columns() > 0) {
+    result = graph.AddNodeProperties(graphComps.nodeProperties);
+    if (!result) {
+      GALOIS_LOG_FATAL("Error adding node properties");
+    }
+  }
+  if (graphComps.nodeLabels->num_columns() > 0) {
+    result = graph.AddNodeProperties(graphComps.nodeLabels);
+    if (!result) {
+      GALOIS_LOG_FATAL("Error adding node labels");
+    }
+  }
+  if (graphComps.edgeProperties->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graphComps.edgeProperties);
+    if (!result) {
+      GALOIS_LOG_FATAL("Error adding edge properties");
+    }
+  }
+  if (graphComps.edgeTypes->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graphComps.edgeTypes);
+    if (!result) {
+      GALOIS_LOG_FATAL("Error adding edge types");
+    }
+  }
+
+  galois::SharedMemSys sys;
+
+  std::string metaFile = dir + "/meta";
+  result               = graph.Write(metaFile);
+  if (!result) {
+    GALOIS_LOG_FATAL("Error writing to fs");
+  }
+}
+
+} // end of namespace galois

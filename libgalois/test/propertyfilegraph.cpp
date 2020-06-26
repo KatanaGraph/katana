@@ -80,6 +80,9 @@ void TestRoundTrip() {
   GALOIS_LOG_ASSERT(node_properties.size() == 1);
   GALOIS_LOG_ASSERT(edge_properties.size() == 1);
 
+  GALOIS_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
+  GALOIS_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
+
   std::shared_ptr<arrow::ChunkedArray> node_property = node_properties[0];
   std::shared_ptr<arrow::ChunkedArray> edge_property = edge_properties[0];
 

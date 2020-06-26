@@ -18,11 +18,3 @@ apt install -yq clang-10 clang++-10 clang-format-10 clang-tidy-10 llvm-10-dev
 
 pip3 install --upgrade pip setuptools
 pip3 install conan==1.24
-
-# Install libgpu dependencies
-wget http://developer.download.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda_10.1.243_418.87.00_linux.run
-sudo sh cuda_10.1.243_418.87.00_linux.run --silent --toolkit --no-opengl-libs --no-man-page --no-drm
-
-# Install libava dependencies
-apt install -yq libclang-7-dev clang-7 indent libglib2.0-dev
-pip3 install toposort>=1.5 blessings>=1.6 astor>=0.7

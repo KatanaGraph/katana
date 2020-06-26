@@ -314,6 +314,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo -H .github/workflows/setup_ubuntu.sh
+        sudo -H .github/workflows/setup_gpu.sh
 
         sudo sysctl -w kernel.core_pattern=$HOME/build/dumps/core.%e.%p.%h.%t
     - name: install C++ dependencies

@@ -96,12 +96,12 @@ int StoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 int StoreAsyncFinish(const std::string& uri);
 
 /* Take whatever is in @data and start putting it a the file called @uri */
-int StoreMultiAsync1(const std::string& uri, const uint8_t* data, uint64_t size);
+int StoreMultiAsync1(const std::string& uri, const uint8_t* data,
+                     uint64_t size);
 int StoreMultiAsync2(const std::string& uri);
 int StoreMultiAsync3(const std::string& uri);
 /* Make sure put has occurred, and wait if it hasn't */
 int StoreMultiAsyncFinish(const std::string& uri);
-
 
 /* read a (probably small) part of the file into a caller defined buffer */
 int Peek(const std::string& filename, uint8_t* result_buffer, uint64_t begin,

@@ -28,7 +28,12 @@ public:
       : start_(start), raw_(raw), size_(size), step_(step) {}
   iterator begin() { return iterator(this, 0); }
   iterator end() { return iterator(this, size_); }
-  uint64_t NumSegments() const { return size_ / step_; }
+  uint64_t NumSegments() const {
+    // Returns 0 for zero sized buffer
+    if ((size_ % step_) == 0)
+      return size_ / step_;
+    return (size_ / step_) + 1UL;
+  }
 
   class iterator {
     SegmentedBufferView* buf_view_;

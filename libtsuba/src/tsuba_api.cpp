@@ -222,7 +222,8 @@ int StoreAsyncFinish(const std::string& uri) {
   return DoWriteS3AsyncFinish(uri);
 }
 
-int StoreMultiAsync1(const std::string& uri, const uint8_t* data, uint64_t size) {
+int StoreMultiAsync1(const std::string& uri, const uint8_t* data,
+                     uint64_t size) {
   int ret = S3OrDoFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3MultiAsync1(uri, data, size);
@@ -248,7 +249,6 @@ int StoreMultiAsyncFinish(const std::string& uri) {
   }
   return DoWriteS3MultiAsyncFinish(uri);
 }
-
 
 int Peek(const std::string& filename, uint8_t* result_buffer, uint64_t begin,
          uint64_t size) {

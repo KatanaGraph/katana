@@ -7,17 +7,14 @@
 #include <sys/resource.h>
 #include <time.h>
 
-#include <cstring>
 #include <vector>
-#include <iostream>
 #include <limits>
-#include <string>
-#include <iomanip>
+#include <numeric>
 
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "tsuba/tsuba.h"
 
-constexpr static const char* const output_fmt =
-    "%24s (%4d) %7ld us/op %4ld ms/op\n";
 constexpr static const char* const s3_url_base =
     "s3://witchel-tests-east2/test-";
 
@@ -26,12 +23,59 @@ constexpr static const char* const s3_url_base =
 /******************************************************************************/
 /* Utilities */
 
+// Prints formatted error message.
+void vreport_error(const char* format, fmt::format_args args) {
+  fmt::vprint(stderr, format, args);
+}
+template <typename... Args>
+void LogE(const char* format, const Args&... args) {
+  vreport_error(format, fmt::make_format_args(args...));
+}
+
+const char* unit[] = {"us", "ms", " s"};
+long DivFactor(double us) {
+  if (us < 1'000.0) {
+    return 1;
+  }
+  us /= 1'000.0;
+  if (us < 1'000.0) {
+    return 1'000.0;
+  }
+  return 1'000'000.0;
+}
+
+static std::unordered_map<long, std::string> df2unit{
+    {1, "us"},
+    {1'000, "ms"},
+    {1'000'000, " s"},
+};
+
+std::string FmtResults(const std::vector<long>& v) {
+  if (v.size() == 0)
+    return "no results";
+  long sum       = std::accumulate(v.begin(), v.end(), 0L);
+  double mean    = (double)sum / v.size();
+  long divFactor = DivFactor(mean);
+
+  double accum = 0.0;
+  std::for_each(std::begin(v), std::end(v),
+                [&](const double d) { accum += (d - mean) * (d - mean); });
+  double stdev = 0.0;
+  if (v.size() > 1) {
+    stdev = sqrt(accum / (v.size() - 1));
+  }
+
+  return fmt::format("{:>5.1f} {}/op (N={:d}) sd {:.1f}", mean / divFactor,
+                     df2unit[divFactor], v.size(), stdev / divFactor);
+}
+
 struct timespec now() {
   struct timespec tp;
-  int ret = clock_gettime(CLOCK_BOOTTIME, &tp);
+  // CLOCK_BOOTTIME is probably better, but Linux specific
+  int ret = clock_gettime(CLOCK_MONOTONIC, &tp);
   if (ret < 0) {
     perror("clock_gettime");
-    std::cerr << "Bad return" << std::endl;
+    LogE("Bad return\n");
   }
   return tp;
 }
@@ -82,283 +126,368 @@ void init_data(uint8_t* buf, int limit) {
   }
 }
 
-// https://stackoverflow.com/questions/5590381/easiest-way-to-convert-int-to-string-in-c
-// variadic template
-template <typename... Args>
-std::string sstr(Args&&... args) {
-  std::ostringstream sstr;
-  // fold expression
-  (sstr << ... << args);
-  return sstr.str();
+// Thank you, fmt!
+std::string CntStr(int i, int width) {
+  return fmt::format("{:0{}d}", i, width);
 }
-std::string fillstr(int i, int width) {
-  std::ostringstream sstr;
-  sstr << std::setw(width) << std::setfill('0') << i;
-  return sstr.str();
+std::string MkS3url(int i, int width) {
+  std::string url(s3_url_base);
+  return url.append(CntStr(i, width));
 }
 
 /******************************************************************************/
-/* S3 interaction */
+// Storage interaction
+//    Each function is a timed test, returns vector of times in microseconds
+//    (longs)
 
-// 2020/06/06 - 33-63 us/op
-void test_mem(int fd_batch, const uint8_t* data, uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
+std::vector<long> test_mem(const uint8_t* data, uint64_t size, int batch,
+                           int numExperiments) {
+  std::vector<int> fds(batch, 0);
+  std::vector<long> results;
 
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    fds[i] = memfd_create(fillstr(i, 4).c_str(), 0);
-    if (fds[i] < 0) {
-      std::cerr << "fd " << fillstr(i, 4) << std::endl;
-      perror("memfd_create");
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (int i = 0; i < batch; ++i) {
+      fds[i] = memfd_create(CntStr(i, 4).c_str(), 0);
+      if (fds[i] < 0) {
+        LogE("fd {:04d}\n", i);
+        perror("memfd_create");
+      }
+      ssize_t bwritten = write(fds[i], data, size);
+      if (bwritten != (ssize_t)size) {
+        LogE("Short write tried {:d} wrote {:d}\n", size, bwritten);
+        perror("write");
+      }
     }
-    ssize_t bwritten = write(fds[i], data, size);
-    if (bwritten != (ssize_t)size) {
-      perror("write");
-      std::cerr << "Short write tried " << size << " did " << bwritten
-                << std::endl;
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+
+    for (int i = 0; i < batch; ++i) {
+      int sysret = close(fds[i]);
+      if (sysret < 0) {
+        perror("close");
+      }
     }
   }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "memfd_create", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
-
-  for (int i = 0; i < fd_batch; ++i) {
-    int sysret = close(fds[i]);
-    if (sysret < 0) {
-      perror("close");
-    }
-  }
+  return results;
 }
 
-// 2020/06/06 - 192-210 us/op (single sync at end)
-// 2020/06/10 - 2.0-2.5 ms/op each open synced
-void test_tmp(int fd_batch, const uint8_t* data, uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
+std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
+                           int numExperiments) {
+  std::vector<int> fds(batch, 0);
   std::vector<std::string> fnames;
-  for (int i = 0; i < fd_batch; ++i) {
-    fnames.push_back(sstr("/tmp/witchel/", fillstr(i, 4)));
+  std::vector<long> results;
+  for (int i = 0; i < batch; ++i) {
+    std::string s("/tmp/witchel/");
+    fnames.push_back(s.append(CntStr(i, 4)));
   }
 
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    fds[i] =
-        open(fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR, S_IRWXU | S_IRWXG);
-    if (fds[i] < 0) {
-      perror("/tmp O_CREAT");
-      std::cerr << "fd " << i << std::endl;
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (int i = 0; i < batch; ++i) {
+      fds[i] = open(fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR,
+                    S_IRWXU | S_IRWXG);
+      if (fds[i] < 0) {
+        LogE("fd {:d}\n", i);
+        perror("/tmp O_CREAT");
+      }
+      ssize_t bwritten = write(fds[i], data, size);
+      if (bwritten != (ssize_t)size) {
+        LogE("Short write tried {:d} wrote {:d}\n", size, bwritten);
+        perror("write");
+      }
+      // Make all data and directory changes persistent
+      // sync is overkill, could sync fd and parent directory, but I'm being
+      // lazy
+      sync();
     }
-    ssize_t bwritten = write(fds[i], data, size);
-    if (bwritten != (ssize_t)size) {
-      perror("write");
-      std::cerr << "Short write tried " << size << " did " << bwritten
-                << std::endl;
+    for (int i = 0; i < batch; ++i) {
+      int sysret = close(fds[i]);
+      if (sysret < 0) {
+        perror("close");
+      }
     }
-    // Make all data and directory changes persistent
-    // sync is overkill, could sync fd and parent directory, but I'm being lazy
-    sync();
-  }
-  for (int i = 0; i < fd_batch; ++i) {
-    int sysret = close(fds[i]);
-    if (sysret < 0) {
-      perror("close");
-    }
-  }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "/tmp create", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
 
-  for (int i = 0; i < fd_batch; ++i) {
-    int sysret = unlink(fnames[i].c_str());
-    if (sysret < 0) {
-      perror("unlink");
+    for (int i = 0; i < batch; ++i) {
+      int sysret = unlink(fnames[i].c_str());
+      if (sysret < 0) {
+        perror("unlink");
+      }
     }
   }
+  return results;
 }
 
-// 2020/06/06 - 297ms/create us-east-2b to bucket in us-east-1 36 or 3 threads
-// 2020/06/08 - 166ms/create us-east-2b to bucket in us-east-2 3 threads.
-// 2020/06/10 - 152ms/create us-east-2b to bucket in us-east-2 36 threads.
-// 2020/06/10 - 143-145ms/create us-east-2b to bucket in us-east-2 36 threads.
-void test_s3_objs(int fd_batch, const uint8_t* data, uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    std::string s3url = sstr(s3_url_base, fillstr(i, 4));
-    int tsubaret      = tsuba::Store(s3url, data, size);
-    if (tsubaret != 0) {
-      std::cerr << "Tsuba bad return " << tsubaret << std::endl;
-      perror("s3");
+std::vector<long> test_s3(const uint8_t* data, uint64_t size, int batch,
+                          int numExperiments) {
+  std::vector<long> results;
+
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (int i = 0; i < batch; ++i) {
+      std::string s3url = MkS3url(i, 4);
+      int tsubaret      = tsuba::Store(s3url, data, size);
+      if (tsubaret != 0) {
+        LogE("Tsuba store bad return {:d}\n", tsubaret);
+      }
     }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "S3 create", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
+  return results;
 }
 
-// 2020/06/11 - 37ms
-void test_s3_objs_sync(int fd_batch, const uint8_t* data, uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
+std::vector<long> test_s3_sync(const uint8_t* data, uint64_t size, int batch,
+                               int numExperiments) {
   std::vector<std::string> s3urls;
-  for (int i = 0; i < fd_batch; ++i) {
-    s3urls.push_back(sstr(s3_url_base, fillstr(i, 4)));
+  std::vector<long> results;
+  for (int i = 0; i < batch; ++i) {
+    s3urls.push_back(MkS3url(i, 4));
   }
 
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    // Current API rejects empty writes
-    int tsubaret = tsuba::StoreSync(s3urls[i], data, size);
-    if (tsubaret != 0) {
-      std::cerr << "Tsuba store sync bad return " << tsubaret << std::endl;
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreSync(s3url, data, size);
+      if (tsubaret != 0) {
+        LogE("Tsuba store sync bad return {:d}\n", tsubaret);
+      }
     }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "S3 sync create", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
+  return results;
 }
 
-// 2020/06/10 - 19-21 ms/op,
-void test_s3_objs_async_one(int fd_batch, const uint8_t* data, uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
+std::vector<long> test_s3_async_one(const uint8_t* data, uint64_t size,
+                                    int batch, int numExperiments) {
   std::vector<std::string> s3urls;
-  for (int i = 0; i < fd_batch; ++i) {
-    s3urls.push_back(sstr(s3_url_base, fillstr(i, 4)));
+  std::vector<long> results;
+  for (int i = 0; i < batch; ++i) {
+    s3urls.push_back(MkS3url(i, 4));
   }
 
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    // Current API rejects empty writes
-    int tsubaret = tsuba::StoreAsync(s3urls[i], data, size);
-    if (tsubaret != 0) {
-      std::cerr << "Tsuba store async bad return " << tsubaret << std::endl;
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreAsync(s3url, data, size);
+      if (tsubaret != 0) {
+        LogE("Tsuba store async bad return {:d}\n", tsubaret);
+      }
+      // Only 1 outstanding store at a time
+      tsuba::StoreAsyncFinish(s3url);
     }
-    // Only 1 outstanding store at a time
-    tsuba::StoreAsyncFinish(s3urls[i]);
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "S3 async create one", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
+  return results;
 }
 
-// 2020/06/10 - 0.98ms/op, 36 threads, batch size 1024
-void test_s3_objs_async_batch(int fd_batch, const uint8_t* data,
-                              uint64_t size) {
-  std::vector<int> fds(fd_batch, 0);
+std::vector<long> test_s3_async_batch(const uint8_t* data, uint64_t size,
+                                      int batch, int numExperiments) {
   std::vector<std::string> s3urls;
-  for (int i = 0; i < fd_batch; ++i) {
-    s3urls.push_back(sstr(s3_url_base, fillstr(i, 4)));
+  std::vector<long> results;
+  for (int i = 0; i < batch; ++i) {
+    s3urls.push_back(MkS3url(i, 4));
   }
 
-  struct timespec start = now();
-  for (int i = 0; i < fd_batch; ++i) {
-    // Current API rejects empty writes
-    int tsubaret = tsuba::StoreAsync(s3urls[i], data, size);
-    if (tsubaret != 0) {
-      std::cerr << "Tsuba store async bad return " << tsubaret << std::endl;
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreAsync(s3url, data, size);
+      if (tsubaret != 0) {
+        LogE("Tsuba store async bad return {:d}\n", tsubaret);
+      }
     }
-  }
-  for (int i = 0; i < fd_batch; ++i) {
-    int ret = tsuba::StoreAsyncFinish(s3urls[i]);
-    if (ret != 0) {
-      std::cerr << "tsuba::StoreAsyncFinish bad return " << ret << std::endl;
+    for (auto s3url : s3urls) {
+      int ret = tsuba::StoreAsyncFinish(s3url);
+      if (ret != 0) {
+        LogE("Tsuba store async bad return {:d}\n", ret);
+      }
     }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
-  long us = timespec_to_us(timespec_sub(now(), start));
-  printf(output_fmt, "S3 async create batch", fd_batch, (us / fd_batch),
-         (us / (fd_batch * 1000)));
+  return results;
+}
+
+std::vector<long> test_s3_multi_async_batch(const uint8_t* data, uint64_t size,
+                                            int batch, int numExperiments) {
+  std::vector<std::string> s3urls;
+  std::vector<long> results;
+  for (int i = 0; i < batch; ++i) {
+    s3urls.push_back(MkS3url(i, 4));
+  }
+
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreMultiAsync1(s3url, data, size);
+      if (tsubaret != 0) {
+        LogE("Tsuba store multi async1 bad return {:d}\n", tsubaret);
+      }
+    }
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreMultiAsync2(s3url);
+      if (tsubaret != 0) {
+        LogE("Tsuba store multi async2 bad return {:d}\n", tsubaret);
+      }
+    }
+    for (auto s3url : s3urls) {
+      // Current API rejects empty writes
+      int tsubaret = tsuba::StoreMultiAsync3(s3url);
+      if (tsubaret != 0) {
+        LogE("Tsuba store multi async3 bad return {:d}\n", tsubaret);
+      }
+    }
+    for (auto s3url : s3urls) {
+      int ret = tsuba::StoreMultiAsyncFinish(s3url);
+      if (ret != 0) {
+        LogE("Tsuba store multi async finish bad return {:d}\n", ret);
+      }
+    }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+  }
+  return results;
 }
 
 /******************************************************************************/
 /* Main */
 
 static uint8_t data_19B[19];
-static uint8_t data_10MB[10 * (1 << 20)];
-static uint8_t data_100MB[100 * (1 << 20)];
+static uint8_t data_10MB[10 * (1UL << 20)];
+static uint8_t data_100MB[100 * (1UL << 20)];
+static uint8_t data_500MB[500 * (1UL << 20)];
+static uint8_t data_1GB[(1UL << 30)];
 
 struct {
   uint8_t* data;
   uint64_t size;
-  int fd_batch;
+  int batch;
+  int numExperiments; // For stats
   const char* name;
-} arr[] = {
-    {.data     = data_19B,
-     .size     = sizeof(data_19B),
-     .fd_batch = 1024,
-     .name     = "  19B"},
-    {.data     = data_10MB,
-     .size     = sizeof(data_10MB),
-     .fd_batch = 128,
-     .name     = " 10MB"},
-    {.data     = data_100MB,
-     .size     = sizeof(data_100MB),
-     .fd_batch = 16,
-     .name     = "100MB"},
+} datas[] = {
+    {.data           = data_19B,
+     .size           = sizeof(data_19B),
+     .batch          = 8,
+     .numExperiments = 3,
+     .name           = "  19B"},
+    {.data           = data_10MB,
+     .size           = sizeof(data_10MB),
+     .batch          = 8,
+     .numExperiments = 3,
+     .name           = " 10MB"},
+    {.data           = data_100MB,
+     .size           = sizeof(data_100MB),
+     .batch          = 8,
+     .numExperiments = 3,
+     .name           = "100MB"},
+    {.data           = data_500MB,
+     .size           = sizeof(data_500MB),
+     .batch          = 8,
+     .numExperiments = 3,
+     .name           = "500MB"},
+    {.data           = data_1GB,
+     .size           = sizeof(data_1GB),
+     .batch          = 6,
+     .numExperiments = 1,
+     .name           = "1GB"},
+
+};
+
+struct {
+  const char* name;
+  std::vector<long> (*func)(const uint8_t*, uint64_t, int, int);
+} tests[] = {
+    {.name = "memfd_create", .func = test_mem},
+    {.name = "/tmp create", .func = test_tmp},
+    {.name = "S3 Put ASync One", .func = test_s3_async_one},
+    {.name = "S3 Put Sync", .func = test_s3_sync},
+    {.name = "S3 Put Async Batch", .func = test_s3_async_batch},
+    {.name = "S3 Put", .func = test_s3},
+    {.name = "S3 Put Multi Async Batch", .func = test_s3_multi_async_batch},
 };
 
 int main() {
-  tsuba::Init(); // Done in Galois code
-  for (unsigned long i = 0; i < sizeof(arr) / sizeof(arr[0]); ++i) {
-    init_data(arr[i].data, arr[i].size);
+  tsuba::Init();
+  for (unsigned long i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
+    init_data(datas[i].data, datas[i].size);
   }
-  int fd_batch = arr[0].fd_batch;
 
-  // Make sure resources are ready and avilable
-  struct rlimit rlim;
-  int sysret;
-  sysret = getrlimit(RLIMIT_NOFILE, &rlim);
-  if (sysret < 0) {
-    perror("getrlimit");
-  }
-  if ((rlim.rlim_cur + 5) > (rlim_t)fd_batch) { // +5 stdin/out/err+slop
-    std::cerr << "Increase open file descriptors to " << (fd_batch * 2)
-              << std::endl;
-    rlim.rlim_cur = fd_batch * 2; // +5 probably sufficient
-    sysret        = setrlimit(RLIMIT_NOFILE, &rlim);
-    if (sysret < 0) {
-      perror("setrlimit");
-    }
-  }
   if (access("/tmp/witchel", R_OK) != 0) {
-    perror("Can't access /tmp/witchel");
-    exit(10);
+    if (mkdir("/tmp/witchel", 0775) != 0) {
+      perror("mkdir /tmp/witchel");
+      exit(10);
+    }
   }
 
   printf("*** VM and bucket same region\n");
-  for (unsigned long i = 0; i < sizeof(arr) / sizeof(arr[0]); ++i) {
-    printf("** size %s\n", arr[i].name);
-    const uint8_t* data = arr[i].data;
-    uint64_t size       = arr[i].size;
-    fd_batch            = arr[i].fd_batch;
-    test_mem(fd_batch, data, size);
-    test_tmp(fd_batch, data, size);
-    test_s3_objs_async_batch(fd_batch, data, size);
-    test_s3_objs_async_one(fd_batch / 3, data, size);
-    test_s3_objs_sync(fd_batch / 3, data, size);
-    test_s3_objs(fd_batch / 3, data, size);
+  for (unsigned long i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
+    printf("** size %s\n", datas[i].name);
+    const uint8_t* data = datas[i].data;
+    uint64_t size       = datas[i].size;
+    int batch           = datas[i].batch;
+    int numExperiments  = datas[i].numExperiments;
+
+    for (unsigned long j = 0; j < sizeof(tests) / sizeof(tests[0]); ++j) {
+      std::vector<long> results =
+          tests[j].func(data, size, batch, numExperiments);
+      fmt::print("{:<24} ({:2d}) {}\n", tests[j].name, batch,
+                 FmtResults(results));
+    }
   }
 
   return 0;
 }
 
-// 2020/06/12
+// 2020/06/29
 
+// *** VM and bucket same region
 // ** size   19B
-//             memfd_create (1024)      44 us/op  0 ms/op
-//              /tmp create (1024)    2753 us/op  2 ms/op
-//    S3 async create batch (1024)    1080 us/op  1 ms/op
-//      S3 async create one ( 341)   20523 us/op 20 ms/op
-//           S3 sync create ( 341)   36578 us/op 36 ms/op
-//                S3 create ( 341)  147186 us/op 147 ms/op
+// memfd_create             ( 8)  41.7 us/op (N=3) sd 21.1
+// /tmp create              ( 8)  47.3 ms/op (N=3) sd 44.1
+// S3 Put ASync One         ( 8) 261.0 ms/op (N=3) sd 188.2
+// S3 Put Sync              ( 8) 500.0 ms/op (N=3) sd 172.1
+// S3 Put Async Batch       ( 8)  48.7 ms/op (N=3) sd 30.2
+// S3 Put                   ( 8)   1.2  s/op (N=3) sd 0.0
+// S3 Put Multi Async Batch ( 8) 186.6 ms/op (N=3) sd 34.9
 // ** size  10MB
-//             memfd_create ( 128)    4037 us/op  4 ms/op
-//              /tmp create ( 128)   74648 us/op 74 ms/op
-//    S3 async create batch ( 128)   86280 us/op 86 ms/op
-//      S3 async create one (  42)  189471 us/op 189 ms/op
-//           S3 sync create (  42)  214694 us/op 214 ms/op
-//                S3 create (  42)  318105 us/op 318 ms/op
+// memfd_create             ( 8)  33.5 ms/op (N=3) sd 0.7
+// /tmp create              ( 8) 345.0 ms/op (N=3) sd 35.5
+// S3 Put ASync One         ( 8)   1.7  s/op (N=3) sd 0.2
+// S3 Put Sync              ( 8)   2.1  s/op (N=3) sd 0.3
+// S3 Put Async Batch       ( 8) 815.8 ms/op (N=3) sd 73.1
+// S3 Put                   ( 8)   2.6  s/op (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8) 914.9 ms/op (N=3) sd 30.9
 // ** size 100MB
-//             memfd_create (  16)   53287 us/op 53 ms/op
-//              /tmp create (  16)  761514 us/op 761 ms/op
-//    S3 async create batch (  16)  864999 us/op 864 ms/op
-//      S3 async create one (   5) 1233452 us/op 1233 ms/op
-//           S3 sync create (   5) 1212307 us/op 1212 ms/op
-//                S3 create (   5) 1067922 us/op 1067 ms/op
+// memfd_create             ( 8) 376.7 ms/op (N=3) sd 0.2
+// /tmp create              ( 8)   6.2  s/op (N=3) sd 0.5
+// S3 Put ASync One         ( 8)  10.3  s/op (N=3) sd 0.5
+// S3 Put Sync              ( 8)  10.7  s/op (N=3) sd 0.3
+// S3 Put Async Batch       ( 8)   6.9  s/op (N=3) sd 0.0
+// S3 Put                   ( 8)   9.1  s/op (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8)   7.0  s/op (N=3) sd 0.0
+// ** size 500MB
+// memfd_create             ( 8)   1.9  s/op (N=3) sd 0.0
+// /tmp create              ( 8)  32.2  s/op (N=3) sd 0.1
+// S3 Put ASync One         ( 8)  50.0  s/op (N=3) sd 0.8
+// S3 Put Sync              ( 8)  47.8  s/op (N=3) sd 1.6
+// S3 Put Async Batch       ( 8)  38.1  s/op (N=3) sd 6.4
+// S3 Put                   ( 8)  36.8  s/op (N=3) sd 0.8
+// S3 Put Multi Async Batch ( 8)  35.6  s/op (N=3) sd 2.0
+// ** size 1GB
+// memfd_create             ( 6)   2.9  s/op (N=1) sd 0.0
+// /tmp create              ( 6)  50.1  s/op (N=1) sd 0.0
+// S3 Put ASync One         ( 6)  68.2  s/op (N=1) sd 0.0
+// S3 Put Sync              ( 6)  70.8  s/op (N=1) sd 0.0
+// S3 Put Async Batch       ( 6)  52.6  s/op (N=1) sd 0.0
+// S3 Put                   ( 6)  54.3  s/op (N=1) sd 0.0
+// S3 Put Multi Async Batch ( 6)  52.9  s/op (N=1) sd 0.0

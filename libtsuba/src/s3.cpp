@@ -124,8 +124,8 @@ galois::Result<int> S3Open(const std::string& bucket,
   }
   auto [tmp_name, fd] = open_result.value();
 
-  auto downloadHandle =
-      transfer_manager->DownloadFile(bucket, object, tmp_name);
+  auto downloadHandle = transfer_manager->DownloadFile(
+      ToAwsString(bucket), ToAwsString(object), ToAwsString(tmp_name));
   downloadHandle->WaitUntilFinished();
 
   assert(downloadHandle->GetBytesTotalSize() ==
@@ -139,8 +139,8 @@ uint64_t S3GetSize(const std::string& bucket, const std::string& object,
   auto s3_client = GetS3Client();
   /* skip all of the thread management overhead if we only have one request */
   Aws::S3::Model::HeadObjectRequest request;
-  request.SetBucket(bucket);
-  request.SetKey(object);
+  request.SetBucket(ToAwsString(bucket));
+  request.SetKey(ToAwsString(object));
   Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
   if (!outcome.IsSuccess()) {
     const auto& error = outcome.GetError();
@@ -157,9 +157,9 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
   auto s3_client = GetS3Client();
 
   Aws::S3::Model::CreateMultipartUploadRequest createMpRequest;
-  createMpRequest.WithBucket(bucket);
+  createMpRequest.WithBucket(ToAwsString(bucket));
   createMpRequest.WithContentType("application/octet-stream");
-  createMpRequest.WithKey(object);
+  createMpRequest.WithKey(ToAwsString(object));
 
   auto createMpResponse = s3_client->CreateMultipartUpload(createMpRequest);
   if (!createMpResponse.IsSuccess()) {
@@ -193,9 +193,9 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
         Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
     Aws::S3::Model::UploadPartRequest uploadPartRequest;
 
-    uploadPartRequest.WithBucket(bucket)
+    uploadPartRequest.WithBucket(ToAwsString(bucket))
         .WithContentLength(static_cast<long long>(lengthToWrite))
-        .WithKey(object)
+        .WithKey(ToAwsString(object))
         .WithPartNumber(i + 1) /* part numbers start at 1 */
         .WithUploadId(upload_id);
 
@@ -233,13 +233,13 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
 
   for (unsigned i = 0; i < part_e_tags.size(); ++i) {
     Aws::S3::Model::CompletedPart completedPart;
-    completedPart.WithPartNumber(i + 1).WithETag(part_e_tags[i]);
+    completedPart.WithPartNumber(i + 1).WithETag(ToAwsString(part_e_tags[i]));
     completedUpload.AddParts(completedPart);
   }
 
   Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
-  completeMultipartUploadRequest.WithBucket(bucket)
-      .WithKey(object)
+  completeMultipartUploadRequest.WithBucket(ToAwsString(bucket))
+      .WithKey(ToAwsString(object))
       .WithUploadId(upload_id)
       .WithMultipartUpload(completedUpload);
 
@@ -264,8 +264,8 @@ int S3UploadOverwriteSync(const std::string& bucket, const std::string& object,
   // Set up request
   Aws::S3::Model::PutObjectRequest object_request;
 
-  object_request.SetBucket(bucket);
-  object_request.SetKey(object);
+  object_request.SetBucket(ToAwsString(bucket));
+  object_request.SetKey(ToAwsString(object));
   auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
       kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
   auto preallocatedStreamReader =
@@ -297,8 +297,8 @@ int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
   // Set up request
   Aws::S3::Model::PutObjectRequest object_request;
 
-  object_request.SetBucket(bucket);
-  object_request.SetKey(object);
+  object_request.SetBucket(ToAwsString(bucket));
+  object_request.SetKey(ToAwsString(object));
   auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
       kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
   auto preallocatedStreamReader =
@@ -357,12 +357,12 @@ static void
 PrepareObjectRequest(Aws::S3::Model::GetObjectRequest* object_request,
                      const std::string& bucket, const std::string& object,
                      SegmentedBufferView::BufPart part) {
-  object_request->SetBucket(bucket);
-  object_request->SetKey(object);
+  object_request->SetBucket(ToAwsString(bucket));
+  object_request->SetKey(ToAwsString(object));
   std::ostringstream range;
   /* Knock one byte off the end because range in AWS S3 API is inclusive */
   range << "bytes=" << part.start << "-" << part.end - 1;
-  object_request->SetRange(range.str());
+  object_request->SetRange(ToAwsString(range.str()));
 
   object_request->SetResponseStreamFactory([part]() {
     auto* bufferStream = Aws::New<Aws::Utils::Stream::DefaultUnderlyingStream>(

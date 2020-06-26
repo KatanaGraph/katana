@@ -16,6 +16,7 @@ add_library(galois_query SHARED
   src/LDBCReader.cpp
   src/Matching.cpp
   src/SubgraphQuery.cpp
+  src/IndexableChunkedArray.cpp
 )
 
 target_compile_definitions(galois_query PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)

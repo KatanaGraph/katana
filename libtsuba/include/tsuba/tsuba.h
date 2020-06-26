@@ -10,6 +10,7 @@
 
 #include "galois/Result.h"
 #include "tsuba/RDG.h"
+#include "tsuba/FileFrame.h"
 
 namespace tsuba {
 
@@ -59,8 +60,7 @@ galois::Result<RDG> Load(std::shared_ptr<RDGHandle> handle,
                          const std::vector<std::string>& edge_properties);
 
 galois::Result<void> Store(const RDG& rdg);
-galois::Result<void> Store(const RDG& rdg, const void* new_top_buf,
-                           uint64_t new_top_size);
+galois::Result<void> Store(const RDG& rdg, std::shared_ptr<FileFrame> ff);
 
 galois::Result<void>
 AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table);

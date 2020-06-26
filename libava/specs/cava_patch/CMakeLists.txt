@@ -14,17 +14,14 @@ include(ExternalProject)
 
 ExternalProject_Add(cava
   PREFIX ava-llvm
-  BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/build
-  DOWNLOAD_COMMAND ""
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                                     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                                     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
-                                     -DCMAKE_C_COMPILER_WORKS=ON
-                                     -DCMAKE_CXX_COMPILER_WORKS=ON
-                                     -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
-  BUILD_COMMAND make -j4
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/build
+  URL "https://github.com/utcs-scea/ava-llvm/releases/download/v7.1.0/ava-llvm-release-7.1.0.tar.gz"
+  URL_HASH MD5=400832522ed255314d6a5848e8f7af6c
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND ""
   INSTALL_COMMAND ""
 )
+
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB2 REQUIRED glib-2.0)
 ExternalProject_Add_Step(cava katana-nwcc

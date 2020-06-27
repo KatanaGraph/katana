@@ -22,6 +22,7 @@
 
 #include "galois/config.h"
 #include "galois/graphs/MorphGraph.h"
+#include "galois/graphs/PropertyFileGraph.h"
 #include "galois/graphs/LCGraph.h"
 #include "galois/graphs/ReadGraph.h"
 

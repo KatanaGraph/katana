@@ -3,18 +3,23 @@
 
 from cython.operator cimport preincrement, dereference as deref
 from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, setActiveThreads, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, GReduceMax, InsertBag, steal
-from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED, atomicMin
-from .cpp.libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph
+from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED, atomicMin, MakeTable
+from .cpp.libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph, PropertyFileGraph, GraphTopology
 from .cpp.libgalois.graphs.ReadGraph cimport readGraph
 from .cpp.libgalois.Worklist cimport ChunkFIFO, OrderedByIntegerMetric, wl, Uint_64u, UpdateRequestIndexer, PerSocketChunkFIFO, ReqPushWrap, UpdateRequest
 from .cpp.libgalois.Timer cimport Timer
 from .cpp.libstd.atomic cimport atomic
+#from .cpp.libstd.boost cimport std_result
+from .cpp.libstd.boost cimport *
+from .cpp.libstd.arrow cimport *
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
 import sys
 from libc.stdint cimport *
 from libc.math cimport fabs
+from .property_graph cimport PropertyGraph
+from libcpp.memory cimport shared_ptr, static_pointer_cast
 
 # Initialize the Galois runtime when the Python module is loaded.
 cdef class _galois_runtime_wrapper:

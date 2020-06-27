@@ -1,3 +1,6 @@
+#include "galois/graphs/PropertyFileGraph.h"
+#include "galois/Logging.h"
+
 #include <iostream>
 namespace galois {
 constexpr uint32_t CHUNK_SIZE_64 = 64;
@@ -33,5 +36,32 @@ struct ReqPushWrap {
     cont.push(UpdateRequest<GNode, Dist>(n, dist));
   }
 };
+
+/*
+ * Extra helper functions for PropertyFileGraph
+ */
+std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
+                                        const std::vector<uint32_t>& data) {
+  arrow::NumericBuilder<arrow::UInt32Type> builder;
+
+  auto append_status = builder.AppendValues(data.begin(), data.end());
+  GALOIS_LOG_ASSERT(append_status.ok());
+
+  std::shared_ptr<arrow::Array> array;
+
+  auto finish_status = builder.Finish(&array);
+  GALOIS_LOG_ASSERT(finish_status.ok());
+
+  std::shared_ptr<arrow::Schema> schema =
+      arrow::schema({arrow::field(name, arrow::uint32())});
+
+  return arrow::Table::Make(schema, {array});
+}
+
+// template <typename T>
+// std::vector<std::shared_ptr<T>>& GetData(const shared_ptr<PropertyFileGraph>
+// pfg, int pid) {
+
+//}
 
 } // namespace galois

@@ -61,6 +61,12 @@ python_extension_module(_sssp)
 add_dependencies(_sssp graphs)
 target_link_libraries(_sssp Galois::shmem)
 
+add_cython_target(_bfs_property_graph _bfs_property_graph.pyx CXX OUTPUT_VAR BFSPG_SOURCES)
+add_library(_bfs_property_graph MODULE ${BFSPG_SOURCES})
+python_extension_module(_bfs_property_graph)
+add_dependencies(_bfs_property_graph graphs)
+target_link_libraries(_bfs_property_graph Galois::shmem)
+
 add_cython_target(_pagerank _pagerank.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
 add_library(_pagerank MODULE ${PAGERANK_SOURCES})
 python_extension_module(_pagerank)
@@ -79,8 +85,14 @@ python_extension_module(_connected_components)
 add_dependencies(_connected_components graphs)
 target_link_libraries(_connected_components Galois::shmem)
 
+add_cython_target(property_graph property_graph.pyx CXX OUTPUT_VAR PROPERTYGRAPH_SOURCES)
+add_library(property_graph MODULE ${PROPERTYGRAPH_SOURCES})
+python_extension_module(property_graph)
+add_dependencies(property_graph graphs)
+target_link_libraries(property_graph Galois::shmem)
+
 install(
-  TARGETS shmem graphs _bfs _pagerank _jaccard _sssp _connected_components
+  TARGETS shmem graphs _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
   LIBRARY DESTINATION python/galois
 )
 

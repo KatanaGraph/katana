@@ -4,6 +4,9 @@
 from libcpp cimport bool
 from libc.stdint cimport *
 from ..libstd.atomic cimport atomic
+from libcpp.memory cimport shared_ptr
+from ..libstd.boost cimport *
+from ..libstd.arrow cimport *
 
 # Declaration from "Galois/Threads.h"
 
@@ -91,3 +94,8 @@ cdef extern from "galois/NoDerefIterator.h" namespace "galois" nogil:
         NoDerefIterator[it] operator++()
         NoDerefIterator[it] operator--()
         it operator*()
+
+   #### Property graph helper functions
+cdef extern from "galois/Constants.h" namespace "galois" nogil:
+   shared_ptr[arrowTable] MakeTable(string&, vector[uint32_t]&)
+   

@@ -296,11 +296,6 @@ jobs:
         restore-keys: |
           ${{runner.os}}-ccache-
         path: ~/.ccache
-    - name: Cache graph inputs
-      uses: actions/cache@v1
-      with:
-        key: generic-cache-graph
-        path: ~/.cache/graph
 
     ###
     # Install platform-level dependencies (OS-specific)

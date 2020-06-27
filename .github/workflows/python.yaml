@@ -17,6 +17,8 @@ jobs:
         # - macOS-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
 
     ###
     # Caching between builds

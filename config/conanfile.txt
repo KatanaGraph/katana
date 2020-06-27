@@ -10,6 +10,7 @@ libxml2/2.9.10
 [options]
 aws-sdk-cpp:build_transfer = True
 aws-sdk-cpp:build_s3 = True
+aws-sdk-cpp:shared = True
 
 [generators]
 cmake_find_package

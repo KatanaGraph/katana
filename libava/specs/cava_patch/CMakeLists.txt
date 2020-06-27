@@ -20,18 +20,19 @@ ExternalProject_Add(cava
   BUILD_COMMAND ""
   CONFIGURE_COMMAND ""
   INSTALL_COMMAND ""
+  UPDATE_DISCONNECTED ON
 )
+
+###### Example: compile cuda_10.1.c ######
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB2 REQUIRED glib-2.0)
 ExternalProject_Add_Step(cava katana-nwcc
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../specs/cuda_10_1.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/nwcc ${CMAKE_CURRENT_SOURCE_DIR}/../../specs/cuda_10_1.c -I /usr/local/cuda-10.1/include -I ${CMAKE_CURRENT_SOURCE_DIR}/headers ${GLIB2_CFLAGS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  ALWAYS ON
-  DEPENDEES install
+  DEPENDEES download
 )
-
-###### Example: compile cuda_10.1.c ######
 
 ExternalProject_Add_Step(cava katana-link
   COMMAND mkdir -p generated &&
@@ -39,7 +40,6 @@ ExternalProject_Add_Step(cava katana-link
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../..
   DEPENDEES katana-nwcc
 )
-ExternalProject_Add_StepTargets(cava katana-link)
 
 ExternalProject_Add(katana_cuda_nw
   PREFIX katana_cuda_nw
@@ -51,5 +51,5 @@ ExternalProject_Add(katana_cuda_nw
              -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
              -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
   BUILD_ALWAYS ON
-  DEPENDS cava-katana-link
+  DEPENDS cava
 )

@@ -1,0 +1,18 @@
+"_id","_labels","born","name","released","tagline","title","_start","_end","_type","roles","text"
+"0",":Movie","","","1999","Welcome to the Real World","The Matrix",,,,,
+"1",":Person","1964","Keanu Reeves","","","",,,,,
+"2",":Person","1967","Carrie-Anne Moss","","","",,,,,
+"3",":Person","1961","Laurence Fishburne","","","",,,,,
+"4",":Person","1960","Hugo Weaving","","","",,,,,
+"5",":Person","1967","Lilly Wachowski","","","",,,,,
+"6",":Person","1965","Lana Wachowski","","","",,,,,
+"7",":Person","1952","Joel Silver","","","",,,,,
+"9",":Other:Person:Random","1963","","","","",,,,,
+,,,,,,,"1","0","ACTED_IN","Neo",""
+,,,,,,,"2","0","ACTED_IN","Trinity",""
+,,,,,,,"3","0","ACTED_IN","Morpheus",""
+,,,,,,,"4","0","ACTED_IN","Agent Smith",""
+,,,,,,,"5","0","DIRECTED","",""
+,,,,,,,"6","0","DIRECTED","",""
+,,,,,,,"7","0","PRODUCED","",""
+,,,,,,,"3","7","IN_SAME_MOVIE","","stuff"

@@ -148,7 +148,11 @@ int Open(const std::string& uri) {
   if (bucket_name.empty() || object_name.empty()) {
     return ERRNO_RET(EINVAL, -1);
   }
-  return S3Open(bucket_name, object_name);
+  auto result = S3Open(bucket_name, object_name);
+  if (!result) {
+    return -1;
+  }
+  return result.value();
 }
 
 // Return 1: This is an S3 URL

@@ -2,13 +2,19 @@
 #define GALOIS_LIBTSUBA_S3_H_
 
 #include <string>
+#include <string_view>
 #include <cstdint>
+
+#include <aws/core/utils/memory/stl/AWSString.h>
+
+#include "galois/Result.h"
 
 namespace tsuba {
 
 int S3Init();
 void S3Fini();
-int S3Open(const std::string& bucket, const std::string& object);
+galois::Result<int> S3Open(const std::string& bucket,
+                           const std::string& object);
 uint64_t S3GetSize(const std::string& bucket, const std::string& object,
                    uint64_t* size);
 
@@ -26,6 +32,15 @@ int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
                            const uint8_t* data, uint64_t size);
 int S3UploadOverwriteAsyncFinish(const std::string& bucket,
                                  const std::string& object);
+
+/* Utility functions for converting between Aws::String and std::string */
+inline std::string_view FromAwsString(const Aws::String& s) {
+  return {s.data(), s.size()};
+}
+inline Aws::String ToAwsString(const std::string& s) {
+  return Aws::String(s.data(), s.size());
+}
+
 } /* namespace tsuba */
 
 #endif

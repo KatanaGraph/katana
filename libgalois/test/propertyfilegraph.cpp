@@ -1,9 +1,10 @@
 #include "galois/Logging.h"
+#include "galois/FileSystem.h"
 #include "galois/graphs/PropertyFileGraph.h"
 
-#include <cstdlib> // mkdtemp
+#include <boost/filesystem.hpp>
 
-#include <filesystem>
+namespace fs = boost::filesystem;
 
 std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
                                         const std::vector<int32_t>& data) {
@@ -46,14 +47,9 @@ void TestRoundTrip() {
   auto add_edge_result = g->AddEdgeProperties(edge_table);
   GALOIS_LOG_ASSERT(add_edge_result);
 
-  const std::string tmpl = "/tmp/propertyfilegraph-XXXXXX";
-  std::vector<char> my_tmpl(tmpl.begin(), tmpl.end());
-  my_tmpl.emplace_back('\0');
-  char* temp_dir = mkdtemp(my_tmpl.data());
-  if (temp_dir == nullptr) {
-    perror("mkdtemp");
-  }
-  GALOIS_LOG_ASSERT(temp_dir != nullptr);
+  auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
+  GALOIS_LOG_ASSERT(unique_result);
+  std::string temp_dir(std::move(unique_result.value()));
 
   std::string meta_file{temp_dir};
   meta_file += "/meta";
@@ -63,13 +59,13 @@ void TestRoundTrip() {
   GALOIS_LOG_WARN("creating temp file {}", meta_file);
 
   if (!write_result) {
-    std::filesystem::remove_all(temp_dir);
+    fs::remove_all(temp_dir);
     GALOIS_LOG_FATAL("writing result: {}", write_result.error());
   }
 
-  outcome::std_result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
+  galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
       make_result = galois::graphs::PropertyFileGraph::Make(meta_file);
-  std::filesystem::remove_all(temp_dir);
+  fs::remove_all(temp_dir);
   if (!make_result) {
     GALOIS_LOG_FATAL("making result: {}", make_result.error());
   }

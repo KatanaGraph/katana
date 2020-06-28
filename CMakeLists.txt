@@ -109,6 +109,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   endif()
 
   add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra>")
+  # Avoid warnings from boost::counting_iterator (1.71.0)
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-copy>")
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
@@ -172,7 +174,7 @@ if(NOT HAVE_HUGEPAGES AND GALOIS_STRICT_CONFIG)
   message(FATAL_ERROR "Need huge pages")
 endif()
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS serialization iostreams)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS filesystem serialization iostreams)
 
 find_package(LLVM REQUIRED CONFIG)
 if("${LLVM_PACKAGE_VERSION}" VERSION_LESS "7")

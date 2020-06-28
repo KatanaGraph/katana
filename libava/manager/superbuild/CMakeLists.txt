@@ -21,7 +21,7 @@ ExternalProject_Add(absl
 ExternalProject_Add(c-ares
   PREFIX c-ares
   GIT_REPOSITORY https://github.com/c-ares/c-ares.git
-  GIT_TAG cares-1_16_0
+  GIT_TAG cares-1_13_0
   SOURCE_DIR "${EXTERNAL_BINARY_DIR}/src/cares/cares"
   CMAKE_CACHE_ARGS
         -DCARES_SHARED:BOOL=OFF
@@ -118,5 +118,5 @@ ExternalProject_Add(ava-manager
         ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
         -DgRPC_DIR:PATH=${EXTERNAL_BINARY_DIR}/grpc/lib/cmake/grpc
         -DFlatbuffers_DIR:PATH=${EXTERNAL_BINARY_DIR}/flatbuffers/lib/cmake/flatbuffers
-  DEPENDS protobuf grpc
+  DEPENDS protobuf grpc flatbuffers
 )

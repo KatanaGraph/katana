@@ -29,7 +29,7 @@ conan remote add kmaragon https://api.bintray.com/conan/kmaragon/conan
 mkdir build
 cd build
 conan install ../config --build=missing
-cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake -DCMAKE_CXX_COMPILER=gcc-9 ..
+cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake -DCMAKE_CXX_COMPILER=g++-9 ..
 make
 ```
 
@@ -46,7 +46,7 @@ CMake option `CMAKE_PREFIX_PATH`, as in:
 
 ```shell
 cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake \
-  -DCMAKE_CXX_COMPILER=gcc-9 \
+  -DCMAKE_CXX_COMPILER=g++-9 \
   -DCMAKE_PREFIX_PATH=<path/to/cmakefiles/for/library>;<another/path> ..
 ```
 
@@ -114,7 +114,7 @@ ctest -L quick
 ```
 
 This runs code tests locally on your machine.  Most of the tests require sample
-graphs. You can get them with `make inputs`.
+graphs. You can get them with `make input`.
 
 # Some Helpful tools
 

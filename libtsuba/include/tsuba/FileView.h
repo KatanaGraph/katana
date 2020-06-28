@@ -1,12 +1,12 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_FILE_VIEW_H_
-#define GALOIS_LIBGALOIS_GALOIS_FILE_VIEW_H_
+#ifndef GALOIS_LIBTSUBA_TSUBA_FILE_VIEW_H_
+#define GALOIS_LIBTSUBA_TSUBA_FILE_VIEW_H_
 
 #include <string>
 #include <cstdint>
 
 #include <parquet/arrow/reader.h>
 
-namespace galois {
+namespace tsuba {
 
 class FileView : public arrow::io::RandomAccessFile {
   uint8_t* map_start_;
@@ -50,6 +50,8 @@ public:
   }
   int Bind(const std::string& filename);
 
+  bool Valid() { return valid_; }
+
   int Unbind();
 
   template <typename T>
@@ -72,6 +74,6 @@ public:
   ///// End arrow::io::RandomAccessFile methods ///////
 };
 
-} /* namespace galois */
+} // namespace tsuba
 
 #endif

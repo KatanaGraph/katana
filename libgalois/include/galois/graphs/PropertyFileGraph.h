@@ -2,15 +2,12 @@
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTY_FILE_GRAPH_H_
 
 #include <arrow/api.h>
-#include <boost/outcome/outcome.hpp>
 
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "galois/FileView.h"
-
-namespace outcome = BOOST_OUTCOME_V2_NAMESPACE;
+#include "tsuba/RDG.h"
 
 namespace galois::graphs {
 
@@ -24,10 +21,6 @@ struct GraphTopology {
 
   uint64_t num_edges() const { return out_dests ? out_dests->length() : 0; }
 };
-
-// Private implementation of metadata to avoid exposing implementation details
-// while the metadata format is in flux.
-struct MetadataImpl;
 
 /// A property graph is a graph that has properties associated with its nodes
 /// and edges. A property has a name and value. Its value may be a primitive
@@ -60,29 +53,28 @@ struct MetadataImpl;
 /// FileGraph, the class PropertyFileGraph supersedes FileGraph, and the latter
 /// is deprecated.
 class PropertyFileGraph {
-  static outcome::std_result<std::shared_ptr<PropertyFileGraph>>
-  Make(MetadataImpl&& metadata);
 
-  galois::FileView topology_file_storage_;
+  tsuba::RDG rdg_;
 
-  std::shared_ptr<arrow::Table> node_table_;
-  std::shared_ptr<arrow::Table> edge_table_;
-
-  // The topology is either backed by topology_file_storage_ or shared with the
+  // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
   GraphTopology topology_;
 
-  // Metadata is the parsed metadata from loading the on-disk representation
-  std::unique_ptr<MetadataImpl> metadata_;
+  // sanity check che graph after loading
+  Result<void> Validate();
 
 public:
   PropertyFileGraph();
+  PropertyFileGraph(tsuba::RDG&& rdg);
 
-  // Declare destructor out-of-line to accomodate incomplete type MetadataImpl.
+  // Declare destructor out-of-line to accomodate incomplete type
+  // MetadataImpl.
   ~PropertyFileGraph();
 
+  static Result<std::shared_ptr<PropertyFileGraph>> Make(tsuba::RDG&& rdg);
+
   /// Make a property graph from a metadata file.
-  static outcome::std_result<std::shared_ptr<PropertyFileGraph>>
+  static Result<std::shared_ptr<PropertyFileGraph>>
   Make(const std::string& metadata_path);
 
   /// Make a property graph from a metadata file but only load the
@@ -93,7 +85,7 @@ public:
   ///
   /// \returns invalid_argument if any property is not found or if there
   /// are multiple properties with the same name
-  static outcome::std_result<std::shared_ptr<PropertyFileGraph>>
+  static Result<std::shared_ptr<PropertyFileGraph>>
   Make(const std::string& metadata_path,
        const std::vector<std::string>& node_properties,
        const std::vector<std::string>& edge_properties);
@@ -103,43 +95,46 @@ public:
   /// files will be written to the same directory.
   ///
   /// \returns io_error if, for instance, a file already exists
-  outcome::std_result<void> Write(const std::string& metadata_path);
+  Result<void> Write(const std::string& metadata_path);
+  /// same as above but overwrite the path this was read from (always an
+  /// overwrite)
+  ///
+  /// \returns invalid if this was not read (but rather constructed in memory)
+  Result<void> Write();
 
   std::shared_ptr<arrow::Schema> node_schema() const {
-    return node_table_->schema();
+    return rdg_.node_table->schema();
   }
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
-    return edge_table_->schema();
+    return rdg_.edge_table->schema();
   }
 
   std::shared_ptr<arrow::ChunkedArray> NodeProperty(int i) const {
-    return node_table_->column(i);
+    return rdg_.node_table->column(i);
   }
 
   std::shared_ptr<arrow::ChunkedArray> EdgeProperty(int i) const {
-    return edge_table_->column(i);
+    return rdg_.edge_table->column(i);
   }
 
   const GraphTopology& topology() const { return topology_; }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> NodeProperties() const {
-    return node_table_->columns();
+    return rdg_.node_table->columns();
   }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> EdgeProperties() const {
-    return edge_table_->columns();
+    return rdg_.edge_table->columns();
   }
 
-  outcome::std_result<void>
-  AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
-  outcome::std_result<void>
-  AddEdgeProperties(const std::shared_ptr<arrow::Table>& table);
+  Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
+  Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& table);
 
-  outcome::std_result<void> RemoveNodeProperty(int i);
-  outcome::std_result<void> RemoveEdgeProperty(int i);
+  Result<void> RemoveNodeProperty(int i);
+  Result<void> RemoveEdgeProperty(int i);
 
-  outcome::std_result<void> SetTopology(const GraphTopology& topology);
+  Result<void> SetTopology(const GraphTopology& topology);
 };
 
 } // namespace galois::graphs

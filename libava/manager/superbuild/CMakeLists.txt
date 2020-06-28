@@ -118,5 +118,6 @@ ExternalProject_Add(ava-manager
         ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
         -DgRPC_DIR:PATH=${EXTERNAL_BINARY_DIR}/grpc/lib/cmake/grpc
         -DFlatbuffers_DIR:PATH=${EXTERNAL_BINARY_DIR}/flatbuffers/lib/cmake/flatbuffers
+        -DCMAKE_CUDA_COMPILER:PATH=${CMAKE_CUDA_COMPILER}
   DEPENDS protobuf grpc flatbuffers
 )

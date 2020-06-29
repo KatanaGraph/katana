@@ -19,7 +19,8 @@ yum install -y -q \
   devtoolset-9-libatomic-devel \
   llvm7.0-devel \
   llvm7.0-static \
-  openmpi-devel
+  openmpi-devel \
+  libxml2-devel
 
 yum install -y -q --enablerepo=epel \
   arrow-devel \

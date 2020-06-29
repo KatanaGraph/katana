@@ -49,7 +49,7 @@ install(TARGETS graph-convert-huge
 
 
 
-find_package(LibXml2 2.9.4 REQUIRED)
+find_package(LibXml2 2.9.1 REQUIRED)
 
 add_library(graph-properties-convert-commmon STATIC graph-properties-convert.cpp)
 # -Wno-unkown-pragmas needed for dependency csv

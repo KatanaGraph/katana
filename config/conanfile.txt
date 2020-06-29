@@ -5,7 +5,6 @@ aws-sdk-cpp/1.7.212@kmaragon/stable
 boost/1.71.0
 eigen/3.3.7
 fmt/6.2.1
-libxml2/2.9.10
 
 [options]
 aws-sdk-cpp:build_transfer = True

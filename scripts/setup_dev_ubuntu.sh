@@ -15,6 +15,10 @@ then
   exit 1
 fi
 
+# installing libxml2
+sudo apt update
+sudo apt install libxml2-dev
+
 # installing g{cc,++}-9
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update

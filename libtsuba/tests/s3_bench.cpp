@@ -65,7 +65,7 @@ std::string FmtResults(const std::vector<long>& v) {
     stdev = sqrt(accum / (v.size() - 1));
   }
 
-  return fmt::format("{:>5.1f} {}/op (N={:d}) sd {:.1f}", mean / divFactor,
+  return fmt::format("{:>5.1f} {} (N={:d}) sd {:.1f}", mean / divFactor,
                      df2unit[divFactor], v.size(), stdev / divFactor);
 }
 
@@ -452,42 +452,42 @@ int main() {
 
 // *** VM and bucket same region
 // ** size   19B
-// memfd_create             ( 8)  41.7 us/op (N=3) sd 21.1
-// /tmp create              ( 8)  47.3 ms/op (N=3) sd 44.1
-// S3 Put ASync One         ( 8) 261.0 ms/op (N=3) sd 188.2
-// S3 Put Sync              ( 8) 500.0 ms/op (N=3) sd 172.1
-// S3 Put Async Batch       ( 8)  48.7 ms/op (N=3) sd 30.2
-// S3 Put                   ( 8)   1.2  s/op (N=3) sd 0.0
-// S3 Put Multi Async Batch ( 8) 186.6 ms/op (N=3) sd 34.9
+// memfd_create             ( 8)  41.7 us (N=3) sd 21.1
+// /tmp create              ( 8)  47.3 ms (N=3) sd 44.1
+// S3 Put ASync One         ( 8) 261.0 ms (N=3) sd 188.2
+// S3 Put Sync              ( 8) 500.0 ms (N=3) sd 172.1
+// S3 Put Async Batch       ( 8)  48.7 ms (N=3) sd 30.2
+// S3 Put                   ( 8)   1.2  s (N=3) sd 0.0
+// S3 Put Multi Async Batch ( 8) 186.6 ms (N=3) sd 34.9
 // ** size  10MB
-// memfd_create             ( 8)  33.5 ms/op (N=3) sd 0.7
-// /tmp create              ( 8) 345.0 ms/op (N=3) sd 35.5
-// S3 Put ASync One         ( 8)   1.7  s/op (N=3) sd 0.2
-// S3 Put Sync              ( 8)   2.1  s/op (N=3) sd 0.3
-// S3 Put Async Batch       ( 8) 815.8 ms/op (N=3) sd 73.1
-// S3 Put                   ( 8)   2.6  s/op (N=3) sd 0.3
-// S3 Put Multi Async Batch ( 8) 914.9 ms/op (N=3) sd 30.9
+// memfd_create             ( 8)  33.5 ms (N=3) sd 0.7
+// /tmp create              ( 8) 345.0 ms (N=3) sd 35.5
+// S3 Put ASync One         ( 8)   1.7  s (N=3) sd 0.2
+// S3 Put Sync              ( 8)   2.1  s (N=3) sd 0.3
+// S3 Put Async Batch       ( 8) 815.8 ms (N=3) sd 73.1
+// S3 Put                   ( 8)   2.6  s (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8) 914.9 ms (N=3) sd 30.9
 // ** size 100MB
-// memfd_create             ( 8) 376.7 ms/op (N=3) sd 0.2
-// /tmp create              ( 8)   6.2  s/op (N=3) sd 0.5
-// S3 Put ASync One         ( 8)  10.3  s/op (N=3) sd 0.5
-// S3 Put Sync              ( 8)  10.7  s/op (N=3) sd 0.3
-// S3 Put Async Batch       ( 8)   6.9  s/op (N=3) sd 0.0
-// S3 Put                   ( 8)   9.1  s/op (N=3) sd 0.3
-// S3 Put Multi Async Batch ( 8)   7.0  s/op (N=3) sd 0.0
+// memfd_create             ( 8) 376.7 ms (N=3) sd 0.2
+// /tmp create              ( 8)   6.2  s (N=3) sd 0.5
+// S3 Put ASync One         ( 8)  10.3  s (N=3) sd 0.5
+// S3 Put Sync              ( 8)  10.7  s (N=3) sd 0.3
+// S3 Put Async Batch       ( 8)   6.9  s (N=3) sd 0.0
+// S3 Put                   ( 8)   9.1  s (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8)   7.0  s (N=3) sd 0.0
 // ** size 500MB
-// memfd_create             ( 8)   1.9  s/op (N=3) sd 0.0
-// /tmp create              ( 8)  32.2  s/op (N=3) sd 0.1
-// S3 Put ASync One         ( 8)  50.0  s/op (N=3) sd 0.8
-// S3 Put Sync              ( 8)  47.8  s/op (N=3) sd 1.6
-// S3 Put Async Batch       ( 8)  38.1  s/op (N=3) sd 6.4
-// S3 Put                   ( 8)  36.8  s/op (N=3) sd 0.8
-// S3 Put Multi Async Batch ( 8)  35.6  s/op (N=3) sd 2.0
+// memfd_create             ( 8)   1.9  s (N=3) sd 0.0
+// /tmp create              ( 8)  32.2  s (N=3) sd 0.1
+// S3 Put ASync One         ( 8)  50.0  s (N=3) sd 0.8
+// S3 Put Sync              ( 8)  47.8  s (N=3) sd 1.6
+// S3 Put Async Batch       ( 8)  38.1  s (N=3) sd 6.4
+// S3 Put                   ( 8)  36.8  s (N=3) sd 0.8
+// S3 Put Multi Async Batch ( 8)  35.6  s (N=3) sd 2.0
 // ** size 1GB
-// memfd_create             ( 6)   2.9  s/op (N=1) sd 0.0
-// /tmp create              ( 6)  50.1  s/op (N=1) sd 0.0
-// S3 Put ASync One         ( 6)  68.2  s/op (N=1) sd 0.0
-// S3 Put Sync              ( 6)  70.8  s/op (N=1) sd 0.0
-// S3 Put Async Batch       ( 6)  52.6  s/op (N=1) sd 0.0
-// S3 Put                   ( 6)  54.3  s/op (N=1) sd 0.0
-// S3 Put Multi Async Batch ( 6)  52.9  s/op (N=1) sd 0.0
+// memfd_create             ( 6)   2.9  s (N=1) sd 0.0
+// /tmp create              ( 6)  50.1  s (N=1) sd 0.0
+// S3 Put ASync One         ( 6)  68.2  s (N=1) sd 0.0
+// S3 Put Sync              ( 6)  70.8  s (N=1) sd 0.0
+// S3 Put Async Batch       ( 6)  52.6  s (N=1) sd 0.0
+// S3 Put                   ( 6)  54.3  s (N=1) sd 0.0
+// S3 Put Multi Async Batch ( 6)  52.9  s (N=1) sd 0.0

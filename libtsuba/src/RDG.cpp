@@ -284,10 +284,15 @@ WriteTable(const arrow::Table& table,
   return next_properties;
 }
 
+/// Add the property columns in @table to @to_update. If @new_properties is true
+/// assume that @table include all new properties and append their meta data to
+/// @properties (this is true when adding new properties to the graph) else
+/// assume that the properties are being reloaded from disk
 galois::Result<void>
 AddProperties(const std::shared_ptr<arrow::Table>& table,
               std::shared_ptr<arrow::Table>* to_update,
-              std::vector<tsuba::PropertyMetadata>* properties) {
+              std::vector<tsuba::PropertyMetadata>* properties,
+              bool new_properties) {
   std::shared_ptr<arrow::Table> current = *to_update;
 
   if (current->num_columns() > 0 && current->num_rows() != table->num_rows()) {
@@ -318,13 +323,20 @@ AddProperties(const std::shared_ptr<arrow::Table>& table,
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  const auto& schema = next->schema();
-  for (int i = current->num_columns(), end = next->num_columns(); i < end;
-       ++i) {
-    properties->emplace_back(tsuba::PropertyMetadata{
-        .name = schema->field(i)->name(),
-        .path = "",
-    });
+  if (new_properties) {
+    const auto& schema = next->schema();
+    for (int i = current->num_columns(), end = next->num_columns(); i < end;
+         ++i) {
+      properties->emplace_back(tsuba::PropertyMetadata{
+          .name = schema->field(i)->name(),
+          .path = "",
+      });
+    }
+    assert(static_cast<size_t>(next->num_columns()) == properties->size());
+  } else {
+    // sanity check since we shouldn't be able to add more old properties to
+    // next than are noted in properties
+    assert(static_cast<size_t>(next->num_columns()) <= properties->size());
   }
 
   *to_update = next;
@@ -586,7 +598,8 @@ galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
   auto node_result = AddTables(
       dir, handle->node_properties,
       [&g, handle](const std::shared_ptr<arrow::Table>& table) {
-        return AddProperties(table, &g.node_table, &handle->node_properties);
+        return AddProperties(table, &g.node_table, &handle->node_properties,
+                             /* new_properties = */ false);
       });
   if (!node_result) {
     return node_result.error();
@@ -595,7 +608,8 @@ galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
   auto edge_result = AddTables(
       dir, handle->edge_properties,
       [&g, handle](const std::shared_ptr<arrow::Table>& table) {
-        return AddProperties(table, &g.edge_table, &handle->edge_properties);
+        return AddProperties(table, &g.edge_table, &handle->edge_properties,
+                             /* new_properties = */ false);
       });
   if (!edge_result) {
     return edge_result.error();
@@ -679,12 +693,14 @@ galois::Result<void> Store(const RDG& rdg, const void* new_top_buf,
 
 galois::Result<void>
 AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &rdg->node_table, &rdg->handle->node_properties);
+  return AddProperties(table, &rdg->node_table, &rdg->handle->node_properties,
+                       /* new_properties = */ true);
 }
 
 galois::Result<void>
 AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &rdg->edge_table, &rdg->handle->edge_properties);
+  return AddProperties(table, &rdg->edge_table, &rdg->handle->edge_properties,
+                       /* new_properties = */ true);
 }
 
 galois::Result<void> DropNodeProperty(RDG* rdg, int i) {

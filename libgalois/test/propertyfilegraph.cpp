@@ -4,6 +4,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include "tsuba/tsuba.h"
+
 namespace fs = boost::filesystem;
 
 std::shared_ptr<arrow::Table> MakeTable(const std::string& name,

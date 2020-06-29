@@ -7,7 +7,7 @@ set(AVA_CAVA_LOCATION ${AVA_UNPACK_LOCATION}/cava)
 
 FetchContent_Declare(ava
   GIT_REPOSITORY "https://github.com/utcs-scea/ava.git"
-  GIT_TAG 71d2fc1fd63904ba
+  GIT_TAG c6dbb7cbba075459
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
 )
@@ -28,6 +28,7 @@ ExternalProject_Add(ava-bin
   DOWNLOAD_COMMAND ""
   CONFIGURE_COMMAND ${CMAKE_COMMAND} ${AVA_UNPACK_LOCATION}
   BUILD_COMMAND make -j4
+  BUILD_ALWAYS ON
   INSTALL_COMMAND ""
 )
 

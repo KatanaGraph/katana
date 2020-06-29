@@ -3,7 +3,7 @@ ava_version("10.1.0");
 ava_identifier(KATANA_CUDA);
 ava_number(1);
 ava_cflags(-I/usr/local/cuda-10.1/include -I../headers);
-ava_libs(-L/usr/local/cuda-10.1/lib64 -lcudart -lcuda);
+ava_libs(-L/usr/local/cuda-10.1/lib64 -lcudart -L/usr/local/cuda-10.1/lib64/stubs -lcuda);
 ava_export_qualifier();
 
 /**

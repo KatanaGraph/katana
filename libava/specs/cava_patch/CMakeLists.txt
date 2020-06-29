@@ -14,22 +14,25 @@ include(ExternalProject)
 
 ExternalProject_Add(cava
   PREFIX ava-llvm
-  BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/build
-  DOWNLOAD_COMMAND ""
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
-  BUILD_COMMAND make -j4
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/build
+  URL "https://github.com/utcs-scea/ava-llvm/releases/download/v7.1.0/ava-llvm-release-7.1.0.tar.gz"
+  URL_HASH MD5=400832522ed255314d6a5848e8f7af6c
+  BUILD_COMMAND ""
+  CONFIGURE_COMMAND ""
   INSTALL_COMMAND ""
-)
-find_package(PkgConfig REQUIRED)
-pkg_search_module(GLIB2 REQUIRED glib-2.0)
-ExternalProject_Add_Step(cava katana-nwcc
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/nwcc ${CMAKE_CURRENT_SOURCE_DIR}/../../specs/cuda_10_1.c -I /usr/local/cuda-10.1/include -I ${CMAKE_CURRENT_SOURCE_DIR}/headers ${GLIB2_CFLAGS}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  ALWAYS ON
-  DEPENDEES install
+  UPDATE_DISCONNECTED ON
 )
 
 ###### Example: compile cuda_10.1.c ######
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GLIB2 REQUIRED glib-2.0)
+ExternalProject_Add_Step(cava katana-nwcc
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../specs/cuda_10_1.c
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/nwcc ${CMAKE_CURRENT_SOURCE_DIR}/../../specs/cuda_10_1.c -I /usr/local/cuda-10.1/include -I ${CMAKE_CURRENT_SOURCE_DIR}/headers ${GLIB2_CFLAGS}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDEES download
+)
 
 ExternalProject_Add_Step(cava katana-link
   COMMAND mkdir -p generated &&
@@ -37,7 +40,6 @@ ExternalProject_Add_Step(cava katana-link
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../..
   DEPENDEES katana-nwcc
 )
-ExternalProject_Add_StepTargets(cava katana-link)
 
 ExternalProject_Add(katana_cuda_nw
   PREFIX katana_cuda_nw
@@ -49,5 +51,5 @@ ExternalProject_Add(katana_cuda_nw
              -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
              -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
   BUILD_ALWAYS ON
-  DEPENDS cava-katana-link
+  DEPENDS cava
 )

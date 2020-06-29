@@ -10,6 +10,11 @@ FetchContent_Declare(ava
   GIT_TAG c6dbb7cbba075459
   GIT_PROGRESS ON
   SOURCE_DIR ${AVA_UNPACK_LOCATION}
+  # AvA includes a copy of grpc; apply same patch as superbuild.
+  #
+  # TODO(ddn): Undo this hack when we can configure grpc location
+  # in ava directly.
+  PATCH_COMMAND cd third_party/grpc && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/manager/superbuild/grpc-gettid.patch
 )
 
 FetchContent_GetProperties(ava)
@@ -27,6 +32,10 @@ ExternalProject_Add(ava-bin
   BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ava-bin
   DOWNLOAD_COMMAND ""
   CONFIGURE_COMMAND ${CMAKE_COMMAND} ${AVA_UNPACK_LOCATION}
+  # TODO(ddn): Override vendored grpc in ava with one installed by the
+  # superbuild. Requires upstream support to propagate GRPC_DIR.
+  # CMAKE_CACHE_ARGS
+  #   -DGRPC_DIR:PATH=${AVA_GRPC_LOCATION}
   BUILD_COMMAND make -j4
   BUILD_ALWAYS ON
   INSTALL_COMMAND ""

@@ -70,6 +70,7 @@ ExternalProject_Add(grpc
   GIT_REPOSITORY https://github.com/grpc/grpc.git
   GIT_TAG v1.15.1
   SOURCE_DIR "${EXTERNAL_BINARY_DIR}/src/grpc"
+  PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/grpc-gettid.patch
   CMAKE_CACHE_ARGS
         -DgRPC_INSTALL:BOOL=ON
         -DgRPC_BUILD_TESTS:BOOL=OFF

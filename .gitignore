@@ -3,7 +3,6 @@
 *.backup
 /.dir-locals.el
 *.orig
-*.patch
 /.project
 .settings
 .*.swo

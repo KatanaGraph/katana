@@ -1,0 +1,52 @@
+diff --git a/src/core/lib/gpr/log_linux.cc b/src/core/lib/gpr/log_linux.cc
+index 561276f0c2..c51182f0c2 100644
+
+glibc 2.30 declares gettid. Newer versions of grpc rename their own gettid
+function to avoid "ambiguating new declaration of 'long int gettid()'" [1] but
+upgrading grpc runs into other problems (protobuf, grpc, grpc+flatbuffer
+plugin).
+
+[1] https://github.com/grpc/grpc/pull/18950
+
+--- a/src/core/lib/gpr/log_linux.cc
++++ b/src/core/lib/gpr/log_linux.cc
+@@ -40,7 +40,7 @@
+ #include <time.h>
+ #include <unistd.h>
+ 
+-static long gettid(void) { return syscall(__NR_gettid); }
++static long _gettid(void) { return syscall(__NR_gettid); }
+ 
+ void gpr_log(const char* file, int line, gpr_log_severity severity,
+              const char* format, ...) {
+@@ -70,7 +70,7 @@ void gpr_default_log(gpr_log_func_args* args) {
+   gpr_timespec now = gpr_now(GPR_CLOCK_REALTIME);
+   struct tm tm;
+   static __thread long tid = 0;
+-  if (tid == 0) tid = gettid();
++  if (tid == 0) tid = _gettid();
+ 
+   timer = static_cast<time_t>(now.tv_sec);
+   final_slash = strrchr(args->file, '/');
+diff --git a/src/core/lib/iomgr/ev_epollex_linux.cc b/src/core/lib/iomgr/ev_epollex_linux.cc
+index b082634af1..7080d450df 100644
+--- a/src/core/lib/iomgr/ev_epollex_linux.cc
++++ b/src/core/lib/iomgr/ev_epollex_linux.cc
+@@ -1146,7 +1146,7 @@ static void end_worker(grpc_pollset* pollset, grpc_pollset_worker* worker,
+ }
+ 
+ #ifndef NDEBUG
+-static long gettid(void) { return syscall(__NR_gettid); }
++static long _gettid(void) { return syscall(__NR_gettid); }
+ #endif
+ 
+ /* pollset->mu lock must be held by the caller before calling this.
+@@ -1166,7 +1166,7 @@ static grpc_error* pollset_work(grpc_pollset* pollset,
+ #define WORKER_PTR (&worker)
+ #endif
+ #ifndef NDEBUG
+-  WORKER_PTR->originator = gettid();
++  WORKER_PTR->originator = _gettid();
+ #endif
+   if (grpc_polling_trace.enabled()) {
+     gpr_log(GPR_INFO,

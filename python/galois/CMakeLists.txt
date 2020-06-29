@@ -35,8 +35,8 @@ function(generate_cython_source BASE)
   generate_cython_file(${BASE}.pyx DEPENDS ${_args_DEPENDS})
 endfunction()
 
-add_cython_target(shmem shmem.pyx CXX OUTPUT_VAR GALOIS_SOURCES)
-add_library(shmem MODULE ${GALOIS_SOURCES})
+add_cython_target(shmem shmem.pyx CXX OUTPUT_VAR SHMEM_SOURCES)
+add_library(shmem MODULE ${SHMEM_SOURCES})
 python_extension_module(shmem)
 target_link_libraries(shmem Galois::shmem)
 
@@ -72,21 +72,23 @@ install(
   LIBRARY DESTINATION python/galois
 )
 
-install(
-  TARGETS galois_shmem
-  PUBLIC_HEADER DESTINATION include
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  INCLUDES DESTINATION include
-)
+if(BUILD_LIBGALOIS)
+  install(
+    TARGETS galois_shmem
+    PUBLIC_HEADER DESTINATION include
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    INCLUDES DESTINATION include
+  )
 
-# In order to preserve the directory structure, galois_shmem uses
-# install(DIRECTORY) rather than setting the PUBLIC_HEADER property on the
-# galois_shmem itself. Mirror the install(DIRECTORY) logic here.
-get_target_property(GALOIS_SOURCE_DIR galois_shmem SOURCE_DIR)
-get_target_property(GALOIS_BINARY_DIR galois_shmem BINARY_DIR)
-install(
-  DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
-  DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
-)
+  # In order to preserve the directory structure, galois_shmem uses
+  # install(DIRECTORY) rather than setting the PUBLIC_HEADER property on the
+  # galois_shmem itself. Mirror the install(DIRECTORY) logic here.
+  get_target_property(GALOIS_SOURCE_DIR galois_shmem SOURCE_DIR)
+  get_target_property(GALOIS_BINARY_DIR galois_shmem BINARY_DIR)
+  install(
+    DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+  )
+endif()

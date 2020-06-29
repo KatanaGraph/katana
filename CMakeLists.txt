@@ -164,6 +164,8 @@ if(GALOIS_ENABLE_PAPI)
   add_definitions(-DGALOIS_ENABLE_PAPI)
 endif()
 
+find_package(NUMA)
+
 find_package(Threads REQUIRED)
 
 include(CheckMmap)
@@ -284,7 +286,10 @@ configure_package_config_file(
   PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR
 )
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfigVersion.cmake" "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfig.cmake"
+  FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfigVersion.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfig.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindNUMA.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Galois"
   COMPONENT dev
 )

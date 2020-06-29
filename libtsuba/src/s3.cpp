@@ -514,7 +514,7 @@ int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
   }
 
   Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
-  completeMultipartUploadRequest.WithBucket(bucket)
+  completeMultipartUploadRequest.WithBucket(ToAwsString(bucket))
       .WithKey(ToAwsString(object))
       .WithUploadId(ToAwsString(pm->upload_id_))
       .WithMultipartUpload(completedUpload);

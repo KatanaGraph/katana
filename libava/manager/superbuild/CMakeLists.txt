@@ -78,7 +78,7 @@ ExternalProject_Add(grpc
         -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
         -DProtobuf_DIR:PATH=${_FINDPACKAGE_PROTOBUF_CONFIG_DIR}
         -DgRPC_ZLIB_PROVIDER:STRING=package
-        -DZLIB_ROOT:STRING=${EXTERNAL_BINARY_DIR}/zlib
+        -DZLIB_DIR:STRING=${EXTERNAL_BINARY_DIR}/zlib
         -DgRPC_ABSL_PROVIDER:STRING=package
         -Dabsl_DIR:STRING=${EXTERNAL_BINARY_DIR}/absl/lib/cmake/absl
         -DgRPC_CARES_PROVIDER:STRING=package
@@ -116,7 +116,7 @@ ExternalProject_Add(ava-manager
   CMAKE_CACHE_ARGS
         -DProtobuf_DIR:PATH=${_FINDPACKAGE_PROTOBUF_CONFIG_DIR}
         -Dc-ares_DIR:PATH=${EXTERNAL_BINARY_DIR}/c-ares/lib/cmake/c-ares
-        -DZLIB_ROOT:STRING=${EXTERNAL_BINARY_DIR}/zlib
+        -DZLIB_DIR:STRING=${EXTERNAL_BINARY_DIR}/zlib
         -Dabsl_DIR:STRING=${EXTERNAL_BINARY_DIR}/absl/lib/cmake/absl
         ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
         -DgRPC_DIR:PATH=${EXTERNAL_BINARY_DIR}/grpc/lib/cmake/grpc

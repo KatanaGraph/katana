@@ -20,5 +20,3 @@ add_test(NAME convert-properties-csv
   COMMAND graph-properties-convert-test --csv ${CMAKE_CURRENT_SOURCE_DIR}/test-inputs/movies.csv
 )
 set_tests_properties(convert-properties-csv PROPERTIES LABELS quick)
-
-message(${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/movies.csv)

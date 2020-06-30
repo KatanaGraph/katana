@@ -1,5 +1,6 @@
 #include "galois/graphs/AttributedGraph.h"
 #include "galois/Timer.h"
+#include "galois/Logging.h"
 #include "querying/CypherCompiler.h"
 #include "querying/SubgraphQuery.h"
 
@@ -498,8 +499,54 @@ void AttributedGraph::reportGraphStats() {
   }
   galois::gPrint("\n");
 
+  // print node/edge attribute names from arrow arrays
+  galois::gPrint("Node Attributes (Arrow):\n");
+  galois::gPrint("------------------------------\n");
+  for (auto& nLabel : this->node_arrow_attributes) {
+    galois::gPrint(nLabel.first, ", ");
+  }
+  galois::gPrint("\n\n");
+
+  // print all edge attribute names
+  galois::gPrint("Edge Attributes (Arrow):\n");
+  galois::gPrint("------------------------------\n");
+  for (auto& eLabel : this->edge_arrow_attributes) {
+    galois::gPrint(eLabel.first, ", ");
+  }
+  galois::gPrint("\n");
+
   galois::gPrint("-------------------------------------------------------------"
                  "---------\n");
+}
+
+void AttributedGraph::insertNodeArrowAttribute(
+    std::string attribute_name,
+    const std::shared_ptr<arrow::ChunkedArray>& arr) {
+  auto result = this->node_arrow_attributes.try_emplace(attribute_name, arr);
+  // report if a duplicate attribute was added
+  if (!result.second) {
+    GALOIS_LOG_ERROR("Inserting a duplicate node attribute {}", attribute_name);
+  }
+}
+
+void AttributedGraph::insertEdgeArrowAttribute(
+    std::string attribute_name,
+    const std::shared_ptr<arrow::ChunkedArray>& arr) {
+  auto result = this->edge_arrow_attributes.try_emplace(attribute_name, arr);
+  // report if a duplicate attribute was added
+  if (!result.second) {
+    GALOIS_LOG_ERROR("Inserting a duplicate edge attribute {}", attribute_name);
+  }
+}
+
+void AttributedGraph::addToNodeLabel(uint32_t node_id, unsigned label_bit) {
+  auto& nd = this->graph.getData(node_id);
+  nd.label = nd.label | (1 << label_bit);
+}
+
+void AttributedGraph::addToEdgeLabel(uint32_t edge_id, unsigned label_bit) {
+  auto& ed = this->graph.getEdgeData(edge_id);
+  ed       = ed | (1 << label_bit);
 }
 
 size_t AttributedGraph::matchCypherQuery(const char* cypherQueryStr) {

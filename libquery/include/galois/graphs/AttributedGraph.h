@@ -22,6 +22,7 @@
 
 #include "galois/graphs/QueryGraph.h"
 #include "querying/Matching.h"
+#include "querying/IndexableChunkedArray.h"
 
 // TODO find a better place to put this
 /**
@@ -51,8 +52,13 @@ namespace galois::graphs {
  * is stored on the node data.
  */
 class AttributedGraph {
-  // TODO privatize some of these vars
+  //! Mapping from attribute name to arrow chunked arrays for node attributes
+  std::unordered_map<std::string, IndexableChunkedArray> node_arrow_attributes;
+  //! Mapping from attribute name to arrow chunked arrays for edge attributes
+  std::unordered_map<std::string, IndexableChunkedArray> edge_arrow_attributes;
+
 public:
+  // TODO privatize some of these vars
   //! Graph structure class
   QueryGraph graph;
 
@@ -284,6 +290,19 @@ public:
   // TODO maybe move these somewhere else rather than have them as funcs
   // here
   size_t matchCypherQuery(const char* cypherQueryStr);
+
+  //! Saves node attributes stored in a chunked array to a map
+  void
+  insertNodeArrowAttribute(std::string attribute_name,
+                           const std::shared_ptr<arrow::ChunkedArray>& arr);
+  //! Saves edge attributes stored in a chunked array to a map
+  void
+  insertEdgeArrowAttribute(std::string attribute_name,
+                           const std::shared_ptr<arrow::ChunkedArray>& arr);
+  //! Adds TO a node label's bits; does not overwrite existing labels
+  void addToNodeLabel(uint32_t node_id, unsigned label_bit);
+  //! Adds TO a edge label's bits; does not overwrite existing labels
+  void addToEdgeLabel(uint32_t edge_id, unsigned label_bit);
 
 private:
   size_t matchQuery(std::vector<MatchedNode>& queryNodes,

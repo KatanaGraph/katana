@@ -36,6 +36,12 @@ static cll::opt<bool> isBoostSerialized(
         "(default false)"),
     cll::init(false));
 
+static cll::opt<std::string> queryBasePath(
+    "queryBasePath",
+    cll::desc(
+        "Base path prepended to all query files processed (default empty)"),
+    cll::init(""));
+
 static cll::opt<std::string> listOfQueries(
     "listOfQueries",
     cll::desc("File containing a list of files with Cypher queries to "
@@ -141,7 +147,8 @@ int main(int argc, char** argv) {
       // TODO drop file extension as well
       std::string queryName =
           curQueryFile.substr(curQueryFile.find_last_of("/\\") + 1);
-      size_t matched = processQueryFile(att_graph, curQueryFile, queryName);
+      size_t matched =
+          processQueryFile(att_graph, queryBasePath + curQueryFile, queryName);
 
       // save query name and count for correctness checking
       if (output) {
@@ -149,7 +156,7 @@ int main(int argc, char** argv) {
       }
     }
   } else if (queryFile != "") {
-    processQueryFile(att_graph, queryFile);
+    processQueryFile(att_graph, queryBasePath + queryFile);
   } else if (query != "") {
     galois::StatTimer timer("Query_Timer");
     timer.start();

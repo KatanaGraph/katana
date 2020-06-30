@@ -44,7 +44,7 @@ long DivFactor(double us) {
   return 1'000'000.0;
 }
 
-static std::unordered_map<long, std::string> df2unit{
+static const std::unordered_map<long, std::string> df2unit{
     {1, "us"},
     {1'000, "ms"},
     {1'000'000, " s"},
@@ -66,7 +66,7 @@ std::string FmtResults(const std::vector<long>& v) {
   }
 
   return fmt::format("{:>5.1f} {} (N={:d}) sd {:.1f}", mean / divFactor,
-                     df2unit[divFactor], v.size(), stdev / divFactor);
+                     df2unit.at(divFactor), v.size(), stdev / divFactor);
 }
 
 struct timespec now() {

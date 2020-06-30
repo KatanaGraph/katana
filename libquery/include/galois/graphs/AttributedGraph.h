@@ -304,6 +304,9 @@ public:
   //! Adds TO a edge label's bits; does not overwrite existing labels
   void addToEdgeLabel(uint32_t edge_id, unsigned label_bit);
 
+  //! Set edge destination for a particular edge ID
+  void setEdgeDestination(uint32_t edge_id, uint32_t dest);
+
 private:
   size_t matchQuery(std::vector<MatchedNode>& queryNodes,
                     std::vector<MatchedEdge>& queryEdges,

@@ -201,9 +201,9 @@ void constructGraphTopology(const galois::graphs::GraphTopology& pfg_topo,
   galois::do_all(
       galois::iterate((uint64_t)0, pfg_num_edges),
       [&](uint64_t n) {
-        att_graph.fixEndEdge(n, pfg_topo.out_indices->Value(n));
+        att_graph.setEdgeDestination(n, pfg_topo.out_dests->Value(n));
       },
-      galois::loopname("Katana2CypherFixEndEdge"), galois::no_stats());
+      galois::loopname("Katana2CypherFixEdgeDestination"), galois::no_stats());
 }
 
 } // namespace

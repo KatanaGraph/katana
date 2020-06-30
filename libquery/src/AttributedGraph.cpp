@@ -549,6 +549,10 @@ void AttributedGraph::addToEdgeLabel(uint32_t edge_id, unsigned label_bit) {
   ed       = ed | (1 << label_bit);
 }
 
+void AttributedGraph::setEdgeDestination(uint32_t edge_id, uint32_t dest) {
+  this->graph.constructEdge(edge_id, dest);
+}
+
 size_t AttributedGraph::matchCypherQuery(const char* cypherQueryStr) {
   galois::StatTimer compileTime("CypherCompileTime");
 

@@ -1,15 +1,11 @@
 #include "galois/Galois.h"
 #include "galois/gstl.h"
-#include "galois/Reduction.h"
 #include "galois/Timer.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
-
 #include "Lonestar/BoilerPlate.h"
 
-// Querying all included by this single header
-#include "querying/DBGraph.h"
+// Querying things all included by this single header (mainly access to the
+// attributed graph is via this header
+#include "querying/KFHandler.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Benchmark metadata
@@ -26,15 +22,17 @@ static const char* url  = "";
 namespace cll = llvm::cl;
 
 static cll::opt<std::string>
-    filename(cll::Positional, cll::desc("<input graph>"), cll::Required);
+    filename(cll::Positional,
+             cll::desc("<Katana Form metafile or Boost-serialized graph>"),
+             cll::Required);
 
 static cll::opt<std::string> query("query", cll::desc("Cypher query"),
                                    cll::init(""));
 
-static cll::opt<bool> isAttributedGraph(
-    "isAttributedGraph",
+static cll::opt<bool> isBoostSerialized(
+    "boostSerialized",
     cll::desc(
-        "Specifies that the passed in file is an attributed graph on disk "
+        "Specifies that the passed in-file is a boost serialized graph on disk "
         "(default false)"),
     cll::init(false));
 
@@ -67,11 +65,11 @@ static cll::opt<uint32_t> numPages("numPages",
                                    cll::init(2500));
 
 ////////////////////////////////////////////////////////////////////////////////
-// Main
+// Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
 //! given file with query, run query and return number of matches
-size_t processQueryFile(galois::graphs::DBGraph& testGraph,
+size_t processQueryFile(galois::graphs::AttributedGraph& att_graph,
                         std::string fileToProcess,
                         std::string queryName = "Query") {
   galois::gInfo("Reading query file ", fileToProcess);
@@ -87,12 +85,17 @@ size_t processQueryFile(galois::graphs::DBGraph& testGraph,
 
   galois::StatTimer timer((queryName + "_Timer").c_str());
   timer.start();
-  size_t numMatch = testGraph.runCypherQuery(querySS.str());
+  // size_t numMatch = testGraph.runCypherQuery(querySS.str());
+  size_t numMatch = att_graph.matchCypherQuery(querySS.str().c_str());
   timer.stop();
 
   galois::gInfo("Num matched subgraphs ", numMatch);
   return numMatch;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Main
+////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
@@ -101,25 +104,29 @@ int main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  galois::graphs::DBGraph testGraph;
-  if (!isAttributedGraph) {
-    // current assumptions of the graph if not using an attributed graph
-    // 3 node labels: n1, n2, n3
-    // 3 edge labels: e1, e2, e3
-    // timestamps on edges are increasing order
-    // graph is automatically made symmetric and treats every directed edge
-    // as an undirected edge (i.e. edges will be doubled)
-    // Also removes self loops
-    testGraph.constructDataGraph(filename);
+  galois::gInfo("Constructing graph");
+
+  // load graph
+  galois::StatTimer graphConstructTime("GraphConstructTime");
+  graphConstructTime.start();
+  galois::graphs::AttributedGraph att_graph;
+  if (!isBoostSerialized) {
+    querying::loadKatanaFormToCypherGraph(att_graph, filename);
   } else {
-    // uses an attributed graph saved on disk via the interface present in
-    // attributed graph
-    testGraph.loadSerializedAttributedGraph(filename);
+    // boost serialized graph
+    att_graph.loadGraph(filename.c_str());
   }
+  graphConstructTime.stop();
+  att_graph.reportGraphStats();
 
   galois::preAlloc(numPages);
   galois::reportPageAlloc("MeminfoPre");
 
+  galois::gInfo("Running query/queries");
+  galois::StatTimer mainTimer("Timer_0");
+  mainTimer.start();
+
+  // do querying proper; determine how the query was passed into the program
   if (listOfQueries != "") {
     galois::gInfo("Reading list of query files ", listOfQueries);
     std::ifstream queryFiles(listOfQueries);
@@ -128,13 +135,13 @@ int main(int argc, char** argv) {
     }
 
     std::ofstream outputFile(outputLocation + "/queries.count");
-
     std::string curQueryFile;
+
     while (std::getline(queryFiles, curQueryFile)) {
       // TODO drop file extension as well
       std::string queryName =
           curQueryFile.substr(curQueryFile.find_last_of("/\\") + 1);
-      size_t matched = processQueryFile(testGraph, curQueryFile, queryName);
+      size_t matched = processQueryFile(att_graph, curQueryFile, queryName);
 
       // save query name and count for correctness checking
       if (output) {
@@ -142,14 +149,21 @@ int main(int argc, char** argv) {
       }
     }
   } else if (queryFile != "") {
-    processQueryFile(testGraph, queryFile);
+    processQueryFile(att_graph, queryFile);
   } else if (query != "") {
-    galois::gInfo("Num matched subgraphs ", testGraph.runCypherQuery(query));
+    galois::StatTimer timer("Query_Timer");
+    timer.start();
+    galois::gInfo("Num matched subgraphs ",
+                  att_graph.matchCypherQuery(query.c_str()));
+    timer.stop();
   } else {
-    galois::gInfo("No query specified");
+    galois::gWarn("No query specified");
   }
+  mainTimer.stop();
 
   galois::reportPageAlloc("MeminfoPost");
+
+  galois::gInfo("Querying complete");
 
   // TODO make this work regardless of how you pass in your queries
   if (listOfQueries != "" && output) {
@@ -157,5 +171,6 @@ int main(int argc, char** argv) {
   }
 
   totalTime.stop();
+
   return 0;
 }

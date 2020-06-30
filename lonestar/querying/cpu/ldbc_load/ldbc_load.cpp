@@ -3,8 +3,8 @@
 #include "Lonestar/BoilerPlate.h"
 
 // Querying includes
-#include "querying/DBGraph.h"
 #include "querying/LDBCReader.h"
+#include "galois/graphs/AttributedGraph.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Benchmark metadata

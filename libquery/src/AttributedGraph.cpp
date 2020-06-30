@@ -497,7 +497,7 @@ void AttributedGraph::reportGraphStats() {
   for (auto& eLabel : this->edgeAttributes) {
     galois::gPrint(eLabel.first, ", ");
   }
-  galois::gPrint("\n");
+  galois::gPrint("\n\n");
 
   // print node/edge attribute names from arrow arrays
   galois::gPrint("Node Attributes (Arrow):\n");

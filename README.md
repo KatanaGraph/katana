@@ -69,6 +69,7 @@ At the minimum, Galois depends on the following software:
 - Boost library (>= 1.58.0, we recommend building/installing the full library)
 - libllvm (>= 7.0 with RTTI support)
 - libfmt (>= 4.0)
+- libxml2 (>=  2.9.1)
 
 Here are the dependencies for the optional features: 
 

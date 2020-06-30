@@ -3,6 +3,7 @@
 
 from libcpp cimport bool
 from libc.stdint cimport *
+from ..libstd.atomic cimport atomic
 
 # Declaration from "Galois/Threads.h"
 
@@ -20,6 +21,7 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
     
     cppclass UserContext[T]:
         pass
+        void push(...)
 
     void for_each(...)
     void do_all(...)
@@ -60,6 +62,12 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
         void allocateInterleaved(size_t)
         void allocateBlocked(size_t)
         T &operator[](size_t)
+
+
+    #### Atomic Helpers ####
+cdef extern from "galois/AtomicHelpers.h" namespace "galois" nogil:
+    const T atomicMin[T](atomic[T]&, const T)
+    const uint32_t atomicMin[uint32_t](atomic[uint32_t]&, const uint32_t)
 
 cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
     cdef cppclass MethodFlag:

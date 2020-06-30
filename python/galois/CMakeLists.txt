@@ -35,8 +35,8 @@ function(generate_cython_source BASE)
   generate_cython_file(${BASE}.pyx DEPENDS ${_args_DEPENDS})
 endfunction()
 
-add_cython_target(shmem shmem.pyx CXX OUTPUT_VAR GALOIS_SOURCES)
-add_library(shmem MODULE ${GALOIS_SOURCES})
+add_cython_target(shmem shmem.pyx CXX OUTPUT_VAR SHMEM_SOURCES)
+add_library(shmem MODULE ${SHMEM_SOURCES})
 python_extension_module(shmem)
 target_link_libraries(shmem Galois::shmem)
 
@@ -55,6 +55,12 @@ python_extension_module(_bfs)
 add_dependencies(_bfs graphs)
 target_link_libraries(_bfs Galois::shmem)
 
+add_cython_target(_sssp _sssp.pyx shmem.pyx CXX OUTPUT_VAR SSSP_SOURCES)
+add_library(_sssp MODULE ${SSSP_SOURCES})
+python_extension_module(_sssp)
+add_dependencies(_sssp graphs)
+target_link_libraries(_sssp Galois::shmem)
+
 add_cython_target(_pagerank _pagerank.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
 add_library(_pagerank MODULE ${PAGERANK_SOURCES})
 python_extension_module(_pagerank)
@@ -67,26 +73,34 @@ python_extension_module(_jaccard)
 add_dependencies(_jaccard graphs)
 target_link_libraries(_jaccard Galois::shmem)
 
+add_cython_target(_connected_components _connected_components.pyx shmem.pyx CXX OUTPUT_VAR CONNECTED_COMPONENTS_SOURCES)
+add_library(_connected_components MODULE ${CONNECTED_COMPONENTS_SOURCES})
+python_extension_module(_connected_components)
+add_dependencies(_connected_components graphs)
+target_link_libraries(_connected_components Galois::shmem)
+
 install(
-  TARGETS shmem graphs _bfs _pagerank _jaccard
+  TARGETS shmem graphs _bfs _pagerank _jaccard _sssp _connected_components
   LIBRARY DESTINATION python/galois
 )
 
-install(
-  TARGETS galois_shmem
-  PUBLIC_HEADER DESTINATION include
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  INCLUDES DESTINATION include
-)
+if(BUILD_LIBGALOIS)
+  install(
+    TARGETS galois_shmem
+    PUBLIC_HEADER DESTINATION include
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    INCLUDES DESTINATION include
+  )
 
-# In order to preserve the directory structure, galois_shmem uses
-# install(DIRECTORY) rather than setting the PUBLIC_HEADER property on the
-# galois_shmem itself. Mirror the install(DIRECTORY) logic here.
-get_target_property(GALOIS_SOURCE_DIR galois_shmem SOURCE_DIR)
-get_target_property(GALOIS_BINARY_DIR galois_shmem BINARY_DIR)
-install(
-  DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
-  DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
-)
+  # In order to preserve the directory structure, galois_shmem uses
+  # install(DIRECTORY) rather than setting the PUBLIC_HEADER property on the
+  # galois_shmem itself. Mirror the install(DIRECTORY) logic here.
+  get_target_property(GALOIS_SOURCE_DIR galois_shmem SOURCE_DIR)
+  get_target_property(GALOIS_BINARY_DIR galois_shmem BINARY_DIR)
+  install(
+    DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+  )
+endif()

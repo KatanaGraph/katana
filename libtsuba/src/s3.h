@@ -26,12 +26,21 @@ int S3DownloadRange(const std::string& bucket, const std::string& object,
 int S3UploadOverwrite(const std::string& bucket, const std::string& object,
                       const uint8_t* data, uint64_t size);
 
-int S3UploadOverwriteSync(const std::string& bucket, const std::string& object,
-                          const uint8_t* data, uint64_t size);
-int S3UploadOverwriteAsync(const std::string& bucket, const std::string& object,
-                           const uint8_t* data, uint64_t size);
-int S3UploadOverwriteAsyncFinish(const std::string& bucket,
-                                 const std::string& object);
+// Call these functions in order to do an async multipart put
+// All but the first call can block, making this a bulk synchronous parallel
+// interface
+int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
+                     const uint8_t* data, uint64_t size);
+int S3PutMultiAsync2(const std::string& bucket, const std::string& object);
+int S3PutMultiAsync3(const std::string& bucket, const std::string& object);
+int S3PutMultiAsyncFinish(const std::string& bucket, const std::string& object);
+
+int S3PutSingleSync(const std::string& bucket, const std::string& object,
+                    const uint8_t* data, uint64_t size);
+int S3PutSingleAsync(const std::string& bucket, const std::string& object,
+                     const uint8_t* data, uint64_t size);
+int S3PutSingleAsyncFinish(const std::string& bucket,
+                           const std::string& object);
 
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view FromAwsString(const Aws::String& s) {

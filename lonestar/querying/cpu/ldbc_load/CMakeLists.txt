@@ -1,3 +1,0 @@
-add_executable(ldbc_load ldbc_load.cpp)
-target_link_libraries(ldbc_load galois_query)
-target_compile_definitions(ldbc_load PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)

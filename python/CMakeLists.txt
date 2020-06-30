@@ -10,6 +10,10 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ModuleOverrid
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
+###### Options (alternatively pass as options to cmake -DName=Value) ######
+set(BUILD_LIBGALOIS ON CACHE BOOL "Build libgalois from the source tree; if set to OFF then expect libgalois to already be installed in the environment.")
+
+
 include(FindPythonModule)
       
 set(CMAKE_CXX_STANDARD 17)
@@ -28,6 +32,10 @@ if (NOT PY_JINJA2)
   message(FATAL_ERROR "Jinja2 required (for Cython code generation)")
 endif()
 
-add_subdirectory(.. ${CMAKE_BINARY_DIR}/../cmake-galois-build EXCLUDE_FROM_ALL)
+if(BUILD_LIBGALOIS)
+  add_subdirectory(.. ${CMAKE_BINARY_DIR}/../cmake-galois-build EXCLUDE_FROM_ALL)
+else()
+  find_package(Galois REQUIRED)
+endif()
 
 add_subdirectory(galois)

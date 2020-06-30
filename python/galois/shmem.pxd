@@ -2,10 +2,11 @@
 # distutils: extra_compile_args=["-std=c++17"]
 
 from cython.operator cimport preincrement, dereference as deref
-from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, GReduceMax, InsertBag, steal
-from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED
+from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, setActiveThreads, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, GReduceMax, InsertBag, steal
+from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED, atomicMin
 from .cpp.libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph
 from .cpp.libgalois.graphs.ReadGraph cimport readGraph
+from .cpp.libgalois.Worklist cimport ChunkFIFO, OrderedByIntegerMetric, wl, Uint_64u, UpdateRequestIndexer, PerSocketChunkFIFO, ReqPushWrap, UpdateRequest
 from .cpp.libgalois.Timer cimport Timer
 from .cpp.libstd.atomic cimport atomic
 from libcpp.vector cimport vector

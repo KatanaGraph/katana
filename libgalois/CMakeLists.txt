@@ -77,6 +77,7 @@ if (SCHED_SETAFFINITY_FOUND)
 endif()
 
 target_link_libraries(galois_shmem PUBLIC tsuba)
+target_link_libraries(galois_shmem INTERFACE pygalois)
 target_link_libraries(galois_shmem PRIVATE Threads::Threads)
 target_link_libraries(galois_shmem PUBLIC galois_support)
 

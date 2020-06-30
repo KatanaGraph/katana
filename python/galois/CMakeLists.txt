@@ -55,6 +55,12 @@ python_extension_module(_bfs)
 add_dependencies(_bfs graphs)
 target_link_libraries(_bfs Galois::shmem)
 
+add_cython_target(_sssp _sssp.pyx shmem.pyx CXX OUTPUT_VAR SSSP_SOURCES)
+add_library(_sssp MODULE ${SSSP_SOURCES})
+python_extension_module(_sssp)
+add_dependencies(_sssp graphs)
+target_link_libraries(_sssp Galois::shmem)
+
 add_cython_target(_pagerank _pagerank.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
 add_library(_pagerank MODULE ${PAGERANK_SOURCES})
 python_extension_module(_pagerank)
@@ -67,8 +73,14 @@ python_extension_module(_jaccard)
 add_dependencies(_jaccard graphs)
 target_link_libraries(_jaccard Galois::shmem)
 
+add_cython_target(_connected_components _connected_components.pyx shmem.pyx CXX OUTPUT_VAR CONNECTED_COMPONENTS_SOURCES)
+add_library(_connected_components MODULE ${CONNECTED_COMPONENTS_SOURCES})
+python_extension_module(_connected_components)
+add_dependencies(_connected_components graphs)
+target_link_libraries(_connected_components Galois::shmem)
+
 install(
-  TARGETS shmem graphs _bfs _pagerank _jaccard
+  TARGETS shmem graphs _bfs _pagerank _jaccard _sssp _connected_components
   LIBRARY DESTINATION python/galois
 )
 

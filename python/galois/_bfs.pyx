@@ -159,6 +159,3 @@ def bfs(LC_CSR_Graph_Directed_uint32_t_void graph, unsigned int source):
     Initialize(&graph.underlying, source)
     bfs_sync(&graph.underlying, <GNodeCSR>source)
     # verify_bfs(&graph.underlying, <GNodeCSR>source)
-    
-
-

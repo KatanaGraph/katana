@@ -17,6 +17,7 @@ add_library(galois_query SHARED
   src/Matching.cpp
   src/SubgraphQuery.cpp
   src/IndexableChunkedArray.cpp
+  src/KFHandler.cpp
 )
 
 target_compile_definitions(galois_query PRIVATE GALOIS_USE_QUERY_GRAPH_TYPE=1)

@@ -1,7 +1,7 @@
 # cython: cdivision= True
 from galois.shmem cimport *
 from cython.operator cimport preincrement, dereference as deref
-from libstd.atomic cimport atomic
+from .cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t ComponentTy
 ctypedef atomic[ComponentTy] AtomicComponentTy
@@ -76,7 +76,7 @@ cdef void labelProp(Graph* graph):
                      disable_conflict_detection(),
                      loopname("labelPropAlgo"))
     T.stop()
-    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")
+    print("Elapsed time:", T.get(), "milliseconds.")
 
 
 
@@ -85,11 +85,8 @@ cdef void labelProp(Graph* graph):
 # Main callsite for CC
 #   
 def connectedComponents(int numThreads, string filename):
-    ## Hack: Need a better way to initialize shared
-    ## memory runtime.
-    sys = new SharedMemSys()
     cdef int new_numThreads = setActiveThreads(numThreads)
-    gPrint(b"Running Pagerank on : ", filename, b"\n")
+    print("Running Pagerank on:", filename)
     if new_numThreads != numThreads:
         print("Warning, using fewer threads than requested")
     

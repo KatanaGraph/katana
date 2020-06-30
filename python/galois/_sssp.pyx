@@ -1,7 +1,7 @@
 # cython: cdivision= True
 from galois.shmem cimport *
 from cython.operator cimport preincrement, dereference as deref
-from libstd.atomic cimport atomic
+from .cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t Dist
 ctypedef atomic[Dist] AtomicDist
@@ -18,10 +18,10 @@ ctypedef LC_CSR_Graph[AtomicDist, EdgeTy, dummy_true].GraphNode GNodeCSR
 cdef void printValue(Graph_CSR *g):
     cdef unsigned long numNodes = g[0].size()
     cdef AtomicDist *data
-    gPrint(b"Number of nodes : ", numNodes, b"\n")
+    print("Number of nodes:", numNodes)
     for n in range(numNodes):
         data = &g[0].getData(n)
-        gPrint(b"\t", data[0].load(), b"\n")         
+        print("\t", data[0].load())
 ##############################################################################
 ## SSSP implementation
 ###########################################################################
@@ -34,9 +34,9 @@ cdef void Initialize(Graph_CSR *g, unsigned long source):
     cdef:
         unsigned long numNodes = g[0].size()
         AtomicDist *data
-    gPrint(b"Number of nodes : ", numNodes, b"\n")
+    print("Number of nodes:", numNodes)
     for n in range(numNodes):
-        #gPrint(n,"\n")
+        #print(n)
         data = &g[0].getData(n)
         if(n == source):
             data[0].store(0)
@@ -98,7 +98,7 @@ cdef void ssspDeltaStep(Graph_CSR *graph, GNodeCSR source, uint32_t shift):
                                 disable_conflict_detection(),
                                 loopname("SSSP"))
     T.stop()
-    gPrint(b"Elapsed time:", T.get(), b" milliseconds.\n")        
+    print("Elapsed time:", T.get(), "milliseconds.")
 
 
 
@@ -129,7 +129,7 @@ cdef bool verify_sssp(Graph_CSR *graph, GNodeCSR source):
 
     data = &graph[0].getData(source)
     if(data[0].load() is not 0):
-        gPrint(b"ERROR: source has non-zero dist value == ", data[0].load(), b"\n")
+        print("ERROR: source has non-zero dist value ==", data[0].load())
     
     notVisited.store(0)
     with nogil:
@@ -138,23 +138,20 @@ cdef bool verify_sssp(Graph_CSR *graph, GNodeCSR source):
                 loopname("not_visited_op"))
 
     if(notVisited.load() > 0):
-        gPrint(notVisited.load(), b" unvisited nodes; this is an error if graph is strongly connected\n")
+        print(notVisited.load(), "unvisited nodes; this is an error if graph is strongly connected")
 
     with nogil:
         do_all(iterate(graph[0]),
                 bind_leading(&max_dist_operator, graph, &maxDist), no_pushes(), steal(),
                 loopname("not_visited_op"))
 
-    gPrint(b"Max distance : ", maxDist.reduce(), b"\n")
+    print("Max distance:", maxDist.reduce())
 
 
 #
 # Main callsite for SSSP
 #        
 def sssp(int numThreads, uint32_t shift, unsigned long source, string filename):
-    ## Hack: Need a better way to initialize shared
-    ## memory runtime.
-    sys = new SharedMemSys()
     cdef int new_numThreads = setActiveThreads(numThreads)
     if new_numThreads != numThreads:
         print("Warning, using fewer threads than requested")
@@ -165,13 +162,13 @@ def sssp(int numThreads, uint32_t shift, unsigned long source, string filename):
     ## Read the CSR format of graph
     ## directly from disk.
     graph.readGraphFromGRFile(filename)
-    gPrint(b"Using Source Node: ", source, b"\n");
+    print("Using Source Node:", source);
     Initialize(&graph, source)
     #printValue(&graph)
     #ssspWorklist(&graph, <GNodeCSR>source)
     ssspDeltaStep(&graph, <GNodeCSR>source, shift)
     #verify_sssp(&graph, <GNodeCSR>source)
-    gPrint(b"Node 1 has dist : ", graph.getData(1), b"\n")
+    print("Node 1 has dist:", graph.getData(1).load())
     
 
 

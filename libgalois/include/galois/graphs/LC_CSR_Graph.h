@@ -459,15 +459,6 @@ public:
                                          edge_end(N, mflag));
   }
 
-  /**
-   * @param N node to get degree for
-   * @param mflag how safe the acquire should be
-   * @returns Degree of node N
-   */
-  auto degree(GraphNode N) const {
-    return std::distance(raw_begin(N), raw_end(N));
-  }
-
   runtime::iterable<NoDerefIterator<edge_iterator>>
   out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return edges(N, mflag);
@@ -805,48 +796,6 @@ public:
    */
   const EdgeIndData& getEdgePrefixSum() const { return edgeIndData; }
 
-  //! Read topology of graph directly into allocated arrays (no edge data)
-  void readGraphTopology(int fd, size_t numNodes, size_t numEdges) {
-    // each array size
-    size_t edgeIndexSize = numNodes * sizeof(uint64_t);
-    size_t edgeDestSize  = numEdges * sizeof(uint32_t);
-    // offsets for mapping
-    size_t nodeIndexOffset = 4 * sizeof(uint64_t);
-    size_t edgeDataOffset =
-        (4 + numNodes) * sizeof(uint64_t) + (numEdges * sizeof(uint32_t));
-    // padding alignment
-    edgeDataOffset = (edgeDataOffset + 7) & ~7;
-
-    // move file descriptor to node index offsets array.
-    if ((int)nodeIndexOffset != lseek(fd, nodeIndexOffset, SEEK_SET)) {
-      GALOIS_DIE("Failed to move file pointer to edge index array.");
-    }
-
-    // node offsets
-    uint64_t numBytesToLoad = edgeIndexSize;
-    uint64_t bytesRead      = 0;
-    while (numBytesToLoad > 0) {
-      ssize_t numRead =
-          read(fd, ((char*)(edgeIndData.data())) + bytesRead, numBytesToLoad);
-      GALOIS_ASSERT(numRead != -1);
-      numBytesToLoad -= numRead;
-      bytesRead += numRead;
-    }
-    assert(numBytesToLoad == 0);
-
-    // edge destinations
-    numBytesToLoad = edgeDestSize;
-    bytesRead      = 0;
-    while (numBytesToLoad > 0) {
-      ssize_t numRead =
-          read(fd, ((char*)(edgeDst.data())) + bytesRead, numBytesToLoad);
-      GALOIS_ASSERT(numRead != -1);
-      numBytesToLoad -= numRead;
-      bytesRead += numRead;
-    }
-    assert(numBytesToLoad == 0);
-  }
-
   //! Set the edge data for a specified edge; assumes memory already allocated
   void setEdgeData(uint64_t e, const typename EdgeData::value_type& val) {
     edgeData.set(e, val);
@@ -1082,14 +1031,11 @@ public:
    * Return degrees in a vector; useful if degrees need to be accessed quickly
    * (1 memory access instead of 2 from subtracting begin and end)
    */
-  auto countDegrees() {
+  gstl::Vector<uint32_t> countDegrees() const {
     gstl::Vector<uint32_t> savedDegrees(numNodes);
     galois::do_all(
         galois::iterate(this->begin(), this->end()),
-        [&](unsigned v) {
-          savedDegrees[v] =
-              std::distance(this->edge_begin(v), this->edge_end(v));
-        },
+        [&](unsigned v) { savedDegrees[v] = this->getDegree(v); },
         galois::loopname("DegreeCounting"));
     return savedDegrees;
   }

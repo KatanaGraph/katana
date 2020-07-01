@@ -315,15 +315,6 @@ public:
   }
 
   /**
-   * @param N node to get in-degree for
-   * @param mflag how safe the acquire should be
-   * @returns In-degree of node N
-   */
-  auto in_degree(GraphNode N) const {
-    return std::distance(in_raw_begin(N), in_raw_end(N));
-  }
-
-  /**
    * Given an edge id for in edges, get the destination of the edge
    *
    * @param ni edge id
@@ -446,14 +437,11 @@ public:
    * Returns in-degrees in a vector; useful if in-degrees need to be accessed
    * quickly (1 memory access instead of 2 from subtracting begin and end).
    */
-  auto countInDegrees() {
+  gstl::Vector<uint32_t> countInDegrees() const {
     gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
     galois::do_all(
         galois::iterate(this->begin(), this->end()),
-        [&](unsigned v) {
-          savedInDegrees[v] =
-              std::distance(this->in_edge_begin(v), this->in_edge_end(v));
-        },
+        [&](unsigned v) { savedInDegrees[v] = this->getInDegree(v); },
         galois::loopname("InDegreeCounting"));
     return savedInDegrees;
   }

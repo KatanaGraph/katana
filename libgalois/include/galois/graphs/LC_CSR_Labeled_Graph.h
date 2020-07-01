@@ -283,17 +283,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Degree of node N
    */
-  auto degree(GraphNode N, const EdgeTy& data) const {
+  auto getDegree(GraphNode N, const EdgeTy& data) const {
     return std::distance(raw_begin(N, data), raw_end(N, data));
-  }
-
-  /**
-   * @param N node to get degree for
-   * @param mflag how safe the acquire should be
-   * @returns Degree of node N
-   */
-  auto degree(GraphNode N) const {
-    return std::distance(raw_begin(N), raw_end(N));
   }
 
   /**
@@ -374,17 +365,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns In-degree of node N
    */
-  auto in_degree(GraphNode N, const EdgeTy& data) const {
+  auto getInDegree(GraphNode N, const EdgeTy& data) const {
     return std::distance(in_raw_begin(N, data), in_raw_end(N, data));
-  }
-
-  /**
-   * @param N node to get in-degree for
-   * @param mflag how safe the acquire should be
-   * @returns In-degree of node N
-   */
-  auto in_degree(GraphNode N) const {
-    return std::distance(in_raw_begin(N), in_raw_end(N));
   }
 
   data_iterator data_begin() const { return edgeIndexToLabelMap.cbegin(); }

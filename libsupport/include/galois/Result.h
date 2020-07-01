@@ -2,6 +2,7 @@
 #define GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
 
 #include <boost/outcome/outcome.hpp>
+#include <cerrno>
 
 namespace galois {
 
@@ -10,6 +11,10 @@ using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<T>;
 
 static inline auto ResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();
+}
+
+static inline auto ResultErrno() {
+  return std::error_code(errno, std::system_category());
 }
 
 } // namespace galois

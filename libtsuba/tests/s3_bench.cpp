@@ -13,7 +13,9 @@
 
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include "galois/Logging.h"
 #include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 
 constexpr static const char* const s3_url_base =
     "s3://witchel-tests-east2/test-";
@@ -229,7 +231,7 @@ std::vector<long> test_s3(const uint8_t* data, uint64_t size, int batch,
     start = now();
     for (int i = 0; i < batch; ++i) {
       std::string s3url = MkS3url(i, 4);
-      int tsubaret      = tsuba::Store(s3url, data, size);
+      int tsubaret      = tsuba::FileStore(s3url, data, size);
       if (tsubaret != 0) {
         LogE("Tsuba store bad return {:d}\n", tsubaret);
       }
@@ -252,7 +254,7 @@ std::vector<long> test_s3_sync(const uint8_t* data, uint64_t size, int batch,
     start = now();
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreSync(s3url, data, size);
+      int tsubaret = tsuba::FileStoreSync(s3url, data, size);
       if (tsubaret != 0) {
         LogE("Tsuba store sync bad return {:d}\n", tsubaret);
       }
@@ -275,12 +277,12 @@ std::vector<long> test_s3_async_one(const uint8_t* data, uint64_t size,
     start = now();
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreAsync(s3url, data, size);
+      int tsubaret = tsuba::FileStoreAsync(s3url, data, size);
       if (tsubaret != 0) {
         LogE("Tsuba store async bad return {:d}\n", tsubaret);
       }
       // Only 1 outstanding store at a time
-      tsuba::StoreAsyncFinish(s3url);
+      tsuba::FileStoreAsyncFinish(s3url);
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
@@ -300,13 +302,13 @@ std::vector<long> test_s3_async_batch(const uint8_t* data, uint64_t size,
     start = now();
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreAsync(s3url, data, size);
+      int tsubaret = tsuba::FileStoreAsync(s3url, data, size);
       if (tsubaret != 0) {
         LogE("Tsuba store async bad return {:d}\n", tsubaret);
       }
     }
     for (auto s3url : s3urls) {
-      int ret = tsuba::StoreAsyncFinish(s3url);
+      int ret = tsuba::FileStoreAsyncFinish(s3url);
       if (ret != 0) {
         LogE("Tsuba store async bad return {:d}\n", ret);
       }
@@ -329,27 +331,27 @@ std::vector<long> test_s3_multi_async_batch(const uint8_t* data, uint64_t size,
     start = now();
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreMultiAsync1(s3url, data, size);
+      int tsubaret = tsuba::FileStoreMultiAsync1(s3url, data, size);
       if (tsubaret != 0) {
         LogE("Tsuba store multi async1 bad return {:d}\n", tsubaret);
       }
     }
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreMultiAsync2(s3url);
+      int tsubaret = tsuba::FileStoreMultiAsync2(s3url);
       if (tsubaret != 0) {
         LogE("Tsuba store multi async2 bad return {:d}\n", tsubaret);
       }
     }
     for (auto s3url : s3urls) {
       // Current API rejects empty writes
-      int tsubaret = tsuba::StoreMultiAsync3(s3url);
+      int tsubaret = tsuba::FileStoreMultiAsync3(s3url);
       if (tsubaret != 0) {
         LogE("Tsuba store multi async3 bad return {:d}\n", tsubaret);
       }
     }
     for (auto s3url : s3urls) {
-      int ret = tsuba::StoreMultiAsyncFinish(s3url);
+      int ret = tsuba::FileStoreMultiAsyncFinish(s3url);
       if (ret != 0) {
         LogE("Tsuba store multi async finish bad return {:d}\n", ret);
       }
@@ -417,7 +419,9 @@ struct {
 };
 
 int main() {
-  tsuba::Init();
+  if (auto init_good = tsuba::Init(); !init_good) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  }
   for (unsigned long i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
     init_data(datas[i].data, datas[i].size);
   }

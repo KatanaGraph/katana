@@ -2,6 +2,7 @@
 #include "galois/FileSystem.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
+#include "tsuba/file.h"
 #include "tsuba/tsuba.h"
 
 #include <boost/filesystem.hpp>
@@ -38,7 +39,7 @@ static void exponential(uint8_t bits[], std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::Stat(filename, &buf);
+  err = tsuba::FileStat(filename, &buf);
   GALOIS_LOG_ASSERT(!err);
   GALOIS_LOG_ASSERT(buf.size == running);
 
@@ -68,7 +69,7 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::Stat(filename, &buf);
+  err = tsuba::FileStat(filename, &buf);
   GALOIS_LOG_ASSERT(!err);
   GALOIS_LOG_ASSERT(buf.size == num_bytes);
 
@@ -105,7 +106,7 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::Stat(filename, &buf);
+  err = tsuba::FileStat(filename, &buf);
   GALOIS_LOG_ASSERT(!err);
   GALOIS_LOG_ASSERT(buf.size == num_bytes);
 

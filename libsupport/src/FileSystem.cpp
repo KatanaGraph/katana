@@ -34,7 +34,7 @@ galois::OpenUniqueFile(std::string_view prefix, std::string_view suffix) {
 
   int fd = mkstemps(buf.data(), suffix.length());
   if (fd < 0) {
-    return std::error_code(errno, std::system_category());
+    return galois::ResultErrno();
   }
 
   return std::make_pair(std::string(buf.begin(), buf.end() - 1), fd);

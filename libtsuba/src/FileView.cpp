@@ -8,7 +8,7 @@
 #include <string>
 
 #include "galois/Logging.h"
-#include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 
 namespace tsuba {
 
@@ -18,7 +18,7 @@ int FileView::Unbind() {
   if (valid_) {
     int err = 0;
     if (map_start_ != nullptr) {
-      err = Munmap(map_start_);
+      err = FileMunmap(map_start_);
     }
     valid_ = false;
     return err;
@@ -28,7 +28,7 @@ int FileView::Unbind() {
 
 int FileView::Bind(const std::string& filename) {
   StatBuf buf;
-  int err = Stat(filename, &buf);
+  int err = FileStat(filename, &buf);
   if (err) {
     return err;
   }
@@ -46,15 +46,15 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
     return -1;
   }
 
-  uint64_t file_off   = tsuba::RoundDownToBlock(begin);
-  uint64_t map_size   = tsuba::RoundUpToBlock(end - file_off);
+  uint64_t file_off   = RoundDownToBlock(begin);
+  uint64_t map_size   = RoundUpToBlock(end - file_off);
   int64_t region_size = end - begin;
   uint8_t* ptr        = nullptr;
 
   // size of 0 is an invalid thing to pass to Mmap, but we want to support
   // 0 length FileViews (useful for new files)
   if (map_size != 0) {
-    ptr = Mmap(filename, file_off, map_size);
+    ptr = FileMmap(filename, file_off, map_size);
     if (!ptr) {
       return -1;
     }

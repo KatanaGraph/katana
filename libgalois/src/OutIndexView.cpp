@@ -1,12 +1,12 @@
 #include "galois/OutIndexView.h"
-#include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 
 namespace galois {
 
 int OutIndexView::Bind() {
   struct GRHeader header;
   int err;
-  if (err = tsuba::Peek(filename_, &header); err) {
+  if (err = tsuba::FilePeek(filename_, &header); err) {
     perror(filename_.c_str());
     return err;
   }

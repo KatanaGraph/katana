@@ -4,7 +4,7 @@
 
 #include "galois/Logging.h"
 #include "galois/Platform.h"
-#include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 
 namespace tsuba {
 
@@ -89,7 +89,7 @@ int FileFrame::Persist() {
     GALOIS_LOG_DEBUG("No path provided to FileFrame");
     return -1;
   }
-  return tsuba::Store(path_, map_start_, cursor_);
+  return tsuba::FileStore(path_, map_start_, cursor_);
 }
 
 /////// Begin arrow::io::BufferOutputStream method definitions //////

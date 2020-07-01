@@ -44,6 +44,8 @@ public:
 
   ~FileView();
 
+  bool Equals(const FileView& other) const;
+
   int Bind(const std::string& filename, uint64_t begin, uint64_t end);
   inline int Bind(const std::string& filename, uint64_t stop) {
     return Bind(filename, 0, stop);

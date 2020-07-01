@@ -6,6 +6,7 @@
 #include "galois/Logging.h"
 #include "galois/Platform.h"
 #include "galois/Result.h"
+#include "tsuba/RDG.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
@@ -178,6 +179,19 @@ galois::Result<void> galois::graphs::PropertyFileGraph::Validate() {
   return galois::ResultSuccess();
 }
 
+galois::Result<void> galois::graphs::PropertyFileGraph::DoWrite(
+    std::shared_ptr<tsuba::RDGHandle> handle) {
+  if (!rdg_.topology_file_storage.Valid()) {
+    auto result = WriteTopology(topology_);
+    if (!result) {
+      return result.error();
+    }
+    return tsuba::Store(handle, &rdg_, result.value());
+  }
+
+  return tsuba::Store(handle, &rdg_);
+}
+
 galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
 galois::graphs::PropertyFileGraph::Make(tsuba::RDG&& rdg) {
   auto g = std::make_shared<PropertyFileGraph>(std::move(rdg));
@@ -219,24 +233,26 @@ galois::graphs::PropertyFileGraph::Make(
 }
 
 galois::Result<void> galois::graphs::PropertyFileGraph::Write() {
-  if (!rdg_.topology_file_storage.Valid()) {
-    auto result = WriteTopology(topology_);
-    if (!result) {
-      return result.error();
-    }
-    return tsuba::Store(rdg_, result.value());
-  }
-
-  return tsuba::Store(rdg_);
+  return DoWrite(handle_);
 }
 
 galois::Result<void>
 galois::graphs::PropertyFileGraph::Write(const std::string& name) {
-  if (auto res = tsuba::Rename(rdg_.handle, name, /* flags */ 0); !res) {
+  if (auto res = tsuba::Create(name); !res) {
     return res.error();
   }
+  auto open_res = tsuba::Open(name, tsuba::kReadWrite);
+  if (!open_res) {
+    return open_res.error();
+  }
+  std::shared_ptr<tsuba::RDGHandle> new_handle = std::move(open_res.value());
 
-  return Write();
+  if (auto res = DoWrite(new_handle); !res) {
+    return res.error();
+  }
+  handle_ = new_handle;
+
+  return galois::ResultSuccess();
 }
 
 galois::Result<void> galois::graphs::PropertyFileGraph::AddNodeProperties(

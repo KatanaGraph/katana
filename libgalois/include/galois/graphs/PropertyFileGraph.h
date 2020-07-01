@@ -55,6 +55,7 @@ struct GraphTopology {
 class PropertyFileGraph {
 
   tsuba::RDG rdg_;
+  std::shared_ptr<tsuba::RDGHandle> handle_;
 
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
@@ -62,6 +63,8 @@ class PropertyFileGraph {
 
   // sanity check che graph after loading
   Result<void> Validate();
+
+  Result<void> DoWrite(std::shared_ptr<tsuba::RDGHandle> handle);
 
 public:
   PropertyFileGraph();

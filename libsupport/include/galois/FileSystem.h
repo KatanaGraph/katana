@@ -4,8 +4,6 @@
 #include <string_view>
 #include <string>
 
-#include <boost/outcome/outcome.hpp>
-
 #include "galois/Result.h"
 
 namespace galois {

@@ -23,7 +23,7 @@ constexpr T RoundUpToBlock(T val) {
 }
 
 // Check to see if the name is formed in a way that tsuba expects
-static inline bool IsUri(std::string_view uri) {
+static inline bool IsS3URI(std::string_view uri) {
   return uri.find("s3://") == 0;
 }
 

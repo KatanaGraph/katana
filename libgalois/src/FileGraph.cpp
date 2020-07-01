@@ -301,7 +301,7 @@ void* FileGraph::fromArrays(uint64_t* out_idx, uint64_t num_nodes, void* outs,
 
 void FileGraph::fromFile(const std::string& filename) {
   int fd;
-  if (tsuba::IsUri(filename)) {
+  if (tsuba::IsS3URI(filename)) {
     fd = tsuba::FileOpen(filename);
   } else {
     fd = open(filename.c_str(), O_RDONLY);

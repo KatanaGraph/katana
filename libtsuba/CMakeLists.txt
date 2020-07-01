@@ -13,6 +13,7 @@ set(sources
 
 target_sources(tsuba PRIVATE ${sources})
 target_link_libraries(tsuba PUBLIC galois_support)
+target_compile_options(tsuba PRIVATE -Wmissing-declarations)
 
 find_package(Arrow CONFIG REQUIRED)
 if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 0.18)

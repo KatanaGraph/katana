@@ -70,6 +70,16 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   return 0;
 }
 
+bool FileView::Equals(const FileView& other) const {
+  if (!valid_ || !other.valid_) {
+    return false;
+  }
+  if (size() != other.size()) {
+    return false;
+  }
+  return memcmp(ptr<uint8_t>(), other.ptr<uint8_t>(), size()) == 0;
+}
+
 ////////////// Begin arrow::io::RandomAccessFile method definitions ////////////
 
 arrow::Status FileView::Close() {

@@ -16,6 +16,7 @@
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
@@ -28,39 +29,17 @@ namespace fs = boost::filesystem;
 
 namespace tsuba {
 
-struct PropertyMetadata {
-  std::string name;
-  std::string path;
-};
-
 struct RDGHandle {
-  std::string topology_path;
-  std::vector<tsuba::PropertyMetadata> node_properties;
-  std::vector<tsuba::PropertyMetadata> edge_properties;
-  std::vector<std::pair<std::string, std::string>> other_metadata;
-
   // Property paths are relative to metadata path
   std::string metadata_dir;
   std::string path;
 
+  /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const {
-    if (topology_path.empty() || metadata_dir.empty()) {
+    if (metadata_dir.empty()) {
+      GALOIS_LOG_DEBUG("metadata_dir: \"{}\" is empty", metadata_dir);
       return ErrorCode::InvalidArgument;
     }
-    if (topology_path.find('/') != std::string::npos) {
-      return ErrorCode::InvalidArgument;
-    }
-    for (const auto& md : node_properties) {
-      if (md.path.find('/') != std::string::npos) {
-        return ErrorCode::InvalidArgument;
-      }
-    }
-    for (const auto& md : edge_properties) {
-      if (md.path.find('/') != std::string::npos) {
-        return ErrorCode::InvalidArgument;
-      }
-    }
-
     return galois::ResultSuccess();
   }
 };
@@ -107,12 +86,17 @@ fs::path NewPath(const fs::path& dir, const std::string& prefix) {
 }
 
 galois::Result<void>
-PrunePropsTo(std::shared_ptr<tsuba::RDGHandle> handle,
-             const std::vector<std::string>& node_properties,
+PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
              const std::vector<std::string>& edge_properties) {
 
+  // this function should be called during load BEFORE properties are populated
+  assert(rdg->node_table->num_rows() == 0);
+  assert(rdg->node_table->num_columns() == 0);
+  assert(rdg->edge_table->num_rows() == 0);
+  assert(rdg->node_table->num_columns() == 0);
+
   std::unordered_map<std::string, std::string> node_paths;
-  for (const auto& m : handle->node_properties) {
+  for (const auto& m : rdg->node_properties) {
     node_paths.insert({m.name, m.path});
   }
 
@@ -130,7 +114,7 @@ PrunePropsTo(std::shared_ptr<tsuba::RDGHandle> handle,
   }
 
   std::unordered_map<std::string, std::string> edge_paths;
-  for (const auto& m : handle->edge_properties) {
+  for (const auto& m : rdg->edge_properties) {
     edge_paths.insert({m.name, m.path});
   }
 
@@ -147,8 +131,8 @@ PrunePropsTo(std::shared_ptr<tsuba::RDGHandle> handle,
     });
   }
 
-  handle->node_properties = next_node_properties;
-  handle->edge_properties = next_edge_properties;
+  rdg->node_properties = next_node_properties;
+  rdg->edge_properties = next_edge_properties;
 
   return galois::ResultSuccess();
 }
@@ -371,22 +355,16 @@ MakeProperties(std::vector<std::string>&& values) {
 ///
 /// The order of metadata fields is significant, and repeated metadata fields
 /// are used to encode lists of values.
-galois::Result<std::shared_ptr<tsuba::RDGHandle>>
-ReadMetadata(const std::string& metadata_path) {
-  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  int err = fv->Bind(metadata_path);
+galois::Result<tsuba::RDG>
+ReadMetadata(std::shared_ptr<tsuba::RDGHandle> handle) {
+  auto fv = std::make_shared<tsuba::FileView>();
+  int err = fv->Bind(handle->path);
   if (err) {
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  fs::path m_path{metadata_path};
-
-  // If we're opening a file for a new graph it will be empty
   if (fv->size() == 0) {
-    auto ret          = std::make_shared<tsuba::RDGHandle>();
-    ret->metadata_dir = m_path.parent_path().string();
-    ret->path         = metadata_path;
-    return ret;
+    return tsuba::RDG();
   }
 
   std::shared_ptr<parquet::FileMetaData> md = parquet::ReadMetaData(fv);
@@ -429,46 +407,39 @@ ReadMetadata(const std::string& metadata_path) {
     return edge_properties_result.error();
   }
 
-  auto ret = std::make_shared<tsuba::RDGHandle>(tsuba::RDGHandle{
-      .topology_path   = topology_path,
-      .node_properties = std::move(node_properties_result.value()),
-      .edge_properties = std::move(edge_properties_result.value()),
-      .other_metadata  = other_metadata,
-      .metadata_dir    = m_path.parent_path().string(),
-      .path            = metadata_path,
-  });
+  tsuba::RDG rdg;
 
-  auto validate_result = ret->Validate();
-  if (!validate_result) {
-    return validate_result.error();
-  }
+  rdg.node_properties = std::move(node_properties_result.value());
+  rdg.edge_properties = std::move(edge_properties_result.value());
+  rdg.other_metadata  = std::move(other_metadata);
+  rdg.topology_path   = std::move(topology_path);
 
-  return ret;
+  return tsuba::RDG(std::move(rdg));
 }
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
-MakeMetadata(const tsuba::RDGHandle& handle) {
+MakeMetadata(const tsuba::RDG& rdg) {
   std::vector<std::string> keys;
   std::vector<std::string> values;
 
   keys.emplace_back(topology_path_key);
-  values.emplace_back(handle.topology_path);
+  values.emplace_back(rdg.topology_path);
 
-  for (const auto& v : handle.node_properties) {
+  for (const auto& v : rdg.node_properties) {
     keys.emplace_back(node_property_name_key);
     values.emplace_back(v.name);
     keys.emplace_back(node_property_path_key);
     values.emplace_back(v.path);
   }
 
-  for (const auto& v : handle.edge_properties) {
+  for (const auto& v : rdg.edge_properties) {
     keys.emplace_back(edge_property_name_key);
     values.emplace_back(v.name);
     keys.emplace_back(edge_property_path_key);
     values.emplace_back(v.path);
   }
 
-  for (const auto& v : handle.other_metadata) {
+  for (const auto& v : rdg.other_metadata) {
     keys.emplace_back(v.first);
     values.emplace_back(v.second);
   }
@@ -477,6 +448,7 @@ MakeMetadata(const tsuba::RDGHandle& handle) {
 }
 
 galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
+                                   const tsuba::RDG& rdg,
                                    const arrow::Schema& schema) {
 
   std::shared_ptr<parquet::SchemaDescriptor> schema_descriptor;
@@ -487,7 +459,7 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
     return tsuba::ErrorCode::ArrowError;
   }
 
-  auto kvs = MakeMetadata(handle);
+  auto kvs = MakeMetadata(rdg);
   auto parquet_kvs =
       std::make_shared<parquet::KeyValueMetadata>(kvs.first, kvs.second);
   auto builder = parquet::FileMetaDataBuilder::Make(
@@ -530,23 +502,166 @@ galois::Result<void> CreateFile(std::string name, bool overwrite = false) {
   return galois::ResultSuccess();
 }
 
+galois::Result<void> DoLoad(std::shared_ptr<tsuba::RDGHandle> handle,
+                            tsuba::RDG* rdg) {
+  fs::path dir     = handle->metadata_dir;
+  auto node_result = AddTables(
+      dir, rdg->node_properties,
+      [&rdg, handle](const std::shared_ptr<arrow::Table>& table) {
+        return AddProperties(table, &rdg->node_table, &rdg->node_properties,
+                             /* new_properties = */ false);
+      });
+  if (!node_result) {
+    return node_result.error();
+  }
+
+  auto edge_result = AddTables(
+      dir, rdg->edge_properties,
+      [&rdg, handle](const std::shared_ptr<arrow::Table>& table) {
+        return AddProperties(table, &rdg->edge_table, &rdg->edge_properties,
+                             /* new_properties = */ false);
+      });
+  if (!edge_result) {
+    return edge_result.error();
+  }
+
+  fs::path t_path{dir};
+  t_path.append(rdg->topology_path);
+
+  if (int err = rdg->topology_file_storage.Bind(t_path.string()); err) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  rdg->rdg_dir = handle->metadata_dir;
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> DoStore(std::shared_ptr<tsuba::RDGHandle> handle,
+                             tsuba::RDG* rdg) {
+  if (rdg->topology_path.empty()) {
+    // No topology file; create one
+    fs::path t_path = NewPath(handle->metadata_dir, "topology");
+
+    int err = tsuba::FileStore(t_path.string(),
+                               rdg->topology_file_storage.ptr<uint8_t>(),
+                               rdg->topology_file_storage.size());
+    if (err) {
+      return tsuba::ErrorCode::InvalidArgument;
+    }
+    rdg->topology_path = t_path.filename().string();
+  }
+
+  auto node_write_result =
+      WriteTable(*rdg->node_table, rdg->node_properties, handle->metadata_dir);
+  if (!node_write_result) {
+    GALOIS_LOG_DEBUG("WriteTable for node_properties failed");
+    return node_write_result.error();
+  }
+  rdg->node_properties = std::move(node_write_result.value());
+
+  auto edge_write_result =
+      WriteTable(*rdg->edge_table, rdg->edge_properties, handle->metadata_dir);
+  if (!edge_write_result) {
+    GALOIS_LOG_DEBUG("WriteTable for edge_properties failed");
+    return edge_write_result.error();
+  }
+  rdg->edge_properties = std::move(edge_write_result.value());
+
+  auto merge_result = arrow::SchemaBuilder::Merge(
+      {rdg->node_table->schema(), rdg->edge_table->schema()},
+      arrow::SchemaBuilder::ConflictPolicy::CONFLICT_APPEND);
+  if (!merge_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", merge_result.status());
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  if (auto validate_result = handle->Validate(); !validate_result) {
+    GALOIS_LOG_DEBUG("RDGHandle failed to validate");
+    return validate_result.error();
+  }
+
+  if (auto validate_result = rdg->Validate(); !validate_result) {
+    GALOIS_LOG_DEBUG("rdg failed to validate");
+    return validate_result.error();
+  }
+
+  std::shared_ptr<arrow::Schema> merged = merge_result.ValueOrDie();
+
+  if (auto write_result = WriteMetadata(*handle, *rdg, *merged);
+      !write_result) {
+    GALOIS_LOG_DEBUG("metadata write error");
+    return write_result.error();
+  }
+
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> UnbindFromStorage(tsuba::RDG* rdg) {
+  for (auto& prop : rdg->node_properties) {
+    prop.path = "";
+  }
+  for (auto& prop : rdg->edge_properties) {
+    prop.path = "";
+  }
+  rdg->topology_path = "";
+  return galois::ResultSuccess();
+}
+
 } // namespace
 
 namespace tsuba {
 
-RDG::RDG() : handle(std::make_shared<tsuba::RDGHandle>()) {
+RDG::RDG() {
   std::vector<std::shared_ptr<arrow::Array>> empty;
   node_table = arrow::Table::Make(arrow::schema({}), empty, 0);
   edge_table = arrow::Table::Make(arrow::schema({}), empty, 0);
 }
 
-galois::Result<std::shared_ptr<tsuba::RDGHandle>>
-Open(const std::string& rdg_name, [[maybe_unused]] int flags) {
-  auto metadata_result = ReadMetadata(rdg_name);
-  if (!metadata_result) {
-    return metadata_result.error();
+galois::Result<void> RDG::Validate() const {
+  for (const auto& md : node_properties) {
+    if (md.path.find('/') != std::string::npos) {
+      GALOIS_LOG_DEBUG("node_property path doesn't contain a slash: \"{}\"",
+                       md.path);
+      return ErrorCode::InvalidArgument;
+    }
   }
-  return metadata_result;
+  for (const auto& md : edge_properties) {
+    if (md.path.find('/') != std::string::npos) {
+      GALOIS_LOG_DEBUG("edge_property path doesn't contain a slash: \"{}\"",
+                       md.path);
+      return ErrorCode::InvalidArgument;
+    }
+  }
+  if (topology_path.empty()) {
+    GALOIS_LOG_DEBUG("either topology_path: \"{}\" is empty", topology_path);
+    return ErrorCode::InvalidArgument;
+  }
+  if (topology_path.find('/') != std::string::npos) {
+    GALOIS_LOG_DEBUG("topology_path doesn't contain a slash: \"{}\"",
+                     topology_path);
+    return ErrorCode::InvalidArgument;
+  }
+  return galois::ResultSuccess();
+}
+
+bool RDG::Equals(const RDG& other) const {
+  return topology_file_storage.Equals(other.topology_file_storage) &&
+         node_table->Equals(*other.node_table, true) &&
+         edge_table->Equals(*other.edge_table, true);
+}
+
+galois::Result<std::shared_ptr<tsuba::RDGHandle>>
+Open(const std::string& metadata_path, [[maybe_unused]] int flags) {
+  fs::path m_path{metadata_path};
+
+  auto ret          = std::make_shared<tsuba::RDGHandle>();
+  ret->metadata_dir = m_path.parent_path().string();
+  ret->path         = metadata_path;
+  return ret;
+}
+
+galois::Result<void> Close([[maybe_unused]] std::shared_ptr<RDGHandle> handle) {
+  // nothing to do yet
+  return galois::ResultSuccess();
 }
 
 galois::Result<void> Create(const std::string& name) {
@@ -556,131 +671,83 @@ galois::Result<void> Create(const std::string& name) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> Rename(std::shared_ptr<RDGHandle> handle,
-                            const std::string& name, int flags) {
-  bool overwrite     = flags & kOverwrite;
-  auto create_result = CreateFile(name, overwrite);
-  if (!create_result) {
-    return create_result.error();
-  }
-
-  fs::path m_path{name};
-  // Property paths are relative to metadata path
-  handle->metadata_dir  = m_path.parent_path().string();
-  handle->path          = name;
-  handle->topology_path = "";
-  return galois::ResultSuccess();
+galois::Result<void> Rename([[maybe_unused]] std::shared_ptr<RDGHandle> handle,
+                            [[maybe_unused]] const std::string& name,
+                            [[maybe_unused]] int flags) {
+  return tsuba::ErrorCode::NotImplemented;
 }
 
 galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
-  RDG g;
-
-  fs::path dir     = handle->metadata_dir;
-  auto node_result = AddTables(
-      dir, handle->node_properties,
-      [&g, handle](const std::shared_ptr<arrow::Table>& table) {
-        return AddProperties(table, &g.node_table, &handle->node_properties,
-                             /* new_properties = */ false);
-      });
-  if (!node_result) {
-    return node_result.error();
+  auto rdg_res = ReadMetadata(handle);
+  if (!rdg_res) {
+    return rdg_res.error();
   }
+  RDG rdg(std::move(rdg_res.value()));
 
-  auto edge_result = AddTables(
-      dir, handle->edge_properties,
-      [&g, handle](const std::shared_ptr<arrow::Table>& table) {
-        return AddProperties(table, &g.edge_table, &handle->edge_properties,
-                             /* new_properties = */ false);
-      });
-  if (!edge_result) {
-    return edge_result.error();
+  if (auto res = DoLoad(handle, &rdg); !res) {
+    return res.error();
   }
-
-  fs::path t_path{dir};
-  t_path.append(handle->topology_path);
-
-  if (int err = g.topology_file_storage.Bind(t_path.string()); err) {
-    return ErrorCode::InvalidArgument;
-  }
-
-  g.handle = handle;
-
-  return RDG(std::move(g));
+  return RDG(std::move(rdg));
 }
 
 galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle,
                          const std::vector<std::string>& node_properties,
                          const std::vector<std::string>& edge_properties) {
 
-  if (auto res = PrunePropsTo(handle, node_properties, edge_properties); !res) {
+  auto rdg_res = ReadMetadata(handle);
+  if (!rdg_res) {
+    return rdg_res.error();
+  }
+  RDG rdg(std::move(rdg_res.value()));
+
+  if (auto res = PrunePropsTo(&rdg, node_properties, edge_properties); !res) {
     return res.error();
   }
-  return Load(handle);
+  if (auto res = DoLoad(handle, &rdg); !res) {
+    return res.error();
+  }
+  return RDG(std::move(rdg));
 }
 
-galois::Result<void> Store(const RDG& rdg) {
-  auto node_write_result = WriteTable(
-      *rdg.node_table, rdg.handle->node_properties, rdg.handle->metadata_dir);
-  if (!node_write_result) {
-    return node_write_result.error();
+galois::Result<void> Store(std::shared_ptr<tsuba::RDGHandle> handle, RDG* rdg) {
+  if (handle->metadata_dir != rdg->rdg_dir) {
+    if (auto res = UnbindFromStorage(rdg); !res) {
+      return res.error();
+    }
   }
-  rdg.handle->node_properties = std::move(node_write_result.value());
-
-  auto edge_write_result = WriteTable(
-      *rdg.edge_table, rdg.handle->edge_properties, rdg.handle->metadata_dir);
-  if (!edge_write_result) {
-    return edge_write_result.error();
-  }
-  rdg.handle->edge_properties = std::move(edge_write_result.value());
-
-  auto merge_result = arrow::SchemaBuilder::Merge(
-      {rdg.node_table->schema(), rdg.edge_table->schema()},
-      arrow::SchemaBuilder::ConflictPolicy::CONFLICT_APPEND);
-  if (!merge_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", merge_result.status());
-    return ErrorCode::ArrowError;
-  }
-
-  auto validate_result = rdg.handle->Validate();
-  if (!validate_result) {
-    return validate_result.error();
-  }
-
-  std::shared_ptr<arrow::Schema> merged = merge_result.ValueOrDie();
-
-  auto metadata_write_result = WriteMetadata(*rdg.handle, *merged);
-  if (!metadata_write_result) {
-    return metadata_write_result.error();
-  }
-
-  return galois::ResultSuccess();
+  return DoStore(handle, rdg);
 }
 
-galois::Result<void> Store(const RDG& rdg,
+galois::Result<void> Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
                            std::shared_ptr<tsuba::FileFrame> ff) {
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
+  if (handle->metadata_dir != rdg->rdg_dir) {
+    if (auto res = UnbindFromStorage(rdg); !res) {
+      return res.error();
+    }
+  }
 
-  fs::path t_path = NewPath(rdg.handle->metadata_dir, "topology");
+  fs::path t_path = NewPath(handle->metadata_dir, "topology");
   ff->Bind(t_path.string());
   int err = ff->Persist();
   if (err) {
     return ErrorCode::InvalidArgument;
   }
-  rdg.handle->topology_path = t_path.filename().string();
+  rdg->topology_path = t_path.filename().string();
 
-  return Store(rdg);
+  return DoStore(handle, rdg);
 }
 
 galois::Result<void>
 AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &rdg->node_table, &rdg->handle->node_properties,
+  return AddProperties(table, &rdg->node_table, &rdg->node_properties,
                        /* new_properties = */ true);
 }
 
 galois::Result<void>
 AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &rdg->edge_table, &rdg->handle->edge_properties,
+  return AddProperties(table, &rdg->edge_table, &rdg->edge_properties,
                        /* new_properties = */ true);
 }
 
@@ -693,7 +760,7 @@ galois::Result<void> DropNodeProperty(RDG* rdg, int i) {
 
   rdg->node_table = result.ValueOrDie();
 
-  auto& p = rdg->handle->node_properties;
+  auto& p = rdg->node_properties;
   assert(static_cast<unsigned>(i) < p.size());
   p.erase(p.begin() + i);
 
@@ -709,7 +776,7 @@ galois::Result<void> DropEdgeProperty(RDG* rdg, int i) {
 
   rdg->edge_table = result.ValueOrDie();
 
-  auto& p = rdg->handle->edge_properties;
+  auto& p = rdg->edge_properties;
   assert(static_cast<unsigned>(i) < p.size());
   p.erase(p.begin() + i);
 

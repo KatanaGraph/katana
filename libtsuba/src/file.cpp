@@ -140,7 +140,7 @@ public:
   }
   int Init(const std::string& uri, uint64_t offset, size_t size) {
     assert(!valid_);
-    if (tsuba::IsUri(uri)) {
+    if (tsuba::IsS3URI(uri)) {
       ptr_ = AllocAndReadS3(uri, offset, size);
     } else {
       ptr_ = MmapLocalFile(uri, offset, size);
@@ -166,7 +166,7 @@ std::unordered_map<uint8_t*, MappingDesc> allocated_memory;
 // Return 1: This is an S3 URL
 // Otherwise process as file and return 0 for success and -1 for fail
 int S3OrDoFile(const std::string& uri, const uint8_t* data, uint64_t size) {
-  if (tsuba::IsUri(uri)) {
+  if (tsuba::IsS3URI(uri)) {
     return 1;
   }
   std::ofstream ofile(uri);
@@ -222,7 +222,7 @@ int tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
 }
 
 int tsuba::FileStoreAsyncFinish(const std::string& uri) {
-  if (!IsUri(uri)) {
+  if (!IsS3URI(uri)) {
     return 0;
   }
   return DoWriteS3AsyncFinish(uri);
@@ -238,21 +238,21 @@ int tsuba::FileStoreMultiAsync1(const std::string& uri, const uint8_t* data,
 }
 
 int tsuba::FileStoreMultiAsync2(const std::string& uri) {
-  if (!IsUri(uri)) {
+  if (!IsS3URI(uri)) {
     return 0;
   }
   return DoWriteS3MultiAsync2(uri);
 }
 
 int tsuba::FileStoreMultiAsync3(const std::string& uri) {
-  if (!IsUri(uri)) {
+  if (!IsS3URI(uri)) {
     return 0;
   }
   return DoWriteS3MultiAsync3(uri);
 }
 
 int tsuba::FileStoreMultiAsyncFinish(const std::string& uri) {
-  if (!IsUri(uri)) {
+  if (!IsS3URI(uri)) {
     return 0;
   }
   return DoWriteS3MultiAsyncFinish(uri);
@@ -260,7 +260,7 @@ int tsuba::FileStoreMultiAsyncFinish(const std::string& uri) {
 
 int tsuba::FilePeek(const std::string& filename, uint8_t* result_buffer,
                     uint64_t begin, uint64_t size) {
-  if (!IsUri(filename)) {
+  if (!IsS3URI(filename)) {
     std::ifstream infile(filename);
     if (!infile.good()) {
       return -1;
@@ -279,7 +279,7 @@ int tsuba::FilePeek(const std::string& filename, uint8_t* result_buffer,
 }
 
 int tsuba::FileStat(const std::string& filename, StatBuf* s_buf) {
-  if (!IsUri(filename)) {
+  if (!IsS3URI(filename)) {
     struct stat local_s_buf;
     if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
       return ret;

@@ -16,7 +16,6 @@ int FileFrame::Destroy() {
     valid_  = false;
     return err;
   }
-  GALOIS_LOG_WARN("Attempted to destroy uninitialized FileFrame");
   return -1;
 }
 

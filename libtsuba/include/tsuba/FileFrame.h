@@ -32,12 +32,15 @@ public:
 
   FileFrame& operator=(FileFrame&& other) noexcept {
     if (&other != this) {
+      Destroy();
       path_        = other.path_;
       map_start_   = other.map_start_;
       map_size_    = other.map_size_;
       region_size_ = other.region_size_;
       cursor_      = other.cursor_;
       synced_      = other.synced_;
+      valid_       = other.valid_;
+      other.valid_ = false;
     }
     return *this;
   }

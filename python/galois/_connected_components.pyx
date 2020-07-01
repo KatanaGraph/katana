@@ -27,12 +27,9 @@ ctypedef LC_CSR_Graph[NodeTy, void, dummy_true].GraphNode GNode
 #
 cdef void initializeCompnents(Graph *g):
     cdef:
-        unsigned long numNodes = g[0].size()
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
-        NodeTy *data
+        unsigned long numNodes = g.size()
     for n in range(numNodes):
-        data = &g[0].getData(n)
+        data = &g.getData(n)
         data[0].comp_current.store(n)
         data[0].comp_old = numNodes
 
@@ -40,21 +37,14 @@ cdef void initializeCompnents(Graph *g):
 # LabelProp algorithm operator
 ##
 cdef void labelPropOperator(Graph *g, bool *work_done, GNode n) nogil:
-    cdef: 
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ii
-        LC_CSR_Graph[NodeTy, void, dummy_true].edge_iterator ei
-        NodeTy *src_data
-        NodeTy *dst_data
-    src_data = &g[0].getData(n, FLAG_UNPROTECTED)
-    if(src_data[0].comp_old > src_data[0].comp_current.load()):
-        src_data[0].comp_old = src_data[0].comp_current.load()
-        work_done[0] = 1        
-        ii = g[0].edge_begin(n, FLAG_UNPROTECTED)
-        ei = g[0].edge_end(n, FLAG_UNPROTECTED)
-        while ii != ei:
-                dst_data = &g[0].getData(g[0].getEdgeDst(ii), FLAG_UNPROTECTED)
-                atomicMin[ComponentTy](dst_data.comp_current, src_data.comp_current.load())
-                preincrement(ii)
+    src_data = &g.getData(n, FLAG_UNPROTECTED)
+    if src_data.comp_old > src_data.comp_current.load():
+        src_data.comp_old = src_data.comp_current.load()
+        work_done[0] = 1
+        edges = g.edges(n, FLAG_UNPROTECTED)
+        for ii in edges:
+            dst_data = &g.getData(g.getEdgeDst(ii), FLAG_UNPROTECTED)
+            atomicMin[ComponentTy](dst_data.comp_current, src_data.comp_current.load())
 ##
 # Label Propagation algorithm for 
 # finding connected components
@@ -82,21 +72,25 @@ cdef void labelProp(Graph* graph):
 
 
 #
-# Main callsite for CC
-#   
-def connectedComponents(int numThreads, string filename):
-    cdef int new_numThreads = setActiveThreads(numThreads)
-    print("Running Pagerank on:", filename)
-    if new_numThreads != numThreads:
-        print("Warning, using fewer threads than requested")
-    
-    print("Using {0} thread(s).".format(new_numThreads))
+# Main callsite for connected components
+#
+cdef class connected_components:
     cdef Graph graph
-    
-    ## Read the CSR format of graph
-    ## directly from disk.
-    graph.readGraphFromGRFile(filename)
-    
-    initializeCompnents(&graph)
-    labelProp(&graph)
-    #printValuePR(&graph)
+
+    def __init__(self, filename):
+        self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
+
+        initializeCompnents(&self.graph)
+        labelProp(&self.graph)
+
+    cpdef getData(self, int i):
+        if i < self.graph.size():
+            return self.graph.getData(i).comp_current.load()
+        else:
+            raise IndexError(i)
+
+    def __getitem__(self, int i):
+        return self.getData(i)
+
+    def __len__(self):
+        return self.graph.size()

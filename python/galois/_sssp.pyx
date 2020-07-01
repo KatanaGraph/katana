@@ -32,12 +32,9 @@ cdef void printValue(Graph_CSR *g):
 #
 cdef void Initialize(Graph_CSR *g, unsigned long source):
     cdef:
-        unsigned long numNodes = g[0].size()
-        AtomicDist *data
-    print("Number of nodes:", numNodes)
+        unsigned long numNodes = g.size()
     for n in range(numNodes):
-        #print(n)
-        data = &g[0].getData(n)
+        data = &g.getData(n)
         if(n == source):
             data[0].store(0)
         else:
@@ -49,33 +46,22 @@ ctypedef UpdateRequest[GNodeCSR, Dist] UpdateRequestObj
 # SSSP Delta step Operator to be executed on each Graph node
 #
 cdef void ssspOperator(Graph_CSR *g, UpdateRequestObj item, UserContext[UpdateRequestObj] &ctx) nogil:
-
-    cdef: 
-        LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ii
-        LC_CSR_Graph[uint32_t, void, dummy_true].edge_iterator ei
-        AtomicDist *src_data
-        AtomicDist *dst_data
-        Dist oldDist, newDist
+    cdef:
+        unsigned long numNodes = g.size()
         EdgeTy edge_data
-        GNodeCSR dst
-        unsigned long numNodes = g[0].size()
-    
-    src_data = &g[0].getData(item.src, FLAG_UNPROTECTED)    
-    ii = g[0].edge_begin(item.src, FLAG_UNPROTECTED)
-    ei = g[0].edge_end(item.src, FLAG_UNPROTECTED)
-    if(src_data.load() < item.dist):
+        Dist oldDist, newDist
+    src_data = &g.getData(item.src, FLAG_UNPROTECTED)
+    edges = g.edges(item.src, FLAG_UNPROTECTED)
+    if src_data.load() < item.dist:
         return
-    while ii != ei:
-            dst = g[0].getEdgeDst(ii)
-            dst_data = &g[0].getData(dst, FLAG_UNPROTECTED)
-            edge_data = g[0].getEdgeData(ii, FLAG_UNPROTECTED)
-            newDist = src_data[0].load() + edge_data
-
-            oldDist = atomicMin[Dist](dst_data[0], newDist)
-            if(newDist < oldDist):
-                ctx.push(UpdateRequestObj(dst, newDist))
-
-            preincrement(ii)
+    for ii in edges:
+        dst = g.getEdgeDst(ii)
+        dst_data = &g.getData(dst, FLAG_UNPROTECTED)
+        edge_data = g.getEdgeData(ii, FLAG_UNPROTECTED)
+        newDist = src_data[0].load() + edge_data
+        oldDist = atomicMin[Dist](dst_data[0], newDist)
+        if newDist < oldDist:
+            ctx.push(UpdateRequestObj(dst, newDist))
 
 ######
 # SSSP Delta step algo using OBIM 
@@ -148,27 +134,29 @@ cdef bool verify_sssp(Graph_CSR *graph, GNodeCSR source):
     print("Max distance:", maxDist.reduce())
 
 
+
 #
 # Main callsite for SSSP
-#        
-def sssp(int numThreads, uint32_t shift, unsigned long source, string filename):
-    cdef int new_numThreads = setActiveThreads(numThreads)
-    if new_numThreads != numThreads:
-        print("Warning, using fewer threads than requested")
-    
-    print("Using {0} thread(s).".format(new_numThreads))
+#
+cdef class sssp:
     cdef Graph_CSR graph
-    
-    ## Read the CSR format of graph
-    ## directly from disk.
-    graph.readGraphFromGRFile(filename)
-    print("Using Source Node:", source);
-    Initialize(&graph, source)
-    #printValue(&graph)
-    #ssspWorklist(&graph, <GNodeCSR>source)
-    ssspDeltaStep(&graph, <GNodeCSR>source, shift)
-    #verify_sssp(&graph, <GNodeCSR>source)
-    print("Node 1 has dist:", graph.getData(1).load())
-    
+
+    def __init__(self, uint32_t shift, unsigned long source, filename):
+        self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
+
+        Initialize(&self.graph, source)
+        ssspDeltaStep(&self.graph, <GNodeCSR>source, shift)
+
+    cpdef getData(self, int i):
+        if i < self.graph.size():
+            return self.graph.getData(i).load()
+        else:
+            raise IndexError(i)
+
+    def __getitem__(self, int i):
+        return self.getData(i)
+
+    def __len__(self):
+        return self.graph.size()
 
 

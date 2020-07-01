@@ -153,7 +153,10 @@ cdef class pagerank:
         pagerankPullTopo(&self.graph, max_iterations)
 
     cpdef getData(self, int i):
-        return self.graph.getData(i).rank
+        if i < self.graph.size():
+            return self.graph.getData(i).rank
+        else:
+            raise IndexError(i)
 
     def __getitem__(self, int i):
         return self.getData(i)

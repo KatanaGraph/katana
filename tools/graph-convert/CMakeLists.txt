@@ -51,16 +51,20 @@ install(TARGETS graph-convert-huge
 
 find_package(LibXml2 2.9.1 REQUIRED)
 
-add_library(graph-properties-convert-commmon STATIC graph-properties-convert.cpp)
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/csv-parser") 
+   message(FATAL_ERROR "Cannot find the csv-parser Git submodule. Please run `git submodule update --init --recursive`") 
+ endif() 
+
+add_library(graph-properties-convert-common STATIC graph-properties-convert.cpp)
 # -Wno-unkown-pragmas needed for dependency csv
-target_compile_options(graph-properties-convert-commmon PRIVATE -Wno-unknown-pragmas)
-target_include_directories(graph-properties-convert-commmon PRIVATE ${PROJECT_SOURCE_DIR}/external/csv-parser/single_include)
-target_link_libraries(graph-properties-convert-commmon PRIVATE LibXml2::LibXml2)
-target_link_libraries(graph-properties-convert-commmon PUBLIC galois_shmem)
+target_compile_options(graph-properties-convert-common PRIVATE -Wno-unknown-pragmas)
+target_include_directories(graph-properties-convert-common PRIVATE ${PROJECT_SOURCE_DIR}/external/csv-parser/single_include)
+target_link_libraries(graph-properties-convert-common PRIVATE LibXml2::LibXml2)
+target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem)
 
 add_executable(graph-properties-convert graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
-target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-commmon)
+target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets
   DESTINATION "${CMAKE_INSTALL_BINDIR}"

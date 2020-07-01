@@ -195,43 +195,100 @@ void addColumnBuilder(const std::string& column, bool forNode,
 }
 void addBuilder(ArrayBuilders* columnBuilders, ArrowFields* schemaVector,
                 KeyGraphML* key) {
-  switch (key->type) {
-  case ImportDataType::STRING: {
-    schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
-    columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
-    break;
-  }
-  case ImportDataType::INT64: {
-    schemaVector->push_back(arrow::field(key->name, arrow::int64()));
-    columnBuilders->push_back(std::make_shared<arrow::Int64Builder>());
-    break;
-  }
-  case ImportDataType::INT32: {
-    schemaVector->push_back(arrow::field(key->name, arrow::int32()));
-    columnBuilders->push_back(std::make_shared<arrow::Int32Builder>());
-    break;
-  }
-  case ImportDataType::DOUBLE: {
-    schemaVector->push_back(arrow::field(key->name, arrow::float64()));
-    columnBuilders->push_back(std::make_shared<arrow::DoubleBuilder>());
-    break;
-  }
-  case ImportDataType::FLOAT: {
-    schemaVector->push_back(arrow::field(key->name, arrow::float32()));
-    columnBuilders->push_back(std::make_shared<arrow::FloatBuilder>());
-    break;
-  }
-  case ImportDataType::BOOLEAN: {
-    schemaVector->push_back(arrow::field(key->name, arrow::boolean()));
-    columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
-    break;
-  }
-  default:
-    // for now handle uncaught types as strings
-    GALOIS_LOG_WARN("treating unknown type {} as string", key->type);
-    schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
-    columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
-    break;
+  if (!key->isList) {
+    switch (key->type) {
+    case ImportDataType::STRING: {
+      schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
+      columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+      break;
+    }
+    case ImportDataType::INT64: {
+      schemaVector->push_back(arrow::field(key->name, arrow::int64()));
+      columnBuilders->push_back(std::make_shared<arrow::Int64Builder>());
+      break;
+    }
+    case ImportDataType::INT32: {
+      schemaVector->push_back(arrow::field(key->name, arrow::int32()));
+      columnBuilders->push_back(std::make_shared<arrow::Int32Builder>());
+      break;
+    }
+    case ImportDataType::DOUBLE: {
+      schemaVector->push_back(arrow::field(key->name, arrow::float64()));
+      columnBuilders->push_back(std::make_shared<arrow::DoubleBuilder>());
+      break;
+    }
+    case ImportDataType::FLOAT: {
+      schemaVector->push_back(arrow::field(key->name, arrow::float32()));
+      columnBuilders->push_back(std::make_shared<arrow::FloatBuilder>());
+      break;
+    }
+    case ImportDataType::BOOLEAN: {
+      schemaVector->push_back(arrow::field(key->name, arrow::boolean()));
+      columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
+      break;
+    }
+    default:
+      // for now handle uncaught types as strings
+      GALOIS_LOG_WARN("treating unknown type {} as string", key->type);
+      schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
+      columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+      break;
+    }
+  } else {
+    auto* pool = arrow::default_memory_pool();
+    switch (key->type) {
+    case ImportDataType::STRING: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::utf8())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::StringBuilder>()));
+      break;
+    }
+    case ImportDataType::INT64: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::int64())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::Int64Builder>()));
+      break;
+    }
+    case ImportDataType::INT32: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::int32())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::Int32Builder>()));
+      break;
+    }
+    case ImportDataType::DOUBLE: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::float64())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::DoubleBuilder>()));
+      break;
+    }
+    case ImportDataType::FLOAT: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::float32())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::FloatBuilder>()));
+      break;
+    }
+    case ImportDataType::BOOLEAN: {
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::boolean())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::BooleanBuilder>()));
+      break;
+    }
+    default:
+      // for now handle uncaught types as strings
+      GALOIS_LOG_WARN("treating unknown array type {} as a string array",
+                      key->type);
+      schemaVector->push_back(
+          arrow::field(key->name, arrow::list(arrow::utf8())));
+      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+          pool, std::make_shared<arrow::StringBuilder>()));
+      break;
+    }
   }
 }
 
@@ -336,6 +393,137 @@ void rearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
   }
 }
 
+template <typename T, typename W>
+void rearrangeArray(std::shared_ptr<arrow::ListBuilder> builder, T* tBuilder,
+                    const std::shared_ptr<arrow::ListArray>& array,
+                    const std::shared_ptr<W>& tArray,
+                    const std::vector<size_t>& mapping) {
+  auto st = builder->Reserve(array->length());
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array");
+  }
+
+  for (size_t k = 0; k < mapping.size(); k++) {
+    size_t index = mapping[k];
+
+    if (array->IsNull(index)) {
+      st = builder->AppendNull();
+      if (!st.ok()) {
+        GALOIS_LOG_FATAL("Error appending null to an arrow array builder");
+      }
+      continue;
+    }
+    int32_t start = array->value_offset(index);
+    int32_t end   = array->value_offset(index + 1);
+
+    st = builder->Append();
+    for (int32_t s = start; s < end; s++) {
+      st = tBuilder->Append(tArray->Value(s));
+      if (!st.ok()) {
+        GALOIS_LOG_FATAL("Error appending value to an arrow array builder");
+      }
+    }
+  }
+}
+
+void rearrangeArray(std::shared_ptr<arrow::ListBuilder> builder,
+                    arrow::StringBuilder* sBuilder,
+                    const std::shared_ptr<arrow::ListArray>& array,
+                    const std::shared_ptr<arrow::StringArray>& sArray,
+                    const std::vector<size_t>& mapping) {
+  auto st = builder->Reserve(array->length());
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array");
+  }
+
+  for (size_t k = 0; k < mapping.size(); k++) {
+    size_t index = mapping[k];
+
+    if (array->IsNull(index)) {
+      st = builder->AppendNull();
+      if (!st.ok()) {
+        GALOIS_LOG_FATAL("Error appending null to an arrow array builder");
+      }
+      continue;
+    }
+    int32_t start = array->value_offset(index);
+    int32_t end   = array->value_offset(index + 1);
+
+    st = builder->Append();
+    for (int32_t s = start; s < end; s++) {
+      st = sBuilder->Append(sArray->GetView(s));
+      if (!st.ok()) {
+        GALOIS_LOG_FATAL("Error appending value to an arrow array builder");
+      }
+    }
+  }
+}
+
+std::shared_ptr<arrow::ListBuilder>
+rearrangeListArray(std::shared_ptr<arrow::ListArray> listArray,
+                   const std::vector<size_t>& mapping) {
+  auto* pool = arrow::default_memory_pool();
+  std::shared_ptr<arrow::ListBuilder> builder;
+
+  switch (listArray->values()->type_id()) {
+  case arrow::Type::STRING: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::StringBuilder>());
+    auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
+    auto sa = std::static_pointer_cast<arrow::StringArray>(listArray->values());
+    rearrangeArray(builder, sb, listArray, sa, mapping);
+    break;
+  }
+  case arrow::Type::INT64: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::Int64Builder>());
+    auto lb = static_cast<arrow::Int64Builder*>(builder->value_builder());
+    auto la = std::static_pointer_cast<arrow::Int64Array>(listArray->values());
+    rearrangeArray(builder, lb, listArray, la, mapping);
+    break;
+  }
+  case arrow::Type::INT32: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::Int32Builder>());
+    auto ib = static_cast<arrow::Int32Builder*>(builder->value_builder());
+    auto ia = std::static_pointer_cast<arrow::Int32Array>(listArray->values());
+    rearrangeArray(builder, ib, listArray, ia, mapping);
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::DoubleBuilder>());
+    auto db = static_cast<arrow::DoubleBuilder*>(builder->value_builder());
+    auto da = std::static_pointer_cast<arrow::DoubleArray>(listArray->values());
+    rearrangeArray(builder, db, listArray, da, mapping);
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::FloatBuilder>());
+    auto fb = static_cast<arrow::FloatBuilder*>(builder->value_builder());
+    auto fa = std::static_pointer_cast<arrow::FloatArray>(listArray->values());
+    rearrangeArray(builder, fb, listArray, fa, mapping);
+    break;
+  }
+  case arrow::Type::BOOL: {
+    builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::BooleanBuilder>());
+    auto bb = static_cast<arrow::BooleanBuilder*>(builder->value_builder());
+    auto ba =
+        std::static_pointer_cast<arrow::BooleanArray>(listArray->values());
+    rearrangeArray(builder, bb, listArray, ba, mapping);
+    break;
+  }
+  default: {
+    GALOIS_LOG_FATAL(
+        "Unsupported arrow array type passed to rearrangeListArray: {}",
+        listArray->values()->type_id());
+  }
+  }
+  return builder;
+}
+
 ArrayBuilders rearrangeTable(const ArrowArrays& initial,
                              const std::vector<size_t>& mapping) {
   ArrayBuilders rearranged;
@@ -388,6 +576,12 @@ ArrayBuilders rearrangeTable(const ArrowArrays& initial,
       rearranged.push_back(bb);
       break;
     }
+    case arrow::Type::LIST: {
+      auto la = std::static_pointer_cast<arrow::ListArray>(array);
+      auto lb = rearrangeListArray(la, mapping);
+      rearranged.push_back(lb);
+      break;
+    }
     default: {
       GALOIS_LOG_FATAL(
           "Unsupported arrow array type passed to rearrangeTable: {}",
@@ -397,6 +591,7 @@ ArrayBuilders rearrangeTable(const ArrowArrays& initial,
   }
   return rearranged;
 }
+
 StringBuilders rearrangeTable(const StringArrays& initial,
                               const std::vector<size_t>& mapping) {
   StringBuilders rearranged;
@@ -494,6 +689,212 @@ buildFinalEdges(StringBuilders* edgeColumnBuilders,
       buildTable(&finalTypeBuilders, edgeTypeSchemaVector));
 }
 
+std::vector<std::string> parseStringList(std::string rawList) {
+  std::vector<std::string> list;
+
+  if (rawList.size() >= 2 && rawList.front() == '[' && rawList.back() == ']') {
+    rawList.erase(0, 1);
+    rawList.erase(rawList.length() - 1, 1);
+  } else {
+    GALOIS_LOG_ERROR(
+        "The provided list was not formatted like neo4j, returning string");
+    list.push_back(rawList);
+    return list;
+  }
+
+  const char* charList = rawList.c_str();
+  // parse the list
+  for (size_t i = 0; i < rawList.size();) {
+    bool firstQuoteFound   = false;
+    bool foundEndOfElem    = false;
+    size_t startOfElem     = i;
+    int consecutiveSlashes = 0;
+
+    // parse the field
+    for (; !foundEndOfElem && i < rawList.size(); i++) {
+      // if second quote not escaped then end of element reached
+      if (charList[i] == '\"') {
+        if (consecutiveSlashes % 2 == 0) {
+          if (!firstQuoteFound) {
+            firstQuoteFound = true;
+            startOfElem     = i + 1;
+          } else if (firstQuoteFound) {
+            foundEndOfElem = true;
+          }
+        }
+        consecutiveSlashes = 0;
+      } else if (charList[i] == '\\') {
+        consecutiveSlashes++;
+      } else {
+        consecutiveSlashes = 0;
+      }
+    }
+    size_t endOfElem  = i - 1;
+    size_t elemLength = endOfElem - startOfElem;
+
+    if (endOfElem <= startOfElem) {
+      list.push_back("");
+    } else {
+
+      std::string elemRough(&charList[startOfElem], elemLength);
+      std::string elem("");
+      elem.reserve(elemRough.size());
+      size_t currIndex = 0;
+      size_t nextSlash = elemRough.find_first_of('\\');
+
+      while (nextSlash != std::string::npos) {
+        elem.append(elemRough.begin() + currIndex,
+                    elemRough.begin() + nextSlash);
+
+        switch (elemRough[nextSlash + 1]) {
+        case 'n':
+          elem.append("\n");
+          break;
+        case '\\':
+          elem.append("\\");
+          break;
+        case 'r':
+          elem.append("\r");
+          break;
+        case '0':
+          elem.append("\0");
+          break;
+        case 'b':
+          elem.append("\b");
+          break;
+        case '\'':
+          elem.append("\'");
+          break;
+        case '\"':
+          elem.append("\"");
+          break;
+        case 't':
+          elem.append("\t");
+          break;
+        case 'f':
+          elem.append("\f");
+          break;
+        case 'v':
+          elem.append("\v");
+          break;
+        case '\xFF':
+          elem.append("\xFF");
+          break;
+        default:
+          GALOIS_LOG_WARN("Unhandled escape character: {}",
+                          elemRough[nextSlash + 1]);
+        }
+
+        currIndex = nextSlash + 2;
+        nextSlash = elemRough.find_first_of('\\', currIndex);
+      }
+      elem.append(elemRough.begin() + currIndex, elemRough.end());
+
+      list.push_back(elem);
+    }
+  }
+
+  return list;
+}
+
+template <typename T>
+std::vector<T> parseNumberList(std::string rawList) {
+  std::vector<T> list;
+
+  if (rawList.front() == '[' && rawList.back() == ']') {
+    rawList.erase(0, 1);
+    rawList.erase(rawList.length() - 1, 1);
+  } else {
+    GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
+                     "returning empty vector");
+    return list;
+  }
+  std::vector<std::string> elems;
+  boost::split(elems, rawList, boost::is_any_of(","));
+
+  for (std::string s : elems) {
+    list.push_back(boost::lexical_cast<T>(s));
+  }
+  return list;
+}
+
+std::vector<bool> parseBooleanList(std::string rawList) {
+  std::vector<bool> list;
+
+  if (rawList.front() == '[' && rawList.back() == ']') {
+    rawList.erase(0, 1);
+    rawList.erase(rawList.length() - 1, 1);
+  } else {
+    GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
+                     "returning empty vector");
+    return list;
+  }
+  std::vector<std::string> elems;
+  boost::split(elems, rawList, boost::is_any_of(","));
+
+  for (std::string s : elems) {
+    bool boolVal = s[0] == 't' || s[0] == 'T';
+    list.push_back(boolVal);
+  }
+  return list;
+}
+
+void appendArray(std::shared_ptr<arrow::ListBuilder> lBuilder,
+                 const std::string& val) {
+  arrow::Status st = arrow::Status::OK();
+
+  switch (lBuilder->value_builder()->type()->id()) {
+  case arrow::Type::STRING: {
+    auto sb     = static_cast<arrow::StringBuilder*>(lBuilder->value_builder());
+    st          = lBuilder->Append();
+    auto sarray = parseStringList(val);
+    st          = sb->AppendValues(sarray);
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto lb     = static_cast<arrow::Int64Builder*>(lBuilder->value_builder());
+    st          = lBuilder->Append();
+    auto larray = parseNumberList<int64_t>(val);
+    st          = lb->AppendValues(larray);
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto ib     = static_cast<arrow::Int32Builder*>(lBuilder->value_builder());
+    st          = lBuilder->Append();
+    auto iarray = parseNumberList<int32_t>(val);
+    st          = ib->AppendValues(iarray);
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto db     = static_cast<arrow::DoubleBuilder*>(lBuilder->value_builder());
+    st          = lBuilder->Append();
+    auto darray = parseNumberList<double>(val);
+    st          = db->AppendValues(darray);
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto fb     = static_cast<arrow::FloatBuilder*>(lBuilder->value_builder());
+    st          = lBuilder->Append();
+    auto farray = parseNumberList<float>(val);
+    st          = fb->AppendValues(farray);
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto bb = static_cast<arrow::BooleanBuilder*>(lBuilder->value_builder());
+    st      = lBuilder->Append();
+    auto barray = parseBooleanList(val);
+    st          = bb->AppendValues(barray);
+    break;
+  }
+  default: {
+    break;
+  }
+  }
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error adding value to arrow list array builder");
+  }
+}
+
 void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
                  const std::string& val) {
   arrow::Status st = arrow::Status::OK();
@@ -528,6 +929,12 @@ void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
     auto bb      = std::static_pointer_cast<arrow::BooleanBuilder>(array);
     bool boolVal = val[0] == 't' || val[0] == 'T';
     st           = bb->Append(boolVal);
+    break;
+  }
+  case arrow::Type::LIST: {
+    // TODO handle non string lists
+    auto lb = std::static_pointer_cast<arrow::ListBuilder>(array);
+    appendArray(lb, val);
     break;
   }
   default: {
@@ -791,7 +1198,7 @@ bool processNode(xmlTextReaderPtr reader,
               boost::split(labels, data, boost::is_any_of(":"));
               extractedLabels = true;
             }
-          } else {
+          } else if (property.first != std::string("IGNORE")) {
             if (validNode) {
               auto keyIter = nodeKeys->find(property.first);
               // if an entry for the key does not already exist, make a default
@@ -936,7 +1343,7 @@ bool processEdge(xmlTextReaderPtr reader,
               type          = property.second;
               extractedType = true;
             }
-          } else {
+          } else if (property.first != std::string("IGNORE")) {
             if (validEdge) {
               auto keyIter = edgeKeys->find(property.first);
               // if an entry for the key does not already exist, make a default
@@ -1127,7 +1534,8 @@ GraphComponents convertGraphML(const std::string& infilename) {
         // if elt is a "key" xml node read it in
         if (xmlStrEqual(name, BAD_CAST "key")) {
           KeyGraphML key = processKey(reader);
-          if (key.id.size() > 0 && key.id != std::string("label")) {
+          if (key.id.size() > 0 && key.id != std::string("label") &&
+              key.id != std::string("IGNORE")) {
             if (key.forNode) {
               key.columnID = nodeKeys.size();
               nodeKeys.insert(std::pair(key.id, key));
@@ -1717,8 +2125,13 @@ void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
 
   galois::SharedMemSys sys;
 
-  std::string metaFile = dir + "/meta";
-  result               = graph.Write(metaFile);
+  std::string metaFile = dir;
+  if (metaFile[metaFile.length() - 1] == '/') {
+    metaFile += "meta";
+  } else {
+    metaFile += "/meta";
+  }
+  result = graph.Write(metaFile);
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs");
   }

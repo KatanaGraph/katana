@@ -59,11 +59,13 @@ install(TARGETS graph-convert-huge
 
 find_package(LibXml2 2.9.1 REQUIRED)
 find_package(date REQUIRED)
+find_package(mongocxx REQUIRED)
 
 add_library(graph-properties-convert-common STATIC graph-properties-convert.cpp Transforms.cpp)
 target_include_directories(graph-properties-convert-common PUBLIC .)
 target_link_libraries(graph-properties-convert-common PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem date::date)
+target_link_libraries(graph-properties-convert-common PRIVATE mongo::mongocxx_shared)
 
 add_executable(graph-properties-convert graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)

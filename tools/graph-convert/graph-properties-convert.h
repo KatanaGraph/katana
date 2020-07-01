@@ -11,7 +11,17 @@ namespace galois {
 
 enum SourceType { kGraphml, kKatana };
 enum SourceDatabase { kNone, kNeo4j, kMongodb };
-enum ImportDataType { kString, kInt64, kInt32, kDouble, kFloat, kBoolean };
+enum ImportDataType {
+  kString,
+  kInt64,
+  kInt32,
+  kDouble,
+  kFloat,
+  kBoolean,
+  kTimestampMilli,
+  kStruct,
+  kUnsupported
+};
 
 struct GraphComponents {
   std::shared_ptr<arrow::Table> node_properties;
@@ -43,6 +53,8 @@ void WritePropertyGraph(const GraphComponents& graph_comps,
                         const std::string& dir);
 void WritePropertyGraph(graphs::PropertyFileGraph prop_graph,
                         const std::string& dir);
+GraphComponents ConvertMongoDB(const std::string& dbName,
+                               const size_t chunk_size);
 
 } // end of namespace galois
 

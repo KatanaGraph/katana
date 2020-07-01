@@ -8,6 +8,8 @@
 
 #include <llvm/Support/CommandLine.h>
 
+#include <iostream>
+
 namespace cll = llvm::cl;
 
 namespace {
@@ -93,8 +95,9 @@ void ParseNeo4j() {
   }
 }
 
-void ParseMongoDB() {
-  GALOIS_LOG_WARN("MongoDB importing is under development");
+void ParseMongodb() {
+  auto graph = galois::ConvertMongoDB(input_filename, chunk_size);
+  galois::ConvertToPropertyGraphAndWrite(graph, output_directory);
 }
 
 } // namespace

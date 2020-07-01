@@ -2,11 +2,6 @@ add_executable(graph-properties-convert-test graph-properties-convert-test.cpp)
 target_include_directories(graph-properties-convert-test PRIVATE ..)
 target_link_libraries(graph-properties-convert-test PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert-test PRIVATE graph-properties-convert-commmon)
-install(TARGETS graph-properties-convert-test
-  EXPORT GaloisTargets
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  COMPONENT tools
-)
 
 add_test(NAME convert-properties-graphml
   COMMAND graph-properties-convert-test --graphml ${CMAKE_CURRENT_SOURCE_DIR}/test-inputs/movies.graphml

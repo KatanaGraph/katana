@@ -1,7 +1,9 @@
+set(RESULT_CHECKER ${PROJECT_SOURCE_DIR}/scripts/result_checker.py)
+
 function(add_test_scale type app)
   set(options NOT_QUICK)
   set(one_value_args)
-  set(multi_value_args REQUIRES COMMAND_PREFIX)
+  set(multi_value_args)
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
   set(threads)
@@ -15,7 +17,7 @@ function(add_test_scale type app)
   foreach (thr ${threads})
     set(name run-${type}-${app}-${thr})
     add_test(NAME ${name} COMMAND ${app} ${X_UNPARSED_ARGUMENTS} -t ${thr})
-    if (NOT ${X_NOT_QUICK})
+    if(NOT X_NOT_QUICK)
       # Allow parallel tests
       set_tests_properties(${name}
         PROPERTIES ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1 LABELS quick)
@@ -36,23 +38,30 @@ endfunction()
 function(add_test_gpu app input output baseoutputext)
   set(options NOT_QUICK)
   set(one_value_args)
-  set(multi_value_args REQUIRES COMMAND_PREFIX)
-  set(RESULT_CHECKER ${PROJECT_SOURCE_DIR}/scripts/result_checker.py)
-  set(suffix "-${app}-${input}")
+  set(multi_value_args)
+  set(suffix "-${app}-gpu-${input}")
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
   string(REPLACE "_" ";" app_list ${app})
   list(GET app_list 0 app_id)
-  set(baseoutput ${BASEOUTPUT}/${input}.${baseoutputext})
+  set(verification_log ${BASE_VERIFICATION}/${input}.${baseoutputext})
 
-  set(name run-${app}-${input})
-  if (EXISTS ${baseoutput})
-     add_test(NAME ${name} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
-     add_test(verify${suffix} python ${RESULT_CHECKER} -t=0.01 -sort=1 -delete=1 ${baseoutput} ${output})
+  if(EXISTS ${verification_log})
+    add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
+    add_test(NAME verify${suffix} COMMAND python ${RESULT_CHECKER} -t=0.01 -sort=1 -delete=1 ${verification_log} ${output})
   else()
-     add_test(NAME ${name} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
+    add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
   endif()
 endfunction(add_test_gpu)
+
+# Return canonical name of an application, e.g., pagerank-pull-dist => pagerank-pull
+function(stem_app app output)
+  string(REPLACE "-" ";" app_list ${app})
+  list(POP_BACK app_list)
+  list(JOIN app_list "-" result)
+
+  set(${output} ${result} PARENT_SCOPE)
+endfunction()
 
 
 if(GALOIS_ENABLE_DIST)
@@ -93,7 +102,7 @@ if(GALOIS_ENABLE_DIST)
       target_compile_definitions(${target_name} PRIVATE GALOIS_USE_BARE_MPI=1)
     endif()
 
-    if(GALOIS_ENABLE_GPU AND NOT ${X_NO_GPU})
+    if(GALOIS_ENABLE_GPU AND NOT X_NO_GPU)
       target_compile_definitions(${target_name} PRIVATE GALOIS_ENABLE_GPU=1)
       target_link_libraries(${target_name} ${target_name}_cuda)
 
@@ -105,47 +114,78 @@ if(GALOIS_ENABLE_DIST)
     endif()
   endfunction()
 
-  set(RESULT_CHECKER ${PROJECT_SOURCE_DIR}/scripts/result_checker.py)
-  cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/output")
-
   function(add_test_dist_and_verify app input type part N np)
-    set(options GPU NOT_QUICK)
+    set(options GPU NOT_QUICK NO_VERIFY)
     set(one_value_args)
     set(multi_value_args)
     cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
-    math(EXPR t "(${N} / ${np})")
-    string(REPLACE "_" ";" app_list ${app})
-    list(GET app_list 0 app_id)
-    set(output ${BASEOUTPUT}/${input}.${app_id})
+    math(EXPR threads "(${N} / ${np})")
 
-    set(suffix "-${app}-${type}-${input}-${part}-${np}")
-    if (EXISTS ${output})
-      add_test(run${suffix} mpiexec --bind-to none -n ${np} ./${app} ${X_UNPARSED_ARGUMENTS} -t=${t} -partition=${part} -output -outputLocation=${CMAKE_BINARY_DIR}/output)
-      add_test(verify${suffix} python ${RESULT_CHECKER} -t=0.01 -sort=1 -delete=1 ${output} ${CMAKE_BINARY_DIR}/output/*)
-    else()
-      add_test(run-${app}-${type}-${input}-${part}-${np} mpiexec --bind-to none -n ${np} ./${app} ${X_UNPARSED_ARGUMENTS} -t=${t} -partition=${part})
+    stem_app(${app} app_id)
+    set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${input})
+
+    set(suffix "-${app}-${input}-${type}-${part}-${N}-${np}")
+    set(output_location ${PROJECT_BINARY_DIR}/Testing/verify/run${suffix})
+    set(command mpiexec --bind-to none -n ${np} $<TARGET_FILE:${app}> ${X_UNPARSED_ARGUMENTS}
+        -t=${threads} -partition=${part})
+
+    if(NOT X_NO_VERIFY)
+      list(APPEND command -output -outputLocation=${output_location})
     endif()
 
-    if (${X_GPU})
+    add_test(NAME setup-clean${suffix}
+      COMMAND ${CMAKE_COMMAND} -E remove_directory ${output_location})
+    add_test(NAME setup-make${suffix}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${output_location})
+    add_test(NAME run${suffix} COMMAND ${command})
+
+    if(X_NO_VERIFY)
+      add_test(NAME verify${suffix}
+        COMMAND ${CMAKE_COMMAND} -E true)
+    else()
+      add_test(NAME verify${suffix}
+        COMMAND python ${RESULT_CHECKER} -t=0.01 -sort=1 ${verification_log} ${output_location})
+    endif()
+
+    # With fixtures, when ctest is given part of a test suite to run, it will
+    # automatically include any other FIXTURE_REQUIRED fixtures. A fixture is
+    # is just a collection of tests with the same FIXTURES_SETUP property. The
+    # fixture name is just an arbitrary string
+    set_tests_properties(setup-make${suffix} setup-clean${suffix}
+      PROPERTIES
+        FIXTURES_SETUP setup${suffix})
+    set_tests_properties(setup-make${suffix}
+      PROPERTIES
+        DEPENDS setup-clean${suffix})
+    set_tests_properties(run${suffix}
+      PROPERTIES
+        DEPENDS setup-make${suffix}
+        FIXTURES_REQUIRED setup${suffix}
+        FIXTURES_SETUP ${suffix}
+        ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1)
+    set_tests_properties(verify${suffix}
+      PROPERTIES
+        DEPENDS run${suffix}
+        FIXTURES_REQUIRED ${suffix})
+
+    if(X_GPU)
       set_tests_properties(run${suffix} PROPERTIES RUN_SERIAL true)
     endif()
 
-    if (NOT ${X_NOT_QUICK})
-      set_tests_properties(run${suffix}
-        PROPERTIES ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1 LABELS quick)
+    if(NOT X_NOT_QUICK)
+      set_tests_properties(verify${suffix} PROPERTIES LABELS quick)
     endif()
   endfunction()
 
   function(add_test_dist_for_partitions app input type num_threads num_gpus part)
     # cut threads in system in half first
-    if (${num_threads} GREATER 1)
+    if(${num_threads} GREATER 1)
       math(EXPR num_threads "${num_threads} / 2")
     endif()
 
     # spawn at most 8 processes/use at most 8 threads during testing
-    if (${num_threads} GREATER 8)
+    if(${num_threads} GREATER 8)
       set(num_threads 8)
     endif()
 
@@ -158,17 +198,14 @@ if(GALOIS_ENABLE_DIST)
     list(REVERSE partitions)
 
     foreach(np ${partitions})
-      if (np GREATER 1)
-        add_test_dist_and_verify(${app} ${input} ${type}-cpu ${part} ${num_threads} 1 ${ARGN})
-      endif()
       add_test_dist_and_verify(${app} ${input} ${type}-cpu ${part} ${num_threads} ${np} ${ARGN})
     endforeach()
 
-    if (NOT GALOIS_ENABLE_GPU)
+    if(NOT GALOIS_ENABLE_GPU)
       return()
     endif()
 
-    if (num_gpus LESS_EQUAL 0)
+    if(num_gpus LESS_EQUAL 0)
       return()
     endif()
 
@@ -193,14 +230,14 @@ if(GALOIS_ENABLE_DIST)
     cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
     set(num_gpus ${GALOIS_NUM_TEST_GPUS})
-    if (${X_NO_GPU})
+    if(X_NO_GPU)
       set(num_gpus 0)
     endif()
 
     set(num_threads ${GALOIS_NUM_TEST_THREADS})
 
     foreach (part oec iec cvc cvc-iec hovc hivc)
-      if (NOT ${X_NO_ASYNC})
+      if(NOT ${X_NO_ASYNC})
         add_test_dist_for_partitions(${app} ${input} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Sync)
         add_test_dist_for_partitions(${app} ${input} async ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Async)
       else()

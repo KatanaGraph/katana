@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cassert>
 #include <string>
-#include <iostream>
 
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
@@ -19,17 +18,17 @@ int FileView::Unbind() {
   if (valid_) {
     int err = 0;
     if (map_start_ != nullptr) {
-      err = tsuba::Munmap(map_start_);
+      err = Munmap(map_start_);
     }
     valid_ = false;
     return err;
   }
-  return 0;
+  return -1;
 }
 
 int FileView::Bind(const std::string& filename) {
-  tsuba::StatBuf buf;
-  int err = tsuba::Stat(filename, &buf);
+  StatBuf buf;
+  int err = Stat(filename, &buf);
   if (err) {
     return err;
   }
@@ -65,7 +64,7 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   map_size_     = map_size;
   region_size_  = region_size;
   map_start_    = ptr;
-  region_start_ = ptr + (begin & tsuba::kBlockOffsetMask); /* NOLINT */
+  region_start_ = ptr + (begin & kBlockOffsetMask); /* NOLINT */
   valid_        = true;
   cursor_       = 0;
   return 0;
@@ -73,7 +72,6 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
 
 ////////////// Begin arrow::io::RandomAccessFile method definitions ////////////
 
-// TODO: get error status from tsuba::Munmap via Unbind to return useful status?
 arrow::Status FileView::Close() {
   int err = Unbind();
   if (err) {
@@ -82,20 +80,34 @@ arrow::Status FileView::Close() {
   return arrow::Status::OK();
 }
 
-arrow::Result<long int> FileView::Tell() const { return cursor_; }
+arrow::Result<long int> FileView::Tell() const {
+  if (!valid_) {
+    return -1;
+  }
+  return cursor_;
+}
 
-bool FileView::closed() const { return valid_; }
+bool FileView::closed() const { return !valid_; }
 
 arrow::Status FileView::Seek(int64_t seek_to) {
-  if (seek_to > region_size_) {
+  if (!valid_) {
     return arrow::Status(arrow::StatusCode::Invalid,
-                         "Cannot Seek past end of file");
+                         "Cannot Seek in unbound FileView");
+  }
+  if (seek_to > region_size_ || seek_to < 0) {
+    const std::string message =
+        std::string("Cannot Seek to ") + std::to_string(seek_to) +
+        " in region of size " + std::to_string(region_size_);
+    return arrow::Status(arrow::StatusCode::Invalid, message);
   }
   cursor_ = seek_to;
   return arrow::Status::OK();
 }
 
 arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
+  if (nbytes <= 0 || !valid_) {
+    return std::make_shared<arrow::Buffer>(region_start_, 0);
+  }
   int64_t nbytes_internal = nbytes;
   if (cursor_ + nbytes > region_size_) {
     nbytes_internal = region_size_ - cursor_;
@@ -107,6 +119,12 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
 }
 
 arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
+  if (nbytes <= 0) {
+    return nbytes;
+  }
+  if (!valid_) {
+    return -1;
+  }
   int64_t nbytes_internal = nbytes;
   if (cursor_ + nbytes > region_size_) {
     nbytes_internal = region_size_ - cursor_;
@@ -118,7 +136,6 @@ arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
 
 arrow::Result<int64_t> FileView::GetSize() { return region_size_; }
 
-/////////////// End arrow::io::RandomAccessFile method definitions
-////////////////
+///// End arrow::io::RandomAccessFile method definitions /////////
 
 } // namespace tsuba

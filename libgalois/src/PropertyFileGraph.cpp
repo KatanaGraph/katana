@@ -7,6 +7,8 @@
 #include "galois/Platform.h"
 #include "galois/Result.h"
 #include "tsuba/tsuba.h"
+#include "tsuba/Errors.h"
+#include "tsuba/FileFrame.h"
 
 // TODO(ddn): add appropriate error codes, package Arrow errors better
 
@@ -92,68 +94,44 @@ LoadTopology(galois::graphs::GraphTopology* topology,
   return galois::ResultSuccess();
 }
 
-class MMapper {
-public:
-  MMapper(size_t s) {
-    void* p = galois::MmapPopulate(nullptr, s, PROT_READ | PROT_WRITE,
-                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (p == MAP_FAILED) {
-      perror("mmap");
-      p = nullptr;
-    }
-
-    size = s;
-    ptr  = p;
-  }
-
-  MMapper(const MMapper&) = delete;
-  MMapper&& operator=(const MMapper&) = delete;
-
-  ~MMapper() {
-    if (!ptr) {
-      return;
-    }
-    if (munmap(ptr, size)) {
-      perror("munmap");
-    }
-  }
-
-  void* ptr{};
-  size_t size{};
-};
-
-galois::Result<std::unique_ptr<MMapper>>
+galois::Result<std::shared_ptr<tsuba::FileFrame>>
 WriteTopology(const galois::graphs::GraphTopology& topology) {
-  // TODO(ddn): avoid buffer copy
+  auto ff = std::make_shared<tsuba::FileFrame>();
+  int err = ff->Init();
+  if (err) {
+    return tsuba::ErrorCode::OutOfMemory;
+  }
   uint64_t num_nodes = topology.num_nodes();
   uint64_t num_edges = topology.num_edges();
-  auto mmapper = std::make_unique<MMapper>(GetGraphSize(num_nodes, num_edges));
-  if (!mmapper->ptr) {
-    return galois::ErrorCode::InvalidArgument;
+
+  uint64_t data[4]      = {1, 0, num_nodes, num_edges};
+  arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
+  if (!aro_sts.ok()) {
+    return tsuba::ArrowToTsuba(aro_sts.code());
   }
 
-  uint64_t* data = reinterpret_cast<uint64_t*>(mmapper->ptr);
-  data[0]        = 1;
-  data[1]        = 0;
-  data[2]        = num_nodes;
-  data[3]        = num_edges;
-
   if (num_nodes) {
-    uint64_t* out   = &data[4];
     const auto* raw = topology.out_indices->raw_values();
-    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>,
-                                 std::decay_t<decltype(*out)>>);
-    std::copy_n(raw, num_nodes, out);
+    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint64_t>);
+    auto buf = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(raw), num_nodes * sizeof(uint64_t));
+    aro_sts = ff->Write(buf);
+    if (!aro_sts.ok()) {
+      return tsuba::ArrowToTsuba(aro_sts.code());
+    }
   }
 
   if (num_edges) {
-    uint32_t* out   = reinterpret_cast<uint32_t*>(&data[4 + num_nodes]);
     const auto* raw = topology.out_dests->raw_values();
-    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>,
-                                 std::decay_t<decltype(*out)>>);
-    std::copy_n(raw, num_edges, out);
+    static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint32_t>);
+    auto buf = std::make_shared<arrow::Buffer>(
+        reinterpret_cast<const uint8_t*>(raw), num_edges * sizeof(uint32_t));
+    aro_sts = ff->Write(buf);
+    if (!aro_sts.ok()) {
+      return tsuba::ArrowToTsuba(aro_sts.code());
+    }
   }
-  return std::unique_ptr<MMapper>(std::move(mmapper));
+  return ff;
 }
 
 galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
@@ -246,8 +224,7 @@ galois::Result<void> galois::graphs::PropertyFileGraph::Write() {
     if (!result) {
       return result.error();
     }
-    auto mmapper = std::move(result.value());
-    return tsuba::Store(rdg_, mmapper->ptr, mmapper->size);
+    return tsuba::Store(rdg_, result.value());
   }
 
   return tsuba::Store(rdg_);

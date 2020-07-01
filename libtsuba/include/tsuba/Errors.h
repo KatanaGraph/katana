@@ -3,6 +3,8 @@
 
 #include <system_error>
 
+#include <arrow/api.h>
+
 namespace tsuba {
 
 enum class ErrorCode {
@@ -12,7 +14,10 @@ enum class ErrorCode {
   NotImplemented  = 3,
   NotFound        = 4,
   Exists          = 5,
+  OutOfMemory     = 6,
 };
+
+ErrorCode ArrowToTsuba(arrow::StatusCode);
 
 } // namespace tsuba
 

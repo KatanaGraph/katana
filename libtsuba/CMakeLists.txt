@@ -4,6 +4,7 @@ set_target_properties(tsuba PROPERTIES EXPORT_NAME tsuba)
 set(sources
    src/tsuba_api.cpp
    src/FileView.cpp
+   src/FileFrame.cpp
    src/Errors.cpp
    src/RDG.cpp
    src/s3.cpp

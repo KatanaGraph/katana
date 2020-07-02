@@ -29,7 +29,7 @@ conan remote add kmaragon https://api.bintray.com/conan/kmaragon/conan
 mkdir build
 cd build
 conan install ../config --build=missing
-cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake -DCMAKE_CXX_COMPILER=g++-9 ..
+cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake ..
 make
 ```
 
@@ -41,12 +41,11 @@ C++17 standard. See README.md for specific tested versions.
 The above instructions should work if you have installed the C++ library
 dependencies in `scripts/setup_dev_ubuntu.sh` (e.g., llvm-dev, arrow) in their
 standard system locations (typically `/usr/lib` or `/usr/local/lib`). If you
-need to tell `cmake` about additional library locations, you can use the
-CMake option `CMAKE_PREFIX_PATH`, as in:
+need to tell `cmake` about additional library locations, you can use the CMake
+option `CMAKE_PREFIX_PATH`, as in:
 
 ```shell
 cmake -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake \
-  -DCMAKE_CXX_COMPILER=g++-9 \
   -DCMAKE_PREFIX_PATH=<path/to/cmakefiles/for/library>;<another/path> ..
 ```
 
@@ -176,3 +175,25 @@ The `conda build` commands will run some simple tests on the packages and will
 fail if the tests fail. These commands are primarily useful for debugging Conda
 build issues however, since the Conda build and install is very slow compared to
 a normal local build.
+
+# Continuous Integration
+
+## Caching
+
+For reference, the caches (`actions/cache`) are scoped to
+[branches](https://github.com/actions/cache#cache-scopes). The cache matching
+policy is:
+
+1. Exact key match on the current branch
+2. Prefix match of a restore key on the current branch. If there are multiple
+   matching keys, return the most recent entry.
+3. Repeat from 1 for the default branch
+
+Keys should be unique because once a cache entry is created it will
+never be updated by `actions/cache`.
+
+If you need to create a cache that simply stores the latest values, create a
+common prefix with a unique suffix (e.g., `github.sha`) and use the common
+prefix as a restore key. The unique key will not match any existing key but
+upon lookup there will be multiple matching cache entries sharing the common
+prefix, and `actions/cache` will return the most recent one.

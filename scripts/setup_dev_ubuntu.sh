@@ -19,11 +19,6 @@ fi
 sudo apt update
 sudo apt install libxml2-dev
 
-# installing g{cc,++}-9
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo apt update
-sudo apt install gcc-9 g++-9
-
 # installing up-to-date cmake https://apt.kitware.com/
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null \
   | gpg --dearmor - \

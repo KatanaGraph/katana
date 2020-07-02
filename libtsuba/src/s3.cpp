@@ -89,17 +89,20 @@ static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
   return GetS3Client(default_executor);
 }
 
-int S3Init() {
+galois::Result<void> S3Init() {
   Aws::InitAPI(sdk_options);
   default_executor =
       Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
           kAwsTag, kNumS3Threads);
   // Need context for async uploads
   async_s3_client = GetS3Client();
-  return 0;
+  return galois::ResultSuccess();
 }
 
-void S3Fini() { Aws::ShutdownAPI(sdk_options); }
+galois::Result<void> S3Fini() {
+  Aws::ShutdownAPI(sdk_options);
+  return galois::ResultSuccess();
+}
 
 static inline std::string BucketAndObject(const std::string& bucket,
                                           const std::string& object) {

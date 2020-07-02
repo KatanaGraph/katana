@@ -16,6 +16,7 @@
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/tsuba.h"
+#include "tsuba/FileFrame.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -237,17 +238,14 @@ WriteTable(const arrow::Table& table,
     std::shared_ptr<arrow::Table> column = arrow::Table::Make(
         arrow::schema({schema->field(i)}), {table.column(i)});
 
-    auto create_result = arrow::io::BufferOutputStream::Create();
-    if (!create_result.ok()) {
-      GALOIS_LOG_DEBUG("arrow error: {}", create_result.status());
-      return tsuba::ErrorCode::ArrowError;
+    auto ff = std::make_shared<tsuba::FileFrame>();
+    int err = ff->Init();
+    if (err) {
+      return tsuba::ErrorCode::OutOfMemory;
     }
 
-    std::shared_ptr<arrow::io::BufferOutputStream> out =
-        create_result.ValueOrDie();
-
     auto write_result =
-        parquet::arrow::WriteTable(*column, arrow::default_memory_pool(), out,
+        parquet::arrow::WriteTable(*column, arrow::default_memory_pool(), ff,
                                    std::numeric_limits<int64_t>::max());
 
     if (!write_result.ok()) {
@@ -255,15 +253,8 @@ WriteTable(const arrow::Table& table,
       return tsuba::ErrorCode::ArrowError;
     }
 
-    auto finish_result = out->Finish();
-    if (!finish_result.ok()) {
-      GALOIS_LOG_DEBUG("arrow error: {}", finish_result.status());
-      return tsuba::ErrorCode::ArrowError;
-    }
-
-    std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
-
-    int err = tsuba::Store(next_path.string(), buf->data(), buf->size());
+    ff->Bind(next_path.string());
+    err = ff->Persist();
     if (err) {
       return tsuba::ErrorCode::InvalidArgument;
     }
@@ -504,29 +495,19 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
       parquet_kvs);
   auto md = builder->Finish();
 
-  auto create_result = arrow::io::BufferOutputStream::Create();
-  if (!create_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", create_result.status());
-    return tsuba::ErrorCode::ArrowError;
+  auto ff = std::make_shared<tsuba::FileFrame>();
+  int err = ff->Init();
+  if (err) {
+    return tsuba::ErrorCode::OutOfMemory;
   }
 
-  std::shared_ptr<arrow::io::BufferOutputStream> out =
-      create_result.ValueOrDie();
-
-  auto write_result = parquet::arrow::WriteMetaDataFile(*md, out.get());
+  auto write_result = parquet::arrow::WriteMetaDataFile(*md, ff.get());
   if (!write_result.ok()) {
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  auto finish_result = out->Finish();
-  if (!finish_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", finish_result.status());
-    return tsuba::ErrorCode::ArrowError;
-  }
-
-  std::shared_ptr<arrow::Buffer> buf = finish_result.ValueOrDie();
-
-  int err = tsuba::Store(handle.path, buf->data(), buf->size());
+  ff->Bind(handle.path);
+  err = ff->Persist();
   if (err) {
     return tsuba::ErrorCode::InvalidArgument;
   }
@@ -675,14 +656,14 @@ galois::Result<void> Store(const RDG& rdg) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> Store(const RDG& rdg, const void* new_top_buf,
-                           size_t new_top_size) {
+galois::Result<void> Store(const RDG& rdg,
+                           std::shared_ptr<tsuba::FileFrame> ff) {
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
 
   fs::path t_path = NewPath(rdg.handle->metadata_dir, "topology");
-  int err         = Store(t_path.string(),
-                  reinterpret_cast<const uint8_t*>(new_top_buf), new_top_size);
+  ff->Bind(t_path.string());
+  int err = ff->Persist();
   if (err) {
     return ErrorCode::InvalidArgument;
   }

@@ -11,8 +11,8 @@
 
 namespace tsuba {
 
-int S3Init();
-void S3Fini();
+galois::Result<void> S3Init();
+galois::Result<void> S3Fini();
 galois::Result<int> S3Open(const std::string& bucket,
                            const std::string& object);
 uint64_t S3GetSize(const std::string& bucket, const std::string& object,

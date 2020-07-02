@@ -132,3 +132,47 @@ The LLVM project provides many useful development tools for C++:
 [clang-tidy](https://clang.llvm.org/extra/clang-tidy/), and
 [clangd](https://clangd.llvm.org/).  Most IDEs can be configured to use these
 tools automatically.
+
+# Building Conda Packages
+
+To build the Conda packages for Galois locally on your machine follow these instructions.
+Note that the Conda build takes over 10 minutes to complete and is not accelerated with 
+ccache.
+
+To setup your Conda environment (only needs to be done once):
+
+* Install Conda. See the [Conda User Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) for more details. 
+```shell
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+```
+* Log out and back in to pick up new environment variables. Then configure conda if needed:
+```shell
+conda config --set auto_activate_base false # If you don't want Conda to activate by default.
+```
+* Create an environment to use `conda build` in:
+```shell
+conda create -n galois-build -c conda-forge conda-build
+```
+
+To build the Conda packages:
+
+* Activate that environment:
+```shell
+conda activate galois-build
+```
+* Build the galois package:
+```shell
+cd $GALOIS_SOURCE_DIR
+conda build -c conda-forge conda_recipe/
+```
+* Build the galois-python package (The galois package must already have been built):
+```shell
+cd $GALOIS_SOURCE_DIR/python
+conda build -c conda-forge --use-local conda_recipe/
+```
+
+The `conda build` commands will run some simple tests on the packages and will 
+fail if the tests fail. These commands are primarily useful for debugging Conda
+build issues however, since the Conda build and install is very slow compared to
+a normal local build.

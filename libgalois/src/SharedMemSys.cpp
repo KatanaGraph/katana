@@ -18,7 +18,16 @@
  */
 
 #include "galois/SharedMemSys.h"
+#include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 
-galois::SharedMemSys::SharedMemSys() { tsuba::Init(); }
-galois::SharedMemSys::~SharedMemSys() { tsuba::Fini(); }
+galois::SharedMemSys::SharedMemSys() {
+  if (auto init_good = tsuba::Init(); !init_good) {
+    GALOIS_LOG_ERROR("tsuba::Init: {}", init_good.error());
+  }
+}
+galois::SharedMemSys::~SharedMemSys() {
+  if (auto fini_good = tsuba::Fini(); !fini_good) {
+    GALOIS_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
+  }
+}

@@ -27,7 +27,7 @@
 #include "galois/gIO.h"
 #include "galois/graphs/FileGraph.h"
 #include "galois/substrate/PageAlloc.h"
-#include "tsuba/tsuba.h"
+#include "tsuba/file.h"
 
 #include <cassert>
 #include <fstream>
@@ -302,7 +302,7 @@ void* FileGraph::fromArrays(uint64_t* out_idx, uint64_t num_nodes, void* outs,
 void FileGraph::fromFile(const std::string& filename) {
   int fd;
   if (tsuba::IsUri(filename)) {
-    fd = tsuba::Open(filename);
+    fd = tsuba::FileOpen(filename);
   } else {
     fd = open(filename.c_str(), O_RDONLY);
   }

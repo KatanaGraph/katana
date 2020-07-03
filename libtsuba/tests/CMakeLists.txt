@@ -36,3 +36,4 @@ add_executable(tsuba_dist_write tsuba_dist_write)
 target_link_libraries(tsuba_dist_write tsuba)
 
 add_test_unit(fileobjects)
+add_test_unit(s3-file)

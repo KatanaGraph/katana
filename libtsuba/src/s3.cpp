@@ -172,8 +172,9 @@ uint64_t S3GetSize(const std::string& bucket, const std::string& object,
   Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
   if (!outcome.IsSuccess()) {
     const auto& error = outcome.GetError();
-    std::cerr << "ERROR: " << error.GetExceptionName() << ": "
-              << error.GetMessage() << std::endl;
+    GALOIS_LOG_ERROR("S3GetSize\n  {}/{}\n  {}: {}\n",
+                     bucket, object, error.GetExceptionName(),
+                     error.GetMessage());
     return -1;
   }
   *size = outcome.GetResult().GetContentLength();

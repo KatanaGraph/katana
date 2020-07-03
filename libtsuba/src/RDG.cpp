@@ -18,6 +18,7 @@
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
+#include "tsuba/file.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -491,6 +492,7 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
 // will fail
 galois::Result<void> CreateFile(std::string name, bool overwrite = false) {
   fs::path m_path{name};
+  GALOIS_LOG_ASSERT(!tsuba::IsUri(name));
   if (overwrite && fs::exists(m_path)) {
     return tsuba::ErrorCode::Exists;
   }

@@ -162,7 +162,9 @@ if(GALOIS_ENABLE_DIST)
         DEPENDS setup-make${suffix}
         FIXTURES_REQUIRED setup${suffix}
         FIXTURES_SETUP ${suffix}
-        ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1)
+        # OpenMPI triggers a lot of leak warnings. Disable it during
+        # sanitizer builds for now.
+        ENVIRONMENT "GALOIS_DO_NOT_BIND_THREADS=1;ASAN_OPTIONS=detect_leaks=0")
     set_tests_properties(verify${suffix}
       PROPERTIES
         DEPENDS run${suffix}

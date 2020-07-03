@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  CypherCompiler cc;
+  querying::CypherCompiler cc;
   // get query to parse
   if (query != "") {
     cc.compile(query.c_str());

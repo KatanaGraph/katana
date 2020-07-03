@@ -20,10 +20,10 @@ if (Eigen_FOUND)
   add_test_scale(small-simple matrixcompletion-cpu -algo=simpleALS -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
 endif()
 
-add_test_scale(small-edge matrixcompletion-cpu -algo=sgdBlockEdge -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+add_test_scale(small-edge matrixcompletion-cpu NOT_QUICK -algo=sgdBlockEdge -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
 
-add_test_scale(small-jump matrixcompletion-cpu -algo=sgdBlockJump -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+add_test_scale(small-jump matrixcompletion-cpu NOT_QUICK -algo=sgdBlockJump -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
 
-add_test_scale(small-byitems matrixcompletion-cpu -algo=sgdByItems -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+add_test_scale(small-byitems matrixcompletion-cpu NOT_QUICK -algo=sgdByItems -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
 
-add_test_scale(small-byedges matrixcompletion-cpu -algo=sgdByEdges -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")
+add_test_scale(small-byedges matrixcompletion-cpu NOT_QUICK -algo=sgdByEdges -lambda=0.001 -learningRate=0.01 -learningRateFunction=intel -tolerance=0.01 -useSameLatentVector -useDetInit "${BASEINPUT}/weighted/bipartite/Epinions_dataset.gr")

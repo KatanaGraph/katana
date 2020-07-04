@@ -10,7 +10,11 @@ fmt/6.2.1
 aws-sdk-cpp:build_transfer = True
 aws-sdk-cpp:build_s3 = True
 aws-sdk-cpp:shared = True
+libcurl:shared=True
 
 [generators]
 cmake_find_package
 cmake_paths
+
+[imports]
+lib, *.dylib* -> /usr/local/lib/

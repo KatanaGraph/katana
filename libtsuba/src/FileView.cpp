@@ -80,7 +80,7 @@ arrow::Status FileView::Close() {
   return arrow::Status::OK();
 }
 
-arrow::Result<long int> FileView::Tell() const {
+arrow::Result<int64_t> FileView::Tell() const {
   if (!valid_) {
     return -1;
   }

@@ -64,12 +64,12 @@ public:
   ///// Begin arrow::io::RandomAccessFile methods ///////
 
   virtual arrow::Status Close();
-  virtual arrow::Result<long int> Tell() const;
+  virtual arrow::Result<int64_t> Tell() const;
   virtual bool closed() const;
   virtual arrow::Status Seek(int64_t);
-  virtual arrow::Result<long int> Read(int64_t, void*);
+  virtual arrow::Result<int64_t> Read(int64_t, void*);
   virtual arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t);
-  virtual arrow::Result<long int> GetSize();
+  virtual arrow::Result<int64_t> GetSize();
 
   ///// End arrow::io::RandomAccessFile methods ///////
 };

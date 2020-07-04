@@ -430,6 +430,21 @@ public:
     this->readGraphFromGRFile(filename);
     constructIncomingEdges();
   }
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Returns in-degrees in a vector; useful if in-degrees need to be accessed
+   * quickly (1 memory access instead of 2 from subtracting begin and end).
+   */
+  gstl::Vector<uint32_t> countInDegrees() const {
+    gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
+    galois::do_all(
+        galois::iterate(this->begin(), this->end()),
+        [&](unsigned v) { savedInDegrees[v] = this->getInDegree(v); },
+        galois::loopname("InDegreeCounting"));
+    return savedInDegrees;
+  }
 };
 
 } // namespace graphs

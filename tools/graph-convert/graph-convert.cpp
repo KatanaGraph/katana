@@ -201,6 +201,11 @@ static cll::opt<int>
 static cll::opt<int> maxDegree("maxDegree", cll::desc("maximum degree to keep"),
                                cll::init(2 * 1024));
 
+static cll::opt<bool>
+    dataAsLabel("dataAsLabel",
+                cll::desc("Use edge data as edge label (for neo4j/GraphFlow)"),
+                cll::init(false));
+
 struct Conversion {};
 struct HasOnlyVoidSpecialization {};
 struct HasNoVoidSpecialization {};
@@ -2681,11 +2686,16 @@ struct Gr2Neo4j : public Conversion {
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
     // TODO Need to figure out how we want to deal with labels
-
     using Graph           = galois::graphs::FileGraph;
     using GNode           = Graph::GraphNode;
     using EdgeData        = galois::LargeArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
+
+    // make sure if want to use edge data as a label that edge data actually
+    // exists
+    if (dataAsLabel) {
+      GALOIS_ASSERT(EdgeData::has_value, "No data to use as edge label");
+    }
 
     Graph graph;
     graph.fromFile(infilename);
@@ -2702,14 +2712,16 @@ struct Gr2Neo4j : public Conversion {
     std::string nodeFile = outfilename + ".nodes";
     std::ofstream fileN(nodeFile.c_str());
     for (size_t i = 0; i < graph.size(); i++) {
-      fileN << i << ",v\n";
+      // TODO make this label come from somewhere? random maybe?
+      fileN << i << ",0\n";
     }
     fileN.close();
 
     // output edge CSV with or without data for edge creation
     std::string edgeHFile = outfilename + ".edgesheader";
     std::ofstream fileHE(edgeHFile.c_str());
-    if (EdgeData::has_value) {
+    // only use edge data as value if data as label is not set
+    if (EdgeData::has_value && !dataAsLabel) {
       fileHE << ":START_ID,:END_ID,:TYPE,value\n";
     } else {
       fileHE << ":START_ID,:END_ID,:TYPE\n";
@@ -2727,11 +2739,16 @@ struct Gr2Neo4j : public Conversion {
                                 ej = graph.edge_end(src);
            jj != ej; ++jj) {
         GNode dst = graph.getEdgeDst(jj);
-        if (EdgeData::has_value) {
+        if (EdgeData::has_value && !dataAsLabel) {
           fileE << src << "," << dst << ",e,"
                 << graph.getEdgeData<edge_value_type>(jj) << "\n";
         } else {
-          fileE << src << "," << dst << ",e\n";
+          if (dataAsLabel) {
+            fileE << src << "," << dst << ","
+                  << graph.getEdgeData<edge_value_type>(jj) << "\n";
+          } else {
+            fileE << src << "," << dst << ",e\n";
+          }
         }
       }
     }

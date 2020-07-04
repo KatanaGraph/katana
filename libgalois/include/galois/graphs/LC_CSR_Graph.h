@@ -796,10 +796,16 @@ public:
    */
   const EdgeIndData& getEdgePrefixSum() const { return edgeIndData; }
 
+  //! Set the edge data for a specified edge; assumes memory already allocated
+  void setEdgeData(uint64_t e, const typename EdgeData::value_type& val) {
+    edgeData.set(e, val);
+  }
+
   auto divideByNode(size_t nodeSize, size_t edgeSize, size_t id, size_t total) {
     return galois::graphs::divideNodesBinarySearch(
         numNodes, numEdges, nodeSize, edgeSize, id, total, edgeIndData);
   }
+
   /**
    *
    * custom allocator for vector<vector<>>
@@ -1019,6 +1025,19 @@ public:
       auto r = divideByNode(0, 1, tid, total).first;
       this->setLocalRange(*r.first, *r.second);
     });
+  }
+
+  /**
+   * Return degrees in a vector; useful if degrees need to be accessed quickly
+   * (1 memory access instead of 2 from subtracting begin and end)
+   */
+  gstl::Vector<uint32_t> countDegrees() const {
+    gstl::Vector<uint32_t> savedDegrees(numNodes);
+    galois::do_all(
+        galois::iterate(this->begin(), this->end()),
+        [&](unsigned v) { savedDegrees[v] = this->getDegree(v); },
+        galois::loopname("DegreeCounting"));
+    return savedDegrees;
   }
 };
 

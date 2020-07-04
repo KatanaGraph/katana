@@ -98,7 +98,54 @@ def check_results(
     return (offset, errors, mrows, global_error_squared, num_nodes)
 
 
-def main(master_file, all_files, tolerance, mean_tolerance):
+def check_results_string_column(
+    masterFile,
+    otherFiles,
+    tolerance,
+    offset,
+    errors,
+    mrows,
+    global_error_squared,
+    num_nodes,
+):
+    """
+    Called if first column is a string (other version casts into a long which
+    is errorneous if string
+    """
+    with open(masterFile) as mfile, open(otherFiles) as ofile:
+        mfile.seek(offset)
+
+        for line2 in ofile:
+            line1 = mfile.readline()
+            offset = offset + len(line1)
+
+            split_line1 = line1.split(" ")
+            split_line2 = line2.split(" ")
+
+            if split_line1[0] == "":
+                print("ERROR: output longer than input")
+                return (0, errors, mrows)
+
+            # check to make sure row matches exactly between the files
+            if split_line1[0] == split_line2[0]:
+                # absolute value of difference in fields
+                field_difference = abs(float(split_line1[1]) - float(split_line2[1]))
+                global_error_squared += field_difference ** 2
+                num_nodes += 1
+
+                if field_difference > tolerance:
+                    print("NOT MATCHED \n")
+                    print(line1)
+                    print(line2)
+                    errors = errors + 1
+            else:
+                print("OFFSET MISMATCH: ", split_line1[0], split_line2[0])
+                return (-1, errors, mrows, global_error_squared, num_nodes)
+
+    return (offset, errors, mrows, global_error_squared, num_nodes)
+
+
+def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
     offset = 0
     errors = 0
     mrows = 0
@@ -107,16 +154,36 @@ def main(master_file, all_files, tolerance, mean_tolerance):
 
     for f in all_files:
         print("Checking", f, "offset =", offset)
-        offset, errors, mrows, global_error_squared, num_nodes = check_results(
-            master_file,
-            f,
-            tolerance,
-            offset,
-            errors,
-            mrows,
-            global_error_squared,
-            num_nodes,
-        )
+        if not stringcolumn:
+            offset, errors, mrows, global_error_squared, num_nodes = check_results(
+                master_file,
+                f,
+                tolerance,
+                offset,
+                errors,
+                mrows,
+                global_error_squared,
+                num_nodes,
+            )
+        else:
+            # first column is a string
+            (
+                offset,
+                errors,
+                mrows,
+                global_error_squared,
+                num_nodes,
+            ) = check_results_string_column(
+                master_file,
+                f,
+                tolerance,
+                offset,
+                errors,
+                mrows,
+                global_error_squared,
+                num_nodes,
+            )
+
         if offset == -1:
             break
 
@@ -179,6 +246,14 @@ if __name__ == "__main__":
         default=0.0001,
         help="tolerance for root mean square error",
     )
+    parser.add_argument(
+        "-stringcolumn",
+        "-c",
+        type=bool,
+        nargs=1,
+        default=False,
+        help="true if first column is a string",
+    )
 
     parsed_arguments = parser.parse_args()
 
@@ -202,14 +277,23 @@ if __name__ == "__main__":
         subprocess.check_call(cmd)
         all_files = [temp_file.name]
 
-    if parsed_arguments.delete:
-        for f in all_files:
-            os.remove(f)
+        # only delete if sorted; else you delete the thing you were going to
+        # compare with
+        if parsed_arguments.delete:
+            for f in all_files:
+                os.remove(f)
 
     tolerance = parsed_arguments.tolerance
     mean_tolerance = parsed_arguments.mean_tolerance
+    stringcolumn = parsed_arguments.stringcolumn
 
-    ret = main(master_file, all_files, tolerance, mean_tolerance)
+    print("Starting comparison...")
+    ret = main(master_file, all_files, tolerance, mean_tolerance, stringcolumn)
+
+    if not parsed_arguments.sort:
+        if parsed_arguments.delete:
+            for f in all_files:
+                os.remove(f)
 
     if ret:
         sys.exit(1)

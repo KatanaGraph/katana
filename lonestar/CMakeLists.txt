@@ -247,6 +247,7 @@ if(GALOIS_ENABLE_DIST)
   endfunction()
 endif()
 
+
 add_subdirectory(liblonestar)
 
 add_subdirectory(tutorial_examples)
@@ -255,3 +256,4 @@ add_subdirectory(analytics)
 add_subdirectory(eda)
 add_subdirectory(mining)
 add_subdirectory(scientific)
+add_subdirectory(querying)

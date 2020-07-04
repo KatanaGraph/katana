@@ -32,8 +32,11 @@ endfunction()
 
 add_executable(s3_bench s3_bench)
 target_link_libraries(s3_bench tsuba)
+
+add_executable(s3_pg_basics s3_pg_basics)
+target_link_libraries(s3_pg_basics tsuba)
+
 add_executable(tsuba_dist_write tsuba_dist_write)
 target_link_libraries(tsuba_dist_write tsuba)
 
 add_test_unit(fileobjects)
-add_test_unit(s3-file)

@@ -196,8 +196,6 @@ int tsuba::FileOpen(const std::string& uri) {
 
 int tsuba::FileStore(const std::string& uri, const uint8_t* data,
                      uint64_t size) {
-  GALOIS_LOG_DEBUG("FILE store {}\n", uri);
-  return 0; // XXX
   int ret = S3OrDoFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3(uri, data, size);

@@ -18,7 +18,6 @@
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
-#include "tsuba/file.h"
 
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -506,6 +505,80 @@ galois::Result<void> CreateFile(std::string name, bool overwrite = false) {
 
 galois::Result<void> DoLoad(std::shared_ptr<tsuba::RDGHandle> handle,
                             tsuba::RDG* rdg) {
+} // namespace
+
+namespace tsuba {
+
+RDG::RDG() : handle(std::make_shared<tsuba::RDGHandle>()) {
+  std::vector<std::shared_ptr<arrow::Array>> empty;
+  node_table = arrow::Table::Make(arrow::schema({}), empty, 0);
+  edge_table = arrow::Table::Make(arrow::schema({}), empty, 0);
+}
+
+galois::Result<std::shared_ptr<tsuba::RDGHandle>>
+Open(const std::string& rdg_name, [[maybe_unused]] int flags) {
+  auto metadata_result = ReadMetadata(rdg_name);
+  if (!metadata_result) {
+    return metadata_result.error();
+  }
+  return metadata_result;
+}
+
+/// dissociate RDG from the handle that was used to create it
+galois::Result<void> RDG::Detach() {
+  auto new_handle = std::make_shared<tsuba::RDGHandle>();
+
+  new_handle->node_properties = std::move(handle->node_properties);
+  for (auto& prop : new_handle->node_properties) {
+    prop.path = "";
+  }
+  new_handle->edge_properties = std::move(handle->edge_properties);
+  for (auto& prop : new_handle->edge_properties) {
+    prop.path = "";
+  }
+  new_handle->other_metadata = std::move(handle->other_metadata);
+
+  handle = new_handle;
+  return galois::ResultSuccess();
+}
+
+bool RDG::Equals(const RDG& other) const {
+  return topology_file_storage.Equals(other.topology_file_storage) &&
+         node_table->Equals(*other.node_table, true) &&
+         edge_table->Equals(*other.edge_table, true);
+}
+    
+galois::Result<void> Create(const std::string& name) {
+  if (auto good = CreateFile(name); !good) {
+    return good.error();
+  }
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> Rename(std::shared_ptr<RDGHandle> handle,
+                            const std::string& name, int flags) {
+  if (!handle->path.empty()) {
+    GALOIS_LOG_ERROR("Only support renaming in memory rdgs (so far)");
+    return tsuba::ErrorCode::NotImplemented;
+  }
+  bool overwrite     = flags & kOverwrite;
+  auto create_result = CreateFile(name, overwrite);
+  if (!create_result) {
+    return create_result.error();
+  }
+
+  fs::path m_path{name};
+  // Property paths are relative to metadata path
+  handle->metadata_dir  = m_path.parent_path().string();
+  handle->path          = name;
+  handle->topology_path = "";
+  return galois::ResultSuccess();
+}
+
+galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
+  RDG g;
+
+>>>>>>> libtsuba: init S3
   fs::path dir     = handle->metadata_dir;
   auto node_result = AddTables(
       dir, rdg->node_properties,

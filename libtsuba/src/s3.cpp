@@ -44,8 +44,9 @@ static constexpr const uint64_t kNumS3Threads = 36;
 
 // Initialized in S3Init
 static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-    default_executor;
+default_executor{nullptr};
 static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
+static bool library_init{false};
 
 /// GetS3Client returns a configured S3 client.
 ///
@@ -85,11 +86,31 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
   return Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
 }
 
+//////////////////////////////////////////////////////////////////////
+// Logging
+//   I wish log level was conditioned on environment variable
+//   I would also use an environment variable to disable __FILE__ __LINE__
+//   Might be nice to compile out VERBOSE statements for release builds or
+//     make DEBUG output conditional on an environment var.
+//   And of course I would prefer V: to VERBOSE:
+template <typename... Args>
+void LogAssert(bool condition, const char* format, const Args&... args) {
+  if (!condition) {
+    fmt::vprint(stderr, format, fmt::make_format_args(args...));
+    // I'm not proud of having to do this
+    fmt::vprint(stderr, "{}", fmt::make_format_args("\n"));
+    abort();
+  }
+}
+
 static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
+  LogAssert(library_init == true,
+            "Must call tsuba::Init before S3 interaction");
   return GetS3Client(default_executor);
 }
 
 galois::Result<void> S3Init() {
+  library_init = true;
   Aws::InitAPI(sdk_options);
   default_executor =
       Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
@@ -107,23 +128,6 @@ galois::Result<void> S3Fini() {
 static inline std::string BucketAndObject(const std::string& bucket,
                                           const std::string& object) {
   return std::string(bucket).append("/").append(object);
-}
-
-//////////////////////////////////////////////////////////////////////
-// Logging
-//   I wish log level was conditioned on environment variable
-//   I would also use an environment variable to disable __FILE__ __LINE__
-//   Might be nice to compile out VERBOSE statements for release builds or
-//     make DEBUG output conditional on an environment var.
-//   And of course I would prefer V: to VERBOSE:
-template <typename... Args>
-void LogAssert(bool condition, const char* format, const Args&... args) {
-  if (!condition) {
-    fmt::vprint(stderr, format, fmt::make_format_args(args...));
-    // I'm not proud of having to do this
-    fmt::vprint(stderr, "{}", fmt::make_format_args("\n"));
-    abort();
-  }
 }
 
 std::pair<std::string, std::string> S3SplitUri(const std::string& uri) {
@@ -172,9 +176,8 @@ uint64_t S3GetSize(const std::string& bucket, const std::string& object,
   Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
   if (!outcome.IsSuccess()) {
     const auto& error = outcome.GetError();
-    GALOIS_LOG_ERROR("S3GetSize\n  {}/{}\n  {}: {}\n",
-                     bucket, object, error.GetExceptionName(),
-                     error.GetMessage());
+    GALOIS_LOG_ERROR("S3GetSize\n  [{}] {}\n  {}: {}\n", bucket, object,
+                     error.GetExceptionName(), error.GetMessage());
     return -1;
   }
   *size = outcome.GetResult().GetContentLength();
@@ -352,6 +355,8 @@ static std::condition_variable xfer_cv;
 // }
 int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
                      const uint8_t* data, uint64_t size) {
+  LogAssert(library_init == true,
+            "Must call tsuba::Init before S3 interaction");
   // TODO: Check total size is less than 5TB
   // TODO: If we fix kS3BufSize at MB(5), then check size less than 48.8GB
   if (size == 0) {
@@ -580,6 +585,8 @@ static std::condition_variable bnocv;
 int S3PutSingleAsync(const std::string& bucket, const std::string& object,
                      const uint8_t* data, uint64_t size) {
   Aws::S3::Model::PutObjectRequest object_request;
+  LogAssert(library_init == true,
+            "Must call tsuba::Init before S3 interaction");
 
   object_request.SetBucket(ToAwsString(bucket));
   object_request.SetKey(ToAwsString(object));

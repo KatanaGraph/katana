@@ -9,19 +9,22 @@
 #include "tsuba/RDG.h"
 
 // static uint8_t data_100[100];
-constexpr static const char* const s3_prop_graphs[] = {
-  "s3://witchel-tests-east2/test-0000",
-//    "s3://katana-ci/yago-shapes/meta",
-    //  "s3://property-graphs/katana/yago-schema/meta",
+std::vector<std::string> s3_pg_inputs = {
+//  "s3://katana-ci/yago-shapes/meta",
+    "s3://property-graphs/katana/yago-schema/meta",
     //  "s3://property-graphs/katana/ldbc_003/meta",
     //  "s3://property-graphs/katana/yago-shapes/meta",
 };
 
-constexpr static const char* const s3_dst_path =
-    "s3://witchel-tests-east2/katana-ci/yago-shapes/meta";
+std::vector<std::string> s3_pg_outputs = {
+//  "s3://witchel-tests-east2/katana-ci/yago-shapes/meta",
+   "s3://witchel-tests-east2/katana/yago-schema/meta",
+  //  "s3://witchel-tests-east2/katana/ldbc_003/meta",
+  //  "s3://witchel-tests-east2/katana/yago-shapes/meta",
+};
 
-void DownloadGraph(const std::string& s3_prop_graph) {
-  auto handle_res = tsuba::Open(s3_prop_graph, tsuba::kReadOnly);
+void CopyGraph(const std::string& s3_pg_in, const std::string& s3_pg_out) {
+  auto handle_res = tsuba::Open(s3_pg_in, tsuba::kReadOnly);
   if (!handle_res) {
     GALOIS_LOG_FATAL("Open rdg: {}", handle_res.error());
   }
@@ -31,10 +34,15 @@ void DownloadGraph(const std::string& s3_prop_graph) {
   // std::shared_ptr<tsuba::RDGHandle> rdg =
   // std::make_shared<tsuba::FileView>(rdg_res.value());
 
+  // NB: Current limitation of API requires Detach call
+  if (auto res = rdg.Detach(); !res) {
+    GALOIS_LOG_FATAL("Detach rdg: {}", res.error());
+  }
+
   if (auto rename_res =
-          tsuba::Rename(rdg.handle, s3_dst_path, tsuba::kReadWrite);
+          tsuba::Rename(rdg.handle, s3_pg_out, tsuba::kReadWrite);
       !rename_res) {
-    GALOIS_LOG_FATAL("Rename to {}: {}", s3_dst_path, rename_res.error());
+    GALOIS_LOG_FATAL("Rename to {}: {}", s3_pg_out, rename_res.error());
   }
   if (auto store_res = tsuba::Store(rdg); !store_res) {
     GALOIS_LOG_FATAL("Store failed: {}", store_res.error());
@@ -125,6 +133,9 @@ void init_data(uint8_t* buf, int limit) {
 
 #endif
 int main() {
+  if (auto init_good = tsuba::Init(); !init_good) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  }
 
   // auto unique_result = galois::CreateUniqueDirectory(s3_url_base);
   // GALOIS_LOG_ASSERT(unique_result);
@@ -133,7 +144,11 @@ int main() {
 
   // arrow_file(data_100, sizeof(data_100), temp_dir);
 
-  DownloadGraph(s3_prop_graphs[0]);
+  GALOIS_LOG_ASSERT(s3_pg_inputs.size() == s3_pg_outputs.size());
+  for(auto i = 0U; i < s3_pg_inputs.size(); ++i) {
+    GALOIS_LOG_VERBOSE("Copy {} to {}\n", s3_pg_inputs[i], s3_pg_outputs[i]);
+    CopyGraph(s3_pg_inputs[i], s3_pg_outputs[i]);
+  }
 
   return 0;
 }

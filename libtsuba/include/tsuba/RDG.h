@@ -42,7 +42,6 @@ struct RDG {
 
   /// Determine if two RDGs are Equal
   bool Equals(const RDG& other) const;
-  RDG();
 };
 
 /// Return True if @rdg1 and @rdg2 have identical content

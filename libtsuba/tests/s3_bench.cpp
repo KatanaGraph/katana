@@ -23,8 +23,7 @@ constexpr static const char* const s3_url_base =
 /******************************************************************************/
 /* Utilities */
 
-const char* unit[] = {"us", "ms", " s"};
-long DivFactor(double us) {
+int64_t DivFactor(double us) {
   if (us < 1'000.0) {
     return 1;
   }
@@ -35,18 +34,18 @@ long DivFactor(double us) {
   return 1'000'000.0;
 }
 
-static const std::unordered_map<long, std::string> df2unit{
+static const std::unordered_map<int64_t, std::string> df2unit{
     {1, "us"},
     {1'000, "ms"},
     {1'000'000, " s"},
 };
 
-std::string FmtResults(const std::vector<long>& v) {
+std::string FmtResults(const std::vector<int64_t>& v) {
   if (v.size() == 0)
     return "no results";
-  long sum       = std::accumulate(v.begin(), v.end(), 0L);
+  int64_t sum       = std::accumulate(v.begin(), v.end(), 0L);
   double mean    = (double)sum / v.size();
-  long divFactor = DivFactor(mean);
+  int64_t divFactor = DivFactor(mean);
 
   double accum = 0.0;
   std::for_each(std::begin(v), std::end(v),
@@ -81,12 +80,12 @@ struct timespec timespec_sub(struct timespec time, struct timespec oldTime) {
                              .tv_nsec = time.tv_nsec - oldTime.tv_nsec};
 }
 
-long timespec_to_us(struct timespec ts) {
+int64_t timespec_to_us(struct timespec ts) {
   return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;
 }
 
 // 21 chars, with 1 null byte
-void get_time_string(char* buf, int limit) {
+void get_time_string(char* buf, int32_t limit) {
   time_t rawtime;
   struct tm* timeinfo;
   time(&rawtime);
@@ -94,7 +93,7 @@ void get_time_string(char* buf, int limit) {
   strftime(buf, limit, "%Y/%m/%d %H:%M:%S ", timeinfo);
 }
 
-void init_data(uint8_t* buf, int limit) {
+void init_data(uint8_t* buf, int32_t limit) {
   if (limit < 0)
     return;
   if (limit < 19) {
@@ -118,10 +117,10 @@ void init_data(uint8_t* buf, int limit) {
 }
 
 // Thank you, fmt!
-std::string CntStr(int i, int width) {
+std::string CntStr(int32_t i, int32_t width) {
   return fmt::format("{:0{}d}", i, width);
 }
-std::string MkS3url(int i, int width) {
+std::string MkS3url(int32_t i, int32_t width) {
   std::string url(s3_url_base);
   return url.append(CntStr(i, width));
 }
@@ -129,17 +128,17 @@ std::string MkS3url(int i, int width) {
 /******************************************************************************/
 // Storage interaction
 //    Each function is a timed test, returns vector of times in microseconds
-//    (longs)
+//    (int64_ts)
 
-std::vector<long> test_mem(const uint8_t* data, uint64_t size, int batch,
-                           int numExperiments) {
-  std::vector<int> fds(batch, 0);
-  std::vector<long> results;
+std::vector<int64_t> test_mem(const uint8_t* data, uint64_t size, int32_t batch,
+                              int32_t numExperiments) {
+  std::vector<int32_t> fds(batch, 0);
+  std::vector<int64_t> results;
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       fds[i] = memfd_create(CntStr(i, 4).c_str(), 0);
       if (fds[i] < 0) {
         GALOIS_LOG_ERROR("fd {:04d}\n", i);
@@ -153,7 +152,7 @@ std::vector<long> test_mem(const uint8_t* data, uint64_t size, int batch,
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
 
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       int sysret = close(fds[i]);
       if (sysret < 0) {
         perror("close");
@@ -163,12 +162,12 @@ std::vector<long> test_mem(const uint8_t* data, uint64_t size, int batch,
   return results;
 }
 
-std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
+std::vector<int64_t> test_tmp(const uint8_t* data, uint64_t size, int batch,
                            int numExperiments) {
-  std::vector<int> fds(batch, 0);
+  std::vector<int32_t> fds(batch, 0);
   std::vector<std::string> fnames;
-  std::vector<long> results;
-  for (int i = 0; i < batch; ++i) {
+  std::vector<int64_t> results;
+  for (auto i = 0; i < batch; ++i) {
     std::string s("/tmp/witchel/");
     fnames.push_back(s.append(CntStr(i, 4)));
   }
@@ -176,7 +175,7 @@ std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       fds[i] = open(fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR,
                     S_IRWXU | S_IRWXG);
       if (fds[i] < 0) {
@@ -193,7 +192,7 @@ std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
       // lazy
       sync();
     }
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       int sysret = close(fds[i]);
       if (sysret < 0) {
         perror("close");
@@ -201,7 +200,7 @@ std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
 
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       int sysret = unlink(fnames[i].c_str());
       if (sysret < 0) {
         perror("unlink");
@@ -211,14 +210,14 @@ std::vector<long> test_tmp(const uint8_t* data, uint64_t size, int batch,
   return results;
 }
 
-std::vector<long> test_s3(const uint8_t* data, uint64_t size, int batch,
-                          int numExperiments) {
-  std::vector<long> results;
+std::vector<int64_t> test_s3(const uint8_t* data, uint64_t size, int32_t batch,
+                             int32_t numExperiments) {
+  std::vector<int64_t> results;
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (int i = 0; i < batch; ++i) {
+    for (auto i = 0; i < batch; ++i) {
       std::string s3url = MkS3url(i, 4);
       int tsubaret      = tsuba::FileStore(s3url, data, size);
       if (tsubaret != 0) {
@@ -230,11 +229,11 @@ std::vector<long> test_s3(const uint8_t* data, uint64_t size, int batch,
   return results;
 }
 
-std::vector<long> test_s3_sync(const uint8_t* data, uint64_t size, int batch,
-                               int numExperiments) {
+std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size, int32_t batch,
+                                  int32_t numExperiments) {
   std::vector<std::string> s3urls;
-  std::vector<long> results;
-  for (int i = 0; i < batch; ++i) {
+  std::vector<int64_t> results;
+  for (auto i = 0; i < batch; ++i) {
     s3urls.push_back(MkS3url(i, 4));
   }
 
@@ -253,11 +252,11 @@ std::vector<long> test_s3_sync(const uint8_t* data, uint64_t size, int batch,
   return results;
 }
 
-std::vector<long> test_s3_async_one(const uint8_t* data, uint64_t size,
-                                    int batch, int numExperiments) {
+std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
+                                       int32_t batch, int32_t numExperiments) {
   std::vector<std::string> s3urls;
-  std::vector<long> results;
-  for (int i = 0; i < batch; ++i) {
+  std::vector<int64_t> results;
+  for (auto i = 0; i < batch; ++i) {
     s3urls.push_back(MkS3url(i, 4));
   }
 
@@ -278,11 +277,11 @@ std::vector<long> test_s3_async_one(const uint8_t* data, uint64_t size,
   return results;
 }
 
-std::vector<long> test_s3_async_batch(const uint8_t* data, uint64_t size,
-                                      int batch, int numExperiments) {
+std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
+                                         int32_t batch, int32_t numExperiments) {
   std::vector<std::string> s3urls;
-  std::vector<long> results;
-  for (int i = 0; i < batch; ++i) {
+  std::vector<int64_t> results;
+  for (auto i = 0; i < batch; ++i) {
     s3urls.push_back(MkS3url(i, 4));
   }
 
@@ -307,11 +306,11 @@ std::vector<long> test_s3_async_batch(const uint8_t* data, uint64_t size,
   return results;
 }
 
-std::vector<long> test_s3_multi_async_batch(const uint8_t* data, uint64_t size,
-                                            int batch, int numExperiments) {
+std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data, uint64_t size,
+                                               int32_t batch, int32_t numExperiments) {
   std::vector<std::string> s3urls;
-  std::vector<long> results;
-  for (int i = 0; i < batch; ++i) {
+  std::vector<int64_t> results;
+  for (auto i = 0; i < batch; ++i) {
     s3urls.push_back(MkS3url(i, 4));
   }
 
@@ -400,7 +399,7 @@ struct {
 
 struct {
   const char* name;
-  std::vector<long> (*func)(const uint8_t*, uint64_t, int, int);
+  std::vector<int64_t> (*func)(const uint8_t*, uint64_t, int, int);
 } tests[] = {
     {.name = "memfd_create", .func = test_mem},
     {.name = "/tmp create", .func = test_tmp},
@@ -415,10 +414,11 @@ int main() {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
-  for (unsigned long i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
+  for (uint64_t i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
     init_data(datas[i].data, datas[i].size);
   }
 
+  // TOCTTOU, but I think harmless
   if (access("/tmp/witchel", R_OK) != 0) {
     if (mkdir("/tmp/witchel", 0775) != 0) {
       perror("mkdir /tmp/witchel");
@@ -427,15 +427,15 @@ int main() {
   }
 
   printf("*** VM and bucket same region\n");
-  for (unsigned long i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
+  for (uint64_t i = 0; i < sizeof(datas) / sizeof(datas[0]); ++i) {
     printf("** size %s\n", datas[i].name);
     const uint8_t* data = datas[i].data;
     uint64_t size       = datas[i].size;
     int batch           = datas[i].batch;
     int numExperiments  = datas[i].numExperiments;
 
-    for (unsigned long j = 0; j < sizeof(tests) / sizeof(tests[0]); ++j) {
-      std::vector<long> results =
+    for (uint64_t j = 0; j < sizeof(tests) / sizeof(tests[0]); ++j) {
+      std::vector<int64_t> results =
           tests[j].func(data, size, batch, numExperiments);
       fmt::print("{:<24} ({:2d}) {}\n", tests[j].name, batch,
                  FmtResults(results));

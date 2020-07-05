@@ -2,6 +2,11 @@
 
 from libcpp.string cimport string
 from ..Galois cimport MethodFlag, iterable, NoDerefIterator
+from libcpp.memory cimport shared_ptr
+from libc.stdint cimport *
+from ....cpp.libstd.boost cimport *
+from ....cpp.libstd.arrow cimport *
+from cython.operator cimport dereference as df
 
 # Fake types to work around Cython's lack of support
 # for non-type template parameters.
@@ -104,3 +109,28 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         unsigned long size()
         edge_data& getEdgeData(edge_iterator)
         edge_data& getEdgeData(edge_iterator, MethodFlag)
+
+    cppclass GraphTopology:
+        shared_ptr[UInt64Array] out_indices
+        shared_ptr[UInt32Array] out_dests
+        uint64_t num_nodes()
+        uint64_t num_edges()
+
+    cppclass PropertyFileGraph:
+        PropertyFileGraph()
+        @staticmethod
+        std_result[shared_ptr[PropertyFileGraph]] Make(string filename)
+
+        GraphTopology& topology()
+        shared_ptr[Schema] node_schema()
+        shared_ptr[Schema] edge_schema()
+
+        vector[shared_ptr[ChunkedArray]] NodeProperties()
+        vector[shared_ptr[ChunkedArray]] EdgeProperties()
+
+        shared_ptr[ChunkedArray] NodeProperty(int i)
+        shared_ptr[ChunkedArray] EdgeProperty(int i)
+
+        std_result[void] AddNodeProperties(shared_ptr[arrowTable])
+
+

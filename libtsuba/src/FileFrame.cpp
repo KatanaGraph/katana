@@ -19,7 +19,7 @@ int FileFrame::Destroy() {
   return -1;
 }
 
-int FileFrame::Init(size_t reserved_size) {
+int FileFrame::Init(uint64_t reserved_size) {
   size_t size_to_reserve = reserved_size <= 0 ? 1 : reserved_size;
   uint64_t map_size      = tsuba::RoundUpToBlock(size_to_reserve);
   void* ptr =

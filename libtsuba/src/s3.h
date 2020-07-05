@@ -17,6 +17,7 @@ galois::Result<int> S3Open(const std::string& bucket,
                            const std::string& object);
 uint64_t S3GetSize(const std::string& bucket, const std::string& object,
                    uint64_t* size);
+int S3Exists(const std::string& bucket, const std::string& object);
 
 std::pair<std::string, std::string> S3SplitUri(const std::string& uri);
 

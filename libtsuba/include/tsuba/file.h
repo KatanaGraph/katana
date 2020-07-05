@@ -34,6 +34,9 @@ struct StatBuf {
 // Download a file and open it
 int FileOpen(const std::string& uri);
 
+galois::Result<void> FileCreate(const std::string& filename,
+                                bool overwrite = false);
+
 // Map a particular chunk of this file (partial download). @begin and @size
 // should be aligned to kBlockSize return value will be aligned to kBlockSize as
 // well

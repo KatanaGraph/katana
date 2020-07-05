@@ -44,7 +44,7 @@ std::string FmtResults(const std::vector<int64_t>& v) {
   if (v.size() == 0)
     return "no results";
   int64_t sum       = std::accumulate(v.begin(), v.end(), 0L);
-  double mean    = (double)sum / v.size();
+  double mean       = (double)sum / v.size();
   int64_t divFactor = DivFactor(mean);
 
   double accum = 0.0;
@@ -163,7 +163,7 @@ std::vector<int64_t> test_mem(const uint8_t* data, uint64_t size, int32_t batch,
 }
 
 std::vector<int64_t> test_tmp(const uint8_t* data, uint64_t size, int batch,
-                           int numExperiments) {
+                              int numExperiments) {
   std::vector<int32_t> fds(batch, 0);
   std::vector<std::string> fnames;
   std::vector<int64_t> results;
@@ -229,8 +229,8 @@ std::vector<int64_t> test_s3(const uint8_t* data, uint64_t size, int32_t batch,
   return results;
 }
 
-std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size, int32_t batch,
-                                  int32_t numExperiments) {
+std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size,
+                                  int32_t batch, int32_t numExperiments) {
   std::vector<std::string> s3urls;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
@@ -278,7 +278,8 @@ std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
 }
 
 std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
-                                         int32_t batch, int32_t numExperiments) {
+                                         int32_t batch,
+                                         int32_t numExperiments) {
   std::vector<std::string> s3urls;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
@@ -306,8 +307,9 @@ std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
   return results;
 }
 
-std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data, uint64_t size,
-                                               int32_t batch, int32_t numExperiments) {
+std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data,
+                                               uint64_t size, int32_t batch,
+                                               int32_t numExperiments) {
   std::vector<std::string> s3urls;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {

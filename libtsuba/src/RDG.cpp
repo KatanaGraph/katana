@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <fstream>
-#include <random>
 #include <unordered_set>
 
 #include <boost/filesystem.hpp>
@@ -14,11 +13,11 @@
 
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "galois/FileSystem.h"
 #include "tsuba/Errors.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
-
 
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -48,43 +47,6 @@ struct RDGHandle {
 } // namespace tsuba
 
 namespace {
-
-// TODO(ddn): Move this to libsupport
-
-// https://stackoverflow.com/questions/440133
-template <typename T = std::mt19937>
-auto random_generator() -> T {
-  auto constexpr seed_bits = sizeof(typename T::result_type) * T::state_size;
-  auto constexpr seed_len =
-      seed_bits / std::numeric_limits<std::seed_seq::result_type>::digits;
-  auto seed = std::array<std::seed_seq::result_type, seed_len>{};
-  auto dev  = std::random_device{};
-  std::generate_n(begin(seed), seed_len, std::ref(dev));
-  auto seed_seq = std::seed_seq(begin(seed), end(seed));
-  return T{seed_seq};
-}
-
-std::string generate_random_alphanumeric_string(std::size_t len) {
-  static constexpr auto chars = "0123456789"
-                                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                "abcdefghijklmnopqrstuvwxyz";
-  thread_local auto rng = random_generator<>();
-  auto dist   = std::uniform_int_distribution{{}, std::strlen(chars) - 1};
-  auto result = std::string(len, '\0');
-  std::generate_n(begin(result), len, [&]() { return chars[dist(rng)]; });
-  return result;
-}
-
-/// NewPath returns a new path in a directory with the given prefix. It works
-/// by appending a random suffix. The generated paths are may not be unique due
-/// to the varying atomicity guarantees of future storage backends.
-fs::path NewPath(const fs::path& dir, const std::string& prefix) {
-  std::string name = prefix;
-  name += "-";
-  name += generate_random_alphanumeric_string(12);
-  fs::path p{dir};
-  return p.append(name);
-}
 
 galois::Result<void>
 PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
@@ -215,7 +177,7 @@ WriteTable(const arrow::Table& table,
       continue;
     }
 
-    fs::path next_path = NewPath(dir, schema->field(i)->name());
+    fs::path next_path = galois::NewPath(dir, schema->field(i)->name());
 
     // Metadata paths should relative to dir
     next_paths.emplace_back(next_path.filename().string());
@@ -491,16 +453,10 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
 // our own namespace, create the file here so that at least another call
 // will fail
 galois::Result<void> CreateFile(std::string name, bool overwrite = false) {
-  fs::path m_path{name};
-  GALOIS_LOG_ASSERT(!tsuba::IsS3URI(name));
-  if (overwrite && fs::exists(m_path)) {
-    return tsuba::ErrorCode::Exists;
+  auto create_res = tsuba::FileCreate(name, overwrite);
+  if (!create_res) {
+    return create_res;
   }
-  fs::path dir = m_path.parent_path();
-  if (boost::system::error_code err; fs::create_directories(dir, err)) {
-    return err;
-  }
-  std::ofstream output(m_path.string());
   return galois::ResultSuccess();
 }
 
@@ -541,7 +497,7 @@ galois::Result<void> DoStore(std::shared_ptr<tsuba::RDGHandle> handle,
                              tsuba::RDG* rdg) {
   if (rdg->topology_path.empty()) {
     // No topology file; create one
-    fs::path t_path = NewPath(handle->metadata_dir, "topology");
+    fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
 
     int err = tsuba::FileStore(t_path.string(),
                                rdg->topology_file_storage.ptr<uint8_t>(),
@@ -730,7 +686,7 @@ galois::Result<void> Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
     }
   }
 
-  fs::path t_path = NewPath(handle->metadata_dir, "topology");
+  fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
   ff->Bind(t_path.string());
   int err = ff->Persist();
   if (err) {

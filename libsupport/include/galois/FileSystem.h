@@ -4,6 +4,8 @@
 #include <string_view>
 #include <string>
 
+#include <boost/filesystem.hpp>
+
 #include "galois/Result.h"
 
 namespace galois {
@@ -19,6 +21,10 @@ Result<std::pair<std::string, int>> OpenUniqueFile(std::string_view prefix,
 
 /// Create a unique directory with the path: ${prefix}${unique number}
 Result<std::string> CreateUniqueDirectory(std::string_view prefix);
+
+// TODO (witchel) return galois::Result<std::string>
+boost::filesystem::path NewPath(const boost::filesystem::path& dir,
+                                const std::string& prefix);
 
 } // namespace galois
 

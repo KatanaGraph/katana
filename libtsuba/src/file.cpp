@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <cassert>
+#include <boost/filesystem.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -24,6 +25,8 @@
 
 #include "s3.h"
 #include "tsuba_internal.h"
+
+namespace fs = boost::filesystem;
 
 namespace {
 
@@ -48,64 +51,65 @@ uint8_t* MmapLocalFile(const std::string& filename, uint64_t begin,
   return ret;
 }
 
-int DoReadS3Part(const std::string& filename, uint8_t* buf, uint64_t begin,
+int DoReadS3Part(const std::string& uri, uint8_t* buf, uint64_t begin,
                  uint64_t size) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3DownloadRange(bucket, object, begin, size, buf);
 }
+int DoS3Exists(const std::string& uri) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
+  return tsuba::S3Exists(bucket, object);
+}
 
-int DoWriteS3(const std::string& filename, const uint8_t* buf, uint64_t size) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3(const std::string& uri, const uint8_t* buf, uint64_t size) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3UploadOverwrite(bucket, object, buf, size);
 }
 
-int DoWriteS3Sync(const std::string& filename, const uint8_t* buf,
-                  uint64_t size) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3Sync(const std::string& uri, const uint8_t* buf, uint64_t size) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutSingleSync(bucket, object, buf, size);
 }
 
-int DoWriteS3Async(const std::string& filename, const uint8_t* buf,
-                   uint64_t size) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3Async(const std::string& uri, const uint8_t* buf, uint64_t size) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutSingleAsync(bucket, object, buf, size);
 }
 
-int DoWriteS3AsyncFinish(const std::string& filename) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3AsyncFinish(const std::string& uri) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutSingleAsyncFinish(bucket, object);
 }
 
-int DoWriteS3MultiAsync1(const std::string& filename, const uint8_t* buf,
+int DoWriteS3MultiAsync1(const std::string& uri, const uint8_t* buf,
                          uint64_t size) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutMultiAsync1(bucket, object, buf, size);
 }
 
-int DoWriteS3MultiAsync2(const std::string& filename) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3MultiAsync2(const std::string& uri) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutMultiAsync2(bucket, object);
 }
 
-int DoWriteS3MultiAsync3(const std::string& filename) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3MultiAsync3(const std::string& uri) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutMultiAsync3(bucket, object);
 }
 
-int DoWriteS3MultiAsyncFinish(const std::string& filename) {
-  auto [bucket, object] = tsuba::S3SplitUri(filename);
+int DoWriteS3MultiAsyncFinish(const std::string& uri) {
+  auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutMultiAsyncFinish(bucket, object);
 }
 
-uint8_t* AllocAndReadS3(const std::string& filename, uint64_t begin,
-                        uint64_t size) {
+uint8_t* AllocAndReadS3(const std::string& uri, uint64_t begin, uint64_t size) {
   auto* ret = MmapCast<uint8_t>(size, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == nullptr) {
     std::cerr << "alloc for s3 read failed" << std::endl;
     return nullptr;
   }
-  if (DoReadS3Part(filename, ret, begin, size)) {
+  if (DoReadS3Part(uri, ret, begin, size)) {
     munmap(ret, size);
     ret = nullptr;
     std::cerr << "do_read_s3_part failed" << std::endl;
@@ -165,7 +169,7 @@ std::unordered_map<uint8_t*, MappingDesc> allocated_memory;
 
 // Return 1: This is an S3 URL
 // Otherwise process as file and return 0 for success and -1 for fail
-int S3OrDoFile(const std::string& uri, const uint8_t* data, uint64_t size) {
+int S3OrWriteFile(const std::string& uri, const uint8_t* data, uint64_t size) {
   if (tsuba::IsS3URI(uri)) {
     return 1;
   }
@@ -182,7 +186,11 @@ int S3OrDoFile(const std::string& uri, const uint8_t* data, uint64_t size) {
 
 } // namespace
 
+// Recommend rename to FileDownloadOpenUnlink
 int tsuba::FileOpen(const std::string& uri) {
+  if (!tsuba::IsS3URI(uri)) {
+    return -1;
+  }
   auto [bucket_name, object_name] = S3SplitUri(uri);
   if (bucket_name.empty() || object_name.empty()) {
     return ERRNO_RET(EINVAL, -1);
@@ -194,9 +202,33 @@ int tsuba::FileOpen(const std::string& uri) {
   return result.value();
 }
 
+galois::Result<void> tsuba::FileCreate(const std::string& filename,
+                                       bool overwrite) {
+  if (tsuba::IsS3URI(filename)) {
+    if (overwrite && DoS3Exists(filename)) {
+      return tsuba::ErrorCode::Exists;
+    }
+    // S3 has atomic puts, so create on write.
+    return galois::ResultSuccess();
+  } else {
+    fs::path m_path{filename};
+    if (overwrite && fs::exists(m_path)) {
+      return tsuba::ErrorCode::Exists;
+    }
+    fs::path dir = m_path.parent_path();
+    if (boost::system::error_code err; fs::create_directories(dir, err)) {
+      return err;
+    }
+    // Creates an empty file
+    std::ofstream output(m_path.string());
+    return galois::ResultSuccess();
+  }
+  return tsuba::ErrorCode::NotImplemented;
+}
+
 int tsuba::FileStore(const std::string& uri, const uint8_t* data,
                      uint64_t size) {
-  int ret = S3OrDoFile(uri, data, size);
+  int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3(uri, data, size);
   }
@@ -205,7 +237,7 @@ int tsuba::FileStore(const std::string& uri, const uint8_t* data,
 
 int tsuba::FileStoreSync(const std::string& uri, const uint8_t* data,
                          uint64_t size) {
-  int ret = S3OrDoFile(uri, data, size);
+  int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3Sync(uri, data, size);
   }
@@ -214,7 +246,7 @@ int tsuba::FileStoreSync(const std::string& uri, const uint8_t* data,
 
 int tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
                           uint64_t size) {
-  int ret = S3OrDoFile(uri, data, size);
+  int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3Async(uri, data, size);
   }
@@ -230,7 +262,7 @@ int tsuba::FileStoreAsyncFinish(const std::string& uri) {
 
 int tsuba::FileStoreMultiAsync1(const std::string& uri, const uint8_t* data,
                                 uint64_t size) {
-  int ret = S3OrDoFile(uri, data, size);
+  int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3MultiAsync1(uri, data, size);
   }

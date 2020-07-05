@@ -44,7 +44,7 @@ static constexpr const uint64_t kNumS3Threads = 36;
 
 // Initialized in S3Init
 static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-default_executor{nullptr};
+    default_executor{nullptr};
 static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
 static bool library_init{false};
 
@@ -184,8 +184,28 @@ uint64_t S3GetSize(const std::string& bucket, const std::string& object,
   return 0;
 }
 
+/// Return 1 if bucket/object exists, 0 otherwise
+int S3Exists(const std::string& bucket, const std::string& object) {
+  auto s3_client = GetS3Client();
+  /* skip all of the thread management overhead if we only have one request */
+  Aws::S3::Model::HeadObjectRequest request;
+  request.SetBucket(ToAwsString(bucket));
+  request.SetKey(ToAwsString(object));
+  Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
+  if (!outcome.IsSuccess()) {
+    return 0;
+  }
+  return 1;
+}
+
 int S3UploadOverwrite(const std::string& bucket, const std::string& object,
                       const uint8_t* data, uint64_t size) {
+  // Zero size uploads done synchronously, with single put
+  if (size == 0) {
+    GALOIS_LOG_VERBOSE("Zero size S3Put, doing sync");
+    return S3PutSingleSync(bucket, object, data, size);
+  }
+
   auto s3_client = GetS3Client();
 
   Aws::S3::Model::CreateMultipartUploadRequest createMpRequest;
@@ -195,10 +215,11 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
 
   auto createMpResponse = s3_client->CreateMultipartUpload(createMpRequest);
   if (!createMpResponse.IsSuccess()) {
-    std::cerr << "ERROR: Transfer failed to create a multi-part upload "
-                 "request. Bucket: ["
-              << bucket << "] with Key: [" << object << "]. "
-              << createMpResponse.GetError() << std::endl;
+    const auto& error = createMpResponse.GetError();
+    GALOIS_LOG_ERROR("Transfer failed to create a multi-part upload request\n"
+                     "  [{}] {}\n  {}: {}\n",
+                     bucket, object, error.GetExceptionName(),
+                     error.GetMessage());
     return -1;
   }
 
@@ -206,10 +227,9 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
   SegmentedBufferView bufView(0, (uint8_t*)data, size, kS3BufSize);
   std::vector<SegmentedBufferView::BufPart> parts(bufView.begin(),
                                                   bufView.end());
-  if (parts.empty()) {
-    std::cerr << "Parts empty, returning" << std::endl;
-    return 0;
-  }
+  // Because zero-length upload handled above, parts should not be empty
+  GALOIS_LOG_ASSERT(!parts.empty());
+
   std::vector<std::string> part_e_tags(parts.size());
 
   std::mutex m;
@@ -253,9 +273,8 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
             cv.notify_one();
           } else {
             const auto& error = outcome.GetError();
-            std::cerr << "UPLOAD ERROR: " << error.GetExceptionName() << ": "
-                      << error.GetMessage() << std::endl;
-            abort();
+            GALOIS_LOG_FATAL("Upload multi callback failure\n  {}: {}",
+                             error.GetExceptionName(), error.GetMessage());
           }
         };
     s3_client->UploadPartAsync(uploadPartRequest, callback);
@@ -279,10 +298,9 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
       s3_client->CompleteMultipartUpload(completeMultipartUploadRequest);
 
   if (!completeUploadOutcome.IsSuccess()) {
-    std::cerr << "ERROR: Failed to complete multipart upload" << std::endl;
     const auto& error = completeUploadOutcome.GetError();
-    std::cerr << "UPLOAD ERROR: " << error.GetExceptionName() << ": "
-              << error.GetMessage() << std::endl;
+    GALOIS_LOG_ERROR("Failed to complete multipart upload\n  {}: {}",
+                     error.GetExceptionName(), error.GetMessage());
     return -1;
   }
   return 0;

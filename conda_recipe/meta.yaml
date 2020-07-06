@@ -29,6 +29,7 @@ requirements:
     - llvm>=8
     - {{ cdt('numactl-devel') }}
     - libxml2>=2.9.10
+    - libcypher-parser>=0.6.2
   run:
     # TODO: use pinning expressions to handle version matching
     #  (https://docs.conda.io/projects/conda-build/en/latest/resources/variants.html#pinning-expressions)
@@ -40,6 +41,7 @@ requirements:
     - zlib>=1.2.11
     - ncurses>=6.1
     - libxml2>=2.9.10
+    - libcypher-parser>=0.6.2
 
 test:
   requires:

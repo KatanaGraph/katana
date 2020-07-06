@@ -55,8 +55,7 @@ At the minimum, Galois depends on the following software:
 - libllvm (>= 7.0 with RTTI support)
 - libfmt (>= 4.0)
 - libxml2 (>=  2.9.1)
-- autoconf (>= 2.69)
-- peg (>= 0.1.18)
+- libcypher-parser (>= 0.6.0)
 
 Here are the dependencies for the optional features: 
 

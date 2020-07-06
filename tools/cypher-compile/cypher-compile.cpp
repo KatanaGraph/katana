@@ -54,6 +54,14 @@ int main(int argc, char** argv) {
     galois::gError("No query or file with query specified to parse");
   }
 
+  unsigned r_count = 0;
+  galois::gInfo("Parsed return values are as follows:");
+  // parsed return values are the following
+  for (const querying::ReturnResult& a : cc.getReturnValues()) {
+    galois::gInfo("Return value ", r_count++);
+    a.printStruct();
+  }
+
   totalTime.stop();
   return 0;
 }

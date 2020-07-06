@@ -4,44 +4,52 @@
 
 #include "galois/Logging.h"
 #include "galois/Platform.h"
+#include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
 namespace tsuba {
 
-FileFrame::~FileFrame() { Destroy(); }
+FileFrame::~FileFrame() {
+  if (auto res = Destroy(); !res) {
+    GALOIS_LOG_ERROR("Destroy failed in ~FileFrame");
+  }
+}
 
-int FileFrame::Destroy() {
+galois::Result<void> FileFrame::Destroy() {
   if (valid_) {
     int err = munmap(map_start_, map_size_);
     valid_  = false;
-    return err;
+    if (err) {
+      return galois::ResultErrno();
+    }
   }
-  return -1;
+  return galois::ResultSuccess();
 }
 
-int FileFrame::Init(uint64_t reserved_size) {
+galois::Result<void> FileFrame::Init(uint64_t reserved_size) {
   size_t size_to_reserve = reserved_size <= 0 ? 1 : reserved_size;
   uint64_t map_size      = tsuba::RoundUpToBlock(size_to_reserve);
   void* ptr =
       galois::MmapPopulate(nullptr, map_size, PROT_READ | PROT_WRITE,
                            MAP_ANONYMOUS | MAP_PRIVATE | MAP_32BIT, -1, 0);
   if (ptr == MAP_FAILED) {
-    perror("mmap");
-    return -1;
+    return galois::ResultErrno();
   }
-  Destroy();
+  if (auto res = Destroy(); !res) {
+    GALOIS_LOG_ERROR("Destroy: {}", res.error());
+  }
   path_      = "";
   map_size_  = map_size;
   map_start_ = static_cast<uint8_t*>(ptr);
   synced_    = false;
   valid_     = true;
   cursor_    = 0;
-  return 0;
+  return galois::ResultSuccess();
 }
 
 void FileFrame::Bind(const std::string& filename) { path_ = filename; }
 
-int FileFrame::GrowBuffer(int64_t accomodate) {
+galois::Result<void> FileFrame::GrowBuffer(int64_t accomodate) {
   // We need a bigger buffer
   auto new_size = map_size_ * 2;
   while (cursor_ + accomodate > new_size) {
@@ -55,49 +63,48 @@ int FileFrame::GrowBuffer(int64_t accomodate) {
       // Mapping succeeded, but not where we wanted it
       int err = munmap(ptr, new_size - map_size_);
       if (err) {
-        perror("munmap");
-        return -1;
+        return galois::ResultErrno();
       }
     } else {
-      perror("mmap");
+      return galois::ResultErrno();
     }
     // Just allocate a brand new buffer :(
     ptr = nullptr;
     ptr = galois::MmapPopulate(nullptr, new_size, PROT_READ | PROT_WRITE,
                                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (ptr == MAP_FAILED) {
-      perror("mmap");
-      return -1;
+      return galois::ResultErrno();
     }
     memmove(ptr, map_start_, cursor_);
     int err = munmap(map_start_, map_size_);
     if (err) {
-      perror("munmap");
-      return -1;
+      return galois::ResultErrno();
     }
     map_start_ = static_cast<uint8_t*>(ptr);
   }
   map_size_ = new_size;
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int FileFrame::Persist() {
+galois::Result<void> FileFrame::Persist() {
   if (!valid_) {
-    return -1;
+    return tsuba::ErrorCode::InvalidArgument;
   }
   if (!path_.length()) {
     GALOIS_LOG_DEBUG("No path provided to FileFrame");
-    return -1;
+    return tsuba::ErrorCode::InvalidArgument;
   }
-  return tsuba::FileStore(path_, map_start_, cursor_);
+  if (tsuba::FileStore(path_, map_start_, cursor_) != 0) {
+    return galois::ResultErrno();
+  }
+  return galois::ResultSuccess();
 }
 
 /////// Begin arrow::io::BufferOutputStream method definitions //////
 
 arrow::Status FileFrame::Close() {
-  int err = Destroy();
-  if (err) {
-    return arrow::Status::UnknownError("FileFrame::Destroy", err);
+  if (auto res = Destroy(); !res) {
+    return arrow::Status::UnknownError("FileFrame::Destroy", res.error());
   }
   return arrow::Status::OK();
 }
@@ -120,8 +127,7 @@ arrow::Status FileFrame::Write(const void* data, int64_t nbytes) {
                          "Cannot Write negative bytes");
   }
   if (cursor_ + nbytes > map_size_) {
-    int err = GrowBuffer(nbytes);
-    if (err) {
+    if (auto res = GrowBuffer(nbytes); !res) {
       return arrow::Status(
           arrow::StatusCode::OutOfMemory,
           "FileFrame could not grow buffer to hold incoming write");

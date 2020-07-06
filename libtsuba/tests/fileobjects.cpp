@@ -22,8 +22,9 @@ static void exponential(uint8_t bits[], std::string& dir) {
   // Write
   std::string filename = dir + "exponential";
   auto ff              = tsuba::FileFrame();
-  int err              = ff.Init();
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Init(); !res) {
+    GALOIS_LOG_FATAL("Init: {}", res.error());
+  }
 
   uint8_t* ptr     = bits;
   uint64_t running = 0;
@@ -34,12 +35,13 @@ static void exponential(uint8_t bits[], std::string& dir) {
     running += 1 << i;
   }
   ff.Bind(filename);
-  err = ff.Persist();
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Persist(); !res) {
+    GALOIS_LOG_FATAL("Persist: {}", res.error());
+  }
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::FileStat(filename, &buf);
+  int err = tsuba::FileStat(filename, &buf);
   GALOIS_LOG_ASSERT(!err);
   GALOIS_LOG_ASSERT(buf.size == running);
 
@@ -58,14 +60,17 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   // Write
   std::string filename = dir + "the-big-one";
   auto ff              = tsuba::FileFrame();
-  int err              = ff.Init();
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Init(); !res) {
+    GALOIS_LOG_FATAL("Init: {}", res.error());
+  }
+  int err;
 
   arrow::Status aro_sts = ff.Write(bits, num_bytes);
   GALOIS_LOG_ASSERT(aro_sts.ok());
   ff.Bind(filename);
-  err = ff.Persist();
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Persist(); !res) {
+    GALOIS_LOG_FATAL("Persist: {}", res.error());
+  }
 
   // Validate
   tsuba::StatBuf buf;
@@ -89,24 +94,28 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   // Write
   std::string filename = dir + "silly";
   auto ff              = tsuba::FileFrame();
-  int err              = ff.Init(num_bytes * 2);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Init(num_bytes * 2); !res) {
+    GALOIS_LOG_FATAL("Init: {}", res.error());
+  }
 
-  err = ff.Persist();
-  GALOIS_LOG_ASSERT(err);
+  if (auto res = ff.Persist(); res) {
+    GALOIS_LOG_FATAL("Persist should have failed");
+  }
 
   auto aro_buf          = std::make_shared<arrow::Buffer>(bits, num_bytes);
   arrow::Status aro_sts = ff.Write(aro_buf);
   GALOIS_LOG_ASSERT(aro_sts.ok());
-  err = ff.Persist();
-  GALOIS_LOG_ASSERT(err);
+  if (auto res = ff.Persist(); res) {
+    GALOIS_LOG_FATAL("Persist should have failed");
+  }
   ff.Bind(filename);
-  err = ff.Persist();
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = ff.Persist(); !res) {
+    GALOIS_LOG_FATAL("Persist: {}", res.error());
+  }
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::FileStat(filename, &buf);
+  int err = tsuba::FileStat(filename, &buf);
   GALOIS_LOG_ASSERT(!err);
   GALOIS_LOG_ASSERT(buf.size == num_bytes);
 
@@ -120,7 +129,7 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   aro_sts = fv.Seek(num_bytes - READ_PARTIAL);
   GALOIS_LOG_ASSERT(aro_sts.ok());
-  arrow::Result<long int> aro_res = fv.Tell();
+  arrow::Result<int64_t> aro_res = fv.Tell();
   GALOIS_LOG_ASSERT(aro_res.ok());
   GALOIS_LOG_ASSERT(static_cast<uint64_t>(aro_res.ValueOrDie()) ==
                     num_bytes - READ_PARTIAL);

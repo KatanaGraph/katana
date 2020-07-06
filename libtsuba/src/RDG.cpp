@@ -186,9 +186,8 @@ WriteTable(const arrow::Table& table,
         arrow::schema({schema->field(i)}), {table.column(i)});
 
     auto ff = std::make_shared<tsuba::FileFrame>();
-    int err = ff->Init();
-    if (err) {
-      return tsuba::ErrorCode::OutOfMemory;
+    if (auto res = ff->Init(); !res) {
+      return res.error();
     }
 
     auto write_result =
@@ -201,9 +200,8 @@ WriteTable(const arrow::Table& table,
     }
 
     ff->Bind(next_path.string());
-    err = ff->Persist();
-    if (err) {
-      return tsuba::ErrorCode::InvalidArgument;
+    if (auto res = ff->Persist(); !res) {
+      return res.error();
     }
   }
 
@@ -431,9 +429,8 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
   auto md = builder->Finish();
 
   auto ff = std::make_shared<tsuba::FileFrame>();
-  int err = ff->Init();
-  if (err) {
-    return tsuba::ErrorCode::OutOfMemory;
+  if (auto res = ff->Init(); !res) {
+    return res.error();
   }
 
   auto write_result = parquet::arrow::WriteMetaDataFile(*md, ff.get());
@@ -442,9 +439,8 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
   }
 
   ff->Bind(handle.path);
-  err = ff->Persist();
-  if (err) {
-    return tsuba::ErrorCode::InvalidArgument;
+  if (auto res = ff->Persist(); !res) {
+    return res.error();
   }
   return galois::ResultSuccess();
 }
@@ -688,9 +684,8 @@ galois::Result<void> Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
 
   fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
   ff->Bind(t_path.string());
-  int err = ff->Persist();
-  if (err) {
-    return ErrorCode::InvalidArgument;
+  if (auto res = ff->Persist(); !res) {
+    return res.error();
   }
   rdg->topology_path = t_path.filename().string();
 

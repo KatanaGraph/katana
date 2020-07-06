@@ -98,9 +98,8 @@ LoadTopology(galois::graphs::GraphTopology* topology,
 galois::Result<std::shared_ptr<tsuba::FileFrame>>
 WriteTopology(const galois::graphs::GraphTopology& topology) {
   auto ff = std::make_shared<tsuba::FileFrame>();
-  int err = ff->Init();
-  if (err) {
-    return tsuba::ErrorCode::OutOfMemory;
+  if (auto res = ff->Init(); !res) {
+    return res.error();
   }
   uint64_t num_nodes = topology.num_nodes();
   uint64_t num_edges = topology.num_edges();

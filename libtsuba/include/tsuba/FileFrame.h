@@ -6,6 +6,9 @@
 
 #include <parquet/arrow/writer.h>
 
+#include "galois/Result.h"
+#include "galois/Logging.h"
+
 namespace tsuba {
 
 class FileFrame : public arrow::io::OutputStream {
@@ -16,7 +19,7 @@ class FileFrame : public arrow::io::OutputStream {
   uint64_t cursor_;
   bool valid_  = false;
   bool synced_ = false;
-  int GrowBuffer(int64_t accommodate);
+  galois::Result<void> GrowBuffer(int64_t accommodate);
 
 public:
   FileFrame()                 = default;
@@ -32,7 +35,9 @@ public:
 
   FileFrame& operator=(FileFrame&& other) noexcept {
     if (&other != this) {
-      Destroy();
+      if (auto res = Destroy(); !res) {
+        GALOIS_LOG_ERROR("Destroy: {}", res.error());
+      }
       path_        = other.path_;
       map_start_   = other.map_start_;
       map_size_    = other.map_size_;
@@ -45,28 +50,28 @@ public:
     return *this;
   }
 
-  ~FileFrame();
+  ~FileFrame() override;
 
-  int Init(uint64_t reserve_size);
-  inline int Init() { return Init(1); }
+  galois::Result<void> Init(uint64_t reserve_size);
+  galois::Result<void> Init() { return Init(1); }
   void Bind(const std::string& filename);
 
-  int Destroy();
+  galois::Result<void> Destroy();
 
-  int Persist();
+  galois::Result<void> Persist();
 
   template <typename T>
-  const T* ptr() const {
+  galois::Result<T*> ptr() const {
     return reinterpret_cast<T*>(map_start_); /* NOLINT */
   }
 
   ///// Begin arrow::io::BufferOutputStream methods ///////
 
-  virtual arrow::Status Close();
-  virtual arrow::Result<int64_t> Tell() const;
-  virtual bool closed() const;
-  virtual arrow::Status Write(const void*, int64_t);
-  virtual arrow::Status Write(const std::shared_ptr<arrow::Buffer>& data);
+  arrow::Status Close() override;
+  arrow::Result<int64_t> Tell() const override;
+  bool closed() const override;
+  arrow::Status Write(const void* data, int64_t nbytes) override;
+  arrow::Status Write(const std::shared_ptr<arrow::Buffer>& data) override;
 
   ///// End arrow::io::BufferOutputStream methods ///////
 };

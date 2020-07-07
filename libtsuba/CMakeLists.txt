@@ -21,7 +21,7 @@ if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL
 endif()
 
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
-find_package(Parquet HINTS ${ARROW_CONFIG_DIR})
+find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
 target_link_libraries(tsuba PUBLIC arrow_shared parquet_shared)
 
 target_include_directories(tsuba PUBLIC

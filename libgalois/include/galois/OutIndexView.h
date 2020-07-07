@@ -8,6 +8,8 @@
 
 #include "galois/graphs/GraphHelpers.h"
 #include "tsuba/FileView.h"
+#include "tsuba/RDG.h"
+#include "tsuba/Errors.h"
 
 namespace galois {
 
@@ -34,9 +36,10 @@ struct GRPrefix {
 };
 
 class OutIndexView {
-  tsuba::FileView file_;
+  // tsuba::FileView file_;
   std::string filename_;
   const GRPrefix* gr_view_;
+  tsuba::RDG rdg_;
 
 public:
   typedef boost::counting_iterator<uint64_t> edge_iterator;
@@ -45,9 +48,19 @@ public:
   OutIndexView(const OutIndexView&) = delete;
   OutIndexView& operator=(const OutIndexView&) = delete;
 
-  OutIndexView(std::string filename) : filename_(std::move(filename)) {}
+  // OutIndexView(std::string filename) : filename_(std::move(filename)) {}
   OutIndexView(OutIndexView&& other) = default;
   OutIndexView& operator=(OutIndexView&& other) = default;
+
+  OutIndexView(tsuba::RDG&& rdg) : rdg_(std::move(rdg)) {}
+
+  static Result<std::shared_ptr<OutIndexView>> Make(tsuba::RDG&& rdg);
+  static Result<std::shared_ptr<OutIndexView>>
+  Make(const std::string& metadata_path);
+  static Result<std::shared_ptr<OutIndexView>>
+  Make(const std::string& metadata_path,
+       const std::vector<std::string>& node_properties,
+       const std::vector<std::string>& edge_properties);
 
   ~OutIndexView() {
     if (auto res = Unbind(); !res) {
@@ -61,8 +74,13 @@ public:
   const std::string& filename() const { return filename_; }
   uint64_t num_nodes() const { return gr_view_->header_.num_nodes_; }
   uint64_t num_edges() const { return gr_view_->header_.num_edges_; }
-  uint64_t view_size() const { return file_.size(); }
+  // uint64_t view_size() const { return rdg_.topology_file_storage.size(); }
+  uint64_t view_size() const {
+    return sizeof(GRHeader) + gr_view_->header_.num_nodes_ * sizeof(index_t);
+  }
+
   const uint64_t& operator[](uint64_t n) const {
+    assert(n < gr_view_->header_.num_nodes_);
     return gr_view_->out_indexes_[n];
   }
   edge_iterator edge_begin(uint64_t vertex) const {
@@ -72,6 +90,7 @@ public:
     return edge_iterator(this->operator[](vertex - 1));
   }
   const GRPrefix* gr_view() const { return gr_view_; }
+  const tsuba::RDG& get_rdg() const { return rdg_; };
 
   // typedefs used by divide by node below
   typedef std::pair<iterator, iterator> NodeRange;

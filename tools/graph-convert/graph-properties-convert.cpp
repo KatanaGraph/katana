@@ -2123,8 +2123,6 @@ void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
     }
   }
 
-  galois::SharedMemSys sys;
-
   std::string metaFile = dir;
   if (metaFile[metaFile.length() - 1] == '/') {
     metaFile += "meta";

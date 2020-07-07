@@ -1,9 +1,10 @@
 #include "graph-properties-convert.h"
-
-#include <llvm/Support/CommandLine.h>
-
+#include "galois/Galois.h"
+#include "galois/Timer.h"
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
+
+#include <llvm/Support/CommandLine.h>
 
 namespace cll = llvm::cl;
 
@@ -71,7 +72,11 @@ void parseMongodb() {
 }
 
 int main(int argc, char** argv) {
+  galois::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  galois::StatTimer totalTimer("TimerTotal");
+  totalTimer.start();
 
   switch (database) {
   case galois::SourceDatabase::NONE:
@@ -84,4 +89,6 @@ int main(int argc, char** argv) {
     parseMongodb();
     break;
   }
+
+  totalTimer.stop();
 }

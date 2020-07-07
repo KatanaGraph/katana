@@ -163,12 +163,12 @@ conda activate galois-build
 * Build the galois package:
 ```shell
 cd $GALOIS_SOURCE_DIR
-conda build -c conda-forge conda_recipe/
+conda build -c conda-forge -c katanagraph conda_recipe/
 ```
 * Build the galois-python package (The galois package must already have been built):
 ```shell
 cd $GALOIS_SOURCE_DIR/python
-conda build -c conda-forge --use-local conda_recipe/
+conda build -c conda-forge -c katanagraph --use-local conda_recipe/
 ```
 
 The `conda build` commands will run some simple tests on the packages and will 

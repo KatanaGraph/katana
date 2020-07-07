@@ -38,18 +38,17 @@ function(add_test_gpu app input output baseoutputext)
   set(options NOT_QUICK)
   set(one_value_args)
   set(multi_value_args)
-  set(suffix "-${app}-gpu-${input}")
+  set(suffix "-${app}-${input}-gpu")
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
   string(REPLACE "_" ";" app_list ${app})
   list(GET app_list 0 app_id)
-  set(verification_log ${BASE_VERIFICATION}/${input}.${baseoutputext})
 
-  if(EXISTS ${verification_log})
-    add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
-    add_test(NAME verify${suffix} COMMAND python ${RESULT_CHECKER} -t=0.01 -sort=1 -delete=1 ${verification_log} ${output})
-  else()
-    add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
+  # TODO: add verification log support
+  add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
+
+  if(NOT X_NOT_QUICK)
+    set_tests_properties(run${suffix} PROPERTIES LABELS quick)
   endif()
 endfunction(add_test_gpu)
 

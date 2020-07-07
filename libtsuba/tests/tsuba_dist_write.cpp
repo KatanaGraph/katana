@@ -1,3 +1,5 @@
+#include "MPICommBackend.h"
+
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -76,9 +78,13 @@ void DownloadGraph() {
 }
 
 int main() {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
+
+  if (auto init_good = tsuba::InitWithMPI(); !init_good) {
+    GALOIS_LOG_FATAL("tsuba::InitWithMPI: {}", init_good.error());
   }
   DownloadGraph();
+  if (auto fini_good = tsuba::FiniWithMPI(); !fini_good) {
+    GALOIS_LOG_FATAL("tsuba::FiniWithMPI: {}", fini_good.error());
+  }
   return 0;
 }

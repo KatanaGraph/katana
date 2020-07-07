@@ -1,10 +1,22 @@
 #include "tsuba/tsuba.h"
 
+#include "galois/CommBackend.h"
 #include "s3.h"
+#include "tsuba_internal.h"
 
-namespace tsuba {
+std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref = nullptr;
 
-galois::Result<void> Init() { return S3Init(); }
-galois::Result<void> Fini() { return S3Fini(); }
+static galois::NullCommBackend default_backend;
 
-} // namespace tsuba
+galois::Result<void> tsuba::Init(galois::CommBackend* comm) {
+  GlobalState::Init(comm);
+  return S3Init();
+}
+
+galois::Result<void> tsuba::Init() { return Init(&default_backend); }
+
+galois::Result<void> tsuba::Fini() {
+  auto s3_fini_ret = S3Fini();
+  GlobalState::Fini();
+  return s3_fini_ret;
+}

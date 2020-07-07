@@ -32,7 +32,6 @@ function(app_gpu target_name)
   target_compile_options(${target_name} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-w>)
   target_link_libraries(${target_name} Galois::gpu)
   set_property(TARGET ${target_name} PROPERTY CUDA_STANDARD 14)
-  set_property(TARGET ${target_name} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 endfunction()
 
 function(add_test_gpu app input output baseoutputext)

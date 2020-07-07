@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  querying::CypherCompiler cc;
+  galois::CypherCompiler cc;
   // get query to parse
   if (query != "") {
     cc.compile(query.c_str());
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   unsigned r_count = 0;
   galois::gInfo("Parsed return values are as follows:");
   // parsed return values are the following
-  for (const querying::ReturnResult& a : cc.getReturnValues()) {
+  for (const galois::CompilerQueryResult& a : cc.getReturnValues()) {
     galois::gInfo("Return value ", r_count++);
     a.printStruct();
   }

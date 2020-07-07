@@ -86,26 +86,9 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
   return Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
 }
 
-//////////////////////////////////////////////////////////////////////
-// Logging
-//   I wish log level was conditioned on environment variable
-//   I would also use an environment variable to disable __FILE__ __LINE__
-//   Might be nice to compile out VERBOSE statements for release builds or
-//     make DEBUG output conditional on an environment var.
-//   And of course I would prefer V: to VERBOSE:
-template <typename... Args>
-void LogAssert(bool condition, const char* format, const Args&... args) {
-  if (!condition) {
-    fmt::vprint(stderr, format, fmt::make_format_args(args...));
-    // I'm not proud of having to do this
-    fmt::vprint(stderr, "{}", fmt::make_format_args("\n"));
-    abort();
-  }
-}
-
 static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
-  LogAssert(library_init == true,
-            "Must call tsuba::Init before S3 interaction");
+  GALOIS_LOG_VASSERT(library_init == true,
+                     "Must call tsuba::Init before S3 interaction");
   return GetS3Client(default_executor);
 }
 
@@ -373,8 +356,8 @@ static std::condition_variable xfer_cv;
 // }
 int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
                      const uint8_t* data, uint64_t size) {
-  LogAssert(library_init == true,
-            "Must call tsuba::Init before S3 interaction");
+  GALOIS_LOG_VASSERT(library_init == true,
+                     "Must call tsuba::Init before S3 interaction");
   // TODO: Check total size is less than 5TB
   // TODO: If we fix kS3BufSize at MB(5), then check size less than 48.8GB
   if (size == 0) {
@@ -398,9 +381,10 @@ int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
       // Now make the iterator point to the emplaced struct
       it = xferm.find(bno);
     }
-    LogAssert(it->second.xfer_ == Xfer::One,
-              "{:<30} PutMultiAsync1 before previous finished, state is {}\n",
-              bno, xfer_label.at(it->second.xfer_));
+    GALOIS_LOG_VASSERT(
+        it->second.xfer_ == Xfer::One,
+        "{:<30} PutMultiAsync1 before previous finished, state is {}\n", bno,
+        xfer_label.at(it->second.xfer_));
     it->second.xfer_  = Xfer::Two;
     it->second.parts_ = std::vector<SegmentedBufferView::BufPart>(
         bufView.begin(), bufView.end());
@@ -428,11 +412,12 @@ int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
   {
     std::lock_guard<std::mutex> lk(xfer_mutex);
     auto it = xferm.find(bno);
-    LogAssert(it != xferm.end(),
-              "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
-    LogAssert(it->second.xfer_ == Xfer::Two,
-              "{:<30} PutMultiAsync2 but state is {}\n", bno,
-              xfer_label.at(it->second.xfer_));
+    GALOIS_LOG_VASSERT(
+        it != xferm.end(),
+        "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
+    GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Two,
+                       "{:<30} PutMultiAsync2 but state is {}\n", bno,
+                       xfer_label.at(it->second.xfer_));
     it->second.xfer_ = Xfer::Three;
     pm               = &it->second;
   }
@@ -482,12 +467,12 @@ int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
         {
           std::lock_guard<std::mutex> lk(xfer_mutex);
           auto it = xferm.find(bno);
-          LogAssert(it != xferm.end(),
-                    "{:<30} PutMultiAsync2 callback no bucket/object in map\n",
-                    bno);
-          LogAssert(it->second.xfer_ == Xfer::Three,
-                    "{:<30} PutMultiAsync2 callback but state is {}\n", bno,
-                    xfer_label.at(it->second.xfer_));
+          GALOIS_LOG_VASSERT(
+              it != xferm.end(),
+              "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
+          GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Three,
+                             "{:<30} PutMultiAsync2 callback but state is {}\n",
+                             bno, xfer_label.at(it->second.xfer_));
           it->second.part_e_tags_[i] = outcome.GetResult().GetETag();
           it->second.finished_++;
           GALOIS_LOG_VERBOSE(
@@ -517,12 +502,12 @@ int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
   {
     std::unique_lock<std::mutex> lk(xfer_mutex);
     auto it = xferm.find(bno);
-    LogAssert(it != xferm.end(),
-              "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
+    GALOIS_LOG_VASSERT(it != xferm.end(),
+                       "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
     pm = &it->second;
-    LogAssert(pm->xfer_ == Xfer::Three,
-              "{:<30} PutMultiAsync3 but state is {}\n", bno,
-              xfer_label.at(it->second.xfer_));
+    GALOIS_LOG_VASSERT(pm->xfer_ == Xfer::Three,
+                       "{:<30} PutMultiAsync3 but state is {}\n", bno,
+                       xfer_label.at(it->second.xfer_));
 
     // Possibly blocking call
     xfer_cv.wait(lk, [pm] { return pm->finished_ >= pm->parts_.size(); });
@@ -550,8 +535,8 @@ int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
   {
     std::lock_guard<std::mutex> lk(xfer_mutex);
     auto it = xferm.find(bno);
-    LogAssert(it != xferm.end(),
-              "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
+    GALOIS_LOG_VASSERT(it != xferm.end(),
+                       "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
     it->second.outcome_fut_ = async_s3_client->CompleteMultipartUploadCallable(
         completeMultipartUploadRequest);
   }
@@ -566,12 +551,13 @@ int S3PutMultiAsyncFinish(const std::string& bucket,
   {
     std::lock_guard<std::mutex> lk(xfer_mutex);
     auto it = xferm.find(bno);
-    LogAssert(it != xferm.end(),
-              "{:<30} PutMultiAsyncFinish no bucket/object in map\n", bno);
+    GALOIS_LOG_VASSERT(it != xferm.end(),
+                       "{:<30} PutMultiAsyncFinish no bucket/object in map\n",
+                       bno);
     pm = &it->second;
-    LogAssert(it->second.xfer_ == Xfer::Four,
-              "{:<30} PutMultiAsyncFinish but state is {}\n", bno,
-              xfer_label.at(it->second.xfer_));
+    GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Four,
+                       "{:<30} PutMultiAsyncFinish but state is {}\n", bno,
+                       xfer_label.at(it->second.xfer_));
   }
 
   auto completeUploadOutcome = pm->outcome_fut_.get(); // Blocking call
@@ -580,8 +566,9 @@ int S3PutMultiAsyncFinish(const std::string& bucket,
   {
     std::lock_guard<std::mutex> lk(xfer_mutex);
     auto it = xferm.find(bno);
-    LogAssert(it != xferm.end(),
-              "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
+    GALOIS_LOG_VASSERT(
+        it != xferm.end(),
+        "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
     it->second.xfer_ = Xfer::One;
   }
 
@@ -603,8 +590,8 @@ static std::condition_variable bnocv;
 int S3PutSingleAsync(const std::string& bucket, const std::string& object,
                      const uint8_t* data, uint64_t size) {
   Aws::S3::Model::PutObjectRequest object_request;
-  LogAssert(library_init == true,
-            "Must call tsuba::Init before S3 interaction");
+  GALOIS_LOG_VASSERT(library_init == true,
+                     "Must call tsuba::Init before S3 interaction");
 
   object_request.SetBucket(ToAwsString(bucket));
   object_request.SetKey(ToAwsString(object));

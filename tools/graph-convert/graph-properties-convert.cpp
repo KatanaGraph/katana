@@ -149,6 +149,29 @@ void addFalseColumnBuilder(const std::string& column,
   falseMap->push_back(true);
 }
 
+// special case for building boolean builders where the empty value is false,
+// not null
+void addFalseColumnBuilder(const std::string& column,
+                           std::unordered_map<std::string, size_t>* map,
+                           BooleanBuilders* columnBuilders,
+                           ArrowFields* schemaVector,
+                           std::shared_ptr<arrow::DataType> type,
+                           size_t offset) {
+  // add entry to map
+  map->insert(std::pair<std::string, size_t>(column, map->size()));
+  auto entry = map->find(column);
+
+  // add column to schema and column builders, make table even by adding nulls
+  schemaVector->push_back(arrow::field(column, type));
+  columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
+  for (size_t i = 0; i < offset; i++) {
+    auto st = columnBuilders->at(entry->second)->Append(false);
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error appending to an arrow array builder");
+    }
+  }
+}
+
 template <typename T>
 void addColumnBuilder(const std::string& column,
                       std::unordered_map<std::string, size_t>* map,
@@ -175,8 +198,7 @@ void addColumnBuilder(const std::string& column,
 void addColumnBuilder(const std::string& column, bool forNode,
                       std::unordered_map<std::string, KeyGraphML>* map,
                       ArrayBuilders* columnBuilders, ArrowFields* schemaVector,
-                      std::shared_ptr<arrow::DataType> type,
-                      std::vector<bool>* nullMap, size_t offset) {
+                      std::shared_ptr<arrow::DataType> type, size_t offset) {
   // add entry to map
   map->insert(std::pair<std::string, KeyGraphML>(
       column, KeyGraphML(column, forNode, map->size())));
@@ -189,9 +211,6 @@ void addColumnBuilder(const std::string& column, bool forNode,
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error appending nulls to an arrow array builder");
   }
-
-  // add to null map
-  nullMap->push_back(true);
 }
 void addBuilder(ArrayBuilders* columnBuilders, ArrowFields* schemaVector,
                 KeyGraphML* key) {
@@ -896,8 +915,10 @@ void appendArray(std::shared_ptr<arrow::ListBuilder> lBuilder,
 }
 
 void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
-                 const std::string& val) {
-  arrow::Status st = arrow::Status::OK();
+                 const std::string& val, size_t currentElts) {
+  arrow::Status st   = arrow::Status::OK();
+  uint64_t nullCount = currentElts - array->length();
+  st                 = array->AppendNulls(nullCount);
 
   switch (array->type()->id()) {
   case arrow::Type::STRING: {
@@ -940,6 +961,29 @@ void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
   default: {
     break;
   }
+  }
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+  }
+}
+
+void evenOutTable(ArrayBuilders& arrays, size_t currentElts) {
+  arrow::Status st = arrow::Status::OK();
+  for (auto array : arrays) {
+    uint64_t nullCount = currentElts - array->length();
+    st                 = array->AppendNulls(nullCount);
+  }
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error adding value to arrow array builder");
+  }
+}
+void evenOutTable(BooleanBuilders& arrays, size_t currentElts) {
+  arrow::Status st = arrow::Status::OK();
+  for (auto array : arrays) {
+    uint64_t falseCount = currentElts - array->length();
+    for (uint64_t i = 0; i < falseCount; i++) {
+      st = array->Append(false);
+    }
   }
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error adding value to arrow array builder");
@@ -1121,11 +1165,9 @@ bool processNode(xmlTextReaderPtr reader,
                  std::unordered_map<std::string, KeyGraphML>* nodeKeys,
                  ArrowFields* nodeSchemaVector,
                  ArrayBuilders* nodeColumnBuilders,
-                 std::vector<bool>* propertyNull,
                  std::unordered_map<std::string, size_t>* labelIndices,
                  ArrowFields* nodeLabelSchemaVector,
-                 BooleanBuilders* nodeLabelColumnBuilders,
-                 std::vector<bool>* nodeLabelNull, size_t nodes,
+                 BooleanBuilders* nodeLabelColumnBuilders, size_t nodes,
                  std::unordered_map<std::string, size_t>* nodeIndexes) {
   auto minimumDepth = xmlTextReaderDepth(reader);
 
@@ -1206,12 +1248,11 @@ bool processNode(xmlTextReaderPtr reader,
               if (keyIter == nodeKeys->end()) {
                 addColumnBuilder(property.first, true, nodeKeys,
                                  nodeColumnBuilders, nodeSchemaVector,
-                                 arrow::utf8(), propertyNull, nodes);
+                                 arrow::utf8(), nodes);
                 keyIter = nodeKeys->find(property.first);
               }
               appendValue(nodeColumnBuilders->at(keyIter->second.columnID),
-                          property.second);
-              propertyNull->at(keyIter->second.columnID) = false;
+                          property.second, nodes);
             }
           }
         }
@@ -1233,21 +1274,19 @@ bool processNode(xmlTextReaderPtr reader,
       // if label does not already exist, add a column
       if (entry == labelIndices->end()) {
         addFalseColumnBuilder(label, labelIndices, nodeLabelColumnBuilders,
-                              nodeLabelSchemaVector, arrow::boolean(),
-                              nodeLabelNull, nodes);
+                              nodeLabelSchemaVector, arrow::boolean(), nodes);
         entry = labelIndices->find(label);
       }
-      auto st = nodeLabelColumnBuilders->at(entry->second)->Append(true);
+      auto array = nodeLabelColumnBuilders->at(entry->second);
+      auto st    = arrow::Status::OK();
+      for (uint64_t i = array->length(); i < nodes; i++) {
+        st = array->Append(false);
+      }
+      st = array->Append(true);
       if (!st.ok()) {
         GALOIS_LOG_FATAL("Error adding value to arrow array");
       }
-      nodeLabelNull->at(entry->second) = false;
     }
-  }
-
-  if (validNode) {
-    addNullsToBuilderAndReset(nodeColumnBuilders, propertyNull);
-    addFalsesToBuilderAndReset(nodeLabelColumnBuilders, nodeLabelNull);
   }
   return validNode;
 }
@@ -1261,11 +1300,9 @@ bool processEdge(xmlTextReaderPtr reader,
                  std::unordered_map<std::string, KeyGraphML>* edgeKeys,
                  ArrowFields* edgeSchemaVector,
                  ArrayBuilders* edgeColumnBuilders,
-                 std::vector<bool>* propertyNull,
                  std::unordered_map<std::string, size_t>* typeIndices,
                  ArrowFields* edgeTypeSchemaVector,
-                 BooleanBuilders* edgeTypeColumnBuilders,
-                 std::vector<bool>* edgeTypeNull, size_t edges,
+                 BooleanBuilders* edgeTypeColumnBuilders, size_t edges,
                  std::vector<uint64_t>* out_indices_,
                  std::vector<uint32_t>* sources,
                  std::vector<uint32_t>* destinations,
@@ -1351,12 +1388,11 @@ bool processEdge(xmlTextReaderPtr reader,
               if (keyIter == edgeKeys->end()) {
                 addColumnBuilder(property.first, false, edgeKeys,
                                  edgeColumnBuilders, edgeSchemaVector,
-                                 arrow::utf8(), propertyNull, edges);
+                                 arrow::utf8(), edges);
                 keyIter = edgeKeys->find(property.first);
               }
               appendValue(edgeColumnBuilders->at(keyIter->second.columnID),
-                          property.second);
-              propertyNull->at(keyIter->second.columnID) = false;
+                          property.second, edges);
             }
           }
         }
@@ -1377,21 +1413,18 @@ bool processEdge(xmlTextReaderPtr reader,
     // if type does not already exist, add a column
     if (entry == typeIndices->end()) {
       addFalseColumnBuilder(type, typeIndices, edgeTypeColumnBuilders,
-                            edgeTypeSchemaVector, arrow::boolean(),
-                            edgeTypeNull, edges);
+                            edgeTypeSchemaVector, arrow::boolean(), edges);
       entry = typeIndices->find(type);
     }
-
-    auto st = edgeTypeColumnBuilders->at(entry->second)->Append(true);
+    auto array = edgeTypeColumnBuilders->at(entry->second);
+    auto st    = arrow::Status::OK();
+    for (uint64_t i = array->length(); i < edges; i++) {
+      st = array->Append(false);
+    }
+    st = array->Append(true);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error adding value to arrow array");
     }
-    edgeTypeNull->at(entry->second) = false;
-  }
-
-  if (validEdge) {
-    addNullsToBuilderAndReset(edgeColumnBuilders, propertyNull);
-    addFalsesToBuilderAndReset(edgeTypeColumnBuilders, edgeTypeNull);
   }
   return validEdge;
 }
@@ -1416,22 +1449,9 @@ void processGraphGraphML(
     std::vector<uint32_t>* destinations) {
   auto minimumDepth = xmlTextReaderDepth(reader);
   int ret           = xmlTextReaderRead(reader);
-  std::vector<bool> nodePropertyNull;
-  std::vector<bool> edgePropertyNull;
-
-  // these are initialized to length 0 since they are built up over time
-  std::vector<bool> nodeLabelNull;
-  std::vector<bool> edgeTypeNull;
 
   // maps node IDs to node indexes
   std::unordered_map<std::string, size_t> nodeIndexes;
-
-  for (size_t i = 0; i < nodeColumnBuilders->size(); i++) {
-    nodePropertyNull.push_back(true);
-  }
-  for (size_t i = 0; i < edgeColumnBuilders->size(); i++) {
-    edgePropertyNull.push_back(true);
-  }
 
   size_t nodes = 0;
   size_t edges = 0;
@@ -1448,18 +1468,17 @@ void processGraphGraphML(
       // if elt is a "node" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "node")) {
         if (processNode(reader, nodeKeys, nodeSchemaVector, nodeColumnBuilders,
-                        &nodePropertyNull, labelIndices, nodeLabelSchemaVector,
-                        nodeLabelColumnBuilders, &nodeLabelNull, nodes,
-                        &nodeIndexes)) {
+                        labelIndices, nodeLabelSchemaVector,
+                        nodeLabelColumnBuilders, nodes, &nodeIndexes)) {
           out_indices_->push_back(0);
           nodes++;
         }
       } else if (xmlStrEqual(name, BAD_CAST "edge")) {
         // if elt is an "egde" xml node read it in
         if (processEdge(reader, edgeKeys, edgeSchemaVector, edgeColumnBuilders,
-                        &edgePropertyNull, typeIndices, edgeTypeSchemaVector,
-                        edgeTypeColumnBuilders, &edgeTypeNull, edges,
-                        out_indices_, sources, destinations, &nodeIndexes)) {
+                        typeIndices, edgeTypeSchemaVector,
+                        edgeTypeColumnBuilders, edges, out_indices_, sources,
+                        destinations, &nodeIndexes)) {
           edges++;
         }
       } else {
@@ -1471,6 +1490,10 @@ void processGraphGraphML(
     xmlFree(name);
     ret = xmlTextReaderRead(reader);
   }
+  evenOutTable(*nodeColumnBuilders, nodes);
+  evenOutTable(*nodeLabelColumnBuilders, nodes);
+  evenOutTable(*edgeColumnBuilders, edges);
+  evenOutTable(*edgeTypeColumnBuilders, edges);
 
   out_dests_->resize(edges, std::numeric_limits<uint32_t>::max());
 }
@@ -2129,6 +2152,7 @@ void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
   } else {
     metaFile += "/meta";
   }
+
   result = graph.Write(metaFile);
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs");

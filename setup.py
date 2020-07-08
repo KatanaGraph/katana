@@ -38,6 +38,7 @@ def package_setup():
     # via the environment.
     cmake_args = os.environ.get("GALOIS_CMAKE_ARGS", "").split()
     cmake_args.append("-DBUILD_SHARED_LIBS=ON")
+    cmake_args.append("-DBUILD_TESTING=OFF")
 
     # Following PEP-518, use pyproject.toml instead of setup(setup_requires=...) to
     # specify setup dependencies.

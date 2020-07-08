@@ -58,10 +58,6 @@ class Lockable;
 #endif
 }
 
-#ifdef GALOIS_USE_EXP
-bool owns(Lockable* lockable, MethodFlag m);
-#endif
-
 [[noreturn]] inline void signalFailSafe(void) {
 #if defined(GALOIS_USE_LONGJMP_ABORT)
   std::longjmp(galois::runtime::execFrame, galois::runtime::REACHED_FAILSAFE);

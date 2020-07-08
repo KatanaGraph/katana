@@ -54,12 +54,23 @@ int main(int argc, char** argv) {
     galois::gError("No query or file with query specified to parse");
   }
 
-  unsigned r_count = 0;
+  // Print parsed values
+  galois::gInfo("Parsed single node values (not attached to an edge) "
+                "are as follows:");
+  for (const galois::CompilerQueryNode& a : cc.getQueryNodes()) {
+    a.printStruct(1);
+  }
+
+  galois::gInfo("Parsed edge values and endpoints are as follows:");
+  for (const galois::CompilerQueryEdge& a : cc.getQueryEdges()) {
+    a.printStruct(1);
+    a.caused_by.printStruct(2);
+    a.acted_on.printStruct(2);
+  }
+
   galois::gInfo("Parsed return values are as follows:");
-  // parsed return values are the following
   for (const galois::CompilerQueryResult& a : cc.getReturnValues()) {
-    galois::gInfo("Return value ", r_count++);
-    a.printStruct();
+    a.printStruct(1);
   }
 
   totalTime.stop();

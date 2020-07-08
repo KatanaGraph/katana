@@ -33,8 +33,8 @@ namespace galois {
 
 /**
  * Thread-safe ordered set. Faster than STL heap operations (about 10%-15%
- * faster on serially) and can use scalable allocation, e.g., {@link
- * FixedSizeAllocator}.
+ * faster on serially) and can use scalable allocation, e.g.,
+ * \ref FixedSizeAllocator.
  */
 template <typename T, typename Cmp = std::less<T>,
           typename Alloc = galois::FixedSizeAllocator<T>>

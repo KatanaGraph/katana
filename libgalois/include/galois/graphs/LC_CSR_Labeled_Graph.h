@@ -280,7 +280,6 @@ public:
   /**
    * @param N node to get degree for
    * @param data label to get degree of
-   * @param mflag how safe the acquire should be
    * @returns Degree of node N
    */
   auto getDegree(GraphNode N, const EdgeTy& data) const {
@@ -362,7 +361,6 @@ public:
   /**
    * @param N node to get in-degree for
    * @param data label to get in-degree of
-   * @param mflag how safe the acquire should be
    * @returns In-degree of node N
    */
   auto getInDegree(GraphNode N, const EdgeTy& data) const {

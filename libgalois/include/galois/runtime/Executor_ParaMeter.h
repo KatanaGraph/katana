@@ -301,126 +301,126 @@ private:
         std::make_tuple(galois::steal(), galois::loopname("ParaM-Simple")));
   }
 
-  void runCautiousStep(UnorderedStepStats& stats){galois::runtime::do_all_gen(
-      m_wl.iterateCurr(),
-      [&, this](IterationContext* it) {
-        stats.wlSize += 1;
+  void runCautiousStep(UnorderedStepStats& stats) {
+    galois::runtime::do_all_gen(
+        m_wl.iterateCurr(),
+        [&, this](IterationContext* it) {
+          stats.wlSize += 1;
 
-        setThreadContext(&(it->ctx));
-        bool broke = false;
+          setThreadContext(&(it->ctx));
+          bool broke = false;
 
-        if (needsBreak) {
-          it->facing.setBreakFlag(&broke);
-        }
-#ifdef GALOIS_USE_LONGJMP_ABORT
-        int flag = 0;
-        if ((flag = setjmp(execFrame)) == 0) {
-          m_func(it->item, it->facing.data());
-
-        } else {
-#elif GALOIS_USE_EXCEPTION_ABORT
-        try {
-          m_func(it->item, it->facing.data());
-
-        } catch (const ConflictFlag& flag) {
-#endif
-          clearConflictLock();
-          switch (flag) {
-          case galois::runtime::CONFLICT:
-            it->doabort = true;
-            break;
-          default:
-            std::abort();
+          if (needsBreak) {
+            it->facing.setBreakFlag(&broke);
           }
-        }
+#ifdef GALOIS_USE_LONGJMP_ABORT
+          int flag = 0;
+          if ((flag = setjmp(execFrame)) == 0) {
+            m_func(it->item, it->facing.data());
+          } else
+#elif GALOIS_USE_EXCEPTION_ABORT
+          try {
+            m_func(it->item, it->facing.data());
 
-        if (needsBreak && broke) {
-          m_broken.update(true);
-        }
+          } catch (const ConflictFlag& flag)
+#endif
+          {
+            clearConflictLock();
+            switch (flag) {
+            case galois::runtime::CONFLICT:
+              it->doabort = true;
+              break;
+            default:
+              std::abort();
+            }
+          }
 
-        setThreadContext(nullptr);
-      },
-      std::make_tuple(galois::steal(), galois::loopname("ParaM-Expand-NH")));
+          if (needsBreak && broke) {
+            m_broken.update(true);
+          }
 
-  galois::runtime::do_all_gen(
-      m_wl.iterateCurr(),
-      [&, this](IterationContext* it) {
-        if (it->doabort) {
-          abortIteration(it);
+          setThreadContext(nullptr);
+        },
+        std::make_tuple(galois::steal(), galois::loopname("ParaM-Expand-NH")));
 
-        } else {
-          stats.parallelism += 1;
-          unsigned nh = commitIteration(it);
-          stats.nhSize += nh;
-        }
-      },
-      std::make_tuple(galois::steal(), galois::loopname("ParaM-Commit")));
-}
+    galois::runtime::do_all_gen(
+        m_wl.iterateCurr(),
+        [&, this](IterationContext* it) {
+          if (it->doabort) {
+            abortIteration(it);
 
-template <typename R>
-void execute(const R& range) {
+          } else {
+            stats.parallelism += 1;
+            unsigned nh = commitIteration(it);
+            stats.nhSize += nh;
+          }
+        },
+        std::make_tuple(galois::steal(), galois::loopname("ParaM-Commit")));
+  }
 
-  galois::runtime::on_each_gen(
-      [&, this](const unsigned, const unsigned) {
-        auto p = range.local_pair();
+  template <typename R>
+  void execute(const R& range) {
 
-        for (auto i = p.first; i != p.second; ++i) {
-          IterationContext* it = newIteration(*i);
-          m_wl.pushNext(it);
-        }
-      },
-      std::make_tuple());
+    galois::runtime::on_each_gen(
+        [&, this](const unsigned, const unsigned) {
+          auto p = range.local_pair();
 
-  UnorderedStepStats stats;
+          for (auto i = p.first; i != p.second; ++i) {
+            IterationContext* it = newIteration(*i);
+            m_wl.pushNext(it);
+          }
+        },
+        std::make_tuple());
 
-  while (!m_wl.empty()) {
+    UnorderedStepStats stats;
 
-    m_wl.nextStep();
+    while (!m_wl.empty()) {
 
-    if (needsAborts) {
-      runCautiousStep(stats);
+      m_wl.nextStep();
 
-    } else {
-      runSimpleStep(stats);
-    }
+      if (needsAborts) {
+        runCautiousStep(stats);
 
-    // dbg::print("Step: ", stats.step, ", Parallelism: ",
-    // stats.parallelism.reduce());
-    assert(stats.parallelism.reduce() && "ERROR: No Progress");
+      } else {
+        runSimpleStep(stats);
+      }
 
-    stats.dump(m_statsFile, loopname);
-    stats.nextStep();
+      // dbg::print("Step: ", stats.step, ", Parallelism: ",
+      // stats.parallelism.reduce());
+      assert(stats.parallelism.reduce() && "ERROR: No Progress");
 
-    if (needsBreak && m_broken.reduce()) {
-      break;
-    }
+      stats.dump(m_statsFile, loopname);
+      stats.nextStep();
 
-  } // end while
+      if (needsBreak && m_broken.reduce()) {
+        break;
+      }
 
-  closeStatsFile();
-}
+    } // end while
+
+    closeStatsFile();
+  }
 
 public:
-ParaMeterExecutor(const FunctionTy& f, const ArgsTy& args)
-    : m_func(f), loopname(galois::internal::getLoopName(args)),
-      m_statsFile(getStatsFile()) {}
+  ParaMeterExecutor(const FunctionTy& f, const ArgsTy& args)
+      : m_func(f), loopname(galois::internal::getLoopName(args)),
+        m_statsFile(getStatsFile()) {}
 
-// called serially once
-template <typename RangeTy>
-void init(const RangeTy& range) {
-  execute(range);
-}
+  // called serially once
+  template <typename RangeTy>
+  void init(const RangeTy& range) {
+    execute(range);
+  }
 
-// called once on each thread followed by a barrier
-template <typename RangeTy>
-void initThread(const RangeTy&) const {}
+  // called once on each thread followed by a barrier
+  template <typename RangeTy>
+  void initThread(const RangeTy&) const {}
 
-void operator()(void) {}
+  void operator()(void) {}
+};
 
-}; // namespace ParaMeter
-
+} // namespace ParaMeter
 } // namespace runtime
-} // namespace galois
 
 namespace worklists {
 

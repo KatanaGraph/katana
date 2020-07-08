@@ -16,7 +16,7 @@ bool GetEnv(const std::string& var_name);
 /// ret_val parameter.
 ///
 /// \param var_name name of the variable
-/// \param[out] ret_val where to store the value of environment variable
+/// \param[out] ret where to store the value of environment variable
 /// \return true if environment variable set and value was successfully parsed;
 ///   false otherwise
 bool GetEnv(const std::string& var_name, bool* ret);

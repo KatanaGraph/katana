@@ -44,8 +44,6 @@ struct RDG {
   bool Equals(const RDG& other) const;
 };
 
-/// Return True if @rdg1 and @rdg2 have identical content
-
 // acceptable values for Open's flags
 constexpr int kReadOnly  = 0;
 constexpr int kReadWrite = 1;
@@ -64,9 +62,9 @@ constexpr int kOverwrite = 1;
 galois::Result<void> Rename(std::shared_ptr<RDGHandle> handle,
                             const std::string& name, int flags);
 
-/// Load the RDG described by the metadata in @handle into memory
+/// Load the RDG described by the metadata in handle into memory
 galois::Result<RDG> Load(std::shared_ptr<RDGHandle> handle);
-/// Load the RDG described by the metadata in @handle into memory, but only
+/// Load the RDG described by the metadata in handle into memory, but only
 ///    populate the listed properties
 galois::Result<RDG> Load(std::shared_ptr<RDGHandle> handle,
                          const std::vector<std::string>& node_properties,

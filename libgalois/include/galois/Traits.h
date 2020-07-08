@@ -290,13 +290,13 @@ struct neighborhood_visitor : public trait_has_value<T>,
 };
 
 /**
- * Indicates the operator has a function that allows a {@link
- * galois::for_each} loop to be exited deterministically.
+ * Indicates the operator has a function that allows a \ref galois::for_each
+ * loop to be exited deterministically.
  *
  * The function should have the signature <code>bool()</code>.
  *
  * It will be periodically called by the deterministic scheduler.  If it
- * returns true, the loop ends as if calling {@link UserContext::breakLoop},
+ * returns true, the loop ends as if calling \ref UserContext::breakLoop,
  * but unlike that function, these breaks are deterministic.
  */
 struct det_parallel_break_tag {};

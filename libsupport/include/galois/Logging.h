@@ -45,6 +45,7 @@ void LogString(LogLevel level, const std::string& s);
 /// Log at a specific LogLevel.
 ///
 /// \tparam F         string-like type
+/// \param level      level to log at
 /// \param fmt_string a C++20-style fmt string (e.g., "hello {}")
 /// \param args       arguments to fmt interpolation
 template <typename F, typename... Args>
@@ -56,6 +57,7 @@ void Log(LogLevel level, F fmt_string, Args&&... args) {
 /// Log at a specific LogLevel with source code information.
 ///
 /// \tparam F         string-like type
+/// \param level      level to log at
 /// \param file_name  file name
 /// \param line_no    line number
 /// \param fmt_string a C++20-style fmt string (e.g., "hello {}")

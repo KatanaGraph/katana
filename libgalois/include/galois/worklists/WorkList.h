@@ -35,18 +35,18 @@
 namespace galois {
 /**
  * Scheduling policies for Galois iterators. Unless you have very specific
- * scheduling requirement, {@link PerSocketChunkLIFO} or {@link
- * PerSocketChunkFIFO} is a reasonable scheduling policy. If you need
- * approximate priority scheduling, use {@link OrderedByIntegerMetric}. For
- * debugging, you may be interested in {@link FIFO} or {@link LIFO}, which try
- * to follow serial order exactly.
+ * scheduling requirement, \ref PerSocketChunkLIFO or \ref PerSocketChunkFIFO is
+ * a reasonable scheduling policy. If you need approximate priority scheduling,
+ * use \ref OrderedByIntegerMetric. For debugging, you may be interested in
+ * \ref FIFO or \ref LIFO, which try to follow serial order exactly.
  *
  * The way to use a worklist is to pass it as a template parameter to
- * {@link for_each()}. For example,
+ * \ref for_each(). For example,
  *
  * \code
  * galois::for_each(galois::iterate(beg,end), fn,
- * galois::wl<galois::worklists::PerSocketChunkFIFO<32>>()); \endcode
+ * galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+ * \endcode
  */
 namespace worklists {
 namespace { // don't pollute the symbol table with the example

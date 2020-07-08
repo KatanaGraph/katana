@@ -30,7 +30,9 @@ else()
   target_link_libraries(galois_support PUBLIC Boost::filesystem)
 endif()
 
-add_subdirectory(test)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  add_subdirectory(test)
+endif()
 
 install(
   DIRECTORY include/

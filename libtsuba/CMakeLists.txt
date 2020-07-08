@@ -51,7 +51,9 @@ else()
   target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
 endif()
 
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 install(
   DIRECTORY include/

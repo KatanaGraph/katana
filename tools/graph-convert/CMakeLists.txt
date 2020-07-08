@@ -79,4 +79,6 @@ install(TARGETS graph-properties-convert
   COMPONENT tools
 )
 
-add_subdirectory(tests)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

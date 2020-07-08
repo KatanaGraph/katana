@@ -9,6 +9,13 @@ rm -rf build
 mkdir build
 cd build
 # Useful debugging addition to the below: -DCMAKE_VERBOSE_MAKEFILE=ON
-cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_ARCH=none $CMAKE_CCACHE_OPTION -S "$SRC_DIR"
+cmake \
+  -DBUILD_SHARED_LIBS=ON \
+  -DBUILD_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=$PREFIX \
+  -DUSE_ARCH=none \
+  $CMAKE_CCACHE_OPTION \
+  -S "$SRC_DIR"
 make -j2
 make install

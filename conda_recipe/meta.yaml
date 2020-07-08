@@ -6,9 +6,6 @@ package:
 
 source:
   path: ../
-  patches:
-    # Disable target which is not needed and doesn't build correctly in the conda environment.
-    - 0001-disable-s3-bench.patch
 
 build:
   number: 1

@@ -1,9 +1,0 @@
-diff --git a/libtsuba/tests/CMakeLists.txt b/libtsuba/tests/CMakeLists.txt
-index 0b370fa9b..ad411b275 100644
---- a/libtsuba/tests/CMakeLists.txt
-+++ b/libtsuba/tests/CMakeLists.txt
-@@ -1,2 +1,2 @@
--add_executable(s3_bench s3_bench)
--target_link_libraries(s3_bench tsuba)
-+# add_executable(s3_bench s3_bench)
-+# target_link_libraries(s3_bench tsuba)

@@ -15,6 +15,8 @@ then
   exit 1
 fi
 
+sudo apt install doxygen doxygen-doc graphviz graphviz-doc
+
 sudo apt update
 sudo apt install libxml2-dev
 

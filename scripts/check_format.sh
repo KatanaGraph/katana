@@ -23,8 +23,8 @@ while read -d '' filename; do
     ${CLANG_FORMAT} -style=file -i "${filename}"
   else
     if ${CLANG_FORMAT} -style=file -output-replacements-xml "${filename}" | grep '<replacement ' > /dev/null; then
-        echo "${filename} NOT OK"
-        FAILED=1
+      echo "${filename} NOT OK"
+      FAILED=1
     fi
   fi
 done < <(find ${ROOTS} -name experimental -prune -o -name external -prune -o -name '*.cpp' -print0 -o -name '*.h' -print0)

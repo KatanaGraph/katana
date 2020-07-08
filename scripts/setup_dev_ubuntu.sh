@@ -15,9 +15,12 @@ then
   exit 1
 fi
 
-# installing libxml2
 sudo apt update
 sudo apt install libxml2-dev
+
+sudo apt-add-repository ppa:cleishm/neo4j
+sudo apt update
+sudo apt install -yq libcypher-parser-dev
 
 # installing up-to-date cmake https://apt.kitware.com/
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null \

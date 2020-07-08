@@ -15,6 +15,7 @@ enum class ErrorCode {
   NotFound        = 4,
   Exists          = 5,
   OutOfMemory     = 6,
+  TODO            = 7,
 };
 
 ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -41,6 +42,8 @@ public:
       return "not found";
     case ErrorCode::Exists:
       return "already exists";
+    case ErrorCode::TODO:
+      return "TODO error yet to be classified";
     default:
       return "unknown error";
     }

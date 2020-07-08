@@ -47,9 +47,8 @@ struct RDG {
 // acceptable values for Open's flags
 constexpr int kReadOnly  = 0;
 constexpr int kReadWrite = 1;
-/// Open an RDGHandle pointing to a named RDG on storage
 galois::Result<std::shared_ptr<RDGHandle>> Open(const std::string& rdg_name,
-                                                int flags);
+                                                uint32_t flags);
 
 /// Close an RDGHandle object
 galois::Result<void> Close(std::shared_ptr<RDGHandle>);

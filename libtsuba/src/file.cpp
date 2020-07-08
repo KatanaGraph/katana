@@ -216,8 +216,10 @@ galois::Result<void> tsuba::FileCreate(const std::string& filename,
       return tsuba::ErrorCode::Exists;
     }
     fs::path dir = m_path.parent_path();
-    if (boost::system::error_code err; fs::create_directories(dir, err)) {
-      return err;
+    if (boost::system::error_code err; !fs::create_directories(dir, err)) {
+      if (err) {
+        return err;
+      }
     }
     // Creates an empty file
     std::ofstream output(m_path.string());

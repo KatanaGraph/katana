@@ -1,5 +1,6 @@
 #include "MPICommBackend.h"
 
+#include <boost/filesystem/operations.hpp>
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -11,6 +12,7 @@
 
 namespace fs = boost::filesystem;
 
+constexpr const char* local_file_dir  = "/tmp/tsuba-dist-write-test";
 constexpr const char* test_prop_graph = "s3://katana-ci/yago-shapes/meta";
 
 void DownloadGraph() {
@@ -27,21 +29,8 @@ void DownloadGraph() {
   }
   auto s3_rdg = std::move(s3_rdg_res.value());
 
-  /*
-  // Forget that we have these files on disk so that we can write them out again
-  if (auto res = UnbindFromStorage(&s3_rdg); !res) {
-    GALOIS_LOG_FATAL("Unbind rdg: {}", res.error());
-  }
-  */
-
   // Create a new unique place in the local filesytem
-  auto dir_res = galois::CreateUniqueDirectory("/tmp/thunt-");
-  if (!dir_res) {
-    GALOIS_LOG_FATAL("CreateUniqueDirectory: {}", dir_res.error());
-  }
-  auto dir = dir_res.value();
-
-  std::string meta_file{dir};
+  std::string meta_file{local_file_dir};
   meta_file += "/test_graph";
 
   GALOIS_LOG_WARN("creating temp file {}", meta_file);
@@ -78,6 +67,7 @@ void DownloadGraph() {
 }
 
 int main() {
+  // fs::remove_all(local_file_dir);
 
   if (auto init_good = tsuba::InitWithMPI(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::InitWithMPI: {}", init_good.error());

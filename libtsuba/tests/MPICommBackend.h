@@ -14,6 +14,17 @@ namespace tsuba {
 
 struct MPICommBackend : public galois::CommBackend {
   MPICommBackend() {
+    int support_provided;
+    int init_success =
+        MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &support_provided);
+    if (init_success != MPI_SUCCESS) {
+      GALOIS_LOG_ERROR("MPI_Init failed");
+      MPI_Abort(MPI_COMM_WORLD, init_success);
+    }
+    if (support_provided != MPI_THREAD_MULTIPLE) {
+      GALOIS_LOG_FATAL("MPI_THREAD_MULTIPLE not supported.");
+    }
+
     int num_tasks_val;
     if (MPI_Comm_size(MPI_COMM_WORLD, &num_tasks_val) != 0) {
       GALOIS_LOG_FATAL("MPI_Comm_size failed");
@@ -26,8 +37,8 @@ struct MPICommBackend : public galois::CommBackend {
 
     assert(task_rank_val >= 0);
     assert(num_tasks_val > 0);
-    ID  = num_tasks_val;
-    Num = task_rank_val;
+    Num = num_tasks_val;
+    ID  = task_rank_val;
   }
 
   void Barrier() override {
@@ -43,21 +54,9 @@ struct MPICommBackend : public galois::CommBackend {
   }
 };
 
-tsuba::MPICommBackend test_backend;
+static tsuba::MPICommBackend test_backend{};
 
-static galois::Result<void> InitWithMPI() {
-  int support_provided;
-  int init_success =
-      MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &support_provided);
-  if (init_success != MPI_SUCCESS) {
-    GALOIS_LOG_ERROR("MPI_Init failed");
-    MPI_Abort(MPI_COMM_WORLD, init_success);
-  }
-  if (support_provided != MPI_THREAD_MULTIPLE) {
-    GALOIS_LOG_FATAL("MPI_THREAD_MULTIPLE not supported.");
-  }
-  return Init(&test_backend);
-}
+static galois::Result<void> InitWithMPI() { return Init(&test_backend); }
 
 static galois::Result<void> FiniWithMPI() {
   auto ret = Fini();

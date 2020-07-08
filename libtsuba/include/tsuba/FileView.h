@@ -63,6 +63,10 @@ public:
 
   uint64_t size() const { return region_size_; }
 
+  // support iterating through characters
+  const char* begin() { return ptr<char>(); }
+  const char* end() { return ptr<char>() + size(); }
+
   ///// Begin arrow::io::RandomAccessFile methods ///////
 
   virtual arrow::Status Close();

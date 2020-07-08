@@ -36,6 +36,7 @@ if (@NUMA_FOUND@)
 endif()
 
 find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
+find_dependency(nlohmann_json REQUIRED)
 
 find_dependency(Arrow CONFIG REQUIRED)
 if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 0.18)
@@ -63,3 +64,4 @@ endif()
 
 check_required_components(Boost)
 check_required_components(AWSSDK)
+check_required_components(nlohmann_json)

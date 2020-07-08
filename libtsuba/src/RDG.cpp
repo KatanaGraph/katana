@@ -11,6 +11,7 @@
 #include <parquet/arrow/writer.h>
 #include <parquet/file_reader.h>
 
+#include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "galois/FileSystem.h"
@@ -19,6 +20,13 @@
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
 
+#include "tsuba_internal.h"
+#include "json.h"
+
+// constexpr uint32_t kPropertyMagicNo  = 0x4B808280; // KPRP
+// constexpr uint32_t kPartitionMagicNo = 0x4B808284; // KPRT
+constexpr uint32_t kRDGMagicNo = 0x4B524447; // KRDG
+
 static const char* topology_path_key      = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
 static const char* node_property_name_key = "kg.v1.node_property.name";
@@ -26,13 +34,40 @@ static const char* edge_property_path_key = "kg.v1.edge_property.path";
 static const char* edge_property_name_key = "kg.v1.edge_property.name";
 
 namespace fs = boost::filesystem;
+using json   = nlohmann::json;
 
 namespace tsuba {
+
+struct RDGMeta {
+  uint32_t version;
+  uint32_t num_hosts;
+
+  // NOLINTNEXTLINE needed non-const ref for nlohmann compat
+  friend void to_json(json& j, const RDGMeta& meta) {
+    j = json{{"magic", kRDGMagicNo},
+             {"version", meta.version},
+             {"num_hosts", meta.num_hosts}};
+  }
+  // NOLINTNEXTLINE needed non-const ref for nlohmann compat
+  friend void from_json(const json& j, RDGMeta& meta) {
+    uint32_t magic;
+    j.at("magic").get_to(magic);
+    j.at("version").get_to(meta.version);
+    j.at("num_hosts").get_to(meta.num_hosts);
+    if (magic != kRDGMagicNo) {
+      // nlohmann::json reports errors using exceptions
+      throw std::runtime_error("RDG Magic number mismatch");
+    }
+  }
+};
 
 struct RDGHandle {
   // Property paths are relative to metadata path
   std::string metadata_dir;
-  std::string path;
+  std::string rdg_path;
+  std::string partition_path;
+  uint32_t flags;
+  RDGMeta rdg;
 
   /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const {
@@ -319,7 +354,7 @@ MakeProperties(std::vector<std::string>&& values) {
 galois::Result<tsuba::RDG>
 ReadMetadata(std::shared_ptr<tsuba::RDGHandle> handle) {
   auto fv = std::make_shared<tsuba::FileView>();
-  int err = fv->Bind(handle->path);
+  int err = fv->Bind(handle->partition_path);
   if (err) {
     return tsuba::ErrorCode::InvalidArgument;
   }
@@ -408,6 +443,12 @@ MakeMetadata(const tsuba::RDG& rdg) {
   return std::make_pair(keys, values);
 }
 
+std::string HostPartitionName(const tsuba::RDGHandle& handle,
+                              uint32_t version) {
+  return fmt::format("{}_{}_{}", handle.rdg_path,
+                     tsuba::GlobalState::Get().Comm()->ID, version);
+}
+
 galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
                                    const tsuba::RDG& rdg,
                                    const arrow::Schema& schema) {
@@ -438,7 +479,7 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  ff->Bind(handle.path);
+  ff->Bind(HostPartitionName(handle, handle.rdg.version + 1));
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
@@ -448,10 +489,24 @@ galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
 // TOCTTOU since it's the local file system but will change when we manage
 // our own namespace, create the file here so that at least another call
 // will fail
-galois::Result<void> CreateFile(std::string name, bool overwrite = false) {
+galois::Result<void> CreateNewRDG(const std::string& name,
+                                  bool overwrite = false) {
+  // need this call in order to respect overwrite
   auto create_res = tsuba::FileCreate(name, overwrite);
   if (!create_res) {
+    GALOIS_LOG_ERROR("create_res");
     return create_res;
+  }
+
+  std::string s = json(tsuba::RDGMeta{
+                           .version   = 0,
+                           .num_hosts = tsuba::GlobalState::Get().Comm()->Num,
+                       })
+                      .dump();
+  if (tsuba::FileStore(name, reinterpret_cast<const uint8_t*>(s.data()),
+                       s.size()) != 0) {
+    GALOIS_LOG_ERROR("failed to store RDG file");
+    return tsuba::ErrorCode::TODO;
   }
   return galois::ResultSuccess();
 }
@@ -486,6 +541,25 @@ galois::Result<void> DoLoad(std::shared_ptr<tsuba::RDGHandle> handle,
     return tsuba::ErrorCode::InvalidArgument;
   }
   rdg->rdg_dir = handle->metadata_dir;
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> CommitRDG(std::shared_ptr<tsuba::RDGHandle> handle) {
+  galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
+  tsuba::RDGMeta new_meta{.version   = handle->rdg.version + 1,
+                          .num_hosts = comm->Num};
+  comm->Barrier();
+  if (comm->ID == 0) {
+    std::string s = json(new_meta).dump();
+    if (tsuba::FileStore(handle->rdg_path,
+                         reinterpret_cast<const uint8_t*>(s.data()),
+                         s.size()) != 0) {
+      GALOIS_LOG_ERROR("failed to store RDG file");
+      return tsuba::ErrorCode::TODO;
+    }
+  }
+  comm->Barrier();
+  handle->rdg = new_meta;
   return galois::ResultSuccess();
 }
 
@@ -545,7 +619,9 @@ galois::Result<void> DoStore(std::shared_ptr<tsuba::RDGHandle> handle,
     GALOIS_LOG_DEBUG("metadata write error");
     return write_result.error();
   }
-
+  if (auto res = CommitRDG(handle); !res) {
+    return res.error();
+  }
   return galois::ResultSuccess();
 }
 
@@ -560,17 +636,23 @@ galois::Result<void> UnbindFromStorage(tsuba::RDG* rdg) {
   return galois::ResultSuccess();
 }
 
+galois::Result<tsuba::RDGMeta> ParseRDGFile(const std::string& path) {
+  tsuba::FileView fv;
+  if (fv.Bind(path) != 0) {
+    return tsuba::ErrorCode::NotFound;
+  }
+  return JsonParse<tsuba::RDGMeta>(fv);
+}
+
 } // namespace
 
-namespace tsuba {
-
-RDG::RDG() {
+tsuba::RDG::RDG() {
   std::vector<std::shared_ptr<arrow::Array>> empty;
   node_table = arrow::Table::Make(arrow::schema({}), empty, 0);
   edge_table = arrow::Table::Make(arrow::schema({}), empty, 0);
 }
 
-galois::Result<void> RDG::Validate() const {
+galois::Result<void> tsuba::RDG::Validate() const {
   for (const auto& md : node_properties) {
     if (md.path.find('/') != std::string::npos) {
       GALOIS_LOG_DEBUG("node_property path doesn't contain a slash: \"{}\"",
@@ -597,41 +679,70 @@ galois::Result<void> RDG::Validate() const {
   return galois::ResultSuccess();
 }
 
-bool RDG::Equals(const RDG& other) const {
+bool tsuba::RDG::Equals(const RDG& other) const {
   return topology_file_storage.Equals(other.topology_file_storage) &&
          node_table->Equals(*other.node_table, true) &&
          edge_table->Equals(*other.edge_table, true);
 }
 
 galois::Result<std::shared_ptr<tsuba::RDGHandle>>
-Open(const std::string& metadata_path, [[maybe_unused]] int flags) {
-  fs::path m_path{metadata_path};
+tsuba::Open(const std::string& rdg_name, uint32_t flags) {
+  auto ret = std::make_shared<tsuba::RDGHandle>();
 
-  auto ret          = std::make_shared<tsuba::RDGHandle>();
+  fs::path m_path{rdg_name};
   ret->metadata_dir = m_path.parent_path().string();
-  ret->path         = metadata_path;
+  ret->rdg_path     = rdg_name;
+  ret->flags        = flags;
+
+  auto rdg_res = ParseRDGFile(rdg_name);
+  if (!rdg_res) {
+    if (rdg_res.error() == tsuba::ErrorCode::InvalidArgument) {
+      GALOIS_WARN_ONCE("Deprecated behavior: treating invalid RDG file like a "
+                       "partition file");
+      galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
+      ret->partition_path       = rdg_name;
+      ret->rdg                  = {.version = 0, .num_hosts = comm->Num};
+      return ret;
+    }
+    return rdg_res.error();
+  }
+
+  ret->rdg = rdg_res.value();
+  if (ret->rdg.num_hosts != tsuba::GlobalState::Get().Comm()->Num) {
+    return ErrorCode::InvalidArgument;
+  }
+  ret->partition_path = HostPartitionName(*ret, ret->rdg.version);
   return ret;
 }
 
-galois::Result<void> Close([[maybe_unused]] std::shared_ptr<RDGHandle> handle) {
+galois::Result<void> tsuba::Close(std::shared_ptr<RDGHandle> handle) {
   // nothing to do yet
+  (void)handle;
   return galois::ResultSuccess();
 }
 
-galois::Result<void> Create(const std::string& name) {
-  if (auto good = CreateFile(name); !good) {
-    return good.error();
+galois::Result<void> tsuba::Create(const std::string& name) {
+  galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
+  if (comm->ID == 0) {
+    if (auto good = CreateNewRDG(name); !good) {
+      GALOIS_LOG_DEBUG("CreateNewRDG failed: {}", good.error());
+      comm->NotifyFailure();
+      return good.error();
+    }
   }
+  comm->Barrier();
   return galois::ResultSuccess();
 }
 
-galois::Result<void> Rename([[maybe_unused]] std::shared_ptr<RDGHandle> handle,
-                            [[maybe_unused]] const std::string& name,
-                            [[maybe_unused]] int flags) {
+galois::Result<void> tsuba::Rename(std::shared_ptr<RDGHandle> handle,
+                                   const std::string& name, int flags) {
+  (void)handle;
+  (void)name;
+  (void)flags;
   return tsuba::ErrorCode::NotImplemented;
 }
 
-galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
+galois::Result<tsuba::RDG> tsuba::Load(std::shared_ptr<RDGHandle> handle) {
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
     return rdg_res.error();
@@ -644,9 +755,10 @@ galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle) {
   return RDG(std::move(rdg));
 }
 
-galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle,
-                         const std::vector<std::string>& node_properties,
-                         const std::vector<std::string>& edge_properties) {
+galois::Result<tsuba::RDG>
+tsuba::Load(std::shared_ptr<RDGHandle> handle,
+            const std::vector<std::string>& node_properties,
+            const std::vector<std::string>& edge_properties) {
 
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
@@ -663,7 +775,7 @@ galois::Result<RDG> Load(std::shared_ptr<tsuba::RDGHandle> handle,
   return RDG(std::move(rdg));
 }
 
-galois::Result<void> Store(std::shared_ptr<tsuba::RDGHandle> handle, RDG* rdg) {
+galois::Result<void> tsuba::Store(std::shared_ptr<RDGHandle> handle, RDG* rdg) {
   if (handle->metadata_dir != rdg->rdg_dir) {
     if (auto res = UnbindFromStorage(rdg); !res) {
       return res.error();
@@ -672,8 +784,8 @@ galois::Result<void> Store(std::shared_ptr<tsuba::RDGHandle> handle, RDG* rdg) {
   return DoStore(handle, rdg);
 }
 
-galois::Result<void> Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
-                           std::shared_ptr<tsuba::FileFrame> ff) {
+galois::Result<void> tsuba::Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
+                                  std::shared_ptr<FileFrame> ff) {
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
   if (handle->metadata_dir != rdg->rdg_dir) {
@@ -693,18 +805,18 @@ galois::Result<void> Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
 }
 
 galois::Result<void>
-AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
+tsuba::AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
   return AddProperties(table, &rdg->node_table, &rdg->node_properties,
                        /* new_properties = */ true);
 }
 
 galois::Result<void>
-AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
+tsuba::AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table) {
   return AddProperties(table, &rdg->edge_table, &rdg->edge_properties,
                        /* new_properties = */ true);
 }
 
-galois::Result<void> DropNodeProperty(RDG* rdg, int i) {
+galois::Result<void> tsuba::DropNodeProperty(RDG* rdg, int i) {
   auto result = rdg->node_table->RemoveColumn(i);
   if (!result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", result.status());
@@ -720,7 +832,7 @@ galois::Result<void> DropNodeProperty(RDG* rdg, int i) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> DropEdgeProperty(RDG* rdg, int i) {
+galois::Result<void> tsuba::DropEdgeProperty(RDG* rdg, int i) {
   auto result = rdg->edge_table->RemoveColumn(i);
   if (!result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", result.status());
@@ -735,5 +847,3 @@ galois::Result<void> DropEdgeProperty(RDG* rdg, int i) {
 
   return galois::ResultSuccess();
 }
-
-} // namespace tsuba

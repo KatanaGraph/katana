@@ -109,7 +109,13 @@ void TestRoundTrip() {
 }
 
 int main() {
+  if (auto res = tsuba::Init(); !res) {
+    GALOIS_LOG_FATAL("libtsuba failed to init");
+  }
   TestRoundTrip();
+  if (auto res = tsuba::Fini(); !res) {
+    GALOIS_LOG_FATAL("libtsuba failed to fini");
+  }
 
   return 0;
 }

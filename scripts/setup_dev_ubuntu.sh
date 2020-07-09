@@ -20,7 +20,6 @@ sudo apt install doxygen doxygen-doc graphviz graphviz-doc
 sudo apt update
 sudo apt install libxml2-dev
 
-sudo apt-add-repository ppa:cleishm/neo4j
 sudo apt update
 sudo apt install -yq libcypher-parser-dev
 

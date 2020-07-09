@@ -14,15 +14,15 @@ constexpr const uint64_t kGBShift = 30;
 
 template <typename T>
 constexpr T KB(T v) {
-  return v << kKBShift;
+  return (uint64_t)v << kKBShift;
 }
 template <typename T>
 constexpr T MB(T v) {
-  return v << kMBShift;
+  return (uint64_t)v << kMBShift;
 }
 template <typename T>
 constexpr T GB(T v) {
-  return v << kGBShift;
+  return (uint64_t)v << kGBShift;
 }
 
 namespace tsuba {

@@ -84,7 +84,7 @@ int64_t timespec_to_us(struct timespec ts) {
   return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;
 }
 
-// 21 chars, with 1 null byte
+// 19 chars, with 1 null byte
 void get_time_string(char* buf, int32_t limit) {
   time_t rawtime;
   struct tm* timeinfo;

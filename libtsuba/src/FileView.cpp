@@ -8,42 +8,47 @@
 #include <string>
 
 #include "galois/Logging.h"
+#include "galois/Result.h"
 #include "tsuba/file.h"
+#include "tsuba/Errors.h"
 
 namespace tsuba {
 
-FileView::~FileView() { Unbind(); }
-
-int FileView::Unbind() {
-  if (valid_) {
-    int err = 0;
-    if (map_start_ != nullptr) {
-      err = FileMunmap(map_start_);
-    }
-    valid_ = false;
-    return err;
+FileView::~FileView() {
+  if (auto res = Unbind(); !res) {
+    GALOIS_LOG_ERROR("Unbind: {}", res.error());
   }
-  return -1;
 }
 
-int FileView::Bind(const std::string& filename) {
+galois::Result<void> FileView::Unbind() {
+  galois::Result<void> res = galois::ResultSuccess();
+  if (valid_) {
+    if (map_start_ != nullptr) {
+      res = FileMunmap(map_start_);
+    }
+    valid_ = false;
+  }
+  return res;
+}
+
+galois::Result<void> FileView::Bind(const std::string& filename) {
   StatBuf buf;
-  int err = FileStat(filename, &buf);
-  if (err) {
-    return err;
+  if (auto res = FileStat(filename, &buf); !res) {
+    return res.error();
   }
 
   return Bind(filename, 0, buf.size);
 }
 
-int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
+galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
+                                    uint64_t end) {
   assert(begin <= end);
   if (end - begin >
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
     GALOIS_LOG_ERROR("FileView region must be indexable by int64_t, recieved "
                      "region of size {:d}",
                      end - begin);
-    return -1;
+    return ErrorCode::InvalidArgument;
   }
 
   uint64_t file_off   = RoundDownToBlock(begin);
@@ -54,20 +59,23 @@ int FileView::Bind(const std::string& filename, uint64_t begin, uint64_t end) {
   // size of 0 is an invalid thing to pass to Mmap, but we want to support
   // 0 length FileViews (useful for new files)
   if (map_size != 0) {
-    ptr = FileMmap(filename, file_off, map_size);
-    if (!ptr) {
-      return -1;
+    auto res = FileMmap(filename, file_off, map_size);
+    if (!res) {
+      return res.error();
     }
+    ptr = res.value();
   }
 
-  Unbind();
+  if (auto res = Unbind(); !res) {
+    return res.error();
+  }
   map_size_     = map_size;
   region_size_  = region_size;
   map_start_    = ptr;
   region_start_ = ptr + (begin & kBlockOffsetMask); /* NOLINT */
   valid_        = true;
   cursor_       = 0;
-  return 0;
+  return galois::ResultSuccess();
 }
 
 bool FileView::Equals(const FileView& other) const {
@@ -83,9 +91,8 @@ bool FileView::Equals(const FileView& other) const {
 ////////////// Begin arrow::io::RandomAccessFile method definitions ////////////
 
 arrow::Status FileView::Close() {
-  int err = Unbind();
-  if (err) {
-    return arrow::Status::UnknownError("Unbind", err);
+  if (auto res = Unbind(); !res) {
+    return arrow::Status::UnknownError("Unbind", res.error());
   }
   return arrow::Status::OK();
 }

@@ -1,27 +1,30 @@
 #include "galois/OutIndexView.h"
+#include "galois/Result.h"
 #include "tsuba/file.h"
 
 namespace galois {
 
-int OutIndexView::Bind() {
+galois::Result<void> OutIndexView::Bind() {
   struct GRHeader header;
-  int err;
-  if (err = tsuba::FilePeek(filename_, &header); err) {
-    perror(filename_.c_str());
-    return err;
+  if (auto res = tsuba::FilePeek(filename_, &header); !res) {
+    return res.error();
   }
-  err = file_.Bind(filename_,
-                   sizeof(header) + header.num_nodes_ * sizeof(index_t));
-  if (err) {
-    return err;
+  if (auto res = file_.Bind(filename_, sizeof(header) +
+                                           header.num_nodes_ * sizeof(index_t));
+      !res) {
+    return res.error();
   }
   gr_view_ = file_.ptr<GRPrefix>();
-  return 0;
+  return galois::ResultSuccess();
 }
 
-void OutIndexView::Unbind() {
-  file_.Unbind();
+galois::Result<void> OutIndexView::Unbind() {
+  galois::Result<void> res = galois::ResultSuccess();
+  if (res = file_.Unbind(); !res) {
+    GALOIS_LOG_ERROR("Unbind: {}", res.error());
+  }
   gr_view_ = nullptr;
+  return res;
 }
 
 } /* namespace galois */

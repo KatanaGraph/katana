@@ -9,6 +9,7 @@
 
 #include "galois/OutIndexView.h"
 #include "galois/graphs/GraphHelpers.h"
+#include "galois/Result.h"
 #include "tsuba/FileView.h"
 
 namespace galois {
@@ -24,11 +25,15 @@ class PartialGraphView {
   const EdgeData* edge_data_;
   uint64_t n_edges_;
 
-  int BindEdgeFile() {
+  galois::Result<void> BindEdgeFile() {
     sz_t edges_offset = outidx_.view_size();
     sz_t edges_start  = edges_offset + (*edge_begin() * sizeof(Edge));
     sz_t edges_stop   = edges_offset + (*edge_end() * sizeof(Edge));
-    return edge_file_.Bind(outidx_.filename(), edges_start, edges_stop);
+    if (auto res = edge_file_.Bind(outidx_.filename(), edges_start, edges_stop);
+        !res) {
+      return res.error();
+    }
+    return galois::ResultSuccess();
   }
 
   template <typename T>
@@ -39,7 +44,7 @@ class PartialGraphView {
   template <
       typename EdgeType,
       typename std::enable_if<!std::is_void<EdgeType>::value>::type* = nullptr>
-  int BindEdgeDataFile() {
+  galois::Result<void> BindEdgeDataFile() {
     /* index past all of the edges */
     sz_t edge_data_offset =
         outidx_.view_size() + (outidx_.num_edges() * sizeof(Edge));
@@ -48,14 +53,19 @@ class PartialGraphView {
     }
     sz_t data_start = edge_data_offset + (*edge_begin() * sizeof(EdgeData));
     sz_t data_stop  = edge_data_offset + (*edge_end() * sizeof(EdgeData));
-    return edge_data_file_.Bind(outidx_.filename(), data_start, data_stop);
+    if (auto res =
+            edge_data_file_.Bind(outidx_.filename(), data_start, data_stop);
+        !res) {
+      return res.error();
+    }
+    return galois::ResultSuccess();
   }
 
   template <
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
-  int BindEdgeDataFile() {
-    return 0;
+  galois::Result<void> BindEdgeDataFile() {
+    return galois::ResultSuccess();
   }
 
 public:
@@ -71,25 +81,33 @@ public:
   PartialGraphView& operator=(PartialGraphView&& other) noexcept = default;
   ~PartialGraphView() { Unbind(); }
 
-  int Bind(index_t node_begin, index_t node_end) {
+  galois::Result<void> Bind(index_t node_begin, index_t node_end) {
     first_node_ = node_begin;
     last_node_  = node_end;
-    if (BindEdgeFile()) {
-      return -1;
+    if (auto res = BindEdgeFile(); !res) {
+      return res.error();
     }
-    if (BindEdgeDataFile<EdgeData>()) {
-      edge_file_.Unbind();
-      return -1;
+    if (auto res = BindEdgeDataFile<EdgeData>(); !res) {
+      if (auto res = edge_file_.Unbind(); !res) {
+        return res.error();
+      }
+      return res.error();
     }
     edges_     = edge_file_.ptr<Edge>();
     edge_data_ = edge_data_file_.ptr<EdgeData>();
-    return 0;
+    return galois::ResultSuccess();
   }
 
   void Unbind() {
-    outidx_.Unbind();
-    edge_file_.Unbind();
-    edge_data_file_.Unbind();
+    if (auto res = outidx_.Unbind(); !res) {
+      GALOIS_LOG_ERROR("outindx_.Unbind(): {}", res.error());
+    }
+    if (auto res = edge_file_.Unbind(); !res) {
+      GALOIS_LOG_ERROR("edge_file_.Unbind(): {}", res.error());
+    }
+    if (auto res = edge_data_file_.Unbind(); !res) {
+      GALOIS_LOG_ERROR("edge_data_file_.Unbind(): {}", res.error());
+    }
     first_node_ = 0;
     last_node_  = 0;
     edges_      = nullptr;

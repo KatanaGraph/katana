@@ -41,14 +41,16 @@ static void exponential(uint8_t bits[], std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  int err = tsuba::FileStat(filename, &buf);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = tsuba::FileStat(filename, &buf); !res) {
+    GALOIS_LOG_FATAL("FileStat: {}", res.error());
+  }
   GALOIS_LOG_ASSERT(buf.size == running);
 
   // Read
   auto fv = tsuba::FileView();
-  err     = fv.Bind(filename);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = fv.Bind(filename); !res) {
+    GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
+  }
   auto aro_res = fv.Read(running);
   GALOIS_LOG_ASSERT(aro_res.ok());
   auto aro_buf = aro_res.ValueOrDie();
@@ -63,7 +65,6 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   if (auto res = ff.Init(); !res) {
     GALOIS_LOG_FATAL("Init: {}", res.error());
   }
-  int err;
 
   arrow::Status aro_sts = ff.Write(bits, num_bytes);
   GALOIS_LOG_ASSERT(aro_sts.ok());
@@ -74,15 +75,17 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  err = tsuba::FileStat(filename, &buf);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = tsuba::FileStat(filename, &buf); !res) {
+    GALOIS_LOG_FATAL("FileStat: {}", res.error());
+  }
   GALOIS_LOG_ASSERT(buf.size == num_bytes);
 
   // Read
   uint64_t res[num_bytes];
   auto fv = tsuba::FileView();
-  err     = fv.Bind(filename);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = fv.Bind(filename); !res) {
+    GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
+  }
   arrow::Result<int64_t> aro_res = fv.Read(READ_PARTIAL, res);
   GALOIS_LOG_ASSERT(aro_res.ok());
   int64_t bytes_read = aro_res.ValueOrDie();
@@ -115,17 +118,20 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   // Validate
   tsuba::StatBuf buf;
-  int err = tsuba::FileStat(filename, &buf);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = tsuba::FileStat(filename, &buf); !res) {
+    GALOIS_LOG_FATAL("FileStat: {}", res.error());
+  }
   GALOIS_LOG_ASSERT(buf.size == num_bytes);
 
   // Read
   auto fv = tsuba::FileView();
-  err     = fv.Bind(filename + "not-a-file");
-  GALOIS_LOG_ASSERT(err);
+  if (auto res = fv.Bind(filename + "not-a-file"); res) {
+    GALOIS_LOG_FATAL("Bind should have failed!");
+  }
 
-  err = fv.Bind(filename);
-  GALOIS_LOG_ASSERT(!err);
+  if (auto res = fv.Bind(filename); !res) {
+    GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
+  }
 
   aro_sts = fv.Seek(num_bytes - READ_PARTIAL);
   GALOIS_LOG_ASSERT(aro_sts.ok());

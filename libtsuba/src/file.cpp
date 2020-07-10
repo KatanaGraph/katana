@@ -21,6 +21,7 @@
 
 #include "galois/Platform.h"
 #include "galois/Logging.h"
+#include "galois/Result.h"
 #include "tsuba/Errors.h"
 
 #include "s3.h"
@@ -187,17 +188,17 @@ int S3OrWriteFile(const std::string& uri, const uint8_t* data, uint64_t size) {
 } // namespace
 
 // Recommend rename to FileDownloadOpenUnlink
-int tsuba::FileOpen(const std::string& uri) {
+[[deprecated]] galois::Result<int> tsuba::FileOpen(const std::string& uri) {
   if (!tsuba::IsS3URI(uri)) {
-    return -1;
+    return ErrorCode::InvalidArgument;
   }
   auto [bucket_name, object_name] = S3SplitUri(uri);
   if (bucket_name.empty() || object_name.empty()) {
-    return ERRNO_RET(EINVAL, -1);
+    return ErrorCode::OutOfMemory;
   }
   auto result = S3Open(bucket_name, object_name);
   if (!result) {
-    return -1;
+    return result.error();
   }
   return result.value();
 }
@@ -228,105 +229,138 @@ galois::Result<void> tsuba::FileCreate(const std::string& filename,
   return tsuba::ErrorCode::NotImplemented;
 }
 
-int tsuba::FileStore(const std::string& uri, const uint8_t* data,
-                     uint64_t size) {
+galois::Result<void> tsuba::FileStore(const std::string& uri,
+                                      const uint8_t* data, uint64_t size) {
   int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3(uri, data, size);
   }
-  return ret;
+  if (ret) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStoreSync(const std::string& uri, const uint8_t* data,
-                         uint64_t size) {
+galois::Result<void> tsuba::FileStoreSync(const std::string& uri,
+                                          const uint8_t* data, uint64_t size) {
   int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3Sync(uri, data, size);
   }
-  return ret;
+  if (ret) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
-                          uint64_t size) {
+galois::Result<void> tsuba::FileStoreAsync(const std::string& uri,
+                                           const uint8_t* data, uint64_t size) {
   int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3Async(uri, data, size);
   }
-  return ret;
-}
-
-int tsuba::FileStoreAsyncFinish(const std::string& uri) {
-  if (!IsS3URI(uri)) {
-    return 0;
+  if (ret) {
+    return ErrorCode::TODO;
   }
-  return DoWriteS3AsyncFinish(uri);
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStoreMultiAsync1(const std::string& uri, const uint8_t* data,
-                                uint64_t size) {
+galois::Result<void> tsuba::FileStoreAsyncFinish(const std::string& uri) {
+  if (!IsS3URI(uri)) {
+    return galois::ResultSuccess();
+  }
+  if (int err = DoWriteS3AsyncFinish(uri); err) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> tsuba::FileStoreMultiAsync1(const std::string& uri,
+                                                 const uint8_t* data,
+                                                 uint64_t size) {
   int ret = S3OrWriteFile(uri, data, size);
   if (ret) {
     ret = DoWriteS3MultiAsync1(uri, data, size);
   }
-  return ret;
-}
-
-int tsuba::FileStoreMultiAsync2(const std::string& uri) {
-  if (!IsS3URI(uri)) {
-    return 0;
+  if (ret) {
+    return ErrorCode::TODO;
   }
-  return DoWriteS3MultiAsync2(uri);
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStoreMultiAsync3(const std::string& uri) {
+galois::Result<void> tsuba::FileStoreMultiAsync2(const std::string& uri) {
   if (!IsS3URI(uri)) {
-    return 0;
+    return galois::ResultSuccess();
   }
-  return DoWriteS3MultiAsync3(uri);
+  if (int err = DoWriteS3MultiAsync2(uri); err) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStoreMultiAsyncFinish(const std::string& uri) {
+galois::Result<void> tsuba::FileStoreMultiAsync3(const std::string& uri) {
   if (!IsS3URI(uri)) {
-    return 0;
+    return galois::ResultSuccess();
   }
-  return DoWriteS3MultiAsyncFinish(uri);
+  if (int err = DoWriteS3MultiAsync3(uri); err) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-int tsuba::FilePeek(const std::string& filename, uint8_t* result_buffer,
-                    uint64_t begin, uint64_t size) {
+galois::Result<void> tsuba::FileStoreMultiAsyncFinish(const std::string& uri) {
+  if (!IsS3URI(uri)) {
+    return galois::ResultSuccess();
+  }
+  if (int err = DoWriteS3MultiAsyncFinish(uri); err) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> tsuba::FilePeek(const std::string& filename,
+                                     uint8_t* result_buffer, uint64_t begin,
+                                     uint64_t size) {
   if (!IsS3URI(filename)) {
     std::ifstream infile(filename);
     if (!infile.good()) {
-      return -1;
+      return galois::ResultErrno();
     }
     infile.seekg(begin);
     if (!infile.good()) {
-      return -1;
+      return galois::ResultErrno();
     }
     infile.read(reinterpret_cast<char*>(result_buffer), size); /* NOLINT */
     if (!infile.good()) {
-      return -1;
+      return galois::ResultErrno();
     }
-    return 0;
+    return galois::ResultSuccess();
   }
-  return DoReadS3Part(filename, result_buffer, begin, size);
+  if (int err = DoReadS3Part(filename, result_buffer, begin, size); err) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-int tsuba::FileStat(const std::string& filename, StatBuf* s_buf) {
+galois::Result<void> tsuba::FileStat(const std::string& filename,
+                                     StatBuf* s_buf) {
   if (!IsS3URI(filename)) {
     struct stat local_s_buf;
     if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
-      return ret;
+      return galois::ResultErrno();
     }
     s_buf->size = local_s_buf.st_size;
-    return 0;
+    return galois::ResultSuccess();
   }
   auto [bucket_name, object_name] = S3SplitUri(std::string(filename));
-  return S3GetSize(bucket_name, object_name, &s_buf->size);
+  if (int ret = S3GetSize(bucket_name, object_name, &s_buf->size); ret) {
+    return ErrorCode::TODO;
+  }
+  return galois::ResultSuccess();
 }
 
-uint8_t* tsuba::FileMmap(const std::string& filename, uint64_t begin,
-                         uint64_t size) {
+galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,
+                                         uint64_t begin, uint64_t size) {
   MappingDesc new_mapping;
   if (int err = new_mapping.Init(filename, begin, size); err) {
     return nullptr;
@@ -341,11 +375,11 @@ uint8_t* tsuba::FileMmap(const std::string& filename, uint64_t begin,
   return it->second.ptr();
 }
 
-int tsuba::FileMunmap(uint8_t* ptr) {
+galois::Result<void> tsuba::FileMunmap(uint8_t* ptr) {
   std::lock_guard<std::mutex> guard(allocated_memory_mutex);
   if (allocated_memory.erase(ptr) != 1) {
     GALOIS_LOG_WARN("passed unknown pointer to tsuba_munmap");
-    return -EINVAL;
+    return tsuba::ErrorCode::InvalidArgument;
   }
-  return 0;
+  return galois::ResultSuccess();
 }

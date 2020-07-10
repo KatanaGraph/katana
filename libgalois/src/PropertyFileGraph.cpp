@@ -284,7 +284,9 @@ galois::graphs::PropertyFileGraph::RemoveEdgeProperty(int i) {
 
 galois::Result<void> galois::graphs::PropertyFileGraph::SetTopology(
     const galois::graphs::GraphTopology& topology) {
-  rdg_.topology_file_storage.Unbind();
+  if (auto res = rdg_.topology_file_storage.Unbind(); !res) {
+    return res.error();
+  }
   topology_ = topology;
 
   return galois::ResultSuccess();

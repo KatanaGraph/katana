@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 
   for (const auto& path : src_paths) {
     tsuba::StatBuf stat_buf;
-    if (auto res = tsuba::FileStat(path, &stat_buf); res != 0) {
+    if (auto res = tsuba::FileStat(path, &stat_buf); !res) {
       GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
     }
     fmt::print("{} {:#x}\n", path, stat_buf.size);

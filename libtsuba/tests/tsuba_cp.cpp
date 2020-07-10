@@ -48,19 +48,20 @@ int main(int argc, char* argv[]) {
   // write.
 
   tsuba::StatBuf stat_buf;
-  if (auto res = tsuba::FileStat(src_path, &stat_buf); res != 0) {
+  if (auto res = tsuba::FileStat(src_path, &stat_buf); !res) {
     GALOIS_LOG_FATAL("Cannot stat {}\n", src_path);
   }
 
   fmt::print("cp {} to {}\n", src_path, dst_path);
 
-  uint8_t* buf = tsuba::FileMmap(src_path, 0UL, stat_buf.size);
-  if (!buf) {
+  auto buf_res = tsuba::FileMmap(src_path, 0UL, stat_buf.size);
+  if (!buf_res) {
     GALOIS_LOG_FATAL("Failed mmap start 0 size {:#x}\n", stat_buf.size);
   }
+  uint8_t* buf = buf_res.value();
 
-  if (auto res = tsuba::FileStore(dst_path, buf, stat_buf.size); res != 0) {
-    fmt::print(stderr, "FileStore error {:d}\n", res);
+  if (auto res = tsuba::FileStore(dst_path, buf, stat_buf.size); !res) {
+    fmt::print(stderr, "FileStore error {}\n", res.error());
     exit(EXIT_FAILURE);
   }
 

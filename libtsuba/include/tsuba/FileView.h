@@ -6,6 +6,9 @@
 
 #include <parquet/arrow/reader.h>
 
+#include "galois/Result.h"
+#include "galois/Logging.h"
+
 namespace tsuba {
 
 class FileView : public arrow::io::RandomAccessFile {
@@ -30,7 +33,9 @@ public:
 
   FileView& operator=(FileView&& other) noexcept {
     if (&other != this) {
-      Unbind();
+      if (auto res = Unbind(); !res) {
+        GALOIS_LOG_ERROR("Unbind: {}", res.error());
+      }
       map_start_    = other.map_start_;
       region_start_ = other.region_start_;
       map_size_     = other.map_size_;
@@ -46,15 +51,16 @@ public:
 
   bool Equals(const FileView& other) const;
 
-  int Bind(const std::string& filename, uint64_t begin, uint64_t end);
-  inline int Bind(const std::string& filename, uint64_t stop) {
+  galois::Result<void> Bind(const std::string& filename, uint64_t begin,
+                            uint64_t end);
+  galois::Result<void> Bind(const std::string& filename, uint64_t stop) {
     return Bind(filename, 0, stop);
   }
-  int Bind(const std::string& filename);
+  galois::Result<void> Bind(const std::string& filename);
 
   bool Valid() { return valid_; }
 
-  int Unbind();
+  galois::Result<void> Unbind();
 
   template <typename T>
   const T* ptr() const {

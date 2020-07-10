@@ -41,7 +41,7 @@ void parse_arguments(int argc, char* argv[]) {
 
 void DoMD5(const std::string& path, MD5& md5) {
   tsuba::StatBuf stat_buf;
-  if (auto res = tsuba::FileStat(path, &stat_buf); res != 0) {
+  if (auto res = tsuba::FileStat(path, &stat_buf); !res) {
     GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
   }
 
@@ -49,14 +49,17 @@ void DoMD5(const std::string& path, MD5& md5) {
   uint64_t size;
   for (uint64_t so_far = 0UL; so_far < stat_buf.size;
        so_far += read_block_size) {
-    size = std::min(read_block_size, (stat_buf.size - so_far));
-    buf  = tsuba::FileMmap(path, so_far, size);
-    if (!buf) {
+    size     = std::min(read_block_size, (stat_buf.size - so_far));
+    auto res = tsuba::FileMmap(path, so_far, size);
+    if (!res) {
       GALOIS_LOG_FATAL("\n  Failed mmap start {:#x} size {:#x} total {:#x}\n",
                        so_far, size, stat_buf.size);
     }
+    buf = res.value();
     md5.add(buf, size);
-    tsuba::FileMunmap(buf);
+    if (auto res = tsuba::FileMunmap(buf); !res) {
+      GALOIS_LOG_FATAL("\n  Failed munmap: {}\n", res.error());
+    }
   }
 }
 

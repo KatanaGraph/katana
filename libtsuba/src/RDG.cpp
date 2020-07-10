@@ -141,9 +141,8 @@ LoadTable(const std::string& expected_name, const fs::path& file_path) {
   // TODO(ddn): use custom NUMA allocator
 
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  int err = fv->Bind(file_path.string());
-  if (err) {
-    return tsuba::ErrorCode::InvalidArgument;
+  if (auto res = fv->Bind(file_path.string()); !res) {
+    return res.error();
   }
 
   std::unique_ptr<parquet::arrow::FileReader> reader;
@@ -354,9 +353,8 @@ MakeProperties(std::vector<std::string>&& values) {
 galois::Result<tsuba::RDG>
 ReadMetadata(std::shared_ptr<tsuba::RDGHandle> handle) {
   auto fv = std::make_shared<tsuba::FileView>();
-  int err = fv->Bind(handle->partition_path);
-  if (err) {
-    return tsuba::ErrorCode::InvalidArgument;
+  if (auto res = fv->Bind(handle->partition_path); !res) {
+    return res.error();
   }
 
   if (fv->size() == 0) {
@@ -503,10 +501,11 @@ galois::Result<void> CreateNewRDG(const std::string& name,
                            .num_hosts = tsuba::GlobalState::Get().Comm()->Num,
                        })
                       .dump();
-  if (tsuba::FileStore(name, reinterpret_cast<const uint8_t*>(s.data()),
-                       s.size()) != 0) {
+  if (auto res = tsuba::FileStore(
+          name, reinterpret_cast<const uint8_t*>(s.data()), s.size());
+      !res) {
     GALOIS_LOG_ERROR("failed to store RDG file");
-    return tsuba::ErrorCode::TODO;
+    return res.error();
   }
   return galois::ResultSuccess();
 }
@@ -537,8 +536,8 @@ galois::Result<void> DoLoad(std::shared_ptr<tsuba::RDGHandle> handle,
   fs::path t_path{dir};
   t_path.append(rdg->topology_path);
 
-  if (int err = rdg->topology_file_storage.Bind(t_path.string()); err) {
-    return tsuba::ErrorCode::InvalidArgument;
+  if (auto res = rdg->topology_file_storage.Bind(t_path.string()); !res) {
+    return res.error();
   }
   rdg->rdg_dir = handle->metadata_dir;
   return galois::ResultSuccess();
@@ -551,11 +550,12 @@ galois::Result<void> CommitRDG(std::shared_ptr<tsuba::RDGHandle> handle) {
   comm->Barrier();
   if (comm->ID == 0) {
     std::string s = json(new_meta).dump();
-    if (tsuba::FileStore(handle->rdg_path,
-                         reinterpret_cast<const uint8_t*>(s.data()),
-                         s.size()) != 0) {
+    if (auto res = tsuba::FileStore(handle->rdg_path,
+                                    reinterpret_cast<const uint8_t*>(s.data()),
+                                    s.size());
+        !res) {
       GALOIS_LOG_ERROR("failed to store RDG file");
-      return tsuba::ErrorCode::TODO;
+      return res.error();
     }
   }
   comm->Barrier();
@@ -569,11 +569,11 @@ galois::Result<void> DoStore(std::shared_ptr<tsuba::RDGHandle> handle,
     // No topology file; create one
     fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
 
-    int err = tsuba::FileStore(t_path.string(),
-                               rdg->topology_file_storage.ptr<uint8_t>(),
-                               rdg->topology_file_storage.size());
-    if (err) {
-      return tsuba::ErrorCode::InvalidArgument;
+    if (auto res = tsuba::FileStore(t_path.string(),
+                                    rdg->topology_file_storage.ptr<uint8_t>(),
+                                    rdg->topology_file_storage.size());
+        !res) {
+      return res.error();
     }
     rdg->topology_path = t_path.filename().string();
   }
@@ -638,8 +638,8 @@ galois::Result<void> UnbindFromStorage(tsuba::RDG* rdg) {
 
 galois::Result<tsuba::RDGMeta> ParseRDGFile(const std::string& path) {
   tsuba::FileView fv;
-  if (fv.Bind(path) != 0) {
-    return tsuba::ErrorCode::NotFound;
+  if (auto res = fv.Bind(path); !res) {
+    return res.error();
   }
   return JsonParse<tsuba::RDGMeta>(fv);
 }

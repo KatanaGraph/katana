@@ -49,10 +49,14 @@ public:
   OutIndexView(OutIndexView&& other) = default;
   OutIndexView& operator=(OutIndexView&& other) = default;
 
-  ~OutIndexView() { Unbind(); }
+  ~OutIndexView() {
+    if (auto res = Unbind(); !res) {
+      GALOIS_LOG_ERROR("Unbind in destructor:", res.error());
+    }
+  }
 
-  int Bind();
-  void Unbind();
+  galois::Result<void> Bind();
+  galois::Result<void> Unbind();
 
   const std::string& filename() const { return filename_; }
   uint64_t num_nodes() const { return gr_view_->header_.num_nodes_; }

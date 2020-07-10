@@ -131,8 +131,8 @@ int main(int argc, char* argv[]) {
   init_data(buf, bytes_to_write);
 
   fmt::print("Writing {}\n", dst_path);
-  if (auto res = tsuba::FileStore(dst_path, buf, bytes_to_write); res != 0) {
-    fmt::print(stderr, "FileStore error {:d}\n", res);
+  if (auto res = tsuba::FileStore(dst_path, buf, bytes_to_write); !res) {
+    fmt::print(stderr, "FileStore error {}\n", res.error());
     exit(EXIT_FAILURE);
   }
 

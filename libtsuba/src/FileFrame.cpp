@@ -94,8 +94,8 @@ galois::Result<void> FileFrame::Persist() {
     GALOIS_LOG_DEBUG("No path provided to FileFrame");
     return tsuba::ErrorCode::InvalidArgument;
   }
-  if (tsuba::FileStore(path_, map_start_, cursor_) != 0) {
-    return galois::ResultErrno();
+  if (auto res = tsuba::FileStore(path_, map_start_, cursor_); !res) {
+    return res.error();
   }
   return galois::ResultSuccess();
 }

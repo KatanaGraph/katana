@@ -176,6 +176,48 @@ fail if the tests fail. These commands are primarily useful for debugging Conda
 build issues however, since the Conda build and install is very slow compared to
 a normal local build.
 
+# Adding new e(x)ternal dependencies
+
+Adding new dependencies should generally be avoided since it makes it more
+likely that satisfying local development requirements, conda build requirements,
+production library requirements, etc. will become impossible. If you do choose
+to require a new 3rd party library for a good reason you should:
+
+  0. Choose a version of the library that is available both in
+  [conda-forge](https://anaconda.org/conda-forge/repo) and in
+  [ConanCenter](https://conan.io/center/). If it is not available in both places,
+  ubuntu package managers like `apt` or `snap` can work but adding it will be
+  different (and you should consider picking another library since this puts an
+  extra burden on developers).
+
+  1. Add the dependency to the [conan config](config/conanfile.txt) in the style
+  of the dependendices that are already there.
+
+  2. Add the dependency to the [conda recipe](conda_recipe/meta.yaml) in the
+  style of what's there. There are two sections; `host` and `run`.
+  Any runtime deps need to be added to both sections. But deps which are totally
+  compiled into galois (i.e., they are not exposed in our API and don't require
+  a shared library at run time), can be in `host` only.
+
+  3. It is possible that you may have to modify the
+  [package config](cmake/GaloisConfig.cmake.in) as well so `cmake` will find
+  your dependency during the conda build (again the best advice is to look at how other
+  dependencies handle this). This should only be necessary if the new dependency
+  is a runtime or user-code dependency. For instance, this should not be
+  necessary for header-only libraries that are not used in public headers.
+
+If you do end up choosing a library that is not in conda-forge/ConanCenter
+(really?) make sure to update the dependency list in [README.md](README.md), and
+make sure the
+[script for setting up a dev environment](scripts/setup_dev_ubuntu.sh) is
+updated as well. There will likely also be changes to the CI scripts that are
+needed.
+
+You should be particularly weary of libraries that are not in conda-forge. If
+absolutely necessary, discuss it with the current conda package maintainer
+(currently @arthurp). Not handling them correctly there will totally break the
+conda packages.
+
 # Continuous Integration
 
 ## Caching

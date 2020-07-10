@@ -34,13 +34,12 @@ void parse_arguments(int argc, char* argv[]) {
     }
   }
 
-  for(auto index = optind; index < argc; ++index) {
+  for (auto index = optind; index < argc; ++index) {
     src_paths.push_back(argv[index]);
   }
 }
 
-void
-DoMD5(const std::string& path, MD5& md5) {
+void DoMD5(const std::string& path, MD5& md5) {
   tsuba::StatBuf stat_buf;
   if (auto res = tsuba::FileStat(path, &stat_buf); res != 0) {
     GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
@@ -48,7 +47,8 @@ DoMD5(const std::string& path, MD5& md5) {
 
   uint8_t* buf{nullptr};
   uint64_t size;
-  for (uint64_t so_far = 0UL; so_far < stat_buf.size; so_far += read_block_size) {
+  for (uint64_t so_far = 0UL; so_far < stat_buf.size;
+       so_far += read_block_size) {
     size = std::min(read_block_size, (stat_buf.size - so_far));
     buf  = tsuba::FileMmap(path, so_far, size);
     if (!buf) {
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
   parse_arguments(argc, argv);
 
   MD5 md5;
-  for(const auto& path: src_paths) {
+  for (const auto& path : src_paths) {
     md5.reset();
     DoMD5(path, md5);
     // md5sum format

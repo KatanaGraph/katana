@@ -66,14 +66,12 @@ int DoWriteS3(const std::string& uri, const uint8_t* buf, uint64_t size) {
   return tsuba::S3UploadOverwrite(bucket, object, buf, size);
 }
 
-int DoWriteS3Sync(const std::string& uri, const uint8_t* buf,
-                  uint64_t size) {
+int DoWriteS3Sync(const std::string& uri, const uint8_t* buf, uint64_t size) {
   auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutSingleSync(bucket, object, buf, size);
 }
 
-int DoWriteS3Async(const std::string& uri, const uint8_t* buf,
-                   uint64_t size) {
+int DoWriteS3Async(const std::string& uri, const uint8_t* buf, uint64_t size) {
   auto [bucket, object] = tsuba::S3SplitUri(uri);
   return tsuba::S3PutSingleAsync(bucket, object, buf, size);
 }
@@ -104,8 +102,7 @@ int DoWriteS3MultiAsyncFinish(const std::string& uri) {
   return tsuba::S3PutMultiAsyncFinish(bucket, object);
 }
 
-uint8_t* AllocAndReadS3(const std::string& uri, uint64_t begin,
-                        uint64_t size) {
+uint8_t* AllocAndReadS3(const std::string& uri, uint64_t begin, uint64_t size) {
   auto* ret = MmapCast<uint8_t>(size, PROT_READ | PROT_WRITE,
                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == nullptr) {
@@ -205,7 +202,8 @@ int tsuba::FileOpen(const std::string& uri) {
   return result.value();
 }
 
-galois::Result<void> tsuba::FileCreate(const std::string& filename, bool overwrite) {
+galois::Result<void> tsuba::FileCreate(const std::string& filename,
+                                       bool overwrite) {
   if (tsuba::IsS3URI(filename)) {
     if (overwrite && DoS3Exists(filename)) {
       return tsuba::ErrorCode::Exists;
@@ -216,7 +214,7 @@ galois::Result<void> tsuba::FileCreate(const std::string& filename, bool overwri
     fs::path m_path{filename};
     if (overwrite && fs::exists(m_path)) {
       return tsuba::ErrorCode::Exists;
-    } 
+    }
     fs::path dir = m_path.parent_path();
     if (boost::system::error_code err; !fs::create_directories(dir, err)) {
       if (err) {

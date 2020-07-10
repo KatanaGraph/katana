@@ -52,7 +52,7 @@ public:
   /// return latest hash as 32 hex characters
   std::string getHash();
   /// return latest hash as bytes
-  void getHash(unsigned char buffer[HashBytes]);
+  void getHash(unsigned char buffer[MD5::HashBytes]);
 
   /// restart
   void reset();

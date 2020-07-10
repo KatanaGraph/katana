@@ -16,9 +16,9 @@ uint64_t bytes_to_write{0};
 std::string dst_path{};
 
 static constexpr auto chars = "0123456789"
-                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                 "abcdefghijklmnopqrstuvwxyz";
-static constexpr auto chars_len = strlen(chars);
+                              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                              "abcdefghijklmnopqrstuvwxyz";
+static auto chars_len = std::strlen(chars);
 
 std::string usage_msg = "Usage: {} <number>[G|M|K|B] <full path>\n";
 
@@ -46,10 +46,10 @@ void init_data(uint8_t* buf, int32_t limit) {
     memcpy(buf, tmp, 19);
     buf += 19;
     if (limit > 19) {
-      *buf++ = ' ';
+      *buf++            = ' ';
       uint64_t char_idx = 0UL;
       for (limit -= 20; limit; limit--) {
-        *buf++ = chars[char_idx++%chars_len]; // We could make this faster...
+        *buf++ = chars[char_idx++ % chars_len]; // We could make this faster...
       }
     }
   }
@@ -98,13 +98,15 @@ void parse_arguments(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  GALOIS_LOG_VASSERT(argc > index,
+                     "\n  Usage: {} <number>[G|M|K|B] <full path>\n", argv[0]);
   index++;
   dst_path = argv[index];
 }
 
-uint8_t*
-mymmap(uint64_t size) {
-  auto res = galois::MmapPopulate(nullptr, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, (off_t)0);
+uint8_t* mymmap(uint64_t size) {
+  auto res = galois::MmapPopulate(nullptr, size, PROT_READ | PROT_WRITE,
+                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, (off_t)0);
   if (res == MAP_FAILED) {
     perror("mmap");
     return nullptr;
@@ -118,7 +120,7 @@ int main(int argc, char* argv[]) {
   }
   parse_arguments(argc, argv);
   uint8_t* buf = static_cast<uint8_t*>(malloc(bytes_to_write));
-  if(buf == nullptr) {
+  if (buf == nullptr) {
     fmt::print(stderr, "malloc failed, trying mmap\n");
     buf = mymmap(bytes_to_write);
     if (buf == nullptr) {

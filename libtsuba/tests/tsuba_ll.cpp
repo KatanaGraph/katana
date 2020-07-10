@@ -34,7 +34,7 @@ void parse_arguments(int argc, char* argv[]) {
     }
   }
 
-  for(auto index = optind; index < argc; ++index) {
+  for (auto index = optind; index < argc; ++index) {
     src_paths.push_back(argv[index]);
   }
 }
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
   }
   parse_arguments(argc, argv);
 
-  for(const auto& path: src_paths) {
+  for (const auto& path : src_paths) {
     tsuba::StatBuf stat_buf;
     if (auto res = tsuba::FileStat(path, &stat_buf); res != 0) {
       GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);

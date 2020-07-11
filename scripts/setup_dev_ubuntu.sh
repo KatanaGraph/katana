@@ -52,6 +52,11 @@ sudo apt install -yq clang-10 clang++-10 clang-format-10 clang-tidy-10 llvm-10-d
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
 sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
 
+# gcc-9 might require this
+#sudo apt-add-repository ppa:ubuntu-toolchain-r/test
+#sudo apt update
+#sudo apt install -yq gcc-9 g++-9
+
 # install conan, without sudo should install locally $HOME/.local/bin
 pip3 install conan
 .github/workflows/setup_conan.sh

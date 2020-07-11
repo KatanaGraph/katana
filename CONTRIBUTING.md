@@ -278,3 +278,11 @@ common prefix with a unique suffix (e.g., `github.sha`) and use the common
 prefix as a restore key. The unique key will not match any existing key but
 upon lookup there will be multiple matching cache entries sharing the common
 prefix, and `actions/cache` will return the most recent one.
+
+One common use of `actions/cache` is to store a ccache cache. There is no limit
+on the number of caches, but once the overall size of a cache exceeds 5 GB
+(compressed), GitHub will start evicting old entries. 5 GB isn't particularly
+large for a ccache so we currently manually limit the size of each ccache to a
+certain number of files (`ccache --max-files`) to more directly control cache
+behavior and ensure fairer eviction among GitHub caches. The downside is these
+limits need to be periodically reassessed.

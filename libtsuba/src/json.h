@@ -15,8 +15,8 @@ galois::Result<T> JsonParse(O& obj) {
   try {
     auto j = nlohmann::json::parse(obj.begin(), obj.end());
     return j.template get<T>();
-  } catch (std::exception* exp) {
-    GALOIS_LOG_DEBUG("nlohmann::json exception: {}", exp->what());
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("nlohmann::json exception: {}", exp.what());
   }
   return tsuba::ErrorCode::InvalidArgument;
 }

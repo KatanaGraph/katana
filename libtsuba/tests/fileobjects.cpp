@@ -156,6 +156,9 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 }
 
 int main() {
+  if (auto res = tsuba::Init(); !res) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", res.error());
+  }
   uint64_t num_bytes = 1 << EXP_WRITE_COUNT;
   uint8_t bits[num_bytes];
   fill_bits(bits, num_bytes);
@@ -169,5 +172,8 @@ int main() {
   silly(bits, num_bytes, temp_dir);
 
   fs::remove_all(temp_dir);
+  if (auto res = tsuba::Fini(); !res) {
+    GALOIS_LOG_FATAL("tsuba::Fini: {}", res.error());
+  }
   return 0;
 }

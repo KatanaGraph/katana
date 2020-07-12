@@ -16,6 +16,7 @@ enum class ErrorCode {
   Exists          = 5,
   OutOfMemory     = 6,
   TODO            = 7,
+  S3Error         = 8,
 };
 
 ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -44,6 +45,8 @@ public:
       return "already exists";
     case ErrorCode::TODO:
       return "TODO error yet to be classified";
+    case ErrorCode::S3Error:
+      return "S3 error";
     default:
       return "unknown error";
     }

@@ -1,7 +1,6 @@
 #include "s3.h"
 
 #include <memory>
-#include <regex>
 #include <string_view>
 #include <algorithm>
 #include <unistd.h>
@@ -17,11 +16,12 @@
 #include <aws/s3/model/CompleteMultipartUploadRequest.h>
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
+#include <fmt/core.h>
 
-#include "fmt/core.h"
 #include "galois/FileSystem.h"
 #include "galois/Result.h"
 #include "galois/Logging.h"
+#include "tsuba/Errors.h"
 #include "tsuba_internal.h"
 #include "SegmentedBufferView.h"
 
@@ -32,7 +32,6 @@ static Aws::SDKOptions sdk_options;
 static constexpr const char* kDefaultS3Region = "us-east-1";
 static constexpr const char* kAwsTag          = "TsubaS3Client";
 static constexpr const char* kTmpTag          = "/tmp/tsuba_s3.";
-static const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
 // TODO: Could explore policies
 // Limits come from here.
 //   https://docs.aws.amazon.com/AmazonS3/latest/dev/qfacts.html
@@ -133,15 +132,6 @@ static inline std::string BucketAndObject(const std::string& bucket,
   return std::string(bucket).append("/").append(object);
 }
 
-std::pair<std::string, std::string> S3SplitUri(const std::string& uri) {
-  std::smatch sub_match;
-  /* I wish regex was compatible with string_view but alas it is not */
-  if (!std::regex_match(uri, sub_match, kS3UriRegex)) {
-    return std::make_pair("", "");
-  }
-  return std::make_pair(sub_match[1], sub_match[2]);
-}
-
 galois::Result<int> S3Open(const std::string& bucket,
                            const std::string& object) {
   auto executor =
@@ -169,8 +159,8 @@ galois::Result<int> S3Open(const std::string& bucket,
   return fd;
 }
 
-uint64_t S3GetSize(const std::string& bucket, const std::string& object,
-                   uint64_t* size) {
+galois::Result<void> S3GetSize(const std::string& bucket,
+                               const std::string& object, uint64_t* size) {
   auto s3_client = GetS3Client();
   /* skip all of the thread management overhead if we only have one request */
   Aws::S3::Model::HeadObjectRequest request;
@@ -181,14 +171,15 @@ uint64_t S3GetSize(const std::string& bucket, const std::string& object,
     const auto& error = outcome.GetError();
     GALOIS_LOG_ERROR("S3GetSize\n  [{}] {}\n  {}: {}\n", bucket, object,
                      error.GetExceptionName(), error.GetMessage());
-    return -1;
+    return tsuba::ErrorCode::S3Error;
   }
   *size = outcome.GetResult().GetContentLength();
-  return 0;
+  return galois::ResultSuccess();
 }
 
 /// Return 1 if bucket/object exists, 0 otherwise
-int S3Exists(const std::string& bucket, const std::string& object) {
+galois::Result<bool> S3Exists(const std::string& bucket,
+                              const std::string& object) {
   auto s3_client = GetS3Client();
   /* skip all of the thread management overhead if we only have one request */
   Aws::S3::Model::HeadObjectRequest request;
@@ -196,13 +187,14 @@ int S3Exists(const std::string& bucket, const std::string& object) {
   request.SetKey(ToAwsString(object));
   Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
   if (!outcome.IsSuccess()) {
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
-int S3UploadOverwrite(const std::string& bucket, const std::string& object,
-                      const uint8_t* data, uint64_t size) {
+galois::Result<void> S3UploadOverwrite(const std::string& bucket,
+                                       const std::string& object,
+                                       const uint8_t* data, uint64_t size) {
   // Any small size put, do synchronously
   if (size < kS3DefaultBufSize) {
     GALOIS_LOG_VERBOSE("S3 Put {:d} bytes, less than {:d}, doing sync", size,
@@ -224,7 +216,7 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
                      "  [{}] {}\n  {}: {}\n",
                      bucket, object, error.GetExceptionName(),
                      error.GetMessage());
-    return -1;
+    return ErrorCode::S3Error;
   }
 
   auto upload_id              = createMpResponse.GetResult().GetUploadId();
@@ -307,13 +299,14 @@ int S3UploadOverwrite(const std::string& bucket, const std::string& object,
     GALOIS_LOG_ERROR(
         "\n  Failed to complete multipart upload\n  {}: {}\n  [{}] {}",
         error.GetExceptionName(), error.GetMessage(), bucket, object);
-    return -1;
+    return ErrorCode::S3Error;
   }
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int S3PutSingleSync(const std::string& bucket, const std::string& object,
-                    const uint8_t* data, uint64_t size) {
+galois::Result<void> S3PutSingleSync(const std::string& bucket,
+                                     const std::string& object,
+                                     const uint8_t* data, uint64_t size) {
   auto s3_client = GetS3Client();
   Aws::S3::Model::PutObjectRequest object_request;
 
@@ -332,11 +325,12 @@ int S3PutSingleSync(const std::string& bucket, const std::string& object,
     /* TODO there are likely some errors we can handle gracefully
      * i.e., with retries */
     const auto& error = outcome.GetError();
-    GALOIS_LOG_FATAL("\n  Upload failed: {}: {}\n  [{}] {}",
+    GALOIS_LOG_ERROR("\n  Upload failed: {}: {}\n  [{}] {}",
                      error.GetExceptionName(), error.GetMessage(), bucket,
                      object);
+    return ErrorCode::S3Error;
   }
-  return 0;
+  return galois::ResultSuccess();
 }
 
 enum class Xfer {
@@ -378,8 +372,9 @@ static std::condition_variable xfer_cv;
 //   if (p.done()) { return; }
 //   p = p.Next(bucket, object);
 // }
-int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
-                     const uint8_t* data, uint64_t size) {
+galois::Result<void> S3PutMultiAsync1(const std::string& bucket,
+                                      const std::string& object,
+                                      const uint8_t* data, uint64_t size) {
   GALOIS_LOG_VASSERT(library_init == true,
                      "Must call tsuba::Init before S3 interaction");
   // TODO: Check total size is less than 5TB
@@ -423,10 +418,11 @@ int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
         "{:<30} PutMultiAsync1 size {:#x} nSeg {:d} parts_.size() {:d}", bno,
         size, bufView.NumSegments(), it->second.parts_.size());
   }
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
+galois::Result<void> S3PutMultiAsync2(const std::string& bucket,
+                                      const std::string& object) {
   std::string bno = BucketAndObject(bucket, object);
   // Standard says we can keep a pointer to value that remains valid even if
   // iterator is invalidated.  Iterators can be invalidated because of "rehash"
@@ -453,7 +449,7 @@ int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
                      "[{}] Key: [{}]\n  {}: {}\n",
                      bucket, object, error.GetExceptionName(),
                      error.GetMessage());
-    return -1;
+    return ErrorCode::S3Error;
   }
 
   pm->upload_id_ = createMpResponse.GetResult().GetUploadId();
@@ -519,10 +515,11 @@ int S3PutMultiAsync2(const std::string& bucket, const std::string& object) {
     async_s3_client->UploadPartAsync(uploadPartRequest, callback);
   }
 
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
+galois::Result<void> S3PutMultiAsync3(const std::string& bucket,
+                                      const std::string& object) {
   std::string bno = BucketAndObject(bucket, object);
   PutMulti* pm{nullptr};
   {
@@ -567,11 +564,11 @@ int S3PutMultiAsync3(const std::string& bucket, const std::string& object) {
         completeMultipartUploadRequest);
   }
 
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int S3PutMultiAsyncFinish(const std::string& bucket,
-                          const std::string& object) {
+galois::Result<void> S3PutMultiAsyncFinish(const std::string& bucket,
+                                           const std::string& object) {
   std::string bno = BucketAndObject(bucket, object);
   PutMulti* pm{nullptr};
   {
@@ -601,21 +598,22 @@ int S3PutMultiAsyncFinish(const std::string& bucket,
   if (!completeUploadOutcome.IsSuccess()) {
     /* TODO there are likely some errors we can handle gracefully */
     const auto& error = completeUploadOutcome.GetError();
-    GALOIS_LOG_FATAL("\n  Failed to complete mutipart upload\n  {}: {}\n  "
+    GALOIS_LOG_ERROR("\n  Failed to complete mutipart upload\n  {}: {}\n  "
                      "upload id: {}\n [{}] {}",
                      error.GetExceptionName(), error.GetMessage(),
                      pm->upload_id_, bucket, object);
-    return -1;
+    return ErrorCode::S3Error;
   }
-  return 0;
+  return galois::ResultSuccess();
 }
 
 static std::unordered_map<std::string, bool> bnodone;
 static std::mutex bnomutex;
 static std::condition_variable bnocv;
 
-int S3PutSingleAsync(const std::string& bucket, const std::string& object,
-                     const uint8_t* data, uint64_t size) {
+galois::Result<void> S3PutSingleAsync(const std::string& bucket,
+                                      const std::string& object,
+                                      const uint8_t* data, uint64_t size) {
   Aws::S3::Model::PutObjectRequest object_request;
   GALOIS_LOG_VASSERT(library_init == true,
                      "Must call tsuba::Init before S3 interaction");
@@ -660,20 +658,20 @@ int S3PutSingleAsync(const std::string& bucket, const std::string& object,
       };
   async_s3_client->PutObjectAsync(object_request, callback);
 
-  return 0;
+  return galois::ResultSuccess();
 }
 
-int S3PutSingleAsyncFinish(const std::string& bucket,
-                           const std::string& object) {
+galois::Result<void> S3PutSingleAsyncFinish(const std::string& bucket,
+                                            const std::string& object) {
   std::string bno = BucketAndObject(bucket, object);
   if (bnodone.find(bno) == bnodone.end()) {
     GALOIS_LOG_ERROR("{:<30} PutSingleAsyncFinish no bucket/object in map",
                      bno);
-    return -1;
+    return ErrorCode::S3Error;
   }
   std::unique_lock<std::mutex> lk(bnomutex);
   bnocv.wait(lk, [&] { return bnodone[bno]; });
-  return 0;
+  return galois::ResultSuccess();
 }
 
 static void
@@ -698,14 +696,15 @@ PrepareObjectRequest(Aws::S3::Model::GetObjectRequest* object_request,
   });
 }
 
-int S3DownloadRange(const std::string& bucket, const std::string& object,
-                    uint64_t start, uint64_t size, uint8_t* result_buf) {
+galois::Result<void> S3DownloadRange(const std::string& bucket,
+                                     const std::string& object, uint64_t start,
+                                     uint64_t size, uint8_t* result_buf) {
   auto s3_client              = GetS3Client();
   SegmentedBufferView bufView = SegmentBuf(start, result_buf, size);
   std::vector<SegmentedBufferView::BufPart> parts(bufView.begin(),
                                                   bufView.end());
   if (parts.empty()) {
-    return 0;
+    return galois::ResultSuccess();
   }
 
   if (parts.size() == 1) {
@@ -719,11 +718,12 @@ int S3DownloadRange(const std::string& bucket, const std::string& object,
       /* TODO there are likely some errors we can handle gracefully
        * i.e., with retries */
       const auto& error = outcome.GetError();
-      GALOIS_LOG_FATAL("\n  Failed S3DownloadRange\n  {}: {}\n [{}] {}",
+      GALOIS_LOG_ERROR("\n  Failed S3DownloadRange\n  {}: {}\n [{}] {}",
                        error.GetExceptionName(), error.GetMessage(), bucket,
                        object);
+      return ErrorCode::S3Error;
     }
-    return 0;
+    return galois::ResultSuccess();
   }
 
   std::mutex m;
@@ -758,7 +758,7 @@ int S3DownloadRange(const std::string& bucket, const std::string& object,
   std::unique_lock<std::mutex> lk(m);
   cv.wait(lk, [&] { return finished >= parts.size(); });
 
-  return 0;
+  return galois::ResultSuccess();
 }
 
 } /* namespace tsuba */

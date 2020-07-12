@@ -11,7 +11,6 @@
 #include <parquet/arrow/writer.h>
 #include <parquet/file_reader.h>
 
-#include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "galois/FileSystem.h"
@@ -20,7 +19,7 @@
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
 
-#include "tsuba_internal.h"
+#include "GlobalState.h"
 #include "json.h"
 
 // constexpr uint32_t kPropertyMagicNo  = 0x4B808280; // KPRP
@@ -443,8 +442,7 @@ MakeMetadata(const tsuba::RDG& rdg) {
 
 std::string HostPartitionName(const tsuba::RDGHandle& handle,
                               uint32_t version) {
-  return fmt::format("{}_{}_{}", handle.rdg_path,
-                     tsuba::GlobalState::Get().Comm()->ID, version);
+  return fmt::format("{}_{}_{}", handle.rdg_path, tsuba::Comm()->ID, version);
 }
 
 galois::Result<void> WriteMetadata(const tsuba::RDGHandle& handle,
@@ -498,7 +496,7 @@ galois::Result<void> CreateNewRDG(const std::string& name,
 
   std::string s = json(tsuba::RDGMeta{
                            .version   = 0,
-                           .num_hosts = tsuba::GlobalState::Get().Comm()->Num,
+                           .num_hosts = tsuba::Comm()->Num,
                        })
                       .dump();
   if (auto res = tsuba::FileStore(
@@ -544,7 +542,7 @@ galois::Result<void> DoLoad(std::shared_ptr<tsuba::RDGHandle> handle,
 }
 
 galois::Result<void> CommitRDG(std::shared_ptr<tsuba::RDGHandle> handle) {
-  galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
+  galois::CommBackend* comm = tsuba::Comm();
   tsuba::RDGMeta new_meta{.version   = handle->rdg.version + 1,
                           .num_hosts = comm->Num};
   comm->Barrier();
@@ -699,16 +697,15 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
     if (rdg_res.error() == tsuba::ErrorCode::InvalidArgument) {
       GALOIS_WARN_ONCE("Deprecated behavior: treating invalid RDG file like a "
                        "partition file");
-      galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
-      ret->partition_path       = rdg_name;
-      ret->rdg                  = {.version = 0, .num_hosts = comm->Num};
+      ret->partition_path = rdg_name;
+      ret->rdg            = {.version = 0, .num_hosts = tsuba::Comm()->Num};
       return ret;
     }
     return rdg_res.error();
   }
 
   ret->rdg = rdg_res.value();
-  if (ret->rdg.num_hosts != tsuba::GlobalState::Get().Comm()->Num) {
+  if (ret->rdg.num_hosts != tsuba::Comm()->Num) {
     return ErrorCode::InvalidArgument;
   }
   ret->partition_path = HostPartitionName(*ret, ret->rdg.version);
@@ -722,7 +719,7 @@ galois::Result<void> tsuba::Close(std::shared_ptr<RDGHandle> handle) {
 }
 
 galois::Result<void> tsuba::Create(const std::string& name) {
-  galois::CommBackend* comm = tsuba::GlobalState::Get().Comm();
+  galois::CommBackend* comm = tsuba::Comm();
   if (comm->ID == 0) {
     if (auto good = CreateNewRDG(name); !good) {
       GALOIS_LOG_DEBUG("CreateNewRDG failed: {}", good.error());

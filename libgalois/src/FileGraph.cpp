@@ -301,16 +301,7 @@ void* FileGraph::fromArrays(uint64_t* out_idx, uint64_t num_nodes, void* outs,
 }
 
 void FileGraph::fromFile(const std::string& filename) {
-  int fd = -1;
-  if (tsuba::IsS3URI(filename)) {
-    auto fd_res = tsuba::FileOpen(filename);
-    if (!fd_res) {
-      GALOIS_LOG_FATAL("tsuba opening {}: {}", filename, fd_res.error());
-    }
-    fd = fd_res.value();
-  } else {
-    fd = open(filename.c_str(), O_RDONLY);
-  }
+  int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1)
     GALOIS_SYS_DIE("failed opening ", "'", filename, "'");
   fds.push_back(fd);

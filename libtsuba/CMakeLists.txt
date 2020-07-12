@@ -3,12 +3,15 @@ set_target_properties(tsuba PROPERTIES EXPORT_NAME tsuba)
 
 set(sources
    src/file.cpp
+   src/GlobalState.cpp
    src/tsuba.cpp
    src/FileView.cpp
    src/FileFrame.cpp
    src/Errors.cpp
    src/RDG.cpp
    src/s3.cpp
+   src/LocalStorage.cpp
+   src/S3Storage.cpp
 )
 
 target_sources(tsuba PRIVATE ${sources})

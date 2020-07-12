@@ -15,33 +15,40 @@ galois::Result<void> S3Init();
 galois::Result<void> S3Fini();
 galois::Result<int> S3Open(const std::string& bucket,
                            const std::string& object);
-uint64_t S3GetSize(const std::string& bucket, const std::string& object,
-                   uint64_t* size);
-int S3Exists(const std::string& bucket, const std::string& object);
+galois::Result<void> S3GetSize(const std::string& bucket,
+                               const std::string& object, uint64_t* size);
+galois::Result<bool> S3Exists(const std::string& bucket,
+                              const std::string& object);
 
-std::pair<std::string, std::string> S3SplitUri(const std::string& uri);
+galois::Result<void> S3DownloadRange(const std::string& bucket,
+                                     const std::string& object, uint64_t start,
+                                     uint64_t size, uint8_t* result_buf);
 
-int S3DownloadRange(const std::string& bucket, const std::string& object,
-                    uint64_t start, uint64_t size, uint8_t* result_buf);
-
-int S3UploadOverwrite(const std::string& bucket, const std::string& object,
-                      const uint8_t* data, uint64_t size);
+galois::Result<void> S3UploadOverwrite(const std::string& bucket,
+                                       const std::string& object,
+                                       const uint8_t* data, uint64_t size);
 
 // Call these functions in order to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface
-int S3PutMultiAsync1(const std::string& bucket, const std::string& object,
-                     const uint8_t* data, uint64_t size);
-int S3PutMultiAsync2(const std::string& bucket, const std::string& object);
-int S3PutMultiAsync3(const std::string& bucket, const std::string& object);
-int S3PutMultiAsyncFinish(const std::string& bucket, const std::string& object);
+galois::Result<void> S3PutMultiAsync1(const std::string& bucket,
+                                      const std::string& object,
+                                      const uint8_t* data, uint64_t size);
+galois::Result<void> S3PutMultiAsync2(const std::string& bucket,
+                                      const std::string& object);
+galois::Result<void> S3PutMultiAsync3(const std::string& bucket,
+                                      const std::string& object);
+galois::Result<void> S3PutMultiAsyncFinish(const std::string& bucket,
+                                           const std::string& object);
 
-int S3PutSingleSync(const std::string& bucket, const std::string& object,
-                    const uint8_t* data, uint64_t size);
-int S3PutSingleAsync(const std::string& bucket, const std::string& object,
-                     const uint8_t* data, uint64_t size);
-int S3PutSingleAsyncFinish(const std::string& bucket,
-                           const std::string& object);
+galois::Result<void> S3PutSingleSync(const std::string& bucket,
+                                     const std::string& object,
+                                     const uint8_t* data, uint64_t size);
+galois::Result<void> S3PutSingleAsync(const std::string& bucket,
+                                      const std::string& object,
+                                      const uint8_t* data, uint64_t size);
+galois::Result<void> S3PutSingleAsyncFinish(const std::string& bucket,
+                                            const std::string& object);
 
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view FromAwsString(const Aws::String& s) {

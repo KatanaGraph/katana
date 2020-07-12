@@ -13,8 +13,6 @@ namespace tsuba {
 
 galois::Result<void> S3Init();
 galois::Result<void> S3Fini();
-galois::Result<int> S3Open(const std::string& bucket,
-                           const std::string& object);
 galois::Result<void> S3GetSize(const std::string& bucket,
                                const std::string& object, uint64_t* size);
 galois::Result<bool> S3Exists(const std::string& bucket,

@@ -31,7 +31,6 @@ static Aws::SDKOptions sdk_options;
 
 static constexpr const char* kDefaultS3Region = "us-east-1";
 static constexpr const char* kAwsTag          = "TsubaS3Client";
-static constexpr const char* kTmpTag          = "/tmp/tsuba_s3.";
 // TODO: Could explore policies
 // Limits come from here.
 //   https://docs.aws.amazon.com/AmazonS3/latest/dev/qfacts.html
@@ -95,6 +94,19 @@ static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {
   return GetS3Client(default_executor);
 }
 
+template <class OutcomeType>
+static galois::Result<void> CheckS3Error(const OutcomeType& outcome) {
+  if (outcome.IsSuccess()) {
+    return galois::ResultSuccess();
+  }
+  const auto& error = outcome.GetError();
+  if (error.GetResponseCode() ==
+      Aws::Http::HttpResponseCode::MOVED_PERMANENTLY) {
+    return ErrorCode::AWSWrongRegion;
+  }
+  return ErrorCode::S3Error;
+}
+
 static SegmentedBufferView SegmentBuf(uint64_t start, const uint8_t* data,
                                       uint64_t size) {
   uint64_t segment_size = kS3DefaultBufSize;
@@ -132,33 +144,6 @@ static inline std::string BucketAndObject(const std::string& bucket,
   return std::string(bucket).append("/").append(object);
 }
 
-galois::Result<int> S3Open(const std::string& bucket,
-                           const std::string& object) {
-  auto executor =
-      Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(kAwsTag, 1);
-  auto s3_client = GetS3Client(executor);
-
-  Aws::Transfer::TransferManagerConfiguration transfer_config(executor.get());
-  transfer_config.s3Client = s3_client;
-  auto transfer_manager =
-      Aws::Transfer::TransferManager::Create(transfer_config);
-
-  auto open_result = galois::OpenUniqueFile(kTmpTag);
-  if (!open_result) {
-    return open_result.error();
-  }
-  auto [tmp_name, fd] = open_result.value();
-
-  auto downloadHandle = transfer_manager->DownloadFile(
-      ToAwsString(bucket), ToAwsString(object), ToAwsString(tmp_name));
-  downloadHandle->WaitUntilFinished();
-
-  assert(downloadHandle->GetBytesTotalSize() ==
-         downloadHandle->GetBytesTransferred());
-  unlink(tmp_name.c_str());
-  return fd;
-}
-
 galois::Result<void> S3GetSize(const std::string& bucket,
                                const std::string& object, uint64_t* size) {
   auto s3_client = GetS3Client();
@@ -167,11 +152,16 @@ galois::Result<void> S3GetSize(const std::string& bucket,
   request.SetBucket(ToAwsString(bucket));
   request.SetKey(ToAwsString(object));
   Aws::S3::Model::HeadObjectOutcome outcome = s3_client->HeadObject(request);
-  if (!outcome.IsSuccess()) {
-    const auto& error = outcome.GetError();
-    GALOIS_LOG_ERROR("S3GetSize\n  [{}] {}\n  {}: {}\n", bucket, object,
-                     error.GetExceptionName(), error.GetMessage());
-    return tsuba::ErrorCode::S3Error;
+
+  if (auto res = CheckS3Error(outcome); !res) {
+    if (res.error() == ErrorCode::S3Error) {
+      // couldn't classify dump some extra info to the log
+      const auto& error = outcome.GetError();
+      GALOIS_LOG_ERROR("S3GetSize\n  [{}] {}\n  {}: {} {}\n", bucket, object,
+                       error.GetResponseCode(), error.GetExceptionName(),
+                       error.GetMessage());
+    }
+    return res;
   }
   *size = outcome.GetResult().GetContentLength();
   return galois::ResultSuccess();
@@ -210,13 +200,15 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   createMpRequest.WithKey(ToAwsString(object));
 
   auto createMpResponse = s3_client->CreateMultipartUpload(createMpRequest);
-  if (!createMpResponse.IsSuccess()) {
-    const auto& error = createMpResponse.GetError();
-    GALOIS_LOG_ERROR("Transfer failed to create a multi-part upload request\n"
-                     "  [{}] {}\n  {}: {}\n",
-                     bucket, object, error.GetExceptionName(),
-                     error.GetMessage());
-    return ErrorCode::S3Error;
+  if (auto res = CheckS3Error(createMpResponse); !res) {
+    if (res.error() == ErrorCode::S3Error) {
+      const auto& error = createMpResponse.GetError();
+      GALOIS_LOG_ERROR("Transfer failed to create a multi-part upload request\n"
+                       "  [{}] {}\n  {}: {}\n",
+                       bucket, object, error.GetExceptionName(),
+                       error.GetMessage());
+    }
+    return res.error();
   }
 
   auto upload_id              = createMpResponse.GetResult().GetUploadId();
@@ -321,14 +313,16 @@ galois::Result<void> S3PutSingleSync(const std::string& bucket,
   object_request.SetContentType("application/octet-stream");
 
   auto outcome = s3_client->PutObject(object_request);
-  if (!outcome.IsSuccess()) {
-    /* TODO there are likely some errors we can handle gracefully
-     * i.e., with retries */
-    const auto& error = outcome.GetError();
-    GALOIS_LOG_ERROR("\n  Upload failed: {}: {}\n  [{}] {}",
-                     error.GetExceptionName(), error.GetMessage(), bucket,
-                     object);
-    return ErrorCode::S3Error;
+  if (auto res = CheckS3Error(outcome); !res) {
+    if (res.error() == ErrorCode::S3Error) {
+      // TODO there are likely some errors we can handle gracefully
+      // i.e., with retries
+      const auto& error = outcome.GetError();
+      GALOIS_LOG_ERROR("\n  Upload failed: {}: {}\n  [{}] {}",
+                       error.GetExceptionName(), error.GetMessage(), bucket,
+                       object);
+    }
+    return res.error();
   }
   return galois::ResultSuccess();
 }
@@ -712,17 +706,18 @@ galois::Result<void> S3DownloadRange(const std::string& bucket,
     Aws::S3::Model::GetObjectRequest request;
     PrepareObjectRequest(&request, bucket, object, parts[0]);
     Aws::S3::Model::GetObjectOutcome outcome = s3_client->GetObject(request);
-    if (outcome.IsSuccess()) {
-      /* result_buf should have the data here */
-    } else {
-      /* TODO there are likely some errors we can handle gracefully
-       * i.e., with retries */
-      const auto& error = outcome.GetError();
-      GALOIS_LOG_ERROR("\n  Failed S3DownloadRange\n  {}: {}\n [{}] {}",
-                       error.GetExceptionName(), error.GetMessage(), bucket,
-                       object);
-      return ErrorCode::S3Error;
+    if (auto res = CheckS3Error(outcome); !res) {
+      if (res.error() != ErrorCode::S3Error) {
+        // TODO there are likely some errors we can handle gracefully
+        // i.e., with retries
+        const auto& error = outcome.GetError();
+        GALOIS_LOG_ERROR("\n  Failed S3DownloadRange\n  {}: {}\n [{}] {}",
+                         error.GetExceptionName(), error.GetMessage(), bucket,
+                         object);
+      }
+      return res.error();
     }
+    // result_buf should have the data here
     return galois::ResultSuccess();
   }
 

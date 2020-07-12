@@ -17,6 +17,7 @@ enum class ErrorCode {
   OutOfMemory     = 6,
   TODO            = 7,
   S3Error         = 8,
+  AWSWrongRegion  = 9,
 };
 
 ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -47,6 +48,8 @@ public:
       return "TODO error yet to be classified";
     case ErrorCode::S3Error:
       return "S3 error";
+    case ErrorCode::AWSWrongRegion:
+      return "AWS op may succeed in other region";
     default:
       return "unknown error";
     }

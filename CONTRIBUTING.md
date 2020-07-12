@@ -115,6 +115,25 @@ ctest -L quick
 This runs code tests locally on your machine.  Most of the tests require sample
 graphs. You can get them with `make input`.
 
+```shell
+ctest -R regex --parallel 4
+```
+
+Run tests matching the regular expression and use 4 parallel jobs to execute
+tests.
+
+```shell
+ctest --test-action memcheck
+```
+
+Run tests with valgrind memcheck.
+
+```shell
+ctest --rerun-failed
+```
+
+Rerun just the tests that failed during the last run.
+
 # Some Helpful tools
 
 [ccmake](https://cmake.org/cmake/help/v3.0/manual/ccmake.1.html): a simple
@@ -217,6 +236,26 @@ You should be particularly weary of libraries that are not in conda-forge. If
 absolutely necessary, discuss it with the current conda package maintainer
 (currently @arthurp). Not handling them correctly there will totally break the
 conda packages.
+
+# Testing
+
+Many tests require sample graphs that are too big to keep in this repository.
+You can get them with `make input`.
+
+Tests are just executables created by the CMake `add_test` command.  A test
+succeeds if it can be run and it returns a zero exit value; otherwise, the test
+execution is considered a failure. A test executable itself may contain many
+individual assertions and subtests.
+
+Tests are divided into groups by their label property. A test can be given a
+label with the `set_property`/`set_tests_properties` command, e.g.,
+`set_property(TEST my-test PROPERTY LABEL my-label)`
+
+So far there is only one useful label:
+
+- **quick**: Quick tests have no external dependencies and can be run in parallel
+  with other quick tests. Each quick test should run in a second or less. These
+  tests are run as part of our continuous integration pipeline.
 
 # Continuous Integration
 

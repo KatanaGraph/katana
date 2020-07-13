@@ -200,7 +200,7 @@ AddTables(const fs::path& dir,
 galois::Result<std::vector<tsuba::PropertyMetadata>>
 WriteTable(const arrow::Table& table,
            const std::vector<tsuba::PropertyMetadata>& properties,
-           const fs::path& dir) {
+           const std::string& dir) {
 
   const auto& schema = table.schema();
 
@@ -210,10 +210,18 @@ WriteTable(const arrow::Table& table,
       continue;
     }
 
-    fs::path next_path = galois::NewPath(dir, schema->field(i)->name());
+    auto path_res = galois::NewPath(dir, schema->field(i)->name());
+    if (!path_res) {
+      return path_res.error();
+    }
+    std::string next_path = path_res.value();
 
     // Metadata paths should relative to dir
-    next_paths.emplace_back(next_path.filename().string());
+    auto name_res = galois::ExtractFileName(next_path);
+    if (!name_res) {
+      return name_res.error();
+    }
+    next_paths.emplace_back(name_res.value());
 
     std::shared_ptr<arrow::Table> column = arrow::Table::Make(
         arrow::schema({schema->field(i)}), {table.column(i)});
@@ -232,7 +240,7 @@ WriteTable(const arrow::Table& table,
       return tsuba::ErrorCode::ArrowError;
     }
 
-    ff->Bind(next_path.string());
+    ff->Bind(next_path);
     if (auto res = ff->Persist(); !res) {
       return res.error();
     }
@@ -565,15 +573,23 @@ galois::Result<void> DoStore(std::shared_ptr<tsuba::RDGHandle> handle,
                              tsuba::RDG* rdg) {
   if (rdg->topology_path.empty()) {
     // No topology file; create one
-    fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
+    auto path_res = galois::NewPath(handle->metadata_dir, "topology");
+    if (!path_res) {
+      return path_res.error();
+    }
+    std::string t_path = path_res.value();
 
-    if (auto res = tsuba::FileStore(t_path.string(),
-                                    rdg->topology_file_storage.ptr<uint8_t>(),
-                                    rdg->topology_file_storage.size());
+    if (auto res =
+            tsuba::FileStore(t_path, rdg->topology_file_storage.ptr<uint8_t>(),
+                             rdg->topology_file_storage.size());
         !res) {
       return res.error();
     }
-    rdg->topology_path = t_path.filename().string();
+    auto name_res = galois::ExtractFileName(t_path);
+    if (!name_res) {
+      return name_res.error();
+    }
+    rdg->topology_path = name_res.value();
   }
 
   auto node_write_result =
@@ -791,12 +807,20 @@ galois::Result<void> tsuba::Store(std::shared_ptr<RDGHandle> handle, RDG* rdg,
     }
   }
 
-  fs::path t_path = galois::NewPath(handle->metadata_dir, "topology");
-  ff->Bind(t_path.string());
+  auto path_res = galois::NewPath(handle->metadata_dir, "topology");
+  if (!path_res) {
+    return path_res.error();
+  }
+  std::string t_path = path_res.value();
+  ff->Bind(t_path);
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
-  rdg->topology_path = t_path.filename().string();
+  auto name_res = galois::ExtractFileName(t_path);
+  if (!name_res) {
+    return name_res.error();
+  }
+  rdg->topology_path = name_res.value();
 
   return DoStore(handle, rdg);
 }

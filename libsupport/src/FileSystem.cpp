@@ -7,7 +7,10 @@
 #include <boost/outcome/outcome.hpp>
 #include <unistd.h>
 
+#include "galois/ErrorCode.h"
+
 static const std::string_view kExes = "XXXXXX";
+static const char kSepChar          = '/';
 
 static std::vector<char> TemplateString(std::string_view pre,
                                         std::string_view suf) {
@@ -78,14 +81,29 @@ std::string generate_random_alphanumeric_string(std::size_t len) {
 }
 
 /// NewPath returns a new path in a directory with the given prefix. It works
-/// by appending a random suffix. The generated paths are may not be unique due
+/// by appending a random suffix. The generated paths may not be unique due
 /// to the varying atomicity guarantees of future storage backends.
-// TODO (witchel) return galois::Result<std::string>
-boost::filesystem::path galois::NewPath(const boost::filesystem::path& dir,
-                                        const std::string& prefix) {
+galois::Result<std::string> galois::NewPath(const std::string& dir,
+                                            const std::string& prefix) {
   std::string name = prefix;
+  if (prefix.front() == kSepChar) {
+    name = name.substr(1, std::string::npos);
+  }
   name += "-";
   name += generate_random_alphanumeric_string(12);
-  boost::filesystem::path p{dir};
-  return p.append(name);
+  std::string p{dir};
+  if (p.back() == kSepChar) {
+    p = p.substr(0, p.length() - 1);
+  }
+  return p.append(1, kSepChar).append(name);
+}
+
+// This function does not recognize any path seperator other than '/'. This
+// could be a problem for Windows or "non-standard S3" paths.
+galois::Result<std::string> galois::ExtractFileName(const std::string& path) {
+  size_t last_slash = path.find_last_of('/', std::string::npos);
+  if (last_slash == std::string::npos) {
+    return support::ErrorCode::InvalidArgument;
+  }
+  return path.substr(last_slash + 1);
 }

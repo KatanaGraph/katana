@@ -83,8 +83,6 @@ Galois provides two variants for galois::graphs::LC_CSR_Graph: galois::graphs::L
 @endhtmlonly
 @image html galois_lc_graphs_example.png "Differences of Galois label-computation graphs"
 
-galois::graphs::LC_Adaptor_Graph helps with creating types with custom data layouts that provide the same APIs as galois::graphs::LC_CSR_Graph
-
 @subsubsection lc_graph_in_edges Tracking Incoming Edges
 
 galois::graphs::LC_InOut_Graph can be used if the desired computation needs to track incoming edges. Below is an example of defining a galois::graphs::LC_InOut_Graph:

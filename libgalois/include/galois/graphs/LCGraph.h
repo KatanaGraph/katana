@@ -26,7 +26,6 @@
 #include "galois/graphs/LC_Linear_Graph.h"
 #include "galois/graphs/LC_Morph_Graph.h"
 #include "galois/graphs/LC_InOut_Graph.h"
-#include "galois/graphs/LC_Adaptor_Graph.h"
 #include "galois/graphs/ReadGraph.h"
 
 #endif

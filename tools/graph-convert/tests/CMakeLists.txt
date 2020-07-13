@@ -11,6 +11,10 @@ add_test(NAME convert-properties-graphml-types
   COMMAND graph-properties-convert-test --graphml --types ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/array_test.graphml
 )
 set_tests_properties(convert-properties-graphml-types PROPERTIES LABELS quick)
+add_test(NAME convert-properties-graphml-chunks
+  COMMAND graph-properties-convert-test --graphml --chunks --chunkSize 3 ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/array_test.graphml
+)
+set_tests_properties(convert-properties-graphml-chunks PROPERTIES LABELS quick)
 
 add_test(NAME convert-properties-json
   COMMAND graph-properties-convert-test --json --movies ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/movies.json

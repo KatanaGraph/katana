@@ -1769,7 +1769,8 @@ namespace galois {
 /// \param infilename path to source graphml file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-GraphComponents convertGraphML(const std::string& infilename) {
+GraphComponents convertGraphML(const std::string& infilename,
+                               const size_t chunkSize) {
   xmlTextReaderPtr reader;
   int ret = 0;
 
@@ -1803,8 +1804,6 @@ GraphComponents convertGraphML(const std::string& infilename) {
   std::vector<uint32_t> sources;
   // list of destinations of edges
   std::vector<uint32_t> destinations;
-
-  const size_t chunkSize = 25000;
 
   bool finishedGraph = false;
 

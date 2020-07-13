@@ -7,7 +7,7 @@
 #include "galois/Galois.h"
 
 namespace {
-enum ConvertTest { MOVIES, TYPES };
+enum ConvertTest { MOVIES, TYPES, CHUNKS };
 }
 
 namespace cll = llvm::cl;
@@ -29,8 +29,14 @@ static cll::opt<ConvertTest> testType(
     cll::values(clEnumValN(ConvertTest::TYPES, "types",
                            "source file is a test for graphml type conversion"),
                 clEnumValN(ConvertTest::MOVIES, "movies",
-                           "source file is a test for generic conversion")),
+                           "source file is a test for generic conversion"),
+                clEnumValN(ConvertTest::CHUNKS, "chunks",
+                           "this is a test for chunks")),
     cll::Required);
+static cll::opt<size_t>
+    chunkSize("chunkSize",
+              cll::desc("Chunk size for in memory arrow representation"),
+              cll::init(25000));
 
 namespace {
 
@@ -647,6 +653,431 @@ void verifyTypesSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(dests->ToString() == destsExpected);
 }
 
+void verifyChunksSet(galois::GraphComponents graph) {
+  GALOIS_ASSERT(graph.nodeProperties->num_columns() == 5);
+  GALOIS_ASSERT(graph.nodeLabels->num_columns() == 4);
+  GALOIS_ASSERT(graph.edgeProperties->num_columns() == 4);
+  GALOIS_ASSERT(graph.edgeTypes->num_columns() == 4);
+
+  GALOIS_ASSERT(graph.nodeProperties->num_rows() == 9);
+  GALOIS_ASSERT(graph.nodeLabels->num_rows() == 9);
+  GALOIS_ASSERT(graph.edgeProperties->num_rows() == 8);
+  GALOIS_ASSERT(graph.edgeTypes->num_rows() == 8);
+
+  GALOIS_ASSERT(graph.topology->out_indices->length() == 9);
+  GALOIS_ASSERT(graph.topology->out_dests->length() == 8);
+
+  // test node properties
+  auto names                = graph.nodeProperties->GetColumnByName("name");
+  std::string namesExpected = std::string("[\n\
+  [\n\
+    null,\n\
+    \"Keanu Reeves\",\n\
+    \"Carrie-Anne Moss\"\n\
+  ],\n\
+  [\n\
+    \"Laurence Fishburne\",\n\
+    \"Hugo Weaving\",\n\
+    \"Lilly Wachowski\"\n\
+  ],\n\
+  [\n\
+    \"Lana Wachowski\",\n\
+    \"Joel Silver\",\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(names->ToString() == namesExpected);
+
+  auto taglines = graph.nodeProperties->GetColumnByName("tagline");
+  std::string taglinesExpected = std::string("[\n\
+  [\n\
+    \"Welcome to the Real World\",\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(taglines->ToString() == taglinesExpected);
+
+  auto titles                = graph.nodeProperties->GetColumnByName("title");
+  std::string titlesExpected = std::string("[\n\
+  [\n\
+    \"The Matrix\",\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(titles->ToString() == titlesExpected);
+
+  auto released = graph.nodeProperties->GetColumnByName("released");
+  std::string releasedExpected = std::string("[\n\
+  [\n\
+    1999,\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(released->ToString() == releasedExpected);
+
+  auto borns                = graph.nodeProperties->GetColumnByName("born");
+  std::string bornsExpected = std::string("[\n\
+  [\n\
+    null,\n\
+    \"1964\",\n\
+    \"1967\"\n\
+  ],\n\
+  [\n\
+    \"1961\",\n\
+    \"1960\",\n\
+    \"1967\"\n\
+  ],\n\
+  [\n\
+    \"1965\",\n\
+    \"1952\",\n\
+    \"1963\"\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(borns->ToString() == bornsExpected);
+
+  // test node labels
+  auto movies                = graph.nodeLabels->GetColumnByName("Movie");
+  std::string moviesExpected = std::string("[\n\
+  [\n\
+    true,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(movies->ToString() == moviesExpected);
+
+  auto persons                = graph.nodeLabels->GetColumnByName("Person");
+  std::string personsExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    true,\n\
+    true\n\
+  ],\n\
+  [\n\
+    true,\n\
+    true,\n\
+    true\n\
+  ],\n\
+  [\n\
+    true,\n\
+    true,\n\
+    true\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(persons->ToString() == personsExpected);
+
+  auto others                = graph.nodeLabels->GetColumnByName("Other");
+  std::string othersExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    true\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(others->ToString() == othersExpected);
+
+  auto randoms                = graph.nodeLabels->GetColumnByName("Random");
+  std::string randomsExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    true\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(randoms->ToString() == randomsExpected);
+
+  // test edge properties
+  auto roles                = graph.edgeProperties->GetColumnByName("roles");
+  std::string rolesExpected = std::string("[\n\
+  [\n\
+    [\n\
+      \"Neo\"\n\
+    ],\n\
+    [\n\
+      \"Trinity\",\n\
+      \"more\",\n\
+      \"another\"\n\
+    ],\n\
+    [\n\
+      \"Morpheus\",\n\
+      \"some stuff\",\n\
+      \"test\nn\"\n\
+    ]\n\
+  ],\n\
+  [\n\
+    null,\n\
+    [\n\
+      \"Agent Smith\",\n\
+      \"alter\"\n\
+    ],\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(roles->ToString() == rolesExpected);
+
+  auto numbers = graph.edgeProperties->GetColumnByName("numbers");
+  std::string numbersExpected = std::string("[\n\
+  [\n\
+    null,\n\
+    null,\n\
+    [\n\
+      12,\n\
+      53,\n\
+      67,\n\
+      32,\n\
+      -1\n\
+    ]\n\
+  ],\n\
+  [\n\
+    null,\n\
+    [\n\
+      53,\n\
+      5324,\n\
+      2435,\n\
+      65756,\n\
+      352,\n\
+      3442,\n\
+      2342454,\n\
+      56\n\
+    ],\n\
+    [\n\
+      2,\n\
+      43,\n\
+      76543\n\
+    ]\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(numbers->ToString() == numbersExpected);
+
+  auto bools                = graph.edgeProperties->GetColumnByName("bools");
+  std::string boolsExpected = std::string("[\n\
+  [\n\
+    null,\n\
+    null,\n\
+    [\n\
+      false,\n\
+      true,\n\
+      false,\n\
+      false\n\
+    ]\n\
+  ],\n\
+  [\n\
+    null,\n\
+    [\n\
+      false,\n\
+      false,\n\
+      false,\n\
+      true,\n\
+      true\n\
+    ],\n\
+    [\n\
+      false,\n\
+      false\n\
+    ]\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(bools->ToString() == boolsExpected);
+
+  auto texts                = graph.edgeProperties->GetColumnByName("text");
+  std::string textsExpected = std::string("[\n\
+  [\n\
+    null,\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    \"stuff\",\n\
+    null,\n\
+    null\n\
+  ],\n\
+  [\n\
+    null,\n\
+    null\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(texts->ToString() == textsExpected);
+
+  // test edge types
+  auto actors                = graph.edgeTypes->GetColumnByName("ACTED_IN");
+  std::string actorsExpected = std::string("[\n\
+  [\n\
+    true,\n\
+    true,\n\
+    true\n\
+  ],\n\
+  [\n\
+    false,\n\
+    true,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(actors->ToString() == actorsExpected);
+
+  auto directors                = graph.edgeTypes->GetColumnByName("DIRECTED");
+  std::string directorsExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    true\n\
+  ],\n\
+  [\n\
+    true,\n\
+    false\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(directors->ToString() == directorsExpected);
+
+  auto producers                = graph.edgeTypes->GetColumnByName("PRODUCED");
+  std::string producersExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    true\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(producers->ToString() == producersExpected);
+
+  auto partners = graph.edgeTypes->GetColumnByName("IN_SAME_MOVIE");
+  std::string partnersExpected = std::string("[\n\
+  [\n\
+    false,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    true,\n\
+    false,\n\
+    false\n\
+  ],\n\
+  [\n\
+    false,\n\
+    false\n\
+  ]\n\
+]");
+  GALOIS_ASSERT(partners->ToString() == partnersExpected);
+
+  // test topology
+  auto indices                = graph.topology->out_indices;
+  std::string indicesExpected = std::string("[\n\
+  0,\n\
+  1,\n\
+  2,\n\
+  4,\n\
+  5,\n\
+  6,\n\
+  7,\n\
+  8,\n\
+  8\n\
+]");
+  GALOIS_ASSERT(indices->ToString() == indicesExpected);
+
+  auto dests                = graph.topology->out_dests;
+  std::string destsExpected = std::string("[\n\
+  0,\n\
+  0,\n\
+  0,\n\
+  7,\n\
+  0,\n\
+  0,\n\
+  0,\n\
+  0\n\
+]");
+  GALOIS_ASSERT(dests->ToString() == destsExpected);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -655,7 +1086,7 @@ int main(int argc, char** argv) {
   galois::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
   switch (fileType) {
   case galois::SourceType::GRAPHML:
-    graph = galois::convertGraphML(inputFilename);
+    graph = galois::convertGraphML(inputFilename, chunkSize);
     break;
   case galois::SourceType::JSON:
     graph = galois::convertNeo4jJSON(inputFilename);
@@ -671,6 +1102,10 @@ int main(int argc, char** argv) {
   }
   case ConvertTest::TYPES: {
     verifyTypesSet(graph);
+    break;
+  }
+  case ConvertTest::CHUNKS: {
+    verifyChunksSet(graph);
     break;
   }
   }

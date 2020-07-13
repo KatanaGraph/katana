@@ -31,11 +31,15 @@ static cll::opt<galois::SourceDatabase>
                          clEnumValN(galois::SourceDatabase::MONGODB, "mongodb",
                                     "source data came from mongodb")),
              cll::init(galois::SourceDatabase::NONE));
+static cll::opt<size_t>
+    chunkSize("chunkSize",
+              cll::desc("Chunk size for in memory arrow representation"),
+              cll::init(25000));
 
 void parseWild() {
   switch (type) {
   case galois::SourceType::GRAPHML: {
-    auto graph = galois::convertGraphML(inputFilename);
+    auto graph = galois::convertGraphML(inputFilename, chunkSize);
     galois::convertToPropertyGraphAndWrite(graph, outputDirectory);
     break;
   }
@@ -49,7 +53,7 @@ void parseNeo4j() {
   galois::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
   switch (type) {
   case galois::SourceType::GRAPHML:
-    graph = galois::convertGraphML(inputFilename);
+    graph = galois::convertGraphML(inputFilename, chunkSize);
     break;
   case galois::SourceType::JSON:
     graph = galois::convertNeo4jJSON(inputFilename);

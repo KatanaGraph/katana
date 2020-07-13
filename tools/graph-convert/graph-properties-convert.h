@@ -29,7 +29,8 @@ struct GraphComponents {
         topology(topology_) {}
 };
 
-GraphComponents convertGraphML(const std::string& inputFilename);
+GraphComponents convertGraphML(const std::string& inputFilename,
+                               const size_t chunkSize);
 GraphComponents convertNeo4jJSON(const std::string& inputFilename);
 GraphComponents convertNeo4jCSV(const std::string& inputFilename);
 void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,

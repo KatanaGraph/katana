@@ -241,7 +241,6 @@ WriteTable(const arrow::Table& table,
 
     auto write_result = parquet::arrow::WriteTable(
         *column, arrow::default_memory_pool(), ff, kRowGroupSize);
-    // std::numeric_limits<int64_t>::max());
 
     if (!write_result.ok()) {
       GALOIS_LOG_DEBUG("arrow error: {}", write_result);

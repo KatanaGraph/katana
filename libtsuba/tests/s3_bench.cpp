@@ -14,6 +14,7 @@
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
+#include "bench_utils.h"
 
 constexpr static const char* const s3_url_base =
     "s3://witchel-tests-east2/test-";
@@ -57,31 +58,6 @@ std::string FmtResults(const std::vector<int64_t>& v) {
 
   return fmt::format("{:>5.1f} {} (N={:d}) sd {:.1f}", mean / divFactor,
                      df2unit.at(divFactor), v.size(), stdev / divFactor);
-}
-
-struct timespec now() {
-  struct timespec tp;
-  // CLOCK_BOOTTIME is probably better, but Linux specific
-  int ret = clock_gettime(CLOCK_MONOTONIC, &tp);
-  if (ret < 0) {
-    perror("clock_gettime");
-    GALOIS_LOG_ERROR("Bad return");
-  }
-  return tp;
-}
-
-struct timespec timespec_sub(struct timespec time, struct timespec oldTime) {
-  if (time.tv_nsec < oldTime.tv_nsec)
-    return (struct timespec){.tv_sec  = time.tv_sec - 1 - oldTime.tv_sec,
-                             .tv_nsec = 1'000'000'000L + time.tv_nsec -
-                                        oldTime.tv_nsec};
-  else
-    return (struct timespec){.tv_sec  = time.tv_sec - oldTime.tv_sec,
-                             .tv_nsec = time.tv_nsec - oldTime.tv_nsec};
-}
-
-int64_t timespec_to_us(struct timespec ts) {
-  return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;
 }
 
 // 19 chars, with 1 null byte

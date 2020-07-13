@@ -10,13 +10,10 @@
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
-#include "md5.h"
 
-uint64_t bytes_to_write{0};
-std::string dst_path{};
 uint64_t read_block_size = (1 << 29);
 
-std::string usage_msg = "Usage: {} <list of file path>\n";
+std::string usage_msg = "Usage: {} <list of file names>\n";
 
 std::vector<std::string> parse_arguments(int argc, char* argv[]) {
   int c;
@@ -33,7 +30,8 @@ std::vector<std::string> parse_arguments(int argc, char* argv[]) {
     }
   }
 
-  std::vector<std::string> paths;
+  std::vector<std::string> paths{};
+  // TODO: Validate paths
   for (auto index = optind; index < argc; ++index) {
     paths.push_back(argv[index]);
   }
@@ -46,12 +44,15 @@ int main(int argc, char* argv[]) {
   }
   std::vector<std::string> src_paths = parse_arguments(argc, argv);
 
+  // file.h does not support removal/unlink
+  GALOIS_LOG_FATAL("Tsuba does not support rm\n");
+
   for (const auto& path : src_paths) {
-    tsuba::StatBuf stat_buf;
-    if (auto res = tsuba::FileStat(path, &stat_buf); !res) {
-      GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
-    }
-    fmt::print("{} {:#x}\n", path, stat_buf.size);
+    (void)(path);
+    // if (auto res = tsuba::FileRm(path, &stat_buf); res != 0) {
+    //   GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
+    // }
+    // fmt::print("rm {}\n", path);
   }
 
   return 0;

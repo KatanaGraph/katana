@@ -48,6 +48,9 @@ target_link_libraries(tsuba_ll tsuba)
 add_executable(tsuba_md5sum tsuba_md5sum md5)
 target_link_libraries(tsuba_md5sum tsuba)
 
+add_executable(tsuba_rm tsuba_rm)
+target_link_libraries(tsuba_rm tsuba)
+
 if(GALOIS_ENABLE_DIST)
   add_executable(tsuba_dist_write tsuba_dist_write)
   target_link_libraries(tsuba_dist_write tsuba)
@@ -56,3 +59,9 @@ endif()
 
 
 add_test_unit(fileobjects)
+# Don't make it a unit test, nor make it quick
+#   because can't run s3 tests with current CI
+#add_test_unit(tsuba_basic_quick)
+add_executable(tsuba_basic_quick tsuba_basic_quick)
+target_link_libraries(tsuba_basic_quick tsuba)
+

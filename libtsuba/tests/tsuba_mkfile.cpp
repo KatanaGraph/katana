@@ -1,5 +1,6 @@
 #include <cerrno>
 #include <cstdlib>
+#include <cctype>
 #include <string>
 #include <unistd.h>
 
@@ -72,15 +73,19 @@ void parse_arguments(int argc, char* argv[]) {
   }
 
   auto index = optind;
-  GALOIS_LOG_VASSERT(index < argc,
-                     "\n  Usage: {} <number>[G|M|K|B] <full path>\n", argv[0]);
+  GALOIS_LOG_VASSERT(
+      index < argc, "\n  Usage: {} <number>[T|G|M|K|B] <full path>\n", argv[0]);
   bytes_to_write = std::strtoul(argv[index], &p_end, 10);
   if (argv[index] == p_end) {
     fmt::print(stderr, "Can't parse first argument (size)\n");
     fmt::print(stderr, usage_msg, argv[0]);
     exit(EXIT_FAILURE);
   }
+
   switch (*p_end) {
+  case 'T':
+    bytes_to_write *= (1UL << 40);
+    break;
   case 'G':
     bytes_to_write *= (1UL << 30);
     break;

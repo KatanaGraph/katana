@@ -7,7 +7,8 @@ set(sources
         src/GetEnv.cpp
         src/Logging.cpp
         src/FileSystem.cpp
-		src/ErrorCode.cpp
+        src/ErrorCode.cpp
+        src/Random.cpp
 )
 
 target_sources(galois_support PRIVATE ${sources})

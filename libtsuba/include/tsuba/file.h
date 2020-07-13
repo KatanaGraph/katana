@@ -6,6 +6,7 @@
 #include <string>
 
 #include "galois/Result.h"
+#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -20,11 +21,6 @@ constexpr T RoundDownToBlock(T val) {
 template <typename T>
 constexpr T RoundUpToBlock(T val) {
   return RoundDownToBlock(val + kBlockOffsetMask);
-}
-
-// Check to see if the name is formed in a way that tsuba expects
-static inline bool IsS3URI(std::string_view uri) {
-  return uri.find("s3://") == 0;
 }
 
 struct StatBuf {
@@ -49,23 +45,9 @@ galois::Result<void> FileMunmap(uint8_t* ptr);
 galois::Result<void> FileStore(const std::string& uri, const uint8_t* data,
                                uint64_t size);
 
-// Take whatever is in @data and put it a file called @uri
-galois::Result<void> FileStoreSync(const std::string& uri, const uint8_t* data,
-                                   uint64_t size);
-
 // Take whatever is in @data and start putting it a the file called @uri
-galois::Result<void> FileStoreAsync(const std::string& uri, const uint8_t* data,
-                                    uint64_t size);
-// Make sure put has occurred, and wait if it hasn't
-galois::Result<void> FileStoreAsyncFinish(const std::string& uri);
-
-// Take whatever is in @data and start putting it a the file called @uri
-galois::Result<void> FileStoreMultiAsync1(const std::string& uri,
-                                          const uint8_t* data, uint64_t size);
-galois::Result<void> FileStoreMultiAsync2(const std::string& uri);
-galois::Result<void> FileStoreMultiAsync3(const std::string& uri);
-// Make sure put has occurred, and wait if it hasn't
-galois::Result<void> FileStoreMultiAsyncFinish(const std::string& uri);
+std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
 // read a (probably small) part of the file into a caller defined buffer
 galois::Result<void> FilePeek(const std::string& filename,

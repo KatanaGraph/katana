@@ -7,6 +7,7 @@
 
 #include "galois/Result.h"
 #include "FileStorage.h"
+#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -38,41 +39,14 @@ public:
     return WriteFile(uri, data, size);
   }
 
-  // Call these functions in order to do an async multipart put
-  // All but the first call can block, making this a bulk synchronous parallel
-  // interface
-  galois::Result<void> PutMultiAsync1(const std::string& uri,
-                                      const uint8_t* data,
-                                      uint64_t size) override {
-    return WriteFile(uri, data, size);
-  }
-  galois::Result<void> PutMultiAsync2([
-      [maybe_unused]] const std::string& uri) override {
-    return galois::ResultSuccess();
-  }
-  galois::Result<void> PutMultiAsync3([
-      [maybe_unused]] const std::string& uri) override {
-    return galois::ResultSuccess();
-  }
-  galois::Result<void> PutMultiAsyncFinish([
-      [maybe_unused]] const std::string& uri) override {
-    return galois::ResultSuccess();
-  }
-  galois::Result<void> PutSingleSync(const std::string& uri,
-                                     const uint8_t* data,
-                                     uint64_t size) override {
-    return WriteFile(uri, data, size);
-  }
-
-  galois::Result<void> PutSingleAsync(const std::string& uri,
-                                      const uint8_t* data,
-                                      uint64_t size) override {
-    return WriteFile(uri, data, size);
-  }
-
-  galois::Result<void> PutSingleAsyncFinish([
-      [maybe_unused]] const std::string& uri) override {
-    return galois::ResultSuccess();
+  // FileAsyncWork pointer can be null, otherwise contains additional work.
+  // Every call to async work can potentially block (bulk synchronous parallel)
+  std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+  PutAsync(const std::string& uri, const uint8_t* data,
+           uint64_t size) override {
+    // No need for AsyncPut to local storage right now
+    auto write_res = WriteFile(uri, data, size);
+    return std::make_pair(write_res, nullptr);
   }
 };
 

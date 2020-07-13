@@ -4,6 +4,7 @@
 #include <string_view>
 #include <algorithm>
 #include <unistd.h>
+#include <stack>
 
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
@@ -23,6 +24,7 @@
 #include "galois/Logging.h"
 #include "tsuba/Errors.h"
 #include "tsuba_internal.h"
+#include "tsuba/s3_internal.h"
 #include "SegmentedBufferView.h"
 
 namespace tsuba {
@@ -123,6 +125,42 @@ static SegmentedBufferView SegmentBuf(uint64_t start, const uint8_t* data,
                              segment_size);
 }
 
+// Remember what bucket and object we are operating on and store a stack of
+// functions to call until we are done with our work.  Any call (except the
+// first) might block and there is no interface to determine if you will block.
+class S3AsyncWork : public FileAsyncWork {
+  std::string bucket_{};
+  std::string object_{};
+  std::stack<galois::Result<void> (*)(const std::string& bucket,
+                                      const std::string& object)>
+      func_stack_{};
+
+public:
+  S3AsyncWork(const std::string& bucket, const std::string& object)
+      : bucket_(bucket), object_(object) {}
+  ~S3AsyncWork() {}
+
+  void Push(galois::Result<void> (*func)(const std::string& bucket,
+                                         const std::string& object)) {
+    func_stack_.push(func);
+  }
+
+  // Call next async function in the chain
+  galois::Result<void> operator()() {
+    if (!func_stack_.empty()) {
+      auto func = func_stack_.top();
+      auto res  = func(bucket_, object_);
+      if (!res) {
+        // TODO: We should abort multi-part uploads
+      }
+      func_stack_.pop();
+      return res;
+    }
+    return ErrorCode::InvalidArgument;
+  }
+  bool Done() const { return func_stack_.empty(); }
+};
+
 galois::Result<void> S3Init() {
   library_init = true;
   Aws::InitAPI(sdk_options);
@@ -180,6 +218,35 @@ galois::Result<bool> S3Exists(const std::string& bucket,
     return false;
   }
   return true;
+}
+
+galois::Result<void> S3PutSingleSync(const std::string& bucket,
+                                     const std::string& object,
+                                     const uint8_t* data, uint64_t size) {
+  auto s3_client = GetS3Client();
+  Aws::S3::Model::PutObjectRequest object_request;
+
+  object_request.SetBucket(ToAwsString(bucket));
+  object_request.SetKey(ToAwsString(object));
+  auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
+      kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
+  auto preallocatedStreamReader =
+      Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
+
+  object_request.SetBody(preallocatedStreamReader);
+  object_request.SetContentType("application/octet-stream");
+
+  auto outcome = s3_client->PutObject(object_request);
+  if (!outcome.IsSuccess()) {
+    /* TODO there are likely some errors we can handle gracefully
+     * i.e., with retries */
+    const auto& error = outcome.GetError();
+    GALOIS_LOG_ERROR("\n  Upload failed: {}: {}\n  [{}] {}",
+                     error.GetExceptionName(), error.GetMessage(), bucket,
+                     object);
+    return ErrorCode::S3Error;
+  }
+  return galois::ResultSuccess();
 }
 
 galois::Result<void> S3UploadOverwrite(const std::string& bucket,
@@ -296,37 +363,6 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   return galois::ResultSuccess();
 }
 
-galois::Result<void> S3PutSingleSync(const std::string& bucket,
-                                     const std::string& object,
-                                     const uint8_t* data, uint64_t size) {
-  auto s3_client = GetS3Client();
-  Aws::S3::Model::PutObjectRequest object_request;
-
-  object_request.SetBucket(ToAwsString(bucket));
-  object_request.SetKey(ToAwsString(object));
-  auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
-      kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
-  auto preallocatedStreamReader =
-      Aws::MakeShared<Aws::IOStream>(kAwsTag, streamBuf);
-
-  object_request.SetBody(preallocatedStreamReader);
-  object_request.SetContentType("application/octet-stream");
-
-  auto outcome = s3_client->PutObject(object_request);
-  if (auto res = CheckS3Error(outcome); !res) {
-    if (res.error() == ErrorCode::S3Error) {
-      // TODO there are likely some errors we can handle gracefully
-      // i.e., with retries
-      const auto& error = outcome.GetError();
-      GALOIS_LOG_ERROR("\n  Upload failed: {}: {}\n  [{}] {}",
-                       error.GetExceptionName(), error.GetMessage(), bucket,
-                       object);
-    }
-    return res.error();
-  }
-  return galois::ResultSuccess();
-}
-
 enum class Xfer {
   One,   // Ready to start
   Two,   // CreateMulti pending
@@ -371,12 +407,11 @@ galois::Result<void> S3PutMultiAsync1(const std::string& bucket,
                                       const uint8_t* data, uint64_t size) {
   GALOIS_LOG_VASSERT(library_init == true,
                      "Must call tsuba::Init before S3 interaction");
-  // TODO: Check total size is less than 5TB
-  if (size == 0) {
-    // TODO, Calls to Async2/3/Finish will fail
-    GALOIS_LOG_VERBOSE("Zero size PutMultiAsync, doing sync");
-    return S3PutSingleSync(bucket, object, data, size);
-  }
+  // We don't expect this function to be called directly, it is part of
+  // s3_internal S3PutAsync checks the size and never calls S3PutMultiAsync1
+  // unless the size is larger than kDefaultS3Region
+  GALOIS_LOG_VASSERT(size > 0,
+                     "MultiAsync is a bad choice for a zero size file");
 
   Aws::S3::Model::CreateMultipartUploadRequest createMpRequest;
   createMpRequest.WithBucket(ToAwsString(bucket));
@@ -666,6 +701,31 @@ galois::Result<void> S3PutSingleAsyncFinish(const std::string& bucket,
   std::unique_lock<std::mutex> lk(bnomutex);
   bnocv.wait(lk, [&] { return bnodone[bno]; });
   return galois::ResultSuccess();
+}
+
+std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+S3PutAsync(const std::string& bucket, const std::string& object,
+           const uint8_t* data, uint64_t size) {
+  galois::Result<void> res = ErrorCode::S3Error;
+  std::unique_ptr<S3AsyncWork> s3aw{nullptr};
+  if (size < kS3DefaultBufSize) {
+    res = S3PutSingleAsync(bucket, object, data, size);
+    if (!res) {
+      return std::make_pair(res, nullptr);
+    }
+    s3aw = std::make_unique<S3AsyncWork>(bucket, object);
+    s3aw->Push(S3PutSingleAsyncFinish);
+  } else {
+    res = S3PutMultiAsync1(bucket, object, data, size);
+    if (!res) {
+      return std::make_pair(res, nullptr);
+    }
+    s3aw = std::make_unique<S3AsyncWork>(bucket, object);
+    s3aw->Push(S3PutMultiAsyncFinish);
+    s3aw->Push(S3PutMultiAsync3);
+    s3aw->Push(S3PutMultiAsync2);
+  }
+  return std::make_pair(res, std::move(s3aw));
 }
 
 static void

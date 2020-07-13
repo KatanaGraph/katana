@@ -8,6 +8,7 @@
 #include <aws/core/utils/memory/stl/AWSString.h>
 
 #include "galois/Result.h"
+#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -26,27 +27,12 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
                                        const std::string& object,
                                        const uint8_t* data, uint64_t size);
 
-// Call these functions in order to do an async multipart put
+// Call this function to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface
-galois::Result<void> S3PutMultiAsync1(const std::string& bucket,
-                                      const std::string& object,
-                                      const uint8_t* data, uint64_t size);
-galois::Result<void> S3PutMultiAsync2(const std::string& bucket,
-                                      const std::string& object);
-galois::Result<void> S3PutMultiAsync3(const std::string& bucket,
-                                      const std::string& object);
-galois::Result<void> S3PutMultiAsyncFinish(const std::string& bucket,
-                                           const std::string& object);
-
-galois::Result<void> S3PutSingleSync(const std::string& bucket,
-                                     const std::string& object,
-                                     const uint8_t* data, uint64_t size);
-galois::Result<void> S3PutSingleAsync(const std::string& bucket,
-                                      const std::string& object,
-                                      const uint8_t* data, uint64_t size);
-galois::Result<void> S3PutSingleAsyncFinish(const std::string& bucket,
-                                            const std::string& object);
+std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+S3PutAsync(const std::string& bucket, const std::string& object,
+           const uint8_t* data, uint64_t size);
 
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view FromAwsString(const Aws::String& s) {

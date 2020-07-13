@@ -12,12 +12,18 @@
 #include <numeric>
 
 #include "galois/Logging.h"
+#include "galois/Result.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 #include "bench_utils.h"
+#include "tsuba/s3_internal.h"
+#include "tsuba/FileAsyncWork.h"
 
-constexpr static const char* const s3_url_base =
-    "s3://witchel-tests-east2/test-";
+// Benchmarks both tsuba interface and S3 internal interface
+
+constexpr static const char* const s3bucket   = "witchel-tests-east2";
+constexpr static const char* const s3obj_base = "s3_test/test-";
+constexpr static const char* const kSepStr    = "/";
 
 // TODO: 2020/06/15 - Across different regions
 
@@ -36,9 +42,7 @@ int64_t DivFactor(double us) {
 }
 
 static const std::unordered_map<int64_t, std::string> df2unit{
-    {1, "us"},
-    {1'000, "ms"},
-    {1'000'000, " s"},
+    {1, "us"}, {1'000, "ms"}, {1'000'000, " s"}, // '
 };
 
 std::string FmtResults(const std::vector<int64_t>& v) {
@@ -96,8 +100,8 @@ void init_data(uint8_t* buf, int32_t limit) {
 std::string CntStr(int32_t i, int32_t width) {
   return fmt::format("{:0{}d}", i, width);
 }
-std::string MkS3url(int32_t i, int32_t width) {
-  std::string url(s3_url_base);
+std::string MkS3obj(int32_t i, int32_t width) {
+  std::string url(s3obj_base);
   return url.append(CntStr(i, width));
 }
 
@@ -117,13 +121,13 @@ std::vector<int64_t> test_mem(const uint8_t* data, uint64_t size, int32_t batch,
     for (auto i = 0; i < batch; ++i) {
       fds[i] = memfd_create(CntStr(i, 4).c_str(), 0);
       if (fds[i] < 0) {
-        GALOIS_LOG_ERROR("fd {:04d}", i);
-        perror("memfd_create");
+        GALOIS_WARN_ONCE("memfd_create: fd {:04d}: {}", i,
+                         galois::ResultErrno().message());
       }
       ssize_t bwritten = write(fds[i], data, size);
       if (bwritten != (ssize_t)size) {
-        GALOIS_LOG_ERROR("Short write tried {:d} wrote {:d}", size, bwritten);
-        perror("write");
+        GALOIS_WARN_ONCE("Short write tried {:d} wrote {:d}: {}", size,
+                         bwritten, galois::ResultErrno().message());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -131,7 +135,7 @@ std::vector<int64_t> test_mem(const uint8_t* data, uint64_t size, int32_t batch,
     for (auto i = 0; i < batch; ++i) {
       int sysret = close(fds[i]);
       if (sysret < 0) {
-        perror("close");
+        GALOIS_WARN_ONCE("close: {}", galois::ResultErrno().message());
       }
     }
   }
@@ -155,13 +159,13 @@ std::vector<int64_t> test_tmp(const uint8_t* data, uint64_t size, int batch,
       fds[i] = open(fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR,
                     S_IRWXU | S_IRWXG);
       if (fds[i] < 0) {
-        GALOIS_LOG_ERROR("fd {:d}", i);
-        perror("/tmp O_CREAT");
+        GALOIS_WARN_ONCE("/tmp O_CREAT: fd {:d}: {}", i,
+                         galois::ResultErrno().message());
       }
       ssize_t bwritten = write(fds[i], data, size);
       if (bwritten != (ssize_t)size) {
-        GALOIS_LOG_ERROR("Short write tried {:d} wrote {:d}", size, bwritten);
-        perror("write");
+        GALOIS_WARN_ONCE("Short write tried {:d} wrote {:d}: {}", size,
+                         bwritten, galois::ResultErrno().message());
       }
       // Make all data and directory changes persistent
       // sync is overkill, could sync fd and parent directory, but I'm being
@@ -171,7 +175,7 @@ std::vector<int64_t> test_tmp(const uint8_t* data, uint64_t size, int batch,
     for (auto i = 0; i < batch; ++i) {
       int sysret = close(fds[i]);
       if (sysret < 0) {
-        perror("close");
+        GALOIS_LOG_WARN("close: {}", galois::ResultErrno().message());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -179,24 +183,70 @@ std::vector<int64_t> test_tmp(const uint8_t* data, uint64_t size, int batch,
     for (auto i = 0; i < batch; ++i) {
       int sysret = unlink(fnames[i].c_str());
       if (sysret < 0) {
-        perror("unlink");
+        GALOIS_LOG_WARN("unlink: {}", galois::ResultErrno().message());
       }
     }
   }
   return results;
 }
 
-std::vector<int64_t> test_s3(const uint8_t* data, uint64_t size, int32_t batch,
-                             int32_t numExperiments) {
+std::vector<int64_t> test_tsuba_sync(const uint8_t* data, uint64_t size,
+                                     int32_t batch, int32_t numExperiments) {
+  std::vector<std::string> s3urls;
+  std::string s3urlstart = "s3://";
+  for (auto i = 0; i < batch; ++i) {
+    s3urls.push_back(s3urlstart + s3bucket + kSepStr + s3obj_base +
+                     MkS3obj(i, 4));
+  }
+  std::vector<int64_t> results;
+
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    start = now();
+    for (const auto& s3url : s3urls) {
+      if (auto res = tsuba::FileStore(s3url, data, size); !res) {
+        GALOIS_WARN_ONCE("Tsuba store bad return {}\n  {}", res.error(), s3url);
+      }
+    }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+  }
+  return results;
+}
+
+std::vector<int64_t> test_tsuba_async(const uint8_t* data, uint64_t size,
+                                      int32_t batch, int32_t numExperiments) {
+  std::vector<std::string> s3urls;
+  std::vector<std::unique_ptr<tsuba::FileAsyncWork>> async_works{
+      (std::size_t)batch};
+  std::string s3urlstart = "s3://";
+  for (auto i = 0; i < batch; ++i) {
+    s3urls.push_back(s3urlstart + s3bucket + kSepStr + s3obj_base +
+                     MkS3obj(i, 4));
+  }
   std::vector<int64_t> results;
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
     for (auto i = 0; i < batch; ++i) {
-      std::string s3url = MkS3url(i, 4);
-      if (auto res = tsuba::FileStore(s3url, data, size); !res) {
-        GALOIS_LOG_ERROR("Tsuba store bad return {}", res.error());
+      auto [res, aw] = tsuba::FileStoreAsync(s3urls[i], data, size);
+      if (!res) {
+        GALOIS_LOG_ERROR("Tsuba storeasync bad return: {}\n  {}", res.error(),
+                         s3urls[i]);
+      }
+      async_works[i] = std::move(aw);
+    }
+    bool done = false;
+    while (!done) {
+      done = true;
+      for (const auto& async_work : async_works) {
+        if (async_work != nullptr && !async_work->Done()) {
+          done = false;
+          if (auto res = (*async_work)(); !res) {
+            GALOIS_LOG_ERROR("Tsuba storeasync work bad return {}",
+                             res.error());
+          }
+        }
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -206,19 +256,20 @@ std::vector<int64_t> test_s3(const uint8_t* data, uint64_t size, int32_t batch,
 
 std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size,
                                   int32_t batch, int32_t numExperiments) {
-  std::vector<std::string> s3urls;
+  std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
-    s3urls.push_back(MkS3url(i, 4));
+    s3objs.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreSync(s3url, data, size); !res) {
-        GALOIS_LOG_ERROR("Tsuba store sync bad return {}", res.error());
+      if (auto res = tsuba::S3PutSingleSync(s3bucket, s3obj, data, size);
+          !res) {
+        GALOIS_WARN_ONCE("S3PutSingleSync bad return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -226,25 +277,27 @@ std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size,
   return results;
 }
 
+// This one closely tracks s3_sync, not surprisingly
 std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
                                        int32_t batch, int32_t numExperiments) {
-  std::vector<std::string> s3urls;
+  std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
-    s3urls.push_back(MkS3url(i, 4));
+    s3objs.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreAsync(s3url, data, size); !res) {
-        GALOIS_LOG_ERROR("Tsuba store async bad return {}", res.error());
+      if (auto res = tsuba::S3PutSingleAsync(s3bucket, s3obj, data, size);
+          !res) {
+        GALOIS_LOG_ERROR("S3PutSingleAsync return {}", res.error());
       }
       // Only 1 outstanding store at a time
-      if (auto res = tsuba::FileStoreAsyncFinish(s3url); !res) {
-        GALOIS_LOG_ERROR("Tsuba store async finish bad return {}", res.error());
+      if (auto res = tsuba::S3PutSingleAsyncFinish(s3bucket, s3obj); !res) {
+        GALOIS_LOG_ERROR("S3PutSingleAsyncFinish bad return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -255,24 +308,26 @@ std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
 std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
                                          int32_t batch,
                                          int32_t numExperiments) {
-  std::vector<std::string> s3urls;
+  std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
-    s3urls.push_back(MkS3url(i, 4));
+    s3objs.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreAsync(s3url, data, size); !res) {
-        GALOIS_LOG_ERROR("Tsuba store async bad return {}", res.error());
+      if (auto res = tsuba::S3PutSingleAsync(s3bucket, s3obj, data, size);
+          !res) {
+        GALOIS_LOG_ERROR("S3PutSingleAsync batch bad return {}", res.error());
       }
     }
-    for (const auto& s3url : s3urls) {
-      if (auto res = tsuba::FileStoreAsyncFinish(s3url); !res) {
-        GALOIS_LOG_ERROR("Tsuba store async bad return {}", res.error());
+    for (const auto& s3obj : s3objs) {
+      if (auto res = tsuba::S3PutSingleAsyncFinish(s3bucket, s3obj); !res) {
+        GALOIS_LOG_ERROR("S3PutSingleAsyncFinish batch bad return {}",
+                         res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -283,37 +338,37 @@ std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
 std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data,
                                                uint64_t size, int32_t batch,
                                                int32_t numExperiments) {
-  std::vector<std::string> s3urls;
+  std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
-    s3urls.push_back(MkS3url(i, 4));
+    s3objs.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreMultiAsync1(s3url, data, size); !res) {
-        GALOIS_LOG_ERROR("Tsuba store multi async1 bad return {}", res.error());
+      if (auto res = tsuba::S3PutMultiAsync1(s3bucket, s3obj, data, size);
+          !res) {
+        GALOIS_LOG_ERROR("S3PutMultiAsync1 bad return {}", res.error());
       }
     }
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreMultiAsync2(s3url); !res) {
-        GALOIS_LOG_ERROR("Tsuba store multi async2 bad return {}", res.error());
+      if (auto res = tsuba::S3PutMultiAsync2(s3bucket, s3obj); !res) {
+        GALOIS_LOG_ERROR("S3PutMultiAsync2 bad return {}", res.error());
       }
     }
-    for (const auto& s3url : s3urls) {
+    for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::FileStoreMultiAsync3(s3url); !res) {
-        GALOIS_LOG_ERROR("Tsuba store multi async3 bad return {}", res.error());
+      if (auto res = tsuba::S3PutMultiAsync3(s3bucket, s3obj); !res) {
+        GALOIS_LOG_ERROR("S3PutMultiAsync3 bad return {}", res.error());
       }
     }
-    for (const auto& s3url : s3urls) {
-      if (auto res = tsuba::FileStoreMultiAsyncFinish(s3url); !res) {
-        GALOIS_LOG_ERROR("Tsuba store multi async finish bad return {}",
-                         res.error());
+    for (const auto& s3obj : s3objs) {
+      if (auto res = tsuba::S3PutMultiAsyncFinish(s3bucket, s3obj); !res) {
+        GALOIS_LOG_ERROR("S3PutMultiAsyncFinish bad return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -371,10 +426,13 @@ struct {
 } tests[] = {
     {.name = "memfd_create", .func = test_mem},
     {.name = "/tmp create", .func = test_tmp},
-    {.name = "S3 Put ASync One", .func = test_s3_async_one},
-    {.name = "S3 Put Sync", .func = test_s3_sync},
+    // Not needed as it tracks s3_sync
+    //    {.name = "S3 Put ASync One", .func = test_s3_async_one},
+    // Not needed because it is slow
+    //{.name = "S3 Put Sync", .func = test_s3_sync},
     {.name = "S3 Put Async Batch", .func = test_s3_async_batch},
-    {.name = "S3 Put", .func = test_s3},
+    {.name = "Tsuba::FileStore", .func = test_tsuba_sync},
+    {.name = "Tsuba::FileStoreAsync", .func = test_tsuba_async},
     {.name = "S3 Put Multi Async Batch", .func = test_s3_multi_async_batch},
 };
 
@@ -389,8 +447,9 @@ int main() {
   // TOCTTOU, but I think harmless
   if (access("/tmp/witchel", R_OK) != 0) {
     if (mkdir("/tmp/witchel", 0775) != 0) {
-      perror("mkdir /tmp/witchel");
-      exit(10);
+      GALOIS_LOG_WARN("mkdir /tmp/witchel: {}",
+                      galois::ResultErrno().message());
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -412,6 +471,45 @@ int main() {
 
   return 0;
 }
+
+// 2020/07/14
+
+// *** VM and bucket same region
+// ** size   19B
+// memfd_create             ( 8)  42.7 us (N=3) sd 21.9
+// /tmp create              ( 8)  34.3 ms (N=3) sd 25.9
+// S3 Put Async Batch       ( 8)  82.0 ms (N=3) sd 44.5
+// Tsuba::FileStore         ( 8) 385.5 ms (N=3) sd 12.1
+// Tsuba::FileStoreAsync    ( 8)  22.4 ms (N=3) sd 0.9
+// S3 Put Multi Async Batch ( 8) 171.4 ms (N=3) sd 15.0
+// ** size  10MB
+// memfd_create             ( 8)  35.0 ms (N=3) sd 1.6
+// /tmp create              ( 8) 322.0 ms (N=3) sd 66.4
+// S3 Put Async Batch       ( 8) 761.0 ms (N=3) sd 4.1
+// Tsuba::FileStore         ( 8)   2.4  s (N=3) sd 0.1
+// Tsuba::FileStoreAsync    ( 8) 922.8 ms (N=3) sd 87.6
+// S3 Put Multi Async Batch ( 8) 886.0 ms (N=3) sd 26.2
+// ** size 100MB
+// memfd_create             ( 8) 415.8 ms (N=3) sd 10.2
+// /tmp create              ( 8)   6.2  s (N=3) sd 0.5
+// S3 Put Async Batch       ( 8)   6.9  s (N=3) sd 0.0
+// Tsuba::FileStore         ( 8)   8.8  s (N=3) sd 0.1
+// Tsuba::FileStoreAsync    ( 8)   7.1  s (N=3) sd 0.1
+// S3 Put Multi Async Batch ( 8)   7.0  s (N=3) sd 0.0
+// ** size 500MB
+// memfd_create             ( 8)   2.0  s (N=3) sd 0.0
+// /tmp create              ( 8)  32.3  s (N=3) sd 0.2
+// S3 Put Async Batch       ( 8)  34.4  s (N=3) sd 0.1
+// Tsuba::FileStore         ( 8)  39.5  s (N=3) sd 5.0
+// Tsuba::FileStoreAsync    ( 8)  34.5  s (N=3) sd 0.1
+// S3 Put Multi Async Batch ( 8)  34.7  s (N=3) sd 0.1
+// ** size 1GB
+// memfd_create             ( 6)   3.1  s (N=1) sd 0.0
+// /tmp create              ( 6)  50.1  s (N=1) sd 0.0
+// S3 Put Async Batch       ( 6)  52.9  s (N=1) sd 0.0
+// Tsuba::FileStore         ( 6)  56.5  s (N=1) sd 0.0
+// Tsuba::FileStoreAsync    ( 6)  52.9  s (N=1) sd 0.0
+// S3 Put Multi Async Batch ( 6)  52.8  s (N=1) sd 0.0
 
 // 2020/06/29
 

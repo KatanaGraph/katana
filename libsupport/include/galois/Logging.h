@@ -126,7 +126,7 @@ void LogLine(LogLevel level, const char* file_name, int line_no, F fmt_string,
 #define GALOIS_WARN_ONCE(fmt_string, ...)                                      \
   do {                                                                         \
     static std::once_flag __galois_warn_once_flag;                             \
-    std::call_once(__galois_warn_once_flag, []() {                             \
+    std::call_once(__galois_warn_once_flag, [&]() {                            \
       ::galois::LogLine(::galois::LogLevel::Warning, __FILE__, __LINE__,       \
                         FMT_STRING(fmt_string), ##__VA_ARGS__);                \
     });                                                                        \

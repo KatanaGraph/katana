@@ -109,36 +109,10 @@ galois::Result<void> tsuba::FileStore(const std::string& uri,
   return FS(uri)->PutMultiSync(uri, data, size);
 }
 
-galois::Result<void> tsuba::FileStoreSync(const std::string& uri,
-                                          const uint8_t* data, uint64_t size) {
-  return FS(uri)->PutSingleSync(uri, data, size);
-}
-
-galois::Result<void> tsuba::FileStoreAsync(const std::string& uri,
-                                           const uint8_t* data, uint64_t size) {
-  return FS(uri)->PutSingleAsync(uri, data, size);
-}
-
-galois::Result<void> tsuba::FileStoreAsyncFinish(const std::string& uri) {
-  return FS(uri)->PutSingleAsyncFinish(uri);
-}
-
-galois::Result<void> tsuba::FileStoreMultiAsync1(const std::string& uri,
-                                                 const uint8_t* data,
-                                                 uint64_t size) {
-  return FS(uri)->PutMultiAsync1(uri, data, size);
-}
-
-galois::Result<void> tsuba::FileStoreMultiAsync2(const std::string& uri) {
-  return FS(uri)->PutMultiAsync2(uri);
-}
-
-galois::Result<void> tsuba::FileStoreMultiAsync3(const std::string& uri) {
-  return FS(uri)->PutMultiAsync3(uri);
-}
-
-galois::Result<void> tsuba::FileStoreMultiAsyncFinish(const std::string& uri) {
-  return FS(uri)->PutMultiAsyncFinish(uri);
+std::pair<galois::Result<void>, std::unique_ptr<tsuba::FileAsyncWork>>
+tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
+                      uint64_t size) {
+  return FS(uri)->PutAsync(uri, data, size);
 }
 
 galois::Result<void> tsuba::FilePeek(const std::string& uri,

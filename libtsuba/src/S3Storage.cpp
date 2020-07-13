@@ -77,73 +77,15 @@ galois::Result<void> S3Storage::PutMultiSync(const std::string& uri,
   return tsuba::S3UploadOverwrite(bucket, object, data, size);
 }
 
-galois::Result<void> S3Storage::PutMultiAsync1(const std::string& uri,
-                                               const uint8_t* data,
-                                               uint64_t size) {
+std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+S3Storage::PutAsync(const std::string& uri, const uint8_t* data,
+                    uint64_t size) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::make_pair(uri_res.error(), nullptr);
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutMultiAsync1(bucket, object, data, size);
-}
-
-galois::Result<void> S3Storage::PutMultiAsync2(const std::string& uri) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutMultiAsync2(bucket, object);
-}
-
-galois::Result<void> S3Storage::PutMultiAsync3(const std::string& uri) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutMultiAsync3(bucket, object);
-}
-
-galois::Result<void> S3Storage::PutMultiAsyncFinish(const std::string& uri) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutMultiAsyncFinish(bucket, object);
-}
-
-galois::Result<void> S3Storage::PutSingleSync(const std::string& uri,
-                                              const uint8_t* data,
-                                              uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutSingleSync(bucket, object, data, size);
-}
-
-galois::Result<void> S3Storage::PutSingleAsync(const std::string& uri,
-                                               const uint8_t* data,
-                                               uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutSingleAsync(bucket, object, data, size);
-}
-
-galois::Result<void> S3Storage::PutSingleAsyncFinish(const std::string& uri) {
-  auto uri_res = CleanURI(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutSingleAsyncFinish(bucket, object);
+  return tsuba::S3PutAsync(bucket, object, data, size);
 }
 
 } // namespace tsuba

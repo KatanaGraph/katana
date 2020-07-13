@@ -28,24 +28,10 @@ public:
   galois::Result<void> PutMultiSync(const std::string& uri, const uint8_t* data,
                                     uint64_t size) override;
 
-  // Call these functions in order to do an async multipart put
-  // All but the first call can block, making this a bulk synchronous parallel
-  // interface
-  galois::Result<void> PutMultiAsync1(const std::string& uri,
-                                      const uint8_t* data,
-                                      uint64_t size) override;
-  galois::Result<void> PutMultiAsync2(const std::string& uri) override;
-  galois::Result<void> PutMultiAsync3(const std::string& uri) override;
-  galois::Result<void> PutMultiAsyncFinish(const std::string& uri) override;
-  galois::Result<void> PutSingleSync(const std::string& uri,
-                                     const uint8_t* data,
-                                     uint64_t size) override;
-
-  galois::Result<void> PutSingleAsync(const std::string& uri,
-                                      const uint8_t* data,
-                                      uint64_t size) override;
-
-  galois::Result<void> PutSingleAsyncFinish(const std::string& uri) override;
+  // FileAsyncWork pointer can be null, otherwise contains additional work.
+  // Every call to async work can potentially block (bulk synchronous parallel)
+  std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+  PutAsync(const std::string& uri, const uint8_t* data, uint64_t size) override;
 };
 
 } // namespace tsuba

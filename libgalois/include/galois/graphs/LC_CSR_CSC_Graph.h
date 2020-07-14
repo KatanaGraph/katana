@@ -299,8 +299,8 @@ public:
     return in_raw_end(N);
   }
 
-  uint64_t getInDegree(GraphNode N) const {
-    return (in_raw_end(N) - in_raw_begin(N));
+  auto getInDegree(GraphNode N) const {
+    return std::distance(in_raw_begin(N), in_raw_end(N));
   }
 
   /**

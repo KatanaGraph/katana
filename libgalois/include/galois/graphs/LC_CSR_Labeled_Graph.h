@@ -279,6 +279,14 @@ public:
 
   /**
    * @param N node to get degree for
+   * @returns Degree of node N
+   */
+  auto getDegree(GraphNode N) const {
+    return std::distance(BaseGraph::raw_begin(N), BaseGraph::raw_end(N));
+  }
+
+  /**
+   * @param N node to get degree for
    * @param data label to get degree of
    * @returns Degree of node N
    */
@@ -356,6 +364,15 @@ public:
            MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(in_edge_begin(N, data, mflag),
                                          in_edge_end(N, data, mflag));
+  }
+
+  /**
+   * @param N node to get in-degree for
+   * @returns In-degree of node N
+   */
+  auto getInDegree(GraphNode N) const {
+    return std::distance(DerivedGraph::in_raw_begin(N),
+                         DerivedGraph::in_raw_end(N));
   }
 
   /**

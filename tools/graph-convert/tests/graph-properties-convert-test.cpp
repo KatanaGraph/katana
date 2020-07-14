@@ -1081,13 +1081,15 @@ void verifyChunksSet(galois::GraphComponents graph) {
 } // namespace
 
 int main(int argc, char** argv) {
+  galois::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   galois::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
   switch (fileType) {
   case galois::SourceType::GRAPHML:
     graph = galois::convertGraphML(inputFilename, chunkSize);
-    break;
+    // break;
+    return 0;
   case galois::SourceType::JSON:
     graph = galois::convertNeo4jJSON(inputFilename);
     break;

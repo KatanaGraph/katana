@@ -15,6 +15,7 @@ enum class TestType {
   kSystem,
   kMDsum,
 };
+
 struct Test {
   TestType type_;
   std::string name_;
@@ -128,14 +129,23 @@ int MD5sumRun(const std::string& cmd, std::string& out) {
   return 0;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  bool self_configure = true;
+  if (argc > 1) {
+    if (std::string(argv[1]) == "--no-self-configure") {
+      self_configure = false;
+    }
+  }
+
   int main_ret = 0;
-  // Not sure if this PATH hack is kosher or treif
-  std::string path = getenv("PATH");
-  path.insert(0, "bin:");
-  setenv("PATH", path.c_str(), 1);
-  // CI buckets are in us-east-1
-  setenv("AWS_DEFAULT_REGION", "us-east-1", 1);
+  if (self_configure) {
+    // Not sure if this PATH hack is kosher or treif
+    std::string path = getenv("PATH");
+    path.insert(0, "bin:");
+    setenv("PATH", path.c_str(), 1);
+    // CI buckets are in us-east-1
+    setenv("AWS_DEFAULT_REGION", "us-east-1", 1);
+  }
 
   auto unique_result = galois::CreateUniqueDirectory("/tmp/tsuba_basic_quick-");
   GALOIS_LOG_ASSERT(unique_result);

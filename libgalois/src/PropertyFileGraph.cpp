@@ -11,8 +11,6 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
 
-// TODO(ddn): add appropriate error codes, package Arrow errors better
-
 namespace {
 
 constexpr uint64_t GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
@@ -134,36 +132,37 @@ WriteTopology(const galois::graphs::GraphTopology& topology) {
   return ff;
 }
 
-galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
-MakePropertyFileGraph(std::shared_ptr<tsuba::RDGHandle> handle,
-                      std::vector<std::string> node_properties,
-                      std::vector<std::string> edge_properties) {
-  auto rdg_result = tsuba::Load(handle, node_properties, edge_properties);
+galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file,
+                      const std::vector<std::string>& node_properties,
+                      const std::vector<std::string>& edge_properties) {
+  auto rdg_result = tsuba::Load(*rdg_file, node_properties, edge_properties);
   if (!rdg_result) {
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_result.value()));
+  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_file),
+                                                 std::move(rdg_result.value()));
 }
 
-galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
-MakePropertyFileGraph(std::shared_ptr<tsuba::RDGHandle> handle) {
-  auto rdg_result = tsuba::Load(handle);
+galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
+  auto rdg_result = tsuba::Load(*rdg_file);
   if (!rdg_result) {
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_result.value()));
+  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_file),
+                                                 std::move(rdg_result.value()));
 }
 
 } // namespace
 
-galois::graphs::PropertyFileGraph::PropertyFileGraph() {}
+galois::graphs::PropertyFileGraph::PropertyFileGraph() = default;
 
-galois::graphs::PropertyFileGraph::PropertyFileGraph(tsuba::RDG&& rdg)
-    : rdg_(std::move(rdg)) {}
-
-galois::graphs::PropertyFileGraph::~PropertyFileGraph() = default;
+galois::graphs::PropertyFileGraph::PropertyFileGraph(
+    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg)
+    : rdg_(std::move(rdg)), file_(std::move(rdg_file)) {}
 
 galois::Result<void> galois::graphs::PropertyFileGraph::Validate() {
   // TODO (thunt) check that arrow table sizes match topology
@@ -178,8 +177,8 @@ galois::Result<void> galois::graphs::PropertyFileGraph::Validate() {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::DoWrite(
-    std::shared_ptr<tsuba::RDGHandle> handle) {
+galois::Result<void>
+galois::graphs::PropertyFileGraph::DoWrite(tsuba::RDGHandle handle) {
   if (!rdg_.topology_file_storage.Valid()) {
     auto result = WriteTopology(topology_);
     if (!result) {
@@ -191,9 +190,11 @@ galois::Result<void> galois::graphs::PropertyFileGraph::DoWrite(
   return tsuba::Store(handle, &rdg_);
 }
 
-galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
-galois::graphs::PropertyFileGraph::Make(tsuba::RDG&& rdg) {
-  auto g = std::make_shared<PropertyFileGraph>(std::move(rdg));
+galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+galois::graphs::PropertyFileGraph::Make(
+    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
+  auto g = std::unique_ptr<PropertyFileGraph>(
+      new PropertyFileGraph(std::move(rdg_file), std::move(rdg)));
 
   auto load_result = LoadTopology(&g->topology_, g->rdg_.topology_file_storage);
   if (!load_result) {
@@ -203,53 +204,55 @@ galois::graphs::PropertyFileGraph::Make(tsuba::RDG&& rdg) {
   if (auto good = g->Validate(); !good) {
     return good.error();
   }
-  return g;
+  return std::unique_ptr<PropertyFileGraph>(std::move(g));
 }
 
-galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
-galois::graphs::PropertyFileGraph::Make(const std::string& metadata_path) {
-  auto handle = tsuba::Open(metadata_path, tsuba::kReadWrite);
+galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+galois::graphs::PropertyFileGraph::Make(const std::string& rdg_name) {
+  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
 
-  return MakePropertyFileGraph(handle.value());
+  return MakePropertyFileGraph(
+      std::make_unique<tsuba::RDGFile>(handle.value()));
 }
 
-galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
+galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
 galois::graphs::PropertyFileGraph::Make(
-    const std::string& metadata_path,
+    const std::string& rdg_name,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
 
-  auto handle = tsuba::Open(metadata_path, tsuba::kReadWrite);
+  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
 
-  return MakePropertyFileGraph(handle.value(), node_properties,
-                               edge_properties);
+  return MakePropertyFileGraph(std::make_unique<tsuba::RDGFile>(handle.value()),
+                               node_properties, edge_properties);
 }
 
 galois::Result<void> galois::graphs::PropertyFileGraph::Write() {
-  return DoWrite(handle_);
+  return DoWrite(*file_);
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::Write(const std::string& name) {
-  if (auto res = tsuba::Create(name); !res) {
+galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
+  if (auto res = tsuba::Create(rdg_name); !res) {
     return res.error();
   }
-  auto open_res = tsuba::Open(name, tsuba::kReadWrite);
+  auto open_res = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
-  std::shared_ptr<tsuba::RDGHandle> new_handle = std::move(open_res.value());
+  auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
-  if (auto res = DoWrite(new_handle); !res) {
+  if (auto res = DoWrite(*new_file); !res) {
     return res.error();
   }
-  handle_ = new_handle;
+
+  file_ = std::move(new_file);
 
   return galois::ResultSuccess();
 }

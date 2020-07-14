@@ -53,26 +53,27 @@ void TestRoundTrip() {
   GALOIS_LOG_ASSERT(unique_result);
   std::string temp_dir(std::move(unique_result.value()));
 
-  std::string meta_file{temp_dir};
-  meta_file += "/meta";
+  std::string rdg_file{temp_dir};
+  rdg_file += "/rdg";
 
-  auto write_result = g->Write(meta_file);
+  auto write_result = g->Write(rdg_file);
 
-  GALOIS_LOG_WARN("creating temp file {}", meta_file);
+  GALOIS_LOG_WARN("creating temp file {}", rdg_file);
 
   if (!write_result) {
     fs::remove_all(temp_dir);
     GALOIS_LOG_FATAL("writing result: {}", write_result.error());
   }
 
-  galois::Result<std::shared_ptr<galois::graphs::PropertyFileGraph>>
-      make_result = galois::graphs::PropertyFileGraph::Make(meta_file);
+  galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+      make_result = galois::graphs::PropertyFileGraph::Make(rdg_file);
   fs::remove_all(temp_dir);
   if (!make_result) {
     GALOIS_LOG_FATAL("making result: {}", make_result.error());
   }
 
-  std::shared_ptr<galois::graphs::PropertyFileGraph> g2 = make_result.value();
+  std::unique_ptr<galois::graphs::PropertyFileGraph> g2 =
+      std::move(make_result.value());
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> node_properties =
       g2->NodeProperties();

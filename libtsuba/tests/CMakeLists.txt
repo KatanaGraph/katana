@@ -33,6 +33,9 @@ endfunction()
 add_executable(s3_bench s3_bench)
 target_link_libraries(s3_bench tsuba)
 
+add_executable(fo_bench fo_bench)
+target_link_libraries(fo_bench tsuba galois_support)
+
 add_executable(s3_pg_basics s3_pg_basics)
 target_link_libraries(s3_pg_basics tsuba)
 
@@ -56,7 +59,6 @@ if(GALOIS_ENABLE_DIST)
   target_link_libraries(tsuba_dist_write tsuba)
   target_link_libraries(tsuba_dist_write MPI::MPI_CXX)
 endif()
-
 
 add_test_unit(fileobjects)
 # Don't make it a unit test, nor make it quick

@@ -439,8 +439,8 @@ public:
     return raw_end(N);
   }
 
-  auto getDegree(GraphNode N) const { 
-    return std::distance(raw_begin(N), raw_end(N)); 
+  auto getDegree(GraphNode N) const {
+    return std::distance(raw_begin(N), raw_end(N));
   }
 
   edge_iterator findEdge(GraphNode N1, GraphNode N2) {

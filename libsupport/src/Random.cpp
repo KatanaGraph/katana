@@ -1,5 +1,6 @@
 #include "galois/Random.h"
 
+#include <array>
 #include <string>
 #include <cstring>
 #include <random>

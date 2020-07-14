@@ -5,11 +5,12 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <time.h>
 
-#include <vector>
+#include <ctime>
 #include <limits>
 #include <numeric>
+#include <unordered_map>
+#include <vector>
 
 #include "galois/Logging.h"
 #include "galois/Result.h"

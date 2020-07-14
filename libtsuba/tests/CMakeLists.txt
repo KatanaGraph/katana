@@ -1,5 +1,9 @@
-add_executable(s3_bench s3_bench.cpp)
-target_link_libraries(s3_bench tsuba)
+if(APPLE)
+  message(WARNING "skipping build of s3_bench because MacOS does not have memfd_create")
+else()
+  add_executable(s3_bench s3_bench.cpp)
+  target_link_libraries(s3_bench tsuba)
+endif()
 
 add_executable(fo_bench fo_bench.cpp)
 target_link_libraries(fo_bench tsuba)

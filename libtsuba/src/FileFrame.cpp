@@ -29,9 +29,8 @@ galois::Result<void> FileFrame::Destroy() {
 galois::Result<void> FileFrame::Init(uint64_t reserved_size) {
   size_t size_to_reserve = reserved_size <= 0 ? 1 : reserved_size;
   uint64_t map_size      = tsuba::RoundUpToBlock(size_to_reserve);
-  void* ptr =
-      galois::MmapPopulate(nullptr, map_size, PROT_READ | PROT_WRITE,
-                           MAP_ANONYMOUS | MAP_PRIVATE | MAP_32BIT, -1, 0);
+  void* ptr = galois::MmapPopulate(nullptr, map_size, PROT_READ | PROT_WRITE,
+                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ptr == MAP_FAILED) {
     return galois::ResultErrno();
   }

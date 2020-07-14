@@ -242,6 +242,14 @@ conda packages.
 Many tests require sample graphs that are too big to keep in this repository.
 You can get them with `make input`.
 
+If you need to update the inputs, they are referenced as
+  https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-<version>.tar.gz
+in `.github/workflows` and in `inputs/CMakeLists.txt`. You can use a command
+like `tar -czvf <new>.tar.gz --owner 0 --group 0 -C <path-to-input-dir> .` to
+create a new input collection. Make sure that new inputs contain just input
+files and not any CMake build files. After creating the tar file, you will need
+to upload the file to the public S3 bucket.
+
 Tests are just executables created by the CMake `add_test` command.  A test
 succeeds if it can be run and it returns a zero exit value; otherwise, the test
 execution is considered a failure. A test executable itself may contain many

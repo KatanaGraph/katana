@@ -109,7 +109,7 @@ galois::Result<void> tsuba::FileStore(const std::string& uri,
   return FS(uri)->PutMultiSync(uri, data, size);
 }
 
-std::pair<galois::Result<void>, std::unique_ptr<tsuba::FileAsyncWork>>
+galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
                       uint64_t size) {
   return FS(uri)->PutAsync(uri, data, size);

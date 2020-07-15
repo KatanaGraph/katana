@@ -40,7 +40,7 @@ public:
 
   // FileAsyncWork pointer can be null, otherwise contains additional work.
   // Every call to async work can potentially block (bulk synchronous parallel)
-  virtual std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+  virtual galois::Result<std::unique_ptr<FileAsyncWork>>
   PutAsync(const std::string& uri, const uint8_t* data, uint64_t size) = 0;
 };
 

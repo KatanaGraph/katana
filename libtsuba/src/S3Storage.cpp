@@ -77,12 +77,12 @@ galois::Result<void> S3Storage::PutMultiSync(const std::string& uri,
   return tsuba::S3UploadOverwrite(bucket, object, data, size);
 }
 
-std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+galois::Result<std::unique_ptr<FileAsyncWork>>
 S3Storage::PutAsync(const std::string& uri, const uint8_t* data,
                     uint64_t size) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
-    return std::make_pair(uri_res.error(), nullptr);
+    return galois::Result<std::unique_ptr<FileAsyncWork>>(uri_res.error());
   }
   auto [bucket, object] = std::move(uri_res.value());
   return tsuba::S3PutAsync(bucket, object, data, size);

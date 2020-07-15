@@ -46,8 +46,9 @@ static const std::unordered_map<int64_t, std::string> df2unit{
 };
 
 std::string FmtResults(const std::vector<int64_t>& v) {
-  if (v.size() == 0)
+  if (v.size() == 0) {
     return "no results";
+  }
   int64_t sum       = std::accumulate(v.begin(), v.end(), 0L);
   double mean       = (double)sum / v.size();
   int64_t divFactor = DivFactor(mean);
@@ -229,12 +230,12 @@ std::vector<int64_t> test_tsuba_async(const uint8_t* data, uint64_t size,
   for (auto j = 0; j < numExperiments; ++j) {
     start = now();
     for (auto i = 0; i < batch; ++i) {
-      auto [res, aw] = tsuba::FileStoreAsync(s3urls[i], data, size);
+      auto res = tsuba::FileStoreAsync(s3urls[i], data, size);
       if (!res) {
         GALOIS_LOG_ERROR("Tsuba storeasync bad return: {}\n  {}", res.error(),
                          s3urls[i]);
       }
-      async_works[i] = std::move(aw);
+      async_works[i] = std::move(res.value());
     }
     bool done = false;
     while (!done) {
@@ -267,7 +268,8 @@ std::vector<int64_t> test_s3_sync(const uint8_t* data, uint64_t size,
     start = now();
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutSingleSync(s3bucket, s3obj, data, size);
+      if (auto res =
+              tsuba::internal::S3PutSingleSync(s3bucket, s3obj, data, size);
           !res) {
         GALOIS_WARN_ONCE("S3PutSingleSync bad return {}", res.error());
       }
@@ -291,12 +293,14 @@ std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
     start = now();
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutSingleAsync(s3bucket, s3obj, data, size);
+      if (auto res =
+              tsuba::internal::S3PutSingleAsync(s3bucket, s3obj, data, size);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync return {}", res.error());
       }
       // Only 1 outstanding store at a time
-      if (auto res = tsuba::S3PutSingleAsyncFinish(s3bucket, s3obj); !res) {
+      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(s3bucket, s3obj);
+          !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsyncFinish bad return {}", res.error());
       }
     }
@@ -305,9 +309,9 @@ std::vector<int64_t> test_s3_async_one(const uint8_t* data, uint64_t size,
   return results;
 }
 
-std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
-                                         int32_t batch,
-                                         int32_t numExperiments) {
+std::vector<int64_t> test_s3_single_async_batch(const uint8_t* data,
+                                                uint64_t size, int32_t batch,
+                                                int32_t numExperiments) {
   std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < batch; ++i) {
@@ -319,13 +323,15 @@ std::vector<int64_t> test_s3_async_batch(const uint8_t* data, uint64_t size,
     start = now();
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutSingleAsync(s3bucket, s3obj, data, size);
+      if (auto res =
+              tsuba::internal::S3PutSingleAsync(s3bucket, s3obj, data, size);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync batch bad return {}", res.error());
       }
     }
     for (const auto& s3obj : s3objs) {
-      if (auto res = tsuba::S3PutSingleAsyncFinish(s3bucket, s3obj); !res) {
+      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(s3bucket, s3obj);
+          !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsyncFinish batch bad return {}",
                          res.error());
       }
@@ -349,25 +355,27 @@ std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data,
     start = now();
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutMultiAsync1(s3bucket, s3obj, data, size);
+      if (auto res =
+              tsuba::internal::S3PutMultiAsync1(s3bucket, s3obj, data, size);
           !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync1 bad return {}", res.error());
       }
     }
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutMultiAsync2(s3bucket, s3obj); !res) {
+      if (auto res = tsuba::internal::S3PutMultiAsync2(s3bucket, s3obj); !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync2 bad return {}", res.error());
       }
     }
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
-      if (auto res = tsuba::S3PutMultiAsync3(s3bucket, s3obj); !res) {
+      if (auto res = tsuba::internal::S3PutMultiAsync3(s3bucket, s3obj); !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync3 bad return {}", res.error());
       }
     }
     for (const auto& s3obj : s3objs) {
-      if (auto res = tsuba::S3PutMultiAsyncFinish(s3bucket, s3obj); !res) {
+      if (auto res = tsuba::internal::S3PutMultiAsyncFinish(s3bucket, s3obj);
+          !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsyncFinish bad return {}", res.error());
       }
     }
@@ -430,7 +438,7 @@ struct {
     //    {.name = "S3 Put ASync One", .func = test_s3_async_one},
     // Not needed because it is slow
     //{.name = "S3 Put Sync", .func = test_s3_sync},
-    {.name = "S3 Put Async Batch", .func = test_s3_async_batch},
+    {.name = "S3 Put Single Async Batch", .func = test_s3_single_async_batch},
     {.name = "Tsuba::FileStore", .func = test_tsuba_sync},
     {.name = "Tsuba::FileStoreAsync", .func = test_tsuba_async},
     {.name = "S3 Put Multi Async Batch", .func = test_s3_multi_async_batch},
@@ -464,7 +472,7 @@ int main() {
     for (uint64_t j = 0; j < sizeof(tests) / sizeof(tests[0]); ++j) {
       std::vector<int64_t> results =
           tests[j].func(data, size, batch, numExperiments);
-      fmt::print("{:<24} ({:2d}) {}\n", tests[j].name, batch,
+      fmt::print("{:<25} ({:2d}) {}\n", tests[j].name, batch,
                  FmtResults(results));
     }
   }

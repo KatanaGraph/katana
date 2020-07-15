@@ -41,12 +41,12 @@ public:
 
   // FileAsyncWork pointer can be null, otherwise contains additional work.
   // Every call to async work can potentially block (bulk synchronous parallel)
-  std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+  galois::Result<std::unique_ptr<FileAsyncWork>>
   PutAsync(const std::string& uri, const uint8_t* data,
            uint64_t size) override {
     // No need for AsyncPut to local storage right now
     auto write_res = WriteFile(uri, data, size);
-    return std::make_pair(write_res, nullptr);
+    return galois::Result<std::unique_ptr<FileAsyncWork>>(write_res.error());
   }
 };
 

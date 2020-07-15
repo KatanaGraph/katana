@@ -46,7 +46,7 @@ galois::Result<void> FileStore(const std::string& uri, const uint8_t* data,
                                uint64_t size);
 
 // Take whatever is in @data and start putting it a the file called @uri
-std::pair<galois::Result<void>, std::unique_ptr<FileAsyncWork>>
+galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
 // read a (probably small) part of the file into a caller defined buffer

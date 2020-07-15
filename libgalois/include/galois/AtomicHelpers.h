@@ -107,7 +107,9 @@ const Ty atomicAdd(std::atomic<Ty>& val, Ty delta) {
 template <typename Ty>
 const Ty atomicAdd(Ty& val, Ty delta) {
   Ty old_val = val;
-  while (!__sync_bool_compare_and_swap(&val, old_val, old_val + delta)) { old_val = val; }
+  while (!__sync_bool_compare_and_swap(&val, old_val, old_val + delta)) {
+    old_val = val;
+  }
   return old_val;
 }
 

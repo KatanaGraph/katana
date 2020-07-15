@@ -715,14 +715,14 @@ S3PutAsync(const std::string& bucket, const std::string& object,
   if (size < kS3DefaultBufSize) {
     auto res = internal::S3PutSingleAsync(bucket, object, data, size);
     if (!res) {
-      return galois::Result<std::unique_ptr<FileAsyncWork>>(res.error());
+      return res.error();
     }
     s3aw = std::make_unique<S3AsyncWork>(bucket, object);
     s3aw->Push(internal::S3PutSingleAsyncFinish);
   } else {
     auto res = internal::S3PutMultiAsync1(bucket, object, data, size);
     if (!res) {
-      return galois::Result<std::unique_ptr<FileAsyncWork>>(res.error());
+      return res.error();
     }
     s3aw = std::make_unique<S3AsyncWork>(bucket, object);
     s3aw->Push(internal::S3PutMultiAsyncFinish);

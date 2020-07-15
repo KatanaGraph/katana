@@ -82,7 +82,7 @@ S3Storage::PutAsync(const std::string& uri, const uint8_t* data,
                     uint64_t size) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
-    return galois::Result<std::unique_ptr<FileAsyncWork>>(uri_res.error());
+    return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
   return tsuba::S3PutAsync(bucket, object, data, size);

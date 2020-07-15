@@ -46,7 +46,7 @@ public:
            uint64_t size) override {
     // No need for AsyncPut to local storage right now
     auto write_res = WriteFile(uri, data, size);
-    return galois::Result<std::unique_ptr<FileAsyncWork>>(write_res.error());
+    return write_res.error();
   }
 };
 

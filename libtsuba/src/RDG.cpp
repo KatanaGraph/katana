@@ -143,12 +143,12 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
 }
 
 galois::Result<std::shared_ptr<arrow::Table>>
-LoadTable(const std::string& expected_name, const fs::path& file_path) {
+LoadTable(const std::string& expected_name, const std::string& file_path) {
   // TODO(ddn): parallelize reading
   // TODO(ddn): use custom NUMA allocator
 
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path.string()); !res) {
+  if (auto res = fv->Bind(file_path); !res) {
     return res.error();
   }
 
@@ -189,7 +189,7 @@ AddTables(const fs::path& dir,
     fs::path p_path{dir};
     p_path.append(properties.path);
 
-    auto load_result = LoadTable(properties.name, p_path);
+    auto load_result = LoadTable(properties.name, p_path.string());
     if (!load_result) {
       return load_result.error();
     }
@@ -870,4 +870,63 @@ galois::Result<void> tsuba::DropEdgeProperty(RDG* rdg, int i) {
   p.erase(p.begin() + i);
 
   return galois::ResultSuccess();
+}
+
+// This shouldn't actually be used outside of this file, just exported for
+// testing
+galois::Result<std::shared_ptr<arrow::Table>>
+tsuba::internal::LoadPartialTable(const std::string& expected_name,
+                                  const std::string& file_path, int64_t offset,
+                                  int64_t length) {
+
+  if (offset < 0 || length < 0) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
+  if (auto res = fv->Bind(file_path); !res) {
+    return res.error();
+  }
+
+  std::unique_ptr<parquet::arrow::FileReader> reader;
+
+  auto open_file_result =
+      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
+  if (!open_file_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", open_file_result);
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  std::vector<int> row_groups;
+  int rg_count            = reader->num_row_groups();
+  int64_t internal_offset = 0;
+  int64_t cumulative_rows = 0;
+  for (int i = 0; cumulative_rows < offset + length && i < rg_count; ++i) {
+    int64_t new_rows =
+        reader->parquet_reader()->metadata()->RowGroup(i)->num_rows();
+    if (offset < cumulative_rows + new_rows) {
+      if (row_groups.empty()) {
+        internal_offset = offset - cumulative_rows;
+      }
+      row_groups.push_back(i);
+    }
+    cumulative_rows += new_rows;
+  }
+
+  std::shared_ptr<arrow::Table> out;
+  auto read_result = reader->ReadRowGroups(row_groups, &out);
+  if (!read_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", read_result);
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  std::shared_ptr<arrow::Schema> schema = out->schema();
+  if (schema->num_fields() != 1) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+
+  if (schema->field(0)->name() != expected_name) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+
+  return out->Slice(internal_offset, length);
 }

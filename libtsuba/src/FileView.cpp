@@ -71,6 +71,7 @@ galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
   }
   map_size_     = map_size;
   region_size_  = region_size;
+  file_offset_  = begin;
   map_start_    = ptr;
   region_start_ = ptr + (begin & kBlockOffsetMask); /* NOLINT */
   valid_        = true;

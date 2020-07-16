@@ -28,6 +28,7 @@
 
 #include <fstream>
 
+#include "galois/OutIndexView.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/Reduction.h"
@@ -129,8 +130,7 @@ private:
    * @param nodeStart the first node to load
    * @param numNodesToLoad number of nodes to load
    */
-  void
-  loadOutIndex(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+  void loadOutIndex(const OutIndexView& view, uint64_t nodeStart) {
     if (numLocalNodes == 0) {
       return;
     }
@@ -143,10 +143,8 @@ private:
     }
 
     // position to start of contiguous chunk of nodes to read
-    nodeOffset      = *view.node_begin();
-    auto& out_index = *view.out_index();
-    memcpy(outIndexBuffer, &out_index[nodeOffset],
-           sizeof(uint64_t) * numLocalNodes);
+    nodeOffset = nodeStart;
+    memcpy(outIndexBuffer, &view[nodeStart], sizeof(uint64_t) * numLocalNodes);
   }
 
   /**
@@ -190,8 +188,7 @@ private:
     edgeOffset = edgeStart;
   }
 
-  void
-  loadEdgeDest(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+  void loadEdgeDest(const galois::PartialGraphView<uint32_t>& view) {
     if (numLocalEdges == 0) {
       return;
     }
@@ -268,8 +265,8 @@ private:
   template <
       typename EdgeType,
       typename std::enable_if<!std::is_void<EdgeType>::value>::type* = nullptr>
-  void
-  loadEdgeData(const galois::PartialGraphView<EdgeDataType, uint32_t>& view) {
+  void loadEdgeData([
+      [maybe_unused]] const galois::PartialGraphView<uint32_t>& view) {
     galois::gDebug("Loading edge data");
 
     if (numLocalEdges == 0) {
@@ -277,15 +274,6 @@ private:
     }
 
     assert(edgeDataBuffer == nullptr);
-    sz_t buffer_size = sizeof(EdgeDataType) * numLocalEdges;
-    edgeDataBuffer   = (EdgeDataType*)malloc(buffer_size);
-
-    if (edgeDataBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for edge data buffer.");
-    }
-
-    // position after nodes + edges
-    memcpy(edgeDataBuffer, view.edge_data(), buffer_size);
   }
 
   /**
@@ -307,8 +295,8 @@ private:
   template <
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
-  void loadEdgeData(const galois::PartialGraphView<EdgeDataType, uint32_t>&
-                        GALOIS_UNUSED(view)) {
+  void
+  loadEdgeData(const galois::PartialGraphView<uint32_t>& GALOIS_UNUSED(view)) {
     galois::gDebug("Not loading edge data");
     // do nothing (edge data is void, i.e. no edge data)
   }
@@ -449,19 +437,19 @@ public:
     graphFile.close();
   }
 
-  void loadPartialGraph(
-      const galois::PartialGraphView<EdgeDataType, edge_v1_t>& view) {
+  void loadPartialGraph(const galois::OutIndexView& out_view,
+                        const galois::PartialGraphView<edge_v1_t>& part_view) {
     if (graphLoaded) {
       GALOIS_DIE("Cannot load an buffered graph more than once.");
     }
 
-    globalSize     = view.out_index()->num_nodes();
-    globalEdgeSize = view.out_index()->num_edges();
-    numLocalNodes  = view.node_end() - view.node_begin();
-    numLocalEdges  = view.edge_end() - view.edge_begin();
+    globalSize     = out_view.num_nodes();
+    globalEdgeSize = out_view.num_edges();
+    numLocalNodes  = part_view.node_end() - part_view.node_begin();
+    numLocalEdges  = part_view.edge_end() - part_view.edge_begin();
 
-    loadOutIndex(view);
-    loadEdgeDest(view);
+    loadOutIndex(out_view, *part_view.node_begin());
+    loadEdgeDest(part_view);
 
     // may or may not do something depending on EdgeDataType
     // loadEdgeData<EdgeDataType>(view);

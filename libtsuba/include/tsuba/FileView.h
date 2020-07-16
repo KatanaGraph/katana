@@ -14,6 +14,7 @@ namespace tsuba {
 class FileView : public arrow::io::RandomAccessFile {
   uint8_t* map_start_;
   uint8_t* region_start_;
+  uint64_t file_offset_;
   uint64_t map_size_;
   int64_t region_size_;
   int64_t cursor_;
@@ -38,6 +39,7 @@ public:
       }
       map_start_    = other.map_start_;
       region_start_ = other.region_start_;
+      file_offset_  = other.file_offset_;
       map_size_     = other.map_size_;
       region_size_  = other.region_size_;
       cursor_       = other.cursor_;
@@ -63,11 +65,16 @@ public:
   galois::Result<void> Unbind();
 
   template <typename T>
+  const T* ptr(uint64_t off) const {
+    return reinterpret_cast<T*>(region_start_ + off); // NOLINT
+  }
+  template <typename T>
   const T* ptr() const {
-    return reinterpret_cast<T*>(region_start_); /* NOLINT */
+    return ptr<T>(0);
   }
 
   uint64_t size() const { return region_size_; }
+  uint64_t file_offset() const { return file_offset_; }
 
   // support iterating through characters
   const char* begin() { return ptr<char>(); }

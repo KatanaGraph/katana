@@ -455,9 +455,9 @@ MakeMetadata(const tsuba::RDG& rdg) {
   return std::make_pair(keys, values);
 }
 
-std::string HostPartitionName(tsuba::RDGHandle handle, uint32_t version) {
-  return fmt::format("{}_{}_{}", handle.impl_->rdg_path, tsuba::Comm()->ID,
-                     version);
+std::string HostPartitionName(tsuba::RDGHandle handle, uint32_t id,
+                              uint32_t version) {
+  return fmt::format("{}_{}_{}", handle.impl_->rdg_path, id, version);
 }
 
 galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
@@ -490,7 +490,8 @@ galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  ff->Bind(HostPartitionName(handle, handle.impl_->rdg.version + 1));
+  ff->Bind(HostPartitionName(handle, tsuba::Comm()->ID,
+                             handle.impl_->rdg.version + 1));
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
@@ -551,6 +552,68 @@ galois::Result<void> DoLoad(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
   if (auto res = rdg->topology_file_storage.Bind(t_path.string()); !res) {
     return res.error();
   }
+  rdg->rdg_dir = handle.impl_->metadata_dir;
+  return galois::ResultSuccess();
+}
+
+galois::Result<tsuba::FileView> BindOutIndex(const std::string& topology_path) {
+  tsuba::GRHeader header;
+  if (auto res = tsuba::FilePeek(topology_path, &header); !res) {
+    return res.error();
+  }
+  tsuba::FileView fv;
+  if (auto res = fv.Bind(topology_path, sizeof(header) + (header.num_nodes *
+                                                          sizeof(uint64_t)));
+      !res) {
+    return res.error();
+  }
+  return tsuba::FileView(std::move(fv));
+}
+
+galois::Result<void>
+DoPartialLoad(tsuba::RDGHandle handle,
+              [[maybe_unused]] std::pair<uint64_t, uint64_t> node_range,
+              [[maybe_unused]] std::pair<uint64_t, uint64_t> edge_range,
+              uint64_t topo_off, uint64_t topo_size, tsuba::RDG* rdg) {
+
+  fs::path dir = handle.impl_->metadata_dir;
+  fs::path t_path{dir};
+  t_path.append(rdg->topology_path);
+
+  if (auto res = rdg->topology_file_storage.Bind(t_path.string(), topo_off,
+                                                 topo_off + topo_size);
+      !res) {
+    return res.error();
+  }
+
+  auto node_result = AddTables(
+      dir, rdg->node_properties,
+      [&rdg](const std::shared_ptr<arrow::Table>& table) {
+        return AddProperties(table, &rdg->node_table, &rdg->node_properties,
+                             /* new_properties = */ false);
+      });
+  if (!node_result) {
+    return node_result.error();
+  }
+  auto edge_result = AddTables(
+      dir, rdg->edge_properties,
+      [&rdg](const std::shared_ptr<arrow::Table>& table) {
+        return AddProperties(table, &rdg->edge_table, &rdg->edge_properties,
+                             /* new_properties = */ false);
+      });
+  if (!edge_result) {
+    return edge_result.error();
+  }
+
+  // slice for now until we support partial parquet reads
+  /* FIXME(thunt) don't slice yet because CUSP code expects full tables on all
+   * nodes
+  auto [edge_begin, edge_end] = edge_range;
+  auto [node_begin, node_end] = node_range;
+  rdg->node_table = rdg->node_table->Slice(node_begin, node_end - node_begin);
+  rdg->edge_table = rdg->edge_table->Slice(edge_begin, edge_end - edge_begin);
+  */
+
   rdg->rdg_dir = handle.impl_->metadata_dir;
   return galois::ResultSuccess();
 }
@@ -703,6 +766,31 @@ bool tsuba::RDG::Equals(const RDG& other) const {
          edge_table->Equals(*other.edge_table, true);
 }
 
+galois::Result<tsuba::RDGPrefix> tsuba::ExaminePrefix(tsuba::RDGHandle handle) {
+  auto meta_res = ReadMetadata(handle);
+  if (!meta_res) {
+    return meta_res.error();
+  }
+
+  RDG rdg = std::move(meta_res.value());
+  RDGPrefix pfx;
+  if (rdg.topology_path.empty()) {
+    return RDGPrefix(std::move(pfx));
+  }
+
+  fs::path t_path{handle.impl_->metadata_dir};
+  t_path.append(rdg.topology_path);
+
+  auto out_idx_res = BindOutIndex(t_path.string());
+  if (!out_idx_res) {
+    return out_idx_res.error();
+  }
+  pfx.prefix_storage = std::move(out_idx_res.value());
+
+  pfx.prefix = pfx.prefix_storage.ptr<GRPrefix>();
+  return RDGPrefix(std::move(pfx));
+}
+
 galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
                                              uint32_t flags) {
   tsuba::RDGHandleImpl impl;
@@ -725,12 +813,23 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
   }
 
   impl.rdg = rdg_res.value();
-  if (impl.rdg.num_hosts != tsuba::Comm()->Num) {
-    return ErrorCode::InvalidArgument;
-  }
 
   auto ret = RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
-  ret.impl_->partition_path = HostPartitionName(ret, ret.impl_->rdg.version);
+
+  if (ret.impl_->flags & kReadPartial) {
+    if (ret.impl_->rdg.num_hosts != 1) {
+      GALOIS_LOG_ERROR("Cannot ReadPartial from partitioned graph");
+      return ErrorCode::InvalidArgument;
+    }
+    ret.impl_->partition_path =
+        HostPartitionName(ret, 0, ret.impl_->rdg.version);
+  } else {
+    if (ret.impl_->rdg.num_hosts != tsuba::Comm()->Num) {
+      return ErrorCode::InvalidArgument;
+    }
+    ret.impl_->partition_path =
+        HostPartitionName(ret, tsuba::Comm()->ID, ret.impl_->rdg.version);
+  }
   return ret;
 }
 
@@ -787,6 +886,46 @@ tsuba::Load(RDGHandle handle, const std::vector<std::string>& node_properties,
     return res.error();
   }
   if (auto res = DoLoad(handle, &rdg); !res) {
+    return res.error();
+  }
+  return RDG(std::move(rdg));
+}
+
+galois::Result<tsuba::RDG>
+tsuba::LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
+                   std::pair<uint64_t, uint64_t> edge_range, uint64_t topo_off,
+                   uint64_t topo_size) {
+  auto rdg_res = ReadMetadata(handle);
+  if (!rdg_res) {
+    return rdg_res.error();
+  }
+  RDG rdg(std::move(rdg_res.value()));
+  if (auto res = DoPartialLoad(handle, node_range, edge_range, topo_off,
+                               topo_size, &rdg);
+      !res) {
+    return res.error();
+  }
+  return RDG(std::move(rdg));
+}
+
+galois::Result<tsuba::RDG>
+tsuba::LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
+                   std::pair<uint64_t, uint64_t> edge_range, uint64_t topo_off,
+                   uint64_t topo_size,
+                   const std::vector<std::string>& node_properties,
+                   const std::vector<std::string>& edge_properties) {
+  auto rdg_res = ReadMetadata(handle);
+  if (!rdg_res) {
+    return rdg_res.error();
+  }
+  RDG rdg(std::move(rdg_res.value()));
+
+  if (auto res = PrunePropsTo(&rdg, node_properties, edge_properties); !res) {
+    return res.error();
+  }
+  if (auto res = DoPartialLoad(handle, node_range, edge_range, topo_off,
+                               topo_size, &rdg);
+      !res) {
     return res.error();
   }
   return RDG(std::move(rdg));

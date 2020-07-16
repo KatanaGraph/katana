@@ -74,6 +74,11 @@ protected:
   //! map from edge label to edge index
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
+  //! out degrees of the data graph
+  galois::gstl::Vector<uint32_t> degrees; // TODO: change these to LargeArray
+  //! in degrees of the data graph
+  galois::gstl::Vector<uint32_t> inDegrees;
+
   void constructEdgeLabelIndex() {
     galois::substrate::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
     galois::do_all(
@@ -384,17 +389,113 @@ public:
     return std::distance(in_raw_begin(N, data), in_raw_end(N, data));
   }
 
-  data_iterator data_begin() const { return edgeIndexToLabelMap.cbegin(); }
+  /**
+   * Wrapper to get the begin iterator to distinct edge labels in the graph.
+   *
+   * @returns Iterator to first distinct edge label
+   */
+  data_iterator distinctEdgeLabelsBegin() const {
+    return edgeIndexToLabelMap.cbegin();
+  }
 
-  data_iterator data_end() const { return edgeIndexToLabelMap.cend(); }
+  /**
+   * Wrapper to get the end iterator to distinct edge labels in the graph.
+   *
+   * @returns Iterator to end distinct edge label
+   */
+  data_iterator distinctEdgeLabelsEnd() const {
+    return edgeIndexToLabelMap.cend();
+  }
 
-  runtime::iterable<NoDerefIterator<data_iterator>> data_range() const {
-    return internal::make_no_deref_range(data_begin(), data_end());
+  /**
+   * Wrapper to get the distinct edge labels in the graph.
+   *
+   * @returns Range of the distinct edge labels
+   */
+  runtime::iterable<NoDerefIterator<data_iterator>> distinctEdgeLabels() const {
+    return internal::make_no_deref_range(distinctEdgeLabelsBegin(),
+                                         distinctEdgeLabelsEnd());
+  }
+
+  /**
+   * @param data label to check
+   * @returns true iff there exists some edge in the graph with that label
+   */
+  bool doesEdgeLabelExist(const EdgeTy& data) const {
+    return (edgeLabelToIndexMap.find(data) != edgeLabelToIndexMap.end());
   }
 
   /////////////////////////////////////////////////////////////////////////////
   // Utility
   /////////////////////////////////////////////////////////////////////////////
+
+protected:
+  template <bool inEdges>
+  inline bool binarySearch(GraphNode key, edge_iterator begin,
+                           edge_iterator end) {
+    edge_iterator l = begin;
+    edge_iterator r = end - 1;
+    while (r >= l) {
+      edge_iterator mid = l + (r - l) / 2;
+      GraphNode value   = inEdges ? DerivedGraph::getInEdgeDst(mid)
+                                : BaseGraph::getEdgeDst(mid);
+      if (value == key) {
+        return true;
+      }
+      if (value < key)
+        l = mid + 1;
+      else
+        r = mid - 1;
+    }
+    return false;
+  }
+
+public:
+  /**
+   * Check if vertex src is connected to vertex dst with the given edge data
+   *
+   * @param src source node of the edge
+   * @param dst destination node of the edge
+   * @param data label of the edge
+   * @returns true iff the edge exists
+   */
+  inline bool isConnectedWithEdgeLabel(GraphNode src, GraphNode dst,
+                                       const EdgeTy& data) {
+    // trivial check; can't be connected if degree is 0
+    if (degrees[src] == 0 || inDegrees[dst] == 0)
+      return false;
+    unsigned key    = dst;
+    unsigned search = src;
+    if (degrees[src] > inDegrees[dst]) {
+      key        = src;
+      search     = dst;
+      auto begin = in_edge_begin(search, data);
+      auto end   = in_edge_end(search, data);
+      return binarySearch<true>(key, begin, end);
+    }
+    auto begin = edge_begin(search, data);
+    auto end   = edge_end(search, data);
+    return binarySearch<false>(key, begin, end);
+  }
+
+  /**
+   * Check if vertex src is connected to vertex dst with any edge data
+   *
+   * @param src source node of the edge
+   * @param dst destination node of the edge
+   * @returns true iff the edge exists
+   */
+  inline bool isConnected(GraphNode src, GraphNode dst) {
+    // trivial check; can't be connected if degree is 0
+    if (degrees[src] == 0 || inDegrees[dst] == 0)
+      return false;
+    for (auto data : distinctEdgeLabels()) {
+      if (isConnectedWithEdgeLabel(src, dst, data)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Sorts outgoing edges of a node. Comparison is over
@@ -500,6 +601,9 @@ public:
     constructEdgeLabelIndex();
     constructEdgeIndDataLabeled();
     constructInEdgeIndDataLabeled();
+
+    degrees   = BaseGraph::countDegrees();
+    inDegrees = DerivedGraph::countInDegrees();
   }
 };
 

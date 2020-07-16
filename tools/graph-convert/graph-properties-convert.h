@@ -8,32 +8,32 @@
 
 namespace galois {
 
-enum SourceType { GRAPHML, JSON, CSV };
-enum SourceDatabase { NONE, NEO4J, MONGODB };
-enum ImportDataType { STRING, INT64, INT32, DOUBLE, FLOAT, BOOLEAN };
+enum SourceType { kGraphml, kJson, kCsv };
+enum SourceDatabase { kNone, kNeo4j, kMongodb };
+enum ImportDataType { kString, kInt64, kInt32, kDouble, kFloat, kBoolean };
 
 struct GraphComponents {
-  std::shared_ptr<arrow::Table> nodeProperties;
-  std::shared_ptr<arrow::Table> nodeLabels;
-  std::shared_ptr<arrow::Table> edgeProperties;
-  std::shared_ptr<arrow::Table> edgeTypes;
+  std::shared_ptr<arrow::Table> node_properties;
+  std::shared_ptr<arrow::Table> node_labels;
+  std::shared_ptr<arrow::Table> edge_properties;
+  std::shared_ptr<arrow::Table> edge_types;
   std::shared_ptr<galois::graphs::GraphTopology> topology;
 
-  GraphComponents(std::shared_ptr<arrow::Table> nodeProperties_,
-                  std::shared_ptr<arrow::Table> nodeLabels_,
-                  std::shared_ptr<arrow::Table> edgeProperties_,
-                  std::shared_ptr<arrow::Table> edgeTypes_,
+  GraphComponents(std::shared_ptr<arrow::Table> node_properties_,
+                  std::shared_ptr<arrow::Table> node_labels_,
+                  std::shared_ptr<arrow::Table> edge_properties_,
+                  std::shared_ptr<arrow::Table> edge_types_,
                   std::shared_ptr<galois::graphs::GraphTopology> topology_)
-      : nodeProperties(nodeProperties_), nodeLabels(nodeLabels_),
-        edgeProperties(edgeProperties_), edgeTypes(edgeTypes_),
+      : node_properties(node_properties_), node_labels(node_labels_),
+        edge_properties(edge_properties_), edge_types(edge_types_),
         topology(topology_) {}
 };
 
-GraphComponents convertGraphML(const std::string& inputFilename,
+GraphComponents ConvertGraphml(const std::string& input_filename,
                                const size_t chunkSize);
-GraphComponents convertNeo4jJSON(const std::string& inputFilename);
-GraphComponents convertNeo4jCSV(const std::string& inputFilename);
-void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
+GraphComponents ConvertNeo4jJson(const std::string& input_filename);
+GraphComponents ConvertNeo4jCsv(const std::string& input_filename);
+void ConvertToPropertyGraphAndWrite(const GraphComponents& graph_comps,
                                     const std::string& dir);
 
 } // end of namespace galois

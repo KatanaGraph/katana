@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <random>
 #include <sstream>
 #include <unordered_map>
@@ -30,6 +31,7 @@
 #include "galois/Galois.h"
 #include "galois/Logging.h"
 #include "galois/graphs/PropertyFileGraph.h"
+#include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
 
@@ -38,43 +40,86 @@ namespace {
 using galois::GraphComponents;
 using galois::ImportDataType;
 
-typedef std::vector<std::shared_ptr<arrow::ArrayBuilder>> ArrayBuilders;
-typedef std::vector<std::shared_ptr<arrow::StringBuilder>> StringBuilders;
-typedef std::vector<std::shared_ptr<arrow::BooleanBuilder>> BooleanBuilders;
-typedef std::vector<std::shared_ptr<arrow::ChunkedArray>> ChunkedArrays;
-typedef std::vector<std::shared_ptr<arrow::Array>> ArrowArrays;
-typedef std::vector<std::shared_ptr<arrow::StringArray>> StringArrays;
-typedef std::vector<std::shared_ptr<arrow::BooleanArray>> BooleanArrays;
-typedef std::vector<std::shared_ptr<arrow::Field>> ArrowFields;
-typedef std::pair<std::unordered_map<int, std::shared_ptr<arrow::Array>>,
-                  std::unordered_map<int, std::shared_ptr<arrow::Array>>>
-    NullMaps;
+using ArrayBuilders   = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
+using StringBuilders  = std::vector<std::shared_ptr<arrow::StringBuilder>>;
+using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
+using ChunkedArrays   = std::vector<std::shared_ptr<arrow::ChunkedArray>>;
+using ArrowArrays     = std::vector<std::shared_ptr<arrow::Array>>;
+using StringArrays    = std::vector<std::shared_ptr<arrow::StringArray>>;
+using BooleanArrays   = std::vector<std::shared_ptr<arrow::BooleanArray>>;
+using ArrowFields     = std::vector<std::shared_ptr<arrow::Field>>;
+using NullMaps =
+    std::pair<std::unordered_map<int, std::shared_ptr<arrow::Array>>,
+              std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
 
 struct KeyGraphML {
   std::string id;
-  bool forNode;
-  bool forEdge;
+  bool for_node;
+  bool for_edge;
   std::string name;
   ImportDataType type;
-  bool isList;
-  size_t columnID;
+  bool is_list;
 
-  KeyGraphML(const std::string& id_, bool forNode_, bool forEdge_,
-             const std::string& name_, ImportDataType type_, bool isList_,
-             size_t columnID_)
-      : id(id_), forNode(forNode_), forEdge(forEdge_), name(name_), type(type_),
-        isList(isList_), columnID(columnID_) {}
-  KeyGraphML(const std::string& id, bool forNode, size_t columnID)
-      : KeyGraphML(id, forNode, !forNode, id, ImportDataType::STRING, false,
-                   columnID) {}
+  KeyGraphML(const std::string& id_, bool for_node_, bool for_edge_,
+             const std::string& name_, ImportDataType type_, bool is_list_)
+      : id(id_), for_node(for_node_), for_edge(for_edge_), name(name_),
+        type(type_), is_list(is_list_) {}
+  KeyGraphML(const std::string& id, bool for_node)
+      : KeyGraphML(id, for_node, !for_node, id, ImportDataType::kString,
+                   false) {}
 };
 
-/************************************/
-/* Shared GraphML/CSV/JSON Function */
-/************************************/
+struct PropertiesState {
+  std::unordered_map<std::string, size_t> keys;
+  ArrowFields schema;
+  ArrayBuilders builders;
+  std::vector<ArrowArrays> chunks;
+};
+
+struct LabelsState {
+  std::unordered_map<std::string, size_t> keys;
+  ArrowFields schema;
+  BooleanBuilders builders;
+  std::vector<ArrowArrays> chunks;
+};
+
+struct TopologyState {
+  // maps node IDs to node indexes
+  std::unordered_map<std::string, size_t> node_indexes;
+  // node's start of edge lists
+  std::vector<uint64_t> out_indices;
+  // edge list of destinations
+  std::vector<uint32_t> out_dests;
+  // list of sources of edges
+  std::vector<uint32_t> sources;
+  // list of destinations of edges
+  std::vector<uint32_t> destinations;
+};
+
+struct GraphState {
+  PropertiesState node_properties;
+  PropertiesState edge_properties;
+  LabelsState node_labels;
+  LabelsState edge_types;
+  TopologyState topology_builder;
+  size_t nodes;
+  size_t edges;
+};
+
+struct WriterProperties {
+  NullMaps null_arrays;
+  std::shared_ptr<arrow::Array> false_array;
+  const size_t chunk_size;
+  size_t nulls_added;
+  size_t falses_added;
+};
+
+/**********************/
+/* CSV/JSON Functions */
+/**********************/
 
 template <typename T>
-void computePrefixSum(std::vector<T>* array) {
+void ComputePrefixSum(std::vector<T>* array) {
   auto prev = array->begin();
   for (auto ii = array->begin() + 1, ei = array->end(); ii != ei;
        ++ii, ++prev) {
@@ -82,29 +127,25 @@ void computePrefixSum(std::vector<T>* array) {
   }
 }
 
-uint64_t setEdgeID(const std::vector<uint64_t>& out_indices_,
-                   std::vector<uint32_t>* out_dests_,
+uint64_t SetEdgeId(const std::vector<uint64_t>& out_indices,
+                   std::vector<uint32_t>* out_dests,
                    std::vector<uint64_t>* offsets,
                    const std::vector<uint32_t>& sources,
                    const std::vector<uint32_t>& destinations, size_t index) {
   uint32_t src  = sources[index];
-  uint64_t base = src ? out_indices_[src - 1] : 0;
+  uint64_t base = src ? out_indices[src - 1] : 0;
   uint64_t i    = base + offsets->at(src)++;
 
-  out_dests_->at(i) = destinations[index];
+  out_dests->at(i) = destinations[index];
   return i;
 }
 
-/**********************/
-/* CSV/JSON Functions */
-/**********************/
-
-BooleanArrays buildArrays(BooleanBuilders* columnBuilders) {
+BooleanArrays BuildArrays(BooleanBuilders* column_builders) {
   BooleanArrays arrays;
-  arrays.reserve(columnBuilders->size());
-  for (size_t i = 0; i < columnBuilders->size(); i++) {
+  arrays.reserve(column_builders->size());
+  for (size_t i = 0; i < column_builders->size(); i++) {
     std::shared_ptr<arrow::BooleanArray> array;
-    auto st = columnBuilders->at(i)->Finish(&array);
+    auto st = column_builders->at(i)->Finish(&array);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building arrow array");
     }
@@ -115,25 +156,25 @@ BooleanArrays buildArrays(BooleanBuilders* columnBuilders) {
 
 template <typename T>
 std::shared_ptr<arrow::Table>
-buildTable(std::vector<std::shared_ptr<T>>* columnBuilders,
-           ArrowFields* schemaVector) {
+BuildTable(std::vector<std::shared_ptr<T>>* column_builders,
+           ArrowFields* schema_vector) {
   ArrowArrays columns;
-  columns.reserve(columnBuilders->size());
-  for (size_t i = 0; i < columnBuilders->size(); i++) {
+  columns.reserve(column_builders->size());
+  for (size_t i = 0; i < column_builders->size(); i++) {
     std::shared_ptr<arrow::Array> array;
-    auto st = columnBuilders->at(i)->Finish(&array);
+    auto st = column_builders->at(i)->Finish(&array);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building arrow array");
     }
     columns.push_back(array);
   }
 
-  auto schema = std::make_shared<arrow::Schema>(*schemaVector);
+  auto schema = std::make_shared<arrow::Schema>(*schema_vector);
   return arrow::Table::Make(schema, columns);
 }
 
 template <typename T, typename W>
-void rearrangeArray(std::shared_ptr<T> builder, const std::shared_ptr<W>& array,
+void RearrangeArray(std::shared_ptr<T> builder, const std::shared_ptr<W>& array,
                     const std::vector<size_t>& mapping) {
   auto st = builder->Reserve(array->length());
   if (!st.ok()) {
@@ -157,7 +198,7 @@ void rearrangeArray(std::shared_ptr<T> builder, const std::shared_ptr<W>& array,
   }
 }
 
-void rearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
+void RearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
                     const std::shared_ptr<arrow::StringArray>& array,
                     const std::vector<size_t>& mapping) {
   auto st = builder->Reserve(array->length());
@@ -182,7 +223,7 @@ void rearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
   }
 }
 
-BooleanBuilders rearrangeTable(const BooleanArrays& initial,
+BooleanBuilders RearrangeTable(const BooleanArrays& initial,
                                const std::vector<size_t>& mapping) {
   BooleanBuilders rearranged;
   rearranged.reserve(initial.size());
@@ -190,19 +231,19 @@ BooleanBuilders rearrangeTable(const BooleanArrays& initial,
     auto bb    = std::make_shared<arrow::BooleanBuilder>();
     auto array = initial[i];
 
-    rearrangeArray(bb, array, mapping);
+    RearrangeArray(bb, array, mapping);
 
     rearranged.push_back(bb);
   }
   return rearranged;
 }
 
-StringArrays buildArrays(StringBuilders* columnBuilders) {
+StringArrays BuildArrays(StringBuilders* column_builders) {
   StringArrays arrays;
-  arrays.reserve(columnBuilders->size());
-  for (size_t i = 0; i < columnBuilders->size(); i++) {
+  arrays.reserve(column_builders->size());
+  for (size_t i = 0; i < column_builders->size(); i++) {
     std::shared_ptr<arrow::StringArray> array;
-    auto st = columnBuilders->at(i)->Finish(&array);
+    auto st = column_builders->at(i)->Finish(&array);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building arrow array");
     }
@@ -213,10 +254,10 @@ StringArrays buildArrays(StringBuilders* columnBuilders) {
 
 // special case for building boolean builders where the empty value is false,
 // not null
-void addFalseColumnBuilder(const std::string& column,
+void AddFalseColumnBuilder(const std::string& column,
                            std::unordered_map<std::string, size_t>* map,
-                           BooleanBuilders* columnBuilders,
-                           ArrowFields* schemaVector,
+                           BooleanBuilders* column_builders,
+                           ArrowFields* schema_vector,
                            std::shared_ptr<arrow::DataType> type,
                            std::vector<bool>* falseMap, size_t offset) {
   // add entry to map
@@ -228,10 +269,10 @@ void addFalseColumnBuilder(const std::string& column,
   }
 
   // add column to schema and column builders, make table even by adding nulls
-  schemaVector->push_back(arrow::field(column, type));
-  columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
+  schema_vector->push_back(arrow::field(column, type));
+  column_builders->push_back(std::make_shared<arrow::BooleanBuilder>());
   for (size_t i = 0; i < offset; i++) {
-    auto st = columnBuilders->at(entry->second)->Append(false);
+    auto st = column_builders->at(entry->second)->Append(false);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error appending to an arrow array builder");
     }
@@ -243,10 +284,10 @@ void addFalseColumnBuilder(const std::string& column,
 template <typename T>
 void addColumnBuilder(const std::string& column,
                       std::unordered_map<std::string, size_t>* map,
-                      std::vector<std::shared_ptr<T>>* columnBuilders,
-                      ArrowFields* schemaVector,
+                      std::vector<std::shared_ptr<T>>* column_builders,
+                      ArrowFields* schema_vector,
                       std::shared_ptr<arrow::DataType> type,
-                      std::vector<bool>* nullMap, size_t offset) {
+                      std::vector<bool>* null_map, size_t offset) {
   // add entry to map
   auto [entry, found] =
       map->insert(std::pair<std::string, size_t>(column, map->size()));
@@ -256,37 +297,37 @@ void addColumnBuilder(const std::string& column,
   }
 
   // add column to schema and column builders, make table even by adding nulls
-  schemaVector->push_back(arrow::field(column, type));
-  columnBuilders->push_back(std::make_shared<T>());
-  auto st = columnBuilders->at(entry->second)->AppendNulls(offset);
+  schema_vector->push_back(arrow::field(column, type));
+  column_builders->push_back(std::make_shared<T>());
+  auto st = column_builders->at(entry->second)->AppendNulls(offset);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error appending nulls to an arrow array builder");
   }
 
   // add to null map
-  nullMap->push_back(true);
+  null_map->push_back(true);
 }
 
 template <typename T>
-void addNullsToBuilderAndReset(std::vector<std::shared_ptr<T>>* columnBuilders,
-                               std::vector<bool>* nullMap) {
-  for (size_t i = 0; i < columnBuilders->size(); i++) {
-    if (nullMap->at(i)) {
-      auto st = columnBuilders->at(i)->AppendNull();
+void addNullsToBuilderAndReset(std::vector<std::shared_ptr<T>>* column_builders,
+                               std::vector<bool>* null_map) {
+  for (size_t i = 0; i < column_builders->size(); i++) {
+    if (null_map->at(i)) {
+      auto st = column_builders->at(i)->AppendNull();
       if (!st.ok()) {
         GALOIS_LOG_FATAL("Error appending null to an arrow array builder");
       }
     } else {
-      nullMap->at(i) = true;
+      null_map->at(i) = true;
     }
   }
 }
 
-void addFalsesToBuilderAndReset(BooleanBuilders* columnBuilders,
+void addFalsesToBuilderAndReset(BooleanBuilders* column_builders,
                                 std::vector<bool>* falseMap) {
-  for (size_t i = 0; i < columnBuilders->size(); i++) {
+  for (size_t i = 0; i < column_builders->size(); i++) {
     if (falseMap->at(i)) {
-      auto st = columnBuilders->at(i)->Append(false);
+      auto st = column_builders->at(i)->Append(false);
       if (!st.ok()) {
         GALOIS_LOG_FATAL("Error appending null to an arrow array builder");
       }
@@ -296,14 +337,14 @@ void addFalsesToBuilderAndReset(BooleanBuilders* columnBuilders,
   }
 }
 
-StringBuilders rearrangeTable(const StringArrays& initial,
+StringBuilders RearrangeTable(const StringArrays& initial,
                               const std::vector<size_t>& mapping) {
   StringBuilders rearranged;
   rearranged.reserve(initial.size());
   for (size_t i = 0; i < initial.size(); i++) {
     auto sb    = std::make_shared<arrow::StringBuilder>();
     auto array = initial[i];
-    rearrangeArray(sb, array, mapping);
+    RearrangeArray(sb, array, mapping);
 
     rearranged.push_back(sb);
   }
@@ -311,37 +352,37 @@ StringBuilders rearrangeTable(const StringArrays& initial,
 }
 
 std::pair<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Table>>
-buildFinalEdges(StringBuilders* edgeColumnBuilders,
+BuildFinalEdges(StringBuilders* edgeColumnBuilders,
                 ArrowFields* edgeSchemaVector,
                 BooleanBuilders* edgeTypeColumnBuilders,
                 ArrowFields* edgeTypeSchemaVector,
-                std::vector<uint64_t>* out_indices_,
-                std::vector<uint32_t>* out_dests_,
+                std::vector<uint64_t>* out_indices,
+                std::vector<uint32_t>* out_dests,
                 const std::vector<uint32_t>& sources,
                 const std::vector<uint32_t>& destinations) {
-  computePrefixSum(out_indices_);
+  ComputePrefixSum(out_indices);
 
-  std::vector<size_t> edgeMapping;
-  edgeMapping.resize(sources.size(), std::numeric_limits<uint64_t>::max());
+  std::vector<size_t> edge_mapping;
+  edge_mapping.resize(sources.size(), std::numeric_limits<uint64_t>::max());
 
   std::vector<uint64_t> offsets;
-  offsets.resize(out_indices_->size(), 0);
+  offsets.resize(out_indices->size(), 0);
 
   // get edge indices
   for (size_t i = 0; i < sources.size(); i++) {
-    uint64_t edgeID = setEdgeID(*out_indices_, out_dests_, &offsets, sources,
-                                destinations, i);
-    edgeMapping[edgeID] = i;
+    uint64_t edgeID =
+        SetEdgeId(*out_indices, out_dests, &offsets, sources, destinations, i);
+    edge_mapping[edgeID] = i;
   }
 
-  auto initialEdgeArrays = buildArrays(edgeColumnBuilders);
-  auto initialTypeArrays = buildArrays(edgeTypeColumnBuilders);
-  auto finalEdgeBuilders = rearrangeTable(initialEdgeArrays, edgeMapping);
-  auto finalTypeBuilders = rearrangeTable(initialTypeArrays, edgeMapping);
+  auto initialEdgeArrays = BuildArrays(edgeColumnBuilders);
+  auto initialTypeArrays = BuildArrays(edgeTypeColumnBuilders);
+  auto finalEdgeBuilders = RearrangeTable(initialEdgeArrays, edge_mapping);
+  auto finalTypeBuilders = RearrangeTable(initialTypeArrays, edge_mapping);
   return std::pair<std::shared_ptr<arrow::Table>,
                    std::shared_ptr<arrow::Table>>(
-      buildTable(&finalEdgeBuilders, edgeSchemaVector),
-      buildTable(&finalTypeBuilders, edgeTypeSchemaVector));
+      BuildTable(&finalEdgeBuilders, edgeSchemaVector),
+      BuildTable(&finalTypeBuilders, edgeTypeSchemaVector));
 }
 
 std::pair<std::vector<std::string>, std::vector<size_t>>
@@ -390,35 +431,45 @@ extractHeaderCSV(csv::CSVReader* reader, ArrowFields* nodeSchemaVector,
 /* GraphML Functions */
 /*********************/
 
+// Used to build the out_dests component of the CSR representation
+uint64_t SetEdgeId(TopologyState* topology_builder,
+                   std::vector<uint64_t>* offsets, size_t index) {
+  uint32_t src  = topology_builder->sources[index];
+  uint64_t base = src ? topology_builder->out_indices[src - 1] : 0;
+  uint64_t i    = base + offsets->at(src)++;
+
+  topology_builder->out_dests[i] = topology_builder->destinations[index];
+  return i;
+}
+
 /************************************/
 /* Basic Building Utility Functions */
 /************************************/
 
 template <typename T>
-std::shared_ptr<arrow::Array> buildArray(std::shared_ptr<T> columnBuilder) {
+std::shared_ptr<arrow::Array> BuildArray(std::shared_ptr<T> builder) {
   std::shared_ptr<arrow::Array> array;
-  auto st = columnBuilder->Finish(&array);
+  auto st = builder->Finish(&array);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array: {}", st.ToString());
   }
   return array;
 }
 
-ChunkedArrays buildChunks(std::vector<ArrowArrays>* arrayChunks) {
-  ChunkedArrays chunkedArrays;
-  chunkedArrays.resize(arrayChunks->size());
-  for (size_t n = 0; n < arrayChunks->size(); n++) {
-    chunkedArrays[n] =
-        std::make_shared<arrow::ChunkedArray>(arrayChunks->at(n));
+ChunkedArrays BuildChunks(std::vector<ArrowArrays>* chunks) {
+  ChunkedArrays chunked_arrays;
+  chunked_arrays.resize(chunks->size());
+  for (size_t n = 0; n < chunks->size(); n++) {
+    chunked_arrays[n] = std::make_shared<arrow::ChunkedArray>(chunks->at(n));
   }
-  return chunkedArrays;
+  return chunked_arrays;
 }
 
-std::shared_ptr<arrow::Table> buildTable(std::vector<ArrowArrays>* arrayChunks,
-                                         ArrowFields* schemaVector) {
-  ChunkedArrays columns = buildChunks(arrayChunks);
+std::shared_ptr<arrow::Table> BuildTable(std::vector<ArrowArrays>* chunks,
+                                         ArrowFields* schema_vector) {
+  ChunkedArrays columns = BuildChunks(chunks);
 
-  auto schema = std::make_shared<arrow::Schema>(*schemaVector);
+  auto schema = std::make_shared<arrow::Schema>(*schema_vector);
   return arrow::Table::Make(schema, columns);
 }
 
@@ -426,687 +477,202 @@ std::shared_ptr<arrow::Table> buildTable(std::vector<ArrowArrays>* arrayChunks,
 /* Functions for adding arrow columns */
 /**************************************/
 
-// special case for building boolean builders where the empty value is false,
+// Special case for building boolean builders where the empty value is false,
 // not null
-void addFalseColumnBuilder(const std::string& column,
-                           std::unordered_map<std::string, size_t>* map,
-                           BooleanBuilders* columnBuilders,
-                           ArrowFields* schemaVector,
-                           std::vector<ArrowArrays>* arrayChunks,
-                           std::shared_ptr<arrow::DataType> type) {
+size_t AddFalseBuilder(const std::string& column, LabelsState* labels) {
   // add entry to map
-  auto [entry, found] =
-      map->insert(std::pair<std::string, size_t>(column, map->size()));
-  if (!found) {
-    GALOIS_LOG_ERROR(
-        "An label name that already exists was attempted to be added");
-  }
-  if (map->size() % 100 == 0) {
-    std::cout << "Label Count: " << map->size() << std::endl;
-  }
+  auto index = labels->keys.size();
+  labels->keys.insert(std::pair<std::string, size_t>(column, index));
 
-  // add column to schema and column builders
-  schemaVector->push_back(arrow::field(column, type));
-  columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
+  // add column to schema, builders, and chunks
+  labels->schema.push_back(arrow::field(column, arrow::boolean()));
+  labels->builders.push_back(std::make_shared<arrow::BooleanBuilder>());
+  labels->chunks.push_back(ArrowArrays{});
 
-  // add column to arrayChunks
-  ArrowArrays chunks;
-  arrayChunks->push_back(chunks);
+  return index;
 }
 
-void addColumnBuilder(const std::string& column, bool forNode,
-                      std::unordered_map<std::string, KeyGraphML>* map,
-                      ArrayBuilders* columnBuilders, ArrowFields* schemaVector,
-                      std::vector<ArrowArrays>* arrayChunks,
-                      std::shared_ptr<arrow::DataType> type) {
+// Special case for adding properties not forward declared as strings since we
+// do not know their type
+size_t AddStringBuilder(const std::string& column,
+                        PropertiesState* properties) {
   // add entry to map
-  auto [entry, found] = map->insert(std::pair<std::string, KeyGraphML>(
-      column, KeyGraphML(column, forNode, map->size())));
-  if (!found) {
-    GALOIS_LOG_ERROR(
-        "An column name that already exists was attempted to be added");
-  }
-  if (map->size() % 100 == 0) {
-    std::cout << "Property Count: " << map->size() << std::endl;
-  }
+  auto index = properties->keys.size();
+  properties->keys.insert(std::pair<std::string, size_t>(column, index));
 
-  // add column to schema and column builders
-  schemaVector->push_back(arrow::field(column, type));
-  columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+  // add column to schema, builders, and chunks
+  properties->schema.push_back(arrow::field(column, arrow::utf8()));
+  properties->builders.push_back(std::make_shared<arrow::StringBuilder>());
+  properties->chunks.push_back(ArrowArrays{});
 
-  // add column to arrayChunks
-  ArrowArrays chunks;
-  arrayChunks->push_back(chunks);
+  return index;
 }
 
-void addBuilder(ArrayBuilders* columnBuilders, ArrowFields* schemaVector,
-                KeyGraphML* key) {
-  if (!key->isList) {
-    switch (key->type) {
-    case ImportDataType::STRING: {
-      schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
-      columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+// Case for adding properties for which we know their type
+void AddBuilder(PropertiesState* properties, KeyGraphML key) {
+  if (!key.is_list) {
+    switch (key.type) {
+    case ImportDataType::kString: {
+      properties->schema.push_back(arrow::field(key.name, arrow::utf8()));
+      properties->builders.push_back(std::make_shared<arrow::StringBuilder>());
       break;
     }
-    case ImportDataType::INT64: {
-      schemaVector->push_back(arrow::field(key->name, arrow::int64()));
-      columnBuilders->push_back(std::make_shared<arrow::Int64Builder>());
+    case ImportDataType::kInt64: {
+      properties->schema.push_back(arrow::field(key.name, arrow::int64()));
+      properties->builders.push_back(std::make_shared<arrow::Int64Builder>());
       break;
     }
-    case ImportDataType::INT32: {
-      schemaVector->push_back(arrow::field(key->name, arrow::int32()));
-      columnBuilders->push_back(std::make_shared<arrow::Int32Builder>());
+    case ImportDataType::kInt32: {
+      properties->schema.push_back(arrow::field(key.name, arrow::int32()));
+      properties->builders.push_back(std::make_shared<arrow::Int32Builder>());
       break;
     }
-    case ImportDataType::DOUBLE: {
-      schemaVector->push_back(arrow::field(key->name, arrow::float64()));
-      columnBuilders->push_back(std::make_shared<arrow::DoubleBuilder>());
+    case ImportDataType::kDouble: {
+      properties->schema.push_back(arrow::field(key.name, arrow::float64()));
+      properties->builders.push_back(std::make_shared<arrow::DoubleBuilder>());
       break;
     }
-    case ImportDataType::FLOAT: {
-      schemaVector->push_back(arrow::field(key->name, arrow::float32()));
-      columnBuilders->push_back(std::make_shared<arrow::FloatBuilder>());
+    case ImportDataType::kFloat: {
+      properties->schema.push_back(arrow::field(key.name, arrow::float32()));
+      properties->builders.push_back(std::make_shared<arrow::FloatBuilder>());
       break;
     }
-    case ImportDataType::BOOLEAN: {
-      schemaVector->push_back(arrow::field(key->name, arrow::boolean()));
-      columnBuilders->push_back(std::make_shared<arrow::BooleanBuilder>());
+    case ImportDataType::kBoolean: {
+      properties->schema.push_back(arrow::field(key.name, arrow::boolean()));
+      properties->builders.push_back(std::make_shared<arrow::BooleanBuilder>());
       break;
     }
     default:
       // for now handle uncaught types as strings
-      GALOIS_LOG_WARN("treating unknown type {} as string", key->type);
-      schemaVector->push_back(arrow::field(key->name, arrow::utf8()));
-      columnBuilders->push_back(std::make_shared<arrow::StringBuilder>());
+      GALOIS_LOG_WARN("treating unknown type {} as string", key.type);
+      properties->schema.push_back(arrow::field(key.name, arrow::utf8()));
+      properties->builders.push_back(std::make_shared<arrow::StringBuilder>());
       break;
     }
   } else {
     auto* pool = arrow::default_memory_pool();
-    switch (key->type) {
-    case ImportDataType::STRING: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::utf8())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    switch (key.type) {
+    case ImportDataType::kString: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::utf8())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
-    case ImportDataType::INT64: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::int64())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    case ImportDataType::kInt64: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::int64())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::Int64Builder>()));
       break;
     }
-    case ImportDataType::INT32: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::int32())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    case ImportDataType::kInt32: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::int32())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::Int32Builder>()));
       break;
     }
-    case ImportDataType::DOUBLE: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::float64())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    case ImportDataType::kDouble: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::float64())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::DoubleBuilder>()));
       break;
     }
-    case ImportDataType::FLOAT: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::float32())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    case ImportDataType::kFloat: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::float32())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::FloatBuilder>()));
       break;
     }
-    case ImportDataType::BOOLEAN: {
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::boolean())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+    case ImportDataType::kBoolean: {
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::boolean())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::BooleanBuilder>()));
       break;
     }
     default:
       // for now handle uncaught types as strings
       GALOIS_LOG_WARN("treating unknown array type {} as a string array",
-                      key->type);
-      schemaVector->push_back(
-          arrow::field(key->name, arrow::list(arrow::utf8())));
-      columnBuilders->push_back(std::make_shared<arrow::ListBuilder>(
+                      key.type);
+      properties->schema.push_back(
+          arrow::field(key.name, arrow::list(arrow::utf8())));
+      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
   }
+  properties->chunks.push_back(ArrowArrays{});
+  properties->keys.insert(
+      std::pair<std::string, size_t>(key.name, properties->keys.size()));
 }
 
-/**************************************************/
-/* Functions for reordering edges into CSR format */
-/**************************************************/
+/*************************************/
+/* Functions for parsing string data */
+/*************************************/
 
-template <typename T, typename W>
-ArrowArrays
-rearrangeArray(std::shared_ptr<T> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunkedArray,
-               const std::vector<size_t>& mapping, size_t chunkSize,
-               NullMaps* NULL_ARRAYS) {
-  ArrowArrays chunks;
-  auto st = builder->Reserve(chunkSize);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
-  }
-  // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<W>> arrays;
-  for (auto chunk : chunkedArray->chunks()) {
-    arrays.push_back(std::static_pointer_cast<W>(chunk));
-  }
-  std::shared_ptr<arrow::Array> NULL_ARRAY =
-      NULL_ARRAYS->first.find(builder->type()->id())->second;
-
-  for (size_t k = 0; k * chunkSize < mapping.size(); k++) {
-    bool addedValue = false;
-    size_t i;
-    for (i = 0; i < chunkSize && k * chunkSize + i < mapping.size(); i++) {
-      size_t index    = mapping[k * chunkSize + i];
-      auto array      = arrays[index / chunkSize];
-      size_t subIndex = index % chunkSize;
-
-      if (array->IsNull(subIndex)) {
-        st = builder->AppendNull();
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL("Error appending null to an arrow array builder: {}",
-                           st.ToString());
-        }
-        continue;
-      }
-      addedValue = true;
-      st         = builder->Append(array->Value(subIndex));
-      if (!st.ok()) {
-        GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
-                         st.ToString());
-      }
-    }
-    auto newArray = buildArray(builder);
-    if (addedValue || i < chunkSize) {
-      chunks.push_back(newArray);
-    } else {
-      chunks.push_back(NULL_ARRAY);
-    }
-  }
-  return chunks;
-}
-
-ArrowArrays
-rearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunkedArray,
-               const std::vector<size_t>& mapping, size_t chunkSize,
-               NullMaps* NULL_ARRAYS) {
-  ArrowArrays chunks;
-  auto st = builder->Reserve(chunkSize);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
-  }
-  // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::StringArray>> arrays;
-  for (auto chunk : chunkedArray->chunks()) {
-    arrays.push_back(std::static_pointer_cast<arrow::StringArray>(chunk));
-  }
-  std::shared_ptr<arrow::Array> NULL_ARRAY =
-      NULL_ARRAYS->first.find(builder->type()->id())->second;
-
-  for (size_t k = 0; k * chunkSize < mapping.size(); k++) {
-    bool addedValue = false;
-    size_t i;
-    for (i = 0; i < chunkSize && k * chunkSize + i < mapping.size(); i++) {
-      size_t index    = mapping[k * chunkSize + i];
-      auto array      = arrays[index / chunkSize];
-      size_t subIndex = index % chunkSize;
-
-      if (array->IsNull(subIndex)) {
-        st = builder->AppendNull();
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL("Error appending null to an arrow array builder: {}",
-                           st.ToString());
-        }
-        continue;
-      }
-      addedValue = true;
-      st         = builder->Append(array->GetView(subIndex));
-      if (!st.ok()) {
-        GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
-                         st.ToString());
-      }
-    }
-    auto newArray = buildArray(builder);
-    if (addedValue || i < chunkSize) {
-      chunks.push_back(newArray);
-    } else {
-      chunks.push_back(NULL_ARRAY);
-    }
-  }
-  return chunks;
-}
-
-ArrowArrays
-rearrangeArray(std::shared_ptr<arrow::BooleanBuilder> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunkedArray,
-               const std::vector<size_t>& mapping, size_t chunkSize,
-               std::shared_ptr<arrow::Array> FALSE_ARRAY) {
-  ArrowArrays chunks;
-  auto st = builder->Reserve(chunkSize);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
-  }
-  // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::BooleanArray>> arrays;
-  for (auto chunk : chunkedArray->chunks()) {
-    arrays.push_back(std::static_pointer_cast<arrow::BooleanArray>(chunk));
-  }
-
-  for (size_t k = 0; k * chunkSize < mapping.size(); k++) {
-    bool addedTrue = false;
-    size_t i;
-    for (i = 0; i < chunkSize && k * chunkSize + i < mapping.size(); i++) {
-      size_t index    = mapping[k * chunkSize + i];
-      auto array      = arrays[index / chunkSize];
-      size_t subIndex = index % chunkSize;
-
-      bool val  = array->Value(subIndex);
-      addedTrue = addedTrue || val;
-      st        = builder->Append(val);
-      if (!st.ok()) {
-        GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
-                         st.ToString());
-      }
-    }
-    auto newArray = buildArray(builder);
-    if (addedTrue || i < chunkSize) {
-      chunks.push_back(newArray);
-    } else {
-      chunks.push_back(FALSE_ARRAY);
-    }
-  }
-  return chunks;
-}
-
-template <typename T, typename W>
-ArrowArrays
-rearrangeArray(const std::shared_ptr<arrow::ListBuilder>& builder, T* tBuilder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunkedArray,
-               const std::vector<size_t>& mapping, size_t chunkSize,
-               NullMaps* NULL_ARRAYS) {
-  ArrowArrays chunks;
-  auto st = builder->Reserve(chunkSize);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
-  }
-  // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::ListArray>> listArrays;
-  std::vector<std::shared_ptr<W>> subArrays;
-  for (auto chunk : chunkedArray->chunks()) {
-    auto arrayTemp = std::static_pointer_cast<arrow::ListArray>(chunk);
-    listArrays.push_back(arrayTemp);
-    subArrays.push_back(std::static_pointer_cast<W>(arrayTemp->values()));
-  }
-  std::shared_ptr<arrow::Array> NULL_ARRAY =
-      NULL_ARRAYS->second.find(tBuilder->type()->id())->second;
-
-  for (size_t k = 0; k * chunkSize < mapping.size(); k++) {
-    bool addedValue = false;
-    size_t i;
-    for (i = 0; i < chunkSize && k * chunkSize + i < mapping.size(); i++) {
-      size_t index    = mapping[k * chunkSize + i];
-      auto array      = listArrays[index / chunkSize];
-      auto sArray     = subArrays[index / chunkSize];
-      size_t subIndex = index % chunkSize;
-
-      if (array->IsNull(subIndex)) {
-        st = builder->AppendNull();
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL("Error appending null to an arrow array builder: {}",
-                           st.ToString());
-        }
-        continue;
-      }
-      addedValue    = true;
-      int32_t start = array->value_offset(subIndex);
-      int32_t end   = array->value_offset(subIndex + 1);
-
-      st = builder->Append();
-      for (int32_t s = start; s < end; s++) {
-        st = tBuilder->Append(sArray->Value(s));
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL(
-              "Error appending value to an arrow array builder: {}",
-              st.ToString());
-        }
-      }
-    }
-    auto newArray = buildArray(builder);
-    if (addedValue || i < chunkSize) {
-      chunks.push_back(newArray);
-    } else {
-      chunks.push_back(NULL_ARRAY);
-    }
-  }
-  return chunks;
-}
-
-ArrowArrays
-rearrangeArray(std::shared_ptr<arrow::ListBuilder> builder,
-               arrow::StringBuilder* sBuilder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunkedArray,
-               const std::vector<size_t>& mapping, size_t chunkSize,
-               NullMaps* NULL_ARRAYS) {
-  ArrowArrays chunks;
-  auto st = builder->Reserve(chunkSize);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
-  }
-  // cast and store array chunks for use in loop
-  std::vector<std::shared_ptr<arrow::ListArray>> listArrays;
-  std::vector<std::shared_ptr<arrow::StringArray>> subArrays;
-  for (auto chunk : chunkedArray->chunks()) {
-    auto arrayTemp = std::static_pointer_cast<arrow::ListArray>(chunk);
-    listArrays.push_back(arrayTemp);
-    subArrays.push_back(
-        std::static_pointer_cast<arrow::StringArray>(arrayTemp->values()));
-  }
-  std::shared_ptr<arrow::Array> NULL_ARRAY =
-      NULL_ARRAYS->second.find(sBuilder->type()->id())->second;
-
-  for (size_t k = 0; k * chunkSize < mapping.size(); k++) {
-    bool addedValue = false;
-    size_t i;
-    for (i = 0; i < chunkSize && k * chunkSize + i < mapping.size(); i++) {
-      size_t index    = mapping[k * chunkSize + i];
-      auto array      = listArrays[index / chunkSize];
-      auto sArray     = subArrays[index / chunkSize];
-      size_t subIndex = index % chunkSize;
-
-      if (array->IsNull(subIndex)) {
-        st = builder->AppendNull();
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL("Error appending null to an arrow array builder: {}",
-                           st.ToString());
-        }
-        continue;
-      }
-      addedValue    = true;
-      int32_t start = array->value_offset(subIndex);
-      int32_t end   = array->value_offset(subIndex + 1);
-
-      st = builder->Append();
-      for (int32_t s = start; s < end; s++) {
-        st = sBuilder->Append(sArray->GetView(s));
-        if (!st.ok()) {
-          GALOIS_LOG_FATAL(
-              "Error appending value to an arrow array builder: {}",
-              st.ToString());
-        }
-      }
-    }
-    auto newArray = buildArray(builder);
-    if (addedValue || i < chunkSize) {
-      chunks.push_back(newArray);
-    } else {
-      chunks.push_back(NULL_ARRAY);
-    }
-  }
-  return chunks;
-}
-
-ArrowArrays
-rearrangeListArray(const std::shared_ptr<arrow::ChunkedArray>& listChunkedArray,
-                   const std::vector<size_t>& mapping, size_t chunkSize,
-                   NullMaps* NULL_ARRAYS) {
-  auto* pool = arrow::default_memory_pool();
-  ArrowArrays chunks;
-  auto listType =
-      std::static_pointer_cast<arrow::BaseListType>(listChunkedArray->type())
-          ->value_type()
-          ->id();
-
-  switch (listType) {
-  case arrow::Type::STRING: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::StringBuilder>());
-    auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
-    chunks  = rearrangeArray(builder, sb, listChunkedArray, mapping, chunkSize,
-                            NULL_ARRAYS);
-    break;
-  }
-  case arrow::Type::INT64: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::Int64Builder>());
-    auto lb = static_cast<arrow::Int64Builder*>(builder->value_builder());
-    chunks  = rearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
-        builder, lb, listChunkedArray, mapping, chunkSize, NULL_ARRAYS);
-    break;
-  }
-  case arrow::Type::INT32: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::Int32Builder>());
-    auto ib = static_cast<arrow::Int32Builder*>(builder->value_builder());
-    chunks  = rearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
-        builder, ib, listChunkedArray, mapping, chunkSize, NULL_ARRAYS);
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::DoubleBuilder>());
-    auto db = static_cast<arrow::DoubleBuilder*>(builder->value_builder());
-    chunks  = rearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
-        builder, db, listChunkedArray, mapping, chunkSize, NULL_ARRAYS);
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::FloatBuilder>());
-    auto fb = static_cast<arrow::FloatBuilder*>(builder->value_builder());
-    chunks  = rearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
-        builder, fb, listChunkedArray, mapping, chunkSize, NULL_ARRAYS);
-    break;
-  }
-  case arrow::Type::BOOL: {
-    auto builder = std::make_shared<arrow::ListBuilder>(
-        pool, std::make_shared<arrow::BooleanBuilder>());
-    auto bb = static_cast<arrow::BooleanBuilder*>(builder->value_builder());
-    chunks  = rearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
-        builder, bb, listChunkedArray, mapping, chunkSize, NULL_ARRAYS);
-    break;
-  }
-  default: {
-    GALOIS_LOG_FATAL(
-        "Unsupported arrow array type passed to rearrangeListArray: {}",
-        listType);
-  }
-  }
-  return chunks;
-}
-
-std::vector<ArrowArrays> rearrangeTable(const ChunkedArrays& initial,
-                                        const std::vector<size_t>& mapping,
-                                        size_t chunkSize,
-                                        NullMaps* NULL_ARRAYS) {
-  std::vector<ArrowArrays> rearranged;
-  rearranged.resize(initial.size());
-
-  galois::do_all(
-      galois::iterate((size_t)0, initial.size()), [&](const size_t& n) {
-        auto array     = initial[n];
-        auto arrayType = array->type()->id();
-        ArrowArrays ca;
-
-        switch (arrayType) {
-        case arrow::Type::STRING: {
-          auto sb = std::make_shared<arrow::StringBuilder>();
-          ca      = rearrangeArray(sb, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::INT64: {
-          auto lb = std::make_shared<arrow::Int64Builder>();
-          ca      = rearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
-              lb, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::INT32: {
-          auto ib = std::make_shared<arrow::Int32Builder>();
-          ca      = rearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
-              ib, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::DOUBLE: {
-          auto db = std::make_shared<arrow::DoubleBuilder>();
-          ca      = rearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
-              db, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::FLOAT: {
-          auto fb = std::make_shared<arrow::FloatBuilder>();
-          ca      = rearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
-              fb, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::BOOL: {
-          auto bb = std::make_shared<arrow::BooleanBuilder>();
-          ca      = rearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
-              bb, array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        case arrow::Type::LIST: {
-          ca = rearrangeListArray(array, mapping, chunkSize, NULL_ARRAYS);
-          break;
-        }
-        default: {
-          GALOIS_LOG_FATAL(
-              "Unsupported arrow array type passed to rearrangeTable: {}",
-              arrayType);
-        }
-        }
-        rearranged[n] = ca;
-        array.reset();
-      });
-  return rearranged;
-}
-
-std::vector<ArrowArrays>
-rearrangeTypeTable(const ChunkedArrays& initial,
-                   const std::vector<size_t>& mapping, size_t chunkSize,
-                   std::shared_ptr<arrow::Array> FALSE_ARRAY) {
-  std::vector<ArrowArrays> rearranged;
-  rearranged.resize(initial.size());
-
-  galois::do_all(
-      galois::iterate((size_t)0, initial.size()), [&](const size_t& n) {
-        auto array = initial[n];
-
-        auto bb = std::make_shared<arrow::BooleanBuilder>();
-        auto ca = rearrangeArray(bb, array, mapping, chunkSize, FALSE_ARRAY);
-        rearranged[n] = ca;
-
-        array.reset();
-      });
-  return rearranged;
-}
-
-std::pair<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Table>>
-buildFinalEdges(
-    const ChunkedArrays& initialEdges, ArrowFields* edgeSchemaVector,
-    const ChunkedArrays& initialTypes, ArrowFields* edgeTypeSchemaVector,
-    std::vector<uint64_t>* out_indices_, std::vector<uint32_t>* out_dests_,
-    const std::vector<uint32_t>& sources,
-    const std::vector<uint32_t>& destinations, size_t chunkSize,
-    NullMaps* NULL_ARRAYS, std::shared_ptr<arrow::Array> FALSE_ARRAY) {
-  computePrefixSum(out_indices_);
-
-  std::vector<size_t> edgeMapping;
-  edgeMapping.resize(sources.size(), std::numeric_limits<uint64_t>::max());
-
-  std::vector<uint64_t> offsets;
-  offsets.resize(out_indices_->size(), 0);
-
-  // get edge indices
-  for (size_t i = 0; i < sources.size(); i++) {
-    uint64_t edgeID = setEdgeID(*out_indices_, out_dests_, &offsets, sources,
-                                destinations, i);
-    edgeMapping[edgeID] = i;
-  }
-  auto finalEdgeBuilders =
-      rearrangeTable(initialEdges, edgeMapping, chunkSize, NULL_ARRAYS);
-  auto finalTypeBuilders =
-      rearrangeTypeTable(initialTypes, edgeMapping, chunkSize, FALSE_ARRAY);
-  return std::pair<std::shared_ptr<arrow::Table>,
-                   std::shared_ptr<arrow::Table>>(
-      buildTable(&finalEdgeBuilders, edgeSchemaVector),
-      buildTable(&finalTypeBuilders, edgeTypeSchemaVector));
-}
-
-/************************************************/
-/* Functions for adding values to arrow builder */
-/************************************************/
-
-std::vector<std::string> parseStringList(std::string rawList) {
+std::vector<std::string> ParseStringList(std::string raw_list) {
   std::vector<std::string> list;
 
-  if (rawList.size() >= 2 && rawList.front() == '[' && rawList.back() == ']') {
-    rawList.erase(0, 1);
-    rawList.erase(rawList.length() - 1, 1);
+  if (raw_list.size() >= 2 && raw_list.front() == '[' &&
+      raw_list.back() == ']') {
+    raw_list.erase(0, 1);
+    raw_list.erase(raw_list.length() - 1, 1);
   } else {
     GALOIS_LOG_ERROR(
         "The provided list was not formatted like neo4j, returning string");
-    list.push_back(rawList);
+    list.push_back(raw_list);
     return list;
   }
 
-  const char* charList = rawList.c_str();
+  const char* char_list = raw_list.c_str();
   // parse the list
-  for (size_t i = 0; i < rawList.size();) {
-    bool firstQuoteFound   = false;
-    bool foundEndOfElem    = false;
-    size_t startOfElem     = i;
-    int consecutiveSlashes = 0;
+  for (size_t i = 0; i < raw_list.size();) {
+    bool first_quote_found  = false;
+    bool found_end_of_elem  = false;
+    size_t start_of_elem    = i;
+    int consecutive_slashes = 0;
 
     // parse the field
-    for (; !foundEndOfElem && i < rawList.size(); i++) {
+    for (; !found_end_of_elem && i < raw_list.size(); i++) {
       // if second quote not escaped then end of element reached
-      if (charList[i] == '\"') {
-        if (consecutiveSlashes % 2 == 0) {
-          if (!firstQuoteFound) {
-            firstQuoteFound = true;
-            startOfElem     = i + 1;
-          } else if (firstQuoteFound) {
-            foundEndOfElem = true;
+      if (char_list[i] == '\"') {
+        if (consecutive_slashes % 2 == 0) {
+          if (!first_quote_found) {
+            first_quote_found = true;
+            start_of_elem     = i + 1;
+          } else if (first_quote_found) {
+            found_end_of_elem = true;
           }
         }
-        consecutiveSlashes = 0;
-      } else if (charList[i] == '\\') {
-        consecutiveSlashes++;
+        consecutive_slashes = 0;
+      } else if (char_list[i] == '\\') {
+        consecutive_slashes++;
       } else {
-        consecutiveSlashes = 0;
+        consecutive_slashes = 0;
       }
     }
-    size_t endOfElem  = i - 1;
-    size_t elemLength = endOfElem - startOfElem;
+    size_t end_of_elem = i - 1;
+    size_t elem_length = end_of_elem - start_of_elem;
 
-    if (endOfElem <= startOfElem) {
+    if (end_of_elem <= start_of_elem) {
       list.push_back("");
     } else {
 
-      std::string elemRough(&charList[startOfElem], elemLength);
+      std::string elem_rough(&char_list[start_of_elem], elem_length);
       std::string elem("");
-      elem.reserve(elemRough.size());
-      size_t currIndex = 0;
-      size_t nextSlash = elemRough.find_first_of('\\');
+      elem.reserve(elem_rough.size());
+      size_t curr_index = 0;
+      size_t next_slash = elem_rough.find_first_of('\\');
 
-      while (nextSlash != std::string::npos) {
-        elem.append(elemRough.begin() + currIndex,
-                    elemRough.begin() + nextSlash);
+      while (next_slash != std::string::npos) {
+        elem.append(elem_rough.begin() + curr_index,
+                    elem_rough.begin() + next_slash);
 
-        switch (elemRough[nextSlash + 1]) {
+        switch (elem_rough[next_slash + 1]) {
         case 'n':
           elem.append("\n");
           break;
@@ -1142,13 +708,13 @@ std::vector<std::string> parseStringList(std::string rawList) {
           break;
         default:
           GALOIS_LOG_WARN("Unhandled escape character: {}",
-                          elemRough[nextSlash + 1]);
+                          elem_rough[next_slash + 1]);
         }
 
-        currIndex = nextSlash + 2;
-        nextSlash = elemRough.find_first_of('\\', currIndex);
+        curr_index = next_slash + 2;
+        next_slash = elem_rough.find_first_of('\\', curr_index);
       }
-      elem.append(elemRough.begin() + currIndex, elemRough.end());
+      elem.append(elem_rough.begin() + curr_index, elem_rough.end());
 
       list.push_back(elem);
     }
@@ -1158,19 +724,19 @@ std::vector<std::string> parseStringList(std::string rawList) {
 }
 
 template <typename T>
-std::vector<T> parseNumberList(std::string rawList) {
+std::vector<T> ParseNumberList(std::string raw_list) {
   std::vector<T> list;
 
-  if (rawList.front() == '[' && rawList.back() == ']') {
-    rawList.erase(0, 1);
-    rawList.erase(rawList.length() - 1, 1);
+  if (raw_list.front() == '[' && raw_list.back() == ']') {
+    raw_list.erase(0, 1);
+    raw_list.erase(raw_list.length() - 1, 1);
   } else {
     GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
                      "returning empty vector");
     return list;
   }
   std::vector<std::string> elems;
-  boost::split(elems, rawList, boost::is_any_of(","));
+  boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
     list.push_back(boost::lexical_cast<T>(s));
@@ -1178,71 +744,196 @@ std::vector<T> parseNumberList(std::string rawList) {
   return list;
 }
 
-std::vector<bool> parseBooleanList(std::string rawList) {
+std::vector<bool> ParseBooleanList(std::string raw_list) {
   std::vector<bool> list;
 
-  if (rawList.front() == '[' && rawList.back() == ']') {
-    rawList.erase(0, 1);
-    rawList.erase(rawList.length() - 1, 1);
+  if (raw_list.front() == '[' && raw_list.back() == ']') {
+    raw_list.erase(0, 1);
+    raw_list.erase(raw_list.length() - 1, 1);
   } else {
     GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
                      "returning empty vector");
     return list;
   }
   std::vector<std::string> elems;
-  boost::split(elems, rawList, boost::is_any_of(","));
+  boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
-    bool boolVal = s[0] == 't' || s[0] == 'T';
-    list.push_back(boolVal);
+    bool bool_val = s[0] == 't' || s[0] == 'T';
+    list.push_back(bool_val);
   }
   return list;
 }
 
-void appendArray(std::shared_ptr<arrow::ListBuilder> lBuilder,
+/************************************************/
+/* Functions for adding values to arrow builder */
+/************************************************/
+
+// Adds nulls to an array being built until its length == total
+template <typename T>
+void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
+              std::shared_ptr<arrow::Array> null_array,
+              WriterProperties* properties, size_t total) {
+  auto chunk_size   = properties->chunk_size;
+  auto nulls_needed = total - (chunks->size() * chunk_size) - builder->length();
+  arrow::Status st;
+
+  // simplest case, no falses needed
+  if (nulls_needed == 0) {
+    return;
+  }
+
+  // case where nulls needed but mid-array
+  if (builder->length() != 0) {
+    auto nulls_to_add = std::min(chunk_size - builder->length(), nulls_needed);
+    st                = builder->AppendNulls(nulls_to_add);
+    nulls_needed -= nulls_to_add;
+
+    // if we filled up a chunk, flush it
+    if (((size_t)builder->length()) == chunk_size) {
+      chunks->push_back(BuildArray(builder));
+    } else {
+      // if we did not fill up the array we know it must need no more nulls
+      return;
+    }
+  }
+
+  // case where we are at the start of a new array and have null_arrays to add
+  for (auto i = chunk_size; i <= nulls_needed; i += chunk_size) {
+    chunks->push_back(null_array);
+    properties->nulls_added++;
+  }
+  nulls_needed %= chunk_size;
+
+  // case where we are at the start of a new array and have less than a
+  // null_array to add
+  st = builder->AppendNulls(nulls_needed);
+
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
+                     st.ToString());
+  }
+}
+
+// Adds nulls to an array being built until its length == total
+template <typename T>
+void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
+              WriterProperties* properties, size_t total) {
+  auto nulls_needed =
+      total - (chunks->size() * properties->chunk_size) - builder->length();
+  if (nulls_needed == 0) {
+    return;
+  }
+  auto type = builder->type()->id();
+  std::shared_ptr<arrow::Array> null_array;
+  if (type != arrow::Type::LIST) {
+    null_array = properties->null_arrays.first.find(type)->second;
+  } else {
+    auto list_builder = std::static_pointer_cast<arrow::ListBuilder>(builder);
+    null_array        = properties->null_arrays.second
+                     .find(list_builder->value_builder()->type()->id())
+                     ->second;
+  }
+  AddNulls(builder, chunks, null_array, properties, total);
+}
+
+// Adds falses to an array being built until its length == total
+void AddFalses(std::shared_ptr<arrow::BooleanBuilder> builder,
+               ArrowArrays* chunks, WriterProperties* properties,
+               size_t total) {
+  auto chunk_size = properties->chunk_size;
+  auto falses_needed =
+      total - (chunks->size() * chunk_size) - builder->length();
+  arrow::Status st;
+
+  // simplest case, no falses needed
+  if (falses_needed == 0) {
+    return;
+  }
+
+  // case where falses needed but mid-array
+  if (builder->length() != 0) {
+    auto falses_to_add =
+        std::min(chunk_size - builder->length(), falses_needed);
+    for (size_t i = 0; i < falses_to_add; i++) {
+      st = builder->Append(false);
+    }
+    falses_needed -= falses_to_add;
+
+    // if we filled up a chunk, flush it
+    if (((size_t)builder->length()) == chunk_size) {
+      chunks->push_back(BuildArray(builder));
+    } else {
+      // if we did not fill up the array we know it must need no more falses
+      return;
+    }
+  }
+
+  // case where we are at the start of a new array and have false_arrays to add
+  for (auto i = chunk_size; i <= falses_needed; i += chunk_size) {
+    chunks->push_back(properties->false_array);
+    properties->falses_added++;
+  }
+  falses_needed %= chunk_size;
+
+  // case where we are at the start of a new array and have less than a
+  // false_array to add
+  for (size_t i = 0; i < falses_needed; i++) {
+    st = builder->Append(false);
+  }
+
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
+                     st.ToString());
+  }
+}
+
+// Append an array to a builder
+void AppendArray(std::shared_ptr<arrow::ListBuilder> list_builder,
                  const std::string& val) {
   arrow::Status st = arrow::Status::OK();
 
-  switch (lBuilder->value_builder()->type()->id()) {
+  switch (list_builder->value_builder()->type()->id()) {
   case arrow::Type::STRING: {
-    auto sb     = static_cast<arrow::StringBuilder*>(lBuilder->value_builder());
-    st          = lBuilder->Append();
-    auto sarray = parseStringList(val);
+    auto sb = static_cast<arrow::StringBuilder*>(list_builder->value_builder());
+    st      = list_builder->Append();
+    auto sarray = ParseStringList(val);
     st          = sb->AppendValues(sarray);
     break;
   }
   case arrow::Type::INT64: {
-    auto lb     = static_cast<arrow::Int64Builder*>(lBuilder->value_builder());
-    st          = lBuilder->Append();
-    auto larray = parseNumberList<int64_t>(val);
+    auto lb = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
+    st      = list_builder->Append();
+    auto larray = ParseNumberList<int64_t>(val);
     st          = lb->AppendValues(larray);
     break;
   }
   case arrow::Type::INT32: {
-    auto ib     = static_cast<arrow::Int32Builder*>(lBuilder->value_builder());
-    st          = lBuilder->Append();
-    auto iarray = parseNumberList<int32_t>(val);
+    auto ib = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
+    st      = list_builder->Append();
+    auto iarray = ParseNumberList<int32_t>(val);
     st          = ib->AppendValues(iarray);
     break;
   }
   case arrow::Type::DOUBLE: {
-    auto db     = static_cast<arrow::DoubleBuilder*>(lBuilder->value_builder());
-    st          = lBuilder->Append();
-    auto darray = parseNumberList<double>(val);
+    auto db = static_cast<arrow::DoubleBuilder*>(list_builder->value_builder());
+    st      = list_builder->Append();
+    auto darray = ParseNumberList<double>(val);
     st          = db->AppendValues(darray);
     break;
   }
   case arrow::Type::FLOAT: {
-    auto fb     = static_cast<arrow::FloatBuilder*>(lBuilder->value_builder());
-    st          = lBuilder->Append();
-    auto farray = parseNumberList<float>(val);
+    auto fb = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
+    st      = list_builder->Append();
+    auto farray = ParseNumberList<float>(val);
     st          = fb->AppendValues(farray);
     break;
   }
   case arrow::Type::BOOL: {
-    auto bb = static_cast<arrow::BooleanBuilder*>(lBuilder->value_builder());
-    st      = lBuilder->Append();
-    auto barray = parseBooleanList(val);
+    auto bb =
+        static_cast<arrow::BooleanBuilder*>(list_builder->value_builder());
+    st          = list_builder->Append();
+    auto barray = ParseBooleanList(val);
     st          = bb->AppendValues(barray);
     break;
   }
@@ -1256,7 +947,8 @@ void appendArray(std::shared_ptr<arrow::ListBuilder> lBuilder,
   }
 }
 
-void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
+// Append a non-null value to an array
+void AppendValue(std::shared_ptr<arrow::ArrayBuilder> array,
                  const std::string& val) {
   arrow::Status st = arrow::Status::OK();
 
@@ -1287,14 +979,14 @@ void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
     break;
   }
   case arrow::Type::BOOL: {
-    auto bb      = std::static_pointer_cast<arrow::BooleanBuilder>(array);
-    bool boolVal = val[0] == 't' || val[0] == 'T';
-    st           = bb->Append(boolVal);
+    auto bb       = std::static_pointer_cast<arrow::BooleanBuilder>(array);
+    bool bool_val = val[0] == 't' || val[0] == 'T';
+    st            = bb->Append(bool_val);
     break;
   }
   case arrow::Type::LIST: {
     auto lb = std::static_pointer_cast<arrow::ListBuilder>(array);
-    appendArray(lb, val);
+    AppendArray(lb, val);
     break;
   }
   default: {
@@ -1308,152 +1000,108 @@ void appendValue(std::shared_ptr<arrow::ArrayBuilder> array,
   }
 }
 
-void appendBoolean(bool val, std::shared_ptr<arrow::BooleanBuilder> builder,
-                   ArrowArrays* chunks,
-                   std::shared_ptr<arrow::Array> FALSE_ARRAY, size_t total,
-                   size_t chunkSize) {
-  auto falsesNeeded = total - (chunks->size() * chunkSize) - builder->length();
-  arrow::Status st;
+// Add nulls until the array is even and then append val so that length = total
+// + 1 at the end
+void AddValue(const std::string& val,
+              std::shared_ptr<arrow::ArrayBuilder> builder, ArrowArrays* chunks,
+              WriterProperties* properties, size_t total) {
+  AddNulls(builder, chunks, properties, total);
+  AppendValue(builder, val);
 
-  // simplest case, no falses needed
-  if (falsesNeeded == 0) {
-    st = builder->Append(val);
-
-    // if we filled up a chunk, flush it
-    if (((size_t)builder->length()) == chunkSize) {
-      chunks->push_back(buildArray(builder));
-    }
-    return;
-  }
-
-  // case where falses needed but mid-array
-  if (builder->length() != 0) {
-    auto falsesToAdd = std::min(chunkSize - builder->length(), falsesNeeded);
-    for (uint64_t i = 0; i < falsesToAdd; i++) {
-      st = builder->Append(false);
-    }
-    falsesNeeded -= falsesToAdd;
-
-    // if we filled up a chunk, flush it
-    if (((size_t)builder->length()) == chunkSize) {
-      chunks->push_back(buildArray(builder));
-    } else {
-      // if we did not fill up the array we know it must need no more falses
-      st = builder->Append(val);
-      // if we filled up a chunk, flush it
-      if (((size_t)builder->length()) == chunkSize) {
-        chunks->push_back(buildArray(builder));
-      }
-      return;
-    }
-  }
-
-  // case where we are at the start of a new array and have FALSE_ARRAYs to add
-  for (auto i = chunkSize; i <= falsesNeeded; i += chunkSize) {
-    chunks->push_back(FALSE_ARRAY);
-  }
-  falsesNeeded %= chunkSize;
-
-  // case where we are at the start of a new array and have less than a
-  // FALSE_ARRAY to add
-  for (size_t i = 0; i < falsesNeeded; i++) {
-    st = builder->Append(false);
-  }
-  // we know there is enough room for value since we could not add a FALSE_ARRAY
-  st = builder->Append(val);
   // if we filled up a chunk, flush it
-  if (((size_t)builder->length()) == chunkSize) {
-    chunks->push_back(buildArray(builder));
-  }
-
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+  if (((size_t)builder->length()) == properties->chunk_size) {
+    chunks->push_back(BuildArray(builder));
   }
 }
 
-void addValue(std::string* val, std::shared_ptr<arrow::ArrayBuilder> builder,
-              ArrowArrays* chunks, NullMaps* NULL_ARRAYS, size_t total,
-              size_t chunkSize) {
-  auto nullsNeeded = total - (chunks->size() * chunkSize) - builder->length();
-  arrow::Status st;
-
-  // simplest case, no nulls needed
-  if (nullsNeeded == 0) {
-    if (val != nullptr) {
-      appendValue(builder, *val);
-    } else {
-      builder->AppendNull();
-    }
-
-    // if we filled up a chunk, flush it
-    if (((size_t)builder->length()) == chunkSize) {
-      chunks->push_back(buildArray(builder));
-    }
-    return;
-  }
-
-  // case where nulls needed but mid-array
-  if (builder->length() != 0) {
-    auto nullsToAdd = std::min(chunkSize - builder->length(), nullsNeeded);
-    st              = builder->AppendNulls(nullsToAdd);
-    nullsNeeded -= nullsToAdd;
-
-    // if we filled up a chunk, flush it
-    if (((size_t)builder->length()) == chunkSize) {
-      chunks->push_back(buildArray(builder));
-    } else {
-      // if we did not fill up the array we know it must need no more nulls
-      if (val != nullptr) {
-        appendValue(builder, *val);
-      } else {
-        builder->AppendNull();
-      }
-      // if we filled up a chunk, flush it
-      if (((size_t)builder->length()) == chunkSize) {
-        chunks->push_back(buildArray(builder));
-      }
-      return;
-    }
-  }
-
-  // case where we are at the start of a new array and have NULL_ARRAYs to add
-  // find right null array to add
-  if (nullsNeeded >= chunkSize) {
-    auto type = builder->type()->id();
-    std::shared_ptr<arrow::Array> NULL_ARRAY;
-    if (type != arrow::Type::LIST) {
-      NULL_ARRAY = NULL_ARRAYS->first.find(type)->second;
-    } else {
-      auto lBuilder = std::static_pointer_cast<arrow::ListBuilder>(builder);
-      NULL_ARRAY =
-          NULL_ARRAYS->second.find(lBuilder->value_builder()->type()->id())
-              ->second;
-    }
-    // add null arrays needed
-    for (auto i = chunkSize; i <= nullsNeeded; i += chunkSize) {
-      chunks->push_back(NULL_ARRAY);
-    }
-    nullsNeeded %= chunkSize;
-  }
-
-  // case where we are at the start of a new array and have less than a
-  // NULL_ARRAY to add
-  st = builder->AppendNulls(nullsNeeded);
-  // we know there is enough room for value since we could not add a NULL_ARRAY
-  if (val != nullptr) {
-    appendValue(builder, *val);
-  } else {
-    builder->AppendNull();
-  }
-  // if we filled up a chunk, flush it
-  if (((size_t)builder->length()) == chunkSize) {
-    chunks->push_back(buildArray(builder));
-  }
-
+// Add nulls until the array is even and then append val so that length = total
+// + 1 at the end
+template <typename T, typename W>
+void AddTypedValue(const W& val, std::shared_ptr<T> builder,
+                   ArrowArrays* chunks,
+                   std::shared_ptr<arrow::Array> null_array,
+                   WriterProperties* properties, size_t total) {
+  AddNulls(builder, chunks, null_array, properties, total);
+  auto st = builder->Append(val);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
                      st.ToString());
+  }
+
+  // if we filled up a chunk, flush it
+  if (((size_t)builder->length()) == properties->chunk_size) {
+    chunks->push_back(BuildArray(builder));
+  }
+}
+
+// Add nulls until the array is even and then append a list so that length =
+// total + 1 at the end
+template <typename T, typename W>
+void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
+              const std::shared_ptr<W>& vals, size_t index,
+              std::shared_ptr<arrow::ListBuilder> list_builder, T* type_builder,
+              ArrowArrays* chunks, std::shared_ptr<arrow::Array> null_array,
+              WriterProperties* properties, size_t total) {
+  AddNulls(list_builder, chunks, null_array, properties, total);
+
+  int32_t start = list_vals->value_offset(index);
+  int32_t end   = list_vals->value_offset(index + 1);
+
+  auto st = list_builder->Append();
+  for (int32_t s = start; s < end; s++) {
+    st = type_builder->Append(vals->Value(s));
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
+                       st.ToString());
+    }
+  }
+  // if we filled up a chunk, flush it
+  if (((size_t)list_builder->length()) == properties->chunk_size) {
+    chunks->push_back(BuildArray(list_builder));
+  }
+}
+
+// Add nulls until the array is even and then append a list so that length =
+// total + 1 at the end
+void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
+              const std::shared_ptr<arrow::StringArray>& vals, size_t index,
+              std::shared_ptr<arrow::ListBuilder> list_builder,
+              arrow::StringBuilder* type_builder, ArrowArrays* chunks,
+              std::shared_ptr<arrow::Array> null_array,
+              WriterProperties* properties, size_t total) {
+  AddNulls(list_builder, chunks, null_array, properties, total);
+
+  int32_t start = list_vals->value_offset(index);
+  int32_t end   = list_vals->value_offset(index + 1);
+
+  auto st = list_builder->Append();
+  for (int32_t s = start; s < end; s++) {
+    st = type_builder->Append(vals->GetView(s));
+    if (!st.ok()) {
+      GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
+                       st.ToString());
+    }
+  }
+  // if we filled up a chunk, flush it
+  if (((size_t)list_builder->length()) == properties->chunk_size) {
+    chunks->push_back(BuildArray(list_builder));
+  }
+}
+
+// Add falses until the array is even and then append true so that length =
+// total + 1 at the end
+void AddLabel(std::shared_ptr<arrow::BooleanBuilder> builder,
+              ArrowArrays* chunks, WriterProperties* properties, size_t total) {
+  AddFalses(builder, chunks, properties, total);
+  auto st = builder->Append(true);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
+                     st.ToString());
+  }
+
+  // if we filled up a chunk, flush it
+  if (((size_t)builder->length()) == properties->chunk_size) {
+    chunks->push_back(BuildArray(builder));
   }
 }
 
@@ -1461,38 +1109,392 @@ void addValue(std::string* val, std::shared_ptr<arrow::ArrayBuilder> builder,
 /* Functions for ensuring all arrow arrays are of the right length in the end */
 /******************************************************************************/
 
-void evenOutChunkBuilders(BooleanBuilders* builders,
+// Adds nulls to the array until its length == total
+template <typename T>
+void EvenOutArray(ArrowArrays* chunks, std::shared_ptr<T> builder,
+                  std::shared_ptr<arrow::Array> null_array,
+                  WriterProperties* properties, size_t total) {
+  AddNulls(builder, chunks, null_array, properties, total);
+
+  if (total % properties->chunk_size != 0) {
+    chunks->push_back(BuildArray(builder));
+  }
+}
+
+// Adds falses to the array until its length == total
+void EvenOutArray(ArrowArrays* chunks,
+                  std::shared_ptr<arrow::BooleanBuilder> builder,
+                  WriterProperties* properties, size_t total) {
+  AddFalses(builder, chunks, properties, total);
+
+  if (total % properties->chunk_size != 0) {
+    chunks->push_back(BuildArray(builder));
+  }
+}
+
+// Adds nulls to the arrays until each length == total
+void EvenOutChunkBuilders(ArrayBuilders* builders,
                           std::vector<ArrowArrays>* chunks,
-                          std::shared_ptr<arrow::Array> FALSE_ARRAY,
-                          size_t total, size_t chunkSize) {
+                          WriterProperties* properties, size_t total) {
   galois::do_all(galois::iterate((size_t)0, builders->size()),
                  [&](const size_t& i) {
-                   if (total > (chunks->at(i).size() * chunkSize) +
-                                   builders->at(i)->length()) {
-                     appendBoolean(false, builders->at(i), &chunks->at(i),
-                                   FALSE_ARRAY, total - 1, chunkSize);
-                   }
-                   if (total % chunkSize != 0) {
-                     chunks->at(i).push_back(buildArray(builders->at(i)));
+                   AddNulls(builders->at(i), &chunks->at(i), properties, total);
+
+                   if (total % properties->chunk_size != 0) {
+                     chunks->at(i).push_back(BuildArray(builders->at(i)));
                    }
                  });
 }
 
-void evenOutChunkBuilders(ArrayBuilders* builders,
+// Adds falses to the arrays until each length == total
+void EvenOutChunkBuilders(BooleanBuilders* builders,
                           std::vector<ArrowArrays>* chunks,
-                          NullMaps* NULL_ARRAYS, size_t total,
-                          size_t chunkSize) {
-  galois::do_all(galois::iterate((size_t)0, builders->size()),
-                 [&](const size_t& i) {
-                   if (total > (chunks->at(i).size() * chunkSize) +
-                                   builders->at(i)->length()) {
-                     addValue(nullptr, builders->at(i), &chunks->at(i),
-                              NULL_ARRAYS, total - 1, chunkSize);
-                   }
-                   if (total % chunkSize != 0) {
-                     chunks->at(i).push_back(buildArray(builders->at(i)));
-                   }
+                          WriterProperties* properties, size_t total) {
+  galois::do_all(
+      galois::iterate((size_t)0, builders->size()), [&](const size_t& i) {
+        AddFalses(builders->at(i), &chunks->at(i), properties, total);
+
+        if (total % properties->chunk_size != 0) {
+          chunks->at(i).push_back(BuildArray(builders->at(i)));
+        }
+      });
+}
+
+/**************************************************/
+/* Functions for reordering edges into CSR format */
+/**************************************************/
+
+// Rearrange an array's entries to match up with those of mapping
+template <typename T, typename W>
+ArrowArrays
+RearrangeArray(std::shared_ptr<T> builder,
+               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+               const std::vector<size_t>& mapping,
+               WriterProperties* properties) {
+  auto chunk_size = properties->chunk_size;
+  ArrowArrays chunks;
+  auto st = builder->Reserve(chunk_size);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
+                     st.ToString());
+  }
+  // cast and store array chunks for use in loop
+  std::vector<std::shared_ptr<W>> arrays;
+  for (auto chunk : chunked_array->chunks()) {
+    arrays.push_back(std::static_pointer_cast<W>(chunk));
+  }
+  std::shared_ptr<arrow::Array> null_array =
+      properties->null_arrays.first.find(builder->type()->id())->second;
+
+  // add non-null values
+  for (size_t i = 0; i < mapping.size(); i++) {
+    auto array = arrays[mapping[i] / chunk_size];
+
+    if (!array->IsNull(mapping[i] % chunk_size)) {
+      auto val = array->Value(mapping[i] % chunk_size);
+      AddTypedValue(val, builder, &chunks, null_array, properties, i);
+    }
+  }
+  EvenOutArray(&chunks, builder, null_array, properties, mapping.size());
+  return chunks;
+}
+
+// Rearrange an array's entries to match up with those of mapping
+ArrowArrays
+RearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
+               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+               const std::vector<size_t>& mapping,
+               WriterProperties* properties) {
+  auto chunk_size = properties->chunk_size;
+  ArrowArrays chunks;
+  auto st = builder->Reserve(chunk_size);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
+                     st.ToString());
+  }
+  // cast and store array chunks for use in loop
+  std::vector<std::shared_ptr<arrow::StringArray>> arrays;
+  for (auto chunk : chunked_array->chunks()) {
+    arrays.push_back(std::static_pointer_cast<arrow::StringArray>(chunk));
+  }
+  std::shared_ptr<arrow::Array> null_array =
+      properties->null_arrays.first.find(builder->type()->id())->second;
+
+  // add non-null values
+  for (size_t i = 0; i < mapping.size(); i++) {
+    auto array = arrays[mapping[i] / chunk_size];
+
+    if (!array->IsNull(mapping[i] % chunk_size)) {
+      auto val = array->GetView(mapping[i] % chunk_size);
+      AddTypedValue(val, builder, &chunks, null_array, properties, i);
+    }
+  }
+  EvenOutArray(&chunks, builder, null_array, properties, mapping.size());
+  return chunks;
+}
+
+// Rearrange an array's entries to match up with those of mapping, for labels
+ArrowArrays
+RearrangeArray(std::shared_ptr<arrow::BooleanBuilder> builder,
+               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+               const std::vector<size_t>& mapping,
+               WriterProperties* properties) {
+  auto chunk_size = properties->chunk_size;
+  ArrowArrays chunks;
+  auto st = builder->Reserve(chunk_size);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
+                     st.ToString());
+  }
+  // cast and store array chunks for use in loop
+  std::vector<std::shared_ptr<arrow::BooleanArray>> arrays;
+  for (auto chunk : chunked_array->chunks()) {
+    arrays.push_back(std::static_pointer_cast<arrow::BooleanArray>(chunk));
+  }
+
+  // add non-null values
+  for (size_t i = 0; i < mapping.size(); i++) {
+    auto val = arrays[mapping[i] / chunk_size]->Value(mapping[i] % chunk_size);
+    if (val) {
+      AddLabel(builder, &chunks, properties, i);
+    }
+  }
+  EvenOutArray(&chunks, builder, properties, mapping.size());
+  return chunks;
+}
+
+// Rearrange a list array's entries to match up with those of mapping
+template <typename T, typename W>
+ArrowArrays RearrangeArray(
+    const std::shared_ptr<arrow::ListBuilder>& builder, T* type_builder,
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const std::vector<size_t>& mapping, WriterProperties* properties) {
+  auto chunk_size = properties->chunk_size;
+  ArrowArrays chunks;
+  auto st = builder->Reserve(chunk_size);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
+                     st.ToString());
+  }
+  // cast and store array chunks for use in loop
+  std::vector<std::shared_ptr<arrow::ListArray>> list_arrays;
+  std::vector<std::shared_ptr<W>> sub_arrays;
+  for (auto chunk : chunked_array->chunks()) {
+    auto array_temp = std::static_pointer_cast<arrow::ListArray>(chunk);
+    list_arrays.push_back(array_temp);
+    sub_arrays.push_back(std::static_pointer_cast<W>(array_temp->values()));
+  }
+  std::shared_ptr<arrow::Array> null_array =
+      properties->null_arrays.second.find(type_builder->type()->id())->second;
+
+  // add values
+  for (size_t i = 0; i < mapping.size(); i++) {
+    auto list_array = list_arrays[mapping[i] / chunk_size];
+    auto sub_array  = sub_arrays[mapping[i] / chunk_size];
+    auto index      = mapping[i] % chunk_size;
+    if (!list_array->IsNull(index)) {
+      AddArray(list_array, sub_array, index, builder, type_builder, &chunks,
+               null_array, properties, i);
+    }
+  }
+  EvenOutArray(&chunks, builder, null_array, properties, mapping.size());
+  return chunks;
+}
+
+// Rearrange a list array's entries to match up with those of mapping
+ArrowArrays RearrangeListArray(
+    const std::shared_ptr<arrow::ChunkedArray>& list_chunked_array,
+    const std::vector<size_t>& mapping, WriterProperties* properties) {
+  auto* pool = arrow::default_memory_pool();
+  ArrowArrays chunks;
+  auto list_type =
+      std::static_pointer_cast<arrow::BaseListType>(list_chunked_array->type())
+          ->value_type()
+          ->id();
+
+  switch (list_type) {
+  case arrow::Type::STRING: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::StringBuilder>());
+    auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::StringBuilder, arrow::StringArray>(
+        builder, sb, list_chunked_array, mapping, properties);
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::Int64Builder>());
+    auto lb = static_cast<arrow::Int64Builder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
+        builder, lb, list_chunked_array, mapping, properties);
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::Int32Builder>());
+    auto ib = static_cast<arrow::Int32Builder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
+        builder, ib, list_chunked_array, mapping, properties);
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::DoubleBuilder>());
+    auto db = static_cast<arrow::DoubleBuilder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
+        builder, db, list_chunked_array, mapping, properties);
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::FloatBuilder>());
+    auto fb = static_cast<arrow::FloatBuilder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
+        builder, fb, list_chunked_array, mapping, properties);
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto builder = std::make_shared<arrow::ListBuilder>(
+        pool, std::make_shared<arrow::BooleanBuilder>());
+    auto bb = static_cast<arrow::BooleanBuilder*>(builder->value_builder());
+    chunks  = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
+        builder, bb, list_chunked_array, mapping, properties);
+    break;
+  }
+  default: {
+    GALOIS_LOG_FATAL(
+        "Unsupported arrow array type passed to RearrangeListArray: {}",
+        list_type);
+  }
+  }
+  return chunks;
+}
+
+// Rearrange each column in a table so that their entries match up with those of
+// mapping
+std::vector<ArrowArrays> RearrangeTable(const ChunkedArrays& initial,
+                                        const std::vector<size_t>& mapping,
+                                        WriterProperties* properties) {
+  std::vector<ArrowArrays> rearranged;
+  rearranged.resize(initial.size());
+
+  galois::do_all(
+      galois::iterate((size_t)0, initial.size()), [&](const size_t& n) {
+        auto array     = initial[n];
+        auto arrayType = array->type()->id();
+        ArrowArrays ca;
+
+        switch (arrayType) {
+        case arrow::Type::STRING: {
+          auto sb = std::make_shared<arrow::StringBuilder>();
+          ca      = RearrangeArray(sb, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::INT64: {
+          auto lb = std::make_shared<arrow::Int64Builder>();
+          ca      = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
+              lb, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::INT32: {
+          auto ib = std::make_shared<arrow::Int32Builder>();
+          ca      = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
+              ib, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::DOUBLE: {
+          auto db = std::make_shared<arrow::DoubleBuilder>();
+          ca      = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
+              db, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::FLOAT: {
+          auto fb = std::make_shared<arrow::FloatBuilder>();
+          ca      = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
+              fb, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::BOOL: {
+          auto bb = std::make_shared<arrow::BooleanBuilder>();
+          ca      = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
+              bb, array, mapping, properties);
+          break;
+        }
+        case arrow::Type::LIST: {
+          ca = RearrangeListArray(array, mapping, properties);
+          break;
+        }
+        default: {
+          GALOIS_LOG_FATAL(
+              "Unsupported arrow array type passed to RearrangeTable: {}",
+              arrayType);
+        }
+        }
+        rearranged[n] = ca;
+        array.reset();
+      });
+  return rearranged;
+}
+
+// Rearrange each column in a table so that their entries match up with those of
+// mapping, for labels
+std::vector<ArrowArrays> RearrangeTypeTable(const ChunkedArrays& initial,
+                                            const std::vector<size_t>& mapping,
+                                            WriterProperties* properties) {
+  std::vector<ArrowArrays> rearranged;
+  rearranged.resize(initial.size());
+
+  galois::do_all(galois::iterate((size_t)0, initial.size()),
+                 [&](const size_t& n) {
+                   auto array = initial[n];
+
+                   auto bb = std::make_shared<arrow::BooleanBuilder>();
+                   auto ca = RearrangeArray(bb, array, mapping, properties);
+                   rearranged[n] = ca;
+
+                   array.reset();
                  });
+  return rearranged;
+}
+
+// Build CSR format and rearrange edge tables to correspond to the CSR
+std::pair<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Table>>
+BuildFinalEdges(GraphState* builder, WriterProperties* properties) {
+  galois::ParallelSTL::partial_sum(
+      builder->topology_builder.out_indices.begin(),
+      builder->topology_builder.out_indices.end(),
+      builder->topology_builder.out_indices.begin());
+
+  std::vector<size_t> edge_mapping;
+  edge_mapping.resize(builder->edges, std::numeric_limits<uint64_t>::max());
+
+  std::vector<uint64_t> offsets;
+  offsets.resize(builder->nodes, 0);
+
+  // get edge indices
+  for (size_t i = 0; i < builder->topology_builder.sources.size(); i++) {
+    uint64_t edgeId = SetEdgeId(&builder->topology_builder, &offsets, i);
+    // edge_mapping[i] = edgeId;
+    edge_mapping[edgeId] = i;
+  }
+
+  auto initial_edges = BuildChunks(&builder->edge_properties.chunks);
+  auto initial_types = BuildChunks(&builder->edge_types.chunks);
+
+  auto finalEdgeBuilders =
+      RearrangeTable(initial_edges, edge_mapping, properties);
+  auto finalTypeBuilders =
+      RearrangeTypeTable(initial_types, edge_mapping, properties);
+
+  std::cout << "False Constants Added Post-Ordering: "
+            << properties->falses_added << std::endl;
+  std::cout << "Null Constants Added Post-Ordering: " << properties->nulls_added
+            << std::endl;
+
+  return std::pair<std::shared_ptr<arrow::Table>,
+                   std::shared_ptr<arrow::Table>>(
+      BuildTable(&finalEdgeBuilders, &builder->edge_properties.schema),
+      BuildTable(&finalTypeBuilders, &builder->edge_types.schema));
 }
 
 /********************************************************************/
@@ -1500,9 +1502,9 @@ void evenOutChunkBuilders(ArrayBuilders* builders,
 /********************************************************************/
 
 template <typename T>
-void addNullArrays(
-    std::unordered_map<int, std::shared_ptr<arrow::Array>>* nullMap,
-    std::unordered_map<int, std::shared_ptr<arrow::Array>>* listsNullMap,
+void AddNullArrays(
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>* null_map,
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>* lists_null_map,
     size_t elts) {
   auto* pool = arrow::default_memory_pool();
 
@@ -1510,35 +1512,35 @@ void addNullArrays(
   // extraneous info
   auto builder = std::make_shared<T>();
   auto st      = builder->AppendNulls(elts);
-  nullMap->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
-      builder->type()->id(), buildArray(builder)));
+  null_map->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
+      builder->type()->id(), BuildArray(builder)));
 
-  auto lBuilder =
+  auto list_builder =
       std::make_shared<arrow::ListBuilder>(pool, std::make_shared<T>());
-  st = lBuilder->AppendNulls(elts);
-  listsNullMap->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
-      builder->type()->id(), buildArray(lBuilder)));
+  st = list_builder->AppendNulls(elts);
+  lists_null_map->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
+      builder->type()->id(), BuildArray(list_builder)));
 
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error creating null builders: {}", st.ToString());
   }
 }
 
-NullMaps getNullArrays(size_t elts) {
-  std::unordered_map<int, std::shared_ptr<arrow::Array>> nullMap;
-  std::unordered_map<int, std::shared_ptr<arrow::Array>> listsNullMap;
+NullMaps GetNullArrays(size_t elts) {
+  std::unordered_map<int, std::shared_ptr<arrow::Array>> null_map;
+  std::unordered_map<int, std::shared_ptr<arrow::Array>> lists_null_map;
 
-  addNullArrays<arrow::StringBuilder>(&nullMap, &listsNullMap, elts);
-  addNullArrays<arrow::Int32Builder>(&nullMap, &listsNullMap, elts);
-  addNullArrays<arrow::Int64Builder>(&nullMap, &listsNullMap, elts);
-  addNullArrays<arrow::FloatBuilder>(&nullMap, &listsNullMap, elts);
-  addNullArrays<arrow::DoubleBuilder>(&nullMap, &listsNullMap, elts);
-  addNullArrays<arrow::BooleanBuilder>(&nullMap, &listsNullMap, elts);
+  AddNullArrays<arrow::StringBuilder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::Int32Builder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::Int64Builder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::FloatBuilder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::DoubleBuilder>(&null_map, &lists_null_map, elts);
+  AddNullArrays<arrow::BooleanBuilder>(&null_map, &lists_null_map, elts);
 
-  return NullMaps(std::move(nullMap), std::move(listsNullMap));
+  return NullMaps(std::move(null_map), std::move(lists_null_map));
 }
 
-std::shared_ptr<arrow::Array> getFalseArray(size_t elts) {
+std::shared_ptr<arrow::Array> GetFalseArray(size_t elts) {
   auto builder = std::make_shared<arrow::BooleanBuilder>();
   arrow::Status st;
   for (size_t i = 0; i < elts; i++) {
@@ -1548,7 +1550,7 @@ std::shared_ptr<arrow::Array> getFalseArray(size_t elts) {
     GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
                      st.ToString());
   }
-  return buildArray(builder);
+  return BuildArray(builder);
 }
 
 /***************************************/
@@ -1556,24 +1558,24 @@ std::shared_ptr<arrow::Array> getFalseArray(size_t elts) {
 /***************************************/
 
 // extract the type from an attr.type or attr.list attribute from a key element
-ImportDataType extractTypeGraphML(xmlChar* value) {
-  ImportDataType type = ImportDataType::STRING;
+ImportDataType ExtractTypeGraphML(xmlChar* value) {
+  ImportDataType type = ImportDataType::kString;
   if (xmlStrEqual(value, BAD_CAST "string")) {
-    type = ImportDataType::STRING;
+    type = ImportDataType::kString;
   } else if (xmlStrEqual(value, BAD_CAST "long")) {
-    type = ImportDataType::INT64;
+    type = ImportDataType::kInt64;
   } else if (xmlStrEqual(value, BAD_CAST "int")) {
-    type = ImportDataType::INT32;
+    type = ImportDataType::kInt32;
   } else if (xmlStrEqual(value, BAD_CAST "double")) {
-    type = ImportDataType::DOUBLE;
+    type = ImportDataType::kDouble;
   } else if (xmlStrEqual(value, BAD_CAST "float")) {
-    type = ImportDataType::FLOAT;
+    type = ImportDataType::kFloat;
   } else if (xmlStrEqual(value, BAD_CAST "boolean")) {
-    type = ImportDataType::BOOLEAN;
+    type = ImportDataType::kBoolean;
   } else {
     GALOIS_LOG_ERROR("Came across attr.type: {}, that is not supported",
                      std::string((const char*)value));
-    type = ImportDataType::STRING;
+    type = ImportDataType::kString;
   }
   return type;
 }
@@ -1583,16 +1585,16 @@ ImportDataType extractTypeGraphML(xmlChar* value) {
  *
  * extracts key attribute information for use later
  */
-KeyGraphML processKey(xmlTextReaderPtr reader) {
+KeyGraphML ProcessKey(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
   std::string id;
-  bool forNode = false;
-  bool forEdge = false;
-  std::string attrName;
-  ImportDataType type = ImportDataType::STRING;
-  bool isList         = false;
+  bool for_node = false;
+  bool for_edge = false;
+  std::string attr_name;
+  ImportDataType type = ImportDataType::kString;
+  bool is_list        = false;
 
   while (ret == 1) {
     name  = xmlTextReaderName(reader);
@@ -1601,18 +1603,18 @@ KeyGraphML processKey(xmlTextReaderPtr reader) {
       if (xmlStrEqual(name, BAD_CAST "id")) {
         id = std::string((const char*)value);
       } else if (xmlStrEqual(name, BAD_CAST "for")) {
-        forNode = xmlStrEqual(value, BAD_CAST "node") == 1;
-        forEdge = xmlStrEqual(value, BAD_CAST "edge") == 1;
+        for_node = xmlStrEqual(value, BAD_CAST "node") == 1;
+        for_edge = xmlStrEqual(value, BAD_CAST "edge") == 1;
       } else if (xmlStrEqual(name, BAD_CAST "attr.name")) {
-        attrName = std::string((const char*)value);
+        attr_name = std::string((const char*)value);
       } else if (xmlStrEqual(name, BAD_CAST "attr.type")) {
         // do this check for neo4j
-        if (!isList) {
-          type = extractTypeGraphML(value);
+        if (!is_list) {
+          type = ExtractTypeGraphML(value);
         }
       } else if (xmlStrEqual(name, BAD_CAST "attr.list")) {
-        isList = true;
-        type   = extractTypeGraphML(value);
+        is_list = true;
+        type    = ExtractTypeGraphML(value);
       } else {
         GALOIS_LOG_ERROR("Attribute on key: {}, was not recognized",
                          std::string((const char*)name));
@@ -1623,9 +1625,8 @@ KeyGraphML processKey(xmlTextReaderPtr reader) {
     xmlFree(value);
     ret = xmlTextReaderMoveToNextAttribute(reader);
   }
-  size_t columnID = 0;
   return KeyGraphML{
-      id, forNode, forEdge, attrName, type, isList, columnID,
+      id, for_node, for_edge, attr_name, type, is_list,
   };
 }
 
@@ -1634,8 +1635,8 @@ KeyGraphML processKey(xmlTextReaderPtr reader) {
  *
  * parses data from a GraphML file into property: pair<string, string>
  */
-std::pair<std::string, std::string> processData(xmlTextReaderPtr reader) {
-  auto minimumDepth = xmlTextReaderDepth(reader);
+std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
+  auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
@@ -1664,7 +1665,7 @@ std::pair<std::string, std::string> processData(xmlTextReaderPtr reader) {
   // parse xml text nodes for property data
   ret = xmlTextReaderRead(reader);
   // will terminate when </data> reached or an improper read
-  while (ret == 1 && minimumDepth < xmlTextReaderDepth(reader)) {
+  while (ret == 1 && minimum_depth < xmlTextReaderDepth(reader)) {
     name = xmlTextReaderName(reader);
     // if elt is an xml text node
     if (xmlTextReaderNodeType(reader) == 3) {
@@ -1684,19 +1685,9 @@ std::pair<std::string, std::string> processData(xmlTextReaderPtr reader) {
  *
  * parses the node from a GraphML file into readable form
  */
-bool processNode(xmlTextReaderPtr reader,
-                 std::unordered_map<std::string, KeyGraphML>* nodeKeys,
-                 ArrowFields* nodeSchemaVector,
-                 ArrayBuilders* nodeColumnBuilders,
-                 std::vector<ArrowArrays>* nodeChunks,
-                 std::unordered_map<std::string, size_t>* labelIndices,
-                 ArrowFields* nodeLabelSchemaVector,
-                 BooleanBuilders* nodeLabelColumnBuilders,
-                 std::vector<ArrowArrays>* labelChunks, NullMaps* NULL_ARRAYS,
-                 std::shared_ptr<arrow::Array> FALSE_ARRAY, size_t nodes,
-                 size_t chunkSize,
-                 std::unordered_map<std::string, size_t>* nodeIndexes) {
-  auto minimumDepth = xmlTextReaderDepth(reader);
+bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
+                 WriterProperties* properties) {
+  auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
@@ -1737,14 +1728,15 @@ bool processNode(xmlTextReaderPtr reader,
 
   bool validNode = !id.empty();
   if (validNode) {
-    nodeIndexes->insert(
-        std::pair<std::string, size_t>(id, nodeIndexes->size()));
+    builder->topology_builder.node_indexes.insert(
+        std::pair<std::string, size_t>(
+            id, builder->topology_builder.node_indexes.size()));
   }
 
   // parse "data" xml nodes for properties
   ret = xmlTextReaderRead(reader);
   // will terminate when </node> reached or an improper read
-  while (ret == 1 && minimumDepth < xmlTextReaderDepth(reader)) {
+  while (ret == 1 && minimum_depth < xmlTextReaderDepth(reader)) {
     name = xmlTextReaderName(reader);
     if (name == NULL) {
       name = xmlStrdup(BAD_CAST "--");
@@ -1753,7 +1745,7 @@ bool processNode(xmlTextReaderPtr reader,
     if (xmlTextReaderNodeType(reader) == 1) {
       // if elt is a "data" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "data")) {
-        auto property = processData(reader);
+        auto property = ProcessData(reader);
         if (property.first.size() > 0) {
           // we reserve the data fields label and labels for node/edge labels
           if (property.first == std::string("label") ||
@@ -1769,19 +1761,20 @@ bool processNode(xmlTextReaderPtr reader,
             }
           } else if (property.first != std::string("IGNORE")) {
             if (validNode) {
-              auto keyIter = nodeKeys->find(property.first);
+              auto keyIter = builder->node_properties.keys.find(property.first);
+              size_t index;
               // if an entry for the key does not already exist, make a default
               // entry for it
-              if (keyIter == nodeKeys->end()) {
-                addColumnBuilder(property.first, true, nodeKeys,
-                                 nodeColumnBuilders, nodeSchemaVector,
-                                 nodeChunks, arrow::utf8());
-                keyIter = nodeKeys->find(property.first);
+              if (keyIter == builder->node_properties.keys.end()) {
+                index =
+                    AddStringBuilder(property.first, &builder->node_properties);
+              } else {
+                index = keyIter->second;
               }
-              addValue(&property.second,
-                       nodeColumnBuilders->at(keyIter->second.columnID),
-                       &nodeChunks->at(keyIter->second.columnID), NULL_ARRAYS,
-                       nodes, chunkSize);
+              AddValue(property.second,
+                       builder->node_properties.builders[index],
+                       &builder->node_properties.chunks[index], properties,
+                       builder->nodes);
             }
           }
         }
@@ -1798,18 +1791,17 @@ bool processNode(xmlTextReaderPtr reader,
   // add labels if they exists
   if (validNode && labels.size() > 0) {
     for (std::string label : labels) {
-      auto entry = labelIndices->find(label);
+      auto entry = builder->node_labels.keys.find(label);
+      size_t index;
 
       // if label does not already exist, add a column
-      if (entry == labelIndices->end()) {
-        addFalseColumnBuilder(label, labelIndices, nodeLabelColumnBuilders,
-                              nodeLabelSchemaVector, labelChunks,
-                              arrow::boolean());
-        entry = labelIndices->find(label);
+      if (entry == builder->node_labels.keys.end()) {
+        index = AddFalseBuilder(label, &builder->node_labels);
+      } else {
+        index = entry->second;
       }
-      appendBoolean(true, nodeLabelColumnBuilders->at(entry->second),
-                    &labelChunks->at(entry->second), FALSE_ARRAY, nodes,
-                    chunkSize);
+      AddLabel(builder->node_labels.builders[index],
+               &builder->node_labels.chunks[index], properties, builder->nodes);
     }
   }
   return validNode;
@@ -1820,21 +1812,9 @@ bool processNode(xmlTextReaderPtr reader,
  *
  * parses the edge from a GraphML file into readable form
  */
-bool processEdge(xmlTextReaderPtr reader,
-                 std::unordered_map<std::string, KeyGraphML>* edgeKeys,
-                 ArrowFields* edgeSchemaVector,
-                 ArrayBuilders* edgeColumnBuilders,
-                 std::vector<ArrowArrays>* edgeChunks,
-                 std::unordered_map<std::string, size_t>* typeIndices,
-                 ArrowFields* edgeTypeSchemaVector,
-                 BooleanBuilders* edgeTypeColumnBuilders,
-                 std::vector<ArrowArrays>* typeChunks, NullMaps* NULL_ARRAYS,
-                 std::shared_ptr<arrow::Array> FALSE_ARRAY, size_t edges,
-                 size_t chunkSize, std::vector<uint64_t>* out_indices_,
-                 std::vector<uint32_t>* sources,
-                 std::vector<uint32_t>* destinations,
-                 std::unordered_map<std::string, size_t>* nodeIndexes) {
-  auto minimumDepth = xmlTextReaderDepth(reader);
+bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
+                 WriterProperties* properties) {
+  auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
@@ -1842,7 +1822,7 @@ bool processEdge(xmlTextReaderPtr reader,
   std::string source;
   std::string target;
   std::string type;
-  bool extractedType = false; // neo4j includes these twice so only parse 1
+  bool extracted_type = false; // neo4j includes these twice so only parse 1
 
   // parse node attributes for id (required) and label(s) (optional)
   while (ret == 1) {
@@ -1857,8 +1837,8 @@ bool processEdge(xmlTextReaderPtr reader,
         target = std::string((const char*)value);
       } else if (xmlStrEqual(name, BAD_CAST "labels") ||
                  xmlStrEqual(name, BAD_CAST "label")) {
-        type          = std::string((const char*)value);
-        extractedType = true;
+        type           = std::string((const char*)value);
+        extracted_type = true;
       } else {
         GALOIS_LOG_ERROR(
             "Attribute on edge: {}, with value {} was not recognized",
@@ -1871,25 +1851,25 @@ bool processEdge(xmlTextReaderPtr reader,
     ret = xmlTextReaderMoveToNextAttribute(reader);
   }
 
-  bool validEdge = !source.empty() && !target.empty();
-  if (validEdge) {
-    auto srcEntry  = nodeIndexes->find(source);
-    auto destEntry = nodeIndexes->find(target);
+  bool valid_edge = !source.empty() && !target.empty();
+  if (valid_edge) {
+    auto src_entry  = builder->topology_builder.node_indexes.find(source);
+    auto dest_entry = builder->topology_builder.node_indexes.find(target);
 
-    validEdge =
-        srcEntry != nodeIndexes->end() && destEntry != nodeIndexes->end();
-    if (validEdge) {
-      sources->push_back(srcEntry->second);
-      destinations->push_back((uint32_t)destEntry->second);
-      out_indices_->at(srcEntry->second) =
-          out_indices_->at(srcEntry->second) + 1;
+    valid_edge = src_entry != builder->topology_builder.node_indexes.end() &&
+                 dest_entry != builder->topology_builder.node_indexes.end();
+    if (valid_edge) {
+      builder->topology_builder.sources.push_back(src_entry->second);
+      builder->topology_builder.destinations.push_back(
+          (uint32_t)dest_entry->second);
+      builder->topology_builder.out_indices[src_entry->second]++;
     }
   }
 
   // parse "data" xml edges for properties
   ret = xmlTextReaderRead(reader);
   // will terminate when </edge> reached or an improper read
-  while (ret == 1 && minimumDepth < xmlTextReaderDepth(reader)) {
+  while (ret == 1 && minimum_depth < xmlTextReaderDepth(reader)) {
     name = xmlTextReaderName(reader);
     if (name == NULL) {
       name = xmlStrdup(BAD_CAST "--");
@@ -1898,30 +1878,31 @@ bool processEdge(xmlTextReaderPtr reader,
     if (xmlTextReaderNodeType(reader) == 1) {
       // if elt is a "data" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "data")) {
-        auto property = processData(reader);
+        auto property = ProcessData(reader);
         if (property.first.size() > 0) {
           // we reserve the data fields label and labels for node/edge labels
           if (property.first == std::string("label") ||
               property.first == std::string("labels")) {
-            if (!extractedType) {
-              type          = property.second;
-              extractedType = true;
+            if (!extracted_type) {
+              type           = property.second;
+              extracted_type = true;
             }
           } else if (property.first != std::string("IGNORE")) {
-            if (validEdge) {
-              auto keyIter = edgeKeys->find(property.first);
+            if (valid_edge) {
+              auto keyIter = builder->edge_properties.keys.find(property.first);
+              size_t index;
               // if an entry for the key does not already exist, make a default
               // entry for it
-              if (keyIter == edgeKeys->end()) {
-                addColumnBuilder(property.first, false, edgeKeys,
-                                 edgeColumnBuilders, edgeSchemaVector,
-                                 edgeChunks, arrow::utf8());
-                keyIter = edgeKeys->find(property.first);
+              if (keyIter == builder->edge_properties.keys.end()) {
+                index =
+                    AddStringBuilder(property.first, &builder->edge_properties);
+              } else {
+                index = keyIter->second;
               }
-              addValue(&property.second,
-                       edgeColumnBuilders->at(keyIter->second.columnID),
-                       &edgeChunks->at(keyIter->second.columnID), NULL_ARRAYS,
-                       edges, chunkSize);
+              AddValue(property.second,
+                       builder->edge_properties.builders[index],
+                       &builder->edge_properties.chunks[index], properties,
+                       builder->edges);
             }
           }
         }
@@ -1936,20 +1917,20 @@ bool processEdge(xmlTextReaderPtr reader,
   }
 
   // add type if it exists
-  if (validEdge && type.length() > 0) {
-    auto entry = typeIndices->find(type);
+  if (valid_edge && type.length() > 0) {
+    auto entry = builder->edge_types.keys.find(type);
+    size_t index;
 
     // if type does not already exist, add a column
-    if (entry == typeIndices->end()) {
-      addFalseColumnBuilder(type, typeIndices, edgeTypeColumnBuilders,
-                            edgeTypeSchemaVector, typeChunks, arrow::boolean());
-      entry = typeIndices->find(type);
+    if (entry == builder->edge_types.keys.end()) {
+      index = AddFalseBuilder(type, &builder->edge_types);
+    } else {
+      index = entry->second;
     }
-    appendBoolean(true, edgeTypeColumnBuilders->at(entry->second),
-                  &typeChunks->at(entry->second), FALSE_ARRAY, edges,
-                  chunkSize);
+    AddLabel(builder->edge_types.builders[index],
+             &builder->edge_types.chunks[index], properties, builder->edges);
   }
-  return validEdge;
+  return valid_edge;
 }
 
 /*
@@ -1957,35 +1938,15 @@ bool processEdge(xmlTextReaderPtr reader,
  *
  * parses the graph structure from a GraphML file into Galois format
  */
-void processGraphGraphML(
-    xmlTextReaderPtr reader,
-    std::unordered_map<std::string, KeyGraphML>* nodeKeys,
-    std::unordered_map<std::string, KeyGraphML>* edgeKeys,
-    ArrayBuilders* nodeColumnBuilders, ArrayBuilders* edgeColumnBuilders,
-    ArrowFields* nodeSchemaVector, ArrowFields* edgeSchemaVector,
-    std::vector<ArrowArrays>* nodeChunks, std::vector<ArrowArrays>* edgeChunks,
-    std::unordered_map<std::string, size_t>* labelIndices,
-    std::unordered_map<std::string, size_t>* typeIndices,
-    BooleanBuilders* nodeLabelColumnBuilders,
-    BooleanBuilders* edgeTypeColumnBuilders, ArrowFields* nodeLabelSchemaVector,
-    ArrowFields* edgeTypeSchemaVector, std::vector<ArrowArrays>* labelChunks,
-    std::vector<ArrowArrays>* typeChunks, NullMaps* NULL_ARRAYS,
-    std::shared_ptr<arrow::Array> FALSE_ARRAY,
-    std::vector<uint64_t>* out_indices_, std::vector<uint32_t>* out_dests_,
-    std::vector<uint32_t>* sources, std::vector<uint32_t>* destinations,
-    size_t chunkSize) {
-  auto minimumDepth = xmlTextReaderDepth(reader);
-  int ret           = xmlTextReaderRead(reader);
+void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
+                  WriterProperties* properties) {
+  auto minimum_depth = xmlTextReaderDepth(reader);
+  int ret            = xmlTextReaderRead(reader);
 
-  // maps node IDs to node indexes
-  std::unordered_map<std::string, size_t> nodeIndexes;
-
-  size_t nodes       = 0;
-  size_t edges       = 0;
-  bool finishedNodes = false;
+  bool finished_nodes = false;
 
   // will terminate when </graph> reached or an improper read
-  while (ret == 1 && minimumDepth < xmlTextReaderDepth(reader)) {
+  while (ret == 1 && minimum_depth < xmlTextReaderDepth(reader)) {
     xmlChar* name;
     name = xmlTextReaderName(reader);
     if (name == NULL) {
@@ -1995,34 +1956,32 @@ void processGraphGraphML(
     if (xmlTextReaderNodeType(reader) == 1) {
       // if elt is a "node" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "node")) {
-        if (processNode(reader, nodeKeys, nodeSchemaVector, nodeColumnBuilders,
-                        nodeChunks, labelIndices, nodeLabelSchemaVector,
-                        nodeLabelColumnBuilders, labelChunks, NULL_ARRAYS,
-                        FALSE_ARRAY, nodes, chunkSize, &nodeIndexes)) {
-          out_indices_->push_back(0);
-          nodes++;
+        if (ProcessNode(reader, builder, properties)) {
+          builder->topology_builder.out_indices.push_back(0);
+          builder->nodes++;
 
-          if (nodes % (chunkSize * 10) == 0) {
-            std::cout << "Nodes Processed: " << nodes << std::endl;
+          if (builder->nodes % (properties->chunk_size * 100) == 0) {
+            GALOIS_LOG_VERBOSE("Nodes Processed: {}", builder->nodes);
           }
         }
       } else if (xmlStrEqual(name, BAD_CAST "edge")) {
-        if (!finishedNodes) {
-          finishedNodes = true;
-          nodeKeys->clear();
-          labelIndices->clear();
+        // for analytic purposes
+        if (!finished_nodes) {
+          finished_nodes = true;
+          std::cout << "Rough False Constants Added to Nodes: "
+                    << properties->falses_added << std::endl;
+          std::cout << "Rough Null Constants Added to Nodes: "
+                    << properties->nulls_added << std::endl;
+          properties->falses_added = 0;
+          properties->nulls_added  = 0;
           std::cout << "Finished processing nodes" << std::endl;
         }
         // if elt is an "egde" xml node read it in
-        if (processEdge(reader, edgeKeys, edgeSchemaVector, edgeColumnBuilders,
-                        edgeChunks, typeIndices, edgeTypeSchemaVector,
-                        edgeTypeColumnBuilders, typeChunks, NULL_ARRAYS,
-                        FALSE_ARRAY, edges, chunkSize, out_indices_, sources,
-                        destinations, &nodeIndexes)) {
-          edges++;
+        if (ProcessEdge(reader, builder, properties)) {
+          builder->edges++;
 
-          if (edges % (chunkSize * 10) == 0) {
-            std::cout << "Edges Processed: " << edges << std::endl;
+          if (builder->edges % (properties->chunk_size * 100) == 0) {
+            GALOIS_LOG_VERBOSE("Edges Processed: {}", builder->edges);
           }
         }
       } else {
@@ -2034,21 +1993,34 @@ void processGraphGraphML(
     xmlFree(name);
     ret = xmlTextReaderRead(reader);
   }
-  edgeKeys->clear();
-  typeIndices->clear();
+  builder->node_properties.keys.clear();
+  builder->node_labels.keys.clear();
+  builder->edge_properties.keys.clear();
+  builder->edge_types.keys.clear();
   std::cout << "Finished processing edges" << std::endl;
 
   // add buffered rows before exiting and even out columns
-  evenOutChunkBuilders(nodeColumnBuilders, nodeChunks, NULL_ARRAYS, nodes,
-                       chunkSize);
-  evenOutChunkBuilders(nodeLabelColumnBuilders, labelChunks, FALSE_ARRAY, nodes,
-                       chunkSize);
-  evenOutChunkBuilders(edgeColumnBuilders, edgeChunks, NULL_ARRAYS, edges,
-                       chunkSize);
-  evenOutChunkBuilders(edgeTypeColumnBuilders, typeChunks, FALSE_ARRAY, edges,
-                       chunkSize);
+  EvenOutChunkBuilders(&builder->node_properties.builders,
+                       &builder->node_properties.chunks, properties,
+                       builder->nodes);
+  EvenOutChunkBuilders(&builder->node_labels.builders,
+                       &builder->node_labels.chunks, properties,
+                       builder->nodes);
+  EvenOutChunkBuilders(&builder->edge_properties.builders,
+                       &builder->edge_properties.chunks, properties,
+                       builder->edges);
+  EvenOutChunkBuilders(&builder->edge_types.builders,
+                       &builder->edge_types.chunks, properties, builder->edges);
 
-  out_dests_->resize(edges, std::numeric_limits<uint32_t>::max());
+  std::cout << "False Constants Added Pre-Ordering: "
+            << properties->falses_added << std::endl;
+  std::cout << "Null Constants Added Pre-Ordering: " << properties->nulls_added
+            << std::endl;
+  properties->falses_added = 0;
+  properties->nulls_added  = 0;
+
+  builder->topology_builder.out_dests.resize(
+      builder->edges, std::numeric_limits<uint32_t>::max());
 }
 
 } // end of unnamed namespace
@@ -2060,49 +2032,17 @@ namespace galois {
 /// \param infilename path to source graphml file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-GraphComponents convertGraphML(const std::string& infilename,
-                               const size_t chunkSize) {
+GraphComponents ConvertGraphml(const std::string& infilename,
+                               const size_t chunk_size) {
   xmlTextReaderPtr reader;
   int ret = 0;
 
-  std::unordered_map<std::string, KeyGraphML> nodeKeys;
-  std::unordered_map<std::string, KeyGraphML> edgeKeys;
-
-  ArrowFields nodeSchemaVector;
-  ArrayBuilders nodeColumnBuilders;
-  ArrowFields edgeSchemaVector;
-  ArrayBuilders edgeColumnBuilders;
-
-  std::vector<ArrowArrays> nodeChunks;
-  std::vector<ArrowArrays> edgeChunks;
-
-  std::unordered_map<std::string, size_t> labelIndices;
-  std::unordered_map<std::string, size_t> typeIndices;
-
-  ArrowFields nodeLabelSchemaVector;
-  BooleanBuilders nodeLabelColumnBuilders;
-  ArrowFields edgeTypeSchemaVector;
-  BooleanBuilders edgeTypeColumnBuilders;
-
-  std::vector<ArrowArrays> labelChunks;
-  std::vector<ArrowArrays> typeChunks;
-
-  // node's start of edge lists
-  std::vector<uint64_t> out_indices_;
-  // edge list of destinations
-  std::vector<uint32_t> out_dests_;
-  // list of sources of edges
-  std::vector<uint32_t> sources;
-  // list of destinations of edges
-  std::vector<uint32_t> destinations;
-
-  NullMaps NULL_ARRAYS                      = getNullArrays(chunkSize);
-  std::shared_ptr<arrow::Array> FALSE_ARRAY = getFalseArray(chunkSize);
+  GraphState builder{};
+  WriterProperties properties{GetNullArrays(chunk_size),
+                              GetFalseArray(chunk_size), chunk_size, 0, 0};
 
   galois::setActiveThreads(1000);
-
   bool finishedGraph = false;
-
   std::cout << "Start converting GraphML file: " << infilename << std::endl;
 
   reader = xmlNewTextReaderFilename(infilename.c_str());
@@ -2123,33 +2063,22 @@ GraphComponents convertGraphML(const std::string& infilename,
       if (xmlTextReaderNodeType(reader) == 1) {
         // if elt is a "key" xml node read it in
         if (xmlStrEqual(name, BAD_CAST "key")) {
-          KeyGraphML key = processKey(reader);
+          KeyGraphML key = ProcessKey(reader);
           if (key.id.size() > 0 && key.id != std::string("label") &&
               key.id != std::string("IGNORE")) {
-            if (key.forNode) {
-              key.columnID = nodeKeys.size();
-              nodeKeys.insert(std::pair(key.id, key));
-              addBuilder(&nodeColumnBuilders, &nodeSchemaVector, &key);
-              nodeChunks.push_back(ArrowArrays{});
-            } else if (key.forEdge) {
-              key.columnID = edgeKeys.size();
-              edgeKeys.insert(std::pair(key.id, key));
-              addBuilder(&edgeColumnBuilders, &edgeSchemaVector, &key);
-              edgeChunks.push_back(ArrowArrays{});
+            if (key.for_node) {
+              AddBuilder(&builder.node_properties, std::move(key));
+            } else if (key.for_edge) {
+              AddBuilder(&builder.edge_properties, std::move(key));
             }
           }
         } else if (xmlStrEqual(name, BAD_CAST "graph")) {
           std::cout << "Finished processing property headers" << std::endl;
-          std::cout << "Node Properties: " << nodeKeys.size() << std::endl;
-          std::cout << "Edge Properties: " << edgeKeys.size() << std::endl;
-          processGraphGraphML(
-              reader, &nodeKeys, &edgeKeys, &nodeColumnBuilders,
-              &edgeColumnBuilders, &nodeSchemaVector, &edgeSchemaVector,
-              &nodeChunks, &edgeChunks, &labelIndices, &typeIndices,
-              &nodeLabelColumnBuilders, &edgeTypeColumnBuilders,
-              &nodeLabelSchemaVector, &edgeTypeSchemaVector, &labelChunks,
-              &typeChunks, &NULL_ARRAYS, FALSE_ARRAY, &out_indices_,
-              &out_dests_, &sources, &destinations, chunkSize);
+          std::cout << "Node Properties declared: "
+                    << builder.node_properties.keys.size() << std::endl;
+          std::cout << "Edge Properties declared: "
+                    << builder.edge_properties.keys.size() << std::endl;
+          ProcessGraph(reader, &builder, &properties);
           finishedGraph = true;
         }
       }
@@ -2165,51 +2094,61 @@ GraphComponents convertGraphML(const std::string& infilename,
     GALOIS_LOG_FATAL("Unable to open {}", infilename);
   }
 
+  // build final nodes
+  auto final_node_table = BuildTable(&builder.node_properties.chunks,
+                                     &builder.node_properties.schema);
+  auto final_label_table =
+      BuildTable(&builder.node_labels.chunks, &builder.node_labels.schema);
+
+  std::cout << "Finished building nodes" << std::endl;
+
   // rearrange edges to match implicit edge IDs
-  auto initialEdges = buildChunks(&edgeChunks);
-  auto initialTypes = buildChunks(&typeChunks);
-  auto edgesTables  = buildFinalEdges(
-      initialEdges, &edgeSchemaVector, initialTypes, &edgeTypeSchemaVector,
-      &out_indices_, &out_dests_, sources, destinations, chunkSize,
-      &NULL_ARRAYS, FALSE_ARRAY);
-  std::shared_ptr<arrow::Table> finalEdgeTable = edgesTables.first;
-  std::shared_ptr<arrow::Table> finalTypeTable = edgesTables.second;
+  auto edgesTables = BuildFinalEdges(&builder, &properties);
+  std::shared_ptr<arrow::Table> final_edge_table = edgesTables.first;
+  std::shared_ptr<arrow::Table> final_type_table = edgesTables.second;
 
   std::cout << "Finished topology and ordering edges" << std::endl;
-
-  // build final nodes
-  auto finalNodeTable  = buildTable(&nodeChunks, &nodeSchemaVector);
-  auto finalLabelTable = buildTable(&labelChunks, &nodeLabelSchemaVector);
 
   // build topology
   auto topology = std::make_shared<galois::graphs::GraphTopology>();
   arrow::Status st;
-  std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+  std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
-  st = topologyIndicesBuilder->AppendValues(out_indices_);
+  st = topology_indices_builder->AppendValues(
+      builder.topology_builder.out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology: {}", st.ToString());
   }
-  std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+  std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
-  st = topologyDestsBuilder->AppendValues(out_dests_);
+  st = topology_dests_builder->AppendValues(builder.topology_builder.out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology: {}", st.ToString());
   }
 
-  st = topologyIndicesBuilder->Finish(&topology->out_indices);
+  st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                      st.ToString());
   }
-  st = topologyDestsBuilder->Finish(&topology->out_dests);
+  st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                      st.ToString());
   }
 
-  return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
-                         finalTypeTable, topology};
+  std::cout << "Finished graphml conversion to arrow" << std::endl;
+  std::cout << "Nodes: " << final_node_table->num_rows() << std::endl;
+  std::cout << "Node Properties: " << final_node_table->num_columns()
+            << std::endl;
+  std::cout << "Node Labels: " << final_label_table->num_columns() << std::endl;
+  std::cout << "Edges: " << final_edge_table->num_rows() << std::endl;
+  std::cout << "Edge Properties: " << final_edge_table->num_columns()
+            << std::endl;
+  std::cout << "Edge Types: " << final_type_table->num_columns() << std::endl;
+
+  return GraphComponents{final_node_table, final_label_table, final_edge_table,
+                         final_type_table, topology};
 }
 
 /// convertNeo4jJSON converts a json file exported from neo4j into katana form
@@ -2226,7 +2165,7 @@ GraphComponents convertGraphML(const std::string& infilename,
 /// \param infilename path to source json file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-GraphComponents convertNeo4jJSON(const std::string& infilename) {
+GraphComponents ConvertNeo4jJson(const std::string& infilename) {
   std::ifstream file(infilename);
   if (file) {
     std::unordered_map<std::string, size_t> nodeKeys;
@@ -2250,12 +2189,12 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
     std::vector<bool> nodeLabelNull;
     std::vector<bool> edgeTypeNull;
 
-    std::unordered_map<std::string, size_t> nodeIndexes;
+    std::unordered_map<std::string, size_t> node_indexes;
 
     // node's start of edge lists
-    std::vector<uint64_t> out_indices_;
+    std::vector<uint64_t> out_indices;
     // edge list of destinations
-    std::vector<uint32_t> out_dests_;
+    std::vector<uint32_t> out_dests;
     // list of sources of edges
     std::vector<uint32_t> sources;
     // list of destinations of edges
@@ -2284,9 +2223,9 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
           std::string id = root.get<std::string>("id");
           validNode      = id.size() > 0;
           if (validNode) {
-            nodeIndexes.insert(
-                std::pair<std::string, size_t>(id, nodeIndexes.size()));
-            out_indices_.push_back(0);
+            node_indexes.insert(
+                std::pair<std::string, size_t>(id, node_indexes.size()));
+            out_indices.push_back(0);
           }
         }
         if (validNode) {
@@ -2326,7 +2265,7 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
               auto key = labelIndices.find(propValue);
               // if property does not already exist, add a column
               if (key == labelIndices.end()) {
-                addFalseColumnBuilder(propValue, &labelIndices,
+                AddFalseColumnBuilder(propValue, &labelIndices,
                                       &nodeLabelColumnBuilders,
                                       &nodeLabelSchemaVector, arrow::boolean(),
                                       &nodeLabelNull, nodes);
@@ -2351,26 +2290,26 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
             root.get_child_optional("start.id");
         boost::optional<boost::property_tree::ptree&> destChild =
             root.get_child_optional("end.id");
-        bool validEdge = false;
+        bool valid_edge = false;
         if (srcChild && destChild) {
           std::string source = root.get<std::string>("start.id");
           std::string target = root.get<std::string>("end.id");
 
-          validEdge = source.size() > 0 && target.size() > 0;
-          if (validEdge) {
-            auto srcEntry  = nodeIndexes.find(source);
-            auto destEntry = nodeIndexes.find(target);
+          valid_edge = source.size() > 0 && target.size() > 0;
+          if (valid_edge) {
+            auto src_entry  = node_indexes.find(source);
+            auto dest_entry = node_indexes.find(target);
 
-            validEdge =
-                srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
-            if (validEdge) {
-              sources.push_back(srcEntry->second);
-              destinations.push_back(destEntry->second);
-              out_indices_[srcEntry->second]++;
+            valid_edge = src_entry != node_indexes.end() &&
+                         dest_entry != node_indexes.end();
+            if (valid_edge) {
+              sources.push_back(src_entry->second);
+              destinations.push_back(dest_entry->second);
+              out_indices[src_entry->second]++;
             }
           }
         }
-        if (validEdge) {
+        if (valid_edge) {
           if (child) {
             // iterate over all relationship's properties
             for (boost::property_tree::ptree::value_type& prop :
@@ -2405,7 +2344,7 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
             auto key = typeIndices.find(type);
             // if property does not already exist, add a column
             if (key == typeIndices.end()) {
-              addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
+              AddFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
                                     &edgeTypeSchemaVector, arrow::boolean(),
                                     &edgeTypeNull, edges);
               key = typeIndices.find(type);
@@ -2425,48 +2364,47 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
         }
       }
     }
-    out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
+    out_dests.resize(edges, std::numeric_limits<uint32_t>::max());
 
-    auto edgesTables =
-        buildFinalEdges(&edgeColumnBuilders, &edgeSchemaVector,
-                        &edgeTypeColumnBuilders, &edgeTypeSchemaVector,
-                        &out_indices_, &out_dests_, sources, destinations);
-    auto finalEdgeTable = edgesTables.first;
-    auto finalTypeTable = edgesTables.second;
+    auto edgesTables = BuildFinalEdges(
+        &edgeColumnBuilders, &edgeSchemaVector, &edgeTypeColumnBuilders,
+        &edgeTypeSchemaVector, &out_indices, &out_dests, sources, destinations);
+    auto final_edge_table = edgesTables.first;
+    auto final_type_table = edgesTables.second;
 
-    auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
-    auto finalLabelTable =
-        buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
+    auto final_node_table = BuildTable(&nodeColumnBuilders, &nodeSchemaVector);
+    auto final_label_table =
+        BuildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
 
     // build topology
     auto topology = std::make_shared<galois::graphs::GraphTopology>();
     arrow::Status st;
-    std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+    std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
         std::make_shared<arrow::UInt64Builder>();
-    st = topologyIndicesBuilder->AppendValues(out_indices_);
+    st = topology_indices_builder->AppendValues(out_indices);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building topology: {}", st.ToString());
     }
-    std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+    std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
         std::make_shared<arrow::UInt32Builder>();
-    st = topologyDestsBuilder->AppendValues(out_dests_);
+    st = topology_dests_builder->AppendValues(out_dests);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building topology: {}", st.ToString());
     }
 
-    st = topologyIndicesBuilder->Finish(&topology->out_indices);
+    st = topology_indices_builder->Finish(&topology->out_indices);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                        st.ToString());
     }
-    st = topologyDestsBuilder->Finish(&topology->out_dests);
+    st = topology_dests_builder->Finish(&topology->out_dests);
     if (!st.ok()) {
       GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                        st.ToString());
     }
 
-    return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
-                           finalTypeTable, topology};
+    return GraphComponents{final_node_table, final_label_table,
+                           final_edge_table, final_type_table, topology};
   }
   GALOIS_LOG_FATAL("Error opening file: {}", infilename);
 }
@@ -2489,7 +2427,7 @@ GraphComponents convertNeo4jJSON(const std::string& infilename) {
 /// \param infilename path to source csv file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-GraphComponents convertNeo4jCSV(const std::string& infilename) {
+GraphComponents ConvertNeo4jCsv(const std::string& infilename) {
   ArrowFields nodeSchemaVector;
   StringBuilders nodeColumnBuilders;
   ArrowFields edgeSchemaVector;
@@ -2506,12 +2444,12 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
   std::vector<bool> nodeLabelNull;
   std::vector<bool> edgeTypeNull;
 
-  std::unordered_map<std::string, size_t> nodeIndexes;
+  std::unordered_map<std::string, size_t> node_indexes;
 
   // node's start of edge lists
-  std::vector<uint64_t> out_indices_;
+  std::vector<uint64_t> out_indices;
   // edge list of destinations
-  std::vector<uint32_t> out_dests_;
+  std::vector<uint32_t> out_dests;
   // list of sources of edges
   std::vector<uint32_t> sources;
   // list of destinations of edges
@@ -2544,8 +2482,8 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
     }
     // deal with nodes
     if (fields[id_index].length() > 0) {
-      nodeIndexes.insert(
-          std::pair<std::string, size_t>(fields[id_index], nodeIndexes.size()));
+      node_indexes.insert(std::pair<std::string, size_t>(fields[id_index],
+                                                         node_indexes.size()));
 
       // extract labels
       if (fields[labels_index].length() > 0) {
@@ -2564,7 +2502,7 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
 
             // if label does not already exist, add a column
             if (entry == labelIndices.end()) {
-              addFalseColumnBuilder(label, &labelIndices,
+              AddFalseColumnBuilder(label, &labelIndices,
                                     &nodeLabelColumnBuilders,
                                     &nodeLabelSchemaVector, arrow::boolean(),
                                     &nodeLabelNull, nodes);
@@ -2597,23 +2535,23 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
           }
         }
       }
-      out_indices_.push_back(0);
+      out_indices.push_back(0);
       nodes++;
     }
     // deal with edges
     else if (fields[start_index].length() > 0 &&
              fields[end_index].length() > 0) {
-      auto srcEntry  = nodeIndexes.find(fields[start_index]);
-      auto destEntry = nodeIndexes.find(fields[end_index]);
+      auto src_entry  = node_indexes.find(fields[start_index]);
+      auto dest_entry = node_indexes.find(fields[end_index]);
 
-      bool validEdge =
-          srcEntry != nodeIndexes.end() && destEntry != nodeIndexes.end();
-      if (validEdge) {
-        sources.push_back(srcEntry->second);
-        destinations.push_back(destEntry->second);
-        out_indices_[srcEntry->second]++;
+      bool valid_edge =
+          src_entry != node_indexes.end() && dest_entry != node_indexes.end();
+      if (valid_edge) {
+        sources.push_back(src_entry->second);
+        destinations.push_back(dest_entry->second);
+        out_indices[src_entry->second]++;
       }
-      if (validEdge) {
+      if (valid_edge) {
         for (auto i : edgeKeys) {
           if (fields[i.first].length() > 0) {
             auto st = edgeColumnBuilders[i.second]->Append(
@@ -2637,7 +2575,7 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
           auto key = typeIndices.find(type);
           // if property does not already exist, add a column
           if (key == typeIndices.end()) {
-            addFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
+            AddFalseColumnBuilder(type, &typeIndices, &edgeTypeColumnBuilders,
                                   &edgeTypeSchemaVector, arrow::boolean(),
                                   &edgeTypeNull, edges);
             key = typeIndices.find(type);
@@ -2656,84 +2594,84 @@ GraphComponents convertNeo4jCSV(const std::string& infilename) {
     }
     fields.clear();
   }
-  out_dests_.resize(edges, std::numeric_limits<uint32_t>::max());
+  out_dests.resize(edges, std::numeric_limits<uint32_t>::max());
 
-  auto edgesTables = buildFinalEdges(
+  auto edgesTables = BuildFinalEdges(
       &edgeColumnBuilders, &edgeSchemaVector, &edgeTypeColumnBuilders,
-      &edgeTypeSchemaVector, &out_indices_, &out_dests_, sources, destinations);
-  auto finalEdgeTable = edgesTables.first;
-  auto finalTypeTable = edgesTables.second;
+      &edgeTypeSchemaVector, &out_indices, &out_dests, sources, destinations);
+  auto final_edge_table = edgesTables.first;
+  auto final_type_table = edgesTables.second;
 
-  auto finalNodeTable = buildTable(&nodeColumnBuilders, &nodeSchemaVector);
-  auto finalLabelTable =
-      buildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
+  auto final_node_table = BuildTable(&nodeColumnBuilders, &nodeSchemaVector);
+  auto final_label_table =
+      BuildTable(&nodeLabelColumnBuilders, &nodeLabelSchemaVector);
 
   // build topology
   auto topology = std::make_shared<galois::graphs::GraphTopology>();
   arrow::Status st;
-  std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+  std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
-  st = topologyIndicesBuilder->AppendValues(out_indices_);
+  st = topology_indices_builder->AppendValues(out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology arrow array: {}", st.ToString());
   }
-  std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+  std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
-  st = topologyDestsBuilder->AppendValues(out_dests_);
+  st = topology_dests_builder->AppendValues(out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology arrow array: {}", st.ToString());
   }
 
-  st = topologyIndicesBuilder->Finish(&topology->out_indices);
+  st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                      st.ToString());
   }
-  st = topologyDestsBuilder->Finish(&topology->out_dests);
+  st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology: {}",
                      st.ToString());
   }
 
-  return GraphComponents{finalNodeTable, finalLabelTable, finalEdgeTable,
-                         finalTypeTable, topology};
+  return GraphComponents{final_node_table, final_label_table, final_edge_table,
+                         final_type_table, topology};
 }
 
 /// convertToPropertyGraphAndWrite formally builds katana form via
 /// PropertyFileGraph from imported components and writes the result to target
 /// directory
 ///
-/// \param graphComps imported components to convert into a PropertyFileGraph
+/// \param graph_comps imported components to convert into a PropertyFileGraph
 /// \param dir local FS directory or s3 directory to write PropertyFileGraph to
-void convertToPropertyGraphAndWrite(const GraphComponents& graphComps,
+void ConvertToPropertyGraphAndWrite(const GraphComponents& graph_comps,
                                     const std::string& dir) {
   galois::graphs::PropertyFileGraph graph;
 
-  auto result = graph.SetTopology(*graphComps.topology);
+  auto result = graph.SetTopology(*graph_comps.topology);
   if (!result) {
     GALOIS_LOG_FATAL("Error adding topology: {}", result.error());
   }
 
-  if (graphComps.nodeProperties->num_columns() > 0) {
-    result = graph.AddNodeProperties(graphComps.nodeProperties);
+  if (graph_comps.node_properties->num_columns() > 0) {
+    result = graph.AddNodeProperties(graph_comps.node_properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node properties: {}", result.error());
     }
   }
-  if (graphComps.nodeLabels->num_columns() > 0) {
-    result = graph.AddNodeProperties(graphComps.nodeLabels);
+  if (graph_comps.node_labels->num_columns() > 0) {
+    result = graph.AddNodeProperties(graph_comps.node_labels);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node labels: {}", result.error());
     }
   }
-  if (graphComps.edgeProperties->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graphComps.edgeProperties);
+  if (graph_comps.edge_properties->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graph_comps.edge_properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge properties: {}", result.error());
     }
   }
-  if (graphComps.edgeTypes->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graphComps.edgeTypes);
+  if (graph_comps.edge_types->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graph_comps.edge_types);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge types: {}", result.error());
     }

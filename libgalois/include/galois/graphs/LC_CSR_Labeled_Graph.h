@@ -430,6 +430,14 @@ public:
   /////////////////////////////////////////////////////////////////////////////
 
 protected:
+  /**
+   * Check if a vertex is present between in the edge destinations list
+   *
+   * @param key vertex to search for
+   * @param begin start of edge list iterator
+   * @param end end of edge list iterator
+   * @returns true iff the key exists
+   */
   template <bool inEdges>
   inline bool binarySearch(GraphNode key, edge_iterator begin,
                            edge_iterator end) {
@@ -472,10 +480,11 @@ public:
       auto begin = in_edge_begin(search, data);
       auto end   = in_edge_end(search, data);
       return binarySearch<true>(key, begin, end);
+    } else {
+      auto begin = edge_begin(search, data);
+      auto end   = edge_end(search, data);
+      return binarySearch<false>(key, begin, end);
     }
-    auto begin = edge_begin(search, data);
-    auto end   = edge_end(search, data);
-    return binarySearch<false>(key, begin, end);
   }
 
   /**

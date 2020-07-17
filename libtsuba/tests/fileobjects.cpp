@@ -1,11 +1,11 @@
+#include <boost/filesystem.hpp>
+
 #include "galois/Logging.h"
 #include "galois/FileSystem.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
-
-#include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
 

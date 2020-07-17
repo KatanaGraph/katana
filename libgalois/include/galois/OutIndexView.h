@@ -36,7 +36,7 @@ public:
 
   uint64_t num_nodes() const { return pfx_.prefix->header.num_nodes; }
   uint64_t num_edges() const { return pfx_.prefix->header.num_edges; }
-  uint64_t view_size() const { return pfx_.prefix_storage.size(); }
+  uint64_t view_size() const { return pfx_.view_offset; }
 
   const uint64_t& operator[](uint64_t n) const {
     assert(n < pfx_.prefix->header.num_nodes);

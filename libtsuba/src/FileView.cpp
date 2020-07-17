@@ -12,6 +12,24 @@
 #include "tsuba/file.h"
 #include "tsuba/Errors.h"
 
+/*
+ * SCB 2020-07-23
+ * We have a problem here involving modifying the underlying file. The problem
+ * is that if the underlying file is modified after the FileView is opened, all
+ * sorts of bad things might happen.
+ *
+ * One solution is to add a modified time field to FileStatBuf and invalidate
+ * the whole memory region whenever we discover the file has changed. This would
+ * require us to stat the file on every read. We could also attempt to use file
+ * locking to make the underlying file read only. But that seems likely to be a
+ * hairy mess that doesn't work properly?
+ *
+ * This is not a huge issue right now as S3 objects are immutable. And we could
+ * maybe solve the problem by internally treating local files as immutable as
+ * well. But that also seems a little dicey: we would have to enforce that
+ * somehow and also tell users to not modify our files?
+ */
+
 namespace tsuba {
 
 FileView::~FileView() {
@@ -24,7 +42,13 @@ galois::Result<void> FileView::Unbind() {
   galois::Result<void> res = galois::ResultSuccess();
   if (valid_) {
     if (map_start_ != nullptr) {
-      res = FileMunmap(map_start_);
+      if (int err = munmap(map_start_, file_size_); err) {
+        return galois::ResultErrno();
+      }
+    }
+    if (present_ != nullptr) {
+      free(present_);
+      present_ = nullptr;
     }
     valid_ = false;
   }
@@ -32,50 +56,92 @@ galois::Result<void> FileView::Unbind() {
 }
 
 galois::Result<void> FileView::Bind(const std::string& filename) {
-  StatBuf buf;
-  if (auto res = FileStat(filename, &buf); !res) {
-    return res.error();
-  }
-
-  return Bind(filename, 0, buf.size);
+  return Bind(filename, 0, std::numeric_limits<uint64_t>::max());
 }
 
 galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
                                     uint64_t end) {
-  assert(begin <= end);
-  if (end - begin >
-      static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
-    GALOIS_LOG_ERROR("FileView region must be indexable by int64_t, recieved "
-                     "region of size {:d}",
-                     end - begin);
+  StatBuf buf;
+  if (auto res = FileStat(filename, &buf); !res) {
+    return res.error();
+  }
+  uint64_t in_end = std::min<uint64_t>(end, static_cast<uint64_t>(buf.size));
+  if (in_end < begin) {
     return ErrorCode::InvalidArgument;
   }
 
-  uint64_t file_off   = RoundDownToBlock(begin);
-  uint64_t map_size   = RoundUpToBlock(end - file_off);
-  int64_t region_size = end - begin;
-  uint8_t* ptr        = nullptr;
+  // SCB 2020-07-23: Given that page_shift_ is treated as a compile-time
+  // constant, it seems silly to have it be a member of this class. But I can
+  // imagine one day wanting to set it dynamically based on file type, file
+  // size, type of backing storage, etc. So make it a class member and set it
+  // here.
+  page_shift_ = 20; /* 1M */
+  filename_   = filename;
+  void* tmp   = nullptr;
+  present_    = nullptr;
 
-  // size of 0 is an invalid thing to pass to Mmap, but we want to support
-  // 0 length FileViews (useful for new files)
-  if (map_size != 0) {
-    auto res = FileMmap(filename, file_off, map_size);
-    if (!res) {
-      return res.error();
-    }
-    ptr = res.value();
+  // Map enough virtual memory to hold entire file, but do not populate it
+  tmp = mmap(nullptr, buf.size, PROT_READ | PROT_WRITE,
+             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (tmp == MAP_FAILED) {
+    GALOIS_LOG_ERROR("mmap: {}", std::strerror(errno));
+    return galois::ResultErrno();
   }
 
   if (auto res = Unbind(); !res) {
     return res.error();
   }
-  map_size_     = map_size;
-  region_size_  = region_size;
-  file_offset_  = begin;
-  map_start_    = ptr;
-  region_start_ = ptr + (begin & kBlockOffsetMask); /* NOLINT */
-  valid_        = true;
-  cursor_       = 0;
+
+  map_start_ = static_cast<uint8_t*>(tmp);
+  mem_start_ = -1;
+  present_ =
+      (uint64_t*)calloc(page_number(buf.size) / 64 + 1, sizeof(uint64_t));
+  file_size_ = buf.size;
+  if (auto res = Fill(begin, in_end); !res) {
+    return res.error();
+  }
+
+  cursor_ = 0;
+  valid_  = true;
+  return galois::ResultSuccess();
+}
+
+galois::Result<void> FileView::Fill(uint64_t begin, uint64_t end) {
+  uint64_t in_end     = std::min<uint64_t>(end, file_size_);
+  uint64_t in_begin   = std::min<uint64_t>(begin, in_end);
+  uint64_t first_page = 0;
+  uint64_t last_page  = 0;
+  bool found_empty    = false;
+
+  // Gracefully handle the fill zero case here to simplify Bind
+  if (in_end != in_begin) {
+    if (auto opt = must_fill(page_number(in_begin), page_number(in_end));
+        opt.has_value()) {
+      std::tie(first_page, last_page) = opt.value();
+      found_empty                     = true;
+    }
+
+    uint64_t file_off = first_page * (1UL << page_shift_);
+    ;
+    uint64_t map_size =
+        std::min((last_page + 1) * (1UL << page_shift_) - file_off,
+                 file_size_ - file_off);
+    if (found_empty) {
+      if (auto res =
+              FilePeek(filename_, map_start_ + file_off, file_off, map_size);
+          !res) {
+        return res.error();
+      }
+      if (auto res = mark_filled(page_number(in_begin), page_number(in_end));
+          !res) {
+        return res.error();
+      }
+      int64_t signed_begin = static_cast<int64_t>(in_begin);
+      if (mem_start_ < 0 || signed_begin < mem_start_) {
+        mem_start_ = signed_begin;
+      }
+    }
+  }
   return galois::ResultSuccess();
 }
 
@@ -86,10 +152,15 @@ bool FileView::Equals(const FileView& other) const {
   if (size() != other.size()) {
     return false;
   }
-  return memcmp(ptr<uint8_t>(), other.ptr<uint8_t>(), size()) == 0;
+  // Consider two FileViews that refer to the same file to be equal, regardless
+  // of which portions of the file actually appear in memory.
+  if (filename_ != other.filename_) {
+    return false;
+  }
+  return true;
 }
 
-////////////// Begin arrow::io::RandomAccessFile method definitions ////////////
+////// Begin arrow::io::RandomAccessFile method definitions ////////
 
 arrow::Status FileView::Close() {
   if (auto res = Unbind(); !res) {
@@ -100,7 +171,8 @@ arrow::Status FileView::Close() {
 
 arrow::Result<int64_t> FileView::Tell() const {
   if (!valid_) {
-    return -1;
+    return arrow::Status(arrow::StatusCode::Invalid,
+                         "Unbound FileView has no cursor position");
   }
   return cursor_;
 }
@@ -112,10 +184,10 @@ arrow::Status FileView::Seek(int64_t seek_to) {
     return arrow::Status(arrow::StatusCode::Invalid,
                          "Cannot Seek in unbound FileView");
   }
-  if (seek_to > region_size_ || seek_to < 0) {
-    const std::string message =
-        std::string("Cannot Seek to ") + std::to_string(seek_to) +
-        " in region of size " + std::to_string(region_size_);
+  if (seek_to > file_size_ || seek_to < 0) {
+    const std::string message = std::string("Cannot Seek to ") +
+                                std::to_string(seek_to) + " in file of size " +
+                                std::to_string(file_size_);
     return arrow::Status(arrow::StatusCode::Invalid, message);
   }
   cursor_ = seek_to;
@@ -123,15 +195,21 @@ arrow::Status FileView::Seek(int64_t seek_to) {
 }
 
 arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
-  if (nbytes <= 0 || !valid_) {
-    return std::make_shared<arrow::Buffer>(region_start_, 0);
+  if (nbytes <= 0) {
+    return std::make_shared<arrow::Buffer>(map_start_, 0);
+  }
+  if (!valid_) {
+    return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
   }
   int64_t nbytes_internal = nbytes;
-  if (cursor_ + nbytes > region_size_) {
-    nbytes_internal = region_size_ - cursor_;
+  if (cursor_ + nbytes > file_size_) {
+    nbytes_internal = file_size_ - cursor_;
+  }
+  if (auto res = Fill(cursor_, cursor_ + nbytes_internal); !res) {
+    return arrow::Status(arrow::StatusCode::IOError, "FileView::Fill");
   }
   auto ret =
-      std::make_shared<arrow::Buffer>(region_start_ + cursor_, nbytes_internal);
+      std::make_shared<arrow::Buffer>(map_start_ + cursor_, nbytes_internal);
   cursor_ += nbytes_internal;
   return ret;
 }
@@ -141,19 +219,167 @@ arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
     return nbytes;
   }
   if (!valid_) {
-    return -1;
+    return arrow::Status(arrow::StatusCode::Invalid, "Unbound FileView");
   }
   int64_t nbytes_internal = nbytes;
-  if (cursor_ + nbytes > region_size_) {
-    nbytes_internal = region_size_ - cursor_;
+  if (cursor_ + nbytes > file_size_) {
+    nbytes_internal = file_size_ - cursor_;
   }
-  std::memcpy(out, region_start_ + cursor_, nbytes_internal);
+  if (auto res = Fill(cursor_, cursor_ + nbytes_internal); !res) {
+    return arrow::Status(arrow::StatusCode::IOError, "FileView::Fill");
+  }
+  std::memcpy(out, map_start_ + cursor_, nbytes_internal);
   cursor_ += nbytes_internal;
   return nbytes_internal;
 }
 
-arrow::Result<int64_t> FileView::GetSize() { return region_size_; }
+arrow::Result<int64_t> FileView::GetSize() { return size(); }
 
 ///// End arrow::io::RandomAccessFile method definitions /////////
 
+uint64_t FileView::page_number(uint64_t size) { return size >> page_shift_; }
+
+inline uint64_t FileView::f_page(uint64_t block_num, uint64_t start,
+                                 uint64_t end) {
+  uint64_t working       = ~present_[block_num];
+  uint64_t mask          = 1UL << (63 - start);
+  uint64_t page_low_bits = start;
+  while (!(working & mask) && page_low_bits <= end) {
+    mask >>= 1;
+    page_low_bits += 1;
+  }
+  return block_num * 64 + page_low_bits;
+}
+
+inline uint64_t FileView::l_page(uint64_t block_num, uint64_t start,
+                                 uint64_t end) {
+  uint64_t working       = ~present_[block_num];
+  uint64_t mask          = 1UL << (63 - end);
+  uint64_t page_low_bits = end;
+  while (!(working & mask) && page_low_bits >= start) {
+    mask <<= 1;
+    page_low_bits -= 1;
+  }
+  return block_num * 64 + page_low_bits;
+}
+
+std::optional<std::pair<uint64_t, uint64_t>> FileView::must_fill(uint64_t begin,
+                                                                 uint64_t end) {
+  /*
+   * We want to search for 0 bits in the bit array present_.
+   *
+   * For "internal" blocks, we just need to find any 0 bits in a uint64_t
+   * and this is relatively straightforward (i.e. A)
+   *
+   * But the first and last block might be only partially covered by [begin,
+   * end] (i.e. the range [60, 70] would cover the last 4 bits of block 0 and
+   * the first 7 bits of block 1).
+   *
+   * So we construct masks at B with ones in the bit positions we want to check.
+   * So for the above example,
+   * 0000000000000000000000000000000000000000000000000000000000001111
+   * and
+   * 1111111000000000000000000000000000000000000000000000000000000000
+   *
+   * Then we AND the mask against the block in question to zero out the bits we
+   * don't care about and XOR the mask against what is left to determine if
+   * there are zeroes left in the region we care about (the zeroed region will
+   * give all zeroes and the meaningful region will produce a 1 only if there is
+   * a zero present). This process occurs at C.
+   *
+   * Finally, we special case the situation where we only want to check part of
+   * one block (i.e. [13, 45]). (D) is the same as C except that we have to
+   * create and use The Mask in order to check the right region.
+   */
+  uint64_t begin_mask; /* B */
+  if (begin % 64) {
+    // This should work even if begin % 64 == 0, but it doesn't?
+    begin_mask = (UINT64_C(1) << (64 - begin % 64)) - UINT64_C(1);
+  } else {
+    begin_mask = ~UINT64_C(0);
+  }
+  uint64_t end_mask = ~((UINT64_C(1) << (63 - end % 64)) - UINT64_C(1));
+
+  uint64_t begin_block = begin / 64;
+  uint64_t end_block   = end / 64;
+
+  if (begin_block == end_block) { /* D */
+    uint64_t jim_carrey = begin_mask & end_mask;
+    if ((present_[begin_block] & jim_carrey) ^ jim_carrey) {
+      return std::make_pair(f_page(begin_block, begin % 64, end % 64),
+                            l_page(begin_block, begin % 64, end % 64));
+    }
+    return std::nullopt;
+  }
+
+  /* C */
+  uint64_t begin_block_zeroes =
+      (present_[begin_block] & begin_mask) ^ begin_mask;
+  uint64_t end_block_zeroes = (present_[end_block] & end_mask) ^ end_mask;
+
+  bool found_first    = begin_block_zeroes;
+  bool found_last     = end_block_zeroes;
+  uint64_t first_page = found_first ? f_page(begin_block, begin % 64, 63) : 0;
+  uint64_t last_page  = found_last ? l_page(end_block, 0, end % 64) : 0;
+
+  if (!found_first) {
+    // search forward for first missing page, skip begin block
+    for (uint64_t i = begin_block + 1; i < end_block && !found_first; ++i) {
+      if (~present_[i]) { /* A */
+        first_page  = f_page(i, 0, 63);
+        found_first = true;
+      }
+    }
+
+    if (!found_first && end_block_zeroes) {
+      first_page  = f_page(end_block, 0, end % 64);
+      found_first = true;
+    }
+  }
+
+  // If we were unsuccessful searching forward we are unlikely to succeed
+  // searching backward
+  if (found_first && !found_last) {
+    // search backward for last page, skip end_block
+    for (uint64_t i = end_block - 1; i > begin_block && !found_last; ++i) {
+      if (~present_[i]) {
+        last_page  = l_page(i, 0, 63);
+        found_last = true;
+      }
+    }
+
+    if (!found_last && begin_block_zeroes) {
+      last_page  = l_page(begin_block, begin % 64, 63);
+      found_last = true;
+    }
+  }
+
+  if (found_first) {
+    assert(found_last);
+    return std::make_pair(first_page, last_page);
+  } else {
+    return std::nullopt;
+  }
+}
+
+galois::Result<void> FileView::mark_filled(uint64_t begin, uint64_t end) {
+  uint64_t begin_mask;
+  if (begin % 64) {
+    begin_mask = (1UL << (64 - begin % 64)) - 1UL;
+  } else {
+    begin_mask = ~UINT64_C(0);
+  }
+  uint64_t end_mask = ~((1UL << (63 - end % 64)) - 1UL);
+
+  uint64_t begin_block = begin / 64;
+  uint64_t end_block   = end / 64;
+
+  present_[begin_block] |= begin_mask;
+  for (uint64_t i = begin_block + 1; i < end_block; ++i) {
+    present_[i] |= (uint64_t)(-1);
+  }
+  present_[end_block] |= end_mask;
+
+  return galois::ResultSuccess();
+}
 } // namespace tsuba

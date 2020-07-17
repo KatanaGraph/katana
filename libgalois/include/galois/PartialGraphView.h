@@ -26,7 +26,8 @@ class PartialGraphView {
 
   PartialGraphView(tsuba::RDG&& rdg, uint64_t first_node, uint64_t last_node,
                    uint64_t first_edge, uint64_t last_edge)
-      : rdg_(std::move(rdg)), edges_(rdg_.topology_file_storage.ptr<Edge>()),
+      : rdg_(std::move(rdg)),
+        edges_(rdg_.topology_file_storage.valid_ptr<Edge>()),
         first_node_(first_node), last_node_(last_node), first_edge_(first_edge),
         last_edge_(last_edge) {}
 

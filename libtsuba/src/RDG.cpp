@@ -568,11 +568,13 @@ galois::Result<void> DoLoad(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
   if (auto res = rdg->topology_file_storage.Bind(t_path.string()); !res) {
     return res.error();
   }
-  rdg->rdg_dir = handle.impl_->metadata_dir;
+  rdg->topology_size = rdg->topology_file_storage.size();
+  rdg->rdg_dir       = handle.impl_->metadata_dir;
   return galois::ResultSuccess();
 }
 
-galois::Result<tsuba::FileView> BindOutIndex(const std::string& topology_path) {
+galois::Result<tsuba::RDGPrefix>
+BindOutIndex(const std::string& topology_path) {
   tsuba::GRHeader header;
   if (auto res = tsuba::FilePeek(topology_path, &header); !res) {
     return res.error();
@@ -583,7 +585,10 @@ galois::Result<tsuba::FileView> BindOutIndex(const std::string& topology_path) {
       !res) {
     return res.error();
   }
-  return tsuba::FileView(std::move(fv));
+  tsuba::RDGPrefix pfx;
+  pfx.prefix_storage = tsuba::FileView(std::move(fv));
+  pfx.view_offset    = sizeof(header) + (header.num_nodes * sizeof(uint64_t));
+  return tsuba::RDGPrefix(std::move(pfx));
 }
 
 galois::Result<void>
@@ -601,6 +606,7 @@ DoPartialLoad(tsuba::RDGHandle handle,
       !res) {
     return res.error();
   }
+  rdg->topology_size = topo_size;
 
   auto node_result = AddTables(
       dir, rdg->node_properties,
@@ -663,9 +669,9 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
     }
     std::string t_path = std::move(path_res.value());
 
-    if (auto res =
-            tsuba::FileStore(t_path, rdg->topology_file_storage.ptr<uint8_t>(),
-                             rdg->topology_file_storage.size());
+    if (auto res = tsuba::FileStore(
+            t_path, rdg->topology_file_storage.valid_ptr<uint8_t>(),
+            rdg->topology_size);
         !res) {
       return res.error();
     }
@@ -788,8 +794,8 @@ galois::Result<tsuba::RDGPrefix> tsuba::ExaminePrefix(tsuba::RDGHandle handle) {
     return meta_res.error();
   }
 
+  tsuba::RDGPrefix pfx;
   RDG rdg = std::move(meta_res.value());
-  RDGPrefix pfx;
   if (rdg.topology_path.empty()) {
     return RDGPrefix(std::move(pfx));
   }
@@ -801,10 +807,11 @@ galois::Result<tsuba::RDGPrefix> tsuba::ExaminePrefix(tsuba::RDGHandle handle) {
   if (!out_idx_res) {
     return out_idx_res.error();
   }
-  pfx.prefix_storage = std::move(out_idx_res.value());
+  tsuba::RDGPrefix npfx = std::move(out_idx_res.value());
 
-  pfx.prefix = pfx.prefix_storage.ptr<GRPrefix>();
-  return RDGPrefix(std::move(pfx));
+  // This is safe because BindOutIndex binds the start of the file
+  npfx.prefix = npfx.prefix_storage.ptr<GRPrefix>();
+  return RDGPrefix(std::move(npfx));
 }
 
 galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
@@ -825,6 +832,7 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
       impl.rdg            = {.version = 0, .num_hosts = tsuba::Comm()->Num};
       return RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
     }
+    GALOIS_LOG_DEBUG("tsuba::Open 0");
     return rdg_res.error();
   }
 
@@ -841,6 +849,7 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
         HostPartitionName(ret, 0, ret.impl_->rdg.version);
   } else {
     if (ret.impl_->rdg.num_hosts != tsuba::Comm()->Num) {
+      GALOIS_LOG_DEBUG("tsuba::Open 1");
       return ErrorCode::InvalidArgument;
     }
     ret.impl_->partition_path =
@@ -1038,7 +1047,7 @@ tsuba::internal::LoadPartialTable(const std::string& expected_name,
     return tsuba::ErrorCode::InvalidArgument;
   }
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path); !res) {
+  if (auto res = fv->Bind(file_path, 0, 0); !res) {
     return res.error();
   }
 
@@ -1052,19 +1061,28 @@ tsuba::internal::LoadPartialTable(const std::string& expected_name,
   }
 
   std::vector<int> row_groups;
-  int rg_count            = reader->num_row_groups();
-  int64_t internal_offset = 0;
-  int64_t cumulative_rows = 0;
+  int rg_count             = reader->num_row_groups();
+  int64_t row_offset       = 0;
+  int64_t cumulative_rows  = 0;
+  int64_t file_offset      = 0;
+  int64_t cumulative_bytes = 0;
   for (int i = 0; cumulative_rows < offset + length && i < rg_count; ++i) {
-    int64_t new_rows =
-        reader->parquet_reader()->metadata()->RowGroup(i)->num_rows();
+    auto rg_md        = reader->parquet_reader()->metadata()->RowGroup(i);
+    int64_t new_rows  = rg_md->num_rows();
+    int64_t new_bytes = rg_md->total_byte_size();
     if (offset < cumulative_rows + new_rows) {
       if (row_groups.empty()) {
-        internal_offset = offset - cumulative_rows;
+        row_offset  = offset - cumulative_rows;
+        file_offset = cumulative_bytes;
       }
       row_groups.push_back(i);
     }
     cumulative_rows += new_rows;
+    cumulative_bytes += new_bytes;
+  }
+
+  if (auto res = fv->Fill(file_offset, cumulative_bytes); !res) {
+    return res.error();
   }
 
   std::shared_ptr<arrow::Table> out;
@@ -1083,5 +1101,5 @@ tsuba::internal::LoadPartialTable(const std::string& expected_name,
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  return out->Slice(internal_offset, length);
+  return out->Slice(row_offset, length);
 }

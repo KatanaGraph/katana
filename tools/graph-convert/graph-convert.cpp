@@ -201,11 +201,6 @@ static cll::opt<int>
 static cll::opt<int> maxDegree("maxDegree", cll::desc("maximum degree to keep"),
                                cll::init(2 * 1024));
 
-static cll::opt<bool>
-    dataAsLabel("dataAsLabel",
-                cll::desc("Use edge data as edge label (for neo4j/GraphFlow)"),
-                cll::init(false));
-
 struct Conversion {};
 struct HasOnlyVoidSpecialization {};
 struct HasNoVoidSpecialization {};
@@ -2683,19 +2678,38 @@ struct Gr2Totem : public HasNoVoidSpecialization {
 };
 
 struct Gr2Neo4j : public Conversion {
+  /**
+   * This conversion produces 4 files to use to import into neo4j.
+   *
+   * <output>.nodesheader: column names for columns in .nodes file
+   * <output>.nodes: a list of numbers from 0 -> number of nodes - 1 to signify
+   * IDs of nodes to be imported into neo4j
+   * <output>.edgesheader: column names for edges, which is just source, dest,
+   * and the name of the edge weight property ("value")
+   * <output>.edges: edgelist in text format with <src> <dst> <weight> (only if
+   * type is specified by user)
+   *
+   * These files can be used to import a GR into neo4j with the following
+   * command.
+   *
+   * ./neo4j-admin import --nodes=Vertex="<nodesheader>,<nodes>"
+   * --edges=EDGE="<edgesheader>,<edges>" --delimiter ','
+   *
+   * The label on nodes will be "Vertex", and the label on edges will be "EDGE".
+   * The weight, if it exists, will be in the property "value" on the edge.
+   *
+   * @tparam EdgeTy type of the edge on the gr. Right now, integer is the only
+   * type that is supported for sure
+   * @param infilename gr file to convert
+   * @param outfilename Prefix of output files, i.e. <outfilename>.nodesheader,
+   * <outfilename>.nodes, etc.
+   */
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
-    // TODO Need to figure out how we want to deal with labels
     using Graph           = galois::graphs::FileGraph;
     using GNode           = Graph::GraphNode;
     using EdgeData        = galois::LargeArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
-
-    // make sure if want to use edge data as a label that edge data actually
-    // exists
-    if (dataAsLabel) {
-      GALOIS_ASSERT(EdgeData::has_value, "No data to use as edge label");
-    }
 
     Graph graph;
     graph.fromFile(infilename);
@@ -2705,26 +2719,28 @@ struct Gr2Neo4j : public Conversion {
     // first is header
     std::string nodeHFile = outfilename + ".nodesheader";
     std::ofstream fileH(nodeHFile.c_str());
-    fileH << "uid:ID,:LABEL\n";
+    fileH << ":ID\n";
     fileH.close();
 
     // then nodes
     std::string nodeFile = outfilename + ".nodes";
     std::ofstream fileN(nodeFile.c_str());
+    // pretty inefficient: literally just printing 0 -> n in a text file, but
+    // sadly it's what neo4j requires to my knowledge
     for (size_t i = 0; i < graph.size(); i++) {
-      // TODO make this label come from somewhere? random maybe?
-      fileN << i << ",0\n";
+      fileN << i << "\n";
     }
     fileN.close();
 
     // output edge CSV with or without data for edge creation
     std::string edgeHFile = outfilename + ".edgesheader";
     std::ofstream fileHE(edgeHFile.c_str());
-    // only use edge data as value if data as label is not set
-    if (EdgeData::has_value && !dataAsLabel) {
-      fileHE << ":START_ID,:END_ID,:TYPE,value\n";
+
+    if (EdgeData::has_value) {
+      // TODO right now assumes integer output
+      fileHE << ":START_ID,:END_ID,value:int\n";
     } else {
-      fileHE << ":START_ID,:END_ID,:TYPE\n";
+      fileHE << ":START_ID,:END_ID\n";
     }
     fileHE.close();
 
@@ -2739,16 +2755,11 @@ struct Gr2Neo4j : public Conversion {
                                 ej = graph.edge_end(src);
            jj != ej; ++jj) {
         GNode dst = graph.getEdgeDst(jj);
-        if (EdgeData::has_value && !dataAsLabel) {
-          fileE << src << "," << dst << ",e,"
+        if (EdgeData::has_value) {
+          fileE << src << "," << dst << ","
                 << graph.getEdgeData<edge_value_type>(jj) << "\n";
         } else {
-          if (dataAsLabel) {
-            fileE << src << "," << dst << ","
-                  << graph.getEdgeData<edge_value_type>(jj) << "\n";
-          } else {
-            fileE << src << "," << dst << ",e\n";
-          }
+          fileE << src << "," << dst << "\n";
         }
       }
     }

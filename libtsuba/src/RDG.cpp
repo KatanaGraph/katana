@@ -18,6 +18,7 @@
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
+#include "tsuba/RDG_internal.h"
 
 #include "GlobalState.h"
 #include "json.h"

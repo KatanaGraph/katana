@@ -8,6 +8,7 @@
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG.h"
 #include "tsuba/tsuba.h"
+#include "tsuba/RDG_internal.h"
 
 /* This test tests the correctness of LoadPartialTable against the ground truth
  * of slicing the desired portion out of the original table.

@@ -105,13 +105,6 @@ AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table);
 galois::Result<void> DropNodeProperty(RDG* rdg, int i);
 galois::Result<void> DropEdgeProperty(RDG* rdg, int i);
 
-namespace internal {
-// Helper function for loading Arrow Tables from Parquet files,
-// exported here only for testing
-galois::Result<std::shared_ptr<arrow::Table>>
-LoadPartialTable(const std::string& expected_name, const std::string& file_path,
-                 int64_t start, int64_t end);
-} // namespace internal
 } // namespace tsuba
 
 #endif

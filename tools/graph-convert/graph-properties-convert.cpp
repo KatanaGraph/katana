@@ -34,7 +34,6 @@
 
 namespace {
 
-using galois::GraphComponents;
 using galois::ImportDataType;
 
 using ArrayBuilders   = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
@@ -1790,15 +1789,13 @@ void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
 
 } // end of unnamed namespace
 
-namespace galois {
-
-/// convertGraphML converts a GraphML file into katana form
+/// ConvertGraphML converts a GraphML file into katana form
 ///
 /// \param infilename path to source graphml file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-GraphComponents ConvertGraphml(const std::string& infilename,
-                               const size_t chunk_size) {
+galois::GraphComponents galois::ConvertGraphML(const std::string& infilename,
+                                               size_t chunk_size) {
   xmlTextReaderPtr reader;
   int ret = 0;
 
@@ -1925,14 +1922,13 @@ GraphComponents ConvertGraphml(const std::string& infilename,
                          final_type_table, topology};
 }
 
-/// convertToPropertyGraphAndWrite formally builds katana form via
-/// PropertyFileGraph from imported components and writes the result to target
-/// directory
+/// writePropertyGraph formally builds katana form via PropertyFileGraph from
+/// imported components and writes the result to target directory
 ///
 /// \param graph_comps imported components to convert into a PropertyFileGraph
 /// \param dir local FS directory or s3 directory to write PropertyFileGraph to
-void ConvertToPropertyGraphAndWrite(const GraphComponents& graph_comps,
-                                    const std::string& dir) {
+void galois::WritePropertyGraph(const galois::GraphComponents& graph_comps,
+                                const std::string& dir) {
   galois::graphs::PropertyFileGraph graph;
 
   auto result = graph.SetTopology(*graph_comps.topology);
@@ -1965,17 +1961,19 @@ void ConvertToPropertyGraphAndWrite(const GraphComponents& graph_comps,
     }
   }
 
-  std::string metaFile = dir;
-  if (metaFile[metaFile.length() - 1] == '/') {
-    metaFile += "meta";
-  } else {
-    metaFile += "/meta";
-  }
+  WritePropertyGraph(std::move(graph), dir);
+}
 
-  result = graph.Write(metaFile);
+void galois::WritePropertyGraph(galois::graphs::PropertyFileGraph prop_graph,
+                                const std::string& dir) {
+  std::string meta_file = dir;
+  if (meta_file[meta_file.length() - 1] == '/') {
+    meta_file += "meta";
+  } else {
+    meta_file += "/meta";
+  }
+  auto result = prop_graph.Write(meta_file);
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs: {}", result.error());
   }
 }
-
-} // end of namespace galois

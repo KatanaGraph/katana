@@ -1,5 +1,9 @@
+add_executable(unit-time-parser time-parser.cpp)
+target_link_libraries(unit-time-parser PRIVATE graph-properties-convert-common)
+add_test(NAME unit-time-parser COMMAND unit-time-parser)
+set_tests_properties(unit-time-parser PROPERTIES LABELS quick)
+
 add_executable(graph-properties-convert-test graph-properties-convert-test.cpp)
-target_include_directories(graph-properties-convert-test PRIVATE ..)
 target_link_libraries(graph-properties-convert-test PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert-test PRIVATE graph-properties-convert-common)
 

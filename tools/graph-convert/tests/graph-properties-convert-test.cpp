@@ -1080,24 +1080,27 @@ int main(int argc, char** argv) {
   galois::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  galois::GraphComponents graph{nullptr, nullptr, nullptr, nullptr, nullptr};
+  galois::GraphComponents graph;
+
   switch (fileType) {
   case galois::SourceType::kGraphml:
-    graph = galois::ConvertGraphml(input_filename, chunk_size);
+    graph = galois::ConvertGraphML(input_filename, chunk_size);
     break;
+  default:
+    GALOIS_LOG_FATAL("unknown option {}", fileType);
   }
+
   switch (test_type) {
-  case ConvertTest::kMovies: {
+  case ConvertTest::kMovies:
     VerifyMovieSet(graph);
     break;
-  }
-  case ConvertTest::kTypes: {
+  case ConvertTest::kTypes:
     VerifyTypesSet(graph);
     break;
-  }
-  case ConvertTest::kChunks: {
+  case ConvertTest::kChunks:
     VerifyChunksSet(graph);
     break;
   }
-  }
+
+  return 0;
 }

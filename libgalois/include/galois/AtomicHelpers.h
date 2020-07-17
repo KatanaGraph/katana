@@ -66,6 +66,15 @@ const Ty atomicMin(std::atomic<Ty>& a, const Ty b) {
   return old_a;
 }
 
+/** galois::atomicMin **/
+template <typename Ty>
+const Ty atomicMin(Ty& a, const Ty b) {
+  Ty old_a = a;
+  while ((old_a = a) > b && !__sync_bool_compare_and_swap(&a, old_a, b))
+    ;
+  return old_a;
+}
+
 template <typename Ty>
 const Ty min(std::atomic<Ty>& a, const Ty& b) {
   Ty old_a = a;
@@ -91,6 +100,16 @@ const Ty atomicAdd(std::atomic<Ty>& val, Ty delta) {
   while (!val.compare_exchange_weak(old_val, old_val + delta,
                                     std::memory_order_relaxed))
     ;
+  return old_val;
+}
+
+/** galois::atomicAdd using intrinsics **/
+template <typename Ty>
+const Ty atomicAdd(Ty& val, Ty delta) {
+  Ty old_val = val;
+  while (!__sync_bool_compare_and_swap(&val, old_val, old_val + delta)) {
+    old_val = val;
+  }
   return old_val;
 }
 

@@ -143,8 +143,9 @@ private:
     }
 
     // position to start of contiguous chunk of nodes to read
-    nodeOffset = *view.node_begin();
-    memcpy(outIndexBuffer, &view.out_index()[nodeOffset],
+    nodeOffset      = *view.node_begin();
+    auto& out_index = *view.out_index();
+    memcpy(outIndexBuffer, &out_index[nodeOffset],
            sizeof(uint64_t) * numLocalNodes);
   }
 
@@ -454,8 +455,8 @@ public:
       GALOIS_DIE("Cannot load an buffered graph more than once.");
     }
 
-    globalSize     = view.out_index().num_nodes();
-    globalEdgeSize = view.out_index().num_edges();
+    globalSize     = view.out_index()->num_nodes();
+    globalEdgeSize = view.out_index()->num_edges();
     numLocalNodes  = view.node_end() - view.node_begin();
     numLocalEdges  = view.edge_end() - view.edge_begin();
 
@@ -463,7 +464,7 @@ public:
     loadEdgeDest(view);
 
     // may or may not do something depending on EdgeDataType
-    loadEdgeData<EdgeDataType>(view);
+    // loadEdgeData<EdgeDataType>(view);
     graphLoaded = true;
   }
 

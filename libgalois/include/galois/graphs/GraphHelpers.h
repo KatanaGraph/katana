@@ -16,8 +16,8 @@
  * including but not limited to those resulting from defects in Software and/or
  * Documentation, or loss or inaccuracy of data of any kind.
  */
-
-#pragma once
+#ifndef _GALOIS_GRAPH_HELPER_H_
+#define _GALOIS_GRAPH_HELPER_H_
 
 #include <cassert>
 #include <vector>
@@ -26,11 +26,42 @@
 
 #include "galois/config.h"
 #include "galois/gIO.h"
+#include "galois/graphs/PropertyFileGraph.h"
 
 namespace galois {
 namespace graphs {
 
 namespace internal {
+
+using edge_iterator = boost::counting_iterator<uint32_t>;
+template <typename GraphTy>
+inline edge_iterator edge_begin(GraphTy& graph, uint32_t N) {
+  return (N > 0) ? graph.topology().out_indices->Value(N - 1) : 0;
+}
+
+/**
+ * Gets the end edge boundary of some node.
+ *
+ * @param N node to get the edge of
+ * @returns iterator to the end of the edges of node N, i.e. the first edge
+ * of the next node (or an "end" iterator if there is no next node)
+ */
+template <typename GraphTy>
+inline edge_iterator edge_end(GraphTy& graph, uint32_t N) {
+  // return graph.edge_end(N, galois::MethodFlag::UNPROTECTED);
+  return graph.topology().out_indices->Value(N);
+}
+
+template <typename Ty>
+inline size_t getEdgePrefixSum(Ty& p, size_t n) {
+  return p[n];
+}
+template <>
+inline size_t getEdgePrefixSum<PropertyFileGraph>(PropertyFileGraph& p,
+                                                  size_t n) {
+  return *edge_end(p, n);
+}
+
 /**
  * Return a suitable index between an upper bound and a lower bound that
  * attempts to get close to the target size (i.e. find a good chunk that
@@ -68,7 +99,9 @@ size_t findIndexPrefixSum(size_t nodeWeight, size_t edgeWeight,
     size_t num_edges;
 
     if ((mid + nodeOffset) != 0) {
-      num_edges = edgePrefixSum[mid - 1 + nodeOffset] - edgeOffset;
+      num_edges =
+          internal::getEdgePrefixSum(edgePrefixSum, mid - 1 + nodeOffset) -
+          edgeOffset;
     } else {
       num_edges = 0;
     }
@@ -207,12 +240,16 @@ auto divideNodesBinarySearch(
 
   if (nodesLower != nodesUpper) {
     if ((nodesLower + nodeOffset) != 0) {
-      edgesLower = edgePrefixSum[nodesLower - 1 + nodeOffset] - edgeOffset;
+      edgesLower = internal::getEdgePrefixSum(edgePrefixSum,
+                                              nodesLower - 1 + nodeOffset) -
+                   edgeOffset;
     } else {
       edgesLower = 0;
     }
 
-    edgesUpper = edgePrefixSum[nodesUpper - 1 + nodeOffset] - edgeOffset;
+    edgesUpper =
+        internal::getEdgePrefixSum(edgePrefixSum, nodesUpper - 1 + nodeOffset) -
+        edgeOffset;
   }
 
   // galois::gDebug("Unit ", id, " nodes ", nodesLower, " to ",
@@ -267,9 +304,11 @@ void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
   assert(beginNode != endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
+  // uint64_t numEdgesInRange =
+  // graph.edge_end(endNode - 1) - graph.edge_begin(beginNode);
   uint64_t numEdgesInRange =
-      graph.edge_end(endNode - 1) - graph.edge_begin(beginNode);
-  uint64_t edgeOffset = *graph.edge_begin(beginNode);
+      edge_end(graph, endNode - 1) - edge_begin(graph, beginNode);
+  uint64_t edgeOffset = *edge_begin(graph, beginNode);
 
   returnRanges[0] = beginNode;
   std::vector<unsigned int> dummyScaleFactor;
@@ -297,8 +336,8 @@ void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
 
     galois::gDebug("LoopGraph Unit ", i, " gets nodes ", returnRanges[i],
                    " to ", returnRanges[i + 1], ", num edges is ",
-                   graph.edge_end(returnRanges[i + 1] - 1) -
-                       graph.edge_begin(returnRanges[i]));
+                   edge_end(graph, returnRanges[i + 1] - 1) -
+                       edge_begin(graph, returnRanges[i]));
   }
 }
 
@@ -403,7 +442,8 @@ template <typename GraphTy>
 std::vector<uint32_t> determineUnitRangesFromGraph(GraphTy& graph,
                                                    uint32_t unitsToSplit,
                                                    uint32_t nodeAlpha = 0) {
-  uint32_t totalNodes = graph.size();
+  // uint32_t totalNodes = graph.size();
+  uint32_t totalNodes = graph.topology().num_nodes();
 
   std::vector<uint32_t> returnRanges;
   returnRanges.resize(unitsToSplit + 1);
@@ -571,3 +611,5 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
 
 } // end namespace graphs
 } // end namespace galois
+
+#endif

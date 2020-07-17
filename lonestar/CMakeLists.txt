@@ -236,7 +236,9 @@ if(GALOIS_ENABLE_DIST)
 
     set(num_threads ${GALOIS_NUM_TEST_THREADS})
 
-    foreach (part oec iec cvc cvc-iec hovc hivc)
+    #foreach (part oec iec cvc cvc-iec hovc hivc)
+    ## NOTE: Restricting to out-going cuts for property-graphs for now.
+    foreach (part oec cvc hovc)
       if(NOT ${X_NO_ASYNC})
         add_test_dist_for_partitions(${app} ${input} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Sync)
         add_test_dist_for_partitions(${app} ${input} async ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Async)

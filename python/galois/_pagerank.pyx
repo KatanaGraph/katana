@@ -2,7 +2,7 @@
 
 from galois.shmem cimport *
 from galois.shmem import *
-from cython.operator cimport preincrement, dereference as deref
+from libc.math cimport fabs
 
 ctypedef atomic[uint32_t] atomuint32_t
 ctypedef atomic[uint64_t] atomuint64_t

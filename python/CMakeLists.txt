@@ -24,6 +24,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(PythonInterp REQUIRED)
 find_package(PythonExtensions REQUIRED)
 find_package(Cython REQUIRED)
+find_package(NumPy REQUIRED)
 
 find_python_module(jinja2 REQUIRED)
 # HACK: For some reason find_python_module doesn't fail even though REQUIRED is

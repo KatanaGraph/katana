@@ -1,9 +1,34 @@
 # cython: cdivision = True
 
+from pyarrow.lib cimport *
+
 from galois.shmem cimport *
 from cython.operator cimport dereference as deref
 
 ctypedef atomic[uint32_t] atomuint32_t
+
+cdef extern from * nogil:
+    """
+std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
+                                        const std::vector<uint32_t>& data) {
+  arrow::NumericBuilder<arrow::UInt32Type> builder;
+
+  auto append_status = builder.AppendValues(data.begin(), data.end());
+  GALOIS_LOG_ASSERT(append_status.ok());
+
+  std::shared_ptr<arrow::Array> array;
+
+  auto finish_status = builder.Finish(&array);
+  GALOIS_LOG_ASSERT(finish_status.ok());
+
+  std::shared_ptr<arrow::Schema> schema =
+      arrow::schema({arrow::field(name, arrow::uint32())});
+
+  return arrow::Table::Make(schema, {array});
+}
+"""
+    cdef shared_ptr[CTable] MakeTable(string name, vector[uint32_t] data)
+
 
 cdef void Initialize(PropertyGraph graph, unsigned long source, vector[uint32_t] &distance):
     cdef uint64_t numNodes = graph.num_nodes()
@@ -13,14 +38,14 @@ cdef void Initialize(PropertyGraph graph, unsigned long source, vector[uint32_t]
         else:
             distance[n] = numNodes
 
-cdef void not_visited_operator(uint64_t numNodes, atomuint32_t *notVisited, shared_ptr[UInt32Array] data, uint32_t n):
+cdef void not_visited_operator(uint64_t numNodes, atomuint32_t *notVisited, shared_ptr[CUInt32Array] data, uint32_t n):
     cdef:
         uint32_t val
     val = deref(data).Value(n)
     if val >= numNodes:
         notVisited[0].fetch_add(1)
 
-cdef void max_dist_operator(uint64_t numNodes, GReduceMax[uint32_t] *maxDist, shared_ptr[UInt32Array] data, uint32_t n):
+cdef void max_dist_operator(uint64_t numNodes, GReduceMax[uint32_t] *maxDist, shared_ptr[CUInt32Array] data, uint32_t n):
     cdef:
         uint32_t val
     val = deref(data).Value(n)
@@ -32,18 +57,18 @@ def verify_bfs(PropertyGraph graph, unsigned int source_i, unsigned int property
         atomuint32_t notVisited
         GReduceMax[uint32_t] maxDist
         uint32_t source = <uint32_t> source_i
-        shared_ptr[UInt32Array] chunk
+        shared_ptr[CUInt32Array] chunk
         uint32_t chunk_offset = 0
         uint64_t numNodes = graph.num_nodes()
         uint32_t start, end
-        ArrayVector chunk_array = graph.get_property_data(<int32_t>0)
+    chunk_array = graph.underlying.get().NodeProperty(0)
 
     notVisited.store(0)
     ### Chunked arrays can have multiple chunks
-    for i in range(chunk_array.size()):
-        chunk = static_pointer_cast[UInt32Array, Array](chunk_array.at(i))
+    for i in range(chunk_array.get().num_chunks()):
+        chunk = static_pointer_cast[CUInt32Array, CArray](chunk_array.get().chunk(i))
         start = chunk_offset
-        end = chunk_offset + deref(chunk).length()
+        end = chunk_offset + chunk.get().length()
         chunk_offset = chunk_offset + deref(chunk).length()
         with nogil:
             do_all(iterate(start, end),
@@ -91,7 +116,7 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
         ### Vector to calculate distance from source node
         # TODO: Replace with gstl::largeArray
         vector[uint32_t] distance
-        shared_ptr[PropertyFileGraph] pfgraph = graph.get_ptr()
+        shared_ptr[PropertyFileGraph] pfgraph = graph.underlying
 
     distance.resize(num_nodes)
     Initialize(graph, source, distance)
@@ -110,20 +135,19 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
 
     #
     # Append new property
-    # TODO: Remove the old property with the same name, if it exists
     #
-    cdef shared_ptr[arrowTable] node_table = MakeTable(propertyName, distance)
-    deref(graph.get_ptr()).AddNodeProperties(node_table)
+    cdef shared_ptr[CTable] node_table = MakeTable(propertyName, distance)
+    graph.underlying.get().AddNodeProperties(node_table)
 
 #
 # Main callsite for Bfs
 #        
 def bfs(PropertyGraph graph, unsigned int source, str propertyName):
-    numNodeProperties = graph.num_node_properties()
+    try:
+        graph.remove_node_property(propertyName)
+    except ValueError:
+        pass # Ignore non-existance of the property.
     bfs_sync_pg(graph, source, bytes(propertyName, "utf-8"))
-
-    newPropertyId = numNodeProperties + 1
-    verify_bfs(graph, source, newPropertyId)
     
 
 

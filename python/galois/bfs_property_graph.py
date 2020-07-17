@@ -1,4 +1,4 @@
-from ._bfs_property_graph import bfs
+from ._bfs_property_graph import bfs, verify_bfs
 from .property_graph import PropertyGraph
 
 if __name__ == "__main__":
@@ -8,7 +8,6 @@ if __name__ == "__main__":
     parser.add_argument('--startNode', type=int, default=0)
     parser.add_argument('--propertyID', type=int, default=0)
     parser.add_argument('--propertyName', type=str, default="NewProperty")
-    parser.add_argument('--graph', type=propertyGraph, default=0)
     parser.add_argument('--reportNode', type=int, default=1)
     parser.add_argument('--noverify', action='store_true', default=False)
     parser.add_argument('--threads', '-t', type=int, default=1)
@@ -18,12 +17,14 @@ if __name__ == "__main__":
     from galois.shmem import *
     print("Using threads:", setActiveThreads(args.threads))
 
-    bfs(args.graph, args.startNode, args.propertyName)
+    graph = PropertyGraph(args.input)
+
+    bfs(graph, args.startNode, args.propertyName)
 
     ##TODO: Implement getData for property  graphs
     #print("Node {}: {}".format(args.reportNode, g.getData(args.reportNode)))
 
     if not args.noverify:
-        numNodeProperties = graph.num_node_properties()
-        newPropertyId = numNodeProperties + 1
-        verify_bfs(g, args.startNode, newPropertyId)
+        numNodeProperties = len(graph.node_schema())
+        newPropertyId = numNodeProperties - 1
+        verify_bfs(graph, args.startNode, newPropertyId)

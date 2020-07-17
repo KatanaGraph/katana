@@ -5,8 +5,8 @@ from ..Galois cimport MethodFlag, iterable, NoDerefIterator
 from libcpp.memory cimport shared_ptr
 from libc.stdint cimport *
 from ....cpp.libstd.boost cimport *
-from ....cpp.libstd.arrow cimport *
 from cython.operator cimport dereference as df
+from pyarrow.lib cimport *
 
 # Fake types to work around Cython's lack of support
 # for non-type template parameters.
@@ -111,8 +111,8 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         edge_data& getEdgeData(edge_iterator, MethodFlag)
 
     cppclass GraphTopology:
-        shared_ptr[UInt64Array] out_indices
-        shared_ptr[UInt32Array] out_dests
+        shared_ptr[CUInt64Array] out_indices
+        shared_ptr[CUInt32Array] out_dests
         uint64_t num_nodes()
         uint64_t num_edges()
 
@@ -120,17 +120,25 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         PropertyFileGraph()
         @staticmethod
         std_result[shared_ptr[PropertyFileGraph]] Make(string filename)
+        @staticmethod
+        std_result[shared_ptr[PropertyFileGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
+
+        std_result[void] Write(string path)
+        std_result[void] Write()
 
         GraphTopology& topology()
-        shared_ptr[Schema] node_schema()
-        shared_ptr[Schema] edge_schema()
 
-        vector[shared_ptr[ChunkedArray]] NodeProperties()
-        vector[shared_ptr[ChunkedArray]] EdgeProperties()
+        shared_ptr[CSchema] node_schema()
+        shared_ptr[CSchema] edge_schema()
 
-        shared_ptr[ChunkedArray] NodeProperty(int i)
-        shared_ptr[ChunkedArray] EdgeProperty(int i)
+        vector[shared_ptr[CChunkedArray]] NodeProperties()
+        vector[shared_ptr[CChunkedArray]] EdgeProperties()
 
-        std_result[void] AddNodeProperties(shared_ptr[arrowTable])
+        shared_ptr[CChunkedArray] NodeProperty(int i)
+        shared_ptr[CChunkedArray] EdgeProperty(int i)
 
+        std_result[void] AddNodeProperties(shared_ptr[CTable])
+        std_result[void] AddEdgeProperties(shared_ptr[CTable])
 
+        std_result[void] RemoveNodeProperty(int)
+        std_result[void] RemoveEdgeProperty(int)

@@ -1,0 +1,68 @@
+{# -*- mode: cython -*- #}
+# cython: cdivision = True
+
+from pyarrow.lib cimport *
+
+cdef api void* Array_get_address_c(array):
+    return pyarrow_unwrap_array(array).get()
+
+def Array_get_address(array):
+    return <uint64_t>Array_get_address_c(array)
+
+cdef api void* ChunkedArray_get_address_c(array):
+    return pyarrow_unwrap_chunked_array(array).get()
+
+def ChunkedArray_get_address(array):
+    return <uint64_t>ChunkedArray_get_address_c(array)
+
+cdef api uint64_t ChunkedArray_num_chunks(CChunkedArray* self) nogil:
+    return self.num_chunks()
+
+cdef api uint64_t ChunkedArray_Array_chunk_length(CChunkedArray* self, uint64_t chunk) nogil:
+    return self.chunk(chunk).get().length()
+
+cdef api bint ChunkedArray_Array_is_valid(CChunkedArray* self, uint64_t chunk, uint64_t i) nogil:
+    return not self.chunk(chunk).get().IsNull(i)
+
+cdef api uint64_t ChunkedArray_length(CChunkedArray* self) nogil:
+    return self.length()
+
+# For len(ChunkedArray.chunk(i)) and ChunkedArray iteration
+cdef api uint64_t Array_length(CArray* self) nogil:
+    return self.length()
+
+cdef api bint Array_is_valid(CArray* self, uint64_t i) nogil:
+    return not self.IsNull(i)
+
+{% macro numba_wrap(array_type_prefix, element_type, c_element_type=element_type) -%}
+# For ChunkedArray.as{{array_type_prefix}}().chunk(i)[j] and ChunkedArray.as{{array_type_prefix}}() iteration
+cdef api {{element_type}} ChunkedArray_{{array_type_prefix}}Array_Value(CChunkedArray* self, uint64_t chunk, uint64_t i) nogil:
+    return (<C{{array_type_prefix}}Array*>self.chunk(chunk).get()).Value(i)
+
+# For Array.as{{array_type_prefix}}()[j] and Array.as{{array_type_prefix}}() iteration
+cdef api {{element_type}} Array_{{array_type_prefix}}Array_Value(CArray* self, uint64_t i) nogil:
+    return (<C{{array_type_prefix}}Array*>self).Value(i)
+
+cdef extern from * nogil:
+    """
+    const {{c_element_type}}* {{array_type_prefix}}Array_raw_values(arrow::{{array_type_prefix}}Array* array) {
+      return array->raw_values();
+    }
+    """
+    const {{element_type}}* {{array_type_prefix}}Array_raw_values(C{{array_type_prefix}}Array*) nogil except *
+
+# For Array.as{{array_type_prefix}}().as_carray() and Array.as{{array_type_prefix}}() iteration
+cdef api const {{element_type}}* Array_{{array_type_prefix}}Array_raw_values(CArray* self) nogil:
+    return {{array_type_prefix}}Array_raw_values(<C{{array_type_prefix}}Array*>self)
+{%- endmacro %}
+
+{% for args in [
+    ("Int64", "int64_t"),
+    ("UInt64", "uint64_t"),
+    ("Int32", "int32_t"),
+    ("UInt32", "uint32_t"),
+    ("Float", "float"),
+    ("Double", "double")] %}
+{{numba_wrap(*args)}}
+{% endfor %}
+{#  ,  ("Boolean", "bint", "bool") #}

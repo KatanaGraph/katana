@@ -1,6 +1,5 @@
 # cython: cdivision= True
 from galois.shmem cimport *
-from cython.operator cimport preincrement, dereference as deref
 from .cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t Dist

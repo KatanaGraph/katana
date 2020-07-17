@@ -2,7 +2,6 @@
 
 from galois.shmem cimport *
 from galois.graphs cimport LC_CSR_Graph_Directed_uint32_t_void
-from cython.operator cimport preincrement
 
 ctypedef atomic[uint32_t] atomuint32_t
 

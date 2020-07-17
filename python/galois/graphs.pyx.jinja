@@ -97,6 +97,10 @@ cdef class LC_CSR_Graph_{{template_name}}_Edge_Iterable:
 
     def __len__(self):
         return self.underlying.size()
+
+    @property
+    def address(self):
+        return <unsigned long int>&self.underlying
 {%- endmacro %}
 
 {% macro wrap_LC_CSR_Graph_PyObject(template_name, directed_arg) -%}
@@ -173,6 +177,20 @@ cdef class LC_CSR_Graph_{{template_name}}:
         d = &self.underlying.getEdgeData(edge.edge)
         d[0] = <{{edge_type}}>data
         {%- endif %}
+
+cdef api {{node_type}} LC_CSR_Graph_{{template_name}}_getData(void* self, unsigned int node_id) nogil:
+    {%- if node_type == "void" %}
+    pass
+    {%- else %}
+    d = &(<Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}]*>self).getData(node_id)
+    return d[0]
+    {%- endif %}
+
+{%- if node_type != "void" %}
+cdef api void LC_CSR_Graph_{{template_name}}_setData(void* self, unsigned int node_id, {{node_type}} v) nogil:
+    d = &(<Graph.LC_CSR_Graph[{{node_type}}, {{edge_type}}, {{directed_arg}}]*>self).getData(node_id)
+    d[0] = v
+{%- endif %}
 {% endmacro %}
        
 {% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}

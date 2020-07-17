@@ -3,7 +3,6 @@
 from galois.shmem cimport *
 from galois.graphs cimport LC_CSR_Graph_Directed_double_void
 from .cpp.libgalois.Galois cimport FLAG_UNPROTECTED
-from cython.operator cimport preincrement, dereference as deref
 from libcpp.unordered_set cimport unordered_set
 
 ctypedef LC_CSR_Graph[double, void, dummy_true] Graph_CSR

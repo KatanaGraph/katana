@@ -6,7 +6,6 @@ from libc.stdint cimport *
 from ..libstd.atomic cimport atomic
 from libcpp.memory cimport shared_ptr
 from ..libstd.boost cimport *
-from ..libstd.arrow cimport *
 
 # Declaration from "Galois/Threads.h"
 
@@ -23,8 +22,12 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
     unsigned int setActiveThreads(unsigned int)
     
     cppclass UserContext[T]:
-        pass
         void push(...)
+        void push_back(...)
+        bint isFirstPass()
+        void cautiousPoint()
+        void breakLoop()
+        void abort()
 
     void for_each(...)
     void do_all(...)
@@ -48,20 +51,17 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
         disable_conflict_detection()
 
     cppclass GReduceMax[T]:
-        pass
         void update(T)
         T reduce()
         void reset()
 
     cppclass InsertBag[T]:
-        pass
         void push(T)
         bool empty()
         void swap(InsertBag&)
         void clear()
 
     cppclass LargeArray[T]:
-        pass
         void allocateInterleaved(size_t)
         void allocateBlocked(size_t)
         T &operator[](size_t)
@@ -94,8 +94,3 @@ cdef extern from "galois/NoDerefIterator.h" namespace "galois" nogil:
         NoDerefIterator[it] operator++()
         NoDerefIterator[it] operator--()
         it operator*()
-
-   #### Property graph helper functions
-cdef extern from "galois/Constants.h" namespace "galois" nogil:
-   shared_ptr[arrowTable] MakeTable(string&, vector[uint32_t]&)
-   

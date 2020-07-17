@@ -1,9 +1,12 @@
 include_directories(..)
+include_directories(${NumPy_INCLUDE_DIR})
 
 # A function for generating the complex Cython files easily
 set(SOURCE_DIRECTORY_GENERATED_FILE_WARNING "in the SOURCE DIRECTORY! (This is to work around limitations in the Cython cmake interface.)")
 # TODO: Avoid this messy "generated code in the source directory" issue.
 message(STATUS "Generating pxd/pyx files ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}")
+
+set(GENERATE_FROM_JINJA ${CMAKE_CURRENT_SOURCE_DIR}/../generate-from-jinja.py)
 
 function(generate_cython_file FILE)
   set(options)
@@ -11,7 +14,7 @@ function(generate_cython_file FILE)
   set(optionsmany DEPENDS)
   cmake_parse_arguments(_args "${options}" "${options1}" "${optionsmany}" ${ARGN})
   add_custom_command(
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../generate-from-jinja.py ${CMAKE_CURRENT_SOURCE_DIR} ${FILE}.jinja > ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
+    COMMAND ${PYTHON_EXECUTABLE} ${GENERATE_FROM_JINJA} ${CMAKE_CURRENT_SOURCE_DIR} ${FILE}.jinja > ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
     DEPENDS ${FILE}.jinja ${_args_DEPENDS}
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
     COMMENT "Generating ${FILE} ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}"
@@ -46,6 +49,20 @@ add_library(graphs MODULE ${GRAPHS_SOURCES})
 python_extension_module(graphs)
 add_dependencies(graphs graphs_pxd)
 target_link_libraries(graphs Galois::shmem)
+
+generate_cython_source(_loops DEPENDS)
+add_cython_target(_loops _loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
+add_library(_loops MODULE ${_LOOPS_SOURCES})
+python_extension_module(_loops)
+add_dependencies(_loops _loops_pxd)
+target_link_libraries(_loops Galois::shmem)
+
+add_cython_target(property_graph property_graph.pyx CXX OUTPUT_VAR PROPERTYGRAPH_SOURCES)
+add_library(property_graph MODULE ${PROPERTYGRAPH_SOURCES})
+python_extension_module(property_graph)
+add_dependencies(property_graph graphs)
+target_link_libraries(property_graph Galois::shmem)
+
 
 # Avoid collisions with existing application targets with the same name.
 # The expected public names (without _) are provided using pure python modules.
@@ -85,14 +102,10 @@ python_extension_module(_connected_components)
 add_dependencies(_connected_components graphs)
 target_link_libraries(_connected_components Galois::shmem)
 
-add_cython_target(property_graph property_graph.pyx CXX OUTPUT_VAR PROPERTYGRAPH_SOURCES)
-add_library(property_graph MODULE ${PROPERTYGRAPH_SOURCES})
-python_extension_module(property_graph)
-add_dependencies(property_graph graphs)
-target_link_libraries(property_graph Galois::shmem)
+add_subdirectory(numba)
 
 install(
-  TARGETS shmem graphs _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
+  TARGETS shmem graphs _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
   LIBRARY DESTINATION python/galois
 )
 
@@ -108,11 +121,31 @@ if(BUILD_LIBGALOIS)
   # In order to preserve the directory structure, galois_shmem uses
   # install(DIRECTORY) rather than setting the PUBLIC_HEADER property on the
   # galois_shmem itself. Mirror the install(DIRECTORY) logic here.
+  get_target_property(GALOIS_SUPPORT_SOURCE_DIR galois_support SOURCE_DIR)
+  get_target_property(GALOIS_SUPPORT_BINARY_DIR galois_support BINARY_DIR)
+  install(
+    DIRECTORY "${GALOIS_SUPPORT_SOURCE_DIR}/include/" "${GALOIS_SUPPORT_BINARY_DIR}/include/"
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+  )
+  get_target_property(TSUBA_SOURCE_DIR tsuba SOURCE_DIR)
+  get_target_property(TSUBA_BINARY_DIR tsuba BINARY_DIR)
+  install(
+    DIRECTORY "${TSUBA_SOURCE_DIR}/include/" "${TSUBA_BINARY_DIR}/include/"
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+  )
   get_target_property(GALOIS_SOURCE_DIR galois_shmem SOURCE_DIR)
   get_target_property(GALOIS_BINARY_DIR galois_shmem BINARY_DIR)
   install(
     DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
     DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+  )
+  get_target_property(PYGALOIS_SOURCE_DIR pygalois INTERFACE_INCLUDE_DIRECTORIES)
+  install(
+    DIRECTORY "${PYGALOIS_SOURCE_DIR}"
+    DESTINATION .
     FILES_MATCHING PATTERN "*.h"
   )
 endif()

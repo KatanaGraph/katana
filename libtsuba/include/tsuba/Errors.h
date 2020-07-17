@@ -8,16 +8,17 @@
 namespace tsuba {
 
 enum class ErrorCode {
-  Success         = 0,
-  InvalidArgument = 1,
-  ArrowError      = 2,
-  NotImplemented  = 3,
-  NotFound        = 4,
-  Exists          = 5,
-  OutOfMemory     = 6,
-  TODO            = 7,
-  S3Error         = 8,
-  AWSWrongRegion  = 9,
+  Success          = 0,
+  InvalidArgument  = 1,
+  ArrowError       = 2,
+  NotImplemented   = 3,
+  NotFound         = 4,
+  Exists           = 5,
+  OutOfMemory      = 6,
+  TODO             = 7,
+  S3Error          = 8,
+  AWSWrongRegion   = 9,
+  PropertyNotFound = 10,
 };
 
 ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -50,6 +51,8 @@ public:
       return "S3 error";
     case ErrorCode::AWSWrongRegion:
       return "AWS op may succeed in other region";
+    case ErrorCode::PropertyNotFound:
+      return "no such property";
     default:
       return "unknown error";
     }
@@ -59,6 +62,7 @@ public:
     switch (static_cast<ErrorCode>(c)) {
     case ErrorCode::InvalidArgument:
     case ErrorCode::ArrowError:
+    case ErrorCode::PropertyNotFound:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);
@@ -66,6 +70,9 @@ public:
       return make_error_condition(std::errc::no_such_file_or_directory);
     case ErrorCode::Exists:
       return make_error_condition(std::errc::file_exists);
+    case ErrorCode::AWSWrongRegion:
+    case ErrorCode::S3Error:
+      return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);
     }

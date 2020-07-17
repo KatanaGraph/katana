@@ -109,7 +109,7 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
   for (const auto& s : node_properties) {
     auto it = node_paths.find(s);
     if (it == node_paths.end()) {
-      return tsuba::ErrorCode::InvalidArgument;
+      return tsuba::ErrorCode::PropertyNotFound;
     }
 
     next_node_properties.emplace_back(tsuba::PropertyMetadata{
@@ -127,7 +127,7 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
   for (const auto& s : edge_properties) {
     auto it = edge_paths.find(s);
     if (it == edge_paths.end()) {
-      return tsuba::ErrorCode::InvalidArgument;
+      return tsuba::ErrorCode::PropertyNotFound;
     }
 
     next_edge_properties.emplace_back(tsuba::PropertyMetadata{

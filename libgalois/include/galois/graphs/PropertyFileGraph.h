@@ -50,6 +50,40 @@ class PropertyFileGraph {
   GraphTopology topology_;
 
 public:
+  /// PropertyView provides a uniform interface when you don't need to
+  /// distinguish operating on edge or node properties
+  struct PropertyView {
+    PropertyFileGraph* g;
+
+    std::shared_ptr<arrow::Schema> (PropertyFileGraph::*schema_fn)() const;
+    std::shared_ptr<arrow::ChunkedArray> (PropertyFileGraph::*property_fn)(
+        int i) const;
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> (
+        PropertyFileGraph::*properties_fn)() const;
+    Result<void> (PropertyFileGraph::*add_properties_fn)(
+        const std::shared_ptr<arrow::Table>& table);
+    Result<void> (PropertyFileGraph::*remove_property_fn)(int i);
+
+    std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
+
+    std::shared_ptr<arrow::ChunkedArray> Property(int i) const {
+      return (g->*property_fn)(i);
+    }
+
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> Properties() const {
+      return (g->*properties_fn)();
+    }
+
+    Result<void>
+    AddProperties(const std::shared_ptr<arrow::Table>& table) const {
+      return (g->*add_properties_fn)(table);
+    }
+
+    Result<void> RemoveProperty(int i) const {
+      return (g->*remove_property_fn)(i);
+    }
+  };
+
   PropertyFileGraph();
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
@@ -118,6 +152,28 @@ public:
 
   Result<void> RemoveNodeProperty(int i);
   Result<void> RemoveEdgeProperty(int i);
+
+  PropertyView node_property_view() {
+    return PropertyView{
+        .g                  = this,
+        .schema_fn          = &PropertyFileGraph::node_schema,
+        .property_fn        = &PropertyFileGraph::NodeProperty,
+        .properties_fn      = &PropertyFileGraph::NodeProperties,
+        .add_properties_fn  = &PropertyFileGraph::AddNodeProperties,
+        .remove_property_fn = &PropertyFileGraph::RemoveNodeProperty,
+    };
+  }
+
+  PropertyView edge_property_view() {
+    return PropertyView{
+        .g                  = this,
+        .schema_fn          = &PropertyFileGraph::edge_schema,
+        .property_fn        = &PropertyFileGraph::EdgeProperty,
+        .properties_fn      = &PropertyFileGraph::EdgeProperties,
+        .add_properties_fn  = &PropertyFileGraph::AddEdgeProperties,
+        .remove_property_fn = &PropertyFileGraph::RemoveEdgeProperty,
+    };
+  }
 
   Result<void> SetTopology(const GraphTopology& topology);
 };

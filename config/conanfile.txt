@@ -1,8 +1,7 @@
-# Bump: v1
-
 [requires]
 aws-sdk-cpp/1.7.212@kmaragon/stable
 boost/1.71.0
+date/2.4.1 
 eigen/3.3.7
 fmt/6.2.1
 nlohmann_json/3.7.3
@@ -11,6 +10,7 @@ nlohmann_json/3.7.3
 aws-sdk-cpp:build_transfer = True
 aws-sdk-cpp:build_s3 = True
 aws-sdk-cpp:shared = True
+date:header_only = True
 libcurl:shared=True
 
 [generators]

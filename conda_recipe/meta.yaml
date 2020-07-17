@@ -28,6 +28,7 @@ requirements:
     - libxml2>=2.9.10
     - libcypher-parser>=0.6.2
     - nlohmann_json>=3.7.3
+    - howardhinnant_date>=3.0.0
   run:
     # TODO: use pinning expressions to handle version matching
     #  (https://docs.conda.io/projects/conda-build/en/latest/resources/variants.html#pinning-expressions)

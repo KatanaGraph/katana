@@ -32,7 +32,6 @@ static const char* node_property_path_key = "kg.v1.node_property.path";
 static const char* node_property_name_key = "kg.v1.node_property.name";
 static const char* edge_property_path_key = "kg.v1.edge_property.path";
 static const char* edge_property_name_key = "kg.v1.edge_property.name";
-static constexpr int64_t kRowGroupSize    = 25000;
 
 namespace fs = boost::filesystem;
 using json   = nlohmann::json;
@@ -240,8 +239,10 @@ WriteTable(const arrow::Table& table,
       return res.error();
     }
 
-    auto write_result = parquet::arrow::WriteTable(
-        *column, arrow::default_memory_pool(), ff, kRowGroupSize);
+    auto writer_properties = parquet::WriterProperties::Builder().build();
+    auto write_result      = parquet::arrow::WriteTable(
+        *column, arrow::default_memory_pool(), ff,
+        std::numeric_limits<int64_t>::max(), writer_properties);
 
     if (!write_result.ok()) {
       GALOIS_LOG_DEBUG("arrow error: {}", write_result);

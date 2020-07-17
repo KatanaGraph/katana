@@ -9,7 +9,7 @@ source:
   patches:
 
 build:
-  number: 0
+  number: 2
 
 requirements:
   build:
@@ -18,6 +18,7 @@ requirements:
     - jinja2
     - cython>=0.29.12
     - {{ compiler('cxx') }}
+    - pyarrow>=0.17.1,<=0.18
   host:
     - python
     - scikit-build
@@ -25,6 +26,8 @@ requirements:
     - {{ compiler('cxx') }}
     - galois={{ version }}
     - cython>=0.29.12
+    - numba
+    - pyarrow>=0.17.1,<=0.18
   run:
     - python
     - galois={{ version }}
@@ -32,17 +35,26 @@ requirements:
     # is to use cython in Jupyter notebooks
     - cython>=0.29.12
     - cxx-compiler
+    - numba
+    - pyarrow>=0.17.1,<=0.18
 
 test:
   imports:
     - galois
     - galois.shmem
     - galois.bfs
+    - galois.loops
+    - galois.graphs
+    - galois.property_graph
   requires:
     - jupyter
+    - pytest
+    - numpy
   files:
     - test_notebook.ipynb
     - torus5.gr
+  source_files:
+    - tests
   
 
 about:

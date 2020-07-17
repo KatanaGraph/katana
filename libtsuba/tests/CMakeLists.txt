@@ -37,6 +37,10 @@ target_link_libraries(unit-fileobjects tsuba)
 add_test(NAME unit-fileobjects COMMAND unit-fileobjects)
 set_tests_properties(unit-fileobjects PROPERTIES LABELS quick)
 
+add_executable(unit-loadpartial loadpartial.cpp)
+target_link_libraries(unit-loadpartial tsuba)
+add_test(NAME unit-loadpartial COMMAND unit-loadpartial)
+
 add_executable(tsuba_basic_quick tsuba_basic_quick.cpp)
 target_link_libraries(tsuba_basic_quick tsuba)
 add_test(NAME tsuba_basic_quick COMMAND tsuba_basic_quick --no-self-configure)

@@ -5,7 +5,7 @@
 #include <chrono>
 
 #include "arrow/api.h"
-#include "arrow/filesystem/api.h"
+//#include "arrow/filesystem/api.h"
 #include "parquet/file_reader.h"
 
 #include "galois/Logging.h"
@@ -19,6 +19,11 @@
 
 /* This file is intended to benchmark a change in our arrow parquet translation.
  * *ArrLib functions represent the very first draft of that translation.
+ *
+ * A useful one-liner is
+ * ./fo_bench | (sed -u 1q; sort)
+ * It will keep the header line but sort the rest of the output, thereby
+ * grouping together runs of the same test.
  */
 
 namespace {
@@ -30,14 +35,24 @@ const std::string s3_base    = "s3://simon-test-useast2";
 const std::string local_base = "/tmp";
 
 // Utilities
-std::string timing_string(struct timespec before, struct timespec middle,
-                          struct timespec after) {
+std::string write_timing_string(struct timespec before, struct timespec middle,
+                                struct timespec after) {
   struct timespec total  = timespec_sub(after, before);
   struct timespec first  = timespec_sub(middle, before);
   struct timespec second = timespec_sub(after, middle);
   return fmt::format("{},{},{}", total.tv_sec + total.tv_nsec / NANO,
                      first.tv_sec + first.tv_nsec / NANO,
                      second.tv_sec + second.tv_nsec / NANO);
+}
+
+std::string read_timing_string(struct timespec before, struct timespec middle,
+                               struct timespec after) {
+  struct timespec total  = timespec_sub(after, before);
+  struct timespec first  = timespec_sub(middle, before);
+  struct timespec second = timespec_sub(after, middle);
+  return fmt::format("{},{},{}", total.tv_sec + total.tv_nsec / NANO,
+                     second.tv_sec + second.tv_nsec / NANO,
+                     first.tv_sec + first.tv_nsec / NANO);
 }
 
 // Schemas
@@ -62,6 +77,22 @@ std::shared_ptr<arrow::Table> big_table() {
   arrow::Status status;
 
   for (int64_t i = 0; i < BIG_ARRAY_SIZE; ++i) {
+    status = builder.Append(i * i);
+    GALOIS_LOG_ASSERT(status.ok());
+  }
+
+  std::shared_ptr<arrow::Int64Array> arr;
+  status = builder.Finish(&arr);
+  GALOIS_LOG_ASSERT(status.ok());
+  std::shared_ptr<arrow::Table> tab = arrow::Table::Make(int64_schema(), {arr});
+  return tab;
+}
+
+std::shared_ptr<arrow::Table> huge_table() {
+  arrow::Int64Builder builder;
+  arrow::Status status;
+
+  for (int64_t i = 0; i < BIG_ARRAY_SIZE * 4; ++i) {
     status = builder.Append(i * i);
     GALOIS_LOG_ASSERT(status.ok());
   }
@@ -179,7 +210,7 @@ void WriteArrLib(std::shared_ptr<arrow::Table> table, std::string path) {
   std::cout << "Arrow_Library_Write"
             << ",";
   std::cout << path << ",";
-  std::cout << timing_string(start, middle, end) << std::endl;
+  std::cout << write_timing_string(start, middle, end) << std::endl;
 }
 
 // SCB July.13.2020 Arrow S3 support is difficult to use. It is not compiled
@@ -230,7 +261,7 @@ void WriteArrLib(std::shared_ptr<arrow::Table> table, std::string path) {
 //  std::cout << "Arrow_Library_Read"
 //            << ",";
 //  std::cout << path << ",";
-//  std::cout << timing_string(start, middle, end) << std::endl;
+//  std::cout << read_timing_string(start, middle, end) << std::endl;
 //  return out;
 //}
 
@@ -267,7 +298,7 @@ void WriteFF(std::shared_ptr<arrow::Table> table, std::string path) {
   std::cout << "FileFrame_Write"
             << ",";
   std::cout << path << ",";
-  std::cout << timing_string(start, middle, end) << std::endl;
+  std::cout << write_timing_string(start, middle, end) << std::endl;
 }
 
 std::shared_ptr<arrow::Table> ReadFV(std::string path) {
@@ -297,12 +328,106 @@ std::shared_ptr<arrow::Table> ReadFV(std::string path) {
   std::cout << "FileView_Read"
             << ",";
   std::cout << path << ",";
-  std::cout << timing_string(start, middle, end) << std::endl;
+  std::cout << read_timing_string(start, middle, end) << std::endl;
   return out;
 }
 
-void ReadWriteArrLib(std::shared_ptr<arrow::Table> table, std::string bucket,
-                     std::string object_prefix) {
+std::shared_ptr<arrow::Table> ReadPartial_v0(std::string path, int64_t offset,
+                                             int64_t length) {
+  GALOIS_LOG_ASSERT(offset >= 0 && length >= 0);
+
+  struct timespec start;
+  struct timespec middle;
+  struct timespec end;
+
+  start = now();
+
+  auto fv  = std::make_shared<tsuba::FileView>(tsuba::FileView());
+  auto res = fv->Bind(path);
+  GALOIS_LOG_ASSERT(res);
+
+  middle = now();
+
+  std::unique_ptr<parquet::arrow::FileReader> reader;
+
+  auto open_file_result =
+      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
+  GALOIS_LOG_ASSERT(open_file_result.ok());
+
+  std::shared_ptr<arrow::Table> out;
+  std::shared_ptr<arrow::Table> ret;
+  auto read_result = reader->ReadTable(&out);
+  GALOIS_LOG_ASSERT(read_result.ok());
+  ret = out->Slice(offset, length);
+
+  end = now();
+
+  std::cout << "FileView_Partial_Read_v0"
+            << ",";
+  std::cout << path << ",";
+  std::cout << read_timing_string(start, middle, end) << std::endl;
+  return ret;
+}
+
+std::shared_ptr<arrow::Table> ReadPartial_v1(std::string path, int64_t offset,
+                                             int64_t length) {
+  GALOIS_LOG_ASSERT(offset >= 0 && length >= 0);
+
+  struct timespec start;
+  struct timespec middle;
+  struct timespec end;
+
+  start = now();
+
+  auto fv  = std::make_shared<tsuba::FileView>(tsuba::FileView());
+  auto res = fv->Bind(path);
+  GALOIS_LOG_ASSERT(res);
+
+  middle = now();
+
+  std::unique_ptr<parquet::arrow::FileReader> reader;
+
+  auto open_file_result =
+      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
+  GALOIS_LOG_ASSERT(open_file_result.ok());
+
+  std::vector<int> row_groups;
+  int rg_count            = reader->num_row_groups();
+  int64_t internal_offset = 0;
+  int64_t cumulative_rows = 0;
+  for (int i = 0; cumulative_rows < offset + length && i < rg_count; ++i) {
+    int64_t new_rows =
+        reader->parquet_reader()->metadata()->RowGroup(i)->num_rows();
+    if (offset < cumulative_rows + new_rows) {
+      if (row_groups.empty()) {
+        internal_offset = offset - cumulative_rows;
+        GALOIS_LOG_ASSERT(internal_offset >= 0);
+      }
+      row_groups.push_back(i);
+    }
+    cumulative_rows += new_rows;
+  }
+
+  std::shared_ptr<arrow::Table> out;
+  std::shared_ptr<arrow::Table> ret;
+  auto read_result = reader->ReadRowGroups(row_groups, &out);
+  GALOIS_LOG_ASSERT(read_result.ok());
+  ret = out->Slice(internal_offset, length);
+
+  end = now();
+
+  std::cout << "FileView_Partial_Read_v1"
+            << ",";
+  std::cout << path << ",";
+  std::cout << read_timing_string(start, middle, end) << std::endl;
+  return ret;
+}
+
+// Mark these functions maybe_unused so they can be commented out in the main
+// test loop below.
+[[maybe_unused]] void ReadWriteArrLib(std::shared_ptr<arrow::Table> table,
+                                      std::string bucket,
+                                      std::string object_prefix) {
   auto path_res = galois::NewPath(bucket, object_prefix);
   GALOIS_LOG_ASSERT(path_res);
   std::string path = path_res.value();
@@ -314,8 +439,9 @@ void ReadWriteArrLib(std::shared_ptr<arrow::Table> table, std::string bucket,
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-void ReadWriteFO(std::shared_ptr<arrow::Table> table, std::string bucket,
-                 std::string object_prefix) {
+[[maybe_unused]] void ReadWriteFO(std::shared_ptr<arrow::Table> table,
+                                  std::string bucket,
+                                  std::string object_prefix) {
   auto path_res = galois::NewPath(bucket, object_prefix);
   GALOIS_LOG_ASSERT(path_res);
   std::string path = path_res.value();
@@ -325,11 +451,43 @@ void ReadWriteFO(std::shared_ptr<arrow::Table> table, std::string bucket,
   GALOIS_LOG_ASSERT(recovered->Equals(*table));
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
+
+[[maybe_unused]] void WriteReadPartialFO(std::shared_ptr<arrow::Table> table,
+                                         std::string bucket,
+                                         std::string object_prefix,
+                                         int64_t length, int64_t version) {
+  GALOIS_LOG_ASSERT(length > 0);
+  auto path_res = galois::NewPath(bucket, object_prefix);
+  GALOIS_LOG_ASSERT(path_res);
+  std::string path = path_res.value();
+  WriteFF(table, path);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int64_t> dist(0, table->num_rows() - length);
+  int64_t offset = dist(gen);
+
+  std::shared_ptr<arrow::Table> recovered;
+  switch (version) {
+  case 0:
+    recovered = ReadPartial_v0(path, offset, length);
+    break;
+  case 1:
+    recovered = ReadPartial_v1(path, offset, length);
+    break;
+  default:
+    GALOIS_LOG_ERROR("{} not a valid version number for ReadPartial", version);
+  }
+
+  GALOIS_LOG_ASSERT(recovered->Equals(*(table->Slice(offset, length))));
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+}
 } // namespace
 
 int main() {
   std::cout << "method,file,total,memory,persistent" << std::endl;
   std::shared_ptr<arrow::Table> big = big_table();
+  std::shared_ptr<arrow::Table> hug = huge_table();
   std::shared_ptr<arrow::Table> sml = small_table();
   std::shared_ptr<arrow::Table> spd = speckled_table();
   std::shared_ptr<arrow::Table> svd = super_void_table();
@@ -349,6 +507,8 @@ int main() {
     ReadWriteArrLib(spd, s3_base, "spd");
     ReadWriteArrLib(svd, s3_base, "svd");
     ReadWriteArrLib(cmp, s3_base, "cmp");
+    WriteReadPartialFO(hug, s3_base, "hug", BIG_ARRAY_SIZE / 2, 0);
+    WriteReadPartialFO(hug, s3_base, "hug", BIG_ARRAY_SIZE / 2, 1);
   }
 
   result = tsuba::Fini();

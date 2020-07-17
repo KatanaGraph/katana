@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <fstream>
+#include <parquet/platform.h>
+#include <parquet/properties.h>
 #include <unordered_set>
 
 #include <boost/filesystem.hpp>
@@ -89,6 +91,20 @@ tsuba::RDGFile::~RDGFile() {
 } // namespace tsuba
 
 namespace {
+
+std::shared_ptr<parquet::WriterProperties> StandardWriterProperties() {
+  // int64 timestamps with nanosecond resolution requires Parquet version 2.0.
+  // In Arrow to Parquet version 1.0, nanosecond timestamps will get truncated
+  // to milliseconds.
+  return parquet::WriterProperties::Builder()
+      .version(parquet::ParquetVersion::PARQUET_2_0)
+      ->data_page_version(parquet::ParquetDataPageVersion::V2)
+      ->build();
+}
+
+std::shared_ptr<parquet::ArrowWriterProperties> StandardArrowProperties() {
+  return parquet::ArrowWriterProperties::Builder().build();
+}
 
 galois::Result<void>
 PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
@@ -239,10 +255,10 @@ WriteTable(const arrow::Table& table,
       return res.error();
     }
 
-    auto writer_properties = parquet::WriterProperties::Builder().build();
-    auto write_result      = parquet::arrow::WriteTable(
+    auto write_result = parquet::arrow::WriteTable(
         *column, arrow::default_memory_pool(), ff,
-        std::numeric_limits<int64_t>::max(), writer_properties);
+        std::numeric_limits<int64_t>::max(), StandardWriterProperties(),
+        StandardArrowProperties());
 
     if (!write_result.ok()) {
       GALOIS_LOG_DEBUG("arrow error: {}", write_result);
@@ -467,7 +483,7 @@ galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
 
   std::shared_ptr<parquet::SchemaDescriptor> schema_descriptor;
   auto to_result = parquet::arrow::ToParquetSchema(
-      &schema, *parquet::default_writer_properties(), &schema_descriptor);
+      &schema, *StandardWriterProperties(), &schema_descriptor);
   if (!to_result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", to_result);
     return tsuba::ErrorCode::ArrowError;
@@ -477,8 +493,7 @@ galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
   auto parquet_kvs =
       std::make_shared<parquet::KeyValueMetadata>(kvs.first, kvs.second);
   auto builder = parquet::FileMetaDataBuilder::Make(
-      schema_descriptor.get(), parquet::default_writer_properties(),
-      parquet_kvs);
+      schema_descriptor.get(), StandardWriterProperties(), parquet_kvs);
   auto md = builder->Finish();
 
   auto ff = std::make_shared<tsuba::FileFrame>();

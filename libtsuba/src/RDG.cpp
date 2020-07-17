@@ -800,8 +800,7 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg) {
   return DoStore(handle, rdg);
 }
 
-galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg,
-                                  std::shared_ptr<FileFrame> ff) {
+galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
   if (handle.impl_->metadata_dir != rdg->rdg_dir) {

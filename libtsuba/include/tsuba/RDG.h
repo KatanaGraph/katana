@@ -95,8 +95,7 @@ galois::Result<RDG> Load(RDGHandle handle,
                          const std::vector<std::string>& edge_properties);
 
 galois::Result<void> Store(RDGHandle handle, RDG* rdg);
-galois::Result<void> Store(RDGHandle handle, RDG* rdg,
-                           std::shared_ptr<FileFrame> ff);
+galois::Result<void> Store(RDGHandle handle, RDG* rdg, FileFrame* ff);
 
 galois::Result<void>
 AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table);

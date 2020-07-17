@@ -184,7 +184,7 @@ galois::graphs::PropertyFileGraph::DoWrite(tsuba::RDGHandle handle) {
     if (!result) {
       return result.error();
     }
-    return tsuba::Store(handle, &rdg_, result.value());
+    return tsuba::Store(handle, &rdg_, result.value().get());
   }
 
   return tsuba::Store(handle, &rdg_);

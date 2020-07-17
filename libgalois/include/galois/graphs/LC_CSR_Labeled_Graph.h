@@ -439,8 +439,8 @@ protected:
    * @returns true iff the key exists
    */
   template <bool inEdges>
-  inline bool binarySearch(GraphNode key, edge_iterator begin,
-                           edge_iterator end) {
+  inline std::optional<edge_iterator>
+  binarySearch(GraphNode key, edge_iterator begin, edge_iterator end) {
     edge_iterator l = begin;
     edge_iterator r = end - 1;
     while (r >= l) {
@@ -448,14 +448,14 @@ protected:
       GraphNode value   = inEdges ? DerivedGraph::getInEdgeDst(mid)
                                 : BaseGraph::getEdgeDst(mid);
       if (value == key) {
-        return true;
+        return mid;
       }
       if (value < key)
         l = mid + 1;
       else
         r = mid - 1;
     }
-    return false;
+    return std::nullopt;
   }
 
 public:
@@ -474,17 +474,22 @@ public:
       return false;
     unsigned key    = dst;
     unsigned search = src;
+    std::optional<edge_iterator> r;
     if (degrees[src] > inDegrees[dst]) {
       key        = src;
       search     = dst;
       auto begin = in_edge_begin(search, data);
       auto end   = in_edge_end(search, data);
-      return binarySearch<true>(key, begin, end);
+      r          = binarySearch<true>(key, begin, end);
     } else {
       auto begin = edge_begin(search, data);
       auto end   = edge_end(search, data);
-      return binarySearch<false>(key, begin, end);
+      r          = binarySearch<false>(key, begin, end);
     }
+    if (r)
+      return true;
+    else
+      return false;
   }
 
   /**
@@ -504,6 +509,34 @@ public:
       }
     }
     return false;
+  }
+
+  /**
+   * Returns an edge iterator to an edge with some source and destination by
+   * searching for the destination via the source vertex's edges.
+   * If not found, returns nothing.
+   */
+  const std::optional<edge_iterator> findEdge(GraphNode src, GraphNode dst) {
+    // trivial check; can't be connected if degree is 0
+    if (degrees[src] == 0 || inDegrees[dst] == 0)
+      return std::nullopt;
+
+    std::optional<edge_iterator> r;
+    // loop through all data labels
+    for (const data_iterator data : distinctEdgeLabels()) {
+      // always use out edges (we want an id to the out edge returned)
+      auto begin = edge_begin(src, *data);
+      auto end   = edge_end(src, *data);
+      r          = binarySearch<false>(dst, begin, end);
+
+      // return if something was found
+      if (r) {
+        return r;
+      }
+    }
+
+    // not found, return empty optional
+    return std::nullopt;
   }
 
   /**

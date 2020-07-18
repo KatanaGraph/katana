@@ -21,8 +21,7 @@ if __name__ == "__main__":
 
     bfs(graph, args.startNode, args.propertyName)
 
-    ##TODO: Implement getData for property  graphs
-    #print("Node {}: {}".format(args.reportNode, g.getData(args.reportNode)))
+    print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
 
     if not args.noverify:
         numNodeProperties = len(graph.node_schema())

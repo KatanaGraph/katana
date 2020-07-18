@@ -57,17 +57,14 @@ cdef void bfs_operator(Graph_CSR *g, bool *work_done, GNodeCSR n, UserContext[GN
 
 cdef void bfs_pull_topo(Graph_CSR *graph):
     cdef bool work_done = 1
-    cdef Timer T
     rounds = 0;
     while(work_done):
         rounds += 1;
         with nogil:
-            T.start()
             work_done = 0
             for_each(iterate(graph[0]),
                      bind_leading(&bfs_operator, graph, &work_done), no_pushes())#,
                      #loopname("name1"))
-            T.stop()
 
 
 #
@@ -90,12 +87,10 @@ cdef void bfs_sync_operator(Graph_CSR *g, InsertBag[GNodeCSR] *next, int nextLev
 
 cdef void bfs_sync(Graph_CSR *graph, GNodeCSR source):
     cdef:
-        Timer T
         InsertBag[GNodeCSR] curr, next
         uint32_t nextLevel = 0;
 
     next.push(source)
-    T.start()
     while(not next.empty()):
         curr.swap(next)
         next.clear()
@@ -104,7 +99,6 @@ cdef void bfs_sync(Graph_CSR *graph, GNodeCSR source):
             do_all(iterate(curr),
                      bind_leading(&bfs_sync_operator, graph, &next, nextLevel), no_pushes(), steal(),
                      loopname("bfs_sync"))
-    T.stop()
 
 cdef void not_visited_operator(Graph_CSR *graph, atomuint32_t *notVisited, GNodeCSR n):
     cdef:

@@ -5,6 +5,8 @@ from pyarrow.lib cimport *
 from galois.shmem cimport *
 from cython.operator cimport dereference as deref
 
+from galois.timer import StatTimer
+
 ctypedef atomic[uint32_t] atomuint32_t
 
 cdef extern from * nogil:
@@ -109,7 +111,6 @@ cdef void bfs_sync_operator_pg(shared_ptr[PropertyFileGraph] g, InsertBag[uint32
 
 cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName):
     cdef:
-        Timer T
         InsertBag[uint32_t] curr, next
         uint32_t nextLevel = 0;
         uint32_t num_nodes = graph.num_nodes()
@@ -118,10 +119,11 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
         vector[uint32_t] distance
         shared_ptr[PropertyFileGraph] pfgraph = graph.underlying
 
+    timer = StatTimer("BFS Property Graph Cython")
+    timer.start()
     distance.resize(num_nodes)
     Initialize(graph, source, distance)
     next.push(source)
-    T.start()
     while(not next.empty()):
         curr.swap(next)
         next.clear()
@@ -131,8 +133,7 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
             do_all(iterate(<uint32_t>0, num_nodes),
                      bind_leading(&bfs_sync_operator_pg, pfgraph, &next, nextLevel, &distance), no_pushes(), steal(),
                      loopname("bfs_sync"))
-    T.stop()
-
+    timer.stop()
     #
     # Append new property
     #

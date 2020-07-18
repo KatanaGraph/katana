@@ -1,3 +1,4 @@
+from galois.timer import StatTimer
 from ._bfs import bfs
 
 if __name__ == "__main__":
@@ -20,7 +21,10 @@ if __name__ == "__main__":
     g = LC_CSR_Graph_Directed_primitive["uint32_t", "void"]()
     g.readGraphFromGRFile(args.input)
 
+    timer = StatTimer("BFS Cython")
+    timer.start()
     bfs(g, args.startNode)
+    timer.stop()
 
     print("Node {}: {}".format(args.reportNode, g.getData(args.reportNode)))
 

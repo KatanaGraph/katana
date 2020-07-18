@@ -1,6 +1,8 @@
 # cython: cdivision= True
 from galois.shmem cimport *
 from cython.operator cimport preincrement, dereference as deref
+
+from galois.timer import StatTimer
 from .cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t ComponentTy
@@ -80,8 +82,11 @@ cdef class connected_components:
     def __init__(self, filename):
         self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
 
+        timer = StatTimer("Connected Components Cython")
+        timer.start()
         initializeCompnents(&self.graph)
         labelProp(&self.graph)
+        timer.stop()
 
     cpdef getData(self, int i):
         if i < self.graph.size():

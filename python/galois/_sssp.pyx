@@ -1,5 +1,6 @@
 # cython: cdivision= True
 from galois.shmem cimport *
+from galois.timer import StatTimer
 from .cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t Dist
@@ -143,8 +144,11 @@ cdef class sssp:
     def __init__(self, uint32_t shift, unsigned long source, filename):
         self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
 
+        timer = StatTimer("SSSP Cython")
+        timer.start()
         Initialize(&self.graph, source)
         ssspDeltaStep(&self.graph, <GNodeCSR>source, shift)
+        timer.stop()
 
     cpdef getData(self, int i):
         if i < self.graph.size():

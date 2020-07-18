@@ -63,6 +63,10 @@ python_extension_module(property_graph)
 add_dependencies(property_graph graphs)
 target_link_libraries(property_graph Galois::shmem)
 
+add_cython_target(timer timer.pyx CXX OUTPUT_VAR TIMER_SOURCES)
+add_library(timer MODULE ${TIMER_SOURCES})
+python_extension_module(timer)
+target_link_libraries(timer Galois::shmem)
 
 # Avoid collisions with existing application targets with the same name.
 # The expected public names (without _) are provided using pure python modules.
@@ -105,7 +109,7 @@ target_link_libraries(_connected_components Galois::shmem)
 add_subdirectory(numba)
 
 install(
-  TARGETS shmem graphs _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
+  TARGETS shmem graphs timer _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
   LIBRARY DESTINATION python/galois
 )
 

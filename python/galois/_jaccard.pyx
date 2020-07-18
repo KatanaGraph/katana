@@ -35,7 +35,6 @@ cdef void jaccard_operator(Graph_CSR *g, unordered_set[GNodeCSR] *n1_neighbors, 
 
 cdef void jaccard_c(Graph_CSR *g, GNodeCSR key_node):
     cdef:
-        Timer T
         unordered_set[GNodeCSR] key_neighbors
 
     with nogil:
@@ -44,12 +43,10 @@ cdef void jaccard_c(Graph_CSR *g, GNodeCSR key_node):
             n = g.getEdgeDst(e)
             key_neighbors.insert(n)
 
-        T.start()
         do_all(iterate(g[0].begin(), g[0].end()),
                bind_leading(&jaccard_operator, g, &key_neighbors),
                steal(),
                loopname("jaccard"))
-        T.stop()
 
 
 cdef void printValue(Graph_CSR *g):

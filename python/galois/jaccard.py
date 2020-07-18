@@ -1,3 +1,4 @@
+from galois.timer import StatTimer
 from ._jaccard import jaccard
 
 if __name__ == "__main__":
@@ -18,6 +19,9 @@ if __name__ == "__main__":
     g = LC_CSR_Graph_Directed_primitive["double", "void"]()
     g.readGraphFromGRFile(args.input)
 
+    timer = StatTimer("Jaccard Cython")
+    timer.start()
     jaccard(g, args.baseNode)
+    timer.stop()
 
     print("Node {}: {}".format(args.reportNode, g.getData(args.reportNode)))

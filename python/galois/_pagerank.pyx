@@ -4,6 +4,8 @@ from galois.shmem cimport *
 from galois.shmem import *
 from libc.math cimport fabs
 
+from galois.timer import StatTimer
+
 ctypedef atomic[uint32_t] atomuint32_t
 ctypedef atomic[uint64_t] atomuint64_t
 ##############################################################################
@@ -148,9 +150,12 @@ cdef class pagerank:
     def __init__(self, uint32_t max_iterations, filename):
         self.graph.readGraphFromGRFile(bytes(filename, "utf-8"))
 
+        timer = StatTimer("Pagerank Cython")
+        timer.start()
         InitializePR(&self.graph)
         computeOutDeg(&self.graph)
         pagerankPullTopo(&self.graph, max_iterations)
+        timer.stop()
 
     cpdef getData(self, int i):
         if i < self.graph.size():

@@ -1,8 +1,8 @@
 Overview
 ========
 
-[![CircleCI](https://circleci.com/gh/IntelligentSoftwareSystems/Galois.svg?style=svg)](https://circleci.com/gh/IntelligentSoftwareSystems/Galois)
-[![Build Status](https://travis-ci.org/IntelligentSoftwareSystems/Galois.svg?branch=master)](https://travis-ci.org/IntelligentSoftwareSystems/Galois)
+![C/C++ CI](https://github.com/KatanaGraph/katana/workflows/C/C++%20CI/badge.svg)
+![Conda Package CI](https://github.com/KatanaGraph/katana/workflows/Conda%20Package%20CI/badge.svg)
 
 Galois is a C++ library designed to ease parallel programming, especially for
 applications with irregular parallelism (e.g., irregular amount of work in parallel

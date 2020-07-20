@@ -12,6 +12,9 @@ from numba.extending import typeof_impl, type_callable
 from galois.numba._native_wrapper_utils import call_callback
 
 
+# TODO: This whole setup is a mess and almost certainly leaks all references passed to closures.
+#  This should be replaced ASAP.
+
 class Closure():
     def __init__(self, func, userdata, unbound_argument_types):
         self._function = func
@@ -35,7 +38,7 @@ class Closure():
 
 class _ClosureInstance():
     def __init__(self, func, bound_args, unbound_args, target):
-        # TODO: Only wrapper depends on func. The other stuff could be catched based on only bound_args (globally)
+        # TODO: Only wrapper depends on func. The other stuff could be cached based on only bound_args (globally)
         class Environment():
             pass
 
@@ -98,19 +101,22 @@ def impl_environment(context, builder, sig, args):
     if context.enable_nrt:
         for argty, argval in zip(sig.args, args):
             context.nrt.incref(builder, argty, argval)
+            context.nrt.incref(builder, argty, argval) # WTF?!?!?! Why do I need to incref twice?
     environment = cgutils.create_struct_proxy(sig.return_type)(context, builder)
     {assign_env}
     return environment._getvalue()
 
 @numba.jit(types.void(types.uint64, *bound_args), nopython=True, target=target)
 def fill(userdata, {env_args}):
-    numba.carray(cast_to_Environment(userdata), 1)[0] = Environment({env_args})
+    userdata_ptr = cast_to_Environment(userdata)
+    numba.carray(userdata_ptr, 1)[0] = Environment({env_args})
 
 @numba.cfunc(types.void(*unbound_args, types.CPointer(environment_type)), nopython=True, nogil=True, cache=False)
 def wrapper({unbound_pass_args} userdata):
     userdata = numba.carray(userdata, 1)[0]
     func({extract_env} {unbound_pass_args})
 """
+        # print(bound_args, unbound_args)
         # print(src)
         exec(src, exec_glbls)
 
@@ -127,6 +133,7 @@ def wrapper({unbound_pass_args} userdata):
         return context.get_abi_sizeof(context.get_value_type(self.environment_type))
 
 
+# FIXME: Fixed unbound argument type at construction time. Needs to support setting at closure *call* time.
 class ClosureBuilder():
     def __init__(self, func, unbound_argument_types, target="cpu"):
         self._underlying_function = func
@@ -144,9 +151,12 @@ class ClosureBuilder():
             return inst
 
     def __call__(self, *args):
-        inst = self._generate(tuple(typeof(v) for v in args))
+        arg_types = tuple(typeof(v) for v in args)
+        inst = self._generate(arg_types)
         env = (ctypes.c_byte * inst.environment_size)()
-        inst.fill(ctypes.addressof(env), *args)
+        env_ptr = ctypes.addressof(env)
+        # print(env_ptr, *args)
+        inst.fill(env_ptr, *args)
         closure = Closure(inst.wrapper, env, self._unbound_argument_types)
         closure._EnvironmentStruct_arguments = args
         return closure

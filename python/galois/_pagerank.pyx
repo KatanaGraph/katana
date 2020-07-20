@@ -3,6 +3,9 @@
 from galois.shmem cimport *
 from galois.shmem import *
 from libc.math cimport fabs
+from galois.cpp.libgalois.Galois cimport FLAG_UNPROTECTED
+from galois.cpp.libgalois.datastructures cimport LargeArray
+from galois.cpp.libgalois.atomic cimport GReduceMax
 
 from galois.timer import StatTimer
 

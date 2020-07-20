@@ -3,3 +3,8 @@ galois/graphs.pyx
 galois/_loops.pxd
 galois/_loops.pyx
 galois/numba/_pyarrow_wrappers.pyx
+galois/atomic.pyx
+galois/datastructures.pyx
+galois/property_graph.pxd
+galois/property_graph.pyx
+galois/datastructures.pxd

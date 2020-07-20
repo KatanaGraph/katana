@@ -1,7 +1,15 @@
+# -*- mode: cython -*-
 # cython: cdivision = True
+
+# {{generated_banner()}}
+
 
 from pyarrow.lib cimport *
 from .cpp.libstd.boost cimport std_result
+
+{% import "numba_wrapper_support.pyx.jinja" as numba %}
+
+{{numba.header()}}
 
 cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l]
@@ -100,20 +108,26 @@ cdef class PropertyGraph:
     def address(self):
         return <uint64_t>self.underlying.get()
 
-cdef api uint64_t PropertyGraph_num_nodes(PropertyFileGraph* self) nogil:
+{% call numba.class_("PropertyGraph", "PropertyFileGraph") %}
+{% call numba.method_with_body("num_nodes", "uint64_t", []) %}
     return self.topology().num_nodes()
-
-cdef api uint64_t PropertyGraph_num_edges(PropertyFileGraph* self) nogil:
+{% endcall %}
+{% call numba.method_with_body("num_edges", "uint64_t", []) %}
     return self.topology().num_edges()
+{% endcall %}
+{% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
+    return self.topology().out_indices.get().Value(arg1)
+{% endcall %}
+{% call numba.method_with_body("get_edge_dst", "uint64_t", ["uint64_t"]) %}
+    return self.topology().out_dests.get().Value(arg1)
+{% endcall %}
+{% endcall %}
 
-cdef api uint64_t PropertyGraph_edge_index(PropertyFileGraph* self, uint64_t n) nogil:
-    return self.topology().out_indices.get().Value(n)
+# cdef api CChunkedArray* PropertyGraph_get_node_property(PropertyFileGraph* self, uint64_t pid) nogil:
+#     return self.NodeProperty(pid).get()
+#
+# cdef api CChunkedArray* PropertyGraph_get_edge_property(PropertyFileGraph* self, uint64_t pid) nogil:
+#     return self.EdgeProperty(pid).get()
 
-cdef api uint64_t PropertyGraph_get_edge_dst(PropertyFileGraph* self, uint64_t e) nogil:
-    return self.topology().out_dests.get().Value(e)
+{{numba.register_all_wrappers()}}
 
-cdef api CChunkedArray* PropertyGraph_get_node_property(PropertyFileGraph* self, uint64_t pid) nogil:
-    return self.NodeProperty(pid).get()
-
-cdef api CChunkedArray* PropertyGraph_get_edge_property(PropertyFileGraph* self, uint64_t pid) nogil:
-    return self.EdgeProperty(pid).get()

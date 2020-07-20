@@ -2,6 +2,8 @@
 
 from galois.shmem cimport *
 from galois.graphs cimport LC_CSR_Graph_Directed_uint32_t_void
+from galois.cpp.libgalois.datastructures cimport InsertBag
+from galois.cpp.libgalois.atomic cimport GReduceMax
 
 ctypedef atomic[uint32_t] atomuint32_t
 
@@ -96,7 +98,7 @@ cdef void bfs_sync(Graph_CSR *graph, GNodeCSR source):
         next.clear()
         nextLevel += 1;
         with nogil:
-            do_all(iterate(curr),
+            do_all(iterate(curr.begin(), curr.end()),
                      bind_leading(&bfs_sync_operator, graph, &next, nextLevel), no_pushes(), steal(),
                      loopname("bfs_sync"))
 
@@ -107,7 +109,6 @@ cdef void not_visited_operator(Graph_CSR *graph, atomuint32_t *notVisited, GNode
     data = &graph.getData(n)
     if (data[0] >= numNodes):
         notVisited[0].fetch_add(1)
-
 cdef void max_dist_operator(Graph_CSR *graph, GReduceMax[uint32_t] *maxDist , GNodeCSR n):
     cdef:
         uint32_t *data

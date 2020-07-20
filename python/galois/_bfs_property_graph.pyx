@@ -4,6 +4,8 @@ from pyarrow.lib cimport *
 
 from galois.shmem cimport *
 from cython.operator cimport dereference as deref
+from galois.cpp.libgalois.datastructures cimport InsertBag
+from galois.cpp.libgalois.atomic cimport GReduceMax
 
 from galois.timer import StatTimer
 
@@ -60,7 +62,6 @@ def verify_bfs(PropertyGraph graph, unsigned int source_i, unsigned int property
         GReduceMax[uint32_t] maxDist
         uint32_t source = <uint32_t> source_i
         shared_ptr[CUInt32Array] chunk
-        uint32_t chunk_offset = 0
         uint64_t numNodes = graph.num_nodes()
         uint32_t start, end
     chunk_array = graph.underlying.get().NodeProperty(0)
@@ -69,9 +70,8 @@ def verify_bfs(PropertyGraph graph, unsigned int source_i, unsigned int property
     ### Chunked arrays can have multiple chunks
     for i in range(chunk_array.get().num_chunks()):
         chunk = static_pointer_cast[CUInt32Array, CArray](chunk_array.get().chunk(i))
-        start = chunk_offset
-        end = chunk_offset + chunk.get().length()
-        chunk_offset = chunk_offset + deref(chunk).length()
+        start = 0
+        end = chunk.get().length()
         with nogil:
             do_all(iterate(start, end),
                     bind_leading(&not_visited_operator, numNodes, &notVisited, chunk), no_pushes(), steal(),
@@ -99,10 +99,11 @@ cdef void bfs_sync_operator_pg(shared_ptr[PropertyFileGraph] g, InsertBag[uint32
         uint64_t val
 
     ###TODO: Better way to access edges
-    edges = 0
-    if(n > 0):
-        edges = deref(deref(g).topology().out_indices).Value(n) - deref(deref(g).topology().out_indices).Value(n - 1)
-    for ii in range(edges):
+    edge_start = 0
+    edge_end = deref(deref(g).topology().out_indices).Value(n)
+    if n > 0:
+        edge_start = deref(deref(g).topology().out_indices).Value(n - 1)
+    for ii in range(edge_start, edge_end):
     ###TODO: Better way to access edges
         dst = deref(deref(g).topology().out_dests).Value(ii)
         if distance[0][dst] == numNodes:
@@ -129,8 +130,7 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
         next.clear()
         nextLevel += 1;
         with nogil:
-            ##TODO: Iterators over graph topology
-            do_all(iterate(<uint32_t>0, num_nodes),
+            do_all(iterate(curr),
                      bind_leading(&bfs_sync_operator_pg, pfgraph, &next, nextLevel, &distance), no_pushes(), steal(),
                      loopname("bfs_sync"))
     timer.stop()

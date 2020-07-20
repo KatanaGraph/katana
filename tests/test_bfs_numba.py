@@ -4,10 +4,10 @@ from numba import jit
 
 from galois.atomic import GAccumulator, GReduceMax
 from galois.datastructures import InsertBag
-from ._bfs_property_graph import bfs as cython_bfs, verify_bfs as cython_verify_bfs
-from .loops import do_all, do_all_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator
+from galois.property_graph import PropertyGraph
+from galois.shmem import setActiveThreads
+from galois.timer import StatTimer
 
 
 @jit(nopython=True)
@@ -30,7 +30,7 @@ def not_visited_operator(num_nodes: int, not_visited: GAccumulator[int], data, n
 @do_all_operator()
 def max_dist_operator(num_nodes: int, max_dist: GReduceMax[int], data, nid):
     val = data[nid]
-    if val < num_nodes:
+    if val >= num_nodes:
         max_dist.update(val)
 
 
@@ -70,54 +70,33 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 
     curr = InsertBag['uint64_t']()
     next = InsertBag['uint64_t']()
-
-    timer = StatTimer("BFS Property Graph Numba: " + property_name)
-    timer.start()
     distance = np.empty((num_nodes,), dtype=int)
+
+    timer = StatTimer("BFS Property Graph Numba")
+    timer.start()
     initialize(graph, source, distance)
     next.push(source)
     while not next.empty():
         curr.swap(next)
         next.clear()
         next_level += 1
-        do_all(curr,
-               bfs_sync_operator_pg(graph, next, next_level, distance),
+        f = bfs_sync_operator_pg(graph, next, next_level, distance)
+        do_all(graph,
+               f,
                steal=True, loop_name="bfs_sync_pg")
     timer.stop()
 
     graph.add_node_property(pyarrow.table({property_name: distance}))
 
+def test_bfs(property_graph):
+    print("Using threads:", setActiveThreads(2))
 
-if __name__ == "__main__":
-    import argparse
+    graph = property_graph
+    startNode = 0
+    propertyName = "NewProp"
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--startNode', type=int, default=0)
-    parser.add_argument('--propertyID', type=int, default=0)
-    parser.add_argument('--propertyName', type=str, default="NewProperty")
-    parser.add_argument('--reportNode', type=int, default=1)
-    parser.add_argument('--noverify', action='store_true', default=False)
-    parser.add_argument('--cython', action='store_true', default=False)
-    parser.add_argument('--threads', '-t', type=int, default=1)
-    parser.add_argument('input', type=str)
-    args = parser.parse_args()
+    bfs_sync_pg(graph, startNode, propertyName)
 
-    from galois.shmem import *
-    print("Using threads:", setActiveThreads(args.threads))
-
-    graph = PropertyGraph(args.input)
-
-    if args.cython:
-        cython_bfs(graph, args.startNode, args.propertyName)
-    else:
-        bfs_sync_pg(graph, args.startNode, args.propertyName)
-
-    print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
-
-    if not args.noverify:
-        numNodeProperties = len(graph.node_schema())
-        newPropertyId = numNodeProperties - 1
-        if args.cython:
-            cython_verify_bfs(graph, args.startNode, newPropertyId)
-        else:
-            verify_bfs(graph, args.startNode, newPropertyId)
+    numNodeProperties = len(graph.node_schema())
+    newPropertyId = numNodeProperties - 1
+    verify_bfs(graph, startNode, newPropertyId)

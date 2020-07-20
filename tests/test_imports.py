@@ -16,6 +16,12 @@ def test_import_property_graph():
 def test_import_graph():
     import galois.graphs
 
+def test_import_datastructures():
+    import galois.datastructures
+
+def test_import_atomic():
+    import galois.atomic
+
 def test_import_numba():
     import galois.numba.pyarrow
     import galois.numba.galois

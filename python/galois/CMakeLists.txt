@@ -47,21 +47,36 @@ generate_cython_source(graphs DEPENDS graphs.instantiations.jinja)
 add_cython_target(graphs graphs.pyx CXX OUTPUT_VAR GRAPHS_SOURCES)
 add_library(graphs MODULE ${GRAPHS_SOURCES})
 python_extension_module(graphs)
-add_dependencies(graphs graphs_pxd)
+add_dependencies(graphs shmem graphs_pxd)
 target_link_libraries(graphs Galois::shmem)
 
-generate_cython_source(_loops DEPENDS)
-add_cython_target(_loops _loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
-add_library(_loops MODULE ${_LOOPS_SOURCES})
-python_extension_module(_loops)
-add_dependencies(_loops _loops_pxd)
-target_link_libraries(_loops Galois::shmem)
+generate_cython_source(atomic DEPENDS numba_wrapper_support.pyx.jinja)
+add_cython_target(atomic atomic.pyx CXX OUTPUT_VAR ATOMIC_SOURCES)
+add_library(atomic MODULE ${ATOMIC_SOURCES})
+python_extension_module(atomic)
+add_dependencies(atomic shmem)
+target_link_libraries(atomic Galois::shmem)
 
+generate_cython_source(datastructures DEPENDS numba_wrapper_support.pyx.jinja)
+add_cython_target(datastructures datastructures.pyx CXX OUTPUT_VAR DATASTRUCTURES_SOURCES)
+add_library(datastructures MODULE ${DATASTRUCTURES_SOURCES})
+python_extension_module(datastructures)
+add_dependencies(datastructures shmem)
+target_link_libraries(datastructures Galois::shmem)
+
+generate_cython_source(property_graph DEPENDS numba_wrapper_support.pyx.jinja)
 add_cython_target(property_graph property_graph.pyx CXX OUTPUT_VAR PROPERTYGRAPH_SOURCES)
 add_library(property_graph MODULE ${PROPERTYGRAPH_SOURCES})
 python_extension_module(property_graph)
-add_dependencies(property_graph graphs)
+add_dependencies(property_graph graphs property_graph_pxd)
 target_link_libraries(property_graph Galois::shmem)
+
+generate_cython_source(_loops DEPENDS numba_wrapper_support.pyx.jinja)
+add_cython_target(_loops _loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
+add_library(_loops MODULE ${_LOOPS_SOURCES})
+python_extension_module(_loops)
+add_dependencies(_loops shmem _loops_pxd datastructures_pxd property_graph_pxd)
+target_link_libraries(_loops Galois::shmem)
 
 add_cython_target(timer timer.pyx CXX OUTPUT_VAR TIMER_SOURCES)
 add_library(timer MODULE ${TIMER_SOURCES})
@@ -109,7 +124,7 @@ target_link_libraries(_connected_components Galois::shmem)
 add_subdirectory(numba)
 
 install(
-  TARGETS shmem graphs timer _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
+  TARGETS shmem graphs timer atomic datastructures _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
   LIBRARY DESTINATION python/galois
 )
 

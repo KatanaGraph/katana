@@ -21,7 +21,7 @@ def test_do_all_python(modes):
     def f(i):
         nonlocal total
         total += i
-    do_all(0, 10, f, **modes)
+    do_all(range(10), f, **modes)
     assert total == 45
 
 @pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)
@@ -32,7 +32,7 @@ def test_for_each_python_with_push(modes):
         total += i
         if i == 8:
             ctx.push(100)
-    for_each(0, 10, f, **modes)
+    for_each(range(10), f, **modes)
     assert total == 145
 
 def test_for_each_wrong_closure():
@@ -41,7 +41,7 @@ def test_for_each_wrong_closure():
         out[i] = i+1
     out = np.zeros(10, dtype=int)
     with pytest.raises(TypeError):
-        for_each(0, 10, f(out))
+        for_each(range(10), f(out))
 
 def test_do_all_wrong_closure():
     @for_each_operator()
@@ -49,7 +49,7 @@ def test_do_all_wrong_closure():
         out[i] = i+1
     out = np.zeros(10, dtype=int)
     with pytest.raises(TypeError):
-        do_all(0, 10, f(out))
+        do_all(range(10), f(out))
 
 @pytest.mark.parametrize("modes", simple_modes)
 def test_do_all(modes):
@@ -57,7 +57,7 @@ def test_do_all(modes):
     def f(out, i):
         out[i] = i+1
     out = np.zeros(10, dtype=int)
-    do_all(0, 10, f(out), **modes)
+    do_all(range(10), f(out), **modes)
     assert np.allclose(out, np.array(range(1, 11)))
 
 @pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)
@@ -68,5 +68,5 @@ def test_for_each(modes):
         if i == 8:
             ctx.push(1)
     out = np.zeros(10, dtype=int)
-    for_each(0, 10, f(out), **modes)
+    for_each(range(10), f(out), **modes)
     assert np.allclose(out, np.array([1, 4, 3, 4, 5, 6, 7, 8, 9, 10]))

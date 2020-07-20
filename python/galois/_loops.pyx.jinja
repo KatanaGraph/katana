@@ -8,12 +8,26 @@ import cython
 import numba.core.ccallback
 import ctypes
 import logging
+from libcpp.memory cimport shared_ptr
+from cython.operator cimport dereference as deref
+
 import galois
 import galois.loops
 import galois.numba.closure
-from .cpp.libgalois cimport Galois
+
+from .cpp.libgalois cimport Galois, datastructures
+from .cpp.libgalois.graphs cimport Graph
+
+from .datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
+from .datastructures import InsertBag_uint64_t, LargeArray_uint64_t
+from .property_graph cimport PropertyGraph
+from .property_graph import PropertyGraph
 
 _logger = logging.getLogger(__name__)
+
+{% import "numba_wrapper_support.pyx.jinja" as numba %}
+
+{{numba.header()}}
 
 @cython.freelist(16)
 cdef class UserContext:
@@ -47,16 +61,34 @@ cdef class UserContext:
     def address(self):
         return <unsigned long int>self.underlying
 
-{% macro wrap_object_function_for_numba(prefix, self_type, func_name, argument_types, return_type="void") -%}
-cdef api {{return_type}} {{prefix}}_{{func_name}}({{self_type}}self{% for typ in argument_types %}, {{typ}} arg{{loop.index}}{% endfor %}) nogil:
-    {% if return_type != "void" %}return {% endif %}self.{{func_name}}({% for typ in argument_types %}{{ ", " if not loop.first }}arg{{loop.index}}{% endfor %})
-{%- endmacro %}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "push", ["uint64_t"])}}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "push_back", ["uint64_t"])}}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "isFirstPass", [], "bint")}}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "cautiousPoint", [])}}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "breakLoop", [])}}
-{{wrap_object_function_for_numba("UserContext", "Galois.UserContext[uint64_t] *", "abort", [])}}
+{% call numba.class_("UserContext", "Galois.UserContext[uint64_t]") %}
+{{numba.method("push", "void", ["uint64_t"])}}
+{{numba.method("push_back", "void", ["uint64_t"])}}
+{{numba.method("isFirstPass", "bint", [])}}
+{{numba.method("cautiousPoint", "void", [])}}
+{{numba.method("breakLoop", "void", [])}}
+{{numba.method("abort", "void", [])}}
+{% endcall %}
+
+
+# FIXME: Hard coded uint64_t loop variable
+cdef extern from * nogil:
+    """
+    typedef void (*do_all_operator_type)(uint64_t, void*);
+    #define do_all_operator_lambda(func, user_data) [&](uint64_t arg) { func(arg, user_data); }
+    """
+    ctypedef void (*do_all_operator_type)(uint64_t, void*) except *
+    Galois.CPPAuto do_all_operator_lambda(do_all_operator_type, void*)
+
+# FIXME: Hard coded uint64_t loop variable
+cdef extern from * nogil:
+    """
+    typedef void (*for_each_operator_type)(uint64_t, galois::UserContext<uint64_t>*, void*);
+    #define for_each_operator_lambda(func, user_data) [&](uint64_t arg, auto& ctx) { func(arg, &ctx, user_data); }
+    """
+    ctypedef void (*for_each_operator_type)(uint64_t, Galois.UserContext[uint64_t]*, void*) except *
+    Galois.CPPAuto for_each_operator_lambda(for_each_operator_type, void*)
+
 
 cdef void wrap_python_callable_do_all_operator(uint64_t arg, void* userdata) nogil:
     with gil:
@@ -66,43 +98,49 @@ cdef void wrap_python_callable_for_each_operator(uint64_t arg, Galois.UserContex
     with gil:
         (<object>userdata)(arg, UserContext.make(ctx))
 
-{% macro native_closure_base(loop_type, has_context) %}
-cdef class NativeClosure_{{loop_type}}:
-    cdef:
-        {{loop_type}}_operator_type function
-        void *userdata
 
-    def __init__(self, function, userdata):
-        self.function = <{{loop_type}}_operator_type><unsigned long>(function.address)
-        self.userdata = <void*><unsigned long>userdata
+{% macro wrap_loop(loop_type, descriptors, supported_iterables) -%}
 
-    @staticmethod
-    cdef NativeClosure_{{loop_type}} make({{loop_type}}_operator_type function, void *userdata):
-        f = <NativeClosure_{{loop_type}}>NativeClosure_{{loop_type}}.__new__(NativeClosure_{{loop_type}})
-        f.function = function
-        f.userdata = userdata
-        return f
+{%- for python_type, iterable_check, extract_impl_arguments, impl_arguments, iterate_expr in supported_iterables %}
+cdef _{{loop_type}}_impl_{{python_type}}({{impl_arguments}}, {{loop_type}}_operator_type cb, void *userdata,
+                                    const char *c_name{% for d in descriptors|sort %}, bint {{d}}{% endfor %}) except +:
+    if False:
+        pass
+    {%- for ss in all_combinations(descriptors) %}
+    elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} not {{d}} {%- endif -%} {%- endfor -%}:
+        with nogil:
+            if c_name == NULL:
+                Galois.{{loop_type}}({{iterate_expr}},
+                            {{loop_type}}_operator_lambda(cb, userdata)
+                          {% for d in ss -%}, Galois.{{ d }}(){%- endfor %}
+                  )
+            else:
+                Galois.{{loop_type}}({{iterate_expr}},
+                            {{loop_type}}_operator_lambda(cb, userdata),
+                            Galois.loopname(c_name)
+                          {% for d in ss -%}, Galois.{{ d }}(){%- endfor %}
+                  )
+    {%- endfor %}
+{%- endfor %}
 
-    def __call__(self, uint64_t arg{{", UserContext ctx" if has_context}}):
-        self.function(arg{{", ctx.underlying" if has_context}}, self.userdata)
-{% endmacro %}
-{{native_closure_base("for_each", True)}}
-{{native_closure_base("do_all", False)}}
-
-
-{% macro wrap_loop(loop_type, descriptors) -%}
-cpdef {{ loop_type }}(int frm, int to, func, loop_name = ""{% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
+# FIXME: Needs a way to infer the argument type produced by the loop and get the appropriate closure setup and call
+#  an appropriate impl function.
+cpdef {{loop_type}}(object iterable, func,
+                    loop_name = None{% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
     cdef:
         {{loop_type}}_operator_type cb
         void *userdata
-    if not isinstance(loop_name, str):
-       raise TypeError("Expected str loop_name")
-    loop_name_bytes = bytes(loop_name, "utf-8")
-    c_name = <const char*>loop_name_bytes
-    if isinstance(func, NativeClosure_{{loop_type}}):
-        cb = (<NativeClosure_{{loop_type}}>func).function
-        userdata = (<NativeClosure_{{loop_type}}>func).userdata
-    elif isinstance(func, numba.core.ccallback.CFunc):
+        const char *c_name
+    
+    if loop_name:
+        if not isinstance(loop_name, str):
+           raise TypeError("Expected str loop_name")
+        loop_name_bytes = bytes(loop_name, "utf-8")
+        c_name = <const char*>loop_name_bytes
+    else:
+        c_name = NULL
+    
+    if isinstance(func, numba.core.ccallback.CFunc):
         if not galois.loops.is_{{loop_type}}_operator_cfunc(func):
             raise TypeError("Function has incorrect signature")
         cb = <{{loop_type}}_operator_type><unsigned long int>(func.address)
@@ -118,15 +156,27 @@ cpdef {{ loop_type }}(int frm, int to, func, loop_name = ""{% for d in descripto
         userdata = <void*>func
     else:
         raise TypeError(func)
+
     if False:
-      pass
-    {%- for ss in all_combinations(descriptors) %}
-    elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} not {{d}} {%- endif -%} {%- endfor -%}:
-        with nogil:
-            _c_{{ loop_type }}_{{ ss|sort|join("_") }}(frm, to, cb, userdata, c_name)
-    {%- endfor %}
+        pass
+{%- for python_type, iterable_check, extract_impl_arguments, impl_arguments, iterate_expr in supported_iterables %}
+    elif isinstance(iterable, {{python_type}}) and {{iterable_check}}:
+        _{{loop_type}}_impl_{{python_type}}({{extract_impl_arguments}}, cb, userdata,
+                                            c_name{% for d in descriptors|sort %}, {{d}}{% endfor %})
+{%- endfor %}
+    else:
+        raise ValueError("iterable unsupported")
 {% endmacro %}
 
-# TODO: implement function type checking for based on numba types.
-{{ wrap_loop("do_all", ["steal"]) }}
-{{ wrap_loop("for_each", ["steal", "no_pushes", "disable_conflict_detection"]) }}
+# FIXME: Hard coded uint64_t loop variable
+{% set supported_iterables = [
+    ("range", "iterable.step == 1", "<uint64_t>iterable.start, <uint64_t>iterable.stop", "uint64_t frm, uint64_t to", "Galois.iterate(frm, to)"),
+    ("InsertBag_uint64_t", "True", "&(<InsertBag_uint64_t>iterable).underlying", "datastructures.InsertBag[uint64_t]* insert_bag", "Galois.iterate(insert_bag[0])"),
+    ("LargeArray_uint64_t", "True", "&(<LargeArray_uint64_t>iterable).underlying", "datastructures.LargeArray[uint64_t]* large_array", "Galois.iterate(large_array[0])"),
+    ("PropertyGraph", "True", "0, (<PropertyGraph>iterable).num_nodes()", "uint64_t frm, uint64_t to", "Galois.iterate(frm, to)"),
+    ] %}
+{{ wrap_loop("do_all", ["steal"], supported_iterables) }}
+{{ wrap_loop("for_each", ["steal", "no_pushes", "disable_conflict_detection"], supported_iterables) }}
+
+
+{{numba.register_all_wrappers()}}

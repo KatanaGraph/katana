@@ -1,0 +1,122 @@
+# -*- mode: cython -*-
+
+import galois.shmem
+
+from .cpp.libgalois cimport datastructures
+from libc.stdint cimport uintptr_t, int64_t, uint64_t
+from cython.operator cimport preincrement, dereference as deref
+import cython
+
+{% import "numba_wrapper_support.pyx.jinja" as numba %}
+
+{{numba.header()}}
+
+{% macro wrap_insert_bag(element_type) %}
+{% set underlying_type %}datastructures.InsertBag[{{element_type}}]{% endset -%}
+{% set class_name %}InsertBag_{{element_type}}{% endset -%}
+@cython.freelist(2)
+cdef class {{class_name}}_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = <{{element_type}}>deref(self.it)
+        preincrement(self.it)
+        return v
+
+cdef class {{class_name}}:
+    def push(self, {{element_type}} v):
+        self.underlying.push(v)
+
+    def clear(self):
+        self.underlying.clear()
+
+    def empty(self):
+        return self.underlying.empty()
+
+    def swap(self, {{class_name}} other):
+        self.underlying.swap(other.underlying)
+
+    def __iter__(self):
+        i =  <{{class_name}}_Iterator>{{class_name}}_Iterator.__new__({{class_name}}_Iterator)
+        i.obj = self
+        i.it = self.underlying.begin()
+        i.end = self.underlying.end()
+        return i
+
+    @property
+    def address(self):
+        return <uintptr_t>&self.underlying
+
+{% call numba.class_(class_name, underlying_type) %}
+{{numba.method("push", "void", [element_type])}}
+{{numba.method("clear", "void", [])}}
+{{numba.method("empty", "bint", [])}}
+{% endcall %}
+{% endmacro %}
+
+InsertBag = {}
+{% for element_type, python_type in [("uint64_t", "'uint64_t'"), ("int64_t", "int"), ("double", "float")] %}
+{{wrap_insert_bag(element_type)}}
+InsertBag[{{python_type}}] = InsertBag_{{element_type}}
+{% endfor %}
+
+
+{% macro wrap_large_array(element_type) %}
+{% set underlying_type %}datastructures.LargeArray[{{element_type}}]{% endset -%}
+{% set class_name %}LargeArray_{{element_type}}{% endset -%}
+@cython.freelist(2)
+cdef class {{class_name}}_Iterator:
+    def __next__(self):
+        if self.it == self.end:
+            raise StopIteration()
+        v = <{{element_type}}>deref(self.it)
+        preincrement(self.it)
+        return v
+
+cdef class {{class_name}}:
+    def __setitem__(self, uint64_t i, {{element_type}} v):
+        if i < 0 or i >= self.underlying.size():
+            raise IndexError(i)
+        self.underlying.set(i, v)
+
+    def __getitem__(self, uint64_t i):
+        if i < 0 or i >= self.underlying.size():
+            raise IndexError(i)
+        return self.underlying[i]
+
+    def __len__(self):
+        return self.underlying.size()
+
+    def allocateInterleaved(self, uint64_t size):
+        self.underlying.allocateInterleaved(size)
+
+    def allocateBlocked(self, uint64_t size):
+        self.underlying.allocateBlocked(size)
+
+    def __iter__(self):
+        i =  <{{class_name}}_Iterator>{{class_name}}_Iterator.__new__({{class_name}}_Iterator)
+        i.obj = self
+        i.it = self.underlying.begin()
+        i.end = self.underlying.end()
+        return i
+
+    @property
+    def address(self):
+        return <uintptr_t>&self.underlying
+
+{% call numba.class_(class_name, underlying_type) %}
+{% call numba.method_with_body("get", element_type, ["uint64_t"]) %}
+    return self[0][arg1]
+{% endcall %}
+{{numba.method("set", "void", ["uint64_t", element_type])}}
+{{numba.method("data", element_type + "*", [])}}
+{% endcall %}
+{% endmacro %}
+
+LargeArray = {}
+{% for element_type, python_type in [("uint64_t", "'uint64_t'"), ("int64_t", "int"), ("double", "float")] %}
+{{wrap_large_array(element_type)}}
+LargeArray[{{python_type}}] = LargeArray_{{element_type}}
+{% endfor %}
+
+{{numba.register_all_wrappers()}}

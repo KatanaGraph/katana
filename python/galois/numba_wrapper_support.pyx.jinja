@@ -1,0 +1,80 @@
+{# Generate the initial declarations needed for the rest of the numba wrapper macros. #}
+{% macro header() %}
+import ctypes
+
+__numba_wrapper_tables__ = []
+
+__numba_wrapper_c_type_to_ctypes_table = {
+    "void": None,
+    "uint64_t": ctypes.c_uint64,
+    "int64_t": ctypes.c_int64,
+    "bint": ctypes.c_bool,
+    "float": ctypes.c_float,
+    "double": ctypes.c_double,
+}
+
+def __numba_wrapper_c_type_to_ctypes(type_name):
+    if type_name.endswith("*"):
+        return ctypes.c_void_p
+    return __numba_wrapper_c_type_to_ctypes_table[type_name]
+{% endmacro %}
+
+{% set numba_gen_state = namespace(found=false) -%}
+
+{# Wrap a class with the specified Python name and C self type.
+   This should be used with {% call numba.class_(...) %} with numba.method calls inside the call block. #}
+{% macro class_(class_name, self_type) -%}
+{% set numba_gen_state.class_name = class_name -%}
+{% set numba_gen_state.self_type = self_type -%}
+__numba_wrapper_table_{{class_name}} = []
+__numba_wrapper_tables__.append(({{class_name}}, __numba_wrapper_table_{{class_name}}))
+{{caller()}}
+del __numba_wrapper_table_{{class_name}}
+{% set numba_gen_state.class_name = None -%}
+{% set numba_gen_state.self_type = None -%}
+{%- endmacro -%}
+
+{% macro method_with_body(func_name, return_type, argument_types, underlying_func_name=None) -%}
+{% set class_name = numba_gen_state.class_name -%}
+{% set self_type = numba_gen_state.self_type -%}
+{% set mangled_func_name %}__numba_wrapper_{{class_name}}_{{func_name}}{% endset %}
+{% if not underlying_func_name -%}
+{% set underlying_func_name = func_name -%}
+{% endif -%}
+cdef api {{return_type}} {{mangled_func_name}}({{self_type}} *self{% for typ in argument_types %}, {{typ}} arg{{loop.index}}{% endfor %}) nogil:
+{{caller()}}
+__numba_wrapper_table_{{class_name}}.append(
+    ("{{func_name}}",
+     ctypes.CFUNCTYPE(__numba_wrapper_c_type_to_ctypes("{{return_type}}"),
+                      __numba_wrapper_c_type_to_ctypes("{{self_type}} *"),
+         {% for typ in argument_types %}{{ ", " if not loop.first }}__numba_wrapper_c_type_to_ctypes("{{typ}}"){% endfor %}),
+     "{{mangled_func_name}}",
+     <uintptr_t>&{{mangled_func_name}}))
+{%- endmacro %}
+
+{# Wrap a method for numba. This should only be called inside a call block as discussed in the documentation of class_. #}
+{% macro method(func_name, return_type, argument_types, underlying_func_name=None) -%}
+{% set class_name = numba_gen_state.class_name -%}
+{% set self_type = numba_gen_state.self_type -%}
+{% set mangled_func_name %}__numba_wrapper_{{class_name}}_{{func_name}}{% endset %}
+{% if not underlying_func_name -%}
+{% set underlying_func_name = func_name -%}
+{% endif -%}
+cdef api {{return_type}} {{mangled_func_name}}({{self_type}} *self{% for typ in argument_types %}, {{typ}} arg{{loop.index}}{% endfor %}) nogil:
+    {% if return_type != "void" %}return {% endif %}self.{{underlying_func_name}}(
+      {% for typ in argument_types %}{{ ", " if not loop.first }}arg{{loop.index}}{% endfor %})
+__numba_wrapper_table_{{class_name}}.append(
+    ("{{func_name}}",
+     ctypes.CFUNCTYPE(__numba_wrapper_c_type_to_ctypes("{{return_type}}"),
+                      __numba_wrapper_c_type_to_ctypes("{{self_type}} *"),
+         {% for typ in argument_types %}{{ ", " if not loop.first }}__numba_wrapper_c_type_to_ctypes("{{typ}}"){% endfor %}),
+     "{{mangled_func_name}}",
+     <uintptr_t>&{{mangled_func_name}}))
+{%- endmacro %}
+
+
+{# Emit code to actually register all the numba wrappers with numba. #}
+{% macro register_all_wrappers() -%}
+import galois.numba.utils
+galois.numba.utils.interpret_numba_wrapper_tables(__numba_wrapper_tables__, globals())
+{% endmacro -%}

@@ -9,7 +9,9 @@ from numba.extending import get_cython_function_address, typeof_impl, overload_m
 
 from .utils import call_raw_function_pointer
 
-__all__ = []
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 def get_cython_function_address_with_defaults(full_function_name, default_module_name, default_function_name):
@@ -27,6 +29,7 @@ def get_cython_function_address_with_defaults(full_function_name, default_module
 
 class NumbaPointerWrapper(metaclass=ABCMeta):
     def __init__(self, orig_typ, override_module_name=None):
+        _logger.debug("NumbaPointerWrapper: %r, %r", orig_typ, override_module_name)
         class Type(numba.types.Type):
             def __init__(self):
                 super(Type, self).__init__(name=orig_typ.__name__)
@@ -58,10 +61,13 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         self.override_module_name = override_module_name or self.module_name
         self.orig_type = orig_typ
 
-    def register_method(self, func_name, typ, cython_func_name=None):
-        addr = get_cython_function_address_with_defaults(
+    def register_method(self, func_name, typ, cython_func_name=None, addr=None):
+        addr_found = get_cython_function_address_with_defaults(
             cython_func_name, self.override_module_name, self.type_name + "_" + func_name)
-        func = typ(addr)
+        if addr:
+            assert addr == addr_found
+        func = typ(addr_found)
+        _logger.debug("%r.register_method: %r, %r: %r%r, %x, %r", self, func_name, func, func.restype, func.argtypes, addr_found, cython_func_name)
         @overload_method(self.Type, func_name)
         def overload(v, *args):
             def impl(v, *args):
@@ -69,10 +75,12 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
             return impl
         return overload
 
-
     @abstractmethod
     def get_value_address(self, pyval):
         raise NotImplementedError()
+
+    def __repr__(self):
+        return "<{} {} {}>".format(type(self).__name__, self.orig_type, self.type)
 
 
 class SimpleNumbaPointerWrapper(NumbaPointerWrapper):

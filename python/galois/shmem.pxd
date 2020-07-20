@@ -1,8 +1,8 @@
 # distutils: language=c++
 # distutils: extra_compile_args=["-std=c++17"]
 
-from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, GReduceMax, InsertBag, steal
-from .cpp.libgalois.Galois cimport LargeArray, MethodFlag, FLAG_UNPROTECTED, atomicMin
+from .cpp.libgalois.Galois cimport UserContext, iterate, for_each, SharedMemSys, loopname, disable_conflict_detection, no_pushes, do_all, steal
+from .cpp.libgalois.Galois cimport MethodFlag
 from .cpp.libgalois.graphs.Graph cimport dummy_true, dummy_false, MorphGraph, LC_CSR_Graph, PropertyFileGraph, GraphTopology
 from .cpp.libgalois.graphs.ReadGraph cimport readGraph
 from .cpp.libgalois.Worklist cimport ChunkFIFO, OrderedByIntegerMetric, wl, Uint_64u, UpdateRequestIndexer, PerSocketChunkFIFO, ReqPushWrap, UpdateRequest
@@ -49,34 +49,4 @@ cdef extern from "algorithm" namespace "std" nogil:
     # be made to match the original templates more closely, but since
     # this form matches the syntax we need to use, it is good enough.
     int count_if(...) except +
-
-# This function is expected to forward C++ exceptions thrown to
-# its caller. This is unusual for Cython, but it's the simplest
-# way to guarantee no loos Python exceptions end up floating around.
-#cdef void IncrementNeighbors(Graph *g, GNode n, UserContext[GNode] &ctx) nogil:
- #   cdef:
-#        MorphGraph[int, void, dummy_true].edge_iterator ii = g[0].edge_begin(n)
-#        MorphGraph[int, void, dummy_true].edge_iterator ei = g[0].edge_end(n)
-#        int *data
-#    while ii != ei:
-#        data = &g[0].getData(g[0].getEdgeDst(ii))
-#        preincrement(data[0])
-#        preincrement(ii)
-
-# C++ exceptions thrown inside this function are forwarded to its caller.
-#cdef bint ValueEqual(Graph *g, int v, GNode n) nogil:
-#    return g[0].getData(n) == v
-
-#cdef bint SameNodes(GNodeCSR n, GNodeCSR s) nogil:
- #   return n == s
-
-#cdef void setGNode(Graph_CSR *g, GNodeCSR n, int val) nogil:
-#    gPrint("inside setGNode\n")
-#    cdef uint32_t *data = &g[0].getData(n);
-#    data[0] = val;
-#    gPrint("n : ", deref(data), "\n");
-#    preincrement(data[0])
-#    gPrint("n : ", deref(data), "\n");
-
-
 

@@ -4,12 +4,6 @@ from galois.property_graph import PropertyGraph
 import pyarrow
 
 def test_load(property_graph):
-    print(property_graph.num_nodes())
-    print(property_graph.num_edges())
-    print()
-    print(property_graph.node_schema())
-    print()
-    print(property_graph.edge_schema())
     assert property_graph.num_nodes() == 29092
     assert property_graph.num_edges() == 39283
     assert len(property_graph.node_schema()) == 32
@@ -104,7 +98,7 @@ def test_simple_algorithm(property_graph):
     prop = g.get_node_property("length")
     out = np.empty((g.num_nodes(),), dtype=int)
 
-    do_all(0, len(g), func_operator(g, prop, out), "operator")
+    do_all(g, func_operator(g, prop, out), "operator")
 
     g.add_node_property(pyarrow.table(dict(referenced_total_length=out)))
 

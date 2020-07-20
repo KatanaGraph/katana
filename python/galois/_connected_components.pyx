@@ -1,6 +1,7 @@
 # cython: cdivision= True
 from galois.shmem cimport *
-from cython.operator cimport preincrement, dereference as deref
+from galois.cpp.libgalois.Galois cimport FLAG_UNPROTECTED
+from galois.cpp.libgalois.atomic cimport atomicMin
 
 from galois.timer import StatTimer
 from .cpp.libstd.atomic cimport atomic

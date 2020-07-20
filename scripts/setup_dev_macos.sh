@@ -14,3 +14,5 @@ bash -x "${REPO_ROOT}/.github/workflows/setup_macos.sh"
 # mkdir build
 # cd build
 # cmake ../ -DGALOIS_AUTO_CONAN=on -DGALOIS_ENABLE_DIST=on
+# The build does rely on git submodules
+# git submoudle update --init

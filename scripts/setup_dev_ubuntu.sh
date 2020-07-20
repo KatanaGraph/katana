@@ -27,3 +27,5 @@ sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format 
 # mkdir build
 # cd build
 # cmake ../ -DGALOIS_AUTO_CONAN=on -DGALOIS_ENABLE_DIST=on
+# The build does rely on git submodules
+# git submoudle update --init

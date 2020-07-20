@@ -21,6 +21,7 @@
 #include "tsuba/file.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG_internal.h"
+#include "tsuba/FaultTest.h"
 
 #include "GlobalState.h"
 #include "json.h"
@@ -271,10 +272,12 @@ WriteTable(const arrow::Table& table,
     }
 
     ff->Bind(next_path);
+    tsuba::internal::PtP();
     if (auto res = ff->Persist(); !res) {
       return res.error();
     }
   }
+  tsuba::internal::PtP();
 
   if (next_paths.empty()) {
     return properties;
@@ -513,9 +516,11 @@ galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
 
   ff->Bind(HostPartitionName(handle, tsuba::Comm()->ID,
                              handle.impl_->rdg.version + 1));
+  tsuba::internal::PtP();
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
+  tsuba::internal::PtP();
   return galois::ResultSuccess();
 }
 
@@ -649,18 +654,26 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle) {
   galois::CommBackend* comm = tsuba::Comm();
   tsuba::RDGMeta new_meta{.version   = handle.impl_->rdg.version + 1,
                           .num_hosts = comm->Num};
+
+  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
+  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   if (comm->ID == 0) {
+    tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
     std::string s = json(new_meta).dump();
+    tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
     if (auto res = tsuba::FileStore(handle.impl_->rdg_path,
                                     reinterpret_cast<const uint8_t*>(s.data()),
                                     s.size());
         !res) {
+      tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
       GALOIS_LOG_ERROR("failed to store RDG file");
       return res.error();
     }
   }
+  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
+  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   handle.impl_->rdg = new_meta;
   return galois::ResultSuccess();
 }
@@ -674,12 +687,14 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
     }
     std::string t_path = std::move(path_res.value());
 
-    if (auto res = tsuba::FileStore(
-            t_path, rdg->topology_file_storage.valid_ptr<uint8_t>(),
-            rdg->topology_size);
+    tsuba::internal::PtP();
+    if (auto res =
+            tsuba::FileStore(t_path, rdg->topology_file_storage.ptr<uint8_t>(),
+                             rdg->topology_file_storage.size());
         !res) {
       return res.error();
     }
+    tsuba::internal::PtP();
     auto name_res = galois::ExtractFileName(t_path);
     if (!name_res) {
       return name_res.error();
@@ -1016,9 +1031,11 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
   }
   std::string t_path = std::move(path_res.value());
   ff->Bind(t_path);
+  tsuba::internal::PtP();
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
+  tsuba::internal::PtP();
   auto name_res = galois::ExtractFileName(t_path);
   if (!name_res) {
     return name_res.error();

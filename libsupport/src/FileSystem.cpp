@@ -66,7 +66,7 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
     name = name.substr(1, std::string::npos);
   }
   name += "-";
-  name += generate_random_alphanumeric_string(12);
+  name += RandomAlphanumericString(12);
   std::string p{dir};
   if (p.back() == kSepChar) {
     p = p.substr(0, p.length() - 1);

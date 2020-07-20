@@ -2,14 +2,14 @@
 #define GALOIS_LIBTSUBA_BENCH_UTILS_H_
 
 #include <time.h>
+#include "galois/Result.h"
 
 inline struct timespec now() {
   struct timespec tp;
   // CLOCK_BOOTTIME is probably better, but Linux specific
   int ret = clock_gettime(CLOCK_MONOTONIC, &tp);
   if (ret < 0) {
-    perror("clock_gettime");
-    GALOIS_LOG_ERROR("Bad return");
+    GALOIS_LOG_ERROR("clock_gettime {}", galois::ResultErrno().message());
   }
   return tp;
 }

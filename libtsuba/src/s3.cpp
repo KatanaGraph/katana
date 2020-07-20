@@ -26,6 +26,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba_internal.h"
 #include "tsuba/s3_internal.h"
+#include "tsuba/FaultTest.h"
 #include "SegmentedBufferView.h"
 
 namespace tsuba {
@@ -220,7 +221,9 @@ galois::Result<void> internal::S3PutSingleSync(const std::string& bucket,
   object_request.SetBody(preallocatedStreamReader);
   object_request.SetContentType("application/octet-stream");
 
+  tsuba::internal::PtP();
   auto outcome = s3_client->PutObject(object_request);
+  tsuba::internal::PtP();
   if (!outcome.IsSuccess()) {
     /* TODO there are likely some errors we can handle gracefully
      * i.e., with retries */
@@ -238,8 +241,8 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
                                        const uint8_t* data, uint64_t size) {
   // Any small size put, do synchronously
   if (size < kS3DefaultBufSize) {
-    GALOIS_LOG_VERBOSE("S3 Put {:d} bytes, less than {:d}, doing sync", size,
-                       kS3DefaultBufSize);
+    GALOIS_LOG_DEBUG("S3 Put {:d} bytes, less than {:d}, doing sync", size,
+                     kS3DefaultBufSize);
     return internal::S3PutSingleSync(bucket, object, data, size);
   }
 
@@ -251,6 +254,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   createMpRequest.WithKey(ToAwsString(object));
 
   auto createMpResponse = s3_client->CreateMultipartUpload(createMpRequest);
+  tsuba::internal::PtP();
   if (auto res = CheckS3Error(createMpResponse); !res) {
     if (res.error() == ErrorCode::S3Error) {
       const auto& error = createMpResponse.GetError();
@@ -275,6 +279,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   std::condition_variable cv;
   Aws::S3::Model::CompletedMultipartUpload completedUpload;
   uint64_t finished = 0;
+  tsuba::internal::PtP();
   for (unsigned i = 0; i < parts.size(); ++i) {
     auto& part         = parts[i];
     auto lengthToWrite = part.end - part.start;
@@ -305,11 +310,14 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
           (void)(client);
           (void)(request);
           (void)(context);
+          tsuba::internal::PtP();
           if (outcome.IsSuccess()) {
             std::lock_guard<std::mutex> lk(m);
+            tsuba::internal::PtP();
             part_e_tags[i] = outcome.GetResult().GetETag();
             finished++;
             cv.notify_one();
+            tsuba::internal::PtP();
           } else {
             const auto& error = outcome.GetError();
             GALOIS_LOG_FATAL(
@@ -318,14 +326,20 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
           }
         };
     s3_client->UploadPartAsync(uploadPartRequest, callback);
+    tsuba::internal::PtP();
   }
   std::unique_lock<std::mutex> lk(m);
-  cv.wait(lk, [&] { return finished >= parts.size(); });
+  tsuba::internal::PtP();
+  cv.wait(lk, [&] {
+    tsuba::internal::PtP();
+    return finished >= parts.size();
+  });
 
   for (unsigned i = 0; i < part_e_tags.size(); ++i) {
     Aws::S3::Model::CompletedPart completedPart;
     completedPart.WithPartNumber(i + 1).WithETag(ToAwsString(part_e_tags[i]));
     completedUpload.AddParts(completedPart);
+    tsuba::internal::PtP();
   }
 
   Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
@@ -334,6 +348,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
       .WithUploadId(upload_id)
       .WithMultipartUpload(completedUpload);
 
+  tsuba::internal::PtP();
   auto completeUploadOutcome =
       s3_client->CompleteMultipartUpload(completeMultipartUploadRequest);
 
@@ -423,7 +438,7 @@ galois::Result<void> internal::S3PutMultiAsync1(S3AsyncWork& s3aw,
     it->second.finished_  = 0UL;
     it->second.upload_id_ = "";
 
-    GALOIS_LOG_VERBOSE(
+    GALOIS_LOG_DEBUG(
         "{:<30} PutMultiAsync1 size {:#x} nSeg {:d} parts_.size() {:d}", bno,
         size, bufView.NumSegments(), it->second.parts_.size());
   }
@@ -463,9 +478,8 @@ galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
   }
 
   pm->upload_id_ = createMpResponse.GetResult().GetUploadId();
-  GALOIS_LOG_VERBOSE(
-      "{:<30} PutMultiAsync2 B parts.size() {:d}\n  upload id {}", bno,
-      pm->parts_.size(), pm->upload_id_);
+  GALOIS_LOG_DEBUG("{:<30} PutMultiAsync2 B parts.size() {:d}\n  upload id {}",
+                   bno, pm->parts_.size(), pm->upload_id_);
 
   Aws::S3::Model::CompletedMultipartUpload completedUpload;
   for (unsigned i = 0; i < pm->parts_.size(); ++i) {
@@ -506,7 +520,7 @@ galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
                              bno, xfer_label.at(it->second.xfer_));
           it->second.part_e_tags_[i] = outcome.GetResult().GetETag();
           it->second.finished_++;
-          GALOIS_LOG_VERBOSE(
+          GALOIS_LOG_DEBUG(
               "{:<30} PutMultiAsync2 i {:d} finished {:d}\n etag {}", bno, i,
               it->second.finished_, outcome.GetResult().GetETag());
         }

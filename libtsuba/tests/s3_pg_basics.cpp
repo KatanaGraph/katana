@@ -14,15 +14,17 @@
 ///  version.
 
 std::vector<std::string> s3_pg_inputs = {
-    "s3://property-graphs/katana/yago-schema/meta",
-    "s3://property-graphs/katana/ldbc_003/meta",
-    "s3://property-graphs/katana/yago-shapes/meta",
+    "s3://non-property-graphs/rmat15/meta",
+    //    "s3://property-graphs/katana/yago-schema/meta",
+    //    "s3://property-graphs/katana/ldbc_003/meta",
+    //    "s3://property-graphs/katana/yago-shapes/meta",
 };
 
 std::vector<std::string> s3_pg_outputs = {
-    "s3://katana-ci/delete_me/katana/yago-schema/meta",
-    "s3://katana-ci/delete_me/katana/ldbc_003/meta",
-    "s3://katana-ci/delete_me/katana/yago-shapes/meta",
+    "s3://katana-ci/delete_me/rmat15/meta",
+    //    "s3://katana-ci/delete_me/katana/yago-schema/meta",
+    //    "s3://katana-ci/delete_me/katana/ldbc_003/meta",
+    //    "s3://katana-ci/delete_me/katana/yago-shapes/meta",
 };
 
 /******************************************************************************/

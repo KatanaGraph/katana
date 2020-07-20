@@ -82,7 +82,7 @@ void MkCpSumS3(uint64_t num_bytes, const std::string& local,
 
 std::vector<Test> ConstructTests(std::string local_dir, std::string s3_dir) {
   std::vector<Test> tests;
-  std::string rnd_str = galois::generate_random_alphanumeric_string(12);
+  std::string rnd_str = galois::RandomAlphanumericString(12);
   if (local_dir.back() != kPathSep) {
     local_dir.push_back(kPathSep);
   }

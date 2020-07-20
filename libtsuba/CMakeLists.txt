@@ -12,6 +12,7 @@ set(sources
    src/s3.cpp
    src/LocalStorage.cpp
    src/S3Storage.cpp
+   src/FaultTest.cpp
 )
 
 target_sources(tsuba PRIVATE ${sources})

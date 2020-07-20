@@ -11,8 +11,6 @@
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
 
-uint64_t read_block_size = (1 << 29);
-
 std::string usage_msg = "Usage: {} <list of file names>\n";
 
 std::vector<std::string> parse_arguments(int argc, char* argv[]) {

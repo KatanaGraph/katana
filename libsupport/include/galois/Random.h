@@ -5,7 +5,13 @@
 
 namespace galois {
 
-std::string generate_random_alphanumeric_string(uint64_t len);
+std::string RandomAlphanumericString(uint64_t len);
+// Range 0..len-1, inclusive
+int64_t RandomUniformInt(int64_t len);
+// Range min+1..max-1, inclusive
+int64_t RandomUniformInt(int64_t min, int64_t max);
+// Range 0.0f..max, inclusive
+float RandomUniformFloat(float max);
 
 } // namespace galois
 

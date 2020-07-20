@@ -26,6 +26,12 @@ target_link_libraries(tsuba_md5sum tsuba)
 add_executable(tsuba_rm tsuba_rm.cpp)
 target_link_libraries(tsuba_rm tsuba)
 
+add_executable(tsuba_fault tsuba_fault.cpp)
+target_link_libraries(tsuba_fault tsuba)
+
+add_executable(tsuba_fault_runner tsuba_fault_runner.cpp)
+target_link_libraries(tsuba_fault_runner tsuba)
+
 if(GALOIS_ENABLE_DIST)
   add_executable(tsuba_dist_write tsuba_dist_write.cpp)
   target_link_libraries(tsuba_dist_write tsuba)

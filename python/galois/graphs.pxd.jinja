@@ -1,9 +1,9 @@
-{# -*- mode: cython -*- -#}
-{# This Jinja2 generates the cython declarations for Galois graph data structures -#}
+# -*- mode: cython -*-
+#{# This Jinja2 generates the cython declarations for Galois graph data structures #}
 # distutils: language=c++
 # distutils: extra_compile_args=["-std=c++17"]
 
-# THIS FILE IS GENERATED. Make changes to graphs.pxd.jinja
+# {{generated_banner()}}
 
 from galois.shmem cimport *
 from .cpp.libgalois.Galois cimport MethodFlag

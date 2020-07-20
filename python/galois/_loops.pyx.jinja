@@ -1,8 +1,8 @@
-{# -*- mode: cython -*- -#}
-{# This Jinja2 generates the Cython wrapper for Galois' do_all and for_each -#}
+# -*- mode: cython -*-
+#{# This Jinja2 generates the Cython wrapper for Galois' do_all and for_each #}
 # cython: cdivision = True
 
-# THIS FILE IS GENERATED.
+# {{generated_banner()}}
 
 import cython
 import numba.core.ccallback

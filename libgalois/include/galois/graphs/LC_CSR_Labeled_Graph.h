@@ -512,6 +512,48 @@ public:
   }
 
   /**
+   * Given some vector, sort the indices of that vector as if they were
+   * the edge destinations that would get sorted if one sorted by the
+   * edge data then destinations. Used mainly to rearrange other vectors
+   * that also need to be sorted besides destinations/data  (since the
+   * current infrastructure only supports sorting those 2 arrays at
+   * the moment).
+   */
+  void sortVectorByDataThenDst(std::vector<uint64_t>& vector_to_sort) {
+    galois::do_all(
+        galois::iterate((size_t)0, this->size()),
+        [&](size_t node_id) {
+          // get this node's first and last edge
+          uint32_t first_edge = *(this->edge_begin(node_id));
+          uint32_t last_edge  = *(this->edge_end(node_id));
+          // get iterators to locations to sort in the vector
+          auto begin_sort_iterator = vector_to_sort.begin() + first_edge;
+          auto end_sort_iterator   = vector_to_sort.begin() + last_edge;
+
+          // rearrange vector indices based on how the destinations of this
+          // graph will eventually be sorted sort function not based on vector
+          // being passed, but rather the data and destination of the graph
+          std::sort(begin_sort_iterator, end_sort_iterator,
+                    [&](const uint64_t e1, const uint64_t e2) {
+                      // get edge data and destinations
+                      EdgeTy data1 = this->getEdgeData(e1);
+                      EdgeTy data2 = this->getEdgeData(e2);
+                      if (data1 < data2) {
+                        return true;
+                      } else if (data1 > data2) {
+                        return false;
+                      } else {
+                        uint32_t dst1 = this->getEdgeDst(e1);
+                        uint32_t dst2 = this->getEdgeDst(e2);
+                        return dst1 < dst2;
+                      }
+                    });
+        },
+        galois::steal(), galois::no_stats(),
+        galois::loopname("SortVectorByDataThenDst"));
+  }
+
+  /**
    * Returns an edge iterator to an edge with some source and destination by
    * searching for the destination via the source vertex's edges.
    * If not found, returns nothing.

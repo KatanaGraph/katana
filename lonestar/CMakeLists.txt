@@ -179,21 +179,19 @@ if(GALOIS_ENABLE_DIST)
   endfunction()
 
   function(add_test_dist_for_partitions app input type num_threads num_gpus part)
-    # cut threads in system in half first
-    if(${num_threads} GREATER 1)
-      math(EXPR num_threads "${num_threads} / 2")
-    endif()
-
-    # spawn at most 8 processes/use at most 8 threads during testing
+    # use at most 8 threads during testing
     if(${num_threads} GREATER 8)
       set(num_threads 8)
     endif()
 
-    set(partitions ${num_threads})
-    set(thr ${num_threads})
-    while (${thr} GREATER 1)
-      math(EXPR thr "${thr} / 2")
-      list(APPEND partitions ${thr})
+    # always use 4 partitions
+    set(partitions 4)
+    # get 2 and 1 into partitions set; code remains in case we want to change
+    # 4 to something else
+    set(other_parts ${partitions})
+    while (${other_parts} GREATER 1)
+      math(EXPR other_parts "${other_parts} / 2")
+      list(APPEND partitions ${other_parts})
     endwhile()
     list(REVERSE partitions)
 

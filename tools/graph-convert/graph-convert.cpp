@@ -2693,7 +2693,7 @@ struct Gr2Neo4j : public Conversion {
    * command.
    *
    * ./neo4j-admin import --nodes=Vertex="<nodesheader>,<nodes>"
-   * --edges=EDGE="<edgesheader>,<edges>" --delimiter ','
+   * --relationships=EDGE="<edgesheader>,<edges>" --delimiter ','
    *
    * The label on nodes will be "Vertex", and the label on edges will be "EDGE".
    * The weight, if it exists, will be in the property "value" on the edge.

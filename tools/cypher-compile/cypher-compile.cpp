@@ -68,6 +68,9 @@ int main(int argc, char** argv) {
     a.acted_on.printStruct(2);
   }
 
+  galois::gInfo("Parsed return metadata is as follows:");
+  cc.getReturnMetadata().printStruct(1);
+
   galois::gInfo("Parsed return values are as follows:");
   for (const galois::CompilerQueryResult& a : cc.getReturnValues()) {
     a.printStruct(1);

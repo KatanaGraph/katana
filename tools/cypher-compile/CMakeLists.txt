@@ -5,3 +5,5 @@ install(TARGETS cypher-compile
   DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT tools
 )
+
+add_subdirectory(test)

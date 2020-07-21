@@ -59,14 +59,7 @@ install(TARGETS graph-convert-huge
 
 find_package(LibXml2 2.9.1 REQUIRED)
 
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/csv-parser") 
-   message(FATAL_ERROR "Cannot find the csv-parser Git submodule. Please run `git submodule update --init --recursive`") 
- endif() 
-
 add_library(graph-properties-convert-common STATIC graph-properties-convert.cpp)
-# -Wno-unkown-pragmas needed for dependency csv
-target_compile_options(graph-properties-convert-common PRIVATE -Wno-unknown-pragmas)
-target_include_directories(graph-properties-convert-common PRIVATE ${PROJECT_SOURCE_DIR}/external/csv-parser/single_include)
 target_link_libraries(graph-properties-convert-common PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem)
 

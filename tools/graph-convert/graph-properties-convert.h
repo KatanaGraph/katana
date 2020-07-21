@@ -8,7 +8,7 @@
 
 namespace galois {
 
-enum SourceType { kGraphml, kJson, kCsv };
+enum SourceType { kGraphml };
 enum SourceDatabase { kNone, kNeo4j, kMongodb };
 enum ImportDataType { kString, kInt64, kInt32, kDouble, kFloat, kBoolean };
 
@@ -31,8 +31,6 @@ struct GraphComponents {
 
 GraphComponents ConvertGraphml(const std::string& input_filename,
                                const size_t chunkSize);
-GraphComponents ConvertNeo4jJson(const std::string& input_filename);
-GraphComponents ConvertNeo4jCsv(const std::string& input_filename);
 void ConvertToPropertyGraphAndWrite(const GraphComponents& graph_comps,
                                     const std::string& dir);
 

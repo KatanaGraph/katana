@@ -18,11 +18,7 @@ static cll::opt<std::string> input_filename(cll::Positional,
 static cll::opt<galois::SourceType>
     fileType(cll::desc("Input file type:"),
              cll::values(clEnumValN(galois::SourceType::kGraphml, "graphml",
-                                    "source file is of type GraphML"),
-                         clEnumValN(galois::SourceType::kJson, "json",
-                                    "source file is of type JSON"),
-                         clEnumValN(galois::SourceType::kCsv, "csv",
-                                    "source file is of type CSV")),
+                                    "source file is of type GraphML")),
              cll::Required);
 static cll::opt<ConvertTest> test_type(
     cll::desc("Input file type:"),
@@ -1088,12 +1084,6 @@ int main(int argc, char** argv) {
   switch (fileType) {
   case galois::SourceType::kGraphml:
     graph = galois::ConvertGraphml(input_filename, chunk_size);
-    break;
-  case galois::SourceType::kJson:
-    graph = galois::ConvertNeo4jJson(input_filename);
-    break;
-  case galois::SourceType::kCsv:
-    graph = galois::ConvertNeo4jCsv(input_filename);
     break;
   }
   switch (test_type) {

@@ -33,7 +33,7 @@ static cll::opt<ConvertTest> testType(
                 clEnumValN(ConvertTest::CHUNKS, "chunks",
                            "this is a test for chunks")),
     cll::Required);
-static cll::opt<size_t>
+static cll::opt<int>
     chunkSize("chunkSize",
               cll::desc("Chunk size for in memory arrow representation"),
               cll::init(25000));

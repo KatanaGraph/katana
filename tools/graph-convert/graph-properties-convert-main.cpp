@@ -31,7 +31,7 @@ static cll::opt<galois::SourceDatabase>
                          clEnumValN(galois::SourceDatabase::MONGODB, "mongodb",
                                     "source data came from mongodb")),
              cll::init(galois::SourceDatabase::NONE));
-static cll::opt<size_t>
+static cll::opt<int>
     chunkSize("chunkSize",
               cll::desc("Chunk size for in memory arrow representation"),
               cll::init(25000));

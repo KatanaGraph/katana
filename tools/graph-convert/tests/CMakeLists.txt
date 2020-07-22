@@ -14,6 +14,6 @@ add_test(NAME convert-properties-graphml-types
 set_tests_properties(convert-properties-graphml-types PROPERTIES LABELS quick)
 
 add_test(NAME convert-properties-graphml-chunks
-  COMMAND graph-properties-convert-test --graphml --chunks --chunk_size 3 ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/array_test.graphml
+  COMMAND graph-properties-convert-test --graphml --chunks --chunkSize 3 ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/array_test.graphml
 )
 set_tests_properties(convert-properties-graphml-chunks PROPERTIES LABELS quick)

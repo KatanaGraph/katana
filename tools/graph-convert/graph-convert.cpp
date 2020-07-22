@@ -3021,7 +3021,10 @@ struct Svmlight2Gr : public HasNoVoidSpecialization {
 
 int main(int argc, char** argv) {
   galois::SharedMemSys G;
-  llvm::cl::ParseCommandLineOptions(argc, argv);
+  llvm::cl::ParseCommandLineOptions(
+      argc, argv,
+      "Converter for old graphs to gr formats for galois\n\n"
+      "  For converting property graphs use graph-properties-convert\n");
   std::ios_base::sync_with_stdio(false);
   switch (convertMode) {
   case bipartitegr2bigpetsc:

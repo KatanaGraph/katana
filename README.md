@@ -157,10 +157,22 @@ Running Galois Applications
 Graph Format
 ------------
 
+Katana stores property graphs in directories called *katana form*
+Formats such as graphml can be converted to *katana form* with
+the `graph-properties-convert` tool provided.
+You can build graph-properties-convert as follows:
+
+```Shell
+cd $BUILD_DIR
+make graph-properties-convert
+./tools/graph-properties-convert --help
+```
+
 Many Galois/Lonestar applications work with graphs. We store graphs in a binary format
 called *galois graph file* 
 (`.gr` file extension). Other formats such as edge-list or Matrix-Market can be
 converted to `.gr` format with `graph-convert` tool provided in galois. 
+This tool does not work for property graphs.
 You can build graph-convert as follows:
 
 ```Shell

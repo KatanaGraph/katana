@@ -27,7 +27,7 @@ static cll::opt<galois::SourceDatabase>
                          clEnumValN(galois::SourceDatabase::kMongodb, "mongodb",
                                     "source data came from mongodb")),
              cll::init(galois::SourceDatabase::kNone));
-static cll::opt<size_t>
+static cll::opt<int>
     chunk_size("chunkSize",
                cll::desc("Chunk size for in memory arrow representation during "
                          "converions, generally this term can be ignored, but "
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 
   galois::StatTimer total_timer("TimerTotal");
   total_timer.start();
-  if (chunk_size == 0) {
+  if (chunk_size <= 0) {
     chunk_size = 25000;
   }
 

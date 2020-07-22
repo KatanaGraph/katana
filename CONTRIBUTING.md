@@ -134,6 +134,12 @@ ctest --rerun-failed
 
 Rerun just the tests that failed during the last run.
 
+```shell
+bin/graph-properties-convert <infile> <out directory/s3>
+```
+
+This converts property graphs into katana form
+
 # Some Helpful tools
 
 [ccmake](https://cmake.org/cmake/help/v3.0/manual/ccmake.1.html): a simple

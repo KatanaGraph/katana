@@ -74,7 +74,7 @@ galois::Result<void> FileFrame::GrowBuffer(int64_t accomodate) {
     if (ptr == MAP_FAILED) {
       return galois::ResultErrno();
     }
-    memmove(ptr, map_start_, cursor_);
+    memcpy(ptr, map_start_, cursor_);
     int err = munmap(map_start_, map_size_);
     if (err) {
       return galois::ResultErrno();

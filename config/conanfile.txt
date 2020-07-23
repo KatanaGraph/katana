@@ -10,6 +10,8 @@ nlohmann_json/3.7.3
 aws-sdk-cpp:build_transfer = True
 aws-sdk-cpp:build_s3 = True
 aws-sdk-cpp:shared = True
+# If header_only is False, the conda packaging needs to include date as a "run"
+# dependency as well
 date:header_only = True
 libcurl:shared=True
 

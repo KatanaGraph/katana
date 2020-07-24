@@ -212,6 +212,8 @@ public:
   using edge_data_reference = typename EdgeInfo::reference;
   //! Iterator over EdgeInfo objects (edges)
   using edge_iterator = EdgeInfo*;
+  //! Edges as a range
+  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
   //! Iterator over nodes
   using iterator =
       boost::transform_iterator<makeGraphNode, typename Nodes::iterator>;
@@ -404,8 +406,7 @@ public:
   /**
    * Return a range for edges of a node for use by C++ for_each loops.
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, mflag),
                                          edge_end(N, mflag));
   }
@@ -414,9 +415,8 @@ public:
    * Returns an object with begin() and end() methods to iterate over the
    * outgoing edges of N.
    */
-  internal::EdgesIterator<LC_Morph_Graph>
-  out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::EdgesIterator<LC_Morph_Graph>(*this, N, mflag);
+  edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+    return edges(N, mflag);
   }
 
   /**

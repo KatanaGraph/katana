@@ -139,9 +139,8 @@ public:
   template <typename RangeTy>
   void push_initial(const RangeTy& r) {
     state& data           = *TLDS.getLocal();
-    auto lp               = r.local_pair();
-    data.localBegin       = lp.first;
-    data.localEnd         = lp.second;
+    data.localBegin       = r.local_begin();
+    data.localEnd         = r.local_end();
     data.nextVictim       = substrate::ThreadPool::getTID();
     data.numStealFailures = 0;
     data.populateSteal();

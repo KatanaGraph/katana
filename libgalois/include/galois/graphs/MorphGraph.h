@@ -52,8 +52,7 @@
 #include "galois/substrate/SimpleLock.h"
 #endif
 
-namespace galois {
-namespace graphs {
+namespace galois::graphs {
 
 namespace internal {
 /**
@@ -465,7 +464,8 @@ private: ///////////////////////////////////////////////////////////////////////
     iterator createEdgeWithReuse(gNode* N, EdgeTy* v, bool inEdge,
                                  Args&&... args) {
       // First check for holes
-      iterator ii, ei;
+      iterator ii;
+      iterator ei;
       if (SortedNeighbors) {
         // If neighbors are sorted, find acceptable range for insertion.
         ii =
@@ -548,6 +548,10 @@ public: ////////////////////////////////////////////////////////////////////////
   using in_edge_iterator =
       typename boost::filter_iterator<is_in_edge,
                                       typename gNodeTypes::iterator>;
+
+  //! Edges as a range
+  using edges_iterator    = StandardRange<NoDerefIterator<edge_iterator>>;
+  using in_edges_iterator = StandardRange<NoDerefIterator<in_edge_iterator>>;
 
   //! Reference to edge data
   using edge_data_reference = typename gNodeTypes::EdgeInfo::reference;
@@ -884,10 +888,10 @@ public
 
   //! Find a particular in-edge: note this function activates for the undirected
   //! graph case, so it just calls the regular out-edge finding function
-  template <bool _Undirected = !Directional>
+  template <bool Undirected = !Directional>
   edge_iterator findInEdge(GraphNode src, GraphNode dst,
                            galois::MethodFlag mflag = MethodFlag::WRITE,
-                           typename std::enable_if<_Undirected>::type* = 0) {
+                           typename std::enable_if<Undirected>::type* = 0) {
     // incoming neighbors are the same as outgoing neighbors in undirected
     // graphs
     return findEdge(src, dst, mflag);
@@ -993,10 +997,10 @@ public
   }
 
   //! Returns an iterator to the in-neighbors of a node
-  template <bool _Undirected = !Directional>
+  template <bool Undirected = !Directional>
   in_edge_iterator
   in_edge_begin(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE,
-                typename std::enable_if<!_Undirected>::type* = 0) {
+                typename std::enable_if<!Undirected>::type* = 0) {
     assert(N);
     N->acquire(mflag);
 
@@ -1012,10 +1016,10 @@ public
 
   //! Returns an iterator to the in-neighbors of a node; undirected case
   //! in which it's the same as a regular neighbor
-  template <bool _Undirected = !Directional>
+  template <bool Undirected = !Directional>
   edge_iterator in_edge_begin(GraphNode N,
                               galois::MethodFlag mflag = MethodFlag::WRITE,
-                              typename std::enable_if<_Undirected>::type* = 0) {
+                              typename std::enable_if<Undirected>::type* = 0) {
     return edge_begin(N, mflag);
   }
 
@@ -1031,11 +1035,11 @@ public
   }
 
   //! Returns the end of an in-neighbor edge iterator
-  template <bool _Undirected = !Directional>
+  template <bool Undirected = !Directional>
   in_edge_iterator
   in_edge_end(GraphNode N,
-              galois::MethodFlag GALOIS_UNUSED(mflag)      = MethodFlag::WRITE,
-              typename std::enable_if<!_Undirected>::type* = 0) {
+              galois::MethodFlag GALOIS_UNUSED(mflag)     = MethodFlag::WRITE,
+              typename std::enable_if<!Undirected>::type* = 0) {
     assert(N);
     // Acquiring lock is not necessary: no valid use for an end pointer should
     // ever require it
@@ -1044,35 +1048,35 @@ public
   }
 
   //! Returns the end of an in-neighbor edge iterator, undirected case
-  template <bool _Undirected = !Directional>
+  template <bool Undirected = !Directional>
   edge_iterator in_edge_end(GraphNode N,
                             galois::MethodFlag mflag = MethodFlag::WRITE,
-                            typename std::enable_if<_Undirected>::type* = 0) {
+                            typename std::enable_if<Undirected>::type* = 0) {
     return edge_end(N, mflag);
   }
 
   //! Return a range of edges that can be iterated over by C++ for-each
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N,
+                       galois::MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, mflag),
                                          edge_end(N, mflag));
   }
 
   //! Return a range of in-edges that can be iterated over by C++ for-each
-  template <bool _Undirected = !Directional>
-  runtime::iterable<NoDerefIterator<in_edge_iterator>>
-  in_edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE,
-           typename std::enable_if<!_Undirected>::type* = 0) {
+  template <bool Undirected = !Directional>
+  in_edges_iterator in_edges(GraphNode N,
+                             galois::MethodFlag mflag = MethodFlag::WRITE,
+                             typename std::enable_if<!Undirected>::type* = 0) {
     return internal::make_no_deref_range(in_edge_begin(N, mflag),
                                          in_edge_end(N, mflag));
   }
 
   //! Return a range of in-edges that can be iterated over by C++ for-each
   //! Undirected case, equivalent to out-edge iteration
-  template <bool _Undirected = !Directional>
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  in_edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE,
-           typename std::enable_if<_Undirected>::type* = 0) {
+  template <bool Undirected = !Directional>
+  edges_iterator in_edges(GraphNode N,
+                          galois::MethodFlag mflag = MethodFlag::WRITE,
+                          typename std::enable_if<Undirected>::type* = 0) {
     return edges(N, mflag);
   }
 
@@ -1080,9 +1084,9 @@ public
    * An object with begin() and end() methods to iterate over the outgoing
    * edges of N.
    */
-  internal::EdgesIterator<MorphGraph>
-  out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::EdgesIterator<MorphGraph>(*this, N, mflag);
+  edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+    return internal::make_no_deref_range(edge_begin(N, mflag),
+                                         edge_end(N, mflag));
   }
 
   /**
@@ -1391,6 +1395,5 @@ public
 #endif
 };
 
-} // namespace graphs
-} // namespace galois
+} // namespace galois::graphs
 #endif

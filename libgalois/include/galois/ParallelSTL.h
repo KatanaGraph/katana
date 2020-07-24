@@ -23,7 +23,7 @@
 #include "galois/config.h"
 #include "galois/GaloisForwardDecl.h"
 #include "galois/NoDerefIterator.h"
-#include "galois/runtime/Range.h"
+#include "galois/Range.h"
 #include "galois/Reduction.h"
 #include "galois/Traits.h"
 #include "galois/UserContext.h"

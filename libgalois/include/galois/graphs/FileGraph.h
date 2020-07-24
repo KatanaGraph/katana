@@ -250,6 +250,8 @@ public:
 
   //! Edge iterators (boost iterator)
   using edge_iterator = boost::counting_iterator<uint64_t>;
+  //! Edges as a range
+  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
 
   /**
    * Returns the index to the beginning of global node N's outgoing edges
@@ -272,7 +274,7 @@ public:
    * Returns the edges of node N as a range that can be iterated through
    * by C++ foreach.
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>> edges(GraphNode N) {
+  edges_iterator edges(GraphNode N) {
     return internal::make_no_deref_range(edge_begin(N), edge_end(N));
   }
 
@@ -280,9 +282,7 @@ public:
    * Returns the edges of node N as a range that can be iterated through
    * by C++ foreach.
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>> out_edges(GraphNode N) {
-    return edges(N);
-  }
+  edges_iterator out_edges(GraphNode N) { return edges(N); }
 
   /**
    * Sorts outgoing edges of a node. Comparison function is over EdgeTy.

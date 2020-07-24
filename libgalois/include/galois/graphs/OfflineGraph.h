@@ -192,6 +192,7 @@ class OfflineGraph {
 public:
   typedef boost::counting_iterator<uint64_t> iterator;
   typedef boost::counting_iterator<uint64_t> edge_iterator;
+  typedef StandardRange<NoDerefIterator<edge_iterator>> edges_iterator;
   typedef uint64_t GraphNode;
 
   OfflineGraph(const std::string& name)
@@ -286,7 +287,7 @@ public:
 
   GraphNode getEdgeDst(edge_iterator ni) { return outEdges(*ni); }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>> edges(GraphNode N) {
+  edges_iterator edges(GraphNode N) {
     return internal::make_no_deref_range(edge_begin(N), edge_end(N));
   }
 

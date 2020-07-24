@@ -1,7 +1,7 @@
 # distutils: extra_compile_args=["-std=c++17"]
 
 from libcpp.string cimport string
-from ..Galois cimport MethodFlag, iterable, NoDerefIterator
+from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 from libcpp.memory cimport shared_ptr
 from libc.stdint cimport *
 from ....cpp.libstd.boost cimport *
@@ -79,10 +79,10 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
             iterator operator--()
             GraphNode operator*()
 
-        iterable[NoDerefIterator[edge_iterator]] edges(GraphNode)
-        iterable[NoDerefIterator[edge_iterator]] edges(unsigned long)
-        iterable[NoDerefIterator[edge_iterator]] edges(GraphNode, MethodFlag)
-        iterable[NoDerefIterator[edge_iterator]] edges(unsigned long, MethodFlag)
+        StandardRange[NoDerefIterator[edge_iterator]] edges(GraphNode)
+        StandardRange[NoDerefIterator[edge_iterator]] edges(unsigned long)
+        StandardRange[NoDerefIterator[edge_iterator]] edges(GraphNode, MethodFlag)
+        StandardRange[NoDerefIterator[edge_iterator]] edges(unsigned long, MethodFlag)
 
         edge_iterator edge_begin(GraphNode)
         edge_iterator edge_end(GraphNode)
@@ -93,7 +93,6 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         edge_iterator edge_end(GraphNode, MethodFlag)
         edge_iterator edge_begin(unsigned long, MethodFlag)
         edge_iterator edge_end(unsigned long, MethodFlag)
-
 
         iterator begin()
         iterator end()

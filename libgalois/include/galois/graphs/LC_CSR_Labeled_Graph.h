@@ -56,6 +56,8 @@ public:
   //! iterator for edges
   using edge_iterator =
       boost::counting_iterator<typename EdgeIndData::value_type>;
+  //! Edges as a range
+  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
   //! iterator for data
   using data_iterator = typename std::vector<EdgeTy>::const_iterator;
   //! reference to edge data
@@ -276,8 +278,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Range to edges of node N
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N, const EdgeTy& data,
+                       MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, data, mflag),
                                          edge_end(N, data, mflag));
   }
@@ -364,9 +366,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Range to in edges of node N
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  in_edges(GraphNode N, const EdgeTy& data,
-           MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator in_edges(GraphNode N, const EdgeTy& data,
+                          MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(in_edge_begin(N, data, mflag),
                                          in_edge_end(N, data, mflag));
   }
@@ -412,7 +413,7 @@ public:
    *
    * @returns Range of the distinct edge labels
    */
-  runtime::iterable<NoDerefIterator<data_iterator>> distinctEdgeLabels() const {
+  auto distinctEdgeLabels() const {
     return internal::make_no_deref_range(distinctEdgeLabelsBegin(),
                                          distinctEdgeLabelsEnd());
   }

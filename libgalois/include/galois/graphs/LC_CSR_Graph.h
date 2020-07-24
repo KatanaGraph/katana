@@ -151,7 +151,8 @@ public:
   typedef typename NodeInfoTypes::reference node_data_reference;
   using edge_iterator =
       boost::counting_iterator<typename EdgeIndData::value_type>;
-  using iterator = boost::counting_iterator<typename EdgeDst::value_type>;
+  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
+  using iterator       = boost::counting_iterator<typename EdgeDst::value_type>;
   typedef iterator const_iterator;
   typedef iterator local_iterator;
   typedef iterator const_local_iterator;
@@ -455,14 +456,12 @@ public:
     return (getEdgeDst(e) == N2) ? e : edge_end(N1);
   }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, mflag),
                                          edge_end(N, mflag));
   }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return edges(N, mflag);
   }
 

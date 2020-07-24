@@ -26,8 +26,7 @@
 #include "galois/graphs/FileGraph.h"
 #include "galois/Timer.h"
 
-namespace galois {
-namespace graphs {
+namespace galois::graphs {
 
 /**
  * Allocates and constructs a graph from a file. Tries to balance
@@ -229,7 +228,6 @@ void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag,
   readGraphDispatch(graph, tag1, f1);
 }
 
-} // namespace graphs
-} // namespace galois
+} // namespace galois::graphs
 
 #endif

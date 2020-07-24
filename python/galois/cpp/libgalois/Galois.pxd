@@ -55,8 +55,8 @@ cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
     MethodFlag FLAG_INTERNAL_MASK "galois::MethodFlag::INTERNAL_MASK"
     MethodFlag PREVIOUS "galois::MethodFlag::PREVIOUS"
 
-cdef extern from "galois/runtime/Iterable.h" namespace "galois::runtime" nogil:
-    cppclass iterable[it]:
+cdef extern from "galois/Range.h" namespace "galois" nogil:
+    cppclass StandardRange[it]:
         it begin()
         it end()
 

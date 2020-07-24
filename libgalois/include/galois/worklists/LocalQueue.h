@@ -64,8 +64,7 @@ private:
             bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
   void pushGlobal(const RangeTy& range,
                   typename std::enable_if<Enable>::type* = 0) {
-    auto rp = range.local_pair();
-    local.getLocal()->push(rp.first, rp.second);
+    local.getLocal()->push(range.local_begin(), range.local_end());
   }
 
   template <typename RangeTy,

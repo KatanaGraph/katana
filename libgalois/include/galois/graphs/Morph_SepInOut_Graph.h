@@ -44,9 +44,7 @@
 #include "galois/substrate/SimpleLock.h"
 #endif
 
-namespace galois {
-//! Parallel graph data structures.
-namespace graphs {
+namespace galois::graphs {
 
 namespace internal {
 /**
@@ -491,10 +489,12 @@ public:
   typedef typename boost::filter_iterator<is_out_edge,
                                           typename gNodeTypes::iterator>
       edge_iterator;
+  typedef StandardRange<NoDerefIterator<edge_iterator>> edges_iterator;
   //! In Edge iterator
   typedef
       typename boost::filter_iterator<is_in_edge, typename gNodeTypes::iterator>
           in_edge_iterator;
+  typedef StandardRange<NoDerefIterator<in_edge_iterator>> in_edges_iterator;
   //! Reference to edge data
   typedef typename gNodeTypes::EdgeInfo::reference edge_data_reference;
   //! Reference to node data
@@ -977,24 +977,24 @@ public:
     return edge_end(N, mflag);
   }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N,
+                       galois::MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, mflag),
                                          edge_end(N, mflag));
   }
 
   template <bool _Undirected = !Directional>
-  runtime::iterable<NoDerefIterator<in_edge_iterator>>
-  in_edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE,
-           typename std::enable_if<!_Undirected>::type* = 0) {
+  in_edges_iterator in_edges(GraphNode N,
+                             galois::MethodFlag mflag = MethodFlag::WRITE,
+                             typename std::enable_if<!_Undirected>::type* = 0) {
     return internal::make_no_deref_range(in_edge_begin(N, mflag),
                                          in_edge_end(N, mflag));
   }
 
   template <bool _Undirected = !Directional>
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  in_edges(GraphNode N, galois::MethodFlag mflag = MethodFlag::WRITE,
-           typename std::enable_if<_Undirected>::type* = 0) {
+  in_edges_iterator in_edges(GraphNode N,
+                             galois::MethodFlag mflag = MethodFlag::WRITE,
+                             typename std::enable_if<_Undirected>::type* = 0) {
     return edges(N, mflag);
   }
 
@@ -1002,9 +1002,8 @@ public:
    * An object with begin() and end() methods to iterate over the outgoing
    * edges of N.
    */
-  internal::EdgesIterator<Morph_SepInOut_Graph>
-  out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::EdgesIterator<Morph_SepInOut_Graph>(*this, N, mflag);
+  edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+    return edges(N, mflag);
   }
 
   /**
@@ -1212,6 +1211,5 @@ public:
 #endif
 };
 
-} // namespace graphs
-} // namespace galois
+} // namespace galois::graphs
 #endif

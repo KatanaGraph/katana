@@ -149,6 +149,7 @@ public:
   typedef typename NodeInfoTypes::reference node_data_reference;
   typedef typename EdgeInfo::reference edge_data_reference;
   typedef EdgeInfo* edge_iterator;
+  typedef StandardRange<NoDerefIterator<edge_iterator>> edges_iterator;
   typedef NodeInfo** iterator;
   typedef NodeInfo* const* const_iterator;
   typedef iterator local_iterator;
@@ -275,14 +276,12 @@ public:
     return N->edgeEnd();
   }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(edge_begin(N, mflag),
                                          edge_end(N, mflag));
   }
 
-  runtime::iterable<NoDerefIterator<edge_iterator>>
-  out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+  edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return edges(N, mflag);
   }
 

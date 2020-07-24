@@ -308,7 +308,7 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Range to in edges of node N
    */
-  runtime::iterable<NoDerefIterator<edge_iterator>>
+  typename ThisGraph::edges_iterator
   in_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     return internal::make_no_deref_range(in_edge_begin(N, mflag),
                                          in_edge_end(N, mflag));

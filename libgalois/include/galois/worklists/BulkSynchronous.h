@@ -82,8 +82,7 @@ public:
 
   template <typename RangeTy>
   void push_initial(const RangeTy& range) {
-    auto rp = range.local_pair();
-    push(rp.first, rp.second);
+    push(range.local_begin(), range.local_end());
     tlds.getLocal()->round = 1;
     some.get()             = true;
   }

@@ -80,6 +80,7 @@ public:
   typedef typename Super::edge_data_reference edge_data_reference;
   typedef typename Super::node_data_reference node_data_reference;
   typedef typename Super::edge_iterator edge_iterator;
+  typedef typename Super::in_edges_iterator in_edges_iterator;
   typedef typename Super::iterator iterator;
   typedef typename Super::const_iterator const_iterator;
   typedef typename Super::local_iterator local_iterator;
@@ -201,9 +202,10 @@ public:
     }
   }
 
-  internal::InEdgesIterator<LC_InOut_Graph>
-  in_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::InEdgesIterator<LC_InOut_Graph>(*this, N, mflag);
+  in_edges_iterator in_edges(GraphNode N,
+                             MethodFlag mflag = MethodFlag::WRITE) {
+    return internal::make_no_deref_range(in_edge_begin(N, mflag),
+                                         in_edge_end(N, mflag));
   }
 
   /**

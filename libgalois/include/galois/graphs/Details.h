@@ -27,12 +27,10 @@
 #include "galois/LargeArray.h"
 #include "galois/LazyObject.h"
 #include "galois/NoDerefIterator.h"
+#include "galois/Range.h"
 #include "galois/Threads.h"
-#include "galois/runtime/Iterable.h"
 #include "galois/runtime/Context.h"
 #include "galois/substrate/PerThreadStorage.h"
-
-// Forward declarations
 
 namespace galois::graphs {
 
@@ -343,67 +341,11 @@ struct EdgeInfoBase : public LazyObject<EdgeTy> {
   NodeInfoPtrTy dst;
 };
 
-/**
- * Convenience wrapper around Graph.edge_begin and Graph.edge_end to allow
- * C++11 foreach iteration of edges.
- */
-template <typename GraphTy>
-class EdgesIterator {
-  typename GraphTy::edge_iterator ii, ee;
-
-public:
-  typedef NoDerefIterator<typename GraphTy::edge_iterator> iterator;
-
-  EdgesIterator(GraphTy& g, typename GraphTy::GraphNode n, MethodFlag f)
-      : ii(g.edge_begin(n, f)), ee(g.edge_end(n, f)) {}
-  EdgesIterator(typename GraphTy::edge_iterator _ii,
-                typename GraphTy::edge_iterator _ee)
-      : ii(_ii), ee(_ee) {}
-
-  iterator begin() { return make_no_deref_iterator(ii); }
-  iterator end() { return make_no_deref_iterator(ee); }
-};
-
 template <typename ItTy>
-runtime::iterable<NoDerefIterator<ItTy>> make_no_deref_range(ItTy ii, ItTy ee) {
-  return runtime::make_iterable(make_no_deref_iterator(ii),
-                                make_no_deref_iterator(ee));
+StandardRange<NoDerefIterator<ItTy>> make_no_deref_range(ItTy ii, ItTy ee) {
+  return MakeStandardRange(make_no_deref_iterator(ii),
+                           make_no_deref_iterator(ee));
 }
-
-/**
- * Convenience wrapper around Graph.in_edge_begin and Graph.in_edge_end to allow
- * C++11 foreach iteration of in edges.
- */
-template <typename GraphTy>
-class InEdgesIterator {
-  GraphTy& g;
-  typename GraphTy::GraphNode n;
-  MethodFlag flag;
-
-public:
-  typedef NoDerefIterator<typename GraphTy::in_edge_iterator> iterator;
-
-  InEdgesIterator(GraphTy& g, typename GraphTy::GraphNode n, MethodFlag f)
-      : g(g), n(n), flag(f) {}
-
-  iterator begin() { return make_no_deref_iterator(g.in_edge_begin(n, flag)); }
-  iterator end() { return make_no_deref_iterator(g.in_edge_end(n, flag)); }
-};
-
-template <typename GraphTy>
-class EdgesWithNoFlagIterator {
-  GraphTy& g;
-  typename GraphTy::GraphNode n;
-
-public:
-  typedef NoDerefIterator<typename GraphTy::edge_iterator> iterator;
-
-  EdgesWithNoFlagIterator(GraphTy& g, typename GraphTy::GraphNode n)
-      : g(g), n(n) {}
-
-  iterator begin() { return make_no_deref_iterator(g.edge_begin(n)); }
-  iterator end() { return make_no_deref_iterator(g.edge_end(n)); }
-};
 
 template <typename A, typename B, typename C, typename D, typename E>
 void swap(EdgeSortReference<A, B, C, D, E> a,

@@ -363,9 +363,10 @@ private:
 
     galois::runtime::on_each_gen(
         [&, this](const unsigned, const unsigned) {
-          auto p = range.local_pair();
+          auto begin = range.local_begin();
+          auto end   = range.local_end();
 
-          for (auto i = p.first; i != p.second; ++i) {
+          for (auto i = begin; i != end; ++i) {
             IterationContext* it = newIteration(*i);
             m_wl.pushNext(it);
           }

@@ -37,40 +37,35 @@ namespace galois {
 
 /**
  * Galois unordered set iterator.
+ *
  * Operator should conform to <code>fn(item, UserContext<T>&)</code> where item
  * is a value from the iteration range and T is the type of item.
  *
- * @param rangeMaker an iterate range maker typically returned by
- * <code>galois::iterate(...)</code>
- * (@see galois::iterate()). rangeMaker is a functor which when called returns a
- * range object
+ * @param range an iterator range typically returned by @ref galois::iterate
  * @param fn operator
  * @param args optional arguments to loop, e.g., {@see loopname}, {@see wl}
  */
 
-template <typename RangeFunc, typename FunctionTy, typename... Args>
-void for_each(const RangeFunc& rangeMaker, FunctionTy&& fn,
-              const Args&... args) {
-  auto tpl = std::make_tuple(args...);
-  runtime::for_each_gen(rangeMaker(tpl), std::forward<FunctionTy>(fn), tpl);
+template <typename Range, typename FunctionTy, typename... Args>
+void for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
+  auto tpl = std::make_tuple(std::forward<Args>(args)...);
+  runtime::for_each_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
 
 /**
  * Standard do-all loop. All iterations should be independent.
+ *
  * Operator should conform to <code>fn(item)</code> where item is a value from
  * the iteration range.
  *
- * @param rangeMaker an iterate range maker typically returned by
- * <code>galois::iterate(...)</code>
- * (@see galois::iterate()). rangeMaker is a functor which when called returns a
- * range object
+ * @param range an iterator range typically returned by @ref galois::iterate
  * @param fn operator
  * @param args optional arguments to loop
  */
-template <typename RangeFunc, typename FunctionTy, typename... Args>
-void do_all(const RangeFunc& rangeMaker, FunctionTy&& fn, const Args&... args) {
-  auto tpl = std::make_tuple(args...);
-  runtime::do_all_gen(rangeMaker(tpl), std::forward<FunctionTy>(fn), tpl);
+template <typename Range, typename FunctionTy, typename... Args>
+void do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
+  auto tpl = std::make_tuple(std::forward<Args>(args)...);
+  runtime::do_all_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
 
 /**
@@ -83,8 +78,9 @@ void do_all(const RangeFunc& rangeMaker, FunctionTy&& fn, const Args&... args) {
  * @param args optional arguments to loop
  */
 template <typename FunctionTy, typename... Args>
-void on_each(FunctionTy&& fn, const Args&... args) {
-  runtime::on_each_gen(std::forward<FunctionTy>(fn), std::make_tuple(args...));
+void on_each(FunctionTy&& fn, Args&&... args) {
+  runtime::on_each_gen(std::forward<FunctionTy>(fn),
+                       std::make_tuple(std::forward<Args>(args)...));
 }
 
 /**
@@ -93,15 +89,7 @@ void on_each(FunctionTy&& fn, const Args&... args) {
  * @param num number of pages to allocate of size {@link
  * galois::runtime::MM::hugePageSize}
  */
-static inline void preAlloc(int num) {
-  static const bool DISABLE_PREALLOC = false;
-  if (DISABLE_PREALLOC) {
-    galois::gWarn("preAlloc disabled");
-
-  } else {
-    runtime::preAlloc_impl(num);
-  }
-}
+static inline void preAlloc(int num) { runtime::preAlloc_impl(num); }
 
 /**
  * Reports number of hugepages allocated by the Galois system so far. The value
@@ -171,10 +159,10 @@ void for_each_ordered(Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc,
  * std::for_each
  */
 struct DoAll {
-  template <typename RangeFunc, typename F, typename... Args>
-  void operator()(const RangeFunc& rangeMaker, const F& f,
-                  Args&&... args) const {
-    galois::do_all(rangeMaker, f, std::forward<Args>(args)...);
+  template <typename Range, typename FunctionTy, typename... Args>
+  void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
+    galois::do_all(range, std::forward<FunctionTy>(fn),
+                   std::forward<Args>(args)...);
   }
 };
 
@@ -184,19 +172,18 @@ struct DoAll {
  */
 
 struct StdForEach {
-  template <typename RangeFunc, typename F, typename... Args>
-  void operator()(const RangeFunc& rangeMaker, const F& f,
-                  Args&&... args) const {
-    auto range = rangeMaker(std::make_tuple(args...));
-    std::for_each(range.begin(), range.end(), f);
+  template <typename Range, typename FunctionTy, typename... Args>
+  void operator()(const Range& range, FunctionTy&& fn,
+                  [[maybe_unused]] Args&&... args) const {
+    std::for_each(range.begin(), range.end(), std::forward<FunctionTy>(fn));
   }
 };
 
 struct ForEach {
-  template <typename RangeFunc, typename F, typename... Args>
-  void operator()(const RangeFunc& rangeMaker, const F& f,
-                  Args&&... args) const {
-    galois::for_each(rangeMaker, f, std::forward<Args>(args)...);
+  template <typename Range, typename FunctionTy, typename... Args>
+  void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
+    galois::for_each(range, std::forward<FunctionTy>(fn),
+                     std::forward<Args>(args)...);
   }
 };
 
@@ -206,11 +193,9 @@ struct WhileQ {
 
   WhileQ(Q&& q = Q()) : m_q(std::move(q)) {}
 
-  template <typename RangeFunc, typename F, typename... Args>
-  void operator()(const RangeFunc& rangeMaker, const F& f, Args&&... args) {
-
-    auto range = rangeMaker(std::make_tuple(args...));
-
+  template <typename Range, typename FunctionTy, typename... Args>
+  void operator()(const Range& range, FunctionTy&& f,
+                  [[maybe_unused]] Args&&... args) {
     m_q.push(range.begin(), range.end());
 
     while (!m_q.empty()) {

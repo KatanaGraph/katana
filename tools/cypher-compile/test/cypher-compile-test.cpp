@@ -129,6 +129,24 @@ void verify_return(const galois::CompilerQueryResult& e,
                      expected.return_name, e.return_name);
 }
 
+void verify_order_by_struct(const galois::CompilerOrderByMetadata& result,
+                            const galois::CompilerOrderByMetadata& expected) {
+  GALOIS_LOG_VASSERT(
+      result.elements_to_order.size() == expected.elements_to_order.size(),
+      "Number of elements to order by differs: expect {}, found {}",
+      expected.elements_to_order.size(), result.elements_to_order.size());
+
+  for (size_t i = 0; i < expected.elements_to_order.size(); i++) {
+    GALOIS_LOG_VASSERT(
+        result.elements_to_order[i].equals(expected.elements_to_order[i]),
+        "Order-by element {} differs between found and expected", i);
+    GALOIS_LOG_VASSERT(result.is_ascending[i] == expected.is_ascending[i],
+                       "Order-by ascend/descend for element {} differs between "
+                       "found {} and expected {}",
+                       i, result.is_ascending[i], expected.is_ascending[i]);
+  }
+}
+
 void verify_return_modifier(const galois::CypherCompiler& cc,
                             const galois::CompilerReturnMetadata& expected) {
   const galois::CompilerReturnMetadata& rm = cc.getReturnMetadata();
@@ -139,6 +157,16 @@ void verify_return_modifier(const galois::CypherCompiler& cc,
   GALOIS_LOG_VASSERT(rm.distinct_return == expected.distinct_return,
                      "Return metadata distinct expected is {}, found {}",
                      expected.distinct_return, rm.distinct_return);
+  if (expected.order_by) {
+    GALOIS_LOG_VASSERT(
+        rm.order_by,
+        "Order by struct for result does not exist even though it is expected");
+    verify_order_by_struct(rm.order_by.value(), expected.order_by.value());
+  } else {
+    GALOIS_LOG_VASSERT(
+        !rm.order_by,
+        "Order by struct for result exists even though it should not");
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -547,6 +575,67 @@ int main() {
       galois::CompilerQueryResult("b", std::nullopt, std::nullopt, "b"));
   GALOIS_LOG_ASSERT(cc.getReturnValues().size() == 2);
   verify_return_modifier(cc, galois::CompilerReturnMetadata{3, 100, true});
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Order by on return
+  //////////////////////////////////////////////////////////////////////////////
+
+  // single
+  GALOIS_LOG_WARN("Order by, Return 1");
+  std::string order_by1 = "match (a) return a order by a.something;";
+  cc.compile(order_by1.c_str());
+  verify_node(cc.getQueryNodes()[0],
+              galois::CompilerQueryNode{"0", "any", "a", ""});
+  verify_return(
+      cc.getReturnValues()[0],
+      galois::CompilerQueryResult("a", std::nullopt, std::nullopt, "a"));
+  GALOIS_LOG_ASSERT(cc.getReturnValues().size() == 1);
+
+  galois::CompilerOrderByMetadata ob1;
+  ob1.addElement(galois::CompilerThing("a", "something", std::nullopt), true);
+
+  verify_return_modifier(cc, galois::CompilerReturnMetadata{
+                                 std::nullopt, std::nullopt, ob1, false});
+
+  // multiple
+  GALOIS_LOG_WARN("Order by, Return 2");
+  std::string order_by2 =
+      "match (a) return a order by a.something, b.more, c.reate;";
+  cc.compile(order_by2.c_str());
+  verify_node(cc.getQueryNodes()[0],
+              galois::CompilerQueryNode{"0", "any", "a", ""});
+  verify_return(
+      cc.getReturnValues()[0],
+      galois::CompilerQueryResult("a", std::nullopt, std::nullopt, "a"));
+  GALOIS_LOG_ASSERT(cc.getReturnValues().size() == 1);
+
+  galois::CompilerOrderByMetadata ob2;
+  ob2.addElement(galois::CompilerThing("a", "something", std::nullopt), true);
+  ob2.addElement(galois::CompilerThing("b", "more", std::nullopt), true);
+  ob2.addElement(galois::CompilerThing("c", "reate", std::nullopt), true);
+
+  verify_return_modifier(cc, galois::CompilerReturnMetadata{
+                                 std::nullopt, std::nullopt, ob2, false});
+
+  // ascend, descend
+  GALOIS_LOG_WARN("Order by, Return 3");
+  std::string order_by3 = "match (a) return a order by a.something desc, "
+                          "b.more descending, c.reate asc;";
+  cc.compile(order_by3.c_str());
+  verify_node(cc.getQueryNodes()[0],
+              galois::CompilerQueryNode{"0", "any", "a", ""});
+  verify_return(
+      cc.getReturnValues()[0],
+      galois::CompilerQueryResult("a", std::nullopt, std::nullopt, "a"));
+  GALOIS_LOG_ASSERT(cc.getReturnValues().size() == 1);
+
+  galois::CompilerOrderByMetadata ob3;
+  ob3.addElement(galois::CompilerThing("a", "something", std::nullopt), false);
+  ob3.addElement(galois::CompilerThing("b", "more", std::nullopt), false);
+  ob3.addElement(galois::CompilerThing("c", "reate", std::nullopt), true);
+
+  verify_return_modifier(cc, galois::CompilerReturnMetadata{
+                                 std::nullopt, std::nullopt, ob3, false});
 
   //////////////////////////////////////////////////////////////////////////////
 

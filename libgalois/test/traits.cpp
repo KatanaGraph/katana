@@ -23,7 +23,7 @@ void print(Tuple tup) {
   print(std::make_index_sequence<std::tuple_size<Tuple>::value>(), tup);
 }
 
-int main() {
+void TestGet() {
   auto pull_from_default = galois::get_default_trait_values(
       std::make_tuple(Unrelated{}), std::make_tuple(A{}), std::make_tuple(B{}));
   static_assert(
@@ -49,4 +49,21 @@ int main() {
 
   auto get_value = galois::get_trait_value<A>(std::tuple<B>(B{"name"}));
   GALOIS_ASSERT(get_value.name_ == "name");
+}
+
+struct HasFunctionTraits {
+  using function_traits = std::tuple<int>;
+};
+
+void TestHasFunctionTraits() {
+  static_assert(galois::has_function_traits_v<HasFunctionTraits>);
+  static_assert(
+      std::is_same<HasFunctionTraits::function_traits,
+                   galois::function_traits<HasFunctionTraits>::type>::value);
+}
+
+int main() {
+  TestGet();
+  TestHasFunctionTraits();
+  return 0;
 }

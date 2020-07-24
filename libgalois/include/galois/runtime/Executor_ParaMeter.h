@@ -202,7 +202,7 @@ template <class T, class FunctionTy, class ArgsTy>
 class ParaMeterExecutor {
 
   using value_type = T;
-  using GenericWL  = typename get_trait_type<wl_tag, ArgsTy>::type::type;
+  using GenericWL  = typename trait_type<wl_tag, ArgsTy>::type::type;
   using WorkListTy = typename GenericWL::template retype<T>;
   using dbg        = galois::debug<1>;
 

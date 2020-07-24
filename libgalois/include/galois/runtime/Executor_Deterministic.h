@@ -502,7 +502,7 @@ template <typename T, typename FunctionTy, typename ArgsTy>
 struct OptionsBase<T, FunctionTy, ArgsTy, true>
     : public OptionsCommon<T, FunctionTy, ArgsTy> {
   typedef OptionsCommon<T, FunctionTy, ArgsTy> SuperTy;
-  typedef typename get_trait_type<neighborhood_visitor_tag, ArgsTy>::type::type
+  typedef typename trait_type<neighborhood_visitor_tag, ArgsTy>::type::type
       function1_type;
 
   function1_type fn1;
@@ -684,8 +684,9 @@ template <typename OptionsTy>
 struct StateManagerBase<OptionsTy, true> {
   typedef typename OptionsTy::value_type value_type;
   typedef typename OptionsTy::function2_type function_type;
-  typedef typename get_trait_type<
-      local_state_tag, typename OptionsTy::args_type>::type::type LocalState;
+  typedef
+      typename trait_type<local_state_tag,
+                          typename OptionsTy::args_type>::type::type LocalState;
 
   void allocLocalState(UserContextAccess<value_type>& c, function_type&) {
     void* p = c.data().getPerIterAlloc().allocate(sizeof(LocalState));
@@ -740,9 +741,9 @@ public:
 
 template <typename OptionsTy>
 class BreakManagerBase<OptionsTy, true> {
-  typedef typename get_trait_type<det_parallel_break_tag,
-                                  typename OptionsTy::args_type>::type::type
-      BreakFn;
+  typedef
+      typename trait_type<det_parallel_break_tag,
+                          typename OptionsTy::args_type>::type::type BreakFn;
   BreakFn breakFn;
   substrate::Barrier& barrier;
   substrate::CacheLineStorage<volatile long> done;
@@ -941,8 +942,8 @@ template <typename OptionsTy>
 class IdManagerBase<OptionsTy, true> {
   typedef typename OptionsTy::value_type value_type;
   typedef
-      typename get_trait_type<det_id_tag,
-                              typename OptionsTy::args_type>::type::type IdFn;
+      typename trait_type<det_id_tag, typename OptionsTy::args_type>::type::type
+          IdFn;
   IdFn idFn;
 
 public:

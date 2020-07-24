@@ -118,9 +118,13 @@ constexpr auto get_trait_value(Tuple tpl) {
  * Returns the type associated with the given trait in a tuple.
  */
 template <typename T, typename Tuple>
-struct get_trait_type {
+struct trait_type {
   using type = typename std::tuple_element<find_trait<T, Tuple>(), Tuple>::type;
 };
+
+template <typename T, typename Tuple>
+using trait_type_t =
+    typename std::tuple_element<find_trait<T, Tuple>(), Tuple>::type;
 
 // Fallback to enable_if tricks over if constexpr to play more nicely with
 // unused parameter warnings.
@@ -166,15 +170,23 @@ constexpr auto get_default_trait_values(S source, T tags, D defaults) {
 }
 
 template <typename T>
-constexpr auto has_function_traits(int)
-    -> decltype(std::declval<typename T::function_traits>(), bool()) {
-  return true;
-}
+struct has_function_traits {
+  template <typename U>
+  constexpr static decltype(std::declval<typename U::function_traits>(), bool())
+  test(int) {
+    return true;
+  }
 
-template <typename>
-constexpr auto has_function_traits(...) -> bool {
-  return false;
-}
+  template <typename>
+  constexpr static bool test(...) {
+    return false;
+  }
+
+  constexpr static bool value = test<T>(0);
+};
+
+template <typename T>
+constexpr static bool has_function_traits_v = has_function_traits<T>::value;
 
 template <typename T, typename Enable = void>
 struct function_traits {
@@ -182,8 +194,7 @@ struct function_traits {
 };
 
 template <typename T>
-struct function_traits<
-    T, typename std::enable_if<has_function_traits<T>(0)>::type> {
+struct function_traits<T, typename std::enable_if_t<has_function_traits_v<T>>> {
   typedef typename T::function_traits type;
 };
 

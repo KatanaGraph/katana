@@ -29,6 +29,9 @@
 #include "galois/gIO.h"
 #include "galois/Mem.h"
 #include "galois/Range.h"
+#include "galois/Threads.h"
+#include "galois/Timer.h"
+#include "galois/Traits.h"
 #include "galois/runtime/Context.h"
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
@@ -38,9 +41,6 @@
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
-#include "galois/Threads.h"
-#include "galois/Timer.h"
-#include "galois/Traits.h"
 #include "galois/worklists/Chunk.h"
 #include "galois/worklists/Simple.h"
 
@@ -442,7 +442,7 @@ template <typename RangeTy, typename FunctionTy, typename ArgsTy>
 void for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
   typedef typename std::iterator_traits<typename RangeTy::iterator>::value_type
       value_type;
-  typedef typename get_trait_type<wl_tag, ArgsTy>::type::type BaseWorkListTy;
+  typedef typename trait_type<wl_tag, ArgsTy>::type::type BaseWorkListTy;
   typedef typename reiterator<BaseWorkListTy, typename RangeTy::iterator>::
       type ::template retype<value_type>
           WorkListTy;

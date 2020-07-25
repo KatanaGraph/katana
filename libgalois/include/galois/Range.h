@@ -27,6 +27,7 @@
 
 #include "galois/config.h"
 #include "galois/gstl.h"
+#include "galois/TwoLevelIterator.h"
 #include "galois/substrate/ThreadPool.h"
 
 namespace galois {
@@ -61,6 +62,47 @@ private:
 template <typename T>
 LocalRange<T> MakeLocalRange(T& obj) {
   return LocalRange<T>(obj);
+}
+
+/**
+ * A LocalTwoLevelRange is a range over a container (outer) of containers
+ * (inner) where the outer container has local ranges and the overall range
+ * should be over elements of the inner container.
+ *
+ * This range is commonly used when iterating over thread-local containers.
+ * The initial elements should be drawn from the container local to the current
+ * thread, but overall iteration space is the sum of all thread-local
+ * containers (e.g., for work-stealing).
+ */
+template <typename T>
+class LocalTwoLevelRange {
+public:
+  typedef typename galois::TwoLevelIterator<typename T::iterator> iterator;
+  typedef typename std::iterator_traits<
+      typename T::local_iterator>::value_type::iterator local_iterator;
+  typedef typename std::iterator_traits<iterator>::value_type value_type;
+
+  LocalTwoLevelRange(T& c) : container(c) {}
+
+  iterator begin() const {
+    return make_two_level_iterator(container.begin(), container.end().first);
+  }
+
+  iterator end() const {
+    return make_two_level_iterator(container.begin(), container.end().second);
+  }
+
+  local_iterator local_begin() const { return container.getLocal()->begin(); }
+
+  local_iterator local_end() const { return container.getLocal()->end(); }
+
+private:
+  T& container;
+};
+
+template <typename T>
+LocalTwoLevelRange<T> MakeLocalTwoLevelRange(T& obj) {
+  return LocalTwoLevelRange<T>(obj);
 }
 
 /**

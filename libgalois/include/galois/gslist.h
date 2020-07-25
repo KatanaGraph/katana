@@ -27,7 +27,7 @@
 
 #include "galois/config.h"
 #include "galois/FixedSizeRing.h"
-#include "galois/TwoLevelIteratorA.h"
+#include "galois/TwoLevelIterator.h"
 
 namespace galois {
 
@@ -163,13 +163,13 @@ public:
   //! External allocator must be able to allocate this type
   typedef Block block_type;
   typedef T value_type;
-  typedef galois::TwoLevelIteratorA<outer_iterator<Block>,
-                                    typename Block::iterator,
-                                    std::forward_iterator_tag, GetBegin, GetEnd>
+  typedef galois::TwoLevelIterator<outer_iterator<Block>,
+                                   typename Block::iterator,
+                                   std::forward_iterator_tag, GetBegin, GetEnd>
       iterator;
-  typedef galois::TwoLevelIteratorA<outer_iterator<const Block>,
-                                    typename Block::const_iterator,
-                                    std::forward_iterator_tag, GetBegin, GetEnd>
+  typedef galois::TwoLevelIterator<outer_iterator<const Block>,
+                                   typename Block::const_iterator,
+                                   std::forward_iterator_tag, GetBegin, GetEnd>
       const_iterator;
 
   gslist_base() : first(0) {}

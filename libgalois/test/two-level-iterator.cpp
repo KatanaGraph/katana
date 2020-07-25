@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/TwoLevelIteratorA.h"
+#include "galois/TwoLevelIterator.h"
 #include "galois/gIO.h"
 
 #include <algorithm>
@@ -78,14 +78,7 @@ void check_forward() {
 #endif
   }
 
-#if __cplusplus >= 201103L
   auto r = galois::make_two_level_iterator<Tag>(data.begin(), data.end());
-#else
-  auto r =
-      galois::make_two_level_iterator<Tag, typename D::iterator,
-                                      typename I::iterator, GetBegin<D, I>,
-                                      GetEnd<D, I>>(data.begin(), data.end());
-#endif
   GALOIS_ASSERT(
       std::equal(r.first, r.second, boost::make_counting_iterator<int>(0)),
       "failed case: forward ", (NonEmpty ? "non-empty" : "empty"),

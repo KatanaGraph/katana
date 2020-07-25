@@ -36,7 +36,6 @@
 #include "galois/runtime/Executor_ForEach.h"
 #include "galois/runtime/Executor_DoAll.h"
 #include "galois/runtime/Executor_OnEach.h"
-#include "galois/PerThreadContainer.h"
 #include "galois/Traits.h"
 #include "galois/worklists/Simple.h"
 
@@ -87,9 +86,9 @@ struct UnorderedStepStats : public StepStatsBase {
   GAccumulator<size_t> wlSize;
   GAccumulator<size_t> nhSize;
 
-  UnorderedStepStats(void) : Base(), step(0) {}
+  UnorderedStepStats() : Base(), step(0) {}
 
-  void nextStep(void) {
+  void nextStep() {
     ++step;
     parallelism.reset();
     wlSize.reset();
@@ -105,49 +104,51 @@ struct UnorderedStepStats : public StepStatsBase {
 // Single ParaMeter stats file per run of an app
 // which includes all instances of for_each loops
 // run with ParaMeter Executor
-FILE* getStatsFile(void);
-void closeStatsFile(void);
+FILE* getStatsFile();
+void closeStatsFile();
 
 template <typename T>
 class FIFO_WL {
+  using PTcont = galois::substrate::PerThreadStorage<galois::gstl::Vector<T>>;
 
-protected:
-  using PTcont = galois::PerThreadVector<T>;
+  std::array<PTcont, 2> worklists;
 
   PTcont* curr;
   PTcont* next;
 
 public:
-  FIFO_WL(void) : curr(new PTcont()), next(new PTcont()) {}
+  FIFO_WL() : curr(&worklists[0]), next(&worklists[1]) {}
 
-  ~FIFO_WL(void) {
-    delete curr;
-    curr = nullptr;
-    delete next;
-    next = nullptr;
-  }
+  auto iterateCurr() { return galois::MakeLocalTwoLevelRange(*curr); }
 
-  auto iterateCurr(void) { return galois::runtime::makeLocalRange(*curr); }
+  void pushNext(const T& item) { next->getLocal()->push_back(item); }
 
-  void pushNext(const T& item) { next->get().push_back(item); }
-
-  void nextStep(void) {
+  void nextStep() {
     std::swap(curr, next);
-    next->clear_all_parallel();
+    galois::runtime::on_each_gen(
+        [this](const unsigned, const unsigned) { next->getLocal()->clear(); },
+        std::make_tuple());
   }
 
-  bool empty(void) const { return next->empty_all(); }
+  PTcont* currentWorklist() { return curr; }
+
+  bool empty() const {
+    for (unsigned i = 0, n = next->size(); i < n; ++i) {
+      if (!next->getRemote(i)->empty()) {
+        return false;
+      }
+    }
+    return true;
+  }
 };
 
 template <typename T>
 class RAND_WL : public FIFO_WL<T> {
-  using Base = FIFO_WL<T>;
-
 public:
-  auto iterateCurr(void) {
+  auto iterateCurr() {
     galois::runtime::on_each_gen(
         [&](int, int) {
-          auto& lwl = Base::curr->get();
+          auto& lwl = *this->currentWorklist()->getLocal();
 
           std::random_device r;
           std::mt19937 rng(r());
@@ -155,26 +156,24 @@ public:
         },
         std::make_tuple());
 
-    return galois::runtime::makeLocalRange(*Base::curr);
+    return MakeLocalTwoLevelRange(*this->currentWorklist());
   }
 };
 
 template <typename T>
 class LIFO_WL : public FIFO_WL<T> {
-  using Base = FIFO_WL<T>;
-
 public:
-  auto iterateCurr(void) {
+  auto iterateCurr() {
 
     // TODO: use reverse iterator instead of std::reverse
     galois::runtime::on_each_gen(
         [&](int, int) {
-          auto& lwl = Base::curr->get();
+          auto& lwl = *this->currentWorklist()->getLocal();
           std::reverse(lwl.begin(), lwl.end());
         },
         std::make_tuple());
 
-    return galois::runtime::makeLocalRange(*Base::curr);
+    return MakeLocalTwoLevelRange(*this->currentWorklist());
   }
 };
 
@@ -417,7 +416,7 @@ public:
   template <typename RangeTy>
   void initThread(const RangeTy&) const {}
 
-  void operator()(void) {}
+  void operator()() {}
 };
 
 } // namespace ParaMeter

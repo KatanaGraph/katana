@@ -23,7 +23,6 @@
 #include "galois/config.h"
 #include "galois/FixedSizeRing.h"
 #include "galois/Mem.h"
-#include "galois/TwoLevelIteratorA.h"
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
@@ -32,10 +31,6 @@
 #include <utility>
 
 namespace galois {
-
-// Experimental random access iterator. Slower than old iterator for simple
-// traversals, so disable for now
-//#define _NEW_ITERATOR
 
 //! Like std::deque but use Galois memory management functionality
 template <typename T, unsigned ChunkSize = 64,
@@ -53,45 +48,6 @@ protected:
     Block(InputIterator first, InputIterator second)
         : ContainerTy(first, second), next(), prev() {}
   };
-
-#ifdef _NEW_ITERATOR
-  template <typename U>
-  class outer_iterator
-      : public boost::iterator_facade<outer_iterator<U>, U,
-                                      boost::bidirectional_traversal_tag> {
-    friend class boost::iterator_core_access;
-    template <typename, unsigned, typename>
-    friend class gdeque;
-    Block* cur;
-    Block* last;
-
-    void increment() { cur = cur->next; }
-    void decrement() {
-      if (cur) {
-        cur = cur->prev;
-      } else {
-        cur = last;
-      }
-    }
-
-    template <typename OtherTy>
-    bool equal(const outer_iterator<OtherTy>& o) const {
-      return cur == o.cur;
-    }
-
-    U& dereference() const { return *cur; }
-
-  public:
-    outer_iterator(Block* b = 0, Block* l = 0) : cur(b), last(l) {}
-
-    template <typename OtherTy>
-    outer_iterator(const outer_iterator<OtherTy>& o)
-        : cur(o.cur), last(o.last) {}
-  };
-
-  typedef typename Block::iterator inner_iterator;
-  typedef typename Block::const_iterator const_inner_iterator;
-#endif
 
   Block* first;
 
@@ -190,18 +146,6 @@ private:
   }
 
 public:
-#ifdef _NEW_ITERATOR
-  typedef galois::TwoLevelIteratorA<outer_iterator<Block>, inner_iterator,
-                                    std::random_access_iterator_tag,
-                                    GetBegin<Block>, GetEnd<Block>>
-      iterator;
-  typedef galois::TwoLevelIteratorA<outer_iterator<const Block>,
-                                    const_inner_iterator,
-                                    std::random_access_iterator_tag,
-                                    GetBegin<const Block>, GetEnd<const Block>>
-      const_iterator;
-#endif
-#ifndef _NEW_ITERATOR
   template <typename U>
   struct Iterator
       : public boost::iterator_facade<Iterator<U>, U,
@@ -251,7 +195,6 @@ public:
   };
   typedef Iterator<T> iterator;
   typedef Iterator<const T> const_iterator;
-#endif
 
   typedef boost::reverse_iterator<iterator> reverse_iterator;
   typedef boost::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -285,53 +228,21 @@ public:
   iterator begin() {
     assert(precondition());
 
-#ifdef _NEW_ITERATOR
-    return iterator{outer_iterator<Block>{first, last},
-                    outer_iterator<Block>{nullptr, last},
-                    outer_iterator<Block>{first, last}, GetBegin<Block>{},
-                    GetEnd<Block>{}};
-#else
     return iterator{first, last, 0};
-#endif
   }
 
   iterator end() {
     assert(precondition());
-#ifdef _NEW_ITERATOR
-    return iterator{outer_iterator<Block>{first, last},
-                    outer_iterator<Block>{nullptr, last},
-                    outer_iterator<Block>{nullptr, last}, GetBegin<Block>{},
-                    GetEnd<Block>{}};
-#else
     return iterator{nullptr, last, 0};
-#endif
   }
 
   const_iterator begin() const {
     assert(precondition());
 
-#ifdef _NEW_ITERATOR
-    return const_iterator{outer_iterator<const Block>{first, last},
-                          outer_iterator<const Block>{nullptr, last},
-                          outer_iterator<const Block>{first, last},
-                          GetBegin<const Block>{},
-                          GetEnd<const Block, const_inner_iterator>{}};
-#else
     return const_iterator{first, last, 0};
-#endif
   }
 
-  const_iterator end() const {
-#ifdef _NEW_ITERATOR
-    return const_iterator{outer_iterator<const Block>{first, last},
-                          outer_iterator<const Block>{nullptr, last},
-                          outer_iterator<const Block>{nullptr, last},
-                          GetBegin<const Block>{},
-                          GetEnd<const Block, const_inner_iterator>{}};
-#else
-    return const_iterator{nullptr, last, 0};
-#endif
-  }
+  const_iterator end() const { return const_iterator{nullptr, last, 0}; }
 
   reverse_iterator rbegin() { return reverse_iterator{end()}; }
 

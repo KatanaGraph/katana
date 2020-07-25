@@ -34,6 +34,8 @@
 #include "galois/gslist.h"
 #include "galois/ParallelSTL.h"
 #include "galois/Range.h"
+#include "galois/Threads.h"
+#include "galois/UnionFind.h"
 #include "galois/runtime/Executor_ForEach.h"
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/Mem.h"
@@ -42,9 +44,6 @@
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
-#include "galois/Threads.h"
-#include "galois/TwoLevelIteratorA.h"
-#include "galois/UnionFind.h"
 #include "galois/worklists/WorkList.h"
 
 // TODO deterministic hash

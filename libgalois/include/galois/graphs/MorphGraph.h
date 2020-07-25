@@ -45,12 +45,8 @@
 #include "galois/graphs/Details.h"
 #include "galois/gstl.h"
 
-#ifdef AUX_MAP
-#include "galois/PerThreadContainer.h"
-#else
 #include "galois/substrate/CacheLineStorage.h"
 #include "galois/substrate/SimpleLock.h"
-#endif
 
 namespace galois::graphs {
 
@@ -562,17 +558,6 @@ public: ////////////////////////////////////////////////////////////////////////
       makeGraphNode,
       boost::filter_iterator<is_node, typename NodeListTy::iterator>>;
 
-#ifdef AUX_MAP
-  //! Auxiliary data for nodes that stores in neighbors in per thread storage
-  //! accessed through a map
-  struct ReadGraphAuxData {
-    LargeArray<GraphNode> nodes;
-    //! stores in neighbors
-    galois::PerThreadMap<FileGraph::GraphNode,
-                         galois::gstl::Vector<std::pair<GraphNode, EdgeTy*>>>
-        inNghs;
-  };
-#else
   //! Wrapper around a graph node that provides a lock for it as well as
   //! in-neighbor tracking
   struct AuxNode {
@@ -593,7 +578,6 @@ public: ////////////////////////////////////////////////////////////////////////
   using ReadGraphAuxData =
       typename std::conditional<DirectedNotInOut, LargeArray<GraphNode>,
                                 LargeArray<AuxNodePadded>>::type;
-#endif
 
 private: ///////////////////////////////////////////////////////////////////////
   template <typename... Args>
@@ -1132,105 +1116,6 @@ public
   //! Returns the size of edge data.
   size_t sizeOfEdgeData() const { return gNode::EdgeInfo::sizeOfSecond(); }
 
-#ifdef AUX_MAP
-  /**
-   * Allocate memory for nodes given a file graph with a particular number of
-   * nodes.
-   *
-   * @param graph FileGraph with a number of nodes to allocate
-   * @param aux Data structure in which to allocate space for nodes.
-   */
-  void allocateFrom(FileGraph& graph, ReadGraphAuxData& aux) {
-    size_t numNodes = graph.size();
-    aux.nodes.allocateInterleaved(numNodes);
-  }
-
-  /**
-   * Constructs the MorphGraph nodes given a FileGraph to construct it from.
-   * Meant to be called by multiple threads.
-   *
-   * @param[in] graph FileGraph to construct a morph graph from
-   * @param[in] tid Thread id of thread calling this function
-   * @param[in] total Total number of threads in current execution
-   * @param[in,out] aux Allocated memory to store newly created nodes
-   */
-  void constructNodesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          ReadGraphAuxData& aux) {
-    auto r = graph
-                 .divideByNode(sizeof(gNode), sizeof(typename gNode::EdgeInfo),
-                               tid, total)
-                 .first;
-    for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
-      aux.nodes[*ii] = createNode();
-      addNode(aux.nodes[*ii], galois::MethodFlag::UNPROTECTED);
-    }
-  }
-
-  /**
-   * Constructs the MorphGraph edges given a FileGraph to construct it from and
-   * already created nodes.
-   * Meant to be called by multiple threads.
-   *
-   * @param[in] graph FileGraph to construct a morph graph from
-   * @param[in] tid Thread id of thread calling this function
-   * @param[in] total Total number of threads in current execution
-   * @param[in] aux Contains created nodes to create edges for
-   */
-  void constructOutEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                             ReadGraphAuxData& aux) {
-    auto r = graph
-                 .divideByNode(sizeof(gNode), sizeof(typename gNode::EdgeInfo),
-                               tid, total)
-                 .first;
-    auto& map = aux.inNghs.get();
-
-    for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
-      for (FileGraph::edge_iterator nn = graph.edge_begin(*ii),
-                                    en = graph.edge_end(*ii);
-           nn != en; ++nn) {
-        auto dstID = graph.getEdgeDst(nn);
-        auto src = aux.nodes[*ii], dst = aux.nodes[dstID];
-        auto e = constructOutEdgeValue(graph, nn, src, dst);
-        if (!Directional || InOut) {
-          map[dstID].push_back({src, e});
-        }
-      }
-    }
-  }
-
-  /**
-   * Constructs the MorphGraph in-edges given a FileGraph to construct it from
-   * and already created nodes. Meant to be called by multiple threads.
-   * DirectedNotInOut = false version
-   *
-   * @param[in] graph FileGraph to construct a morph graph from
-   * @param[in] tid Thread id of thread calling this function
-   * @param[in] total Total number of threads in current execution
-   * @param[in] aux Contains created nodes to create edges for
-   */
-  void constructInEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                            const ReadGraphAuxData& aux) {
-    // only do it if not directioal or an inout graph
-    if (!Directional || InOut) {
-      auto r = graph
-                   .divideByNode(sizeof(gNode),
-                                 sizeof(typename gNode::EdgeInfo), tid, total)
-                   .first;
-
-      for (size_t i = 0; i < aux.inNghs.numRows(); ++i) {
-        const auto& map = aux.inNghs.get(i);
-        auto ii         = map.lower_bound(*(r.first));  // inclusive begin
-        auto ei         = map.lower_bound(*(r.second)); // exclusive end
-        for (; ii != ei; ++ii) {
-          auto dst = aux.nodes[ii->first];
-          for (const auto& ie : ii->second) {
-            constructInEdgeValue(graph, ie.second, ie.first, dst);
-          }
-        }
-      }
-    }
-  }
-#else
   /**
    * Allocate memory for nodes given a file graph with a particular number of
    * nodes.
@@ -1392,7 +1277,6 @@ public
   template <bool V = DirectedNotInOut>
   std::enable_if_t<V> constructInEdgesFrom(FileGraph&, unsigned, unsigned,
                                            ReadGraphAuxData&) {}
-#endif
 };
 
 } // namespace galois::graphs

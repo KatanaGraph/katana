@@ -37,12 +37,8 @@
 #include "galois/graphs/FileGraph.h"
 #include "galois/gstl.h"
 
-#ifdef AUX_MAP
-#include "galois/PerThreadContainer.h"
-#else
 #include "galois/substrate/CacheLineStorage.h"
 #include "galois/substrate/SimpleLock.h"
-#endif
 
 namespace galois::graphs {
 
@@ -504,14 +500,6 @@ public:
       makeGraphNode,
       boost::filter_iterator<is_node, typename NodeListTy::iterator>>
       iterator;
-#ifdef AUX_MAP
-  struct ReadGraphAuxData {
-    LargeArray<GraphNode> nodes;
-    galois::PerThreadMap<FileGraph::GraphNode,
-                         galois::gstl::Vector<std::pair<GraphNode, EdgeTy*>>>
-        inNghs;
-  };
-#else
   struct AuxNode {
     galois::substrate::SimpleLock lock;
     GraphNode n;
@@ -523,7 +511,6 @@ public:
   using ReadGraphAuxData =
       typename std::conditional<DirectedNotInOut, LargeArray<GraphNode>,
                                 LargeArray<AuxNodePadded>>::type;
-#endif
 
 private:
   template <typename... Args>
@@ -1046,68 +1033,6 @@ public:
   //! Returns the size of edge data.
   size_t sizeOfEdgeData() const { return gNode::EdgeInfo::sizeOfSecond(); }
 
-#ifdef AUX_MAP
-  void allocateFrom(FileGraph& graph, ReadGraphAuxData& aux) {
-    size_t numNodes = graph.size();
-    aux.nodes.allocateInterleaved(numNodes);
-  }
-
-  void constructNodesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          ReadGraphAuxData& aux) {
-    auto r = graph
-                 .divideByNode(sizeof(gNode), sizeof(typename gNode::EdgeInfo),
-                               tid, total)
-                 .first;
-    for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
-      aux.nodes[*ii] = createNode();
-      addNode(aux.nodes[*ii], galois::MethodFlag::UNPROTECTED);
-    }
-  }
-
-  void constructOutEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                             ReadGraphAuxData& aux) {
-    auto r = graph
-                 .divideByNode(sizeof(gNode), sizeof(typename gNode::EdgeInfo),
-                               tid, total)
-                 .first;
-    auto& map = aux.inNghs.get();
-
-    for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
-      for (FileGraph::edge_iterator nn = graph.edge_begin(*ii),
-                                    en = graph.edge_end(*ii);
-           nn != en; ++nn) {
-        auto dstID = graph.getEdgeDst(nn);
-        auto src = aux.nodes[*ii], dst = aux.nodes[dstID];
-        auto e = constructOutEdgeValue(graph, nn, src, dst);
-        if (!Directional || InOut) {
-          map[dstID].push_back({src, e});
-        }
-      }
-    }
-  }
-
-  void constructInEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                            const ReadGraphAuxData& aux) {
-    if (!Directional || InOut) {
-      auto r = graph
-                   .divideByNode(sizeof(gNode),
-                                 sizeof(typename gNode::EdgeInfo), tid, total)
-                   .first;
-
-      for (size_t i = 0; i < aux.inNghs.numRows(); ++i) {
-        const auto& map = aux.inNghs.get(i);
-        auto ii         = map.lower_bound(*(r.first));  // inclusive begin
-        auto ei         = map.lower_bound(*(r.second)); // exclusive end
-        for (; ii != ei; ++ii) {
-          auto dst = aux.nodes[ii->first];
-          for (const auto& ie : ii->second) {
-            constructInEdgeValue(graph, ie.second, ie.first, dst);
-          }
-        }
-      }
-    }
-  }
-#else
   void allocateFrom(FileGraph& graph, ReadGraphAuxData& aux) {
     size_t numNodes = graph.size();
     aux.allocateInterleaved(numNodes);
@@ -1208,7 +1133,6 @@ public:
   template <bool V = DirectedNotInOut>
   std::enable_if_t<V> constructInEdgesFrom(FileGraph&, unsigned, unsigned,
                                            ReadGraphAuxData&) {}
-#endif
 };
 
 } // namespace galois::graphs

@@ -1,7 +1,6 @@
-import pytest
-from galois.property_graph import PropertyGraph
-
 import pyarrow
+import pytest
+
 
 def test_load(property_graph):
     assert property_graph.num_nodes() == 29092

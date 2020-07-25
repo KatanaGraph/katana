@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 
-from galois.loops import *
 from galois.datastructures import *
+from galois.loops import *
 
 types = [
     pytest.param(int, id="int"),

@@ -16,9 +16,10 @@ from galois.numba._native_wrapper_utils import call_callback
 #  This should be replaced ASAP.
 
 class Closure():
-    def __init__(self, func, userdata, unbound_argument_types):
+    def __init__(self, func, userdata, return_type, unbound_argument_types):
         self._function = func
         self._userdata = userdata
+        self.return_type = return_type
         self.unbound_argument_types = unbound_argument_types
 
     @property
@@ -35,9 +36,10 @@ class Closure():
     def __str__(self):
         return "<Closure {} {}>".format(self._function, self._userdata)
 
+# Add return type parameter
 
 class _ClosureInstance():
-    def __init__(self, func, bound_args, unbound_args, target):
+    def __init__(self, func, return_type, bound_args, unbound_args, target):
         # TODO: Only wrapper depends on func. The other stuff could be cached based on only bound_args (globally)
         class Environment():
             pass
@@ -111,10 +113,10 @@ def fill(userdata, {env_args}):
     userdata_ptr = cast_to_Environment(userdata)
     numba.carray(userdata_ptr, 1)[0] = Environment({env_args})
 
-@numba.cfunc(types.void(*unbound_args, types.CPointer(environment_type)), nopython=True, nogil=True, cache=False)
+@numba.cfunc(return_type(*unbound_args, types.CPointer(environment_type)), nopython=True, nogil=True, cache=False)
 def wrapper({unbound_pass_args} userdata):
     userdata = numba.carray(userdata, 1)[0]
-    func({extract_env} {unbound_pass_args})
+    return func({extract_env} {unbound_pass_args})
 """
         # print(bound_args, unbound_args)
         # print(src)
@@ -135,18 +137,19 @@ def wrapper({unbound_pass_args} userdata):
 
 # FIXME: Fixed unbound argument type at construction time. Needs to support setting at closure *call* time.
 class ClosureBuilder():
-    def __init__(self, func, unbound_argument_types, target="cpu"):
+    def __init__(self, func, *, return_type=types.void, unbound_argument_types, target="cpu"):
         self._underlying_function = func
         self._instance_cache = {}
         self._target = target
         self._unbound_argument_types = tuple(unbound_argument_types)
+        self._return_type = return_type
 
     def _generate(self, bound_args):
         key = bound_args
         if key in self._instance_cache:
             return self._instance_cache[key]
         else:
-            inst = _ClosureInstance(self._underlying_function, bound_args, unbound_args=self._unbound_argument_types, target=self._target)
+            inst = _ClosureInstance(self._underlying_function, self._return_type, bound_args, unbound_args=self._unbound_argument_types, target=self._target)
             self._instance_cache[key] = inst
             return inst
 
@@ -157,7 +160,7 @@ class ClosureBuilder():
         env_ptr = ctypes.addressof(env)
         # print(env_ptr, *args)
         inst.fill(env_ptr, *args)
-        closure = Closure(inst.wrapper, env, self._unbound_argument_types)
+        closure = Closure(inst.wrapper, env, self._return_type, self._unbound_argument_types)
         closure._EnvironmentStruct_arguments = args
         return closure
 

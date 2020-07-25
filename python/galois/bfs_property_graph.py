@@ -93,7 +93,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--startNode', type=int, default=0)
-    parser.add_argument('--propertyID', type=int, default=0)
     parser.add_argument('--propertyName', type=str, default="NewProperty")
     parser.add_argument('--reportNode', type=int, default=1)
     parser.add_argument('--noverify', action='store_true', default=False)

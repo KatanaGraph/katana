@@ -17,6 +17,8 @@ import galois.numba.closure
 
 from .cpp.libgalois cimport Galois, datastructures
 from .cpp.libgalois.graphs cimport Graph
+from .cpp.libgalois cimport Worklist
+#cimport OrderedByIntegerMetric, PerSocketChunkFIFO, Uint_64u
 
 from .datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
 from .datastructures import InsertBag_uint64_t, LargeArray_uint64_t
@@ -31,8 +33,10 @@ _logger = logging.getLogger(__name__)
 
 @cython.freelist(16)
 cdef class UserContext:
+    # FIXME: Hard coded uint64_t loop variable
     cdef Galois.UserContext[uint64_t] *underlying
 
+    # FIXME: Hard coded uint64_t loop variable
     @staticmethod
     cdef UserContext make(Galois.UserContext[uint64_t] * u):
         f = <UserContext>UserContext.__new__(UserContext)
@@ -71,6 +75,34 @@ cdef class UserContext:
 {% endcall %}
 
 
+# FIXME: Hard coded uint64_t loop variable and int64_t order variable
+cdef extern from * nogil:
+    """
+typedef int64_t (*obim_metric_type)(uint64_t, void*);
+
+constexpr static const unsigned CHUNK_SIZE      = 64U;
+using PSchunk = galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE>;
+
+struct AdapterFunctor {
+    obim_metric_type func;
+    void* userdata;    
+    int64_t operator()(uint64_t arg) { 
+        return func(arg, userdata);
+    }
+};
+
+auto make_order_by_integer_metric_with_callback(obim_metric_type func, void* userdata) {
+  return galois::wl<galois::worklists::OrderedByIntegerMetric<AdapterFunctor, PSchunk>>(AdapterFunctor{func, userdata});
+}
+    """
+    ctypedef int64_t (*obim_metric_type)(uint64_t, void*) except *
+    Galois.CPPAuto make_order_by_integer_metric_with_callback(obim_metric_type func, void* userdata)
+
+cdef int64_t wrap_python_callable_obim_metric(uint64_t arg, void* userdata) nogil:
+    with gil:
+        return (<object>userdata)(arg)
+
+
 # FIXME: Hard coded uint64_t loop variable
 cdef extern from * nogil:
     """
@@ -98,85 +130,182 @@ cdef void wrap_python_callable_for_each_operator(uint64_t arg, Galois.UserContex
     with gil:
         (<object>userdata)(arg, UserContext.make(ctx))
 
+{# These handle_* and extract_* macros are stacked together using nested_statements from generate-from-jinja.py.
+    Each macro calls inner which is a function that encapulates all the remaining macros that need to be
+    stacked together. Multiple calls to inner cause the rest of the stack to be duplicated (with different arguments
+    generally). Arguments before inner are bound (with partial) before executing the stack of functions; arguments
+    after inner are passed from each layer to the next. The first argument to inner is the number of (4 space)
+    indentation level that should be added to the code generated.
+#}
 
-{% macro wrap_loop(loop_type, descriptors, supported_iterables) -%}
-
-{%- for python_type, iterable_check, extract_impl_arguments, impl_arguments, iterate_expr in supported_iterables %}
-cdef _{{loop_type}}_impl_{{python_type}}({{impl_arguments}}, {{loop_type}}_operator_type cb, void *userdata,
-                                    const char *c_name{% for d in descriptors|sort %}, bint {{d}}{% endfor %}) except +:
-    if False:
-        pass
-    {%- for ss in all_combinations(descriptors) %}
-    elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} not {{d}} {%- endif -%} {%- endfor -%}:
-        with nogil:
-            if c_name == NULL:
-                Galois.{{loop_type}}({{iterate_expr}},
-                            {{loop_type}}_operator_lambda(cb, userdata)
-                          {% for d in ss -%}, Galois.{{ d }}(){%- endfor %}
-                  )
-            else:
-                Galois.{{loop_type}}({{iterate_expr}},
-                            {{loop_type}}_operator_lambda(cb, userdata),
-                            Galois.loopname(c_name)
-                          {% for d in ss -%}, Galois.{{ d }}(){%- endfor %}
-                  )
+{% macro handle_descriptors(descriptors, inner, iterable, args) -%}
+if False:
+    pass
+{%- for ss in all_combinations(descriptors) %}
+elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} not {{d}} {%- endif -%} {%- endfor -%}:
+    {% set args = args.copy() %}
+    {% for d in ss -%}
+    {% set _ = args.append("Galois."+d+"()") %}
     {%- endfor %}
+    {{inner(1, iterable, args)}}
 {%- endfor %}
+{% endmacro %}
 
+{% macro handle_worklist(inner, iterable, args) -%}
+if worklist is None:
+    {{inner(1, iterable, args)}}
+elif isinstance(worklist, OrderedByIntegerMetric):
+    obim_func = worklist.indexer
+    if isinstance(obim_func, numba.core.ccallback.CFunc):
+        if not galois.loops.is_obim_metric_cfunc(obim_func):
+            raise TypeError("Function has incorrect signature")
+        obim_cb = <obim_metric_type><unsigned long int>(obim_func.address)
+        obim_userdata = NULL
+    elif isinstance(obim_func, galois.numba.closure.Closure):
+        if not galois.loops.is_obim_metric_closure(obim_func):
+            raise TypeError("Function has incorrect signature")
+        obim_cb = <obim_metric_type><unsigned long int>(obim_func.__function_address__)
+        obim_userdata = <void*><unsigned long int>(obim_func.__userdata_address__)
+    elif callable(obim_func):
+        _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(obim_func, "__name__", "<unknown function>"))
+        obim_cb = &wrap_python_callable_obim_metric
+        obim_userdata = <void*>obim_func
+    else:
+        raise TypeError(obim_func)
+
+    {{inner(1, iterable, args + ["make_order_by_integer_metric_with_callback(obim_cb, obim_userdata)"])}}
+else:
+    raise TypeError(worklist)
+{% endmacro %}
+
+{% macro release_gil(inner, iterable, args) -%}
+with nogil:
+    {{inner(1, iterable, args)}}
+{% endmacro %}
+
+{% macro handle_loop_name(inner, iterable, args) -%}
+# This always passes a loopname since that reduces the size of the binary by 11MiB.
+# If loopname has a performance cost we could have two cases here.
+if c_name == NULL:
+    c_name = "<unnamed>"
+{{inner(0, iterable, args + ["Galois.loopname(c_name)"])}}
+{% endmacro %}
+
+{% macro handle_iterable(inner, iterable, args) -%}
+# FIXME: Hard coded uint64_t loop variable
+if isinstance(iterable, range) and iterable.step == 1:
+    frm = <uint64_t>iterable.start
+    to = <uint64_t>iterable.stop
+    {{inner(1, "Galois.iterate(frm, to)", args)}}
+elif isinstance(iterable, InsertBag_uint64_t):
+    insert_bag = &(<InsertBag_uint64_t>iterable).underlying
+    {{inner(1, "Galois.iterate(insert_bag[0])", args)}}
+elif isinstance(iterable, LargeArray_uint64_t):
+    large_array = &(<LargeArray_uint64_t>iterable).underlying
+    {{inner(1, "Galois.iterate(large_array[0])", args)}}
+elif isinstance(iterable, PropertyGraph):
+    num_nodes = <uint64_t>(<PropertyGraph>iterable).num_nodes()
+    {{inner(1, "Galois.iterate(<uint64_t>0, num_nodes)", args)}}
+else:
+    raise ValueError("iterable unsupported")
+{% endmacro %}
+
+{% macro extract_loop_name(inner, iterable, args) -%}
+if loop_name:
+    if not isinstance(loop_name, str):
+        raise TypeError("Expected str loop_name")
+    loop_name_bytes = bytes(loop_name, "utf-8")
+    c_name = <const char*>loop_name_bytes
+else:
+    c_name = NULL
+
+{{inner(0, iterable, args)}}
+{% endmacro %}
+
+{% macro extract_callback(loop_type, inner, iterable, args) -%}
+if isinstance(func, numba.core.ccallback.CFunc):
+    if not galois.loops.is_{{loop_type}}_operator_cfunc(func):
+        raise TypeError("Function has incorrect signature")
+    cb = <{{loop_type}}_operator_type><unsigned long int>(func.address)
+    userdata = NULL
+elif isinstance(func, galois.numba.closure.Closure):
+    if not galois.loops.is_{{loop_type}}_operator_closure(func):
+        raise TypeError("Function has incorrect signature")
+    cb = <{{loop_type}}_operator_type><unsigned long int>(func.__function_address__)
+    userdata = <void*><unsigned long int>(func.__userdata_address__)
+elif callable(func):
+    _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(func, "__name__", "<unknown function>"))
+    cb = &wrap_python_callable_{{loop_type}}_operator
+    userdata = <void*>func
+else:
+    raise TypeError(func)
+
+{{inner(0, iterable, args)}}
+{% endmacro %}
+
+{% macro generate_call(loop_type, inner, iterable, args) -%}
+Galois.{{loop_type}}({{iterable}},
+                     {{loop_type}}_operator_lambda(cb, userdata),
+                     {{args|join(", ")}})
+{%- endmacro %}
+
+
+{% macro wrap_loop(loop_type, descriptors) -%}
 # FIXME: Needs a way to infer the argument type produced by the loop and get the appropriate closure setup and call
 #  an appropriate impl function.
 cpdef {{loop_type}}(object iterable, func,
-                    loop_name = None{% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
+                    loop_name = None
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
     cdef:
         {{loop_type}}_operator_type cb
         void *userdata
         const char *c_name
-    
-    if loop_name:
-        if not isinstance(loop_name, str):
-           raise TypeError("Expected str loop_name")
-        loop_name_bytes = bytes(loop_name, "utf-8")
-        c_name = <const char*>loop_name_bytes
-    else:
-        c_name = NULL
-    
-    if isinstance(func, numba.core.ccallback.CFunc):
-        if not galois.loops.is_{{loop_type}}_operator_cfunc(func):
-            raise TypeError("Function has incorrect signature")
-        cb = <{{loop_type}}_operator_type><unsigned long int>(func.address)
-        userdata = NULL
-    elif isinstance(func, galois.numba.closure.Closure):
-        if not galois.loops.is_{{loop_type}}_operator_closure(func):
-            raise TypeError("Function has incorrect signature")
-        cb = <{{loop_type}}_operator_type><unsigned long int>(func.__function_address__)
-        userdata = <void*><unsigned long int>(func.__userdata_address__)
-    elif callable(func):
-        _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(func, "__name__", "<unknown function>"))
-        cb = &wrap_python_callable_{{loop_type}}_operator
-        userdata = <void*>func
-    else:
-        raise TypeError(func)
 
-    if False:
-        pass
-{%- for python_type, iterable_check, extract_impl_arguments, impl_arguments, iterate_expr in supported_iterables %}
-    elif isinstance(iterable, {{python_type}}) and {{iterable_check}}:
-        _{{loop_type}}_impl_{{python_type}}({{extract_impl_arguments}}, cb, userdata,
-                                            c_name{% for d in descriptors|sort %}, {{d}}{% endfor %})
-{%- endfor %}
-    else:
-        raise ValueError("iterable unsupported")
+    {{indent(1, nested_statements([
+        extract_loop_name,
+        partial(extract_callback, loop_type),
+        handle_loop_name,
+        handle_iterable,
+        partial(handle_descriptors, descriptors|sort),
+        release_gil,
+        partial(generate_call, loop_type)], "", []))}}
 {% endmacro %}
 
-# FIXME: Hard coded uint64_t loop variable
-{% set supported_iterables = [
-    ("range", "iterable.step == 1", "<uint64_t>iterable.start, <uint64_t>iterable.stop", "uint64_t frm, uint64_t to", "Galois.iterate(frm, to)"),
-    ("InsertBag_uint64_t", "True", "&(<InsertBag_uint64_t>iterable).underlying", "datastructures.InsertBag[uint64_t]* insert_bag", "Galois.iterate(insert_bag[0])"),
-    ("LargeArray_uint64_t", "True", "&(<LargeArray_uint64_t>iterable).underlying", "datastructures.LargeArray[uint64_t]* large_array", "Galois.iterate(large_array[0])"),
-    ("PropertyGraph", "True", "0, (<PropertyGraph>iterable).num_nodes()", "uint64_t frm, uint64_t to", "Galois.iterate(frm, to)"),
-    ] %}
-{{ wrap_loop("do_all", ["steal"], supported_iterables) }}
-{{ wrap_loop("for_each", ["steal", "no_pushes", "disable_conflict_detection"], supported_iterables) }}
+{% macro wrap_loop_worklist(loop_type, descriptors) -%}
+# FIXME: Needs a way to infer the argument type produced by the loop and get the appropriate closure setup and call
+#  an appropriate impl function.
+cpdef {{loop_type}}(object iterable, func,
+                    loop_name = None,
+                    worklist = None
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
+    cdef:
+        {{loop_type}}_operator_type cb
+        void *userdata
+        const char *c_name
+        obim_metric_type obim_cb
+        void *obim_userdata
+
+    {{indent(1, nested_statements([
+        extract_loop_name,
+        partial(extract_callback, loop_type),
+        handle_loop_name,
+        handle_worklist,
+        handle_iterable,
+        release_gil,
+        partial(handle_descriptors, descriptors|sort),
+        partial(generate_call, loop_type)], "", []))}}
+{% endmacro %}
+
+
+class Worklist:
+    pass
+
+class OrderedByIntegerMetric(Worklist):
+    def __init__(self, indexer):
+        self.indexer = indexer
+
+{{ wrap_loop("do_all", ["steal"]) }}
+{{ wrap_loop_worklist("for_each", ["steal", "no_pushes", "disable_conflict_detection"]) }}
 
 
 {{numba.register_all_wrappers()}}

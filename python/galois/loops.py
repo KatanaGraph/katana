@@ -4,13 +4,13 @@ import numba
 import numba.core.ccallback
 import numba.types
 
-from ._loops import do_all, for_each, UserContext_numba_type
+from ._loops import do_all, for_each, UserContext_numba_type, OrderedByIntegerMetric
 from .numba.closure import ClosureBuilder, Closure
 
-__all__ = ["do_all", "do_all_operator", "for_each", "for_each_operator"]
+__all__ = ["do_all", "do_all_operator", "for_each", "for_each_operator", "obim_metric", "OrderedByIntegerMetric"]
 
 
-###### Parallel loops
+# Parallel loops
 
 # FIXME: Hard coded uint64_t loop variable
 do_all_unbound_argument_types = (numba.types.uint64,)
@@ -33,7 +33,7 @@ def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
     def decorator(f):
         n_args = f.__code__.co_argcount-1
         f_jit = numba.jit(typ, nopython=nopython, target=target, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, do_all_unbound_argument_types, target=target))
+        builder = wraps(f)(ClosureBuilder(f_jit, unbound_argument_types=do_all_unbound_argument_types, target=target))
         if n_args == 0:
             return builder()
         else:
@@ -70,7 +70,7 @@ def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
     def decorator(f):
         n_args = f.__code__.co_argcount-2
         f_jit = numba.jit(typ, nopython=nopython, target=target, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, for_each_unbound_argument_types, target=target))
+        builder = wraps(f)(ClosureBuilder(f_jit, unbound_argument_types=for_each_unbound_argument_types, target=target))
         if n_args == 0:
             return builder()
         else:
@@ -85,6 +85,29 @@ def is_for_each_operator_cfunc(v):
 
 def is_for_each_operator_closure(v):
     return isinstance(v, Closure) and v.unbound_argument_types == for_each_unbound_argument_types
+
+# Ordered By Integer Metric
+
+def obim_metric(typ=None, nopython=True, target="cpu", **kws):
+    def decorator(f):
+        n_args = f.__code__.co_argcount-1
+        f_jit = numba.jit(typ, nopython=nopython, target=target, **kws)(f)
+        builder = wraps(f)(ClosureBuilder(f_jit, return_type=numba.types.int64, unbound_argument_types=do_all_unbound_argument_types, target=target))
+        if n_args == 0:
+            return builder()
+        else:
+            return builder
+    return decorator
+
+def is_obim_metric_cfunc(v):
+    try:
+        return isinstance(v, numba.core.ccallback.CFunc) and v.__wrapped__.__code__.co_argcount == 3
+    except AttributeError:
+        return False
+
+def is_obim_metric_closure(v):
+    return isinstance(v, Closure) and v.return_type == numba.types.int64 and v.unbound_argument_types == do_all_unbound_argument_types
+
 
 # Import the numba wrappers people are likely to need.
 # TODO: This imports should probably be elsewhere, but this will work for now.

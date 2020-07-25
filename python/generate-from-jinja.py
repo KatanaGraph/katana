@@ -3,6 +3,7 @@ import jinja2
 import sys
 
 from itertools import combinations
+from functools import partial
 
 DIR = sys.argv[1]
 TEMPLATE_FILE = sys.argv[2]
@@ -16,9 +17,25 @@ def all_combinations(l):
 def generated_banner():
     return "THIS FILE IS GENERATED FROM '{0}'. Make changes to that file instead of this one.".format(TEMPLATE_FILE)
 
+def indent(n, s):
+    return s.replace("\n", "\n" + " "*(n*4))
+
+def nested_statements(layers, *args, **kwargs):
+    if layers:
+        outer, *inners = layers
+        def inner(depth, *args, **kwargs):
+            s = nested_statements(inners, *args, **kwargs)
+            return indent(depth, s)
+        return outer(inner, *args, **kwargs)
+    else:
+        raise RuntimeError("The last layer must not call inner.")
+
 templateEnv.globals.update(
     combinations=combinations,
     all_combinations=all_combinations,
-    generated_banner=generated_banner)
+    generated_banner=generated_banner,
+    nested_statements=nested_statements,
+    partial=partial,
+    indent=indent)
 template = templateEnv.get_template(TEMPLATE_FILE)
 print(template.render())

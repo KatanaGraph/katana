@@ -1,7 +1,8 @@
-#include "galois/gIO.h"
-#include "galois/Traits.h"
 #include <iostream>
 #include <utility>
+
+#include "galois/gIO.h"
+#include "galois/Traits.h"
 
 struct A {};
 
@@ -14,13 +15,13 @@ struct B : public A {
 struct Unrelated {};
 
 template <size_t... Ints, typename Tuple>
-void print(std::index_sequence<Ints...>, Tuple tup) {
+void Print(std::index_sequence<Ints...>, Tuple tup) {
   (..., (std::cout << typeid(std::get<Ints>(tup)).name() << " ")) << "\n";
 }
 
 template <typename Tuple>
-void print(Tuple tup) {
-  print(std::make_index_sequence<std::tuple_size<Tuple>::value>(), tup);
+void Print(Tuple tup) {
+  Print(std::make_index_sequence<std::tuple_size<Tuple>::value>(), tup);
 }
 
 void TestGet() {
@@ -62,8 +63,41 @@ void TestHasFunctionTraits() {
                    galois::function_traits<HasFunctionTraits>::type>::value);
 }
 
+struct Functor {
+  int v_;
+
+  int operator()(int) { return v_; }
+};
+
+auto MakePRValueArgument() {
+  return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(1);
+}
+
+auto MakeLValueArgument() {
+  int v = 2;
+  return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(v);
+}
+
+void TestCopy() {
+  std::cout << "making prvalue functor\n";
+  std::cout << std::get<0>(MakePRValueArgument().args);
+  std::cout << "\n";
+
+  // If galois::wl incorrectly stores references to arguments, we will get an
+  // uninitialized reference here, which will be detected statically by gcc 7
+  // -Werror=uninitialized.
+  auto args = MakeLValueArgument().args;
+  std::cout << "making lvalue functor\n";
+  std::cout << std::get<0>(args);
+  std::cout << "\n";
+
+  // For other compilers, directly check the sufficient condition.
+  static_assert(!std::is_reference_v<std::tuple_element_t<0, decltype(args)>>);
+}
+
 int main() {
   TestGet();
   TestHasFunctionTraits();
+  TestCopy();
   return 0;
 }

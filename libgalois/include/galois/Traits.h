@@ -223,12 +223,12 @@ struct wl_tag {};
 template <typename T, typename... Args>
 struct s_wl : public trait_has_type<T>, wl_tag {
   std::tuple<Args...> args;
-  s_wl(Args&&... a) : args(std::forward<Args>(a)...) {}
+  s_wl(Args... a) : args(std::move(a)...) {}
 };
 
 template <typename T, typename... Args>
-s_wl<T, Args...> wl(Args&&... args) {
-  return s_wl<T, Args...>(std::forward<Args>(args)...);
+s_wl<T, Args...> wl(Args... args) {
+  return s_wl<T, Args...>(std::move(args)...);
 }
 
 //

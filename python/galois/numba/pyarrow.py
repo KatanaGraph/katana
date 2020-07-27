@@ -123,7 +123,8 @@ _array_type_map = {
     pyarrow.uint64(): pyarrow.UInt64Array,
     pyarrow.uint32(): pyarrow.UInt32Array,
     pyarrow.float64(): pyarrow.lib.DoubleArray,
-    pyarrow.float32(): pyarrow.lib.FloatArray
+    pyarrow.float32(): pyarrow.lib.FloatArray,
+    pyarrow.bool_(): pyarrow.lib.BooleanArray
     }
 
 _type_array_map = {a: t for t, a in _array_type_map.items()}
@@ -134,7 +135,8 @@ _arrow_ctypes_map = {
     pyarrow.uint64(): ctypes.c_uint64,
     pyarrow.uint32(): ctypes.c_uint32,
     pyarrow.float64(): ctypes.c_double,
-    pyarrow.float32(): ctypes.c_float
+    pyarrow.float32(): ctypes.c_float,
+    pyarrow.bool_(): ctypes.c_bool
     }
 
 class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):

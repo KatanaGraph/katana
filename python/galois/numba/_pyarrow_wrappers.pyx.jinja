@@ -44,18 +44,6 @@ cdef api {{element_type}} ChunkedArray_{{array_type_prefix}}Array_Value(CChunked
 # For Array.as{{array_type_prefix}}()[j] and Array.as{{array_type_prefix}}() iteration
 cdef api {{element_type}} Array_{{array_type_prefix}}Array_Value(CArray* self, uint64_t i) nogil:
     return (<C{{array_type_prefix}}Array*>self).Value(i)
-
-cdef extern from * nogil:
-    """
-    const {{c_element_type}}* {{array_type_prefix}}Array_raw_values(arrow::{{array_type_prefix}}Array* array) {
-      return array->raw_values();
-    }
-    """
-    const {{element_type}}* {{array_type_prefix}}Array_raw_values(C{{array_type_prefix}}Array*) nogil except *
-
-# For Array.as{{array_type_prefix}}().as_carray() and Array.as{{array_type_prefix}}() iteration
-cdef api const {{element_type}}* Array_{{array_type_prefix}}Array_raw_values(CArray* self) nogil:
-    return {{array_type_prefix}}Array_raw_values(<C{{array_type_prefix}}Array*>self)
 {%- endmacro %}
 
 {% for args in [
@@ -64,7 +52,8 @@ cdef api const {{element_type}}* Array_{{array_type_prefix}}Array_raw_values(CAr
     ("Int32", "int32_t"),
     ("UInt32", "uint32_t"),
     ("Float", "float"),
-    ("Double", "double")] %}
+    ("Double", "double"),
+    ("Boolean", "bint", "bool")] %}
 {{numba_wrap(*args)}}
 {% endfor %}
 {#  ,  ("Boolean", "bint", "bool") #}

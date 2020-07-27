@@ -1,4 +1,3 @@
-import numpy
 from numba import types
 from numba.core import cgutils
 from numba.core.typing.arraydecl import get_array_index_type

@@ -36,12 +36,13 @@ cdef void printValue(Graph_CSR *g):
 cdef void Initialize(Graph_CSR *g, unsigned long source):
     cdef:
         unsigned long numNodes = g.size()
+        uint32_t inf = UINT32_MAX
     for n in range(numNodes):
         data = &g.getData(n)
         if(n == source):
             data[0].store(0)
         else:
-            data[0].store(numNodes)
+            data[0].store(inf)
         
 
 ctypedef UpdateRequest[GNodeCSR, Dist] UpdateRequestObj

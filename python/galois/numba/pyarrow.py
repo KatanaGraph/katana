@@ -310,9 +310,6 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         #                 yield Array_xArray_Value(v.ptr, i)
         #         return impl_
 
-# ChunkedArrayType = NativeNumbaPointerWrapper(
-#     pyarrow.ChunkedArray, _pyarrow_wrappers.ChunkedArray_get_address,
-#     override_module_name="galois.numba._pyarrow_wrappers")
 ChunkedArrayNumbaPointerWrapper(
     pyarrow.ChunkedArray, _pyarrow_wrappers.ChunkedArray_get_address,
     override_module_name="galois.numba._pyarrow_wrappers")

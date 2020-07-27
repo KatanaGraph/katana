@@ -75,6 +75,11 @@ def declare_atomic_array_op(iop, uop, fop):
 
 @declare_atomic_array_op("add", "add", "fadd")
 def atomic_add(ary, i, v):
+    """
+    Atomically, perform `ary[i] += v` and return the previous value of `ary[i]`.
+
+    i must be a simple index for a single element of ary. Broadcasting and vector operations are not supported.
+    """
     orig = ary[i]
     ary[i] += v
     return orig
@@ -82,6 +87,11 @@ def atomic_add(ary, i, v):
 
 @declare_atomic_array_op("sub", "sub", "fsub")
 def atomic_sub(ary, i, v):
+    """
+    Atomically, perform `ary[i] -= v` and return the previous value of `ary[i]`.
+
+    i must be a simple index for a single element of ary. Broadcasting and vector operations are not supported.
+    """
     orig = ary[i]
     ary[i] -= v
     return orig
@@ -89,6 +99,11 @@ def atomic_sub(ary, i, v):
 
 @declare_atomic_array_op("max", "umax", None)
 def atomic_max(ary, i, v):
+    """
+    Atomically, perform `ary[i] = max(ary[i], v)` and return the previous value of `ary[i]`.
+
+    i must be a simple index for a single element of ary. Broadcasting and vector operations are not supported.
+    """
     orig = ary[i]
     ary[i] = max(ary[i], v)
     return orig
@@ -96,6 +111,11 @@ def atomic_max(ary, i, v):
 
 @declare_atomic_array_op("min", "umin", None)
 def atomic_min(ary, i, v):
+    """
+    Atomically, perform `ary[i] = min(ary[i], v)` and return the previous value of `ary[i]`.
+
+    i must be a simple index for a single element of ary. Broadcasting and vector operations are not supported.
+    """
     orig = ary[i]
     ary[i] = min(ary[i], v)
     return orig

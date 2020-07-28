@@ -56,6 +56,7 @@ struct RDG {
   std::vector<std::pair<std::string, std::string>> other_metadata;
 
   std::string topology_path;
+  uint64_t topology_size;
   FileView topology_file_storage;
 
   /// name of the graph that was used to load this RDG
@@ -85,6 +86,7 @@ struct GRPrefix {
 
 struct RDGPrefix {
   FileView prefix_storage;
+  uint64_t view_offset;
   const GRPrefix* prefix{nullptr};
 };
 

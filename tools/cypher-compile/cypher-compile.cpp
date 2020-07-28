@@ -72,8 +72,8 @@ int main(int argc, char** argv) {
   cc.getReturnMetadata().printStruct(1);
 
   galois::gInfo("Parsed return values are as follows:");
-  for (const galois::CompilerQueryResult& a : cc.getReturnValues()) {
-    a.printStruct(1);
+  for (const galois::QueryProperty& a : cc.getReturnValues()) {
+    galois::gPrint("\t", a.toString(), "\n");
   }
 
   totalTime.stop();

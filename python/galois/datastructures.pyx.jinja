@@ -1,7 +1,5 @@
 # -*- mode: cython -*-
 
-import galois.shmem
-
 from .cpp.libgalois cimport datastructures
 from libc.stdint cimport uintptr_t, int64_t, uint64_t
 from cython.operator cimport preincrement, dereference as deref

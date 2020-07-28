@@ -27,6 +27,10 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
                                        const std::string& object,
                                        const uint8_t* data, uint64_t size);
 
+galois::Result<std::unique_ptr<FileAsyncWork>>
+S3GetAsync(const std::string& bucket, const std::string& object, uint64_t start,
+           uint64_t size, uint8_t* result_buf);
+
 // Call this function to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface

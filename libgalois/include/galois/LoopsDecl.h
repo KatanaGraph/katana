@@ -19,6 +19,12 @@
 
 #include "galois/config.h"
 
+/// Forward declarations of parallel loops. This is for internal cases where
+/// types used in the implementation of parallel loops also require parallel
+/// loop constructs.
+///
+/// @file LoopsDecl.h
+
 namespace galois {
 
 template <typename Range, typename FunctionTy, typename... Args>

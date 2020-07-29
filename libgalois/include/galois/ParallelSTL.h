@@ -21,13 +21,13 @@
 #define GALOIS_PARALLELSTL_H
 
 #include "galois/config.h"
-#include "galois/GaloisForwardDecl.h"
+#include "galois/LoopsDecl.h"
 #include "galois/NoDerefIterator.h"
 #include "galois/Range.h"
 #include "galois/Reduction.h"
+#include "galois/Threads.h"
 #include "galois/Traits.h"
 #include "galois/UserContext.h"
-#include "galois/Threads.h"
 #include "galois/worklists/Chunk.h"
 
 namespace galois {

@@ -36,23 +36,19 @@
 #include "galois/config.h"
 #include "galois/AtomicWrapper.h"
 #include "galois/PODResizeableArray.h"
-#include "galois/GaloisForwardDecl.h"
-#include "galois/Traits.h"
-#include "galois/Galois.h"
 
 namespace galois {
 /**
  * Concurrent dynamically allocated bitset
  **/
 class DynamicBitSet {
-protected:
   galois::PODResizeableArray<galois::CopyableAtomic<uint64_t>> bitvec;
-  size_t num_bits;
+  size_t num_bits{0};
   static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
 
 public:
   //! Constructor which initializes to an empty bitset.
-  DynamicBitSet() : num_bits(0) {}
+  DynamicBitSet() = default;
 
   /**
    * Returns the underlying bitset representation to the user
@@ -116,8 +112,9 @@ public:
    * @param end last bit in range to reset
    */
   void reset(size_t begin, size_t end) {
-    if (num_bits == 0)
+    if (num_bits == 0) {
       return;
+    }
 
     assert(begin <= (num_bits - 1));
     assert(end <= (num_bits - 1));
@@ -154,10 +151,10 @@ public:
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
         assert(diff < 64);
-        uint64_t mask = ((uint64_t)1 << (64 - diff)) - 1;
+        uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
 
         size_t end_diff  = end - vec_end + 1;
-        uint64_t or_mask = ((uint64_t)1 << end_diff) - 1;
+        uint64_t or_mask = (uint64_t{1} << end_diff) - 1;
         mask |= ~or_mask;
 
         size_t bit_index = begin / bits_uint64;
@@ -167,14 +164,14 @@ public:
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
         assert(diff < 64);
-        uint64_t mask    = ((uint64_t)1 << (64 - diff)) - 1;
+        uint64_t mask    = (uint64_t{1} << (64 - diff)) - 1;
         size_t bit_index = begin / bits_uint64;
         bitvec[bit_index] &= mask;
       }
       if (end >= vec_end) {
         size_t diff = end - vec_end + 1;
         assert(diff < 64);
-        uint64_t mask    = ((uint64_t)1 << diff) - 1;
+        uint64_t mask    = (uint64_t{1} << diff) - 1;
         size_t bit_index = end / bits_uint64;
         bitvec[bit_index] &= ~mask;
       }
@@ -212,8 +209,9 @@ public:
     // if old_bit is 0, then atomically set it
     while (((old_val & bit_offset) == 0) &&
            !bitvec[bit_index].compare_exchange_weak(
-               old_val, old_val | bit_offset, std::memory_order_relaxed))
+               old_val, old_val | bit_offset, std::memory_order_relaxed)) {
       ;
+    }
     return (old_val & bit_offset);
   }
 
@@ -232,19 +230,14 @@ public:
     // if old_bit is 1, then atomically reset it
     while (((old_val & bit_offset) != 0) &&
            !bitvec[bit_index].compare_exchange_weak(
-               old_val, old_val & ~bit_offset, std::memory_order_relaxed))
+               old_val, old_val & ~bit_offset, std::memory_order_relaxed)) {
       ;
+    }
     return (old_val & bit_offset);
   }
 
   // assumes bit_vector is not updated (set) in parallel
-  void bitwise_or(const DynamicBitSet& other) {
-    assert(size() == other.size());
-    auto& other_bitvec = other.get_vec();
-    galois::do_all(
-        galois::iterate(size_t{0}, bitvec.size()),
-        [&](size_t i) { bitvec[i] |= other_bitvec[i]; }, galois::no_stats());
-  }
+  void bitwise_or(const DynamicBitSet& other);
 
   // assumes bit_vector is not updated (set) in parallel
 
@@ -253,13 +246,7 @@ public:
    *
    * @param other Other bitset to do bitwise and with
    */
-  void bitwise_and(const DynamicBitSet& other) {
-    assert(size() == other.size());
-    auto& other_bitvec = other.get_vec();
-    galois::do_all(
-        galois::iterate(size_t{0}, bitvec.size()),
-        [&](size_t i) { bitvec[i] &= other_bitvec[i]; }, galois::no_stats());
-  }
+  void bitwise_and(const DynamicBitSet& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -268,30 +255,14 @@ public:
    * @param other1 Bitset to and with other 2
    * @param other2 Bitset to and with other 1
    */
-  void bitwise_and(const DynamicBitSet& other1, const DynamicBitSet& other2) {
-    assert(size() == other1.size());
-    assert(size() == other2.size());
-    auto& other_bitvec1 = other1.get_vec();
-    auto& other_bitvec2 = other2.get_vec();
-
-    galois::do_all(
-        galois::iterate(size_t{0}, bitvec.size()),
-        [&](size_t i) { bitvec[i] = other_bitvec1[i] & other_bitvec2[i]; },
-        galois::no_stats());
-  }
+  void bitwise_and(const DynamicBitSet& other1, const DynamicBitSet& other2);
 
   /**
    * Does an IN-PLACE bitwise xor of this bitset and another bitset
    *
    * @param other Other bitset to do bitwise xor with
    */
-  void bitwise_xor(const DynamicBitSet& other) {
-    assert(size() == other.size());
-    auto& other_bitvec = other.get_vec();
-    galois::do_all(
-        galois::iterate(size_t{0}, bitvec.size()),
-        [&](size_t i) { bitvec[i] ^= other_bitvec[i]; }, galois::no_stats());
-  }
+  void bitwise_xor(const DynamicBitSet& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -300,41 +271,14 @@ public:
    * @param other1 Bitset to xor with other 2
    * @param other2 Bitset to xor with other 1
    */
-  void bitwise_xor(const DynamicBitSet& other1, const DynamicBitSet& other2) {
-    assert(size() == other1.size());
-    assert(size() == other2.size());
-    auto& other_bitvec1 = other1.get_vec();
-    auto& other_bitvec2 = other2.get_vec();
-
-    galois::do_all(
-        galois::iterate(size_t{0}, bitvec.size()),
-        [&](size_t i) { bitvec[i] = other_bitvec1[i] ^ other_bitvec2[i]; },
-        galois::no_stats());
-  }
+  void bitwise_xor(const DynamicBitSet& other1, const DynamicBitSet& other2);
 
   /**
    * Count how many bits are set in the bitset
    *
    * @returns number of set bits in the bitset
    */
-  uint64_t count() const {
-    galois::GAccumulator<uint64_t> ret;
-    galois::do_all(
-        galois::iterate(bitvec.begin(), bitvec.end()),
-        [&](uint64_t n) {
-#ifdef __GNUC__
-          ret += __builtin_popcountll(n);
-#else
-          n = n - ((n >> 1) & 0x5555555555555555UL);
-          n = (n & 0x3333333333333333UL) + ((n >> 2) & 0x3333333333333333UL);
-          ret +=
-              (((n + (n >> 4)) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >>
-              56;
-#endif
-        },
-        galois::no_stats());
-    return ret.reduce();
-  }
+  uint64_t count() const;
 
   /**
    * Returns a vector containing the set bits in this bitset in order
@@ -343,64 +287,7 @@ public:
    *
    * @returns vector with offsets into set bits
    */
-  // TODO uint32_t is somewhat dangerous; change in the future
-  std::vector<uint32_t> getOffsets() const {
-    uint32_t activeThreads = galois::getActiveThreads();
-    std::vector<unsigned int> tPrefixBitCounts(activeThreads);
-
-    // count how many bits are set on each thread
-    galois::on_each([&](unsigned tid, unsigned nthreads) {
-      size_t start;
-      size_t end;
-      std::tie(start, end) =
-          galois::block_range((size_t)0, this->size(), tid, nthreads);
-
-      unsigned int count = 0;
-      for (unsigned int i = start; i < end; ++i) {
-        if (this->test(i))
-          ++count;
-      }
-
-      tPrefixBitCounts[tid] = count;
-    });
-
-    // calculate prefix sum of bits per thread
-    for (unsigned int i = 1; i < activeThreads; ++i) {
-      tPrefixBitCounts[i] += tPrefixBitCounts[i - 1];
-    }
-
-    // total num of set bits
-    uint64_t bitsetCount = tPrefixBitCounts[activeThreads - 1];
-    std::vector<uint32_t> offsets;
-
-    // calculate the indices of the set bits and save them to the offset
-    // vector
-    if (bitsetCount > 0) {
-      offsets.resize(bitsetCount);
-      galois::on_each([&](unsigned tid, unsigned nthreads) {
-        size_t start;
-        size_t end;
-        std::tie(start, end) =
-            galois::block_range((size_t)0, this->size(), tid, nthreads);
-        unsigned int count = 0;
-        unsigned int tPrefixBitCount;
-        if (tid == 0) {
-          tPrefixBitCount = 0;
-        } else {
-          tPrefixBitCount = tPrefixBitCounts[tid - 1];
-        }
-
-        for (unsigned int i = start; i < end; ++i) {
-          if (this->test(i)) {
-            offsets[tPrefixBitCount + count] = i;
-            ++count;
-          }
-        }
-      });
-    }
-
-    return offsets;
-  }
+  std::vector<uint32_t> getOffsets() const;
 
   //! this is defined to
   using tt_is_copyable = int;

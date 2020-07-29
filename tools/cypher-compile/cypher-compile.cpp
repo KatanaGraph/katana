@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   galois::CypherCompiler cc;
   // get query to parse
   if (query != "") {
-    cc.compile(query.c_str());
+    cc.Compile(query.c_str());
   } else if (filename != "") {
     // open file, get query
     std::ifstream queryStream(filename);
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     // putting into string stream lets you pull a string out of it
     querySS << queryStream.rdbuf();
 
-    cc.compile(querySS.str().c_str());
+    cc.Compile(querySS.str().c_str());
   } else {
     galois::gError("No query or file with query specified to parse");
   }
@@ -57,23 +57,23 @@ int main(int argc, char** argv) {
   // Print parsed values
   galois::gInfo("Parsed single node values (not attached to an edge) "
                 "are as follows:");
-  for (const galois::CompilerQueryNode& a : cc.getQueryNodes()) {
-    a.printStruct(1);
+  for (const galois::CompilerQueryNode& a : cc.GetQueryNodes()) {
+    a.PrintStruct(1);
   }
 
   galois::gInfo("Parsed edge values and endpoints are as follows:");
-  for (const galois::CompilerQueryEdge& a : cc.getQueryEdges()) {
-    a.printStruct(1);
-    a.caused_by.printStruct(2);
-    a.acted_on.printStruct(2);
+  for (const galois::CompilerQueryEdge& a : cc.GetQueryEdges()) {
+    a.PrintStruct(1);
+    a.caused_by.PrintStruct(2);
+    a.acted_on.PrintStruct(2);
   }
 
   galois::gInfo("Parsed return metadata is as follows:");
-  cc.getReturnMetadata().printStruct(1);
+  cc.GetReturnMetadata().PrintStruct(1);
 
   galois::gInfo("Parsed return values are as follows:");
-  for (const galois::QueryProperty& a : cc.getReturnValues()) {
-    galois::gPrint("\t", a.toString(), "\n");
+  for (const galois::QueryProperty& a : cc.GetReturnValues()) {
+    galois::gPrint("\t", a.ToString(), "\n");
   }
 
   totalTime.stop();

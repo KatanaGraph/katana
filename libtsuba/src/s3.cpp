@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 
 #include "galois/FileSystem.h"
+#include "galois/GetEnv.h"
 #include "galois/Result.h"
 #include "galois/Logging.h"
 #include "tsuba/Errors.h"
@@ -75,6 +76,8 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
                 executor) {
   Aws::Client::ClientConfiguration cfg("default");
 
+  bool use_virtual_addressing = true;
+
   const char* region = std::getenv("AWS_DEFAULT_REGION");
   if (region) {
     cfg.region = region;
@@ -87,7 +90,23 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
   }
 
   cfg.executor = executor;
-  return Aws::MakeShared<Aws::S3::S3Client>(kAwsTag, cfg);
+
+  std::string test_endpoint;
+  // No official AWS environment analog so use GALOIS prefix
+  galois::GetEnv("GALOIS_AWS_TEST_ENDPOINT", &test_endpoint);
+  if (!test_endpoint.empty()) {
+    cfg.endpointOverride = test_endpoint;
+    cfg.scheme           = Aws::Http::Scheme::HTTP;
+
+    // if false SDK will build "path-style" URLs if true the URLs will be
+    // "virtual-host-style" URLs LocalStack only supports the former but they
+    // are deprecated for new buckets in s3
+    use_virtual_addressing = false;
+  }
+
+  return Aws::MakeShared<Aws::S3::S3Client>(
+      kAwsTag, cfg, Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+      use_virtual_addressing);
 }
 
 static inline std::shared_ptr<Aws::S3::S3Client> GetS3Client() {

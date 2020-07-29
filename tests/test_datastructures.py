@@ -7,13 +7,16 @@ from galois.datastructures import *
 types = [
     pytest.param(int, id="int"),
     pytest.param(float, id="float"),
-    pytest.param('uint64_t', id="uint64_t"),
+    pytest.param(np.uint64, id="uint64_t"),
 ]
 
 @pytest.mark.parametrize("typ", types)
 def test_InsertBag_simple(typ):
     T = InsertBag[typ]
+    assert issubclass(T, InsertBag)
     bag = T()
+    assert isinstance(bag, InsertBag)
+    assert isinstance(bag, T)
     assert bag.empty()
     bag.push(10)
     bag.push(2)
@@ -40,7 +43,10 @@ def test_InsertBag_parallel(typ):
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_simple(typ):
     T = LargeArray[typ]
+    assert issubclass(T, LargeArray)
     arr = T()
+    assert isinstance(arr, LargeArray)
+    assert isinstance(arr, T)
     arr.allocateInterleaved(5)
     arr[0] = 10
     arr[1] = 1

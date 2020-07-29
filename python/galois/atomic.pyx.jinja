@@ -1,3 +1,8 @@
+"""
+This module provides atomic values and atomic operations on numpy arrays.
+"""
+import numpy as np
+from galois.util.template_type import make_template_type1
 from .cpp.libgalois cimport atomic
 from libc.stdint cimport uintptr_t, int64_t, uint64_t
 from .numba.numpy_atomic import *
@@ -18,7 +23,7 @@ __all__ = [
 
 {{numba.header()}}
 
-{% macro wrap_reducible(name, element_type, underlying_type) %}
+{% macro wrap_reducible(name, element_type, underlying_type, english_operator) %}
 {% if not underlying_type -%}
 {% set underlying_type %}atomic.{{name}}[{{element_type}}]{% endset -%}
 {% set class_name %}{{name}}_{{element_type}}{% endset -%}
@@ -53,16 +58,20 @@ cdef class {{class_name}}:
 {% endcall %}
 {% endmacro %}
 
-{% for reducible in ["GAccumulator", "GReduceMax", "GReduceMin"] %}
-{{reducible}} = {}
-{% for element_type, python_type in [("uint64_t", "'uint64_t'"), ("int64_t", "int"), ("double", "float")] %}
-{{wrap_reducible(reducible, element_type, None)}}
-{{reducible}}[{{python_type}}] = {{reducible}}_{{element_type}}
+{% for reducible, english_operator in [("GAccumulator", "addition"),
+                                       ("GReduceMax", "maximum"),
+                                       ("GReduceMin", "minimum")] %}
+_{{reducible}}_types = {}
+{% for element_type, python_type in [("uint64_t", "np.uint64"), ("int64_t", "int"), ("double", "float")] %}
+{{wrap_reducible(reducible, element_type, None, english_operator)}}
+_{{reducible}}_types[{{python_type}}] = {{reducible}}_{{element_type}}
 {% endfor %}
+{{reducible}} = make_template_type1("{{reducible}}", _{{reducible}}_types)
 {% endfor %}
 
-{% for reducible in ["GReduceLogicalAnd", "GReduceLogicalOr"] %}
-{{wrap_reducible(reducible, "bint", reducible)}}
+{% for reducible, english_operator in [("GReduceLogicalAnd", "logical and"),
+                                       ("GReduceLogicalOr", "logical or")] %}
+{{wrap_reducible(reducible, "bint", reducible, english_operator)}}
 {% endfor %}
 
 {{numba.register_all_wrappers()}}

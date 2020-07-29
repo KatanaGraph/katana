@@ -15,7 +15,7 @@ dtypes = dtypes_int + [
 types = [
     pytest.param(int, id="int"),
     pytest.param(float, id="float"),
-    pytest.param('uint64_t', id="uint64_t"),
+    pytest.param(np.uint64, id="uint64_t"),
 ]
 
 acc_types = [

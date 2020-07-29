@@ -54,7 +54,7 @@ def verify_bfs(graph: PropertyGraph, source_i: int, property_id: int):
 
 
 @do_all_operator()
-def bfs_sync_operator_pg(graph: PropertyGraph, next: InsertBag['uint64_t'], next_level: int, distance: np.ndarray, nid):
+def bfs_sync_operator_pg(graph: PropertyGraph, next: InsertBag[np.uint64], next_level: int, distance: np.ndarray, nid):
     num_nodes = graph.num_nodes()
 
     for ii in graph.edges(nid):
@@ -68,8 +68,8 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
     num_nodes = graph.num_nodes()
     next_level = 0
 
-    curr = InsertBag['uint64_t']()
-    next = InsertBag['uint64_t']()
+    curr = InsertBag[np.uint64]()
+    next = InsertBag[np.uint64]()
 
     timer = StatTimer("BFS Property Graph Numba: " + property_name)
     timer.start()

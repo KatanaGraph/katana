@@ -37,10 +37,11 @@ endif()
 
 find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
 find_dependency(nlohmann_json REQUIRED)
+find_dependency(date REQUIRED)
 
 find_dependency(Arrow CONFIG REQUIRED)
-if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 0.18)
-  message(FATAL_ERROR "libarrow must be version 0.17.*; found ${ARROW_VERSION} instead")
+if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)
+  message(FATAL_ERROR "libarrow must be version 0.17 or 1.0; found ${ARROW_VERSION} instead")
 endif()
 
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
@@ -65,3 +66,4 @@ endif()
 check_required_components(Boost)
 check_required_components(AWSSDK)
 check_required_components(nlohmann_json)
+check_required_components(date)

@@ -23,8 +23,8 @@ target_link_libraries(tsuba PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(tsuba PUBLIC galois_support)
 
 find_package(Arrow CONFIG REQUIRED)
-if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 0.18)
-  message(FATAL_ERROR "libarrow must be version 0.17.*; found ${ARROW_VERSION} instead")
+if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)
+  message(FATAL_ERROR "libarrow must be version 0.17 or 1.0; found ${ARROW_VERSION} instead")
 endif()
 
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)

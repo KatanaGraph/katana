@@ -33,7 +33,7 @@ def test_get_node_property_exception(property_graph):
 
 def test_get_node_property(property_graph):
     prop1 = property_graph.get_node_property(4)
-    assert prop1[10] == 82
+    assert prop1[10].as_py() == 82
     prop2 = property_graph.get_node_property("length")
     assert prop1 == prop2
 
@@ -57,9 +57,9 @@ def test_add_node_property(property_graph):
     assert property_graph.get_node_property("new_prop") == pyarrow.chunked_array([range(property_graph.num_nodes())])
 
 def test_get_edge_property(property_graph):
-    prop1 = property_graph.get_edge_property(3)
-    assert prop1[10] == False
-    prop2 = property_graph.get_edge_property("classYear")
+    prop1 = property_graph.get_edge_property(5)
+    assert prop1[10].as_py() == False
+    prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     assert prop1 == prop2
 
 def test_remove_edge_property(property_graph):

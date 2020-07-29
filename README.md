@@ -56,6 +56,9 @@ At the minimum, Galois depends on the following software:
 - libfmt (>= 4.0)
 - libxml2 (>=  2.9.1)
 - libcypher-parser (>= 0.6.0)
+- libarrow (>= 0.17)
+- [nlohmann/json](https://github.com/nlohmann/json) (>= 3.7.3)
+- [HowardHinnant/date](https://github.com/HowardHinnant/date) (>= 2.4.1)
 
 Here are the dependencies for the optional features: 
 

@@ -18,7 +18,7 @@ requirements:
     - jinja2
     - cython>=0.29.12
     - {{ compiler('cxx') }}
-    - pyarrow>=0.17.1,<=0.18
+    - pyarrow>=0.17.1,<2.0.0
   host:
     - python
     - scikit-build
@@ -27,7 +27,7 @@ requirements:
     - galois={{ version }}
     - cython>=0.29.12
     - numba
-    - pyarrow>=0.17.1,<=0.18
+    - pyarrow>=0.17.1,<2.0.0
   run:
     - python
     - galois={{ version }}
@@ -36,7 +36,7 @@ requirements:
     - cython>=0.29.12
     - cxx-compiler
     - numba
-    - pyarrow>=0.17.1,<=0.18
+    - pyarrow>=0.17.1,<2.0.0
 
 test:
   imports:

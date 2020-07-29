@@ -19,6 +19,7 @@ requirements:
     - cython>=0.29.12
     - {{ compiler('cxx') }}
     - pyarrow>=0.17.1,<2.0.0
+    - sphinx
   host:
     - python
     - scikit-build

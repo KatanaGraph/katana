@@ -12,7 +12,7 @@ from .cpp.libstd.boost cimport std_result
 {{numba.header()}}
 
 cdef _convert_string_list(l):
-    return [bytes(s, "utf-8") for s in l]
+    return [bytes(s, "utf-8") for s in l or []]
 
 cdef void handle_result(std_result[void] res) except *:
     if not res.has_value():
@@ -22,13 +22,29 @@ cdef void handle_result(std_result[void] res) except *:
 # Python Property Graph
 #
 cdef class PropertyGraph:
-    def __init__(self, filename, node_properties=None, edge_properties=None):
+    """
+    A property graph loaded into memory.
+    """
+    def __init__(self, path, node_properties=None, edge_properties=None):
+        """
+        __init__(self, path, node_properties=None, edge_properties=None)
+
+        Load a property graph.
+
+        :param path: the path or URL from which to load the graph. This support local paths or s3 URLs.
+        :type path: str
+        :param node_properties: A list of node property names to load into memory. If this is None (default), then all properties are loaded.
+        :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all properties are loaded.
+        """
         if node_properties is not None or edge_properties is not None:
-            self.underlying = PropertyFileGraph.MakeWithProperties(bytes(filename, "utf-8"), _convert_string_list(node_properties), _convert_string_list(edge_properties)).value()
+            self.underlying = PropertyFileGraph.MakeWithProperties(bytes(path, "utf-8"), _convert_string_list(node_properties), _convert_string_list(edge_properties)).value()
         else:
-            self.underlying = PropertyFileGraph.Make(bytes(filename, "utf-8")).value()
+            self.underlying = PropertyFileGraph.Make(bytes(path, "utf-8")).value()
 
     def write(self, path=None):
+        """
+        Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided).
+        """
         if path:
             handle_result(self.underlying.get().Write(bytes(path, "utf-8")))
         else:
@@ -41,15 +57,39 @@ cdef class PropertyGraph:
         return self.topology().num_nodes()
 
     def __len__(self):
+        """
+        >>> len(self)
+
+        Return the number of nodes in the graph.
+
+        Can be called from numba compiled code.
+        """
         return self.num_nodes()
 
     cpdef uint64_t num_edges(PropertyGraph self):
+        """
+        num_edges(self)
+        
+        Return the number of edges in the graph.
+        
+        Can be called from numba compiled code.
+        """
         return self.topology().num_edges()
 
     def node_schema(self):
+        """
+        node_schema(self)
+
+        Return the `pyarrow` schema for the node properties stored with this graph.
+        """
         return pyarrow_wrap_schema(self.underlying.get().node_schema())
 
     def edge_schema(self):
+        """
+        edge_schema(self)
+
+        Return the `pyarrow` schema for the edge properties stored with this graph.
+        """
         return pyarrow_wrap_schema(self.underlying.get().edge_schema())
 
     @staticmethod
@@ -67,15 +107,39 @@ cdef class PropertyGraph:
         return pid
 
     def node_property_name_to_id(self, prop):
+        """
+        node_property_name_to_id(self, prop)
+
+        Return the index (ID) of a node property specified by name. If an index is provided, it is returned.
+        """
         return PropertyGraph._property_name_to_id(prop, self.node_schema())
 
     def edge_property_name_to_id(self, prop):
+        """
+        edge_property_name_to_id(self, prop)
+
+        Return the index (ID) of a edge property specified by name. If an index is provided, it is returned.
+        """
         return PropertyGraph._property_name_to_id(prop, self.edge_schema())
 
     def __iter__(self):
+        """
+        >>> for nid in self: ...
+
+        Iterate over the node IDs of this graph.
+
+        Can be called from numba compiled code with the name `self.nodes()`.
+        """
         return iter(range(self.num_nodes()))
 
     def edges(self, uint64_t n):
+        """
+        edges(self, n)
+
+        Return a collection of edge IDs which are the outgoing edges of the node `n`.
+
+        Can be called from numba compiled code.
+        """
         cdef uint64_t prev
         if n == 0:
             prev = 0
@@ -84,24 +148,65 @@ cdef class PropertyGraph:
         return range(prev, self.topology().out_indices.get().Value(n))
 
     cpdef uint64_t get_edge_dst(PropertyGraph self, uint64_t e):
+        """
+        get_edge_dst(self, e)
+        
+        Return the destination node ID of the edge `e`.
+
+        Can be called from numba compiled code.
+        """
         return self.topology().out_dests.get().Value(e)
 
     def get_node_property(self, prop):
+        """
+        get_node_property(self, prop)
+
+        Return a `pyarrow` chunked array storing the data for node property `prop`. `prop` may be either a name or an index.
+        """
         return pyarrow_wrap_chunked_array(self.underlying.get().NodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
 
     def get_edge_property(self, prop):
+        """
+        get_edge_property(self, prop)
+
+        Return a `pyarrow` chunked array storing the data for edge property `prop`. `prop` may be either a name or an index.
+        """
         return pyarrow_wrap_chunked_array(self.underlying.get().EdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
 
     def add_node_property(self, table):
+        """
+        add_node_property(self, table)
+
+        Add a new node property to this graph.
+
+        :param table: A pyarrow Table containing the property (the name is taken from the table). The table must have length `len(self)`.
+        """
         handle_result(self.underlying.get().AddNodeProperties(pyarrow_unwrap_table(table)))
 
     def add_edge_property(self, table):
+        """
+        add_edge_property(self, table)
+
+        Add a new edge property to this graph.
+
+        :param table: A pyarrow Table containing the property (the name is taken from the table). The table must have length `self.num_edges()`.
+        """
         handle_result(self.underlying.get().AddEdgeProperties(pyarrow_unwrap_table(table)))
 
     def remove_node_property(self, prop):
+        """
+        remove_node_property(self, prop)
+
+        Remove a node property from the graph by name or index.
+        """
         handle_result(self.underlying.get().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
 
     def remove_edge_property(self, prop):
+        """
+        remove_edge_property(self, prop)
+
+        Remove an edge property from the graph by name or index.
+        """
         handle_result(self.underlying.get().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
 
     @property

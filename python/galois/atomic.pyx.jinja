@@ -1,5 +1,17 @@
+{% set instantiation_types = [("uint64_t", "np.uint64"), ("int64_t", "int"), ("double", "float")] %}
 """
 This module provides atomic values and atomic operations on numpy arrays.
+The atomic values are instantiated for several element types, but cannot support custom element types.
+Atomic operations on numpy arrays support integer and floating point arrays.
+
+The instantiations are:
+
+{% for c, py in instantiation_types %}
+* `{{py}}` (with C element type {{c}})
+{% endfor %}
+
+The instantiation is selected by indexing the type, for example `GAccumulator[int]` or `GReduceMin[np.uint64]`.
+
 """
 import numpy as np
 from galois.util.template_type import make_template_type1
@@ -32,18 +44,49 @@ __all__ = [
 {% set class_name %}{{name}}{% endset -%}
 {% endif -%}
 cdef class {{class_name}}:
+    """
+    A reducer object that can updated with new values and combines the results efficiently using {{english_operator}}.
+
+    This class can be passed into numba compiled code and it's methods can be used from there.
+
+    (This class wraps the underlying C++ type {{name}}.)
+    """
     cdef {{underlying_type}} underlying
 
     def update(self, {{element_type}} v):
+        """
+        update(self, v)
+
+        Update this reducer with `v` performing the operation.
+        """
         self.underlying.update(v)
 
     def reset(self):
+        """
+        reset(self)
+
+        Reset the reducer to zero.
+
+        This must only be called from single threaded code.
+        """
         self.underlying.reset()
 
     def reduce(self):
+        """
+        reduce(self)
+
+        Get the current value of the reducer.
+
+        This must only be called from single threaded code.
+        """
         return self.underlying.reduce()
 
     def get_local(self):
+        """
+        get_local(self)
+
+        Get a sub-result of the reducers operation. This is generally the reduced value for this thread.
+        """
         return self.underlying.getLocal()
 
     @property
@@ -62,7 +105,7 @@ cdef class {{class_name}}:
                                        ("GReduceMax", "maximum"),
                                        ("GReduceMin", "minimum")] %}
 _{{reducible}}_types = {}
-{% for element_type, python_type in [("uint64_t", "np.uint64"), ("int64_t", "int"), ("double", "float")] %}
+{% for element_type, python_type in instantiation_types %}
 {{wrap_reducible(reducible, element_type, None, english_operator)}}
 _{{reducible}}_types[{{python_type}}] = {{reducible}}_{{element_type}}
 {% endfor %}

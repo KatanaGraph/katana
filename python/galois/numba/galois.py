@@ -1,11 +1,19 @@
 import ctypes
 
-from numba.extending import overload_method
+from numba.extending import overload_method, overload
 
 import galois.property_graph
 
 
 # PropertyGraph
+
+@overload(len)
+def overload_len(v):
+    if isinstance(v, galois.property_graph.PropertyGraph_numba_wrapper.Type):
+        def impl_(v):
+            return v.num_nodes()
+        return impl_
+
 
 @overload_method(galois.property_graph.PropertyGraph_numba_wrapper.Type, "nodes")
 def overload_nodes(self):

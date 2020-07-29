@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.13)
 
 project(pygalois)
 
+file(STRINGS ../config/version.txt GALOIS_VERSION)
+string(REGEX REPLACE "[ \t\n]" "" GALOIS_VERSION ${GALOIS_VERSION})
+set(GALOIS_COPYRIGHT_YEAR "2020") # Also in COPYRIGHT
+
 # Override the scikit-build Cython modules since they are bugged in a
 # way that prevents the use of generated Cython code.
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ModuleOverrides")
@@ -40,3 +44,4 @@ else()
 endif()
 
 add_subdirectory(galois)
+add_subdirectory(docs)

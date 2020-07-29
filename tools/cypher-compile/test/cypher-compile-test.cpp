@@ -615,9 +615,33 @@ int main() {
                                std::nullopt, std::nullopt, ob3, false});
 
   //////////////////////////////////////////////////////////////////////////////
+  // MISC
+  //////////////////////////////////////////////////////////////////////////////
+
+  // check if count is parsed correctly
+  GALOIS_LOG_WARN("Misc 1, distinct count");
+  // NOTE: return vars do not necessarily have to exist in the query
+  std::string misc1 =
+      "match (a) return a, count(distinct b), count(DISTINCT c);";
+  cc.Compile(misc1.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{"0", "any", "a", ""});
+  VerifyReturn(cc.GetReturnValues()[0],
+               galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
+  VerifyReturn(cc.GetReturnValues()[1],
+               galois::QueryProperty("b", std::nullopt, "distinct count",
+                                     "count(distinct b)"));
+  VerifyReturn(cc.GetReturnValues()[2],
+               galois::QueryProperty("c", std::nullopt, "distinct count",
+                                     "count(DISTINCT c)"));
+  GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 3);
+  GALOIS_LOG_ASSERT(cc.GetReturnValues()[1].IsDistinctCount());
+  GALOIS_LOG_ASSERT(cc.GetReturnValues()[2].IsDistinctCount());
+  AssertNoReturnModifiers(cc);
+
+  //////////////////////////////////////////////////////////////////////////////
 
   // TODO when we get to implementing/reviving
-  // - order by
   // - star paths
   // - shortest paths
   // - WHERE

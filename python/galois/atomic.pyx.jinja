@@ -53,6 +53,15 @@ cdef class {{class_name}}:
     """
     cdef {{underlying_type}} underlying
 
+    def __init__(self, v=None):
+        """
+        __init__(self, v=None)
+
+        Create a {{name}}. If `v` is provided and is not None, then initialize the reducer to `v`.
+        """
+        if v is not None:
+            self.update(v)
+
     def update(self, {{element_type}} v):
         """
         update(self, v)

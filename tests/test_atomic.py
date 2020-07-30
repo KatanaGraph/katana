@@ -33,6 +33,8 @@ def test_accumulator_simple(acc_type, res, typ):
     acc.update(2)
     acc.update(3)
     assert acc.reduce() == res
+    acc = T(10)
+    assert acc.reduce() == 10
 
 def test_GAccumulator_parallel(threads_many):
     T = GAccumulator[int]
@@ -86,6 +88,10 @@ def test_GReduceLogicalOr_simple():
     acc.update(False)
     acc.update(True)
     assert acc.reduce() == True
+    acc = T(True)
+    assert acc.reduce() == True
+    acc = T(False)
+    assert acc.reduce() == False
 
 def test_GReduceLogicalAnd_simple():
     T = GReduceLogicalAnd
@@ -93,6 +99,10 @@ def test_GReduceLogicalAnd_simple():
     acc.update(True)
     acc.update(False)
     acc.update(True)
+    assert acc.reduce() == False
+    acc = T(True)
+    assert acc.reduce() == True
+    acc = T(False)
     assert acc.reduce() == False
 
 @pytest.mark.parametrize("dtype", dtypes)

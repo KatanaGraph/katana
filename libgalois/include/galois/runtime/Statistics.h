@@ -40,7 +40,7 @@
 #include "galois/substrate/ThreadRWlock.h"
 #include "galois/Threads.h"
 
-/**
+/*
  * TODO:
  * Print intra host stats with per-thread details and inter-host stats with
  per-host details

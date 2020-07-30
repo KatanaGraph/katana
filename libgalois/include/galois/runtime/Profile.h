@@ -181,12 +181,11 @@ void splitCSVstr(const std::string& inputStr, C& output,
 template <typename F>
 void profilePapi(const F& func, const char* region) {
 
-  const char* const PAPI_VAR_NAME = "GALOIS_PAPI_EVENTS";
-  region                          = region ? region : "(NULL)";
+  region = region ? region : "(NULL)";
 
   std::string eventNamesCSV;
 
-  if (!galois::substrate::EnvCheck(PAPI_VAR_NAME, eventNamesCSV) ||
+  if (!galois::GetEnv("GALOIS_PAPI_EVENTS", &eventNamesCSV) ||
       eventNamesCSV.empty()) {
     galois::gWarn(
         "No Events specified. Set environment variable GALOIS_PAPI_EVENTS");

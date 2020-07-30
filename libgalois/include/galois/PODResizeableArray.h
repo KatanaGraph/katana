@@ -20,12 +20,13 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
 #define GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <iterator>
 #include <stdexcept>
-#include <cstddef>
-#include <algorithm>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 #include "galois/config.h"
 

@@ -18,10 +18,12 @@
  */
 
 #include "galois/runtime/Statistics.h"
-#include "galois/runtime/Executor_OnEach.h"
 
 #include <iostream>
 #include <fstream>
+
+#include "galois/GetEnv.h"
+#include "galois/runtime/Executor_OnEach.h"
 
 using namespace galois::runtime;
 
@@ -62,7 +64,7 @@ void galois::runtime::reportRUsage(const std::string& id) {
 }
 
 bool StatManager::printingThreadVals(void) {
-  return galois::substrate::EnvCheck(StatManager::TSTAT_ENV_VAR);
+  return galois::GetEnv("PRINT_PER_THREAD_STATS");
 }
 
 void StatManager::print(void) {

@@ -18,15 +18,13 @@
  */
 
 #include "galois/runtime/Executor_ParaMeter.h"
+
 #include "galois/gIO.h"
-#include "galois/substrate/EnvCheck.h"
+#include "galois/GetEnv.h"
 
 #include <ctime>
 
 struct StatsFileManager {
-
-  constexpr static const char* const PARAM_FILE_ENV_VAR =
-      "GALOIS_PARAMETER_OUTFILE";
 
   bool init     = false;
   bool isOpen   = false;
@@ -56,7 +54,7 @@ struct StatsFileManager {
     if (!init) {
       init = true;
 
-      if (!galois::substrate::EnvCheck(PARAM_FILE_ENV_VAR, statsFileName)) {
+      if (!galois::GetEnv("GALOIS_PARAMETER_OUTFILE", &statsFileName)) {
         // statsFileName = "ParaMeter-Stats.csv";
         getTimeStampedName(statsFileName);
       }

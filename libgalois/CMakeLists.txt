@@ -18,7 +18,6 @@ set(sources
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
-        src/EnvCheck.cpp
         src/FileGraph.cpp
         src/FileGraphParallel.cpp
         src/gIO.cpp

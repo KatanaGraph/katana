@@ -79,8 +79,8 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
 
   bool use_virtual_addressing = true;
 
-  const char* region = std::getenv("AWS_DEFAULT_REGION");
-  if (region) {
+  std::string region;
+  if (galois::GetEnv("AWS_DEFAULT_REGION", &region)) {
     cfg.region = region;
   }
 

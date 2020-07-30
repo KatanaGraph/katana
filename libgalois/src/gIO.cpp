@@ -18,9 +18,6 @@
  */
 
 #include "galois/gIO.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/EnvCheck.h"
-#include "galois/substrate/ThreadPool.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -33,6 +30,10 @@
 #include <fstream>
 #include <iomanip>
 #include <mutex>
+
+#include "galois/GetEnv.h"
+#include "galois/substrate/SimpleLock.h"
+#include "galois/substrate/ThreadPool.h"
 
 static void printString(bool error, bool newline, const std::string& prefix,
                         const std::string& s) {
@@ -47,7 +48,7 @@ static void printString(bool error, bool newline, const std::string& prefix,
 }
 
 void galois::gDebugStr(const std::string& s) {
-  static bool skip = galois::substrate::EnvCheck("GALOIS_DEBUG_SKIP");
+  static bool skip = GetEnv("GALOIS_DEBUG_SKIP");
   if (skip)
     return;
   static const unsigned TIME_STR_SIZE = 32;
@@ -64,7 +65,7 @@ void galois::gDebugStr(const std::string& s) {
   os << "[" << time_str << " " << std::setw(3)
      << galois::substrate::ThreadPool::getTID() << "] " << s;
 
-  if (galois::substrate::EnvCheck("GALOIS_DEBUG_TO_FILE")) {
+  if (GetEnv("GALOIS_DEBUG_TO_FILE")) {
     static galois::substrate::SimpleLock dIOLock;
     std::lock_guard<decltype(dIOLock)> lock(dIOLock);
     static std::ofstream debugOut;

@@ -17,7 +17,6 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/EnvCheck.h"
 #include "galois/substrate/HWTopo.h"
 #include "galois/substrate/SimpleLock.h"
 #include "galois/gIO.h"

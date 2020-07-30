@@ -29,7 +29,7 @@
 #include <sstream>
 
 #include "galois/config.h"
-#include "galois/substrate/EnvCheck.h"
+#include "galois/GetEnv.h"
 #include "galois/PODResizeableArray.h"
 
 namespace galois {
@@ -134,7 +134,7 @@ static inline void trace(Args&&...) {}
 template <typename... Args>
 static inline void trace(Args&&... args) {
   if (!internal::initTrace) {
-    internal::doTrace   = substrate::EnvCheck("GALOIS_DEBUG_TRACE");
+    internal::doTrace   = GetEnv("GALOIS_DEBUG_TRACE");
     internal::initTrace = true;
   }
   if (internal::doTrace) {

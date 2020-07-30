@@ -36,7 +36,6 @@
 #include "galois/gIO.h"
 #include "galois/gstl.h"
 #include "galois/Threads.h"
-#include "galois/substrate/EnvCheck.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/ThreadRWlock.h"
 #include "galois/Threads.h"
@@ -337,10 +336,9 @@ class StatManager {
 public:
   using Str = galois::gstl::Str;
 
-  static constexpr const char* const SEP           = ", ";
-  static constexpr const char* const TSTAT_SEP     = "; ";
-  static constexpr const char* const TSTAT_NAME    = "ThreadValues";
-  static constexpr const char* const TSTAT_ENV_VAR = "PRINT_PER_THREAD_STATS";
+  static constexpr const char* const SEP        = ", ";
+  static constexpr const char* const TSTAT_SEP  = "; ";
+  static constexpr const char* const TSTAT_NAME = "ThreadValues";
 
   static bool printingThreadVals(void);
 

@@ -18,12 +18,13 @@
  */
 
 #include "galois/substrate/ThreadPool.h"
-#include "galois/substrate/EnvCheck.h"
-#include "galois/substrate/HWTopo.h"
-#include "galois/gIO.h"
 
 #include <algorithm>
 #include <iostream>
+
+#include "galois/substrate/HWTopo.h"
+#include "galois/gIO.h"
+#include "galois/GetEnv.h"
 
 // Forward declare this to avoid including PerThreadStorage.
 // We avoid this to stress that the thread Pool MUST NOT depend on PTS.
@@ -121,8 +122,8 @@ void ThreadPool::initThread(unsigned tid) {
   // Initialize
   substrate::initPTS(mi.maxThreads);
 
-  if (!EnvCheck("GALOIS_DO_NOT_BIND_THREADS")) {
-    if (my_box.topo.tid != 0 || !EnvCheck("GALOIS_DO_NOT_BIND_MAIN_THREAD")) {
+  if (!GetEnv("GALOIS_DO_NOT_BIND_THREADS")) {
+    if (my_box.topo.tid != 0 || !GetEnv("GALOIS_DO_NOT_BIND_MAIN_THREAD")) {
       bindThreadSelf(my_box.topo.osContext);
     }
   }

@@ -24,8 +24,9 @@
  */
 
 #include "galois/runtime/Tracer.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/EnvCheck.h"
+
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <cassert>
@@ -33,8 +34,8 @@
 #include <chrono>
 #include <mutex>
 
-#include <sys/types.h>
-#include <unistd.h>
+#include "galois/substrate/SimpleLock.h"
+#include "galois/GetEnv.h"
 
 using namespace galois::substrate;
 
@@ -54,7 +55,7 @@ uint32_t galois::runtime::getHostID() { return 0; }
 
 static std::ostream& openIfNot() {
   if (!doCerrInit) {
-    doCerr     = EnvCheck("GALOIS_DEBUG_TRACE_STDERR");
+    doCerr     = galois::GetEnv("GALOIS_DEBUG_TRACE_STDERR");
     doCerrInit = true;
   }
   if (doCerr)
@@ -82,7 +83,7 @@ void galois::runtime::internal::printTrace(std::ostringstream& os) {
   out << os.str();
   out.flush();
   static int iSleep   = 0;
-  static bool doSleep = EnvCheck("GALOIS_DEBUG_TRACE_PAUSE", iSleep);
+  static bool doSleep = GetEnv("GALOIS_DEBUG_TRACE_PAUSE", &iSleep);
   if (doSleep)
     usleep(iSleep ? iSleep : 10);
 }

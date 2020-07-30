@@ -56,12 +56,15 @@ void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
   }
 }
 
-static void die_now() {
+static void die_now(void* caller) {
+  fmt::print("FaultTest::PtP caller {}\n", caller);
   // Best to kill ourselves quickly and messily
   *((volatile int*)0) = 1;
 }
 
 void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity) {
+  // gcc dependency for __builtin_return_address
+  void* caller = __builtin_return_address(0);
   fault_run_count_++;
   switch (mode_) {
   case tsuba::internal::FaultMode::None:
@@ -79,13 +82,13 @@ void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity) {
     }
     if (galois::RandomUniformFloat(1.0f) < threshold) {
       fmt::print("  fault_run_count {:d}\n", fault_run_count_);
-      die_now();
+      die_now(caller);
     }
   } break;
   case tsuba::internal::FaultMode::RunLength:
   case tsuba::internal::FaultMode::UniformOverRun: {
     if (fault_run_count_ == fault_run_length_) {
-      die_now();
+      die_now(caller);
     }
   }
   }

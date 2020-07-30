@@ -66,8 +66,10 @@ int CrashAndVerify(const std::string& uri_in, char* const* envp,
   int status;
   pid_t len_pid;
   pid_t verify_pid;
-  const char* const fault_len_argv[] = {"bin/tsuba_fault", "-r", rl.c_str(),
-                                        uri_in.c_str(), NULL};
+  // -c ensures we modify graph enough times to call PtP atleast rl times
+  const char* const fault_len_argv[] = {
+      "bin/tsuba_fault", "-r",           rl.c_str(), "-c",
+      rl.c_str(),        uri_in.c_str(), NULL};
   status = posix_spawn(&len_pid, fault_len_argv[0], NULL, NULL,
                        const_cast<char* const*>(fault_len_argv), envp);
   if (status == 0) {

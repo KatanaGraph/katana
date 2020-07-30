@@ -1,4 +1,6 @@
 #! /bin/sh
+set -e
+
 CMAKE_CCACHE_OPTION=""
 if ccache -V > /dev/null 2> /dev/null; then
     export CCACHE_BASEDIR="$(dirname "$SRC_DIR")"

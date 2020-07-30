@@ -16,7 +16,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 ###### Options (alternatively pass as options to cmake -DName=Value) ######
 set(BUILD_LIBGALOIS ON CACHE BOOL "Build libgalois from the source tree; if set to OFF then expect libgalois to already be installed in the environment.")
-
+set(BUILD_DOCS OFF CACHE BOOL "Build documentation.")
 
 include(FindPythonModule)
       

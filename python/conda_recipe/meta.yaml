@@ -9,15 +9,19 @@ source:
   patches:
 
 build:
-  number: 2
+  number: 3
+  script_env:
+    - GALOIS_DOCS_OUTPUT
 
 requirements:
   build:
     - python
     - scikit-build
     - jinja2
-    - cython>=0.29.12
     - {{ compiler('cxx') }}
+    - galois={{ version }}
+    - cython>=0.29.12
+    - numba
     - pyarrow>=0.17.1,<2.0.0
     - sphinx
   host:

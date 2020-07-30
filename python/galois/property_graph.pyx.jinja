@@ -16,7 +16,12 @@ cdef _convert_string_list(l):
 
 cdef void handle_result(std_result[void] res) except *:
     if not res.has_value():
-        raise RuntimeError(res.error().message())
+        raise RuntimeError(str(res.error().message(), "ascii"))
+
+cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) except *:
+    if not res.has_value():
+        raise RuntimeError(str(res.error().message(), "ascii"))
+    return to_shared(res.value())
 
 #
 # Python Property Graph
@@ -37,9 +42,15 @@ cdef class PropertyGraph:
         :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all properties are loaded.
         """
         if node_properties is not None or edge_properties is not None:
-            self.underlying = PropertyFileGraph.MakeWithProperties(bytes(path, "utf-8"), _convert_string_list(node_properties), _convert_string_list(edge_properties)).value()
+            if node_properties is None or edge_properties is None:
+                raise ValueError("If either node_properties or edge_properties are provided, both must be provided.")
+            self.underlying = handle_result_value(
+                PropertyFileGraph.MakeWithProperties(bytes(path, "utf-8"),
+                                                     _convert_string_list(node_properties),
+                                                     _convert_string_list(edge_properties)))
         else:
-            self.underlying = PropertyFileGraph.Make(bytes(path, "utf-8")).value()
+            self.underlying = handle_result_value(
+                PropertyFileGraph.Make(bytes(path, "utf-8")))
 
     def write(self, path=None):
         """

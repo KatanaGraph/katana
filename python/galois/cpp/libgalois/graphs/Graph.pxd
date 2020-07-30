@@ -2,7 +2,7 @@
 
 from libcpp.string cimport string
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
-from libcpp.memory cimport shared_ptr
+from libcpp.memory cimport shared_ptr, unique_ptr
 from libc.stdint cimport *
 from ....cpp.libstd.boost cimport *
 from cython.operator cimport dereference as df
@@ -118,9 +118,9 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
     cppclass PropertyFileGraph:
         PropertyFileGraph()
         @staticmethod
-        std_result[shared_ptr[PropertyFileGraph]] Make(string filename)
+        std_result[unique_ptr[PropertyFileGraph]] Make(string filename)
         @staticmethod
-        std_result[shared_ptr[PropertyFileGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
+        std_result[unique_ptr[PropertyFileGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
 
         std_result[void] Write(string path)
         std_result[void] Write()

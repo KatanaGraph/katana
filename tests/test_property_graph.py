@@ -81,10 +81,14 @@ def test_add_edge_property(property_graph):
     assert len(property_graph.edge_schema()) == 20
     assert property_graph.get_edge_property("new_prop") == pyarrow.chunked_array([range(property_graph.num_edges())])
 
-@pytest.mark.skip
 def test_load_invalid_path():
     with pytest.raises(RuntimeError):
         PropertyGraph("non-existent")
+
+@pytest.mark.skip
+def test_load_directory():
+    with pytest.raises(RuntimeError):
+        PropertyGraph("/tmp")
 
 def test_simple_algorithm(property_graph):
     from galois.loops import do_all_operator, do_all

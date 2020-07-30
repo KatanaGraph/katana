@@ -2,7 +2,7 @@
 #define GALOIS_LIBTSUBA_S3_INTERNAL_H_
 
 #include "galois/Result.h"
-#include "galois/ErrorCode.h"
+#include "tsuba/Errors.h"
 #include <string>
 #include <mutex>
 #include <condition_variable>
@@ -64,7 +64,7 @@ public:
       func_stack_.pop();
       return res;
     }
-    return support::ErrorCode::InvalidArgument;
+    return ErrorCode::InvalidArgument;
   }
   bool Done() const { return func_stack_.empty(); }
 };

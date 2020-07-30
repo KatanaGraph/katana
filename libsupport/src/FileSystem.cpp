@@ -79,7 +79,7 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
 galois::Result<std::string> galois::ExtractFileName(const std::string& path) {
   size_t last_slash = path.find_last_of('/', std::string::npos);
   if (last_slash == std::string::npos) {
-    return support::ErrorCode::InvalidArgument;
+    return ErrorCode::InvalidArgument;
   }
   return path.substr(last_slash + 1);
 }

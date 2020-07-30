@@ -1,7 +1,7 @@
 #include "galois/ErrorCode.h"
 
-const support::internal::ErrorCodeCategory&
-support::internal::GetErrorCodeCategory() {
+const galois::internal::ErrorCodeCategory&
+galois::internal::GetErrorCodeCategory() {
   static ErrorCodeCategory c;
   return c;
 }

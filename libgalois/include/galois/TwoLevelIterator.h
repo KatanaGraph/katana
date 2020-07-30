@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H
-#define GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H_
+#define GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H_
 
 #include <algorithm>
 #include <cassert>

@@ -22,8 +22,8 @@
  *
  * Includes functions for tracing output and printing data.
  */
-#ifndef GALOIS_RUNTIME_TRACER_H
-#define GALOIS_RUNTIME_TRACER_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_TRACER_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_TRACER_H_
 
 #include <functional>
 #include <sstream>

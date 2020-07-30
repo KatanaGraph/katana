@@ -22,8 +22,8 @@
  *
  * Contains a copyable atomics class.
  */
-#ifndef _ATOMIC_WRAPPER_H_
-#define _ATOMIC_WRAPPER_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_ATOMICWRAPPER_H_
+#define GALOIS_LIBGALOIS_GALOIS_ATOMICWRAPPER_H_
 
 #include <atomic>
 

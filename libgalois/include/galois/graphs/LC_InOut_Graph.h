@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_GRAPHS_LC_INOUT_GRAPH_H
-#define GALOIS_GRAPHS_LC_INOUT_GRAPH_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_INOUT_GRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_INOUT_GRAPH_H_
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/fusion/include/vector.hpp>

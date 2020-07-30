@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_SUBSTRATE_THREAD_RW_LOCK_H
-#define GALOIS_SUBSTRATE_THREAD_RW_LOCK_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADRWLOCK_H_
+#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADRWLOCK_H_
 
 #include "galois/config.h"
 #include "galois/substrate/PaddedLock.h"
@@ -88,4 +88,4 @@ void readUpdateProtected(L& rwmutex, R& readAndCheck, W& write) {
 } // end namespace substrate
 } // end namespace galois
 
-#endif // GALOIS_SUBSTRATE_THREAD_RW_LOCK_H
+#endif

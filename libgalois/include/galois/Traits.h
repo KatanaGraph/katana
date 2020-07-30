@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_TRAITS_H
-#define GALOIS_TRAITS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_TRAITS_H_
+#define GALOIS_LIBGALOIS_GALOIS_TRAITS_H_
 
 #include <tuple>
 #include <type_traits>

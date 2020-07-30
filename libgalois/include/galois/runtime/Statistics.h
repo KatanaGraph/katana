@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_STAT_MANAGER_H
-#define GALOIS_STAT_MANAGER_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
 
 #include <limits>
 #include <map>
@@ -633,4 +633,4 @@ void reportNumaAlloc(const char* category);
 } // end namespace runtime
 } // end namespace galois
 
-#endif // GALOIS_STAT_MANAGER_H
+#endif

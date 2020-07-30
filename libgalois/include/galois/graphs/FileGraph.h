@@ -25,8 +25,8 @@
  * @todo finish up doxygen
  */
 
-#ifndef GALOIS_GRAPHS_FILEGRAPH_H
-#define GALOIS_GRAPHS_FILEGRAPH_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_FILEGRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_FILEGRAPH_H_
 
 #include <cstring>
 #include <deque>

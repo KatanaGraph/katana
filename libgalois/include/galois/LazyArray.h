@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LAZYARRAY_H
-#define GALOIS_LAZYARRAY_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_LAZYARRAY_H_
+#define GALOIS_LIBGALOIS_GALOIS_LAZYARRAY_H_
 
 #include <algorithm>
 #include <cstddef>
@@ -123,4 +123,4 @@ public:
 };
 
 } // namespace galois
-#endif // GALOIS_LAZYARRAY_H
+#endif

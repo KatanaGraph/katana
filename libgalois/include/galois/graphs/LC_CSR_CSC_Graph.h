@@ -22,8 +22,8 @@
  *
  * Contains the implementation of a bidirectional LC_CS_Graph.
  */
-#ifndef GALOIS_GRAPHS_LC_CSR_CSC_GRAPH_H
-#define GALOIS_GRAPHS_LC_CSR_CSC_GRAPH_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_CSR_CSC_GRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_CSR_CSC_GRAPH_H_
 
 #include "galois/config.h"
 

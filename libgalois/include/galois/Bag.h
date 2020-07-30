@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_BAG_H
-#define GALOIS_BAG_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_BAG_H_
+#define GALOIS_LIBGALOIS_GALOIS_BAG_H_
 
 #include <algorithm>
 #include <stdexcept>

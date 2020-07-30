@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_REDUCTION_H
-#define GALOIS_REDUCTION_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_REDUCTION_H_
+#define GALOIS_LIBGALOIS_GALOIS_REDUCTION_H_
 
 #include <functional>
 #include <limits>
@@ -225,4 +225,4 @@ public:
 };
 
 } // namespace galois
-#endif // GALOIS_REDUCTION_H
+#endif

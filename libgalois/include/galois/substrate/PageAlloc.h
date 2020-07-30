@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_SUBSTRATE_PAGEALLOC_H
-#define GALOIS_SUBSTRATE_PAGEALLOC_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEALLOC_H_
+#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEALLOC_H_
 
 #include <cstddef>
 
@@ -39,4 +39,4 @@ void freePages(void* ptr, unsigned num);
 } // namespace substrate
 } // namespace galois
 
-#endif // GALOIS_SUBSTRATE_PAGEALLOC_H
+#endif

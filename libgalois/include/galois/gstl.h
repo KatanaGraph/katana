@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_GSTL_H
-#define GALOIS_GSTL_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GSTL_H_
+#define GALOIS_LIBGALOIS_GALOIS_GSTL_H_
 
 #include <algorithm>
 #include <iterator>

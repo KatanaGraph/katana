@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_ENDIAN_H
-#define GALOIS_ENDIAN_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_ENDIAN_H_
+#define GALOIS_LIBGALOIS_GALOIS_ENDIAN_H_
 
 #include <cstdint>
 

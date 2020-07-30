@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_MEM_H
-#define GALOIS_MEM_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_MEM_H_
+#define GALOIS_LIBGALOIS_GALOIS_MEM_H_
 
 #include "galois/config.h"
 #include "galois/runtime/Mem.h"

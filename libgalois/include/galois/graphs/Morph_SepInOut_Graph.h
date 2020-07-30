@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_GRAPH_MORPH_SEPINOUT_GRAPH_H
-#define GALOIS_GRAPH_MORPH_SEPINOUT_GRAPH_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_MORPH_SEPINOUT_GRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_MORPH_SEPINOUT_GRAPH_H_
 
 #include <algorithm>
 #include <map>

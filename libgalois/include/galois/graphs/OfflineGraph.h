@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef _GALOIS_DIST_OFFLINE_GRAPH_
-#define _GALOIS_DIST_OFFLINE_GRAPH_
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
 
 #include <cstdint>
 #include <fstream>
@@ -450,4 +450,4 @@ public:
 } // namespace graphs
 } // namespace galois
 
-#endif //_GALOIS_DIST_OFFLINE_GRAPH_
+#endif

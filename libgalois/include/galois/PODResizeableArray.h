@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_PODRESIZEABLEARRAY_H
-#define GALOIS_PODRESIZEABLEARRAY_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
+#define GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
 
 #include <iterator>
 #include <stdexcept>
@@ -197,4 +197,4 @@ public:
 };
 
 } // namespace galois
-#endif // GALOIS_PODRESIZEABLEARRAY_H
+#endif

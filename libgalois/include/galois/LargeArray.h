@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LARGEARRAY_H
-#define GALOIS_LARGEARRAY_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_LARGEARRAY_H_
+#define GALOIS_LIBGALOIS_GALOIS_LARGEARRAY_H_
 
 #include <iostream>
 #include <utility>

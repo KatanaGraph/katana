@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_RUNTIME_PAGEPOOL_H
-#define GALOIS_RUNTIME_PAGEPOOL_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_PAGEPOOL_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_PAGEPOOL_H_
 
 #include <cstddef>
 #include <deque>

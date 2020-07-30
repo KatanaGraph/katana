@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_WORKLIST_PERTHREADCHUNK_H
-#define GALOIS_WORKLIST_PERTHREADCHUNK_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
+#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
 
 #include "galois/FixedSizeRing.h"
 #include "galois/runtime/Mem.h"

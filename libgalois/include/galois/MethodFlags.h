@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_METHODFLAGS_H
-#define GALOIS_METHODFLAGS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_METHODFLAGS_H_
+#define GALOIS_LIBGALOIS_GALOIS_METHODFLAGS_H_
 
 #include "galois/config.h"
 
@@ -50,4 +50,4 @@ inline MethodFlag operator|(MethodFlag x, MethodFlag y) {
 }
 } // namespace galois
 
-#endif // GALOIS_METHODFLAGS_H
+#endif

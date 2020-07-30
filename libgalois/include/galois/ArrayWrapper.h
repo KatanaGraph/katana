@@ -24,8 +24,8 @@
  * possible.
  */
 
-#ifndef _ARRAY_WRAPPER_H_
-#define _ARRAY_WRAPPER_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_ARRAYWRAPPER_H_
+#define GALOIS_LIBGALOIS_GALOIS_ARRAYWRAPPER_H_
 
 #include <array>
 #include "galois/config.h"

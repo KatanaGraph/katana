@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_USERCONTEXT_H
-#define GALOIS_USERCONTEXT_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_USERCONTEXT_H_
+#define GALOIS_LIBGALOIS_GALOIS_USERCONTEXT_H_
 
 #include <functional>
 

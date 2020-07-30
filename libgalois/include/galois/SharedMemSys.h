@@ -1,5 +1,5 @@
-#ifndef GALOIS_SHAREDMEMSYS_H
-#define GALOIS_SHAREDMEMSYS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
+#define GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
 
 #include "galois/config.h"
 #include "galois/runtime/SharedMem.h"

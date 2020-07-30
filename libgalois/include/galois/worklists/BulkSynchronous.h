@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_WORKLIST_BULKSYNCHRONOUS_H
-#define GALOIS_WORKLIST_BULKSYNCHRONOUS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_BULKSYNCHRONOUS_H_
+#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_BULKSYNCHRONOUS_H_
 
 #include <atomic>
 

@@ -23,8 +23,8 @@
  * Contains the implementation of BufferedGraph
  */
 
-#ifndef GALOIS_GRAPHS_BUFGRAPH_H
-#define GALOIS_GRAPHS_BUFGRAPH_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_BUFFEREDGRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_BUFFEREDGRAPH_H_
 
 #include <fstream>
 

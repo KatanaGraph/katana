@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_GIO_H
-#define GALOIS_GIO_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GIO_H_
+#define GALOIS_LIBGALOIS_GALOIS_GIO_H_
 
 #include <sstream>
 #include <cerrno>
@@ -125,4 +125,4 @@ struct debug<0> {
 
 } // end namespace galois
 
-#endif //_GIO_H
+#endif

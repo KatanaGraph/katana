@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_FIXEDSIZERING_H
-#define GALOIS_FIXEDSIZERING_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_FIXEDSIZERING_H_
+#define GALOIS_LIBGALOIS_GALOIS_FIXEDSIZERING_H_
 
 #include <atomic>
 #include <utility>

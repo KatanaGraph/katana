@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_TIMER_H
-#define GALOIS_TIMER_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_TIMER_H_
+#define GALOIS_LIBGALOIS_GALOIS_TIMER_H_
 
 #include <chrono>
 

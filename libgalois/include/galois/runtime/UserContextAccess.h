@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_RUNTIME_USERCONTEXTACCESS_H
-#define GALOIS_RUNTIME_USERCONTEXTACCESS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
 
 #include "galois/config.h"
 #include "galois/UserContext.h"

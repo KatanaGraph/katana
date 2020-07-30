@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_S3_INTERNAL_H_
-#define GALOIS_LIBTSUBA_S3_INTERNAL_H_
+#ifndef GALOIS_LIBTSUBA_TSUBA_S3_INTERNAL_H_
+#define GALOIS_LIBTSUBA_TSUBA_S3_INTERNAL_H_
 
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
@@ -87,4 +87,4 @@ galois::Result<void> S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data,
 galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
 } // namespace tsuba::internal
 
-#endif // GALOIS_LIBTSUBA_S3_INTERNAL_H_
+#endif

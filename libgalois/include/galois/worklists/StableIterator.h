@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_WORKLIST_STABLEITERATOR_H
-#define GALOIS_WORKLIST_STABLEITERATOR_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_STABLEITERATOR_H_
+#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_STABLEITERATOR_H_
 
 #include "galois/config.h"
 #include "galois/gstl.h"

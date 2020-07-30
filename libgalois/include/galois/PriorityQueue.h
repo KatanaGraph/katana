@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_PRIORITYQUEUE_H
-#define GALOIS_PRIORITYQUEUE_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_PRIORITYQUEUE_H_
+#define GALOIS_LIBGALOIS_GALOIS_PRIORITYQUEUE_H_
 
 #include <algorithm>
 #include <set>

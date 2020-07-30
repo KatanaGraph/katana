@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LAZYOBJECT_H
-#define GALOIS_LAZYOBJECT_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_LAZYOBJECT_H_
+#define GALOIS_LIBGALOIS_GALOIS_LAZYOBJECT_H_
 
 #include <type_traits>
 #include <utility>

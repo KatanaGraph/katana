@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_FILE_STORAGE_H_
-#define GALOIS_LIBTSUBA_FILE_STORAGE_H_
+#ifndef GALOIS_LIBTSUBA_FILESTORAGE_H_
+#define GALOIS_LIBTSUBA_FILESTORAGE_H_
 
 #include <cstdint>
 #include <string_view>

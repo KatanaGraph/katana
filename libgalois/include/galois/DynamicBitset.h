@@ -23,8 +23,8 @@
  * Contains the DynamicBitSet class and most of its implementation.
  */
 
-#ifndef _GALOIS_DYNAMIC_BIT_SET_
-#define _GALOIS_DYNAMIC_BIT_SET_
+#ifndef GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
+#define GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
 
 #include <climits>
 #include <vector>

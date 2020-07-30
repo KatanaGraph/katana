@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_RUNTIME_OPERATOR_REFERENCE_TYPES_H
-#define GALOIS_RUNTIME_OPERATOR_REFERENCE_TYPES_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_OPERATORREFERENCETYPES_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_OPERATORREFERENCETYPES_H_
 
 #include "galois/config.h"
 
@@ -68,4 +68,4 @@ using OperatorReferenceType =
 } // namespace runtime
 } // namespace galois
 
-#endif // ifndef(GALOIS_RUNTIME_OPERATOR_REFERENCE_TYPES_H)
+#endif

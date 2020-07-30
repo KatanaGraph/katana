@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TESTS_BENCH_UTILS_H_
-#define GALOIS_LIBTSUBA_TESTS_BENCH_UTILS_H_
+#ifndef GALOIS_LIBTSUBA_BENCH_UTILS_H_
+#define GALOIS_LIBTSUBA_BENCH_UTILS_H_
 
 #include <time.h>
 
@@ -29,4 +29,4 @@ inline int64_t timespec_to_us(struct timespec ts) {
   return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;
 }
 
-#endif // GALOIS_LIBTSUBA_TESTS_BENCH_UTILS_H_
+#endif

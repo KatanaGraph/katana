@@ -23,8 +23,8 @@
  * Defines particular traits used by the distributed runtime.
  */
 
-#ifndef GALOIS_RUNTIME_EXTRA_TRAITS_H
-#define GALOIS_RUNTIME_EXTRA_TRAITS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXTRATRAITS_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXTRATRAITS_H_
 
 #include <type_traits>
 #include <boost/mpl/has_xxx.hpp>

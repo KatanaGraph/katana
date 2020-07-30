@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_SUBSTRATE_THREADPOOL_H
-#define GALOIS_SUBSTRATE_THREADPOOL_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADPOOL_H_
+#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADPOOL_H_
 
 #include <atomic>
 #include <cassert>

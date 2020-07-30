@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_CHECKEDOBJECT_H
-#define GALOIS_CHECKEDOBJECT_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_CHECKEDOBJECT_H_
+#define GALOIS_LIBGALOIS_GALOIS_CHECKEDOBJECT_H_
 
 #include "galois/config.h"
 #include "galois/runtime/Context.h"
@@ -59,4 +59,4 @@ public:
 
 } // namespace galois
 
-#endif // _GALOIS_CHECKEDOBJECT_H
+#endif

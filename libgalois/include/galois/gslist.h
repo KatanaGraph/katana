@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_GSLIST_H
-#define GALOIS_GSLIST_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_GSLIST_H_
+#define GALOIS_LIBGALOIS_GALOIS_GSLIST_H_
 
 #include <type_traits>
 

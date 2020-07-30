@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_WORKLIST_WORKLISTHELPERS_H
-#define GALOIS_WORKLIST_WORKLISTHELPERS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLISTHELPERS_H_
+#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLISTHELPERS_H_
 
 #include <boost/iterator/iterator_facade.hpp>
 

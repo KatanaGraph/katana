@@ -16,8 +16,8 @@
  * including but not limited to those resulting from defects in Software and/or
  * Documentation, or loss or inaccuracy of data of any kind.
  */
-#ifndef _GALOIS_GRAPH_HELPER_H_
-#define _GALOIS_GRAPH_HELPER_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPHHELPERS_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPHHELPERS_H_
 
 #include <cassert>
 #include <vector>

@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LOOPS_H
-#define GALOIS_LOOPS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
+#define GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
 
 #include "galois/config.h"
 #include "galois/LoopsDecl.h"
@@ -209,4 +209,4 @@ struct WhileQ {
 
 } // namespace galois
 
-#endif // GALOIS_LOOPS_H
+#endif

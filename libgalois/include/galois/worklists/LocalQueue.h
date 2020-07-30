@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_WORKLIST_LOCALQUEUE_H
-#define GALOIS_WORKLIST_LOCALQUEUE_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_LOCALQUEUE_H_
+#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_LOCALQUEUE_H_
 
 #include <type_traits>
 

@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_THREADS_H
-#define GALOIS_THREADS_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_THREADS_H_
+#define GALOIS_LIBGALOIS_GALOIS_THREADS_H_
 
 #include "galois/config.h"
 

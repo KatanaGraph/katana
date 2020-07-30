@@ -1,5 +1,6 @@
 #include "galois/Logging.h"
-#include "graph-properties-convert.h"
+#include "graph-properties-convert-graphml.h"
+#include "graph-properties-convert-mongodb.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <memory>

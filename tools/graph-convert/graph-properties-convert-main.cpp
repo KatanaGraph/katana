@@ -1,14 +1,19 @@
-#include "graph-properties-convert.h"
+#include "graph-properties-convert-graphml.h"
 
+#include <iostream>
+
+#include <llvm/Support/CommandLine.h>
+
+#include "galois/config.h"
 #include "galois/Galois.h"
 #include "galois/Timer.h"
 #include "galois/ErrorCode.h"
 #include "galois/Logging.h"
 #include "Transforms.h"
 
-#include <llvm/Support/CommandLine.h>
-
-#include <iostream>
+#if defined(GALOIS_MONGOC_FOUND)
+#include "graph-properties-convert-mongodb.h"
+#endif
 
 namespace cll = llvm::cl;
 
@@ -28,20 +33,31 @@ cll::opt<galois::SourceType>
                      clEnumValN(galois::SourceType::kKatana, "katana",
                                 "source file is of type Katana")),
          cll::init(galois::SourceType::kGraphml));
-cll::opt<galois::SourceDatabase>
-    database(cll::desc("Database the data was exported from:"),
+static cll::opt<galois::SourceDatabase>
+    database(cll::desc("Database the data is from:"),
              cll::values(clEnumValN(galois::SourceDatabase::kNeo4j, "neo4j",
                                     "source data came from Neo4j"),
                          clEnumValN(galois::SourceDatabase::kMongodb, "mongodb",
-                                    "source data came from mongodb")),
+                                    "source is mongodb")),
              cll::init(galois::SourceDatabase::kNone));
-cll::opt<int>
-    chunk_size("chunkSize",
+static cll::opt<int>
+    chunk_size("chunk-size",
                cll::desc("Chunk size for in memory arrow representation during "
-                         "converions, generally this term can be ignored, but "
-                         "it can be decreased for improving memory usage when "
+                         "converions\n"
+                         "Generally this term can be ignored, but "
+                         "it can be decreased to improve memory usage when "
                          "converting large inputs"),
                cll::init(25000));
+static cll::opt<std::string> mapping(
+    "mapping",
+    cll::desc("File in graphml format with a schema mapping for the database"),
+    cll::init(""));
+static cll::opt<bool> generate_mapping(
+    "generate-mapping",
+    cll::desc("Generate a file in graphml format with a schema mapping for the "
+              "database\n"
+              "The file is created at the output destination specified"),
+    cll::init(false));
 
 cll::list<std::string> timestamp_properties("timestamp",
                                             cll::desc("Timestamp properties"));
@@ -95,9 +111,18 @@ void ParseNeo4j() {
   }
 }
 
-void ParseMongodb() {
-  auto graph = galois::ConvertMongoDB(input_filename, chunk_size);
-  galois::ConvertToPropertyGraphAndWrite(graph, output_directory);
+void ParseMongoDB() {
+#if defined(GALOIS_MONGOC_FOUND)
+  if (generate_mapping) {
+    galois::GenerateMappingMongoDB(input_filename, output_directory);
+  } else {
+    galois::WritePropertyGraph(
+        galois::ConvertMongoDB(input_filename, mapping, chunk_size),
+        output_directory);
+  }
+#else
+  GALOIS_LOG_FATAL("Dependencies not present for MongoDB");
+#endif
 }
 
 } // namespace

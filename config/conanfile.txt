@@ -5,6 +5,8 @@ date/2.4.1
 eigen/3.3.7
 fmt/6.2.1
 nlohmann_json/3.7.3
+openssl/1.1.1g
+mongo-c-driver/1.16.1@bincrafters/stable
 
 [options]
 aws-sdk-cpp:build_transfer = True

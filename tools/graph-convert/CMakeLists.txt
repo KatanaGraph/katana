@@ -59,16 +59,29 @@ install(TARGETS graph-convert-huge
 
 find_package(LibXml2 2.9.1 REQUIRED)
 find_package(date REQUIRED)
-find_package(mongocxx REQUIRED)
 
-add_library(graph-properties-convert-common STATIC graph-properties-convert.cpp Transforms.cpp)
+set(sources
+  graph-properties-convert.cpp
+  graph-properties-convert-graphml.cpp
+  Transforms.cpp
+)
+
+if(mongoc-1.0_FOUND)
+  list(APPEND sources graph-properties-convert-mongodb.cpp)
+endif()
+
+add_library(graph-properties-convert-common STATIC ${sources})
 target_include_directories(graph-properties-convert-common PUBLIC .)
 target_link_libraries(graph-properties-convert-common PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem date::date)
-target_link_libraries(graph-properties-convert-common PRIVATE mongo::mongocxx_shared)
+
+if(mongoc-1.0_FOUND)
+  target_link_libraries(graph-properties-convert-common PRIVATE mongo::mongoc_shared)
+endif()
 
 add_executable(graph-properties-convert graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
+target_link_libraries(graph-properties-convert PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets

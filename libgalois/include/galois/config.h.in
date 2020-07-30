@@ -91,3 +91,5 @@ _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
 #endif
 
 #endif
+
+#cmakedefine GALOIS_MONGOC_FOUND

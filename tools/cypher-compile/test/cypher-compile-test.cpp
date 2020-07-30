@@ -32,8 +32,14 @@ void AssertNoReturnModifiers(const galois::CypherCompiler& cc) {
   GALOIS_LOG_VASSERT(!rm.return_skip, "Return metadata should not have a skip");
   GALOIS_LOG_VASSERT(!rm.return_limit,
                      "Return metadata should not have a limit");
+  GALOIS_LOG_VASSERT(!rm.return_skip_param_name,
+                     "Return metadata should not have a skip param");
+  GALOIS_LOG_VASSERT(!rm.return_limit_param_name,
+                     "Return metadata should not have a limit param");
   GALOIS_LOG_VASSERT(!rm.distinct_return,
                      "Return metadata should not have distinct be true");
+  GALOIS_LOG_VASSERT(!rm.order_by,
+                     "Return metadata should not have order by metadata");
 }
 
 //! Asserts the following:
@@ -150,9 +156,16 @@ void VerifyReturnModifier(const galois::CypherCompiler& cc,
                      "Return metadata skip does not match expected");
   GALOIS_LOG_VASSERT(rm.return_limit == expected.return_limit,
                      "Return metadata limit does not match limit");
+  GALOIS_LOG_VASSERT(rm.return_skip_param_name ==
+                         expected.return_skip_param_name,
+                     "Return metadata skip param does not match expected");
+  GALOIS_LOG_VASSERT(rm.return_limit_param_name ==
+                         expected.return_limit_param_name,
+                     "Return metadata limit param does not match limit");
   GALOIS_LOG_VASSERT(rm.distinct_return == expected.distinct_return,
                      "Return metadata distinct expected is {}, found {}",
                      expected.distinct_return, rm.distinct_return);
+
   if (expected.order_by) {
     GALOIS_LOG_VASSERT(
         rm.order_by,
@@ -556,6 +569,38 @@ int main() {
   GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 2);
   VerifyReturnModifier(cc, galois::CompilerReturnMetadata{3, 100, true});
 
+  // parameters for skip and limit
+  GALOIS_LOG_WARN("Return Mods 5");
+  std::string return_mod5 = "match (a) return a, b skip $asdf limit $some;";
+  cc.Compile(return_mod5.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{"0", "any", "a", ""});
+  VerifyReturn(cc.GetReturnValues()[0],
+               galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
+  VerifyReturn(cc.GetReturnValues()[1],
+               galois::QueryProperty("b", std::nullopt, std::nullopt, "b"));
+  GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 2);
+  galois::CompilerReturnMetadata correct_mod5;
+  correct_mod5.return_skip_param_name  = "asdf";
+  correct_mod5.return_limit_param_name = "some";
+  VerifyReturnModifier(cc, correct_mod5);
+
+  // parameters for skip and limit , mix and match
+  GALOIS_LOG_WARN("Return Mods 6");
+  std::string return_mod6 = "match (a) return a, b skip 777 limit $some;";
+  cc.Compile(return_mod6.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{"0", "any", "a", ""});
+  VerifyReturn(cc.GetReturnValues()[0],
+               galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
+  VerifyReturn(cc.GetReturnValues()[1],
+               galois::QueryProperty("b", std::nullopt, std::nullopt, "b"));
+  GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 2);
+  galois::CompilerReturnMetadata correct_mod6;
+  correct_mod6.return_skip             = 777;
+  correct_mod6.return_limit_param_name = "some";
+  VerifyReturnModifier(cc, correct_mod6);
+
   //////////////////////////////////////////////////////////////////////////////
   // Order by on return
   //////////////////////////////////////////////////////////////////////////////
@@ -618,7 +663,7 @@ int main() {
   // MISC
   //////////////////////////////////////////////////////////////////////////////
 
-  // check if count is parsed correctly
+  // check if distinct count is parsed correctly
   GALOIS_LOG_WARN("Misc 1, distinct count");
   // NOTE: return vars do not necessarily have to exist in the query
   std::string misc1 =

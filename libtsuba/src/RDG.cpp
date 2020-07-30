@@ -79,6 +79,11 @@ struct RDGHandleImpl {
     }
     return galois::ResultSuccess();
   }
+  constexpr bool AllowsReadPartial() const {
+    return flags & tsuba::kReadPartial;
+  }
+  constexpr bool AllowsRead() const { return !AllowsReadPartial(); }
+  constexpr bool AllowsWrite() const { return flags & tsuba::kReadWrite; }
 };
 
 tsuba::RDGFile::~RDGFile() {
@@ -789,6 +794,10 @@ bool tsuba::RDG::Equals(const RDG& other) const {
 }
 
 galois::Result<tsuba::RDGPrefix> tsuba::ExaminePrefix(tsuba::RDGHandle handle) {
+  if (!handle.impl_->AllowsReadPartial()) {
+    GALOIS_LOG_DEBUG("handle not intended for partial read");
+    return ErrorCode::InvalidArgument;
+  }
   auto meta_res = ReadMetadata(handle);
   if (!meta_res) {
     return meta_res.error();
@@ -878,13 +887,20 @@ galois::Result<void> tsuba::Create(const std::string& name) {
 
 galois::Result<void> tsuba::Rename(RDGHandle handle, const std::string& name,
                                    int flags) {
-  (void)handle;
+  if (!handle.impl_->AllowsWrite()) {
+    GALOIS_LOG_DEBUG("handle does not allow write");
+    return ErrorCode::InvalidArgument;
+  }
   (void)name;
   (void)flags;
   return tsuba::ErrorCode::NotImplemented;
 }
 
 galois::Result<tsuba::RDG> tsuba::Load(RDGHandle handle) {
+  if (!handle.impl_->AllowsRead()) {
+    GALOIS_LOG_DEBUG("handle does not allow full read");
+    return ErrorCode::InvalidArgument;
+  }
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
     return rdg_res.error();
@@ -900,6 +916,10 @@ galois::Result<tsuba::RDG> tsuba::Load(RDGHandle handle) {
 galois::Result<tsuba::RDG>
 tsuba::Load(RDGHandle handle, const std::vector<std::string>& node_properties,
             const std::vector<std::string>& edge_properties) {
+  if (!handle.impl_->AllowsRead()) {
+    GALOIS_LOG_DEBUG("handle does not allow full read");
+    return ErrorCode::InvalidArgument;
+  }
 
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
@@ -920,6 +940,10 @@ galois::Result<tsuba::RDG>
 tsuba::LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
                    std::pair<uint64_t, uint64_t> edge_range, uint64_t topo_off,
                    uint64_t topo_size) {
+  if (!handle.impl_->AllowsReadPartial()) {
+    GALOIS_LOG_DEBUG("handle does not allow partial read");
+    return ErrorCode::InvalidArgument;
+  }
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
     return rdg_res.error();
@@ -939,6 +963,10 @@ tsuba::LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
                    uint64_t topo_size,
                    const std::vector<std::string>& node_properties,
                    const std::vector<std::string>& edge_properties) {
+  if (!handle.impl_->AllowsReadPartial()) {
+    GALOIS_LOG_DEBUG("handle does not allow partial read");
+    return ErrorCode::InvalidArgument;
+  }
   auto rdg_res = ReadMetadata(handle);
   if (!rdg_res) {
     return rdg_res.error();
@@ -957,6 +985,10 @@ tsuba::LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
 }
 
 galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg) {
+  if (!handle.impl_->AllowsWrite()) {
+    GALOIS_LOG_DEBUG("handle does not allow write");
+    return ErrorCode::InvalidArgument;
+  }
   if (handle.impl_->metadata_dir != rdg->rdg_dir) {
     if (auto res = UnbindFromStorage(rdg); !res) {
       return res.error();
@@ -966,6 +998,10 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg) {
 }
 
 galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
+  if (!handle.impl_->AllowsWrite()) {
+    GALOIS_LOG_DEBUG("handle does not allow write");
+    return ErrorCode::InvalidArgument;
+  }
   // TODO(ddn): property paths will be dangling if metadata directory changes
   // but absolute paths in metadata make moving property files around hard.
   if (handle.impl_->metadata_dir != rdg->rdg_dir) {

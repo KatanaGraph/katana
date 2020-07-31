@@ -1,12 +1,15 @@
 # -*- mode: cython -*-
-{% set instantiation_types = [("uint64_t", "np.uint64"), ("int64_t", "int"), ("double", "float")] %}
+from enum import Enum
+
+{% set instantiation_types = [("uint64_t", "np.uint64", "Q"), ("int64_t", "int", "q"), ("double", "float", "d")] %}
+
 """
 This module contains data structures designed for use with Galois' parallel loops.
 They are instantiated for several element types, but cannot support custom element types.
 
 The instantiations are:
 
-{% for c, py in instantiation_types %}
+{% for c, py, format in instantiation_types %}
 * `{{py}}` (with C element type {{c}})
 {% endfor %}
 
@@ -19,7 +22,7 @@ from libc.stdint cimport uintptr_t, int64_t, uint64_t
 from cython.operator cimport preincrement, dereference as deref
 import cython
 
-__all__ = ["InsertBag", "LargeArray"]
+__all__ = ["InsertBag", "LargeArray", "AllocationPolicy"]
 
 {% import "numba_wrapper_support.pyx.jinja" as numba %}
 
@@ -44,30 +47,40 @@ cdef class {{class_name}}:
     """
     def push(self, {{element_type}} v):
         """
+        push(self, v)
+
         Add an element to the collection. This may be called from numba compiled code.
         """
         self.underlying.push(v)
 
     def clear(self):
         """
+        clear(self)
+
         Discard the contents of this collection. Must be called from single threaded code.
         """
         self.underlying.clear()
 
     def empty(self):
         """
+        empty(self)
+
         Return true of the collection is empty.
         """
         return self.underlying.empty()
 
     def swap(self, {{class_name}} other):
         """
+        swap(self, InsertBag other)
+
         Swap the contents of this collection with another efficiently. Must be called from single threaded code.
         """
         self.underlying.swap(other.underlying)
 
     def __iter__(self):
         """
+        iter(self)
+
         Iterate over the elements of the collection. Must be called from single threaded code.
         """
         i =  <{{class_name}}_Iterator>{{class_name}}_Iterator.__new__({{class_name}}_Iterator)
@@ -88,14 +101,22 @@ cdef class {{class_name}}:
 {% endmacro %}
 
 _InsertBag_types = {}
-{% for element_type, python_type in instantiation_types %}
+{% for element_type, python_type, buffer_format in instantiation_types %}
 {{wrap_insert_bag(element_type)}}
 _InsertBag_types[{{python_type}}] = InsertBag_{{element_type}}
 {% endfor %}
 InsertBag = make_template_type1("InsertBag", _InsertBag_types)
 
 
-{% macro wrap_large_array(element_type) %}
+class AllocationPolicy(Enum):
+    """
+    NUMA allocation policies.
+    """
+    BLOCKED = 0
+    INTERLEAVED = 1
+
+
+{% macro wrap_large_array(element_type, python_type, buffer_format) %}
 {% set underlying_type %}datastructures.LargeArray[{{element_type}}]{% endset -%}
 {% set class_name %}LargeArray_{{element_type}}{% endset -%}
 @cython.freelist(2)
@@ -110,9 +131,29 @@ cdef class {{class_name}}_Iterator:
 cdef class {{class_name}}:
     """
     An array of elements of the same type that are allocated using NUMA aware policies.
-
-    The underlying array must be allocated with `allocateBlocked` or `allocateInterleaved`.
     """
+    def __init__(self, size=None, policy=None):
+        """
+        __init__(self, size=None, policy=None)
+
+        Construct a new array.
+
+        If `size` and `policy` are provided, the array is allocated with the specified size and policy.
+        Otherwise,  the underlying array must be allocated with `allocateBlocked` or `allocateInterleaved` after
+        construction.
+        """
+        self.shape = -1
+        self.stride = sizeof({{element_type}})
+        if size is not None:
+            if policy is None:
+                raise ValueError("Policy must be provided to allocate.")
+            if policy == AllocationPolicy.BLOCKED:
+                self.allocateBlocked(size)
+            elif policy == AllocationPolicy.INTERLEAVED:
+                self.allocateInterleaved(size)
+            else:
+                raise TypeError("Policy must be an AllocationPolicy")
+
     def __setitem__(self, uint64_t i, {{element_type}} v):
         """
         `self[i] = v`
@@ -141,13 +182,29 @@ cdef class {{class_name}}:
         """
         return self.underlying.size()
 
+    cdef bint _check_not_allocated(self) except False:
+        if self.shape >= 0:
+            raise ValueError("LargeArray is already allocated.")
+        return True
+
+    cdef bint _check_allocated(self) except False:
+        if self.shape < 0:
+            raise ValueError("LargeArray is not yet allocated.")
+        return True
+
+    cdef bint _mark_allocated(self) except False:
+        self.shape = <Py_ssize_t>self.underlying.size()
+        return True
+
     def allocateInterleaved(self, uint64_t size):
         """
         allocateInterleaved(self, size)
 
         Allocate the array with a specific `size` using a NUMA interleaved memory policy.
         """
+        self._check_not_allocated()
         self.underlying.allocateInterleaved(size)
+        self._mark_allocated()
 
     def allocateBlocked(self, uint64_t size):
         """
@@ -155,7 +212,9 @@ cdef class {{class_name}}:
 
         Allocate the array with a specific `size` using blocked memory policy.
         """
+        self._check_not_allocated()
         self.underlying.allocateBlocked(size)
+        self._mark_allocated()
 
     def __iter__(self):
         """
@@ -175,6 +234,31 @@ cdef class {{class_name}}:
     def address(self):
         return <uintptr_t>&self.underlying
 
+    def as_numpy(self):
+        """
+        as_numpy(self)
+
+        Return a numpy array that is a view on self.
+        """
+        return np.frombuffer(self, dtype={{python_type}})
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        self._check_allocated()
+        buffer.buf = <char *>self.underlying.data()
+        buffer.format = '{{buffer_format}}'
+        buffer.internal = NULL
+        buffer.itemsize = self.stride
+        buffer.len = self.shape * self.stride
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = &self.shape
+        buffer.strides = &self.stride
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        pass
+
 {% call numba.class_(class_name, underlying_type) %}
 {% call numba.method_with_body("get", element_type, ["uint64_t"]) %}
     return self[0][arg1]
@@ -185,8 +269,8 @@ cdef class {{class_name}}:
 {% endmacro %}
 
 _LargeArray_types = {}
-{% for element_type, python_type in instantiation_types %}
-{{wrap_large_array(element_type)}}
+{% for element_type, python_type, buffer_format in instantiation_types %}
+{{wrap_large_array(element_type, python_type, buffer_format)}}
 _LargeArray_types[{{python_type}}] = LargeArray_{{element_type}}
 {% endfor %}
 LargeArray = make_template_type1("LargeArray", _LargeArray_types)

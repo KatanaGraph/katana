@@ -1,8 +1,9 @@
-import pytest
 import numpy as np
+import pytest
 
-from galois.loops import *
 from galois.atomic import *
+from galois.datastructures import LargeArray
+from galois.loops import do_all_operator, do_all
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),
@@ -112,6 +113,15 @@ def test_atomic_add_parallel(dtype, threads_many):
         atomic_add(out, 0, i)
     out = np.array([0], dtype=dtype)
     do_all(range(1000), f(out), steal=False)
+    assert out[0] == 499500
+
+def test_atomic_add_parallel_largearray(threads_many):
+    @do_all_operator()
+    def f(out, i):
+        atomic_add(out, 0, i)
+    out = LargeArray[int]()
+    out.allocateBlocked(1000)
+    do_all(range(1000), f(out.as_numpy()), steal=False)
     assert out[0] == 499500
 
 @pytest.mark.parametrize("dtype", dtypes)

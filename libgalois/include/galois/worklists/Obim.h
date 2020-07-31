@@ -263,15 +263,9 @@ private:
       for (;
            p.lastMasterVersion < masterVersion.load(std::memory_order_relaxed);
            ++p.lastMasterVersion) {
-        // XXX(ddn): Somehow the second block is better than
-        // the first for bipartite matching (GCC 4.7.2)
-#if 0
-        p.local.insert(masterLog[p.lastMasterVersion]);
-#else
         std::pair<Index, CTy*> logEntry = masterLog[p.lastMasterVersion];
         p.local[logEntry.first]         = logEntry.second;
         assert(logEntry.second);
-#endif
       }
       return true;
     }

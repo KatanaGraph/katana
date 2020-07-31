@@ -103,7 +103,6 @@ public:
 
   explicit flat_map(const _Compare& __comp,
                     const allocator_type& = allocator_type())
-      // XXX :_data(_Pair_alloc_type(__a)), _comp(__comp) {}
       : _data(), _comp(__comp) {}
 
   flat_map(const flat_map& __x) : _data(__x._data), _comp(__x._comp) {}
@@ -111,13 +110,6 @@ public:
   flat_map(flat_map&& __x)
       /* noexcept(std::is_nothrow_copy_constructible<_Compare>::value) */
       : _data(std::move(__x._data)), _comp(std::move(__x._comp)) {}
-
-  /*
-  flat_map(std::initializer_list<value_type> __l,
-       const _Compare& __comp = _Compare(),
-       const allocator_type& __a = allocator_type())
-    : _data(__l, _Pair_alloc_type(__a)), _comp(__comp) { resort(); }
-   */
 
   template <typename _InputIterator>
   flat_map(_InputIterator __first, _InputIterator __last)

@@ -78,8 +78,6 @@ class Fixed2DGraphTiledExecutor {
       boost::transform_iterator<GetDst, no_deref_iterator>;
 
   Graph& g;
-  int cutoff;                          // XXX: UseExp
-  galois::substrate::Barrier& barrier; // XXX: UseExp
   // std::array<galois::LargeArray<SpinLock>, numDims> locks;
   // galois::LargeArray<Task> tasks;
   std::array<std::vector<SpinLock>, numDims> locks;
@@ -363,44 +361,7 @@ class Fixed2DGraphTiledExecutor {
       edge_dst_iterator dbegin(nbegin, getDst);
       edge_dst_iterator dend(nend, getDst);
 
-      // TODO check if we want to use experimental
-      // if (UseExp &&
-      //    cutoff < 0 &&
-      //    std::distance(g.edge_begin(*ii, galois::MethodFlag::UNPROTECTED),
-      //      g.edge_end(*ii, galois::MethodFlag::UNPROTECTED)) >= -cutoff) {
-      //  continue;
-      //} else if (UseExp &&
-      //           cutoff > 0 &&
-      //           std::distance(g.edge_begin(*ii,
-      //                           galois::MethodFlag::UNPROTECTED),
-      //                         g.edge_end(*ii,
-      //                           galois::MethodFlag::UNPROTECTED)) < cutoff) {
-      //  continue;
-      //}
-
       for (auto jj = std::lower_bound(dbegin, dend, task.startY); jj != dend;) {
-        // if (UseExp) {
-        //  constexpr int numTimes = 1;
-        //  constexpr int width = 1;
-        //  bool done = false;
-        //  for (int times = 0; times < numTimes; ++times) {
-        //    for (int i = 0; i < width; ++i) {
-        //      edge_iterator edge = *(jj+i).base();
-        //      if (*(jj + i) > task.endYInclusive) {
-        //        done = true;
-        //        break;
-        //      }
-
-        //      fn(*ii, *(jj+i), edge);
-        //    }
-        //  }
-        //  if (done)
-        //    break;
-        //  for (int i = 0; jj != dend && i < width; ++jj, ++i)
-        //    ;
-        //  if (jj == dend)
-        //    break;
-        //} else {
         edge_iterator edge = *jj.base();
         if (*jj > task.endYInclusive)
           break;
@@ -409,111 +370,6 @@ class Fixed2DGraphTiledExecutor {
         ++jj;
         //}
       }
-    }
-  }
-
-  /**
-   * Bulk Synchronous Diagonals: Static work assignment
-   *
-   * From the start point assigned to each thread, loop across the grid
-   * diagonally, moving a step in the direction of the longer of the X or Y
-   * direction every round and working along the diagonal there.
-   *
-   * @tparam UseDense dense update (all nodes in block update with all other
-   * nodes) or sparse update (update only if edge exists)
-   * @tparam Type of function specifying how to do update between nodes
-   *
-   * @param fn Function used to update nodes
-   * @param tid Thread id
-   * @param total Total number of threads
-   */
-  template <bool UseDense, typename Function>
-  void executeLoopExp(Function fn, unsigned tid, unsigned total) {
-    Point numBlocks{locks[0].size(), locks[1].size()};
-    Point block;
-    Point start;
-
-    // TODO this assigns each thread a block along the diagonal, which is
-    // probably NOT what you want in this executor since each block will go
-    // along the diagonal; fix this
-    for (int i = 0; i < numDims; ++i) {
-      block[i] = (numBlocks[i] + total - 1) / total; // blocks per thread
-      start[i] = std::min(block[i] * tid, numBlocks[i] - 1); // block to start
-    }
-
-    // Move diagonal along dim each round
-    // if more y than x, then dim is 1 (i.e. y), else 0
-    int dim  = numBlocks[0] < numBlocks[1] ? 1 : 0;
-    int odim = (dim + 1) % 2;
-    // num blocks in dim dimension
-    size_t maxRounds = numBlocks[dim];
-
-    for (size_t rounds = 0; rounds < maxRounds; ++rounds) {
-      Point p{start[0], start[1]};
-      nextPoint(p, dim, rounds);
-
-      size_t ntries =
-          std::min(block[odim] * (tid + 1), numBlocks[odim]) - start[odim];
-      for (size_t tries = 0; tries < ntries; ++tries) {
-        Task* t = probeBlock(p, 0, 1); // probe block I am currently on
-        if (t) {
-          executeBlock<UseDense>(fn, *t);
-
-          if (useLocks) {
-            for (int i = 0; i < numDims; ++i)
-              locks[i][t->coord[i]].unlock();
-          }
-        }
-
-        for (int i = 0; i < numDims; ++i)
-          nextPoint(p, i, 1);
-      }
-
-      barrier.wait();
-    }
-  }
-
-  // TODO examine this
-  // bulk synchronous diagonals: dynamic assignment within diagonals
-  template <bool UseDense, typename Function>
-  void executeLoopExp2(Function fn, unsigned tid, unsigned total) {
-    Point numBlocks{{locks[0].size(), locks[1].size()}};
-    Point block;
-    Point start;
-    for (int i = 0; i < numDims; ++i) {
-      block[i] = (numBlocks[i] + total - 1) / total;
-      start[i] = std::min(block[i] * tid, numBlocks[i] - 1);
-    }
-
-    // Move diagonal along dim each round
-    int dim          = numBlocks[0] < numBlocks[1] ? 1 : 0;
-    int odim         = (dim + 1) % 2;
-    size_t maxRounds = numBlocks[dim];
-
-    for (size_t round = 0; round < maxRounds; ++round) {
-      Point base{{start[0], start[1]}};
-      nextPoint(base, dim, round);
-      for (size_t tries = 0; tries < numBlocks[odim]; ++tries) {
-        size_t index = tries + base[odim];
-        if (index >= numBlocks[odim])
-          index -= numBlocks[odim];
-        Point p{};
-        nextPoint(p, dim, round);
-        nextPoint(p, odim, index);
-        nextPoint(p, dim, index);
-
-        Task* t = probeBlock(p, 0, 1);
-        if (!t)
-          continue;
-        executeBlock<UseDense>(fn, *t);
-
-        if (useLocks) {
-          for (int i = 0; i < numDims; ++i)
-            locks[i][t->coord[i]].unlock();
-        }
-      }
-
-      barrier.wait();
     }
   }
 
@@ -590,9 +446,6 @@ class Fixed2DGraphTiledExecutor {
    */
   template <bool UseDense, typename Function>
   void executeLoop(Function fn, unsigned tid, unsigned total) {
-    // if (false && UseExp)
-    //  executeLoopExp2<UseDense>(fn, tid, total);
-    // else
     executeLoopOrig<UseDense>(fn, tid, total);
   }
 
@@ -634,7 +487,7 @@ class Fixed2DGraphTiledExecutor {
       iterator e;
       std::tie(s, e) =
           galois::block_range(firstY, lastY, task.coord[1], numYBlocks);
-      // XXX: Works for CSR graphs
+      // Works for CSR graphs
       task.startY        = *s;
       task.endYInclusive = *e - 1;
     }
@@ -659,9 +512,7 @@ class Fixed2DGraphTiledExecutor {
   };
 
 public:
-  Fixed2DGraphTiledExecutor(Graph& g, int cutoff = 0)
-      : g(g), cutoff(cutoff),
-        barrier(galois::runtime::getBarrier(galois::getActiveThreads())) {}
+  Fixed2DGraphTiledExecutor(Graph& g) : g(g) {}
 
   /**
    * Report the number of probe block failures to statistics.

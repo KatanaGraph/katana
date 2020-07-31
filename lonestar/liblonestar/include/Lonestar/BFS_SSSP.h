@@ -206,7 +206,7 @@ struct BFS_SSSP {
         if (dd > sd + ew) {
           std::cout << "Wrong label: " << dd << ", on node: " << dst
                     << ", correct label from src node " << node << " is "
-                    << sd + ew << "\n"; // XXX
+                    << sd + ew << "\n";
           refb = true;
           // return;
         }

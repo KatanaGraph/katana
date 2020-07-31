@@ -51,7 +51,7 @@
 namespace galois {
 namespace graphs {
 
-// XXX(ddn): Refactor to eliminate OCFileGraph
+// TODO(ddn): Refactor to eliminate OCFileGraph
 
 //! Graph that mmaps Galois gr files for access
 class FileGraph {

@@ -121,7 +121,6 @@ class AbortHandler {
 
 public:
   AbortHandler() {
-    // XXX(ddn): Implement smarter adaptive policy
     useBasicPolicy = substrate::getThreadPool().getMaxSockets() > 2;
   }
 

@@ -194,9 +194,8 @@ inline bool shouldLock(const galois::MethodFlag g) {
     return true;
 
   default:
-    // XXX(ddn): Adding error checking code here either upsets the inlining
-    // heuristics or icache behavior. Avoid complex code if possible.
-    // GALOIS_DIE("shouldn't get here");
+    // Adding error checking code here either upsets the inlining heuristics or
+    // icache behavior. Avoid complex code if possible.
     assert(false);
   }
   return false;

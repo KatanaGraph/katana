@@ -258,7 +258,6 @@ public:
 struct read_oc_immutable_edge_graph_tag {};
 
 template <typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
-          // bool UseNumaAlloc=false, // XXX: implement this
           bool HasOutOfLineLockable = false>
 class OCImmutableEdgeGraph
     : private internal::LocalIteratorFeature<false>,
@@ -350,7 +349,7 @@ public:
     //! Returns true if segment represents a non-empty range
     explicit operator bool() { return nodeBegin != nodeEnd; }
     size_t size() const { return std::distance(nodeBegin, nodeEnd); }
-    bool containsNode(size_t n) const { // XXX: hack
+    bool containsNode(size_t n) const {
       return *nodeBegin <= n && n < *nodeEnd;
     }
   };

@@ -449,13 +449,6 @@ std::vector<partInfo> partition(MetisGraph* mcg, unsigned fineMetisGraphWeight,
       abort();
     }
   }
-  // XXX(ddn): Leave commented out until we have balance() defined.
-#if 0
-  if (!multiSeed) {
-    unsigned maxWeight = 1.01 * mcg->getTotalWeight() / numPartitions;
-    balance(mcg, parts, maxWeight);
-  }
-#endif
   static_assert(multiSeed, "not yet implemented");
   return parts;
 }

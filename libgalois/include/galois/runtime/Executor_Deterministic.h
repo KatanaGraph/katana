@@ -304,8 +304,8 @@ public:
   struct ContextPtrLessThan {
     bool operator()(const DeterministicContextBase* a,
                     const DeterministicContextBase* b) const {
-      // XXX non-deterministic behavior when we have multiple items with the
-      // same id
+      // Non-deterministic behavior when we have multiple items with the same
+      // id
       if (a->item.id == b->item.id)
         return a < b;
       return a->item.id < b->item.id;

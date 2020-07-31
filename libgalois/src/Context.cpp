@@ -45,23 +45,13 @@ galois::runtime::LockManagerBase::AcquireStatus
 galois::runtime::LockManagerBase::tryAcquire(
     galois::runtime::Lockable* lockable) {
   assert(lockable);
-  // XXX(ddn): Hand inlining this code makes a difference on
-  // delaunaytriangulation (GCC 4.7.2)
-#if 0
-  if (tryLock(lockable)) {
-    assert(!getOwner(lockable));
-    setOwner(lockable);
-    return NEW_OWNER;
-#else
   if (lockable->owner.try_lock()) {
     lockable->owner.setValue(this);
     return NEW_OWNER;
-#endif
-}
-else if (getOwner(lockable) == this) {
-  return ALREADY_OWNER;
-}
-return FAIL;
+  } else if (getOwner(lockable) == this) {
+    return ALREADY_OWNER;
+  }
+  return FAIL;
 }
 
 void galois::runtime::SimpleRuntimeContext::release(

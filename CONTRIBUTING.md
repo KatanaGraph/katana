@@ -271,6 +271,46 @@ So far there is only one useful label:
   with other quick tests. Each quick test should run in a second or less. These
   tests are run as part of our continuous integration pipeline.
 
+# Code style and conventions
+
+We automatically test for some code style adherence at merge-time; so the
+automatic tools have the final word. Nevertheless, there are some conventions
+enforced by maintainers to be aware of:
+
+ * `TODO`/`FIXME`/`XXX` are common comments used to denote known issues that
+   should be fixed soon. In this code base, `XXX` is reserved for local changes
+   that the author intends to fix immediately, i.e., comments with `XXX` should
+   never be committed. `TODO` and `FIXME` should only be used with the name
+   of a contributor who is responsible for fixing them (usually you)
+   in the style: `TODO(thunt)`. In general `TODO` tasks involve more work to fix
+   than `FIXME` tasks but the distinction isn't enforced.
+
+ * Dates in comments should always take the form `YYYY-MM-DD`.
+
+ * In general, we try to adhere to the [Google C++ Style
+   Guide](https://google.github.io/styleguide/cppguide.html). One exception
+   (so far) is that when passing arguments to functions, prefer pointers
+   to non-const references (which used to be a part of that guide).
+
+The following are the automated style checkers that we use. The continuous
+integration process will check adherence on each Pull Request, but it is faster,
+in terms of feedback latency, to run these checks locally first.
+ * `scripts/check_docs.sh`: ensures that you didn't break doc generation
+ * `scripts/check_ifndef.py [-fix] lib*`: checks that header guards are well
+ formed.
+ * `scripts/check_format.sh [-fix] lib*`: applies `clang-format` to check style.
+We also have a `clang-tidy` configuration; `clang-tidy` is useful, but not run
+currently by continuous integration.
+
+None of these checks are exhaustive (on their own or combined)!
+
+New code is expected to follow the above guidelines. But also be aware: there
+are older modules that predate these expectations (currently, older modules are
+everything that is not `libtsuba`, `libsupport` and `libquery`). In those cases,
+it is acceptable to follow the convention in that module; though in general, it
+would be preferable to follow the motto of "leave the codebase in better shape
+than you found it."
+
 # Continuous Integration
 
 ## Caching

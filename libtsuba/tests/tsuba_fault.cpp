@@ -70,7 +70,7 @@ void parse_arguments(int argc, char* argv[]) {
 
 /******************************************************************************/
 // Utility functions to print tables
-void PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
+static void PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
   for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
     auto int_arr =
         std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -79,7 +79,7 @@ void PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
     }
   }
 }
-void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
+static void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
   for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
     auto str_arr =
         std::static_pointer_cast<arrow::StringArray>(arr->chunk(chunk));
@@ -89,7 +89,7 @@ void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
   }
 }
 
-void PrintTable(std::shared_ptr<arrow::Table> table) {
+static void PrintTable(std::shared_ptr<arrow::Table> table) {
   const auto& schema = table->schema();
   for (int i = 0, n = schema->num_fields(); i < n; i++) {
     fmt::print("Schema {:d} {}\n", i, schema->field(i)->name());
@@ -118,12 +118,12 @@ std::shared_ptr<arrow::Schema> string_schema() {
 }
 
 // Tables
-std::shared_ptr<arrow::Table> MakeAgeTable(std::vector<int64_t> node_ages) {
+std::shared_ptr<arrow::Table> MakeNodePropTable(std::vector<int64_t> node_props) {
   arrow::Int64Builder builder;
   arrow::Status status;
 
-  for (const auto& node_age : node_ages) {
-    status = builder.Append(node_age);
+  for (const auto& node_prop : node_props) {
+    status = builder.Append(node_prop);
     GALOIS_LOG_ASSERT(status.ok());
   }
 
@@ -169,16 +169,17 @@ std::vector<int64_t> GenRandVec(uint64_t size, int64_t min, int64_t max) {
 void MutateGraph(tsuba::RDG& rdg) {
   // Nodes
   {
-    auto arr                       = rdg.node_table->GetColumnByName("age");
-    std::vector<int64_t> node_ages = GenRandVec(arr->length() - 1, -1000, 1000);
+    int column_num = galois::RandomUniformInt(rdg.node_table->num_columns());
+    auto col                        = rdg.node_table->column(column_num);
+    std::vector<int64_t> col_values = GenRandVec(col->length() - 1, -1000000, 1000000);
     // Sum to 0
-    node_ages.push_back(
-        0L - std::accumulate(node_ages.begin(), node_ages.end(), 0L));
-    if (auto res = DropNodeProperty(&rdg, 0); !res) {
-      GALOIS_LOG_FATAL("DropNodeProperty 0 {}", res.error());
+    col_values.push_back(
+        0L - std::accumulate(col_values.begin(), col_values.end(), 0L));
+    if (auto res = DropNodeProperty(&rdg, column_num); !res) {
+      GALOIS_LOG_FATAL("DropNodeProperty {:d} {}", column_num, res.error());
     }
-    auto node_ages_tab = MakeAgeTable(node_ages);
-    if (auto res = AddNodeProperties(&rdg, node_ages_tab); !res) {
+    auto node_prop_tab = MakeNodePropTable(col_values);
+    if (auto res = AddNodeProperties(&rdg, node_prop_tab); !res) {
       GALOIS_LOG_FATAL("AddNodeProperties 0 {}", res.error());
     }
   }
@@ -201,9 +202,9 @@ void MutateGraph(tsuba::RDG& rdg) {
 
 void ValidateGraph(tsuba::RDG& rdg) {
   // Nodes
-  {
-    auto arr      = rdg.node_table->GetColumnByName("age");
+  for(auto col_num = 0; col_num < rdg.node_table->num_columns(); ++col_num) {
     int64_t total = 0L;
+    auto arr = rdg.node_table->column(col_num);
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto int_arr =
           std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -292,7 +293,9 @@ void PrintGraph(const std::string& src_uri) {
   auto rdg = std::move(rdg_res.value());
   fmt::print("NODE\n");
   PrintTable(rdg.node_table);
-  PrintInts(rdg.node_table->GetColumnByName("age"));
+  for(auto i = 0; i < rdg.node_table->num_columns(); ++i) {
+    PrintInts(rdg.node_table->column(i));
+  }
 
   fmt::print("EDGE\n");
   PrintTable(rdg.edge_table);

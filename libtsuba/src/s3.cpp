@@ -135,11 +135,11 @@ static SegmentedBufferView SegmentBuf(uint64_t start, const uint8_t* data,
   if ((size / kS3DefaultBufSize) > kS3MaxMultiPart) {
     // I can't find anything that says this needs to be an "even" number
     // Add one because integer arithmetic is floor
-    segment_size = size / kS3MaxMultiPart + 1;
+    segment_size = size / (kS3MaxMultiPart + 1);
     GALOIS_LOG_VASSERT(
         (segment_size > kS3MinBufSize) && (segment_size < kS3MaxBufSize),
-        "Can't find valid segment size ({:d}) for requested size {:d}",
-        segment_size, kS3MaxBufSize);
+        "\n  Min {:d} Max {:d} Default {:d} Request (too big) {:d} Segment {:d}",
+        kS3MinBufSize, kS3MaxBufSize, kS3DefaultBufSize, size, segment_size);
   }
   return SegmentedBufferView(start, const_cast<uint8_t*>(data), size,
                              segment_size);

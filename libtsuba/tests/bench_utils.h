@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_BENCH_UTILS_H_
-#define GALOIS_LIBTSUBA_BENCH_UTILS_H_
+#ifndef GALOIS_LIBTSUBA_BENCHUTILS_H_
+#define GALOIS_LIBTSUBA_BENCHUTILS_H_
 
 #include <time.h>
 #include "galois/Result.h"

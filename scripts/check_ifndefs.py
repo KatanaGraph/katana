@@ -49,6 +49,10 @@ def make_guard(root, filename):
     p = p.replace("/SRC/", "/", 1)
     p = p.replace("/TESTS/", "/", 1)
     p = p.replace("/TEST/", "/", 1)
+    # Just in case, remove characters that can't be part of macros
+    p = re.sub("[+\-*%=<>?~&\^|#:;{}.[\]]","", p)
+    # Differentiate between snake_case file names and directories
+    p = p.replace("_", "", -1)
     p = p.replace("/", "_")
     return "GALOIS_{p}_H_".format(p=p)
 

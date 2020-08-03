@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_S3_INTERNAL_H_
-#define GALOIS_LIBTSUBA_TSUBA_S3_INTERNAL_H_
+#ifndef GALOIS_LIBTSUBA_TSUBA_S3INTERNAL_H_
+#define GALOIS_LIBTSUBA_TSUBA_S3INTERNAL_H_
 
 #include "galois/Result.h"
 #include "tsuba/Errors.h"

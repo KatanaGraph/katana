@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTOR_ONEACH_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTOR_ONEACH_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
 
 #include "galois/config.h"
 #include "galois/gIO.h"

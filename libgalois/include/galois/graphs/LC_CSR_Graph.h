@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_CSR_GRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LC_CSR_GRAPH_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRGRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRGRAPH_H_
 
 #include <fstream>
 #include <type_traits>

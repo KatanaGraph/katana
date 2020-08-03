@@ -165,7 +165,7 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
 }
 
 galois::Result<std::shared_ptr<arrow::Table>>
-LoadTable(const std::string& expected_name, const std::string& file_path) {
+DoLoadTable(const std::string& expected_name, const std::string& file_path) {
   // TODO(ddn): parallelize reading
   // TODO(ddn): use custom NUMA allocator
 
@@ -202,6 +202,82 @@ LoadTable(const std::string& expected_name, const std::string& file_path) {
   return out;
 }
 
+galois::Result<std::shared_ptr<arrow::Table>>
+LoadTable(const std::string& expected_name, const std::string& file_path) {
+  try {
+    return DoLoadTable(expected_name, file_path);
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    return tsuba::ErrorCode::ArrowError;
+  }
+}
+
+galois::Result<std::shared_ptr<arrow::Table>>
+DoLoadPartialTable(const std::string& expected_name,
+                   const std::string& file_path, int64_t offset,
+                   int64_t length) {
+
+  if (offset < 0 || length < 0) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
+  if (auto res = fv->Bind(file_path, 0, 0); !res) {
+    return res.error();
+  }
+
+  std::unique_ptr<parquet::arrow::FileReader> reader;
+
+  auto open_file_result =
+      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
+  if (!open_file_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", open_file_result);
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  std::vector<int> row_groups;
+  int rg_count             = reader->num_row_groups();
+  int64_t row_offset       = 0;
+  int64_t cumulative_rows  = 0;
+  int64_t file_offset      = 0;
+  int64_t cumulative_bytes = 0;
+  for (int i = 0; cumulative_rows < offset + length && i < rg_count; ++i) {
+    auto rg_md        = reader->parquet_reader()->metadata()->RowGroup(i);
+    int64_t new_rows  = rg_md->num_rows();
+    int64_t new_bytes = rg_md->total_byte_size();
+    if (offset < cumulative_rows + new_rows) {
+      if (row_groups.empty()) {
+        row_offset  = offset - cumulative_rows;
+        file_offset = cumulative_bytes;
+      }
+      row_groups.push_back(i);
+    }
+    cumulative_rows += new_rows;
+    cumulative_bytes += new_bytes;
+  }
+
+  if (auto res = fv->Fill(file_offset, cumulative_bytes); !res) {
+    return res.error();
+  }
+
+  std::shared_ptr<arrow::Table> out;
+  auto read_result = reader->ReadRowGroups(row_groups, &out);
+  if (!read_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", read_result);
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  std::shared_ptr<arrow::Schema> schema = out->schema();
+  if (schema->num_fields() != 1) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+
+  if (schema->field(0)->name() != expected_name) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+
+  return out->Slice(row_offset, length);
+}
+
 template <typename AddFn>
 galois::Result<void>
 AddTables(const fs::path& dir,
@@ -228,9 +304,9 @@ AddTables(const fs::path& dir,
 }
 
 galois::Result<std::vector<tsuba::PropertyMetadata>>
-WriteTable(const arrow::Table& table,
-           const std::vector<tsuba::PropertyMetadata>& properties,
-           const std::string& dir) {
+DoWriteTable(const arrow::Table& table,
+             const std::vector<tsuba::PropertyMetadata>& properties,
+             const std::string& dir) {
 
   const auto& schema = table.schema();
 
@@ -292,6 +368,18 @@ WriteTable(const arrow::Table& table,
   }
 
   return next_properties;
+}
+
+galois::Result<std::vector<tsuba::PropertyMetadata>>
+WriteTable(const arrow::Table& table,
+           const std::vector<tsuba::PropertyMetadata>& properties,
+           const std::string& dir) {
+  try {
+    return DoWriteTable(table, properties, dir);
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    return tsuba::ErrorCode::ArrowError;
+  }
 }
 
 /// Add the property columns in @table to @to_update. If @new_properties is true
@@ -390,7 +478,7 @@ MakeProperties(std::vector<std::string>&& values) {
 ///
 /// The order of metadata fields is significant, and repeated metadata fields
 /// are used to encode lists of values.
-galois::Result<tsuba::RDG> ReadMetadata(tsuba::RDGHandle handle) {
+galois::Result<tsuba::RDG> DoReadMetadata(tsuba::RDGHandle handle) {
   auto fv = std::make_shared<tsuba::FileView>();
   if (auto res = fv->Bind(handle.impl_->partition_path); !res) {
     return res.error();
@@ -450,6 +538,15 @@ galois::Result<tsuba::RDG> ReadMetadata(tsuba::RDGHandle handle) {
   return tsuba::RDG(std::move(rdg));
 }
 
+galois::Result<tsuba::RDG> ReadMetadata(tsuba::RDGHandle handle) {
+  try {
+    return DoReadMetadata(handle);
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    return tsuba::ErrorCode::ArrowError;
+  }
+}
+
 std::pair<std::vector<std::string>, std::vector<std::string>>
 MakeMetadata(const tsuba::RDG& rdg) {
   std::vector<std::string> keys;
@@ -485,9 +582,9 @@ std::string HostPartitionName(tsuba::RDGHandle handle, uint32_t id,
   return fmt::format("{}_{}_{}", handle.impl_->rdg_path, id, version);
 }
 
-galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
-                                   const tsuba::RDG& rdg,
-                                   const arrow::Schema& schema) {
+galois::Result<void> DoWriteMetadata(tsuba::RDGHandle handle,
+                                     const tsuba::RDG& rdg,
+                                     const arrow::Schema& schema) {
 
   std::shared_ptr<parquet::SchemaDescriptor> schema_descriptor;
   auto to_result = parquet::arrow::ToParquetSchema(
@@ -522,6 +619,17 @@ galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
   }
   tsuba::internal::PtP();
   return galois::ResultSuccess();
+}
+
+galois::Result<void> WriteMetadata(tsuba::RDGHandle handle,
+                                   const tsuba::RDG& rdg,
+                                   const arrow::Schema& schema) {
+  try {
+    return DoWriteMetadata(handle, rdg, schema);
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    return tsuba::ErrorCode::ArrowError;
+  }
 }
 
 // TOCTTOU since it's the local file system but will change when we manage
@@ -1095,64 +1203,10 @@ galois::Result<std::shared_ptr<arrow::Table>>
 tsuba::internal::LoadPartialTable(const std::string& expected_name,
                                   const std::string& file_path, int64_t offset,
                                   int64_t length) {
-
-  if (offset < 0 || length < 0) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
-  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path, 0, 0); !res) {
-    return res.error();
-  }
-
-  std::unique_ptr<parquet::arrow::FileReader> reader;
-
-  auto open_file_result =
-      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
-  if (!open_file_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", open_file_result);
+  try {
+    return DoLoadPartialTable(expected_name, file_path, offset, length);
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
   }
-
-  std::vector<int> row_groups;
-  int rg_count             = reader->num_row_groups();
-  int64_t row_offset       = 0;
-  int64_t cumulative_rows  = 0;
-  int64_t file_offset      = 0;
-  int64_t cumulative_bytes = 0;
-  for (int i = 0; cumulative_rows < offset + length && i < rg_count; ++i) {
-    auto rg_md        = reader->parquet_reader()->metadata()->RowGroup(i);
-    int64_t new_rows  = rg_md->num_rows();
-    int64_t new_bytes = rg_md->total_byte_size();
-    if (offset < cumulative_rows + new_rows) {
-      if (row_groups.empty()) {
-        row_offset  = offset - cumulative_rows;
-        file_offset = cumulative_bytes;
-      }
-      row_groups.push_back(i);
-    }
-    cumulative_rows += new_rows;
-    cumulative_bytes += new_bytes;
-  }
-
-  if (auto res = fv->Fill(file_offset, cumulative_bytes); !res) {
-    return res.error();
-  }
-
-  std::shared_ptr<arrow::Table> out;
-  auto read_result = reader->ReadRowGroups(row_groups, &out);
-  if (!read_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", read_result);
-    return tsuba::ErrorCode::ArrowError;
-  }
-
-  std::shared_ptr<arrow::Schema> schema = out->schema();
-  if (schema->num_fields() != 1) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
-
-  if (schema->field(0)->name() != expected_name) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
-
-  return out->Slice(row_offset, length);
 }

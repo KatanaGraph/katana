@@ -109,11 +109,29 @@ void TestRoundTrip() {
   }
 }
 
+void TestGarbageMetadata() {
+  auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
+  GALOIS_LOG_ASSERT(unique_result);
+  std::string temp_dir(std::move(unique_result.value()));
+
+  std::string rdg_file{temp_dir};
+  rdg_file += "/rdg";
+
+  std::ofstream out(rdg_file);
+  out << "garbage to make the file non-empty";
+  out.close();
+
+  auto no_dir_result = galois::graphs::PropertyFileGraph::Make(rdg_file);
+  fs::remove_all(temp_dir);
+  GALOIS_LOG_ASSERT(!no_dir_result.has_value());
+}
+
 int main() {
   if (auto res = tsuba::Init(); !res) {
     GALOIS_LOG_FATAL("libtsuba failed to init");
   }
   TestRoundTrip();
+  TestGarbageMetadata();
   if (auto res = tsuba::Fini(); !res) {
     GALOIS_LOG_FATAL("libtsuba failed to fini");
   }

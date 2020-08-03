@@ -1,5 +1,10 @@
+import os
+from tempfile import NamedTemporaryFile
+
 import pyarrow
 import pytest
+
+from galois.property_graph import PropertyGraph
 
 
 def test_load(property_graph):
@@ -84,10 +89,19 @@ def test_load_invalid_path():
     with pytest.raises(RuntimeError):
         PropertyGraph("non-existent")
 
-@pytest.mark.skip
 def test_load_directory():
     with pytest.raises(RuntimeError):
         PropertyGraph("/tmp")
+
+def test_load_garbage_file():
+    fi = NamedTemporaryFile(delete=False)
+    try:
+        with fi:
+            fi.write(b"Test")
+        with pytest.raises(RuntimeError):
+            PropertyGraph(fi.name)
+    finally:
+        os.unlink(fi.name)
 
 def test_simple_algorithm(property_graph):
     from galois.loops import do_all_operator, do_all

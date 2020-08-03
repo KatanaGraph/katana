@@ -45,8 +45,19 @@ public:
   PutAsync(const std::string& uri, const uint8_t* data,
            uint64_t size) override {
     // No need for AsyncPut to local storage right now
-    auto write_res = WriteFile(uri, data, size);
-    return write_res.error();
+    if (auto write_res = WriteFile(uri, data, size); !write_res) {
+      return write_res.error();
+    }
+    return nullptr;
+  }
+  galois::Result<std::unique_ptr<FileAsyncWork>>
+  GetAsync(const std::string& uri, uint64_t start, uint64_t size,
+           uint8_t* result_buf) override {
+    // I suppose there is no need for AsyncGet to local storage either
+    if (auto read_res = ReadFile(uri, start, size, result_buf); !read_res) {
+      return read_res.error();
+    }
+    return nullptr;
   }
 };
 

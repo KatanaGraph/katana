@@ -42,6 +42,9 @@ public:
   // Every call to async work can potentially block (bulk synchronous parallel)
   virtual galois::Result<std::unique_ptr<FileAsyncWork>>
   PutAsync(const std::string& uri, const uint8_t* data, uint64_t size) = 0;
+  virtual galois::Result<std::unique_ptr<FileAsyncWork>>
+  GetAsync(const std::string& uri, uint64_t start, uint64_t size,
+           uint8_t* result_buf) = 0;
 };
 
 } // namespace tsuba

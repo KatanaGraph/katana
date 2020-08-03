@@ -69,9 +69,9 @@ public:
   bool Done() const { return func_stack_.empty(); }
 };
 
-galois::Result<void> S3GetSingleAsync(S3AsyncWork& s3aw, uint64_t start,
-                                      uint64_t size, uint8_t* result_buf);
-galois::Result<void> S3GetSingleAsyncFinish(S3AsyncWork& s3aw);
+galois::Result<void> S3GetMultiAsync(S3AsyncWork& s3aw, uint64_t start,
+                                     uint64_t size, uint8_t* result_buf);
+galois::Result<void> S3GetMultiAsyncFinish(S3AsyncWork& s3aw);
 
 galois::Result<void> S3PutSingleSync(const std::string& bucket,
                                      const std::string& object,

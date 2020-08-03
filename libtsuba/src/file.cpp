@@ -121,6 +121,12 @@ galois::Result<void> tsuba::FilePeek(const std::string& uri,
   return FS(uri)->GetMultiSync(uri, begin, size, result_buffer);
 }
 
+galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+tsuba::FilePeekAsync(const std::string& uri, uint8_t* result_buffer,
+                     uint64_t begin, uint64_t size) {
+  return FS(uri)->GetAsync(uri, begin, size, result_buffer);
+}
+
 galois::Result<void> tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }

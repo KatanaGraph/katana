@@ -49,10 +49,15 @@ galois::Result<void> FileStore(const std::string& uri, const uint8_t* data,
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
-// read a (probably small) part of the file into a caller defined buffer
+// read a part of the file into a caller defined buffer
 galois::Result<void> FilePeek(const std::string& filename,
                               uint8_t* result_buffer, uint64_t begin,
                               uint64_t size);
+
+// start reading a part of the file into a caller defined buffer
+galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+FilePeekAsync(const std::string& filename, uint8_t* result_buffer,
+              uint64_t begin, uint64_t size);
 
 template <typename StrType, typename T>
 static inline galois::Result<void> FilePeek(const StrType& filename, T* obj) {

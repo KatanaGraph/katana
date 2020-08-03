@@ -340,6 +340,112 @@ std::vector<int64_t> test_s3_single_async_batch(const uint8_t* data,
   return results;
 }
 
+/* These next two benchmarks rely on previous writes. Make sure to call them
+ * after at least one write benchmark
+ */
+
+std::vector<int64_t> test_s3_async_get_one(const uint8_t* data, uint64_t size,
+                                           int32_t batch,
+                                           int32_t numExperiments) {
+  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<int64_t> results;
+  std::vector<uint8_t> read_buffer(size);
+  uint8_t* rbuf = read_buffer.data();
+  tsuba::StatBuf sbuf;
+
+  for (auto i = 0; i < batch; ++i) {
+    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
+        s3bucket, MkS3obj(i, 4)));
+    // Confirm that the data we need is present
+    if (auto res = tsuba::FileStat(
+            std::string(s3bucket).append("/").append(MkS3obj(i, 4)), &sbuf);
+        !res) {
+      GALOIS_LOG_ERROR(
+          "tsuba::FileStat({}/{}) returned {}. Did you remember to run the "
+          "appropriate write benchmark before this read benchmark?",
+          s3bucket, MkS3obj(i, 4), res.error());
+    }
+    if (sbuf.size != size) {
+      GALOIS_LOG_ERROR(
+          "{} is of size {}, expected {}. Did you remember to run the "
+          "appropriate write benchmark before this read benchmark?",
+          std::string(s3bucket).append("/").append(MkS3obj(i, 4)), sbuf.size,
+          size);
+    }
+  }
+
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    memset(rbuf, 0, size);
+    start = now();
+    for (const auto& s3aw : s3aws) {
+      if (auto res = tsuba::internal::S3GetMultiAsync(*s3aw, 0, size, rbuf);
+          !res) {
+        GALOIS_LOG_ERROR("S3GetMultiAsync return {}", res.error());
+      }
+      // Only 1 outstanding load at a time
+      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(*s3aw); !res) {
+        GALOIS_LOG_ERROR("S3GetMultiAsyncFinish bad return {}", res.error());
+      }
+    }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+    GALOIS_LOG_ASSERT(!memcmp(rbuf, data, size));
+  }
+  return results;
+}
+
+std::vector<int64_t> test_s3_async_get_batch(const uint8_t* data, uint64_t size,
+                                             int32_t batch,
+                                             int32_t numExperiments) {
+  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<int64_t> results;
+  std::vector<uint8_t> read_buffer(size);
+  uint8_t* rbuf = read_buffer.data();
+  tsuba::StatBuf sbuf;
+
+  for (auto i = 0; i < batch; ++i) {
+    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
+        s3bucket, MkS3obj(i, 4)));
+    // Confirm that the data we need is present
+    if (auto res = tsuba::FileStat(
+            std::string(s3bucket).append("/").append(MkS3obj(i, 4)), &sbuf);
+        !res) {
+      GALOIS_LOG_ERROR(
+          "tsuba::FileStat({}/{}) returned {}. Did you remember to run the "
+          "appropriate write benchmark before this read benchmark?",
+          s3bucket, MkS3obj(i, 4), res.error());
+    }
+    if (sbuf.size != size) {
+      GALOIS_LOG_ERROR(
+          "{} is of size {}, expected {}. Did you remember to run the "
+          "appropriate write benchmark before this read benchmark?",
+          std::string(s3bucket).append("/").append(MkS3obj(i, 4)), sbuf.size,
+          size);
+    }
+  }
+
+  struct timespec start;
+  for (auto j = 0; j < numExperiments; ++j) {
+    memset(rbuf, 0, size);
+    start = now();
+    for (const auto& s3aw : s3aws) {
+      if (auto res = tsuba::internal::S3GetMultiAsync(*s3aw, 0, size, rbuf);
+          !res) {
+        GALOIS_LOG_ERROR("S3GetMultiAsync batch bad return {}", res.error());
+      }
+    }
+    for (const auto& s3aw : s3aws) {
+      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(*s3aw); !res) {
+        GALOIS_LOG_ERROR("S3GetMultiAsyncFinish batch bad return {}",
+                         res.error());
+      }
+    }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+    GALOIS_LOG_ASSERT(!memcmp(rbuf, data, size));
+  }
+  return results;
+}
+
 std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data,
                                                uint64_t size, int32_t batch,
                                                int32_t numExperiments) {
@@ -437,6 +543,9 @@ struct {
     // Not needed because it is slow
     //{.name = "S3 Put Sync", .func = test_s3_sync},
     {.name = "S3 Put Single Async Batch", .func = test_s3_single_async_batch},
+    // The next two need to follow at least one S3 write benchmark
+    {.name = "S3 Get ASync One", .func = test_s3_async_get_one},
+    {.name = "S3 Get Async Batch", .func = test_s3_async_get_batch},
     {.name = "Tsuba::FileStore", .func = test_tsuba_sync},
     {.name = "Tsuba::FileStoreAsync", .func = test_tsuba_async},
     {.name = "S3 Put Multi Async Batch", .func = test_s3_multi_async_batch},

@@ -11,17 +11,19 @@
 std::string src_uri{};
 int64_t num_threads{1L};
 uint64_t run_length_limit{0UL};
+int32_t node_property_total{0}; // Which node property
 float independent_failure_probability{0.0f};
 
 std::string usage_msg = "Usage: {} <RDG URI>\n"
                         "  [-t] number of threads (default=1)\n"
                         "  [-r] Test runs up to argument (default=0)\n"
+                        "  [-n] Total number of node properties (default=0)\n"
                         "  [-h] usage message\n";
 
 void parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "i:t:r:h")) != -1) {
+  while ((c = getopt(argc, argv, "i:t:r:n:h")) != -1) {
     switch (c) {
     case 't': {
       char* p_end{nullptr};
@@ -32,6 +34,9 @@ void parse_arguments(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
       }
     } break;
+    case 'n':
+      node_property_total = std::atoi(optarg);
+      break;
     case 'i':
       independent_failure_probability = std::atof(optarg);
       break;
@@ -62,14 +67,20 @@ void parse_arguments(int argc, char* argv[]) {
 }
 
 int CrashAndVerify(const std::string& uri_in, char* const* envp,
-                   const std::string& rl) {
+                   const std::string& rl, const std::string& node_prop_num) {
   int status;
   pid_t len_pid;
   pid_t verify_pid;
   // -c ensures we modify graph enough times to call PtP atleast rl times
-  const char* const fault_len_argv[] = {
-      "bin/tsuba_fault", "-r",           rl.c_str(), "-c",
-      rl.c_str(),        uri_in.c_str(), NULL};
+  const char* const fault_len_argv[] = {"bin/tsuba_fault",
+                                        "-r",
+                                        rl.c_str(),
+                                        "-c",
+                                        rl.c_str(),
+                                        uri_in.c_str(),
+                                        "-n",
+                                        node_prop_num.c_str(),
+                                        NULL};
   status = posix_spawn(&len_pid, fault_len_argv[0], NULL, NULL,
                        const_cast<char* const*>(fault_len_argv), envp);
   if (status == 0) {
@@ -98,8 +109,9 @@ int RunLenFaulty(const std::string& uri_in, char* const* envp,
 
   // Run len must be at least 1
   for (auto i = 1; i < run_len_limit; ++i) {
-    std::string rl = fmt::format("{:d}", i);
-    CrashAndVerify(uri_in, envp, rl);
+    std::string rl  = fmt::format("{:d}", i);
+    std::string npn = fmt::format("{:d}", i % node_property_total);
+    CrashAndVerify(uri_in, envp, rl, npn);
   }
 
   return 0;

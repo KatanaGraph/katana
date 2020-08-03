@@ -138,7 +138,8 @@ static SegmentedBufferView SegmentBuf(uint64_t start, const uint8_t* data,
     segment_size = size / (kS3MaxMultiPart + 1);
     GALOIS_LOG_VASSERT(
         (segment_size > kS3MinBufSize) && (segment_size < kS3MaxBufSize),
-        "\n  Min {:d} Max {:d} Default {:d} Request (too big) {:d} Segment {:d}",
+        "\n  Min {:d} Max {:d} Default {:d} Request (too big) {:d} Segment "
+        "{:d}",
         kS3MinBufSize, kS3MaxBufSize, kS3DefaultBufSize, size, segment_size);
   }
   return SegmentedBufferView(start, const_cast<uint8_t*>(data), size,

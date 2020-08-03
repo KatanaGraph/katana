@@ -13,12 +13,14 @@
 std::string src_uri{};
 bool opt_print{false};
 bool opt_validate{false};
-int32_t count{1}; // By default do 1 thing
+int32_t count{1};             // By default do 1 thing
+int32_t node_property_num{0}; // Which node property
 float independent_failure_probability{0.0f};
 uint64_t run_length{0UL};
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-c] count (default=1)\n"
+    "  [-n] node property number (default=0)\n"
     "  [-i] Independent failure probability (default=0.0, max=0.5)\n"
     "  [-r] Execute this many PtPs, then die (starts at 1)\n"
     "  [-v] validate graph\n"
@@ -28,10 +30,13 @@ std::string usage_msg =
 void parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "c:i:r:vph")) != -1) {
+  while ((c = getopt(argc, argv, "c:n:i:r:vph")) != -1) {
     switch (c) {
     case 'c':
       count = std::atoi(optarg);
+      break;
+    case 'n':
+      node_property_num = std::atoi(optarg);
       break;
     case 'i':
       independent_failure_probability = std::atof(optarg);
@@ -102,13 +107,14 @@ static void PrintTable(std::shared_ptr<arrow::Table> table) {
 /******************************************************************************/
 // Construct arrow tables, which are node & edge properties
 // Schemas
-std::shared_ptr<arrow::Schema> int64_schema() {
+std::shared_ptr<arrow::Schema> int64_schema(const std::string& prop_name) {
   auto field = std::make_shared<arrow::Field>(
-      "age", std::make_shared<arrow::Int64Type>());
+      prop_name.c_str(), std::make_shared<arrow::Int64Type>());
   auto schema =
       std::make_shared<arrow::Schema>(arrow::Schema({field}, nullptr));
   return schema;
 }
+
 std::shared_ptr<arrow::Schema> string_schema() {
   auto field = std::make_shared<arrow::Field>(
       "str", std::make_shared<arrow::StringType>());
@@ -118,7 +124,9 @@ std::shared_ptr<arrow::Schema> string_schema() {
 }
 
 // Tables
-std::shared_ptr<arrow::Table> MakeNodePropTable(std::vector<int64_t> node_props) {
+std::shared_ptr<arrow::Table>
+MakeNodePropTable(std::vector<int64_t> node_props,
+                  const std::string& node_prop_name) {
   arrow::Int64Builder builder;
   arrow::Status status;
 
@@ -130,7 +138,8 @@ std::shared_ptr<arrow::Table> MakeNodePropTable(std::vector<int64_t> node_props)
   std::shared_ptr<arrow::Int64Array> arr;
   status = builder.Finish(&arr);
   GALOIS_LOG_ASSERT(status.ok());
-  std::shared_ptr<arrow::Table> tab = arrow::Table::Make(int64_schema(), {arr});
+  std::shared_ptr<arrow::Table> tab =
+      arrow::Table::Make(int64_schema(node_prop_name), {arr});
   return tab;
 }
 
@@ -169,18 +178,24 @@ std::vector<int64_t> GenRandVec(uint64_t size, int64_t min, int64_t max) {
 void MutateGraph(tsuba::RDG& rdg) {
   // Nodes
   {
-    int column_num = galois::RandomUniformInt(rdg.node_table->num_columns());
-    auto col                        = rdg.node_table->column(column_num);
-    std::vector<int64_t> col_values = GenRandVec(col->length() - 1, -1000000, 1000000);
+    GALOIS_LOG_VASSERT(node_property_num < rdg.node_table->num_columns(),
+                       "Node property number is {:d} but only {:d} properties",
+                       node_property_num, rdg.node_table->num_columns());
+    auto col = rdg.node_table->column(node_property_num);
+    auto node_prop_name =
+        rdg.node_table->schema()->field(node_property_num)->name();
+    std::vector<int64_t> col_values =
+        GenRandVec(col->length() - 1, -1000000, 1000000);
     // Sum to 0
     col_values.push_back(
         0L - std::accumulate(col_values.begin(), col_values.end(), 0L));
-    if (auto res = DropNodeProperty(&rdg, column_num); !res) {
-      GALOIS_LOG_FATAL("DropNodeProperty {:d} {}", column_num, res.error());
+    if (auto res = DropNodeProperty(&rdg, node_property_num); !res) {
+      GALOIS_LOG_FATAL("DropNodeProperty {:d} {}", node_property_num,
+                       res.error());
     }
-    auto node_prop_tab = MakeNodePropTable(col_values);
+    auto node_prop_tab = MakeNodePropTable(col_values, node_prop_name);
     if (auto res = AddNodeProperties(&rdg, node_prop_tab); !res) {
-      GALOIS_LOG_FATAL("AddNodeProperties 0 {}", res.error());
+      GALOIS_LOG_FATAL("AddNodeProperties {}", res.error());
     }
   }
   // Edges
@@ -202,9 +217,9 @@ void MutateGraph(tsuba::RDG& rdg) {
 
 void ValidateGraph(tsuba::RDG& rdg) {
   // Nodes
-  for(auto col_num = 0; col_num < rdg.node_table->num_columns(); ++col_num) {
+  for (auto col_num = 0; col_num < rdg.node_table->num_columns(); ++col_num) {
     int64_t total = 0L;
-    auto arr = rdg.node_table->column(col_num);
+    auto arr      = rdg.node_table->column(col_num);
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto int_arr =
           std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -293,7 +308,7 @@ void PrintGraph(const std::string& src_uri) {
   auto rdg = std::move(rdg_res.value());
   fmt::print("NODE\n");
   PrintTable(rdg.node_table);
-  for(auto i = 0; i < rdg.node_table->num_columns(); ++i) {
+  for (auto i = 0; i < rdg.node_table->num_columns(); ++i) {
     PrintInts(rdg.node_table->column(i));
   }
 

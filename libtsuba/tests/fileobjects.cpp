@@ -48,7 +48,7 @@ static void exponential(uint8_t bits[], std::string& dir) {
 
   // Read
   auto fv = tsuba::FileView();
-  if (auto res = fv.Bind(filename); !res) {
+  if (auto res = fv.Bind(filename, true); !res) {
     GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
   }
   auto aro_res = fv.Read(running);
@@ -56,6 +56,23 @@ static void exponential(uint8_t bits[], std::string& dir) {
   auto aro_buf = aro_res.ValueOrDie();
   GALOIS_LOG_ASSERT(static_cast<uint64_t>(aro_buf->size()) == running);
   GALOIS_LOG_ASSERT(!memcmp(aro_buf->data(), bits, running));
+
+  // Exercise asynchronous reads
+  auto fva = tsuba::FileView();
+  if (auto res = fva.Bind(filename, 0, 0, false); !res) {
+    GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
+  }
+
+  ptr     = bits;
+  running = 0;
+  for (int i = 0; i < EXP_WRITE_COUNT; ++i) {
+    aro_res = fva.Read(1 << i);
+    GALOIS_LOG_ASSERT(aro_res.ok());
+    aro_buf = aro_res.ValueOrDie();
+    GALOIS_LOG_ASSERT(!memcmp(ptr, aro_buf->data(), 1 << i));
+    ptr += 1 << i;
+    running += 1 << i;
+  }
 }
 
 static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
@@ -83,7 +100,7 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   // Read
   uint64_t res[num_bytes];
   auto fv = tsuba::FileView();
-  if (auto res = fv.Bind(filename); !res) {
+  if (auto res = fv.Bind(filename, true); !res) {
     GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
   }
   arrow::Result<int64_t> aro_res = fv.Read(READ_PARTIAL, res);
@@ -125,11 +142,11 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
 
   // Read
   auto fv = tsuba::FileView();
-  if (auto res = fv.Bind(filename + "not-a-file"); res) {
+  if (auto res = fv.Bind(filename + "not-a-file", true); res) {
     GALOIS_LOG_FATAL("Bind should have failed!");
   }
 
-  if (auto res = fv.Bind(filename); !res) {
+  if (auto res = fv.Bind(filename, true); !res) {
     GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
   }
 

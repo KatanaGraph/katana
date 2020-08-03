@@ -91,7 +91,7 @@ void from_json(const json& j, RDGMeta& meta) {
 
 galois::Result<RDGMeta> RDGMeta::Make(const std::string& rdg_name) {
   tsuba::FileView fv;
-  if (auto res = fv.Bind(rdg_name); !res) {
+  if (auto res = fv.Bind(rdg_name, true); !res) {
     return res.error();
   }
   auto parse_res = JsonParse<tsuba::RDGMeta>(fv);
@@ -239,7 +239,7 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
 galois::Result<std::shared_ptr<arrow::Table>>
 DoLoadTable(const std::string& expected_name, const std::string& file_path) {
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path); !res) {
+  if (auto res = fv->Bind(file_path, false); !res) {
     return res.error();
   }
 
@@ -306,7 +306,7 @@ DoLoadPartialTable(const std::string& expected_name,
     return tsuba::ErrorCode::InvalidArgument;
   }
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path, 0, 0); !res) {
+  if (auto res = fv->Bind(file_path, 0, 0, false); !res) {
     return res.error();
   }
 
@@ -340,7 +340,7 @@ DoLoadPartialTable(const std::string& expected_name,
     cumulative_bytes += new_bytes;
   }
 
-  if (auto res = fv->Fill(file_offset, cumulative_bytes); !res) {
+  if (auto res = fv->Fill(file_offset, cumulative_bytes, false); !res) {
     return res.error();
   }
 
@@ -667,7 +667,7 @@ MakeProperties(std::vector<std::string>&& values) {
 /// are used to encode lists of values.
 galois::Result<tsuba::RDG> DoReadMetadata(tsuba::RDGHandle handle) {
   auto fv = std::make_shared<tsuba::FileView>();
-  if (auto res = fv->Bind(handle.impl_->partition_path); !res) {
+  if (auto res = fv->Bind(handle.impl_->partition_path, false); !res) {
     return res.error();
   }
 
@@ -935,7 +935,7 @@ galois::Result<void> DoLoad(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
   fs::path t_path{dir};
   t_path.append(rdg->topology_path);
 
-  if (auto res = rdg->topology_file_storage.Bind(t_path.string()); !res) {
+  if (auto res = rdg->topology_file_storage.Bind(t_path.string(), true); !res) {
     return res.error();
   }
   rdg->topology_size = rdg->topology_file_storage.size();
@@ -950,8 +950,9 @@ BindOutIndex(const std::string& topology_path) {
     return res.error();
   }
   tsuba::FileView fv;
-  if (auto res = fv.Bind(topology_path, sizeof(header) + (header.num_nodes *
-                                                          sizeof(uint64_t)));
+  if (auto res =
+          fv.Bind(topology_path,
+                  sizeof(header) + (header.num_nodes * sizeof(uint64_t)), true);
       !res) {
     return res.error();
   }
@@ -972,7 +973,7 @@ galois::Result<void> DoPartialLoad(tsuba::RDGHandle handle,
   t_path.append(rdg->topology_path);
 
   if (auto res = rdg->topology_file_storage.Bind(t_path.string(), topo_off,
-                                                 topo_off + topo_size);
+                                                 topo_off + topo_size, true);
       !res) {
     return res.error();
   }
@@ -1153,7 +1154,7 @@ galois::Result<void> UnbindFromStorage(tsuba::RDG* rdg) {
 
 galois::Result<tsuba::RDGMeta> ParseRDGFile(const std::string& path) {
   tsuba::FileView fv;
-  if (auto res = fv.Bind(path); !res) {
+  if (auto res = fv.Bind(path, true); !res) {
     return res.error();
   }
   return JsonParse<tsuba::RDGMeta>(fv);

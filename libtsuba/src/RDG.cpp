@@ -303,6 +303,33 @@ AddTables(const fs::path& dir,
   return galois::ResultSuccess();
 }
 
+template <typename AddFn>
+galois::Result<void>
+AddPartialTables(const fs::path& dir,
+                 const std::vector<tsuba::PropertyMetadata>& properties,
+                 std::pair<uint64_t, uint64_t> range, AddFn add_fn) {
+  for (const tsuba::PropertyMetadata& properties : properties) {
+    fs::path p_path{dir};
+    p_path.append(properties.path);
+
+    auto load_result = tsuba::internal::LoadPartialTable(
+        properties.name, p_path.string(), range.first,
+        range.second - range.first);
+    if (!load_result) {
+      return load_result.error();
+    }
+
+    std::shared_ptr<arrow::Table> table = load_result.value();
+
+    auto add_result = add_fn(table);
+    if (!add_result) {
+      return add_result.error();
+    }
+  }
+
+  return galois::ResultSuccess();
+}
+
 galois::Result<std::vector<tsuba::PropertyMetadata>>
 DoWriteTable(const arrow::Table& table,
              const std::vector<tsuba::PropertyMetadata>& properties,
@@ -709,11 +736,11 @@ BindOutIndex(const std::string& topology_path) {
   return tsuba::RDGPrefix(std::move(pfx));
 }
 
-galois::Result<void>
-DoPartialLoad(tsuba::RDGHandle handle,
-              [[maybe_unused]] std::pair<uint64_t, uint64_t> node_range,
-              [[maybe_unused]] std::pair<uint64_t, uint64_t> edge_range,
-              uint64_t topo_off, uint64_t topo_size, tsuba::RDG* rdg) {
+galois::Result<void> DoPartialLoad(tsuba::RDGHandle handle,
+                                   std::pair<uint64_t, uint64_t> node_range,
+                                   std::pair<uint64_t, uint64_t> edge_range,
+                                   uint64_t topo_off, uint64_t topo_size,
+                                   tsuba::RDG* rdg) {
 
   fs::path dir = handle.impl_->metadata_dir;
   fs::path t_path{dir};
@@ -726,8 +753,8 @@ DoPartialLoad(tsuba::RDGHandle handle,
   }
   rdg->topology_size = topo_size;
 
-  auto node_result = AddTables(
-      dir, rdg->node_properties,
+  auto node_result = AddPartialTables(
+      dir, rdg->node_properties, node_range,
       [&rdg](const std::shared_ptr<arrow::Table>& table) {
         return AddProperties(table, &rdg->node_table, &rdg->node_properties,
                              /* new_properties = */ false);
@@ -735,8 +762,8 @@ DoPartialLoad(tsuba::RDGHandle handle,
   if (!node_result) {
     return node_result.error();
   }
-  auto edge_result = AddTables(
-      dir, rdg->edge_properties,
+  auto edge_result = AddPartialTables(
+      dir, rdg->edge_properties, edge_range,
       [&rdg](const std::shared_ptr<arrow::Table>& table) {
         return AddProperties(table, &rdg->edge_table, &rdg->edge_properties,
                              /* new_properties = */ false);
@@ -744,15 +771,6 @@ DoPartialLoad(tsuba::RDGHandle handle,
   if (!edge_result) {
     return edge_result.error();
   }
-
-  // slice for now until we support partial parquet reads
-  /* FIXME(thunt) don't slice yet because CUSP code expects full tables on all
-   * nodes
-  auto [edge_begin, edge_end] = edge_range;
-  auto [node_begin, node_end] = node_range;
-  rdg->node_table = rdg->node_table->Slice(node_begin, node_end - node_begin);
-  rdg->edge_table = rdg->edge_table->Slice(edge_begin, edge_end - edge_begin);
-  */
 
   rdg->rdg_dir = handle.impl_->metadata_dir;
   return galois::ResultSuccess();

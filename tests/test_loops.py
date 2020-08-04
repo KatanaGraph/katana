@@ -1,3 +1,4 @@
+import weakref
 from functools import partial
 
 import numpy as np
@@ -102,3 +103,15 @@ def test_obim(threads_1):
     for_each(range(10), partial(f, out), worklist=OrderedByIntegerMetric(metric(out)))
     assert np.allclose(out, np.array([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
     assert order == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
+def test_closure_memory_management():
+    @do_all_operator()
+    def f(x, y):
+        pass
+    a = np.zeros((100,))
+    w = weakref.ref(a)
+    c = f(a)
+    del a
+    assert w() is not None
+    del c
+    assert w() is None

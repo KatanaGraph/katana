@@ -9,7 +9,7 @@ source:
   patches:
 
 build:
-  number: 3
+  number: 4
   script_env:
     - GALOIS_DOCS_OUTPUT
 
@@ -21,7 +21,7 @@ requirements:
     - {{ compiler('cxx') }}
     - galois={{ version }}
     - cython>=0.29.12
-    - numba
+    - numba>=0.50,<1.0
     - pyarrow>=0.17.1,<2.0.0
     - sphinx
   host:
@@ -31,7 +31,7 @@ requirements:
     - {{ compiler('cxx') }}
     - galois={{ version }}
     - cython>=0.29.12
-    - numba
+    - numba>=0.50,<1.0
     - pyarrow>=0.17.1,<2.0.0
   run:
     - python
@@ -40,7 +40,7 @@ requirements:
     # is to use cython in Jupyter notebooks
     - cython>=0.29.12
     - cxx-compiler
-    - numba
+    - numba>=0.50,<1.0
     - pyarrow>=0.17.1,<2.0.0
 
 test:

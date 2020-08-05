@@ -10,6 +10,7 @@ types = [
     pytest.param(np.uint64, id="uint64_t"),
 ]
 
+
 @pytest.mark.parametrize("typ", types)
 def test_InsertBag_simple(typ):
     T = InsertBag[typ]
@@ -27,18 +28,22 @@ def test_InsertBag_simple(typ):
     assert bag.empty()
     assert set(bag) == set()
 
+
 @pytest.mark.parametrize("typ", types)
 def test_InsertBag_parallel(typ):
     T = InsertBag[typ]
     bag = T()
+
     @do_all_operator()
     def f(bag, i):
         bag.push(i)
         bag.push(i)
+
     do_all(range(1000), f(bag), steal=False)
     l = list(bag)
     l.sort()
     assert l == [v for i in range(1000) for v in [i, i]]
+
 
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_simple(typ):
@@ -55,11 +60,13 @@ def test_LargeArray_simple(typ):
         arr[10] = 0
     assert list(arr) == [10, 1, 0, 0, 10]
 
+
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_constructor(typ):
     T = LargeArray[typ]
     arr = T(8, AllocationPolicy.BLOCKED)
     assert len(arr) == 8
+
 
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_realloc(typ):
@@ -69,18 +76,22 @@ def test_LargeArray_realloc(typ):
     with pytest.raises(ValueError):
         arr.allocateInterleaved(10)
 
+
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_parallel(typ):
     T = LargeArray[typ]
     arr = T()
     arr.allocateInterleaved(1000)
+
     @do_all_operator()
     def f(arr, i):
         # TODO: Use __setitem__
         arr.set(i, i)
         arr.set(i, arr.get(i) + 1)
+
     do_all(range(1000), f(arr), steal=False)
     assert list(arr) == list(range(1, 1001))
+
 
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_numpy(typ):
@@ -100,14 +111,17 @@ def test_LargeArray_numpy(typ):
     with pytest.raises(IndexError):
         arr[10] = 0
 
+
 @pytest.mark.parametrize("typ", types)
 def test_LargeArray_numpy_parallel(typ):
     T = LargeArray[typ]
     arr = T()
     arr.allocateInterleaved(1000)
+
     @do_all_operator()
     def f(arr, i):
         arr[i] = i
         arr[i] += 1
+
     do_all(range(1000), f(arr.as_numpy()), steal=False)
     assert list(arr) == list(range(1, 1001))

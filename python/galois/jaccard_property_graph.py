@@ -6,6 +6,7 @@ from .property_graph import PropertyGraph
 from .timer import StatTimer
 from galois.shmem import setActiveThreads
 
+
 @do_all_operator()
 def jaccard_operator(g, n1_neighbors, n1_size, output, n2):
     intersection_size = 0
@@ -30,21 +31,23 @@ def jaccard(g, key_node, property_name):
         n = g.get_edge_dst(e)
         key_neighbors[n] = True
 
-    do_all(g, jaccard_operator(g, key_neighbors, len(g.edges(key_node)), output),
-           steal=True, loop_name="jaccard")
+    do_all(
+        g, jaccard_operator(g, key_neighbors, len(g.edges(key_node)), output), steal=True, loop_name="jaccard",
+    )
 
     g.add_node_property(pyarrow.table({property_name: output}))
+
 
 if __name__ == "__main__":
     import argparse
     from galois.shmem import *
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--baseNode', type=int, default=0)
-    parser.add_argument('--reportNode', type=int, default=1)
-    parser.add_argument('--propertyName', type=str, default="NewProperty")
-    parser.add_argument('--threads', '-t', type=int, default=1)
-    parser.add_argument('input', type=str)
+    parser.add_argument("--baseNode", type=int, default=0)
+    parser.add_argument("--reportNode", type=int, default=1)
+    parser.add_argument("--propertyName", type=str, default="NewProperty")
+    parser.add_argument("--threads", "-t", type=int, default=1)
+    parser.add_argument("input", type=str)
     args = parser.parse_args()
 
     print("Using threads:", setActiveThreads(args.threads))

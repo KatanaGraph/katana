@@ -40,11 +40,13 @@ def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
     dists = create_distance_array(graph, source)
     t = StatTimer("Total SSSP")
     t.start()
-    for_each(range(source, source+1),
-             sssp_operator(graph, dists, graph.get_edge_property(length_property)),
-             worklist=OrderedByIntegerMetric(obim_indexer(shift, dists)),
-             disable_conflict_detection=True,
-             loop_name="SSSP")
+    for_each(
+        range(source, source + 1),
+        sssp_operator(graph, dists, graph.get_edge_property(length_property)),
+        worklist=OrderedByIntegerMetric(obim_indexer(shift, dists)),
+        disable_conflict_detection=True,
+        loop_name="SSSP",
+    )
     t.stop()
     print("Elapsed time: ", t.get(), "milliseconds.")
 
@@ -70,16 +72,23 @@ def verify_sssp(graph: PropertyGraph, source_i: int, property_id: int):
     not_visited = GAccumulator[int](0)
     max_dist = GReduceMax[int]()
 
-    do_all(range(len(chunk_array)),
-           not_visited_operator(graph.num_nodes(), not_visited, chunk_array),
-           loop_name="not_visited_op")
+    do_all(
+        range(len(chunk_array)),
+        not_visited_operator(graph.num_nodes(), not_visited, chunk_array),
+        loop_name="not_visited_op",
+    )
 
     if not_visited.reduce() > 0:
-        print(not_visited.reduce(), " unvisited nodes; this is an error if graph is strongly connected")
+        print(
+            not_visited.reduce(), " unvisited nodes; this is an error if graph is strongly connected",
+        )
 
-    do_all(range(len(chunk_array)),
-           max_dist_operator(graph.num_nodes(), max_dist, chunk_array),
-           steal=True, loop_name="max_dist_operator")
+    do_all(
+        range(len(chunk_array)),
+        max_dist_operator(graph.num_nodes(), max_dist, chunk_array),
+        steal=True,
+        loop_name="max_dist_operator",
+    )
 
     print("Max distance:", max_dist.reduce())
 
@@ -88,14 +97,14 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--startNode', type=int, default=0)
-    parser.add_argument('--propertyName', type=str, default="NewProperty")
-    parser.add_argument('--edgeWeightProperty', type=str, required=True)
-    parser.add_argument('--shift', type=int, default=6)
-    parser.add_argument('--reportNode', type=int, default=1)
-    parser.add_argument('--noverify', action='store_true', default=False)
-    parser.add_argument('--threads', '-t', type=int, default=1)
-    parser.add_argument('input', type=str)
+    parser.add_argument("--startNode", type=int, default=0)
+    parser.add_argument("--propertyName", type=str, default="NewProperty")
+    parser.add_argument("--edgeWeightProperty", type=str, required=True)
+    parser.add_argument("--shift", type=int, default=6)
+    parser.add_argument("--reportNode", type=int, default=1)
+    parser.add_argument("--noverify", action="store_true", default=False)
+    parser.add_argument("--threads", "-t", type=int, default=1)
+    parser.add_argument("input", type=str)
     args = parser.parse_args()
 
     print("Using threads:", setActiveThreads(args.threads))

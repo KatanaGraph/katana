@@ -8,7 +8,7 @@ __all__ = ["atomic_add", "atomic_sub", "atomic_max", "atomic_min"]
 
 
 def atomic_rmw(context, builder, op, arrayty, val, ptr):
-    assert arrayty.aligned # We probably have to have aligned arrays.
+    assert arrayty.aligned  # We probably have to have aligned arrays.
     dataval = context.get_value_as_data(builder, arrayty.dtype, val)
     return builder.atomic_rmw(op, ptr, dataval, "monotonic")
 
@@ -23,6 +23,7 @@ def declare_atomic_array_op(iop, uop, fop):
                     res = out.result
                     if context.can_convert(val, res):
                         return res
+
             return typer
 
         @lower_builtin(func, types.Buffer, types.Any, types.Any)
@@ -44,12 +45,11 @@ def declare_atomic_array_op(iop, uop, fop):
             ary = make_array(aryty)(context, builder, ary)
 
             # First try basic indexing to see if a single array location is denoted.
-            index_types, indices = normalize_indices(context, builder,
-                                                     index_types, indices)
+            index_types, indices = normalize_indices(context, builder, index_types, indices)
             try:
-                dataptr, shapes, strides = \
-                    basic_indexing(context, builder, aryty, ary, index_types, indices,
-                                   boundscheck=context.enable_boundscheck)
+                dataptr, shapes, strides = basic_indexing(
+                    context, builder, aryty, ary, index_types, indices, boundscheck=context.enable_boundscheck,
+                )
             except NotImplementedError:
                 use_fancy_indexing = True
             else:
@@ -69,7 +69,9 @@ def declare_atomic_array_op(iop, uop, fop):
             if op is None:
                 raise TypeError("Atomic operation not supported on " + str(aryty))
             return atomic_rmw(context, builder, op, aryty, val, dataptr)
+
         return func
+
     return decorator
 
 

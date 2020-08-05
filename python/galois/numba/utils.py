@@ -11,9 +11,11 @@ def call_raw_function_pointer(func_ptr, function_type, args, builder: ir.IRBuild
 
 def interpret_numba_wrapper_tables(tables, globals=None):
     from galois.numba.wrappers import SimpleNumbaPointerWrapper
+
     for typ, table in tables:
-        assert hasattr(typ, "address") and hasattr(typ.address, "__get__") and not hasattr(typ.address, "__call__"), \
-            "{}.address does not exist or is not a property.".format(typ)
+        assert (
+            hasattr(typ, "address") and hasattr(typ.address, "__get__") and not hasattr(typ.address, "__call__")
+        ), "{}.address does not exist or is not a property.".format(typ)
         Type = SimpleNumbaPointerWrapper(typ)
         interpret_numba_wrapper_table(Type, table)
         if globals:

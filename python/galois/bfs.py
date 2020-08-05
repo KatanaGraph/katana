@@ -5,14 +5,15 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--startNode', type=int, default=0)
-    parser.add_argument('--reportNode', type=int, default=1)
-    parser.add_argument('--noverify', action='store_true', default=False)
-    parser.add_argument('--threads', '-t', type=int, default=1)
-    parser.add_argument('input', type=str)
+    parser.add_argument("--startNode", type=int, default=0)
+    parser.add_argument("--reportNode", type=int, default=1)
+    parser.add_argument("--noverify", action="store_true", default=False)
+    parser.add_argument("--threads", "-t", type=int, default=1)
+    parser.add_argument("input", type=str)
     args = parser.parse_args()
 
     from galois.shmem import *
+
     print("Using threads:", setActiveThreads(args.threads))
 
     from ._bfs import verify_bfs

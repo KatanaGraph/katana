@@ -14,8 +14,9 @@ from galois.shmem import setActiveThreads
 ################################################
 @do_all_operator()
 def initialize_cc_pull_operator(graph: PropertyGraph, comp_current: np.ndarray, nid):
-    # Initialize each node in its own component 
+    # Initialize each node in its own component
     comp_current[nid] = nid
+
 
 @do_all_operator()
 def cc_pull_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarray, nid):
@@ -26,7 +27,8 @@ def cc_pull_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarra
             comp_current[nid] = comp_current[dst]
             # Indicates that update happened
             changed.update(True)
-            
+
+
 def cc_pull_topo(graph: PropertyGraph, property_name):
     print("Executing Pull algo\n")
     num_nodes = graph.num_nodes()
@@ -35,24 +37,25 @@ def cc_pull_topo(graph: PropertyGraph, property_name):
     timer.start()
     # Stores the component id assignment
     comp_current = np.empty((num_nodes,), dtype=np.uint32)
-    
+
     # Initialize
-    do_all(range(num_nodes),
-               initialize_cc_pull_operator(graph, comp_current),
-               steal=True, loop_name="initialize_cc_pull")
+    do_all(
+        range(num_nodes), initialize_cc_pull_operator(graph, comp_current), steal=True, loop_name="initialize_cc_pull",
+    )
 
     # Execute while component ids are updated
     changed = GReduceLogicalOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()
-        do_all(range(num_nodes),
-               cc_pull_topo_operator(graph, changed, comp_current),
-               steal=True, loop_name="cc_pull_topo")
-        
+        do_all(
+            range(num_nodes), cc_pull_topo_operator(graph, changed, comp_current), steal=True, loop_name="cc_pull_topo",
+        )
+
     timer.stop()
     # Add the component assignment as a new property to the property graph
     graph.add_node_property(pyarrow.table({property_name: comp_current}))
+
 
 ################################################
 ## Topological pull style connencted components
@@ -60,9 +63,10 @@ def cc_pull_topo(graph: PropertyGraph, property_name):
 ################################################
 @do_all_operator()
 def initialize_cc_push_operator(graph: PropertyGraph, comp_current: np.ndarray, comp_old: np.ndarray, nid):
-    # Initialize each node in its own component 
+    # Initialize each node in its own component
     comp_current[nid] = nid
     comp_old[nid] = graph.num_nodes()
+
 
 @do_all_operator()
 def cc_push_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarray, comp_old: np.ndarray, nid):
@@ -86,20 +90,26 @@ def cc_push_topo(graph: PropertyGraph, property_name):
     # Stores the component id assignment
     comp_current = np.empty((num_nodes,), dtype=np.uint32)
     comp_old = np.empty((num_nodes,), dtype=np.uint32)
-    
+
     # Initialize
-    do_all(range(num_nodes),
-               initialize_cc_push_operator(graph, comp_current, comp_old),
-               steal=True, loop_name="initialize_cc_push")
+    do_all(
+        range(num_nodes),
+        initialize_cc_push_operator(graph, comp_current, comp_old),
+        steal=True,
+        loop_name="initialize_cc_push",
+    )
 
     # Execute while component ids are updated
     changed = GReduceLogicalOr()
     changed.update(True)
     while changed.reduce():
         changed.reset()
-        do_all(range(num_nodes),
-               cc_push_topo_operator(graph, changed, comp_current, comp_old),
-               steal=True, loop_name="cc_push_topo")
+        do_all(
+            range(num_nodes),
+            cc_push_topo_operator(graph, changed, comp_current, comp_old),
+            steal=True,
+            loop_name="cc_push_topo",
+        )
 
     timer.stop()
     # Add the component assignment as a new property to the property graph
@@ -112,17 +122,18 @@ def cc_push_topo(graph: PropertyGraph, property_name):
 ################################################
 @do_all_operator()
 def verify_cc_operator(num_components: GAccumulator[int], data, nid):
-    # Component id == node id 
+    # Component id == node id
     if data[nid] == nid:
         num_components.update(1)
+
 
 def verify_cc(graph: PropertyGraph, property_id: int):
     chunk_array = graph.get_node_property(property_id)
     num_components = GAccumulator[int](0)
-    
-    do_all(range(len(chunk_array)),
-           verify_cc_operator(num_components, chunk_array),
-           loop_name="num_components")
+
+    do_all(
+        range(len(chunk_array)), verify_cc_operator(num_components, chunk_array), loop_name="num_components",
+    )
 
     print("Number of components are : ", num_components.reduce())
 
@@ -131,12 +142,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--algoType', type=str, default="push")
-    parser.add_argument('--propertyName', type=str, default="NewProperty")
-    parser.add_argument('--reportNode', type=int, default=1)
-    parser.add_argument('--noverify', action='store_true', default=False)
-    parser.add_argument('--threads', '-t', type=int, default=1)
-    parser.add_argument('input', type=str)
+    parser.add_argument("--algoType", type=str, default="push")
+    parser.add_argument("--propertyName", type=str, default="NewProperty")
+    parser.add_argument("--reportNode", type=int, default=1)
+    parser.add_argument("--noverify", action="store_true", default=False)
+    parser.add_argument("--threads", "-t", type=int, default=1)
+    parser.add_argument("input", type=str)
     args = parser.parse_args()
 
     print("Using threads:", setActiveThreads(args.threads))
@@ -147,7 +158,7 @@ if __name__ == "__main__":
         cc_push_topo(graph, args.propertyName)
     else:
         cc_pull_topo(graph, args.propertyName)
-    
+
     print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
 
     if not args.noverify:

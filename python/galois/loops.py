@@ -4,12 +4,27 @@ import numba
 import numba.core.ccallback
 import numba.types
 
-from ._loops import do_all, for_each, UserContext_numba_type, OrderedByIntegerMetric, UserContext, PerSocketChunkFIFO
+from ._loops import (
+    do_all,
+    for_each,
+    UserContext_numba_type,
+    OrderedByIntegerMetric,
+    UserContext,
+    PerSocketChunkFIFO,
+)
 from .numba.closure import ClosureBuilder, Closure
 from .numba.galois_compiler import OperatorCompiler
 
-__all__ = ["do_all", "do_all_operator", "for_each", "for_each_operator",
-           "obim_metric", "OrderedByIntegerMetric", "UserContext", "PerSocketChunkFIFO"]
+__all__ = [
+    "do_all",
+    "do_all_operator",
+    "for_each",
+    "for_each_operator",
+    "obim_metric",
+    "OrderedByIntegerMetric",
+    "UserContext",
+    "PerSocketChunkFIFO",
+]
 
 
 # Parallel loops
@@ -17,6 +32,7 @@ __all__ = ["do_all", "do_all_operator", "for_each", "for_each_operator",
 # FIXME: Hard coded uint64_t loop variable
 
 do_all_unbound_argument_types = (numba.types.uint64,)
+
 
 def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
     """
@@ -39,15 +55,18 @@ def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
     * The operator may not create new references to arrays or other dynamically allocated values. For example, an
       operator may not add a numpy array to a global list.
     """
+
     def decorator(f):
-        n_args = f.__code__.co_argcount-1
+        n_args = f.__code__.co_argcount - 1
         f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
         builder = wraps(f)(ClosureBuilder(f_jit, unbound_argument_types=do_all_unbound_argument_types, target=target,))
         if n_args == 0:
             return builder()
         else:
             return builder
+
     return decorator
+
 
 def is_do_all_operator_cfunc(v):
     try:
@@ -55,11 +74,14 @@ def is_do_all_operator_cfunc(v):
     except AttributeError:
         return False
 
+
 def is_do_all_operator_closure(v):
     return isinstance(v, Closure) and v.unbound_argument_types == do_all_unbound_argument_types
 
+
 # FIXME: Hard coded uint64_t loop variable
 for_each_unbound_argument_types = (numba.types.uint64, UserContext_numba_type)
+
 
 def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
     """
@@ -82,15 +104,20 @@ def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
     * The operator may not create new references to arrays or other dynamically allocated values. For example, an
       operator may not add a numpy array to a global list.
     """
+
     def decorator(f):
-        n_args = f.__code__.co_argcount-2
+        n_args = f.__code__.co_argcount - 2
         f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, unbound_argument_types=for_each_unbound_argument_types, target=target))
+        builder = wraps(f)(
+            ClosureBuilder(f_jit, unbound_argument_types=for_each_unbound_argument_types, target=target,)
+        )
         if n_args == 0:
             return builder()
         else:
             return builder
+
     return decorator
+
 
 def is_for_each_operator_cfunc(v):
     try:
@@ -98,10 +125,13 @@ def is_for_each_operator_cfunc(v):
     except AttributeError:
         return False
 
+
 def is_for_each_operator_closure(v):
     return isinstance(v, Closure) and v.unbound_argument_types == for_each_unbound_argument_types
 
+
 # Ordered By Integer Metric
+
 
 def obim_metric(typ=None, nopython=True, target="cpu", **kws):
     """
@@ -115,15 +145,25 @@ def obim_metric(typ=None, nopython=True, target="cpu", **kws):
     * The metric may not create new references to arrays or other dynamically allocated values. For example, a
       metric may not add a numpy array to a global list.
     """
+
     def decorator(f):
-        n_args = f.__code__.co_argcount-1
+        n_args = f.__code__.co_argcount - 1
         f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, return_type=numba.types.int64, unbound_argument_types=do_all_unbound_argument_types, target=target))
+        builder = wraps(f)(
+            ClosureBuilder(
+                f_jit,
+                return_type=numba.types.int64,
+                unbound_argument_types=do_all_unbound_argument_types,
+                target=target,
+            )
+        )
         if n_args == 0:
             return builder()
         else:
             return builder
+
     return decorator
+
 
 def is_obim_metric_cfunc(v):
     try:
@@ -131,8 +171,13 @@ def is_obim_metric_cfunc(v):
     except AttributeError:
         return False
 
+
 def is_obim_metric_closure(v):
-    return isinstance(v, Closure) and v.return_type == numba.types.int64 and v.unbound_argument_types == do_all_unbound_argument_types
+    return (
+        isinstance(v, Closure)
+        and v.return_type == numba.types.int64
+        and v.unbound_argument_types == do_all_unbound_argument_types
+    )
 
 
 # Import the numba wrappers people are likely to need.

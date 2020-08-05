@@ -6,6 +6,7 @@ from galois.example_utils import get_input
 @pytest.fixture
 def property_graph():
     from galois.property_graph import PropertyGraph
+
     g = PropertyGraph(get_input("propertygraphs/ldbc_003/meta"))
     return g
 
@@ -13,6 +14,7 @@ def property_graph():
 @pytest.fixture
 def threads_1():
     from galois.shmem import setActiveThreads
+
     setActiveThreads(1)
     return True
 
@@ -20,6 +22,7 @@ def threads_1():
 @pytest.fixture(autouse=True)
 def threads_default():
     from galois.shmem import setActiveThreads
+
     setActiveThreads(4)
     return True
 
@@ -27,5 +30,6 @@ def threads_default():
 @pytest.fixture
 def threads_many():
     from galois.shmem import setActiveThreads
+
     setActiveThreads(16)
     return True

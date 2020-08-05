@@ -2,6 +2,7 @@ from IPython.core.magic import Magics, magics_class, cell_magic
 
 import numpy
 
+
 @magics_class
 class GaloisMagics(Magics):
     @cell_magic
@@ -12,6 +13,8 @@ class GaloisMagics(Magics):
         header = """
 # distutils: extra_link_args=["-lgalois_shmem"]
 # distutils: extra_compile_args=["-I{}"]
-""".format(numpy.get_include())
+""".format(
+            numpy.get_include()
+        )
         cell = header + cell
         return cython_magic(line, cell)

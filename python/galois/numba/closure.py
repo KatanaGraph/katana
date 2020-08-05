@@ -18,6 +18,7 @@ class Closure:
     A closure containing a native function pointer and the environment needed to invoke it. These closures are
     used by galois to specify operators.
     """
+
     def __init__(self, func, userdata, return_type, unbound_argument_types, captured=()):
         """
         :param func: The function to of this closure. Must have an address attribute returning a function pointer as an int.
@@ -51,6 +52,7 @@ class _ClosureInstance:
     """
     A closure structure and wrapper compiled for specific types.
     """
+
     def __init__(self, func, return_type, bound_args, unbound_args, target):
         Environment = self._build_environment(bound_args)
         store_struct = self._build_store_struct(Environment)
@@ -90,10 +92,10 @@ class Environment():
         exec_glbls["cfunc"] = cfunc
         exec_glbls["types"] = types
         exec_glbls["OperatorCompiler"] = OperatorCompiler
-        unbound_pass_args = "" if not unbound_args else ", ".join(
-            f"unbound_arg{i}" for i, t in enumerate(unbound_args)) + ","
-        extract_env = "" if not bound_args else ", ".join(
-            f"userdata.arg{i}" for i, t in enumerate(bound_args)) + ","
+        unbound_pass_args = (
+            "" if not unbound_args else ", ".join(f"unbound_arg{i}" for i, t in enumerate(unbound_args)) + ","
+        )
+        extract_env = "" if not bound_args else ", ".join(f"userdata.arg{i}" for i, t in enumerate(bound_args)) + ","
         src = f"""
 @cfunc(return_type(*unbound_args, types.int64), nopython=True, nogil=True, cache=False, pipeline_class=OperatorCompiler)
 def wrapper({unbound_pass_args} userdata):
@@ -107,6 +109,7 @@ def wrapper({unbound_pass_args} userdata):
         """
         Construct a numba builtin function which takes a pointer (passed as int64) and loads a jitclass from it.
         """
+
         def load_struct(t):
             raise NotImplementedError("Not callable from Python")
 
@@ -136,6 +139,7 @@ def wrapper({unbound_pass_args} userdata):
         jitclass into the pointer. This is implemented using a jit function and a numba builtin. The buffer must be
         two pointers in size.
         """
+
         def store_struct(s, t):
             raise NotImplementedError("Not callable from Python")
 
@@ -167,6 +171,7 @@ class ClosureBuilder:
 
     This object manages a cache of compiled closures structures and wrappers (as _ClosureInstance objects).
     """
+
     def __init__(self, func, *, return_type=types.void, unbound_argument_types, target="cpu"):
         self._underlying_function = func
         self._instance_cache = {}
@@ -179,8 +184,13 @@ class ClosureBuilder:
         if key in self._instance_cache:
             return self._instance_cache[key]
         else:
-            inst = _ClosureInstance(self._underlying_function, self._return_type, bound_args,
-                                    unbound_args=self._unbound_argument_types, target=self._target)
+            inst = _ClosureInstance(
+                self._underlying_function,
+                self._return_type,
+                bound_args,
+                unbound_args=self._unbound_argument_types,
+                target=self._target,
+            )
             self._instance_cache[key] = inst
             return inst
 
@@ -191,8 +201,9 @@ class ClosureBuilder:
         env_ptr = ctypes.addressof(env)
         env_struct = inst.Environment(*args)
         inst.store_struct(env_struct, env_ptr)
-        closure = Closure(inst.wrapper, env, self._return_type, self._unbound_argument_types,
-                          captured=(env_struct, args))
+        closure = Closure(
+            inst.wrapper, env, self._return_type, self._unbound_argument_types, captured=(env_struct, args),
+        )
         return closure
 
     def __str__(self):

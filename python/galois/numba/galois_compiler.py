@@ -24,13 +24,9 @@ class GaloisCompiler(CompilerBase):
         if not self.state.flags.force_pyobject:
             pms.append(DefaultPassBuilder.define_nopython_pipeline(self.state))
         if self.state.status.can_fallback or self.state.flags.force_pyobject:
-            pms.append(
-                DefaultPassBuilder.define_objectmode_pipeline(self.state)
-            )
+            pms.append(DefaultPassBuilder.define_objectmode_pipeline(self.state))
         if self.state.status.can_giveup:
-            pms.append(
-                DefaultPassBuilder.define_interpreted_pipeline(self.state)
-            )
+            pms.append(DefaultPassBuilder.define_interpreted_pipeline(self.state))
         return pms
 
 
@@ -75,6 +71,7 @@ def cfunc(sig, locals={}, cache=False, pipeline_class=compiler.Compiler, **optio
 
     def wrapper(func):
         from numba.core.ccallback import CFunc
+
         res = CFunc(func, sig, locals=locals, options=options, pipeline_class=pipeline_class)
         if cache:
             res.enable_caching()

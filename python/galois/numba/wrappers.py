@@ -5,8 +5,16 @@ import numba.core.ccallback
 import numba.types
 from llvmlite import ir
 from numba.core import cgutils, imputils
-from numba.extending import get_cython_function_address, typeof_impl, overload_method, models, register_model, \
-    make_attribute_wrapper, unbox, NativeValue
+from numba.extending import (
+    get_cython_function_address,
+    typeof_impl,
+    overload_method,
+    models,
+    register_model,
+    make_attribute_wrapper,
+    unbox,
+    NativeValue,
+)
 
 from .utils import call_raw_function_pointer
 
@@ -20,7 +28,7 @@ def get_cython_function_address_with_defaults(full_function_name, default_module
         i = full_function_name.rfind(".")
         if i >= 0:
             module_name = full_function_name[:i]
-            function_name = full_function_name[i+1:]
+            function_name = full_function_name[i + 1 :]
         else:
             function_name = full_function_name
     return get_cython_function_address(module_name or default_module_name, function_name or default_function_name)
@@ -29,6 +37,7 @@ def get_cython_function_address_with_defaults(full_function_name, default_module
 class NumbaPointerWrapper(metaclass=ABCMeta):
     def __init__(self, orig_typ, override_module_name=None):
         _logger.debug("NumbaPointerWrapper: %r, %r", orig_typ, override_module_name)
+
         class Type(numba.types.Type):
             def __init__(self):
                 super(Type, self).__init__(name=orig_typ.__name__)
@@ -42,10 +51,10 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         @register_model(Type)
         class Model_(models.StructModel):
             def __init__(self, dmm, fe_type):
-                members = [('ptr', numba.types.voidptr)]
+                members = [("ptr", numba.types.voidptr)]
                 models.StructModel.__init__(self, dmm, fe_type, members)
 
-        make_attribute_wrapper(Type, 'ptr', 'ptr')
+        make_attribute_wrapper(Type, "ptr", "ptr")
 
         @imputils.lower_constant(Type)
         def constant_(context, builder, ty, pyval):
@@ -62,16 +71,29 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
 
     def register_method(self, func_name, typ, cython_func_name=None, addr=None):
         addr_found = get_cython_function_address_with_defaults(
-            cython_func_name, self.override_module_name, self.type_name + "_" + func_name)
+            cython_func_name, self.override_module_name, self.type_name + "_" + func_name,
+        )
         if addr:
             assert addr == addr_found
         func = typ(addr_found)
-        _logger.debug("%r.register_method: %r, %r: %r%r, %x, %r", self, func_name, func, func.restype, func.argtypes, addr_found, cython_func_name)
+        _logger.debug(
+            "%r.register_method: %r, %r: %r%r, %x, %r",
+            self,
+            func_name,
+            func,
+            func.restype,
+            func.argtypes,
+            addr_found,
+            cython_func_name,
+        )
+
         @overload_method(self.Type, func_name)
         def overload(v, *args):
             def impl(v, *args):
                 return func(v.ptr, *args)
+
             return impl
+
         overload.__name__ = func_name
         return overload
 
@@ -106,10 +128,12 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
 
         try:
             addr_func_c = get_cython_function_address_with_defaults(
-                addr_func_name, self.override_module_name, self.type_name + "_get_address")
+                addr_func_name, self.override_module_name, self.type_name + "_get_address",
+            )
         except ValueError:
             addr_func_c = get_cython_function_address_with_defaults(
-                addr_func_name, self.override_module_name, self.type_name + "_get_address_c")
+                addr_func_name, self.override_module_name, self.type_name + "_get_address_c",
+            )
 
         @unbox(self.Type)
         def unbox_(typ, obj, c):
@@ -118,7 +142,8 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
                 addr_func_c,
                 ir.FunctionType(ir.PointerType(ir.IntType(8)), (ir.PointerType(ir.IntType(8)),)),
                 (obj,),
-                c.builder)
+                c.builder,
+            )
             return NativeValue(ctx._getvalue())
 
         self.addr_func = addr_func

@@ -90,6 +90,6 @@ _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
 #define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS
 #endif
 
-#endif
-
 #cmakedefine GALOIS_MONGOC_FOUND
+
+#endif

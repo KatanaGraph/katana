@@ -1494,6 +1494,9 @@ void galois::AddLabel(std::shared_ptr<arrow::BooleanBuilder> builder,
 
 galois::GraphComponents
 galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
+  builder.topology_builder.out_dests.resize(
+      builder.edges, std::numeric_limits<uint32_t>::max());
+
   if (!builder.topology_builder.sources_intermediate.empty() ||
       !builder.topology_builder.destinations_intermediate.empty()) {
     ResolveIntermediateIDs(&builder);
@@ -1538,25 +1541,25 @@ galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
   // build topology
   auto topology = std::make_shared<galois::graphs::GraphTopology>();
   arrow::Status st;
-  std::shared_ptr<arrow::UInt64Builder> topologyIndicesBuilder =
+  std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
-  st = topologyIndicesBuilder->AppendValues(
+  st = topology_indices_builder->AppendValues(
       builder.topology_builder.out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology");
   }
-  std::shared_ptr<arrow::UInt32Builder> topologyDestsBuilder =
+  std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
-  st = topologyDestsBuilder->AppendValues(builder.topology_builder.out_dests);
+  st = topology_dests_builder->AppendValues(builder.topology_builder.out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology");
   }
 
-  st = topologyIndicesBuilder->Finish(&topology->out_indices);
+  st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology");
   }
-  st = topologyDestsBuilder->Finish(&topology->out_dests);
+  st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building arrow array for topology");
   }
@@ -1573,7 +1576,7 @@ galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
                                  final_edge_table, final_type_table, topology};
 }
 
-/// convertToPropertyGraphAndWrite formally builds katana form via
+/// WritePropertyGraph formally builds katana form via
 /// PropertyFileGraph from imported components and writes the result to target
 /// directory
 ///

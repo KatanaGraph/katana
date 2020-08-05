@@ -83,6 +83,11 @@ add_executable(graph-properties-convert graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
+
+if(mongoc-1.0_FOUND)
+  target_link_libraries(graph-properties-convert PRIVATE mongo::mongoc_shared)
+endif()
+
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets
   DESTINATION "${CMAKE_INSTALL_BINDIR}"

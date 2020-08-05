@@ -24,8 +24,6 @@
 #include <arrow/array/builder_binary.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
-#include <bson/bson.h>
-#include <mongoc/mongoc.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
@@ -466,11 +464,11 @@ void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
                                              bson_iter_key_len(&iter));
 
         // since all edge cases have been checked, we can add this property
-        auto keyIter = builder->edge_properties.keys.find(elt_name);
+        auto key_iter = builder->edge_properties.keys.find(elt_name);
         size_t index;
         // if an entry for the key does not already exist, make an
         // entry for it
-        if (keyIter == builder->edge_properties.keys.end()) {
+        if (key_iter == builder->edge_properties.keys.end()) {
           auto key = ProcessElement(elt, elt_name);
           if (key.type == ImportDataType::kUnsupported) {
             std::cout << "elt not type not supported\n";
@@ -478,7 +476,7 @@ void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
           }
           index = galois::AddBuilder(&builder->edge_properties, std::move(key));
         } else {
-          index = keyIter->second;
+          index = key_iter->second;
         }
         galois::AddValue(builder->edge_properties.builders[index],
                          &builder->edge_properties.chunks[index], properties,
@@ -497,100 +495,9 @@ void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
   }
 }
 
-// for now only handle arrays and data all of same type
-void HandleEdgeDocumentMongoDB(GraphState* builder,
-                               WriterProperties* properties, const bson_t* doc,
-                               const std::string& collection_name) {
-  bool found_source = false;
-  std::string src;
-  std::string dest;
-
-  bson_iter_t iter;
-  if (bson_iter_init(&iter, doc)) {
-    // handle document
-    while (bson_iter_next(&iter)) {
-      const bson_value_t* elt = bson_iter_value(&iter);
-      auto name = std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
-
-      // initialize new node
-      if (name == std::string("_id")) {
-        auto oid = ExtractOid(iter);
-        builder->topology_builder.edge_ids.insert(oid);
-        continue;
-      }
-      // handle src and destination node IDs
-      if (elt->value_type == BSON_TYPE_OID) {
-        if (!found_source) {
-          src          = ExtractOid(iter);
-          found_source = true;
-        } else {
-          dest = ExtractOid(iter);
-        }
-        continue;
-      }
-
-      // since all edge cases have been checked, we can add this property
-      auto keyIter = builder->edge_properties.keys.find(name);
-      size_t index;
-      // if an entry for the key does not already exist, make an
-      // entry for it
-      if (keyIter == builder->edge_properties.keys.end()) {
-        auto key = ProcessElement(elt, name);
-        if (key.type == ImportDataType::kUnsupported) {
-          std::cout << "elt not type not supported\n";
-          continue;
-        }
-        index = galois::AddBuilder(&builder->edge_properties, std::move(key));
-      } else {
-        index = keyIter->second;
-      }
-      galois::AddValue(builder->edge_properties.builders[index],
-                       &builder->edge_properties.chunks[index], properties,
-                       builder->edges, [&]() {
-                         AppendValue(builder->edge_properties.builders[index],
-                                     elt);
-                       });
-
-      if (elt->value_type == BSON_TYPE_DOCUMENT) {
-        std::string prefix = name + std::string(".");
-        HandleEmbeddedEdgeStruct(builder, properties, bson_iter_value(&iter),
-                                 prefix);
-      }
-    }
-  }
-
-  // add type
-  auto entry = builder->edge_types.keys.find(collection_name);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->edge_types.keys.end()) {
-    LabelRule rule{collection_name};
-    index = galois::AddLabelBuilder(&builder->edge_types, std::move(rule));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->edge_types.builders[index],
-                   &builder->edge_types.chunks[index], properties,
-                   builder->edges);
-
-  // handle topology requirements
-  builder->topology_builder.sources_intermediate.push_back(src);
-  builder->topology_builder.sources.push_back(
-      std::numeric_limits<uint32_t>::max());
-  builder->topology_builder.destinations_intermediate.push_back(dest);
-  builder->topology_builder.destinations.push_back(
-      std::numeric_limits<uint32_t>::max());
-
-  builder->edges++;
-}
-
 /****************************************/
 /* MongoDB functions for handling nodes */
 /****************************************/
-
-void HandleNodeDocumentMongoDB(GraphState* builder,
-                               WriterProperties* properties, const bson_t* doc,
-                               const std::string& collection_name);
 
 void HandleEmbeddedDocuments(
     GraphState* builder, WriterProperties* properties,
@@ -608,7 +515,7 @@ void HandleEmbeddedDocuments(
                 static_cast<uint32_t>(
                     builder->topology_builder.node_indexes.size()),
                 edge_type);
-        HandleNodeDocumentMongoDB(builder, properties, &doc, name);
+        galois::HandleNodeDocumentMongoDB(builder, properties, &doc, name);
       }
     } else {
       bson_t array;
@@ -627,7 +534,8 @@ void HandleEmbeddedDocuments(
                         static_cast<uint32_t>(
                             builder->topology_builder.node_indexes.size()),
                         name);
-                HandleNodeDocumentMongoDB(builder, properties, &doc, name);
+                galois::HandleNodeDocumentMongoDB(builder, properties, &doc,
+                                                  name);
               }
             }
           }
@@ -703,8 +611,7 @@ void HandleEmbeddedNodeStruct(
       // handle document
       while (bson_iter_next(&iter)) {
         const bson_value_t* elt = bson_iter_value(&iter);
-        auto struct_name =
-            std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
+        std::string struct_name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
         auto elt_name = prefix + struct_name;
 
         if (HandleNonPropertyNodeElement(builder, properties, docs, struct_name,
@@ -713,11 +620,11 @@ void HandleEmbeddedNodeStruct(
         }
 
         // since all edge cases have been checked, we can add this property
-        auto keyIter = builder->node_properties.keys.find(elt_name);
+        auto key_iter = builder->node_properties.keys.find(elt_name);
         size_t index;
         // if an entry for the key does not already exist, make an
         // entry for it
-        if (keyIter == builder->node_properties.keys.end()) {
+        if (key_iter == builder->node_properties.keys.end()) {
           auto key = ProcessElement(elt, elt_name);
           if (key.type == ImportDataType::kUnsupported) {
             std::cout << "elt not type not supported\n";
@@ -725,7 +632,7 @@ void HandleEmbeddedNodeStruct(
           }
           index = galois::AddBuilder(&builder->node_properties, std::move(key));
         } else {
-          index = keyIter->second;
+          index = key_iter->second;
         }
         galois::AddValue(builder->node_properties.builders[index],
                          &builder->node_properties.chunks[index], properties,
@@ -742,75 +649,6 @@ void HandleEmbeddedNodeStruct(
       }
     }
   }
-}
-
-// for now only handle arrays and data all of same type
-void HandleNodeDocumentMongoDB(GraphState* builder,
-                               WriterProperties* properties, const bson_t* doc,
-                               const std::string& collection_name) {
-  auto node_index = builder->topology_builder.node_indexes.size();
-  builder->topology_builder.out_indices.push_back(0);
-  std::vector<std::pair<std::string, bson_value_t_wrapper>> docs;
-
-  bson_iter_t iter;
-  if (bson_iter_init(&iter, doc)) {
-    // handle document
-    while (bson_iter_next(&iter)) {
-      const bson_value_t* elt = bson_iter_value(&iter);
-      auto name = std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
-      if (HandleNonPropertyNodeElement(builder, properties, &docs, name, elt,
-                                       node_index, collection_name)) {
-        continue;
-      }
-
-      // since all edge cases have been checked, we can add this property
-      auto keyIter = builder->node_properties.keys.find(name);
-      size_t index;
-      // if an entry for the key does not already exist, make an
-      // entry for it
-      if (keyIter == builder->node_properties.keys.end()) {
-        auto key = ProcessElement(elt, name);
-        if (key.type == ImportDataType::kUnsupported) {
-          std::cout << "elt not type not supported\n";
-          continue;
-        }
-        index = galois::AddBuilder(&builder->node_properties, std::move(key));
-      } else {
-        index = keyIter->second;
-      }
-      galois::AddValue(builder->node_properties.builders[index],
-                       &builder->node_properties.chunks[index], properties,
-                       builder->nodes, [&]() {
-                         AppendValue(builder->node_properties.builders[index],
-                                     elt);
-                       });
-
-      if (elt->value_type == BSON_TYPE_DOCUMENT) {
-        std::string prefix = name + std::string(".");
-        HandleEmbeddedNodeStruct(builder, properties, &docs, name, elt, prefix,
-                                 node_index);
-      }
-    }
-  }
-
-  // add label
-  auto entry = builder->node_labels.keys.find(collection_name);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->node_labels.keys.end()) {
-    LabelRule rule{collection_name};
-    index = galois::AddLabelBuilder(&builder->node_labels, std::move(rule));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->node_labels.builders[index],
-                   &builder->node_labels.chunks[index], properties,
-                   builder->nodes);
-
-  builder->nodes++;
-  // deal with embedded documents
-  HandleEmbeddedDocuments(builder, properties, docs, collection_name,
-                          node_index);
 }
 
 /**********************************/
@@ -895,7 +733,7 @@ bool CheckIfDocumentIsEdge(const bson_t* doc) {
   // handle document
   while (bson_iter_next(&iter)) {
     const bson_value_t* elt = bson_iter_value(&iter);
-    auto name = std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
+    std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
 
     if (name == std::string("_id")) {
       continue;
@@ -978,7 +816,7 @@ void ExtractDocumentFields(const bson_t* doc, CollectionFields* fields,
   // handle document
   while (bson_iter_next(&iter)) {
     const bson_value_t* elt = bson_iter_value(&iter);
-    auto name = std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
+    std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
 
     if (name == std::string("_id")) {
       continue;
@@ -1304,6 +1142,164 @@ GetUserInput(mongoc_database_t* database,
 
 } // end of unnamed namespace
 
+// for now only handle arrays and data all of same type
+void galois::HandleEdgeDocumentMongoDB(GraphState* builder,
+                                       WriterProperties* properties,
+                                       const bson_t* doc,
+                                       const std::string& collection_name) {
+  bool found_source = false;
+  std::string src;
+  std::string dest;
+
+  bson_iter_t iter;
+  if (bson_iter_init(&iter, doc)) {
+    // handle document
+    while (bson_iter_next(&iter)) {
+      const bson_value_t* elt = bson_iter_value(&iter);
+      std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
+
+      // initialize new node
+      if (name == std::string("_id")) {
+        auto oid = ExtractOid(iter);
+        builder->topology_builder.edge_ids.insert(oid);
+        continue;
+      }
+      // handle src and destination node IDs
+      if (elt->value_type == BSON_TYPE_OID) {
+        if (!found_source) {
+          src          = ExtractOid(iter);
+          found_source = true;
+        } else {
+          dest = ExtractOid(iter);
+        }
+        continue;
+      }
+
+      // since all edge cases have been checked, we can add this property
+      auto key_iter = builder->edge_properties.keys.find(name);
+      size_t index;
+      // if an entry for the key does not already exist, make an
+      // entry for it
+      if (key_iter == builder->edge_properties.keys.end()) {
+        auto key = ProcessElement(elt, name);
+        if (key.type == ImportDataType::kUnsupported) {
+          std::cout << "elt not type not supported\n";
+          continue;
+        }
+        index = galois::AddBuilder(&builder->edge_properties, std::move(key));
+      } else {
+        index = key_iter->second;
+      }
+      galois::AddValue(builder->edge_properties.builders[index],
+                       &builder->edge_properties.chunks[index], properties,
+                       builder->edges, [&]() {
+                         AppendValue(builder->edge_properties.builders[index],
+                                     elt);
+                       });
+
+      if (elt->value_type == BSON_TYPE_DOCUMENT) {
+        std::string prefix = name + std::string(".");
+        HandleEmbeddedEdgeStruct(builder, properties, bson_iter_value(&iter),
+                                 prefix);
+      }
+    }
+  }
+
+  // add type
+  auto entry = builder->edge_types.keys.find(collection_name);
+  size_t index;
+  // if type does not already exist, add a column
+  if (entry == builder->edge_types.keys.end()) {
+    LabelRule rule{collection_name};
+    index = galois::AddLabelBuilder(&builder->edge_types, std::move(rule));
+  } else {
+    index = entry->second;
+  }
+  galois::AddLabel(builder->edge_types.builders[index],
+                   &builder->edge_types.chunks[index], properties,
+                   builder->edges);
+
+  // handle topology requirements
+  builder->topology_builder.sources_intermediate.push_back(src);
+  builder->topology_builder.sources.push_back(
+      std::numeric_limits<uint32_t>::max());
+  builder->topology_builder.destinations_intermediate.push_back(dest);
+  builder->topology_builder.destinations.push_back(
+      std::numeric_limits<uint32_t>::max());
+
+  builder->edges++;
+}
+
+// for now only handle arrays and data all of same type
+void galois::HandleNodeDocumentMongoDB(GraphState* builder,
+                                       WriterProperties* properties,
+                                       const bson_t* doc,
+                                       const std::string& collection_name) {
+  auto node_index = builder->topology_builder.node_indexes.size();
+  builder->topology_builder.out_indices.push_back(0);
+  std::vector<std::pair<std::string, bson_value_t_wrapper>> docs;
+
+  bson_iter_t iter;
+  if (bson_iter_init(&iter, doc)) {
+    // handle document
+    while (bson_iter_next(&iter)) {
+      const bson_value_t* elt = bson_iter_value(&iter);
+      std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
+      if (HandleNonPropertyNodeElement(builder, properties, &docs, name, elt,
+                                       node_index, collection_name)) {
+        continue;
+      }
+
+      // since all edge cases have been checked, we can add this property
+      auto key_iter = builder->node_properties.keys.find(name);
+      size_t index;
+      // if an entry for the key does not already exist, make an
+      // entry for it
+      if (key_iter == builder->node_properties.keys.end()) {
+        auto key = ProcessElement(elt, name);
+        if (key.type == ImportDataType::kUnsupported) {
+          std::cout << "elt not type not supported\n";
+          continue;
+        }
+        index = galois::AddBuilder(&builder->node_properties, std::move(key));
+      } else {
+        index = key_iter->second;
+      }
+      galois::AddValue(builder->node_properties.builders[index],
+                       &builder->node_properties.chunks[index], properties,
+                       builder->nodes, [&]() {
+                         AppendValue(builder->node_properties.builders[index],
+                                     elt);
+                       });
+
+      if (elt->value_type == BSON_TYPE_DOCUMENT) {
+        std::string prefix = name + std::string(".");
+        HandleEmbeddedNodeStruct(builder, properties, &docs, name, elt, prefix,
+                                 node_index);
+      }
+    }
+  }
+
+  // add label
+  auto entry = builder->node_labels.keys.find(collection_name);
+  size_t index;
+  // if type does not already exist, add a column
+  if (entry == builder->node_labels.keys.end()) {
+    LabelRule rule{collection_name};
+    index = galois::AddLabelBuilder(&builder->node_labels, std::move(rule));
+  } else {
+    index = entry->second;
+  }
+  galois::AddLabel(builder->node_labels.builders[index],
+                   &builder->node_labels.chunks[index], properties,
+                   builder->nodes);
+
+  builder->nodes++;
+  // deal with embedded documents
+  HandleEmbeddedDocuments(builder, properties, docs, collection_name,
+                          node_index);
+}
+
 void galois::GenerateMappingMongoDB(const std::string& db_name,
                                     const std::string& outfile) {
   const char* uri_string = "mongodb://localhost:27017";
@@ -1355,17 +1351,17 @@ galois::GraphComponents galois::ConvertMongoDB(const std::string& db_name,
   // add all edges first
   for (auto coll_name : edges) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      HandleEdgeDocumentMongoDB(&builder, &properties, document, coll_name);
+      galois::HandleEdgeDocumentMongoDB(&builder, &properties, document,
+                                        coll_name);
     });
   }
   // then add all nodes
   for (auto coll_name : nodes) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      HandleNodeDocumentMongoDB(&builder, &properties, document, coll_name);
+      galois::HandleNodeDocumentMongoDB(&builder, &properties, document,
+                                        coll_name);
     });
   }
-  builder.topology_builder.out_dests.resize(
-      builder.edges, std::numeric_limits<uint32_t>::max());
 
   mongoc_client_destroy(client);
   mongoc_cleanup();

@@ -693,9 +693,6 @@ void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
   builder->edge_properties.keys.clear();
   builder->edge_types.keys.clear();
   std::cout << "Finished processing edges;";
-
-  builder->topology_builder.out_dests.resize(
-      builder->edges, std::numeric_limits<uint32_t>::max());
 }
 
 } // end of unnamed namespace

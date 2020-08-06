@@ -197,7 +197,7 @@ int main() {
   std::string basic_node1 = "match (a) return a;";
   cc.Compile(basic_node1.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   AssertQueryNodeEdgeCount(cc, 1, 0);
   AssertBasicReturn(cc);
 
@@ -206,7 +206,7 @@ int main() {
   std::string basic_node2 = "match (b:Test) return a;";
   cc.Compile(basic_node2.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "Test", "b", ""});
+             galois::CompilerQueryNode{0, "Test", "b", ""});
   AssertQueryNodeEdgeCount(cc, 1, 0);
   AssertBasicReturn(cc);
 
@@ -215,7 +215,7 @@ int main() {
   std::string basic_node3 = "match (a:Test:Test2) return a;";
   cc.Compile(basic_node3.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "Test;Test2", "a", ""});
+             galois::CompilerQueryNode{0, "Test;Test2", "a", ""});
   AssertQueryNodeEdgeCount(cc, 1, 0);
   AssertBasicReturn(cc);
 
@@ -224,7 +224,7 @@ int main() {
   std::string basic_node4 = "match path=(a:Test:Test2) return a;";
   cc.Compile(basic_node4.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "Test;Test2", "a", "path"});
+             galois::CompilerQueryNode{0, "Test;Test2", "a", "path"});
   AssertQueryNodeEdgeCount(cc, 1, 0);
   AssertBasicReturn(cc);
 
@@ -237,8 +237,8 @@ int main() {
   cc.Compile(basic_edge1.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"0", "any", "", ""},
-                 galois::CompilerQueryNode{"1", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   AssertQueryNodeEdgeCount(cc, 0, 1);
   AssertBasicReturn(cc, "e");
@@ -249,8 +249,8 @@ int main() {
   cc.Compile(basic_edge2.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "SOME", galois::CompilerQueryNode{"0", "Test", "a", ""},
-                 galois::CompilerQueryNode{"1", "any", "k", ""},
+                 "SOME", galois::CompilerQueryNode{0, "Test", "a", ""},
+                 galois::CompilerQueryNode{1, "any", "k", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   AssertQueryNodeEdgeCount(cc, 0, 1);
   AssertBasicReturn(cc, "e");
@@ -261,8 +261,8 @@ int main() {
   cc.Compile(basic_edge3.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "SOME", galois::CompilerQueryNode{"0", "Test", "a", ""},
-                 galois::CompilerQueryNode{"1", "any", "k", ""},
+                 "SOME", galois::CompilerQueryNode{0, "Test", "a", ""},
+                 galois::CompilerQueryNode{1, "any", "k", ""},
                  galois::UNDIRECTED_EDGE, "e", ""});
   AssertQueryNodeEdgeCount(cc, 0, 1);
   AssertBasicReturn(cc, "e");
@@ -274,8 +274,8 @@ int main() {
   cc.Compile(basic_edge4.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "SOME", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"0", "Test", "a", ""},
+                 "SOME", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{0, "Test", "a", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   AssertQueryNodeEdgeCount(cc, 0, 1);
   AssertBasicReturn(cc, "e");
@@ -286,8 +286,8 @@ int main() {
   cc.Compile(basic_edge5.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "SOME", galois::CompilerQueryNode{"1", "any", "k", "p"},
-                 galois::CompilerQueryNode{"0", "Test", "a", "p"},
+                 "SOME", galois::CompilerQueryNode{1, "any", "k", "p"},
+                 galois::CompilerQueryNode{0, "Test", "a", "p"},
                  galois::DIRECTED_EDGE, "e", "p"});
   AssertQueryNodeEdgeCount(cc, 0, 1);
   AssertBasicReturn(cc, "e");
@@ -301,13 +301,13 @@ int main() {
   cc.Compile(multi_edge1.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"0", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{0, "any", "", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"2", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{2, "any", "", ""},
                  galois::DIRECTED_EDGE, "f", ""});
   AssertQueryNodeEdgeCount(cc, 0, 2);
   AssertBasicReturn(cc, "e");
@@ -319,13 +319,13 @@ int main() {
   cc.Compile(multi_edge2.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"0", "Test", "a", ""},
-                 galois::CompilerQueryNode{"1", "Test2", "k", ""},
+                 "ANY", galois::CompilerQueryNode{0, "Test", "a", ""},
+                 galois::CompilerQueryNode{1, "Test2", "k", ""},
                  galois::UNDIRECTED_EDGE, "e", ""});
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "WELP", galois::CompilerQueryNode{"2", "any", "", ""},
-                 galois::CompilerQueryNode{"1", "Test2", "k", ""},
+                 "WELP", galois::CompilerQueryNode{2, "any", "", ""},
+                 galois::CompilerQueryNode{1, "Test2", "k", ""},
                  galois::DIRECTED_EDGE, "f", ""});
   AssertQueryNodeEdgeCount(cc, 0, 2);
   AssertBasicReturn(cc, "e");
@@ -338,18 +338,18 @@ int main() {
   cc.Compile(multi_edge3.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "SOME", galois::CompilerQueryNode{"0", "Test;Also", "a", "p"},
-                 galois::CompilerQueryNode{"1", "Test2", "k", "p"},
+                 "SOME", galois::CompilerQueryNode{0, "Test;Also", "a", "p"},
+                 galois::CompilerQueryNode{1, "Test2", "k", "p"},
                  galois::UNDIRECTED_EDGE, "e", "p"});
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "WELP", galois::CompilerQueryNode{"2", "any", "", "p"},
-                 galois::CompilerQueryNode{"1", "Test2", "k", "p"},
+                 "WELP", galois::CompilerQueryNode{2, "any", "", "p"},
+                 galois::CompilerQueryNode{1, "Test2", "k", "p"},
                  galois::DIRECTED_EDGE, "f", "p"});
   VerifyEdge(cc.GetQueryEdges()[2],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"2", "any", "", "p"},
-                 galois::CompilerQueryNode{"3", "any", "noname", "p"},
+                 "ANY", galois::CompilerQueryNode{2, "any", "", "p"},
+                 galois::CompilerQueryNode{3, "any", "noname", "p"},
                  galois::DIRECTED_EDGE, "", "p"});
   AssertQueryNodeEdgeCount(cc, 0, 3);
   AssertBasicReturn(cc, "e");
@@ -363,13 +363,13 @@ int main() {
   cc.Compile(split_edge1.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"0", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{0, "any", "", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"2", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{2, "any", "", ""},
                  galois::DIRECTED_EDGE, "f", ""});
   AssertQueryNodeEdgeCount(cc, 0, 2);
   AssertBasicReturn(cc, "e");
@@ -379,8 +379,8 @@ int main() {
   cc.Compile(split_edge2.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "Test", "k", ""},
-                 galois::CompilerQueryNode{"0", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "Test", "k", ""},
+                 galois::CompilerQueryNode{0, "any", "", ""},
                  galois::DIRECTED_EDGE, "e", ""});
   // TODO even though k refers to the same k:Test, label ends up as "any"
   // The difference is fixed during query graph construction if I recall
@@ -388,8 +388,8 @@ int main() {
   // TODO should this be fixed in the compiler end as well?
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", ""},
-                 galois::CompilerQueryNode{"2", "any", "", ""},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", ""},
+                 galois::CompilerQueryNode{2, "any", "", ""},
                  galois::DIRECTED_EDGE, "f", ""});
   AssertQueryNodeEdgeCount(cc, 0, 2);
   AssertBasicReturn(cc, "e");
@@ -401,18 +401,18 @@ int main() {
   cc.Compile(split_edge3.c_str());
   VerifyEdge(cc.GetQueryEdges()[0],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", "p"},
-                 galois::CompilerQueryNode{"0", "any", "a", "p"},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", "p"},
+                 galois::CompilerQueryNode{0, "any", "a", "p"},
                  galois::DIRECTED_EDGE, "e", "p"});
   VerifyEdge(cc.GetQueryEdges()[1],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"1", "any", "k", "q"},
-                 galois::CompilerQueryNode{"2", "any", "b", "q"},
+                 "ANY", galois::CompilerQueryNode{1, "any", "k", "q"},
+                 galois::CompilerQueryNode{2, "any", "b", "q"},
                  galois::DIRECTED_EDGE, "f", "q"});
   VerifyEdge(cc.GetQueryEdges()[2],
              galois::CompilerQueryEdge{
-                 "ANY", galois::CompilerQueryNode{"2", "any", "b", "r"},
-                 galois::CompilerQueryNode{"0", "any", "a", "r"},
+                 "ANY", galois::CompilerQueryNode{2, "any", "b", "r"},
+                 galois::CompilerQueryNode{0, "any", "a", "r"},
                  galois::DIRECTED_EDGE, "g", "r"});
 
   AssertQueryNodeEdgeCount(cc, 0, 3);
@@ -428,7 +428,7 @@ int main() {
   std::string return1 = "match (a) return a, b, c;";
   cc.Compile(return1.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -444,7 +444,7 @@ int main() {
   std::string return2 = "match (a) return a, count(b), count(c);";
   cc.Compile(return2.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -461,7 +461,7 @@ int main() {
       "match (a) return a.thing1, count(b.thing2), count(c.thing3);";
   cc.Compile(return3.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", "thing1", std::nullopt, "a.thing1"));
   VerifyReturn(
@@ -480,7 +480,7 @@ int main() {
                         "two, count(c.thing3) as three;";
   cc.Compile(return4.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", "thing1", std::nullopt, "one"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -498,7 +498,7 @@ int main() {
       "two, ASDF3(c.thing3) as three;";
   cc.Compile(return5.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", "thing1", "asdf", "one"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -519,7 +519,7 @@ int main() {
   std::string return_mod1 = "match (a) return distinct a, b;";
   cc.Compile(return_mod1.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -533,7 +533,7 @@ int main() {
   std::string return_mod2 = "match (a) return a, b skip 3;";
   cc.Compile(return_mod2.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -547,7 +547,7 @@ int main() {
   std::string return_mod3 = "match (a) return a, b limit 100;";
   cc.Compile(return_mod3.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -561,7 +561,7 @@ int main() {
   std::string return_mod4 = "match (a) return distinct a, b skip 3 limit 100;";
   cc.Compile(return_mod4.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -574,7 +574,7 @@ int main() {
   std::string return_mod5 = "match (a) return a, b skip $asdf limit $some;";
   cc.Compile(return_mod5.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -590,7 +590,7 @@ int main() {
   std::string return_mod6 = "match (a) return a, b skip 777 limit $some;";
   cc.Compile(return_mod6.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],
@@ -610,7 +610,7 @@ int main() {
   std::string order_by1 = "match (a) return a order by a.something;";
   cc.Compile(order_by1.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 1);
@@ -627,7 +627,7 @@ int main() {
       "match (a) return a order by a.something, b.more, c.reate;";
   cc.Compile(order_by2.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 1);
@@ -646,7 +646,7 @@ int main() {
                           "b.more descending, c.reate asc;";
   cc.Compile(order_by3.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   GALOIS_LOG_ASSERT(cc.GetReturnValues().size() == 1);
@@ -670,7 +670,7 @@ int main() {
       "match (a) return a, count(distinct b), count(DISTINCT c);";
   cc.Compile(misc1.c_str());
   VerifyNode(cc.GetQueryNodes()[0],
-             galois::CompilerQueryNode{"0", "any", "a", ""});
+             galois::CompilerQueryNode{0, "any", "a", ""});
   VerifyReturn(cc.GetReturnValues()[0],
                galois::QueryProperty("a", std::nullopt, std::nullopt, "a"));
   VerifyReturn(cc.GetReturnValues()[1],

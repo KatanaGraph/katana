@@ -190,6 +190,19 @@ DoLoadTable(const std::string& expected_name, const std::string& file_path) {
     return tsuba::ErrorCode::ArrowError;
   }
 
+  // Combine multiple chunks into one. Binary and string columns (c.f. large
+  // binary and large string columns) are a special case. They may not be
+  // combined into a single chunk due to the fact the offset type for these
+  // columns is int32_t and thus the maximum size of an arrow::Array for these
+  // types is 2^31.
+  auto combine_result = out->CombineChunks(arrow::default_memory_pool());
+  if (!combine_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", combine_result.status());
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  out = std::move(combine_result.ValueOrDie());
+
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
     return tsuba::ErrorCode::InvalidArgument;
@@ -265,6 +278,14 @@ DoLoadPartialTable(const std::string& expected_name,
     GALOIS_LOG_DEBUG("arrow error: {}", read_result);
     return tsuba::ErrorCode::ArrowError;
   }
+
+  auto combine_result = out->CombineChunks(arrow::default_memory_pool());
+  if (!combine_result.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", combine_result.status());
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  out = std::move(combine_result.ValueOrDie());
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {

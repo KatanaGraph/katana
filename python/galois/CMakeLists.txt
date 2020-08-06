@@ -7,6 +7,7 @@ set(SOURCE_DIRECTORY_GENERATED_FILE_WARNING "in the SOURCE DIRECTORY! (This is t
 message(STATUS "Generating pxd/pyx files ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}")
 
 set(GENERATE_FROM_JINJA ${CMAKE_CURRENT_SOURCE_DIR}/../generate_from_jinja.py)
+set(GENERATOR_CONF ${CMAKE_CURRENT_SOURCE_DIR}/../generator_conf.py)
 
 function(generate_cython_file FILE)
   set(options)
@@ -15,7 +16,7 @@ function(generate_cython_file FILE)
   cmake_parse_arguments(_args "${options}" "${options1}" "${optionsmany}" ${ARGN})
   add_custom_command(
     COMMAND ${PYTHON_EXECUTABLE} ${GENERATE_FROM_JINJA} ${CMAKE_CURRENT_SOURCE_DIR} ${FILE}.jinja > ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
-    DEPENDS ${FILE}.jinja ${_args_DEPENDS}
+    DEPENDS ${FILE}.jinja ${_args_DEPENDS} ${GENERATE_FROM_JINJA} ${GENERATOR_CONF}
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
     COMMENT "Generating ${FILE} ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}"
     )
@@ -43,6 +44,10 @@ add_library(shmem MODULE ${SHMEM_SOURCES})
 python_extension_module(shmem)
 target_link_libraries(shmem Galois::shmem)
 
+add_cython_target(numpy_structs numpy_structs.pyx CXX OUTPUT_VAR NUMPY_STRUCTS_SOURCES)
+add_library(numpy_structs MODULE ${NUMPY_STRUCTS_SOURCES})
+python_extension_module(numpy_structs)
+
 generate_cython_source(graphs DEPENDS graphs.instantiations.jinja)
 add_cython_target(graphs graphs.pyx CXX OUTPUT_VAR GRAPHS_SOURCES)
 add_library(graphs MODULE ${GRAPHS_SOURCES})
@@ -61,7 +66,7 @@ generate_cython_source(datastructures DEPENDS numba_wrapper_support.pyx.jinja)
 add_cython_target(datastructures datastructures.pyx CXX OUTPUT_VAR DATASTRUCTURES_SOURCES)
 add_library(datastructures MODULE ${DATASTRUCTURES_SOURCES})
 python_extension_module(datastructures)
-add_dependencies(datastructures shmem)
+add_dependencies(datastructures shmem numpy_structs)
 target_link_libraries(datastructures Galois::shmem)
 
 generate_cython_source(property_graph DEPENDS numba_wrapper_support.pyx.jinja)
@@ -75,7 +80,7 @@ generate_cython_source(_loops DEPENDS numba_wrapper_support.pyx.jinja)
 add_cython_target(_loops _loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
 add_library(_loops MODULE ${_LOOPS_SOURCES})
 python_extension_module(_loops)
-add_dependencies(_loops shmem _loops_pxd datastructures_pxd property_graph_pxd)
+add_dependencies(_loops shmem numpy_structs _loops_pxd datastructures_pxd property_graph_pxd)
 target_link_libraries(_loops Galois::shmem)
 
 add_cython_target(timer timer.pyx CXX OUTPUT_VAR TIMER_SOURCES)
@@ -132,7 +137,8 @@ endforeach()
 add_subdirectory(numba)
 
 install(
-  TARGETS shmem graphs timer atomic datastructures _loops _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
+  TARGETS shmem numpy_structs graphs timer atomic datastructures _loops
+    _bfs _pagerank _jaccard _sssp _connected_components property_graph _bfs_property_graph
   LIBRARY DESTINATION python/galois
 )
 

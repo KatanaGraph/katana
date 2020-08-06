@@ -7,7 +7,6 @@ from numba.experimental import jitclass
 from numba.extending import lower_builtin
 from numba.extending import type_callable
 
-from galois.numba._native_wrapper_utils import call_callback
 from galois.numba.galois_compiler import OperatorCompiler, cfunc
 
 PointerPair = ctypes.c_void_p * 2
@@ -18,6 +17,8 @@ class Closure:
     A closure containing a native function pointer and the environment needed to invoke it. These closures are
     used by galois to specify operators.
     """
+
+    __slots__ = ["_function", "_userdata", "return_type", "unbound_argument_types", "_captured"]
 
     def __init__(self, func, userdata, return_type, unbound_argument_types, captured=()):
         """
@@ -41,9 +42,6 @@ class Closure:
     @property
     def __userdata_address__(self):
         return ctypes.addressof(self._userdata)
-
-    def __call__(self, arg):
-        return call_callback(self.__function_address__, arg, self.__userdata_address__)
 
     def __str__(self):
         return "<Closure {} {}>".format(self._function, self._userdata)
@@ -169,7 +167,6 @@ def wrapper({unbound_pass_args} userdata):
         return store_struct_py
 
 
-# TODO: Fixed unbound argument type at construction time. Needs to support setting at closure *call* time.
 class ClosureBuilder:
     """
     A factory object for closures.
@@ -177,41 +174,66 @@ class ClosureBuilder:
     This object manages a cache of compiled closures structures and wrappers (as _ClosureInstance objects).
     """
 
-    def __init__(self, func, *, return_type=types.void, unbound_argument_types, target="cpu"):
+    def __init__(self, func, *, n_unbound_arguments, return_type=types.void, target="cpu"):
         self._underlying_function = func
         self._instance_cache = {}
         self._target = target
-        self._unbound_argument_types = tuple(unbound_argument_types)
         self._return_type = return_type
+        self.n_unbound_arguments = n_unbound_arguments
 
-    def _generate(self, bound_args):
-        key = bound_args
+    def _generate(self, bound_argument_types, unbound_argument_types):
+        if len(unbound_argument_types) != self.n_unbound_arguments:
+            raise TypeError(
+                "Self requires {} unbound arguments, got {}".format(
+                    self.n_unbound_arguments, len(unbound_argument_types)
+                )
+            )
+        key = (bound_argument_types, unbound_argument_types)
         if key in self._instance_cache:
             return self._instance_cache[key]
         inst = _ClosureInstance(
             self._underlying_function,
             self._return_type,
-            bound_args,
-            unbound_args=self._unbound_argument_types,
+            bound_argument_types,
+            unbound_args=unbound_argument_types,
             target=self._target,
         )
         self._instance_cache[key] = inst
         return inst
 
-    def __call__(self, *args):
+    def bind(self, args, unbound_argument_types):
         arg_types = tuple(typeof(v) for v in args)
-        inst = self._generate(arg_types)
+        inst = self._generate(arg_types, unbound_argument_types)
         env = PointerPair()
         env_ptr = ctypes.addressof(env)
         env_struct = inst.Environment(*args)
         inst.store_struct(env_struct, env_ptr)
-        closure = Closure(
-            inst.wrapper, env, self._return_type, self._unbound_argument_types, captured=(env_struct, args),
-        )
-        return closure
+        return Closure(inst.wrapper, env, self._return_type, unbound_argument_types, captured=(env_struct, args),)
+
+    def __call__(self, *args):
+        return UninstantiatedClosure(self, args)
 
     def __str__(self):
-        return "<Closure builder {} {}>".format(self._underlying_function, self._unbound_argument_types)
+        return "<Closure builder {}>".format(self._underlying_function)
 
     def inspect_llvm(self):
         return {types: inst.wrapper.inspect_llvm() for types, inst in self._instance_cache.items()}
+
+
+class UninstantiatedClosure:
+    """
+    A closure containing a native function pointer and the environment needed to invoke it. These closures are
+    used by galois to specify operators.
+    """
+
+    __slots__ = ["_builder", "_args"]
+
+    def __init__(self, builder, args):
+        self._builder = builder
+        self._args = args
+
+    def instantiate(self, *unbound_argument_types):
+        return self._builder.bind(self._args, unbound_argument_types)
+
+    def __str__(self):
+        return "<UninstantiatedClosure {}>".format(self._builder._underlying_function)

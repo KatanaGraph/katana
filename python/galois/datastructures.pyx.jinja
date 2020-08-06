@@ -1,24 +1,29 @@
 # -*- mode: cython -*-
-from enum import Enum
-
-{% set instantiation_types = [("uint64_t", "np.uint64", "Q"), ("int64_t", "int", "q"), ("double", "float", "d")] %}
-
 """
 This module contains data structures designed for use with Galois' parallel loops.
 They are instantiated for several element types, but cannot support custom element types.
 
 The instantiations are:
 
-{% for c, py, format in instantiation_types %}
-* `{{py}}` (with C element type {{c}})
+{% for inst in primitive_type_instantiations -%}
+* `{{inst.element_py_type}}` (with C element type {{inst.element_c_type}})
 {% endfor %}
 
 The instantiation is selected by indexing the type, for example `InsertBag[int]` or `LargeArray[np.uint64]`.
 """
+
+# {{generated_banner()}}
+
+from enum import Enum
+
 import numpy as np
-from galois.util.template_type import make_template_type1
+cimport numpy as np
+
+from galois.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
+from galois.numpy_structs import StructInstance
+from galois.util.template_type import make_template_type1, make_template_type1_with_opaque
 from .cpp.libgalois cimport datastructures
-from libc.stdint cimport uintptr_t, int64_t, uint64_t
+from libc.stdint cimport uintptr_t
 from cython.operator cimport preincrement, dereference as deref
 import cython
 
@@ -28,30 +33,44 @@ __all__ = ["InsertBag", "LargeArray", "AllocationPolicy"]
 
 {{numba.header()}}
 
-{% macro wrap_insert_bag(element_type) %}
-{% set underlying_type %}datastructures.InsertBag[{{element_type}}]{% endset -%}
-{% set class_name %}InsertBag_{{element_type}}{% endset -%}
+
+{% macro wrap_insert_bag(inst) %}
+{% set underlying_type %}datastructures.InsertBag[{{inst.element_c_type}}]{% endset -%}
+{% set class_name %}InsertBag_{{inst.element_c_type}}{% endset -%}
 @cython.freelist(2)
 cdef class {{class_name}}_Iterator:
     def __next__(self):
         if self.it == self.end:
             raise StopIteration()
-        v = <{{element_type}}>deref(self.it)
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}deref(self.it)
         preincrement(self.it)
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.obj.dtype)
+        {% else %}
         return v
+        {% endif %}
 
 cdef class {{class_name}}:
     """
     Unordered collection of elements. This data structure supports scalable
     concurrent pushes but reading the bag can only be done serially.
     """
-    def push(self, {{element_type}} v):
+    def __init__(self, dtype):
+        self.dtype = {{inst.dtype("dtype")}}
+
+    def push(self, v):
         """
         push(self, v)
 
         Add an element to the collection. This may be called from numba compiled code.
         """
-        self.underlying.push(v)
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.push((<{{inst.element_c_type}}*>arr.data)[0])
+{% else %}
+        self.underlying.push(<{{inst.element_c_type}}>v)
+{% endif %}
 
     def clear(self):
         """
@@ -93,19 +112,18 @@ cdef class {{class_name}}:
     def address(self):
         return <uintptr_t>&self.underlying
 
-{% call numba.class_(class_name, underlying_type) %}
-{{numba.method("push", "void", [element_type])}}
+    @property
+    def storage_size(self):
+        return sizeof({{inst.element_c_type}})
+
+{% call numba.class_(class_name, underlying_type, True) %}
+{{numba.method("push", "void", [inst.element_c_type + (" dtype" if inst.by_pointer else "")])}}
 {{numba.method("clear", "void", [])}}
 {{numba.method("empty", "bint", [])}}
 {% endcall %}
 {% endmacro %}
 
-_InsertBag_types = {}
-{% for element_type, python_type, buffer_format in instantiation_types %}
-{{wrap_insert_bag(element_type)}}
-_InsertBag_types[{{python_type}}] = InsertBag_{{element_type}}
-{% endfor %}
-InsertBag = make_template_type1("InsertBag", _InsertBag_types)
+{{numba.wrap_all_instances("InsertBag", wrap_insert_bag, True)}}
 
 
 class AllocationPolicy(Enum):
@@ -116,23 +134,29 @@ class AllocationPolicy(Enum):
     INTERLEAVED = 1
 
 
-{% macro wrap_large_array(element_type, python_type, buffer_format) %}
-{% set underlying_type %}datastructures.LargeArray[{{element_type}}]{% endset -%}
-{% set class_name %}LargeArray_{{element_type}}{% endset -%}
+{% macro wrap_large_array(inst) %}
+# inst.element_c_type, inst.element_py_type, inst.element_format_code
+{% set underlying_type %}datastructures.LargeArray[{{inst.element_c_type}}]{% endset -%}
+{% set class_name %}LargeArray_{{inst.element_c_type}}{% endset -%}
 @cython.freelist(2)
 cdef class {{class_name}}_Iterator:
     def __next__(self):
         if self.it == self.end:
             raise StopIteration()
-        v = <{{element_type}}>deref(self.it)
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}deref(self.it)
         preincrement(self.it)
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.obj.dtype)
+        {% else %}
         return v
+        {% endif %}
 
 cdef class {{class_name}}:
     """
     An array of elements of the same type that are allocated using NUMA aware policies.
     """
-    def __init__(self, size=None, policy=None):
+    def __init__(self, size=None, policy=None, dtype=None):
         """
         __init__(self, size=None, policy=None)
 
@@ -142,8 +166,9 @@ cdef class {{class_name}}:
         Otherwise,  the underlying array must be allocated with `allocateBlocked` or `allocateInterleaved` after
         construction.
         """
+        self.dtype = {{inst.dtype("dtype")}}
         self.shape = -1
-        self.stride = sizeof({{element_type}})
+        self.stride = sizeof({{inst.element_c_type}})
         if size is not None:
             if policy is None:
                 raise ValueError("Policy must be provided to allocate.")
@@ -154,7 +179,7 @@ cdef class {{class_name}}:
             else:
                 raise TypeError("Policy must be an AllocationPolicy")
 
-    def __setitem__(self, uint64_t i, {{element_type}} v):
+    def __setitem__(self, uint64_t i,  v):
         """
         `self[i] = v`
 
@@ -162,7 +187,12 @@ cdef class {{class_name}}:
         """
         if i < 0 or i >= self.underlying.size():
             raise IndexError(i)
-        self.underlying.set(i, v)
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.set(i, (<{{inst.element_c_type}}*>arr.data)[0])
+{% else %}
+        self.underlying.set(i, <{{inst.element_c_type}}>v)
+{% endif %}
 
     def __getitem__(self, uint64_t i):
         """
@@ -172,7 +202,13 @@ cdef class {{class_name}}:
         """
         if i < 0 or i >= self.underlying.size():
             raise IndexError(i)
-        return self.underlying[i]
+        v = {% if inst.by_pointer %}&{% else %}<{{inst.element_c_type}}>{% endif %}self.underlying[i]
+        {% if inst.by_pointer %}
+        tv = <{{inst.element_c_type}}[:1]>v
+        return as_struct_instance(np.asarray(tv), self.dtype)
+        {% else %}
+        return v
+        {% endif %}
 
     def __len__(self):
         """
@@ -240,12 +276,14 @@ cdef class {{class_name}}:
 
         Return a numpy array that is a view on self.
         """
-        return np.frombuffer(self, dtype={{python_type}})
+        return np.lib.stride_tricks.as_strided(np.frombuffer(self, dtype=self.dtype),
+                                               shape=(len(self),),
+                                               strides=(sizeof({{inst.element_c_type}}),))
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
         self._check_allocated()
         buffer.buf = <char *>self.underlying.data()
-        buffer.format = '{{buffer_format}}'
+        buffer.format = NULL
         buffer.internal = NULL
         buffer.itemsize = self.stride
         buffer.len = self.shape * self.stride
@@ -259,20 +297,16 @@ cdef class {{class_name}}:
     def __releasebuffer__(self, Py_buffer *buffer):
         pass
 
-{% call numba.class_(class_name, underlying_type) %}
-{% call numba.method_with_body("get", element_type, ["uint64_t"]) %}
-    return self[0][arg1]
+{% call numba.class_(class_name, underlying_type, True) %}
+{% call numba.method_with_body("get", inst.element_c_type + (" dtype" if inst.by_pointer else ""), ["uint64_t"]) %}
+    return {{"&" if inst.by_pointer}}self[0][arg1]
 {% endcall %}
-{{numba.method("set", "void", ["uint64_t", element_type])}}
-{{numba.method("data", element_type + "*", [])}}
+{{numba.method("set", "void", ["uint64_t", inst.element_c_type + (" dtype" if inst.by_pointer else "")])}}
 {% endcall %}
 {% endmacro %}
 
-_LargeArray_types = {}
-{% for element_type, python_type, buffer_format in instantiation_types %}
-{{wrap_large_array(element_type, python_type, buffer_format)}}
-_LargeArray_types[{{python_type}}] = LargeArray_{{element_type}}
-{% endfor %}
-LargeArray = make_template_type1("LargeArray", _LargeArray_types)
+{{numba.wrap_all_instances("LargeArray", wrap_large_array, True)}}
 
 {{numba.register_all_wrappers()}}
+{{numba.build_numba_type_dict("InsertBag", True)}}
+{{numba.build_numba_type_dict("LargeArray", True)}}

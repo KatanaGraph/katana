@@ -5,6 +5,8 @@ from itertools import combinations
 
 import jinja2
 
+import generator_conf
+
 DIR = sys.argv[1]
 TEMPLATE_FILE = sys.argv[2]
 
@@ -43,6 +45,7 @@ templateEnv.globals.update(
     nested_statements=nested_statements,
     partial=partial,
     indent=indent,
+    **generator_conf.exports
 )
 template = templateEnv.get_template(TEMPLATE_FILE)
 print(template.render())

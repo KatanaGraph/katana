@@ -1,4 +1,3 @@
-{% set instantiation_types = [("uint64_t", "np.uint64"), ("int64_t", "int"), ("double", "float")] %}
 """
 This module provides atomic values and atomic operations on numpy arrays.
 The atomic values are instantiated for several element types, but cannot support custom element types.
@@ -6,18 +5,23 @@ Atomic operations on numpy arrays support integer and floating point arrays.
 
 The instantiations are:
 
-{% for c, py in instantiation_types %}
-* `{{py}}` (with C element type {{c}})
+{% for inst in primitive_type_instantiations -%}
+* `{{inst.element_py_type}}` (with C element type {{inst.element_c_type}})
 {% endfor %}
 
 The instantiation is selected by indexing the type, for example `GAccumulator[int]` or `GReduceMin[np.uint64]`.
 
 """
+
+# {{generated_banner()}}
+
 import numpy as np
 from galois.util.template_type import make_template_type1
 from .cpp.libgalois cimport atomic
-from libc.stdint cimport uintptr_t, int64_t, uint64_t
+from libc.stdint cimport uintptr_t
 from .numba.numpy_atomic import *
+
+{{type_instantiation_imports}}
 
 __all__ = [
     "GAccumulator",
@@ -114,9 +118,9 @@ cdef class {{class_name}}:
                                        ("GReduceMax", "maximum"),
                                        ("GReduceMin", "minimum")] %}
 _{{reducible}}_types = {}
-{% for element_type, python_type in instantiation_types %}
-{{wrap_reducible(reducible, element_type, None, english_operator)}}
-_{{reducible}}_types[{{python_type}}] = {{reducible}}_{{element_type}}
+{% for inst in primitive_type_instantiations %}
+{{wrap_reducible(reducible, inst.element_c_type, None, english_operator)}}
+_{{reducible}}_types[{{inst.element_py_type}}] = {{reducible}}_{{inst.type_scab}}
 {% endfor %}
 {{reducible}} = make_template_type1("{{reducible}}", _{{reducible}}_types)
 {% endfor %}

@@ -148,6 +148,7 @@ def verify_pr(graph: PropertyGraph, property_name: str, topn: int):
 
 
 def main():
+    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--propertyName", type=str, default="NewProperty")

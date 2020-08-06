@@ -239,11 +239,5 @@ cdef class PropertyGraph:
 {% endcall %}
 {% endcall %}
 
-# cdef api CChunkedArray* PropertyGraph_get_node_property(PropertyFileGraph* self, uint64_t pid) nogil:
-#     return self.NodeProperty(pid).get()
-#
-# cdef api CChunkedArray* PropertyGraph_get_edge_property(PropertyFileGraph* self, uint64_t pid) nogil:
-#     return self.EdgeProperty(pid).get()
-
 {{numba.register_all_wrappers()}}
 

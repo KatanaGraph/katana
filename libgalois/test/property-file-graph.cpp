@@ -1,50 +1,40 @@
+#include "TestPropertyGraph.h"
+
+#include <arrow/api.h>
+#include <boost/filesystem.hpp>
+
 #include "galois/Logging.h"
 #include "galois/FileSystem.h"
 #include "galois/graphs/PropertyFileGraph.h"
-
-#include <boost/filesystem.hpp>
-
 #include "tsuba/tsuba.h"
 
 namespace fs = boost::filesystem;
 
-std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
-                                        const std::vector<int32_t>& data) {
-  arrow::NumericBuilder<arrow::Int32Type> builder;
+template <typename T>
+std::shared_ptr<arrow::Table> MakeTable(const std::string& name, size_t size) {
+  TableBuilder builder{size};
 
-  auto append_status = builder.AppendValues(data.begin(), data.end());
-  GALOIS_LOG_ASSERT(append_status.ok());
-
-  std::shared_ptr<arrow::Array> array;
-
-  auto finish_status = builder.Finish(&array);
-  GALOIS_LOG_ASSERT(finish_status.ok());
-
-  std::shared_ptr<arrow::Schema> schema =
-      arrow::schema({arrow::field(name, arrow::int32())});
-
-  return arrow::Table::Make(schema, {array});
+  ColumnOptions options;
+  options.name             = name;
+  options.ascending_values = true;
+  builder.AddColumn<T>(options);
+  return builder.Finish();
 }
 
 void TestRoundTrip() {
-  constexpr int test_length = 10;
+  constexpr size_t test_length = 10;
+  using ValueType              = int32_t;
 
   auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
 
-  std::vector<int32_t> data;
-  {
-    int32_t value = 0;
-    for (int i = 0; i < test_length; ++i) {
-      data.emplace_back(value++);
-    }
-  }
-
-  std::shared_ptr<arrow::Table> node_table = MakeTable("node-name", data);
+  std::shared_ptr<arrow::Table> node_table =
+      MakeTable<ValueType>("node-name", test_length);
 
   auto add_node_result = g->AddNodeProperties(node_table);
   GALOIS_LOG_ASSERT(add_node_result);
 
-  std::shared_ptr<arrow::Table> edge_table = MakeTable("edge-name", data);
+  std::shared_ptr<arrow::Table> edge_table =
+      MakeTable<ValueType>("edge-name", test_length);
 
   auto add_edge_result = g->AddEdgeProperties(edge_table);
   GALOIS_LOG_ASSERT(add_edge_result);
@@ -89,9 +79,11 @@ void TestRoundTrip() {
   std::shared_ptr<arrow::ChunkedArray> node_property = node_properties[0];
   std::shared_ptr<arrow::ChunkedArray> edge_property = edge_properties[0];
 
-  GALOIS_LOG_ASSERT(node_property->length() == test_length);
+  GALOIS_LOG_ASSERT(static_cast<size_t>(node_property->length()) ==
+                    test_length);
   GALOIS_LOG_ASSERT(node_property->num_chunks() == 1);
-  GALOIS_LOG_ASSERT(edge_property->length() == test_length);
+  GALOIS_LOG_ASSERT(static_cast<size_t>(edge_property->length()) ==
+                    test_length);
   GALOIS_LOG_ASSERT(edge_property->num_chunks() == 1);
 
   {
@@ -100,8 +92,8 @@ void TestRoundTrip() {
     auto node_data = std::static_pointer_cast<arrow::Int32Array>(node_chunk);
     auto edge_data = std::static_pointer_cast<arrow::Int32Array>(edge_chunk);
 
-    int32_t value = 0;
-    for (int i = 0; i < test_length; ++i) {
+    ValueType value{};
+    for (size_t i = 0; i < test_length; ++i) {
       GALOIS_LOG_ASSERT(!node_data->IsNull(i) && node_data->Value(i) == value);
       GALOIS_LOG_ASSERT(!edge_data->IsNull(i) && edge_data->Value(i) == value);
       ++value;

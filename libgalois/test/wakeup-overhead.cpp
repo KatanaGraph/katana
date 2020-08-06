@@ -17,18 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "Lonestar/BoilerPlate.h"
-#include "llvm/Support/CommandLine.h"
-
-#include <boost/iterator/counting_iterator.hpp>
-
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <vector>
+
+#include <boost/iterator/counting_iterator.hpp>
+#include <llvm/Support/CommandLine.h>
+
+#include "galois/Galois.h"
+#include "galois/Reduction.h"
+#include "galois/Timer.h"
 
 typedef galois::GAccumulator<double> AccumDouble;
 
@@ -92,7 +91,7 @@ std::atomic<int> EXIT;
 
 int main(int argc, char* argv[]) {
   galois::SharedMemSys Galois_runtime;
-  LonestarStart(argc, argv);
+  llvm::cl::ParseCommandLineOptions(argc, argv);
 
   galois::setActiveThreads(threads);
 

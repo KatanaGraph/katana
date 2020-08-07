@@ -3,6 +3,8 @@ add_library(Galois::support ALIAS galois_support)
 set_target_properties(galois_support PROPERTIES EXPORT_NAME support)
 add_dependencies(lib galois_support)
 
+configure_file(include/galois/config.h.in include/galois/config.h)
+
 set(sources
         src/GetEnv.cpp
         src/Logging.cpp
@@ -15,6 +17,7 @@ target_sources(galois_support PRIVATE ${sources})
 
 target_include_directories(galois_support PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -38,6 +41,13 @@ endif()
 
 install(
   DIRECTORY include/
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  COMPONENT dev
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   COMPONENT dev
   FILES_MATCHING PATTERN "*.h"

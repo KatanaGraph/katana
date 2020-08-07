@@ -475,7 +475,7 @@ public:
 
   edge_data_reference
   getEdgeData(const segment_type& segment, edge_iterator ni,
-              MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::UNPROTECTED) {
+              [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     return outGraph.getEdgeData<EdgeTy>(segment.out, ni);
   }
@@ -523,7 +523,7 @@ public:
 
   edge_data_reference
   getInEdgeData(const segment_type& segment, edge_iterator ni,
-                MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::UNPROTECTED) {
+                [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     return inGraph->getEdgeData<EdgeTy>(segment.in, ni);
   }

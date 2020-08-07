@@ -9,28 +9,6 @@
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_ALLOW_WARNINGS                \
-_Pragma("GCC diagnostic push")               \
-_Pragma("GCC diagnostic warning \"-Wall\"")  \
-_Pragma("GCC diagnostic warning \"-Wextra\"")
-#define GALOIS_END_ALLOW_WARNINGS _Pragma("GCC diagnostic pop")
-#else
-#define GALOIS_ALLOW_WARNINGS
-#define GALOIS_END_ALLOW_WARNINGS
-#endif
-
-#if defined(__GNUC__)
-#define GALOIS_IGNORE_WARNINGS               \
-_Pragma("GCC diagnostic push")               \
-_Pragma("GCC diagnostic ignored \"-Wall\"")  \
-_Pragma("GCC diagnostic ignored \"-Wextra\"")
-#define GALOIS_END_IGNORE_WARNINGS _Pragma("GCC diagnostic pop")
-#else
-#define GALOIS_IGNORE_WARNINGS
-#define GALOIS_END_IGNORE_WARNINGS
-#endif
-
-#if defined(__GNUC__)
 #define GALOIS_IGNORE_UNUSED_PARAMETERS                 \
 _Pragma("GCC diagnostic push")                          \
 _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -71,14 +49,6 @@ _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
 #define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET
 #define GALOIS_END_GCC7_IGNORE_UNUSED_BUT_SET
 #endif
-
-#if defined(NDEBUG)
-#define GALOIS_USED_ONLY_IN_DEBUG(NAME) NAME [[maybe_unused]]
-#else
-#define GALOIS_USED_ONLY_IN_DEBUG(NAME) NAME
-#endif
-
-#define GALOIS_UNUSED(NAME) NAME [[maybe_unused]]
 
 #if defined(__GNUC__)
 #define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS         \

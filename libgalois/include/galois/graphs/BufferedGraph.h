@@ -295,8 +295,8 @@ private:
   template <
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
-  void
-  loadEdgeData(const galois::PartialGraphView<uint32_t>& GALOIS_UNUSED(view)) {
+  void loadEdgeData([
+      [maybe_unused]] const galois::PartialGraphView<uint32_t>& view) {
     galois::gDebug("Not loading edge data");
     // do nothing (edge data is void, i.e. no edge data)
   }

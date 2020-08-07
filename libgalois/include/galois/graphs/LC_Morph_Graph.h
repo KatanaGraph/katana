@@ -398,8 +398,8 @@ public:
   /**
    * Return an iterator to the end of edges of a particular node.
    */
-  edge_iterator edge_end(GraphNode N,
-                         MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::WRITE) {
+  edge_iterator
+  edge_end(GraphNode N, [[maybe_unused]] MethodFlag mflag = MethodFlag::WRITE) {
     return N->edgeEnd;
   }
 

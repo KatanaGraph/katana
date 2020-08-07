@@ -345,7 +345,7 @@ public:
 
   ~BlockHeap() { clear(); }
 
-  inline void* allocate(size_t GALOIS_USED_ONLY_IN_DEBUG(size)) {
+  inline void* allocate([[maybe_unused]] size_t size) {
     assert(size == ElemSize);
     if (!head || headIndex == TotalFit)
       refill();
@@ -757,7 +757,7 @@ public:
     return static_cast<pointer>(heap.allocate(sizeof(Ty)));
   }
 
-  void deallocate(pointer ptr, size_type GALOIS_USED_ONLY_IN_DEBUG(len)) {
+  void deallocate(pointer ptr, [[maybe_unused]] size_type len) {
     assert(len == 1);
     heap.deallocate(ptr);
   }

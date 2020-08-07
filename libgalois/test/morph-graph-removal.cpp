@@ -80,8 +80,8 @@ void removeGraphOutEdge(G& g, typename G::GraphNode n1,
 
 void removeGraphInEdge(SymGraph& g, SymGraph::GraphNode n1,
                        SymGraph::GraphNode n2) {
-  auto e12                            = g.findInEdge(n1, n2);
-  auto GALOIS_USED_ONLY_IN_DEBUG(e21) = g.findEdge(n2, n1);
+  auto e12                  = g.findInEdge(n1, n2);
+  [[maybe_unused]] auto e21 = g.findEdge(n2, n1);
 
   if (e12 == g.in_edge_end(n1)) {
     assert(e21 == g.edge_end(n1));
@@ -97,8 +97,8 @@ void removeGraphInEdge(SymGraph& g, SymGraph::GraphNode n1,
 
 void removeGraphInEdge(InOutGraph& g, InOutGraph::GraphNode n1,
                        InOutGraph::GraphNode n2) {
-  auto ie                           = g.findInEdge(n1, n2);
-  auto GALOIS_USED_ONLY_IN_DEBUG(e) = g.findEdge(n2, n1);
+  auto ie                 = g.findInEdge(n1, n2);
+  [[maybe_unused]] auto e = g.findEdge(n2, n1);
   if (ie == g.in_edge_end(n1)) {
     assert(e == g.edge_end(n2));
   } else {

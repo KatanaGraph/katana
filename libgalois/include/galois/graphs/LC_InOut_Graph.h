@@ -149,7 +149,7 @@ public:
 
   edge_data_reference
   getInEdgeData(in_edge_iterator ni,
-                MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::UNPROTECTED) {
+                [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     if (ni.type == 0) {
       return this->getEdgeData(boost::fusion::at_c<0>(ni.its));

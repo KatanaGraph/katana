@@ -181,7 +181,7 @@ public:
   }
 
   template <class InputIterator>
-  void insert(iterator GALOIS_USED_ONLY_IN_DEBUG(position), InputIterator first,
+  void insert([[maybe_unused]] iterator position, InputIterator first,
               InputIterator last) {
     assert(position == end());
     size_t old_size = size_;

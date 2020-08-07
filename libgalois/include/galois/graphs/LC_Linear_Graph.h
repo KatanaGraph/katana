@@ -235,9 +235,9 @@ public:
     return N->getData();
   }
 
-  edge_data_reference
-  getEdgeData(edge_iterator ni,
-              MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::UNPROTECTED) const {
+  edge_data_reference getEdgeData(
+      edge_iterator ni,
+      [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) const {
     // galois::runtime::checkWrite(mflag, false);
     return ni->get();
   }

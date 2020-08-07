@@ -203,7 +203,7 @@ void BitsetToWl(const Graph& graph, const galois::DynamicBitSet& bitset,
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
-                const R& GALOIS_UNUSED(edgeRange), const uint32_t runID) {
+                [[maybe_unused]] const R& edgeRange, const uint32_t runID) {
 
   using Cont = typename std::conditional<CONCURRENT, galois::InsertBag<T>,
                                          galois::SerStack<T>>::type;
@@ -343,7 +343,7 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
-               const R& GALOIS_UNUSED(edgeRange)) {
+               [[maybe_unused]] const R& edgeRange) {
 
   namespace gwl = galois::worklists;
   // typedef PerSocketChunkFIFO<CHUNK_SIZE> dFIFO;

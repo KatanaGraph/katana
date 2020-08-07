@@ -181,7 +181,7 @@ int getLogIndex(ptrdiff_t x) {
   return sign * logvalue;
 }
 
-void doSortedLogOffsetHistogram(Graph& GALOIS_UNUSED(graph)) {
+void doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
   // Graph copy;
   // {
   //   // Original FileGraph is immutable because it is backed by a file

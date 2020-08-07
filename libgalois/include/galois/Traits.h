@@ -138,7 +138,7 @@ constexpr auto get_default_trait_value(
 
 template <typename S, typename T, typename D>
 constexpr auto get_default_trait_value(
-    S GALOIS_UNUSED(source), T GALOIS_UNUSED(tags), D defaults,
+    [[maybe_unused]] S source, [[maybe_unused]] T tags, D defaults,
     typename std::enable_if<!has_trait<T, S>()>::type* = nullptr) {
   return std::make_tuple(defaults);
 }
@@ -149,15 +149,15 @@ constexpr auto get_default_trait_value(
  */
 template <typename S, typename T, typename D>
 constexpr auto
-get_default_trait_values(std::index_sequence<> GALOIS_UNUSED(seq),
-                         S GALOIS_UNUSED(source), T GALOIS_UNUSED(tags),
-                         D GALOIS_UNUSED(defaults)) {
+get_default_trait_values([[maybe_unused]] std::index_sequence<> seq,
+                         [[maybe_unused]] S source, [[maybe_unused]] T tags,
+                         [[maybe_unused]] D defaults) {
   return std::make_tuple();
 }
 
 template <size_t... Ints, typename S, typename T, typename D>
 constexpr auto
-get_default_trait_values(std::index_sequence<Ints...> GALOIS_UNUSED(seq),
+get_default_trait_values([[maybe_unused]] std::index_sequence<Ints...> seq,
                          S source, T tags, D defaults) {
   return std::tuple_cat(get_default_trait_value(source, std::get<Ints>(tags),
                                                 std::get<Ints>(defaults))...);

@@ -396,7 +396,7 @@ public:
 
   edge_data_reference
   getEdgeData(edge_iterator ni,
-              MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::UNPROTECTED) {
+              [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     return edgeData[*ni];
   }
@@ -762,7 +762,7 @@ public:
   template <typename E                                           = EdgeTy,
             std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(FileGraph& graph, unsigned tid, unsigned total,
-                     const bool GALOIS_UNUSED(readUnweighted) = false) {
+                     [[maybe_unused]] const bool readUnweighted = false) {
     // at this point memory should already be allocated
     auto r =
         graph

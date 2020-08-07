@@ -936,7 +936,7 @@ public:
   //! Returns the end of the neighbor iterator
   edge_iterator
   edge_end(GraphNode N,
-           galois::MethodFlag GALOIS_UNUSED(mflag) = MethodFlag::WRITE) {
+           [[maybe_unused]] galois::MethodFlag mflag = MethodFlag::WRITE) {
     assert(N);
     // Acquiring lock is not necessary: no valid use for an end pointer should
     // ever require it
@@ -947,7 +947,7 @@ public:
   template <bool _Undirected = !Directional>
   in_edge_iterator
   in_edge_end(GraphNode N,
-              galois::MethodFlag GALOIS_UNUSED(mflag)      = MethodFlag::WRITE,
+              [[maybe_unused]] galois::MethodFlag mflag    = MethodFlag::WRITE,
               typename std::enable_if<!_Undirected>::type* = 0) {
     assert(N);
     // Acquiring lock is not necessary: no valid use for an end pointer should

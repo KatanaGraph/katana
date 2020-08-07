@@ -28,22 +28,22 @@ namespace runtime {
 // TODO(ddn): Pull in and integrate in executors from exp
 
 template <typename Iter, typename Cmp, typename NhFunc, typename OpFunc>
-void for_each_ordered_impl(Iter GALOIS_UNUSED(beg), Iter GALOIS_UNUSED(end),
-                           const Cmp& GALOIS_UNUSED(cmp),
-                           const NhFunc& GALOIS_UNUSED(nhFunc),
-                           const OpFunc& GALOIS_UNUSED(opFunc),
-                           const char* GALOIS_UNUSED(loopname)) {
+void for_each_ordered_impl([[maybe_unused]] Iter beg, [[maybe_unused]] Iter end,
+                           [[maybe_unused]] const Cmp& cmp,
+                           [[maybe_unused]] const NhFunc& nhFunc,
+                           [[maybe_unused]] const OpFunc& opFunc,
+                           [[maybe_unused]] const char* loopname) {
   GALOIS_DIE("not yet implemented");
 }
 
 template <typename Iter, typename Cmp, typename NhFunc, typename OpFunc,
           typename StableTest>
-void for_each_ordered_impl(Iter GALOIS_UNUSED(beg), Iter GALOIS_UNUSED(end),
-                           const Cmp& GALOIS_UNUSED(cmp),
-                           const NhFunc& GALOIS_UNUSED(nhFunc),
-                           const OpFunc& GALOIS_UNUSED(opFunc),
-                           const StableTest& GALOIS_UNUSED(stabilityTest),
-                           const char* GALOIS_UNUSED(loopname)) {
+void for_each_ordered_impl([[maybe_unused]] Iter beg, [[maybe_unused]] Iter end,
+                           [[maybe_unused]] const Cmp& cmp,
+                           [[maybe_unused]] const NhFunc& nhFunc,
+                           [[maybe_unused]] const OpFunc& opFunc,
+                           [[maybe_unused]] const StableTest& stabilityTest,
+                           [[maybe_unused]] const char* loopname) {
   GALOIS_DIE("not yet implemented");
 }
 

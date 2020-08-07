@@ -9,9 +9,9 @@
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_UNUSED_PARAMETERS                 \
-_Pragma("GCC diagnostic push")                          \
-_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+#define GALOIS_IGNORE_UNUSED_PARAMETERS                                        \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
 #define GALOIS_END_IGNORE_UNUSED_PARAMETERS _Pragma("GCC diagnostic pop")
 #else
 #define GALOIS_IGNORE_UNUSED_PARAMETERS
@@ -19,9 +19,9 @@ _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
-#define GALOIS_IGNORE_MAYBE_UNINITIALIZED                  \
-_Pragma("GCC diagnostic push")                             \
-_Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+#define GALOIS_IGNORE_MAYBE_UNINITIALIZED                                      \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 #define GALOIS_END_IGNORE_MAYBE_UNINITIALIZED _Pragma("GCC diagnostic pop")
 #else
 #define GALOIS_IGNORE_MAYBE_UNINITIALIZED
@@ -29,9 +29,9 @@ _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_UNUSED_BUT_SET                           \
-_Pragma("GCC diagnostic push")                                 \
-_Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
+#define GALOIS_IGNORE_UNUSED_BUT_SET                                           \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
 #define GALOIS_END_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
 #else
 #define GALOIS_IGNORE_UNUSED_BUT_SET
@@ -41,9 +41,9 @@ _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
 // Macro to suppress compiler warnings that a variable is set but unused.
 // This warning is buggy in gcc 7.
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 8
-#define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET                      \
-_Pragma("GCC diagnostic push")                                 \
-_Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
+#define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET                                      \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
 #define GALOIS_END_GCC7_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
 #else
 #define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET
@@ -51,13 +51,22 @@ _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS         \
-_Pragma("GCC diagnostic push")                           \
-_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-#define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS _Pragma("GCC diagnostic pop")
+#define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS                               \
+  _Pragma("GCC diagnostic push")                                               \
+      _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+#define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS                           \
+  _Pragma("GCC diagnostic pop")
 #else
 #define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS
 #define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS
+#endif
+
+#if defined(WIN32) || defined(_WIN32)
+#define GALOIS_EXPORT __declspec(dllexport)
+#define GALOIS_NO_EXPORT
+#else
+#define GALOIS_EXPORT __attribute__((visibility("default")))
+#define GALOIS_NO_EXPORT __attribute__((visibility("hidden")))
 #endif
 
 #cmakedefine GALOIS_MONGOC_FOUND

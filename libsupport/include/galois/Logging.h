@@ -9,6 +9,8 @@
 #include <string>
 #include <system_error>
 
+#include "galois/config.h"
+
 // Small patch to work with libfmt 4.0, which is the version in Ubuntu 18.04.
 #ifndef FMT_STRING
 #define FMT_STRING(...) __VA_ARGS__
@@ -39,7 +41,7 @@ enum class LogLevel {
 
 namespace internal {
 
-void LogString(LogLevel level, const std::string& s);
+GALOIS_EXPORT void LogString(LogLevel level, const std::string& s);
 
 }
 

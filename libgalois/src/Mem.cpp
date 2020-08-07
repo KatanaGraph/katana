@@ -29,7 +29,6 @@ SystemHeap::SystemHeap() { assert(AllocSize == runtime::pagePoolSize()); }
 
 SystemHeap::~SystemHeap() {}
 
-#ifndef GALOIS_FORCE_STANDALONE
 thread_local SizedHeapFactory::HeapMap* SizedHeapFactory::localHeaps = 0;
 
 SizedHeapFactory::SizedHeap*
@@ -77,4 +76,3 @@ SizedHeapFactory::~SizedHeapFactory() {
   for (auto mptr : allLocalHeaps)
     delete mptr;
 }
-#endif

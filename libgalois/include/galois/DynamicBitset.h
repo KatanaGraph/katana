@@ -41,7 +41,7 @@ namespace galois {
 /**
  * Concurrent dynamically allocated bitset
  **/
-class DynamicBitSet {
+class GALOIS_EXPORT DynamicBitSet {
   galois::PODResizeableArray<galois::CopyableAtomic<uint64_t>> bitvec;
   size_t num_bits{0};
   static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
@@ -294,10 +294,10 @@ public:
 };
 
 //! An empty bitset object; used mainly by InvalidBitsetFnTy
-static galois::DynamicBitSet EmptyBitset;
+extern galois::DynamicBitSet EmptyBitset;
 
 //! A structure representing an empty bitset.
-struct InvalidBitsetFnTy {
+struct GALOIS_EXPORT InvalidBitsetFnTy {
   //! Returns false as this is an empty bitset
   static constexpr bool is_vector_bitset() { return false; }
 

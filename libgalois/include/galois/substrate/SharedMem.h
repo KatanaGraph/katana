@@ -29,7 +29,7 @@
 
 namespace galois::substrate {
 
-class SharedMem {
+class GALOIS_EXPORT SharedMem {
 
   // Order is critical here
   ThreadPool m_tpool;

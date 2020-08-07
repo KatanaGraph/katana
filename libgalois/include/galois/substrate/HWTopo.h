@@ -27,7 +27,7 @@
 
 namespace galois::substrate {
 
-struct ThreadTopoInfo {
+struct GALOIS_EXPORT ThreadTopoInfo {
   unsigned tid;                 // this thread (galois id)
   unsigned socketLeader;        // first thread id in tid's socket
   unsigned socket;              // socket (L3 normally) of thread
@@ -37,14 +37,14 @@ struct ThreadTopoInfo {
   unsigned osNumaNode;          // OS ID for numa node
 };
 
-struct MachineTopoInfo {
+struct GALOIS_EXPORT MachineTopoInfo {
   unsigned maxThreads;
   unsigned maxCores;
   unsigned maxSockets;
   unsigned maxNumaNodes;
 };
 
-struct HWTopoInfo {
+struct GALOIS_EXPORT HWTopoInfo {
   MachineTopoInfo machineTopoInfo;
   std::vector<ThreadTopoInfo> threadTopoInfo;
 };
@@ -53,18 +53,18 @@ struct HWTopoInfo {
  * getHWTopo determines the machine topology from the process information
  * exposed in /proc and /dev filesystems.
  */
-HWTopoInfo getHWTopo();
+GALOIS_EXPORT HWTopoInfo getHWTopo();
 
 /**
  * parseCPUList parses cpuset information in "List format" as described in
  * cpuset(7) and available under /proc/self/status
  */
-std::vector<int> parseCPUList(const std::string& in);
+GALOIS_EXPORT std::vector<int> parseCPUList(const std::string& in);
 
 /**
  * bindThreadSelf binds a thread to an osContext as returned by getHWTopo.
  */
-bool bindThreadSelf(unsigned osContext);
+GALOIS_EXPORT bool bindThreadSelf(unsigned osContext);
 
 } // namespace galois::substrate
 

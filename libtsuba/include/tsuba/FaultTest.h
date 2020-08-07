@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "galois/config.h"
+
 namespace tsuba::internal {
 
 enum class FaultSensitivity { Normal, High };
@@ -14,10 +16,11 @@ enum class FaultMode {
   UniformOverRun, // Choose uniform run length 1..run_length (exclusive)
 };
 
-void FaultTestInit(FaultMode mode         = FaultMode::None,
-                   float independent_prob = 0.0f, uint64_t run_length = 0UL);
+GALOIS_EXPORT void FaultTestInit(FaultMode mode         = FaultMode::None,
+                                 float independent_prob = 0.0f,
+                                 uint64_t run_length    = 0UL);
 // LOG_VERBOSE stats
-void FaultTestReport();
+GALOIS_EXPORT void FaultTestReport();
 
 // PullThePlug (virtually) Compile this out if NDEBUG?
 void PtP(FaultSensitivity sensitivity = FaultSensitivity::Normal);

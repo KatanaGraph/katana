@@ -31,7 +31,7 @@ namespace galois {
 namespace substrate {
 
 namespace internal {
-void ptr_slow_lock(std::atomic<uintptr_t>& l);
+GALOIS_EXPORT void ptr_slow_lock(std::atomic<uintptr_t>& l);
 }
 
 /// PtrLock is a spinlock and a pointer.  This wraps a pointer and

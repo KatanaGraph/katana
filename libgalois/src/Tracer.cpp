@@ -112,7 +112,7 @@ void galois::runtime::internal::print_output_impl(std::ostringstream& os) {
 }
 
 //! Specifies whether or not tracing is enabled
-bool galois::runtime::internal::doTrace = false;
+GALOIS_EXPORT bool galois::runtime::internal::doTrace = false;
 //! Specify if program has checked environment to see if doTrace should be on
 //! or off
-bool galois::runtime::internal::initTrace = false;
+GALOIS_EXPORT bool galois::runtime::internal::initTrace = false;

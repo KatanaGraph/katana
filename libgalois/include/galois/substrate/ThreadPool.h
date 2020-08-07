@@ -50,7 +50,7 @@ struct ExecuteTupleImpl<tpl, s, 0> {
 
 namespace galois::substrate {
 
-class ThreadPool {
+class GALOIS_EXPORT ThreadPool {
   friend class SharedMem;
 
 protected:
@@ -214,13 +214,13 @@ public:
 /**
  * return a reference to system thread pool
  */
-ThreadPool& getThreadPool(void);
+GALOIS_EXPORT ThreadPool& getThreadPool();
 
 } // namespace galois::substrate
 
 namespace galois::substrate::internal {
 
-void setThreadPool(ThreadPool* tp);
+GALOIS_EXPORT void setThreadPool(ThreadPool* tp);
 
 } // namespace galois::substrate::internal
 

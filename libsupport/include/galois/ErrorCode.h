@@ -4,6 +4,8 @@
 #include <string>
 #include <system_error>
 
+#include "galois/config.h"
+
 namespace galois {
 
 enum class ErrorCode {
@@ -55,7 +57,7 @@ public:
 };
 
 /// Return singleton category
-const ErrorCodeCategory& GetErrorCodeCategory();
+GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
 } // namespace galois::internal
 

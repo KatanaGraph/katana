@@ -5,6 +5,7 @@
 #include <string_view>
 #include <string>
 
+#include "galois/config.h"
 #include "galois/Result.h"
 #include "tsuba/FileAsyncWork.h"
 
@@ -31,31 +32,31 @@ struct StatBuf {
 //[[deprecated]] (turning this on breaks the build)
 galois::Result<int> FileOpen(const std::string& uri);
 
-galois::Result<void> FileCreate(const std::string& filename,
-                                bool overwrite = false);
+GALOIS_EXPORT galois::Result<void> FileCreate(const std::string& filename,
+                                              bool overwrite = false);
 
 // Map a particular chunk of this file (partial download). @begin and @size
 // should be aligned to kBlockSize return value will be aligned to kBlockSize as
 // well
-galois::Result<uint8_t*> FileMmap(const std::string& filename, uint64_t begin,
-                                  uint64_t size);
-galois::Result<void> FileMunmap(uint8_t* ptr);
+GALOIS_EXPORT galois::Result<uint8_t*> FileMmap(const std::string& filename,
+                                                uint64_t begin, uint64_t size);
+GALOIS_EXPORT galois::Result<void> FileMunmap(uint8_t* ptr);
 
 // Take whatever is in @data and put it a file called @uri
-galois::Result<void> FileStore(const std::string& uri, const uint8_t* data,
-                               uint64_t size);
+GALOIS_EXPORT galois::Result<void>
+FileStore(const std::string& uri, const uint8_t* data, uint64_t size);
 
 // Take whatever is in @data and start putting it a the file called @uri
-galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
 // read a part of the file into a caller defined buffer
-galois::Result<void> FilePeek(const std::string& filename,
-                              uint8_t* result_buffer, uint64_t begin,
-                              uint64_t size);
+GALOIS_EXPORT galois::Result<void> FilePeek(const std::string& filename,
+                                            uint8_t* result_buffer,
+                                            uint64_t begin, uint64_t size);
 
 // start reading a part of the file into a caller defined buffer
-galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FilePeekAsync(const std::string& filename, uint8_t* result_buffer,
               uint64_t begin, uint64_t size);
 
@@ -65,7 +66,8 @@ static inline galois::Result<void> FilePeek(const StrType& filename, T* obj) {
                   0, sizeof(*obj));
 }
 
-galois::Result<void> FileStat(const std::string& filename, StatBuf* s_buf);
+GALOIS_EXPORT galois::Result<void> FileStat(const std::string& filename,
+                                            StatBuf* s_buf);
 
 } // namespace tsuba
 

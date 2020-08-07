@@ -7,6 +7,7 @@
 
 #include <arrow/api.h>
 
+#include "galois/config.h"
 #include "galois/Result.h"
 #include "tsuba/FileView.h"
 #include "tsuba/FileFrame.h"
@@ -21,7 +22,7 @@ struct RDGHandle {
 };
 
 /// RDGFile wraps an RDGHandle to close the handle when RDGFile is destroyed.
-class RDGFile {
+class GALOIS_EXPORT RDGFile {
   RDGHandle handle_;
 
 public:
@@ -46,7 +47,7 @@ struct PropertyMetadata {
   std::string path;
 };
 
-struct RDG {
+struct GALOIS_EXPORT RDG {
   // arrow lib returns shared_ptr's to tables; match that for now
   std::shared_ptr<arrow::Table> node_table;
   std::shared_ptr<arrow::Table> edge_table;
@@ -90,18 +91,19 @@ struct RDGPrefix {
   const GRPrefix* prefix{nullptr};
 };
 
-galois::Result<RDGPrefix> ExaminePrefix(RDGHandle handle);
+GALOIS_EXPORT galois::Result<RDGPrefix> ExaminePrefix(RDGHandle handle);
 
 // acceptable values for Open's flags
 constexpr int kReadOnly    = 0;
 constexpr int kReadWrite   = 1;
 constexpr int kReadPartial = 2;
-galois::Result<RDGHandle> Open(const std::string& rdg_name, uint32_t flags);
+GALOIS_EXPORT galois::Result<RDGHandle> Open(const std::string& rdg_name,
+                                             uint32_t flags);
 
 /// Close an RDGHandle object
-galois::Result<void> Close(RDGHandle handle);
+GALOIS_EXPORT galois::Result<void> Close(RDGHandle handle);
 
-galois::Result<void> Create(const std::string& name);
+GALOIS_EXPORT galois::Result<void> Create(const std::string& name);
 
 // acceptable values for Rename's flags
 constexpr int kOverwrite = 1;
@@ -110,38 +112,39 @@ galois::Result<void> Rename(RDGHandle handle, const std::string& name,
                             int flags);
 
 /// Load the RDG described by the metadata in handle into memory
-galois::Result<RDG> Load(RDGHandle handle);
+GALOIS_EXPORT galois::Result<RDG> Load(RDGHandle handle);
 
 /// Load a contiguous piece of an RDG described by the metadata in the handle
 /// into memory
-galois::Result<RDG> LoadPartial(RDGHandle handle,
-                                std::pair<uint64_t, uint64_t> node_range,
-                                std::pair<uint64_t, uint64_t> edge_range,
-                                uint64_t topo_off, uint64_t topo_size);
+GALOIS_EXPORT galois::Result<RDG>
+LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
+            std::pair<uint64_t, uint64_t> edge_range, uint64_t topo_off,
+            uint64_t topo_size);
 
 /// Load the RDG described by the metadata in handle into memory, but only
 ///    populate the listed properties
-galois::Result<RDG> Load(RDGHandle handle,
-                         const std::vector<std::string>& node_properties,
-                         const std::vector<std::string>& edge_properties);
+GALOIS_EXPORT galois::Result<RDG>
+Load(RDGHandle handle, const std::vector<std::string>& node_properties,
+     const std::vector<std::string>& edge_properties);
 /// Load a contiguous piece of an RDG described by the metadata in the handle
 /// into memory
-galois::Result<RDG>
+GALOIS_EXPORT galois::Result<RDG>
 LoadPartial(RDGHandle handle, std::pair<uint64_t, uint64_t> node_range,
             std::pair<uint64_t, uint64_t> edge_range, uint64_t topo_off,
             uint64_t topo_size, const std::vector<std::string>& node_properties,
             const std::vector<std::string>& edge_properties);
 
-galois::Result<void> Store(RDGHandle handle, RDG* rdg);
-galois::Result<void> Store(RDGHandle handle, RDG* rdg, FileFrame* ff);
+GALOIS_EXPORT galois::Result<void> Store(RDGHandle handle, RDG* rdg);
+GALOIS_EXPORT galois::Result<void> Store(RDGHandle handle, RDG* rdg,
+                                         FileFrame* ff);
 
-galois::Result<void>
+GALOIS_EXPORT galois::Result<void>
 AddNodeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table);
-galois::Result<void>
+GALOIS_EXPORT galois::Result<void>
 AddEdgeProperties(RDG* rdg, const std::shared_ptr<arrow::Table>& table);
 
-galois::Result<void> DropNodeProperty(RDG* rdg, int i);
-galois::Result<void> DropEdgeProperty(RDG* rdg, int i);
+GALOIS_EXPORT galois::Result<void> DropNodeProperty(RDG* rdg, int i);
+GALOIS_EXPORT galois::Result<void> DropEdgeProperty(RDG* rdg, int i);
 
 } // namespace tsuba
 

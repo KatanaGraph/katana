@@ -33,7 +33,7 @@ namespace substrate {
 /// SimpleLock is a spinlock.
 /// Copying a lock is unsynchronized (relaxed ordering)
 
-class SimpleLock {
+class GALOIS_EXPORT SimpleLock {
   mutable std::atomic<int> _lock;
   void slow_lock() const;
 
@@ -86,25 +86,6 @@ public:
     return _lock.load(std::memory_order_acquire) & 1;
   }
 };
-
-//! Dummy Lock implements the lock interface without a lock for serial code
-
-class DummyLock {
-public:
-  inline void lock() const {}
-  inline void unlock() const {}
-  inline bool try_lock() const { return true; }
-  inline bool is_locked() const { return false; }
-};
-
-template <bool Enabled>
-using CondLock =
-    typename std::conditional<Enabled, SimpleLock, DummyLock>::type;
-
-using lock_guard_galois = std::lock_guard<SimpleLock>;
-
-#define MAKE_LOCK_GUARD(__x)                                                   \
-  galois::substrate::lock_guard_galois locker##___COUNTER__(__x)
 
 } // end namespace substrate
 } // end namespace galois

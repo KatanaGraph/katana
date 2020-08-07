@@ -28,7 +28,7 @@
 namespace galois {
 
 //! A simple timer
-class Timer {
+class GALOIS_EXPORT Timer {
   typedef std::chrono::steady_clock clockTy;
   // typedef std::chrono::high_resolution_clock clockTy;
   std::chrono::time_point<clockTy> startT, stopT;
@@ -42,7 +42,7 @@ public:
 
 //! A multi-start time accumulator.
 //! Gives the final runtime for a series of intervals
-class TimeAccumulator {
+class GALOIS_EXPORT TimeAccumulator {
   Timer ltimer;
   uint64_t acc;
 
@@ -60,7 +60,7 @@ public:
 
 //! Galois Timer that automatically reports stats upon destruction
 //! Provides statistic interface around timer
-class StatTimer : public TimeAccumulator {
+class GALOIS_EXPORT StatTimer : public TimeAccumulator {
   gstl::Str name_;
   gstl::Str region_;
   bool valid_;

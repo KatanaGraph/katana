@@ -32,15 +32,15 @@
 namespace galois {
 
 //! Prints a string
-void gPrintStr(const std::string&);
+GALOIS_EXPORT void gPrintStr(const std::string&);
 //! Prints an info string (for easy parsing)
-void gInfoStr(const std::string&);
+GALOIS_EXPORT void gInfoStr(const std::string&);
 //! Prints a warning string (for easy parsing)
-void gWarnStr(const std::string&);
+GALOIS_EXPORT void gWarnStr(const std::string&);
 //! Prints a debug string (for easy parsing)
-void gDebugStr(const std::string&);
+GALOIS_EXPORT void gDebugStr(const std::string&);
 //! Prints an error string (for easy parsing)
-void gErrorStr(const std::string&);
+GALOIS_EXPORT void gErrorStr(const std::string&);
 
 //! Prints a sequence of things
 template <typename... Args>
@@ -85,7 +85,7 @@ void gError(Args&&... args) {
   gErrorStr(os.str());
 }
 
-void gFlush();
+GALOIS_EXPORT void gFlush();
 
 #define GALOIS_SYS_DIE(...)                                                    \
   do {                                                                         \

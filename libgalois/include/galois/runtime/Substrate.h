@@ -37,7 +37,7 @@ namespace runtime {
  * barrier to the new number of active threads. If that may
  * happen, use {@link createSimpleBarrier()} instead.
  */
-substrate::Barrier& getBarrier(unsigned activeThreads);
+GALOIS_EXPORT substrate::Barrier& getBarrier(unsigned activeThreads);
 
 } // end namespace runtime
 } // end namespace galois

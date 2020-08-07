@@ -5,6 +5,8 @@
 
 #include <arrow/api.h>
 
+#include "galois/config.h"
+
 namespace tsuba {
 
 enum class ErrorCode {
@@ -21,7 +23,7 @@ enum class ErrorCode {
   PropertyNotFound = 10,
 };
 
-ErrorCode ArrowToTsuba(arrow::StatusCode);
+GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
 
 } // namespace tsuba
 
@@ -80,7 +82,7 @@ public:
 };
 
 /// Return singleton category
-const ErrorCodeCategory& GetErrorCodeCategory();
+GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
 } // namespace tsuba::internal
 

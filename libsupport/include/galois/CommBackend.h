@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "galois/config.h"
+
 namespace galois {
 
 struct CommBackend {

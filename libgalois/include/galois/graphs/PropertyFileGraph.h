@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "galois/config.h"
 #include "tsuba/RDG.h"
 
 namespace galois::graphs {
@@ -34,7 +35,7 @@ struct GraphTopology {
 /// The main way to load and store a property graph is via an RDG. An RDG
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
-class PropertyFileGraph {
+class GALOIS_EXPORT PropertyFileGraph {
   PropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   // sanity check the graph after loading

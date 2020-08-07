@@ -103,7 +103,7 @@ std::ostream& operator<<(std::ostream& os, const vecPrinter<T>& vp) {
 /**
  * Prints trace data (which has time data included).
  */
-void printTrace(std::ostringstream&);
+GALOIS_EXPORT void printTrace(std::ostringstream&);
 
 /**
  * Prints out string stream.

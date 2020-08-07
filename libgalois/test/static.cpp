@@ -34,8 +34,6 @@ int main() {
 
   std::cout << "is_pod SimpleLock == " << std::boolalpha
             << std::is_pod<SimpleLock>::value << "\n";
-  std::cout << "is_pod DummyLock == " << std::boolalpha
-            << std::is_pod<DummyLock>::value << "\n";
 
   std::cout << "is_pod StaticInstance<int> == " << std::boolalpha
             << std::is_pod<StaticInstance<int>>::value << "\n";

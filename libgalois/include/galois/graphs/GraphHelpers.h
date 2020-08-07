@@ -128,8 +128,8 @@ size_t findIndexPrefixSum(size_t nodeWeight, size_t edgeWeight,
  *
  * @returns The total number of blocks to split among all divisions
  */
-uint32_t determine_block_division(uint32_t numDivisions,
-                                  std::vector<unsigned>& scaleFactor);
+GALOIS_EXPORT uint32_t determine_block_division(
+    uint32_t numDivisions, std::vector<unsigned>& scaleFactor);
 
 } // end namespace internal
 
@@ -274,9 +274,10 @@ namespace internal {
  * @returns true if a corner case was found (indicates that returnRanges has
  * been finalized)
  */
-bool unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
-                               uint32_t endNode,
-                               std::vector<uint32_t>& returnRanges);
+GALOIS_EXPORT bool
+unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
+                          uint32_t endNode,
+                          std::vector<uint32_t>& returnRanges);
 
 /**
  * Helper function used by determineUnitRangesGraph that consists of the main
@@ -414,8 +415,9 @@ void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
  * @param endNode End of range, non-inclusive
  * @param returnRanges Ranges to sanity check
  */
-void unitRangeSanity(uint32_t unitsToSplit, uint32_t beginNode,
-                     uint32_t endNode, std::vector<uint32_t>& returnRanges);
+GALOIS_EXPORT void unitRangeSanity(uint32_t unitsToSplit, uint32_t beginNode,
+                                   uint32_t endNode,
+                                   std::vector<uint32_t>& returnRanges);
 
 } // namespace internal
 

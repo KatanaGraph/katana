@@ -6,6 +6,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
+#include "galois/config.h"
 #include "galois/graphs/GraphHelpers.h"
 #include "tsuba/FileView.h"
 #include "tsuba/RDG.h"
@@ -17,7 +18,7 @@ namespace galois {
 typedef uint32_t edge_v1_t;
 typedef uint64_t edge_v2_t;
 
-class OutIndexView {
+class GALOIS_EXPORT OutIndexView {
   tsuba::RDGPrefix pfx_;
 
   OutIndexView(tsuba::RDGPrefix&& pfx) noexcept : pfx_(std::move(pfx)) {}

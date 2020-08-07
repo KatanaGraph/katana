@@ -1,4 +1,8 @@
-add_library(galois_support STATIC)
+if(GALOIS_FORCE_NON_STATIC)
+  add_library(galois_support)
+else()
+  add_library(galois_support STATIC)
+endif()
 add_library(Galois::support ALIAS galois_support)
 set_target_properties(galois_support PROPERTIES EXPORT_NAME support)
 add_dependencies(lib galois_support)
@@ -22,12 +26,12 @@ target_include_directories(galois_support PUBLIC
 )
 
 find_package(fmt REQUIRED)
-if (fmt_VERSION VERSION_LESS 4)
+if(fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")
 endif()
 target_link_libraries(galois_support PUBLIC fmt::fmt)
 
-if (TARGET Boost::Boost)
+if(TARGET Boost::Boost)
   target_link_libraries(galois_support PUBLIC Boost::Boost)
 else()
   # Standard CMake Boost module, shorten the link time if we can

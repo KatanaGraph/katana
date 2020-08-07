@@ -24,6 +24,8 @@
 #include "galois/DynamicBitset.h"
 #include "galois/Galois.h"
 
+GALOIS_EXPORT galois::DynamicBitSet galois::EmptyBitset;
+
 void galois::DynamicBitSet::bitwise_or(const DynamicBitSet& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();

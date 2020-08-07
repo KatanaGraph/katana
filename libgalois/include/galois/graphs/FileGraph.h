@@ -54,7 +54,7 @@ namespace graphs {
 // TODO(ddn): Refactor to eliminate OCFileGraph
 
 //! Graph that mmaps Galois gr files for access
-class FileGraph {
+class GALOIS_EXPORT FileGraph {
 public:
   //! type of a node
   using GraphNode = uint64_t;

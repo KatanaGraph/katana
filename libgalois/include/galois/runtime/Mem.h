@@ -46,23 +46,23 @@ extern unsigned activeThreads;
 
 //! Memory management functionality.
 
-void preAlloc_impl(unsigned num);
+GALOIS_EXPORT void preAlloc_impl(unsigned num);
 
 // const size_t hugePageSize = 2*1024*1024;
 
 //! Preallocate numpages large pages for each thread
-void pagePreAlloc(int numpages);
+GALOIS_EXPORT void pagePreAlloc(int numpages);
 //! Forces the given block to be paged into physical memory
-void pageIn(void* buf, size_t len, size_t stride);
+GALOIS_EXPORT void pageIn(void* buf, size_t len, size_t stride);
 //! Forces the given readonly block to be paged into physical memory
-void pageInReadOnly(void* buf, size_t len, size_t stride);
+GALOIS_EXPORT void pageInReadOnly(void* buf, size_t len, size_t stride);
 
 //! Returns total small pages allocated by OS on a NUMA node
-int numNumaAllocForNode(unsigned nodeid);
+GALOIS_EXPORT int numNumaAllocForNode(unsigned nodeid);
 
 //! Print lines from /proc/pid/numa_maps that contain at least n (non-huge)
 //! pages
-void printInterleavedStats(int minPages = 16 * 1024);
+GALOIS_EXPORT void printInterleavedStats(int minPages = 16 * 1024);
 
 //! [Example Third Party Allocator]
 class MallocHeap {
@@ -507,7 +507,7 @@ public:
 
 //! This is the base source of memory for all allocators.
 //! It maintains a freelist of chunks acquired from the system
-class SystemHeap {
+class GALOIS_EXPORT SystemHeap {
 public:
   // FIXME: actually check!
   enum { AllocSize = 2 * 1024 * 1024 };
@@ -521,13 +521,13 @@ public:
 };
 
 template <typename Derived>
-class StaticSingleInstance : private boost::noncopyable {
+class GALOIS_EXPORT StaticSingleInstance : private boost::noncopyable {
 
   // static std::unique_ptr<Derived> instance;
   static substrate::PtrLock<Derived> ptr;
 
 public:
-  static Derived* getInstance(void) {
+  static Derived* getInstance() {
     Derived* f = ptr.getValue();
     if (f) {
       // assert (f == instance.get ());
@@ -589,27 +589,17 @@ public:
   }
 };
 
-#ifdef GALOIS_FORCE_STANDALONE
-class SizedHeapFactory : private boost::noncopyable {
-public:
-  typedef MallocHeap SizedHeap;
-
-  static SizedHeap* getHeapForSize(const size_t) { return &alloc; }
-
-private:
-  static SizedHeap alloc;
-};
-#else
-class SizedHeapFactory : public StaticSingleInstance<SizedHeapFactory> {
+class GALOIS_EXPORT SizedHeapFactory
+    : public StaticSingleInstance<SizedHeapFactory> {
   using Base = StaticSingleInstance<SizedHeapFactory>;
-  /* template <typename> */ friend class StaticSingleInstance<SizedHeapFactory>;
+  friend class StaticSingleInstance<SizedHeapFactory>;
 
 public:
   //! [FixedSizeAllocator example]
   typedef ThreadPrivateHeap<FreeListHeap<BumpHeap<SystemHeap>>> SizedHeap;
   //! [FixedSizeAllocator example]
 
-  static SizedHeap* getHeapForSize(const size_t);
+  static SizedHeap* getHeapForSize(size_t);
 
 private:
   typedef std::map<size_t, SizedHeap*> HeapMap;
@@ -625,7 +615,6 @@ private:
 public:
   ~SizedHeapFactory();
 };
-#endif
 
 /**
  * Scalable variable-size allocations.
@@ -782,7 +771,8 @@ public:
   }
 };
 
-class Pow_2_BlockHeap : public StaticSingleInstance<Pow_2_BlockHeap> {
+class GALOIS_EXPORT Pow_2_BlockHeap
+    : public StaticSingleInstance<Pow_2_BlockHeap> {
 
 private:
   using Base = StaticSingleInstance<Pow_2_BlockHeap>;

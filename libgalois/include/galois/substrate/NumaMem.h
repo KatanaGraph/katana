@@ -30,7 +30,7 @@ namespace galois {
 namespace substrate {
 
 namespace internal {
-struct largeFreer {
+struct GALOIS_EXPORT largeFreer {
   size_t bytes;
   void operator()(void* ptr) const;
 };
@@ -38,12 +38,13 @@ struct largeFreer {
 
 typedef std::unique_ptr<void, internal::largeFreer> LAptr;
 
-LAptr largeMallocLocal(size_t bytes);    // fault in locally
-LAptr largeMallocFloating(size_t bytes); // leave numa mapping undefined
+GALOIS_EXPORT LAptr largeMallocLocal(size_t bytes); // fault in locally
+GALOIS_EXPORT LAptr
+largeMallocFloating(size_t bytes); // leave numa mapping undefined
 // fault in interleaved mapping
-LAptr largeMallocInterleaved(size_t bytes, unsigned numThreads);
+GALOIS_EXPORT LAptr largeMallocInterleaved(size_t bytes, unsigned numThreads);
 // fault in block interleaved mapping
-LAptr largeMallocBlocked(size_t bytes, unsigned numThreads);
+GALOIS_EXPORT LAptr largeMallocBlocked(size_t bytes, unsigned numThreads);
 
 // fault in specified regions for each thread (threadRanges)
 template <typename RangeArrayTy>

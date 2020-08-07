@@ -23,7 +23,7 @@
 #include <algorithm>
 namespace galois {
 namespace runtime {
-unsigned int activeThreads = 1;
+GALOIS_EXPORT unsigned int activeThreads = 1;
 }
 } // namespace galois
 

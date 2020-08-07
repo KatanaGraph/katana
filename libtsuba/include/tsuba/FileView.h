@@ -6,12 +6,13 @@
 
 #include <parquet/arrow/reader.h>
 
+#include "galois/config.h"
 #include "galois/Result.h"
 #include "galois/Logging.h"
 
 namespace tsuba {
 
-class FileView : public arrow::io::RandomAccessFile {
+class GALOIS_EXPORT FileView : public arrow::io::RandomAccessFile {
   uint8_t* map_start_;
   int64_t file_size_;
   uint8_t page_shift_;

@@ -10,7 +10,8 @@ namespace galois {
  * SharedMemSys is an explicit class to initialize the Galois runtime. The
  * runtime is destroyed when this object is destroyed.
  */
-class SharedMemSys : public runtime::SharedMem<runtime::StatManager> {
+class GALOIS_EXPORT SharedMemSys
+    : public runtime::SharedMem<runtime::StatManager> {
 
 public:
   explicit SharedMemSys();

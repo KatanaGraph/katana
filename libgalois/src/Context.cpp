@@ -26,7 +26,7 @@
 //! Global thread context for each active thread
 static thread_local galois::runtime::SimpleRuntimeContext* thread_ctx = 0;
 
-thread_local jmp_buf galois::runtime::execFrame;
+GALOIS_EXPORT thread_local jmp_buf galois::runtime::execFrame;
 
 void galois::runtime::setThreadContext(
     galois::runtime::SimpleRuntimeContext* ctx) {

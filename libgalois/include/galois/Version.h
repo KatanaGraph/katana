@@ -26,12 +26,12 @@
 
 namespace galois {
 
-std::string getVersion();
-std::string getRevision();
-int getVersionMajor();
-int getVersionMinor();
-int getVersionPatch();
-int getCopyrightYear();
+GALOIS_EXPORT std::string getVersion();
+GALOIS_EXPORT std::string getRevision();
+GALOIS_EXPORT int getVersionMajor();
+GALOIS_EXPORT int getVersionMinor();
+GALOIS_EXPORT int getVersionPatch();
+GALOIS_EXPORT int getCopyrightYear();
 
 } // end namespace galois
 

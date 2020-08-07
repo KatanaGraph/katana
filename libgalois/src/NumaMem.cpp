@@ -227,9 +227,11 @@ LAptr galois::substrate::largeMallocSpecified(size_t bytes, uint32_t numThreads,
 }
 // Explicit template declarations since the template is defined in the .h
 // file
-template LAptr galois::substrate::largeMallocSpecified<std::vector<uint32_t>>(
+template LAptr GALOIS_EXPORT
+galois::substrate::largeMallocSpecified<std::vector<uint32_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint32_t>& threadRanges,
     size_t elementSize);
-template LAptr galois::substrate::largeMallocSpecified<std::vector<uint64_t>>(
+template LAptr GALOIS_EXPORT
+galois::substrate::largeMallocSpecified<std::vector<uint64_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint64_t>& threadRanges,
     size_t elementSize);

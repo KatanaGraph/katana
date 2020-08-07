@@ -34,7 +34,7 @@
 
 namespace galois::substrate {
 
-class PerBackend {
+class GALOIS_EXPORT PerBackend {
   typedef substrate::SimpleLock Lock;
 
   std::atomic<unsigned int> nextLoc{0};
@@ -78,12 +78,12 @@ public:
 };
 
 extern thread_local char* ptsBase;
-PerBackend& getPTSBackend();
+GALOIS_EXPORT PerBackend& getPTSBackend();
 
 extern thread_local char* pssBase;
-PerBackend& getPPSBackend();
+GALOIS_EXPORT PerBackend& getPPSBackend();
 
-void initPTS(unsigned maxT);
+GALOIS_EXPORT void initPTS(unsigned maxT);
 
 template <typename T>
 class PerThreadStorage {

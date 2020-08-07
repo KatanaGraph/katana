@@ -40,18 +40,18 @@ namespace runtime {
 
 //! Low level page pool (individual pages, use largeMalloc for large blocks)
 
-void* pagePoolAlloc();
-void pagePoolFree(void*);
-void pagePoolPreAlloc(unsigned);
+GALOIS_EXPORT void* pagePoolAlloc();
+GALOIS_EXPORT void pagePoolFree(void*);
+GALOIS_EXPORT void pagePoolPreAlloc(unsigned);
 
 // Size of returned pages
-size_t pagePoolSize();
+GALOIS_EXPORT size_t pagePoolSize();
 
 //! Returns total large pages allocated by Galois memory management subsystem
-int numPagePoolAllocTotal();
+GALOIS_EXPORT int numPagePoolAllocTotal();
 //! Returns total large pages allocated for thread by Galois memory management
 //! subsystem
-int numPagePoolAllocForThread(unsigned tid);
+GALOIS_EXPORT int numPagePoolAllocForThread(unsigned tid);
 
 namespace internal {
 
@@ -125,7 +125,7 @@ public:
 };
 
 //! Initialize PagePool, used by runtime::init();
-void setPagePoolState(PageAllocState<>* pa);
+GALOIS_EXPORT void setPagePoolState(PageAllocState<>* pa);
 
 } // end namespace internal
 

@@ -69,22 +69,25 @@ public:
   bool Done() const { return func_stack_.empty(); }
 };
 
-galois::Result<void> S3GetMultiAsync(S3AsyncWork& s3aw, uint64_t start,
-                                     uint64_t size, uint8_t* result_buf);
-galois::Result<void> S3GetMultiAsyncFinish(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void> S3GetMultiAsync(S3AsyncWork& s3aw,
+                                                   uint64_t start,
+                                                   uint64_t size,
+                                                   uint8_t* result_buf);
+GALOIS_EXPORT galois::Result<void> S3GetMultiAsyncFinish(S3AsyncWork& s3aw);
 
-galois::Result<void> S3PutSingleSync(const std::string& bucket,
-                                     const std::string& object,
-                                     const uint8_t* data, uint64_t size);
-galois::Result<void> S3PutMultiAsync1(S3AsyncWork& s3aw, const uint8_t* data,
-                                      uint64_t size);
-galois::Result<void> S3PutMultiAsync2(S3AsyncWork& s3aw);
-galois::Result<void> S3PutMultiAsync3(S3AsyncWork& s3aw);
-galois::Result<void> S3PutMultiAsyncFinish(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void> S3PutSingleSync(const std::string& bucket,
+                                                   const std::string& object,
+                                                   const uint8_t* data,
+                                                   uint64_t size);
+GALOIS_EXPORT galois::Result<void>
+S3PutMultiAsync1(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
+GALOIS_EXPORT galois::Result<void> S3PutMultiAsync2(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void> S3PutMultiAsync3(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void> S3PutMultiAsyncFinish(S3AsyncWork& s3aw);
 
-galois::Result<void> S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data,
-                                      uint64_t size);
-galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void>
+S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
+GALOIS_EXPORT galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
 } // namespace tsuba::internal
 
 #endif

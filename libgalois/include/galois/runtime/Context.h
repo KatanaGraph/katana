@@ -76,7 +76,7 @@ class LockManagerBase;
  * All objects that may be locked (nodes primarily) must inherit from
  * Lockable.
  */
-class Lockable {
+class GALOIS_EXPORT Lockable {
   substrate::PtrLock<LockManagerBase> owner;
   //! Use an intrusive list to track neighborhood of a context without
   //! allocation overhead. Works for cases where a Lockable needs to be only in
@@ -89,7 +89,7 @@ public:
   Lockable() : next(0) {}
 };
 
-class LockManagerBase : private boost::noncopyable {
+class GALOIS_EXPORT LockManagerBase : private boost::noncopyable {
 protected:
   enum AcquireStatus { FAIL, NEW_OWNER, ALREADY_OWNER };
 
@@ -128,7 +128,7 @@ protected:
   }
 };
 
-class SimpleRuntimeContext : public LockManagerBase {
+class GALOIS_EXPORT SimpleRuntimeContext : public LockManagerBase {
   //! The locks we hold
   Lockable* locks;
   bool customAcquire;
@@ -176,10 +176,10 @@ public:
 
 //! get the current conflict detection class, may be null if not in parallel
 //! region
-SimpleRuntimeContext* getThreadContext();
+GALOIS_EXPORT SimpleRuntimeContext* getThreadContext();
 
 //! used by the parallel code to set up conflict detection per thread
-void setThreadContext(SimpleRuntimeContext* n);
+GALOIS_EXPORT void setThreadContext(SimpleRuntimeContext* n);
 
 //! Helper function to decide if the conflict detection lock should be taken
 inline bool shouldLock(const galois::MethodFlag g) {

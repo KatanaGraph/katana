@@ -30,7 +30,7 @@
 namespace galois {
 namespace substrate {
 
-class Barrier {
+class GALOIS_EXPORT Barrier {
 public:
   virtual ~Barrier();
 
@@ -50,17 +50,17 @@ public:
 /**
  * Return a reference to system barrier
  */
-Barrier& getBarrier(unsigned activeThreads);
+GALOIS_EXPORT Barrier& getBarrier(unsigned activeThreads);
 
 /**
  * Create specific types of barriers.  For benchmarking only.  Use
  * getBarrier() for all production code
  */
-std::unique_ptr<Barrier> createPthreadBarrier(unsigned);
-std::unique_ptr<Barrier> createMCSBarrier(unsigned);
-std::unique_ptr<Barrier> createTopoBarrier(unsigned);
-std::unique_ptr<Barrier> createCountingBarrier(unsigned);
-std::unique_ptr<Barrier> createDisseminationBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> createPthreadBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> createMCSBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> createTopoBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> createCountingBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> createDisseminationBarrier(unsigned);
 
 /**
  * Creates a new simple barrier. This barrier is not designed to be fast but
@@ -69,7 +69,7 @@ std::unique_ptr<Barrier> createDisseminationBarrier(unsigned);
  * race in {@link getBarrier()}.  Client is reponsible for deallocating
  * returned barrier.
  */
-std::unique_ptr<Barrier> createSimpleBarrier(unsigned int);
+GALOIS_EXPORT std::unique_ptr<Barrier> createSimpleBarrier(unsigned int);
 
 namespace internal {
 

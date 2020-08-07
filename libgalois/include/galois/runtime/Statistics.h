@@ -53,7 +53,7 @@
 namespace galois {
 namespace runtime {
 
-boost::uuids::uuid getRandUUID();
+GALOIS_EXPORT boost::uuids::uuid getRandUUID();
 
 template <typename T>
 class RunningMin {
@@ -331,7 +331,7 @@ using ScalarStatManager = BasicStatMap<ScalarStat<T>>;
 
 } // end namespace internal
 
-class StatManager {
+class GALOIS_EXPORT StatManager {
 
 public:
   using Str = galois::gstl::Str;
@@ -527,8 +527,8 @@ public:
 
 namespace internal {
 
-void setSysStatManager(StatManager* sm);
-StatManager* sysStatManager(void);
+GALOIS_EXPORT void setSysStatManager(StatManager* sm);
+GALOIS_EXPORT StatManager* sysStatManager();
 
 } // namespace internal
 
@@ -615,18 +615,17 @@ void reportParam(const S1& region, const S2& category, const V& value) {
   internal::sysStatManager()->addToParam(region, category, value);
 }
 
-void setStatFile(const std::string& f);
+GALOIS_EXPORT void setStatFile(const std::string& f);
 
 //! Reports maximum resident set size and page faults stats using
 //! rusage
 //! @param id Identifier to prefix stat with in statistics output
-void reportRUsage(const std::string& id);
+GALOIS_EXPORT void reportRUsage(const std::string& id);
 
-// TODO: switch to gstl::Str in here
 //! Reports Galois system memory stats for all threads
-void reportPageAlloc(const char* category);
+GALOIS_EXPORT void reportPageAlloc(const char* category);
 //! Reports NUMA memory stats for all NUMA nodes
-void reportNumaAlloc(const char* category);
+GALOIS_EXPORT void reportNumaAlloc(const char* category);
 
 } // end namespace runtime
 } // end namespace galois

@@ -11,7 +11,7 @@
 
 namespace tsuba {
 
-class FileFrame : public arrow::io::OutputStream {
+class GALOIS_EXPORT FileFrame : public arrow::io::OutputStream {
   std::string path_;
   uint8_t* map_start_;
   uint64_t map_size_;

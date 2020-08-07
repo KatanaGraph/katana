@@ -24,14 +24,14 @@
 #include <atomic>
 #include <mutex>
 
-thread_local char* galois::substrate::ptsBase;
+GALOIS_EXPORT thread_local char* galois::substrate::ptsBase;
 
 galois::substrate::PerBackend& galois::substrate::getPTSBackend() {
   static galois::substrate::PerBackend b;
   return b;
 }
 
-thread_local char* galois::substrate::pssBase;
+GALOIS_EXPORT thread_local char* galois::substrate::pssBase;
 
 galois::substrate::PerBackend& galois::substrate::getPPSBackend() {
   static galois::substrate::PerBackend b;

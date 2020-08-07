@@ -104,8 +104,8 @@ struct UnorderedStepStats : public StepStatsBase {
 // Single ParaMeter stats file per run of an app
 // which includes all instances of for_each loops
 // run with ParaMeter Executor
-FILE* getStatsFile();
-void closeStatsFile();
+GALOIS_EXPORT FILE* getStatsFile();
+GALOIS_EXPORT void closeStatsFile();
 
 template <typename T>
 class FIFO_WL {

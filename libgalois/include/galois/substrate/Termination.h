@@ -34,9 +34,10 @@ class TerminationDetection;
  * returns an object.  The object will be reused, but reinitialized to
  * activeThreads
  */
-TerminationDetection& getSystemTermination(unsigned activeThreads);
+GALOIS_EXPORT TerminationDetection&
+getSystemTermination(unsigned activeThreads);
 
-class TerminationDetection {
+class GALOIS_EXPORT TerminationDetection {
 
   friend TerminationDetection& getSystemTermination(unsigned);
 

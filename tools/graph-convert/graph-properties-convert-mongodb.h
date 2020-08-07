@@ -8,11 +8,9 @@
 
 namespace galois {
 
-void HandleNodeDocumentMongoDB(GraphState* builder,
-                               WriterProperties* properties, const bson_t* doc,
+void HandleNodeDocumentMongoDB(PropertyGraphBuilder* builder, const bson_t* doc,
                                const std::string& collection_name);
-void HandleEdgeDocumentMongoDB(GraphState* builder,
-                               WriterProperties* properties, const bson_t* doc,
+void HandleEdgeDocumentMongoDB(PropertyGraphBuilder*, const bson_t* doc,
                                const std::string& collection_name);
 
 GraphComponents ConvertMongoDB(const std::string& db_name,

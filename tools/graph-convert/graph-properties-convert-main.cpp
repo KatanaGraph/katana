@@ -101,7 +101,6 @@ void ParseWild() {
 }
 
 void ParseNeo4j() {
-  galois::GraphComponents graph;
   switch (type) {
   case galois::SourceType::kGraphml:
     return galois::WritePropertyGraph(

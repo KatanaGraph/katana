@@ -27,7 +27,11 @@ add_test(NAME convert-properties-graphml-chunks
 )
 set_tests_properties(convert-properties-graphml-chunks PROPERTIES LABELS quick)
 
-add_test(NAME convert-properties-mongodb
-  COMMAND graph-properties-convert-test --mongodb --mongo friend
-)
-set_tests_properties(convert-properties-graphml PROPERTIES LABELS quick)
+if(mongoc-1.0_FOUND)
+  add_test(NAME convert-properties-mongodb
+    COMMAND graph-properties-convert-test --mongodb --mongo friend
+  )
+  set_tests_properties(convert-properties-graphml PROPERTIES LABELS quick)
+else()
+  message(STATUS "Skipping mongodb tests")
+endif()

@@ -33,16 +33,6 @@
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
 
-using galois::GraphComponents;
-using galois::GraphState;
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::LabelsState;
-using galois::PropertiesState;
-using galois::PropertyKey;
-using galois::TopologyState;
-using galois::WriterProperties;
-
 using ArrayBuilders   = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
 using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
 using ChunkedArrays   = std::vector<std::shared_ptr<arrow::ChunkedArray>>;
@@ -51,6 +41,16 @@ using ArrowFields     = std::vector<std::shared_ptr<arrow::Field>>;
 using NullMaps =
     std::pair<std::unordered_map<int, std::shared_ptr<arrow::Array>>,
               std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
+
+using galois::GraphComponents;
+using galois::ImportData;
+using galois::ImportDataType;
+using galois::LabelRule;
+using galois::LabelsState;
+using galois::PropertiesState;
+using galois::PropertyKey;
+using galois::TopologyState;
+using galois::WriterProperties;
 
 namespace {
 
@@ -169,6 +169,11 @@ std::shared_ptr<arrow::Array> GetFalseArray(size_t elts) {
   return BuildArray(builder);
 }
 
+WriterProperties GetWriterProperties(size_t chunk_size) {
+  return WriterProperties{GetNullArrays(chunk_size), GetFalseArray(chunk_size),
+                          chunk_size};
+}
+
 /*************************************************************/
 /* Utility functions for retrieving null arrays from the map */
 /*************************************************************/
@@ -284,6 +289,178 @@ void WriteFalseStats(const std::vector<ArrowArrays>& table,
 /* Functions for adding values to arrow builder */
 /************************************************/
 
+// Append an array to a builder
+void AppendArray(
+    std::shared_ptr<arrow::ListBuilder> list_builder,
+    std::function<ImportData(ImportDataType, bool)> resolve_value) {
+  arrow::Status st = arrow::Status::OK();
+  bool is_list     = true;
+
+  switch (list_builder->value_builder()->type()->id()) {
+  case arrow::Type::STRING: {
+    auto sb = static_cast<arrow::StringBuilder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kString, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = sb->AppendValues(std::get<std::vector<std::string>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto lb  = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kInt64, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = lb->AppendValues(std::get<std::vector<int64_t>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto ib  = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kInt32, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = ib->AppendValues(std::get<std::vector<int32_t>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto db = static_cast<arrow::DoubleBuilder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kDouble, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = db->AppendValues(std::get<std::vector<double>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto fb  = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kFloat, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = fb->AppendValues(std::get<std::vector<float>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto bb =
+        static_cast<arrow::BooleanBuilder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kBoolean, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = bb->AppendValues(std::get<std::vector<bool>>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::TIMESTAMP: {
+    auto tb =
+        static_cast<arrow::TimestampBuilder*>(list_builder->value_builder());
+    auto res = resolve_value(ImportDataType::kTimestampMilli, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = list_builder->Append();
+      st = tb->AppendValues(std::get<std::vector<int64_t>>(res.value));
+    }
+    break;
+  }
+  default: {
+    break;
+  }
+  }
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error adding value to arrow list array builder: {}",
+                     st.ToString());
+  }
+}
+
+// Append a non-null value to an array
+void AppendValue(
+    std::shared_ptr<arrow::ArrayBuilder> array,
+    std::function<ImportData(ImportDataType, bool)> resolve_value) {
+  arrow::Status st = arrow::Status::OK();
+  bool is_list     = false;
+
+  switch (array->type()->id()) {
+  case arrow::Type::STRING: {
+    auto sb  = std::static_pointer_cast<arrow::StringBuilder>(array);
+    auto res = resolve_value(ImportDataType::kString, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = sb->Append(std::get<std::string>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto lb  = std::static_pointer_cast<arrow::Int64Builder>(array);
+    auto res = resolve_value(ImportDataType::kInt64, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = lb->Append(std::get<int64_t>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto ib  = std::static_pointer_cast<arrow::Int32Builder>(array);
+    auto res = resolve_value(ImportDataType::kInt32, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = ib->Append(std::get<int32_t>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto db  = std::static_pointer_cast<arrow::DoubleBuilder>(array);
+    auto res = resolve_value(ImportDataType::kDouble, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = db->Append(std::get<double>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto fb  = std::static_pointer_cast<arrow::FloatBuilder>(array);
+    auto res = resolve_value(ImportDataType::kFloat, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = fb->Append(std::get<float>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto bb  = std::static_pointer_cast<arrow::BooleanBuilder>(array);
+    auto res = resolve_value(ImportDataType::kBoolean, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = bb->Append(std::get<bool>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::TIMESTAMP: {
+    auto tb  = std::static_pointer_cast<arrow::TimestampBuilder>(array);
+    auto res = resolve_value(ImportDataType::kTimestampMilli, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = tb->Append(std::get<int64_t>(res.value));
+    }
+    break;
+  }
+  // for now uint8_t is an alias for a struct
+  case arrow::Type::UINT8: {
+    auto bb  = std::static_pointer_cast<arrow::UInt8Builder>(array);
+    auto res = resolve_value(ImportDataType::kStruct, is_list);
+    if (res.type != ImportDataType::kUnsupported) {
+      st = bb->Append(std::get<uint8_t>(res.value));
+    }
+    break;
+  }
+  case arrow::Type::LIST: {
+    auto lb = std::static_pointer_cast<arrow::ListBuilder>(array);
+    AppendArray(lb, resolve_value);
+    break;
+  }
+  default: {
+    break;
+  }
+  }
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL(
+        "Error adding value to arrow array builder, parquet error: {}",
+        st.ToString());
+  }
+}
+
 // Adds nulls to an array being built until its length == total
 template <typename T>
 void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
@@ -306,7 +483,7 @@ void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
 
     // if we filled up a chunk, flush it
     if (static_cast<size_t>(builder->length()) == chunk_size) {
-      chunks->push_back(BuildArray(builder));
+      chunks->emplace_back(BuildArray(builder));
     } else {
       // if we did not fill up the array we know it must need no more nulls
       return;
@@ -315,7 +492,7 @@ void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
 
   // case where we are at the start of a new array and have null_arrays to add
   for (auto i = chunk_size; i <= nulls_needed; i += chunk_size) {
-    chunks->push_back(null_array);
+    chunks->emplace_back(null_array);
   }
   nulls_needed %= chunk_size;
 
@@ -367,7 +544,7 @@ void AddFalses(std::shared_ptr<arrow::BooleanBuilder> builder,
 
     // if we filled up a chunk, flush it
     if (static_cast<size_t>(builder->length()) == chunk_size) {
-      chunks->push_back(BuildArray(builder));
+      chunks->emplace_back(BuildArray(builder));
     } else {
       // if we did not fill up the array we know it must need no more falses
       return;
@@ -376,7 +553,7 @@ void AddFalses(std::shared_ptr<arrow::BooleanBuilder> builder,
 
   // case where we are at the start of a new array and have false_arrays to add
   for (auto i = chunk_size; i <= falses_needed; i += chunk_size) {
-    chunks->push_back(properties->false_array);
+    chunks->emplace_back(properties->false_array);
   }
   falses_needed %= chunk_size;
 
@@ -408,7 +585,7 @@ void AddTypedValue(const W& val, std::shared_ptr<T> builder,
 
   // if we filled up a chunk, flush it
   if (static_cast<size_t>(builder->length()) == properties->chunk_size) {
-    chunks->push_back(BuildArray(builder));
+    chunks->emplace_back(BuildArray(builder));
   }
 }
 
@@ -435,7 +612,7 @@ void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
   }
   // if we filled up a chunk, flush it
   if (static_cast<size_t>(list_builder->length()) == properties->chunk_size) {
-    chunks->push_back(BuildArray(list_builder));
+    chunks->emplace_back(BuildArray(list_builder));
   }
 }
 
@@ -462,7 +639,40 @@ void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
   }
   // if we filled up a chunk, flush it
   if (static_cast<size_t>(list_builder->length()) == properties->chunk_size) {
-    chunks->push_back(BuildArray(list_builder));
+    chunks->emplace_back(BuildArray(list_builder));
+  }
+}
+
+// Add nulls until the array is even and then append val so that length = total
+// + 1 at the end
+void AddValueInternal(
+    std::shared_ptr<arrow::ArrayBuilder> builder, ArrowArrays* chunks,
+    WriterProperties* properties, size_t total,
+    std::function<ImportData(ImportDataType, bool)> resolve_value) {
+  AddNulls(builder, chunks, properties, total);
+  AppendValue(builder, resolve_value);
+
+  // if we filled up a chunk, flush it
+  if (static_cast<size_t>(builder->length()) == properties->chunk_size) {
+    chunks->emplace_back(BuildArray(builder));
+  }
+}
+
+// Add falses until the array is even and then append true so that length =
+// total + 1 at the end
+void AddLabelInternal(std::shared_ptr<arrow::BooleanBuilder> builder,
+                      ArrowArrays* chunks, WriterProperties* properties,
+                      size_t total) {
+  AddFalses(builder, chunks, properties, total);
+  auto st = builder->Append(true);
+  if (!st.ok()) {
+    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
+                     st.ToString());
+  }
+
+  // if we filled up a chunk, flush it
+  if (static_cast<size_t>(builder->length()) == properties->chunk_size) {
+    chunks->emplace_back(BuildArray(builder));
   }
 }
 
@@ -481,48 +691,6 @@ uint64_t SetEdgeId(TopologyState* topology_builder,
   return i;
 }
 
-// Resolve string node IDs to node indexes, if a node does not exist create an
-// empty node
-void ResolveIntermediateIDs(GraphState* builder) {
-  TopologyState* topology = &builder->topology_builder;
-
-  for (size_t i = 0; i < topology->destinations.size(); i++) {
-    if (topology->destinations[i] == std::numeric_limits<uint32_t>::max()) {
-      auto str_id     = topology->destinations_intermediate[i];
-      auto dest_index = topology->node_indexes.find(str_id);
-      uint32_t dest;
-      // if node does not exist, create it
-      if (dest_index == topology->node_indexes.end()) {
-        dest = builder->nodes;
-        topology->node_indexes.insert(
-            std::pair<std::string, size_t>(str_id, dest));
-        builder->nodes++;
-        topology->out_indices.push_back(0);
-      } else {
-        dest = static_cast<uint32_t>(dest_index->second);
-      }
-      topology->destinations[i] = dest;
-    }
-
-    if (topology->sources[i] == std::numeric_limits<uint32_t>::max()) {
-      auto str_id    = topology->sources_intermediate[i];
-      auto src_index = topology->node_indexes.find(str_id);
-      uint32_t src;
-      if (src_index == topology->node_indexes.end()) {
-        src = builder->nodes;
-        topology->node_indexes.insert(
-            std::pair<std::string, size_t>(str_id, src));
-        builder->nodes++;
-        topology->out_indices.push_back(0);
-      } else {
-        src = static_cast<uint32_t>(src_index->second);
-      }
-      topology->sources[i] = src;
-      topology->out_indices[src]++;
-    }
-  }
-}
-
 /******************************************************************************/
 /* Functions for ensuring all arrow arrays are of the right length in the end */
 /******************************************************************************/
@@ -535,7 +703,7 @@ void EvenOutArray(ArrowArrays* chunks, std::shared_ptr<T> builder,
   AddNulls(builder, chunks, null_array, properties, total);
 
   if (total % properties->chunk_size != 0) {
-    chunks->push_back(BuildArray(builder));
+    chunks->emplace_back(BuildArray(builder));
   }
 }
 
@@ -546,7 +714,7 @@ void EvenOutArray(ArrowArrays* chunks,
   AddFalses(builder, chunks, properties, total);
 
   if (total % properties->chunk_size != 0) {
-    chunks->push_back(BuildArray(builder));
+    chunks->emplace_back(BuildArray(builder));
   }
 }
 
@@ -559,7 +727,7 @@ void EvenOutChunkBuilders(ArrayBuilders* builders,
                    AddNulls(builders->at(i), &chunks->at(i), properties, total);
 
                    if (total % properties->chunk_size != 0) {
-                     chunks->at(i).push_back(BuildArray(builders->at(i)));
+                     chunks->at(i).emplace_back(BuildArray(builders->at(i)));
                    }
                  });
 }
@@ -574,7 +742,7 @@ void EvenOutChunkBuilders(BooleanBuilders* builders,
                              total);
 
                    if (total % properties->chunk_size != 0) {
-                     chunks->at(i).push_back(BuildArray(builders->at(i)));
+                     chunks->at(i).emplace_back(BuildArray(builders->at(i)));
                    }
                  });
 }
@@ -600,7 +768,7 @@ RearrangeArray(std::shared_ptr<T> builder,
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<W>> arrays;
   for (auto chunk : chunked_array->chunks()) {
-    arrays.push_back(std::static_pointer_cast<W>(chunk));
+    arrays.emplace_back(std::static_pointer_cast<W>(chunk));
   }
   std::shared_ptr<arrow::Array> null_array =
       properties->null_arrays.first.find(builder->type()->id())->second;
@@ -634,7 +802,7 @@ RearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<arrow::StringArray>> arrays;
   for (auto chunk : chunked_array->chunks()) {
-    arrays.push_back(std::static_pointer_cast<arrow::StringArray>(chunk));
+    arrays.emplace_back(std::static_pointer_cast<arrow::StringArray>(chunk));
   }
   std::shared_ptr<arrow::Array> null_array =
       properties->null_arrays.first.find(builder->type()->id())->second;
@@ -668,14 +836,14 @@ RearrangeArray(std::shared_ptr<arrow::BooleanBuilder> builder,
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<arrow::BooleanArray>> arrays;
   for (auto chunk : chunked_array->chunks()) {
-    arrays.push_back(std::static_pointer_cast<arrow::BooleanArray>(chunk));
+    arrays.emplace_back(std::static_pointer_cast<arrow::BooleanArray>(chunk));
   }
 
   // add non-null values
   for (size_t i = 0; i < mapping.size(); i++) {
     auto val = arrays[mapping[i] / chunk_size]->Value(mapping[i] % chunk_size);
     if (val) {
-      AddLabel(builder, &chunks, properties, i);
+      AddLabelInternal(builder, &chunks, properties, i);
     }
   }
   EvenOutArray(&chunks, builder, properties, mapping.size());
@@ -700,8 +868,8 @@ ArrowArrays RearrangeArray(
   std::vector<std::shared_ptr<W>> sub_arrays;
   for (auto chunk : chunked_array->chunks()) {
     auto array_temp = std::static_pointer_cast<arrow::ListArray>(chunk);
-    list_arrays.push_back(array_temp);
-    sub_arrays.push_back(std::static_pointer_cast<W>(array_temp->values()));
+    list_arrays.emplace_back(array_temp);
+    sub_arrays.emplace_back(std::static_pointer_cast<W>(array_temp->values()));
   }
   std::shared_ptr<arrow::Array> null_array =
       properties->null_arrays.second.find(type_builder->type()->id())->second;
@@ -905,397 +1073,218 @@ std::vector<ArrowArrays> RearrangeTypeTable(const ChunkedArrays& initial,
   return rearranged;
 }
 
-// Build CSR format and rearrange edge tables to correspond to the CSR
-std::pair<std::shared_ptr<arrow::Table>, std::shared_ptr<arrow::Table>>
-BuildFinalEdges(GraphState* builder, WriterProperties* properties) {
-  galois::ParallelSTL::partial_sum(
-      builder->topology_builder.out_indices.begin(),
-      builder->topology_builder.out_indices.end(),
-      builder->topology_builder.out_indices.begin());
-
-  std::vector<size_t> edge_mapping;
-  edge_mapping.resize(builder->edges, std::numeric_limits<uint64_t>::max());
-
-  std::vector<uint64_t> offsets;
-  offsets.resize(builder->nodes, 0);
-
-  // get edge indices
-  for (size_t i = 0; i < builder->topology_builder.sources.size(); i++) {
-    uint64_t edgeId = SetEdgeId(&builder->topology_builder, &offsets, i);
-    // edge_mapping[i] = edgeId;
-    edge_mapping[edgeId] = i;
-  }
-
-  auto initial_edges = BuildChunks(&builder->edge_properties.chunks);
-  auto initial_types = BuildChunks(&builder->edge_types.chunks);
-
-  auto finalEdgeBuilders =
-      RearrangeTable(initial_edges, edge_mapping, properties);
-  auto finalTypeBuilders =
-      RearrangeTypeTable(initial_types, edge_mapping, properties);
-
-  std::cout << "Edge Properties Post:\n";
-  WriteNullStats(finalEdgeBuilders, properties, builder->edges);
-  std::cout << "Edge Types Post:\n";
-  WriteFalseStats(finalTypeBuilders, properties, builder->edges);
-
-  return std::pair<std::shared_ptr<arrow::Table>,
-                   std::shared_ptr<arrow::Table>>(
-      BuildTable(&finalEdgeBuilders, &builder->edge_properties.schema),
-      BuildTable(&finalTypeBuilders, &builder->edge_types.schema));
-}
-
 } // end of unnamed namespace
 
-/***************************************/
-/* Functions for writing GraphML files */
-/***************************************/
+galois::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
+    : properties_(GetWriterProperties(chunk_size)),
+      node_properties_(PropertiesState{}), edge_properties_(PropertiesState{}),
+      node_labels_(LabelsState{}), edge_types_(LabelsState{}),
+      topology_builder_(TopologyState{}), nodes_(0), edges_(0),
+      building_node_(false), building_edge_(false) {}
 
-xmlTextWriterPtr galois::CreateGraphmlFile(const std::string& outfile) {
-  xmlTextWriterPtr writer;
-  writer = xmlNewTextWriterFilename(outfile.c_str(), 0);
-  xmlTextWriterStartDocument(writer, "1.0", "UTF-8", NULL);
-  xmlTextWriterSetIndentString(writer, BAD_CAST "");
-  xmlTextWriterSetIndent(writer, 1);
+/***************************/
+/* Basic utility functions */
+/***************************/
 
-  xmlTextWriterStartElement(writer, BAD_CAST "graphml");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "xmlns",
-                              BAD_CAST "http://graphml.graphdrawing.org/xmlns");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "xmlns:xsi",
-                              BAD_CAST
-                              "http://www.w3.org/2001/XMLSchema-instance");
-  xmlTextWriterWriteAttribute(
-      writer, BAD_CAST "xmlns:schemaLocation",
-      BAD_CAST "http://graphml.graphdrawing.org/xmlns "
-               "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd");
-
-  return writer;
+size_t galois::PropertyGraphBuilder::GetNodeIndex() {
+  if (building_node_) {
+    return nodes_;
+  }
+  return std::numeric_limits<size_t>::max();
 }
 
-void galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
-  xmlTextWriterStartElement(writer, BAD_CAST "rule");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST rule.id.c_str());
-  if (rule.for_node) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "node");
-  } else if (rule.for_edge) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "edge");
-  }
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.label",
-                              BAD_CAST rule.label.c_str());
+size_t galois::PropertyGraphBuilder::GetNodes() { return nodes_; }
 
-  xmlTextWriterEndElement(writer);
+size_t galois::PropertyGraphBuilder::GetEdges() { return edges_; }
+
+/****************************************************************/
+/* Functions for handling topology and logical flow of building */
+/****************************************************************/
+
+bool galois::PropertyGraphBuilder::StartNode() {
+  if (building_node_ || building_edge_) {
+    return false;
+  }
+  building_node_ = true;
+  topology_builder_.out_indices.emplace_back(0);
+
+  return building_node_;
 }
 
-void galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
-  xmlTextWriterStartElement(writer, BAD_CAST "key");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST key.id.c_str());
-  if (key.for_node) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "node");
-  } else if (key.for_edge) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "edge");
+bool galois::PropertyGraphBuilder::StartNode(const std::string& id) {
+  if (this->StartNode()) {
+    this->AddNodeId(id);
+    return true;
   }
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.name",
-                              BAD_CAST key.name.c_str());
-  auto type = TypeName(key.type);
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.type",
-                              BAD_CAST type.c_str());
-  if (key.is_list) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.list",
-                                BAD_CAST type.c_str());
-  }
-
-  xmlTextWriterEndElement(writer);
+  return false;
 }
 
-void galois::FinishGraphmlFile(xmlTextWriterPtr writer) {
-  xmlTextWriterEndElement(writer); // end graphml
-  xmlTextWriterEndDocument(writer);
-  xmlFreeTextWriter(writer);
-}
-void galois::ExportSchemaMapping(const std::string& outfile,
-                                 const std::vector<LabelRule>& rules,
-                                 const std::vector<PropertyKey>& keys) {
-  xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
-
-  for (const LabelRule& rule : rules) {
-    WriteGraphmlRule(writer, rule);
-  }
-  for (const PropertyKey& key : keys) {
-    WriteGraphmlKey(writer, key);
-  }
-
-  xmlTextWriterStartElement(writer, BAD_CAST "graph");
-  xmlTextWriterEndElement(writer);
-
-  FinishGraphmlFile(writer);
+void galois::PropertyGraphBuilder::AddNodeId(const std::string& id) {
+  topology_builder_.node_indexes.insert(
+      std::pair<std::string, size_t>(id, nodes_));
 }
 
-/***************************************/
-/* Functions for parsing GraphML files */
-/***************************************/
+void galois::PropertyGraphBuilder::AddOutgoingEdge(const std::string& target,
+                                                   const std::string& label) {
+  if (!building_node_) {
+    return;
+  }
+  // if dest is an edge, do not create a shallow edge to it
+  if (topology_builder_.edge_ids.find(target) !=
+      topology_builder_.edge_ids.end()) {
+    return;
+  }
+  building_node_ = false;
+  building_edge_ = true;
 
-// extract the type from an attr.type or attr.list attribute from a key element
-ImportDataType galois::ExtractTypeGraphML(xmlChar* value) {
-  ImportDataType type = ImportDataType::kString;
-  if (xmlStrEqual(value, BAD_CAST "string")) {
-    type = ImportDataType::kString;
-  } else if (xmlStrEqual(value, BAD_CAST "long") ||
-             xmlStrEqual(value, BAD_CAST "int64")) {
-    type = ImportDataType::kInt64;
-  } else if (xmlStrEqual(value, BAD_CAST "int") ||
-             xmlStrEqual(value, BAD_CAST "int32")) {
-    type = ImportDataType::kInt32;
-  } else if (xmlStrEqual(value, BAD_CAST "double")) {
-    type = ImportDataType::kDouble;
-  } else if (xmlStrEqual(value, BAD_CAST "float")) {
-    type = ImportDataType::kFloat;
-  } else if (xmlStrEqual(value, BAD_CAST "boolean")) {
-    type = ImportDataType::kBoolean;
-  } else if (xmlStrEqual(value, BAD_CAST "timestamp milli")) {
-    type = ImportDataType::kTimestampMilli;
-  } else if (xmlStrEqual(value, BAD_CAST "struct")) {
-    type = ImportDataType::kStruct;
+  uint32_t src = static_cast<uint32_t>(nodes_);
+  topology_builder_.sources.emplace_back(src);
+  topology_builder_.out_indices[src]++;
+
+  this->AddEdgeTarget(target);
+  this->AddLabel(label);
+
+  edges_++;
+  building_node_ = true;
+  building_edge_ = false;
+}
+
+void galois::PropertyGraphBuilder::AddOutgoingEdge(uint32_t target,
+                                                   const std::string& label) {
+  if (!building_node_) {
+    return;
+  }
+  building_node_ = false;
+  building_edge_ = true;
+
+  uint32_t src = static_cast<uint32_t>(nodes_);
+  topology_builder_.sources.emplace_back(src);
+  topology_builder_.out_indices[src]++;
+  topology_builder_.destinations.emplace_back(target);
+
+  this->AddLabel(label);
+
+  edges_++;
+  building_node_ = true;
+  building_edge_ = false;
+}
+
+bool galois::PropertyGraphBuilder::FinishNode() {
+  if (!building_node_) {
+    return false;
+  }
+  nodes_++;
+  building_node_ = false;
+
+  return true;
+}
+
+bool galois::PropertyGraphBuilder::AddNode(const std::string& id) {
+  this->StartNode(id);
+  return this->FinishNode();
+}
+
+bool galois::PropertyGraphBuilder::StartEdge() {
+  if (building_node_ || building_edge_) {
+    return false;
+  }
+  building_edge_ = true;
+  return building_edge_;
+}
+
+bool galois::PropertyGraphBuilder::StartEdge(const std::string& source,
+                                             const std::string& target) {
+  if (building_node_ || building_edge_) {
+    return false;
+  }
+  building_edge_ = true;
+
+  this->AddEdgeSource(source);
+  this->AddEdgeTarget(target);
+
+  return building_edge_;
+}
+
+void galois::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
+  topology_builder_.edge_ids.insert(id);
+}
+
+void galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
+  if (!building_edge_) {
+    return;
+  }
+  auto src_entry = topology_builder_.node_indexes.find(source);
+  if (src_entry != topology_builder_.node_indexes.end()) {
+    topology_builder_.sources.emplace_back(
+        static_cast<uint32_t>(src_entry->second));
+    topology_builder_.out_indices[src_entry->second]++;
   } else {
-    GALOIS_LOG_ERROR("Came across attr.type: {}, that is not supported",
-                     std::string((const char*)value));
-    type = ImportDataType::kString;
+    topology_builder_.sources_intermediate.insert(
+        std::pair<size_t, std::string>(edges_, source));
+    topology_builder_.sources.emplace_back(
+        std::numeric_limits<uint32_t>::max());
   }
-  return type;
 }
 
-/*
- * reader should be pointing to key node elt before calling
- *
- * extracts key attribute information for use later
- */
-PropertyKey galois::ProcessKey(xmlTextReaderPtr reader) {
-  int ret = xmlTextReaderMoveToNextAttribute(reader);
-  xmlChar *name, *value;
-
-  std::string id;
-  bool for_node = false;
-  bool for_edge = false;
-  std::string attr_name;
-  ImportDataType type = ImportDataType::kString;
-  bool is_list        = false;
-
-  while (ret == 1) {
-    name  = xmlTextReaderName(reader);
-    value = xmlTextReaderValue(reader);
-    if (name != NULL) {
-      if (xmlStrEqual(name, BAD_CAST "id")) {
-        id = std::string((const char*)value);
-      } else if (xmlStrEqual(name, BAD_CAST "for")) {
-        for_node = xmlStrEqual(value, BAD_CAST "node") == 1;
-        for_edge = xmlStrEqual(value, BAD_CAST "edge") == 1;
-      } else if (xmlStrEqual(name, BAD_CAST "attr.name")) {
-        attr_name = std::string((const char*)value);
-      } else if (xmlStrEqual(name, BAD_CAST "attr.type")) {
-        // do this check for neo4j
-        if (!is_list) {
-          type = ExtractTypeGraphML(value);
-        }
-      } else if (xmlStrEqual(name, BAD_CAST "attr.list")) {
-        is_list = true;
-        type    = ExtractTypeGraphML(value);
-      } else {
-        GALOIS_LOG_ERROR("Attribute on key: {}, was not recognized",
-                         std::string((const char*)name));
-      }
-    }
-
-    xmlFree(name);
-    xmlFree(value);
-    ret = xmlTextReaderMoveToNextAttribute(reader);
+void galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
+  if (!building_edge_) {
+    return;
   }
-  return PropertyKey{
-      id, for_node, for_edge, attr_name, type, is_list,
-  };
-}
-
-/*
- * reader should be pointing to rule node elt before calling
- *
- * extracts key attribute information for use later
- */
-LabelRule galois::ProcessRule(xmlTextReaderPtr reader) {
-  int ret = xmlTextReaderMoveToNextAttribute(reader);
-  xmlChar *name, *value;
-
-  std::string id;
-  bool for_node = false;
-  bool for_edge = false;
-  std::string attr_label;
-
-  while (ret == 1) {
-    name  = xmlTextReaderName(reader);
-    value = xmlTextReaderValue(reader);
-    if (name != NULL) {
-      if (xmlStrEqual(name, BAD_CAST "id")) {
-        id = std::string((const char*)value);
-      } else if (xmlStrEqual(name, BAD_CAST "for")) {
-        for_node = xmlStrEqual(value, BAD_CAST "node") == 1;
-        for_edge = xmlStrEqual(value, BAD_CAST "edge") == 1;
-      } else if (xmlStrEqual(name, BAD_CAST "attr.label")) {
-        attr_label = std::string((const char*)value);
-      } else {
-        GALOIS_LOG_ERROR("Attribute on key: {}, was not recognized",
-                         std::string((const char*)name));
-      }
-    }
-
-    xmlFree(name);
-    xmlFree(value);
-    ret = xmlTextReaderMoveToNextAttribute(reader);
-  }
-  return LabelRule{
-      id,
-      for_node,
-      for_edge,
-      attr_label,
-  };
-}
-
-/**************************************************/
-/* Functions for reading schema mapping from file */
-/**************************************************/
-
-std::pair<std::vector<std::string>, std::vector<std::string>>
-galois::ProcessSchemaMapping(GraphState* builder, const std::string& mapping,
-                             const std::vector<std::string>& coll_names) {
-  xmlTextReaderPtr reader;
-  int ret              = 0;
-  bool finished_header = false;
-  std::vector<std::string> nodes;
-  std::vector<std::string> edges;
-
-  std::cout << "Start reading GraphML schema mapping file: " << mapping << "\n";
-
-  reader = xmlNewTextReaderFilename(mapping.c_str());
-  if (reader != NULL) {
-    ret = xmlTextReaderRead(reader);
-
-    // procedure:
-    // read in "key" xml nodes and add them to nodeKeys and edgeKeys
-    // once we reach the first "graph" xml node we parse it using the above keys
-    // once we have parsed the first "graph" xml node we exit
-    while (ret == 1 && !finished_header) {
-      xmlChar* name;
-      name = xmlTextReaderName(reader);
-      if (name == NULL) {
-        name = xmlStrdup(BAD_CAST "--");
-      }
-      // if elt is an xml node
-      if (xmlTextReaderNodeType(reader) == 1) {
-        // if elt is a "key" xml node read it in
-        if (xmlStrEqual(name, BAD_CAST "key")) {
-          PropertyKey key = ProcessKey(reader);
-          if (key.id.size() > 0 && key.id != std::string("label") &&
-              key.id != std::string("IGNORE")) {
-            if (key.for_node) {
-              AddBuilder(&builder->node_properties, std::move(key));
-            } else if (key.for_edge) {
-              AddBuilder(&builder->edge_properties, std::move(key));
-            }
-          }
-        } else if (xmlStrEqual(name, BAD_CAST "rule")) {
-          LabelRule rule = ProcessRule(reader);
-          if (rule.id.size() > 0) {
-            if (rule.for_node) {
-              if (std::find(coll_names.begin(), coll_names.end(), rule.id) !=
-                  coll_names.end()) {
-                nodes.push_back(rule.id);
-              }
-              AddLabelBuilder(&builder->node_labels, std::move(rule));
-            } else if (rule.for_edge) {
-              if (std::find(coll_names.begin(), coll_names.end(), rule.id) !=
-                  coll_names.end()) {
-                edges.push_back(rule.id);
-              }
-              AddLabelBuilder(&builder->edge_types, std::move(rule));
-            }
-          }
-        } else if (xmlStrEqual(name, BAD_CAST "graph")) {
-          std::cout << "Finished processing headers\n";
-          finished_header = true;
-        }
-      }
-
-      xmlFree(name);
-      ret = xmlTextReaderRead(reader);
-    }
-    xmlFreeTextReader(reader);
-    if (ret < 0) {
-      GALOIS_LOG_FATAL("Failed to parse {}", mapping);
-    }
+  auto dest_entry = topology_builder_.node_indexes.find(target);
+  if (dest_entry != topology_builder_.node_indexes.end()) {
+    topology_builder_.destinations.emplace_back(
+        static_cast<uint32_t>(dest_entry->second));
   } else {
-    GALOIS_LOG_FATAL("Unable to open {}", mapping);
-  }
-  return std::pair<std::vector<std::string>, std::vector<std::string>>(nodes,
-                                                                       edges);
-}
-
-/**************************************************/
-/* Functions for converting to/from datatype enum */
-/**************************************************/
-
-std::string galois::TypeName(ImportDataType type) {
-  switch (type) {
-  case ImportDataType::kString:
-    return std::string("string");
-  case ImportDataType::kDouble:
-    return std::string("double");
-  case ImportDataType::kInt64:
-    return std::string("int64");
-  case ImportDataType::kInt32:
-    return std::string("int32");
-  case ImportDataType::kBoolean:
-    return std::string("bool");
-  case ImportDataType::kTimestampMilli:
-    return std::string("timestamp milli");
-  case ImportDataType::kStruct:
-    return std::string("struct");
-  default:
-    return std::string("unsupported");
+    topology_builder_.destinations_intermediate.insert(
+        std::pair<size_t, std::string>(edges_, target));
+    topology_builder_.destinations.emplace_back(
+        std::numeric_limits<uint32_t>::max());
   }
 }
 
-ImportDataType galois::ParseType(const std::string& in) {
-  auto type = boost::to_lower_copy<std::string>(in);
-  if (type == std::string("string")) {
-    return ImportDataType::kString;
+bool galois::PropertyGraphBuilder::FinishEdge() {
+  if (!building_edge_) {
+    return false;
   }
-  if (type == std::string("double")) {
-    return ImportDataType::kDouble;
-  }
-  if (type == std::string("float")) {
-    return ImportDataType::kFloat;
-  }
-  if (type == std::string("int64")) {
-    return ImportDataType::kInt64;
-  }
-  if (type == std::string("int32")) {
-    return ImportDataType::kInt32;
-  }
-  if (type == std::string("bool")) {
-    return ImportDataType::kBoolean;
-  }
-  if (type == std::string("timestamp")) {
-    return ImportDataType::kTimestampMilli;
-  }
-  if (type == std::string("struct")) {
-    return ImportDataType::kStruct;
-  }
-  return ImportDataType::kUnsupported;
+  edges_++;
+  building_edge_ = false;
+
+  return true;
 }
 
-/**************************/
-/* Basic helper functions */
-/**************************/
+bool galois::PropertyGraphBuilder::AddEdge(const std::string& source,
+                                           const std::string& target) {
+  this->StartEdge(source, target);
+  return this->FinishEdge();
+}
 
-WriterProperties galois::GetWriterProperties(size_t chunk_size) {
-  return WriterProperties{GetNullArrays(chunk_size), GetFalseArray(chunk_size),
-                          chunk_size};
+bool galois::PropertyGraphBuilder::AddEdge(uint32_t source,
+                                           const std::string& target,
+                                           const std::string& label) {
+  // if dest is an edge, do not create a shallow edge to it
+  if (topology_builder_.edge_ids.find(target) !=
+      topology_builder_.edge_ids.end()) {
+    return false;
+  }
+  this->StartEdge();
+
+  topology_builder_.sources.emplace_back(source);
+  topology_builder_.out_indices[source]++;
+
+  this->AddEdgeTarget(target);
+  this->AddLabel(label);
+  return this->FinishEdge();
+}
+
+bool galois::PropertyGraphBuilder::AddEdge(uint32_t source, uint32_t target,
+                                           const std::string& label) {
+  this->StartEdge();
+  topology_builder_.sources.emplace_back(source);
+  topology_builder_.out_indices[source]++;
+  topology_builder_.destinations.emplace_back(target);
+
+  this->AddLabel(label);
+  return this->FinishEdge();
 }
 
 /**************************************/
@@ -1304,7 +1293,9 @@ WriterProperties galois::GetWriterProperties(size_t chunk_size) {
 
 // Special case for building label builders where the empty value is false,
 // not null
-size_t galois::AddLabelBuilder(LabelsState* labels, LabelRule rule) {
+size_t galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
+  LabelsState* labels = rule.for_node ? &node_labels_ : &edge_types_;
+
   size_t index;
   auto reverse_iter = labels->reverse_schema.find(rule.label);
   // add entry to map if it is not already present
@@ -1313,9 +1304,9 @@ size_t galois::AddLabelBuilder(LabelsState* labels, LabelRule rule) {
     labels->keys.insert(std::pair<std::string, size_t>(rule.id, index));
 
     // add column to schema, builders, and chunks
-    labels->schema.push_back(arrow::field(rule.label, arrow::boolean()));
-    labels->builders.push_back(std::make_shared<arrow::BooleanBuilder>());
-    labels->chunks.push_back(ArrowArrays{});
+    labels->schema.emplace_back(arrow::field(rule.label, arrow::boolean()));
+    labels->builders.emplace_back(std::make_shared<arrow::BooleanBuilder>());
+    labels->chunks.emplace_back(ArrowArrays{});
     labels->reverse_schema.insert(
         std::pair<std::string, std::string>(rule.label, rule.id));
   } else {
@@ -1327,101 +1318,112 @@ size_t galois::AddLabelBuilder(LabelsState* labels, LabelRule rule) {
 }
 
 // Case for adding properties for which we know their type
-size_t galois::AddBuilder(PropertiesState* properties, PropertyKey key) {
+size_t galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
+  PropertiesState* properties =
+      key.for_node ? &node_properties_ : &edge_properties_;
+
   auto* pool = arrow::default_memory_pool();
   if (!key.is_list) {
     switch (key.type) {
     case ImportDataType::kString: {
-      properties->schema.push_back(arrow::field(key.name, arrow::utf8()));
-      properties->builders.push_back(std::make_shared<arrow::StringBuilder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::utf8()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::StringBuilder>());
       break;
     }
     case ImportDataType::kInt64: {
-      properties->schema.push_back(arrow::field(key.name, arrow::int64()));
-      properties->builders.push_back(std::make_shared<arrow::Int64Builder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::int64()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::Int64Builder>());
       break;
     }
     case ImportDataType::kInt32: {
-      properties->schema.push_back(arrow::field(key.name, arrow::int32()));
-      properties->builders.push_back(std::make_shared<arrow::Int32Builder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::int32()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::Int32Builder>());
       break;
     }
     case ImportDataType::kDouble: {
-      properties->schema.push_back(arrow::field(key.name, arrow::float64()));
-      properties->builders.push_back(std::make_shared<arrow::DoubleBuilder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::float64()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::DoubleBuilder>());
       break;
     }
     case ImportDataType::kFloat: {
-      properties->schema.push_back(arrow::field(key.name, arrow::float32()));
-      properties->builders.push_back(std::make_shared<arrow::FloatBuilder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::float32()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::FloatBuilder>());
       break;
     }
     case ImportDataType::kBoolean: {
-      properties->schema.push_back(arrow::field(key.name, arrow::boolean()));
-      properties->builders.push_back(std::make_shared<arrow::BooleanBuilder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::boolean()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::BooleanBuilder>());
       break;
     }
     case ImportDataType::kTimestampMilli: {
       auto field = arrow::field(
           key.name, arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"));
-      properties->schema.push_back(field);
-      properties->builders.push_back(
+      properties->schema.emplace_back(field);
+      properties->builders.emplace_back(
           std::make_shared<arrow::TimestampBuilder>(field->type(), pool));
       break;
     }
     case ImportDataType::kStruct: {
-      properties->schema.push_back(arrow::field(key.name, arrow::uint8()));
-      properties->builders.push_back(std::make_shared<arrow::UInt8Builder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::uint8()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::UInt8Builder>());
       break;
     }
     default:
       // for now handle uncaught types as strings
       GALOIS_LOG_WARN("treating unknown type {} as string", key.type);
-      properties->schema.push_back(arrow::field(key.name, arrow::utf8()));
-      properties->builders.push_back(std::make_shared<arrow::StringBuilder>());
+      properties->schema.emplace_back(arrow::field(key.name, arrow::utf8()));
+      properties->builders.emplace_back(
+          std::make_shared<arrow::StringBuilder>());
       break;
     }
   } else {
     switch (key.type) {
     case ImportDataType::kString: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::utf8())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
     case ImportDataType::kInt64: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::int64())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::Int64Builder>()));
       break;
     }
     case ImportDataType::kInt32: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::int32())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::Int32Builder>()));
       break;
     }
     case ImportDataType::kDouble: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::float64())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::DoubleBuilder>()));
       break;
     }
     case ImportDataType::kFloat: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::float32())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::FloatBuilder>()));
       break;
     }
     case ImportDataType::kBoolean: {
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::boolean())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::BooleanBuilder>()));
       break;
     }
@@ -1429,8 +1431,9 @@ size_t galois::AddBuilder(PropertiesState* properties, PropertyKey key) {
       auto field = arrow::field(
           key.name, arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"));
 
-      properties->schema.push_back(arrow::field(key.name, arrow::list(field)));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->schema.emplace_back(
+          arrow::field(key.name, arrow::list(field)));
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool,
           std::make_shared<arrow::TimestampBuilder>(field->type(), pool)));
       break;
@@ -1439,15 +1442,15 @@ size_t galois::AddBuilder(PropertiesState* properties, PropertyKey key) {
       // for now handle uncaught types as strings
       GALOIS_LOG_WARN("treating unknown array type {} as a string array",
                       key.type);
-      properties->schema.push_back(
+      properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::utf8())));
-      properties->builders.push_back(std::make_shared<arrow::ListBuilder>(
+      properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
           pool, std::make_shared<arrow::StringBuilder>()));
       break;
     }
   }
   auto index = properties->keys.size();
-  properties->chunks.push_back(ArrowArrays{});
+  properties->chunks.emplace_back(ArrowArrays{});
   properties->keys.insert(std::pair<std::string, size_t>(key.id, index));
   return index;
 }
@@ -1458,83 +1461,168 @@ size_t galois::AddBuilder(PropertiesState* properties, PropertyKey key) {
 
 // Add nulls until the array is even and then append val so that length = total
 // + 1 at the end
-void galois::AddValue(std::shared_ptr<arrow::ArrayBuilder> builder,
-                      ArrowArrays* chunks, WriterProperties* properties,
-                      size_t total, std::function<void(void)> AppendValue) {
-  AddNulls(builder, chunks, properties, total);
-  AppendValue();
-
-  // if we filled up a chunk, flush it
-  if (static_cast<size_t>(builder->length()) == properties->chunk_size) {
-    chunks->push_back(BuildArray(builder));
+void galois::PropertyGraphBuilder::AddValue(
+    const std::string& id, std::function<PropertyKey()> process_element,
+    std::function<ImportData(ImportDataType, bool)> resolve_value) {
+  if (!building_node_ && !building_edge_) {
+    return;
   }
+  auto property_builder =
+      building_node_ ? &node_properties_ : &edge_properties_;
+  auto total = building_node_ ? nodes_ : edges_;
+
+  auto key_iter = property_builder->keys.find(id);
+  size_t index;
+  // if an entry for the key does not already exist, make an
+  // entry for it
+  if (key_iter == property_builder->keys.end()) {
+    auto key = process_element();
+    if (key.type == ImportDataType::kUnsupported) {
+      std::cout << "elt not type not supported\n";
+      return;
+    }
+    key.for_node = building_node_;
+    key.for_edge = building_edge_;
+    index        = this->AddBuilder(std::move(key));
+  } else {
+    index = key_iter->second;
+  }
+  AddValueInternal(property_builder->builders[index],
+                   &property_builder->chunks[index], &properties_, total,
+                   resolve_value);
 }
 
 // Add falses until the array is even and then append true so that length =
 // total + 1 at the end
-void galois::AddLabel(std::shared_ptr<arrow::BooleanBuilder> builder,
-                      ArrowArrays* chunks, WriterProperties* properties,
-                      size_t total) {
-  AddFalses(builder, chunks, properties, total);
-  auto st = builder->Append(true);
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+void galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
+  if (!building_node_ && !building_edge_) {
+    return;
+  }
+  auto label_builder = building_node_ ? &node_labels_ : &edge_types_;
+  auto total         = building_node_ ? nodes_ : edges_;
+
+  // add label
+  auto entry = label_builder->keys.find(name);
+  size_t index;
+  // if type does not already exist, add a column
+  if (entry == label_builder->keys.end()) {
+    LabelRule rule{name, building_node_, building_edge_, name};
+    index = this->AddLabelBuilder(std::move(rule));
+  } else {
+    index = entry->second;
+  }
+  AddLabelInternal(label_builder->builders[index],
+                   &label_builder->chunks[index], &properties_, total);
+}
+
+/*********************************/
+/* Functions for building Graphs */
+/*********************************/
+
+// Resolve string node IDs to node indexes, if a node does not exist create an
+// empty node
+void galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
+  TopologyState* topology = &topology_builder_;
+
+  for (auto [index, str_id] : topology->destinations_intermediate) {
+    auto dest_index = topology->node_indexes.find(str_id);
+    uint32_t dest;
+    // if node does not exist, create it
+    if (dest_index == topology->node_indexes.end()) {
+      dest = nodes_;
+      this->AddNode(str_id);
+    } else {
+      dest = static_cast<uint32_t>(dest_index->second);
+    }
+    topology->destinations[index] = dest;
   }
 
-  // if we filled up a chunk, flush it
-  if (static_cast<size_t>(builder->length()) == properties->chunk_size) {
-    chunks->push_back(BuildArray(builder));
+  for (auto [index, str_id] : topology->sources_intermediate) {
+    auto src_index = topology->node_indexes.find(str_id);
+    uint32_t src;
+    if (src_index == topology->node_indexes.end()) {
+      src = nodes_;
+      this->AddNode(str_id);
+    } else {
+      src = static_cast<uint32_t>(src_index->second);
+    }
+    topology->sources[index] = src;
+    topology->out_indices[src]++;
   }
 }
 
-/**************************************/
-/* Functions for building GraphStates */
-/**************************************/
+// Build CSR format and rearrange edge tables to correspond to the CSR
+galois::GraphComponent galois::PropertyGraphBuilder::BuildFinalEdges() {
+  galois::ParallelSTL::partial_sum(topology_builder_.out_indices.begin(),
+                                   topology_builder_.out_indices.end(),
+                                   topology_builder_.out_indices.begin());
 
-galois::GraphComponents
-galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
-  builder.topology_builder.out_dests.resize(
-      builder.edges, std::numeric_limits<uint32_t>::max());
+  std::vector<size_t> edge_mapping;
+  edge_mapping.resize(edges_, std::numeric_limits<uint64_t>::max());
 
-  if (!builder.topology_builder.sources_intermediate.empty() ||
-      !builder.topology_builder.destinations_intermediate.empty()) {
-    ResolveIntermediateIDs(&builder);
+  std::vector<uint64_t> offsets;
+  offsets.resize(nodes_, 0);
+
+  // get edge indices
+  for (size_t i = 0; i < topology_builder_.sources.size(); i++) {
+    uint64_t edgeId = SetEdgeId(&topology_builder_, &offsets, i);
+    // edge_mapping[i] = edgeId;
+    edge_mapping[edgeId] = i;
   }
 
+  auto initial_edges = BuildChunks(&edge_properties_.chunks);
+  auto initial_types = BuildChunks(&edge_types_.chunks);
+
+  auto final_edge_builders =
+      RearrangeTable(initial_edges, edge_mapping, &properties_);
+  auto final_type_builders =
+      RearrangeTypeTable(initial_types, edge_mapping, &properties_);
+
+  std::cout << "Edge Properties Post:\n";
+  WriteNullStats(final_edge_builders, &properties_, edges_);
+  std::cout << "Edge Types Post:\n";
+  WriteFalseStats(final_type_builders, &properties_, edges_);
+
+  return GraphComponent{
+      BuildTable(&final_edge_builders, &edge_properties_.schema),
+      BuildTable(&final_type_builders, &edge_types_.schema)};
+}
+
+galois::GraphComponents galois::PropertyGraphBuilder::Finish() {
+  topology_builder_.out_dests.resize(edges_,
+                                     std::numeric_limits<uint32_t>::max());
+  this->ResolveIntermediateIDs();
+
   // add buffered rows and even out columns
-  EvenOutChunkBuilders(&builder.node_properties.builders,
-                       &builder.node_properties.chunks, &properties,
-                       builder.nodes);
-  EvenOutChunkBuilders(&builder.node_labels.builders,
-                       &builder.node_labels.chunks, &properties, builder.nodes);
-  EvenOutChunkBuilders(&builder.edge_properties.builders,
-                       &builder.edge_properties.chunks, &properties,
-                       builder.edges);
-  EvenOutChunkBuilders(&builder.edge_types.builders, &builder.edge_types.chunks,
-                       &properties, builder.edges);
+  EvenOutChunkBuilders(&node_properties_.builders, &node_properties_.chunks,
+                       &properties_, nodes_);
+  EvenOutChunkBuilders(&node_labels_.builders, &node_labels_.chunks,
+                       &properties_, nodes_);
+  EvenOutChunkBuilders(&edge_properties_.builders, &edge_properties_.chunks,
+                       &properties_, edges_);
+  EvenOutChunkBuilders(&edge_types_.builders, &edge_types_.chunks, &properties_,
+                       edges_);
 
   std::cout << "Node Properties:\n";
-  WriteNullStats(builder.node_properties.chunks, &properties, builder.nodes);
+  WriteNullStats(node_properties_.chunks, &properties_, nodes_);
   std::cout << "Node Labels:\n";
-  WriteFalseStats(builder.node_labels.chunks, &properties, builder.nodes);
+  WriteFalseStats(node_labels_.chunks, &properties_, nodes_);
   std::cout << "Edge Properties Pre:\n";
-  WriteNullStats(builder.edge_properties.chunks, &properties, builder.edges);
+  WriteNullStats(edge_properties_.chunks, &properties_, edges_);
   std::cout << "Edge Types Pre:\n";
-  WriteFalseStats(builder.edge_types.chunks, &properties, builder.edges);
+  WriteFalseStats(edge_types_.chunks, &properties_, edges_);
 
   // build final nodes
-  auto final_node_table = BuildTable(&builder.node_properties.chunks,
-                                     &builder.node_properties.schema);
+  auto final_node_table =
+      BuildTable(&node_properties_.chunks, &node_properties_.schema);
   auto final_label_table =
-      BuildTable(&builder.node_labels.chunks, &builder.node_labels.schema);
+      BuildTable(&node_labels_.chunks, &node_labels_.schema);
+  GraphComponent nodes_tables{final_node_table, final_label_table};
 
   std::cout << "Finished building nodes\n";
 
   // rearrange edges to match implicit edge IDs
-  auto edges_tables = BuildFinalEdges(&builder, &properties);
-  std::shared_ptr<arrow::Table> final_edge_table = edges_tables.first;
-  std::shared_ptr<arrow::Table> final_type_table = edges_tables.second;
+  auto edges_tables = this->BuildFinalEdges();
 
   std::cout << "Finished topology and ordering edges\n";
 
@@ -1543,14 +1631,13 @@ galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
   arrow::Status st;
   std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
-  st = topology_indices_builder->AppendValues(
-      builder.topology_builder.out_indices);
+  st = topology_indices_builder->AppendValues(topology_builder_.out_indices);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology");
   }
   std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
-  st = topology_dests_builder->AppendValues(builder.topology_builder.out_dests);
+  st = topology_dests_builder->AppendValues(topology_builder_.out_dests);
   if (!st.ok()) {
     GALOIS_LOG_FATAL("Error building topology");
   }
@@ -1566,14 +1653,15 @@ galois::BuildGraphComponents(GraphState builder, WriterProperties properties) {
 
   std::cout << "Finished mongodb conversion to arrow\n";
   std::cout << "Nodes: " << topology->out_indices->length() << "\n";
-  std::cout << "Node Properties: " << final_node_table->num_columns() << "\n";
-  std::cout << "Node Labels: " << final_label_table->num_columns() << "\n";
+  std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
+            << "\n";
+  std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
   std::cout << "Edges: " << topology->out_dests->length() << "\n";
-  std::cout << "Edge Properties: " << final_edge_table->num_columns() << "\n";
-  std::cout << "Edge Types: " << final_type_table->num_columns() << "\n";
+  std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
+            << "\n";
+  std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
 
-  return galois::GraphComponents{final_node_table, final_label_table,
-                                 final_edge_table, final_type_table, topology};
+  return galois::GraphComponents{nodes_tables, edges_tables, topology};
 }
 
 /// WritePropertyGraph formally builds katana form via
@@ -1592,26 +1680,26 @@ void galois::WritePropertyGraph(const galois::GraphComponents& graph_comps,
     GALOIS_LOG_FATAL("Error adding topology: {}", result.error());
   }
 
-  if (graph_comps.node_properties->num_columns() > 0) {
-    result = graph.AddNodeProperties(graph_comps.node_properties);
+  if (graph_comps.nodes.properties->num_columns() > 0) {
+    result = graph.AddNodeProperties(graph_comps.nodes.properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node properties: {}", result.error());
     }
   }
-  if (graph_comps.node_labels->num_columns() > 0) {
-    result = graph.AddNodeProperties(graph_comps.node_labels);
+  if (graph_comps.nodes.labels->num_columns() > 0) {
+    result = graph.AddNodeProperties(graph_comps.nodes.labels);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node labels: {}", result.error());
     }
   }
-  if (graph_comps.edge_properties->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graph_comps.edge_properties);
+  if (graph_comps.edges.properties->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graph_comps.edges.properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge properties: {}", result.error());
     }
   }
-  if (graph_comps.edge_types->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graph_comps.edge_types);
+  if (graph_comps.edges.labels->num_columns() > 0) {
+    result = graph.AddEdgeProperties(graph_comps.edges.labels);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge types: {}", result.error());
     }

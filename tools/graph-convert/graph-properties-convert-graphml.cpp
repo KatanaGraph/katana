@@ -32,16 +32,12 @@
 #include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "graph-properties-convert-schema.h"
 
-using galois::GraphComponents;
-using galois::GraphState;
+using galois::ImportData;
 using galois::ImportDataType;
 using galois::LabelRule;
-using galois::LabelsState;
-using galois::PropertiesState;
 using galois::PropertyKey;
-using galois::TopologyState;
-using galois::WriterProperties;
 
 namespace {
 
@@ -49,7 +45,7 @@ namespace {
 /* Functions for parsing data */
 /******************************/
 
-std::vector<std::string> ParseStringList(std::string raw_list) {
+std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
   std::vector<std::string> list;
 
   if (raw_list.size() >= 2 && raw_list.front() == '[' &&
@@ -58,9 +54,8 @@ std::vector<std::string> ParseStringList(std::string raw_list) {
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
     GALOIS_LOG_ERROR(
-        "The provided list was not formatted like neo4j, returning string");
-    list.push_back(raw_list);
-    return list;
+        "The provided list was not formatted like neo4j, returning null");
+    return std::nullopt;
   }
 
   const char* char_list = raw_list.c_str();
@@ -94,7 +89,7 @@ std::vector<std::string> ParseStringList(std::string raw_list) {
     size_t elem_length = end_of_elem - start_of_elem;
 
     if (end_of_elem <= start_of_elem) {
-      list.push_back("");
+      list.emplace_back("");
     } else {
 
       std::string elem_rough(&char_list[start_of_elem], elem_length);
@@ -151,7 +146,7 @@ std::vector<std::string> ParseStringList(std::string raw_list) {
       }
       elem.append(elem_rough.begin() + curr_index, elem_rough.end());
 
-      list.push_back(elem);
+      list.emplace_back(elem);
     }
   }
 
@@ -159,7 +154,7 @@ std::vector<std::string> ParseStringList(std::string raw_list) {
 }
 
 template <typename T>
-std::vector<T> ParseNumberList(std::string raw_list) {
+std::optional<std::vector<T>> ParseNumberList(std::string raw_list) {
   std::vector<T> list;
 
   if (raw_list.front() == '[' && raw_list.back() == ']') {
@@ -168,18 +163,18 @@ std::vector<T> ParseNumberList(std::string raw_list) {
   } else {
     GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
                      "returning empty vector");
-    return list;
+    return std::nullopt;
   }
   std::vector<std::string> elems;
   boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
-    list.push_back(boost::lexical_cast<T>(s));
+    list.emplace_back(boost::lexical_cast<T>(s));
   }
   return list;
 }
 
-std::vector<bool> ParseBooleanList(std::string raw_list) {
+std::optional<std::vector<bool>> ParseBooleanList(std::string raw_list) {
   std::vector<bool> list;
 
   if (raw_list.front() == '[' && raw_list.back() == ']') {
@@ -188,14 +183,14 @@ std::vector<bool> ParseBooleanList(std::string raw_list) {
   } else {
     GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
                      "returning empty vector");
-    return list;
+    return std::nullopt;
   }
   std::vector<std::string> elems;
   boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
     bool bool_val = s[0] == 't' || s[0] == 'T';
-    list.push_back(bool_val);
+    list.emplace_back(bool_val);
   }
   return list;
 }
@@ -204,115 +199,74 @@ std::vector<bool> ParseBooleanList(std::string raw_list) {
 /* Functions for adding values to arrow builder */
 /************************************************/
 
-// Append an array to a builder
-void AppendArray(std::shared_ptr<arrow::ListBuilder> list_builder,
-                 const std::string& val) {
-  arrow::Status st = arrow::Status::OK();
+template <typename T>
+ImportData Resolve(ImportDataType type, bool is_list, T val) {
+  ImportData data{type, is_list};
+  data.value = val;
+  return data;
+}
 
-  switch (list_builder->value_builder()->type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb = static_cast<arrow::StringBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    auto sarray = ParseStringList(val);
-    st          = sb->AppendValues(sarray);
-    break;
+template <typename Fn>
+ImportData ResolveOptionalList(ImportDataType type, const std::string& val,
+                               Fn resolver) {
+  ImportData data{type, true};
+
+  auto res = resolver(val);
+  if (!res) {
+    data.type = ImportDataType::kUnsupported;
+  } else {
+    data.value = res.value();
   }
-  case arrow::Type::INT64: {
-    auto lb = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    auto larray = ParseNumberList<int64_t>(val);
-    st          = lb->AppendValues(larray);
-    break;
-  }
-  case arrow::Type::INT32: {
-    auto ib = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    auto iarray = ParseNumberList<int32_t>(val);
-    st          = ib->AppendValues(iarray);
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    auto db = static_cast<arrow::DoubleBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    auto darray = ParseNumberList<double>(val);
-    st          = db->AppendValues(darray);
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    auto fb = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    auto farray = ParseNumberList<float>(val);
-    st          = fb->AppendValues(farray);
-    break;
-  }
-  case arrow::Type::BOOL: {
-    auto bb =
-        static_cast<arrow::BooleanBuilder*>(list_builder->value_builder());
-    st          = list_builder->Append();
-    auto barray = ParseBooleanList(val);
-    st          = bb->AppendValues(barray);
-    break;
-  }
-  default: {
-    break;
-  }
-  }
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error adding value to arrow list array builder: {}",
-                     st.ToString());
+  return data;
+}
+
+ImportData ResolveListValue(const std::string& val, ImportDataType type) {
+  switch (type) {
+  case ImportDataType::kString:
+    return ResolveOptionalList(type, val, ParseStringList);
+  case ImportDataType::kInt64:
+    return ResolveOptionalList(type, val, ParseNumberList<int64_t>);
+  case ImportDataType::kInt32:
+    return ResolveOptionalList(type, val, ParseNumberList<int32_t>);
+  case ImportDataType::kDouble:
+    return ResolveOptionalList(type, val, ParseNumberList<double>);
+  case ImportDataType::kFloat:
+    return ResolveOptionalList(type, val, ParseNumberList<float>);
+  case ImportDataType::kBoolean:
+    return ResolveOptionalList(type, val, ParseBooleanList);
+  case ImportDataType::kTimestampMilli:
+    return ImportData{ImportDataType::kUnsupported, true};
+  default:
+    return ImportData{ImportDataType::kUnsupported, true};
   }
 }
 
-// Append a non-null value to an array
-void AppendValue(std::shared_ptr<arrow::ArrayBuilder> array,
-                 const std::string& val) {
-  arrow::Status st = arrow::Status::OK();
-
-  switch (array->type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb = std::static_pointer_cast<arrow::StringBuilder>(array);
-    st      = sb->Append(val.c_str(), val.length());
-    break;
+ImportData ResolveValue(const std::string& val, ImportDataType type,
+                        bool is_list) {
+  if (is_list) {
+    return ResolveListValue(val, type);
   }
-  case arrow::Type::INT64: {
-    auto lb = std::static_pointer_cast<arrow::Int64Builder>(array);
-    st      = lb->Append(boost::lexical_cast<int64_t>(val));
-    break;
-  }
-  case arrow::Type::INT32: {
-    auto ib = std::static_pointer_cast<arrow::Int32Builder>(array);
-    st      = ib->Append(boost::lexical_cast<int32_t>(val));
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    auto db = std::static_pointer_cast<arrow::DoubleBuilder>(array);
-    st      = db->Append(boost::lexical_cast<double>(val));
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    auto fb = std::static_pointer_cast<arrow::FloatBuilder>(array);
-    st      = fb->Append(boost::lexical_cast<float>(val));
-    break;
-  }
-  case arrow::Type::BOOL: {
-    auto bb       = std::static_pointer_cast<arrow::BooleanBuilder>(array);
-    bool bool_val = val[0] == 't' || val[0] == 'T';
-    st            = bb->Append(bool_val);
-    break;
-  }
-  case arrow::Type::LIST: {
-    auto lb = std::static_pointer_cast<arrow::ListBuilder>(array);
-    AppendArray(lb, val);
-    break;
-  }
-  default: {
-    break;
-  }
-  }
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL(
-        "Error adding value to arrow array builder: {}, parquet error: {}", val,
-        st.ToString());
+  try {
+    switch (type) {
+    case ImportDataType::kString:
+      return Resolve(type, is_list, val);
+    case ImportDataType::kInt64:
+      return Resolve(type, is_list, boost::lexical_cast<int64_t>(val));
+    case ImportDataType::kInt32:
+      return Resolve(type, is_list, boost::lexical_cast<int32_t>(val));
+    case ImportDataType::kDouble:
+      return Resolve(type, is_list, boost::lexical_cast<double>(val));
+    case ImportDataType::kFloat:
+      return Resolve(type, is_list, boost::lexical_cast<float>(val));
+    case ImportDataType::kBoolean:
+      return Resolve(type, is_list, val[0] == 't' || val[0] == 'T');
+    case ImportDataType::kTimestampMilli:
+      return ImportData{ImportDataType::kUnsupported, false};
+    default:
+      return ImportData{ImportDataType::kUnsupported, false};
+    }
+  } catch (const boost::bad_lexical_cast&) {
+    return ImportData{ImportDataType::kUnsupported, false};
   }
 }
 
@@ -375,8 +329,8 @@ std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
  *
  * parses the node from a GraphML file into readable form
  */
-bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
-                 WriterProperties* properties) {
+void ProcessNode(xmlTextReaderPtr reader,
+                 galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -418,9 +372,7 @@ bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
 
   bool validNode = !id.empty();
   if (validNode) {
-    builder->topology_builder.node_indexes.insert(
-        std::pair<std::string, size_t>(
-            id, builder->topology_builder.node_indexes.size()));
+    builder->StartNode(id);
   }
 
   // parse "data" xml nodes for properties
@@ -436,7 +388,7 @@ bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
       // if elt is a "data" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "data")) {
         auto property = ProcessData(reader);
-        if (property.first.size() > 0) {
+        if (!property.first.empty()) {
           // we reserve the data fields label and labels for node/edge labels
           if (property.first == std::string("label") ||
               property.first == std::string("labels")) {
@@ -451,24 +403,16 @@ bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
             }
           } else if (property.first != std::string("IGNORE")) {
             if (validNode) {
-              auto keyIter = builder->node_properties.keys.find(property.first);
-              size_t index;
-              // if an entry for the key does not already exist, make a default
-              // entry for it
-              if (keyIter == builder->node_properties.keys.end()) {
-                PropertyKey key{property.first, ImportDataType::kString, false};
-                index = galois::AddBuilder(&builder->node_properties,
-                                           std::move(key));
-              } else {
-                index = keyIter->second;
-              }
-              galois::AddValue(builder->node_properties.builders[index],
-                               &builder->node_properties.chunks[index],
-                               properties, builder->nodes, [&]() {
-                                 AppendValue(
-                                     builder->node_properties.builders[index],
-                                     property.second);
-                               });
+              const std::string& value = property.second;
+              builder->AddValue(
+                  property.first,
+                  [&]() {
+                    return PropertyKey{property.first, ImportDataType::kString,
+                                       false};
+                  },
+                  [&value](ImportDataType type, bool is_list) {
+                    return ResolveValue(value, type, is_list);
+                  });
             }
           }
         }
@@ -483,24 +427,14 @@ bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
   }
 
   // add labels if they exists
-  if (validNode && labels.size() > 0) {
-    for (std::string label : labels) {
-      auto entry = builder->node_labels.keys.find(label);
-      size_t index;
-
-      // if label does not already exist, add a column
-      if (entry == builder->node_labels.keys.end()) {
-        LabelRule rule{label};
-        index = galois::AddLabelBuilder(&builder->node_labels, std::move(rule));
-      } else {
-        index = entry->second;
+  if (validNode) {
+    if (!labels.empty()) {
+      for (std::string label : labels) {
+        builder->AddLabel(label);
       }
-      galois::AddLabel(builder->node_labels.builders[index],
-                       &builder->node_labels.chunks[index], properties,
-                       builder->nodes);
     }
+    builder->FinishNode();
   }
-  return validNode;
 }
 
 /*
@@ -508,8 +442,8 @@ bool ProcessNode(xmlTextReaderPtr reader, GraphState* builder,
  *
  * parses the edge from a GraphML file into readable form
  */
-bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
-                 WriterProperties* properties) {
+void ProcessEdge(xmlTextReaderPtr reader,
+                 galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -549,17 +483,7 @@ bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
 
   bool valid_edge = !source.empty() && !target.empty();
   if (valid_edge) {
-    auto src_entry  = builder->topology_builder.node_indexes.find(source);
-    auto dest_entry = builder->topology_builder.node_indexes.find(target);
-
-    valid_edge = src_entry != builder->topology_builder.node_indexes.end() &&
-                 dest_entry != builder->topology_builder.node_indexes.end();
-    if (valid_edge) {
-      builder->topology_builder.sources.push_back(src_entry->second);
-      builder->topology_builder.destinations.push_back(
-          static_cast<uint32_t>(dest_entry->second));
-      builder->topology_builder.out_indices[src_entry->second]++;
-    }
+    valid_edge = builder->StartEdge(source, target);
   }
 
   // parse "data" xml edges for properties
@@ -575,7 +499,7 @@ bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
       // if elt is a "data" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "data")) {
         auto property = ProcessData(reader);
-        if (property.first.size() > 0) {
+        if (!property.first.empty()) {
           // we reserve the data fields label and labels for node/edge labels
           if (property.first == std::string("label") ||
               property.first == std::string("labels")) {
@@ -585,24 +509,16 @@ bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
             }
           } else if (property.first != std::string("IGNORE")) {
             if (valid_edge) {
-              auto keyIter = builder->edge_properties.keys.find(property.first);
-              size_t index;
-              // if an entry for the key does not already exist, make a default
-              // entry for it
-              if (keyIter == builder->edge_properties.keys.end()) {
-                PropertyKey key{property.first, ImportDataType::kString, false};
-                index = galois::AddBuilder(&builder->edge_properties,
-                                           std::move(key));
-              } else {
-                index = keyIter->second;
-              }
-              galois::AddValue(builder->edge_properties.builders[index],
-                               &builder->edge_properties.chunks[index],
-                               properties, builder->edges, [&]() {
-                                 AppendValue(
-                                     builder->edge_properties.builders[index],
-                                     property.second);
-                               });
+              const std::string& value = property.second;
+              builder->AddValue(
+                  property.first,
+                  [&]() {
+                    return PropertyKey{property.first, ImportDataType::kString,
+                                       false};
+                  },
+                  [&value](ImportDataType type, bool is_list) {
+                    return ResolveValue(value, type, is_list);
+                  });
             }
           }
         }
@@ -611,28 +527,17 @@ bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
                          std::string((const char*)name));
       }
     }
-
     xmlFree(name);
     ret = xmlTextReaderRead(reader);
   }
 
   // add type if it exists
-  if (valid_edge && type.length() > 0) {
-    auto entry = builder->edge_types.keys.find(type);
-    size_t index;
-
-    // if type does not already exist, add a column
-    if (entry == builder->edge_types.keys.end()) {
-      LabelRule rule{type};
-      index = galois::AddLabelBuilder(&builder->edge_types, std::move(type));
-    } else {
-      index = entry->second;
+  if (valid_edge) {
+    if (type.length() > 0) {
+      builder->AddLabel(type);
     }
-    galois::AddLabel(builder->edge_types.builders[index],
-                     &builder->edge_types.chunks[index], properties,
-                     builder->edges);
+    builder->FinishEdge();
   }
-  return valid_edge;
 }
 
 /*
@@ -640,8 +545,8 @@ bool ProcessEdge(xmlTextReaderPtr reader, GraphState* builder,
  *
  * parses the graph structure from a GraphML file into Galois format
  */
-void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
-                  WriterProperties* properties) {
+void ProcessGraph(xmlTextReaderPtr reader,
+                  galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
   int ret            = xmlTextReaderRead(reader);
 
@@ -658,27 +563,14 @@ void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
     if (xmlTextReaderNodeType(reader) == 1) {
       // if elt is a "node" xml node read it in
       if (xmlStrEqual(name, BAD_CAST "node")) {
-        if (ProcessNode(reader, builder, properties)) {
-          builder->topology_builder.out_indices.push_back(0);
-          builder->nodes++;
-
-          if (builder->nodes % (properties->chunk_size * 100) == 0) {
-            GALOIS_LOG_VERBOSE("Nodes Processed: {}", builder->nodes);
-          }
-        }
+        ProcessNode(reader, builder);
       } else if (xmlStrEqual(name, BAD_CAST "edge")) {
         if (!finished_nodes) {
           finished_nodes = true;
           std::cout << "Finished processing nodes\n";
         }
         // if elt is an "egde" xml node read it in
-        if (ProcessEdge(reader, builder, properties)) {
-          builder->edges++;
-
-          if (builder->edges % (properties->chunk_size * 100) == 0) {
-            GALOIS_LOG_VERBOSE("Edges Processed: {}", builder->edges);
-          }
-        }
+        ProcessEdge(reader, builder);
       } else {
         GALOIS_LOG_ERROR("Found element: {}, which was ignored",
                          std::string((const char*)name));
@@ -688,11 +580,7 @@ void ProcessGraph(xmlTextReaderPtr reader, GraphState* builder,
     xmlFree(name);
     ret = xmlTextReaderRead(reader);
   }
-  builder->node_properties.keys.clear();
-  builder->node_labels.keys.clear();
-  builder->edge_properties.keys.clear();
-  builder->edge_types.keys.clear();
-  std::cout << "Finished processing edges;";
+  std::cout << "Finished processing edges\n";
 }
 
 } // end of unnamed namespace
@@ -707,8 +595,7 @@ galois::GraphComponents galois::ConvertGraphML(const std::string& infilename,
   xmlTextReaderPtr reader;
   int ret = 0;
 
-  GraphState builder{};
-  WriterProperties properties = galois::GetWriterProperties(chunk_size);
+  galois::PropertyGraphBuilder builder{chunk_size};
 
   galois::setActiveThreads(1000);
   bool finishedGraph = false;
@@ -733,21 +620,17 @@ galois::GraphComponents galois::ConvertGraphML(const std::string& infilename,
         // if elt is a "key" xml node read it in
         if (xmlStrEqual(name, BAD_CAST "key")) {
           PropertyKey key = galois::ProcessKey(reader);
-          if (key.id.size() > 0 && key.id != std::string("label") &&
+          if (!key.id.empty() && key.id != std::string("label") &&
               key.id != std::string("IGNORE")) {
             if (key.for_node) {
-              galois::AddBuilder(&builder.node_properties, std::move(key));
+              builder.AddBuilder(std::move(key));
             } else if (key.for_edge) {
-              galois::AddBuilder(&builder.edge_properties, std::move(key));
+              builder.AddBuilder(std::move(key));
             }
           }
         } else if (xmlStrEqual(name, BAD_CAST "graph")) {
           std::cout << "Finished processing property headers\n";
-          std::cout << "Node Properties declared: "
-                    << builder.node_properties.keys.size() << "\n";
-          std::cout << "Edge Properties declared: "
-                    << builder.edge_properties.keys.size() << "\n";
-          ProcessGraph(reader, &builder, &properties);
+          ProcessGraph(reader, &builder);
           finishedGraph = true;
         }
       }
@@ -762,6 +645,5 @@ galois::GraphComponents galois::ConvertGraphML(const std::string& infilename,
   } else {
     GALOIS_LOG_FATAL("Unable to open {}", infilename);
   }
-  return galois::BuildGraphComponents(std::move(builder),
-                                      std::move(properties));
+  return builder.Finish();
 }

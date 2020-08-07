@@ -32,16 +32,13 @@
 #include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "graph-properties-convert-schema.h"
 
 using galois::GraphComponents;
-using galois::GraphState;
+using galois::ImportData;
 using galois::ImportDataType;
 using galois::LabelRule;
-using galois::LabelsState;
-using galois::PropertiesState;
 using galois::PropertyKey;
-using galois::TopologyState;
-using galois::WriterProperties;
 
 namespace {
 
@@ -49,6 +46,13 @@ struct CollectionFields {
   std::map<std::string, PropertyKey> property_fields;
   std::set<std::string> embedded_nodes;
   std::set<std::string> embedded_relations;
+};
+
+struct MongoClient {
+  mongoc_client_t* client;
+
+  MongoClient(mongoc_client_t* client_) : client(client_) {}
+  ~MongoClient() { mongoc_client_destroy(client); }
 };
 
 struct bson_value_t_wrapper {
@@ -98,211 +102,143 @@ std::optional<std::string> RetrieveString(const bson_value_t* elt) {
   case BSON_TYPE_UTF8:
     return std::string(elt->value.v_utf8.str, elt->value.v_utf8.len);
   default:
-    // std::cout << "A string value was not retrieved\n";
     return std::nullopt;
   }
+}
+
+std::optional<int64_t> RetrieveDate(const bson_value_t* elt) {
+  if (elt->value_type == BSON_TYPE_DATE_TIME) {
+    return elt->value.v_datetime;
+  }
+  return std::nullopt;
+}
+
+std::optional<uint8_t> RetrieveStruct(const bson_value_t* elt) {
+  if (elt->value_type == BSON_TYPE_DOCUMENT) {
+    return 1;
+  }
+  return std::nullopt;
+}
+
+template <typename T>
+ImportData RetrievePrimitiveList(ImportDataType type, bson_iter_t* val) {
+  ImportData data{type, true};
+  std::vector<T> list;
+
+  while (bson_iter_next(val)) {
+    auto elt = bson_iter_value(val);
+    auto res = RetrievePrimitive<T>(elt);
+    if (res) {
+      list.emplace_back(res.value());
+    }
+  }
+  data.value = list;
+  return data;
+}
+
+ImportData RetrieveStringList(ImportDataType type, bson_iter_t* val) {
+  ImportData data{type, true};
+  std::vector<std::string> list;
+
+  while (bson_iter_next(val)) {
+    auto elt = bson_iter_value(val);
+    auto res = RetrieveString(elt);
+    if (res) {
+      list.emplace_back(res.value());
+    }
+  }
+  data.value = list;
+  return data;
+}
+
+ImportData RetrieveDateList(ImportDataType type, bson_iter_t* val) {
+  ImportData data{type, true};
+  std::vector<int64_t> timestamps;
+
+  while (bson_iter_next(val)) {
+    auto elt = bson_iter_value(val);
+    if (elt->value_type == BSON_TYPE_DATE_TIME) {
+      timestamps.emplace_back(elt->value.v_datetime);
+    }
+  }
+  data.value = timestamps;
+  return data;
 }
 
 /************************************************/
 /* Functions for adding values to arrow builder */
 /************************************************/
 
-// Append an array to a builder
-void AppendArray(std::shared_ptr<arrow::ListBuilder> list_builder,
-                 const bson_value_t* array_ptr) {
-  arrow::Status st = arrow::Status::OK();
+template <typename Fn>
+ImportData ResolveOptional(ImportDataType type, bool is_list,
+                           const bson_value_t* val, Fn resolver) {
+  ImportData data{type, is_list};
+  auto res = resolver(val);
+  if (!res) {
+    data.type = ImportDataType::kUnsupported;
+  } else {
+    data.value = res.value();
+  }
+  return data;
+}
 
+ImportData ResolveListValue(const bson_value_t* array_ptr,
+                            ImportDataType type) {
   bson_t array;
   bson_iter_t val;
   if (bson_init_static(&array, array_ptr->value.v_doc.data,
                        array_ptr->value.v_doc.data_len)) {
     if (!bson_iter_init(&val, &array)) {
-      return;
+      return ImportData{ImportDataType::kUnsupported, true};
     }
   } else {
-    return;
+    return ImportData{ImportDataType::kUnsupported, true};
   }
 
-  switch (list_builder->value_builder()->type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb = static_cast<arrow::StringBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrieveString(elt);
-      if (res) {
-        st = sb->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::INT64: {
-    auto lb = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrievePrimitive<int64_t>(elt);
-      if (res) {
-        st = lb->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::INT32: {
-    auto ib = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrievePrimitive<int32_t>(elt);
-      if (res) {
-        st = ib->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    auto db = static_cast<arrow::DoubleBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrievePrimitive<double>(elt);
-      if (res) {
-        st = db->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    auto fb = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
-    st      = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrievePrimitive<float>(elt);
-      if (res) {
-        st = fb->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::BOOL: {
-    auto bb =
-        static_cast<arrow::BooleanBuilder*>(list_builder->value_builder());
-    st = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      auto res = RetrievePrimitive<bool>(elt);
-      if (res) {
-        st = bb->Append(res.value());
-      }
-    }
-    break;
-  }
-  case arrow::Type::TIMESTAMP: {
-    auto tb =
-        static_cast<arrow::TimestampBuilder*>(list_builder->value_builder());
-    st = list_builder->Append();
-    while (bson_iter_next(&val)) {
-      auto elt = bson_iter_value(&val);
-      if (elt->value_type == BSON_TYPE_DATE_TIME) {
-        st = tb->Append(elt->value.v_datetime);
-      }
-    }
-    break;
-  }
-  default: {
-    break;
-  }
-  }
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error adding value to arrow list array builder: {}",
-                     st.ToString());
+  switch (type) {
+  case ImportDataType::kString:
+    return RetrieveStringList(type, &val);
+  case ImportDataType::kInt64:
+    return RetrievePrimitiveList<int64_t>(type, &val);
+  case ImportDataType::kInt32:
+    return RetrievePrimitiveList<int32_t>(type, &val);
+  case ImportDataType::kDouble:
+    return RetrievePrimitiveList<double>(type, &val);
+  case ImportDataType::kFloat:
+    return RetrievePrimitiveList<float>(type, &val);
+  case ImportDataType::kBoolean:
+    return RetrievePrimitiveList<bool>(type, &val);
+  case ImportDataType::kTimestampMilli:
+    return RetrieveDateList(type, &val);
+  default:
+    return ImportData{ImportDataType::kUnsupported, true};
   }
 }
 
-// Append a non-null value to an array
-void AppendValue(std::shared_ptr<arrow::ArrayBuilder> array,
-                 const bson_value_t* val) {
-  arrow::Status st = arrow::Status::OK();
-
-  switch (array->type()->id()) {
-  case arrow::Type::STRING: {
-    auto sb  = std::static_pointer_cast<arrow::StringBuilder>(array);
-    auto res = RetrieveString(val);
-    if (res) {
-      st = sb->Append(res.value());
-    }
-    break;
+ImportData ResolveValue(const bson_value_t* val, ImportDataType type,
+                        bool is_list) {
+  if (is_list) {
+    return ResolveListValue(val, type);
   }
-  case arrow::Type::INT64: {
-    auto lb  = std::static_pointer_cast<arrow::Int64Builder>(array);
-    auto res = RetrievePrimitive<int64_t>(val);
-    if (res) {
-      st = lb->Append(res.value());
-    }
-    break;
-  }
-  case arrow::Type::INT32: {
-    auto ib  = std::static_pointer_cast<arrow::Int32Builder>(array);
-    auto res = RetrievePrimitive<int32_t>(val);
-    if (res) {
-      st = ib->Append(res.value());
-    }
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    auto db  = std::static_pointer_cast<arrow::DoubleBuilder>(array);
-    auto res = RetrievePrimitive<double>(val);
-    if (res) {
-      st = db->Append(res.value());
-    }
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    auto fb  = std::static_pointer_cast<arrow::FloatBuilder>(array);
-    auto res = RetrievePrimitive<float>(val);
-    if (res) {
-      st = fb->Append(res.value());
-    }
-    break;
-  }
-  case arrow::Type::BOOL: {
-    auto bb  = std::static_pointer_cast<arrow::BooleanBuilder>(array);
-    auto res = RetrievePrimitive<bool>(val);
-    if (res) {
-      st = bb->Append(res.value());
-    }
-    break;
-  }
-  case arrow::Type::TIMESTAMP: {
-    auto tb = std::static_pointer_cast<arrow::TimestampBuilder>(array);
-    if (val->value_type == BSON_TYPE_DATE_TIME) {
-      st = tb->Append(val->value.v_datetime);
-    }
-    break;
-  }
-  // for now uint8_t is an alias for a struct
-  case arrow::Type::UINT8: {
-    auto bb = std::static_pointer_cast<arrow::UInt8Builder>(array);
-    if (val->value_type == BSON_TYPE_DOCUMENT) {
-      st = bb->Append(1);
-    }
-    break;
-  }
-  case arrow::Type::LIST: {
-    auto lb = std::static_pointer_cast<arrow::ListBuilder>(array);
-    if (val->value_type == BSON_TYPE_ARRAY) {
-      AppendArray(lb, val);
-    }
-    break;
-  }
-  default: {
-    break;
-  }
-  }
-  if (!st.ok()) {
-    GALOIS_LOG_FATAL(
-        "Error adding value to arrow array builder, parquet error: {}",
-        st.ToString());
+  switch (type) {
+  case ImportDataType::kString:
+    return ResolveOptional(type, is_list, val, RetrieveString);
+  case ImportDataType::kInt64:
+    return ResolveOptional(type, is_list, val, RetrievePrimitive<int64_t>);
+  case ImportDataType::kInt32:
+    return ResolveOptional(type, is_list, val, RetrievePrimitive<int32_t>);
+  case ImportDataType::kDouble:
+    return ResolveOptional(type, is_list, val, RetrievePrimitive<double>);
+  case ImportDataType::kFloat:
+    return ResolveOptional(type, is_list, val, RetrievePrimitive<float>);
+  case ImportDataType::kBoolean:
+    return ResolveOptional(type, is_list, val, RetrievePrimitive<bool>);
+  case ImportDataType::kTimestampMilli:
+    return ResolveOptional(type, is_list, val, RetrieveDate);
+  case ImportDataType::kStruct:
+    return ResolveOptional(type, is_list, val, RetrieveStruct);
+  default:
+    return ImportData{ImportDataType::kUnsupported, is_list};
   }
 }
 
@@ -391,65 +327,7 @@ PropertyKey ProcessElement(const bson_value_t* elt, const std::string& name) {
 /* MongoDB functions for handling edges */
 /****************************************/
 
-void AddEdge(GraphState* builder, WriterProperties* properties, uint32_t src,
-             uint32_t dest, const std::string& type) {
-  builder->topology_builder.sources_intermediate.push_back(std::string(""));
-  builder->topology_builder.sources.push_back(src);
-  builder->topology_builder.destinations_intermediate.push_back(
-      std::string(""));
-  builder->topology_builder.destinations.push_back(dest);
-  builder->topology_builder.out_indices[src]++;
-
-  // add type
-  auto entry = builder->edge_types.keys.find(type);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->edge_types.keys.end()) {
-    LabelRule rule{type};
-    index = galois::AddLabelBuilder(&builder->edge_types, std::move(rule));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->edge_types.builders[index],
-                   &builder->edge_types.chunks[index], properties,
-                   builder->edges);
-
-  builder->edges++;
-}
-
-void AddEdge(GraphState* builder, WriterProperties* properties, uint32_t src,
-             const std::string& dest, const std::string& type) {
-  // if dest is an edge, do not create a shallow edge to it
-  if (builder->topology_builder.edge_ids.find(dest) !=
-      builder->topology_builder.edge_ids.end()) {
-    return;
-  }
-
-  builder->topology_builder.sources_intermediate.push_back(std::string(""));
-  builder->topology_builder.sources.push_back(src);
-  builder->topology_builder.destinations_intermediate.push_back(dest);
-  builder->topology_builder.destinations.push_back(
-      std::numeric_limits<uint32_t>::max());
-  builder->topology_builder.out_indices[src]++;
-
-  // add type
-  auto entry = builder->edge_types.keys.find(type);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->edge_types.keys.end()) {
-    LabelRule rule{type};
-    index = galois::AddLabelBuilder(&builder->edge_types, std::move(type));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->edge_types.builders[index],
-                   &builder->edge_types.chunks[index], properties,
-                   builder->edges);
-
-  builder->edges++;
-}
-
-void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
+void HandleEmbeddedEdgeStruct(galois::PropertyGraphBuilder* builder,
                               const bson_value_t* doc_ptr,
                               const std::string& prefix) {
   bson_t doc;
@@ -464,31 +342,15 @@ void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
                                              bson_iter_key_len(&iter));
 
         // since all edge cases have been checked, we can add this property
-        auto key_iter = builder->edge_properties.keys.find(elt_name);
-        size_t index;
-        // if an entry for the key does not already exist, make an
-        // entry for it
-        if (key_iter == builder->edge_properties.keys.end()) {
-          auto key = ProcessElement(elt, elt_name);
-          if (key.type == ImportDataType::kUnsupported) {
-            std::cout << "elt not type not supported\n";
-            continue;
-          }
-          index = galois::AddBuilder(&builder->edge_properties, std::move(key));
-        } else {
-          index = key_iter->second;
-        }
-        galois::AddValue(builder->edge_properties.builders[index],
-                         &builder->edge_properties.chunks[index], properties,
-                         builder->edges, [&]() {
-                           AppendValue(builder->edge_properties.builders[index],
-                                       elt);
-                         });
+        builder->AddValue(
+            elt_name, [&]() { return ProcessElement(elt, elt_name); },
+            [&elt](ImportDataType type, bool is_list) {
+              return ResolveValue(elt, type, is_list);
+            });
 
         if (elt->value_type == BSON_TYPE_DOCUMENT) {
           auto new_prefix = elt_name + ".";
-          HandleEmbeddedEdgeStruct(builder, properties, bson_iter_value(&iter),
-                                   new_prefix);
+          HandleEmbeddedEdgeStruct(builder, bson_iter_value(&iter), new_prefix);
         }
       }
     }
@@ -500,7 +362,7 @@ void HandleEmbeddedEdgeStruct(GraphState* builder, WriterProperties* properties,
 /****************************************/
 
 void HandleEmbeddedDocuments(
-    GraphState* builder, WriterProperties* properties,
+    galois::PropertyGraphBuilder* builder,
     const std::vector<std::pair<std::string, bson_value_t_wrapper>>& docs,
     const std::string& parent_name, size_t parent_index) {
   for (auto [name, elt_wrapper] : docs) {
@@ -511,11 +373,9 @@ void HandleEmbeddedDocuments(
       bson_t doc;
       if (bson_init_static(&doc, elt->value.v_doc.data,
                            elt->value.v_doc.data_len)) {
-        AddEdge(builder, properties, static_cast<uint32_t>(parent_index),
-                static_cast<uint32_t>(
-                    builder->topology_builder.node_indexes.size()),
-                edge_type);
-        galois::HandleNodeDocumentMongoDB(builder, properties, &doc, name);
+        builder->AddEdge(static_cast<uint32_t>(parent_index),
+                         static_cast<uint32_t>(builder->GetNodes()), edge_type);
+        galois::HandleNodeDocumentMongoDB(builder, &doc, name);
       }
     } else {
       bson_t array;
@@ -529,13 +389,10 @@ void HandleEmbeddedDocuments(
               bson_t doc;
               if (bson_init_static(&doc, doc_ptr->value.v_doc.data,
                                    doc_ptr->value.v_doc.data_len)) {
-                AddEdge(builder, properties,
-                        static_cast<uint32_t>(parent_index),
-                        static_cast<uint32_t>(
-                            builder->topology_builder.node_indexes.size()),
-                        name);
-                galois::HandleNodeDocumentMongoDB(builder, properties, &doc,
-                                                  name);
+                builder->AddEdge(static_cast<uint32_t>(parent_index),
+                                 static_cast<uint32_t>(builder->GetNodes()),
+                                 name);
+                galois::HandleNodeDocumentMongoDB(builder, &doc, name);
               }
             }
           }
@@ -547,25 +404,22 @@ void HandleEmbeddedDocuments(
 }
 
 bool HandleNonPropertyNodeElement(
-    GraphState* builder, WriterProperties* properties,
+    galois::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
-    const std::string& name, const bson_value_t* elt, size_t node_index,
+    const std::string& name, const bson_value_t* elt,
     const std::string& collection_name) {
   auto elt_type = elt->value_type;
 
   // initialize new node
   if (name == std::string("_id")) {
-    auto oid = ExtractOid(elt);
-    builder->topology_builder.node_indexes.insert(
-        std::pair<std::string, size_t>(oid, node_index));
+    builder->AddNodeId(ExtractOid(elt));
     return true;
   }
   // if elt is an ObjectID (foreign key), add a property-less edge
   if (elt_type == BSON_TYPE_OID) {
     std::string edge_type = collection_name + "_" + name;
     auto oid              = ExtractOid(elt);
-    AddEdge(builder, properties, static_cast<uint32_t>(node_index), oid,
-            edge_type);
+    builder->AddOutgoingEdge(oid, edge_type);
     return true;
   }
   // if elt is an array of embedded documents defer adding them to later
@@ -574,7 +428,7 @@ bool HandleNonPropertyNodeElement(
     if (array_type == BSON_TYPE_DOCUMENT) {
       bson_value_t copy;
       bson_value_copy(elt, &copy);
-      docs->push_back(std::pair<std::string, bson_value_t_wrapper>(
+      docs->emplace_back(std::pair<std::string, bson_value_t_wrapper>(
           name, bson_value_t_wrapper{std::move(copy)}));
       return true;
     }
@@ -587,8 +441,7 @@ bool HandleNonPropertyNodeElement(
           while (bson_iter_next(&arr_iter)) {
             auto val = bson_iter_value(&arr_iter);
             auto oid = ExtractOid(val);
-            AddEdge(builder, properties, static_cast<uint32_t>(node_index), oid,
-                    name);
+            builder->AddOutgoingEdge(oid, name);
           }
         }
       }
@@ -599,10 +452,10 @@ bool HandleNonPropertyNodeElement(
 }
 
 void HandleEmbeddedNodeStruct(
-    GraphState* builder, WriterProperties* properties,
+    galois::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
     const std::string& name, const bson_value_t* doc_ptr,
-    const std::string& prefix, size_t parent_index) {
+    const std::string& prefix) {
   bson_t doc;
   bson_iter_t iter;
   if (bson_init_static(&doc, doc_ptr->value.v_doc.data,
@@ -614,37 +467,21 @@ void HandleEmbeddedNodeStruct(
         std::string struct_name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
         auto elt_name = prefix + struct_name;
 
-        if (HandleNonPropertyNodeElement(builder, properties, docs, struct_name,
-                                         elt, parent_index, name)) {
+        if (HandleNonPropertyNodeElement(builder, docs, struct_name, elt,
+                                         name)) {
           continue;
         }
 
         // since all edge cases have been checked, we can add this property
-        auto key_iter = builder->node_properties.keys.find(elt_name);
-        size_t index;
-        // if an entry for the key does not already exist, make an
-        // entry for it
-        if (key_iter == builder->node_properties.keys.end()) {
-          auto key = ProcessElement(elt, elt_name);
-          if (key.type == ImportDataType::kUnsupported) {
-            std::cout << "elt not type not supported\n";
-            continue;
-          }
-          index = galois::AddBuilder(&builder->node_properties, std::move(key));
-        } else {
-          index = key_iter->second;
-        }
-        galois::AddValue(builder->node_properties.builders[index],
-                         &builder->node_properties.chunks[index], properties,
-                         builder->nodes, [&]() {
-                           AppendValue(builder->node_properties.builders[index],
-                                       elt);
-                         });
+        builder->AddValue(
+            elt_name, [&]() { return ProcessElement(elt, elt_name); },
+            [&elt](ImportDataType type, bool is_list) {
+              return ResolveValue(elt, type, is_list);
+            });
 
         if (elt->value_type == BSON_TYPE_DOCUMENT) {
           auto new_prefix = elt_name + ".";
-          HandleEmbeddedNodeStruct(builder, properties, docs, elt_name, elt,
-                                   new_prefix, parent_index);
+          HandleEmbeddedNodeStruct(builder, docs, elt_name, elt, new_prefix);
         }
       }
     }
@@ -684,7 +521,7 @@ std::vector<std::string> GetCollectionNames(mongoc_database_t* database) {
       mongoc_database_get_collection_names_with_opts(database, nullptr, &error);
 
   for (size_t i = 0; collection_names[i] != nullptr; i++) {
-    coll_names.push_back(collection_names[i]);
+    coll_names.emplace_back(collection_names[i]);
   }
   bson_strfreev(collection_names);
 
@@ -923,9 +760,9 @@ GetUserInputForEdges(const std::vector<std::string>& possible_edges,
 
   for (const std::string& coll_name : possible_edges) {
     if (GetUserBool("Treat " + coll_name + " as an edge")) {
-      edges.push_back(coll_name);
+      edges.emplace_back(coll_name);
     } else {
-      nodes->push_back(coll_name);
+      nodes->emplace_back(coll_name);
     }
   }
   return edges;
@@ -1039,9 +876,9 @@ void GetMappingInput(mongoc_database_t* database,
         mongoc_database_get_collection(database, coll_name.c_str());
 
     if (CheckIfCollectionIsEdge(collection)) {
-      possible_edges.push_back(coll_name);
+      possible_edges.emplace_back(coll_name);
     } else {
-      nodes.push_back(coll_name);
+      nodes.emplace_back(coll_name);
     }
     mongoc_collection_destroy(collection);
   }
@@ -1057,33 +894,29 @@ void GetMappingInput(mongoc_database_t* database,
         mongoc_database_get_collection(database, coll_name.c_str());
     ExtractCollectionFields(collection, &node_fields, coll_name);
     mongoc_collection_destroy(collection);
-    LabelRule rule{coll_name, true, false, coll_name};
-    rules.push_back(rule);
+    rules.emplace_back(coll_name, true, false, coll_name);
   }
   for (std::string coll_name : edges) {
     auto collection =
         mongoc_database_get_collection(database, coll_name.c_str());
     ExtractCollectionFields(collection, &edge_fields, coll_name);
     mongoc_collection_destroy(collection);
-    LabelRule rule{coll_name, false, true, coll_name};
-    rules.push_back(rule);
+    rules.emplace_back(coll_name, false, true, coll_name);
   }
 
   for (const std::string& embedded_node : node_fields.embedded_nodes) {
-    LabelRule rule{embedded_node, true, false, embedded_node};
-    rules.push_back(rule);
+    rules.emplace_back(embedded_node, true, false, embedded_node);
   }
   for (const std::string& embedded_relation : node_fields.embedded_relations) {
-    LabelRule rule{embedded_relation, false, true, embedded_relation};
-    rules.push_back(rule);
+    rules.emplace_back(embedded_relation, false, true, embedded_relation);
   }
   for (auto field : node_fields.property_fields) {
     field.second.for_node = true;
-    keys.push_back(field.second);
+    keys.emplace_back(field.second);
   }
   for (auto field : edge_fields.property_fields) {
     field.second.for_edge = true;
-    keys.push_back(field.second);
+    keys.emplace_back(field.second);
   }
 
   if (GetUserBool("Generate default mapping now")) {
@@ -1127,9 +960,9 @@ GetUserInput(mongoc_database_t* database,
         mongoc_database_get_collection(database, coll_name.c_str());
 
     if (CheckIfCollectionIsEdge(collection)) {
-      possible_edges.push_back(coll_name);
+      possible_edges.emplace_back(coll_name);
     } else {
-      nodes.push_back(coll_name);
+      nodes.emplace_back(coll_name);
     }
     mongoc_collection_destroy(collection);
   }
@@ -1143,14 +976,12 @@ GetUserInput(mongoc_database_t* database,
 } // end of unnamed namespace
 
 // for now only handle arrays and data all of same type
-void galois::HandleEdgeDocumentMongoDB(GraphState* builder,
-                                       WriterProperties* properties,
+void galois::HandleEdgeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
                                        const bson_t* doc,
                                        const std::string& collection_name) {
-  bool found_source = false;
-  std::string src;
-  std::string dest;
+  builder->StartEdge();
 
+  bool found_source = false;
   bson_iter_t iter;
   if (bson_iter_init(&iter, doc)) {
     // handle document
@@ -1160,83 +991,43 @@ void galois::HandleEdgeDocumentMongoDB(GraphState* builder,
 
       // initialize new node
       if (name == std::string("_id")) {
-        auto oid = ExtractOid(iter);
-        builder->topology_builder.edge_ids.insert(oid);
+        builder->AddEdgeId(ExtractOid(iter));
         continue;
       }
       // handle src and destination node IDs
       if (elt->value_type == BSON_TYPE_OID) {
         if (!found_source) {
-          src          = ExtractOid(iter);
+          builder->AddEdgeSource(ExtractOid(iter));
           found_source = true;
         } else {
-          dest = ExtractOid(iter);
+          builder->AddEdgeTarget(ExtractOid(iter));
         }
         continue;
       }
 
       // since all edge cases have been checked, we can add this property
-      auto key_iter = builder->edge_properties.keys.find(name);
-      size_t index;
-      // if an entry for the key does not already exist, make an
-      // entry for it
-      if (key_iter == builder->edge_properties.keys.end()) {
-        auto key = ProcessElement(elt, name);
-        if (key.type == ImportDataType::kUnsupported) {
-          std::cout << "elt not type not supported\n";
-          continue;
-        }
-        index = galois::AddBuilder(&builder->edge_properties, std::move(key));
-      } else {
-        index = key_iter->second;
-      }
-      galois::AddValue(builder->edge_properties.builders[index],
-                       &builder->edge_properties.chunks[index], properties,
-                       builder->edges, [&]() {
-                         AppendValue(builder->edge_properties.builders[index],
-                                     elt);
-                       });
+      builder->AddValue(
+          name, [&]() { return ProcessElement(elt, name); },
+          [&elt](ImportDataType type, bool is_list) {
+            return ResolveValue(elt, type, is_list);
+          });
 
       if (elt->value_type == BSON_TYPE_DOCUMENT) {
         std::string prefix = name + std::string(".");
-        HandleEmbeddedEdgeStruct(builder, properties, bson_iter_value(&iter),
-                                 prefix);
+        HandleEmbeddedEdgeStruct(builder, bson_iter_value(&iter), prefix);
       }
     }
   }
-
-  // add type
-  auto entry = builder->edge_types.keys.find(collection_name);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->edge_types.keys.end()) {
-    LabelRule rule{collection_name};
-    index = galois::AddLabelBuilder(&builder->edge_types, std::move(rule));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->edge_types.builders[index],
-                   &builder->edge_types.chunks[index], properties,
-                   builder->edges);
-
-  // handle topology requirements
-  builder->topology_builder.sources_intermediate.push_back(src);
-  builder->topology_builder.sources.push_back(
-      std::numeric_limits<uint32_t>::max());
-  builder->topology_builder.destinations_intermediate.push_back(dest);
-  builder->topology_builder.destinations.push_back(
-      std::numeric_limits<uint32_t>::max());
-
-  builder->edges++;
+  builder->AddLabel(collection_name);
+  builder->FinishEdge();
 }
 
 // for now only handle arrays and data all of same type
-void galois::HandleNodeDocumentMongoDB(GraphState* builder,
-                                       WriterProperties* properties,
+void galois::HandleNodeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
                                        const bson_t* doc,
                                        const std::string& collection_name) {
-  auto node_index = builder->topology_builder.node_indexes.size();
-  builder->topology_builder.out_indices.push_back(0);
+  builder->StartNode();
+  auto node_index = builder->GetNodeIndex();
   std::vector<std::pair<std::string, bson_value_t_wrapper>> docs;
 
   bson_iter_t iter;
@@ -1245,59 +1036,28 @@ void galois::HandleNodeDocumentMongoDB(GraphState* builder,
     while (bson_iter_next(&iter)) {
       const bson_value_t* elt = bson_iter_value(&iter);
       std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
-      if (HandleNonPropertyNodeElement(builder, properties, &docs, name, elt,
-                                       node_index, collection_name)) {
+      if (HandleNonPropertyNodeElement(builder, &docs, name, elt,
+                                       collection_name)) {
         continue;
       }
 
-      // since all edge cases have been checked, we can add this property
-      auto key_iter = builder->node_properties.keys.find(name);
-      size_t index;
-      // if an entry for the key does not already exist, make an
-      // entry for it
-      if (key_iter == builder->node_properties.keys.end()) {
-        auto key = ProcessElement(elt, name);
-        if (key.type == ImportDataType::kUnsupported) {
-          std::cout << "elt not type not supported\n";
-          continue;
-        }
-        index = galois::AddBuilder(&builder->node_properties, std::move(key));
-      } else {
-        index = key_iter->second;
-      }
-      galois::AddValue(builder->node_properties.builders[index],
-                       &builder->node_properties.chunks[index], properties,
-                       builder->nodes, [&]() {
-                         AppendValue(builder->node_properties.builders[index],
-                                     elt);
-                       });
+      builder->AddValue(
+          name, [&]() { return ProcessElement(elt, name); },
+          [&elt](ImportDataType type, bool is_list) {
+            return ResolveValue(elt, type, is_list);
+          });
 
       if (elt->value_type == BSON_TYPE_DOCUMENT) {
         std::string prefix = name + std::string(".");
-        HandleEmbeddedNodeStruct(builder, properties, &docs, name, elt, prefix,
-                                 node_index);
+        HandleEmbeddedNodeStruct(builder, &docs, name, elt, prefix);
       }
     }
   }
+  builder->AddLabel(collection_name);
+  builder->FinishNode();
 
-  // add label
-  auto entry = builder->node_labels.keys.find(collection_name);
-  size_t index;
-  // if type does not already exist, add a column
-  if (entry == builder->node_labels.keys.end()) {
-    LabelRule rule{collection_name};
-    index = galois::AddLabelBuilder(&builder->node_labels, std::move(rule));
-  } else {
-    index = entry->second;
-  }
-  galois::AddLabel(builder->node_labels.builders[index],
-                   &builder->node_labels.chunks[index], properties,
-                   builder->nodes);
-
-  builder->nodes++;
   // deal with embedded documents
-  HandleEmbeddedDocuments(builder, properties, docs, collection_name,
-                          node_index);
+  HandleEmbeddedDocuments(builder, docs, collection_name, node_index);
 }
 
 void galois::GenerateMappingMongoDB(const std::string& db_name,
@@ -1305,16 +1065,15 @@ void galois::GenerateMappingMongoDB(const std::string& db_name,
   const char* uri_string = "mongodb://localhost:27017";
 
   mongoc_init();
-  mongoc_client_t* client = GetMongoClient(uri_string);
+  MongoClient client_wrapper{GetMongoClient(uri_string)};
   mongoc_database_t* database =
-      mongoc_client_get_database(client, db_name.c_str());
+      mongoc_client_get_database(client_wrapper.client, db_name.c_str());
   std::vector<std::string> coll_names = GetCollectionNames(database);
 
   // get user input on node/edge mappings, label names, property names and
   // values
   GetMappingInput(database, std::move(coll_names), outfile);
 
-  mongoc_client_destroy(client);
   mongoc_cleanup();
 }
 
@@ -1324,14 +1083,13 @@ galois::GraphComponents galois::ConvertMongoDB(const std::string& db_name,
   const char* uri_string = "mongodb://localhost:27017";
   const bson_t* document = nullptr;
 
-  GraphState builder{};
-  WriterProperties properties = galois::GetWriterProperties(chunk_size);
+  galois::PropertyGraphBuilder builder{chunk_size};
   galois::setActiveThreads(1000);
 
   mongoc_init();
-  mongoc_client_t* client = GetMongoClient(uri_string);
+  MongoClient client_wrapper{GetMongoClient(uri_string)};
   mongoc_database_t* database =
-      mongoc_client_get_database(client, db_name.c_str());
+      mongoc_client_get_database(client_wrapper.client, db_name.c_str());
   std::vector<std::string> coll_names = GetCollectionNames(database);
 
   // get input on node/edge mappings, label names, property names and
@@ -1351,21 +1109,16 @@ galois::GraphComponents galois::ConvertMongoDB(const std::string& db_name,
   // add all edges first
   for (auto coll_name : edges) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      galois::HandleEdgeDocumentMongoDB(&builder, &properties, document,
-                                        coll_name);
+      galois::HandleEdgeDocumentMongoDB(&builder, document, coll_name);
     });
   }
   // then add all nodes
   for (auto coll_name : nodes) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      galois::HandleNodeDocumentMongoDB(&builder, &properties, document,
-                                        coll_name);
+      galois::HandleNodeDocumentMongoDB(&builder, document, coll_name);
     });
   }
 
-  mongoc_client_destroy(client);
   mongoc_cleanup();
-
-  return galois::BuildGraphComponents(std::move(builder),
-                                      std::move(properties));
+  return builder.Finish();
 }

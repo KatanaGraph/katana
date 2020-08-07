@@ -2,13 +2,13 @@
 #define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
 
 #include <functional>
+#include <iostream>
 #include <string>
+#include <variant>
 #include <vector>
 #include <utility>
 
 #include <arrow/api.h>
-#include <libxml/xmlreader.h>
-#include <libxml/xmlwriter.h>
 
 #include "galois/graphs/PropertyFileGraph.h"
 
@@ -34,6 +34,19 @@ enum ImportDataType {
   kTimestampMilli,
   kStruct,
   kUnsupported
+};
+
+struct ImportData {
+  ImportDataType type;
+  bool is_list;
+  std::variant<uint8_t, std::string, int64_t, int32_t, double, float, bool,
+               std::vector<std::string>, std::vector<int64_t>,
+               std::vector<int32_t>, std::vector<double>, std::vector<float>,
+               std::vector<bool>>
+      value;
+
+  ImportData(ImportDataType type_, bool is_list_)
+      : type(type_), is_list(is_list_) {}
 };
 
 struct PropertyKey {
@@ -96,18 +109,8 @@ struct TopologyState {
   // for schema mapping
   std::unordered_set<std::string> edge_ids;
   // for data ingestion that does not guarantee nodes are imported first
-  std::vector<std::string> sources_intermediate;
-  std::vector<std::string> destinations_intermediate;
-};
-
-struct GraphState {
-  PropertiesState node_properties;
-  PropertiesState edge_properties;
-  LabelsState node_labels;
-  LabelsState edge_types;
-  TopologyState topology_builder;
-  size_t nodes;
-  size_t edges;
+  std::unordered_map<size_t, std::string> sources_intermediate;
+  std::unordered_map<size_t, std::string> destinations_intermediate;
 };
 
 struct WriterProperties {
@@ -116,61 +119,97 @@ struct WriterProperties {
   const size_t chunk_size;
 };
 
+struct GraphComponent {
+  std::shared_ptr<arrow::Table> properties;
+  std::shared_ptr<arrow::Table> labels;
+
+  GraphComponent(std::shared_ptr<arrow::Table> properties_,
+                 std::shared_ptr<arrow::Table> labels_)
+      : properties(properties_), labels(labels_) {}
+  GraphComponent() : properties(nullptr), labels(nullptr) {}
+};
+
 struct GraphComponents {
-  std::shared_ptr<arrow::Table> node_properties;
-  std::shared_ptr<arrow::Table> node_labels;
-  std::shared_ptr<arrow::Table> edge_properties;
-  std::shared_ptr<arrow::Table> edge_types;
+  GraphComponent nodes;
+  GraphComponent edges;
   std::shared_ptr<galois::graphs::GraphTopology> topology;
 
-  GraphComponents(std::shared_ptr<arrow::Table> node_properties_,
-                  std::shared_ptr<arrow::Table> node_labels_,
-                  std::shared_ptr<arrow::Table> edge_properties_,
-                  std::shared_ptr<arrow::Table> edge_types_,
+  GraphComponents(GraphComponent nodes_, GraphComponent edges_,
                   std::shared_ptr<galois::graphs::GraphTopology> topology_)
-      : node_properties(std::move(node_properties_)),
-        node_labels(std::move(node_labels_)),
-        edge_properties(std::move(edge_properties_)),
-        edge_types(std::move(edge_types_)), topology(std::move(topology_)) {}
+      : nodes(std::move(nodes_)), edges(std::move(edges_)),
+        topology(std::move(topology_)) {}
 
   GraphComponents()
-      : GraphComponents(nullptr, nullptr, nullptr, nullptr, nullptr) {}
+      : GraphComponents(GraphComponent{}, GraphComponent{}, nullptr) {}
+
+  void Dump() const {
+    std::cout << nodes.properties->ToString() << "\n";
+    std::cout << nodes.labels->ToString() << "\n";
+    std::cout << edges.properties->ToString() << "\n";
+    std::cout << edges.labels->ToString() << "\n";
+
+    std::cout << topology->out_indices->ToString() << "\n";
+    std::cout << topology->out_dests->ToString() << "\n";
+  }
+};
+
+class PropertyGraphBuilder {
+  WriterProperties properties_;
+  PropertiesState node_properties_;
+  PropertiesState edge_properties_;
+  LabelsState node_labels_;
+  LabelsState edge_types_;
+  TopologyState topology_builder_;
+  size_t nodes_;
+  size_t edges_;
+  bool building_node_;
+  bool building_edge_;
+
+public:
+  PropertyGraphBuilder(size_t chunk_size);
+
+  bool StartNode();
+  bool StartNode(const std::string& id);
+  void AddNodeId(const std::string& id);
+  void AddOutgoingEdge(const std::string& target, const std::string& label);
+  void AddOutgoingEdge(uint32_t target, const std::string& label);
+  bool FinishNode();
+
+  bool AddNode(const std::string& id);
+
+  bool StartEdge();
+  bool StartEdge(const std::string& source, const std::string& target);
+  void AddEdgeId(const std::string& id);
+  void AddEdgeSource(const std::string& source);
+  void AddEdgeTarget(const std::string& target);
+  bool FinishEdge();
+
+  bool AddEdge(const std::string& source, const std::string& target);
+  bool AddEdge(uint32_t source, const std::string& target,
+               const std::string& label);
+  bool AddEdge(uint32_t source, uint32_t target, const std::string& label);
+
+  size_t AddLabelBuilder(const LabelRule& rule);
+  size_t AddBuilder(const PropertyKey& key);
+
+  void AddValue(const std::string& id,
+                std::function<PropertyKey()> ProcessElement,
+                std::function<ImportData(ImportDataType, bool)> ResolveValue);
+  void AddLabel(const std::string& name);
+
+  GraphComponents Finish();
+
+  size_t GetNodeIndex();
+  size_t GetNodes();
+  size_t GetEdges();
+
+private:
+  void ResolveIntermediateIDs();
+  GraphComponent BuildFinalEdges();
 };
 
 galois::graphs::PropertyFileGraph
 ConvertKatana(const std::string& input_filename);
-
-xmlTextWriterPtr CreateGraphmlFile(const std::string& outfile);
-void WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule);
-void WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key);
-void FinishGraphmlFile(xmlTextWriterPtr writer);
-void ExportSchemaMapping(const std::string& outfile,
-                         const std::vector<LabelRule>& rules,
-                         const std::vector<PropertyKey>& keys);
-
-ImportDataType ExtractTypeGraphML(xmlChar* value);
-PropertyKey ProcessKey(xmlTextReaderPtr reader);
-LabelRule ProcessRule(xmlTextReaderPtr reader);
-std::pair<std::vector<std::string>, std::vector<std::string>>
-ProcessSchemaMapping(GraphState* builder, const std::string& mapping,
-                     const std::vector<std::string>& coll_names);
-
-std::string TypeName(ImportDataType type);
-ImportDataType ParseType(const std::string& in);
-
-WriterProperties GetWriterProperties(size_t chunk_size);
-
-size_t AddLabelBuilder(LabelsState* labels, LabelRule rule);
-size_t AddBuilder(PropertiesState* properties, PropertyKey key);
-
-void AddValue(std::shared_ptr<arrow::ArrayBuilder> builder, ArrowArrays* chunks,
-              WriterProperties* properties, size_t total,
-              std::function<void(void)> AppendValue);
-void AddLabel(std::shared_ptr<arrow::BooleanBuilder> builder,
-              ArrowArrays* chunks, WriterProperties* properties, size_t total);
-
-GraphComponents BuildGraphComponents(GraphState builder,
-                                     WriterProperties properties);
 
 void WritePropertyGraph(const GraphComponents& graph_comps,
                         const std::string& dir);

@@ -62,6 +62,7 @@ find_package(date REQUIRED)
 
 set(sources
   graph-properties-convert.cpp
+  graph-properties-convert-schema.cpp
   graph-properties-convert-graphml.cpp
   Transforms.cpp
 )

@@ -96,6 +96,7 @@ void VerifyNode(const galois::CompilerQueryNode& n,
                      n.path_name);
 }
 
+//! Make sure edge fields are as expected in addition to endpoints
 void VerifyEdge(const galois::CompilerQueryEdge& e,
                 galois::CompilerQueryEdge expected) {
   // check nodes
@@ -113,6 +114,7 @@ void VerifyEdge(const galois::CompilerQueryEdge& e,
                      e.path_name);
 }
 
+//! Make sure return var is as expected
 void VerifyReturn(const galois::QueryProperty& e,
                   galois::QueryProperty expected) {
   GALOIS_LOG_VASSERT(e.variable_name == expected.variable_name,
@@ -131,6 +133,7 @@ void VerifyReturn(const galois::QueryProperty& e,
                      expected.alias.value_or(""), e.alias.value_or(""));
 }
 
+//! Verify order by metadata
 void VerifyOrderByStruct(const galois::CompilerOrderByMetadata& result,
                          const galois::CompilerOrderByMetadata& expected) {
   GALOIS_LOG_VASSERT(
@@ -149,6 +152,7 @@ void VerifyOrderByStruct(const galois::CompilerOrderByMetadata& result,
   }
 }
 
+//! Verify skip, limit, orderby
 void VerifyReturnModifier(const galois::CypherCompiler& cc,
                           const galois::CompilerReturnMetadata& expected) {
   const galois::CompilerReturnMetadata& rm = cc.GetReturnMetadata();
@@ -175,6 +179,28 @@ void VerifyReturnModifier(const galois::CypherCompiler& cc,
     GALOIS_LOG_VASSERT(
         !rm.order_by,
         "Order by struct for result exists even though it should not");
+  }
+}
+
+//! make sure property maps are equivalent
+void VerifyPropertyMap(const galois::PropertyMap& to_check,
+                       const galois::PropertyMap& expected) {
+
+  GALOIS_LOG_VASSERT(to_check.size() == expected.size(),
+                     "Expected size {} does not match actual size {}",
+                     expected.size(), to_check.size());
+  for (auto i = expected.begin(); i != expected.end(); i++) {
+    std::string key = i->first;
+    if (to_check.find(key) != to_check.end()) {
+      galois::PropertyValue val = to_check.at(key);
+      // TODO(l-hoang) need to implement a visitor to print from PropertyValue
+      // or some kind of helper function
+      GALOIS_LOG_VASSERT(val == i->second,
+                         "Key {} does not have the correct value", key);
+    } else {
+      GALOIS_LOG_FATAL("Key {} was expected in a property map, but not found",
+                       key);
+    }
   }
 }
 
@@ -658,6 +684,84 @@ int main() {
 
   VerifyReturnModifier(cc, galois::CompilerReturnMetadata{
                                std::nullopt, std::nullopt, ob3, false});
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Property limits on nodes/edges (without WHERE)
+  //////////////////////////////////////////////////////////////////////////////
+
+  // prop on node, int
+  GALOIS_LOG_WARN("Prop limits 1");
+  std::string prop_limits1 = "match (a {id:12345}) return a;";
+  cc.Compile(prop_limits1.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{0, "any", "a", ""});
+  AssertQueryNodeEdgeCount(cc, 1, 0);
+  AssertBasicReturn(cc);
+  galois::PropertyMap pm1;
+  pm1["id"].emplace<1>(12345);
+  VerifyPropertyMap(cc.GetQueryNodes()[0].property_map.value(), pm1);
+
+  ////////////////////////////////////////
+
+  // prop on node, int + string + float
+  GALOIS_LOG_WARN("Prop limits 2");
+  std::string prop_limits2 =
+      "match (a { id:12345, str:\"something\", F:3.5 }) return a;";
+  cc.Compile(prop_limits2.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{0, "any", "a", ""});
+  AssertQueryNodeEdgeCount(cc, 1, 0);
+  AssertBasicReturn(cc);
+  galois::PropertyMap pm2;
+  pm2["id"].emplace<1>(12345);
+  pm2["str"].emplace<0>("something");
+  pm2["F"].emplace<2>(3.5);
+  VerifyPropertyMap(cc.GetQueryNodes()[0].property_map.value(), pm2);
+
+  ////////////////////////////////////////
+
+  // prop on node, int + string + float + param
+  GALOIS_LOG_WARN("Prop limits 3");
+  std::string prop_limits3 =
+      "match (a { id:12345, str:\"something\", F:3.5, param:$asdf }) return a;";
+  cc.Compile(prop_limits3.c_str());
+  VerifyNode(cc.GetQueryNodes()[0],
+             galois::CompilerQueryNode{0, "any", "a", ""});
+  AssertQueryNodeEdgeCount(cc, 1, 0);
+  AssertBasicReturn(cc);
+  galois::PropertyMap pm3;
+  // int, string, float, and param
+  pm3["id"].emplace<1>(12345);
+  pm3["str"].emplace<0>("something");
+  pm3["F"].emplace<2>(3.5);
+  pm3["param"].emplace<3>("asdf");
+  VerifyPropertyMap(cc.GetQueryNodes()[0].property_map.value(), pm3);
+
+  ////////////////////////////////////////
+
+  // prop on node and edge, int + string + float + param
+  GALOIS_LOG_WARN("Prop limits 4");
+  std::string prop_limits4 =
+      "match (a { id:12345, str:\"something\", F:3.5, param:$asdf })-[e { "
+      "id:12345, str:\"something\", F:3.5, param:$asdf }]-()  return a;";
+  cc.Compile(prop_limits4.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "ANY", galois::CompilerQueryNode{0, "any", "a", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::UNDIRECTED_EDGE, "e", ""});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc);
+
+  galois::PropertyMap empty_property_map;
+
+  // reuse pm3; should be on both node and edge
+  VerifyPropertyMap(cc.GetQueryEdges()[0].caused_by.property_map.value(), pm3);
+  VerifyPropertyMap(cc.GetQueryEdges()[0].property_map.value(), pm3);
+  // confirm empty map as well (it's optional, so it shouldn't exist)
+  GALOIS_LOG_VASSERT(
+      !cc.GetQueryEdges()[0].acted_on.property_map,
+      "Property map for destination edge (prop limit 4) should not exist");
 
   //////////////////////////////////////////////////////////////////////////////
   // MISC

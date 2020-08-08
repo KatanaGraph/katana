@@ -102,6 +102,14 @@ cdef int64_t wrap_python_callable_obim_metric(uint64_t arg, void* userdata) nogi
     with gil:
         return (<object>userdata)(arg)
 
+# Adds PerSocketChunkFIFO worklist
+cdef extern from * nogil:
+    """
+auto make_per_socket_chunk_fifo() {
+  return galois::wl<PSchunk>();
+}
+    """
+    Galois.CPPAuto make_per_socket_chunk_fifo()
 
 # FIXME: Hard coded uint64_t loop variable
 cdef extern from * nogil:
@@ -154,6 +162,8 @@ elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} n
 {% macro handle_worklist(inner, iterable, args) -%}
 if worklist is None:
     {{inner(1, iterable, args)}}
+elif isinstance(worklist, PerSocketChunkFIFO):
+    {{inner(1, iterable, args + ["make_per_socket_chunk_fifo()"])}}
 elif isinstance(worklist, OrderedByIntegerMetric):
     obim_func = worklist.indexer
     if isinstance(obim_func, numba.core.ccallback.CFunc):
@@ -300,6 +310,9 @@ cpdef {{loop_type}}(object iterable, func,
 class Worklist:
     pass
 
+class PerSocketChunkFIFO(Worklist):
+    pass
+    
 class OrderedByIntegerMetric(Worklist):
     def __init__(self, indexer):
         self.indexer = indexer

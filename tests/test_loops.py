@@ -104,6 +104,19 @@ def test_obim(threads_1):
     assert np.allclose(out, np.array([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
     assert order == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 
+def test_per_socket_chunk_fifo(threads_1):
+    order = []
+    def f(out, i, ctx):
+        order.append(i)
+        orig = out[i]
+        out[i] = 10-i
+        if orig == 0:
+            ctx.push(9-i)
+    out = np.zeros(10, dtype=int)
+    for_each(range(10), partial(f, out), worklist=PerSocketChunkFIFO())
+    assert np.allclose(out, np.array([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
+    assert order == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
 def test_closure_memory_management():
     @do_all_operator()
     def f(x, y):

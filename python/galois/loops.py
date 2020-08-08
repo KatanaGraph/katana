@@ -4,11 +4,11 @@ import numba
 import numba.core.ccallback
 import numba.types
 
-from ._loops import do_all, for_each, UserContext_numba_type, OrderedByIntegerMetric, UserContext
+from ._loops import do_all, for_each, UserContext_numba_type, OrderedByIntegerMetric, UserContext, PerSocketChunkFIFO
 from .numba.closure import ClosureBuilder, Closure
 
 __all__ = ["do_all", "do_all_operator", "for_each", "for_each_operator",
-           "obim_metric", "OrderedByIntegerMetric", "UserContext"]
+           "obim_metric", "OrderedByIntegerMetric", "UserContext", "PerSocketChunkFIFO"]
 
 
 # Parallel loops

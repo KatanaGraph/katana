@@ -8,3 +8,4 @@ galois/datastructures.pyx
 galois/property_graph.pxd
 galois/property_graph.pyx
 galois/datastructures.pxd
+galois/**/*.so

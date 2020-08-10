@@ -3,10 +3,12 @@ from functools import wraps
 
 import llvmlite.ir
 from galois.numba._native_wrapper_utils import call_callback
-from numba import types, typeof, njit, cfunc
+from numba import types, typeof, njit
 from numba.experimental import jitclass
 from numba.extending import lower_builtin
 from numba.extending import type_callable
+
+from galois.numba.galois_compiler import OperatorCompiler, cfunc
 
 PointerPair = ctypes.c_void_p * 2
 
@@ -87,12 +89,13 @@ class Environment():
         exec_glbls = locals()
         exec_glbls["cfunc"] = cfunc
         exec_glbls["types"] = types
+        exec_glbls["OperatorCompiler"] = OperatorCompiler
         unbound_pass_args = "" if not unbound_args else ", ".join(
             f"unbound_arg{i}" for i, t in enumerate(unbound_args)) + ","
         extract_env = "" if not bound_args else ", ".join(
             f"userdata.arg{i}" for i, t in enumerate(bound_args)) + ","
         src = f"""
-@cfunc(return_type(*unbound_args, types.int64), nopython=True, nogil=True, cache=False)
+@cfunc(return_type(*unbound_args, types.int64), nopython=True, nogil=True, cache=False, pipeline_class=OperatorCompiler)
 def wrapper({unbound_pass_args} userdata):
     userdata = load_struct(userdata)
     return func({extract_env} {unbound_pass_args})
@@ -121,7 +124,8 @@ def wrapper({unbound_pass_args} userdata):
             ptr = builder.inttoptr(args[0], struct_ty.as_pointer())
             struct = builder.load(ptr)
             # We incref here since this function should give away a reference.
-            context.nrt.incref(builder, sig.return_type, struct)
+            if context.enable_nrt:
+                context.nrt.incref(builder, sig.return_type, struct)
             return struct
 
         return load_struct
@@ -193,3 +197,6 @@ class ClosureBuilder:
 
     def __str__(self):
         return "<Closure builder {} {}>".format(self._underlying_function, self._unbound_argument_types)
+
+    def inspect_llvm(self):
+        return {types: inst.wrapper.inspect_llvm() for types, inst in self._instance_cache.items()}

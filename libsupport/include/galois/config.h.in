@@ -61,12 +61,24 @@
 #define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS
 #endif
 
-#if defined(WIN32) || defined(_WIN32)
-#define GALOIS_EXPORT __declspec(dllexport)
+#if defined(_WIN32) || defined(__CYGWIN__)
+// Windows
 #define GALOIS_NO_EXPORT
+#if defined(GALOIS_STATIC_LIB)
+#define GALOIS_EXPORT
+#elif defined(GALOIS_SHARED_LIB_BUILDING)
+#define GALOIS_EXPORT __declspec(dllexport)
+#else
+#define GALOIS_EXPORT __declspec(dllimport)
+#endif
+#else
+// Not Windows
+#define GALOIS_NO_EXPORT __attribute__((visibility("hidden")))
+#if defined(GALOIS_STATIC_LIB)
+#define GALOIS_EXPORT
 #else
 #define GALOIS_EXPORT __attribute__((visibility("default")))
-#define GALOIS_NO_EXPORT __attribute__((visibility("hidden")))
+#endif
 #endif
 
 #cmakedefine GALOIS_MONGOC_FOUND

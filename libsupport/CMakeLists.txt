@@ -25,6 +25,12 @@ target_include_directories(galois_support PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(galois_support PRIVATE GALOIS_SHARED_LIB_BUILDING)
+else()
+  target_compile_definitions(galois_support PRIVATE GALOIS_STATIC_LIB)
+endif()
+
 find_package(fmt REQUIRED)
 if(fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")

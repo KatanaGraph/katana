@@ -48,7 +48,7 @@ set(sources
         src/Tracer.cpp
 )
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND sources src/HWTopoDarwin.cpp)
 else()
   include(CheckSchedSetAffinity)
@@ -67,28 +67,42 @@ target_include_directories(galois_shmem PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-if (SCHED_SETAFFINITY_FOUND)
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_SCHED_SETAFFINITY)
-  target_link_libraries(galois_shmem PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
-endif()
-
 target_link_libraries(galois_shmem PUBLIC tsuba)
 target_link_libraries(galois_shmem INTERFACE pygalois)
 target_link_libraries(galois_shmem PRIVATE Threads::Threads)
 target_link_libraries(galois_shmem PUBLIC galois_support)
 
-if (CMAKE_HAVE_PTHREAD_H)
+# Some careful defines and build directives to ensure things work on Windows
+# (see config.h):
+#
+# 1. When we build our shared library, GALOIS_EXPORT => dllexport
+# 2. When someone uses our shared library, GALOIS_EXPORT => dllimport
+# 3. When we build a static library, GALOIS_EXPORT => ""
+#
+# In the world of ELF, 1 and 2 can both be handled with visibility("default")
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(galois_shmem PRIVATE GALOIS_SHARED_LIB_BUILDING)
+else()
+  target_compile_definitions(galois_shmem PRIVATE GALOIS_STATIC_LIB)
+endif()
+
+if(SCHED_SETAFFINITY_FOUND)
+  target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_SCHED_SETAFFINITY)
+  target_link_libraries(galois_shmem PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
+endif()
+
+if(CMAKE_HAVE_PTHREAD_H)
   target_compile_definitions(galois_shmem PRIVATE GALOIS_HAVE_PTHREAD)
 endif()
 
-if (NUMA_FOUND)
+if(NUMA_FOUND)
   target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_NUMA)
   target_link_libraries(galois_shmem PRIVATE ${NUMA_LIBRARY})
 else()
   message(WARNING "No NUMA Support.  Likely poor performance for multi-socket systems.")
 endif()
 
-if (VTune_FOUND)
+if(VTune_FOUND)
   target_link_libraries(galois_shmem PRIVATE ${VTune_LIBRARIES})
 endif()
 

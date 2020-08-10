@@ -22,8 +22,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "galois/Logging.h"
 #include "galois/substrate/HWTopo.h"
-#include "galois/gIO.h"
 #include "galois/GetEnv.h"
 
 // Forward declare this to avoid including PerThreadStorage.
@@ -92,8 +92,9 @@ void ThreadPool::beKind() {
 template <typename T>
 static void atomic_append(std::atomic<T*>& headptr, T* newnode) {
   T* n = nullptr;
-  if (!headptr.compare_exchange_strong(n, newnode))
+  if (!headptr.compare_exchange_strong(n, newnode)) {
     atomic_append(headptr.load()->next, newnode);
+  }
 }
 
 // find id
@@ -123,7 +124,17 @@ void ThreadPool::initThread(unsigned tid) {
   substrate::initPTS(mi.maxThreads);
 
   if (!GetEnv("GALOIS_DO_NOT_BIND_THREADS")) {
-    if (my_box.topo.tid != 0 || !GetEnv("GALOIS_DO_NOT_BIND_MAIN_THREAD")) {
+    bool bind_main = false;
+    if (GetEnv("GALOIS_DO_NOT_BIND_MAIN_THREAD")) {
+      GALOIS_WARN_ONCE("GALOIS_DO_NOT_MAIN_THREAD is deprecated.\n"
+                       "The default behavior is to not bind the main thread.\n"
+                       "Use GALOIS_BIND_MAIN_THREAD to override.");
+    }
+    if (GetEnv("GALOIS_BIND_MAIN_THREAD")) {
+      bind_main = true;
+    }
+
+    if (my_box.topo.tid != 0 || bind_main) {
       bindThreadSelf(my_box.topo.osContext);
     }
   }
@@ -188,13 +199,13 @@ void ThreadPool::cascade(bool fastmode) {
 
   auto midpoint = me.wbegin + (1 + me.wend - me.wbegin) / 2;
 
-  auto child1    = signals[me.wbegin];
+  auto* child1   = signals[me.wbegin];
   child1->wbegin = me.wbegin + 1;
   child1->wend   = midpoint;
   child1->wakeup(fastmode);
 
   if (midpoint < me.wend) {
-    auto child2    = signals[midpoint];
+    auto* child2   = signals[midpoint];
     child2->wbegin = midpoint + 1;
     child2->wend   = me.wend;
     child2->wakeup(fastmode);
@@ -204,7 +215,7 @@ void ThreadPool::cascade(bool fastmode) {
 void ThreadPool::runInternal(unsigned num) {
   // sanitize num
   // seq write to starting should make work safe
-  GALOIS_ASSERT(!running, "Recursive thread pool execution not supported");
+  GALOIS_LOG_VASSERT(!running, "Recursive thread pool execution not supported");
   running = true;
   num     = std::min(std::max(1U, num), getMaxUsableThreads());
   // my_box is tid 0
@@ -233,13 +244,13 @@ void ThreadPool::runDedicated(std::function<void(void)>& f) {
   // TODO(ddn): update galois::runtime::activeThreads to reflect the dedicated
   // thread but we don't want to depend on galois::runtime symbols and too many
   // clients access galois::runtime::activeThreads directly.
-  GALOIS_ASSERT(!running,
-                "Can't start dedicated thread during parallel section");
+  GALOIS_LOG_VASSERT(!running,
+                     "Can't start dedicated thread during parallel section");
   ++reserved;
 
-  GALOIS_ASSERT(reserved < mi.maxThreads, "Too many dedicated threads");
+  GALOIS_LOG_VASSERT(reserved < mi.maxThreads, "Too many dedicated threads");
   work          = [&f]() { throw dedicated_ty{f}; };
-  auto child    = signals[mi.maxThreads - reserved];
+  auto* child   = signals[mi.maxThreads - reserved];
   child->wbegin = 0;
   child->wend   = 0;
   child->done   = 0;
@@ -253,11 +264,11 @@ void ThreadPool::runDedicated(std::function<void(void)>& f) {
 static galois::substrate::ThreadPool* TPOOL = nullptr;
 
 void galois::substrate::internal::setThreadPool(ThreadPool* tp) {
-  GALOIS_ASSERT(!(TPOOL && tp), "Double initialization of ThreadPool");
+  GALOIS_LOG_VASSERT(!(TPOOL && tp), "Double initialization of ThreadPool");
   TPOOL = tp;
 }
 
 galois::substrate::ThreadPool& galois::substrate::getThreadPool() {
-  GALOIS_ASSERT(TPOOL, "ThreadPool not initialized");
+  GALOIS_LOG_VASSERT(TPOOL, "ThreadPool not initialized");
   return *TPOOL;
 }

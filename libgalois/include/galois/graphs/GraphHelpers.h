@@ -48,7 +48,6 @@ inline edge_iterator edge_begin(GraphTy& graph, uint32_t N) {
  */
 template <typename GraphTy>
 inline edge_iterator edge_end(GraphTy& graph, uint32_t N) {
-  // return graph.edge_end(N, galois::MethodFlag::UNPROTECTED);
   return graph.topology().out_indices->Value(N);
 }
 
@@ -515,15 +514,16 @@ determineUnitRangesFromGraph(GraphTy& graph, uint32_t unitsToSplit,
  *
  * @param unitsToSplit number of units to split nodes among
  * @param edgePrefixSum A prefix sum of edges
+ * @param numNodes number of nodes in the graph
  * @param nodeAlpha amount of weight to give to nodes when dividing work among
  * threads
  * @returns vector that indirectly specifies how nodes are split amongs units
  * of execution
  */
 template <typename VectorTy>
-std::vector<uint32_t> determineUnitRangesFromPrefixSum(uint32_t unitsToSplit,
-                                                       VectorTy& edgePrefixSum,
-                                                       uint32_t nodeAlpha = 0) {
+std::vector<uint32_t>
+determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
+                                 uint64_t numNodes, uint32_t nodeAlpha = 0) {
   assert(unitsToSplit > 0);
 
   std::vector<uint32_t> nodeRanges;
@@ -531,7 +531,6 @@ std::vector<uint32_t> determineUnitRangesFromPrefixSum(uint32_t unitsToSplit,
 
   nodeRanges[0] = 0;
 
-  uint32_t numNodes = edgePrefixSum.size();
   // handle corner case TODO there are better ways to do this, i.e. call helper
   if (numNodes == 0) {
     nodeRanges[0] = 0;
@@ -542,7 +541,8 @@ std::vector<uint32_t> determineUnitRangesFromPrefixSum(uint32_t unitsToSplit,
     return nodeRanges;
   }
 
-  uint64_t numEdges = edgePrefixSum[numNodes - 1];
+  uint64_t numEdges = internal::getEdgePrefixSum(
+      edgePrefixSum, numNodes - 1); // edgePrefixSum[numNodes - 1];
 
   for (uint32_t i = 0; i < unitsToSplit; i++) {
     auto nodeSplits =

@@ -1,4 +1,4 @@
-from numba.extending import overload_method, overload
+from numba.extending import overload_method, overload, types
 
 import galois.property_graph
 
@@ -22,10 +22,11 @@ def overload_nodes(self):
 
 @overload_method(galois.property_graph.PropertyGraph_numba_wrapper.Type, "edges")
 def overload_edges(self, n):
-    def impl(self, n):
-        if n == 0:
-            prev = 0
-        else:
-            prev = self.edge_index(n-1)
-        return range(prev, self.edge_index(n))
-    return impl
+    if isinstance(n, types.Integer) and not n.signed:
+        def impl(self, n):
+            if n == 0:
+                prev = 0
+            else:
+                prev = self.edge_index(n-1)
+            return range(prev, self.edge_index(n))
+        return impl

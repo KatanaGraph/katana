@@ -193,7 +193,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                 addr_func_c,
                 ir.FunctionType(ir.PointerType(ir.IntType(8)), (ir.PointerType(ir.IntType(8)),)),
                 (obj,),
-                c)
+                c.builder)
             return NativeValue(ctx._getvalue())
 
         self.addr_func = addr_func

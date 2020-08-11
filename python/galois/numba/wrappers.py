@@ -1,3 +1,4 @@
+import logging
 from abc import abstractmethod, ABCMeta
 
 import numba.core.ccallback
@@ -8,8 +9,6 @@ from numba.extending import get_cython_function_address, typeof_impl, overload_m
     make_attribute_wrapper, unbox, NativeValue
 
 from .utils import call_raw_function_pointer
-
-import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -73,6 +72,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
             def impl(v, *args):
                 return func(v.ptr, *args)
             return impl
+        overload.__name__ = func_name
         return overload
 
     @abstractmethod
@@ -118,7 +118,7 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
                 addr_func_c,
                 ir.FunctionType(ir.PointerType(ir.IntType(8)), (ir.PointerType(ir.IntType(8)),)),
                 (obj,),
-                c)
+                c.builder)
             return NativeValue(ctx._getvalue())
 
         self.addr_func = addr_func

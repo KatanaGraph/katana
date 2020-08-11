@@ -3,8 +3,15 @@ A customized numba compiler pipeline for use with Galois.
 
 This pipeline is used from the `*_operator` decorators in loops.py.
 """
-from numba.core import sigutils, compiler
+
+import numba.cpython.builtins
+from llvmlite import ir
+from numba.core import sigutils, compiler, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
+from numba.core.imputils import lower_constant
+
+disable_nrt = True
+external_function_pointer_as_constant = True
 
 
 class GaloisCompiler(CompilerBase):
@@ -34,8 +41,22 @@ class OperatorCompiler(GaloisCompiler):
     """
 
     def __init__(self, typingctx, targetctx, library, args, return_type, flags, locals):
-        flags.nrt = False
+        if disable_nrt:
+            flags.nrt = False
         super().__init__(typingctx, targetctx, library, args, return_type, flags, locals)
+        targetctx._operator_context = True
+
+
+@lower_constant(types.ExternalFunctionPointer)
+def constant_function_pointer(context, builder: ir.IRBuilder, ty, pyval):
+    """
+    Override the internal handling of ExternalFunctionPointer to avoid generating a global variable.
+    """
+    if external_function_pointer_as_constant and hasattr(context, "_operator_context") and context._operator_context:
+        ptrty = context.get_function_pointer_type(ty)
+        return ir.Constant(ir.types.IntType(64), ty.get_pointer(pyval)).inttoptr(ptrty)
+    # If we are not in an operator context (as defined by OperatorCompiler use) then call the numba implementation
+    return numba.cpython.builtins.constant_function_pointer(context, builder, ty, pyval)
 
 
 # TODO: This is duplicated from numba to allow pipeline_class to be passed through. This should be merged upstream.

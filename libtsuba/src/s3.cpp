@@ -56,45 +56,23 @@ static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
 static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
 static bool library_init{false};
 
-// TODO(thunt) 2020-08-11 this was taken pretty much verbatim from the current
-// AWS SDK source. We should revisit this when the version of the SDK is updated
-// in conan (currently at 1.7)
-class TsubaCredentialsChain : public Aws::Auth::AWSCredentialsProviderChain {
+class WarnOnEmptyDefaultCredentialsChain
+    : public Aws::Auth::DefaultAWSCredentialsProviderChain {
 public:
-  TsubaCredentialsChain() : AWSCredentialsProviderChain() {
-    AddProvider(
-        Aws::MakeShared<Aws::Auth::EnvironmentAWSCredentialsProvider>(kAwsTag));
-    AddProvider(
-        Aws::MakeShared<Aws::Auth::ProfileConfigFileAWSCredentialsProvider>(
-            kAwsTag));
-    AddProvider(
-        Aws::MakeShared<Aws::Auth::ProcessCredentialsProvider>(kAwsTag));
-    AddProvider(
-        Aws::MakeShared<Aws::Auth::STSAssumeRoleWebIdentityCredentialsProvider>(
-            kAwsTag));
-
-    // Based on source code from the Default provider chain
-    std::string relative_uri;
-    std::string absolute_uri;
-    bool ec2_metadata_disabled = false;
-
-    galois::GetEnv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", &relative_uri);
-    galois::GetEnv("AWS_CONTAINER_CREDENTIALS_FULL_URI", &absolute_uri);
-    galois::GetEnv("AWS_EC2_METADATA_DISABLED", &ec2_metadata_disabled);
-
-    if (!relative_uri.empty()) {
-      AddProvider(Aws::MakeShared<Aws::Auth::TaskRoleCredentialsProvider>(
-          kAwsTag, relative_uri.c_str()));
-    } else if (!absolute_uri.empty()) {
-      std::string token;
-      galois::GetEnv("AWS_CONTAINER_AUTHORIZATION_TOKEN", &token);
-      AddProvider(Aws::MakeShared<Aws::Auth::TaskRoleCredentialsProvider>(
-          kAwsTag, absolute_uri.c_str(), token.c_str()));
-    } else if (!ec2_metadata_disabled) {
-      AddProvider(
-          Aws::MakeShared<Aws::Auth::InstanceProfileCredentialsProvider>(
-              kAwsTag));
+  WarnOnEmptyDefaultCredentialsChain()
+      : Aws::Auth::DefaultAWSCredentialsProviderChain() {}
+  Aws::Auth::AWSCredentials GetAWSCredentials() override {
+    auto creds =
+        Aws::Auth::DefaultAWSCredentialsProviderChain::GetAWSCredentials();
+    if (creds.IsEmpty()) {
+      GALOIS_WARN_ONCE(
+          "AWS credentials not found. S3 storage will likely be inaccessible\n"
+          "    Not providing credentials can slow initialization down\n"
+          "    considerably. If you don't intend to use S3 you can set\n"
+          "    \"AWS_EC2_METADATA_DISABLED=true\" in the environment to\n"
+          "    bypass the most expensive check.");
     }
+    return creds;
   }
 };
 
@@ -121,7 +99,7 @@ public:
 /// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
 /// 5. IAM roles for tasks (containers)
 /// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
-/// 6. The machine's account (via EC2 metadata service) if on EC2
+/// 6. The machine's account (via EC2 metadata service) if on EC2.
 static inline std::shared_ptr<Aws::S3::S3Client>
 GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
                 executor) {
@@ -156,8 +134,8 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
   }
 
   return Aws::MakeShared<Aws::S3::S3Client>(
-      kAwsTag, Aws::MakeShared<TsubaCredentialsChain>(kAwsTag), cfg,
-      Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+      kAwsTag, Aws::MakeShared<WarnOnEmptyDefaultCredentialsChain>(kAwsTag),
+      cfg, Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
       use_virtual_addressing);
 }
 

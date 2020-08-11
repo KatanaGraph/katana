@@ -17,6 +17,8 @@
 #include <aws/s3/model/CompleteMultipartUploadRequest.h>
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
+#include <aws/core/auth/AWSCredentialsProviderChain.h>
+#include <aws/core/auth/STSCredentialsProvider.h>
 #include <fmt/core.h>
 
 #include "galois/FileSystem.h"
@@ -54,6 +56,48 @@ static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
 static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
 static bool library_init{false};
 
+// TODO(thunt) 2020-08-11 this was taken pretty much verbatim from the current
+// AWS SDK source. We should revisit this when the version of the SDK is updated
+// in conan (currently at 1.7)
+class TsubaCredentialsChain : public Aws::Auth::AWSCredentialsProviderChain {
+public:
+  TsubaCredentialsChain() : AWSCredentialsProviderChain() {
+    AddProvider(
+        Aws::MakeShared<Aws::Auth::EnvironmentAWSCredentialsProvider>(kAwsTag));
+    AddProvider(
+        Aws::MakeShared<Aws::Auth::ProfileConfigFileAWSCredentialsProvider>(
+            kAwsTag));
+    AddProvider(
+        Aws::MakeShared<Aws::Auth::ProcessCredentialsProvider>(kAwsTag));
+    AddProvider(
+        Aws::MakeShared<Aws::Auth::STSAssumeRoleWebIdentityCredentialsProvider>(
+            kAwsTag));
+
+    // Based on source code from the Default provider chain
+    std::string relative_uri;
+    std::string absolute_uri;
+    bool ec2_metadata_disabled = false;
+
+    galois::GetEnv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", &relative_uri);
+    galois::GetEnv("AWS_CONTAINER_CREDENTIALS_FULL_URI", &absolute_uri);
+    galois::GetEnv("AWS_EC2_METADATA_DISABLED", &ec2_metadata_disabled);
+
+    if (!relative_uri.empty()) {
+      AddProvider(Aws::MakeShared<Aws::Auth::TaskRoleCredentialsProvider>(
+          kAwsTag, relative_uri.c_str()));
+    } else if (!absolute_uri.empty()) {
+      std::string token;
+      galois::GetEnv("AWS_CONTAINER_AUTHORIZATION_TOKEN", &token);
+      AddProvider(Aws::MakeShared<Aws::Auth::TaskRoleCredentialsProvider>(
+          kAwsTag, absolute_uri.c_str(), token.c_str()));
+    } else if (!ec2_metadata_disabled) {
+      AddProvider(
+          Aws::MakeShared<Aws::Auth::InstanceProfileCredentialsProvider>(
+              kAwsTag));
+    }
+  }
+};
+
 /// GetS3Client returns a configured S3 client.
 ///
 /// The client pulls its configuration from the environment using the same
@@ -67,11 +111,17 @@ static bool library_init{false};
 /// 2. Otherwise, env[AWS_DEFAULT_REGION]
 /// 3. Otherwise, us-east-1
 ///
-/// The credentials are determined by:
+/// The credentials are determined by (in order of precedence):
 ///
-/// 1. The credentials associcated with the default profile in
+/// 1. The environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+/// 2. The credentials associcated with the default profile in
 /// $HOME/.aws/credentials
-/// 2. Otherwise, the machine account if in EC2
+/// 3. An external credential provider command as noted in the config file.
+/// 4. STS assume role credenials
+/// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
+/// 5. IAM roles for tasks (containers)
+/// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+/// 6. The machine's account (via EC2 metadata service) if on EC2
 static inline std::shared_ptr<Aws::S3::S3Client>
 GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
                 executor) {
@@ -106,7 +156,8 @@ GetS3Client(const std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>&
   }
 
   return Aws::MakeShared<Aws::S3::S3Client>(
-      kAwsTag, cfg, Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+      kAwsTag, Aws::MakeShared<TsubaCredentialsChain>(kAwsTag), cfg,
+      Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
       use_virtual_addressing);
 }
 

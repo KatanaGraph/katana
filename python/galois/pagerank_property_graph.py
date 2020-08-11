@@ -7,6 +7,7 @@ from galois.datastructures import LargeArray, AllocationPolicy
 from .loops import do_all, do_all_operator
 from .property_graph import PropertyGraph
 from .timer import StatTimer
+from galois.shmem import setActiveThreads
 
 # Constants for Pagerank
 ALPHA = 0.85
@@ -130,6 +131,7 @@ if __name__ == "__main__":
     parser.add_argument('--noverify', action='store_true', default=False)
     parser.add_argument('--printTopN', type=int, default=10)
     parser.add_argument('--threads', '-t', type=int, default=1)
+    parser.add_argument('--reportNode', type=int, default=0)
     parser.add_argument('input', type=str)
     args = parser.parse_args()
 

@@ -4,7 +4,7 @@ import pyarrow
 from .loops import do_all, do_all_operator
 from .property_graph import PropertyGraph
 from .timer import StatTimer
-
+from galois.shmem import setActiveThreads
 
 @do_all_operator()
 def jaccard_operator(g, n1_neighbors, n1_size, output, n2):

@@ -7,6 +7,7 @@ from galois.datastructures import LargeArray, AllocationPolicy, InsertBag
 from .loops import do_all, do_all_operator, for_each, for_each_operator
 from .property_graph import PropertyGraph
 from .timer import StatTimer
+from galois.shmem import setActiveThreads
 
 @do_all_operator()
 def compute_degree_count_operator(graph: PropertyGraph, current_degree, nid):
@@ -84,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--noverify', action='store_true', default=False)
     parser.add_argument('--threads', '-t', type=int, default=1)
     parser.add_argument('--kcore', '-k', type=int, default=100)
+    parser.add_argument('--reportNode', type=int, default=0)
     parser.add_argument('input', type=str)
     args = parser.parse_args()
 

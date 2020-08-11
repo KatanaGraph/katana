@@ -6,6 +6,7 @@ from galois.atomic import GAccumulator, GReduceLogicalOr, atomic_min
 from .loops import do_all, do_all_operator
 from .property_graph import PropertyGraph
 from .timer import StatTimer
+from galois.shmem import setActiveThreads
 
 ################################################
 ## Topological pull style connencted components
@@ -134,7 +135,6 @@ if __name__ == "__main__":
     parser.add_argument('--propertyName', type=str, default="NewProperty")
     parser.add_argument('--reportNode', type=int, default=1)
     parser.add_argument('--noverify', action='store_true', default=False)
-    #parser.add_argument('--cython', action='store_true', default=False)
     parser.add_argument('--threads', '-t', type=int, default=1)
     parser.add_argument('input', type=str)
     args = parser.parse_args()

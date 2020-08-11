@@ -6,6 +6,7 @@ from galois.atomic import atomic_min, GAccumulator, GReduceMax
 from galois.loops import *
 from galois.property_graph import PropertyGraph
 from galois.timer import StatTimer
+from galois.shmem import setActiveThreads
 
 
 def create_distance_array(g: PropertyGraph, source):
@@ -97,7 +98,6 @@ if __name__ == "__main__":
     parser.add_argument('input', type=str)
     args = parser.parse_args()
 
-    from galois.shmem import setActiveThreads
     print("Using threads:", setActiveThreads(args.threads))
 
     graph = PropertyGraph(args.input)

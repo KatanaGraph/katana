@@ -12,7 +12,6 @@ from .cpp.libstd.boost cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
 from libc.stdint cimport *
-from .property_graph cimport PropertyGraph
 
 # Initialize the Galois runtime when the Python module is loaded.
 cdef class _galois_runtime_wrapper:

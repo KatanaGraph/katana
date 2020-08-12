@@ -41,28 +41,47 @@ using json   = nlohmann::json;
 
 namespace tsuba {
 
-struct RDGMeta {
-  uint32_t version;
-  uint32_t num_hosts;
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void to_json(json& j, const RDGMeta& meta) {
+  j = json{{"magic", kRDGMagicNo},
+           {"version", meta.version},
+           {"previous_version", meta.previous_version},
+           {"num_hosts", meta.num_hosts}};
+}
 
-  // NOLINTNEXTLINE needed non-const ref for nlohmann compat
-  friend void to_json(json& j, const RDGMeta& meta) {
-    j = json{{"magic", kRDGMagicNo},
-             {"version", meta.version},
-             {"num_hosts", meta.num_hosts}};
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void from_json(const json& j, RDGMeta& meta) {
+  uint32_t magic;
+  j.at("magic").get_to(magic);
+  j.at("version").get_to(meta.version);
+  j.at("previous_version").get_to(meta.previous_version);
+  j.at("num_hosts").get_to(meta.num_hosts);
+  if (magic != kRDGMagicNo) {
+    // nlohmann::json reports errors using exceptions
+    throw std::runtime_error("RDG Magic number mismatch");
   }
-  // NOLINTNEXTLINE needed non-const ref for nlohmann compat
-  friend void from_json(const json& j, RDGMeta& meta) {
-    uint32_t magic;
-    j.at("magic").get_to(magic);
-    j.at("version").get_to(meta.version);
-    j.at("num_hosts").get_to(meta.num_hosts);
-    if (magic != kRDGMagicNo) {
-      // nlohmann::json reports errors using exceptions
-      throw std::runtime_error("RDG Magic number mismatch");
-    }
+}
+
+galois::Result<RDGMeta> RDGMeta::Make(const std::string& rdg_name) {
+  tsuba::FileView fv;
+  if (auto res = fv.Bind(rdg_name); !res) {
+    return res.error();
   }
-};
+  auto parse_res = JsonParse<tsuba::RDGMeta>(fv);
+  if (!parse_res) {
+    return parse_res.error();
+  }
+  return parse_res.value();
+}
+
+// e.g., rdg_path == s3://witchel-tests-east2/fault/simple/meta
+std::string RDGMeta::FileName(const std::string& rdg_path, uint64_t version) {
+  return fmt::format("{}_{}", rdg_path, version);
+}
+std::string RDGMeta::PartitionFileName(const std::string& rdg_path,
+                                       uint32_t node_id, uint64_t version) {
+  return fmt::format("{}_{}_{}", rdg_path, node_id, version);
+}
 
 struct RDGHandleImpl {
   // Property paths are relative to metadata path
@@ -70,7 +89,7 @@ struct RDGHandleImpl {
   std::string rdg_path;
   std::string partition_path;
   uint32_t flags;
-  RDGMeta rdg;
+  RDGMeta rdg_meta;
 
   /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const {
@@ -625,11 +644,6 @@ MakeMetadata(const tsuba::RDG& rdg) {
   return std::make_pair(keys, values);
 }
 
-std::string HostPartitionName(tsuba::RDGHandle handle, uint32_t id,
-                              uint32_t version) {
-  return fmt::format("{}_{}_{}", handle.impl_->rdg_path, id, version);
-}
-
 galois::Result<void> DoWriteMetadata(tsuba::RDGHandle handle,
                                      const tsuba::RDG& rdg,
                                      const arrow::Schema& schema) {
@@ -659,8 +673,9 @@ galois::Result<void> DoWriteMetadata(tsuba::RDGHandle handle,
     return tsuba::ErrorCode::InvalidArgument;
   }
 
-  ff->Bind(HostPartitionName(handle, tsuba::Comm()->ID,
-                             handle.impl_->rdg.version + 1));
+  ff->Bind(tsuba::RDGMeta::PartitionFileName(
+      handle.impl_->rdg_path, tsuba::Comm()->ID,
+      handle.impl_->rdg_meta.version + 1));
   tsuba::internal::PtP();
   if (auto res = ff->Persist(); !res) {
     return res.error();
@@ -693,8 +708,9 @@ galois::Result<void> CreateNewRDG(const std::string& name,
   }
 
   std::string s = json(tsuba::RDGMeta{
-                           .version   = 0,
-                           .num_hosts = tsuba::Comm()->Num,
+                           .version          = 0,
+                           .previous_version = 0,
+                           .num_hosts        = tsuba::Comm()->Num,
                        })
                       .dump();
   if (auto res = tsuba::FileStore(
@@ -799,16 +815,28 @@ galois::Result<void> DoPartialLoad(tsuba::RDGHandle handle,
 
 galois::Result<void> CommitRDG(tsuba::RDGHandle handle) {
   galois::CommBackend* comm = tsuba::Comm();
-  tsuba::RDGMeta new_meta{.version   = handle.impl_->rdg.version + 1,
-                          .num_hosts = comm->Num};
+  tsuba::RDGMeta new_meta{.version = handle.impl_->rdg_meta.version + 1,
+                          .previous_version = handle.impl_->rdg_meta.version,
+                          .num_hosts        = comm->Num};
 
   tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
   tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   if (comm->ID == 0) {
     tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
-    std::string s = json(new_meta).dump();
+    std::string s = json(handle.impl_->rdg_meta).dump();
+    if (auto res = tsuba::FileStore(
+            tsuba::RDGMeta::FileName(handle.impl_->rdg_path,
+                                     handle.impl_->rdg_meta.version),
+            reinterpret_cast<const uint8_t*>(s.data()), s.size());
+        !res) {
+      tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+      GALOIS_LOG_ERROR("failed to store previous RDGMeta file");
+      return res.error();
+    }
+    s = json(new_meta).dump();
     tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+    // Special sync store or subsequent fsync?
     if (auto res = tsuba::FileStore(handle.impl_->rdg_path,
                                     reinterpret_cast<const uint8_t*>(s.data()),
                                     s.size());
@@ -821,7 +849,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle) {
   tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
   tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
-  handle.impl_->rdg = new_meta;
+  handle.impl_->rdg_meta = new_meta;
   return galois::ResultSuccess();
 }
 
@@ -1001,34 +1029,36 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
   auto rdg_res = ParseRDGFile(rdg_name);
   if (!rdg_res) {
     if (rdg_res.error() == tsuba::ErrorCode::InvalidArgument) {
+      // Maintain this?
       GALOIS_WARN_ONCE("Deprecated behavior: treating invalid RDG file like a "
                        "partition file");
       impl.partition_path = rdg_name;
-      impl.rdg            = {.version = 0, .num_hosts = tsuba::Comm()->Num};
+      impl.rdg_meta       = {
+          .version = 0, .previous_version = 0, .num_hosts = tsuba::Comm()->Num};
       return RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
     }
     GALOIS_LOG_DEBUG("tsuba::Open 0");
     return rdg_res.error();
   }
 
-  impl.rdg = rdg_res.value();
+  impl.rdg_meta = rdg_res.value();
 
   auto ret = RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
 
   if (ret.impl_->flags & kReadPartial) {
-    if (ret.impl_->rdg.num_hosts != 1) {
+    if (ret.impl_->rdg_meta.num_hosts != 1) {
       GALOIS_LOG_ERROR("Cannot ReadPartial from partitioned graph");
       return ErrorCode::InvalidArgument;
     }
-    ret.impl_->partition_path =
-        HostPartitionName(ret, 0, ret.impl_->rdg.version);
+    ret.impl_->partition_path = tsuba::RDGMeta::PartitionFileName(
+        ret.impl_->rdg_path, 0, ret.impl_->rdg_meta.version);
   } else {
-    if (ret.impl_->rdg.num_hosts != tsuba::Comm()->Num) {
+    if (ret.impl_->rdg_meta.num_hosts != tsuba::Comm()->Num) {
       GALOIS_LOG_DEBUG("tsuba::Open 1");
       return ErrorCode::InvalidArgument;
     }
-    ret.impl_->partition_path =
-        HostPartitionName(ret, tsuba::Comm()->ID, ret.impl_->rdg.version);
+    ret.impl_->partition_path = tsuba::RDGMeta::PartitionFileName(
+        ret.impl_->rdg_path, tsuba::Comm()->ID, ret.impl_->rdg_meta.version);
   }
   return ret;
 }

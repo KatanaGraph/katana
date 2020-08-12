@@ -23,8 +23,8 @@ target_link_libraries(tsuba_ll tsuba)
 add_executable(tsuba_md5sum tsuba_md5sum.cpp md5.cpp)
 target_link_libraries(tsuba_md5sum tsuba)
 
-add_executable(tsuba_rm tsuba_rm.cpp)
-target_link_libraries(tsuba_rm tsuba)
+add_executable(tsuba_gc tsuba_gc.cpp)
+target_link_libraries(tsuba_gc tsuba)
 
 add_executable(tsuba_fault tsuba_fault.cpp)
 target_link_libraries(tsuba_fault tsuba)

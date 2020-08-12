@@ -30,6 +30,8 @@ GALOIS_EXPORT Result<std::string> NewPath(const std::string& dir,
 
 // Return the filename portion of a path
 GALOIS_EXPORT Result<std::string> ExtractFileName(const std::string& path);
+// Return the "directory" portion of a path
+GALOIS_EXPORT Result<std::string> ExtractDirName(const std::string& path);
 
 } // namespace galois
 

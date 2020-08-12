@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include <arrow/api.h>
+#include <nlohmann/json.hpp>
 
 #include "galois/config.h"
 #include "galois/Result.h"
@@ -45,6 +46,24 @@ public:
 struct PropertyMetadata {
   std::string name;
   std::string path;
+};
+
+// Struct version of main graph metadatafile
+struct RDGMeta {
+  uint64_t version;
+  uint64_t previous_version;
+  uint32_t num_hosts;
+
+  // Create an RDGMeta from the named RDG file
+  static galois::Result<RDGMeta> Make(const std::string& rdg_name);
+  // Canonical naming
+  static std::string FileName(const std::string& rdg_path, uint64_t version);
+  static std::string PartitionFileName(const std::string& rdg_path,
+                                       uint32_t node_id, uint64_t version);
+
+  // Required by nlohmann
+  friend void to_json(nlohmann::json& j, const RDGMeta& meta);
+  friend void from_json(const nlohmann::json& j, RDGMeta& meta);
 };
 
 struct GALOIS_EXPORT RDG {

@@ -71,12 +71,22 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
   return p.append(1, kSepChar).append(name);
 }
 
+// TODO: These functions do not properly deal with non-canonical path
+//  names, e.g., multiple '/' in a row
 // This function does not recognize any path seperator other than '/'. This
 // could be a problem for Windows or "non-standard S3" paths.
 galois::Result<std::string> galois::ExtractFileName(const std::string& path) {
-  size_t last_slash = path.find_last_of('/', std::string::npos);
+  size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
   if (last_slash == std::string::npos) {
     return ErrorCode::InvalidArgument;
   }
   return path.substr(last_slash + 1);
+}
+
+galois::Result<std::string> galois::ExtractDirName(const std::string& path) {
+  size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
+  if (last_slash == std::string::npos) {
+    return ErrorCode::InvalidArgument;
+  }
+  return path.substr(0, last_slash);
 }

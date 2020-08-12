@@ -37,7 +37,7 @@ else()
 endif()
 
 find_package(nlohmann_json 3.7.3 REQUIRED)
-target_link_libraries(tsuba PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(tsuba PUBLIC nlohmann_json::nlohmann_json)
 
 find_package(Arrow CONFIG REQUIRED)
 if(${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)

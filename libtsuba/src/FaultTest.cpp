@@ -9,7 +9,7 @@ static tsuba::internal::FaultMode mode_{tsuba::internal::FaultMode::None};
 static float independent_prob_{0.0f};
 static uint64_t run_length_{0UL};
 static uint64_t fault_run_length_{0UL};
-static uint64_t fault_run_count_{0UL};
+static uint64_t ptp_count_{0UL};
 static const std::unordered_map<tsuba::internal::FaultMode, std::string>
     fault_mode_label{
         {tsuba::internal::FaultMode::None, "No faults"},
@@ -19,7 +19,7 @@ static const std::unordered_map<tsuba::internal::FaultMode, std::string>
     };
 
 void tsuba::internal::FaultTestReport() {
-  fmt::print("Fault run count {:d}\n", fault_run_count_);
+  fmt::print("PtP count: {:d}\n", ptp_count_);
 }
 
 void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
@@ -56,16 +56,16 @@ void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
   }
 }
 
-static void die_now(void* caller) {
-  fmt::print("FaultTest::PtP caller {}\n", caller);
+static void die_now(const char* file, int line) {
+  fmt::print("FaultTest::PtP {}:{}\n", file, line);
   // Best to kill ourselves quickly and messily
   *((volatile int*)0) = 1;
 }
 
-void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity) {
-  // gcc dependency for __builtin_return_address
-  void* caller = __builtin_return_address(0);
-  fault_run_count_++;
+void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity,
+                          const char* file,
+                          int line) {
+  ptp_count_++;
   switch (mode_) {
   case tsuba::internal::FaultMode::None:
     return;
@@ -81,14 +81,14 @@ void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity) {
       break;
     }
     if (galois::RandomUniformFloat(1.0f) < threshold) {
-      fmt::print("  fault_run_count {:d}\n", fault_run_count_);
-      die_now(caller);
+      fmt::print("  PtP count {:d}\n", ptp_count_);
+      die_now(file, line);
     }
   } break;
   case tsuba::internal::FaultMode::RunLength:
   case tsuba::internal::FaultMode::UniformOverRun: {
-    if (fault_run_count_ == fault_run_length_) {
-      die_now(caller);
+    if (ptp_count_ == fault_run_length_) {
+      die_now(file, line);
     }
   }
   }

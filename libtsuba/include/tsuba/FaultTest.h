@@ -23,7 +23,9 @@ GALOIS_EXPORT void FaultTestInit(FaultMode mode         = FaultMode::None,
 GALOIS_EXPORT void FaultTestReport();
 
 // PullThePlug (virtually) Compile this out if NDEBUG?
-void PtP(FaultSensitivity sensitivity = FaultSensitivity::Normal);
+void PtP(FaultSensitivity sensitivity = FaultSensitivity::Normal,
+         const char* file = __FILE__,
+         int line = __LINE__);
 
 } // namespace tsuba::internal
 

@@ -1,5 +1,5 @@
 function(add_test_unit name)
-  set(options)
+  set(options NOT_QUICK)
   set(multi_value_args REQUIRES)
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
@@ -21,12 +21,17 @@ function(add_test_unit name)
 
   add_test(NAME ${test_name} COMMAND ${command_line})
 
-  # Allow parallel tests
   set_tests_properties(${test_name}
     PROPERTIES
-      ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1
-      LABELS quick
-    )
+      ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1)
+
+  # Allow parallel tests
+  if(NOT X_NOT_QUICK)
+    set_tests_properties(${test_name}
+      PROPERTIES
+        LABELS quick
+      )
+  endif()
 endfunction()
 
 add_test_unit(acquire)
@@ -53,6 +58,8 @@ add_test_unit(papi 2)
 add_test_unit(range)
 add_test_unit(pc)
 add_test_unit(property-file-graph)
+add_test_unit(property-graph)
+add_test_unit(property-graph-bench NOT_QUICK)
 add_test_unit(reduction)
 add_test_unit(sort)
 add_test_unit(static)
@@ -62,3 +69,5 @@ add_test_unit(wakeup-overhead)
 add_test_unit(worklists-compile)
 
 target_link_libraries(unit-wakeup-overhead LLVMSupport)
+
+target_link_libraries(unit-property-graph-bench benchmark::benchmark)

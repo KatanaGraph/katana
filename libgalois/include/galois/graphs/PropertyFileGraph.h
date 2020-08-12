@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "galois/config.h"
+#include "galois/Properties.h"
 #include "tsuba/RDG.h"
 
 namespace galois::graphs {
@@ -21,6 +22,12 @@ struct GraphTopology {
   uint64_t num_nodes() const { return out_indices ? out_indices->length() : 0; }
 
   uint64_t num_edges() const { return out_dests ? out_dests->length() : 0; }
+
+  std::pair<uint64_t, uint64_t> edge_range(uint32_t node_id) const {
+    auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
+    auto edge_end   = out_indices->Value(node_id);
+    return std::make_pair(edge_start, edge_end);
+  }
 };
 
 /// A property graph is a graph that has properties associated with its nodes
@@ -38,10 +45,18 @@ struct GraphTopology {
 class GALOIS_EXPORT PropertyFileGraph {
   PropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
-  // sanity check the graph after loading
+  /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
 
   Result<void> DoWrite(tsuba::RDGHandle handle);
+
+  /// ExtractArrays returns the array for each column of a table. It returns an
+  /// error if there is more than one array for any column.
+  static Result<std::vector<arrow::Array*>> ExtractArrays(arrow::Table* table);
+
+  template <typename PropTuple>
+  Result<PropertyViewTuple<PropTuple>> static MakePropertyViews(
+      arrow::Table* table);
 
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
@@ -177,7 +192,46 @@ public:
   }
 
   Result<void> SetTopology(const GraphTopology& topology);
+
+  /// MakeNodePropertyViews asserts a typed view on top of runtime properties.
+  ///
+  /// It returns an error if there are fewer properties than elements of the
+  /// view or if the underlying arrow::ChunkedArray has more than one
+  /// arrow::Array.
+  template <typename PropTuple>
+  Result<PropertyViewTuple<PropTuple>> MakeNodePropertyViews() {
+    return this->MakePropertyViews<PropTuple>(rdg_.node_table.get());
+  }
+
+  /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
+  ///
+  /// \see MakeNodePropertyViews
+  template <typename PropTuple>
+  Result<PropertyViewTuple<PropTuple>> MakeEdgePropertyViews() {
+    return this->MakePropertyViews<PropTuple>(rdg_.edge_table.get());
+  }
 };
+
+template <typename PropTuple>
+Result<PropertyViewTuple<PropTuple>>
+PropertyFileGraph::MakePropertyViews(arrow::Table* table) {
+  auto arrays_result = ExtractArrays(table);
+  if (!arrays_result) {
+    return arrays_result.error();
+  }
+
+  auto arrays = std::move(arrays_result.value());
+
+  if (arrays.size() < std::tuple_size_v<PropTuple>) {
+    return std::errc::invalid_argument;
+  }
+
+  auto views_result = ConstructPropertyViews<PropTuple>(arrays);
+  if (!views_result) {
+    return views_result.error();
+  }
+  return views_result.value();
+}
 
 } // namespace galois::graphs
 

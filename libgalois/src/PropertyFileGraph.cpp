@@ -294,3 +294,16 @@ galois::Result<void> galois::graphs::PropertyFileGraph::SetTopology(
 
   return galois::ResultSuccess();
 }
+
+galois::Result<std::vector<arrow::Array*>>
+galois::graphs::PropertyFileGraph::ExtractArrays(arrow::Table* table) {
+  std::vector<arrow::Array*> ret;
+  for (auto& column : table->columns()) {
+    if (column->num_chunks() != 1) {
+      return std::errc::invalid_argument;
+    }
+    ret.emplace_back(column->chunks()[0].get());
+  }
+
+  return ret;
+}

@@ -22,6 +22,8 @@ LabelRule ProcessRule(xmlTextReaderPtr reader);
 std::pair<std::vector<std::string>, std::vector<std::string>>
 ProcessSchemaMapping(PropertyGraphBuilder* builder, const std::string& mapping,
                      const std::vector<std::string>& coll_names);
+std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
+ProcessSchemaMapping(const std::string& mapping);
 
 std::string TypeName(ImportDataType type);
 ImportDataType ParseType(const std::string& in);

@@ -110,7 +110,8 @@ ImportDataType galois::ExtractTypeGraphML(xmlChar* value) {
     type = ImportDataType::kDouble;
   } else if (xmlStrEqual(value, BAD_CAST "float")) {
     type = ImportDataType::kFloat;
-  } else if (xmlStrEqual(value, BAD_CAST "boolean")) {
+  } else if (xmlStrEqual(value, BAD_CAST "boolean") ||
+             xmlStrEqual(value, BAD_CAST "bool")) {
     type = ImportDataType::kBoolean;
   } else if (xmlStrEqual(value, BAD_CAST "timestamp milli")) {
     type = ImportDataType::kTimestampMilli;
@@ -295,6 +296,64 @@ galois::ProcessSchemaMapping(galois::PropertyGraphBuilder* builder,
   }
   return std::pair<std::vector<std::string>, std::vector<std::string>>(nodes,
                                                                        edges);
+}
+
+std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
+galois::ProcessSchemaMapping(const std::string& mapping) {
+  xmlTextReaderPtr reader;
+  int ret              = 0;
+  bool finished_header = false;
+  std::vector<LabelRule> rules;
+  std::vector<PropertyKey> keys;
+
+  std::cout << "Start reading GraphML schema mapping file: " << mapping << "\n";
+
+  reader = xmlNewTextReaderFilename(mapping.c_str());
+  if (reader != NULL) {
+    ret = xmlTextReaderRead(reader);
+
+    // procedure:
+    // read in "key" xml nodes and add them to nodeKeys and edgeKeys
+    // once we reach the first "graph" xml node we parse it using the above keys
+    // once we have parsed the first "graph" xml node we exit
+    while (ret == 1 && !finished_header) {
+      xmlChar* name;
+      name = xmlTextReaderName(reader);
+      if (name == NULL) {
+        name = xmlStrdup(BAD_CAST "--");
+      }
+      // if elt is an xml node
+      if (xmlTextReaderNodeType(reader) == 1) {
+        // if elt is a "key" xml node read it in
+        if (xmlStrEqual(name, BAD_CAST "key")) {
+          PropertyKey key = ProcessKey(reader);
+          if (key.id.size() > 0 && key.id != std::string("label") &&
+              key.id != std::string("IGNORE")) {
+            keys.emplace_back(key);
+          }
+        } else if (xmlStrEqual(name, BAD_CAST "rule")) {
+          LabelRule rule = ProcessRule(reader);
+          if (rule.id.size() > 0) {
+            rules.emplace_back(rule);
+          }
+        } else if (xmlStrEqual(name, BAD_CAST "graph")) {
+          std::cout << "Finished processing headers\n";
+          finished_header = true;
+        }
+      }
+
+      xmlFree(name);
+      ret = xmlTextReaderRead(reader);
+    }
+    xmlFreeTextReader(reader);
+    if (ret < 0) {
+      GALOIS_LOG_FATAL("Failed to parse {}", mapping);
+    }
+  } else {
+    GALOIS_LOG_FATAL("Unable to open {}", mapping);
+  }
+  return std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>(rules,
+                                                                     keys);
 }
 
 /**************************************************/

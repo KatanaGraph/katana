@@ -70,6 +70,9 @@ set(sources
 if(mongoc-1.0_FOUND)
   list(APPEND sources graph-properties-convert-mongodb.cpp)
 endif()
+if(MySQL_FOUND)
+  list(APPEND sources graph-properties-convert-mysql.cpp)
+endif()
 
 add_library(graph-properties-convert-common STATIC ${sources})
 target_include_directories(graph-properties-convert-common PUBLIC .)
@@ -78,6 +81,9 @@ target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem date::
 
 if(mongoc-1.0_FOUND)
   target_link_libraries(graph-properties-convert-common PRIVATE mongo::mongoc_shared)
+endif()
+if(MySQL_FOUND)
+  target_link_libraries(graph-properties-convert-common PRIVATE MySQL::MySQL)
 endif()
 
 add_executable(graph-properties-convert graph-properties-convert-main.cpp)

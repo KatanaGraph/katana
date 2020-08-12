@@ -1180,6 +1180,7 @@ bool galois::PropertyGraphBuilder::FinishNode() {
 }
 
 bool galois::PropertyGraphBuilder::AddNode(const std::string& id) {
+  std::cout << "Adding placeholder node: " << id << std::endl;
   this->StartNode(id);
   return this->FinishNode();
 }

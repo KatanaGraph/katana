@@ -82,5 +82,6 @@
 #endif
 
 #cmakedefine GALOIS_MONGOC_FOUND
+#cmakedefine GALOIS_MYSQL_FOUND
 
 #endif

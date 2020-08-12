@@ -14,6 +14,9 @@
 #if defined(GALOIS_MONGOC_FOUND)
 #include "graph-properties-convert-mongodb.h"
 #endif
+#if defined(GALOIS_MYSQL_FOUND)
+#include "graph-properties-convert-mysql.h"
+#endif
 
 namespace cll = llvm::cl;
 
@@ -38,7 +41,9 @@ static cll::opt<galois::SourceDatabase>
              cll::values(clEnumValN(galois::SourceDatabase::kNeo4j, "neo4j",
                                     "source data came from Neo4j"),
                          clEnumValN(galois::SourceDatabase::kMongodb, "mongodb",
-                                    "source is mongodb")),
+                                    "source is mongodb"),
+                         clEnumValN(galois::SourceDatabase::kMysql, "mysql",
+                                    "source is mysql")),
              cll::init(galois::SourceDatabase::kNone));
 static cll::opt<int>
     chunk_size("chunk-size",
@@ -61,6 +66,16 @@ static cll::opt<bool> generate_mapping(
 
 cll::list<std::string> timestamp_properties("timestamp",
                                             cll::desc("Timestamp properties"));
+
+static cll::opt<std::string>
+    host("host",
+         cll::desc("URL/IP/localhost for the target database if needed, "
+                   "default is 127.0.0.1"),
+         cll::init("127.0.0.1"));
+static cll::opt<std::string> user(
+    "user",
+    cll::desc("Username for the target database if needed, default is root"),
+    cll::init("root"));
 
 galois::graphs::PropertyFileGraph ConvertKatana(const std::string& rdg_file) {
   auto result = galois::graphs::PropertyFileGraph::Make(rdg_file);
@@ -124,6 +139,20 @@ void ParseMongoDB() {
 #endif
 }
 
+void ParseMysql() {
+#if defined(GALOIS_MYSQL_FOUND)
+  if (generate_mapping) {
+    galois::GenerateMappingMysql(input_filename, output_directory, host, user);
+  } else {
+    galois::WritePropertyGraph(
+        galois::ConvertMysql(input_filename, mapping, chunk_size, host, user),
+        output_directory);
+  }
+#else
+  GALOIS_LOG_FATAL("Dependencies not present for MySQL");
+#endif
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -145,6 +174,9 @@ int main(int argc, char** argv) {
     break;
   case galois::SourceDatabase::kMongodb:
     ParseMongoDB();
+    break;
+  case galois::SourceDatabase::kMysql:
+    ParseMysql();
     break;
   }
 

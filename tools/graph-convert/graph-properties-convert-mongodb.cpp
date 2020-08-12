@@ -16,20 +16,12 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include <arrow/api.h>
-#include <arrow/buffer.h>
-#include <arrow/io/api.h>
-#include <arrow/array/builder_binary.h>
-#include <parquet/arrow/reader.h>
-#include <parquet/arrow/writer.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
 #include "galois/graphs/PropertyFileGraph.h"
-#include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
 #include "graph-properties-convert-schema.h"
@@ -792,7 +784,7 @@ void GetUserInputForFields(xmlTextWriterPtr writer, CollectionFields doc_fields,
                            bool for_node) {
   auto fields = doc_fields.property_fields;
   std::cout << "Total Detected Fields: " << fields.size() << "\n";
-  for (auto [name, key] : fields) {
+  for (auto& [name, key] : fields) {
     std::cout << "Choose property name for field " << name << " (" << name
               << "): ";
     std::string res;

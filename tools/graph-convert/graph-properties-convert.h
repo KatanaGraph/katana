@@ -23,7 +23,7 @@ using NullMaps =
               std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
 
 enum SourceType { kGraphml, kKatana };
-enum SourceDatabase { kNone, kNeo4j, kMongodb };
+enum SourceDatabase { kNone, kNeo4j, kMongodb, kMysql };
 enum ImportDataType {
   kString,
   kInt64,

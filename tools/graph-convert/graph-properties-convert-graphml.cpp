@@ -16,20 +16,12 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include <arrow/api.h>
-#include <arrow/buffer.h>
-#include <arrow/io/api.h>
-#include <arrow/array/builder_binary.h>
-#include <parquet/arrow/reader.h>
-#include <parquet/arrow/writer.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
 #include "galois/graphs/PropertyFileGraph.h"
-#include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
 #include "graph-properties-convert-schema.h"
@@ -169,7 +161,10 @@ std::optional<std::vector<T>> ParseNumberList(std::string raw_list) {
   boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
-    list.emplace_back(boost::lexical_cast<T>(s));
+    try {
+      list.emplace_back(boost::lexical_cast<T>(s));
+    } catch (const boost::bad_lexical_cast&) {
+    }
   }
   return list;
 }
@@ -189,8 +184,10 @@ std::optional<std::vector<bool>> ParseBooleanList(std::string raw_list) {
   boost::split(elems, raw_list, boost::is_any_of(","));
 
   for (std::string s : elems) {
-    bool bool_val = s[0] == 't' || s[0] == 'T';
-    list.emplace_back(bool_val);
+    if (!s.empty()) {
+      bool bool_val = s[0] == 't' || s[0] == 'T';
+      list.emplace_back(bool_val);
+    }
   }
   return list;
 }

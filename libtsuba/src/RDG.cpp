@@ -415,12 +415,12 @@ DoWriteTable(const arrow::Table& table,
     }
 
     ff->Bind(next_path);
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
     if (auto res = ff->Persist(); !res) {
       return res.error();
     }
   }
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
 
   if (next_paths.empty()) {
     return properties;
@@ -676,11 +676,11 @@ galois::Result<void> DoWriteMetadata(tsuba::RDGHandle handle,
   ff->Bind(tsuba::RDGMeta::PartitionFileName(
       handle.impl_->rdg_path, tsuba::Comm()->ID,
       handle.impl_->rdg_meta.version + 1));
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   return galois::ResultSuccess();
 }
 
@@ -708,8 +708,8 @@ galois::Result<void> CreateNewRDG(const std::string& name,
   }
 
   std::string s = json(tsuba::RDGMeta{
-                           .version          = 0,
-                           .previous_version = 0,
+                           .version          = 0UL,
+                           .previous_version = 0UL,
                            .num_hosts        = tsuba::Comm()->Num,
                        })
                       .dump();
@@ -819,36 +819,36 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle) {
                           .previous_version = handle.impl_->rdg_meta.version,
                           .num_hosts        = comm->Num};
 
-  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
-  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   if (comm->ID == 0) {
-    tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
     std::string s = json(handle.impl_->rdg_meta).dump();
     if (auto res = tsuba::FileStore(
             tsuba::RDGMeta::FileName(handle.impl_->rdg_path,
                                      handle.impl_->rdg_meta.version),
             reinterpret_cast<const uint8_t*>(s.data()), s.size());
         !res) {
-      tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+      TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
       GALOIS_LOG_ERROR("failed to store previous RDGMeta file");
       return res.error();
     }
     s = json(new_meta).dump();
-    tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
-    // Special sync store or subsequent fsync?
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
     if (auto res = tsuba::FileStore(handle.impl_->rdg_path,
                                     reinterpret_cast<const uint8_t*>(s.data()),
                                     s.size());
         !res) {
-      tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+      TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
       GALOIS_LOG_ERROR("failed to store RDG file");
       return res.error();
     }
   }
-  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
-  tsuba::internal::PtP(tsuba::internal::FaultSensitivity::High);
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+
   handle.impl_->rdg_meta = new_meta;
   return galois::ResultSuccess();
 }
@@ -862,14 +862,14 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
     }
     std::string t_path = std::move(path_res.value());
 
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
     if (auto res =
             tsuba::FileStore(t_path, rdg->topology_file_storage.ptr<uint8_t>(),
                              rdg->topology_file_storage.size());
         !res) {
       return res.error();
     }
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
     auto name_res = galois::ExtractFileName(t_path);
     if (!name_res) {
       return name_res.error();
@@ -1033,8 +1033,9 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
       GALOIS_WARN_ONCE("Deprecated behavior: treating invalid RDG file like a "
                        "partition file");
       impl.partition_path = rdg_name;
-      impl.rdg_meta       = {
-          .version = 0, .previous_version = 0, .num_hosts = tsuba::Comm()->Num};
+      impl.rdg_meta       = {.version          = 0UL,
+                       .previous_version = 0UL,
+                       .num_hosts        = tsuba::Comm()->Num};
       return RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
     }
     GALOIS_LOG_DEBUG("tsuba::Open 0");
@@ -1212,11 +1213,11 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
   }
   std::string t_path = std::move(path_res.value());
   ff->Bind(t_path);
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   if (auto res = ff->Persist(); !res) {
     return res.error();
   }
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   auto name_res = galois::ExtractFileName(t_path);
   if (!name_res) {
     return name_res.error();

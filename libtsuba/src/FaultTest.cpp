@@ -62,9 +62,8 @@ static void die_now(const char* file, int line) {
   *((volatile int*)0) = 1;
 }
 
-void tsuba::internal::PtP(tsuba::internal::FaultSensitivity sensitivity,
-                          const char* file,
-                          int line) {
+void tsuba::internal::PtP(const char* file, int line,
+                          tsuba::internal::FaultSensitivity sensitivity) {
   ptp_count_++;
   switch (mode_) {
   case tsuba::internal::FaultMode::None:

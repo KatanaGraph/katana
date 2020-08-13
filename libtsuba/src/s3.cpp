@@ -251,9 +251,9 @@ galois::Result<void> internal::S3PutSingleSync(const std::string& bucket,
   object_request.SetBody(preallocatedStreamReader);
   object_request.SetContentType("application/octet-stream");
 
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   auto outcome = s3_client->PutObject(object_request);
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   if (!outcome.IsSuccess()) {
     /* TODO there are likely some errors we can handle gracefully
      * i.e., with retries */
@@ -284,7 +284,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   createMpRequest.WithKey(ToAwsString(object));
 
   auto createMpResponse = s3_client->CreateMultipartUpload(createMpRequest);
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   if (auto res = CheckS3Error(createMpResponse); !res) {
     if (res.error() == ErrorCode::S3Error) {
       const auto& error = createMpResponse.GetError();
@@ -309,7 +309,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   std::condition_variable cv;
   Aws::S3::Model::CompletedMultipartUpload completedUpload;
   uint64_t finished = 0;
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   for (unsigned i = 0; i < parts.size(); ++i) {
     auto& part         = parts[i];
     auto lengthToWrite = part.end - part.start;
@@ -340,14 +340,14 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
           (void)(client);
           (void)(request);
           (void)(context);
-          tsuba::internal::PtP();
+          TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
           if (outcome.IsSuccess()) {
             std::lock_guard<std::mutex> lk(m);
-            tsuba::internal::PtP();
+            TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
             part_e_tags[i] = outcome.GetResult().GetETag();
             finished++;
             cv.notify_one();
-            tsuba::internal::PtP();
+            TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
           } else {
             const auto& error = outcome.GetError();
             GALOIS_LOG_FATAL(
@@ -356,12 +356,12 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
           }
         };
     s3_client->UploadPartAsync(uploadPartRequest, callback);
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   }
   std::unique_lock<std::mutex> lk(m);
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   cv.wait(lk, [&] {
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
     return finished >= parts.size();
   });
 
@@ -369,7 +369,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
     Aws::S3::Model::CompletedPart completedPart;
     completedPart.WithPartNumber(i + 1).WithETag(ToAwsString(part_e_tags[i]));
     completedUpload.AddParts(completedPart);
-    tsuba::internal::PtP();
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   }
 
   Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
@@ -378,7 +378,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
       .WithUploadId(upload_id)
       .WithMultipartUpload(completedUpload);
 
-  tsuba::internal::PtP();
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
   auto completeUploadOutcome =
       s3_client->CompleteMultipartUpload(completeMultipartUploadRequest);
 

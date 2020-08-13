@@ -71,7 +71,7 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
   return p.append(1, kSepChar).append(name);
 }
 
-// TODO: These functions do not properly deal with non-canonical path
+// TODO (witchel) These functions do not properly deal with non-canonical path
 //  names, e.g., multiple '/' in a row
 // This function does not recognize any path seperator other than '/'. This
 // could be a problem for Windows or "non-standard S3" paths.

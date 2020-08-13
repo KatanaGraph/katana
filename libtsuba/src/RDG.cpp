@@ -950,7 +950,11 @@ galois::Result<void> tsuba::RDG::Validate() const {
 }
 
 bool tsuba::RDG::Equals(const RDG& other) const {
-  return topology_file_storage.Equals(other.topology_file_storage) &&
+  // Assumption: t_f_s and other.t_f_s are both fully loaded into memory
+  return topology_file_storage.size() == other.topology_file_storage.size() &&
+         !memcmp(topology_file_storage.ptr<uint8_t>(),
+                 other.topology_file_storage.ptr<uint8_t>(),
+                 topology_file_storage.size()) &&
          node_table->Equals(*other.node_table, true) &&
          edge_table->Equals(*other.edge_table, true);
 }

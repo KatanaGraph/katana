@@ -22,6 +22,9 @@ OpenUniqueFile(std::string_view prefix, std::string_view sufix = "");
 GALOIS_EXPORT Result<std::string>
 CreateUniqueDirectory(std::string_view prefix);
 
+/// NewPath returns a new path in a directory with the given prefix. It works
+/// by appending a random suffix. The generated paths may not be unique due
+/// to the varying atomicity guarantees of future storage backends.
 GALOIS_EXPORT Result<std::string> NewPath(const std::string& dir,
                                           const std::string& prefix);
 

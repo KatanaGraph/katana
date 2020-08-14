@@ -56,9 +56,6 @@ galois::CreateUniqueDirectory(std::string_view prefix) {
   return std::string(buf.begin(), buf.end() - 1);
 }
 
-/// NewPath returns a new path in a directory with the given prefix. It works
-/// by appending a random suffix. The generated paths may not be unique due
-/// to the varying atomicity guarantees of future storage backends.
 galois::Result<std::string> galois::NewPath(const std::string& dir,
                                             const std::string& prefix) {
   std::string name = prefix;

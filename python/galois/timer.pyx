@@ -40,7 +40,7 @@ cdef class Timer:
 
         Return the accumulated time in seconds (as a float).
         """
-        return <double>self.underlying.get_usec() / 1000 / 1000 / 1000
+        return <double>self.underlying.get_usec() / 1000 / 1000
 
     def get(self):
         """
@@ -142,7 +142,7 @@ cdef class StatTimer:
         Return the accumulated time in seconds (as a float).
         """
         self._check()
-        return <double>self.underlying.get_usec() / 1000 / 1000 / 1000
+        return <double>self.underlying.get_usec() / 1000 / 1000
 
     def get(self):
         """

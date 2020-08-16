@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument("input", type=str)
     args = parser.parse_args()
 
-    from galois.shmem import *
+    from galois.shmem import setActiveThreads
 
     print("Using threads:", setActiveThreads(args.threads))
 

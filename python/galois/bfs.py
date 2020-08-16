@@ -3,6 +3,7 @@ from ._bfs import bfs
 
 if __name__ == "__main__":
     import argparse
+    from galois.shmem import setActiveThreads
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)
@@ -11,8 +12,6 @@ if __name__ == "__main__":
     parser.add_argument("--threads", "-t", type=int, default=1)
     parser.add_argument("input", type=str)
     args = parser.parse_args()
-
-    from galois.shmem import *
 
     print("Using threads:", setActiveThreads(args.threads))
 

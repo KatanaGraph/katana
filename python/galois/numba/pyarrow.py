@@ -4,26 +4,15 @@ import operator
 import numba.core.ccallback
 import numba.types
 import pyarrow
-from llvmlite import ir
-from numba.core import cgutils, imputils
 from numba.extending import (
     get_cython_function_address,
     typeof_impl,
     overload,
     overload_method,
-    models,
-    register_model,
-    make_attribute_wrapper,
-    unbox,
-    NativeValue,
 )
 
 from . import _pyarrow_wrappers
-from .utils import call_raw_function_pointer
-from .wrappers import (
-    NativeNumbaPointerWrapper,
-    get_cython_function_address_with_defaults,
-)
+from .wrappers import NativeNumbaPointerWrapper
 
 __all__ = []
 
@@ -197,19 +186,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         def typeof_(val, c):
             return typs[val.type]
 
-        @register_model(Type)
-        class Model_(models.StructModel):
-            def __init__(self, dmm, fe_type):
-                members = [("ptr", numba.types.voidptr)]
-                models.StructModel.__init__(self, dmm, fe_type, members)
-
-        make_attribute_wrapper(Type, "ptr", "ptr")
-
-        @imputils.lower_constant(Type)
-        def constant_(context, builder, ty, pyval):
-            ptr = ir.Constant(ir.IntType(64), self.get_value_address(pyval)).inttoptr(ir.PointerType(ir.IntType(8)))
-            ret = ir.Constant.literal_struct((ptr,))
-            return ret
+        self._build_model(Type)
 
         self.Type = Type
         self.types = typs
@@ -218,27 +195,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         self.override_module_name = override_module_name or self.module_name
         self.orig_type = orig_typ
 
-        try:
-            addr_func_c = get_cython_function_address_with_defaults(
-                addr_func_name, self.override_module_name, self.type_name + "_get_address",
-            )
-        except ValueError:
-            addr_func_c = get_cython_function_address_with_defaults(
-                addr_func_name, self.override_module_name, self.type_name + "_get_address_c",
-            )
-
-        @unbox(self.Type)
-        def unbox_(typ, obj, c):
-            ctx = cgutils.create_struct_proxy(typ)(c.context, c.builder)
-            ctx.ptr = call_raw_function_pointer(
-                addr_func_c,
-                ir.FunctionType(ir.PointerType(ir.IntType(8)), (ir.PointerType(ir.IntType(8)),)),
-                (obj,),
-                c.builder,
-            )
-            return NativeValue(ctx._getvalue())
-
-        self.addr_func = addr_func
+        self.addr_func = self._build_unbox_by_call(addr_func, addr_func_name)
 
         addr = get_cython_function_address(self.override_module_name, "ChunkedArray_length")
         ChunkedArray_length = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_voidp)(addr)
@@ -258,29 +215,27 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         addr = get_cython_function_address(self.override_module_name, "ChunkedArray_Array_chunk_length")
         ChunkedArray_Array_chunk_length = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_voidp, ctypes.c_uint64)(addr)
 
-        @overload_method(self.Type, "_convert_index")
-        def overload_getitem(v, i):
+        @overload_method(self.Type, "convert_index")
+        def overload_convert_index(v, i):
             if isinstance(v, self.Type):
-                ChunkedArray_xArray_Value = ChunkedArray_xArray_Value_map[v]
                 if isinstance(i, numba.types.UniTuple) and i.types == (numba.types.uint64, numba.types.uint64,):
 
-                    def impl_(v, i):
+                    def impl_pair_index(v, i):
                         return i
 
-                    return impl_
-                else:
+                    return impl_pair_index
 
-                    def impl_(v, i):
-                        chunk = 0
-                        while True:  # contains break
-                            chunk_len = ChunkedArray_Array_chunk_length(v.ptr, chunk)
-                            if i < chunk_len:
-                                break
-                            i -= chunk_len
-                            chunk += 1
-                        return (chunk, i)
+                def impl_single_index(v, i):
+                    chunk = 0
+                    while True:  # contains break
+                        chunk_len = ChunkedArray_Array_chunk_length(v.ptr, chunk)
+                        if i < chunk_len:
+                            break
+                        i -= chunk_len
+                        chunk += 1
+                    return (chunk, i)
 
-                    return impl_
+                return impl_single_index
 
         addr = get_cython_function_address(self.override_module_name, "ChunkedArray_Array_is_valid")
         ChunkedArray_is_valid = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_voidp, ctypes.c_uint64, ctypes.c_uint64)(addr)
@@ -288,7 +243,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         @overload_method(self.Type, "is_valid")
         def overload_is_valid(v, ind):
             def impl_(v, ind):
-                c, i = v._convert_index(ind)
+                c, i = v.convert_index(ind)
                 return ChunkedArray_is_valid(v.ptr, c, i)
 
             return impl_
@@ -296,7 +251,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         @overload_method(self.Type, "is_null")
         def overload_is_null(v, ind):
             def impl_(v, ind):
-                c, i = v._convert_index(ind)
+                c, i = v.convert_index(ind)
                 return not ChunkedArray_is_valid(v.ptr, c, i)
 
             return impl_
@@ -333,23 +288,22 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                 ChunkedArray_xArray_Value = ChunkedArray_xArray_Value_map[v]
                 if isinstance(i, numba.types.UniTuple) and i.types == (numba.types.uint64, numba.types.uint64,):
 
-                    def impl_(v, i):
+                    def impl_pair_index(v, i):
                         return ChunkedArray_xArray_Value(v.ptr, i[0], i[1])
 
-                    return impl_
-                else:
+                    return impl_pair_index
 
-                    def impl_(v, i):
-                        chunk = 0
-                        while True:  # contains break
-                            chunk_len = ChunkedArray_Array_chunk_length(v.ptr, chunk)
-                            if i < chunk_len:
-                                break
-                            i -= chunk_len
-                            chunk += 1
-                        return ChunkedArray_xArray_Value(v.ptr, chunk, i)
+                def impl_single_index(v, i):
+                    chunk = 0
+                    while True:  # contains break
+                        chunk_len = ChunkedArray_Array_chunk_length(v.ptr, chunk)
+                        if i < chunk_len:
+                            break
+                        i -= chunk_len
+                        chunk += 1
+                    return ChunkedArray_xArray_Value(v.ptr, chunk, i)
 
-                    return impl_
+                return impl_single_index
 
         @overload_method(self.Type, "values")
         def overload_values(v):

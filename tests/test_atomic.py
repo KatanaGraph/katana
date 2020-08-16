@@ -1,7 +1,17 @@
 import numpy as np
 import pytest
 
-from galois.atomic import *
+from galois.atomic import (
+    GAccumulator,
+    GReduceMax,
+    GReduceMin,
+    GReduceLogicalAnd,
+    GReduceLogicalOr,
+    atomic_add,
+    atomic_sub,
+    atomic_max,
+    atomic_min,
+)
 from galois.datastructures import LargeArray
 from galois.loops import do_all_operator, do_all
 

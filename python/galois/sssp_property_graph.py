@@ -3,7 +3,15 @@ import numba.types
 import pyarrow
 
 from galois.atomic import atomic_min, GAccumulator, GReduceMax
-from galois.loops import *
+from galois.loops import (
+    for_each_operator,
+    for_each,
+    UserContext,
+    obim_metric,
+    OrderedByIntegerMetric,
+    do_all_operator,
+    do_all,
+)
 from galois.property_graph import PropertyGraph
 from galois.timer import StatTimer
 from galois.shmem import setActiveThreads
@@ -67,7 +75,7 @@ def max_dist_operator(num_nodes: int, max_dist: GReduceMax[int], data, nid):
         max_dist.update(val)
 
 
-def verify_sssp(graph: PropertyGraph, source_i: int, property_id: int):
+def verify_sssp(graph: PropertyGraph, _source_i: int, property_id: int):
     chunk_array = graph.get_node_property(property_id)
     not_visited = GAccumulator[int](0)
     max_dist = GReduceMax[int]()
@@ -93,7 +101,7 @@ def verify_sssp(graph: PropertyGraph, source_i: int, property_id: int):
     print("Max distance:", max_dist.reduce())
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -119,3 +127,7 @@ if __name__ == "__main__":
         numNodeProperties = len(graph.node_schema())
         newPropertyId = numNodeProperties - 1
         verify_sssp(graph, args.startNode, newPropertyId)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 
-from galois.datastructures import *
-from galois.loops import *
+from galois.datastructures import InsertBag, LargeArray, AllocationPolicy
+from galois.loops import do_all_operator, do_all
 
 types = [
     pytest.param(int, id="int"),

@@ -1,3 +1,4 @@
+from galois.shmem import setActiveThreads
 from galois.timer import StatTimer
 from ._jaccard import jaccard
 
@@ -10,8 +11,6 @@ if __name__ == "__main__":
     parser.add_argument("--threads", "-t", type=int, default=1)
     parser.add_argument("input", type=str)
     args = parser.parse_args()
-
-    from galois.shmem import *
 
     print("Using threads:", setActiveThreads(args.threads))
 

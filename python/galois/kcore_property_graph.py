@@ -1,25 +1,26 @@
 import numpy as np
 import pyarrow
-from numba import jit
 
 from galois.atomic import GAccumulator, atomic_sub
 from galois.datastructures import LargeArray, AllocationPolicy, InsertBag
-from .loops import do_all, do_all_operator, for_each, for_each_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator, for_each, for_each_operator
+from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
+from galois.timer import StatTimer
 
 
 @do_all_operator()
 def compute_degree_count_operator(graph: PropertyGraph, current_degree, nid):
-    """Operator to initialize degree fields in graph with current degree. Since symmetric, 
-        out edge count is equivalent to in-edge count."""
+    """
+    Operator to initialize degree fields in graph with current degree. Since symmetric,
+    out edge count is equivalent to in-edge count.
+    """
     current_degree[nid] = len(graph.edges(nid))
 
 
 @do_all_operator()
 def setup_initial_worklist_operator(
-    graph: PropertyGraph, initial_worklist: InsertBag[np.uint64], current_degree, k_core_num, nid,
+    initial_worklist: InsertBag[np.uint64], current_degree, k_core_num, nid,
 ):
     """Operator to fill worklist with dead nodes (with degree less than k_core_num) to be processed."""
     if current_degree[nid] < k_core_num:
@@ -56,7 +57,7 @@ def kcore_async(graph: PropertyGraph, k_core_num, property_name):
     # Setup initial worklist
     do_all(
         range(num_nodes),
-        setup_initial_worklist_operator(graph, initial_worklist, current_degree.as_numpy(), k_core_num),
+        setup_initial_worklist_operator(initial_worklist, current_degree.as_numpy(), k_core_num),
         steal=True,
         loop_name="initialize_degree_count",
     )
@@ -97,7 +98,7 @@ def verify_kcore(graph: PropertyGraph, property_name: str, k_core_num: int):
     print("Number of nodes in the", k_core_num, "-core is", alive_nodes.reduce())
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -119,3 +120,7 @@ if __name__ == "__main__":
 
     if not args.noverify:
         verify_kcore(graph, args.propertyName, args.kcore)
+
+
+if __name__ == "__main__":
+    main()

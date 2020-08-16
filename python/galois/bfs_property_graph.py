@@ -34,7 +34,7 @@ def max_dist_operator(num_nodes: int, max_dist: GReduceMax[int], data, nid):
         max_dist.update(val)
 
 
-def verify_bfs(graph: PropertyGraph, source_i: int, property_id: int):
+def verify_bfs(graph: PropertyGraph, _source_i: int, property_id: int):
     chunk_array = graph.get_node_property(property_id)
     not_visited = GAccumulator[int](0)
     max_dist = GReduceMax[int]()
@@ -62,43 +62,47 @@ def verify_bfs(graph: PropertyGraph, source_i: int, property_id: int):
 
 @do_all_operator()
 def bfs_sync_operator_pg(
-    graph: PropertyGraph, next: InsertBag[np.uint64], next_level: int, distance: np.ndarray, nid,
+    graph: PropertyGraph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
     num_nodes = graph.num_nodes()
 
     for ii in graph.edges(nid):
         dst = graph.get_edge_dst(ii)
         if distance[dst] == num_nodes:
-            distance[dst] = next_level
-            next.push(dst)
+            distance[dst] = next_level_number
+            next_level.push(dst)
 
 
 def bfs_sync_pg(graph: PropertyGraph, source, property_name):
     num_nodes = graph.num_nodes()
-    next_level = 0
+    next_level_number = 0
 
-    curr = InsertBag[np.uint64]()
-    next = InsertBag[np.uint64]()
+    curr_level = InsertBag[np.uint64]()
+    next_level = InsertBag[np.uint64]()
 
     timer = StatTimer("BFS Property Graph Numba: " + property_name)
     timer.start()
     distance = np.empty((num_nodes,), dtype=int)
     initialize(graph, source, distance)
-    next.push(source)
-    while not next.empty():
-        curr.swap(next)
-        next.clear()
-        next_level += 1
+    next_level.push(source)
+    while not next_level.empty():
+        curr_level.swap(next_level)
+        next_level.clear()
+        next_level_number += 1
         do_all(
-            curr, bfs_sync_operator_pg(graph, next, next_level, distance), steal=True, loop_name="bfs_sync_pg",
+            curr_level,
+            bfs_sync_operator_pg(graph, next_level, next_level_number, distance),
+            steal=True,
+            loop_name="bfs_sync_pg",
         )
     timer.stop()
 
     graph.add_node_property(pyarrow.table({property_name: distance}))
 
 
-if __name__ == "__main__":
+def main():
     import argparse
+    from galois.shmem import setActiveThreads
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)
@@ -108,9 +112,8 @@ if __name__ == "__main__":
     parser.add_argument("--cython", action="store_true", default=False)
     parser.add_argument("--threads", "-t", type=int, default=1)
     parser.add_argument("input", type=str)
-    args = parser.parse_args()
 
-    from galois.shmem import *
+    args = parser.parse_args()
 
     print("Using threads:", setActiveThreads(args.threads))
 
@@ -130,3 +133,7 @@ if __name__ == "__main__":
             cython_verify_bfs(graph, args.startNode, newPropertyId)
         else:
             verify_bfs(graph, args.startNode, newPropertyId)
+
+
+if __name__ == "__main__":
+    main()

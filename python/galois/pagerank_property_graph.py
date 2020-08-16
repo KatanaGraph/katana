@@ -1,6 +1,5 @@
 import numpy as np
 import pyarrow
-from numba import jit
 
 from galois.atomic import (
     GAccumulator,
@@ -10,10 +9,10 @@ from galois.atomic import (
     GReduceMax,
 )
 from galois.datastructures import LargeArray, AllocationPolicy
-from .loops import do_all, do_all_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator
+from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
+from galois.timer import StatTimer
 
 # Constants for Pagerank
 ALPHA = 0.85
@@ -21,7 +20,7 @@ INIT_RESIDUAL = 1 - ALPHA
 
 
 @do_all_operator()
-def initialize_residual_operator(graph: PropertyGraph, rank, nout, delta, residual, nid):
+def initialize_residual_operator(rank, nout, delta, residual, nid):
     rank[nid] = 0
     nout[nid] = 0
     delta[nid] = 0
@@ -37,7 +36,7 @@ def compute_out_deg_operator(graph: PropertyGraph, nout, nid):
 
 
 @do_all_operator()
-def compute_pagerank_pull_delta_operator(graph: PropertyGraph, rank, nout, delta, residual, tolerance, changed, nid):
+def compute_pagerank_pull_delta_operator(rank, nout, delta, residual, tolerance, changed, nid):
     delta[nid] = 0
     if residual[nid] > tolerance:
         old_residual = residual[nid]
@@ -71,7 +70,7 @@ def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, 
     # Initialize
     do_all(
         range(num_nodes),
-        initialize_residual_operator(graph, rank.as_numpy(), nout.as_numpy(), delta.as_numpy(), residual.as_numpy(),),
+        initialize_residual_operator(rank.as_numpy(), nout.as_numpy(), delta.as_numpy(), residual.as_numpy(),),
         steal=True,
         loop_name="initialize_pagerank_pull_residual",
     )
@@ -94,7 +93,7 @@ def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, 
         do_all(
             range(num_nodes),
             compute_pagerank_pull_delta_operator(
-                graph, rank.as_numpy(), nout.as_numpy(), delta.as_numpy(), residual.as_numpy(), tolerance, changed,
+                rank.as_numpy(), nout.as_numpy(), delta.as_numpy(), residual.as_numpy(), tolerance, changed,
             ),
             steal=True,
             loop_name="pagerank_delta",
@@ -148,8 +147,7 @@ def verify_pr(graph: PropertyGraph, property_name: str, topn: int):
             print(np_array[i], " : ", i, "\n")
 
 
-if __name__ == "__main__":
-    import argparse
+def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--propertyName", type=str, default="NewProperty")
@@ -172,3 +170,7 @@ if __name__ == "__main__":
 
     if not args.noverify:
         verify_pr(graph, args.propertyName, args.printTopN)
+
+
+if __name__ == "__main__":
+    main()

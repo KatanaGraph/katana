@@ -4,7 +4,7 @@ import numpy as np
 
 
 class TemplateType1(type):
-    def __new__(mcs, name, bases, attrs):
+    def __new__(cls, name, _bases, attrs):
         instantiations = {np.dtype(t): v for t, v in attrs["instantiations"].items()}
         del attrs["instantiations"]
         representative_type = next(iter(instantiations.values()))
@@ -13,21 +13,21 @@ class TemplateType1(type):
         attrs["__representative__"] = representative_type
 
         @wraps(representative_type.__init__)
-        def _init_stub(self, *args, **kwargs):
+        def _init_stub(self, *_args, **_kwargs):
             name = type(self).__name__
             raise TypeError("{0} cannot be instantiated directly. Select a specific type with {0}[...].".format(name))
 
         attrs["__init__"] = _init_stub
-        return type.__new__(mcs, name, (), attrs)
+        return type.__new__(cls, name, (), attrs)
 
-    def __getitem__(self, item):
-        return self.__instantiations__[np.dtype(item)]
+    def __getitem__(cls, item):
+        return cls.__instantiations__[np.dtype(item)]
 
-    def __instancecheck__(self, instance):
-        return any(isinstance(instance, ty) for ty in self.__instantiations__.values())
+    def __instancecheck__(cls, instance):
+        return any(isinstance(instance, ty) for ty in cls.__instantiations__.values())
 
-    def __subclasscheck__(self, subclass):
-        return any(issubclass(subclass, ty) for ty in self.__instantiations__.values())
+    def __subclasscheck__(cls, subclass):
+        return any(issubclass(subclass, ty) for ty in cls.__instantiations__.values())
 
     def __repr__(cls):
         return "<template class '{}.{}'>".format(cls.__representative__.__module__, cls.__qualname__)

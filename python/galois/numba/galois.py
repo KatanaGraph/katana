@@ -1,14 +1,14 @@
 from numba.extending import overload_method, overload, types
 
-import galois.property_graph
+from galois import property_graph
 
 
 # PropertyGraph
 
 
 @overload(len)
-def overload_nodes(self):
-    if isinstance(self, galois.property_graph.PropertyGraph_numba_wrapper.Type):
+def overload_PropertyGraph_len(self):
+    if isinstance(self, property_graph.PropertyGraph_numba_wrapper.Type):
 
         def impl(self):
             return self.num_nodes()
@@ -16,16 +16,16 @@ def overload_nodes(self):
         return impl
 
 
-@overload_method(galois.property_graph.PropertyGraph_numba_wrapper.Type, "nodes")
-def overload_nodes(self):
+@overload_method(property_graph.PropertyGraph_numba_wrapper.Type, "nodes")
+def overload_PropertyGraph_nodes(self):
     def impl(self):
         return range(self.num_nodes())
 
     return impl
 
 
-@overload_method(galois.property_graph.PropertyGraph_numba_wrapper.Type, "edges")
-def overload_edges(self, n):
+@overload_method(property_graph.PropertyGraph_numba_wrapper.Type, "edges")
+def overload_PropertyGraph_edges(self, n):
     if isinstance(n, types.Integer) and not n.signed:
 
         def impl(self, n):

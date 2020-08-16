@@ -1,19 +1,19 @@
 import numpy as np
 import pyarrow
-from numba import jit
 
 from galois.atomic import GAccumulator, GReduceLogicalOr, atomic_min
-from .loops import do_all, do_all_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator
+from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
+from galois.timer import StatTimer
+
 
 ################################################
 ## Topological pull style connencted components
 ## NOTE: Requires symmetric graph
 ################################################
 @do_all_operator()
-def initialize_cc_pull_operator(graph: PropertyGraph, comp_current: np.ndarray, nid):
+def initialize_cc_pull_operator(comp_current: np.ndarray, nid):
     # Initialize each node in its own component
     comp_current[nid] = nid
 
@@ -40,7 +40,7 @@ def cc_pull_topo(graph: PropertyGraph, property_name):
 
     # Initialize
     do_all(
-        range(num_nodes), initialize_cc_pull_operator(graph, comp_current), steal=True, loop_name="initialize_cc_pull",
+        range(num_nodes), initialize_cc_pull_operator(comp_current), steal=True, loop_name="initialize_cc_pull",
     )
 
     # Execute while component ids are updated
@@ -78,7 +78,7 @@ def cc_push_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarra
             dst = graph.get_edge_dst(ii)
             new_comp = comp_current[nid]
             # Push the minimum component to your neighbors
-            old_dist = atomic_min(comp_current, dst, new_comp)
+            atomic_min(comp_current, dst, new_comp)
 
 
 def cc_push_topo(graph: PropertyGraph, property_name):
@@ -138,7 +138,7 @@ def verify_cc(graph: PropertyGraph, property_id: int):
     print("Number of components are : ", num_components.reduce())
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -165,3 +165,7 @@ if __name__ == "__main__":
         numNodeProperties = len(graph.node_schema())
         newPropertyId = numNodeProperties - 1
         verify_cc(graph, newPropertyId)
+
+
+if __name__ == "__main__":
+    main()

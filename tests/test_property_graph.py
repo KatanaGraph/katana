@@ -1,9 +1,11 @@
 import os
 from tempfile import NamedTemporaryFile
 
+import numpy as np
 import pyarrow
 import pytest
 
+from galois.loops import do_all_operator, do_all
 from galois.property_graph import PropertyGraph
 
 
@@ -37,7 +39,7 @@ def test_get_node_property_exception(property_graph):
     # with pytest.raises(RuntimeError):
     #     prop1 = property_graph.get_node_property(100)
     with pytest.raises(ValueError):
-        prop2 = property_graph.get_node_property("_mispelled")
+        property_graph.get_node_property("_mispelled")
 
 
 def test_get_node_property(property_graph):
@@ -120,9 +122,6 @@ def test_load_garbage_file():
 
 
 def test_simple_algorithm(property_graph):
-    from galois.loops import do_all_operator, do_all
-    import numpy as np
-
     @do_all_operator()
     def func_operator(g, prop, out, nid):
         t = 0

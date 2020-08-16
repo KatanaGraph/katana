@@ -4,7 +4,15 @@ from functools import partial
 import numpy as np
 import pytest
 
-from galois.loops import *
+from galois.loops import (
+    do_all_operator,
+    do_all,
+    for_each_operator,
+    for_each,
+    obim_metric,
+    OrderedByIntegerMetric,
+    PerSocketChunkFIFO,
+)
 
 simple_modes = [
     pytest.param(dict(steal=True), id="steal=True"),

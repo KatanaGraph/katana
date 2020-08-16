@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
-import jinja2
 import sys
-
-from itertools import combinations
 from functools import partial
+from itertools import combinations
+
+import jinja2
 
 DIR = sys.argv[1]
 TEMPLATE_FILE = sys.argv[2]
@@ -33,8 +33,7 @@ def nested_statements(layers, *args, **kwargs):
             return indent(depth, s)
 
         return outer(inner, *args, **kwargs)
-    else:
-        raise RuntimeError("The last layer must not call inner.")
+    raise RuntimeError("The last layer must not call inner.")
 
 
 templateEnv.globals.update(

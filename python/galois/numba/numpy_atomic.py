@@ -46,16 +46,11 @@ def declare_atomic_array_op(iop, uop, fop):
 
             # First try basic indexing to see if a single array location is denoted.
             index_types, indices = normalize_indices(context, builder, index_types, indices)
-            try:
-                dataptr, shapes, strides = basic_indexing(
-                    context, builder, aryty, ary, index_types, indices, boundscheck=context.enable_boundscheck,
-                )
-            except NotImplementedError:
-                use_fancy_indexing = True
-            else:
-                use_fancy_indexing = bool(shapes)
-
-            assert not use_fancy_indexing
+            dataptr, shapes, _strides = basic_indexing(
+                context, builder, aryty, ary, index_types, indices, boundscheck=context.enable_boundscheck,
+            )
+            if shapes:
+                raise NotImplementedError("Complex shapes are not supported")
 
             # Store source value the given location
             val = context.cast(builder, val, valty, aryty.dtype)

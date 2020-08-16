@@ -1,9 +1,9 @@
 import numpy as np
 import pyarrow
 
-from .loops import do_all, do_all_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator
+from galois.property_graph import PropertyGraph
+from galois.timer import StatTimer
 from galois.shmem import setActiveThreads
 
 
@@ -38,9 +38,8 @@ def jaccard(g, key_node, property_name):
     g.add_node_property(pyarrow.table({property_name: output}))
 
 
-if __name__ == "__main__":
+def main():
     import argparse
-    from galois.shmem import *
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseNode", type=int, default=0)
@@ -61,3 +60,7 @@ if __name__ == "__main__":
     # del timer
 
     print("Node {}: {}".format(args.reportNode, g.get_node_property(args.propertyName)[args.reportNode]))
+
+
+if __name__ == "__main__":
+    main()

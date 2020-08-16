@@ -29,7 +29,7 @@ __all__ = [
 
 # Parallel loops
 
-# FIXME: Hard coded uint64_t loop variable
+# TODO: Hard coded uint64_t loop variable
 
 do_all_unbound_argument_types = (numba.types.uint64,)
 
@@ -62,8 +62,7 @@ def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
         builder = wraps(f)(ClosureBuilder(f_jit, unbound_argument_types=do_all_unbound_argument_types, target=target,))
         if n_args == 0:
             return builder()
-        else:
-            return builder
+        return builder
 
     return decorator
 
@@ -79,7 +78,7 @@ def is_do_all_operator_closure(v):
     return isinstance(v, Closure) and v.unbound_argument_types == do_all_unbound_argument_types
 
 
-# FIXME: Hard coded uint64_t loop variable
+# TODO: Hard coded uint64_t loop variable
 for_each_unbound_argument_types = (numba.types.uint64, UserContext_numba_type)
 
 
@@ -113,8 +112,7 @@ def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
         )
         if n_args == 0:
             return builder()
-        else:
-            return builder
+        return builder
 
     return decorator
 
@@ -159,8 +157,7 @@ def obim_metric(typ=None, nopython=True, target="cpu", **kws):
         )
         if n_args == 0:
             return builder()
-        else:
-            return builder
+        return builder
 
     return decorator
 

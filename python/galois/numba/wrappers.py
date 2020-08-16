@@ -48,19 +48,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         def typeof_(val, c):
             return typ
 
-        @register_model(Type)
-        class Model_(models.StructModel):
-            def __init__(self, dmm, fe_type):
-                members = [("ptr", numba.types.voidptr)]
-                models.StructModel.__init__(self, dmm, fe_type, members)
-
-        make_attribute_wrapper(Type, "ptr", "ptr")
-
-        @imputils.lower_constant(Type)
-        def constant_(context, builder, ty, pyval):
-            ptr = ir.Constant(ir.IntType(64), self.get_value_address(pyval)).inttoptr(ir.PointerType(ir.IntType(8)))
-            ret = ir.Constant.literal_struct((ptr,))
-            return ret
+        self._build_model(Type)
 
         self.Type = Type
         self.type = typ
@@ -68,6 +56,21 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
         self.module_name = orig_typ.__module__
         self.override_module_name = override_module_name or self.module_name
         self.orig_type = orig_typ
+
+    def _build_model(self, Type):
+        @register_model(Type)
+        class Model(models.StructModel):
+            def __init__(self, dmm, fe_type):
+                members = [("ptr", numba.types.voidptr)]
+                models.StructModel.__init__(self, dmm, fe_type, members)
+
+        make_attribute_wrapper(Type, "ptr", "ptr")
+
+        @imputils.lower_constant(Type)
+        def constant(context, builder, ty, pyval):
+            ptr = ir.Constant(ir.IntType(64), self.get_value_address(pyval)).inttoptr(ir.PointerType(ir.IntType(8)))
+            ret = ir.Constant.literal_struct((ptr,))
+            return ret
 
     def register_method(self, func_name, typ, cython_func_name=None, addr=None):
         addr_found = get_cython_function_address_with_defaults(
@@ -125,7 +128,9 @@ class SimpleNumbaPointerWrapper(NumbaPointerWrapper):
 class NativeNumbaPointerWrapper(NumbaPointerWrapper):
     def __init__(self, orig_typ, addr_func, addr_func_name=None, override_module_name=None):
         super().__init__(orig_typ, override_module_name)
+        self.addr_func = self._build_unbox_by_call(addr_func, addr_func_name)
 
+    def _build_unbox_by_call(self, addr_func, addr_func_name):
         try:
             addr_func_c = get_cython_function_address_with_defaults(
                 addr_func_name, self.override_module_name, self.type_name + "_get_address",
@@ -136,7 +141,7 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
             )
 
         @unbox(self.Type)
-        def unbox_(typ, obj, c):
+        def unbox_type(typ, obj, c):
             ctx = cgutils.create_struct_proxy(typ)(c.context, c.builder)
             ctx.ptr = call_raw_function_pointer(
                 addr_func_c,
@@ -146,7 +151,7 @@ class NativeNumbaPointerWrapper(NumbaPointerWrapper):
             )
             return NativeValue(ctx._getvalue())
 
-        self.addr_func = addr_func
+        return addr_func
 
     def get_value_address(self, pyval):
         return self.addr_func(pyval)

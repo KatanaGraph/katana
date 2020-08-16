@@ -2,12 +2,12 @@ import ctypes
 from functools import wraps
 
 import llvmlite.ir
-from galois.numba._native_wrapper_utils import call_callback
 from numba import types, typeof, njit
 from numba.experimental import jitclass
 from numba.extending import lower_builtin
 from numba.extending import type_callable
 
+from galois.numba._native_wrapper_utils import call_callback
 from galois.numba.galois_compiler import OperatorCompiler, cfunc
 
 PointerPair = ctypes.c_void_p * 2
@@ -21,7 +21,8 @@ class Closure:
 
     def __init__(self, func, userdata, return_type, unbound_argument_types, captured=()):
         """
-        :param func: The function to of this closure. Must have an address attribute returning a function pointer as an int.
+        :param func: The function to of this closure. Must have an address attribute returning a function pointer
+            as an int.
         :param userdata: The userdata pointer to be passed to `func` as a ctypes value.
         :param return_type: The numba return type of the function.
         :param unbound_argument_types: The numba types of the unbound arguments of the function.
@@ -66,7 +67,8 @@ class _ClosureInstance:
         self.wrapper = wraps(func)(wrapper)
         self.target = target
 
-    def _build_environment(self, bound_args):
+    @staticmethod
+    def _build_environment(bound_args):
         """
         Construct a numba jitclass structure with elements named arg1 ... argn with types bound_args[1...n].
         """
@@ -84,7 +86,8 @@ class Environment():
         exec(src, exec_glbls)
         return exec_glbls["Environment"]
 
-    def _build_wrapper(self, func, load_struct, return_type, bound_args, unbound_args):
+    @staticmethod
+    def _build_wrapper(func, load_struct, return_type, bound_args, unbound_args):
         """
         The arguments are unpacked from the jitclass pointer passed as an int64.
         """
@@ -105,7 +108,8 @@ def wrapper({unbound_pass_args} userdata):
         exec(src, exec_glbls)
         return exec_glbls["wrapper"]
 
-    def _build_load_struct(self, Environment):
+    @staticmethod
+    def _build_load_struct(Environment):
         """
         Construct a numba builtin function which takes a pointer (passed as int64) and loads a jitclass from it.
         """
@@ -133,7 +137,8 @@ def wrapper({unbound_pass_args} userdata):
 
         return load_struct
 
-    def _build_store_struct(self, Environment):
+    @staticmethod
+    def _build_store_struct(Environment):
         """
         Construct a python function which takes a jitclass instance and a pointer (passed as int64) and copies the
         jitclass into the pointer. This is implemented using a jit function and a numba builtin. The buffer must be
@@ -164,7 +169,7 @@ def wrapper({unbound_pass_args} userdata):
         return store_struct_py
 
 
-# FIXME: Fixed unbound argument type at construction time. Needs to support setting at closure *call* time.
+# TODO: Fixed unbound argument type at construction time. Needs to support setting at closure *call* time.
 class ClosureBuilder:
     """
     A factory object for closures.
@@ -183,16 +188,15 @@ class ClosureBuilder:
         key = bound_args
         if key in self._instance_cache:
             return self._instance_cache[key]
-        else:
-            inst = _ClosureInstance(
-                self._underlying_function,
-                self._return_type,
-                bound_args,
-                unbound_args=self._unbound_argument_types,
-                target=self._target,
-            )
-            self._instance_cache[key] = inst
-            return inst
+        inst = _ClosureInstance(
+            self._underlying_function,
+            self._return_type,
+            bound_args,
+            unbound_args=self._unbound_argument_types,
+            target=self._target,
+        )
+        self._instance_cache[key] = inst
+        return inst
 
     def __call__(self, *args):
         arg_types = tuple(typeof(v) for v in args)

@@ -6,7 +6,7 @@ set(SOURCE_DIRECTORY_GENERATED_FILE_WARNING "in the SOURCE DIRECTORY! (This is t
 # TODO: Avoid this messy "generated code in the source directory" issue.
 message(STATUS "Generating pxd/pyx files ${SOURCE_DIRECTORY_GENERATED_FILE_WARNING}")
 
-set(GENERATE_FROM_JINJA ${CMAKE_CURRENT_SOURCE_DIR}/../generate-from-jinja.py)
+set(GENERATE_FROM_JINJA ${CMAKE_CURRENT_SOURCE_DIR}/../generate_from_jinja.py)
 
 function(generate_cython_file FILE)
   set(options)

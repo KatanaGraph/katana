@@ -138,7 +138,7 @@ cdef void wrap_python_callable_for_each_operator(uint64_t arg, Galois.UserContex
     with gil:
         (<object>userdata)(arg, UserContext.make(ctx))
 
-{# These handle_* and extract_* macros are stacked together using nested_statements from generate-from-jinja.py.
+{# These handle_* and extract_* macros are stacked together using nested_statements from generate_from_jinja.py.
     Each macro calls inner which is a function that encapulates all the remaining macros that need to be
     stacked together. Multiple calls to inner cause the rest of the stack to be duplicated (with different arguments
     generally). Arguments before inner are bound (with partial) before executing the stack of functions; arguments

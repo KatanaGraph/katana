@@ -163,16 +163,15 @@ public:
 
   LargeArray() : m_data(0), m_size(0) {}
 
-  LargeArray(LargeArray&& o) : m_data(0), m_size(0) {
-    std::swap(this->m_realdata, o.m_realdata);
-    std::swap(this->m_data, o.m_data);
-    std::swap(this->m_size, o.m_size);
-  }
+  LargeArray(LargeArray&& o) noexcept
+      : m_realdata(std::move(o.m_realdata)), m_data(o.m_data),
+        m_size(o.m_size) {}
 
   LargeArray& operator=(LargeArray&& o) {
-    std::swap(this->m_realdata, o.m_realdata);
-    std::swap(this->m_data, o.m_data);
-    std::swap(this->m_size, o.m_size);
+    auto tmp = std::move(o);
+    std::swap(m_realdata, tmp.m_realdata);
+    std::swap(m_data, tmp.m_data);
+    std::swap(m_size, tmp.m_size);
     return *this;
   }
 

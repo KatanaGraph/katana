@@ -26,8 +26,6 @@ target_include_directories(tsuba PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_compile_options(tsuba PRIVATE -Wmissing-declarations)
-
 target_link_libraries(tsuba PUBLIC galois_support)
 
 if(BUILD_SHARED_LIBS)

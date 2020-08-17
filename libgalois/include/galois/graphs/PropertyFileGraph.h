@@ -124,6 +124,16 @@ public:
        const std::vector<std::string>& node_properties,
        const std::vector<std::string>& edge_properties);
 
+  const tsuba::PartitionMetadata* partition_metadata() {
+    return rdg_.part_metadata.get();
+  }
+
+  Result<void>
+  set_partition_metadata(std::unique_ptr<tsuba::PartitionMetadata> meta) {
+    rdg_.part_metadata = std::move(meta);
+    return galois::ResultSuccess();
+  }
+
   /// Write the property graph to the given RDG name.
   ///
   /// \returns io_error if, for instance, a file already exists

@@ -48,11 +48,19 @@ struct PropertyMetadata {
   std::string path;
 };
 
+struct GALOIS_EXPORT RDGStat {
+  uint64_t num_hosts{0};
+  uint32_t policy_id{0};
+  bool transpose{false};
+};
+
 // Struct version of main graph metadatafile
 struct GALOIS_EXPORT RDGMeta {
-  uint64_t version;
-  uint64_t previous_version;
-  uint32_t num_hosts;
+  uint64_t version{0};
+  uint64_t previous_version{0};
+  uint32_t num_hosts{0};
+  uint32_t policy_id{0};
+  bool transpose{false};
 
   // Create an RDGMeta from the named RDG file
   static galois::Result<RDGMeta> Make(const std::string& rdg_name);
@@ -66,6 +74,24 @@ struct GALOIS_EXPORT RDGMeta {
   friend void from_json(const nlohmann::json& j, RDGMeta& meta);
 };
 
+struct PartitionMetadata {
+  uint32_t policy_id_;
+  bool transposed_;
+  bool is_vertex_cut_;
+  uint64_t num_global_nodes_;
+  uint64_t num_global_edges_;
+  uint64_t num_edges_;
+  uint32_t num_nodes_;
+  uint32_t num_owned_;
+  uint32_t num_nodes_with_edges_;
+  std::pair<uint32_t, uint32_t> cartesian_grid_;
+
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
+  std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
+  std::shared_ptr<arrow::ChunkedArray> global_to_local_keys_;
+  std::shared_ptr<arrow::ChunkedArray> global_to_local_values_;
+};
+
 struct GALOIS_EXPORT RDG {
   // arrow lib returns shared_ptr's to tables; match that for now
   std::shared_ptr<arrow::Table> node_table;
@@ -73,6 +99,7 @@ struct GALOIS_EXPORT RDG {
 
   std::vector<tsuba::PropertyMetadata> node_properties;
   std::vector<tsuba::PropertyMetadata> edge_properties;
+  std::vector<tsuba::PropertyMetadata> part_properties;
   std::vector<std::pair<std::string, std::string>> other_metadata;
 
   std::string topology_path;
@@ -81,6 +108,9 @@ struct GALOIS_EXPORT RDG {
 
   /// name of the graph that was used to load this RDG
   std::string rdg_dir;
+
+  /// Metadata filled in by CuSP
+  std::unique_ptr<PartitionMetadata> part_metadata;
 
   RDG();
 
@@ -129,6 +159,9 @@ constexpr int kOverwrite = 1;
 // Rename
 galois::Result<void> Rename(RDGHandle handle, const std::string& name,
                             int flags);
+
+/// Get Information about the graph
+GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& filename);
 
 /// Load the RDG described by the metadata in handle into memory
 GALOIS_EXPORT galois::Result<RDG> Load(RDGHandle handle);

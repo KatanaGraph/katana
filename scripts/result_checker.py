@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Script to check the output of algorithms:
 # Author: Gurbinder Gill (gurbinder533@gmail.com)
@@ -11,25 +11,11 @@
 #   <nodeID> <nodeFieldVal>
 #   ...
 
-from __future__ import print_function
-
 import argparse
 import os
 import subprocess
 import sys
 import tempfile
-
-
-if sys.version_info >= (3, 0):
-
-    def convert(x):
-        return x
-
-
-else:
-
-    def convert(x):
-        return long(x)
 
 
 def check_results(
@@ -57,7 +43,7 @@ def check_results(
                 print("ERROR: output longer than input")
                 return (0, errors, mrows, None, None)
 
-            while convert(split_line1[0]) < convert(split_line2[0]):
+            while split_line1[0] < split_line2[0]:
                 print("MISSING ROW: ", split_line1[0])
                 mrows = mrows + 1
                 line1 = mfile.readline()
@@ -68,7 +54,7 @@ def check_results(
             # if mrows > 0:
             #  return (-1, errors, mrows)
 
-            if convert(split_line1[0]) == convert(split_line2[0]):
+            if split_line1[0] == split_line2[0]:
                 # absolute value of difference in fields
                 field_difference = abs(float(split_line1[1]) - float(split_line2[1]))
 
@@ -262,7 +248,7 @@ if __name__ == "__main__":
     all_files = []
     for f in parsed_arguments.files[1:]:
         if os.path.isdir(f):
-            all_files.extend([os.path.join(f, x) for x in os.listdir(f)])
+            all_files.extend([x.path for x in os.scandir(f) if x.is_file()])
         else:
             all_files.append(f)
 

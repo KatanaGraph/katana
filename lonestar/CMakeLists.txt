@@ -112,21 +112,31 @@ if(GALOIS_ENABLE_DIST)
     endif()
   endfunction()
 
-  function(add_test_dist_and_verify app input type part N np)
-    set(options GPU NOT_QUICK NO_VERIFY)
-    set(one_value_args)
+  function(add_test_dist_and_verify app type part N np)
+    set(options GPU NOT_QUICK NO_VERIFY STORE_PART)
+    set(one_value_args INPUT INPUT_URI)
     set(multi_value_args)
     cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
     math(EXPR threads "(${N} / ${np})")
 
     stem_app(${app} app_id)
-    set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${input})
+    set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${X_INPUT})
 
-    set(suffix "-${app}-${input}-${type}-${part}-${N}-${np}")
+    if (${X_STORE_PART})
+      set(suffix "-${app}-${X_INPUT}-${type}-${part}-${N}-${np}-store_part")
+    else()
+      set(suffix "-${app}-${X_INPUT}-${type}-${part}-${N}-${np}")
+    endif()
+
     set(output_location ${PROJECT_BINARY_DIR}/Testing/verify/run${suffix})
-    set(command mpiexec --bind-to none -n ${np} $<TARGET_FILE:${app}> ${X_UNPARSED_ARGUMENTS}
-        -t=${threads} -partition=${part})
+
+    if (${X_STORE_PART})
+      set(partitioner_input ${X_INPUT_URI})
+      set(X_INPUT_URI ${output_location}/part_graph/rdg)
+    endif()
+
+    set(command mpiexec --bind-to none -n ${np} $<TARGET_FILE:${app}> ${X_INPUT_URI} ${X_UNPARSED_ARGUMENTS} -t=${threads} -partition=${part})
 
     if(NOT X_NO_VERIFY)
       list(APPEND command -output -outputLocation=${output_location})
@@ -136,6 +146,14 @@ if(GALOIS_ENABLE_DIST)
       COMMAND ${CMAKE_COMMAND} -E remove_directory ${output_location})
     add_test(NAME setup-make${suffix}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${output_location})
+
+    if (${X_STORE_PART})
+      add_test(NAME setup-partition${suffix}
+        COMMAND mpiexec --bind-to none -n ${np} $<TARGET_FILE:partition-dist> -newRDG=${X_INPUT_URI} ${partitioner_input} --edgePropertyName=value -t=${threads} -partition=${part})
+    else()
+      add_test(NAME setup-partition${suffix} COMMAND ${CMAKE_COMMAND} -E true)
+    endif()
+
     add_test(NAME run${suffix} COMMAND ${command})
 
     if(X_NO_VERIFY)
@@ -143,7 +161,7 @@ if(GALOIS_ENABLE_DIST)
         COMMAND ${CMAKE_COMMAND} -E true)
     else()
       add_test(NAME verify${suffix}
-        COMMAND python ${RESULT_CHECKER} -t=0.01 -sort=1 ${verification_log} ${output_location})
+        COMMAND python3 ${RESULT_CHECKER} -t=0.01 -sort=1 ${verification_log} ${output_location})
     endif()
 
     # With fixtures, when ctest is given part of a test suite to run, it will
@@ -156,9 +174,16 @@ if(GALOIS_ENABLE_DIST)
     set_tests_properties(setup-make${suffix}
       PROPERTIES
         DEPENDS setup-clean${suffix})
+    set_tests_properties(setup-partition${suffix}
+      PROPERTIES
+        FIXTURES_SETUP setup${suffix}
+        DEPENDS setup-make${suffix}
+        # OpenMPI triggers a lot of leak warnings. Disable it during
+        # sanitizer builds for now.
+        ENVIRONMENT "GALOIS_DO_NOT_BIND_THREADS=1;ASAN_OPTIONS=detect_leaks=0")
     set_tests_properties(run${suffix}
       PROPERTIES
-        DEPENDS setup-make${suffix}
+        DEPENDS setup-partition${suffix}
         FIXTURES_REQUIRED setup${suffix}
         FIXTURES_SETUP ${suffix}
         # OpenMPI triggers a lot of leak warnings. Disable it during
@@ -178,7 +203,7 @@ if(GALOIS_ENABLE_DIST)
     endif()
   endfunction()
 
-  function(add_test_dist_for_partitions app input type num_threads num_gpus part)
+  function(add_test_dist_for_partitions app type num_threads num_gpus part)
     # use at most 8 threads during testing
     if(${num_threads} GREATER 8)
       set(num_threads 8)
@@ -196,7 +221,7 @@ if(GALOIS_ENABLE_DIST)
     list(REVERSE partitions)
 
     foreach(np ${partitions})
-      add_test_dist_and_verify(${app} ${input} ${type}-cpu ${part} ${num_threads} ${np} ${ARGN})
+      add_test_dist_and_verify(${app} ${type}-cpu ${part} ${num_threads} ${np} ${ARGN})
     endforeach()
 
     if(NOT GALOIS_ENABLE_GPU)
@@ -214,14 +239,14 @@ if(GALOIS_ENABLE_DIST)
     set(PSET "-pset=")
     foreach(np RANGE 1 ${num_gpus})
       set(PSET "${PSET}g")
-      add_test_dist_and_verify(${app} ${input} ${type}-gpu ${part} ${num_threads} ${np} GPU ${ARGN} -num_nodes=1 ${PSET})
+      add_test_dist_and_verify(${app} ${type}-gpu ${part} ${num_threads} ${np} GPU ${ARGN} -num_nodes=1 ${PSET})
     endforeach(np)
     set(PSET "${PSET}c")
     math(EXPR np "(${G} + 1)")
-    add_test_dist_and_verify(${app} ${input} ${type}-cpugpu ${part} ${num_threads} ${np} GPU ${ARGN} -num_nodes=1 ${PSET} -scalegpu=3)
+    add_test_dist_and_verify(${app} ${type}-cpugpu ${part} ${num_threads} ${np} GPU ${ARGN} -num_nodes=1 ${PSET} -scalegpu=3)
   endfunction()
 
-  function(add_test_dist app input)
+  function(add_test_dist app)
     set(options NO_GPU NO_ASYNC)
     set(one_value_args)
     set(multi_value_args)
@@ -238,10 +263,10 @@ if(GALOIS_ENABLE_DIST)
     ## NOTE: Restricting to out-going cuts for property-graphs for now.
     foreach (part oec cvc hovc)
       if(NOT ${X_NO_ASYNC})
-        add_test_dist_for_partitions(${app} ${input} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Sync)
-        add_test_dist_for_partitions(${app} ${input} async ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Async)
+        add_test_dist_for_partitions(${app} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Sync)
+        add_test_dist_for_partitions(${app} async ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Async)
       else()
-        add_test_dist_for_partitions(${app} ${input} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS})
+        add_test_dist_for_partitions(${app} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS})
       endif()
     endforeach()
   endfunction()

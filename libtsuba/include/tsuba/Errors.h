@@ -21,6 +21,7 @@ enum class ErrorCode {
   S3Error          = 8,
   AWSWrongRegion   = 9,
   PropertyNotFound = 10,
+  JsonParseFailed  = 11,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -55,6 +56,8 @@ public:
       return "AWS op may succeed in other region";
     case ErrorCode::PropertyNotFound:
       return "no such property";
+    case ErrorCode::JsonParseFailed:
+      return "could not parse JSON";
     default:
       return "unknown error";
     }
@@ -65,6 +68,7 @@ public:
     case ErrorCode::InvalidArgument:
     case ErrorCode::ArrowError:
     case ErrorCode::PropertyNotFound:
+    case ErrorCode::JsonParseFailed:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);

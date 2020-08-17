@@ -49,7 +49,7 @@ struct PropertyMetadata {
 };
 
 // Struct version of main graph metadatafile
-struct RDGMeta {
+struct GALOIS_EXPORT RDGMeta {
   uint64_t version;
   uint64_t previous_version;
   uint32_t num_hosts;

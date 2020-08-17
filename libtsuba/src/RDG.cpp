@@ -54,7 +54,12 @@ void from_json(const json& j, RDGMeta& meta) {
   uint32_t magic;
   j.at("magic").get_to(magic);
   j.at("version").get_to(meta.version);
-  j.at("previous_version").get_to(meta.previous_version);
+  // previous_version is optional
+  if (j.count("previous_version") != 0) {
+    j.at("previous_version").get_to(meta.previous_version);
+  } else {
+    meta.previous_version = 0UL;
+  }
   j.at("num_hosts").get_to(meta.num_hosts);
   if (magic != kRDGMagicNo) {
     // nlohmann::json reports errors using exceptions

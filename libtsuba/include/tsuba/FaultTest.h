@@ -23,14 +23,13 @@ GALOIS_EXPORT void FaultTestInit(FaultMode mode         = FaultMode::None,
 GALOIS_EXPORT void FaultTestReport();
 
 // PullThePlug (virtually) Compile this out if NDEBUG?
-void PtP(const char* file, int line,
-         FaultSensitivity sensitivity = FaultSensitivity::Normal);
-
-} // namespace tsuba::internal
-
 #define TSUBA_PTP(...)                                                         \
   do {                                                                         \
     ::tsuba::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                 \
   } while (0)
+void PtP(const char* file, int line,
+         FaultSensitivity sensitivity = FaultSensitivity::Normal);
+
+} // namespace tsuba::internal
 
 #endif

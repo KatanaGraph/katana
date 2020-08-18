@@ -15,6 +15,7 @@
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/CompleteMultipartUploadRequest.h>
+#include <aws/s3/model/ListObjectsV2Request.h>
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
@@ -885,6 +886,34 @@ galois::Result<void> S3DownloadRange(const std::string& bucket,
   std::unique_lock<std::mutex> lk(m);
   cv.wait(lk, [&] { return finished >= parts.size(); });
 
+  return galois::ResultSuccess();
+}
+
+galois::Result<std::unique_ptr<FileAsyncWork>>
+S3ListAsync(const std::string& bucket, const std::string& object,
+            std::vector<std::string>& list_out) {
+  list_out.clear();
+  auto s3_client = GetS3Client();
+  Aws::S3::Model::ListObjectsV2Request request;
+  request.SetBucket(ToAwsString(bucket));
+  request.SetPrefix(ToAwsString(object));
+
+  auto s3outcome = s3_client->ListObjectsV2(request);
+  if (!s3outcome.IsSuccess()) {
+    const auto& error = s3outcome.GetError();
+    GALOIS_LOG_FATAL("\n  Failed ListMatching callback\n  {}: {}\n  [{}] {}",
+                     error.GetExceptionName(), error.GetMessage(), bucket,
+                     object);
+  }
+  auto s3result           = s3outcome.GetResult();
+  auto continuation_token = FromAwsString(s3result.GetContinuationToken());
+  if (continuation_token.length() > 0) {
+    GALOIS_LOG_FATAL(
+        "\n  Continuation token is present, but no continuation path");
+  }
+  for (const auto& content : s3outcome.GetResult().GetContents()) {
+    list_out.emplace_back(FromAwsString(content.GetKey()));
+  }
   return galois::ResultSuccess();
 }
 

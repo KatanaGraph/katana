@@ -131,6 +131,12 @@ galois::Result<void> tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }
 
+galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+tsuba::FileListAsync(const std::string& directory,
+                     std::vector<std::string>& list_out) {
+  return FS(directory)->ListAsync(directory, list_out);
+}
+
 galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,
                                          uint64_t begin, uint64_t size) {
   MappingDesc new_mapping;

@@ -66,6 +66,11 @@ static inline galois::Result<void> FilePeek(const StrType& filename, T* obj) {
                   0, sizeof(*obj));
 }
 
+// List files "in directory" or matching a prefix
+// Async interface to allow many entries
+GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+FileListAsync(const std::string& directory, std::vector<std::string>& list_out);
+
 GALOIS_EXPORT galois::Result<void> FileStat(const std::string& filename,
                                             StatBuf* s_buf);
 

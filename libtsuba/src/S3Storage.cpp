@@ -99,4 +99,15 @@ S3Storage::GetAsync(const std::string& uri, uint64_t start, uint64_t size,
   return tsuba::S3GetAsync(bucket, object, start, size, result_buf);
 }
 
+galois::Result<std::unique_ptr<FileAsyncWork>>
+S3Storage::ListAsync(const std::string& uri,
+                     std::vector<std::string>& list_out) {
+  auto uri_res = CleanURI(std::string(uri));
+  if (!uri_res) {
+    return uri_res.error();
+  }
+  auto [bucket, object] = std::move(uri_res.value());
+  return tsuba::S3ListAsync(bucket, object, list_out);
+}
+
 } // namespace tsuba

@@ -5,6 +5,7 @@
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/RDG.h"
+#include "tsuba/file.h"
 #include "galois/FileSystem.h"
 
 std::string src_uri{};
@@ -78,9 +79,24 @@ std::vector<uint64_t> FindVersions(const std::string& src_uri,
 
 void GC(const std::string& src_uri, uint32_t remaining_versions) {
   std::vector<uint64_t> versions = FindVersions(src_uri, remaining_versions);
+  fmt::print("Found versions: ");
   std::for_each(versions.begin(), versions.end(),
                 [](const auto& e) { fmt::print("{} ", e); });
   fmt::print("\n");
+  auto res = galois::ExtractDirName(src_uri);
+  if (!res) {
+    GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
+  }
+  auto dir = res.value();
+  fmt::print("Dir: {}\n", dir);
+  std::vector<std::string> file_vec;
+  auto list_res = tsuba::FileListAsync(dir, file_vec);
+  if (!list_res) {
+    GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
+  }
+  fmt::print("List dir: ");
+  std::for_each(file_vec.begin(), file_vec.end(),
+                [](const auto& e) { fmt::print("{}\n", e); });
 }
 
 int main(int argc, char* argv[]) {

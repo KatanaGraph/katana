@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 #include <boost/filesystem.hpp>
 
@@ -90,6 +91,36 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
   // Creates an empty file
   std::ofstream output(m_path.string());
   return galois::ResultSuccess();
+}
+
+galois::Result<std::unique_ptr<FileAsyncWork>>
+LocalStorage::ListAsync(const std::string& directory,
+                        std::vector<std::string>& list_out) {
+  // Implement with synchronous calls
+  DIR* dirp;
+  struct dirent* dp;
+  list_out.clear();
+  if ((dirp = opendir(directory.c_str())) == NULL) {
+    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", directory,
+                     galois::ResultErrno().message());
+    return ErrorCode::InvalidArgument;
+  }
+
+  do {
+    errno = 0;
+    if ((dp = readdir(dirp)) != NULL) {
+      list_out.emplace_back(dp->d_name);
+    }
+  } while (dp != NULL);
+
+  if (errno != 0) {
+    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", directory,
+                     galois::ResultErrno().message());
+    return ErrorCode::FilesystemError;
+  }
+  (void)closedir(dirp);
+
+  return nullptr;
 }
 
 } // namespace tsuba

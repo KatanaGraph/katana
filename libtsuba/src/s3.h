@@ -38,6 +38,10 @@ galois::Result<std::unique_ptr<FileAsyncWork>>
 S3PutAsync(const std::string& bucket, const std::string& object,
            const uint8_t* data, uint64_t size);
 
+galois::Result<std::unique_ptr<FileAsyncWork>>
+S3ListAsync(const std::string& bucket, const std::string& object,
+            std::vector<std::string>& list_out);
+
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view FromAwsString(const Aws::String& s) {
   return {s.data(), s.size()};

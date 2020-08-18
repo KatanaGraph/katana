@@ -59,6 +59,9 @@ public:
     }
     return nullptr;
   }
+  galois::Result<std::unique_ptr<FileAsyncWork>>
+  ListAsync(const std::string& directory,
+            std::vector<std::string>& list_out) override;
 };
 
 } // namespace tsuba

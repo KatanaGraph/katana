@@ -22,6 +22,7 @@ enum class ErrorCode {
   AWSWrongRegion   = 9,
   PropertyNotFound = 10,
   JsonParseFailed  = 11,
+  FilesystemError  = 12,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -58,6 +59,8 @@ public:
       return "no such property";
     case ErrorCode::JsonParseFailed:
       return "could not parse JSON";
+    case ErrorCode::FilesystemError:
+      return "File system error";
     default:
       return "unknown error";
     }
@@ -78,6 +81,7 @@ public:
       return make_error_condition(std::errc::file_exists);
     case ErrorCode::AWSWrongRegion:
     case ErrorCode::S3Error:
+    case ErrorCode::FilesystemError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

@@ -165,10 +165,6 @@ GALOIS_EXPORT uint32_t determine_block_division(
  * to division "id"; returns LOCAL ids, not global ids (i.e. if node offset
  * was used, it is up to the caller to add the offset to the numbers)
  */
-// Note: "inline" may be required if PrefixSumType is exactly the same type
-// in 2 different translation units; otherwise it should be fine
-// If inline is used, then apparently you cannot use typedefs, so get rid
-// of those if the need arises.
 template <typename PrefixSumType, typename NodeType = uint64_t>
 auto divideNodesBinarySearch(
     NodeType numNodes, uint64_t numEdges, size_t nodeWeight, size_t edgeWeight,

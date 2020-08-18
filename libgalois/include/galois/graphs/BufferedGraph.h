@@ -28,11 +28,9 @@
 
 #include <fstream>
 
-#include "galois/OutIndexView.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/Reduction.h"
-#include "galois/PartialGraphView.h"
 
 namespace galois {
 namespace graphs {
@@ -123,31 +121,6 @@ private:
   }
 
   /**
-   * Load the out indices (i.e. where a particular node's edges begin in the
-   * array of edges) from the file.
-   *
-   * @param graphFile loaded file for the graph
-   * @param nodeStart the first node to load
-   * @param numNodesToLoad number of nodes to load
-   */
-  void loadOutIndex(const OutIndexView& view, uint64_t nodeStart) {
-    if (numLocalNodes == 0) {
-      return;
-    }
-
-    assert(outIndexBuffer == nullptr);
-    outIndexBuffer = (uint64_t*)malloc(sizeof(uint64_t) * numLocalNodes);
-
-    if (outIndexBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for out index buffer.");
-    }
-
-    // position to start of contiguous chunk of nodes to read
-    nodeOffset = nodeStart;
-    memcpy(outIndexBuffer, &view[nodeStart], sizeof(uint64_t) * numLocalNodes);
-  }
-
-  /**
    * Load the edge destination information from the file.
    *
    * @param graphFile loaded file for the graph
@@ -186,22 +159,6 @@ private:
     assert(numBytesToLoad == 0);
     // save edge offset of this graph for later use
     edgeOffset = edgeStart;
-  }
-
-  void loadEdgeDest(const galois::PartialGraphView<uint32_t>& view) {
-    if (numLocalEdges == 0) {
-      return;
-    }
-
-    assert(edgeDestBuffer == nullptr);
-    edgeDestBuffer = (uint32_t*)malloc(sizeof(uint32_t) * numLocalEdges);
-
-    if (edgeDestBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for edge dest buffer.");
-    }
-
-    edgeOffset = *view.edge_begin();
-    memcpy(edgeDestBuffer, view.edges(), sizeof(uint32_t) * numLocalEdges);
   }
 
   /**
@@ -262,20 +219,6 @@ private:
     assert(numBytesToLoad == 0);
   }
 
-  template <
-      typename EdgeType,
-      typename std::enable_if<!std::is_void<EdgeType>::value>::type* = nullptr>
-  void loadEdgeData([
-      [maybe_unused]] const galois::PartialGraphView<uint32_t>& view) {
-    galois::gDebug("Loading edge data");
-
-    if (numLocalEdges == 0) {
-      return;
-    }
-
-    assert(edgeDataBuffer == nullptr);
-  }
-
   /**
    * Load edge data function for when the edge data type is void, i.e.
    * no edge data to load.
@@ -288,15 +231,6 @@ private:
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
   void loadEdgeData(std::ifstream&, uint64_t, uint64_t, uint64_t, uint64_t) {
-    galois::gDebug("Not loading edge data");
-    // do nothing (edge data is void, i.e. no edge data)
-  }
-
-  template <
-      typename EdgeType,
-      typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
-  void loadEdgeData([
-      [maybe_unused]] const galois::PartialGraphView<uint32_t>& view) {
     galois::gDebug("Not loading edge data");
     // do nothing (edge data is void, i.e. no edge data)
   }
@@ -328,6 +262,9 @@ private:
   }
 
 public:
+  //! Edge iterator typedef
+  using EdgeIterator = boost::counting_iterator<uint64_t>;
+
   /**
    * Class vars should be initialized by in-class initialization; all
    * left is to reset read counters.
@@ -437,27 +374,6 @@ public:
     graphFile.close();
   }
 
-  void loadPartialGraph(const galois::OutIndexView& out_view,
-                        const galois::PartialGraphView<edge_v1_t>& part_view) {
-    if (graphLoaded) {
-      GALOIS_DIE("Cannot load an buffered graph more than once.");
-    }
-
-    globalSize     = out_view.num_nodes();
-    globalEdgeSize = out_view.num_edges();
-    numLocalNodes  = part_view.node_end() - part_view.node_begin();
-    numLocalEdges  = part_view.edge_end() - part_view.edge_begin();
-
-    loadOutIndex(out_view, *part_view.node_begin());
-    loadEdgeDest(part_view);
-
-    // may or may not do something depending on EdgeDataType
-    // loadEdgeData<EdgeDataType>(view);
-    graphLoaded = true;
-  }
-
-  //! Edge iterator typedef
-  using EdgeIterator = boost::counting_iterator<uint64_t>;
   /**
    * Get the index to the first edge of the provided node THAT THIS GRAPH
    * HAS LOADED (not necessary the first edge of it globally).

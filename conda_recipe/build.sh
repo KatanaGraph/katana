@@ -17,6 +17,7 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$PREFIX \
   -DUSE_ARCH=none \
+  -DGALOIS_STORAGE_BACKEND="local;s3" \
   $CMAKE_CCACHE_OPTION \
   -S "$SRC_DIR"
 make -j2

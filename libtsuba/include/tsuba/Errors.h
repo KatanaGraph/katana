@@ -23,6 +23,8 @@ enum class ErrorCode {
   PropertyNotFound  = 10,
   JsonParseFailed   = 11,
   LocalStorageError = 12,
+  NoCredentials     = 13,
+  AzureError        = 14,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -60,7 +62,11 @@ public:
     case ErrorCode::JsonParseFailed:
       return "could not parse JSON";
     case ErrorCode::LocalStorageError:
-      return "Local storage error";
+      return "local storage error";
+    case ErrorCode::NoCredentials:
+      return "credentials not configured";
+    case ErrorCode::AzureError:
+      return "Azure error";
     default:
       return "unknown error";
     }
@@ -72,6 +78,7 @@ public:
     case ErrorCode::ArrowError:
     case ErrorCode::PropertyNotFound:
     case ErrorCode::JsonParseFailed:
+    case ErrorCode::NoCredentials:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);
@@ -82,6 +89,7 @@ public:
     case ErrorCode::AWSWrongRegion:
     case ErrorCode::S3Error:
     case ErrorCode::LocalStorageError:
+    case ErrorCode::AzureError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

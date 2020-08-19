@@ -9,6 +9,7 @@ openssl/1.1.1g
 mongo-c-driver/1.16.1@bincrafters/stable
 benchmark/1.5.0
 libmysqlclient/8.0.17
+openssl/1.1.1g
 
 [options]
 aws-sdk-cpp:build_transfer = True

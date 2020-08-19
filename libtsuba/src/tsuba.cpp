@@ -1,7 +1,6 @@
 #include "tsuba/tsuba.h"
 
 #include "galois/CommBackend.h"
-#include "s3.h"
 #include "GlobalState.h"
 
 static galois::NullCommBackend default_backend;

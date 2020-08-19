@@ -1,9 +1,10 @@
 #ifndef GALOIS_LIBTSUBA_S3_H_
 #define GALOIS_LIBTSUBA_S3_H_
 
+#include <cstdint>
 #include <string>
 #include <string_view>
-#include <cstdint>
+#include <unordered_set>
 
 #include <aws/core/utils/memory/stl/AWSString.h>
 
@@ -38,10 +39,10 @@ galois::Result<std::unique_ptr<FileAsyncWork>>
 S3PutAsync(const std::string& bucket, const std::string& object,
            const uint8_t* data, uint64_t size);
 
-// Listing returned in FileAsyncWork::GetListingRef
 // Listing relative to the full path of the provided directory
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3ListAsync(const std::string& bucket, const std::string& object);
+S3ListAsync(const std::string& bucket, const std::string& object,
+            std::unordered_set<std::string>* list);
 
 galois::Result<void> S3Delete(const std::string& bucket,
                               const std::string& object,
@@ -51,7 +52,7 @@ galois::Result<void> S3Delete(const std::string& bucket,
 inline std::string_view FromAwsString(const Aws::String& s) {
   return {s.data(), s.size()};
 }
-inline Aws::String ToAwsString(const std::string& s) {
+inline Aws::String ToAwsString(std::string_view s) {
   return Aws::String(s.data(), s.size());
 }
 

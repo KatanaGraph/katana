@@ -1,20 +1,18 @@
-#ifndef GALOIS_LIBTSUBA_S3STORAGE_H_
-#define GALOIS_LIBTSUBA_S3STORAGE_H_
+#ifndef GALOIS_LIBTSUBA_AZURESTORAGE_H_
+#define GALOIS_LIBTSUBA_AZURESTORAGE_H_
 
-#include <cstdint>
-
-#include "galois/Result.h"
 #include "FileStorage.h"
 
 namespace tsuba {
 
-class S3Storage : public FileStorage {
-  friend class GlobalState;
+class AzureStorage : public FileStorage {
   galois::Result<std::pair<std::string, std::string>>
   CleanURI(const std::string& uri);
 
 public:
-  S3Storage() : FileStorage("s3://") {}
+  // "abfs://" is the uri style used by the hadoop plug in for azure blob store
+  // https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-introduction-abfs-uri
+  AzureStorage() : FileStorage("abfs://") {}
 
   galois::Result<void> Init() override;
   galois::Result<void> Fini() override;
@@ -36,11 +34,10 @@ public:
   GetAsync(const std::string& uri, uint64_t start, uint64_t size,
            uint8_t* result_buf) override;
   galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-  ListAsync(const std::string& uri,
+  ListAsync(const std::string& directory,
             std::unordered_set<std::string>* list) override;
-  // files are relative to uri pseudo-directory or bucket
   galois::Result<void>
-  Delete(const std::string& uri,
+  Delete(const std::string& directory,
          const std::unordered_set<std::string>& files) override;
 };
 

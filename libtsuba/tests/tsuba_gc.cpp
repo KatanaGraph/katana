@@ -164,8 +164,9 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
   if (!res) {
     GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
   }
-  auto dir      = res.value();
-  auto list_res = tsuba::FileListAsync(dir);
+  auto dir = res.value();
+  std::unordered_set<std::string> listing;
+  auto list_res = tsuba::FileListAsync(dir, &listing);
   if (!list_res) {
     GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
   }
@@ -176,7 +177,6 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
       GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);
     }
   }
-  auto& listing = faw->GetListingRef();
   if (opt_verbose_level > 0) {
     fmt::print("All  files: {}\n", listing.size());
     if (opt_verbose_level > 1) {

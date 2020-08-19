@@ -1,12 +1,14 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_S3INTERNAL_H_
 #define GALOIS_LIBTSUBA_TSUBA_S3INTERNAL_H_
 
-#include "galois/Result.h"
-#include "tsuba/Errors.h"
 #include <string>
 #include <mutex>
 #include <condition_variable>
 #include <stack>
+
+#include "galois/Result.h"
+#include "tsuba/Errors.h"
+#include "tsuba/FileAsyncWork.h"
 
 // Don't call these directly.  They are intended for use only in s3.cpp and
 // testing code
@@ -24,7 +26,8 @@ class S3AsyncWork : public FileAsyncWork {
   uint64_t goal_{
       UINT64_C(0)}; // Goal initialized > 0, when reaches 0 we are done
 
-  std::stack<galois::Result<void> (*)(S3AsyncWork& s3aw)> func_stack_{};
+  std::stack<std::function<galois::Result<void>(S3AsyncWork& s3aw)>>
+      func_stack_{};
   std::string token_{};
 
 public:
@@ -35,9 +38,10 @@ public:
   std::string GetBucket() const { return bucket_; }
   std::string GetObject() const { return object_; }
 
-  void Push(galois::Result<void> (*func)(S3AsyncWork& s3aw)) {
+  void Push(const std::function<galois::Result<void>(S3AsyncWork&)>& func) {
     func_stack_.push(func);
   }
+
   void SetGoal(uint64_t goal) {
     GALOIS_LOG_VASSERT(goal > UINT64_C(0),
                        "Count of FileAsyncWork must be > 0");
@@ -100,7 +104,10 @@ GALOIS_EXPORT galois::Result<void>
 S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
 GALOIS_EXPORT galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
 
-GALOIS_EXPORT galois::Result<void> S3ListAsyncAW(S3AsyncWork& s3aw);
+GALOIS_EXPORT galois::Result<void>
+S3ListAsyncAW(internal::S3AsyncWork& s3aw,
+              std::unordered_set<std::string>* list,
+              std::string_view token = "");
 
 } // namespace tsuba::internal
 

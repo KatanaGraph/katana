@@ -3,13 +3,36 @@
 #include <algorithm>
 #include <cassert>
 
+#include "galois/Logging.h"
 #include "galois/Result.h"
-#include "LocalStorage.h"
-#include "S3Storage.h"
 
 namespace tsuba {
 
-std::unique_ptr<tsuba::GlobalState> GlobalState::ref = nullptr;
+extern GlobalFileStorageAllocator azure_storage_allocator;
+extern GlobalFileStorageAllocator local_storage_allocator;
+extern GlobalFileStorageAllocator s3_storage_allocator;
+
+} // namespace tsuba
+
+namespace {
+
+std::vector<tsuba::GlobalFileStorageAllocator*> available_storage_allocators{
+#ifdef GALOIS_HAVE_AZURE_BACKEND
+    &tsuba::azure_storage_allocator,
+#endif
+#ifdef GALOIS_HAVE_S3_BACKEND
+    &tsuba::s3_storage_allocator,
+#endif
+#ifdef GALOIS_HAVE_LOCAL_BACKEND
+    &tsuba::local_storage_allocator,
+#endif
+};
+
+} // namespace
+
+namespace tsuba {
+
+std::unique_ptr<tsuba::GlobalState> GlobalState::ref_ = nullptr;
 
 galois::CommBackend* GlobalState::Comm() const {
   assert(comm_ != nullptr);
@@ -22,7 +45,7 @@ FileStorage* GlobalState::GetDefaultFS() const {
 }
 
 tsuba::FileStorage* GlobalState::FS(std::string_view uri) const {
-  for (auto& fs : file_stores_) {
+  for (const std::unique_ptr<FileStorage>& fs : file_stores_) {
     if (uri.find(fs->uri_scheme()) == 0) {
       return fs.get();
     }
@@ -31,40 +54,45 @@ tsuba::FileStorage* GlobalState::FS(std::string_view uri) const {
 }
 
 galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
-  assert(ref == nullptr);
+  assert(ref_ == nullptr);
+
   // new to access non-public constructor
   std::unique_ptr<GlobalState> global_state(new GlobalState(comm));
 
-  std::unique_ptr<LocalStorage> local_storage(new LocalStorage());
-  if (auto res = local_storage->Init(); !res) {
-    return res.error();
-  }
-  std::unique_ptr<S3Storage> s3_storage(new S3Storage());
-  if (auto res = s3_storage->Init(); !res) {
-    return res.error();
+  for (GlobalFileStorageAllocator* allocator : available_storage_allocators) {
+    global_state->file_stores_.emplace_back(allocator->allocate());
   }
 
-  // The first is returned for URI without schema
-  global_state->file_stores_.emplace_back(std::move(local_storage));
-  global_state->file_stores_.emplace_back(std::move(s3_storage));
+  std::sort(global_state->file_stores_.begin(),
+            global_state->file_stores_.end(),
+            [](const std::unique_ptr<FileStorage>& lhs,
+               const std::unique_ptr<FileStorage>& rhs) {
+              return lhs->Priority() > rhs->Priority();
+            });
 
-  ref = std::move(global_state);
+  for (std::unique_ptr<FileStorage>& storage : global_state->file_stores_) {
+    if (auto res = storage->Init(); !res) {
+      return res.error();
+    }
+  }
+
+  ref_ = std::move(global_state);
   return galois::ResultSuccess();
 }
 
 galois::Result<void> GlobalState::Fini() {
-  for (auto& fs : ref->file_stores_) {
+  for (std::unique_ptr<FileStorage>& fs : ref_->file_stores_) {
     if (auto res = fs->Fini(); !res) {
       return res.error();
     }
   }
-  ref.reset(nullptr);
+  ref_.reset(nullptr);
   return galois::ResultSuccess();
 }
 
 const tsuba::GlobalState& GlobalState::Get() {
-  assert(ref != nullptr);
-  return *ref;
+  assert(ref_ != nullptr);
+  return *ref_;
 }
 
 } // namespace tsuba

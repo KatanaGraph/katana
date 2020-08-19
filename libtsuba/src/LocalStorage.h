@@ -20,13 +20,16 @@ class LocalStorage : public FileStorage {
                                  uint64_t size);
   galois::Result<void> ReadFile(std::string uri, uint64_t start, uint64_t size,
                                 uint8_t* data);
-  LocalStorage() : FileStorage("file://") {}
 
 public:
+  LocalStorage() : FileStorage("file://") {}
+
   galois::Result<void> Init() override { return galois::ResultSuccess(); }
   galois::Result<void> Fini() override { return galois::ResultSuccess(); }
   galois::Result<void> Stat(const std::string& uri, StatBuf* size) override;
   galois::Result<void> Create(const std::string& uri, bool overwrite) override;
+
+  uint32_t Priority() override { return 1; }
 
   galois::Result<void> GetMultiSync(const std::string& uri, uint64_t start,
                                     uint64_t size,
@@ -60,7 +63,8 @@ public:
     return nullptr;
   }
   galois::Result<std::unique_ptr<FileAsyncWork>>
-  ListAsync(const std::string& uri) override;
+  ListAsync(const std::string& uri,
+            std::unordered_set<std::string>* list) override;
 
   galois::Result<void>
   Delete(const std::string& directory,

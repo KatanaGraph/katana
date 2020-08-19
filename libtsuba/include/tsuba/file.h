@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string_view>
 #include <string>
+#include <unordered_set>
 
 #include "galois/config.h"
 #include "galois/Result.h"
@@ -50,13 +51,17 @@ FileStore(const std::string& uri, const uint8_t* data, uint64_t size);
 GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
+/// List the set of files in a directory
 /// \param directory is URI whose contents are listed. It can be
 /// Async return type allows this function to be called repeatedly (and
 /// synchronously)
-///   if each call returns a limited number of entries, which is the case for S3
-/// result is in GetListOutRef().  Names are local to directory
+/// \param list is populated with the files found
+///
+/// \return Async work object; files will be in `list` after this object
+/// reports done (or immediately if nullptr is returned)
 GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-FileListAsync(const std::string& directory);
+FileListAsync(const std::string& directory,
+              std::unordered_set<std::string>* list);
 
 /// Delete a set of files in a directory
 /// \param directory is a base URI

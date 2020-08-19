@@ -6,17 +6,14 @@ endif()
 set_target_properties(tsuba PROPERTIES EXPORT_NAME tsuba)
 
 set(sources
-   src/file.cpp
-   src/GlobalState.cpp
-   src/tsuba.cpp
-   src/FileView.cpp
-   src/FileFrame.cpp
-   src/Errors.cpp
-   src/RDG.cpp
-   src/s3.cpp
-   src/LocalStorage.cpp
-   src/S3Storage.cpp
-   src/FaultTest.cpp
+  src/Errors.cpp
+  src/FaultTest.cpp
+  src/file.cpp
+  src/FileFrame.cpp
+  src/FileView.cpp
+  src/GlobalState.cpp
+  src/RDG.cpp
+  src/tsuba.cpp
 )
 
 target_sources(tsuba PRIVATE ${sources})
@@ -56,14 +53,59 @@ else()
   target_link_libraries(tsuba PUBLIC Boost::boost)
 endif()
 
-# The conan generated package name is aws-sdk-cpp while the
-# package name when built from source is AWSSDK.
-find_package(aws-sdk-cpp QUIET)
-if(aws-sdk-cpp_FOUND)
-  target_link_libraries(tsuba PRIVATE aws-sdk-cpp::aws-sdk-cpp)
-else()
-  find_package(AWSSDK REQUIRED COMPONENTS transfer)
-  target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
+if(NOT GALOIS_STORAGE_BACKEND)
+  message(FATAL_ERROR "Must provide a storage backend")
+endif()
+
+foreach(backend ${GALOIS_STORAGE_BACKEND})
+  string(TOLOWER "${backend}" lc_backend)
+  if("${lc_backend}" STREQUAL "local")
+    set(TSUBA_BACKEND_LOCAL ON)
+  elseif("${lc_backend}" STREQUAL "s3")
+    set(TSUBA_BACKEND_S3 ON)
+  elseif("${lc_backend}" STREQUAL "azure")
+    set(TSUBA_BACKEND_AZURE ON)
+  else()
+    message(FATAL_ERROR "Unknown value for GALOIS_STORAGE_BACKEND. Accepted values: local s3 azure")
+  endif()
+endforeach()
+
+if(TSUBA_BACKEND_S3)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_S3_BACKEND)
+  target_sources(tsuba PRIVATE src/S3Storage.cpp src/s3.cpp)
+  # The conan generated package name is aws-sdk-cpp while the
+  # package name when built from source is AWSSDK.
+  find_package(aws-sdk-cpp QUIET)
+  if(aws-sdk-cpp_FOUND)
+    target_link_libraries(tsuba PRIVATE aws-sdk-cpp::aws-sdk-cpp)
+  else()
+    find_package(AWSSDK REQUIRED COMPONENTS transfer)
+    target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
+  endif()
+endif()
+
+if(TSUBA_BACKEND_AZURE)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_AZURE_BACKEND)
+  target_sources(tsuba PRIVATE src/AzureStorage.cpp src/azure.cpp)
+  # The Azure storage sdk isn't in conan or conda-forge so handle it ourselves
+  # and leave it statically linked
+  FetchContent_Declare(
+    AzureStorage
+    GIT_REPOSITORY https://github.com/Azure/azure-storage-cpplite.git
+    GIT_TAG 2aa4e3155777ccddcd4a8562456d50059f34492c
+    PATCH_COMMAND git reset --hard HEAD && git apply "${PROJECT_SOURCE_DIR}/external/azure-storage-cpplite/fix_build.patch"
+  )
+  FetchContent_GetProperties(AzureStorage)
+  if(NOT azurestorage_POPULATED)
+    FetchContent_Populate(AzureStorage)
+    add_subdirectory(${azurestorage_SOURCE_DIR} ${azurestorage_BINARY_DIR})
+  endif()
+  target_link_libraries(tsuba PUBLIC azure-storage-lite)
+endif()
+
+if(TSUBA_BACKEND_LOCAL)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_LOCAL_BACKEND)
+  target_sources(tsuba PRIVATE src/LocalStorage.cpp)
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)

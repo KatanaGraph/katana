@@ -5,6 +5,7 @@
 #include "galois/Result.h"
 #include "tsuba/file.h"
 #include "tsuba/Errors.h"
+#include "GlobalState.h"
 #include "s3.h"
 
 namespace {
@@ -14,6 +15,10 @@ const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
 } // namespace
 
 namespace tsuba {
+
+tsuba::GlobalFileStorageAllocator s3_storage_allocator([]() {
+  return std::unique_ptr<tsuba::FileStorage>(new tsuba::S3Storage());
+});
 
 galois::Result<std::pair<std::string, std::string>>
 S3Storage::CleanURI(const std::string& uri) {
@@ -100,13 +105,14 @@ S3Storage::GetAsync(const std::string& uri, uint64_t start, uint64_t size,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3Storage::ListAsync(const std::string& uri) {
+S3Storage::ListAsync(const std::string& uri,
+                     std::unordered_set<std::string>* list) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3ListAsync(bucket, object);
+  return tsuba::S3ListAsync(bucket, object, list);
 }
 
 galois::Result<void>

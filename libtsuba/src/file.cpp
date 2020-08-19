@@ -19,7 +19,6 @@
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
 
-#include "s3.h"
 #include "GlobalState.h"
 
 namespace {
@@ -132,8 +131,9 @@ galois::Result<void> tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-tsuba::FileListAsync(const std::string& directory) {
-  return FS(directory)->ListAsync(directory);
+tsuba::FileListAsync(const std::string& directory,
+                     std::unordered_set<std::string>* list) {
+  return FS(directory)->ListAsync(directory, list);
 }
 
 galois::Result<void>

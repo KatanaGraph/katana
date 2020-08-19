@@ -5,15 +5,27 @@
 #include <vector>
 
 #include "galois/CommBackend.h"
+#include "galois/Logging.h"
 #include "FileStorage.h"
 
 namespace tsuba {
 
-class GlobalState {
-  static std::unique_ptr<GlobalState> ref;
+class GlobalFileStorageAllocator {
+  std::function<std::unique_ptr<FileStorage>()> gen_fun_;
 
-  galois::CommBackend* comm_;
+public:
+  GlobalFileStorageAllocator(
+      std::function<std::unique_ptr<FileStorage>()> gen_fun)
+      : gen_fun_(std::move(gen_fun)) {}
+
+  std::unique_ptr<FileStorage> allocate() { return gen_fun_(); }
+};
+
+class GlobalState {
+  static std::unique_ptr<GlobalState> ref_;
+
   std::vector<std::unique_ptr<FileStorage>> file_stores_;
+  galois::CommBackend* comm_;
 
   GlobalState(galois::CommBackend* comm) : comm_(comm){};
   FileStorage* GetDefaultFS() const;
@@ -32,6 +44,7 @@ public:
   ///
   /// store object is selected based on scheme:
   /// s3://...    -> S3Store
+  /// abfs://...  -> AzureStore
   /// file://...  -> LocalStore
   /// {no scheme} -> LocalStore
   FileStorage* FS(std::string_view uri) const;

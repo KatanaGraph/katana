@@ -895,7 +895,10 @@ galois::Result<void> S3DownloadRange(const std::string& bucket,
 }
 
 // This listing routine is synchronous, but S3 only returns 1,000 at a time
-galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
+galois::Result<void>
+internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw,
+                        std::unordered_set<std::string>* list,
+                        std::string_view token) {
   std::string bucket = s3aw.GetBucket();
   std::string object = s3aw.GetObject();
   GALOIS_LOG_VASSERT(library_init == true,
@@ -904,7 +907,6 @@ galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
   Aws::S3::Model::ListObjectsV2Request request;
   request.SetBucket(ToAwsString(bucket));
   request.SetPrefix(ToAwsString(object));
-  std::string token = s3aw.GetToken();
   if (token.length() > 0) {
     request.SetContinuationToken(ToAwsString(token));
   }
@@ -923,27 +925,28 @@ galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
         FromAwsString(s3result.GetNextContinuationToken());
     GALOIS_LOG_VASSERT(continuation_token.length() > 0,
                        "ListAsync IsTruncated true, but token empty");
-    s3aw.SetToken(continuation_token);
-    s3aw.Push(internal::S3ListAsyncAW);
+    s3aw.Push([=](internal::S3AsyncWork& async_work) -> galois::Result<void> {
+      return internal::S3ListAsyncAW(async_work, list, continuation_token);
+    });
   }
-  auto& listing = s3aw.GetListingRef();
   for (const auto& content : s3result.GetContents()) {
     std::string file(FromAwsString(content.GetKey()));
     // Return file names relative to the enclosing directory
     if (file.find(object) == 0) {
       file = std::string(file.begin() + object.size() + 1, file.end());
     }
-    listing.emplace(file);
+    list->emplace(file);
   }
 
   return galois::ResultSuccess();
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3ListAsync(const std::string& bucket, const std::string& object) {
+S3ListAsync(const std::string& bucket, const std::string& object,
+            std::unordered_set<std::string>* list) {
   std::unique_ptr<internal::S3AsyncWork> s3aw =
       std::make_unique<internal::S3AsyncWork>(bucket, object);
-  auto res = S3ListAsyncAW(*s3aw);
+  auto res = S3ListAsyncAW(*s3aw, list);
   if (!res) {
     GALOIS_LOG_DEBUG("S3ListAsync failure [{}]{}", bucket, object);
     return res.error();

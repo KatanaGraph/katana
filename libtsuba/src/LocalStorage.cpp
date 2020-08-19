@@ -14,10 +14,15 @@
 #include "galois/FileSystem.h"
 #include "tsuba/file.h"
 #include "tsuba/Errors.h"
+#include "GlobalState.h"
 
 namespace fs = boost::filesystem;
 
 namespace tsuba {
+
+GlobalFileStorageAllocator local_storage_allocator([]() {
+  return std::unique_ptr<FileStorage>(new LocalStorage());
+});
 
 void LocalStorage::CleanURI(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
@@ -97,7 +102,8 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
 
 // Current implementation is not async
 galois::Result<std::unique_ptr<FileAsyncWork>>
-LocalStorage::ListAsync(const std::string& uri) {
+LocalStorage::ListAsync(const std::string& uri,
+                        std::unordered_set<std::string>* list) {
   // Implement with synchronous calls
   DIR* dirp;
   struct dirent* dp;
@@ -109,15 +115,13 @@ LocalStorage::ListAsync(const std::string& uri) {
     return ErrorCode::InvalidArgument;
   }
 
-  std::unique_ptr<FileAsyncWork> faw = std::make_unique<FileAsyncWork>();
-  auto& listing                      = faw->GetListingRef();
   do {
     errno = 0;
     if ((dp = readdir(dirp)) != NULL) {
       // I am filtering "." and ".." from local listing because I can't see how
       // to filter in clients in a reasonable way.
       if (strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
-        listing.emplace(dp->d_name);
+        list->emplace(dp->d_name);
       }
     }
   } while (dp != NULL);
@@ -129,7 +133,7 @@ LocalStorage::ListAsync(const std::string& uri) {
   }
   (void)closedir(dirp);
 
-  return std::unique_ptr<FileAsyncWork>(std::move(faw));
+  return nullptr;
 }
 
 galois::Result<void>

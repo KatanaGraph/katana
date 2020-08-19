@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <unordered_set>
 
 #include "galois/Result.h"
 #include "tsuba/FileAsyncWork.h"
@@ -38,6 +39,11 @@ public:
   virtual galois::Result<void>
   PutMultiSync(const std::string& uri, const uint8_t* data, uint64_t size) = 0;
 
+  /// Storage classes with higher priority will be tried by GlobalState earlier
+  /// currently only used to enforce local fs default; GlobalState defaults
+  /// to the LocalStorage when no protocol on the URI is provided
+  virtual uint32_t Priority() { return 0; }
+
   // FileAsyncWork pointer can be null, otherwise contains additional work.
   // Every call to async work can potentially block (bulk synchronous parallel)
   virtual galois::Result<std::unique_ptr<FileAsyncWork>>
@@ -46,7 +52,8 @@ public:
   GetAsync(const std::string& uri, uint64_t start, uint64_t size,
            uint8_t* result_buf) = 0;
   virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-  ListAsync(const std::string& directory) = 0;
+  ListAsync(const std::string& directory,
+            std::unordered_set<std::string>* list) = 0;
   virtual galois::Result<void>
   Delete(const std::string& directory,
          const std::unordered_set<std::string>& files) = 0;

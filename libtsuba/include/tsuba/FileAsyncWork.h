@@ -1,18 +1,12 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_FILEASYNCWORK_H_
 #define GALOIS_LIBTSUBA_TSUBA_FILEASYNCWORK_H_
 
-#include <unordered_set>
-
 #include "galois/Result.h"
 #include "galois/Logging.h"
 
 namespace tsuba {
 
 class FileAsyncWork {
-  // This holds the result of directory listings.
-  std::unordered_set<std::string> listing_{};
-
-protected:
 public:
   FileAsyncWork() {}
   FileAsyncWork(const FileAsyncWork& no_copy) = delete;
@@ -26,9 +20,6 @@ public:
     GALOIS_LOG_VASSERT(false, "No default operator() in FileAsyncWork");
   }
   virtual bool Done() const { return true; }
-
-  // Location of directory listing
-  virtual std::unordered_set<std::string>& GetListingRef() { return listing_; }
 };
 
 } // namespace tsuba

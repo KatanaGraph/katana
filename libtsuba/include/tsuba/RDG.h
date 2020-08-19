@@ -163,6 +163,9 @@ galois::Result<void> Rename(RDGHandle handle, const std::string& name,
 /// Get Information about the graph
 GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
+// Return all file names that store dat for this handle
+galois::Result<std::unordered_set<std::string>> FileNames(RDGHandle handle);
+
 /// Load the RDG described by the metadata in handle into memory
 GALOIS_EXPORT galois::Result<RDG> Load(RDGHandle handle);
 

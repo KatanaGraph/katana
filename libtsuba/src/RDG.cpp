@@ -105,8 +105,13 @@ galois::Result<RDGMeta> RDGMeta::Make(const std::string& rdg_name) {
 std::string RDGMeta::FileName(const std::string& rdg_path, uint64_t version) {
   return fmt::format("{}_{}", rdg_path, version);
 }
+
 std::string RDGMeta::PartitionFileName(const std::string& rdg_path,
                                        uint32_t node_id, uint64_t version) {
+  // witchel: This special case isn't great, but lineage is coming
+  if(rdg_path.size() == 0) {
+    return fmt::format("{}_{}_{}", "meta", node_id, version);
+  }
   return fmt::format("{}_{}_{}", rdg_path, node_id, version);
 }
 
@@ -1463,6 +1468,36 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
   rdg->topology_path = name_res.value();
 
   return DoStore(handle, rdg);
+}
+
+// Return the set of file names that hold this RDG's data
+galois::Result<std::unordered_set<std::string>> tsuba::FileNames(RDGHandle handle) {
+  if (!handle.impl_->AllowsRead()) {
+    GALOIS_LOG_DEBUG("handle does not allow full read");
+    return ErrorCode::InvalidArgument;
+  }
+  auto rdg_res = ReadMetadata(handle);
+  if (!rdg_res) {
+    return rdg_res.error();
+  }
+  std::unordered_set<std::string> fnames{};
+  for(auto i = 0U; i < handle.impl_->rdg_meta.num_hosts; ++i) {
+    // All other file names are directory-local, so we pass an empty
+    // directory instead of handle.impl_->rdg_path,
+    fnames.emplace(RDGMeta::PartitionFileName("",
+                                              i,
+                                              handle.impl_->rdg_meta.version));
+  }
+  auto rdg = std::move(rdg_res.value());
+  std::for_each(rdg.node_properties.begin(), rdg.node_properties.end(),
+                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
+  std::for_each(rdg.edge_properties.begin(), rdg.edge_properties.end(),
+                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
+  std::for_each(rdg.part_properties.begin(), rdg.part_properties.end(),
+                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
+
+  fnames.emplace(rdg.topology_path);
+  return fnames;
 }
 
 galois::Result<void>

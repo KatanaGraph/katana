@@ -67,7 +67,8 @@ galois::Result<void> LocalStorage::Stat(const std::string& uri,
   std::string filename = uri;
   CleanURI(&filename);
   struct stat local_s_buf;
-  if (int ret = stat(uri.c_str(), &local_s_buf); ret) {
+
+  if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
     return galois::ResultErrno();
   }
   s_buf->size = local_s_buf.st_size;
@@ -94,35 +95,39 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-LocalStorage::ListAsync(const std::string& directory) {
+LocalStorage::ListAsync(const std::string& uri) {
   // Implement with synchronous calls
   DIR* dirp;
   struct dirent* dp;
-  std::unique_ptr<FileAsyncWork> faw = std::make_unique<FileAsyncWork>();
-
-  auto list_out = faw->GetListOutRef();
-  list_out.clear();
-  if ((dirp = opendir(directory.c_str())) == NULL) {
-    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", directory,
+  std::string dirname = uri;
+  CleanURI(&dirname);
+  if ((dirp = opendir(dirname.c_str())) == NULL) {
+    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", dirname,
                      galois::ResultErrno().message());
     return ErrorCode::InvalidArgument;
   }
 
+  std::unique_ptr<FileAsyncWork> faw = std::make_unique<FileAsyncWork>();
+  auto& listing                      = faw->GetListingRef();
   do {
     errno = 0;
     if ((dp = readdir(dirp)) != NULL) {
-      list_out.emplace_back(dp->d_name);
+      // I am filtering "." and ".." from local listing because I can't see how to
+      // filter in clients in a reasonable way.
+      if(strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
+        listing.emplace(dp->d_name);
+      }
     }
   } while (dp != NULL);
 
   if (errno != 0) {
-    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", directory,
+    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", dirname,
                      galois::ResultErrno().message());
     return ErrorCode::FilesystemError;
   }
   (void)closedir(dirp);
 
-  return nullptr;
+  return std::unique_ptr<FileAsyncWork>(std::move(faw));
 }
 
 } // namespace tsuba

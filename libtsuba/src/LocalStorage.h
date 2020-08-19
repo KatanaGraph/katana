@@ -60,7 +60,7 @@ public:
     return nullptr;
   }
   galois::Result<std::unique_ptr<FileAsyncWork>>
-  ListAsync(const std::string& directory) override;
+  ListAsync(const std::string& uri) override;
 };
 
 } // namespace tsuba

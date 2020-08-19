@@ -53,16 +53,16 @@ galois::Result<tsuba::RDGMeta> GetPreviousRDGMeta(tsuba::RDGMeta rdg_meta,
 // Return a vector of valid version numbers, with index 0 being the most recent
 // version Vector can have fewer than remaining_versions entries if there aren't
 // that many previous versions.
-std::vector<uint64_t> FindVersions(const std::string& src_uri,
-                                   uint32_t remaining_versions) {
+std::vector<tsuba::RDGMeta> FindVersions(const std::string& src_uri,
+                                         uint32_t remaining_versions) {
   auto make_res = tsuba::RDGMeta::Make(src_uri);
   if (!make_res) {
     GALOIS_LOG_FATAL("Cannot open {}: {}", src_uri, make_res.error());
   }
 
-  tsuba::RDGMeta rdg_meta = make_res.value();
-  std::vector<uint64_t> versions{};
-  versions.push_back(rdg_meta.version);
+  auto rdg_meta = make_res.value();
+  std::vector<tsuba::RDGMeta> versions{};
+  versions.push_back(rdg_meta);
 
   while (rdg_meta.version != rdg_meta.previous_version &&
          versions.size() < remaining_versions) {
@@ -72,35 +72,85 @@ std::vector<uint64_t> FindVersions(const std::string& src_uri,
       return versions;
     }
     rdg_meta = rdg_res.value();
-    versions.push_back(rdg_meta.version);
+    versions.push_back(rdg_meta);
   }
   return versions;
 }
 
+void
+RDGFileNames(const std::string rdg_uri, std::unordered_set<std::string>& fnames) {
+  tsuba::StatBuf stat_buf;
+  if(auto res = FileStat(rdg_uri, &stat_buf); !res) {
+    // The most recent graph version is stored in a file called
+    // meta, not meta_xxxx where xxxx is the version number.
+    GALOIS_LOG_DEBUG("File does not exist {}", rdg_uri);
+    return;
+  }
+  auto open_res = tsuba::Open(rdg_uri, tsuba::kReadOnly);
+  if(!open_res) {
+    GALOIS_LOG_DEBUG("Bad RDG Open {}: {}", rdg_uri, open_res.error());
+    return;
+  }
+  auto rdg_handle = open_res.value();
+  auto new_fnames_res = tsuba::FileNames(rdg_handle);
+  if(!new_fnames_res) {
+    GALOIS_LOG_DEBUG("Bad tsuba::FileNames {}: {}", rdg_uri, new_fnames_res.error());
+    return;
+  }
+  auto new_fnames = new_fnames_res.value();
+
+  fnames.insert(new_fnames.begin(), new_fnames.end());
+  auto close_res = tsuba::Close(rdg_handle);
+  if(!close_res) {
+    GALOIS_LOG_DEBUG("Bad RDG Close {}: {}", rdg_uri, close_res.error());
+  }
+}
+
+// Collect file names for the given set of graph versions
+std::unordered_set<std::string>
+GraphFileNames(const std::string& src_uri, const std::vector<tsuba::RDGMeta> metas) {
+  std::unordered_set<std::string> fnames{};
+  // src_uri == ...meta
+  RDGFileNames(src_uri, fnames);
+  for(const auto& meta: metas) {
+    // src_uri == ...meta_meta.version
+    RDGFileNames(tsuba::RDGMeta::FileName(src_uri, meta.version),
+                 fnames);
+  }
+  return fnames;
+}
+
 void GC(const std::string& src_uri, uint32_t remaining_versions) {
-  std::vector<uint64_t> versions = FindVersions(src_uri, remaining_versions);
+  auto versions = FindVersions(src_uri, remaining_versions);
   fmt::print("Found versions: ");
   std::for_each(versions.begin(), versions.end(),
-                [](const auto& e) { fmt::print("{} ", e); });
+                [](const auto& e) { fmt::print("{} ", e.version); });
   fmt::print("\n");
+
+  auto save_listing = GraphFileNames(src_uri, versions);
+  fmt::print("Graph paths:\n");
+  std::for_each(save_listing.begin(), save_listing.end(),
+                [](const auto& e) { fmt::print("{}\n", e); });
+
   auto res = galois::ExtractDirName(src_uri);
   if (!res) {
     GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
   }
-  auto dir = res.value();
+  auto dir      = res.value();
   auto list_res = tsuba::FileListAsync(dir);
   if (!list_res) {
     GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
   }
   auto faw = std::move(list_res.value());
-  while(!faw->Done()) {
+  while (!faw->Done()) {
     // Get next round of file entries
-    if(auto res = (*faw)(); !res) {
+    if (auto res = (*faw)(); !res) {
       GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);
     }
   }
-  auto& file_vec = faw->GetListOutRef();
-  std::for_each(file_vec.begin(), file_vec.end(),
+  auto& listing = faw->GetListingRef();
+  fmt::print("All paths:\n");
+  std::for_each(listing.begin(), listing.end(),
                 [](const auto& e) { fmt::print("{}\n", e); });
 }
 

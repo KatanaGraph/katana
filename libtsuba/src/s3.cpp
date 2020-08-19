@@ -214,11 +214,11 @@ galois::Result<void> S3GetSize(const std::string& bucket,
 
   if (auto res = CheckS3Error(outcome); !res) {
     if (res.error() == ErrorCode::S3Error) {
-      // couldn't classify dump some extra info to the log
-      const auto& error = outcome.GetError();
-      GALOIS_LOG_ERROR("S3GetSize\n  [{}] {}\n  {}: {} {}\n", bucket, object,
-                       error.GetResponseCode(), error.GetExceptionName(),
-                       error.GetMessage());
+      // This is S3Stat, which can legitimately be called on a non-existent file
+      GALOIS_LOG_DEBUG("S3GetSize\n  [{}] {}\n  {}: {} {}\n", bucket, object,
+                       outcome.GetError().GetResponseCode(),
+                       outcome.GetError().GetExceptionName(),
+                       outcome.GetError().GetMessage());
     }
     return res;
   }
@@ -921,9 +921,9 @@ galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
     s3aw.SetToken(continuation_token);
     s3aw.Push(internal::S3ListAsyncAW);
   }
-  std::vector<std::string>& list_out = s3aw.GetListOutRef();
+  auto& listing = s3aw.GetListingRef();
   for (const auto& content : s3result.GetContents()) {
-    list_out.emplace_back(FromAwsString(content.GetKey()));
+    listing.emplace(FromAwsString(content.GetKey()));
   }
 
   return galois::ResultSuccess();

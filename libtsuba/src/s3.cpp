@@ -889,32 +889,56 @@ galois::Result<void> S3DownloadRange(const std::string& bucket,
   return galois::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
-S3ListAsync(const std::string& bucket, const std::string& object,
-            std::vector<std::string>& list_out) {
-  list_out.clear();
-  auto s3_client = GetS3Client();
+// This listing routine is synchronous, but S3 only returns 1,000 at a time
+galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
+  std::string bucket = s3aw.GetBucket();
+  std::string object = s3aw.GetObject();
+  GALOIS_LOG_VASSERT(library_init == true,
+                     "Must call tsuba::Init before S3 interaction");
+
   Aws::S3::Model::ListObjectsV2Request request;
   request.SetBucket(ToAwsString(bucket));
   request.SetPrefix(ToAwsString(object));
+  std::string token = s3aw.GetToken();
+  if (token.length() > 0) {
+    request.SetContinuationToken(ToAwsString(token));
+  }
 
-  auto s3outcome = s3_client->ListObjectsV2(request);
+  auto s3outcome = async_s3_client->ListObjectsV2(request);
   if (!s3outcome.IsSuccess()) {
     const auto& error = s3outcome.GetError();
-    GALOIS_LOG_FATAL("\n  Failed ListMatching callback\n  {}: {}\n  [{}] {}",
+    GALOIS_LOG_FATAL("\n  Failed ListAsyncAW\n  {}: {}\n  [{}] {}",
                      error.GetExceptionName(), error.GetMessage(), bucket,
                      object);
   }
-  auto s3result           = s3outcome.GetResult();
-  auto continuation_token = FromAwsString(s3result.GetContinuationToken());
-  if (continuation_token.length() > 0) {
-    GALOIS_LOG_FATAL(
-        "\n  Continuation token is present, but no continuation path");
+  auto s3result = s3outcome.GetResult();
+  if (s3result.GetIsTruncated()) {
+    // Get more listings
+    auto continuation_token =
+        FromAwsString(s3result.GetNextContinuationToken());
+    GALOIS_LOG_VASSERT(continuation_token.length() > 0,
+                       "ListAsync IsTruncated true, but token empty");
+    s3aw.SetToken(continuation_token);
+    s3aw.Push(internal::S3ListAsyncAW);
   }
-  for (const auto& content : s3outcome.GetResult().GetContents()) {
+  std::vector<std::string>& list_out = s3aw.GetListOutRef();
+  for (const auto& content : s3result.GetContents()) {
     list_out.emplace_back(FromAwsString(content.GetKey()));
   }
+
   return galois::ResultSuccess();
+}
+
+galois::Result<std::unique_ptr<FileAsyncWork>>
+S3ListAsync(const std::string& bucket, const std::string& object) {
+  std::unique_ptr<internal::S3AsyncWork> s3aw =
+      std::make_unique<internal::S3AsyncWork>(bucket, object);
+  auto res = S3ListAsyncAW(*s3aw);
+  if (!res) {
+    GALOIS_LOG_DEBUG("S3ListAsync failure [{}]{}", bucket, object);
+    return res.error();
+  }
+  return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
 }
 
 } /* namespace tsuba */

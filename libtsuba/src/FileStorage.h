@@ -46,8 +46,7 @@ public:
   GetAsync(const std::string& uri, uint64_t start, uint64_t size,
            uint8_t* result_buf) = 0;
   virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-  ListAsync(const std::string& directory,
-            std::vector<std::string>& list_out) = 0;
+  ListAsync(const std::string& directory) = 0;
 };
 
 } // namespace tsuba

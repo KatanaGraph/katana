@@ -94,11 +94,13 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-LocalStorage::ListAsync(const std::string& directory,
-                        std::vector<std::string>& list_out) {
+LocalStorage::ListAsync(const std::string& directory) {
   // Implement with synchronous calls
   DIR* dirp;
   struct dirent* dp;
+  std::unique_ptr<FileAsyncWork> faw = std::make_unique<FileAsyncWork>();
+
+  auto list_out = faw->GetListOutRef();
   list_out.clear();
   if ((dirp = opendir(directory.c_str())) == NULL) {
     GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", directory,

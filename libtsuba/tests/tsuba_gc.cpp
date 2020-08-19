@@ -88,13 +88,18 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
     GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
   }
   auto dir = res.value();
-  fmt::print("Dir: {}\n", dir);
-  std::vector<std::string> file_vec;
-  auto list_res = tsuba::FileListAsync(dir, file_vec);
+  auto list_res = tsuba::FileListAsync(dir);
   if (!list_res) {
     GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
   }
-  fmt::print("List dir: ");
+  auto faw = std::move(list_res.value());
+  while(!faw->Done()) {
+    // Get next round of file entries
+    if(auto res = (*faw)(); !res) {
+      GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);
+    }
+  }
+  auto& file_vec = faw->GetListOutRef();
   std::for_each(file_vec.begin(), file_vec.end(),
                 [](const auto& e) { fmt::print("{}\n", e); });
 }

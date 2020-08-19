@@ -24,6 +24,7 @@ class S3AsyncWork : public FileAsyncWork {
   uint64_t goal_{0UL}; // Goal initialized > 0, when reaches 0 we are done
 
   std::stack<galois::Result<void> (*)(S3AsyncWork& s3aw)> func_stack_{};
+  std::string token_{};
 
 public:
   S3AsyncWork(const std::string& bucket, const std::string& object)
@@ -51,6 +52,14 @@ public:
   void WaitGoal() {
     std::unique_lock<std::mutex> lk(mutex_);
     cv_.wait(lk, [&] { return goal_ == (uint64_t)0; });
+  }
+
+  void SetToken(const std::string_view& token) { token_ = token; }
+  // Token is single use
+  std::string GetToken() {
+    std::string ret = token_;
+    token_.clear();
+    return ret;
   }
 
   // Call next async function in the chain
@@ -88,6 +97,9 @@ GALOIS_EXPORT galois::Result<void> S3PutMultiAsyncFinish(S3AsyncWork& s3aw);
 GALOIS_EXPORT galois::Result<void>
 S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
 GALOIS_EXPORT galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
+
+GALOIS_EXPORT galois::Result<void> S3ListAsyncAW(S3AsyncWork& s3aw);
+
 } // namespace tsuba::internal
 
 #endif

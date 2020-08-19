@@ -132,9 +132,8 @@ galois::Result<void> tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-tsuba::FileListAsync(const std::string& directory,
-                     std::vector<std::string>& list_out) {
-  return FS(directory)->ListAsync(directory, list_out);
+tsuba::FileListAsync(const std::string& directory) {
+  return FS(directory)->ListAsync(directory);
 }
 
 galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,

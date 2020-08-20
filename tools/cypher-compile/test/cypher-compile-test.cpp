@@ -112,6 +112,13 @@ void VerifyEdge(const galois::CompilerQueryEdge& e,
   GALOIS_LOG_VASSERT(e.path_name == expected.path_name,
                      "Expected path name is {}, found {}", expected.path_name,
                      e.path_name);
+  GALOIS_LOG_VASSERT(e.edge_direction == expected.edge_direction,
+                     "Expected edge direction is {}, found {}",
+                     expected.edge_direction, e.edge_direction);
+  GALOIS_LOG_VASSERT(e.var_length_start == expected.var_length_start,
+                     "Var length start settings not equal");
+  GALOIS_LOG_VASSERT(e.var_length_end == expected.var_length_end,
+                     "Var length end settings not equal");
 }
 
 //! Make sure return var is as expected
@@ -762,6 +769,105 @@ int main() {
   GALOIS_LOG_VASSERT(
       !cc.GetQueryEdges()[0].acted_on.property_map,
       "Property map for destination edge (prop limit 4) should not exist");
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Variable length edges
+  //////////////////////////////////////////////////////////////////////////////
+
+  // unbound path
+  GALOIS_LOG_WARN("Var edge 1");
+  std::string var_edge1 = "match ()-[*]->() return e;";
+  cc.Compile(var_edge1.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", std::nullopt, std::nullopt});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  // start
+  GALOIS_LOG_WARN("Var edge 2");
+  std::string var_edge2 = "match ()-[*3..]->() return e;";
+  cc.Compile(var_edge2.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", 3, std::nullopt});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  // end
+  GALOIS_LOG_WARN("Var edge 3");
+  std::string var_edge3 = "match ()-[*..10]->() return e;";
+  cc.Compile(var_edge3.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", std::nullopt, 10});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  // start and end
+  GALOIS_LOG_WARN("Var edge 4");
+  std::string var_edge4 = "match ()-[*3..10]->() return e;";
+  cc.Compile(var_edge4.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", 3, 10});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  // start and end with label
+  GALOIS_LOG_WARN("Var edge 5");
+  std::string var_edge5 = "match ()-[:KNOWS*3..10]->() return e;";
+  cc.Compile(var_edge5.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "KNOWS", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", 3, 10});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  // single edge sanity check (expected is 1, 1); should be checked by default
+  // but just making sure
+  GALOIS_LOG_WARN("Var edge 6");
+  std::string var_edge6 = "match ()-[:KNOWS]->() return e;";
+  cc.Compile(var_edge6.c_str());
+  VerifyEdge(cc.GetQueryEdges()[0],
+             galois::CompilerQueryEdge{
+                 "KNOWS", galois::CompilerQueryNode{0, "any", "", ""},
+                 galois::CompilerQueryNode{1, "any", "", ""},
+                 galois::DIRECTED_EDGE, "", "", 1, 1});
+  AssertQueryNodeEdgeCount(cc, 0, 1);
+  AssertBasicReturn(cc, "e");
+
+  //// 3 duplicate edges TODO(roshan) get this to work
+  // GALOIS_LOG_WARN("Var edge 9");
+  // std::string var_edge9 = "match ()-[*3]->(:Final) return e;";
+  // cc.Compile(var_edge9.c_str());
+  // VerifyEdge(cc.GetQueryEdges()[0],
+  //           galois::CompilerQueryEdge{
+  //               "ANY", galois::CompilerQueryNode{0, "any", "", ""},
+  //               galois::CompilerQueryNode{1, "any", "", ""},
+  //               galois::DIRECTED_EDGE, "", ""});
+  // VerifyEdge(cc.GetQueryEdges()[1],
+  //           galois::CompilerQueryEdge{
+  //               "ANY", galois::CompilerQueryNode{1, "any", "", ""},
+  //               galois::CompilerQueryNode{2, "any", "", ""},
+  //               galois::DIRECTED_EDGE, "", ""});
+  // VerifyEdge(cc.GetQueryEdges()[2],
+  //           galois::CompilerQueryEdge{
+  //               "ANY", galois::CompilerQueryNode{2, "any", "", ""},
+  //               galois::CompilerQueryNode{3, "Final", "", ""},
+  //               galois::DIRECTED_EDGE, "", ""});
+  // AssertQueryNodeEdgeCount(cc, 0, 3);
+  // AssertBasicReturn(cc, "e");
 
   //////////////////////////////////////////////////////////////////////////////
   // MISC

@@ -74,7 +74,7 @@ struct GALOIS_EXPORT RDGMeta {
   friend void from_json(const nlohmann::json& j, RDGMeta& meta);
 };
 
-struct PartitionMetadata {
+struct GALOIS_EXPORT PartitionMetadata {
   uint32_t policy_id_;
   bool transposed_;
   bool is_vertex_cut_;

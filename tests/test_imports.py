@@ -2,11 +2,16 @@ def test_import_applications_flat_graph():
     import galois.sssp
     import galois.pagerank
     import galois.bfs
+    import galois.jaccard
     import galois.connected_components
 
 
 def test_import_applications_property_graph():
     import galois.bfs_property_graph
+    import galois.jaccard_property_graph
+    import galois.pagerank_property_graph
+    import galois.connected_components_property_graph
+    import galois.kcore_property_graph
 
 
 def test_import_loops():

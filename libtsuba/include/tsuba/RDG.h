@@ -161,7 +161,7 @@ galois::Result<void> Rename(RDGHandle handle, const std::string& name,
                             int flags);
 
 /// Get Information about the graph
-GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& filename);
+GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
 /// Load the RDG described by the metadata in handle into memory
 GALOIS_EXPORT galois::Result<RDG> Load(RDGHandle handle);

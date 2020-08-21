@@ -261,6 +261,8 @@ galois::Result<void> galois::graphs::PropertyFileGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_indices &&
       topology_.out_indices->length() != table->num_rows()) {
+    GALOIS_LOG_DEBUG("expected {} rows found {} instead",
+                     topology_.out_indices->length(), table->num_rows());
     return ErrorCode::InvalidArgument;
   }
   return tsuba::AddNodeProperties(&rdg_, table);
@@ -270,6 +272,8 @@ galois::Result<void> galois::graphs::PropertyFileGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_dests &&
       topology_.out_dests->length() != table->num_rows()) {
+    GALOIS_LOG_DEBUG("expected {} rows found {} instead",
+                     topology_.out_dests->length(), table->num_rows());
     return ErrorCode::InvalidArgument;
   }
   return tsuba::AddEdgeProperties(&rdg_, table);

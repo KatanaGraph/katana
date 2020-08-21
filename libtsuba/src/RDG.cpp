@@ -1,22 +1,23 @@
 #include "tsuba/RDG.h"
 
+#include <cassert>
 #include <exception>
-#include <memory>
 #include <fstream>
-#include <parquet/platform.h>
-#include <parquet/properties.h>
+#include <memory>
 #include <unordered_set>
 
-#include <boost/filesystem.hpp>
 #include <arrow/filesystem/api.h>
+#include <boost/filesystem.hpp>
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
 #include <parquet/file_reader.h>
+#include <parquet/platform.h>
+#include <parquet/properties.h>
 
+#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
-#include "galois/FileSystem.h"
 #include "tsuba/Errors.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
@@ -237,9 +238,6 @@ PrunePropsTo(tsuba::RDG* rdg, const std::vector<std::string>& node_properties,
 
 galois::Result<std::shared_ptr<arrow::Table>>
 DoLoadTable(const std::string& expected_name, const std::string& file_path) {
-  // TODO(ddn): parallelize reading
-  // TODO(ddn): use custom NUMA allocator
-
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
   if (auto res = fv->Bind(file_path); !res) {
     return res.error();
@@ -276,10 +274,13 @@ DoLoadTable(const std::string& expected_name, const std::string& file_path) {
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
+    GALOIS_LOG_DEBUG("expected 1 field found {} instead", schema->num_fields());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
   if (schema->field(0)->name() != expected_name) {
+    GALOIS_LOG_DEBUG("expected {} found {} instead", expected_name,
+                     schema->field(0)->name());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -360,10 +361,13 @@ DoLoadPartialTable(const std::string& expected_name,
 
   std::shared_ptr<arrow::Schema> schema = out->schema();
   if (schema->num_fields() != 1) {
+    GALOIS_LOG_DEBUG("expected 1 field found {} instead", schema->num_fields());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
   if (schema->field(0)->name() != expected_name) {
+    GALOIS_LOG_DEBUG("expected {} found {} instead", expected_name,
+                     schema->field(0)->name());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -575,6 +579,8 @@ AddProperties(const std::shared_ptr<arrow::Table>& table,
   std::shared_ptr<arrow::Table> current = *to_update;
 
   if (current->num_columns() > 0 && current->num_rows() != table->num_rows()) {
+    GALOIS_LOG_DEBUG("expected {} rows found {} instead", current->num_rows(),
+                     table->num_rows());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -599,6 +605,7 @@ AddProperties(const std::shared_ptr<arrow::Table>& table,
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
+    GALOIS_LOG_DEBUG("column names are not distinct");
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -628,6 +635,7 @@ MakeProperties(std::vector<std::string>&& values) {
   std::vector v = std::move(values);
 
   if ((v.size() % 2) != 0) {
+    GALOIS_LOG_DEBUG("number of values {} is not even", v.size());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -647,9 +655,7 @@ MakeProperties(std::vector<std::string>&& values) {
     });
   }
 
-  if (names.size() != properties.size()) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
+  assert(names.size() == properties.size());
 
   return properties;
 }
@@ -673,7 +679,7 @@ galois::Result<tsuba::RDG> DoReadMetadata(tsuba::RDGHandle handle) {
   try {
     md = parquet::ReadMetaData(fv);
   } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG("OOF IT IS HERE: {}", exp.what());
+    GALOIS_LOG_DEBUG("arrow error: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
   }
 
@@ -689,29 +695,24 @@ galois::Result<tsuba::RDG> DoReadMetadata(tsuba::RDGHandle handle) {
   std::vector<std::string> part_values;
   std::vector<std::pair<std::string, std::string>> other_metadata;
   std::string topology_path;
-  try {
-    for (int64_t i = 0, n = kv_metadata->size(); i < n; ++i) {
-      const std::string& k = kv_metadata->key(i);
-      const std::string& v = kv_metadata->value(i);
+  for (int64_t i = 0, n = kv_metadata->size(); i < n; ++i) {
+    const std::string& k = kv_metadata->key(i);
+    const std::string& v = kv_metadata->value(i);
 
-      if (k == node_property_path_key || k == node_property_name_key) {
-        node_values.emplace_back(v);
-      } else if (k == edge_property_path_key || k == edge_property_name_key) {
-        edge_values.emplace_back(v);
-      } else if (k == part_property_path_key || k == part_property_name_key) {
-        part_values.emplace_back(v);
-      } else if (k == topology_path_key) {
-        if (!topology_path.empty()) {
-          return tsuba::ErrorCode::InvalidArgument;
-        }
-        topology_path = v;
-      } else {
-        other_metadata.emplace_back(std::make_pair(k, v));
+    if (k == node_property_path_key || k == node_property_name_key) {
+      node_values.emplace_back(v);
+    } else if (k == edge_property_path_key || k == edge_property_name_key) {
+      edge_values.emplace_back(v);
+    } else if (k == part_property_path_key || k == part_property_name_key) {
+      part_values.emplace_back(v);
+    } else if (k == topology_path_key) {
+      if (!topology_path.empty()) {
+        return tsuba::ErrorCode::InvalidArgument;
       }
+      topology_path = v;
+    } else {
+      other_metadata.emplace_back(std::make_pair(k, v));
     }
-  } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG("Actually it's here: {}", exp.what());
-    return tsuba::ErrorCode::ArrowError;
   }
 
   auto node_properties_result = MakeProperties(std::move(node_values));
@@ -1072,7 +1073,7 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
   auto node_write_result = WriteTable(*rdg->node_table, rdg->node_properties,
                                       handle.impl_->metadata_dir);
   if (!node_write_result) {
-    GALOIS_LOG_DEBUG("WriteTable for node_properties failed");
+    GALOIS_LOG_DEBUG("unable to write node properties");
     return node_write_result.error();
   }
   rdg->node_properties = std::move(node_write_result.value());
@@ -1080,7 +1081,7 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
   auto edge_write_result = WriteTable(*rdg->edge_table, rdg->edge_properties,
                                       handle.impl_->metadata_dir);
   if (!edge_write_result) {
-    GALOIS_LOG_DEBUG("WriteTable for edge_properties failed");
+    GALOIS_LOG_DEBUG("unable to write edge properties");
     return edge_write_result.error();
   }
   rdg->edge_properties = std::move(edge_write_result.value());
@@ -1262,16 +1263,18 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
 
   auto ret = RDGHandle{.impl_ = new tsuba::RDGHandleImpl(impl)};
 
-  if (ret.impl_->flags & kReadPartial) {
+  if (ret.impl_->AllowsReadPartial()) {
     if (ret.impl_->rdg_meta.num_hosts != 1) {
-      GALOIS_LOG_ERROR("Cannot ReadPartial from partitioned graph");
+      GALOIS_LOG_ERROR("cannot partially read partitioned graph");
       return ErrorCode::InvalidArgument;
     }
     ret.impl_->partition_path = tsuba::RDGMeta::PartitionFileName(
         ret.impl_->rdg_path, 0, ret.impl_->rdg_meta.version);
   } else {
     if (ret.impl_->rdg_meta.num_hosts != tsuba::Comm()->Num) {
-      GALOIS_LOG_DEBUG("tsuba::Open 1");
+      GALOIS_LOG_DEBUG("number of hosts for partitioned graph {} does not "
+                       "match number of current hosts {}",
+                       ret.impl_->rdg_meta.num_hosts, tsuba::Comm()->Num);
       return ErrorCode::InvalidArgument;
     }
     ret.impl_->partition_path = tsuba::RDGMeta::PartitionFileName(

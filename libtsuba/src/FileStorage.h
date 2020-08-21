@@ -47,6 +47,9 @@ public:
            uint8_t* result_buf) = 0;
   virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
   ListAsync(const std::string& directory) = 0;
+  virtual galois::Result<void>
+  Delete(const std::string& directory,
+         const std::unordered_set<std::string>& files) = 0;
 };
 
 } // namespace tsuba

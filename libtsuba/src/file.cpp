@@ -136,6 +136,12 @@ tsuba::FileListAsync(const std::string& directory) {
   return FS(directory)->ListAsync(directory);
 }
 
+galois::Result<void>
+tsuba::FileDelete(const std::string& directory,
+                  const std::unordered_set<std::string>& files) {
+  return FS(directory)->Delete(directory, files);
+}
+
 galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,
                                          uint64_t begin, uint64_t size) {
   MappingDesc new_mapping;

@@ -74,11 +74,11 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
 
 // This function does not recognize any path seperator other than '/'. This
 // could be a problem for Windows or "non-standard S3" paths.
-galois::Result<std::string> galois::ExtractFileName(const std::string& path) {
+std::string galois::ExtractFileName(const std::string& path) {
   size_t last_slash     = path.find_last_of(kSepChar, std::string::npos);
   size_t name_end_plus1 = path.length();
   if (last_slash == std::string::npos) {
-    return ErrorCode::InvalidArgument;
+    return path;
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
@@ -110,4 +110,12 @@ galois::Result<std::string> galois::ExtractDirName(const std::string& path) {
     last_slash++;
   }
   return path.substr(0, last_slash);
+}
+
+std::string galois::JoinPath(const std::string& dir, const std::string& file) {
+  size_t last_slash = dir.find_last_of(kSepChar, std::string::npos);
+  if (last_slash == (dir.length() - 1)) {
+    return dir + file;
+  }
+  return dir + kSepChar + file;
 }

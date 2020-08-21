@@ -11,6 +11,7 @@
 
 #include "galois/Result.h"
 #include "galois/Logging.h"
+#include "galois/FileSystem.h"
 #include "tsuba/file.h"
 #include "tsuba/Errors.h"
 
@@ -94,6 +95,7 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
   return galois::ResultSuccess();
 }
 
+// Current implementation is not async
 galois::Result<std::unique_ptr<FileAsyncWork>>
 LocalStorage::ListAsync(const std::string& uri) {
   // Implement with synchronous calls
@@ -112,22 +114,34 @@ LocalStorage::ListAsync(const std::string& uri) {
   do {
     errno = 0;
     if ((dp = readdir(dirp)) != NULL) {
-      // I am filtering "." and ".." from local listing because I can't see how to
-      // filter in clients in a reasonable way.
-      if(strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
+      // I am filtering "." and ".." from local listing because I can't see how
+      // to filter in clients in a reasonable way.
+      if (strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
         listing.emplace(dp->d_name);
       }
     }
   } while (dp != NULL);
 
   if (errno != 0) {
-    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", dirname,
+    GALOIS_LOG_ERROR("\n  readdir failed: {}: {}", dirname,
                      galois::ResultErrno().message());
-    return ErrorCode::FilesystemError;
+    return ErrorCode::LocalStorageError;
   }
   (void)closedir(dirp);
 
   return std::unique_ptr<FileAsyncWork>(std::move(faw));
+}
+
+galois::Result<void>
+LocalStorage::Delete(const std::string& directory_uri,
+                     const std::unordered_set<std::string>& files) {
+  std::string dir = directory_uri;
+  CleanURI(&dir);
+  for (const auto& file : files) {
+    auto path = galois::JoinPath(dir, file);
+    unlink(path.c_str());
+  }
+  return galois::ResultSuccess();
 }
 
 } // namespace tsuba

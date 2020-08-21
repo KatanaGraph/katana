@@ -109,4 +109,15 @@ S3Storage::ListAsync(const std::string& uri) {
   return tsuba::S3ListAsync(bucket, object);
 }
 
+galois::Result<void>
+S3Storage::Delete(const std::string& uri,
+                  const std::unordered_set<std::string>& files) {
+  auto uri_res = CleanURI(std::string(uri));
+  if (!uri_res) {
+    return uri_res.error();
+  }
+  auto [bucket, object] = std::move(uri_res.value());
+  return tsuba::S3Delete(bucket, object, files);
+}
+
 } // namespace tsuba

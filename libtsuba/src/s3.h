@@ -38,9 +38,14 @@ galois::Result<std::unique_ptr<FileAsyncWork>>
 S3PutAsync(const std::string& bucket, const std::string& object,
            const uint8_t* data, uint64_t size);
 
-// Listing returned in FileAsyncWork::GetListOutRef
+// Listing returned in FileAsyncWork::GetListingRef
+// Listing relative to the full path of the provided directory
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3ListAsync(const std::string& bucket, const std::string& object);
+
+galois::Result<void> S3Delete(const std::string& bucket,
+                              const std::string& object,
+                              const std::unordered_set<std::string>& files);
 
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view FromAwsString(const Aws::String& s) {

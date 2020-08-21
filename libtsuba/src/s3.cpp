@@ -16,6 +16,9 @@
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/CompleteMultipartUploadRequest.h>
 #include <aws/s3/model/ListObjectsV2Request.h>
+#include <aws/s3/model/DeleteObjectsRequest.h>
+#include <aws/s3/model/Delete.h>
+#include <aws/s3/model/ObjectIdentifier.h>
 #include <aws/core/utils/stream/PreallocatedStreamBuf.h>
 #include <aws/core/utils/memory/stl/AWSStreamFwd.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
@@ -47,6 +50,8 @@ static constexpr const uint64_t kS3MinBufSize     = MB(5);
 static constexpr const uint64_t kS3DefaultBufSize = MB(8);
 static constexpr const uint64_t kS3MaxBufSize     = GB(5);
 static constexpr const uint64_t kS3MaxMultiPart   = 10000;
+// Can only delete 1000 objects at a time, but we are conservative
+static constexpr const uint64_t kS3MaxDelete = 995;
 // TODO: How to set this number?  Base it on cores on machines and/or memory
 // use?
 static constexpr const uint64_t kNumS3Threads = 36;
@@ -923,7 +928,11 @@ galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
   }
   auto& listing = s3aw.GetListingRef();
   for (const auto& content : s3result.GetContents()) {
-    listing.emplace(FromAwsString(content.GetKey()));
+    std::string file(FromAwsString(content.GetKey()));
+    if (file.find(object) == 0) {
+      file = std::string(file.begin() + object.size() + 1, file.end());
+    }
+    listing.emplace(file);
   }
 
   return galois::ResultSuccess();
@@ -939,6 +948,50 @@ S3ListAsync(const std::string& bucket, const std::string& object) {
     return res.error();
   }
   return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
+}
+
+static void
+S3SendDelete(const Aws::Vector<Aws::S3::Model::ObjectIdentifier>& aws_objs,
+             const std::string& bucket) {
+  Aws::S3::Model::DeleteObjectsRequest object_request;
+  Aws::S3::Model::Delete aws_delete;
+  aws_delete.SetObjects(aws_objs);
+  object_request.SetDelete(aws_delete);
+  object_request.SetBucket(ToAwsString(bucket));
+  // fmt::print("DELETE [{}] files: {} {}\n",
+  // bucket, aws_objs.size(), (*aws_objs.begin()).GetKey());
+  auto s3_client = GetS3Client();
+  auto s3outcome = s3_client->DeleteObjects(object_request);
+  if (!s3outcome.IsSuccess()) {
+    const auto& error = s3outcome.GetError();
+    GALOIS_LOG_FATAL("\n  Failed Delete\n  {}: {}\n  [{}]",
+                     error.GetExceptionName(), error.GetMessage(), bucket);
+  }
+}
+galois::Result<void> S3Delete(const std::string& bucket,
+                              const std::string& object,
+                              const std::unordered_set<std::string>& files) {
+  if (files.size() == 0)
+    return galois::ResultSuccess();
+  Aws::Vector<Aws::S3::Model::ObjectIdentifier> aws_objs;
+
+  uint64_t index = 0;
+  for (const auto& file : files) {
+    // Must send a batch of kS3DefaultBufSize or fewer at a time
+    if (index && (index % kS3MaxDelete) == 0) {
+      S3SendDelete(aws_objs, bucket);
+      aws_objs.clear();
+    }
+    Aws::S3::Model::ObjectIdentifier oid;
+    oid.SetKey(ToAwsString(galois::JoinPath(object, file)));
+    aws_objs.push_back(oid);
+    index++;
+  }
+  if (aws_objs.size() > 0) {
+    S3SendDelete(aws_objs, bucket);
+  }
+
+  return galois::ResultSuccess();
 }
 
 } /* namespace tsuba */

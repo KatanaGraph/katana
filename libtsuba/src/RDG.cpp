@@ -108,9 +108,16 @@ std::string RDGMeta::FileName(const std::string& rdg_path, uint64_t version) {
 
 std::string RDGMeta::PartitionFileName(const std::string& rdg_path,
                                        uint32_t node_id, uint64_t version) {
-  // witchel: This special case isn't great, but lineage is coming
-  if(rdg_path.size() == 0) {
+  // witchel: These special casea aren't great, but lineage is coming
+  if (rdg_path.size() == 0) {
     return fmt::format("{}_{}_{}", "meta", node_id, version);
+  } else if (rdg_path.find("_") != std::string::npos) {
+    auto res = galois::ExtractDirName(rdg_path);
+    if (!res) {
+      GALOIS_LOG_DEBUG("failed to get directory from {}", rdg_path);
+      return "";
+    }
+    return fmt::format("{}/{}_{}_{}", res.value(), "meta", node_id, version);
   }
   return fmt::format("{}_{}_{}", rdg_path, node_id, version);
 }
@@ -1069,11 +1076,7 @@ galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {
       return res.error();
     }
     TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-    auto name_res = galois::ExtractFileName(t_path);
-    if (!name_res) {
-      return name_res.error();
-    }
-    rdg->topology_path = name_res.value();
+    rdg->topology_path = galois::ExtractFileName(t_path);
   }
 
   auto node_write_result = WriteTable(*rdg->node_table, rdg->node_properties,
@@ -1461,17 +1464,14 @@ galois::Result<void> tsuba::Store(RDGHandle handle, RDG* rdg, FileFrame* ff) {
     return res.error();
   }
   TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-  auto name_res = galois::ExtractFileName(t_path);
-  if (!name_res) {
-    return name_res.error();
-  }
-  rdg->topology_path = name_res.value();
+  rdg->topology_path = galois::ExtractFileName(t_path);
 
   return DoStore(handle, rdg);
 }
 
 // Return the set of file names that hold this RDG's data
-galois::Result<std::unordered_set<std::string>> tsuba::FileNames(RDGHandle handle) {
+galois::Result<std::unordered_set<std::string>>
+tsuba::FileNames(RDGHandle handle) {
   if (!handle.impl_->AllowsRead()) {
     GALOIS_LOG_DEBUG("handle does not allow full read");
     return ErrorCode::InvalidArgument;
@@ -1481,20 +1481,24 @@ galois::Result<std::unordered_set<std::string>> tsuba::FileNames(RDGHandle handl
     return rdg_res.error();
   }
   std::unordered_set<std::string> fnames{};
-  for(auto i = 0U; i < handle.impl_->rdg_meta.num_hosts; ++i) {
+  // Add master meta file
+  fnames.emplace(galois::ExtractFileName(handle.impl_->rdg_path));
+  for (auto i = 0U; i < handle.impl_->rdg_meta.num_hosts; ++i) {
     // All other file names are directory-local, so we pass an empty
-    // directory instead of handle.impl_->rdg_path,
-    fnames.emplace(RDGMeta::PartitionFileName("",
-                                              i,
-                                              handle.impl_->rdg_meta.version));
+    // directory instead of handle.impl_->rdg_path for the partition files
+    fnames.emplace(
+        RDGMeta::PartitionFileName("", i, handle.impl_->rdg_meta.version));
   }
   auto rdg = std::move(rdg_res.value());
-  std::for_each(rdg.node_properties.begin(), rdg.node_properties.end(),
-                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
-  std::for_each(rdg.edge_properties.begin(), rdg.edge_properties.end(),
-                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
-  std::for_each(rdg.part_properties.begin(), rdg.part_properties.end(),
-                [&fnames](tsuba::PropertyMetadata pmd){fnames.emplace(pmd.path);});
+  std::for_each(
+      rdg.node_properties.begin(), rdg.node_properties.end(),
+      [&fnames](tsuba::PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+  std::for_each(
+      rdg.edge_properties.begin(), rdg.edge_properties.end(),
+      [&fnames](tsuba::PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+  std::for_each(
+      rdg.part_properties.begin(), rdg.part_properties.end(),
+      [&fnames](tsuba::PropertyMetadata pmd) { fnames.emplace(pmd.path); });
 
   fnames.emplace(rdg.topology_path);
   return fnames;

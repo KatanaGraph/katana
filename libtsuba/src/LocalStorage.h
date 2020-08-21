@@ -61,6 +61,10 @@ public:
   }
   galois::Result<std::unique_ptr<FileAsyncWork>>
   ListAsync(const std::string& uri) override;
+
+  galois::Result<void>
+  Delete(const std::string& directory,
+         const std::unordered_set<std::string>& files) override;
 };
 
 } // namespace tsuba

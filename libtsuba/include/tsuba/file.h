@@ -50,6 +50,22 @@ FileStore(const std::string& uri, const uint8_t* data, uint64_t size);
 GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 
+/// \param directory is URI whose contents are listed. It can be
+/// Async return type allows this function to be called repeatedly (and
+/// synchronously)
+///   if each call returns a limited number of entries, which is the case for S3
+/// result is in GetListOutRef().  Names are local to directory
+GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+FileListAsync(const std::string& directory);
+
+/// Delete a set of files in a directory
+/// \param directory is a base URI
+/// \param files is a set of file names relative to the directory that should be
+/// deleted
+GALOIS_EXPORT galois::Result<void>
+FileDelete(const std::string& directory,
+           const std::unordered_set<std::string>& files);
+
 // read a part of the file into a caller defined buffer
 GALOIS_EXPORT galois::Result<void> FilePeek(const std::string& filename,
                                             uint8_t* result_buffer,
@@ -65,12 +81,6 @@ static inline galois::Result<void> FilePeek(const StrType& filename, T* obj) {
   return FilePeek(filename, reinterpret_cast<uint8_t*>(obj), /* NOLINT */
                   0, sizeof(*obj));
 }
-
-// List files in the "directory"
-// Async interface to allow many entries, even if each call is synchronous
-//   when done, result is in GetListOutRef()
-GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-FileListAsync(const std::string& directory);
 
 GALOIS_EXPORT galois::Result<void> FileStat(const std::string& filename,
                                             StatBuf* s_buf);

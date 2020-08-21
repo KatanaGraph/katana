@@ -10,18 +10,23 @@
 
 std::string src_uri{};
 uint32_t remaining_versions{10};
+bool opt_verbose{false};
 
 std::string usage_msg = "Usage: {} <RDG URI>\n"
                         "  [-r] remaining versions (default=10)\n"
+                        "  [-v] verbose (default=false)\n"
                         "  [-h] usage message\n";
 
 void parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "hr:")) != -1) {
+  while ((c = getopt(argc, argv, "hr:v")) != -1) {
     switch (c) {
     case 'r':
       remaining_versions = std::atoi(optarg);
+      break;
+    case 'v':
+      opt_verbose = true;
       break;
     case 'h':
       fmt::print(stderr, usage_msg, argv[0]);
@@ -77,60 +82,63 @@ std::vector<tsuba::RDGMeta> FindVersions(const std::string& src_uri,
   return versions;
 }
 
-void
-RDGFileNames(const std::string rdg_uri, std::unordered_set<std::string>& fnames) {
+void RDGFileNames(const std::string rdg_uri,
+                  std::unordered_set<std::string>& fnames) {
   tsuba::StatBuf stat_buf;
-  if(auto res = FileStat(rdg_uri, &stat_buf); !res) {
+  if (auto res = FileStat(rdg_uri, &stat_buf); !res) {
     // The most recent graph version is stored in a file called
     // meta, not meta_xxxx where xxxx is the version number.
     GALOIS_LOG_DEBUG("File does not exist {}", rdg_uri);
     return;
   }
   auto open_res = tsuba::Open(rdg_uri, tsuba::kReadOnly);
-  if(!open_res) {
+  if (!open_res) {
     GALOIS_LOG_DEBUG("Bad RDG Open {}: {}", rdg_uri, open_res.error());
     return;
   }
-  auto rdg_handle = open_res.value();
+  auto rdg_handle     = open_res.value();
   auto new_fnames_res = tsuba::FileNames(rdg_handle);
-  if(!new_fnames_res) {
-    GALOIS_LOG_DEBUG("Bad tsuba::FileNames {}: {}", rdg_uri, new_fnames_res.error());
+  if (!new_fnames_res) {
+    GALOIS_LOG_DEBUG("Bad tsuba::FileNames {}: {}", rdg_uri,
+                     new_fnames_res.error());
     return;
   }
   auto new_fnames = new_fnames_res.value();
 
   fnames.insert(new_fnames.begin(), new_fnames.end());
   auto close_res = tsuba::Close(rdg_handle);
-  if(!close_res) {
+  if (!close_res) {
     GALOIS_LOG_DEBUG("Bad RDG Close {}: {}", rdg_uri, close_res.error());
   }
 }
 
 // Collect file names for the given set of graph versions
 std::unordered_set<std::string>
-GraphFileNames(const std::string& src_uri, const std::vector<tsuba::RDGMeta> metas) {
+GraphFileNames(const std::string& src_uri,
+               const std::vector<tsuba::RDGMeta> metas) {
   std::unordered_set<std::string> fnames{};
   // src_uri == ...meta
   RDGFileNames(src_uri, fnames);
-  for(const auto& meta: metas) {
+  for (const auto& meta : metas) {
     // src_uri == ...meta_meta.version
-    RDGFileNames(tsuba::RDGMeta::FileName(src_uri, meta.version),
-                 fnames);
+    RDGFileNames(tsuba::RDGMeta::FileName(src_uri, meta.version), fnames);
   }
   return fnames;
 }
 
 void GC(const std::string& src_uri, uint32_t remaining_versions) {
   auto versions = FindVersions(src_uri, remaining_versions);
-  fmt::print("Found versions: ");
+  fmt::print("Keeping versions: ");
   std::for_each(versions.begin(), versions.end(),
                 [](const auto& e) { fmt::print("{} ", e.version); });
   fmt::print("\n");
 
   auto save_listing = GraphFileNames(src_uri, versions);
-  fmt::print("Graph paths:\n");
-  std::for_each(save_listing.begin(), save_listing.end(),
-                [](const auto& e) { fmt::print("{}\n", e); });
+  if (opt_verbose) {
+    fmt::print("Graph paths:\n");
+    std::for_each(save_listing.begin(), save_listing.end(),
+                  [](const auto& e) { fmt::print("{}\n", e); });
+  }
 
   auto res = galois::ExtractDirName(src_uri);
   if (!res) {
@@ -149,9 +157,37 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
     }
   }
   auto& listing = faw->GetListingRef();
-  fmt::print("All paths:\n");
-  std::for_each(listing.begin(), listing.end(),
-                [](const auto& e) { fmt::print("{}\n", e); });
+  if (opt_verbose) {
+    fmt::print("All paths:\n");
+    std::for_each(listing.begin(), listing.end(),
+                  [](const auto& e) { fmt::print("{}\n", e); });
+  }
+  // Sanity check, all saved files should be in listing
+  std::for_each(save_listing.begin(), save_listing.end(),
+                [&listing, dir](std::string save_file) {
+                  if (listing.find(save_file) == listing.end()) {
+                    GALOIS_LOG_FATAL("Save file not in listing: [{}] {}", dir,
+                                     save_file);
+                  }
+                });
+  // Set difference, listing - save_listing
+  std::unordered_set<std::string> diff;
+  std::copy_if(listing.begin(), listing.end(),
+               std::inserter(diff, diff.begin()),
+               [&save_listing](std::string list_file) {
+                 return save_listing.find(list_file) == save_listing.end();
+               });
+
+  if (listing.size() - save_listing.size() != diff.size()) {
+    GALOIS_LOG_FATAL("Listing: {} Save: {} sub:{} diff:{} ", listing.size(),
+                     save_listing.size(), listing.size() - save_listing.size(),
+                     diff.size());
+  }
+
+  auto delete_res = tsuba::FileDelete(dir, diff);
+  if (!delete_res) {
+    GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, delete_res.error());
+  }
 }
 
 int main(int argc, char* argv[]) {

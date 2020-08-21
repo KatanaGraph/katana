@@ -37,6 +37,10 @@ public:
            uint8_t* result_buf) override;
   galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
   ListAsync(const std::string& uri) override;
+  // files are relative to uri pseudo-directory or bucket
+  galois::Result<void>
+  Delete(const std::string& uri,
+         const std::unordered_set<std::string>& files) override;
 };
 
 } // namespace tsuba

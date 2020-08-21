@@ -978,10 +978,6 @@ galois::Result<void> S3Delete(const std::string& bucket,
   galois::Result<void> res = galois::ResultSuccess();
   if (files.size() == 0)
     return res;
-  Aws::Vector<Aws::S3::Model::ObjectIdentifier> aws_objs;
-
-  uint64_t index = 0;
-  for (const auto& file : files) {
     // Must send a batch of kS3MaxDelete or fewer at a time
     if (index && (index % kS3MaxDelete) == 0) {
       auto batch_res = S3SendDelete(aws_objs, bucket);

@@ -3,6 +3,7 @@ import numba.types
 import pyarrow
 
 from galois.atomic import atomic_min, GAccumulator, GReduceMax
+from galois.datastructures import InsertBag
 from galois.loops import (
     for_each_operator,
     for_each,
@@ -17,6 +18,9 @@ from galois.timer import StatTimer
 from galois.shmem import setActiveThreads
 
 
+UpdateRequest = np.dtype([("src", np.uint64), ("dist", np.uint32),])
+
+
 def create_distance_array(g: PropertyGraph, source):
     inf_distance = numba.types.uint64.maxval
     a = np.empty(len(g), dtype=np.uint64)
@@ -26,32 +30,34 @@ def create_distance_array(g: PropertyGraph, source):
 
 
 @for_each_operator()
-def sssp_operator(g: PropertyGraph, dists: np.ndarray, edge_lengths, nid, ctx: UserContext):
-    # TODO: We cannot distinguish multiple paths to the same node we we have to do the full amount of work each time.
-    #  With some kind of structures as iteration elements (instead of just nid) we could short cut the case where we
-    #  have already
-    for ii in g.edges(nid):
+def sssp_operator(g: PropertyGraph, dists: np.ndarray, edge_weights, item, ctx: UserContext):
+    if dists[item.src] < item.dist:
+        return
+    for ii in g.edges(item.src):
         dst = g.get_edge_dst(ii)
-        edge_length = edge_lengths[ii]
-        new_distance = edge_length + dists[nid]
+        edge_length = edge_weights[ii]
+        new_distance = edge_length + dists[item.src]
         old_distance = atomic_min(dists, dst, new_distance)
         if new_distance < old_distance:
-            ctx.push(dst)
+            ctx.push((dst, new_distance))
 
 
 @obim_metric()
-def obim_indexer(shift, dists, nid):
-    return dists[nid] >> shift
+def obim_indexer(shift, item):
+    return item.dist >> shift
 
 
 def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
     dists = create_distance_array(graph, source)
+    init_bag = InsertBag[UpdateRequest]()
+    init_bag.push((source, 0))
+
     t = StatTimer("Total SSSP")
     t.start()
     for_each(
-        range(source, source + 1),
+        init_bag,
         sssp_operator(graph, dists, graph.get_edge_property(length_property)),
-        worklist=OrderedByIntegerMetric(obim_indexer(shift, dists)),
+        worklist=OrderedByIntegerMetric(obim_indexer(shift)),
         disable_conflict_detection=True,
         loop_name="SSSP",
     )

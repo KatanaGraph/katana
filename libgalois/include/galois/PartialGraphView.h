@@ -13,6 +13,8 @@
 
 namespace galois {
 
+/// A PartialGraphView is a view of a graph constrained to a contiguous range
+/// of nodes and constrained to a specific set of node and edge properties.
 template <typename Edge>
 class PartialGraphView {
   tsuba::RDG rdg_;
@@ -95,12 +97,24 @@ public:
   }
 
   uint64_t GetEdgeDest(uint64_t edge_id) const {
-    return edges_[edge_id - edge_range_.first];
+    return edges_[GetEdgeOffset(edge_id)];
+  }
+
+  /// GetNodeOffset returns the offset into this PartialGraphView given a
+  /// global node ID.
+  uint64_t GetNodeOffset(uint64_t node_id) const {
+    assert(node_range_.first <= node_id && node_id < node_range_.second);
+    return node_id - node_range_.first;
+  }
+
+  /// GetEdgeOffset returns the offset into this PartialGraphView given a
+  /// global edge ID.
+  uint64_t GetEdgeOffset(uint64_t edge_id) const {
+    assert(edge_range_.first <= edge_id && edge_id < edge_range_.second);
+    return edge_id - edge_range_.first;
   }
 
   const tsuba::RDG& prdg() const { return rdg_; }
-
-  uint64_t node_offset() const { return node_range_.first; }
 };
 
 using PartialV1GraphView = PartialGraphView<uint32_t>;

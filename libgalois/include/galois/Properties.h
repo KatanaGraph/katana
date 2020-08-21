@@ -83,6 +83,11 @@ namespace internal {
 template <typename>
 struct PropertyViewTuple;
 
+template <>
+struct PropertyViewTuple<void> {
+  using type = std::tuple<>;
+};
+
 template <typename... Args>
 struct PropertyViewTuple<std::tuple<Args...>> {
   using type = std::tuple<galois::PropertyViewType<Args>...>;
@@ -169,7 +174,8 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays) {
 template <typename T>
 class PODPropertyView {
 public:
-  using reference = T&;
+  using reference  = T&;
+  using value_type = T;
 
   template <typename U>
   static Result<PODPropertyView> Make(const arrow::NumericArray<U>& array) {
@@ -194,6 +200,8 @@ public:
 
   reference GetValue(size_t i) { return values_[i]; }
 
+  reference operator[](size_t i) { return GetValue(i); }
+
 private:
   PODPropertyView(T* values, const uint8_t* null_bitmap)
       : values_(values), null_bitmap_(null_bitmap) {}
@@ -206,7 +214,8 @@ private:
 /// elements.
 class StringPropertyView {
 public:
-  using reference = std::string_view;
+  using reference  = std::string_view;
+  using value_type = std::string_view;
 
   /// Make creates a string property view from a large string array.
   ///
@@ -237,6 +246,20 @@ private:
   const int64_t* offsets_{};
   const uint8_t* null_bitmap_{};
 };
+
+template <typename T>
+struct PODProperty {
+  using ArrowType = typename arrow::CTypeTraits<T>::ArrowType;
+  using ViewType  = PODPropertyView<T>;
+};
+
+struct UInt8Property : public PODProperty<uint8_t> {};
+
+struct UInt16Property : public PODProperty<uint16_t> {};
+
+struct UInt32Property : public PODProperty<uint32_t> {};
+
+struct UInt64Property : public PODProperty<uint64_t> {};
 
 } // namespace galois
 #endif

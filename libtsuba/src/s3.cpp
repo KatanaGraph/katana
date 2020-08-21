@@ -65,12 +65,18 @@ public:
     auto creds =
         Aws::Auth::DefaultAWSCredentialsProviderChain::GetAWSCredentials();
     if (creds.IsEmpty()) {
-      GALOIS_WARN_ONCE(
-          "AWS credentials not found. S3 storage will likely be inaccessible\n"
-          "    Not providing credentials can slow initialization down\n"
-          "    considerably. If you don't intend to use S3 you can set\n"
-          "    \"AWS_EC2_METADATA_DISABLED=true\" in the environment to\n"
-          "    bypass the most expensive check.");
+      bool metadata_disabled = false;
+      galois::GetEnv("AWS_EC2_METADATA_DISABLED", &metadata_disabled);
+
+      if (!metadata_disabled) {
+        GALOIS_WARN_ONCE(
+            "AWS credentials not found. S3 storage will likely be\n"
+            "    inaccessible. Not providing credentials can slow\n"
+            "    initialization down considerably. If you don't\n"
+            "    intend to use S3 you can set\n"
+            "    \"AWS_EC2_METADATA_DISABLED=true\" in the environment\n"
+            "    to bypass the most expensive check.");
+      }
     }
     return creds;
   }

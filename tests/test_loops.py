@@ -22,8 +22,8 @@ simple_modes = [
     pytest.param(dict(loop_name="test_loop_name"), id="loop_name"),
 ]
 no_conflicts_modes = [
-    pytest.param(dict(disable_conflict_detection=True), id="disable_conflict_detection=True"),
-    pytest.param(dict(disable_conflict_detection=False), id="disable_conflict_detection=False"),
+    pytest.param(dict(no_pushes=True), id="no_pushes=True"),
+    pytest.param(dict(no_pushes=False), id="no_pushes=False"),
 ]
 types = [
     pytest.param(int, id="int"),
@@ -45,7 +45,7 @@ def test_do_all_python(modes):
     assert total == 45
 
 
-@pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)
+@pytest.mark.parametrize("modes", simple_modes)
 def test_for_each_python_with_push(modes):
     total = 0
 
@@ -130,6 +130,17 @@ def test_do_all_specific_type(modes, typ):
 
 
 @pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)
+def test_for_each_no_push(modes):
+    @for_each_operator()
+    def f(out, i, ctx):
+        out[i] += i + 1
+
+    out = np.zeros(10, dtype=int)
+    for_each(range(10), f(out), **modes)
+    assert np.allclose(out, np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+
+
+@pytest.mark.parametrize("modes", simple_modes)
 def test_for_each(modes):
     @for_each_operator()
     def f(out, i, ctx):
@@ -142,7 +153,7 @@ def test_for_each(modes):
     assert np.allclose(out, np.array([1, 4, 3, 4, 5, 6, 7, 8, 9, 10]))
 
 
-@pytest.mark.parametrize("modes", simple_modes + no_conflicts_modes)
+@pytest.mark.parametrize("modes", simple_modes)
 def test_for_each_opaque(modes):
     from galois.datastructures import InsertBag
 

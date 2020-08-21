@@ -349,12 +349,10 @@ Galois.{{loop_type}}({{iterable}},
 {%- endmacro %}
 
 
-{% macro wrap_loop(loop_type, descriptors) -%}
-# FIXME: Needs a way to infer the argument type produced by the loop and get the appropriate closure setup and call
-#  an appropriate impl function.
-cpdef {{loop_type}}(object iterable, func,
+{% set descriptors = ["steal"] %}
+def do_all(object iterable, func,
                     loop_name = None
-                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}):
     cdef:
         const char *c_name
 
@@ -362,32 +360,10 @@ cpdef {{loop_type}}(object iterable, func,
         extract_loop_name,
         handle_loop_name,
         handle_iterable,
-        partial(extract_callback, loop_type),
+        partial(extract_callback, "do_all"),
         partial(handle_descriptors, descriptors|sort),
         release_gil,
-        partial(generate_call, loop_type)], "", [], None))}}
-{% endmacro %}
-
-{% macro wrap_loop_worklist(loop_type, descriptors) -%}
-# FIXME: Needs a way to infer the argument type produced by the loop and get the appropriate closure setup and call
-#  an appropriate impl function.
-cpdef {{loop_type}}(object iterable, func,
-                    loop_name = None,
-                    worklist = None
-                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}) except +:
-    cdef:
-        const char *c_name
-
-    {{indent(1, nested_statements([
-        extract_loop_name,
-        handle_loop_name,
-        handle_iterable,
-        partial(extract_callback, loop_type),
-        handle_worklist,
-        release_gil,
-        partial(handle_descriptors, descriptors|sort),
-        partial(generate_call, loop_type)], "", [], None))}}
-{% endmacro %}
+        partial(generate_call, "do_all")], "", [], None))}}
 
 
 class Worklist:
@@ -400,8 +376,26 @@ class OrderedByIntegerMetric(Worklist):
     def __init__(self, indexer):
         self.indexer = indexer
 
-{{ wrap_loop("do_all", ["steal"]) }}
-{{ wrap_loop_worklist("for_each", ["steal", "no_pushes", "disable_conflict_detection"]) }}
+{% set descriptors = ["steal", "no_pushes"] %}
+def for_each(object iterable, func,
+                    loop_name = None,
+                    worklist = None
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %},
+                    disable_conflict_detection=True):
+    cdef:
+        const char *c_name
+
+    assert disable_conflict_detection
+
+    {{indent(1, nested_statements([
+        extract_loop_name,
+        handle_loop_name,
+        handle_iterable,
+        partial(extract_callback, "for_each"),
+        handle_worklist,
+        release_gil,
+        partial(handle_descriptors, descriptors|sort),
+        partial(generate_call, "for_each")], "", ["Galois.disable_conflict_detection()"], None))}}
 
 
 {{numba.register_all_wrappers()}}

@@ -959,6 +959,7 @@ S3SendDelete(const Aws::Vector<Aws::S3::Model::ObjectIdentifier>& aws_objs,
   aws_delete.SetObjects(aws_objs);
   object_request.SetDelete(aws_delete);
   object_request.SetBucket(ToAwsString(bucket));
+
   GALOIS_LOG_DEBUG("\n  DELETE [{}] files: {} {}\n", bucket, aws_objs.size(),
                    (*aws_objs.begin()).GetKey());
   auto s3_client = GetS3Client();

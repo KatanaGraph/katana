@@ -7,7 +7,7 @@
 
 #include <arrow/type_fwd.h>
 #include <arrow/type_traits.h>
-#include <arrow/array/array_binary.h>
+#include <arrow/array.h>
 
 #include "galois/Traits.h"
 #include "galois/Result.h"

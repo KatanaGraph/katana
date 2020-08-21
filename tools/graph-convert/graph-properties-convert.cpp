@@ -19,9 +19,8 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <arrow/api.h>
-#include <arrow/buffer.h>
 #include <arrow/io/api.h>
-#include <arrow/array/builder_binary.h>
+#include <arrow/array.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
 

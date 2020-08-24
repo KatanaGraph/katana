@@ -17,6 +17,7 @@ requirements:
   build:
     - python
     - scikit-build
+    - make
     - jinja2
     - {{ compiler('cxx') }}
     - galois={{ version }}

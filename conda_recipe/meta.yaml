@@ -14,6 +14,7 @@ requirements:
   build:
     - {{ compiler('cxx') }}    
     - cmake>=3.13
+    - make
   host:
     - boost-cpp>=1.71
     - arrow-cpp>=0.17.1,<2.0.0
@@ -44,7 +45,9 @@ requirements:
 
 test:
   requires:
-    - cmake
+    - {{ compiler('cxx') }}
+    - cmake>=3.13
+    - make
   files:
     - test_app/CMakeLists.txt
     - test_app/test_app.cpp

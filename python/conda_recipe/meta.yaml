@@ -1,4 +1,4 @@
-{% set version = "6.0" %}
+{% set version %}{% include "version.txt" %}{% endset %}
 
 package:
   name: galois-python
@@ -6,10 +6,9 @@ package:
 
 source:
   path: ../../
-  patches:
 
 build:
-  number: 4
+  number: 5
   script_env:
     - GALOIS_DOCS_OUTPUT
 
@@ -36,13 +35,13 @@ requirements:
     - pyarrow>=0.17.1,<2.0.0
   run:
     - python
-    - galois={{ version }}
+    - galois
     # Cython is a runtime dependency because a major use case for the package
     # is to use cython in Jupyter notebooks
-    - cython>=0.29.12
+    - cython
     - cxx-compiler
-    - numba>=0.50,<1.0
-    - pyarrow>=0.17.1,<2.0.0
+    - numba
+    - pyarrow
 
 test:
   imports:

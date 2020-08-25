@@ -1,4 +1,4 @@
-{% set version = "6.0" %}
+{% set version %}{% include "version.txt" %}{% endset %}
 
 package:
   name: galois
@@ -8,7 +8,7 @@ source:
   path: ../
 
 build:
-  number: 3
+  number: 5
 
 requirements:
   build:
@@ -17,33 +17,29 @@ requirements:
     - cmake>=3.13
     - make
   host:
-    - boost-cpp>=1.71
-    - arrow-cpp>=0.17.1,<2.0.0
-    - aws-sdk-cpp>=1.7.164
-    - eigen>=3.3.7
-    - fmt>=6.2.1,<7
+    - boost-cpp>=1.71,<2.0a0
+    - arrow-cpp>=0.17.1,<2.0a0
+    - aws-sdk-cpp>=1.7.164,<2.0a0
+    - fmt>=6.2.1,<7.0a0
     - zlib>=1.2.11
     - ncurses>=6.1
     - llvm>=8
     - {{ cdt('numactl-devel') }}
     - libxml2>=2.9.10
-    - libcypher-parser>=0.6.2
-    - nlohmann_json>=3.7.3
-    - howardhinnant_date>=3.0.0
+    - libcypher-parser>=0.6.2,<0.7a0
+    - nlohmann_json>=3.7.3,<4.0a0
+    - howardhinnant_date>=3.0.0,<4.0a0
   run:
-    # TODO: use pinning expressions to handle version matching
-    #  (https://docs.conda.io/projects/conda-build/en/latest/resources/variants.html#pinning-expressions)
-    - boost-cpp>=1.71
-    - arrow-cpp>=0.17.1,<2.0.0
-    - aws-sdk-cpp>=1.7.164
-    - eigen>=3.3.7
-    - fmt>=6.2.1,<7
-    - zlib>=1.2.11
-    - ncurses>=6.1
-    - libxml2>=2.9.10
-    - libcypher-parser>=0.6.2
-    - nlohmann_json>=3.7.3
-    - howardhinnant_date>=3.0.0
+    - boost-cpp
+    - arrow-cpp
+    - aws-sdk-cpp
+    - fmt
+    - zlib
+    - ncurses
+    - libxml2
+    - libcypher-parser
+    - nlohmann_json
+    - howardhinnant_date
 
 test:
   requires:

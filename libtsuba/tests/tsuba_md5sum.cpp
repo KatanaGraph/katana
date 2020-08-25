@@ -47,7 +47,7 @@ void DoMD5(const std::string& path, MD5& md5) {
 
   uint8_t* buf{nullptr};
   uint64_t size;
-  for (uint64_t so_far = 0UL; so_far < stat_buf.size;
+  for (uint64_t so_far = UINT64_C(0); so_far < stat_buf.size;
        so_far += read_block_size) {
     size     = std::min(read_block_size, (stat_buf.size - so_far));
     auto res = tsuba::FileMmap(path, so_far, size);

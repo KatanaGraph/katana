@@ -91,12 +91,12 @@ std::vector<Test> ConstructTests(std::string local_dir, std::string s3_dir) {
 
   // Each of these could be done on a different thread
   MkCpSumLocal(8, local_rnd, s3_rnd, tests);
-  MkCpSumLocal(1UL << 13, local_rnd, s3_rnd, tests);
-  MkCpSumLocal(1UL << 15, local_rnd, s3_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 13, local_rnd, s3_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 15, local_rnd, s3_rnd, tests);
 
   MkCpSumS3(15, local_rnd, s3_rnd, tests);
-  MkCpSumS3((1UL << 13) - 1, local_rnd, s3_rnd, tests);
-  MkCpSumS3((1UL << 15) - 1, local_rnd, s3_rnd, tests);
+  MkCpSumS3((UINT64_C(1) << 13) - 1, local_rnd, s3_rnd, tests);
+  MkCpSumS3((UINT64_C(1) << 15) - 1, local_rnd, s3_rnd, tests);
 
   return tests;
 }

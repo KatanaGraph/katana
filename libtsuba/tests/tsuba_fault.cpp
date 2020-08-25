@@ -16,7 +16,7 @@ bool opt_validate{false};
 int32_t count{1};             // By default do 1 thing
 int32_t node_property_num{0}; // Which node property
 float independent_failure_probability{0.0f};
-uint64_t run_length{0UL};
+uint64_t run_length{UINT64_C(0)};
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-c] count (default=1)\n"
@@ -336,12 +336,13 @@ int main(int argc, char* argv[]) {
     ValidateGraph(rdg);
     exit(0);
   }
-  if (run_length > 0UL) {
+  if (run_length > UINT64_C(0)) {
     tsuba::internal::FaultTestInit(tsuba::internal::FaultMode::RunLength, 0.0f,
                                    run_length);
   } else if (independent_failure_probability > 0.0f) {
     tsuba::internal::FaultTestInit(tsuba::internal::FaultMode::Independent,
-                                   independent_failure_probability, 0UL);
+                                   independent_failure_probability,
+                                   UINT64_C(0));
   }
 
   OpenUpdateStore(src_uri, count);

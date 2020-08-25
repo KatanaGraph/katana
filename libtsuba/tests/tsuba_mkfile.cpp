@@ -48,7 +48,7 @@ void init_data(uint8_t* buf, int32_t limit) {
     buf += 19;
     if (limit > 19) {
       *buf++            = ' ';
-      uint64_t char_idx = 0UL;
+      uint64_t char_idx = UINT64_C(0);
       for (limit -= 20; limit; limit--) {
         *buf++ = chars[char_idx++ % chars_len]; // We could make this faster...
       }
@@ -84,16 +84,16 @@ void parse_arguments(int argc, char* argv[]) {
 
   switch (*p_end) {
   case 'T':
-    bytes_to_write *= (1UL << 40);
+    bytes_to_write *= (UINT64_C(1) << 40);
     break;
   case 'G':
-    bytes_to_write *= (1UL << 30);
+    bytes_to_write *= (UINT64_C(1) << 30);
     break;
   case 'M':
-    bytes_to_write *= (1UL << 20);
+    bytes_to_write *= (UINT64_C(1) << 20);
     break;
   case 'K':
-    bytes_to_write *= (1UL << 10);
+    bytes_to_write *= (UINT64_C(1) << 10);
     break;
   case 'B':
     break;

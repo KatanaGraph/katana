@@ -18,7 +18,7 @@ enum class FaultMode {
 
 GALOIS_EXPORT void FaultTestInit(FaultMode mode         = FaultMode::None,
                                  float independent_prob = 0.0f,
-                                 uint64_t run_length    = 0UL);
+                                 uint64_t run_length    = UINT64_C(0));
 // LOG_VERBOSE stats
 GALOIS_EXPORT void FaultTestReport();
 

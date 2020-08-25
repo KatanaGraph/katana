@@ -7,9 +7,9 @@
 
 static tsuba::internal::FaultMode mode_{tsuba::internal::FaultMode::None};
 static float independent_prob_{0.0f};
-static uint64_t run_length_{0UL};
-static uint64_t fault_run_length_{0UL};
-static uint64_t ptp_count_{0UL};
+static uint64_t run_length_{UINT64_C(0)};
+static uint64_t fault_run_length_{UINT64_C(0)};
+static uint64_t ptp_count_{UINT64_C(0)};
 static const std::unordered_map<tsuba::internal::FaultMode, std::string>
     fault_mode_label{
         {tsuba::internal::FaultMode::None, "No faults"},

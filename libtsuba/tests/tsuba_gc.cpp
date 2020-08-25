@@ -151,7 +151,7 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
 
   auto save_listing = GraphFileNames(src_uri, versions);
   if (opt_verbose_level > 0) {
-    fmt::print("Graph files: {}\n", save_listing.size());
+    fmt::print("Keep files: {}\n", save_listing.size());
     if (opt_verbose_level > 1) {
       std::for_each(save_listing.begin(), save_listing.end(),
                     [](const auto& e) { fmt::print("{}\n", e); });
@@ -177,7 +177,7 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
   }
   auto& listing = faw->GetListingRef();
   if (opt_verbose_level > 0) {
-    fmt::print("All files: {}\n", listing.size());
+    fmt::print("All  files: {}\n", listing.size());
     if (opt_verbose_level > 1) {
       std::for_each(listing.begin(), listing.end(),
                     [](const auto& e) { fmt::print("{}\n", e); });
@@ -237,7 +237,11 @@ int main(int argc, char* argv[]) {
   }
   parse_arguments(argc, argv);
 
-  fmt::print("gc count {:d}: {}\n", remaining_versions, src_uri);
+  if (opt_dry) {
+    fmt::print("DRY gc count {:d}: {}\n", remaining_versions, src_uri);
+  } else {
+    fmt::print("gc count {:d}: {}\n", remaining_versions, src_uri);
+  }
 
   GC(src_uri, remaining_versions);
 

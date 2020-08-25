@@ -492,10 +492,10 @@ std::vector<int64_t> test_s3_multi_async_batch(const uint8_t* data,
 /* Main */
 
 static uint8_t data_19B[19];
-static uint8_t data_10MB[10 * (1UL << 20)];
-static uint8_t data_100MB[100 * (1UL << 20)];
-static uint8_t data_500MB[500 * (1UL << 20)];
-static uint8_t data_1GB[(1UL << 30)];
+static uint8_t data_10MB[10 * (UINT64_C(1) << 20)];
+static uint8_t data_100MB[100 * (UINT64_C(1) << 20)];
+static uint8_t data_500MB[500 * (UINT64_C(1) << 20)];
+static uint8_t data_1GB[(UINT64_C(1) << 30)];
 
 struct {
   uint8_t* data;

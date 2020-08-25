@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 
   fmt::print("cp {} to {}\n", src_path, dst_path);
 
-  auto buf_res = tsuba::FileMmap(src_path, 0UL, stat_buf.size);
+  auto buf_res = tsuba::FileMmap(src_path, UINT64_C(0), stat_buf.size);
   if (!buf_res) {
     GALOIS_LOG_FATAL("Failed mmap start 0 size {:#x}\n", stat_buf.size);
   }

@@ -11,7 +11,7 @@
 
 namespace tsuba {
 
-constexpr uint64_t kBlockSize       = 4UL << 10; /* 4K */
+constexpr uint64_t kBlockSize       = UINT64_C(4) << 10; /* 4K */
 constexpr uint64_t kBlockOffsetMask = kBlockSize - 1;
 constexpr uint64_t kBlockMask       = ~kBlockOffsetMask;
 

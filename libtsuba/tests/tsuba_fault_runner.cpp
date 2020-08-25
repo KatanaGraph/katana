@@ -10,7 +10,7 @@
 
 std::string src_uri{};
 int64_t num_threads{1L};
-uint64_t run_length_limit{0UL};
+uint64_t run_length_limit{UINT64_C(0)};
 int32_t node_property_total{0}; // Which node property
 float independent_failure_probability{0.0f};
 
@@ -80,7 +80,7 @@ int CrashAndVerify(const std::string& uri_in, char* const* envp,
                                         uri_in.c_str(),
                                         "-n",
                                         node_prop_num.c_str(),
-                                        NULL};
+                                        nullptr};
   status = posix_spawn(&len_pid, fault_len_argv[0], NULL, NULL,
                        const_cast<char* const*>(fault_len_argv), envp);
   if (status == 0) {
@@ -120,7 +120,7 @@ int RunLenFaulty(const std::string& uri_in, char* const* envp,
 int main(int argc, char* argv[], char* const* envp) {
   parse_arguments(argc, argv);
 
-  if (run_length_limit > 0UL) {
+  if (run_length_limit > UINT64_C(0)) {
     RunLenFaulty(src_uri, envp, run_length_limit);
   }
 

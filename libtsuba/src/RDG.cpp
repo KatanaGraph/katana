@@ -863,10 +863,10 @@ galois::Result<void> CreateNewRDG(const std::string& name,
   }
 
   std::string s = json(tsuba::RDGMeta{
-                           .version          = 0UL,
-                           .previous_version = 0UL,
+                           .version          = UINT64_C(0),
+                           .previous_version = UINT64_C(0),
                            .num_hosts        = tsuba::Comm()->Num,
-                           .policy_id        = 0UL,
+                           .policy_id        = UINT64_C(0),
                            .transpose        = false,
                        })
                       .dump();

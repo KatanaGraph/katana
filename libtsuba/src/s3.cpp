@@ -309,7 +309,7 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   }
 
   auto upload_id              = createMpResponse.GetResult().GetUploadId();
-  SegmentedBufferView bufView = SegmentBuf(0UL, data, size);
+  SegmentedBufferView bufView = SegmentBuf(UINT64_C(0), data, size);
   std::vector<SegmentedBufferView::BufPart> parts(bufView.begin(),
                                                   bufView.end());
   // Because zero-length upload handled above, parts should not be empty
@@ -427,7 +427,7 @@ struct PutMulti {
   std::future<Aws::S3::Model::CreateMultipartUploadOutcome> create_fut_{};
   std::future<Aws::S3::Model::CompleteMultipartUploadOutcome> outcome_fut_{};
   std::vector<std::string> part_e_tags_{};
-  uint64_t finished_{0UL};
+  uint64_t finished_{UINT64_C(0)};
   std::string upload_id_{""};
   // Construct by assigning elements, since that is the general case.
   PutMulti() {}
@@ -455,7 +455,7 @@ galois::Result<void> internal::S3PutMultiAsync1(S3AsyncWork& s3aw,
   createMpRequest.WithContentType("application/octet-stream");
   createMpRequest.WithKey(ToAwsString(object));
 
-  SegmentedBufferView bufView = SegmentBuf(0UL, data, size);
+  SegmentedBufferView bufView = SegmentBuf(UINT64_C(0), data, size);
 
   std::string bno = BucketAndObject(bucket, object);
   {
@@ -477,7 +477,7 @@ galois::Result<void> internal::S3PutMultiAsync1(S3AsyncWork& s3aw,
         async_s3_client->CreateMultipartUploadCallable(createMpRequest);
     // it->second.outcome_fut_ // assumed invalid
     it->second.part_e_tags_.resize(bufView.NumSegments());
-    it->second.finished_  = 0UL;
+    it->second.finished_  = UINT64_C(0);
     it->second.upload_id_ = "";
 
     GALOIS_LOG_DEBUG(
@@ -976,8 +976,14 @@ galois::Result<void> S3Delete(const std::string& bucket,
                               const std::string& object,
                               const std::unordered_set<std::string>& files) {
   galois::Result<void> res = galois::ResultSuccess();
-  if (files.size() == 0)
+  if (files.size() == 0) {
     return res;
+  }
+  Aws::Vector<Aws::S3::Model::ObjectIdentifier> aws_objs;
+
+  uint64_t index = 0;
+  for (const auto& file : files) {
+
     // Must send a batch of kS3MaxDelete or fewer at a time
     if (index && (index % kS3MaxDelete) == 0) {
       auto batch_res = S3SendDelete(aws_objs, bucket);

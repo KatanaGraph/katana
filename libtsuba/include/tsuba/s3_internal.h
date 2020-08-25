@@ -21,7 +21,8 @@ class S3AsyncWork : public FileAsyncWork {
   std::string object_{};
   std::mutex mutex_{};
   std::condition_variable cv_{};
-  uint64_t goal_{0UL}; // Goal initialized > 0, when reaches 0 we are done
+  uint64_t goal_{
+      UINT64_C(0)}; // Goal initialized > 0, when reaches 0 we are done
 
   std::stack<galois::Result<void> (*)(S3AsyncWork& s3aw)> func_stack_{};
   std::string token_{};
@@ -38,12 +39,13 @@ public:
     func_stack_.push(func);
   }
   void SetGoal(uint64_t goal) {
-    GALOIS_LOG_VASSERT(goal > 0UL, "Count of FileAsyncWork must be > 0");
+    GALOIS_LOG_VASSERT(goal > UINT64_C(0),
+                       "Count of FileAsyncWork must be > 0");
     goal_ = goal;
   }
   void GoalMinusOne() {
     std::unique_lock<std::mutex> lk(mutex_);
-    GALOIS_LOG_VASSERT(goal_ > 0UL,
+    GALOIS_LOG_VASSERT(goal_ > UINT64_C(0),
                        "Goal FileAsyncWork is 0, but in GoalMinusOne");
     goal_--;
     lk.unlock(); // Notify without lock

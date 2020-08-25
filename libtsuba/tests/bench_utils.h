@@ -29,4 +29,16 @@ inline int64_t timespec_to_us(struct timespec ts) {
   return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;
 }
 
+inline std::string UsToString(uint64_t us_) {
+  float us                                 = (float)us_;
+  static std::vector<std::string> suffixes = {"us", "ms", "s"};
+  for (auto const& suffix : suffixes) {
+    if (us < 1000) {
+      return fmt::format("{:.1f} {}", us, suffix);
+    }
+    us /= 1000;
+  }
+  return fmt::format("{:.1f} s", us);
+}
+
 #endif

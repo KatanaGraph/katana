@@ -132,14 +132,15 @@ GraphFileNames(const std::string& src_uri,
 }
 
 static std::vector<std::string> suffixes = {"B", "KB", "MB", "GB", "TB", "PB"};
-static std::string BytesToString(uint64_t bytes) {
+static std::string BytesToString(uint64_t bytes_) {
+  float bytes = (float)bytes_;
   for (auto const& suffix : suffixes) {
     if (bytes < 1024) {
-      return fmt::format("{} {}", bytes, suffix);
+      return fmt::format("{:.1f} {}", bytes, suffix);
     }
     bytes /= 1024;
   }
-  return fmt::format("{} PB", bytes);
+  return fmt::format("{:1.f} PB", bytes);
 }
 
 void GC(const std::string& src_uri, uint32_t remaining_versions) {

@@ -29,15 +29,6 @@
 #include <type_traits>
 #include <boost/mpl/has_xxx.hpp>
 
-// depending on compiler version, trivially copyable defintion changes
-#if __GNUC__ < 5
-//! Defines what it means to be trivially copyable
-#define __is_trivially_copyable(type) __has_trivial_copy(type)
-#else
-//! Defines what it means to be trivially copyable
-#define __is_trivially_copyable(type) std::is_trivially_copyable<type>::value
-#endif
-
 namespace galois {
 namespace runtime {
 
@@ -51,19 +42,20 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(tt_is_copyable)
 template <typename T>
 struct is_copyable : public has_tt_is_copyable<T> {};
 
-//! Indicates if T is serializable
-template <typename T>
-struct is_serializable {
-  //! true if T is serializable
-  static const bool value = has_serialize<T>::value || is_copyable<T>::value ||
-                            __is_trivially_copyable(T);
-};
-
 //! Indicates if T is memory copyable
 template <typename T>
 struct is_memory_copyable {
   //! true if T is memory copyable
-  static const bool value = is_copyable<T>::value || __is_trivially_copyable(T);
+  static const bool value =
+      is_copyable<T>::value || std::is_trivially_copyable<T>::value;
+};
+
+//! Indicates if T is serializable
+template <typename T>
+struct is_serializable {
+  //! true if T is serializable
+  static const bool value =
+      has_serialize<T>::value || is_memory_copyable<T>::value;
 };
 
 } // namespace runtime

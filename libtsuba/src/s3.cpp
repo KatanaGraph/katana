@@ -929,6 +929,7 @@ galois::Result<void> internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw) {
   auto& listing = s3aw.GetListingRef();
   for (const auto& content : s3result.GetContents()) {
     std::string file(FromAwsString(content.GetKey()));
+    // Return file names relative to the enclosing directory
     if (file.find(object) == 0) {
       file = std::string(file.begin() + object.size() + 1, file.end());
     }
@@ -950,7 +951,7 @@ S3ListAsync(const std::string& bucket, const std::string& object) {
   return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
 }
 
-static void
+static galois::Result<void>
 S3SendDelete(const Aws::Vector<Aws::S3::Model::ObjectIdentifier>& aws_objs,
              const std::string& bucket) {
   Aws::S3::Model::DeleteObjectsRequest object_request;
@@ -958,28 +959,36 @@ S3SendDelete(const Aws::Vector<Aws::S3::Model::ObjectIdentifier>& aws_objs,
   aws_delete.SetObjects(aws_objs);
   object_request.SetDelete(aws_delete);
   object_request.SetBucket(ToAwsString(bucket));
-  // fmt::print("DELETE [{}] files: {} {}\n",
-  // bucket, aws_objs.size(), (*aws_objs.begin()).GetKey());
+  GALOIS_LOG_DEBUG("\n  DELETE [{}] files: {} {}\n", bucket, aws_objs.size(),
+                   (*aws_objs.begin()).GetKey());
   auto s3_client = GetS3Client();
   auto s3outcome = s3_client->DeleteObjects(object_request);
   if (!s3outcome.IsSuccess()) {
-    const auto& error = s3outcome.GetError();
-    GALOIS_LOG_FATAL("\n  Failed Delete\n  {}: {}\n  [{}]",
-                     error.GetExceptionName(), error.GetMessage(), bucket);
+    GALOIS_LOG_DEBUG("\n  Failed Delete\n  {}: {}\n  [{}]",
+                     s3outcome.GetError().GetExceptionName(),
+                     s3outcome.GetError().GetMessage(), bucket);
+    return ErrorCode::S3Error;
   }
+  return galois::ResultSuccess();
 }
+
 galois::Result<void> S3Delete(const std::string& bucket,
                               const std::string& object,
                               const std::unordered_set<std::string>& files) {
+  galois::Result<void> res = galois::ResultSuccess();
   if (files.size() == 0)
-    return galois::ResultSuccess();
+    return res;
   Aws::Vector<Aws::S3::Model::ObjectIdentifier> aws_objs;
 
   uint64_t index = 0;
   for (const auto& file : files) {
-    // Must send a batch of kS3DefaultBufSize or fewer at a time
+    // Must send a batch of kS3MaxDelete or fewer at a time
     if (index && (index % kS3MaxDelete) == 0) {
-      S3SendDelete(aws_objs, bucket);
+      auto batch_res = S3SendDelete(aws_objs, bucket);
+      // If we get an error code, carry on, but remember it and return it
+      if (!batch_res) {
+        res = batch_res;
+      }
       aws_objs.clear();
     }
     Aws::S3::Model::ObjectIdentifier oid;
@@ -988,10 +997,13 @@ galois::Result<void> S3Delete(const std::string& bucket,
     index++;
   }
   if (aws_objs.size() > 0) {
-    S3SendDelete(aws_objs, bucket);
+    auto batch_res = S3SendDelete(aws_objs, bucket);
+    if (!batch_res) {
+      res = batch_res;
+    }
   }
 
-  return galois::ResultSuccess();
+  return res;
 }
 
 } /* namespace tsuba */

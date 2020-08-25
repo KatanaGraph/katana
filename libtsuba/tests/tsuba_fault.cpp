@@ -94,7 +94,7 @@ static void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
   }
 }
 
-// Should use table->ToString();
+// TODO(witchel) Should use table->ToString();
 static void PrintTable(std::shared_ptr<arrow::Table> table) {
   const auto& schema = table->schema();
   for (int i = 0, n = schema->num_fields(); i < n; i++) {

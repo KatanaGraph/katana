@@ -10,23 +10,28 @@
 
 std::string src_uri{};
 uint32_t remaining_versions{10};
-bool opt_verbose{false};
+int opt_verbose_level{0};
+bool opt_dry{false};
 
 std::string usage_msg = "Usage: {} <RDG URI>\n"
                         "  [-r] remaining versions (default=10)\n"
-                        "  [-v] verbose (default=false)\n"
+                        "  [-n] dry run (default=false)\n"
+                        "  [-v] verbose, can be repeated (default=false)\n"
                         "  [-h] usage message\n";
 
 void parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "hr:v")) != -1) {
+  while ((c = getopt(argc, argv, "hnr:v")) != -1) {
     switch (c) {
     case 'r':
       remaining_versions = std::atoi(optarg);
       break;
+    case 'n':
+      opt_dry = true;
+      break;
     case 'v':
-      opt_verbose = true;
+      opt_verbose_level++;
       break;
     case 'h':
       fmt::print(stderr, usage_msg, argv[0]);
@@ -55,7 +60,7 @@ galois::Result<tsuba::RDGMeta> GetPreviousRDGMeta(tsuba::RDGMeta rdg_meta,
   return make_res.value();
 }
 
-// Return a vector of valid version numbers, with index 0 being the most recent
+// Return a vector of RDGMeta objects, with index 0 being the most recent
 // version Vector can have fewer than remaining_versions entries if there aren't
 // that many previous versions.
 std::vector<tsuba::RDGMeta> FindVersions(const std::string& src_uri,
@@ -126,6 +131,17 @@ GraphFileNames(const std::string& src_uri,
   return fnames;
 }
 
+static std::vector<std::string> suffixes = {"B", "KB", "MB", "GB", "TB", "PB"};
+static std::string BytesToString(uint64_t bytes) {
+  for (auto const& suffix : suffixes) {
+    if (bytes < 1024) {
+      return fmt::format("{} {}", bytes, suffix);
+    }
+    bytes /= 1024;
+  }
+  return fmt::format("{} PB", bytes);
+}
+
 void GC(const std::string& src_uri, uint32_t remaining_versions) {
   auto versions = FindVersions(src_uri, remaining_versions);
   fmt::print("Keeping versions: ");
@@ -134,12 +150,15 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
   fmt::print("\n");
 
   auto save_listing = GraphFileNames(src_uri, versions);
-  if (opt_verbose) {
-    fmt::print("Graph paths:\n");
-    std::for_each(save_listing.begin(), save_listing.end(),
-                  [](const auto& e) { fmt::print("{}\n", e); });
+  if (opt_verbose_level > 0) {
+    fmt::print("Graph files: {}\n", save_listing.size());
+    if (opt_verbose_level > 1) {
+      std::for_each(save_listing.begin(), save_listing.end(),
+                    [](const auto& e) { fmt::print("{}\n", e); });
+    }
   }
 
+  // collect the entire contents of directory into listing
   auto res = galois::ExtractDirName(src_uri);
   if (!res) {
     GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
@@ -157,10 +176,12 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
     }
   }
   auto& listing = faw->GetListingRef();
-  if (opt_verbose) {
-    fmt::print("All paths:\n");
-    std::for_each(listing.begin(), listing.end(),
-                  [](const auto& e) { fmt::print("{}\n", e); });
+  if (opt_verbose_level > 0) {
+    fmt::print("All files: {}\n", listing.size());
+    if (opt_verbose_level > 1) {
+      std::for_each(listing.begin(), listing.end(),
+                    [](const auto& e) { fmt::print("{}\n", e); });
+    }
   }
   // Sanity check, all saved files should be in listing
   std::for_each(save_listing.begin(), save_listing.end(),
@@ -184,9 +205,29 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
                      diff.size());
   }
 
-  auto delete_res = tsuba::FileDelete(dir, diff);
-  if (!delete_res) {
-    GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, delete_res.error());
+  // If verbose, output size of files we are deleting
+  // This does a lot of calls, so it can be slow
+  if (opt_verbose_level > 0) {
+    uint64_t size{UINT64_C(0)};
+    tsuba::StatBuf stat;
+    for (const auto& file : diff) {
+      std::string s3path(galois::JoinPath(dir, file));
+      auto stat_res = tsuba::FileStat(s3path, &stat);
+      if (!stat_res) {
+        GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, stat_res.error());
+      } else {
+        size += stat.size;
+      }
+    }
+    fmt::print("Deleting: {} files, {}\n", diff.size(), BytesToString(size));
+  }
+
+  // If not a dry run, actually delete
+  if (!opt_dry) {
+    auto delete_res = tsuba::FileDelete(dir, diff);
+    if (!delete_res) {
+      GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, delete_res.error());
+    }
   }
 }
 

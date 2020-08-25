@@ -6,5 +6,5 @@ python_extension_module(_pyarrow_wrappers)
 
 install(
   TARGETS _pyarrow_wrappers
-  LIBRARY DESTINATION python/galois/numba
+  LIBRARY DESTINATION python/galois/numba_support
 )

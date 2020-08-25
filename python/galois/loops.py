@@ -11,8 +11,8 @@ from ._loops import (
     UserContext,
     PerSocketChunkFIFO,
 )
-from .numba.closure import ClosureBuilder, Closure
-from .numba.galois_compiler import OperatorCompiler
+from .numba_support.closure import ClosureBuilder, Closure
+from .numba_support.galois_compiler import OperatorCompiler
 
 __all__ = [
     "do_all",
@@ -157,5 +157,5 @@ def is_obim_metric_closure(v):
 
 # Import the numba wrappers people are likely to need.
 # TODO: This imports should probably be elsewhere, but this will work for now.
-import galois.numba.galois
-import galois.numba.pyarrow
+import galois.numba_support.galois
+import galois.numba_support.pyarrow

@@ -35,5 +35,5 @@ def test_import_atomic():
 
 
 def test_import_numba():
-    import galois.numba.pyarrow
-    import galois.numba.galois
+    import galois.numba_support.pyarrow
+    import galois.numba_support.galois

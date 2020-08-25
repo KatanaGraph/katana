@@ -127,14 +127,14 @@ add_dependencies(_connected_components graphs)
 target_link_libraries(_connected_components Galois::shmem)
 
 # Symlink all python source file into binary directory so that documentation generation can load python modules correctly.
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/numba)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/numba_support)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/util)
 file(GLOB_RECURSE PY_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
 foreach(X IN LISTS PY_FILES)
     file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/${X} ${CMAKE_CURRENT_BINARY_DIR}/${X} SYMBOLIC)
 endforeach()
 
-add_subdirectory(numba)
+add_subdirectory(numba_support)
 
 install(
   TARGETS shmem numpy_structs graphs timer atomic datastructures _loops

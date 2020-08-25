@@ -7,7 +7,7 @@ from numba.experimental import jitclass
 from numba.extending import lower_builtin
 from numba.extending import type_callable
 
-from galois.numba.galois_compiler import OperatorCompiler, cfunc
+from galois.numba_support.galois_compiler import OperatorCompiler, cfunc
 
 PointerPair = ctypes.c_void_p * 2
 

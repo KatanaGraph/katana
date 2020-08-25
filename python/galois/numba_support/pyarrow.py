@@ -103,42 +103,42 @@ ArrowArrayNumbaPointerWrapper(
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_int64,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 ArrowArrayNumbaPointerWrapper(
     pyarrow.Int32Array,
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_int32,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 ArrowArrayNumbaPointerWrapper(
     pyarrow.UInt64Array,
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_uint64,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 ArrowArrayNumbaPointerWrapper(
     pyarrow.UInt32Array,
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_uint32,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 ArrowArrayNumbaPointerWrapper(
     pyarrow.lib.FloatArray,
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_float,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 ArrowArrayNumbaPointerWrapper(
     pyarrow.lib.DoubleArray,
     _pyarrow_wrappers.Array_get_address,
     ctypes.c_double,
     addr_func_name="Array_get_address_c",
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )
 
 
@@ -330,5 +330,5 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
 ChunkedArrayNumbaPointerWrapper(
     pyarrow.ChunkedArray,
     _pyarrow_wrappers.ChunkedArray_get_address,
-    override_module_name="galois.numba._pyarrow_wrappers",
+    override_module_name="galois.numba_support._pyarrow_wrappers",
 )

@@ -15,7 +15,7 @@ import numpy as np
 
 import galois
 import galois.loops
-import galois.numba.closure
+import galois.numba_support.closure
 from numba import from_dtype
 
 from .cpp.libgalois cimport Galois, datastructures
@@ -236,7 +236,7 @@ elif isinstance(worklist, PerSocketChunkFIFO):
     {{inner(1, iterable, args + ["make_per_socket_chunk_fifo()"], loop_variable_type)}}
 elif isinstance(worklist, OrderedByIntegerMetric):
     obim_func = worklist.indexer
-    if isinstance(obim_func, galois.numba.closure.UninstantiatedClosure):
+    if isinstance(obim_func, galois.numba_support.closure.UninstantiatedClosure):
         obim_func = obim_func.instantiate(from_dtype(dtype))
 
     if isinstance(obim_func, numba.core.ccallback.CFunc):
@@ -244,7 +244,7 @@ elif isinstance(worklist, OrderedByIntegerMetric):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.address)
         obim_userdata = NULL
-    elif isinstance(obim_func, galois.numba.closure.Closure):
+    elif isinstance(obim_func, galois.numba_support.closure.Closure):
         if not galois.loops.is_obim_metric_closure(obim_func):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.__function_address__)
@@ -314,7 +314,7 @@ else:
 
 {% macro extract_callback(loop_type, inner, iterable, args, loop_variable_type) -%}
 {{"FATAL: loop_variable_type must be set." if not loop_variable_type}}
-if isinstance(func, galois.numba.closure.UninstantiatedClosure):
+if isinstance(func, galois.numba_support.closure.UninstantiatedClosure):
     {% if loop_type == "do_all" %}
     func = func.instantiate(from_dtype(dtype))
     {% else %}
@@ -326,7 +326,7 @@ if isinstance(func, numba.core.ccallback.CFunc):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.address)
     userdata = NULL
-elif isinstance(func, galois.numba.closure.Closure):
+elif isinstance(func, galois.numba_support.closure.Closure):
     if not galois.loops.is_{{loop_type}}_operator_closure(func):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.__function_address__)

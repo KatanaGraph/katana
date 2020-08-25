@@ -101,6 +101,12 @@ galois::Result<RDGMeta> RDGMeta::Make(const std::string& rdg_name) {
   return parse_res.value();
 }
 
+std::string RDGMetaToJsonString(const tsuba::RDGMeta& RDGMeta) {
+  // POSIX specifies that test files end in a newline
+  std::string s = json(RDGMeta).dump() + '\n';
+  return s;
+}
+
 // e.g., rdg_path == s3://witchel-tests-east2/fault/simple/meta
 std::string RDGMeta::FileName(const std::string& rdg_path, uint64_t version) {
   return fmt::format("{}_{}", rdg_path, version);
@@ -862,14 +868,13 @@ galois::Result<void> CreateNewRDG(const std::string& name,
     return create_res;
   }
 
-  std::string s = json(tsuba::RDGMeta{
-                           .version          = UINT64_C(0),
-                           .previous_version = UINT64_C(0),
-                           .num_hosts        = tsuba::Comm()->Num,
-                           .policy_id        = UINT64_C(0),
-                           .transpose        = false,
-                       })
-                      .dump();
+  std::string s = RDGMetaToJsonString(tsuba::RDGMeta{
+      .version          = UINT64_C(0),
+      .previous_version = UINT64_C(0),
+      .num_hosts        = tsuba::Comm()->Num,
+      .policy_id        = UINT64_C(0),
+      .transpose        = false,
+  });
   if (auto res = tsuba::FileStore(
           name, reinterpret_cast<const uint8_t*>(s.data()), s.size());
       !res) {
@@ -1030,7 +1035,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   if (comm->ID == 0) {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-    std::string s = json(handle.impl_->rdg_meta).dump();
+    std::string s = RDGMetaToJsonString(handle.impl_->rdg_meta);
     if (auto res = tsuba::FileStore(
             tsuba::RDGMeta::FileName(handle.impl_->rdg_path,
                                      handle.impl_->rdg_meta.version),
@@ -1040,7 +1045,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
       GALOIS_LOG_ERROR("failed to store previous RDGMeta file");
       return res.error();
     }
-    s = json(new_meta).dump();
+    s = RDGMetaToJsonString(new_meta);
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
     if (auto res = tsuba::FileStore(handle.impl_->rdg_path,
                                     reinterpret_cast<const uint8_t*>(s.data()),

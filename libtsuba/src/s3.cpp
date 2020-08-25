@@ -999,6 +999,7 @@ galois::Result<void> S3Delete(const std::string& bucket,
     aws_objs.push_back(oid);
     index++;
   }
+  
   if (aws_objs.size() > 0) {
     auto batch_res = S3SendDelete(aws_objs, bucket);
     if (!batch_res) {

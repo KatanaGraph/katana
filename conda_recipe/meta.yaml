@@ -48,6 +48,7 @@ requirements:
 test:
   requires:
     - {{ compiler('cxx') }}
+    - {{ cdt('numactl') }}
     - cmake>=3.13
     - make
   files:

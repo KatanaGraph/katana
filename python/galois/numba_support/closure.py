@@ -1,3 +1,4 @@
+import atexit
 import ctypes
 from functools import wraps
 
@@ -8,8 +9,12 @@ from numba.extending import lower_builtin
 from numba.extending import type_callable
 
 from galois.numba_support.galois_compiler import OperatorCompiler, cfunc
+from galois.timer import StatTimer
 
 PointerPair = ctypes.c_void_p * 2
+
+_compilation_timer = StatTimer("Compilation", "Galois-Python")
+atexit.register(_compilation_timer.finalize)
 
 
 class Closure:
@@ -18,9 +23,17 @@ class Closure:
     used by galois to specify operators.
     """
 
-    __slots__ = ["_function", "_userdata", "return_type", "unbound_argument_types", "_captured"]
+    __slots__ = [
+        "_function",
+        "_userdata",
+        "return_type",
+        "unbound_argument_types",
+        "_captured",
+        "__name__",
+        "__qualname__",
+    ]
 
-    def __init__(self, func, userdata, return_type, unbound_argument_types, captured=()):
+    def __init__(self, func, userdata, return_type, unbound_argument_types, captured=(), *, name, qualname):
         """
         :param func: The function to of this closure. Must have an address attribute returning a function pointer
             as an int.
@@ -34,6 +47,8 @@ class Closure:
         self.return_type = return_type
         self.unbound_argument_types = unbound_argument_types
         self._captured = captured
+        self.__name__ = name
+        self.__qualname__ = qualname
 
     @property
     def __function_address__(self):
@@ -176,6 +191,8 @@ class ClosureBuilder:
         self._instance_cache = {}
         self._return_type = return_type
         self.n_unbound_arguments = n_unbound_arguments
+        self.__name__ = self._underlying_function.__name__
+        self.__qualname__ = self._underlying_function.__qualname__
 
     def _generate(self, bound_argument_types, unbound_argument_types):
         if len(unbound_argument_types) != self.n_unbound_arguments:
@@ -195,12 +212,21 @@ class ClosureBuilder:
 
     def bind(self, args, unbound_argument_types):
         arg_types = tuple(typeof(v) for v in args)
-        inst = self._generate(arg_types, unbound_argument_types)
-        env = PointerPair()
-        env_ptr = ctypes.addressof(env)
-        env_struct = inst.Environment(*args)
-        inst.store_struct(env_struct, env_ptr)
-        return Closure(inst.wrapper, env, self._return_type, unbound_argument_types, captured=(env_struct, args),)
+        with _compilation_timer, StatTimer("Compilation", self.__qualname__):
+            inst = self._generate(arg_types, unbound_argument_types)
+            env = PointerPair()
+            env_ptr = ctypes.addressof(env)
+            env_struct = inst.Environment(*args)
+            inst.store_struct(env_struct, env_ptr)
+            return Closure(
+                inst.wrapper,
+                env,
+                self._return_type,
+                unbound_argument_types,
+                captured=(env_struct, args),
+                name=self.__name__,
+                qualname=self.__qualname__,
+            )
 
     def __call__(self, *args):
         return UninstantiatedClosure(self, args)
@@ -218,11 +244,15 @@ class UninstantiatedClosure:
     used by galois to specify operators.
     """
 
-    __slots__ = ["_builder", "_args"]
+    _builder: ClosureBuilder
+
+    __slots__ = ["_builder", "_args", "__name__", "__qualname__"]
 
     def __init__(self, builder, args):
         self._builder = builder
         self._args = args
+        self.__name__ = self._builder.__name__
+        self.__qualname__ = self._builder.__qualname__
 
     def instantiate(self, *unbound_argument_types):
         return self._builder.bind(self._args, unbound_argument_types)

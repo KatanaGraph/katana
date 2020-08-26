@@ -268,10 +268,6 @@ with nogil:
 {% endmacro %}
 
 {% macro handle_loop_name(inner, iterable, args, loop_variable_type) -%}
-# This always passes a loopname since that reduces the size of the binary significantly.
-# If loopname has a performance cost we could have two cases here.
-if c_name == NULL:
-    c_name = "<unnamed>"
 {{inner(0, iterable, args + ["Galois.loopname(c_name)"], loop_variable_type)}}
 {% endmacro %}
 
@@ -301,13 +297,12 @@ else:
 {% endmacro %}
 
 {% macro extract_loop_name(inner, iterable, args, loop_variable_type) -%}
-if loop_name:
-    if not isinstance(loop_name, str):
-        raise TypeError("Expected str loop_name")
-    loop_name_bytes = bytes(loop_name, "utf-8")
-    c_name = <const char*>loop_name_bytes
-else:
-    c_name = NULL
+if not loop_name:
+    loop_name = getattr(func, "__qualname__", getattr(func, "__name__", "<unnamed>"))
+if not isinstance(loop_name, str):
+    raise TypeError("Expected str loop_name")
+loop_name_bytes = bytes(loop_name, "utf-8")
+c_name = <const char*>loop_name_bytes
 
 {{inner(0, iterable, args, loop_variable_type)}}
 {% endmacro %}

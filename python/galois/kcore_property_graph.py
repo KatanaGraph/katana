@@ -48,10 +48,7 @@ def kcore_async(graph: PropertyGraph, k_core_num, property_name):
 
     # Initialize
     do_all(
-        range(num_nodes),
-        compute_degree_count_operator(graph, current_degree.as_numpy()),
-        steal=True,
-        loop_name="initialize_degree_count",
+        range(num_nodes), compute_degree_count_operator(graph, current_degree.as_numpy()), steal=True,
     )
 
     # Setup initial worklist
@@ -59,7 +56,6 @@ def kcore_async(graph: PropertyGraph, k_core_num, property_name):
         range(num_nodes),
         setup_initial_worklist_operator(initial_worklist, current_degree.as_numpy(), k_core_num),
         steal=True,
-        loop_name="initialize_degree_count",
     )
 
     # Compute k-core
@@ -68,7 +64,6 @@ def kcore_async(graph: PropertyGraph, k_core_num, property_name):
         compute_async_kcore_operator(graph, current_degree.as_numpy(), k_core_num),
         steal=True,
         disable_conflict_detection=True,
-        loop_name="compute_kcore",
     )
 
     timer.stop()

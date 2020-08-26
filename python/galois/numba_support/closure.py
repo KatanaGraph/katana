@@ -52,18 +52,15 @@ class _ClosureInstance:
     A closure structure and wrapper compiled for specific types.
     """
 
-    def __init__(self, func, return_type, bound_args, unbound_args, target):
+    def __init__(self, func, return_type, bound_args, unbound_args):
         Environment = self._build_environment(bound_args)
         store_struct = self._build_store_struct(Environment)
         load_struct = self._build_load_struct(Environment)
         wrapper = self._build_wrapper(func, load_struct, return_type, bound_args, unbound_args)
 
-        assert target == "cpu", "Only cpu is supported as target because numba.cfunc only supports cpu."
-
         self.Environment = Environment
         self.store_struct = store_struct
         self.wrapper = wraps(func)(wrapper)
-        self.target = target
 
     @staticmethod
     def _build_environment(bound_args):
@@ -174,10 +171,9 @@ class ClosureBuilder:
     This object manages a cache of compiled closures structures and wrappers (as _ClosureInstance objects).
     """
 
-    def __init__(self, func, *, n_unbound_arguments, return_type=types.void, target="cpu"):
+    def __init__(self, func, *, n_unbound_arguments, return_type=types.void):
         self._underlying_function = func
         self._instance_cache = {}
-        self._target = target
         self._return_type = return_type
         self.n_unbound_arguments = n_unbound_arguments
 
@@ -192,11 +188,7 @@ class ClosureBuilder:
         if key in self._instance_cache:
             return self._instance_cache[key]
         inst = _ClosureInstance(
-            self._underlying_function,
-            self._return_type,
-            bound_argument_types,
-            unbound_args=unbound_argument_types,
-            target=self._target,
+            self._underlying_function, self._return_type, bound_argument_types, unbound_args=unbound_argument_types,
         )
         self._instance_cache[key] = inst
         return inst

@@ -29,7 +29,7 @@ __all__ = [
 # Parallel loops
 
 
-def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
+def do_all_operator(typ=None, nopython=True, **kws):
     """
     >>> @do_all_operator()
     ... def f(arg0, ..., argn, element): ...
@@ -53,8 +53,8 @@ def do_all_operator(typ=None, nopython=True, target="cpu", **kws):
 
     def decorator(f):
         n_args = f.__code__.co_argcount - 1
-        f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, n_unbound_arguments=1, target=target,))
+        f_jit = numba.jit(typ, nopython=nopython, pipeline_class=OperatorCompiler, **kws)(f)
+        builder = wraps(f)(ClosureBuilder(f_jit, n_unbound_arguments=1))
         if n_args == 0:
             return builder()
         return builder
@@ -73,7 +73,7 @@ def is_do_all_operator_closure(v):
     return isinstance(v, Closure) and len(v.unbound_argument_types) == 1
 
 
-def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
+def for_each_operator(typ=None, nopython=True, **kws):
     """
     >>> @for_each_operator()
     ... def f(arg0, ..., argn, element, ctx): ...
@@ -97,8 +97,8 @@ def for_each_operator(typ=None, nopython=True, target="cpu", **kws):
 
     def decorator(f):
         n_args = f.__code__.co_argcount - 2
-        f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, n_unbound_arguments=2, target=target,))
+        f_jit = numba.jit(typ, nopython=nopython, pipeline_class=OperatorCompiler, **kws)(f)
+        builder = wraps(f)(ClosureBuilder(f_jit, n_unbound_arguments=2))
         if n_args == 0:
             return builder()
         return builder
@@ -120,7 +120,7 @@ def is_for_each_operator_closure(v):
 # Ordered By Integer Metric
 
 
-def obim_metric(typ=None, nopython=True, target="cpu", **kws):
+def obim_metric(typ=None, nopython=True, **kws):
     """
     >>> @obim_metric()
     ... def f(arg0, ..., argn, element): ...
@@ -135,8 +135,8 @@ def obim_metric(typ=None, nopython=True, target="cpu", **kws):
 
     def decorator(f):
         n_args = f.__code__.co_argcount - 1
-        f_jit = numba.jit(typ, nopython=nopython, target=target, pipeline_class=OperatorCompiler, **kws)(f)
-        builder = wraps(f)(ClosureBuilder(f_jit, return_type=numba.types.int64, n_unbound_arguments=1, target=target,))
+        f_jit = numba.jit(typ, nopython=nopython, pipeline_class=OperatorCompiler, **kws)(f)
+        builder = wraps(f)(ClosureBuilder(f_jit, return_type=numba.types.int64, n_unbound_arguments=1))
         if n_args == 0:
             return builder()
         return builder

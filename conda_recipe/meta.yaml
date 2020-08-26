@@ -13,6 +13,7 @@ build:
 requirements:
   build:
     - {{ compiler('cxx') }}    
+    - {{ cdt('numactl-devel') }}
     - cmake>=3.13
     - make
   host:
@@ -24,6 +25,7 @@ requirements:
     - zlib>=1.2.11
     - ncurses>=6.1
     - llvm>=8
+    - {{ cdt('numactl-devel') }}
     - libxml2>=2.9.10
     - libcypher-parser>=0.6.2
     - nlohmann_json>=3.7.3

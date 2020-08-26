@@ -23,13 +23,6 @@
 #include <iostream>
 #include <utility>
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/binary_object.hpp>
-#include <boost/serialization/array.hpp>
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/split_member.hpp>
-
 #include "galois/config.h"
 #include "galois/Galois.h"
 #include "galois/gIO.h"
@@ -100,60 +93,6 @@ protected:
     };
     m_data = reinterpret_cast<T*>(m_realdata.get());
   }
-
-private:
-  /*
-   * To support boost serialization
-   */
-  friend class boost::serialization::access;
-  template <typename Archive>
-  void save(Archive& ar, const unsigned int) const {
-
-    // TODO DON'T USE CERR
-    // std::cerr << "save m_size : " << m_size << " Threads : " <<
-    // runtime::activeThreads << "\n";
-    ar << m_size;
-    // for(size_t i = 0; i < m_size; ++i){
-    // ar << m_data[i];
-    //}
-    ar << boost::serialization::make_binary_object(m_data, m_size * sizeof(T));
-    /*
-     * Cas use make_array too as shown below
-     * IMPORTANT: Use make_array as temp fix for benchmarks using non-trivial
-     * structures in nodeData (Eg. SGD) This also requires changes in
-     * libgalois/include/galois/graphs/Details.h (specified in the file).
-     */
-    // ar << boost::serialization::make_array<T>(m_data, m_size);
-  }
-  template <typename Archive>
-  void load(Archive& ar, const unsigned int) {
-    ar >> m_size;
-
-    // TODO DON'T USE CERR
-    // std::cerr << "load m_size : " << m_size << " Threads : " <<
-    // runtime::activeThreads << "\n";
-
-    // TODO: For now, always use allocateInterleaved
-    // Allocates and sets m_data pointer
-    if (!m_data)
-      allocateInterleaved(m_size);
-
-    // for(size_t i = 0; i < m_size; ++i){
-    // ar >> m_data[i];
-    //}
-    ar >> boost::serialization::make_binary_object(m_data, m_size * sizeof(T));
-    /*
-     * Cas use make_array too as shown below
-     * IMPORTANT: Use make_array as temp fix for SGD
-     *            This also requires changes in
-     * libgalois/include/galois/graphs/Details.h (specified in the file).
-     */
-    // ar >> boost::serialization::make_array<T>(m_data, m_size);
-  }
-  // The macro BOOST_SERIALIZATION_SPLIT_MEMBER() generates code which invokes
-  // the save or load depending on whether the archive is used for saving or
-  // loading
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 public:
   /**
@@ -295,17 +234,6 @@ public:
 //! Void specialization
 template <>
 class LargeArray<void> {
-
-private:
-  /*
-   * To support boost serialization
-   * Can use single function serialize instead of save and load, since both save
-   * and load have identical code.
-   */
-  friend class boost::serialization::access;
-  template <typename Archive>
-  void serialize(Archive&, const unsigned int) const {}
-
 public:
   LargeArray(void*, size_t) {}
   LargeArray()                  = default;

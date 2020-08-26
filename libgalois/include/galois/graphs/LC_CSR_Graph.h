@@ -23,12 +23,6 @@
 #include <fstream>
 #include <type_traits>
 
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/split_member.hpp>
-#include <boost/serialization/binary_object.hpp>
-#include <boost/serialization/serialization.hpp>
-
 #include "galois/config.h"
 #include "galois/Galois.h"
 #include "galois/graphs/Details.h"
@@ -223,108 +217,12 @@ protected:
 
   GraphNode getNode(size_t n) { return n; }
 
-private:
-  friend class boost::serialization::access;
-
-  template <typename Archive>
-  void save(Archive& ar, const unsigned int) const {
-    ar << numNodes;
-    ar << numEdges;
-
-    // Large Arrays
-    ar << edgeIndData;
-    ar << edgeDst;
-    ar << edgeData;
-  }
-
-  template <typename Archive>
-  void load(Archive& ar, const unsigned int) {
-    ar >> numNodes;
-    ar >> numEdges;
-
-    // Large Arrays
-    ar >> edgeIndData;
-    ar >> edgeDst;
-    ar >> edgeData;
-
-    if (!nodeData.data()) {
-      if (UseNumaAlloc) {
-        nodeData.allocateBlocked(numNodes);
-        this->outOfLineAllocateBlocked(numNodes);
-      } else {
-        nodeData.allocateInterleaved(numNodes);
-        this->outOfLineAllocateInterleaved(numNodes);
-      }
-
-      // Construct nodeData largeArray
-      for (size_t n = 0; n < numNodes; ++n) {
-        nodeData.constructAt(n);
-      }
-    }
-  }
-
-  // The macro BOOST_SERIALIZATION_SPLIT_MEMBER() generates code which invokes
-  // the save or load depending on whether the archive is used for saving or
-  // loading
-  BOOST_SERIALIZATION_SPLIT_MEMBER()
-
 public:
   LC_CSR_Graph(LC_CSR_Graph&& rhs) = default;
 
   LC_CSR_Graph() = default;
 
   LC_CSR_Graph& operator=(LC_CSR_Graph&&) = default;
-
-  /**
-   * Serializes node data using Boost.
-   *
-   * @param ar Boost archive to serialize to.
-   */
-  void serializeNodeData(boost::archive::binary_oarchive& ar) const {
-    ar << nodeData;
-  }
-
-  /**
-   * Deserializes a Boost archive containing node data to the local node data
-   * variable.
-   *
-   * @param ar Boost archive to deserialize from.
-   */
-  void deSerializeNodeData(boost::archive::binary_iarchive& ar) {
-    ar >> nodeData;
-  }
-
-  /**
-   * Serializes graph using Boost.
-   *
-   * @param ar Boost archive to serialize to.
-   */
-  void serializeGraph(boost::archive::binary_oarchive& ar) const {
-    ar << numNodes;
-    ar << numEdges;
-
-    // Large Arrays
-    ar << nodeData;
-    ar << edgeIndData;
-    ar << edgeDst;
-    ar << edgeData;
-  }
-
-  /**
-   * Deserializes a Boost archive to the local graph.
-   *
-   * @param ar Boost archive to deserialize from.
-   */
-  void deSerializeGraph(boost::archive::binary_iarchive& ar) {
-    ar >> numNodes;
-    ar >> numEdges;
-
-    // Large Arrays
-    ar >> nodeData;
-    ar >> edgeIndData;
-    ar >> edgeDst;
-    ar >> edgeData;
-  }
 
   /**
    * Accesses the "prefix sum" of this graph; takes advantage of the fact

@@ -385,7 +385,8 @@ def for_each(object iterable, func,
     cdef:
         const char *c_name
 
-    assert disable_conflict_detection
+    if not disable_conflict_detection:
+        raise ValueError("disable_conflict_detection=False is not supported")
 
     {{indent(1, nested_statements([
         extract_loop_name,

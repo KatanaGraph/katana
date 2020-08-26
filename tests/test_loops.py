@@ -59,6 +59,17 @@ def test_for_each_python_with_push(modes):
     assert total == 145
 
 
+def test_for_each_conflict_detection_unsupported():
+    total = 0
+
+    def f(i, ctx):
+        nonlocal total
+        total += i
+
+    with pytest.raises(ValueError):
+        for_each(range(10), f, disable_conflict_detection=False)
+
+
 def test_for_each_wrong_closure():
     @do_all_operator()
     def f(out, i):

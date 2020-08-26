@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <mutex>
+
+#include "galois/Logging.h"
 #include "galois/substrate/PageAlloc.h"
 #include "galois/substrate/SimpleLock.h"
-#include "galois/gIO.h"
-
-#include <mutex>
 
 #ifdef __linux__
 #include <linux/mman.h>
@@ -37,17 +37,19 @@ static void* trymmap(size_t size, int flag) {
   std::lock_guard<galois::substrate::SimpleLock> lg(allocLock);
   const int _PROT = PROT_READ | PROT_WRITE;
   void* ptr       = mmap(0, size, _PROT, flag, -1, 0);
-  if (ptr == MAP_FAILED)
+  if (ptr == MAP_FAILED) {
     ptr = nullptr;
+  }
   return ptr;
 }
+
 // mmap flags
 #if defined(MAP_ANONYMOUS)
 static const int _MAP_ANON = MAP_ANONYMOUS;
 #elif defined(MAP_ANON)
 static const int _MAP_ANON     = MAP_ANON;
 #else
-static_assert(0, "No Anonymous mapping");
+static_assert(false, "No Anonymous mapping");
 #endif
 
 static const int _MAP = _MAP_ANON | MAP_PRIVATE;
@@ -69,71 +71,34 @@ static const int _MAP_HUGE     = _MAP;
 size_t galois::substrate::allocSize() { return hugePageSize; }
 
 void* galois::substrate::allocPages(unsigned num, bool preFault) {
-  if (num > 0) {
-    void* ptr =
-        trymmap(num * hugePageSize, preFault ? _MAP_HUGE_POP : _MAP_HUGE);
-    if (!ptr) {
-      gDebug("Huge page alloc failed, falling back");
-      ptr = trymmap(num * hugePageSize, preFault ? _MAP_POP : _MAP);
-    }
-
-    if (!ptr)
-      GALOIS_SYS_DIE("Out of Memory");
-
-    if (preFault && doHandMap)
-      for (size_t x = 0; x < num * hugePageSize; x += 4096)
-        static_cast<char*>(ptr)[x] = 0;
-
-    return ptr;
-  } else {
+  if (num == 0) {
     return nullptr;
   }
+
+  void* ptr = trymmap(num * hugePageSize, preFault ? _MAP_HUGE_POP : _MAP_HUGE);
+  if (!ptr) {
+#ifndef NDEBUG
+    GALOIS_WARN_ONCE("huge page alloc failed, falling back to regular pages");
+#endif
+    ptr = trymmap(num * hugePageSize, preFault ? _MAP_POP : _MAP);
+  }
+
+  if (!ptr) {
+    GALOIS_LOG_FATAL("failed to allocate: {}", errno);
+  }
+
+  if (preFault && doHandMap) {
+    for (size_t x = 0; x < num * hugePageSize; x += 4096) {
+      static_cast<char*>(ptr)[x] = 0;
+    }
+  }
+
+  return ptr;
 }
 
 void galois::substrate::freePages(void* ptr, unsigned num) {
   std::lock_guard<SimpleLock> lg(allocLock);
-  if (munmap(ptr, num * hugePageSize) != 0)
-    GALOIS_SYS_DIE("Unmap failed");
+  if (munmap(ptr, num * hugePageSize) != 0) {
+    GALOIS_LOG_FATAL("munmap failed: {}", errno);
+  }
 }
-
-/*
-
-class PageSizeConf {
-#ifdef MAP_HUGETLB
-  void checkHuge() {
-    std::ifstream f("/proc/meminfo");
-
-    if (!f)
-      return;
-
-    char line[2048];
-    size_t hugePageSizeKb = 0;
-    while (f.getline(line, sizeof(line)/sizeof(*line))) {
-      if (strstr(line, "Hugepagesize:") != line)
-        continue;
-      std::stringstream ss(line + strlen("Hugepagesize:"));
-      std::string kb;
-      ss >> hugePageSizeKb >> kb;
-      if (kb != "kB")
-        galois::substrate::gWarn("error parsing meminfo");
-      break;
-    }
-    if (hugePageSizeKb * 1024 != galois::runtime::hugePageSize)
-      galois::substrate::gWarn("System HugePageSize does not match compiled
-HugePageSize");
-  }
-#else
-  void checkHuge() { }
-#endif
-
-public:
-  PageSizeConf() {
-#ifdef _POSIX_PAGESIZE
-    galois::runtime::pageSize = _POSIX_PAGESIZE;
-#else
-    galois::runtime::pageSize = sysconf(_SC_PAGESIZE);
-#endif
-    checkHuge();
-  }
-};
-*/

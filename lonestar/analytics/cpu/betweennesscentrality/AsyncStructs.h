@@ -1,6 +1,8 @@
 #ifndef GALOIS_BC_ASYNC
 #define GALOIS_BC_ASYNC
 
+#include <iostream>
+
 #include "BCNode.h"
 #include "BCEdge.h"
 #include "galois/Bag.h"

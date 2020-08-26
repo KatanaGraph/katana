@@ -380,12 +380,6 @@ public:
     }
   }
 
-  // template<typename EdgeTy>
-  // const EdgeTy& getEdgeData(edge_iterator it) const {
-  //  assert(edgeData);
-  //  return reinterpret_cast<const EdgeTy*>(edgeData)[*it];
-  //}
-
   //! Get edge data given an edge iterator
   template <typename EdgeTy>
   EdgeTy& getEdgeData(edge_iterator it) {
@@ -810,7 +804,7 @@ void makeSymmetric(FileGraph& in_graph, FileGraph& out) {
 
   g.setNumNodes(in_graph.size());
   g.setNumEdges(numEdges);
-  g.setSizeofEdgeData(EdgeData::has_value ? sizeof(edge_value_type) : 0);
+  g.setSizeofEdgeData(EdgeData::size_of::value);
 
   g.phase1();
   for (FileGraph::iterator ii = in_graph.begin(), ei = in_graph.end(); ii != ei;
@@ -880,7 +874,7 @@ void permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
   size_t numEdges = in_graph.sizeEdges();
   g.setNumNodes(in_graph.size());
   g.setNumEdges(numEdges);
-  g.setSizeofEdgeData(EdgeData::has_value ? sizeof(edge_value_type) : 0);
+  g.setSizeofEdgeData(EdgeData::size_of::value);
 
   g.phase1();
   for (FileGraph::iterator ii = in_graph.begin(), ei = in_graph.end(); ii != ei;

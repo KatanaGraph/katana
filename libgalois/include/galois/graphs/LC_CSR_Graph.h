@@ -275,15 +275,6 @@ public:
     }
   }
 
-  friend void swap(LC_CSR_Graph& lhs, LC_CSR_Graph& rhs) {
-    swap(lhs.nodeData, rhs.nodeData);
-    swap(lhs.edgeIndData, rhs.edgeIndData);
-    swap(lhs.edgeDst, rhs.edgeDst);
-    swap(lhs.edgeData, rhs.edgeData);
-    std::swap(lhs.numNodes, rhs.numNodes);
-    std::swap(lhs.numEdges, rhs.numEdges);
-  }
-
   node_data_reference getData(GraphNode N,
                               MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, false);

@@ -20,14 +20,15 @@
 #ifndef CLUSTERING_H
 #define CLUSTERING_H
 
+#include <random>
+#include <fstream>
+#include <iostream>
+
+#include <llvm/Support/CommandLine.h>
+
 #include "galois/Galois.h"
 #include "galois/AtomicHelpers.h"
 #include "galois/LargeArray.h"
-
-#include "llvm/Support/CommandLine.h"
-
-#include <random>
-#include <fstream>
 
 namespace cll = llvm::cl;
 static cll::opt<bool>

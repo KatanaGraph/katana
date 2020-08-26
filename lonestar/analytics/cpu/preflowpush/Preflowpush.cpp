@@ -585,7 +585,7 @@ struct PreflowPush {
 
     p.setNumNodes(reader.size());
     p.setNumEdges(numEdges);
-    p.setSizeofEdgeData(sizeof(edge_value_type));
+    p.setSizeofEdgeData(EdgeData::size_of::value);
 
     p.phase1();
     for (ReaderGraph::iterator ii = reader.begin(), ei = reader.end(); ii != ei;

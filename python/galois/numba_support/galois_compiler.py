@@ -48,7 +48,11 @@ def constant_function_pointer(context, builder: ir.IRBuilder, ty, pyval):
     """
     Override the internal handling of ExternalFunctionPointer to avoid generating a global variable.
     """
-    if external_function_pointer_as_constant and hasattr(context, "_operator_context") and context.is_operator_context:
+    if (
+        external_function_pointer_as_constant
+        and hasattr(context, "is_operator_context")
+        and context.is_operator_context
+    ):
         ptrty = context.get_function_pointer_type(ty)
         return ir.Constant(ir.types.IntType(64), ty.get_pointer(pyval)).inttoptr(ptrty)
     # If we are not in an operator context (as defined by OperatorCompiler use) then call the numba implementation

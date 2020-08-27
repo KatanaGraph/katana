@@ -6,17 +6,21 @@
 
 from pyarrow.lib cimport *
 from .cpp.libstd.boost cimport std_result
+from .numba_support._pyarrow_wrappers import unchunked
 
 {% import "numba_wrapper_support.pyx.jinja" as numba %}
 
 {{numba.header()}}
 
+
 cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
+
 
 cdef void handle_result(std_result[void] res) except *:
     if not res.has_value():
         raise RuntimeError(str(res.error().message(), "ascii"))
+
 
 cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) except *:
     if not res.has_value():
@@ -172,17 +176,45 @@ cdef class PropertyGraph:
         """
         get_node_property(self, prop)
 
-        Return a `pyarrow` chunked array storing the data for node property `prop`. `prop` may be either a name or an index.
+        Return a `pyarrow` array or chunked array storing the data for node property `prop`.
+        This attempts to unwrap chunked arrays if possible.
+        `prop` may be either a name or an index.
         """
-        return pyarrow_wrap_chunked_array(self.underlying.get().NodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
+        return unchunked(self.get_node_property_chunked(prop))
+
+    def get_node_property_chunked(self, prop):
+        """
+        get_node_property(self, prop)
+
+        Return a `pyarrow` chunked array storing the data for node property `prop`.
+        `prop` may be either a name or an index.
+        `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
+        """
+        return pyarrow_wrap_chunked_array(
+            self.underlying.get().NodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
+        )
 
     def get_edge_property(self, prop):
         """
         get_edge_property(self, prop)
 
-        Return a `pyarrow` chunked array storing the data for edge property `prop`. `prop` may be either a name or an index.
+        Return a `pyarrow` array or chunked array storing the data for edge property `prop`.
+        This attempts to unwrap chunked arrays if possible.
+        `prop` may be either a name or an index.
         """
-        return pyarrow_wrap_chunked_array(self.underlying.get().EdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
+        return unchunked(self.get_edge_property_chunked(prop))
+
+    def get_edge_property_chunked(self, prop):
+        """
+        get_edge_property_chunked(self, prop)
+
+        Return a `pyarrow` chunked array storing the data for edge property `prop`.
+        `prop` may be either a name or an index.
+        `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
+        """
+        return pyarrow_wrap_chunked_array(
+            self.underlying.get().EdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
+        )
 
     def add_node_property(self, table):
         """

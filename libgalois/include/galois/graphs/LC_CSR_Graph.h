@@ -55,7 +55,6 @@ template <typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
           typename FileEdgeTy = EdgeTy>
 class LC_CSR_Graph :
     //! [doxygennuma]
-    private boost::noncopyable,
     private internal::LocalIteratorFeature<UseNumaAlloc>,
     private internal::OutOfLineLockableFeature<HasOutOfLineLockable &&
                                                !HasNoLockable> {
@@ -218,11 +217,7 @@ protected:
   GraphNode getNode(size_t n) { return n; }
 
 public:
-  LC_CSR_Graph(LC_CSR_Graph&& rhs) = default;
-
   LC_CSR_Graph() = default;
-
-  LC_CSR_Graph& operator=(LC_CSR_Graph&&) = default;
 
   /**
    * Accesses the "prefix sum" of this graph; takes advantage of the fact

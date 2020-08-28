@@ -143,13 +143,6 @@ protected:
   }
 
 public:
-  //! default constructor
-  LC_CSR_Labeled_Graph() = default;
-  //! default move constructor
-  LC_CSR_Labeled_Graph(LC_CSR_Labeled_Graph&& rhs) = default;
-  //! default = operator
-  LC_CSR_Labeled_Graph& operator=(LC_CSR_Labeled_Graph&&) = default;
-
   /////////////////////////////////////////////////////////////////////////////
   // Access functions
   /////////////////////////////////////////////////////////////////////////////

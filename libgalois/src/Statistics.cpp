@@ -83,6 +83,13 @@ void StatManager::print(void) {
 
 void StatManager::printStats(std::ostream& out) {
   mergeStats();
+
+  if (intStats.cbegin() == intStats.cend() &&
+      fpStats.cbegin() == fpStats.cend() &&
+      strStats.cbegin() == strStats.cend()) {
+    return;
+  }
+
   printHeader(out);
   intStats.print(out);
   fpStats.print(out);

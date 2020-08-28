@@ -3,4 +3,3 @@ pin_run_as_build:
   pyarrow: x.x
   cython: x.x
   python: x.x
-  galois: x.x.x

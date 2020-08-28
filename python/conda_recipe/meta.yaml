@@ -1,5 +1,15 @@
 {% set version %}{% include "version.txt" %}{% endset %}
 
+# Check environment variables to determine build context
+{% set ci_build = environ.get("CI", False) %}
+{% set dev_build = environ.get("GALOIS_DEV_BUILD", ci_build) %}
+
+# For dev builds, add ".devN" to the version number, for N being the git commit count since the last tag.
+# This makes the build come BEFORE the plain version.
+{% set version %}{{ version }}{{ ".dev" + environ.get("GIT_DESCRIBE_NUMBER", "") if dev_build }}{% endset %}
+# The number is the github run number or if that is not set the git describe number (commit count since last tag).
+{% set build_number = environ.get("GITHUB_RUN_NUMBER", environ.get("GIT_DESCRIBE_NUMBER")) %}
+
 package:
   name: galois-python
   version: {{ version }}
@@ -8,7 +18,11 @@ source:
   path: ../../
 
 build:
-  number: 5
+  number: {{ build_number }}
+  # For dev builds, the build string includes the git hash and a tag stating where the build is happening.
+  {% if dev_build %}
+  string: {{ environ.get("GIT_DESCRIBE_HASH") }}_{{ "ci_" if ci_build }}{{ build_number }}
+  {% endif %}
   script_env:
     - GALOIS_DOCS_OUTPUT
 
@@ -35,7 +49,7 @@ requirements:
     - pyarrow>=0.17.1,<2.0.0
   run:
     - python
-    - galois
+    - galois={{ version }}
     # Cython is a runtime dependency because a major use case for the package
     # is to use cython in Jupyter notebooks
     - cython
@@ -66,7 +80,7 @@ about:
   home: https://katanagraph.com/
   license: BSD
   license_file: LICENSE.txt
-  summary: Library for building parallel graph algorithms.
+  summary: A Python interface to the Galois library for building parallel graph algorithms.
 
 extra:
   recipe-maintainers:

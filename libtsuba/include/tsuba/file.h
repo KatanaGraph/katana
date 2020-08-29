@@ -26,7 +26,7 @@ constexpr T RoundUpToBlock(T val) {
 }
 
 struct StatBuf {
-  uint64_t size;
+  uint64_t size{UINT64_C(0)};
 };
 
 // Download a file and open it

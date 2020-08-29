@@ -7,6 +7,7 @@
 #include "tsuba/RDG.h"
 #include "tsuba/file.h"
 #include "galois/FileSystem.h"
+#include "bench_utils.h"
 
 std::string src_uri{};
 uint32_t remaining_versions{10};
@@ -131,18 +132,6 @@ GraphFileNames(const std::string& src_uri,
   return fnames;
 }
 
-static std::vector<std::string> suffixes = {"B", "KB", "MB", "GB", "TB", "PB"};
-static std::string BytesToString(uint64_t bytes_) {
-  float bytes = (float)bytes_;
-  for (auto const& suffix : suffixes) {
-    if (bytes < 1024) {
-      return fmt::format("{:.1f} {}", bytes, suffix);
-    }
-    bytes /= 1024;
-  }
-  return fmt::format("{:1.f} PB", bytes);
-}
-
 void GC(const std::string& src_uri, uint32_t remaining_versions) {
   auto versions = FindVersions(src_uri, remaining_versions);
   fmt::print("Keeping versions: ");
@@ -220,7 +209,8 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
         size += stat.size;
       }
     }
-    fmt::print("Deleting: {} files, {}\n", diff.size(), BytesToString(size));
+    auto[scaled_size, units] = BytesToString(size);
+    fmt::print("Deleting: {} files, {:5.1f}{}\n", diff.size(), scaled_size, units);
   }
 
   // If not a dry run, actually delete

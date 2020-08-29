@@ -41,4 +41,17 @@ inline std::string UsToString(uint64_t us_) {
   return fmt::format("{:.1f} s", us);
 }
 
+inline std::pair<float,std::string> BytesToString(uint64_t bytes_) {
+  static std::vector<std::string> suffixes = {"B",  "KB", "MB",
+                                              "GB", "TB", "PB"};
+  float bytes                              = (float)bytes_;
+  for (auto const& suffix : suffixes) {
+    if (bytes < 1024.0) {
+      return std::make_pair(bytes, suffix);
+    }
+    bytes /= 1024;
+  }
+  return std::make_pair(bytes, "PB");
+}
+
 #endif

@@ -255,11 +255,13 @@ class NoLockable {};
 template <typename NodeTy, bool HasLockable>
 struct NodeInfoBaseTypes {
   typedef NodeTy& reference;
+  typedef const NodeTy& const_reference;
 };
 
 template <bool HasLockable>
 struct NodeInfoBaseTypes<void, HasLockable> {
   typedef void* reference;
+  typedef void* const_reference;
 };
 
 //! Specializations for void node data
@@ -275,6 +277,7 @@ public:
   NodeInfoBase(Args&&... args) : data(std::forward<Args>(args)...) {}
 
   typename NodeInfoBase::reference getData() { return data; }
+  typename NodeInfoBase::const_reference getData() const { return data; }
 };
 
 template <bool HasLockable>
@@ -283,6 +286,7 @@ struct NodeInfoBase<void, HasLockable>
                               NoLockable>::type,
       public NodeInfoBaseTypes<void, HasLockable> {
   typename NodeInfoBase::reference getData() { return 0; }
+  typename NodeInfoBase::const_reference getData() const { return 0; }
 };
 
 template <bool Enable>

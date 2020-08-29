@@ -78,9 +78,9 @@ protected:
   void constructEdgeLabelIndex() {
     galois::substrate::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
     galois::do_all(
-        galois::iterate((size_t)0, this->size()),
+        galois::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
-          for (auto e : edges(N)) {
+          for (auto e : BaseGraph::edges(N)) {
             auto& data = this->getEdgeData(e);
             edgeLabels.getLocal()->insert(data);
           }
@@ -113,11 +113,11 @@ protected:
     }
 
     galois::do_all(
-        galois::iterate((size_t)0, this->size()),
+        galois::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
           auto offset    = N * this->numEdgeLabels;
           uint32_t index = 0;
-          for (auto e : edges(N)) {
+          for (auto e : BaseGraph::edges(N)) {
             auto& data = this->getEdgeData(e);
             while (data != edgeIndexToLabelMap[index]) {
               this->edgeIndDataLabeled[offset + index] = *e;
@@ -125,7 +125,7 @@ protected:
               assert(index < this->numEdgeLabels);
             }
           }
-          auto e = edge_end(N);
+          auto e = BaseGraph::edge_end(N);
           while (index < this->numEdgeLabels) {
             this->edgeIndDataLabeled[offset + index] = *e;
             index++;
@@ -143,15 +143,20 @@ protected:
   }
 
 public:
+  using node_data_const_reference =
+      typename BaseGraph::NodeInfoTypes::const_reference;
+
   /////////////////////////////////////////////////////////////////////////////
   // Access functions
   /////////////////////////////////////////////////////////////////////////////
 
-  using BaseGraph::edge_begin;
-  using BaseGraph::edge_end;
-  using BaseGraph::edges;
-  using BaseGraph::raw_begin;
-  using BaseGraph::raw_end;
+  node_data_const_reference getData(GraphNode N) const {
+    return this->nodeData[N].getData();
+  }
+
+  typename BaseGraph::node_data_reference getData(GraphNode N) {
+    return this->nodeData[N].getData();
+  }
 
   /**
    * Grabs edge beginning without lock/safety.
@@ -290,8 +295,8 @@ protected:
    * @param end end of edge list iterator
    * @returns true iff the key exists
    */
-  inline std::optional<edge_iterator>
-  binarySearch(GraphNode key, edge_iterator begin, edge_iterator end) {
+  std::optional<edge_iterator> binarySearch(GraphNode key, edge_iterator begin,
+                                            edge_iterator end) const {
     edge_iterator l = begin;
     edge_iterator r = end - 1;
     while (r >= l) {
@@ -317,20 +322,16 @@ public:
    * @param data label of the edge
    * @returns true iff the edge exists
    */
-  inline bool isConnectedWithEdgeLabel(GraphNode src, GraphNode dst,
-                                       const EdgeTy& data) {
+  bool isConnectedWithEdgeLabel(GraphNode src, GraphNode dst,
+                                const EdgeTy& data) const {
     // trivial check; can't be connected if degree is 0
-    if (degrees[src] == 0)
+    if (degrees[src] == 0) {
       return false;
+    }
     unsigned key    = dst;
     unsigned search = src;
-    auto begin      = edge_begin(search, data);
-    auto end        = edge_end(search, data);
-    auto r          = binarySearch(key, begin, end);
-    if (r)
-      return true;
-    else
-      return false;
+    return binarySearch(key, raw_begin(search, data), raw_end(search, data))
+        .has_value();
   }
 
   /**
@@ -340,10 +341,11 @@ public:
    * @param dst destination node of the edge
    * @returns true iff the edge exists
    */
-  inline bool isConnected(GraphNode src, GraphNode dst) {
+  bool isConnected(GraphNode src, GraphNode dst) const {
     // trivial check; can't be connected if degree is 0
-    if (degrees[src] == 0)
+    if (degrees[src] == 0) {
       return false;
+    }
     for (auto data : distinctEdgeLabels()) {
       if (isConnectedWithEdgeLabel(src, dst, data)) {
         return true;
@@ -365,8 +367,8 @@ public:
         galois::iterate((size_t)0, this->size()),
         [&](size_t node_id) {
           // get this node's first and last edge
-          uint32_t first_edge = *(this->edge_begin(node_id));
-          uint32_t last_edge  = *(this->edge_end(node_id));
+          uint32_t first_edge = *(BaseGraph::edge_begin(node_id));
+          uint32_t last_edge  = *(BaseGraph::edge_end(node_id));
           // get iterators to locations to sort in the vector
           auto begin_sort_iterator = vector_to_sort.begin() + first_edge;
           auto end_sort_iterator   = vector_to_sort.begin() + last_edge;

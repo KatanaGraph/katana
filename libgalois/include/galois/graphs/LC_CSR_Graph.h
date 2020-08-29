@@ -285,7 +285,7 @@ public:
     return edgeData[*ni];
   }
 
-  GraphNode getEdgeDst(edge_iterator ni) { return edgeDst[*ni]; }
+  GraphNode getEdgeDst(edge_iterator ni) const { return edgeDst[*ni]; }
 
   size_t size() const { return numNodes; }
   size_t sizeEdges() const { return numEdges; }

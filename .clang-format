@@ -1,0 +1,162 @@
+---
+# BasedOnStyle: Google
+# Deviations marked with Google:
+Language:        Cpp
+
+# Google: -1
+# Rationale: Use whole shifts for indentation
+AccessModifierOffset: -2
+
+# Google: Align
+# Rationale: fewer options
+AlignAfterOpenBracket: AlwaysBreak
+
+AlignConsecutiveMacros: false
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+
+# Google: Left
+AlignEscapedNewlines: Right
+
+AlignOperands:   true
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All
+
+# Google: WithoutElse
+# Rationale: fewer options
+AllowShortIfStatementsOnASingleLine: Never
+
+# Google: true
+# Rationale: fewer options
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterDefinitionReturnType: None
+
+# Google: None
+# Rationale: Consistent breaks makes it easier to read function definitions
+AlwaysBreakAfterReturnType: TopLevelDefinitions
+
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeColon
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
+BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true
+ColumnLimit:     80
+CommentPragmas:  '^ IWYU pragma:'
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+
+# Google: true
+# Rationale: Fewer options, one true line ending
+DeriveLineEnding: false
+
+# Google: true
+# Rational: Fewer options
+DerivePointerAlignment: false
+
+DisableFormat:   false
+ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
+ForEachMacros:
+  - foreach
+  - Q_FOREACH
+  - BOOST_FOREACH
+IncludeBlocks:   Regroup
+
+# Google include categories assume that 3rd party includes use "" instead of
+# <>. The categories below assume 3rd party includes use <>, but we have to
+# distinguish C system includes from 3rd party ones explicitly.
+IncludeCategories:
+  - Regex:           '^<ext/.*\.h>'
+    Priority:        2
+    SortPriority:    0
+  - Regex:           '^<([^/]+\.h|sys/.*|netinet/*|linux/*)'
+    Priority:        1
+    SortPriority:    0
+  - Regex:           '^<[^/]*/'
+    Priority:        4
+    SortPriority:    0
+  - Regex:           '^<.*'
+    Priority:        3
+    SortPriority:    0
+  - Regex:           '.*'
+    Priority:        5
+    SortPriority:    0
+
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+IncludeIsMainSourceRegex: ''
+IndentCaseLabels: false  # Google: true
+IndentGotoLabels: false  # Google: true
+IndentPPDirectives: None
+IndentWidth:     2
+IndentWrappedFunctionNames: false
+JavaScriptQuotes: Leave
+JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MacroBlockBegin: ''
+MacroBlockEnd:   ''
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+ObjCBinPackProtocolList: Never
+ObjCBlockIndentWidth: 2
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 200
+PointerAlignment: Left
+
+# Google: true
+# Rationale: clang-format does not converge to a single fixpoint when reflowing
+# comments.
+ReflowComments:  false
+
+SortIncludes:    true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles:  false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeSquareBrackets: false
+Standard:        Auto
+TabWidth:        8
+UseCRLF:         false
+UseTab:          Never
+...
+

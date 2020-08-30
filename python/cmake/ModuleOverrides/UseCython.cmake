@@ -223,6 +223,12 @@ function(add_cython_target _name)
 
   list(APPEND cython_include_directories ${cmake_include_directories})
 
+  get_directory_property(cmake_include_directories_source
+                        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        INCLUDE_DIRECTORIES)
+
+  list(APPEND cython_include_directories ${cmake_include_directories_source})
+
   # Determine dependencies.
   # Add the pxd file with the same basename as the given pyx file.
   get_filename_component(pyx_file_basename ${_source_file} NAME_WE)

@@ -58,13 +58,6 @@ requirements:
     - pyarrow
 
 test:
-  imports:
-    - galois
-    - galois.shmem
-    - galois.bfs
-    - galois.loops
-    - galois.graphs
-    - galois.property_graph
   requires:
     - jupyter
     - pytest

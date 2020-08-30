@@ -1,5 +1,5 @@
-from galois.bfs_property_graph import bfs_sync_pg, verify_bfs
-from galois.jaccard_property_graph import jaccard
+from galois.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
+from galois.lonestar.analytics.jaccard import jaccard
 
 
 def test_bfs(property_graph):

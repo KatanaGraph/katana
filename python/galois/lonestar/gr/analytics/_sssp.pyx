@@ -1,7 +1,7 @@
 # cython: cdivision= True
 from galois.shmem cimport *
 from galois.timer import StatTimer
-from .cpp.libstd.atomic cimport atomic
+from galois.cpp.libstd.atomic cimport atomic
 from galois.cpp.libgalois.Galois cimport FLAG_UNPROTECTED
 from galois.cpp.libgalois.datastructures cimport InsertBag
 from galois.cpp.libgalois.atomic cimport GReduceMax, atomicMin

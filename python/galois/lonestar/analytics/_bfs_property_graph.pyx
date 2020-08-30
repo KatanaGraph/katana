@@ -6,7 +6,7 @@ from galois.shmem cimport *
 from cython.operator cimport dereference as deref
 from galois.cpp.libgalois.datastructures cimport InsertBag
 from galois.cpp.libgalois.atomic cimport GReduceMax
-from .property_graph cimport PropertyGraph
+from galois.property_graph cimport PropertyGraph
 
 from galois.timer import StatTimer
 

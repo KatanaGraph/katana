@@ -5,9 +5,9 @@ from numba import jit
 from galois.atomic import GAccumulator, GReduceMax
 from galois.datastructures import InsertBag
 from ._bfs_property_graph import bfs as cython_bfs, verify_bfs as cython_verify_bfs
-from .loops import do_all, do_all_operator
-from .property_graph import PropertyGraph
-from .timer import StatTimer
+from galois.loops import do_all, do_all_operator
+from galois.property_graph import PropertyGraph
+from galois.timer import StatTimer
 
 
 @jit(nopython=True)

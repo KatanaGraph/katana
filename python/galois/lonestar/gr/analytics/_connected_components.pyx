@@ -4,7 +4,7 @@ from galois.cpp.libgalois.Galois cimport FLAG_UNPROTECTED
 from galois.cpp.libgalois.atomic cimport atomicMin
 
 from galois.timer import StatTimer
-from .cpp.libstd.atomic cimport atomic
+from galois.cpp.libstd.atomic cimport atomic
 
 ctypedef uint32_t ComponentTy
 ctypedef atomic[ComponentTy] AtomicComponentTy

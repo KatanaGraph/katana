@@ -1,17 +1,17 @@
 def test_import_applications_flat_graph():
-    import galois.sssp
-    import galois.pagerank
-    import galois.bfs
-    import galois.jaccard
-    import galois.connected_components
+    import galois.lonestar.gr.analytics.sssp
+    import galois.lonestar.gr.analytics.pagerank
+    import galois.lonestar.gr.analytics.bfs
+    import galois.lonestar.gr.analytics.jaccard
+    import galois.lonestar.gr.analytics.connected_components
 
 
 def test_import_applications_property_graph():
-    import galois.bfs_property_graph
-    import galois.jaccard_property_graph
-    import galois.pagerank_property_graph
-    import galois.connected_components_property_graph
-    import galois.kcore_property_graph
+    import galois.lonestar.analytics.bfs
+    import galois.lonestar.analytics.jaccard
+    import galois.lonestar.analytics.pagerank
+    import galois.lonestar.analytics.connected_components
+    import galois.lonestar.analytics.kcore
 
 
 def test_import_loops():

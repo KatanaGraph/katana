@@ -13,7 +13,6 @@
 std::string src_uri{};
 bool opt_print{false};
 bool opt_validate{false};
-bool opt_transaction_bnc{false};
 int32_t count{1};             // By default do 1 thing
 int32_t node_property_num{0}; // Which node property
 float independent_failure_probability{0.0f};
@@ -21,18 +20,19 @@ uint64_t run_length{UINT64_C(0)};
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-c] count (default=1)\n"
-    "  [-t] execute <count> transactions as fast as possible (default=false)\n"
     "  [-n] node property number (default=0)\n"
     "  [-i] Independent failure probability (default=0.0, max=0.5)\n"
     "  [-r] Execute this many PtPs, then die (starts at 1)\n"
     "  [-v] validate graph\n"
     "  [-p] print graph\n"
-    "  [-h] usage message\n";
+    "  [-h] usage message\n"
+    "  when run with just -c, it will mutate & store the graph count times "
+    "with no errors";
 
 void parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "c:n:i:r:vpht")) != -1) {
+  while ((c = getopt(argc, argv, "c:n:i:r:vph")) != -1) {
     switch (c) {
     case 'c':
       count = std::atoi(optarg);
@@ -54,9 +54,6 @@ void parse_arguments(int argc, char* argv[]) {
     } break;
     case 'v':
       opt_validate = true;
-      break;
-    case 't':
-      opt_transaction_bnc = true;
       break;
     case 'p':
       opt_print = true;
@@ -300,37 +297,6 @@ void OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   }
 }
 
-void TxBnc(const std::string& src_uri, int count) {
-  struct timespec start = now();
-
-  auto handle_res = tsuba::Open(src_uri, tsuba::kReadWrite);
-  if (!handle_res) {
-    GALOIS_LOG_FATAL("Open rdg: {}", handle_res.error());
-  }
-  auto handle = handle_res.value();
-
-  auto rdg_res = tsuba::Load(handle);
-  if (!rdg_res) {
-    GALOIS_LOG_FATAL("Load rdg from s3: {}", rdg_res.error());
-  }
-  auto rdg = std::move(rdg_res.value());
-  auto us  = timespec_to_us(timespec_sub(now(), start));
-  fmt::print("Load: {}\n", UsToString(us));
-
-  start = now();
-  for (auto i = 0; i < count; ++i) {
-    if (auto res = tsuba::Store(handle, &rdg); !res) {
-      GALOIS_LOG_FATAL("Store rdg: {}", res.error());
-    }
-  }
-  us = timespec_to_us(timespec_sub(now(), start));
-  fmt::print("Load: {} {}/tx\n", UsToString(us), UsToString(us / count));
-
-  if (auto res = tsuba::Close(handle); !res) {
-    GALOIS_LOG_FATAL("Close local handle: {}", res.error());
-  }
-}
-
 void PrintGraph(const std::string& src_uri) {
   auto handle_res = tsuba::Open(src_uri, tsuba::kReadOnly);
   if (!handle_res) {
@@ -359,11 +325,6 @@ int main(int argc, char* argv[]) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
   parse_arguments(argc, argv);
-
-  if (opt_transaction_bnc) {
-    TxBnc(src_uri, count);
-    exit(0);
-  }
 
   if (opt_print) {
     PrintGraph(src_uri);

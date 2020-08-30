@@ -28,6 +28,9 @@ target_link_libraries(tsuba_md5sum tsuba)
 add_executable(tsuba_gc tsuba_gc.cpp)
 target_link_libraries(tsuba_gc tsuba)
 
+add_executable(tsuba_bench tsuba_bench.cpp)
+target_link_libraries(tsuba_bench tsuba)
+
 add_executable(tsuba_fault tsuba_fault.cpp)
 target_link_libraries(tsuba_fault tsuba)
 

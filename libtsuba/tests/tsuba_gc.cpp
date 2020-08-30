@@ -1,7 +1,3 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/RDG.h"
@@ -209,8 +205,11 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
         size += stat.size;
       }
     }
-    auto[scaled_size, units] = BytesToString(size);
-    fmt::print("Deleting: {} files, {:5.1f}{}\n", diff.size(), scaled_size, units);
+    auto [scaled_size, units] = BytesToPair(size);
+    fmt::print("Deleting: {} files, {:5.1f}{}\n", diff.size(), scaled_size,
+               units);
+  } else {
+    fmt::print("Deleting: {} files\n", diff.size());
   }
 
   // If not a dry run, actually delete

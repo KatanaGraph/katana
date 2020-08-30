@@ -1,0 +1,137 @@
+
+// 2020/08/29
+
+//*** VM and bucket same region
+//** size   19B
+// memfd_create              (8)  59.0 us (N=3) sd  38.6 314.5 KB/s
+// /tmp create               (8)  42.5 ms (N=3) sd  34.2 447.0 B/s
+// S3 Put Sync               (8) 302.8 ms (N=3) sd  52.1  62.0 B/s
+// S3 Put Single Async Batch (8)  36.1 ms (N=3) sd  26.5 526.0 B/s
+// S3 Get ASync One          (8)  73.7 ms (N=3) sd   4.4 257.0 B/s
+// S3 Get Async Batch        (8)  17.9 ms (N=3) sd  10.1   1.0 KB/s
+// S3 Put Multi Async Batch  (8) 172.0 ms (N=3) sd  18.8 110.0 B/s
+// Tsuba::FileStore          (8) 337.4 ms (N=3) sd  15.9  56.0 B/s
+// Tsuba::FileStoreAsync     (8)  20.9 ms (N=3) sd   1.3 908.0 B/s
+// ** size  10MB
+// memfd_create              (8)  42.8 ms (N=3) sd   2.1 233.9 MB/s
+// /tmp create               (8) 320.1 ms (N=3) sd 110.4  31.2 MB/s
+// S3 Put Sync               (8)   1.8 s  (N=3) sd   0.1   5.4 MB/s
+// S3 Put Single Async Batch (8) 334.5 ms (N=3) sd  26.3  29.9 MB/s
+// S3 Get ASync One          (8) 711.7 ms (N=3) sd  42.2  14.1 MB/s
+// S3 Get Async Batch        (8) 368.3 ms (N=3) sd  13.8  27.1 MB/s
+// S3 Put Multi Async Batch  (8) 465.2 ms (N=3) sd  41.2  21.5 MB/s
+// Tsuba::FileStore          (8)   2.7  s (N=3) sd   0.1   3.7 MB/s
+// Tsuba::FileStoreAsync     (8) 589.6 ms (N=3) sd 103.3  17.0 MB/s
+// ** size 100MB
+// memfd_create              (8) 532.0 ms (N=3) sd 115.7 188.0 MB/s
+// /tmp create               (8)   6.2  s (N=3) sd   0.4  16.2 MB/s
+// S3 Put Sync               (8)  10.9 s  (N=3) sd   0.4   9.2 MB/s
+// S3 Put Single Async Batch (8)   2.4  s (N=3) sd   0.2  41.1 MB/s
+// S3 Get ASync One          (8)   3.5  s (N=3) sd   0.1  28.9 MB/s
+// S3 Get Async Batch        (8)   3.4  s (N=3) sd   0.0  29.4 MB/s
+// S3 Put Multi Async Batch  (8)   3.6  s (N=3) sd   1.4  27.5 MB/s
+// Tsuba::FileStore          (8)   7.0  s (N=3) sd   2.2  14.3 MB/s
+// Tsuba::FileStoreAsync     (8)   3.0  s (N=3) sd   0.5  33.8 MB/s
+// ** size 500MB
+// memfd_create              (8)   2.2  s (N=3) sd   0.0 226.5 MB/s
+// /tmp create               (8)  32.2  s (N=3) sd   0.0  15.5 MB/s
+// S3 Put Sync               (8)  49.6 s  (N=3) sd   3.0  10.1 MB/s
+// S3 Put Single Async Batch (8)  34.4  s (N=3) sd   0.0  14.5 MB/s
+// S3 Get ASync One          (8)  34.4  s (N=3) sd   0.1  14.5 MB/s
+// S3 Get Async Batch        (8)  34.3  s (N=3) sd   0.1  14.6 MB/s
+// S3 Put Multi Async Batch  (8)  34.6  s (N=3) sd   0.0  14.5 MB/s
+// Tsuba::FileStore          (8)  36.6  s (N=3) sd   0.5  13.7 MB/s
+// Tsuba::FileStoreAsync     (8)  34.5  s (N=3) sd   0.0  14.5 MB/s
+// ** size 1GB
+// memfd_create              ( 6)   3.1  s (N=1) sd 0.0
+// /tmp create               ( 6)  50.1  s (N=1) sd 0.0
+// S3 Put Single Async Batch ( 6)  53.1  s (N=1) sd 0.0
+// S3 Get ASync One          ( 6)  52.7  s (N=1) sd 0.0
+// S3 Get Async Batch        ( 6)  52.6  s (N=1) sd 0.0
+// S3 Put Multi Async Batch  ( 6)  53.0  s (N=1) sd 0.0
+// Tsuba::FileStore          ( 6)  54.1  s (N=1) sd 0.0
+// Tsuba::FileStoreAsync     ( 6)  52.9  s (N=1) sd 0.0
+
+
+// 2020/07/14
+
+// *** VM and bucket same region
+// ** size   19B
+// memfd_create             ( 8)  42.7 us (N=3) sd 21.9
+// /tmp create              ( 8)  34.3 ms (N=3) sd 25.9
+// S3 Put Async Batch       ( 8)  82.0 ms (N=3) sd 44.5
+// Tsuba::FileStore         ( 8) 385.5 ms (N=3) sd 12.1
+// Tsuba::FileStoreAsync    ( 8)  22.4 ms (N=3) sd 0.9
+// S3 Put Multi Async Batch ( 8) 171.4 ms (N=3) sd 15.0
+// ** size  10MB
+// memfd_create             ( 8)  35.0 ms (N=3) sd 1.6
+// /tmp create              ( 8) 322.0 ms (N=3) sd 66.4
+// S3 Put Async Batch       ( 8) 761.0 ms (N=3) sd 4.1
+// Tsuba::FileStore         ( 8)   2.4  s (N=3) sd 0.1
+// Tsuba::FileStoreAsync    ( 8) 922.8 ms (N=3) sd 87.6
+// S3 Put Multi Async Batch ( 8) 886.0 ms (N=3) sd 26.2
+// ** size 100MB
+// memfd_create             ( 8) 415.8 ms (N=3) sd 10.2
+// /tmp create              ( 8)   6.2  s (N=3) sd 0.5
+// S3 Put Async Batch       ( 8)   6.9  s (N=3) sd 0.0
+// Tsuba::FileStore         ( 8)   8.8  s (N=3) sd 0.1
+// Tsuba::FileStoreAsync    ( 8)   7.1  s (N=3) sd 0.1
+// S3 Put Multi Async Batch ( 8)   7.0  s (N=3) sd 0.0
+// ** size 500MB
+// memfd_create             ( 8)   2.0  s (N=3) sd 0.0
+// /tmp create              ( 8)  32.3  s (N=3) sd 0.2
+// S3 Put Async Batch       ( 8)  34.4  s (N=3) sd 0.1
+// Tsuba::FileStore         ( 8)  39.5  s (N=3) sd 5.0
+// Tsuba::FileStoreAsync    ( 8)  34.5  s (N=3) sd 0.1
+// S3 Put Multi Async Batch ( 8)  34.7  s (N=3) sd 0.1
+// ** size 1GB
+// memfd_create             ( 6)   3.1  s (N=1) sd 0.0
+// /tmp create              ( 6)  50.1  s (N=1) sd 0.0
+// S3 Put Async Batch       ( 6)  52.9  s (N=1) sd 0.0
+// Tsuba::FileStore         ( 6)  56.5  s (N=1) sd 0.0
+// Tsuba::FileStoreAsync    ( 6)  52.9  s (N=1) sd 0.0
+// S3 Put Multi Async Batch ( 6)  52.8  s (N=1) sd 0.0
+
+// 2020/06/29
+
+// *** VM and bucket same region
+// ** size   19B
+// memfd_create             ( 8)  41.7 us (N=3) sd 21.1
+// /tmp create              ( 8)  47.3 ms (N=3) sd 44.1
+// S3 Put ASync One         ( 8) 261.0 ms (N=3) sd 188.2
+// S3 Put Sync              ( 8) 500.0 ms (N=3) sd 172.1
+// S3 Put Async Batch       ( 8)  48.7 ms (N=3) sd 30.2
+// S3 Put                   ( 8)   1.2  s (N=3) sd 0.0
+// S3 Put Multi Async Batch ( 8) 186.6 ms (N=3) sd 34.9
+// ** size  10MB
+// memfd_create             ( 8)  33.5 ms (N=3) sd 0.7
+// /tmp create              ( 8) 345.0 ms (N=3) sd 35.5
+// S3 Put ASync One         ( 8)   1.7  s (N=3) sd 0.2
+// S3 Put Sync              ( 8)   2.1  s (N=3) sd 0.3
+// S3 Put Async Batch       ( 8) 815.8 ms (N=3) sd 73.1
+// S3 Put                   ( 8)   2.6  s (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8) 914.9 ms (N=3) sd 30.9
+// ** size 100MB
+// memfd_create             ( 8) 376.7 ms (N=3) sd 0.2
+// /tmp create              ( 8)   6.2  s (N=3) sd 0.5
+// S3 Put ASync One         ( 8)  10.3  s (N=3) sd 0.5
+// S3 Put Sync              ( 8)  10.7  s (N=3) sd 0.3
+// S3 Put Async Batch       ( 8)   6.9  s (N=3) sd 0.0
+// S3 Put                   ( 8)   9.1  s (N=3) sd 0.3
+// S3 Put Multi Async Batch ( 8)   7.0  s (N=3) sd 0.0
+// ** size 500MB
+// memfd_create             ( 8)   1.9  s (N=3) sd 0.0
+// /tmp create              ( 8)  32.2  s (N=3) sd 0.1
+// S3 Put ASync One         ( 8)  50.0  s (N=3) sd 0.8
+// S3 Put Sync              ( 8)  47.8  s (N=3) sd 1.6
+// S3 Put Async Batch       ( 8)  38.1  s (N=3) sd 6.4
+// S3 Put                   ( 8)  36.8  s (N=3) sd 0.8
+// S3 Put Multi Async Batch ( 8)  35.6  s (N=3) sd 2.0
+// ** size 1GB
+// memfd_create             ( 6)   2.9  s (N=1) sd 0.0
+// /tmp create              ( 6)  50.1  s (N=1) sd 0.0
+// S3 Put ASync One         ( 6)  68.2  s (N=1) sd 0.0
+// S3 Put Sync              ( 6)  70.8  s (N=1) sd 0.0
+// S3 Put Async Batch       ( 6)  52.6  s (N=1) sd 0.0
+// S3 Put                   ( 6)  54.3  s (N=1) sd 0.0
+// S3 Put Multi Async Batch ( 6)  52.9  s (N=1) sd 0.0

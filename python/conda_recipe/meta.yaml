@@ -39,7 +39,7 @@ requirements:
     # Cython is a runtime dependency because a major use case for the package
     # is to use cython in Jupyter notebooks
     - cython
-    - cxx-compiler
+    - {{ compiler('cxx') }}
     - numba
     - pyarrow
 

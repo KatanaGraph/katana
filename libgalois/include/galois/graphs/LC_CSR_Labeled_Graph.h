@@ -132,14 +132,6 @@ protected:
           }
         },
         galois::no_stats(), galois::steal());
-
-    // for (size_t i = 0; i < BaseGraph::size(); ++i) {
-    //   for (size_t j = 0; j < numEdgeLabels; ++j) {
-    //     galois::gDebug("Vertex index ", i, " Label ",
-    //     edgeIndexToLabelMap.at(j), " Out edge offset ", edgeIndDataLabeled[i
-    //     * numEdgeLabels + j], "\n");
-    //   }
-    // }
   }
 
 public:
@@ -220,20 +212,17 @@ public:
   /**
    * @param N node to get edges for
    * @param data label to get edges of
-   * @param mflag how safe the acquire should be
    * @returns Range to edges of node N
    */
-  edges_iterator edges(GraphNode N, const EdgeTy& data,
-                       MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(edge_begin(N, data, mflag),
-                                         edge_end(N, data, mflag));
+  edges_iterator edges(GraphNode N, const EdgeTy& data) const {
+    return internal::make_no_deref_range(raw_begin(N, data), raw_end(N, data));
   }
 
   /**
    * @param N node to get degree for
    * @returns Degree of node N
    */
-  auto getDegree(GraphNode N) const {
+  size_t getDegree(GraphNode N) const {
     return std::distance(BaseGraph::raw_begin(N), BaseGraph::raw_end(N));
   }
 
@@ -242,7 +231,7 @@ public:
    * @param data label to get degree of
    * @returns Degree of node N
    */
-  auto getDegree(GraphNode N, const EdgeTy& data) const {
+  size_t getDegree(GraphNode N, const EdgeTy& data) const {
     return std::distance(raw_begin(N, data), raw_end(N, data));
   }
 
@@ -401,18 +390,17 @@ public:
    * searching for the destination via the source vertex's edges.
    * If not found, returns nothing.
    */
-  const std::optional<edge_iterator> findEdge(GraphNode src, GraphNode dst) {
+  std::optional<edge_iterator> findEdge(GraphNode src, GraphNode dst) const {
     // trivial check; can't be connected if degree is 0
-    if (degrees[src] == 0)
+    if (degrees[src] == 0) {
       return std::nullopt;
+    }
 
-    std::optional<edge_iterator> r;
     // loop through all data labels
     for (const data_iterator data : distinctEdgeLabels()) {
       // always use out edges (we want an id to the out edge returned)
-      auto begin = edge_begin(src, *data);
-      auto end   = edge_end(src, *data);
-      r          = binarySearch(dst, begin, end);
+      std::optional<edge_iterator> r =
+          binarySearch(dst, raw_begin(src, *data), raw_end(src, *data));
 
       // return if something was found
       if (r) {
@@ -459,16 +447,6 @@ public:
   void constructAndSortIndex() {
     // sort outgoing edges
     sortAllEdgesByDataThenDst();
-
-    // galois::gDebug("outgoing edges");
-    // for (unsigned i = 0; i < BaseGraph::size(); i++) {
-    //  for (auto j = BaseGraph::edge_begin(i);
-    //       j != BaseGraph::edge_end(i);
-    //       j++) {
-    //    galois::gDebug(i, " ", BaseGraph::getEdgeDst(j), " ",
-    //                  BaseGraph::getEdgeData(j));
-    //  }
-    // }
 
     constructEdgeLabelIndex();
     constructEdgeIndDataLabeled();

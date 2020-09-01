@@ -31,6 +31,9 @@ else()
   target_compile_definitions(galois_support PRIVATE GALOIS_STATIC_LIB)
 endif()
 
+find_package(nlohmann_json 3.7.3 REQUIRED)
+target_link_libraries(galois_support PUBLIC nlohmann_json::nlohmann_json)
+
 find_package(fmt REQUIRED)
 if(fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")

@@ -14,6 +14,8 @@ enum class ErrorCode {
   NotImplemented  = 2,
   NotFound        = 3,
   ArrowError      = 4,
+  JsonParseFailed = 5,
+  JsonDumpFailed  = 6,
 };
 
 } // namespace galois
@@ -36,6 +38,10 @@ public:
       return "not found";
     case ErrorCode::ArrowError:
       return "arrow error";
+    case ErrorCode::JsonParseFailed:
+      return "could not parse json";
+    case ErrorCode::JsonDumpFailed:
+      return "could not dump json";
     default:
       return "unknown error";
     }
@@ -45,6 +51,8 @@ public:
     switch (static_cast<ErrorCode>(c)) {
     case ErrorCode::InvalidArgument:
     case ErrorCode::ArrowError:
+    case ErrorCode::JsonParseFailed:
+    case ErrorCode::JsonDumpFailed:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);

@@ -1,11 +1,11 @@
-#ifndef GALOIS_LIBTSUBA_JSON_H_
-#define GALOIS_LIBTSUBA_JSON_H_
+#ifndef GALOIS_LIBSUPPORT_GALOIS_JSON_H_
+#define GALOIS_LIBSUPPORT_GALOIS_JSON_H_
 
 #include <nlohmann/json.hpp>
 
 #include "galois/Result.h"
 #include "galois/Logging.h"
-#include "tsuba/Errors.h"
+#include "galois/ErrorCode.h"
 
 namespace {
 
@@ -18,7 +18,7 @@ galois::Result<T> JsonParse(O& obj) {
   } catch (const std::exception& exp) {
     GALOIS_LOG_DEBUG("nlohmann::json exception: {}", exp.what());
   }
-  return tsuba::ErrorCode::JsonParseFailed;
+  return galois::ErrorCode::JsonParseFailed;
 }
 
 template <typename T, typename O>
@@ -30,7 +30,17 @@ galois::Result<void> JsonParse(O& obj, T* val) {
   } catch (const std::exception& exp) {
     GALOIS_LOG_DEBUG("nlohmann::json exception: {}", exp.what());
   }
-  return tsuba::ErrorCode::JsonParseFailed;
+  return galois::ErrorCode::JsonParseFailed;
+}
+
+template <typename T>
+galois::Result<std::string> JsonDump(const T& obj) {
+  try {
+    return obj.dump();
+  } catch (const std::exception& exp) {
+    GALOIS_LOG_DEBUG("nlohmann::json exception: {}", exp.what());
+  }
+  return galois::ErrorCode::JsonDumpFailed;
 }
 
 } // namespace

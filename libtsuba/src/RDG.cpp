@@ -18,6 +18,7 @@
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "galois/JSON.h"
 #include "tsuba/Errors.h"
 #include "tsuba/tsuba.h"
 #include "tsuba/file.h"
@@ -26,7 +27,6 @@
 #include "tsuba/FaultTest.h"
 
 #include "GlobalState.h"
-#include "json.h"
 
 // constexpr uint32_t kPropertyMagicNo  = 0x4B808280; // KPRP
 // constexpr uint32_t kPartitionMagicNo = 0x4B808284; // KPRT
@@ -1259,7 +1259,7 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
 
   auto rdg_res = ParseRDGFile(rdg_name);
   if (!rdg_res) {
-    if (rdg_res.error() == tsuba::ErrorCode::JsonParseFailed) {
+    if (rdg_res.error() == galois::ErrorCode::JsonParseFailed) {
       // Maintain this?
       GALOIS_WARN_ONCE("Deprecated behavior: treating invalid RDG file like a "
                        "partition file");
@@ -1300,7 +1300,7 @@ galois::Result<tsuba::RDGHandle> tsuba::Open(const std::string& rdg_name,
 galois::Result<tsuba::RDGStat> tsuba::Stat(const std::string& rdg_name) {
   auto rdg_res = ParseRDGFile(rdg_name);
   if (!rdg_res) {
-    if (rdg_res.error() == tsuba::ErrorCode::JsonParseFailed) {
+    if (rdg_res.error() == galois::ErrorCode::JsonParseFailed) {
       return RDGStat{.num_hosts = 1, .policy_id = 0, .transpose = false};
     }
     return rdg_res.error();

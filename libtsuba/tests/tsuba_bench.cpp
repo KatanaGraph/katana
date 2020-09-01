@@ -10,6 +10,7 @@ uint32_t tx_bnc_count{20};
 bool opt_transaction_bnc{false};
 int opt_verbose_level{0};
 
+std::string prog_name = "tsuba_bench";
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-t] execute ARG transactions as fast as possible (default=20)\n"
@@ -29,18 +30,21 @@ void parse_arguments(int argc, char* argv[]) {
       opt_verbose_level++;
       break;
     case 'h':
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(0);
       break;
     default:
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(EXIT_FAILURE);
     }
   }
 
   // TODO: Validate paths
   auto index = optind;
-  GALOIS_LOG_VASSERT(index < argc, "{} requires property graph URI", argv[0]);
+  if (index >= argc) {
+    fmt::print("{} requires property graph URI argument\n", prog_name);
+    exit(EXIT_FAILURE);
+  }
   src_uri = argv[index++];
 }
 
@@ -204,6 +208,8 @@ struct Test {
 };
 std::vector<Test> tests = {
     Test("Tsuba::FileStore", tsuba_sync),
+    Test("Tsuba::FileStoreAsync", tsuba_async),
+    Test("Tsuba::FileStoreAsync", tsuba_async),
     Test("Tsuba::FileStoreAsync", tsuba_async),
 };
 

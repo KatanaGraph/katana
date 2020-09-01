@@ -14,6 +14,7 @@ uint64_t run_length_limit{UINT64_C(0)};
 int32_t node_property_total{0}; // Which node property
 float independent_failure_probability{0.0f};
 
+std::string prog_name = "tsuba_fault_runner";
 std::string usage_msg = "Usage: {} <RDG URI>\n"
                         "  [-t] number of threads (default=1)\n"
                         "  [-r] Test runs up to argument (default=0)\n"
@@ -45,24 +46,28 @@ void parse_arguments(int argc, char* argv[]) {
       run_length_limit = std::strtoul(optarg, &p_end, 10);
       if (optarg == p_end) {
         fmt::print(stderr, "Can't parse -r run length limit\n");
-        fmt::print(stderr, usage_msg, argv[0]);
+        fmt::print(stderr, usage_msg, prog_name);
         exit(EXIT_FAILURE);
       }
     } break;
     case 'h':
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(0);
       break;
     default:
       fmt::print(stderr, "Bad option {}\n", (char)c);
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(EXIT_FAILURE);
     }
   }
 
   // TODO: Validate paths
   auto index = optind;
-  GALOIS_LOG_VASSERT(index < argc, "{} requires property graph URI", argv[0]);
+  if (index >= argc) {
+    fmt::print("{} requires property graph URI argument\n", prog_name);
+    exit(EXIT_FAILURE);
+  }
+
   src_uri = argv[index++];
 }
 

@@ -17,6 +17,7 @@ int32_t count{1};             // By default do 1 thing
 int32_t node_property_num{0}; // Which node property
 float independent_failure_probability{0.0f};
 uint64_t run_length{UINT64_C(0)};
+std::string prog_name = "tsuba_fault";
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-c] count (default=1)\n"
@@ -27,7 +28,7 @@ std::string usage_msg =
     "  [-p] print graph\n"
     "  [-h] usage message\n"
     "  when run with just -c, it will mutate & store the graph count times "
-    "with no errors";
+    "with no errors\n";
 
 void parse_arguments(int argc, char* argv[]) {
   int c;
@@ -48,7 +49,7 @@ void parse_arguments(int argc, char* argv[]) {
       run_length = std::strtoul(optarg, &p_end, 10);
       if (optarg == p_end) {
         fmt::print(stderr, "Can't parse -r argument (run length)\n");
-        fmt::print(stderr, usage_msg, argv[0]);
+        fmt::print(stderr, usage_msg, prog_name);
         exit(EXIT_FAILURE);
       }
     } break;
@@ -59,19 +60,22 @@ void parse_arguments(int argc, char* argv[]) {
       opt_print = true;
       break;
     case 'h':
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(0);
       break;
     default:
       fmt::print(stderr, "Bad option {}\n", (char)c);
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(EXIT_FAILURE);
     }
   }
 
   // TODO: Validate paths
   auto index = optind;
-  GALOIS_LOG_VASSERT(index < argc, "{} requires property graph URI", argv[0]);
+  if (index >= argc) {
+    fmt::print(stderr, "{} requires property graph URI argument\n", prog_name);
+    exit(EXIT_FAILURE);
+  }
   src_uri = argv[index++];
 }
 

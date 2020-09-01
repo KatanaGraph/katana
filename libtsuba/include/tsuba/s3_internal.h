@@ -15,42 +15,30 @@
 
 namespace tsuba::internal {
 
-// Remember what bucket and object we are operating on and store a stack of
-// functions to call until we are done with our work.  Any call (except the
-// first) might block and there is no interface to determine if you will block.
-class S3AsyncWork : public FileAsyncWork {
-  std::string bucket_{};
-  std::string object_{};
+class CountingSemaphore {
   std::mutex mutex_{};
   std::condition_variable cv_{};
   uint64_t goal_{
       UINT64_C(0)}; // Goal initialized > 0, when reaches 0 we are done
 
-  std::stack<std::function<galois::Result<void>(S3AsyncWork& s3aw)>>
-      func_stack_{};
-  std::string token_{};
-
 public:
-  S3AsyncWork(const std::string& bucket, const std::string& object)
-      : bucket_(bucket), object_(object) {}
-  ~S3AsyncWork() {}
+  CountingSemaphore(const CountingSemaphore& no_copy) = delete;
+  CountingSemaphore(CountingSemaphore&& no_move)      = delete;
+  CountingSemaphore& operator=(const CountingSemaphore& no_copy) = delete;
+  CountingSemaphore& operator=(CountingSemaphore&& no_move) = delete;
 
-  std::string GetBucket() const { return bucket_; }
-  std::string GetObject() const { return object_; }
-
-  void Push(const std::function<galois::Result<void>(S3AsyncWork&)>& func) {
-    func_stack_.push(func);
-  }
+  // We find out goal after initialization
+  CountingSemaphore() {}
 
   void SetGoal(uint64_t goal) {
     GALOIS_LOG_VASSERT(goal > UINT64_C(0),
-                       "Count of FileAsyncWork must be > 0");
+                       "Count of CountingSemaphore must be > 0");
     goal_ = goal;
   }
   void GoalMinusOne() {
     std::unique_lock<std::mutex> lk(mutex_);
     GALOIS_LOG_VASSERT(goal_ > UINT64_C(0),
-                       "Goal FileAsyncWork is 0, but in GoalMinusOne");
+                       "Goal CountingSemaphore is 0, but in GoalMinusOne");
     goal_--;
     lk.unlock(); // Notify without lock
     cv_.notify_one();
@@ -59,55 +47,44 @@ public:
     std::unique_lock<std::mutex> lk(mutex_);
     cv_.wait(lk, [&] { return goal_ == (uint64_t)0; });
   }
-
-  void SetToken(const std::string_view& token) { token_ = token; }
-  // Token is single use
-  std::string GetToken() {
-    std::string ret = token_;
-    token_.clear();
-    return ret;
-  }
-
-  // Call next async function in the chain
-  galois::Result<void> operator()() {
-    if (!func_stack_.empty()) {
-      auto func = func_stack_.top();
-      auto res  = func(*this);
-      if (!res) {
-        // TODO: We should abort multi-part uploads
-      }
-      func_stack_.pop();
-      return res;
-    }
-    return ErrorCode::InvalidArgument;
-  }
-  bool Done() const { return func_stack_.empty(); }
 };
 
-GALOIS_EXPORT galois::Result<void> S3GetMultiAsync(S3AsyncWork& s3aw,
-                                                   uint64_t start,
-                                                   uint64_t size,
-                                                   uint8_t* result_buf);
-GALOIS_EXPORT galois::Result<void> S3GetMultiAsyncFinish(S3AsyncWork& s3aw);
+struct PutMultiImpl;
+struct PutMultiHandle {
+  PutMultiImpl* impl_;
+};
+
+GALOIS_EXPORT galois::Result<void>
+S3GetMultiAsync(const std::string& bucket, const std::string& object,
+                uint64_t start, uint64_t size, uint8_t* result_buf,
+                CountingSemaphore* sema);
+GALOIS_EXPORT galois::Result<void>
+S3GetMultiAsyncFinish(CountingSemaphore* sema);
 
 GALOIS_EXPORT galois::Result<void> S3PutSingleSync(const std::string& bucket,
                                                    const std::string& object,
                                                    const uint8_t* data,
                                                    uint64_t size);
+GALOIS_EXPORT PutMultiHandle S3PutMultiAsync1(const std::string& bucket,
+                                              const std::string& object,
+                                              const uint8_t* data,
+                                              uint64_t size);
+
+GALOIS_EXPORT galois::Result<void> S3PutMultiAsync2(const std::string& bucket,
+                                                    const std::string& object,
+                                                    PutMultiHandle pmh);
+GALOIS_EXPORT galois::Result<void> S3PutMultiAsync3(const std::string& bucket,
+                                                    const std::string& object,
+                                                    PutMultiHandle pmh);
 GALOIS_EXPORT galois::Result<void>
-S3PutMultiAsync1(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
-GALOIS_EXPORT galois::Result<void> S3PutMultiAsync2(S3AsyncWork& s3aw);
-GALOIS_EXPORT galois::Result<void> S3PutMultiAsync3(S3AsyncWork& s3aw);
-GALOIS_EXPORT galois::Result<void> S3PutMultiAsyncFinish(S3AsyncWork& s3aw);
+S3PutMultiAsyncFinish(const std::string& bucket, const std::string& object,
+                      PutMultiHandle pmh);
 
 GALOIS_EXPORT galois::Result<void>
-S3PutSingleAsync(S3AsyncWork& s3aw, const uint8_t* data, uint64_t size);
-GALOIS_EXPORT galois::Result<void> S3PutSingleAsyncFinish(S3AsyncWork& s3aw);
-
+S3PutSingleAsync(const std::string& bucket, const std::string& object,
+                 const uint8_t* data, uint64_t size, CountingSemaphore* sema);
 GALOIS_EXPORT galois::Result<void>
-S3ListAsyncAW(internal::S3AsyncWork& s3aw,
-              std::unordered_set<std::string>* list,
-              std::string_view token = "");
+S3PutSingleAsyncFinish(CountingSemaphore* sema);
 
 } // namespace tsuba::internal
 

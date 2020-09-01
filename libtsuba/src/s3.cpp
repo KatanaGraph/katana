@@ -187,6 +187,17 @@ static SegmentedBufferView SegmentBuf(uint64_t start, const uint8_t* data,
                              segment_size);
 }
 
+struct internal::PutMultiImpl {
+  std::vector<SegmentedBufferView::BufPart> parts_{};
+  std::future<Aws::S3::Model::CreateMultipartUploadOutcome> create_fut_{};
+  std::future<Aws::S3::Model::CompleteMultipartUploadOutcome> outcome_fut_{};
+  std::vector<std::string> part_e_tags_{};
+  internal::CountingSemaphore sema{};
+  std::string upload_id_{""};
+  // Just a container
+  PutMultiImpl() {}
+};
+
 galois::Result<void> S3Init() {
   library_init = true;
   Aws::InitAPI(sdk_options);
@@ -201,11 +212,6 @@ galois::Result<void> S3Init() {
 galois::Result<void> S3Fini() {
   Aws::ShutdownAPI(sdk_options);
   return galois::ResultSuccess();
-}
-
-static inline std::string BucketAndObject(const std::string& bucket,
-                                          const std::string& object) {
-  return std::string(bucket).append("/").append(object);
 }
 
 galois::Result<void> S3GetSize(const std::string& bucket,
@@ -404,44 +410,10 @@ galois::Result<void> S3UploadOverwrite(const std::string& bucket,
   return galois::ResultSuccess();
 }
 
-// This stuff is too complex to fold into S3AsyncWork.  At least for now
-enum class Xfer {
-  One,   // Ready to start
-  Two,   // CreateMulti pending
-  Three, // Xfer started
-  Four   // Xfer finished, completion pending
-};
-// ew: There is probably a way to combine declaration and labels,
-// but all the techniques I found were over the top
-static const std::unordered_map<Xfer, std::string> xfer_label{
-    {Xfer::One, "Xfer_1"},
-    {Xfer::Two, "Xfer_2"},
-    {Xfer::Three, "Xfer_3"},
-    {Xfer::Four, "Xfer_4"},
-};
-struct PutMulti {
-  // Modify xfer_ with lock held.  Only code for that Xfer state should
-  // read/write data.
-  Xfer xfer_{Xfer::One};
-  std::vector<SegmentedBufferView::BufPart> parts_{};
-  std::future<Aws::S3::Model::CreateMultipartUploadOutcome> create_fut_{};
-  std::future<Aws::S3::Model::CompleteMultipartUploadOutcome> outcome_fut_{};
-  std::vector<std::string> part_e_tags_{};
-  uint64_t finished_{UINT64_C(0)};
-  std::string upload_id_{""};
-  // Construct by assigning elements, since that is the general case.
-  PutMulti() {}
-};
-
-static std::unordered_map<std::string, PutMulti> xferm;
-static std::mutex xfer_mutex;
-static std::condition_variable xfer_cv;
-
-galois::Result<void> internal::S3PutMultiAsync1(S3AsyncWork& s3aw,
-                                                const uint8_t* data,
-                                                uint64_t size) {
-  std::string bucket = s3aw.GetBucket();
-  std::string object = s3aw.GetObject();
+internal::PutMultiHandle internal::S3PutMultiAsync1(const std::string& bucket,
+                                                    const std::string& object,
+                                                    const uint8_t* data,
+                                                    uint64_t size) {
   GALOIS_LOG_VASSERT(library_init == true,
                      "Must call tsuba::Init before S3 interaction");
   // We don't expect this function to be called directly, it is part of
@@ -457,59 +429,31 @@ galois::Result<void> internal::S3PutMultiAsync1(S3AsyncWork& s3aw,
 
   SegmentedBufferView bufView = SegmentBuf(UINT64_C(0), data, size);
 
-  std::string bno = BucketAndObject(bucket, object);
-  {
-    std::lock_guard<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    if (it == xferm.end()) {
-      xferm.try_emplace(bno);
-      // Now make the iterator point to the emplaced struct
-      it = xferm.find(bno);
-    }
-    GALOIS_LOG_VASSERT(
-        it->second.xfer_ == Xfer::One,
-        "{:<30} PutMultiAsync1 before previous finished, state is {}\n", bno,
-        xfer_label.at(it->second.xfer_));
-    it->second.xfer_  = Xfer::Two;
-    it->second.parts_ = std::vector<SegmentedBufferView::BufPart>(
-        bufView.begin(), bufView.end());
-    it->second.create_fut_ =
-        async_s3_client->CreateMultipartUploadCallable(createMpRequest);
-    // it->second.outcome_fut_ // assumed invalid
-    it->second.part_e_tags_.resize(bufView.NumSegments());
-    it->second.finished_  = UINT64_C(0);
-    it->second.upload_id_ = "";
+  auto pm = internal::PutMultiHandle{.impl_ = new internal::PutMultiImpl()};
+  pm.impl_->parts_ =
+      std::vector<SegmentedBufferView::BufPart>(bufView.begin(), bufView.end());
+  pm.impl_->sema.SetGoal(std::distance(bufView.begin(), bufView.end()));
+  pm.impl_->create_fut_ =
+      async_s3_client->CreateMultipartUploadCallable(createMpRequest);
+  pm.impl_->part_e_tags_.resize(bufView.NumSegments());
+  pm.impl_->upload_id_ = "";
 
-    GALOIS_LOG_DEBUG(
-        "{:<30} PutMultiAsync1 size {:#x} nSeg {:d} parts_.size() {:d}", bno,
-        size, bufView.NumSegments(), it->second.parts_.size());
-  }
-  return galois::ResultSuccess();
+  GALOIS_LOG_DEBUG(
+      "[{}]{:<30} PutMultiAsync1 size {:#x} nSeg {:d} parts_.size() {:d}",
+      bucket, object, size, bufView.NumSegments(), pm.impl_->parts_.size());
+  return pm;
 }
 
-galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
-  std::string bucket = s3aw.GetBucket();
-  std::string object = s3aw.GetObject();
-  std::string bno    = BucketAndObject(bucket, object);
+galois::Result<void> internal::S3PutMultiAsync2(const std::string& bucket,
+                                                const std::string& object,
+                                                internal::PutMultiHandle pmh) {
   // Standard says we can keep a pointer to value that remains valid even if
   // iterator is invalidated.  Iterators can be invalidated because of "rehash"
   // https://en.cppreference.com/w/cpp/container/unordered_map (Iterator
   // invalidation)
-  PutMulti* pm{nullptr};
-  {
-    std::lock_guard<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    GALOIS_LOG_VASSERT(
-        it != xferm.end(),
-        "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
-    GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Two,
-                       "{:<30} PutMultiAsync2 but state is {}\n", bno,
-                       xfer_label.at(it->second.xfer_));
-    it->second.xfer_ = Xfer::Three;
-    pm               = &it->second;
-  }
 
-  auto createMpResponse = pm->create_fut_.get(); // Blocking call
+  auto createMpResponse = pmh.impl_->create_fut_.get(); // Blocking call
+
   if (!createMpResponse.IsSuccess()) {
     const auto& error = createMpResponse.GetError();
     GALOIS_LOG_ERROR("Failed to create a multi-part upload request.\n  Bucket: "
@@ -519,13 +463,14 @@ galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
     return ErrorCode::S3Error;
   }
 
-  pm->upload_id_ = createMpResponse.GetResult().GetUploadId();
-  GALOIS_LOG_DEBUG("{:<30} PutMultiAsync2 B parts.size() {:d}\n  upload id {}",
-                   bno, pm->parts_.size(), pm->upload_id_);
+  pmh.impl_->upload_id_ = createMpResponse.GetResult().GetUploadId();
+  GALOIS_LOG_DEBUG(
+      "[{}]{:<30} PutMultiAsync2 B parts.size() {:d}\n  upload id {}", bucket,
+      object, pmh.impl_->parts_.size(), pmh.impl_->upload_id_);
 
   Aws::S3::Model::CompletedMultipartUpload completedUpload;
-  for (unsigned i = 0; i < pm->parts_.size(); ++i) {
-    auto& part         = pm->parts_[i];
+  for (unsigned i = 0; i < pmh.impl_->parts_.size(); ++i) {
+    auto& part         = pmh.impl_->parts_[i];
     auto lengthToWrite = part.end - part.start;
     auto streamBuf     = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
         kAwsTag, part.dest, static_cast<size_t>(lengthToWrite));
@@ -537,37 +482,23 @@ galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
         .WithContentLength(static_cast<long long>(lengthToWrite))
         .WithKey(ToAwsString(object))
         .WithPartNumber(i + 1) /* part numbers start at 1 */
-        .WithUploadId(ToAwsString(pm->upload_id_));
+        .WithUploadId(ToAwsString(pmh.impl_->upload_id_));
 
     uploadPartRequest.SetBody(preallocatedStreamReader);
     uploadPartRequest.SetContentType("application/octet-stream");
 
     // References to locals will go out of scope
-    auto callback = [i, bucket, object](
-                        const Aws::S3::S3Client* /*client*/,
+    auto callback = [=](const Aws::S3::S3Client* /*client*/,
                         const Aws::S3::Model::UploadPartRequest& request,
                         const Aws::S3::Model::UploadPartOutcome& outcome,
                         const std::shared_ptr<
                             const Aws::Client::AsyncCallerContext>& /*ctx*/) {
-      std::string bno = BucketAndObject(bucket, object);
       if (outcome.IsSuccess()) {
-        {
-          std::lock_guard<std::mutex> lk(xfer_mutex);
-          auto it = xferm.find(bno);
-          GALOIS_LOG_VASSERT(
-              it != xferm.end(),
-              "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
-          GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Three,
-                             "{:<30} PutMultiAsync2 callback but state is {}\n",
-                             bno, xfer_label.at(it->second.xfer_));
-          it->second.part_e_tags_[i] = outcome.GetResult().GetETag();
-          it->second.finished_++;
-          GALOIS_LOG_DEBUG(
-              "{:<30} PutMultiAsync2 i {:d} finished {:d}\n etag {}", bno, i,
-              it->second.finished_, outcome.GetResult().GetETag());
-        }
-        // Notify does not require lock
-        xfer_cv.notify_one();
+        // XXX not thread safe
+        pmh.impl_->part_e_tags_[i] = outcome.GetResult().GetETag();
+        pmh.impl_->sema.GoalMinusOne();
+        GALOIS_LOG_DEBUG("[{}]{:<30} PutMultiAsync2 i {:d}\n etag {}", bucket,
+                         object, i, outcome.GetResult().GetETag());
       } else {
         /* TODO there are likely some errors we can handle gracefully
          * i.e., with retries */
@@ -584,84 +515,39 @@ galois::Result<void> internal::S3PutMultiAsync2(S3AsyncWork& s3aw) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> internal::S3PutMultiAsync3(S3AsyncWork& s3aw) {
-  std::string bucket = s3aw.GetBucket();
-  std::string object = s3aw.GetObject();
-  std::string bno    = BucketAndObject(bucket, object);
-  PutMulti* pm{nullptr};
-  {
-    std::unique_lock<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    GALOIS_LOG_VASSERT(it != xferm.end(),
-                       "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
-    pm = &it->second;
-    GALOIS_LOG_VASSERT(pm->xfer_ == Xfer::Three,
-                       "{:<30} PutMultiAsync3 but state is {}\n", bno,
-                       xfer_label.at(it->second.xfer_));
-
-    // Possibly blocking call
-    xfer_cv.wait(lk, [pm] { return pm->finished_ >= pm->parts_.size(); });
-    pm->xfer_ = Xfer::Four;
-  }
-
-  // GALOIS_LOG_VERBOSE("{:<30} PutMultiAsync3 B wait resolved finished {:d}
-  // parts size {:d} etags size {:d}\n",
-  //      bno, pm->finished_, pm->parts_.size(), pm->part_e_tags_.size());
+galois::Result<void> internal::S3PutMultiAsync3(const std::string& bucket,
+                                                const std::string& object,
+                                                internal::PutMultiHandle pmh) {
+  // Possibly blocking call
+  pmh.impl_->sema.WaitGoal();
 
   Aws::S3::Model::CompletedMultipartUpload completedUpload;
-  for (unsigned i = 0; i < pm->part_e_tags_.size(); ++i) {
+  for (unsigned i = 0; i < pmh.impl_->part_e_tags_.size(); ++i) {
     Aws::S3::Model::CompletedPart completedPart;
     completedPart.WithPartNumber(i + 1).WithETag(
-        ToAwsString(pm->part_e_tags_[i]));
+        ToAwsString(pmh.impl_->part_e_tags_[i]));
     completedUpload.AddParts(completedPart);
   }
 
   Aws::S3::Model::CompleteMultipartUploadRequest completeMultipartUploadRequest;
   completeMultipartUploadRequest.WithBucket(ToAwsString(bucket))
       .WithKey(ToAwsString(object))
-      .WithUploadId(ToAwsString(pm->upload_id_))
+      .WithUploadId(ToAwsString(pmh.impl_->upload_id_))
       .WithMultipartUpload(completedUpload);
 
-  {
-    std::lock_guard<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    GALOIS_LOG_VASSERT(it != xferm.end(),
-                       "{:<30} PutMultiAsync3 no bucket/object in map\n", bno);
-    it->second.outcome_fut_ = async_s3_client->CompleteMultipartUploadCallable(
-        completeMultipartUploadRequest);
-  }
+  pmh.impl_->outcome_fut_ = async_s3_client->CompleteMultipartUploadCallable(
+      completeMultipartUploadRequest);
 
   return galois::ResultSuccess();
 }
 
-galois::Result<void> internal::S3PutMultiAsyncFinish(S3AsyncWork& s3aw) {
-  std::string bucket = s3aw.GetBucket();
-  std::string object = s3aw.GetObject();
-  std::string bno    = BucketAndObject(bucket, object);
-  PutMulti* pm{nullptr};
-  {
-    std::lock_guard<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    GALOIS_LOG_VASSERT(it != xferm.end(),
-                       "{:<30} PutMultiAsyncFinish no bucket/object in map\n",
-                       bno);
-    pm = &it->second;
-    GALOIS_LOG_VASSERT(it->second.xfer_ == Xfer::Four,
-                       "{:<30} PutMultiAsyncFinish but state is {}\n", bno,
-                       xfer_label.at(it->second.xfer_));
-  }
+galois::Result<void>
+internal::S3PutMultiAsyncFinish(const std::string& bucket,
+                                const std::string& object,
+                                internal::PutMultiHandle pmh) {
+  auto completeUploadOutcome = pmh.impl_->outcome_fut_.get(); // Blocking call
 
-  auto completeUploadOutcome = pm->outcome_fut_.get(); // Blocking call
-
-  // MultiStagePut is complete
-  {
-    std::lock_guard<std::mutex> lk(xfer_mutex);
-    auto it = xferm.find(bno);
-    GALOIS_LOG_VASSERT(
-        it != xferm.end(),
-        "{:<30} PutMultiAsync2 callback no bucket/object in map\n", bno);
-    it->second.xfer_ = Xfer::One;
-  }
+  delete pmh.impl_;
 
   if (!completeUploadOutcome.IsSuccess()) {
     /* TODO there are likely some errors we can handle gracefully */
@@ -669,21 +555,24 @@ galois::Result<void> internal::S3PutMultiAsyncFinish(S3AsyncWork& s3aw) {
     GALOIS_LOG_ERROR("\n  Failed to complete mutipart upload\n  {}: {}\n  "
                      "upload id: {}\n [{}] {}",
                      error.GetExceptionName(), error.GetMessage(),
-                     pm->upload_id_, bucket, object);
+                     pmh.impl_->upload_id_, bucket, object);
     return ErrorCode::S3Error;
   }
   return galois::ResultSuccess();
 }
 
-galois::Result<void> internal::S3PutSingleAsync(S3AsyncWork& s3aw,
-                                                const uint8_t* data,
-                                                uint64_t size) {
+galois::Result<void>
+internal::S3PutSingleAsync(const std::string& bucket, const std::string& object,
+                           const uint8_t* data, uint64_t size,
+                           internal::CountingSemaphore* sema) {
   Aws::S3::Model::PutObjectRequest object_request;
   GALOIS_LOG_VASSERT(library_init == true,
                      "Must call tsuba::Init before S3 interaction");
 
-  object_request.SetBucket(ToAwsString(s3aw.GetBucket()));
-  object_request.SetKey(ToAwsString(s3aw.GetObject()));
+  sema->SetGoal(1);
+
+  object_request.SetBucket(ToAwsString(bucket));
+  object_request.SetKey(ToAwsString(object));
   auto streamBuf = Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
       kAwsTag, (uint8_t*)data, static_cast<size_t>(size));
   auto preallocatedStreamReader =
@@ -692,23 +581,20 @@ galois::Result<void> internal::S3PutSingleAsync(S3AsyncWork& s3aw,
   object_request.SetBody(preallocatedStreamReader);
   object_request.SetContentType("application/octet-stream");
 
-  s3aw.SetGoal(1);
-
-  auto callback = [&s3aw](const Aws::S3::S3Client* /*client*/,
-                          const Aws::S3::Model::PutObjectRequest& /*request*/,
-                          const Aws::S3::Model::PutObjectOutcome& outcome,
-                          const std::shared_ptr<
-                              const Aws::Client::AsyncCallerContext>& /*ctx*/) {
+  auto callback = [=](const Aws::S3::S3Client* /*client*/,
+                      const Aws::S3::Model::PutObjectRequest& /*request*/,
+                      const Aws::S3::Model::PutObjectOutcome& outcome,
+                      const std::shared_ptr<
+                          const Aws::Client::AsyncCallerContext>& /*ctx*/) {
     if (outcome.IsSuccess()) {
-      s3aw.GoalMinusOne();
+      sema->GoalMinusOne();
     } else {
       /* TODO there are likely some errors we can handle gracefully
        * i.e., with retries */
       const auto& error = outcome.GetError();
       GALOIS_LOG_FATAL(
           "\n  Failed to complete single async upload\n  {}: {}\n  [{}] {}",
-          error.GetExceptionName(), error.GetMessage(), s3aw.GetBucket(),
-          s3aw.GetObject());
+          error.GetExceptionName(), error.GetMessage(), bucket, object);
     }
   };
   async_s3_client->PutObjectAsync(object_request, callback);
@@ -717,32 +603,46 @@ galois::Result<void> internal::S3PutSingleAsync(S3AsyncWork& s3aw,
 }
 
 galois::Result<void>
-internal::S3PutSingleAsyncFinish(internal::S3AsyncWork& s3aw) {
-  s3aw.WaitGoal();
+internal::S3PutSingleAsyncFinish(internal::CountingSemaphore* sema) {
+  sema->WaitGoal();
   return galois::ResultSuccess();
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3PutAsync(const std::string& bucket, const std::string& object,
            const uint8_t* data, uint64_t size) {
-  std::unique_ptr<internal::S3AsyncWork> s3aw =
-      std::make_unique<internal::S3AsyncWork>(bucket, object);
+
   if (size < kS3DefaultBufSize) {
-    auto res = internal::S3PutSingleAsync(*s3aw, data, size);
-    if (!res) {
-      return res.error();
-    }
-    s3aw->Push(internal::S3PutSingleAsyncFinish);
+    auto future = std::async([=]() -> galois::Result<void> {
+      auto sema = internal::CountingSemaphore();
+      if (auto res =
+              internal::S3PutSingleAsync(bucket, object, data, size, &sema);
+          !res) {
+        return res.error();
+      }
+      if (auto res = internal::S3PutSingleAsyncFinish(&sema); !res) {
+        return res.error();
+      }
+      return galois::ResultSuccess();
+    });
+    return std::make_unique<FileAsyncWork>(std::move(future));
   } else {
-    auto res = internal::S3PutMultiAsync1(*s3aw, data, size);
-    if (!res) {
-      return res.error();
-    }
-    s3aw->Push(internal::S3PutMultiAsyncFinish);
-    s3aw->Push(internal::S3PutMultiAsync3);
-    s3aw->Push(internal::S3PutMultiAsync2);
+    auto future = std::async([=]() -> galois::Result<void> {
+      auto pm = internal::S3PutMultiAsync1(bucket, object, data, size);
+      if (auto res = internal::S3PutMultiAsync2(bucket, object, pm); !res) {
+        return res.error();
+      }
+      if (auto res = internal::S3PutMultiAsync3(bucket, object, pm); !res) {
+        return res.error();
+      }
+      if (auto res = internal::S3PutMultiAsyncFinish(bucket, object, pm);
+          !res) {
+        return res.error();
+      }
+      return galois::ResultSuccess();
+    });
+    return std::make_unique<FileAsyncWork>(std::move(future));
   }
-  return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
 }
 
 static void
@@ -767,9 +667,10 @@ PrepareObjectRequest(Aws::S3::Model::GetObjectRequest* object_request,
   });
 }
 
-galois::Result<void> internal::S3GetMultiAsync(S3AsyncWork& s3aw,
-                                               uint64_t start, uint64_t size,
-                                               uint8_t* result_buf) {
+galois::Result<void>
+internal::S3GetMultiAsync(const std::string& bucket, const std::string& object,
+                          uint64_t start, uint64_t size, uint8_t* result_buf,
+                          internal::CountingSemaphore* sema) {
   SegmentedBufferView bufView = SegmentBuf(start, result_buf, size);
   std::vector<SegmentedBufferView::BufPart> parts(bufView.begin(),
                                                   bufView.end());
@@ -777,36 +678,36 @@ galois::Result<void> internal::S3GetMultiAsync(S3AsyncWork& s3aw,
     return galois::ResultSuccess();
   }
 
-  s3aw.SetGoal(parts.size());
+  sema->SetGoal(parts.size());
 
-  auto callback = [&s3aw](const Aws::S3::S3Client* /*client*/,
-                          const Aws::S3::Model::GetObjectRequest& /*request*/,
-                          const Aws::S3::Model::GetObjectOutcome& outcome,
-                          const std::shared_ptr<
-                              const Aws::Client::AsyncCallerContext>& /*ctx*/) {
+  auto callback = [=](const Aws::S3::S3Client* /*client*/,
+                      const Aws::S3::Model::GetObjectRequest& /*request*/,
+                      const Aws::S3::Model::GetObjectOutcome& outcome,
+                      const std::shared_ptr<
+                          const Aws::Client::AsyncCallerContext>& /*ctx*/) {
     if (outcome.IsSuccess()) {
-      s3aw.GoalMinusOne();
+      sema->GoalMinusOne();
     } else {
       /* TODO there are likely some errors we can handle gracefully
        * i.e., with retries */
       const auto& error = outcome.GetError();
       GALOIS_LOG_FATAL(
           "\n  Failed to complete multi async download\n  {}: {}\n  [{}] {}",
-          error.GetExceptionName(), error.GetMessage(), s3aw.GetBucket(),
-          s3aw.GetObject());
+          error.GetExceptionName(), error.GetMessage(), bucket, object);
     }
   };
 
   for (auto& part : parts) {
     Aws::S3::Model::GetObjectRequest request;
-    PrepareObjectRequest(&request, s3aw.GetBucket(), s3aw.GetObject(), part);
+    PrepareObjectRequest(&request, bucket, object, part);
     async_s3_client->GetObjectAsync(request, callback);
   }
   return galois::ResultSuccess();
 }
 
-galois::Result<void> internal::S3GetMultiAsyncFinish(S3AsyncWork& s3aw) {
-  s3aw.WaitGoal();
+galois::Result<void>
+internal::S3GetMultiAsyncFinish(internal::CountingSemaphore* sema) {
+  sema->WaitGoal();
   // result_buf should have the data here
   return galois::ResultSuccess();
 }
@@ -817,15 +718,19 @@ S3GetAsync(const std::string& bucket, const std::string& object, uint64_t start,
   if (size == (uint64_t)0) {
     return galois::ResultSuccess();
   }
-  std::unique_ptr<internal::S3AsyncWork> s3aw =
-      std::make_unique<internal::S3AsyncWork>(bucket, object);
-
-  if (auto res = internal::S3GetMultiAsync(*s3aw, start, size, result_buf);
-      !res) {
-    return res.error();
-  }
-  s3aw->Push(internal::S3GetMultiAsyncFinish);
-  return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
+  auto future = std::async([=]() -> galois::Result<void> {
+    auto sema = internal::CountingSemaphore();
+    if (auto res = internal::S3GetMultiAsync(bucket, object, start, size,
+                                             result_buf, &sema);
+        !res) {
+      return res.error();
+    }
+    if (auto res = internal::S3GetMultiAsyncFinish(&sema); !res) {
+      return res.error();
+    }
+    return galois::ResultSuccess();
+  });
+  return std::make_unique<FileAsyncWork>(std::move(future));
 }
 
 galois::Result<void> S3DownloadRange(const std::string& bucket,
@@ -894,64 +799,53 @@ galois::Result<void> S3DownloadRange(const std::string& bucket,
   return galois::ResultSuccess();
 }
 
-// This listing routine is synchronous, but S3 only returns 1,000 at a time
-galois::Result<void>
-internal::S3ListAsyncAW(internal::S3AsyncWork& s3aw,
-                        std::unordered_set<std::string>* list,
-                        std::string_view token) {
-  std::string bucket = s3aw.GetBucket();
-  std::string object = s3aw.GetObject();
-  GALOIS_LOG_VASSERT(library_init == true,
-                     "Must call tsuba::Init before S3 interaction");
-
-  Aws::S3::Model::ListObjectsV2Request request;
-  request.SetBucket(ToAwsString(bucket));
-  request.SetPrefix(ToAwsString(object));
-  if (token.length() > 0) {
-    request.SetContinuationToken(ToAwsString(token));
-  }
-
-  auto s3outcome = async_s3_client->ListObjectsV2(request);
-  if (!s3outcome.IsSuccess()) {
-    const auto& error = s3outcome.GetError();
-    GALOIS_LOG_FATAL("\n  Failed ListAsyncAW\n  {}: {}\n  [{}] {}",
-                     error.GetExceptionName(), error.GetMessage(), bucket,
-                     object);
-  }
-  auto s3result = s3outcome.GetResult();
-  if (s3result.GetIsTruncated()) {
-    // Get more listings
-    auto continuation_token =
-        FromAwsString(s3result.GetNextContinuationToken());
-    GALOIS_LOG_VASSERT(continuation_token.length() > 0,
-                       "ListAsync IsTruncated true, but token empty");
-    s3aw.Push([=](internal::S3AsyncWork& async_work) -> galois::Result<void> {
-      return internal::S3ListAsyncAW(async_work, list, continuation_token);
-    });
-  }
-  for (const auto& content : s3result.GetContents()) {
-    std::string file(FromAwsString(content.GetKey()));
-    // Return file names relative to the enclosing directory
-    if (file.find(object) == 0) {
-      file = std::string(file.begin() + object.size() + 1, file.end());
-    }
-    list->emplace(file);
-  }
-
-  return galois::ResultSuccess();
-}
-
+// S3 only returns 1,000 directory entries at once, so to test this,
+// use a big directory, e.g., this way
+// tsuba_fault -c 2000 URI
+// tsuba_gc -n -v  URI; tsuba_gc URI
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3ListAsync(const std::string& bucket, const std::string& object,
             std::unordered_set<std::string>* list) {
-  std::unique_ptr<internal::S3AsyncWork> s3aw =
-      std::make_unique<internal::S3AsyncWork>(bucket, object);
-  auto res = S3ListAsyncAW(*s3aw, list);
-  if (!res) {
-    GALOIS_LOG_DEBUG("S3ListAsync failure [{}]{}", bucket, object);
-    return res.error();
-  }
-  return std::unique_ptr<FileAsyncWork>(std::move(s3aw));
+  GALOIS_LOG_VASSERT(library_init == true,
+                     "Must call tsuba::Init before S3 interaction");
+
+  auto future = std::async([=]() -> galois::Result<void> {
+    std::string token{};
+    Aws::S3::Model::ListObjectsV2Request request;
+    request.SetBucket(ToAwsString(bucket));
+    request.SetPrefix(ToAwsString(object));
+    do {
+      if (token.length() > 0) {
+        request.SetContinuationToken(ToAwsString(token));
+      }
+
+      auto s3outcome = async_s3_client->ListObjectsV2(request);
+      if (!s3outcome.IsSuccess()) {
+        const auto& error = s3outcome.GetError();
+        GALOIS_LOG_FATAL("\n  Failed ListAsyncAW\n  {}: {}\n  [{}] {}",
+                         error.GetExceptionName(), error.GetMessage(), bucket,
+                         object);
+      }
+      auto s3result = s3outcome.GetResult();
+      for (const auto& content : s3result.GetContents()) {
+        std::string short_name(FromAwsString(content.GetKey()));
+        size_t begin = short_name.find(object);
+        GALOIS_LOG_ASSERT(begin == 0);
+        GALOIS_LOG_ASSERT(short_name[object.length()] == '/');
+        short_name.erase(begin, object.length() + 1);
+        list->emplace(short_name);
+      }
+      token.clear();
+      if (s3result.GetIsTruncated()) {
+        // Get more listings
+        token = FromAwsString(s3result.GetNextContinuationToken());
+        GALOIS_LOG_VASSERT(token.length() > 0,
+                           "ListAsync IsTruncated true, but token empty");
+      }
+    } while (token.size() > 0);
+    return galois::ResultSuccess();
+  });
+  return std::make_unique<FileAsyncWork>(std::move(future));
 }
 
 static galois::Result<void>

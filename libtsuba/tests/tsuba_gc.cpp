@@ -10,6 +10,7 @@ uint32_t remaining_versions{10};
 int opt_verbose_level{0};
 bool opt_dry{false};
 
+std::string prog_name = "tsuba_bench";
 std::string usage_msg = "Usage: {} <RDG URI>\n"
                         "  [-r] remaining versions (default=10)\n"
                         "  [-n] dry run (default=false)\n"
@@ -31,18 +32,21 @@ void parse_arguments(int argc, char* argv[]) {
       opt_verbose_level++;
       break;
     case 'h':
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(0);
       break;
     default:
-      fmt::print(stderr, usage_msg, argv[0]);
+      fmt::print(stderr, usage_msg, prog_name);
       exit(EXIT_FAILURE);
     }
   }
 
   // TODO: Validate paths
   auto index = optind;
-  GALOIS_LOG_VASSERT(index < argc, "{} requires property graph URI", argv[0]);
+  if (index >= argc) {
+    fmt::print(stderr, "{} requires property graph URI argument\n", prog_name);
+    exit(EXIT_FAILURE);
+  }
   src_uri = argv[index++];
 }
 

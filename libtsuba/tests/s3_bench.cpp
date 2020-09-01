@@ -3,6 +3,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <list>
+
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "galois/FileSystem.h"
@@ -72,7 +74,7 @@ public:
   uint64_t size_{UINT64_C(0)};
   std::vector<uint8_t> buffer_;
   int batch_{8};
-  int numTransfers_{3}; // For stats
+  int numTransfers_{4}; // For stats
 
   Experiment(const std::string& name, uint64_t size)
       : name_(name), size_(size) {
@@ -198,25 +200,25 @@ std::vector<int64_t> test_s3_sync(const Experiment& exp) {
 
 // This one closely tracks s3_sync, not surprisingly
 std::vector<int64_t> test_s3_async_one(const Experiment& exp) {
-  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<std::string> objects;
   std::vector<int64_t> results;
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
-        s3bucket, MkS3obj(i, 4)));
+    objects.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     start = now();
-    for (const auto& s3aw : s3aws) {
+    for (const auto& object : objects) {
+      tsuba::internal::CountingSemaphore sema;
       // Current API rejects empty writes
       if (auto res = tsuba::internal::S3PutSingleAsync(
-              *s3aw, exp.buffer_.data(), exp.size_);
+              s3bucket, object, exp.buffer_.data(), exp.size_, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync return {}", res.error());
       }
       // Only 1 outstanding store at a time
-      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(*s3aw); !res) {
+      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(&sema); !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsyncFinish bad return {}", res.error());
       }
     }
@@ -226,25 +228,28 @@ std::vector<int64_t> test_s3_async_one(const Experiment& exp) {
 }
 
 std::vector<int64_t> test_s3_single_async_batch(const Experiment& exp) {
-  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<std::string> objects;
+  std::list<tsuba::internal::CountingSemaphore> semas;
   std::vector<int64_t> results;
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
-        s3bucket, MkS3obj(i, 4)));
+    objects.push_back(MkS3obj(i, 4));
+    semas.emplace_back();
   }
 
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     start = now();
-    for (const auto& s3aw : s3aws) {
+    int i = 0;
+    for (auto& sema : semas) {
       if (auto res = tsuba::internal::S3PutSingleAsync(
-              *s3aw, exp.buffer_.data(), exp.size_);
+              s3bucket, objects[i], exp.buffer_.data(), exp.size_, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync batch bad return {}", res.error());
       }
+      i++;
     }
-    for (const auto& s3aw : s3aws) {
-      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(*s3aw); !res) {
+    for (auto& sema : semas) {
+      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(&sema); !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsyncFinish batch bad return {}",
                          res.error());
       }
@@ -278,30 +283,31 @@ void CheckFile(const std::string& bucket, const std::string& object,
  * after at least one write benchmark
  */
 std::vector<int64_t> test_s3_async_get_one(const Experiment& exp) {
-  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<std::string> objects;
   std::vector<int64_t> results;
   std::vector<uint8_t> read_buffer(exp.size_);
   uint8_t* rbuf = read_buffer.data();
 
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
-        s3bucket, MkS3obj(i, 4)));
+    std::string obj = MkS3obj(i, 4);
+    objects.push_back(obj);
     // Confirm that the data we need is present
-    CheckFile(s3bucket, MkS3obj(i, 4), exp.size_);
+    CheckFile(s3bucket, obj, exp.size_);
   }
 
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     memset(rbuf, 0, exp.size_);
     start = now();
-    for (const auto& s3aw : s3aws) {
-      if (auto res =
-              tsuba::internal::S3GetMultiAsync(*s3aw, 0, exp.size_, rbuf);
+    for (const auto& object : objects) {
+      tsuba::internal::CountingSemaphore sema;
+      if (auto res = tsuba::internal::S3GetMultiAsync(s3bucket, object, 0,
+                                                      exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync return {}", res.error());
       }
       // Only 1 outstanding load at a time
-      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(*s3aw); !res) {
+      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(&sema); !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsyncFinish bad return {}", res.error());
       }
     }
@@ -312,31 +318,32 @@ std::vector<int64_t> test_s3_async_get_one(const Experiment& exp) {
 }
 
 std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
-  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<std::string> objects;
+  std::list<tsuba::internal::CountingSemaphore> semas;
   std::vector<int64_t> results;
   std::vector<uint8_t> read_buffer(exp.size_);
   uint8_t* rbuf = read_buffer.data();
 
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
-        s3bucket, MkS3obj(i, 4)));
-    // Confirm that the data we need is present
-    CheckFile(s3bucket, MkS3obj(i, 4), exp.size_);
+    objects.push_back(MkS3obj(i, 4));
+    semas.emplace_back();
   }
 
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     memset(rbuf, 0, exp.size_);
     start = now();
-    for (const auto& s3aw : s3aws) {
-      if (auto res =
-              tsuba::internal::S3GetMultiAsync(*s3aw, 0, exp.size_, rbuf);
+    int i = 0;
+    for (auto& sema : semas) {
+      if (auto res = tsuba::internal::S3GetMultiAsync(s3bucket, objects[i], 0,
+                                                      exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync batch bad return {}", res.error());
       }
+      i++;
     }
-    for (const auto& s3aw : s3aws) {
-      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(*s3aw); !res) {
+    for (auto& sema : semas) {
+      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(&sema); !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsyncFinish batch bad return {}",
                          res.error());
       }
@@ -348,38 +355,39 @@ std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
 }
 
 std::vector<int64_t> test_s3_multi_async_batch(const Experiment& exp) {
-  std::vector<std::unique_ptr<tsuba::internal::S3AsyncWork>> s3aws;
+  std::vector<std::string> objects;
+  std::vector<tsuba::internal::PutMultiHandle> pmhs;
+  pmhs.reserve(exp.batch_);
   std::vector<int64_t> results;
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3aws.push_back(std::make_unique<tsuba::internal::S3AsyncWork>(
-        s3bucket, MkS3obj(i, 4)));
+    objects.push_back(MkS3obj(i, 4));
   }
 
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     start = now();
-    for (const auto& s3aw : s3aws) {
-      // Current API rejects empty writes
-      if (auto res = tsuba::internal::S3PutMultiAsync1(
-              *s3aw, exp.buffer_.data(), exp.size_);
-          !res) {
-        GALOIS_LOG_ERROR("S3PutMultiAsync1 bad return {}", res.error());
-      }
+    for (int i = 0; i < exp.batch_; ++i) {
+      pmhs[i] = tsuba::internal::S3PutMultiAsync1(
+          s3bucket, objects[i], exp.buffer_.data(), exp.size_);
     }
-    for (const auto& s3aw : s3aws) {
-      // Current API rejects empty writes
-      if (auto res = tsuba::internal::S3PutMultiAsync2(*s3aw); !res) {
+    for (int i = 0; i < exp.batch_; ++i) {
+      if (auto res =
+              tsuba::internal::S3PutMultiAsync2(s3bucket, objects[i], pmhs[i]);
+          !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync2 bad return {}", res.error());
       }
     }
-    for (const auto& s3aw : s3aws) {
-      // Current API rejects empty writes
-      if (auto res = tsuba::internal::S3PutMultiAsync3(*s3aw); !res) {
+    for (int i = 0; i < exp.batch_; ++i) {
+      if (auto res =
+              tsuba::internal::S3PutMultiAsync3(s3bucket, objects[i], pmhs[i]);
+          !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync3 bad return {}", res.error());
       }
     }
-    for (const auto& s3aw : s3aws) {
-      if (auto res = tsuba::internal::S3PutMultiAsyncFinish(*s3aw); !res) {
+    for (int i = 0; i < exp.batch_; ++i) {
+      if (auto res = tsuba::internal::S3PutMultiAsyncFinish(
+              s3bucket, objects[i], pmhs[i]);
+          !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsyncFinish bad return {}", res.error());
       }
     }
@@ -401,10 +409,10 @@ struct Test {
 std::vector<Test> tests = {
     Test("memfd_create", test_mem),
     Test("/tmp create", test_tmp),
-    // Not needed as it tracks s3_sync
-    //    Test("S3 Put ASync One", test_s3_async_one),
-    // Not needed because it is slow
-    // Test("S3 Put Sync", test_s3_sync),
+    // Tracks Sync one, but slightly faster
+    Test("S3 Put ASync One", test_s3_async_one),
+    // Slowest
+    Test("S3 Put Sync", test_s3_sync),
     Test("S3 Put Single Async Batch", test_s3_single_async_batch),
     // The next two need to follow at least one S3 write benchmark
     Test("S3 Get ASync One", test_s3_async_get_one),

@@ -1,3 +1,97 @@
+// 2020/09/01 future based implementation slower than 20/08/29,
+// but consistent with previous implementation on 20/09/01
+// probably due to S3 vagaries (my VM might be in us-east-2c
+// as opposed to us-east-2b)
+** size   19B
+Tsuba::FileStore          (8) 377.0 ms (N=3) sd  62.4  50.0 B/s
+Tsuba::FileStoreAsync     (8)  36.6 ms (N=3) sd  17.6 518.0 B/s
+** size  10MB
+Tsuba::FileStore          (8)   3.2 s  (N=3) sd   0.6   3.1 MB/s
+Tsuba::FileStoreAsync     (8) 884.3 ms (N=3) sd  33.7  11.3 MB/s
+** size 100MB
+Tsuba::FileStore          (8)  10.0 s  (N=3) sd   1.1  10.0 MB/s
+Tsuba::FileStoreAsync     (8)   7.1 s  (N=3) sd   0.1  14.2 MB/s
+** size 500MB
+Tsuba::FileStore          (8)  39.1 s  (N=3) sd   4.5  12.8 MB/s
+Tsuba::FileStoreAsync     (8)  34.5 s  (N=3) sd   0.0  14.5 MB/s
+
+** size   19B
+memfd_create              (8)  48.0 us (N=3) sd  23.3 381.3 KB/s
+/tmp create               (8)  38.6 ms (N=3) sd  29.8 492.0 B/s
+S3 Put ASync One          (8) 246.3 ms (N=3) sd  44.6  77.0 B/s
+S3 Put Sync               (8) 353.0 ms (N=3) sd  87.4  53.0 B/s
+S3 Put Single Async Batch (8)  35.0 ms (N=3) sd  15.2 542.0 B/s
+S3 Get ASync One          (8)  84.4 ms (N=3) sd   3.6 225.0 B/s
+S3 Get Async Batch        (8)  16.6 ms (N=3) sd   3.8   1.1 KB/s
+S3 Put Multi Async Batch  (8) 168.0 ms (N=3) sd  23.3 113.0 B/s
+** size  10MB
+memfd_create              (8)  44.6 ms (N=3) sd   1.1 224.0 MB/s
+/tmp create               (8) 319.2 ms (N=3) sd  40.5  31.3 MB/s
+S3 Put ASync One          (8)   1.8 s  (N=3) sd   0.1   5.6 MB/s
+S3 Put Sync               (8)   2.0 s  (N=3) sd   0.3   5.0 MB/s
+S3 Put Single Async Batch (8) 743.0 ms (N=3) sd   8.9  13.5 MB/s
+S3 Get ASync One          (8) 886.3 ms (N=3) sd  19.4  11.3 MB/s
+S3 Get Async Batch        (8) 712.1 ms (N=3) sd  11.8  14.0 MB/s
+S3 Put Multi Async Batch  (8) 909.9 ms (N=3) sd  73.7  11.0 MB/s
+S3 Put Multi Async Batch  (8)   7.1 s  (N=5) sd   0.1  14.1 MB/s
+** size 100MB
+memfd_create              (8) 459.5 ms (N=3) sd   5.4 217.6 MB/s
+/tmp create               (8)   6.2 s  (N=3) sd   0.4  16.2 MB/s
+S3 Put ASync One          (8)  10.0 s  (N=3) sd   0.5  10.0 MB/s
+S3 Put Sync               (8)  11.3 s  (N=3) sd   0.1   8.8 MB/s
+S3 Put Single Async Batch (8)   7.0 s  (N=3) sd   0.1  14.3 MB/s
+S3 Get ASync One          (8)   7.0 s  (N=3) sd   0.0  14.4 MB/s
+S3 Get Async Batch        (8)   6.9 s  (N=3) sd   0.0  14.6 MB/s
+S3 Put Multi Async Batch  (8)   7.0 s  (N=3) sd   0.0  14.2 MB/s
+S3 Put Multi Async Batch  (8)   7.9 s  (N=5) sd   1.9  12.7 MB/s
+** size 500MB
+memfd_create              (8)   2.1 s  (N=3) sd   0.0 235.4 MB/s
+/tmp create               (8)  32.2 s  (N=3) sd   0.0  15.5 MB/s
+S3 Put ASync One          (8)  52.5 s  (N=3) sd   1.2   9.5 MB/s
+S3 Put Sync               (8)  51.3 s  (N=3) sd   1.6   9.7 MB/s
+S3 Put Single Async Batch (8)  34.4 s  (N=3) sd   0.2  14.5 MB/s
+S3 Get ASync One          (8)  34.5 s  (N=3) sd   0.2  14.5 MB/s
+S3 Get Async Batch        (8)  34.4 s  (N=3) sd   0.0  14.6 MB/s
+S3 Put Multi Async Batch  (8)  34.5 s  (N=3) sd   0.1  14.5 MB/s
+ip-172-31-35-41:~/katana/build> git branch
+* feature/simp_async
+  kg_master
+  master
+
+*** VM and bucket same region
+** size   19B
+memfd_create              (8)  45.0 us (N=3) sd  22.1 409.3 KB/s
+/tmp create               (8)  37.7 ms (N=3) sd  29.2 503.0 B/s
+S3 Put Single Async Batch (8)  32.7 ms (N=3) sd  22.8 581.0 B/s
+S3 Get ASync One          (8)  75.3 ms (N=3) sd   9.0 252.0 B/s
+S3 Get Async Batch        (8)  11.7 ms (N=3) sd   1.4   1.6 KB/s
+S3 Put Multi Async Batch  (8) 181.7 ms (N=3) sd   7.4 104.0 B/s
+** size  10MB
+memfd_create              (8)  44.5 ms (N=3) sd   1.3 224.8 MB/s
+/tmp create               (8) 318.9 ms (N=3) sd  66.7  31.4 MB/s
+S3 Put Single Async Batch (8)   1.0 s  (N=3) sd   0.2   9.8 MB/s
+S3 Get ASync One          (8) 818.1 ms (N=3) sd  31.1  12.2 MB/s
+S3 Get Async Batch        (8) 711.7 ms (N=3) sd  11.6  14.1 MB/s
+S3 Put Multi Async Batch  (8) 957.2 ms (N=3) sd  91.3  10.4 MB/s
+** size 100MB
+memfd_create              (8) 449.4 ms (N=3) sd   6.9 222.5 MB/s
+/tmp create               (8)   6.2 s  (N=3) sd   0.4  16.2 MB/s
+S3 Put Single Async Batch (8)   7.0 s  (N=3) sd   0.1  14.2 MB/s
+S3 Get ASync One          (8)   7.2 s  (N=3) sd   0.1  14.0 MB/s
+S3 Get Async Batch        (8)   6.9 s  (N=3) sd   0.0  14.6 MB/s
+S3 Put Multi Async Batch  (8)  10.1 s  (N=3) sd   5.2   9.9 MB/s
+** size 500MB
+memfd_create              (8)   2.1 s  (N=3) sd   0.0 234.0 MB/s
+/tmp create               (8)  32.2 s  (N=3) sd   0.0  15.5 MB/s
+S3 Put Single Async Batch (8)  34.4 s  (N=3) sd   0.0  14.6 MB/s
+S3 Get ASync One          (8)  34.4 s  (N=3) sd   0.0  14.6 MB/s
+S3 Get Async Batch        (8)  34.3 s  (N=3) sd   0.1  14.6 MB/s
+S3 Put Multi Async Batch  (8)  35.1 s  (N=3) sd   1.0  14.3 MB/s
+ip-172-31-35-41:~/katana/build> git branch
+  feature/simp_async
+  kg_master
+* master
+
 
 // 2020/08/29
 

@@ -44,6 +44,7 @@ static const char* part_other_metadata_key = "kg.v1.other_part_metadata.key";
 
 // special partition property names
 static const char* mirror_nodes_prop_name         = "mirror_nodes";
+static const char* master_nodes_prop_name         = "master_nodes";
 static const char* local_to_global_prop_name      = "local_to_global_vector";
 static const char* global_to_local_keys_prop_name = "global_to_local_keys";
 static const char* global_to_local_vals_prop_name = "global_to_local_values";
@@ -535,6 +536,10 @@ std::string MirrorPropName(unsigned i) {
   return std::string(mirror_nodes_prop_name) + "_" + std::to_string(i);
 }
 
+std::string MasterPropName(unsigned i) {
+  return std::string(master_nodes_prop_name) + "_" + std::to_string(i);
+}
+
 galois::Result<std::vector<tsuba::PropertyMetadata>>
 WritePartArrays(const tsuba::PartitionMetadata& part_meta,
                 const std::string& dir) {
@@ -551,6 +556,19 @@ WritePartArrays(const tsuba::PartitionMetadata& part_meta,
     next_properties.emplace_back(tsuba::PropertyMetadata{
         .name = name,
         .path = std::move(mirr_res.value()),
+    });
+  }
+
+  for (unsigned i = 0; i < part_meta.master_nodes_.size(); ++i) {
+    auto name = MasterPropName(i);
+    auto mast_res =
+        StoreArrowArrayAtName(part_meta.master_nodes_[i], dir, name);
+    if (!mast_res) {
+      return mast_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropertyMetadata{
+        .name = name,
+        .path = std::move(mast_res.value()),
     });
   }
 
@@ -892,6 +910,8 @@ AddPartitionMetadataArray(tsuba::PartitionMetadata* p_meta,
   const std::shared_ptr<arrow::ChunkedArray>& col = table->column(0);
   if (name.find(mirror_nodes_prop_name) == 0) {
     p_meta->mirror_nodes_.emplace_back(col);
+  } else if (name.find(master_nodes_prop_name) == 0) {
+    p_meta->master_nodes_.emplace_back(col);
   } else if (name == local_to_global_prop_name) {
     p_meta->local_to_global_vector_ = col;
   } else if (name == global_to_local_keys_prop_name) {

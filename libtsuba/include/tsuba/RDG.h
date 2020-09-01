@@ -87,6 +87,7 @@ struct GALOIS_EXPORT PartitionMetadata {
   std::pair<uint32_t, uint32_t> cartesian_grid_;
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
   std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
   std::shared_ptr<arrow::ChunkedArray> global_to_local_keys_;
   std::shared_ptr<arrow::ChunkedArray> global_to_local_values_;

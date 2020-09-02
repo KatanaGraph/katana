@@ -88,7 +88,6 @@ target_link_libraries(timer Galois::shmem)
 
 # Symlink all python source file into binary directory so that documentation generation can load python modules correctly.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lonestar/analytics)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lonestar/gr/analytics)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/numba_support)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/util)
 file(GLOB_RECURSE PY_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
@@ -98,7 +97,6 @@ endforeach()
 
 add_subdirectory(numba_support)
 add_subdirectory(lonestar/analytics)
-add_subdirectory(lonestar/gr/analytics)
 
 install(
   TARGETS shmem numpy_structs graphs timer atomic datastructures _loops property_graph

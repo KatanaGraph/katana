@@ -1,11 +1,3 @@
-def test_import_applications_flat_graph():
-    import galois.lonestar.gr.analytics.sssp
-    import galois.lonestar.gr.analytics.pagerank
-    import galois.lonestar.gr.analytics.bfs
-    import galois.lonestar.gr.analytics.jaccard
-    import galois.lonestar.gr.analytics.connected_components
-
-
 def test_import_applications_property_graph():
     import galois.lonestar.analytics.bfs
     import galois.lonestar.analytics.jaccard

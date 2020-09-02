@@ -259,8 +259,8 @@ public:
    * @returns Range of the distinct edge labels
    */
   auto distinctEdgeLabels() const {
-    return internal::make_no_deref_range(distinctEdgeLabelsBegin(),
-                                         distinctEdgeLabelsEnd());
+    return MakeStandardRange(distinctEdgeLabelsBegin(),
+                             distinctEdgeLabelsEnd());
   }
 
   /**

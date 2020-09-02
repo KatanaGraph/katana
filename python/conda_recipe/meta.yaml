@@ -50,10 +50,6 @@ requirements:
   run:
     - python
     - galois={{ version }}
-    # Cython is a runtime dependency because a major use case for the package
-    # is to use cython in Jupyter notebooks
-    - cython
-    - {{ compiler('cxx') }}
     - numba
     - pyarrow
 
@@ -62,11 +58,9 @@ test:
     - jupyter
     - pytest
     - numpy
-  files:
-    - test_notebook.ipynb
-    - torus5.gr
   source_files:
     - tests
+    - python/examples/jupyter
   
 
 about:

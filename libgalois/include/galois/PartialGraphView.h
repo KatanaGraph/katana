@@ -50,7 +50,35 @@ public:
   typedef StandardRange<boost::counting_iterator<uint64_t>> nodes_iterator;
 
   /// Make a partial graph view from a partially loaded RDG, as indicated by a
-  /// RDGHandle and OutIndexView.
+  /// RDGHandle and OutIndexView, which loads all node and edge properties.
+  static galois::Result<PartialGraphView> Make(tsuba::RDGHandle handle,
+                                               OutIndexView&& oiv,
+                                               uint64_t first_node,
+                                               uint64_t last_node) {
+
+    auto view                     = std::move(oiv);
+    const tsuba::GRPrefix* prefix = view.gr_view();
+
+    uint64_t first_edge   = EdgeBegin(prefix, first_node);
+    uint64_t last_edge    = EdgeBegin(prefix, last_node);
+    uint64_t edges_offset = view.view_offset();
+    uint64_t edges_start  = edges_offset + (first_edge * sizeof(Edge));
+    uint64_t edges_stop   = edges_offset + (last_edge * sizeof(Edge));
+
+    auto node_range = std::make_pair(first_node, last_node);
+    auto edge_range = std::make_pair(first_edge, last_edge);
+
+    auto rdg_res = tsuba::LoadPartial(handle, node_range, edge_range,
+                                      edges_start, edges_stop - edges_start);
+    if (!rdg_res) {
+      return rdg_res.error();
+    }
+    return PartialGraphView(std::move(rdg_res.value()), std::move(view),
+                            node_range, edge_range);
+  }
+
+  /// Make a partial graph view from a partially loaded RDG, as indicated by a
+  /// RDGHandle and OutIndexView, which loads only the specified properties
   static galois::Result<PartialGraphView>
   Make(tsuba::RDGHandle handle, OutIndexView&& oiv, uint64_t first_node,
        uint64_t last_node, const std::vector<std::string>& node_properties,

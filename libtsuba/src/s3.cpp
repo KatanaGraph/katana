@@ -494,7 +494,7 @@ galois::Result<void> internal::S3PutMultiAsync2(const std::string& bucket,
                         const std::shared_ptr<
                             const Aws::Client::AsyncCallerContext>& /*ctx*/) {
       if (outcome.IsSuccess()) {
-        // XXX not thread safe
+        // "Concurrently accessing or modifying different elements is safe."
         pmh.impl_->part_e_tags_[i] = outcome.GetResult().GetETag();
         pmh.impl_->sema.GoalMinusOne();
         GALOIS_LOG_DEBUG("[{}]{:<30} PutMultiAsync2 i {:d}\n etag {}", bucket,
@@ -553,9 +553,9 @@ internal::S3PutMultiAsyncFinish(const std::string& bucket,
     /* TODO there are likely some errors we can handle gracefully */
     const auto& error = completeUploadOutcome.GetError();
     GALOIS_LOG_ERROR("\n  Failed to complete mutipart upload\n  {}: {}\n  "
-                     "upload id: {}\n [{}] {}",
-                     error.GetExceptionName(), error.GetMessage(),
-                     pmh.impl_->upload_id_, bucket, object);
+                     "[{}] {}",
+                     error.GetExceptionName(), error.GetMessage(), bucket,
+                     object);
     return ErrorCode::S3Error;
   }
   return galois::ResultSuccess();

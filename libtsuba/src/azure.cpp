@@ -13,7 +13,6 @@
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
-#include "tsuba/azure_internal.h"
 
 namespace az = azure::storage_lite;
 
@@ -155,7 +154,7 @@ tsuba::AzureGetAsync(const std::string& container, const std::string& blob,
     }
     return galois::ResultSuccess();
   });
-  return std::make_unique<internal::AzureAsyncWork>(std::move(future));
+  return std::make_unique<tsuba::FileAsyncWork>(std::move(future));
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
@@ -179,7 +178,7 @@ tsuba::AzurePutAsync(const std::string& container, const std::string& blob,
     }
     return galois::ResultSuccess();
   });
-  return std::make_unique<internal::AzureAsyncWork>(std::move(future));
+  return std::make_unique<FileAsyncWork>(std::move(future));
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
@@ -215,7 +214,7 @@ tsuba::AzureListAsync(const std::string& container, const std::string& blob,
     } while (!token.empty());
     return galois::ResultSuccess();
   });
-  return std::make_unique<internal::AzureAsyncWork>(std::move(future));
+  return std::make_unique<tsuba::FileAsyncWork>(std::move(future));
 }
 
 galois::Result<void>

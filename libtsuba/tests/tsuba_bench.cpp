@@ -77,8 +77,7 @@ void TxBnc(const std::string& src_uri, int count) {
     auto us                  = timespec_to_us(timespec_sub(now(), start));
     auto [time, units]       = UsToPair(us);
     auto [time_tx, units_tx] = UsToPair(us / count);
-    fmt::print("Load: {:5.1f}{} {:5.1f}{}/tx\n", time, units, time_tx,
-               units_tx);
+    fmt::print("Tx: {:5.1f}{} {:5.1f}{}/tx\n", time, units, time_tx, units_tx);
   }
 
   if (auto res = tsuba::Close(handle); !res) {

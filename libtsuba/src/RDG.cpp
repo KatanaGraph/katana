@@ -1029,31 +1029,50 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
       .policy_id        = policy_id,
       .transpose        = transpose,
   };
+  galois::Result<void> ret = galois::ResultSuccess();
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   if (comm->ID == 0) {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-    std::string s = RDGMetaToJsonString(handle.impl_->rdg_meta);
-    if (auto res = tsuba::FileStore(
-            tsuba::RDGMeta::FileName(handle.impl_->rdg_path,
-                                     handle.impl_->rdg_meta.version),
-            reinterpret_cast<const uint8_t*>(s.data()), s.size());
-        !res) {
-      TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-      GALOIS_LOG_ERROR("failed to store previous RDGMeta file");
-      return res.error();
-    }
-    s = RDGMetaToJsonString(new_meta);
+
+    std::string prev_s = RDGMetaToJsonString(handle.impl_->rdg_meta);
+    auto prev_res      = tsuba::FileStoreAsync(
+        tsuba::RDGMeta::FileName(handle.impl_->rdg_path,
+                                 handle.impl_->rdg_meta.version),
+        reinterpret_cast<const uint8_t*>(prev_s.data()), prev_s.size());
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-    if (auto res = tsuba::FileStore(handle.impl_->rdg_path,
-                                    reinterpret_cast<const uint8_t*>(s.data()),
-                                    s.size());
-        !res) {
-      TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-      GALOIS_LOG_ERROR("failed to store RDG file");
-      return res.error();
+
+    std::string curr_s = RDGMetaToJsonString(new_meta);
+    auto curr_res      = tsuba::FileStoreAsync(
+        handle.impl_->rdg_path, reinterpret_cast<const uint8_t*>(curr_s.data()),
+        curr_s.size());
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+
+    if (!prev_res) {
+      GALOIS_LOG_ERROR("failed to store previous RDGMeta file");
+      ret = prev_res.error();
+    }
+    if (!curr_res) {
+      GALOIS_LOG_ERROR("failed to store current RDGMeta file");
+      ret = curr_res.error();
+    }
+
+    auto prev_fut = std::move(prev_res.value());
+    while (!prev_fut->Done()) {
+      if (auto res = (*prev_fut)(); !res) {
+        GALOIS_LOG_ERROR("future failed to store previous RDGMeta file {}",
+                         res.error());
+      }
+    }
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+    auto curr_fut = std::move(curr_res.value());
+    while (!curr_fut->Done()) {
+      if (auto res = (*curr_fut)(); !res) {
+        GALOIS_LOG_ERROR("future failed to store previous RDGMeta file {}",
+                         res.error());
+      }
     }
   }
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -1061,7 +1080,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
   handle.impl_->rdg_meta = new_meta;
-  return galois::ResultSuccess();
+  return ret;
 }
 
 galois::Result<void> DoStore(tsuba::RDGHandle handle, tsuba::RDG* rdg) {

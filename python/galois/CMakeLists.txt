@@ -78,7 +78,7 @@ generate_cython_source(_loops DEPENDS numba_wrapper_support.pyx.jinja)
 add_cython_target(_loops ${CMAKE_CURRENT_BINARY_DIR}/_loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
 add_library(_loops MODULE ${_LOOPS_SOURCES})
 python_extension_module(_loops)
-add_dependencies(_loops shmem numpy_structs _loops_pxd datastructures_pxd property_graph_pxd)
+add_dependencies(_loops shmem numpy_structs datastructures_pxd property_graph_pxd)
 target_link_libraries(_loops Galois::shmem)
 
 add_cython_target(timer timer.pyx CXX OUTPUT_VAR TIMER_SOURCES)
@@ -134,12 +134,6 @@ if(BUILD_LIBGALOIS)
   install(
     DIRECTORY "${GALOIS_SOURCE_DIR}/include/" "${GALOIS_BINARY_DIR}/include/"
     DESTINATION include
-    FILES_MATCHING PATTERN "*.h"
-  )
-  get_target_property(PYGALOIS_SOURCE_DIR pygalois INTERFACE_INCLUDE_DIRECTORIES)
-  install(
-    DIRECTORY "${PYGALOIS_SOURCE_DIR}"
-    DESTINATION .
     FILES_MATCHING PATTERN "*.h"
   )
 endif()

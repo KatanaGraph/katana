@@ -397,10 +397,10 @@ public:
     }
 
     // loop through all data labels
-    for (const data_iterator data : distinctEdgeLabels()) {
+    for (const EdgeTy& label : distinctEdgeLabels()) {
       // always use out edges (we want an id to the out edge returned)
       std::optional<edge_iterator> r =
-          binarySearch(dst, raw_begin(src, *data), raw_end(src, *data));
+          binarySearch(dst, raw_begin(src, label), raw_end(src, label));
 
       // return if something was found
       if (r) {

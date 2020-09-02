@@ -1,9 +1,8 @@
 # -*- mode: cython -*-
-# cython: cdivision = True
 
 # {{generated_banner()}}
 
-from libc.stdint cimport *
+from libc.stdint cimport uint64_t
 from .cpp.libgalois.graphs.Graph cimport PropertyFileGraph, GraphTopology
 from libcpp.memory cimport shared_ptr
 from pyarrow.lib cimport Schema

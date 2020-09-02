@@ -1,9 +1,10 @@
 # -*- mode: cython -*-
-# cython: cdivision = True
 
 # {{generated_banner()}}
 
-from pyarrow.lib cimport *
+from libc.stdint cimport uint64_t, int64_t, uint32_t, int32_t
+
+from pyarrow.lib cimport pyarrow_unwrap_array, pyarrow_unwrap_chunked_array, CChunkedArray, CArray
 import pyarrow
 
 
@@ -61,6 +62,8 @@ cdef api bint Array_is_valid(CArray* self, uint64_t i) nogil:
 
 
 {% macro numba_wrap(array_type_prefix, element_type, c_element_type=element_type) -%}
+from pyarrow.lib cimport C{{array_type_prefix}}Array
+
 # For ChunkedArray.as{{array_type_prefix}}().chunk(i)[j] and ChunkedArray.as{{array_type_prefix}}() iteration
 cdef api {{element_type}} ChunkedArray_{{array_type_prefix}}Array_Value(CChunkedArray* self, uint64_t chunk, uint64_t i) nogil:
     return (<C{{array_type_prefix}}Array*>self.chunk(chunk).get()).Value(i)

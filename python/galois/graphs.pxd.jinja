@@ -1,14 +1,13 @@
 # -*- mode: cython -*-
 #{# This Jinja2 generates the cython declarations for Galois graph data structures #}
-# distutils: language=c++
-# distutils: extra_compile_args=["-std=c++17"]
 
 # {{generated_banner()}}
 
-from galois.shmem cimport *
 from .cpp.libgalois.Galois cimport MethodFlag
 from .cpp.libgalois.graphs cimport Graph
+from .cpp.libstd cimport template_parameter_true, template_parameter_false
 from cpython cimport PyObject
+
 
 ctypedef PyObject* PyObjectP
 
@@ -49,8 +48,8 @@ cdef class LC_CSR_Graph_{{template_name}}:
 {%- endmacro %}
 
 {% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}
-{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_true")}}
-{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_false")}}
+{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_true")}}
+{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_false")}}
 {% endmacro %}
 
 {% include "graphs.instantiations.jinja" %}

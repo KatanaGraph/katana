@@ -1,18 +1,10 @@
-# distutils: extra_compile_args=["-std=c++17"]
-
 from libcpp.string cimport string
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
-from libcpp.memory cimport shared_ptr, unique_ptr
-from libc.stdint cimport *
-from ....cpp.libstd.boost cimport *
-from cython.operator cimport dereference as df
-from pyarrow.lib cimport *
-
-# Fake types to work around Cython's lack of support
-# for non-type template parameters.
-cdef extern from *:
-    cppclass dummy_true "true"
-    cppclass dummy_false "false"
+from libcpp.memory cimport unique_ptr, shared_ptr
+from libcpp.vector cimport vector
+from libc.stdint cimport uint64_t
+from galois.cpp.libstd.boost cimport std_result
+from pyarrow.lib cimport CSchema, CChunkedArray, CArray, CTable, CUInt32Array, CUInt64Array
 
 # Omit the exception specifications here to
 # allow returning lvalues.

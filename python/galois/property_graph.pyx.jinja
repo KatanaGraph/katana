@@ -1,12 +1,12 @@
 # -*- mode: cython -*-
-# cython: cdivision = True
 
 # {{generated_banner()}}
 
+from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_array, pyarrow_unwrap_table
 
-from pyarrow.lib cimport *
 from .cpp.libstd.boost cimport std_result
 from .numba_support._pyarrow_wrappers import unchunked
+from libcpp.memory cimport shared_ptr, unique_ptr
 
 {% import "numba_wrapper_support.pyx.jinja" as numba %}
 

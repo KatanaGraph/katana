@@ -1,27 +1,3 @@
-from libc.stdint cimport *
-
-cdef extern from *:
-    cppclass dummy_true "true"
-    cppclass dummy_false "false"
-    cppclass Uint_64u "64u"
-
-##
-# TODO: Need a better way to provide user defined
-# functions as template parameters to DS such as
-# OBIM
-##
-cdef extern from "galois/Constants.h" namespace "galois" nogil:
-    cppclass UpdateRequestIndexer:
-        UpdateRequestIndexer(uint32_t)
-        pass
-    cppclass UpdateRequest[G, D]:
-        G src
-        D dist
-        UpdateRequest(G&, D)
-        pass
-    cppclass ReqPushWrap:
-        pass
-        
 cdef extern from "galois/Traits.h" namespace "galois" nogil:
     cppclass s_wl:
         pass

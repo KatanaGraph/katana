@@ -1,6 +1,5 @@
 # -*- mode: cython -*-
 #{# This Jinja2 generates the Cython wrapper for Galois' do_all and for_each #}
-# cython: cdivision = True
 
 # {{generated_banner()}}
 
@@ -12,6 +11,8 @@ from libcpp.memory cimport shared_ptr
 from cython.operator cimport dereference as deref
 cimport numpy as np
 import numpy as np
+
+{{type_instantiation_imports}}
 
 import galois
 import galois.loops

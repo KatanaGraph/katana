@@ -1,8 +1,10 @@
 {# -*- mode: cython -*- -#}
 
+from libc.stdint cimport uint32_t
+
 # =========== python object    
-{{wrap_LC_CSR_Graph_PyObject("Directed", "dummy_true")}}
-{{wrap_LC_CSR_Graph_PyObject("Undirected", "dummy_false")}}
+{{wrap_LC_CSR_Graph_PyObject("Directed", "template_parameter_true")}}
+{{wrap_LC_CSR_Graph_PyObject("Undirected", "template_parameter_false")}}
 
 {% set types = ["void", "int", "float", "double", "uint32_t"] %}
 {% for node_type in types %}

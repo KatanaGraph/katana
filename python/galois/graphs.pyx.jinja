@@ -1,17 +1,16 @@
 # -*- mode: cython -*-
 #{# This Jinja2 generates the cython definitions for Galois graph data structures #}
-# cython: cdivision = True
 
 # {{generated_banner()}}
 
 import cython
-from galois.shmem cimport *
 from .cpp.libgalois cimport Galois
 from .cpp.libgalois.Galois cimport MethodFlag
 from .cpp.libgalois.graphs cimport Graph
+from .cpp.libstd cimport template_parameter_true, template_parameter_false
 from cython.operator cimport preincrement, dereference as deref
 from cpython cimport PyObject
-from cpython.ref cimport Py_DECREF, Py_XDECREF, Py_INCREF
+from cpython.ref cimport Py_XDECREF, Py_INCREF
 
 cdef class _MethodFlag:
     @staticmethod
@@ -194,10 +193,10 @@ cdef api void LC_CSR_Graph_{{template_name}}_setData(void* self, unsigned int no
 {% endmacro %}
        
 {% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}
-{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_true")}}
+{{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_true")}}
 LC_CSR_Graph_Directed_primitive[("{{node_type}}", "{{edge_type}}")] = LC_CSR_Graph_Directed_{{node_type}}_{{edge_type}}
 
-{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "dummy_false")}}
+{{wrap_LC_CSR_Graph_primitive("Undirected_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_false")}}
 LC_CSR_Graph_Undirected_primitive[("{{node_type}}", "{{edge_type}}")] = LC_CSR_Graph_Undirected_{{node_type}}_{{edge_type}}
 {% endmacro %}
 

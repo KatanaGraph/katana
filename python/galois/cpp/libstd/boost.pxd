@@ -1,7 +1,4 @@
 from libcpp.string cimport string
-from libcpp.vector cimport vector
-from libc.stdint cimport *
-from libcpp.memory cimport shared_ptr
 
 cdef extern from "<system_error>" namespace "std" nogil:
     cdef cppclass error_code:

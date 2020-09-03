@@ -1060,7 +1060,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
     }
 
     auto prev_fut = std::move(prev_res.value());
-    while (!prev_fut->Done()) {
+    while (prev_fut != nullptr && !prev_fut->Done()) {
       if (auto res = (*prev_fut)(); !res) {
         GALOIS_LOG_ERROR("future failed to store previous RDGMeta file {}",
                          res.error());
@@ -1068,7 +1068,7 @@ galois::Result<void> CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id,
     }
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
     auto curr_fut = std::move(curr_res.value());
-    while (!curr_fut->Done()) {
+    while (curr_fut != nullptr && !curr_fut->Done()) {
       if (auto res = (*curr_fut)(); !res) {
         GALOIS_LOG_ERROR("future failed to store previous RDGMeta file {}",
                          res.error());

@@ -247,40 +247,53 @@ private:
   const arrow::BooleanArray& array_;
 };
 
-/// StringPropertyView provides a property view over arrow::Arrays of string
-/// elements.
-class StringPropertyView {
+/// StringPropertyReadOnlyView provides a read-only property view over
+/// arrow::Arrays of string elements.
+template <typename OffsetType>
+class StringPropertyReadOnlyView {
 public:
-  using reference  = std::string_view;
   using value_type = std::string_view;
 
   /// Make creates a string property view from a large string array.
+  static Result<StringPropertyReadOnlyView>
+  Make(const arrow::LargeStringArray& array) {
+    return StringPropertyReadOnlyView(
+        array.data()->GetMutableValues<uint8_t>(2),
+        array.data()->GetValues<OffsetType>(1),
+        array.data()->GetValues<uint8_t>(0));
+  }
+
+  /// Make creates a string property view from a string array.
   ///
-  /// We do not support non-large string arrays because they use int32_t
-  /// offsets and we cannot guarantee their values will fit in single array.
-  static Result<StringPropertyView> Make(const arrow::LargeStringArray& array) {
-    return StringPropertyView(array.data()->GetMutableValues<uint8_t>(2),
-                              array.data()->GetValues<int64_t>(1),
-                              array.data()->GetValues<uint8_t>(0));
+  /// Note that we cannot guarantee all the values will fit in single array
+  /// because string array size is limited to 2^32.
+  static Result<StringPropertyReadOnlyView>
+  Make(const arrow::StringArray& array) {
+    return StringPropertyReadOnlyView(
+        array.data()->GetMutableValues<uint8_t>(2),
+        array.data()->GetValues<OffsetType>(1),
+        array.data()->GetValues<uint8_t>(0));
   }
 
   bool IsValid(size_t i) const {
     return null_bitmap_ != nullptr && arrow::BitUtil::GetBit(null_bitmap_, i);
   }
 
-  reference GetValue(size_t i) {
-    const int64_t pos = offsets_[i];
-    return reference(reinterpret_cast<char*>(values_ + pos),
-                     offsets_[i + 1] - pos);
+  value_type GetValue(size_t i) const {
+    const OffsetType pos = offsets_[i];
+    return value_type(reinterpret_cast<char*>(values_ + pos),
+                      offsets_[i + 1] - pos);
   }
 
+  value_type operator[](size_t i) const { return GetValue(i); }
+
 private:
-  StringPropertyView(uint8_t* values, const int64_t* offsets,
-                     const uint8_t* null_bitmap)
+  StringPropertyReadOnlyView(uint8_t* values, const OffsetType* offsets,
+                             const uint8_t* null_bitmap)
       : values_(values), offsets_(offsets), null_bitmap_(null_bitmap) {}
 
   uint8_t* values_{};
-  const int64_t* offsets_{};
+  const OffsetType* offsets_{};
   const uint8_t* null_bitmap_{};
 };
 
@@ -301,6 +314,16 @@ struct UInt64Property : public PODProperty<uint64_t> {};
 struct BooleanReadOnlyProperty {
   using ArrowType = typename arrow::CTypeTraits<bool>::ArrowType;
   using ViewType  = BooleanPropertyReadOnlyView;
+};
+
+struct StringReadOnlyProperty {
+  using ArrowType = arrow::StringType;
+  using ViewType  = StringPropertyReadOnlyView<int32_t>;
+};
+
+struct LargeStringReadOnlyProperty {
+  using ArrowType = arrow::LargeStringType;
+  using ViewType  = StringPropertyReadOnlyView<int64_t>;
 };
 
 } // namespace galois

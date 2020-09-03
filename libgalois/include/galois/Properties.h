@@ -174,8 +174,9 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays) {
 template <typename T>
 class PODPropertyView {
 public:
-  using reference  = T&;
-  using value_type = T;
+  using value_type      = T;
+  using reference       = T&;
+  using const_reference = const T&;
 
   template <typename U>
   static Result<PODPropertyView> Make(const arrow::NumericArray<U>& array) {
@@ -200,7 +201,11 @@ public:
 
   reference GetValue(size_t i) { return values_[i]; }
 
+  const_reference GetValue(size_t i) const { return values_[i]; }
+
   reference operator[](size_t i) { return GetValue(i); }
+
+  const_reference operator[](size_t i) const { return GetValue(i); }
 
 private:
   PODPropertyView(T* values, const uint8_t* null_bitmap)
@@ -208,6 +213,38 @@ private:
 
   T* values_;
   const uint8_t* null_bitmap_;
+};
+
+/// BooleanPropertyReadOnlyView provides a read-only property view over
+/// arrow::Arrays of boolean elements.
+class BooleanPropertyReadOnlyView {
+public:
+  // use uint8_t instead of bool for value_type to avoid std::vector<bool>
+  // (std::vector<bool> specialization leads to issues in concurrent writes
+  // as well as serialization/deserialization)
+  using value_type = uint8_t;
+
+  static Result<BooleanPropertyReadOnlyView>
+  Make(const arrow::BooleanArray& array) {
+    return BooleanPropertyReadOnlyView(array);
+  }
+
+  bool IsValid(size_t i) const { return array_.IsValid(i); }
+
+  value_type GetValue(size_t i) const { return array_.Value(i); }
+
+  value_type operator[](size_t i) const {
+    if (!IsValid(i)) {
+      return false;
+    }
+    return GetValue(i);
+  }
+
+private:
+  BooleanPropertyReadOnlyView(const arrow::BooleanArray& array)
+      : array_(array) {}
+
+  const arrow::BooleanArray& array_;
 };
 
 /// StringPropertyView provides a property view over arrow::Arrays of string
@@ -260,6 +297,11 @@ struct UInt16Property : public PODProperty<uint16_t> {};
 struct UInt32Property : public PODProperty<uint32_t> {};
 
 struct UInt64Property : public PODProperty<uint64_t> {};
+
+struct BooleanReadOnlyProperty {
+  using ArrowType = typename arrow::CTypeTraits<bool>::ArrowType;
+  using ViewType  = BooleanPropertyReadOnlyView;
+};
 
 } // namespace galois
 #endif

@@ -132,7 +132,8 @@ std::string RDGMeta::PartitionFileName(const std::string& rdg_path,
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
   j = json{{"transposed", pmd.transposed_},
-           {"is_vertex_cut", pmd.is_vertex_cut_},
+           {"is_outgoing_edge_cut", pmd.is_outgoing_edge_cut_},
+           {"is_incoming_edge_cut", pmd.is_incoming_edge_cut_},
            {"num_global_nodes", pmd.num_global_nodes_},
            {"num_global_edges", pmd.num_global_edges_},
            {"num_nodes", pmd.num_nodes_},
@@ -145,7 +146,8 @@ void to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   j.at("transposed").get_to(pmd.transposed_);
-  j.at("is_vertex_cut").get_to(pmd.is_vertex_cut_);
+  j.at("is_outgoing_edge_cut").get_to(pmd.is_outgoing_edge_cut_);
+  j.at("is_incoming_edge_cut").get_to(pmd.is_incoming_edge_cut_);
   j.at("num_global_nodes").get_to(pmd.num_global_nodes_);
   j.at("num_global_edges").get_to(pmd.num_global_edges_);
   j.at("num_nodes").get_to(pmd.num_nodes_);

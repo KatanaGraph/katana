@@ -77,7 +77,8 @@ struct GALOIS_EXPORT RDGMeta {
 struct GALOIS_EXPORT PartitionMetadata {
   uint32_t policy_id_;
   bool transposed_;
-  bool is_vertex_cut_;
+  bool is_outgoing_edge_cut_;
+  bool is_incoming_edge_cut_;
   uint64_t num_global_nodes_;
   uint64_t num_global_edges_;
   uint64_t num_edges_;

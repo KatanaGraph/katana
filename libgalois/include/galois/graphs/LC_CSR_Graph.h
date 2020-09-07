@@ -760,6 +760,65 @@ public:
     initializeLocalRanges();
   }
 
+  template <typename E                                            = EdgeTy,
+            std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
+  void constructFrom(
+      uint32_t numNodes, uint64_t numEdges,
+      galois::LargeArray<uint64_t>&& prefix_sum,
+      galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>& edges_id,
+      std::vector<std::vector<EdgeTy>>& edges_data) {
+    allocateFrom(numNodes, numEdges);
+    constructNodes();
+
+    edgeIndData = std::move(prefix_sum);
+
+    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+      if (n == 0) {
+        if (edgeIndData[n] > 0) {
+          std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
+          std::copy(edges_data[n].begin(), edges_data[n].end(),
+                    edgeData.begin());
+        }
+      } else {
+        if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
+          std::copy(edges_id[n].begin(), edges_id[n].end(),
+                    edgeDst.begin() + edgeIndData[n - 1]);
+          std::copy(edges_data[n].begin(), edges_data[n].end(),
+                    edgeData.begin() + edgeIndData[n - 1]);
+        }
+      }
+    });
+
+    initializeLocalRanges();
+  }
+
+  template <typename E                                           = EdgeTy,
+            std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
+  void constructFrom(
+      uint32_t numNodes, uint64_t numEdges,
+      galois::LargeArray<uint64_t>&& prefix_sum,
+      galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>& edges_id) {
+    allocateFrom(numNodes, numEdges);
+    constructNodes();
+
+    edgeIndData = std::move(prefix_sum);
+
+    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+      if (n == 0) {
+        if (edgeIndData[n] > 0) {
+          std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
+        }
+      } else {
+        if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
+          std::copy(edges_id[n].begin(), edges_id[n].end(),
+                    edgeDst.begin() + edgeIndData[n - 1]);
+        }
+      }
+    });
+
+    initializeLocalRanges();
+  }
+
   /**
    * Reads the GR files directly into in-memory
    * data-structures of LC_CSR graphs using freads.

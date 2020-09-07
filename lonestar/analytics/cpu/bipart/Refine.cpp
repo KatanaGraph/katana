@@ -17,587 +17,458 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "bipart.h"
-#include "galois/AtomicHelpers.h"
-#include <set>
-#include <iostream>
-#include <fstream>
+#include "Helper.h"
 
-namespace {
-
-// This is only used on the terminal graph (find graph)
-// Should workd for hmetis
-
-/*int calculate_cutsize(GGraph& g) {
-
-  GNodeBag bag;
-  galois::do_all(galois::iterate(g.getNets()),
-        [&](GNode n) {
-            auto c = g.edges(n).begin();
-            GNode cn = g.getEdgeDst(*c);
-            int part = g.getData(cn).getPart();
-            for (auto x : g.edges(n)) {
-              auto cc = g.getEdgeDst(x);
-              int partc = g.getData(cc).getPart();
-              if (partc != part) {
-                bag.push(n);
-                return;
-              }
-            }
-        },
-        galois::loopname("cutsize"));
-  return std::distance(bag.begin(), bag.end());
-}*/
-
-/*int calculate_cutsize(GGraph& g, std::map<GNode, unsigned> part) {
-
-  GNodeBag bag;
-  galois::do_all(galois::iterate(g.getNets()),
-        [&](GNode n) {
-            auto c = g.edges(n).begin();
-            GNode cn = g.getEdgeDst(*c);
-            unsigned ppart = part[cn];
-            for (auto x : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
-              auto cc = g.getEdgeDst(x);
-              unsigned partc = part[cc];
-              if (partc != ppart) {
-                bag.push(n);
-                return;
-              }
-            }
-        },
-        galois::steal(), galois::loopname("cutsize"));
-  return std::distance(bag.begin(), bag.end());
-}*/
-void projectPart(MetisGraph* Graph) {
-  GGraph* fineGraph   = Graph->getFinerGraph()->getGraph();
-  GGraph* coarseGraph = Graph->getGraph();
+void ProjectPart(MetisGraph* metis_graph) {
+  GGraph* fine_graph   = metis_graph->GetParentGraph()->GetGraph();
+  GGraph* coarse_graph = metis_graph->GetGraph();
   galois::do_all(
-      galois::iterate(fineGraph->hedges, fineGraph->size()),
+      galois::iterate(fine_graph->hedges,
+                      static_cast<uint32_t>(fine_graph->size())),
       [&](GNode n) {
-        auto parent   = fineGraph->getData(n).getParent();
-        auto& cn      = coarseGraph->getData(parent);
-        unsigned part = cn.getPart();
-        fineGraph->getData(n).setPart(part);
+        auto parent        = fine_graph->getData(n).GetParent();
+        auto& cn           = coarse_graph->getData(parent);
+        uint32_t partition = cn.GetPartition();
+        fine_graph->getData(n).SetPartition(partition);
       },
-      galois::loopname("project"));
+      galois::loopname("Refining-Project-Partition"));
 }
 
-void initGains(GGraph& g, int) {
-  std::string name    = "initgain";
-  std::string fetsref = "FETSREF_"; // + std::to_string(pass);
+void ResetCounter(GGraph& g) {
+  galois::do_all(
+      galois::iterate(g.hedges, static_cast<uint32_t>(g.size())),
+      [&](GNode n) { g.getData(n).ResetCounter(); },
+      galois::loopname("Refining-Reset-Counter"));
+}
+
+void ParallelSwaps(
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
+    std::vector<GGraph*>& g, uint32_t refine_max_levels) {
+  uint32_t num_partitions = g.size();
+  std::vector<galois::GAccumulator<WeightTy>> accum(num_partitions);
+  std::vector<galois::GAccumulator<WeightTy>> node_size(num_partitions);
+
+  uint32_t total_nodes = combined_nodelist.size();
 
   galois::do_all(
-      galois::iterate(g.hedges, g.size()),
-      [&](GNode n) {
-        g.getData(n).FS.store(0);
-        g.getData(n).TE.store(0);
-      },
-      galois::loopname(name.c_str()));
-  galois::InsertBag<std::pair<GNode, GGraph::edge_iterator>> bag;
-  typedef std::map<GNode, int> mapTy;
-  typedef galois::substrate::PerThreadStorage<mapTy> ThreadLocalData;
-  ThreadLocalData edgesThreadLocal;
-  galois::do_all(
-      galois::iterate(size_t{0}, g.hedges),
-      [&](GNode n) {
-        int p1 = 0;
-        int p2 = 0;
-        for (auto x : g.edges(n)) {
-          auto cc  = g.getEdgeDst(x);
-          int part = g.getData(cc).getPart();
-          if (part == 0)
-            p1++;
-          else
-            p2++;
-          if (p1 > 1 && p2 > 1)
-            break;
-        }
-        if (!(p1 > 1 && p2 > 1) && (p1 + p2 > 1)) {
-          for (auto x : g.edges(n)) {
-            auto cc  = g.getEdgeDst(x);
-            int part = g.getData(cc).getPart();
-            int nodep;
-            if (part == 0)
-              nodep = p1;
-            else
-              nodep = p2;
-            if (nodep == 1) {
-              galois::atomicAdd(g.getData(cc).FS, 1);
-            }
-            if (nodep == (p1 + p2)) {
-              galois::atomicAdd(g.getData(cc).TE, 1);
-            }
-          }
+      galois::iterate(uint32_t{0}, total_nodes),
+      [&](uint32_t v) {
+        auto node_index_pair = combined_nodelist[v];
+        uint32_t index       = node_index_pair.second;
+        GNode n              = node_index_pair.first;
+        MetisNode& node_data = g[index]->getData(n);
+        WeightTy weight      = node_data.GetWeight();
+
+        node_size[index] += weight;
+        if (node_data.GetPartition() > 0) {
+          accum[index] += weight;
         }
       },
-      galois::steal(), galois::loopname("initGains"));
-}
+      galois::loopname("Refining-Make-Balance-Swap"));
 
-void unlock(GGraph& g) {
-  galois::do_all(
-      galois::iterate(g.hedges, g.size()),
-      [&](GNode n) { g.getData(n).counter = 0; }, galois::loopname("unlock"));
-}
+  GNodeBag partition_zero_nodes;
+  GNodeBag partition_one_nodes;
+  GNodeBag swap_bag;
+  std::vector<GNode> partition_zero_nodes_bag;
+  std::vector<GNode> partition_one_nodes_bag;
+  uint32_t num_partition_zero_nodes{0};
+  uint32_t num_partition_one_nodes{0};
 
-__attribute__((unused)) void unlocked(GGraph& g) {
-  galois::do_all(
-      galois::iterate(g.hedges, g.size()),
-      [&](GNode n) { g.getData(n).setLocked(false); },
-      galois::loopname("unlocked"));
-}
-// refine
-void parallel_refine_KF(GGraph& g, float, unsigned refineTo) {
+  galois::StatTimer init_gain_timer("Refining-Init-Gains");
+  galois::StatTimer sort_timer("Refining-Sort");
 
-  // std::cout<<"in parallel balance\n";
-  typedef galois::gstl::Vector<unsigned> VecTy;
-  typedef galois::substrate::PerThreadStorage<VecTy> ThreadLocalData;
-  ThreadLocalData edgesThreadLocal;
-  std::string name = "findZandO";
+  for (uint32_t pass = 0; pass < refine_max_levels; pass++) {
+    init_gain_timer.start();
+    InitGain(combined_edgelist, combined_nodelist, g);
+    init_gain_timer.stop();
 
-  // typedef galois::worklists::PerSocketChunkFIFO<8> Chunk;
-
-  galois::GAccumulator<unsigned int> accum;
-  galois::GAccumulator<unsigned int> nodeSize;
-  galois::do_all(
-      galois::iterate(g.hedges, g.size()),
-      [&](GNode n) {
-        nodeSize += g.getData(n).getWeight();
-        if (g.getData(n).getPart() > 0)
-          accum += g.getData(n).getWeight();
-      },
-      galois::loopname("make balance"));
-  unsigned pass = 0;
-  // std::cout<<"cut parallel "<<calculate_cutsize(g)<<"\n";
-  // initGain(g);
-  while (pass < refineTo) {
-    // T.start();
-    initGains(g, refineTo);
-    // T.stop();
-    // std::cout<<"init gain time "<<T.get()<<" for round "<<pass<<"\n";
-    GNodeBag nodelistz;
-    GNodeBag nodelisto;
-    unsigned zeroW = 0;
-    unsigned oneW  = 0;
-    galois::do_all(
-        galois::iterate(g.hedges, g.size()),
-        [&](GNode n) {
-          if (g.getData(n).FS == 0 && g.getData(n).TE == 0)
-            return;
-          int gain = g.getData(n).getGain();
-          if (gain < 0) {
-            return;
-          }
-          unsigned pp = g.getData(n).getPart();
-          if (pp == 0) {
-            nodelistz.push(n);
-          } else {
-            nodelisto.push(n);
-          }
-        },
-        galois::loopname("findZandO"));
-    zeroW = std::distance(nodelistz.begin(), nodelistz.end());
-    oneW  = std::distance(nodelisto.begin(), nodelisto.end());
-    GNodeBag bb;
-    std::vector<GNode> bbagz;
-    std::vector<GNode> bbago;
-    for (auto n : nodelistz)
-      bbagz.push_back(n);
-    for (auto n : nodelisto)
-      bbago.push_back(n);
-    std::sort(bbagz.begin(), bbagz.end(), [&g](GNode& lpw, GNode& rpw) {
-      if (g.getData(lpw).getGain() == g.getData(rpw).getGain())
-        return g.getData(lpw).nodeid < g.getData(rpw).nodeid;
-      return g.getData(lpw).getGain() > g.getData(rpw).getGain();
-    });
-    std::sort(bbago.begin(), bbago.end(), [&g](GNode& lpw, GNode& rpw) {
-      if (g.getData(lpw).getGain() == g.getData(rpw).getGain())
-        return g.getData(lpw).nodeid < g.getData(rpw).nodeid;
-      return g.getData(lpw).getGain() > g.getData(rpw).getGain();
-    });
-    if (zeroW <= oneW) {
-      for (unsigned i = 0; i < zeroW; i++) {
-        bb.push(bbago[i]);
-        bb.push(bbagz[i]);
-        //    if (i >= sqrt(Size)) break;
+    for (uint32_t i = 0; i < num_partitions; i++) {
+      if (g[i] == nullptr) {
+        continue;
       }
+      GGraph& cur_graph = *g[i];
+
+      partition_zero_nodes.clear();
+      partition_one_nodes.clear();
+      partition_zero_nodes_bag.clear();
+      partition_one_nodes_bag.clear();
+      swap_bag.clear();
+
       galois::do_all(
-          galois::iterate(bb),
-          [&](GNode n) {
-            if (g.getData(n).getPart() == 0)
-              g.getData(n).setPart(1);
-            else
-              g.getData(n).setPart(0);
-            g.getData(n).counter++;
-          },
-          galois::loopname("swap"));
-    } else {
-      for (unsigned i = 0; i < oneW; i++) {
-        bb.push(bbago[i]);
-        bb.push(bbagz[i]);
-        //     if (i >= sqrt(Size)) break;
-      }
-      galois::do_all(
-          galois::iterate(bb),
-          [&](GNode n) {
-            if (g.getData(n).getPart() == 0)
-              g.getData(n).setPart(1);
-            else
-              g.getData(n).setPart(0);
-            g.getData(n).counter++;
-          },
-          galois::loopname("swap"));
-    }
-    pass++;
-  }
-  unlock(g);
-}
+          galois::iterate(cur_graph.hedges,
+                          static_cast<uint32_t>(cur_graph.size())),
+          [&](uint32_t n) {
+            MetisNode& node_data = cur_graph.getData(n);
 
-void parallel_make_balance(GGraph& g, float tol, int p) {
-
-  unsigned Size = g.hnodes;
-
-  galois::GAccumulator<unsigned int> accum;
-  galois::GAccumulator<unsigned int> nodeSize;
-  galois::do_all(
-      galois::iterate(g.hedges, g.size()),
-      [&](GNode n) {
-        nodeSize += g.getData(n).getWeight();
-        if (g.getData(n).getPart() > 0)
-          accum += g.getData(n).getWeight();
-      },
-      galois::loopname("make balance"));
-
-  const int hi = (1 + tol) * nodeSize.reduce() / (2 + tol);
-  const int lo = nodeSize.reduce() - hi;
-  int bal      = accum.reduce();
-
-  while (1) {
-    if (bal >= lo && bal <= hi)
-      break;
-    initGains(g, p);
-
-    // creating buckets
-    std::array<std::vector<GNode>, 101> nodeListz;
-    std::array<std::vector<GNode>, 101> nodeListo;
-
-    std::array<GNodeBag, 101> nodelistz;
-    std::array<GNodeBag, 101> nodelisto;
-
-    // bucket for nodes with gan by weight ratio <= -9.0f
-    std::vector<GNode> nodeListzNegGain;
-    std::vector<GNode> nodeListoNegGain;
-
-    GNodeBag nodelistzNegGain;
-    GNodeBag nodelistoNegGain;
-
-    if (bal < lo) {
-
-      // placing each node in an appropriate bucket using the gain by weight
-      // ratio
-      galois::do_all(
-          galois::iterate(g.hedges, g.size()),
-          [&](GNode n) {
-            float gain = ((float)g.getData(n).getGain()) /
-                         ((float)g.getData(n).getWeight());
-            unsigned pp = g.getData(n).getPart();
-            if (pp == 0) {
-              // nodes with gain >= 1.0f are in one bucket
-              if (gain >= 1.0f) {
-                nodelistz[0].push(n);
-              } else if (gain >= 0.0f) {
-                int d   = gain * 10.0f;
-                int idx = 10 - d;
-                nodelistz[idx].push(n);
-              } else if (gain >= -9.0f) {
-                int d   = gain * 10.0f - 1;
-                int idx = 10 - d;
-                nodelistz[idx].push(n);
-              } else { // NODES with gain by weight ratio <= -9.0f are in one
-                       // bucket
-                nodelistzNegGain.push(n);
-              }
-            }
-          },
-          galois::steal());
-
-      // sorting each bucket in parallel
-      galois::do_all(
-          galois::iterate(nodelistz),
-          [&](GNodeBag& b) {
-            if (b.begin() == b.end())
+            if (!node_data.GetPositiveGain() && !node_data.GetNegativeGain()) {
               return;
+            }
 
-            GNode n    = *b.begin();
-            float gain = ((float)g.getData(n).getGain()) /
-                         ((float)g.getData(n).getWeight());
-            int idx;
-            if (gain >= 1.0f)
-              idx = 0;
-            else if (gain >= 0.0f) {
-              int d = gain * 10.0f;
-              idx   = 10 - d;
+            GainTy gain = node_data.GetGain();
+
+            if (gain < 0) {
+              return;
+            }
+
+            uint32_t partition = node_data.GetPartition();
+
+            if (partition == 0) {
+              partition_zero_nodes.push(n);
             } else {
-              int d = gain * 10.0f - 1;
-              idx   = 10 - d;
+              partition_one_nodes.push(n);
             }
-            for (auto x : b) {
-              nodeListz[idx].push_back(x);
-            }
-
-            std::sort(nodeListz[idx].begin(), nodeListz[idx].end(),
-                      [&g](GNode& lpw, GNode& rpw) {
-                        if (fabs((float)((g.getData(lpw).getGain()) *
-                                         (1.0f / g.getData(lpw).getWeight())) -
-                                 (float)((g.getData(rpw).getGain()) *
-                                         (1.0f / g.getData(rpw).getWeight()))) <
-                            0.00001f)
-                          return (float)g.getData(lpw).nodeid <
-                                 (float)g.getData(rpw).nodeid;
-                        return (float)((g.getData(lpw).getGain()) *
-                                       (1.0f / g.getData(lpw).getWeight())) >
-                               (float)((g.getData(rpw).getGain()) *
-                                       (1.0f / g.getData(rpw).getWeight()));
-                      });
           },
-          galois::steal());
+          galois::loopname("Refining-Find-Partition-Nodes"));
 
-      int i = 0;
-      int j = 0;
+      num_partition_zero_nodes = std::distance(partition_zero_nodes.begin(),
+                                               partition_zero_nodes.end());
+      num_partition_one_nodes =
+          std::distance(partition_one_nodes.begin(), partition_one_nodes.end());
 
-      // now moving nodes from partition 0 to 1
-      while (j <= 100) {
-        if (nodeListz[j].size() == 0) {
-          j++;
-          continue;
-        }
-
-        for (auto zz : nodeListz[j]) {
-          g.getData(zz).setPart(1);
-          bal += g.getData(zz).getWeight();
-          if (bal >= lo)
-            break;
-          i++;
-          if (i > sqrt(Size))
-            break;
-        }
-        if (bal >= lo)
-          break;
-        if (i > sqrt(Size))
-          break;
-        j++;
+      for (uint32_t n : partition_zero_nodes) {
+        partition_zero_nodes_bag.push_back(n);
+      }
+      for (uint32_t n : partition_one_nodes) {
+        partition_one_nodes_bag.push_back(n);
       }
 
-      if (bal >= lo)
-        break;
-      if (i > sqrt(Size))
-        continue;
+      sort_timer.start();
+      for (uint32_t iter = 0; iter < 2; iter++) {
+        auto& cur_bag =
+            (iter == 0) ? partition_zero_nodes_bag : partition_one_nodes_bag;
+        std::sort(cur_bag.begin(), cur_bag.end(),
+                  [&cur_graph](GNode& l_opr, GNode& r_opr) {
+                    MetisNode& l_data = cur_graph.getData(l_opr);
+                    MetisNode& r_data = cur_graph.getData(r_opr);
+                    GainTy l_gain     = l_data.GetGain();
+                    GainTy r_gain     = r_data.GetGain();
 
-      // moving nodes from nodeListzNegGain
-      //
-      if (nodelistzNegGain.begin() == nodelistzNegGain.end())
-        continue;
+                    if (l_gain == r_gain) {
+                      uint32_t l_nid = l_data.GetNodeId();
+                      uint32_t r_nid = r_data.GetNodeId();
 
-      for (auto x : nodelistzNegGain)
-        nodeListzNegGain.push_back(x);
+                      return l_nid < r_nid;
+                    }
 
-      std::sort(nodeListzNegGain.begin(), nodeListzNegGain.end(),
-                [&g](GNode& lpw, GNode& rpw) {
-                  if (fabs((float)((g.getData(lpw).getGain()) *
-                                   (1.0f / g.getData(lpw).getWeight())) -
-                           (float)((g.getData(rpw).getGain()) *
-                                   (1.0f / g.getData(rpw).getWeight()))) <
-                      0.00001f)
-                    return (float)g.getData(lpw).nodeid <
-                           (float)g.getData(rpw).nodeid;
-                  return (float)((g.getData(lpw).getGain()) *
-                                 (1.0f / g.getData(lpw).getWeight())) >
-                         (float)((g.getData(rpw).getGain()) *
-                                 (1.0f / g.getData(rpw).getWeight()));
-                });
-
-      for (auto zz : nodeListzNegGain) {
-        g.getData(zz).setPart(1);
-        bal += g.getData(zz).getWeight();
-        if (bal >= lo)
-          break;
-        i++;
-        if (i > sqrt(Size))
-          break;
+                    return l_gain > r_gain;
+                  });
       }
+      sort_timer.stop();
 
-      if (bal >= lo)
-        break;
+      uint32_t num_swap_nodes =
+          (num_partition_zero_nodes <= num_partition_one_nodes)
+              ? num_partition_zero_nodes
+              : num_partition_one_nodes;
+      for (uint32_t i = 0; i < num_swap_nodes; i++) {
+        swap_bag.push(partition_one_nodes_bag[i]);
+        swap_bag.push(partition_zero_nodes_bag[i]);
+      }
+      galois::do_all(
+          galois::iterate(swap_bag),
+          [&](GNode n) {
+            MetisNode& node_data = cur_graph.getData(n);
+            uint32_t partition   = node_data.GetPartition();
+            node_data.SetPartition(1 - partition);
+            node_data.IncCounter();
+          },
+          galois::loopname("Refining-Swap"));
+    }
+  }
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (g[i] != nullptr) {
+      ResetCounter(*g[i]);
+    }
+  }
+}
 
-    } // end if
+void ParallelMakingbalance(GGraph& g, float tol) {
+  uint32_t total_hnodes = g.hnodes;
+  uint32_t total_hedges = g.hedges;
+  uint32_t graph_size   = g.size();
+  uint32_t sqrt_hnodes  = sqrt(total_hnodes);
 
-    else {
+  galois::GAccumulator<WeightTy> accum;
+  galois::GAccumulator<WeightTy> node_size;
+  galois::do_all(
+      galois::iterate(total_hedges, graph_size),
+      [&](GNode n) {
+        MetisNode& node_data = g.getData(n);
+        WeightTy weight      = node_data.GetWeight();
+        node_size += weight;
+        if (node_data.GetPartition() > 0) {
+          accum += weight;
+        }
+      },
+      galois::loopname("Refining-Make-Balance"));
 
-      // placing each node in an appropriate bucket using the gain by weight
-      // ratio
-      galois::do_all(galois::iterate(g.hedges, g.size()), [&](GNode n) {
-        float gain =
-            ((float)g.getData(n).getGain()) / ((float)g.getData(n).getWeight());
-        unsigned pp = g.getData(n).getPart();
-        if (pp == 1) {
-          // nodes with gain >= 1.0f are in one bucket
+  const WeightTy hi = (1 + tol) * node_size.reduce() / (2 + tol);
+  const WeightTy lo = node_size.reduce() - hi;
+  WeightTy balance  = accum.reduce();
+
+  galois::StatTimer init_gain_timer("Refining-Init-Gains");
+  galois::StatTimer sort_timer("Refining-Sort");
+  galois::StatTimer make_balance_timer("Refining-Make-Balance");
+
+  while (true) {
+    if (balance >= lo && balance <= hi) {
+      break;
+    }
+
+    init_gain_timer.start();
+    InitGain(g);
+    init_gain_timer.stop();
+
+    // Creating buckets.
+    std::array<std::vector<GNode>, 101> pz_nodes_vec_arr;
+    std::array<std::vector<GNode>, 101> po_nodes_vec_arr;
+
+    std::array<GNodeBag, 101> pz_nodes_bag_arr;
+    std::array<GNodeBag, 101> po_nodes_bag_arr;
+
+    // Bucket for nodes with gan by weight ratio <= -9.0f.
+    std::vector<GNode> neg_pz_nodes_vec;
+    std::vector<GNode> neg_po_nodes_vec;
+
+    GNodeBag neg_pz_nodes_bag;
+    GNodeBag neg_po_nodes_bag;
+
+    bool process_zero_partition = (balance < lo) ? true : false;
+    auto& cand_nodes_vec_arr =
+        (process_zero_partition) ? pz_nodes_vec_arr : po_nodes_vec_arr;
+    auto& cand_nodes_bag_arr =
+        (process_zero_partition) ? pz_nodes_bag_arr : po_nodes_bag_arr;
+    auto& neg_cand_nodes_vec =
+        (process_zero_partition) ? neg_pz_nodes_vec : neg_po_nodes_vec;
+    auto& neg_cand_nodes_bag =
+        (process_zero_partition) ? neg_pz_nodes_bag : neg_pz_nodes_bag;
+
+    // Placing each node in an appropriate bucket using the gain by weight
+    // ratio.
+    galois::do_all(
+        galois::iterate(total_hedges, graph_size),
+        [&](GNode n) {
+          MetisNode& node_data = g.getData(n);
+          float gain =
+              static_cast<float>(node_data.GetGain()) / node_data.GetWeight();
+          uint32_t partition = g.getData(n).GetPartition();
+
+          if ((process_zero_partition && partition != 0) ||
+              (!process_zero_partition && partition != 1)) {
+            return;
+          }
+
+          // Nodes with gain >= 1.0f are in one bucket.
           if (gain >= 1.0f) {
-            nodelisto[0].push(n);
+            cand_nodes_bag_arr[0].emplace(n);
           } else if (gain >= 0.0f) {
-            int d   = gain * 10.0f;
-            int idx = 10 - d;
-            nodelisto[idx].push(n);
+            int32_t d    = gain * 10.0f;
+            uint32_t idx = 10 - d;
+            cand_nodes_bag_arr[idx].emplace(n);
           } else if (gain > -9.0f) {
-            int d   = gain * 10.0f - 1;
-            int idx = 10 - d;
-            nodelisto[idx].push(n);
-          } else { // NODES with gain by weight ratio <= -9.0f are in one bucket
-            nodelistoNegGain.push(n);
+            int32_t d    = gain * 10.0f - 1;
+            uint32_t idx = 10 - d;
+            cand_nodes_bag_arr[idx].emplace(n);
+          } else { /* NODES with gain by weight ratio <= -9.0f are in one
+                      bucket */
+            neg_cand_nodes_bag.emplace(n);
+          }
+        },
+        galois::loopname("Refining-Bucket-Gain"));
+
+    // Sorting each bucket in parallel.
+    galois::do_all(
+        galois::iterate(cand_nodes_bag_arr),
+        [&](GNodeBag& cand_nodes_bag) {
+          if (cand_nodes_bag.empty()) {
+            return;
+          }
+
+          GNode n              = *cand_nodes_bag.begin();
+          MetisNode& node_data = g.getData(n);
+          float gain =
+              static_cast<float>(node_data.GetGain()) / node_data.GetWeight();
+          uint32_t idx{0};
+          if (gain < 1.0f) {
+            GainTy weighted_gain{static_cast<int32_t>(gain * 10.0f)};
+            if (gain < 0.0f) {
+              weighted_gain -= 1;
+            }
+            idx = 10 - weighted_gain;
+          }
+          for (GNode cand_node : cand_nodes_bag) {
+            cand_nodes_vec_arr[idx].push_back(cand_node);
+          }
+
+          SortNodesByGainAndWeight(g, cand_nodes_vec_arr[idx], 0);
+        },
+        galois::steal(), galois::loopname("Refining-Sort-Bucket"));
+
+    uint32_t i{0}, j{0};
+
+    make_balance_timer.start();
+    // Now moving nodes from partition 0 to 1.
+    while (j <= 100) {
+      if (cand_nodes_vec_arr[j].size() == 0) {
+        j++;
+        continue;
+      }
+
+      for (GNode cand_node : cand_nodes_vec_arr[j]) {
+        MetisNode& cand_node_data = g.getData(cand_node);
+        uint32_t partition        = cand_node_data.GetPartition();
+        cand_node_data.SetPartition(1 - partition);
+
+        if (process_zero_partition) {
+          balance += cand_node_data.GetWeight();
+          if (balance >= lo) {
+            break;
+          }
+        } else {
+          balance -= cand_node_data.GetWeight();
+          if (balance <= hi) {
+            break;
           }
         }
-      });
-
-      // sorting each bucket in parallel
-      galois::do_all(galois::iterate(nodelisto), [&](GNodeBag& b) {
-        if (b.begin() == b.end())
-          return;
-
-        GNode n = *b.begin();
-        float gain =
-            ((float)g.getData(n).getGain()) / ((float)g.getData(n).getWeight());
-        int idx;
-        if (gain >= 1.0f)
-          idx = 0;
-        else if (gain >= 0.0f) {
-          int d = gain * 10.0f;
-          idx   = 10 - d;
-        } else {
-          int d = gain * 10.0f - 1;
-          idx   = 10 - d;
-        }
-        for (auto x : b) {
-          nodeListo[idx].push_back(x);
-        }
-
-        std::sort(nodeListo[idx].begin(), nodeListo[idx].end(),
-                  [&g](GNode& lpw, GNode& rpw) {
-                    if (fabs((float)((g.getData(lpw).getGain()) *
-                                     (1.0f / g.getData(lpw).getWeight())) -
-                             (float)((g.getData(rpw).getGain()) *
-                                     (1.0f / g.getData(rpw).getWeight()))) <
-                        0.00001f)
-                      return (float)g.getData(lpw).nodeid <
-                             (float)g.getData(rpw).nodeid;
-                    return (float)((g.getData(lpw).getGain()) *
-                                   (1.0f / g.getData(lpw).getWeight())) >
-                           (float)((g.getData(rpw).getGain()) *
-                                   (1.0f / g.getData(rpw).getWeight()));
-                  });
-      });
-
-      int i = 0;
-      int j = 0;
-
-      // now moving nodes from partition 1 to 0
-      while (j <= 100) {
-        if (nodeListo[j].size() == 0) {
-          j++;
-          continue;
-        }
-
-        for (auto zz : nodeListo[j]) {
-          g.getData(zz).setPart(0);
-          bal -= g.getData(zz).getWeight();
-          if (bal <= hi)
-            break;
-          i++;
-          if (i > sqrt(Size))
-            break;
-        }
-        if (bal <= hi)
-          break;
-        if (i > sqrt(Size))
-          break;
-        j++;
-      }
-
-      if (bal <= hi)
-        break;
-      if (i > sqrt(Size))
-        continue;
-
-      // moving nodes from nodeListoNegGain
-      //
-      if (nodelistoNegGain.begin() == nodelistoNegGain.end())
-        continue;
-
-      for (auto x : nodelistoNegGain)
-        nodeListoNegGain.push_back(x);
-
-      std::sort(nodeListoNegGain.begin(), nodeListoNegGain.end(),
-                [&g](GNode& lpw, GNode& rpw) {
-                  if (fabs((float)((g.getData(lpw).getGain()) *
-                                   (1.0f / g.getData(lpw).getWeight())) -
-                           (float)((g.getData(rpw).getGain()) *
-                                   (1.0f / g.getData(rpw).getWeight()))) <
-                      0.00001f)
-                    return (float)g.getData(lpw).nodeid <
-                           (float)g.getData(rpw).nodeid;
-                  return (float)((g.getData(lpw).getGain()) *
-                                 (1.0f / g.getData(lpw).getWeight())) >
-                         (float)((g.getData(rpw).getGain()) *
-                                 (1.0f / g.getData(rpw).getWeight()));
-                });
-
-      for (auto zz : nodeListoNegGain) {
-        g.getData(zz).setPart(0);
-        bal -= g.getData(zz).getWeight();
-        if (bal <= hi)
-          break;
         i++;
-        if (i > sqrt(Size))
+        if (i > sqrt_hnodes) {
           break;
+        }
       }
 
-      if (bal <= hi)
+      if ((process_zero_partition && balance >= lo) ||
+          (!process_zero_partition && balance <= hi) || i > sqrt_hnodes) {
         break;
-    } // end else
-
-  } // end while
-}
-
-} // namespace
-
-bool isPT(int n) {
-  if (n == 0)
-    return false;
-
-  return (ceil(log2(n)) == floor(log2(n)));
-}
-
-void refine(MetisGraph* coarseGraph, unsigned K) {
-  float ratio = 0.0f;
-  float tol   = 0.0f;
-  bool flag   = isPT(K);
-  if (flag) {
-    ratio = 55.0 / 45.0; // change if needed
-    tol   = std::max(ratio, 1 - ratio) - 1;
-  } else {
-    ratio = ((float)((K + 1) / 2)) / ((float)(K / 2)); // change if needed
-    tol   = std::max(ratio, 1 - ratio) - 1;
-  }
-  do {
-    MetisGraph* fineGraph = coarseGraph->getFinerGraph();
-    auto gg               = coarseGraph->getGraph();
-
-    parallel_refine_KF(*gg, tol, 2);
-    parallel_make_balance(*gg, tol, 2);
-    bool do_pro = true;
-    if (fineGraph && do_pro) {
-      projectPart(coarseGraph);
+      }
+      j++;
     }
-  } while ((coarseGraph = coarseGraph->getFinerGraph()));
+    make_balance_timer.stop();
+
+    if ((process_zero_partition && balance >= lo) ||
+        (!process_zero_partition && balance <= hi)) {
+      break;
+    }
+
+    if (i > sqrt_hnodes || neg_cand_nodes_bag.empty()) {
+      continue;
+    }
+
+    for (GNode cand_node : neg_cand_nodes_bag) {
+      neg_cand_nodes_vec.push_back(cand_node);
+    }
+
+    sort_timer.start();
+    SortNodesByGainAndWeight(g, neg_cand_nodes_vec, 0);
+    sort_timer.stop();
+
+    make_balance_timer.start();
+    for (GNode cand_node : neg_cand_nodes_vec) {
+      MetisNode& cand_node_data = g.getData(cand_node);
+      uint32_t partition        = cand_node_data.GetPartition();
+
+      cand_node_data.SetPartition(1 - partition);
+      if (process_zero_partition) {
+        balance += cand_node_data.GetWeight();
+        if (balance >= lo) {
+          break;
+        }
+      } else {
+        balance -= cand_node_data.GetWeight();
+        if (balance <= hi) {
+          break;
+        }
+      }
+      i++;
+      if (i > sqrt_hnodes) {
+        break;
+      }
+    }
+    make_balance_timer.stop();
+
+    if ((process_zero_partition && balance >= lo) ||
+        (!process_zero_partition && balance <= hi)) {
+      break;
+    }
+  }
+}
+
+void Refine(std::vector<MetisGraph*>& coarse_graph) {
+  uint32_t num_partitions = coarse_graph.size();
+
+  std::vector<float> ratio(num_partitions, 0.0f);
+  std::vector<float> tol(num_partitions, 0.0f);
+  std::vector<MetisGraph*> fine_graph(num_partitions, nullptr);
+  std::vector<GGraph*> gg(num_partitions, nullptr);
+
+  galois::StatTimer construct_timer("Refining-Total-Construct-Lists");
+  galois::StatTimer parallel_swap_timer("Refining-Total-Parallel-Swap");
+  galois::StatTimer make_balance_timer("Refining-Total-Make-Balance");
+  galois::StatTimer project_partition_timer("Refining-Total-Project-Partition");
+
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (coarse_graph[i] == nullptr) {
+      continue;
+    }
+
+    ratio[i] = 52.5 / 47.5; // change if needed
+    tol[i]   = std::max(ratio[i], 1 - ratio[i]) - 1;
+  }
+
+  uint32_t total_hnodes{0}, total_hedges{0};
+
+  while (true) {
+    for (uint32_t i = 0; i < num_partitions; i++) {
+      if (coarse_graph[i] != nullptr) {
+        fine_graph[i] = coarse_graph[i]->GetParentGraph();
+        gg[i]         = coarse_graph[i]->GetGraph();
+        total_hnodes += gg[i]->hnodes;
+        total_hedges += gg[i]->hedges;
+      } else {
+        gg[i] = nullptr;
+      }
+    }
+
+    construct_timer.start();
+    std::vector<std::pair<uint32_t, uint32_t>> combined_edgelist(total_hedges);
+
+    std::vector<std::pair<uint32_t, uint32_t>> combined_nodelist(total_hnodes);
+
+    ConstructCombinedLists(coarse_graph, combined_edgelist, combined_nodelist);
+
+    construct_timer.stop();
+    ParallelSwaps(combined_edgelist, combined_nodelist, gg, 2);
+
+    make_balance_timer.start();
+    // Not maiking it further parallel since it only takes 4% of the total
+    // running time.
+    for (uint32_t i = 0; i < num_partitions; i++) {
+      if (gg[i] != nullptr) {
+        ParallelMakingbalance(*gg[i], tol[i]);
+      }
+    }
+    make_balance_timer.stop();
+
+    project_partition_timer.start();
+    for (uint32_t i = 0; i < num_partitions; i++) {
+      if (fine_graph[i] != nullptr) {
+        ProjectPart(coarse_graph[i]);
+      }
+    }
+    project_partition_timer.stop();
+
+    bool all_done{true};
+    for (uint32_t i = 0; i < num_partitions; i++) {
+      if (coarse_graph[i] != nullptr) {
+        coarse_graph[i] = coarse_graph[i]->GetParentGraph();
+        all_done        = false;
+      }
+    }
+
+    if (all_done) {
+      break;
+    }
+
+    total_hnodes = 0;
+    total_hedges = 0;
+  }
 }

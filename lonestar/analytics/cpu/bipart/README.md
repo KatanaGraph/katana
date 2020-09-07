@@ -23,10 +23,15 @@ BUILD
 
 1. Run cmake at BUILD directory (refer to top-level README for cmake instructions).
 
-2. Run `cd <BUILD>/lonestar/analytics/cpu/bipart/; make -j
+2. Run `cd <BUILD>/lonestar/analytics/cpu/bipart/;
+make -
+    j
 
-RUN
---------------------------------------------------------------------------------
+        RUN-- ------------------------------------------------------------------------------
 
-To run on machine with a k value of 4, use the following:
-`./bipart-cpu <input-graph> <number-of-coarsening-levels> <number-of-refinement-levels> -<scheduling-policy> -t=<num-threads> -hMetisGraph`
+    To run on machine with a k value of 4,
+    use the following :
+`./ bipart -
+        cpu<input - graph><number - of - coarsening - levels>
+        <number - of - refinement - levels> - <scheduling - policy> -
+        t = <num - threads> - hMetisGraph`

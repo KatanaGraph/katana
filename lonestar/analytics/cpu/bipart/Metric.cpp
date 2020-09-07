@@ -17,95 +17,50 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "bipart.h"
+#include "Bipart.h"
 
-#include <iomanip>
-#include <iostream>
-#include <numeric>
+struct OnlineStat {
+  uint32_t num_nodes;
+  uint64_t total_distance;
+  uint64_t min_distance;
+  uint64_t max_distance;
+  double distance_square;
 
-struct onlineStat {
-  unsigned num;
-  unsigned val;
-  double valSQ;
-  unsigned mmin;
-  unsigned mmax;
+  OnlineStat()
+      : num_nodes(0), total_distance(0),
+        min_distance(std::numeric_limits<uint64_t>::max()), max_distance(0),
+        distance_square(0) {}
 
-  onlineStat()
-      : num(0), val(0), valSQ(0), mmin(std::numeric_limits<unsigned>::max()),
-        mmax(0) {}
-
-  void add(unsigned v) {
-    ++num;
-    val += v;
-    valSQ += (double)v * (double)v;
-    mmin = std::min(v, mmin);
-    mmax = std::max(v, mmax);
+  void AddDistance(uint64_t distance) {
+    ++num_nodes;
+    total_distance += distance;
+    distance_square += distance * distance;
+    min_distance = std::min(distance, min_distance);
+    max_distance = std::max(distance, max_distance);
   }
 
-  double mean() { return (double)val / (double)num; }
+  double GetMean() { return total_distance / static_cast<double>(num_nodes); }
 
-  double variance() {
-    double t = valSQ / (double)num;
-    double m = mean();
+  double GetVariance() {
+    double t = distance_square / num_nodes;
+    double m = GetMean();
     return t - m * m;
   }
 
-  unsigned count() { return num; }
-  unsigned total() { return val; }
-  unsigned min() { return mmin; }
-  unsigned max() { return mmax; }
+  uint32_t GetNodeCount() { return num_nodes; }
+  uint64_t GetTotalDistance() { return total_distance; }
+  uint64_t GetMinDistance() { return min_distance; }
+  uint64_t GetMaxDistance() { return max_distance; }
 };
 
-unsigned graphStat(GGraph& graph) {
-  onlineStat e;
-  for (auto ii : graph) {
-    unsigned val = std::distance(graph.edge_begin(ii), graph.edge_end(ii));
-    e.add(val);
+uint32_t GraphStat(GGraph& graph) {
+  OnlineStat stat;
+  for (GNode node : graph) {
+    uint64_t dist = std::distance(graph.edge_begin(node), graph.edge_end(node));
+    stat.AddDistance(dist);
   }
-  std::cout << "Nodes " << e.count() << " Edges(total, var, min, max) "
-            << e.total() << " " << e.variance() << " " << e.min() << " "
-            << e.max();
-  return e.count();
-}
-
-std::vector<unsigned> edgeCut(GGraph& g, unsigned nparts) {
-  std::vector<unsigned> cuts(nparts);
-
-  // find boundary nodes with positive gain
-  for (auto nn : g) {
-    unsigned gPart = g.getData(nn).getPart();
-    for (auto ii : g.edges(nn)) {
-      auto& m = g.getData(g.getEdgeDst(ii));
-      if (m.getPart() != gPart) {
-        cuts.at(gPart) += g.getEdgeData(ii);
-      }
-    }
-  }
-  return cuts;
-}
-
-unsigned computeCut(GGraph& g) {
-  unsigned cuts = 0;
-  for (auto nn : g) {
-    unsigned gPart = g.getData(nn).getPart();
-    for (auto ii : g.edges(nn)) {
-      auto& m = g.getData(g.getEdgeDst(ii));
-      if (m.getPart() != gPart)
-        cuts += g.getEdgeData(ii);
-    }
-  }
-  return cuts / 2;
-}
-
-void printCuts(const char* str, MetisGraph* g, unsigned numPartitions) {
-  std::vector<unsigned> ec = edgeCut(*g->getGraph(), numPartitions);
-  std::cout << str << " Edge Cuts:\n";
-  for (unsigned x = 0; x < ec.size(); ++x)
-    std::cout << (x == 0 ? "" : " ") << ec[x];
-  std::cout << "\n";
-  std::cout << str << " Average Edge Cut: "
-            << (std::accumulate(ec.begin(), ec.end(), 0) / ec.size()) << "\n";
-  std::cout << str
-            << " Minimum Edge Cut: " << *std::min_element(ec.begin(), ec.end())
-            << "\n";
+  galois::gPrint("Nodes ", stat.GetNodeCount(), " Edges(total, var, min, max) ",
+                 stat.GetTotalDistance(), " ", stat.GetVariance(), " ",
+                 stat.GetMinDistance(), " ", stat.GetMaxDistance(), "\n");
+  return stat.GetNodeCount();
 }

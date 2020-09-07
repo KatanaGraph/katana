@@ -17,248 +17,240 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "bipart.h"
-#include <set>
-#include "galois/Galois.h"
-#include "galois/AtomicHelpers.h"
-#include <map>
-#include <set>
-#include <cstdlib>
-#include <iostream>
-#include <stack>
-#include <climits>
-#include <array>
+#include "Helper.h"
 
-namespace {
-// final
-__attribute__((unused)) int cut(GGraph& g) {
+/**
+ * Computes the degrees of the nodes
+ *
+ * @param graph Vector of graphs
+ * @param combined_edge_list Concatenated list of hyperedges of the graphs in
+ * specified param graph
+ * @param combined_node_list Concatenated list of nodes of the graphs in
+ * specified param graph
+ */
+void ComputeDegrees(
+    std::vector<GGraph*>& graph,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
+  uint32_t total_nodes = combined_node_list.size();
 
-  GNodeBag bag;
   galois::do_all(
-      galois::iterate(g),
-      [&](GNode n) {
-        if (g.hedges <= n)
+      galois::iterate(uint32_t{0}, total_nodes),
+      [&](uint32_t n) {
+        auto node_index_pair = combined_node_list[n];
+        uint32_t index       = node_index_pair.second;
+        GNode node           = node_index_pair.first;
+        graph[index]->getData(node).SetDegree(0);
+      },
+      galois::loopname("Partitioning-Init-Degrees"));
+
+  uint32_t total_hedges = combined_edge_list.size();
+
+  galois::do_all(
+      galois::iterate(uint32_t{0}, total_hedges),
+      [&](GNode hedge) {
+        auto hedge_index_pair = combined_edge_list[hedge];
+        uint32_t index        = hedge_index_pair.second;
+        GNode h               = hedge_index_pair.first;
+        GGraph& cur_graph     = *graph[index];
+        auto edges            = cur_graph.edges(h);
+
+        uint32_t degree = std::distance(edges.begin(), edges.end());
+
+        // No need to add degree for lone hedges.
+        if (degree <= 1) {
           return;
-        for (auto cell : g.edges(n)) {
-          auto c   = g.getEdgeDst(cell);
-          int part = g.getData(c).getPart();
-          for (auto x : g.edges(n)) {
-            auto cc   = g.getEdgeDst(x);
-            int partc = g.getData(cc).getPart();
-            if (partc != part) {
-              bag.push(n);
-              return;
-            }
-          }
+        }
+
+        for (auto& fedge : edges) {
+          GNode member_node = cur_graph.getEdgeDst(fedge);
+          galois::atomicAdd(cur_graph.getData(member_node).GetDegree(),
+                            uint32_t{1});
         }
       },
-      galois::loopname("cutsize"));
-  return std::distance(bag.begin(), bag.end());
+      galois::loopname("Partitioning-Calculate-Degrees"));
 }
 
-void initGain(GGraph& g) {
+/**
+ * Finds an initial partition of the coarsest graphs
+ *
+ * @param metis_graphs Vector of metis graphs
+ * @param K Vector corresponding to the number of target partitions that needs
+ * to be created for the graphs in specified param metis_graphs
+ */
+void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
+                             std::vector<unsigned>& K) {
+  assert(metis_graphs.size() == K.size());
+  uint32_t num_partitions = metis_graphs.size();
+  std::vector<galois::GAccumulator<WeightTy>> nzero_accum(num_partitions);
+  std::vector<galois::GAccumulator<WeightTy>> zero_accum(num_partitions);
+  std::vector<GNodeBag> zero_partition_nodes(num_partitions);
+  std::vector<GNodeBag> nzero_partition_nodes(num_partitions);
+  std::vector<GGraph*> graph(num_partitions, nullptr);
+  uint32_t total_hedges{0};
+  uint32_t total_nodes{0};
+
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (metis_graphs[i] != nullptr) {
+      graph[i] = metis_graphs[i]->GetGraph();
+    }
+  }
+
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (graph[i] != nullptr) {
+      total_hedges += graph[i]->hedges;
+    }
+  }
+
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (graph[i] != nullptr) {
+      total_nodes += graph[i]->hnodes;
+    }
+  }
+
+  std::vector<std::pair<uint32_t, uint32_t>> combined_edge_list(total_hedges);
+  std::vector<std::pair<uint32_t, uint32_t>> combined_node_list(total_nodes);
+
+  ConstructCombinedLists(metis_graphs, combined_edge_list, combined_node_list);
+
   galois::do_all(
-      galois::iterate(g),
-      [&](GNode n) {
-        if (n < g.hedges)
-          return;
-        g.getData(n).FS.store(0);
-        g.getData(n).TE.store(0);
+      galois::iterate(uint32_t{0}, total_nodes),
+      [&](uint32_t n) {
+        auto node_index_pair = combined_node_list[n];
+        uint32_t index       = node_index_pair.second;
+        GNode item           = node_index_pair.first;
+
+        MetisNode& node_data = graph[index]->getData(item);
+        nzero_accum[index] += node_data.GetWeight();
+        node_data.InitRefine(1);
       },
-      galois::loopname("firstinit"));
-
-  typedef std::map<GNode, int> mapTy;
-  typedef galois::substrate::PerThreadStorage<mapTy> ThreadLocalData;
-  ThreadLocalData edgesThreadLocal;
-  galois::do_all(
-      galois::iterate(g),
-      [&](GNode n) {
-        if (g.hedges <= n)
-          return;
-        int p1 = 0;
-        int p2 = 0;
-        for (auto x : g.edges(n)) {
-          auto cc  = g.getEdgeDst(x);
-          int part = g.getData(cc).getPart();
-          if (part == 0)
-            p1++;
-          else
-            p2++;
-          if (p1 > 1 && p2 > 1)
-            break;
-        }
-        if (!(p1 > 1 && p2 > 1) && (p1 + p2 > 1)) {
-          for (auto x : g.edges(n)) {
-            auto cc  = g.getEdgeDst(x);
-            int part = g.getData(cc).getPart();
-            int nodep;
-            if (part == 0)
-              nodep = p1;
-            else
-              nodep = p2;
-            if (nodep == 1) {
-              galois::atomicAdd(g.getData(cc).FS, 1);
-            }
-            if (nodep == (p1 + p2)) {
-              galois::atomicAdd(g.getData(cc).TE, 1);
-            }
-          }
-        }
-      },
-      galois::steal(), galois::loopname("initGainsPart"));
-}
-
-} // namespace
-
-// Final
-void partition(MetisGraph* mcg, unsigned K) {
-  GGraph* g = mcg->getGraph();
-  galois::GAccumulator<unsigned int> accum;
-  int waccum;
-  galois::GAccumulator<unsigned int> accumZ;
-  GNodeBag nodelist;
-  galois::do_all(
-      galois::iterate(g->hedges, g->size()),
-      [&](GNode item) {
-        accum += g->getData(item).getWeight();
-        g->getData(item, galois::MethodFlag::UNPROTECTED).initRefine(1, true);
-        g->getData(item, galois::MethodFlag::UNPROTECTED).initPartition();
-      },
-      galois::loopname("initPart"));
+      galois::loopname("Partitioning-Init-PartitionOne"));
 
   galois::do_all(
-      galois::iterate(size_t{0}, g->hedges),
-      [&](GNode item) {
-        for (auto c : g->edges(item)) {
-          auto n = g->getEdgeDst(c);
-          g->getData(n).setPart(0);
+      galois::iterate(uint32_t{0}, total_hedges),
+      [&](uint32_t hedge) {
+        auto hedge_index_pair = combined_edge_list[hedge];
+        uint32_t index        = hedge_index_pair.second;
+        GGraph& sub_graph     = *graph[index];
+        GNode item            = hedge_index_pair.first;
+
+        for (auto& fedge : sub_graph.edges(item)) {
+          GNode node           = sub_graph.getEdgeDst(fedge);
+          MetisNode& node_data = sub_graph.getData(node);
+          node_data.SetPartition(0);
         }
       },
-      galois::loopname("initones"));
-  GNodeBag nodelistoz;
+      galois::steal(), galois::loopname("Partitioning-Init-PartitionZero"));
+
   galois::do_all(
-      galois::iterate(g->hedges, g->size()),
-      [&](GNode item) {
-        if (g->getData(item).getPart() == 0) {
-          accumZ += g->getData(item).getWeight();
-          nodelist.push(item);
+      galois::iterate(uint32_t{0}, total_nodes),
+      [&](uint32_t node) {
+        auto node_index_pair = combined_node_list[node];
+        uint32_t index       = node_index_pair.second;
+        GNode item           = node_index_pair.first;
+        MetisNode& node_data = graph[index]->getData(item);
+
+        if (node_data.GetPartition() == 0) {
+          zero_partition_nodes[index].push(item);
+          zero_accum[index] += node_data.GetWeight();
         } else
-          nodelistoz.push(item);
+          nzero_partition_nodes[index].push(item);
       },
-      galois::loopname("initones"));
-  unsigned newSize = accum.reduce();
-  waccum           = accum.reduce() - accumZ.reduce();
-  // unsigned targetWeight = accum.reduce() / 2;
-  unsigned kvalue        = (K + 1) / 2;
-  unsigned targetWeight0 = (accum.reduce() * kvalue) / K;
-  unsigned targetWeight1 = accum.reduce() - targetWeight0;
+      galois::loopname("Partitioning-Aggregate-Nodes"));
 
-  if (static_cast<long>(accumZ.reduce()) > waccum) {
-    int gain = waccum;
-    // initGain(*g);
-    while (1) {
-      initGain(*g);
-      std::vector<GNode> nodeListz;
-      GNodeBag nodelistz;
-      galois::do_all(
-          galois::iterate(nodelist),
-          [&](GNode node) {
-            unsigned pp = g->getData(node).getPart();
-            if (pp == 0) {
-              nodelistz.push(node);
-            }
-          },
-          galois::loopname("while"));
+  // first compute degree of every node
+  ComputeDegrees(graph, combined_edge_list, combined_node_list);
 
-      for (auto c : nodelistz)
-        nodeListz.push_back(c);
-      std::sort(
-          nodeListz.begin(), nodeListz.end(), [&g](GNode& lpw, GNode& rpw) {
-            if (fabs((float)((g->getData(lpw).getGain()) *
-                             (1.0f / g->getData(lpw).getWeight())) -
-                     (float)((g->getData(rpw).getGain()) *
-                             (1.0f / g->getData(rpw).getWeight()))) < 0.00001f)
-              return (float)g->getData(lpw).nodeid <
-                     (float)g->getData(rpw).nodeid;
-            return (float)((g->getData(lpw).getGain()) *
-                           (1.0f / g->getData(lpw).getWeight())) >
-                   (float)((g->getData(rpw).getGain()) *
-                           (1.0f / g->getData(rpw).getWeight()));
-          });
-      int i = 0;
-      for (auto zz : nodeListz) {
-        // auto zz = *nodeListz.begin();
-        g->getData(zz).setPart(1);
-        gain += g->getData(zz).getWeight();
-        // std::cout<<" weight "<<g->getData(zz).getWeight()<<"\n";
+  for (uint32_t i = 0; i < num_partitions; i++) {
+    if (graph[i] == nullptr) {
+      continue;
+    }
+    GGraph& cur_graph = *graph[i];
 
-        i++;
-        if (gain >= static_cast<long>(targetWeight1))
-          break;
-        if (i > sqrt(newSize))
-          break;
-      }
+    WeightTy total_weights           = nzero_accum[i].reduce();
+    WeightTy zero_partition_weights  = zero_accum[i].reduce();
+    WeightTy first_partition_weights = total_weights - zero_partition_weights;
+    bool process_zero_partition =
+        (zero_partition_weights > first_partition_weights);
+    WeightTy sqrt_size      = sqrt(total_weights);
+    uint32_t curr_partition = (process_zero_partition) ? 0 : 1;
+    uint32_t k_val          = (K[i] + 1) / 2;
+    WeightTy target_weight  = (total_weights * k_val) / K[i];
+    if (process_zero_partition) {
+      target_weight = total_weights - target_weight;
+    }
+    GNodeBag& node_bag = (process_zero_partition) ? zero_partition_nodes[i]
+                                                  : nzero_partition_nodes[i];
+    uint32_t node_bag_size = std::distance(node_bag.begin(), node_bag.end());
+    std::vector<GNode> node_vec(node_bag_size);
+    uint32_t idx{0};
+    WeightTy moved_weight = (process_zero_partition) ? first_partition_weights
+                                                     : zero_partition_weights;
 
-      if (gain >= static_cast<long>(targetWeight1))
-        break;
-      // updateGain(*g,zz);
+    for (auto& item : node_bag) {
+      node_vec[idx++] = item;
     }
 
-  } else {
+    galois::StatTimer init_gain_timer("Partitioning-Init-Gains");
+    galois::StatTimer aggregate_node_timer("Partitioning-Aggregate-Nodes");
+    galois::StatTimer sort_timer("Partitioning-Sort");
+    galois::StatTimer find_partitionone_timer("Partitioning-Find-PartitionOne");
+    while (true) {
+      init_gain_timer.start();
+      InitGain(cur_graph);
+      init_gain_timer.stop();
 
-    int gain = accumZ.reduce();
-    // std::cout<<"gain is "<<gain<<"\n";
-    // initGain(*g);
-    while (1) {
-      initGain(*g);
-      std::vector<GNode> nodeListz;
-      GNodeBag nodelistz;
+      node_bag.clear();
+
       galois::do_all(
-          galois::iterate(nodelistoz),
-          [&](GNode node) {
-            // for (auto node : nodelist) {
-            unsigned pp = g->getData(node).getPart();
-            if (pp == 1) {
-              nodelistz.push(node);
+          galois::iterate(uint32_t{0}, idx),
+          [&](uint32_t node_id) {
+            GNode node         = node_vec[node_id];
+            uint32_t partition = cur_graph.getData(node).GetPartition();
+            if ((process_zero_partition && partition == 0) ||
+                (!process_zero_partition && partition == 1)) {
+              node_bag.emplace(node);
             }
           },
-          galois::loopname("while"));
-      for (auto c : nodelistz)
-        nodeListz.push_back(c);
+          galois::loopname("Partitioning-Aggregate-Nodes"));
 
-      std::sort(
-          nodeListz.begin(), nodeListz.end(), [&g](GNode& lpw, GNode& rpw) {
-            if (fabs((float)((g->getData(lpw).getGain()) *
-                             (1.0f / g->getData(lpw).getWeight())) -
-                     (float)((g->getData(rpw).getGain()) *
-                             (1.0f / g->getData(rpw).getWeight()))) < 0.00001f)
-              return (float)g->getData(lpw).nodeid <
-                     (float)g->getData(rpw).nodeid;
-            return (float)((g->getData(lpw).getGain()) *
-                           (1.0f / g->getData(lpw).getWeight())) >
-                   (float)((g->getData(rpw).getGain()) *
-                           (1.0f / g->getData(rpw).getWeight()));
-          });
-
-      int i = 0;
-      for (auto zz : nodeListz) {
-        // auto zz = *nodeListz.begin();
-        g->getData(zz).setPart(0);
-        gain += g->getData(zz).getWeight();
-
-        i++;
-        if (gain >= static_cast<long>(targetWeight0))
-          break;
-        if (i > sqrt(newSize))
-          break;
+      aggregate_node_timer.start();
+      idx = 0;
+      for (auto& item : node_bag) {
+        node_vec[idx++] = item;
       }
+      aggregate_node_timer.stop();
 
-      if (gain >= static_cast<long>(targetWeight0))
+      sort_timer.start();
+      SortNodesByGainAndWeight(cur_graph, node_vec, idx);
+      sort_timer.stop();
+
+      find_partitionone_timer.start();
+      uint32_t node_size{0};
+      for (uint32_t node_id = 0; node_id < idx; node_id++) {
+        GNode node           = node_vec[node_id];
+        MetisNode& node_data = cur_graph.getData(node);
+        node_data.SetPartition(1 - curr_partition);
+        moved_weight += node_data.GetWeight();
+
+        // Check if node is a lone hedge.
+        uint32_t degree = node_data.GetDegree();
+
+        if (degree >= 1) {
+          node_size++;
+        }
+        if (moved_weight >= target_weight) {
+          break;
+        }
+        if (node_size > sqrt_size) {
+          break;
+        }
+      }
+      find_partitionone_timer.stop();
+
+      if (moved_weight >= target_weight) {
         break;
-
-      // updateGain(*g,zz);
+      }
     }
   }
 }

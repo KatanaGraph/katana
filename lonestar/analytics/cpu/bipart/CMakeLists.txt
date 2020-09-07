@@ -1,4 +1,4 @@
-add_executable(bipart-cpu bipart.cpp Coarsening.cpp Metric.cpp Partitioning.cpp Refine.cpp)
+add_executable(bipart-cpu Helper.cpp Coarsening.cpp Partitioning.cpp Refine.cpp Metric.cpp Bipart.cpp) 
 add_dependencies(apps bipart-cpu)
 target_link_libraries(bipart-cpu PRIVATE Galois::shmem lonestar)
 install(TARGETS bipart-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)

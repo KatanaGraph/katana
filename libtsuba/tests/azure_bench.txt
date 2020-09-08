@@ -1,0 +1,22 @@
+// 2020/09/08, azure vm - Standard A8m v2 (8 vcpus, 64 GiB memory)
+// tsuba_bench
+** size   19B
+Tsuba::FileStore          (8) 430.3 ms (N=3) sd  14.8  44.0 B/s
+Tsuba::FileStoreAsync     (8) 118.9 ms (N=3) sd  25.7 159.0 B/s
+Tsuba::FilePeekAsync      (8)  44.6 ms (N=3) sd   4.2 425.0 B/s
+** size  10MB
+Tsuba::FileStore          (8)   1.2 s  (N=3) sd   0.0   8.4 MB/s
+Tsuba::FileStoreAsync     (8) 466.1 ms (N=3) sd  21.8  21.5 MB/s
+Tsuba::FilePeekAsync      (8) 627.4 ms (N=3) sd  81.3  15.9 MB/s
+** size 100MB
+Tsuba::FileStore          (8)   4.7 s  (N=3) sd   0.0  21.4 MB/s
+Tsuba::FileStoreAsync     (8)   3.9 s  (N=3) sd   0.0  25.8 MB/s
+Tsuba::FileLoadAsync      (8)   1.7 s  (N=3) sd   0.1  60.0 MB/s
+** size 500MB
+Tsuba::FileStore          (8)  19.4 s  (N=3) sd   0.0  25.8 MB/s
+Tsuba::FileStoreAsync     (8)  18.8 s  (N=3) sd   0.0  26.6 MB/s
+Tsuba::FilePeekAsync      (8)   7.3 s  (N=3) sd   0.1  69.0 MB/s
+
+// tsuba_bench -t 20 rmat15
+Load: 531.5ms
+Tx:   1.9s  96.7ms/tx

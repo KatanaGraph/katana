@@ -104,10 +104,10 @@ galois::Result<void> tsuba::AzureGetSync(const std::string& container,
 
   std::unique_ptr<az::blob_client> client = std::move(client_res.value());
 
-  auto ret =
-      client
-          ->download_blob_to_buffer(container, blob, start, size, result_buf, 1)
-          .get();
+  auto ret = client
+                 ->download_blob_to_buffer(container, blob, start, size,
+                                           result_buf, INT_MAX)
+                 .get();
   if (!ret.success()) {
     return ErrorCode::AzureError;
   }
@@ -126,7 +126,7 @@ galois::Result<void> tsuba::AzurePutSync(const std::string& container,
   std::vector<std::pair<std::string, std::string>> metadata{};
   auto ret = client
                  ->upload_block_blob_from_buffer(container, blob, data,
-                                                 metadata, size, 1)
+                                                 metadata, size, INT_MAX)
                  .get();
   if (!ret.success()) {
     return ErrorCode::AzureError;
@@ -147,7 +147,7 @@ tsuba::AzureGetAsync(const std::string& container, const std::string& blob,
 
     auto res = client
                    ->download_blob_to_buffer(container, blob, start, size,
-                                             result_buf, 1)
+                                             result_buf, INT_MAX)
                    .get();
     if (!res.success()) {
       return ErrorCode::AzureError;

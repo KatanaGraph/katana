@@ -136,7 +136,7 @@ std::string MkS3obj(int32_t i, int32_t width) {
   return fmt::format("test-{:0{}d}", i, width);
 }
 
-std::vector<int64_t> tsuba_sync(const Experiment& exp) {
+std::vector<int64_t> tsuba_put_sync(const Experiment& exp) {
   std::vector<std::string> s3urls;
   for (auto i = 0; i < exp.batch_; ++i) {
     s3urls.push_back(galois::JoinPath(src_uri, MkS3obj(i, 4)));
@@ -157,7 +157,7 @@ std::vector<int64_t> tsuba_sync(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> tsuba_async(const Experiment& exp) {
+std::vector<int64_t> tsuba_put_async(const Experiment& exp) {
   std::vector<std::string> s3urls;
   std::vector<std::unique_ptr<tsuba::FileAsyncWork>> async_works{
       (std::size_t)exp.batch_};
@@ -196,6 +196,70 @@ std::vector<int64_t> tsuba_async(const Experiment& exp) {
   return results;
 }
 
+void CheckFile(const std::string& url, uint64_t size) {
+  // Confirm that the data we need is present
+  tsuba::StatBuf sbuf;
+
+  if (auto res = tsuba::FileStat(url, &sbuf); !res) {
+    GALOIS_LOG_ERROR(
+        "tsuba::FileStat({}) returned {}. Did you remember to run the "
+        "appropriate write benchmark before this read benchmark?",
+        url, sbuf.size);
+  }
+  if (sbuf.size != size) {
+    GALOIS_LOG_ERROR(
+        "{} is of size {}, expected {}. Did you remember to run the "
+        "appropriate write benchmark before this read benchmark?",
+        url, sbuf.size, size);
+  }
+}
+
+/* These next two benchmarks rely on previous writes. Make sure to call them
+ * after at least one write benchmark
+ */
+std::vector<int64_t> tsuba_get_async(const Experiment& exp) {
+  std::vector<std::string> objects;
+  std::vector<int64_t> results;
+  std::vector<uint8_t> read_buffer(exp.size_);
+  uint8_t* rbuf = read_buffer.data();
+
+  for (auto i = 0; i < exp.batch_; ++i) {
+    std::string obj = galois::JoinPath(src_uri, MkS3obj(i, 4));
+    objects.push_back(obj);
+    // Confirm that the data we need is present
+    CheckFile(obj, exp.size_);
+  }
+
+  struct timespec start;
+  for (auto j = 0; j < exp.numTransfers_; ++j) {
+    memset(rbuf, 0, exp.size_);
+    std::vector<std::unique_ptr<tsuba::FileAsyncWork>> work;
+    start = now();
+    for (const std::string& object : objects) {
+      auto async_work_res = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
+      if (!async_work_res) {
+        GALOIS_LOG_ERROR("FilePeekAsync: {}", async_work_res.error());
+      } else {
+        work.emplace_back(std::move(async_work_res.value()));
+      }
+    }
+    for (std::unique_ptr<tsuba::FileAsyncWork>& item : work) {
+      if (!item) {
+        continue;
+      }
+      while (!item->Done()) {
+        if (auto res = (*item)(); !res) {
+          GALOIS_LOG_ERROR("Work item returned: {}", res.error());
+          break;
+        }
+      }
+    }
+    results.push_back(timespec_to_us(timespec_sub(now(), start)));
+    GALOIS_LOG_ASSERT(!memcmp(rbuf, exp.buffer_.data(), exp.size_));
+  }
+  return results;
+}
+
 /////////////////////////////////////////////////////////////////////
 // Test
 struct Test {
@@ -206,10 +270,9 @@ struct Test {
       : name_(name), func_(func) {}
 };
 std::vector<Test> tests = {
-    Test("Tsuba::FileStore", tsuba_sync),
-    Test("Tsuba::FileStoreAsync", tsuba_async),
-    Test("Tsuba::FileStoreAsync", tsuba_async),
-    Test("Tsuba::FileStoreAsync", tsuba_async),
+    Test("Tsuba::FileStore", tsuba_put_sync),
+    Test("Tsuba::FileStoreAsync", tsuba_put_async),
+    Test("Tsuba::FilePeekAsync", tsuba_get_async),
 };
 
 int main(int argc, char* argv[]) {

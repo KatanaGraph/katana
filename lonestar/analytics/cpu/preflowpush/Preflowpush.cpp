@@ -663,18 +663,6 @@ struct PreflowPush {
       }
       galois::gPrint("Reading graph: ", inputFile, "\n");
       galois::graphs::readGraph(graph, inputFile);
-
-      // Assume that input edge data has already been converted instead
-#if 0 // def HAVE_BIG_ENDIAN
-      // Convert edge data to host ordering
-      for (auto ss : newApp->graph) {
-        for (auto ii : newApp->graph.edges(ss)) {
-          Graph::edge_data_type& cap = newApp->graph.getEdgeData(ii);
-          static_assert(sizeof(cap) == sizeof(uint32_t), "Unexpected edge data size");
-          cap = galois::convert_le32toh(cap);
-        }
-      }
-#endif
     }
 
     if (sourceId == sinkId || sourceId >= graph.size() ||

@@ -1,8 +1,11 @@
 #ifndef GALOIS_LIBTSUBA_BENCHUTILS_H_
 #define GALOIS_LIBTSUBA_BENCHUTILS_H_
 
-#include <time.h>
+#include <cmath>
+#include <ctime>
 #include <numeric>
+
+#include "galois/Logging.h"
 #include "galois/Result.h"
 
 inline struct timespec now() {

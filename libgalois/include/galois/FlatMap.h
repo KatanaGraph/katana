@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 

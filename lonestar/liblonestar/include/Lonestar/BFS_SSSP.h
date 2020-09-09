@@ -19,8 +19,14 @@
 
 #ifndef LONESTAR_BFS_SSSP_H
 #define LONESTAR_BFS_SSSP_H
+
+#include <atomic>
+#include <cstdlib>
 #include <iostream>
 #include <cstdlib>
+
+#include "galois/Galois.h"
+#include "galois/Reduction.h"
 
 template <typename Graph, typename _DistLabel, bool USE_EDGE_WT,
           ptrdiff_t EDGE_TILE_SIZE = 256>

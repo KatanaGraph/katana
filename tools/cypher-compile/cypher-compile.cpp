@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
   } else if (filename != "") {
     // open file, get query
     std::ifstream queryStream(filename);
-    if (!queryStream.is_open()) {
-      GALOIS_DIE("failed to open query file ", filename);
-    }
     std::stringstream querySS;
     // putting into string stream lets you pull a string out of it
     querySS << queryStream.rdbuf();
+    if (!queryStream) {
+      GALOIS_DIE("failed to read query file ", filename);
+    }
 
     cc.Compile(querySS.str().c_str());
   } else {

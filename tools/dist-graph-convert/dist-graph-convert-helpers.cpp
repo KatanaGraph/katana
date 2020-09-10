@@ -122,7 +122,11 @@ uint32_t findOwner(const uint64_t gID,
 
 uint64_t getFileSize(std::ifstream& openFile) {
   openFile.seekg(0, std::ios_base::end);
-  return openFile.tellg();
+  uint64_t size = openFile.tellg();
+  if (!openFile) {
+    GALOIS_DIE("failed to read file");
+  }
+  return size;
 }
 
 Uint64Pair determineByteRange(std::ifstream& edgeListFile, uint64_t fileSize) {

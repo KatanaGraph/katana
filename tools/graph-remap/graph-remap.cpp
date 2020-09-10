@@ -40,10 +40,18 @@ using Writer = galois::graphs::FileGraphWriter;
 std::map<uint32_t, uint32_t> createNodeMap() {
   galois::gInfo("Creating node map");
   // read new mapping
-  std::ifstream mapFile;
-  mapFile.open(mappingFilename);
-  int64_t endOfFile = mapFile.seekg(0, std::ios_base::end).tellg();
+  std::ifstream mapFile(mappingFilename);
+  mapFile.seekg(0, std::ios_base::end);
+
+  int64_t endOfFile = mapFile.tellg();
+  if (!mapFile) {
+    GALOIS_DIE("failed to read file");
+  }
+
   mapFile.seekg(0, std::ios_base::beg);
+  if (!mapFile) {
+    GALOIS_DIE("failed to read file");
+  }
 
   // remap node listed on line n in the mapping to node n
   std::map<uint32_t, uint32_t> remapper;
@@ -51,12 +59,14 @@ std::map<uint32_t, uint32_t> createNodeMap() {
   while (((int64_t)mapFile.tellg() + 1) != endOfFile) {
     uint64_t nodeID;
     mapFile >> nodeID;
+    if (!mapFile) {
+      GALOIS_DIE("failed to read file");
+    }
     remapper[nodeID] = counter++;
   }
 
   GALOIS_ASSERT(remapper.size() == counter);
   galois::gInfo("Remapping ", counter, " nodes");
-  mapFile.close();
 
   galois::gInfo("Node map created");
 

@@ -49,16 +49,18 @@ galois::Result<void> LocalStorage::ReadFile(std::string uri, uint64_t start,
                                             uint64_t size, uint8_t* data) {
   CleanURI(&uri);
   std::ifstream ifile(uri);
-  if (!ifile.good()) {
-    GALOIS_LOG_DEBUG("Failed to create ifstream");
-    return galois::ResultErrno();
-  }
+
   ifile.seekg(start);
-  if (!ifile.good()) {
-    GALOIS_LOG_DEBUG("Failed to seek");
+  if (!ifile) {
+    GALOIS_LOG_DEBUG("failed to seek");
     return galois::ResultErrno();
   }
+
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */
+  if (!ifile) {
+    GALOIS_LOG_DEBUG("failed to read");
+    return galois::ResultErrno();
+  }
 
   // if the difference in what was read from what we wanted is less  than a
   // block it's because the file size isn't well aligned so don't complain.

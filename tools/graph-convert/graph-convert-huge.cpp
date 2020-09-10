@@ -233,7 +233,6 @@ void go_edgesSorted(std::istream& input, uint64_t numNodes) {
 
 int main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  //  std::ios_base::sync_with_stdio(false);
   std::cout << "Data will be " << (useSmallData ? 4 : 8) << " Bytes\n";
 
   std::ifstream infile(inputFilename, std::ios_base::in);
@@ -242,20 +241,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // // if (isCompressed(inputType)) {
-  // //   boost::iostreams::filtering_streambuf<boost::iostreams::input> inbuf;
-  // //   inbuf.push(boost::iostreams::gzip_decompressor());
-  // //   inbuf.push(infile);
-  // //   //Convert streambuf to istream
-  // //   std::istream instream(&inbuf);
-  // //   go(instream);
-  // // } else {
   if (numNodes > 0 && edgesSorted) {
     go_edgesSorted(infile, numNodes);
   } else {
     go(infile);
   }
-  //  }
 
   return 0;
 }

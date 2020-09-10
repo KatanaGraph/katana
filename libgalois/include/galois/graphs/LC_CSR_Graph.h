@@ -772,11 +772,11 @@ public:
       typename std::enable_if<!std::is_void<EdgeTy>::value, U>::type* = nullptr>
   void readGraphFromGRFile(const std::string& filename) {
     std::ifstream graphFile(filename.c_str());
-    if (!graphFile.is_open()) {
-      GALOIS_DIE("failed to open file");
-    }
     uint64_t header[4];
     graphFile.read(reinterpret_cast<char*>(header), sizeof(uint64_t) * 4);
+    if (!graphFile) {
+      GALOIS_DIE("failed to read file");
+    }
     uint64_t version = header[0];
     numNodes         = header[2];
     numEdges         = header[3];
@@ -797,6 +797,10 @@ public:
     graphFile.seekg(readPosition);
     graphFile.read(reinterpret_cast<char*>(edgeIndData.data()),
                    sizeof(uint64_t) * numNodes);
+    if (!graphFile) {
+      GALOIS_DIE("failed to read file");
+    }
+
     /**
      * Load edgeDst array
      **/
@@ -810,6 +814,9 @@ public:
     if (version == 1) {
       graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
                      sizeof(uint32_t) * numEdges);
+      if (!graphFile) {
+        GALOIS_DIE("failed to read file");
+      }
       readPosition =
           ((4 + numNodes) * sizeof(uint64_t) + numEdges * sizeof(uint32_t));
       // version 1 padding TODO make version agnostic
@@ -819,6 +826,9 @@ public:
     } else if (version == 2) {
       graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
                      sizeof(uint64_t) * numEdges);
+      if (!graphFile) {
+        GALOIS_DIE("failed to read file");
+      }
       readPosition =
           ((4 + numNodes) * sizeof(uint64_t) + numEdges * sizeof(uint64_t));
       if (numEdges % 2) {
@@ -837,9 +847,11 @@ public:
     graphFile.seekg(readPosition);
     graphFile.read(reinterpret_cast<char*>(edgeData.data()),
                    sizeof(EdgeTy) * numEdges);
+    if (!graphFile) {
+      GALOIS_DIE("failed to read file");
+    }
 
     initializeLocalRanges();
-    graphFile.close();
   }
 
   /**
@@ -854,11 +866,12 @@ public:
       typename std::enable_if<std::is_void<EdgeTy>::value, U>::type* = nullptr>
   void readGraphFromGRFile(const std::string& filename) {
     std::ifstream graphFile(filename.c_str());
-    if (!graphFile.is_open()) {
-      GALOIS_DIE("failed to open file");
-    }
     uint64_t header[4];
     graphFile.read(reinterpret_cast<char*>(header), sizeof(uint64_t) * 4);
+    if (!graphFile) {
+      GALOIS_DIE("failed to read file");
+    }
+
     uint64_t version = header[0];
     numNodes         = header[2];
     numEdges         = header[3];
@@ -878,6 +891,10 @@ public:
     graphFile.seekg(readPosition);
     graphFile.read(reinterpret_cast<char*>(edgeIndData.data()),
                    sizeof(uint64_t) * numNodes);
+    if (!graphFile) {
+      GALOIS_DIE("failed to read file");
+    }
+
     /**
      * Load edgeDst array
      **/
@@ -890,15 +907,20 @@ public:
     if (version == 1) {
       graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
                      sizeof(uint32_t) * numEdges);
+      if (!graphFile) {
+        GALOIS_DIE("failed to read file");
+      }
     } else if (version == 2) {
       graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
                      sizeof(uint64_t) * numEdges);
+      if (!graphFile) {
+        GALOIS_DIE("failed to read file");
+      }
     } else {
       GALOIS_DIE("unknown file version: ", version);
     }
 
     initializeLocalRanges();
-    graphFile.close();
   }
 
   /**

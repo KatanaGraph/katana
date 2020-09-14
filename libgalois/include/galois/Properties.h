@@ -83,14 +83,18 @@ namespace internal {
 template <typename>
 struct PropertyViewTuple;
 
-template <>
-struct PropertyViewTuple<void> {
-  using type = std::tuple<>;
-};
-
 template <typename... Args>
 struct PropertyViewTuple<std::tuple<Args...>> {
   using type = std::tuple<galois::PropertyViewType<Args>...>;
+};
+
+template <typename>
+struct PropertyArrowTuple;
+
+template <typename... Args>
+struct PropertyArrowTuple<std::tuple<Args...>> {
+  using type = std::tuple<
+      typename arrow::TypeTraits<galois::PropertyArrowType<Args>>::CType...>;
 };
 
 } // namespace internal
@@ -98,6 +102,11 @@ struct PropertyViewTuple<std::tuple<Args...>> {
 /// PropertyViewTuple applies PropertyViewType to a tuple of properties.
 template <typename T>
 using PropertyViewTuple = typename internal::PropertyViewTuple<T>::type;
+
+/// PropertyArrowTuple applies arrow::TypeTraits<T::ArrowType>::CType
+/// to a tuple of properties
+template <typename T>
+using PropertyArrowTuple = typename internal::PropertyArrowTuple<T>::type;
 
 /// TupleElements selects the tuple elements at the given indices
 template <typename Tuple, size_t... indices>

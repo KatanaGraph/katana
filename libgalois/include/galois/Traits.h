@@ -126,21 +126,15 @@ template <typename T, typename Tuple>
 using trait_type_t =
     typename std::tuple_element<find_trait<T, Tuple>(), Tuple>::type;
 
-// Fallback to enable_if tricks over if constexpr to play more nicely with
-// unused parameter warnings.
-
 template <typename S, typename T, typename D>
-constexpr auto get_default_trait_value(
-    S /*source*/, T /*tag*/, D /*def*/,
-    typename std::enable_if<has_trait<T, S>()>::type* = nullptr) {
-  return std::make_tuple();
-}
-
-template <typename S, typename T, typename D>
-constexpr auto get_default_trait_value(
-    [[maybe_unused]] S source, [[maybe_unused]] T tags, D defaults,
-    typename std::enable_if<!has_trait<T, S>()>::type* = nullptr) {
-  return std::make_tuple(defaults);
+constexpr auto get_default_trait_value([[maybe_unused]] S source,
+                                       [[maybe_unused]] T tags,
+                                       [[maybe_unused]] D defaults) {
+  if constexpr (has_trait<T, S>()) {
+    return std::make_tuple();
+  } else {
+    return std::make_tuple(defaults);
+  }
 }
 
 /**

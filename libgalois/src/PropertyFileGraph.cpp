@@ -62,16 +62,15 @@ MapTopology(const tsuba::FileView& file_view) {
     return galois::ErrorCode::InvalidArgument;
   }
 
-  const uint64_t* out_indices = &data[4];
+  uint64_t* out_indices = const_cast<uint64_t*>(&data[4]);
 
-  const auto* out_dests =
-      reinterpret_cast<const uint32_t*>(out_indices + num_nodes);
+  auto* out_dests = reinterpret_cast<uint32_t*>(out_indices + num_nodes);
 
-  auto indices_buffer = std::make_shared<arrow::Buffer>(
-      reinterpret_cast<const uint8_t*>(out_indices), num_nodes);
+  auto indices_buffer = std::make_shared<arrow::MutableBuffer>(
+      reinterpret_cast<uint8_t*>(out_indices), num_nodes);
 
-  auto dests_buffer = std::make_shared<arrow::Buffer>(
-      reinterpret_cast<const uint8_t*>(out_dests), num_edges);
+  auto dests_buffer = std::make_shared<arrow::MutableBuffer>(
+      reinterpret_cast<uint8_t*>(out_dests), num_edges);
 
   return galois::graphs::GraphTopology{
       .out_indices = std::make_shared<arrow::UInt64Array>(

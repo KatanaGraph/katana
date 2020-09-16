@@ -30,7 +30,7 @@ class PartialGraphView {
                    std::pair<uint64_t, uint64_t> node_range,
                    std::pair<uint64_t, uint64_t> edge_range)
       : rdg_(std::move(rdg)), view_(std::move(view)), prefix_(view_.gr_view()),
-        edges_(rdg_.topology_file_storage.valid_ptr<Edge>()),
+        edges_(rdg_.topology_file_storage_.valid_ptr<Edge>()),
         node_range_(std::move(node_range)), edge_range_(std::move(edge_range)) {
   }
 
@@ -45,65 +45,65 @@ class PartialGraphView {
     return prefix->out_indexes[node_id];
   }
 
+  static tsuba::RDG::SliceArg BuildSliceArg(const OutIndexView& oiv,
+                                            uint64_t first_node,
+                                            uint64_t last_node) {
+    const tsuba::GRPrefix* prefix = oiv.gr_view();
+
+    uint64_t first_edge   = EdgeBegin(prefix, first_node);
+    uint64_t last_edge    = EdgeBegin(prefix, last_node);
+    uint64_t edges_offset = oiv.view_offset();
+    uint64_t edges_start  = edges_offset + (first_edge * sizeof(Edge));
+    uint64_t edges_stop   = edges_offset + (last_edge * sizeof(Edge));
+
+    return tsuba::RDG::SliceArg{
+        .node_range = std::make_pair(first_node, last_node),
+        .edge_range = std::make_pair(first_edge, last_edge),
+        .topo_off   = edges_start,
+        .topo_size  = edges_stop - edges_start,
+    };
+  }
+
 public:
   typedef StandardRange<boost::counting_iterator<uint64_t>> edges_iterator;
   typedef StandardRange<boost::counting_iterator<uint64_t>> nodes_iterator;
 
   /// Make a partial graph view from a partially loaded RDG, as indicated by a
-  /// RDGHandle and OutIndexView, which loads all node and edge properties.
-  static galois::Result<PartialGraphView> Make(tsuba::RDGHandle handle,
-                                               OutIndexView&& oiv,
-                                               uint64_t first_node,
-                                               uint64_t last_node) {
+  /// RDGHandle and OutIndexView, which loads only the specified properties
+  static galois::Result<PartialGraphView>
+  Make(tsuba::RDGHandle handle, OutIndexView&& oiv, uint64_t first_node,
+       uint64_t last_node,
+       const std::vector<std::string>* node_properties = nullptr,
+       const std::vector<std::string>* edge_properties = nullptr) {
 
-    auto view                     = std::move(oiv);
-    const tsuba::GRPrefix* prefix = view.gr_view();
-
-    uint64_t first_edge   = EdgeBegin(prefix, first_node);
-    uint64_t last_edge    = EdgeBegin(prefix, last_node);
-    uint64_t edges_offset = view.view_offset();
-    uint64_t edges_start  = edges_offset + (first_edge * sizeof(Edge));
-    uint64_t edges_stop   = edges_offset + (last_edge * sizeof(Edge));
-
-    auto node_range = std::make_pair(first_node, last_node);
-    auto edge_range = std::make_pair(first_edge, last_edge);
-
-    auto rdg_res = tsuba::LoadPartial(handle, node_range, edge_range,
-                                      edges_start, edges_stop - edges_start);
+    auto view                  = std::move(oiv);
+    tsuba::RDG::SliceArg slice = BuildSliceArg(view, first_node, last_node);
+    auto rdg_res = tsuba::RDG::LoadPartial(handle, slice, node_properties,
+                                           edge_properties);
     if (!rdg_res) {
       return rdg_res.error();
     }
     return PartialGraphView(std::move(rdg_res.value()), std::move(view),
-                            node_range, edge_range);
+                            slice.node_range, slice.edge_range);
   }
 
   /// Make a partial graph view from a partially loaded RDG, as indicated by a
   /// RDGHandle and OutIndexView, which loads only the specified properties
   static galois::Result<PartialGraphView>
-  Make(tsuba::RDGHandle handle, OutIndexView&& oiv, uint64_t first_node,
-       uint64_t last_node, const std::vector<std::string>& node_properties,
-       const std::vector<std::string>& edge_properties) {
+  Make(const std::string& uri, OutIndexView&& oiv, uint64_t first_node,
+       uint64_t last_node,
+       const std::vector<std::string>* node_properties = nullptr,
+       const std::vector<std::string>* edge_properties = nullptr) {
 
-    auto view                     = std::move(oiv);
-    const tsuba::GRPrefix* prefix = view.gr_view();
-
-    uint64_t first_edge   = EdgeBegin(prefix, first_node);
-    uint64_t last_edge    = EdgeBegin(prefix, last_node);
-    uint64_t edges_offset = view.view_offset();
-    uint64_t edges_start  = edges_offset + (first_edge * sizeof(Edge));
-    uint64_t edges_stop   = edges_offset + (last_edge * sizeof(Edge));
-
-    auto node_range = std::make_pair(first_node, last_node);
-    auto edge_range = std::make_pair(first_edge, last_edge);
-
-    auto rdg_res = tsuba::LoadPartial(handle, node_range, edge_range,
-                                      edges_start, edges_stop - edges_start,
-                                      node_properties, edge_properties);
+    auto view                  = std::move(oiv);
+    tsuba::RDG::SliceArg slice = BuildSliceArg(view, first_node, last_node);
+    auto rdg_res =
+        tsuba::RDG::LoadPartial(uri, slice, node_properties, edge_properties);
     if (!rdg_res) {
       return rdg_res.error();
     }
     return PartialGraphView(std::move(rdg_res.value()), std::move(view),
-                            node_range, edge_range);
+                            slice.node_range, slice.edge_range);
   }
 
   nodes_iterator nodes() const {

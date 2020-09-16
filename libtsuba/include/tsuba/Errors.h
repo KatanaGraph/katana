@@ -24,6 +24,7 @@ enum class ErrorCode {
   LocalStorageError = 12,
   NoCredentials     = 13,
   AzureError        = 14,
+  BadVersion        = 16,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -64,6 +65,8 @@ public:
       return "credentials not configured";
     case ErrorCode::AzureError:
       return "Azure error";
+    case ErrorCode::BadVersion:
+      return "previous version expectation violated";
     default:
       return "unknown error";
     }
@@ -75,6 +78,7 @@ public:
     case ErrorCode::ArrowError:
     case ErrorCode::PropertyNotFound:
     case ErrorCode::NoCredentials:
+    case ErrorCode::BadVersion:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);

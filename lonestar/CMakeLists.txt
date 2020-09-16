@@ -133,7 +133,7 @@ if(GALOIS_ENABLE_DIST)
 
     if (${X_STORE_PART})
       set(partitioner_input ${X_INPUT_URI})
-      set(X_INPUT_URI ${output_location}/part_graph/rdg)
+      set(X_INPUT_URI ${output_location}/part_graph)
     endif()
 
     set(command mpiexec --bind-to none -n ${np} $<TARGET_FILE:${app}> ${X_INPUT_URI} ${X_UNPARSED_ARGUMENTS} -t=${threads} -partition=${part})

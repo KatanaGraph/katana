@@ -17,4 +17,12 @@ galois::Result<OutIndexView> OutIndexView::Make(tsuba::RDGHandle handle) {
   return OutIndexView(std::move(pfx_res.value()));
 }
 
+galois::Result<OutIndexView> OutIndexView::Make(const std::string& path) {
+  auto pfx_res = tsuba::ExaminePrefix(path);
+  if (!pfx_res) {
+    return pfx_res.error();
+  }
+  return OutIndexView(std::move(pfx_res.value()));
+}
+
 } /* namespace galois */

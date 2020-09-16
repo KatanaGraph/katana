@@ -12,6 +12,7 @@ set(sources
   src/FileFrame.cpp
   src/FileView.cpp
   src/GlobalState.cpp
+  src/NameServerClient.cpp
   src/RDG.cpp
   src/tsuba.cpp
 )

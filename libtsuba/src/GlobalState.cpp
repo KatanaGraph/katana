@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "NameServerClient.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 
@@ -53,6 +54,8 @@ tsuba::FileStorage* GlobalState::FS(std::string_view uri) const {
   return GetDefaultFS();
 }
 
+NameServerClient* GlobalState::NS() const { return name_server_client_.get(); }
+
 galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
   assert(ref_ == nullptr);
 
@@ -75,6 +78,12 @@ galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
       return res.error();
     }
   }
+
+  auto name_server_client_res = ConnectToNameServer();
+  if (!name_server_client_res) {
+    return name_server_client_res.error();
+  }
+  global_state->name_server_client_ = std::move(name_server_client_res.value());
 
   ref_ = std::move(global_state);
   return galois::ResultSuccess();
@@ -102,3 +111,5 @@ galois::CommBackend* tsuba::Comm() { return GlobalState::Get().Comm(); }
 tsuba::FileStorage* tsuba::FS(std::string_view uri) {
   return GlobalState::Get().FS(uri);
 }
+
+tsuba::NameServerClient* tsuba::NS() { return GlobalState::Get().NS(); }

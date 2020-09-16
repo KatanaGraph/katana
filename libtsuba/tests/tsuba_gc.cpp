@@ -50,15 +50,16 @@ void parse_arguments(int argc, char* argv[]) {
   src_uri = argv[index++];
 }
 
-galois::Result<tsuba::RDGMeta> GetPreviousRDGMeta(tsuba::RDGMeta rdg_meta,
-                                                  const std::string& src_uri) {
-  auto fn       = tsuba::RDGMeta::FileName(src_uri, rdg_meta.previous_version);
-  auto make_res = tsuba::RDGMeta::Make(fn);
+galois::Result<tsuba::RDGMeta>
+GetPreviousRDGMeta(const tsuba::RDGMeta& rdg_meta, const std::string& src_uri) {
+  auto make_res = tsuba::RDGMeta::Make(src_uri, rdg_meta.previous_version_);
   if (!make_res) {
-    fmt::print("Error opening {}: {}\n", fn, make_res.error());
-    return make_res.error();
+    GALOIS_LOG_ERROR(
+        "Error opening {}: {}\n",
+        tsuba::RDGMeta::FileName(src_uri, rdg_meta.previous_version_),
+        make_res.error());
   }
-  return make_res.value();
+  return make_res;
 }
 
 // Return a vector of RDGMeta objects, with index 0 being the most recent
@@ -75,7 +76,7 @@ std::vector<tsuba::RDGMeta> FindVersions(const std::string& src_uri,
   std::vector<tsuba::RDGMeta> versions{};
   versions.push_back(rdg_meta);
 
-  while (rdg_meta.version != rdg_meta.previous_version &&
+  while (rdg_meta.version_ != rdg_meta.previous_version_ &&
          versions.size() < remaining_versions) {
     auto rdg_res = GetPreviousRDGMeta(rdg_meta, src_uri);
     if (!rdg_res) {
@@ -127,7 +128,7 @@ GraphFileNames(const std::string& src_uri,
   RDGFileNames(src_uri, fnames);
   for (const auto& meta : metas) {
     // src_uri == ...meta_meta.version
-    RDGFileNames(tsuba::RDGMeta::FileName(src_uri, meta.version), fnames);
+    RDGFileNames(tsuba::RDGMeta::FileName(src_uri, meta.version_), fnames);
   }
   return fnames;
 }
@@ -136,7 +137,7 @@ void GC(const std::string& src_uri, uint32_t remaining_versions) {
   auto versions = FindVersions(src_uri, remaining_versions);
   fmt::print("Keeping versions: ");
   std::for_each(versions.begin(), versions.end(),
-                [](const auto& e) { fmt::print("{} ", e.version); });
+                [](const auto& e) { fmt::print("{} ", e.version_); });
   fmt::print("\n");
 
   auto save_listing = GraphFileNames(src_uri, versions);

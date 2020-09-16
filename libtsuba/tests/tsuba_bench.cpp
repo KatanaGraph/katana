@@ -57,7 +57,7 @@ void TxBnc(const std::string& src_uri, int count) {
   }
   auto handle = handle_res.value();
 
-  auto rdg_res = tsuba::Load(handle);
+  auto rdg_res = tsuba::RDG::Load(handle);
   if (!rdg_res) {
     GALOIS_LOG_FATAL("Load rdg from s3: {}", rdg_res.error());
   }
@@ -69,7 +69,7 @@ void TxBnc(const std::string& src_uri, int count) {
 
   start = now();
   for (auto i = 0; i < count; ++i) {
-    if (auto res = tsuba::Store(handle, &rdg); !res) {
+    if (auto res = rdg.Store(handle); !res) {
       GALOIS_LOG_FATAL("Store rdg: {}", res.error());
     }
   }

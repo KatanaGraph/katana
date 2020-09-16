@@ -125,12 +125,12 @@ public:
        const std::vector<std::string>& edge_properties);
 
   const tsuba::PartitionMetadata* partition_metadata() {
-    return rdg_.part_metadata.get();
+    return rdg_.part_metadata_.get();
   }
 
   Result<void>
   set_partition_metadata(std::unique_ptr<tsuba::PartitionMetadata> meta) {
-    rdg_.part_metadata = std::move(meta);
+    rdg_.part_metadata_ = std::move(meta);
     return galois::ResultSuccess();
   }
 
@@ -148,29 +148,29 @@ public:
   Result<void> Write();
 
   std::shared_ptr<arrow::Schema> node_schema() const {
-    return rdg_.node_table->schema();
+    return rdg_.node_table_->schema();
   }
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
-    return rdg_.edge_table->schema();
+    return rdg_.edge_table_->schema();
   }
 
   std::shared_ptr<arrow::ChunkedArray> NodeProperty(int i) const {
-    return rdg_.node_table->column(i);
+    return rdg_.node_table_->column(i);
   }
 
   std::shared_ptr<arrow::ChunkedArray> EdgeProperty(int i) const {
-    return rdg_.edge_table->column(i);
+    return rdg_.edge_table_->column(i);
   }
 
   const GraphTopology& topology() const { return topology_; }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> NodeProperties() const {
-    return rdg_.node_table->columns();
+    return rdg_.node_table_->columns();
   }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> EdgeProperties() const {
-    return rdg_.edge_table->columns();
+    return rdg_.edge_table_->columns();
   }
 
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
@@ -210,7 +210,7 @@ public:
   /// arrow::Array.
   template <typename PropTuple>
   Result<PropertyViewTuple<PropTuple>> MakeNodePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.node_table.get());
+    return this->MakePropertyViews<PropTuple>(rdg_.node_table_.get());
   }
 
   /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
@@ -218,7 +218,7 @@ public:
   /// \see MakeNodePropertyViews
   template <typename PropTuple>
   Result<PropertyViewTuple<PropTuple>> MakeEdgePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.edge_table.get());
+    return this->MakePropertyViews<PropTuple>(rdg_.edge_table_.get());
   }
 };
 

@@ -136,7 +136,8 @@ galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
 MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file,
                       const std::vector<std::string>& node_properties,
                       const std::vector<std::string>& edge_properties) {
-  auto rdg_result = tsuba::Load(*rdg_file, node_properties, edge_properties);
+  auto rdg_result =
+      tsuba::RDG::Load(*rdg_file, &node_properties, &edge_properties);
   if (!rdg_result) {
     return rdg_result.error();
   }
@@ -147,7 +148,7 @@ MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file,
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
 MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
-  auto rdg_result = tsuba::Load(*rdg_file);
+  auto rdg_result = tsuba::RDG::Load(*rdg_file);
   if (!rdg_result) {
     return rdg_result.error();
   }
@@ -179,15 +180,15 @@ galois::Result<void> galois::graphs::PropertyFileGraph::Validate() {
 
 galois::Result<void>
 galois::graphs::PropertyFileGraph::DoWrite(tsuba::RDGHandle handle) {
-  if (!rdg_.topology_file_storage.Valid()) {
+  if (!rdg_.topology_file_storage_.Valid()) {
     auto result = WriteTopology(topology_);
     if (!result) {
       return result.error();
     }
-    return tsuba::Store(handle, &rdg_, result.value().get());
+    return rdg_.Store(handle, result.value().get());
   }
 
-  return tsuba::Store(handle, &rdg_);
+  return rdg_.Store(handle);
 }
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
@@ -196,7 +197,8 @@ galois::graphs::PropertyFileGraph::Make(
   auto g = std::unique_ptr<PropertyFileGraph>(
       new PropertyFileGraph(std::move(rdg_file), std::move(rdg)));
 
-  auto load_result = LoadTopology(&g->topology_, g->rdg_.topology_file_storage);
+  auto load_result =
+      LoadTopology(&g->topology_, g->rdg_.topology_file_storage_);
   if (!load_result) {
     return load_result.error();
   }
@@ -265,7 +267,7 @@ galois::Result<void> galois::graphs::PropertyFileGraph::AddNodeProperties(
                      topology_.out_indices->length(), table->num_rows());
     return ErrorCode::InvalidArgument;
   }
-  return tsuba::AddNodeProperties(&rdg_, table);
+  return rdg_.AddNodeProperties(table);
 }
 
 galois::Result<void> galois::graphs::PropertyFileGraph::AddEdgeProperties(
@@ -276,22 +278,22 @@ galois::Result<void> galois::graphs::PropertyFileGraph::AddEdgeProperties(
                      topology_.out_dests->length(), table->num_rows());
     return ErrorCode::InvalidArgument;
   }
-  return tsuba::AddEdgeProperties(&rdg_, table);
+  return rdg_.AddEdgeProperties(table);
 }
 
 galois::Result<void>
 galois::graphs::PropertyFileGraph::RemoveNodeProperty(int i) {
-  return tsuba::DropNodeProperty(&rdg_, i);
+  return rdg_.DropNodeProperty(i);
 }
 
 galois::Result<void>
 galois::graphs::PropertyFileGraph::RemoveEdgeProperty(int i) {
-  return tsuba::DropEdgeProperty(&rdg_, i);
+  return rdg_.DropEdgeProperty(i);
 }
 
 galois::Result<void> galois::graphs::PropertyFileGraph::SetTopology(
     const galois::graphs::GraphTopology& topology) {
-  if (auto res = rdg_.topology_file_storage.Unbind(); !res) {
+  if (auto res = rdg_.topology_file_storage_.Unbind(); !res) {
     return res.error();
   }
   topology_ = topology;

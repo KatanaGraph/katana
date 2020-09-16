@@ -44,7 +44,6 @@ void TestRoundTrip() {
   std::string temp_dir(std::move(unique_result.value()));
 
   std::string rdg_file{temp_dir};
-  rdg_file += "/rdg";
 
   auto write_result = g->Write(rdg_file);
 
@@ -107,7 +106,7 @@ void TestGarbageMetadata() {
   std::string temp_dir(std::move(unique_result.value()));
 
   std::string rdg_file{temp_dir};
-  rdg_file += "/rdg";
+  rdg_file += "/meta";
 
   std::ofstream out(rdg_file);
   out << "garbage to make the file non-empty";

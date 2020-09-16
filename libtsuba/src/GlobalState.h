@@ -7,6 +7,7 @@
 #include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "FileStorage.h"
+#include "NameServerClient.h"
 
 namespace tsuba {
 
@@ -26,6 +27,7 @@ class GlobalState {
 
   std::vector<std::unique_ptr<FileStorage>> file_stores_;
   galois::CommBackend* comm_;
+  std::unique_ptr<NameServerClient> name_server_client_;
 
   GlobalState(galois::CommBackend* comm) : comm_(comm){};
   FileStorage* GetDefaultFS() const;
@@ -39,6 +41,7 @@ public:
   ~GlobalState() = default;
 
   galois::CommBackend* Comm() const;
+  NameServerClient* NS() const;
 
   /// Get the correct FileStorage based on the URI
   ///
@@ -56,6 +59,7 @@ public:
 
 galois::CommBackend* Comm();
 FileStorage* FS(std::string_view uri);
+NameServerClient* NS();
 
 } // namespace tsuba
 

@@ -23,7 +23,7 @@ void DownloadGraph() {
 
   auto s3_handle = s3_handle_res.value();
 
-  auto s3_rdg_res = tsuba::Load(s3_handle);
+  auto s3_rdg_res = tsuba::RDG::Load(s3_handle);
   if (!s3_rdg_res) {
     GALOIS_LOG_FATAL("Load rdg from s3: {}", s3_rdg_res.error());
   }
@@ -45,7 +45,7 @@ void DownloadGraph() {
   }
   auto local_handle = local_handle_res.value();
 
-  if (auto res = tsuba::Store(local_handle, &s3_rdg); !res) {
+  if (auto res = s3_rdg.Store(local_handle); !res) {
     GALOIS_LOG_FATAL("Store local rdg: {}", res.error());
   }
 
@@ -59,7 +59,7 @@ void DownloadGraph() {
   }
   auto new_local_handle = new_local_handle_res.value();
 
-  auto new_rdg_res = tsuba::Load(new_local_handle);
+  auto new_rdg_res = tsuba::RDG::Load(new_local_handle);
   GALOIS_LOG_ASSERT(new_rdg_res);
 
   auto new_rdg = std::move(new_rdg_res.value());

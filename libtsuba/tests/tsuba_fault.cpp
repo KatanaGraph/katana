@@ -185,38 +185,38 @@ std::vector<int64_t> GenRandVec(uint64_t size, int64_t min, int64_t max) {
 void MutateGraph(tsuba::RDG& rdg) {
   // Nodes
   {
-    GALOIS_LOG_VASSERT(node_property_num < rdg.node_table->num_columns(),
+    GALOIS_LOG_VASSERT(node_property_num < rdg.node_table_->num_columns(),
                        "Node property number is {:d} but only {:d} properties",
-                       node_property_num, rdg.node_table->num_columns());
-    auto col = rdg.node_table->column(node_property_num);
+                       node_property_num, rdg.node_table_->num_columns());
+    auto col = rdg.node_table_->column(node_property_num);
     auto node_prop_name =
-        rdg.node_table->schema()->field(node_property_num)->name();
+        rdg.node_table_->schema()->field(node_property_num)->name();
     std::vector<int64_t> col_values =
         GenRandVec(col->length() - 1, -1000000, 1000000);
     // Sum to 0
     col_values.push_back(
         0L - std::accumulate(col_values.begin(), col_values.end(), 0L));
-    if (auto res = DropNodeProperty(&rdg, node_property_num); !res) {
+    if (auto res = rdg.DropNodeProperty(node_property_num); !res) {
       GALOIS_LOG_FATAL("DropNodeProperty {:d} {}", node_property_num,
                        res.error());
     }
     auto node_prop_tab = MakeNodePropTable(col_values, node_prop_name);
-    if (auto res = AddNodeProperties(&rdg, node_prop_tab); !res) {
+    if (auto res = rdg.AddNodeProperties(node_prop_tab); !res) {
       GALOIS_LOG_FATAL("AddNodeProperties {}", res.error());
     }
   }
   // Edges
   {
-    auto arr                       = rdg.edge_table->GetColumnByName("str");
+    auto arr                       = rdg.edge_table_->GetColumnByName("str");
     std::vector<int64_t> edge_lens = GenRandVec(arr->length() - 1, -100, 100);
     // Sum to 0
     edge_lens.push_back(
         0L - std::accumulate(edge_lens.begin(), edge_lens.end(), 0L));
-    if (auto res = DropEdgeProperty(&rdg, 0); !res) {
+    if (auto res = rdg.DropEdgeProperty(0); !res) {
       GALOIS_LOG_FATAL("DropEdgeProperty 0 {}", res.error());
     }
     auto edge_lens_tab = MakeStrTable(edge_lens);
-    if (auto res = AddEdgeProperties(&rdg, edge_lens_tab); !res) {
+    if (auto res = rdg.AddEdgeProperties(edge_lens_tab); !res) {
       GALOIS_LOG_FATAL("AddEdgeProperties 0 {}", res.error());
     }
   }
@@ -224,9 +224,9 @@ void MutateGraph(tsuba::RDG& rdg) {
 
 void ValidateGraph(tsuba::RDG& rdg) {
   // Nodes
-  for (auto col_num = 0; col_num < rdg.node_table->num_columns(); ++col_num) {
+  for (auto col_num = 0; col_num < rdg.node_table_->num_columns(); ++col_num) {
     int64_t total = 0L;
-    auto arr      = rdg.node_table->column(col_num);
+    auto arr      = rdg.node_table_->column(col_num);
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto int_arr =
           std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -238,7 +238,7 @@ void ValidateGraph(tsuba::RDG& rdg) {
   }
   // Edges
   {
-    auto arr      = rdg.edge_table->GetColumnByName("str");
+    auto arr      = rdg.edge_table_->GetColumnByName("str");
     int64_t total = 0L;
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto str_arr =
@@ -268,7 +268,7 @@ galois::Result<tsuba::RDG> OpenGraph(const std::string& pg_in, uint32_t flags) {
   }
   auto handle = handle_res.value();
 
-  auto rdg_res = tsuba::Load(handle);
+  auto rdg_res = tsuba::RDG::Load(handle);
   if (!rdg_res) {
     GALOIS_LOG_FATAL("Load rdg error: {}", rdg_res.error());
   }
@@ -282,7 +282,7 @@ void OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   }
   auto handle = handle_res.value();
 
-  auto rdg_res = tsuba::Load(handle);
+  auto rdg_res = tsuba::RDG::Load(handle);
   if (!rdg_res) {
     GALOIS_LOG_FATAL("Load rdg error: {}", rdg_res.error());
   }
@@ -291,7 +291,7 @@ void OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   for (auto i = 0U; i < count; ++i) {
     ValidateGraph(rdg);
     MutateGraph(rdg);
-    if (auto res = tsuba::Store(handle, &rdg); !res) {
+    if (auto res = rdg.Store(handle); !res) {
       GALOIS_LOG_FATAL("Store local rdg: {}", res.error());
     }
   }
@@ -308,20 +308,20 @@ void PrintGraph(const std::string& src_uri) {
   }
   auto handle = handle_res.value();
 
-  auto rdg_res = tsuba::Load(handle);
+  auto rdg_res = tsuba::RDG::Load(handle);
   if (!rdg_res) {
     GALOIS_LOG_FATAL("Load rdg from s3: {}", rdg_res.error());
   }
   auto rdg = std::move(rdg_res.value());
   fmt::print("NODE\n");
-  PrintTable(rdg.node_table);
-  for (auto i = 0; i < rdg.node_table->num_columns(); ++i) {
-    PrintInts(rdg.node_table->column(i));
+  PrintTable(rdg.node_table_);
+  for (auto i = 0; i < rdg.node_table_->num_columns(); ++i) {
+    PrintInts(rdg.node_table_->column(i));
   }
 
   fmt::print("EDGE\n");
-  PrintTable(rdg.edge_table);
-  PrintStrings(rdg.edge_table->GetColumnByName("str"));
+  PrintTable(rdg.edge_table_);
+  PrintStrings(rdg.edge_table_->GetColumnByName("str"));
 }
 
 int main(int argc, char* argv[]) {

@@ -27,6 +27,15 @@ public:
     return outcome;
   }
   virtual bool Done() const { return done_; }
+  galois::Result<void> Finish() {
+    while (!Done()) {
+      auto res = this->operator()();
+      if (!res) {
+        return res;
+      }
+    }
+    return galois::ResultSuccess();
+  }
 };
 
 } // namespace tsuba

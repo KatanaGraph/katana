@@ -34,6 +34,14 @@ void LocalStorage::CleanURI(std::string* uri) {
 galois::Result<void>
 LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
   CleanURI(&uri);
+  fs::path m_path{uri};
+  fs::path dir = m_path.parent_path();
+  if (boost::system::error_code err; !fs::create_directories(dir, err)) {
+    if (err) {
+      return err;
+    }
+  }
+
   std::ofstream ofile(uri);
   if (!ofile.good()) {
     return galois::ResultErrno();
@@ -111,22 +119,26 @@ LocalStorage::ListAsync(const std::string& uri,
   struct dirent* dp;
   std::string dirname = uri;
   CleanURI(&dirname);
-  if ((dirp = opendir(dirname.c_str())) == NULL) {
+  if ((dirp = opendir(dirname.c_str())) == nullptr) {
+    if (errno == ENOENT) {
+      // other storage backends are flat and so return an empty list here
+      return nullptr;
+    }
     GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", dirname,
                      galois::ResultErrno().message());
-    return ErrorCode::InvalidArgument;
+    return galois::ResultErrno();
   }
 
   do {
     errno = 0;
-    if ((dp = readdir(dirp)) != NULL) {
+    if ((dp = readdir(dirp)) != nullptr) {
       // I am filtering "." and ".." from local listing because I can't see how
       // to filter in clients in a reasonable way.
       if (strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
         list->emplace(dp->d_name);
       }
     }
-  } while (dp != NULL);
+  } while (dp != nullptr);
 
   if (errno != 0) {
     GALOIS_LOG_ERROR("\n  readdir failed: {}: {}", dirname,

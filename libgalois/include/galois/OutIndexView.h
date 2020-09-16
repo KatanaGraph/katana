@@ -27,6 +27,7 @@ public:
   OutIndexView& operator=(OutIndexView&& other) = default;
 
   static galois::Result<OutIndexView> Make(tsuba::RDGHandle handle);
+  static galois::Result<OutIndexView> Make(const std::string& path);
 
   uint64_t num_nodes() const { return pfx_.prefix->header.num_nodes; }
   uint64_t num_edges() const { return pfx_.prefix->header.num_edges; }

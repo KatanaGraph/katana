@@ -18,7 +18,6 @@
  */
 
 #include "galois/Galois.h"
-#include "galois/AtomicHelpers.h"
 #include "galois/DynamicBitset.h"
 #include "galois/gstl.h"
 #include "galois/Reduction.h"

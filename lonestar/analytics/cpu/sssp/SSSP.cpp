@@ -147,7 +147,7 @@ void deltaStepAlgo(Graph& graph, GNode source, const P& pushWrap,
           auto& ddist        = graph.getData(dst, flag);
           Dist ew            = graph.getEdgeData(ii, flag);
           const Dist newDist = sdata + ew;
-          Dist oldDist       = galois::atomicMin<uint32_t>(ddist, newDist);
+          Dist oldDist       = galois::atomicMin(ddist, newDist);
           if (newDist < oldDist) {
             if (TRACK_WORK) {
               //! [per-thread contribution of self-defined stats]

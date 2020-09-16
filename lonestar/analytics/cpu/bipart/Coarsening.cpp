@@ -25,6 +25,7 @@
  */
 
 #include "Helper.h"
+#include "galois/AtomicHelpers.h"
 
 // maximum weight limit for a coarsened node
 WeightTy kLimitWeights[100];

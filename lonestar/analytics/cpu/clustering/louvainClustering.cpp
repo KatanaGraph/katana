@@ -164,10 +164,9 @@ double algoLouvainWithLocking(Graph& graph, double lower, double threshold,
 
             galois::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
             galois::atomicAdd(c_info[local_target].size, (uint64_t)1);
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].degree_wt,
-                                   n_data.degree_wt);
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].size,
-                                   (uint64_t)1);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].degree_wt,
+                              n_data.degree_wt);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
 
             /* Set the new cluster id */
             n_data.curr_comm_ass = local_target;
@@ -296,10 +295,9 @@ double algoLouvainWithoutLockingDoAll(Graph& graph, double lower,
 
             galois::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
             galois::atomicAdd(c_info[local_target].size, (uint64_t)1);
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].degree_wt,
-                                   n_data.degree_wt);
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].size,
-                                   (uint64_t)1);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].degree_wt,
+                              n_data.degree_wt);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
 
             /* Set the new cluster id */
             n_data.curr_comm_ass = local_target;
@@ -428,10 +426,9 @@ double algoLouvainWithLockingDelayUpdate(Graph& graph, double lower,
             galois::atomicAdd(c_update[local_target[n]].degree_wt,
                               n_data.degree_wt);
             galois::atomicAdd(c_update[local_target[n]].size, (uint64_t)1);
-            galois::atomicSubtract(c_update[n_data.curr_comm_ass].degree_wt,
-                                   n_data.degree_wt);
-            galois::atomicSubtract(c_update[n_data.curr_comm_ass].size,
-                                   (uint64_t)1);
+            galois::atomicSub(c_update[n_data.curr_comm_ass].degree_wt,
+                              n_data.degree_wt);
+            galois::atomicSub(c_update[n_data.curr_comm_ass].size, (uint64_t)1);
           }
         },
         galois::loopname("louvain algo: Phase 1"));
@@ -658,10 +655,10 @@ double algoLouvainWithColoring(Graph& graph, double lower, double threshold,
                 galois::atomicAdd(c_update[local_target].degree_wt,
                                   n_data.degree_wt);
                 galois::atomicAdd(c_update[local_target].size, (uint64_t)1);
-                galois::atomicSubtract(c_update[n_data.curr_comm_ass].degree_wt,
-                                       n_data.degree_wt);
-                galois::atomicSubtract(c_update[n_data.curr_comm_ass].size,
-                                       (uint64_t)1);
+                galois::atomicSub(c_update[n_data.curr_comm_ass].degree_wt,
+                                  n_data.degree_wt);
+                galois::atomicSub(c_update[n_data.curr_comm_ass].size,
+                                  (uint64_t)1);
                 /* Set the new cluster id */
                 n_data.curr_comm_ass = local_target;
               }

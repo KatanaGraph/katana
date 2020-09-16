@@ -21,7 +21,6 @@
 #define BIPART_H_
 
 #include "galois/graphs/LC_CSR_Graph.h"
-#include "galois/AtomicHelpers.h"
 #include "galois/DynamicBitset.h"
 
 constexpr static const uint32_t kChunkSize = 512u;

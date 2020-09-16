@@ -140,8 +140,7 @@ void syncCascadeKCore(Graph& graph) {
           for (auto e : graph.edges(deadNode)) {
             GNode dest         = graph.getEdgeDst(e);
             NodeData& destData = graph.getData(dest);
-            uint32_t oldDegree =
-                galois::atomicSubtract(destData.currentDegree, 1u);
+            uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
 
             if (oldDegree == k_core_num) {
               //! This thread was responsible for putting degree of destination
@@ -175,8 +174,7 @@ void asyncCascadeKCore(Graph& graph,
         for (auto e : graph.edges(deadNode)) {
           GNode dest         = graph.getEdgeDst(e);
           NodeData& destData = graph.getData(dest);
-          uint32_t oldDegree =
-              galois::atomicSubtract(destData.currentDegree, 1u);
+          uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
 
           if (oldDegree == k_core_num) {
             //! This thread was responsible for putting degree of destination

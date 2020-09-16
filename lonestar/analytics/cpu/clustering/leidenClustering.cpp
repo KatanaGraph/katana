@@ -174,12 +174,11 @@ double algoLeidenWithLocking(Graph& graph, double lower, double threshold,
             galois::atomicAdd(c_info[local_target].size, uint64_t{1});
             galois::atomicAdd(c_info[local_target].node_wt, n_data.node_wt);
 
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].degree_wt,
-                                   n_data.degree_wt);
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].size,
-                                   uint64_t{1});
-            galois::atomicSubtract(c_info[n_data.curr_comm_ass].node_wt,
-                                   n_data.node_wt);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].degree_wt,
+                              n_data.degree_wt);
+            galois::atomicSub(c_info[n_data.curr_comm_ass].size, uint64_t{1});
+            galois::atomicSub(c_info[n_data.curr_comm_ass].node_wt,
+                              n_data.node_wt);
 
             /* Set the new cluster id */
             n_data.curr_comm_ass = local_target;

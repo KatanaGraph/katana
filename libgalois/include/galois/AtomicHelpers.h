@@ -18,193 +18,74 @@
  */
 
 #pragma once
+
 #include <atomic>
-#include <algorithm>
-#include <vector>
+#include <type_traits>
 
 #include "galois/config.h"
 
 namespace galois {
-/** galois::atomicMax + non-atomic max calls **/
-template <typename Ty>
-const Ty atomicMax(std::atomic<Ty>& a, const Ty b) {
-  Ty old_a = a;
-  // if old value is less than new value, atomically exchange
+
+template <typename T>
+T atomicMax(std::atomic<T>& a, const T& b) {
+  T old_a = a.load(std::memory_order_relaxed);
   while (old_a < b &&
          !a.compare_exchange_weak(old_a, b, std::memory_order_relaxed))
     ;
   return old_a;
 }
 
-template <typename Ty>
-const Ty max(std::atomic<Ty>& a, const Ty& b) {
-  Ty old_a = a;
-
-  if (a < b) {
-    a = b;
-  }
-  return old_a;
-}
-
-template <typename Ty>
-const Ty max(Ty& a, const Ty& b) {
-  Ty old_a = a;
-
-  if (a < b) {
-    a = b;
-  }
-  return old_a;
-}
-
-/** galois::atomicMin **/
-template <typename Ty>
-const Ty atomicMin(std::atomic<Ty>& a, const Ty b) {
-  Ty old_a = a;
+template <typename T>
+T atomicMin(std::atomic<T>& a, const T& b) {
+  T old_a = a.load(std::memory_order_relaxed);
   while (old_a > b &&
          !a.compare_exchange_weak(old_a, b, std::memory_order_relaxed))
     ;
   return old_a;
 }
 
-template <typename Ty>
-const Ty min(std::atomic<Ty>& a, const Ty& b) {
-  Ty old_a = a;
-  if (a > b) {
-    a = b;
-  }
-  return old_a;
+#if __cplusplus > 201703L
+template <typename T>
+T atomicAdd(std::atomic<T>& a, const T& b) {
+  return a.fetch_add(b, std::memory_order_relaxed);
+}
+#else
+template <typename T>
+T atomicAdd(std::atomic<T>& a, const T& b,
+            std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
+  return a.fetch_add(b, std::memory_order_relaxed);
 }
 
-template <typename Ty>
-const Ty min(Ty& a, const Ty& b) {
-  Ty old_a = a;
-  if (a > b) {
-    a = b;
-  }
-  return old_a;
-}
-
-/** galois::atomicAdd **/
-template <typename Ty>
-const Ty atomicAdd(std::atomic<Ty>& val, Ty delta) {
-  Ty old_val = val;
-  while (!val.compare_exchange_weak(old_val, old_val + delta,
-                                    std::memory_order_relaxed))
+template <typename T>
+T atomicAdd(std::atomic<T>& a, const T& b,
+            std::enable_if_t<!std::is_integral_v<T>>* = nullptr) {
+  T old_a = a.load(std::memory_order_relaxed);
+  while (!a.compare_exchange_weak(old_a, old_a + b, std::memory_order_relaxed))
     ;
-  return old_val;
-}
-
-template <typename Ty>
-const Ty add(std::atomic<Ty>& a, const Ty& b) {
-  Ty old_a = a;
-  a        = a + b;
   return old_a;
 }
+#endif
 
-template <typename Ty>
-const Ty add(Ty& a, std::atomic<Ty>& b) {
-  Ty old_a = a;
-  a        = a + b.load();
-  return old_a;
+#if __cplusplus > 201703L
+template <typename T>
+T atomicSub(std::atomic<T>& a, const T& b) {
+  return a.fetch_sub(b, std::memory_order_relaxed);
+}
+#else
+template <typename T>
+T atomicSub(std::atomic<T>& a, const T& b,
+            std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
+  return a.fetch_sub(b, std::memory_order_relaxed);
 }
 
-template <typename Ty>
-const Ty add(Ty& a, const Ty& b) {
-  Ty old_a = a;
-  a += b;
-  return old_a;
-}
-
-/**
- * atomic subtraction of delta (because atomicAdd with negative numbers implies
- * a signed integer cast)
- */
-template <typename Ty>
-const Ty atomicSubtract(std::atomic<Ty>& val, Ty delta) {
-  Ty old_val = val;
-  while (!val.compare_exchange_weak(old_val, old_val - delta,
-                                    std::memory_order_relaxed))
+template <typename T>
+T atomicSub(std::atomic<T>& a, const T& b,
+            std::enable_if_t<!std::is_integral_v<T>>* = nullptr) {
+  T old_a = a.load(std::memory_order_relaxed);
+  while (!a.compare_exchange_weak(old_a, old_a - b, std::memory_order_relaxed))
     ;
-  return old_val;
+  return old_a;
 }
+#endif
 
-template <typename Ty>
-const Ty set(Ty& a, const Ty& b) {
-  a = b;
-  return a;
-}
-
-template <typename Ty>
-const Ty set(std::atomic<Ty>& a, const Ty& b) {
-  a = b;
-  return a;
-}
-
-/** Pair Wise Average function **/
-template <typename Ty>
-const Ty pairWiseAvg(Ty a, Ty b) {
-  return (a + b) / 2.0;
-}
-
-template <typename Ty>
-void pairWiseAvg_vec(std::vector<Ty>& a_vec, std::vector<Ty>& b_vec) {
-  for (unsigned i = 0; i < a_vec.size(); ++i) {
-    a_vec[i] = (a_vec[i] + b_vec[i]) / 2.0;
-  }
-}
-
-template <typename Ty>
-void resetVec(Ty& a_arr) {
-  // std::for_each(a_arr.begin(), a_arr.end(),[](Ty &ele){ele = 0;} );
-  std::fill(a_arr.begin(), a_arr.end(), 0);
-}
-
-template <typename Ty>
-void pairWiseAvg_vec(Ty& a_arr, Ty& b_arr) {
-  for (unsigned i = 0; i < a_arr.size(); ++i) {
-    a_arr[i] = (a_arr[i] + b_arr[i]) / 2.0;
-  }
-}
-
-template <typename Ty>
-void addArray(Ty& a_arr, Ty& b_arr) {
-  for (unsigned i = 0; i < a_arr.size(); ++i) {
-    a_arr[i] = (a_arr[i] + b_arr[i]);
-  }
-}
-
-template <typename Ty>
-void resetVec(std::vector<Ty>& a_vec) {
-  std::for_each(a_vec.begin(), a_vec.end(), [](Ty& ele) { ele = 0; });
-}
-
-// like std::inner_product
-template <typename ItrTy, typename Ty>
-Ty innerProduct(ItrTy a_begin, ItrTy a_end, ItrTy b_begin, Ty init_value) {
-  auto jj = b_begin;
-  for (auto ii = a_begin; ii != a_end; ++ii, ++jj) {
-    init_value += (*ii) * (*jj);
-  }
-  return init_value;
-}
-
-// like std::inner_product
-template <typename ItrTy, typename Ty>
-Ty innerProduct(ItrTy& a_arr, ItrTy& b_arr, Ty init_value) {
-  auto jj = b_arr.begin();
-  for (auto ii = a_arr.begin(); ii != a_arr.end(); ++ii, ++jj) {
-    init_value += (*ii) * (*jj);
-  }
-  return init_value;
-}
-
-template <typename Ty>
-void reset(Ty& var, Ty val) {
-  var = val;
-}
-
-template <typename Ty>
-void reset(std::atomic<Ty>& var, Ty val) {
-  var = val;
-}
 } // end namespace galois

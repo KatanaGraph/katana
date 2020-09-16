@@ -18,6 +18,7 @@
  */
 
 #include "Helper.h"
+#include "galois/AtomicHelpers.h"
 
 /**
  * Computes the degrees of the nodes

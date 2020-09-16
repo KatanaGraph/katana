@@ -1,16 +1,16 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
 #define GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
 
-#include <string_view>
-#include <cassert>
-#include <utility>
-
+#include <arrow/array.h>
 #include <arrow/type_fwd.h>
 #include <arrow/type_traits.h>
-#include <arrow/array.h>
 
-#include "galois/Traits.h"
+#include <cassert>
+#include <string_view>
+#include <utility>
+
 #include "galois/Result.h"
+#include "galois/Traits.h"
 
 namespace galois {
 
@@ -255,6 +255,8 @@ public:
   using value_type = std::string_view;
 
   /// Make creates a string property view from a large string array.
+  template <typename T = OffsetType,
+            std::enable_if_t<std::is_same<int64_t, T>::value, int>* = nullptr>
   static Result<StringPropertyReadOnlyView>
   Make(const arrow::LargeStringArray& array) {
     return StringPropertyReadOnlyView(
@@ -267,6 +269,8 @@ public:
   ///
   /// Note that we cannot guarantee all the values will fit in single array
   /// because string array size is limited to 2^32.
+  template <typename T = OffsetType,
+            std::enable_if_t<std::is_same<int32_t, T>::value, int>* = nullptr>
   static Result<StringPropertyReadOnlyView>
   Make(const arrow::StringArray& array) {
     return StringPropertyReadOnlyView(
@@ -285,7 +289,12 @@ public:
                       offsets_[i + 1] - pos);
   }
 
-  value_type operator[](size_t i) const { return GetValue(i); }
+  value_type operator[](size_t i) const {
+    if (!IsValid(i)) {
+      return value_type();
+    }
+    return GetValue(i);
+  }
 
 private:
   StringPropertyReadOnlyView(uint8_t* values, const OffsetType* offsets,

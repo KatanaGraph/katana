@@ -26,8 +26,9 @@
 namespace galois {
 namespace worklists {
 
-template <typename OwnerFn   = DummyIndexer<int>,
-          typename Container = ChunkLIFO<>, typename T = int>
+template <
+    typename OwnerFn = DummyIndexer<int>, typename Container = ChunkLIFO<>,
+    typename T = int>
 struct OwnerComputes : private boost::noncopyable {
   template <typename _T>
   using retype =
@@ -61,8 +62,8 @@ public:
   typedef T value_type;
 
   void push(const value_type& val) {
-    unsigned int index  = Fn(val);
-    auto& tp            = substrate::getThreadPool();
+    unsigned int index = Fn(val);
+    auto& tp = substrate::getThreadPool();
     unsigned int mindex = tp.getSocket(index);
     // std::cerr << "[" << index << "," << index % active << "]\n";
     if (mindex == substrate::ThreadPool::getSocket())
@@ -85,7 +86,7 @@ public:
   }
 
   galois::optional<value_type> pop() {
-    cWL& wl                             = *items.getLocal();
+    cWL& wl = *items.getLocal();
     galois::optional<value_type> retval = wl.pop();
     if (retval)
       return retval;
@@ -97,7 +98,7 @@ public:
 };
 GALOIS_WLCOMPILECHECK(OwnerComputes)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

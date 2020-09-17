@@ -23,7 +23,7 @@
 #include "galois/config.h"
 
 #ifndef GALOIS_WLCOMPILECHECK
-#define GALOIS_WLCOMPILECHECK(name) //
+#define GALOIS_WLCOMPILECHECK(name)  //
 #endif
 
 #endif

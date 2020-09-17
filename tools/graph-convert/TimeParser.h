@@ -2,8 +2,8 @@
 #define GALOIS_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
 
 #include <array>
-#include <optional>
 #include <chrono>
+#include <optional>
 #include <sstream>
 
 #include <date/date.h>
@@ -24,7 +24,7 @@ public:
   std::optional<int64_t> Parse(const std::string& str);
 };
 
-} // namespace galois
+}  // namespace galois
 
 template <typename Duration>
 std::optional<int64_t>
@@ -38,10 +38,10 @@ galois::TimeParser<Duration>::Parse(const std::string& str) {
   // RFC 3339:
   //  2020-11-22 11:22:33.52Z only
   std::array formats{
-      "%F %H:%M:%SZ", // RFC 3339 UTC
-      "%FT%H:%M:%SZ", // ISO 8601 UTC
-      "%FT%H:%MZ",    // Ad-hoc variants
-      "%F %H:%MZ",    // ...
+      "%F %H:%M:%SZ",  // RFC 3339 UTC
+      "%FT%H:%M:%SZ",  // ISO 8601 UTC
+      "%FT%H:%MZ",     // Ad-hoc variants
+      "%F %H:%MZ",     // ...
   };
 
   // Unix time (no leap seconds)
@@ -49,9 +49,9 @@ galois::TimeParser<Duration>::Parse(const std::string& str) {
   std::string unused_abbrev;
   std::chrono::minutes offset;
 
-  int attempt               = 0;
+  int attempt = 0;
   constexpr int num_formats = formats.size();
-  int idx                   = last_format_;
+  int idx = last_format_;
   for (; attempt < num_formats; ++attempt) {
     idx = last_format_ + attempt;
     if (idx >= num_formats) {

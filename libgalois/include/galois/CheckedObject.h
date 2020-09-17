@@ -57,6 +57,6 @@ public:
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

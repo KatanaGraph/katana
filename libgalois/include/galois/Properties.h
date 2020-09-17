@@ -1,13 +1,13 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
 #define GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
 
-#include <arrow/array.h>
-#include <arrow/type_fwd.h>
-#include <arrow/type_traits.h>
-
 #include <cassert>
 #include <string_view>
 #include <utility>
+
+#include <arrow/array.h>
+#include <arrow/type_fwd.h>
+#include <arrow/type_traits.h>
 
 #include "galois/Result.h"
 #include "galois/Traits.h"
@@ -62,7 +62,7 @@ namespace galois {
 template <typename Prop>
 struct PropertyTraits {
   using ArrowType = typename Prop::ArrowType;
-  using ViewType  = typename Prop::ViewType;
+  using ViewType = typename Prop::ViewType;
 };
 
 template <typename Prop>
@@ -97,7 +97,7 @@ struct PropertyArrowTuple<std::tuple<Args...>> {
       typename arrow::TypeTraits<galois::PropertyArrowType<Args>>::CType...>;
 };
 
-} // namespace internal
+}  // namespace internal
 
 /// PropertyViewTuple applies PropertyViewType to a tuple of properties.
 template <typename T>
@@ -119,10 +119,11 @@ using TupleElements = std::tuple<std::tuple_element_t<indices, Tuple>...>;
 /// \returns  The view corresponding to given array or nullopt if the array
 ///   cannot be downcast to the array type for the property.
 template <typename Prop>
-Result<PropertyViewType<Prop>> ConstructPropertyView(arrow::Array* array) {
+Result<PropertyViewType<Prop>>
+ConstructPropertyView(arrow::Array* array) {
   using ArrowArrayType = PropertyArrowArrayType<Prop>;
-  using ViewType       = PropertyViewType<Prop>;
-  auto* t              = dynamic_cast<ArrowArrayType*>(array);
+  using ViewType = PropertyViewType<Prop>;
+  auto* t = dynamic_cast<ArrowArrayType*>(array);
 
   if (!t) {
     return std::errc::invalid_argument;
@@ -138,15 +139,17 @@ Result<PropertyViewType<Prop>> ConstructPropertyView(arrow::Array* array) {
 ///
 /// \see ConstructPropertyView
 template <typename PropTuple>
-Result<std::tuple<>> ConstructPropertyViews(const std::vector<arrow::Array*>&,
-                                            std::index_sequence<>) {
+Result<std::tuple<>>
+ConstructPropertyViews(
+    const std::vector<arrow::Array*>&, std::index_sequence<>) {
   return std::tuple<>();
 }
 
 template <typename PropTuple, size_t head, size_t... tail>
 Result<TupleElements<PropertyViewTuple<PropTuple>, head, tail...>>
-ConstructPropertyViews(const std::vector<arrow::Array*>& arrays,
-                       std::index_sequence<head, tail...>) {
+ConstructPropertyViews(
+    const std::vector<arrow::Array*>& arrays,
+    std::index_sequence<head, tail...>) {
   using Prop = std::tuple_element_t<head, PropTuple>;
   using View = PropertyViewType<Prop>;
 
@@ -161,8 +164,8 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays,
     return rest.error();
   }
 
-  return std::tuple_cat(std::tuple<View>(std::move(v.value())),
-                        std::move(rest.value()));
+  return std::tuple_cat(
+      std::tuple<View>(std::move(v.value())), std::move(rest.value()));
 }
 
 template <typename PropTuple>
@@ -183,25 +186,27 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays) {
 template <typename T>
 class PODPropertyView {
 public:
-  using value_type      = T;
-  using reference       = T&;
+  using value_type = T;
+  using reference = T&;
   using const_reference = const T&;
 
   template <typename U>
   static Result<PODPropertyView> Make(const arrow::NumericArray<U>& array) {
-    static_assert(sizeof(typename arrow::NumericArray<U>::value_type) ==
-                      sizeof(T),
-                  "incompatible types");
-    return PODPropertyView(array.data()->template GetMutableValues<T>(1),
-                           array.data()->template GetValues<uint8_t>(0));
+    static_assert(
+        sizeof(typename arrow::NumericArray<U>::value_type) == sizeof(T),
+        "incompatible types");
+    return PODPropertyView(
+        array.data()->template GetMutableValues<T>(1),
+        array.data()->template GetValues<uint8_t>(0));
   }
 
-  static Result<PODPropertyView>
-  Make(const arrow::FixedSizeBinaryArray& array) {
+  static Result<PODPropertyView> Make(
+      const arrow::FixedSizeBinaryArray& array) {
     assert(array.byte_width() == sizeof(T));
 
-    return PODPropertyView(array.data()->GetMutableValues<T>(1),
-                           array.data()->GetValues<uint8_t>(0));
+    return PODPropertyView(
+        array.data()->GetMutableValues<T>(1),
+        array.data()->GetValues<uint8_t>(0));
   }
 
   bool IsValid(size_t i) const {
@@ -233,8 +238,8 @@ public:
   // as well as serialization/deserialization)
   using value_type = uint8_t;
 
-  static Result<BooleanPropertyReadOnlyView>
-  Make(const arrow::BooleanArray& array) {
+  static Result<BooleanPropertyReadOnlyView> Make(
+      const arrow::BooleanArray& array) {
     return BooleanPropertyReadOnlyView(array);
   }
 
@@ -264,10 +269,11 @@ public:
   using value_type = std::string_view;
 
   /// Make creates a string property view from a large string array.
-  template <typename T = OffsetType,
-            std::enable_if_t<std::is_same<int64_t, T>::value, int>* = nullptr>
-  static Result<StringPropertyReadOnlyView>
-  Make(const arrow::LargeStringArray& array) {
+  template <
+      typename T = OffsetType,
+      std::enable_if_t<std::is_same<int64_t, T>::value, int>* = nullptr>
+  static Result<StringPropertyReadOnlyView> Make(
+      const arrow::LargeStringArray& array) {
     return StringPropertyReadOnlyView(
         array.data()->GetMutableValues<uint8_t>(2),
         array.data()->GetValues<OffsetType>(1),
@@ -278,10 +284,11 @@ public:
   ///
   /// Note that we cannot guarantee all the values will fit in single array
   /// because string array size is limited to 2^32.
-  template <typename T = OffsetType,
-            std::enable_if_t<std::is_same<int32_t, T>::value, int>* = nullptr>
-  static Result<StringPropertyReadOnlyView>
-  Make(const arrow::StringArray& array) {
+  template <
+      typename T = OffsetType,
+      std::enable_if_t<std::is_same<int32_t, T>::value, int>* = nullptr>
+  static Result<StringPropertyReadOnlyView> Make(
+      const arrow::StringArray& array) {
     return StringPropertyReadOnlyView(
         array.data()->GetMutableValues<uint8_t>(2),
         array.data()->GetValues<OffsetType>(1),
@@ -294,8 +301,8 @@ public:
 
   value_type GetValue(size_t i) const {
     const OffsetType pos = offsets_[i];
-    return value_type(reinterpret_cast<char*>(values_ + pos),
-                      offsets_[i + 1] - pos);
+    return value_type(
+        reinterpret_cast<char*>(values_ + pos), offsets_[i + 1] - pos);
   }
 
   value_type operator[](size_t i) const {
@@ -306,8 +313,8 @@ public:
   }
 
 private:
-  StringPropertyReadOnlyView(uint8_t* values, const OffsetType* offsets,
-                             const uint8_t* null_bitmap)
+  StringPropertyReadOnlyView(
+      uint8_t* values, const OffsetType* offsets, const uint8_t* null_bitmap)
       : values_(values), offsets_(offsets), null_bitmap_(null_bitmap) {}
 
   uint8_t* values_{};
@@ -318,7 +325,7 @@ private:
 template <typename T>
 struct PODProperty {
   using ArrowType = typename arrow::CTypeTraits<T>::ArrowType;
-  using ViewType  = PODPropertyView<T>;
+  using ViewType = PODPropertyView<T>;
 };
 
 struct UInt8Property : public PODProperty<uint8_t> {};
@@ -331,18 +338,18 @@ struct UInt64Property : public PODProperty<uint64_t> {};
 
 struct BooleanReadOnlyProperty {
   using ArrowType = typename arrow::CTypeTraits<bool>::ArrowType;
-  using ViewType  = BooleanPropertyReadOnlyView;
+  using ViewType = BooleanPropertyReadOnlyView;
 };
 
 struct StringReadOnlyProperty {
   using ArrowType = arrow::StringType;
-  using ViewType  = StringPropertyReadOnlyView<int32_t>;
+  using ViewType = StringPropertyReadOnlyView<int32_t>;
 };
 
 struct LargeStringReadOnlyProperty {
   using ArrowType = arrow::LargeStringType;
-  using ViewType  = StringPropertyReadOnlyView<int64_t>;
+  using ViewType = StringPropertyReadOnlyView<int64_t>;
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

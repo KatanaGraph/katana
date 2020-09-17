@@ -23,8 +23,8 @@
 #include "galois/graphs/LC_Morph_Graph.h"
 
 class MetisNode;
-using GGraph   = galois::graphs::LC_Morph_Graph<MetisNode, int>;
-using GNode    = GGraph::GraphNode;
+using GGraph = galois::graphs::LC_Morph_Graph<MetisNode, int>;
+using GNode = GGraph::GraphNode;
 using GNodeBag = galois::InsertBag<GNode>;
 
 // algorithms
@@ -32,7 +32,6 @@ enum InitialPartMode { GGP, GGGP, MGGGP };
 enum refinementMode { BKL, BKL2, ROBO, GRACLUS };
 // Nodes in the metis graph
 class MetisNode {
-
   struct coarsenData {
     int matched : 1;
     int failedmatch : 1;
@@ -50,9 +49,9 @@ class MetisNode {
   partitionData pd;
 
   void initCoarsen() {
-    data.cd.matched     = false;
+    data.cd.matched = false;
     data.cd.failedmatch = false;
-    data.cd.parent      = NULL;
+    data.cd.parent = NULL;
   }
 
 public:
@@ -79,7 +78,7 @@ public:
   // call to switch data to refining
   void initRefine(unsigned part = 0, bool bound = false) {
     refineData rd = {part, part, bound};
-    data.rd       = rd;
+    data.rd = rd;
   }
 
   int getWeight() const { return _weight; }
@@ -168,7 +167,7 @@ struct partInfo {
 
   std::pair<unsigned, unsigned> splitRatio(unsigned numParts) {
     unsigned L = 0, R = 0;
-    unsigned LM = partMask - 1; // 00100 -> 00011
+    unsigned LM = partMask - 1;  // 00100 -> 00011
     for (unsigned x = 0; x < numParts; ++x)
       if ((x & LM) == partNum) {
         if (x & partMask)
@@ -196,20 +195,19 @@ void printCuts(const char* str, MetisGraph* g, unsigned numPartitions);
 unsigned computeCut(GGraph& g);
 
 // Coarsening
-MetisGraph* coarsen(MetisGraph* fineMetisGraph, unsigned coarsenTo,
-                    bool verbose);
+MetisGraph* coarsen(
+    MetisGraph* fineMetisGraph, unsigned coarsenTo, bool verbose);
 
 // Partitioning
-std::vector<partInfo> partition(MetisGraph* coarseMetisGraph,
-                                unsigned fineMetisGraphWeight,
-                                unsigned numPartitions,
-                                InitialPartMode partMode);
-std::vector<partInfo> BisectAll(MetisGraph* mcg, unsigned numPartitions,
-                                unsigned maxSize);
+std::vector<partInfo> partition(
+    MetisGraph* coarseMetisGraph, unsigned fineMetisGraphWeight,
+    unsigned numPartitions, InitialPartMode partMode);
+std::vector<partInfo> BisectAll(
+    MetisGraph* mcg, unsigned numPartitions, unsigned maxSize);
 // Refinement
-void refine(MetisGraph* coarseGraph, std::vector<partInfo>& parts,
-            unsigned minSize, unsigned maxSize, refinementMode refM,
-            bool verbose);
+void refine(
+    MetisGraph* coarseGraph, std::vector<partInfo>& parts, unsigned minSize,
+    unsigned maxSize, refinementMode refM, bool verbose);
 // void refinePart(GGraph& g, std::vector<partInfo>& parts, unsigned maxSize);
 // Balancing
 void balance(MetisGraph* Graph, std::vector<partInfo>& parts, unsigned maxSize);

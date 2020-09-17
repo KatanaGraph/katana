@@ -17,43 +17,43 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <fcntl.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <deque>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <limits>
+#include <random>
+#include <regex>
+#include <vector>
+
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/mpl/if.hpp>
+
 #include "galois/LargeArray.h"
 #include "galois/graphs/FileGraph.h"
 #include "galois/graphs/OfflineGraph.h"
-
 #include "llvm/Support/CommandLine.h"
-
-#include <boost/iostreams/filtering_streambuf.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/mpl/if.hpp>
-#include <algorithm>
-#include <deque>
-#include <fstream>
-#include <iostream>
-#include <ios>
-#include <limits>
-#include <cstdint>
-#include <vector>
-#include <random>
-#include <chrono>
-#include <regex>
-#include <fcntl.h>
-#include <cstdlib>
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string>
-    inputFilename(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<std::string>
-    outputFilename(cll::Positional, cll::desc("<output file>"), cll::Required);
-static cll::opt<bool> useSmallData("32bitData", cll::desc("Use 32 bit data"),
-                                   cll::init(false));
-static cll::opt<bool>
-    edgesSorted("edgesSorted", cll::desc("Edges are sorted by the sourceIDs."),
-                cll::init(false));
-static cll::opt<unsigned long long>
-    numNodes("numNodes", cll::desc("Total number of nodes given."),
-             cll::init(0));
+static cll::opt<std::string> inputFilename(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> outputFilename(
+    cll::Positional, cll::desc("<output file>"), cll::Required);
+static cll::opt<bool> useSmallData(
+    "32bitData", cll::desc("Use 32 bit data"), cll::init(false));
+static cll::opt<bool> edgesSorted(
+    "edgesSorted", cll::desc("Edges are sorted by the sourceIDs."),
+    cll::init(false));
+static cll::opt<unsigned long long> numNodes(
+    "numNodes", cll::desc("Total number of nodes given."), cll::init(0));
 
 union dataTy {
   int64_t ival;
@@ -62,33 +62,36 @@ union dataTy {
   int32_t i32val;
 };
 
-void perEdge(std::istream& is,
-             std::function<void(uint64_t, uint64_t, dataTy)> fn,
-             std::function<void(uint64_t, uint64_t)> fnPreSize) {
+void
+perEdge(
+    std::istream& is, std::function<void(uint64_t, uint64_t, dataTy)> fn,
+    std::function<void(uint64_t, uint64_t)> fnPreSize) {
   std::string line;
 
-  uint64_t bytes      = 0;
-  uint64_t counter    = 0;
+  uint64_t bytes = 0;
+  uint64_t counter = 0;
   uint64_t totalBytes = 0;
 
-  const std::regex problemLine("^p[[:space:]]+[[:alpha:]]+[[:space:]]+([[:"
-                               "digit:]]+)[[:space:]]+([[:digit:]]+)");
+  const std::regex problemLine(
+      "^p[[:space:]]+[[:alpha:]]+[[:space:]]+([[:"
+      "digit:]]+)[[:space:]]+([[:digit:]]+)");
   const std::regex noData(
       "^a?[[:space:]]*([[:digit:]]+)[[:space:]]+([[:digit:]]+)[[:space:]]*");
   // const std::regex noData_nospace(
   // "^a?[[:space:]]*([[:digit:]]+)[[:space:]]+([[:digit:]]+)");
-  const std::regex intData("^a?[[:space:]]*([[:digit:]]+)[[:space:]]+([[:digit:"
-                           "]]+)[[:space:]]+(-?[[:digit:]]+)");
+  const std::regex intData(
+      "^a?[[:space:]]*([[:digit:]]+)[[:space:]]+([[:digit:"
+      "]]+)[[:space:]]+(-?[[:digit:]]+)");
   const std::regex floatData(
       "^a?[[:space:]]*([[:digit:]]+)[[:space:]]+([[:digit:]]+)[[:space:]]+(-?[["
       ":digit:]]+\\.[[:digit:]]+)");
 
-  auto timer      = std::chrono::system_clock::now();
+  auto timer = std::chrono::system_clock::now();
   auto timerStart = timer;
 
   std::smatch matches;
-  bool zeroBased = false; // set to 1 if file is one-indexed
-  bool seenEdge  = false;
+  bool zeroBased = false;  // set to 1 if file is one-indexed
+  bool seenEdge = false;
 
   while (std::getline(is, line)) {
     auto t = line.size() + 1;
@@ -97,7 +100,7 @@ void perEdge(std::istream& is,
     ++counter;
 
     if (counter == 1024 * 128) {
-      counter     = 0;
+      counter = 0;
       auto timer2 = std::chrono::system_clock::now();
       std::cout << "Scan: "
                 << (double)bytes /
@@ -123,21 +126,22 @@ void perEdge(std::istream& is,
       else
         data.ival = std::stoll(matches[3].str());
       match = true;
-    } else if (std::regex_match(line, matches,
-                                noData)) { // || std::regex_match(line, matches,
-                                           // noData_nospace)) {
+    } else if (std::regex_match(
+                   line, matches,
+                   noData)) {  // || std::regex_match(line, matches,
+                               // noData_nospace)) {
       data.ival = 0;
-      match     = true;
+      match = true;
     } else if (std::regex_match(line, matches, problemLine)) {
       if (seenEdge) {
         std::cerr << "Error: seeing a dimacs problem line after seeing edges\n";
         abort();
       }
-      zeroBased = true; // dimacs files are 1-indexed
+      zeroBased = true;  // dimacs files are 1-indexed
       fnPreSize(std::stoull(matches[1].str()), std::stoull(matches[2].str()));
     }
     if (match) {
-      seenEdge     = true;
+      seenEdge = true;
       uint64_t src = std::stoull(matches[1].str());
       uint64_t dst = std::stoull(matches[2].str());
       if (zeroBased) {
@@ -160,7 +164,8 @@ void perEdge(std::istream& is,
             << " MB/s\n";
 }
 
-void go(std::istream& input) {
+void
+go(std::istream& input) {
   try {
     std::deque<uint64_t> edgeCount;
     perEdge(
@@ -191,21 +196,22 @@ void go(std::istream& input) {
   }
 }
 
-void go_edgesSorted(std::istream& input, uint64_t numNodes) {
+void
+go_edgesSorted(std::istream& input, uint64_t numNodes) {
   try {
     std::deque<uint64_t> edgeCount(numNodes, 0);
     input.clear();
     input.seekg(0, std::ios_base::beg);
-    galois::graphs::OfflineGraphWriter outFile(outputFilename, useSmallData,
-                                               numNodes);
+    galois::graphs::OfflineGraphWriter outFile(
+        outputFilename, useSmallData, numNodes);
     outFile.setCounts(edgeCount);
     outFile.seekEdgesDstStart();
-    uint64_t curr_src           = 0;
+    uint64_t curr_src = 0;
     uint64_t curr_src_edgeCount = 0;
     perEdge(
         input,
-        [&outFile, &edgeCount, &curr_src,
-         &curr_src_edgeCount](uint64_t src, uint64_t dst, dataTy) {
+        [&outFile, &edgeCount, &curr_src, &curr_src_edgeCount](
+            uint64_t src, uint64_t dst, dataTy) {
           if (src == curr_src) {
             ++curr_src_edgeCount;
           } else {
@@ -216,8 +222,8 @@ void go_edgesSorted(std::istream& input, uint64_t numNodes) {
               abort();
             }
             edgeCount[curr_src] = curr_src_edgeCount;
-            curr_src            = src;
-            curr_src_edgeCount  = 1;
+            curr_src = src;
+            curr_src_edgeCount = 1;
           }
           outFile.setEdgeSorted(dst);
         },
@@ -231,7 +237,8 @@ void go_edgesSorted(std::istream& input, uint64_t numNodes) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
   std::cout << "Data will be " << (useSmallData ? 4 : 8) << " Bytes\n";
 

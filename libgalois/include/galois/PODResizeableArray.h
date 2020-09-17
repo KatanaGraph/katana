@@ -76,9 +76,9 @@ public:
   //! move constructor
   PODResizeableArray(PODResizeableArray&& v)
       : data_(v.data_), capacity_(v.capacity_), size_(v.size_) {
-    v.data_     = NULL;
+    v.data_ = NULL;
     v.capacity_ = 0;
-    v.size_     = 0;
+    v.size_ = 0;
   }
 
   //! disabled (shallow) copy assignment operator
@@ -88,12 +88,12 @@ public:
   PODResizeableArray& operator=(PODResizeableArray&& v) {
     if (data_ != NULL)
       free(data_);
-    data_       = v.data_;
-    capacity_   = v.capacity_;
-    size_       = v.size_;
-    v.data_     = NULL;
+    data_ = v.data_;
+    capacity_ = v.capacity_;
+    size_ = v.size_;
+    v.data_ = NULL;
     v.capacity_ = 0;
-    v.size_     = 0;
+    v.size_ = 0;
     return *this;
   }
 
@@ -181,11 +181,12 @@ public:
   }
 
   template <class InputIterator>
-  void insert([[maybe_unused]] iterator position, InputIterator first,
-              InputIterator last) {
+  void insert(
+      [[maybe_unused]] iterator position, InputIterator first,
+      InputIterator last) {
     assert(position == end());
     size_t old_size = size_;
-    size_t to_add   = last - first;
+    size_t to_add = last - first;
     resize(old_size + to_add);
     std::copy_n(first, to_add, begin() + old_size);
   }
@@ -197,5 +198,5 @@ public:
   }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

@@ -1,18 +1,18 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_RDG_H_
 #define GALOIS_LIBTSUBA_TSUBA_RDG_H_
 
-#include <string>
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <string>
 
 #include <arrow/api.h>
 #include <nlohmann/json.hpp>
 
-#include "galois/config.h"
 #include "galois/Result.h"
+#include "galois/config.h"
 #include "tsuba/Errors.h"
-#include "tsuba/FileView.h"
 #include "tsuba/FileFrame.h"
+#include "tsuba/FileView.h"
 
 namespace tsuba {
 
@@ -60,17 +60,21 @@ class GALOIS_EXPORT RDGMeta {
 public:
   uint64_t version_{0};
   uint64_t previous_version_{0};
-  uint32_t num_hosts_{0}; // 0 is a reserved value for the empty RDG when
+  uint32_t num_hosts_{0};  // 0 is a reserved value for the empty RDG when
   uint32_t policy_id_{0};
   bool transpose_{false};
 
-  std::string dir_; // not persisted; inferred from name
+  std::string dir_;  // not persisted; inferred from name
 
   RDGMeta(std::string dir) : dir_(std::move(dir)) {}
-  RDGMeta(uint64_t version, uint64_t previous_version, uint32_t num_hosts,
-          uint32_t policy_id, bool transpose, std::string dir)
-      : version_(version), previous_version_(previous_version),
-        num_hosts_(num_hosts), policy_id_(policy_id), transpose_(transpose),
+  RDGMeta(
+      uint64_t version, uint64_t previous_version, uint32_t num_hosts,
+      uint32_t policy_id, bool transpose, std::string dir)
+      : version_(version),
+        previous_version_(previous_version),
+        num_hosts_(num_hosts),
+        policy_id_(policy_id),
+        transpose_(transpose),
         dir_(std::move(dir)) {}
   RDGMeta() = default;
 
@@ -84,14 +88,14 @@ public:
   /// \param meta_dir is a storage prefix where the RDG is stored
   /// \param version is the version of the meta_dir to load
   /// \returns the constructed RDGMeta and the directory of its contents
-  static galois::Result<RDGMeta> Make(const std::string& meta_dir,
-                                      uint64_t version);
+  static galois::Result<RDGMeta> Make(
+      const std::string& meta_dir, uint64_t version);
   static galois::Result<RDGMeta> MakeFromStorage(const std::string& uri);
 
   // Canonical naming
   static std::string FileName(const std::string& rdg_path, uint64_t version);
-  static std::string PartitionFileName(const std::string& rdg_path,
-                                       uint32_t node_id, uint64_t version);
+  static std::string PartitionFileName(
+      const std::string& rdg_path, uint32_t node_id, uint64_t version);
   std::string ToJsonString() const;
 
   // Required by nlohmann
@@ -159,56 +163,56 @@ public:
   /// an updated topology and persisted as such
   galois::Result<void> Store(RDGHandle handle, FileFrame* ff = nullptr);
 
-  galois::Result<void>
-  AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
+  galois::Result<void> AddNodeProperties(
+      const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void>
-  AddEdgeProperties(const std::shared_ptr<arrow::Table>& table);
+  galois::Result<void> AddEdgeProperties(
+      const std::shared_ptr<arrow::Table>& table);
 
   galois::Result<void> DropNodeProperty(int i);
   galois::Result<void> DropEdgeProperty(int i);
 
   /// Load the RDG described by the metadata in handle into memory
-  static galois::Result<RDG>
-  Load(RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
-       const std::vector<std::string>* edge_props = nullptr);
+  static galois::Result<RDG> Load(
+      RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
+      const std::vector<std::string>* edge_props = nullptr);
 
-  static galois::Result<RDG>
-  Load(const std::string& rdg_meta_path,
-       const std::vector<std::string>* node_props = nullptr,
-       const std::vector<std::string>* edge_props = nullptr);
+  static galois::Result<RDG> Load(
+      const std::string& rdg_meta_path,
+      const std::vector<std::string>* node_props = nullptr,
+      const std::vector<std::string>* edge_props = nullptr);
 
   /// Load a contiguous piece of an RDG described by the metadata in the handle
   /// into memory
-  static galois::Result<RDG>
-  LoadPartial(RDGHandle handle, const SliceArg& slice,
-              const std::vector<std::string>* node_props = nullptr,
-              const std::vector<std::string>* edge_props = nullptr);
+  static galois::Result<RDG> LoadPartial(
+      RDGHandle handle, const SliceArg& slice,
+      const std::vector<std::string>* node_props = nullptr,
+      const std::vector<std::string>* edge_props = nullptr);
 
-  static galois::Result<RDG>
-  LoadPartial(const std::string& rdg_meta_path, const SliceArg& slice,
-              const std::vector<std::string>* node_props = nullptr,
-              const std::vector<std::string>* edge_props = nullptr);
+  static galois::Result<RDG> LoadPartial(
+      const std::string& rdg_meta_path, const SliceArg& slice,
+      const std::vector<std::string>* node_props = nullptr,
+      const std::vector<std::string>* edge_props = nullptr);
 
 private:
   galois::Result<void> DoLoad(const std::string& metadata_dir);
 
-  galois::Result<void> DoLoadPartial(const std::string& metadata_dir,
-                                     const SliceArg& slice);
+  galois::Result<void> DoLoadPartial(
+      const std::string& metadata_dir, const SliceArg& slice);
 
-  static galois::Result<RDG> Make(const std::string& partition_path,
-                                  const std::vector<std::string>* node_props,
-                                  const std::vector<std::string>* edge_props,
-                                  const SliceArg* slice);
+  static galois::Result<RDG> Make(
+      const std::string& partition_path,
+      const std::vector<std::string>* node_props,
+      const std::vector<std::string>* edge_props, const SliceArg* slice);
 
-  std::pair<std::vector<std::string>, std::vector<std::string>>
-  MakeMetadata() const;
+  std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
+      const;
 
-  galois::Result<void> DoWriteMetadata(RDGHandle handle,
-                                       const arrow::Schema& schema);
+  galois::Result<void> DoWriteMetadata(
+      RDGHandle handle, const arrow::Schema& schema);
 
-  galois::Result<void> WriteMetadata(RDGHandle handle,
-                                     const arrow::Schema& schema) {
+  galois::Result<void> WriteMetadata(
+      RDGHandle handle, const arrow::Schema& schema) {
     try {
       return DoWriteMetadata(handle, schema);
     } catch (const std::exception& exp) {
@@ -217,9 +221,9 @@ private:
     }
   }
 
-  galois::Result<void>
-  PrunePropsTo(const std::vector<std::string>* node_properties,
-               const std::vector<std::string>* edge_properties);
+  galois::Result<void> PrunePropsTo(
+      const std::vector<std::string>* node_properties,
+      const std::vector<std::string>* edge_properties);
 
   galois::Result<void> DoStore(RDGHandle handle);
 
@@ -249,11 +253,11 @@ GALOIS_EXPORT galois::Result<RDGPrefix> ExaminePrefix(RDGHandle handle);
 GALOIS_EXPORT galois::Result<RDGPrefix> ExaminePrefix(const std::string& uri);
 
 // acceptable values for Open's flags
-constexpr int kReadOnly    = 0;
-constexpr int kReadWrite   = 1;
+constexpr int kReadOnly = 0;
+constexpr int kReadWrite = 1;
 constexpr int kReadPartial = 2;
-GALOIS_EXPORT galois::Result<RDGHandle> Open(const std::string& rdg_name,
-                                             uint32_t flags);
+GALOIS_EXPORT galois::Result<RDGHandle> Open(
+    const std::string& rdg_name, uint32_t flags);
 
 /// Close an RDGHandle object
 GALOIS_EXPORT galois::Result<void> Close(RDGHandle handle);
@@ -271,9 +275,9 @@ galois::Result<void> Register(const std::string& name);
 GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
 // Return all file names that store data for this handle
-GALOIS_EXPORT galois::Result<std::unordered_set<std::string>>
-FileNames(RDGHandle handle);
+GALOIS_EXPORT galois::Result<std::unordered_set<std::string>> FileNames(
+    RDGHandle handle);
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

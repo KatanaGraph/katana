@@ -27,23 +27,27 @@
 // 6. push-style operator using atomic intrinsics in do_all
 // 7. push-style operator using atomic intrinsics in for_each w/o conflict
 // detection
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/Timer.h"
 #include <iostream>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/graphs/LCGraph.h"
 
 using Graph = galois::graphs::LC_CSR_Graph<int, int>;
 using GNode = Graph::GraphNode;
 
 //! [Initialization]
-void initialize(Graph& g) {
-  galois::do_all(galois::iterate(g.begin(), g.end()), // range
-                 [&](GNode n) { g.getData(n) = 0; }   // operator
+void
+initialize(Graph& g) {
+  galois::do_all(
+      galois::iterate(g.begin(), g.end()),  // range
+      [&](GNode n) { g.getData(n) = 0; }    // operator
   );
 };
 //! [Initialization]
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
 
   if (argc < 3) {
@@ -52,8 +56,8 @@ int main(int argc, char* argv[]) {
   }
 
   Graph g;
-  galois::graphs::readGraph(g, argv[1]); // argv[1] is the file name for graph
-  galois::setActiveThreads(std::atoi(argv[2])); // argv[2] is # of threads
+  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
+  galois::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
 
   //******************************************************
   // serial traversal over a graph
@@ -62,7 +66,7 @@ int main(int argc, char* argv[]) {
   T.start();
   for (auto n : g) {
     auto& sum = g.getData(n);
-    sum       = 0;
+    sum = 0;
     for (auto e : g.edges(n)) {
       sum += g.getEdgeData(e);
     }
@@ -77,14 +81,14 @@ int main(int argc, char* argv[]) {
   // after this program finishes
   initialize(g);
   galois::for_each(
-      galois::iterate(g.begin(), g.end()), // range
-      [&](GNode n, auto&) {                // operator
-        for (auto e : g.edges(n)) {        // cautious point
+      galois::iterate(g.begin(), g.end()),  // range
+      [&](GNode n, auto&) {                 // operator
+        for (auto e : g.edges(n)) {         // cautious point
           auto dst = g.getEdgeDst(e);
           g.getData(dst) += g.getEdgeData(e);
         }
       },
-      galois::loopname("sum_in_for_each_with_push_operator") // options
+      galois::loopname("sum_in_for_each_with_push_operator")  // options
   );
   //! [For each with conflict detection]
 
@@ -92,8 +96,8 @@ int main(int argc, char* argv[]) {
   // define lambda expression as a varible for reuse
   auto sumEdgeWeightsAtomically = [&](GNode n) {
     for (auto e : g.edges(n)) {
-      auto dst        = g.getEdgeDst(e);
-      auto& dstData   = g.getData(dst);
+      auto dst = g.getEdgeDst(e);
+      auto& dstData = g.getData(dst);
       auto edgeWeight = g.getEdgeData(e);
       __sync_fetch_and_add(&dstData, edgeWeight);
     }
@@ -105,10 +109,11 @@ int main(int argc, char* argv[]) {
   // 2. do_all is named "sum_in_do_all_with_push_atomic" to show stat after this
   // program finishes
   initialize(g);
-  galois::do_all(galois::iterate(g.begin(), g.end()), // range
-                 sumEdgeWeightsAtomically             // operator
-                 ,
-                 galois::loopname("sum_in_do_all_with_push_atomic") // options
+  galois::do_all(
+      galois::iterate(g.begin(), g.end()),  // range
+      sumEdgeWeightsAtomically              // operator
+      ,
+      galois::loopname("sum_in_do_all_with_push_atomic")  // options
   );
 
   //******************************************************
@@ -118,10 +123,10 @@ int main(int argc, char* argv[]) {
   // after this program finishes
   initialize(g);
   galois::for_each(
-      galois::iterate(g.begin(), g.end()),                 // range
-      [&](GNode n, auto&) { sumEdgeWeightsAtomically(n); } // operator
+      galois::iterate(g.begin(), g.end()),                  // range
+      [&](GNode n, auto&) { sumEdgeWeightsAtomically(n); }  // operator
       ,
-      galois::loopname("sum_in_for_each_with_push_atomic") // options
+      galois::loopname("sum_in_for_each_with_push_atomic")  // options
       ,
       galois::no_pushes(), galois::disable_conflict_detection());
   //! [For each and do all without conflict detection]

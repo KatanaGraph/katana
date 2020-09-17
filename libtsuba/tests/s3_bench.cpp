@@ -1,24 +1,24 @@
-#include <unistd.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <list>
 
+#include "bench_utils.h"
+#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
-#include "galois/FileSystem.h"
-#include "tsuba/tsuba.h"
-#include "tsuba/file.h"
-#include "bench_utils.h"
-#include "tsuba/s3_internal.h"
 #include "tsuba/FileAsyncWork.h"
+#include "tsuba/file.h"
+#include "tsuba/s3_internal.h"
+#include "tsuba/tsuba.h"
 
 // Benchmarks both tsuba interface and S3 internal interface
 
 constexpr static const char* const s3bucket = "witchel-tests-east2";
-constexpr static const char* const kSepStr  = "/";
-constexpr static const char* const tmpDir   = "/tmp/s3_test/";
+constexpr static const char* const kSepStr = "/";
+constexpr static const char* const tmpDir = "/tmp/s3_test/";
 
 // TODO: 2020/06/15 - Across different regions
 
@@ -26,15 +26,18 @@ constexpr static const char* const tmpDir   = "/tmp/s3_test/";
 /* Utilities */
 
 // Thank you, fmt!
-std::string CntStr(int32_t i, int32_t width) {
+std::string
+CntStr(int32_t i, int32_t width) {
   return fmt::format("{:0{}d}", i, width);
 }
-std::string MkS3obj(int32_t i, int32_t width) {
+std::string
+MkS3obj(int32_t i, int32_t width) {
   constexpr static const char* const s3obj_base = "s3_test/test-";
   std::string url(s3obj_base);
   return url.append(CntStr(i, width));
 }
-std::string MkS3URL(const std::string& bucket, const std::string& object) {
+std::string
+MkS3URL(const std::string& bucket, const std::string& object) {
   constexpr static const char* const s3urlstart = "s3://";
   return s3urlstart + bucket + kSepStr + object;
 }
@@ -56,9 +59,9 @@ class Experiment {
       }
       return;
     } else {
-      char tmp[32];             // Generous with space
-      get_time_string(tmp, 31); // Trailing null
-      memcpy(buf, tmp, 19);     // Copy without trailing null
+      char tmp[32];              // Generous with space
+      get_time_string(tmp, 31);  // Trailing null
+      memcpy(buf, tmp, 19);      // Copy without trailing null
       buf += 19;
       if (limit > 19) {
         *buf++ = ' ';
@@ -74,7 +77,7 @@ public:
   uint64_t size_{UINT64_C(0)};
   std::vector<uint8_t> buffer_;
   int batch_{8};
-  int numTransfers_{4}; // For stats
+  int numTransfers_{4};  // For stats
 
   Experiment(const std::string& name, uint64_t size)
       : name_(name), size_(size) {
@@ -89,7 +92,8 @@ public:
 //    Each function is a timed test, returns vector of times in microseconds
 //    (int64_ts)
 
-std::vector<int64_t> test_mem(const Experiment& exp) {
+std::vector<int64_t>
+test_mem(const Experiment& exp) {
   std::vector<int32_t> fds(exp.batch_, 0);
   std::vector<int64_t> results;
 
@@ -99,13 +103,14 @@ std::vector<int64_t> test_mem(const Experiment& exp) {
     for (auto i = 0; i < exp.batch_; ++i) {
       fds[i] = memfd_create(CntStr(i, 4).c_str(), 0);
       if (fds[i] < 0) {
-        GALOIS_WARN_ONCE("memfd_create: fd {:04d}: {}", i,
-                         galois::ResultErrno().message());
+        GALOIS_WARN_ONCE(
+            "memfd_create: fd {:04d}: {}", i, galois::ResultErrno().message());
       }
       ssize_t bwritten = write(fds[i], exp.buffer_.data(), exp.size_);
       if (bwritten != (ssize_t)exp.size_) {
-        GALOIS_WARN_ONCE("Short write tried {:d} wrote {:d}: {}", exp.size_,
-                         bwritten, galois::ResultErrno().message());
+        GALOIS_WARN_ONCE(
+            "Short write tried {:d} wrote {:d}: {}", exp.size_, bwritten,
+            galois::ResultErrno().message());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -120,7 +125,8 @@ std::vector<int64_t> test_mem(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> test_tmp(const Experiment& exp) {
+std::vector<int64_t>
+test_tmp(const Experiment& exp) {
   std::vector<int32_t> fds(exp.batch_, 0);
   std::vector<std::string> fnames;
   std::vector<int64_t> results;
@@ -141,16 +147,17 @@ std::vector<int64_t> test_tmp(const Experiment& exp) {
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     start = now();
     for (auto i = 0; i < exp.batch_; ++i) {
-      fds[i] = open(fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR,
-                    S_IRWXU | S_IRWXG);
+      fds[i] = open(
+          fnames[i].c_str(), O_CREAT | O_TRUNC | O_RDWR, S_IRWXU | S_IRWXG);
       if (fds[i] < 0) {
-        GALOIS_WARN_ONCE("/tmp O_CREAT: fd {:d}: {}", i,
-                         galois::ResultErrno().message());
+        GALOIS_WARN_ONCE(
+            "/tmp O_CREAT: fd {:d}: {}", i, galois::ResultErrno().message());
       }
       ssize_t bwritten = write(fds[i], exp.buffer_.data(), exp.size_);
       if (bwritten != (ssize_t)exp.size_) {
-        GALOIS_WARN_ONCE("Short write tried {:d} wrote {:d}: {}", exp.size_,
-                         bwritten, galois::ResultErrno().message());
+        GALOIS_WARN_ONCE(
+            "Short write tried {:d} wrote {:d}: {}", exp.size_, bwritten,
+            galois::ResultErrno().message());
       }
       // Make all data and directory changes persistent
       // sync is overkill, could sync fd and parent directory, but I'm being
@@ -175,7 +182,8 @@ std::vector<int64_t> test_tmp(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> test_s3_sync(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_sync(const Experiment& exp) {
   std::vector<std::string> s3objs;
   std::vector<int64_t> results;
   for (auto i = 0; i < exp.batch_; ++i) {
@@ -199,7 +207,8 @@ std::vector<int64_t> test_s3_sync(const Experiment& exp) {
 }
 
 // This one closely tracks s3_sync, not surprisingly
-std::vector<int64_t> test_s3_async_one(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_async_one(const Experiment& exp) {
   std::vector<std::string> objects;
   std::vector<int64_t> results;
   for (auto i = 0; i < exp.batch_; ++i) {
@@ -227,7 +236,8 @@ std::vector<int64_t> test_s3_async_one(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> test_s3_single_async_batch(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_single_async_batch(const Experiment& exp) {
   std::vector<std::string> objects;
   std::list<tsuba::internal::CountingSemaphore> semas;
   std::vector<int64_t> results;
@@ -250,8 +260,8 @@ std::vector<int64_t> test_s3_single_async_batch(const Experiment& exp) {
     }
     for (auto& sema : semas) {
       if (auto res = tsuba::internal::S3PutSingleAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR("S3PutSingleAsyncFinish batch bad return {}",
-                         res.error());
+        GALOIS_LOG_ERROR(
+            "S3PutSingleAsyncFinish batch bad return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -259,8 +269,8 @@ std::vector<int64_t> test_s3_single_async_batch(const Experiment& exp) {
   return results;
 }
 
-void CheckFile(const std::string& bucket, const std::string& object,
-               uint64_t size) {
+void
+CheckFile(const std::string& bucket, const std::string& object, uint64_t size) {
   // Confirm that the data we need is present
   std::string url = MkS3URL(bucket, object);
   tsuba::StatBuf sbuf;
@@ -282,7 +292,8 @@ void CheckFile(const std::string& bucket, const std::string& object,
 /* These next two benchmarks rely on previous writes. Make sure to call them
  * after at least one write benchmark
  */
-std::vector<int64_t> test_s3_async_get_one(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_async_get_one(const Experiment& exp) {
   std::vector<std::string> objects;
   std::vector<int64_t> results;
   std::vector<uint8_t> read_buffer(exp.size_);
@@ -301,8 +312,8 @@ std::vector<int64_t> test_s3_async_get_one(const Experiment& exp) {
     start = now();
     for (const auto& object : objects) {
       tsuba::internal::CountingSemaphore sema;
-      if (auto res = tsuba::internal::S3GetMultiAsync(s3bucket, object, 0,
-                                                      exp.size_, rbuf, &sema);
+      if (auto res = tsuba::internal::S3GetMultiAsync(
+              s3bucket, object, 0, exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync return {}", res.error());
       }
@@ -317,7 +328,8 @@ std::vector<int64_t> test_s3_async_get_one(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_async_get_batch(const Experiment& exp) {
   std::vector<std::string> objects;
   std::list<tsuba::internal::CountingSemaphore> semas;
   std::vector<int64_t> results;
@@ -335,8 +347,8 @@ std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
     start = now();
     int i = 0;
     for (auto& sema : semas) {
-      if (auto res = tsuba::internal::S3GetMultiAsync(s3bucket, objects[i], 0,
-                                                      exp.size_, rbuf, &sema);
+      if (auto res = tsuba::internal::S3GetMultiAsync(
+              s3bucket, objects[i], 0, exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync batch bad return {}", res.error());
       }
@@ -344,8 +356,8 @@ std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
     }
     for (auto& sema : semas) {
       if (auto res = tsuba::internal::S3GetMultiAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR("S3GetMultiAsyncFinish batch bad return {}",
-                         res.error());
+        GALOIS_LOG_ERROR(
+            "S3GetMultiAsyncFinish batch bad return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -354,7 +366,8 @@ std::vector<int64_t> test_s3_async_get_batch(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> test_s3_multi_async_batch(const Experiment& exp) {
+std::vector<int64_t>
+test_s3_multi_async_batch(const Experiment& exp) {
   std::vector<std::string> objects;
   std::vector<tsuba::internal::PutMultiHandle> pmhs;
   pmhs.reserve(exp.batch_);
@@ -402,8 +415,9 @@ std::vector<int64_t> test_s3_multi_async_batch(const Experiment& exp) {
 struct Test {
   std::string name_;
   std::function<std::vector<int64_t>(const Experiment&)> func_;
-  Test(const std::string& name,
-       std::function<std::vector<int64_t>(const Experiment&)> func)
+  Test(
+      const std::string& name,
+      std::function<std::vector<int64_t>(const Experiment&)> func)
       : name_(name), func_(func) {}
 };
 std::vector<Test> tests = {
@@ -420,7 +434,8 @@ std::vector<Test> tests = {
     Test("S3 Put Multi Async Batch", test_s3_multi_async_batch),
 };
 
-int main() {
+int
+main() {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
@@ -438,8 +453,9 @@ int main() {
 
     for (const auto& test : tests) {
       std::vector<int64_t> results = test.func_(exp);
-      fmt::print("{:<25} ({}) {}\n", test.name_, exp.batch_,
-                 FmtResults(results, exp.size_));
+      fmt::print(
+          "{:<25} ({}) {}\n", test.name_, exp.batch_,
+          FmtResults(results, exp.size_));
     }
   }
 

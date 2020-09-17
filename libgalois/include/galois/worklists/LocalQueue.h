@@ -39,15 +39,17 @@ struct NoGlobalQueue {
   using retype = NoGlobalQueue<_T>;
 };
 
-template <typename Global = NoGlobalQueue<>, typename Local = GFIFO<int>,
-          typename T = int>
+template <
+    typename Global = NoGlobalQueue<>, typename Local = GFIFO<int>,
+    typename T = int>
 struct LocalQueue : private boost::noncopyable {
   template <bool _concurrent>
   using rethread = LocalQueue<Global, Local, T>;
 
   template <typename _T>
-  using retype = LocalQueue<typename Global::template retype<_T>,
-                            typename Local::template retype<_T>, _T>;
+  using retype = LocalQueue<
+      typename Global::template retype<_T>, typename Local::template retype<_T>,
+      _T>;
 
   template <typename _global>
   using with_global = LocalQueue<_global, Local, T>;
@@ -60,17 +62,19 @@ private:
   substrate::PerThreadStorage<lWLTy> local;
   Global global;
 
-  template <typename RangeTy,
-            bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  void pushGlobal(const RangeTy& range,
-                  typename std::enable_if<Enable>::type* = 0) {
+  template <
+      typename RangeTy,
+      bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
+  void pushGlobal(
+      const RangeTy& range, typename std::enable_if<Enable>::type* = 0) {
     local.getLocal()->push(range.local_begin(), range.local_end());
   }
 
-  template <typename RangeTy,
-            bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  void pushGlobal(const RangeTy& range,
-                  typename std::enable_if<!Enable>::type* = 0) {
+  template <
+      typename RangeTy,
+      bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
+  void pushGlobal(
+      const RangeTy& range, typename std::enable_if<!Enable>::type* = 0) {
     global.push_initial(range);
   }
 
@@ -108,7 +112,7 @@ public:
 };
 GALOIS_WLCOMPILECHECK(LocalQueue)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

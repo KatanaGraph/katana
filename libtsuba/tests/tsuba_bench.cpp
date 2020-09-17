@@ -1,9 +1,9 @@
+#include "bench_utils.h"
+#include "galois/FileSystem.h"
 #include "galois/Logging.h"
-#include "tsuba/tsuba.h"
 #include "tsuba/RDG.h"
 #include "tsuba/file.h"
-#include "galois/FileSystem.h"
-#include "bench_utils.h"
+#include "tsuba/tsuba.h"
 
 std::string src_uri{};
 uint32_t tx_bnc_count{20};
@@ -17,13 +17,14 @@ std::string usage_msg =
     "  [-v] verbose, can be repeated (default=false)\n"
     "  [-h] usage message\n";
 
-void parse_arguments(int argc, char* argv[]) {
+void
+parse_arguments(int argc, char* argv[]) {
   int c;
 
   while ((c = getopt(argc, argv, "t:vh")) != -1) {
     switch (c) {
     case 't':
-      tx_bnc_count        = std::atoi(optarg);
+      tx_bnc_count = std::atoi(optarg);
       opt_transaction_bnc = true;
       break;
     case 'v':
@@ -48,7 +49,8 @@ void parse_arguments(int argc, char* argv[]) {
   src_uri = argv[index++];
 }
 
-void TxBnc(const std::string& src_uri, int count) {
+void
+TxBnc(const std::string& src_uri, int count) {
   struct timespec start = now();
 
   auto handle_res = tsuba::Open(src_uri, tsuba::kReadWrite);
@@ -74,8 +76,8 @@ void TxBnc(const std::string& src_uri, int count) {
     }
   }
   {
-    auto us                  = timespec_to_us(timespec_sub(now(), start));
-    auto [time, units]       = UsToPair(us);
+    auto us = timespec_to_us(timespec_sub(now(), start));
+    auto [time, units] = UsToPair(us);
     auto [time_tx, units_tx] = UsToPair(us / count);
     fmt::print("Tx: {:5.1f}{} {:5.1f}{}/tx\n", time, units, time_tx, units_tx);
   }
@@ -104,9 +106,9 @@ class Experiment {
       }
       return;
     } else {
-      char tmp[32];             // Generous with space
-      get_time_string(tmp, 31); // Trailing null
-      memcpy(buf, tmp, 19);     // Copy without trailing null
+      char tmp[32];              // Generous with space
+      get_time_string(tmp, 31);  // Trailing null
+      memcpy(buf, tmp, 19);      // Copy without trailing null
       buf += 19;
       if (limit > 19) {
         *buf++ = ' ';
@@ -122,7 +124,7 @@ public:
   uint64_t size_{UINT64_C(0)};
   std::vector<uint8_t> buffer_;
   int batch_{8};
-  int numTransfers_{3}; // For stats
+  int numTransfers_{3};  // For stats
 
   Experiment(const std::string& name, uint64_t size)
       : name_(name), size_(size) {
@@ -132,11 +134,13 @@ public:
   }
 };
 
-std::string MkS3obj(int32_t i, int32_t width) {
+std::string
+MkS3obj(int32_t i, int32_t width) {
   return fmt::format("test-{:0{}d}", i, width);
 }
 
-std::vector<int64_t> tsuba_put_sync(const Experiment& exp) {
+std::vector<int64_t>
+tsuba_put_sync(const Experiment& exp) {
   std::vector<std::string> s3urls;
   for (auto i = 0; i < exp.batch_; ++i) {
     s3urls.push_back(galois::JoinPath(src_uri, MkS3obj(i, 4)));
@@ -157,7 +161,8 @@ std::vector<int64_t> tsuba_put_sync(const Experiment& exp) {
   return results;
 }
 
-std::vector<int64_t> tsuba_put_async(const Experiment& exp) {
+std::vector<int64_t>
+tsuba_put_async(const Experiment& exp) {
   std::vector<std::string> s3urls;
   std::vector<std::unique_ptr<tsuba::FileAsyncWork>> async_works{
       (std::size_t)exp.batch_};
@@ -173,8 +178,8 @@ std::vector<int64_t> tsuba_put_async(const Experiment& exp) {
       auto res =
           tsuba::FileStoreAsync(s3urls[i], exp.buffer_.data(), exp.size_);
       if (!res) {
-        GALOIS_LOG_ERROR("Tsuba storeasync bad return: {}\n  {}", res.error(),
-                         s3urls[i]);
+        GALOIS_LOG_ERROR(
+            "Tsuba storeasync bad return: {}\n  {}", res.error(), s3urls[i]);
       }
       async_works[i] = std::move(res.value());
     }
@@ -185,8 +190,8 @@ std::vector<int64_t> tsuba_put_async(const Experiment& exp) {
         if (async_work != nullptr && !async_work->Done()) {
           done = false;
           if (auto res = (*async_work)(); !res) {
-            GALOIS_LOG_ERROR("Tsuba storeasync work bad return {}",
-                             res.error());
+            GALOIS_LOG_ERROR(
+                "Tsuba storeasync work bad return {}", res.error());
           }
         }
       }
@@ -196,7 +201,8 @@ std::vector<int64_t> tsuba_put_async(const Experiment& exp) {
   return results;
 }
 
-void CheckFile(const std::string& url, uint64_t size) {
+void
+CheckFile(const std::string& url, uint64_t size) {
   // Confirm that the data we need is present
   tsuba::StatBuf sbuf;
 
@@ -217,7 +223,8 @@ void CheckFile(const std::string& url, uint64_t size) {
 /* These next two benchmarks rely on previous writes. Make sure to call them
  * after at least one write benchmark
  */
-std::vector<int64_t> tsuba_get_async(const Experiment& exp) {
+std::vector<int64_t>
+tsuba_get_async(const Experiment& exp) {
   std::vector<std::string> objects;
   std::vector<int64_t> results;
   std::vector<uint8_t> read_buffer(exp.size_);
@@ -265,8 +272,9 @@ std::vector<int64_t> tsuba_get_async(const Experiment& exp) {
 struct Test {
   std::string name_;
   std::function<std::vector<int64_t>(const Experiment&)> func_;
-  Test(const std::string& name,
-       std::function<std::vector<int64_t>(const Experiment&)> func)
+  Test(
+      const std::string& name,
+      std::function<std::vector<int64_t>(const Experiment&)> func)
       : name_(name), func_(func) {}
 };
 std::vector<Test> tests = {
@@ -275,7 +283,8 @@ std::vector<Test> tests = {
     Test("Tsuba::FilePeekAsync", tsuba_get_async),
 };
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
@@ -299,8 +308,9 @@ int main(int argc, char* argv[]) {
 
     for (const auto& test : tests) {
       std::vector<int64_t> results = test.func_(exp);
-      fmt::print("{:<25} ({}) {}\n", test.name_, exp.batch_,
-                 FmtResults(results, exp.size_));
+      fmt::print(
+          "{:<25} ({}) {}\n", test.name_, exp.batch_,
+          FmtResults(results, exp.size_));
     }
   }
 

@@ -5,9 +5,9 @@
 
 namespace galois {
 
-GraphComponents ConvertGraphML(const std::string& input_filename,
-                               size_t chunk_size);
+GraphComponents ConvertGraphML(
+    const std::string& input_filename, size_t chunk_size);
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

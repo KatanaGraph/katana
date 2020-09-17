@@ -110,7 +110,7 @@ struct OrderedByIntegerMetricComparator<Index, true> {
         earliest(std::numeric_limits<Index>::max()) {}
 };
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Approximate priority scheduling. Indexer is a default-constructable class
@@ -144,11 +144,12 @@ struct OrderedByIntegerMetricComparator<Index, true> {
  */
 // TODO could move to general comparator but there are issues with atomic reads
 // and initial values for arbitrary types
-template <class Indexer      = DummyIndexer<int>,
-          typename Container = PerSocketChunkFIFO<>, unsigned BlockPeriod = 0,
-          bool BSP = true, typename T = int, typename Index = int,
-          bool UseBarrier = false, bool UseMonotonic = false,
-          bool UseDescending = false, bool Concurrent = true>
+template <
+    class Indexer = DummyIndexer<int>,
+    typename Container = PerSocketChunkFIFO<>, unsigned BlockPeriod = 0,
+    bool BSP = true, typename T = int, typename Index = int,
+    bool UseBarrier = false, bool UseMonotonic = false,
+    bool UseDescending = false, bool Concurrent = true>
 struct OrderedByIntegerMetric
     : private boost::noncopyable,
       public internal::OrderedByIntegerMetricData<T, Index, UseBarrier>,
@@ -163,63 +164,63 @@ struct OrderedByIntegerMetric
       UseDescending, Concurrent>;
 
   template <bool _b>
-  using rethread =
-      OrderedByIntegerMetric<Indexer, Container, BlockPeriod, BSP, T, Index,
-                             UseBarrier, UseMonotonic, UseDescending, _b>;
+  using rethread = OrderedByIntegerMetric<
+      Indexer, Container, BlockPeriod, BSP, T, Index, UseBarrier, UseMonotonic,
+      UseDescending, _b>;
 
   template <unsigned _period>
   struct with_block_period {
-    typedef OrderedByIntegerMetric<Indexer, Container, _period, BSP, T, Index,
-                                   UseBarrier, UseMonotonic, UseDescending,
-                                   Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, Container, _period, BSP, T, Index, UseBarrier, UseMonotonic,
+        UseDescending, Concurrent>
         type;
   };
 
   template <typename _container>
   struct with_container {
-    typedef OrderedByIntegerMetric<Indexer, _container, BlockPeriod, BSP, T,
-                                   Index, UseBarrier, UseMonotonic,
-                                   UseDescending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, _container, BlockPeriod, BSP, T, Index, UseBarrier,
+        UseMonotonic, UseDescending, Concurrent>
         type;
   };
 
   template <typename _indexer>
   struct with_indexer {
-    typedef OrderedByIntegerMetric<_indexer, Container, BlockPeriod, BSP, T,
-                                   Index, UseBarrier, UseMonotonic,
-                                   UseDescending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        _indexer, Container, BlockPeriod, BSP, T, Index, UseBarrier,
+        UseMonotonic, UseDescending, Concurrent>
         type;
   };
 
   template <bool _bsp>
   struct with_back_scan_prevention {
-    typedef OrderedByIntegerMetric<Indexer, Container, BlockPeriod, _bsp, T,
-                                   Index, UseBarrier, UseMonotonic,
-                                   UseDescending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, Container, BlockPeriod, _bsp, T, Index, UseBarrier,
+        UseMonotonic, UseDescending, Concurrent>
         type;
   };
 
   template <bool _use_barrier>
   struct with_barrier {
-    typedef OrderedByIntegerMetric<Indexer, Container, BlockPeriod, BSP, T,
-                                   Index, _use_barrier, UseMonotonic,
-                                   UseDescending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, Container, BlockPeriod, BSP, T, Index, _use_barrier,
+        UseMonotonic, UseDescending, Concurrent>
         type;
   };
 
   template <bool _use_monotonic>
   struct with_monotonic {
-    typedef OrderedByIntegerMetric<Indexer, Container, BlockPeriod, BSP, T,
-                                   Index, UseBarrier, _use_monotonic,
-                                   UseDescending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, Container, BlockPeriod, BSP, T, Index, UseBarrier,
+        _use_monotonic, UseDescending, Concurrent>
         type;
   };
 
   template <bool _use_descending>
   struct with_descending {
-    typedef OrderedByIntegerMetric<Indexer, Container, BlockPeriod, BSP, T,
-                                   Index, UseBarrier, UseMonotonic,
-                                   _use_descending, Concurrent>
+    typedef OrderedByIntegerMetric<
+        Indexer, Container, BlockPeriod, BSP, T, Index, UseBarrier,
+        UseMonotonic, _use_descending, Concurrent>
         type;
   };
 
@@ -232,9 +233,8 @@ private:
       Comparator;
   typedef typename Comparator::template with_local_map<CTy*>::type LMapTy;
 
-  struct ThreadData
-      : public internal::OrderedByIntegerMetricData<T, Index,
-                                                    UseBarrier>::ThreadData {
+  struct ThreadData : public internal::OrderedByIntegerMetricData<
+                          T, Index, UseBarrier>::ThreadData {
     LMapTy local;
     Index curIndex;
     Index scanStart;
@@ -243,8 +243,11 @@ private:
     unsigned int numPops;
 
     ThreadData(Index initial)
-        : curIndex(initial), scanStart(initial), current(0),
-          lastMasterVersion(0), numPops(0) {}
+        : curIndex(initial),
+          scanStart(initial),
+          current(0),
+          lastMasterVersion(0),
+          numPops(0) {}
   };
 
   typedef std::deque<std::pair<Index, CTy*>> MasterLog;
@@ -264,7 +267,7 @@ private:
            p.lastMasterVersion < masterVersion.load(std::memory_order_relaxed);
            ++p.lastMasterVersion) {
         std::pair<Index, CTy*> logEntry = masterLog[p.lastMasterVersion];
-        p.local[logEntry.first]         = logEntry.second;
+        p.local[logEntry.first] = logEntry.second;
         assert(logEntry.second);
       }
       return true;
@@ -275,7 +278,7 @@ private:
   GALOIS_ATTRIBUTE_NOINLINE
   galois::optional<T> slowPop(ThreadData& p) {
     bool localLeader = substrate::ThreadPool::isLeader();
-    Index msS        = this->earliest;
+    Index msS = this->earliest;
 
     updateLocal(p);
 
@@ -298,8 +301,8 @@ private:
          ++ii) {
       galois::optional<T> item;
       if ((item = ii->second->pop())) {
-        p.current   = ii->second;
-        p.curIndex  = ii->first;
+        p.current = ii->second;
+        p.curIndex = ii->first;
         p.scanStart = ii->first;
         return item;
       }
@@ -322,8 +325,8 @@ private:
     auto it = p.local.find(i);
     CTy* C2 = (it != p.local.end()) ? it->second : nullptr;
     if (!C2) {
-      C2                  = new CTy();
-      p.local[i]          = C2;
+      C2 = new CTy();
+      p.local[i] = C2;
       p.lastMasterVersion = masterVersion.load(std::memory_order_relaxed) + 1;
       masterLog.push_back(std::make_pair(i, C2));
       masterVersion.fetch_add(1);
@@ -355,7 +358,7 @@ public:
   }
 
   void push(const value_type& val) {
-    Index index   = indexer(val);
+    Index index = indexer(val);
     ThreadData& p = *data.getLocal();
 
     assert(!UseMonotonic || this->compare(p.curIndex, index));
@@ -373,7 +376,7 @@ public:
     // Opportunistically move to higher priority work
     if (!UseBarrier && this->compare(index, p.curIndex)) {
       p.curIndex = index;
-      p.current  = C;
+      p.current = C;
     }
     C->push(val);
   }
@@ -392,7 +395,7 @@ public:
   galois::optional<value_type> pop() {
     // Find a successful pop
     ThreadData& p = *data.getLocal();
-    CTy* C        = p.current;
+    CTy* C = p.current;
 
     if (this->hasStored(p, p.curIndex))
       return this->popStored(p, p.curIndex);
@@ -431,29 +434,29 @@ public:
         }
       }
       p.curIndex = storedIndex;
-      p.current  = p.local[storedIndex];
+      p.current = p.local[storedIndex];
     }
     p.hasWork = !p.stored.empty();
 
     this->barrier.wait();
 
     // align with the earliest level from threads that have works
-    bool hasWork   = p.hasWork;
+    bool hasWork = p.hasWork;
     Index curIndex = (hasWork) ? p.curIndex : this->identity;
-    CTy* C         = (hasWork) ? p.current : nullptr;
+    CTy* C = (hasWork) ? p.current : nullptr;
 
     for (unsigned i = 0; i < runtime::activeThreads; ++i) {
       ThreadData& o = *data.getRemote(i);
       if (o.hasWork && this->compare(o.curIndex, curIndex)) {
         curIndex = o.curIndex;
-        C        = o.current;
+        C = o.current;
       }
       hasWork |= o.hasWork;
     }
 
     this->barrier.wait();
 
-    p.current  = C;
+    p.current = C;
     p.curIndex = curIndex;
 
     if (UseMonotonic) {
@@ -470,7 +473,7 @@ public:
 };
 GALOIS_WLCOMPILECHECK(OrderedByIntegerMetric)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

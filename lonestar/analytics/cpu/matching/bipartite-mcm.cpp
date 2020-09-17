@@ -20,20 +20,19 @@
 // TODO(ddn): Needs a graph implementation that supports reversing edges more
 // efficiently
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/Timer.h"
-#include "galois/graphs/Graph.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/FileGraph.h"
-#include "llvm/Support/CommandLine.h"
-#include "Lonestar/BoilerPlate.h"
-
 #include <algorithm>
 #include <iostream>
 #include <random>
 #include <string>
 #include <vector>
+
+#include "Lonestar/BoilerPlate.h"
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/graphs/FileGraph.h"
+#include "galois/graphs/Graph.h"
+#include "galois/graphs/LCGraph.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
 
@@ -51,34 +50,35 @@ enum ExecutionType { serial, parallel };
 
 enum InputType { generated, fromFile };
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Optional);
-static cll::opt<MatchingAlgo>
-    algo(cll::desc("Choose an algorithm:"),
-         cll::values(clEnumVal(pfpAlgo, "Preflow-push"),
-                     clEnumVal(ffAlgo, "Ford-Fulkerson augmenting paths"),
-                     clEnumVal(abmpAlgo, "Alt-Blum-Mehlhorn-Paul")),
-         cll::init(abmpAlgo));
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Optional);
+static cll::opt<MatchingAlgo> algo(
+    cll::desc("Choose an algorithm:"),
+    cll::values(
+        clEnumVal(pfpAlgo, "Preflow-push"),
+        clEnumVal(ffAlgo, "Ford-Fulkerson augmenting paths"),
+        clEnumVal(abmpAlgo, "Alt-Blum-Mehlhorn-Paul")),
+    cll::init(abmpAlgo));
 static cll::opt<ExecutionType> executionType(
     cll::desc("Choose execution type:"),
     cll::values(clEnumVal(serial, "Serial"), clEnumVal(parallel, "Parallel")),
     cll::init(parallel));
-static cll::opt<InputType>
-    inputType("inputType", cll::desc("Input type:"),
-              cll::values(clEnumVal(generated, "Generated"),
-                          clEnumVal(fromFile, "From file")),
-              cll::init(fromFile));
-static cll::opt<int>
-    N("n", cll::desc("Size of each set of nodes in generated input"),
-      cll::init(100));
-static cll::opt<int> numEdges("numEdges",
-                              cll::desc("Number of edges in generated input"),
-                              cll::init(1000));
-static cll::opt<int> numGroups("numGroups",
-                               cll::desc("Number of groups in generated input"),
-                               cll::init(10));
-static cll::opt<int> seed("seed", cll::desc("Random seed for generated input"),
-                          cll::init(0));
+static cll::opt<InputType> inputType(
+    "inputType", cll::desc("Input type:"),
+    cll::values(
+        clEnumVal(generated, "Generated"), clEnumVal(fromFile, "From file")),
+    cll::init(fromFile));
+static cll::opt<int> N(
+    "n", cll::desc("Size of each set of nodes in generated input"),
+    cll::init(100));
+static cll::opt<int> numEdges(
+    "numEdges", cll::desc("Number of edges in generated input"),
+    cll::init(1000));
+static cll::opt<int> numGroups(
+    "numGroups", cll::desc("Number of groups in generated input"),
+    cll::init(10));
+static cll::opt<int> seed(
+    "seed", cll::desc("Random seed for generated input"), cll::init(0));
 static cll::opt<bool> runIteratively(
     "runIteratively",
     cll::desc("After finding matching, removed matched edges and repeat"),
@@ -124,13 +124,13 @@ struct BaseNode {
   int degree;
   bool covered;
   bool free;
-  bool reachable; // for preparing node cover
+  bool reachable;  // for preparing node cover
   BaseNode(size_t i = -1)
       : id(i), degree(0), covered(false), free(true), reachable(false) {}
   void reset() {
-    degree    = 0;
-    covered   = false;
-    free      = true;
+    degree = 0;
+    covered = false;
+    free = true;
     reachable = false;
   }
 };
@@ -207,7 +207,7 @@ struct FFNode : public BaseNode {
   void reset() {
     BaseNode::reset();
     reached = false;
-    pred    = -1;
+    pred = -1;
   }
 };
 
@@ -255,22 +255,22 @@ struct MatchingFF {
   typedef std::vector<Edge> SerialRevs;
   typedef std::vector<GraphNode> SerialReached;
 
-  typedef std::vector<Edge,
-                      typename galois::PerIterAllocTy::rebind<Edge>::other>
+  typedef std::vector<
+      Edge, typename galois::PerIterAllocTy::rebind<Edge>::other>
       ParallelRevs;
-  typedef std::vector<GraphNode,
-                      typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+  typedef std::vector<
+      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
       ParallelReached;
 
   typedef InstanceWrapper<SerialRevs, ParallelRevs, Concurrent> RevsWrapper;
   typedef InstanceWrapper<SerialReached, ParallelReached, Concurrent>
       ReachedWrapper;
 
-  typedef std::deque<GraphNode,
-                     typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+  typedef std::deque<
+      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
       Queue;
-  typedef std::vector<GraphNode,
-                      typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+  typedef std::vector<
+      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
       Preds;
 
   static const galois::MethodFlag flag =
@@ -284,15 +284,15 @@ struct MatchingFF {
   }
 
   template <typename C>
-  bool findAugmentingPath(G& g, const GraphNode& root, C& ctx,
-                          typename RevsWrapper::Type& revs,
-                          typename ReachedWrapper::Type& reached) {
+  bool findAugmentingPath(
+      G& g, const GraphNode& root, C& ctx, typename RevsWrapper::Type& revs,
+      typename ReachedWrapper::Type& reached) {
     Queue queue(ctx.getPerIterAlloc());
     Preds preds(ctx.getPerIterAlloc());
 
     // Order matters between (1) and (2)
-    g.getData(root, flag).reached = true; // (1)
-    reached.push_back(root);              // (2)
+    g.getData(root, flag).reached = true;  // (1)
+    reached.push_back(root);               // (2)
 
     queue.push_back(root);
 
@@ -301,7 +301,7 @@ struct MatchingFF {
       queue.pop_front();
 
       for (auto ii : g.edges(src, flag)) {
-        GraphNode dst        = g.getEdgeDst(ii);
+        GraphNode dst = g.getEdgeDst(ii);
         node_data_type& ddst = g.getData(dst, galois::MethodFlag::UNPROTECTED);
         if (ddst.reached)
           continue;
@@ -314,7 +314,7 @@ struct MatchingFF {
 
         if (ddst.free) {
           // Fail-safe point modulo ``reached'' which is handled separately
-          ddst.free     = false;
+          ddst.free = false;
           GraphNode cur = dst;
           while (cur != root) {
             GraphNode pred =
@@ -371,10 +371,9 @@ struct MatchingFF {
   };
 
   template <typename C>
-  void propagate(G& g, const GraphNode& src, C& ctx,
-                 typename RevsWrapper::Type& revs,
-                 typename ReachedWrapper::Type& reached) {
-
+  void propagate(
+      G& g, const GraphNode& src, C& ctx, typename RevsWrapper::Type& revs,
+      typename ReachedWrapper::Type& reached) {
     ReachedCleanup cleanup(g, reached);
 
     if (findAugmentingPath(g, src, ctx, revs, reached)) {
@@ -411,8 +410,9 @@ struct MatchingFF {
           ParallelRevs parallelRevs(ctx.getPerIterAlloc());
           ParallelReached parallelReached(ctx.getPerIterAlloc());
 
-          this->propagate(g, node, ctx, RevsWrapper(revs, parallelRevs).get(),
-                          ReachedWrapper(reached, parallelReached).get());
+          this->propagate(
+              g, node, ctx, RevsWrapper(revs, parallelRevs).get(),
+              ReachedWrapper(reached, parallelReached).get());
         },
         galois::loopname("MatchingFF"), galois::per_iter_alloc(),
         galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
@@ -428,7 +428,7 @@ struct ABMPNode : public FFNode {
   void reset() {
     FFNode::reset();
     layer = 0;
-    next  = 0;
+    next = 0;
   }
 };
 
@@ -440,8 +440,8 @@ struct MatchingABMP {
   typedef typename G::edge_iterator edge_iterator;
   typedef typename G::node_data_type node_data_type;
   typedef typename GraphTypes<G>::Edge Edge;
-  typedef std::vector<Edge,
-                      typename galois::PerIterAllocTy::rebind<Edge>::other>
+  typedef std::vector<
+      Edge, typename galois::PerIterAllocTy::rebind<Edge>::other>
       Revs;
   typedef std::pair<GraphNode, unsigned> WorkItem;
 
@@ -457,7 +457,7 @@ struct MatchingABMP {
 
   bool nextEdge(G& g, const GraphNode& src, GraphNode& next) {
     node_data_type& dsrc = g.getData(src, galois::MethodFlag::UNPROTECTED);
-    unsigned l           = dsrc.layer - 1;
+    unsigned l = dsrc.layer - 1;
 
     // Start search where we last left off
     edge_iterator ii = g.edge_begin(src, flag);
@@ -501,8 +501,8 @@ struct MatchingABMP {
         // Reverse edges in augmenting path
         for (typename Revs::iterator ii = revs.begin(), ei = revs.end();
              ii != ei; ++ii) {
-          auto edge = g.findEdge(ii->first, ii->second,
-                                 galois::MethodFlag::UNPROTECTED);
+          auto edge = g.findEdge(
+              ii->first, ii->second, galois::MethodFlag::UNPROTECTED);
           assert(edge != g.edge_end(ii->first));
           g.removeEdge(ii->first, edge, galois::MethodFlag::UNPROTECTED);
           g.addEdge(ii->second, ii->first, galois::MethodFlag::UNPROTECTED);
@@ -593,8 +593,8 @@ struct MFNode : public BaseNode {
   MFNode(size_t i = -1) : BaseNode(i), excess(0), height(1), current(0) {}
   void reset() {
     BaseNode::reset();
-    excess  = 0;
-    height  = 1;
+    excess = 0;
+    height = 1;
     current = 0;
   }
 };
@@ -637,15 +637,16 @@ struct MatchingMF {
     return std::string(Concurrent ? "Concurrent" : "Serial") + " Max Flow";
   }
 
-  void reduceCapacity(edge_data_type& edge1, edge_data_type& edge2,
-                      int amount) {
+  void reduceCapacity(
+      edge_data_type& edge1, edge_data_type& edge2, int amount) {
     edge1.cap -= amount;
     edge2.cap += amount;
   }
 
   template <typename C>
-  bool discharge(G& g, const GraphNode& src, C& ctx, const GraphNode& source,
-                 const GraphNode& sink, unsigned numNodes) {
+  bool discharge(
+      G& g, const GraphNode& src, C& ctx, const GraphNode& source,
+      const GraphNode& sink, unsigned numNodes) {
     node_data_type& node = g.getData(src, flag);
     // unsigned prevHeight = node.height;
     bool relabeled = false;
@@ -656,12 +657,12 @@ struct MatchingMF {
 
     while (true) {
       galois::MethodFlag f = relabeled ? galois::MethodFlag::UNPROTECTED : flag;
-      bool finished        = false;
-      int current          = -1;
+      bool finished = false;
+      int current = -1;
 
       for (auto ii : g.edges(src, f)) {
         ++current;
-        GraphNode dst        = g.getEdgeDst(ii);
+        GraphNode dst = g.getEdgeDst(ii);
         edge_data_type& edge = g.getEdgeData(ii);
         if (edge.cap == 0 || current < node.current)
           continue;
@@ -672,10 +673,11 @@ struct MatchingMF {
 
         // Push flow
         int amount = std::min(static_cast<int>(node.excess), edge.cap);
-        reduceCapacity(edge,
-                       g.getEdgeData(g.findEdge(
-                           dst, src, galois::MethodFlag::UNPROTECTED)),
-                       amount);
+        reduceCapacity(
+            edge,
+            g.getEdgeData(
+                g.findEdge(dst, src, galois::MethodFlag::UNPROTECTED)),
+            amount);
 
         // Only add once
         if (dst != sink && dst != source && dnode.excess == 0)
@@ -685,7 +687,7 @@ struct MatchingMF {
         dnode.excess += amount;
 
         if (node.excess == 0) {
-          finished     = true;
+          finished = true;
           node.current = current;
           break;
         }
@@ -705,18 +707,18 @@ struct MatchingMF {
 
   void relabel(G& g, const GraphNode& src, unsigned int) {
     unsigned minHeight = std::numeric_limits<unsigned>::max();
-    int minEdge        = 0; // TODO: not sure of initial value
+    int minEdge = 0;  // TODO: not sure of initial value
 
     int current = -1;
     for (auto ii : g.edges(src, galois::MethodFlag::UNPROTECTED)) {
       ++current;
       GraphNode dst = g.getEdgeDst(ii);
-      int cap       = g.getEdgeData(ii).cap;
+      int cap = g.getEdgeData(ii).cap;
       if (cap > 0) {
         node_data_type& dnode = g.getData(dst, galois::MethodFlag::UNPROTECTED);
         if (dnode.height < minHeight) {
           minHeight = dnode.height;
-          minEdge   = current;
+          minEdge = current;
         }
       }
     }
@@ -725,18 +727,18 @@ struct MatchingMF {
     ++minHeight;
 
     node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
-    node.height          = minHeight;
-    node.current         = minEdge;
+    node.height = minHeight;
+    node.current = minEdge;
   }
 
-  void globalRelabel(G& g, const GraphNode& source, const GraphNode& sink,
-                     unsigned numNodes, std::vector<GraphNode>& incoming) {
-
+  void globalRelabel(
+      G& g, const GraphNode& source, const GraphNode& sink, unsigned numNodes,
+      std::vector<GraphNode>& incoming) {
     for (iterator ii = g.begin(), ei = g.end(); ii != ei; ++ii) {
-      GraphNode src        = *ii;
+      GraphNode src = *ii;
       node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
-      node.height          = numNodes;
-      node.current         = 0;
+      node.height = numNodes;
+      node.current = 0;
       if (src == sink)
         node.height = 0;
     }
@@ -761,8 +763,8 @@ struct MatchingMF {
               if (useCAS) {
                 unsigned oldHeight = 0;
                 while (newHeight < (oldHeight = node.height)) {
-                  if (__sync_bool_compare_and_swap(&node.height, oldHeight,
-                                                   newHeight)) {
+                  if (__sync_bool_compare_and_swap(
+                          &node.height, oldHeight, newHeight)) {
                     ctx.push(dst);
                     break;
                   }
@@ -780,7 +782,7 @@ struct MatchingMF {
     T.stop();
 
     for (iterator ii = g.begin(), ei = g.end(); ii != ei; ++ii) {
-      GraphNode src        = *ii;
+      GraphNode src = *ii;
       node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
       if (src == sink || src == source)
         continue;
@@ -789,12 +791,12 @@ struct MatchingMF {
     }
   }
 
-  void initializePreflow(G& g, const GraphNode& source,
-                         std::vector<GraphNode>& initial) {
+  void initializePreflow(
+      G& g, const GraphNode& source, std::vector<GraphNode>& initial) {
     for (auto ii : g.edges(source)) {
-      GraphNode dst        = g.getEdgeDst(ii);
+      GraphNode dst = g.getEdgeDst(ii);
       edge_data_type& edge = g.getEdgeData(ii);
-      int cap              = edge.cap;
+      int cap = edge.cap;
       if (cap > 0)
         initial.push_back(dst);
       reduceCapacity(edge, g.getEdgeData(g.findEdge(dst, source)), cap);
@@ -803,13 +805,14 @@ struct MatchingMF {
   }
 
   //! Adds reverse edges
-  void initializeGraph(G& g, GraphNode& source, GraphNode& sink,
-                       unsigned& numNodes, unsigned& globalRelabelInterval) {
+  void initializeGraph(
+      G& g, GraphNode& source, GraphNode& sink, unsigned& numNodes,
+      unsigned& globalRelabelInterval) {
     size_t numEdges = 0;
 
-    numNodes                 = std::distance(g.begin(), g.end());
-    source                   = g.createNode(node_data_type(numNodes++));
-    sink                     = g.createNode(node_data_type(numNodes++));
+    numNodes = std::distance(g.begin(), g.end());
+    source = g.createNode(node_data_type(numNodes++));
+    sink = g.createNode(node_data_type(numNodes++));
     g.getData(source).height = numNodes;
     g.addNode(source);
     g.addNode(sink);
@@ -874,7 +877,7 @@ struct MatchingMF {
     t.stop();
 
     bool shouldGlobalRelabel = false;
-    unsigned counter         = 0;
+    unsigned counter = 0;
     galois::setActiveThreads(Concurrent ? numThreads : 1);
 
     while (!initial.empty()) {
@@ -947,8 +950,9 @@ struct Verifier {
     return true;
   }
 
-  void check(G& g, typename NodeList::iterator ii,
-             typename NodeList::iterator ei, size_t& count, bool& retval) {
+  void check(
+      G& g, typename NodeList::iterator ii, typename NodeList::iterator ei,
+      size_t& count, bool& retval) {
     for (; ii != ei; ++ii) {
       node_data_type& dii = g.getData(*ii);
       if (dii.degree > 1) {
@@ -980,7 +984,7 @@ struct Verifier {
       g.getData(ii->second).degree++;
     }
 
-    bool retval  = true;
+    bool retval = true;
     size_t count = 0;
     check(g, g.A.begin(), g.A.end(), count, retval);
     check(g, g.B.begin(), g.B.end(), count, retval);
@@ -1004,8 +1008,9 @@ struct Verifier {
  * B.
  */
 template <typename G>
-void generateRandomInput(int numA, int numB, int numEdges, int numGroups,
-                         int seed, G& g) {
+void
+generateRandomInput(
+    int numA, int numB, int numEdges, int numGroups, int seed, G& g) {
   typedef typename G::edge_data_type edge_data_type;
 
   std::cout << "numGroups: " << numGroups << " seed: " << seed << "\n";
@@ -1044,7 +1049,7 @@ void generateRandomInput(int numA, int numB, int numEdges, int numGroups,
         int base1 = group == 0 ? (numGroups - 1) * bSize : (group - 1) * bSize;
         int base2 = group == numGroups - 1 ? 0 : (group + 1) * bSize;
         for (int i = 0; i < d; ++i) {
-          int b   = dist(gen) < 0.5 ? base1 : base2;
+          int b = dist(gen) < 0.5 ? base1 : base2;
           int off = (int)(dist(gen) * (bSize - 1));
           if (phase == 0)
             p.incrementDegree(ii);
@@ -1078,12 +1083,14 @@ void generateRandomInput(int numA, int numB, int numEdges, int numGroups,
  *  (2) nodes in set A are the first numA nodes (followed by nodes in set B)
  */
 template <typename G>
-void readInput(const std::string& filename, G& g) {
+void
+readInput(const std::string& filename, G& g) {
   galois::graphs::readGraph(g, filename);
 }
 
 template <template <typename, bool> class Algo, typename G>
-size_t countMatching(G& g) {
+size_t
+countMatching(G& g) {
   Exists<G, Algo> exists;
   size_t count = 0;
   for (auto n : g.B) {
@@ -1097,7 +1104,8 @@ size_t countMatching(G& g) {
 }
 
 template <template <typename, bool> class Algo, typename G>
-void removeMatchedEdges(G& g) {
+void
+removeMatchedEdges(G& g) {
   Exists<G, Algo> exists;
   for (auto n : g.B) {
     assert(std::distance(g.edge_begin(n), g.edge_end(n)) <= 1);
@@ -1111,7 +1119,8 @@ void removeMatchedEdges(G& g) {
 }
 
 template <template <typename, bool> class Algo, typename G, bool Concurrent>
-void start(int N, int numEdges, int numGroups) {
+void
+start(int N, int numEdges, int numGroups) {
   typedef Algo<G, Concurrent> A;
 
   A algo;
@@ -1174,26 +1183,28 @@ void start(int N, int numEdges, int numGroups) {
 }
 
 template <bool Concurrent>
-void start() {
+void
+start() {
   switch (algo) {
   case abmpAlgo:
     start<MatchingABMP, MFBipartiteGraph<ABMPNode, void>, Concurrent>(
         N, numEdges, numGroups);
     break;
   case pfpAlgo:
-    start<MatchingMF, MFBipartiteGraph<MFNode, MFEdge>, Concurrent>(N, numEdges,
-                                                                    numGroups);
+    start<MatchingMF, MFBipartiteGraph<MFNode, MFEdge>, Concurrent>(
+        N, numEdges, numGroups);
     break;
   case ffAlgo:
-    start<MatchingFF, MFBipartiteGraph<FFNode, void>, Concurrent>(N, numEdges,
-                                                                  numGroups);
+    start<MatchingFF, MFBipartiteGraph<FFNode, void>, Concurrent>(
+        N, numEdges, numGroups);
     break;
   default:
     GALOIS_DIE("unknown algo");
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFile);
 
@@ -1201,9 +1212,10 @@ int main(int argc, char** argv) {
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE("This application requires a symmetric graph input;"
-               " please use the -symmetricGraph flag "
-               " to indicate the input is a symmetric graph.");
+    GALOIS_DIE(
+        "This application requires a symmetric graph input;"
+        " please use the -symmetricGraph flag "
+        " to indicate the input is a symmetric graph.");
   }
 
   switch (executionType) {

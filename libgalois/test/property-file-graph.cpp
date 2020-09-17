@@ -1,29 +1,30 @@
-#include "TestPropertyGraph.h"
-
 #include <arrow/api.h>
 #include <boost/filesystem.hpp>
 
-#include "galois/Logging.h"
+#include "TestPropertyGraph.h"
 #include "galois/FileSystem.h"
+#include "galois/Logging.h"
 #include "galois/graphs/PropertyFileGraph.h"
 #include "tsuba/tsuba.h"
 
 namespace fs = boost::filesystem;
 
 template <typename T>
-std::shared_ptr<arrow::Table> MakeTable(const std::string& name, size_t size) {
+std::shared_ptr<arrow::Table>
+MakeTable(const std::string& name, size_t size) {
   TableBuilder builder{size};
 
   ColumnOptions options;
-  options.name             = name;
+  options.name = name;
   options.ascending_values = true;
   builder.AddColumn<T>(options);
   return builder.Finish();
 }
 
-void TestRoundTrip() {
+void
+TestRoundTrip() {
   constexpr size_t test_length = 10;
-  using ValueType              = int32_t;
+  using ValueType = int32_t;
 
   auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
 
@@ -78,11 +79,11 @@ void TestRoundTrip() {
   std::shared_ptr<arrow::ChunkedArray> node_property = node_properties[0];
   std::shared_ptr<arrow::ChunkedArray> edge_property = edge_properties[0];
 
-  GALOIS_LOG_ASSERT(static_cast<size_t>(node_property->length()) ==
-                    test_length);
+  GALOIS_LOG_ASSERT(
+      static_cast<size_t>(node_property->length()) == test_length);
   GALOIS_LOG_ASSERT(node_property->num_chunks() == 1);
-  GALOIS_LOG_ASSERT(static_cast<size_t>(edge_property->length()) ==
-                    test_length);
+  GALOIS_LOG_ASSERT(
+      static_cast<size_t>(edge_property->length()) == test_length);
   GALOIS_LOG_ASSERT(edge_property->num_chunks() == 1);
 
   {
@@ -100,7 +101,8 @@ void TestRoundTrip() {
   }
 }
 
-void TestGarbageMetadata() {
+void
+TestGarbageMetadata() {
   auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
   GALOIS_LOG_ASSERT(unique_result);
   std::string temp_dir(std::move(unique_result.value()));
@@ -117,7 +119,8 @@ void TestGarbageMetadata() {
   GALOIS_LOG_ASSERT(!no_dir_result.has_value());
 }
 
-int main() {
+int
+main() {
   if (auto res = tsuba::Init(); !res) {
     GALOIS_LOG_FATAL("libtsuba failed to init");
   }

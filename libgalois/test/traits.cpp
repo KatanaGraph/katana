@@ -1,8 +1,9 @@
+#include "galois/Traits.h"
+
 #include <iostream>
 #include <utility>
 
 #include "galois/gIO.h"
-#include "galois/Traits.h"
 
 struct A {};
 
@@ -15,16 +16,19 @@ struct B : public A {
 struct Unrelated {};
 
 template <size_t... Ints, typename Tuple>
-void Print(std::index_sequence<Ints...>, Tuple tup) {
+void
+Print(std::index_sequence<Ints...>, Tuple tup) {
   (..., (std::cout << typeid(std::get<Ints>(tup)).name() << " ")) << "\n";
 }
 
 template <typename Tuple>
-void Print(Tuple tup) {
+void
+Print(Tuple tup) {
   Print(std::make_index_sequence<std::tuple_size<Tuple>::value>(), tup);
 }
 
-void TestGet() {
+void
+TestGet() {
   auto pull_from_default = galois::get_default_trait_values(
       std::make_tuple(Unrelated{}), std::make_tuple(A{}), std::make_tuple(B{}));
   static_assert(
@@ -32,13 +36,14 @@ void TestGet() {
 
   auto no_pull_from_default_when_same = galois::get_default_trait_values(
       std::make_tuple(A{}), std::make_tuple(A{}), std::make_tuple(B{}));
-  static_assert(std::is_same<decltype(no_pull_from_default_when_same),
-                             std::tuple<>>::value);
+  static_assert(std::is_same<
+                decltype(no_pull_from_default_when_same), std::tuple<>>::value);
 
   auto no_pull_from_default_when_derived = galois::get_default_trait_values(
       std::make_tuple(B{}), std::make_tuple(A{}), std::make_tuple(B{}));
-  static_assert(std::is_same<decltype(no_pull_from_default_when_derived),
-                             std::tuple<>>::value);
+  static_assert(
+      std::is_same<
+          decltype(no_pull_from_default_when_derived), std::tuple<>>::value);
 
   auto empty_tuple = galois::get_default_trait_values(
       std::make_tuple(), std::make_tuple(), std::make_tuple());
@@ -56,11 +61,12 @@ struct HasFunctionTraits {
   using function_traits = std::tuple<int>;
 };
 
-void TestHasFunctionTraits() {
+void
+TestHasFunctionTraits() {
   static_assert(galois::has_function_traits_v<HasFunctionTraits>);
-  static_assert(
-      std::is_same<HasFunctionTraits::function_traits,
-                   galois::function_traits<HasFunctionTraits>::type>::value);
+  static_assert(std::is_same<
+                HasFunctionTraits::function_traits,
+                galois::function_traits<HasFunctionTraits>::type>::value);
 }
 
 struct Functor {
@@ -69,16 +75,19 @@ struct Functor {
   int operator()(int) { return v_; }
 };
 
-auto MakePRValueArgument() {
+auto
+MakePRValueArgument() {
   return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(1);
 }
 
-auto MakeLValueArgument() {
+auto
+MakeLValueArgument() {
   int v = 2;
   return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(v);
 }
 
-void TestCopy() {
+void
+TestCopy() {
   std::cout << "making prvalue functor\n";
   std::cout << std::get<0>(MakePRValueArgument().args);
   std::cout << "\n";
@@ -95,7 +104,8 @@ void TestCopy() {
   static_assert(!std::is_reference_v<std::tuple_element_t<0, decltype(args)>>);
 }
 
-int main() {
+int
+main() {
   TestGet();
   TestHasFunctionTraits();
   TestCopy();

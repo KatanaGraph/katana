@@ -17,10 +17,6 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/gIO.h"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -31,6 +27,10 @@
 #include <memory>
 #include <mutex>
 #include <set>
+
+#include "galois/gIO.h"
+#include "galois/substrate/HWTopo.h"
+#include "galois/substrate/SimpleLock.h"
 
 #ifdef GALOIS_USE_NUMA
 #include <numa.h>
@@ -50,12 +50,13 @@ struct cpuinfo {
   unsigned sib;
   unsigned coreid;
   unsigned cpucores;
-  unsigned numaNode; // from libnuma
-  bool valid;        // from cpuset
-  bool smt;          // computed
+  unsigned numaNode;  // from libnuma
+  bool valid;         // from cpuset
+  bool smt;           // computed
 };
 
-bool operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
+bool
+operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
   if (lhs.smt != rhs.smt)
     return lhs.smt < rhs.smt;
   if (lhs.physid != rhs.physid)
@@ -65,18 +66,20 @@ bool operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
   return lhs.proc < rhs.proc;
 }
 
-unsigned getNumaNode(cpuinfo& c) {
+unsigned
+getNumaNode(cpuinfo& c) {
   static bool warnOnce = false;
 #ifdef GALOIS_USE_NUMA
   static bool numaAvail = false;
 
   if (!warnOnce) {
-    warnOnce  = true;
+    warnOnce = true;
     numaAvail = numa_available() >= 0;
     numaAvail = numaAvail && numa_num_configured_nodes() > 0;
     if (!numaAvail)
-      galois::gWarn("Numa support configured but not present at runtime.  "
-                    "Assuming numa topology matches socket topology.");
+      galois::gWarn(
+          "Numa support configured but not present at runtime.  "
+          "Assuming numa topology matches socket topology.");
   }
 
   if (!numaAvail)
@@ -88,15 +91,17 @@ unsigned getNumaNode(cpuinfo& c) {
 #else
   if (!warnOnce) {
     warnOnce = true;
-    galois::gWarn("Numa Support Not configured (install libnuma-dev).  "
-                  "Assuming numa topology matches socket topology.");
+    galois::gWarn(
+        "Numa Support Not configured (install libnuma-dev).  "
+        "Assuming numa topology matches socket topology.");
   }
   return c.physid;
 #endif
 }
 
 //! Parse /proc/cpuinfo
-std::vector<cpuinfo> parseCPUInfo() {
+std::vector<cpuinfo>
+parseCPUInfo() {
   std::vector<cpuinfo> vals;
 
   const int len = 1024;
@@ -136,28 +141,32 @@ std::vector<cpuinfo> parseCPUInfo() {
   return vals;
 }
 
-unsigned countSockets(const std::vector<cpuinfo>& info) {
+unsigned
+countSockets(const std::vector<cpuinfo>& info) {
   std::set<unsigned> pkgs;
   for (auto& c : info)
     pkgs.insert(c.physid);
   return pkgs.size();
 }
 
-unsigned countCores(const std::vector<cpuinfo>& info) {
+unsigned
+countCores(const std::vector<cpuinfo>& info) {
   std::set<std::pair<int, int>> cores;
   for (auto& c : info)
     cores.insert(std::make_pair(c.physid, c.coreid));
   return cores.size();
 }
 
-unsigned countNumaNodes(const std::vector<cpuinfo>& info) {
+unsigned
+countNumaNodes(const std::vector<cpuinfo>& info) {
   std::set<unsigned> nodes;
   for (auto& c : info)
     nodes.insert(c.numaNode);
   return nodes.size();
 }
 
-void markSMT(std::vector<cpuinfo>& info) {
+void
+markSMT(std::vector<cpuinfo>& info) {
   for (unsigned int i = 1; i < info.size(); ++i)
     if (info[i - 1].physid == info[i].physid &&
         info[i - 1].coreid == info[i].coreid)
@@ -166,7 +175,8 @@ void markSMT(std::vector<cpuinfo>& info) {
       info[i].smt = false;
 }
 
-std::vector<int> parseCPUSet() {
+std::vector<int>
+parseCPUSet() {
   std::vector<int> vals;
 
   std::ifstream data("/proc/self/status");
@@ -199,7 +209,8 @@ std::vector<int> parseCPUSet() {
   return galois::substrate::parseCPUList(line);
 }
 
-void markValid(std::vector<cpuinfo>& info) {
+void
+markValid(std::vector<cpuinfo>& info) {
   auto v = parseCPUSet();
   if (v.empty()) {
     for (auto& c : info)
@@ -211,7 +222,8 @@ void markValid(std::vector<cpuinfo>& info) {
   }
 }
 
-galois::substrate::HWTopoInfo makeHWTopo() {
+galois::substrate::HWTopoInfo
+makeHWTopo() {
   galois::substrate::MachineTopoInfo retMTI;
 
   auto info = parseCPUInfo();
@@ -219,15 +231,16 @@ galois::substrate::HWTopoInfo makeHWTopo() {
   markSMT(info);
   markValid(info);
 
-  info.erase(std::partition(info.begin(), info.end(),
-                            [](const cpuinfo& c) { return c.valid; }),
-             info.end());
+  info.erase(
+      std::partition(
+          info.begin(), info.end(), [](const cpuinfo& c) { return c.valid; }),
+      info.end());
 
   std::sort(info.begin(), info.end());
   markSMT(info);
-  retMTI.maxSockets   = countSockets(info);
-  retMTI.maxThreads   = info.size();
-  retMTI.maxCores     = countCores(info);
+  retMTI.maxSockets = countSockets(info);
+  retMTI.maxThreads = info.size();
+  retMTI.maxCores = countCores(info);
   retMTI.maxNumaNodes = countNumaNodes(info);
 
   std::vector<galois::substrate::ThreadTopoInfo> retTTI;
@@ -239,32 +252,34 @@ galois::substrate::HWTopoInfo makeHWTopo() {
     sockets.insert(i.physid);
     numaNodes.insert(i.numaNode);
   }
-  unsigned mid = 0; // max socket id
+  unsigned mid = 0;  // max socket id
   for (unsigned i = 0; i < info.size(); ++i) {
     unsigned pid = info[i].physid;
     unsigned repid =
         std::distance(sockets.begin(), sockets.find(info[i].physid));
-    mid             = std::max(mid, repid);
+    mid = std::max(mid, repid);
     unsigned leader = std::distance(
         info.begin(),
-        std::find_if(info.begin(), info.end(),
-                     [pid](const cpuinfo& c) { return c.physid == pid; }));
+        std::find_if(info.begin(), info.end(), [pid](const cpuinfo& c) {
+          return c.physid == pid;
+        }));
     retTTI.push_back(galois::substrate::ThreadTopoInfo{
         i, leader, repid,
-        (unsigned)std::distance(numaNodes.begin(),
-                                numaNodes.find(info[i].numaNode)),
+        (unsigned)std::distance(
+            numaNodes.begin(), numaNodes.find(info[i].numaNode)),
         mid, info[i].proc, info[i].numaNode});
   }
 
   return {
       .machineTopoInfo = retMTI,
-      .threadTopoInfo  = retTTI,
+      .threadTopoInfo = retTTI,
   };
 }
 
-} // namespace
+}  // namespace
 
-galois::substrate::HWTopoInfo galois::substrate::getHWTopo() {
+galois::substrate::HWTopoInfo
+galois::substrate::getHWTopo() {
   static SimpleLock lock;
   static std::unique_ptr<HWTopoInfo> data;
 
@@ -276,7 +291,8 @@ galois::substrate::HWTopoInfo galois::substrate::getHWTopo() {
 }
 
 //! binds current thread to OS HW context "proc"
-bool galois::substrate::bindThreadSelf(unsigned osContext) {
+bool
+galois::substrate::bindThreadSelf(unsigned osContext) {
 #ifdef GALOIS_USE_SCHED_SETAFFINITY
   cpu_set_t mask;
   /* CPU_ZERO initializes all the bits in the mask to zero. */
@@ -288,8 +304,8 @@ bool galois::substrate::bindThreadSelf(unsigned osContext) {
 
   /* sched_setaffinity returns 0 in success */
   if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
-    galois::gWarn("Could not set CPU affinity to ", osContext, "(",
-                  strerror(errno), ")");
+    galois::gWarn(
+        "Could not set CPU affinity to ", osContext, "(", strerror(errno), ")");
     return false;
   }
   return true;

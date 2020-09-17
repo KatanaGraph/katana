@@ -1,5 +1,6 @@
 #include "graph-properties-convert-mysql.h"
 
+#include <mysql.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -19,14 +20,13 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <mysql.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
 
 using galois::GraphComponents;
@@ -52,11 +52,13 @@ struct Relationship {
   std::string target_table;
   std::string target_field;
 
-  Relationship(std::string source_table_, std::string source_field_,
-               std::string target_table_, std::string target_field_)
+  Relationship(
+      std::string source_table_, std::string source_field_,
+      std::string target_table_, std::string target_field_)
       : label(source_table_ + "_" + target_table_ + "_" + source_field_),
         source_table(std::move(source_table_)),
-        source_field(std::move(source_field_)), source_index(0),
+        source_field(std::move(source_field_)),
+        source_index(0),
         target_table(std::move(target_table_)),
         target_field(std::move(target_field_)) {}
 };
@@ -72,7 +74,9 @@ struct TableData {
   std::unordered_set<std::string> ignore_list;
 
   TableData(std::string name_)
-      : name(std::move(name_)), is_node(true), primary_key_index(-1),
+      : name(std::move(name_)),
+        is_node(true),
+        primary_key_index(-1),
         out_references(std::vector<Relationship>{}),
         in_references(std::vector<Relationship>{}),
         field_names(std::vector<std::string>{}),
@@ -99,13 +103,15 @@ struct TableData {
 };
 
 template <typename T>
-ImportData Resolve(ImportDataType type, bool is_list, T val) {
+ImportData
+Resolve(ImportDataType type, bool is_list, T val) {
   ImportData data{type, is_list};
   data.value = val;
   return data;
 }
 
-ImportData ResolveBool(const std::string& val) {
+ImportData
+ResolveBool(const std::string& val) {
   if (val.empty()) {
     return ImportData{ImportDataType::kUnsupported, false};
   }
@@ -130,8 +136,8 @@ ImportData ResolveBool(const std::string& val) {
   return data;
 }
 
-ImportData ResolveValue(const std::string& val, ImportDataType type,
-                        bool is_list) {
+ImportData
+ResolveValue(const std::string& val, ImportDataType type, bool is_list) {
   if (is_list) {
     return ImportData{ImportDataType::kUnsupported, is_list};
   }
@@ -159,7 +165,8 @@ ImportData ResolveValue(const std::string& val, ImportDataType type,
   }
 }
 
-ImportDataType ExtractTypeMysql(enum_field_types type) {
+ImportDataType
+ExtractTypeMysql(enum_field_types type) {
   switch (type) {
   case MYSQL_TYPE_TINY:
     return ImportDataType::kBoolean;
@@ -186,30 +193,35 @@ ImportDataType ExtractTypeMysql(enum_field_types type) {
   }
 }
 
-std::string GenerateFetchForeignKeyQuery(const std::string& table) {
-  return std::string{"SELECT DISTINCT "
-                     "TABLE_NAME, "
-                     "COLUMN_NAME, "
-                     "CONSTRAINT_NAME, "
-                     "REFERENCED_TABLE_NAME, "
-                     "REFERENCED_COLUMN_NAME "
-                     "FROM "
-                     "INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
-                     "WHERE "
-                     "REFERENCED_TABLE_NAME IS NOT NULL AND "
-                     "TABLE_NAME = '" +
-                     table + "';"};
+std::string
+GenerateFetchForeignKeyQuery(const std::string& table) {
+  return std::string{
+      "SELECT DISTINCT "
+      "TABLE_NAME, "
+      "COLUMN_NAME, "
+      "CONSTRAINT_NAME, "
+      "REFERENCED_TABLE_NAME, "
+      "REFERENCED_COLUMN_NAME "
+      "FROM "
+      "INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+      "WHERE "
+      "REFERENCED_TABLE_NAME IS NOT NULL AND "
+      "TABLE_NAME = '" +
+      table + "';"};
 }
 
-std::string GenerateFetchRowQuery(const std::string& table) {
+std::string
+GenerateFetchRowQuery(const std::string& table) {
   return std::string{"SELECT * FROM " + table + " LIMIT 1;"};
 }
 
-std::string GenerateFetchTableQuery(const std::string& table) {
+std::string
+GenerateFetchTableQuery(const std::string& table) {
   return std::string{"SELECT * FROM " + table + ";"};
 }
 
-std::vector<std::string> FetchTableNames(MYSQL* con) {
+std::vector<std::string>
+FetchTableNames(MYSQL* con) {
   std::vector<std::string> table_names;
 
   MysqlRes tables{mysql_list_tables(con, NULL)};
@@ -236,15 +248,18 @@ std::vector<std::string> FetchFieldNames(MysqlRes* table) {
   return field_names;
 }*/
 
-MysqlRes RunQuery(MYSQL* con, const std::string& query) {
+MysqlRes
+RunQuery(MYSQL* con, const std::string& query) {
   if (mysql_real_query(con, query.c_str(), query.size())) {
     GALOIS_LOG_FATAL("Could not run query {}: {}", query, mysql_error(con));
   }
   return MysqlRes(mysql_use_result(con));
 }
 
-void AddNodeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
-                  const TableData& table_data) {
+void
+AddNodeTable(
+    galois::PropertyGraphBuilder* builder, MYSQL* con,
+    const TableData& table_data) {
   MysqlRes table = RunQuery(con, GenerateFetchTableQuery(table_data.name));
   MYSQL_ROW row;
 
@@ -271,8 +286,8 @@ void AddNodeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
         builder->AddValue(
             table_data.field_names[i],
             []() {
-              return PropertyKey{"invalid", ImportDataType::kUnsupported,
-                                 false};
+              return PropertyKey{
+                  "invalid", ImportDataType::kUnsupported, false};
             },
             [&value](ImportDataType type, bool is_list) {
               return ResolveValue(value, type, is_list);
@@ -294,8 +309,10 @@ void AddNodeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
   }
 }
 
-void AddEdgeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
-                  const TableData& table_data) {
+void
+AddEdgeTable(
+    galois::PropertyGraphBuilder* builder, MYSQL* con,
+    const TableData& table_data) {
   MysqlRes table = RunQuery(con, GenerateFetchTableQuery(table_data.name));
   MYSQL_ROW row;
 
@@ -329,8 +346,8 @@ void AddEdgeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
         builder->AddValue(
             table_data.field_names[i],
             []() {
-              return PropertyKey{"invalid", ImportDataType::kUnsupported,
-                                 false};
+              return PropertyKey{
+                  "invalid", ImportDataType::kUnsupported, false};
             },
             [&value](ImportDataType type, bool is_list) {
               return ResolveValue(value, type, is_list);
@@ -345,7 +362,8 @@ void AddEdgeTable(galois::PropertyGraphBuilder* builder, MYSQL* con,
 /* Functions for getting user input */
 /************************************/
 
-bool GetUserBool(const std::string& prompt) {
+bool
+GetUserBool(const std::string& prompt) {
   while (true) {
     std::cout << prompt << " (y/n): ";
     std::string res;
@@ -364,9 +382,10 @@ bool GetUserBool(const std::string& prompt) {
 }
 
 // TODO support multiple labels per collection
-void GetUserInputForLabels(xmlTextWriterPtr writer,
-                           const std::map<std::string, TableData>& table_data,
-                           bool for_node) {
+void
+GetUserInputForLabels(
+    xmlTextWriterPtr writer, const std::map<std::string, TableData>& table_data,
+    bool for_node) {
   for (auto [name, data] : table_data) {
     if (for_node == data.is_node) {
       std::cout << "Choose label for " << name << " (" << name << "): ";
@@ -386,7 +405,8 @@ void GetUserInputForLabels(xmlTextWriterPtr writer,
 }
 
 // TODO support multiple labels per collection
-void GetUserInputForLabels(
+void
+GetUserInputForLabels(
     xmlTextWriterPtr writer,
     const std::map<std::string, LabelRule>& foreign_labels) {
   for (auto [name, rule] : foreign_labels) {
@@ -404,8 +424,9 @@ void GetUserInputForLabels(
   }
 }
 
-void GetUserInputForFields(xmlTextWriterPtr writer,
-                           std::map<std::string, PropertyKey>* fields) {
+void
+GetUserInputForFields(
+    xmlTextWriterPtr writer, std::map<std::string, PropertyKey>* fields) {
   std::cout << "Total Detected Fields: " << fields->size() << "\n";
   for (auto& [name, key] : (*fields)) {
     std::cout << "Choose property name for field " << name << " (" << name
@@ -417,7 +438,7 @@ void GetUserInputForFields(xmlTextWriterPtr writer,
       key.name = res;
     }
 
-    bool done      = false;
+    bool done = false;
     auto type_name = galois::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
@@ -428,28 +449,29 @@ void GetUserInputForFields(xmlTextWriterPtr writer,
       std::getline(std::cin, res);
       if (!res.empty()) {
         std::istringstream iss(res);
-        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
-                                        std::istream_iterator<std::string>{}};
+        std::vector<std::string> tokens{
+            std::istream_iterator<std::string>{iss},
+            std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
           auto new_type = galois::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
                 std::cout << "Arrays of structs are not supported\n";
-              } else if (boost::to_lower_copy<std::string>(tokens[1]) ==
-                         "array") {
-                key.type    = new_type;
+              } else if (
+                  boost::to_lower_copy<std::string>(tokens[1]) == "array") {
+                key.type = new_type;
                 key.is_list = true;
-                done        = true;
+                done = true;
               } else {
                 std::cout
                     << "Second argument could not be recognized, to specify an "
                        "array use the format: \"double array\"\n";
               }
             } else {
-              key.type    = new_type;
+              key.type = new_type;
               key.is_list = false;
-              done        = true;
+              done = true;
             }
           } else {
             std::cout << "Inputted datatype could not be recognized, valid "
@@ -478,13 +500,15 @@ void GetUserInputForFields(xmlTextWriterPtr writer,
 /* Functions for preprocessing MySQL databases */
 /***********************************************/
 
-void ExhaustResultSet(MysqlRes* res) {
+void
+ExhaustResultSet(MysqlRes* res) {
   while (mysql_fetch_row(res->res))
     ;
 }
 
-bool ContainsRelation(const std::vector<LabelRule>& rules,
-                      const std::string& label) {
+bool
+ContainsRelation(
+    const std::vector<LabelRule>& rules, const std::string& label) {
   for (auto rule : rules) {
     if (rule.for_edge && rule.id == label) {
       return true;
@@ -493,8 +517,10 @@ bool ContainsRelation(const std::vector<LabelRule>& rules,
   return false;
 }
 
-bool ContainsKey(const std::vector<PropertyKey>& keys, const std::string& id,
-                 bool for_node) {
+bool
+ContainsKey(
+    const std::vector<PropertyKey>& keys, const std::string& id,
+    bool for_node) {
   for (auto key : keys) {
     if (key.for_node == for_node && key.for_edge == !for_node && key.id == id) {
       return true;
@@ -503,13 +529,14 @@ bool ContainsKey(const std::vector<PropertyKey>& keys, const std::string& id,
   return false;
 }
 
-PropertyKey ProcessField(MYSQL_FIELD* field) {
+PropertyKey
+ProcessField(MYSQL_FIELD* field) {
   std::string id{field->name, field->name_length};
-  bool for_node         = false;
-  bool for_edge         = false;
+  bool for_node = false;
+  bool for_edge = false;
   std::string attr_name = id;
-  ImportDataType type   = ExtractTypeMysql(field->type);
-  bool is_list          = false;
+  ImportDataType type = ExtractTypeMysql(field->type);
+  bool is_list = false;
 
   return PropertyKey{
       id, for_node, for_edge, attr_name, type, is_list,
@@ -517,8 +544,9 @@ PropertyKey ProcessField(MYSQL_FIELD* field) {
 }
 
 template <typename T>
-void PreprocessForeignKeys(MysqlRes* foreign_keys, T* table_data,
-                           const std::string& table_name) {
+void
+PreprocessForeignKeys(
+    MysqlRes* foreign_keys, T* table_data, const std::string& table_name) {
   TableData data{table_name};
   MYSQL_ROW row;
 
@@ -545,9 +573,10 @@ void PreprocessForeignKeys(MysqlRes* foreign_keys, T* table_data,
 }
 
 template <typename T>
-void PreprocessForeignKeys(MysqlRes* foreign_keys, T* table_data,
-                           const std::vector<LabelRule>& rules,
-                           const std::string& table_name) {
+void
+PreprocessForeignKeys(
+    MysqlRes* foreign_keys, T* table_data, const std::vector<LabelRule>& rules,
+    const std::string& table_name) {
   TableData data{table_name};
   data.is_node = !ContainsRelation(rules, table_name);
   MYSQL_ROW row;
@@ -577,7 +606,8 @@ void PreprocessForeignKeys(MysqlRes* foreign_keys, T* table_data,
 }
 
 template <typename T>
-void FillForeignKeyRelations(T* table_data) {
+void
+FillForeignKeyRelations(T* table_data) {
   for (auto& iter : (*table_data)) {
     for (auto relation : iter.second.out_references) {
       auto& dest = table_data->find(relation.target_table)->second;
@@ -587,7 +617,8 @@ void FillForeignKeyRelations(T* table_data) {
 }
 
 template <typename T>
-void SetEdges(T* table_data) {
+void
+SetEdges(T* table_data) {
   for (auto& iter : (*table_data)) {
     if (iter.second.IsValidEdge()) {
       iter.second.is_node = !GetUserBool("Treat " + iter.first + " as an edge");
@@ -596,9 +627,11 @@ void SetEdges(T* table_data) {
 }
 
 template <typename T>
-void PreprocessFields(MysqlRes* table_row, T* table_data,
-                      std::map<std::string, PropertyKey>* property_fields,
-                      const std::string& table_name) {
+void
+PreprocessFields(
+    MysqlRes* table_row, T* table_data,
+    std::map<std::string, PropertyKey>* property_fields,
+    const std::string& table_name) {
   auto table_iter = table_data->find(table_name);
   MYSQL_FIELD* field;
 
@@ -609,8 +642,9 @@ void PreprocessFields(MysqlRes* table_row, T* table_data,
     // if this field is a primary key, do not add it for now
     if (IS_PRI_KEY(field->flags)) {
       table_iter->second.primary_key_index = static_cast<int64_t>(index);
-    } else if (table_iter->second.ignore_list.find(key.id) ==
-               table_iter->second.ignore_list.end()) {
+    } else if (
+        table_iter->second.ignore_list.find(key.id) ==
+        table_iter->second.ignore_list.end()) {
       // if this field will be added to the database
       key.for_node = table_iter->second.is_node;
       key.for_edge = !table_iter->second.is_node;
@@ -627,9 +661,10 @@ void PreprocessFields(MysqlRes* table_row, T* table_data,
 }
 
 template <typename T>
-void PreprocessFields(MysqlRes* table_row, T* table_data,
-                      const std::vector<PropertyKey>& keys,
-                      const std::string& table_name) {
+void
+PreprocessFields(
+    MysqlRes* table_row, T* table_data, const std::vector<PropertyKey>& keys,
+    const std::string& table_name) {
   auto table_iter = table_data->find(table_name);
   MYSQL_FIELD* field;
 
@@ -640,8 +675,9 @@ void PreprocessFields(MysqlRes* table_row, T* table_data,
     // if this field is a primary key, do not add it for now
     if (IS_PRI_KEY(field->flags)) {
       table_iter->second.primary_key_index = static_cast<int64_t>(index);
-    } else if (table_iter->second.ignore_list.find(key.id) !=
-               table_iter->second.ignore_list.end()) {
+    } else if (
+        table_iter->second.ignore_list.find(key.id) !=
+        table_iter->second.ignore_list.end()) {
       // if this field is a foreign key, resolve its local field indexes
       table_iter->second.ResolveOutgoingKeys(key.id, index);
     }
@@ -655,8 +691,9 @@ void PreprocessFields(MysqlRes* table_row, T* table_data,
 }
 
 std::unordered_map<std::string, TableData>
-PreprocessTables(MYSQL* con, galois::PropertyGraphBuilder* builder,
-                 const std::vector<std::string>& table_names) {
+PreprocessTables(
+    MYSQL* con, galois::PropertyGraphBuilder* builder,
+    const std::vector<std::string>& table_names) {
   std::unordered_map<std::string, TableData> table_data;
   std::map<std::string, PropertyKey> node_fields;
   std::map<std::string, PropertyKey> edge_fields;
@@ -694,10 +731,10 @@ PreprocessTables(MYSQL* con, galois::PropertyGraphBuilder* builder,
 }
 
 std::unordered_map<std::string, TableData>
-PreprocessTables(MYSQL* con, galois::PropertyGraphBuilder* builder,
-                 const std::vector<std::string>& table_names,
-                 const std::vector<LabelRule>& rules,
-                 const std::vector<PropertyKey>& keys) {
+PreprocessTables(
+    MYSQL* con, galois::PropertyGraphBuilder* builder,
+    const std::vector<std::string>& table_names,
+    const std::vector<LabelRule>& rules, const std::vector<PropertyKey>& keys) {
   std::unordered_map<std::string, TableData> table_data;
 
   // first process tables for primary and foreign keys
@@ -727,9 +764,10 @@ PreprocessTables(MYSQL* con, galois::PropertyGraphBuilder* builder,
   return table_data;
 }
 
-void GetMappingInput(MYSQL* con, const std::vector<std::string>& table_names,
-                     const std::string& outfile) {
-
+void
+GetMappingInput(
+    MYSQL* con, const std::vector<std::string>& table_names,
+    const std::string& outfile) {
   std::map<std::string, TableData> table_data;
   std::map<std::string, PropertyKey> node_fields;
   std::map<std::string, PropertyKey> edge_fields;
@@ -816,13 +854,12 @@ void GetMappingInput(MYSQL* con, const std::vector<std::string>& table_names,
   galois::FinishGraphmlFile(writer);
 }
 
-} // end of unnamed namespace
+}  // end of unnamed namespace
 
-GraphComponents galois::ConvertMysql(const std::string& db_name,
-                                     const std::string& mapping,
-                                     const size_t chunk_size,
-                                     const std::string& host,
-                                     const std::string& user) {
+GraphComponents
+galois::ConvertMysql(
+    const std::string& db_name, const std::string& mapping,
+    const size_t chunk_size, const std::string& host, const std::string& user) {
   galois::PropertyGraphBuilder builder{chunk_size};
   std::string password{getpass("MySQL Password: ")};
 
@@ -830,16 +867,17 @@ GraphComponents galois::ConvertMysql(const std::string& db_name,
   if (con == nullptr) {
     GALOIS_LOG_FATAL("mysql_init() failed");
   }
-  if (mysql_real_connect(con, host.c_str(), user.c_str(), password.c_str(),
-                         db_name.c_str(), 0, NULL, 0) == NULL) {
-    GALOIS_LOG_FATAL("Could not establish mysql connection: {}",
-                     mysql_error(con));
+  if (mysql_real_connect(
+          con, host.c_str(), user.c_str(), password.c_str(), db_name.c_str(), 0,
+          NULL, 0) == NULL) {
+    GALOIS_LOG_FATAL(
+        "Could not establish mysql connection: {}", mysql_error(con));
   }
   std::vector<std::string> table_names = FetchTableNames(con);
   std::unordered_map<std::string, TableData> table_data;
   if (!mapping.empty()) {
-    auto res                      = galois::ProcessSchemaMapping(mapping);
-    std::vector<LabelRule> rules  = res.first;
+    auto res = galois::ProcessSchemaMapping(mapping);
+    std::vector<LabelRule> rules = res.first;
     std::vector<PropertyKey> keys = res.second;
     table_data = PreprocessTables(con, &builder, table_names, rules, keys);
   } else {
@@ -859,20 +897,21 @@ GraphComponents galois::ConvertMysql(const std::string& db_name,
   return out;
 }
 
-void galois::GenerateMappingMysql(const std::string& db_name,
-                                  const std::string& outfile,
-                                  const std::string& host,
-                                  const std::string& user) {
+void
+galois::GenerateMappingMysql(
+    const std::string& db_name, const std::string& outfile,
+    const std::string& host, const std::string& user) {
   std::string password{getpass("MySQL Password: ")};
 
   MYSQL* con = mysql_init(NULL);
   if (con == nullptr) {
     GALOIS_LOG_FATAL("mysql_init() failed");
   }
-  if (mysql_real_connect(con, host.c_str(), user.c_str(), password.c_str(),
-                         db_name.c_str(), 0, NULL, 0) == NULL) {
-    GALOIS_LOG_FATAL("Could not establish mysql connection: {}",
-                     mysql_error(con));
+  if (mysql_real_connect(
+          con, host.c_str(), user.c_str(), password.c_str(), db_name.c_str(), 0,
+          NULL, 0) == NULL) {
+    GALOIS_LOG_FATAL(
+        "Could not establish mysql connection: {}", mysql_error(con));
   }
   std::vector<std::string> table_names = FetchTableNames(con);
 

@@ -21,9 +21,9 @@
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
 
 using galois::GraphComponents;
@@ -56,7 +56,8 @@ struct bson_value_t_wrapper {
 /******************************/
 
 template <typename T>
-std::optional<T> RetrievePrimitive(const bson_value_t* elt) {
+std::optional<T>
+RetrievePrimitive(const bson_value_t* elt) {
   switch (elt->value_type) {
   case BSON_TYPE_INT64:
     return static_cast<T>(elt->value.v_int64);
@@ -81,7 +82,8 @@ std::optional<T> RetrievePrimitive(const bson_value_t* elt) {
   }
 }
 
-std::optional<std::string> RetrieveString(const bson_value_t* elt) {
+std::optional<std::string>
+RetrieveString(const bson_value_t* elt) {
   switch (elt->value_type) {
   case BSON_TYPE_INT64:
     return boost::lexical_cast<std::string>(elt->value.v_int64);
@@ -98,14 +100,16 @@ std::optional<std::string> RetrieveString(const bson_value_t* elt) {
   }
 }
 
-std::optional<int64_t> RetrieveDate(const bson_value_t* elt) {
+std::optional<int64_t>
+RetrieveDate(const bson_value_t* elt) {
   if (elt->value_type == BSON_TYPE_DATE_TIME) {
     return elt->value.v_datetime;
   }
   return std::nullopt;
 }
 
-std::optional<uint8_t> RetrieveStruct(const bson_value_t* elt) {
+std::optional<uint8_t>
+RetrieveStruct(const bson_value_t* elt) {
   if (elt->value_type == BSON_TYPE_DOCUMENT) {
     return 1;
   }
@@ -113,7 +117,8 @@ std::optional<uint8_t> RetrieveStruct(const bson_value_t* elt) {
 }
 
 template <typename T>
-ImportData RetrievePrimitiveList(ImportDataType type, bson_iter_t* val) {
+ImportData
+RetrievePrimitiveList(ImportDataType type, bson_iter_t* val) {
   ImportData data{type, true};
   std::vector<T> list;
 
@@ -128,7 +133,8 @@ ImportData RetrievePrimitiveList(ImportDataType type, bson_iter_t* val) {
   return data;
 }
 
-ImportData RetrieveStringList(ImportDataType type, bson_iter_t* val) {
+ImportData
+RetrieveStringList(ImportDataType type, bson_iter_t* val) {
   ImportData data{type, true};
   std::vector<std::string> list;
 
@@ -143,7 +149,8 @@ ImportData RetrieveStringList(ImportDataType type, bson_iter_t* val) {
   return data;
 }
 
-ImportData RetrieveDateList(ImportDataType type, bson_iter_t* val) {
+ImportData
+RetrieveDateList(ImportDataType type, bson_iter_t* val) {
   ImportData data{type, true};
   std::vector<int64_t> timestamps;
 
@@ -162,8 +169,9 @@ ImportData RetrieveDateList(ImportDataType type, bson_iter_t* val) {
 /************************************************/
 
 template <typename Fn>
-ImportData ResolveOptional(ImportDataType type, bool is_list,
-                           const bson_value_t* val, Fn resolver) {
+ImportData
+ResolveOptional(
+    ImportDataType type, bool is_list, const bson_value_t* val, Fn resolver) {
   ImportData data{type, is_list};
   auto res = resolver(val);
   if (!res) {
@@ -174,12 +182,13 @@ ImportData ResolveOptional(ImportDataType type, bool is_list,
   return data;
 }
 
-ImportData ResolveListValue(const bson_value_t* array_ptr,
-                            ImportDataType type) {
+ImportData
+ResolveListValue(const bson_value_t* array_ptr, ImportDataType type) {
   bson_t array;
   bson_iter_t val;
-  if (bson_init_static(&array, array_ptr->value.v_doc.data,
-                       array_ptr->value.v_doc.data_len)) {
+  if (bson_init_static(
+          &array, array_ptr->value.v_doc.data,
+          array_ptr->value.v_doc.data_len)) {
     if (!bson_iter_init(&val, &array)) {
       return ImportData{ImportDataType::kUnsupported, true};
     }
@@ -207,8 +216,8 @@ ImportData ResolveListValue(const bson_value_t* array_ptr,
   }
 }
 
-ImportData ResolveValue(const bson_value_t* val, ImportDataType type,
-                        bool is_list) {
+ImportData
+ResolveValue(const bson_value_t* val, ImportDataType type, bool is_list) {
   if (is_list) {
     return ResolveListValue(val, type);
   }
@@ -238,30 +247,33 @@ ImportData ResolveValue(const bson_value_t* val, ImportDataType type,
 /* Helper functions for MongoDB C Driver */
 /*****************************************/
 
-std::string ExtractOid(const bson_value_t* elt) {
+std::string
+ExtractOid(const bson_value_t* elt) {
   const bson_oid_t* oid = &elt->value.v_oid;
   char str[25];
   bson_oid_to_string(oid, str);
   return std::string(str);
 }
 
-std::string ExtractOid(const bson_iter_t& elt) {
+std::string
+ExtractOid(const bson_iter_t& elt) {
   const bson_oid_t* oid = bson_iter_oid(&elt);
   char str[25];
   bson_oid_to_string(oid, str);
   return std::string(str);
 }
 
-bson_type_t ExtractBsonArrayType(const bson_value_t* val) {
+bson_type_t
+ExtractBsonArrayType(const bson_value_t* val) {
   bson_type_t type = BSON_TYPE_NULL;
   bson_t array;
-  if (bson_init_static(&array, val->value.v_doc.data,
-                       val->value.v_doc.data_len)) {
+  if (bson_init_static(
+          &array, val->value.v_doc.data, val->value.v_doc.data_len)) {
     bson_iter_t arr_iter;
     if (bson_iter_init(&arr_iter, &array)) {
       if (bson_iter_next(&arr_iter)) {
         auto elt = bson_iter_value(&arr_iter);
-        type     = elt->value_type;
+        type = elt->value_type;
       }
     }
   }
@@ -273,7 +285,8 @@ bson_type_t ExtractBsonArrayType(const bson_value_t* val) {
 /***********************************/
 
 // extract the type from a bson type
-ImportDataType ExtractTypeMongoDB(bson_type_t value) {
+ImportDataType
+ExtractTypeMongoDB(bson_type_t value) {
   switch (value) {
   case BSON_TYPE_UTF8:
     return ImportDataType::kString;
@@ -294,9 +307,10 @@ ImportDataType ExtractTypeMongoDB(bson_type_t value) {
   }
 }
 
-PropertyKey ProcessElement(const bson_value_t* elt, const std::string& name) {
+PropertyKey
+ProcessElement(const bson_value_t* elt, const std::string& name) {
   auto elt_type = elt->value_type;
-  bool is_list  = elt_type == BSON_TYPE_ARRAY;
+  bool is_list = elt_type == BSON_TYPE_ARRAY;
   if (is_list) {
     elt_type = ExtractBsonArrayType(elt);
     if (elt_type == BSON_TYPE_DOCUMENT) {
@@ -319,19 +333,21 @@ PropertyKey ProcessElement(const bson_value_t* elt, const std::string& name) {
 /* MongoDB functions for handling edges */
 /****************************************/
 
-void HandleEmbeddedEdgeStruct(galois::PropertyGraphBuilder* builder,
-                              const bson_value_t* doc_ptr,
-                              const std::string& prefix) {
+void
+HandleEmbeddedEdgeStruct(
+    galois::PropertyGraphBuilder* builder, const bson_value_t* doc_ptr,
+    const std::string& prefix) {
   bson_t doc;
   bson_iter_t iter;
-  if (bson_init_static(&doc, doc_ptr->value.v_doc.data,
-                       doc_ptr->value.v_doc.data_len)) {
+  if (bson_init_static(
+          &doc, doc_ptr->value.v_doc.data, doc_ptr->value.v_doc.data_len)) {
     if (bson_iter_init(&iter, &doc)) {
       // handle document
       while (bson_iter_next(&iter)) {
         const bson_value_t* elt = bson_iter_value(&iter);
-        auto elt_name           = prefix + std::string(bson_iter_key(&iter),
-                                             bson_iter_key_len(&iter));
+        auto elt_name =
+            prefix +
+            std::string(bson_iter_key(&iter), bson_iter_key_len(&iter));
 
         // since all edge cases have been checked, we can add this property
         builder->AddValue(
@@ -353,7 +369,8 @@ void HandleEmbeddedEdgeStruct(galois::PropertyGraphBuilder* builder,
 /* MongoDB functions for handling nodes */
 /****************************************/
 
-void HandleEmbeddedDocuments(
+void
+HandleEmbeddedDocuments(
     galois::PropertyGraphBuilder* builder,
     const std::vector<std::pair<std::string, bson_value_t_wrapper>>& docs,
     const std::string& parent_name, size_t parent_index) {
@@ -363,27 +380,29 @@ void HandleEmbeddedDocuments(
       std::string edge_type = parent_name + "_" + name;
 
       bson_t doc;
-      if (bson_init_static(&doc, elt->value.v_doc.data,
-                           elt->value.v_doc.data_len)) {
-        builder->AddEdge(static_cast<uint32_t>(parent_index),
-                         static_cast<uint32_t>(builder->GetNodes()), edge_type);
+      if (bson_init_static(
+              &doc, elt->value.v_doc.data, elt->value.v_doc.data_len)) {
+        builder->AddEdge(
+            static_cast<uint32_t>(parent_index),
+            static_cast<uint32_t>(builder->GetNodes()), edge_type);
         galois::HandleNodeDocumentMongoDB(builder, &doc, name);
       }
     } else {
       bson_t array;
-      if (bson_init_static(&array, elt->value.v_doc.data,
-                           elt->value.v_doc.data_len)) {
+      if (bson_init_static(
+              &array, elt->value.v_doc.data, elt->value.v_doc.data_len)) {
         bson_iter_t arr_iter;
         if (bson_iter_init(&arr_iter, &array)) {
           while (bson_iter_next(&arr_iter)) {
             auto doc_ptr = bson_iter_value(&arr_iter);
             if (doc_ptr->value_type == BSON_TYPE_DOCUMENT) {
               bson_t doc;
-              if (bson_init_static(&doc, doc_ptr->value.v_doc.data,
-                                   doc_ptr->value.v_doc.data_len)) {
-                builder->AddEdge(static_cast<uint32_t>(parent_index),
-                                 static_cast<uint32_t>(builder->GetNodes()),
-                                 name);
+              if (bson_init_static(
+                      &doc, doc_ptr->value.v_doc.data,
+                      doc_ptr->value.v_doc.data_len)) {
+                builder->AddEdge(
+                    static_cast<uint32_t>(parent_index),
+                    static_cast<uint32_t>(builder->GetNodes()), name);
                 galois::HandleNodeDocumentMongoDB(builder, &doc, name);
               }
             }
@@ -395,7 +414,8 @@ void HandleEmbeddedDocuments(
   }
 }
 
-bool HandleNonPropertyNodeElement(
+bool
+HandleNonPropertyNodeElement(
     galois::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
     const std::string& name, const bson_value_t* elt,
@@ -410,7 +430,7 @@ bool HandleNonPropertyNodeElement(
   // if elt is an ObjectID (foreign key), add a property-less edge
   if (elt_type == BSON_TYPE_OID) {
     std::string edge_type = collection_name + "_" + name;
-    auto oid              = ExtractOid(elt);
+    auto oid = ExtractOid(elt);
     builder->AddOutgoingEdge(oid, edge_type);
     return true;
   }
@@ -426,8 +446,8 @@ bool HandleNonPropertyNodeElement(
     }
     if (array_type == BSON_TYPE_OID) {
       bson_t array;
-      if (bson_init_static(&array, elt->value.v_doc.data,
-                           elt->value.v_doc.data_len)) {
+      if (bson_init_static(
+              &array, elt->value.v_doc.data, elt->value.v_doc.data_len)) {
         bson_iter_t arr_iter;
         if (bson_iter_init(&arr_iter, &array)) {
           while (bson_iter_next(&arr_iter)) {
@@ -443,15 +463,16 @@ bool HandleNonPropertyNodeElement(
   return false;
 }
 
-void HandleEmbeddedNodeStruct(
+void
+HandleEmbeddedNodeStruct(
     galois::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
     const std::string& name, const bson_value_t* doc_ptr,
     const std::string& prefix) {
   bson_t doc;
   bson_iter_t iter;
-  if (bson_init_static(&doc, doc_ptr->value.v_doc.data,
-                       doc_ptr->value.v_doc.data_len)) {
+  if (bson_init_static(
+          &doc, doc_ptr->value.v_doc.data, doc_ptr->value.v_doc.data_len)) {
     if (bson_iter_init(&iter, &doc)) {
       // handle document
       while (bson_iter_next(&iter)) {
@@ -459,8 +480,8 @@ void HandleEmbeddedNodeStruct(
         std::string struct_name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
         auto elt_name = prefix + struct_name;
 
-        if (HandleNonPropertyNodeElement(builder, docs, struct_name, elt,
-                                         name)) {
+        if (HandleNonPropertyNodeElement(
+                builder, docs, struct_name, elt, name)) {
           continue;
         }
 
@@ -485,19 +506,22 @@ void HandleEmbeddedNodeStruct(
 /**********************************/
 
 // mongoc_init() should be called before this function
-mongoc_client_t* GetMongoClient(const char* uri_string) {
+mongoc_client_t*
+GetMongoClient(const char* uri_string) {
   bson_error_t error;
   mongoc_uri_t* uri = mongoc_uri_new_with_error(uri_string, &error);
   if (!uri) {
-    GALOIS_LOG_FATAL("Failed to parse URI: {}\n"
-                     "Error message: {}\n",
-                     uri_string, error.message);
+    GALOIS_LOG_FATAL(
+        "Failed to parse URI: {}\n"
+        "Error message: {}\n",
+        uri_string, error.message);
   }
   mongoc_client_t* client = mongoc_client_new_from_uri(uri);
   if (!client) {
-    GALOIS_LOG_FATAL("Could not connect to URI: {}\n"
-                     "Error message: {}\n",
-                     uri_string, error.message);
+    GALOIS_LOG_FATAL(
+        "Could not connect to URI: {}\n"
+        "Error message: {}\n",
+        uri_string, error.message);
   }
   mongoc_client_set_appname(client, "graph-properties-convert");
   mongoc_uri_destroy(uri);
@@ -505,7 +529,8 @@ mongoc_client_t* GetMongoClient(const char* uri_string) {
   return client;
 }
 
-std::vector<std::string> GetCollectionNames(mongoc_database_t* database) {
+std::vector<std::string>
+GetCollectionNames(mongoc_database_t* database) {
   std::vector<std::string> coll_names;
 
   bson_error_t error;
@@ -521,8 +546,10 @@ std::vector<std::string> GetCollectionNames(mongoc_database_t* database) {
 }
 
 template <typename T>
-void QueryEntireCollection(mongoc_database_t* database, const bson_t** document,
-                           const std::string& coll_name, T document_op) {
+void
+QueryEntireCollection(
+    mongoc_database_t* database, const bson_t** document,
+    const std::string& coll_name, T document_op) {
   bson_error_t error;
   auto collection = mongoc_database_get_collection(database, coll_name.c_str());
   bson_t filter;
@@ -534,8 +561,8 @@ void QueryEntireCollection(mongoc_database_t* database, const bson_t** document,
     document_op();
   }
   if (mongoc_cursor_error(cursor, &error)) {
-    GALOIS_LOG_ERROR("An error occurred with a mongodb cursor: {}",
-                     error.message);
+    GALOIS_LOG_ERROR(
+        "An error occurred with a mongodb cursor: {}", error.message);
   }
 
   bson_destroy(&filter);
@@ -552,7 +579,8 @@ void QueryEntireCollection(mongoc_database_t* database, const bson_t** document,
  *    - it contains an array of Documents
  *    - it does not have exactly 2 ObjectIDs excluding its own ID
  */
-bool CheckIfDocumentIsEdge(const bson_t* doc) {
+bool
+CheckIfDocumentIsEdge(const bson_t* doc) {
   uint32_t oid_count = 0;
 
   bson_iter_t iter;
@@ -591,7 +619,8 @@ bool CheckIfDocumentIsEdge(const bson_t* doc) {
   return oid_count == 2;
 }
 
-bool CheckIfCollectionIsEdge(mongoc_collection_t* coll) {
+bool
+CheckIfCollectionIsEdge(mongoc_collection_t* coll) {
   {
     // findOne and check it exists
     bson_t* opts;
@@ -617,10 +646,11 @@ bool CheckIfCollectionIsEdge(mongoc_collection_t* coll) {
   }
 
   // randomly sample 1000 documents from collection
-  bson_t* pipeline = BCON_NEW("pipeline", "[", "{", "$sample", "{", "size",
-                              BCON_INT32(1000), "}", "}", "]");
-  auto docs = mongoc_collection_aggregate(coll, MONGOC_QUERY_NONE, pipeline,
-                                          nullptr, nullptr);
+  bson_t* pipeline = BCON_NEW(
+      "pipeline", "[", "{", "$sample", "{", "size", BCON_INT32(1000), "}", "}",
+      "]");
+  auto docs = mongoc_collection_aggregate(
+      coll, MONGOC_QUERY_NONE, pipeline, nullptr, nullptr);
   bson_destroy(pipeline);
 
   const bson_t* doc;
@@ -634,10 +664,10 @@ bool CheckIfCollectionIsEdge(mongoc_collection_t* coll) {
   return true;
 }
 
-void ExtractDocumentFields(const bson_t* doc, CollectionFields* fields,
-                           const std::string& prefix,
-                           const std::string& parent_name) {
-
+void
+ExtractDocumentFields(
+    const bson_t* doc, CollectionFields* fields, const std::string& prefix,
+    const std::string& parent_name) {
   bson_iter_t iter;
   if (!bson_iter_init(&iter, doc)) {
     return;
@@ -676,17 +706,18 @@ void ExtractDocumentFields(const bson_t* doc, CollectionFields* fields,
     if (elt->value_type == BSON_TYPE_DOCUMENT) {
       auto new_prefix = elt_name + ".";
       bson_t doc;
-      if (bson_init_static(&doc, elt->value.v_doc.data,
-                           elt->value.v_doc.data_len)) {
+      if (bson_init_static(
+              &doc, elt->value.v_doc.data, elt->value.v_doc.data_len)) {
         ExtractDocumentFields(&doc, fields, new_prefix, name);
       }
     }
   }
 }
 
-void ExtractCollectionFields(mongoc_collection_t* coll,
-                             CollectionFields* fields,
-                             const std::string& coll_name) {
+void
+ExtractCollectionFields(
+    mongoc_collection_t* coll, CollectionFields* fields,
+    const std::string& coll_name) {
   {
     // findOne and check it exists
     bson_t* opts;
@@ -710,10 +741,11 @@ void ExtractCollectionFields(mongoc_collection_t* coll,
   }
 
   // randomly sample 1000 documents from collection
-  bson_t* pipeline = BCON_NEW("pipeline", "[", "{", "$sample", "{", "size",
-                              BCON_INT32(1000), "}", "}", "]");
-  auto docs = mongoc_collection_aggregate(coll, MONGOC_QUERY_NONE, pipeline,
-                                          nullptr, nullptr);
+  bson_t* pipeline = BCON_NEW(
+      "pipeline", "[", "{", "$sample", "{", "size", BCON_INT32(1000), "}", "}",
+      "]");
+  auto docs = mongoc_collection_aggregate(
+      coll, MONGOC_QUERY_NONE, pipeline, nullptr, nullptr);
   bson_destroy(pipeline);
 
   const bson_t* doc;
@@ -727,7 +759,8 @@ void ExtractCollectionFields(mongoc_collection_t* coll,
 /* Functions to get user input for conversion */
 /**********************************************/
 
-bool GetUserBool(const std::string& prompt) {
+bool
+GetUserBool(const std::string& prompt) {
   while (true) {
     std::cout << prompt << " (y/n): ";
     std::string res;
@@ -746,8 +779,9 @@ bool GetUserBool(const std::string& prompt) {
 }
 
 std::vector<std::string>
-GetUserInputForEdges(const std::vector<std::string>& possible_edges,
-                     std::vector<std::string>* nodes) {
+GetUserInputForEdges(
+    const std::vector<std::string>& possible_edges,
+    std::vector<std::string>* nodes) {
   std::vector<std::string> edges;
 
   for (const std::string& coll_name : possible_edges) {
@@ -762,8 +796,9 @@ GetUserInputForEdges(const std::vector<std::string>& possible_edges,
 
 // TODO support multiple labels per collection
 template <typename T>
-void GetUserInputForLabels(xmlTextWriterPtr writer, const T& coll_names,
-                           bool for_node) {
+void
+GetUserInputForLabels(
+    xmlTextWriterPtr writer, const T& coll_names, bool for_node) {
   for (const std::string& coll_name : coll_names) {
     std::cout << "Choose label for " << coll_name << " (" << coll_name << "): ";
     std::string res;
@@ -780,8 +815,9 @@ void GetUserInputForLabels(xmlTextWriterPtr writer, const T& coll_names,
   }
 }
 
-void GetUserInputForFields(xmlTextWriterPtr writer, CollectionFields doc_fields,
-                           bool for_node) {
+void
+GetUserInputForFields(
+    xmlTextWriterPtr writer, CollectionFields doc_fields, bool for_node) {
   auto fields = doc_fields.property_fields;
   std::cout << "Total Detected Fields: " << fields.size() << "\n";
   for (auto& [name, key] : fields) {
@@ -794,7 +830,7 @@ void GetUserInputForFields(xmlTextWriterPtr writer, CollectionFields doc_fields,
       key.name = res;
     }
 
-    bool done      = false;
+    bool done = false;
     auto type_name = galois::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
@@ -805,28 +841,29 @@ void GetUserInputForFields(xmlTextWriterPtr writer, CollectionFields doc_fields,
       std::getline(std::cin, res);
       if (!res.empty()) {
         std::istringstream iss(res);
-        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
-                                        std::istream_iterator<std::string>{}};
+        std::vector<std::string> tokens{
+            std::istream_iterator<std::string>{iss},
+            std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
           auto new_type = galois::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
                 std::cout << "Arrays of structs are not supported\n";
-              } else if (boost::to_lower_copy<std::string>(tokens[1]) ==
-                         "array") {
-                key.type    = new_type;
+              } else if (
+                  boost::to_lower_copy<std::string>(tokens[1]) == "array") {
+                key.type = new_type;
                 key.is_list = true;
-                done        = true;
+                done = true;
               } else {
                 std::cout
                     << "Second argument could not be recognized, to specify an "
                        "array use the format: \"double array\"\n";
               }
             } else {
-              key.type    = new_type;
+              key.type = new_type;
               key.is_list = false;
-              done        = true;
+              done = true;
             }
           } else {
             std::cout << "Inputted datatype could not be recognized, valid "
@@ -853,9 +890,10 @@ void GetUserInputForFields(xmlTextWriterPtr writer, CollectionFields doc_fields,
   }
 }
 
-void GetMappingInput(mongoc_database_t* database,
-                     const std::vector<std::string>& coll_names,
-                     const std::string& outfile) {
+void
+GetMappingInput(
+    mongoc_database_t* database, const std::vector<std::string>& coll_names,
+    const std::string& outfile) {
   std::vector<std::string> nodes;
   std::vector<std::string> possible_edges;
 
@@ -941,8 +979,8 @@ void GetMappingInput(mongoc_database_t* database,
 }
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
-GetUserInput(mongoc_database_t* database,
-             const std::vector<std::string>& coll_names) {
+GetUserInput(
+    mongoc_database_t* database, const std::vector<std::string>& coll_names) {
   std::vector<std::string> nodes;
   std::vector<std::string> possible_edges;
 
@@ -965,12 +1003,13 @@ GetUserInput(mongoc_database_t* database,
       std::move(nodes), std::move(edges));
 }
 
-} // end of unnamed namespace
+}  // end of unnamed namespace
 
 // for now only handle arrays and data all of same type
-void galois::HandleEdgeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
-                                       const bson_t* doc,
-                                       const std::string& collection_name) {
+void
+galois::HandleEdgeDocumentMongoDB(
+    galois::PropertyGraphBuilder* builder, const bson_t* doc,
+    const std::string& collection_name) {
   builder->StartEdge();
 
   bool found_source = false;
@@ -1015,9 +1054,10 @@ void galois::HandleEdgeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
 }
 
 // for now only handle arrays and data all of same type
-void galois::HandleNodeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
-                                       const bson_t* doc,
-                                       const std::string& collection_name) {
+void
+galois::HandleNodeDocumentMongoDB(
+    galois::PropertyGraphBuilder* builder, const bson_t* doc,
+    const std::string& collection_name) {
   builder->StartNode();
   auto node_index = builder->GetNodeIndex();
   std::vector<std::pair<std::string, bson_value_t_wrapper>> docs;
@@ -1028,8 +1068,8 @@ void galois::HandleNodeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
     while (bson_iter_next(&iter)) {
       const bson_value_t* elt = bson_iter_value(&iter);
       std::string name{bson_iter_key(&iter), bson_iter_key_len(&iter)};
-      if (HandleNonPropertyNodeElement(builder, &docs, name, elt,
-                                       collection_name)) {
+      if (HandleNonPropertyNodeElement(
+              builder, &docs, name, elt, collection_name)) {
         continue;
       }
 
@@ -1052,8 +1092,9 @@ void galois::HandleNodeDocumentMongoDB(galois::PropertyGraphBuilder* builder,
   HandleEmbeddedDocuments(builder, docs, collection_name, node_index);
 }
 
-void galois::GenerateMappingMongoDB(const std::string& db_name,
-                                    const std::string& outfile) {
+void
+galois::GenerateMappingMongoDB(
+    const std::string& db_name, const std::string& outfile) {
   const char* uri_string = "mongodb://localhost:27017";
 
   mongoc_init();
@@ -1069,9 +1110,9 @@ void galois::GenerateMappingMongoDB(const std::string& db_name,
   mongoc_cleanup();
 }
 
-galois::GraphComponents galois::ConvertMongoDB(const std::string& db_name,
-                                               const std::string& mapping,
-                                               size_t chunk_size) {
+galois::GraphComponents
+galois::ConvertMongoDB(
+    const std::string& db_name, const std::string& mapping, size_t chunk_size) {
   const char* uri_string = "mongodb://localhost:27017";
   const bson_t* document = nullptr;
 
@@ -1090,12 +1131,12 @@ galois::GraphComponents galois::ConvertMongoDB(const std::string& db_name,
   std::vector<std::string> edges;
   if (!mapping.empty()) {
     auto res = galois::ProcessSchemaMapping(&builder, mapping, coll_names);
-    nodes    = res.first;
-    edges    = res.second;
+    nodes = res.first;
+    edges = res.second;
   } else {
     auto res = GetUserInput(database, coll_names);
-    nodes    = res.first;
-    edges    = res.second;
+    nodes = res.first;
+    edges = res.second;
   }
 
   // add all edges first

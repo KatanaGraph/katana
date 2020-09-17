@@ -63,7 +63,6 @@ namespace galois {
  */
 template <typename T, typename MergeFunc, typename IdFunc>
 class Reducible : public MergeFunc, public IdFunc {
-
   galois::substrate::PerThreadStorage<T> data_;
 
   void merge(T& lhs, T&& rhs) {
@@ -122,7 +121,8 @@ public:
  * function.
  */
 template <typename MergeFn, typename IdFn>
-auto make_reducible(const MergeFn& mergeFn, const IdFn& idFn) {
+auto
+make_reducible(const MergeFn& mergeFn, const IdFn& idFn) {
   return Reducible<std::invoke_result_t<IdFn>, MergeFn, IdFn>(mergeFn, idFn);
 }
 
@@ -203,8 +203,9 @@ public:
 };
 
 //! logical AND reduction
-class GReduceLogicalAnd : public Reducible<bool, std::logical_and<bool>,
-                                           identity_value<bool, true>> {
+class GReduceLogicalAnd
+    : public Reducible<
+          bool, std::logical_and<bool>, identity_value<bool, true>> {
   using base_type =
       Reducible<bool, std::logical_and<bool>, identity_value<bool, true>>;
 
@@ -214,8 +215,9 @@ public:
 };
 
 //! logical OR reduction
-class GReduceLogicalOr : public Reducible<bool, std::logical_or<bool>,
-                                          identity_value<bool, false>> {
+class GReduceLogicalOr
+    : public Reducible<
+          bool, std::logical_or<bool>, identity_value<bool, false>> {
   using base_type =
       Reducible<bool, std::logical_or<bool>, identity_value<bool, false>>;
 
@@ -224,5 +226,5 @@ public:
       : base_type(std::logical_or<bool>(), identity_value<bool, false>()) {}
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

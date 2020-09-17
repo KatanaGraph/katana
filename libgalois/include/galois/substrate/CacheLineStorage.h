@@ -51,6 +51,6 @@ struct CacheLineStorage {
   }
 };
 
-} // namespace galois::substrate
+}  // namespace galois::substrate
 
 #endif

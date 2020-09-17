@@ -33,6 +33,6 @@ GALOIS_EXPORT int getVersionMinor();
 GALOIS_EXPORT int getVersionPatch();
 GALOIS_EXPORT int getCopyrightYear();
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

@@ -30,7 +30,8 @@ private:
 };
 
 template <typename GraphTy>
-void check() {
+void
+check() {
   typedef typename GraphTy::GraphNode GNode;
   int v = 0;
 
@@ -68,7 +69,8 @@ void check() {
   std::cout << "\n\n";
 }
 
-int main() {
+int
+main() {
   galois::SharedMemSys Galois_runtime;
   check<galois::graphs::MorphGraph<NoDefault, NoDefault, true>>();
   check<galois::graphs::MorphGraph<NoDefault, NoDefault, false>>();

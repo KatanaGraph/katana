@@ -17,14 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <iostream>
+
 #include "galois/Galois.h"
 #include "galois/Timer.h"
 #include "galois/runtime/Profile.h"
 
-#include <iostream>
-
 template <typename V>
-size_t vecSumSerial(V& vec) {
+size_t
+vecSumSerial(V& vec) {
   galois::runtime::profilePapi(
       [&](void) {
         for (size_t i = 0, sz = vec.size(); i < sz; ++i) {
@@ -47,11 +48,13 @@ size_t vecSumSerial(V& vec) {
 }
 
 template <typename V>
-size_t vecSumParallel(V& vec) {
+size_t
+vecSumParallel(V& vec) {
   galois::runtime::profilePapi(
       [&](void) {
-        galois::do_all(galois::iterate(size_t{0}, vec.size()),
-                       [&](size_t i) { vec[i] = i; });
+        galois::do_all(galois::iterate(size_t{0}, vec.size()), [&](size_t i) {
+          vec[i] = i;
+        });
       },
       "vecInit");
 
@@ -59,16 +62,17 @@ size_t vecSumParallel(V& vec) {
 
   galois::runtime::profilePapi(
       [&](void) {
-        galois::do_all(galois::iterate(size_t{0}, vec.size()),
-                       [&](size_t i) { sum += vec[i]; });
+        galois::do_all(galois::iterate(size_t{0}, vec.size()), [&](size_t i) {
+          sum += vec[i];
+        });
       },
       "vecSum");
 
   return sum;
 }
 
-int main(int argc, char* argv[]) {
-
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
 
   unsigned long long numThreads;

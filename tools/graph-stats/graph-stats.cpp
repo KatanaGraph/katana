@@ -17,15 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/OfflineGraph.h"
-
-#include "llvm/Support/CommandLine.h"
-
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+
+#include "galois/Galois.h"
+#include "galois/graphs/LCGraph.h"
+#include "galois/graphs/OfflineGraph.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
 
@@ -40,48 +39,55 @@ enum StatMode {
   summary
 };
 
-static cll::opt<std::string>
-    inputfilename(cll::Positional, cll::desc("<graph file>"), cll::Required);
+static cll::opt<std::string> inputfilename(
+    cll::Positional, cll::desc("<graph file>"), cll::Required);
 static cll::list<StatMode> statModeList(
     cll::desc("Available stats:"),
-    cll::values(clEnumVal(degreehist, "Histogram of degrees"),
-                clEnumVal(degrees, "Node degrees"),
-                clEnumVal(maxDegreeNode, "Max Degree Node"),
-                clEnumVal(dsthist, "Histogram of destinations"),
-                clEnumVal(indegreehist, "Histogram of indegrees"),
-                clEnumVal(sortedlogoffsethist,
-                          "Histogram of neighbor offsets with sorted edges"),
-                clEnumVal(sparsityPattern, "Pattern of non-zeros when graph is "
-                                           "interpreted as a sparse matrix"),
-                clEnumVal(summary, "Graph summary")));
-static cll::opt<int> numBins("numBins", cll::desc("Number of bins"),
-                             cll::init(-1));
-static cll::opt<int> columns("columns", cll::desc("Columns for sparsity"),
-                             cll::init(80));
+    cll::values(
+        clEnumVal(degreehist, "Histogram of degrees"),
+        clEnumVal(degrees, "Node degrees"),
+        clEnumVal(maxDegreeNode, "Max Degree Node"),
+        clEnumVal(dsthist, "Histogram of destinations"),
+        clEnumVal(indegreehist, "Histogram of indegrees"),
+        clEnumVal(
+            sortedlogoffsethist,
+            "Histogram of neighbor offsets with sorted edges"),
+        clEnumVal(
+            sparsityPattern,
+            "Pattern of non-zeros when graph is "
+            "interpreted as a sparse matrix"),
+        clEnumVal(summary, "Graph summary")));
+static cll::opt<int> numBins(
+    "numBins", cll::desc("Number of bins"), cll::init(-1));
+static cll::opt<int> columns(
+    "columns", cll::desc("Columns for sparsity"), cll::init(80));
 
 typedef galois::graphs::OfflineGraph Graph;
 typedef Graph::GraphNode GNode;
 
-void doSummary(Graph& graph) {
+void
+doSummary(Graph& graph) {
   std::cout << "NumNodes: " << graph.size() << "\n";
   std::cout << "NumEdges: " << graph.sizeEdges() << "\n";
   std::cout << "SizeofEdge: " << graph.edgeSize() << "\n";
 }
 
-void doDegrees(Graph& graph) {
+void
+doDegrees(Graph& graph) {
   for (auto n : graph) {
     std::cout << std::distance(graph.edge_begin(n), graph.edge_end(n)) << "\n";
   }
 }
 
-void findMaxDegreeNode(Graph& graph) {
-  uint64_t nodeId        = 0;
-  size_t MaxDegree       = 0;
+void
+findMaxDegreeNode(Graph& graph) {
+  uint64_t nodeId = 0;
+  size_t MaxDegree = 0;
   uint64_t MaxDegreeNode = 0;
   for (auto n : graph) {
     size_t degree = std::distance(graph.edge_begin(n), graph.edge_end(n));
     if (MaxDegree < degree) {
-      MaxDegree     = degree;
+      MaxDegree = degree;
       MaxDegreeNode = nodeId;
     }
     ++nodeId;
@@ -90,8 +96,8 @@ void findMaxDegreeNode(Graph& graph) {
             << " , MaxDegree : " << MaxDegree << "\n";
 }
 
-void printHistogram(const std::string& name,
-                    std::map<uint64_t, uint64_t>& hists) {
+void
+printHistogram(const std::string& name, std::map<uint64_t, uint64_t>& hists) {
   auto max = hists.rbegin()->first;
   if (numBins <= 0) {
     std::cout << name << "Bin,Start,End,Count\n";
@@ -121,8 +127,9 @@ void printHistogram(const std::string& name,
   }
 }
 
-void doSparsityPattern(Graph& graph,
-                       std::function<void(unsigned, unsigned, bool)> printFn) {
+void
+doSparsityPattern(
+    Graph& graph, std::function<void(unsigned, unsigned, bool)> printFn) {
   unsigned blockSize = (graph.size() + columns - 1) / columns;
 
   for (int i = 0; i < columns; ++i) {
@@ -139,7 +146,8 @@ void doSparsityPattern(Graph& graph,
   }
 }
 
-void doDegreeHistogram(Graph& graph) {
+void
+doDegreeHistogram(Graph& graph) {
   std::map<uint64_t, uint64_t> hist;
   for (auto ii : graph) {
     ++hist[std::distance(graph.edge_begin(ii), graph.edge_end(ii))];
@@ -147,7 +155,8 @@ void doDegreeHistogram(Graph& graph) {
   printHistogram("Degree", hist);
 }
 
-void doInDegreeHistogram(Graph& graph) {
+void
+doInDegreeHistogram(Graph& graph) {
   std::vector<uint64_t> inv(graph.size());
   std::map<uint64_t, uint64_t> hist;
   for (auto ii : graph) {
@@ -167,9 +176,10 @@ struct EdgeComp {
   bool operator()(const Edge& a, const Edge& b) const { return a.dst < b.dst; }
 };
 
-int getLogIndex(ptrdiff_t x) {
+int
+getLogIndex(ptrdiff_t x) {
   int logvalue = 0;
-  int sign     = x < 0 ? -1 : 1;
+  int sign = x < 0 ? -1 : 1;
 
   if (x < 0) {
     x = -x;
@@ -181,7 +191,8 @@ int getLogIndex(ptrdiff_t x) {
   return sign * logvalue;
 }
 
-void doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
+void
+doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
   // Graph copy;
   // {
   //   // Original FileGraph is immutable because it is backed by a file
@@ -229,7 +240,8 @@ void doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
   // printHistogram("LogOffset", hists);
 }
 
-void doDestinationHistogram(Graph& graph) {
+void
+doDestinationHistogram(Graph& graph) {
   std::map<uint64_t, uint64_t> hist;
   for (auto ii : graph) {
     for (auto jj : graph.edges(ii)) {
@@ -239,7 +251,8 @@ void doDestinationHistogram(Graph& graph) {
   printHistogram("DestinationBin", hist);
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
   try {
     Graph graph(inputfilename);

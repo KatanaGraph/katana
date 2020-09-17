@@ -31,6 +31,6 @@ BOOST_MPL_HAS_XXX_TRAIT_DEF(tt_is_segmented)
 template <typename T>
 struct is_segmented : public has_tt_is_segmented<T> {};
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 #endif

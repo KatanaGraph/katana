@@ -10,26 +10,26 @@
 namespace tsuba {
 
 enum class ErrorCode {
-  Success           = 0,
-  InvalidArgument   = 1,
-  ArrowError        = 2,
-  NotImplemented    = 3,
-  NotFound          = 4,
-  Exists            = 5,
-  OutOfMemory       = 6,
-  TODO              = 7,
-  S3Error           = 8,
-  AWSWrongRegion    = 9,
-  PropertyNotFound  = 10,
+  Success = 0,
+  InvalidArgument = 1,
+  ArrowError = 2,
+  NotImplemented = 3,
+  NotFound = 4,
+  Exists = 5,
+  OutOfMemory = 6,
+  TODO = 7,
+  S3Error = 8,
+  AWSWrongRegion = 9,
+  PropertyNotFound = 10,
   LocalStorageError = 12,
-  NoCredentials     = 13,
-  AzureError        = 14,
-  BadVersion        = 16,
+  NoCredentials = 13,
+  AzureError = 14,
+  BadVersion = 16,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
 
-} // namespace tsuba
+}  // namespace tsuba
 
 namespace tsuba::internal {
 
@@ -100,7 +100,7 @@ public:
 /// Return singleton category
 GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
-} // namespace tsuba::internal
+}  // namespace tsuba::internal
 
 namespace std {
 
@@ -108,16 +108,17 @@ namespace std {
 template <>
 struct is_error_code_enum<tsuba::ErrorCode> : true_type {};
 
-} // namespace std
+}  // namespace std
 
 namespace tsuba {
 
 /// Overload free function make_error_code with our error code. This will be
 /// found with ADL if necessary.
-inline std::error_code make_error_code(ErrorCode e) noexcept {
+inline std::error_code
+make_error_code(ErrorCode e) noexcept {
   return {static_cast<int>(e), internal::GetErrorCodeCategory()};
 }
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

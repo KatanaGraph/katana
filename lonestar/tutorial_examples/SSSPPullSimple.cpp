@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Timer.h"
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Galois.h"
+#include "galois/Timer.h"
 #include "galois/graphs/LCGraph.h"
 #include "llvm/Support/CommandLine.h"
-#include "Lonestar/BoilerPlate.h"
 
 //! [Define LC Graph]
 typedef galois::graphs::LC_Linear_Graph<unsigned int, unsigned int> Graph;
@@ -36,10 +36,11 @@ constexpr unsigned stepShift = 14;
 Graph graph;
 
 namespace cll = llvm::cl;
-static cll::opt<std::string> filename(cll::Positional,
-                                      cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> filename(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv);
 
@@ -47,8 +48,9 @@ int main(int argc, char** argv) {
   galois::graphs::readGraph(graph, filename);
   //! [ReadGraph]
 
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { graph.getData(n) = DIST_INFINITY; });
+  galois::do_all(galois::iterate(graph), [&](GNode n) {
+    graph.getData(n) = DIST_INFINITY;
+  });
 
   //! [OrderedByIntegerMetic in SSSPsimple]
   auto reqIndexer = [](const UpdateRequest& req) {
@@ -65,8 +67,8 @@ int main(int argc, char** argv) {
   graph.getData(*graph.begin()) = 0;
   //! [for_each in SSSPPullsimple]
   std::vector<UpdateRequest> init;
-  init.reserve(std::distance(graph.edge_begin(*graph.begin()),
-                             graph.edge_end(*graph.begin())));
+  init.reserve(std::distance(
+      graph.edge_begin(*graph.begin()), graph.edge_end(*graph.begin())));
   for (auto ii : graph.edges(*graph.begin()))
     init.push_back(std::make_pair(0, graph.getEdgeDst(ii)));
 
@@ -74,7 +76,7 @@ int main(int argc, char** argv) {
       galois::iterate(init.begin(), init.end()),
       [&](const UpdateRequest& req, auto& ctx) {
         GNode active_node = req.second;
-        unsigned& data    = graph.getData(active_node);
+        unsigned& data = graph.getData(active_node);
         unsigned newValue = data;
 
         //![loop over neighbors to compute new value]

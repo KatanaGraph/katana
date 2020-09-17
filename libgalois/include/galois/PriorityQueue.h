@@ -24,10 +24,10 @@
 #include <set>
 #include <vector>
 
-#include "galois/config.h"
 #include "galois/Mem.h"
-#include "galois/substrate/PaddedLock.h"
+#include "galois/config.h"
 #include "galois/substrate/CompilerSpecific.h"
+#include "galois/substrate/PaddedLock.h"
 
 namespace galois {
 
@@ -36,8 +36,9 @@ namespace galois {
  * faster on serially) and can use scalable allocation, e.g.,
  * \ref FixedSizeAllocator.
  */
-template <typename T, typename Cmp = std::less<T>,
-          typename Alloc = galois::FixedSizeAllocator<T>>
+template <
+    typename T, typename Cmp = std::less<T>,
+    typename Alloc = galois::FixedSizeAllocator<T>>
 class ThreadSafeOrderedSet {
   typedef std::set<T, Cmp, Alloc> Set;
 
@@ -60,19 +61,20 @@ private:
   Set orderedSet;
 
 public:
-  template <typename _T, typename _Cmp = std::less<_T>,
-            typename _Alloc = galois::FixedSizeAllocator<_T>>
-  using retype =
-      ThreadSafeOrderedSet<_T, _Cmp,
-                           _Alloc>; // FIXME: loses Alloc and Cmp types
+  template <
+      typename _T, typename _Cmp = std::less<_T>,
+      typename _Alloc = galois::FixedSizeAllocator<_T>>
+  using retype = ThreadSafeOrderedSet<
+      _T, _Cmp,
+      _Alloc>;  // FIXME: loses Alloc and Cmp types
 
-  explicit ThreadSafeOrderedSet(const Cmp& cmp     = Cmp(),
-                                const Alloc& alloc = Alloc())
+  explicit ThreadSafeOrderedSet(
+      const Cmp& cmp = Cmp(), const Alloc& alloc = Alloc())
       : orderedSet(cmp, alloc) {}
 
   template <typename Iter>
-  ThreadSafeOrderedSet(Iter b, Iter e, const Cmp& cmp = Cmp(),
-                       const Alloc& alloc = Alloc())
+  ThreadSafeOrderedSet(
+      Iter b, Iter e, const Cmp& cmp = Cmp(), const Alloc& alloc = Alloc())
       : orderedSet(cmp, alloc) {
     for (; b != e; ++b) {
       orderedSet.insert(*b);
@@ -137,7 +139,7 @@ public:
       ret = true;
     } else {
       size_type s = orderedSet.erase(x);
-      ret         = (s > 0);
+      ret = (s > 0);
     }
     mutex.unlock();
 
@@ -154,8 +156,9 @@ public:
   const_iterator end() const { return orderedSet.end(); }
 };
 
-template <typename T, typename Cmp = std::less<T>,
-          typename Cont = std::vector<T, runtime::Pow_2_BlockAllocator<T>>>
+template <
+    typename T, typename Cmp = std::less<T>,
+    typename Cont = std::vector<T, runtime::Pow_2_BlockAllocator<T>>>
 class MinHeap {
 public:
   typedef runtime::Pow_2_BlockAllocator<T> alloc_type;
@@ -373,6 +376,6 @@ public:
   void reserve(size_type s) { heap.reserve(s); }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

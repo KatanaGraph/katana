@@ -1,6 +1,7 @@
 #include <galois/SharedMemSys.h>
 
-int main() {
+int
+main() {
   galois::SharedMemSys G;
   return 0;
 }

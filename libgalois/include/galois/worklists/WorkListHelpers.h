@@ -40,9 +40,8 @@ public:
 };
 
 template <typename T>
-class ConExtIterator
-    : public boost::iterator_facade<ConExtIterator<T>, T,
-                                    boost::forward_traversal_tag> {
+class ConExtIterator : public boost::iterator_facade<
+                           ConExtIterator<T>, T, boost::forward_traversal_tag> {
   friend class boost::iterator_core_access;
   T* at;
 
@@ -76,7 +75,7 @@ public:
   void push(T* C) {
     T* oldhead(0);
     do {
-      oldhead      = head.getValue();
+      oldhead = head.getValue();
       C->getNext() = oldhead;
     } while (!head.CAS(oldhead, C));
   }
@@ -130,7 +129,7 @@ public:
     C->getNext() = 0;
     if (tail) {
       tail->getNext() = C;
-      tail            = C;
+      tail = C;
       head.unlock();
     } else {
       assert(!head.getValue());
@@ -179,7 +178,7 @@ struct DummyIndexer {
   unsigned operator()(const T&) { return 0; }
 };
 
-} // namespace worklists
-} // end namespace galois
+}  // namespace worklists
+}  // end namespace galois
 
 #endif

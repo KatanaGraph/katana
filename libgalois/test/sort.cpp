@@ -17,16 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <cstdlib>
+#include <iostream>
+#include <numeric>
+
 #include "galois/Galois.h"
 #include "galois/ParallelSTL.h"
 #include "galois/Timer.h"
 
-#include <iostream>
-#include <cstdlib>
-#include <numeric>
-
-int RandomNumber() { return (rand() % 1000000); }
-bool IsOdd(int i) { return ((i % 2) == 1); }
+int
+RandomNumber() {
+  return (rand() % 1000000);
+}
+bool
+IsOdd(int i) {
+  return ((i % 2) == 1);
+}
 
 struct IsOddS {
   bool operator()(int i) const { return ((i % 2) == 1); }
@@ -34,14 +40,13 @@ struct IsOddS {
 
 int vectorSize = 1;
 
-int do_sort() {
-
+int
+do_sort() {
   unsigned M = galois::substrate::getThreadPool().getMaxThreads();
   std::cout << "sort:\n";
 
   while (M) {
-
-    galois::setActiveThreads(M); // galois::runtime::LL::getMaxThreads());
+    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
@@ -87,14 +92,13 @@ int do_sort() {
   return 0;
 }
 
-int do_count_if() {
-
+int
+do_count_if() {
   unsigned M = galois::substrate::getThreadPool().getMaxThreads();
   std::cout << "count_if:\n";
 
   while (M) {
-
-    galois::setActiveThreads(M); // galois::runtime::LL::getMaxThreads());
+    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
@@ -125,13 +129,13 @@ struct mymax {
   T operator()(const T& x, const T& y) const { return std::max(x, y); }
 };
 
-int do_accumulate() {
-
+int
+do_accumulate() {
   unsigned M = galois::substrate::getThreadPool().getMaxThreads();
   std::cout << "accumulate:\n";
 
   while (M) {
-    galois::setActiveThreads(M); // galois::runtime::LL::getMaxThreads());
+    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
@@ -141,8 +145,8 @@ int do_accumulate() {
 
     galois::Timer t;
     t.start();
-    x1 = galois::ParallelSTL::accumulate(V.begin(), V.end(), 0u,
-                                         mymax<unsigned>());
+    x1 = galois::ParallelSTL::accumulate(
+        V.begin(), V.end(), 0u, mymax<unsigned>());
     t.stop();
 
     galois::Timer t2;
@@ -160,7 +164,8 @@ int do_accumulate() {
   return 0;
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   if (argc > 1)
     vectorSize = atoi(argv[1]);

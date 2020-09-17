@@ -12,22 +12,23 @@ xmlTextWriterPtr CreateGraphmlFile(const std::string& outfile);
 void WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule);
 void WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key);
 void FinishGraphmlFile(xmlTextWriterPtr writer);
-void ExportSchemaMapping(const std::string& outfile,
-                         const std::vector<LabelRule>& rules,
-                         const std::vector<PropertyKey>& keys);
+void ExportSchemaMapping(
+    const std::string& outfile, const std::vector<LabelRule>& rules,
+    const std::vector<PropertyKey>& keys);
 
 ImportDataType ExtractTypeGraphML(xmlChar* value);
 PropertyKey ProcessKey(xmlTextReaderPtr reader);
 LabelRule ProcessRule(xmlTextReaderPtr reader);
 std::pair<std::vector<std::string>, std::vector<std::string>>
-ProcessSchemaMapping(PropertyGraphBuilder* builder, const std::string& mapping,
-                     const std::vector<std::string>& coll_names);
+ProcessSchemaMapping(
+    PropertyGraphBuilder* builder, const std::string& mapping,
+    const std::vector<std::string>& coll_names);
 std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
 ProcessSchemaMapping(const std::string& mapping);
 
 std::string TypeName(ImportDataType type);
 ImportDataType ParseType(const std::string& in);
 
-} // namespace galois
+}  // namespace galois
 
 #endif

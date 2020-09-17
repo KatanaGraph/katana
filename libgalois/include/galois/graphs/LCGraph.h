@@ -22,10 +22,10 @@
 
 #include "galois/config.h"
 #include "galois/graphs/LC_CSR_Graph.h"
+#include "galois/graphs/LC_InOut_Graph.h"
 #include "galois/graphs/LC_InlineEdge_Graph.h"
 #include "galois/graphs/LC_Linear_Graph.h"
 #include "galois/graphs/LC_Morph_Graph.h"
-#include "galois/graphs/LC_InOut_Graph.h"
 #include "galois/graphs/ReadGraph.h"
 
 #endif

@@ -15,7 +15,8 @@
 
 /// BuildArray copies the input data into an arrow array
 template <typename T>
-std::shared_ptr<arrow::Array> BuildArray(std::vector<T>& data) {
+std::shared_ptr<arrow::Array>
+BuildArray(std::vector<T>& data) {
   using Builder = typename arrow::CTypeTraits<T>::BuilderType;
 
   Builder builder;
@@ -55,7 +56,8 @@ public:
   std::shared_ptr<arrow::Table> Finish();
 };
 
-std::shared_ptr<arrow::Table> TableBuilder::Finish() {
+std::shared_ptr<arrow::Table>
+TableBuilder::Finish() {
   auto ret = arrow::Table::Make(arrow::schema(fields_), columns_);
   columns_.clear();
   fields_.clear();
@@ -63,8 +65,9 @@ std::shared_ptr<arrow::Table> TableBuilder::Finish() {
 }
 
 template <typename T>
-void TableBuilder::AddColumn(const ColumnOptions& options) {
-  using Builder   = typename arrow::CTypeTraits<T>::BuilderType;
+void
+TableBuilder::AddColumn(const ColumnOptions& options) {
+  using Builder = typename arrow::CTypeTraits<T>::BuilderType;
   using ArrowType = typename arrow::CTypeTraits<T>::ArrowType;
 
   std::vector<std::shared_ptr<arrow::Array>> chunks;
@@ -79,7 +82,7 @@ void TableBuilder::AddColumn(const ColumnOptions& options) {
       data.emplace_back(1);
     }
     bool last_in_chunk = (chunk_index + 1 >= options.chunk_size);
-    bool last          = (idx + 1 >= size_);
+    bool last = (idx + 1 >= size_);
 
     if (!last_in_chunk && !last) {
       ++chunk_index;
@@ -112,8 +115,8 @@ class Policy {
 public:
   virtual ~Policy() = default;
 
-  virtual std::vector<uint32_t> GenerateNeighbors(size_t node_id,
-                                                  size_t num_nodes) = 0;
+  virtual std::vector<uint32_t> GenerateNeighbors(
+      size_t node_id, size_t num_nodes) = 0;
 };
 
 class LinePolicy : public Policy {
@@ -122,8 +125,8 @@ class LinePolicy : public Policy {
 public:
   LinePolicy(size_t width) : width_(width) {}
 
-  std::vector<uint32_t> GenerateNeighbors(size_t node_id,
-                                          size_t num_nodes) override {
+  std::vector<uint32_t> GenerateNeighbors(
+      size_t node_id, size_t num_nodes) override {
     std::vector<uint32_t> r;
     for (size_t i = 0; i < width_; ++i) {
       size_t neighbor = (node_id + i + 1) % num_nodes;
@@ -139,8 +142,8 @@ class RandomPolicy : public Policy {
 public:
   RandomPolicy(size_t width) : width_(width) {}
 
-  std::vector<uint32_t> GenerateNeighbors([[maybe_unused]] size_t node_id,
-                                          size_t num_nodes) override {
+  std::vector<uint32_t> GenerateNeighbors(
+      [[maybe_unused]] size_t node_id, size_t num_nodes) override {
     std::vector<uint32_t> r;
     for (size_t i = 0; i < width_; ++i) {
       size_t neighbor = galois::RandomUniformInt(num_nodes);
@@ -201,9 +204,8 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
 /// each node, for each edge" pattern and accesses the corresponding entries in
 /// a node property and edge property array.
 template <typename NodeType, typename EdgeType>
-size_t BaselineIterate(galois::graphs::PropertyFileGraph* g,
-                       int num_properties) {
-
+size_t
+BaselineIterate(galois::graphs::PropertyFileGraph* g, int num_properties) {
   using NodeArrowType = typename galois::PropertyArrowType<NodeType>;
   using EdgeArrowType = typename galois::PropertyArrowType<EdgeType>;
 
@@ -214,7 +216,7 @@ size_t BaselineIterate(galois::graphs::PropertyFileGraph* g,
   using EdgePointer = typename arrow::TypeTraits<EdgeArrowType>::CType*;
 
   const auto* indices = g->topology().out_indices->raw_values();
-  const auto* dests   = g->topology().out_dests->raw_values();
+  const auto* dests = g->topology().out_dests->raw_values();
 
   std::vector<NodePointer> node_data;
   std::vector<EdgePointer> edge_data;
@@ -228,10 +230,12 @@ size_t BaselineIterate(galois::graphs::PropertyFileGraph* g,
     GALOIS_LOG_ASSERT(node_property);
     GALOIS_LOG_ASSERT(edge_property);
 
-    GALOIS_LOG_ASSERT(static_cast<size_t>(node_property->length()) ==
-                      g->topology().num_nodes());
-    GALOIS_LOG_ASSERT(static_cast<size_t>(edge_property->length()) ==
-                      g->topology().num_edges());
+    GALOIS_LOG_ASSERT(
+        static_cast<size_t>(node_property->length()) ==
+        g->topology().num_nodes());
+    GALOIS_LOG_ASSERT(
+        static_cast<size_t>(edge_property->length()) ==
+        g->topology().num_edges());
 
     node_data.emplace_back(
         const_cast<NodePointer>(node_property->raw_values()));
@@ -243,7 +247,7 @@ size_t BaselineIterate(galois::graphs::PropertyFileGraph* g,
 
   for (size_t i = 0, n = g->topology().num_nodes(); i < n; ++i) {
     uint64_t begin = (i == 0) ? 0 : indices[i - 1];
-    uint64_t end   = indices[i];
+    uint64_t end = indices[i];
 
     for (int prop = 0; prop < num_properties; ++prop) {
       result += node_data[prop][i];
@@ -267,7 +271,7 @@ template <size_t size, typename Graph>
 struct SumNodeProperty {
   static size_t Call(Graph g, typename Graph::iterator node, size_t limit) {
     constexpr size_t total = std::tuple_size_v<typename Graph::node_properties>;
-    constexpr size_t idx   = total - size;
+    constexpr size_t idx = total - size;
     using Index =
         typename std::tuple_element_t<idx, typename Graph::node_properties>;
 
@@ -283,17 +287,18 @@ struct SumNodeProperty<0, Graph> {
 
 /// Sum all the properties associated with a particular node.
 template <typename Graph>
-size_t SumNodePropertyV(Graph g, typename Graph::iterator node, size_t limit) {
+size_t
+SumNodePropertyV(Graph g, typename Graph::iterator node, size_t limit) {
   constexpr size_t size = std::tuple_size_v<typename Graph::node_properties>;
   return SumNodeProperty<size, Graph>::Call(g, node, limit);
 }
 
 template <size_t size, typename Graph>
 struct SumEdgeProperty {
-  static size_t Call(Graph g, typename Graph::edge_iterator edge,
-                     size_t limit) {
+  static size_t Call(
+      Graph g, typename Graph::edge_iterator edge, size_t limit) {
     constexpr size_t total = std::tuple_size_v<typename Graph::edge_properties>;
-    constexpr size_t idx   = total - size;
+    constexpr size_t idx = total - size;
     using Index =
         typename std::tuple_element_t<idx, typename Graph::edge_properties>;
 
@@ -311,15 +316,15 @@ struct SumEdgeProperty<0, Graph> {
 
 /// Sum all the properties associated with a particular edge.
 template <typename Graph>
-size_t SumEdgePropertyV(Graph g, typename Graph::edge_iterator edge,
-                        size_t limit) {
+size_t
+SumEdgePropertyV(Graph g, typename Graph::edge_iterator edge, size_t limit) {
   constexpr size_t size = std::tuple_size_v<typename Graph::edge_properties>;
   return SumEdgeProperty<size, Graph>::Call(g, edge, limit);
 }
 
 template <typename NodeType, typename EdgeType>
-size_t Iterate(galois::graphs::PropertyGraph<NodeType, EdgeType> g,
-               size_t limit) {
+size_t
+Iterate(galois::graphs::PropertyGraph<NodeType, EdgeType> g, size_t limit) {
   size_t result = 0;
   for (const auto& node : g) {
     result += SumNodePropertyV(g, node, limit);
@@ -334,8 +339,10 @@ size_t Iterate(galois::graphs::PropertyGraph<NodeType, EdgeType> g,
 
 /// ExpectedValue returns the value expected by Iterate or BaselineIterate
 /// given the parameters to MakeFileGraph.
-size_t ExpectedValue(size_t num_nodes, size_t num_edges, size_t num_properties,
-                     bool ascending_values) {
+size_t
+ExpectedValue(
+    size_t num_nodes, size_t num_edges, size_t num_properties,
+    bool ascending_values) {
   GALOIS_ASSERT(!ascending_values);
 
   return (num_nodes + 2 * num_edges) * num_properties;

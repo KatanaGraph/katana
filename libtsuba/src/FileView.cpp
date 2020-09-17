@@ -1,16 +1,16 @@
 #include "tsuba/FileView.h"
 
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
-#include <cstdio>
 #include <cassert>
+#include <cstdio>
 #include <string>
 
 #include "galois/Logging.h"
 #include "galois/Result.h"
-#include "tsuba/file.h"
 #include "tsuba/Errors.h"
+#include "tsuba/file.h"
 
 /*
  * SCB 2020-07-23
@@ -38,7 +38,8 @@ FileView::~FileView() {
   }
 }
 
-galois::Result<void> FileView::Unbind() {
+galois::Result<void>
+FileView::Unbind() {
   galois::Result<void> res = galois::ResultSuccess();
   if (valid_) {
     // Resolve all outstanding reads so they don't write to the memory we are
@@ -56,8 +57,9 @@ galois::Result<void> FileView::Unbind() {
   return res;
 }
 
-galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
-                                    uint64_t end, bool resolve) {
+galois::Result<void>
+FileView::Bind(
+    const std::string& filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
   if (auto res = FileStat(filename, &buf); !res) {
     return res.error();
@@ -73,12 +75,13 @@ galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
   // size, type of backing storage, etc. So make it a class member and set it
   // here.
   page_shift_ = 20; /* 1M */
-  filename_   = filename;
-  void* tmp   = nullptr;
+  filename_ = filename;
+  void* tmp = nullptr;
 
   // Map enough virtual memory to hold entire file, but do not populate it
-  tmp = mmap(nullptr, buf.size, PROT_READ | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  tmp = mmap(
+      nullptr, buf.size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
+      -1, 0);
   if (tmp == MAP_FAILED) {
     GALOIS_LOG_ERROR("mmap: {}", std::strerror(errno));
     return galois::ResultErrno();
@@ -92,23 +95,23 @@ galois::Result<void> FileView::Bind(const std::string& filename, uint64_t begin,
   mem_start_ = -1;
   filling_.resize(page_number(buf.size) / 64 + 1, 0);
   file_size_ = buf.size;
-  fetches_   = std::make_unique<std::vector<FillingRange>>();
+  fetches_ = std::make_unique<std::vector<FillingRange>>();
   if (auto res = Fill(begin, in_end, resolve); !res) {
     return res.error();
   }
 
   cursor_ = 0;
-  valid_  = true;
+  valid_ = true;
   return galois::ResultSuccess();
 }
 
-galois::Result<void> FileView::Fill(uint64_t begin, uint64_t end,
-                                    bool resolve) {
-  uint64_t in_end     = std::min<uint64_t>(end, file_size_);
-  uint64_t in_begin   = std::min<uint64_t>(begin, in_end);
+galois::Result<void>
+FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
+  uint64_t in_end = std::min<uint64_t>(end, file_size_);
+  uint64_t in_begin = std::min<uint64_t>(begin, in_end);
   uint64_t first_page = 0;
-  uint64_t last_page  = 0;
-  bool found_empty    = false;
+  uint64_t last_page = 0;
+  bool found_empty = false;
 
   // We would check !valid_ but we want to call this in Bind before we have
   // set valid_. fetches_ should be default constructed to
@@ -122,13 +125,13 @@ galois::Result<void> FileView::Fill(uint64_t begin, uint64_t end,
             MustFill(&filling_[0], page_number(in_begin), page_number(in_end));
         opt.has_value()) {
       std::tie(first_page, last_page) = opt.value();
-      found_empty                     = true;
+      found_empty = true;
     }
 
     uint64_t file_off = first_page * (1UL << page_shift_);
-    uint64_t map_size =
-        std::min((last_page + 1) * (1UL << page_shift_) - file_off,
-                 file_size_ - file_off);
+    uint64_t map_size = std::min(
+        (last_page + 1) * (1UL << page_shift_) - file_off,
+        file_size_ - file_off);
     if (found_empty) {
       auto peek_res =
           FilePeekAsync(filename_, map_start_ + file_off, file_off, map_size);
@@ -154,7 +157,8 @@ galois::Result<void> FileView::Fill(uint64_t begin, uint64_t end,
   return galois::ResultSuccess();
 }
 
-bool FileView::Equals(const FileView& other) const {
+bool
+FileView::Equals(const FileView& other) const {
   if (!valid_ || !other.valid_) {
     return false;
   }
@@ -171,27 +175,33 @@ bool FileView::Equals(const FileView& other) const {
 
 ////// Begin arrow::io::RandomAccessFile method definitions ////////
 
-arrow::Status FileView::Close() {
+arrow::Status
+FileView::Close() {
   if (auto res = Unbind(); !res) {
     return arrow::Status::UnknownError("Unbind", res.error());
   }
   return arrow::Status::OK();
 }
 
-arrow::Result<int64_t> FileView::Tell() const {
+arrow::Result<int64_t>
+FileView::Tell() const {
   if (!valid_) {
-    return arrow::Status(arrow::StatusCode::Invalid,
-                         "Unbound FileView has no cursor position");
+    return arrow::Status(
+        arrow::StatusCode::Invalid, "Unbound FileView has no cursor position");
   }
   return cursor_;
 }
 
-bool FileView::closed() const { return !valid_; }
+bool
+FileView::closed() const {
+  return !valid_;
+}
 
-arrow::Status FileView::Seek(int64_t seek_to) {
+arrow::Status
+FileView::Seek(int64_t seek_to) {
   if (!valid_) {
-    return arrow::Status(arrow::StatusCode::Invalid,
-                         "Cannot Seek in unbound FileView");
+    return arrow::Status(
+        arrow::StatusCode::Invalid, "Cannot Seek in unbound FileView");
   }
   if (seek_to > file_size_ || seek_to < 0) {
     const std::string message = std::string("Cannot Seek to ") +
@@ -203,7 +213,8 @@ arrow::Status FileView::Seek(int64_t seek_to) {
   return arrow::Status::OK();
 }
 
-arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
+arrow::Result<std::shared_ptr<arrow::Buffer>>
+FileView::Read(int64_t nbytes) {
   // sanitize inputs
   if (nbytes <= 0) {
     return std::make_shared<arrow::Buffer>(map_start_, 0);
@@ -222,8 +233,8 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
   // resolve outstanding relevant fetches
   if (auto res = Resolve(cursor_, nbytes_internal); !res) {
     // TODO (scober): Include res.error() as part of arrow Status
-    return arrow::Status(arrow::StatusCode::IOError,
-                         "Resolving asynchronous reads");
+    return arrow::Status(
+        arrow::StatusCode::IOError, "Resolving asynchronous reads");
   }
   // prefetch
   if (auto res = PreFetch(cursor_, nbytes_internal); !res) {
@@ -237,7 +248,8 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> FileView::Read(int64_t nbytes) {
   return ret;
 }
 
-arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
+arrow::Result<int64_t>
+FileView::Read(int64_t nbytes, void* out) {
   // sanitize inputs
   if (nbytes <= 0) {
     return nbytes;
@@ -256,8 +268,8 @@ arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
   // resolve outstanding relevant fetches
   if (auto res = Resolve(cursor_, nbytes_internal); !res) {
     // TODO (scober): Include res.error() as part of arrow Status
-    return arrow::Status(arrow::StatusCode::IOError,
-                         "Resolving asynchronous reads");
+    return arrow::Status(
+        arrow::StatusCode::IOError, "Resolving asynchronous reads");
   }
   // prefetch
   if (auto res = PreFetch(cursor_, nbytes_internal); !res) {
@@ -270,16 +282,23 @@ arrow::Result<int64_t> FileView::Read(int64_t nbytes, void* out) {
   return nbytes_internal;
 }
 
-arrow::Result<int64_t> FileView::GetSize() { return size(); }
+arrow::Result<int64_t>
+FileView::GetSize() {
+  return size();
+}
 
 ///// End arrow::io::RandomAccessFile method definitions /////////
 
-uint64_t FileView::page_number(uint64_t size) { return size >> page_shift_; }
+uint64_t
+FileView::page_number(uint64_t size) {
+  return size >> page_shift_;
+}
 
-inline uint64_t FileView::FirstPage(uint64_t* bitmap, uint64_t block_num,
-                                    uint64_t start, uint64_t end) {
-  uint64_t working       = ~bitmap[block_num];
-  uint64_t mask          = 1UL << (63 - start);
+inline uint64_t
+FileView::FirstPage(
+    uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end) {
+  uint64_t working = ~bitmap[block_num];
+  uint64_t mask = 1UL << (63 - start);
   uint64_t page_low_bits = start;
   while (!(working & mask) && page_low_bits <= end) {
     mask >>= 1;
@@ -288,10 +307,11 @@ inline uint64_t FileView::FirstPage(uint64_t* bitmap, uint64_t block_num,
   return block_num * 64 + page_low_bits;
 }
 
-inline uint64_t FileView::LastPage(uint64_t* bitmap, uint64_t block_num,
-                                   uint64_t start, uint64_t end) {
-  uint64_t working       = ~bitmap[block_num];
-  uint64_t mask          = 1UL << (63 - end);
+inline uint64_t
+FileView::LastPage(
+    uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end) {
+  uint64_t working = ~bitmap[block_num];
+  uint64_t mask = 1UL << (63 - end);
   uint64_t page_low_bits = end;
   while (!(working & mask) && page_low_bits >= start) {
     mask <<= 1;
@@ -338,7 +358,7 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   uint64_t end_mask = ~((UINT64_C(1) << (63 - end % 64)) - UINT64_C(1));
 
   uint64_t begin_block = begin / 64;
-  uint64_t end_block   = end / 64;
+  uint64_t end_block = end / 64;
 
   if (begin_block == end_block) { /* D */
     uint64_t jim_carrey = begin_mask & end_mask;
@@ -352,10 +372,10 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
 
   /* C */
   uint64_t begin_block_zeroes = (bitmap[begin_block] & begin_mask) ^ begin_mask;
-  uint64_t end_block_zeroes   = (bitmap[end_block] & end_mask) ^ end_mask;
+  uint64_t end_block_zeroes = (bitmap[end_block] & end_mask) ^ end_mask;
 
   bool found_first = begin_block_zeroes;
-  bool found_last  = end_block_zeroes;
+  bool found_last = end_block_zeroes;
   uint64_t first_page =
       found_first ? FirstPage(bitmap, begin_block, begin % 64, 63) : 0;
   uint64_t last_page =
@@ -365,13 +385,13 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
     // search forward for first missing page, skip begin block
     for (uint64_t i = begin_block + 1; i < end_block && !found_first; ++i) {
       if (~bitmap[i]) { /* A */
-        first_page  = FirstPage(bitmap, i, 0, 63);
+        first_page = FirstPage(bitmap, i, 0, 63);
         found_first = true;
       }
     }
 
     if (!found_first && end_block_zeroes) {
-      first_page  = FirstPage(bitmap, end_block, 0, end % 64);
+      first_page = FirstPage(bitmap, end_block, 0, end % 64);
       found_first = true;
     }
   }
@@ -382,13 +402,13 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
     // search backward for last page, skip end_block
     for (uint64_t i = end_block - 1; i > begin_block && !found_last; ++i) {
       if (~bitmap[i]) {
-        last_page  = LastPage(bitmap, i, 0, 63);
+        last_page = LastPage(bitmap, i, 0, 63);
         found_last = true;
       }
     }
 
     if (!found_last && begin_block_zeroes) {
-      last_page  = LastPage(bitmap, begin_block, begin % 64, 63);
+      last_page = LastPage(bitmap, begin_block, begin % 64, 63);
       found_last = true;
     }
   }
@@ -401,8 +421,8 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   }
 }
 
-galois::Result<void> FileView::MarkFilled(uint64_t* bitmap, uint64_t begin,
-                                          uint64_t end) {
+galois::Result<void>
+FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   uint64_t begin_mask;
   if (begin % 64) {
     begin_mask = (UINT64_C(1) << (64 - begin % 64)) - UINT64_C(1);
@@ -412,7 +432,7 @@ galois::Result<void> FileView::MarkFilled(uint64_t* bitmap, uint64_t begin,
   uint64_t end_mask = ~((UINT64_C(1) << (63 - end % 64)) - UINT64_C(1));
 
   uint64_t begin_block = begin / 64;
-  uint64_t end_block   = end / 64;
+  uint64_t end_block = end / 64;
 
   if (begin_block == end_block) {
     bitmap[begin_block] |= (begin_mask & end_mask);
@@ -427,7 +447,8 @@ galois::Result<void> FileView::MarkFilled(uint64_t* bitmap, uint64_t begin,
   return galois::ResultSuccess();
 }
 
-galois::Result<void> FileView::Resolve(int64_t start, int64_t size) {
+galois::Result<void>
+FileView::Resolve(int64_t start, int64_t size) {
   // This loop could do less work by sorting the vector or storing an
   // interval tree, but that seems like overkill unless this becomes a
   // bottleneck
@@ -451,7 +472,8 @@ galois::Result<void> FileView::Resolve(int64_t start, int64_t size) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> FileView::PreFetch(int64_t start, int64_t size) {
+galois::Result<void>
+FileView::PreFetch(int64_t start, int64_t size) {
   // Our highly sophisticated prefetching algorithm is to crudely approximate
   // the size of the last read plus 10%. This is largely motivated by parquet
   // files, which consecutively read row groups that are (in theory)
@@ -460,10 +482,10 @@ galois::Result<void> FileView::PreFetch(int64_t start, int64_t size) {
   // Make sure we haven't overflown
   assert(fetch_size >= 0);
   uint64_t begin = static_cast<uint64_t>(start + size);
-  uint64_t end   = static_cast<uint64_t>(start + size + fetch_size);
+  uint64_t end = static_cast<uint64_t>(start + size + fetch_size);
   if (auto res = Fill(begin, end, false); !res) {
     return res.error();
   }
   return galois::ResultSuccess();
 }
-} // namespace tsuba
+}  // namespace tsuba

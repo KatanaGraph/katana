@@ -24,12 +24,10 @@
 
 template <typename ElTy, ElTy initializer>
 struct UnionFind {
-
   ElTy* parents;
   const size_t size;
 
   explicit UnionFind(size_t sz) : size(sz) {
-
     parents = new ElTy[size];
     for (size_t s = 0; s < sz; s++)
       parents[s] = initializer;
@@ -46,7 +44,7 @@ struct UnionFind {
     tmp = e;
     while (parents[tmp] != initializer) {
       parents[tmp] = rep;
-      tmp          = parents[tmp];
+      tmp = parents[tmp];
     }
     return rep;
   }
@@ -56,5 +54,8 @@ struct UnionFind {
   ~UnionFind() { delete parents; }
 };
 
-void test_uf() { UnionFind<int, -1> sample(10000); }
-#endif // def GALOIS_UNION_FIND
+void
+test_uf() {
+  UnionFind<int, -1> sample(10000);
+}
+#endif  // def GALOIS_UNION_FIND

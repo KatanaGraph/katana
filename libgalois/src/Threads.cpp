@@ -17,23 +17,26 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/ThreadPool.h"
 #include "galois/Threads.h"
 
 #include <algorithm>
+
+#include "galois/substrate/ThreadPool.h"
 namespace galois {
 namespace runtime {
 GALOIS_EXPORT unsigned int activeThreads = 1;
 }
-} // namespace galois
+}  // namespace galois
 
-unsigned int galois::setActiveThreads(unsigned int num) noexcept {
+unsigned int
+galois::setActiveThreads(unsigned int num) noexcept {
   num = std::min(num, galois::substrate::getThreadPool().getMaxUsableThreads());
   num = std::max(num, 1U);
   galois::runtime::activeThreads = num;
   return num;
 }
 
-unsigned int galois::getActiveThreads() noexcept {
+unsigned int
+galois::getActiveThreads() noexcept {
   return galois::runtime::activeThreads;
 }

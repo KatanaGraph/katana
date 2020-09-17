@@ -23,13 +23,13 @@
 #include <atomic>
 #include <utility>
 
-#include <boost/mpl/if.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
+#include <boost/mpl/if.hpp>
 
+#include "galois/LazyArray.h"
 #include "galois/config.h"
 #include "galois/optional.h"
-#include "galois/LazyArray.h"
 
 namespace galois {
 
@@ -37,8 +37,8 @@ namespace galois {
 template <typename T, unsigned ChunkSize, bool Concurrent>
 class FixedSizeBagBase {
   LazyArray<T, ChunkSize> datac;
-  typedef typename boost::mpl::if_c<Concurrent, std::atomic<unsigned>,
-                                    unsigned>::type Count;
+  typedef typename boost::mpl::if_c<
+      Concurrent, std::atomic<unsigned>, unsigned>::type Count;
   Count count;
 
   T* at(unsigned i) { return &datac[i]; }
@@ -215,9 +215,8 @@ class FixedSizeRing {
   bool precondition() const { return count <= ChunkSize && start <= ChunkSize; }
 
   template <typename U>
-  class Iterator
-      : public boost::iterator_facade<Iterator<U>, U,
-                                      boost::random_access_traversal_tag> {
+  class Iterator : public boost::iterator_facade<
+                       Iterator<U>, U, boost::random_access_traversal_tag> {
     friend class boost::iterator_core_access;
     U* base;
     unsigned cur;
@@ -249,7 +248,7 @@ class FixedSizeRing {
     }
 
     ptrdiff_t distance_to(const Iterator& o) const {
-      ptrdiff_t c  = count;
+      ptrdiff_t c = count;
       ptrdiff_t oc = o.count;
       return c - oc;
     }
@@ -339,7 +338,7 @@ public:
       ++count;
     } else {
       auto d = std::distance(begin(), pos);
-      i      = (start + d) % ChunkSize;
+      i = (start + d) % ChunkSize;
       emplace_back();
       std::move_backward(begin() + d, end() - 1, end());
       datac.destroy(i);
@@ -445,5 +444,5 @@ public:
   const_iterator rend() const { const_reverse_iterator(this->begin()); }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

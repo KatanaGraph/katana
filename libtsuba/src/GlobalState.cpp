@@ -13,7 +13,7 @@ extern GlobalFileStorageAllocator azure_storage_allocator;
 extern GlobalFileStorageAllocator local_storage_allocator;
 extern GlobalFileStorageAllocator s3_storage_allocator;
 
-} // namespace tsuba
+}  // namespace tsuba
 
 namespace {
 
@@ -29,23 +29,26 @@ std::vector<tsuba::GlobalFileStorageAllocator*> available_storage_allocators{
 #endif
 };
 
-} // namespace
+}  // namespace
 
 namespace tsuba {
 
 std::unique_ptr<tsuba::GlobalState> GlobalState::ref_ = nullptr;
 
-galois::CommBackend* GlobalState::Comm() const {
+galois::CommBackend*
+GlobalState::Comm() const {
   assert(comm_ != nullptr);
   return comm_;
 }
 
-FileStorage* GlobalState::GetDefaultFS() const {
+FileStorage*
+GlobalState::GetDefaultFS() const {
   assert(file_stores_.size() > 0);
   return file_stores_[0].get();
 }
 
-tsuba::FileStorage* GlobalState::FS(std::string_view uri) const {
+tsuba::FileStorage*
+GlobalState::FS(std::string_view uri) const {
   for (const std::unique_ptr<FileStorage>& fs : file_stores_) {
     if (uri.find(fs->uri_scheme()) == 0) {
       return fs.get();
@@ -54,9 +57,13 @@ tsuba::FileStorage* GlobalState::FS(std::string_view uri) const {
   return GetDefaultFS();
 }
 
-NameServerClient* GlobalState::NS() const { return name_server_client_.get(); }
+NameServerClient*
+GlobalState::NS() const {
+  return name_server_client_.get();
+}
 
-galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
+galois::Result<void>
+GlobalState::Init(galois::CommBackend* comm) {
   assert(ref_ == nullptr);
 
   // new to access non-public constructor
@@ -66,12 +73,12 @@ galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
     global_state->file_stores_.emplace_back(allocator->allocate());
   }
 
-  std::sort(global_state->file_stores_.begin(),
-            global_state->file_stores_.end(),
-            [](const std::unique_ptr<FileStorage>& lhs,
-               const std::unique_ptr<FileStorage>& rhs) {
-              return lhs->Priority() > rhs->Priority();
-            });
+  std::sort(
+      global_state->file_stores_.begin(), global_state->file_stores_.end(),
+      [](const std::unique_ptr<FileStorage>& lhs,
+         const std::unique_ptr<FileStorage>& rhs) {
+        return lhs->Priority() > rhs->Priority();
+      });
 
   for (std::unique_ptr<FileStorage>& storage : global_state->file_stores_) {
     if (auto res = storage->Init(); !res) {
@@ -89,7 +96,8 @@ galois::Result<void> GlobalState::Init(galois::CommBackend* comm) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> GlobalState::Fini() {
+galois::Result<void>
+GlobalState::Fini() {
   for (std::unique_ptr<FileStorage>& fs : ref_->file_stores_) {
     if (auto res = fs->Fini(); !res) {
       return res.error();
@@ -99,17 +107,25 @@ galois::Result<void> GlobalState::Fini() {
   return galois::ResultSuccess();
 }
 
-const tsuba::GlobalState& GlobalState::Get() {
+const tsuba::GlobalState&
+GlobalState::Get() {
   assert(ref_ != nullptr);
   return *ref_;
 }
 
-} // namespace tsuba
+}  // namespace tsuba
 
-galois::CommBackend* tsuba::Comm() { return GlobalState::Get().Comm(); }
+galois::CommBackend*
+tsuba::Comm() {
+  return GlobalState::Get().Comm();
+}
 
-tsuba::FileStorage* tsuba::FS(std::string_view uri) {
+tsuba::FileStorage*
+tsuba::FS(std::string_view uri) {
   return GlobalState::Get().FS(uri);
 }
 
-tsuba::NameServerClient* tsuba::NS() { return GlobalState::Get().NS(); }
+tsuba::NameServerClient*
+tsuba::NS() {
+  return GlobalState::Get().NS();
+}

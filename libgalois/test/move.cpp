@@ -18,18 +18,18 @@
  */
 
 #include "galois/Bag.h"
-#include "galois/gdeque.h"
-#include "galois/gslist.h"
 #include "galois/FlatMap.h"
 #include "galois/LargeArray.h"
+#include "galois/gdeque.h"
+#include "galois/gslist.h"
 #include "galois/runtime/Mem.h"
 #include "galois/substrate/PerThreadStorage.h"
 
 struct MoveOnly {
-  MoveOnly()           = default;
+  MoveOnly() = default;
   MoveOnly(MoveOnly&&) = default;
   MoveOnly& operator=(MoveOnly&&) = default;
-  MoveOnly(const MoveOnly&)       = delete;
+  MoveOnly(const MoveOnly&) = delete;
   MoveOnly& operator=(const MoveOnly&) = delete;
 };
 
@@ -42,7 +42,8 @@ struct MoveOnlyA {
 };
 
 template <typename T>
-void test(T&& x) {
+void
+test(T&& x) {
   T a = std::move(x);
   T b;
   std::swap(a, b);
@@ -50,7 +51,8 @@ void test(T&& x) {
 }
 
 template <typename T, typename U>
-void testContainerA(T&& x, U&& y) {
+void
+testContainerA(T&& x, U&& y) {
   T a = std::move(x);
   T b;
   b = std::move(a);
@@ -58,7 +60,8 @@ void testContainerA(T&& x, U&& y) {
 }
 
 template <typename T, typename U>
-void testContainerAA(T&& x, U&& y) {
+void
+testContainerAA(T&& x, U&& y) {
   galois::runtime::FixedSizeHeap heap(sizeof(typename T::block_type));
 
   T a = std::move(x);
@@ -69,7 +72,8 @@ void testContainerAA(T&& x, U&& y) {
 }
 
 template <typename T, typename U>
-void testContainerB(T&& x, U&& y) {
+void
+testContainerB(T&& x, U&& y) {
   T a = std::move(x);
   T b;
   b = std::move(a);
@@ -77,14 +81,16 @@ void testContainerB(T&& x, U&& y) {
 }
 
 template <typename T, typename U>
-void testContainerC(T&& x, U&& y) {
+void
+testContainerC(T&& x, U&& y) {
   T a = std::move(x);
   T b;
   b = std::move(a);
   b.emplace(b.begin(), std::move(y));
 }
 
-int main() {
+int
+main() {
   galois::SharedMemSys Galois_runtime;
   // test(galois::FixedSizeBag<MoveOnly>());
   // test(galois::ConcurrentFixedSizeBag<MoveOnly>());

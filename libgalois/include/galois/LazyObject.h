@@ -69,9 +69,8 @@ struct StrictObject<void> {
  */
 template <typename T>
 class LazyObject {
-  typedef
-      typename std::aligned_storage<sizeof(T),
-                                    std::alignment_of<T>::value>::type CharData;
+  typedef typename std::aligned_storage<
+      sizeof(T), std::alignment_of<T>::value>::type CharData;
 
   union Data {
     CharData buf;
@@ -79,8 +78,8 @@ class LazyObject {
 
     // Declare constructor explicitly because Data must be default
     // constructable regardless of the constructability of T.
-    Data() {}  // NOLINT(modernize-use-equals-default)
-    ~Data() {} // NOLINT(modernize-use-equals-default)
+    Data() {}   // NOLINT(modernize-use-equals-default)
+    ~Data() {}  // NOLINT(modernize-use-equals-default)
 
     T& value() { return value_; }
     const T& value() const { return value_; }
@@ -133,5 +132,5 @@ struct LazyObject<void> {
   const_reference get() const { return 0; }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

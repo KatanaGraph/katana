@@ -35,8 +35,9 @@ namespace worklists {
  * created work is processed after all the current work in a round is
  * completed.
  */
-template <class Container = PerSocketChunkFIFO<>, class T = int,
-          bool Concurrent = true>
+template <
+    class Container = PerSocketChunkFIFO<>, class T = int,
+    bool Concurrent = true>
 class BulkSynchronous : private boost::noncopyable {
 public:
   template <bool _concurrent>
@@ -67,7 +68,8 @@ public:
   typedef T value_type;
 
   BulkSynchronous()
-      : barrier(runtime::getBarrier(runtime::activeThreads)), some(false),
+      : barrier(runtime::getBarrier(runtime::activeThreads)),
+        some(false),
         isEmpty(false) {}
 
   void push(const value_type& val) {
@@ -84,7 +86,7 @@ public:
   void push_initial(const RangeTy& range) {
     push(range.local_begin(), range.local_end());
     tlds.getLocal()->round = 1;
-    some.get()             = true;
+    some.get() = true;
   }
 
   galois::optional<value_type> pop() {
@@ -93,7 +95,7 @@ public:
 
     while (true) {
       if (isEmpty)
-        return r; // empty
+        return r;  // empty
 
       r = wls[tld.round].pop();
       if (r)
@@ -118,7 +120,7 @@ public:
 };
 GALOIS_WLCOMPILECHECK(BulkSynchronous)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

@@ -20,23 +20,23 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GDEQUE_H_
 #define GALOIS_LIBGALOIS_GALOIS_GDEQUE_H_
 
-#include "galois/config.h"
-#include "galois/FixedSizeRing.h"
-#include "galois/Mem.h"
+#include <algorithm>
+#include <utility>
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
 
-#include <algorithm>
-#include <utility>
+#include "galois/FixedSizeRing.h"
+#include "galois/Mem.h"
+#include "galois/config.h"
 
 namespace galois {
 
 //! Like std::deque but use Galois memory management functionality
-template <typename T, unsigned ChunkSize = 64,
-          typename ContainerTy = FixedSizeRing<T, ChunkSize>>
+template <
+    typename T, unsigned ChunkSize = 64,
+    typename ContainerTy = FixedSizeRing<T, ChunkSize>>
 class gdeque {
-
 protected:
   struct Block : ContainerTy {
     Block* next;
@@ -79,7 +79,7 @@ private:
 
   Block* extend_first() {
     Block* b = alloc_block();
-    b->next  = first;
+    b->next = first;
     if (b->next)
       b->next->prev = b;
     first = b;
@@ -90,7 +90,7 @@ private:
 
   Block* extend_last() {
     Block* b = alloc_block();
-    b->prev  = last;
+    b->prev = last;
     if (b->prev)
       b->prev->next = b;
     last = b;
@@ -112,8 +112,8 @@ private:
   }
 
   template <typename... Args>
-  std::pair<Block*, typename Block::iterator>
-  emplace(Block* b, typename Block::iterator ii, Args&&... args) {
+  std::pair<Block*, typename Block::iterator> emplace(
+      Block* b, typename Block::iterator ii, Args&&... args) {
     ++num;
     if (!b) {
       // gdeque is empty or iteration == end
@@ -128,12 +128,12 @@ private:
         b = extend_first();
       ii = b->begin();
     } else if (b->full()) {
-      auto d   = std::distance(ii, b->end());
-      Block* n = alloc_block(std::make_move_iterator(ii),
-                             std::make_move_iterator(b->end()));
+      auto d = std::distance(ii, b->end());
+      Block* n = alloc_block(
+          std::make_move_iterator(ii), std::make_move_iterator(b->end()));
       for (; d > 0; --d)
         b->pop_back();
-      ii      = b->end();
+      ii = b->end();
       n->next = b->next;
       n->prev = b;
       b->next = n;
@@ -147,9 +147,8 @@ private:
 
 public:
   template <typename U>
-  struct Iterator
-      : public boost::iterator_facade<Iterator<U>, U,
-                                      boost::bidirectional_traversal_tag> {
+  struct Iterator : public boost::iterator_facade<
+                        Iterator<U>, U, boost::bidirectional_traversal_tag> {
     friend class boost::iterator_core_access;
 
     Block* b;
@@ -160,18 +159,18 @@ public:
     void increment() {
       ++offset;
       if (offset == b->size()) {
-        b      = b->next;
+        b = b->next;
         offset = 0;
       }
     }
 
     void decrement() {
       if (!b) {
-        b      = last;
+        b = last;
         offset = b->size() - 1;
         return;
       } else if (offset == 0) {
-        b      = b->prev;
+        b = b->prev;
         offset = b->size() - 1;
       } else {
         --offset;
@@ -308,18 +307,18 @@ public:
     while (b) {
       b->clear();
       Block* old = b;
-      b          = b->next;
+      b = b->next;
       free_block(old);
     }
     first = last = NULL;
-    num          = 0;
+    num = 0;
   }
 
   //! Invalidates pointers
   template <typename... Args>
   iterator emplace(iterator pos, Args&&... args) {
 #ifdef _NEW_ITERATOR
-    Block* b          = pos.get_outer_reference().cur;
+    Block* b = pos.get_outer_reference().cur;
     inner_iterator ii = pos.get_inner_reference();
 #else
     Block* b = pos.b;
@@ -329,12 +328,13 @@ public:
 #endif
     auto p = emplace(b, ii, std::forward<Args>(args)...);
 #ifdef _NEW_ITERATOR
-    return iterator{outer_iterator<Block>{first, last},
-                    outer_iterator<Block>{nullptr, last},
-                    outer_iterator<Block>{p.first, last},
-                    p.second,
-                    GetBegin<Block>{},
-                    GetEnd<Block>{}};
+    return iterator{
+        outer_iterator<Block>{first, last},
+        outer_iterator<Block>{nullptr, last},
+        outer_iterator<Block>{p.first, last},
+        p.second,
+        GetBegin<Block>{},
+        GetEnd<Block>{}};
 #else
     return iterator(p.first, last, std::distance(p.first->begin(), p.second));
 #endif
@@ -405,5 +405,5 @@ public:
 };
 
 #undef _NEW_ITERATOR
-} // namespace galois
+}  // namespace galois
 #endif

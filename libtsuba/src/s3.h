@@ -15,44 +15,46 @@ namespace tsuba {
 
 galois::Result<void> S3Init();
 galois::Result<void> S3Fini();
-galois::Result<void> S3GetSize(const std::string& bucket,
-                               const std::string& object, uint64_t* size);
-galois::Result<bool> S3Exists(const std::string& bucket,
-                              const std::string& object);
+galois::Result<void> S3GetSize(
+    const std::string& bucket, const std::string& object, uint64_t* size);
+galois::Result<bool> S3Exists(
+    const std::string& bucket, const std::string& object);
 
-galois::Result<void> S3DownloadRange(const std::string& bucket,
-                                     const std::string& object, uint64_t start,
-                                     uint64_t size, uint8_t* result_buf);
+galois::Result<void> S3DownloadRange(
+    const std::string& bucket, const std::string& object, uint64_t start,
+    uint64_t size, uint8_t* result_buf);
 
-galois::Result<void> S3UploadOverwrite(const std::string& bucket,
-                                       const std::string& object,
-                                       const uint8_t* data, uint64_t size);
+galois::Result<void> S3UploadOverwrite(
+    const std::string& bucket, const std::string& object, const uint8_t* data,
+    uint64_t size);
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
-S3GetAsync(const std::string& bucket, const std::string& object, uint64_t start,
-           uint64_t size, uint8_t* result_buf);
+galois::Result<std::unique_ptr<FileAsyncWork>> S3GetAsync(
+    const std::string& bucket, const std::string& object, uint64_t start,
+    uint64_t size, uint8_t* result_buf);
 
 // Call this function to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface
-galois::Result<std::unique_ptr<FileAsyncWork>>
-S3PutAsync(const std::string& bucket, const std::string& object,
-           const uint8_t* data, uint64_t size);
+galois::Result<std::unique_ptr<FileAsyncWork>> S3PutAsync(
+    const std::string& bucket, const std::string& object, const uint8_t* data,
+    uint64_t size);
 
 // Listing relative to the full path of the provided directory
-galois::Result<std::unique_ptr<FileAsyncWork>>
-S3ListAsync(const std::string& bucket, const std::string& object,
-            std::unordered_set<std::string>* list);
+galois::Result<std::unique_ptr<FileAsyncWork>> S3ListAsync(
+    const std::string& bucket, const std::string& object,
+    std::unordered_set<std::string>* list);
 
-galois::Result<void> S3Delete(const std::string& bucket,
-                              const std::string& object,
-                              const std::unordered_set<std::string>& files);
+galois::Result<void> S3Delete(
+    const std::string& bucket, const std::string& object,
+    const std::unordered_set<std::string>& files);
 
 /* Utility functions for converting between Aws::String and std::string */
-inline std::string_view FromAwsString(const Aws::String& s) {
+inline std::string_view
+FromAwsString(const Aws::String& s) {
   return {s.data(), s.size()};
 }
-inline Aws::String ToAwsString(std::string_view s) {
+inline Aws::String
+ToAwsString(std::string_view s) {
   return Aws::String(s.data(), s.size());
 }
 

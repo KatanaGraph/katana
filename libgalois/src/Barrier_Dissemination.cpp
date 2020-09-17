@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/ThreadPool.h"
+#include <atomic>
+
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
-
-#include <atomic>
+#include "galois/substrate/ThreadPool.h"
 
 namespace {
 
@@ -31,7 +31,6 @@ namespace {
   (((x) - (1 << FAST_LOG2(x))) ? FAST_LOG2(x) + 1 : FAST_LOG2(x))
 
 class DisseminationBarrier : public galois::substrate::Barrier {
-
   struct node {
     std::atomic<int> flag[2];
     node* partner;
@@ -57,14 +56,14 @@ class DisseminationBarrier : public galois::substrate::Barrier {
     nodes.resize(P);
     for (unsigned i = 0; i < P; ++i) {
       LocalData& lhs = nodes.at(i).get();
-      lhs.parity     = 0;
-      lhs.sense      = 1;
+      lhs.parity = 0;
+      lhs.sense = 1;
       for (unsigned j = 0; j < sizeof(lhs.myflags) / sizeof(*lhs.myflags); ++j)
         lhs.myflags[j].flag[0] = lhs.myflags[j].flag[1] = 0;
 
       int d = 1;
       for (unsigned j = 0; j < LogP; ++j) {
-        LocalData& rhs         = nodes.at((i + d) % P).get();
+        LocalData& rhs = nodes.at((i + d) % P).get();
         lhs.myflags[j].partner = &rhs.myflags[j];
         d *= 2;
       }
@@ -77,8 +76,8 @@ public:
   virtual void reinit(unsigned val) { _reinit(val); }
 
   virtual void wait() {
-    auto& ld     = nodes.at(galois::substrate::ThreadPool::getTID()).get();
-    auto& sense  = ld.sense;
+    auto& ld = nodes.at(galois::substrate::ThreadPool::getTID()).get();
+    auto& sense = ld.sense;
     auto& parity = ld.parity;
     for (unsigned r = 0; r < LogP; ++r) {
       ld.myflags[r].partner->flag[parity] = sense;
@@ -94,7 +93,7 @@ public:
   virtual const char* name() const { return "DisseminationBarrier"; }
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createDisseminationBarrier(unsigned activeThreads) {

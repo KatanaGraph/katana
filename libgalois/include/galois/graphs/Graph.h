@@ -21,9 +21,9 @@
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPH_H_
 
 #include "galois/config.h"
+#include "galois/graphs/LCGraph.h"
 #include "galois/graphs/MorphGraph.h"
 #include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/LCGraph.h"
 #include "galois/graphs/ReadGraph.h"
 
 #endif

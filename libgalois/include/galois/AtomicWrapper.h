@@ -51,11 +51,11 @@ public:
 
   //! Copy constructor operator
   CopyableAtomic& operator=(const CopyableAtomic<T>& other) {
-    this->store(other.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
+    this->store(
+        other.load(std::memory_order_relaxed), std::memory_order_relaxed);
     return *this;
   }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

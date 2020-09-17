@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/graphs/OCGraph.h"
-#include "galois/runtime/Mem.h"
-#include "galois/gIO.h"
+#include <fcntl.h>
 
 #include <cassert>
 
-#include <fcntl.h>
+#include "galois/gIO.h"
+#include "galois/graphs/OCGraph.h"
+#include "galois/runtime/Mem.h"
 #ifdef __linux__
 #include <linux/mman.h>
 #endif
@@ -46,12 +46,14 @@ using namespace galois::graphs;
 
 #ifdef HAVE_MMAP64
 template <typename... Args>
-void* mmap_big(Args... args) {
+void*
+mmap_big(Args... args) {
   return mmap64(std::forward<Args>(args)...);
 }
 #else
 template <typename... Args>
-void* mmap_big(Args... args) {
+void*
+mmap_big(Args... args) {
   return mmap(std::forward<Args>(args)...);
 }
 #endif
@@ -63,7 +65,8 @@ OCFileGraph::~OCFileGraph() {
     close(masterFD);
 }
 
-void OCFileGraph::Block::unload() {
+void
+OCFileGraph::Block::unload() {
   if (!m_mapping)
     return;
 
@@ -73,8 +76,9 @@ void OCFileGraph::Block::unload() {
   m_mapping = 0;
 }
 
-void OCFileGraph::Block::load(int fd, offset_t offset, size_t begin, size_t len,
-                              size_t sizeof_data) {
+void
+OCFileGraph::Block::load(
+    int fd, offset_t offset, size_t begin, size_t len, size_t sizeof_data) {
   assert(m_mapping == 0);
 
   offset_t start = offset + begin * sizeof_data;
@@ -85,9 +89,9 @@ void OCFileGraph::Block::load(int fd, offset_t offset, size_t begin, size_t len,
 #ifdef MAP_POPULATE
   _MAP_BASE |= MAP_POPULATE;
 #endif
-  m_length =
-      len * sizeof_data +
-      galois::runtime::pagePoolSize(); // account for round off due to alignment
+  m_length = len * sizeof_data +
+             galois::runtime::
+                 pagePoolSize();  // account for round off due to alignment
   m_mapping = mmap_big(nullptr, m_length, PROT_READ, _MAP_BASE, fd, aligned);
   if (m_mapping == MAP_FAILED) {
     GALOIS_SYS_DIE("failed allocating ", fd);
@@ -95,16 +99,19 @@ void OCFileGraph::Block::load(int fd, offset_t offset, size_t begin, size_t len,
 
   m_data = reinterpret_cast<char*>(m_mapping);
   assert(aligned <= start);
-  assert(start - aligned <=
-         static_cast<offset_t>(galois::runtime::pagePoolSize()));
+  assert(
+      start - aligned <=
+      static_cast<offset_t>(galois::runtime::pagePoolSize()));
   m_data += start - aligned;
-  m_begin       = begin;
+  m_begin = begin;
   m_sizeof_data = sizeof_data;
 }
 
-void OCFileGraph::load(segment_type& s, edge_iterator begin, edge_iterator end,
-                       size_t sizeof_data) {
-  size_t bb  = *begin;
+void
+OCFileGraph::load(
+    segment_type& s, edge_iterator begin, edge_iterator end,
+    size_t sizeof_data) {
+  size_t bb = *begin;
   size_t len = *end - *begin;
 
   offset_t outs = (4 + numNodes) * sizeof(uint64_t);
@@ -117,7 +124,8 @@ void OCFileGraph::load(segment_type& s, edge_iterator begin, edge_iterator end,
   s.loaded = true;
 }
 
-static void readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
+static void
+readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
   void* m = mmap(0, 4 * sizeof(uint64_t), PROT_READ, MAP_PRIVATE, fd, 0);
   if (m == MAP_FAILED) {
     GALOIS_SYS_DIE("failed reading ", fd);
@@ -133,14 +141,15 @@ static void readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
   }
 }
 
-void OCFileGraph::fromFile(const std::string& filename) {
+void
+OCFileGraph::fromFile(const std::string& filename) {
   masterFD = open(filename.c_str(), O_RDONLY);
   if (masterFD == -1) {
     GALOIS_SYS_DIE("failed opening ", filename);
   }
 
   readHeader(masterFD, numNodes, numEdges);
-  masterLength  = 4 * sizeof(uint64_t) + numNodes * sizeof(uint64_t);
+  masterLength = 4 * sizeof(uint64_t) + numNodes * sizeof(uint64_t);
   int _MAP_BASE = MAP_PRIVATE;
 #ifdef MAP_POPULATE
   _MAP_BASE |= MAP_POPULATE;

@@ -23,8 +23,8 @@
 #include <atomic>
 
 #include "galois/config.h"
-#include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/CacheLineStorage.h"
+#include "galois/substrate/PerThreadStorage.h"
 
 namespace galois {
 namespace substrate {
@@ -34,11 +34,10 @@ class TerminationDetection;
  * returns an object.  The object will be reused, but reinitialized to
  * activeThreads
  */
-GALOIS_EXPORT TerminationDetection&
-getSystemTermination(unsigned activeThreads);
+GALOIS_EXPORT TerminationDetection& getSystemTermination(
+    unsigned activeThreads);
 
 class GALOIS_EXPORT TerminationDetection {
-
   friend TerminationDetection& getSystemTermination(unsigned);
 
 protected:
@@ -77,13 +76,12 @@ namespace internal {
 // Dijkstra style 2-pass ring termination detection
 template <typename _UNUSED = void>
 class LocalTerminationDetection : public TerminationDetection {
-
   struct TokenHolder {
     friend class TerminationDetection;
     std::atomic<long> tokenIsBlack;
     std::atomic<long> hasToken;
     long processIsBlack;
-    bool lastWasWhite; // only used by the master
+    bool lastWasWhite;  // only used by the master
   };
 
   galois::substrate::PerThreadStorage<TokenHolder> data;
@@ -92,10 +90,10 @@ class LocalTerminationDetection : public TerminationDetection {
 
   // send token onwards
   void propToken(bool isBlack) {
-    unsigned id     = ThreadPool::getTID();
+    unsigned id = ThreadPool::getTID();
     TokenHolder& th = *data.getRemote((id + 1) % activeThreads);
     th.tokenIsBlack = isBlack;
-    th.hasToken     = true;
+    th.hasToken = true;
   }
 
   void propGlobalTerm() { globalTerm = true; }
@@ -109,11 +107,11 @@ public:
   LocalTerminationDetection() {}
 
   virtual void initializeThread() {
-    TokenHolder& th   = *data.getLocal();
-    th.tokenIsBlack   = false;
+    TokenHolder& th = *data.getLocal();
+    th.tokenIsBlack = false;
     th.processIsBlack = true;
-    th.lastWasWhite   = true;
-    globalTerm        = false;
+    th.lastWasWhite = true;
+    globalTerm = false;
     if (isSysMaster())
       th.hasToken = true;
     else
@@ -126,7 +124,7 @@ public:
     th.processIsBlack |= workHappened;
     if (th.hasToken) {
       if (isSysMaster()) {
-        bool failed     = th.tokenIsBlack || th.processIsBlack;
+        bool failed = th.tokenIsBlack || th.processIsBlack;
         th.tokenIsBlack = th.processIsBlack = false;
         if (th.lastWasWhite && !failed) {
           // This was the second success
@@ -136,11 +134,12 @@ public:
         th.lastWasWhite = !failed;
       }
       // Normal thread or recirc by master
-      assert(!globalTerm.get() &&
-             "no token should be in progress after globalTerm");
-      bool taint        = th.processIsBlack || th.tokenIsBlack;
+      assert(
+          !globalTerm.get() &&
+          "no token should be in progress after globalTerm");
+      bool taint = th.processIsBlack || th.tokenIsBlack;
       th.processIsBlack = th.tokenIsBlack = false;
-      th.hasToken                         = false;
+      th.hasToken = false;
       propToken(taint);
     }
   }
@@ -160,7 +159,7 @@ class TreeTerminationDetection : public TerminationDetection {
     // my state
     long processIsBlack;
     bool hasToken;
-    bool lastWasWhite; // only used by the master
+    bool lastWasWhite;  // only used by the master
     int parent;
     int parent_offset;
     TokenHolder* child[num];
@@ -175,7 +174,7 @@ class TreeTerminationDetection : public TerminationDetection {
     // int myid = LL::getTID();
     // have all up tokens?
     bool haveAll = th.hasToken;
-    bool black   = th.processIsBlack;
+    bool black = th.processIsBlack;
     for (int i = 0; i < num; ++i) {
       if (th.child[i]) {
         if (th.up_token[i] == -1)
@@ -187,7 +186,7 @@ class TreeTerminationDetection : public TerminationDetection {
     // Have the tokens, propagate
     if (haveAll) {
       th.processIsBlack = false;
-      th.hasToken       = false;
+      th.hasToken = false;
       if (isSysMaster()) {
         if (th.lastWasWhite && !black) {
           // This was the second success
@@ -195,7 +194,7 @@ class TreeTerminationDetection : public TerminationDetection {
           return;
         }
         th.lastWasWhite = !black;
-        th.down_token   = true;
+        th.down_token = true;
       } else {
         data.getRemote(th.parent)->up_token[th.parent_offset] = black;
       }
@@ -204,7 +203,7 @@ class TreeTerminationDetection : public TerminationDetection {
     // recieved a down token, propagate
     if (th.down_token) {
       th.down_token = false;
-      th.hasToken   = true;
+      th.hasToken = true;
       for (int i = 0; i < num; ++i) {
         th.up_token[i] = -1;
         if (th.child[i])
@@ -225,16 +224,16 @@ public:
 
   virtual void initializeThread() {
     TokenHolder& th = *data.getLocal();
-    th.down_token   = false;
+    th.down_token = false;
     for (int i = 0; i < num; ++i)
       th.up_token[i] = false;
     th.processIsBlack = true;
-    th.hasToken       = false;
-    th.lastWasWhite   = false;
-    globalTerm        = false;
-    auto tid          = ThreadPool::getTID();
-    th.parent         = (tid - 1) / num;
-    th.parent_offset  = (tid - 1) % num;
+    th.hasToken = false;
+    th.lastWasWhite = false;
+    globalTerm = false;
+    auto tid = ThreadPool::getTID();
+    th.parent = (tid - 1) / num;
+    th.parent_offset = (tid - 1) % num;
     for (unsigned i = 0; i < num; ++i) {
       unsigned cn = tid * num + i + 1;
       if (cn < activeThreads)
@@ -256,9 +255,9 @@ public:
 };
 
 void setTermDetect(TerminationDetection* term);
-} // end namespace internal
+}  // end namespace internal
 
-} // namespace substrate
-} // end namespace galois
+}  // namespace substrate
+}  // end namespace galois
 
 #endif

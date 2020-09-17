@@ -20,55 +20,52 @@
 #ifndef CLUSTERING_H
 #define CLUSTERING_H
 
-#include <random>
 #include <fstream>
 #include <iostream>
+#include <random>
 
 #include <llvm/Support/CommandLine.h>
 
-#include "galois/Galois.h"
 #include "galois/AtomicHelpers.h"
+#include "galois/Galois.h"
 #include "galois/LargeArray.h"
 
 namespace cll = llvm::cl;
-static cll::opt<bool>
-    enable_VF("enable_VF",
-              cll::desc("Flag to enable vertex following optimization."),
-              cll::init(false));
+static cll::opt<bool> enable_VF(
+    "enable_VF", cll::desc("Flag to enable vertex following optimization."),
+    cll::init(false));
 
-static cll::opt<double> c_threshold("c_threshold",
-                                    cll::desc("Threshold for modularity gain"),
-                                    cll::init(0.01));
+static cll::opt<double> c_threshold(
+    "c_threshold", cll::desc("Threshold for modularity gain"), cll::init(0.01));
 
-static cll::opt<double>
-    threshold("threshold", cll::desc("Total threshold for modularity gain"),
-              cll::init(0.01));
+static cll::opt<double> threshold(
+    "threshold", cll::desc("Total threshold for modularity gain"),
+    cll::init(0.01));
 
-static cll::opt<uint32_t>
-    max_iter("max_iter", cll::desc("Maximum number of iterations to execute"),
-             cll::init(10));
+static cll::opt<uint32_t> max_iter(
+    "max_iter", cll::desc("Maximum number of iterations to execute"),
+    cll::init(10));
 
-static cll::opt<bool>
-    output_CID("output_CID", cll::desc("Flag to enable cluster ID printing."),
-               cll::init(false));
+static cll::opt<bool> output_CID(
+    "output_CID", cll::desc("Flag to enable cluster ID printing."),
+    cll::init(false));
 
-static cll::opt<std::string>
-    output_CID_filename("output_CID_filename",
-                        cll::desc("File name to output cluster IDs."),
-                        cll::init("output_CID_filename"));
+static cll::opt<std::string> output_CID_filename(
+    "output_CID_filename", cll::desc("File name to output cluster IDs."),
+    cll::init("output_CID_filename"));
 
-static cll::opt<double>
-    resolution("resolution", cll::desc("Resolution for CPM quality function."),
-               cll::init(1.0));
+static cll::opt<double> resolution(
+    "resolution", cll::desc("Resolution for CPM quality function."),
+    cll::init(1.0));
 
-static cll::opt<double>
-    randomness("randomness",
-               cll::desc("Randomness factor for refining clusters in Leiden."),
-               cll::init(0.01));
+static cll::opt<double> randomness(
+    "randomness",
+    cll::desc("Randomness factor for refining clusters in Leiden."),
+    cll::init(0.01));
 
-static cll::opt<uint32_t>
-    min_graph_size("min_graph_size", cll::desc("Minimum coarsened graph size"),
-                   cll::init(100));
+static cll::opt<uint32_t> min_graph_size(
+    "min_graph_size", cll::desc("Minimum coarsened graph size"),
+    cll::init(100));
 
 /*
  * Typedefs
@@ -80,8 +77,8 @@ constexpr static const uint64_t UNASSIGNED =
 constexpr static const double DOUBLE_MAX =
     std::numeric_limits<double>::max() / 4;
 
-constexpr galois::MethodFlag flag_no_lock    = galois::MethodFlag::UNPROTECTED;
-constexpr galois::MethodFlag flag_read_lock  = galois::MethodFlag::READ;
+constexpr galois::MethodFlag flag_no_lock = galois::MethodFlag::UNPROTECTED;
+constexpr galois::MethodFlag flag_read_lock = galois::MethodFlag::READ;
 constexpr galois::MethodFlag flag_write_lock = galois::MethodFlag::WRITE;
 
 typedef galois::LargeArray<uint64_t> largeArray;
@@ -90,8 +87,8 @@ typedef float EdgeTy;
 typedef galois::LargeArray<EdgeTy> largeArrayEdgeTy;
 
 template <typename GraphTy>
-void printGraphCharateristics(GraphTy& graph) {
-
+void
+printGraphCharateristics(GraphTy& graph) {
   galois::gPrint("/******************************************/\n");
   galois::gPrint("/************ Graph Properties ************/\n");
   galois::gPrint("/******************************************/\n");
@@ -104,10 +101,11 @@ void printGraphCharateristics(GraphTy& graph) {
  * to move to among its neighbors.
  */
 template <typename GraphTy>
-void findNeighboringClusters(GraphTy& graph, typename GraphTy::GraphNode& n,
-                             std::map<uint64_t, uint64_t>& cluster_local_map,
-                             std::vector<EdgeTy>& counter,
-                             EdgeTy& self_loop_wt) {
+void
+findNeighboringClusters(
+    GraphTy& graph, typename GraphTy::GraphNode& n,
+    std::map<uint64_t, uint64_t>& cluster_local_map,
+    std::vector<EdgeTy>& counter, EdgeTy& self_loop_wt) {
   using GNode = typename GraphTy::GraphNode;
   for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
     graph.getData(graph.getEdgeDst(ii), flag_write_lock);
@@ -119,21 +117,21 @@ void findNeighboringClusters(GraphTy& graph, typename GraphTy::GraphNode& n,
    * for movement as well
    */
   cluster_local_map[graph.getData(n).curr_comm_ass] =
-      0;                // Add n's current cluster
-  counter.push_back(0); // Initialize the counter to zero (no edges incident
-                        // yet)
+      0;                 // Add n's current cluster
+  counter.push_back(0);  // Initialize the counter to zero (no edges incident
+                         // yet)
   num_unique_clusters++;
 
   // Assuming we have grabbed lock on all the neighbors
   for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
     GNode dst = graph.getEdgeDst(ii);
     auto edge_wt =
-        graph.getEdgeData(ii, flag_no_lock); // Self loop weights is recorded
+        graph.getEdgeData(ii, flag_no_lock);  // Self loop weights is recorded
     if (dst == n) {
-      self_loop_wt += edge_wt; // Self loop weights is recorded
+      self_loop_wt += edge_wt;  // Self loop weights is recorded
     }
     auto stored_already = cluster_local_map.find(
-        graph.getData(dst).curr_comm_ass); // Check if it already exists
+        graph.getData(dst).curr_comm_ass);  // Check if it already exists
     if (stored_already != cluster_local_map.end()) {
       counter[stored_already->second] += edge_wt;
     } else {
@@ -141,23 +139,25 @@ void findNeighboringClusters(GraphTy& graph, typename GraphTy::GraphNode& n,
       counter.push_back(edge_wt);
       num_unique_clusters++;
     }
-  } // End edge loop
+  }  // End edge loop
   return;
 }
 template <typename GraphTy>
-uint64_t vertexFollowing(GraphTy& graph) {
+uint64_t
+vertexFollowing(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   // Initialize each node to its own cluster
-  galois::do_all(galois::iterate(graph),
-                 [&graph](GNode n) { graph.getData(n).curr_comm_ass = n; });
+  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+    graph.getData(n).curr_comm_ass = n;
+  });
 
   // Remove isolated and degree-one nodes
   galois::GAccumulator<uint64_t> isolatedNodes;
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     auto& n_data = graph.getData(n);
-    uint64_t degree =
-        std::distance(graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
-                      graph.edge_end(n, galois::MethodFlag::UNPROTECTED));
+    uint64_t degree = std::distance(
+        graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
+        graph.edge_end(n, galois::MethodFlag::UNPROTECTED));
     if (degree == 0) {
       isolatedNodes += 1;
       n_data.curr_comm_ass = UNASSIGNED;
@@ -181,58 +181,62 @@ uint64_t vertexFollowing(GraphTy& graph) {
 }
 
 template <typename GraphTy, typename CommArrayTy>
-void sumVertexDegreeWeight(GraphTy& graph, CommArrayTy& c_info) {
+void
+sumVertexDegreeWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
-    auto& n_data        = graph.getData(n);
+    auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       total_weight += graph.getEdgeData(ii, flag_no_lock);
     }
-    n_data.degree_wt    = total_weight;
+    n_data.degree_wt = total_weight;
     c_info[n].degree_wt = total_weight;
-    c_info[n].size      = 1;
+    c_info[n].size = 1;
   });
 }
 template <typename GraphTy, typename CommArrayTy>
-void sumVertexDegreeWeightWithNodeWeight(GraphTy& graph, CommArrayTy& c_info) {
+void
+sumVertexDegreeWeightWithNodeWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
-    auto& n_data        = graph.getData(n);
+    auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       total_weight += graph.getEdgeData(ii, flag_no_lock);
     }
-    n_data.degree_wt    = total_weight;
+    n_data.degree_wt = total_weight;
     c_info[n].degree_wt = total_weight;
-    c_info[n].size      = 1;
+    c_info[n].size = 1;
     c_info[n].node_wt.store(n_data.node_wt);
   });
 }
 
 template <typename GraphTy, typename CommArrayTy>
-void sumClusterWeight(GraphTy& graph, CommArrayTy& c_info) {
+void
+sumClusterWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
-    auto& n_data        = graph.getData(n);
+    auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       total_weight += graph.getEdgeData(ii, flag_no_lock);
     }
-    n_data.degree_wt    = total_weight;
+    n_data.degree_wt = total_weight;
     c_info[n].degree_wt = 0;
   });
 
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     auto& n_data = graph.getData(n);
     if (n_data.curr_comm_ass != UNASSIGNED)
-      galois::atomicAdd(c_info[n_data.curr_comm_ass].degree_wt,
-                        n_data.degree_wt);
+      galois::atomicAdd(
+          c_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
   });
 }
 
 template <typename GraphTy>
-double calConstantForSecondTerm(GraphTy& graph) {
+double
+calConstantForSecondTerm(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   /**
    * Using double to avoid overflow
@@ -247,35 +251,35 @@ double calConstantForSecondTerm(GraphTy& graph) {
 }
 
 template <typename GraphTy, typename CommArrayTy>
-uint64_t maxCPMQuality(std::map<uint64_t, uint64_t>& cluster_local_map,
-                       std::vector<EdgeTy>& counter, EdgeTy self_loop_wt,
-                       CommArrayTy& c_info, uint64_t node_wt, uint64_t sc) {
-
-  uint64_t max_index = sc; // Assign the initial value as self community
-  double cur_gain    = 0;
-  double max_gain    = 0;
-  double eix         = counter[0] - self_loop_wt;
-  double eiy         = 0;
-  double size_x      = (double)(c_info[sc].node_wt - node_wt);
-  double size_y      = 0;
+uint64_t
+maxCPMQuality(
+    std::map<uint64_t, uint64_t>& cluster_local_map,
+    std::vector<EdgeTy>& counter, EdgeTy self_loop_wt, CommArrayTy& c_info,
+    uint64_t node_wt, uint64_t sc) {
+  uint64_t max_index = sc;  // Assign the initial value as self community
+  double cur_gain = 0;
+  double max_gain = 0;
+  double eix = counter[0] - self_loop_wt;
+  double eiy = 0;
+  double size_x = (double)(c_info[sc].node_wt - node_wt);
+  double size_y = 0;
 
   auto stored_already = cluster_local_map.begin();
   do {
     if (sc != stored_already->first) {
-
       eiy =
-          counter[stored_already->second]; // Total edges incident on cluster y
+          counter[stored_already->second];  // Total edges incident on cluster y
       size_y = c_info[stored_already->first].node_wt;
 
       cur_gain = 2.0f * (double)(eiy - eix) -
                  resolution * node_wt * (double)(size_y - size_x);
       if ((cur_gain > max_gain) || ((cur_gain == max_gain) && (cur_gain != 0) &&
                                     (stored_already->first < max_index))) {
-        max_gain  = cur_gain;
+        max_gain = cur_gain;
         max_index = stored_already->first;
       }
     }
-    stored_already++; // Explore next cluster
+    stored_already++;  // Explore next cluster
   } while (stored_already != cluster_local_map.end());
 
   if ((c_info[max_index].size == 1 && c_info[sc].size == 1 && max_index > sc)) {
@@ -286,9 +290,10 @@ uint64_t maxCPMQuality(std::map<uint64_t, uint64_t>& cluster_local_map,
 }
 
 template <typename GraphTy, typename CommArrayTy>
-double calCPMQuality(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
-                     double& a2_x, double& constant_for_second_term) {
-
+double
+calCPMQuality(
+    GraphTy& graph, CommArrayTy& c_info, double& e_xx, double& a2_x,
+    double& constant_for_second_term) {
   using GNode = typename GraphTy::GraphNode;
   /* Variables needed for Modularity calculation */
   double mod = -1;
@@ -303,8 +308,8 @@ double calCPMQuality(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
   galois::GAccumulator<double> acc_e_xx;
   galois::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { cluster_wt_internal[n] = 0; });
+  galois::do_all(
+      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
@@ -326,41 +331,41 @@ double calCPMQuality(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
 
   e_xx = acc_e_xx.reduce();
   a2_x = acc_a2_x.reduce();
-  mod  = (e_xx - a2_x) * (double)constant_for_second_term;
+  mod = (e_xx - a2_x) * (double)constant_for_second_term;
 
   return mod;
 }
 
 template <typename CommArrayTy>
-uint64_t maxModularity(std::map<uint64_t, uint64_t>& cluster_local_map,
-                       std::vector<EdgeTy>& counter, EdgeTy self_loop_wt,
-                       CommArrayTy& c_info, EdgeTy degree_wt, uint64_t sc,
-                       double constant) {
-
-  uint64_t max_index = sc; // Assign the intial value as self community
-  double cur_gain    = 0;
-  double max_gain    = 0;
-  double eix         = counter[0] - self_loop_wt;
-  double ax          = c_info[sc].degree_wt - degree_wt;
-  double eiy         = 0;
-  double ay          = 0;
+uint64_t
+maxModularity(
+    std::map<uint64_t, uint64_t>& cluster_local_map,
+    std::vector<EdgeTy>& counter, EdgeTy self_loop_wt, CommArrayTy& c_info,
+    EdgeTy degree_wt, uint64_t sc, double constant) {
+  uint64_t max_index = sc;  // Assign the intial value as self community
+  double cur_gain = 0;
+  double max_gain = 0;
+  double eix = counter[0] - self_loop_wt;
+  double ax = c_info[sc].degree_wt - degree_wt;
+  double eiy = 0;
+  double ay = 0;
 
   auto stored_already = cluster_local_map.begin();
   do {
     if (sc != stored_already->first) {
-      ay = c_info[stored_already->first].degree_wt; // Degree wt of cluster y
+      ay = c_info[stored_already->first].degree_wt;  // Degree wt of cluster y
       eiy =
-          counter[stored_already->second]; // Total edges incident on cluster y
+          counter[stored_already->second];  // Total edges incident on cluster y
       cur_gain = 2 * constant * (eiy - eix) +
                  2 * degree_wt * ((ax - ay) * constant * constant);
 
       if ((cur_gain > max_gain) || ((cur_gain == max_gain) && (cur_gain != 0) &&
                                     (stored_already->first < max_index))) {
-        max_gain  = cur_gain;
+        max_gain = cur_gain;
         max_index = stored_already->first;
       }
     }
-    stored_already++; // Explore next cluster
+    stored_already++;  // Explore next cluster
   } while (stored_already != cluster_local_map.end());
 
   if ((c_info[max_index].size == 1 && c_info[sc].size == 1 && max_index > sc)) {
@@ -373,23 +378,22 @@ uint64_t maxModularity(std::map<uint64_t, uint64_t>& cluster_local_map,
 
 template <typename CommArrayTy>
 uint64_t
-maxModularityWithoutSwaps(std::map<uint64_t, uint64_t>& cluster_local_map,
-                          std::vector<EdgeTy>& counter, uint64_t self_loop_wt,
-                          CommArrayTy& c_info, EdgeTy degree_wt, uint64_t sc,
-                          double constant) {
-
-  uint64_t max_index = sc; // Assign the intial value as self community
-  double cur_gain    = 0;
-  double max_gain    = 0;
-  double eix         = counter[0] - self_loop_wt;
-  double ax          = c_info[sc].degree_wt - degree_wt;
-  double eiy         = 0;
-  double ay          = 0;
+maxModularityWithoutSwaps(
+    std::map<uint64_t, uint64_t>& cluster_local_map,
+    std::vector<EdgeTy>& counter, uint64_t self_loop_wt, CommArrayTy& c_info,
+    EdgeTy degree_wt, uint64_t sc, double constant) {
+  uint64_t max_index = sc;  // Assign the intial value as self community
+  double cur_gain = 0;
+  double max_gain = 0;
+  double eix = counter[0] - self_loop_wt;
+  double ax = c_info[sc].degree_wt - degree_wt;
+  double eiy = 0;
+  double ay = 0;
 
   auto stored_already = cluster_local_map.begin();
   do {
     if (sc != stored_already->first) {
-      ay = c_info[stored_already->first].degree_wt; // Degree wt of cluster y
+      ay = c_info[stored_already->first].degree_wt;  // Degree wt of cluster y
 
       if (ay < (ax + degree_wt)) {
         stored_already++;
@@ -400,17 +404,17 @@ maxModularityWithoutSwaps(std::map<uint64_t, uint64_t>& cluster_local_map,
       }
 
       eiy =
-          counter[stored_already->second]; // Total edges incident on cluster y
+          counter[stored_already->second];  // Total edges incident on cluster y
       cur_gain = 2 * constant * (eiy - eix) +
                  2 * degree_wt * ((ax - ay) * constant * constant);
 
       if ((cur_gain > max_gain) || ((cur_gain == max_gain) && (cur_gain != 0) &&
                                     (stored_already->first < max_index))) {
-        max_gain  = cur_gain;
+        max_gain = cur_gain;
         max_index = stored_already->first;
       }
     }
-    stored_already++; // Explore next cluster
+    stored_already++;  // Explore next cluster
   } while (stored_already != cluster_local_map.end());
 
   if ((c_info[max_index].size == 1 && c_info[sc].size == 1 && max_index > sc)) {
@@ -422,10 +426,11 @@ maxModularityWithoutSwaps(std::map<uint64_t, uint64_t>& cluster_local_map,
 }
 
 template <typename GraphTy, typename CommArrayTy>
-double calModularityDelay(GraphTy& graph, CommArrayTy& c_info,
-                          CommArrayTy& c_update, double& e_xx, double& a2_x,
-                          double& constant_for_second_term,
-                          std::vector<uint64_t>& local_target) {
+double
+calModularityDelay(
+    GraphTy& graph, CommArrayTy& c_info, CommArrayTy& c_update, double& e_xx,
+    double& a2_x, double& constant_for_second_term,
+    std::vector<uint64_t>& local_target) {
   using GNode = typename GraphTy::GraphNode;
   /* Variables needed for Modularity calculation */
   double mod = -1;
@@ -439,8 +444,8 @@ double calModularityDelay(GraphTy& graph, CommArrayTy& c_info,
   galois::GAccumulator<double> acc_e_xx;
   galois::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { cluster_wt_internal[n] = 0; });
+  galois::do_all(
+      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
@@ -466,8 +471,10 @@ double calModularityDelay(GraphTy& graph, CommArrayTy& c_info,
 }
 
 template <typename GraphTy, typename CommArrayTy>
-double calModularity(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
-                     double& a2_x, double& constant_for_second_term) {
+double
+calModularity(
+    GraphTy& graph, CommArrayTy& c_info, double& e_xx, double& a2_x,
+    double& constant_for_second_term) {
   using GNode = typename GraphTy::GraphNode;
   /* Variables needed for Modularity calculation */
   double mod = -1;
@@ -481,8 +488,8 @@ double calModularity(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
   galois::GAccumulator<double> acc_e_xx;
   galois::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { cluster_wt_internal[n] = 0; });
+  galois::do_all(
+      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
@@ -514,12 +521,13 @@ double calModularity(GraphTy& graph, CommArrayTy& c_info, double& e_xx,
  * assignments.
  */
 template <typename GraphTy, typename CommArrayTy>
-double calModularityFinal(GraphTy& graph) {
-  using GNode     = typename GraphTy::GraphNode;
+double
+calModularityFinal(GraphTy& graph) {
+  using GNode = typename GraphTy::GraphNode;
   using CommArray = CommArrayTy;
 
-  CommArray c_info;   // Community info
-  CommArray c_update; // Used for updating community
+  CommArray c_info;    // Community info
+  CommArray c_update;  // Used for updating community
 
   /* Variables needed for Modularity calculation */
   double constant_for_second_term;
@@ -544,8 +552,8 @@ double calModularityFinal(GraphTy& graph) {
   double a2_x = 0;
   galois::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { cluster_wt_internal[n] = 0; });
+  galois::do_all(
+      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
   galois::do_all(galois::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
@@ -574,7 +582,8 @@ double calModularityFinal(GraphTy& graph) {
   return mod;
 }
 template <typename GraphTy>
-uint64_t renumberClustersContiguously(GraphTy& graph) {
+uint64_t
+renumberClustersContiguously(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   std::map<uint64_t, uint64_t> cluster_local_map;
   uint64_t num_unique_clusters = 0;
@@ -588,7 +597,7 @@ uint64_t renumberClustersContiguously(GraphTy& graph) {
         n_data.curr_comm_ass = stored_already->second;
       } else {
         cluster_local_map[n_data.curr_comm_ass] = num_unique_clusters;
-        n_data.curr_comm_ass                    = num_unique_clusters;
+        n_data.curr_comm_ass = num_unique_clusters;
         num_unique_clusters++;
       }
     }
@@ -597,8 +606,8 @@ uint64_t renumberClustersContiguously(GraphTy& graph) {
 }
 
 template <typename GraphTy>
-uint64_t renumberClustersContiguouslySubcomm(GraphTy& graph) {
-
+uint64_t
+renumberClustersContiguouslySubcomm(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   std::map<uint64_t, uint64_t> cluster_local_map;
   uint64_t num_unique_clusters = 0;
@@ -612,7 +621,7 @@ uint64_t renumberClustersContiguouslySubcomm(GraphTy& graph) {
       n_data.curr_subcomm_ass = stored_already->second;
     } else {
       cluster_local_map[n_data.curr_subcomm_ass] = num_unique_clusters;
-      n_data.curr_subcomm_ass                    = num_unique_clusters;
+      n_data.curr_subcomm_ass = num_unique_clusters;
       num_unique_clusters++;
     }
   }
@@ -621,7 +630,8 @@ uint64_t renumberClustersContiguouslySubcomm(GraphTy& graph) {
 }
 
 template <typename GraphTy>
-uint64_t renumberClustersContiguouslyArray(largeArray& arr) {
+uint64_t
+renumberClustersContiguouslyArray(largeArray& arr) {
   using GNode = typename GraphTy::GraphNode;
   std::map<uint64_t, uint64_t> cluster_local_map;
   uint64_t num_unique_clusters = 0;
@@ -634,7 +644,7 @@ uint64_t renumberClustersContiguouslyArray(largeArray& arr) {
         arr[n] = stored_already->second;
       } else {
         cluster_local_map[arr[n]] = num_unique_clusters;
-        arr[n]                    = num_unique_clusters;
+        arr[n] = num_unique_clusters;
         num_unique_clusters++;
       }
     }
@@ -643,18 +653,20 @@ uint64_t renumberClustersContiguouslyArray(largeArray& arr) {
 }
 
 template <typename GraphTy>
-void printGraph(GraphTy& graph) {
+void
+printGraph(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   for (GNode n = 0; n < graph.size(); ++n) {
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-      galois::gPrint(n, " --> ", graph.getEdgeDst(ii), " , ",
-                     graph.getEdgeData(ii), "\n");
+      galois::gPrint(
+          n, " --> ", graph.getEdgeDst(ii), " , ", graph.getEdgeData(ii), "\n");
     }
   }
 }
 
 template <typename GraphTy>
-void printNodeClusterId(GraphTy& graph, std::string output_CID_filename) {
+void
+printNodeClusterId(GraphTy& graph, std::string output_CID_filename) {
   using GNode = typename GraphTy::GraphNode;
   std::ofstream outputFile(output_CID_filename, std::ofstream::out);
   for (GNode n = 0; n < graph.size(); ++n) {
@@ -664,7 +676,8 @@ void printNodeClusterId(GraphTy& graph, std::string output_CID_filename) {
 }
 
 template <typename GraphTy, typename CommArrayTy>
-void checkModularity(GraphTy& graph, largeArray& clusters_orig) {
+void
+checkModularity(GraphTy& graph, largeArray& clusters_orig) {
   using GNode = typename GraphTy::GraphNode;
   galois::gPrint("checkModularity\n");
 
@@ -673,8 +686,8 @@ void checkModularity(GraphTy& graph, largeArray& clusters_orig) {
   });
 
   uint64_t num_unique_clusters = renumberClustersContiguously(graph);
-  galois::gPrint("Number of unique clusters (renumber): ", num_unique_clusters,
-                 "\n");
+  galois::gPrint(
+      "Number of unique clusters (renumber): ", num_unique_clusters, "\n");
   auto mod = calModularityFinal<GraphTy, CommArrayTy>(graph);
   galois::gPrint("FINAL MOD: ", mod, "\n");
 }
@@ -682,72 +695,74 @@ void checkModularity(GraphTy& graph, largeArray& clusters_orig) {
 /***********************************************
  ********** Leiden Routines ********************
  **********************************************/
-uint64_t generateRandonNumber(uint64_t min, uint64_t max) {
+uint64_t
+generateRandonNumber(uint64_t min, uint64_t max) {
   std::random_device dev;
   std::mt19937 rng(dev());
   std::uniform_int_distribution<std::mt19937::result_type> dist6(
-      min, max); // distribution in range [min, max]
+      min, max);  // distribution in range [min, max]
   return dist6(rng);
 }
 
-uint64_t generateRandonNumberDouble(double min, double max) {
+uint64_t
+generateRandonNumberDouble(double min, double max) {
   std::random_device
-      rd; // Will be used to obtain a seed for the random number engine
-  std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-  std::uniform_real_distribution<> dis(min,
-                                       max); // distribution in range [min, max]
+      rd;  // Will be used to obtain a seed for the random number engine
+  std::mt19937 gen(rd());  // Standard mersenne_twister_engine seeded with rd()
+  std::uniform_real_distribution<> dis(
+      min,
+      max);  // distribution in range [min, max]
   return dis(gen);
 }
 
 template <typename CommArrayTy>
-double diffCPMQuality(uint64_t curr_subcomm, uint64_t candidate_subcomm,
-                      std::map<uint64_t, uint64_t>& cluster_local_map,
-                      std::vector<EdgeTy>& counter, CommArrayTy& subcomm_info,
-                      EdgeTy self_loop_wt) {
-
+double
+diffCPMQuality(
+    uint64_t curr_subcomm, uint64_t candidate_subcomm,
+    std::map<uint64_t, uint64_t>& cluster_local_map,
+    std::vector<EdgeTy>& counter, CommArrayTy& subcomm_info,
+    EdgeTy self_loop_wt) {
   uint64_t size_x = subcomm_info[curr_subcomm].node_wt;
   uint64_t size_y = subcomm_info[candidate_subcomm].node_wt;
 
   double diff =
-      (double)(counter[cluster_local_map[candidate_subcomm]] -
-               counter[cluster_local_map[curr_subcomm]] + self_loop_wt) +
+      (double)(counter[cluster_local_map[candidate_subcomm]] - counter[cluster_local_map[curr_subcomm]] + self_loop_wt) +
       resolution * 0.5f *
-          (double)((size_x * (size_x - 1) + size_y * (size_y - 1)) -
-                   ((size_x - 1) * (size_x - 2) + size_y * (size_y + 1)));
+          (double)((size_x * (size_x - 1) + size_y * (size_y - 1)) - ((size_x - 1) * (size_x - 2) + size_y * (size_y + 1)));
 
   return diff;
 }
 
 template <typename GraphTy, typename CommArrayTy>
-uint64_t getRandomSubcommunity(GraphTy& graph, uint64_t n,
-                               CommArrayTy& subcomm_info,
-                               uint64_t total_degree_wt,
-                               double constant_for_second_term) {
-  using GNode           = typename GraphTy::GraphNode;
+uint64_t
+getRandomSubcommunity(
+    GraphTy& graph, uint64_t n, CommArrayTy& subcomm_info,
+    uint64_t total_degree_wt, double constant_for_second_term) {
+  using GNode = typename GraphTy::GraphNode;
   uint64_t curr_subcomm = graph.getData(n).curr_subcomm_ass;
 
   std::map<uint64_t, uint64_t>
-      cluster_local_map; // Map each neighbor's subcommunity to local number:
-                         // Subcommunity --> Index
-  std::vector<EdgeTy> counter; // Number of edges to each unique subcommunity
+      cluster_local_map;  // Map each neighbor's subcommunity to local number:
+                          // Subcommunity --> Index
+  std::vector<EdgeTy> counter;  // Number of edges to each unique subcommunity
   uint64_t num_unique_clusters = 1;
 
-  cluster_local_map[curr_subcomm] = 0; // Add n's current subcommunity
-  counter.push_back(0); // Initialize the counter to zero (no edges incident
-                        // yet)
+  cluster_local_map[curr_subcomm] = 0;  // Add n's current subcommunity
+  counter.push_back(0);  // Initialize the counter to zero (no edges incident
+                         // yet)
 
   EdgeTy self_loop_wt = 0;
 
   for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
     GNode dst = graph.getEdgeDst(ii);
     EdgeTy edge_wt =
-        graph.getEdgeData(ii, flag_no_lock); // Self loop weights is recorded
+        graph.getEdgeData(ii, flag_no_lock);  // Self loop weights is recorded
 
     if (dst == n) {
-      self_loop_wt += edge_wt; // Self loop weights is recorded
+      self_loop_wt += edge_wt;  // Self loop weights is recorded
     }
     auto stored_already = cluster_local_map.find(
-        graph.getData(dst).curr_subcomm_ass); // Check if it already exists
+        graph.getData(dst).curr_subcomm_ass);  // Check if it already exists
     if (stored_already != cluster_local_map.end()) {
       counter[stored_already->second] += edge_wt;
     } else {
@@ -756,12 +771,12 @@ uint64_t getRandomSubcommunity(GraphTy& graph, uint64_t n,
       counter.push_back(edge_wt);
       num_unique_clusters++;
     }
-  } // End edge loop
+  }  // End edge loop
 
   std::map<uint64_t, uint64_t> new_cluster_local_map;
   std::vector<EdgeTy> new_counter;
   num_unique_clusters = 0;
-  EdgeTy total        = 0;
+  EdgeTy total = 0;
 
   for (auto pair : cluster_local_map) {
     auto subcomm = pair.first;
@@ -774,17 +789,18 @@ uint64_t getRandomSubcommunity(GraphTy& graph, uint64_t n,
         constant_for_second_term * (double)subcomm_degree_wt *
             ((double)total_degree_wt - (double)subcomm_degree_wt))
       continue;
-    if (diffCPMQuality(curr_subcomm, subcomm, cluster_local_map, counter,
-                       subcomm_info, self_loop_wt) > 0) {
+    if (diffCPMQuality(
+            curr_subcomm, subcomm, cluster_local_map, counter, subcomm_info,
+            self_loop_wt) > 0) {
       new_cluster_local_map[subcomm] = num_unique_clusters;
-      EdgeTy count                   = counter[cluster_local_map[subcomm]];
+      EdgeTy count = counter[cluster_local_map[subcomm]];
       new_counter.push_back(count);
       total += count;
     }
   }
 
   // Pick max community size
-  uint64_t rand_idx = 1; // getRandomInt(0,total-1);
+  uint64_t rand_idx = 1;  // getRandomInt(0,total-1);
 
   uint64_t idx = 0;
   for (auto pair : new_cluster_local_map) {
@@ -798,17 +814,18 @@ uint64_t getRandomSubcommunity(GraphTy& graph, uint64_t n,
 }
 
 template <typename GraphTy, typename CommTy>
-uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
-                                CommTy& subcomm_info, uint64_t total_degree_wt,
-                                uint64_t comm_id,
-                                double constant_for_second_term) {
-  using GNode  = typename GraphTy::GraphNode;
+uint64_t
+getRandomSubcommunity2(
+    GraphTy& graph, typename GraphTy::GraphNode n, CommTy& subcomm_info,
+    uint64_t total_degree_wt, uint64_t comm_id,
+    double constant_for_second_term) {
+  using GNode = typename GraphTy::GraphNode;
   auto& n_data = graph.getData(n);
   /*
    * Remove the currently selected node from its current cluster.
    * This causes the cluster to be empty.
    */
-  subcomm_info[n_data.curr_subcomm_ass].node_wt          = 0;
+  subcomm_info[n_data.curr_subcomm_ass].node_wt = 0;
   subcomm_info[n_data.curr_subcomm_ass].internal_edge_wt = 0;
 
   /*
@@ -831,10 +848,10 @@ uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
    * currently selected node will be moved back to its old
    * cluster.
    */
-  cluster_local_map[n_data.curr_subcomm_ass] = 0; // Add n's current
-                                                  // subcommunity
-  counter.push_back(0); // Initialize the counter to zero (no edges incident
-                        // yet)
+  cluster_local_map[n_data.curr_subcomm_ass] = 0;  // Add n's current
+                                                   // subcommunity
+  counter.push_back(0);  // Initialize the counter to zero (no edges incident
+                         // yet)
   neighboring_cluster_ids.push_back(n_data.curr_subcomm_ass);
   uint64_t num_unique_clusters = 1;
 
@@ -843,13 +860,13 @@ uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
   for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
     GNode dst = graph.getEdgeDst(ii);
     EdgeTy edge_wt =
-        graph.getEdgeData(ii, flag_no_lock); // Self loop weights is recorded
+        graph.getEdgeData(ii, flag_no_lock);  // Self loop weights is recorded
     if (graph.getData(dst).curr_comm_ass == comm_id) {
       if (dst == n) {
-        self_loop_wt += edge_wt; // Self loop weights is recorded
+        self_loop_wt += edge_wt;  // Self loop weights is recorded
       }
       auto stored_already = cluster_local_map.find(
-          graph.getData(dst).curr_subcomm_ass); // Check if it already exists
+          graph.getData(dst).curr_subcomm_ass);  // Check if it already exists
       if (stored_already != cluster_local_map.end()) {
         counter[stored_already->second] += edge_wt;
       } else {
@@ -860,12 +877,12 @@ uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
         num_unique_clusters++;
       }
     }
-  } // End edge loop
+  }  // End edge loop
 
-  uint64_t best_cluster                            = n_data.curr_subcomm_ass;
-  double max_quality_value_increment               = 0;
+  uint64_t best_cluster = n_data.curr_subcomm_ass;
+  double max_quality_value_increment = 0;
   double total_transformed_quality_value_increment = 0;
-  double quality_value_increment                   = 0;
+  double quality_value_increment = 0;
   std::vector<double> cum_transformed_quality_value_increment_per_cluster(
       num_unique_clusters);
   for (auto pair : cluster_local_map) {
@@ -873,19 +890,18 @@ uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
     if (n_data.curr_subcomm_ass == subcomm)
       continue;
 
-    uint64_t subcomm_node_wt   = subcomm_info[subcomm].node_wt;
+    uint64_t subcomm_node_wt = subcomm_info[subcomm].node_wt;
     uint64_t subcomm_degree_wt = subcomm_info[subcomm].degree_wt;
 
     // check if subcommunity is well connected
     if (subcomm_info[subcomm].internal_edge_wt >=
         constant_for_second_term * (double)subcomm_degree_wt *
             ((double)total_degree_wt - (double)subcomm_degree_wt)) {
-
       quality_value_increment =
           counter[pair.second] - n_data.node_wt * subcomm_node_wt * resolution;
 
       if (quality_value_increment > max_quality_value_increment) {
-        best_cluster                = subcomm;
+        best_cluster = subcomm;
         max_quality_value_increment = quality_value_increment;
       }
 
@@ -950,24 +966,24 @@ uint64_t getRandomSubcommunity2(GraphTy& graph, typename GraphTy::GraphNode n,
  *
  */
 template <typename GraphTy, typename CommTy>
-void mergeNodesSubset(GraphTy& graph,
-                      std::vector<typename GraphTy::GraphNode>& cluster_nodes,
-                      uint64_t comm_id, uint64_t total_degree_wt,
-                      CommTy& subcomm_info, double constant_for_second_term) {
-
+void
+mergeNodesSubset(
+    GraphTy& graph, std::vector<typename GraphTy::GraphNode>& cluster_nodes,
+    uint64_t comm_id, uint64_t total_degree_wt, CommTy& subcomm_info,
+    double constant_for_second_term) {
   using GNode = typename GraphTy::GraphNode;
 
   // select set R
   std::vector<GNode> cluster_nodes_to_move;
   for (uint64_t i = 0; i < cluster_nodes.size(); ++i) {
-    GNode n      = cluster_nodes[i];
+    GNode n = cluster_nodes[i];
     auto& n_data = graph.getData(n);
     /*
      * Initialize with singleton sub-communities
      */
     EdgeTy nodeEdgeWeightWithinCluster = 0;
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-      GNode dst      = graph.getEdgeDst(ii);
+      GNode dst = graph.getEdgeDst(ii);
       EdgeTy edge_wt = graph.getEdgeData(ii, flag_no_lock);
       /*
        * Must include the edge weight of all neighbors excluding self loops
@@ -978,7 +994,7 @@ void mergeNodesSubset(GraphTy& graph,
       }
     }
 
-    uint64_t node_wt   = n_data.node_wt;
+    uint64_t node_wt = n_data.node_wt;
     uint64_t degree_wt = n_data.degree_wt;
     /*
      * Additionally, only nodes that are well connected with
@@ -991,10 +1007,10 @@ void mergeNodesSubset(GraphTy& graph,
             ((double)total_degree_wt - (double)degree_wt))
       cluster_nodes_to_move.push_back(n);
 
-    subcomm_info[n].node_wt          = node_wt;
+    subcomm_info[n].node_wt = node_wt;
     subcomm_info[n].internal_edge_wt = nodeEdgeWeightWithinCluster;
-    subcomm_info[n].size             = 1;
-    subcomm_info[n].degree_wt        = degree_wt;
+    subcomm_info[n].size = 1;
+    subcomm_info[n].degree_wt = degree_wt;
   }
 
   for (GNode n : cluster_nodes_to_move) {
@@ -1003,9 +1019,9 @@ void mergeNodesSubset(GraphTy& graph,
      * Only consider singleton communities
      */
     if (subcomm_info[n_data.curr_subcomm_ass].size == 1) {
-      uint64_t new_subcomm_ass =
-          getRandomSubcommunity2(graph, n, subcomm_info, total_degree_wt,
-                                 comm_id, constant_for_second_term);
+      uint64_t new_subcomm_ass = getRandomSubcommunity2(
+          graph, n, subcomm_info, total_degree_wt, comm_id,
+          constant_for_second_term);
 
       if ((int64_t)new_subcomm_ass != -1 &&
           new_subcomm_ass != graph.getData(n).curr_subcomm_ass) {
@@ -1015,14 +1031,14 @@ void mergeNodesSubset(GraphTy& graph,
          * Move the currently selected node to its new cluster and
          * update the clustering statistics.
          */
-        galois::atomicAdd(subcomm_info[new_subcomm_ass].node_wt,
-                          n_data.node_wt);
+        galois::atomicAdd(
+            subcomm_info[new_subcomm_ass].node_wt, n_data.node_wt);
         galois::atomicAdd(subcomm_info[new_subcomm_ass].size, (uint64_t)1);
-        galois::atomicAdd(subcomm_info[new_subcomm_ass].degree_wt,
-                          n_data.degree_wt);
+        galois::atomicAdd(
+            subcomm_info[new_subcomm_ass].degree_wt, n_data.degree_wt);
 
         for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-          GNode dst    = graph.getEdgeDst(ii);
+          GNode dst = graph.getEdgeDst(ii);
           auto edge_wt = graph.getEdgeData(ii, flag_no_lock);
           if (dst != n && graph.getData(dst).curr_comm_ass == comm_id) {
             if (graph.getData(dst).curr_subcomm_ass == new_subcomm_ass) {
@@ -1042,9 +1058,9 @@ void mergeNodesSubset(GraphTy& graph,
  * trying to split up each cluster into multiple clusters.
  */
 template <typename GraphTy, typename CommArrayTy>
-void refinePartition(GraphTy& graph, double constant_for_second_term) {
-
-  using GNode     = typename GraphTy::GraphNode;
+void
+refinePartition(GraphTy& graph, double constant_for_second_term) {
+  using GNode = typename GraphTy::GraphNode;
   using CommArray = CommArrayTy;
 
   galois::gPrint("Refining\n");
@@ -1063,7 +1079,7 @@ void refinePartition(GraphTy& graph, double constant_for_second_term) {
   galois::do_all(
       galois::iterate((uint32_t)0, (uint32_t)(2 * graph.size() + 1)),
       [&](uint32_t n) {
-        comm_info[n].node_wt   = (uint64_t)0;
+        comm_info[n].node_wt = (uint64_t)0;
         comm_info[n].degree_wt = (uint64_t)0;
       },
       galois::steal());
@@ -1074,8 +1090,8 @@ void refinePartition(GraphTy& graph, double constant_for_second_term) {
       cluster_bags[n_data.curr_comm_ass].push_back(n);
 
     galois::atomicAdd(comm_info[n_data.curr_comm_ass].node_wt, n_data.node_wt);
-    galois::atomicAdd(comm_info[n_data.curr_comm_ass].degree_wt,
-                      n_data.degree_wt);
+    galois::atomicAdd(
+        comm_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
   }
 
   CommArray subcomm_info;
@@ -1083,23 +1099,23 @@ void refinePartition(GraphTy& graph, double constant_for_second_term) {
   subcomm_info.allocateBlocked(graph.size() + 1);
 
   // call mergeNodesSubset for each community in parallel
-  galois::do_all(galois::iterate((uint64_t)0, (uint64_t)graph.size()),
-                 [&](uint64_t c) {
-                   /*
+  galois::do_all(
+      galois::iterate((uint64_t)0, (uint64_t)graph.size()), [&](uint64_t c) {
+        /*
                     * Only nodes belonging to singleton clusters can be moved to
                     * a different cluster. This guarantees that clusters will
                     * never be split up.
                     */
-                   comm_info[c].num_subcomm = 0;
-                   if (cluster_bags[c].size() > 1) {
-                     // comm_info[c].num_subcomm =
-                     mergeNodesSubset<GraphTy, CommArray>(
-                         graph, cluster_bags[c], c, comm_info[c].degree_wt,
-                         subcomm_info, constant_for_second_term);
-                   } else {
-                     comm_info[c].num_subcomm = 0;
-                   }
-                 });
+        comm_info[c].num_subcomm = 0;
+        if (cluster_bags[c].size() > 1) {
+          // comm_info[c].num_subcomm =
+          mergeNodesSubset<GraphTy, CommArray>(
+              graph, cluster_bags[c], c, comm_info[c].degree_wt, subcomm_info,
+              constant_for_second_term);
+        } else {
+          comm_info[c].num_subcomm = 0;
+        }
+      });
 }
 
 /*
@@ -1109,15 +1125,16 @@ void refinePartition(GraphTy& graph, double constant_for_second_term) {
  *
  */
 template <typename GraphTy>
-void buildNextLevelGraph(GraphTy& graph, GraphTy& graph_next,
-                         uint64_t num_unique_clusters) {
+void
+buildNextLevelGraph(
+    GraphTy& graph, GraphTy& graph_next, uint64_t num_unique_clusters) {
   using GNode = typename GraphTy::GraphNode;
   std::cerr << "Inside buildNextLevelGraph\n";
 
   galois::StatTimer TimerGraphBuild("Timer_Graph_build");
   TimerGraphBuild.start();
   uint32_t num_nodes_next = num_unique_clusters;
-  uint64_t num_edges_next = 0; // Unknown right now
+  uint64_t num_edges_next = 0;  // Unknown right now
 
   std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
   // Comment: Serial separation is better than do_all due to contention
@@ -1138,17 +1155,17 @@ void buildNextLevelGraph(GraphTy& graph, GraphTy& graph_next,
         uint64_t num_unique_clusters = 0;
         for (auto cb_ii = cluster_bags[c].begin();
              cb_ii != cluster_bags[c].end(); ++cb_ii) {
-
-          assert(graph.getData(*cb_ii, flag_no_lock).curr_comm_ass ==
-                 c); // All nodes in this bag must have same cluster id
+          assert(
+              graph.getData(*cb_ii, flag_no_lock).curr_comm_ass ==
+              c);  // All nodes in this bag must have same cluster id
 
           for (auto ii = graph.edge_begin(*cb_ii); ii != graph.edge_end(*cb_ii);
                ++ii) {
-            GNode dst     = graph.getEdgeDst(ii);
+            GNode dst = graph.getEdgeDst(ii);
             auto dst_data = graph.getData(dst, flag_no_lock);
             assert(dst_data.curr_comm_ass != UNASSIGNED);
             auto stored_already = cluster_local_map.find(
-                dst_data.curr_comm_ass); // Check if it already exists
+                dst_data.curr_comm_ass);  // Check if it already exists
             if (stored_already != cluster_local_map.end()) {
               edges_data[c][stored_already->second] += graph.getEdgeData(ii);
             } else {
@@ -1157,7 +1174,7 @@ void buildNextLevelGraph(GraphTy& graph, GraphTy& graph_next,
               edges_data[c].push_back(graph.getEdgeData(ii));
               num_unique_clusters++;
             }
-          } // End edge loop
+          }  // End edge loop
         }
       },
       galois::steal(), galois::loopname("BuildGrah: Find edges"));
@@ -1176,14 +1193,14 @@ void buildNextLevelGraph(GraphTy& graph, GraphTy& graph_next,
   }
 
   assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
-  galois::gPrint("#nodes : ", num_nodes_next, ", #edges : ", num_edges_next,
-                 "\n");
+  galois::gPrint(
+      "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
   std::cerr << "Graph construction started"
             << "\n";
   galois::StatTimer TimerConstructFrom("Timer_Construct_From");
   TimerConstructFrom.start();
-  graph_next.constructFrom(num_nodes_next, num_edges_next, prefix_edges_count,
-                           edges_id, edges_data);
+  graph_next.constructFrom(
+      num_nodes_next, num_edges_next, prefix_edges_count, edges_id, edges_data);
   TimerConstructFrom.stop();
 
   TimerGraphBuild.stop();
@@ -1191,16 +1208,17 @@ void buildNextLevelGraph(GraphTy& graph, GraphTy& graph_next,
 }
 
 template <typename GraphTy>
-void buildNextLevelGraphSubComm(GraphTy& graph, GraphTy& graph_next,
-                                uint64_t num_unique_clusters,
-                                std::vector<uint64_t>& original_comm_ass,
-                                std::vector<uint64_t>& cluster_node_wt) {
+void
+buildNextLevelGraphSubComm(
+    GraphTy& graph, GraphTy& graph_next, uint64_t num_unique_clusters,
+    std::vector<uint64_t>& original_comm_ass,
+    std::vector<uint64_t>& cluster_node_wt) {
   using GNode = typename GraphTy::GraphNode;
 
   galois::StatTimer TimerGraphBuild("Timer_Graph_build");
   TimerGraphBuild.start();
   uint32_t num_nodes_next = num_unique_clusters;
-  uint64_t num_edges_next = 0; // Unknown right now
+  uint64_t num_edges_next = 0;  // Unknown right now
 
   std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
   // Comment: Serial separation is better than do_all due to contention
@@ -1224,17 +1242,17 @@ void buildNextLevelGraphSubComm(GraphTy& graph, GraphTy& graph_next,
         uint64_t num_unique_clusters = 0;
         for (auto cb_ii = cluster_bags[c].begin();
              cb_ii != cluster_bags[c].end(); ++cb_ii) {
-
-          assert(graph.getData(*cb_ii, flag_no_lock).curr_subcomm_ass ==
-                 c); // All nodes in this bag must have same cluster id
+          assert(
+              graph.getData(*cb_ii, flag_no_lock).curr_subcomm_ass ==
+              c);  // All nodes in this bag must have same cluster id
 
           for (auto ii = graph.edge_begin(*cb_ii); ii != graph.edge_end(*cb_ii);
                ++ii) {
-            GNode dst     = graph.getEdgeDst(ii);
+            GNode dst = graph.getEdgeDst(ii);
             auto dst_data = graph.getData(dst, flag_no_lock);
             assert(dst_data.curr_subcomm_ass != UNASSIGNED);
             auto stored_already = cluster_local_map.find(
-                dst_data.curr_subcomm_ass); // Check if it already exists
+                dst_data.curr_subcomm_ass);  // Check if it already exists
             if (stored_already != cluster_local_map.end()) {
               edges_data[c][stored_already->second] += graph.getEdgeData(ii);
             } else {
@@ -1244,7 +1262,7 @@ void buildNextLevelGraphSubComm(GraphTy& graph, GraphTy& graph_next,
               edges_data[c].push_back(graph.getEdgeData(ii));
               num_unique_clusters++;
             }
-          } // End edge loop
+          }  // End edge loop
         }
       },
       galois::steal(), galois::loopname("BuildGrah: Find edges"));
@@ -1263,18 +1281,18 @@ void buildNextLevelGraphSubComm(GraphTy& graph, GraphTy& graph_next,
   }
 
   assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
-  galois::gPrint("#nodes : ", num_nodes_next, ", #edges : ", num_edges_next,
-                 "\n");
-  galois::gPrint("#prefix last : ", prefix_edges_count[num_unique_clusters - 1],
-                 "\n");
+  galois::gPrint(
+      "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
+  galois::gPrint(
+      "#prefix last : ", prefix_edges_count[num_unique_clusters - 1], "\n");
 
   std::cerr << "Graph construction started"
             << "\n";
 
   galois::StatTimer TimerConstructFrom("Timer_Construct_From");
   TimerConstructFrom.start();
-  graph_next.constructFrom(num_nodes_next, num_edges_next, prefix_edges_count,
-                           edges_id, edges_data);
+  graph_next.constructFrom(
+      num_nodes_next, num_edges_next, prefix_edges_count, edges_id, edges_data);
   TimerConstructFrom.stop();
 
   std::cout << " c1:" << calConstantForSecondTerm(graph) << "\n";
@@ -1282,4 +1300,4 @@ void buildNextLevelGraphSubComm(GraphTy& graph, GraphTy& graph_next,
   galois::gPrint("Graph construction done\n");
 }
 
-#endif // CLUSTERING_H
+#endif  // CLUSTERING_H

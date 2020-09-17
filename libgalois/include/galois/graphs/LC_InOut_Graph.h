@@ -20,13 +20,13 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINOUTGRAPH_H_
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINOUTGRAPH_H_
 
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/fusion/include/vector.hpp>
 #include <boost/fusion/include/at_c.hpp>
+#include <boost/fusion/include/vector.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 
+#include "galois/Galois.h"
 #include "galois/config.h"
 #include "galois/graphs/Details.h"
-#include "galois/Galois.h"
 
 namespace galois {
 namespace graphs {
@@ -54,8 +54,8 @@ public:
 
 private:
   template <typename G>
-  friend void readGraphDispatch(G&, read_lc_inout_graph_tag, const std::string&,
-                                const std::string&);
+  friend void readGraphDispatch(
+      G&, read_lc_inout_graph_tag, const std::string&, const std::string&);
 
   typedef typename GraphTy ::template with_id<true>::type Super;
   typedef
@@ -89,8 +89,8 @@ public:
 
   // Union of edge_iterator and InGraph::edge_iterator
   class in_edge_iterator
-      : public boost::iterator_facade<in_edge_iterator, void*,
-                                      std::random_access_iterator_tag, void*> {
+      : public boost::iterator_facade<
+            in_edge_iterator, void*, std::random_access_iterator_tag, void*> {
     friend class boost::iterator_core_access;
     friend class LC_InOut_Graph;
     typedef edge_iterator Iterator0;
@@ -125,8 +125,8 @@ public:
       }
     }
 
-    typename in_edge_iterator::difference_type
-    distance_to(const in_edge_iterator& lhs) const {
+    typename in_edge_iterator::difference_type distance_to(
+        const in_edge_iterator& lhs) const {
       if (type == 0)
         return boost::fusion::at_c<0>(lhs.its) - boost::fusion::at_c<0>(its);
       else
@@ -147,9 +147,9 @@ public:
 
   LC_InOut_Graph() : asymmetric(false) {}
 
-  edge_data_reference
-  getInEdgeData(in_edge_iterator ni,
-                [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
+  edge_data_reference getInEdgeData(
+      in_edge_iterator ni,
+      [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     if (ni.type == 0) {
       return this->getEdgeData(boost::fusion::at_c<0>(ni.its));
@@ -167,8 +167,8 @@ public:
     }
   }
 
-  in_edge_iterator in_edge_begin(GraphNode N,
-                                 MethodFlag mflag = MethodFlag::WRITE) {
+  in_edge_iterator in_edge_begin(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
     if (!asymmetric) {
       if (galois::runtime::shouldLock(mflag)) {
@@ -184,16 +184,16 @@ public:
                  ii = inGraph.raw_begin(inGraphNode(N)),
                  ei = inGraph.raw_end(inGraphNode(N));
              ii != ei; ++ii) {
-          this->acquireNode(nodeFromId(inGraph.getId(inGraph.getEdgeDst(ii))),
-                            mflag);
+          this->acquireNode(
+              nodeFromId(inGraph.getId(inGraph.getEdgeDst(ii))), mflag);
         }
       }
       return in_edge_iterator(inGraph.raw_begin(inGraphNode(N)), 0);
     }
   }
 
-  in_edge_iterator in_edge_end(GraphNode N,
-                               MethodFlag mflag = MethodFlag::WRITE) {
+  in_edge_iterator in_edge_end(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
     if (!asymmetric) {
       return in_edge_iterator(this->raw_end(N));
@@ -202,10 +202,10 @@ public:
     }
   }
 
-  in_edges_iterator in_edges(GraphNode N,
-                             MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(in_edge_begin(N, mflag),
-                                         in_edge_end(N, mflag));
+  in_edges_iterator in_edges(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+    return internal::make_no_deref_range(
+        in_edge_begin(N, mflag), in_edge_end(N, mflag));
   }
 
   /**
@@ -216,19 +216,21 @@ public:
   void sortInEdgesByEdgeData(
       GraphNode N,
       const CompTy& comp = std::less<typename GraphTy::edge_data_type>(),
-      MethodFlag mflag   = MethodFlag::WRITE) {
+      MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
     if (!asymmetric) {
-      std::sort(this->edge_sort_begin(N), this->edge_sort_end(N),
-                internal::EdgeSortCompWrapper<
-                    EdgeSortValue<GraphNode, typename GraphTy::edge_data_type>,
-                    CompTy>(comp));
+      std::sort(
+          this->edge_sort_begin(N), this->edge_sort_end(N),
+          internal::EdgeSortCompWrapper<
+              EdgeSortValue<GraphNode, typename GraphTy::edge_data_type>,
+              CompTy>(comp));
     } else {
-      std::sort(inGraph.edge_sort_begin(inGraphNode(N)),
-                inGraph.edge_sort_end(inGraphNode(N)),
-                internal::EdgeSortCompWrapper<
-                    EdgeSortValue<GraphNode, typename GraphTy::edge_data_type>,
-                    CompTy>(comp));
+      std::sort(
+          inGraph.edge_sort_begin(inGraphNode(N)),
+          inGraph.edge_sort_end(inGraphNode(N)),
+          internal::EdgeSortCompWrapper<
+              EdgeSortValue<GraphNode, typename GraphTy::edge_data_type>,
+              CompTy>(comp));
     }
   }
 
@@ -237,14 +239,15 @@ public:
    * <code>EdgeSortValue<GraphTy::edge_data_type></code>.
    */
   template <typename CompTy>
-  void sortInEdges(GraphNode N, const CompTy& comp,
-                   MethodFlag mflag = MethodFlag::WRITE) {
+  void sortInEdges(
+      GraphNode N, const CompTy& comp, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
     if (!asymmetric) {
       std::sort(this->edge_sort_begin(N), this->edge_sort_end(N), comp);
     } else {
-      std::sort(inGraph.edge_sort_begin(inGraphNode(N)),
-                inGraph.edge_sort_end(inGraphNode(N)), comp);
+      std::sort(
+          inGraph.edge_sort_begin(inGraphNode(N)),
+          inGraph.edge_sort_end(inGraphNode(N)), comp);
     }
   }
 
@@ -255,19 +258,21 @@ public:
     this->acquireNode(N, mflag);
     if (!asymmetric) {
       typedef EdgeSortValue<GraphNode, edge_data_type> EdgeSortVal;
-      std::sort(this->edge_sort_begin(N), this->edge_sort_end(N),
-                [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
-                  return e1.dst < e2.dst;
-                });
+      std::sort(
+          this->edge_sort_begin(N), this->edge_sort_end(N),
+          [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
+            return e1.dst < e2.dst;
+          });
     } else {
-      typedef EdgeSortValue<typename InGraph::GraphNode,
-                            typename InGraph::edge_data_type>
+      typedef EdgeSortValue<
+          typename InGraph::GraphNode, typename InGraph::edge_data_type>
           InEdgeSortVal;
-      std::sort(inGraph.edge_sort_begin(inGraphNode(N)),
-                inGraph.edge_sort_end(inGraphNode(N)),
-                [=](const InEdgeSortVal& e1, const InEdgeSortVal& e2) {
-                  return e1.dst < e2.dst;
-                });
+      std::sort(
+          inGraph.edge_sort_begin(inGraphNode(N)),
+          inGraph.edge_sort_end(inGraphNode(N)),
+          [=](const InEdgeSortVal& e1, const InEdgeSortVal& e2) {
+            return e1.dst < e2.dst;
+          });
     }
   }
 
@@ -286,6 +291,6 @@ public:
   GraphNode nodeFromId(size_t N) { return this->getNode(N); }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 #endif

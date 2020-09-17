@@ -19,29 +19,32 @@
 
 #include "Helper.h"
 
-void ProjectPart(MetisGraph* metis_graph) {
-  GGraph* fine_graph   = metis_graph->GetParentGraph()->GetGraph();
+void
+ProjectPart(MetisGraph* metis_graph) {
+  GGraph* fine_graph = metis_graph->GetParentGraph()->GetGraph();
   GGraph* coarse_graph = metis_graph->GetGraph();
   galois::do_all(
-      galois::iterate(fine_graph->hedges,
-                      static_cast<uint32_t>(fine_graph->size())),
+      galois::iterate(
+          fine_graph->hedges, static_cast<uint32_t>(fine_graph->size())),
       [&](GNode n) {
-        auto parent        = fine_graph->getData(n).GetParent();
-        auto& cn           = coarse_graph->getData(parent);
+        auto parent = fine_graph->getData(n).GetParent();
+        auto& cn = coarse_graph->getData(parent);
         uint32_t partition = cn.GetPartition();
         fine_graph->getData(n).SetPartition(partition);
       },
       galois::loopname("Refining-Project-Partition"));
 }
 
-void ResetCounter(GGraph& g) {
+void
+ResetCounter(GGraph& g) {
   galois::do_all(
       galois::iterate(g.hedges, static_cast<uint32_t>(g.size())),
       [&](GNode n) { g.getData(n).ResetCounter(); },
       galois::loopname("Refining-Reset-Counter"));
 }
 
-void ParallelSwaps(
+void
+ParallelSwaps(
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
     std::vector<GGraph*>& g, uint32_t refine_max_levels) {
@@ -55,10 +58,10 @@ void ParallelSwaps(
       galois::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t v) {
         auto node_index_pair = combined_nodelist[v];
-        uint32_t index       = node_index_pair.second;
-        GNode n              = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
+        GNode n = node_index_pair.first;
         MetisNode& node_data = g[index]->getData(n);
-        WeightTy weight      = node_data.GetWeight();
+        WeightTy weight = node_data.GetWeight();
 
         node_size[index] += weight;
         if (node_data.GetPartition() > 0) {
@@ -96,8 +99,8 @@ void ParallelSwaps(
       swap_bag.clear();
 
       galois::do_all(
-          galois::iterate(cur_graph.hedges,
-                          static_cast<uint32_t>(cur_graph.size())),
+          galois::iterate(
+              cur_graph.hedges, static_cast<uint32_t>(cur_graph.size())),
           [&](uint32_t n) {
             MetisNode& node_data = cur_graph.getData(n);
 
@@ -121,8 +124,8 @@ void ParallelSwaps(
           },
           galois::loopname("Refining-Find-Partition-Nodes"));
 
-      num_partition_zero_nodes = std::distance(partition_zero_nodes.begin(),
-                                               partition_zero_nodes.end());
+      num_partition_zero_nodes = std::distance(
+          partition_zero_nodes.begin(), partition_zero_nodes.end());
       num_partition_one_nodes =
           std::distance(partition_one_nodes.begin(), partition_one_nodes.end());
 
@@ -137,22 +140,23 @@ void ParallelSwaps(
       for (uint32_t iter = 0; iter < 2; iter++) {
         auto& cur_bag =
             (iter == 0) ? partition_zero_nodes_bag : partition_one_nodes_bag;
-        std::sort(cur_bag.begin(), cur_bag.end(),
-                  [&cur_graph](GNode& l_opr, GNode& r_opr) {
-                    MetisNode& l_data = cur_graph.getData(l_opr);
-                    MetisNode& r_data = cur_graph.getData(r_opr);
-                    GainTy l_gain     = l_data.GetGain();
-                    GainTy r_gain     = r_data.GetGain();
+        std::sort(
+            cur_bag.begin(), cur_bag.end(),
+            [&cur_graph](GNode& l_opr, GNode& r_opr) {
+              MetisNode& l_data = cur_graph.getData(l_opr);
+              MetisNode& r_data = cur_graph.getData(r_opr);
+              GainTy l_gain = l_data.GetGain();
+              GainTy r_gain = r_data.GetGain();
 
-                    if (l_gain == r_gain) {
-                      uint32_t l_nid = l_data.GetNodeId();
-                      uint32_t r_nid = r_data.GetNodeId();
+              if (l_gain == r_gain) {
+                uint32_t l_nid = l_data.GetNodeId();
+                uint32_t r_nid = r_data.GetNodeId();
 
-                      return l_nid < r_nid;
-                    }
+                return l_nid < r_nid;
+              }
 
-                    return l_gain > r_gain;
-                  });
+              return l_gain > r_gain;
+            });
       }
       sort_timer.stop();
 
@@ -168,7 +172,7 @@ void ParallelSwaps(
           galois::iterate(swap_bag),
           [&](GNode n) {
             MetisNode& node_data = cur_graph.getData(n);
-            uint32_t partition   = node_data.GetPartition();
+            uint32_t partition = node_data.GetPartition();
             node_data.SetPartition(1 - partition);
             node_data.IncCounter();
           },
@@ -182,11 +186,12 @@ void ParallelSwaps(
   }
 }
 
-void ParallelMakingbalance(GGraph& g, float tol) {
+void
+ParallelMakingbalance(GGraph& g, float tol) {
   uint32_t total_hnodes = g.hnodes;
   uint32_t total_hedges = g.hedges;
-  uint32_t graph_size   = g.size();
-  uint32_t sqrt_hnodes  = sqrt(total_hnodes);
+  uint32_t graph_size = g.size();
+  uint32_t sqrt_hnodes = sqrt(total_hnodes);
 
   galois::GAccumulator<WeightTy> accum;
   galois::GAccumulator<WeightTy> node_size;
@@ -194,7 +199,7 @@ void ParallelMakingbalance(GGraph& g, float tol) {
       galois::iterate(total_hedges, graph_size),
       [&](GNode n) {
         MetisNode& node_data = g.getData(n);
-        WeightTy weight      = node_data.GetWeight();
+        WeightTy weight = node_data.GetWeight();
         node_size += weight;
         if (node_data.GetPartition() > 0) {
           accum += weight;
@@ -204,7 +209,7 @@ void ParallelMakingbalance(GGraph& g, float tol) {
 
   const WeightTy hi = (1 + tol) * node_size.reduce() / (2 + tol);
   const WeightTy lo = node_size.reduce() - hi;
-  WeightTy balance  = accum.reduce();
+  WeightTy balance = accum.reduce();
 
   galois::StatTimer init_gain_timer("Refining-Init-Gains");
   galois::StatTimer sort_timer("Refining-Sort");
@@ -262,11 +267,11 @@ void ParallelMakingbalance(GGraph& g, float tol) {
           if (gain >= 1.0f) {
             cand_nodes_bag_arr[0].emplace(n);
           } else if (gain >= 0.0f) {
-            int32_t d    = gain * 10.0f;
+            int32_t d = gain * 10.0f;
             uint32_t idx = 10 - d;
             cand_nodes_bag_arr[idx].emplace(n);
           } else if (gain > -9.0f) {
-            int32_t d    = gain * 10.0f - 1;
+            int32_t d = gain * 10.0f - 1;
             uint32_t idx = 10 - d;
             cand_nodes_bag_arr[idx].emplace(n);
           } else { /* NODES with gain by weight ratio <= -9.0f are in one
@@ -284,7 +289,7 @@ void ParallelMakingbalance(GGraph& g, float tol) {
             return;
           }
 
-          GNode n              = *cand_nodes_bag.begin();
+          GNode n = *cand_nodes_bag.begin();
           MetisNode& node_data = g.getData(n);
           float gain =
               static_cast<float>(node_data.GetGain()) / node_data.GetWeight();
@@ -316,7 +321,7 @@ void ParallelMakingbalance(GGraph& g, float tol) {
 
       for (GNode cand_node : cand_nodes_vec_arr[j]) {
         MetisNode& cand_node_data = g.getData(cand_node);
-        uint32_t partition        = cand_node_data.GetPartition();
+        uint32_t partition = cand_node_data.GetPartition();
         cand_node_data.SetPartition(1 - partition);
 
         if (process_zero_partition) {
@@ -364,7 +369,7 @@ void ParallelMakingbalance(GGraph& g, float tol) {
     make_balance_timer.start();
     for (GNode cand_node : neg_cand_nodes_vec) {
       MetisNode& cand_node_data = g.getData(cand_node);
-      uint32_t partition        = cand_node_data.GetPartition();
+      uint32_t partition = cand_node_data.GetPartition();
 
       cand_node_data.SetPartition(1 - partition);
       if (process_zero_partition) {
@@ -392,7 +397,8 @@ void ParallelMakingbalance(GGraph& g, float tol) {
   }
 }
 
-void Refine(std::vector<MetisGraph*>& coarse_graph) {
+void
+Refine(std::vector<MetisGraph*>& coarse_graph) {
   uint32_t num_partitions = coarse_graph.size();
 
   std::vector<float> ratio(num_partitions, 0.0f);
@@ -410,8 +416,8 @@ void Refine(std::vector<MetisGraph*>& coarse_graph) {
       continue;
     }
 
-    ratio[i] = 52.5 / 47.5; // change if needed
-    tol[i]   = std::max(ratio[i], 1 - ratio[i]) - 1;
+    ratio[i] = 52.5 / 47.5;  // change if needed
+    tol[i] = std::max(ratio[i], 1 - ratio[i]) - 1;
   }
 
   uint32_t total_hnodes{0}, total_hedges{0};
@@ -420,7 +426,7 @@ void Refine(std::vector<MetisGraph*>& coarse_graph) {
     for (uint32_t i = 0; i < num_partitions; i++) {
       if (coarse_graph[i] != nullptr) {
         fine_graph[i] = coarse_graph[i]->GetParentGraph();
-        gg[i]         = coarse_graph[i]->GetGraph();
+        gg[i] = coarse_graph[i]->GetGraph();
         total_hnodes += gg[i]->hnodes;
         total_hedges += gg[i]->hedges;
       } else {
@@ -460,7 +466,7 @@ void Refine(std::vector<MetisGraph*>& coarse_graph) {
     for (uint32_t i = 0; i < num_partitions; i++) {
       if (coarse_graph[i] != nullptr) {
         coarse_graph[i] = coarse_graph[i]->GetParentGraph();
-        all_done        = false;
+        all_done = false;
       }
     }
 

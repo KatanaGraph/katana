@@ -17,12 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Bag.h"
-#include <vector>
 #include <iostream>
+#include <vector>
 
-void function_pointer(int x, galois::UserContext<int>&) {
+#include "galois/Bag.h"
+#include "galois/Galois.h"
+
+void
+function_pointer(int x, galois::UserContext<int>&) {
   std::cout << x << "\n";
 }
 
@@ -32,15 +34,17 @@ struct function_object {
   }
 };
 
-int main() {
+int
+main() {
   galois::SharedMemSys Galois_runtime;
   std::vector<int> v(10);
   galois::InsertBag<int> b;
 
-  galois::for_each(galois::iterate(v), &function_pointer,
-                   galois::loopname("func-pointer"));
-  galois::for_each(galois::iterate(v), function_object(),
-                   galois::loopname("with function object and options"));
+  galois::for_each(
+      galois::iterate(v), &function_pointer, galois::loopname("func-pointer"));
+  galois::for_each(
+      galois::iterate(v), function_object(),
+      galois::loopname("with function object and options"));
   galois::do_all(galois::iterate(v), [&b](int x) { b.push(x); });
   galois::for_each(galois::iterate(b), function_object());
 

@@ -53,6 +53,6 @@ public:
   SharedMem& operator=(SharedMem&&) = delete;
 };
 
-} // namespace galois::runtime
+}  // namespace galois::runtime
 
 #endif

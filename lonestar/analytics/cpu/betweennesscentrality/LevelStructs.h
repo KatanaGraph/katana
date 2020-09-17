@@ -1,13 +1,13 @@
 #ifndef GALOIS_BC_LEVEL
 #define GALOIS_BC_LEVEL
 
+#include <fstream>
+#include <limits>
+
 #include "galois/AtomicHelpers.h"
-#include "galois/gstl.h"
 #include "galois/Reduction.h"
 #include "galois/graphs/LCGraph.h"
-
-#include <limits>
-#include <fstream>
+#include "galois/gstl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,7 @@ struct LevelNodeData {
 using LevelGraph =
     galois::graphs::LC_CSR_Graph<LevelNodeData, void>::with_no_lockable<
         true>::type::with_numa_alloc<true>::type;
-using LevelGNode        = LevelGraph::GraphNode;
+using LevelGNode = LevelGraph::GraphNode;
 using LevelWorklistType = galois::InsertBag<LevelGNode, 4096>;
 
 constexpr static const unsigned LEVEL_CHUNK_SIZE = 256u;
@@ -39,15 +39,16 @@ constexpr static const unsigned LEVEL_CHUNK_SIZE = 256u;
  * Initialize node fields all to 0
  * @param graph LevelGraph to initialize
  */
-void LevelInitializeGraph(LevelGraph& graph) {
+void
+LevelInitializeGraph(LevelGraph& graph) {
   galois::do_all(
       galois::iterate(graph),
       [&](LevelGNode n) {
-        LevelNodeData& nodeData   = graph.getData(n);
-        nodeData.currentDistance  = 0;
+        LevelNodeData& nodeData = graph.getData(n);
+        nodeData.currentDistance = 0;
         nodeData.numShortestPaths = 0;
-        nodeData.dependency       = 0;
-        nodeData.bc               = 0;
+        nodeData.dependency = 0;
+        nodeData.bc = 0;
       },
       galois::no_stats(), galois::loopname("InitializeGraph"));
 }
@@ -57,19 +58,20 @@ void LevelInitializeGraph(LevelGraph& graph) {
  *
  * @param graph LevelGraph to reset iteration data
  */
-void LevelInitializeIteration(LevelGraph& graph) {
+void
+LevelInitializeIteration(LevelGraph& graph) {
   galois::do_all(
       galois::iterate(graph),
       [&](LevelGNode n) {
         LevelNodeData& nodeData = graph.getData(n);
-        bool isSource           = (n == levelCurrentSrcNode);
+        bool isSource = (n == levelCurrentSrcNode);
         // source nodes have distance 0 and initialize short paths to 1, else
         // distance is infinity with 0 short paths
         if (!isSource) {
-          nodeData.currentDistance  = infinity;
+          nodeData.currentDistance = infinity;
           nodeData.numShortestPaths = 0;
         } else {
-          nodeData.currentDistance  = 0;
+          nodeData.currentDistance = 0;
           nodeData.numShortestPaths = 1;
         }
         // dependency reset for new source
@@ -84,7 +86,8 @@ void LevelInitializeIteration(LevelGraph& graph) {
  * Worklist-based push. Save worklists on a stack for reuse in backward
  * Brandes dependency propagation.
  */
-galois::gstl::Vector<LevelWorklistType> LevelSSSP(LevelGraph& graph) {
+galois::gstl::Vector<LevelWorklistType>
+LevelSSSP(LevelGraph& graph) {
   galois::gstl::Vector<LevelWorklistType> stackOfWorklists;
   uint32_t currentLevel = 0;
 
@@ -105,7 +108,7 @@ galois::gstl::Vector<LevelWorklistType> LevelSSSP(LevelGraph& graph) {
           GALOIS_ASSERT(curData.currentDistance == currentLevel);
 
           for (auto e : graph.edges(n)) {
-            LevelGNode dest         = graph.getEdgeDst(e);
+            LevelGNode dest = graph.getEdgeDst(e);
             LevelNodeData& destData = graph.getData(dest);
 
             if (destData.currentDistance == infinity) {
@@ -116,11 +119,11 @@ galois::gstl::Vector<LevelWorklistType> LevelSSSP(LevelGraph& graph) {
                 stackOfWorklists[nextLevel].emplace(dest);
               }
 
-              galois::atomicAdd(destData.numShortestPaths,
-                                curData.numShortestPaths.load());
+              galois::atomicAdd(
+                  destData.numShortestPaths, curData.numShortestPaths.load());
             } else if (destData.currentDistance == nextLevel) {
-              galois::atomicAdd(destData.numShortestPaths,
-                                curData.numShortestPaths.load());
+              galois::atomicAdd(
+                  destData.numShortestPaths, curData.numShortestPaths.load());
             }
           }
         },
@@ -139,7 +142,8 @@ galois::gstl::Vector<LevelWorklistType> LevelSSSP(LevelGraph& graph) {
  *
  * @param graph LevelGraph to do backward Brandes dependency prop on
  */
-void LevelBackwardBrandes(
+void
+LevelBackwardBrandes(
     LevelGraph& graph,
     galois::gstl::Vector<LevelWorklistType>& stackOfWorklists) {
   // minus 3 because last one is empty, one after is leaf nodes, and one
@@ -150,7 +154,7 @@ void LevelBackwardBrandes(
     // last level is ignored since it's just the source
     while (currentLevel > 0) {
       LevelWorklistType& currentWorklist = stackOfWorklists[currentLevel];
-      uint32_t succLevel                 = currentLevel + 1;
+      uint32_t succLevel = currentLevel + 1;
 
       galois::do_all(
           galois::iterate(currentWorklist),
@@ -159,7 +163,7 @@ void LevelBackwardBrandes(
             GALOIS_ASSERT(curData.currentDistance == currentLevel);
 
             for (auto e : graph.edges(n)) {
-              LevelGNode dest         = graph.getEdgeDst(e);
+              LevelGNode dest = graph.getEdgeDst(e);
               LevelNodeData& destData = graph.getData(dest);
 
               if (destData.currentDistance == succLevel) {
@@ -193,7 +197,8 @@ void LevelBackwardBrandes(
  *
  * @param graph LevelGraph to sanity check
  */
-void LevelSanity(LevelGraph& graph) {
+void
+LevelSanity(LevelGraph& graph) {
   galois::GReduceMax<float> accumMax;
   galois::GReduceMin<float> accumMin;
   galois::GAccumulator<float> accumSum;
@@ -221,16 +226,18 @@ void LevelSanity(LevelGraph& graph) {
 /* Running */
 /******************************************************************************/
 
-void doLevelBC() {
+void
+doLevelBC() {
   // reading in list of sources to operate on if provided
   std::ifstream sourceFile;
   std::vector<uint64_t> sourceVector;
 
   // some initial stat reporting
-  galois::gInfo("Worklist chunk size of ", LEVEL_CHUNK_SIZE,
-                ": best size may depend on input.");
-  galois::runtime::reportStat_Single(REGION_NAME, "ChunkSize",
-                                     LEVEL_CHUNK_SIZE);
+  galois::gInfo(
+      "Worklist chunk size of ", LEVEL_CHUNK_SIZE,
+      ": best size may depend on input.");
+  galois::runtime::reportStat_Single(
+      REGION_NAME, "ChunkSize", LEVEL_CHUNK_SIZE);
   galois::reportPageAlloc("MemAllocPre");
 
   // LevelGraph construction
@@ -244,24 +251,25 @@ void doLevelBC() {
   // preallocate pages in memory so allocation doesn't occur during compute
   galois::StatTimer preallocTime("PreAllocTime", REGION_NAME);
   preallocTime.start();
-  galois::preAlloc(
-      std::max(size_t{galois::getActiveThreads()} * (graph.size() / 2000000),
-               std::max(10U, galois::getActiveThreads()) * size_t{10}));
+  galois::preAlloc(std::max(
+      size_t{galois::getActiveThreads()} * (graph.size() / 2000000),
+      std::max(10U, galois::getActiveThreads()) * size_t{10}));
   preallocTime.stop();
   galois::reportPageAlloc("MemAllocMid");
 
   // If particular set of sources was specified, use them
   if (sourcesToUse != "") {
     sourceFile.open(sourcesToUse);
-    std::vector<uint64_t> t(std::istream_iterator<uint64_t>{sourceFile},
-                            std::istream_iterator<uint64_t>{});
+    std::vector<uint64_t> t(
+        std::istream_iterator<uint64_t>{sourceFile},
+        std::istream_iterator<uint64_t>{});
     sourceVector = t;
     sourceFile.close();
   }
 
   // determine how many sources to loop over based on command line args
   uint64_t loop_end = 1;
-  bool sSources     = false;
+  bool sSources = false;
   if (!singleSourceBC) {
     if (!numOfSources) {
       loop_end = graph.size();

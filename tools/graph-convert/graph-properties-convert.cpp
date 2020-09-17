@@ -15,31 +15,31 @@
 #include <unordered_set>
 #include <vector>
 
+#include <arrow/api.h>
+#include <arrow/array.h>
+#include <arrow/io/api.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include <arrow/api.h>
-#include <arrow/io/api.h>
-#include <arrow/array.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "galois/ParallelSTL.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "galois/graphs/PropertyFileGraph.h"
 
-using ArrayBuilders   = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
+using ArrayBuilders = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
 using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
-using ChunkedArrays   = std::vector<std::shared_ptr<arrow::ChunkedArray>>;
-using ArrowArrays     = std::vector<std::shared_ptr<arrow::Array>>;
-using ArrowFields     = std::vector<std::shared_ptr<arrow::Field>>;
-using NullMaps =
-    std::pair<std::unordered_map<int, std::shared_ptr<arrow::Array>>,
-              std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
+using ChunkedArrays = std::vector<std::shared_ptr<arrow::ChunkedArray>>;
+using ArrowArrays = std::vector<std::shared_ptr<arrow::Array>>;
+using ArrowFields = std::vector<std::shared_ptr<arrow::Field>>;
+using NullMaps = std::pair<
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>,
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
 
 using galois::GraphComponents;
 using galois::ImportData;
@@ -58,7 +58,8 @@ namespace {
 /************************************/
 
 template <typename T>
-std::shared_ptr<arrow::Array> BuildArray(std::shared_ptr<T> builder) {
+std::shared_ptr<arrow::Array>
+BuildArray(std::shared_ptr<T> builder) {
   std::shared_ptr<arrow::Array> array;
   auto st = builder->Finish(&array);
   if (!st.ok()) {
@@ -67,7 +68,8 @@ std::shared_ptr<arrow::Array> BuildArray(std::shared_ptr<T> builder) {
   return array;
 }
 
-ChunkedArrays BuildChunks(std::vector<ArrowArrays>* chunks) {
+ChunkedArrays
+BuildChunks(std::vector<ArrowArrays>* chunks) {
   ChunkedArrays chunked_arrays;
   chunked_arrays.resize(chunks->size());
   for (size_t n = 0; n < chunks->size(); n++) {
@@ -76,8 +78,8 @@ ChunkedArrays BuildChunks(std::vector<ArrowArrays>* chunks) {
   return chunked_arrays;
 }
 
-std::shared_ptr<arrow::Table> BuildTable(std::vector<ArrowArrays>* chunks,
-                                         ArrowFields* schema_vector) {
+std::shared_ptr<arrow::Table>
+BuildTable(std::vector<ArrowArrays>* chunks, ArrowFields* schema_vector) {
   ChunkedArrays columns = BuildChunks(chunks);
 
   auto schema = std::make_shared<arrow::Schema>(*schema_vector);
@@ -89,7 +91,8 @@ std::shared_ptr<arrow::Table> BuildTable(std::vector<ArrowArrays>* chunks,
 /********************************************************************/
 
 template <typename T>
-void AddNullArrays(
+void
+AddNullArrays(
     std::unordered_map<int, std::shared_ptr<arrow::Array>>* null_map,
     std::unordered_map<int, std::shared_ptr<arrow::Array>>* lists_null_map,
     size_t elts) {
@@ -98,7 +101,7 @@ void AddNullArrays(
   // the builder types are still added for the list types since the list type is
   // extraneous info
   auto builder = std::make_shared<T>();
-  auto st      = builder->AppendNulls(elts);
+  auto st = builder->AppendNulls(elts);
   null_map->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
       builder->type()->id(), BuildArray(builder)));
 
@@ -114,7 +117,8 @@ void AddNullArrays(
 }
 
 // for Timestamp Types
-void AddNullArrays(
+void
+AddNullArrays(
     std::unordered_map<int, std::shared_ptr<arrow::Array>>* null_map,
     std::unordered_map<int, std::shared_ptr<arrow::Array>>* lists_null_map,
     size_t elts, std::shared_ptr<arrow::DataType> type) {
@@ -123,7 +127,7 @@ void AddNullArrays(
   // the builder types are still added for the list types since the list type is
   // extraneous info
   auto builder = std::make_shared<arrow::TimestampBuilder>(type, pool);
-  auto st      = builder->AppendNulls(elts);
+  auto st = builder->AppendNulls(elts);
   null_map->insert(std::pair<int, std::shared_ptr<arrow::Array>>(
       builder->type()->id(), BuildArray(builder)));
 
@@ -138,7 +142,8 @@ void AddNullArrays(
   }
 }
 
-NullMaps GetNullArrays(size_t elts) {
+NullMaps
+GetNullArrays(size_t elts) {
   std::unordered_map<int, std::shared_ptr<arrow::Array>> null_map;
   std::unordered_map<int, std::shared_ptr<arrow::Array>> lists_null_map;
 
@@ -149,28 +154,31 @@ NullMaps GetNullArrays(size_t elts) {
   AddNullArrays<arrow::DoubleBuilder>(&null_map, &lists_null_map, elts);
   AddNullArrays<arrow::BooleanBuilder>(&null_map, &lists_null_map, elts);
   AddNullArrays<arrow::UInt8Builder>(&null_map, &lists_null_map, elts);
-  AddNullArrays(&null_map, &lists_null_map, elts,
-                arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"));
+  AddNullArrays(
+      &null_map, &lists_null_map, elts,
+      arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"));
 
   return NullMaps(std::move(null_map), std::move(lists_null_map));
 }
 
-std::shared_ptr<arrow::Array> GetFalseArray(size_t elts) {
+std::shared_ptr<arrow::Array>
+GetFalseArray(size_t elts) {
   auto builder = std::make_shared<arrow::BooleanBuilder>();
   arrow::Status st;
   for (size_t i = 0; i < elts; i++) {
     st = builder->Append(false);
   }
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error appending to an arrow array builder: {}", st.ToString());
   }
   return BuildArray(builder);
 }
 
-WriterProperties GetWriterProperties(size_t chunk_size) {
-  return WriterProperties{GetNullArrays(chunk_size), GetFalseArray(chunk_size),
-                          chunk_size};
+WriterProperties
+GetWriterProperties(size_t chunk_size) {
+  return WriterProperties{
+      GetNullArrays(chunk_size), GetFalseArray(chunk_size), chunk_size};
 }
 
 /*************************************************************/
@@ -178,23 +186,24 @@ WriterProperties GetWriterProperties(size_t chunk_size) {
 /*************************************************************/
 
 template <typename T>
-std::shared_ptr<arrow::Array> FindNullArray(std::shared_ptr<T> builder,
-                                            WriterProperties* properties) {
+std::shared_ptr<arrow::Array>
+FindNullArray(std::shared_ptr<T> builder, WriterProperties* properties) {
   auto type = builder->type()->id();
   std::shared_ptr<arrow::Array> null_array;
   if (type != arrow::Type::LIST) {
     null_array = properties->null_arrays.first.find(type)->second;
   } else {
     auto list_builder = std::static_pointer_cast<arrow::ListBuilder>(builder);
-    null_array        = properties->null_arrays.second
+    null_array = properties->null_arrays.second
                      .find(list_builder->value_builder()->type()->id())
                      ->second;
   }
   return null_array;
 }
 
-std::shared_ptr<arrow::Array> FindNullArray(std::shared_ptr<arrow::Array> array,
-                                            WriterProperties* properties) {
+std::shared_ptr<arrow::Array>
+FindNullArray(
+    std::shared_ptr<arrow::Array> array, WriterProperties* properties) {
   auto type = array->type()->id();
   std::shared_ptr<arrow::Array> null_array;
   if (type != arrow::Type::LIST) {
@@ -212,13 +221,15 @@ std::shared_ptr<arrow::Array> FindNullArray(std::shared_ptr<arrow::Array> array,
 /* Functions for finding basic statistics on datasets */
 /******************************************************/
 
-void WriteNullStats(const std::vector<ArrowArrays>& table,
-                    WriterProperties* properties, size_t total) {
+void
+WriteNullStats(
+    const std::vector<ArrowArrays>& table, WriterProperties* properties,
+    size_t total) {
   if (table.size() == 0) {
     std::cout << "This table has no entries\n";
     return;
   }
-  size_t null_constants  = 0;
+  size_t null_constants = 0;
   size_t non_null_values = 0;
 
   for (auto col : table) {
@@ -248,14 +259,16 @@ void WriteNullStats(const std::vector<ArrowArrays>& table,
   std::cout << "\n";
 }
 
-void WriteFalseStats(const std::vector<ArrowArrays>& table,
-                     WriterProperties* properties, size_t total) {
+void
+WriteFalseStats(
+    const std::vector<ArrowArrays>& table, WriterProperties* properties,
+    size_t total) {
   if (table.size() == 0) {
     std::cout << "This table has no entries\n";
     return;
   }
   size_t false_constants = 0;
-  size_t true_values     = 0;
+  size_t true_values = 0;
 
   for (auto col : table) {
     for (auto chunk : col) {
@@ -289,11 +302,12 @@ void WriteFalseStats(const std::vector<ArrowArrays>& table,
 /************************************************/
 
 // Append an array to a builder
-void AppendArray(
+void
+AppendArray(
     std::shared_ptr<arrow::ListBuilder> list_builder,
     std::function<ImportData(ImportDataType, bool)> resolve_value) {
   arrow::Status st = arrow::Status::OK();
-  bool is_list     = true;
+  bool is_list = true;
 
   switch (list_builder->value_builder()->type()->id()) {
   case arrow::Type::STRING: {
@@ -306,7 +320,7 @@ void AppendArray(
     break;
   }
   case arrow::Type::INT64: {
-    auto lb  = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
+    auto lb = static_cast<arrow::Int64Builder*>(list_builder->value_builder());
     auto res = resolve_value(ImportDataType::kInt64, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = list_builder->Append();
@@ -315,7 +329,7 @@ void AppendArray(
     break;
   }
   case arrow::Type::INT32: {
-    auto ib  = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
+    auto ib = static_cast<arrow::Int32Builder*>(list_builder->value_builder());
     auto res = resolve_value(ImportDataType::kInt32, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = list_builder->Append();
@@ -333,7 +347,7 @@ void AppendArray(
     break;
   }
   case arrow::Type::FLOAT: {
-    auto fb  = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
+    auto fb = static_cast<arrow::FloatBuilder*>(list_builder->value_builder());
     auto res = resolve_value(ImportDataType::kFloat, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = list_builder->Append();
@@ -366,21 +380,22 @@ void AppendArray(
   }
   }
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error adding value to arrow list array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error adding value to arrow list array builder: {}", st.ToString());
   }
 }
 
 // Append a non-null value to an array
-void AppendValue(
+void
+AppendValue(
     std::shared_ptr<arrow::ArrayBuilder> array,
     std::function<ImportData(ImportDataType, bool)> resolve_value) {
   arrow::Status st = arrow::Status::OK();
-  bool is_list     = false;
+  bool is_list = false;
 
   switch (array->type()->id()) {
   case arrow::Type::STRING: {
-    auto sb  = std::static_pointer_cast<arrow::StringBuilder>(array);
+    auto sb = std::static_pointer_cast<arrow::StringBuilder>(array);
     auto res = resolve_value(ImportDataType::kString, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = sb->Append(std::get<std::string>(res.value));
@@ -388,7 +403,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::INT64: {
-    auto lb  = std::static_pointer_cast<arrow::Int64Builder>(array);
+    auto lb = std::static_pointer_cast<arrow::Int64Builder>(array);
     auto res = resolve_value(ImportDataType::kInt64, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = lb->Append(std::get<int64_t>(res.value));
@@ -396,7 +411,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::INT32: {
-    auto ib  = std::static_pointer_cast<arrow::Int32Builder>(array);
+    auto ib = std::static_pointer_cast<arrow::Int32Builder>(array);
     auto res = resolve_value(ImportDataType::kInt32, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = ib->Append(std::get<int32_t>(res.value));
@@ -404,7 +419,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::DOUBLE: {
-    auto db  = std::static_pointer_cast<arrow::DoubleBuilder>(array);
+    auto db = std::static_pointer_cast<arrow::DoubleBuilder>(array);
     auto res = resolve_value(ImportDataType::kDouble, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = db->Append(std::get<double>(res.value));
@@ -412,7 +427,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::FLOAT: {
-    auto fb  = std::static_pointer_cast<arrow::FloatBuilder>(array);
+    auto fb = std::static_pointer_cast<arrow::FloatBuilder>(array);
     auto res = resolve_value(ImportDataType::kFloat, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = fb->Append(std::get<float>(res.value));
@@ -420,7 +435,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::BOOL: {
-    auto bb  = std::static_pointer_cast<arrow::BooleanBuilder>(array);
+    auto bb = std::static_pointer_cast<arrow::BooleanBuilder>(array);
     auto res = resolve_value(ImportDataType::kBoolean, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = bb->Append(std::get<bool>(res.value));
@@ -428,7 +443,7 @@ void AppendValue(
     break;
   }
   case arrow::Type::TIMESTAMP: {
-    auto tb  = std::static_pointer_cast<arrow::TimestampBuilder>(array);
+    auto tb = std::static_pointer_cast<arrow::TimestampBuilder>(array);
     auto res = resolve_value(ImportDataType::kTimestampMilli, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = tb->Append(std::get<int64_t>(res.value));
@@ -437,7 +452,7 @@ void AppendValue(
   }
   // for now uint8_t is an alias for a struct
   case arrow::Type::UINT8: {
-    auto bb  = std::static_pointer_cast<arrow::UInt8Builder>(array);
+    auto bb = std::static_pointer_cast<arrow::UInt8Builder>(array);
     auto res = resolve_value(ImportDataType::kStruct, is_list);
     if (res.type != ImportDataType::kUnsupported) {
       st = bb->Append(std::get<uint8_t>(res.value));
@@ -462,10 +477,12 @@ void AppendValue(
 
 // Adds nulls to an array being built until its length == total
 template <typename T>
-void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
-              std::shared_ptr<arrow::Array> null_array,
-              WriterProperties* properties, size_t total) {
-  auto chunk_size   = properties->chunk_size;
+void
+AddNulls(
+    std::shared_ptr<T> builder, ArrowArrays* chunks,
+    std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
+    size_t total) {
+  auto chunk_size = properties->chunk_size;
   auto nulls_needed = total - (chunks->size() * chunk_size) - builder->length();
   arrow::Status st;
 
@@ -477,7 +494,7 @@ void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
   // case where nulls needed but mid-array
   if (builder->length() != 0) {
     auto nulls_to_add = std::min(chunk_size - builder->length(), nulls_needed);
-    st                = builder->AppendNulls(nulls_to_add);
+    st = builder->AppendNulls(nulls_to_add);
     nulls_needed -= nulls_to_add;
 
     // if we filled up a chunk, flush it
@@ -500,15 +517,17 @@ void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
   st = builder->AppendNulls(nulls_needed);
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error appending to an arrow array builder: {}", st.ToString());
   }
 }
 
 // Adds nulls to an array being built until its length == total
 template <typename T>
-void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
-              WriterProperties* properties, size_t total) {
+void
+AddNulls(
+    std::shared_ptr<T> builder, ArrowArrays* chunks,
+    WriterProperties* properties, size_t total) {
   auto nulls_needed =
       total - (chunks->size() * properties->chunk_size) - builder->length();
   if (nulls_needed == 0) {
@@ -519,9 +538,10 @@ void AddNulls(std::shared_ptr<T> builder, ArrowArrays* chunks,
 }
 
 // Adds falses to an array being built until its length == total
-void AddFalses(std::shared_ptr<arrow::BooleanBuilder> builder,
-               ArrowArrays* chunks, WriterProperties* properties,
-               size_t total) {
+void
+AddFalses(
+    std::shared_ptr<arrow::BooleanBuilder> builder, ArrowArrays* chunks,
+    WriterProperties* properties, size_t total) {
   auto chunk_size = properties->chunk_size;
   auto falses_needed =
       total - (chunks->size() * chunk_size) - builder->length();
@@ -563,23 +583,24 @@ void AddFalses(std::shared_ptr<arrow::BooleanBuilder> builder,
   }
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error appending to an arrow array builder: {}", st.ToString());
   }
 }
 
 // Add nulls until the array is even and then append val so that length = total
 // + 1 at the end
 template <typename T, typename W>
-void AddTypedValue(const W& val, std::shared_ptr<T> builder,
-                   ArrowArrays* chunks,
-                   std::shared_ptr<arrow::Array> null_array,
-                   WriterProperties* properties, size_t total) {
+void
+AddTypedValue(
+    const W& val, std::shared_ptr<T> builder, ArrowArrays* chunks,
+    std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
+    size_t total) {
   AddNulls(builder, chunks, null_array, properties, total);
   auto st = builder->Append(val);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error appending to an arrow array builder: {}", st.ToString());
   }
 
   // if we filled up a chunk, flush it
@@ -591,22 +612,24 @@ void AddTypedValue(const W& val, std::shared_ptr<T> builder,
 // Add nulls until the array is even and then append a list so that length =
 // total + 1 at the end
 template <typename T, typename W>
-void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
-              const std::shared_ptr<W>& vals, size_t index,
-              std::shared_ptr<arrow::ListBuilder> list_builder, T* type_builder,
-              ArrowArrays* chunks, std::shared_ptr<arrow::Array> null_array,
-              WriterProperties* properties, size_t total) {
+void
+AddArray(
+    const std::shared_ptr<arrow::ListArray>& list_vals,
+    const std::shared_ptr<W>& vals, size_t index,
+    std::shared_ptr<arrow::ListBuilder> list_builder, T* type_builder,
+    ArrowArrays* chunks, std::shared_ptr<arrow::Array> null_array,
+    WriterProperties* properties, size_t total) {
   AddNulls(list_builder, chunks, null_array, properties, total);
 
   int32_t start = list_vals->value_offset(index);
-  int32_t end   = list_vals->value_offset(index + 1);
+  int32_t end = list_vals->value_offset(index + 1);
 
   auto st = list_builder->Append();
   for (int32_t s = start; s < end; s++) {
     st = type_builder->Append(vals->Value(s));
     if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
-                       st.ToString());
+      GALOIS_LOG_FATAL(
+          "Error appending value to an arrow array builder: {}", st.ToString());
     }
   }
   // if we filled up a chunk, flush it
@@ -617,23 +640,25 @@ void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
 
 // Add nulls until the array is even and then append a list so that length =
 // total + 1 at the end
-void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
-              const std::shared_ptr<arrow::StringArray>& vals, size_t index,
-              std::shared_ptr<arrow::ListBuilder> list_builder,
-              arrow::StringBuilder* type_builder, ArrowArrays* chunks,
-              std::shared_ptr<arrow::Array> null_array,
-              WriterProperties* properties, size_t total) {
+void
+AddArray(
+    const std::shared_ptr<arrow::ListArray>& list_vals,
+    const std::shared_ptr<arrow::StringArray>& vals, size_t index,
+    std::shared_ptr<arrow::ListBuilder> list_builder,
+    arrow::StringBuilder* type_builder, ArrowArrays* chunks,
+    std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
+    size_t total) {
   AddNulls(list_builder, chunks, null_array, properties, total);
 
   int32_t start = list_vals->value_offset(index);
-  int32_t end   = list_vals->value_offset(index + 1);
+  int32_t end = list_vals->value_offset(index + 1);
 
   auto st = list_builder->Append();
   for (int32_t s = start; s < end; s++) {
     st = type_builder->Append(vals->GetView(s));
     if (!st.ok()) {
-      GALOIS_LOG_FATAL("Error appending value to an arrow array builder: {}",
-                       st.ToString());
+      GALOIS_LOG_FATAL(
+          "Error appending value to an arrow array builder: {}", st.ToString());
     }
   }
   // if we filled up a chunk, flush it
@@ -644,7 +669,8 @@ void AddArray(const std::shared_ptr<arrow::ListArray>& list_vals,
 
 // Add nulls until the array is even and then append val so that length = total
 // + 1 at the end
-void AddValueInternal(
+void
+AddValueInternal(
     std::shared_ptr<arrow::ArrayBuilder> builder, ArrowArrays* chunks,
     WriterProperties* properties, size_t total,
     std::function<ImportData(ImportDataType, bool)> resolve_value) {
@@ -659,14 +685,15 @@ void AddValueInternal(
 
 // Add falses until the array is even and then append true so that length =
 // total + 1 at the end
-void AddLabelInternal(std::shared_ptr<arrow::BooleanBuilder> builder,
-                      ArrowArrays* chunks, WriterProperties* properties,
-                      size_t total) {
+void
+AddLabelInternal(
+    std::shared_ptr<arrow::BooleanBuilder> builder, ArrowArrays* chunks,
+    WriterProperties* properties, size_t total) {
   AddFalses(builder, chunks, properties, total);
   auto st = builder->Append(true);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error appending to an arrow array builder: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error appending to an arrow array builder: {}", st.ToString());
   }
 
   // if we filled up a chunk, flush it
@@ -680,11 +707,13 @@ void AddLabelInternal(std::shared_ptr<arrow::BooleanBuilder> builder,
 /***********************************/
 
 // Used to build the out_dests component of the CSR representation
-uint64_t SetEdgeId(TopologyState* topology_builder,
-                   std::vector<uint64_t>* offsets, size_t index) {
-  uint32_t src  = topology_builder->sources[index];
+uint64_t
+SetEdgeId(
+    TopologyState* topology_builder, std::vector<uint64_t>* offsets,
+    size_t index) {
+  uint32_t src = topology_builder->sources[index];
   uint64_t base = src ? topology_builder->out_indices[src - 1] : 0;
-  uint64_t i    = base + offsets->at(src)++;
+  uint64_t i = base + offsets->at(src)++;
 
   topology_builder->out_dests[i] = topology_builder->destinations[index];
   return i;
@@ -696,9 +725,11 @@ uint64_t SetEdgeId(TopologyState* topology_builder,
 
 // Adds nulls to the array until its length == total
 template <typename T>
-void EvenOutArray(ArrowArrays* chunks, std::shared_ptr<T> builder,
-                  std::shared_ptr<arrow::Array> null_array,
-                  WriterProperties* properties, size_t total) {
+void
+EvenOutArray(
+    ArrowArrays* chunks, std::shared_ptr<T> builder,
+    std::shared_ptr<arrow::Array> null_array, WriterProperties* properties,
+    size_t total) {
   AddNulls(builder, chunks, null_array, properties, total);
 
   if (total % properties->chunk_size != 0) {
@@ -707,9 +738,10 @@ void EvenOutArray(ArrowArrays* chunks, std::shared_ptr<T> builder,
 }
 
 // Adds falses to the array until its length == total
-void EvenOutArray(ArrowArrays* chunks,
-                  std::shared_ptr<arrow::BooleanBuilder> builder,
-                  WriterProperties* properties, size_t total) {
+void
+EvenOutArray(
+    ArrowArrays* chunks, std::shared_ptr<arrow::BooleanBuilder> builder,
+    WriterProperties* properties, size_t total) {
   AddFalses(builder, chunks, properties, total);
 
   if (total % properties->chunk_size != 0) {
@@ -718,32 +750,35 @@ void EvenOutArray(ArrowArrays* chunks,
 }
 
 // Adds nulls to the arrays until each length == total
-void EvenOutChunkBuilders(ArrayBuilders* builders,
-                          std::vector<ArrowArrays>* chunks,
-                          WriterProperties* properties, size_t total) {
-  galois::do_all(galois::iterate(static_cast<size_t>(0), builders->size()),
-                 [&](const size_t& i) {
-                   AddNulls(builders->at(i), &chunks->at(i), properties, total);
+void
+EvenOutChunkBuilders(
+    ArrayBuilders* builders, std::vector<ArrowArrays>* chunks,
+    WriterProperties* properties, size_t total) {
+  galois::do_all(
+      galois::iterate(static_cast<size_t>(0), builders->size()),
+      [&](const size_t& i) {
+        AddNulls(builders->at(i), &chunks->at(i), properties, total);
 
-                   if (total % properties->chunk_size != 0) {
-                     chunks->at(i).emplace_back(BuildArray(builders->at(i)));
-                   }
-                 });
+        if (total % properties->chunk_size != 0) {
+          chunks->at(i).emplace_back(BuildArray(builders->at(i)));
+        }
+      });
 }
 
 // Adds falses to the arrays until each length == total
-void EvenOutChunkBuilders(BooleanBuilders* builders,
-                          std::vector<ArrowArrays>* chunks,
-                          WriterProperties* properties, size_t total) {
-  galois::do_all(galois::iterate(static_cast<size_t>(0), builders->size()),
-                 [&](const size_t& i) {
-                   AddFalses(builders->at(i), &chunks->at(i), properties,
-                             total);
+void
+EvenOutChunkBuilders(
+    BooleanBuilders* builders, std::vector<ArrowArrays>* chunks,
+    WriterProperties* properties, size_t total) {
+  galois::do_all(
+      galois::iterate(static_cast<size_t>(0), builders->size()),
+      [&](const size_t& i) {
+        AddFalses(builders->at(i), &chunks->at(i), properties, total);
 
-                   if (total % properties->chunk_size != 0) {
-                     chunks->at(i).emplace_back(BuildArray(builders->at(i)));
-                   }
-                 });
+        if (total % properties->chunk_size != 0) {
+          chunks->at(i).emplace_back(BuildArray(builders->at(i)));
+        }
+      });
 }
 
 /**************************************************/
@@ -753,16 +788,16 @@ void EvenOutChunkBuilders(BooleanBuilders* builders,
 // Rearrange an array's entries to match up with those of mapping
 template <typename T, typename W>
 ArrowArrays
-RearrangeArray(std::shared_ptr<T> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
-               const std::vector<size_t>& mapping,
-               WriterProperties* properties) {
+RearrangeArray(
+    std::shared_ptr<T> builder,
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const std::vector<size_t>& mapping, WriterProperties* properties) {
   auto chunk_size = properties->chunk_size;
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<W>> arrays;
@@ -787,16 +822,16 @@ RearrangeArray(std::shared_ptr<T> builder,
 
 // Rearrange an array's entries to match up with those of mapping
 ArrowArrays
-RearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
-               const std::vector<size_t>& mapping,
-               WriterProperties* properties) {
+RearrangeArray(
+    std::shared_ptr<arrow::StringBuilder> builder,
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const std::vector<size_t>& mapping, WriterProperties* properties) {
   auto chunk_size = properties->chunk_size;
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<arrow::StringArray>> arrays;
@@ -821,16 +856,16 @@ RearrangeArray(std::shared_ptr<arrow::StringBuilder> builder,
 
 // Rearrange an array's entries to match up with those of mapping, for labels
 ArrowArrays
-RearrangeArray(std::shared_ptr<arrow::BooleanBuilder> builder,
-               const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
-               const std::vector<size_t>& mapping,
-               WriterProperties* properties) {
+RearrangeArray(
+    std::shared_ptr<arrow::BooleanBuilder> builder,
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    const std::vector<size_t>& mapping, WriterProperties* properties) {
   auto chunk_size = properties->chunk_size;
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<arrow::BooleanArray>> arrays;
@@ -851,7 +886,8 @@ RearrangeArray(std::shared_ptr<arrow::BooleanBuilder> builder,
 
 // Rearrange a list array's entries to match up with those of mapping
 template <typename T, typename W>
-ArrowArrays RearrangeArray(
+ArrowArrays
+RearrangeArray(
     const std::shared_ptr<arrow::ListBuilder>& builder, T* type_builder,
     const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
     const std::vector<size_t>& mapping, WriterProperties* properties) {
@@ -859,8 +895,8 @@ ArrowArrays RearrangeArray(
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error reserving space for arrow array: {}",
-                     st.ToString());
+    GALOIS_LOG_FATAL(
+        "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
   std::vector<std::shared_ptr<arrow::ListArray>> list_arrays;
@@ -876,11 +912,12 @@ ArrowArrays RearrangeArray(
   // add values
   for (size_t i = 0; i < mapping.size(); i++) {
     auto list_array = list_arrays[mapping[i] / chunk_size];
-    auto sub_array  = sub_arrays[mapping[i] / chunk_size];
-    auto index      = mapping[i] % chunk_size;
+    auto sub_array = sub_arrays[mapping[i] / chunk_size];
+    auto index = mapping[i] % chunk_size;
     if (!list_array->IsNull(index)) {
-      AddArray(list_array, sub_array, index, builder, type_builder, &chunks,
-               null_array, properties, i);
+      AddArray(
+          list_array, sub_array, index, builder, type_builder, &chunks,
+          null_array, properties, i);
     }
   }
   EvenOutArray(&chunks, builder, null_array, properties, mapping.size());
@@ -888,7 +925,8 @@ ArrowArrays RearrangeArray(
 }
 
 // Rearrange a list array's entries to match up with those of mapping
-ArrowArrays RearrangeListArray(
+ArrowArrays
+RearrangeListArray(
     const std::shared_ptr<arrow::ChunkedArray>& list_chunked_array,
     const std::vector<size_t>& mapping, WriterProperties* properties) {
   auto* pool = arrow::default_memory_pool();
@@ -902,7 +940,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::StringBuilder>());
     auto sb = static_cast<arrow::StringBuilder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::StringBuilder, arrow::StringArray>(
+    chunks = RearrangeArray<arrow::StringBuilder, arrow::StringArray>(
         builder, sb, list_chunked_array, mapping, properties);
     break;
   }
@@ -910,7 +948,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::Int64Builder>());
     auto lb = static_cast<arrow::Int64Builder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
+    chunks = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
         builder, lb, list_chunked_array, mapping, properties);
     break;
   }
@@ -918,7 +956,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::Int32Builder>());
     auto ib = static_cast<arrow::Int32Builder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
+    chunks = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
         builder, ib, list_chunked_array, mapping, properties);
     break;
   }
@@ -926,7 +964,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::DoubleBuilder>());
     auto db = static_cast<arrow::DoubleBuilder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
+    chunks = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
         builder, db, list_chunked_array, mapping, properties);
     break;
   }
@@ -934,7 +972,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::FloatBuilder>());
     auto fb = static_cast<arrow::FloatBuilder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
+    chunks = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
         builder, fb, list_chunked_array, mapping, properties);
     break;
   }
@@ -942,7 +980,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::BooleanBuilder>());
     auto bb = static_cast<arrow::BooleanBuilder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
+    chunks = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
         builder, bb, list_chunked_array, mapping, properties);
     break;
   }
@@ -950,7 +988,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::TimestampBuilder>(list_type, pool));
     auto tb = static_cast<arrow::TimestampBuilder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::TimestampBuilder, arrow::TimestampArray>(
+    chunks = RearrangeArray<arrow::TimestampBuilder, arrow::TimestampArray>(
         builder, tb, list_chunked_array, mapping, properties);
     break;
   }
@@ -958,7 +996,7 @@ ArrowArrays RearrangeListArray(
     auto builder = std::make_shared<arrow::ListBuilder>(
         pool, std::make_shared<arrow::UInt8Builder>());
     auto bb = static_cast<arrow::UInt8Builder*>(builder->value_builder());
-    chunks  = RearrangeArray<arrow::UInt8Builder, arrow::UInt8Array>(
+    chunks = RearrangeArray<arrow::UInt8Builder, arrow::UInt8Array>(
         builder, bb, list_chunked_array, mapping, properties);
     break;
   }
@@ -973,52 +1011,53 @@ ArrowArrays RearrangeListArray(
 
 // Rearrange each column in a table so that their entries match up with those of
 // mapping
-std::vector<ArrowArrays> RearrangeTable(const ChunkedArrays& initial,
-                                        const std::vector<size_t>& mapping,
-                                        WriterProperties* properties) {
+std::vector<ArrowArrays>
+RearrangeTable(
+    const ChunkedArrays& initial, const std::vector<size_t>& mapping,
+    WriterProperties* properties) {
   std::vector<ArrowArrays> rearranged;
   rearranged.resize(initial.size());
 
   galois::do_all(
       galois::iterate(static_cast<size_t>(0), initial.size()),
       [&](const size_t& n) {
-        auto array     = initial[n];
+        auto array = initial[n];
         auto arrayType = array->type()->id();
         ArrowArrays ca;
 
         switch (arrayType) {
         case arrow::Type::STRING: {
           auto sb = std::make_shared<arrow::StringBuilder>();
-          ca      = RearrangeArray(sb, array, mapping, properties);
+          ca = RearrangeArray(sb, array, mapping, properties);
           break;
         }
         case arrow::Type::INT64: {
           auto lb = std::make_shared<arrow::Int64Builder>();
-          ca      = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
+          ca = RearrangeArray<arrow::Int64Builder, arrow::Int64Array>(
               lb, array, mapping, properties);
           break;
         }
         case arrow::Type::INT32: {
           auto ib = std::make_shared<arrow::Int32Builder>();
-          ca      = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
+          ca = RearrangeArray<arrow::Int32Builder, arrow::Int32Array>(
               ib, array, mapping, properties);
           break;
         }
         case arrow::Type::DOUBLE: {
           auto db = std::make_shared<arrow::DoubleBuilder>();
-          ca      = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
+          ca = RearrangeArray<arrow::DoubleBuilder, arrow::DoubleArray>(
               db, array, mapping, properties);
           break;
         }
         case arrow::Type::FLOAT: {
           auto fb = std::make_shared<arrow::FloatBuilder>();
-          ca      = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
+          ca = RearrangeArray<arrow::FloatBuilder, arrow::FloatArray>(
               fb, array, mapping, properties);
           break;
         }
         case arrow::Type::BOOL: {
           auto bb = std::make_shared<arrow::BooleanBuilder>();
-          ca      = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
+          ca = RearrangeArray<arrow::BooleanBuilder, arrow::BooleanArray>(
               bb, array, mapping, properties);
           break;
         }
@@ -1031,7 +1070,7 @@ std::vector<ArrowArrays> RearrangeTable(const ChunkedArrays& initial,
         }
         case arrow::Type::UINT8: {
           auto bb = std::make_shared<arrow::UInt8Builder>();
-          ca      = RearrangeArray<arrow::UInt8Builder, arrow::UInt8Array>(
+          ca = RearrangeArray<arrow::UInt8Builder, arrow::UInt8Array>(
               bb, array, mapping, properties);
           break;
         }
@@ -1053,54 +1092,69 @@ std::vector<ArrowArrays> RearrangeTable(const ChunkedArrays& initial,
 
 // Rearrange each column in a table so that their entries match up with those of
 // mapping, for labels
-std::vector<ArrowArrays> RearrangeTypeTable(const ChunkedArrays& initial,
-                                            const std::vector<size_t>& mapping,
-                                            WriterProperties* properties) {
+std::vector<ArrowArrays>
+RearrangeTypeTable(
+    const ChunkedArrays& initial, const std::vector<size_t>& mapping,
+    WriterProperties* properties) {
   std::vector<ArrowArrays> rearranged;
   rearranged.resize(initial.size());
 
-  galois::do_all(galois::iterate(static_cast<size_t>(0), initial.size()),
-                 [&](const size_t& n) {
-                   auto array = initial[n];
+  galois::do_all(
+      galois::iterate(static_cast<size_t>(0), initial.size()),
+      [&](const size_t& n) {
+        auto array = initial[n];
 
-                   auto bb = std::make_shared<arrow::BooleanBuilder>();
-                   auto ca = RearrangeArray(bb, array, mapping, properties);
-                   rearranged[n] = ca;
+        auto bb = std::make_shared<arrow::BooleanBuilder>();
+        auto ca = RearrangeArray(bb, array, mapping, properties);
+        rearranged[n] = ca;
 
-                   array.reset();
-                 });
+        array.reset();
+      });
   return rearranged;
 }
 
-} // end of unnamed namespace
+}  // end of unnamed namespace
 
 galois::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
     : properties_(GetWriterProperties(chunk_size)),
-      node_properties_(PropertiesState{}), edge_properties_(PropertiesState{}),
-      node_labels_(LabelsState{}), edge_types_(LabelsState{}),
-      topology_builder_(TopologyState{}), nodes_(0), edges_(0),
-      building_node_(false), building_edge_(false) {}
+      node_properties_(PropertiesState{}),
+      edge_properties_(PropertiesState{}),
+      node_labels_(LabelsState{}),
+      edge_types_(LabelsState{}),
+      topology_builder_(TopologyState{}),
+      nodes_(0),
+      edges_(0),
+      building_node_(false),
+      building_edge_(false) {}
 
 /***************************/
 /* Basic utility functions */
 /***************************/
 
-size_t galois::PropertyGraphBuilder::GetNodeIndex() {
+size_t
+galois::PropertyGraphBuilder::GetNodeIndex() {
   if (building_node_) {
     return nodes_;
   }
   return std::numeric_limits<size_t>::max();
 }
 
-size_t galois::PropertyGraphBuilder::GetNodes() { return nodes_; }
+size_t
+galois::PropertyGraphBuilder::GetNodes() {
+  return nodes_;
+}
 
-size_t galois::PropertyGraphBuilder::GetEdges() { return edges_; }
+size_t
+galois::PropertyGraphBuilder::GetEdges() {
+  return edges_;
+}
 
 /****************************************************************/
 /* Functions for handling topology and logical flow of building */
 /****************************************************************/
 
-bool galois::PropertyGraphBuilder::StartNode() {
+bool
+galois::PropertyGraphBuilder::StartNode() {
   if (building_node_ || building_edge_) {
     return false;
   }
@@ -1110,7 +1164,8 @@ bool galois::PropertyGraphBuilder::StartNode() {
   return building_node_;
 }
 
-bool galois::PropertyGraphBuilder::StartNode(const std::string& id) {
+bool
+galois::PropertyGraphBuilder::StartNode(const std::string& id) {
   if (this->StartNode()) {
     this->AddNodeId(id);
     return true;
@@ -1118,13 +1173,15 @@ bool galois::PropertyGraphBuilder::StartNode(const std::string& id) {
   return false;
 }
 
-void galois::PropertyGraphBuilder::AddNodeId(const std::string& id) {
+void
+galois::PropertyGraphBuilder::AddNodeId(const std::string& id) {
   topology_builder_.node_indexes.insert(
       std::pair<std::string, size_t>(id, nodes_));
 }
 
-void galois::PropertyGraphBuilder::AddOutgoingEdge(const std::string& target,
-                                                   const std::string& label) {
+void
+galois::PropertyGraphBuilder::AddOutgoingEdge(
+    const std::string& target, const std::string& label) {
   if (!building_node_) {
     return;
   }
@@ -1148,8 +1205,9 @@ void galois::PropertyGraphBuilder::AddOutgoingEdge(const std::string& target,
   building_edge_ = false;
 }
 
-void galois::PropertyGraphBuilder::AddOutgoingEdge(uint32_t target,
-                                                   const std::string& label) {
+void
+galois::PropertyGraphBuilder::AddOutgoingEdge(
+    uint32_t target, const std::string& label) {
   if (!building_node_) {
     return;
   }
@@ -1168,7 +1226,8 @@ void galois::PropertyGraphBuilder::AddOutgoingEdge(uint32_t target,
   building_edge_ = false;
 }
 
-bool galois::PropertyGraphBuilder::FinishNode() {
+bool
+galois::PropertyGraphBuilder::FinishNode() {
   if (!building_node_) {
     return false;
   }
@@ -1178,13 +1237,15 @@ bool galois::PropertyGraphBuilder::FinishNode() {
   return true;
 }
 
-bool galois::PropertyGraphBuilder::AddNode(const std::string& id) {
+bool
+galois::PropertyGraphBuilder::AddNode(const std::string& id) {
   std::cout << "Adding placeholder node: " << id << std::endl;
   this->StartNode(id);
   return this->FinishNode();
 }
 
-bool galois::PropertyGraphBuilder::StartEdge() {
+bool
+galois::PropertyGraphBuilder::StartEdge() {
   if (building_node_ || building_edge_) {
     return false;
   }
@@ -1192,8 +1253,9 @@ bool galois::PropertyGraphBuilder::StartEdge() {
   return building_edge_;
 }
 
-bool galois::PropertyGraphBuilder::StartEdge(const std::string& source,
-                                             const std::string& target) {
+bool
+galois::PropertyGraphBuilder::StartEdge(
+    const std::string& source, const std::string& target) {
   if (building_node_ || building_edge_) {
     return false;
   }
@@ -1205,11 +1267,13 @@ bool galois::PropertyGraphBuilder::StartEdge(const std::string& source,
   return building_edge_;
 }
 
-void galois::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
+void
+galois::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
   topology_builder_.edge_ids.insert(id);
 }
 
-void galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
+void
+galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
   if (!building_edge_) {
     return;
   }
@@ -1226,7 +1290,8 @@ void galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
   }
 }
 
-void galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
+void
+galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
   if (!building_edge_) {
     return;
   }
@@ -1242,7 +1307,8 @@ void galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
   }
 }
 
-bool galois::PropertyGraphBuilder::FinishEdge() {
+bool
+galois::PropertyGraphBuilder::FinishEdge() {
   if (!building_edge_) {
     return false;
   }
@@ -1252,15 +1318,16 @@ bool galois::PropertyGraphBuilder::FinishEdge() {
   return true;
 }
 
-bool galois::PropertyGraphBuilder::AddEdge(const std::string& source,
-                                           const std::string& target) {
+bool
+galois::PropertyGraphBuilder::AddEdge(
+    const std::string& source, const std::string& target) {
   this->StartEdge(source, target);
   return this->FinishEdge();
 }
 
-bool galois::PropertyGraphBuilder::AddEdge(uint32_t source,
-                                           const std::string& target,
-                                           const std::string& label) {
+bool
+galois::PropertyGraphBuilder::AddEdge(
+    uint32_t source, const std::string& target, const std::string& label) {
   // if dest is an edge, do not create a shallow edge to it
   if (topology_builder_.edge_ids.find(target) !=
       topology_builder_.edge_ids.end()) {
@@ -1276,8 +1343,9 @@ bool galois::PropertyGraphBuilder::AddEdge(uint32_t source,
   return this->FinishEdge();
 }
 
-bool galois::PropertyGraphBuilder::AddEdge(uint32_t source, uint32_t target,
-                                           const std::string& label) {
+bool
+galois::PropertyGraphBuilder::AddEdge(
+    uint32_t source, uint32_t target, const std::string& label) {
   this->StartEdge();
   topology_builder_.sources.emplace_back(source);
   topology_builder_.out_indices[source]++;
@@ -1293,7 +1361,8 @@ bool galois::PropertyGraphBuilder::AddEdge(uint32_t source, uint32_t target,
 
 // Special case for building label builders where the empty value is false,
 // not null
-size_t galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
+size_t
+galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
   LabelsState* labels = rule.for_node ? &node_labels_ : &edge_types_;
 
   size_t index;
@@ -1318,7 +1387,8 @@ size_t galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
 }
 
 // Case for adding properties for which we know their type
-size_t galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
+size_t
+galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
   PropertiesState* properties =
       key.for_node ? &node_properties_ : &edge_properties_;
 
@@ -1440,8 +1510,8 @@ size_t galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
     }
     default:
       // for now handle uncaught types as strings
-      GALOIS_LOG_WARN("treating unknown array type {} as a string array",
-                      key.type);
+      GALOIS_LOG_WARN(
+          "treating unknown array type {} as a string array", key.type);
       properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::utf8())));
       properties->builders.emplace_back(std::make_shared<arrow::ListBuilder>(
@@ -1461,7 +1531,8 @@ size_t galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
 
 // Add nulls until the array is even and then append val so that length = total
 // + 1 at the end
-void galois::PropertyGraphBuilder::AddValue(
+void
+galois::PropertyGraphBuilder::AddValue(
     const std::string& id, std::function<PropertyKey()> process_element,
     std::function<ImportData(ImportDataType, bool)> resolve_value) {
   if (!building_node_ && !building_edge_) {
@@ -1483,23 +1554,24 @@ void galois::PropertyGraphBuilder::AddValue(
     }
     key.for_node = building_node_;
     key.for_edge = building_edge_;
-    index        = this->AddBuilder(std::move(key));
+    index = this->AddBuilder(std::move(key));
   } else {
     index = key_iter->second;
   }
-  AddValueInternal(property_builder->builders[index],
-                   &property_builder->chunks[index], &properties_, total,
-                   resolve_value);
+  AddValueInternal(
+      property_builder->builders[index], &property_builder->chunks[index],
+      &properties_, total, resolve_value);
 }
 
 // Add falses until the array is even and then append true so that length =
 // total + 1 at the end
-void galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
+void
+galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
   if (!building_node_ && !building_edge_) {
     return;
   }
   auto label_builder = building_node_ ? &node_labels_ : &edge_types_;
-  auto total         = building_node_ ? nodes_ : edges_;
+  auto total = building_node_ ? nodes_ : edges_;
 
   // add label
   auto entry = label_builder->keys.find(name);
@@ -1511,8 +1583,9 @@ void galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
   } else {
     index = entry->second;
   }
-  AddLabelInternal(label_builder->builders[index],
-                   &label_builder->chunks[index], &properties_, total);
+  AddLabelInternal(
+      label_builder->builders[index], &label_builder->chunks[index],
+      &properties_, total);
 }
 
 /*********************************/
@@ -1521,7 +1594,8 @@ void galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
 
 // Resolve string node IDs to node indexes, if a node does not exist create an
 // empty node
-void galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
+void
+galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
   TopologyState* topology = &topology_builder_;
 
   for (auto [index, str_id] : topology->destinations_intermediate) {
@@ -1552,10 +1626,12 @@ void galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
 }
 
 // Build CSR format and rearrange edge tables to correspond to the CSR
-galois::GraphComponent galois::PropertyGraphBuilder::BuildFinalEdges() {
-  galois::ParallelSTL::partial_sum(topology_builder_.out_indices.begin(),
-                                   topology_builder_.out_indices.end(),
-                                   topology_builder_.out_indices.begin());
+galois::GraphComponent
+galois::PropertyGraphBuilder::BuildFinalEdges() {
+  galois::ParallelSTL::partial_sum(
+      topology_builder_.out_indices.begin(),
+      topology_builder_.out_indices.end(),
+      topology_builder_.out_indices.begin());
 
   std::vector<size_t> edge_mapping;
   edge_mapping.resize(edges_, std::numeric_limits<uint64_t>::max());
@@ -1588,20 +1664,23 @@ galois::GraphComponent galois::PropertyGraphBuilder::BuildFinalEdges() {
       BuildTable(&final_type_builders, &edge_types_.schema)};
 }
 
-galois::GraphComponents galois::PropertyGraphBuilder::Finish() {
-  topology_builder_.out_dests.resize(edges_,
-                                     std::numeric_limits<uint32_t>::max());
+galois::GraphComponents
+galois::PropertyGraphBuilder::Finish() {
+  topology_builder_.out_dests.resize(
+      edges_, std::numeric_limits<uint32_t>::max());
   this->ResolveIntermediateIDs();
 
   // add buffered rows and even out columns
-  EvenOutChunkBuilders(&node_properties_.builders, &node_properties_.chunks,
-                       &properties_, nodes_);
-  EvenOutChunkBuilders(&node_labels_.builders, &node_labels_.chunks,
-                       &properties_, nodes_);
-  EvenOutChunkBuilders(&edge_properties_.builders, &edge_properties_.chunks,
-                       &properties_, edges_);
-  EvenOutChunkBuilders(&edge_types_.builders, &edge_types_.chunks, &properties_,
-                       edges_);
+  EvenOutChunkBuilders(
+      &node_properties_.builders, &node_properties_.chunks, &properties_,
+      nodes_);
+  EvenOutChunkBuilders(
+      &node_labels_.builders, &node_labels_.chunks, &properties_, nodes_);
+  EvenOutChunkBuilders(
+      &edge_properties_.builders, &edge_properties_.chunks, &properties_,
+      edges_);
+  EvenOutChunkBuilders(
+      &edge_types_.builders, &edge_types_.chunks, &properties_, edges_);
 
   std::cout << "Node Properties:\n";
   WriteNullStats(node_properties_.chunks, &properties_, nodes_);
@@ -1671,8 +1750,9 @@ galois::GraphComponents galois::PropertyGraphBuilder::Finish() {
 /// \param graph_comps imported components to convert into a PropertyFileGraph
 /// \param dir local FS directory or s3 directory to write PropertyFileGraph
 /// to
-void galois::WritePropertyGraph(const galois::GraphComponents& graph_comps,
-                                const std::string& dir) {
+void
+galois::WritePropertyGraph(
+    const galois::GraphComponents& graph_comps, const std::string& dir) {
   galois::graphs::PropertyFileGraph graph;
 
   auto result = graph.SetTopology(*graph_comps.topology);
@@ -1708,8 +1788,9 @@ void galois::WritePropertyGraph(const galois::GraphComponents& graph_comps,
   WritePropertyGraph(std::move(graph), dir);
 }
 
-void galois::WritePropertyGraph(galois::graphs::PropertyFileGraph prop_graph,
-                                const std::string& dir) {
+void
+galois::WritePropertyGraph(
+    galois::graphs::PropertyFileGraph prop_graph, const std::string& dir) {
   std::string meta_file = dir;
   if (meta_file[meta_file.length() - 1] == '/') {
     meta_file += "meta";

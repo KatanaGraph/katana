@@ -5,14 +5,13 @@
 
 namespace galois {
 
-GraphComponents ConvertMysql(const std::string& db_name,
-                             const std::string& mapping,
-                             const size_t chunk_size, const std::string& host,
-                             const std::string& user);
-void GenerateMappingMysql(const std::string& db_name,
-                          const std::string& outfile, const std::string& host,
-                          const std::string& user);
+GraphComponents ConvertMysql(
+    const std::string& db_name, const std::string& mapping,
+    const size_t chunk_size, const std::string& host, const std::string& user);
+void GenerateMappingMysql(
+    const std::string& db_name, const std::string& outfile,
+    const std::string& host, const std::string& user);
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

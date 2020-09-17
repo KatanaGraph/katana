@@ -23,22 +23,21 @@
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
-#include <cstdlib>
 
 #include "galois/Galois.h"
 #include "galois/Reduction.h"
 
-template <typename Graph, typename _DistLabel, bool USE_EDGE_WT,
-          ptrdiff_t EDGE_TILE_SIZE = 256>
+template <
+    typename Graph, typename _DistLabel, bool USE_EDGE_WT,
+    ptrdiff_t EDGE_TILE_SIZE = 256>
 struct BFS_SSSP {
-
   using Dist = _DistLabel;
 
   constexpr static const Dist DIST_INFINITY =
       std::numeric_limits<Dist>::max() / 2 - 1;
 
   using GNode = typename Graph::GraphNode;
-  using EI    = typename Graph::edge_iterator;
+  using EI = typename Graph::edge_iterator;
 
   struct UpdateRequest {
     GNode src;
@@ -46,8 +45,8 @@ struct BFS_SSSP {
     UpdateRequest(const GNode& N, Dist W) : src(N), dist(W) {}
     UpdateRequest() : src(), dist(0) {}
 
-    friend bool operator<(const UpdateRequest& left,
-                          const UpdateRequest& right) {
+    friend bool operator<(
+        const UpdateRequest& left, const UpdateRequest& right) {
       return left.dist == right.dist ? left.src < right.src
                                      : left.dist < right.dist;
     }
@@ -103,28 +102,26 @@ struct BFS_SSSP {
   }
 
   template <typename WL, typename TileMaker>
-  static void pushEdgeTiles(WL& wl, Graph& graph, GNode src,
-                            const TileMaker& f) {
-    auto beg       = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
+  static void pushEdgeTiles(
+      WL& wl, Graph& graph, GNode src, const TileMaker& f) {
+    auto beg = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
     const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
 
     pushEdgeTiles(wl, beg, end, f);
   }
 
   template <typename WL, typename TileMaker>
-  static void pushEdgeTilesParallel(WL& wl, Graph& graph, GNode src,
-                                    const TileMaker& f) {
-
-    auto beg       = graph.edge_begin(src);
+  static void pushEdgeTilesParallel(
+      WL& wl, Graph& graph, GNode src, const TileMaker& f) {
+    auto beg = graph.edge_begin(src);
     const auto end = graph.edge_end(src);
 
     if ((end - beg) > EDGE_TILE_SIZE) {
-
       galois::on_each(
           [&](const unsigned tid, const unsigned numT) {
             auto p = galois::block_range(beg, end, tid, numT);
 
-            auto b       = p.first;
+            auto b = p.first;
             const auto e = p.second;
 
             pushEdgeTiles(wl, b, e, f);
@@ -138,8 +135,8 @@ struct BFS_SSSP {
 
   struct ReqPushWrap {
     template <typename C>
-    void operator()(C& cont, const GNode& n, const Dist& dist,
-                    const char* const) const {
+    void operator()(
+        C& cont, const GNode& n, const Dist& dist, const char* const) const {
       (*this)(cont, n, dist);
     }
 
@@ -150,12 +147,11 @@ struct BFS_SSSP {
   };
 
   struct SrcEdgeTilePushWrap {
-
     Graph& graph;
 
     template <typename C>
-    void operator()(C& cont, const GNode& n, const Dist& dist,
-                    const char* const) const {
+    void operator()(
+        C& cont, const GNode& n, const Dist& dist, const char* const) const {
       pushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
     }
 
@@ -189,14 +185,14 @@ struct BFS_SSSP {
     not_consistent(Graph& g, std::atomic<bool>& refb) : g(g), refb(refb) {}
 
     template <bool useWt, typename iiTy>
-    Dist getEdgeWeight(iiTy,
-                       typename std::enable_if<!useWt>::type* = nullptr) const {
+    Dist getEdgeWeight(
+        iiTy, typename std::enable_if<!useWt>::type* = nullptr) const {
       return 1;
     }
 
     template <bool useWt, typename iiTy>
-    Dist getEdgeWeight(iiTy ii,
-                       typename std::enable_if<useWt>::type* = nullptr) const {
+    Dist getEdgeWeight(
+        iiTy ii, typename std::enable_if<useWt>::type* = nullptr) const {
       return g.getEdgeData(ii);
     }
 
@@ -207,8 +203,8 @@ struct BFS_SSSP {
 
       for (auto ii : g.edges(node)) {
         auto dst = g.getEdgeDst(ii);
-        Dist dd  = g.getData(dst);
-        Dist ew  = getEdgeWeight<USE_EDGE_WT>(ii);
+        Dist dd = g.getData(dst);
+        Dist ew = getEdgeWeight<USE_EDGE_WT>(ii);
         if (dd > sd + ew) {
           std::cout << "Wrong label: " << dd << ", on node: " << dst
                     << ", correct label from src node " << node << " is "
@@ -271,8 +267,7 @@ struct BFS_SSSP {
 
 template <typename T, typename BucketFunc, size_t MAX_BUCKETS = 543210ul>
 class SerialBucketWL {
-
-  using Bucket      = std::deque<T>;
+  using Bucket = std::deque<T>;
   using BucketsCont = std::vector<Bucket>;
 
   size_t m_minBucket;
@@ -337,4 +332,4 @@ private:
   }
 };
 
-#endif //  LONESTAR_BFS_SSSP_H
+#endif  //  LONESTAR_BFS_SSSP_H

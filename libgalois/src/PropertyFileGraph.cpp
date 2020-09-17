@@ -6,14 +6,15 @@
 #include "galois/Logging.h"
 #include "galois/Platform.h"
 #include "galois/Result.h"
-#include "tsuba/RDG.h"
-#include "tsuba/tsuba.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
+#include "tsuba/RDG.h"
+#include "tsuba/tsuba.h"
 
 namespace {
 
-constexpr uint64_t GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
+constexpr uint64_t
+GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
   /// version, sizeof_edge_data, num_nodes, num_edges
   constexpr int mandatory_fields = 4;
 
@@ -75,15 +76,15 @@ MapTopology(const tsuba::FileView& file_view) {
   return galois::graphs::GraphTopology{
       .out_indices = std::make_shared<arrow::UInt64Array>(
           indices_buffer->size(), indices_buffer),
-      .out_dests = std::make_shared<arrow::UInt32Array>(dests_buffer->size(),
-                                                        dests_buffer),
+      .out_dests = std::make_shared<arrow::UInt32Array>(
+          dests_buffer->size(), dests_buffer),
   };
 }
 
 galois::Result<void>
-LoadTopology(galois::graphs::GraphTopology* topology,
-             const tsuba::FileView& topology_file_storage) {
-
+LoadTopology(
+    galois::graphs::GraphTopology* topology,
+    const tsuba::FileView& topology_file_storage) {
   auto map_result = MapTopology(topology_file_storage);
   if (!map_result) {
     return map_result.error();
@@ -102,7 +103,7 @@ WriteTopology(const galois::graphs::GraphTopology& topology) {
   uint64_t num_nodes = topology.num_nodes();
   uint64_t num_edges = topology.num_edges();
 
-  uint64_t data[4]      = {1, 0, num_nodes, num_edges};
+  uint64_t data[4] = {1, 0, num_nodes, num_edges};
   arrow::Status aro_sts = ff->Write(&data, 4 * sizeof(uint64_t));
   if (!aro_sts.ok()) {
     return tsuba::ArrowToTsuba(aro_sts.code());
@@ -133,17 +134,18 @@ WriteTopology(const galois::graphs::GraphTopology& topology) {
 }
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
-MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file,
-                      const std::vector<std::string>& node_properties,
-                      const std::vector<std::string>& edge_properties) {
+MakePropertyFileGraph(
+    std::unique_ptr<tsuba::RDGFile> rdg_file,
+    const std::vector<std::string>& node_properties,
+    const std::vector<std::string>& edge_properties) {
   auto rdg_result =
       tsuba::RDG::Load(*rdg_file, &node_properties, &edge_properties);
   if (!rdg_result) {
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_file),
-                                                 std::move(rdg_result.value()));
+  return galois::graphs::PropertyFileGraph::Make(
+      std::move(rdg_file), std::move(rdg_result.value()));
 }
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
@@ -153,11 +155,11 @@ MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(std::move(rdg_file),
-                                                 std::move(rdg_result.value()));
+  return galois::graphs::PropertyFileGraph::Make(
+      std::move(rdg_file), std::move(rdg_result.value()));
 }
 
-} // namespace
+}  // namespace
 
 galois::graphs::PropertyFileGraph::PropertyFileGraph() = default;
 
@@ -165,7 +167,8 @@ galois::graphs::PropertyFileGraph::PropertyFileGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg)
     : rdg_(std::move(rdg)), file_(std::move(rdg_file)) {}
 
-galois::Result<void> galois::graphs::PropertyFileGraph::Validate() {
+galois::Result<void>
+galois::graphs::PropertyFileGraph::Validate() {
   // TODO (thunt) check that arrow table sizes match topology
   // if (topology_.out_dests &&
   //    topology_.out_dests->length() != table->num_rows()) {
@@ -225,17 +228,18 @@ galois::graphs::PropertyFileGraph::Make(
     const std::string& rdg_name,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
-
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
 
-  return MakePropertyFileGraph(std::make_unique<tsuba::RDGFile>(handle.value()),
-                               node_properties, edge_properties);
+  return MakePropertyFileGraph(
+      std::make_unique<tsuba::RDGFile>(handle.value()), node_properties,
+      edge_properties);
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::Write() {
+galois::Result<void>
+galois::graphs::PropertyFileGraph::Write() {
   return DoWrite(*file_);
 }
 
@@ -259,23 +263,27 @@ galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::AddNodeProperties(
+galois::Result<void>
+galois::graphs::PropertyFileGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_indices &&
       topology_.out_indices->length() != table->num_rows()) {
-    GALOIS_LOG_DEBUG("expected {} rows found {} instead",
-                     topology_.out_indices->length(), table->num_rows());
+    GALOIS_LOG_DEBUG(
+        "expected {} rows found {} instead", topology_.out_indices->length(),
+        table->num_rows());
     return ErrorCode::InvalidArgument;
   }
   return rdg_.AddNodeProperties(table);
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::AddEdgeProperties(
+galois::Result<void>
+galois::graphs::PropertyFileGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_dests &&
       topology_.out_dests->length() != table->num_rows()) {
-    GALOIS_LOG_DEBUG("expected {} rows found {} instead",
-                     topology_.out_dests->length(), table->num_rows());
+    GALOIS_LOG_DEBUG(
+        "expected {} rows found {} instead", topology_.out_dests->length(),
+        table->num_rows());
     return ErrorCode::InvalidArgument;
   }
   return rdg_.AddEdgeProperties(table);
@@ -291,7 +299,8 @@ galois::graphs::PropertyFileGraph::RemoveEdgeProperty(int i) {
   return rdg_.DropEdgeProperty(i);
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::SetTopology(
+galois::Result<void>
+galois::graphs::PropertyFileGraph::SetTopology(
     const galois::graphs::GraphTopology& topology) {
   if (auto res = rdg_.topology_file_storage_.Unbind(); !res) {
     return res.error();

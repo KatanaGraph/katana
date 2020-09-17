@@ -17,32 +17,33 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/graphs/FileGraph.h"
-#include "galois/substrate/ThreadPool.h"
-#include "galois/substrate/HWTopo.h"
-
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+
+#include "galois/graphs/FileGraph.h"
+#include "galois/substrate/HWTopo.h"
+#include "galois/substrate/ThreadPool.h"
 
 namespace galois {
 namespace graphs {
 
-void FileGraph::fromFileInterleaved(const std::string& filename,
-                                    size_t sizeofEdgeData) {
+void
+FileGraph::fromFileInterleaved(
+    const std::string& filename, size_t sizeofEdgeData) {
   fromFile(filename);
 
   std::mutex lock;
   std::condition_variable cond;
-  auto& tp            = substrate::getThreadPool();
+  auto& tp = substrate::getThreadPool();
   unsigned maxSockets = tp.getMaxSockets();
-  unsigned count      = maxSockets;
+  unsigned count = maxSockets;
 
   // Interleave across all NUMA nodes
   tp.run(tp.getMaxThreads(), [&]() {
     std::unique_lock<std::mutex> lk(lock);
     if (substrate::ThreadPool::isLeader()) {
-      pageInByNode(substrate::ThreadPool::getSocket(), maxSockets,
-                   sizeofEdgeData);
+      pageInByNode(
+          substrate::ThreadPool::getSocket(), maxSockets, sizeofEdgeData);
       if (--count == 0)
         cond.notify_all();
     } else {
@@ -51,5 +52,5 @@ void FileGraph::fromFileInterleaved(const std::string& filename,
   });
 }
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois

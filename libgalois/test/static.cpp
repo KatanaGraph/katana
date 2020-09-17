@@ -19,16 +19,17 @@
 
 // std_tr1__type_traits__is_pod.cpp
 
+#include <iostream>
+#include <type_traits>
+
 #include "galois/substrate/PtrLock.h"
 #include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/StaticInstance.h"
 
-#include <type_traits>
-#include <iostream>
-
 using namespace galois::substrate;
 
-int main() {
+int
+main() {
   std::cout << "is_pod PtrLock<int> == " << std::boolalpha
             << std::is_pod<PtrLock<int>>::value << "\n";
 

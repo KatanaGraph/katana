@@ -22,12 +22,12 @@
 // 2. how to add new work items using context
 // 3. how to specify schedulers
 // 4. how to write an indexer for OBIM
-#include "galois/Timer.h"
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-
 #include <iostream>
 #include <string>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/graphs/LCGraph.h"
 
 using Graph = galois::graphs::LC_Linear_Graph<unsigned int, unsigned int>;
 using GNode = Graph::GraphNode;
@@ -38,9 +38,10 @@ static const unsigned int DIST_INFINITY =
 
 constexpr unsigned int stepShift = 14;
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
-  galois::setActiveThreads(256); // Galois will cap at hw max
+  galois::setActiveThreads(256);  // Galois will cap at hw max
 
   if (argc != 3) {
     std::cout << "Usage: " << argv[0]
@@ -52,14 +53,16 @@ int main(int argc, char** argv) {
   }
 
   Graph graph;
-  galois::graphs::readGraph(graph,
-                            argv[1]); // argv[1] is the file name for graph
+  galois::graphs::readGraph(
+      graph,
+      argv[1]);  // argv[1] is the file name for graph
 
   // initialization
-  galois::do_all(galois::iterate(graph),
-                 [&graph](GNode N) {
-                   graph.getData(N) = DIST_INFINITY;
-                 } // operator as lambda expression
+  galois::do_all(
+      galois::iterate(graph),
+      [&graph](GNode N) {
+        graph.getData(N) = DIST_INFINITY;
+      }  // operator as lambda expression
   );
 
   galois::StatTimer T;
@@ -73,13 +76,13 @@ int main(int argc, char** argv) {
     auto srcData = graph.getData(active_node);
 
     // loop over neighbors to compute new value
-    for (auto ii : graph.edges(active_node)) { // cautious point
-      auto dst      = graph.getEdgeDst(ii);
-      auto weight   = graph.getEdgeData(ii);
+    for (auto ii : graph.edges(active_node)) {  // cautious point
+      auto dst = graph.getEdgeDst(ii);
+      auto weight = graph.getEdgeData(ii);
       auto& dstData = graph.getData(dst);
       if (dstData > weight + srcData) {
         dstData = weight + srcData;
-        ctx.push(dst); // add new work items
+        ctx.push(dst);  // add new work items
       }
     }
   };
@@ -93,12 +96,12 @@ int main(int argc, char** argv) {
   };
 
   using namespace galois::worklists;
-  using PSchunk = PerSocketChunkLIFO<16>; // chunk size 16
-  using OBIM    = OrderedByIntegerMetric<decltype(reqIndexer), PSchunk>;
+  using PSchunk = PerSocketChunkLIFO<16>;  // chunk size 16
+  using OBIM = OrderedByIntegerMetric<decltype(reqIndexer), PSchunk>;
   //! [Scheduler examples]
 
   //! [Data-driven loops]
-  std::string schedule = argv[2]; // argv[2] is the scheduler to be used
+  std::string schedule = argv[2];  // argv[2] is the scheduler to be used
 
   // clear source
   graph.getData(*graph.begin()) = 0;
@@ -107,12 +110,12 @@ int main(int argc, char** argv) {
     //! [chunk worklist]
     galois::for_each(
         galois::iterate(
-            {*graph.begin()}), // initial range using initializer list
-        SSSP                   // operator
+            {*graph.begin()}),  // initial range using initializer list
+        SSSP                    // operator
         ,
-        galois::wl<PSchunk>() // options. PSchunk expands to
-                              // galois::worklists::PerSocketChunkLIFO<16>,
-                              // where 16 is chunk size
+        galois::wl<PSchunk>()  // options. PSchunk expands to
+                               // galois::worklists::PerSocketChunkLIFO<16>,
+                               // where 16 is chunk size
         ,
         galois::loopname("sssp_dchunk16"));
     //! [chunk worklist]
@@ -120,11 +123,11 @@ int main(int argc, char** argv) {
     //! [OBIM]
     galois::for_each(
         galois::iterate(
-            {*graph.begin()}), // initial range using initializer list
-        SSSP                   // operator
+            {*graph.begin()}),  // initial range using initializer list
+        SSSP                    // operator
         ,
-        galois::wl<OBIM>(reqIndexer) // options. Pass an indexer instance for
-                                     // OBIM construction.
+        galois::wl<OBIM>(reqIndexer)  // options. Pass an indexer instance for
+                                      // OBIM construction.
         ,
         galois::loopname("sssp_obim"));
     //! [OBIM]
@@ -135,10 +138,10 @@ int main(int argc, char** argv) {
     //! [ParaMeter loop iterator]
     galois::for_each(
         galois::iterate(
-            {*graph.begin()}), // initial range using initializer list
-        SSSP                   // operator
+            {*graph.begin()}),  // initial range using initializer list
+        SSSP                    // operator
         ,
-        galois::wl<galois::worklists::ParaMeter<>>() // options
+        galois::wl<galois::worklists::ParaMeter<>>()  // options
         ,
         galois::loopname("sssp_ParaMeter"));
     //! [ParaMeter loop iterator]
@@ -146,10 +149,10 @@ int main(int argc, char** argv) {
     //! [Deterministic loop iterator]
     galois::for_each(
         galois::iterate(
-            {*graph.begin()}), // initial range using initializer list
-        SSSP                   // operator
+            {*graph.begin()}),  // initial range using initializer list
+        SSSP                    // operator
         ,
-        galois::wl<galois::worklists::Deterministic<>>() // options
+        galois::wl<galois::worklists::Deterministic<>>()  // options
         ,
         galois::loopname("sssp_deterministic"));
     //! [Deterministic loop iterator]

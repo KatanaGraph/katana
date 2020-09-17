@@ -84,10 +84,11 @@ class SpatialTree2d {
   Box2d bounds;
 
   // true if x,y is closer to testx, testy than oldx, oldy
-  bool closer(double x, double y, double testx, double testy, double oldx,
-              double oldy) const {
-    double doldx  = x - oldx;
-    double doldy  = y - oldy;
+  bool closer(
+      double x, double y, double testx, double testy, double oldx,
+      double oldy) const {
+    double doldx = x - oldx;
+    double doldy = y - oldy;
     double dtestx = x - testx;
     double dtesty = y - testy;
     doldx *= doldx;
@@ -115,7 +116,7 @@ class SpatialTree2d {
         best = n;
       //      best = &n->val;
       int quad = n->getQuad(x, y);
-      n        = n->children[quad];
+      n = n->children[quad];
     }
     return &best->val;
   }
@@ -125,7 +126,7 @@ class SpatialTree2d {
       // only do an atomic if it looks empty
       node->setCenter(b.xmid(), b.ymid());
       if (__sync_bool_compare_and_swap(pos, 0, node))
-        return; // worked!
+        return;  // worked!
     }
     // We should recurse
     int quad = (*pos)->getQuad(node->x, node->y);
@@ -155,8 +156,9 @@ class SpatialTree2d {
   }
 
 public:
-  SpatialTree2d(double xmin = 0.0, double ymin = 0.0, double xmax = 0.0,
-                double ymax = 0.0)
+  SpatialTree2d(
+      double xmin = 0.0, double ymin = 0.0, double xmax = 0.0,
+      double ymax = 0.0)
       : root(0) {
     init(xmin, ymin, xmax, ymax);
   }
@@ -186,7 +188,7 @@ public:
   }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 
 #endif

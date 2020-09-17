@@ -36,9 +36,9 @@ struct BCEdge {
 
   BCEdge& operator=(BCEdge const& from) {
     if (this != &from) {
-      src   = from.src;
-      dst   = from.dst;
-      val   = from.val;
+      src = from.src;
+      dst = from.dst;
+      val = from.val;
       level = from.level;
     }
     return *this;

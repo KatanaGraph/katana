@@ -80,12 +80,12 @@ struct BarrierInstance {
 
   BarrierInstance(void) {
     m_num_threads = getThreadPool().getMaxThreads();
-    m_barrier     = createTopoBarrier(m_num_threads);
+    m_barrier = createTopoBarrier(m_num_threads);
   }
 
   Barrier& get(unsigned numT) {
-    GALOIS_ASSERT(numT > 0,
-                  "substrate::getBarrier() number of threads must be > 0");
+    GALOIS_ASSERT(
+        numT > 0, "substrate::getBarrier() number of threads must be > 0");
 
     numT = std::min(numT, getThreadPool().getMaxUsableThreads());
     numT = std::max(numT, 1u);
@@ -101,9 +101,9 @@ struct BarrierInstance {
 
 void setBarrierInstance(BarrierInstance<>* bi);
 
-} // end namespace internal
+}  // end namespace internal
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

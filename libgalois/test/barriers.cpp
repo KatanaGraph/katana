@@ -17,15 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Timer.h"
-#include "galois/Galois.h"
-#include "galois/substrate/Barrier.h"
-
-#include <iostream>
-#include <cstdlib>
 #include <unistd.h>
 
-unsigned iter       = 0;
+#include <cstdlib>
+#include <iostream>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/substrate/Barrier.h"
+
+unsigned iter = 0;
 unsigned numThreads = 0;
 
 char bname[100];
@@ -50,7 +51,8 @@ struct emp {
   }
 };
 
-void test(std::unique_ptr<galois::substrate::Barrier> b) {
+void
+test(std::unique_ptr<galois::substrate::Barrier> b) {
   if (b == nullptr) {
     std::cout << "skipping " << bname << "\n";
     return;
@@ -73,7 +75,8 @@ void test(std::unique_ptr<galois::substrate::Barrier> b) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   if (argc > 1)
     iter = atoi(argv[1]);

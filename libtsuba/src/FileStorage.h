@@ -20,24 +20,24 @@ protected:
 
 public:
   FileStorage(const FileStorage& no_copy) = delete;
-  FileStorage(FileStorage&& no_move)      = delete;
+  FileStorage(FileStorage&& no_move) = delete;
   FileStorage& operator=(const FileStorage& no_copy) = delete;
   FileStorage& operator=(FileStorage&& no_move) = delete;
-  virtual ~FileStorage()                        = default;
+  virtual ~FileStorage() = default;
 
   std::string_view uri_scheme() { return uri_scheme_; }
-  virtual galois::Result<void> Init()                                      = 0;
-  virtual galois::Result<void> Fini()                                      = 0;
+  virtual galois::Result<void> Init() = 0;
+  virtual galois::Result<void> Fini() = 0;
   virtual galois::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
-  virtual galois::Result<void> Create(const std::string& uri,
-                                      bool overwrite)                      = 0;
+  virtual galois::Result<void> Create(
+      const std::string& uri, bool overwrite) = 0;
 
-  virtual galois::Result<void> GetMultiSync(const std::string& uri,
-                                            uint64_t start, uint64_t size,
-                                            uint8_t* result_buf) = 0;
+  virtual galois::Result<void> GetMultiSync(
+      const std::string& uri, uint64_t start, uint64_t size,
+      uint8_t* result_buf) = 0;
 
-  virtual galois::Result<void>
-  PutMultiSync(const std::string& uri, const uint8_t* data, uint64_t size) = 0;
+  virtual galois::Result<void> PutMultiSync(
+      const std::string& uri, const uint8_t* data, uint64_t size) = 0;
 
   /// Storage classes with higher priority will be tried by GlobalState earlier
   /// currently only used to enforce local fs default; GlobalState defaults
@@ -46,19 +46,18 @@ public:
 
   // FileAsyncWork pointer can be null, otherwise contains additional work.
   // Every call to async work can potentially block (bulk synchronous parallel)
-  virtual galois::Result<std::unique_ptr<FileAsyncWork>>
-  PutAsync(const std::string& uri, const uint8_t* data, uint64_t size) = 0;
-  virtual galois::Result<std::unique_ptr<FileAsyncWork>>
-  GetAsync(const std::string& uri, uint64_t start, uint64_t size,
-           uint8_t* result_buf) = 0;
-  virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-  ListAsync(const std::string& directory,
-            std::unordered_set<std::string>* list) = 0;
-  virtual galois::Result<void>
-  Delete(const std::string& directory,
-         const std::unordered_set<std::string>& files) = 0;
+  virtual galois::Result<std::unique_ptr<FileAsyncWork>> PutAsync(
+      const std::string& uri, const uint8_t* data, uint64_t size) = 0;
+  virtual galois::Result<std::unique_ptr<FileAsyncWork>> GetAsync(
+      const std::string& uri, uint64_t start, uint64_t size,
+      uint8_t* result_buf) = 0;
+  virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>> ListAsync(
+      const std::string& directory, std::unordered_set<std::string>* list) = 0;
+  virtual galois::Result<void> Delete(
+      const std::string& directory,
+      const std::unordered_set<std::string>& files) = 0;
 };
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

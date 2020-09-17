@@ -35,7 +35,8 @@ namespace internal {
 
 using edge_iterator = boost::counting_iterator<uint32_t>;
 template <typename GraphTy>
-inline edge_iterator edge_begin(GraphTy& graph, uint32_t N) {
+inline edge_iterator
+edge_begin(GraphTy& graph, uint32_t N) {
   return (N > 0) ? graph.topology().out_indices->Value(N - 1) : 0;
 }
 
@@ -47,17 +48,19 @@ inline edge_iterator edge_begin(GraphTy& graph, uint32_t N) {
  * of the next node (or an "end" iterator if there is no next node)
  */
 template <typename GraphTy>
-inline edge_iterator edge_end(GraphTy& graph, uint32_t N) {
+inline edge_iterator
+edge_end(GraphTy& graph, uint32_t N) {
   return graph.topology().out_indices->Value(N);
 }
 
 template <typename Ty>
-inline size_t getEdgePrefixSum(Ty& p, size_t n) {
+inline size_t
+getEdgePrefixSum(Ty& p, size_t n) {
   return p[n];
 }
 template <>
-inline size_t getEdgePrefixSum<PropertyFileGraph>(PropertyFileGraph& p,
-                                                  size_t n) {
+inline size_t
+getEdgePrefixSum<PropertyFileGraph>(PropertyFileGraph& p, size_t n) {
   return *edge_end(p, n);
 }
 
@@ -87,10 +90,11 @@ inline size_t getEdgePrefixSum<PropertyFileGraph>(PropertyFileGraph& p,
 // Note: "inline" may be required if PrefixSumType is exactly the same type
 // in 2 different translation units; otherwise it should be fine
 template <typename PrefixSumType>
-size_t findIndexPrefixSum(size_t nodeWeight, size_t edgeWeight,
-                          size_t targetWeight, uint64_t lb, uint64_t ub,
-                          PrefixSumType& edgePrefixSum, uint64_t edgeOffset,
-                          uint64_t nodeOffset) {
+size_t
+findIndexPrefixSum(
+    size_t nodeWeight, size_t edgeWeight, size_t targetWeight, uint64_t lb,
+    uint64_t ub, PrefixSumType& edgePrefixSum, uint64_t edgeOffset,
+    uint64_t nodeOffset) {
   assert(nodeWeight != 0 || edgeWeight != 0);
 
   while (lb < ub) {
@@ -131,7 +135,7 @@ size_t findIndexPrefixSum(size_t nodeWeight, size_t edgeWeight,
 GALOIS_EXPORT uint32_t determine_block_division(
     uint32_t numDivisions, std::vector<unsigned>& scaleFactor);
 
-} // end namespace internal
+}  // end namespace internal
 
 /**
  * Returns 2 ranges (one for nodes, one for edges) for a particular division.
@@ -166,7 +170,8 @@ GALOIS_EXPORT uint32_t determine_block_division(
  * was used, it is up to the caller to add the offset to the numbers)
  */
 template <typename PrefixSumType, typename NodeType = uint64_t>
-auto divideNodesBinarySearch(
+auto
+divideNodesBinarySearch(
     NodeType numNodes, uint64_t numEdges, size_t nodeWeight, size_t edgeWeight,
     size_t id, size_t total, PrefixSumType& edgePrefixSum,
     std::vector<unsigned> scaleFactor = std::vector<unsigned>(),
@@ -179,8 +184,9 @@ auto divideNodesBinarySearch(
 
   // numNodes = 0 corner case
   if (numNodes == 0) {
-    return GraphRange(NodeRange(iterator(0), iterator(0)),
-                      EdgeRange(edge_iterator(0), edge_iterator(0)));
+    return GraphRange(
+        NodeRange(iterator(0), iterator(0)),
+        EdgeRange(edge_iterator(0), edge_iterator(0)));
   }
 
   assert(nodeWeight != 0 || edgeWeight != 0);
@@ -235,8 +241,8 @@ auto divideNodesBinarySearch(
 
   if (nodesLower != nodesUpper) {
     if ((nodesLower + nodeOffset) != 0) {
-      edgesLower = internal::getEdgePrefixSum(edgePrefixSum,
-                                              nodesLower - 1 + nodeOffset) -
+      edgesLower = internal::getEdgePrefixSum(
+                       edgePrefixSum, nodesLower - 1 + nodeOffset) -
                    edgeOffset;
     } else {
       edgesLower = 0;
@@ -270,10 +276,9 @@ namespace internal {
  * @returns true if a corner case was found (indicates that returnRanges has
  * been finalized)
  */
-GALOIS_EXPORT bool
-unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
-                          uint32_t endNode,
-                          std::vector<uint32_t>& returnRanges);
+GALOIS_EXPORT bool unitRangeCornerCaseHandle(
+    uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
+    std::vector<uint32_t>& returnRanges);
 
 /**
  * Helper function used by determineUnitRangesGraph that consists of the main
@@ -293,10 +298,10 @@ unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
  * determining division of nodes (edges have weight 1).
  */
 template <typename GraphTy>
-void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
-                                  uint32_t beginNode, uint32_t endNode,
-                                  std::vector<uint32_t>& returnRanges,
-                                  uint32_t nodeAlpha) {
+void
+determineUnitRangesLoopGraph(
+    GraphTy& graph, uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
+    std::vector<uint32_t>& returnRanges, uint32_t nodeAlpha) {
   assert(beginNode != endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
@@ -321,7 +326,7 @@ void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
         assert(returnRanges[i] == *(nodeSplits.first) + beginNode);
-      } else { // i == 0
+      } else {  // i == 0
         assert(returnRanges[i] == beginNode);
       }
       returnRanges[i + 1] = *(nodeSplits.second) + beginNode;
@@ -330,10 +335,11 @@ void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
       returnRanges[i + 1] = returnRanges[i];
     }
 
-    galois::gDebug("LoopGraph Unit ", i, " gets nodes ", returnRanges[i],
-                   " to ", returnRanges[i + 1], ", num edges is ",
-                   edge_end(graph, returnRanges[i + 1] - 1) -
-                       edge_begin(graph, returnRanges[i]));
+    galois::gDebug(
+        "LoopGraph Unit ", i, " gets nodes ", returnRanges[i], " to ",
+        returnRanges[i + 1], ", num edges is ",
+        edge_end(graph, returnRanges[i + 1] - 1) -
+            edge_begin(graph, returnRanges[i]));
   }
 }
 
@@ -355,11 +361,10 @@ void determineUnitRangesLoopGraph(GraphTy& graph, uint32_t unitsToSplit,
  * determining division of nodes (edges have weight 1).
  */
 template <typename VectorTy>
-void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
-                                      uint32_t unitsToSplit, uint32_t beginNode,
-                                      uint32_t endNode,
-                                      std::vector<uint32_t>& returnRanges,
-                                      uint32_t nodeAlpha) {
+void
+determineUnitRangesLoopPrefixSum(
+    VectorTy& prefixSum, uint32_t unitsToSplit, uint32_t beginNode,
+    uint32_t endNode, std::vector<uint32_t>& returnRanges, uint32_t nodeAlpha) {
   assert(beginNode != endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
@@ -368,10 +373,10 @@ void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
   uint64_t edgeOffset;
   if (beginNode != 0) {
     numEdgesInRange = prefixSum[endNode - 1] - prefixSum[beginNode - 1];
-    edgeOffset      = prefixSum[beginNode - 1];
+    edgeOffset = prefixSum[beginNode - 1];
   } else {
     numEdgesInRange = prefixSum[endNode - 1];
-    edgeOffset      = 0;
+    edgeOffset = 0;
   }
 
   returnRanges[0] = beginNode;
@@ -389,7 +394,7 @@ void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
         assert(returnRanges[i] == *(nodeSplits.first) + beginNode);
-      } else { // i == 0
+      } else {  // i == 0
         assert(returnRanges[i] == beginNode);
       }
       returnRanges[i + 1] = *(nodeSplits.second) + beginNode;
@@ -398,8 +403,9 @@ void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
       returnRanges[i + 1] = returnRanges[i];
     }
 
-    galois::gDebug("Unit ", i, " gets nodes ", returnRanges[i], " to ",
-                   returnRanges[i + 1]);
+    galois::gDebug(
+        "Unit ", i, " gets nodes ", returnRanges[i], " to ",
+        returnRanges[i + 1]);
   }
 }
 
@@ -411,11 +417,11 @@ void determineUnitRangesLoopPrefixSum(VectorTy& prefixSum,
  * @param endNode End of range, non-inclusive
  * @param returnRanges Ranges to sanity check
  */
-GALOIS_EXPORT void unitRangeSanity(uint32_t unitsToSplit, uint32_t beginNode,
-                                   uint32_t endNode,
-                                   std::vector<uint32_t>& returnRanges);
+GALOIS_EXPORT void unitRangeSanity(
+    uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
+    std::vector<uint32_t>& returnRanges);
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Determines node division ranges for all nodes in a graph and returns it in
@@ -436,9 +442,9 @@ GALOIS_EXPORT void unitRangeSanity(uint32_t unitsToSplit, uint32_t beginNode,
  * @returns vector that indirectly specifies which units get which nodes
  */
 template <typename GraphTy>
-std::vector<uint32_t> determineUnitRangesFromGraph(GraphTy& graph,
-                                                   uint32_t unitsToSplit,
-                                                   uint32_t nodeAlpha = 0) {
+std::vector<uint32_t>
+determineUnitRangesFromGraph(
+    GraphTy& graph, uint32_t unitsToSplit, uint32_t nodeAlpha = 0) {
   // uint32_t totalNodes = graph.size();
   uint32_t totalNodes = graph.topology().num_nodes();
 
@@ -446,15 +452,15 @@ std::vector<uint32_t> determineUnitRangesFromGraph(GraphTy& graph,
   returnRanges.resize(unitsToSplit + 1);
 
   // check corner cases
-  if (internal::unitRangeCornerCaseHandle(unitsToSplit, 0, totalNodes,
-                                          returnRanges)) {
+  if (internal::unitRangeCornerCaseHandle(
+          unitsToSplit, 0, totalNodes, returnRanges)) {
     return returnRanges;
   }
 
   // no corner cases: onto main loop over nodes that determines
   // node ranges
-  internal::determineUnitRangesLoopGraph(graph, unitsToSplit, 0, totalNodes,
-                                         returnRanges, nodeAlpha);
+  internal::determineUnitRangesLoopGraph(
+      graph, unitsToSplit, 0, totalNodes, returnRanges, nodeAlpha);
 
   internal::unitRangeSanity(unitsToSplit, 0, totalNodes, returnRanges);
 
@@ -483,21 +489,21 @@ std::vector<uint32_t> determineUnitRangesFromGraph(GraphTy& graph,
  */
 template <typename GraphTy>
 std::vector<uint32_t>
-determineUnitRangesFromGraph(GraphTy& graph, uint32_t unitsToSplit,
-                             uint32_t beginNode, uint32_t endNode,
-                             uint32_t nodeAlpha = 0) {
+determineUnitRangesFromGraph(
+    GraphTy& graph, uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
+    uint32_t nodeAlpha = 0) {
   std::vector<uint32_t> returnRanges;
   returnRanges.resize(unitsToSplit + 1);
 
-  if (internal::unitRangeCornerCaseHandle(unitsToSplit, beginNode, endNode,
-                                          returnRanges)) {
+  if (internal::unitRangeCornerCaseHandle(
+          unitsToSplit, beginNode, endNode, returnRanges)) {
     return returnRanges;
   }
 
   // no corner cases: onto main loop over nodes that determines
   // node ranges
-  internal::determineUnitRangesLoopGraph(graph, unitsToSplit, beginNode,
-                                         endNode, returnRanges, nodeAlpha);
+  internal::determineUnitRangesLoopGraph(
+      graph, unitsToSplit, beginNode, endNode, returnRanges, nodeAlpha);
 
   internal::unitRangeSanity(unitsToSplit, beginNode, endNode, returnRanges);
 
@@ -520,8 +526,9 @@ determineUnitRangesFromGraph(GraphTy& graph, uint32_t unitsToSplit,
  */
 template <typename VectorTy>
 std::vector<uint32_t>
-determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
-                                 uint64_t numNodes, uint32_t nodeAlpha = 0) {
+determineUnitRangesFromPrefixSum(
+    uint32_t unitsToSplit, VectorTy& edgePrefixSum, uint64_t numNodes,
+    uint32_t nodeAlpha = 0) {
   assert(unitsToSplit > 0);
 
   std::vector<uint32_t> nodeRanges;
@@ -540,7 +547,7 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
   }
 
   uint64_t numEdges = internal::getEdgePrefixSum(
-      edgePrefixSum, numNodes - 1); // edgePrefixSum[numNodes - 1];
+      edgePrefixSum, numNodes - 1);  // edgePrefixSum[numNodes - 1];
 
   for (uint32_t i = 0; i < unitsToSplit; i++) {
     auto nodeSplits =
@@ -552,7 +559,7 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
         assert(nodeRanges[i] == *(nodeSplits.first));
-      } else { // i == 0
+      } else {  // i == 0
         assert(nodeRanges[i] == 0);
       }
       nodeRanges[i + 1] = *(nodeSplits.second);
@@ -561,8 +568,8 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
       nodeRanges[i + 1] = nodeRanges[i];
     }
 
-    galois::gDebug("Unit ", i, " gets nodes ", nodeRanges[i], " to ",
-                   nodeRanges[i + 1]);
+    galois::gDebug(
+        "Unit ", i, " gets nodes ", nodeRanges[i], " to ", nodeRanges[i + 1]);
   }
 
   return nodeRanges;
@@ -586,14 +593,14 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
  */
 template <typename VectorTy>
 std::vector<uint32_t>
-determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
-                                 uint32_t beginNode, uint32_t endNode,
-                                 uint32_t nodeAlpha = 0) {
+determineUnitRangesFromPrefixSum(
+    uint32_t unitsToSplit, VectorTy& edgePrefixSum, uint32_t beginNode,
+    uint32_t endNode, uint32_t nodeAlpha = 0) {
   std::vector<uint32_t> returnRanges;
   returnRanges.resize(unitsToSplit + 1);
 
-  if (internal::unitRangeCornerCaseHandle(unitsToSplit, beginNode, endNode,
-                                          returnRanges)) {
+  if (internal::unitRangeCornerCaseHandle(
+          unitsToSplit, beginNode, endNode, returnRanges)) {
     return returnRanges;
   }
 
@@ -607,7 +614,7 @@ determineUnitRangesFromPrefixSum(uint32_t unitsToSplit, VectorTy& edgePrefixSum,
   return returnRanges;
 }
 
-} // end namespace graphs
-} // end namespace galois
+}  // end namespace graphs
+}  // end namespace galois
 
 #endif

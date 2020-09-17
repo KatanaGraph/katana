@@ -24,15 +24,17 @@
 // 3. access to node and edge data
 // 4. usage of galois::StatTimer
 // 5. how to change # of threads
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/Timer.h"
 #include <iostream>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/graphs/LCGraph.h"
 
 using Graph = galois::graphs::LC_CSR_Graph<int, int>;
 using GNode = Graph::GraphNode;
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
 
   if (argc < 3) {
@@ -41,8 +43,8 @@ int main(int argc, char* argv[]) {
   }
 
   Graph g;
-  galois::graphs::readGraph(g, argv[1]); // argv[1] is the file name for graph
-  galois::setActiveThreads(std::atoi(argv[2])); // argv[2] is # of threads
+  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
+  galois::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
 
   //******************************************************************************************
   // serial traversal over a graph
@@ -51,7 +53,7 @@ int main(int argc, char* argv[]) {
   T.start();
   for (auto n : g) {
     auto& sum = g.getData(n);
-    sum       = 0;
+    sum = 0;
     for (auto e : g.edges(n)) {
       sum += g.getEdgeData(e);
     }
@@ -65,15 +67,15 @@ int main(int argc, char* argv[]) {
   // program finishes
   //! [Graph traversal in pull using do_all]
   galois::do_all(
-      galois::iterate(g.begin(), g.end()), // range
-      [&](GNode n) {                       // operator
+      galois::iterate(g.begin(), g.end()),  // range
+      [&](GNode n) {                        // operator
         auto& sum = g.getData(n);
-        sum       = 0;
+        sum = 0;
         for (auto e : g.edges(n)) {
           sum += g.getEdgeData(e);
         }
       },
-      galois::loopname("sum_in_do_all_with_lambda") // options
+      galois::loopname("sum_in_do_all_with_lambda")  // options
   );
   //! [Graph traversal in pull using do_all]
 

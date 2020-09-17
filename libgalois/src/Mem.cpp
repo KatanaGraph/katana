@@ -38,7 +38,8 @@ SizedHeapFactory::getHeapForSize(const size_t size) {
   return Base::getInstance()->getHeap(size);
 }
 
-SizedHeapFactory::SizedHeap* SizedHeapFactory::getHeap(const size_t size) {
+SizedHeapFactory::SizedHeap*
+SizedHeapFactory::getHeap(const size_t size) {
   typedef SizedHeapFactory::HeapMap HeapMap;
 
   if (!localHeaps) {

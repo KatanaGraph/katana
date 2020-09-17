@@ -26,7 +26,8 @@ extern "C" {
 }
 #include <iostream>
 
-unsigned long galois::runtime::internal::papiGetTID(void) {
+unsigned long
+galois::runtime::internal::papiGetTID(void) {
   return galois::substrate::ThreadPool::getTID();
 }
 #endif

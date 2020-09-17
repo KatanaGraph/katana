@@ -17,36 +17,35 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
+#include <algorithm>
+#include <atomic>
+#include <iostream>
+#include <utility>
+
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Bag.h"
+#include "galois/Galois.h"
 #include "galois/ParallelSTL.h"
 #include "galois/Reduction.h"
 #include "galois/Timer.h"
 #include "galois/UnionFind.h"
 #include "galois/graphs/LCGraph.h"
 #include "galois/runtime/Profile.h"
-#include "Lonestar/BoilerPlate.h"
-
 #include "llvm/Support/CommandLine.h"
-
-#include <atomic>
-#include <utility>
-#include <algorithm>
-#include <iostream>
 
 namespace cll = llvm::cl;
 
 static const char* name = "Boruvka's Minimum Spanning Tree Algorithm";
 static const char* desc = "Computes the minimum spanning forest of a graph";
-static const char* url  = "mst";
+static const char* url = "mst";
 
 enum Algo { parallel, exp_parallel };
 
-static cll::opt<std::string>
-    inputFilename(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<Algo>
-    algo("algo", cll::desc("Choose an algorithm (default value parallel):"),
-         cll::values(clEnumVal(parallel, "Parallel")), cll::init(parallel));
+static cll::opt<std::string> inputFilename(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<Algo> algo(
+    "algo", cll::desc("Choose an algorithm (default value parallel):"),
+    cll::values(clEnumVal(parallel, "Parallel")), cll::init(parallel));
 
 typedef int EdgeData;
 
@@ -60,7 +59,8 @@ typedef galois::graphs::LC_CSR_Graph<Node, EdgeData>::with_numa_alloc<
 
 typedef Graph::GraphNode GNode;
 
-std::ostream& operator<<(std::ostream& os, const Node& n) {
+std::ostream&
+operator<<(std::ostream& os, const Node& n) {
   os << "[id: " << &n << ", c: " << n.find() << "]";
   return os;
 }
@@ -104,8 +104,9 @@ struct ParallelAlgo {
    * worklist.
    */
   template <bool useLimit, typename Context, typename Pending>
-  static void findLightest(ParallelAlgo* self, const GNode& src, int cur,
-                           Context& ctx, Pending& pending) {
+  static void findLightest(
+      ParallelAlgo* self, const GNode& src, int cur, Context& ctx,
+      Pending& pending) {
     Node& sdata = self->graph.getData(src, galois::MethodFlag::UNPROTECTED);
     Graph::edge_iterator ii =
         self->graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
@@ -115,7 +116,7 @@ struct ParallelAlgo {
     std::advance(ii, cur);
 
     for (; ii != ei; ++ii, ++cur) {
-      GNode dst   = self->graph.getEdgeDst(ii);
+      GNode dst = self->graph.getEdgeDst(ii);
       Node& ddata = self->graph.getData(dst, galois::MethodFlag::UNPROTECTED);
       EdgeData& weight = self->graph.getEdgeData(ii);
       if (useLimit && weight > self->limit) {
@@ -162,7 +163,6 @@ struct ParallelAlgo {
   };
 
   struct Merge {
-
     ParallelAlgo* self;
 
     Merge(ParallelAlgo* s) : self(s) {}
@@ -178,13 +178,13 @@ struct ParallelAlgo {
 
     template <typename Context, typename Pending>
     void operator()(const WorkItem& item, Context&, Pending&) const {
-      GNode src   = item.edge.src;
+      GNode src = item.edge.src;
       Node& sdata = self->graph.getData(src, galois::MethodFlag::UNPROTECTED);
-      Node* rep   = sdata.findAndCompress();
-      int cur     = item.cur;
+      Node* rep = sdata.findAndCompress();
+      int cur = item.cur;
 
       if (rep->lightest == item.edge.weight) {
-        GNode dst   = item.edge.dst;
+        GNode dst = item.edge.dst;
         Node& ddata = self->graph.getData(dst, galois::MethodFlag::UNPROTECTED);
         if ((rep = sdata.merge(&ddata))) {
           rep->lightest = &self->inf;
@@ -210,44 +210,44 @@ struct ParallelAlgo {
     }
 
     template <typename Context, typename Pending>
-    void operator()(const WorkItem& item, Context& ctx,
-                    Pending& pending) const {
+    void operator()(
+        const WorkItem& item, Context& ctx, Pending& pending) const {
       findLightest<true>(self, item.edge.src, item.cur, ctx, pending);
     }
   };
 
   void init() {
     current = &wls[0];
-    next    = &wls[1];
+    next = &wls[1];
     pending = &wls[2];
 
     EdgeData delta = std::max(heaviest / 5, 1);
-    limit          = delta;
+    limit = delta;
   }
 
   void process() {
-
     constexpr unsigned CHUNK_SIZE = 16;
 
     size_t rounds = 0;
 
     init();
 
-    galois::do_all(galois::iterate(graph), Initialize(this),
-                   galois::chunk_size<CHUNK_SIZE>(), galois::steal(),
-                   galois::loopname("Initialize"));
+    galois::do_all(
+        galois::iterate(graph), Initialize(this),
+        galois::chunk_size<CHUNK_SIZE>(), galois::steal(),
+        galois::loopname("Initialize"));
 
     while (true) {
       while (true) {
         rounds += 1;
 
         std::swap(current, next);
-        galois::do_all(galois::iterate(*current), Merge(this), galois::steal(),
-                       galois::chunk_size<CHUNK_SIZE>(),
-                       galois::loopname("Merge"));
-        galois::do_all(galois::iterate(*current), Find(this), galois::steal(),
-                       galois::chunk_size<CHUNK_SIZE>(),
-                       galois::loopname("Find"));
+        galois::do_all(
+            galois::iterate(*current), Merge(this), galois::steal(),
+            galois::chunk_size<CHUNK_SIZE>(), galois::loopname("Merge"));
+        galois::do_all(
+            galois::iterate(*current), Find(this), galois::steal(),
+            galois::chunk_size<CHUNK_SIZE>(), galois::loopname("Find"));
         current->clear();
 
         if (next->empty())
@@ -300,13 +300,12 @@ struct ParallelAlgo {
   }
 
   EdgeData sortEdges() {
-
     galois::GReduceMax<EdgeData> heavy;
 
     galois::do_all(galois::iterate(graph), [&heavy, this](const GNode& src) {
       //! [sortEdgeByEdgeData]
-      graph.sortEdgesByEdgeData(src, std::less<EdgeData>(),
-                                galois::MethodFlag::UNPROTECTED);
+      graph.sortEdgesByEdgeData(
+          src, std::less<EdgeData>(), galois::MethodFlag::UNPROTECTED);
       //! [sortEdgeByEdgeData]
 
       Graph::edge_iterator ii =
@@ -324,11 +323,10 @@ struct ParallelAlgo {
   }
 
   bool verify() {
-
     auto is_bad_graph = [this](const GNode& n) {
       Node& me = graph.getData(n);
       for (auto ii : graph.edges(n)) {
-        GNode dst  = graph.getEdgeDst(ii);
+        GNode dst = graph.getEdgeDst(ii);
         Node& data = graph.getData(dst);
         if (me.findAndCompress() != data.findAndCompress()) {
           std::cerr << "not in same component: " << me << " and " << data
@@ -344,8 +342,8 @@ struct ParallelAlgo {
              graph.getData(e.dst).findAndCompress();
     };
 
-    if (galois::ParallelSTL::find_if(graph.begin(), graph.end(),
-                                     is_bad_graph) == graph.end()) {
+    if (galois::ParallelSTL::find_if(
+            graph.begin(), graph.end(), is_bad_graph) == graph.end()) {
       if (galois::ParallelSTL::find_if(mst.begin(), mst.end(), is_bad_mst) ==
           mst.end()) {
         return checkAcyclic();
@@ -383,8 +381,8 @@ struct ParallelAlgo {
 };
 
 template <typename Algo>
-void run() {
-
+void
+run() {
   Algo algo;
 
   galois::StatTimer Tinitial("InitializeTime");
@@ -392,9 +390,10 @@ void run() {
   algo.initializeGraph();
   Tinitial.stop();
 
-  galois::preAlloc(8 * galois::getActiveThreads() +
-                   16 * (algo.graph.size() + algo.graph.sizeEdges()) /
-                       galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      8 * galois::getActiveThreads() +
+      16 * (algo.graph.size() + algo.graph.sizeEdges()) /
+          galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");
@@ -416,7 +415,8 @@ void run() {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFilename);
 

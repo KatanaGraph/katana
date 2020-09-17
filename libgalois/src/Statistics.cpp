@@ -19,15 +19,16 @@
 
 #include "galois/runtime/Statistics.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include "galois/GetEnv.h"
 #include "galois/runtime/Executor_OnEach.h"
 
 using namespace galois::runtime;
 
-boost::uuids::uuid galois::runtime::getRandUUID(void) {
+boost::uuids::uuid
+galois::runtime::getRandUUID(void) {
   static boost::uuids::uuid UUID = boost::uuids::random_generator()();
   return UUID;
 }
@@ -38,15 +39,18 @@ StatManager::StatManager(const std::string& outfile) : m_outfile(outfile) {}
 
 StatManager::~StatManager(void) {}
 
-void StatManager::setStatFile(const std::string& outfile) {
+void
+StatManager::setStatFile(const std::string& outfile) {
   m_outfile = outfile;
 }
 
-void galois::runtime::setStatFile(const std::string& f) {
+void
+galois::runtime::setStatFile(const std::string& f) {
   internal::sysStatManager()->setStatFile(f);
 }
 
-void galois::runtime::reportRUsage(const std::string& id) {
+void
+galois::runtime::reportRUsage(const std::string& id) {
   // get rusage at this point in time
   struct rusage usage_stats;
   int rusage_result = getrusage(RUSAGE_SELF, &usage_stats);
@@ -55,19 +59,24 @@ void galois::runtime::reportRUsage(const std::string& id) {
   }
 
   // report stats using ID to identify them
-  reportStat("rusage", "MaxResidentSetSize_" + id, usage_stats.ru_maxrss,
-             StatTotal::SINGLE);
-  reportStat("rusage", "SoftPageFaults_" + id, usage_stats.ru_minflt,
-             StatTotal::SINGLE);
-  reportStat("rusage", "HardPageFaults_" + id, usage_stats.ru_majflt,
-             StatTotal::SINGLE);
+  reportStat(
+      "rusage", "MaxResidentSetSize_" + id, usage_stats.ru_maxrss,
+      StatTotal::SINGLE);
+  reportStat(
+      "rusage", "SoftPageFaults_" + id, usage_stats.ru_minflt,
+      StatTotal::SINGLE);
+  reportStat(
+      "rusage", "HardPageFaults_" + id, usage_stats.ru_majflt,
+      StatTotal::SINGLE);
 }
 
-bool StatManager::printingThreadVals(void) {
+bool
+StatManager::printingThreadVals(void) {
   return galois::GetEnv("PRINT_PER_THREAD_STATS");
 }
 
-void StatManager::print(void) {
+void
+StatManager::print(void) {
   if (m_outfile == "") {
     printStats(std::cout);
   } else {
@@ -81,7 +90,8 @@ void StatManager::print(void) {
   }
 }
 
-void StatManager::printStats(std::ostream& out) {
+void
+StatManager::printStats(std::ostream& out) {
   mergeStats();
 
   if (intStats.cbegin() == intStats.cend() &&
@@ -96,45 +106,55 @@ void StatManager::printStats(std::ostream& out) {
   strStats.print(out);
 }
 
-void StatManager::printHeader(std::ostream& out) const {
-
+void
+StatManager::printHeader(std::ostream& out) const {
   out << "STAT_TYPE" << SEP << "REGION" << SEP << "CATEGORY" << SEP;
   out << "TOTAL_TYPE" << SEP << "TOTAL";
   out << "\n";
 }
 
-StatManager::int_iterator StatManager::intBegin(void) const {
+StatManager::int_iterator
+StatManager::intBegin(void) const {
   return intStats.cbegin();
 }
-StatManager::int_iterator StatManager::intEnd(void) const {
+StatManager::int_iterator
+StatManager::intEnd(void) const {
   return intStats.cend();
 }
 
-StatManager::fp_iterator StatManager::fpBegin(void) const {
+StatManager::fp_iterator
+StatManager::fpBegin(void) const {
   return fpStats.cbegin();
 }
-StatManager::fp_iterator StatManager::fpEnd(void) const {
+StatManager::fp_iterator
+StatManager::fpEnd(void) const {
   return fpStats.cend();
 }
 
-StatManager::str_iterator StatManager::paramBegin(void) const {
+StatManager::str_iterator
+StatManager::paramBegin(void) const {
   return strStats.cbegin();
 }
-StatManager::str_iterator StatManager::paramEnd(void) const {
+StatManager::str_iterator
+StatManager::paramEnd(void) const {
   return strStats.cend();
 }
 
 static galois::runtime::StatManager* SM;
 
-void galois::runtime::internal::setSysStatManager(
-    galois::runtime::StatManager* sm) {
+void
+galois::runtime::internal::setSysStatManager(galois::runtime::StatManager* sm) {
   GALOIS_ASSERT(!(SM && sm), "StatManager.cpp: Double Initialization of SM");
   SM = sm;
 }
 
-StatManager* galois::runtime::internal::sysStatManager(void) { return SM; }
+StatManager*
+galois::runtime::internal::sysStatManager(void) {
+  return SM;
+}
 
-void galois::runtime::reportPageAlloc(const char* category) {
+void
+galois::runtime::reportPageAlloc(const char* category) {
   galois::runtime::on_each_gen(
       [category](const unsigned int tid, const unsigned int) {
         reportStat_Tsum("PageAlloc", category, numPagePoolAllocForThread(tid));
@@ -142,7 +162,8 @@ void galois::runtime::reportPageAlloc(const char* category) {
       std::make_tuple());
 }
 
-void galois::runtime::reportNumaAlloc(const char*) {
+void
+galois::runtime::reportNumaAlloc(const char*) {
   galois::gWarn("reportNumaAlloc NOT IMPLEMENTED YET. TBD");
   int nodes = substrate::getThreadPool().getMaxNumaNodes();
   for (int x = 0; x < nodes; ++x) {

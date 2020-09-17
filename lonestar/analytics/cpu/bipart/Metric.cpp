@@ -27,8 +27,10 @@ struct OnlineStat {
   double distance_square;
 
   OnlineStat()
-      : num_nodes(0), total_distance(0),
-        min_distance(std::numeric_limits<uint64_t>::max()), max_distance(0),
+      : num_nodes(0),
+        total_distance(0),
+        min_distance(std::numeric_limits<uint64_t>::max()),
+        max_distance(0),
         distance_square(0) {}
 
   void AddDistance(uint64_t distance) {
@@ -53,14 +55,16 @@ struct OnlineStat {
   uint64_t GetMaxDistance() { return max_distance; }
 };
 
-uint32_t GraphStat(GGraph& graph) {
+uint32_t
+GraphStat(GGraph& graph) {
   OnlineStat stat;
   for (GNode node : graph) {
     uint64_t dist = std::distance(graph.edge_begin(node), graph.edge_end(node));
     stat.AddDistance(dist);
   }
-  galois::gPrint("Nodes ", stat.GetNodeCount(), " Edges(total, var, min, max) ",
-                 stat.GetTotalDistance(), " ", stat.GetVariance(), " ",
-                 stat.GetMinDistance(), " ", stat.GetMaxDistance(), "\n");
+  galois::gPrint(
+      "Nodes ", stat.GetNodeCount(), " Edges(total, var, min, max) ",
+      stat.GetTotalDistance(), " ", stat.GetVariance(), " ",
+      stat.GetMinDistance(), " ", stat.GetMaxDistance(), "\n");
   return stat.GetNodeCount();
 }

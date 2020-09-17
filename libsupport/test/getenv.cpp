@@ -1,7 +1,9 @@
 #include "galois/GetEnv.h"
+
 #include "galois/Logging.h"
 
-int main() {
+int
+main() {
   GALOIS_LOG_ASSERT(galois::GetEnv("PATH"));
 
   std::string s;

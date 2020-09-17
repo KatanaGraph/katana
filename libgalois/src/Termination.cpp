@@ -17,15 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/gIO.h"
 #include "galois/substrate/Termination.h"
+
+#include "galois/gIO.h"
 
 // vtable anchoring
 galois::substrate::TerminationDetection::~TerminationDetection(void) {}
 
 static galois::substrate::TerminationDetection* TERM = nullptr;
 
-void galois::substrate::internal::setTermDetect(
+void
+galois::substrate::internal::setTermDetect(
     galois::substrate::TerminationDetection* t) {
   GALOIS_ASSERT(!(TERM && t), "Double initialization of TerminationDetection");
   TERM = t;

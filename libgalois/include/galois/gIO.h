@@ -20,10 +20,11 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GIO_H_
 #define GALOIS_LIBGALOIS_GALOIS_GIO_H_
 
-#include <sstream>
+#include <string.h>
+
 #include <cerrno>
 #include <cstdlib>
-#include <string.h>
+#include <sstream>
 
 #include "galois/config.h"
 
@@ -44,7 +45,8 @@ GALOIS_EXPORT void gErrorStr(const std::string&);
 
 //! Prints a sequence of things
 template <typename... Args>
-void gPrint(Args&&... args) {
+void
+gPrint(Args&&... args) {
   std::ostringstream os;
   (os << ... << args);
   gPrintStr(os.str());
@@ -52,7 +54,8 @@ void gPrint(Args&&... args) {
 
 //! Prints an info string from a sequence of things
 template <typename... Args>
-void gInfo(Args&&... args) {
+void
+gInfo(Args&&... args) {
   std::ostringstream os;
   (os << ... << args);
   gInfoStr(os.str());
@@ -60,7 +63,8 @@ void gInfo(Args&&... args) {
 
 //! Prints a warning string from a sequence of things
 template <typename... Args>
-void gWarn(Args&&... args) {
+void
+gWarn(Args&&... args) {
   std::ostringstream os;
   (os << ... << args);
   gWarnStr(os.str());
@@ -69,7 +73,8 @@ void gWarn(Args&&... args) {
 //! Prints a debug string from a sequence of things; prints nothing if NDEBUG
 //! is defined.
 template <typename... Args>
-void gDebug([[maybe_unused]] Args&&... args) {
+void
+gDebug([[maybe_unused]] Args&&... args) {
 #ifndef NDEBUG
   std::ostringstream os;
   (os << ... << args);
@@ -79,7 +84,8 @@ void gDebug([[maybe_unused]] Args&&... args) {
 
 //! Prints error message
 template <typename... Args>
-void gError(Args&&... args) {
+void
+gError(Args&&... args) {
   std::ostringstream os;
   (os << ... << args);
   gErrorStr(os.str());
@@ -89,8 +95,8 @@ GALOIS_EXPORT void gFlush();
 
 #define GALOIS_SYS_DIE(...)                                                    \
   do {                                                                         \
-    galois::gError(__FILE__, ":", __LINE__, ": ", strerror(errno), ": ",       \
-                   ##__VA_ARGS__);                                             \
+    galois::gError(                                                            \
+        __FILE__, ":", __LINE__, ": ", strerror(errno), ": ", ##__VA_ARGS__);  \
     abort();                                                                   \
   } while (0)
 #define GALOIS_DIE(...)                                                        \
@@ -103,8 +109,9 @@ GALOIS_EXPORT void gFlush();
   do {                                                                         \
     bool b = (cond);                                                           \
     if (!b) {                                                                  \
-      galois::gError(__FILE__, ":", __LINE__, ": assertion failed: ", #cond,   \
-                     " ", ##__VA_ARGS__);                                      \
+      galois::gError(                                                          \
+          __FILE__, ":", __LINE__, ": assertion failed: ", #cond, " ",         \
+          ##__VA_ARGS__);                                                      \
       abort();                                                                 \
     }                                                                          \
   } while (0)
@@ -123,6 +130,6 @@ struct debug<0> {
   inline static void print(const Args&...) {}
 };
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

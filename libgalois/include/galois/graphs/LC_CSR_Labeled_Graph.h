@@ -20,20 +20,22 @@ namespace graphs {
  * @tparam HasOutOfLineLockable
  * @tparam FileEdgeTy
  */
-template <typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
-          bool HasNoLockable = false, bool UseNumaAlloc = false,
-          bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
-class LC_CSR_Labeled_Graph
-    : public LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                          HasOutOfLineLockable, FileEdgeTy> {
+template <
+    typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
+    bool HasNoLockable = false, bool UseNumaAlloc = false,
+    bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
+class LC_CSR_Labeled_Graph : public LC_CSR_Graph<
+                                 NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
+                                 HasOutOfLineLockable, FileEdgeTy> {
   // typedef to make it easier to read
   //! Typedef referring to base LC_CSR_Graph
-  using BaseGraph = LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                 HasOutOfLineLockable, FileEdgeTy>;
+  using BaseGraph = LC_CSR_Graph<
+      NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+      FileEdgeTy>;
   //! Typedef referring to this class itself
-  using ThisGraph =
-      LC_CSR_Labeled_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
-                           UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
+  using ThisGraph = LC_CSR_Labeled_Graph<
+      NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable, UseNumaAlloc,
+      HasOutOfLineLockable, FileEdgeTy>;
 
 public:
   //! Graph node typedef
@@ -73,7 +75,7 @@ protected:
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
   //! out degrees of the data graph
-  galois::gstl::Vector<uint32_t> degrees; // TODO: change these to LargeArray
+  galois::gstl::Vector<uint32_t> degrees;  // TODO: change these to LargeArray
 
   void constructEdgeLabelIndex() {
     galois::substrate::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
@@ -115,7 +117,7 @@ protected:
     galois::do_all(
         galois::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
-          auto offset    = N * this->numEdgeLabels;
+          auto offset = N * this->numEdgeLabels;
           uint32_t index = 0;
           for (auto e : BaseGraph::edges(N)) {
             auto& data = this->getEdgeData(e);
@@ -183,8 +185,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Iterator to first edge of node N
    */
-  edge_iterator edge_begin(GraphNode N, const EdgeTy& data,
-                           MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator edge_begin(
+      GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
       for (edge_iterator ii = raw_begin(N, data), ee = raw_end(N, data);
@@ -203,8 +205,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Iterator to end of edges of node N (i.e. first edge of N+1)
    */
-  edge_iterator edge_end(GraphNode N, const EdgeTy& data,
-                         MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator edge_end(
+      GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     return raw_end(N, data);
   }
@@ -259,8 +261,8 @@ public:
    * @returns Range of the distinct edge labels
    */
   auto distinctEdgeLabels() const {
-    return MakeStandardRange(distinctEdgeLabelsBegin(),
-                             distinctEdgeLabelsEnd());
+    return MakeStandardRange(
+        distinctEdgeLabelsBegin(), distinctEdgeLabelsEnd());
   }
 
   /**
@@ -284,13 +286,13 @@ protected:
    * @param end end of edge list iterator
    * @returns true iff the key exists
    */
-  std::optional<edge_iterator> binarySearch(GraphNode key, edge_iterator begin,
-                                            edge_iterator end) const {
+  std::optional<edge_iterator> binarySearch(
+      GraphNode key, edge_iterator begin, edge_iterator end) const {
     edge_iterator l = begin;
     edge_iterator r = end - 1;
     while (r >= l) {
       edge_iterator mid = l + (r - l) / 2;
-      GraphNode value   = BaseGraph::getEdgeDst(mid);
+      GraphNode value = BaseGraph::getEdgeDst(mid);
       if (value == key) {
         return mid;
       }
@@ -311,13 +313,13 @@ public:
    * @param data label of the edge
    * @returns true iff the edge exists
    */
-  bool isConnectedWithEdgeLabel(GraphNode src, GraphNode dst,
-                                const EdgeTy& data) const {
+  bool isConnectedWithEdgeLabel(
+      GraphNode src, GraphNode dst, const EdgeTy& data) const {
     // trivial check; can't be connected if degree is 0
     if (degrees[src] == 0) {
       return false;
     }
-    unsigned key    = dst;
+    unsigned key = dst;
     unsigned search = src;
     return binarySearch(key, raw_begin(search, data), raw_end(search, data))
         .has_value();
@@ -357,29 +359,30 @@ public:
         [&](size_t node_id) {
           // get this node's first and last edge
           uint32_t first_edge = *(BaseGraph::edge_begin(node_id));
-          uint32_t last_edge  = *(BaseGraph::edge_end(node_id));
+          uint32_t last_edge = *(BaseGraph::edge_end(node_id));
           // get iterators to locations to sort in the vector
           auto begin_sort_iterator = vector_to_sort.begin() + first_edge;
-          auto end_sort_iterator   = vector_to_sort.begin() + last_edge;
+          auto end_sort_iterator = vector_to_sort.begin() + last_edge;
 
           // rearrange vector indices based on how the destinations of this
           // graph will eventually be sorted sort function not based on vector
           // being passed, but rather the data and destination of the graph
-          std::sort(begin_sort_iterator, end_sort_iterator,
-                    [&](const uint64_t e1, const uint64_t e2) {
-                      // get edge data and destinations
-                      EdgeTy data1 = this->getEdgeData(e1);
-                      EdgeTy data2 = this->getEdgeData(e2);
-                      if (data1 < data2) {
-                        return true;
-                      } else if (data1 > data2) {
-                        return false;
-                      } else {
-                        uint32_t dst1 = this->getEdgeDst(e1);
-                        uint32_t dst2 = this->getEdgeDst(e2);
-                        return dst1 < dst2;
-                      }
-                    });
+          std::sort(
+              begin_sort_iterator, end_sort_iterator,
+              [&](const uint64_t e1, const uint64_t e2) {
+                // get edge data and destinations
+                EdgeTy data1 = this->getEdgeData(e1);
+                EdgeTy data2 = this->getEdgeData(e2);
+                if (data1 < data2) {
+                  return true;
+                } else if (data1 > data2) {
+                  return false;
+                } else {
+                  uint32_t dst1 = this->getEdgeDst(e1);
+                  uint32_t dst2 = this->getEdgeDst(e2);
+                  return dst1 < dst2;
+                }
+              });
         },
         galois::steal(), galois::no_stats(),
         galois::loopname("SortVectorByDataThenDst"));
@@ -416,21 +419,22 @@ public:
    * Sorts outgoing edges of a node. Comparison is over
    * getEdgeData(e) and then getEdgeDst(e).
    */
-  void sortEdgesByDataThenDst(GraphNode N,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+  void sortEdgesByDataThenDst(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     typedef EdgeSortValue<GraphNode, EdgeTy> EdgeSortVal;
-    std::sort(BaseGraph::edge_sort_begin(N), BaseGraph::edge_sort_end(N),
-              [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
-                auto& data1 = e1.get();
-                auto& data2 = e2.get();
-                if (data1 < data2)
-                  return true;
-                else if (data1 > data2)
-                  return false;
-                else
-                  return e1.dst < e2.dst;
-              });
+    std::sort(
+        BaseGraph::edge_sort_begin(N), BaseGraph::edge_sort_end(N),
+        [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
+          auto& data1 = e1.get();
+          auto& data2 = e2.get();
+          if (data1 < data2)
+            return true;
+          else if (data1 > data2)
+            return false;
+          else
+            return e1.dst < e2.dst;
+        });
   }
 
   /**
@@ -456,5 +460,5 @@ public:
   }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois

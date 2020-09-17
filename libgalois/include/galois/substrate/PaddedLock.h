@@ -20,8 +20,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PADDEDLOCK_H_
 #define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PADDEDLOCK_H_
 
-#include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/CacheLineStorage.h"
+#include "galois/substrate/SimpleLock.h"
 
 namespace galois {
 namespace substrate {
@@ -49,7 +49,7 @@ public:
   void unlock() const {}
 };
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

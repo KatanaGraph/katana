@@ -17,40 +17,44 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/gIO.h"
-
-#include <mach/mach_interface.h>
-#include <mach/thread_policy.h>
-#include <sys/types.h>
+#include <pthread.h>
 #include <sys/sysctl.h>
+#include <sys/types.h>
+
 #include <algorithm>
 #include <memory>
 #include <mutex>
-#include <pthread.h>
+
+#include <mach/mach_interface.h>
+#include <mach/thread_policy.h>
+
+#include "galois/gIO.h"
+#include "galois/substrate/HWTopo.h"
+#include "galois/substrate/SimpleLock.h"
 
 using namespace galois::substrate;
 
 namespace {
 
-int getIntValue(const char* name) {
+int
+getIntValue(const char* name) {
   int value;
   size_t len = sizeof(value);
 
   if (sysctlbyname(name, &value, &len, nullptr, 0) == -1) {
-    GALOIS_SYS_DIE("could not get sysctl value for ", name, ": ",
-                   strerror(errno));
+    GALOIS_SYS_DIE(
+        "could not get sysctl value for ", name, ": ", strerror(errno));
   }
 
   return value;
 }
 
-HWTopoInfo makeHWTopo() {
+HWTopoInfo
+makeHWTopo() {
   MachineTopoInfo mti;
-  mti.maxSockets   = getIntValue("hw.packages");
-  mti.maxThreads   = getIntValue("hw.logicalcpu_max");
-  mti.maxCores     = getIntValue("hw.physicalcpu_max");
+  mti.maxSockets = getIntValue("hw.packages");
+  mti.maxThreads = getIntValue("hw.logicalcpu_max");
+  mti.maxCores = getIntValue("hw.physicalcpu_max");
   mti.maxNumaNodes = mti.maxSockets;
 
   std::vector<ThreadTopoInfo> tti;
@@ -76,57 +80,61 @@ HWTopoInfo makeHWTopo() {
     unsigned leader = socket * threadsPerSocket;
     tti.push_back(ThreadTopoInfo{
         .socketLeader = leader,
-        .socket       = socket,
-        .numaNode     = socket,
-        .osContext    = i,
-        .osNumaNode   = socket,
+        .socket = socket,
+        .numaNode = socket,
+        .osContext = i,
+        .osNumaNode = socket,
     });
   }
 
   const unsigned logicalPerPhysical =
       (mti.maxThreads + mti.maxThreads - 1) / mti.maxCores;
 
-  std::sort(tti.begin(), tti.end(),
-            [&](const ThreadTopoInfo& a, const ThreadTopoInfo& b) {
-              int smtA = a.osContext % logicalPerPhysical;
-              int smtB = b.osContext % logicalPerPhysical;
-              if (smtA == smtB) {
-                return a.osContext < b.osContext;
-              }
-              return smtA < smtB;
-            });
+  std::sort(
+      tti.begin(), tti.end(),
+      [&](const ThreadTopoInfo& a, const ThreadTopoInfo& b) {
+        int smtA = a.osContext % logicalPerPhysical;
+        int smtB = b.osContext % logicalPerPhysical;
+        if (smtA == smtB) {
+          return a.osContext < b.osContext;
+        }
+        return smtA < smtB;
+      });
 
   for (unsigned i = 0, m = 0; i < mti.maxThreads; ++i) {
-    m                          = std::max(m, tti[i].socket);
-    tti[i].tid                 = i;
+    m = std::max(m, tti[i].socket);
+    tti[i].tid = i;
     tti[i].cumulativeMaxSocket = m;
   }
 
   return {
       .machineTopoInfo = mti,
-      .threadTopoInfo  = tti,
+      .threadTopoInfo = tti,
   };
 }
 
-} // namespace
+}  // namespace
 
 //! binds current thread to OS HW context "proc"
-bool galois::substrate::bindThreadSelf(unsigned osContext) {
-  pthread_t thread              = pthread_self();
+bool
+galois::substrate::bindThreadSelf(unsigned osContext) {
+  pthread_t thread = pthread_self();
   thread_affinity_policy policy = {int(osContext)};
-  thread_t machThread           = pthread_mach_thread_np(thread);
-  if (thread_policy_set(machThread, THREAD_AFFINITY_POLICY,
-                        thread_policy_t(&policy),
-                        THREAD_AFFINITY_POLICY_COUNT)) {
-    galois::gWarn("Could not set CPU affinity to ", osContext, " (",
-                  strerror(errno), ")");
+  thread_t machThread = pthread_mach_thread_np(thread);
+  if (thread_policy_set(
+          machThread, THREAD_AFFINITY_POLICY, thread_policy_t(&policy),
+          THREAD_AFFINITY_POLICY_COUNT)) {
+    galois::gWarn(
+        "Could not set CPU affinity to ", osContext, " (", strerror(errno),
+        ")");
     return false;
   }
 
   return true;
 }
 
-HWTopoInfo galois::substrate::getHWTopo() {
+HWTopoInfo
+galois::substrate::getHWTopo() {
   static SimpleLock lock;
   static std::unique_ptr<HWTopoInfo> data;
 

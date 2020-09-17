@@ -18,8 +18,8 @@
  */
 
 #include "Lonestar/BoilerPlate.h"
-#include "llvm/Support/CommandLine.h"
 #include "Lonestar/Utils.h"
+#include "llvm/Support/CommandLine.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -35,56 +35,57 @@ const uint32_t infinity = std::numeric_limits<uint32_t>::max() / 4;
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 
-static cll::opt<std::string> sourcesToUse("sourcesToUse",
-                                          cll::desc("Whitespace separated list "
-                                                    "of sources in a file to "
-                                                    "use in BC"),
-                                          cll::init(""));
+static cll::opt<std::string> sourcesToUse(
+    "sourcesToUse",
+    cll::desc("Whitespace separated list "
+              "of sources in a file to "
+              "use in BC"),
+    cll::init(""));
 
-static cll::opt<unsigned int>
-    numOfSources("numOfSources",
-                 cll::desc("Number of sources to compute BC on (default all)"),
-                 cll::init(0));
+static cll::opt<unsigned int> numOfSources(
+    "numOfSources",
+    cll::desc("Number of sources to compute BC on (default all)"),
+    cll::init(0));
 
-static llvm::cl::opt<unsigned int>
-    iterLimit("numOfOutSources",
-              llvm::cl::desc("Number of sources WITH EDGES "
-                             " to compute BC on (default is all); does "
-                             "not work with Level BC"),
-              llvm::cl::init(0));
+static llvm::cl::opt<unsigned int> iterLimit(
+    "numOfOutSources",
+    llvm::cl::desc("Number of sources WITH EDGES "
+                   " to compute BC on (default is all); does "
+                   "not work with Level BC"),
+    llvm::cl::init(0));
 
-static cll::opt<bool>
-    singleSourceBC("singleSource",
-                   cll::desc("Level: Use for single source BC (default off)"),
-                   cll::init(false));
+static cll::opt<bool> singleSourceBC(
+    "singleSource", cll::desc("Level: Use for single source BC (default off)"),
+    cll::init(false));
 
-static cll::opt<uint64_t>
-    startSource("startNode",
-                cll::desc("Level/Outer: Starting source node used for "
-                          "betweeness-centrality (default 0); works with "
-                          "singleSource flag only"),
-                cll::init(0));
+static cll::opt<uint64_t> startSource(
+    "startNode",
+    cll::desc("Level/Outer: Starting source node used for "
+              "betweeness-centrality (default 0); works with "
+              "singleSource flag only"),
+    cll::init(0));
 
-static cll::opt<bool>
-    output("output", cll::desc("Output BC (Level/Async) (default: false)"),
-           cll::init(false));
+static cll::opt<bool> output(
+    "output", cll::desc("Output BC (Level/Async) (default: false)"),
+    cll::init(false));
 
 static cll::opt<Algo> algo(
     "algo", cll::desc("Choose an algorithm (default value AutoAlgo):"),
-    cll::values(clEnumVal(Level, "Level"), clEnumVal(Async, "Async"),
-                clEnumVal(Outer, "Outer"),
-                clEnumVal(AutoAlgo,
-                          "Auto: choose among the algorithms automatically")),
+    cll::values(
+        clEnumVal(Level, "Level"), clEnumVal(Async, "Async"),
+        clEnumVal(Outer, "Outer"),
+        clEnumVal(AutoAlgo, "Auto: choose among the algorithms automatically")),
     cll::init(AutoAlgo));
 
 ////////////////////////////////////////////////////////////////////////////////
 
 static const char* name = "Betweenness Centrality";
-static const char* desc = "Computes betwenness centrality in an unweighted "
-                          "graph";
+static const char* desc =
+    "Computes betwenness centrality in an unweighted "
+    "graph";
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -93,13 +94,14 @@ static const char* desc = "Computes betwenness centrality in an unweighted "
 // @todo not the best coding practice; passing cl in via argument might be
 // better
 
-#include "LevelStructs.h"
 #include "AsyncStructs.h"
+#include "LevelStructs.h"
 #include "OuterStructs.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 

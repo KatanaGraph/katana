@@ -1,15 +1,15 @@
-#include <cerrno>
-#include <cstdlib>
-#include <string>
 #include <unistd.h>
 
-#include <vector>
+#include <cerrno>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "galois/Logging.h"
-#include "tsuba/tsuba.h"
 #include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 std::string src_path{};
 std::string dst_path{};
@@ -17,7 +17,8 @@ uint64_t read_block_size = (1 << 29);
 
 std::string usage_msg = "Usage: {} <src file name> <dst file name>\n";
 
-void parse_arguments(int argc, char* argv[]) {
+void
+parse_arguments(int argc, char* argv[]) {
   int c;
 
   while ((c = getopt(argc, argv, "h")) != -1) {
@@ -34,11 +35,12 @@ void parse_arguments(int argc, char* argv[]) {
 
   // TODO: Validate paths
   auto index = optind;
-  src_path   = argv[index++];
-  dst_path   = argv[index++];
+  src_path = argv[index++];
+  dst_path = argv[index++];
 }
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }

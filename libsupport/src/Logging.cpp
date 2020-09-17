@@ -7,8 +7,9 @@
 
 namespace {
 
-void PrintString(bool error, bool flush, const std::string& prefix,
-                 const std::string& s) {
+void
+PrintString(
+    bool error, bool flush, const std::string& prefix, const std::string& s) {
   static std::mutex lock;
   std::lock_guard<std::mutex> lg(lock);
 
@@ -22,9 +23,10 @@ void PrintString(bool error, bool flush, const std::string& prefix,
   }
 }
 
-} // end unnamed namespace
+}  // end unnamed namespace
 
-void galois::internal::LogString(galois::LogLevel level, const std::string& s) {
+void
+galois::internal::LogString(galois::LogLevel level, const std::string& s) {
   int env_log_level = static_cast<int32_t>(LogLevel::Debug);
   GetEnv("GALOIS_LOG_LEVEL", &env_log_level);
   // Only log GALOIS_LOG_LEVEL and above (default, log everything)

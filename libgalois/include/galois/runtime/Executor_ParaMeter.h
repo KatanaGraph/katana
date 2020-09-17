@@ -28,15 +28,15 @@
 #include <random>
 #include <vector>
 
-#include "galois/config.h"
-#include "galois/gIO.h"
 #include "galois/Mem.h"
 #include "galois/Reduction.h"
-#include "galois/runtime/Context.h"
-#include "galois/runtime/Executor_ForEach.h"
-#include "galois/runtime/Executor_DoAll.h"
-#include "galois/runtime/Executor_OnEach.h"
 #include "galois/Traits.h"
+#include "galois/config.h"
+#include "galois/gIO.h"
+#include "galois/runtime/Context.h"
+#include "galois/runtime/Executor_DoAll.h"
+#include "galois/runtime/Executor_ForEach.h"
+#include "galois/runtime/Executor_OnEach.h"
 #include "galois/worklists/Simple.h"
 
 namespace galois {
@@ -46,15 +46,17 @@ namespace ParaMeter {
 
 struct StepStatsBase {
   static inline void printHeader(FILE* out) {
-    fprintf(out,
-            "LOOPNAME, STEP, PARALLELISM, WORKLIST_SIZE, NEIGHBORHOOD_SIZE\n");
+    fprintf(
+        out, "LOOPNAME, STEP, PARALLELISM, WORKLIST_SIZE, NEIGHBORHOOD_SIZE\n");
   }
 
-  static inline void dump(FILE* out, const char* loopname, size_t step,
-                          size_t parallelism, size_t wlSize, size_t nhSize) {
+  static inline void dump(
+      FILE* out, const char* loopname, size_t step, size_t parallelism,
+      size_t wlSize, size_t nhSize) {
     assert(out && "StepStatsBase::dump() file handle is null");
-    fprintf(out, "%s, %zu, %zu, %zu, %zu\n", loopname, step, parallelism,
-            wlSize, nhSize);
+    fprintf(
+        out, "%s, %zu, %zu, %zu, %zu\n", loopname, step, parallelism, wlSize,
+        nhSize);
   }
 };
 
@@ -96,8 +98,9 @@ struct UnorderedStepStats : public StepStatsBase {
   }
 
   void dump(FILE* out, const char* loopname) {
-    Base::dump(out, loopname, step, parallelism.reduce(), wlSize.reduce(),
-               nhSize.reduce());
+    Base::dump(
+        out, loopname, step, parallelism.reduce(), wlSize.reduce(),
+        nhSize.reduce());
   }
 };
 
@@ -164,7 +167,6 @@ template <typename T>
 class LIFO_WL : public FIFO_WL<T> {
 public:
   auto iterateCurr() {
-
     // TODO: use reverse iterator instead of std::reverse
     galois::runtime::on_each_gen(
         [&](int, int) {
@@ -199,17 +201,16 @@ struct ChooseWL<T, SchedType::RAND> {
 
 template <class T, class FunctionTy, class ArgsTy>
 class ParaMeterExecutor {
-
   using value_type = T;
-  using GenericWL  = typename trait_type<wl_tag, ArgsTy>::type::type;
+  using GenericWL = typename trait_type<wl_tag, ArgsTy>::type::type;
   using WorkListTy = typename GenericWL::template retype<T>;
-  using dbg        = galois::debug<1>;
+  using dbg = galois::debug<1>;
 
   constexpr static bool needsStats = !has_trait<no_stats_tag, ArgsTy>();
-  constexpr static bool needsPush  = !has_trait<no_pushes_tag, ArgsTy>();
+  constexpr static bool needsPush = !has_trait<no_pushes_tag, ArgsTy>();
   constexpr static bool needsAborts =
       !has_trait<disable_conflict_detection_tag, ArgsTy>();
-  constexpr static bool needsPia   = has_trait<per_iter_alloc_tag, ArgsTy>();
+  constexpr static bool needsPia = has_trait<per_iter_alloc_tag, ArgsTy>();
   constexpr static bool needsBreak = has_trait<parallel_break_tag, ArgsTy>();
 
   struct IterationContext {
@@ -252,8 +253,9 @@ private:
 
   unsigned abortIteration(IterationContext* it) {
     assert(it && "nullptr arg");
-    assert(it->doabort &&
-           "aborting an iteration without setting its doabort flag");
+    assert(
+        it->doabort &&
+        "aborting an iteration without setting its doabort flag");
 
     unsigned numLocks = it->ctx.cancelIteration();
     it->reset();
@@ -359,11 +361,10 @@ private:
 
   template <typename R>
   void execute(const R& range) {
-
     galois::runtime::on_each_gen(
         [&, this](const unsigned, const unsigned) {
           auto begin = range.local_begin();
-          auto end   = range.local_end();
+          auto end = range.local_end();
 
           for (auto i = begin; i != end; ++i) {
             IterationContext* it = newIteration(*i);
@@ -375,7 +376,6 @@ private:
     UnorderedStepStats stats;
 
     while (!m_wl.empty()) {
-
       m_wl.nextStep();
 
       if (needsAborts) {
@@ -396,14 +396,15 @@ private:
         break;
       }
 
-    } // end while
+    }  // end while
 
     closeStatsFile();
   }
 
 public:
   ParaMeterExecutor(const FunctionTy& f, const ArgsTy& args)
-      : m_func(f), loopname(galois::internal::getLoopName(args)),
+      : m_func(f),
+        loopname(galois::internal::getLoopName(args)),
         m_statsFile(getStatsFile()) {}
 
   // called serially once
@@ -419,13 +420,14 @@ public:
   void operator()() {}
 };
 
-} // namespace ParaMeter
-} // namespace runtime
+}  // namespace ParaMeter
+}  // namespace runtime
 
 namespace worklists {
 
-template <class T = int, runtime::ParaMeter::SchedType SCHED =
-                             runtime::ParaMeter::SchedType::FIFO>
+template <
+    class T = int,
+    runtime::ParaMeter::SchedType SCHED = runtime::ParaMeter::SchedType::FIFO>
 class ParaMeter {
 public:
   template <bool _concurrent>
@@ -438,12 +440,12 @@ public:
 
   constexpr static const runtime::ParaMeter::SchedType SCHEDULE = SCHED;
 
-  using fifo   = ParaMeter<T, runtime::ParaMeter::SchedType::FIFO>;
+  using fifo = ParaMeter<T, runtime::ParaMeter::SchedType::FIFO>;
   using random = ParaMeter<T, runtime::ParaMeter::SchedType::RAND>;
-  using lifo   = ParaMeter<T, runtime::ParaMeter::SchedType::LIFO>;
+  using lifo = ParaMeter<T, runtime::ParaMeter::SchedType::LIFO>;
 };
 
-} // namespace worklists
+}  // namespace worklists
 
 namespace runtime {
 
@@ -458,9 +460,8 @@ struct ForEachExecutor<galois::worklists::ParaMeter<T>, FunctionTy, ArgsTy>
 
 //! invoke ParaMeter tool to execute a for_each style loop
 template <typename R, typename F, typename ArgsTuple>
-void for_each_ParaMeter(const R& range, const F& func,
-                        const ArgsTuple& argsTuple) {
-
+void
+for_each_ParaMeter(const R& range, const F& func, const ArgsTuple& argsTuple) {
   using T = typename R::values_type;
 
   auto tpl = galois::get_default_trait_values(
@@ -475,8 +476,8 @@ void for_each_ParaMeter(const R& range, const F& func,
   exec.execute(range);
 }
 
-} // end namespace runtime
-} // end namespace galois
+}  // end namespace runtime
+}  // end namespace galois
 #endif
 
 /*

@@ -10,15 +10,15 @@ namespace tsuba::internal {
 
 enum class FaultSensitivity { Normal, High };
 enum class FaultMode {
-  None,           // No faults
-  Independent,    // Each point has a fixed probability of failure
-  RunLength,      // Specify the number call on which to crash (starts at 1)
-  UniformOverRun, // Choose uniform run length 1..run_length (exclusive)
+  None,            // No faults
+  Independent,     // Each point has a fixed probability of failure
+  RunLength,       // Specify the number call on which to crash (starts at 1)
+  UniformOverRun,  // Choose uniform run length 1..run_length (exclusive)
 };
 
-GALOIS_EXPORT void FaultTestInit(FaultMode mode         = FaultMode::None,
-                                 float independent_prob = 0.0f,
-                                 uint64_t run_length    = UINT64_C(0));
+GALOIS_EXPORT void FaultTestInit(
+    FaultMode mode = FaultMode::None, float independent_prob = 0.0f,
+    uint64_t run_length = UINT64_C(0));
 // LOG_VERBOSE stats
 GALOIS_EXPORT void FaultTestReport();
 
@@ -27,9 +27,10 @@ GALOIS_EXPORT void FaultTestReport();
   do {                                                                         \
     ::tsuba::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                 \
   } while (0)
-void PtP(const char* file, int line,
-         FaultSensitivity sensitivity = FaultSensitivity::Normal);
+void PtP(
+    const char* file, int line,
+    FaultSensitivity sensitivity = FaultSensitivity::Normal);
 
-} // namespace tsuba::internal
+}  // namespace tsuba::internal
 
 #endif

@@ -1,20 +1,21 @@
 #include "LocalStorage.h"
 
-#include <fstream>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 
-#include "galois/Result.h"
-#include "galois/Logging.h"
-#include "galois/FileSystem.h"
-#include "tsuba/file.h"
-#include "tsuba/Errors.h"
 #include "GlobalState.h"
+#include "galois/FileSystem.h"
+#include "galois/Logging.h"
+#include "galois/Result.h"
+#include "tsuba/Errors.h"
+#include "tsuba/file.h"
 
 namespace fs = boost::filesystem;
 
@@ -24,7 +25,8 @@ GlobalFileStorageAllocator local_storage_allocator([]() {
   return std::unique_ptr<FileStorage>(new LocalStorage());
 });
 
-void LocalStorage::CleanURI(std::string* uri) {
+void
+LocalStorage::CleanURI(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
     return;
   }
@@ -53,8 +55,9 @@ LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> LocalStorage::ReadFile(std::string uri, uint64_t start,
-                                            uint64_t size, uint8_t* data) {
+galois::Result<void>
+LocalStorage::ReadFile(
+    std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
   CleanURI(&uri);
   std::ifstream ifile(uri);
 
@@ -78,8 +81,8 @@ galois::Result<void> LocalStorage::ReadFile(std::string uri, uint64_t start,
   return galois::ResultSuccess();
 }
 
-galois::Result<void> LocalStorage::Stat(const std::string& uri,
-                                        StatBuf* s_buf) {
+galois::Result<void>
+LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   std::string filename = uri;
   CleanURI(&filename);
   struct stat local_s_buf;
@@ -91,8 +94,8 @@ galois::Result<void> LocalStorage::Stat(const std::string& uri,
   return galois::ResultSuccess();
 }
 
-galois::Result<void> LocalStorage::Create(const std::string& uri,
-                                          bool overwrite) {
+galois::Result<void>
+LocalStorage::Create(const std::string& uri, bool overwrite) {
   std::string filename = uri;
   CleanURI(&filename);
   fs::path m_path{filename};
@@ -112,8 +115,8 @@ galois::Result<void> LocalStorage::Create(const std::string& uri,
 
 // Current implementation is not async
 galois::Result<std::unique_ptr<FileAsyncWork>>
-LocalStorage::ListAsync(const std::string& uri,
-                        std::unordered_set<std::string>* list) {
+LocalStorage::ListAsync(
+    const std::string& uri, std::unordered_set<std::string>* list) {
   // Implement with synchronous calls
   DIR* dirp;
   struct dirent* dp;
@@ -124,8 +127,9 @@ LocalStorage::ListAsync(const std::string& uri,
       // other storage backends are flat and so return an empty list here
       return nullptr;
     }
-    GALOIS_LOG_ERROR("\n  Open dir failed: {}: {}", dirname,
-                     galois::ResultErrno().message());
+    GALOIS_LOG_ERROR(
+        "\n  Open dir failed: {}: {}", dirname,
+        galois::ResultErrno().message());
     return galois::ResultErrno();
   }
 
@@ -141,8 +145,8 @@ LocalStorage::ListAsync(const std::string& uri,
   } while (dp != nullptr);
 
   if (errno != 0) {
-    GALOIS_LOG_ERROR("\n  readdir failed: {}: {}", dirname,
-                     galois::ResultErrno().message());
+    GALOIS_LOG_ERROR(
+        "\n  readdir failed: {}: {}", dirname, galois::ResultErrno().message());
     return ErrorCode::LocalStorageError;
   }
   (void)closedir(dirp);
@@ -151,8 +155,9 @@ LocalStorage::ListAsync(const std::string& uri,
 }
 
 galois::Result<void>
-LocalStorage::Delete(const std::string& directory_uri,
-                     const std::unordered_set<std::string>& files) {
+LocalStorage::Delete(
+    const std::string& directory_uri,
+    const std::unordered_set<std::string>& files) {
   std::string dir = directory_uri;
   CleanURI(&dir);
   for (const auto& file : files) {
@@ -162,4 +167,4 @@ LocalStorage::Delete(const std::string& directory_uri,
   return galois::ResultSuccess();
 }
 
-} // namespace tsuba
+}  // namespace tsuba

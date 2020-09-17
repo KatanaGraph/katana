@@ -52,15 +52,17 @@ struct GetEnd {
  * A TwoLevelIterator is an iterator over a container (outer) of containers
  * (inner) in which the elements are the elements of the inner container.
  */
-template <class OuterIter,
-          class InnerIter =
-              typename std::iterator_traits<OuterIter>::value_type::iterator,
-          class CategoryOrTraversal = std::forward_iterator_tag,
-          class InnerBeginFn = GetBegin, class InnerEndFn = GetEnd>
+template <
+    class OuterIter,
+    class InnerIter =
+        typename std::iterator_traits<OuterIter>::value_type::iterator,
+    class CategoryOrTraversal = std::forward_iterator_tag,
+    class InnerBeginFn = GetBegin, class InnerEndFn = GetEnd>
 class TwoLevelIterator
     : public boost::iterator_adaptor<
-          TwoLevelIterator<OuterIter, InnerIter, CategoryOrTraversal,
-                           InnerBeginFn, InnerEndFn>,
+          TwoLevelIterator<
+              OuterIter, InnerIter, CategoryOrTraversal, InnerBeginFn,
+              InnerEndFn>,
           InnerIter, boost::use_default, CategoryOrTraversal> {
 public:
   typedef typename TwoLevelIterator::iterator_adaptor_::difference_type
@@ -78,14 +80,16 @@ private:
   InnerEndFn m_inner_end_fn;
 
   static_assert(
-      std::is_convertible<typename std::result_of<InnerBeginFn(
-                              decltype(*std::declval<OuterIter>()))>::type,
-                          InnerIter>::value,
+      std::is_convertible<
+          typename std::result_of<
+              InnerBeginFn(decltype(*std::declval<OuterIter>()))>::type,
+          InnerIter>::value,
       "Result of InnerBeginFn(*OuterIter) should be convertable to InnerIter");
   static_assert(
-      std::is_convertible<typename std::result_of<InnerEndFn(
-                              decltype(*std::declval<OuterIter>()))>::type,
-                          InnerIter>::value,
+      std::is_convertible<
+          typename std::result_of<
+              InnerEndFn(decltype(*std::declval<OuterIter>()))>::type,
+          InnerIter>::value,
       "Result of InnerEndFn(*OuterIter) should be convertable to InnerIter");
 
   friend class boost::iterator_core_access;
@@ -109,8 +113,8 @@ private:
   }
 
   template <class Iter>
-  void safe_decrement_dispatch(std::forward_iterator_tag, Iter& it,
-                               Iter begin) {
+  void safe_decrement_dispatch(
+      std::forward_iterator_tag, Iter& it, Iter begin) {
     Iter prev = begin;
 
     for (; begin != it; ++begin)
@@ -118,8 +122,8 @@ private:
   }
 
   template <class Iter>
-  void safe_decrement_dispatch(std::bidirectional_iterator_tag, Iter& it,
-                               const Iter&) {
+  void safe_decrement_dispatch(
+      std::bidirectional_iterator_tag, Iter& it, const Iter&) {
     --it;
   }
 
@@ -134,9 +138,8 @@ private:
   }
 
   template <class Iter>
-  typename std::iterator_traits<Iter>::difference_type
-  safe_difference_dispatch(Iter it1, Iter it2, Iter end,
-                           std::input_iterator_tag) const {
+  typename std::iterator_traits<Iter>::difference_type safe_difference_dispatch(
+      Iter it1, Iter it2, Iter end, std::input_iterator_tag) const {
     if (it1 == it2)
       return 0;
 
@@ -161,9 +164,8 @@ private:
   }
 
   template <class Iter>
-  typename std::iterator_traits<Iter>::difference_type
-  safe_difference_dispatch(Iter it1, Iter it2, Iter,
-                           std::random_access_iterator_tag) const {
+  typename std::iterator_traits<Iter>::difference_type safe_difference_dispatch(
+      Iter it1, Iter it2, Iter, std::random_access_iterator_tag) const {
     return std::distance(it1, it2);
   }
 
@@ -172,8 +174,8 @@ private:
    * reachable from it1.
    */
   template <class Iter>
-  typename std::iterator_traits<Iter>::difference_type
-  safe_distance(Iter it1, Iter it2, Iter end) const {
+  typename std::iterator_traits<Iter>::difference_type safe_distance(
+      Iter it1, Iter it2, Iter end) const {
     return safe_difference_dispatch(
         it1, it2, end,
         typename std::iterator_traits<Iter>::iterator_category());
@@ -207,8 +209,8 @@ private:
           safe_decrement(m_outer, m_outer_begin);
       assert(!too_far);
       seek_backward();
-    } else if (!safe_decrement(this->base_reference(),
-                               m_inner_begin_fn(*m_outer))) {
+    } else if (!safe_decrement(
+                   this->base_reference(), m_inner_begin_fn(*m_outer))) {
       // Common case
       return;
     } else {
@@ -293,8 +295,8 @@ private:
   }
 
   template <class Other>
-  difference_type distance_to_dispatch(Other it2,
-                                       std::input_iterator_tag) const {
+  difference_type distance_to_dispatch(
+      Other it2, std::input_iterator_tag) const {
     // Inline safe_distance here otherwise there is a cyclic dependency:
     // std::distance -> iterator_adaptor -> distance_to -> safe_distance ->
     // std::distance
@@ -322,13 +324,13 @@ private:
   }
 
   template <class Other>
-  difference_type distance_to_dispatch(const Other& x,
-                                       std::random_access_iterator_tag) const {
+  difference_type distance_to_dispatch(
+      const Other& x, std::random_access_iterator_tag) const {
     if (*this == x)
       return 0;
     else if (m_outer == x.m_outer)
-      return safe_distance(this->base_reference(), x.base_reference(),
-                           m_inner_end_fn(*m_outer));
+      return safe_distance(
+          this->base_reference(), x.base_reference(), m_inner_end_fn(*m_outer));
     else if (safe_distance(m_outer, x.m_outer, m_outer_end) < 0)
       return -x.distance_to(*this);
 
@@ -352,8 +354,8 @@ private:
     return 0;
   }
 
-  template <class OtherOuterIter, class OtherInnerIter, class C, class BF,
-            class EF>
+  template <
+      class OtherOuterIter, class OtherInnerIter, class C, class BF, class EF>
   difference_type distance_to(
       const TwoLevelIterator<OtherOuterIter, OtherInnerIter, C, BF, EF>& x)
       const {
@@ -361,11 +363,10 @@ private:
         x, typename std::iterator_traits<InnerIter>::iterator_category());
   }
 
-  template <class OtherOuterIter, class OtherInnerIter, class C, class BF,
-            class EF>
-  bool
-  equal(const TwoLevelIterator<OtherOuterIter, OtherInnerIter, C, BF, EF>& x)
-      const {
+  template <
+      class OtherOuterIter, class OtherInnerIter, class C, class BF, class EF>
+  bool equal(const TwoLevelIterator<OtherOuterIter, OtherInnerIter, C, BF, EF>&
+                 x) const {
     if (m_outer == m_outer_end && m_outer == x.m_outer)
       return true;
 
@@ -375,21 +376,28 @@ private:
 public:
   TwoLevelIterator() {}
 
-  TwoLevelIterator(OuterIter outer_begin, OuterIter outer_end, OuterIter outer,
-                   InnerBeginFn inner_begin_fn, InnerEndFn inner_end_fn)
-      : m_outer_begin(outer_begin), m_outer_end(outer_end), m_outer(outer),
-        m_inner_begin_fn(inner_begin_fn), m_inner_end_fn(inner_end_fn) {
+  TwoLevelIterator(
+      OuterIter outer_begin, OuterIter outer_end, OuterIter outer,
+      InnerBeginFn inner_begin_fn, InnerEndFn inner_end_fn)
+      : m_outer_begin(outer_begin),
+        m_outer_end(outer_end),
+        m_outer(outer),
+        m_inner_begin_fn(inner_begin_fn),
+        m_inner_end_fn(inner_end_fn) {
     if (m_outer != m_outer_end) {
       this->base_reference() = m_inner_begin_fn(*m_outer);
       seek_forward();
     }
   }
 
-  TwoLevelIterator(OuterIter outer_begin, OuterIter outer_end, OuterIter outer,
-                   InnerIter inner, InnerBeginFn inner_begin_fn,
-                   InnerEndFn inner_end_fn)
-      : m_outer_begin(outer_begin), m_outer_end(outer_end), m_outer(outer),
-        m_inner_begin_fn(inner_begin_fn), m_inner_end_fn(inner_end_fn) {
+  TwoLevelIterator(
+      OuterIter outer_begin, OuterIter outer_end, OuterIter outer,
+      InnerIter inner, InnerBeginFn inner_begin_fn, InnerEndFn inner_end_fn)
+      : m_outer_begin(outer_begin),
+        m_outer_end(outer_end),
+        m_outer(outer),
+        m_inner_begin_fn(inner_begin_fn),
+        m_inner_end_fn(inner_end_fn) {
     this->base_reference() = inner;
   }
 
@@ -402,17 +410,17 @@ public:
 
 template <
     class CategoryOrTraversal = std::forward_iterator_tag, class OuterIter,
-    class InnerIter           = decltype(std::declval<OuterIter>()->begin()),
+    class InnerIter = decltype(std::declval<OuterIter>()->begin()),
     class InnerBeginFn = GetBegin, class InnerEndFn = GetEnd,
-    class Iter = TwoLevelIterator<OuterIter, InnerIter, CategoryOrTraversal,
-                                  InnerBeginFn, InnerEndFn>>
-std::pair<Iter, Iter> make_two_level_iterator(OuterIter outer_begin,
-                                              OuterIter outer_end) {
+    class Iter = TwoLevelIterator<
+        OuterIter, InnerIter, CategoryOrTraversal, InnerBeginFn, InnerEndFn>>
+std::pair<Iter, Iter>
+make_two_level_iterator(OuterIter outer_begin, OuterIter outer_end) {
   return std::make_pair(
       Iter(outer_begin, outer_end, outer_begin, InnerBeginFn(), InnerEndFn()),
       Iter(outer_begin, outer_end, outer_end, InnerBeginFn(), InnerEndFn()));
 }
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

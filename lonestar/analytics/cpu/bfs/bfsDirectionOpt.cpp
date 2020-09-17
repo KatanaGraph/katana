@@ -17,28 +17,28 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
+#include <stdio.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+
+#include <cstdlib>
+#include <deque>
+#include <iostream>
+#include <type_traits>
+
+#include "Lonestar/BFS_SSSP.h"
+#include "Lonestar/BoilerPlate.h"
+#include "Lonestar/Utils.h"
 #include "galois/DynamicBitset.h"
-#include "galois/gstl.h"
+#include "galois/Galois.h"
 #include "galois/Reduction.h"
 #include "galois/Timer.h"
 #include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
 #include "galois/graphs/LC_CSR_CSC_Graph.h"
+#include "galois/graphs/TypeTraits.h"
+#include "galois/gstl.h"
 #include "galois/runtime/Profile.h"
-#include "Lonestar/BFS_SSSP.h"
-#include "Lonestar/Utils.h"
-#include "Lonestar/BoilerPlate.h"
-
 #include "llvm/Support/CommandLine.h"
-
-#include <stdio.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <iostream>
-#include <deque>
-#include <type_traits>
-#include <cstdlib>
 
 namespace cll = llvm::cl;
 
@@ -50,41 +50,37 @@ static const char* desc =
 
 static const char* url = "breadth_first_search";
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<uint64_t>
-    startNode("startNode",
-              cll::desc("Node to start search from (default value 0)"),
-              cll::init(0));
-static cll::opt<unsigned int>
-    reportNode("reportNode",
-               cll::desc("Node to report distance to (default value 1)"),
-               cll::init(1));
-static cll::opt<unsigned int>
-    numRuns("numRuns", cll::desc("Number of runs (default value 1)"),
-            cll::init(1));
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<uint64_t> startNode(
+    "startNode", cll::desc("Node to start search from (default value 0)"),
+    cll::init(0));
+static cll::opt<unsigned int> reportNode(
+    "reportNode", cll::desc("Node to report distance to (default value 1)"),
+    cll::init(1));
+static cll::opt<unsigned int> numRuns(
+    "numRuns", cll::desc("Number of runs (default value 1)"), cll::init(1));
 
-static cll::opt<int>
-    alpha("alpha",
-          cll::desc("alpha value to change direction in direction-optimization "
-                    "(default value 15)"),
-          cll::init(15));
-static cll::opt<int>
-    beta("beta",
-         cll::desc("beta value to change direction in direction-optimization "
-                   "(default value 18)"),
-         cll::init(18));
+static cll::opt<int> alpha(
+    "alpha",
+    cll::desc("alpha value to change direction in direction-optimization "
+              "(default value 15)"),
+    cll::init(15));
+static cll::opt<int> beta(
+    "beta",
+    cll::desc("beta value to change direction in direction-optimization "
+              "(default value 18)"),
+    cll::init(18));
 
-static cll::opt<unsigned int>
-    preAlloc("preAlloc",
-             cll::desc("Number of pages to preAlloc (default value 400)"),
-             cll::init(400));
+static cll::opt<unsigned int> preAlloc(
+    "preAlloc", cll::desc("Number of pages to preAlloc (default value 400)"),
+    cll::init(400));
 
-static cll::opt<unsigned int>
-    numPrint("numPrint",
-             cll::desc("Print parents for the numPrint number of nodes for "
-                       "verification if verification is on (default value 10)"),
-             cll::init(10));
+static cll::opt<unsigned int> numPrint(
+    "numPrint",
+    cll::desc("Print parents for the numPrint number of nodes for "
+              "verification if verification is on (default value 10)"),
+    cll::init(10));
 
 enum Exec { SERIAL, PARALLEL };
 
@@ -98,13 +94,13 @@ static cll::opt<Exec> execution(
     cll::values(clEnumVal(SERIAL, "SERIAL"), clEnumVal(PARALLEL, "PARALLEL")),
     cll::init(PARALLEL));
 
-static cll::opt<Algo>
-    algo("algo", cll::desc("Choose an algorithm (default value Auto):"),
-         cll::values(
-             clEnumVal(SyncDO, "SyncDO"), clEnumVal(Async, "Async"),
-             clEnumVal(AutoAlgo,
-                       "Auto: choose between SyncDO and Async automatically")),
-         cll::init(AutoAlgo));
+static cll::opt<Algo> algo(
+    "algo", cll::desc("Choose an algorithm (default value Auto):"),
+    cll::values(
+        clEnumVal(SyncDO, "SyncDO"), clEnumVal(Async, "Async"),
+        clEnumVal(
+            AutoAlgo, "Auto: choose between SyncDO and Async automatically")),
+    cll::init(AutoAlgo));
 
 using Graph =
     // galois::graphs::LC_CSR_CSC_Graph<unsigned, void, false, true, true>;
@@ -113,12 +109,12 @@ using Graph =
 // void>::with_no_lockable<true>::type::with_numa_alloc<true>::type;
 using GNode = Graph::GraphNode;
 
-constexpr static const unsigned CHUNK_SIZE      = 256u;
+constexpr static const unsigned CHUNK_SIZE = 256u;
 constexpr static const ptrdiff_t EDGE_TILE_SIZE = 256;
 
-using BFS            = BFS_SSSP<Graph, unsigned int, false, EDGE_TILE_SIZE>;
-using UpdateRequest  = BFS::UpdateRequest;
-using Dist           = BFS::Dist;
+using BFS = BFS_SSSP<Graph, unsigned int, false, EDGE_TILE_SIZE>;
+using UpdateRequest = BFS::UpdateRequest;
+using Dist = BFS::Dist;
 using OutEdgeRangeFn = BFS::OutEdgeRangeFn;
 
 struct EdgeTile {
@@ -127,14 +123,13 @@ struct EdgeTile {
 };
 
 struct EdgeTileMaker {
-  EdgeTile operator()(Graph::edge_iterator beg,
-                      Graph::edge_iterator end) const {
+  EdgeTile operator()(
+      Graph::edge_iterator beg, Graph::edge_iterator end) const {
     return EdgeTile{beg, end};
   }
 };
 
 struct NodePushWrap {
-
   template <typename C>
   void operator()(C& cont, const GNode& n, const char* const) const {
     (*this)(cont, n);
@@ -170,15 +165,17 @@ struct OneTilePushWrap {
 
   template <typename C>
   void operator()(C& cont, const GNode& n) const {
-    EdgeTile t{graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
-               graph.edge_end(n, galois::MethodFlag::UNPROTECTED)};
+    EdgeTile t{
+        graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
+        graph.edge_end(n, galois::MethodFlag::UNPROTECTED)};
 
     cont.push(t);
   }
 };
 
 template <typename WL>
-void WlToBitset(WL& wl, galois::DynamicBitSet& bitset) {
+void
+WlToBitset(WL& wl, galois::DynamicBitSet& bitset) {
   galois::do_all(
       galois::iterate(wl), [&](const GNode& src) { bitset.set(src); },
       galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
@@ -186,8 +183,8 @@ void WlToBitset(WL& wl, galois::DynamicBitSet& bitset) {
 }
 
 template <typename WL>
-void BitsetToWl(const Graph& graph, const galois::DynamicBitSet& bitset,
-                WL& wl) {
+void
+BitsetToWl(const Graph& graph, const galois::DynamicBitSet& bitset, WL& wl) {
   wl.clear();
   galois::do_all(
       galois::iterate(graph),
@@ -201,13 +198,14 @@ void BitsetToWl(const Graph& graph, const galois::DynamicBitSet& bitset,
 }
 
 template <bool CONCURRENT, typename T, typename P, typename R>
-void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
-                [[maybe_unused]] const R& edgeRange, const uint32_t runID) {
-
-  using Cont = typename std::conditional<CONCURRENT, galois::InsertBag<T>,
-                                         galois::SerStack<T>>::type;
-  using Loop = typename std::conditional<CONCURRENT, galois::DoAll,
-                                         galois::StdForEach>::type;
+void
+syncDOAlgo(
+    Graph& graph, GNode source, const P& pushWrap,
+    [[maybe_unused]] const R& edgeRange, const uint32_t runID) {
+  using Cont = typename std::conditional<
+      CONCURRENT, galois::InsertBag<T>, galois::SerStack<T>>::type;
+  using Loop = typename std::conditional<
+      CONCURRENT, galois::DoAll, galois::StdForEach>::type;
 
   constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
   galois::GAccumulator<uint32_t> work_items;
@@ -224,7 +222,7 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
   Cont* curr = new Cont();
   Cont* next = new Cont();
 
-  Dist nextLevel              = 0u;
+  Dist nextLevel = 0u;
   graph.getData(source, flag) = 0u;
 
   if (CONCURRENT) {
@@ -243,7 +241,7 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
   assert(!next->empty());
 
   uint64_t old_workItemNum = 0;
-  uint64_t numNodes        = graph.size();
+  uint64_t numNodes = graph.size();
   // uint32_t c_pull = 0, c_push = 0;
   galois::GAccumulator<uint64_t> writes_pull, writes_push;
   writes_push.reset();
@@ -252,11 +250,9 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
   // pull_levels.reserve(10);
 
   while (!next->empty()) {
-
     std::swap(curr, next);
     next->clear();
     if (scout_count > edges_to_check / alpha) {
-
       WlToBitset(*curr, front_bitset);
       do {
         // c_pull++;
@@ -310,7 +306,7 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
           galois::iterate(*curr),
           [&](const T& src) {
             for (auto e : graph.edges(src)) {
-              auto dst    = graph.getEdgeDst(e);
+              auto dst = graph.getEdgeDst(e);
               auto& ddata = graph.getData(dst, flag);
 
               if (ddata == BFS::DIST_INFINITY) {
@@ -341,17 +337,17 @@ void syncDOAlgo(Graph& graph, GNode source, const P& pushWrap,
 }
 
 template <bool CONCURRENT, typename T, typename P, typename R>
-void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
-               [[maybe_unused]] const R& edgeRange) {
-
+void
+asyncAlgo(
+    Graph& graph, GNode source, const P& pushWrap,
+    [[maybe_unused]] const R& edgeRange) {
   namespace gwl = galois::worklists;
   // typedef PerSocketChunkFIFO<CHUNK_SIZE> dFIFO;
   using FIFO = gwl::PerSocketChunkFIFO<CHUNK_SIZE>;
-  using WL   = FIFO;
+  using WL = FIFO;
 
-  using Loop =
-      typename std::conditional<CONCURRENT, galois::ForEach,
-                                galois::WhileQ<galois::SerFIFO<T>>>::type;
+  using Loop = typename std::conditional<
+      CONCURRENT, galois::ForEach, galois::WhileQ<galois::SerFIFO<T>>>::type;
 
   Loop loop;
 
@@ -373,7 +369,7 @@ void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
         constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
 
         for (auto ii : graph.edges(src)) {
-          GNode dst   = graph.getEdgeDst(ii);
+          GNode dst = graph.getEdgeDst(ii);
           auto& ddata = graph.getData(dst, flag);
 
           if (ddata == BFS::DIST_INFINITY) {
@@ -389,15 +385,16 @@ void asyncAlgo(Graph& graph, GNode source, const P& pushWrap,
 }
 
 template <bool CONCURRENT>
-void runAlgo(Graph& graph, const GNode& source, const uint32_t runID) {
+void
+runAlgo(Graph& graph, const GNode& source, const uint32_t runID) {
   switch (algo) {
   case SyncDO:
-    syncDOAlgo<CONCURRENT, GNode>(graph, source, NodePushWrap(),
-                                  OutEdgeRangeFn{graph}, runID);
+    syncDOAlgo<CONCURRENT, GNode>(
+        graph, source, NodePushWrap(), OutEdgeRangeFn{graph}, runID);
     break;
   case Async:
-    asyncAlgo<CONCURRENT, GNode>(graph, source, NodePushWrap(),
-                                 OutEdgeRangeFn{graph});
+    asyncAlgo<CONCURRENT, GNode>(
+        graph, source, NodePushWrap(), OutEdgeRangeFn{graph});
     break;
 
   default:
@@ -405,7 +402,8 @@ void runAlgo(Graph& graph, const GNode& source, const uint32_t runID) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFile);
 
@@ -433,7 +431,7 @@ int main(int argc, char** argv) {
   auto it = graph.begin();
   std::advance(it, startNode.getValue());
   source = *it;
-  it     = graph.begin();
+  it = graph.begin();
   std::advance(it, reportNode.getValue());
   report = *it;
 
@@ -441,8 +439,9 @@ int main(int argc, char** argv) {
   galois::gPrint("Fixed preAlloc done : ", preAlloc, "\n");
   galois::reportPageAlloc("MeminfoPre");
 
-  galois::do_all(galois::iterate(graph),
-                 [&graph](GNode n) { graph.getData(n) = BFS::DIST_INFINITY; });
+  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+    graph.getData(n) = BFS::DIST_INFINITY;
+  });
 
   graph.getData(source) = 0;
 

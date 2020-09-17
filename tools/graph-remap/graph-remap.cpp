@@ -18,26 +18,26 @@
  */
 
 #include "galois/Galois.h"
-#include "galois/graphs/FileGraph.h"
 #include "galois/graphs/BufferedGraph.h"
+#include "galois/graphs/FileGraph.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string>
-    inputFilename(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<std::string> mappingFilename(cll::Positional,
-                                             cll::desc("<mapping file>"),
-                                             cll::Required);
-static cll::opt<std::string>
-    outputFilename(cll::Positional, cll::desc("<output file>"), cll::Required);
+static cll::opt<std::string> inputFilename(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> mappingFilename(
+    cll::Positional, cll::desc("<mapping file>"), cll::Required);
+static cll::opt<std::string> outputFilename(
+    cll::Positional, cll::desc("<output file>"), cll::Required);
 
 using Writer = galois::graphs::FileGraphWriter;
 
 /**
  * Create node map from file
  */
-std::map<uint32_t, uint32_t> createNodeMap() {
+std::map<uint32_t, uint32_t>
+createNodeMap() {
   galois::gInfo("Creating node map");
   // read new mapping
   std::ifstream mapFile(mappingFilename);
@@ -73,7 +73,8 @@ std::map<uint32_t, uint32_t> createNodeMap() {
   return remapper;
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
@@ -91,7 +92,7 @@ int main(int argc, char** argv) {
   // phase 1: count degrees
   graphWriter.phase1();
   galois::gInfo("Starting degree counting");
-  size_t prevNumNodes  = graphToRemap.size();
+  size_t prevNumNodes = graphToRemap.size();
   size_t nodeIDCounter = 0;
   for (size_t i = 0; i < prevNumNodes; i++) {
     // see if current node is to be remapped, i.e. exists in the map
@@ -130,8 +131,9 @@ int main(int argc, char** argv) {
   graphWriter.finish<void>();
   graphWriter.toFile(outputFilename);
 
-  galois::gInfo("new size is ", graphWriter.size(), " num edges ",
-                graphWriter.sizeEdges());
+  galois::gInfo(
+      "new size is ", graphWriter.size(), " num edges ",
+      graphWriter.sizeEdges());
 
   return 0;
 }

@@ -18,6 +18,7 @@
  */
 
 #include "galois/runtime/Substrate.h"
+
 #include "galois/substrate/Barrier.h"
 
 galois::substrate::Barrier&

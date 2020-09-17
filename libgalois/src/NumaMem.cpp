@@ -18,42 +18,46 @@
  */
 
 #include "galois/substrate/NumaMem.h"
-#include "galois/substrate/PageAlloc.h"
-#include "galois/substrate/ThreadPool.h"
-#include "galois/gIO.h"
 
 #include <cassert>
+
+#include "galois/gIO.h"
+#include "galois/substrate/PageAlloc.h"
+#include "galois/substrate/ThreadPool.h"
 
 using namespace galois::substrate;
 
 /* Access pages on each thread so each thread has some pages already loaded
  * (preferably ones it will use) */
-static void pageIn(void* _ptr, size_t len, size_t pageSize, unsigned numThreads,
-                   bool finegrained) {
+static void
+pageIn(
+    void* _ptr, size_t len, size_t pageSize, unsigned numThreads,
+    bool finegrained) {
   char* ptr = static_cast<char*>(_ptr);
 
   if (numThreads == 1) {
     for (size_t x = 0; x < len; x += pageSize / 2)
       ptr[x] = 0;
   } else {
-    getThreadPool().run(numThreads, [ptr, len, pageSize, numThreads,
-                                     finegrained]() {
-      auto myID = ThreadPool::getTID();
+    getThreadPool().run(
+        numThreads, [ptr, len, pageSize, numThreads, finegrained]() {
+          auto myID = ThreadPool::getTID();
 
-      if (finegrained) {
-        // round robin page distribution among threads (e.g. thread 0 gets
-        // a page, then thread 1, then thread n, then back to thread 0 and
-        // so on until the end of the region)
-        for (size_t x = pageSize * myID; x < len; x += pageSize * numThreads)
-          ptr[x] = 0;
-      } else {
-        // sectioned page distribution (e.g. thread 0 gets first chunk, thread
-        // 1 gets next chunk, ... last thread gets last chunk)
-        for (size_t x = myID * len / numThreads;
-             x < len && x < (myID + 1) * len / numThreads; x += pageSize)
-          ptr[x] = 0;
-      }
-    });
+          if (finegrained) {
+            // round robin page distribution among threads (e.g. thread 0 gets
+            // a page, then thread 1, then thread n, then back to thread 0 and
+            // so on until the end of the region)
+            for (size_t x = pageSize * myID; x < len;
+                 x += pageSize * numThreads)
+              ptr[x] = 0;
+          } else {
+            // sectioned page distribution (e.g. thread 0 gets first chunk, thread
+            // 1 gets next chunk, ... last thread gets last chunk)
+            for (size_t x = myID * len / numThreads;
+                 x < len && x < (myID + 1) * len / numThreads; x += pageSize)
+              ptr[x] = 0;
+          }
+        });
   }
 }
 
@@ -73,9 +77,10 @@ static void pageIn(void* _ptr, size_t len, size_t pageSize, unsigned numThreads,
  * threads
  */
 template <typename RangeArrayTy>
-static void pageInSpecified(void* _ptr, size_t len, size_t pageSize,
-                            unsigned numThreads, RangeArrayTy threadRanges,
-                            size_t elementSize) {
+static void
+pageInSpecified(
+    void* _ptr, size_t len, size_t pageSize, unsigned numThreads,
+    RangeArrayTy threadRanges, size_t elementSize) {
   assert(numThreads > 0);
   assert(elementSize > 0);
 
@@ -87,7 +92,7 @@ static void pageInSpecified(void* _ptr, size_t len, size_t pageSize,
           auto myID = ThreadPool::getTID();
 
           uint64_t beginLocation = threadRanges[myID];
-          uint64_t endLocation   = threadRanges[myID + 1];
+          uint64_t endLocation = threadRanges[myID + 1];
 
           assert(beginLocation <= endLocation);
 
@@ -109,7 +114,7 @@ static void pageInSpecified(void* _ptr, size_t len, size_t pageSize,
             // 1));
 
             uint32_t beginPage = beginByte / pageSize;
-            uint32_t endPage   = endByte / pageSize;
+            uint32_t endPage = endByte / pageSize;
 
             assert(beginPage <= endPage);
 
@@ -130,16 +135,19 @@ static void pageInSpecified(void* _ptr, size_t len, size_t pageSize,
   }
 }
 
-static void largeFree(void* ptr, size_t bytes) {
+static void
+largeFree(void* ptr, size_t bytes) {
   freePages(ptr, bytes / allocSize());
 }
 
-void galois::substrate::internal::largeFreer::operator()(void* ptr) const {
+void
+galois::substrate::internal::largeFreer::operator()(void* ptr) const {
   largeFree(ptr, bytes);
 }
 
 // round data to a multiple of mult
-static size_t roundup(size_t data, size_t mult) {
+static size_t
+roundup(size_t data, size_t mult) {
   auto rem = data % mult;
 
   if (!rem)
@@ -147,8 +155,8 @@ static size_t roundup(size_t data, size_t mult) {
   return data + (mult - rem);
 }
 
-LAptr galois::substrate::largeMallocInterleaved(size_t bytes,
-                                                unsigned numThreads) {
+LAptr
+galois::substrate::largeMallocInterleaved(size_t bytes, unsigned numThreads) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
 
@@ -169,23 +177,26 @@ LAptr galois::substrate::largeMallocInterleaved(size_t bytes,
   return LAptr{data, internal::largeFreer{bytes}};
 }
 
-LAptr galois::substrate::largeMallocLocal(size_t bytes) {
+LAptr
+galois::substrate::largeMallocLocal(size_t bytes) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a prefaulted allocation
-  return LAptr{allocPages(bytes / allocSize(), true),
-               internal::largeFreer{bytes}};
+  return LAptr{
+      allocPages(bytes / allocSize(), true), internal::largeFreer{bytes}};
 }
 
-LAptr galois::substrate::largeMallocFloating(size_t bytes) {
+LAptr
+galois::substrate::largeMallocFloating(size_t bytes) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a non-prefaulted allocation
-  return LAptr{allocPages(bytes / allocSize(), false),
-               internal::largeFreer{bytes}};
+  return LAptr{
+      allocPages(bytes / allocSize(), false), internal::largeFreer{bytes}};
 }
 
-LAptr galois::substrate::largeMallocBlocked(size_t bytes, unsigned numThreads) {
+LAptr
+galois::substrate::largeMallocBlocked(size_t bytes, unsigned numThreads) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a non-prefaulted allocation
@@ -210,9 +221,10 @@ LAptr galois::substrate::largeMallocBlocked(size_t bytes, unsigned numThreads) {
  * @returns The allocated memory along with a freer object
  */
 template <typename RangeArrayTy>
-LAptr galois::substrate::largeMallocSpecified(size_t bytes, uint32_t numThreads,
-                                              RangeArrayTy& threadRanges,
-                                              size_t elementSize) {
+LAptr
+galois::substrate::largeMallocSpecified(
+    size_t bytes, uint32_t numThreads, RangeArrayTy& threadRanges,
+    size_t elementSize) {
   // ceiling to nearest page
   bytes = roundup(bytes, allocSize());
 
@@ -220,8 +232,8 @@ LAptr galois::substrate::largeMallocSpecified(size_t bytes, uint32_t numThreads,
 
   // NUMA aware page in based on element distribution specified in threadRanges
   if (data)
-    pageInSpecified(data, bytes, allocSize(), numThreads, threadRanges,
-                    elementSize);
+    pageInSpecified(
+        data, bytes, allocSize(), numThreads, threadRanges, elementSize);
 
   return LAptr{data, internal::largeFreer{bytes}};
 }

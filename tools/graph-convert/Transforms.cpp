@@ -2,14 +2,16 @@
 
 #include <arrow/type.h>
 
-#include "galois/Logging.h"
 #include "TimeParser.h"
+#include "galois/Logging.h"
 
 namespace {
 
-void ApplyTransform(galois::graphs::PropertyFileGraph::PropertyView view,
-                    galois::ColumnTransformer* transform) {
-  int cur_field  = 0;
+void
+ApplyTransform(
+    galois::graphs::PropertyFileGraph::PropertyView view,
+    galois::ColumnTransformer* transform) {
+  int cur_field = 0;
   int num_fields = view.schema()->num_fields();
   std::vector<std::shared_ptr<arrow::Field>> new_fields;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
@@ -21,8 +23,8 @@ void ApplyTransform(galois::graphs::PropertyFileGraph::PropertyView view,
       continue;
     }
 
-    GALOIS_LOG_WARN("applying {} to property {}", transform->name(),
-                    field->name());
+    GALOIS_LOG_WARN(
+        "applying {} to property {}", transform->name(), field->name());
 
     std::shared_ptr<arrow::ChunkedArray> property = view.Property(cur_field);
 
@@ -50,11 +52,11 @@ void ApplyTransform(galois::graphs::PropertyFileGraph::PropertyView view,
   }
 }
 
-} // namespace
+}  // namespace
 
 std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
-galois::ConvertTimestamps::operator()(arrow::Field* field,
-                                      arrow::ChunkedArray* chunked_array) {
+galois::ConvertTimestamps::operator()(
+    arrow::Field* field, arrow::ChunkedArray* chunked_array) {
   std::vector<int64_t> values;
   std::vector<bool> is_valid;
 
@@ -78,10 +80,10 @@ galois::ConvertTimestamps::operator()(arrow::Field* field,
 
       if (valid) {
         std::string str = array->GetString(i);
-        auto r          = parser.Parse(str);
+        auto r = parser.Parse(str);
         if (r) {
           valid = true;
-          ts    = *r;
+          ts = *r;
         } else {
           GALOIS_LOG_WARN("could not parse datetime string {}", str);
           valid = false;
@@ -102,8 +104,8 @@ galois::ConvertTimestamps::operator()(arrow::Field* field,
 
   auto new_field = field->WithType(timestamp_type)->WithNullable(true);
 
-  arrow::TimestampBuilder builder(new_field->type(),
-                                  arrow::default_memory_pool());
+  arrow::TimestampBuilder builder(
+      new_field->type(), arrow::default_memory_pool());
   if (auto result = builder.AppendValues(values, is_valid); !result.ok()) {
     GALOIS_LOG_FATAL("could not append array: {}", result);
   }
@@ -120,8 +122,8 @@ galois::ConvertTimestamps::operator()(arrow::Field* field,
 }
 
 std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
-galois::SparsifyBooleans::operator()(arrow::Field* field,
-                                     arrow::ChunkedArray* chunked_array) {
+galois::SparsifyBooleans::operator()(
+    arrow::Field* field, arrow::ChunkedArray* chunked_array) {
   std::vector<uint8_t> values;
 
   values.reserve(chunked_array->length());
@@ -151,14 +153,15 @@ galois::SparsifyBooleans::operator()(arrow::Field* field,
     GALOIS_LOG_FATAL("could not finish array: {}", result);
   }
 
-  auto new_field  = field->WithType(arrow::uint8())->WithNullable(false);
+  auto new_field = field->WithType(arrow::uint8())->WithNullable(false);
   auto new_column = std::make_shared<arrow::ChunkedArray>(
       std::vector<std::shared_ptr<arrow::Array>>{new_array});
 
   return std::make_pair(new_field, new_column);
 }
 
-void galois::ApplyTransforms(
+void
+galois::ApplyTransforms(
     galois::graphs::PropertyFileGraph* graph,
     const std::vector<std::unique_ptr<galois::ColumnTransformer>>&
         transformers) {

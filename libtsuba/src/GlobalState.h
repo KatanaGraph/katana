@@ -4,10 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "galois/CommBackend.h"
-#include "galois/Logging.h"
 #include "FileStorage.h"
 #include "NameServerClient.h"
+#include "galois/CommBackend.h"
+#include "galois/Logging.h"
 
 namespace tsuba {
 
@@ -33,7 +33,7 @@ class GlobalState {
   FileStorage* GetDefaultFS() const;
 
 public:
-  GlobalState(const GlobalState& no_copy)  = delete;
+  GlobalState(const GlobalState& no_copy) = delete;
   GlobalState(const GlobalState&& no_move) = delete;
   GlobalState& operator=(const GlobalState& no_copy) = delete;
   GlobalState& operator=(const GlobalState&& no_move) = delete;
@@ -61,6 +61,6 @@ galois::CommBackend* Comm();
 FileStorage* FS(std::string_view uri);
 NameServerClient* NS();
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

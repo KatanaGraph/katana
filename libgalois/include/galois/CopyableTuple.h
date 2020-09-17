@@ -47,7 +47,7 @@ struct Pair {
 
   //! Constructor that initializes 2 fields
   Pair(T1 one, T2 two) {
-    first  = one;
+    first = one;
     second = two;
   }
 };
@@ -74,10 +74,10 @@ struct TupleOfThree {
 
   //! Constructor that initializes 3 fields
   TupleOfThree(T1 one, T2 two, T3 three) {
-    first  = one;
+    first = one;
     second = two;
-    third  = three;
+    third = three;
   }
 };
 
-} // namespace galois
+}  // namespace galois

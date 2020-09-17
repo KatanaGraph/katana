@@ -31,9 +31,10 @@
 namespace galois {
 
 //! Simple map data structure, based off a single array.
-template <class _Key, class _Tp, class _Compare = std::less<_Key>,
-          class _Alloc = std::allocator<std::pair<_Key, _Tp>>,
-          class _Store = std::vector<std::pair<_Key, _Tp>, _Alloc>>
+template <
+    class _Key, class _Tp, class _Compare = std::less<_Key>,
+    class _Alloc = std::allocator<std::pair<_Key, _Tp>>,
+    class _Store = std::vector<std::pair<_Key, _Tp>, _Alloc>>
 class flat_map {
 public:
   typedef _Key key_type;
@@ -102,8 +103,8 @@ public:
 
   flat_map() : _data(), _comp() {}
 
-  explicit flat_map(const _Compare& __comp,
-                    const allocator_type& = allocator_type())
+  explicit flat_map(
+      const _Compare& __comp, const allocator_type& = allocator_type())
       : _data(), _comp(__comp) {}
 
   flat_map(const flat_map& __x) : _data(__x._data), _comp(__x._comp) {}
@@ -119,8 +120,9 @@ public:
   }
 
   template <typename _InputIterator>
-  flat_map(_InputIterator __first, _InputIterator __last, const _Compare&,
-           const allocator_type& __a = allocator_type())
+  flat_map(
+      _InputIterator __first, _InputIterator __last, const _Compare&,
+      const allocator_type& __a = allocator_type())
       : _data(__first, __last, _Pair_alloc_type(__a)) {
     resort();
   }
@@ -180,7 +182,7 @@ public:
     //}) == _data.end());
     _data.emplace_back(std::forward<Args>(args)...);
     value_type& v = _data.back();
-    auto ee       = _data.end();
+    auto ee = _data.end();
     --ee;
     auto __i = std::lower_bound(_data.begin(), ee, v.first, value_key_comp());
     // key < __i->first
@@ -188,7 +190,7 @@ public:
     if (retval) {
       if (__i != ee) {
         value_type tmp = std::move(v);
-        __i            = _data.emplace(__i, std::move(tmp));
+        __i = _data.emplace(__i, std::move(tmp));
         _data.pop_back();
       }
     } else {
@@ -202,8 +204,9 @@ public:
     iterator __i = lower_bound(__k);
     // __i->first is greater than or equivalent to __k.
     if (__i == end() || key_comp()(__k, (*__i).first))
-      __i = _data.emplace(__i, std::piecewise_construct,
-                          std::forward_as_tuple(__k), std::tuple<>());
+      __i = _data.emplace(
+          __i, std::piecewise_construct, std::forward_as_tuple(__k),
+          std::tuple<>());
     return (*__i).second;
   }
 
@@ -211,9 +214,9 @@ public:
     iterator __i = lower_bound(__k);
     // __i->first is greater than or equivalent to __k.
     if (__i == end() || key_comp()(__k, (*__i).first))
-      __i =
-          _data.emplace(__i, std::piecewise_construct,
-                        std::forward_as_tuple(std::move(__k)), std::tuple<>());
+      __i = _data.emplace(
+          __i, std::piecewise_construct, std::forward_as_tuple(std::move(__k)),
+          std::tuple<>());
     return (*__i).second;
   }
 
@@ -231,9 +234,9 @@ public:
     return (*__i).second;
   }
 
-  template <typename PairTy,
-            typename = typename std::enable_if<
-                std::is_constructible<value_type, PairTy&&>::value>::type>
+  template <
+      typename PairTy, typename = typename std::enable_if<std::is_constructible<
+                           value_type, PairTy&&>::value>::type>
   std::pair<iterator, bool> insert(PairTy&& __x) {
     return emplace(std::forward<PairTy>(__x));
   }
@@ -312,63 +315,77 @@ public:
     return std::make_pair(lower_bound(__x), upper_bound(__x));
   }
 
-  std::pair<const_iterator, const_iterator>
-  equal_range(const key_type& __x) const {
+  std::pair<const_iterator, const_iterator> equal_range(
+      const key_type& __x) const {
     return std::make_pair(lower_bound(__x), upper_bound(__x));
   }
 };
 
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator==(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                       const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator==(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return __x._data == __y._data;
 }
 
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator<(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                      const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator<(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return __x._data < __y._data;
 }
 
 /// Based on operator==
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator!=(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                       const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator!=(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return !(__x == __y);
 }
 
 /// Based on operator<
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator>(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                      const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator>(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return __y < __x;
 }
 
 /// Based on operator<
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator<=(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                       const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator<=(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return !(__y < __x);
 }
 
 /// Based on operator<
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline bool operator>=(const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                       const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline bool
+operator>=(
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    const flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   return !(__x < __y);
 }
 
-} // namespace galois
+}  // namespace galois
 
 namespace std {
 
 /// See galois::flat_map::swap().
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
-inline void swap(galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-                 galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+inline void
+swap(
+    galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   __x.swap(__y);
 }
 
-} // namespace std
+}  // namespace std
 
 #endif

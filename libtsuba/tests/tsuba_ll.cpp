@@ -1,16 +1,16 @@
-#include <cerrno>
-#include <cstdlib>
-#include <string>
 #include <unistd.h>
 
-#include <vector>
+#include <cerrno>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "galois/Logging.h"
-#include "tsuba/tsuba.h"
-#include "tsuba/file.h"
 #include "md5.h"
+#include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 uint64_t bytes_to_write{0};
 std::string dst_path{};
@@ -18,7 +18,8 @@ uint64_t read_block_size = (1 << 29);
 
 std::string usage_msg = "Usage: {} <list of file path>\n";
 
-std::vector<std::string> parse_arguments(int argc, char* argv[]) {
+std::vector<std::string>
+parse_arguments(int argc, char* argv[]) {
   int c;
 
   while ((c = getopt(argc, argv, "h")) != -1) {
@@ -40,7 +41,8 @@ std::vector<std::string> parse_arguments(int argc, char* argv[]) {
   return paths;
 }
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }

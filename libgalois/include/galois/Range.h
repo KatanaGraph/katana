@@ -21,13 +21,13 @@
 #define GALOIS_LIBGALOIS_GALOIS_RANGE_H_
 
 #include <iterator>
-
-#include <boost/iterator/counting_iterator.hpp>
 #include <type_traits>
 
+#include <boost/iterator/counting_iterator.hpp>
+
+#include "galois/TwoLevelIterator.h"
 #include "galois/config.h"
 #include "galois/gstl.h"
-#include "galois/TwoLevelIterator.h"
 #include "galois/substrate/ThreadPool.h"
 
 namespace galois {
@@ -60,7 +60,8 @@ private:
 };
 
 template <typename T>
-LocalRange<T> MakeLocalRange(T& obj) {
+LocalRange<T>
+MakeLocalRange(T& obj) {
   return LocalRange<T>(obj);
 }
 
@@ -101,7 +102,8 @@ private:
 };
 
 template <typename T>
-LocalTwoLevelRange<T> MakeLocalTwoLevelRange(T& obj) {
+LocalTwoLevelRange<T>
+MakeLocalTwoLevelRange(T& obj) {
   return LocalTwoLevelRange<T>(obj);
 }
 
@@ -127,8 +129,9 @@ public:
 
 private:
   std::pair<local_iterator, local_iterator> local_pair() const {
-    return galois::block_range(begin_, end_, substrate::ThreadPool::getTID(),
-                               galois::runtime::activeThreads);
+    return galois::block_range(
+        begin_, end_, substrate::ThreadPool::getTID(),
+        galois::runtime::activeThreads);
   }
 
   IterTy begin_;
@@ -136,7 +139,8 @@ private:
 };
 
 template <typename IterTy>
-StandardRange<IterTy> MakeStandardRange(IterTy begin, IterTy end) {
+StandardRange<IterTy>
+MakeStandardRange(IterTy begin, IterTy end) {
   return StandardRange<IterTy>(begin, end);
 }
 
@@ -164,13 +168,13 @@ private:
    * of the range for this particular thread.
    */
   std::pair<local_iterator, local_iterator> local_pair() const {
-    uint32_t my_thread_id  = substrate::ThreadPool::getTID();
+    uint32_t my_thread_id = substrate::ThreadPool::getTID();
     uint32_t total_threads = runtime::activeThreads;
 
     const auto& beginnings = *thread_beginnings_;
 
     iterator local_begin = beginnings[my_thread_id];
-    iterator local_end   = beginnings[my_thread_id + 1];
+    iterator local_end = beginnings[my_thread_id + 1];
 
     assert(local_begin <= local_end);
 
@@ -183,7 +187,7 @@ private:
     // entire 0 to thread end range; therefore, work under the assumption that
     // only some threads will execute things only if they "own" nodes in the
     // range
-    iterator left  = local_begin;
+    iterator left = local_begin;
     iterator right = local_end;
 
     // local = what this thread CAN do
@@ -221,9 +225,10 @@ private:
   const std::vector<uint32_t>* thread_beginnings_;
 
 public:
-  SpecificRange(IterTy begin, IterTy end,
-                const std::vector<uint32_t>& thread_ranges)
-      : global_begin_(begin), global_end_(end),
+  SpecificRange(
+      IterTy begin, IterTy end, const std::vector<uint32_t>& thread_ranges)
+      : global_begin_(begin),
+        global_end_(end),
         thread_beginnings_(&thread_ranges) {}
 
   iterator begin() const { return global_begin_; }
@@ -245,8 +250,8 @@ public:
  */
 template <typename IterTy>
 SpecificRange<IterTy>
-MakeSpecificRange(IterTy begin, IterTy end,
-                  const std::vector<uint32_t>& thread_ranges) {
+MakeSpecificRange(
+    IterTy begin, IterTy end, const std::vector<uint32_t>& thread_ranges) {
   return SpecificRange<IterTy>(begin, end, thread_ranges);
 }
 
@@ -279,35 +284,40 @@ constexpr bool has_local_iterator_v = has_local_iterator<T>::value;
  * - A numeric range: iterator(1, 2)
  */
 
-template <typename T,
-          typename std::enable_if_t<has_local_iterator_v<T>>* = nullptr>
-auto iterate(T& container) {
+template <
+    typename T, typename std::enable_if_t<has_local_iterator_v<T>>* = nullptr>
+auto
+iterate(T& container) {
   return MakeLocalRange(container);
 }
 
-template <typename T,
-          typename std::enable_if_t<!has_local_iterator_v<T>>* = nullptr>
-auto iterate(T& container) {
+template <
+    typename T, typename std::enable_if_t<!has_local_iterator_v<T>>* = nullptr>
+auto
+iterate(T& container) {
   return MakeStandardRange(container.begin(), container.end());
 }
 
 template <typename T>
-auto iterate(std::initializer_list<T> init_list) {
+auto
+iterate(std::initializer_list<T> init_list) {
   return MakeStandardRange(init_list.begin(), init_list.end());
 }
 
-template <typename T,
-          typename std::enable_if_t<std::is_integral_v<T>>* = nullptr>
-auto iterate(const T& begin, const T& end) {
-  return MakeStandardRange(boost::counting_iterator<T>(begin),
-                           boost::counting_iterator<T>(end));
+template <
+    typename T, typename std::enable_if_t<std::is_integral_v<T>>* = nullptr>
+auto
+iterate(const T& begin, const T& end) {
+  return MakeStandardRange(
+      boost::counting_iterator<T>(begin), boost::counting_iterator<T>(end));
 }
 
-template <typename T,
-          typename std::enable_if_t<!std::is_integral_v<T>>* = nullptr>
-auto iterate(const T& begin, const T& end) {
+template <
+    typename T, typename std::enable_if_t<!std::is_integral_v<T>>* = nullptr>
+auto
+iterate(const T& begin, const T& end) {
   return MakeStandardRange(begin, end);
 }
 
-} // end namespace galois
+}  // end namespace galois
 #endif

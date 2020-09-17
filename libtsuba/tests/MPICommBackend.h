@@ -1,13 +1,13 @@
 #ifndef GALOIS_LIBTSUBA_MPICOMMBACKEND_H_
 #define GALOIS_LIBTSUBA_MPICOMMBACKEND_H_
 
-#include <cassert>
-
 #include <mpi.h>
 
+#include <cassert>
+
+#include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
-#include "galois/CommBackend.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {
@@ -38,7 +38,7 @@ struct MPICommBackend : public galois::CommBackend {
     assert(task_rank_val >= 0);
     assert(num_tasks_val > 0);
     Num = num_tasks_val;
-    ID  = task_rank_val;
+    ID = task_rank_val;
   }
 
   void Barrier() override {
@@ -56,9 +56,13 @@ struct MPICommBackend : public galois::CommBackend {
 
 static tsuba::MPICommBackend test_backend{};
 
-static galois::Result<void> InitWithMPI() { return Init(&test_backend); }
+static galois::Result<void>
+InitWithMPI() {
+  return Init(&test_backend);
+}
 
-static galois::Result<void> FiniWithMPI() {
+static galois::Result<void>
+FiniWithMPI() {
   auto ret = Fini();
 
   int finalize_success = MPI_Finalize();
@@ -69,6 +73,6 @@ static galois::Result<void> FiniWithMPI() {
   return ret;
 }
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

@@ -17,13 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/SimpleLock.h"
-
 #include <cstdlib>
+
+#include "galois/substrate/SimpleLock.h"
 
 volatile int V;
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   unsigned M = 1;
   if (argc > 1)
     M = atoi(argv[1]);

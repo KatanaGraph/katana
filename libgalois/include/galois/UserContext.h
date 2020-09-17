@@ -22,9 +22,9 @@
 
 #include <functional>
 
+#include "galois/Mem.h"
 #include "galois/config.h"
 #include "galois/gdeque.h"
-#include "galois/Mem.h"
 #include "galois/runtime/Context.h"
 
 namespace galois {
@@ -52,7 +52,7 @@ protected:
 
   //! some flags used by deterministic
   bool firstPassFlag = false;
-  void* localState   = nullptr;
+  void* localState = nullptr;
 
   void __resetAlloc() { IterationAllocatorBase.clear(); }
 
@@ -71,7 +71,8 @@ protected:
 public:
   UserContext()
       : IterationAllocatorBase(),
-        PerIterationAllocator(&IterationAllocatorBase), didBreak(0) {}
+        PerIterationAllocator(&IterationAllocatorBase),
+        didBreak(0) {}
 
   //! Signal break in parallel loop, current iteration continues
   //! untill natural termination
@@ -132,6 +133,6 @@ public:
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

@@ -1,13 +1,13 @@
 // Run some quick, basic sanity checks on tsuba
-#include "galois/Logging.h"
-#include "galois/FileSystem.h"
-#include "galois/Random.h"
-
 #include <stdlib.h>
-// remove_all (rm -rf) is just too sweet
-#include <boost/filesystem.hpp>
 
+#include "galois/FileSystem.h"
+#include "galois/Logging.h"
+#include "galois/Random.h"
+// remove_all (rm -rf) is just too sweet
 #include <vector>
+
+#include <boost/filesystem.hpp>
 
 constexpr uint8_t kPathSep = '/';
 
@@ -24,12 +24,14 @@ struct Test {
       : type_(type), name_(name) {
     cmd_.push_back(cmd);
   }
-  Test(TestType type, const std::string& name,
-       const std::vector<std::string>& cmd)
+  Test(
+      TestType type, const std::string& name,
+      const std::vector<std::string>& cmd)
       : type_(type), name_(name), cmd_(cmd) {}
 };
 
-std::string Bytes2Str(uint64_t bytes) {
+std::string
+Bytes2Str(uint64_t bytes) {
   for (auto unit : {"B", "KB", "MB", "GB", "TB"}) {
     if (bytes < 1024) {
       // tsuba_mkfile assume no space between number and unit
@@ -40,54 +42,63 @@ std::string Bytes2Str(uint64_t bytes) {
   return "Invalid size";
 }
 
-void MkCpSumLocal(uint64_t num_bytes, const std::string& local,
-                  const std::string& s3, std::vector<Test>& tests) {
+void
+MkCpSumLocal(
+    uint64_t num_bytes, const std::string& local, const std::string& s3,
+    std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
-  tests.push_back(Test(TestType::kSystem,
-                       fmt::format("Make a local file ({})", bytes_str),
-                       fmt::format("tsuba_mkfile {} {}", bytes_str, local)));
-  tests.push_back(Test(TestType::kSystem,
-                       fmt::format("Copy local file to S3 ({})", bytes_str),
-                       fmt::format("tsuba_cp {} {}", local, s3)));
-  std::vector<std::string> cmds{fmt::format("tsuba_md5sum {}", local),
-                                fmt::format("tsuba_md5sum {}", s3)};
+  tests.push_back(Test(
+      TestType::kSystem, fmt::format("Make a local file ({})", bytes_str),
+      fmt::format("tsuba_mkfile {} {}", bytes_str, local)));
+  tests.push_back(Test(
+      TestType::kSystem, fmt::format("Copy local file to S3 ({})", bytes_str),
+      fmt::format("tsuba_cp {} {}", local, s3)));
+  std::vector<std::string> cmds{
+      fmt::format("tsuba_md5sum {}", local),
+      fmt::format("tsuba_md5sum {}", s3)};
   tests.push_back(Test(
       TestType::kMDsum,
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
   // Note, no tsuba_rm yet
-  tests.push_back(Test(TestType::kSystem, "Remove S3 file via aws cli",
-                       fmt::format("aws s3 rm {}", s3)));
+  tests.push_back(Test(
+      TestType::kSystem, "Remove S3 file via aws cli",
+      fmt::format("aws s3 rm {}", s3)));
 }
 
-void MkCpSumS3(uint64_t num_bytes, const std::string& local,
-               const std::string& s3, std::vector<Test>& tests) {
+void
+MkCpSumS3(
+    uint64_t num_bytes, const std::string& local, const std::string& s3,
+    std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
-  tests.push_back(Test(TestType::kSystem,
-                       fmt::format("Make S3 file ({})", bytes_str),
-                       fmt::format("tsuba_mkfile {} {}", bytes_str, s3)));
-  tests.push_back(Test(TestType::kSystem,
-                       fmt::format("Copy S3 file to local ({})", bytes_str),
-                       fmt::format("tsuba_cp {} {}", s3, local)));
-  std::vector<std::string> cmds{fmt::format("tsuba_md5sum {}", local),
-                                fmt::format("tsuba_md5sum {}", s3)};
+  tests.push_back(Test(
+      TestType::kSystem, fmt::format("Make S3 file ({})", bytes_str),
+      fmt::format("tsuba_mkfile {} {}", bytes_str, s3)));
+  tests.push_back(Test(
+      TestType::kSystem, fmt::format("Copy S3 file to local ({})", bytes_str),
+      fmt::format("tsuba_cp {} {}", s3, local)));
+  std::vector<std::string> cmds{
+      fmt::format("tsuba_md5sum {}", local),
+      fmt::format("tsuba_md5sum {}", s3)};
   tests.push_back(Test(
       TestType::kMDsum,
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
   // Note, no tsuba_rm yet and local directory cleaned at end.
-  tests.push_back(Test(TestType::kSystem, "Remove S3 file via aws cli",
-                       fmt::format("aws s3 rm {}", s3)));
+  tests.push_back(Test(
+      TestType::kSystem, "Remove S3 file via aws cli",
+      fmt::format("aws s3 rm {}", s3)));
 }
 
-std::vector<Test> ConstructTests(std::string local_dir, std::string s3_dir) {
+std::vector<Test>
+ConstructTests(std::string local_dir, std::string s3_dir) {
   std::vector<Test> tests;
   std::string rnd_str = galois::RandomAlphanumericString(12);
   if (local_dir.back() != kPathSep) {
     local_dir.push_back(kPathSep);
   }
   std::string local_rnd = local_dir + "ci-test-" + rnd_str;
-  std::string s3_rnd    = std::string(s3_dir) + "ci-test-" + rnd_str;
+  std::string s3_rnd = std::string(s3_dir) + "ci-test-" + rnd_str;
 
   // Each of these could be done on a different thread
   MkCpSumLocal(8, local_rnd, s3_rnd, tests);
@@ -101,7 +112,8 @@ std::vector<Test> ConstructTests(std::string local_dir, std::string s3_dir) {
   return tests;
 }
 
-int RunPopen(const std::string& cmd, std::string& out) {
+int
+RunPopen(const std::string& cmd, std::string& out) {
   char buff[4096];
   FILE* fp = popen(cmd.c_str(), "r");
   if (fp == NULL) {
@@ -114,7 +126,8 @@ int RunPopen(const std::string& cmd, std::string& out) {
   return 0;
 }
 
-int MD5sumRun(const std::string& cmd, std::string& out) {
+int
+MD5sumRun(const std::string& cmd, std::string& out) {
   std::string cmd_out;
   int res = RunPopen(cmd, cmd_out);
   if (res != 0) {
@@ -129,7 +142,8 @@ int MD5sumRun(const std::string& cmd, std::string& out) {
   return 0;
 }
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   bool self_configure = true;
   if (argc > 1) {
     if (std::string(argv[1]) == "--no-self-configure") {
@@ -179,8 +193,9 @@ int main(int argc, char* argv[]) {
       auto first = results[0];
       for (auto const& result : results) {
         if (first != result) {
-          fmt::print("Test FAILED, outputs\n  first: {}\n  other: {}\n", first,
-                     result);
+          fmt::print(
+              "Test FAILED, outputs\n  first: {}\n  other: {}\n", first,
+              result);
           main_ret = EXIT_FAILURE;
           break;
         }

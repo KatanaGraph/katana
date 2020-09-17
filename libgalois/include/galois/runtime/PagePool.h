@@ -30,9 +30,9 @@
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/PageAlloc.h"
 #include "galois/substrate/PtrLock.h"
+#include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/ThreadPool.h"
 
 namespace galois {
@@ -94,7 +94,7 @@ public:
   }
 
   void* pageAlloc() {
-    auto tid    = galois::substrate::ThreadPool::getTID();
+    auto tid = galois::substrate::ThreadPool::getTID();
     HeadPtr& hp = pool[tid].data;
     if (hp.getValue()) {
       hp.lock();
@@ -117,7 +117,7 @@ public:
     HeadPtr& hp = pool[i].data;
     hp.lock();
     FreeNode* nh = reinterpret_cast<FreeNode*>(ptr);
-    nh->next     = hp.getValue();
+    nh->next = hp.getValue();
     hp.unlock_and_set(nh);
   }
 
@@ -127,9 +127,9 @@ public:
 //! Initialize PagePool, used by runtime::init();
 GALOIS_EXPORT void setPagePoolState(PageAllocState<>* pa);
 
-} // end namespace internal
+}  // end namespace internal
 
-} // end namespace runtime
-} // end namespace galois
+}  // end namespace runtime
+}  // end namespace galois
 
 #endif

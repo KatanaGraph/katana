@@ -23,12 +23,12 @@
 #include <fstream>
 #include <type_traits>
 
-#include "galois/config.h"
 #include "galois/Galois.h"
+#include "galois/PODResizeableArray.h"
+#include "galois/config.h"
 #include "galois/graphs/Details.h"
 #include "galois/graphs/FileGraph.h"
 #include "galois/graphs/GraphHelpers.h"
-#include "galois/PODResizeableArray.h"
 
 namespace galois::graphs {
 /**
@@ -50,14 +50,15 @@ namespace galois::graphs {
  * @tparam EdgeTy data on out edges
  */
 //! [doxygennuma]
-template <typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
-          bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
-          typename FileEdgeTy = EdgeTy>
+template <
+    typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
+    bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
+    typename FileEdgeTy = EdgeTy>
 class LC_CSR_Graph :
     //! [doxygennuma]
     private internal::LocalIteratorFeature<UseNumaAlloc>,
-    private internal::OutOfLineLockableFeature<HasOutOfLineLockable &&
-                                               !HasNoLockable> {
+    private internal::OutOfLineLockableFeature<
+        HasOutOfLineLockable && !HasNoLockable> {
   template <typename Graph>
   friend class LC_InOut_Graph;
 
@@ -69,55 +70,61 @@ public:
 
   template <typename _node_data>
   struct with_node_data {
-    typedef LC_CSR_Graph<_node_data, EdgeTy, HasNoLockable, UseNumaAlloc,
-                         HasOutOfLineLockable, FileEdgeTy>
+    typedef LC_CSR_Graph<
+        _node_data, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        FileEdgeTy>
         type;
   };
 
   template <typename _edge_data>
   struct with_edge_data {
-    typedef LC_CSR_Graph<NodeTy, _edge_data, HasNoLockable, UseNumaAlloc,
-                         HasOutOfLineLockable, FileEdgeTy>
+    typedef LC_CSR_Graph<
+        NodeTy, _edge_data, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        FileEdgeTy>
         type;
   };
 
   template <typename _file_edge_data>
   struct with_file_edge_data {
-    typedef LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                         HasOutOfLineLockable, _file_edge_data>
+    typedef LC_CSR_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        _file_edge_data>
         type;
   };
 
   //! If true, do not use abstract locks in graph
   template <bool _has_no_lockable>
   struct with_no_lockable {
-    typedef LC_CSR_Graph<NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc,
-                         HasOutOfLineLockable, FileEdgeTy>
+    typedef LC_CSR_Graph<
+        NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
+        FileEdgeTy>
         type;
   };
   template <bool _has_no_lockable>
-  using _with_no_lockable =
-      LC_CSR_Graph<NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc,
-                   HasOutOfLineLockable, FileEdgeTy>;
+  using _with_no_lockable = LC_CSR_Graph<
+      NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
+      FileEdgeTy>;
 
   //! If true, use NUMA-aware graph allocation; otherwise, use NUMA interleaved
   //! allocation.
   template <bool _use_numa_alloc>
   struct with_numa_alloc {
-    typedef LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc,
-                         HasOutOfLineLockable, FileEdgeTy>
+    typedef LC_CSR_Graph<
+        NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
+        FileEdgeTy>
         type;
   };
   template <bool _use_numa_alloc>
-  using _with_numa_alloc =
-      LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc,
-                   HasOutOfLineLockable, FileEdgeTy>;
+  using _with_numa_alloc = LC_CSR_Graph<
+      NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
+      FileEdgeTy>;
 
   //! If true, store abstract locks separate from nodes
   template <bool _has_out_of_line_lockable>
   struct with_out_of_line_lockable {
-    typedef LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                         _has_out_of_line_lockable, FileEdgeTy>
+    typedef LC_CSR_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, _has_out_of_line_lockable,
+        FileEdgeTy>
         type;
   };
 
@@ -126,11 +133,11 @@ public:
 protected:
   typedef LargeArray<EdgeTy> EdgeData;
   typedef LargeArray<uint32_t> EdgeDst;
-  typedef internal::NodeInfoBaseTypes<NodeTy,
-                                      !HasNoLockable && !HasOutOfLineLockable>
+  typedef internal::NodeInfoBaseTypes<
+      NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfoTypes;
-  typedef internal::NodeInfoBase<NodeTy,
-                                 !HasNoLockable && !HasOutOfLineLockable>
+  typedef internal::NodeInfoBase<
+      NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfo;
   typedef LargeArray<uint64_t> EdgeIndData;
   typedef LargeArray<NodeInfo> NodeData;
@@ -145,7 +152,7 @@ public:
   using edge_iterator =
       boost::counting_iterator<typename EdgeIndData::value_type>;
   using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
-  using iterator       = boost::counting_iterator<typename EdgeDst::value_type>;
+  using iterator = boost::counting_iterator<typename EdgeDst::value_type>;
   typedef iterator const_iterator;
   typedef iterator local_iterator;
   typedef iterator const_local_iterator;
@@ -180,35 +187,40 @@ protected:
   }
 
   template <bool _A1 = HasNoLockable, bool _A2 = HasOutOfLineLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<!_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<!_A1 && !_A2>::type* = 0) {
     galois::runtime::acquire(&nodeData[N], mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<_A1 && !_A2>::type* = 0) {
     this->outOfLineAcquire(getId(N), mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode, MethodFlag,
-                   typename std::enable_if<_A2>::type* = 0) {}
+  void acquireNode(
+      GraphNode, MethodFlag, typename std::enable_if<_A2>::type* = 0) {}
 
-  template <bool _A1 = EdgeData::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph& graph,
-                          typename FileGraph::edge_iterator nn,
-                          typename std::enable_if<!_A1 || _A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeData::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph& graph, typename FileGraph::edge_iterator nn,
+      typename std::enable_if<!_A1 || _A2>::type* = 0) {
     typedef LargeArray<FileEdgeTy> FED;
     if (EdgeData::has_value)
       edgeData.set(*nn, graph.getEdgeData<typename FED::value_type>(nn));
   }
 
-  template <bool _A1 = EdgeData::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph&, typename FileGraph::edge_iterator nn,
-                          typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeData::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph&, typename FileGraph::edge_iterator nn,
+      typename std::enable_if<_A1 && !_A2>::type* = 0) {
     edgeData.set(*nn, {});
   }
 
@@ -233,8 +245,9 @@ public:
   uint64_t operator[](uint64_t n) { return *(edge_end(n)); }
 
   template <typename EdgeNumFnTy, typename EdgeDstFnTy, typename EdgeDataFnTy>
-  LC_CSR_Graph(uint32_t _numNodes, uint64_t _numEdges, EdgeNumFnTy edgeNum,
-               EdgeDstFnTy _edgeDst, EdgeDataFnTy _edgeData)
+  LC_CSR_Graph(
+      uint32_t _numNodes, uint64_t _numEdges, EdgeNumFnTy edgeNum,
+      EdgeDstFnTy _edgeDst, EdgeDataFnTy _edgeData)
       : numNodes(_numNodes), numEdges(_numEdges) {
     if (UseNumaAlloc) {
       //! [numaallocex]
@@ -270,17 +283,17 @@ public:
     }
   }
 
-  node_data_reference getData(GraphNode N,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+  node_data_reference getData(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, false);
     NodeInfo& NI = nodeData[N];
     acquireNode(N, mflag);
     return NI.getData();
   }
 
-  edge_data_reference
-  getEdgeData(edge_iterator ni,
-              [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
+  edge_data_reference getEdgeData(
+      edge_iterator ni,
+      [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     return edgeData[*ni];
   }
@@ -329,8 +342,9 @@ public:
   }
 
   edge_iterator findEdge(GraphNode N1, GraphNode N2) {
-    return std::find_if(edge_begin(N1), edge_end(N1),
-                        [=](edge_iterator e) { return getEdgeDst(e) == N2; });
+    return std::find_if(edge_begin(N1), edge_end(N1), [=](edge_iterator e) {
+      return getEdgeDst(e) == N2;
+    });
   }
 
   edge_iterator findEdgeSortedByDst(GraphNode N1, GraphNode N2) {
@@ -341,8 +355,8 @@ public:
   }
 
   edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(edge_begin(N, mflag),
-                                         edge_end(N, mflag));
+    return internal::make_no_deref_range(
+        edge_begin(N, mflag), edge_end(N, mflag));
   }
 
   edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
@@ -353,9 +367,9 @@ public:
    * Sorts outgoing edges of a node. Comparison function is over EdgeTy.
    */
   template <typename CompTy>
-  void sortEdgesByEdgeData(GraphNode N,
-                           const CompTy& comp = std::less<EdgeTy>(),
-                           MethodFlag mflag   = MethodFlag::WRITE) {
+  void sortEdgesByEdgeData(
+      GraphNode N, const CompTy& comp = std::less<EdgeTy>(),
+      MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
     std::sort(
         edge_sort_begin(N), edge_sort_end(N),
@@ -368,8 +382,8 @@ public:
    * Comparison function is over <code>EdgeSortValue<EdgeTy></code>.
    */
   template <typename CompTy>
-  void sortEdges(GraphNode N, const CompTy& comp,
-                 MethodFlag mflag = MethodFlag::WRITE) {
+  void sortEdges(
+      GraphNode N, const CompTy& comp, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
     std::sort(edge_sort_begin(N), edge_sort_end(N), comp);
   }
@@ -380,10 +394,11 @@ public:
   void sortEdgesByDst(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
     typedef EdgeSortValue<GraphNode, EdgeTy> EdgeSortVal;
-    std::sort(edge_sort_begin(N), edge_sort_end(N),
-              [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
-                return e1.dst < e2.dst;
-              });
+    std::sort(
+        edge_sort_begin(N), edge_sort_end(N),
+        [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
+          return e1.dst < e2.dst;
+        });
   }
 
   /**
@@ -485,8 +500,8 @@ public:
     edgeData.destroy();
   }
 
-  void constructEdge(uint64_t e, uint32_t dst,
-                     const typename EdgeData::value_type& val) {
+  void constructEdge(
+      uint64_t e, uint32_t dst, const typename EdgeData::value_type& val) {
     edgeData.set(e, val);
     edgeDst[e] = dst;
   }
@@ -524,7 +539,7 @@ public:
     galois::do_all(
         galois::iterate(UINT64_C(0), numNodes),
         [&](uint64_t n) {
-          edgeIndData_old[n]  = edgeIndData[n];
+          edgeIndData_old[n] = edgeIndData[n];
           edgeIndData_temp[n] = 0;
         },
         galois::no_stats(), galois::loopname("TRANSPOSE_EDGEINTDATA_COPY"));
@@ -533,7 +548,7 @@ public:
     galois::do_all(
         galois::iterate(UINT64_C(0), numEdges),
         [&](uint64_t e) {
-          auto dst       = edgeDst[e];
+          auto dst = edgeDst[e];
           edgeDst_old[e] = dst;
           // counting outgoing edges in the tranpose graph by
           // counting incoming edges in the original graph
@@ -597,22 +612,25 @@ public:
   }
 
   template <bool is_non_void = EdgeData::has_value>
-  void edgeDataCopy(EdgeData& edgeData_new, EdgeData& edgeData, uint64_t e_new,
-                    uint64_t e,
-                    typename std::enable_if<is_non_void>::type* = 0) {
+  void edgeDataCopy(
+      EdgeData& edgeData_new, EdgeData& edgeData, uint64_t e_new, uint64_t e,
+      typename std::enable_if<is_non_void>::type* = 0) {
     edgeData_new[e_new] = edgeData[e];
   }
 
   template <bool is_non_void = EdgeData::has_value>
-  void edgeDataCopy(EdgeData&, EdgeData&, uint64_t, uint64_t,
-                    typename std::enable_if<!is_non_void>::type* = 0) {
+  void edgeDataCopy(
+      EdgeData&, EdgeData&, uint64_t, uint64_t,
+      typename std::enable_if<!is_non_void>::type* = 0) {
     // does nothing
   }
 
-  template <typename E                                            = EdgeTy,
-            std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
-  void constructFrom(FileGraph& graph, unsigned tid, unsigned total,
-                     const bool readUnweighted = false) {
+  template <
+      typename E = EdgeTy,
+      std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
+  void constructFrom(
+      FileGraph& graph, unsigned tid, unsigned total,
+      const bool readUnweighted = false) {
     // at this point memory should already be allocated
     auto r =
         graph
@@ -643,10 +661,12 @@ public:
     }
   }
 
-  template <typename E                                           = EdgeTy,
-            std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
-  void constructFrom(FileGraph& graph, unsigned tid, unsigned total,
-                     [[maybe_unused]] const bool readUnweighted = false) {
+  template <
+      typename E = EdgeTy,
+      std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
+  void constructFrom(
+      FileGraph& graph, unsigned tid, unsigned total,
+      [[maybe_unused]] const bool readUnweighted = false) {
     // at this point memory should already be allocated
     auto r =
         graph
@@ -697,10 +717,10 @@ public:
    * Adding for Louvain clustering
    * TODO: Find better way to do this
    */
-  void constructFrom(uint32_t numNodes, uint64_t numEdges,
-                     std::vector<uint64_t>& prefix_sum,
-                     std::vector<std::vector<uint32_t>>& edges_id,
-                     std::vector<std::vector<EdgeTy>>& edges_data) {
+  void constructFrom(
+      uint32_t numNodes, uint64_t numEdges, std::vector<uint64_t>& prefix_sum,
+      std::vector<std::vector<uint32_t>>& edges_id,
+      std::vector<std::vector<EdgeTy>>& edges_data) {
     // allocateFrom(numNodes, numEdges);
     /*
      * Deallocate if reusing the graph
@@ -708,22 +728,25 @@ public:
     destroyAndAllocateFrom(numNodes, numEdges);
     constructNodes();
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes),
-                   [&](uint32_t n) { edgeIndData[n] = prefix_sum[n]; });
+    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+      edgeIndData[n] = prefix_sum[n];
+    });
 
     galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin());
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(), edgeData.begin());
         }
       } else {
         if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
-          std::copy(edges_id[n].begin(), edges_id[n].end(),
-                    edgeDst.begin() + edgeIndData[n - 1]);
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_id[n].begin(), edges_id[n].end(),
+              edgeDst.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(),
+              edgeData.begin() + edgeIndData[n - 1]);
         }
       }
     });
@@ -737,22 +760,25 @@ public:
     allocateFrom(numNodes, numEdges);
     constructNodes();
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes),
-                   [&](uint32_t n) { edgeIndData[n] = prefix_sum[n]; });
+    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+      edgeIndData[n] = prefix_sum[n];
+    });
 
     galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin());
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(), edgeData.begin());
         }
       } else {
         if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
-          std::copy(edges_id[n].begin(), edges_id[n].end(),
-                    edgeDst.begin() + edgeIndData[n - 1]);
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_id[n].begin(), edges_id[n].end(),
+              edgeDst.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(),
+              edgeData.begin() + edgeIndData[n - 1]);
         }
       }
     });
@@ -760,8 +786,9 @@ public:
     initializeLocalRanges();
   }
 
-  template <typename E                                            = EdgeTy,
-            std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
+  template <
+      typename E = EdgeTy,
+      std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
       galois::LargeArray<uint64_t>&& prefix_sum,
@@ -776,15 +803,17 @@ public:
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin());
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(), edgeData.begin());
         }
       } else {
         if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
-          std::copy(edges_id[n].begin(), edges_id[n].end(),
-                    edgeDst.begin() + edgeIndData[n - 1]);
-          std::copy(edges_data[n].begin(), edges_data[n].end(),
-                    edgeData.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_id[n].begin(), edges_id[n].end(),
+              edgeDst.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_data[n].begin(), edges_data[n].end(),
+              edgeData.begin() + edgeIndData[n - 1]);
         }
       }
     });
@@ -792,8 +821,9 @@ public:
     initializeLocalRanges();
   }
 
-  template <typename E                                           = EdgeTy,
-            std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
+  template <
+      typename E = EdgeTy,
+      std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
       galois::LargeArray<uint64_t>&& prefix_sum,
@@ -810,8 +840,9 @@ public:
         }
       } else {
         if (edgeIndData[n] - edgeIndData[n - 1] > 0) {
-          std::copy(edges_id[n].begin(), edges_id[n].end(),
-                    edgeDst.begin() + edgeIndData[n - 1]);
+          std::copy(
+              edges_id[n].begin(), edges_id[n].end(),
+              edgeDst.begin() + edgeIndData[n - 1]);
         }
       }
     });
@@ -827,7 +858,7 @@ public:
    *
    */
   template <
-      typename U                                                      = void,
+      typename U = void,
       typename std::enable_if<!std::is_void<EdgeTy>::value, U>::type* = nullptr>
   void readGraphFromGRFile(const std::string& filename) {
     std::ifstream graphFile(filename.c_str());
@@ -837,10 +868,10 @@ public:
       GALOIS_DIE("failed to read file");
     }
     uint64_t version = header[0];
-    numNodes         = header[2];
-    numEdges         = header[3];
-    galois::gPrint("Number of Nodes: ", numNodes,
-                   ", Number of Edges: ", numEdges, "\n");
+    numNodes = header[2];
+    numEdges = header[3];
+    galois::gPrint(
+        "Number of Nodes: ", numNodes, ", Number of Edges: ", numEdges, "\n");
     allocateFrom(numNodes, numEdges);
     constructNodes();
     /**
@@ -854,8 +885,9 @@ public:
     // start position to read index data
     uint64_t readPosition = (4 * sizeof(uint64_t));
     graphFile.seekg(readPosition);
-    graphFile.read(reinterpret_cast<char*>(edgeIndData.data()),
-                   sizeof(uint64_t) * numNodes);
+    graphFile.read(
+        reinterpret_cast<char*>(edgeIndData.data()),
+        sizeof(uint64_t) * numNodes);
     if (!graphFile) {
       GALOIS_DIE("failed to read file");
     }
@@ -871,8 +903,8 @@ public:
     readPosition = ((4 + numNodes) * sizeof(uint64_t));
     graphFile.seekg(readPosition);
     if (version == 1) {
-      graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
-                     sizeof(uint32_t) * numEdges);
+      graphFile.read(
+          reinterpret_cast<char*>(edgeDst.data()), sizeof(uint32_t) * numEdges);
       if (!graphFile) {
         GALOIS_DIE("failed to read file");
       }
@@ -883,8 +915,8 @@ public:
         readPosition += sizeof(uint32_t);
       }
     } else if (version == 2) {
-      graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
-                     sizeof(uint64_t) * numEdges);
+      graphFile.read(
+          reinterpret_cast<char*>(edgeDst.data()), sizeof(uint64_t) * numEdges);
       if (!graphFile) {
         GALOIS_DIE("failed to read file");
       }
@@ -904,8 +936,8 @@ public:
       GALOIS_DIE("out of memory");
     }
     graphFile.seekg(readPosition);
-    graphFile.read(reinterpret_cast<char*>(edgeData.data()),
-                   sizeof(EdgeTy) * numEdges);
+    graphFile.read(
+        reinterpret_cast<char*>(edgeData.data()), sizeof(EdgeTy) * numEdges);
     if (!graphFile) {
       GALOIS_DIE("failed to read file");
     }
@@ -921,7 +953,7 @@ public:
    *
    */
   template <
-      typename U                                                     = void,
+      typename U = void,
       typename std::enable_if<std::is_void<EdgeTy>::value, U>::type* = nullptr>
   void readGraphFromGRFile(const std::string& filename) {
     std::ifstream graphFile(filename.c_str());
@@ -932,10 +964,10 @@ public:
     }
 
     uint64_t version = header[0];
-    numNodes         = header[2];
-    numEdges         = header[3];
-    galois::gPrint("Number of Nodes: ", numNodes,
-                   ", Number of Edges: ", numEdges, "\n");
+    numNodes = header[2];
+    numEdges = header[3];
+    galois::gPrint(
+        "Number of Nodes: ", numNodes, ", Number of Edges: ", numEdges, "\n");
     allocateFrom(numNodes, numEdges);
     constructNodes();
     /**
@@ -948,8 +980,9 @@ public:
     // start position to read index data
     uint64_t readPosition = (4 * sizeof(uint64_t));
     graphFile.seekg(readPosition);
-    graphFile.read(reinterpret_cast<char*>(edgeIndData.data()),
-                   sizeof(uint64_t) * numNodes);
+    graphFile.read(
+        reinterpret_cast<char*>(edgeIndData.data()),
+        sizeof(uint64_t) * numNodes);
     if (!graphFile) {
       GALOIS_DIE("failed to read file");
     }
@@ -964,14 +997,14 @@ public:
     readPosition = ((4 + numNodes) * sizeof(uint64_t));
     graphFile.seekg(readPosition);
     if (version == 1) {
-      graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
-                     sizeof(uint32_t) * numEdges);
+      graphFile.read(
+          reinterpret_cast<char*>(edgeDst.data()), sizeof(uint32_t) * numEdges);
       if (!graphFile) {
         GALOIS_DIE("failed to read file");
       }
     } else if (version == 2) {
-      graphFile.read(reinterpret_cast<char*>(edgeDst.data()),
-                     sizeof(uint64_t) * numEdges);
+      graphFile.read(
+          reinterpret_cast<char*>(edgeDst.data()), sizeof(uint64_t) * numEdges);
       if (!graphFile) {
         GALOIS_DIE("failed to read file");
       }
@@ -1007,6 +1040,6 @@ public:
   }
 };
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 #endif

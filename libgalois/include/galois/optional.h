@@ -22,8 +22,8 @@
 
 #include <cassert>
 
-#include "galois/config.h"
 #include "galois/LazyObject.h"
+#include "galois/config.h"
 
 namespace galois {
 
@@ -145,6 +145,6 @@ public:
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

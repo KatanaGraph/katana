@@ -24,10 +24,10 @@
 
 #include <boost/mpl/if.hpp>
 
-#include "galois/config.h"
 #include "galois/LargeArray.h"
-#include "galois/graphs/FileGraph.h"
+#include "galois/config.h"
 #include "galois/graphs/Details.h"
+#include "galois/graphs/FileGraph.h"
 
 namespace galois {
 namespace graphs {
@@ -40,65 +40,71 @@ namespace graphs {
  * The position of template parameters may change between Galois releases; the
  * most robust way to specify them is through the with_XXX nested templates.
  */
-template <typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
-          bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
-          bool HasId = false, typename FileEdgeTy = EdgeTy>
-class LC_Linear_Graph
-    : private boost::noncopyable,
-      private internal::LocalIteratorFeature<UseNumaAlloc>,
-      private internal::OutOfLineLockableFeature<HasOutOfLineLockable &&
-                                                 !HasNoLockable> {
+template <
+    typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
+    bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
+    bool HasId = false, typename FileEdgeTy = EdgeTy>
+class LC_Linear_Graph : private boost::noncopyable,
+                        private internal::LocalIteratorFeature<UseNumaAlloc>,
+                        private internal::OutOfLineLockableFeature<
+                            HasOutOfLineLockable && !HasNoLockable> {
   template <typename Graph>
   friend class LC_InOut_Graph;
 
 public:
   template <bool _has_id>
   struct with_id {
-    typedef LC_Linear_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                            HasOutOfLineLockable, _has_id, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        _has_id, FileEdgeTy>
         type;
   };
 
   template <typename _node_data>
   struct with_node_data {
-    typedef LC_Linear_Graph<_node_data, EdgeTy, HasNoLockable, UseNumaAlloc,
-                            HasOutOfLineLockable, HasId, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        _node_data, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>
         type;
   };
 
   template <typename _edge_data>
   struct with_edge_data {
-    typedef LC_Linear_Graph<NodeTy, _edge_data, HasNoLockable, UseNumaAlloc,
-                            HasOutOfLineLockable, HasId, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        NodeTy, _edge_data, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>
         type;
   };
 
   template <typename _file_edge_data>
   struct with_file_edge_data {
-    typedef LC_Linear_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                            HasOutOfLineLockable, HasId, _file_edge_data>
+    typedef LC_Linear_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, _file_edge_data>
         type;
   };
 
   template <bool _has_no_lockable>
   struct with_no_lockable {
-    typedef LC_Linear_Graph<NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc,
-                            HasOutOfLineLockable, HasId, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>
         type;
   };
 
   template <bool _use_numa_alloc>
   struct with_numa_alloc {
-    typedef LC_Linear_Graph<NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc,
-                            HasOutOfLineLockable, HasId, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>
         type;
   };
 
   template <bool _has_out_of_line_lockable>
   struct with_out_of_line_lockable {
-    typedef LC_Linear_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                            _has_out_of_line_lockable,
-                            _has_out_of_line_lockable || HasId, FileEdgeTy>
+    typedef LC_Linear_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, _has_out_of_line_lockable,
+        _has_out_of_line_lockable || HasId, FileEdgeTy>
         type;
   };
 
@@ -108,21 +114,20 @@ protected:
   class NodeInfo;
   typedef internal::EdgeInfoBase<NodeInfo*, EdgeTy> EdgeInfo;
   typedef LargeArray<NodeInfo*> Nodes;
-  typedef internal::NodeInfoBaseTypes<NodeTy,
-                                      !HasNoLockable && !HasOutOfLineLockable>
+  typedef internal::NodeInfoBaseTypes<
+      NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfoTypes;
 
-  class NodeInfo
-      : public internal::NodeInfoBase<NodeTy,
-                                      !HasNoLockable && !HasOutOfLineLockable>,
-        public internal::IntrusiveId<
-            typename boost::mpl::if_c<HasId, uint32_t, void>::type> {
+  class NodeInfo : public internal::NodeInfoBase<
+                       NodeTy, !HasNoLockable && !HasOutOfLineLockable>,
+                   public internal::IntrusiveId<
+                       typename boost::mpl::if_c<HasId, uint32_t, void>::type> {
     friend class LC_Linear_Graph;
     int numEdges;
 
     EdgeInfo* edgeBegin() {
       NodeInfo* n = this;
-      ++n; // start of edges
+      ++n;  // start of edges
       return reinterpret_cast<EdgeInfo*>(n);
     }
 
@@ -163,40 +168,44 @@ protected:
   Nodes nodes;
 
   template <bool _A1 = HasNoLockable, bool _A2 = HasOutOfLineLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<!_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<!_A1 && !_A2>::type* = 0) {
     galois::runtime::acquire(N, mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<_A1 && !_A2>::type* = 0) {
     this->outOfLineAcquire(getId(N), mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode, MethodFlag,
-                   typename std::enable_if<_A2>::type* = 0) {}
+  void acquireNode(
+      GraphNode, MethodFlag, typename std::enable_if<_A2>::type* = 0) {}
 
   edge_iterator raw_begin(GraphNode N) { return N->edgeBegin(); }
 
   edge_iterator raw_end(GraphNode N) { return N->edgeEnd(); }
 
-  template <bool _A1 = EdgeInfo::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph& graph,
-                          typename FileGraph::edge_iterator nn, EdgeInfo* edge,
-                          typename std::enable_if<!_A1 || _A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeInfo::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph& graph, typename FileGraph::edge_iterator nn, EdgeInfo* edge,
+      typename std::enable_if<!_A1 || _A2>::type* = 0) {
     typedef LargeArray<FileEdgeTy> FED;
     if (EdgeInfo::has_value)
       edge->construct(graph.getEdgeData<typename FED::value_type>(nn));
   }
 
-  template <bool _A1 = EdgeInfo::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph&, typename FileGraph::edge_iterator,
-                          EdgeInfo* edge,
-                          typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeInfo::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph&, typename FileGraph::edge_iterator, EdgeInfo* edge,
+      typename std::enable_if<_A1 && !_A2>::type* = 0) {
     edge->construct();
   }
 
@@ -214,9 +223,9 @@ public:
   ~LC_Linear_Graph() {
     for (typename Nodes::iterator ii = nodes.begin(), ei = nodes.end();
          ii != ei; ++ii) {
-      NodeInfo* n         = *ii;
+      NodeInfo* n = *ii;
       EdgeInfo* edgeBegin = n->edgeBegin();
-      EdgeInfo* edgeEnd   = n->edgeEnd();
+      EdgeInfo* edgeEnd = n->edgeEnd();
 
       if (EdgeInfo::has_value) {
         while (edgeBegin != edgeEnd) {
@@ -228,8 +237,8 @@ public:
     }
   }
 
-  node_data_reference getData(GraphNode N,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+  node_data_reference getData(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, false);
     acquireNode(N, mflag);
     return N->getData();
@@ -277,8 +286,8 @@ public:
   }
 
   edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(edge_begin(N, mflag),
-                                         edge_end(N, mflag));
+    return internal::make_no_deref_range(
+        edge_begin(N, mflag), edge_end(N, mflag));
   }
 
   edges_iterator out_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
@@ -289,12 +298,13 @@ public:
    * Sorts outgoing edges of a node. Comparison function is over EdgeTy.
    */
   template <typename CompTy>
-  void sortEdgesByEdgeData(GraphNode N,
-                           const CompTy& comp = std::less<EdgeTy>(),
-                           MethodFlag mflag   = MethodFlag::WRITE) {
+  void sortEdgesByEdgeData(
+      GraphNode N, const CompTy& comp = std::less<EdgeTy>(),
+      MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    std::sort(N->edgeBegin(), N->edgeEnd(),
-              internal::EdgeSortCompWrapper<EdgeInfo, CompTy>(comp));
+    std::sort(
+        N->edgeBegin(), N->edgeEnd(),
+        internal::EdgeSortCompWrapper<EdgeInfo, CompTy>(comp));
   }
 
   /**
@@ -302,8 +312,8 @@ public:
    * <code>EdgeSortValue<EdgeTy></code>.
    */
   template <typename CompTy>
-  void sortEdges(GraphNode N, const CompTy& comp,
-                 MethodFlag mflag = MethodFlag::WRITE) {
+  void sortEdges(
+      GraphNode N, const CompTy& comp, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
     std::sort(N->edgeBegin(), N->edgeEnd(), comp);
   }
@@ -312,30 +322,31 @@ public:
     numNodes = graph.size();
     numEdges = graph.sizeEdges();
     if (UseNumaAlloc) {
-      data.allocateLocal(sizeof(NodeInfo) * numNodes * 2 +
-                         sizeof(EdgeInfo) * numEdges);
+      data.allocateLocal(
+          sizeof(NodeInfo) * numNodes * 2 + sizeof(EdgeInfo) * numEdges);
       nodes.allocateLocal(numNodes);
       this->outOfLineAllocateLocal(numNodes);
     } else {
-      data.allocateInterleaved(sizeof(NodeInfo) * numNodes * 2 +
-                               sizeof(EdgeInfo) * numEdges);
+      data.allocateInterleaved(
+          sizeof(NodeInfo) * numNodes * 2 + sizeof(EdgeInfo) * numEdges);
       nodes.allocateInterleaved(numNodes);
       this->outOfLineAllocateInterleaved(numNodes);
     }
   }
 
-  void constructNodesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          const ReadGraphAuxData&) {
+  void constructNodesFrom(
+      FileGraph& graph, unsigned tid, unsigned total, const ReadGraphAuxData&) {
     auto r = graph
-                 .divideByNode(Nodes::size_of::value + 2 * sizeof(NodeInfo) +
-                                   LC_Linear_Graph::size_of_out_of_line::value,
-                               sizeof(EdgeInfo), tid, total)
+                 .divideByNode(
+                     Nodes::size_of::value + 2 * sizeof(NodeInfo) +
+                         LC_Linear_Graph::size_of_out_of_line::value,
+                     sizeof(EdgeInfo), tid, total)
                  .first;
 
     this->setLocalRange(*r.first, *r.second);
     NodeInfo* curNode = reinterpret_cast<NodeInfo*>(data.data());
 
-    size_t id    = *r.first;
+    size_t id = *r.first;
     size_t edges = *graph.edge_begin(*r.first);
     size_t bytes = edges * sizeof(EdgeInfo) + 2 * (id + 1) * sizeof(NodeInfo);
     curNode += bytes / sizeof(NodeInfo);
@@ -348,16 +359,17 @@ public:
       curNode->numEdges =
           std::distance(graph.edge_begin(*ii), graph.edge_end(*ii));
       nodes[*ii] = curNode;
-      curNode    = curNode->next();
+      curNode = curNode->next();
     }
   }
 
-  void constructEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          const ReadGraphAuxData&) {
+  void constructEdgesFrom(
+      FileGraph& graph, unsigned tid, unsigned total, const ReadGraphAuxData&) {
     auto r = graph
-                 .divideByNode(Nodes::size_of::value + 2 * sizeof(NodeInfo) +
-                                   LC_Linear_Graph::size_of_out_of_line::value,
-                               sizeof(EdgeInfo), tid, total)
+                 .divideByNode(
+                     Nodes::size_of::value + 2 * sizeof(NodeInfo) +
+                         LC_Linear_Graph::size_of_out_of_line::value,
+                     sizeof(EdgeInfo), tid, total)
                  .first;
 
     for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
@@ -373,7 +385,7 @@ public:
   }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 
 #endif

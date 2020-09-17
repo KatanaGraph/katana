@@ -26,7 +26,8 @@
 
 namespace galois {
 
-static inline uint32_t bswap32(uint32_t x) {
+static inline uint32_t
+bswap32(uint32_t x) {
 #if defined(__GNUC__) || defined(__clang__)
   return __builtin_bswap32(x);
 #else
@@ -35,7 +36,8 @@ static inline uint32_t bswap32(uint32_t x) {
 #endif
 }
 
-static inline uint64_t bswap64(uint64_t x) {
+static inline uint64_t
+bswap64(uint64_t x) {
 #if defined(__GNUC__) || defined(__clang__)
   return __builtin_bswap64(x);
 #else
@@ -52,7 +54,8 @@ static inline uint64_t bswap64(uint64_t x) {
 // NB: Wrap these standard functions with different names because
 // sometimes le64toh and such are implemented as macros and we don't
 // want any nasty surprises.
-static inline uint64_t convert_le64toh(uint64_t x) {
+static inline uint64_t
+convert_le64toh(uint64_t x) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   return x;
 #else
@@ -60,7 +63,8 @@ static inline uint64_t convert_le64toh(uint64_t x) {
 #endif
 }
 
-static inline uint32_t convert_le32toh(uint32_t x) {
+static inline uint32_t
+convert_le32toh(uint32_t x) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   return x;
 #else
@@ -68,7 +72,8 @@ static inline uint32_t convert_le32toh(uint32_t x) {
 #endif
 }
 
-static inline uint64_t convert_htobe64(uint64_t x) {
+static inline uint64_t
+convert_htobe64(uint64_t x) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   return x;
 #else
@@ -76,7 +81,8 @@ static inline uint64_t convert_htobe64(uint64_t x) {
 #endif
 }
 
-static inline uint32_t convert_htobe32(uint32_t x) {
+static inline uint32_t
+convert_htobe32(uint32_t x) {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   return x;
 #else
@@ -84,7 +90,8 @@ static inline uint32_t convert_htobe32(uint32_t x) {
 #endif
 }
 
-static inline uint64_t convert_htole64(uint64_t x) {
+static inline uint64_t
+convert_htole64(uint64_t x) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   return x;
 #else
@@ -92,7 +99,8 @@ static inline uint64_t convert_htole64(uint64_t x) {
 #endif
 }
 
-static inline uint32_t convert_htole32(uint32_t x) {
+static inline uint32_t
+convert_htole32(uint32_t x) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   return x;
 #else
@@ -100,5 +108,5 @@ static inline uint32_t convert_htole32(uint32_t x) {
 #endif
 }
 
-} // namespace galois
+}  // namespace galois
 #endif

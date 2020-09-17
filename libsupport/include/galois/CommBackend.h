@@ -15,12 +15,12 @@ struct CommBackend {
   uint32_t Num{1};
   /// The id number of this task
   uint32_t ID{0};
-  CommBackend()                         = default;
+  CommBackend() = default;
   CommBackend(const CommBackend& other) = default;
-  CommBackend(CommBackend&& other)      = default;
+  CommBackend(CommBackend&& other) = default;
   CommBackend& operator=(const CommBackend& other) = default;
   CommBackend& operator=(CommBackend&& other) = default;
-  virtual ~CommBackend()                      = default;
+  virtual ~CommBackend() = default;
   /// Wait for all tasks to call Barrier
   virtual void Barrier() = 0;
   /// Notify other tasks that there was a failure; e.g., with MPI_Abort
@@ -32,6 +32,6 @@ struct NullCommBackend : public CommBackend {
   void NotifyFailure() override {}
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

@@ -21,8 +21,10 @@
 #define LONESTAR_MATRIXCOMPLETION_H
 
 #include <cassert>
-#include <galois/gstl.h>
 #include <string>
+
+#include <galois/gstl.h>
+
 #include "llvm/Support/CommandLine.h"
 
 typedef float LatentValue;
@@ -30,7 +32,7 @@ typedef float EdgeType;
 
 // Purdue, CSGD: 100; Intel: 20
 // static const int LATENT_VECTOR_SIZE = 100;
-static const int LATENT_VECTOR_SIZE = 20; // Purdue, CSGD: 100; Intel: 20
+static const int LATENT_VECTOR_SIZE = 20;  // Purdue, CSGD: 100; Intel: 20
 
 /**
  * Common commandline parameters to for matrix completion algorithms
@@ -43,77 +45,78 @@ namespace cll = llvm::cl;
  * (Purdue, Neflix): 0.012, (Purdue, Yahoo Music): 0.00075, (Purdue, HugeWiki):
  * 0.001 Intel: 0.001 Bottou: 0.1
  */
-static cll::opt<float> learningRate("learningRate",
-                                    cll::desc("learning rate parameter [alpha] "
-                                              "for Bold, Bottou, Intel and "
-                                              "Purdue step size function"),
-                                    cll::init(0.012));
+static cll::opt<float> learningRate(
+    "learningRate",
+    cll::desc("learning rate parameter [alpha] "
+              "for Bold, Bottou, Intel and "
+              "Purdue step size function"),
+    cll::init(0.012));
 
 /*
  * (Purdue, Netflix): 0.015, (Purdue, Yahoo Music): 0.01,
  * (Purdue, HugeWiki): 0.0, Intel: 0.9
  */
-static cll::opt<float> decayRate("decayRate",
-                                 cll::desc("decay rate parameter [beta] for "
-                                           "Intel and Purdue step size "
-                                           "function"),
-                                 cll::init(0.015));
+static cll::opt<float> decayRate(
+    "decayRate",
+    cll::desc("decay rate parameter [beta] for "
+              "Intel and Purdue step size "
+              "function"),
+    cll::init(0.015));
 /*
  * (Purdue, Netflix): 0.05, (Purdue, Yahoo Music): 1.0, (Purdue, HugeWiki): 0.01
  * Intel: 0.001
  */
-static cll::opt<float> lambda("lambda",
-                              cll::desc("regularization parameter [lambda]"),
-                              cll::init(0.05));
+static cll::opt<float> lambda(
+    "lambda", cll::desc("regularization parameter [lambda]"), cll::init(0.05));
 
-static cll::opt<unsigned> usersPerBlock("usersPerBlock",
-                                        cll::desc("users per block"),
-                                        cll::init(2048));
-static cll::opt<unsigned> itemsPerBlock("itemsPerBlock",
-                                        cll::desc("items per block"),
-                                        cll::init(350));
-static cll::opt<float>
-    tolerance("tolerance", cll::desc("convergence tolerance"), cll::init(0.01));
+static cll::opt<unsigned> usersPerBlock(
+    "usersPerBlock", cll::desc("users per block"), cll::init(2048));
+static cll::opt<unsigned> itemsPerBlock(
+    "itemsPerBlock", cll::desc("items per block"), cll::init(350));
+static cll::opt<float> tolerance(
+    "tolerance", cll::desc("convergence tolerance"), cll::init(0.01));
 
-static cll::opt<bool> useSameLatentVector("useSameLatentVector",
-                                          cll::desc("initialize all nodes to "
-                                                    "use same latent vector"),
-                                          cll::init(false));
+static cll::opt<bool> useSameLatentVector(
+    "useSameLatentVector",
+    cll::desc("initialize all nodes to "
+              "use same latent vector"),
+    cll::init(false));
 
 /*
  * Regarding algorithm termination
  */
-static cll::opt<unsigned> maxUpdates("maxUpdates",
-                                     cll::desc("Max number of times to update "
-                                               "latent vectors (default 100)"),
-                                     cll::init(100));
+static cll::opt<unsigned> maxUpdates(
+    "maxUpdates",
+    cll::desc("Max number of times to update "
+              "latent vectors (default 100)"),
+    cll::init(100));
 
-static cll::opt<std::string>
-    outputFilename(cll::Positional, cll::desc("[output file]"), cll::init(""));
-static cll::opt<std::string>
-    transposeGraphName("graphTranspose", cll::desc("Transpose of input graph"));
-static cll::opt<OutputType>
-    outputType("output", cll::desc("Output type:"),
-               cll::values(clEnumValN(OutputType::binary, "binary", "Binary"),
-                           clEnumValN(OutputType::ascii, "ascii", "ASCII")),
-               cll::init(OutputType::binary));
+static cll::opt<std::string> outputFilename(
+    cll::Positional, cll::desc("[output file]"), cll::init(""));
+static cll::opt<std::string> transposeGraphName(
+    "graphTranspose", cll::desc("Transpose of input graph"));
+static cll::opt<OutputType> outputType(
+    "output", cll::desc("Output type:"),
+    cll::values(
+        clEnumValN(OutputType::binary, "binary", "Binary"),
+        clEnumValN(OutputType::ascii, "ascii", "ASCII")),
+    cll::init(OutputType::binary));
 
-static cll::opt<unsigned int>
-    updatesPerEdge("updatesPerEdge", cll::desc("number of updates per edge"),
-                   cll::init(1));
+static cll::opt<unsigned int> updatesPerEdge(
+    "updatesPerEdge", cll::desc("number of updates per edge"), cll::init(1));
 
-static cll::opt<unsigned int>
-    fixedRounds("fixedRounds", cll::desc("run for a fixed number of rounds"),
-                cll::init(0));
-static cll::opt<bool> useExactError("useExactError",
-                                    cll::desc("use exact error for testing "
-                                              "convergence"),
-                                    cll::init(false));
-static cll::opt<bool>
-    useDetInit("useDetInit",
-               cll::desc("initialize all nodes to "
-                         "use deterministic values for latent vector"),
-               cll::init(false));
+static cll::opt<unsigned int> fixedRounds(
+    "fixedRounds", cll::desc("run for a fixed number of rounds"), cll::init(0));
+static cll::opt<bool> useExactError(
+    "useExactError",
+    cll::desc("use exact error for testing "
+              "convergence"),
+    cll::init(false));
+static cll::opt<bool> useDetInit(
+    "useDetInit",
+    cll::desc("initialize all nodes to "
+              "use deterministic values for latent vector"),
+    cll::init(false));
 
 /**
  * Inner product of 2 vectors.
@@ -131,8 +134,10 @@ static cll::opt<bool>
  * if init is -"ground truth"
  */
 template <typename T>
-T innerProduct(T* __restrict__ first1, [[maybe_unused]] T* __restrict__ last1,
-               T* __restrict__ first2, T init) {
+T
+innerProduct(
+    T* __restrict__ first1, [[maybe_unused]] T* __restrict__ last1,
+    T* __restrict__ first2, T init) {
   assert(first1 + LATENT_VECTOR_SIZE == last1);
   for (int i = 0; i < LATENT_VECTOR_SIZE; ++i) {
     init += first1[i] * first2[i];
@@ -141,11 +146,12 @@ T innerProduct(T* __restrict__ first1, [[maybe_unused]] T* __restrict__ last1,
 }
 
 template <typename T>
-T predictionError(T* __restrict__ itemLatent, T* __restrict__ userLatent,
-                  double actual) {
+T
+predictionError(
+    T* __restrict__ itemLatent, T* __restrict__ userLatent, double actual) {
   T v = actual;
-  return innerProduct(itemLatent, itemLatent + LATENT_VECTOR_SIZE, userLatent,
-                      -v);
+  return innerProduct(
+      itemLatent, itemLatent + LATENT_VECTOR_SIZE, userLatent, -v);
 }
 
 /**
@@ -164,14 +170,16 @@ T predictionError(T* __restrict__ itemLatent, T* __restrict__ userLatent,
  * @return Error before gradient update
  */
 template <typename T>
-T doGradientUpdate(T* __restrict__ itemLatent, T* __restrict__ userLatent,
-                   double lambda, double edgeRating, double stepSize) {
+T
+doGradientUpdate(
+    T* __restrict__ itemLatent, T* __restrict__ userLatent, double lambda,
+    double edgeRating, double stepSize) {
   // Implicit cast to type T
-  T l      = lambda;
-  T step   = stepSize;
+  T l = lambda;
+  T step = stepSize;
   T rating = edgeRating;
-  T error  = innerProduct(itemLatent, itemLatent + LATENT_VECTOR_SIZE,
-                         userLatent, -rating);
+  T error = innerProduct(
+      itemLatent, itemLatent + LATENT_VECTOR_SIZE, userLatent, -rating);
 
   // Take gradient step to reduce error
   for (int i = 0; i < LATENT_VECTOR_SIZE; i++) {
@@ -186,7 +194,7 @@ T doGradientUpdate(T* __restrict__ itemLatent, T* __restrict__ userLatent,
 
 struct StepFunction {
   virtual LatentValue stepSize(int round) const = 0;
-  virtual std::string name() const              = 0;
+  virtual std::string name() const = 0;
   virtual bool isBold() const { return false; }
   virtual ~StepFunction() {}
 };
@@ -195,7 +203,8 @@ struct StepFunction {
  * Generate a number [-1, 1] using node id
  * for deterministic runs
  */
-static double genVal(uint32_t n) {
+static double
+genVal(uint32_t n) {
   return 2.0 * ((double)n / (double)RAND_MAX) - 1.0;
 }
 

@@ -1,10 +1,9 @@
-#include "TestPropertyGraph.h"
-
 #include <benchmark/benchmark.h>
 
+#include "TestPropertyGraph.h"
 #include "galois/Logging.h"
-#include "galois/graphs/PropertyGraph.h"
 #include "galois/graphs/PropertyFileGraph.h"
+#include "galois/graphs/PropertyGraph.h"
 
 namespace gg = galois::graphs;
 
@@ -12,7 +11,7 @@ using DataType = int64_t;
 
 #define FIELD(Number)                                                          \
   struct Field##Number {                                                       \
-    using ViewType  = galois::PODPropertyView<DataType>;                       \
+    using ViewType = galois::PODPropertyView<DataType>;                        \
     using ArrowType = arrow::CTypeTraits<DataType>::ArrowType;                 \
   }
 
@@ -31,10 +30,11 @@ FIELD(9);
 
 namespace {
 
-void MakeArguments(benchmark::internal::Benchmark* b) {
+void
+MakeArguments(benchmark::internal::Benchmark* b) {
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 2; ++j) {
-      long num_nodes      = 1 << (i * 8 + 10);
+      long num_nodes = 1 << (i * 8 + 10);
       long num_properties = j * 3 + 1;
       b->Args({num_nodes, num_properties});
     }
@@ -62,12 +62,14 @@ struct PropertyTuple<7> {
 
 template <>
 struct PropertyTuple<10> {
-  using type = std::tuple<Field0, Field1, Field2, Field3, Field4, Field5,
-                          Field6, Field7, Field8, Field9>;
+  using type = std::tuple<
+      Field0, Field1, Field2, Field3, Field4, Field5, Field6, Field7, Field8,
+      Field9>;
 };
 
 template <size_t num_properties>
-void IterateProperty(benchmark::State& state, gg::PropertyFileGraph* g) {
+void
+IterateProperty(benchmark::State& state, gg::PropertyFileGraph* g) {
   using P = typename PropertyTuple<num_properties>::type;
 
   auto r = gg::PropertyGraph<P, P>::Make(g);
@@ -77,15 +79,16 @@ void IterateProperty(benchmark::State& state, gg::PropertyFileGraph* g) {
 
   for (auto _ : state) {
     size_t r_iterate = Iterate(r.value(), num_properties);
-    size_t expected =
-        ExpectedValue(g->topology().num_nodes(), g->topology().num_edges(),
-                      num_properties, false);
-    GALOIS_LOG_VASSERT(r_iterate == expected, "expected {} found {}", expected,
-                       r_iterate);
+    size_t expected = ExpectedValue(
+        g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+        false);
+    GALOIS_LOG_VASSERT(
+        r_iterate == expected, "expected {} found {}", expected, r_iterate);
   }
 }
 
-void IterateProperty(benchmark::State& state) {
+void
+IterateProperty(benchmark::State& state) {
   auto [num_nodes, num_properties] =
       std::make_tuple(state.range(0), state.range(1));
 
@@ -108,7 +111,8 @@ void IterateProperty(benchmark::State& state) {
   }
 }
 
-void IterateBaseline(benchmark::State& state) {
+void
+IterateBaseline(benchmark::State& state) {
   auto [num_nodes, num_properties] =
       std::make_tuple(state.range(0), state.range(1));
 
@@ -119,9 +123,9 @@ void IterateBaseline(benchmark::State& state) {
 
   for (auto _ : state) {
     size_t r = BaselineIterate<Field0, Field0>(g.get(), num_properties);
-    size_t expected =
-        ExpectedValue(g->topology().num_nodes(), g->topology().num_edges(),
-                      num_properties, false);
+    size_t expected = ExpectedValue(
+        g->topology().num_nodes(), g->topology().num_edges(), num_properties,
+        false);
     GALOIS_LOG_VASSERT(r == expected, "expected {} found {}", expected, r);
   }
 }
@@ -129,6 +133,6 @@ void IterateBaseline(benchmark::State& state) {
 BENCHMARK(IterateBaseline)->Apply(MakeArguments);
 BENCHMARK(IterateProperty)->Apply(MakeArguments);
 
-} // namespace
+}  // namespace
 
 BENCHMARK_MAIN();

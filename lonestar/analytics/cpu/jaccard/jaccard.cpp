@@ -17,41 +17,40 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <deque>
+#include <iostream>
+#include <type_traits>
+#include <unordered_set>
+
+#include "Lonestar/BFS_SSSP.h"
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Galois.h"
-#include "galois/gstl.h"
 #include "galois/Reduction.h"
 #include "galois/Timer.h"
 #include "galois/graphs/LCGraph.h"
 #include "galois/graphs/TypeTraits.h"
-#include "Lonestar/BoilerPlate.h"
-#include "Lonestar/BFS_SSSP.h"
-
+#include "galois/gstl.h"
 #include "llvm/Support/CommandLine.h"
-
-#include <iostream>
-#include <deque>
-#include <type_traits>
-#include <unordered_set>
 
 namespace cll = llvm::cl;
 
 static const char* name = "Jaccard Similarity";
 
-static const char* desc = "Compute the similarity of nodes (to some base node) "
-                          "based on the similarity of their neighbor sets.";
+static const char* desc =
+    "Compute the similarity of nodes (to some base node) "
+    "based on the similarity of their neighbor sets.";
 
 static const char* url = "jaccard";
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int>
-    baseNode("baseNode",
-             cll::desc("Node to compute similarity to (default value 0)"),
-             cll::init(0));
-static cll::opt<unsigned int>
-    reportNode("reportNode",
-               cll::desc("Node to report the similarity of (default value 1)"),
-               cll::init(1));
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<unsigned int> baseNode(
+    "baseNode", cll::desc("Node to compute similarity to (default value 0)"),
+    cll::init(0));
+static cll::opt<unsigned int> reportNode(
+    "reportNode",
+    cll::desc("Node to report the similarity of (default value 1)"),
+    cll::init(1));
 
 using Graph =
     galois::graphs::LC_CSR_Graph<double, void>::with_no_lockable<true>::type;
@@ -59,7 +58,8 @@ using Graph =
 
 using GNode = Graph::GraphNode;
 
-void algo(Graph& graph, GNode base) {
+void
+algo(Graph& graph, GNode base) {
   std::unordered_set<GNode> base_neighbors;
 
   // Collect all the neighbors of the base node into a hash set.
@@ -72,7 +72,7 @@ void algo(Graph& graph, GNode base) {
   galois::do_all(
       galois::iterate(graph),
       [&](const GNode& n2) {
-        double& n2_data  = graph.getData(n2);
+        double& n2_data = graph.getData(n2);
         uint32_t n2_size = 0, intersection_size = 0;
         // TODO: Using a sorted edge list would allow a much faster intersection
         // operation. Use that here.
@@ -94,7 +94,8 @@ void algo(Graph& graph, GNode base) {
       galois::steal(), galois::loopname("jaccard"));
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFile);
 
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
   auto it = graph.begin();
   std::advance(it, baseNode.getValue());
   base = *it;
-  it   = graph.begin();
+  it = graph.begin();
   std::advance(it, reportNode.getValue());
   report = *it;
 
@@ -170,8 +171,9 @@ int main(int argc, char** argv) {
     if (graph.getData(base) == 1.0) {
       std::cout << "Verification successful.\n";
     } else {
-      GALOIS_DIE("verification failed (this algorithm does not support graphs "
-                 "with duplicate edges)");
+      GALOIS_DIE(
+          "verification failed (this algorithm does not support graphs "
+          "with duplicate edges)");
     }
   }
 

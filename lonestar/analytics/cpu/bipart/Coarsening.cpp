@@ -45,7 +45,8 @@ constexpr static const uint32_t kCoarsestNodeLimit = 300u;
  *
  * @returns hashed value for the specified param val
  */
-uint32_t Hash(NetnumTy val) {
+uint32_t
+Hash(NetnumTy val) {
   int64_t seed = val * 1103515245 + 12345;
   return ((seed / 65536) % 32768);
 }
@@ -57,15 +58,16 @@ uint32_t Hash(NetnumTy val) {
  * @param combined_edge_list Concatenated list of hyperedges of the
  * finer-graphs in specified param graph
  */
-void ParallelRand(
+void
+ParallelRand(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list) {
   galois::do_all(
-      galois::iterate(uint32_t{0},
-                      static_cast<uint32_t>(combined_edge_list.size())),
+      galois::iterate(
+          uint32_t{0}, static_cast<uint32_t>(combined_edge_list.size())),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t index        = hedge_index_pair.second;
+        uint32_t index = hedge_index_pair.second;
         if (graph[index] == nullptr) {
           return;
         }
@@ -86,7 +88,8 @@ void ParallelRand(
  * finer-graphs in specified param graph
  */
 template <MatchingPolicyFunction Matcher>
-void ParallelPrioRand(
+void
+ParallelPrioRand(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list) {
   ParallelRand(graph, combined_edge_list);
@@ -98,21 +101,22 @@ void ParallelPrioRand(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
+        uint32_t g_index = hedge_index_pair.second;
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge        = hedge_index_pair.first;
+        GNode hedge = hedge_index_pair.first;
         GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
 
         Matcher(hedge, fine_graph);
         // Iterate inside normal edges of the hyper edge.
         for (auto& fedge : fine_graph->edges(hedge)) {
           GNode dst = fine_graph->getEdgeDst(fedge);
-          galois::atomicMin(fine_graph->getData(dst).GetNetval(),
-                            fine_graph->getData(hedge).GetNetval().load());
+          galois::atomicMin(
+              fine_graph->getData(dst).GetNetval(),
+              fine_graph->getData(hedge).GetNetval().load());
         }
       },
       galois::steal(), galois::chunk_size<kChunkSize>(),
@@ -122,22 +126,22 @@ void ParallelPrioRand(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
+        uint32_t g_index = hedge_index_pair.second;
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge           = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[g_index]->GetParentGraph()->GetGraph();
+        GNode hedge = hedge_index_pair.first;
+        GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
         MetisNode& hedge_data = fine_graph->getData(hedge);
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode dst                = fine_graph->getEdgeDst(fedge);
+          GNode dst = fine_graph->getEdgeDst(fedge);
           MetisNode& dst_node_data = fine_graph->getData(dst);
 
           if (dst_node_data.GetNetval() == hedge_data.GetNetval()) {
-            galois::atomicMin(dst_node_data.GetNetrand(),
-                              hedge_data.GetNetrand().load());
+            galois::atomicMin(
+                dst_node_data.GetNetrand(), hedge_data.GetNetrand().load());
           }
         }
       },
@@ -148,22 +152,22 @@ void ParallelPrioRand(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
+        uint32_t g_index = hedge_index_pair.second;
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge           = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[g_index]->GetParentGraph()->GetGraph();
+        GNode hedge = hedge_index_pair.first;
+        GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
         MetisNode& hedge_data = fine_graph->getData(hedge);
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode dst                = fine_graph->getEdgeDst(fedge);
+          GNode dst = fine_graph->getEdgeDst(fedge);
           MetisNode& dst_node_data = fine_graph->getData(dst);
 
           if (dst_node_data.GetNetrand() == hedge_data.GetNetrand()) {
-            galois::atomicMin(dst_node_data.GetNetnum(),
-                              hedge_data.GetNetnum().load());
+            galois::atomicMin(
+                dst_node_data.GetNetnum(), hedge_data.GetNetnum().load());
           }
         }
       },
@@ -187,7 +191,8 @@ void ParallelPrioRand(
  * coarsened nodes
  */
 template <MatchingPolicyFunction Matcher>
-void ParallelHMatchAndCreateNodes(
+void
+ParallelHMatchAndCreateNodes(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<GNodeBag>& nodes, std::vector<galois::DynamicBitSet>& hedges,
@@ -195,14 +200,14 @@ void ParallelHMatchAndCreateNodes(
   ParallelPrioRand<Matcher>(graph, combined_edge_list);
 
   uint32_t total_hedge_size = combined_edge_list.size();
-  uint32_t num_partitions   = graph.size();
+  uint32_t num_partitions = graph.size();
   std::vector<galois::InsertBag<GNode>> hedge_bag(num_partitions);
 
   galois::do_all(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t index        = hedge_index_pair.second;
+        uint32_t index = hedge_index_pair.second;
 
         if (graph[index] == nullptr) {
           return;
@@ -210,7 +215,7 @@ void ParallelHMatchAndCreateNodes(
 
         GGraph* fine_graph = graph[index]->GetParentGraph()->GetGraph();
 
-        GNode hedge           = hedge_index_pair.first;
+        GNode hedge = hedge_index_pair.first;
         MetisNode& hedge_data = fine_graph->getData(hedge);
         std::vector<GNode> edges;
         GNode node_id{std::numeric_limits<GNode>::max()};
@@ -222,7 +227,7 @@ void ParallelHMatchAndCreateNodes(
         // exceeds the limit, then the current node is not
         // included in the currently visiting match; so ignore it for now.
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode dst                = fine_graph->getEdgeDst(fedge);
+          GNode dst = fine_graph->getEdgeDst(fedge);
           MetisNode& dst_node_data = fine_graph->getData(dst);
           if (dst_node_data.IsMatched()) {
             flag = true;
@@ -304,35 +309,37 @@ void ParallelHMatchAndCreateNodes(
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
  */
-void MoreCoarse(std::vector<MetisGraph*>& graph,
-                std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-                std::vector<std::vector<WeightTy>>& weight) {
+void
+MoreCoarse(
+    std::vector<MetisGraph*>& graph,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
+    std::vector<std::vector<WeightTy>>& weight) {
   using VecTy = std::vector<GNode>;
 
   uint32_t num_partitions = graph.size();
   std::vector<GNodeBag> updated_node_bag(num_partitions);
   uint32_t total_hedge_size = combined_edge_list.size();
-  NetvalTy min_netval       = std::numeric_limits<NetvalTy>::min();
+  NetvalTy min_netval = std::numeric_limits<NetvalTy>::min();
 
   galois::do_all(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
+        uint32_t g_index = hedge_index_pair.second;
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge           = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[g_index]->GetParentGraph()->GetGraph();
+        GNode hedge = hedge_index_pair.first;
+        GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
         MetisNode& hedge_data = fine_graph->getData(hedge);
 
         if (hedge_data.IsMatched()) {
           return;
         }
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode dst                = fine_graph->getEdgeDst(fedge);
+          GNode dst = fine_graph->getEdgeDst(fedge);
           MetisNode& dst_node_data = fine_graph->getData(dst);
           if (dst_node_data.IsMatched()) {
             dst_node_data.SetNetval(min_netval);
@@ -346,15 +353,15 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
-        WeightTy max_weight   = std::numeric_limits<WeightTy>::max();
+        uint32_t g_index = hedge_index_pair.second;
+        WeightTy max_weight = std::numeric_limits<WeightTy>::max();
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge           = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[g_index]->GetParentGraph()->GetGraph();
+        GNode hedge = hedge_index_pair.first;
+        GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
         MetisNode& hedge_node = fine_graph->getData(hedge);
         WeightTy best_weight{max_weight};
         GNode best_node{0};
@@ -365,7 +372,7 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
         }
 
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode mem_node           = fine_graph->getEdgeDst(fedge);
+          GNode mem_node = fine_graph->getEdgeDst(fedge);
           MetisNode& mem_node_data = fine_graph->getData(mem_node);
           // If dst is already in a match,
           // then compares with the current minimum node.
@@ -374,7 +381,7 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
               WeightTy node_weight = mem_node_data.GetWeight();
               if (node_weight < best_weight) {
                 best_weight = node_weight;
-                best_node   = mem_node;
+                best_node = mem_node;
               } else if (node_weight == best_weight && mem_node < best_node) {
                 best_node = mem_node;
               }
@@ -387,7 +394,7 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
 
         if (cells.size() > 0 && best_weight < max_weight) {
           MetisNode& best_node_data = fine_graph->getData(best_node);
-          GNode b_parent            = best_node_data.GetParent();
+          GNode b_parent = best_node_data.GetParent();
           // Iterate not yet matched nodes.
           for (GNode nym : cells) {
             MetisNode& nym_node = fine_graph->getData(nym);
@@ -417,7 +424,7 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
 
         for (GNode nym : updated_node_bag[i]) {
           MetisNode& nym_node = fine_graph->getData(nym);
-          GNode nym_parent    = nym_node.GetParent();
+          GNode nym_parent = nym_node.GetParent();
           weight[i][nym_parent - fine_graph->hedges] += nym_node.GetWeight();
         }
       },
@@ -437,7 +444,8 @@ void MoreCoarse(std::vector<MetisGraph*>& graph,
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
  */
-void CoarsePhaseII(
+void
+CoarsePhaseII(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<galois::DynamicBitSet>& hedges,
@@ -451,14 +459,14 @@ void CoarsePhaseII(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](GNode h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t g_index      = hedge_index_pair.second;
+        uint32_t g_index = hedge_index_pair.second;
 
         if (graph[g_index] == nullptr) {
           return;
         }
 
-        GNode hedge           = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[g_index]->GetParentGraph()->GetGraph();
+        GNode hedge = hedge_index_pair.first;
+        GGraph* fine_graph = graph[g_index]->GetParentGraph()->GetGraph();
         MetisNode& hedge_data = fine_graph->getData(hedge);
 
         if (hedge_data.IsMatched()) {
@@ -472,7 +480,7 @@ void CoarsePhaseII(
         // First, check if there are nodes having different parents.
         // Second, check if there is any node which is still not in a match.
         for (auto& fedge : fine_graph->edges(hedge)) {
-          GNode mem_node           = fine_graph->getEdgeDst(fedge);
+          GNode mem_node = fine_graph->getEdgeDst(fedge);
           MetisNode& mem_node_data = fine_graph->getData(mem_node);
           if (mem_node_data.IsMatched()) {
             GNode cur_parent = mem_node_data.GetParent();
@@ -508,7 +516,8 @@ void CoarsePhaseII(
  * @param combined_node_list Concatenated list of nodes of the
  * finer-graphs in specified param graph
  */
-void FindLoneNodes(
+void
+FindLoneNodes(
     std::vector<GGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
@@ -521,8 +530,8 @@ void FindLoneNodes(
       galois::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n_id) {
         auto node_index_pair = combined_node_list[n_id];
-        uint32_t index       = node_index_pair.second;
-        GNode node           = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
+        GNode node = node_index_pair.first;
         graph[index]->getData(node).UnsetNotAlone();
       },
       galois::loopname("Coarsening-Initialize-LoneNodes"));
@@ -533,9 +542,9 @@ void FindLoneNodes(
       galois::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t hedge_id) {
         auto hedge_index_pair = combined_edge_list[hedge_id];
-        uint32_t index        = hedge_index_pair.second;
-        GNode src             = hedge_index_pair.first;
-        GGraph* fine_graph    = graph[index];
+        uint32_t index = hedge_index_pair.second;
+        GNode src = hedge_index_pair.first;
+        GGraph* fine_graph = graph[index];
         for (auto& e : fine_graph->edges(src)) {
           GNode dst = fine_graph->getEdgeDst(e);
           fine_graph->getData(dst).SetNotAlone();
@@ -558,7 +567,8 @@ void FindLoneNodes(
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
  */
-void ParallelCreateEdges(
+void
+ParallelCreateEdges(
     std::vector<MetisGraph*>& coarse_metis_graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
@@ -566,8 +576,8 @@ void ParallelCreateEdges(
     std::vector<galois::DynamicBitSet>& hedges,
     std::vector<std::vector<WeightTy>>& weight) {
   uint32_t num_partitions = coarse_metis_graph.size();
-  NetnumTy max_netnum     = std::numeric_limits<NetnumTy>::max();
-  NetvalTy max_netval     = std::numeric_limits<NetvalTy>::max();
+  NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
+  NetvalTy max_netval = std::numeric_limits<NetvalTy>::max();
 
   // For conveniences, construct pointer arrays pointing to graphs.
   std::vector<GGraph*> fine_graphs(num_partitions, nullptr);
@@ -593,8 +603,8 @@ void ParallelCreateEdges(
       galois::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
-        uint32_t h_index      = hedge_index_pair.second;
-        GNode hedge           = hedge_index_pair.first;
+        uint32_t h_index = hedge_index_pair.second;
+        GNode hedge = hedge_index_pair.first;
         if (hedges[h_index].test(hedge)) {
           num_wip_hg[h_index] += 1;
         }
@@ -610,15 +620,15 @@ void ParallelCreateEdges(
       galois::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
-        uint32_t n_index     = node_index_pair.second;
-        GNode node           = node_index_pair.first;
+        uint32_t n_index = node_index_pair.second;
+        GNode node = node_index_pair.first;
         MetisNode& node_data = fine_graphs[n_index]->getData(node);
         // If a node is not connected to a hyper edge,
         // then it can be considered as a coarsened node.
         if (!node_data.IsMatched() && node_data.IsNotAlone()) {
           nodes_bag[n_index].emplace(node);
           node_data.SetMatched();
-          node_data.SetParent(node); ///< self-edge.
+          node_data.SetParent(node);  ///< self-edge.
           node_data.SetNetnum(max_netnum);
           weight[n_index][node - fine_graphs[n_index]->hedges] =
               node_data.GetWeight();
@@ -642,8 +652,8 @@ void ParallelCreateEdges(
           return;
         }
 
-        std::vector<GNode> repr_node_ids(kLoneNodesCoarsenFactor,
-                                         std::numeric_limits<GNode>::max());
+        std::vector<GNode> repr_node_ids(
+            kLoneNodesCoarsenFactor, std::numeric_limits<GNode>::max());
         // FIXME(HCLee) need better name.
         galois::DynamicBitSet new_match_filter;
         new_match_filter.resize(kLoneNodesCoarsenFactor);
@@ -666,8 +676,8 @@ void ParallelCreateEdges(
 
         // 3) Update the processed nodes information.
         for (GNode n : postponded_nodes[i]) {
-          uint32_t n_index     = n % kLoneNodesCoarsenFactor;
-          GNode repr_node_id   = repr_node_ids[n_index];
+          uint32_t n_index = n % kLoneNodesCoarsenFactor;
+          GNode repr_node_id = repr_node_ids[n_index];
           MetisNode& node_data = fine_graphs[i]->getData(n);
           node_data.SetMatched();
           node_data.SetParent(repr_node_id);
@@ -693,10 +703,10 @@ void ParallelCreateEdges(
       continue;
     }
     uint32_t num_hnodes = fine_graphs[i]->hnodes;
-    hnum[i]             = num_wip_hg[i].reduce(); ///< # of hedges.
+    hnum[i] = num_wip_hg[i].reduce();  ///< # of hedges.
     // # of the representative nodes of the
     // coarsened match inside of i-th hedge.
-    nodes[i]  = std::distance(nodes_bag[i].begin(), nodes_bag[i].end());
+    nodes[i] = std::distance(nodes_bag[i].begin(), nodes_bag[i].end());
     newval[i] = hnum[i]; /* # of hedges. */
     idmap[i].resize(num_hnodes);
     new_weight[i].resize(nodes[i]);
@@ -710,7 +720,7 @@ void ParallelCreateEdges(
           return;
         }
         uint32_t num_hedges = fine_graphs[i]->hedges;
-        uint32_t tot_size   = fine_graphs[i]->size();
+        uint32_t tot_size = fine_graphs[i]->size();
         galois::DynamicBitSet new_match_filter;
         new_match_filter.resize(tot_size);
 
@@ -723,7 +733,7 @@ void ParallelCreateEdges(
         for (uint32_t n = num_hedges; n < tot_size; n++) {
           if (new_match_filter.test(n)) {
             // ID of the appended coarsened node.
-            GNode current_id         = newval[i]++;
+            GNode current_id = newval[i]++;
             idmap[i][n - num_hedges] = current_id;
             // new_weight: sparse array of the coarsened nodes.
             // weight: dense array of the nodes.
@@ -739,8 +749,8 @@ void ParallelCreateEdges(
       galois::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
-        uint32_t g_index     = node_index_pair.second;
-        GNode node           = node_index_pair.first;
+        uint32_t g_index = node_index_pair.second;
+        GNode node = node_index_pair.first;
         MetisNode& node_data = fine_graphs[g_index]->getData(node);
 
         GNode par_id = node_data.GetParent();
@@ -762,8 +772,8 @@ void ParallelCreateEdges(
         }
         uint32_t i_num_hedge = hnum[i];
         uint32_t i_num_fedge = nodes[i];
-        uint32_t num_iedges  = i_num_fedge + i_num_hedge;
-        num_nodes_next[i]    = i_num_hedge + i_num_fedge;
+        uint32_t num_iedges = i_num_fedge + i_num_hedge;
+        num_nodes_next[i] = i_num_hedge + i_num_fedge;
 
         edges_id[i].resize(num_iedges);
         old_id[i].resize(i_num_hedge);
@@ -784,8 +794,8 @@ void ParallelCreateEdges(
       galois::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t v) {
         auto hedge_index_pair = combined_edge_list[v];
-        uint32_t index        = hedge_index_pair.second;
-        GNode n               = hedge_index_pair.first;
+        uint32_t index = hedge_index_pair.second;
+        GNode n = hedge_index_pair.first;
 
         if (!hedges[index].test(n)) {
           return;
@@ -796,11 +806,11 @@ void ParallelCreateEdges(
         GNode id = f_graph.getData(n).GetNodeId();
 
         for (auto& fedge : f_graph.edges(n)) {
-          GNode dst           = f_graph.getEdgeDst(fedge);
+          GNode dst = f_graph.getEdgeDst(fedge);
           MetisNode& dst_data = f_graph.getData(dst);
-          GNode pid           = dst_data.GetParent();
-          auto parent_iter    = std::find(edges_id[index][id].begin(),
-                                       edges_id[index][id].end(), pid);
+          GNode pid = dst_data.GetParent();
+          auto parent_iter = std::find(
+              edges_id[index][id].begin(), edges_id[index][id].end(), pid);
           // If a parent does not exist in the edge id array,
           // then add it.
           if (parent_iter == edges_id[index][id].end()) {
@@ -835,14 +845,15 @@ void ParallelCreateEdges(
       continue;
     }
 
-    uint32_t num_ith_nodes  = num_nodes_next[i];
+    uint32_t num_ith_nodes = num_nodes_next[i];
     uint64_t num_edges_next = num_edges_acc[i].reduce();
 
     ParallelPrefixSum(edges_prefixsum[i]);
 
     GGraph& c_graph = *coarse_graphs[i];
-    c_graph.constructFrom(num_ith_nodes, num_edges_next,
-                          std::move(edges_prefixsum[i]), edges_id[i]);
+    c_graph.constructFrom(
+        num_ith_nodes, num_edges_next, std::move(edges_prefixsum[i]),
+        edges_id[i]);
     c_graph.hedges = hnum[i];
     c_graph.hnodes = nodes[i];
     galois::do_all(
@@ -875,13 +886,13 @@ void ParallelCreateEdges(
  * finer-graphs
  * @param matching_policy matching policy to be used
  */
-void FindMatching(
+void
+FindMatching(
     std::vector<MetisGraph*>& coarse_mgraph,
     std::vector<MetisGraph*>& fine_mgraph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
     MatchingPolicy matching_policy) {
-
   assert(coarse_mgraph.size() == fine_mgraph.size());
   uint32_t num_fine_hedges = fine_mgraph.size();
   std::vector<GNodeBag> nodes(num_fine_hedges);
@@ -894,9 +905,9 @@ void FindMatching(
       continue;
     }
 
-    GGraph* f_graph           = fine_mgraph[i]->GetGraph();
+    GGraph* f_graph = fine_mgraph[i]->GetGraph();
     uint32_t num_valid_hedges = f_graph->hedges;
-    uint32_t num_valid_nodes  = f_graph->hnodes;
+    uint32_t num_valid_nodes = f_graph->hnodes;
     hedges[i].resize(num_valid_hedges);
     weight[i].resize(num_valid_nodes);
   }
@@ -927,8 +938,9 @@ void FindMatching(
   }
 
   CoarsePhaseII(coarse_mgraph, combined_edge_list, hedges, weight);
-  ParallelCreateEdges(coarse_mgraph, combined_edge_list, combined_node_list,
-                      nodes, hedges, weight);
+  ParallelCreateEdges(
+      coarse_mgraph, combined_edge_list, combined_node_list, nodes, hedges,
+      weight);
 }
 
 /**
@@ -942,11 +954,13 @@ void FindMatching(
  * finer-graphs
  * @param matching_policy matching policy to be used
  */
-void CoarsenOnce(std::vector<MetisGraph*>& next_coarse_graph,
-                 std::vector<MetisGraph*>& fine_metis_graph,
-                 std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-                 std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
-                 MatchingPolicy matching_policy) {
+void
+CoarsenOnce(
+    std::vector<MetisGraph*>& next_coarse_graph,
+    std::vector<MetisGraph*>& fine_metis_graph,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
+    MatchingPolicy matching_policy) {
   assert(next_coarse_graph.size() == fine_metis_graph.size());
   uint32_t num_partitions = fine_metis_graph.size();
   for (uint32_t i = 0; i < num_partitions; ++i) {
@@ -957,8 +971,9 @@ void CoarsenOnce(std::vector<MetisGraph*>& next_coarse_graph,
     }
   }
 
-  FindMatching(next_coarse_graph, fine_metis_graph, combined_edge_list,
-               combined_node_list, matching_policy);
+  FindMatching(
+      next_coarse_graph, fine_metis_graph, combined_edge_list,
+      combined_node_list, matching_policy);
 }
 
 /**
@@ -968,9 +983,10 @@ void CoarsenOnce(std::vector<MetisGraph*>& next_coarse_graph,
  * @param max_coarsen_level maximum number of coarsening levels allowed
  * @param matching_policy matching policy to be used
  */
-void Coarsen(std::vector<MetisGraph*>& metis_graphs, uint32_t max_coarsen_level,
-             MatchingPolicy matching_policy) {
-
+void
+Coarsen(
+    std::vector<MetisGraph*>& metis_graphs, uint32_t max_coarsen_level,
+    MatchingPolicy matching_policy) {
   uint32_t num_partitions = metis_graphs.size();
   std::vector<uint32_t> current_num_nodes(num_partitions);
   std::vector<uint32_t> new_num_nodes(num_partitions);
@@ -991,14 +1007,14 @@ void Coarsen(std::vector<MetisGraph*>& metis_graphs, uint32_t max_coarsen_level,
   std::vector<uint32_t> num_hedges(num_partitions);
 
   const float ratio = 52.5 / 47.5;
-  const float tol   = ratio - 1;
+  const float tol = ratio - 1;
 
   for (uint32_t i = 0; i < num_partitions; ++i) {
     if (metis_graphs[i] == nullptr) {
       continue;
     }
     const WeightTy hi = (1 + tol) * current_num_nodes[i] / (2 + tol);
-    kLimitWeights[i]  = hi / 4;
+    kLimitWeights[i] = hi / 4;
   }
 
   uint32_t iter_num{0};
@@ -1013,7 +1029,7 @@ void Coarsen(std::vector<MetisGraph*>& metis_graphs, uint32_t max_coarsen_level,
         if ((metis_graphs[i] != nullptr) && !graph_is_done.test(i) &&
             (current_num_nodes[i] - new_num_nodes[i] <= 0)) {
           graph_is_done.set(i);
-          final_graph[i]  = metis_graphs[i];
+          final_graph[i] = metis_graphs[i];
           metis_graphs[i] = nullptr;
         }
       }
@@ -1057,14 +1073,15 @@ void Coarsen(std::vector<MetisGraph*>& metis_graphs, uint32_t max_coarsen_level,
 
     ConstructCombinedLists(metis_graphs, combined_edgelist, combined_nodelist);
 
-    CoarsenOnce(next_coarse_graph, metis_graphs, combined_edgelist,
-                combined_nodelist, matching_policy);
+    CoarsenOnce(
+        next_coarse_graph, metis_graphs, combined_edgelist, combined_nodelist,
+        matching_policy);
 
     for (uint32_t i = 0; i < num_partitions; ++i) {
       if (!graph_is_done.test(i)) {
-        metis_graphs[i]      = next_coarse_graph[i];
+        metis_graphs[i] = next_coarse_graph[i];
         current_num_nodes[i] = metis_graphs[i]->GetGraph()->hnodes;
-        num_hedges[i]        = metis_graphs[i]->GetGraph()->hedges;
+        num_hedges[i] = metis_graphs[i]->GetGraph()->hedges;
         //! If the number of hyper edge is less than 1000,
         //! then the graph is already very small,
         //! so no need to coarsen more.

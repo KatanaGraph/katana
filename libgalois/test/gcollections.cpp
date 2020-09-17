@@ -17,22 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/gdeque.h"
-#include "galois/gslist.h"
-#include "galois/Timer.h"
-#include "galois/gIO.h"
-#include "galois/runtime/Mem.h"
+#include <cassert>
+#include <deque>
+#include <iostream>
+#include <random>
+#include <string>
+#include <vector>
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include <iostream>
-#include <cassert>
-#include <string>
-#include <deque>
-#include <vector>
-#include <random>
+#include "galois/Bag.h"
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/gIO.h"
+#include "galois/gdeque.h"
+#include "galois/gslist.h"
+#include "galois/runtime/Mem.h"
 
 template <typename C>
 auto constexpr needs_heap(int)
@@ -46,26 +46,28 @@ bool constexpr needs_heap(...) {
 }
 
 template <typename C, typename HeapTy, typename V>
-auto addToCollection(C& c, HeapTy& heap, V&& v) ->
+auto
+addToCollection(C& c, HeapTy& heap, V&& v) ->
     typename std::enable_if<needs_heap<C>(0)>::type {
   c.push_front(heap.heap, std::forward<V>(v));
 }
 
 template <typename C, typename HeapTy, typename V>
-auto addToCollection(C& c, HeapTy&, V&& v) ->
+auto
+addToCollection(C& c, HeapTy&, V&& v) ->
     typename std::enable_if<!needs_heap<C>(0)>::type {
   c.push_back(std::forward<V>(v));
 }
 
 template <typename C>
-auto removeFromCollection(C& c) ->
-    typename std::enable_if<needs_heap<C>(0)>::type {
+auto
+removeFromCollection(C& c) -> typename std::enable_if<needs_heap<C>(0)>::type {
   c.pop_front(typename C::promise_to_dealloc());
 }
 
 template <typename C>
-auto removeFromCollection(C& c) ->
-    typename std::enable_if<!needs_heap<C>(0)>::type {
+auto
+removeFromCollection(C& c) -> typename std::enable_if<!needs_heap<C>(0)>::type {
   c.pop_back();
 }
 
@@ -79,7 +81,8 @@ struct Heap<C, true> {
 };
 
 template <typename C>
-void testBasic(std::string prefix, C&& collection, int N) {
+void
+testBasic(std::string prefix, C&& collection, int N) {
   Heap<C, needs_heap<C>(0)> heap;
 
   assert(N > 0);
@@ -103,7 +106,8 @@ void testBasic(std::string prefix, C&& collection, int N) {
 }
 
 template <typename C>
-void testNormal(std::string prefix, C&& collection, int N) {
+void
+testNormal(std::string prefix, C&& collection, int N) {
   Heap<C, needs_heap<C>(0)> heap;
 
   assert(N > 0);
@@ -123,8 +127,8 @@ void testNormal(std::string prefix, C&& collection, int N) {
 
   GALOIS_ASSERT(static_cast<int>(c.size()) == N, prefix);
 
-  GALOIS_ASSERT(static_cast<int>(c.size()) == std::distance(c.begin(), c.end()),
-                prefix);
+  GALOIS_ASSERT(
+      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
 
   i = N - 1;
   for (; !c.empty(); --i, removeFromCollection(c)) {
@@ -132,12 +136,13 @@ void testNormal(std::string prefix, C&& collection, int N) {
   }
 
   GALOIS_ASSERT(static_cast<int>(c.size()) == 0, prefix);
-  GALOIS_ASSERT(static_cast<int>(c.size()) == std::distance(c.begin(), c.end()),
-                prefix);
+  GALOIS_ASSERT(
+      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
 }
 
 template <typename C>
-void testSort(std::string prefix, C&& collection, int N) {
+void
+testSort(std::string prefix, C&& collection, int N) {
   Heap<C, needs_heap<C>(0)> heap;
 
   assert(N > 0);
@@ -164,7 +169,8 @@ void testSort(std::string prefix, C&& collection, int N) {
 }
 
 template <typename C, typename Iterator>
-void timeAccess(std::string prefix, C&& c, Iterator first, Iterator last) {
+void
+timeAccess(std::string prefix, C&& c, Iterator first, Iterator last) {
   Heap<C, needs_heap<C>(0)> heap;
 
   galois::Timer t1, t2;
@@ -183,10 +189,12 @@ void timeAccess(std::string prefix, C&& c, Iterator first, Iterator last) {
 }
 
 template <typename T>
-void timeAccesses(std::string prefix, T&& x, int size) {
+void
+timeAccesses(std::string prefix, T&& x, int size) {
   for (int i = 0; i < 3; ++i)
-    timeAccess(prefix, std::forward<T>(x), boost::counting_iterator<int>(0),
-               boost::counting_iterator<int>(size));
+    timeAccess(
+        prefix, std::forward<T>(x), boost::counting_iterator<int>(0),
+        boost::counting_iterator<int>(size));
 }
 
 struct element {
@@ -194,7 +202,8 @@ struct element {
   element(int x) : val(x) {}
 };
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   testBasic("galois::gslist", galois::gslist<int>(), 32 * 32);
   testNormal("galois::gdeque", galois::gdeque<int>(), 32 * 32);
@@ -209,8 +218,8 @@ int main(int argc, char** argv) {
   timeAccesses("std::vector", std::vector<element>(), size);
   timeAccesses("galois::gdeque", galois::gdeque<element>(), size);
   timeAccesses("galois::gslist", galois::gslist<element>(), size);
-  timeAccesses("galois::concurrent_gslist",
-               galois::concurrent_gslist<element>(), size);
+  timeAccesses(
+      "galois::concurrent_gslist", galois::concurrent_gslist<element>(), size);
   timeAccesses("galois::InsertBag", galois::InsertBag<element>(), size);
 
   return 0;

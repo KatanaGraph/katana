@@ -29,7 +29,6 @@ namespace runtime {
 // Usually instantiated per thread
 template <bool Enabled>
 class LoopStatistics {
-
 protected:
   size_t m_iterations;
   size_t m_pushes;
@@ -72,6 +71,6 @@ public:
   inline void inc_conflicts() const {}
 };
 
-} // namespace runtime
-} // namespace galois
+}  // namespace runtime
+}  // namespace galois
 #endif

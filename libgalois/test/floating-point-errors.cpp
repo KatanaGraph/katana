@@ -17,17 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <boost/rational.hpp>
-
-#include <random>
-#include <iostream>
-
 #include <cstdio>
+#include <iostream>
+#include <random>
+
+#include <boost/rational.hpp>
 
 using Rational = boost::rational<size_t>;
 
-void multiplyTest(const double mpcand, const double mplier, const double ans) {
-
+void
+multiplyTest(const double mpcand, const double mplier, const double ans) {
   double lim = mplier / 100.0;
   assert(lim >= 1.0);
 
@@ -41,7 +40,6 @@ void multiplyTest(const double mpcand, const double mplier, const double ans) {
   double computed = 0.0;
 
   while (remainMplier > 0.0) {
-
     double partial = dist(eng);
 
     if (partial > remainMplier) {
@@ -56,9 +54,9 @@ void multiplyTest(const double mpcand, const double mplier, const double ans) {
   std::printf("Error in multiplication with doubles = %g\n", (ans - computed));
 }
 
-void multiplyTestRational(const Rational& mpcand, const Rational& mplier,
-                          const Rational& ans) {
-
+void
+multiplyTestRational(
+    const Rational& mpcand, const Rational& mplier, const Rational& ans) {
   size_t lim = boost::rational_cast<size_t>(mplier / Rational(100));
 
   std::mt19937 eng;
@@ -71,7 +69,6 @@ void multiplyTestRational(const Rational& mpcand, const Rational& mplier,
   Rational computed(0);
 
   while (remainMplier > Rational(0)) {
-
     Rational partial(dist(eng), lim);
 
     if (partial > remainMplier) {
@@ -87,8 +84,8 @@ void multiplyTestRational(const Rational& mpcand, const Rational& mplier,
             << "\n";
 }
 
-void rationalConversionError(double fpVal) {
-
+void
+rationalConversionError(double fpVal) {
   static const unsigned SIGNIFICANT_BITS = 40;
 
   size_t q = (size_t(1) << SIGNIFICANT_BITS);
@@ -96,11 +93,12 @@ void rationalConversionError(double fpVal) {
 
   Rational r(p, q);
 
-  std::printf("Conversion error = %g\n",
-              (fpVal - boost::rational_cast<double>(r)));
+  std::printf(
+      "Conversion error = %g\n", (fpVal - boost::rational_cast<double>(r)));
 }
 
-int main() {
+int
+main() {
   multiplyTest(0.125, 1000.0, 125.0);
 
   multiplyTestRational(Rational(125, 1000), Rational(1000), Rational(125));
@@ -111,7 +109,7 @@ int main() {
   rationalConversionError(sqrt(3.0));
   rationalConversionError(sqrt(1000.0));
   rationalConversionError(sqrt(100000.0));
-  rationalConversionError(sqrt(15485867)); // prime number
+  rationalConversionError(sqrt(15485867));  // prime number
 
   return 0;
 }

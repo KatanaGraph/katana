@@ -17,14 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <iostream>
+#include <string>
+
 #include "galois/Galois.h"
 #include "galois/Timer.h"
 #include "galois/graphs/Graph.h"
 #include "galois/graphs/TypeTraits.h"
 #include "galois/runtime/Profile.h"
-
-#include <iostream>
-#include <string>
 
 using OutGraph =
     galois::graphs::MorphGraph<unsigned int, unsigned int, true, false>;
@@ -37,7 +37,8 @@ std::string statfile;
 std::string graphtype;
 
 template <typename Graph>
-void initGraph(Graph& g) {
+void
+initGraph(Graph& g) {
   unsigned int i = 1;
   for (auto n : g) {
     g.getData(n) = i++;
@@ -45,7 +46,8 @@ void initGraph(Graph& g) {
 }
 
 template <typename Graph>
-void traverseGraph(Graph& g) {
+void
+traverseGraph(Graph& g) {
   uint64_t sum = 0;
 
   for (auto n : g) {
@@ -64,7 +66,8 @@ void traverseGraph(Graph& g) {
 }
 
 template <typename Graph>
-void run(Graph& g, galois::StatTimer& timer, std::string prompt) {
+void
+run(Graph& g, galois::StatTimer& timer, std::string prompt) {
   std::cout << prompt << "\n";
 
   galois::graphs::FileGraph f;
@@ -72,10 +75,10 @@ void run(Graph& g, galois::StatTimer& timer, std::string prompt) {
 
   size_t approxGraphSize =
       120 * f.sizeEdges() *
-      sizeof(typename Graph::edge_data_type); // 120*|E|*sizeof(E)
+      sizeof(typename Graph::edge_data_type);  // 120*|E|*sizeof(E)
   size_t numThreads = galois::getActiveThreads();
-  galois::preAlloc(numThreads +
-                   approxGraphSize / galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      numThreads + approxGraphSize / galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   timer.start();
@@ -92,7 +95,8 @@ void run(Graph& g, galois::StatTimer& timer, std::string prompt) {
   traverseGraph(g);
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
 
   if (argc < 4) {
@@ -101,7 +105,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  filename  = argv[1];
+  filename = argv[1];
   graphtype = argv[3];
 
   auto numThreads = galois::setActiveThreads(std::stoul(argv[2]));

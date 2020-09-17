@@ -46,7 +46,7 @@ struct ExecuteTupleImpl<tpl, s, 0> {
   static inline void execute(tpl&) {}
 };
 
-} // namespace galois::substrate::internal
+}  // namespace galois::substrate::internal
 
 namespace galois::substrate {
 
@@ -54,13 +54,13 @@ class GALOIS_EXPORT ThreadPool {
   friend class SharedMem;
 
 protected:
-  struct shutdown_ty {}; //! type for shutting down thread
+  struct shutdown_ty {};  //! type for shutting down thread
   struct fastmode_ty {
     bool mode;
-  }; //! type for setting fastmode
+  };  //! type for setting fastmode
   struct dedicated_ty {
     std::function<void(void)> fn;
-  }; //! type to switch to dedicated mode
+  };  //! type to switch to dedicated mode
 
   //! Per-thread mailboxes for notification
   struct per_signal {
@@ -73,7 +73,7 @@ protected:
 
     void wakeup(bool fastmode) {
       if (fastmode) {
-        done        = 0;
+        done = 0;
         fastRelease = 1;
       } else {
         std::lock_guard<std::mutex> lg(m);
@@ -216,12 +216,12 @@ public:
  */
 GALOIS_EXPORT ThreadPool& getThreadPool();
 
-} // namespace galois::substrate
+}  // namespace galois::substrate
 
 namespace galois::substrate::internal {
 
 GALOIS_EXPORT void setThreadPool(ThreadPool* tp);
 
-} // namespace galois::substrate::internal
+}  // namespace galois::substrate::internal
 
 #endif

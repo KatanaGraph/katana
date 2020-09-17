@@ -17,17 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Executor_ParaMeter.h"
-
-#include "galois/gIO.h"
-#include "galois/GetEnv.h"
-
 #include <ctime>
 
-struct StatsFileManager {
+#include "galois/GetEnv.h"
+#include "galois/gIO.h"
+#include "galois/runtime/Executor_ParaMeter.h"
 
-  bool init     = false;
-  bool isOpen   = false;
+struct StatsFileManager {
+  bool init = false;
+  bool isOpen = false;
   FILE* statsFH = nullptr;
   // char statsFileName[FNAME_SIZE];
   std::string statsFileName;
@@ -35,7 +33,6 @@ struct StatsFileManager {
   ~StatsFileManager(void) { close(); }
 
   static void getTimeStampedName(std::string& statsFileName) {
-
     constexpr unsigned FNAME_SIZE = 256;
     char buf[FNAME_SIZE];
 
@@ -45,8 +42,8 @@ struct StatsFileManager {
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    strftime(buf, FNAME_SIZE, "ParaMeter-Stats-%Y-%m-%d--%H-%M-%S.csv",
-             timeinfo);
+    strftime(
+        buf, FNAME_SIZE, "ParaMeter-Stats-%Y-%m-%d--%H-%M-%S.csv", timeinfo);
     statsFileName = buf;
   }
 
@@ -68,7 +65,7 @@ struct StatsFileManager {
     }
 
     if (!isOpen) {
-      statsFH = fopen(statsFileName.c_str(), "a"); // open in append mode
+      statsFH = fopen(statsFileName.c_str(), "a");  // open in append mode
       GALOIS_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
       isOpen = true;
@@ -80,21 +77,24 @@ struct StatsFileManager {
   void close(void) {
     if (isOpen) {
       fclose(statsFH);
-      isOpen  = false;
+      isOpen = false;
       statsFH = nullptr;
     }
   }
 };
 
-static StatsFileManager& getStatsFileManager(void) {
+static StatsFileManager&
+getStatsFileManager(void) {
   static StatsFileManager s;
   return s;
 }
 
-FILE* galois::runtime::ParaMeter::getStatsFile(void) {
+FILE*
+galois::runtime::ParaMeter::getStatsFile(void) {
   return getStatsFileManager().get();
 }
 
-void galois::runtime::ParaMeter::closeStatsFile(void) {
+void
+galois::runtime::ParaMeter::closeStatsFile(void) {
   getStatsFileManager().close();
 }

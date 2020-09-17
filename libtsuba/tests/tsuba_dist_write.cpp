@@ -1,21 +1,21 @@
-#include "MPICommBackend.h"
-
-#include <boost/filesystem/operations.hpp>
 #include <string>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/operations.hpp>
 
-#include "galois/Logging.h"
+#include "MPICommBackend.h"
 #include "galois/FileSystem.h"
-#include "tsuba/tsuba.h"
+#include "galois/Logging.h"
 #include "tsuba/RDG.h"
+#include "tsuba/tsuba.h"
 
 namespace fs = boost::filesystem;
 
-constexpr const char* local_file_dir  = "/tmp/tsuba-dist-write-test";
+constexpr const char* local_file_dir = "/tmp/tsuba-dist-write-test";
 constexpr const char* test_prop_graph = "s3://katana-ci/yago-shapes/meta";
 
-void DownloadGraph() {
+void
+DownloadGraph() {
   auto s3_handle_res = tsuba::Open(test_prop_graph, tsuba::kReadOnly);
   if (!s3_handle_res) {
     GALOIS_LOG_FATAL("Open rdg from s3: {}", s3_handle_res.error());
@@ -66,7 +66,8 @@ void DownloadGraph() {
   GALOIS_LOG_ASSERT(new_rdg.Equals(s3_rdg));
 }
 
-int main() {
+int
+main() {
   // fs::remove_all(local_file_dir);
 
   if (auto init_good = tsuba::InitWithMPI(); !init_good) {

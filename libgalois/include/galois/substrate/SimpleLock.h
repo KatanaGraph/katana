@@ -47,8 +47,8 @@ public:
     if (&p == this)
       return *this;
     // relaxed order for initialization
-    _lock.store(p._lock.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
+    _lock.store(
+        p._lock.load(std::memory_order_relaxed), std::memory_order_relaxed);
     return *this;
   }
 
@@ -56,12 +56,12 @@ public:
     int oldval = 0;
     if (_lock.load(std::memory_order_relaxed))
       goto slow_path;
-    if (!_lock.compare_exchange_weak(oldval, 1, std::memory_order_acq_rel,
-                                     std::memory_order_relaxed))
+    if (!_lock.compare_exchange_weak(
+            oldval, 1, std::memory_order_acq_rel, std::memory_order_relaxed))
       goto slow_path;
     assert(is_locked());
     return;
-  slow_path:
+slow_path:
     slow_lock();
   }
 
@@ -87,7 +87,7 @@ public:
   }
 };
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

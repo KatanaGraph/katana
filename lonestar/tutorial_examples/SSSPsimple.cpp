@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Timer.h"
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Galois.h"
+#include "galois/Timer.h"
 #include "galois/graphs/LCGraph.h"
 #include "llvm/Support/CommandLine.h"
-#include "Lonestar/BoilerPlate.h"
 
 //! [Define LC Graph]
 typedef galois::graphs::LC_Linear_Graph<unsigned int, unsigned int> Graph;
@@ -36,15 +36,16 @@ unsigned stepShift = 14;
 Graph graph;
 
 namespace cll = llvm::cl;
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 
 template <typename C>
-void relax_edge(unsigned src_data, Graph::edge_iterator ii, C& ctx) {
+void
+relax_edge(unsigned src_data, Graph::edge_iterator ii, C& ctx) {
   GNode dst = graph.getEdgeDst(ii);
   //![get edge and node data]
   unsigned int edge_data = graph.getEdgeData(ii);
-  unsigned& dst_data     = graph.getData(dst);
+  unsigned& dst_data = graph.getData(dst);
   //![get edge and node data]
   unsigned int newDist = src_data + edge_data;
   if (newDist < dst_data) {
@@ -53,7 +54,8 @@ void relax_edge(unsigned src_data, Graph::edge_iterator ii, C& ctx) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv);
 
@@ -61,8 +63,9 @@ int main(int argc, char** argv) {
   galois::graphs::readGraph(graph, inputFile);
   //! [ReadGraph]
 
-  galois::for_each(galois::iterate(graph),
-                   [&](GNode n, auto&) { graph.getData(n) = DIST_INFINITY; });
+  galois::for_each(galois::iterate(graph), [&](GNode n, auto&) {
+    graph.getData(n) = DIST_INFINITY;
+  });
 
   //! [OrderedByIntegerMetic in SSSPsimple]
   auto reqIndexer = [](const UpdateRequest& req) {
@@ -83,7 +86,7 @@ int main(int argc, char** argv) {
       //! [Operator in SSSPsimple]
       [&](UpdateRequest& req, auto& ctx) {
         GNode active_node = req.second;
-        unsigned& data    = graph.getData(active_node);
+        unsigned& data = graph.getData(active_node);
         if (req.first > data)
           return;
         //![loop over neighbors]

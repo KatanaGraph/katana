@@ -2,17 +2,17 @@
 
 #include <regex>
 
-#include "galois/Result.h"
-#include "tsuba/file.h"
-#include "tsuba/Errors.h"
 #include "GlobalState.h"
+#include "galois/Result.h"
 #include "s3.h"
+#include "tsuba/Errors.h"
+#include "tsuba/file.h"
 
 namespace {
 
 const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
 
-} // namespace
+}  // namespace
 
 namespace tsuba {
 
@@ -29,11 +29,18 @@ S3Storage::CleanURI(const std::string& uri) {
   return std::make_pair(sub_match[1], sub_match[2]);
 }
 
-galois::Result<void> S3Storage::Init() { return S3Init(); }
+galois::Result<void>
+S3Storage::Init() {
+  return S3Init();
+}
 
-galois::Result<void> S3Storage::Fini() { return S3Fini(); }
+galois::Result<void>
+S3Storage::Fini() {
+  return S3Fini();
+}
 
-galois::Result<void> S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
+galois::Result<void>
+S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -42,13 +49,14 @@ galois::Result<void> S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
   return S3GetSize(bucket, object, &s_buf->size);
 }
 
-galois::Result<void> S3Storage::Create(const std::string& uri, bool overwrite) {
+galois::Result<void>
+S3Storage::Create(const std::string& uri, bool overwrite) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  auto exists_res       = tsuba::S3Exists(bucket, object);
+  auto exists_res = tsuba::S3Exists(bucket, object);
   if (!exists_res) {
     return exists_res.error();
   }
@@ -60,9 +68,10 @@ galois::Result<void> S3Storage::Create(const std::string& uri, bool overwrite) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void> S3Storage::GetMultiSync(const std::string& uri,
-                                             uint64_t start, uint64_t size,
-                                             uint8_t* result_buf) {
+galois::Result<void>
+S3Storage::GetMultiSync(
+    const std::string& uri, uint64_t start, uint64_t size,
+    uint8_t* result_buf) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -71,9 +80,9 @@ galois::Result<void> S3Storage::GetMultiSync(const std::string& uri,
   return tsuba::S3DownloadRange(bucket, object, start, size, result_buf);
 }
 
-galois::Result<void> S3Storage::PutMultiSync(const std::string& uri,
-                                             const uint8_t* data,
-                                             uint64_t size) {
+galois::Result<void>
+S3Storage::PutMultiSync(
+    const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -83,8 +92,8 @@ galois::Result<void> S3Storage::PutMultiSync(const std::string& uri,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3Storage::PutAsync(const std::string& uri, const uint8_t* data,
-                    uint64_t size) {
+S3Storage::PutAsync(
+    const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -94,8 +103,9 @@ S3Storage::PutAsync(const std::string& uri, const uint8_t* data,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3Storage::GetAsync(const std::string& uri, uint64_t start, uint64_t size,
-                    uint8_t* result_buf) {
+S3Storage::GetAsync(
+    const std::string& uri, uint64_t start, uint64_t size,
+    uint8_t* result_buf) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -105,8 +115,8 @@ S3Storage::GetAsync(const std::string& uri, uint64_t start, uint64_t size,
 }
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
-S3Storage::ListAsync(const std::string& uri,
-                     std::unordered_set<std::string>* list) {
+S3Storage::ListAsync(
+    const std::string& uri, std::unordered_set<std::string>* list) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -116,8 +126,8 @@ S3Storage::ListAsync(const std::string& uri,
 }
 
 galois::Result<void>
-S3Storage::Delete(const std::string& uri,
-                  const std::unordered_set<std::string>& files) {
+S3Storage::Delete(
+    const std::string& uri, const std::unordered_set<std::string>& files) {
   auto uri_res = CleanURI(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
@@ -126,4 +136,4 @@ S3Storage::Delete(const std::string& uri,
   return tsuba::S3Delete(bucket, object, files);
 }
 
-} // namespace tsuba
+}  // namespace tsuba

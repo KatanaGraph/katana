@@ -24,14 +24,18 @@
 
 namespace galois::substrate {
 
-inline static void asmPause() {
+inline static void
+asmPause() {
 #if defined(__i386__) || defined(__amd64__)
   //  __builtin_ia32_pause();
   asm volatile("pause");
 #endif
 }
 
-inline static void compilerBarrier() { asm volatile("" ::: "memory"); }
+inline static void
+compilerBarrier() {
+  asm volatile("" ::: "memory");
+}
 
 // xeons have 64 byte cache lines, but will prefetch 2 at a time
 constexpr int GALOIS_CACHE_LINE_SIZE = 128;
@@ -46,6 +50,6 @@ constexpr int GALOIS_CACHE_LINE_SIZE = 128;
 #define GALOIS_ATTRIBUTE_NOINLINE
 #endif
 
-} // namespace galois::substrate
+}  // namespace galois::substrate
 
 #endif

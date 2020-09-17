@@ -17,18 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include <boost/iterator/counting_iterator.hpp>
 #include <iostream>
+
+#include <boost/iterator/counting_iterator.hpp>
+
+#include "galois/Galois.h"
 
 //! [do_all example]
 struct HelloWorld {
   void operator()(int i) const { std::cout << "Hello " << i << "\n"; }
 };
 
-void helloWorld(int i) { std::cout << "Hello " << i << "\n"; }
+void
+helloWorld(int i) {
+  std::cout << "Hello " << i << "\n";
+}
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
 
   if (argc < 3) {
@@ -36,15 +42,15 @@ int main(int argc, char** argv) {
     return 1;
   }
   unsigned int numThreads = atoi(argv[1]);
-  int n                   = atoi(argv[2]);
+  int n = atoi(argv[2]);
 
   numThreads = galois::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " threads and " << n
             << " iterations\n";
 
   std::cout << "Using a lambda\n";
-  galois::do_all(galois::iterate(0, n),
-                 [](int i) { std::cout << "Hello " << i << "\n"; });
+  galois::do_all(
+      galois::iterate(0, n), [](int i) { std::cout << "Hello " << i << "\n"; });
 
   std::cout << "Using a function object\n";
   galois::do_all(galois::iterate(0, n), HelloWorld());

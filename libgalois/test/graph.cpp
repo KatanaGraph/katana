@@ -18,9 +18,11 @@
  */
 
 #include "galois/graphs/Graph.h"
+
 #include <string>
 
-int useGraph(std::string inputfile) {
+int
+useGraph(std::string inputfile) {
   //! [Using a graph]
   typedef galois::graphs::LC_CSR_Graph<int, int> Graph;
 
@@ -36,8 +38,8 @@ int useGraph(std::string inputfile) {
     for (Graph::edge_iterator jj = g.edge_begin(src), ej = g.edge_end(src);
          jj != ej; ++jj) {
       Graph::GraphNode dst = g.getEdgeDst(jj);
-      int edgeData         = g.getEdgeData(jj);
-      int nodeData         = g.getData(dst);
+      int edgeData = g.getEdgeData(jj);
+      int nodeData = g.getData(dst);
       sum += edgeData * nodeData;
     }
   }
@@ -46,7 +48,8 @@ int useGraph(std::string inputfile) {
   return sum;
 }
 
-int useGraphCxx11(std::string inputfile) {
+int
+useGraphCxx11(std::string inputfile) {
   //! [Using a graph cxx11]
   typedef galois::graphs::LC_CSR_Graph<int, int> Graph;
 
@@ -60,8 +63,8 @@ int useGraphCxx11(std::string inputfile) {
   for (Graph::GraphNode src : g) {
     for (Graph::edge_iterator edge : g.out_edges(src)) {
       Graph::GraphNode dst = g.getEdgeDst(edge);
-      int edgeData         = g.getEdgeData(edge);
-      int nodeData         = g.getData(dst);
+      int edgeData = g.getEdgeData(edge);
+      int nodeData = g.getData(dst);
       sum += edgeData * nodeData;
     }
   }
@@ -70,7 +73,8 @@ int useGraphCxx11(std::string inputfile) {
   return sum;
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   if (argc > 1) {
     useGraph(argv[1]);

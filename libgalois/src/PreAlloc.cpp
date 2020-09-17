@@ -21,8 +21,9 @@
 #include "galois/runtime/Mem.h"
 #include "galois/runtime/PagePool.h"
 
-void galois::runtime::preAlloc_impl(unsigned num) {
+void
+galois::runtime::preAlloc_impl(unsigned num) {
   unsigned pagesPerThread = (num + activeThreads - 1) / activeThreads;
-  substrate::getThreadPool().run(activeThreads,
-                                 [=]() { pagePoolPreAlloc(pagesPerThread); });
+  substrate::getThreadPool().run(
+      activeThreads, [=]() { pagePoolPreAlloc(pagesPerThread); });
 }

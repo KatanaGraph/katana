@@ -27,7 +27,8 @@
 namespace galois {
 
 template <typename T>
-T atomicMax(std::atomic<T>& a, const T& b) {
+T
+atomicMax(std::atomic<T>& a, const T& b) {
   T old_a = a.load(std::memory_order_relaxed);
   while (old_a < b &&
          !a.compare_exchange_weak(old_a, b, std::memory_order_relaxed))
@@ -36,7 +37,8 @@ T atomicMax(std::atomic<T>& a, const T& b) {
 }
 
 template <typename T>
-T atomicMin(std::atomic<T>& a, const T& b) {
+T
+atomicMin(std::atomic<T>& a, const T& b) {
   T old_a = a.load(std::memory_order_relaxed);
   while (old_a > b &&
          !a.compare_exchange_weak(old_a, b, std::memory_order_relaxed))
@@ -46,19 +48,24 @@ T atomicMin(std::atomic<T>& a, const T& b) {
 
 #if __cplusplus > 201703L
 template <typename T>
-T atomicAdd(std::atomic<T>& a, const T& b) {
+T
+atomicAdd(std::atomic<T>& a, const T& b) {
   return a.fetch_add(b, std::memory_order_relaxed);
 }
 #else
 template <typename T>
-T atomicAdd(std::atomic<T>& a, const T& b,
-            std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
+T
+atomicAdd(
+    std::atomic<T>& a, const T& b,
+    std::enable_if_t<std::is_integral_v<T> >* = nullptr) {
   return a.fetch_add(b, std::memory_order_relaxed);
 }
 
 template <typename T>
-T atomicAdd(std::atomic<T>& a, const T& b,
-            std::enable_if_t<!std::is_integral_v<T>>* = nullptr) {
+T
+atomicAdd(
+    std::atomic<T>& a, const T& b,
+    std::enable_if_t<!std::is_integral_v<T> >* = nullptr) {
   T old_a = a.load(std::memory_order_relaxed);
   while (!a.compare_exchange_weak(old_a, old_a + b, std::memory_order_relaxed))
     ;
@@ -68,19 +75,24 @@ T atomicAdd(std::atomic<T>& a, const T& b,
 
 #if __cplusplus > 201703L
 template <typename T>
-T atomicSub(std::atomic<T>& a, const T& b) {
+T
+atomicSub(std::atomic<T>& a, const T& b) {
   return a.fetch_sub(b, std::memory_order_relaxed);
 }
 #else
 template <typename T>
-T atomicSub(std::atomic<T>& a, const T& b,
-            std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
+T
+atomicSub(
+    std::atomic<T>& a, const T& b,
+    std::enable_if_t<std::is_integral_v<T> >* = nullptr) {
   return a.fetch_sub(b, std::memory_order_relaxed);
 }
 
 template <typename T>
-T atomicSub(std::atomic<T>& a, const T& b,
-            std::enable_if_t<!std::is_integral_v<T>>* = nullptr) {
+T
+atomicSub(
+    std::atomic<T>& a, const T& b,
+    std::enable_if_t<!std::is_integral_v<T> >* = nullptr) {
   T old_a = a.load(std::memory_order_relaxed);
   while (!a.compare_exchange_weak(old_a, old_a - b, std::memory_order_relaxed))
     ;
@@ -88,4 +100,4 @@ T atomicSub(std::atomic<T>& a, const T& b,
 }
 #endif
 
-} // end namespace galois
+}  // end namespace galois

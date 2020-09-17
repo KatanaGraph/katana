@@ -17,21 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/gstl.h"
+#include "Lonestar/BoilerPlate.h"
 #include "galois/AtomicHelpers.h"
+#include "galois/Galois.h"
 #include "galois/Reduction.h"
 #include "galois/graphs/LCGraph.h"
-#include "Lonestar/BoilerPlate.h"
-
+#include "galois/gstl.h"
 #include "llvm/Support/CommandLine.h"
 
 constexpr static const char* const REGION_NAME = "k-core";
-constexpr static const char* const name        = "k-core";
-constexpr static const char* const desc        = "Finds the k-core of a graph, "
-                                          "defined as the subgraph where"
-                                          " all vertices have degree at "
-                                          "least k.";
+constexpr static const char* const name = "k-core";
+constexpr static const char* const desc =
+    "Finds the k-core of a graph, "
+    "defined as the subgraph where"
+    " all vertices have degree at "
+    "least k.";
 
 /*******************************************************************************
  * Declaration of command line arguments
@@ -40,19 +40,19 @@ namespace cll = llvm::cl;
 
 enum Algo { Async = 0, Sync };
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 
 //! Choose algorithm: worklist vs. sync.
-static cll::opt<Algo> algo("algo",
-                           cll::desc("Choose an algorithm (default Sync):"),
-                           cll::values(clEnumVal(Async, "Asynchronous"),
-                                       clEnumVal(Sync, "Synchronous")),
-                           cll::init(Sync));
+static cll::opt<Algo> algo(
+    "algo", cll::desc("Choose an algorithm (default Sync):"),
+    cll::values(
+        clEnumVal(Async, "Asynchronous"), clEnumVal(Sync, "Synchronous")),
+    cll::init(Sync));
 
 //! Required k specification for k-core.
-static cll::opt<unsigned int> k_core_num("kcore", cll::desc("k-core value"),
-                                         cll::Required);
+static cll::opt<unsigned int> k_core_num(
+    "kcore", cll::desc("k-core value"), cll::Required);
 
 /*******************************************************************************
  * Graph structure declarations + other inits
@@ -83,7 +83,8 @@ constexpr static const unsigned CHUNK_SIZE = 64u;
  *
  * @param graph Graph to initialize degrees in
  */
-void degreeCounting(Graph& graph) {
+void
+degreeCounting(Graph& graph) {
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
       [&](GNode curNode) {
@@ -100,8 +101,8 @@ void degreeCounting(Graph& graph) {
  * @param graph Graph to operate on
  * @param initialWorklist Empty worklist to be filled with dead nodes.
  */
-void setupInitialWorklist(Graph& graph,
-                          galois::InsertBag<GNode>& initialWorklist) {
+void
+setupInitialWorklist(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
   galois::do_all(
       galois::iterate(graph.begin(), graph.end()),
       [&](GNode curNode) {
@@ -121,9 +122,10 @@ void setupInitialWorklist(Graph& graph,
  *
  * @param graph Graph to operate on
  */
-void syncCascadeKCore(Graph& graph) {
+void
+syncCascadeKCore(Graph& graph) {
   galois::InsertBag<GNode>* current = new galois::InsertBag<GNode>;
-  galois::InsertBag<GNode>* next    = new galois::InsertBag<GNode>;
+  galois::InsertBag<GNode>* next = new galois::InsertBag<GNode>;
 
   //! Setup worklist.
   setupInitialWorklist(graph, *next);
@@ -138,7 +140,7 @@ void syncCascadeKCore(Graph& graph) {
         [&](GNode deadNode) {
           //! Decrement degree of all neighbors.
           for (auto e : graph.edges(deadNode)) {
-            GNode dest         = graph.getEdgeDst(e);
+            GNode dest = graph.getEdgeDst(e);
             NodeData& destData = graph.getData(dest);
             uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
 
@@ -165,14 +167,14 @@ void syncCascadeKCore(Graph& graph) {
  * @param graph Graph to operate on
  * @param initialWorklist Worklist containing initial dead nodes
  */
-void asyncCascadeKCore(Graph& graph,
-                       galois::InsertBag<GNode>& initialWorklist) {
+void
+asyncCascadeKCore(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
   galois::for_each(
       galois::iterate(initialWorklist),
       [&](GNode deadNode, auto& ctx) {
         //! Decrement degree of all neighbors.
         for (auto e : graph.edges(deadNode)) {
-          GNode dest         = graph.getEdgeDst(e);
+          GNode dest = graph.getEdgeDst(e);
           NodeData& destData = graph.getData(dest);
           uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
 
@@ -196,7 +198,8 @@ void asyncCascadeKCore(Graph& graph,
  *
  * @param graph Graph to get alive count of
  */
-void kCoreSanity(Graph& graph) {
+void
+kCoreSanity(Graph& graph) {
   galois::GAccumulator<uint32_t> aliveNodes;
   aliveNodes.reset();
 
@@ -210,15 +213,17 @@ void kCoreSanity(Graph& graph) {
       },
       galois::loopname("KCoreSanityCheck"), galois::no_stats());
 
-  galois::gPrint("Number of nodes in the ", k_core_num, "-core is ",
-                 aliveNodes.reduce(), "\n");
+  galois::gPrint(
+      "Number of nodes in the ", k_core_num, "-core is ", aliveNodes.reduce(),
+      "\n");
 }
 
 /*******************************************************************************
  * Main method for running
  ******************************************************************************/
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
@@ -226,15 +231,17 @@ int main(int argc, char** argv) {
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE("This application requires a symmetric graph input;"
-               " please use the -symmetricGraph flag "
-               " to indicate the input is a symmetric graph.");
+    GALOIS_DIE(
+        "This application requires a symmetric graph input;"
+        " please use the -symmetricGraph flag "
+        " to indicate the input is a symmetric graph.");
   }
 
   //! Some initial stat reporting.
-  galois::gInfo("Worklist chunk size of ", CHUNK_SIZE,
-                ": best size may depend"
-                " on input.");
+  galois::gInfo(
+      "Worklist chunk size of ", CHUNK_SIZE,
+      ": best size may depend"
+      " on input.");
   galois::runtime::reportStat_Single(REGION_NAME, "ChunkSize", CHUNK_SIZE);
   galois::reportPageAlloc("MemAllocPre");
 
@@ -248,9 +255,9 @@ int main(int argc, char** argv) {
   //! Preallocate pages in memory so allocation doesn't occur during compute.
   galois::StatTimer preallocTime("PreAllocTime", REGION_NAME);
   preallocTime.start();
-  galois::preAlloc(
-      std::max(size_t{galois::getActiveThreads()} * (graph.size() / 1000000),
-               std::max(10U, galois::getActiveThreads()) * size_t{10}));
+  galois::preAlloc(std::max(
+      size_t{galois::getActiveThreads()} * (graph.size() / 1000000),
+      std::max(10U, galois::getActiveThreads()) * size_t{10}));
   preallocTime.stop();
   galois::reportPageAlloc("MemAllocMid");
 
@@ -263,8 +270,8 @@ int main(int argc, char** argv) {
   execTime.start();
 
   if (algo == Async) {
-    galois::gInfo("Running asynchronous k-core with k-core number ",
-                  k_core_num);
+    galois::gInfo(
+        "Running asynchronous k-core with k-core number ", k_core_num);
     //! Worklist setup of initial dead ndoes.
     galois::InsertBag<GNode> initialWorklist;
     setupInitialWorklist(graph, initialWorklist);

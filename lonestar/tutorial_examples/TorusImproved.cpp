@@ -17,10 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <iostream>
+
 #include "galois/Galois.h"
 #include "galois/Timer.h"
 #include "galois/graphs/Graph.h"
-#include <iostream>
 
 //! Graph has int node data, void edge data and is directed
 typedef galois::graphs::MorphGraph<int, void, true> Graph;
@@ -41,7 +42,8 @@ public:
 };
 
 //! Construct a simple torus graph
-void constructTorus(Graph& g, int height, int width) {
+void
+constructTorus(Graph& g, int height, int width) {
   // Construct set of nodes
   int numNodes = height * width;
   std::vector<Point2D> points(numNodes);
@@ -52,25 +54,26 @@ void constructTorus(Graph& g, int height, int width) {
   }
 
   // Sort in a space-filling way
-  std::sort(points.begin(), points.end(),
-            /**
+  std::sort(
+      points.begin(), points.end(),
+      /**
              * Sort pairs according to Morton Z-Order.
              *
              * From http://en.wikipedia.org/wiki/Z-order_%28curve%29
              */
-            [&](const Point2D& p1, const Point2D& p2) -> bool {
-              int index = 0;
-              int x     = 0;
-              for (int k = 0; k < p1.dim(); ++k) {
-                int y        = p1.at(k) ^ p2.at(k);
-                bool lessMsb = x < y && x < (x ^ y);
-                if (lessMsb) {
-                  index = k;
-                  x     = y;
-                }
-              }
-              return p1.at(index) - p2.at(index) < 0;
-            });
+      [&](const Point2D& p1, const Point2D& p2) -> bool {
+        int index = 0;
+        int x = 0;
+        for (int k = 0; k < p1.dim(); ++k) {
+          int y = p1.at(k) ^ p2.at(k);
+          bool lessMsb = x < y && x < (x ^ y);
+          if (lessMsb) {
+            index = k;
+            x = y;
+          }
+        }
+        return p1.at(index) - p2.at(index) < 0;
+      });
 
   // Using space-filling order, assign nodes and create (and allocate) them in
   // parallel
@@ -97,7 +100,8 @@ void constructTorus(Graph& g, int height, int width) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
 
   if (argc < 3) {
@@ -105,7 +109,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   unsigned int numThreads = atoi(argv[1]);
-  int n                   = atoi(argv[2]);
+  int n = atoi(argv[2]);
 
   GALOIS_ASSERT(n > 2);
 

@@ -15,6 +15,6 @@ GALOIS_EXPORT int64_t RandomUniformInt(int64_t min, int64_t max);
 // Range 0.0f..max, inclusive
 GALOIS_EXPORT float RandomUniformFloat(float max);
 
-} // namespace galois
+}  // namespace galois
 
 #endif

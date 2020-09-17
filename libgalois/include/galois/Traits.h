@@ -56,7 +56,8 @@ struct trait_has_svalue {
  * (i.e., lambdas).
  */
 template <template <typename...> class TT, typename... Args>
-auto make_trait_with_args(Args... args) -> TT<Args...> {
+auto
+make_trait_with_args(Args... args) -> TT<Args...> {
   return TT<Args...>(args...);
 }
 
@@ -75,7 +76,8 @@ constexpr bool at_least_base_of =
  * This function is not well-defined if there is no matching trait.
  */
 template <typename T, typename Tuple, size_t Int, size_t... Ints>
-constexpr size_t find_trait(std::index_sequence<Int, Ints...> /*seq*/) {
+constexpr size_t
+find_trait(std::index_sequence<Int, Ints...> /*seq*/) {
   if constexpr (at_least_base_of<
                     T, typename std::tuple_element<Int, Tuple>::type>) {
     return Int;
@@ -85,7 +87,8 @@ constexpr size_t find_trait(std::index_sequence<Int, Ints...> /*seq*/) {
 }
 
 template <typename T, typename Tuple>
-constexpr size_t find_trait() {
+constexpr size_t
+find_trait() {
   constexpr std::make_index_sequence<std::tuple_size<Tuple>::value> seq{};
   return find_trait<T, Tuple>(seq);
 }
@@ -94,12 +97,14 @@ constexpr size_t find_trait() {
  * Returns true if the tuple type contains the given trait T.
  */
 template <typename T, typename... Ts>
-constexpr bool has_trait(std::tuple<Ts...>* /*tpl*/) {
+constexpr bool
+has_trait(std::tuple<Ts...>* /*tpl*/) {
   return (... || at_least_base_of<T, Ts>);
 }
 
 template <typename T, typename Tuple>
-constexpr bool has_trait() {
+constexpr bool
+has_trait() {
   return has_trait<T>(static_cast<Tuple*>(nullptr));
 }
 
@@ -109,7 +114,8 @@ constexpr bool has_trait() {
  * This function is not well-defined when there is not matching trait.
  */
 template <typename T, typename Tuple>
-constexpr auto get_trait_value(Tuple tpl) {
+constexpr auto
+get_trait_value(Tuple tpl) {
   constexpr size_t match(find_trait<T, Tuple>());
   return std::get<match>(tpl);
 }
@@ -127,9 +133,10 @@ using trait_type_t =
     typename std::tuple_element<find_trait<T, Tuple>(), Tuple>::type;
 
 template <typename S, typename T, typename D>
-constexpr auto get_default_trait_value([[maybe_unused]] S source,
-                                       [[maybe_unused]] T tags,
-                                       [[maybe_unused]] D defaults) {
+constexpr auto
+get_default_trait_value(
+    [[maybe_unused]] S source, [[maybe_unused]] T tags,
+    [[maybe_unused]] D defaults) {
   if constexpr (has_trait<T, S>()) {
     return std::make_tuple();
   } else {
@@ -143,22 +150,24 @@ constexpr auto get_default_trait_value([[maybe_unused]] S source,
  */
 template <typename S, typename T, typename D>
 constexpr auto
-get_default_trait_values([[maybe_unused]] std::index_sequence<> seq,
-                         [[maybe_unused]] S source, [[maybe_unused]] T tags,
-                         [[maybe_unused]] D defaults) {
+get_default_trait_values(
+    [[maybe_unused]] std::index_sequence<> seq, [[maybe_unused]] S source,
+    [[maybe_unused]] T tags, [[maybe_unused]] D defaults) {
   return std::make_tuple();
 }
 
 template <size_t... Ints, typename S, typename T, typename D>
 constexpr auto
-get_default_trait_values([[maybe_unused]] std::index_sequence<Ints...> seq,
-                         S source, T tags, D defaults) {
-  return std::tuple_cat(get_default_trait_value(source, std::get<Ints>(tags),
-                                                std::get<Ints>(defaults))...);
+get_default_trait_values(
+    [[maybe_unused]] std::index_sequence<Ints...> seq, S source, T tags,
+    D defaults) {
+  return std::tuple_cat(get_default_trait_value(
+      source, std::get<Ints>(tags), std::get<Ints>(defaults))...);
 }
 
 template <typename S, typename T, typename D>
-constexpr auto get_default_trait_values(S source, T tags, D defaults) {
+constexpr auto
+get_default_trait_values(S source, T tags, D defaults) {
   constexpr std::make_index_sequence<std::tuple_size<T>::value> seq{};
   return get_default_trait_values(seq, source, tags, defaults);
 }
@@ -221,7 +230,8 @@ struct s_wl : public trait_has_type<T>, wl_tag {
 };
 
 template <typename T, typename... Args>
-s_wl<T, Args...> wl(Args... args) {
+s_wl<T, Args...>
+wl(Args... args) {
   return s_wl<T, Args...>(std::move(args)...);
 }
 
@@ -307,8 +317,9 @@ struct neighborhood_visitor : public trait_has_value<T>,
 struct det_parallel_break_tag {};
 template <typename T>
 struct det_parallel_break : public trait_has_value<T>, det_parallel_break_tag {
-  static_assert(std::is_same<typename std::result_of<T()>::type, bool>::value,
-                "signature must be bool()");
+  static_assert(
+      std::is_same<typename std::result_of<T()>::type, bool>::value,
+      "signature must be bool()");
   det_parallel_break(const T& t = T()) : trait_has_value<T>(t) {}
   det_parallel_break(T&& t) : trait_has_value<T>(std::move(t)) {}
 };
@@ -361,8 +372,9 @@ template <unsigned SZ = 32>
 struct chunk_size : public trait_has_value<unsigned>, chunk_size_tag {
 private:
   constexpr static unsigned clamp(unsigned int v) {
-    return std::min(std::max(v, unsigned{chunk_size_tag::MIN}),
-                    unsigned{chunk_size_tag::MAX});
+    return std::min(
+        std::max(v, unsigned{chunk_size_tag::MIN}),
+        unsigned{chunk_size_tag::MAX});
   }
 
 public:
@@ -392,8 +404,8 @@ std::enable_if_t<!has_trait<loopname_tag, Tup>(), const char*>
 getLoopName(const Tup&) {
   return "ANON_LOOP";
 }
-} // namespace internal
+}  // namespace internal
 
-} // namespace galois
+}  // namespace galois
 
 #endif

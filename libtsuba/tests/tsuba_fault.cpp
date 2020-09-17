@@ -1,20 +1,20 @@
 // During a graph mutation, crash horribly
 #include <ctime>
 
+#include "bench_utils.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
-#include "tsuba/tsuba.h"
-#include "tsuba/FileView.h"
-#include "tsuba/file.h"
-#include "tsuba/RDG.h"
 #include "tsuba/FaultTest.h"
-#include "bench_utils.h"
+#include "tsuba/FileView.h"
+#include "tsuba/RDG.h"
+#include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 std::string src_uri{};
 bool opt_print{false};
 bool opt_validate{false};
-int32_t count{1};             // By default do 1 thing
-int32_t node_property_num{0}; // Which node property
+int32_t count{1};              // By default do 1 thing
+int32_t node_property_num{0};  // Which node property
 float independent_failure_probability{0.0f};
 uint64_t run_length{UINT64_C(0)};
 std::string prog_name = "tsuba_fault";
@@ -30,7 +30,8 @@ std::string usage_msg =
     "  when run with just -c, it will mutate & store the graph count times "
     "with no errors\n";
 
-void parse_arguments(int argc, char* argv[]) {
+void
+parse_arguments(int argc, char* argv[]) {
   int c;
 
   while ((c = getopt(argc, argv, "c:n:i:r:vph")) != -1) {
@@ -81,7 +82,8 @@ void parse_arguments(int argc, char* argv[]) {
 
 /******************************************************************************/
 // Utility functions to print tables
-static void PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
+static void
+PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
   for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
     auto int_arr =
         std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -90,7 +92,8 @@ static void PrintInts(std::shared_ptr<arrow::ChunkedArray> arr) {
     }
   }
 }
-static void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
+static void
+PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
   for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
     auto str_arr =
         std::static_pointer_cast<arrow::StringArray>(arr->chunk(chunk));
@@ -101,20 +104,22 @@ static void PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
 }
 
 // TODO(witchel) Should use table->ToString();
-static void PrintTable(std::shared_ptr<arrow::Table> table) {
+static void
+PrintTable(std::shared_ptr<arrow::Table> table) {
   const auto& schema = table->schema();
   for (int i = 0, n = schema->num_fields(); i < n; i++) {
     fmt::print("Schema {:d} {}\n", i, schema->field(i)->name());
   }
-  fmt::print("Table num col {:d} num row {:d} col 0 chunks {:d}\n",
-             table->num_columns(), table->num_rows(),
-             table->column(0)->num_chunks());
+  fmt::print(
+      "Table num col {:d} num row {:d} col 0 chunks {:d}\n",
+      table->num_columns(), table->num_rows(), table->column(0)->num_chunks());
 }
 
 /******************************************************************************/
 // Construct arrow tables, which are node & edge properties
 // Schemas
-std::shared_ptr<arrow::Schema> int64_schema(const std::string& prop_name) {
+std::shared_ptr<arrow::Schema>
+int64_schema(const std::string& prop_name) {
   auto field = std::make_shared<arrow::Field>(
       prop_name.c_str(), std::make_shared<arrow::Int64Type>());
   auto schema =
@@ -122,7 +127,8 @@ std::shared_ptr<arrow::Schema> int64_schema(const std::string& prop_name) {
   return schema;
 }
 
-std::shared_ptr<arrow::Schema> string_schema() {
+std::shared_ptr<arrow::Schema>
+string_schema() {
   auto field = std::make_shared<arrow::Field>(
       "str", std::make_shared<arrow::StringType>());
   auto schema =
@@ -132,8 +138,8 @@ std::shared_ptr<arrow::Schema> string_schema() {
 
 // Tables
 std::shared_ptr<arrow::Table>
-MakeNodePropTable(std::vector<int64_t> node_props,
-                  const std::string& node_prop_name) {
+MakeNodePropTable(
+    std::vector<int64_t> node_props, const std::string& node_prop_name) {
   arrow::Int64Builder builder;
   arrow::Status status;
 
@@ -150,7 +156,8 @@ MakeNodePropTable(std::vector<int64_t> node_props,
   return tab;
 }
 
-std::shared_ptr<arrow::Table> MakeStrTable(std::vector<int64_t> edge_lens) {
+std::shared_ptr<arrow::Table>
+MakeStrTable(std::vector<int64_t> edge_lens) {
   arrow::StringBuilder builder;
   arrow::Status status;
 
@@ -175,19 +182,23 @@ std::shared_ptr<arrow::Table> MakeStrTable(std::vector<int64_t> edge_lens) {
   return tab;
 }
 
-std::vector<int64_t> GenRandVec(uint64_t size, int64_t min, int64_t max) {
+std::vector<int64_t>
+GenRandVec(uint64_t size, int64_t min, int64_t max) {
   std::vector<int64_t> data(size);
-  std::generate(data.begin(), data.end(),
-                [=]() { return galois::RandomUniformInt(min, max); });
+  std::generate(data.begin(), data.end(), [=]() {
+    return galois::RandomUniformInt(min, max);
+  });
   return data;
 }
 
-void MutateGraph(tsuba::RDG& rdg) {
+void
+MutateGraph(tsuba::RDG& rdg) {
   // Nodes
   {
-    GALOIS_LOG_VASSERT(node_property_num < rdg.node_table_->num_columns(),
-                       "Node property number is {:d} but only {:d} properties",
-                       node_property_num, rdg.node_table_->num_columns());
+    GALOIS_LOG_VASSERT(
+        node_property_num < rdg.node_table_->num_columns(),
+        "Node property number is {:d} but only {:d} properties",
+        node_property_num, rdg.node_table_->num_columns());
     auto col = rdg.node_table_->column(node_property_num);
     auto node_prop_name =
         rdg.node_table_->schema()->field(node_property_num)->name();
@@ -197,8 +208,8 @@ void MutateGraph(tsuba::RDG& rdg) {
     col_values.push_back(
         0L - std::accumulate(col_values.begin(), col_values.end(), 0L));
     if (auto res = rdg.DropNodeProperty(node_property_num); !res) {
-      GALOIS_LOG_FATAL("DropNodeProperty {:d} {}", node_property_num,
-                       res.error());
+      GALOIS_LOG_FATAL(
+          "DropNodeProperty {:d} {}", node_property_num, res.error());
     }
     auto node_prop_tab = MakeNodePropTable(col_values, node_prop_name);
     if (auto res = rdg.AddNodeProperties(node_prop_tab); !res) {
@@ -207,7 +218,7 @@ void MutateGraph(tsuba::RDG& rdg) {
   }
   // Edges
   {
-    auto arr                       = rdg.edge_table_->GetColumnByName("str");
+    auto arr = rdg.edge_table_->GetColumnByName("str");
     std::vector<int64_t> edge_lens = GenRandVec(arr->length() - 1, -100, 100);
     // Sum to 0
     edge_lens.push_back(
@@ -222,11 +233,12 @@ void MutateGraph(tsuba::RDG& rdg) {
   }
 }
 
-void ValidateGraph(tsuba::RDG& rdg) {
+void
+ValidateGraph(tsuba::RDG& rdg) {
   // Nodes
   for (auto col_num = 0; col_num < rdg.node_table_->num_columns(); ++col_num) {
     int64_t total = 0L;
-    auto arr      = rdg.node_table_->column(col_num);
+    auto arr = rdg.node_table_->column(col_num);
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto int_arr =
           std::static_pointer_cast<arrow::Int64Array>(arr->chunk(chunk));
@@ -238,20 +250,20 @@ void ValidateGraph(tsuba::RDG& rdg) {
   }
   // Edges
   {
-    auto arr      = rdg.edge_table_->GetColumnByName("str");
+    auto arr = rdg.edge_table_->GetColumnByName("str");
     int64_t total = 0L;
     for (auto chunk = 0; chunk < arr->num_chunks(); ++chunk) {
       auto str_arr =
           std::static_pointer_cast<arrow::StringArray>(arr->chunk(chunk));
       for (auto i = 0; i < arr->length(); ++i) {
         std::string str = str_arr->GetString(i);
-        auto len        = str.length();
+        auto len = str.length();
         if (len > 0L) {
           if (str[0] == 'a') {
             total += len;
           } else {
-            GALOIS_LOG_VASSERT(str[0] == 'b', "Bad str {:d}: len {:d} {}", i,
-                               len, str);
+            GALOIS_LOG_VASSERT(
+                str[0] == 'b', "Bad str {:d}: len {:d} {}", i, len, str);
             total -= len;
           }
         }
@@ -261,7 +273,8 @@ void ValidateGraph(tsuba::RDG& rdg) {
   }
 }
 
-galois::Result<tsuba::RDG> OpenGraph(const std::string& pg_in, uint32_t flags) {
+galois::Result<tsuba::RDG>
+OpenGraph(const std::string& pg_in, uint32_t flags) {
   auto handle_res = tsuba::Open(pg_in, flags);
   if (!handle_res) {
     GALOIS_LOG_FATAL("Open rdg: {}", handle_res.error());
@@ -275,7 +288,8 @@ galois::Result<tsuba::RDG> OpenGraph(const std::string& pg_in, uint32_t flags) {
   return tsuba::RDG(std::move(rdg_res.value()));
 }
 
-void OpenUpdateStore(const std::string& pg_in, uint32_t count) {
+void
+OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   auto handle_res = tsuba::Open(pg_in, tsuba::kReadWrite);
   if (!handle_res) {
     GALOIS_LOG_FATAL("Open rdg: {}", handle_res.error());
@@ -301,7 +315,8 @@ void OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   }
 }
 
-void PrintGraph(const std::string& src_uri) {
+void
+PrintGraph(const std::string& src_uri) {
   auto handle_res = tsuba::Open(src_uri, tsuba::kReadOnly);
   if (!handle_res) {
     GALOIS_LOG_FATAL("Open rdg: {}", handle_res.error());
@@ -324,7 +339,8 @@ void PrintGraph(const std::string& src_uri) {
   PrintStrings(rdg.edge_table_->GetColumnByName("str"));
 }
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
@@ -346,12 +362,12 @@ int main(int argc, char* argv[]) {
   }
 
   if (run_length > UINT64_C(0)) {
-    tsuba::internal::FaultTestInit(tsuba::internal::FaultMode::RunLength, 0.0f,
-                                   run_length);
+    tsuba::internal::FaultTestInit(
+        tsuba::internal::FaultMode::RunLength, 0.0f, run_length);
   } else if (independent_failure_probability > 0.0f) {
-    tsuba::internal::FaultTestInit(tsuba::internal::FaultMode::Independent,
-                                   independent_failure_probability,
-                                   UINT64_C(0));
+    tsuba::internal::FaultTestInit(
+        tsuba::internal::FaultMode::Independent,
+        independent_failure_probability, UINT64_C(0));
   }
 
   OpenUpdateStore(src_uri, count);

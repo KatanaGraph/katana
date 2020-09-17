@@ -73,7 +73,7 @@ public:
   StatTimer() : StatTimer(nullptr, nullptr) {}
 
   StatTimer(const StatTimer&) = delete;
-  StatTimer(StatTimer&&)      = delete;
+  StatTimer(StatTimer&&) = delete;
   StatTimer& operator=(const StatTimer&) = delete;
   StatTimer& operator=(StatTimer&&) = delete;
 
@@ -105,7 +105,8 @@ public:
 };
 
 template <typename F>
-void timeThis(const F& f, const char* const name) {
+void
+timeThis(const F& f, const char* const name) {
   StatTimer t("Time", name);
 
   t.start();
@@ -115,5 +116,5 @@ void timeThis(const F& f, const char* const name) {
   t.stop();
 }
 
-} // end namespace galois
+}  // end namespace galois
 #endif

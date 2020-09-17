@@ -1,8 +1,8 @@
 #include "NameServerClient.h"
 
+#include <cassert>
 #include <future>
 #include <regex>
-#include <cassert>
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -42,10 +42,10 @@ DummyTestNameServerClient::Get(const std::string& rdg_name) {
 }
 
 galois::Result<void>
-DummyTestNameServerClient::Create(const std::string& rdg_name,
-                                  const RDGMeta& meta) {
+DummyTestNameServerClient::Create(
+    const std::string& rdg_name, const RDGMeta& meta) {
   std::lock_guard<std::mutex> lock(mutex_);
-  bool good                   = false;
+  bool good = false;
   std::tie(std::ignore, good) = server_state_.emplace(rdg_name, meta);
   if (!good) {
     return ErrorCode::Exists;
@@ -54,8 +54,8 @@ DummyTestNameServerClient::Create(const std::string& rdg_name,
 }
 
 galois::Result<void>
-DummyTestNameServerClient::Update(const std::string& rdg_name,
-                                  uint64_t old_version, const RDGMeta& meta) {
+DummyTestNameServerClient::Update(
+    const std::string& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   if (old_version >= meta.version_) {
     return ErrorCode::InvalidArgument;
   }
@@ -72,7 +72,8 @@ DummyTestNameServerClient::Update(const std::string& rdg_name,
   return galois::ResultSuccess();
 }
 
-galois::Result<void> DummyTestNameServerClient::CheckHealth() {
+galois::Result<void>
+DummyTestNameServerClient::CheckHealth() {
   return galois::ResultSuccess();
 }
 
@@ -81,7 +82,7 @@ DummyTestNameServerClient::Make() {
   return std::unique_ptr<NameServerClient>(new DummyTestNameServerClient());
 }
 
-} // namespace tsuba
+}  // namespace tsuba
 
 galois::Result<std::unique_ptr<tsuba::NameServerClient>>
 tsuba::ConnectToNameServer() {
@@ -92,8 +93,9 @@ tsuba::ConnectToNameServer() {
   galois::GetEnv("GALOIS_NS_PORT", &port);
 
   if (host.empty()) {
-    GALOIS_LOG_WARN("name server not configured, no consistency guarantees "
-                    "between Katana instances");
+    GALOIS_LOG_WARN(
+        "name server not configured, no consistency guarantees "
+        "between Katana instances");
     return DummyTestNameServerClient::Make();
   }
   GALOIS_LOG_DEBUG("connecting to nameserver {}:{}", host, port);

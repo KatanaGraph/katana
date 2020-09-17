@@ -20,7 +20,6 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_PARALLELSTL_H_
 #define GALOIS_LIBGALOIS_GALOIS_PARALLELSTL_H_
 
-#include "galois/config.h"
 #include "galois/LoopsDecl.h"
 #include "galois/NoDerefIterator.h"
 #include "galois/Range.h"
@@ -28,6 +27,7 @@
 #include "galois/Threads.h"
 #include "galois/Traits.h"
 #include "galois/UserContext.h"
+#include "galois/config.h"
 #include "galois/worklists/Chunk.h"
 
 namespace galois {
@@ -36,8 +36,8 @@ namespace galois {
 namespace ParallelSTL {
 
 template <class InputIterator, class Predicate>
-size_t count_if(InputIterator first, InputIterator last, Predicate pred) {
-
+size_t
+count_if(InputIterator first, InputIterator last, Predicate pred) {
   galois::GAccumulator<size_t> count;
 
   galois::do_all(galois::iterate(first, last), [&](const auto& v) {
@@ -51,7 +51,6 @@ size_t count_if(InputIterator first, InputIterator last, Predicate pred) {
 
 template <typename InputIterator, class Predicate>
 struct find_if_helper {
-
   typedef galois::optional<InputIterator> ElementTy;
   typedef substrate::PerThreadStorage<ElementTy> AccumulatorTy;
   AccumulatorTy& accum;
@@ -67,16 +66,18 @@ struct find_if_helper {
 };
 
 template <class InputIterator, class Predicate>
-InputIterator find_if(InputIterator first, InputIterator last, Predicate pred) {
+InputIterator
+find_if(InputIterator first, InputIterator last, Predicate pred) {
   typedef find_if_helper<InputIterator, Predicate> HelperTy;
   typedef typename HelperTy::AccumulatorTy AccumulatorTy;
   typedef galois::worklists::PerSocketChunkFIFO<256> WL;
   AccumulatorTy accum;
   HelperTy helper(accum, pred);
-  for_each(galois::iterate(make_no_deref_iterator(first),
-                           make_no_deref_iterator(last)),
-           helper, galois::disable_conflict_detection(), galois::no_pushes(),
-           galois::parallel_break(), galois::wl<WL>());
+  for_each(
+      galois::iterate(
+          make_no_deref_iterator(first), make_no_deref_iterator(last)),
+      helper, galois::disable_conflict_detection(), galois::no_pushes(),
+      galois::parallel_break(), galois::wl<WL>());
   for (unsigned i = 0; i < accum.size(); ++i) {
     if (*accum.getRemote(i))
       return **accum.getRemote(i);
@@ -85,7 +86,8 @@ InputIterator find_if(InputIterator first, InputIterator last, Predicate pred) {
 }
 
 template <class Iterator>
-Iterator choose_rand(Iterator first, Iterator last) {
+Iterator
+choose_rand(Iterator first, Iterator last) {
   size_t dist = std::distance(first, last);
   if (dist)
     std::advance(first, rand() % dist);
@@ -109,24 +111,26 @@ struct sort_helper {
   sort_helper(Compare c) : comp(c) {}
 
   template <class RandomAccessIterator, class Context>
-  void operator()(std::pair<RandomAccessIterator, RandomAccessIterator> bounds,
-                  Context& ctx) {
+  void operator()(
+      std::pair<RandomAccessIterator, RandomAccessIterator> bounds,
+      Context& ctx) {
     if (std::distance(bounds.first, bounds.second) <= 1024) {
       std::sort(bounds.first, bounds.second, comp);
     } else {
       typedef
           typename std::iterator_traits<RandomAccessIterator>::value_type VT;
       RandomAccessIterator pivot = choose_rand(bounds.first, bounds.second);
-      VT pv                      = *pivot;
-      pivot                      = std::partition(bounds.first, bounds.second,
-                             std::bind(comp, std::placeholders::_1, pv));
+      VT pv = *pivot;
+      pivot = std::partition(
+          bounds.first, bounds.second,
+          std::bind(comp, std::placeholders::_1, pv));
       // push the lower bit
       if (bounds.first != pivot)
         ctx.push(std::make_pair(bounds.first, pivot));
       // adjust the upper bit
-      pivot =
-          std::find_if(pivot, bounds.second,
-                       std::bind(neq_to<VT>(comp), std::placeholders::_1, pv));
+      pivot = std::find_if(
+          pivot, bounds.second,
+          std::bind(neq_to<VT>(comp), std::placeholders::_1, pv));
       // push the upper bit
       if (bounds.second != pivot)
         ctx.push(std::make_pair(pivot, bounds.second));
@@ -136,9 +140,9 @@ struct sort_helper {
 
 template <typename RandomAccessIterator, class Predicate>
 std::pair<RandomAccessIterator, RandomAccessIterator>
-dual_partition(RandomAccessIterator first1, RandomAccessIterator last1,
-               RandomAccessIterator first2, RandomAccessIterator last2,
-               Predicate pred) {
+dual_partition(
+    RandomAccessIterator first1, RandomAccessIterator last1,
+    RandomAccessIterator first2, RandomAccessIterator last2, Predicate pred) {
   typedef std::reverse_iterator<RandomAccessIterator> RI;
   RI first3(last2), last3(first2);
   while (true) {
@@ -168,8 +172,8 @@ struct partition_helper {
       return 1024;
     }
 
-    partition_helper_state(RandomAccessIterator f, RandomAccessIterator l,
-                           Predicate p)
+    partition_helper_state(
+        RandomAccessIterator f, RandomAccessIterator l, Predicate p)
         : first(f), last(l), rfirst(l), rlast(f), pred(p) {}
     RP takeHigh() {
       Lock.lock();
@@ -191,11 +195,11 @@ struct partition_helper {
       Lock.lock();
       if (low.first != low.second) {
         rfirst = std::min(rfirst, low.first);
-        rlast  = std::max(rlast, low.second);
+        rlast = std::max(rlast, low.second);
       }
       if (high.first != high.second) {
         rfirst = std::min(rfirst, high.first);
-        rlast  = std::max(rlast, high.second);
+        rlast = std::max(rlast, high.second);
       }
       Lock.unlock();
     }
@@ -208,8 +212,8 @@ struct partition_helper {
   void operator()(unsigned, unsigned) {
     RP high, low;
     do {
-      RP parts  = dual_partition(low.first, low.second, high.first, high.second,
-                                state->pred);
+      RP parts = dual_partition(
+          low.first, low.second, high.first, high.second, state->pred);
       low.first = parts.first;
       high.second = parts.second;
       if (low.first == low.second)
@@ -222,14 +226,15 @@ struct partition_helper {
 };
 
 template <class RandomAccessIterator, class Predicate>
-RandomAccessIterator partition(RandomAccessIterator first,
-                               RandomAccessIterator last, Predicate pred) {
+RandomAccessIterator
+partition(
+    RandomAccessIterator first, RandomAccessIterator last, Predicate pred) {
   if (std::distance(first, last) <= 1024)
     return std::partition(first, last, pred);
   typedef partition_helper<RandomAccessIterator, Predicate> P;
   typename P::partition_helper_state s(first, last, pred);
   on_each(P(&s));
-  if (s.rfirst == first && s.rlast == last) { // perfect !
+  if (s.rfirst == first && s.rlast == last) {  // perfect !
     // abort();
     return s.first;
   }
@@ -244,20 +249,23 @@ struct pair_dist {
 };
 
 template <class RandomAccessIterator, class Compare>
-void sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp) {
+void
+sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp) {
   if (std::distance(first, last) <= 1024) {
     std::sort(first, last, comp);
     return;
   }
   typedef galois::worklists::PerSocketChunkFIFO<1> WL;
 
-  for_each(galois::iterate({std::make_pair(first, last)}),
-           sort_helper<Compare>(comp), galois::disable_conflict_detection(),
-           galois::wl<WL>());
+  for_each(
+      galois::iterate({std::make_pair(first, last)}),
+      sort_helper<Compare>(comp), galois::disable_conflict_detection(),
+      galois::wl<WL>());
 }
 
 template <class RandomAccessIterator>
-void sort(RandomAccessIterator first, RandomAccessIterator last) {
+void
+sort(RandomAccessIterator first, RandomAccessIterator last) {
   galois::ParallelSTL::sort(
       first, last,
       std::less<
@@ -265,9 +273,10 @@ void sort(RandomAccessIterator first, RandomAccessIterator last) {
 }
 
 template <class InputIterator, class T, typename BinaryOperation>
-T accumulate(InputIterator first, InputIterator last, const T& identity,
-             const BinaryOperation& binary_op) {
-
+T
+accumulate(
+    InputIterator first, InputIterator last, const T& identity,
+    const BinaryOperation& binary_op) {
   auto id_fn = [=]() { return identity; };
 
   auto r = make_reducible(binary_op, id_fn);
@@ -278,40 +287,45 @@ T accumulate(InputIterator first, InputIterator last, const T& identity,
 }
 
 template <class InputIterator, class T>
-T accumulate(InputIterator first, InputIterator last, const T& identity = T()) {
+T
+accumulate(InputIterator first, InputIterator last, const T& identity = T()) {
   return accumulate(first, last, identity, std::plus<T>());
 }
 
 template <class InputIterator, class MapFn, class T, class ReduceFn>
-T map_reduce(InputIterator first, InputIterator last, MapFn map_fn,
-             ReduceFn reduce_fn, const T& identity) {
-
+T
+map_reduce(
+    InputIterator first, InputIterator last, MapFn map_fn, ReduceFn reduce_fn,
+    const T& identity) {
   auto id_fn = [=]() { return identity; };
 
   auto r = make_reducible(reduce_fn, id_fn);
 
-  galois::do_all(galois::iterate(first, last),
-                 [&](const auto& v) { r.update(map_fn(v)); });
+  galois::do_all(galois::iterate(first, last), [&](const auto& v) {
+    r.update(map_fn(v));
+  });
 
   return r.reduce();
 }
 
 template <typename I>
-std::enable_if_t<!std::is_scalar<internal::Val_ty<I>>::value> destroy(I first,
-                                                                      I last) {
+std::enable_if_t<!std::is_scalar<internal::Val_ty<I>>::value>
+destroy(I first, I last) {
   using T = internal::Val_ty<I>;
   do_all(iterate(first, last), [=](T& i) { (&i)->~T(); });
 }
 
 template <class I>
-std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value> destroy(I, I) {}
+std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value>
+destroy(I, I) {}
 
 /**
  * Does a partial sum from first -> last and writes the results to the d_first
  * iterator.
  */
 template <class InputIt, class OutputIt>
-OutputIt partial_sum(InputIt first, InputIt last, OutputIt d_first) {
+OutputIt
+partial_sum(InputIt first, InputIt last, OutputIt d_first) {
   using ValueType = typename std::iterator_traits<InputIt>::value_type;
 
   size_t sizeOfVector = std::distance(first, last);
@@ -329,12 +343,12 @@ OutputIt partial_sum(InputIt first, InputIt last, OutputIt d_first) {
         galois::iterate((size_t)0, numBlocks), [&](const size_t& block) {
           // block start can extend past sizeOfVector if doesn't divide evenly
           size_t blockStart = std::min(block * blockSize, sizeOfVector);
-          size_t blockEnd   = std::min((block + 1) * blockSize, sizeOfVector);
+          size_t blockEnd = std::min((block + 1) * blockSize, sizeOfVector);
           assert(blockStart <= blockEnd);
 
           // partial accumulation of each block done now
-          std::partial_sum(first + blockStart, first + blockEnd,
-                           d_first + blockStart);
+          std::partial_sum(
+              first + blockStart, first + blockEnd, d_first + blockStart);
           // save the last number in this block: used for block prefix sum
           if (blockEnd > 0) {
             localSums[block] = *(d_first + blockEnd - 1);
@@ -359,14 +373,14 @@ OutputIt partial_sum(InputIt first, InputIt last, OutputIt d_first) {
         galois::iterate((size_t)0, numBlocks), [&](const size_t& block) {
           // add the sums of previous elements to blocks
           ValueType numToAdd = bulkPrefix[block];
-          size_t blockStart  = std::min(block * blockSize, sizeOfVector);
-          size_t blockEnd    = std::min((block + 1) * blockSize, sizeOfVector);
+          size_t blockStart = std::min(block * blockSize, sizeOfVector);
+          size_t blockEnd = std::min((block + 1) * blockSize, sizeOfVector);
           assert(blockStart <= blockEnd);
 
           // transform applies addition to appropriate range
-          std::transform(d_first + blockStart, d_first + blockEnd,
-                         d_first + blockStart,
-                         [&](ValueType& val) { return val + numToAdd; });
+          std::transform(
+              d_first + blockStart, d_first + blockEnd, d_first + blockStart,
+              [&](ValueType& val) { return val + numToAdd; });
         });
 
     // return the iterator past the last element written
@@ -377,6 +391,6 @@ OutputIt partial_sum(InputIt first, InputIt last, OutputIt d_first) {
   }
 }
 
-} // end namespace ParallelSTL
-} // end namespace galois
+}  // end namespace ParallelSTL
+}  // end namespace galois
 #endif

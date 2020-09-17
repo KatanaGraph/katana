@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include <arrow/type.h>
 #include <arrow/api.h>
+#include <arrow/type.h>
 
 #include "galois/graphs/PropertyFileGraph.h"
 
@@ -18,8 +18,8 @@ class ColumnTransformer {
 public:
   virtual ~ColumnTransformer() = default;
 
-  virtual std::pair<std::shared_ptr<arrow::Field>,
-                    std::shared_ptr<arrow::ChunkedArray>>
+  virtual std::pair<
+      std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
   operator()(arrow::Field* field, arrow::ChunkedArray* chunked_array) = 0;
 
   virtual bool Matches(arrow::Field* field) = 0;
@@ -68,8 +68,9 @@ struct ConvertTimestamps : public ColumnTransformer {
       return false;
     }
 
-    return std::find(property_names_.begin(), property_names_.end(),
-                     field->name()) != property_names_.end();
+    return std::find(
+               property_names_.begin(), property_names_.end(), field->name()) !=
+           property_names_.end();
   }
 
   std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
@@ -80,6 +81,6 @@ void ApplyTransforms(
     galois::graphs::PropertyFileGraph* graph,
     const std::vector<std::unique_ptr<ColumnTransformer>>& transformers);
 
-} // namespace galois
+}  // namespace galois
 
 #endif

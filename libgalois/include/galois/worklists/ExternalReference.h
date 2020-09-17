@@ -60,6 +60,6 @@ public:
   galois::optional<value_type> pop() { return wl.pop(); }
 };
 
-} // namespace worklists
-} // namespace galois
+}  // namespace worklists
+}  // namespace galois
 #endif

@@ -20,8 +20,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_CHUNK_H_
 #define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_CHUNK_H_
 
-#include "galois/config.h"
 #include "galois/FixedSizeRing.h"
+#include "galois/config.h"
 #include "galois/runtime/Mem.h"
 #include "galois/substrate/PaddedLock.h"
 #include "galois/worklists/WLCompileCheck.h"
@@ -55,8 +55,9 @@ struct squeue<false, PS, TQ> {
 };
 
 //! Common functionality to all chunked worklists
-template <typename T, template <typename, bool> class QT, bool Distributed,
-          bool IsStack, int ChunkSize, bool Concurrent>
+template <
+    typename T, template <typename, bool> class QT, bool Distributed,
+    bool IsStack, int ChunkSize, bool Concurrent>
 struct ChunkMaster {
   template <typename _T>
   using retype =
@@ -109,7 +110,7 @@ private:
   }
 
   Chunk* popChunk() {
-    int id   = Q.myEffectiveID();
+    int id = Q.myEffectiveID();
     Chunk* r = popChunkByID(id);
     if (r)
       return r;
@@ -145,7 +146,7 @@ private:
 public:
   typedef T value_type;
 
-  ChunkMaster()                   = default;
+  ChunkMaster() = default;
   ChunkMaster(const ChunkMaster&) = delete;
   ChunkMaster& operator=(const ChunkMaster&) = delete;
 
@@ -192,7 +193,7 @@ public:
         delChunk(n.cur);
       n.cur = popChunk();
       if (!n.cur) {
-        n.cur  = n.next;
+        n.cur = n.next;
         n.next = 0;
       }
       if (n.cur && !n.cur->empty())
@@ -253,7 +254,7 @@ public:
         delChunk(n.cur);
       n.cur = popChunk();
       if (!n.cur) {
-        n.cur  = n.next;
+        n.cur = n.next;
         n.next = 0;
       }
       if (n.cur)
@@ -263,7 +264,7 @@ public:
   }
 };
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Chunk FIFO. A global FIFO of chunks of some fixed size.
@@ -271,8 +272,8 @@ public:
  * @tparam ChunkSize chunk size
  */
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
-using ChunkFIFO = internal::ChunkMaster<T, ConExtLinkedQueue, false, false,
-                                        ChunkSize, Concurrent>;
+using ChunkFIFO = internal::ChunkMaster<
+    T, ConExtLinkedQueue, false, false, ChunkSize, Concurrent>;
 GALOIS_WLCOMPILECHECK(ChunkFIFO)
 
 /**
@@ -281,8 +282,8 @@ GALOIS_WLCOMPILECHECK(ChunkFIFO)
  * @tparam ChunkSize chunk size
  */
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
-using ChunkLIFO = internal::ChunkMaster<T, ConExtLinkedStack, false, true,
-                                        ChunkSize, Concurrent>;
+using ChunkLIFO = internal::ChunkMaster<
+    T, ConExtLinkedStack, false, true, ChunkSize, Concurrent>;
 GALOIS_WLCOMPILECHECK(ChunkLIFO)
 
 /**
@@ -291,8 +292,8 @@ GALOIS_WLCOMPILECHECK(ChunkLIFO)
  * @tparam ChunkSize chunk size
  */
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
-using PerSocketChunkFIFO = internal::ChunkMaster<T, ConExtLinkedQueue, true,
-                                                 false, ChunkSize, Concurrent>;
+using PerSocketChunkFIFO = internal::ChunkMaster<
+    T, ConExtLinkedQueue, true, false, ChunkSize, Concurrent>;
 GALOIS_WLCOMPILECHECK(PerSocketChunkFIFO)
 
 /**
@@ -301,8 +302,8 @@ GALOIS_WLCOMPILECHECK(PerSocketChunkFIFO)
  * @tparam chunksize chunk size
  */
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
-using PerSocketChunkLIFO = internal::ChunkMaster<T, ConExtLinkedStack, true,
-                                                 true, ChunkSize, Concurrent>;
+using PerSocketChunkLIFO = internal::ChunkMaster<
+    T, ConExtLinkedStack, true, true, ChunkSize, Concurrent>;
 GALOIS_WLCOMPILECHECK(PerSocketChunkLIFO)
 
 /**
@@ -312,11 +313,11 @@ GALOIS_WLCOMPILECHECK(PerSocketChunkLIFO)
  * @tparam chunksize chunk size
  */
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
-using PerSocketChunkBag = internal::ChunkMaster<T, ConExtLinkedQueue, true,
-                                                true, ChunkSize, Concurrent>;
+using PerSocketChunkBag = internal::ChunkMaster<
+    T, ConExtLinkedQueue, true, true, ChunkSize, Concurrent>;
 GALOIS_WLCOMPILECHECK(PerSocketChunkBag)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

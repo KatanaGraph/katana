@@ -28,9 +28,9 @@
 
 #include <fstream>
 
+#include "galois/Reduction.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
-#include "galois/Reduction.h"
 
 namespace galois {
 namespace graphs {
@@ -89,8 +89,8 @@ private:
    * @param nodeStart the first node to load
    * @param numNodesToLoad number of nodes to load
    */
-  void loadOutIndex(std::ifstream& graphFile, uint64_t nodeStart,
-                    uint64_t numNodesToLoad) {
+  void loadOutIndex(
+      std::ifstream& graphFile, uint64_t nodeStart, uint64_t numNodesToLoad) {
     if (numNodesToLoad == 0) {
       return;
     }
@@ -106,7 +106,7 @@ private:
     graphFile.seekg(readPosition);
 
     uint64_t numBytesToLoad = numNodesToLoad * sizeof(uint64_t);
-    uint64_t bytesRead      = 0;
+    uint64_t bytesRead = 0;
 
     while (numBytesToLoad > 0) {
       graphFile.read(((char*)this->outIndexBuffer) + bytesRead, numBytesToLoad);
@@ -129,8 +129,9 @@ private:
    * @param numGlobalNodes total number of nodes in the graph file; needed
    * to determine offset into the file
    */
-  void loadEdgeDest(std::ifstream& graphFile, uint64_t edgeStart,
-                    uint64_t numEdgesToLoad, uint64_t numGlobalNodes) {
+  void loadEdgeDest(
+      std::ifstream& graphFile, uint64_t edgeStart, uint64_t numEdgesToLoad,
+      uint64_t numGlobalNodes) {
     if (numEdgesToLoad == 0) {
       return;
     }
@@ -148,7 +149,7 @@ private:
     graphFile.seekg(readPosition);
 
     uint64_t numBytesToLoad = numEdgesToLoad * sizeof(uint32_t);
-    uint64_t bytesRead      = 0;
+    uint64_t bytesRead = 0;
     while (numBytesToLoad > 0) {
       graphFile.read(((char*)this->edgeDestBuffer) + bytesRead, numBytesToLoad);
       size_t numRead = graphFile.gcount();
@@ -176,9 +177,9 @@ private:
   template <
       typename EdgeType,
       typename std::enable_if<!std::is_void<EdgeType>::value>::type* = nullptr>
-  void loadEdgeData(std::ifstream& graphFile, uint64_t edgeStart,
-                    uint64_t numEdgesToLoad, uint64_t numGlobalNodes,
-                    uint64_t numGlobalEdges) {
+  void loadEdgeData(
+      std::ifstream& graphFile, uint64_t edgeStart, uint64_t numEdgesToLoad,
+      uint64_t numGlobalNodes, uint64_t numGlobalEdges) {
     galois::gDebug("Loading edge data");
 
     if (numEdgesToLoad == 0) {
@@ -207,7 +208,7 @@ private:
         baseReadPosition + (sizeof(EdgeDataType) * edgeStart);
     graphFile.seekg(readPosition);
     uint64_t numBytesToLoad = numEdgesToLoad * sizeof(EdgeDataType);
-    uint64_t bytesRead      = 0;
+    uint64_t bytesRead = 0;
 
     while (numBytesToLoad > 0) {
       graphFile.read(((char*)this->edgeDataBuffer) + bytesRead, numBytesToLoad);
@@ -239,13 +240,13 @@ private:
    * Resets graph metadata to default values. Does NOT touch the buffers.
    */
   void resetGraphStatus() {
-    graphLoaded    = false;
-    globalSize     = 0;
+    graphLoaded = false;
+    globalSize = 0;
     globalEdgeSize = 0;
-    nodeOffset     = 0;
-    edgeOffset     = 0;
-    numLocalNodes  = 0;
-    numLocalEdges  = 0;
+    nodeOffset = 0;
+    edgeOffset = 0;
+    numLocalNodes = 0;
+    numLocalEdges = 0;
     resetReadCounters();
   }
 
@@ -325,8 +326,8 @@ public:
     loadOutIndex(graphFile, 0, globalSize);
     loadEdgeDest(graphFile, 0, globalEdgeSize, globalSize);
     // may or may not do something depending on EdgeDataType
-    loadEdgeData<EdgeDataType>(graphFile, 0, globalEdgeSize, globalSize,
-                               globalEdgeSize);
+    loadEdgeData<EdgeDataType>(
+        graphFile, 0, globalEdgeSize, globalSize, globalEdgeSize);
     graphLoaded = true;
 
     graphFile.close();
@@ -346,16 +347,17 @@ public:
    * @param numGlobalNodes Total number of nodes in the graph
    * @param numGlobalEdges Total number of edges in the graph
    */
-  void loadPartialGraph(const std::string& filename, uint64_t nodeStart,
-                        uint64_t nodeEnd, uint64_t edgeStart, uint64_t edgeEnd,
-                        uint64_t numGlobalNodes, uint64_t numGlobalEdges) {
+  void loadPartialGraph(
+      const std::string& filename, uint64_t nodeStart, uint64_t nodeEnd,
+      uint64_t edgeStart, uint64_t edgeEnd, uint64_t numGlobalNodes,
+      uint64_t numGlobalEdges) {
     if (graphLoaded) {
       GALOIS_DIE("Cannot load an buffered graph more than once.");
     }
 
     std::ifstream graphFile(filename.c_str());
 
-    globalSize     = numGlobalNodes;
+    globalSize = numGlobalNodes;
     globalEdgeSize = numGlobalEdges;
 
     assert(nodeEnd >= nodeStart);
@@ -367,8 +369,8 @@ public:
     loadEdgeDest(graphFile, edgeStart, numLocalEdges, numGlobalNodes);
 
     // may or may not do something depending on EdgeDataType
-    loadEdgeData<EdgeDataType>(graphFile, edgeStart, numLocalEdges,
-                               numGlobalNodes, numGlobalEdges);
+    loadEdgeData<EdgeDataType>(
+        graphFile, edgeStart, numLocalEdges, numGlobalNodes, numGlobalEdges);
     graphLoaded = true;
 
     graphFile.close();
@@ -456,8 +458,9 @@ public:
    * @param globalEdgeID the global edge id of the edge to get the data of
    * @returns the edge data of the requested edge id
    */
-  template <typename K = EdgeDataType,
-            typename std::enable_if<!std::is_void<K>::value>::type* = nullptr>
+  template <
+      typename K = EdgeDataType,
+      typename std::enable_if<!std::is_void<K>::value>::type* = nullptr>
   EdgeDataType edgeData(uint64_t globalEdgeID) {
     if (!graphLoaded) {
       GALOIS_DIE("Graph hasn't been loaded yet.");
@@ -482,8 +485,9 @@ public:
   /**
    * Version of above function when edge data type is void.
    */
-  template <typename K = EdgeDataType,
-            typename std::enable_if<std::is_void<K>::value>::type* = nullptr>
+  template <
+      typename K = EdgeDataType,
+      typename std::enable_if<std::is_void<K>::value>::type* = nullptr>
   unsigned edgeData(uint64_t) {
     galois::gWarn("Getting edge data on graph when it doesn't exist\n");
     return 0;
@@ -517,6 +521,6 @@ public:
     resetGraphStatus();
   }
 };
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 #endif

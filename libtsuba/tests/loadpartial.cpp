@@ -1,14 +1,14 @@
 #include <random>
 
-#include "arrow/api.h"
 #include <boost/filesystem.hpp>
 
-#include "galois/Logging.h"
+#include "arrow/api.h"
 #include "galois/FileSystem.h"
+#include "galois/Logging.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG.h"
-#include "tsuba/tsuba.h"
 #include "tsuba/RDG_internal.h"
+#include "tsuba/tsuba.h"
 
 /* This test tests the correctness of LoadPartialTable against the ground truth
  * of slicing the desired portion out of the original table.
@@ -22,10 +22,11 @@ namespace fs = boost::filesystem;
 namespace {
 
 const int64_t BIG_ARRAY_SIZE = 1 << 27;
-const std::string TEST_DIR   = "/tmp/partial-load";
+const std::string TEST_DIR = "/tmp/partial-load";
 
 // Schema
-std::shared_ptr<arrow::Schema> int64_schema() {
+std::shared_ptr<arrow::Schema>
+int64_schema() {
   auto field = std::make_shared<arrow::Field>(
       "test", std::make_shared<arrow::Int64Type>());
   auto schema =
@@ -34,7 +35,8 @@ std::shared_ptr<arrow::Schema> int64_schema() {
 }
 
 // Table
-std::shared_ptr<arrow::Table> big_table() {
+std::shared_ptr<arrow::Table>
+big_table() {
   arrow::Int64Builder builder;
   arrow::Status status;
 
@@ -51,14 +53,15 @@ std::shared_ptr<arrow::Table> big_table() {
 }
 
 // Test
-void WriteInit(std::shared_ptr<arrow::Table> table, std::string path) {
-  auto ff  = std::make_shared<tsuba::FileFrame>();
+void
+WriteInit(std::shared_ptr<arrow::Table> table, std::string path) {
+  auto ff = std::make_shared<tsuba::FileFrame>();
   auto res = ff->Init();
   GALOIS_LOG_ASSERT(res);
 
-  auto write_result =
-      parquet::arrow::WriteTable(*table, arrow::default_memory_pool(), ff,
-                                 std::numeric_limits<int64_t>::max());
+  auto write_result = parquet::arrow::WriteTable(
+      *table, arrow::default_memory_pool(), ff,
+      std::numeric_limits<int64_t>::max());
   GALOIS_LOG_ASSERT(write_result.ok());
 
   ff->Bind(path);
@@ -66,23 +69,27 @@ void WriteInit(std::shared_ptr<arrow::Table> table, std::string path) {
   GALOIS_LOG_ASSERT(res);
 }
 
-void Test(std::shared_ptr<arrow::Table> table, std::string path, int64_t offset,
-          int64_t length) {
+void
+Test(
+    std::shared_ptr<arrow::Table> table, std::string path, int64_t offset,
+    int64_t length) {
   GALOIS_LOG_ASSERT(length >= 0 && offset >= 0);
 
   auto recovered_result =
       tsuba::internal::LoadPartialTable("test", path, offset, length);
   if (!recovered_result) {
-    GALOIS_LOG_FATAL("tsuba::LoadPartialTable(\"test\", {}, {}, {}): {}", path,
-                     offset, length, recovered_result.error());
+    GALOIS_LOG_FATAL(
+        "tsuba::LoadPartialTable(\"test\", {}, {}, {}): {}", path, offset,
+        length, recovered_result.error());
   }
   std::shared_ptr<arrow::Table> recovered = recovered_result.value();
 
   GALOIS_LOG_ASSERT(recovered->Equals(*(table->Slice(offset, length))));
 }
-} // namespace
+}  // namespace
 
-int main() {
+int
+main() {
   std::shared_ptr<arrow::Table> table = big_table();
 
   if (auto res = tsuba::Init(); !res) {
@@ -97,8 +104,9 @@ int main() {
 
   auto path_result = galois::NewPath(temp_dir, "big_parquet");
   if (!path_result) {
-    GALOIS_LOG_FATAL("galois::NewPath({}, \"{}\"): {}", temp_dir, "big_parquet",
-                     path_result.error());
+    GALOIS_LOG_FATAL(
+        "galois::NewPath({}, \"{}\"): {}", temp_dir, "big_parquet",
+        path_result.error());
   }
   std::string path = path_result.value();
   WriteInit(table, path);

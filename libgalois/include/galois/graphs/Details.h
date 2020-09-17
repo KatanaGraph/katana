@@ -21,14 +21,15 @@
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_DETAILS_H_
 
 #include <algorithm>
+
 #include <boost/mpl/if.hpp>
 
-#include "galois/config.h"
 #include "galois/LargeArray.h"
 #include "galois/LazyObject.h"
 #include "galois/NoDerefIterator.h"
 #include "galois/Range.h"
 #include "galois/Threads.h"
+#include "galois/config.h"
 #include "galois/runtime/Context.h"
 #include "galois/substrate/PerThreadStorage.h"
 
@@ -39,13 +40,13 @@ struct read_with_aux_graph_tag {};
 struct read_lc_inout_graph_tag {};
 struct read_with_aux_first_graph_tag {};
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 namespace galois::graphs::internal {
 
 template <typename, typename, typename, typename, typename>
 struct EdgeSortReference;
-} // namespace galois::graphs::internal
+}  // namespace galois::graphs::internal
 
 namespace galois::graphs {
 
@@ -71,7 +72,7 @@ public:
   }
 };
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 namespace galois::graphs::internal {
 
@@ -91,7 +92,7 @@ public:
 
   void setLocalRange(uint64_t begin, uint64_t end) {
     Range& r = *localIterators.getLocal();
-    r.first  = begin;
+    r.first = begin;
     r.second = end;
   }
 };
@@ -99,16 +100,16 @@ public:
 template <>
 struct LocalIteratorFeature<false> {
   uint64_t localBegin(uint64_t numNodes) const {
-    unsigned int id  = substrate::ThreadPool::getTID();
+    unsigned int id = substrate::ThreadPool::getTID();
     unsigned int num = galois::getActiveThreads();
-    uint64_t begin   = (numNodes + num - 1) / num * id;
+    uint64_t begin = (numNodes + num - 1) / num * id;
     return std::min(begin, numNodes);
   }
 
   uint64_t localEnd(uint64_t numNodes) const {
-    unsigned int id  = substrate::ThreadPool::getTID();
+    unsigned int id = substrate::ThreadPool::getTID();
     unsigned int num = galois::getActiveThreads();
-    uint64_t end     = (numNodes + num - 1) / num * (id + 1);
+    uint64_t end = (numNodes + num - 1) / num * (id + 1);
     return std::min(end, numNodes);
   }
 
@@ -116,8 +117,9 @@ struct LocalIteratorFeature<false> {
 };
 
 //! Proxy object for {@link EdgeSortIterator}
-template <typename GraphNode, typename EdgeIndex, typename EdgeDst,
-          typename EdgeData, typename GraphNodeConverter>
+template <
+    typename GraphNode, typename EdgeIndex, typename EdgeDst, typename EdgeData,
+    typename GraphNodeConverter>
 struct EdgeSortReference {
   typedef typename EdgeData::raw_value_type EdgeTy;
   EdgeIndex at;
@@ -132,8 +134,8 @@ struct EdgeSortReference {
   // from a class with a non-defaulted copy assignment
   // operator is deprecated.
   EdgeSortReference(EdgeSortReference const& x) {
-    at       = x.at;
-    edgeDst  = x.edgeDst;
+    at = x.at;
+    edgeDst = x.edgeDst;
     edgeData = x.edgeData;
   }
 
@@ -193,21 +195,22 @@ struct Identity {
  *   EdgeDst when dereferencing this iterator; assignment uses untransformed
  *   EdgeDst values
  */
-template <typename GraphNode, typename EdgeIndex, typename EdgeDst,
-          typename EdgeData, typename GraphNodeConverter = Identity>
+template <
+    typename GraphNode, typename EdgeIndex, typename EdgeDst, typename EdgeData,
+    typename GraphNodeConverter = Identity>
 class EdgeSortIterator
     : public boost::iterator_facade<
-          EdgeSortIterator<GraphNode, EdgeIndex, EdgeDst, EdgeData,
-                           GraphNodeConverter>,
+          EdgeSortIterator<
+              GraphNode, EdgeIndex, EdgeDst, EdgeData, GraphNodeConverter>,
           EdgeSortValue<GraphNode, typename EdgeData::raw_value_type>,
           boost::random_access_traversal_tag,
-          EdgeSortReference<GraphNode, EdgeIndex, EdgeDst, EdgeData,
-                            GraphNodeConverter>> {
-  typedef EdgeSortIterator<GraphNode, EdgeIndex, EdgeDst, EdgeData,
-                           GraphNodeConverter>
+          EdgeSortReference<
+              GraphNode, EdgeIndex, EdgeDst, EdgeData, GraphNodeConverter>> {
+  typedef EdgeSortIterator<
+      GraphNode, EdgeIndex, EdgeDst, EdgeData, GraphNodeConverter>
       Self;
-  typedef EdgeSortReference<GraphNode, EdgeIndex, EdgeDst, EdgeData,
-                            GraphNodeConverter>
+  typedef EdgeSortReference<
+      GraphNode, EdgeIndex, EdgeDst, EdgeData, GraphNodeConverter>
       Reference;
 
   EdgeIndex at;
@@ -267,8 +270,8 @@ struct NodeInfoBaseTypes<void, HasLockable> {
 //! Specializations for void node data
 template <typename NodeTy, bool HasLockable>
 class NodeInfoBase
-    : public boost::mpl::if_c<HasLockable, galois::runtime::Lockable,
-                              NoLockable>::type,
+    : public boost::mpl::if_c<
+          HasLockable, galois::runtime::Lockable, NoLockable>::type,
       public NodeInfoBaseTypes<NodeTy, HasLockable> {
   NodeTy data;
 
@@ -282,8 +285,8 @@ public:
 
 template <bool HasLockable>
 struct NodeInfoBase<void, HasLockable>
-    : public boost::mpl::if_c<HasLockable, galois::runtime::Lockable,
-                              NoLockable>::type,
+    : public boost::mpl::if_c<
+          HasLockable, galois::runtime::Lockable, NoLockable>::type,
       public NodeInfoBaseTypes<void, HasLockable> {
   typename NodeInfoBase::reference getData() { return 0; }
   typename NodeInfoBase::const_reference getData() const { return 0; }
@@ -346,20 +349,21 @@ struct EdgeInfoBase : public LazyObject<EdgeTy> {
 };
 
 template <typename ItTy>
-StandardRange<NoDerefIterator<ItTy>> make_no_deref_range(ItTy ii, ItTy ee) {
-  return MakeStandardRange(make_no_deref_iterator(ii),
-                           make_no_deref_iterator(ee));
+StandardRange<NoDerefIterator<ItTy>>
+make_no_deref_range(ItTy ii, ItTy ee) {
+  return MakeStandardRange(
+      make_no_deref_iterator(ii), make_no_deref_iterator(ee));
 }
 
 template <typename A, typename B, typename C, typename D, typename E>
-void swap(EdgeSortReference<A, B, C, D, E> a,
-          EdgeSortReference<A, B, C, D, E> b) {
+void
+swap(EdgeSortReference<A, B, C, D, E> a, EdgeSortReference<A, B, C, D, E> b) {
   auto aa = *a;
   auto bb = *b;
-  a       = bb;
-  b       = aa;
+  a = bb;
+  b = aa;
 }
 
-} // namespace galois::graphs::internal
+}  // namespace galois::graphs::internal
 
 #endif

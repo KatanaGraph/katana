@@ -20,23 +20,23 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_TILEDEXECUTOR_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_TILEDEXECUTOR_H_
 
-#include "galois/config.h"
 #include "galois/Galois.h"
 #include "galois/LargeArray.h"
 #include "galois/NoDerefIterator.h"
+#include "galois/config.h"
 
 namespace galois {
 namespace runtime {
 
 template <typename Graph, bool UseExp = false>
 class Fixed2DGraphTiledExecutor {
-  static constexpr int numDims = 2; // code is specialized to 2
+  static constexpr int numDims = 2;  // code is specialized to 2
 
-  using SpinLock      = galois::substrate::PaddedLock<true>;
-  using GNode         = typename Graph::GraphNode;
-  using iterator      = typename Graph::iterator;
+  using SpinLock = galois::substrate::PaddedLock<true>;
+  using GNode = typename Graph::GraphNode;
+  using iterator = typename Graph::iterator;
   using edge_iterator = typename Graph::edge_iterator;
-  using Point         = std::array<size_t, numDims>;
+  using Point = std::array<size_t, numDims>;
 
   template <typename T>
   struct SimpleAtomic {
@@ -289,8 +289,8 @@ class Fixed2DGraphTiledExecutor {
       // TODO probably unoptimal: if any limit has hit 0, is it the case that
       // the entire grid has been looked at already? This comment writer thinks
       // the answer is yes in which case the below is doing extra work
-      while (std::any_of(limit.begin(), limit.end(),
-                         [](size_t x) { return x > 0; })) {
+      while (std::any_of(
+          limit.begin(), limit.end(), [](size_t x) { return x > 0; })) {
         for (int i = 0; i < numDims; ++i) {
           if (limit[i] > 1 && (t = probeBlock(p, i, limit[i] - 1))) {
             start = p;
@@ -322,8 +322,8 @@ class Fixed2DGraphTiledExecutor {
    * @param task Task that contains block information
    */
   template <bool UseDense, typename Function>
-  void executeBlock(Function& fn, Task& task,
-                    typename std::enable_if<UseDense>::type* = 0) {
+  void executeBlock(
+      Function& fn, Task& task, typename std::enable_if<UseDense>::type* = 0) {
     GetDst getDst{&g};
 
     for (auto ii = task.startX; ii != task.endX; ++ii) {
@@ -347,8 +347,8 @@ class Fixed2DGraphTiledExecutor {
    * @param task Task that contains block information
    */
   template <bool UseDense, typename Function>
-  void executeBlock(Function& fn, Task& task,
-                    typename std::enable_if<!UseDense>::type* = 0) {
+  void executeBlock(
+      Function& fn, Task& task, typename std::enable_if<!UseDense>::type* = 0) {
     GetDst getDst{&g};
 
     for (auto ii = task.startX; ii != task.endX; ++ii) {
@@ -396,8 +396,8 @@ class Fixed2DGraphTiledExecutor {
     // find out each thread's starting point; essentially what it is doing
     // is assinging each thread to a block on the diagonal to begin with
     for (int i = 0; i < numDims; ++i) {
-      block[i] = (numBlocks[i] + total - 1) / total; // blocks per thread
-      start[i] = std::min(block[i] * tid, numBlocks[i] - 1); // block to start
+      block[i] = (numBlocks[i] + total - 1) / total;  // blocks per thread
+      start[i] = std::min(block[i] * tid, numBlocks[i] - 1);  // block to start
     }
 
     unsigned coresPerSocket =
@@ -407,11 +407,12 @@ class Fixed2DGraphTiledExecutor {
     // if using locks, readjust start Y location of this thread to location of
     // the thread's socket
     if (useLocks) {
-      start = {{start[0],
-                std::min(block[1] *
-                             galois::substrate::getThreadPool().getSocket(tid) *
-                             coresPerSocket,
-                         numBlocks[1] - 1)}};
+      start = {
+          {start[0],
+           std::min(
+               block[1] * galois::substrate::getThreadPool().getSocket(tid) *
+                   coresPerSocket,
+               numBlocks[1] - 1)}};
     }
 
     Point p = start;
@@ -461,8 +462,9 @@ class Fixed2DGraphTiledExecutor {
    * @param sizeX desired size of blocks in X dimension
    * @param sizeY desired size of blocks in Y dimension
    */
-  void initializeTasks(iterator firstX, iterator lastX, iterator firstY,
-                       iterator lastY, size_t sizeX, size_t sizeY) {
+  void initializeTasks(
+      iterator firstX, iterator lastX, iterator firstY, iterator lastY,
+      size_t sizeX, size_t sizeY) {
     const size_t numXBlocks =
         (std::distance(firstX, lastX) + sizeX - 1) / sizeX;
     const size_t numYBlocks =
@@ -488,7 +490,7 @@ class Fixed2DGraphTiledExecutor {
       std::tie(s, e) =
           galois::block_range(firstY, lastY, task.coord[1], numYBlocks);
       // Works for CSR graphs
-      task.startY        = *s;
+      task.startY = *s;
       task.endYInclusive = *e - 1;
     }
   }
@@ -518,8 +520,8 @@ public:
    * Report the number of probe block failures to statistics.
    */
   ~Fixed2DGraphTiledExecutor() {
-    galois::runtime::reportStat_Single("TiledExecutor", "ProbeFailures",
-                                       failedProbes.reduce());
+    galois::runtime::reportStat_Single(
+        "TiledExecutor", "ProbeFailures", failedProbes.reduce());
   }
 
   /**
@@ -541,21 +543,23 @@ public:
    * tiled executor for
    */
   template <typename Function>
-  void execute(iterator firstX, iterator lastX, iterator firstY, iterator lastY,
-               size_t sizeX, size_t sizeY, Function fn, bool _useLocks,
-               unsigned numIterations = 1) {
+  void execute(
+      iterator firstX, iterator lastX, iterator firstY, iterator lastY,
+      size_t sizeX, size_t sizeY, Function fn, bool _useLocks,
+      unsigned numIterations = 1) {
     initializeTasks(firstX, lastX, firstY, lastY, sizeX, sizeY);
-    numTasks   = tasks.size();
+    numTasks = tasks.size();
     maxUpdates = numIterations;
-    useLocks   = _useLocks;
+    useLocks = _useLocks;
 
     Process<false, Function> p{this, fn};
 
     galois::on_each(p);
 
     // TODO remove after worklist fix
-    if (std::any_of(tasks.begin(), tasks.end(),
-                    [this](Task& t) { return t.updates.value < maxUpdates; })) {
+    if (std::any_of(tasks.begin(), tasks.end(), [this](Task& t) {
+          return t.updates.value < maxUpdates;
+        })) {
       galois::gWarn("Missing tasks");
     }
   }
@@ -579,24 +583,26 @@ public:
    * tiled executor for
    */
   template <typename Function>
-  void executeDense(iterator firstX, iterator lastX, iterator firstY,
-                    iterator lastY, size_t sizeX, size_t sizeY, Function fn,
-                    bool _useLocks, int numIterations = 1) {
+  void executeDense(
+      iterator firstX, iterator lastX, iterator firstY, iterator lastY,
+      size_t sizeX, size_t sizeY, Function fn, bool _useLocks,
+      int numIterations = 1) {
     initializeTasks(firstX, lastX, firstY, lastY, sizeX, sizeY);
-    numTasks   = tasks.size();
+    numTasks = tasks.size();
     maxUpdates = numIterations;
-    useLocks   = _useLocks;
+    useLocks = _useLocks;
     Process<true, Function> p{this, fn};
     galois::on_each(p);
 
     // TODO remove after worklist fix
-    if (std::any_of(tasks.begin(), tasks.end(),
-                    [this](Task& t) { return t.updates.value < maxUpdates; })) {
+    if (std::any_of(tasks.begin(), tasks.end(), [this](Task& t) {
+          return t.updates.value < maxUpdates;
+        })) {
       galois::gWarn("Missing tasks");
     }
   }
 };
 
-} // namespace runtime
-} // namespace galois
+}  // namespace runtime
+}  // namespace galois
 #endif

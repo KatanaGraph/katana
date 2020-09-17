@@ -4,9 +4,9 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
-#include <utility>
 
 #include <arrow/api.h>
 
@@ -14,13 +14,13 @@
 
 namespace galois {
 
-using ArrayBuilders   = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
+using ArrayBuilders = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
 using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
-using ArrowArrays     = std::vector<std::shared_ptr<arrow::Array>>;
-using ArrowFields     = std::vector<std::shared_ptr<arrow::Field>>;
-using NullMaps =
-    std::pair<std::unordered_map<int, std::shared_ptr<arrow::Array>>,
-              std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
+using ArrowArrays = std::vector<std::shared_ptr<arrow::Array>>;
+using ArrowFields = std::vector<std::shared_ptr<arrow::Field>>;
+using NullMaps = std::pair<
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>,
+    std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
 
 enum SourceType { kGraphml, kKatana };
 enum SourceDatabase { kNone, kNeo4j, kMongodb, kMysql };
@@ -39,10 +39,10 @@ enum ImportDataType {
 struct ImportData {
   ImportDataType type;
   bool is_list;
-  std::variant<uint8_t, std::string, int64_t, int32_t, double, float, bool,
-               std::vector<std::string>, std::vector<int64_t>,
-               std::vector<int32_t>, std::vector<double>, std::vector<float>,
-               std::vector<bool>>
+  std::variant<
+      uint8_t, std::string, int64_t, int32_t, double, float, bool,
+      std::vector<std::string>, std::vector<int64_t>, std::vector<int32_t>,
+      std::vector<double>, std::vector<float>, std::vector<bool>>
       value;
 
   ImportData(ImportDataType type_, bool is_list_)
@@ -57,10 +57,15 @@ struct PropertyKey {
   ImportDataType type;
   bool is_list;
 
-  PropertyKey(const std::string& id_, bool for_node_, bool for_edge_,
-              const std::string& name_, ImportDataType type_, bool is_list_)
-      : id(id_), for_node(for_node_), for_edge(for_edge_), name(name_),
-        type(type_), is_list(is_list_) {}
+  PropertyKey(
+      const std::string& id_, bool for_node_, bool for_edge_,
+      const std::string& name_, ImportDataType type_, bool is_list_)
+      : id(id_),
+        for_node(for_node_),
+        for_edge(for_edge_),
+        name(name_),
+        type(type_),
+        is_list(is_list_) {}
   PropertyKey(const std::string& id, ImportDataType type, bool is_list)
       : PropertyKey(id, false, false, id, type, is_list) {}
 };
@@ -71,8 +76,9 @@ struct LabelRule {
   bool for_edge;
   std::string label;
 
-  LabelRule(const std::string& id_, bool for_node_, bool for_edge_,
-            const std::string& label_)
+  LabelRule(
+      const std::string& id_, bool for_node_, bool for_edge_,
+      const std::string& label_)
       : id(id_), for_node(for_node_), for_edge(for_edge_), label(label_) {}
   LabelRule(const std::string& id, const std::string& label)
       : LabelRule(id, false, false, label) {}
@@ -123,8 +129,9 @@ struct GraphComponent {
   std::shared_ptr<arrow::Table> properties;
   std::shared_ptr<arrow::Table> labels;
 
-  GraphComponent(std::shared_ptr<arrow::Table> properties_,
-                 std::shared_ptr<arrow::Table> labels_)
+  GraphComponent(
+      std::shared_ptr<arrow::Table> properties_,
+      std::shared_ptr<arrow::Table> labels_)
       : properties(properties_), labels(labels_) {}
   GraphComponent() : properties(nullptr), labels(nullptr) {}
 };
@@ -134,9 +141,11 @@ struct GraphComponents {
   GraphComponent edges;
   std::shared_ptr<galois::graphs::GraphTopology> topology;
 
-  GraphComponents(GraphComponent nodes_, GraphComponent edges_,
-                  std::shared_ptr<galois::graphs::GraphTopology> topology_)
-      : nodes(std::move(nodes_)), edges(std::move(edges_)),
+  GraphComponents(
+      GraphComponent nodes_, GraphComponent edges_,
+      std::shared_ptr<galois::graphs::GraphTopology> topology_)
+      : nodes(std::move(nodes_)),
+        edges(std::move(edges_)),
         topology(std::move(topology_)) {}
 
   GraphComponents()
@@ -185,16 +194,16 @@ public:
   bool FinishEdge();
 
   bool AddEdge(const std::string& source, const std::string& target);
-  bool AddEdge(uint32_t source, const std::string& target,
-               const std::string& label);
+  bool AddEdge(
+      uint32_t source, const std::string& target, const std::string& label);
   bool AddEdge(uint32_t source, uint32_t target, const std::string& label);
 
   size_t AddLabelBuilder(const LabelRule& rule);
   size_t AddBuilder(const PropertyKey& key);
 
-  void AddValue(const std::string& id,
-                std::function<PropertyKey()> ProcessElement,
-                std::function<ImportData(ImportDataType, bool)> ResolveValue);
+  void AddValue(
+      const std::string& id, std::function<PropertyKey()> ProcessElement,
+      std::function<ImportData(ImportDataType, bool)> ResolveValue);
   void AddLabel(const std::string& name);
 
   GraphComponents Finish();
@@ -208,14 +217,14 @@ private:
   GraphComponent BuildFinalEdges();
 };
 
-galois::graphs::PropertyFileGraph
-ConvertKatana(const std::string& input_filename);
+galois::graphs::PropertyFileGraph ConvertKatana(
+    const std::string& input_filename);
 
-void WritePropertyGraph(const GraphComponents& graph_comps,
-                        const std::string& dir);
-void WritePropertyGraph(graphs::PropertyFileGraph prop_graph,
-                        const std::string& dir);
+void WritePropertyGraph(
+    const GraphComponents& graph_comps, const std::string& dir);
+void WritePropertyGraph(
+    graphs::PropertyFileGraph prop_graph, const std::string& dir);
 
-} // end of namespace galois
+}  // end of namespace galois
 
 #endif

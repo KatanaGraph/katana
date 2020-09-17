@@ -18,28 +18,32 @@
  */
 
 #include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/PageAlloc.h"
 
-#include "galois/gIO.h"
 #include <atomic>
 #include <mutex>
 
+#include "galois/gIO.h"
+#include "galois/substrate/PageAlloc.h"
+
 GALOIS_EXPORT thread_local char* galois::substrate::ptsBase;
 
-galois::substrate::PerBackend& galois::substrate::getPTSBackend() {
+galois::substrate::PerBackend&
+galois::substrate::getPTSBackend() {
   static galois::substrate::PerBackend b;
   return b;
 }
 
 GALOIS_EXPORT thread_local char* galois::substrate::pssBase;
 
-galois::substrate::PerBackend& galois::substrate::getPPSBackend() {
+galois::substrate::PerBackend&
+galois::substrate::getPPSBackend() {
   static galois::substrate::PerBackend b;
   return b;
 }
 
 const size_t ptAllocSize = galois::substrate::allocSize();
-inline void* alloc() {
+inline void*
+alloc() {
   // alloc a single page, don't prefault
   void* toReturn = galois::substrate::allocPages(1, true);
   if (toReturn == nullptr) {
@@ -57,7 +61,8 @@ static_assert((1 << MIN_SIZE) == galois::substrate::GALOIS_CACHE_LINE_SIZE);
 
 galois::substrate::PerBackend::PerBackend() { freeOffsets.resize(MAX_SIZE); }
 
-unsigned galois::substrate::PerBackend::nextLog2(unsigned size) {
+unsigned
+galois::substrate::PerBackend::nextLog2(unsigned size) {
   unsigned i = MIN_SIZE;
   while ((1U << i) < size) {
     ++i;
@@ -68,8 +73,9 @@ unsigned galois::substrate::PerBackend::nextLog2(unsigned size) {
   return i;
 }
 
-unsigned galois::substrate::PerBackend::allocOffset(const unsigned sz) {
-  unsigned ll   = nextLog2(sz);
+unsigned
+galois::substrate::PerBackend::allocOffset(const unsigned sz) {
+  unsigned ll = nextLog2(sz);
   unsigned size = (1 << ll);
 
   if (nextLoc.load(std::memory_order_relaxed) + size <= ptAllocSize) {
@@ -111,7 +117,7 @@ unsigned galois::substrate::PerBackend::allocOffset(const unsigned sz) {
   freeOffsets[index].pop_back();
 
   // remaining chunk
-  unsigned end   = offset + (1 << index);
+  unsigned end = offset + (1 << index);
   unsigned start = offset + size;
   for (unsigned i = index - 1; start < end; --i) {
     freeOffsets[i].push_back(start);
@@ -123,10 +129,11 @@ unsigned galois::substrate::PerBackend::allocOffset(const unsigned sz) {
   return offset;
 }
 
-void galois::substrate::PerBackend::deallocOffset(const unsigned offset,
-                                                  const unsigned sz) {
-  unsigned ll       = nextLog2(sz);
-  unsigned size     = (1 << ll);
+void
+galois::substrate::PerBackend::deallocOffset(
+    const unsigned offset, const unsigned sz) {
+  unsigned ll = nextLog2(sz);
+  unsigned size = (1 << ll);
   unsigned expected = offset + size;
 
   if (nextLoc.compare_exchange_strong(expected, offset)) {
@@ -144,30 +151,33 @@ void galois::substrate::PerBackend::deallocOffset(const unsigned offset,
   freeOffsets[ll].push_back(offset);
 }
 
-void* galois::substrate::PerBackend::getRemote(unsigned thread,
-                                               unsigned offset) {
+void*
+galois::substrate::PerBackend::getRemote(unsigned thread, unsigned offset) {
   char* rbase = heads[thread].load(std::memory_order_relaxed);
   assert(rbase);
   return &rbase[offset];
 }
 
-void galois::substrate::PerBackend::initCommon(unsigned maxT) {
+void
+galois::substrate::PerBackend::initCommon(unsigned maxT) {
   if (!heads) {
     assert(ThreadPool::getTID() == 0);
     heads = new std::atomic<char*>[maxT] {};
   }
 }
 
-char* galois::substrate::PerBackend::initPerThread(unsigned maxT) {
+char*
+galois::substrate::PerBackend::initPerThread(unsigned maxT) {
   initCommon(maxT);
   char* b = heads[ThreadPool::getTID()] = (char*)alloc();
   memset(b, 0, ptAllocSize);
   return b;
 }
 
-char* galois::substrate::PerBackend::initPerSocket(unsigned maxT) {
+char*
+galois::substrate::PerBackend::initPerSocket(unsigned maxT) {
   initCommon(maxT);
-  unsigned id     = ThreadPool::getTID();
+  unsigned id = ThreadPool::getTID();
   unsigned leader = ThreadPool::getLeader();
   if (id == leader) {
     char* b = heads[id] = (char*)alloc();
@@ -183,7 +193,8 @@ char* galois::substrate::PerBackend::initPerSocket(unsigned maxT) {
   return heads[id];
 }
 
-void galois::substrate::initPTS(unsigned maxT) {
+void
+galois::substrate::initPTS(unsigned maxT) {
   if (!ptsBase) {
     // unguarded initialization as initPTS will run in the master thread
     // before any other threads are generated

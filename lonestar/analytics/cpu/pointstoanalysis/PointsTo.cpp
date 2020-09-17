@@ -17,13 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <deque>
+#include <fstream>
+#include <iostream>
+
+#include "Lonestar/BoilerPlate.h"
+#include "SparseBitVector.h"
 #include "galois/Galois.h"
 #include "llvm/Support/CommandLine.h"
-#include "Lonestar/BoilerPlate.h"
-#include <iostream>
-#include <fstream>
-#include <deque>
-#include "SparseBitVector.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Command line parameters
@@ -32,38 +33,39 @@
 namespace cll = llvm::cl;
 
 const char* name = "Points-to Analysis";
-const char* desc = "Performs inclusion-based points-to analysis over the input "
-                   "constraints.";
+const char* desc =
+    "Performs inclusion-based points-to analysis over the input "
+    "constraints.";
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<bool>
-    useSerial("serial",
-              cll::desc("Runs serial version of the algorithm "
-                        "(i.e. 1 thread, no galois::for_each) "
-                        "(default false)"),
-              cll::init(false));
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<bool> useSerial(
+    "serial",
+    cll::desc("Runs serial version of the algorithm "
+              "(i.e. 1 thread, no galois::for_each) "
+              "(default false)"),
+    cll::init(false));
 
-static cll::opt<bool>
-    printAnswer("printAnswer",
-                cll::desc("If set, prints all points to facts "
-                          "at the end"),
-                cll::init(false));
+static cll::opt<bool> printAnswer(
+    "printAnswer",
+    cll::desc("If set, prints all points to facts "
+              "at the end"),
+    cll::init(false));
 
-static cll::opt<bool>
-    useCycleDetection("ocd",
-                      cll::desc("If set, online cycle detection is"
-                                " used in algorithm (serial only) "
-                                "(default false)"),
-                      cll::init(false));
+static cll::opt<bool> useCycleDetection(
+    "ocd",
+    cll::desc("If set, online cycle detection is"
+              " used in algorithm (serial only) "
+              "(default false)"),
+    cll::init(false));
 
-static cll::opt<unsigned>
-    THRESHOLD_LS("lsThreshold",
-                 cll::desc("Determines how many constraints to "
-                           "process before load/store constraints "
-                           "are reprocessed (serial only) "
-                           "(default 500000)"),
-                 cll::init(500000));
+static cll::opt<unsigned> THRESHOLD_LS(
+    "lsThreshold",
+    cll::desc("Determines how many constraints to "
+              "process before load/store constraints "
+              "are reprocessed (serial only) "
+              "(default 500000)"),
+    cll::init(500000));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Declaration of strutures, types, and variables
@@ -83,8 +85,8 @@ private:
 
 public:
   PtsToCons(ConstraintType tt, unsigned ss, unsigned dd) {
-    src  = ss;
-    dst  = dd;
+    src = ss;
+    dst = dd;
     type = tt;
   }
 
@@ -135,15 +137,15 @@ class PTABase {
   using SparseBitVector = galois::SparseBitVector<IsConcurrent>;
 
   using PointsToConstraints = std::vector<PtsToCons>;
-  using PointsToInfo        = std::vector<SparseBitVector>;
-  using EdgeVector          = std::vector<SparseBitVector>;
+  using PointsToInfo = std::vector<SparseBitVector>;
+  using EdgeVector = std::vector<SparseBitVector>;
 
   using NodeAllocator =
       galois::FixedSizeAllocator<typename SparseBitVector::Node>;
 
 protected:
-  PointsToInfo pointsToResult; // pointsTo results for nodes
-  EdgeVector outgoingEdges;    // holds outgoing edges of a node
+  PointsToInfo pointsToResult;  // pointsTo results for nodes
+  EdgeVector outgoingEdges;     // holds outgoing edges of a node
 
   PointsToConstraints addressCopyConstraints;
   PointsToConstraints loadStoreConstraints;
@@ -157,13 +159,14 @@ protected:
   struct OnlineCycleDetection {
   private:
     PTABase<IsConcurrent>&
-        outerPTA; // reference to outer PTA instance to get runtime info
+        outerPTA;  // reference to outer PTA instance to get runtime info
 
-    galois::gstl::Vector<unsigned> ancestors; // TODO find better representation
-    galois::gstl::Vector<bool> visited;       // TODO use better representation
+    galois::gstl::Vector<unsigned>
+        ancestors;                       // TODO find better representation
+    galois::gstl::Vector<bool> visited;  // TODO use better representation
     galois::gstl::Vector<unsigned> representative;
 
-    unsigned NoRepresentative; // "constant" that represents no representative
+    unsigned NoRepresentative;  // "constant" that represents no representative
 
     /**
      * @returns true of the nodeid is an ancestor node
@@ -320,8 +323,8 @@ protected:
 
       while (curRep != NoRepresentative) {
         representative[nodeid] = finalRep;
-        nodeid                 = curRep;
-        curRep                 = representative[nodeid];
+        nodeid = curRep;
+        curRep = representative[nodeid];
       }
 
       return finalRep;
@@ -344,7 +347,7 @@ protected:
         visited[ii] = false;
       }
 
-      unsigned cycleNode = NoRepresentative; // set to invalid id.
+      unsigned cycleNode = NoRepresentative;  // set to invalid id.
 
       for (unsigned update : updates) {
         galois::gDebug("cycle process ", update);
@@ -354,10 +357,10 @@ protected:
         }
       }
     }
-  }; // end struct OnlineCycleDetection
+  };  // end struct OnlineCycleDetection
   ////////////////////////////////////////////////////////////////////////////////
 
-  OnlineCycleDetection ocd; // cycle detector/squasher; only works with serial
+  OnlineCycleDetection ocd;  // cycle detector/squasher; only works with serial
 
   /**
    * Adds edges to the graph based on load/store constraints.
@@ -378,9 +381,8 @@ protected:
    * @param updates output variable that will have updated nodes added to it
    */
   template <typename LoopInvoker, typename VecType>
-  void processLoadStore(const PointsToConstraints& constraints,
-                        VecType& updates) {
-
+  void processLoadStore(
+      const PointsToConstraints& constraints, VecType& updates) {
     LoopInvoker()(galois::iterate(constraints), [&](auto constraint) {
       unsigned src;
       unsigned dst;
@@ -402,7 +404,7 @@ protected:
             updates.push_back(pointeeRepr);
           }
         }
-      } else { // store whatever src has into whatever dst points to
+      } else {  // store whatever src has into whatever dst points to
         bool newEdgeAdded = false;
 
         for (auto pointee = pointsToResult[dstRepr].begin();
@@ -452,9 +454,9 @@ protected:
 
       std::tie(src, dst) = ii.getSrcDst();
 
-      if (ii.getType() == PtsToCons::AddressOf) { // addressof; save point info
+      if (ii.getType() == PtsToCons::AddressOf) {  // addressof; save point info
         pointsToResult[dst].set(src);
-      } else if (src != dst) { // copy constraint; add an edge
+      } else if (src != dst) {  // copy constraint; add an edge
         outgoingEdges[src].set(dst);
         updates.push_back(src);
       }
@@ -533,19 +535,20 @@ public:
    * @returns number of nodes in the constraint graph
    */
   unsigned readConstraints(const char* file) {
-    galois::gInfo("GEP constraints (constraint type 4) and any constraints "
-                  "with offsets are ignored.");
+    galois::gInfo(
+        "GEP constraints (constraint type 4) and any constraints "
+        "with offsets are ignored.");
 
-    unsigned numNodes     = 0;
+    unsigned numNodes = 0;
     unsigned nconstraints = 0;
 
     std::ifstream cfile(file);
     std::string cstr;
 
-    getline(cfile, cstr); // # of vars.
+    getline(cfile, cstr);  // # of vars.
     sscanf(cstr.c_str(), "%d", &numNodes);
 
-    getline(cfile, cstr); // # of constraints.
+    getline(cfile, cstr);  // # of constraints.
     sscanf(cstr.c_str(), "%d", &nconstraints);
 
     addressCopyConstraints.clear();
@@ -565,8 +568,9 @@ public:
         int as_int;
         PtsToCons::ConstraintType as_ctype;
       } type_converter;
-      sscanf(cstr.c_str(), "%d,%d,%d,%d,%d", &constraintNum, &src, &dst,
-             &type_converter.as_int, &offset);
+      sscanf(
+          cstr.c_str(), "%d,%d,%d,%d,%d", &constraintNum, &src, &dst,
+          &type_converter.as_int, &offset);
 
       type = type_converter.as_ctype;
 
@@ -575,7 +579,7 @@ public:
       if (type == PtsToCons::AddressOf || type == PtsToCons::Copy) {
         addressCopyConstraints.push_back(cc);
       } else if (type == PtsToCons::Load || type == PtsToCons::Store) {
-        if (offset == 0) { // ignore load/stores with offsets
+        if (offset == 0) {  // ignore load/stores with offsets
           loadStoreConstraints.push_back(cc);
         }
       }
@@ -611,10 +615,11 @@ public:
     for (unsigned ii = 0; ii < pointsToResult.size(); ++ii) {
       unsigned repr = ocd.getFinalRepresentative(ii);
       if (repr != ii && !pointsToResult[ii].isSubsetEq(pointsToResult[repr])) {
-        galois::gError("pointsto(", ii,
-                       ") is not less than its "
-                       "representative pointsto(",
-                       repr, ").");
+        galois::gError(
+            "pointsto(", ii,
+            ") is not less than its "
+            "representative pointsto(",
+            repr, ").");
       }
     }
   }
@@ -627,10 +632,11 @@ public:
     for (unsigned ii = 0; ii < outgoingEdges.size(); ++ii) {
       unsigned repr = ocd.getFinalRepresentative(ii);
       if (repr != ii && !outgoingEdges[ii].isSubsetEq(outgoingEdges[repr])) {
-        galois::gError("edges(", ii,
-                       ") is not less than its "
-                       "representative edges(",
-                       repr, ").");
+        galois::gError(
+            "edges(", ii,
+            ") is not less than its "
+            "representative edges(",
+            repr, ").");
       }
     }
   }
@@ -661,7 +667,7 @@ public:
       pointsToResult[repr].print(std::cerr, prefix);
     }
   }
-}; // end class PTA
+};  // end class PTA
 
 /**
  * Serial points to executor.
@@ -693,7 +699,7 @@ public:
            dst != outgoingEdges[src].end(); dst++) {
         unsigned newPtsTo = propagate(src, *dst);
 
-        if (newPtsTo) { // newPtsTo is positive if dst changed
+        if (newPtsTo) {  // newPtsTo is positive if dst changed
           updates.push_back(ocd.getFinalRepresentative(*dst));
         }
 
@@ -701,8 +707,8 @@ public:
       }
 
       if (updates.empty() || numUps >= THRESHOLD_LS) {
-        galois::gDebug("No of points-to facts computed = ",
-                       countPointsToFacts());
+        galois::gDebug(
+            "No of points-to facts computed = ", countPointsToFacts());
         numUps = 0;
 
         // After propagating all constraints, see if load/store
@@ -769,7 +775,8 @@ public:
  * Method from running PTA.
  */
 template <typename PTAClass, typename Alloc>
-void runPTA(PTAClass& pta, Alloc& nodeAllocator) {
+void
+runPTA(PTAClass& pta, Alloc& nodeAllocator) {
   size_t numNodes = pta.readConstraints(inputFile.c_str());
   pta.initialize(numNodes, nodeAllocator);
 
@@ -795,7 +802,8 @@ void runPTA(PTAClass& pta, Alloc& nodeAllocator) {
   pta.freeNodeAllocatorMemory();
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
@@ -805,10 +813,11 @@ int main(int argc, char** argv) {
   // depending on serial or concurrent, create the correct class and pass it
   // into the run harness which takes care of the rest
   if (!useSerial) {
-    galois::gInfo("-------- Parallel version: ", galois::getActiveThreads(),
-                  " threads.");
-    galois::gInfo("Note correctness of this version is relative to the serial "
-                  "version.");
+    galois::gInfo(
+        "-------- Parallel version: ", galois::getActiveThreads(), " threads.");
+    galois::gInfo(
+        "Note correctness of this version is relative to the serial "
+        "version.");
 
     PTAConcurrent p;
     galois::FixedSizeAllocator<typename galois::SparseBitVector<true>::Node>

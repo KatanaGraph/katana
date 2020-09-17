@@ -20,11 +20,11 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_READGRAPH_H_
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_READGRAPH_H_
 
-#include "galois/config.h"
 #include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/config.h"
 #include "galois/graphs/Details.h"
 #include "galois/graphs/FileGraph.h"
-#include "galois/Timer.h"
 
 namespace galois::graphs {
 
@@ -34,15 +34,17 @@ namespace galois::graphs {
  * execution.
  */
 template <typename GraphTy, typename... Args>
-void readGraph(GraphTy& graph, Args&&... args) {
+void
+readGraph(GraphTy& graph, Args&&... args) {
   typename GraphTy::read_tag tag;
   readGraphDispatch(graph, tag, std::forward<Args>(args)...);
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_default_graph_tag tag,
-                       const std::string& filename,
-                       const bool readUnweighted = false) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_default_graph_tag tag, const std::string& filename,
+    const bool readUnweighted = false) {
   FileGraph f;
   if (readUnweighted) {
     //! If user specifies that the input graph is unweighted,
@@ -69,8 +71,10 @@ struct ReadGraphConstructFrom {
 };
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_default_graph_tag, FileGraph& f,
-                       const bool readUnweighted = false) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_default_graph_tag, FileGraph& f,
+    const bool readUnweighted = false) {
   graph.allocateFrom(f);
 
   ReadGraphConstructFrom<GraphTy> reader(graph, f, readUnweighted);
@@ -102,15 +106,17 @@ struct ReadGraphConstructEdgesFrom {
 };
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_with_aux_graph_tag tag,
-                       const std::string& filename) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_with_aux_graph_tag tag, const std::string& filename) {
   FileGraph f;
   f.fromFileInterleaved<typename GraphTy::file_edge_data_type>(filename);
   readGraphDispatch(graph, tag, f);
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_with_aux_graph_tag, FileGraph& f) {
+void
+readGraphDispatch(GraphTy& graph, read_with_aux_graph_tag, FileGraph& f) {
   typedef typename GraphTy::ReadGraphAuxData Aux;
 
   Aux aux;
@@ -148,8 +154,8 @@ struct ReadGraphConstructInEdgesFrom {
 };
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_with_aux_first_graph_tag,
-                       FileGraph& f) {
+void
+readGraphDispatch(GraphTy& graph, read_with_aux_first_graph_tag, FileGraph& f) {
   typedef typename GraphTy::ReadGraphAuxData Aux;
   constexpr static const bool profile = false;
 
@@ -184,16 +190,20 @@ void readGraphDispatch(GraphTy& graph, read_with_aux_first_graph_tag,
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_with_aux_first_graph_tag tag,
-                       const std::string& filename) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_with_aux_first_graph_tag tag,
+    const std::string& filename) {
   FileGraph f;
   f.fromFileInterleaved<typename GraphTy::file_edge_data_type>(filename);
   readGraphDispatch(graph, tag, f);
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag,
-                       const std::string& f1, const std::string& f2) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_lc_inout_graph_tag, const std::string& f1,
+    const std::string& f2) {
   graph.createAsymmetric();
 
   typename GraphTy::out_graph_type::read_tag tag1;
@@ -204,8 +214,9 @@ void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag,
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag, FileGraph& f1,
-                       FileGraph& f2) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_lc_inout_graph_tag, FileGraph& f1, FileGraph& f2) {
   graph.createAsymmetric();
 
   typename GraphTy::out_graph_type::read_tag tag1;
@@ -216,18 +227,20 @@ void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag, FileGraph& f1,
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag, FileGraph& f1) {
+void
+readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag, FileGraph& f1) {
   typename GraphTy::out_graph_type::read_tag tag1;
   readGraphDispatch(graph, tag1, f1);
 }
 
 template <typename GraphTy>
-void readGraphDispatch(GraphTy& graph, read_lc_inout_graph_tag,
-                       const std::string& f1) {
+void
+readGraphDispatch(
+    GraphTy& graph, read_lc_inout_graph_tag, const std::string& f1) {
   typename GraphTy::out_graph_type::read_tag tag1;
   readGraphDispatch(graph, tag1, f1);
 }
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 #endif

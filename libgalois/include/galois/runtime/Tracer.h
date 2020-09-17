@@ -28,9 +28,9 @@
 #include <functional>
 #include <sstream>
 
-#include "galois/config.h"
 #include "galois/GetEnv.h"
 #include "galois/PODResizeableArray.h"
+#include "galois/config.h"
 
 namespace galois {
 namespace runtime {
@@ -40,13 +40,17 @@ namespace internal {
 /**
  * Base case for traceImpl; ends the line with a new line.
  */
-static inline void traceImpl(std::ostringstream& os) { os << "\n"; }
+static inline void
+traceImpl(std::ostringstream& os) {
+  os << "\n";
+}
 
 /**
  * Prints out a value to the output stream.
  */
 template <typename T, typename... Args>
-static inline void traceImpl(std::ostringstream& os, T&&, Args&&... args) {
+static inline void
+traceImpl(std::ostringstream& os, T&&, Args&&... args) {
   // os << value << " ";
   traceImpl(os, std::forward<Args>(args)...);
 }
@@ -54,7 +58,8 @@ static inline void traceImpl(std::ostringstream& os, T&&, Args&&... args) {
 /**
  * Format string to os.
  */
-static inline void traceFormatImpl(std::ostringstream& os, const char* format) {
+static inline void
+traceFormatImpl(std::ostringstream& os, const char* format) {
   os << format;
 }
 
@@ -62,8 +67,9 @@ static inline void traceFormatImpl(std::ostringstream& os, const char* format) {
  * Format string to os as well as something else to print.
  */
 template <typename T, typename... Args>
-static inline void traceFormatImpl(std::ostringstream& os, const char* format,
-                                   T&& value, Args&&... args) {
+static inline void
+traceFormatImpl(
+    std::ostringstream& os, const char* format, T&& value, Args&&... args) {
   for (; *format != '\0'; format++) {
     if (*format == '%') {
       os << value;
@@ -95,7 +101,8 @@ public:
  * Operator to print a vector given a vecPrinter object
  */
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const vecPrinter<T>& vp) {
+std::ostream&
+operator<<(std::ostream& os, const vecPrinter<T>& vp) {
   vp.print(os);
   return os;
 }
@@ -113,14 +120,15 @@ void print_output_impl(std::ostringstream&);
 extern bool doTrace;
 extern bool initTrace;
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Given a vector, returns a vector printer object that is able
  * to print the vector out onto an output stream.
  */
 template <typename T>
-internal::vecPrinter<T> printVec(const galois::PODResizeableArray<T>& v) {
+internal::vecPrinter<T>
+printVec(const galois::PODResizeableArray<T>& v) {
   return internal::vecPrinter<T>(v);
 };
 
@@ -129,12 +137,14 @@ internal::vecPrinter<T> printVec(const galois::PODResizeableArray<T>& v) {
  */
 #ifdef NDEBUG
 template <typename... Args>
-static inline void trace(Args&&...) {}
+static inline void
+trace(Args&&...) {}
 #else
 template <typename... Args>
-static inline void trace(Args&&... args) {
+static inline void
+trace(Args&&... args) {
   if (!internal::initTrace) {
-    internal::doTrace   = GetEnv("GALOIS_DEBUG_TRACE");
+    internal::doTrace = GetEnv("GALOIS_DEBUG_TRACE");
     internal::initTrace = true;
   }
   if (internal::doTrace) {
@@ -152,12 +162,13 @@ static inline void trace(Args&&... args) {
  * @param args data to print
  */
 template <typename... Args>
-static inline void printOutput(const char* format, Args&&... args) {
+static inline void
+printOutput(const char* format, Args&&... args) {
   std::ostringstream os;
   internal::traceFormatImpl(os, format, std::forward<Args>(args)...);
   internal::print_output_impl(os);
 }
-} // namespace runtime
-} // namespace galois
+}  // namespace runtime
+}  // namespace galois
 
 #endif

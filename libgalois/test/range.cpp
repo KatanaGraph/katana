@@ -1,9 +1,9 @@
 #include "galois/Range.h"
 
 struct LocalContainer {
-  using iterator       = int*;
+  using iterator = int*;
   using local_iterator = int*;
-  using value_type     = int;
+  using value_type = int;
 
   iterator begin();
   iterator end();
@@ -12,7 +12,7 @@ struct LocalContainer {
 };
 
 struct StandardContainer {
-  using iterator   = int*;
+  using iterator = int*;
   using value_type = int;
 
   iterator begin();
@@ -20,16 +20,19 @@ struct StandardContainer {
 };
 
 template <typename T>
-constexpr std::true_type IsLocalRange(galois::LocalRange<T>) {
+constexpr std::true_type
+IsLocalRange(galois::LocalRange<T>) {
   return std::true_type();
 }
 
 template <typename T>
-constexpr std::false_type IsLocalRange(T) {
+constexpr std::false_type
+IsLocalRange(T) {
   return std::false_type();
 }
 
-void TestLocal() {
+void
+TestLocal() {
   LocalContainer local{};
   StandardContainer standard{};
 
@@ -40,7 +43,8 @@ void TestLocal() {
   static_assert(!decltype(IsLocalRange(galois::iterate(standard)))::value);
 }
 
-int main() {
+int
+main() {
   TestLocal();
   return 0;
 }

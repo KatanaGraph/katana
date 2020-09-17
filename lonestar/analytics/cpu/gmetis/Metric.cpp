@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "Metis.h"
-
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+
+#include "Metis.h"
 
 struct onlineStat {
   unsigned num;
@@ -31,7 +31,10 @@ struct onlineStat {
   unsigned mmax;
 
   onlineStat()
-      : num(0), val(0), valSQ(0), mmin(std::numeric_limits<unsigned>::max()),
+      : num(0),
+        val(0),
+        valSQ(0),
+        mmin(std::numeric_limits<unsigned>::max()),
         mmax(0) {}
 
   void add(unsigned v) {
@@ -56,7 +59,8 @@ struct onlineStat {
   unsigned max() { return mmax; }
 };
 
-unsigned graphStat(GGraph& graph) {
+unsigned
+graphStat(GGraph& graph) {
   onlineStat e;
   for (auto ii = graph.begin(), ee = graph.end(); ii != ee; ++ii) {
     unsigned val = std::distance(graph.edge_begin(*ii), graph.edge_end(*ii));
@@ -68,7 +72,8 @@ unsigned graphStat(GGraph& graph) {
   return e.count();
 }
 
-std::vector<unsigned> edgeCut(GGraph& g, unsigned nparts) {
+std::vector<unsigned>
+edgeCut(GGraph& g, unsigned nparts) {
   std::vector<unsigned> cuts(nparts);
 
   // find boundary nodes with positive gain
@@ -84,7 +89,8 @@ std::vector<unsigned> edgeCut(GGraph& g, unsigned nparts) {
   return cuts;
 }
 
-unsigned computeCut(GGraph& g) {
+unsigned
+computeCut(GGraph& g) {
   unsigned cuts = 0;
   for (auto nn : g) {
     unsigned gPart = g.getData(nn).getPart();
@@ -97,7 +103,8 @@ unsigned computeCut(GGraph& g) {
   return cuts / 2;
 }
 
-void printPartStats(std::vector<partInfo>& parts) {
+void
+printPartStats(std::vector<partInfo>& parts) {
   onlineStat e;
   assert(!parts.empty());
   for (unsigned x = 0; x < parts.size(); ++x) {
@@ -107,13 +114,15 @@ void printPartStats(std::vector<partInfo>& parts) {
             << " min " << e.min() << " max " << e.max() << "\n";
 }
 
-std::ostream& operator<<(std::ostream& os, const partInfo& p) {
+std::ostream&
+operator<<(std::ostream& os, const partInfo& p) {
   os << "Num " << std::setw(3) << p.partNum << "\tmask " << std::setw(5)
      << std::hex << p.partMask << std::dec << "\tweight " << p.partWeight;
   return os;
 }
 
-void printCuts(const char* str, MetisGraph* g, unsigned numPartitions) {
+void
+printCuts(const char* str, MetisGraph* g, unsigned numPartitions) {
   std::vector<unsigned> ec = edgeCut(*g->getGraph(), numPartitions);
   std::cout << str << " Edge Cuts:\n";
   for (unsigned x = 0; x < ec.size(); ++x)

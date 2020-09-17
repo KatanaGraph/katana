@@ -36,17 +36,17 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "galois/config.h"
 #include "galois/Endian.h"
-#include "galois/MethodFlags.h"
 #include "galois/LargeArray.h"
+#include "galois/MethodFlags.h"
+#include "galois/Reduction.h"
+#include "galois/config.h"
 #include "galois/graphs/Details.h"
 #include "galois/graphs/GraphHelpers.h"
 #include "galois/runtime/Context.h"
 #include "galois/substrate/CacheLineStorage.h"
 #include "galois/substrate/CompilerSpecific.h"
 #include "galois/substrate/NumaMem.h"
-#include "galois/Reduction.h"
 
 namespace galois {
 namespace graphs {
@@ -172,8 +172,9 @@ private:
    *
    * @returns A node id that hits the target size (or gets close to it)
    */
-  size_t findIndex(size_t nodeSize, size_t edgeSize, size_t targetSize,
-                   size_t lb, size_t ub);
+  size_t findIndex(
+      size_t nodeSize, size_t edgeSize, size_t targetSize, size_t lb,
+      size_t ub);
 
   void fromFileInterleaved(const std::string& filename, size_t sizeofEdgeData);
 
@@ -208,10 +209,10 @@ protected:
    * @param oGraphVersion Galois graph version to use
    * @return pointer to begining of edgeData in graph
    */
-  void* fromArrays(uint64_t* outIdx, uint64_t numNodes, void* outs,
-                   uint64_t numEdges, char* edgeData, size_t sizeofEdgeData,
-                   uint64_t nodeOffset, uint64_t edgeOffset, bool converted,
-                   int oGraphVersion = 1);
+  void* fromArrays(
+      uint64_t* outIdx, uint64_t numNodes, void* outs, uint64_t numEdges,
+      char* edgeData, size_t sizeofEdgeData, uint64_t nodeOffset,
+      uint64_t edgeOffset, bool converted, int oGraphVersion = 1);
 
 public:
   /**
@@ -288,14 +289,14 @@ public:
    * Sorts outgoing edges of a node. Comparison function is over EdgeTy.
    */
   template <typename EdgeTy, typename CompTy>
-  void sortEdgesByEdgeData(GraphNode N,
-                           const CompTy& comp = std::less<EdgeTy>()) {
+  void sortEdgesByEdgeData(
+      GraphNode N, const CompTy& comp = std::less<EdgeTy>()) {
     if (graphVersion == 1) {
       typedef LargeArray<uint32_t> EdgeDst;
       typedef LargeArray<EdgeTy> EdgeData;
 
-      typedef internal::EdgeSortIterator<GraphNode, uint64_t, EdgeDst, EdgeData,
-                                         Convert32>
+      typedef internal::EdgeSortIterator<
+          GraphNode, uint64_t, EdgeDst, EdgeData, Convert32>
           edge_sort_iterator;
 
       EdgeDst edgeDst(outs, numEdges);
@@ -307,15 +308,16 @@ public:
       edge_sort_iterator end(
           std::distance((uint32_t*)outs, (uint32_t*)raw_neighbor_end(N)),
           &edgeDst, &ed);
-      std::sort(begin, end,
-                internal::EdgeSortCompWrapper<EdgeSortValue<GraphNode, EdgeTy>,
-                                              CompTy>(comp));
+      std::sort(
+          begin, end,
+          internal::EdgeSortCompWrapper<
+              EdgeSortValue<GraphNode, EdgeTy>, CompTy>(comp));
     } else if (graphVersion == 2) {
       typedef LargeArray<uint64_t> EdgeDst;
       typedef LargeArray<EdgeTy> EdgeData;
 
-      typedef internal::EdgeSortIterator<GraphNode, uint64_t, EdgeDst, EdgeData,
-                                         Convert64>
+      typedef internal::EdgeSortIterator<
+          GraphNode, uint64_t, EdgeDst, EdgeData, Convert64>
           edge_sort_iterator;
 
       EdgeDst edgeDst(outs, numEdges);
@@ -327,9 +329,10 @@ public:
       edge_sort_iterator end(
           std::distance((uint64_t*)outs, (uint64_t*)raw_neighbor_end(N)),
           &edgeDst, &ed);
-      std::sort(begin, end,
-                internal::EdgeSortCompWrapper<EdgeSortValue<GraphNode, EdgeTy>,
-                                              CompTy>(comp));
+      std::sort(
+          begin, end,
+          internal::EdgeSortCompWrapper<
+              EdgeSortValue<GraphNode, EdgeTy>, CompTy>(comp));
     } else {
       GALOIS_DIE("unknown file version: ", graphVersion);
     }
@@ -344,8 +347,8 @@ public:
     if (graphVersion == 1) {
       typedef LargeArray<uint32_t> EdgeDst;
       typedef LargeArray<EdgeTy> EdgeData;
-      typedef internal::EdgeSortIterator<GraphNode, uint64_t, EdgeDst, EdgeData,
-                                         Convert32>
+      typedef internal::EdgeSortIterator<
+          GraphNode, uint64_t, EdgeDst, EdgeData, Convert32>
           edge_sort_iterator;
 
       EdgeDst edgeDst(outs, numEdges);
@@ -361,8 +364,8 @@ public:
     } else if (graphVersion == 2) {
       typedef LargeArray<uint64_t> EdgeDst;
       typedef LargeArray<EdgeTy> EdgeData;
-      typedef internal::EdgeSortIterator<GraphNode, uint64_t, EdgeDst, EdgeData,
-                                         Convert64>
+      typedef internal::EdgeSortIterator<
+          GraphNode, uint64_t, EdgeDst, EdgeData, Convert64>
           edge_sort_iterator;
 
       EdgeDst edgeDst(outs, numEdges);
@@ -411,8 +414,8 @@ public:
    * @warning only version 1 support, do not use with version 2
    */
   neighbor_iterator neighbor_begin(GraphNode N) {
-    return boost::make_transform_iterator((uint32_t*)raw_neighbor_begin(N),
-                                          Convert32());
+    return boost::make_transform_iterator(
+        (uint32_t*)raw_neighbor_begin(N), Convert32());
   }
 
   /**
@@ -421,8 +424,8 @@ public:
    * @warning only version 1 support, do not use with version 2
    */
   neighbor_iterator neighbor_end(GraphNode N) {
-    return boost::make_transform_iterator((uint32_t*)raw_neighbor_end(N),
-                                          Convert32());
+    return boost::make_transform_iterator(
+        (uint32_t*)raw_neighbor_end(N), Convert32());
   }
 
   template <typename EdgeTy>
@@ -488,8 +491,8 @@ public:
    * @returns A node range and an edge range specifying division "id"'s assigned
    * nodes/edges
    */
-  GraphRange divideByNode(size_t nodeSize, size_t edgeSize, size_t id,
-                          size_t total);
+  GraphRange divideByNode(
+      size_t nodeSize, size_t edgeSize, size_t id, size_t total);
 
   /**
    * Divides nodes only considering edges.
@@ -505,8 +508,8 @@ public:
    * @returns A node range and an edge range specifying division "id"'s assigned
    * nodes/edges
    */
-  GraphRange divideByEdge(size_t nodeSize, size_t edgeSize, size_t id,
-                          size_t total);
+  GraphRange divideByEdge(
+      size_t nodeSize, size_t edgeSize, size_t id, size_t total);
   /**
    * Returns an iterator to the beginning of the node destination
    * array.
@@ -612,8 +615,9 @@ public:
    * @param numaMap if true, does interleaved numa allocation for data
    * structures
    */
-  void partFromFile(const std::string& filename, NodeRange nrange,
-                    EdgeRange erange, bool numaMap = false);
+  void partFromFile(
+      const std::string& filename, NodeRange nrange, EdgeRange erange,
+      bool numaMap = false);
 
   /**
    * Reads graph connectivity information from file. Tries to balance memory
@@ -758,14 +762,16 @@ public:
     void* ret;
     if (numNodes <= std::numeric_limits<uint32_t>::max()) {
       // version 1
-      ret = fromArrays(&outIdx[0], numNodes, &outs[0], numEdges, nullptr,
-                       sizeofEdgeData, 0, 0, false, 1);
+      ret = fromArrays(
+          &outIdx[0], numNodes, &outs[0], numEdges, nullptr, sizeofEdgeData, 0,
+          0, false, 1);
       starts.clear();
       outs.clear();
     } else {
       // version 2
-      ret = fromArrays(&outIdx[0], numNodes, &outs64[0], numEdges, nullptr,
-                       sizeofEdgeData, 0, 0, false, 2);
+      ret = fromArrays(
+          &outIdx[0], numNodes, &outs64[0], numEdges, nullptr, sizeofEdgeData,
+          0, 0, false, 2);
     }
 
     outIdx.clear();
@@ -779,7 +785,8 @@ public:
  * out is destroyed.
  */
 template <typename EdgeTy>
-void makeSymmetric(FileGraph& in_graph, FileGraph& out) {
+void
+makeSymmetric(FileGraph& in_graph, FileGraph& out) {
   typedef FileGraph::GraphNode GNode;
   typedef LargeArray<EdgeTy> EdgeData;
   typedef typename EdgeData::value_type edge_value_type;
@@ -844,9 +851,9 @@ void makeSymmetric(FileGraph& in_graph, FileGraph& out) {
 
   edge_value_type* rawEdgeData = g.finish<edge_value_type>();
   if (EdgeData::has_value)
-    std::uninitialized_copy(std::make_move_iterator(edgeData.begin()),
-                            std::make_move_iterator(edgeData.end()),
-                            rawEdgeData);
+    std::uninitialized_copy(
+        std::make_move_iterator(edgeData.begin()),
+        std::make_move_iterator(edgeData.end()), rawEdgeData);
 
   out = std::move(g);
 }
@@ -863,7 +870,8 @@ void makeSymmetric(FileGraph& in_graph, FileGraph& out) {
  * @param out permuted graph
  */
 template <typename EdgeTy, typename PTy>
-void permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
+void
+permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
   typedef FileGraph::GraphNode GNode;
   typedef LargeArray<EdgeTy> EdgeData;
   typedef typename EdgeData::value_type edge_value_type;
@@ -907,13 +915,13 @@ void permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
 
   edge_value_type* rawEdgeData = g.finish<edge_value_type>();
   if (EdgeData::has_value)
-    std::uninitialized_copy(std::make_move_iterator(edgeData.begin()),
-                            std::make_move_iterator(edgeData.end()),
-                            rawEdgeData);
+    std::uninitialized_copy(
+        std::make_move_iterator(edgeData.begin()),
+        std::make_move_iterator(edgeData.end()), rawEdgeData);
 
   out = std::move(g);
 }
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 #endif

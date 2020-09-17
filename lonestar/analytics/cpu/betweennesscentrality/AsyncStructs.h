@@ -1,14 +1,14 @@
 #ifndef GALOIS_BC_ASYNC
 #define GALOIS_BC_ASYNC
 
+#include <iomanip>
 #include <iostream>
 
-#include "BCNode.h"
 #include "BCEdge.h"
+#include "BCNode.h"
 #include "galois/Bag.h"
 #include "galois/graphs/BufferedGraph.h"
 #include "galois/graphs/LC_CSR_CSC_Graph.h"
-#include <iomanip>
 
 // WARNING: optimal chunk size may differ depending on input graph
 constexpr static const unsigned ASYNC_CHUNK_SIZE = 64U;
@@ -34,7 +34,7 @@ struct FPWorkItemIndexer {
 // obim worklist type declaration
 namespace gwl = galois::worklists;
 using PSchunk = gwl::PerSocketChunkFIFO<ASYNC_CHUNK_SIZE>;
-using OBIM    = gwl::OrderedByIntegerMetric<FPWorkItemIndexer, PSchunk>;
+using OBIM = gwl::OrderedByIntegerMetric<FPWorkItemIndexer, PSchunk>;
 
 template <typename T, bool enable>
 struct Counter : public T {
@@ -133,7 +133,7 @@ struct BetweenessCentralityAsync {
     const ShortPathType srcSigma = srcData.sigma;
     assert(srcSigma > 0);
     NodeType::predTY& dstPreds = dstData.preds;
-    bool dstPredsNotEmpty      = !dstPreds.empty();
+    bool dstPredsNotEmpty = !dstPreds.empty();
     dstPreds.clear();
     dstPreds.push_back(srcID);
     dstData.distance = srcData.distance + 1;
@@ -141,9 +141,9 @@ struct BetweenessCentralityAsync {
     largestNodeDist.update(dstData.distance);
 
     dstData.nsuccs = 0;        // SP
-    dstData.sigma  = srcSigma; // FU
-    ed.val         = srcSigma;
-    ed.level       = srcData.distance;
+    dstData.sigma = srcSigma;  // FU
+    ed.val = srcSigma;
+    ed.level = srcData.distance;
     srcData.unlock();
     if (!dstData.isAlreadyIn())
       ctx.push(ForwardPhaseWorkItem(dstID, dstData.distance));
@@ -161,8 +161,8 @@ struct BetweenessCentralityAsync {
     NodeType& dstData = graph.getData(dstID);
 
     const ShortPathType srcSigma = srcData.sigma;
-    const ShortPathType eval     = ed.val;
-    const ShortPathType diff     = srcSigma - eval;
+    const ShortPathType eval = ed.val;
+    const ShortPathType diff = srcSigma - eval;
 
     srcData.unlock();
     // greater than 0.0001 instead of 0 due to floating point imprecision
@@ -210,7 +210,7 @@ struct BetweenessCentralityAsync {
     //  dstData.sigma = std::numeric_limits<uint64_t>::max();
     //}
 
-    ed.val   = srcSigma;
+    ed.val = srcSigma;
     ed.level = srcData.distance;
     srcData.unlock();
     int nbsuccs = dstData.nsuccs;
@@ -225,18 +225,18 @@ struct BetweenessCentralityAsync {
     galois::for_each(
         galois::iterate(wl),
         [&](ForwardPhaseWorkItem& wi, auto& ctx) {
-          uint32_t srcID    = wi.nodeID;
+          uint32_t srcID = wi.nodeID;
           NodeType& srcData = graph.getData(srcID);
           srcData.markOut();
 
           // loop through all edges
           for (auto e : graph.edges(srcID)) {
-            BCEdge& edgeData  = graph.getEdgeData(e);
-            uint32_t dstID    = graph.getEdgeDst(e);
+            BCEdge& edgeData = graph.getEdgeData(e);
+            uint32_t dstID = graph.getEdgeDst(e);
             NodeType& dstData = graph.getData(dstID);
 
             if (srcID == dstID)
-              continue; // ignore self loops
+              continue;  // ignore self loops
 
             // lock in set order to prevent deadlock (lower id
             // first)
@@ -251,8 +251,8 @@ struct BetweenessCentralityAsync {
             }
 
             const int elevel = edgeData.level;
-            const int ADist  = srcData.distance;
-            const int BDist  = dstData.distance;
+            const int ADist = srcData.distance;
+            const int BDist = dstData.distance;
 
             if (BDist - ADist > 1) {
               // Shortest Path + First Update (and Correct Node)
@@ -263,7 +263,7 @@ struct BetweenessCentralityAsync {
             } else if (BDist == ADist + 1 && elevel != ADist) {
               // First Update not combined with Shortest Path
               this->firstUpdate(srcID, dstID, edgeData, ctx);
-            } else { // No Action
+            } else {  // No Action
               noActionCount.update(1);
               srcData.unlock();
               dstData.unlock();
@@ -291,7 +291,7 @@ struct BetweenessCentralityAsync {
 
             // loop through src's predecessors
             for (unsigned i = 0; i < srcPreds.size(); i++) {
-              uint32_t predID    = srcPreds[i];
+              uint32_t predID = srcPreds[i];
               NodeType& predData = graph.getData(predID);
 
               assert(srcData.sigma >= 1);
@@ -343,7 +343,8 @@ struct BetweenessCentralityAsync {
   }
 };
 
-void AsyncSanity(AsyncGraph& graph) {
+void
+AsyncSanity(AsyncGraph& graph) {
   galois::GReduceMax<float> accumMax;
   galois::GReduceMin<float> accumMin;
   galois::GAccumulator<float> accumSum;
@@ -369,7 +370,8 @@ void AsyncSanity(AsyncGraph& graph) {
 ////////////////////////////////////////////////////////////////////////////////
 
 //! runs asynchronous BC
-void doAsyncBC() {
+void
+doAsyncBC() {
   if (BC_CONCURRENT) {
     galois::gInfo("Running in concurrent mode with ", numThreads, " threads");
   } else {
@@ -409,35 +411,39 @@ void doAsyncBC() {
   uint64_t nedges = bcGraph.sizeEdges();
   galois::gInfo("Num nodes is ", nnodes, ", num edges is ", nedges);
   galois::gInfo("Using OBIM chunk size: ", ASYNC_CHUNK_SIZE);
-  galois::gInfo("Note that optimal chunk size may differ depending on input "
-                "graph");
+  galois::gInfo(
+      "Note that optimal chunk size may differ depending on input "
+      "graph");
   galois::runtime::reportStat_Single("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
 
   galois::reportPageAlloc("MemAllocPre");
   galois::gInfo("Going to pre-allocate pages");
   galois::preAlloc(
-      std::min(static_cast<uint64_t>(
-                   std::min(galois::getActiveThreads(), 100U) *
-                   std::max((nnodes / 4500000), unsigned{5}) *
-                   std::max((nedges / 30000000), uint64_t{5}) * 2.5),
-               uint64_t{1500}) +
+      std::min(
+          static_cast<uint64_t>(
+              std::min(galois::getActiveThreads(), 100U) *
+              std::max((nnodes / 4500000), unsigned{5}) *
+              std::max((nedges / 30000000), uint64_t{5}) * 2.5),
+          uint64_t{1500}) +
       5);
   galois::gInfo("Pre-allocation complete");
   galois::reportPageAlloc("MemAllocMid");
 
   // reset everything in preparation for run
-  galois::do_all(galois::iterate(0u, nnodes),
-                 [&](auto i) { bcGraph.getData(i).reset(); });
-  galois::do_all(galois::iterate(UINT64_C(0), nedges),
-                 [&](auto i) { bcGraph.getEdgeData(i).reset(); });
+  galois::do_all(
+      galois::iterate(0u, nnodes), [&](auto i) { bcGraph.getData(i).reset(); });
+  galois::do_all(galois::iterate(UINT64_C(0), nedges), [&](auto i) {
+    bcGraph.getEdgeData(i).reset();
+  });
 
   // reading in list of sources to operate on if provided
   std::ifstream sourceFile;
   std::vector<uint64_t> sourceVector;
   if (sourcesToUse != "") {
     sourceFile.open(sourcesToUse);
-    std::vector<uint64_t> t(std::istream_iterator<uint64_t>{sourceFile},
-                            std::istream_iterator<uint64_t>{});
+    std::vector<uint64_t> t(
+        std::istream_iterator<uint64_t>{sourceFile},
+        std::istream_iterator<uint64_t>{});
     sourceVector = t;
     sourceFile.close();
   }
@@ -476,8 +482,8 @@ void doAsyncBC() {
     }
 
     // ignore nodes with no neighbors
-    if (!std::distance(bcGraph.edge_begin(sourceToUse),
-                       bcGraph.edge_end(sourceToUse))) {
+    if (!std::distance(
+            bcGraph.edge_begin(sourceToUse), bcGraph.edge_end(sourceToUse))) {
       galois::gDebug(sourceToUse, " has no outgoing edges");
       continue;
     }
@@ -495,7 +501,7 @@ void doAsyncBC() {
     double backupSrcBC = active.bc;
     bcExecutor.dependencyBackProp(backwardPhaseWL);
 
-    active.bc = backupSrcBC; // current source BC should not get updated
+    active.bc = backupSrcBC;  // current source BC should not get updated
 
     backwardPhaseWL.clear();
 
@@ -518,8 +524,9 @@ void doAsyncBC() {
   if (!skipVerify) {
     int count = 0;
     for (unsigned i = 0; i < nnodes && count < 10; ++i, ++count) {
-      galois::gPrint(count, ": ", std::setiosflags(std::ios::fixed),
-                     std::setprecision(6), bcGraph.getData(i).bc, "\n");
+      galois::gPrint(
+          count, ": ", std::setiosflags(std::ios::fixed), std::setprecision(6),
+          bcGraph.getData(i).bc, "\n");
     }
   }
 

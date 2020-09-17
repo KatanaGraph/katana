@@ -36,4 +36,4 @@ void do_all(const Range& range, FunctionTy&& fn, Args&&... args);
 template <typename FunctionTy, typename... Args>
 void on_each(FunctionTy&& fn, Args&&... args);
 
-} // end namespace galois
+}  // end namespace galois

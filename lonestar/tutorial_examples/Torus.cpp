@@ -17,10 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <iostream>
+
 #include "galois/Galois.h"
 #include "galois/Timer.h"
 #include "galois/graphs/Graph.h"
-#include <iostream>
 
 //! Graph has int node data, void edge data and is directed
 //! [define a graph]
@@ -30,7 +31,8 @@ typedef galois::graphs::MorphGraph<int, void, true> Graph;
 typedef Graph::GraphNode GNode;
 
 //! Construct a simple torus graph
-void constructTorus(Graph& g, int height, int width) {
+void
+constructTorus(Graph& g, int height, int width) {
   // Construct set of nodes
   int numNodes = height * width;
   std::vector<GNode> nodes(numNodes);
@@ -59,7 +61,8 @@ void constructTorus(Graph& g, int height, int width) {
   //! [add edges]
 }
 
-void verify(Graph& graph, int n) {
+void
+verify(Graph& graph, int n) {
   // Verify
   int count = std::count_if(graph.begin(), graph.end(), [&](GNode n) -> bool {
     return graph.getData(n) == 4;
@@ -72,12 +75,14 @@ void verify(Graph& graph, int n) {
   }
 }
 
-void initialize(Graph& graph) {
-  galois::do_all(galois::iterate(graph),
-                 [&](GNode n) { graph.getData(n) = 0; });
+void
+initialize(Graph& graph) {
+  galois::do_all(
+      galois::iterate(graph), [&](GNode n) { graph.getData(n) = 0; });
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
 
   if (argc < 3) {
@@ -85,7 +90,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   unsigned int numThreads = atoi(argv[1]);
-  int N                   = atoi(argv[2]);
+  int N = atoi(argv[2]);
 
   numThreads = galois::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " thread(s) and " << N << " x " << N
@@ -110,7 +115,7 @@ int main(int argc, char** argv) {
       galois::iterate(graph),
       [&](GNode n, auto&) {
         for (auto ii : graph.edges(n)) {
-          GNode dst  = graph.getEdgeDst(ii);
+          GNode dst = graph.getEdgeDst(ii);
           auto& data = graph.getData(dst);
           data += 1;
         }
@@ -120,7 +125,7 @@ int main(int argc, char** argv) {
 
   auto incrementNeighborsAtomically = [&](GNode n) {
     for (auto e : graph.edges(n)) {
-      auto dst      = graph.getEdgeDst(e);
+      auto dst = graph.getEdgeDst(e);
       auto& dstData = graph.getData(dst);
       __sync_fetch_and_add(&dstData, 1);
     }
@@ -129,9 +134,10 @@ int main(int argc, char** argv) {
   // push operator with self synchronization in do_all
   initialize(graph);
   //! [work stealing]
-  galois::do_all(galois::iterate(graph), incrementNeighborsAtomically,
-                 galois::loopname("do_all_self_sync"), galois::steal(),
-                 galois::chunk_size<32>());
+  galois::do_all(
+      galois::iterate(graph), incrementNeighborsAtomically,
+      galois::loopname("do_all_self_sync"), galois::steal(),
+      galois::chunk_size<32>());
   //! [work stealing]
   verify(graph, N);
 

@@ -1,23 +1,26 @@
 #ifndef GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
 #define GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
 
-#include <boost/outcome/outcome.hpp>
 #include <cerrno>
+
+#include <boost/outcome/outcome.hpp>
 
 namespace galois {
 
 template <class T>
 using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<T>;
 
-static inline auto ResultSuccess() {
+static inline auto
+ResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();
 }
 
-static inline auto ResultErrno() {
+static inline auto
+ResultErrno() {
   return std::error_code(errno, std::system_category());
 }
 
-} // namespace galois
+}  // namespace galois
 
 // NOTE: on older compilers auto conversion to Result will fail for types
 // that can't be copied. We've adopted the workaround of returning such objects

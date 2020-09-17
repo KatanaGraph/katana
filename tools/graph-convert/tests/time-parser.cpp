@@ -1,8 +1,8 @@
 #include "TimeParser.h"
-
 #include "galois/Logging.h"
 
-void TestBasic() {
+void
+TestBasic() {
   galois::TimeParser<std::chrono::seconds> parser;
 
   {
@@ -19,7 +19,8 @@ void TestBasic() {
   }
 }
 
-int main() {
+int
+main() {
   TestBasic();
   return 0;
 }

@@ -17,14 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "galois/gIO.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
-#include "galois/gIO.h"
 
 #if defined(GALOIS_HAVE_PTHREAD)
 
-#include <unistd.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #endif
 
@@ -72,7 +72,7 @@ public:
   virtual const char* name() const { return "PthreadBarrier"; }
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createPthreadBarrier(unsigned activeThreads) {

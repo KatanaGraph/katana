@@ -17,9 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Lockable.h"
-
 #include <iostream>
+
+#include "galois/runtime/Lockable.h"
 
 using namespace galois::runtime;
 
@@ -27,7 +27,8 @@ struct simple : public Lockable {
   int foo;
 };
 
-char translate(int i) {
+char
+translate(int i) {
   switch (i) {
   case 0:
     return 'F';
@@ -42,7 +43,8 @@ char translate(int i) {
 
 // FIXME: include ro tests
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   simple s1, s2;
   LockManagerBase b1, b2;
 

@@ -33,18 +33,18 @@ extern "C" {
 }
 #endif
 
-#include "galois/config.h"
 #include "galois/Galois.h"
-#include "galois/gIO.h"
 #include "galois/Timer.h"
+#include "galois/config.h"
+#include "galois/gIO.h"
 
 namespace galois::runtime {
 
 #ifdef GALOIS_ENABLE_VTUNE
 
 template <typename F>
-void profileVtune(const F& func, const char* region) {
-
+void
+profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
 
   GALOIS_ASSERT(
@@ -61,8 +61,8 @@ void profileVtune(const F& func, const char* region) {
 #else
 
 template <typename F>
-void profileVtune(const F& func, const char* region) {
-
+void
+profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
   galois::gWarn("Vtune not enabled or found");
 
@@ -78,14 +78,14 @@ namespace internal {
 unsigned long papiGetTID(void);
 
 template <typename __T = void>
-void papiInit() {
-
+void
+papiInit() {
   /* Initialize the PAPI library */
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
 
   if (retval != PAPI_VER_CURRENT && retval > 0) {
-    GALOIS_DIE("PAPI library version mismatch: ", retval,
-               " != ", PAPI_VER_CURRENT);
+    GALOIS_DIE(
+        "PAPI library version mismatch: ", retval, " != ", PAPI_VER_CURRENT);
   }
 
   if (retval < 0) {
@@ -98,19 +98,22 @@ void papiInit() {
 }
 
 template <typename V1, typename V2>
-void decodePapiEvents(const V1& eventNames, V2& papiEvents) {
+void
+decodePapiEvents(const V1& eventNames, V2& papiEvents) {
   for (size_t i = 0; i < eventNames.size(); ++i) {
     char buf[256];
     std::strcpy(buf, eventNames[i].c_str());
     if (PAPI_event_name_to_code(buf, &papiEvents[i]) != PAPI_OK) {
-      GALOIS_DIE("failed to recognize eventName = ", eventNames[i],
-                 ", event code: ", papiEvents[i]);
+      GALOIS_DIE(
+          "failed to recognize eventName = ", eventNames[i],
+          ", event code: ", papiEvents[i]);
     }
   }
 }
 
 template <typename V1, typename V2, typename V3>
-void papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
+void
+papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
   galois::on_each([&](const unsigned tid, const unsigned numT) {
     if (PAPI_register_thread() != PAPI_OK) {
       GALOIS_DIE("failed to register thread with PAPI");
@@ -136,8 +139,8 @@ void papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
 }
 
 template <typename V1, typename V2, typename V3>
-void papiStop(V1& eventSets, V2& papiResults, V3& eventNames,
-              const char* region) {
+void
+papiStop(V1& eventSets, V2& papiResults, V3& eventNames, const char* region) {
   galois::on_each([&](const unsigned tid, const unsigned numT) {
     int& eventSet = *eventSets.getLocal();
 
@@ -153,11 +156,12 @@ void papiStop(V1& eventSets, V2& papiResults, V3& eventNames,
       GALOIS_DIE("PAPI_destroy_eventset failed");
     }
 
-    assert(eventNames.size() == papiResults.getLocal()->size() &&
-           "Both vectors should be of equal length");
+    assert(
+        eventNames.size() == papiResults.getLocal()->size() &&
+        "Both vectors should be of equal length");
     for (size_t i = 0; i < eventNames.size(); ++i) {
-      galois::runtime::reportStat_Tsum(region, eventNames[i],
-                                       (*papiResults.getLocal())[i]);
+      galois::runtime::reportStat_Tsum(
+          region, eventNames[i], (*papiResults.getLocal())[i]);
     }
 
     if (PAPI_unregister_thread() != PAPI_OK) {
@@ -167,8 +171,8 @@ void papiStop(V1& eventSets, V2& papiResults, V3& eventNames,
 }
 
 template <typename C>
-void splitCSVstr(const std::string& inputStr, C& output,
-                 const char delim = ',') {
+void
+splitCSVstr(const std::string& inputStr, C& output, const char delim = ',') {
   std::stringstream ss(inputStr);
 
   for (std::string item; std::getline(ss, item, delim);) {
@@ -176,11 +180,11 @@ void splitCSVstr(const std::string& inputStr, C& output,
   }
 }
 
-} // end namespace internal
+}  // end namespace internal
 
 template <typename F>
-void profilePapi(const F& func, const char* region) {
-
+void
+profilePapi(const F& func, const char* region) {
   region = region ? region : "(NULL)";
 
   std::string eventNamesCSV;
@@ -216,8 +220,8 @@ void profilePapi(const F& func, const char* region) {
 #else
 
 template <typename F>
-void profilePapi(const F& func, const char* region) {
-
+void
+profilePapi(const F& func, const char* region) {
   region = region ? region : "(NULL)";
   galois::gWarn("PAPI not enabled or found");
 
@@ -226,6 +230,6 @@ void profilePapi(const F& func, const char* region) {
 
 #endif
 
-} // namespace galois::runtime
+}  // namespace galois::runtime
 
 #endif

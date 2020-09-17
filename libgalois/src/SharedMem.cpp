@@ -18,18 +18,19 @@
  */
 
 #include "galois/substrate/SharedMem.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/ThreadPool.h"
-#include "galois/substrate/Termination.h"
 
 #include <memory>
+
+#include "galois/substrate/Barrier.h"
+#include "galois/substrate/Termination.h"
+#include "galois/substrate/ThreadPool.h"
 
 galois::substrate::SharedMem::SharedMem() {
   internal::setThreadPool(&m_tpool);
 
   // delayed initialization because both call getThreadPool in constructor
   // which is valid only after setThreadPool() above
-  m_biPtr   = std::make_unique<internal::BarrierInstance<>>();
+  m_biPtr = std::make_unique<internal::BarrierInstance<>>();
   m_termPtr = std::make_unique<internal::LocalTerminationDetection<>>();
 
   internal::setBarrierInstance(m_biPtr.get());

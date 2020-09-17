@@ -17,18 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/ThreadPool.h"
+#include <atomic>
+
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
-
-#include <atomic>
+#include "galois/substrate/ThreadPool.h"
 
 namespace {
 
 class MCSBarrier : public galois::substrate::Barrier {
   struct treenode {
     // vpid is galois::runtime::LL::getTID()
-    std::atomic<bool>* parentpointer; // null for vpid == 0
+    std::atomic<bool>* parentpointer;  // null for vpid == 0
     std::atomic<bool>* childpointers[2];
     bool havechild[4];
 
@@ -41,7 +41,7 @@ class MCSBarrier : public galois::substrate::Barrier {
       childpointers[0] = rhs.childpointers[0];
       childpointers[1] = rhs.childpointers[1];
       for (int i = 0; i < 4; ++i) {
-        havechild[i]     = rhs.havechild[i];
+        havechild[i] = rhs.havechild[i];
         childnotready[i] = rhs.childnotready[i].load();
       }
       parentsense = rhs.parentsense.load();
@@ -53,8 +53,8 @@ class MCSBarrier : public galois::substrate::Barrier {
   void _reinit(unsigned P) {
     nodes.resize(P);
     for (unsigned i = 0; i < P; ++i) {
-      treenode& n   = nodes.at(i).get();
-      n.sense       = true;
+      treenode& n = nodes.at(i).get();
+      n.sense = true;
       n.parentsense = false;
       for (int j = 0; j < 4; ++j)
         n.childnotready[j] = n.havechild[j] = ((4 * i + j + 1) < P);
@@ -100,7 +100,7 @@ public:
   virtual const char* name() const { return "MCSBarrier"; }
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createMCSBarrier(unsigned activeThreads) {

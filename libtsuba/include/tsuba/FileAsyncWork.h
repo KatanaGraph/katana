@@ -3,8 +3,8 @@
 
 #include <future>
 
-#include "galois/Result.h"
 #include "galois/Logging.h"
+#include "galois/Result.h"
 
 namespace tsuba {
 
@@ -16,14 +16,14 @@ public:
   FileAsyncWork(std::future<galois::Result<void>> future)
       : future_(std::move(future)), done_(false) {}
   FileAsyncWork(const FileAsyncWork& no_copy) = delete;
-  FileAsyncWork(FileAsyncWork&& no_move)      = delete;
+  FileAsyncWork(FileAsyncWork&& no_move) = delete;
   FileAsyncWork& operator=(const FileAsyncWork& no_copy) = delete;
   FileAsyncWork& operator=(FileAsyncWork&& no_move) = delete;
-  virtual ~FileAsyncWork()                          = default;
+  virtual ~FileAsyncWork() = default;
 
   virtual galois::Result<void> operator()() {
     auto outcome = future_.get();
-    done_        = true;
+    done_ = true;
     return outcome;
   }
   virtual bool Done() const { return done_; }
@@ -38,6 +38,6 @@ public:
   }
 };
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

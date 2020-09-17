@@ -20,10 +20,11 @@
 #ifndef _GALOIS_SPARSEBITVECTOR_
 #define _GALOIS_SPARSEBITVECTOR_
 
+#include <utility>
+
+#include <boost/iterator/iterator_facade.hpp>
 #include <galois/AtomicWrapper.h>
 #include <galois/Mem.h>
-#include <utility>
-#include <boost/iterator/iterator_facade.hpp>
 
 namespace galois {
 
@@ -35,7 +36,7 @@ namespace galois {
  */
 template <bool IsConcurrent>
 struct SparseBitVector {
-  using WORD                     = unsigned int;
+  using WORD = unsigned int;
   static const unsigned wordSize = sizeof(WORD) * 8;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -44,17 +45,15 @@ struct SparseBitVector {
    * Node in sparse bit vector linked list
    */
   struct Node {
-    unsigned _base; // base to multiply by/used to sort linked list
+    unsigned _base;  // base to multiply by/used to sort linked list
     // If concurrent, then wrap these in a copyable atomic
-    using WordType =
-        typename std::conditional<IsConcurrent, galois::CopyableAtomic<WORD>,
-                                  WORD>::type;
-    WordType _bitVector; // stores set bits for a base
+    using WordType = typename std::conditional<
+        IsConcurrent, galois::CopyableAtomic<WORD>, WORD>::type;
+    WordType _bitVector;  // stores set bits for a base
 
-    using NodeType =
-        typename std::conditional<IsConcurrent, galois::CopyableAtomic<Node*>,
-                                  Node*>::type;
-    NodeType _next; // pointer to next node in linked list
+    using NodeType = typename std::conditional<
+        IsConcurrent, galois::CopyableAtomic<Node*>, Node*>::type;
+    NodeType _next;  // pointer to next node in linked list
 
     /**
      * Needs a base when being constructed.
@@ -62,9 +61,9 @@ struct SparseBitVector {
      * @param base
      */
     Node(unsigned base) {
-      _base      = base;
+      _base = base;
       _bitVector = 0;
-      _next      = nullptr;
+      _next = nullptr;
     }
 
     /**
@@ -90,18 +89,18 @@ struct SparseBitVector {
      * @param offset Offset to set the bit at
      * @returns true if the set bit wasn't set previously
      */
-    template <bool A                            = IsConcurrent,
-              typename std::enable_if<A>::type* = nullptr>
+    template <
+        bool A = IsConcurrent, typename std::enable_if<A>::type* = nullptr>
     bool set(unsigned offset) {
       unsigned expected = _bitVector;
       unsigned newValue = expected | ((WORD)1 << offset);
-      bool changed      = (expected != newValue);
+      bool changed = (expected != newValue);
 
       while (changed && !std::atomic_compare_exchange_weak(
                             &_bitVector, &expected, newValue)) {
         // if cas fails, then update new value
         newValue = expected | ((WORD)1 << offset);
-        changed  = (expected != newValue);
+        changed = (expected != newValue);
       }
 
       return changed;
@@ -114,8 +113,8 @@ struct SparseBitVector {
      * @param offset Offset to set the bit at
      * @returns true if the set bit wasn't set previously
      */
-    template <bool A                             = IsConcurrent,
-              typename std::enable_if<!A>::type* = nullptr>
+    template <
+        bool A = IsConcurrent, typename std::enable_if<!A>::type* = nullptr>
     bool set(unsigned offset) {
       WORD beforeBits = _bitVector;
       _bitVector |= ((WORD)1 << offset);
@@ -149,19 +148,19 @@ struct SparseBitVector {
      * @param second sbv node to do a bitwise or with
      * @returns 1 if something changed, 0 otherwise
      */
-    template <bool A                            = IsConcurrent,
-              typename std::enable_if<A>::type* = nullptr>
+    template <
+        bool A = IsConcurrent, typename std::enable_if<A>::type* = nullptr>
     unsigned unify(Node* second) {
       if (second) {
         WORD oldVector = _bitVector;
         WORD newVector = oldVector | (second->_bitVector);
-        bool changed   = (oldVector != newVector);
+        bool changed = (oldVector != newVector);
 
         while (changed && !std::atomic_compare_exchange_weak(
                               &_bitVector, &oldVector, newVector)) {
           // if cas fails, update again
           newVector = oldVector | (second->_bitVector);
-          changed   = (oldVector != newVector);
+          changed = (oldVector != newVector);
         }
 
         return changed;
@@ -177,8 +176,8 @@ struct SparseBitVector {
      * @param second Node to do a bitwise or with
      * @returns 1 if something changed, 0 otherwise
      */
-    template <bool A                             = IsConcurrent,
-              typename std::enable_if<!A>::type* = nullptr>
+    template <
+        bool A = IsConcurrent, typename std::enable_if<!A>::type* = nullptr>
     unsigned unify(Node* second) {
       if (second) {
         WORD oldBits = _bitVector;
@@ -198,9 +197,9 @@ struct SparseBitVector {
       Node* newWord = nodeAllocator->allocate(1);
       nodeAllocator->construct(newWord, 0);
 
-      newWord->_base      = _base;
+      newWord->_base = _base;
       newWord->_bitVector = _bitVector;
-      newWord->_next      = nullptr;
+      newWord->_next = nullptr;
 
       return newWord;
     }
@@ -214,7 +213,7 @@ struct SparseBitVector {
       unsigned numElements = 0;
 
       WORD bitMask = 1;
-      WORD bits    = _bitVector;
+      WORD bits = _bitVector;
 
       for (unsigned ii = 0; ii < wordSize; ++ii) {
         if (bits & bitMask) {
@@ -237,9 +236,9 @@ struct SparseBitVector {
     template <typename VectorTy>
     unsigned getAllSetBits(VectorTy& setbits) const {
       // or mask used to mask set bits
-      WORD orMask     = 1;
+      WORD orMask = 1;
       unsigned numSet = 0;
-      WORD bits       = _bitVector;
+      WORD bits = _bitVector;
 
       for (unsigned curBit = 0; curBit < wordSize; ++curBit) {
         if (bits & orMask) {
@@ -263,15 +262,15 @@ struct SparseBitVector {
    * (i.e. correctness is not guaranteed)
    */
   class SBVIterator
-      : public boost::iterator_facade<SBVIterator, const unsigned,
-                                      boost::forward_traversal_tag> {
+      : public boost::iterator_facade<
+            SBVIterator, const unsigned, boost::forward_traversal_tag> {
     Node* currentHead;
     unsigned currentBit{0};
     unsigned currentValue{~0U};
 
     void advanceToNextBit(bool inclusive) {
       if (!inclusive) {
-        currentBit++; // current bit doesn't count for checking
+        currentBit++;  // current bit doesn't count for checking
       }
 
       bool found = false;
@@ -287,7 +286,7 @@ struct SparseBitVector {
 
         if (!found) {
           currentHead = (currentHead->_next);
-          currentBit  = 0;
+          currentBit = 0;
         }
       }
 
@@ -324,8 +323,8 @@ struct SparseBitVector {
      */
     void increment() {
       if (currentHead != nullptr) {
-        advanceToNextBit(false); // false = increment currentBit
-      }                          // do nothing if head is nullptr (i.e. the end)
+        advanceToNextBit(false);  // false = increment currentBit
+      }  // do nothing if head is nullptr (i.e. the end)
     }
 
     /**
@@ -357,9 +356,8 @@ struct SparseBitVector {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  using NodeType =
-      typename std::conditional<IsConcurrent, galois::CopyableAtomic<Node*>,
-                                Node*>::type;
+  using NodeType = typename std::conditional<
+      IsConcurrent, galois::CopyableAtomic<Node*>, Node*>::type;
   // head of linked list
   NodeType head;
   // allocator of new nodes
@@ -369,7 +367,7 @@ struct SparseBitVector {
    * Default constructor = nullptrs
    */
   SparseBitVector() {
-    head          = nullptr;
+    head = nullptr;
     nodeAllocator = nullptr;
   }
 
@@ -383,10 +381,10 @@ struct SparseBitVector {
   }
 
   void freeAll() {
-    if (nodeAllocator) { // check to make sure nodeAllocator isn't null
+    if (nodeAllocator) {  // check to make sure nodeAllocator isn't null
       while (head) {
         Node* current = head;
-        head          = current->_next;
+        head = current->_next;
         nodeAllocator->destroy(current);
         nodeAllocator->deallocate(current, 1);
       }
@@ -403,7 +401,7 @@ struct SparseBitVector {
    * a new linked list node
    */
   void init(galois::FixedSizeAllocator<Node>* _nodeAllocator) {
-    head          = nullptr;
+    head = nullptr;
     nodeAllocator = _nodeAllocator;
   }
 
@@ -434,14 +432,14 @@ struct SparseBitVector {
     std::tie(baseWord, offsetIntoWord) = getOffsets(num);
 
     Node* curPtr = head;
-    Node* prev   = nullptr;
+    Node* prev = nullptr;
 
     // while true due to fact that compare and swap (CAS) may fail
     while (true) {
       // pointers should be in sorted order
       // loop through linked list to find the correct base word (if it exists)
       while (curPtr != nullptr && curPtr->_base < baseWord) {
-        prev   = curPtr;
+        prev = curPtr;
         curPtr = (curPtr->_next);
       }
 
@@ -461,8 +459,8 @@ struct SparseBitVector {
         // attempt a compare and swap: if it fails, that means the list was
         // altered, so go back to beginning of this loop to check again
         if (prev) {
-          if (std::atomic_compare_exchange_weak(&(prev->_next), &curPtr,
-                                                newWord)) {
+          if (std::atomic_compare_exchange_weak(
+                  &(prev->_next), &curPtr, newWord)) {
             return true;
           } else {
             // if it fails, return to the top; current pointer has new value
@@ -502,12 +500,12 @@ struct SparseBitVector {
     std::tie(baseWord, offsetIntoWord) = getOffsets(bit);
 
     Node* curPtr = head;
-    Node* prev   = nullptr;
+    Node* prev = nullptr;
 
     // pointers should be in sorted order
     // loop through linked list to find the correct base word (if it exists)
     while (curPtr != nullptr && curPtr->_base < baseWord) {
-      prev   = curPtr;
+      prev = curPtr;
       curPtr = curPtr->_next;
     }
 
@@ -523,7 +521,7 @@ struct SparseBitVector {
       // this should point to prev's next, prev should point to this
       if (prev) {
         newWord->_next = prev->_next;
-        prev->_next    = newWord;
+        prev->_next = newWord;
       } else {
         if (curPtr == nullptr) {
           // this is the first word we are adding since both prev and head are
@@ -558,7 +556,7 @@ struct SparseBitVector {
     unsigned offsetIntoWord;
 
     std::tie(baseWord, offsetIntoWord) = getOffsets(num);
-    Node* curPointer                   = head;
+    Node* curPointer = head;
 
     while (curPointer != nullptr && curPointer->_base < baseWord) {
       curPointer = (curPointer->_next);
@@ -606,7 +604,7 @@ struct SparseBitVector {
         // ptrTwo has overtaken ptrOne, i.e. one has something (a base)
         // two doesn't
         return false;
-      } else { // ptrOne > ptrTwo
+      } else {  // ptrOne > ptrTwo
         // greater than case; advance ptrTwo to see if it eventually
         // reaches what ptrOne is currently at
         ptrTwo = (ptrTwo->_next);
@@ -641,7 +639,7 @@ struct SparseBitVector {
   unsigned unify(const SparseBitVector& second) {
     unsigned changed = 0;
 
-    Node* prev   = nullptr;
+    Node* prev = nullptr;
     Node* ptrOne = head;
     Node* ptrTwo = second.head;
 
@@ -651,14 +649,14 @@ struct SparseBitVector {
           // merged ptrTwo's word with our word, then advance both
           changed += ptrOne->unify(ptrTwo);
 
-          prev   = ptrOne;
+          prev = ptrOne;
           ptrOne = (ptrOne->_next);
           ptrTwo = (ptrTwo->_next);
         } else if (ptrOne->_base < ptrTwo->_base) {
           // advance our pointer until we reach new bases we don't have
-          prev   = ptrOne;
+          prev = ptrOne;
           ptrOne = (ptrOne->_next);
-        } else { // oneBase > twoBase
+        } else {  // oneBase > twoBase
           // two has something we don't have; add it between prev and current
           // ptrone
           Node* newWord = ptrTwo->clone(nodeAllocator);
@@ -666,8 +664,8 @@ struct SparseBitVector {
           (newWord->_next) = ptrOne;
 
           if (prev) {
-            if (!std::atomic_compare_exchange_weak(&(prev->_next), &ptrOne,
-                                                   newWord)) {
+            if (!std::atomic_compare_exchange_weak(
+                    &(prev->_next), &ptrOne, newWord)) {
               // if it fails, return to the top; ptrOne has new value
               // that needs to be checked
               nodeAllocator->destroy(newWord);
@@ -699,13 +697,13 @@ struct SparseBitVector {
 
         // note ptrOne in below cases should be nullptr...
         if (prev) {
-          if (!std::atomic_compare_exchange_weak(&(prev->_next), &ptrOne,
-                                                 newWord)) {
+          if (!std::atomic_compare_exchange_weak(
+                  &(prev->_next), &ptrOne, newWord)) {
             // if it fails, return to the top; ptrOne has new value
             // that needs to be checked
             nodeAllocator->destroy(newWord);
             nodeAllocator->deallocate(newWord, 1);
-            break; // goes out to outermost while loop
+            break;  // goes out to outermost while loop
           }
         } else {
           if (!std::atomic_compare_exchange_weak(&head, &ptrOne, newWord)) {
@@ -713,11 +711,11 @@ struct SparseBitVector {
             // that needs to be checked
             nodeAllocator->destroy(newWord);
             nodeAllocator->deallocate(newWord, 1);
-            break; // goes out to outermost while loop
+            break;  // goes out to outermost while loop
           }
         }
 
-        prev   = newWord;
+        prev = newWord;
         ptrTwo = (ptrTwo->_next);
 
         changed++;
@@ -740,7 +738,7 @@ struct SparseBitVector {
   unsigned unify(const SparseBitVector& second) {
     unsigned changed = 0;
 
-    Node* prev   = nullptr;
+    Node* prev = nullptr;
     Node* ptrOne = head;
     Node* ptrTwo = second.head;
 
@@ -749,14 +747,14 @@ struct SparseBitVector {
         // merged ptrTwo's word with our word, then advance both
         changed += ptrOne->unify(ptrTwo);
 
-        prev   = ptrOne;
+        prev = ptrOne;
         ptrOne = ptrOne->_next;
         ptrTwo = ptrTwo->_next;
       } else if (ptrOne->_base < ptrTwo->_base) {
         // advance our pointer until we reach new bases we don't have
-        prev   = ptrOne;
+        prev = ptrOne;
         ptrOne = (ptrOne->_next);
-      } else { // oneBase > twoBase
+      } else {  // oneBase > twoBase
         // two has something we don't have; add it between prev and current
         // ptrone
         Node* newWord = ptrTwo->clone(nodeAllocator);
@@ -787,7 +785,7 @@ struct SparseBitVector {
         head = newWord;
       }
 
-      prev   = newWord;
+      prev = newWord;
       ptrTwo = (ptrTwo->_next);
 
       changed++;
@@ -850,13 +848,13 @@ private:
    * baseword that corresponds to num
    */
   std::pair<unsigned, unsigned> getOffsets(unsigned num) const {
-    unsigned baseWord       = num / wordSize;
+    unsigned baseWord = num / wordSize;
     unsigned offsetIntoWord = num % wordSize;
 
     return std::pair<unsigned, unsigned>(baseWord, offsetIntoWord);
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

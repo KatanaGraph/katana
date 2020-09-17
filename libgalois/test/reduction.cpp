@@ -1,21 +1,23 @@
-#include "galois/Galois.h"
 #include "galois/Reduction.h"
-#include "galois/SharedMemSys.h"
 
 #include <algorithm>
-#include <iostream>
 #include <functional>
+#include <iostream>
+
+#include "galois/Galois.h"
+#include "galois/SharedMemSys.h"
 
 struct Move {
-  Move()            = default;
-  ~Move()           = default;
+  Move() = default;
+  ~Move() = default;
   Move(const Move&) = delete;
   Move(Move&&) noexcept {}
   Move& operator=(const Move&) = delete;
-  Move& operator               =(Move&&) noexcept { return *this; }
+  Move& operator=(Move&&) noexcept { return *this; }
 };
 
-void test_move() {
+void
+test_move() {
   auto merge_fn = [](Move& a, Move &&) -> Move& { return a; };
 
   auto identity_fn = []() { return Move(); };
@@ -30,7 +32,8 @@ void test_move() {
   // reducible.update(x);
 }
 
-void test_map() {
+void
+test_map() {
   using Map = std::map<std::string, int>;
 
   auto reduce = [](Map& a, Map&& b) -> Map& {
@@ -55,9 +58,11 @@ void test_map() {
   GALOIS_ASSERT(result["key"] == 1);
 }
 
-void other() {}
+void
+other() {}
 
-void test_max() {
+void
+test_max() {
   const int& (*int_max)(const int&, const int&) = std::max<int>;
   std::function<const int&(const int&, const int&)> fn{int_max};
 
@@ -71,7 +76,8 @@ void test_max() {
   GALOIS_ASSERT(r.reduce() == num);
 }
 
-void test_accum() {
+void
+test_accum() {
   galois::GAccumulator<int> accum;
 
   constexpr int num = 123456;
@@ -81,12 +87,14 @@ void test_accum() {
   GALOIS_ASSERT(accum.reduce() == num);
 }
 
-int main() {
+int
+main() {
   galois::SharedMemSys sys;
   galois::setActiveThreads(2);
 
-  static_assert(sizeof(galois::GAccumulator<int>) <=
-                sizeof(galois::substrate::PerThreadStorage<int>));
+  static_assert(
+      sizeof(galois::GAccumulator<int>) <=
+      sizeof(galois::substrate::PerThreadStorage<int>));
 
   test_map();
   test_move();

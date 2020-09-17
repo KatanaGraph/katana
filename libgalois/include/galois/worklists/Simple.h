@@ -96,7 +96,7 @@ GALOIS_WLCOMPILECHECK(GFIFO)
 GALOIS_WLCOMPILECHECK(LIFO)
 GALOIS_WLCOMPILECHECK(GLIFO)
 
-} // end namespace worklists
-} // end namespace galois
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

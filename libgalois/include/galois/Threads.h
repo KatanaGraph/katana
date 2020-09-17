@@ -37,5 +37,5 @@ GALOIS_EXPORT unsigned int setActiveThreads(unsigned int num) noexcept;
  */
 GALOIS_EXPORT unsigned int getActiveThreads() noexcept;
 
-} // namespace galois
+}  // namespace galois
 #endif

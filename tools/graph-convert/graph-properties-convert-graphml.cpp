@@ -21,9 +21,9 @@
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Threads.h"
+#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
 
 using galois::ImportData;
@@ -37,7 +37,8 @@ namespace {
 /* Functions for parsing data */
 /******************************/
 
-std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
+std::optional<std::vector<std::string>>
+ParseStringList(std::string raw_list) {
   std::vector<std::string> list;
 
   if (raw_list.size() >= 2 && raw_list.front() == '[' &&
@@ -53,9 +54,9 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
   const char* char_list = raw_list.c_str();
   // parse the list
   for (size_t i = 0; i < raw_list.size();) {
-    bool first_quote_found  = false;
-    bool found_end_of_elem  = false;
-    size_t start_of_elem    = i;
+    bool first_quote_found = false;
+    bool found_end_of_elem = false;
+    size_t start_of_elem = i;
     int consecutive_slashes = 0;
 
     // parse the field
@@ -65,7 +66,7 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
         if (consecutive_slashes % 2 == 0) {
           if (!first_quote_found) {
             first_quote_found = true;
-            start_of_elem     = i + 1;
+            start_of_elem = i + 1;
           } else if (first_quote_found) {
             found_end_of_elem = true;
           }
@@ -83,7 +84,6 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
     if (end_of_elem <= start_of_elem) {
       list.emplace_back("");
     } else {
-
       std::string elem_rough(&char_list[start_of_elem], elem_length);
       std::string elem("");
       elem.reserve(elem_rough.size());
@@ -91,8 +91,8 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
       size_t next_slash = elem_rough.find_first_of('\\');
 
       while (next_slash != std::string::npos) {
-        elem.append(elem_rough.begin() + curr_index,
-                    elem_rough.begin() + next_slash);
+        elem.append(
+            elem_rough.begin() + curr_index, elem_rough.begin() + next_slash);
 
         switch (elem_rough[next_slash + 1]) {
         case 'n':
@@ -129,8 +129,8 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
           elem.append("\xFF");
           break;
         default:
-          GALOIS_LOG_WARN("Unhandled escape character: {}",
-                          elem_rough[next_slash + 1]);
+          GALOIS_LOG_WARN(
+              "Unhandled escape character: {}", elem_rough[next_slash + 1]);
         }
 
         curr_index = next_slash + 2;
@@ -146,15 +146,17 @@ std::optional<std::vector<std::string>> ParseStringList(std::string raw_list) {
 }
 
 template <typename T>
-std::optional<std::vector<T>> ParseNumberList(std::string raw_list) {
+std::optional<std::vector<T>>
+ParseNumberList(std::string raw_list) {
   std::vector<T> list;
 
   if (raw_list.front() == '[' && raw_list.back() == ']') {
     raw_list.erase(0, 1);
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
-    GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
-                     "returning empty vector");
+    GALOIS_LOG_ERROR(
+        "The provided list was not formatted like neo4j, "
+        "returning empty vector");
     return std::nullopt;
   }
   std::vector<std::string> elems;
@@ -169,15 +171,17 @@ std::optional<std::vector<T>> ParseNumberList(std::string raw_list) {
   return list;
 }
 
-std::optional<std::vector<bool>> ParseBooleanList(std::string raw_list) {
+std::optional<std::vector<bool>>
+ParseBooleanList(std::string raw_list) {
   std::vector<bool> list;
 
   if (raw_list.front() == '[' && raw_list.back() == ']') {
     raw_list.erase(0, 1);
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
-    GALOIS_LOG_ERROR("The provided list was not formatted like neo4j, "
-                     "returning empty vector");
+    GALOIS_LOG_ERROR(
+        "The provided list was not formatted like neo4j, "
+        "returning empty vector");
     return std::nullopt;
   }
   std::vector<std::string> elems;
@@ -197,15 +201,16 @@ std::optional<std::vector<bool>> ParseBooleanList(std::string raw_list) {
 /************************************************/
 
 template <typename T>
-ImportData Resolve(ImportDataType type, bool is_list, T val) {
+ImportData
+Resolve(ImportDataType type, bool is_list, T val) {
   ImportData data{type, is_list};
   data.value = val;
   return data;
 }
 
 template <typename Fn>
-ImportData ResolveOptionalList(ImportDataType type, const std::string& val,
-                               Fn resolver) {
+ImportData
+ResolveOptionalList(ImportDataType type, const std::string& val, Fn resolver) {
   ImportData data{type, true};
 
   auto res = resolver(val);
@@ -217,7 +222,8 @@ ImportData ResolveOptionalList(ImportDataType type, const std::string& val,
   return data;
 }
 
-ImportData ResolveListValue(const std::string& val, ImportDataType type) {
+ImportData
+ResolveListValue(const std::string& val, ImportDataType type) {
   switch (type) {
   case ImportDataType::kString:
     return ResolveOptionalList(type, val, ParseStringList);
@@ -238,8 +244,8 @@ ImportData ResolveListValue(const std::string& val, ImportDataType type) {
   }
 }
 
-ImportData ResolveValue(const std::string& val, ImportDataType type,
-                        bool is_list) {
+ImportData
+ResolveValue(const std::string& val, ImportDataType type, bool is_list) {
   if (is_list) {
     return ResolveListValue(val, type);
   }
@@ -276,7 +282,8 @@ ImportData ResolveValue(const std::string& val, ImportDataType type,
  *
  * parses data from a GraphML file into property: pair<string, string>
  */
-std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
+std::pair<std::string, std::string>
+ProcessData(xmlTextReaderPtr reader) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -287,14 +294,15 @@ std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
 
   // parse node attributes for key (required)
   while (ret == 1) {
-    name  = xmlTextReaderName(reader);
+    name = xmlTextReaderName(reader);
     value = xmlTextReaderValue(reader);
     if (name != NULL) {
       if (xmlStrEqual(name, BAD_CAST "key")) {
         key = std::string((const char*)value);
       } else {
-        GALOIS_LOG_ERROR("Attribute on node: {}, was not recognized",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "Attribute on node: {}, was not recognized",
+            std::string((const char*)name));
       }
     }
 
@@ -310,7 +318,7 @@ std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
     name = xmlTextReaderName(reader);
     // if elt is an xml text node
     if (xmlTextReaderNodeType(reader) == 3) {
-      value        = xmlTextReaderValue(reader);
+      value = xmlTextReaderValue(reader);
       propertyData = std::string((const char*)value);
       xmlFree(value);
     }
@@ -326,8 +334,8 @@ std::pair<std::string, std::string> ProcessData(xmlTextReaderPtr reader) {
  *
  * parses the node from a GraphML file into readable form
  */
-void ProcessNode(xmlTextReaderPtr reader,
-                 galois::PropertyGraphBuilder* builder) {
+void
+ProcessNode(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -336,18 +344,19 @@ void ProcessNode(xmlTextReaderPtr reader,
   std::string id;
   std::vector<std::string> labels;
 
-  bool extractedLabels = false; // neo4j includes these twice so only parse 1
+  bool extractedLabels = false;  // neo4j includes these twice so only parse 1
 
   // parse node attributes for id (required) and label(s) (optional)
   while (ret == 1) {
-    name  = xmlTextReaderName(reader);
+    name = xmlTextReaderName(reader);
     value = xmlTextReaderValue(reader);
 
     if (name != NULL) {
       if (xmlStrEqual(name, BAD_CAST "id")) {
         id = std::string((const char*)value);
-      } else if (xmlStrEqual(name, BAD_CAST "labels") ||
-                 xmlStrEqual(name, BAD_CAST "label")) {
+      } else if (
+          xmlStrEqual(name, BAD_CAST "labels") ||
+          xmlStrEqual(name, BAD_CAST "label")) {
         std::string data((const char*)value);
         // erase prepended ':' if it exists
         if (data.front() == ':') {
@@ -404,8 +413,8 @@ void ProcessNode(xmlTextReaderPtr reader,
               builder->AddValue(
                   property.first,
                   [&]() {
-                    return PropertyKey{property.first, ImportDataType::kString,
-                                       false};
+                    return PropertyKey{
+                        property.first, ImportDataType::kString, false};
                   },
                   [&value](ImportDataType type, bool is_list) {
                     return ResolveValue(value, type, is_list);
@@ -414,8 +423,9 @@ void ProcessNode(xmlTextReaderPtr reader,
           }
         }
       } else {
-        GALOIS_LOG_ERROR("In node found element: {}, which was ignored",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "In node found element: {}, which was ignored",
+            std::string((const char*)name));
       }
     }
 
@@ -439,8 +449,8 @@ void ProcessNode(xmlTextReaderPtr reader,
  *
  * parses the edge from a GraphML file into readable form
  */
-void ProcessEdge(xmlTextReaderPtr reader,
-                 galois::PropertyGraphBuilder* builder) {
+void
+ProcessEdge(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -449,11 +459,11 @@ void ProcessEdge(xmlTextReaderPtr reader,
   std::string source;
   std::string target;
   std::string type;
-  bool extracted_type = false; // neo4j includes these twice so only parse 1
+  bool extracted_type = false;  // neo4j includes these twice so only parse 1
 
   // parse node attributes for id (required) and label(s) (optional)
   while (ret == 1) {
-    name  = xmlTextReaderName(reader);
+    name = xmlTextReaderName(reader);
     value = xmlTextReaderValue(reader);
 
     if (name != NULL) {
@@ -462,9 +472,10 @@ void ProcessEdge(xmlTextReaderPtr reader,
         source = std::string((const char*)value);
       } else if (xmlStrEqual(name, BAD_CAST "target")) {
         target = std::string((const char*)value);
-      } else if (xmlStrEqual(name, BAD_CAST "labels") ||
-                 xmlStrEqual(name, BAD_CAST "label")) {
-        type           = std::string((const char*)value);
+      } else if (
+          xmlStrEqual(name, BAD_CAST "labels") ||
+          xmlStrEqual(name, BAD_CAST "label")) {
+        type = std::string((const char*)value);
         extracted_type = true;
       } else {
         GALOIS_LOG_ERROR(
@@ -501,7 +512,7 @@ void ProcessEdge(xmlTextReaderPtr reader,
           if (property.first == std::string("label") ||
               property.first == std::string("labels")) {
             if (!extracted_type) {
-              type           = property.second;
+              type = property.second;
               extracted_type = true;
             }
           } else if (property.first != std::string("IGNORE")) {
@@ -510,8 +521,8 @@ void ProcessEdge(xmlTextReaderPtr reader,
               builder->AddValue(
                   property.first,
                   [&]() {
-                    return PropertyKey{property.first, ImportDataType::kString,
-                                       false};
+                    return PropertyKey{
+                        property.first, ImportDataType::kString, false};
                   },
                   [&value](ImportDataType type, bool is_list) {
                     return ResolveValue(value, type, is_list);
@@ -520,8 +531,9 @@ void ProcessEdge(xmlTextReaderPtr reader,
           }
         }
       } else {
-        GALOIS_LOG_ERROR("In edge found element: {}, which was ignored",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "In edge found element: {}, which was ignored",
+            std::string((const char*)name));
       }
     }
     xmlFree(name);
@@ -542,10 +554,10 @@ void ProcessEdge(xmlTextReaderPtr reader,
  *
  * parses the graph structure from a GraphML file into Galois format
  */
-void ProcessGraph(xmlTextReaderPtr reader,
-                  galois::PropertyGraphBuilder* builder) {
+void
+ProcessGraph(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
-  int ret            = xmlTextReaderRead(reader);
+  int ret = xmlTextReaderRead(reader);
 
   bool finished_nodes = false;
 
@@ -569,8 +581,9 @@ void ProcessGraph(xmlTextReaderPtr reader,
         // if elt is an "egde" xml node read it in
         ProcessEdge(reader, builder);
       } else {
-        GALOIS_LOG_ERROR("Found element: {}, which was ignored",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "Found element: {}, which was ignored",
+            std::string((const char*)name));
       }
     }
 
@@ -580,15 +593,15 @@ void ProcessGraph(xmlTextReaderPtr reader,
   std::cout << "Finished processing edges\n";
 }
 
-} // end of unnamed namespace
+}  // end of unnamed namespace
 
 /// ConvertGraphML converts a GraphML file into katana form
 ///
 /// \param infilename path to source graphml file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-galois::GraphComponents galois::ConvertGraphML(const std::string& infilename,
-                                               size_t chunk_size) {
+galois::GraphComponents
+galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
   xmlTextReaderPtr reader;
   int ret = 0;
 

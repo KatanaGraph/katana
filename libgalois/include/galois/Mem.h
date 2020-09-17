@@ -47,5 +47,5 @@ using FixedSizeAllocator = galois::runtime::FixedSizeAllocator<Ty>;
 template <typename T>
 using Pow_2_VarSizeAlloc = typename runtime::Pow_2_BlockAllocator<T>;
 
-} // namespace galois
+}  // namespace galois
 #endif

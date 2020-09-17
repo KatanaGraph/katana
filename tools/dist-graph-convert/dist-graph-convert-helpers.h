@@ -20,25 +20,25 @@
 #ifndef _GALOIS_DIST_CONVERT_HELP_
 #define _GALOIS_DIST_CONVERT_HELP_
 
+#include <mpi.h>
+
 #include <iostream>
 #include <mutex>
 #include <random>
 
-#include <mpi.h>
-
-#include "galois/Galois.h"
+#include "galois/DReducible.h"
 #include "galois/DynamicBitset.h"
+#include "galois/Galois.h"
+#include "galois/graphs/BufferedGraph.h"
+#include "galois/graphs/OfflineGraph.h"
 #include "galois/gstl.h"
 #include "galois/runtime/Network.h"
-#include "galois/DReducible.h"
-#include "galois/graphs/OfflineGraph.h"
-#include "galois/graphs/BufferedGraph.h"
 
 // useful typedefs that shorten long declarations
-using Uint64Pair       = std::pair<uint64_t, uint64_t>;
+using Uint64Pair = std::pair<uint64_t, uint64_t>;
 using DoubleUint64Pair = std::pair<Uint64Pair, Uint64Pair>;
-using VoVUint32        = std::vector<std::vector<uint32_t>>;
-using PairVoVUint32    = std::pair<VoVUint32, VoVUint32>;
+using VoVUint32 = std::vector<std::vector<uint32_t>>;
+using PairVoVUint32 = std::pair<VoVUint32, VoVUint32>;
 
 /**
  * Given a binary node mapping, read a specified region into memory.
@@ -48,9 +48,8 @@ using PairVoVUint32    = std::pair<VoVUint32, VoVUint32>;
  * @param numToRead the number of node mappings (i.e. nodes) to read
  * @returns Vector with the read in node mappings
  */
-std::vector<uint32_t> readRandomNodeMapping(const std::string& nodeMapBinary,
-                                            uint64_t nodeOffset,
-                                            uint64_t numToRead);
+std::vector<uint32_t> readRandomNodeMapping(
+    const std::string& nodeMapBinary, uint64_t nodeOffset, uint64_t numToRead);
 
 /**
  * Wrapper for MPI calls that return an error code. Make sure it is success
@@ -79,7 +78,8 @@ Uint64Pair readV1GrHeader(const std::string& grFile, bool isVoid);
  * @param toFree vector to free memory of
  */
 template <typename VectorTy>
-void freeVector(VectorTy& toFree) {
+void
+freeVector(VectorTy& toFree) {
   VectorTy dummyVector;
   toFree.swap(dummyVector);
 }
@@ -94,7 +94,8 @@ void freeVector(VectorTy& toFree) {
  * @returns the number of edges represented by the vector
  */
 template <typename EdgeDataTy>
-size_t getNumEdges(const std::vector<uint32_t>& edgeVector) {
+size_t
+getNumEdges(const std::vector<uint32_t>& edgeVector) {
   size_t numEdges;
   if (std::is_void<EdgeDataTy>::value) {
     numEdges = edgeVector.size() / 2;
@@ -120,12 +121,13 @@ size_t getNumEdges(const std::vector<uint32_t>& edgeVector) {
  */
 template <typename EdgeDataTy>
 std::vector<uint32_t>
-loadEdgesFromEdgeList(std::ifstream& edgeListFile, uint64_t localStartByte,
-                      uint64_t localEndByte, uint64_t totalNumNodes,
-                      bool startAtOne = false, bool ignoreWeights = false) {
+loadEdgesFromEdgeList(
+    std::ifstream& edgeListFile, uint64_t localStartByte, uint64_t localEndByte,
+    uint64_t totalNumNodes, bool startAtOne = false,
+    bool ignoreWeights = false) {
   // load edges into a vector
   uint64_t localNumEdges = 0;
-  std::vector<uint32_t> localEdges; // v1 support only + only uint32_t data
+  std::vector<uint32_t> localEdges;  // v1 support only + only uint32_t data
 
   // read lines until last byte
   edgeListFile.seekg(localStartByte);
@@ -178,8 +180,8 @@ loadEdgesFromEdgeList(std::ifstream& edgeListFile, uint64_t localStartByte,
  * @returns A vector of pairs representing node -> host assignments. Evenly
  * distributed nodes to hosts.
  */
-std::vector<Uint64Pair> getHostToNodeMapping(uint64_t numHosts,
-                                             uint64_t totalNumNodes);
+std::vector<Uint64Pair> getHostToNodeMapping(
+    uint64_t numHosts, uint64_t totalNumNodes);
 
 /**
  * Get the assigned owner of some ID given a mapping from ID to owner.
@@ -189,8 +191,8 @@ std::vector<Uint64Pair> getHostToNodeMapping(uint64_t numHosts,
  * nodes
  * @returns Owner of requested ID on or -1 if it couldn't be found
  */
-uint32_t findOwner(const uint64_t gID,
-                   const std::vector<Uint64Pair>& ownerMapping);
+uint32_t findOwner(
+    const uint64_t gID, const std::vector<Uint64Pair>& ownerMapping);
 
 /**
  * Returns the file size of an ifstream.
@@ -227,8 +229,9 @@ uint64_t accumulateValue(uint64_t value);
  * @param prefixSum Prefix sum where the weights/returned index are derived
  * from
  */
-uint64_t findIndexPrefixSum(uint64_t targetWeight, uint64_t lb, uint64_t ub,
-                            const std::vector<uint64_t>& prefixSum);
+uint64_t findIndexPrefixSum(
+    uint64_t targetWeight, uint64_t lb, uint64_t ub,
+    const std::vector<uint64_t>& prefixSum);
 
 /**
  * Given a prefix sum, a partition ID, and the total number of partitions,
@@ -242,8 +245,8 @@ uint64_t findIndexPrefixSum(uint64_t targetWeight, uint64_t lb, uint64_t ub,
  * @returns Pair representing the begin/end of the elements that partition
  * "id" is assigned based on the prefix sum
  */
-Uint64Pair binSearchDivision(uint64_t id, uint64_t totalID,
-                             const std::vector<uint64_t>& prefixSum);
+Uint64Pair binSearchDivision(
+    uint64_t id, uint64_t totalID, const std::vector<uint64_t>& prefixSum);
 
 /**
  * Finds the unique source nodes of a set of edges in memory. Assumes
@@ -257,8 +260,10 @@ Uint64Pair binSearchDivision(uint64_t id, uint64_t totalID,
  * function
  */
 template <typename EdgeDataTy>
-void findUniqueSourceNodes(const std::vector<uint32_t>& localEdges,
-                           galois::DynamicBitSet& uniqueNodeBitset) {
+void
+findUniqueSourceNodes(
+    const std::vector<uint32_t>& localEdges,
+    galois::DynamicBitSet& uniqueNodeBitset) {
   uint64_t hostID = galois::runtime::getSystemNetworkInterface().ID;
   std::cout << "[" << hostID << "] Finding unique nodes\n";
   uniqueNodeBitset.reset();
@@ -290,9 +295,10 @@ void findUniqueSourceNodes(const std::vector<uint32_t>& localEdges,
  * @returns a set of chunk ids corresponding to the nodes passed in (i.e. chunks
  * those nodes are included in)
  */
-void findUniqueChunks(galois::DynamicBitSet& uniqueNodeBitset,
-                      const std::vector<Uint64Pair>& chunkToNode,
-                      galois::DynamicBitSet& uniqueChunkBitset);
+void findUniqueChunks(
+    galois::DynamicBitSet& uniqueNodeBitset,
+    const std::vector<Uint64Pair>& chunkToNode,
+    galois::DynamicBitSet& uniqueChunkBitset);
 
 /**
  * Get the edge counts for chunks of edges that we have locally.
@@ -306,10 +312,12 @@ void findUniqueChunks(galois::DynamicBitSet& uniqueNodeBitset,
  * edited to have our local chunk edge counts
  */
 template <typename EdgeDataTy>
-void accumulateLocalEdgesToChunks(galois::DynamicBitSet& uniqueChunkBitset,
-                                  const std::vector<uint32_t>& localEdges,
-                                  const std::vector<Uint64Pair>& chunkToNode,
-                                  std::vector<uint64_t>& chunkCounts) {
+void
+accumulateLocalEdgesToChunks(
+    galois::DynamicBitSet& uniqueChunkBitset,
+    const std::vector<uint32_t>& localEdges,
+    const std::vector<Uint64Pair>& chunkToNode,
+    std::vector<uint64_t>& chunkCounts) {
   std::map<uint64_t, std::atomic<uint64_t>> chunkToAccumulator;
 
   // default-initialize necessary chunk atomics
@@ -375,13 +383,14 @@ void sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts);
  */
 template <typename EdgeDataTy>
 std::vector<uint64_t>
-getChunkEdgeCounts(galois::DynamicBitSet& uniqueChunkBitset,
-                   const std::vector<uint32_t>& localEdges,
-                   const std::vector<Uint64Pair>& chunkToNode) {
+getChunkEdgeCounts(
+    galois::DynamicBitSet& uniqueChunkBitset,
+    const std::vector<uint32_t>& localEdges,
+    const std::vector<Uint64Pair>& chunkToNode) {
   std::vector<uint64_t> chunkCounts;
   chunkCounts.assign(uniqueChunkBitset.size(), 0);
-  accumulateLocalEdgesToChunks<EdgeDataTy>(uniqueChunkBitset, localEdges,
-                                           chunkToNode, chunkCounts);
+  accumulateLocalEdgesToChunks<EdgeDataTy>(
+      uniqueChunkBitset, localEdges, chunkToNode, chunkCounts);
   sendAndReceiveEdgeChunkCounts(chunkCounts);
 
   return chunkCounts;
@@ -397,9 +406,9 @@ getChunkEdgeCounts(galois::DynamicBitSet& uniqueChunkBitset,
  * @returns a host to node mapping where each host very roughly has a balanced
  * number of edges
  */
-std::vector<Uint64Pair>
-getChunkToHostMapping(const std::vector<uint64_t>& chunkCountsPrefixSum,
-                      const std::vector<Uint64Pair>& chunkToNode);
+std::vector<Uint64Pair> getChunkToHostMapping(
+    const std::vector<uint64_t>& chunkCountsPrefixSum,
+    const std::vector<Uint64Pair>& chunkToNode);
 
 /**
  * Attempts to evenly assign nodes to hosts such that each host roughly gets
@@ -414,10 +423,11 @@ getChunkToHostMapping(const std::vector<uint64_t>& chunkCountsPrefixSum,
  */
 template <typename EdgeDataTy>
 std::vector<Uint64Pair>
-getEvenNodeToHostMapping(const std::vector<uint32_t>& localEdges,
-                         uint64_t totalNodeCount, uint64_t totalEdgeCount) {
-  auto& net              = galois::runtime::getSystemNetworkInterface();
-  uint64_t hostID        = net.ID;
+getEvenNodeToHostMapping(
+    const std::vector<uint32_t>& localEdges, uint64_t totalNodeCount,
+    uint64_t totalEdgeCount) {
+  auto& net = galois::runtime::getSystemNetworkInterface();
+  uint64_t hostID = net.ID;
   uint64_t totalNumHosts = net.Num;
 
   uint64_t numNodeChunks = totalEdgeCount / totalNumHosts;
@@ -493,13 +503,13 @@ DoubleUint64Pair getNodesToReadFromGr(const std::string& inputGr);
  */
 template <typename EdgeDataTy>
 std::vector<uint32_t>
-loadEdgesFromBufferedGraph(const std::string& inputFile, Uint64Pair nodesToRead,
-                           Uint64Pair edgesToRead, uint64_t totalNumNodes,
-                           uint64_t totalNumEdges) {
+loadEdgesFromBufferedGraph(
+    const std::string& inputFile, Uint64Pair nodesToRead,
+    Uint64Pair edgesToRead, uint64_t totalNumNodes, uint64_t totalNumEdges) {
   galois::graphs::BufferedGraph<EdgeDataTy> bufGraph;
-  bufGraph.loadPartialGraph(inputFile, nodesToRead.first, nodesToRead.second,
-                            edgesToRead.first, edgesToRead.second,
-                            totalNumNodes, totalNumEdges);
+  bufGraph.loadPartialGraph(
+      inputFile, nodesToRead.first, nodesToRead.second, edgesToRead.first,
+      edgesToRead.second, totalNumNodes, totalNumEdges);
 
   std::vector<uint32_t> edgeData;
 
@@ -515,7 +525,7 @@ loadEdgesFromBufferedGraph(const std::string& inputFile, Uint64Pair nodesToRead,
         galois::iterate(nodesToRead.first, nodesToRead.second),
         [&](uint32_t gID) {
           uint64_t edgeBegin = *bufGraph.edgeBegin(gID);
-          uint64_t edgeEnd   = *bufGraph.edgeEnd(gID);
+          uint64_t edgeEnd = *bufGraph.edgeEnd(gID);
 
           // offset into which we should start writing data in
           // edgeData
@@ -528,8 +538,8 @@ loadEdgesFromBufferedGraph(const std::string& inputFile, Uint64Pair nodesToRead,
 
           // loop through all edges
           for (uint64_t i = edgeBegin; i < edgeEnd; i++) {
-            uint32_t edgeDest            = bufGraph.edgeDestination(i);
-            edgeData[edgeDataOffset]     = gID;
+            uint32_t edgeDest = bufGraph.edgeDestination(i);
+            edgeData[edgeDataOffset] = gID;
             edgeData[edgeDataOffset + 1] = edgeDest;
 
             if (std::is_void<EdgeDataTy>::value) {
@@ -561,13 +571,14 @@ loadEdgesFromBufferedGraph(const std::string& inputFile, Uint64Pair nodesToRead,
  * pass into the function
  */
 template <typename EdgeDataTy>
-std::vector<uint32_t> loadTransposedEdgesFromBufferedGraph(
+std::vector<uint32_t>
+loadTransposedEdgesFromBufferedGraph(
     const std::string& inputFile, Uint64Pair nodesToRead,
     Uint64Pair edgesToRead, uint64_t totalNumNodes, uint64_t totalNumEdges) {
   galois::graphs::BufferedGraph<EdgeDataTy> bufGraph;
-  bufGraph.loadPartialGraph(inputFile, nodesToRead.first, nodesToRead.second,
-                            edgesToRead.first, edgesToRead.second,
-                            totalNumNodes, totalNumEdges);
+  bufGraph.loadPartialGraph(
+      inputFile, nodesToRead.first, nodesToRead.second, edgesToRead.first,
+      edgesToRead.second, totalNumNodes, totalNumEdges);
 
   std::vector<uint32_t> edgeData;
 
@@ -583,7 +594,7 @@ std::vector<uint32_t> loadTransposedEdgesFromBufferedGraph(
         galois::iterate(nodesToRead.first, nodesToRead.second),
         [&](uint32_t gID) {
           uint64_t edgeBegin = *bufGraph.edgeBegin(gID);
-          uint64_t edgeEnd   = *bufGraph.edgeEnd(gID);
+          uint64_t edgeEnd = *bufGraph.edgeEnd(gID);
 
           // offset into which we should start writing data in
           // edgeData
@@ -599,7 +610,7 @@ std::vector<uint32_t> loadTransposedEdgesFromBufferedGraph(
             uint32_t edgeSource = bufGraph.edgeDestination(i);
             // src is saved as dest and dest is saved as source
             // (transpose)
-            edgeData[edgeDataOffset]     = edgeSource;
+            edgeData[edgeDataOffset] = edgeSource;
             edgeData[edgeDataOffset + 1] = gID;
 
             if (std::is_void<EdgeDataTy>::value) {
@@ -631,14 +642,15 @@ std::vector<uint32_t> loadTransposedEdgesFromBufferedGraph(
  * passed into the function; 1 edge in original becomes 2
  */
 template <typename EdgeDataTy>
-std::vector<uint32_t> loadSymmetricEdgesFromBufferedGraph(
+std::vector<uint32_t>
+loadSymmetricEdgesFromBufferedGraph(
     const std::string& inputFile, Uint64Pair nodesToRead,
     Uint64Pair edgesToRead, uint64_t totalNumNodes, uint64_t totalNumEdges) {
   // TODO change this
   galois::graphs::BufferedGraph<EdgeDataTy> bufGraph;
-  bufGraph.loadPartialGraph(inputFile, nodesToRead.first, nodesToRead.second,
-                            edgesToRead.first, edgesToRead.second,
-                            totalNumNodes, totalNumEdges);
+  bufGraph.loadPartialGraph(
+      inputFile, nodesToRead.first, nodesToRead.second, edgesToRead.first,
+      edgesToRead.second, totalNumNodes, totalNumEdges);
 
   std::vector<uint32_t> edgeData;
 
@@ -654,7 +666,7 @@ std::vector<uint32_t> loadSymmetricEdgesFromBufferedGraph(
         galois::iterate(nodesToRead.first, nodesToRead.second),
         [&](uint32_t gID) {
           uint64_t edgeBegin = *bufGraph.edgeBegin(gID);
-          uint64_t edgeEnd   = *bufGraph.edgeEnd(gID);
+          uint64_t edgeEnd = *bufGraph.edgeEnd(gID);
 
           // offset into which we should start writing data in
           // edgeData
@@ -667,8 +679,8 @@ std::vector<uint32_t> loadSymmetricEdgesFromBufferedGraph(
 
           // loop through all edges, create 2 edges for every edge
           for (uint64_t i = edgeBegin; i < edgeEnd; i++) {
-            uint32_t edgeDest            = bufGraph.edgeDestination(i);
-            edgeData[edgeDataOffset]     = gID;
+            uint32_t edgeDest = bufGraph.edgeDestination(i);
+            edgeData[edgeDataOffset] = gID;
             edgeData[edgeDataOffset + 1] = edgeDest;
 
             if (std::is_void<EdgeDataTy>::value) {
@@ -706,11 +718,10 @@ std::vector<uint32_t> loadSymmetricEdgesFromBufferedGraph(
  * @returns a vector with edges corresponding to the nodes/edges
  * passed into the function; multi edges and self loops removed
  */
-std::vector<uint32_t>
-loadCleanEdgesFromBufferedGraph(const std::string& inputFile,
-                                Uint64Pair nodesToRead, Uint64Pair edgesToRead,
-                                uint64_t totalNumNodes, uint64_t totalNumEdges,
-                                bool keepSelfLoops);
+std::vector<uint32_t> loadCleanEdgesFromBufferedGraph(
+    const std::string& inputFile, Uint64Pair nodesToRead,
+    Uint64Pair edgesToRead, uint64_t totalNumNodes, uint64_t totalNumEdges,
+    bool keepSelfLoops);
 
 /**
  * Loads the node to new node mapping, then reads the edges that this host
@@ -735,14 +746,15 @@ loadCleanEdgesFromBufferedGraph(const std::string& inputFile,
  * depending on edge data type)
  */
 template <typename EdgeDataTy>
-std::vector<uint32_t> loadMappedSourceEdgesFromBufferedGraph(
+std::vector<uint32_t>
+loadMappedSourceEdgesFromBufferedGraph(
     const std::string& inputFile, Uint64Pair nodesToRead,
     Uint64Pair edgesToRead, uint64_t totalNumNodes, uint64_t totalNumEdges,
     const std::string& mappedBinary) {
   galois::graphs::BufferedGraph<EdgeDataTy> bufGraph;
-  bufGraph.loadPartialGraph(inputFile, nodesToRead.first, nodesToRead.second,
-                            edgesToRead.first, edgesToRead.second,
-                            totalNumNodes, totalNumEdges);
+  bufGraph.loadPartialGraph(
+      inputFile, nodesToRead.first, nodesToRead.second, edgesToRead.first,
+      edgesToRead.second, totalNumNodes, totalNumEdges);
   std::vector<uint32_t> edgeData;
   // void = 2 elements per edge; non-void = 3 elements per edge
   if (std::is_void<EdgeDataTy>::value) {
@@ -759,7 +771,7 @@ std::vector<uint32_t> loadMappedSourceEdgesFromBufferedGraph(
         galois::iterate(nodesToRead.first, nodesToRead.second),
         [&](uint32_t gID) {
           uint64_t edgeBegin = *bufGraph.edgeBegin(gID);
-          uint64_t edgeEnd   = *bufGraph.edgeEnd(gID);
+          uint64_t edgeEnd = *bufGraph.edgeEnd(gID);
 
           // offset into which we should start writing data in
           // edgeData
@@ -770,7 +782,7 @@ std::vector<uint32_t> loadMappedSourceEdgesFromBufferedGraph(
             edgeDataOffset = (edgeBegin - edgesToRead.first) * 3;
           }
 
-          uint32_t lID          = gID - nodesToRead.first;
+          uint32_t lID = gID - nodesToRead.first;
           uint32_t mappedSource = node2NewNode[lID];
 
           // loop through all edges
@@ -778,7 +790,7 @@ std::vector<uint32_t> loadMappedSourceEdgesFromBufferedGraph(
             uint32_t edgeSource = bufGraph.edgeDestination(i);
             // src is saved as dest and dest is saved as source
             // (transpose)
-            edgeData[edgeDataOffset]     = edgeSource;
+            edgeData[edgeDataOffset] = edgeSource;
             edgeData[edgeDataOffset + 1] = mappedSource;
 
             if (std::is_void<EdgeDataTy>::value) {
@@ -804,10 +816,12 @@ std::vector<uint32_t> loadMappedSourceEdgesFromBufferedGraph(
  * @param localEdges in-memory buffer of edges this host has loaded
  */
 template <typename EdgeDataTy>
-void sendEdgeCounts(const std::vector<Uint64Pair>& hostToNodes,
-                    const std::vector<uint32_t>& localEdges) {
-  auto& net              = galois::runtime::getSystemNetworkInterface();
-  uint64_t hostID        = net.ID;
+void
+sendEdgeCounts(
+    const std::vector<Uint64Pair>& hostToNodes,
+    const std::vector<uint32_t>& localEdges) {
+  auto& net = galois::runtime::getSystemNetworkInterface();
+  uint64_t hostID = net.ID;
   uint64_t totalNumHosts = net.Num;
 
   std::cout << "[" << hostID << "] Determinining edge counts\n";
@@ -870,13 +884,14 @@ uint64_t receiveEdgeCounts();
 template <
     typename EdgeDataTy,
     typename std::enable_if<std::is_void<EdgeDataTy>::value>::type* = nullptr>
-void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
-                       const std::vector<uint32_t>& localEdges,
-                       std::vector<std::vector<uint32_t>>& localSrcToDest,
-                       std::vector<std::vector<uint32_t>>&,
-                       std::vector<std::mutex>& nodeLocks) {
-  auto& net              = galois::runtime::getSystemNetworkInterface();
-  uint64_t hostID        = net.ID;
+void
+sendAssignedEdges(
+    const std::vector<Uint64Pair>& hostToNodes,
+    const std::vector<uint32_t>& localEdges,
+    std::vector<std::vector<uint32_t>>& localSrcToDest,
+    std::vector<std::vector<uint32_t>>&, std::vector<std::mutex>& nodeLocks) {
+  auto& net = galois::runtime::getSystemNetworkInterface();
+  uint64_t hostID = net.ID;
   uint64_t totalNumHosts = net.Num;
 
   std::cout << "[" << hostID << "] Going to send assigned edges\n";
@@ -904,15 +919,15 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
   galois::do_all(
       galois::iterate((uint64_t)0, localNumEdges),
       [&](uint64_t edgeIndex) {
-        uint32_t src       = localEdges[edgeIndex * 2];
+        uint32_t src = localEdges[edgeIndex * 2];
         uint32_t edgeOwner = findOwner(src, hostToNodes);
-        uint32_t dst       = localEdges[(edgeIndex * 2) + 1];
-        uint32_t localID   = src - hostToNodes[edgeOwner].first;
+        uint32_t dst = localEdges[(edgeIndex * 2) + 1];
+        uint32_t localID = src - hostToNodes[edgeOwner].first;
 
         if (edgeOwner != hostID) {
           // send off to correct host
           auto& hostSendBuffer = (*(sendBuffers.getLocal()))[edgeOwner];
-          auto& dstVector      = (*(dstVectors.getLocal()))[edgeOwner];
+          auto& dstVector = (*(dstVectors.getLocal()))[edgeOwner];
           auto& lastSourceSent =
               (*(lastSourceSentStorage.getLocal()))[edgeOwner];
 
@@ -924,12 +939,12 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
             if (dstVector.size() > 0) {
               uint64_t globalSourceID =
                   lastSourceSent + hostToNodes[edgeOwner].first;
-              galois::runtime::gSerialize(hostSendBuffer, globalSourceID,
-                                          dstVector);
+              galois::runtime::gSerialize(
+                  hostSendBuffer, globalSourceID, dstVector);
               dstVector.clear();
               if (hostSendBuffer.size() > 1400) {
-                net.sendTagged(edgeOwner, galois::runtime::evilPhase,
-                               hostSendBuffer);
+                net.sendTagged(
+                    edgeOwner, galois::runtime::evilPhase, hostSendBuffer);
                 hostSendBuffer.getVec().clear();
               }
             }
@@ -954,14 +969,14 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
         for (unsigned h = 0; h < totalNumHosts; h++) {
           if (h == hostID)
             continue;
-          auto& hostSendBuffer    = (*(sendBuffers.getLocal()))[h];
-          auto& dstVector         = (*(dstVectors.getLocal()))[h];
+          auto& hostSendBuffer = (*(sendBuffers.getLocal()))[h];
+          auto& dstVector = (*(dstVectors.getLocal()))[h];
           uint64_t lastSourceSent = (*(lastSourceSentStorage.getLocal()))[h];
 
           if (dstVector.size() > 0) {
             uint64_t globalSourceID = lastSourceSent + hostToNodes[h].first;
-            galois::runtime::gSerialize(hostSendBuffer, globalSourceID,
-                                        dstVector);
+            galois::runtime::gSerialize(
+                hostSendBuffer, globalSourceID, dstVector);
             dstVector.clear();
           }
 
@@ -978,13 +993,15 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
 template <
     typename EdgeDataTy,
     typename std::enable_if<!std::is_void<EdgeDataTy>::value>::type* = nullptr>
-void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
-                       const std::vector<uint32_t>& localEdges,
-                       std::vector<std::vector<uint32_t>>& localSrcToDest,
-                       std::vector<std::vector<uint32_t>>& localSrcToData,
-                       std::vector<std::mutex>& nodeLocks) {
-  auto& net              = galois::runtime::getSystemNetworkInterface();
-  uint64_t hostID        = net.ID;
+void
+sendAssignedEdges(
+    const std::vector<Uint64Pair>& hostToNodes,
+    const std::vector<uint32_t>& localEdges,
+    std::vector<std::vector<uint32_t>>& localSrcToDest,
+    std::vector<std::vector<uint32_t>>& localSrcToData,
+    std::vector<std::mutex>& nodeLocks) {
+  auto& net = galois::runtime::getSystemNetworkInterface();
+  uint64_t hostID = net.ID;
   uint64_t totalNumHosts = net.Num;
 
   std::cout << "[" << hostID << "] Going to send assigned edges\n";
@@ -992,7 +1009,7 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
   // initialize localsrctodata
   GALOIS_ASSERT(localSrcToData.empty());
   using EdgeVectorTy = std::vector<std::vector<uint32_t>>;
-  EdgeVectorTy tmp   = EdgeVectorTy(localSrcToDest.size());
+  EdgeVectorTy tmp = EdgeVectorTy(localSrcToDest.size());
   localSrcToData.swap(tmp);
   GALOIS_ASSERT(localSrcToData.size() == localSrcToDest.size());
 
@@ -1020,17 +1037,17 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
   galois::do_all(
       galois::iterate((uint64_t)0, localNumEdges),
       [&](uint64_t edgeIndex) {
-        uint32_t src       = localEdges[edgeIndex * 3];
+        uint32_t src = localEdges[edgeIndex * 3];
         uint32_t edgeOwner = findOwner(src, hostToNodes);
-        uint32_t dst       = localEdges[(edgeIndex * 3) + 1];
-        uint32_t localID   = src - hostToNodes[edgeOwner].first;
-        uint32_t edgeData  = localEdges[(edgeIndex * 3) + 2];
+        uint32_t dst = localEdges[(edgeIndex * 3) + 1];
+        uint32_t localID = src - hostToNodes[edgeOwner].first;
+        uint32_t edgeData = localEdges[(edgeIndex * 3) + 2];
 
         if (edgeOwner != hostID) {
           // send off to correct host
           auto& hostSendBuffer = (*(sendBuffers.getLocal()))[edgeOwner];
-          auto& dstVector      = (*(dstVectors.getLocal()))[edgeOwner];
-          auto& dataVector     = (*(dataVectors.getLocal()))[edgeOwner];
+          auto& dstVector = (*(dstVectors.getLocal()))[edgeOwner];
+          auto& dataVector = (*(dataVectors.getLocal()))[edgeOwner];
           auto& lastSourceSent =
               (*(lastSourceSentStorage.getLocal()))[edgeOwner];
 
@@ -1043,13 +1060,13 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
             if (dstVector.size() > 0) {
               uint64_t globalSourceID =
                   lastSourceSent + hostToNodes[edgeOwner].first;
-              galois::runtime::gSerialize(hostSendBuffer, globalSourceID,
-                                          dstVector, dataVector);
+              galois::runtime::gSerialize(
+                  hostSendBuffer, globalSourceID, dstVector, dataVector);
               dstVector.clear();
               dataVector.clear();
               if (hostSendBuffer.size() > 1400) {
-                net.sendTagged(edgeOwner, galois::runtime::evilPhase,
-                               hostSendBuffer);
+                net.sendTagged(
+                    edgeOwner, galois::runtime::evilPhase, hostSendBuffer);
                 hostSendBuffer.getVec().clear();
               }
             }
@@ -1076,15 +1093,15 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
         for (unsigned h = 0; h < totalNumHosts; h++) {
           if (h == hostID)
             continue;
-          auto& hostSendBuffer    = (*(sendBuffers.getLocal()))[h];
-          auto& dstVector         = (*(dstVectors.getLocal()))[h];
-          auto& dataVector        = (*(dataVectors.getLocal()))[h];
+          auto& hostSendBuffer = (*(sendBuffers.getLocal()))[h];
+          auto& dstVector = (*(dstVectors.getLocal()))[h];
+          auto& dataVector = (*(dataVectors.getLocal()))[h];
           uint64_t lastSourceSent = (*(lastSourceSentStorage.getLocal()))[h];
 
           if (dstVector.size() > 0) {
             uint64_t globalSourceID = lastSourceSent + hostToNodes[h].first;
-            galois::runtime::gSerialize(hostSendBuffer, globalSourceID,
-                                        dstVector, dataVector);
+            galois::runtime::gSerialize(
+                hostSendBuffer, globalSourceID, dstVector, dataVector);
             dstVector.clear();
             dataVector.clear();
           }
@@ -1113,11 +1130,12 @@ void sendAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
  * when writing to the local mapping of sources to destinations since vectors
  * are not thread safe
  */
-void receiveAssignedEdges(std::atomic<uint64_t>& edgesToReceive,
-                          const std::vector<Uint64Pair>& hostToNodes,
-                          std::vector<std::vector<uint32_t>>& localSrcToDest,
-                          std::vector<std::vector<uint32_t>>& localSrcToData,
-                          std::vector<std::mutex>& nodeLocks);
+void receiveAssignedEdges(
+    std::atomic<uint64_t>& edgesToReceive,
+    const std::vector<Uint64Pair>& hostToNodes,
+    std::vector<std::vector<uint32_t>>& localSrcToDest,
+    std::vector<std::vector<uint32_t>>& localSrcToData,
+    std::vector<std::mutex>& nodeLocks);
 
 /**
  * Send/receive other hosts number of assigned edges.
@@ -1135,8 +1153,8 @@ std::vector<uint64_t> getEdgesPerHost(uint64_t localAssignedEdges);
  * ALL DATA IN THE VECTOR.
  * @returns a flattened vector from vectorOfVectors
  */
-std::vector<uint32_t>
-flattenVectors(std::vector<std::vector<uint32_t>>& vectorOfVectors);
+std::vector<uint32_t> flattenVectors(
+    std::vector<std::vector<uint32_t>>& vectorOfVectors);
 
 /**
  * Writes a binary galois graph's header information.
@@ -1147,8 +1165,9 @@ flattenVectors(std::vector<std::vector<uint32_t>>& vectorOfVectors);
  * @param totalNumNodes total number of nodes in the graph
  * @param totalEdgeConnt total number of edges in the graph
  */
-void writeGrHeader(MPI_File& gr, uint64_t version, uint64_t sizeOfEdge,
-                   uint64_t totalNumNodes, uint64_t totalEdgeCount);
+void writeGrHeader(
+    MPI_File& gr, uint64_t version, uint64_t sizeOfEdge, uint64_t totalNumNodes,
+    uint64_t totalEdgeCount);
 
 /**
  * Writes the node index data of a galois binary graph.
@@ -1160,9 +1179,9 @@ void writeGrHeader(MPI_File& gr, uint64_t version, uint64_t sizeOfEdge,
  * in graph tells you where to start looking for edges of some node, i.e.
  * it's a prefix sum)
  */
-void writeNodeIndexData(MPI_File& gr, uint64_t nodesToWrite,
-                        uint64_t nodeIndexOffset,
-                        const std::vector<uint64_t>& edgePrefixSum);
+void writeNodeIndexData(
+    MPI_File& gr, uint64_t nodesToWrite, uint64_t nodeIndexOffset,
+    const std::vector<uint64_t>& edgePrefixSum);
 
 /**
  * Writes the edge destination data of a galois binary graph.
@@ -1172,8 +1191,9 @@ void writeNodeIndexData(MPI_File& gr, uint64_t nodesToWrite,
  * @param localSrcToDest Vector of vectors: the vector at index i specifies
  * the destinations for local src node i
  */
-void writeEdgeDestData(MPI_File& gr, uint64_t edgeDestOffset,
-                       std::vector<std::vector<uint32_t>>& localSrcToDest);
+void writeEdgeDestData(
+    MPI_File& gr, uint64_t edgeDestOffset,
+    std::vector<std::vector<uint32_t>>& localSrcToDest);
 
 /**
  * Writes the edge destination data of a galois binary graph.
@@ -1182,8 +1202,8 @@ void writeEdgeDestData(MPI_File& gr, uint64_t edgeDestOffset,
  * @param destVector Vector of edge destinations IN THE ORDER THAT THEY SHOULD
  * BE WRITTEN (i.e. in correct order corresponding to node order this host has)
  */
-void writeEdgeDestData(MPI_File& gr, uint64_t edgeDestOffset,
-                       std::vector<uint32_t>& destVector);
+void writeEdgeDestData(
+    MPI_File& gr, uint64_t edgeDestOffset, std::vector<uint32_t>& destVector);
 /**
  * Writes the edge data data of a galois binary graph.
  *
@@ -1192,8 +1212,9 @@ void writeEdgeDestData(MPI_File& gr, uint64_t edgeDestOffset,
  * @param edgeDataToWrite vector of localNumEdges elements corresponding to
  * edge data that needs to be written
  */
-void writeEdgeDataData(MPI_File& gr, uint64_t edgeDataOffset,
-                       const std::vector<uint32_t>& edgeDataToWrite);
+void writeEdgeDataData(
+    MPI_File& gr, uint64_t edgeDataOffset,
+    const std::vector<uint32_t>& edgeDataToWrite);
 
 /**
  * Write graph data out to a V1 Galois binary graph file.
@@ -1211,11 +1232,12 @@ void writeEdgeDataData(MPI_File& gr, uint64_t edgeDataOffset,
  * @param localSrcToData Vector of vectors: the vector at index i specifies
  * the data of edges owned by local node i
  */
-void writeToGr(const std::string& outputFile, uint64_t totalNumNodes,
-               uint64_t totalNumEdges, uint64_t localNumNodes,
-               uint64_t localNodeBegin, uint64_t globalEdgeOffset,
-               std::vector<std::vector<uint32_t>>& localSrcToDest,
-               std::vector<std::vector<uint32_t>>& localSrcToData);
+void writeToGr(
+    const std::string& outputFile, uint64_t totalNumNodes,
+    uint64_t totalNumEdges, uint64_t localNumNodes, uint64_t localNodeBegin,
+    uint64_t globalEdgeOffset,
+    std::vector<std::vector<uint32_t>>& localSrcToDest,
+    std::vector<std::vector<uint32_t>>& localSrcToData);
 
 /**
  * Write graph data out to a Lux binary graph file.
@@ -1233,11 +1255,12 @@ void writeToGr(const std::string& outputFile, uint64_t totalNumNodes,
  * @param localSrcToData Vector of vectors: the vector at index i specifies
  * the data of edges owned by local node i
  */
-void writeToLux(const std::string& outputFile, uint64_t totalNumNodes,
-                uint64_t totalNumEdges, uint64_t localNumNodes,
-                uint64_t localNodeBegin, uint64_t globalEdgeOffset,
-                std::vector<std::vector<uint32_t>>& localSrcToDest,
-                std::vector<std::vector<uint32_t>>& localSrcToData);
+void writeToLux(
+    const std::string& outputFile, uint64_t totalNumNodes,
+    uint64_t totalNumEdges, uint64_t localNumNodes, uint64_t localNodeBegin,
+    uint64_t globalEdgeOffset,
+    std::vector<std::vector<uint32_t>>& localSrcToDest,
+    std::vector<std::vector<uint32_t>>& localSrcToData);
 
 /**
  * Generates a vector of random uint32_ts.
@@ -1248,8 +1271,8 @@ void writeToLux(const std::string& outputFile, uint64_t totalNumNodes,
  * @param upper upper bound of number to generate, inclusive
  * @returns Vector of random uint32_t numbers
  */
-std::vector<uint32_t> generateRandomNumbers(uint64_t count, uint64_t seed,
-                                            uint64_t lower, uint64_t upper);
+std::vector<uint32_t> generateRandomNumbers(
+    uint64_t count, uint64_t seed, uint64_t lower, uint64_t upper);
 
 /**
  * Gets the offset into the location of the edge data of some edge in a galois
@@ -1260,9 +1283,8 @@ std::vector<uint32_t> generateRandomNumbers(uint64_t count, uint64_t seed,
  * @param localEdgeBegin the edge to get the offset to
  * @returns offset into location of edge data of localEdgeBegin
  */
-uint64_t getOffsetToLocalEdgeData(uint64_t totalNumNodes,
-                                  uint64_t totalNumEdges,
-                                  uint64_t localEdgeBegin);
+uint64_t getOffsetToLocalEdgeData(
+    uint64_t totalNumNodes, uint64_t totalNumEdges, uint64_t localEdgeBegin);
 
 /**
  * Given some number, get the chunk of that number that this host is responsible
@@ -1286,8 +1308,9 @@ Uint64Pair getLocalAssignment(uint64_t numToSplit);
  */
 template <typename EdgeTy>
 PairVoVUint32
-sendAndReceiveAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
-                            std::vector<uint32_t>& localEdges) {
+sendAndReceiveAssignedEdges(
+    const std::vector<Uint64Pair>& hostToNodes,
+    std::vector<uint32_t>& localEdges) {
   uint32_t hostID = galois::runtime::getSystemNetworkInterface().ID;
   uint64_t localNumNodes =
       hostToNodes[hostID].second - hostToNodes[hostID].first;
@@ -1304,11 +1327,11 @@ sendAndReceiveAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
   VoVUint32 localSrcToData;
   std::vector<std::mutex> nodeLocks(localNumNodes);
 
-  sendAssignedEdges<EdgeTy>(hostToNodes, localEdges, localSrcToDest,
-                            localSrcToData, nodeLocks);
+  sendAssignedEdges<EdgeTy>(
+      hostToNodes, localEdges, localSrcToDest, localSrcToData, nodeLocks);
   freeVector(localEdges);
-  receiveAssignedEdges(edgesToReceive, hostToNodes, localSrcToDest,
-                       localSrcToData, nodeLocks);
+  receiveAssignedEdges(
+      edgesToReceive, hostToNodes, localSrcToDest, localSrcToData, nodeLocks);
   return PairVoVUint32(localSrcToDest, localSrcToData);
 }
 
@@ -1323,9 +1346,10 @@ sendAndReceiveAssignedEdges(const std::vector<Uint64Pair>& hostToNodes,
  * @param outputFile file to write new graph to
  */
 template <typename EdgeTy>
-void assignAndWriteEdges(std::vector<uint32_t>& localEdges,
-                         uint64_t totalNumNodes, uint64_t totalNumEdges,
-                         const std::string& outputFile) {
+void
+assignAndWriteEdges(
+    std::vector<uint32_t>& localEdges, uint64_t totalNumNodes,
+    uint64_t totalNumEdges, const std::string& outputFile) {
   uint32_t hostID = galois::runtime::getSystemNetworkInterface().ID;
 
   std::vector<Uint64Pair> hostToNodes = getEvenNodeToHostMapping<EdgeTy>(
@@ -1337,7 +1361,7 @@ void assignAndWriteEdges(std::vector<uint32_t>& localEdges,
   VoVUint32 localSrcToData = receivedEdgeInfo.second;
 
   uint64_t localNodeBegin = hostToNodes[hostID].first;
-  uint64_t localNumNodes  = hostToNodes[hostID].second - localNodeBegin;
+  uint64_t localNumNodes = hostToNodes[hostID].second - localNodeBegin;
   freeVector(hostToNodes);
 
   uint64_t totalAssignedEdges = 0;
@@ -1350,8 +1374,8 @@ void assignAndWriteEdges(std::vector<uint32_t>& localEdges,
 
   // calculate global edge offset using edge counts from other hosts
   std::vector<uint64_t> edgesPerHost = getEdgesPerHost(totalAssignedEdges);
-  uint64_t globalEdgeOffset          = 0;
-  uint64_t totalEdgeCount            = 0;
+  uint64_t globalEdgeOffset = 0;
+  uint64_t totalEdgeCount = 0;
   for (unsigned h = 0; h < hostID; h++) {
     globalEdgeOffset += edgesPerHost[h];
     totalEdgeCount += edgesPerHost[h];
@@ -1366,8 +1390,9 @@ void assignAndWriteEdges(std::vector<uint32_t>& localEdges,
   GALOIS_ASSERT(totalNumEdges == totalEdgeCount);
   freeVector(edgesPerHost);
 
-  writeToGr(outputFile, totalNumNodes, totalEdgeCount, localNumNodes,
-            localNodeBegin, globalEdgeOffset, localSrcToDest, localSrcToData);
+  writeToGr(
+      outputFile, totalNumNodes, totalEdgeCount, localNumNodes, localNodeBegin,
+      globalEdgeOffset, localSrcToDest, localSrcToData);
 }
 
 /**
@@ -1384,9 +1409,10 @@ void assignAndWriteEdges(std::vector<uint32_t>& localEdges,
  * @param outputFile file to write new graph to
  */
 template <typename EdgeTy>
-void assignAndWriteEdgesLux(std::vector<uint32_t>& localEdges,
-                            uint64_t totalNumNodes, uint64_t totalNumEdges,
-                            const std::string& outputFile) {
+void
+assignAndWriteEdgesLux(
+    std::vector<uint32_t>& localEdges, uint64_t totalNumNodes,
+    uint64_t totalNumEdges, const std::string& outputFile) {
   uint32_t hostID = galois::runtime::getSystemNetworkInterface().ID;
 
   std::vector<Uint64Pair> hostToNodes = getEvenNodeToHostMapping<EdgeTy>(
@@ -1398,7 +1424,7 @@ void assignAndWriteEdgesLux(std::vector<uint32_t>& localEdges,
   VoVUint32 localSrcToData = receivedEdgeInfo.second;
 
   uint64_t localNodeBegin = hostToNodes[hostID].first;
-  uint64_t localNumNodes  = hostToNodes[hostID].second - localNodeBegin;
+  uint64_t localNumNodes = hostToNodes[hostID].second - localNodeBegin;
   freeVector(hostToNodes);
 
   uint64_t totalAssignedEdges = 0;
@@ -1411,8 +1437,8 @@ void assignAndWriteEdgesLux(std::vector<uint32_t>& localEdges,
 
   // calculate global edge offset using edge counts from other hosts
   std::vector<uint64_t> edgesPerHost = getEdgesPerHost(totalAssignedEdges);
-  uint64_t globalEdgeOffset          = 0;
-  uint64_t totalEdgeCount            = 0;
+  uint64_t globalEdgeOffset = 0;
+  uint64_t totalEdgeCount = 0;
   for (unsigned h = 0; h < hostID; h++) {
     globalEdgeOffset += edgesPerHost[h];
     totalEdgeCount += edgesPerHost[h];
@@ -1427,7 +1453,8 @@ void assignAndWriteEdgesLux(std::vector<uint32_t>& localEdges,
   GALOIS_ASSERT(totalNumEdges == totalEdgeCount);
   freeVector(edgesPerHost);
 
-  writeToLux(outputFile, totalNumNodes, totalEdgeCount, localNumNodes,
-             localNodeBegin, globalEdgeOffset, localSrcToDest, localSrcToData);
+  writeToLux(
+      outputFile, totalNumNodes, totalEdgeCount, localNumNodes, localNodeBegin,
+      globalEdgeOffset, localSrcToDest, localSrcToData);
 }
 #endif

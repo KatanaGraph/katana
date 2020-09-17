@@ -9,16 +9,16 @@
 namespace galois {
 
 enum class ErrorCode {
-  Success         = 0,
+  Success = 0,
   InvalidArgument = 1,
-  NotImplemented  = 2,
-  NotFound        = 3,
-  ArrowError      = 4,
+  NotImplemented = 2,
+  NotFound = 3,
+  ArrowError = 4,
   JsonParseFailed = 5,
-  JsonDumpFailed  = 6,
+  JsonDumpFailed = 6,
 };
 
-} // namespace galois
+}  // namespace galois
 
 namespace galois::internal {
 
@@ -67,7 +67,7 @@ public:
 /// Return singleton category
 GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
-} // namespace galois::internal
+}  // namespace galois::internal
 
 namespace std {
 
@@ -75,16 +75,17 @@ namespace std {
 template <>
 struct is_error_code_enum<galois::ErrorCode> : true_type {};
 
-} // namespace std
+}  // namespace std
 
 namespace galois {
 
 /// Overload free function make_error_code with our error code. This will be
 /// found with ADL if necessary.
-inline std::error_code make_error_code(ErrorCode e) noexcept {
+inline std::error_code
+make_error_code(ErrorCode e) noexcept {
   return {static_cast<int>(e), internal::GetErrorCodeCategory()};
 }
 
-} // namespace galois
+}  // namespace galois
 
 #endif

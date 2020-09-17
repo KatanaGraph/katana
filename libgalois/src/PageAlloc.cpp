@@ -17,10 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "galois/substrate/PageAlloc.h"
+
 #include <mutex>
 
 #include "galois/Logging.h"
-#include "galois/substrate/PageAlloc.h"
 #include "galois/substrate/SimpleLock.h"
 
 #ifdef __linux__
@@ -33,10 +34,11 @@ const size_t hugePageSize = 2 * 1024 * 1024;
 // protect mmap, munmap since linux has issues
 static galois::substrate::SimpleLock allocLock;
 
-static void* trymmap(size_t size, int flag) {
+static void*
+trymmap(size_t size, int flag) {
   std::lock_guard<galois::substrate::SimpleLock> lg(allocLock);
   const int _PROT = PROT_READ | PROT_WRITE;
-  void* ptr       = mmap(0, size, _PROT, flag, -1, 0);
+  void* ptr = mmap(0, size, _PROT, flag, -1, 0);
   if (ptr == MAP_FAILED) {
     ptr = nullptr;
   }
@@ -47,30 +49,34 @@ static void* trymmap(size_t size, int flag) {
 #if defined(MAP_ANONYMOUS)
 static const int _MAP_ANON = MAP_ANONYMOUS;
 #elif defined(MAP_ANON)
-static const int _MAP_ANON     = MAP_ANON;
+static const int _MAP_ANON = MAP_ANON;
 #else
 static_assert(false, "No Anonymous mapping");
 #endif
 
 static const int _MAP = _MAP_ANON | MAP_PRIVATE;
 #ifdef MAP_POPULATE
-static const int _MAP_POP   = MAP_POPULATE | _MAP;
+static const int _MAP_POP = MAP_POPULATE | _MAP;
 static const bool doHandMap = false;
 #else
-static const int _MAP_POP      = _MAP;
-static const bool doHandMap    = true;
+static const int _MAP_POP = _MAP;
+static const bool doHandMap = true;
 #endif
 #ifdef MAP_HUGETLB
 static const int _MAP_HUGE_POP = MAP_HUGETLB | _MAP_POP;
-static const int _MAP_HUGE     = MAP_HUGETLB | _MAP;
+static const int _MAP_HUGE = MAP_HUGETLB | _MAP;
 #else
 static const int _MAP_HUGE_POP = _MAP_POP;
-static const int _MAP_HUGE     = _MAP;
+static const int _MAP_HUGE = _MAP;
 #endif
 
-size_t galois::substrate::allocSize() { return hugePageSize; }
+size_t
+galois::substrate::allocSize() {
+  return hugePageSize;
+}
 
-void* galois::substrate::allocPages(unsigned num, bool preFault) {
+void*
+galois::substrate::allocPages(unsigned num, bool preFault) {
   if (num == 0) {
     return nullptr;
   }
@@ -96,7 +102,8 @@ void* galois::substrate::allocPages(unsigned num, bool preFault) {
   return ptr;
 }
 
-void galois::substrate::freePages(void* ptr, unsigned num) {
+void
+galois::substrate::freePages(void* ptr, unsigned num) {
   std::lock_guard<SimpleLock> lg(allocLock);
   if (munmap(ptr, num * hugePageSize) != 0) {
     GALOIS_LOG_FATAL("munmap failed: {}", errno);

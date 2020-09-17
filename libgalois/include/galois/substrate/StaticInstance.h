@@ -61,7 +61,7 @@ struct StaticInstance {
   }
 };
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

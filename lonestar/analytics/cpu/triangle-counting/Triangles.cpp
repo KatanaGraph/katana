@@ -17,25 +17,25 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Bag.h"
-#include "galois/ParallelSTL.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/BufferedGraph.h"
-#include "galois/runtime/Profile.h"
-#include "llvm/Support/CommandLine.h"
-#include "Lonestar/Utils.h"
-#include "Lonestar/BoilerPlate.h"
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <utility>
+#include <vector>
 
 #include <boost/iterator/transform_iterator.hpp>
 
-#include <utility>
-#include <vector>
-#include <algorithm>
-#include <iostream>
-#include <fstream>
+#include "Lonestar/BoilerPlate.h"
+#include "Lonestar/Utils.h"
+#include "galois/Bag.h"
+#include "galois/Galois.h"
+#include "galois/ParallelSTL.h"
+#include "galois/Reduction.h"
+#include "galois/Timer.h"
+#include "galois/graphs/BufferedGraph.h"
+#include "galois/graphs/LCGraph.h"
+#include "galois/runtime/Profile.h"
+#include "llvm/Support/CommandLine.h"
 
 const char* name = "Triangles";
 const char* desc = "Counts the triangles in a graph";
@@ -45,21 +45,23 @@ enum Algo { nodeiterator, edgeiterator, orderedCount };
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 static cll::opt<Algo> algo(
     "algo", cll::desc("Choose an algorithm:"),
-    cll::values(clEnumValN(Algo::nodeiterator, "nodeiterator", "Node Iterator"),
-                clEnumValN(Algo::edgeiterator, "edgeiterator", "Edge Iterator"),
-                clEnumValN(Algo::orderedCount, "orderedCount",
-                           "Ordered Simple Count (default)")),
+    cll::values(
+        clEnumValN(Algo::nodeiterator, "nodeiterator", "Node Iterator"),
+        clEnumValN(Algo::edgeiterator, "edgeiterator", "Edge Iterator"),
+        clEnumValN(
+            Algo::orderedCount, "orderedCount",
+            "Ordered Simple Count (default)")),
     cll::init(Algo::orderedCount));
 
-static cll::opt<bool>
-    relabel("relabel",
-            cll::desc("Relabel nodes of the graph (default value of false => "
-                      "choose automatically)"),
-            cll::init(false));
+static cll::opt<bool> relabel(
+    "relabel",
+    cll::desc("Relabel nodes of the graph (default value of false => "
+              "choose automatically)"),
+    cll::init(false));
 
 typedef galois::graphs::LC_CSR_Graph<void, void>::with_numa_alloc<
     true>::type ::with_no_lockable<true>::type Graph;
@@ -71,7 +73,8 @@ typedef Graph::GraphNode GNode;
  * element for which comp is not true.
  */
 template <typename Iterator, typename Compare>
-Iterator lowerBound(Iterator first, Iterator last, Compare comp) {
+Iterator
+lowerBound(Iterator first, Iterator last, Compare comp) {
   using difference_type =
       typename std::iterator_traits<Iterator>::difference_type;
 
@@ -81,7 +84,7 @@ Iterator lowerBound(Iterator first, Iterator last, Compare comp) {
 
   count = std::distance(first, last);
   while (count > 0) {
-    it   = first;
+    it = first;
     half = count / 2;
     std::advance(it, half);
     if (comp(it)) {
@@ -98,9 +101,10 @@ Iterator lowerBound(Iterator first, Iterator last, Compare comp) {
  * std::set_intersection over edge_iterators.
  */
 template <typename G>
-size_t countEqual(G& g, typename G::edge_iterator aa,
-                  typename G::edge_iterator ea, typename G::edge_iterator bb,
-                  typename G::edge_iterator eb) {
+size_t
+countEqual(
+    G& g, typename G::edge_iterator aa, typename G::edge_iterator ea,
+    typename G::edge_iterator bb, typename G::edge_iterator eb) {
   size_t retval = 0;
   while (aa != ea && bb != eb) {
     typename G::GraphNode a = g.getEdgeDst(aa);
@@ -171,9 +175,9 @@ struct GetDegree {
 
 template <typename GraphNode, typename EdgeTy>
 struct IdLess {
-  bool
-  operator()(const galois::graphs::EdgeSortValue<GraphNode, EdgeTy>& e1,
-             const galois::graphs::EdgeSortValue<GraphNode, EdgeTy>& e2) const {
+  bool operator()(
+      const galois::graphs::EdgeSortValue<GraphNode, EdgeTy>& e1,
+      const galois::graphs::EdgeSortValue<GraphNode, EdgeTy>& e2) const {
     return e1.dst < e2.dst;
   }
 };
@@ -190,8 +194,8 @@ struct IdLess {
  * Thomas Schank. Algorithmic Aspects of Triangle-Based Network Analysis. PhD
  * Thesis. Universitat Karlsruhe. 2007.
  */
-void nodeIteratingAlgo(Graph& graph) {
-
+void
+nodeIteratingAlgo(Graph& graph) {
   galois::GAccumulator<size_t> numTriangles;
 
   //! [profile w/ vtune]
@@ -239,8 +243,9 @@ void nodeIteratingAlgo(Graph& graph) {
 /**
  * Lambda function to count triangles
  */
-void orderedCountFunc(Graph& graph, GNode n,
-                      galois::GAccumulator<size_t>& numTriangles) {
+void
+orderedCountFunc(
+    Graph& graph, GNode n, galois::GAccumulator<size_t>& numTriangles) {
   size_t numTriangles_local = 0;
   for (auto it_v : graph.edges(n)) {
     auto v = graph.getEdgeDst(it_v);
@@ -266,7 +271,8 @@ void orderedCountFunc(Graph& graph, GNode n,
 /*
  * Simple counting loop, instead of binary searching.
  */
-void orderedCountAlgo(Graph& graph) {
+void
+orderedCountAlgo(Graph& graph) {
   galois::GAccumulator<size_t> numTriangles;
   galois::do_all(
       galois::iterate(graph),
@@ -290,8 +296,8 @@ void orderedCountAlgo(Graph& graph) {
  * Thomas Schank. Algorithmic Aspects of Triangle-Based Network Analysis. PhD
  * Thesis. Universitat Karlsruhe. 2007.
  */
-void edgeIteratingAlgo(Graph& graph) {
-
+void
+edgeIteratingAlgo(Graph& graph) {
   struct WorkItem {
     GNode src;
     GNode dst;
@@ -352,7 +358,8 @@ void edgeIteratingAlgo(Graph& graph) {
 }
 
 //! Sorts read graph by degree (high degree nodes are reindexed to beginning)
-void makeSortedGraph(Graph& graph) {
+void
+makeSortedGraph(Graph& graph) {
   galois::StatTimer readTimer("ReadGraphTimer");
   readTimer.start();
   // read original graph
@@ -379,8 +386,8 @@ void makeSortedGraph(Graph& graph) {
   galois::StatTimer degSortTimer("DegreeSortTimer");
   degSortTimer.start();
   // sort by degree (first item)
-  galois::ParallelSTL::sort(dnPairs.begin(), dnPairs.end(),
-                            std::greater<DegreeNodePair>());
+  galois::ParallelSTL::sort(
+      dnPairs.begin(), dnPairs.end(), std::greater<DegreeNodePair>());
   degSortTimer.stop();
 
   // create mapping, get degrees out to another vector to get prefix sum
@@ -397,9 +404,9 @@ void makeSortedGraph(Graph& graph) {
       galois::loopname("CreateRemappingGetPrefixSum"));
 
   std::vector<uint64_t> newPrefixSum(numGraphNodes);
-  galois::ParallelSTL::partial_sum(inProgressPrefixSum.begin(),
-                                   inProgressPrefixSum.end(),
-                                   newPrefixSum.begin());
+  galois::ParallelSTL::partial_sum(
+      inProgressPrefixSum.begin(), inProgressPrefixSum.end(),
+      newPrefixSum.begin());
 
   // allocate graph
   graph.allocateFrom(numGraphNodes, initial.sizeEdges());
@@ -432,7 +439,7 @@ void makeSortedGraph(Graph& graph) {
         for (auto e = initial.edgeBegin(oldNodeID);
              e < initial.edgeEnd(oldNodeID); e++) {
           // get destination, reindex
-          uint32_t oldEdgeDst       = initial.edgeDestination(*e);
+          uint32_t oldEdgeDst = initial.edgeDestination(*e);
           uint32_t reindexedEdgeDst = oldToNewMapping[oldEdgeDst];
 
           // construct edge
@@ -457,7 +464,8 @@ void makeSortedGraph(Graph& graph) {
   Trelabel.stop();
 }
 
-void readGraph(Graph& graph) {
+void
+readGraph(Graph& graph) {
   galois::StatTimer autoAlgoTimer("AutoAlgo_0");
   if (!relabel) {
     galois::graphs::FileGraph degreeGraph;
@@ -477,7 +485,8 @@ void readGraph(Graph& graph) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
@@ -485,9 +494,10 @@ int main(int argc, char** argv) {
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE("This application requires a symmetric graph input;"
-               " please use the -symmetricGraph flag "
-               " to indicate the input is a symmetric graph.");
+    GALOIS_DIE(
+        "This application requires a symmetric graph input;"
+        " please use the -symmetricGraph flag "
+        " to indicate the input is a symmetric graph.");
   }
 
   Graph graph;
@@ -497,8 +507,9 @@ int main(int argc, char** argv) {
   readGraph(graph);
   initialTime.stop();
 
-  galois::preAlloc(numThreads + 16 * (graph.size() + graph.sizeEdges()) /
-                                    galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      numThreads + 16 * (graph.size() + graph.sizeEdges()) /
+                       galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   galois::gInfo("Starting triangle counting...");

@@ -1,30 +1,32 @@
-#include <cerrno>
-#include <cstdlib>
-#include <cctype>
-#include <string>
 #include <unistd.h>
 
-#include <vector>
+#include <cctype>
+#include <cerrno>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "galois/Logging.h"
 #include "galois/Platform.h"
-#include "tsuba/tsuba.h"
 #include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 uint64_t bytes_to_write{0};
 std::string dst_path{};
 
-static constexpr auto chars = "0123456789"
-                              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                              "abcdefghijklmnopqrstuvwxyz";
+static constexpr auto chars =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
 static auto chars_len = std::strlen(chars);
 
 std::string usage_msg = "Usage: {} <number>[G|M|K|B] <full path>\n";
 
 // 19 chars, with 1 null byte
-void get_time_string(char* buf, int32_t limit) {
+void
+get_time_string(char* buf, int32_t limit) {
   time_t rawtime;
   struct tm* timeinfo;
   time(&rawtime);
@@ -32,7 +34,8 @@ void get_time_string(char* buf, int32_t limit) {
   strftime(buf, limit, "%Y/%m/%d %H:%M:%S ", timeinfo);
 }
 
-void init_data(uint8_t* buf, int32_t limit) {
+void
+init_data(uint8_t* buf, int32_t limit) {
   if (limit < 0)
     return;
   if (limit < 19) {
@@ -41,22 +44,23 @@ void init_data(uint8_t* buf, int32_t limit) {
     }
     return;
   } else {
-    char tmp[32];             // Generous with space
-    get_time_string(tmp, 31); // Trailing null
-                              // Copy without trailing null
+    char tmp[32];              // Generous with space
+    get_time_string(tmp, 31);  // Trailing null
+                               // Copy without trailing null
     memcpy(buf, tmp, 19);
     buf += 19;
     if (limit > 19) {
-      *buf++            = ' ';
+      *buf++ = ' ';
       uint64_t char_idx = UINT64_C(0);
       for (limit -= 20; limit; limit--) {
-        *buf++ = chars[char_idx++ % chars_len]; // We could make this faster...
+        *buf++ = chars[char_idx++ % chars_len];  // We could make this faster...
       }
     }
   }
 }
 
-void parse_arguments(int argc, char* argv[]) {
+void
+parse_arguments(int argc, char* argv[]) {
   int c;
   char* p_end{nullptr};
 
@@ -103,15 +107,17 @@ void parse_arguments(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  GALOIS_LOG_VASSERT(argc > index,
-                     "\n  Usage: {} <number>[G|M|K|B] <full path>\n", argv[0]);
+  GALOIS_LOG_VASSERT(
+      argc > index, "\n  Usage: {} <number>[G|M|K|B] <full path>\n", argv[0]);
   index++;
   dst_path = argv[index];
 }
 
-uint8_t* mymmap(uint64_t size) {
-  auto res = galois::MmapPopulate(nullptr, size, PROT_READ | PROT_WRITE,
-                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, (off_t)0);
+uint8_t*
+mymmap(uint64_t size) {
+  auto res = galois::MmapPopulate(
+      nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1,
+      (off_t)0);
   if (res == MAP_FAILED) {
     perror("mmap");
     return nullptr;
@@ -119,7 +125,8 @@ uint8_t* mymmap(uint64_t size) {
   return static_cast<uint8_t*>(res);
 }
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }

@@ -1,7 +1,7 @@
 #include <boost/filesystem.hpp>
 
-#include "galois/Logging.h"
 #include "galois/FileSystem.h"
+#include "galois/Logging.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
 #include "tsuba/file.h"
@@ -12,21 +12,23 @@ namespace fs = boost::filesystem;
 #define EXP_WRITE_COUNT 15
 #define READ_PARTIAL 4567
 
-static void fill_bits(uint8_t bits[], int n) {
+static void
+fill_bits(uint8_t bits[], int n) {
   for (int i = 0; i < n; ++i) {
     bits[i] = std::rand();
   }
 }
 
-static void exponential(uint8_t bits[], std::string& dir) {
+static void
+exponential(uint8_t bits[], std::string& dir) {
   // Write
   std::string filename = dir + "exponential";
-  auto ff              = tsuba::FileFrame();
+  auto ff = tsuba::FileFrame();
   if (auto res = ff.Init(); !res) {
     GALOIS_LOG_FATAL("Init: {}", res.error());
   }
 
-  uint8_t* ptr     = bits;
+  uint8_t* ptr = bits;
   uint64_t running = 0;
   for (int i = 0; i < EXP_WRITE_COUNT; ++i) {
     arrow::Status aro_sts = ff.Write(ptr, 1 << i);
@@ -63,7 +65,7 @@ static void exponential(uint8_t bits[], std::string& dir) {
     GALOIS_LOG_FATAL("Bind on {}: {}", filename, res.error());
   }
 
-  ptr     = bits;
+  ptr = bits;
   running = 0;
   for (int i = 0; i < EXP_WRITE_COUNT; ++i) {
     aro_res = fva.Read(1 << i);
@@ -75,10 +77,11 @@ static void exponential(uint8_t bits[], std::string& dir) {
   }
 }
 
-static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
+static void
+the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   // Write
   std::string filename = dir + "the-big-one";
-  auto ff              = tsuba::FileFrame();
+  auto ff = tsuba::FileFrame();
   if (auto res = ff.Init(); !res) {
     GALOIS_LOG_FATAL("Init: {}", res.error());
   }
@@ -110,10 +113,11 @@ static void the_big_one(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   GALOIS_LOG_ASSERT(!memcmp(res, bits, READ_PARTIAL));
 }
 
-static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
+static void
+silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   // Write
   std::string filename = dir + "silly";
-  auto ff              = tsuba::FileFrame();
+  auto ff = tsuba::FileFrame();
   if (auto res = ff.Init(num_bytes * 2); !res) {
     GALOIS_LOG_FATAL("Init: {}", res.error());
   }
@@ -122,7 +126,7 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
     GALOIS_LOG_FATAL("Persist should have failed");
   }
 
-  auto aro_buf          = std::make_shared<arrow::Buffer>(bits, num_bytes);
+  auto aro_buf = std::make_shared<arrow::Buffer>(bits, num_bytes);
   arrow::Status aro_sts = ff.Write(aro_buf);
   GALOIS_LOG_ASSERT(aro_sts.ok());
   if (auto res = ff.Persist(); res) {
@@ -154,8 +158,8 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   GALOIS_LOG_ASSERT(aro_sts.ok());
   arrow::Result<int64_t> aro_res = fv.Tell();
   GALOIS_LOG_ASSERT(aro_res.ok());
-  GALOIS_LOG_ASSERT(static_cast<uint64_t>(aro_res.ValueOrDie()) ==
-                    num_bytes - READ_PARTIAL);
+  GALOIS_LOG_ASSERT(
+      static_cast<uint64_t>(aro_res.ValueOrDie()) == num_bytes - READ_PARTIAL);
 
   arrow::Result<std::shared_ptr<arrow::Buffer>> aro_rest = fv.Read(num_bytes);
   GALOIS_LOG_ASSERT(aro_rest.ok());
@@ -172,7 +176,8 @@ static void silly(uint8_t bits[], uint64_t num_bytes, std::string& dir) {
   GALOIS_LOG_ASSERT(ff.closed());
 }
 
-int main() {
+int
+main() {
   if (auto res = tsuba::Init(); !res) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", res.error());
   }

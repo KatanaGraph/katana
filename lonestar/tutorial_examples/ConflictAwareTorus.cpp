@@ -23,12 +23,12 @@
 // 3. how to define iterators for STL compliance
 // 4. how to leverage LargeArray to do NUMA-aware allocation
 // 5. how to turn-off conflict-detection when you do not want it
-#include "galois/Galois.h"
-#include "galois/LargeArray.h"
+#include <iostream>
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include <iostream>
+#include "galois/Galois.h"
+#include "galois/LargeArray.h"
 
 template <typename T>
 class Torus2D {
@@ -103,8 +103,8 @@ public:
   //************************************************************************
   // functions to acquire node ownership
   //************************************************************************
-  void acquireNode(TorusNode n,
-                   galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+  void acquireNode(
+      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
     // sanity check
     assert(n < size());
 
@@ -117,8 +117,8 @@ public:
   //************************************************************************
   // function to access node data
   //************************************************************************
-  typename NodeData::reference
-  getData(TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+  typename NodeData::reference getData(
+      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
     acquireNode(n, mflag);
 
     // use the internal wrapper type to encapsulate users from Lockable objects
@@ -158,18 +158,18 @@ public:
   // function to lock all neighbors of node n
   // similar to edge_begin(), edge_end() or edges() in a general graph
   //************************************************************************
-  void
-  acquireAllNeighbors(TorusNode n,
-                      galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+  void acquireAllNeighbors(
+      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
     acquireNode(*upNeighbor(n), mflag);
     acquireNode(*downNeighbor(n), mflag);
     acquireNode(*leftNeighbor(n), mflag);
     acquireNode(*rightNeighbor(n), mflag);
   }
   //! [Easy operator cautiousness]
-}; // end of class Torus2D
+};  // end of class Torus2D
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
 
   if (argc < 4) {
@@ -181,23 +181,24 @@ int main(int argc, char* argv[]) {
   galois::setActiveThreads(std::atoi(argv[3]));
 
   //! [Use torus]
-  using Torus     = Torus2D<unsigned int>;
+  using Torus = Torus2D<unsigned int>;
   using TorusNode = Torus::TorusNode;
 
   Torus torus(std::atoi(argv[1]), std::atoi(argv[2]));
 
   galois::do_all(
-      galois::iterate(size_t{0},
-                      torus.size()), // range as a pair of unsigned integers
-      [&](TorusNode n) { torus.getData(n) = 0; } // operator
+      galois::iterate(
+          size_t{0},
+          torus.size()),  // range as a pair of unsigned integers
+      [&](TorusNode n) { torus.getData(n) = 0; }  // operator
       ,
-      galois::loopname("do_all_torus_reset_self") // options
+      galois::loopname("do_all_torus_reset_self")  // options
   );
 
   galois::for_each(
       galois::iterate(
-          torus), // range as a container. assuming begin() and end()
-      [&](TorusNode n, auto&) { // operator
+          torus),  // range as a container. assuming begin() and end()
+      [&](TorusNode n, auto&) {  // operator
         // cautious point
         torus.acquireAllNeighbors(n);
 
@@ -206,7 +207,7 @@ int main(int argc, char* argv[]) {
         torus.getData(*torus.leftNeighbor(n)) += 1;
         torus.getData(*torus.rightNeighbor(n)) += 1;
       },
-      galois::loopname("for_each_torus_add_neighbors") // options
+      galois::loopname("for_each_torus_add_neighbors")  // options
       ,
       galois::no_pushes());
   //! [Use torus]

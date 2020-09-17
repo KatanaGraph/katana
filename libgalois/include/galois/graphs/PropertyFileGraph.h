@@ -1,14 +1,14 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYFILEGRAPH_H_
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYFILEGRAPH_H_
 
-#include <arrow/api.h>
-
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "galois/config.h"
+#include <arrow/api.h>
+
 #include "galois/Properties.h"
+#include "galois/config.h"
 #include "tsuba/RDG.h"
 
 namespace galois::graphs {
@@ -25,7 +25,7 @@ struct GraphTopology {
 
   std::pair<uint64_t, uint64_t> edge_range(uint32_t node_id) const {
     auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
-    auto edge_end   = out_indices->Value(node_id);
+    auto edge_end = out_indices->Value(node_id);
     return std::make_pair(edge_start, edge_end);
   }
 };
@@ -90,8 +90,8 @@ public:
       return (g->*properties_fn)();
     }
 
-    Result<void>
-    AddProperties(const std::shared_ptr<arrow::Table>& table) const {
+    Result<void> AddProperties(
+        const std::shared_ptr<arrow::Table>& table) const {
       return (g->*add_properties_fn)(table);
     }
 
@@ -104,12 +104,12 @@ public:
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
-  static Result<std::unique_ptr<PropertyFileGraph>>
-  Make(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
+  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   /// Make a property graph from an RDG name.
-  static Result<std::unique_ptr<PropertyFileGraph>>
-  Make(const std::string& rdg_name);
+  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+      const std::string& rdg_name);
 
   /// Make a property graph from an RDG but only load the named node and edge
   /// properties.
@@ -119,17 +119,17 @@ public:
   ///
   /// \returns invalid_argument if any property is not found or if there
   /// are multiple properties with the same name
-  static Result<std::unique_ptr<PropertyFileGraph>>
-  Make(const std::string& rdg_name,
-       const std::vector<std::string>& node_properties,
-       const std::vector<std::string>& edge_properties);
+  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+      const std::string& rdg_name,
+      const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties);
 
   const tsuba::PartitionMetadata* partition_metadata() {
     return rdg_.part_metadata_.get();
   }
 
-  Result<void>
-  set_partition_metadata(std::unique_ptr<tsuba::PartitionMetadata> meta) {
+  Result<void> set_partition_metadata(
+      std::unique_ptr<tsuba::PartitionMetadata> meta) {
     rdg_.part_metadata_ = std::move(meta);
     return galois::ResultSuccess();
   }
@@ -181,22 +181,22 @@ public:
 
   PropertyView node_property_view() {
     return PropertyView{
-        .g                  = this,
-        .schema_fn          = &PropertyFileGraph::node_schema,
-        .property_fn        = &PropertyFileGraph::NodeProperty,
-        .properties_fn      = &PropertyFileGraph::NodeProperties,
-        .add_properties_fn  = &PropertyFileGraph::AddNodeProperties,
+        .g = this,
+        .schema_fn = &PropertyFileGraph::node_schema,
+        .property_fn = &PropertyFileGraph::NodeProperty,
+        .properties_fn = &PropertyFileGraph::NodeProperties,
+        .add_properties_fn = &PropertyFileGraph::AddNodeProperties,
         .remove_property_fn = &PropertyFileGraph::RemoveNodeProperty,
     };
   }
 
   PropertyView edge_property_view() {
     return PropertyView{
-        .g                  = this,
-        .schema_fn          = &PropertyFileGraph::edge_schema,
-        .property_fn        = &PropertyFileGraph::EdgeProperty,
-        .properties_fn      = &PropertyFileGraph::EdgeProperties,
-        .add_properties_fn  = &PropertyFileGraph::AddEdgeProperties,
+        .g = this,
+        .schema_fn = &PropertyFileGraph::edge_schema,
+        .property_fn = &PropertyFileGraph::EdgeProperty,
+        .properties_fn = &PropertyFileGraph::EdgeProperties,
+        .add_properties_fn = &PropertyFileGraph::AddEdgeProperties,
         .remove_property_fn = &PropertyFileGraph::RemoveEdgeProperty,
     };
   }
@@ -243,6 +243,6 @@ PropertyFileGraph::MakePropertyViews(arrow::Table* table) {
   return views_result.value();
 }
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 #endif

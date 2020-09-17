@@ -2,8 +2,9 @@
 //  to test our crash recovery and transaction implementation
 
 #include "tsuba/FaultTest.h"
-#include "galois/Random.h"
+
 #include "galois/Logging.h"
+#include "galois/Random.h"
 
 static tsuba::internal::FaultMode mode_{tsuba::internal::FaultMode::None};
 static float independent_prob_{0.0f};
@@ -18,22 +19,25 @@ static const std::unordered_map<tsuba::internal::FaultMode, std::string>
         {tsuba::internal::FaultMode::UniformOverRun, "UniformOverRun"},
     };
 
-void tsuba::internal::FaultTestReport() {
+void
+tsuba::internal::FaultTestReport() {
   fmt::print("PtP count: {:d}\n", ptp_count_);
 }
 
-void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
-                                    float independent_prob,
-                                    uint64_t run_length) {
-  mode_             = mode;
+void
+tsuba::internal::FaultTestInit(
+    tsuba::internal::FaultMode mode, float independent_prob,
+    uint64_t run_length) {
+  mode_ = mode;
   independent_prob_ = independent_prob;
-  run_length_       = run_length;
+  run_length_ = run_length;
   // Configuration sanity check
   if (run_length > (1UL << 40)) {
     GALOIS_LOG_WARN("Large run length {:d}", run_length);
   }
-  GALOIS_LOG_VASSERT(independent_prob_ >= 0.0f && independent_prob_ <= 0.5f,
-                     "Failure probability must be between 0.0f and 0.5f");
+  GALOIS_LOG_VASSERT(
+      independent_prob_ >= 0.0f && independent_prob_ <= 0.5f,
+      "Failure probability must be between 0.0f and 0.5f");
   switch (mode_) {
   case tsuba::internal::FaultMode::RunLength: {
     fault_run_length_ = run_length;
@@ -44,8 +48,9 @@ void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
         run_length > 0,
         "For UniformOverRun, max run length must be larger than 0");
     fault_run_length_ = galois::RandomUniformInt(1, run_length);
-    fmt::print("FaultTest UniformOverRun {:d} ({:d})\n", fault_run_length_,
-               run_length_);
+    fmt::print(
+        "FaultTest UniformOverRun {:d} ({:d})\n", fault_run_length_,
+        run_length_);
   } break;
   case tsuba::internal::FaultMode::Independent: {
     fmt::print("FaultTest Independent {:f}\n", independent_prob_);
@@ -56,14 +61,16 @@ void tsuba::internal::FaultTestInit(tsuba::internal::FaultMode mode,
   }
 }
 
-static void die_now(const char* file, int line) {
+static void
+die_now(const char* file, int line) {
   fmt::print("FaultTest::PtP {}:{}\n", file, line);
   // Best to kill ourselves quickly and messily
   *((volatile int*)0) = 1;
 }
 
-void tsuba::internal::PtP(const char* file, int line,
-                          tsuba::internal::FaultSensitivity sensitivity) {
+void
+tsuba::internal::PtP(
+    const char* file, int line, tsuba::internal::FaultSensitivity sensitivity) {
   ptp_count_++;
   switch (mode_) {
   case tsuba::internal::FaultMode::None:

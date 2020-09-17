@@ -25,9 +25,9 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/mpl/if.hpp>
 
-#include "galois/config.h"
 #include "galois/FixedSizeRing.h"
 #include "galois/TwoLevelIterator.h"
+#include "galois/config.h"
 
 namespace galois {
 
@@ -39,9 +39,9 @@ public:
   struct promise_to_dealloc {};
 
 private:
-  typedef typename boost::mpl::if_c<Concurrent,
-                                    ConcurrentFixedSizeBag<T, ChunkSize>,
-                                    FixedSizeBag<T, ChunkSize>>::type Ring;
+  typedef typename boost::mpl::if_c<
+      Concurrent, ConcurrentFixedSizeBag<T, ChunkSize>,
+      FixedSizeBag<T, ChunkSize>>::type Ring;
 
   struct Block : public Ring {
     Block* next;
@@ -50,8 +50,8 @@ private:
 
   template <typename U>
   class outer_iterator
-      : public boost::iterator_facade<outer_iterator<U>, U,
-                                      boost::forward_traversal_tag> {
+      : public boost::iterator_facade<
+            outer_iterator<U>, U, boost::forward_traversal_tag> {
     friend class boost::iterator_core_access;
     U* cur;
 
@@ -95,7 +95,7 @@ private:
     Block* b = alloc_block(heap);
     while (true) {
       Block* f = first.load(std::memory_order_relaxed);
-      b->next  = f;
+      b->next = f;
       if (first.compare_exchange_weak(f, b))
         return;
     }
@@ -104,8 +104,8 @@ private:
   template <typename HeapTy, bool C = Concurrent>
   auto extend_first(HeapTy& heap) -> typename std::enable_if<!C>::type {
     Block* b = alloc_block(heap);
-    b->next  = first;
-    first    = b;
+    b->next = first;
+    first = b;
   }
 
   Block* get_first() {
@@ -163,13 +163,13 @@ public:
   //! External allocator must be able to allocate this type
   typedef Block block_type;
   typedef T value_type;
-  typedef galois::TwoLevelIterator<outer_iterator<Block>,
-                                   typename Block::iterator,
-                                   std::forward_iterator_tag, GetBegin, GetEnd>
+  typedef galois::TwoLevelIterator<
+      outer_iterator<Block>, typename Block::iterator,
+      std::forward_iterator_tag, GetBegin, GetEnd>
       iterator;
-  typedef galois::TwoLevelIterator<outer_iterator<const Block>,
-                                   typename Block::const_iterator,
-                                   std::forward_iterator_tag, GetBegin, GetEnd>
+  typedef galois::TwoLevelIterator<
+      outer_iterator<const Block>, typename Block::const_iterator,
+      std::forward_iterator_tag, GetBegin, GetEnd>
       const_iterator;
 
   gslist_base() : first(0) {}
@@ -182,8 +182,8 @@ public:
   gslist_base& operator=(gslist_base&& o) {
     Block* m_first = first;
     Block* o_first = o.first;
-    first          = o_first;
-    o.first        = m_first;
+    first = o_first;
+    o.first = m_first;
     return *this;
   }
 
@@ -194,14 +194,16 @@ public:
   }
 
   iterator begin() {
-    return galois::make_two_level_iterator(outer_iterator<Block>(get_first()),
-                                           outer_iterator<Block>(nullptr))
+    return galois::make_two_level_iterator(
+               outer_iterator<Block>(get_first()),
+               outer_iterator<Block>(nullptr))
         .first;
   }
 
   iterator end() {
-    return galois::make_two_level_iterator(outer_iterator<Block>(get_first()),
-                                           outer_iterator<Block>(nullptr))
+    return galois::make_two_level_iterator(
+               outer_iterator<Block>(get_first()),
+               outer_iterator<Block>(nullptr))
         .second;
   }
 
@@ -285,5 +287,5 @@ using gslist = gslist_base<T, chunksize, false>;
 template <typename T, unsigned chunksize = 16>
 using concurrent_gslist = gslist_base<T, chunksize, true>;
 
-} // namespace galois
+}  // namespace galois
 #endif

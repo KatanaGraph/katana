@@ -25,13 +25,13 @@
 #include <memory>
 #include <utility>
 
-#include "galois/config.h"
-#include "galois/gIO.h"
 #include "galois/Mem.h"
 #include "galois/Range.h"
 #include "galois/Threads.h"
 #include "galois/Timer.h"
 #include "galois/Traits.h"
+#include "galois/config.h"
+#include "galois/gIO.h"
 #include "galois/runtime/Context.h"
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
@@ -63,7 +63,7 @@ class AbortHandler {
    * Policy: serialize via tree over sockets.
    */
   void basicPolicy(const Item& item) {
-    auto& tp        = substrate::getThreadPool();
+    auto& tp = substrate::getThreadPool();
     unsigned socket = tp.getSocket();
     queues.getRemote(tp.getLeaderForSocket(socket / 2))->push(item);
   }
@@ -79,8 +79,8 @@ class AbortHandler {
       return;
     }
 
-    unsigned tid    = substrate::ThreadPool::getTID();
-    auto& tp        = substrate::getThreadPool();
+    unsigned tid = substrate::ThreadPool::getTID();
+    auto& tp = substrate::getThreadPool();
     unsigned socket = substrate::ThreadPool::getSocket();
     unsigned leader = substrate::ThreadPool::getLeader();
     if (tid != leader) {
@@ -102,8 +102,8 @@ class AbortHandler {
       return;
     }
 
-    unsigned tid    = substrate::ThreadPool::getTID();
-    auto& tp        = substrate::getThreadPool();
+    unsigned tid = substrate::ThreadPool::getTID();
+    auto& tp = substrate::getThreadPool();
     unsigned socket = substrate::ThreadPool::getSocket();
     unsigned leader = tp.getLeaderForSocket(socket);
     if (retries < 5 && tid != leader) {
@@ -152,7 +152,7 @@ public:
   static constexpr bool needsPush = !has_trait<no_pushes_tag, ArgsTy>();
   static constexpr bool needsAborts =
       !has_trait<disable_conflict_detection_tag, ArgsTy>();
-  static constexpr bool needsPia   = has_trait<per_iter_alloc_tag, ArgsTy>();
+  static constexpr bool needsPia = has_trait<per_iter_alloc_tag, ArgsTy>();
   static constexpr bool needsBreak = has_trait<parallel_break_tag, ArgsTy>();
   static constexpr bool MORE_STATS =
       needStats && has_trait<more_stats_tag, ArgsTy>();
@@ -171,7 +171,6 @@ protected:
   using LoopStat = LoopStatistics<needStats>;
 
   struct ThreadLocalData : public ThreadLocalBasics, public LoopStat {
-
     ThreadLocalData(FunctionTy fn, const char* ln)
         : ThreadLocalBasics(fn), LoopStat(ln) {}
   };
@@ -204,7 +203,7 @@ protected:
       // auto ii = tld.facing.getPushBuffer().begin();
       // auto ee = tld.facing.getPushBuffer().end();
       auto& pb = tld.facing.getPushBuffer();
-      auto n   = pb.size();
+      auto n = pb.size();
       if (n) {
         tld.inc_pushes(n);
         wl.push(pb.begin(), pb.end());
@@ -219,8 +218,8 @@ protected:
   }
 
   template <typename Item>
-  GALOIS_ATTRIBUTE_NOINLINE void abortIteration(const Item& item,
-                                                ThreadLocalData& tld) {
+  GALOIS_ATTRIBUTE_NOINLINE void abortIteration(
+      const Item& item, ThreadLocalData& tld) {
     assert(needsAborts);
     tld.ctx.cancelIteration();
     tld.inc_conflicts();
@@ -304,7 +303,6 @@ protected:
 
   template <bool couldAbort, bool isLeader>
   void go() {
-
     execTime.start();
 
     // Thread-local data goes on the local stack to be NUMA friendly
@@ -314,8 +312,8 @@ protected:
     if (couldAbort)
       setThreadContext(&tld.ctx);
     if (needsPush && !couldAbort)
-      tld.facing.setFastPushBack(std::bind(&ForEachExecutor::fastPushBack, this,
-                                           std::placeholders::_1));
+      tld.facing.setFastPushBack(std::bind(
+          &ForEachExecutor::fastPushBack, this, std::placeholders::_1));
 
     while (true) {
       do {
@@ -324,21 +322,21 @@ protected:
         // Run some iterations
         if (couldAbort || needsBreak) {
           constexpr int __NUM = (needsBreak || isLeader) ? 64 : 0;
-          bool b              = runQueue<__NUM>(tld, wl);
-          didWork             = b || didWork;
+          bool b = runQueue<__NUM>(tld, wl);
+          didWork = b || didWork;
           // Check for abort
           if (couldAbort) {
-            b       = handleAborts(tld);
+            b = handleAborts(tld);
             didWork = b || didWork;
           }
-        } else { // No try/catch
-          bool b  = runQueueSimple(tld);
+        } else {  // No try/catch
+          bool b = runQueueSimple(tld);
           didWork = b || didWork;
         }
 
         // Update node color and prop token
         term.localTermination(didWork);
-        substrate::asmPause(); // Let token propagate
+        substrate::asmPause();  // Let token propagate
       } while (!term.globalTermination() && (!needsBreak || !broke));
 
       if (checkEmpty(wl, tld, 0)) {
@@ -365,33 +363,38 @@ protected:
   template <typename... WArgsTy>
   ForEachExecutor(T2, FunctionTy f, const ArgsTy& args, WArgsTy... wargs)
       : term(substrate::getSystemTermination(activeThreads)),
-        barrier(getBarrier(activeThreads)), wl(std::forward<WArgsTy>(wargs)...),
-        origFunction(f), loopname(galois::internal::getLoopName(args)),
-        broke(false), initTime(loopname, "Init"),
+        barrier(getBarrier(activeThreads)),
+        wl(std::forward<WArgsTy>(wargs)...),
+        origFunction(f),
+        loopname(galois::internal::getLoopName(args)),
+        broke(false),
+        initTime(loopname, "Init"),
         execTime(loopname, "Execute") {}
 
   template <typename WArgsTy, size_t... Is>
-  ForEachExecutor(T1, FunctionTy f, const ArgsTy& args, const WArgsTy& wlargs,
-                  std::index_sequence<Is...>)
+  ForEachExecutor(
+      T1, FunctionTy f, const ArgsTy& args, const WArgsTy& wlargs,
+      std::index_sequence<Is...>)
       : ForEachExecutor(T2{}, f, args, std::get<Is>(wlargs)...) {}
 
   template <typename WArgsTy>
-  ForEachExecutor(T1, FunctionTy f, const ArgsTy& args, const WArgsTy&,
-                  std::index_sequence<>)
+  ForEachExecutor(
+      T1, FunctionTy f, const ArgsTy& args, const WArgsTy&,
+      std::index_sequence<>)
       : ForEachExecutor(T2{}, f, args) {}
 
 public:
   ForEachExecutor(FunctionTy f, const ArgsTy& args)
-      : ForEachExecutor(T1{}, f, args, get_trait_value<wl_tag>(args).args,
-                        std::make_index_sequence<std::tuple_size<decltype(
-                            get_trait_value<wl_tag>(args).args)>::value>{}) {}
+      : ForEachExecutor(
+            T1{}, f, args, get_trait_value<wl_tag>(args).args,
+            std::make_index_sequence<std::tuple_size<decltype(
+                get_trait_value<wl_tag>(args).args)>::value>{}) {}
 
   template <typename RangeTy>
   void init(const RangeTy&) {}
 
   template <typename RangeTy>
   void initThread(const RangeTy& range) {
-
     initTime.start();
 
     wl.push_initial(range);
@@ -401,7 +404,7 @@ public:
   }
 
   void operator()() {
-    bool isLeader   = substrate::ThreadPool::isLeader();
+    bool isLeader = substrate::ThreadPool::isLeader();
     bool couldAbort = needsAborts && activeThreads > 1;
     if (couldAbort && isLeader)
       go<true, true>();
@@ -415,13 +418,15 @@ public:
 };
 
 template <typename WLTy>
-constexpr auto has_with_iterator(int) -> decltype(
+constexpr auto
+has_with_iterator(int) -> decltype(
     std::declval<typename WLTy::template with_iterator<int*>::type>(), bool()) {
   return true;
 }
 
 template <typename>
-constexpr auto has_with_iterator(...) -> bool {
+constexpr auto
+has_with_iterator(...) -> bool {
   return false;
 }
 
@@ -431,14 +436,15 @@ struct reiterator {
 };
 
 template <typename WLTy, typename IterTy>
-struct reiterator<WLTy, IterTy,
-                  typename std::enable_if<has_with_iterator<WLTy>(0)>::type> {
+struct reiterator<
+    WLTy, IterTy, typename std::enable_if<has_with_iterator<WLTy>(0)>::type> {
   typedef typename WLTy::template with_iterator<IterTy>::type type;
 };
 
 // TODO(ddn): Think about folding in range into args too
 template <typename RangeTy, typename FunctionTy, typename ArgsTy>
-void for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
+void
+for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
   typedef typename std::iterator_traits<typename RangeTy::iterator>::value_type
       value_type;
   typedef typename trait_type<wl_tag, ArgsTy>::type::type BaseWorkListTy;
@@ -449,7 +455,7 @@ void for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
       OperatorReferenceType<decltype(std::forward<FunctionTy>(fn))>;
   typedef ForEachExecutor<WorkListTy, FuncRefType, ArgsTy> WorkTy;
 
-  auto& barrier      = getBarrier(activeThreads);
+  auto& barrier = getBarrier(activeThreads);
   FuncRefType fn_ref = fn;
   WorkTy W(fn_ref, args);
   W.init(range);
@@ -463,7 +469,8 @@ void for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
 
 //! Normalize arguments to for_each
 template <typename RangeTy, typename FunctionTy, typename TupleTy>
-void for_each_gen(const RangeTy& r, FunctionTy&& fn, const TupleTy& tpl) {
+void
+for_each_gen(const RangeTy& r, FunctionTy&& fn, const TupleTy& tpl) {
   static_assert(!has_trait<char*, TupleTy>(), "old loopname");
   static_assert(!has_trait<char const*, TupleTy>(), "old loopname");
   static_assert(!has_trait<bool, TupleTy>(), "old steal");
@@ -471,8 +478,9 @@ void for_each_gen(const RangeTy& r, FunctionTy&& fn, const TupleTy& tpl) {
   auto ftpl = std::tuple_cat(tpl, typename function_traits<FunctionTy>::type{});
 
   auto xtpl = std::tuple_cat(
-      ftpl, get_default_trait_values(tpl, std::make_tuple(wl_tag{}),
-                                     std::make_tuple(wl<defaultWL>())));
+      ftpl,
+      get_default_trait_values(
+          tpl, std::make_tuple(wl_tag{}), std::make_tuple(wl<defaultWL>())));
 
   constexpr bool TIME_IT = has_trait<loopname_tag, decltype(xtpl)>();
   CondStatTimer<TIME_IT> timer(galois::internal::getLoopName(xtpl));
@@ -484,6 +492,6 @@ void for_each_gen(const RangeTy& r, FunctionTy&& fn, const TupleTy& tpl) {
   timer.stop();
 }
 
-} // end namespace runtime
-} // end namespace galois
+}  // end namespace runtime
+}  // end namespace galois
 #endif

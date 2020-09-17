@@ -20,9 +20,9 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PTRLOCK_H_
 #define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PTRLOCK_H_
 
-#include <cstdint>
-#include <cassert>
 #include <atomic>
+#include <cassert>
+#include <cstdint>
 
 #include "galois/config.h"
 #include "galois/substrate/CompilerSpecific.h"
@@ -53,8 +53,8 @@ public:
     if (&p == this)
       return *this;
     // relaxed order for initialization
-    _lock.store(p._lock.load(std::memory_order_relaxed),
-                std::memory_order_relaxed);
+    _lock.store(
+        p._lock.load(std::memory_order_relaxed), std::memory_order_relaxed);
     return *this;
   }
 
@@ -62,21 +62,22 @@ public:
     uintptr_t oldval = _lock.load(std::memory_order_relaxed);
     if (oldval & 1)
       goto slow_path;
-    if (!_lock.compare_exchange_weak(oldval, oldval | 1,
-                                     std::memory_order_acq_rel,
-                                     std::memory_order_relaxed))
+    if (!_lock.compare_exchange_weak(
+            oldval, oldval | 1, std::memory_order_acq_rel,
+            std::memory_order_relaxed))
       goto slow_path;
     assert(is_locked());
     return;
 
-  slow_path:
+slow_path:
     internal::ptr_slow_lock(_lock);
   }
 
   inline void unlock() {
     assert(is_locked());
-    _lock.store(_lock.load(std::memory_order_relaxed) & ~(uintptr_t)1,
-                std::memory_order_release);
+    _lock.store(
+        _lock.load(std::memory_order_relaxed) & ~(uintptr_t)1,
+        std::memory_order_release);
   }
 
   inline void unlock_and_clear() {
@@ -154,7 +155,7 @@ public:
   inline bool stealing_CAS(T* oldval, T* newval) { return CAS(oldval, newval); }
 };
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

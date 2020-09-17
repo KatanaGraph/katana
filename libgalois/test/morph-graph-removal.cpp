@@ -1,13 +1,13 @@
+#include <cassert>
 #include <iostream>
 #include <string>
-#include <cassert>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 #include "galois/graphs/MorphGraph.h"
 
 static unsigned int numNodes = 10;
-static bool verbose          = false;
+static bool verbose = false;
 
 // only tracks out-going edges
 using OutGraph =
@@ -21,7 +21,8 @@ using InOutGraph =
 using SymGraph = galois::graphs::MorphGraph<unsigned int, unsigned int, false>;
 
 template <class G>
-void traverseOutGraph(G& g) {
+void
+traverseOutGraph(G& g) {
   for (auto n : g) {
     for (auto e : g.edges(n)) {
       auto dst = g.getEdgeDst(e);
@@ -32,7 +33,8 @@ void traverseOutGraph(G& g) {
 }
 
 template <class G>
-void traverseInGraph(G& g) {
+void
+traverseInGraph(G& g) {
   for (auto n : g) {
     for (auto ie : g.in_edges(n)) {
       auto src = g.getEdgeDst(ie);
@@ -43,11 +45,13 @@ void traverseInGraph(G& g) {
 }
 
 template <>
-void traverseInGraph(OutGraph&) {}
+void
+traverseInGraph(OutGraph&) {}
 
 // construct a directed clique w/ (i, j) where i < j
 template <class G>
-void constructGraph(G& g, std::vector<typename G::GraphNode>& v) {
+void
+constructGraph(G& g, std::vector<typename G::GraphNode>& v) {
   // add nodes
   for (unsigned int i = 0; i < numNodes; i++) {
     auto n = g.createNode(i);
@@ -70,17 +74,17 @@ void constructGraph(G& g, std::vector<typename G::GraphNode>& v) {
 }
 
 template <class G>
-void removeGraphOutEdge(G& g, typename G::GraphNode n1,
-                        typename G::GraphNode n2) {
+void
+removeGraphOutEdge(G& g, typename G::GraphNode n1, typename G::GraphNode n2) {
   auto e = g.findEdge(n1, n2);
   if (e != g.edge_end(n1)) {
     g.removeEdge(n1, e);
   }
 }
 
-void removeGraphInEdge(SymGraph& g, SymGraph::GraphNode n1,
-                       SymGraph::GraphNode n2) {
-  auto e12                  = g.findInEdge(n1, n2);
+void
+removeGraphInEdge(SymGraph& g, SymGraph::GraphNode n1, SymGraph::GraphNode n2) {
+  auto e12 = g.findInEdge(n1, n2);
   [[maybe_unused]] auto e21 = g.findEdge(n2, n1);
 
   if (e12 == g.in_edge_end(n1)) {
@@ -95,9 +99,10 @@ void removeGraphInEdge(SymGraph& g, SymGraph::GraphNode n1,
   }
 }
 
-void removeGraphInEdge(InOutGraph& g, InOutGraph::GraphNode n1,
-                       InOutGraph::GraphNode n2) {
-  auto ie                 = g.findInEdge(n1, n2);
+void
+removeGraphInEdge(
+    InOutGraph& g, InOutGraph::GraphNode n1, InOutGraph::GraphNode n2) {
+  auto ie = g.findInEdge(n1, n2);
   [[maybe_unused]] auto e = g.findEdge(n2, n1);
   if (ie == g.in_edge_end(n1)) {
     assert(e == g.edge_end(n2));
@@ -111,9 +116,10 @@ void removeGraphInEdge(InOutGraph& g, InOutGraph::GraphNode n1,
   }
 }
 
-unsigned int countUnmatchedEdge(OutGraph& g,
-                                std::vector<typename OutGraph::GraphNode>& v,
-                                unsigned int i, unsigned int j) {
+unsigned int
+countUnmatchedEdge(
+    OutGraph& g, std::vector<typename OutGraph::GraphNode>& v, unsigned int i,
+    unsigned int j) {
   unsigned int unmatched = 0;
 
   // nodes whose out edges are all removed
@@ -144,9 +150,10 @@ unsigned int countUnmatchedEdge(OutGraph& g,
   return unmatched;
 }
 
-unsigned int countUnmatchedEdge(InOutGraph& g,
-                                std::vector<typename InOutGraph::GraphNode>& v,
-                                unsigned int i, unsigned int j) {
+unsigned int
+countUnmatchedEdge(
+    InOutGraph& g, std::vector<typename InOutGraph::GraphNode>& v,
+    unsigned int i, unsigned int j) {
   unsigned int unmatched = 0;
 
   // nodes whose out edges are all removed
@@ -182,9 +189,10 @@ unsigned int countUnmatchedEdge(InOutGraph& g,
   return unmatched;
 }
 
-unsigned int countUnmatchedEdge(SymGraph& g,
-                                std::vector<typename SymGraph::GraphNode>& v,
-                                unsigned int i, unsigned int j) {
+unsigned int
+countUnmatchedEdge(
+    SymGraph& g, std::vector<typename SymGraph::GraphNode>& v, unsigned int i,
+    unsigned int j) {
   unsigned int unmatched = 0;
 
   // no self loops
@@ -223,8 +231,8 @@ unsigned int countUnmatchedEdge(SymGraph& g,
 }
 
 template <class G>
-unsigned int testGraphOutEdgeRemoval(G& g,
-                                     std::vector<typename G::GraphNode>& v) {
+unsigned int
+testGraphOutEdgeRemoval(G& g, std::vector<typename G::GraphNode>& v) {
   constructGraph(g, v);
   unsigned int numFailedRemoval = 0;
 
@@ -245,8 +253,8 @@ unsigned int testGraphOutEdgeRemoval(G& g,
 }
 
 template <class G>
-unsigned int testGraphInEdgeRemoval(G& g,
-                                    std::vector<typename G::GraphNode>& v) {
+unsigned int
+testGraphInEdgeRemoval(G& g, std::vector<typename G::GraphNode>& v) {
   constructGraph(g, v);
   unsigned int numFailedRemoval = 0;
 
@@ -266,7 +274,8 @@ unsigned int testGraphInEdgeRemoval(G& g,
   return numFailedRemoval;
 }
 
-int main() {
+int
+main() {
   galois::SharedMemSys G;
   unsigned int numFailure = 0;
 

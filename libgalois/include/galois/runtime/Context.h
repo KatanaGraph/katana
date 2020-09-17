@@ -31,44 +31,47 @@
 #include <csetjmp>
 #endif
 
-#include "galois/gIO.h"
 #include "galois/MethodFlags.h"
+#include "galois/gIO.h"
 #include "galois/substrate/PtrLock.h"
 
 namespace galois {
 namespace runtime {
 
 enum ConflictFlag {
-  CONFLICT         = -1,
-  NO_CONFLICT      = 0,
+  CONFLICT = -1,
+  NO_CONFLICT = 0,
   REACHED_FAILSAFE = 1,
-  BREAK            = 2
+  BREAK = 2
 };
 
 extern thread_local std::jmp_buf execFrame;
 
 class Lockable;
 
-[[noreturn]] inline void signalConflict(Lockable* = nullptr) {
+[[noreturn]] inline void
+signalConflict(Lockable* = nullptr) {
 #if defined(GALOIS_USE_LONGJMP_ABORT)
   std::longjmp(execFrame, CONFLICT);
-  std::abort(); // shouldn't reach here after longjmp
+  std::abort();  // shouldn't reach here after longjmp
 #elif defined(GALOIS_USE_EXCEPTION_ABORT)
   throw CONFLICT;
 #endif
 }
 
-[[noreturn]] inline void signalFailSafe(void) {
+[[noreturn]] inline void
+signalFailSafe(void) {
 #if defined(GALOIS_USE_LONGJMP_ABORT)
   std::longjmp(galois::runtime::execFrame, galois::runtime::REACHED_FAILSAFE);
-  std::abort(); // shouldn't reach here after longjmp
+  std::abort();  // shouldn't reach here after longjmp
 #elif defined(GALOIS_USE_EXCEPTION_ABORT)
   throw REACHED_FAILSAFE;
 #endif
 }
 
 //! used to release lock over exception path
-static inline void clearConflictLock() {}
+static inline void
+clearConflictLock() {}
 
 class LockManagerBase;
 
@@ -146,7 +149,7 @@ protected:
   void addToNhood(Lockable* lockable) {
     assert(!lockable->next);
     lockable->next = locks;
-    locks          = lockable;
+    locks = lockable;
   }
 
   void acquire(Lockable* lockable, galois::MethodFlag m) {
@@ -182,7 +185,8 @@ GALOIS_EXPORT SimpleRuntimeContext* getThreadContext();
 GALOIS_EXPORT void setThreadContext(SimpleRuntimeContext* n);
 
 //! Helper function to decide if the conflict detection lock should be taken
-inline bool shouldLock(const galois::MethodFlag g) {
+inline bool
+shouldLock(const galois::MethodFlag g) {
   // Mask out additional "optional" flags
   switch (g & galois::MethodFlag::INTERNAL_MASK) {
   case MethodFlag::UNPROTECTED:
@@ -202,7 +206,8 @@ inline bool shouldLock(const galois::MethodFlag g) {
 }
 
 //! actual locking function.  Will always lock.
-inline void doAcquire(Lockable* lockable, galois::MethodFlag m) {
+inline void
+doAcquire(Lockable* lockable, galois::MethodFlag m) {
   SimpleRuntimeContext* ctx = getThreadContext();
   if (ctx)
     ctx->acquire(lockable, m);
@@ -210,7 +215,8 @@ inline void doAcquire(Lockable* lockable, galois::MethodFlag m) {
 
 //! Master function which handles conflict detection
 //! used to acquire a lockable thing
-inline void acquire(Lockable* lockable, galois::MethodFlag m) {
+inline void
+acquire(Lockable* lockable, galois::MethodFlag m) {
   if (shouldLock(m))
     doAcquire(lockable, m);
 }
@@ -227,7 +233,7 @@ struct CheckedLockObj {
   void operator()(Lockable* lockable) const { acquire(lockable, m); }
 };
 
-} // namespace runtime
-} // end namespace galois
+}  // namespace runtime
+}  // end namespace galois
 
 #endif

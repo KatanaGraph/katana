@@ -6,7 +6,8 @@ tsuba::internal::GetErrorCodeCategory() {
   return c;
 }
 
-tsuba::ErrorCode tsuba::ArrowToTsuba(arrow::StatusCode code) {
+tsuba::ErrorCode
+tsuba::ArrowToTsuba(arrow::StatusCode code) {
   switch (code) {
   case arrow::StatusCode::OK:
     return tsuba::ErrorCode::Success;

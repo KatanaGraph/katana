@@ -22,12 +22,14 @@
 // 1. serial iteration over nodes
 // 2. access to node and edge data
 // 3. usage of galois::StatTimer
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/Timer.h"
 #include <iostream>
 
-int main(int argc, char* argv[]) {
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/graphs/LCGraph.h"
+
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
 
   if (argc < 2) {
@@ -42,7 +44,7 @@ int main(int argc, char* argv[]) {
 
   //! [Read a graph]
   Graph g;
-  galois::graphs::readGraph(g, argv[1]); // argv[1] is the file name for graph
+  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
   //! [Read a graph]
 
   //! [use of a StatTimer]
@@ -54,11 +56,11 @@ int main(int argc, char* argv[]) {
   //! [Graph traversal]
   // iterate over nodes
   for (auto n : g) {
-    auto& sum = g.getData(n); // get node data of n
-    sum       = 0;
+    auto& sum = g.getData(n);  // get node data of n
+    sum = 0;
     // iterate over edges from node n
     for (auto e : g.edges(n)) {
-      sum += g.getEdgeData(e); // get edge data of e
+      sum += g.getEdgeData(e);  // get edge data of e
     }
   }
   //! [Graph traversal]

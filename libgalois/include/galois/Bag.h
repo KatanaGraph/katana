@@ -26,11 +26,11 @@
 #include <boost/iterator/iterator_facade.hpp>
 
 #include "galois/config.h"
+#include "galois/gIO.h"
 #include "galois/gstl.h"
 #include "galois/runtime/Executor_OnEach.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/gIO.h"
 #include "galois/runtime/Mem.h"
+#include "galois/substrate/PerThreadStorage.h"
 
 namespace galois {
 
@@ -40,20 +40,19 @@ namespace galois {
  */
 template <typename T, unsigned int BlockSize = 0>
 class InsertBag {
-
   struct header {
     header* next;
-    T* dbegin; // start of interesting data
-    T* dend;   // end of valid data
-    T* dlast;  // end of storage
+    T* dbegin;  // start of interesting data
+    T* dend;    // end of valid data
+    T* dlast;   // end of storage
   };
 
   typedef std::pair<header*, header*> PerThread;
 
 public:
   template <typename U>
-  class Iterator : public boost::iterator_facade<Iterator<U>, U,
-                                                 boost::forward_traversal_tag> {
+  class Iterator : public boost::iterator_facade<
+                       Iterator<U>, U, boost::forward_traversal_tag> {
     friend class boost::iterator_core_access;
 
     galois::substrate::PerThreadStorage<std::pair<header*, header*>>* hd;
@@ -131,22 +130,22 @@ private:
     PerThread& hpair = *heads.getLocal();
     if (hpair.second) {
       hpair.second->next = h;
-      hpair.second       = h;
+      hpair.second = h;
     } else {
       hpair.first = hpair.second = h;
     }
   }
 
   header* newHeaderFromHeap(void* m, unsigned size) {
-    header* H  = new (m) header();
+    header* H = new (m) header();
     int offset = 1;
     if (sizeof(T) < sizeof(header))
       offset += sizeof(header) / sizeof(T);
-    T* a      = reinterpret_cast<T*>(m);
+    T* a = reinterpret_cast<T*>(m);
     H->dbegin = &a[offset];
-    H->dend   = H->dbegin;
-    H->dlast  = &a[(size / sizeof(T))];
-    H->next   = 0;
+    H->dend = H->dbegin;
+    H->dlast = &a[(size / sizeof(T))];
+    H->next = 0;
     return H;
   }
 
@@ -154,19 +153,19 @@ private:
     if (BlockSize) {
       return newHeaderFromHeap(heap.allocate(BlockSize), BlockSize);
     } else {
-      return newHeaderFromHeap(galois::runtime::pagePoolAlloc(),
-                               galois::runtime::pagePoolSize());
+      return newHeaderFromHeap(
+          galois::runtime::pagePoolAlloc(), galois::runtime::pagePoolSize());
     }
   }
 
   void destruct_serial() {
     for (unsigned x = 0; x < heads.size(); ++x) {
       PerThread& hpair = *heads.getRemote(x);
-      header*& h       = hpair.first;
+      header*& h = hpair.first;
       while (h) {
         uninitialized_destroy(h->dbegin, h->dend);
         header* h2 = h;
-        h          = h->next;
+        h = h->next;
         if (BlockSize)
           heap.deallocate(h2);
         else
@@ -180,11 +179,11 @@ private:
     galois::runtime::on_each_gen(
         [this](const unsigned int tid, const unsigned int) {
           PerThread& hpair = *heads.getLocal(tid);
-          header*& h       = hpair.first;
+          header*& h = hpair.first;
           while (h) {
             uninitialized_destroy(h->dbegin, h->dend);
             header* h2 = h;
-            h          = h->next;
+            h = h->next;
             if (BlockSize)
               heap.deallocate(h2);
             else
@@ -300,6 +299,6 @@ public:
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

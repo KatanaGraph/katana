@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PerThreadStorage.h"
+#include <atomic>
+
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
-
-#include <atomic>
+#include "galois/substrate/PerThreadStorage.h"
 
 namespace {
 
@@ -30,7 +30,7 @@ class TopoBarrier : public galois::substrate::Barrier {
     // vpid is galois::runtime::LL::getTID()
 
     // socket binary tree
-    treenode* parentpointer; // null of vpid == 0
+    treenode* parentpointer;  // null of vpid == 0
     treenode* childpointers[2];
 
     // waiting values:
@@ -45,12 +45,12 @@ class TopoBarrier : public galois::substrate::Barrier {
   galois::substrate::PerThreadStorage<unsigned> sense;
 
   void _reinit(unsigned P) {
-    auto& tp      = galois::substrate::getThreadPool();
+    auto& tp = galois::substrate::getThreadPool();
     unsigned pkgs = tp.getCumulativeMaxSocket(P - 1) + 1;
     for (unsigned i = 0; i < pkgs; ++i) {
-      treenode& n     = *nodes.getRemoteByPkg(i);
+      treenode& n = *nodes.getRemoteByPkg(i);
       n.childnotready = 0;
-      n.havechild     = 0;
+      n.havechild = 0;
       for (int j = 0; j < 4; ++j) {
         if ((4 * i + j + 1) < pkgs) {
           ++n.childnotready;
@@ -120,7 +120,7 @@ public:
   virtual const char* name() const { return "TopoBarrier"; }
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createTopoBarrier(unsigned activeThreads) {

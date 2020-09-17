@@ -19,12 +19,13 @@
 
 // This example shows how to use galois::runtime::ExternalHeapAllocator
 // to wrap up 3rd-party allocators and use the wrapped heap for STL containers.
+#include <iostream>
+
 #include "galois/Galois.h"
 #include "galois/runtime/Mem.h"
 
-#include <iostream>
-
-int main() {
+int
+main() {
   galois::SharedMemSys G;
 
   //! [heap wrapping example]

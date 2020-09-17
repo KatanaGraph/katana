@@ -20,8 +20,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
 #define GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
 
-#include "galois/config.h"
 #include "galois/LoopsDecl.h"
+#include "galois/config.h"
 #include "galois/runtime/Executor_Deterministic.h"
 #include "galois/runtime/Executor_DoAll.h"
 #include "galois/runtime/Executor_ForEach.h"
@@ -48,7 +48,8 @@ namespace galois {
  */
 
 template <typename Range, typename FunctionTy, typename... Args>
-void for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
+void
+for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
   auto tpl = std::make_tuple(std::forward<Args>(args)...);
   runtime::for_each_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
@@ -64,7 +65,8 @@ void for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
  * @param args optional arguments to loop
  */
 template <typename Range, typename FunctionTy, typename... Args>
-void do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
+void
+do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
   auto tpl = std::make_tuple(std::forward<Args>(args)...);
   runtime::do_all_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
@@ -79,9 +81,11 @@ void do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
  * @param args optional arguments to loop
  */
 template <typename FunctionTy, typename... Args>
-void on_each(FunctionTy&& fn, Args&&... args) {
-  runtime::on_each_gen(std::forward<FunctionTy>(fn),
-                       std::make_tuple(std::forward<Args>(args)...));
+void
+on_each(FunctionTy&& fn, Args&&... args) {
+  runtime::on_each_gen(
+      std::forward<FunctionTy>(fn),
+      std::make_tuple(std::forward<Args>(args)...));
 }
 
 /**
@@ -90,7 +94,10 @@ void on_each(FunctionTy&& fn, Args&&... args) {
  * @param num number of pages to allocate of size {@link
  * galois::runtime::MM::hugePageSize}
  */
-static inline void preAlloc(int num) { runtime::preAlloc_impl(num); }
+static inline void
+preAlloc(int num) {
+  runtime::preAlloc_impl(num);
+}
 
 /**
  * Reports number of hugepages allocated by the Galois system so far. The value
@@ -98,7 +105,8 @@ static inline void preAlloc(int num) { runtime::preAlloc_impl(num); }
  *
  * @param label Label to associated with report at this program point
  */
-static inline void reportPageAlloc(const char* label) {
+static inline void
+reportPageAlloc(const char* label) {
   runtime::reportPageAlloc(label);
 }
 
@@ -120,8 +128,10 @@ static inline void reportPageAlloc(const char* label) {
  * @param loopname string to identity loop in statistics output
  */
 template <typename Iter, typename Cmp, typename NhFunc, typename OpFunc>
-void for_each_ordered(Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc,
-                      const OpFunc& fn, const char* loopname = 0) {
+void
+for_each_ordered(
+    Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc, const OpFunc& fn,
+    const char* loopname = 0) {
   runtime::for_each_ordered_impl(b, e, cmp, nhFunc, fn, loopname);
 }
 
@@ -145,13 +155,15 @@ void for_each_ordered(Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc,
  * @param stabilityTest stability test
  * @param loopname string to identity loop in statistics output
  */
-template <typename Iter, typename Cmp, typename NhFunc, typename OpFunc,
-          typename StableTest>
-void for_each_ordered(Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc,
-                      const OpFunc& fn, const StableTest& stabilityTest,
-                      const char* loopname = 0) {
-  runtime::for_each_ordered_impl(b, e, cmp, nhFunc, fn, stabilityTest,
-                                 loopname);
+template <
+    typename Iter, typename Cmp, typename NhFunc, typename OpFunc,
+    typename StableTest>
+void
+for_each_ordered(
+    Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc, const OpFunc& fn,
+    const StableTest& stabilityTest, const char* loopname = 0) {
+  runtime::for_each_ordered_impl(
+      b, e, cmp, nhFunc, fn, stabilityTest, loopname);
 }
 
 /**
@@ -162,8 +174,8 @@ void for_each_ordered(Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc,
 struct DoAll {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
-    galois::do_all(range, std::forward<FunctionTy>(fn),
-                   std::forward<Args>(args)...);
+    galois::do_all(
+        range, std::forward<FunctionTy>(fn), std::forward<Args>(args)...);
   }
 };
 
@@ -174,8 +186,9 @@ struct DoAll {
 
 struct StdForEach {
   template <typename Range, typename FunctionTy, typename... Args>
-  void operator()(const Range& range, FunctionTy&& fn,
-                  [[maybe_unused]] Args&&... args) const {
+  void operator()(
+      const Range& range, FunctionTy&& fn,
+      [[maybe_unused]] Args&&... args) const {
     std::for_each(range.begin(), range.end(), std::forward<FunctionTy>(fn));
   }
 };
@@ -183,8 +196,8 @@ struct StdForEach {
 struct ForEach {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
-    galois::for_each(range, std::forward<FunctionTy>(fn),
-                     std::forward<Args>(args)...);
+    galois::for_each(
+        range, std::forward<FunctionTy>(fn), std::forward<Args>(args)...);
   }
 };
 
@@ -195,8 +208,8 @@ struct WhileQ {
   WhileQ(Q&& q = Q()) : m_q(std::move(q)) {}
 
   template <typename Range, typename FunctionTy, typename... Args>
-  void operator()(const Range& range, FunctionTy&& f,
-                  [[maybe_unused]] Args&&... args) {
+  void operator()(
+      const Range& range, FunctionTy&& f, [[maybe_unused]] Args&&... args) {
     m_q.push(range.begin(), range.end());
 
     while (!m_q.empty()) {
@@ -207,6 +220,6 @@ struct WhileQ {
   }
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

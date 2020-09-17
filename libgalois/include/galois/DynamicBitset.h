@@ -26,16 +26,16 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
 #define GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
 
+#include <cassert>
 #include <climits>
 #include <vector>
-#include <cassert>
 
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/mpl/has_xxx.hpp>
 
-#include "galois/config.h"
 #include "galois/AtomicWrapper.h"
 #include "galois/PODResizeableArray.h"
+#include "galois/config.h"
 
 namespace galois {
 /**
@@ -72,7 +72,7 @@ public:
    * @param n Size to change the bitset to
    */
   void resize(uint64_t n) {
-    assert(bits_uint64 == 64); // compatibility with other devices
+    assert(bits_uint64 == 64);  // compatibility with other devices
     num_bits = n;
     bitvec.resize((n + bits_uint64 - 1) / bits_uint64);
     reset();
@@ -84,7 +84,7 @@ public:
    * @param n Size to reserve the capacity of the bitset to
    */
   void reserve(uint64_t n) {
-    assert(bits_uint64 == 64); // compatibility with other devices
+    assert(bits_uint64 == 64);  // compatibility with other devices
     bitvec.reserve((n + bits_uint64 - 1) / bits_uint64);
   }
 
@@ -135,7 +135,7 @@ public:
     if (end == (num_bits - 1))
       vec_end = bitvec.size();
     else
-      vec_end = (end + 1) / bits_uint64; // floor
+      vec_end = (end + 1) / bits_uint64;  // floor
 
     if (vec_begin < vec_end) {
       std::fill(bitvec.begin() + vec_begin, bitvec.begin() + vec_end, 0);
@@ -153,7 +153,7 @@ public:
         assert(diff < 64);
         uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
 
-        size_t end_diff  = end - vec_end + 1;
+        size_t end_diff = end - vec_end + 1;
         uint64_t or_mask = (uint64_t{1} << end_diff) - 1;
         mask |= ~or_mask;
 
@@ -164,14 +164,14 @@ public:
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
         assert(diff < 64);
-        uint64_t mask    = (uint64_t{1} << (64 - diff)) - 1;
+        uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
         size_t bit_index = begin / bits_uint64;
         bitvec[bit_index] &= mask;
       }
       if (end >= vec_end) {
         size_t diff = end - vec_end + 1;
         assert(diff < 64);
-        uint64_t mask    = (uint64_t{1} << diff) - 1;
+        uint64_t mask = (uint64_t{1} << diff) - 1;
         size_t bit_index = end / bits_uint64;
         bitvec[bit_index] &= ~mask;
       }
@@ -187,11 +187,11 @@ public:
    * @returns true if index is set
    */
   bool test(size_t index) const {
-    size_t bit_index    = index / bits_uint64;
+    size_t bit_index = index / bits_uint64;
     uint64_t bit_offset = 1;
     bit_offset <<= (index % bits_uint64);
-    return ((bitvec[bit_index].load(std::memory_order_relaxed) & bit_offset) !=
-            0);
+    return (
+        (bitvec[bit_index].load(std::memory_order_relaxed) & bit_offset) != 0);
   }
 
   /**
@@ -201,7 +201,7 @@ public:
    * @returns the old value
    */
   bool set(size_t index) {
-    size_t bit_index    = index / bits_uint64;
+    size_t bit_index = index / bits_uint64;
     uint64_t bit_offset = 1;
     bit_offset <<= (index % bits_uint64);
     uint64_t old_val = bitvec[bit_index];
@@ -222,7 +222,7 @@ public:
    * @returns the old value
    */
   bool reset(size_t index) {
-    size_t bit_index    = index / bits_uint64;
+    size_t bit_index = index / bits_uint64;
     uint64_t bit_offset = 1;
     bit_offset <<= (index % bits_uint64);
     uint64_t old_val = bitvec[bit_index];
@@ -310,5 +310,5 @@ struct GALOIS_EXPORT InvalidBitsetFnTy {
   //! No-op since it's an empty bitset
   static void reset_range(size_t, size_t) {}
 };
-} // namespace galois
+}  // namespace galois
 #endif

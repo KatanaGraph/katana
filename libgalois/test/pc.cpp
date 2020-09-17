@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/Timer.h"
-#include "galois/Galois.h"
-
 #include <cstdlib>
 #include <iostream>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
+#include "galois/substrate/PerThreadStorage.h"
 
 using namespace galois::substrate;
 
@@ -53,7 +53,8 @@ struct testR {
 };
 
 template <typename T>
-void testf(const char* str) {
+void
+testf(const char* str) {
   PerThreadStorage<T> b;
   std::cout << "\nRunning: " << str << " sizeof " << sizeof(PerThreadStorage<T>)
             << "\n";
@@ -70,7 +71,8 @@ void testf(const char* str) {
   std::cout << str << " L: " << tL.get() << " R: " << tR.get() << '\n';
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   if (argc > 1)
     num = atoi(argv[1]);
@@ -80,7 +82,7 @@ int main(int argc, char** argv) {
   unsigned M = galois::substrate::getThreadPool().getMaxThreads();
 
   while (M) {
-    galois::setActiveThreads(M); // galois::runtime::LL::getMaxThreads());
+    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     testf<int>("int");

@@ -17,13 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Timer.h"
-#include "galois/runtime/Context.h"
-
 #include <cstdlib>
 #include <iostream>
 
-int main(int argc, char** argv) {
+#include "galois/Timer.h"
+#include "galois/runtime/Context.h"
+
+int
+main(int argc, char** argv) {
   galois::runtime::SimpleRuntimeContext S;
   galois::runtime::Lockable L;
 

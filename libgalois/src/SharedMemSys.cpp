@@ -18,6 +18,7 @@
  */
 
 #include "galois/SharedMemSys.h"
+
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 

@@ -29,7 +29,8 @@
  * @param combined_node_list Concatenated list of nodes of the graphs in
  * specified param graph
  */
-void ComputeDegrees(
+void
+ComputeDegrees(
     std::vector<GGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
@@ -39,8 +40,8 @@ void ComputeDegrees(
       galois::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
-        uint32_t index       = node_index_pair.second;
-        GNode node           = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
+        GNode node = node_index_pair.first;
         graph[index]->getData(node).SetDegree(0);
       },
       galois::loopname("Partitioning-Init-Degrees"));
@@ -51,10 +52,10 @@ void ComputeDegrees(
       galois::iterate(uint32_t{0}, total_hedges),
       [&](GNode hedge) {
         auto hedge_index_pair = combined_edge_list[hedge];
-        uint32_t index        = hedge_index_pair.second;
-        GNode h               = hedge_index_pair.first;
-        GGraph& cur_graph     = *graph[index];
-        auto edges            = cur_graph.edges(h);
+        uint32_t index = hedge_index_pair.second;
+        GNode h = hedge_index_pair.first;
+        GGraph& cur_graph = *graph[index];
+        auto edges = cur_graph.edges(h);
 
         uint32_t degree = std::distance(edges.begin(), edges.end());
 
@@ -65,8 +66,8 @@ void ComputeDegrees(
 
         for (auto& fedge : edges) {
           GNode member_node = cur_graph.getEdgeDst(fedge);
-          galois::atomicAdd(cur_graph.getData(member_node).GetDegree(),
-                            uint32_t{1});
+          galois::atomicAdd(
+              cur_graph.getData(member_node).GetDegree(), uint32_t{1});
         }
       },
       galois::loopname("Partitioning-Calculate-Degrees"));
@@ -79,8 +80,9 @@ void ComputeDegrees(
  * @param K Vector corresponding to the number of target partitions that needs
  * to be created for the graphs in specified param metis_graphs
  */
-void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
-                             std::vector<unsigned>& K) {
+void
+PartitionCoarsestGraphs(
+    std::vector<MetisGraph*>& metis_graphs, std::vector<unsigned>& K) {
   assert(metis_graphs.size() == K.size());
   uint32_t num_partitions = metis_graphs.size();
   std::vector<galois::GAccumulator<WeightTy>> nzero_accum(num_partitions);
@@ -118,8 +120,8 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
       galois::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
-        uint32_t index       = node_index_pair.second;
-        GNode item           = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
+        GNode item = node_index_pair.first;
 
         MetisNode& node_data = graph[index]->getData(item);
         nzero_accum[index] += node_data.GetWeight();
@@ -131,12 +133,12 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
       galois::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t hedge) {
         auto hedge_index_pair = combined_edge_list[hedge];
-        uint32_t index        = hedge_index_pair.second;
-        GGraph& sub_graph     = *graph[index];
-        GNode item            = hedge_index_pair.first;
+        uint32_t index = hedge_index_pair.second;
+        GGraph& sub_graph = *graph[index];
+        GNode item = hedge_index_pair.first;
 
         for (auto& fedge : sub_graph.edges(item)) {
-          GNode node           = sub_graph.getEdgeDst(fedge);
+          GNode node = sub_graph.getEdgeDst(fedge);
           MetisNode& node_data = sub_graph.getData(node);
           node_data.SetPartition(0);
         }
@@ -147,8 +149,8 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
       galois::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t node) {
         auto node_index_pair = combined_node_list[node];
-        uint32_t index       = node_index_pair.second;
-        GNode item           = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
+        GNode item = node_index_pair.first;
         MetisNode& node_data = graph[index]->getData(item);
 
         if (node_data.GetPartition() == 0) {
@@ -168,15 +170,15 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
     }
     GGraph& cur_graph = *graph[i];
 
-    WeightTy total_weights           = nzero_accum[i].reduce();
-    WeightTy zero_partition_weights  = zero_accum[i].reduce();
+    WeightTy total_weights = nzero_accum[i].reduce();
+    WeightTy zero_partition_weights = zero_accum[i].reduce();
     WeightTy first_partition_weights = total_weights - zero_partition_weights;
     bool process_zero_partition =
         (zero_partition_weights > first_partition_weights);
-    WeightTy sqrt_size      = sqrt(total_weights);
+    WeightTy sqrt_size = sqrt(total_weights);
     uint32_t curr_partition = (process_zero_partition) ? 0 : 1;
-    uint32_t k_val          = (K[i] + 1) / 2;
-    WeightTy target_weight  = (total_weights * k_val) / K[i];
+    uint32_t k_val = (K[i] + 1) / 2;
+    WeightTy target_weight = (total_weights * k_val) / K[i];
     if (process_zero_partition) {
       target_weight = total_weights - target_weight;
     }
@@ -206,7 +208,7 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
       galois::do_all(
           galois::iterate(uint32_t{0}, idx),
           [&](uint32_t node_id) {
-            GNode node         = node_vec[node_id];
+            GNode node = node_vec[node_id];
             uint32_t partition = cur_graph.getData(node).GetPartition();
             if ((process_zero_partition && partition == 0) ||
                 (!process_zero_partition && partition == 1)) {
@@ -229,7 +231,7 @@ void PartitionCoarsestGraphs(std::vector<MetisGraph*>& metis_graphs,
       find_partitionone_timer.start();
       uint32_t node_size{0};
       for (uint32_t node_id = 0; node_id < idx; node_id++) {
-        GNode node           = node_vec[node_id];
+        GNode node = node_vec[node_id];
         MetisNode& node_data = cur_graph.getData(node);
         node_data.SetPartition(1 - curr_partition);
         moved_weight += node_data.GetWeight();

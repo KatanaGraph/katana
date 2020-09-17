@@ -27,8 +27,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "galois/config.h"
 #include "galois/LazyObject.h"
+#include "galois/config.h"
 
 namespace galois {
 
@@ -122,5 +122,5 @@ public:
   void destroy(size_type __n) { (get(__n))->~_Tp(); }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

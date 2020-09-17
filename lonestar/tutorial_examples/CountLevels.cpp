@@ -32,11 +32,10 @@ static const char* desc = "Computes the number of degree levels";
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input graph>"), cll::Required);
-static cll::opt<unsigned int> startNode("startNode",
-                                        cll::desc("Node to start search from"),
-                                        cll::init(0));
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input graph>"), cll::Required);
+static cll::opt<unsigned int> startNode(
+    "startNode", cll::desc("Node to start search from"), cll::init(0));
 
 enum COLOR { WHITE, GRAY, BLACK };
 
@@ -52,8 +51,8 @@ using GNode = Graph::GraphNode;
 static const unsigned int DIST_INFINITY =
     std::numeric_limits<unsigned int>::max();
 
-const galois::gstl::Vector<size_t>& countLevels(Graph& graph) {
-
+const galois::gstl::Vector<size_t>&
+countLevels(Graph& graph) {
   using Vec = galois::gstl::Vector<size_t>;
 
   //! [Define GReducible]
@@ -90,37 +89,39 @@ const galois::gstl::Vector<size_t>& countLevels(Graph& graph) {
   //! [Define GReducible]
 }
 
-void bfsSerial(Graph& graph, GNode source) {
+void
+bfsSerial(Graph& graph, GNode source) {
   constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
 
   LNode& sdata = graph.getData(source, flag);
-  sdata.dist   = 0u;
-  sdata.color  = GRAY;
+  sdata.dist = 0u;
+  sdata.color = GRAY;
 
   std::queue<GNode> queue;
   queue.push(source);
 
   while (!queue.empty()) {
     GNode curr = queue.front();
-    sdata      = graph.getData(curr, flag);
+    sdata = graph.getData(curr, flag);
     queue.pop();
 
     // iterate over edges from node n
     for (auto e : graph.edges(curr)) {
-      GNode dst    = graph.getEdgeDst(e);
+      GNode dst = graph.getEdgeDst(e);
       LNode& ddata = graph.getData(dst);
 
       if (ddata.color == WHITE) {
         ddata.color = GRAY;
-        ddata.dist  = sdata.dist + 1;
+        ddata.dist = sdata.dist + 1;
         queue.push(dst);
       }
     }
     sdata.color = BLACK;
-  } // end while
+  }  // end while
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
@@ -132,17 +133,18 @@ int main(int argc, char** argv) {
   std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
             << " edges\n";
 
-  galois::preAlloc(5 * numThreads +
-                   (2 * graph.size() * sizeof(typename Graph::node_data_type)) /
-                       galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      5 * numThreads +
+      (2 * graph.size() * sizeof(typename Graph::node_data_type)) /
+          galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   galois::do_all(
       galois::iterate(graph),
       [&](const GNode& src) {
         LNode& sdata = graph.getData(src);
-        sdata.color  = WHITE;
-        sdata.dist   = DIST_INFINITY;
+        sdata.color = WHITE;
+        sdata.dist = DIST_INFINITY;
       },
       galois::no_stats());
 

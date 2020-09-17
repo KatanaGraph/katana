@@ -1,16 +1,16 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_OUTINDEXVIEW_H_
 #define GALOIS_LIBGALOIS_GALOIS_OUTINDEXVIEW_H_
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "galois/config.h"
 #include "galois/graphs/GraphHelpers.h"
+#include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 #include "tsuba/RDG.h"
-#include "tsuba/Errors.h"
 
 namespace galois {
 
@@ -40,6 +40,6 @@ public:
 
   const tsuba::GRPrefix* gr_view() const { return pfx_.prefix; }
 };
-} // namespace galois
+}  // namespace galois
 
 #endif

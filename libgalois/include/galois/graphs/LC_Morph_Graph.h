@@ -31,10 +31,10 @@
 #include <boost/mpl/if.hpp>
 
 #include "galois/Bag.h"
-#include "galois/config.h"
 #include "galois/LargeArray.h"
-#include "galois/graphs/FileGraph.h"
+#include "galois/config.h"
 #include "galois/graphs/Details.h"
+#include "galois/graphs/FileGraph.h"
 
 namespace galois {
 namespace graphs {
@@ -43,13 +43,13 @@ namespace graphs {
  * Local computation graph that allows addition of nodes (but not removals)
  * if the maximum degree of a node is known at the time it is added.
  */
-template <typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
-          bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
-          bool HasId = false, typename FileEdgeTy = EdgeTy>
-class LC_Morph_Graph
-    : private boost::noncopyable,
-      private internal::OutOfLineLockableFeature<HasOutOfLineLockable &&
-                                                 !HasNoLockable> {
+template <
+    typename NodeTy, typename EdgeTy, bool HasNoLockable = false,
+    bool UseNumaAlloc = false, bool HasOutOfLineLockable = false,
+    bool HasId = false, typename FileEdgeTy = EdgeTy>
+class LC_Morph_Graph : private boost::noncopyable,
+                       private internal::OutOfLineLockableFeature<
+                           HasOutOfLineLockable && !HasNoLockable> {
   //! Friend of LC_InOut_Graph (makes a graph have both in and out edges)
   template <typename Graph>
   friend class LC_InOut_Graph;
@@ -62,8 +62,9 @@ public:
    */
   template <bool _has_id>
   struct with_id {
-    using type = LC_Morph_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                HasOutOfLineLockable, _has_id, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        _has_id, FileEdgeTy>;
   };
 
   /**
@@ -72,8 +73,9 @@ public:
    */
   template <typename _node_data>
   struct with_node_data {
-    using type = LC_Morph_Graph<_node_data, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                HasOutOfLineLockable, HasId, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        _node_data, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>;
   };
 
   /**
@@ -82,8 +84,9 @@ public:
    */
   template <typename _edge_data>
   struct with_edge_data {
-    using type = LC_Morph_Graph<NodeTy, _edge_data, HasNoLockable, UseNumaAlloc,
-                                HasOutOfLineLockable, HasId, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        NodeTy, _edge_data, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>;
   };
 
   /**
@@ -92,8 +95,9 @@ public:
    */
   template <typename _file_edge_data>
   struct with_file_edge_data {
-    using type = LC_Morph_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                HasOutOfLineLockable, HasId, _file_edge_data>;
+    using type = LC_Morph_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, _file_edge_data>;
   };
 
   /**
@@ -102,8 +106,9 @@ public:
    */
   template <bool _has_no_lockable>
   struct with_no_lockable {
-    using type = LC_Morph_Graph<NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc,
-                                HasOutOfLineLockable, HasId, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        NodeTy, EdgeTy, _has_no_lockable, UseNumaAlloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>;
   };
 
   /**
@@ -112,8 +117,9 @@ public:
    */
   template <bool _use_numa_alloc>
   struct with_numa_alloc {
-    using type = LC_Morph_Graph<NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc,
-                                HasOutOfLineLockable, HasId, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        NodeTy, EdgeTy, HasNoLockable, _use_numa_alloc, HasOutOfLineLockable,
+        HasId, FileEdgeTy>;
   };
 
   /**
@@ -122,9 +128,9 @@ public:
    */
   template <bool _has_out_of_line_lockable>
   struct with_out_of_line_lockable {
-    using type = LC_Morph_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                _has_out_of_line_lockable,
-                                _has_out_of_line_lockable || HasId, FileEdgeTy>;
+    using type = LC_Morph_Graph<
+        NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, _has_out_of_line_lockable,
+        _has_out_of_line_lockable || HasId, FileEdgeTy>;
   };
 
   //! type that tells graph reader how to read a file for this graph
@@ -139,9 +145,8 @@ protected:
   //! Nodes are stored in an insert bag
   using Nodes = galois::InsertBag<NodeInfo>;
   //! Type of nodes
-  using NodeInfoTypes =
-      internal::NodeInfoBaseTypes<NodeTy,
-                                  !HasNoLockable && !HasOutOfLineLockable>;
+  using NodeInfoTypes = internal::NodeInfoBaseTypes<
+      NodeTy, !HasNoLockable && !HasOutOfLineLockable>;
 
   //! Linked list structure holding together blocks of memory that stores
   //! edges.
@@ -158,9 +163,8 @@ protected:
    * Class that stores node info (e.g. where its edges begin and end, its data,
    * etc.).
    */
-  class NodeInfo
-      : public internal::NodeInfoBase<NodeTy,
-                                      !HasNoLockable && !HasOutOfLineLockable> {
+  class NodeInfo : public internal::NodeInfoBase<
+                       NodeTy, !HasNoLockable && !HasOutOfLineLockable> {
     using Super =
         internal::NodeInfoBase<NodeTy, !HasNoLockable && !HasOutOfLineLockable>;
     friend class LC_Morph_Graph;
@@ -175,7 +179,7 @@ protected:
     //! Calls NodeInfoBase constructor
     template <typename... Args>
     NodeInfo(Args&&... args) : Super(std::forward<Args>(args)...) {}
-  }; // end NodeInfo
+  };  // end NodeInfo
 
   //! Functor that returns pointers to NodeInfo objects given references
   struct makeGraphNode {
@@ -241,8 +245,9 @@ protected:
    * etc.)
    */
   template <bool _A1 = HasNoLockable, bool _A2 = HasOutOfLineLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<!_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<!_A1 && !_A2>::type* = 0) {
     galois::runtime::acquire(N, mflag);
   }
 
@@ -255,8 +260,9 @@ protected:
    * etc.)
    */
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode N, MethodFlag mflag,
-                   typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  void acquireNode(
+      GraphNode N, MethodFlag mflag,
+      typename std::enable_if<_A1 && !_A2>::type* = 0) {
     this->outOfLineAcquire(getId(N), mflag);
   }
 
@@ -264,18 +270,19 @@ protected:
    * Given a FileGraph and an edge in it, add it to the LCMorphGraph.
    * Can handle edge weights.
    */
-  template <bool _A1 = EdgeInfo::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph& graph,
-                          typename FileGraph::edge_iterator nn, GraphNode src,
-                          GraphNode dst,
-                          typename std::enable_if<!_A1 || _A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeInfo::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph& graph, typename FileGraph::edge_iterator nn, GraphNode src,
+      GraphNode dst, typename std::enable_if<!_A1 || _A2>::type* = 0) {
     if (EdgeInfo::has_value) {
       // type of edge data in file graph
       using FEDV = typename LargeArray<FileEdgeTy>::value_type;
       // add an edge with edge data
-      addMultiEdge(src, dst, galois::MethodFlag::UNPROTECTED,
-                   graph.getEdgeData<FEDV>(nn));
+      addMultiEdge(
+          src, dst, galois::MethodFlag::UNPROTECTED,
+          graph.getEdgeData<FEDV>(nn));
     } else {
       // add an edge without edge data
       addMultiEdge(src, dst, galois::MethodFlag::UNPROTECTED);
@@ -286,11 +293,12 @@ protected:
    * Given a FileGraph and an edge in it, add it to the LCMorphGraph.
    * Does not handle edge weights.
    */
-  template <bool _A1 = EdgeInfo::has_value,
-            bool _A2 = LargeArray<FileEdgeTy>::has_value>
-  void constructEdgeValue(FileGraph&, typename FileGraph::edge_iterator,
-                          GraphNode src, GraphNode dst,
-                          typename std::enable_if<_A1 && !_A2>::type* = 0) {
+  template <
+      bool _A1 = EdgeInfo::has_value,
+      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+  void constructEdgeValue(
+      FileGraph&, typename FileGraph::edge_iterator, GraphNode src,
+      GraphNode dst, typename std::enable_if<_A1 && !_A2>::type* = 0) {
     addMultiEdge(src, dst, galois::MethodFlag::UNPROTECTED);
   }
 
@@ -298,8 +306,8 @@ protected:
    * No-op acquire node when HasNoLockable is true.
    */
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
-  void acquireNode(GraphNode, MethodFlag,
-                   typename std::enable_if<_A2>::type* = 0) {}
+  void acquireNode(
+      GraphNode, MethodFlag, typename std::enable_if<_A2>::type* = 0) {}
 
   /**
    * Get the ID of a graph node if they're enabled in the class.
@@ -317,9 +325,9 @@ public:
   ~LC_Morph_Graph() {
     for (typename Nodes::iterator ii = nodes.begin(), ei = nodes.end();
          ii != ei; ++ii) {
-      NodeInfo& n         = *ii;
+      NodeInfo& n = *ii;
       EdgeInfo* edgeBegin = n.edgeBegin;
-      EdgeInfo* edgeEnd   = n.edgeEnd;
+      EdgeInfo* edgeEnd = n.edgeEnd;
 
       if (EdgeInfo::has_value) {
         while (edgeBegin != edgeEnd) {
@@ -333,8 +341,8 @@ public:
   /**
    * Get the data of a node N.
    */
-  node_data_reference getData(const GraphNode& N,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+  node_data_reference getData(
+      const GraphNode& N, MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, false);
     acquireNode(N, mflag);
     return N->getData();
@@ -343,8 +351,8 @@ public:
   /**
    * Get edge data of an edge given an iterator to the edge.
    */
-  edge_data_reference getEdgeData(edge_iterator ni,
-                                  MethodFlag mflag = MethodFlag::UNPROTECTED) {
+  edge_data_reference getEdgeData(
+      edge_iterator ni, MethodFlag mflag = MethodFlag::UNPROTECTED) {
     // galois::runtime::checkWrite(mflag, false);
     acquireNode(ni->dst, mflag);
     return ni->get();
@@ -398,8 +406,8 @@ public:
   /**
    * Return an iterator to the end of edges of a particular node.
    */
-  edge_iterator
-  edge_end(GraphNode N, [[maybe_unused]] MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator edge_end(
+      GraphNode N, [[maybe_unused]] MethodFlag mflag = MethodFlag::WRITE) {
     return N->edgeEnd;
   }
 
@@ -407,8 +415,8 @@ public:
    * Return a range for edges of a node for use by C++ for_each loops.
    */
   edges_iterator edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(edge_begin(N, mflag),
-                                         edge_end(N, mflag));
+    return internal::make_no_deref_range(
+        edge_begin(N, mflag), edge_end(N, mflag));
   }
 
   /**
@@ -437,21 +445,21 @@ public:
         std::distance(local_edges->begin, local_edges->end) < nedges) {
       EdgeHolder* old = local_edges;
       // FIXME: this seems to leak
-      size_t size       = runtime::pagePoolSize();
-      void* block       = runtime::pagePoolAlloc();
-      local_edges       = reinterpret_cast<EdgeHolder*>(block);
+      size_t size = runtime::pagePoolSize();
+      void* block = runtime::pagePoolAlloc();
+      local_edges = reinterpret_cast<EdgeHolder*>(block);
       local_edges->next = old;
 
       size -= sizeof(EdgeHolder);
       block = reinterpret_cast<char*>(block) + sizeof(EdgeHolder);
 
-      if (!std::align(std::alignment_of_v<EdgeInfo>, sizeof(EdgeInfo), block,
-                      size)) {
+      if (!std::align(
+              std::alignment_of_v<EdgeInfo>, sizeof(EdgeInfo), block, size)) {
         GALOIS_DIE("not enough space for EdgeInfo");
       }
 
       local_edges->begin = reinterpret_cast<EdgeInfo*>(block);
-      local_edges->end   = local_edges->begin;
+      local_edges->end = local_edges->begin;
       local_edges->end += size / sizeof(EdgeInfo);
       if (std::distance(local_edges->begin, local_edges->end) < nedges) {
         GALOIS_DIE("not enough space for EdgeInfo");
@@ -476,8 +484,8 @@ public:
    * @param args Arguments needed to construct an edge
    */
   template <typename... Args>
-  edge_iterator addEdge(GraphNode src, GraphNode dst, galois::MethodFlag mflag,
-                        Args&&... args) {
+  edge_iterator addEdge(
+      GraphNode src, GraphNode dst, galois::MethodFlag mflag, Args&&... args) {
     // galois::runtime::checkWrite(mflag, true);
     acquireNode(src, mflag);
     auto it = std::find_if(src->edgeBegin, src->edgeEnd, dst_equals(dst));
@@ -501,8 +509,8 @@ public:
    * @returns Iterator to newly added edge
    */
   template <typename... Args>
-  edge_iterator addMultiEdge(GraphNode src, GraphNode dst,
-                             galois::MethodFlag mflag, Args&&... args) {
+  edge_iterator addMultiEdge(
+      GraphNode src, GraphNode dst, galois::MethodFlag mflag, Args&&... args) {
     acquireNode(src, mflag);
     auto it = src->edgeEnd;
     it->dst = dst;
@@ -517,8 +525,9 @@ public:
    *
    * Invalidates edge iterator.
    */
-  void removeEdge(GraphNode src, edge_iterator dst,
-                  galois::MethodFlag mflag = MethodFlag::WRITE) {
+  void removeEdge(
+      GraphNode src, edge_iterator dst,
+      galois::MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, true);
     acquireNode(src, mflag);
     src->edgeEnd--;
@@ -530,8 +539,9 @@ public:
   /**
    * Finds an edge between 2 nodes and returns the iterator to it if it exists.
    */
-  edge_iterator findEdge(GraphNode src, GraphNode dst,
-                         galois::MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator findEdge(
+      GraphNode src, GraphNode dst,
+      galois::MethodFlag mflag = MethodFlag::WRITE) {
     // galois::runtime::checkWrite(mflag, true); // TODO: double check 'true'
     // here
     acquireNode(src, mflag);
@@ -567,15 +577,16 @@ public:
    * @param[in] total Total number of threads in current execution
    * @param[in,out] aux Allocated memory to store pointers to the created nodes
    */
-  void constructNodesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          ReadGraphAuxData& aux) {
+  void constructNodesFrom(
+      FileGraph& graph, unsigned tid, unsigned total, ReadGraphAuxData& aux) {
     // get the portion of the graph that this thread is responsible for
     // creating
-    auto r = graph
-                 .divideByNode(sizeof(NodeInfo) +
-                                   LC_Morph_Graph::size_of_out_of_line::value,
-                               sizeof(EdgeInfo), tid, total)
-                 .first;
+    auto r =
+        graph
+            .divideByNode(
+                sizeof(NodeInfo) + LC_Morph_Graph::size_of_out_of_line::value,
+                sizeof(EdgeInfo), tid, total)
+            .first;
 
     // create nodes of portion we are responsible for only
     for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
@@ -595,13 +606,15 @@ public:
    * @param[in] aux Contains pointers to already created nodes to
    * create edges for.
    */
-  void constructEdgesFrom(FileGraph& graph, unsigned tid, unsigned total,
-                          const ReadGraphAuxData& aux) {
-    auto r = graph
-                 .divideByNode(sizeof(NodeInfo) +
-                                   LC_Morph_Graph::size_of_out_of_line::value,
-                               sizeof(EdgeInfo), tid, total)
-                 .first;
+  void constructEdgesFrom(
+      FileGraph& graph, unsigned tid, unsigned total,
+      const ReadGraphAuxData& aux) {
+    auto r =
+        graph
+            .divideByNode(
+                sizeof(NodeInfo) + LC_Morph_Graph::size_of_out_of_line::value,
+                sizeof(EdgeInfo), tid, total)
+            .first;
 
     for (FileGraph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
       for (FileGraph::edge_iterator nn = graph.edge_begin(*ii),
@@ -613,7 +626,7 @@ public:
   }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 
 #endif /* LC_MORPH_GRAPH_H_ */

@@ -59,13 +59,13 @@ struct OperatorReferenceType_impl<FuncNoRef&&> {
   using type = FuncNoRef&;
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename T>
 using OperatorReferenceType =
     typename internal::OperatorReferenceType_impl<T>::type;
 
-} // namespace runtime
-} // namespace galois
+}  // namespace runtime
+}  // namespace galois
 
 #endif

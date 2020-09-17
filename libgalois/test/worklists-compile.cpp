@@ -17,10 +17,10 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <cstdlib>
+
 #include "galois/Galois.h"
 #include "galois/Range.h"
-
-#include <cstdlib>
 
 int run = 1;
 
@@ -60,7 +60,8 @@ struct checker {
 #define GALOIS_WLCOMPILECHECK(name) checker<name<>> ck_##name;
 #include "galois/worklists/WorkList.h"
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   if (argc > 1)
     run = atoi(argv[1]);

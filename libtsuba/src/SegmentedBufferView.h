@@ -1,9 +1,9 @@
 #ifndef GALOIS_LIBTSUBA_SEGMENTEDBUFFERVIEW_H_
 #define GALOIS_LIBTSUBA_SEGMENTEDBUFFERVIEW_H_
 
-#include <iterator>
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 
 namespace tsuba {
 
@@ -23,8 +23,8 @@ public:
     uint8_t* dest;
   };
 
-  SegmentedBufferView(uint64_t start, uint8_t* raw, uint64_t size,
-                      uint64_t step)
+  SegmentedBufferView(
+      uint64_t start, uint8_t* raw, uint64_t size, uint64_t step)
       : start_(start), raw_(raw), size_(size), step_(step) {}
   iterator begin() { return iterator(this, 0); }
   iterator end() { return iterator(this, size_); }
@@ -42,10 +42,10 @@ public:
 
   public:
     using iterator_category = std::input_iterator_tag;
-    using value_type        = BufPart;
-    using difference_type   = int64_t;
-    using pointer           = BufPart*;
-    using reference         = BufPart&;
+    using value_type = BufPart;
+    using difference_type = int64_t;
+    using pointer = BufPart*;
+    using reference = BufPart&;
     iterator(SegmentedBufferView* buf_view, uint64_t offset)
         : buf_view_(buf_view), offset_(offset) {
       if (buf_view_->size_ <= buf_view_->step_) {
@@ -57,8 +57,8 @@ public:
     BufPart operator*() {
       return BufPart{
           .start = buf_view_->start_ + offset_,
-          .end   = buf_view_->start_ + offset_ + next_step_,
-          .dest  = buf_view_->raw_ + offset_, /* NOLINT */
+          .end = buf_view_->start_ + offset_ + next_step_,
+          .dest = buf_view_->raw_ + offset_, /* NOLINT */
       };
     }
     iterator& operator++() {

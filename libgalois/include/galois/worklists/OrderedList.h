@@ -20,14 +20,14 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_ORDEREDLIST_H_
 #define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_ORDEREDLIST_H_
 
-#include "galois/config.h"
 #include "galois/FlatMap.h"
+#include "galois/config.h"
 
 namespace galois {
 namespace worklists {
 
-template <class Compare = std::less<int>, typename T = int,
-          bool concurrent = true>
+template <
+    class Compare = std::less<int>, typename T = int, bool concurrent = true>
 class OrderedList : private boost::noncopyable,
                     private substrate::PaddedLock<concurrent> {
   typedef galois::flat_map<T, std::deque<T>, Compare> Map;
@@ -77,7 +77,7 @@ public:
       unlock();
       return galois::optional<value_type>();
     }
-    auto ii             = map.begin();
+    auto ii = map.begin();
     std::deque<T>& list = ii->second;
     galois::optional<value_type> v(list.front());
     list.pop_front();
@@ -88,6 +88,6 @@ public:
   }
 };
 GALOIS_WLCOMPILECHECK(OrderedList)
-} // namespace worklists
-} // namespace galois
+}  // namespace worklists
+}  // namespace galois
 #endif

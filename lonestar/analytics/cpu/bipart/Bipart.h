@@ -20,8 +20,8 @@
 #ifndef BIPART_H_
 #define BIPART_H_
 
-#include "galois/graphs/LC_CSR_Graph.h"
 #include "galois/DynamicBitset.h"
+#include "galois/graphs/LC_CSR_Graph.h"
 
 constexpr static const uint32_t kChunkSize = 512u;
 constexpr static const uint32_t kInfPartition =
@@ -40,9 +40,9 @@ struct GGraph
   uint32_t hnodes;
 };
 
-using GNode    = GGraph::GraphNode;
+using GNode = GGraph::GraphNode;
 using GNodeBag = galois::InsertBag<GNode>;
-using GainTy   = int;
+using GainTy = int;
 using NetvalTy = int;
 using NetnumTy = uint32_t;
 using WeightTy = uint32_t;
@@ -88,8 +88,8 @@ class MetisNode {
 
   void InitCoarsen() {
     matched_ = false;
-    parent_  = 0;
-    netval_  = 0;
+    parent_ = 0;
+    netval_ = 0;
   }
 
 public:
@@ -150,20 +150,20 @@ public:
 
   explicit MetisNode(WeightTy weight) : weight_(weight) {
     InitCoarsen();
-    counter_   = 0;
+    counter_ = 0;
     partition_ = 0;
   }
 
   MetisNode() : weight_(1) {
     InitCoarsen();
-    counter_   = 0;
+    counter_ = 0;
     partition_ = 0;
-    matched_   = false;
+    matched_ = false;
   }
 
   void InitRefine(uint32_t p = 0) {
     partition_ = p;
-    counter_   = 0;
+    counter_ = 0;
   }
 }; /* Metis Node Done. */
 

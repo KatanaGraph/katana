@@ -7,20 +7,21 @@
  * @param graph Graph
  * @param num_hedges Number of hyperedges in the specified param graph
  */
-void InitNodes(GGraph& graph, uint32_t num_hedges) {
+void
+InitNodes(GGraph& graph, uint32_t num_hedges) {
   galois::do_all(
       galois::iterate(graph),
       [&](GNode n) {
-        MetisNode& node     = graph.getData(n);
+        MetisNode& node = graph.getData(n);
         NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
         NetvalTy max_netval = std::numeric_limits<NetvalTy>::max();
         //! only hyper edge has its own indices.
         node.SetNetnum((n < num_hedges) ? (n + 1) : max_netnum);
         node.SetNetrand(max_netval);
         node.SetNetval(max_netval);
-        node.SetNodeId(n + 1); ///< all nodes/hedges have indices.
+        node.SetNodeId(n + 1);  ///< all nodes/hedges have indices.
         node.SetGraphIndex(0);
-        node.InitRefine(); ///< partition <- 0, bound <- true.
+        node.InitRefine();  ///< partition <- 0, bound <- true.
       },
       galois::loopname("Init-Nodes"));
 }
@@ -31,9 +32,10 @@ void InitNodes(GGraph& graph, uint32_t num_hedges) {
  * @param prefix_sum A LargeArray to store prefix sum of nodes
  */
 template <typename T>
-uint64_t ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
+uint64_t
+ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
   uint32_t num_threads = galois::getActiveThreads();
-  uint32_t size        = prefix_sum.size();
+  uint32_t size = prefix_sum.size();
 
   galois::LargeArray<uint64_t> interm_sums;
   interm_sums.allocateInterleaved(num_threads);
@@ -45,7 +47,7 @@ uint64_t ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
       ++block_size;
     }
     uint32_t start = tid * block_size;
-    uint32_t end   = (tid + 1) * block_size;
+    uint32_t end = (tid + 1) * block_size;
     if (end > size) {
       end = size;
     }
@@ -71,7 +73,7 @@ uint64_t ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
       ++block_size;
     }
     uint32_t start = tid * block_size;
-    uint32_t end   = (tid + 1) * block_size;
+    uint32_t end = (tid + 1) * block_size;
     if (end > size) {
       end = size;
     }
@@ -90,8 +92,10 @@ uint64_t ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
  * @param graph Graph to be constructed
  * @param filename Input graph file name
  */
-void ConstructGraph(GGraph& graph, const std::string filename,
-                    const bool skip_isolated_hedges) {
+void
+ConstructGraph(
+    GGraph& graph, const std::string filename,
+    const bool skip_isolated_hedges) {
   std::ifstream f(filename.c_str());
   std::string line;
   std::getline(f, line);
@@ -126,7 +130,7 @@ void ConstructGraph(GGraph& graph, const std::string filename,
       num_read_hedges++;
     }
   }
-  num_hedges      = num_read_hedges;
+  num_hedges = num_read_hedges;
   total_num_nodes = num_hedges + num_hnodes;
 
   // Reset the file descriptor for execution phase.
@@ -187,35 +191,39 @@ void ConstructGraph(GGraph& graph, const std::string filename,
   // # nodes = (# of hyper edges + # of nodes), which means each hyper edge
   // is considered as a node.
   // # edges = (# of normal edges).
-  graph.constructFrom(total_num_nodes, num_fedges, std::move(prefix_edges),
-                      edges_id);
+  graph.constructFrom(
+      total_num_nodes, num_fedges, std::move(prefix_edges), edges_id);
   InitNodes(graph, num_hedges);
 
   timer_graph_construt.stop();
-  galois::gPrint(" Time to construct Metis Graph ", timer_graph_construt.get(),
-                 "\n");
+  galois::gPrint(
+      " Time to construct Metis Graph ", timer_graph_construt.get(), "\n");
 }
 
 /**
  * Priority assinging functions.
  */
-void PrioritizeHigherDegree(GNode node, GGraph* fine_graph) {
+void
+PrioritizeHigherDegree(GNode node, GGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
   fine_graph->getData(node).SetNetval(-num_edges);
 }
-void PrioritizeRandom(GNode node, GGraph* fine_graph) {
+void
+PrioritizeRandom(GNode node, GGraph* fine_graph) {
   MetisNode& node_data = fine_graph->getData(node);
 
   node_data.SetNetval(-node_data.GetNetrand());
   node_data.SetNetrand(-node_data.GetNetnum());
 }
-void PrioritizeLowerDegree(GNode node, GGraph* fine_graph) {
+void
+PrioritizeLowerDegree(GNode node, GGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
   fine_graph->getData(node).SetNetval(num_edges);
 }
-void PrioritizeHigherWeight(GNode node, GGraph* fine_graph) {
+void
+PrioritizeHigherWeight(GNode node, GGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
@@ -223,7 +231,8 @@ void PrioritizeHigherWeight(GNode node, GGraph* fine_graph) {
   }
   fine_graph->getData(node).SetNetval(-w);
 }
-void PrioritizeDegree(GNode node, GGraph* fine_graph) {
+void
+PrioritizeDegree(GNode node, GGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
@@ -232,18 +241,19 @@ void PrioritizeDegree(GNode node, GGraph* fine_graph) {
   fine_graph->getData(node).SetNetval(w);
 }
 
-void SortNodesByGainAndWeight(GGraph& graph, std::vector<GNode>& nodes,
-                              uint32_t end_offset = 0) {
+void
+SortNodesByGainAndWeight(
+    GGraph& graph, std::vector<GNode>& nodes, uint32_t end_offset = 0) {
   auto end_iter = (end_offset == 0) ? nodes.end() : nodes.begin() + end_offset;
   std::sort(nodes.begin(), end_iter, [&graph](GNode& l_opr, GNode& r_opr) {
     MetisNode& l_data = graph.getData(l_opr);
     MetisNode& r_data = graph.getData(r_opr);
-    float l_gain      = l_data.GetGain();
-    float r_gain      = r_data.GetGain();
-    float l_weight    = l_data.GetWeight();
-    float r_weight    = r_data.GetWeight();
-    float l_cost      = l_gain / l_weight;
-    float r_cost      = r_gain / r_weight;
+    float l_gain = l_data.GetGain();
+    float r_gain = r_data.GetGain();
+    float l_weight = l_data.GetWeight();
+    float r_weight = r_data.GetWeight();
+    float l_cost = l_gain / l_weight;
+    float r_cost = r_gain / r_weight;
 
     if (fabs(l_cost - r_cost) < 0.00001f) {
       uint32_t l_nid = l_data.GetNodeId();
@@ -256,7 +266,8 @@ void SortNodesByGainAndWeight(GGraph& graph, std::vector<GNode>& nodes,
   });
 }
 
-void InitGain(GGraph& g) {
+void
+InitGain(GGraph& g) {
   uint32_t num_hedges = g.hedges;
   uint32_t size_graph = static_cast<uint32_t>(g.size());
 
@@ -299,10 +310,10 @@ void InitGain(GGraph& g) {
         if (!(num_p0_nodes > 1 && num_p1_nodes > 1) &&
             (num_p0_nodes + num_p1_nodes > 1)) {
           for (auto& fedge : g.edges(n)) {
-            GNode node           = g.getEdgeDst(fedge);
+            GNode node = g.getEdgeDst(fedge);
             MetisNode& node_data = g.getData(node);
-            uint32_t part        = node_data.GetPartition();
-            uint32_t nodep       = (part == 0) ? num_p0_nodes : num_p1_nodes;
+            uint32_t part = node_data.GetPartition();
+            uint32_t nodep = (part == 0) ? num_p0_nodes : num_p1_nodes;
             if (nodep == 1) {
               gain_vector[node - num_hedges] += 1;
             }
@@ -329,18 +340,20 @@ void InitGain(GGraph& g) {
       galois::loopname("Reduce-Gains"));
 }
 
-void InitGain(std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
-              std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
-              std::vector<GGraph*>& g) {
-  uint32_t total_nodes  = combined_nodelist.size();
+void
+InitGain(
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
+    std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
+    std::vector<GGraph*>& g) {
+  uint32_t total_nodes = combined_nodelist.size();
   uint32_t total_hedges = combined_edgelist.size();
 
   galois::do_all(
       galois::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_nodelist[n];
-        GNode node_id        = node_index_pair.first;
-        uint32_t index       = node_index_pair.second;
+        GNode node_id = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
         MetisNode& node_data = g[index]->getData(node_id);
         node_data.SetPositiveGain(0);
         node_data.SetNegativeGain(0);
@@ -365,9 +378,9 @@ void InitGain(std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
       galois::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t n) {
         auto hedge_index_pair = combined_edgelist[n];
-        GNode node_id         = hedge_index_pair.first;
-        uint32_t index        = hedge_index_pair.second;
-        GGraph& graph         = *g[index];
+        GNode node_id = hedge_index_pair.first;
+        uint32_t index = hedge_index_pair.second;
+        GGraph& graph = *g[index];
         uint32_t num_p0_nodes{0}, num_p1_nodes{0};
 
         for (auto& fedge : graph.edges(node_id)) {
@@ -389,11 +402,11 @@ void InitGain(std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
         if (!(num_p0_nodes > 1 && num_p1_nodes > 1) &&
             (num_p0_nodes + num_p1_nodes > 1)) {
           for (auto& fedge : graph.edges(node_id)) {
-            GNode dst_id         = graph.getEdgeDst(fedge);
+            GNode dst_id = graph.getEdgeDst(fedge);
             MetisNode& node_data = graph.getData(dst_id);
-            uint32_t part        = node_data.GetPartition();
-            uint32_t nodep       = (part == 0) ? num_p0_nodes : num_p1_nodes;
-            uint32_t list_index  = node_data.GetListIndex();
+            uint32_t part = node_data.GetPartition();
+            uint32_t nodep = (part == 0) ? num_p0_nodes : num_p1_nodes;
+            uint32_t list_index = node_data.GetListIndex();
 
             if (nodep == 1) {
               positive_gain_vector[list_index] += 1;
@@ -421,8 +434,8 @@ void InitGain(std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
         }
 
         auto node_index_pair = combined_nodelist[n];
-        GNode node_id        = node_index_pair.first;
-        uint32_t index       = node_index_pair.second;
+        GNode node_id = node_index_pair.first;
+        uint32_t index = node_index_pair.second;
         MetisNode& node_data = g[index]->getData(node_id);
         node_data.SetPositiveGain(positive_gain);
         node_data.SetNegativeGain(negative_gain);

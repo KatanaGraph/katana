@@ -12,7 +12,6 @@ namespace galois {
  */
 class GALOIS_EXPORT SharedMemSys
     : public runtime::SharedMem<runtime::StatManager> {
-
 public:
   explicit SharedMemSys();
   ~SharedMemSys();
@@ -24,6 +23,6 @@ public:
   SharedMemSys& operator=(SharedMemSys&&) = delete;
 };
 
-} // namespace galois
+}  // namespace galois
 
 #endif

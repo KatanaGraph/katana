@@ -20,6 +20,7 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
 
+#include "galois/Timer.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/runtime/Executor_OnEach.h"
@@ -31,7 +32,6 @@
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
-#include "galois/Timer.h"
 
 namespace galois::runtime {
 
@@ -39,7 +39,6 @@ namespace internal {
 
 template <typename R, typename F, typename ArgsTuple>
 class DoAllStealingExec {
-
   typedef typename R::local_iterator Iter;
   typedef typename std::iterator_traits<Iter>::difference_type Diff_ty;
 
@@ -52,7 +51,6 @@ class DoAllStealingExec {
   constexpr static const bool USE_TERM = false;
 
   struct ThreadContext {
-
     alignas(substrate::GALOIS_CACHE_LINE_SIZE) substrate::SimpleLock work_mutex;
     unsigned id;
 
@@ -64,15 +62,23 @@ class DoAllStealingExec {
     // Stats
 
     ThreadContext()
-        : work_mutex(), id(substrate::getThreadPool().getMaxThreads()),
-          shared_beg(), shared_end(), m_size(0), num_iter(0) {
+        : work_mutex(),
+          id(substrate::getThreadPool().getMaxThreads()),
+          shared_beg(),
+          shared_end(),
+          m_size(0),
+          num_iter(0) {
       // TODO: fix this initialization problem,
       // see initThread
     }
 
     ThreadContext(unsigned id, Iter beg, Iter end)
-        : work_mutex(), id(id), shared_beg(beg), shared_end(end),
-          m_size(std::distance(beg, end)), num_iter(0) {}
+        : work_mutex(),
+          id(id),
+          shared_beg(beg),
+          shared_end(end),
+          m_size(std::distance(beg, end)),
+          num_iter(0) {}
 
     bool doWork(F func, const unsigned chunk_size) {
       Iter beg(shared_beg);
@@ -81,7 +87,6 @@ class DoAllStealingExec {
       bool didwork = false;
 
       while (getWork(beg, end, chunk_size)) {
-
         didwork = true;
 
         for (; beg != end; ++beg) {
@@ -124,7 +129,7 @@ class DoAllStealingExec {
 
           Iter nbeg = shared_beg;
           if (m_size <= chunk_size) {
-            nbeg   = shared_end;
+            nbeg = shared_end;
             m_size = 0;
 
           } else {
@@ -133,8 +138,8 @@ class DoAllStealingExec {
             assert(m_size > 0);
           }
 
-          priv_beg   = shared_beg;
-          priv_end   = nbeg;
+          priv_beg = shared_beg;
+          priv_end = nbeg;
           shared_beg = nbeg;
         }
       }
@@ -143,18 +148,18 @@ class DoAllStealingExec {
       return succ;
     }
 
-    void steal_from_end_impl(Iter& steal_beg, Iter& steal_end, const Diff_ty sz,
-                             std::forward_iterator_tag) {
-
+    void steal_from_end_impl(
+        Iter& steal_beg, Iter& steal_end, const Diff_ty sz,
+        std::forward_iterator_tag) {
       // steal from front for forward_iterator_tag
       steal_beg = shared_beg;
       std::advance(shared_beg, sz);
       steal_end = shared_beg;
     }
 
-    void steal_from_end_impl(Iter& steal_beg, Iter& steal_end, const Diff_ty sz,
-                             std::bidirectional_iterator_tag) {
-
+    void steal_from_end_impl(
+        Iter& steal_beg, Iter& steal_end, const Diff_ty sz,
+        std::bidirectional_iterator_tag) {
       steal_end = shared_end;
       std::advance(shared_end, -sz);
       steal_beg = shared_end;
@@ -175,12 +180,12 @@ class DoAllStealingExec {
     }
 
   public:
-    bool stealWork(Iter& steal_beg, Iter& steal_end, Diff_ty& steal_size,
-                   StealAmt amount, size_t chunk_size) {
+    bool stealWork(
+        Iter& steal_beg, Iter& steal_end, Diff_ty& steal_size, StealAmt amount,
+        size_t chunk_size) {
       bool succ = false;
 
       if (work_mutex.try_lock()) {
-
         if (hasWorkWeak()) {
           succ = true;
 
@@ -197,10 +202,9 @@ class DoAllStealingExec {
             shared_beg = shared_end;
 
             steal_size = m_size;
-            m_size     = 0;
+            m_size = 0;
 
           } else {
-
             // steal_from_end (steal_beg, steal_end, steal_size);
             steal_from_beg(steal_beg, steal_end, steal_size);
             m_size -= steal_size;
@@ -222,16 +226,15 @@ class DoAllStealingExec {
 
         shared_beg = beg;
         shared_end = end;
-        m_size     = sz;
+        m_size = sz;
       }
       work_mutex.unlock();
     }
   };
 
 private:
-  GALOIS_ATTRIBUTE_NOINLINE bool
-  transferWork(ThreadContext& rich, ThreadContext& poor, StealAmt amount) {
-
+  GALOIS_ATTRIBUTE_NOINLINE bool transferWork(
+      ThreadContext& rich, ThreadContext& poor, StealAmt amount) {
     assert(rich.id != poor.id);
     assert(rich.id < galois::getActiveThreads());
     assert(poor.id < galois::getActiveThreads());
@@ -256,21 +259,19 @@ private:
   }
 
   GALOIS_ATTRIBUTE_NOINLINE bool stealWithinSocket(ThreadContext& poor) {
-
-    bool sawWork   = false;
+    bool sawWork = false;
     bool stoleWork = false;
 
     auto& tp = substrate::getThreadPool();
 
-    const unsigned maxT     = galois::getActiveThreads();
-    const unsigned my_pack  = substrate::ThreadPool::getSocket();
+    const unsigned maxT = galois::getActiveThreads();
+    const unsigned my_pack = substrate::ThreadPool::getSocket();
     const unsigned per_pack = tp.getMaxThreads() / tp.getMaxSockets();
 
     const unsigned pack_beg = my_pack * per_pack;
     const unsigned pack_end = (my_pack + 1) * per_pack;
 
     for (unsigned i = 1; i < pack_end; ++i) {
-
       // go around the socket in circle starting from the next thread
       unsigned t = (poor.id + i) % per_pack + pack_beg;
       assert((t >= pack_beg) && (t < pack_end));
@@ -291,12 +292,12 @@ private:
     return sawWork || stoleWork;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE bool stealOutsideSocket(ThreadContext& poor,
-                                                    const StealAmt& amt) {
-    bool sawWork   = false;
+  GALOIS_ATTRIBUTE_NOINLINE bool stealOutsideSocket(
+      ThreadContext& poor, const StealAmt& amt) {
+    bool sawWork = false;
     bool stoleWork = false;
 
-    auto& tp       = substrate::getThreadPool();
+    auto& tp = substrate::getThreadPool();
     unsigned myPkg = substrate::ThreadPool::getSocket();
     // unsigned maxT = LL::getMaxThreads ();
     unsigned maxT = galois::getActiveThreads();
@@ -368,12 +369,15 @@ private:
 
 public:
   DoAllStealingExec(const R& _range, F _func, const ArgsTuple& argsTuple)
-      : range(_range), func(_func),
+      : range(_range),
+        func(_func),
         loopname(galois::internal::getLoopName(argsTuple)),
         chunk_size(get_trait_value<chunk_size_tag>(argsTuple).value),
         term(substrate::getSystemTermination(activeThreads)),
-        totalTime(loopname, "Total"), initTime(loopname, "Init"),
-        execTime(loopname, "Execute"), stealTime(loopname, "Steal"),
+        totalTime(loopname, "Total"),
+        initTime(loopname, "Init"),
+        execTime(loopname, "Execute"),
+        stealTime(loopname, "Steal"),
         termTime(loopname, "Term") {
     assert(chunk_size > 0);
   }
@@ -405,7 +409,6 @@ public:
   }
 
   void operator()(void) {
-
     ThreadContext& ctx = *workers.getLocal();
     totalTime.start();
 
@@ -430,7 +433,6 @@ public:
         continue;
 
       } else {
-
         assert(!ctx.hasWork());
         if (USE_TERM) {
           termTime.start();
@@ -459,10 +461,8 @@ public:
 
 template <bool _STEAL>
 struct ChooseDoAllImpl {
-
   template <typename R, typename F, typename ArgsT>
   static void call(const R& range, F&& func, const ArgsT& argsTuple) {
-
     internal::DoAllStealingExec<
         R, OperatorReferenceType<decltype(std::forward<F>(func))>, ArgsT>
         exec(range, std::forward<F>(func), argsTuple);
@@ -477,10 +477,8 @@ struct ChooseDoAllImpl {
 
 template <>
 struct ChooseDoAllImpl<false> {
-
   template <typename R, typename F, typename ArgsT>
   static void call(const R& range, F func, const ArgsT& argsTuple) {
-
     runtime::on_each_gen(
         [&](const unsigned int, const unsigned int) {
           static constexpr bool NEED_STATS =
@@ -497,7 +495,7 @@ struct ChooseDoAllImpl<false> {
           totalTime.start();
           initTime.start();
 
-          auto begin     = range.local_begin();
+          auto begin = range.local_begin();
           const auto end = range.local_end();
 
           initTime.stop();
@@ -524,19 +522,19 @@ struct ChooseDoAllImpl<false> {
   }
 };
 
-} // end namespace internal
+}  // end namespace internal
 
 template <typename R, typename F, typename ArgsTuple>
-void do_all_gen(const R& range, F&& func, const ArgsTuple& argsTuple) {
-
+void
+do_all_gen(const R& range, F&& func, const ArgsTuple& argsTuple) {
   static_assert(!has_trait<char*, ArgsTuple>(), "old loopname");
   static_assert(!has_trait<char const*, ArgsTuple>(), "old loopname");
   static_assert(!has_trait<bool, ArgsTuple>(), "old steal");
 
   auto argsT = std::tuple_cat(
-      argsTuple,
-      get_default_trait_values(argsTuple, std::make_tuple(chunk_size_tag{}),
-                               std::make_tuple(chunk_size<>{})));
+      argsTuple, get_default_trait_values(
+                     argsTuple, std::make_tuple(chunk_size_tag{}),
+                     std::make_tuple(chunk_size<>{})));
 
   using ArgsT = decltype(argsT);
 
@@ -553,6 +551,6 @@ void do_all_gen(const R& range, F&& func, const ArgsTuple& argsTuple) {
   timer.stop();
 }
 
-} // namespace galois::runtime
+}  // namespace galois::runtime
 
 #endif

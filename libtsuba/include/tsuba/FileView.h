@@ -1,14 +1,14 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_FILEVIEW_H_
 #define GALOIS_LIBTSUBA_TSUBA_FILEVIEW_H_
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 #include <parquet/arrow/reader.h>
 
-#include "galois/config.h"
-#include "galois/Result.h"
 #include "galois/Logging.h"
+#include "galois/Result.h"
+#include "galois/config.h"
 #include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
@@ -31,15 +31,19 @@ class GALOIS_EXPORT FileView : public arrow::io::RandomAccessFile {
   std::unique_ptr<std::vector<FillingRange>> fetches_;
 
 public:
-  FileView()                = default;
+  FileView() = default;
   FileView(const FileView&) = delete;
   FileView& operator=(const FileView&) = delete;
 
   FileView(FileView&& other) noexcept
-      : map_start_(other.map_start_), file_size_(other.file_size_),
-        page_shift_(other.page_shift_), cursor_(other.cursor_),
-        mem_start_(other.mem_start_), filename_(other.filename_),
-        valid_(other.valid_), filling_(other.filling_),
+      : map_start_(other.map_start_),
+        file_size_(other.file_size_),
+        page_shift_(other.page_shift_),
+        cursor_(other.cursor_),
+        mem_start_(other.mem_start_),
+        filename_(other.filename_),
+        valid_(other.valid_),
+        filling_(other.filling_),
         fetches_(std::move(other.fetches_)) {
     other.valid_ = false;
   }
@@ -49,14 +53,14 @@ public:
       if (auto res = Unbind(); !res) {
         GALOIS_LOG_ERROR("Unbind: {}", res.error());
       }
-      map_start_  = other.map_start_;
-      file_size_  = other.file_size_;
+      map_start_ = other.map_start_;
+      file_size_ = other.file_size_;
       page_shift_ = other.page_shift_;
-      cursor_     = other.cursor_;
-      mem_start_  = other.mem_start_;
-      filename_   = other.filename_;
-      valid_      = other.valid_;
-      filling_    = other.filling_;
+      cursor_ = other.cursor_;
+      mem_start_ = other.mem_start_;
+      filename_ = other.filename_;
+      valid_ = other.valid_;
+      filling_ = other.filling_;
       fetches_ =
           std::unique_ptr<std::vector<FillingRange>>(std::move(other.fetches_));
       other.valid_ = false;
@@ -76,10 +80,10 @@ public:
   /// Calls to Read will handle asynchronous
   /// reads internally, but if you intend to use ptr(), you should pass
   /// resolve=true.
-  galois::Result<void> Bind(const std::string& filename, uint64_t begin,
-                            uint64_t end, bool resolve);
-  galois::Result<void> Bind(const std::string& filename, uint64_t stop,
-                            bool resolve) {
+  galois::Result<void> Bind(
+      const std::string& filename, uint64_t begin, uint64_t end, bool resolve);
+  galois::Result<void> Bind(
+      const std::string& filename, uint64_t stop, bool resolve) {
     return Bind(filename, 0, stop, resolve);
   }
   galois::Result<void> Bind(const std::string& filename, bool resolve) {
@@ -145,19 +149,19 @@ private:
   // helper functions for MustFill
   /// These functions do not validate their input. In particular, if
   /// bitmap[block_num] contains no zeroes, they may never terminate
-  inline uint64_t LastPage(uint64_t* bitmap, uint64_t block_num, uint64_t start,
-                           uint64_t end);
-  inline uint64_t FirstPage(uint64_t* bitmap, uint64_t block_num,
-                            uint64_t start, uint64_t end);
+  inline uint64_t LastPage(
+      uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end);
+  inline uint64_t FirstPage(
+      uint64_t* bitmap, uint64_t block_num, uint64_t start, uint64_t end);
 
   // Given a starting and ending page, return an inclusive region that describes
   // which pages must be fetched from storage. Or an empty std::optional if no
   // pages need to be fetched.
-  std::optional<std::pair<uint64_t, uint64_t>>
-  MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end);
+  std::optional<std::pair<uint64_t, uint64_t>> MustFill(
+      uint64_t* bitmap, uint64_t begin, uint64_t end);
 
-  galois::Result<void> MarkFilled(uint64_t* bitmap, uint64_t begin,
-                                  uint64_t end);
+  galois::Result<void> MarkFilled(
+      uint64_t* bitmap, uint64_t begin, uint64_t end);
 
   // Resolve all outstanding reads that overlap with the range [cursor_, nbytes]
   galois::Result<void> Resolve(int64_t start, int64_t size);
@@ -166,6 +170,6 @@ private:
   // @start and @size give the location and range of the previous read
   galois::Result<void> PreFetch(int64_t start, int64_t size);
 };
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

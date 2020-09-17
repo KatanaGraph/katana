@@ -20,15 +20,15 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
 
+#include "galois/Threads.h"
+#include "galois/Timer.h"
+#include "galois/Traits.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
 #include "galois/runtime/Statistics.h"
 #include "galois/runtime/ThreadTimer.h"
 #include "galois/substrate/ThreadPool.h"
-#include "galois/Threads.h"
-#include "galois/Timer.h"
-#include "galois/Traits.h"
 
 namespace galois {
 namespace runtime {
@@ -36,8 +36,8 @@ namespace runtime {
 namespace internal {
 
 template <typename FunctionTy, typename ArgsTy>
-inline void on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
-
+inline void
+on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
   static_assert(!has_trait<char*, ArgsTy>(), "old loopname");
   static_assert(!has_trait<char const*, ArgsTy>(), "old loopname");
 
@@ -68,14 +68,15 @@ inline void on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
   timer.stop();
 }
 
-} // namespace internal
+}  // namespace internal
 
 template <typename FunctionTy, typename TupleTy>
-inline void on_each_gen(FunctionTy&& fn, const TupleTy& tpl) {
+inline void
+on_each_gen(FunctionTy&& fn, const TupleTy& tpl) {
   internal::on_each_impl(std::forward<FunctionTy>(fn), tpl);
 }
 
-} // end namespace runtime
-} // end namespace galois
+}  // end namespace runtime
+}  // end namespace galois
 
 #endif

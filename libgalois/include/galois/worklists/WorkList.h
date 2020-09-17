@@ -22,14 +22,14 @@
 
 #include "galois/config.h"
 #include "galois/optional.h"
-#include "galois/worklists/PerThreadChunk.h"
 #include "galois/worklists/BulkSynchronous.h"
 #include "galois/worklists/Chunk.h"
-#include "galois/worklists/Simple.h"
 #include "galois/worklists/LocalQueue.h"
 #include "galois/worklists/Obim.h"
 #include "galois/worklists/OrderedList.h"
 #include "galois/worklists/OwnerComputes.h"
+#include "galois/worklists/PerThreadChunk.h"
+#include "galois/worklists/Simple.h"
 #include "galois/worklists/StableIterator.h"
 
 namespace galois {
@@ -49,7 +49,7 @@ namespace galois {
  * \endcode
  */
 namespace worklists {
-namespace { // don't pollute the symbol table with the example
+namespace {  // don't pollute the symbol table with the example
 
 // Worklists may not be copied.
 // All classes (should) conform to:
@@ -97,8 +97,8 @@ public:
   bool empty();
 };
 
-} // namespace
-} // end namespace worklists
-} // end namespace galois
+}  // namespace
+}  // end namespace worklists
+}  // end namespace galois
 
 #endif

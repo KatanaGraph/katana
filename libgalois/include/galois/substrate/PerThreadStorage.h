@@ -103,9 +103,8 @@ class PerThreadStorage {
   }
 
 public:
-  class iterator
-      : public boost::iterator_facade<iterator, T,
-                                      boost::random_access_traversal_tag> {
+  class iterator : public boost::iterator_facade<
+                       iterator, T, boost::random_access_traversal_tag> {
     friend class boost::iterator_core_access;
 
     void increment() { ++pos; }
@@ -227,7 +226,7 @@ public:
     // This will call initPTS for each thread if it hasn't already
     getThreadPool();
 
-    offset   = b->allocOffset(sizeof(T));
+    offset = b->allocOffset(sizeof(T));
     auto& tp = getThreadPool();
     for (unsigned n = 0; n < tp.getMaxSockets(); ++n) {
       new (b->getRemote(tp.getLeaderForSocket(n), offset))
@@ -294,5 +293,5 @@ public:
   unsigned size() const { return getThreadPool().getMaxThreads(); }
 };
 
-} // end namespace galois::substrate
+}  // end namespace galois::substrate
 #endif

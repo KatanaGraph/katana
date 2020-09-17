@@ -22,9 +22,9 @@
 
 #include <utility>
 
-#include "galois/config.h"
 #include "galois/Galois.h"
 #include "galois/ParallelSTL.h"
+#include "galois/config.h"
 #include "galois/substrate/NumaMem.h"
 
 namespace galois {
@@ -52,8 +52,8 @@ class LargeArray {
           substrate::largeMallocBlocked(n * sizeof(T), runtime::activeThreads);
       break;
     case AllocType::Interleaved:
-      real_data_ = substrate::largeMallocInterleaved(n * sizeof(T),
-                                                     runtime::activeThreads);
+      real_data_ = substrate::largeMallocInterleaved(
+          n * sizeof(T), runtime::activeThreads);
       break;
     case AllocType::Local:
       real_data_ = substrate::largeMallocLocal(n * sizeof(T));
@@ -212,12 +212,12 @@ template <>
 class LargeArray<void> {
 public:
   LargeArray(void*, size_t) {}
-  LargeArray()  = default;
+  LargeArray() = default;
   ~LargeArray() = default;
 
   LargeArray(const LargeArray&) = delete;
   LargeArray& operator=(const LargeArray&) = delete;
-  LargeArray(LargeArray&&)                 = delete;
+  LargeArray(LargeArray&&) = delete;
   LargeArray& operator=(LargeArray&&) = delete;
 
   typedef void raw_value_type;
@@ -268,5 +268,5 @@ public:
   pointer data() { return nullptr; }
 };
 
-} // namespace galois
+}  // namespace galois
 #endif

@@ -20,8 +20,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
 
-#include "galois/config.h"
 #include "galois/UserContext.h"
+#include "galois/config.h"
 
 namespace galois {
 namespace runtime {
@@ -42,13 +42,13 @@ public:
   void setFastPushBack(FastPushBack f) { SuperTy::__setFastPushBack(f); }
   void setBreakFlag(bool* b) {
     SuperTy::didBreak = b;
-  } // NOLINT(readability-non-const-parameter)
+  }  // NOLINT(readability-non-const-parameter)
 
   void setFirstPass(void) { SuperTy::__setFirstPass(); }
   void resetFirstPass(void) { SuperTy::__resetFirstPass(); }
 };
 
-} // namespace runtime
-} // end namespace galois
+}  // namespace runtime
+}  // end namespace galois
 
 #endif

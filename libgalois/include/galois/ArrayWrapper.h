@@ -28,6 +28,7 @@
 #define GALOIS_LIBGALOIS_GALOIS_ARRAYWRAPPER_H_
 
 #include <array>
+
 #include "galois/config.h"
 #include "galois/runtime/ExtraTraits.h"
 
@@ -45,9 +46,8 @@ class CopyableArray : public std::array<T, N> {
 public:
   //! Only typedef tt_is_copyable if T is trivially copyable.
   //! Allows the use of memcopy in serialize/deserialize.
-  using tt_is_copyable =
-      typename std::enable_if<galois::runtime::is_memory_copyable<T>::value,
-                              int>::type;
+  using tt_is_copyable = typename std::enable_if<
+      galois::runtime::is_memory_copyable<T>::value, int>::type;
 };
-} // namespace galois
+}  // namespace galois
 #endif

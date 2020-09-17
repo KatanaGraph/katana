@@ -1,10 +1,11 @@
-#include <llvm/Support/CommandLine.h>
-#include <memory>
 #include <iostream>
+#include <memory>
 
-#include "galois/config.h"
+#include <llvm/Support/CommandLine.h>
+
 #include "galois/Galois.h"
 #include "galois/Logging.h"
+#include "galois/config.h"
 #include "graph-properties-convert-graphml.h"
 
 #if defined(GALOIS_MONGOC_FOUND)
@@ -17,42 +18,44 @@ enum ConvertTest { kMovies, kTypes, kChunks, kMongodb };
 
 namespace cll = llvm::cl;
 
-static cll::opt<std::string> input_filename(cll::Positional,
-                                            cll::desc("<input file/directory>"),
-                                            cll::Required);
-static cll::opt<galois::SourceDatabase>
-    fileType(cll::desc("Input file type:"),
-             cll::values(clEnumValN(galois::SourceDatabase::kNeo4j, "neo4j",
-                                    "source file is from neo4j")),
-             cll::values(clEnumValN(galois::SourceDatabase::kMongodb, "mongodb",
-                                    "source is from MongoDB")),
-             cll::Required);
+static cll::opt<std::string> input_filename(
+    cll::Positional, cll::desc("<input file/directory>"), cll::Required);
+static cll::opt<galois::SourceDatabase> fileType(
+    cll::desc("Input file type:"),
+    cll::values(clEnumValN(
+        galois::SourceDatabase::kNeo4j, "neo4j", "source file is from neo4j")),
+    cll::values(clEnumValN(
+        galois::SourceDatabase::kMongodb, "mongodb", "source is from MongoDB")),
+    cll::Required);
 static cll::opt<ConvertTest> test_type(
     cll::desc("Input file type:"),
-    cll::values(clEnumValN(ConvertTest::kTypes, "types",
-                           "source file is a test for graphml type conversion"),
-                clEnumValN(ConvertTest::kMovies, "movies",
-                           "source file is a test for generic conversion"),
-                clEnumValN(ConvertTest::kChunks, "chunks",
-                           "this is a test for chunks"),
-                clEnumValN(ConvertTest::kMongodb, "mongo",
-                           "this is a test for mongodb")),
+    cll::values(
+        clEnumValN(
+            ConvertTest::kTypes, "types",
+            "source file is a test for graphml type conversion"),
+        clEnumValN(
+            ConvertTest::kMovies, "movies",
+            "source file is a test for generic conversion"),
+        clEnumValN(ConvertTest::kChunks, "chunks", "this is a test for chunks"),
+        clEnumValN(
+            ConvertTest::kMongodb, "mongo", "this is a test for mongodb")),
     cll::Required);
-static cll::opt<int>
-    chunk_size("chunkSize",
-               cll::desc("Chunk size for in memory arrow representation"),
-               cll::init(25000));
+static cll::opt<int> chunk_size(
+    "chunkSize", cll::desc("Chunk size for in memory arrow representation"),
+    cll::init(25000));
 
 namespace {
 
 template <typename T, typename U>
-std::shared_ptr<T> safe_cast(const std::shared_ptr<U>& r) noexcept {
+std::shared_ptr<T>
+safe_cast(const std::shared_ptr<U>& r) noexcept {
   auto p = std::dynamic_pointer_cast<T>(r);
   GALOIS_LOG_ASSERT(p);
   return p;
 }
 
-void VerifyMovieSet(const galois::GraphComponents& graph) {
+void
+VerifyMovieSet(const galois::GraphComponents& graph) {
   GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
   GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
   GALOIS_ASSERT(graph.edges.properties->num_columns() == 2);
@@ -69,7 +72,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
-  std::string names_expected = std::string("[\n\
+  std::string names_expected = std::string(
+      "[\n\
   null,\n\
   \"Keanu Reeves\",\n\
   \"Carrie-Anne Moss\",\n\
@@ -84,7 +88,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
-  std::string taglines_expected = std::string("[\n\
+  std::string taglines_expected = std::string(
+      "[\n\
   \"Welcome to the Real World\",\n\
   null,\n\
   null,\n\
@@ -99,7 +104,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
-  std::string titles_expected = std::string("[\n\
+  std::string titles_expected = std::string(
+      "[\n\
   \"The Matrix\",\n\
   null,\n\
   null,\n\
@@ -114,7 +120,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto released = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
-  std::string released_expected = std::string("[\n\
+  std::string released_expected = std::string(
+      "[\n\
   \"1999\",\n\
   null,\n\
   null,\n\
@@ -129,7 +136,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
-  std::string borns_expected = std::string("[\n\
+  std::string borns_expected = std::string(
+      "[\n\
   null,\n\
   \"1964\",\n\
   \"1967\",\n\
@@ -145,7 +153,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Movie")->chunk(0));
-  std::string movies_expected = std::string("[\n\
+  std::string movies_expected = std::string(
+      "[\n\
   true,\n\
   false,\n\
   false,\n\
@@ -160,7 +169,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
-  std::string persons_expected = std::string("[\n\
+  std::string persons_expected = std::string(
+      "[\n\
   false,\n\
   true,\n\
   true,\n\
@@ -175,7 +185,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
-  std::string others_expected = std::string("[\n\
+  std::string others_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -190,7 +201,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
-  std::string randoms_expected = std::string("[\n\
+  std::string randoms_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -206,7 +218,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   // test edge properties
   auto roles = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("roles")->chunk(0));
-  std::string roles_expected = std::string("[\n\
+  std::string roles_expected = std::string(
+      "[\n\
   \"Neo\",\n\
   \"Trinity\",\n\
   \"Morpheus\",\n\
@@ -220,7 +233,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
-  std::string texts_expected = std::string("[\n\
+  std::string texts_expected = std::string(
+      "[\n\
   null,\n\
   null,\n\
   null,\n\
@@ -235,7 +249,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("ACTED_IN")->chunk(0));
-  std::string actors_expected = std::string("[\n\
+  std::string actors_expected = std::string(
+      "[\n\
   true,\n\
   true,\n\
   true,\n\
@@ -249,7 +264,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
-  std::string directors_expected = std::string("[\n\
+  std::string directors_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -263,7 +279,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
-  std::string producers_expected = std::string("[\n\
+  std::string producers_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -277,7 +294,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
-  std::string partners_expected = std::string("[\n\
+  std::string partners_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -290,8 +308,9 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   GALOIS_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices                 = graph.topology->out_indices;
-  std::string indices_expected = std::string("[\n\
+  auto indices = graph.topology->out_indices;
+  std::string indices_expected = std::string(
+      "[\n\
   0,\n\
   1,\n\
   2,\n\
@@ -304,8 +323,9 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
 ]");
   GALOIS_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests                 = graph.topology->out_dests;
-  std::string dests_expected = std::string("[\n\
+  auto dests = graph.topology->out_dests;
+  std::string dests_expected = std::string(
+      "[\n\
   0,\n\
   0,\n\
   0,\n\
@@ -318,7 +338,8 @@ void VerifyMovieSet(const galois::GraphComponents& graph) {
   GALOIS_ASSERT(dests->ToString() == dests_expected);
 }
 
-void VerifyTypesSet(galois::GraphComponents graph) {
+void
+VerifyTypesSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
   GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
   GALOIS_ASSERT(graph.edges.properties->num_columns() == 4);
@@ -335,7 +356,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
-  std::string names_expected = std::string("[\n\
+  std::string names_expected = std::string(
+      "[\n\
   null,\n\
   \"Keanu Reeves\",\n\
   \"Carrie-Anne Moss\",\n\
@@ -350,7 +372,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
-  std::string taglines_expected = std::string("[\n\
+  std::string taglines_expected = std::string(
+      "[\n\
   \"Welcome to the Real World\",\n\
   null,\n\
   null,\n\
@@ -365,7 +388,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
-  std::string titles_expected = std::string("[\n\
+  std::string titles_expected = std::string(
+      "[\n\
   \"The Matrix\",\n\
   null,\n\
   null,\n\
@@ -380,7 +404,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto released = safe_cast<arrow::Int64Array>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
-  std::string released_expected = std::string("[\n\
+  std::string released_expected = std::string(
+      "[\n\
   1999,\n\
   null,\n\
   null,\n\
@@ -395,7 +420,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
-  std::string borns_expected = std::string("[\n\
+  std::string borns_expected = std::string(
+      "[\n\
   null,\n\
   \"1964\",\n\
   \"1967\",\n\
@@ -411,7 +437,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Movie")->chunk(0));
-  std::string movies_expected = std::string("[\n\
+  std::string movies_expected = std::string(
+      "[\n\
   true,\n\
   false,\n\
   false,\n\
@@ -426,7 +453,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
-  std::string persons_expected = std::string("[\n\
+  std::string persons_expected = std::string(
+      "[\n\
   false,\n\
   true,\n\
   true,\n\
@@ -441,7 +469,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
-  std::string others_expected = std::string("[\n\
+  std::string others_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -456,7 +485,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
-  std::string randoms_expected = std::string("[\n\
+  std::string randoms_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -472,7 +502,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   // test edge properties
   auto roles = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("roles")->chunk(0));
-  std::string roles_expected = std::string("[\n\
+  std::string roles_expected = std::string(
+      "[\n\
   [\n\
     \"Neo\"\n\
   ],\n\
@@ -499,7 +530,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto numbers = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("numbers")->chunk(0));
-  std::string numbers_expected = std::string("[\n\
+  std::string numbers_expected = std::string(
+      "[\n\
   null,\n\
   null,\n\
   [\n\
@@ -532,7 +564,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto bools = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("bools")->chunk(0));
-  std::string bools_expected = std::string("[\n\
+  std::string bools_expected = std::string(
+      "[\n\
   null,\n\
   null,\n\
   [\n\
@@ -560,7 +593,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
-  std::string texts_expected = std::string("[\n\
+  std::string texts_expected = std::string(
+      "[\n\
   null,\n\
   null,\n\
   null,\n\
@@ -575,7 +609,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("ACTED_IN")->chunk(0));
-  std::string actors_expected = std::string("[\n\
+  std::string actors_expected = std::string(
+      "[\n\
   true,\n\
   true,\n\
   true,\n\
@@ -589,7 +624,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
-  std::string directors_expected = std::string("[\n\
+  std::string directors_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -603,7 +639,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
-  std::string producers_expected = std::string("[\n\
+  std::string producers_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -617,7 +654,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
-  std::string partners_expected = std::string("[\n\
+  std::string partners_expected = std::string(
+      "[\n\
   false,\n\
   false,\n\
   false,\n\
@@ -630,8 +668,9 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices                 = graph.topology->out_indices;
-  std::string indices_expected = std::string("[\n\
+  auto indices = graph.topology->out_indices;
+  std::string indices_expected = std::string(
+      "[\n\
   0,\n\
   1,\n\
   2,\n\
@@ -644,8 +683,9 @@ void VerifyTypesSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests                 = graph.topology->out_dests;
-  std::string dests_expected = std::string("[\n\
+  auto dests = graph.topology->out_dests;
+  std::string dests_expected = std::string(
+      "[\n\
   0,\n\
   0,\n\
   0,\n\
@@ -658,7 +698,8 @@ void VerifyTypesSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(dests->ToString() == dests_expected);
 }
 
-void VerifyChunksSet(galois::GraphComponents graph) {
+void
+VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
   GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
   GALOIS_ASSERT(graph.edges.properties->num_columns() == 4);
@@ -673,8 +714,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
-  auto names                 = graph.nodes.properties->GetColumnByName("name");
-  std::string names_expected = std::string("[\n\
+  auto names = graph.nodes.properties->GetColumnByName("name");
+  std::string names_expected = std::string(
+      "[\n\
   [\n\
     null,\n\
     \"Keanu Reeves\",\n\
@@ -694,7 +736,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(names->ToString() == names_expected);
 
   auto taglines = graph.nodes.properties->GetColumnByName("tagline");
-  std::string taglines_expected = std::string("[\n\
+  std::string taglines_expected = std::string(
+      "[\n\
   [\n\
     \"Welcome to the Real World\",\n\
     null,\n\
@@ -714,7 +757,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = graph.nodes.properties->GetColumnByName("title");
-  std::string titles_expected = std::string("[\n\
+  std::string titles_expected = std::string(
+      "[\n\
   [\n\
     \"The Matrix\",\n\
     null,\n\
@@ -734,7 +778,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(titles->ToString() == titles_expected);
 
   auto released = graph.nodes.properties->GetColumnByName("released");
-  std::string released_expected = std::string("[\n\
+  std::string released_expected = std::string(
+      "[\n\
   [\n\
     1999,\n\
     null,\n\
@@ -753,8 +798,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(released->ToString() == released_expected);
 
-  auto borns                 = graph.nodes.properties->GetColumnByName("born");
-  std::string borns_expected = std::string("[\n\
+  auto borns = graph.nodes.properties->GetColumnByName("born");
+  std::string borns_expected = std::string(
+      "[\n\
   [\n\
     null,\n\
     \"1964\",\n\
@@ -774,8 +820,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
-  auto movies                 = graph.nodes.labels->GetColumnByName("Movie");
-  std::string movies_expected = std::string("[\n\
+  auto movies = graph.nodes.labels->GetColumnByName("Movie");
+  std::string movies_expected = std::string(
+      "[\n\
   [\n\
     true,\n\
     false,\n\
@@ -794,8 +841,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(movies->ToString() == movies_expected);
 
-  auto persons                 = graph.nodes.labels->GetColumnByName("Person");
-  std::string persons_expected = std::string("[\n\
+  auto persons = graph.nodes.labels->GetColumnByName("Person");
+  std::string persons_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     true,\n\
@@ -814,8 +862,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(persons->ToString() == persons_expected);
 
-  auto others                 = graph.nodes.labels->GetColumnByName("Other");
-  std::string others_expected = std::string("[\n\
+  auto others = graph.nodes.labels->GetColumnByName("Other");
+  std::string others_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     false,\n\
@@ -834,8 +883,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(others->ToString() == others_expected);
 
-  auto randoms                 = graph.nodes.labels->GetColumnByName("Random");
-  std::string randoms_expected = std::string("[\n\
+  auto randoms = graph.nodes.labels->GetColumnByName("Random");
+  std::string randoms_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     false,\n\
@@ -855,8 +905,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
-  auto roles                 = graph.edges.properties->GetColumnByName("roles");
-  std::string roles_expected = std::string("[\n\
+  auto roles = graph.edges.properties->GetColumnByName("roles");
+  std::string roles_expected = std::string(
+      "[\n\
   [\n\
     [\n\
       \"Neo\"\n\
@@ -888,7 +939,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(roles->ToString() == roles_expected);
 
   auto numbers = graph.edges.properties->GetColumnByName("numbers");
-  std::string numbers_expected = std::string("[\n\
+  std::string numbers_expected = std::string(
+      "[\n\
   [\n\
     null,\n\
     null,\n\
@@ -925,8 +977,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(numbers->ToString() == numbers_expected);
 
-  auto bools                 = graph.edges.properties->GetColumnByName("bools");
-  std::string bools_expected = std::string("[\n\
+  auto bools = graph.edges.properties->GetColumnByName("bools");
+  std::string bools_expected = std::string(
+      "[\n\
   [\n\
     null,\n\
     null,\n\
@@ -958,8 +1011,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(bools->ToString() == bools_expected);
 
-  auto texts                 = graph.edges.properties->GetColumnByName("text");
-  std::string texts_expected = std::string("[\n\
+  auto texts = graph.edges.properties->GetColumnByName("text");
+  std::string texts_expected = std::string(
+      "[\n\
   [\n\
     null,\n\
     null,\n\
@@ -978,8 +1032,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
-  auto actors                 = graph.edges.labels->GetColumnByName("ACTED_IN");
-  std::string actors_expected = std::string("[\n\
+  auto actors = graph.edges.labels->GetColumnByName("ACTED_IN");
+  std::string actors_expected = std::string(
+      "[\n\
   [\n\
     true,\n\
     true,\n\
@@ -998,7 +1053,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = graph.edges.labels->GetColumnByName("DIRECTED");
-  std::string directors_expected = std::string("[\n\
+  std::string directors_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     false,\n\
@@ -1017,7 +1073,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = graph.edges.labels->GetColumnByName("PRODUCED");
-  std::string producers_expected = std::string("[\n\
+  std::string producers_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     false,\n\
@@ -1036,7 +1093,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = graph.edges.labels->GetColumnByName("IN_SAME_MOVIE");
-  std::string partners_expected = std::string("[\n\
+  std::string partners_expected = std::string(
+      "[\n\
   [\n\
     false,\n\
     false,\n\
@@ -1055,8 +1113,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
   GALOIS_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices                 = graph.topology->out_indices;
-  std::string indices_expected = std::string("[\n\
+  auto indices = graph.topology->out_indices;
+  std::string indices_expected = std::string(
+      "[\n\
   0,\n\
   1,\n\
   2,\n\
@@ -1069,8 +1128,9 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 ]");
   GALOIS_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests                 = graph.topology->out_dests;
-  std::string dests_expected = std::string("[\n\
+  auto dests = graph.topology->out_dests;
+  std::string dests_expected = std::string(
+      "[\n\
   0,\n\
   0,\n\
   0,\n\
@@ -1084,7 +1144,8 @@ void VerifyChunksSet(galois::GraphComponents graph) {
 }
 
 #if defined(GALOIS_MONGOC_FOUND)
-galois::GraphComponents GenerateAndConvertBson(size_t chunk_size) {
+galois::GraphComponents
+GenerateAndConvertBson(size_t chunk_size) {
   galois::PropertyGraphBuilder builder{chunk_size};
 
   bson_oid_t george_oid;
@@ -1094,16 +1155,18 @@ galois::GraphComponents GenerateAndConvertBson(size_t chunk_size) {
   bson_oid_t friend_oid;
   bson_oid_init_from_string(&friend_oid, "5efca3f859a16711627b03f9");
 
-  bson_t* george = BCON_NEW("_id", BCON_OID(&george_oid), "name",
-                            BCON_UTF8("George"), "born", BCON_DOUBLE(1985));
+  bson_t* george = BCON_NEW(
+      "_id", BCON_OID(&george_oid), "name", BCON_UTF8("George"), "born",
+      BCON_DOUBLE(1985));
   galois::HandleNodeDocumentMongoDB(&builder, george, "person");
-  bson_t* frank = BCON_NEW("_id", BCON_OID(&frank_oid), "name",
-                           BCON_UTF8("Frank"), "born", BCON_DOUBLE(1989));
+  bson_t* frank = BCON_NEW(
+      "_id", BCON_OID(&frank_oid), "name", BCON_UTF8("Frank"), "born",
+      BCON_DOUBLE(1989));
   galois::HandleNodeDocumentMongoDB(&builder, frank, "person");
 
-  bson_t* friend_doc =
-      BCON_NEW("_id", BCON_OID(&friend_oid), "friend1", BCON_OID(&george_oid),
-               "friend2", BCON_OID(&frank_oid), "met", BCON_DOUBLE(2000));
+  bson_t* friend_doc = BCON_NEW(
+      "_id", BCON_OID(&friend_oid), "friend1", BCON_OID(&george_oid), "friend2",
+      BCON_OID(&frank_oid), "met", BCON_DOUBLE(2000));
   galois::HandleEdgeDocumentMongoDB(&builder, friend_doc, "friend");
 
   return builder.Finish();
@@ -1111,7 +1174,8 @@ galois::GraphComponents GenerateAndConvertBson(size_t chunk_size) {
 #endif
 
 #if defined(GALOIS_MONGOC_FOUND)
-void VerifyMongodbSet(const galois::GraphComponents& graph) {
+void
+VerifyMongodbSet(const galois::GraphComponents& graph) {
   GALOIS_ASSERT(graph.nodes.properties->num_columns() == 2);
   GALOIS_ASSERT(graph.nodes.labels->num_columns() == 1);
   GALOIS_ASSERT(graph.edges.properties->num_columns() == 1);
@@ -1128,7 +1192,8 @@ void VerifyMongodbSet(const galois::GraphComponents& graph) {
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("name")->chunk(0));
-  std::string names_expected = std::string("[\n\
+  std::string names_expected = std::string(
+      "[\n\
   \"George\",\n\
   \"Frank\"\n\
 ]");
@@ -1136,7 +1201,8 @@ void VerifyMongodbSet(const galois::GraphComponents& graph) {
 
   auto born = safe_cast<arrow::DoubleArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
-  std::string born_expected = std::string("[\n\
+  std::string born_expected = std::string(
+      "[\n\
   1985,\n\
   1989\n\
 ]");
@@ -1145,7 +1211,8 @@ void VerifyMongodbSet(const galois::GraphComponents& graph) {
   // test node labels
   auto people = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("person")->chunk(0));
-  std::string people_expected = std::string("[\n\
+  std::string people_expected = std::string(
+      "[\n\
   true,\n\
   true\n\
 ]");
@@ -1154,7 +1221,8 @@ void VerifyMongodbSet(const galois::GraphComponents& graph) {
   // test edge properties
   auto mets = safe_cast<arrow::DoubleArray>(
       graph.edges.properties->GetColumnByName("met")->chunk(0));
-  std::string mets_expected = std::string("[\n\
+  std::string mets_expected = std::string(
+      "[\n\
   2000\n\
 ]");
   GALOIS_ASSERT(mets->ToString() == mets_expected);
@@ -1162,30 +1230,34 @@ void VerifyMongodbSet(const galois::GraphComponents& graph) {
   // test edge labels
   auto friends = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("friend")->chunk(0));
-  std::string friends_expected = std::string("[\n\
+  std::string friends_expected = std::string(
+      "[\n\
   true\n\
 ]");
   GALOIS_ASSERT(friends->ToString() == friends_expected);
 
   // test topology
-  auto indices                 = graph.topology->out_indices;
-  std::string indices_expected = std::string("[\n\
+  auto indices = graph.topology->out_indices;
+  std::string indices_expected = std::string(
+      "[\n\
   1,\n\
   1\n\
 ]");
   GALOIS_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests                 = graph.topology->out_dests;
-  std::string dests_expected = std::string("[\n\
+  auto dests = graph.topology->out_dests;
+  std::string dests_expected = std::string(
+      "[\n\
   1\n\
 ]");
   GALOIS_ASSERT(dests->ToString() == dests_expected);
 }
 #endif
 
-} // namespace
+}  // namespace
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 

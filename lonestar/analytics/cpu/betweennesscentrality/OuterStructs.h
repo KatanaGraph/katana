@@ -1,13 +1,14 @@
 #ifndef GALOIS_BC_OUTER
 #define GALOIS_BC_OUTER
 
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "Lonestar/BoilerPlate.h"
+#include <fstream>
+#include <iomanip>
+
 #include <boost/iterator/filter_iterator.hpp>
 
-#include <iomanip>
-#include <fstream>
+#include "Lonestar/BoilerPlate.h"
+#include "galois/Galois.h"
+#include "galois/graphs/LCGraph.h"
 
 using OuterGraph = galois::graphs::LC_CSR_Graph<void, void>::with_no_lockable<
     true>::type ::with_numa_alloc<true>::type;
@@ -19,7 +20,7 @@ class BCOuter {
   OuterGraph* G;
   int NumNodes;
 
-  galois::substrate::PerThreadStorage<double*> CB; // betweeness measure
+  galois::substrate::PerThreadStorage<double*> CB;  // betweeness measure
   galois::substrate::PerThreadStorage<double*> perThreadSigma;
   galois::substrate::PerThreadStorage<int*> perThreadD;
   galois::substrate::PerThreadStorage<double*> perThreadDelta;
@@ -41,13 +42,13 @@ public:
   void doBC(const OuterGNode curSource) {
     galois::gdeque<OuterGNode> SQ;
 
-    double* sigma                    = *perThreadSigma.getLocal();
-    int* d                           = *perThreadD.getLocal();
-    double* delta                    = *perThreadDelta.getLocal();
+    double* sigma = *perThreadSigma.getLocal();
+    int* d = *perThreadD.getLocal();
+    double* delta = *perThreadDelta.getLocal();
     galois::gdeque<OuterGNode>* succ = *perThreadSucc.getLocal();
 
     sigma[curSource] = 1;
-    d[curSource]     = 1;
+    d[curSource] = 1;
 
     SQ.push_back(curSource);
 
@@ -78,9 +79,9 @@ public:
       int leaf = SQ.back();
       SQ.pop_back();
 
-      double sigma_leaf = sigma[leaf]; // has finalized short path value
+      double sigma_leaf = sigma[leaf];  // has finalized short path value
       double delta_leaf = delta[leaf];
-      auto& succ_list   = succ[leaf];
+      auto& succ_list = succ[leaf];
 
       for (auto succ = succ_list.begin(), succ_end = succ_list.end();
            succ != succ_end; ++succ) {
@@ -96,7 +97,7 @@ public:
       Vec[i] += delta[i];
       delta[i] = 0;
       sigma[i] = 0;
-      d[i]     = 0;
+      d[i] = 0;
       succ[i].clear();
     }
   }
@@ -140,7 +141,7 @@ public:
    */
   void verify() {
     double sampleBC = 0.0;
-    bool firstTime  = true;
+    bool firstTime = true;
     for (int i = 0; i < NumNodes; ++i) {
       double bc = (*CB.getRemote(0))[i];
 
@@ -154,8 +155,8 @@ public:
       } else {
         // check if over some tolerance value
         if ((bc - sampleBC) > 0.0001) {
-          galois::gInfo("If torus graph, verification failed ",
-                        (bc - sampleBC));
+          galois::gInfo(
+              "If torus graph, verification failed ", (bc - sampleBC));
           return;
         }
       }
@@ -170,8 +171,8 @@ public:
    * @param out stream to output to
    * @param precision precision of the floating points outputted by the function
    */
-  void printBCValues(size_t begin, size_t end, std::ostream& out,
-                     int precision = 6) {
+  void printBCValues(
+      size_t begin, size_t end, std::ostream& out, int precision = 6) {
     for (; begin != end; ++begin) {
       double bc = (*CB.getRemote(0))[begin];
 
@@ -289,7 +290,8 @@ struct HasOut {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void doOuterBC() {
+void
+doOuterBC() {
   OuterGraph g;
   galois::graphs::readGraph(g, inputFile);
 
@@ -318,8 +320,9 @@ void doOuterBC() {
         iterLimit ? galois::safe_advance(begin, end, (int)iterLimit) : end;
 
     size_t iterations = std::distance(begin, adjustedEnd);
-    galois::gPrint("Num Nodes: ", NumNodes, " Start Node: ", startSource,
-                   " Iterations: ", iterations, "\n");
+    galois::gPrint(
+        "Num Nodes: ", NumNodes, " Start Node: ", startSource,
+        " Iterations: ", iterations, "\n");
     // vector of nodes we want to process
     v.insert(v.end(), begin, adjustedEnd);
   }

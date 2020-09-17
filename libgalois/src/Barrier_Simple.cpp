@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <condition_variable>
+#include <mutex>
+
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/ThreadPool.h"
-
-#include <mutex>
-#include <condition_variable>
 
 namespace {
 
@@ -79,7 +79,7 @@ public:
   virtual const char* name() const { return "SimpleBarrier"; }
 };
 
-} // end anonymous namespace
+}  // end anonymous namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createSimpleBarrier(unsigned int v) {

@@ -12,7 +12,8 @@ using galois::PropertyKey;
 /* Functions for writing GraphML files */
 /***************************************/
 
-xmlTextWriterPtr galois::CreateGraphmlFile(const std::string& outfile) {
+xmlTextWriterPtr
+galois::CreateGraphmlFile(const std::string& outfile) {
   xmlTextWriterPtr writer;
   writer = xmlNewTextWriterFilename(outfile.c_str(), 0);
   xmlTextWriterStartDocument(writer, "1.0", "UTF-8", NULL);
@@ -20,20 +21,23 @@ xmlTextWriterPtr galois::CreateGraphmlFile(const std::string& outfile) {
   xmlTextWriterSetIndent(writer, 1);
 
   xmlTextWriterStartElement(writer, BAD_CAST "graphml");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "xmlns",
-                              BAD_CAST "http://graphml.graphdrawing.org/xmlns");
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "xmlns:xsi",
-                              BAD_CAST
-                              "http://www.w3.org/2001/XMLSchema-instance");
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "xmlns",
+      BAD_CAST "http://graphml.graphdrawing.org/xmlns");
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "xmlns:xsi",
+      BAD_CAST "http://www.w3.org/2001/XMLSchema-instance");
   xmlTextWriterWriteAttribute(
       writer, BAD_CAST "xmlns:schemaLocation",
-      BAD_CAST "http://graphml.graphdrawing.org/xmlns "
-               "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd");
+      BAD_CAST
+      "http://graphml.graphdrawing.org/xmlns "
+      "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd");
 
   return writer;
 }
 
-void galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
+void
+galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
   xmlTextWriterStartElement(writer, BAD_CAST "rule");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST rule.id.c_str());
   if (rule.for_node) {
@@ -41,13 +45,14 @@ void galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
   } else if (rule.for_edge) {
     xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "edge");
   }
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.label",
-                              BAD_CAST rule.label.c_str());
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "attr.label", BAD_CAST rule.label.c_str());
 
   xmlTextWriterEndElement(writer);
 }
 
-void galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
+void
+galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
   xmlTextWriterStartElement(writer, BAD_CAST "key");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST key.id.c_str());
   if (key.for_node) {
@@ -55,27 +60,29 @@ void galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
   } else if (key.for_edge) {
     xmlTextWriterWriteAttribute(writer, BAD_CAST "for", BAD_CAST "edge");
   }
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.name",
-                              BAD_CAST key.name.c_str());
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "attr.name", BAD_CAST key.name.c_str());
   auto type = TypeName(key.type);
-  xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.type",
-                              BAD_CAST type.c_str());
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "attr.type", BAD_CAST type.c_str());
   if (key.is_list) {
-    xmlTextWriterWriteAttribute(writer, BAD_CAST "attr.list",
-                                BAD_CAST type.c_str());
+    xmlTextWriterWriteAttribute(
+        writer, BAD_CAST "attr.list", BAD_CAST type.c_str());
   }
 
   xmlTextWriterEndElement(writer);
 }
 
-void galois::FinishGraphmlFile(xmlTextWriterPtr writer) {
-  xmlTextWriterEndElement(writer); // end graphml
+void
+galois::FinishGraphmlFile(xmlTextWriterPtr writer) {
+  xmlTextWriterEndElement(writer);  // end graphml
   xmlTextWriterEndDocument(writer);
   xmlFreeTextWriter(writer);
 }
-void galois::ExportSchemaMapping(const std::string& outfile,
-                                 const std::vector<LabelRule>& rules,
-                                 const std::vector<PropertyKey>& keys) {
+void
+galois::ExportSchemaMapping(
+    const std::string& outfile, const std::vector<LabelRule>& rules,
+    const std::vector<PropertyKey>& keys) {
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
 
   for (const LabelRule& rule : rules) {
@@ -96,30 +103,35 @@ void galois::ExportSchemaMapping(const std::string& outfile,
 /***************************************/
 
 // extract the type from an attr.type or attr.list attribute from a key element
-ImportDataType galois::ExtractTypeGraphML(xmlChar* value) {
+ImportDataType
+galois::ExtractTypeGraphML(xmlChar* value) {
   ImportDataType type = ImportDataType::kString;
   if (xmlStrEqual(value, BAD_CAST "string")) {
     type = ImportDataType::kString;
-  } else if (xmlStrEqual(value, BAD_CAST "long") ||
-             xmlStrEqual(value, BAD_CAST "int64")) {
+  } else if (
+      xmlStrEqual(value, BAD_CAST "long") ||
+      xmlStrEqual(value, BAD_CAST "int64")) {
     type = ImportDataType::kInt64;
-  } else if (xmlStrEqual(value, BAD_CAST "int") ||
-             xmlStrEqual(value, BAD_CAST "int32")) {
+  } else if (
+      xmlStrEqual(value, BAD_CAST "int") ||
+      xmlStrEqual(value, BAD_CAST "int32")) {
     type = ImportDataType::kInt32;
   } else if (xmlStrEqual(value, BAD_CAST "double")) {
     type = ImportDataType::kDouble;
   } else if (xmlStrEqual(value, BAD_CAST "float")) {
     type = ImportDataType::kFloat;
-  } else if (xmlStrEqual(value, BAD_CAST "boolean") ||
-             xmlStrEqual(value, BAD_CAST "bool")) {
+  } else if (
+      xmlStrEqual(value, BAD_CAST "boolean") ||
+      xmlStrEqual(value, BAD_CAST "bool")) {
     type = ImportDataType::kBoolean;
   } else if (xmlStrEqual(value, BAD_CAST "timestamp milli")) {
     type = ImportDataType::kTimestampMilli;
   } else if (xmlStrEqual(value, BAD_CAST "struct")) {
     type = ImportDataType::kStruct;
   } else {
-    GALOIS_LOG_ERROR("Came across attr.type: {}, that is not supported",
-                     std::string((const char*)value));
+    GALOIS_LOG_ERROR(
+        "Came across attr.type: {}, that is not supported",
+        std::string((const char*)value));
     type = ImportDataType::kString;
   }
   return type;
@@ -130,7 +142,8 @@ ImportDataType galois::ExtractTypeGraphML(xmlChar* value) {
  *
  * extracts key attribute information for use later
  */
-PropertyKey galois::ProcessKey(xmlTextReaderPtr reader) {
+PropertyKey
+galois::ProcessKey(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -139,10 +152,10 @@ PropertyKey galois::ProcessKey(xmlTextReaderPtr reader) {
   bool for_edge = false;
   std::string attr_name;
   ImportDataType type = ImportDataType::kString;
-  bool is_list        = false;
+  bool is_list = false;
 
   while (ret == 1) {
-    name  = xmlTextReaderName(reader);
+    name = xmlTextReaderName(reader);
     value = xmlTextReaderValue(reader);
     if (name != NULL) {
       if (xmlStrEqual(name, BAD_CAST "id")) {
@@ -159,10 +172,11 @@ PropertyKey galois::ProcessKey(xmlTextReaderPtr reader) {
         }
       } else if (xmlStrEqual(name, BAD_CAST "attr.list")) {
         is_list = true;
-        type    = ExtractTypeGraphML(value);
+        type = ExtractTypeGraphML(value);
       } else {
-        GALOIS_LOG_ERROR("Attribute on key: {}, was not recognized",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "Attribute on key: {}, was not recognized",
+            std::string((const char*)name));
       }
     }
 
@@ -180,7 +194,8 @@ PropertyKey galois::ProcessKey(xmlTextReaderPtr reader) {
  *
  * extracts key attribute information for use later
  */
-LabelRule galois::ProcessRule(xmlTextReaderPtr reader) {
+LabelRule
+galois::ProcessRule(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -190,7 +205,7 @@ LabelRule galois::ProcessRule(xmlTextReaderPtr reader) {
   std::string attr_label;
 
   while (ret == 1) {
-    name  = xmlTextReaderName(reader);
+    name = xmlTextReaderName(reader);
     value = xmlTextReaderValue(reader);
     if (name != NULL) {
       if (xmlStrEqual(name, BAD_CAST "id")) {
@@ -201,8 +216,9 @@ LabelRule galois::ProcessRule(xmlTextReaderPtr reader) {
       } else if (xmlStrEqual(name, BAD_CAST "attr.label")) {
         attr_label = std::string((const char*)value);
       } else {
-        GALOIS_LOG_ERROR("Attribute on key: {}, was not recognized",
-                         std::string((const char*)name));
+        GALOIS_LOG_ERROR(
+            "Attribute on key: {}, was not recognized",
+            std::string((const char*)name));
       }
     }
 
@@ -223,11 +239,11 @@ LabelRule galois::ProcessRule(xmlTextReaderPtr reader) {
 /**************************************************/
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
-galois::ProcessSchemaMapping(galois::PropertyGraphBuilder* builder,
-                             const std::string& mapping,
-                             const std::vector<std::string>& coll_names) {
+galois::ProcessSchemaMapping(
+    galois::PropertyGraphBuilder* builder, const std::string& mapping,
+    const std::vector<std::string>& coll_names) {
   xmlTextReaderPtr reader;
-  int ret              = 0;
+  int ret = 0;
   bool finished_header = false;
   std::vector<std::string> nodes;
   std::vector<std::string> edges;
@@ -294,14 +310,14 @@ galois::ProcessSchemaMapping(galois::PropertyGraphBuilder* builder,
   } else {
     GALOIS_LOG_FATAL("Unable to open {}", mapping);
   }
-  return std::pair<std::vector<std::string>, std::vector<std::string>>(nodes,
-                                                                       edges);
+  return std::pair<std::vector<std::string>, std::vector<std::string>>(
+      nodes, edges);
 }
 
 std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
 galois::ProcessSchemaMapping(const std::string& mapping) {
   xmlTextReaderPtr reader;
-  int ret              = 0;
+  int ret = 0;
   bool finished_header = false;
   std::vector<LabelRule> rules;
   std::vector<PropertyKey> keys;
@@ -352,15 +368,16 @@ galois::ProcessSchemaMapping(const std::string& mapping) {
   } else {
     GALOIS_LOG_FATAL("Unable to open {}", mapping);
   }
-  return std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>(rules,
-                                                                     keys);
+  return std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>(
+      rules, keys);
 }
 
 /**************************************************/
 /* Functions for converting to/from datatype enum */
 /**************************************************/
 
-std::string galois::TypeName(ImportDataType type) {
+std::string
+galois::TypeName(ImportDataType type) {
   switch (type) {
   case ImportDataType::kString:
     return std::string("string");
@@ -381,7 +398,8 @@ std::string galois::TypeName(ImportDataType type) {
   }
 }
 
-ImportDataType galois::ParseType(const std::string& in) {
+ImportDataType
+galois::ParseType(const std::string& in) {
   auto type = boost::to_lower_copy<std::string>(in);
   if (type == std::string("string")) {
     return ImportDataType::kString;

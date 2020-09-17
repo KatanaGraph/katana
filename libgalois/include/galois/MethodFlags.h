@@ -32,22 +32,24 @@ namespace galois {
  * and/or (2) saving undo information. By default, both are performed (ALL).
  */
 enum class MethodFlag : char {
-  UNPROTECTED   = 0,
-  WRITE         = 1,
-  READ          = 2,
+  UNPROTECTED = 0,
+  WRITE = 1,
+  READ = 2,
   INTERNAL_MASK = 3,
-  PREVIOUS      = 4,
+  PREVIOUS = 4,
 };
 
 //! Bitwise & for method flags
-inline MethodFlag operator&(MethodFlag x, MethodFlag y) {
+inline MethodFlag
+operator&(MethodFlag x, MethodFlag y) {
   return (MethodFlag)(((int)x) & ((int)y));
 }
 
 //! Bitwise | for method flags
-inline MethodFlag operator|(MethodFlag x, MethodFlag y) {
+inline MethodFlag
+operator|(MethodFlag x, MethodFlag y) {
   return (MethodFlag)(((int)x) | ((int)y));
 }
-} // namespace galois
+}  // namespace galois
 
 #endif

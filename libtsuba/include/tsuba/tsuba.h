@@ -1,9 +1,9 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_TSUBA_H_
 #define GALOIS_LIBTSUBA_TSUBA_TSUBA_H_
 
-#include "galois/config.h"
-#include "galois/Result.h"
 #include "galois/CommBackend.h"
+#include "galois/Result.h"
+#include "galois/config.h"
 
 namespace tsuba {
 
@@ -13,6 +13,6 @@ GALOIS_EXPORT galois::Result<void> Init();
 
 GALOIS_EXPORT galois::Result<void> Fini();
 
-} // namespace tsuba
+}  // namespace tsuba
 
 #endif

@@ -6,25 +6,25 @@
 //
 #include "tsuba/file.h"
 
-#include <mutex>
-#include <unordered_map>
-#include <fstream>
-#include <iostream>
-#include <cassert>
-
 #include <sys/mman.h>
 
-#include "galois/Platform.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "tsuba/Errors.h"
+#include <cassert>
+#include <fstream>
+#include <iostream>
+#include <mutex>
+#include <unordered_map>
 
 #include "GlobalState.h"
+#include "galois/Logging.h"
+#include "galois/Platform.h"
+#include "galois/Result.h"
+#include "tsuba/Errors.h"
 
 namespace {
 
 template <typename T>
-T* MmapCast(size_t size, int prot, int flags, int fd, off_t off) {
+T*
+MmapCast(size_t size, int prot, int flags, int fd, off_t off) {
   void* ret = galois::MmapPopulate(nullptr, size, prot, flags, fd, off);
   if (ret == MAP_FAILED) {
     perror("mmap");
@@ -33,10 +33,10 @@ T* MmapCast(size_t size, int prot, int flags, int fd, off_t off) {
   return reinterpret_cast<T*>(ret); /* NOLINT cast needed for mmap interface */
 }
 
-galois::Result<uint8_t*> AllocAndRead(const std::string& uri, uint64_t begin,
-                                      uint64_t size) {
-  auto* ret = MmapCast<uint8_t>(size, PROT_READ | PROT_WRITE,
-                                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+galois::Result<uint8_t*>
+AllocAndRead(const std::string& uri, uint64_t begin, uint64_t size) {
+  auto* ret = MmapCast<uint8_t>(
+      size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == nullptr) {
     GALOIS_LOG_DEBUG("alloc for s3 read");
     return galois::ResultErrno();
@@ -57,7 +57,7 @@ class MappingDesc {
 public:
   MappingDesc(const MappingDesc&) = delete;
   MappingDesc& operator=(const MappingDesc&) = delete;
-  MappingDesc()                              = default;
+  MappingDesc() = default;
   MappingDesc(MappingDesc&& other) noexcept
       : ptr_(other.ptr_), size_(other.size_), valid_(other.valid_) {
     other.valid_ = false;
@@ -67,23 +67,23 @@ public:
       if (valid_) {
         munmap(ptr_, size_);
       }
-      ptr_         = other.ptr_;
-      size_        = other.size_;
-      valid_       = other.valid_;
+      ptr_ = other.ptr_;
+      size_ = other.size_;
+      valid_ = other.valid_;
       other.valid_ = false;
     }
     return *this;
   }
-  galois::Result<void> Init(const std::string& uri, uint64_t offset,
-                            size_t size) {
+  galois::Result<void> Init(
+      const std::string& uri, uint64_t offset, size_t size) {
     assert(!valid_);
     auto ptr_res = AllocAndRead(uri, offset, size);
     if (!ptr_res) {
       return ptr_res.error();
     }
-    ptr_   = ptr_res.value();
+    ptr_ = ptr_res.value();
     valid_ = true;
-    size_  = size;
+    size_ = size;
     return galois::ResultSuccess();
   }
   ~MappingDesc() {
@@ -97,53 +97,58 @@ public:
 std::mutex allocated_memory_mutex;
 std::unordered_map<uint8_t*, MappingDesc> allocated_memory;
 
-} // namespace
+}  // namespace
 
-galois::Result<void> tsuba::FileCreate(const std::string& uri, bool overwrite) {
+galois::Result<void>
+tsuba::FileCreate(const std::string& uri, bool overwrite) {
   return FS(uri)->Create(uri, overwrite);
 }
 
-galois::Result<void> tsuba::FileStore(const std::string& uri,
-                                      const uint8_t* data, uint64_t size) {
+galois::Result<void>
+tsuba::FileStore(const std::string& uri, const uint8_t* data, uint64_t size) {
   return FS(uri)->PutMultiSync(uri, data, size);
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-tsuba::FileStoreAsync(const std::string& uri, const uint8_t* data,
-                      uint64_t size) {
+tsuba::FileStoreAsync(
+    const std::string& uri, const uint8_t* data, uint64_t size) {
   return FS(uri)->PutAsync(uri, data, size);
 }
 
-galois::Result<void> tsuba::FilePeek(const std::string& uri,
-                                     uint8_t* result_buffer, uint64_t begin,
-                                     uint64_t size) {
+galois::Result<void>
+tsuba::FilePeek(
+    const std::string& uri, uint8_t* result_buffer, uint64_t begin,
+    uint64_t size) {
   return FS(uri)->GetMultiSync(uri, begin, size, result_buffer);
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-tsuba::FilePeekAsync(const std::string& uri, uint8_t* result_buffer,
-                     uint64_t begin, uint64_t size) {
+tsuba::FilePeekAsync(
+    const std::string& uri, uint8_t* result_buffer, uint64_t begin,
+    uint64_t size) {
   return FS(uri)->GetAsync(uri, begin, size, result_buffer);
 }
 
-galois::Result<void> tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
+galois::Result<void>
+tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-tsuba::FileListAsync(const std::string& directory,
-                     std::unordered_set<std::string>* list) {
+tsuba::FileListAsync(
+    const std::string& directory, std::unordered_set<std::string>* list) {
   return FS(directory)->ListAsync(directory, list);
 }
 
 galois::Result<void>
-tsuba::FileDelete(const std::string& directory,
-                  const std::unordered_set<std::string>& files) {
+tsuba::FileDelete(
+    const std::string& directory,
+    const std::unordered_set<std::string>& files) {
   return FS(directory)->Delete(directory, files);
 }
 
-galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,
-                                         uint64_t begin, uint64_t size) {
+galois::Result<uint8_t*>
+tsuba::FileMmap(const std::string& filename, uint64_t begin, uint64_t size) {
   MappingDesc new_mapping;
   if (auto res = new_mapping.Init(filename, begin, size); !res) {
     return res.error();
@@ -158,7 +163,8 @@ galois::Result<uint8_t*> tsuba::FileMmap(const std::string& filename,
   return it->second.ptr();
 }
 
-galois::Result<void> tsuba::FileMunmap(uint8_t* ptr) {
+galois::Result<void>
+tsuba::FileMunmap(uint8_t* ptr) {
   std::lock_guard<std::mutex> guard(allocated_memory_mutex);
   if (allocated_memory.erase(ptr) != 1) {
     GALOIS_LOG_WARN("passed unknown pointer to tsuba_munmap");

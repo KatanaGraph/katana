@@ -50,7 +50,7 @@ public:
       : region_(region), category_(category) {}
 
   PerThreadTimer(const PerThreadTimer&) = delete;
-  PerThreadTimer(PerThreadTimer&&)      = delete;
+  PerThreadTimer(PerThreadTimer&&) = delete;
   PerThreadTimer& operator=(const PerThreadTimer&) = delete;
   PerThreadTimer& operator=(PerThreadTimer&&) = delete;
 
@@ -63,12 +63,11 @@ public:
 
 template <>
 class PerThreadTimer<false> {
-
 public:
   PerThreadTimer(const char* const, const char* const) {}
 
   PerThreadTimer(const PerThreadTimer&) = delete;
-  PerThreadTimer(PerThreadTimer&&)      = delete;
+  PerThreadTimer(PerThreadTimer&&) = delete;
   PerThreadTimer& operator=(const PerThreadTimer&) = delete;
   PerThreadTimer& operator=(PerThreadTimer&&) = delete;
 
@@ -79,6 +78,6 @@ public:
   void stop() const {}
 };
 
-} // end namespace galois::runtime
+}  // end namespace galois::runtime
 
 #endif

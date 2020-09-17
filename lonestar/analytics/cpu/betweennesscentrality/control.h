@@ -30,4 +30,4 @@ using ShortPathType = double;
 // on if markings on nodes are to be used (helps with no duplicates in worklist)
 #define BC_USE_MARKING 1
 
-#endif // end BC_ASYNC_CONTROL
+#endif  // end BC_ASYNC_CONTROL

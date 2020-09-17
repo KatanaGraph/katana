@@ -28,13 +28,13 @@
 namespace galois::substrate {
 
 struct GALOIS_EXPORT ThreadTopoInfo {
-  unsigned tid;                 // this thread (galois id)
-  unsigned socketLeader;        // first thread id in tid's socket
-  unsigned socket;              // socket (L3 normally) of thread
-  unsigned numaNode;            // memory bank.  may be different than socket.
-  unsigned cumulativeMaxSocket; // max socket id seen from [0, tid]
-  unsigned osContext;           // OS ID to use for thread binding
-  unsigned osNumaNode;          // OS ID for numa node
+  unsigned tid;                  // this thread (galois id)
+  unsigned socketLeader;         // first thread id in tid's socket
+  unsigned socket;               // socket (L3 normally) of thread
+  unsigned numaNode;             // memory bank.  may be different than socket.
+  unsigned cumulativeMaxSocket;  // max socket id seen from [0, tid]
+  unsigned osContext;            // OS ID to use for thread binding
+  unsigned osNumaNode;           // OS ID for numa node
 };
 
 struct GALOIS_EXPORT MachineTopoInfo {
@@ -66,6 +66,6 @@ GALOIS_EXPORT std::vector<int> parseCPUList(const std::string& in);
  */
 GALOIS_EXPORT bool bindThreadSelf(unsigned osContext);
 
-} // namespace galois::substrate
+}  // namespace galois::substrate
 
 #endif

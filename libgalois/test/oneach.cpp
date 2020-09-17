@@ -17,11 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-
 #include <iostream>
 
-int main() {
+#include "galois/Galois.h"
+
+int
+main() {
   galois::SharedMemSys Galois_runtime;
   galois::substrate::SimpleLock l;
   galois::setActiveThreads(10000);

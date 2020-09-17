@@ -55,7 +55,8 @@ struct Node5 {
   Graph5::GraphNode gnode;
 };
 
-int main() {
+int
+main() {
   galois::SharedMemSys Galois_runtime;
   Graph1 g1;
   Graph2 g2;

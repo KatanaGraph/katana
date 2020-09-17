@@ -20,14 +20,14 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
 
+#include <fcntl.h>
+#include <sys/mman.h>
+
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <numeric>
-
-#include <fcntl.h>
-#include <sys/mman.h>
 
 #include <boost/iterator/counting_iterator.hpp>
 
@@ -198,9 +198,15 @@ public:
   OfflineGraph(const std::string& name)
       : fileEdgeDst(name, std::ios_base::binary),
         fileIndex(name, std::ios_base::binary),
-        fileEdgeData(name, std::ios_base::binary), locEdgeDst(0), locIndex(0),
-        locEdgeData(0), numSeeksEdgeDst(0), numSeeksIndex(0),
-        numSeeksEdgeData(0), numBytesReadEdgeDst(0), numBytesReadIndex(0),
+        fileEdgeData(name, std::ios_base::binary),
+        locEdgeDst(0),
+        locIndex(0),
+        locEdgeData(0),
+        numSeeksEdgeDst(0),
+        numSeeksIndex(0),
+        numSeeksEdgeData(0),
+        numBytesReadEdgeDst(0),
+        numBytesReadIndex(0),
         numBytesReadEdgeData(0) {
     if (!fileEdgeDst.is_open() || !fileEdgeDst.good())
       throw "Bad filename";
@@ -209,19 +215,19 @@ public:
     if (!fileEdgeData.is_open() || !fileEdgeData.good())
       throw "Bad filename";
 
-    fileEdgeDst.exceptions(std::ifstream::eofbit | std::ifstream::failbit |
-                           std::ifstream::badbit);
-    fileIndex.exceptions(std::ifstream::eofbit | std::ifstream::failbit |
-                         std::ifstream::badbit);
-    fileEdgeData.exceptions(std::ifstream::eofbit | std::ifstream::failbit |
-                            std::ifstream::badbit);
+    fileEdgeDst.exceptions(
+        std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
+    fileIndex.exceptions(
+        std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
+    fileEdgeData.exceptions(
+        std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
 
     uint64_t ver = 0;
 
     try {
       fileEdgeDst.read(reinterpret_cast<char*>(&ver), sizeof(uint64_t));
-      fileEdgeDst.read(reinterpret_cast<char*>(&sizeEdgeData),
-                       sizeof(uint64_t));
+      fileEdgeDst.read(
+          reinterpret_cast<char*>(&sizeEdgeData), sizeof(uint64_t));
       fileEdgeDst.read(reinterpret_cast<char*>(&numNodes), sizeof(uint64_t));
       fileEdgeDst.read(reinterpret_cast<char*>(&numEdges), sizeof(uint64_t));
     } catch (const std::ifstream::failure& e) {
@@ -322,9 +328,9 @@ public:
    * @param scaleFactor Vector specifying if certain divisions should get more
    * than other divisions
    */
-  auto divideByNode(size_t nodeWeight, size_t edgeWeight, size_t id,
-                    size_t total,
-                    std::vector<unsigned> scaleFactor = std::vector<unsigned>())
+  auto divideByNode(
+      size_t nodeWeight, size_t edgeWeight, size_t id, size_t total,
+      std::vector<unsigned> scaleFactor = std::vector<unsigned>())
       -> GraphRange {
     return galois::graphs::divideNodesBinarySearch<OfflineGraph>(
         numNodes, numEdges, nodeWeight, edgeWeight, id, total, *this,
@@ -379,11 +385,12 @@ class OfflineGraphWriter {
   void setEdge_sortedBuffer() {
     if (ver == 1) {
       std::vector<uint32_t> tmp(bufferDst.begin(), bufferDst.end());
-      file.write(reinterpret_cast<char*>(&tmp[0]),
-                 (sizeof(uint32_t) * tmp.size()));
+      file.write(
+          reinterpret_cast<char*>(&tmp[0]), (sizeof(uint32_t) * tmp.size()));
     }
-    file.write(reinterpret_cast<char*>(&bufferDst[0]),
-               (sizeof(uint64_t) * bufferDst.size()));
+    file.write(
+        reinterpret_cast<char*>(&bufferDst[0]),
+        (sizeof(uint64_t) * bufferDst.size()));
   }
 
   // void setEdge64_sorted(uint64_t dst) {
@@ -391,11 +398,16 @@ class OfflineGraphWriter {
   //}
 
 public:
-  OfflineGraphWriter(const std::string& name, bool use32 = false,
-                     uint64_t _numNodes = 0, uint64_t _numEdges = 0)
-      : file(name, std::ios_base::in | std::ios_base::out |
-                       std::ios_base::binary | std::ios_base::trunc),
-        numNodes(_numNodes), numEdges(_numEdges), smallData(use32), ver(1) {
+  OfflineGraphWriter(
+      const std::string& name, bool use32 = false, uint64_t _numNodes = 0,
+      uint64_t _numEdges = 0)
+      : file(
+            name, std::ios_base::in | std::ios_base::out |
+                      std::ios_base::binary | std::ios_base::trunc),
+        numNodes(_numNodes),
+        numEdges(_numEdges),
+        smallData(use32),
+        ver(1) {
     if (!file.is_open() || !file.good())
       throw "Bad filename";
     uint64_t etSize = smallData ? sizeof(float) : sizeof(double);
@@ -411,11 +423,11 @@ public:
   // sets the number of nodes and edges.  points to an container of edge counts
   void setCounts(std::deque<uint64_t> edgeCounts) {
     edgeOffsets = std::move(edgeCounts);
-    numNodes    = edgeOffsets.size();
-    numEdges    = std::accumulate(edgeOffsets.begin(), edgeOffsets.end(), 0);
+    numNodes = edgeOffsets.size();
+    numEdges = std::accumulate(edgeOffsets.begin(), edgeOffsets.end(), 0);
     std::cout << " NUM EDGES  : " << numEdges << "\n";
-    std::partial_sum(edgeOffsets.begin(), edgeOffsets.end(),
-                     edgeOffsets.begin());
+    std::partial_sum(
+        edgeOffsets.begin(), edgeOffsets.end(), edgeOffsets.begin());
     // Nodes are greater than 2^32 so need ver = 2.
     if (numNodes >= 4294967296) {
       ver = 2;
@@ -423,7 +435,7 @@ public:
       ver = 1;
     }
     std::cout << " USING VERSION : " << ver << "\n";
-    uint64_t etSize = 0; // smallData ? sizeof(float) : sizeof(double);
+    uint64_t etSize = 0;  // smallData ? sizeof(float) : sizeof(double);
     file.seekg(0, std::ios_base::beg);
     file.write(reinterpret_cast<char*>(&ver), sizeof(uint64_t));
     file.write(reinterpret_cast<char*>(&etSize), sizeof(uint64_t));
@@ -447,7 +459,7 @@ public:
   void seekEdgesDstStart() { file.seekg(offsetOfDst(0), std::ios_base::beg); }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 
 #endif

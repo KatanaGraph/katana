@@ -17,15 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
 #include "galois/FlatMap.h"
-#include "galois/Timer.h"
 
-#include <boost/iterator/counting_iterator.hpp>
 #include <cstdlib>
 #include <iostream>
 #include <map>
 #include <random>
+
+#include <boost/iterator/counting_iterator.hpp>
+
+#include "galois/Galois.h"
+#include "galois/Timer.h"
 
 struct element {
   volatile int val;
@@ -34,7 +36,8 @@ struct element {
   operator int() const { return val; }
 };
 
-std::ostream& operator<<(std::ostream& out, const element& e) {
+std::ostream&
+operator<<(std::ostream& out, const element& e) {
   out << e.val;
   return out;
 }
@@ -55,7 +58,8 @@ struct Fn2 {
 };
 
 template <typename MapTy>
-void timeMapParallel(std::string c, const std::vector<int>& keys) {
+void
+timeMapParallel(std::string c, const std::vector<int>& keys) {
   MapTy m;
   galois::Timer t1, t2;
   t1.start();
@@ -68,7 +72,8 @@ void timeMapParallel(std::string c, const std::vector<int>& keys) {
 }
 
 template <typename MapTy>
-void timeMap(std::string c, const std::vector<int>& keys) {
+void
+timeMap(std::string c, const std::vector<int>& keys) {
   MapTy m;
   galois::Timer t1, t2;
   t1.start();
@@ -86,7 +91,8 @@ void timeMap(std::string c, const std::vector<int>& keys) {
 }
 
 template <typename MapTy>
-void testMap() {
+void
+testMap() {
   MapTy m;
   MapTy m2(m);
   MapTy m3;
@@ -142,14 +148,16 @@ void testMap() {
   std::cout << "\n";
 }
 
-void timeTests(std::string prefix, const std::vector<int>& keys) {
+void
+timeTests(std::string prefix, const std::vector<int>& keys) {
   for (int i = 0; i < 3; ++i)
     timeMap<std::map<int, element>>(prefix + "std::map", keys);
   for (int i = 0; i < 3; ++i)
     timeMap<galois::flat_map<int, element>>(prefix + "flat_map", keys);
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
   testMap<std::map<int, element>>();
   testMap<galois::flat_map<int, element>>();

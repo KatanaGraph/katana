@@ -20,22 +20,20 @@
 #ifndef _BCNODE_H_
 #define _BCNODE_H_
 
-#include "control.h"
-
-#include "galois/substrate/SimpleLock.h"
-#include "galois/gstl.h"
-
-#include <vector>
-#include <string>
-#include <sstream>
 #include <algorithm>
 #include <limits>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "control.h"
+#include "galois/gstl.h"
+#include "galois/substrate/SimpleLock.h"
 
 template <bool UseMarking = false, bool Concurrent = true>
 struct BCNode {
-  using LockType =
-      typename std::conditional<Concurrent, galois::substrate::SimpleLock,
-                                char>::type;
+  using LockType = typename std::conditional<
+      Concurrent, galois::substrate::SimpleLock, char>::type;
   LockType spinLock;
 
   using predTY = galois::gstl::Vector<uint32_t>;
@@ -50,8 +48,14 @@ struct BCNode {
   int mark;
 
   BCNode()
-      : spinLock(), preds(), distance(infinity), nsuccs(0), sigma(0), delta(0),
-        bc(0), mark(0) {}
+      : spinLock(),
+        preds(),
+        distance(infinity),
+        nsuccs(0),
+        sigma(0),
+        delta(0),
+        bc(0),
+        mark(0) {}
 
   /**
    * @param a Node to check if predecessor of this node
@@ -113,10 +117,10 @@ struct BCNode {
   void reset() {
     preds.clear();
     distance = infinity;
-    nsuccs   = 0;
-    sigma    = 0;
-    delta    = 0;
-    mark     = 0;
+    nsuccs = 0;
+    sigma = 0;
+    delta = 0;
+    mark = 0;
   }
 
   /**
@@ -136,7 +140,7 @@ struct BCNode {
    */
   void initAsSource() {
     distance = 0;
-    sigma    = 1;
+    sigma = 1;
   }
 
   /**
@@ -165,7 +169,7 @@ struct BCNode {
       return __sync_fetch_and_or(&mark, 1);
     } else {
       int retval = mark;
-      mark       = 1;
+      mark = 1;
       return retval;
     }
   }
@@ -178,4 +182,4 @@ struct BCNode {
     return 0;
   }
 };
-#endif // _BCNODE_H_
+#endif  // _BCNODE_H_

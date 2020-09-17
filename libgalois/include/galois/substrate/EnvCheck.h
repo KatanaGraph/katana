@@ -58,8 +58,8 @@ struct ConvByType<std::string> {
 };
 
 template <typename T>
-bool genericGetEnv(const char* varName, T& ret) {
-
+bool
+genericGetEnv(const char* varName, T& ret) {
   char* varVal = getenv(varName);
   if (varVal) {
     ConvByType<T>::go(varVal, ret);
@@ -69,7 +69,7 @@ bool genericGetEnv(const char* varName, T& ret) {
   }
 }
 
-} // end namespace internal
+}  // end namespace internal
 
 //! Return true if the Enviroment variable is set
 bool EnvCheck(const char* varName);
@@ -83,16 +83,18 @@ bool EnvCheck(const std::string& varName);
  * @return true if environment variable set, false otherwise
  */
 template <typename T>
-bool EnvCheck(const char* varName, T& retVal) {
+bool
+EnvCheck(const char* varName, T& retVal) {
   return internal::genericGetEnv(varName, retVal);
 }
 
 template <typename T>
-bool EnvCheck(const std::string& varName, T& retVal) {
+bool
+EnvCheck(const std::string& varName, T& retVal) {
   return EnvCheck(varName.c_str(), retVal);
 }
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

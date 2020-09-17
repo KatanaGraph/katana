@@ -23,14 +23,13 @@
 #include <memory>
 
 #include "galois/config.h"
-#include "galois/substrate/ThreadPool.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/Termination.h"
+#include "galois/substrate/ThreadPool.h"
 
 namespace galois::substrate {
 
 class GALOIS_EXPORT SharedMem {
-
   // Order is critical here
   ThreadPool m_tpool;
 
@@ -55,6 +54,6 @@ public:
   SharedMem& operator=(SharedMem&&) = delete;
 };
 
-} // namespace galois::substrate
+}  // namespace galois::substrate
 
 #endif

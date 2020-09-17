@@ -35,8 +35,9 @@ namespace worklists {
  * @tparam Container Worklist to manage work enqueued by the operator
  * @tparam Iterator  (inferred by library)
  */
-template <bool Steal = false, typename Container = PerSocketChunkFIFO<>,
-          typename Iterator = int*>
+template <
+    bool Steal = false, typename Container = PerSocketChunkFIFO<>,
+    typename Iterator = int*>
 struct StableIterator {
   typedef typename std::iterator_traits<Iterator>::value_type value_type;
   typedef Iterator iterator;
@@ -84,7 +85,7 @@ private:
       if (Steal && localBegin != localEnd) {
         shared_state& s = stealState.data;
         s.stealLock.lock();
-        s.stealEnd   = localEnd;
+        s.stealEnd = localEnd;
         s.stealBegin = localEnd = galois::split_range(localBegin, localEnd);
         if (s.stealBegin != s.stealEnd)
           s.stealAvail = true;
@@ -106,7 +107,7 @@ private:
       }
       if (s.stealBegin != s.stealEnd) {
         dst.localBegin = s.stealBegin;
-        s.stealBegin   = dst.localEnd =
+        s.stealBegin = dst.localEnd =
             galois::split_range(s.stealBegin, s.stealEnd);
         s.stealAvail = s.stealBegin != s.stealEnd;
       }
@@ -138,10 +139,10 @@ public:
   //! called with the same b and e on each thread
   template <typename RangeTy>
   void push_initial(const RangeTy& r) {
-    state& data           = *TLDS.getLocal();
-    data.localBegin       = r.local_begin();
-    data.localEnd         = r.local_end();
-    data.nextVictim       = substrate::ThreadPool::getTID();
+    state& data = *TLDS.getLocal();
+    data.localBegin = r.local_begin();
+    data.localEnd = r.local_end();
+    data.nextVictim = substrate::ThreadPool::getTID();
     data.numStealFailures = 0;
     data.populateSteal();
   }
@@ -173,6 +174,6 @@ public:
 };
 GALOIS_WLCOMPILECHECK(StableIterator)
 
-} // namespace worklists
-} // namespace galois
+}  // namespace worklists
+}  // namespace galois
 #endif

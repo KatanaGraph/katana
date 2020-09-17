@@ -17,9 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/ThreadPool.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
+#include "galois/substrate/ThreadPool.h"
 
 namespace {
 
@@ -31,7 +31,7 @@ class CountingBarrier : public galois::substrate::Barrier {
 
   void _reinit(unsigned val) {
     count = num = val;
-    sense       = false;
+    sense = false;
     local_sense.resize(val);
     for (unsigned i = 0; i < val; ++i)
       local_sense.at(i).get() = false;
@@ -61,7 +61,7 @@ public:
   virtual const char* name() const { return "CountingBarrier"; }
 };
 
-} // namespace
+}  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
 galois::substrate::createCountingBarrier(unsigned activeThreads) {

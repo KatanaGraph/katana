@@ -18,22 +18,24 @@
  */
 
 #include "galois/runtime/Context.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/CacheLineStorage.h"
 
 #include <stdio.h>
+
+#include "galois/substrate/CacheLineStorage.h"
+#include "galois/substrate/SimpleLock.h"
 
 //! Global thread context for each active thread
 static thread_local galois::runtime::SimpleRuntimeContext* thread_ctx = 0;
 
 GALOIS_EXPORT thread_local jmp_buf galois::runtime::execFrame;
 
-void galois::runtime::setThreadContext(
-    galois::runtime::SimpleRuntimeContext* ctx) {
+void
+galois::runtime::setThreadContext(galois::runtime::SimpleRuntimeContext* ctx) {
   thread_ctx = ctx;
 }
 
-galois::runtime::SimpleRuntimeContext* galois::runtime::getThreadContext() {
+galois::runtime::SimpleRuntimeContext*
+galois::runtime::getThreadContext() {
   return thread_ctx;
 }
 
@@ -54,7 +56,8 @@ galois::runtime::LockManagerBase::tryAcquire(
   return FAIL;
 }
 
-void galois::runtime::SimpleRuntimeContext::release(
+void
+galois::runtime::SimpleRuntimeContext::release(
     galois::runtime::Lockable* lockable) {
   assert(lockable);
   // The deterministic executor, for instance, steals locks from other
@@ -64,13 +67,14 @@ void galois::runtime::SimpleRuntimeContext::release(
   lockable->owner.unlock_and_clear();
 }
 
-unsigned galois::runtime::SimpleRuntimeContext::commitIteration() {
+unsigned
+galois::runtime::SimpleRuntimeContext::commitIteration() {
   unsigned numLocks = 0;
   while (locks) {
     // ORDER MATTERS!
     Lockable* lockable = locks;
-    locks              = lockable->next;
-    lockable->next     = 0;
+    locks = lockable->next;
+    lockable->next = 0;
     substrate::compilerBarrier();
     release(lockable);
     ++numLocks;
@@ -79,11 +83,13 @@ unsigned galois::runtime::SimpleRuntimeContext::commitIteration() {
   return numLocks;
 }
 
-unsigned galois::runtime::SimpleRuntimeContext::cancelIteration() {
+unsigned
+galois::runtime::SimpleRuntimeContext::cancelIteration() {
   return commitIteration();
 }
 
-void galois::runtime::SimpleRuntimeContext::subAcquire(
+void
+galois::runtime::SimpleRuntimeContext::subAcquire(
     galois::runtime::Lockable*, galois::MethodFlag) {
   GALOIS_DIE("unreachable");
 }

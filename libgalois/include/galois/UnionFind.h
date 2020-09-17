@@ -38,7 +38,7 @@ class UnionFindNode {
     T* rep = m_component;
     while (rep->m_component != rep) {
       T* next = rep->m_component.load(std::memory_order_relaxed);
-      rep     = next;
+      rep = next;
     }
     return rep;
   }
@@ -74,7 +74,7 @@ public:
     while (rep->m_component.load(std::memory_order_relaxed) != rep) {
       // get next parent
       T* next = rep->m_component.load(std::memory_order_relaxed);
-      rep     = next;
+      rep = next;
     }
 
     // at this point rep is the parent: save as my parent
@@ -89,7 +89,7 @@ public:
     if (isRep())
       return m_component.load(std::memory_order_relaxed);
 
-    T* rep  = m_component;
+    T* rep = m_component;
     T* prev = 0;
     while (rep->m_component.load(std::memory_order_relaxed) != rep) {
       T* next = rep->m_component.load(std::memory_order_relaxed);
@@ -98,7 +98,7 @@ public:
         prev->m_component.store(next, std::memory_order_relaxed);
       }
       prev = rep;
-      rep  = next;
+      rep = next;
     }
 
     return rep;
@@ -121,5 +121,5 @@ public:
     }
   }
 };
-} // namespace galois
+}  // namespace galois
 #endif

@@ -23,8 +23,9 @@ namespace galois {
 namespace graphs {
 namespace internal {
 
-uint32_t determine_block_division(uint32_t numDivisions,
-                                  std::vector<unsigned>& scaleFactor) {
+uint32_t
+determine_block_division(
+    uint32_t numDivisions, std::vector<unsigned>& scaleFactor) {
   uint32_t numBlocks = 0;
 
   if (scaleFactor.empty()) {
@@ -50,9 +51,10 @@ uint32_t determine_block_division(uint32_t numDivisions,
   return numBlocks;
 }
 
-bool unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
-                               uint32_t endNode,
-                               std::vector<uint32_t>& returnRanges) {
+bool
+unitRangeCornerCaseHandle(
+    uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
+    std::vector<uint32_t>& returnRanges) {
   uint32_t totalNodes = endNode - beginNode;
 
   // check corner cases
@@ -75,7 +77,7 @@ bool unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
     // more units than nodes
   } else if (unitsToSplit > totalNodes) {
     uint32_t current_node = beginNode;
-    returnRanges[0]       = current_node;
+    returnRanges[0] = current_node;
     // 1 node for units until out of units
     for (uint32_t i = 0; i < totalNodes; i++) {
       returnRanges[i + 1] = ++current_node;
@@ -91,16 +93,18 @@ bool unitRangeCornerCaseHandle(uint32_t unitsToSplit, uint32_t beginNode,
   return false;
 }
 
-void unitRangeSanity([[maybe_unused]] uint32_t unitsToSplit,
-                     [[maybe_unused]] uint32_t beginNode,
-                     [[maybe_unused]] uint32_t endNode,
-                     [[maybe_unused]] std::vector<uint32_t>& returnRanges) {
+void
+unitRangeSanity(
+    [[maybe_unused]] uint32_t unitsToSplit, [[maybe_unused]] uint32_t beginNode,
+    [[maybe_unused]] uint32_t endNode,
+    [[maybe_unused]] std::vector<uint32_t>& returnRanges) {
 #ifndef NDEBUG
   // sanity checks
-  assert(returnRanges[0] == beginNode &&
-         "return ranges begin not the begin node");
-  assert(returnRanges[unitsToSplit] == endNode &&
-         "return ranges end not end node");
+  assert(
+      returnRanges[0] == beginNode && "return ranges begin not the begin node");
+  assert(
+      returnRanges[unitsToSplit] == endNode &&
+      "return ranges end not end node");
 
   for (uint32_t i = 1; i < unitsToSplit; i++) {
     assert(returnRanges[i] >= beginNode && returnRanges[i] <= endNode);
@@ -109,6 +113,6 @@ void unitRangeSanity([[maybe_unused]] uint32_t unitsToSplit,
 #endif
 }
 
-} // namespace internal
-} // namespace graphs
-} // namespace galois
+}  // namespace internal
+}  // namespace graphs
+}  // namespace galois

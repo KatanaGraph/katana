@@ -17,22 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <algorithm>
+#include <deque>
+#include <fstream>
+#include <iostream>
+#include <memory>
+
+#include "Lonestar/BoilerPlate.h"
+#include "galois/Bag.h"
 #include "galois/Galois.h"
 #include "galois/Reduction.h"
-#include "galois/Bag.h"
 #include "galois/Timer.h"
 #include "galois/graphs/Graph.h"
 #include "galois/graphs/TypeTraits.h"
 #include "galois/runtime/Statistics.h"
-#include "Lonestar/BoilerPlate.h"
-
 #include "llvm/Support/CommandLine.h"
-
-#include <iostream>
-#include <deque>
-#include <algorithm>
-#include <fstream>
-#include <memory>
 
 enum Algo {
   bspJacobi,
@@ -47,22 +46,24 @@ static const char* desc =
     "Computes the maximal k-trusses for a given undirected graph";
 static const char* url = "k_truss";
 
-static cll::opt<std::string>
-    inputFile(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int>
-    trussNum("trussNum", cll::desc("report trussNum-trusses"), cll::Required);
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<unsigned int> trussNum(
+    "trussNum", cll::desc("report trussNum-trusses"), cll::Required);
 
-static cll::opt<std::string>
-    outName("o", cll::desc("output file for the edgelist of resulting truss"));
+static cll::opt<std::string> outName(
+    "o", cll::desc("output file for the edgelist of resulting truss"));
 
 static cll::opt<Algo> algo(
     "algo", cll::desc("Choose an algorithm:"),
     cll::values(
-        clEnumValN(Algo::bspJacobi, "bspJacobi",
-                   "Bulk-synchronous parallel with separated edge removal"),
+        clEnumValN(
+            Algo::bspJacobi, "bspJacobi",
+            "Bulk-synchronous parallel with separated edge removal"),
         clEnumValN(Algo::bsp, "bsp", "Bulk-synchronous parallel (default)"),
-        clEnumValN(Algo::bspCoreThenTruss, "bspCoreThenTruss",
-                   "Compute k-1 core and then k-truss")),
+        clEnumValN(
+            Algo::bspCoreThenTruss, "bspCoreThenTruss",
+            "Compute k-1 core and then k-truss")),
     cll::init(Algo::bsp));
 
 //! Set LSB of an edge weight to indicate the removal of the edge.
@@ -70,18 +71,18 @@ using Graph =
     galois::graphs::LC_CSR_Graph<void, uint32_t>::template with_numa_alloc<
         true>::type::template with_no_lockable<true>::type;
 
-using GNode   = Graph::GraphNode;
-using Edge    = std::pair<GNode, GNode>;
+using GNode = Graph::GraphNode;
+using Edge = std::pair<GNode, GNode>;
 using EdgeVec = galois::InsertBag<Edge>;
 using NodeVec = galois::InsertBag<GNode>;
 
 template <typename T>
 using PerIterAlloc = typename galois::PerIterAllocTy::rebind<T>::other;
 
-static const uint32_t valid   = 0x0;
+static const uint32_t valid = 0x0;
 static const uint32_t removed = 0x1;
 
-#if 0 ///< Deprecated codes.
+#if 0  ///< Deprecated codes.
 ///< TODO We can restore the asynchronous ktruss.
 
 /**
@@ -268,7 +269,8 @@ struct AsyncTrussTxAlgo {
  * Initialize edge data to valid.
  */
 template <typename Graph>
-void initialize(Graph& g) {
+void
+initialize(Graph& g) {
   g.sortAllEdgesByDst();
 
   //! Initializa all edges to valid.
@@ -286,7 +288,8 @@ void initialize(Graph& g) {
  * Dump ktruss for each node to a file.
  */
 template <typename Graph>
-void reportKTruss(Graph& g) {
+void
+reportKTruss(Graph& g) {
   if (outName.empty()) {
     return;
   }
@@ -321,7 +324,8 @@ void reportKTruss(Graph& g) {
  * @return true if the target node n has the number of degrees
  *         more than or equal to j
  */
-bool isValidDegreeNoLessThanJ(Graph& g, GNode n, unsigned int j) {
+bool
+isValidDegreeNoLessThanJ(Graph& g, GNode n, unsigned int j) {
   size_t numValid = 0;
   for (auto e : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
     if (!(g.getEdgeData(e) & removed)) {
@@ -344,12 +348,13 @@ bool isValidDegreeNoLessThanJ(Graph& g, GNode n, unsigned int j) {
  *
  * @return true if the src and the dst are included in more than j triangles
  */
-bool isSupportNoLessThanJ(Graph& g, GNode src, GNode dst, unsigned int j) {
+bool
+isSupportNoLessThanJ(Graph& g, GNode src, GNode dst, unsigned int j) {
   size_t numValidEqual = 0;
-  auto srcI            = g.edge_begin(src, galois::MethodFlag::UNPROTECTED),
-       srcE            = g.edge_end(src, galois::MethodFlag::UNPROTECTED),
-       dstI            = g.edge_begin(dst, galois::MethodFlag::UNPROTECTED),
-       dstE            = g.edge_end(dst, galois::MethodFlag::UNPROTECTED);
+  auto srcI = g.edge_begin(src, galois::MethodFlag::UNPROTECTED),
+       srcE = g.edge_end(src, galois::MethodFlag::UNPROTECTED),
+       dstI = g.edge_begin(dst, galois::MethodFlag::UNPROTECTED),
+       dstE = g.edge_end(dst, galois::MethodFlag::UNPROTECTED);
 
   while (true) {
     //! Find the first valid edge.
@@ -397,8 +402,8 @@ struct BSPTrussJacobiAlgo {
   struct PickUnsupportedEdges {
     Graph& g;
     unsigned int j;
-    EdgeVec& r; ///< unsupported
-    EdgeVec& s; ///< next
+    EdgeVec& r;  ///< unsupported
+    EdgeVec& s;  ///< next
 
     PickUnsupportedEdges(Graph& g, unsigned int j, EdgeVec& r, EdgeVec& s)
         : g(g), j(j), r(r), s(s) {}
@@ -432,9 +437,9 @@ struct BSPTrussJacobiAlgo {
         galois::steal());
 
     while (true) {
-      galois::do_all(galois::iterate(*cur),
-                     PickUnsupportedEdges{g, k - 2, unsupported, *next},
-                     galois::steal());
+      galois::do_all(
+          galois::iterate(*cur),
+          PickUnsupportedEdges{g, k - 2, unsupported, *next}, galois::steal());
 
       if (std::distance(unsupported.begin(), unsupported.end()) == 0) {
         break;
@@ -453,8 +458,8 @@ struct BSPTrussJacobiAlgo {
       cur->clear();
       std::swap(cur, next);
     }
-  } ///< End operator()
-};  ///< End struct BSPTrussJacobiAlgo
+  }  ///< End operator()
+};   ///< End struct BSPTrussJacobiAlgo
 
 /**
  * BSPTrussAlgo:
@@ -509,8 +514,9 @@ struct BSPTrussAlgo {
 
     //! Remove unsupported edges until no more edges can be removed.
     while (true) {
-      galois::do_all(galois::iterate(*cur), KeepSupportedEdges{g, k - 2, *next},
-                     galois::steal());
+      galois::do_all(
+          galois::iterate(*cur), KeepSupportedEdges{g, k - 2, *next},
+          galois::steal());
       nextSize = std::distance(next->begin(), next->end());
 
       if (curSize == nextSize) {
@@ -522,8 +528,8 @@ struct BSPTrussAlgo {
       curSize = nextSize;
       std::swap(cur, next);
     }
-  } ///< End operator()
-};  ///< End struct BSPTrussAlgo
+  }  ///< End operator()
+};   ///< End struct BSPTrussAlgo
 
 /**
  * BSPCoreAlgo:
@@ -546,7 +552,7 @@ struct BSPCoreAlgo {
         s.push_back(n);
       } else {
         for (auto e : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
-          auto dst                                     = g.getEdgeDst(e);
+          auto dst = g.getEdgeDst(e);
           g.getEdgeData(g.findEdgeSortedByDst(n, dst)) = removed;
           g.getEdgeData(g.findEdgeSortedByDst(dst, n)) = removed;
         }
@@ -559,8 +565,8 @@ struct BSPCoreAlgo {
     NodeVec *cur = &work[0], *next = &work[1];
     size_t curSize = g.size(), nextSize;
 
-    galois::do_all(galois::iterate(g), KeepValidNodes{g, k, *next},
-                   galois::steal());
+    galois::do_all(
+        galois::iterate(g), KeepValidNodes{g, k, *next}, galois::steal());
     nextSize = std::distance(next->begin(), next->end());
 
     while (curSize != nextSize) {
@@ -568,12 +574,12 @@ struct BSPCoreAlgo {
       curSize = nextSize;
       std::swap(cur, next);
 
-      galois::do_all(galois::iterate(*cur), KeepValidNodes{g, k, *next},
-                     galois::steal());
+      galois::do_all(
+          galois::iterate(*cur), KeepValidNodes{g, k, *next}, galois::steal());
       nextSize = std::distance(next->begin(), next->end());
     }
   }
-}; ///< End BSPCoreAlgo.
+};  ///< End BSPCoreAlgo.
 
 /**
  * BSPCoreThenTrussAlgo:
@@ -603,11 +609,12 @@ struct BSPCoreThenTrussAlgo {
     bspTrussIm(g, k);
 
     TTruss.stop();
-  } ///< End operator().
-};  ///< End struct BSPCoreThenTrussAlgo.
+  }  ///< End operator().
+};   ///< End struct BSPCoreThenTrussAlgo.
 
 template <typename Algo>
-void run() {
+void
+run() {
   Graph graph;
   Algo algo;
 
@@ -619,8 +626,8 @@ void run() {
             << trussNum << "-truss\n";
 
   size_t approxEdgeData = 4 * (graph.size() + graph.sizeEdges());
-  galois::preAlloc(numThreads +
-                   4 * (approxEdgeData) / galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      numThreads + 4 * (approxEdgeData) / galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   initialize(graph);
@@ -647,7 +654,8 @@ void run() {
   galois::gInfo("Number of edges left in truss is ", numEdges);
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFile);
 
@@ -655,9 +663,10 @@ int main(int argc, char** argv) {
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE("This application requires a symmetric graph input;"
-               " please use the -symmetricGraph flag "
-               " to indicate the input is a symmetric graph.");
+    GALOIS_DIE(
+        "This application requires a symmetric graph input;"
+        " please use the -symmetricGraph flag "
+        " to indicate the input is a symmetric graph.");
   }
 
   if (2 > trussNum) {

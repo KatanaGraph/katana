@@ -1,20 +1,21 @@
 #include "galois/FileSystem.h"
-#include "galois/Random.h"
+
+#include <unistd.h>
 
 #include <string_view>
 #include <vector>
 
 #include <boost/outcome/outcome.hpp>
-#include <unistd.h>
 #include <fmt/core.h>
 
 #include "galois/ErrorCode.h"
+#include "galois/Random.h"
 
 static const std::string_view kExes = "XXXXXX";
-static const char kSepChar          = '/';
+static const char kSepChar = '/';
 
-static std::vector<char> TemplateString(std::string_view pre,
-                                        std::string_view suf) {
+static std::vector<char>
+TemplateString(std::string_view pre, std::string_view suf) {
   std::vector<char> res(pre.begin(), pre.end());
   res.insert(res.end(), kExes.begin(), kExes.end());
   res.insert(res.end(), suf.begin(), suf.end());
@@ -22,8 +23,8 @@ static std::vector<char> TemplateString(std::string_view pre,
   return res;
 }
 
-galois::Result<std::string> galois::CreateUniqueFile(std::string_view prefix,
-                                                     std::string_view suffix) {
+galois::Result<std::string>
+galois::CreateUniqueFile(std::string_view prefix, std::string_view suffix) {
   auto result = OpenUniqueFile(prefix, suffix);
   if (!result) {
     return result.error();
@@ -57,8 +58,8 @@ galois::CreateUniqueDirectory(std::string_view prefix) {
   return std::string(buf.begin(), buf.end() - 1);
 }
 
-galois::Result<std::string> galois::NewPath(const std::string& dir,
-                                            const std::string& prefix) {
+galois::Result<std::string>
+galois::NewPath(const std::string& dir, const std::string& prefix) {
   std::string name = prefix;
   if (prefix.front() == kSepChar) {
     name = name.substr(1, std::string::npos);
@@ -74,8 +75,9 @@ galois::Result<std::string> galois::NewPath(const std::string& dir,
 
 // This function does not recognize any path seperator other than '/'. This
 // could be a problem for Windows or "non-standard S3" paths.
-std::string galois::ExtractFileName(const std::string& path) {
-  size_t last_slash     = path.find_last_of(kSepChar, std::string::npos);
+std::string
+galois::ExtractFileName(const std::string& path) {
+  size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
   size_t name_end_plus1 = path.length();
   if (last_slash == std::string::npos) {
     return path;
@@ -85,14 +87,15 @@ std::string galois::ExtractFileName(const std::string& path) {
     while (last_slash > 0 && path[last_slash] == kSepChar)
       last_slash--;
     name_end_plus1 =
-        last_slash + 1; // name_end_plus1 points to last slash in group
+        last_slash + 1;  // name_end_plus1 points to last slash in group
     while (last_slash > 0 && path[last_slash] != kSepChar)
       last_slash--;
   }
   return path.substr(last_slash + 1, name_end_plus1 - last_slash - 1);
 }
 
-galois::Result<std::string> galois::ExtractDirName(const std::string& path) {
+galois::Result<std::string>
+galois::ExtractDirName(const std::string& path) {
   size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
   if (last_slash == std::string::npos) {
     return ErrorCode::InvalidArgument;
@@ -112,7 +115,8 @@ galois::Result<std::string> galois::ExtractDirName(const std::string& path) {
   return path.substr(0, last_slash);
 }
 
-std::string galois::JoinPath(const std::string& dir, const std::string& file) {
+std::string
+galois::JoinPath(const std::string& dir, const std::string& file) {
   size_t last_slash = dir.find_last_of(kSepChar, std::string::npos);
   if (last_slash == (dir.length() - 1)) {
     return dir + file;

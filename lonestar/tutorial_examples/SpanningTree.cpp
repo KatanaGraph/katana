@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
+#include <algorithm>
+#include <iostream>
+#include <utility>
+
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Bag.h"
+#include "galois/Galois.h"
+#include "galois/ParallelSTL.h"
+#include "galois/Reduction.h"
 #include "galois/Timer.h"
 #include "galois/UnionFind.h"
 #include "galois/graphs/LCGraph.h"
-#include "galois/ParallelSTL.h"
 #include "llvm/Support/CommandLine.h"
-
-#include "Lonestar/BoilerPlate.h"
-
-#include <utility>
-#include <algorithm>
-#include <iostream>
 
 namespace cll = llvm::cl;
 
@@ -39,14 +38,15 @@ const char* desc = "Computes the spanning forest of a graph";
 
 enum Algo { demo, asynchronous, blockedasync };
 
-static cll::opt<std::string>
-    inputFilename(cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<Algo>
-    algo("algo", cll::desc("Choose an algorithm:"),
-         cll::values(clEnumVal(demo, "Demonstration algorithm"),
-                     clEnumVal(asynchronous, "Asynchronous"),
-                     clEnumVal(blockedasync, "Blocked Asynchronous")),
-         cll::init(blockedasync));
+static cll::opt<std::string> inputFilename(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
+static cll::opt<Algo> algo(
+    "algo", cll::desc("Choose an algorithm:"),
+    cll::values(
+        clEnumVal(demo, "Demonstration algorithm"),
+        clEnumVal(asynchronous, "Asynchronous"),
+        clEnumVal(blockedasync, "Blocked Asynchronous")),
+    cll::init(blockedasync));
 
 struct Node : public galois::UnionFindNode<Node> {
   Node() : galois::UnionFindNode<Node>(const_cast<Node*>(this)) {}
@@ -54,7 +54,8 @@ struct Node : public galois::UnionFindNode<Node> {
   void setComponent(Node* n) { m_component = n; }
 };
 
-std::ostream& operator<<(std::ostream& os, const Node& n) {
+std::ostream&
+operator<<(std::ostream& os, const Node& n) {
   os << "[id: " << &n << "]";
   return os;
 }
@@ -70,17 +71,18 @@ struct BlockedWorkItem {
 };
 
 template <bool MakeContinuation, int Limit>
-auto specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
+auto
+specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
     -> decltype(auto) {
   return
       [&](const GNode& src, const Graph::edge_iterator& start, auto& pusher) {
         Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-        int count   = 1;
+        int count = 1;
         for (Graph::edge_iterator
                  ii = start,
                  ei = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
              ii != ei; ++ii, ++count) {
-          GNode dst   = graph.getEdgeDst(ii);
+          GNode dst = graph.getEdgeDst(ii);
           Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
           if (sdata.merge(&ddata)) {
             mst.push(std::make_pair(src, dst));
@@ -98,7 +100,8 @@ auto specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
       };
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, nullptr);
 
@@ -139,7 +142,7 @@ int main(int argc, char** argv) {
           galois::iterate({*ii}),
           [&](GNode src, auto& ctx) {
             for (auto ii : graph.edges(src, galois::MethodFlag::WRITE)) {
-              GNode dst   = graph.getEdgeDst(ii);
+              GNode dst = graph.getEdgeDst(ii);
               Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
               if (ddata.component() == root)
                 continue;
@@ -163,7 +166,7 @@ int main(int argc, char** argv) {
           [&](const GNode& src) {
             Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
             for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-              GNode dst   = graph.getEdgeDst(ii);
+              GNode dst = graph.getEdgeDst(ii);
               Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
               if (sdata.merge(&ddata)) {
                 mst.push(std::make_pair(src, dst));
@@ -171,8 +174,8 @@ int main(int argc, char** argv) {
             }
           },
           galois::loopname("Merge"), galois::steal());
-      galois::do_all(galois::iterate(graph), Normalize,
-                     galois::loopname("Normalize"));
+      galois::do_all(
+          galois::iterate(graph), Normalize, galois::loopname("Normalize"));
     }
     break;
 
@@ -202,8 +205,8 @@ int main(int argc, char** argv) {
           galois::loopname("Merge"), galois::disable_conflict_detection(),
           galois::wl<galois::worklists::PerSocketChunkFIFO<128>>());
       //! Normalize component by doing find with path compression
-      galois::do_all(galois::iterate(graph), Normalize,
-                     galois::loopname("Normalize"));
+      galois::do_all(
+          galois::iterate(graph), Normalize, galois::loopname("Normalize"));
     }
     break;
 
@@ -217,7 +220,7 @@ int main(int argc, char** argv) {
   auto is_bad_graph = [&](const GNode& n) {
     Node& me = graph.getData(n);
     for (auto ii : graph.edges(n)) {
-      GNode dst  = graph.getEdgeDst(ii);
+      GNode dst = graph.getEdgeDst(ii);
       Node& data = graph.getData(dst);
       if (me.component() != data.component()) {
         std::cerr << "not in same component: " << me << " and " << data << "\n";
@@ -253,8 +256,8 @@ int main(int argc, char** argv) {
   };
 
   auto verify = [&]() {
-    if (galois::ParallelSTL::find_if(graph.begin(), graph.end(),
-                                     is_bad_graph) == graph.end()) {
+    if (galois::ParallelSTL::find_if(
+            graph.begin(), graph.end(), is_bad_graph) == graph.end()) {
       if (galois::ParallelSTL::find_if(mst.begin(), mst.end(), is_bad_mst) ==
           mst.end()) {
         return checkAcyclic();

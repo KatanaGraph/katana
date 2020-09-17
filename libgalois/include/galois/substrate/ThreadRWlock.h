@@ -28,7 +28,6 @@ namespace galois {
 namespace substrate {
 
 class ThreadRWlock {
-
   typedef substrate::PaddedLock<true> Lock_ty;
   // typedef galois::runtime::LL::SimpleLock<true> Lock_ty;
   typedef substrate::PerThreadStorage<Lock_ty> PerThreadLock;
@@ -61,17 +60,15 @@ public:
 //! \param write is function object to perform the write. It should update state
 //! to store result after writing. Shouldn't use rwmutex internally
 template <typename L, typename R, typename W>
-void readUpdateProtected(L& rwmutex, R& readAndCheck, W& write) {
-
+void
+readUpdateProtected(L& rwmutex, R& readAndCheck, W& write) {
   rwmutex.readLock();
 
   if (readAndCheck()) {
-
     rwmutex.readUnlock();
     return;
 
   } else {
-
     rwmutex.readUnlock();
 
     rwmutex.writeLock();
@@ -85,7 +82,7 @@ void readUpdateProtected(L& rwmutex, R& readAndCheck, W& write) {
   }
 }
 
-} // end namespace substrate
-} // end namespace galois
+}  // end namespace substrate
+}  // end namespace galois
 
 #endif

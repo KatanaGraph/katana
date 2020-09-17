@@ -36,7 +36,7 @@ void* allocPages(unsigned num, bool preFault);
 // free page range
 void freePages(void* ptr, unsigned num);
 
-} // namespace substrate
-} // namespace galois
+}  // namespace substrate
+}  // namespace galois
 
 #endif

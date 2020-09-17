@@ -21,11 +21,11 @@
 #define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
 
 #include "galois/FixedSizeRing.h"
-#include "galois/runtime/Mem.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/PtrLock.h"
 #include "galois/Threads.h"
+#include "galois/runtime/Mem.h"
+#include "galois/substrate/CompilerSpecific.h"
+#include "galois/substrate/PerThreadStorage.h"
+#include "galois/substrate/PtrLock.h"
 #include "galois/worklists/WLCompileCheck.h"
 
 namespace galois {
@@ -63,7 +63,7 @@ public:
     obj->next = 0;
     if (tail) {
       tail->next = obj;
-      tail       = obj;
+      tail = obj;
       head.unlock();
     } else {
       assert(!head.getValue());
@@ -105,12 +105,12 @@ public:
       victim.tail = 0;
     victim.head.unlock_and_clear();
     if (!C)
-      return 0; // Didn't get anything
+      return 0;  // Didn't get anything
     ChunkHeader* retval = C;
-    C                   = C->next;
-    retval->next        = 0;
+    C = C->next;
+    retval->next = 0;
     if (!C)
-      return retval; // Only got one thing
+      return retval;  // Only got one thing
     prepend(C);
     return retval;
   }
@@ -121,9 +121,9 @@ public:
       return 0;
     // Steal half
     victim.head.lock();
-    ChunkHeader* C     = victim.head.getValue();
+    ChunkHeader* C = victim.head.getValue();
     ChunkHeader* ntail = C;
-    bool count         = false;
+    bool count = false;
     while (C) {
       C = C->next;
       if (count)
@@ -131,18 +131,18 @@ public:
       count = !count;
     }
     if (ntail) {
-      C           = ntail->next;
+      C = ntail->next;
       ntail->next = 0;
       victim.tail = ntail;
     }
     victim.head.unlock();
     if (!C)
-      return 0; // Didn't get anything
+      return 0;  // Didn't get anything
     ChunkHeader* retval = C;
-    C                   = C->next;
-    retval->next        = 0;
+    C = C->next;
+    retval->next = 0;
     if (!C)
-      return retval; // Only got one thing
+      return retval;  // Only got one thing
     prepend(C);
     return retval;
   }
@@ -168,7 +168,7 @@ public:
   void push(ChunkHeader* obj) {
     ChunkHeader* oldhead = 0;
     do {
-      oldhead   = head.getValue();
+      oldhead = head.getValue();
       obj->next = oldhead;
     } while (!head.CAS(oldhead, obj));
   }
@@ -183,7 +183,7 @@ public:
     ChunkHeader* retval = head.getValue();
     ChunkHeader* setval = 0;
     if (retval) {
-      setval       = retval->next;
+      setval = retval->next;
       retval->next = 0;
     }
     head.unlock_and_set(setval);
@@ -199,12 +199,12 @@ public:
     ChunkHeader* C = victim.head.getValue();
     victim.head.unlock_and_clear();
     if (!C)
-      return 0; // Didn't get anything
+      return 0;  // Didn't get anything
     ChunkHeader* retval = C;
-    C                   = C->next;
-    retval->next        = 0;
+    C = C->next;
+    retval->next = 0;
     if (!C)
-      return retval; // Only got one thing
+      return retval;  // Only got one thing
     prepend(C);
     return retval;
   }
@@ -215,9 +215,9 @@ public:
       return 0;
     // Steal half
     victim.head.lock();
-    ChunkHeader* C     = victim.head.getValue();
+    ChunkHeader* C = victim.head.getValue();
     ChunkHeader* ntail = C;
-    bool count         = false;
+    bool count = false;
     while (C) {
       C = C->next;
       if (count)
@@ -225,17 +225,17 @@ public:
       count = !count;
     }
     if (ntail) {
-      C           = ntail->next;
+      C = ntail->next;
       ntail->next = 0;
     }
     victim.head.unlock();
     if (!C)
-      return 0; // Didn't get anything
+      return 0;  // Didn't get anything
     ChunkHeader* retval = C;
-    C                   = C->next;
-    retval->next        = 0;
+    C = C->next;
+    retval->next = 0;
     if (!C)
-      return retval; // Only got one thing
+      return retval;  // Only got one thing
     prepend(C);
     return retval;
   }
@@ -248,10 +248,10 @@ class StealingQueue : private boost::noncopyable {
   GALOIS_ATTRIBUTE_NOINLINE
   ChunkHeader* doSteal() {
     std::pair<InnerWL, unsigned>& me = *local.getLocal();
-    auto& tp                         = substrate::getThreadPool();
-    unsigned id                      = tp.getTID();
-    unsigned pkg                     = substrate::ThreadPool::getSocket();
-    unsigned num                     = galois::getActiveThreads();
+    auto& tp = substrate::getThreadPool();
+    unsigned id = tp.getTID();
+    unsigned pkg = substrate::ThreadPool::getSocket();
+    unsigned num = galois::getActiveThreads();
 
     // First steal from this socket
     for (unsigned eid = id + 1; eid < num; ++eid) {
@@ -366,14 +366,14 @@ public:
 
   void push(value_type val) {
     std::pair<Chunk*, Chunk*>& tld = *data.getLocal();
-    Chunk*& n                      = getPushChunk(tld);
+    Chunk*& n = getPushChunk(tld);
     push_internal(tld, n, val);
   }
 
   template <typename Iter>
   void push(Iter b, Iter e) {
     std::pair<Chunk*, Chunk*>& tld = *data.getLocal();
-    Chunk*& n                      = getPushChunk(tld);
+    Chunk*& n = getPushChunk(tld);
     while (b != e)
       push_internal(tld, n, *b++);
   }
@@ -385,7 +385,7 @@ public:
 
   galois::optional<value_type> pop() {
     std::pair<Chunk*, Chunk*>& tld = *data.getLocal();
-    Chunk*& n                      = getPopChunk(tld);
+    Chunk*& n = getPopChunk(tld);
     galois::optional<value_type> retval;
     // simple case, things in current chunk
     if (n && (retval = doPop(n)))
@@ -406,17 +406,15 @@ public:
 };
 
 template <int ChunkSize = 64, typename T = int>
-using PerThreadChunkLIFO =
-    PerThreadChunkMaster<true, ChunkSize, StealingQueue<PerThreadChunkStack>,
-                         T>;
+using PerThreadChunkLIFO = PerThreadChunkMaster<
+    true, ChunkSize, StealingQueue<PerThreadChunkStack>, T>;
 GALOIS_WLCOMPILECHECK(PerThreadChunkLIFO)
 
 template <int ChunkSize = 64, typename T = int>
-using PerThreadChunkFIFO =
-    PerThreadChunkMaster<false, ChunkSize, StealingQueue<PerThreadChunkQueue>,
-                         T>;
+using PerThreadChunkFIFO = PerThreadChunkMaster<
+    false, ChunkSize, StealingQueue<PerThreadChunkQueue>, T>;
 GALOIS_WLCOMPILECHECK(PerThreadChunkFIFO)
 
-} // namespace worklists
-} // namespace galois
+}  // namespace worklists
+}  // namespace galois
 #endif

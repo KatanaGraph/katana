@@ -26,7 +26,6 @@
 #define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRCSCGRAPH_H_
 
 #include "galois/config.h"
-
 #include "galois/graphs/LC_CSR_Graph.h"
 
 namespace galois {
@@ -48,20 +47,22 @@ namespace graphs {
  * @tparam HasOutOfLineLockable
  * @tparam FileEdgeTy
  */
-template <typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
-          bool HasNoLockable = false, bool UseNumaAlloc = false,
-          bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
-class LC_CSR_CSC_Graph
-    : public LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                          HasOutOfLineLockable, FileEdgeTy> {
+template <
+    typename NodeTy, typename EdgeTy, bool EdgeDataByValue = false,
+    bool HasNoLockable = false, bool UseNumaAlloc = false,
+    bool HasOutOfLineLockable = false, typename FileEdgeTy = EdgeTy>
+class LC_CSR_CSC_Graph : public LC_CSR_Graph<
+                             NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
+                             HasOutOfLineLockable, FileEdgeTy> {
   // typedef to make it easier to read
   //! Typedef referring to base LC_CSR_Graph
-  using BaseGraph = LC_CSR_Graph<NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc,
-                                 HasOutOfLineLockable, FileEdgeTy>;
+  using BaseGraph = LC_CSR_Graph<
+      NodeTy, EdgeTy, HasNoLockable, UseNumaAlloc, HasOutOfLineLockable,
+      FileEdgeTy>;
   //! Typedef referring to this class itself
-  using ThisGraph =
-      LC_CSR_CSC_Graph<NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable,
-                       UseNumaAlloc, HasOutOfLineLockable, FileEdgeTy>;
+  using ThisGraph = LC_CSR_CSC_Graph<
+      NodeTy, EdgeTy, EdgeDataByValue, HasNoLockable, UseNumaAlloc,
+      HasOutOfLineLockable, FileEdgeTy>;
 
 public:
   //! Graph node typedef
@@ -97,9 +98,8 @@ protected:
   EdgeDataRep inEdgeData;
 
   //! redefinition of the edge sort iterator in LC_CSR_Graph
-  using edge_sort_iterator =
-      internal::EdgeSortIterator<GraphNode, typename EdgeIndData::value_type,
-                                 EdgeDst, EdgeDataRep>;
+  using edge_sort_iterator = internal::EdgeSortIterator<
+      GraphNode, typename EdgeIndData::value_type, EdgeDst, EdgeDataRep>;
 
   //! beginning iterator to an edge sorter for in-edges
   edge_sort_iterator in_edge_sort_begin(GraphNode N) {
@@ -117,8 +117,8 @@ protected:
    * @param e_new position of out-edge to copy as an in-edge
    * @param e position of in-edge
    */
-  template <bool A                            = EdgeDataByValue,
-            typename std::enable_if<A>::type* = nullptr>
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<A>::type* = nullptr>
   void createEdgeData(const uint64_t e_new, const uint64_t e) {
     BaseGraph::edgeDataCopy(inEdgeData, BaseGraph::edgeData, e_new, e);
   }
@@ -130,8 +130,8 @@ protected:
    * @param e_new position of out-edge to save
    * @param e position of in-edge
    */
-  template <bool A                             = EdgeDataByValue,
-            typename std::enable_if<!A>::type* = nullptr>
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<!A>::type* = nullptr>
   void createEdgeData(const uint64_t e_new, const uint64_t e) {
     if (!std::is_void<EdgeTy>::value) {
       inEdgeData[e_new] = e;
@@ -150,11 +150,11 @@ protected:
   void determineInEdgeIndices(EdgeIndData& dataBuffer) {
     // counting outgoing edges in the tranpose graph by
     // counting incoming edges in the original graph
-    galois::do_all(galois::iterate(UINT64_C(0), BaseGraph::numEdges),
-                   [&](uint64_t e) {
-                     auto dst = BaseGraph::edgeDst[e];
-                     __sync_add_and_fetch(&(dataBuffer[dst]), 1);
-                   });
+    galois::do_all(
+        galois::iterate(UINT64_C(0), BaseGraph::numEdges), [&](uint64_t e) {
+          auto dst = BaseGraph::edgeDst[e];
+          __sync_add_and_fetch(&(dataBuffer[dst]), 1);
+        });
 
     // prefix sum calculation of the edge index array
     for (uint32_t n = 1; n < BaseGraph::numNodes; ++n) {
@@ -163,8 +163,9 @@ protected:
 
     // copy over the new tranposed edge index data
     inEdgeIndData.allocateInterleaved(BaseGraph::numNodes);
-    galois::do_all(galois::iterate(UINT64_C(0), BaseGraph::numNodes),
-                   [&](uint64_t n) { inEdgeIndData[n] = dataBuffer[n]; });
+    galois::do_all(
+        galois::iterate(UINT64_C(0), BaseGraph::numNodes),
+        [&](uint64_t n) { inEdgeIndData[n] = dataBuffer[n]; });
   }
 
   /**
@@ -179,8 +180,9 @@ protected:
     // saving an edge for a node
     if (BaseGraph::numNodes >= 1) {
       dataBuffer[0] = 0;
-      galois::do_all(galois::iterate(UINT64_C(1), BaseGraph::numNodes),
-                     [&](uint64_t n) { dataBuffer[n] = inEdgeIndData[n - 1]; });
+      galois::do_all(
+          galois::iterate(UINT64_C(1), BaseGraph::numNodes),
+          [&](uint64_t n) { dataBuffer[n] = inEdgeIndData[n - 1]; });
     }
 
     // allocate edge dests and data
@@ -234,8 +236,9 @@ public:
     // initialize the temp array
     EdgeIndData dataBuffer;
     dataBuffer.allocateInterleaved(BaseGraph::numNodes);
-    galois::do_all(galois::iterate(UINT64_C(0), BaseGraph::numNodes),
-                   [&](uint64_t n) { dataBuffer[n] = 0; });
+    galois::do_all(
+        galois::iterate(UINT64_C(0), BaseGraph::numNodes),
+        [&](uint64_t n) { dataBuffer[n] = 0; });
 
     determineInEdgeIndices(dataBuffer);
     determineInEdgeDestAndData(dataBuffer);
@@ -275,8 +278,8 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Iterator to first in edge of node N
    */
-  edge_iterator in_edge_begin(GraphNode N,
-                              MethodFlag mflag = MethodFlag::WRITE) {
+  edge_iterator in_edge_begin(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
     if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
       for (edge_iterator ii = in_raw_begin(N), ee = in_raw_end(N); ii != ee;
@@ -308,10 +311,10 @@ public:
    * @param mflag how safe the acquire should be
    * @returns Range to in edges of node N
    */
-  typename ThisGraph::edges_iterator
-  in_edges(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    return internal::make_no_deref_range(in_edge_begin(N, mflag),
-                                         in_edge_end(N, mflag));
+  typename ThisGraph::edges_iterator in_edges(
+      GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
+    return internal::make_no_deref_range(
+        in_edge_begin(N, mflag), in_edge_end(N, mflag));
   }
 
   /**
@@ -331,10 +334,10 @@ public:
    * @param ni in-edge id
    * @returns data of the edge
    */
-  template <bool A                            = EdgeDataByValue,
-            typename std::enable_if<A>::type* = nullptr>
-  edge_data_reference
-  getInEdgeData(edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) const {
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<A>::type* = nullptr>
+  edge_data_reference getInEdgeData(
+      edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) const {
     return inEdgeData[*ni];
   }
 
@@ -347,10 +350,10 @@ public:
    * @param ni in-edge id
    * @returns data of the edge
    */
-  template <bool A                            = EdgeDataByValue,
-            typename std::enable_if<A>::type* = nullptr>
-  edge_data_reference getInEdgeData(edge_iterator ni,
-                                    MethodFlag = MethodFlag::UNPROTECTED) {
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<A>::type* = nullptr>
+  edge_data_reference getInEdgeData(
+      edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) {
     return inEdgeData[*ni];
   }
 
@@ -363,10 +366,10 @@ public:
    * @param ni in-edge id
    * @returns data of the edge
    */
-  template <bool A                             = EdgeDataByValue,
-            typename std::enable_if<!A>::type* = nullptr>
-  edge_data_reference
-  getInEdgeData(edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) const {
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<!A>::type* = nullptr>
+  edge_data_reference getInEdgeData(
+      edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) const {
     return BaseGraph::edgeData[inEdgeData[*ni]];
   }
 
@@ -379,10 +382,10 @@ public:
    * @param ni in-edge id
    * @returns data of the edge
    */
-  template <bool A                             = EdgeDataByValue,
-            typename std::enable_if<!A>::type* = nullptr>
-  edge_data_reference getInEdgeData(edge_iterator ni,
-                                    MethodFlag = MethodFlag::UNPROTECTED) {
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<!A>::type* = nullptr>
+  edge_data_reference getInEdgeData(
+      edge_iterator ni, MethodFlag = MethodFlag::UNPROTECTED) {
     return BaseGraph::edgeData[inEdgeData[*ni]];
   }
 
@@ -405,10 +408,11 @@ public:
         GraphNode,
         typename std::conditional<EdgeDataByValue, EdgeTy, uint64_t>::type>;
 
-    std::sort(in_edge_sort_begin(N), in_edge_sort_end(N),
-              [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
-                return e1.dst < e2.dst;
-              });
+    std::sort(
+        in_edge_sort_begin(N), in_edge_sort_end(N),
+        [=](const EdgeSortVal& e1, const EdgeSortVal& e2) {
+          return e1.dst < e2.dst;
+        });
   }
 
   /**
@@ -447,6 +451,6 @@ public:
   }
 };
 
-} // namespace graphs
-} // namespace galois
+}  // namespace graphs
+}  // namespace galois
 #endif

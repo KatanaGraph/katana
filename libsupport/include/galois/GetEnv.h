@@ -26,6 +26,6 @@ GALOIS_EXPORT bool GetEnv(const std::string& var_name, int* ret);
 GALOIS_EXPORT bool GetEnv(const std::string& var_name, double* ret);
 GALOIS_EXPORT bool GetEnv(const std::string& var_name, std::string* ret);
 
-} // end namespace galois
+}  // end namespace galois
 
 #endif

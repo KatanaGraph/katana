@@ -39,7 +39,7 @@ namespace runtime {
  */
 GALOIS_EXPORT substrate::Barrier& getBarrier(unsigned activeThreads);
 
-} // end namespace runtime
-} // end namespace galois
+}  // end namespace runtime
+}  // end namespace galois
 
 #endif

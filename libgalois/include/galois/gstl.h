@@ -21,19 +21,19 @@
 #define GALOIS_LIBGALOIS_GALOIS_GSTL_H_
 
 #include <algorithm>
-#include <iterator>
-#include <utility>
 #include <cassert>
-#include <vector>
-#include <set>
 #include <deque>
-#include <map>
+#include <iterator>
 #include <list>
-#include <string>
+#include <map>
+#include <set>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "galois/config.h"
 #include "galois/PriorityQueue.h"
+#include "galois/config.h"
 
 namespace galois {
 
@@ -64,10 +64,11 @@ using Set = std::set<T, C, FixedSizeAlloc<T>>;
 template <typename K, typename V, typename C = std::less<K>>
 using Map = std::map<K, V, C, FixedSizeAlloc<std::pair<const K, V>>>;
 
-template <typename K, typename V, typename Hash = std::hash<K>,
-          typename KeyEqual = std::equal_to<K>>
-using UnorderedMap = std::unordered_map<K, V, Hash, KeyEqual,
-                                        FixedSizeAlloc<std::pair<const K, V>>>;
+template <
+    typename K, typename V, typename Hash = std::hash<K>,
+    typename KeyEqual = std::equal_to<K>>
+using UnorderedMap = std::unordered_map<
+    K, V, Hash, KeyEqual, FixedSizeAlloc<std::pair<const K, V>>>;
 
 template <typename T, typename C = std::less<T>>
 using PQ = MinHeap<T, C, Vector<T>>;
@@ -99,10 +100,11 @@ struct StrMaker<const char*> {
 };
 
 template <typename T>
-Str makeStr(const T& x) {
+Str
+makeStr(const T& x) {
   return StrMaker<T>()(x);
 }
-} // end namespace gstl
+}  // end namespace gstl
 
 template <typename I>
 class IterRange {
@@ -116,15 +118,17 @@ public:
 };
 
 template <typename I>
-auto makeIterRange(const I& beg, const I& end) {
+auto
+makeIterRange(const I& beg, const I& end) {
   return IterRange<I>(beg, end);
 }
 
 template <typename C>
-auto makeIterRange(C&& cont) {
+auto
+makeIterRange(C&& cont) {
   using I = decltype(std::forward<C>(cont).begin());
-  return IterRange<I>(std::forward<C>(cont).begin(),
-                      std::forward<C>(cont).end());
+  return IterRange<I>(
+      std::forward<C>(cont).begin(), std::forward<C>(cont).end());
 }
 
 namespace internal {
@@ -153,8 +157,8 @@ struct SerCont {
 
   void clear(void) { m_q.clear(); }
 
-  using value_type     = typename C::value_type;
-  using iterator       = typename C::iterator;
+  using value_type = typename C::value_type;
+  using iterator = typename C::iterator;
   using const_iterator = typename C::const_iterator;
 
   iterator begin(void) { return m_q.begin(); }
@@ -166,11 +170,10 @@ struct SerCont {
   const_iterator cbegin(void) const { return m_q.cbegin(); }
   const_iterator cend(void) const { return m_q.cend(); }
 };
-} // namespace internal
+}  // namespace internal
 
 template <typename T, typename C = std::deque<T>>
 class SerFIFO : public internal::SerCont<T, C> {
-
   using Base = internal::SerCont<T, C>;
 
 public:
@@ -185,7 +188,6 @@ public:
 
 template <typename T, typename C = std::vector<T>>
 class SerStack : public internal::SerCont<T, C> {
-
   using Base = internal::SerCont<T, C>;
 
 public:
@@ -199,8 +201,9 @@ public:
 };
 
 template <typename IterTy, class Distance>
-IterTy safe_advance_dispatch(IterTy b, IterTy e, Distance n,
-                             std::random_access_iterator_tag) {
+IterTy
+safe_advance_dispatch(
+    IterTy b, IterTy e, Distance n, std::random_access_iterator_tag) {
   if (std::distance(b, e) >= n)
     return b + n;
   else
@@ -208,8 +211,8 @@ IterTy safe_advance_dispatch(IterTy b, IterTy e, Distance n,
 }
 
 template <typename IterTy, class Distance>
-IterTy safe_advance_dispatch(IterTy b, IterTy e, Distance n,
-                             std::input_iterator_tag) {
+IterTy
+safe_advance_dispatch(IterTy b, IterTy e, Distance n, std::input_iterator_tag) {
   while (b != e && n--)
     ++b;
   return b;
@@ -219,7 +222,8 @@ IterTy safe_advance_dispatch(IterTy b, IterTy e, Distance n,
  * Like std::advance but returns end if end is closer than the advance amount.
  */
 template <typename IterTy, class Distance>
-IterTy safe_advance(IterTy b, IterTy e, Distance n) {
+IterTy
+safe_advance(IterTy b, IterTy e, Distance n) {
   typename std::iterator_traits<IterTy>::iterator_category category;
   return safe_advance_dispatch(b, e, n, category);
 }
@@ -229,7 +233,8 @@ IterTy safe_advance(IterTy b, IterTy e, Distance n) {
  * the second half if the range has an odd length.
  */
 template <typename IterTy>
-IterTy split_range(IterTy b, IterTy e) {
+IterTy
+split_range(IterTy b, IterTy e) {
   std::advance(b, (std::distance(b, e) + 1) / 2);
   return b;
 }
@@ -241,12 +246,12 @@ IterTy split_range(IterTy b, IterTy e) {
 template <
     typename IterTy,
     typename std::enable_if<!std::is_integral<IterTy>::value>::type* = nullptr>
-std::pair<IterTy, IterTy> block_range(IterTy b, IterTy e, unsigned id,
-                                      unsigned num) {
-  size_t dist   = std::distance(b, e);
-  size_t numper = std::max((dist + num - 1) / num, (size_t)1); // round up
-  size_t A      = std::min(numper * id, dist);
-  size_t B      = std::min(numper * (id + 1), dist);
+std::pair<IterTy, IterTy>
+block_range(IterTy b, IterTy e, unsigned id, unsigned num) {
+  size_t dist = std::distance(b, e);
+  size_t numper = std::max((dist + num - 1) / num, (size_t)1);  // round up
+  size_t A = std::min(numper * id, dist);
+  size_t B = std::min(numper * (id + 1), dist);
   std::advance(b, A);
 
   if (dist != B) {
@@ -257,14 +262,15 @@ std::pair<IterTy, IterTy> block_range(IterTy b, IterTy e, unsigned id,
   return std::make_pair(b, e);
 }
 
-template <typename IntTy, typename std::enable_if<
-                              std::is_integral<IntTy>::value>::type* = nullptr>
-std::pair<IntTy, IntTy> block_range(IntTy b, IntTy e, unsigned id,
-                                    unsigned num) {
-  IntTy dist   = e - b;
-  IntTy numper = std::max((dist + num - 1) / num, (IntTy)1); // round up
-  IntTy A      = std::min(numper * id, dist);
-  IntTy B      = std::min(numper * (id + 1), dist);
+template <
+    typename IntTy,
+    typename std::enable_if<std::is_integral<IntTy>::value>::type* = nullptr>
+std::pair<IntTy, IntTy>
+block_range(IntTy b, IntTy e, unsigned id, unsigned num) {
+  IntTy dist = e - b;
+  IntTy numper = std::max((dist + num - 1) / num, (IntTy)1);  // round up
+  IntTy A = std::min(numper * id, dist);
+  IntTy B = std::min(numper * (id + 1), dist);
   b += A;
   if (dist != B) {
     e = b;
@@ -276,13 +282,12 @@ std::pair<IntTy, IntTy> block_range(IntTy b, IntTy e, unsigned id,
 namespace internal {
 template <typename I>
 using Val_ty = typename std::iterator_traits<I>::value_type;
-} // namespace internal
+}  // namespace internal
 
 //! Destroy a range
 template <typename I>
 std::enable_if_t<!std::is_scalar<internal::Val_ty<I>>::value>
 uninitialized_destroy(I first, I last) {
-
   using T = internal::Val_ty<I>;
   for (; first != last; ++first)
     (&*first)->~T();
@@ -292,5 +297,5 @@ template <class I>
 std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value>
 uninitialized_destroy(I, I) {}
 
-} // namespace galois
+}  // namespace galois
 #endif

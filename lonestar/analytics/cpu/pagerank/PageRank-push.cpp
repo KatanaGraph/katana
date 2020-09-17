@@ -39,19 +39,19 @@ const char* desc =
 
 constexpr static const unsigned CHUNK_SIZE = 16;
 
-enum Algo { Async, Sync }; ///< Async has better asbolute performance.
+enum Algo { Async, Sync };  ///< Async has better asbolute performance.
 
-static cll::opt<Algo> algo("algo", cll::desc("Choose an algorithm:"),
-                           cll::values(clEnumVal(Async, "Async"),
-                                       clEnumVal(Sync, "Sync")),
-                           cll::init(Async));
+static cll::opt<Algo> algo(
+    "algo", cll::desc("Choose an algorithm:"),
+    cll::values(clEnumVal(Async, "Async"), clEnumVal(Sync, "Sync")),
+    cll::init(Async));
 
 struct LNode {
   PRTy value;
   std::atomic<PRTy> residual;
 
   void init() {
-    value    = 0.0;
+    value = 0.0;
     residual = INIT_RESIDUAL;
   }
 
@@ -65,7 +65,8 @@ typedef galois::graphs::LC_CSR_Graph<LNode, void>::with_numa_alloc<
     true>::type ::with_no_lockable<true>::type Graph;
 typedef typename Graph::GraphNode GNode;
 
-void asyncPageRank(Graph& graph) {
+void
+asyncPageRank(Graph& graph) {
   typedef galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE> WL;
   galois::for_each(
       galois::iterate(graph),
@@ -77,13 +78,13 @@ void asyncPageRank(Graph& graph) {
         if (sdata.residual > tolerance) {
           PRTy oldResidual = sdata.residual.exchange(0.0);
           sdata.value += oldResidual;
-          int src_nout = std::distance(graph.edge_begin(src, flag),
-                                       graph.edge_end(src, flag));
+          int src_nout = std::distance(
+              graph.edge_begin(src, flag), graph.edge_end(src, flag));
           if (src_nout > 0) {
             PRTy delta = oldResidual * ALPHA / src_nout;
             //! For each out-going neighbors.
             for (auto jj : graph.edges(src, flag)) {
-              GNode dst    = graph.getEdgeDst(jj);
+              GNode dst = graph.getEdgeDst(jj);
               LNode& ddata = graph.getData(dst, flag);
               if (delta > 0) {
                 auto old = atomicAdd(ddata.residual, delta);
@@ -100,7 +101,8 @@ void asyncPageRank(Graph& graph) {
       galois::wl<WL>());
 }
 
-void syncPageRank(Graph& graph) {
+void
+syncPageRank(Graph& graph) {
   struct Update {
     PRTy delta;
     Graph::edge_iterator beg;
@@ -130,11 +132,11 @@ void syncPageRank(Graph& graph) {
             sdata.value += oldResidual;
             sdata.residual = 0.0;
 
-            int src_nout = std::distance(graph.edge_begin(src, flag),
-                                         graph.edge_end(src, flag));
-            PRTy delta   = oldResidual * ALPHA / src_nout;
+            int src_nout = std::distance(
+                graph.edge_begin(src, flag), graph.edge_end(src, flag));
+            PRTy delta = oldResidual * ALPHA / src_nout;
 
-            auto beg       = graph.edge_begin(src, flag);
+            auto beg = graph.edge_begin(src, flag);
             const auto end = graph.edge_end(src, flag);
 
             assert(beg <= end);
@@ -165,9 +167,9 @@ void syncPageRank(Graph& graph) {
               galois::MethodFlag::UNPROTECTED;
           //! For each out-going neighbors.
           for (auto jj = up.beg; jj != up.end; ++jj) {
-            GNode dst    = graph.getEdgeDst(jj);
+            GNode dst = graph.getEdgeDst(jj);
             LNode& ddata = graph.getData(dst, flag);
-            auto old     = atomicAdd(ddata.residual, up.delta);
+            auto old = atomicAdd(ddata.residual, up.delta);
             //! If fabs(old) is greater than tolerance, then it would
             //! already have been processed in the previous do_all
             //! loop.
@@ -187,7 +189,8 @@ void syncPageRank(Graph& graph) {
   }
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFile);
 
@@ -199,9 +202,10 @@ int main(int argc, char** argv) {
   std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
             << " edges\n";
 
-  galois::preAlloc(5 * numThreads +
-                   (5 * graph.size() * sizeof(typename Graph::node_data_type)) /
-                       galois::runtime::pagePoolSize());
+  galois::preAlloc(
+      5 * numThreads +
+      (5 * graph.size() * sizeof(typename Graph::node_data_type)) /
+          galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   std::cout << "tolerance:" << tolerance << ", maxIterations:" << maxIterations

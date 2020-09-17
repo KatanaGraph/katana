@@ -1,15 +1,15 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_AZUREINTERNAL_H_
 #define GALOIS_LIBTSUBA_TSUBA_AZUREINTERNAL_H_
 
+#include <storage_outcome.h>
+
 #include <future>
 #include <string>
 
-#include <storage_outcome.h>
-
 #include "blob/blob_client.h"
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 #include "tsuba/Errors.h"
+#include "tsuba/FileAsyncWork.h"
 
 // Don't call these directly.  They are intended for use only in azure.cpp and
 // testing code
@@ -26,12 +26,12 @@ public:
 
   galois::Result<void> operator()() override {
     auto outcome = future_.get();
-    done_        = true;
+    done_ = true;
     return outcome;
   }
   bool Done() const override { return done_; }
 };
 
-} // namespace tsuba::internal
+}  // namespace tsuba::internal
 
 #endif

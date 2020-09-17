@@ -1,13 +1,13 @@
 #ifndef GALOIS_LIBTSUBA_TSUBA_FILEFRAME_H_
 #define GALOIS_LIBTSUBA_TSUBA_FILEFRAME_H_
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 #include <parquet/arrow/writer.h>
 
-#include "galois/Result.h"
 #include "galois/Logging.h"
+#include "galois/Result.h"
 
 namespace tsuba {
 
@@ -17,19 +17,23 @@ class GALOIS_EXPORT FileFrame : public arrow::io::OutputStream {
   uint64_t map_size_;
   uint64_t region_size_;
   uint64_t cursor_;
-  bool valid_  = false;
+  bool valid_ = false;
   bool synced_ = false;
   galois::Result<void> GrowBuffer(int64_t accommodate);
 
 public:
-  FileFrame()                 = default;
+  FileFrame() = default;
   FileFrame(const FileFrame&) = delete;
   FileFrame& operator=(const FileFrame&) = delete;
 
   FileFrame(FileFrame&& other) noexcept
-      : path_(other.path_), map_start_(other.map_start_),
-        map_size_(other.map_size_), region_size_(other.region_size_),
-        cursor_(other.cursor_), valid_(other.valid_), synced_(other.synced_) {
+      : path_(other.path_),
+        map_start_(other.map_start_),
+        map_size_(other.map_size_),
+        region_size_(other.region_size_),
+        cursor_(other.cursor_),
+        valid_(other.valid_),
+        synced_(other.synced_) {
     other.valid_ = false;
   }
 
@@ -38,13 +42,13 @@ public:
       if (auto res = Destroy(); !res) {
         GALOIS_LOG_ERROR("Destroy: {}", res.error());
       }
-      path_        = other.path_;
-      map_start_   = other.map_start_;
-      map_size_    = other.map_size_;
+      path_ = other.path_;
+      map_start_ = other.map_start_;
+      map_size_ = other.map_size_;
       region_size_ = other.region_size_;
-      cursor_      = other.cursor_;
-      synced_      = other.synced_;
-      valid_       = other.valid_;
+      cursor_ = other.cursor_;
+      synced_ = other.synced_;
+      valid_ = other.valid_;
       other.valid_ = false;
     }
     return *this;

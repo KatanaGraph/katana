@@ -27,6 +27,7 @@
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXTRATRAITS_H_
 
 #include <type_traits>
+
 #include <boost/mpl/has_xxx.hpp>
 
 namespace galois {
@@ -58,7 +59,7 @@ struct is_serializable {
       has_serialize<T>::value || is_memory_copyable<T>::value;
 };
 
-} // namespace runtime
-} // namespace galois
+}  // namespace runtime
+}  // namespace galois
 
 #endif

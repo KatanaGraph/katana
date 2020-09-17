@@ -30,7 +30,7 @@ while (true) {
   int index = strtol(items, &remaining, 10) - 1;
   if (index < 0)
     break;
-  items    = remaining;
+  items = remaining;
   GNode n2 = nodes[index];
   if (n1 == n2) {
     continue;
@@ -42,12 +42,14 @@ while (true) {
 }
 }
 
-parallelMakeNodes(GGraph* g, vector<GNode>& gn, InputGraph* in,
-                  galois::GAccumulator<int>& numNodes)
+parallelMakeNodes(
+    GGraph* g, vector<GNode>& gn, InputGraph* in,
+    galois::GAccumulator<int>& numNodes)
     : graph(g), inputGraph(in), gnodes(gn), pnumNodes(numNodes) {}
-void operator()(InputGNode node, galois::UserContext<InputGNode>& ctx) {
-  int id     = inputGraph->getData(node);
-  GNode item = graph->createNode(100, 1); // FIXME: edge num
+void
+operator()(InputGNode node, galois::UserContext<InputGNode>& ctx) {
+  int id = inputGraph->getData(node);
+  GNode item = graph->createNode(100, 1);  // FIXME: edge num
   //    graph->addNode(item);
   gnodes[id] = item;
   pnumNodes += 1;
@@ -63,26 +65,26 @@ struct parallelMakeEdges {
   bool directed;
   galois::GAccumulator<int>& pnumEdges;
 
-  parallelMakeEdges(GGraph* g, vector<GNode>& gn, InputGraph* in,
-                    galois::GAccumulator<int>& numE, bool w = false,
-                    bool dir = true)
+  parallelMakeEdges(
+      GGraph* g, vector<GNode>& gn, InputGraph* in,
+      galois::GAccumulator<int>& numE, bool w = false, bool dir = true)
       : graph(g), inputGraph(in), gnodes(gn), pnumEdges(numE) {
     weighted = w;
     directed = dir;
   }
 
   void operator()(InputGNode inNode, galois::UserContext<InputGNode>& ctx) {
-    int nodeId          = inputGraph->getData(inNode);
-    GNode node          = gnodes[nodeId];
+    int nodeId = inputGraph->getData(inNode);
+    GNode node = gnodes[nodeId];
     MetisNode& nodeData = graph->getData(node);
-    for (InputGraph::edge_iterator jj   = inputGraph->edge_begin(inNode),
+    for (InputGraph::edge_iterator jj = inputGraph->edge_begin(inNode),
                                    eejj = inputGraph->edge_end(inNode);
          jj != eejj; ++jj) {
       InputGNode inNeighbor = inputGraph->getEdgeDst(jj);
       if (inNode == inNeighbor)
         continue;
       int neighId = inputGraph->getData(inNeighbor);
-      int weight  = 1;
+      int weight = 1;
       if (weighted) {
         weight = inputGraph->getEdgeData(jj);
       }
@@ -102,15 +104,17 @@ struct parallelMakeEdges {
   }
 };
 
-void readGraph(MetisGraph* metisGraph, const char* filename,
-               bool weighted = false, bool directed = true) {
+void
+readGraph(
+    MetisGraph* metisGraph, const char* filename, bool weighted = false,
+    bool directed = true) {
   InputGraph inputGraph;
   galois::graphs::readGraph(inputGraph, filename);
   cout << "start to transfer data to GGraph\n";
   int id = 0;
   for (InputGraph::iterator ii = inputGraph.begin(), ee = inputGraph.end();
        ii != ee; ++ii) {
-    InputGNode node          = *ii;
+    InputGNode node = *ii;
     inputGraph.getData(node) = id++;
   }
 
@@ -129,9 +133,9 @@ void readGraph(MetisGraph* metisGraph, const char* filename,
 
   galois::Timer t;
   t.start();
-  galois::for_each<WL>(inputGraph.begin(), inputGraph.end(),
-                       parallelMakeNodes(graph, gnodes, &inputGraph, pnumNodes),
-                       "NodesLoad");
+  galois::for_each<WL>(
+      inputGraph.begin(), inputGraph.end(),
+      parallelMakeNodes(graph, gnodes, &inputGraph, pnumNodes), "NodesLoad");
   t.stop();
   cout << t.get() << " ms\n";
   t.start();

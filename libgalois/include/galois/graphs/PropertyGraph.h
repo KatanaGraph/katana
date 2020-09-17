@@ -7,8 +7,8 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "galois/NoDerefIterator.h"
-#include "galois/Traits.h"
 #include "galois/Result.h"
+#include "galois/Traits.h"
 #include "galois/graphs/Details.h"
 #include "galois/graphs/PropertyFileGraph.h"
 
@@ -29,7 +29,6 @@ namespace galois::graphs {
 /// \tparam EdgeProps A tuple of property types for edges
 template <typename NodeProps, typename EdgeProps>
 class PropertyGraph {
-
   using NodeView = PropertyViewTuple<NodeProps>;
   using EdgeView = PropertyViewTuple<EdgeProps>;
 
@@ -39,16 +38,17 @@ class PropertyGraph {
   EdgeView edge_view_;
 
   PropertyGraph(PropertyFileGraph* pfg, NodeView node_view, EdgeView edge_view)
-      : pfg_(pfg), node_view_(std::move(node_view)),
+      : pfg_(pfg),
+        node_view_(std::move(node_view)),
         edge_view_(std::move(edge_view)) {}
 
 public:
   using node_properties = NodeProps;
   using edge_properties = EdgeProps;
-  using node_iterator   = boost::counting_iterator<uint32_t>;
-  using edge_iterator   = boost::counting_iterator<uint64_t>;
-  using edges_iterator  = StandardRange<NoDerefIterator<edge_iterator>>;
-  using iterator        = node_iterator;
+  using node_iterator = boost::counting_iterator<uint32_t>;
+  using edge_iterator = boost::counting_iterator<uint64_t>;
+  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
+  using iterator = node_iterator;
 
   // Standard container concepts
 
@@ -86,14 +86,14 @@ public:
 
   edges_iterator edges(const node_iterator& n) const {
     auto [begin_edge, end_edge] = pfg_->topology().edge_range(*n);
-    return internal::make_no_deref_range(edge_iterator(begin_edge),
-                                         edge_iterator(end_edge));
+    return internal::make_no_deref_range(
+        edge_iterator(begin_edge), edge_iterator(end_edge));
   }
 
   // Graph constructors
 
-  static Result<PropertyGraph<NodeProps, EdgeProps>>
-  Make(PropertyFileGraph* pfg);
+  static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
+      PropertyFileGraph* pfg);
 };
 
 template <typename NodeProps, typename EdgeProps>
@@ -109,10 +109,11 @@ PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
     return edge_view_result.error();
   }
 
-  return PropertyGraph(pfg, std::move(node_view_result.value()),
-                       std::move(edge_view_result.value()));
+  return PropertyGraph(
+      pfg, std::move(node_view_result.value()),
+      std::move(edge_view_result.value()));
 }
 
-} // namespace galois::graphs
+}  // namespace galois::graphs
 
 #endif

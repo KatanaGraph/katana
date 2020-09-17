@@ -1,11 +1,11 @@
-#include "galois/Galois.h"
+#include <fstream>
+#include <iostream>
+
+#include "Lonestar/BoilerPlate.h"
 #include "galois/Bag.h"
+#include "galois/Galois.h"
 #include "galois/UserContext.h"
 #include "galois/substrate/PerThreadStorage.h"
-#include "Lonestar/BoilerPlate.h"
-
-#include <iostream>
-#include <fstream>
 
 class ExampleWrappedWorklist {
 private:
@@ -55,7 +55,8 @@ public:
   }
 };
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char* argv[]) {
   galois::SharedMemSys G;
   LonestarStart(argc, argv);
 

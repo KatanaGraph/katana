@@ -1451,20 +1451,14 @@ run() {
   typename Algo::Graph g;
   Algo algo;
 
-  galois::runtime::reportNumaAlloc("NumaAlloc0");
-
   // Bipartite graph in general graph data structure should be following:
   // * items are the first m nodes
   // * users are the next n nodes
   // * only items have outedges
   algo.readGraph(g);
 
-  galois::runtime::reportNumaAlloc("NumaAlloc1");
-
   // initialize latent vectors and get number of item nodes
   NUM_ITEM_NODES = initializeGraphData(g);
-
-  galois::runtime::reportNumaAlloc("NumaAlloc2");
 
   std::cout << "num users: " << g.size() - NUM_ITEM_NODES
             << " num items: " << NUM_ITEM_NODES
@@ -1509,8 +1503,6 @@ run() {
       GALOIS_DIE("invalid output type for latent vector output");
     }
   }
-
-  galois::runtime::reportNumaAlloc("NumaAlloc");
 }
 
 int

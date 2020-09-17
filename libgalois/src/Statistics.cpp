@@ -19,34 +19,277 @@
 
 #include "galois/runtime/Statistics.h"
 
+#include <sys/resource.h>
+#include <sys/time.h>
+
 #include <fstream>
 #include <iostream>
 
 #include "galois/GetEnv.h"
+#include "galois/Logging.h"
 #include "galois/runtime/Executor_OnEach.h"
+#include "galois/substrate/PerThreadStorage.h"
 
-using namespace galois::runtime;
+namespace {
 
-boost::uuids::uuid
-galois::runtime::getRandUUID(void) {
-  static boost::uuids::uuid UUID = boost::uuids::random_generator()();
-  return UUID;
+bool
+CheckPrintingThreadVals() {
+  return galois::GetEnv("PRINT_PER_THREAD_STATS");
 }
 
-using galois::gstl::Str;
+void
+PrintHeader(std::ostream& out, const char* sep) {
+  out << "STAT_TYPE" << sep << "REGION" << sep << "CATEGORY" << sep;
+  out << "TOTAL_TYPE" << sep << "TOTAL";
+  out << "\n";
+}
 
-StatManager::StatManager(const std::string& outfile) : m_outfile(outfile) {}
+template <typename T>
+struct StatImpl {
+  using MergedStats = galois::runtime::internal::VecStatManager<T>;
+  using Stat = typename MergedStats::Stat;
+  using const_iterator = typename MergedStats::const_iterator;
 
-StatManager::~StatManager(void) {}
+  static constexpr const char* StatKind() {
+    return std::is_same<T, galois::gstl::Str>::value ? "PARAM" : "STAT";
+  }
+
+  galois::substrate::PerThreadStorage<
+      galois::runtime::internal::ScalarStatManager<T>>
+      perThreadManagers_;
+  MergedStats result_;
+  bool merged_{};
+
+  void Add(
+      const galois::gstl::Str& region, const galois::gstl::Str& category,
+      const T& val, const galois::runtime::StatTotal::Type& type) {
+    perThreadManagers_.getLocal()->addToStat(region, category, val, type);
+  }
+
+  void Merge() {
+    if (merged_) {
+      return;
+    }
+
+    for (unsigned t = 0; t < perThreadManagers_.size(); ++t) {
+      const auto* manager = perThreadManagers_.getRemote(t);
+
+      for (auto i = manager->cbegin(), end_i = manager->cend(); i != end_i;
+           ++i) {
+        result_.addToStat(
+            manager->region(i), manager->category(i), T(manager->stat(i)),
+            manager->stat(i).totalTy());
+      }
+    }
+
+    merged_ = true;
+  }
+
+  void Read(
+      const_iterator i, galois::gstl::Str& region, galois::gstl::Str& category,
+      T& total, galois::runtime::StatTotal::Type& type,
+      galois::gstl::Vector<T>& values) const {
+    region = result_.region(i);
+    category = result_.category(i);
+
+    total = result_.stat(i).total();
+    type = result_.stat(i).totalTy();
+
+    values = result_.stat(i).values();
+  }
+
+  void Print(
+      std::ostream& out, const char* sep, const char* thread_sep,
+      const char* thread_name_sep) const {
+    for (auto i = result_.cbegin(), end_i = result_.cend(); i != end_i; ++i) {
+      out << StatKind() << sep << result_.region(i) << sep
+          << result_.category(i) << sep;
+
+      const auto& s = result_.stat(i);
+      out << galois::runtime::StatTotal::str(s.totalTy()) << sep << s.total();
+      out << "\n";
+
+      if (CheckPrintingThreadVals()) {
+        out << StatKind() << sep << result_.region(i) << sep
+            << result_.category(i) << sep;
+        out << thread_name_sep << sep;
+
+        const char* tsep = "";
+        for (const auto& v : s.values()) {
+          out << tsep << v;
+          tsep = thread_sep;
+        }
+
+        out << "\n";
+      }
+    }
+  }
+};
+
+}  // end unnamed namespace
+
+class galois::runtime::StatManager::Impl {
+public:
+  StatImpl<int64_t> int_stats_;
+  StatImpl<double> fp_stats_;
+  StatImpl<Str> str_stats_;
+  std::string outfile_;
+};
+
+galois::runtime::StatManager::StatManager() {
+  impl_ = std::make_unique<Impl>();
+}
+
+galois::runtime::StatManager::~StatManager() = default;
 
 void
-StatManager::setStatFile(const std::string& outfile) {
-  m_outfile = outfile;
+galois::runtime::StatManager::SetStatFile(const std::string& outfile) {
+  impl_->outfile_ = outfile;
+}
+
+bool
+galois::runtime::StatManager::IsPrintingThreadVals() const {
+  return CheckPrintingThreadVals();
+}
+
+void
+galois::runtime::StatManager::PrintStats(std::ostream& out) {
+  MergeStats();
+
+  if (int_cbegin() == int_cend() && fp_cbegin() == fp_cend() &&
+      param_cbegin() == param_cend()) {
+    return;
+  }
+
+  PrintHeader(out, kSep);
+  impl_->int_stats_.Print(out, kSep, kThreadSep, kThreadNameSep);
+  impl_->fp_stats_.Print(out, kSep, kThreadSep, kThreadNameSep);
+  impl_->str_stats_.Print(out, kSep, kThreadSep, kThreadNameSep);
+}
+
+auto
+galois::runtime::StatManager::int_cbegin() const -> int_const_iterator {
+  return impl_->int_stats_.result_.cbegin();
+}
+
+auto
+galois::runtime::StatManager::int_cend() const -> int_const_iterator {
+  return impl_->int_stats_.result_.cend();
+}
+
+auto
+galois::runtime::StatManager::fp_cbegin() const -> fp_const_iterator {
+  return impl_->fp_stats_.result_.cbegin();
+}
+
+auto
+galois::runtime::StatManager::fp_cend() const -> fp_const_iterator {
+  return impl_->fp_stats_.result_.cend();
+}
+
+auto
+galois::runtime::StatManager::param_cbegin() const -> param_const_iterator {
+  return impl_->str_stats_.result_.cbegin();
+}
+
+auto
+galois::runtime::StatManager::param_cend() const -> param_const_iterator {
+  return impl_->str_stats_.result_.cend();
+}
+
+void
+galois::runtime::StatManager::MergeStats() {
+  impl_->int_stats_.Merge();
+  impl_->fp_stats_.Merge();
+  impl_->str_stats_.Merge();
+}
+
+void
+galois::runtime::StatManager::ReadInt(
+    int_const_iterator i, Str& region, Str& category, int64_t& total,
+    StatTotal::Type& type, gstl::Vector<int64_t>& vec) const {
+  impl_->int_stats_.Read(i, region, category, total, type, vec);
+}
+
+void
+galois::runtime::StatManager::ReadFP(
+    fp_const_iterator i, Str& region, Str& category, double& total,
+    StatTotal::Type& type, gstl::Vector<double>& vec) const {
+  impl_->fp_stats_.Read(i, region, category, total, type, vec);
+}
+
+void
+galois::runtime::StatManager::ReadParam(
+    param_const_iterator i, Str& region, Str& category, Str& total,
+    StatTotal::Type& type, gstl::Vector<Str>& vec) const {
+  impl_->str_stats_.Read(i, region, category, total, type, vec);
+}
+
+void
+galois::runtime::StatManager::AddInt(
+    const std::string& region, const std::string& category, int64_t val,
+    const StatTotal::Type& type) {
+  impl_->int_stats_.Add(
+      gstl::makeStr(region), gstl::makeStr(category), val, type);
+}
+
+void
+galois::runtime::StatManager::AddFP(
+    const std::string& region, const std::string& category, double val,
+    const StatTotal::Type& type) {
+  impl_->fp_stats_.Add(
+      gstl::makeStr(region), gstl::makeStr(category), val, type);
+}
+
+void
+galois::runtime::StatManager::AddParam(
+    const std::string& region, const std::string& category, const Str& val) {
+  impl_->str_stats_.Add(
+      gstl::makeStr(region), gstl::makeStr(category), val, StatTotal::SINGLE);
+}
+
+void
+galois::runtime::StatManager::Print() {
+  if (impl_->outfile_.empty()) {
+    return PrintStats(std::cout);
+  }
+
+  std::ofstream out(impl_->outfile_.c_str());
+  if (!out) {
+    GALOIS_LOG_ERROR("could not print stats to {} ", impl_->outfile_);
+    return PrintStats(std::cerr);
+  }
+
+  PrintStats(out);
+}
+
+static galois::runtime::StatManager* stat_manager_singleton;
+
+void
+galois::runtime::internal::setSysStatManager(galois::runtime::StatManager* sm) {
+  GALOIS_LOG_VASSERT(
+      !(stat_manager_singleton && sm),
+      "StatManager.cpp: Double Initialization of SM");
+  stat_manager_singleton = sm;
+}
+
+galois::runtime::StatManager*
+galois::runtime::internal::sysStatManager() {
+  return stat_manager_singleton;
 }
 
 void
 galois::runtime::setStatFile(const std::string& f) {
-  internal::sysStatManager()->setStatFile(f);
+  internal::sysStatManager()->SetStatFile(f);
+}
+
+void
+galois::runtime::reportPageAlloc(const char* category) {
+  galois::runtime::on_each_gen(
+      [category](unsigned int tid, unsigned int) {
+        reportStat_Tsum("PageAlloc", category, numPagePoolAllocForThread(tid));
+      },
+      std::make_tuple());
 }
 
 void
@@ -55,7 +298,7 @@ galois::runtime::reportRUsage(const std::string& id) {
   struct rusage usage_stats;
   int rusage_result = getrusage(RUSAGE_SELF, &usage_stats);
   if (rusage_result != 0) {
-    GALOIS_DIE("getrusage failed: ", rusage_result);
+    GALOIS_LOG_FATAL("getrusage failed: {}", rusage_result);
   }
 
   // report stats using ID to identify them
@@ -68,109 +311,4 @@ galois::runtime::reportRUsage(const std::string& id) {
   reportStat(
       "rusage", "HardPageFaults_" + id, usage_stats.ru_majflt,
       StatTotal::SINGLE);
-}
-
-bool
-StatManager::printingThreadVals(void) {
-  return galois::GetEnv("PRINT_PER_THREAD_STATS");
-}
-
-void
-StatManager::print(void) {
-  if (m_outfile == "") {
-    printStats(std::cout);
-  } else {
-    std::ofstream outf(m_outfile.c_str());
-    if (outf.good()) {
-      printStats(outf);
-    } else {
-      gWarn("Could not open stats file for writing, file provided:", m_outfile);
-      printStats(std::cerr);
-    }
-  }
-}
-
-void
-StatManager::printStats(std::ostream& out) {
-  mergeStats();
-
-  if (intStats.cbegin() == intStats.cend() &&
-      fpStats.cbegin() == fpStats.cend() &&
-      strStats.cbegin() == strStats.cend()) {
-    return;
-  }
-
-  printHeader(out);
-  intStats.print(out);
-  fpStats.print(out);
-  strStats.print(out);
-}
-
-void
-StatManager::printHeader(std::ostream& out) const {
-  out << "STAT_TYPE" << SEP << "REGION" << SEP << "CATEGORY" << SEP;
-  out << "TOTAL_TYPE" << SEP << "TOTAL";
-  out << "\n";
-}
-
-StatManager::int_iterator
-StatManager::intBegin(void) const {
-  return intStats.cbegin();
-}
-StatManager::int_iterator
-StatManager::intEnd(void) const {
-  return intStats.cend();
-}
-
-StatManager::fp_iterator
-StatManager::fpBegin(void) const {
-  return fpStats.cbegin();
-}
-StatManager::fp_iterator
-StatManager::fpEnd(void) const {
-  return fpStats.cend();
-}
-
-StatManager::str_iterator
-StatManager::paramBegin(void) const {
-  return strStats.cbegin();
-}
-StatManager::str_iterator
-StatManager::paramEnd(void) const {
-  return strStats.cend();
-}
-
-static galois::runtime::StatManager* SM;
-
-void
-galois::runtime::internal::setSysStatManager(galois::runtime::StatManager* sm) {
-  GALOIS_ASSERT(!(SM && sm), "StatManager.cpp: Double Initialization of SM");
-  SM = sm;
-}
-
-StatManager*
-galois::runtime::internal::sysStatManager(void) {
-  return SM;
-}
-
-void
-galois::runtime::reportPageAlloc(const char* category) {
-  galois::runtime::on_each_gen(
-      [category](const unsigned int tid, const unsigned int) {
-        reportStat_Tsum("PageAlloc", category, numPagePoolAllocForThread(tid));
-      },
-      std::make_tuple());
-}
-
-void
-galois::runtime::reportNumaAlloc(const char*) {
-  galois::gWarn("reportNumaAlloc NOT IMPLEMENTED YET. TBD");
-  int nodes = substrate::getThreadPool().getMaxNumaNodes();
-  for (int x = 0; x < nodes; ++x) {
-    // auto rStat = Stats.getRemote(x);
-    // std::lock_guard<substrate::SimpleLock> lg(rStat->first);
-    //      rStat->second.emplace_back(loop, category, numNumaAllocForNode(x));
-  }
-  //  SC->addNumaAllocToStat(std::string("(NULL)"), std::string(category ?
-  //  category : "(NULL)"));
 }

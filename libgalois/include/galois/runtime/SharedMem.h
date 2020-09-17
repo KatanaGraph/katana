@@ -41,7 +41,7 @@ public:
   }
 
   ~SharedMem() {
-    m_sm.print();
+    m_sm.Print();
     internal::setSysStatManager(nullptr);
     internal::setPagePoolState(nullptr);
   }

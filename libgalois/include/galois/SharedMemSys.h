@@ -13,7 +13,7 @@ namespace galois {
 class GALOIS_EXPORT SharedMemSys
     : public runtime::SharedMem<runtime::StatManager> {
 public:
-  explicit SharedMemSys();
+  SharedMemSys();
   ~SharedMemSys();
 
   SharedMemSys(const SharedMemSys&) = delete;

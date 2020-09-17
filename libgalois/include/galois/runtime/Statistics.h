@@ -20,50 +20,27 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
 
-#include <sys/resource.h>
-#include <sys/time.h>
-
 #include <limits>
-#include <map>
 #include <string>
 #include <type_traits>
 
-#include <boost/uuid/uuid.hpp>             // uuid class
-#include <boost/uuid/uuid_generators.hpp>  // generators
-#include <boost/uuid/uuid_io.hpp>          // streaming operators etc.
-
-#include "galois/Threads.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/gstl.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/ThreadRWlock.h"
-
-/*
- * TODO:
- * Print intra host stats with per-thread details and inter-host stats with
- per-host details
- * print to 2 files if supporting R format
- * dist implements an addToStat with host ID and manages inter-host stats and
- their combining
-
- */
 
 namespace galois {
 namespace runtime {
-
-GALOIS_EXPORT boost::uuids::uuid getRandUUID();
 
 template <typename T>
 class RunningMin {
   T m_min;
 
 public:
-  RunningMin(void) : m_min(std::numeric_limits<T>::max()) {}
+  RunningMin() : m_min(std::numeric_limits<T>::max()) {}
 
   void add(const T& val) { m_min = std::min(m_min, val); }
 
-  const T& min(void) const { return m_min; }
+  const T& min() const { return m_min; }
 };
 
 template <typename T>
@@ -71,11 +48,11 @@ class RunningMax {
   T m_max;
 
 public:
-  RunningMax(void) : m_max(std::numeric_limits<T>::min()) {}
+  RunningMax() : m_max(std::numeric_limits<T>::min()) {}
 
   void add(const T& val) { m_max = std::max(m_max, val); }
 
-  const T& max(void) const { return m_max; }
+  const T& max() const { return m_max; }
 };
 
 template <typename T>
@@ -84,16 +61,16 @@ class RunningSum {
   size_t m_count;
 
 public:
-  RunningSum(void) : m_sum(), m_count(0) {}
+  RunningSum() : m_sum(), m_count(0) {}
 
   void add(const T& val) {
     m_sum += val;
     ++m_count;
   }
 
-  const T& sum(void) const { return m_sum; }
+  const T& sum() const { return m_sum; }
 
-  const size_t& count(void) const { return m_count; }
+  const size_t& count() const { return m_count; }
 
   T avg() const { return m_sum / m_count; }
 };
@@ -107,7 +84,7 @@ class RunningVec {
 public:
   void add(const T& val) { m_vec.push_back(val); }
 
-  const Vec& values(void) const { return m_vec; }
+  const Vec& values() const { return m_vec; }
 };
 
 template <typename T>
@@ -121,7 +98,7 @@ public:
 
   void setName(Str&& name) { m_name = std::move(name); }
 
-  const Str& name(void) const { return m_name; }
+  const Str& name() const { return m_name; }
 
   void add(const T&) const {}
 };
@@ -142,15 +119,12 @@ public:
   void add(const T& val) { (..., Bases::add(val)); }
 };
 
-namespace {
-static constexpr const char* StatTotalNames[] = {
-    "SINGLE", "TMIN", "TMAX", "TSUM", "TAVG"};
-}
-
 struct StatTotal {
   enum Type { SINGLE = 0, TMIN, TMAX, TSUM, TAVG };
 
-  static const char* str(const Type& t) { return StatTotalNames[t]; }
+  static constexpr const char* kTotalNames[] = {
+      "SINGLE", "TMIN", "TMAX", "TSUM", "TAVG"};
+  static const char* str(const Type& t) { return kTotalNames[t]; }
 };
 
 namespace internal {
@@ -221,8 +195,8 @@ public:
     s.add(val);
   }
 
-  const_iterator cbegin(void) const { return statMap.cbegin(); }
-  const_iterator cend(void) const { return statMap.cend(); }
+  const_iterator cbegin() const { return statMap.cbegin(); }
+  const_iterator cend() const { return statMap.cend(); }
 
   const Str& region(const const_iterator& i) const {
     return *(std::get<0>(i->first));
@@ -241,31 +215,29 @@ using VecStat_with_MinMaxSum =
 
 template <typename T>
 struct VecStat : public VecStat_with_MinMaxSum<T> {
-  using Base = VecStat_with_MinMaxSum<T>;
-
   StatTotal::Type m_totalTy;
 
-  explicit VecStat(const StatTotal::Type& type) : Base(), m_totalTy(type) {}
+  explicit VecStat(const StatTotal::Type& type) : m_totalTy(type) {}
 
-  const StatTotal::Type& totalTy(void) const { return m_totalTy; }
+  const StatTotal::Type& totalTy() const { return m_totalTy; }
 
-  T total(void) const {
+  T total() const {
     switch (m_totalTy) {
     case StatTotal::SINGLE:
-      assert(Base::values().size() > 0);
-      return Base::values()[0];
+      assert(this->values().size() > 0);
+      return this->values()[0];
 
     case StatTotal::TMIN:
-      return Base::min();
+      return this->min();
 
     case StatTotal::TMAX:
-      return Base::max();
+      return this->max();
 
     case StatTotal::TSUM:
-      return Base::sum();
+      return this->sum();
 
     case StatTotal::TAVG:
-      return Base::avg();
+      return this->avg();
 
     default:
       GALOIS_DIE("unreachable");
@@ -275,19 +247,17 @@ struct VecStat : public VecStat_with_MinMaxSum<T> {
 
 template <>
 struct VecStat<gstl::Str> : public AggregStat<gstl::Str>::with_mem {
-  using Base = AggregStat<gstl::Str>::with_mem;
-
   StatTotal::Type m_totalTy;
 
-  explicit VecStat(const StatTotal::Type& type) : Base(), m_totalTy(type) {}
+  explicit VecStat(const StatTotal::Type& type) : m_totalTy(type) {}
 
-  const StatTotal::Type& totalTy(void) const { return m_totalTy; }
+  const StatTotal::Type& totalTy() const { return m_totalTy; }
 
-  const gstl::Str& total(void) const {
+  const gstl::Str& total() const {
     switch (m_totalTy) {
     case StatTotal::SINGLE:
-      assert(Base::values().size() > 0);
-      return Base::values()[0];
+      assert(values().size() > 0);
+      return values()[0];
 
     default:
       GALOIS_DIE("unreachable");
@@ -307,9 +277,9 @@ struct ScalarStat {
 
   void add(const T& v) { m_val += v; }
 
-  operator const T&(void) const { return m_val; }
+  operator const T&() const { return m_val; }
 
-  const StatTotal::Type& totalTy(void) const { return m_totalTy; }
+  const StatTotal::Type& totalTy() const { return m_totalTy; }
 };
 
 template <typename T>
@@ -318,196 +288,79 @@ using ScalarStatManager = BasicStatMap<ScalarStat<T>>;
 }  // end namespace internal
 
 class GALOIS_EXPORT StatManager {
+  class Impl;
+
+  std::unique_ptr<Impl> impl_;
+
 public:
   using Str = galois::gstl::Str;
-
-  static constexpr const char* const SEP = ", ";
-  static constexpr const char* const TSTAT_SEP = "; ";
-  static constexpr const char* const TSTAT_NAME = "ThreadValues";
-
-  static bool printingThreadVals(void);
-
-  template <typename T>
-  static constexpr const char* statKind(void) {
-    return std::is_same<T, Str>::value ? "PARAM" : "STAT";
-  }
-
-private:
-  template <typename T>
-  struct StatManagerImpl {
-    using MergedStats = internal::VecStatManager<T>;
-    using const_iterator = typename MergedStats::const_iterator;
-    using Stat = typename MergedStats::Stat;
-
-    substrate::PerThreadStorage<internal::ScalarStatManager<T>>
-        perThreadManagers;
-    MergedStats result;
-    bool merged = false;
-
-    void addToStat(
-        const Str& region, const Str& category, const T& val,
-        const StatTotal::Type& type) {
-      perThreadManagers.getLocal()->addToStat(region, category, val, type);
-    }
-
-    void mergeStats(void) {
-      if (merged) {
-        return;
-      }
-
-      for (unsigned t = 0; t < perThreadManagers.size(); ++t) {
-        const auto* manager = perThreadManagers.getRemote(t);
-
-        for (auto i = manager->cbegin(), end_i = manager->cend(); i != end_i;
-             ++i) {
-          result.addToStat(
-              manager->region(i), manager->category(i), T(manager->stat(i)),
-              manager->stat(i).totalTy());
-        }
-      }
-
-      merged = true;
-    }
-
-    const_iterator cbegin(void) const { return result.cbegin(); }
-    const_iterator cend(void) const { return result.cend(); }
-
-    const Str& region(const const_iterator& i) const {
-      return result.region(i);
-    }
-
-    const Str& category(const const_iterator& i) const {
-      return result.category(i);
-    }
-
-    const Stat& stat(const const_iterator& i) const { return result.stat(i); }
-
-    template <typename S, typename V>
-    void readStat(
-        const const_iterator& i, S& region, S& category, T& total,
-        StatTotal::Type& type, V& thrdVals) const {
-      region = this->region(i);
-      category = this->category(i);
-
-      total = this->stat(i).total();
-      type = this->stat(i).totalTy();
-
-      thrdVals.clear();
-      thrdVals = this->stat(i).values();
-    }
-
-    void print(std::ostream& out) const {
-      for (auto i = cbegin(), end_i = cend(); i != end_i; ++i) {
-        out << statKind<T>() << SEP << this->region(i) << SEP
-            << this->category(i) << SEP;
-
-        const auto& s = this->stat(i);
-        out << StatTotal::str(s.totalTy()) << SEP << s.total();
-
-        out << "\n";
-
-        if (StatManager::printingThreadVals()) {
-          out << statKind<T>() << SEP << this->region(i) << SEP
-              << this->category(i) << SEP;
-          out << TSTAT_NAME << SEP;
-
-          const char* sep = "";
-          for (const auto& v : s.values()) {
-            out << sep << v;
-            sep = TSTAT_SEP;
-          }
-
-          out << "\n";
-        }
-      }
-    }
-  };
-
-  using IntStats = StatManagerImpl<int64_t>;
-  using FPstats = StatManagerImpl<double>;
-  using StrStats = StatManagerImpl<Str>;
-  using int_iterator = typename IntStats::const_iterator;
-  using fp_iterator = typename FPstats::const_iterator;
-  using str_iterator = typename StrStats::const_iterator;
-
-  std::string m_outfile;
-  IntStats intStats;
-  FPstats fpStats;
-  StrStats strStats;
+  using int_const_iterator =
+      typename internal::VecStatManager<int64_t>::const_iterator;
+  using fp_const_iterator =
+      typename internal::VecStatManager<double>::const_iterator;
+  using param_const_iterator =
+      typename internal::VecStatManager<Str>::const_iterator;
 
 protected:
-  void mergeStats(void) {
-    intStats.mergeStats();
-    fpStats.mergeStats();
-    strStats.mergeStats();
-  }
+  static constexpr const char* const kSep = ", ";
+  static constexpr const char* const kThreadSep = "; ";
+  static constexpr const char* const kThreadNameSep = "ThreadValues";
 
-  int_iterator intBegin(void) const;
-  int_iterator intEnd(void) const;
+  /// PrintStats prints statistics to a stream.
+  ///
+  /// This function is called by Print and Print, in turn, is typically called
+  /// during the destruction of SharedMem. All statistics are added via this
+  /// class; subclasses will need to extract the data they want with ReadInt,
+  /// ReadParam and ReadFP and print their own results here.
+  virtual void PrintStats(std::ostream& out);
 
-  fp_iterator fpBegin(void) const;
-  fp_iterator fpEnd(void) const;
+  void MergeStats();
 
-  str_iterator paramBegin(void) const;
-  str_iterator paramEnd(void) const;
+  bool IsPrintingThreadVals() const;
 
-  template <typename S, typename V>
-  void readIntStat(
-      const int_iterator& i, S& region, S& category, int64_t& total,
-      StatTotal::Type& type, V& vec) const {
-    intStats.readStat(i, region, category, total, type, vec);
-  }
+  int_const_iterator int_cbegin() const;
+  int_const_iterator int_cend() const;
+  fp_const_iterator fp_cbegin() const;
+  fp_const_iterator fp_cend() const;
+  param_const_iterator param_cbegin() const;
+  param_const_iterator param_cend() const;
 
-  template <typename S, typename V>
-  void readFPstat(
-      const fp_iterator& i, S& region, S& category, double& total,
-      StatTotal::Type& type, V& vec) const {
-    fpStats.readStat(i, region, category, total, type, vec);
-  }
+  void ReadInt(
+      int_const_iterator i, Str& region, Str& category, int64_t& total,
+      StatTotal::Type& type, gstl::Vector<int64_t>& vec) const;
 
-  template <typename S, typename V>
-  void readParam(
-      const str_iterator& i, S& region, S& category, Str& total,
-      StatTotal::Type& type, V& vec) const {
-    strStats.readStat(i, region, category, total, type, vec);
-  }
+  void ReadFP(
+      fp_const_iterator i, Str& region, Str& category, double& total,
+      StatTotal::Type& type, gstl::Vector<double>& vec) const;
 
-  virtual void printStats(std::ostream& out);
-
-  void printHeader(std::ostream& out) const;
+  void ReadParam(
+      param_const_iterator i, Str& region, Str& category, Str& total,
+      StatTotal::Type& type, gstl::Vector<Str>& vec) const;
 
 public:
-  explicit StatManager(const std::string& outfile = "");
+  StatManager();
+
+  StatManager(const StatManager&) = delete;
+  StatManager& operator=(const StatManager&) = delete;
+  StatManager(StatManager&&) = delete;
+  StatManager& operator=(StatManager&&) = delete;
 
   virtual ~StatManager();
 
-  void setStatFile(const std::string& outfile);
+  void SetStatFile(const std::string& outfile);
 
-  template <
-      typename S1, typename S2, typename T,
-      typename = std::enable_if_t<
-          std::is_integral<T>::value || std::is_floating_point<T>::value>>
-  void addToStat(
-      const S1& region, const S2& category, const T& val,
-      const StatTotal::Type& type) {
-    if (std::is_floating_point<T>::value) {
-      fpStats.addToStat(
-          gstl::makeStr(region), gstl::makeStr(category), double(val), type);
+  void AddInt(
+      const std::string& region, const std::string& category, int64_t val,
+      const StatTotal::Type& type);
 
-    } else {
-      intStats.addToStat(
-          gstl::makeStr(region), gstl::makeStr(category), int64_t(val), type);
-    }
-  }
+  void AddFP(
+      const std::string& region, const std::string& category, double val,
+      const StatTotal::Type& type);
 
-  template <typename S1, typename S2, typename V>
-  void addToParam(const S1& region, const S2& category, const V& val) {
-    strStats.addToStat(
-        gstl::makeStr(region), gstl::makeStr(category), gstl::makeStr(val),
-        StatTotal::SINGLE);
-  }
+  void AddParam(
+      const std::string& region, const std::string& category, const Str& val);
 
-  void print(void);
+  void Print();
 };
 
 namespace internal {
@@ -515,94 +368,66 @@ namespace internal {
 GALOIS_EXPORT void setSysStatManager(StatManager* sm);
 GALOIS_EXPORT StatManager* sysStatManager();
 
-}  // namespace internal
+}  // end namespace internal
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat(
-    const S1& region, const S2& category, const T& value,
-    const StatTotal::Type& type) {
-  internal::sysStatManager()->addToStat(region, category, value, type);
+template <typename T>
+void
+reportParam(
+    const std::string& region, const std::string& category, const T& value) {
+  internal::sysStatManager()->AddParam(region, category, gstl::makeStr(value));
 }
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat_Single(const S1& region, const S2& category, const T& value) {
+template <typename T>
+void
+reportStat(
+    const std::string& region, const std::string& category, const T& value,
+    const StatTotal::Type& type,
+    std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
+  internal::sysStatManager()->AddInt(region, category, int64_t(value), type);
+}
+
+template <typename T>
+void
+reportStat(
+    const std::string& region, const std::string& category, const T& value,
+    const StatTotal::Type& type,
+    std::enable_if_t<std::is_floating_point_v<T>>* = nullptr) {
+  internal::sysStatManager()->AddFP(region, category, double(value), type);
+}
+
+template <typename T>
+void
+reportStat_Single(
+    const std::string& region, const std::string& category, const T& value) {
   reportStat(region, category, value, StatTotal::SINGLE);
 }
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat_Tmin(const S1& region, const S2& category, const T& value) {
+template <typename T>
+void
+reportStat_Tmin(
+    const std::string& region, const std::string& category, const T& value) {
   reportStat(region, category, value, StatTotal::TMIN);
 }
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat_Tmax(const S1& region, const S2& category, const T& value) {
+template <typename T>
+void
+reportStat_Tmax(
+    const std::string& region, const std::string& category, const T& value) {
   reportStat(region, category, value, StatTotal::TMAX);
 }
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat_Tsum(const S1& region, const S2& category, const T& value) {
+template <typename T>
+void
+reportStat_Tsum(
+    const std::string& region, const std::string& category, const T& value) {
   reportStat(region, category, value, StatTotal::TSUM);
 }
 
-template <typename S1, typename S2, typename T>
-inline void
-reportStat_Tavg(const S1& region, const S2& category, const T& value) {
-  reportStat(region, category, value, StatTotal::TAVG);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond(
-    const S1& region, const S2& category, const T& value,
-    const StatTotal::Type& type) {
-  if (Report)
-    internal::sysStatManager()->addToStat(region, category, value, type);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond_Single(const S1& region, const S2& category, const T& value) {
-  if (Report)
-    reportStat(region, category, value, StatTotal::SINGLE);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond_Tmin(const S1& region, const S2& category, const T& value) {
-  if (Report)
-    reportStat(region, category, value, StatTotal::TMIN);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond_Tmax(const S1& region, const S2& category, const T& value) {
-  if (Report)
-    reportStat(region, category, value, StatTotal::TMAX);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond_Tsum(const S1& region, const S2& category, const T& value) {
-  if (Report)
-    reportStat(region, category, value, StatTotal::TSUM);
-}
-
-template <bool Report = false, typename S1, typename S2, typename T>
-inline void
-reportStatCond_Tavg(const S1& region, const S2& category, const T& value) {
-  if (Report)
-    reportStat(region, category, value, StatTotal::TAVG);
-}
-
-template <typename S1, typename S2, typename V>
+template <typename T>
 void
-reportParam(const S1& region, const S2& category, const V& value) {
-  internal::sysStatManager()->addToParam(region, category, value);
+reportStat_Tavg(
+    const std::string& region, const std::string& category, const T& value) {
+  reportStat(region, category, value, StatTotal::TAVG);
 }
 
 GALOIS_EXPORT void setStatFile(const std::string& f);
@@ -614,8 +439,6 @@ GALOIS_EXPORT void reportRUsage(const std::string& id);
 
 //! Reports Galois system memory stats for all threads
 GALOIS_EXPORT void reportPageAlloc(const char* category);
-//! Reports NUMA memory stats for all NUMA nodes
-GALOIS_EXPORT void reportNumaAlloc(const char* category);
 
 }  // end namespace runtime
 }  // end namespace galois

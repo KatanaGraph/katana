@@ -96,7 +96,8 @@ StatTimer::~StatTimer() {
 
   // only report non-zero stat
   if (TimeAccumulator::get()) {
-    galois::runtime::reportStat_Tmax(region_, name_, TimeAccumulator::get());
+    galois::runtime::reportStat_Tmax(
+        region_.c_str(), name_.c_str(), TimeAccumulator::get());
   }
 }
 

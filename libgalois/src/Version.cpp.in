@@ -24,7 +24,10 @@
 
 std::string galois::getVersion() { return STR(@GALOIS_VERSION@); }
 
-std::string galois::getRevision() { return "unknown"; }
+std::string
+galois::getRevision() {
+  return STR(@GALOIS_GIT_SHA@) "-" STR(@CMAKE_BUILD_TYPE@);
+}
 
 int galois::getVersionMajor() { return @GALOIS_VERSION_MAJOR@; }
 

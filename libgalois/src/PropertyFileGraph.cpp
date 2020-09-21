@@ -237,20 +237,20 @@ galois::graphs::PropertyFileGraph::Make(
       edge_properties);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::Write() {
+galois::Result<void> galois::graphs::PropertyFileGraph::Commit() {
   return DoWrite(*file_);
 }
 
 galois::Result<void>
 galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
-  if (auto res = tsuba::Create(rdg_name); !res) {
+  if(auto res = tsuba::Create(rdg_name); !res) {
     return res.error();
   }
   auto open_res = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
+
   auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
   if (auto res = DoWrite(*new_file); !res) {

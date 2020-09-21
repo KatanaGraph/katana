@@ -10,7 +10,7 @@ uint32_t remaining_versions{10};
 int opt_verbose_level{0};
 bool opt_dry{false};
 
-std::string prog_name = "tsuba_bench";
+std::string prog_name = "tsuba_gc";
 std::string usage_msg =
     "Usage: {} <RDG URI>\n"
     "  [-r] remaining versions (default=10)\n"
@@ -167,7 +167,7 @@ GC(const std::string& src_uri, uint32_t remaining_versions) {
     GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
   }
   auto faw = std::move(list_res.value());
-  while (!faw->Done()) {
+  while (faw != nullptr && !faw->Done()) {
     // Get next round of file entries
     if (auto res = (*faw)(); !res) {
       GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);

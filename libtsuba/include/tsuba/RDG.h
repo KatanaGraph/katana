@@ -20,7 +20,7 @@ struct RDGHandleImpl;
 
 /// RDGHandle is an opaque indentifier for an RDG.
 struct RDGHandle {
-  RDGHandleImpl* impl_;
+  RDGHandleImpl* impl_{};
 };
 
 /// RDGFile wraps an RDGHandle to close the handle when RDGFile is destroyed.
@@ -61,6 +61,8 @@ public:
   uint64_t version_{0};
   uint64_t previous_version_{0};
   uint32_t num_hosts_{0};  // 0 is a reserved value for the empty RDG when
+  // tsuba views policy_id as zero (not partitioned) or not zero (partitioned
+  // according to a CuSP-specific policy)
   uint32_t policy_id_{0};
   bool transpose_{false};
 
@@ -208,6 +210,7 @@ private:
   std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
       const;
 
+  galois::Result<void> DoWriteMetadataText(RDGHandle handle) const;
   galois::Result<void> DoWriteMetadata(
       RDGHandle handle, const arrow::Schema& schema);
 

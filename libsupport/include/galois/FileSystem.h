@@ -35,7 +35,7 @@ GALOIS_EXPORT Result<std::string> ExtractDirName(const std::string& path);
 // Return the path for the file in that directory
 GALOIS_EXPORT std::string JoinPath(
     const std::string& dir, const std::string& file);
-
+GALOIS_EXPORT std::string StripURIScheme(const std::string& uri);
 }  // namespace galois
 
 #endif

@@ -115,36 +115,36 @@ VerifyCopy(const tsuba::RDG& s3_rdg, const std::string& s3_pg_out) {
 
 galois::Result<tsuba::RDG>
 DoCopy(const std::string& s3_pg_in, const std::string& s3_pg_out) {
-  auto s3_handle_res = tsuba::Open(s3_pg_in, tsuba::kReadOnly);
-  if (!s3_handle_res) {
-    GALOIS_LOG_FATAL("Open rdg: {}", s3_handle_res.error());
+  auto in_handle_res = tsuba::Open(s3_pg_in, tsuba::kReadOnly);
+  if (!in_handle_res) {
+    GALOIS_LOG_FATAL("Open rdg: {}", in_handle_res.error());
   }
-  auto s3_handle = s3_handle_res.value();
+  auto in_handle = in_handle_res.value();
 
-  auto s3_rdg_res = tsuba::RDG::Load(s3_handle);
-  if (!s3_rdg_res) {
-    GALOIS_LOG_FATAL("Load rdg from s3: {}", s3_rdg_res.error());
+  auto in_rdg_res = tsuba::RDG::Load(in_handle);
+  if (!in_rdg_res) {
+    GALOIS_LOG_FATAL("Load rdg from s3: {}", in_rdg_res.error());
   }
-  auto s3_rdg = std::move(s3_rdg_res.value());
+  auto in_rdg = std::move(in_rdg_res.value());
 
   if (auto res = tsuba::Create(s3_pg_out); !res) {
     GALOIS_LOG_FATAL("create rdg: {}", res.error());
   }
 
-  auto local_handle_res = tsuba::Open(s3_pg_out, tsuba::kReadWrite);
-  if (!local_handle_res) {
-    GALOIS_LOG_FATAL("Open local rdg: {}", local_handle_res.error());
+  auto out_handle_res = tsuba::Open(s3_pg_out, tsuba::kReadWrite);
+  if (!out_handle_res) {
+    GALOIS_LOG_FATAL("Open local rdg: {}", out_handle_res.error());
   }
-  auto local_handle = local_handle_res.value();
+  auto out_handle = out_handle_res.value();
 
-  if (auto res = s3_rdg.Store(local_handle); !res) {
+  if (auto res = in_rdg.Store(out_handle); !res) {
     GALOIS_LOG_FATAL("Store local rdg: {}", res.error());
   }
 
-  if (auto res = tsuba::Close(local_handle); !res) {
-    GALOIS_LOG_FATAL("Close local handle: {}", res.error());
+  if (auto res = tsuba::Close(out_handle); !res) {
+    GALOIS_LOG_FATAL("Close out handle: {}", res.error());
   }
-  return tsuba::RDG(std::move(s3_rdg));
+  return tsuba::RDG(std::move(in_rdg));
 }
 
 void

@@ -143,9 +143,7 @@ public:
   ///
   /// Like \ref Write(const std::string&) but overwrite the path this was read
   /// from (always an overwrite)
-  ///
-  /// \returns invalid if this was not read (but rather constructed in memory)
-  Result<void> Write();
+  Result<void> Commit();
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_table_->schema();

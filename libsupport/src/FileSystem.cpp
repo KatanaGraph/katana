@@ -116,6 +116,15 @@ galois::ExtractDirName(const std::string& path) {
 }
 
 std::string
+galois::StripURIScheme(const std::string& uri) {
+  size_t double_slash = uri.find("//");
+  if (double_slash == std::string::npos) {
+    return uri;
+  }
+  return uri.substr(double_slash + 2);
+}
+
+std::string
 galois::JoinPath(const std::string& dir, const std::string& file) {
   size_t last_slash = dir.find_last_of(kSepChar, std::string::npos);
   if (last_slash == (dir.length() - 1)) {

@@ -101,7 +101,6 @@ galois::Result<uint64_t>
 ParseVersion(std::string file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kMetaVersion)) {
-    GALOIS_LOG_ERROR("no match {}", file);
     return tsuba::ErrorCode::InvalidArgument;
   }
   return Parse(sub_match[1]);

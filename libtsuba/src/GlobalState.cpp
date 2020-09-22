@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cassert>
 
-#include "NameServerClient.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "tsuba/NameServerClient.h"
 
 namespace tsuba {
 
@@ -59,15 +59,15 @@ GlobalState::FS(std::string_view uri) const {
 
 NameServerClient*
 GlobalState::NS() const {
-  return name_server_client_.get();
+  return name_server_client_;
 }
 
 galois::Result<void>
-GlobalState::Init(galois::CommBackend* comm) {
+GlobalState::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
   assert(ref_ == nullptr);
 
   // new to access non-public constructor
-  std::unique_ptr<GlobalState> global_state(new GlobalState(comm));
+  std::unique_ptr<GlobalState> global_state(new GlobalState(comm, ns));
 
   for (GlobalFileStorageAllocator* allocator : available_storage_allocators) {
     global_state->file_stores_.emplace_back(allocator->allocate());
@@ -85,12 +85,6 @@ GlobalState::Init(galois::CommBackend* comm) {
       return res.error();
     }
   }
-
-  auto name_server_client_res = ConnectToNameServer();
-  if (!name_server_client_res) {
-    return name_server_client_res.error();
-  }
-  global_state->name_server_client_ = std::move(name_server_client_res.value());
 
   ref_ = std::move(global_state);
   return galois::ResultSuccess();

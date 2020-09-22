@@ -1,4 +1,4 @@
-#include "NameServerClient.h"
+#include "tsuba/MemoryNameServerClient.h"
 
 #include <cassert>
 #include <future>
@@ -16,7 +16,7 @@
 namespace tsuba {
 
 galois::Result<RDGMeta>
-DummyTestNameServerClient::lookup(const std::string& key) {
+MemoryNameServerClient::lookup(const std::string& key) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = server_state_.find(key);
   if (it == server_state_.end()) {
@@ -26,7 +26,7 @@ DummyTestNameServerClient::lookup(const std::string& key) {
 }
 
 galois::Result<RDGMeta>
-DummyTestNameServerClient::Get(const std::string& rdg_name) {
+MemoryNameServerClient::Get(const std::string& rdg_name) {
   // take the lock in lookup to avoid deadlock since Register will call Create
   auto meta_res = lookup(rdg_name);
   if (!meta_res && meta_res.error() == ErrorCode::NotFound) {
@@ -42,7 +42,7 @@ DummyTestNameServerClient::Get(const std::string& rdg_name) {
 }
 
 galois::Result<void>
-DummyTestNameServerClient::Create(
+MemoryNameServerClient::Create(
     const std::string& rdg_name, const RDGMeta& meta) {
   std::lock_guard<std::mutex> lock(mutex_);
   bool good = false;
@@ -54,7 +54,7 @@ DummyTestNameServerClient::Create(
 }
 
 galois::Result<void>
-DummyTestNameServerClient::Update(
+MemoryNameServerClient::Update(
     const std::string& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   if (old_version >= meta.version_) {
     return ErrorCode::InvalidArgument;
@@ -73,31 +73,8 @@ DummyTestNameServerClient::Update(
 }
 
 galois::Result<void>
-DummyTestNameServerClient::CheckHealth() {
+MemoryNameServerClient::CheckHealth() {
   return galois::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<NameServerClient>>
-DummyTestNameServerClient::Make() {
-  return std::unique_ptr<NameServerClient>(new DummyTestNameServerClient());
-}
-
 }  // namespace tsuba
-
-galois::Result<std::unique_ptr<tsuba::NameServerClient>>
-tsuba::ConnectToNameServer() {
-  std::string host;
-  int port = 0;
-
-  galois::GetEnv("GALOIS_NS_HOST", &host);
-  galois::GetEnv("GALOIS_NS_PORT", &port);
-
-  if (host.empty()) {
-    GALOIS_LOG_WARN(
-        "name server not configured, no consistency guarantees "
-        "between Katana instances");
-    return DummyTestNameServerClient::Make();
-  }
-  GALOIS_LOG_DEBUG("connecting to nameserver {}:{}", host, port);
-  return ErrorCode::NotImplemented;
-}

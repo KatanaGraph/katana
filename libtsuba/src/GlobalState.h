@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "FileStorage.h"
-#include "NameServerClient.h"
 #include "galois/CommBackend.h"
 #include "galois/Logging.h"
+#include "tsuba/NameServerClient.h"
 
 namespace tsuba {
 
@@ -27,9 +27,10 @@ class GlobalState {
 
   std::vector<std::unique_ptr<FileStorage>> file_stores_;
   galois::CommBackend* comm_;
-  std::unique_ptr<NameServerClient> name_server_client_;
+  tsuba::NameServerClient* name_server_client_;
 
-  GlobalState(galois::CommBackend* comm) : comm_(comm){};
+  GlobalState(galois::CommBackend* comm, tsuba::NameServerClient* ns)
+      : comm_(comm), name_server_client_(ns){};
   FileStorage* GetDefaultFS() const;
 
 public:
@@ -52,7 +53,8 @@ public:
   /// {no scheme} -> LocalStore
   FileStorage* FS(std::string_view uri) const;
 
-  static galois::Result<void> Init(galois::CommBackend* comm);
+  static galois::Result<void> Init(
+      galois::CommBackend* comm, tsuba::NameServerClient* ns);
   static galois::Result<void> Fini();
   static const GlobalState& Get();
 };

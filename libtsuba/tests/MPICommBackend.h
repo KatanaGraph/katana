@@ -8,6 +8,7 @@
 #include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "tsuba/MemoryNameServerClient.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {
@@ -55,10 +56,11 @@ struct MPICommBackend : public galois::CommBackend {
 };
 
 static tsuba::MPICommBackend test_backend{};
+static tsuba::MemoryNameServerClient test_ns{};
 
 static galois::Result<void>
 InitWithMPI() {
-  return Init(&test_backend);
+  return Init(&test_backend, &test_ns);
 }
 
 static galois::Result<void>

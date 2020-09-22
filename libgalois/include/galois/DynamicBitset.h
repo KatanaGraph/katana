@@ -293,11 +293,11 @@ public:
   using tt_is_copyable = int;
 };
 
-//! An empty bitset object; used mainly by InvalidBitsetFnTy
+//! An empty bitset object; used mainly by InvalidBitsetFn
 extern galois::DynamicBitSet EmptyBitset;
 
 //! A structure representing an empty bitset.
-struct GALOIS_EXPORT InvalidBitsetFnTy {
+struct GALOIS_EXPORT InvalidBitsetFn {
   //! Returns false as this is an empty bitset
   static constexpr bool is_vector_bitset() { return false; }
 

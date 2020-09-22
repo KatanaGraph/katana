@@ -44,9 +44,10 @@ namespace galois {
 class GALOIS_EXPORT DynamicBitSet {
   galois::PODResizeableArray<galois::CopyableAtomic<uint64_t>> bitvec;
   size_t num_bits{0};
-  static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
 
 public:
+  static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
+
   //! Constructor which initializes to an empty bitset.
   DynamicBitSet() = default;
 

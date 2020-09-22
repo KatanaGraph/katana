@@ -845,9 +845,12 @@ S3ListAsync(
         std::string short_name(FromAwsString(content.GetKey()));
         size_t begin = short_name.find(object);
         GALOIS_LOG_ASSERT(begin == 0);
-        GALOIS_LOG_ASSERT(short_name[object.length()] == '/');
-        short_name.erase(begin, object.length() + 1);
-        list->emplace(short_name);
+        // object might be rmat15/, but if rmat15s/ also exists, S3
+        // will send us those entries
+        if (short_name[object.length()] == '/') {
+          short_name.erase(begin, object.length() + 1);
+          list->emplace(short_name);
+        }
       }
       token.clear();
       if (s3result.GetIsTruncated()) {

@@ -1,15 +1,41 @@
 // Run some quick, basic sanity checks on tsuba
 #include <stdlib.h>
 
+#include <vector>
+
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
-// remove_all (rm -rf) is just too sweet
-#include <vector>
 
+// remove_all (rm -rf) is just too sweet
 #include <boost/filesystem.hpp>
 
-constexpr uint8_t kPathSep = '/';
+int opt_verbose_level{0};
+std::string prog_name = "tsuba_basic_quick";
+std::string usage_msg =
+    "Usage: {}\n"
+    "  [-v] verbose, can be repeated (default=false)\n"
+    "  [-h] usage message\n";
+
+void
+ParseArguments(int argc, char* argv[]) {
+  int c;
+
+  while ((c = getopt(argc, argv, "hv")) != -1) {
+    switch (c) {
+    case 'v':
+      opt_verbose_level++;
+      break;
+    case 'h':
+      fmt::print(stderr, usage_msg, prog_name);
+      exit(0);
+      break;
+    default:
+      fmt::print(stderr, usage_msg, prog_name);
+      exit(EXIT_FAILURE);
+    }
+  }
+}
 
 enum class TestType {
   kSystem,
@@ -49,10 +75,13 @@ MkCpSumLocal(
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
       TestType::kSystem, fmt::format("Make a local file ({})", bytes_str),
-      fmt::format("tsuba_mkfile {} {}", bytes_str, local)));
+      (opt_verbose_level > 0)
+          ? fmt::format("tsuba_mkfile -v {} {}", bytes_str, local)
+          : fmt::format("tsuba_mkfile {} {}", bytes_str, local)));
   tests.push_back(Test(
       TestType::kSystem, fmt::format("Copy local file to S3 ({})", bytes_str),
-      fmt::format("tsuba_cp {} {}", local, s3)));
+      (opt_verbose_level > 0) ? fmt::format("tsuba_cp -v {} {}", local, s3)
+                              : fmt::format("tsuba_cp {} {}", local, s3)));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
       fmt::format("tsuba_md5sum {}", s3)};
@@ -63,7 +92,8 @@ MkCpSumLocal(
   // Note, no tsuba_rm yet
   tests.push_back(Test(
       TestType::kSystem, "Remove S3 file via aws cli",
-      fmt::format("aws s3 rm {}", s3)));
+      (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
+                              : fmt::format("aws s3 rm --quiet {}", s3)));
 }
 
 void
@@ -73,10 +103,13 @@ MkCpSumS3(
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
       TestType::kSystem, fmt::format("Make S3 file ({})", bytes_str),
-      fmt::format("tsuba_mkfile {} {}", bytes_str, s3)));
+      (opt_verbose_level > 0)
+          ? fmt::format("tsuba_mkfile -v {} {}", bytes_str, s3)
+          : fmt::format("tsuba_mkfile {} {}", bytes_str, s3)));
   tests.push_back(Test(
       TestType::kSystem, fmt::format("Copy S3 file to local ({})", bytes_str),
-      fmt::format("tsuba_cp {} {}", s3, local)));
+      (opt_verbose_level > 0) ? fmt::format("tsuba_cp -v {} {}", s3, local)
+                              : fmt::format("tsuba_cp {} {}", s3, local)));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
       fmt::format("tsuba_md5sum {}", s3)};
@@ -87,18 +120,16 @@ MkCpSumS3(
   // Note, no tsuba_rm yet and local directory cleaned at end.
   tests.push_back(Test(
       TestType::kSystem, "Remove S3 file via aws cli",
-      fmt::format("aws s3 rm {}", s3)));
+      (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
+                              : fmt::format("aws s3 rm --quiet {}", s3)));
 }
 
 std::vector<Test>
 ConstructTests(std::string local_dir, std::string s3_dir) {
   std::vector<Test> tests;
   std::string rnd_str = galois::RandomAlphanumericString(12);
-  if (local_dir.back() != kPathSep) {
-    local_dir.push_back(kPathSep);
-  }
-  std::string local_rnd = local_dir + "ci-test-" + rnd_str;
-  std::string s3_rnd = std::string(s3_dir) + "ci-test-" + rnd_str;
+  std::string local_rnd = galois::JoinPath(local_dir, "ci-test-" + rnd_str);
+  std::string s3_rnd = galois::JoinPath(s3_dir, "ci-test-" + rnd_str);
 
   // Each of these could be done on a different thread
   MkCpSumLocal(8, local_rnd, s3_rnd, tests);
@@ -161,13 +192,17 @@ main(int argc, char* argv[]) {
     setenv("AWS_DEFAULT_REGION", "us-east-1", 1);
   }
 
+  ParseArguments(argc, argv);
+
   auto unique_result = galois::CreateUniqueDirectory("/tmp/tsuba_basic_quick-");
   GALOIS_LOG_ASSERT(unique_result);
   std::string tmp_dir(std::move(unique_result.value()));
   auto tests = ConstructTests(tmp_dir, "s3://katana-ci/delete_me/");
 
   for (auto const& test : tests) {
-    fmt::print("Running: {}\n", test.name_);
+    if (opt_verbose_level > 0) {
+      fmt::print("Running: {}\n", test.name_);
+    }
     switch (test.type_) {
     case TestType::kSystem: {
       int res = system(test.cmd_[0].c_str());

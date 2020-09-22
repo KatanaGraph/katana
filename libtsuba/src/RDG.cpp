@@ -313,35 +313,6 @@ AddPartialTables(
   return galois::ResultSuccess();
 }
 
-// void IncrementGraphVersion(tsuba::RDGHandle handle, bool transpose) {
-//   galois::CommBackend* comm = tsuba::Comm();
-//   GALOIS_LOG_VASSERT(
-//       (comm->Num == handle.impl_->rdg_meta.num_hosts_) ||
-//           (handle.impl_->rdg_meta.num_hosts_ == 1 && comm->Num > 1),
-//       "can't change the number of hosts for an RDG once number is above 1 comm "
-//       "{} RDG {}",
-//       comm->Num, handle.impl_->rdg_meta.num_hosts_);
-//   tsuba::RDGMeta new_meta(
-//       handle.impl_->rdg_meta.version_ + 1,
-//       handle.impl_->rdg_meta.version_,
-//       comm->Num,
-//       handle.impl_->rdg_meta.policy_id_,
-//       transpose,
-//       handle.impl_->rdg_meta.dir_
-//   );
-//   // If version == previous_version, then this is the first write
-//   // of a graph to a new location, so no need to bump the version number yet.
-//   if (handle.impl_->rdg_meta.version_ ==
-//       handle.impl_->rdg_meta.previous_version_) {
-//     new_meta.version_--;
-//     GALOIS_LOG_VASSERT(
-//         new_meta.version_ == new_meta.previous_version_,
-//         "RDG in a new location must have version ({}) == previous version ({})",
-//         new_meta.version_, new_meta.previous_version_);
-//   }
-//   handle.impl_->rdg_meta = new_meta;
-// }
-
 /// Store the arrow array as a table in a unique file, return
 /// the final name of that file
 galois::Result<std::string>
@@ -1003,11 +974,42 @@ from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   j.at("cartesian_grid").get_to(pmd.cartesian_grid_);
 }
 
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void
+to_json(nlohmann::json& j, const PropertyMetadata& propmd) {
+  j = json{propmd.name, propmd.path};
+}
+
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void
+from_json(const nlohmann::json& j, PropertyMetadata& propmd) {
+  j.at(propmd.name).get_to(propmd.path);
+}
+
 RDGFile::~RDGFile() {
   auto result = Close(handle_);
   if (!result) {
     GALOIS_LOG_ERROR("closing RDGFile: {}", result.error());
   }
+}
+
+std::string
+RDG::MakeMetadataJson() const {
+  json j;
+
+  j[topology_path_key] = topology_path_;
+  j[node_property_name_key] = node_properties_;
+  j[edge_property_name_key] = edge_properties_;
+  j[part_property_name_key] = part_properties_;
+
+  // Should this data live under a global key?
+  for (const auto& v : other_metadata_) {
+    j[v.first] = v.second;
+  }
+  // POSIX specifies that text files end in a newline
+  std::string map_s = j.dump() + '\n';
+
+  return map_s;
 }
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
@@ -1048,31 +1050,18 @@ RDG::MakeMetadata() const {
 }
 
 galois::Result<void>
-RDG::DoWriteMetadataText(RDGHandle handle) const {
-  std::map<std::string, std::string> map;
-  auto [keys, vals] = MakeMetadata();
-  GALOIS_LOG_VASSERT(
-      keys.size() == vals.size(),
-      "problem making metadata, different length keys and values");
-  for (auto i = 0U; i < keys.size(); ++i) {
-    map[keys[i]] = vals[i];
-  }
-  json j = map;
-  std::string map_s = j.dump() + '\n';
+RDG::DoWriteMetadataJson(RDGHandle handle) const {
+  std::string map_s = MakeMetadataJson();
   auto curr_res = tsuba::FileStore(
       RDGMeta::PartitionFileName(
           handle.impl_->rdg_meta.dir_, Comm()->ID,
-          handle.impl_->rdg_meta.version_ + 1) +
-          ".json",
+          handle.impl_->rdg_meta.version_ + 1),
       reinterpret_cast<const uint8_t*>(map_s.data()), map_s.size());
   return curr_res;
 }
 
 galois::Result<void>
 RDG::DoWriteMetadata(RDGHandle handle, const arrow::Schema& schema) {
-  if (auto res = DoWriteMetadataText(handle); !res) {
-    GALOIS_LOG_ERROR("problem writing json partition file");
-  }
   std::shared_ptr<parquet::SchemaDescriptor> schema_descriptor;
   auto to_result = parquet::arrow::ToParquetSchema(
       &schema, *StandardWriterProperties(), &schema_descriptor);
@@ -1186,8 +1175,17 @@ RDG::DoStore(RDGHandle handle) {
     topology_path_ = galois::ExtractFileName(t_path);
   }
 
-  auto node_write_result =
-      WriteTable(*node_table_, node_properties_, handle.impl_->rdg_meta.dir_);
+  // TODO (witchel) replace with more robust naming convention
+  // Don't persist ephemeral columns whose names start with "Column_"
+  std::vector<tsuba::PropertyMetadata> filtered_node_properties{};
+  std::copy_if(
+      node_properties_.begin(), node_properties_.end(),
+      std::back_inserter(filtered_node_properties),
+      [](tsuba::PropertyMetadata pmd) {
+        return pmd.name.find("Column_") != 0;
+      });
+  auto node_write_result = WriteTable(
+      *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_);
   if (!node_write_result) {
     GALOIS_LOG_DEBUG("unable to write node properties");
     return node_write_result.error();

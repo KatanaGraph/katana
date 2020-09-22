@@ -207,10 +207,11 @@ private:
       const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props, const SliceArg* slice);
 
+  std::string MakeMetadataJson() const;
   std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
       const;
 
-  galois::Result<void> DoWriteMetadataText(RDGHandle handle) const;
+  galois::Result<void> DoWriteMetadataJson(RDGHandle handle) const;
   galois::Result<void> DoWriteMetadata(
       RDGHandle handle, const arrow::Schema& schema);
 

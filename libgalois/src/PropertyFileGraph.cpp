@@ -237,20 +237,12 @@ galois::graphs::PropertyFileGraph::Make(
       edge_properties);
 }
 
-galois::Result<void> galois::graphs::PropertyFileGraph::Commit() {
-  return DoWrite(*file_);
-}
-
 galois::Result<void>
-galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
-  if(auto res = tsuba::Create(rdg_name); !res) {
-    return res.error();
-  }
-  auto open_res = tsuba::Open(rdg_name, tsuba::kReadWrite);
+galois::graphs::PropertyFileGraph::WriteGraph(std::string uri) {
+  auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
-
   auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
   if (auto res = DoWrite(*new_file); !res) {
@@ -260,6 +252,26 @@ galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
   file_ = std::move(new_file);
 
   return galois::ResultSuccess();
+}
+
+galois::Result<void>
+galois::graphs::PropertyFileGraph::Commit() {
+  if (file_ == nullptr) {
+    if (rdg_.rdg_dir_.empty()) {
+      GALOIS_LOG_ERROR("RDG commit but rdg_dir_ is empty");
+      return ErrorCode::InvalidArgument;
+    }
+    return WriteGraph(rdg_.rdg_dir_);
+  }
+  return DoWrite(*file_);
+}
+
+galois::Result<void>
+galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
+  if (auto res = tsuba::Create(rdg_name); !res) {
+    return res.error();
+  }
+  return WriteGraph(rdg_name);
 }
 
 galois::Result<void>

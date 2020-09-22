@@ -14,15 +14,19 @@
 std::string src_path{};
 std::string dst_path{};
 uint64_t read_block_size = (1 << 29);
+int opt_verbose_level{0};
 
-std::string usage_msg = "Usage: {} <src file name> <dst file name>\n";
+std::string usage_msg = "Usage: [-v] {} <src file name> <dst file name>\n";
 
 void
 parse_arguments(int argc, char* argv[]) {
   int c;
 
-  while ((c = getopt(argc, argv, "h")) != -1) {
+  while ((c = getopt(argc, argv, "hv")) != -1) {
     switch (c) {
+    case 'v':
+      opt_verbose_level++;
+      break;
     case 'h':
       fmt::print(stderr, usage_msg, argv[0]);
       exit(0);
@@ -54,7 +58,9 @@ main(int argc, char* argv[]) {
     GALOIS_LOG_FATAL("Cannot stat {}\n", src_path);
   }
 
-  fmt::print("cp {} to {}\n", src_path, dst_path);
+  if (opt_verbose_level > 0) {
+    fmt::print("cp {} to {}\n", src_path, dst_path);
+  }
 
   auto buf_res = tsuba::FileMmap(src_path, UINT64_C(0), stat_buf.size);
   if (!buf_res) {

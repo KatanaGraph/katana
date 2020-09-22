@@ -49,6 +49,7 @@ class GALOIS_EXPORT PropertyFileGraph {
   Result<void> Validate();
 
   Result<void> DoWrite(tsuba::RDGHandle handle);
+  Result<void> WriteGraph(std::string uri);
 
   /// ExtractArrays returns the array for each column of a table. It returns an
   /// error if there is more than one array for any column.
@@ -139,11 +140,13 @@ public:
   /// \returns io_error if, for instance, a file already exists
   Result<void> Write(const std::string& rdg_name);
 
-  /// Write the property graph to the given path.
+  /// Write updates to the property graph
   ///
-  /// Like \ref Write(const std::string&) but overwrite the path this was read
+  /// Like \ref Write(const std::string&) but overwrite location graph was read
   /// from (always an overwrite)
   Result<void> Commit();
+  /// Tell the RDG where it's data is coming from
+  void InformPath(std::string input_path) { rdg_.rdg_dir_ = input_path; }
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_table_->schema();

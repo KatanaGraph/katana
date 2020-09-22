@@ -70,7 +70,7 @@ BytesToPair(uint64_t bytes_) {
 // Input: vector of timings, byte size of experiment
 // Output: string summarizing experiment
 inline std::string
-FmtResults(const std::vector<int64_t>& v, uint64_t bytes) {
+FmtResults(const std::vector<int64_t>& v, uint64_t bytes = UINT64_C(0)) {
   if (v.size() == 0) {
     return "no results";
   }
@@ -88,10 +88,15 @@ FmtResults(const std::vector<int64_t>& v, uint64_t bytes) {
 
   auto [time, time_units] = UsToPair(mean);
   float stdev_in_units = stdev * time / mean;
-  auto [bw, bw_units] = BytesToPair(1'000'000 * bytes / mean);
+  if (bytes && mean) {
+    auto [bw, bw_units] = BytesToPair(1'000'000 * bytes / mean);
+    return fmt::format(
+        "{:>5.1f} {:2} (N={:d}) sd {:5.1f} {:5.1f} {}/s", time, time_units,
+        v.size(), stdev_in_units, bw, bw_units);
+  }
   return fmt::format(
-      "{:>5.1f} {:2} (N={:d}) sd {:5.1f} {:5.1f} {}/s", time, time_units,
-      v.size(), stdev_in_units, bw, bw_units);
+      "{:>5.1f} {:2} (N={:d}) sd {:5.1f}", time, time_units, v.size(),
+      stdev_in_units);
 }
 
 #endif

@@ -15,6 +15,7 @@
 
 uint64_t bytes_to_write{0};
 std::string dst_path{};
+int opt_verbose_level{0};
 
 static constexpr auto chars =
     "0123456789"
@@ -22,7 +23,7 @@ static constexpr auto chars =
     "abcdefghijklmnopqrstuvwxyz";
 static auto chars_len = std::strlen(chars);
 
-std::string usage_msg = "Usage: {} <number>[G|M|K|B] <full path>\n";
+std::string usage_msg = "Usage: {} [-v] <number>[G|M|K|B] <full path>\n";
 
 // 19 chars, with 1 null byte
 void
@@ -64,8 +65,11 @@ parse_arguments(int argc, char* argv[]) {
   int c;
   char* p_end{nullptr};
 
-  while ((c = getopt(argc, argv, "h")) != -1) {
+  while ((c = getopt(argc, argv, "hv")) != -1) {
     switch (c) {
+    case 'v':
+      opt_verbose_level++;
+      break;
     case 'h':
       fmt::print(stderr, usage_msg, argv[0]);
       exit(0);
@@ -142,7 +146,9 @@ main(int argc, char* argv[]) {
   }
   init_data(buf, bytes_to_write);
 
-  fmt::print("Writing {}\n", dst_path);
+  if (opt_verbose_level > 0) {
+    fmt::print("Writing {}\n", dst_path);
+  }
   if (auto res = tsuba::FileStore(dst_path, buf, bytes_to_write); !res) {
     fmt::print(stderr, "FileStore error {}\n", res.error());
     exit(EXIT_FAILURE);

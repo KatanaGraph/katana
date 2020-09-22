@@ -78,7 +78,8 @@ FindVersions(const std::string& src_uri, uint32_t remaining_versions) {
   std::vector<tsuba::RDGMeta> versions{};
   versions.push_back(rdg_meta);
 
-  while (rdg_meta.version_ != rdg_meta.previous_version_ &&
+  while (rdg_meta.version_ > 1 &&
+         rdg_meta.version_ != rdg_meta.previous_version_ &&
          versions.size() < remaining_versions) {
     auto rdg_res = GetPreviousRDGMeta(rdg_meta, src_uri);
     if (!rdg_res) {

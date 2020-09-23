@@ -298,9 +298,6 @@ extern galois::DynamicBitSet EmptyBitset;
 
 //! A structure representing an empty bitset.
 struct GALOIS_EXPORT InvalidBitsetFn {
-  //! Returns false as this is an empty bitset
-  static constexpr bool is_vector_bitset() { return false; }
-
   //! Returns false as this is an empty bitset (invalid)
   static constexpr bool is_valid() { return false; }
 

@@ -22,11 +22,24 @@
 #include "galois/Logging.h"
 #include "tsuba/tsuba.h"
 
+namespace {
+
+galois::NullCommBackend comm_backend;
+
+}  // namespace
+
 galois::SharedMemSys::SharedMemSys() {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    GALOIS_LOG_ERROR("tsuba::Init: {}", init_good.error());
+  auto ns_res = tsuba::GetNameServerClient();
+  if (!ns_res) {
+    GALOIS_LOG_FATAL(
+        "failed to initialize name server client: {}", ns_res.error());
+  }
+  ns_ = std::move(ns_res.value());
+  if (auto init_good = tsuba::Init(&comm_backend, ns_.get()); !init_good) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 }
+
 galois::SharedMemSys::~SharedMemSys() {
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     GALOIS_LOG_ERROR("tsuba::Fini: {}", fini_good.error());

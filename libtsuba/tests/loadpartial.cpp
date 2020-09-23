@@ -75,11 +75,17 @@ Test(
     int64_t length) {
   GALOIS_LOG_ASSERT(length >= 0 && offset >= 0);
 
+  auto uri_res = galois::Uri::Make(path);
+  if (!uri_res) {
+    GALOIS_LOG_FATAL("uri parse failed ({}): {}", path, uri_res.error());
+  }
+  galois::Uri uri = std::move(uri_res.value());
+
   auto recovered_result =
-      tsuba::internal::LoadPartialTable("test", path, offset, length);
+      tsuba::internal::LoadPartialTable("test", uri, offset, length);
   if (!recovered_result) {
     GALOIS_LOG_FATAL(
-        "tsuba::LoadPartialTable(\"test\", {}, {}, {}): {}", path, offset,
+        "tsuba::LoadPartialTable(\"test\", {}, {}, {}): {}", uri, offset,
         length, recovered_result.error());
   }
   std::shared_ptr<arrow::Table> recovered = recovered_result.value();
@@ -102,13 +108,7 @@ main() {
   }
   std::string temp_dir(std::move(unique_result.value()));
 
-  auto path_result = galois::NewPath(temp_dir, "big_parquet");
-  if (!path_result) {
-    GALOIS_LOG_FATAL(
-        "galois::NewPath({}, \"{}\"): {}", temp_dir, "big_parquet",
-        path_result.error());
-  }
-  std::string path = path_result.value();
+  std::string path = galois::NewPath(temp_dir, "big_parquet");
   WriteInit(table, path);
 
   // Run several tests

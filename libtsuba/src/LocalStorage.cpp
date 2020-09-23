@@ -26,7 +26,7 @@ GlobalFileStorageAllocator local_storage_allocator([]() {
 });
 
 void
-LocalStorage::CleanURI(std::string* uri) {
+LocalStorage::CleanUri(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
     return;
   }
@@ -35,7 +35,7 @@ LocalStorage::CleanURI(std::string* uri) {
 
 galois::Result<void>
 LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
-  CleanURI(&uri);
+  CleanUri(&uri);
   fs::path m_path{uri};
   fs::path dir = m_path.parent_path();
   if (boost::system::error_code err; !fs::create_directories(dir, err)) {
@@ -58,7 +58,7 @@ LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
 galois::Result<void>
 LocalStorage::ReadFile(
     std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
-  CleanURI(&uri);
+  CleanUri(&uri);
   std::ifstream ifile(uri);
 
   ifile.seekg(start);
@@ -84,7 +84,7 @@ LocalStorage::ReadFile(
 galois::Result<void>
 LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   std::string filename = uri;
-  CleanURI(&filename);
+  CleanUri(&filename);
   struct stat local_s_buf;
 
   if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
@@ -97,7 +97,7 @@ LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
 galois::Result<void>
 LocalStorage::Create(const std::string& uri, bool overwrite) {
   std::string filename = uri;
-  CleanURI(&filename);
+  CleanUri(&filename);
   fs::path m_path{filename};
   if (overwrite && fs::exists(m_path)) {
     return ErrorCode::Exists;
@@ -121,7 +121,7 @@ LocalStorage::ListAsync(
   DIR* dirp;
   struct dirent* dp;
   std::string dirname = uri;
-  CleanURI(&dirname);
+  CleanUri(&dirname);
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
@@ -159,7 +159,7 @@ LocalStorage::Delete(
     const std::string& directory_uri,
     const std::unordered_set<std::string>& files) {
   std::string dir = directory_uri;
-  CleanURI(&dir);
+  CleanUri(&dir);
   for (const auto& file : files) {
     auto path = galois::JoinPath(dir, file);
     unlink(path.c_str());

@@ -22,7 +22,7 @@ GlobalFileStorageAllocator azure_storage_allocator([]() {
 });
 
 galois::Result<std::pair<std::string, std::string>>
-AzureStorage::CleanURI(const std::string& uri) {
+AzureStorage::CleanUri(const std::string& uri) {
   std::smatch sub_match;
   if (!std::regex_match(uri, sub_match, kAzureUriRegex)) {
     return ErrorCode::InvalidArgument;
@@ -42,7 +42,7 @@ AzureStorage::Fini() {
 
 galois::Result<void>
 AzureStorage::Stat(const std::string& uri, StatBuf* s_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -52,7 +52,7 @@ AzureStorage::Stat(const std::string& uri, StatBuf* s_buf) {
 
 galois::Result<void>
 AzureStorage::Create(const std::string& uri, bool overwrite) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -72,7 +72,7 @@ galois::Result<void>
 AzureStorage::GetMultiSync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -85,7 +85,7 @@ AzureStorage::GetMultiSync(
 galois::Result<void>
 AzureStorage::PutMultiSync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -99,7 +99,7 @@ AzureStorage::PutMultiSync(
 galois::Result<std::unique_ptr<FileAsyncWork>>
 AzureStorage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -114,7 +114,7 @@ galois::Result<std::unique_ptr<FileAsyncWork>>
 AzureStorage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -127,7 +127,7 @@ AzureStorage::GetAsync(
 galois::Result<std::unique_ptr<FileAsyncWork>>
 AzureStorage::ListAsync(
     const std::string& directory, std::unordered_set<std::string>* list) {
-  auto uri_res = CleanURI(std::string(directory));
+  auto uri_res = CleanUri(std::string(directory));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -139,7 +139,7 @@ galois::Result<void>
 AzureStorage::Delete(
     const std::string& directory,
     const std::unordered_set<std::string>& files) {
-  auto uri_res = CleanURI(std::string(directory));
+  auto uri_res = CleanUri(std::string(directory));
   if (!uri_res) {
     return uri_res.error();
   }

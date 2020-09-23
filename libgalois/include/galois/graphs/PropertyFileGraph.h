@@ -146,7 +146,14 @@ public:
   /// from (always an overwrite)
   Result<void> Commit();
   /// Tell the RDG where it's data is coming from
-  void InformPath(std::string input_path) { rdg_.rdg_dir_ = input_path; }
+  Result<void> InformPath(const std::string& input_path) {
+    auto uri_res = galois::Uri::Make(input_path);
+    if (!uri_res) {
+      return uri_res.error();
+    }
+    rdg_.rdg_dir_ = uri_res.value();
+    return ResultSuccess();
+  }
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_table_->schema();

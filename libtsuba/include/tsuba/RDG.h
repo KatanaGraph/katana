@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "galois/config.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
@@ -66,12 +67,12 @@ public:
   uint32_t policy_id_{0};
   bool transpose_{false};
 
-  std::string dir_;  // not persisted; inferred from name
+  galois::Uri dir_;  // not persisted; inferred from name
 
-  RDGMeta(std::string dir) : dir_(std::move(dir)) {}
+  RDGMeta(galois::Uri dir) : dir_(std::move(dir)) {}
   RDGMeta(
       uint64_t version, uint64_t previous_version, uint32_t num_hosts,
-      uint32_t policy_id, bool transpose, std::string dir)
+      uint32_t policy_id, bool transpose, galois::Uri dir)
       : version_(version),
         previous_version_(previous_version),
         num_hosts_(num_hosts),
@@ -81,24 +82,26 @@ public:
   RDGMeta() = default;
 
   /// Create an RDGMeta
-  /// \param rdg_name a uri that either names a registered RDG or an explicit
+  /// \param uri a uri that either names a registered RDG or an explicit
   ///    rdg file
   /// \returns the constructed RDGMeta and the directory of its contents
-  static galois::Result<RDGMeta> Make(const std::string& rdg_name);
+  static galois::Result<RDGMeta> Make(const galois::Uri& uri);
 
   /// Create an RDGMeta
-  /// \param meta_dir is a storage prefix where the RDG is stored
+  /// \param uri is a storage prefix where the RDG is stored
   /// \param version is the version of the meta_dir to load
   /// \returns the constructed RDGMeta and the directory of its contents
-  static galois::Result<RDGMeta> Make(
-      const std::string& meta_dir, uint64_t version);
-  static galois::Result<RDGMeta> MakeFromStorage(const std::string& uri);
+  static galois::Result<RDGMeta> Make(const galois::Uri& uri, uint64_t version);
+  static galois::Result<RDGMeta> MakeFromStorage(const galois::Uri& uri);
 
   // Canonical naming
-  static std::string FileName(const std::string& rdg_path, uint64_t version);
-  static std::string PartitionFileName(
-      const std::string& rdg_path, uint32_t node_id, uint64_t version);
+  static galois::Uri FileName(const galois::Uri& uri, uint64_t version);
+
+  static galois::Uri PartitionFileName(
+      const galois::Uri& uri, uint32_t node_id, uint64_t version);
   std::string ToJsonString() const;
+
+  static std::string PartitionFileName(uint32_t node_id, uint64_t version);
 
   // Required by nlohmann
   friend void to_json(nlohmann::json& j, const RDGMeta& meta);
@@ -148,7 +151,7 @@ public:
   FileView topology_file_storage_;
 
   /// name of the graph that was used to load this RDG
-  std::string rdg_dir_;
+  galois::Uri rdg_dir_;
 
   /// Metadata filled in by CuSP
   std::unique_ptr<PartitionMetadata> part_metadata_;
@@ -197,13 +200,13 @@ public:
       const std::vector<std::string>* edge_props = nullptr);
 
 private:
-  galois::Result<void> DoLoad(const std::string& metadata_dir);
+  galois::Result<void> DoLoad(const galois::Uri& metadata_dir);
 
   galois::Result<void> DoLoadPartial(
-      const std::string& metadata_dir, const SliceArg& slice);
+      const galois::Uri& metadata_dir, const SliceArg& slice);
 
   static galois::Result<RDG> Make(
-      const std::string& partition_path,
+      const galois::Uri& partition_path,
       const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props, const SliceArg* slice);
 

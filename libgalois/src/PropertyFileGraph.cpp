@@ -261,7 +261,7 @@ galois::graphs::PropertyFileGraph::Commit() {
       GALOIS_LOG_ERROR("RDG commit but rdg_dir_ is empty");
       return ErrorCode::InvalidArgument;
     }
-    return WriteGraph(rdg_.rdg_dir_);
+    return WriteGraph(rdg_.rdg_dir_.string());
   }
   return DoWrite(*file_);
 }

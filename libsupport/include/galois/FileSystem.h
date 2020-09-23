@@ -25,17 +25,17 @@ GALOIS_EXPORT Result<std::string> CreateUniqueDirectory(
 /// NewPath returns a new path in a directory with the given prefix. It works
 /// by appending a random suffix. The generated paths may not be unique due
 /// to the varying atomicity guarantees of future storage backends.
-GALOIS_EXPORT Result<std::string> NewPath(
-    const std::string& dir, const std::string& prefix);
+GALOIS_EXPORT std::string NewPath(
+    std::string_view dir, std::string_view prefix);
 
 // Return the filename portion of a path
-GALOIS_EXPORT std::string ExtractFileName(const std::string& path);
+GALOIS_EXPORT std::string ExtractFileName(std::string_view path);
 // Return the "directory" portion of a path
-GALOIS_EXPORT Result<std::string> ExtractDirName(const std::string& path);
+GALOIS_EXPORT Result<std::string> ExtractDirName(std::string_view path);
 // Return the path for the file in that directory
-GALOIS_EXPORT std::string JoinPath(
-    const std::string& dir, const std::string& file);
+GALOIS_EXPORT std::string JoinPath(std::string_view dir, std::string_view file);
 GALOIS_EXPORT std::string StripURIScheme(const std::string& uri);
+
 }  // namespace galois
 
 #endif

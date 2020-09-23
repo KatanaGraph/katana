@@ -1,22 +1,23 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_MEMORYNAMESERVERCLIENT_H_
-#define GALOIS_LIBTSUBA_TSUBA_MEMORYNAMESERVERCLIENT_H_
+#ifndef GALOIS_LIBTSUBA_TSUBA_HTTPNAMESERVERCLIENT_H_
+#define GALOIS_LIBTSUBA_TSUBA_HTTPNAMESERVERCLIENT_H_
 
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <string>
 
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "tsuba/NameServerClient.h"
 #include "tsuba/RDG.h"
 
 namespace tsuba {
 
-class GALOIS_EXPORT MemoryNameServerClient : public NameServerClient {
-  std::mutex mutex_;
-  std::unordered_map<std::string, RDGMeta> server_state_;
+class GALOIS_EXPORT HttpNameServerClient : public NameServerClient {
+  std::string prefix_;
+  galois::Result<std::string> BuildUrl(const galois::Uri& rdg_name);
 
-  galois::Result<RDGMeta> lookup(const std::string& key);
+  HttpNameServerClient(std::string_view host, int port)
+      : prefix_(fmt::format("http://{}:{}/apiV1/", host, port)) {}
 
 public:
   galois::Result<RDGMeta> Get(const galois::Uri& rdg_name) override;
@@ -29,6 +30,9 @@ public:
       const RDGMeta& meta) override;
 
   galois::Result<void> CheckHealth() override;
+
+  static galois::Result<std::unique_ptr<tsuba::NameServerClient>> Make(
+      std::string_view host, int port);
 };
 
 }  // namespace tsuba

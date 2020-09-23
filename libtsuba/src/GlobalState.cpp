@@ -66,6 +66,11 @@ galois::Result<void>
 GlobalState::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
   assert(ref_ == nullptr);
 
+  // quick ping to say hello and fail fast if something was misconfigured
+  if (auto res = ns->CheckHealth(); !res) {
+    return res.error();
+  }
+
   // new to access non-public constructor
   std::unique_ptr<GlobalState> global_state(new GlobalState(comm, ns));
 

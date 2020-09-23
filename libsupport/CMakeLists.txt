@@ -10,11 +10,14 @@ add_dependencies(lib galois_support)
 configure_file(include/galois/config.h.in include/galois/config.h)
 
 set(sources
-        src/GetEnv.cpp
-        src/Logging.cpp
-        src/FileSystem.cpp
         src/ErrorCode.cpp
+        src/FileSystem.cpp
+        src/GetEnv.cpp
+        src/Http.cpp
+        src/JSON.cpp
+        src/Logging.cpp
         src/Random.cpp
+        src/Uri.cpp
 )
 
 target_sources(galois_support PRIVATE ${sources})
@@ -33,6 +36,8 @@ endif()
 
 find_package(nlohmann_json 3.7.3 REQUIRED)
 target_link_libraries(galois_support PUBLIC nlohmann_json::nlohmann_json)
+find_package(libcurl 7.66 REQUIRED )
+target_link_libraries(galois_support PUBLIC libcurl::libcurl)
 
 find_package(fmt REQUIRED)
 if(fmt_VERSION VERSION_LESS 4)

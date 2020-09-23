@@ -16,6 +16,7 @@ enum class ErrorCode {
   ArrowError = 4,
   JsonParseFailed = 5,
   JsonDumpFailed = 6,
+  HttpError = 7,
 };
 
 }  // namespace galois
@@ -42,6 +43,8 @@ public:
       return "could not parse json";
     case ErrorCode::JsonDumpFailed:
       return "could not dump json";
+    case ErrorCode::HttpError:
+      return "http operation failed";
     default:
       return "unknown error";
     }
@@ -58,6 +61,8 @@ public:
       return make_error_condition(std::errc::function_not_supported);
     case ErrorCode::NotFound:
       return make_error_condition(std::errc::no_such_file_or_directory);
+    case ErrorCode::HttpError:
+      return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);
     }

@@ -53,7 +53,7 @@ parse_arguments(int argc, char* argv[]) {
 }
 
 galois::Result<tsuba::RDGMeta>
-GetPreviousRDGMeta(const tsuba::RDGMeta& rdg_meta, const std::string& src_uri) {
+GetPreviousRDGMeta(const tsuba::RDGMeta& rdg_meta, const galois::Uri& src_uri) {
   auto make_res = tsuba::RDGMeta::Make(src_uri, rdg_meta.previous_version_);
   if (!make_res) {
     GALOIS_LOG_ERROR(
@@ -68,7 +68,7 @@ GetPreviousRDGMeta(const tsuba::RDGMeta& rdg_meta, const std::string& src_uri) {
 // version Vector can have fewer than remaining_versions entries if there aren't
 // that many previous versions.
 std::vector<tsuba::RDGMeta>
-FindVersions(const std::string& src_uri, uint32_t remaining_versions) {
+FindVersions(const galois::Uri& src_uri, uint32_t remaining_versions) {
   auto make_res = tsuba::RDGMeta::Make(src_uri);
   if (!make_res) {
     GALOIS_LOG_FATAL("Cannot open {}: {}", src_uri, make_res.error());
@@ -94,15 +94,15 @@ FindVersions(const std::string& src_uri, uint32_t remaining_versions) {
 
 void
 RDGFileNames(
-    const std::string rdg_uri, std::unordered_set<std::string>& fnames) {
+    const galois::Uri rdg_uri, std::unordered_set<std::string>& fnames) {
   tsuba::StatBuf stat_buf;
-  if (auto res = FileStat(rdg_uri, &stat_buf); !res) {
+  if (auto res = FileStat(rdg_uri.string(), &stat_buf); !res) {
     // The most recent graph version is stored in a file called
     // meta, not meta_xxxx where xxxx is the version number.
     GALOIS_LOG_DEBUG("File does not exist {}", rdg_uri);
     return;
   }
-  auto open_res = tsuba::Open(rdg_uri, tsuba::kReadOnly);
+  auto open_res = tsuba::Open(rdg_uri.string(), tsuba::kReadOnly);
   if (!open_res) {
     GALOIS_LOG_DEBUG("Bad RDG Open {}: {}", rdg_uri, open_res.error());
     return;
@@ -126,7 +126,7 @@ RDGFileNames(
 // Collect file names for the given set of graph versions
 std::unordered_set<std::string>
 GraphFileNames(
-    const std::string& src_uri, const std::vector<tsuba::RDGMeta> metas) {
+    const galois::Uri& src_uri, const std::vector<tsuba::RDGMeta> metas) {
   std::unordered_set<std::string> fnames{};
   // src_uri == ...meta
   RDGFileNames(src_uri, fnames);
@@ -138,7 +138,7 @@ GraphFileNames(
 }
 
 void
-GC(const std::string& src_uri, uint32_t remaining_versions) {
+GC(const galois::Uri& src_uri, uint32_t remaining_versions) {
   auto versions = FindVersions(src_uri, remaining_versions);
   fmt::print("Keeping versions: ");
   std::for_each(versions.begin(), versions.end(), [](const auto& e) {
@@ -157,13 +157,9 @@ GC(const std::string& src_uri, uint32_t remaining_versions) {
   }
 
   // collect the entire contents of directory into listing
-  auto res = galois::ExtractDirName(src_uri);
-  if (!res) {
-    GALOIS_LOG_FATAL("Extracting dir name: {}: {}", src_uri, res.error());
-  }
-  auto dir = res.value();
+  galois::Uri dir = src_uri.DirName();
   std::unordered_set<std::string> listing;
-  auto list_res = tsuba::FileListAsync(dir, &listing);
+  auto list_res = tsuba::FileListAsync(dir.string(), &listing);
   if (!list_res) {
     GALOIS_LOG_FATAL("Bad listing: {}: {}", dir, list_res.error());
   }
@@ -210,8 +206,7 @@ GC(const std::string& src_uri, uint32_t remaining_versions) {
     uint64_t size{UINT64_C(0)};
     tsuba::StatBuf stat;
     for (const auto& file : diff) {
-      std::string s3path(galois::JoinPath(dir, file));
-      auto stat_res = tsuba::FileStat(s3path, &stat);
+      auto stat_res = tsuba::FileStat(dir.Append(file).string(), &stat);
       if (!stat_res) {
         GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, stat_res.error());
       } else {
@@ -227,7 +222,7 @@ GC(const std::string& src_uri, uint32_t remaining_versions) {
 
   // If not a dry run, actually delete
   if (!opt_dry) {
-    auto delete_res = tsuba::FileDelete(dir, diff);
+    auto delete_res = tsuba::FileDelete(dir.string(), diff);
     if (!delete_res) {
       GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, delete_res.error());
     }
@@ -247,7 +242,13 @@ main(int argc, char* argv[]) {
     fmt::print("gc count {:d}: {}\n", remaining_versions, src_uri);
   }
 
-  GC(src_uri, remaining_versions);
+  auto uri_res = galois::Uri::Make(src_uri);
+  if (!uri_res) {
+    GALOIS_LOG_FATAL(
+        "does not look like a uri ({}): {}", src_uri, uri_res.error());
+  }
+  galois::Uri uri = std::move(uri_res.value());
+  GC(uri, remaining_versions);
 
   return 0;
 }

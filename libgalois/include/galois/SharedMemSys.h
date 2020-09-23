@@ -4,6 +4,12 @@
 #include "galois/config.h"
 #include "galois/runtime/SharedMem.h"
 
+namespace tsuba {
+
+class NameServerClient;
+
+}  // namespace tsuba
+
 namespace galois {
 
 /**
@@ -12,6 +18,8 @@ namespace galois {
  */
 class GALOIS_EXPORT SharedMemSys
     : public runtime::SharedMem<runtime::StatManager> {
+  std::unique_ptr<tsuba::NameServerClient> ns_;
+
 public:
   SharedMemSys();
   ~SharedMemSys();

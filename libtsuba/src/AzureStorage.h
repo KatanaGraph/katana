@@ -6,7 +6,7 @@
 namespace tsuba {
 
 class AzureStorage : public FileStorage {
-  galois::Result<std::pair<std::string, std::string>> CleanURI(
+  galois::Result<std::pair<std::string, std::string>> CleanUri(
       const std::string& uri);
 
 public:

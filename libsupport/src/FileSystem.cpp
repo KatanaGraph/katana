@@ -58,9 +58,9 @@ galois::CreateUniqueDirectory(std::string_view prefix) {
   return std::string(buf.begin(), buf.end() - 1);
 }
 
-galois::Result<std::string>
-galois::NewPath(const std::string& dir, const std::string& prefix) {
-  std::string name = prefix;
+std::string
+galois::NewPath(std::string_view dir, std::string_view prefix) {
+  std::string name(prefix);
   if (prefix.front() == kSepChar) {
     name = name.substr(1, std::string::npos);
   }
@@ -76,43 +76,49 @@ galois::NewPath(const std::string& dir, const std::string& prefix) {
 // This function does not recognize any path seperator other than '/'. This
 // could be a problem for Windows or "non-standard S3" paths.
 std::string
-galois::ExtractFileName(const std::string& path) {
+galois::ExtractFileName(std::string_view path) {
   size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
   size_t name_end_plus1 = path.length();
   if (last_slash == std::string::npos) {
-    return path;
+    return std::string(path);
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == kSepChar)
+    while (last_slash > 0 && path[last_slash] == kSepChar) {
       last_slash--;
+    }
     name_end_plus1 =
         last_slash + 1;  // name_end_plus1 points to last slash in group
-    while (last_slash > 0 && path[last_slash] != kSepChar)
+    while (last_slash > 0 && path[last_slash] != kSepChar) {
       last_slash--;
+    }
   }
-  return path.substr(last_slash + 1, name_end_plus1 - last_slash - 1);
+  return std::string(
+      path.substr(last_slash + 1, name_end_plus1 - last_slash - 1));
 }
 
 galois::Result<std::string>
-galois::ExtractDirName(const std::string& path) {
+galois::ExtractDirName(std::string_view path) {
   size_t last_slash = path.find_last_of(kSepChar, std::string::npos);
   if (last_slash == std::string::npos) {
     return ErrorCode::InvalidArgument;
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == kSepChar)
+    while (last_slash > 0 && path[last_slash] == kSepChar) {
       last_slash--;
+    }
     // Find first slash before file name
-    while (last_slash > 0 && path[last_slash] != kSepChar)
+    while (last_slash > 0 && path[last_slash] != kSepChar) {
       last_slash--;
+    }
     // Find first slash after directory name
-    while (last_slash > 0 && path[last_slash] == kSepChar)
+    while (last_slash > 0 && path[last_slash] == kSepChar) {
       last_slash--;
+    }
     last_slash++;
   }
-  return path.substr(0, last_slash);
+  return std::string(path.substr(0, last_slash));
 }
 
 std::string
@@ -125,10 +131,10 @@ galois::StripURIScheme(const std::string& uri) {
 }
 
 std::string
-galois::JoinPath(const std::string& dir, const std::string& file) {
+galois::JoinPath(std::string_view dir, std::string_view file) {
   size_t last_slash = dir.find_last_of(kSepChar, std::string::npos);
   if (last_slash == (dir.length() - 1)) {
-    return dir + file;
+    return fmt::format("{}{}", dir, file);
   }
-  return dir + kSepChar + file;
+  return fmt::format("{}{}{}", dir, kSepChar, file);
 }

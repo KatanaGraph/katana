@@ -21,7 +21,7 @@ tsuba::GlobalFileStorageAllocator s3_storage_allocator([]() {
 });
 
 galois::Result<std::pair<std::string, std::string>>
-S3Storage::CleanURI(const std::string& uri) {
+S3Storage::CleanUri(const std::string& uri) {
   std::smatch sub_match;
   if (!std::regex_match(uri, sub_match, kS3UriRegex)) {
     return ErrorCode::InvalidArgument;
@@ -41,7 +41,7 @@ S3Storage::Fini() {
 
 galois::Result<void>
 S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -51,7 +51,7 @@ S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
 
 galois::Result<void>
 S3Storage::Create(const std::string& uri, bool overwrite) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -72,7 +72,7 @@ galois::Result<void>
 S3Storage::GetMultiSync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -83,7 +83,7 @@ S3Storage::GetMultiSync(
 galois::Result<void>
 S3Storage::PutMultiSync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -94,7 +94,7 @@ S3Storage::PutMultiSync(
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3Storage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -106,7 +106,7 @@ galois::Result<std::unique_ptr<FileAsyncWork>>
 S3Storage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -117,7 +117,7 @@ S3Storage::GetAsync(
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3Storage::ListAsync(
     const std::string& uri, std::unordered_set<std::string>* list) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
@@ -128,7 +128,7 @@ S3Storage::ListAsync(
 galois::Result<void>
 S3Storage::Delete(
     const std::string& uri, const std::unordered_set<std::string>& files) {
-  auto uri_res = CleanURI(std::string(uri));
+  auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }

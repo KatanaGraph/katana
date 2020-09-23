@@ -16,7 +16,7 @@ namespace tsuba {
 /// testing only (un-optimized)
 class LocalStorage : public FileStorage {
   friend class GlobalState;
-  void CleanURI(std::string* uri);
+  void CleanUri(std::string* uri);
   galois::Result<void> WriteFile(
       std::string, const uint8_t* data, uint64_t size);
   galois::Result<void> ReadFile(

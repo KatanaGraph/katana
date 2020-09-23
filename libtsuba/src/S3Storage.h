@@ -10,7 +10,7 @@ namespace tsuba {
 
 class S3Storage : public FileStorage {
   friend class GlobalState;
-  galois::Result<std::pair<std::string, std::string>> CleanURI(
+  galois::Result<std::pair<std::string, std::string>> CleanUri(
       const std::string& uri);
 
 public:

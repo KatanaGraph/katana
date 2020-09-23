@@ -18,21 +18,19 @@ namespace galois {
 template <typename Edge>
 class PartialGraphView {
   tsuba::RDG rdg_;
-  galois::OutIndexView view_;
 
-  const tsuba::GRPrefix* prefix_;
+  const std::vector<uint64_t> out_indexes_;
   const Edge* edges_;
 
   std::pair<uint64_t, uint64_t> node_range_;
   std::pair<uint64_t, uint64_t> edge_range_;
 
   PartialGraphView(
-      tsuba::RDG&& rdg, galois::OutIndexView&& view,
+      tsuba::RDG&& rdg, std::vector<uint64_t>&& out_indexes,
       std::pair<uint64_t, uint64_t> node_range,
       std::pair<uint64_t, uint64_t> edge_range)
       : rdg_(std::move(rdg)),
-        view_(std::move(view)),
-        prefix_(view_.gr_view()),
+        out_indexes_(std::move(out_indexes)),
         edges_(rdg_.topology_file_storage_.valid_ptr<Edge>()),
         node_range_(std::move(node_range)),
         edge_range_(std::move(edge_range)) {}
@@ -66,6 +64,14 @@ class PartialGraphView {
     };
   }
 
+  static std::vector<uint64_t> BuildOutIndexesSlice(
+      const tsuba::GRPrefix* prefix, std::pair<uint64_t, uint64_t> node_range) {
+    std::vector<uint64_t> slice(
+        prefix->out_indexes + node_range.first,
+        prefix->out_indexes + node_range.second);
+    return slice;
+  }
+
 public:
   typedef StandardRange<boost::counting_iterator<uint64_t>> edges_iterator;
   typedef StandardRange<boost::counting_iterator<uint64_t>> nodes_iterator;
@@ -84,8 +90,9 @@ public:
     if (!rdg_res) {
       return rdg_res.error();
     }
+    auto out_indexes = BuildOutIndexesSlice(view.gr_view(), slice.node_range);
     return PartialGraphView(
-        std::move(rdg_res.value()), std::move(view), slice.node_range,
+        std::move(rdg_res.value()), std::move(out_indexes), slice.node_range,
         slice.edge_range);
   }
 
@@ -103,8 +110,9 @@ public:
     if (!rdg_res) {
       return rdg_res.error();
     }
+    auto out_indexes = BuildOutIndexesSlice(view.gr_view(), slice.node_range);
     return PartialGraphView(
-        std::move(rdg_res.value()), std::move(view), slice.node_range,
+        std::move(rdg_res.value()), std::move(out_indexes), slice.node_range,
         slice.edge_range);
   }
 
@@ -121,9 +129,12 @@ public:
   }
 
   edges_iterator edges(uint64_t node_id) const {
+    auto node_offset = GetNodeOffset(node_id);
     return MakeStandardRange(
-        boost::counting_iterator<uint64_t>(EdgeBegin(prefix_, node_id)),
-        boost::counting_iterator<uint64_t>(EdgeEnd(prefix_, node_id)));
+        boost::counting_iterator<uint64_t>(
+            (node_offset == 0) ? edge_range_.first
+                               : out_indexes_[node_offset - 1]),
+        boost::counting_iterator<uint64_t>(out_indexes_[node_offset]));
   }
 
   uint64_t GetEdgeDest(uint64_t edge_id) const {

@@ -144,7 +144,10 @@ public:
   std::vector<tsuba::PropertyMetadata> node_properties_;
   std::vector<tsuba::PropertyMetadata> edge_properties_;
   std::vector<tsuba::PropertyMetadata> part_properties_;
+  // Deprecated, will go away with parquet-format partition files
   std::vector<std::pair<std::string, std::string>> other_metadata_;
+  /// Metadata filled in by CuSP
+  std::unique_ptr<PartitionMetadata> part_metadata_;
 
   std::string topology_path_;
   uint64_t topology_size_;
@@ -152,9 +155,6 @@ public:
 
   /// name of the graph that was used to load this RDG
   galois::Uri rdg_dir_;
-
-  /// Metadata filled in by CuSP
-  std::unique_ptr<PartitionMetadata> part_metadata_;
 
   RDG();
 
@@ -214,19 +214,7 @@ private:
   std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
       const;
 
-  galois::Result<void> DoWriteMetadataJson(RDGHandle handle) const;
-  galois::Result<void> DoWriteMetadata(
-      RDGHandle handle, const arrow::Schema& schema);
-
-  galois::Result<void> WriteMetadata(
-      RDGHandle handle, const arrow::Schema& schema) {
-    try {
-      return DoWriteMetadata(handle, schema);
-    } catch (const std::exception& exp) {
-      GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
-      return ErrorCode::ArrowError;
-    }
-  }
+  galois::Result<void> WriteMetadataJson(RDGHandle handle) const;
 
   galois::Result<void> PrunePropsTo(
       const std::vector<std::string>* node_properties,

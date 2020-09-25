@@ -8,6 +8,8 @@
 
 #include "galois/Logging.h"
 
+namespace {
+
 // https://stackoverflow.com/questions/440133
 template <typename T = std::mt19937>
 auto
@@ -22,13 +24,16 @@ random_generator() -> T {
   return T{seed_seq};
 }
 
+thread_local auto rng = random_generator<>();
+
+}  // namespace
+
 std::string
 galois::RandomAlphanumericString(uint64_t len) {
   static constexpr auto chars =
       "0123456789"
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       "abcdefghijklmnopqrstuvwxyz";
-  thread_local auto rng = random_generator<>();
   auto dist = std::uniform_int_distribution{{}, std::strlen(chars) - 1};
   auto result = std::string(len, '\0');
   std::generate_n(begin(result), len, [&]() { return chars[dist(rng)]; });
@@ -38,7 +43,6 @@ galois::RandomAlphanumericString(uint64_t len) {
 // Range 0..len-1, inclusive
 int64_t
 galois::RandomUniformInt(int64_t len) {
-  thread_local auto rng = random_generator<>();
   GALOIS_LOG_ASSERT(len > 0);
   auto dist = std::uniform_int_distribution{{}, len - 1};
   return dist(rng);
@@ -47,7 +51,6 @@ galois::RandomUniformInt(int64_t len) {
 // Range min+1..max-1, inclusive
 int64_t
 galois::RandomUniformInt(int64_t min, int64_t max) {
-  thread_local auto rng = random_generator<>();
   GALOIS_LOG_ASSERT(min < max);
   auto dist = std::uniform_int_distribution{min + 1, max - 1};
   return dist(rng);
@@ -56,7 +59,6 @@ galois::RandomUniformInt(int64_t min, int64_t max) {
 // Range 0.0f..max, inclusive
 float
 galois::RandomUniformFloat(float max) {
-  thread_local auto rng = random_generator<>();
   std::uniform_real_distribution<float> dist(
       0.0f, std::nextafter(max, std::numeric_limits<float>::max()));
   return dist(rng);

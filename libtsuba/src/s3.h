@@ -42,7 +42,7 @@ galois::Result<std::unique_ptr<FileAsyncWork>> S3PutAsync(
 // Listing relative to the full path of the provided directory
 galois::Result<std::unique_ptr<FileAsyncWork>> S3ListAsync(
     const std::string& bucket, const std::string& object,
-    std::unordered_set<std::string>* list);
+    std::unordered_set<std::string>* list, int64_t* size = NULL);
 
 galois::Result<void> S3Delete(
     const std::string& bucket, const std::string& object,

@@ -29,8 +29,8 @@
 #include "tsuba/tsuba.h"
 
 // constexpr uint32_t kPropertyMagicNo  = 0x4B808280; // KPRP
-// constexpr uint32_t kPartitionMagicNo = 0x4B808284; // KPRT
-constexpr uint32_t kRDGMagicNo = 0x4B524447;  // KRDG
+constexpr uint32_t kPartitionMagicNo = 0x4B808284;  // KPRT
+constexpr uint32_t kRDGMagicNo = 0x4B524447;        // KRDG
 
 static const char* topology_path_key = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
@@ -46,7 +46,6 @@ static const char* node_property_key = "kg.v1.node_property";
 static const char* edge_property_key = "kg.v1.edge_property";
 static const char* part_property_files_key = "kg.v1.part_property_files";
 static const char* part_property_meta_key = "kg.v1.part_property_meta";
-
 
 // special partition property names
 static const char* mirror_nodes_prop_name = "mirror_nodes";
@@ -86,6 +85,10 @@ IsManagedUri(const galois::Uri& uri) {
   return !std::regex_match(uri.BaseName(), kMetaVersion);
 }
 
+// galois::RandomAlphanumericString does not include _, making this pattern robust
+// TODO (witchel) meta with no _[0-9]+ is deprecated and should be eliminated eventually
+const std::regex kMetaVersion("meta(?:_([0-9]+)|)$");
+
 galois::Result<uint64_t>
 Parse(const std::string& str) {
   uint64_t val = strtoul(str.c_str(), NULL, 10);
@@ -97,7 +100,7 @@ Parse(const std::string& str) {
 }
 
 galois::Result<uint64_t>
-ParseVersion(std::string file) {
+ParseVersion(const std::string& file) {
   std::smatch sub_match;
   if (!std::regex_match(file, sub_match, kMetaVersion)) {
     return tsuba::ErrorCode::InvalidArgument;
@@ -531,9 +534,8 @@ AddProperties(
   return galois::ResultSuccess();
 }
 
-
 galois::Result<tsuba::RDG>
-DoReadMetadataJson(const std::string& partition_path) {
+ReadMetadataJson(const std::string& partition_path) {
   tsuba::FileView fv;
   if (auto res = fv.Bind(partition_path, true); !res) {
     return res.error();
@@ -586,7 +588,7 @@ MakeProperties(std::vector<std::string>&& values) {
 /// The order of metadata fields is significant, and repeated metadata fields
 /// are used to encode lists of values.
 galois::Result<tsuba::RDG>
-DoReadMetadata(const galois::Uri& partition_path) {
+ReadMetadataParquet(const galois::Uri& partition_path) {
   auto fv = std::make_shared<tsuba::FileView>();
   if (auto res = fv->Bind(partition_path.string(), false); !res) {
     return res.error();
@@ -665,9 +667,9 @@ DoReadMetadata(const galois::Uri& partition_path) {
 galois::Result<tsuba::RDG>
 ReadMetadata(const galois::Uri& partition_path) {
   try {
-    auto res = DoReadMetadata(partition_path);
-    if(!res) {
-      res = DoReadMetadataJson(partition_path);
+    auto res = ReadMetadataParquet(partition_path);
+    if (!res) {
+      res = ReadMetadataJson(partition_path);
     }
     return res;
   } catch (const std::exception& exp) {
@@ -967,6 +969,7 @@ RDGMeta::PartitionFileName(
 void
 to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
   j = json{
+      {"magic", kPartitionMagicNo},
       {"policy_id", pmd.policy_id_},
       {"transposed", pmd.transposed_},
       {"is_outgoing_edge_cut", pmd.is_outgoing_edge_cut_},
@@ -983,6 +986,8 @@ to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void
 from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
+  uint32_t magic;
+  j.at("magic").get_to(magic);
   j.at("policy_id").get_to(pmd.policy_id_);
   j.at("transposed").get_to(pmd.transposed_);
   j.at("is_outgoing_edge_cut").get_to(pmd.is_outgoing_edge_cut_);
@@ -994,6 +999,11 @@ from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   j.at("num_owned").get_to(pmd.num_owned_);
   j.at("num_nodes_with_edges").get_to(pmd.num_nodes_with_edges_);
   j.at("cartesian_grid").get_to(pmd.cartesian_grid_);
+
+  if (magic != kPartitionMagicNo) {
+    // nlohmann::json reports errors using exceptions
+    throw std::runtime_error("Partition magic number mismatch");
+  }
 }
 
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
@@ -1013,11 +1023,11 @@ from_json(const nlohmann::json& j, PropertyMetadata& propmd) {
 void
 to_json(nlohmann::json& j, const RDG& rdg) {
   j = json{
-    {topology_path_key, rdg.topology_path_},
-    {node_property_key, rdg.node_properties_},
-    {edge_property_key, rdg.edge_properties_},
-    {part_property_files_key, rdg.part_properties_},
-    {part_property_meta_key, *rdg.part_metadata_}};
+      {topology_path_key, rdg.topology_path_},
+      {node_property_key, rdg.node_properties_},
+      {edge_property_key, rdg.edge_properties_},
+      {part_property_files_key, rdg.part_properties_},
+      {part_property_meta_key, *rdg.part_metadata_}};
 }
 
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
@@ -1027,6 +1037,11 @@ from_json(const nlohmann::json& j, RDG& rdg) {
   j.at(node_property_key).get_to(rdg.node_properties_);
   j.at(edge_property_key).get_to(rdg.edge_properties_);
   j.at(part_property_files_key).get_to(rdg.part_properties_);
+  if (rdg.part_metadata_ != nullptr) {
+    GALOIS_LOG_DEBUG(
+        "Overwriting existing part_metadata_ from json top: {}",
+        rdg.topology_path_);
+  }
   rdg.part_metadata_ = std::make_unique<PartitionMetadata>();
   j.at(part_property_meta_key).get_to(*rdg.part_metadata_);
 }
@@ -1683,37 +1698,48 @@ tsuba::Register(const std::string& name) {
   return res;
 }
 
-// Return the set of file names that hold this RDG's data
+// Return the set of file names that hold this RDG's data by reading partition files
+// Useful to garbage collect unused files
 galois::Result<std::unordered_set<std::string>>
-tsuba::FileNames(RDGHandle handle) {
-  if (!handle.impl_->AllowsRead()) {
-    GALOIS_LOG_DEBUG("handle does not allow full read");
-    return ErrorCode::InvalidArgument;
+tsuba::internal::FileNames(const std::string& dir, uint64_t version) {
+  auto rdg_meta_res = tsuba::RDGMeta::Make(dir, version);
+  if (!rdg_meta_res) {
+    return rdg_meta_res.error();
   }
-  auto rdg_res = ReadMetadata(handle.impl_->partition_path);
-  if (!rdg_res) {
-    return rdg_res.error();
-  }
+  auto rdg_meta = rdg_meta_res.value();
+
   std::unordered_set<std::string> fnames{};
-  for (auto i = 0U; i < handle.impl_->rdg_meta.num_hosts_; ++i) {
+  for (auto i = 0U; i < rdg_meta.num_hosts_; ++i) {
     // All other file names are directory-local, so we pass an empty
     // directory instead of handle.impl_->rdg_meta.path for the partition files
-    fnames.emplace(
-        RDGMeta::PartitionFileName(i, handle.impl_->rdg_meta.version_));
-  }
-  auto rdg = std::move(rdg_res.value());
-  std::for_each(
-      rdg.node_properties_.begin(), rdg.node_properties_.end(),
-      [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
-  std::for_each(
-      rdg.edge_properties_.begin(), rdg.edge_properties_.end(),
-      [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
-  std::for_each(
-      rdg.part_properties_.begin(), rdg.part_properties_.end(),
-      [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+    fnames.emplace(RDGMeta::PartitionFileName("", i, rdg_meta.version_));
 
-  fnames.emplace(rdg.topology_path_);
+    auto rdg_res = ReadMetadata(
+        tsuba::RDGMeta::PartitionFileName(dir, i, rdg_meta.version_));
+    if(!rdg_res) {
+      GALOIS_LOG_DEBUG("problem dir: {} host: {} ver: {} : {}",
+                       dir, i, rdg_meta.version_, rdg_res.error());
+    } else {
+      auto rdg = std::move(rdg_res.value());
+      std::for_each(
+          rdg.node_properties_.begin(), rdg.node_properties_.end(),
+          [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+      std::for_each(
+          rdg.edge_properties_.begin(), rdg.edge_properties_.end(),
+          [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+      std::for_each(
+          rdg.part_properties_.begin(), rdg.part_properties_.end(),
+          [&fnames](PropertyMetadata pmd) { fnames.emplace(pmd.path); });
+      // Duplicates eliminated by set
+      fnames.emplace(rdg.topology_path_);
+    }
+  }
   return fnames;
+}
+
+galois::Result<uint64_t>
+tsuba::internal::ParseVersion(const std::string& file) {
+  return ::ParseVersion(file);
 }
 
 // This shouldn't actually be used outside of this file, just exported for

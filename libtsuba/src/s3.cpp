@@ -819,9 +819,12 @@ S3DownloadRange(
 galois::Result<std::unique_ptr<FileAsyncWork>>
 S3ListAsync(
     const std::string& bucket, const std::string& object,
-    std::unordered_set<std::string>* list) {
+    std::unordered_set<std::string>* list, int64_t* size) {
   GALOIS_LOG_VASSERT(
       library_init == true, "Must call tsuba::Init before S3 interaction");
+  if (size != NULL) {
+    *size = 0L;
+  }
 
   auto future = std::async([=]() -> galois::Result<void> {
     std::string token{};
@@ -850,6 +853,9 @@ S3ListAsync(
         if (short_name[object.length()] == '/') {
           short_name.erase(begin, object.length() + 1);
           list->emplace(short_name);
+          if (size != NULL) {
+            *size += content.GetSize();
+          }
         }
       }
       token.clear();

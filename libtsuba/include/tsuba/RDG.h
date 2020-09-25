@@ -269,10 +269,6 @@ galois::Result<void> Register(const std::string& name);
 /// Get Information about the graph
 GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
-// Return all file names that store data for this handle
-GALOIS_EXPORT galois::Result<std::unordered_set<std::string>> FileNames(
-    RDGHandle handle);
-
 }  // namespace tsuba
 
 #endif

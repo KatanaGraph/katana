@@ -565,6 +565,9 @@ public:
   //! Returns the size of an edge
   size_t edgeSize() const { return sizeofEdge; }
 
+  uint64_t num_nodes() const { return numNodes; }
+  uint64_t num_edges() const { return numEdges; }
+
   /**
    * Default file graph constructor which initializes fields to null values.
    */

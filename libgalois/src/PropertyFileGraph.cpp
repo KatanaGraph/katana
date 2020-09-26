@@ -2,7 +2,6 @@
 
 #include <sys/mman.h>
 
-#include "galois/ErrorCode.h"
 #include "galois/Logging.h"
 #include "galois/Platform.h"
 #include "galois/Result.h"

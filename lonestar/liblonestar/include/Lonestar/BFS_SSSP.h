@@ -24,8 +24,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
+#include "Lonestar/Utils.h"
 
 template <
     typename Graph, typename _DistLabel, bool USE_EDGE_WT,
@@ -36,7 +35,7 @@ struct BFS_SSSP {
   constexpr static const Dist DIST_INFINITY =
       std::numeric_limits<Dist>::max() / 2 - 1;
 
-  using GNode = typename Graph::GraphNode;
+  using GNode = typename Graph::Node;
   using EI = typename Graph::edge_iterator;
 
   struct UpdateRequest {
@@ -103,18 +102,18 @@ struct BFS_SSSP {
 
   template <typename WL, typename TileMaker>
   static void pushEdgeTiles(
-      WL& wl, Graph& graph, GNode src, const TileMaker& f) {
-    auto beg = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-    const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+      WL& wl, Graph* graph, GNode src, const TileMaker& f) {
+    auto beg = graph->edge_begin(src);
+    const auto end = graph->edge_end(src);
 
     pushEdgeTiles(wl, beg, end, f);
   }
 
   template <typename WL, typename TileMaker>
   static void pushEdgeTilesParallel(
-      WL& wl, Graph& graph, GNode src, const TileMaker& f) {
-    auto beg = graph.edge_begin(src);
-    const auto end = graph.edge_end(src);
+      WL& wl, Graph* graph, GNode src, const TileMaker& f) {
+    auto beg = graph->edge_begin(src);
+    const auto end = graph->edge_end(src);
 
     if ((end - beg) > EDGE_TILE_SIZE) {
       galois::on_each(
@@ -147,7 +146,7 @@ struct BFS_SSSP {
   };
 
   struct SrcEdgeTilePushWrap {
-    Graph& graph;
+    Graph* graph;
 
     template <typename C>
     void operator()(
@@ -162,13 +161,11 @@ struct BFS_SSSP {
   };
 
   struct OutEdgeRangeFn {
-    Graph& graph;
-    auto operator()(const GNode& n) const {
-      return graph.edges(n, galois::MethodFlag::UNPROTECTED);
-    }
+    Graph* graph;
+    auto operator()(const GNode& n) const { return graph->edges(n); }
 
     auto operator()(const UpdateRequest& req) const {
-      return graph.edges(req.src, galois::MethodFlag::UNPROTECTED);
+      return graph->edges(req.src);
     }
   };
 
@@ -179,10 +176,11 @@ struct BFS_SSSP {
     }
   };
 
+  template <typename NodeProp, typename EdgeProp>
   struct not_consistent {
-    Graph& g;
+    Graph* g;
     std::atomic<bool>& refb;
-    not_consistent(Graph& g, std::atomic<bool>& refb) : g(g), refb(refb) {}
+    not_consistent(Graph* g, std::atomic<bool>& refb) : g(g), refb(refb) {}
 
     template <bool useWt, typename iiTy>
     Dist getEdgeWeight(
@@ -193,20 +191,20 @@ struct BFS_SSSP {
     template <bool useWt, typename iiTy>
     Dist getEdgeWeight(
         iiTy ii, typename std::enable_if<useWt>::type* = nullptr) const {
-      return g.getEdgeData(ii);
+      return g->template GetEdgeData<EdgeProp>(ii);
     }
 
-    void operator()(typename Graph::GraphNode node) const {
-      Dist sd = g.getData(node);
+    void operator()(typename Graph::Node node) const {
+      Dist sd = g->template GetData<NodeProp>(node);
       if (sd == DIST_INFINITY)
         return;
 
-      for (auto ii : g.edges(node)) {
-        auto dst = g.getEdgeDst(ii);
-        Dist dd = g.getData(dst);
+      for (auto ii : g->edges(node)) {
+        auto dest = g->GetEdgeDest(ii);
+        Dist dd = g->template GetData<NodeProp>(*dest);
         Dist ew = getEdgeWeight<USE_EDGE_WT>(ii);
         if (dd > sd + ew) {
-          std::cout << "Wrong label: " << dd << ", on node: " << dst
+          std::cout << "Wrong label: " << dd << ", on node: " << *dest
                     << ", correct label from src node " << node << " is "
                     << sd + ew << "\n";
           refb = true;
@@ -216,40 +214,44 @@ struct BFS_SSSP {
     }
   };
 
+  template <typename NodeProp>
   struct max_dist {
-    Graph& g;
+    Graph* g;
     galois::GReduceMax<Dist>& m;
 
-    max_dist(Graph& g, galois::GReduceMax<Dist>& m) : g(g), m(m) {}
+    max_dist(Graph* g, galois::GReduceMax<Dist>& m) : g(g), m(m) {}
 
-    void operator()(typename Graph::GraphNode node) const {
-      Dist d = g.getData(node);
+    void operator()(typename Graph::Node node) const {
+      Dist d = g->template GetData<NodeProp>(node);
       if (d == DIST_INFINITY)
         return;
       m.update(d);
     }
   };
 
-  static bool verify(Graph& graph, GNode source) {
-    if (graph.getData(source) != 0) {
+  template <typename NodeProp, typename EdgeProp = galois::PODProperty<int64_t>>
+  static bool verify(Graph* graph, GNode source) {
+    if (graph->template GetData<NodeProp>(source) != 0) {
       std::cerr << "ERROR: source has non-zero dist value == "
-                << graph.getData(source) << std::endl;
+                << graph->template GetData<NodeProp>(source) << std::endl;
       return false;
     }
 
-    std::atomic<size_t> notVisited(0);
-    galois::do_all(galois::iterate(graph), [&notVisited, &graph](GNode node) {
-      if (graph.getData(node) >= DIST_INFINITY)
-        ++notVisited;
+    std::atomic<size_t> not_visited(0);
+    galois::do_all(galois::iterate(*graph), [&not_visited, &graph](GNode node) {
+      if (graph->template GetData<NodeProp>(node) >= DIST_INFINITY)
+        ++not_visited;
     });
 
-    if (notVisited)
-      std::cerr << notVisited
+    if (not_visited)
+      std::cerr << not_visited
                 << " unvisited nodes; this is an error if the graph is "
                    "strongly connected\n";
 
     std::atomic<bool> not_c(false);
-    galois::do_all(galois::iterate(graph), not_consistent(graph, not_c));
+    galois::do_all(
+        galois::iterate(*graph),
+        not_consistent<NodeProp, EdgeProp>(graph, not_c));
 
     if (not_c) {
       std::cerr << "node found with incorrect distance\n";
@@ -257,7 +259,7 @@ struct BFS_SSSP {
     }
 
     galois::GReduceMax<Dist> m;
-    galois::do_all(galois::iterate(graph), max_dist(graph, m));
+    galois::do_all(galois::iterate(*graph), max_dist<NodeProp>(graph, m));
 
     std::cout << "max dist: " << m.reduce() << "\n";
 

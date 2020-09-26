@@ -131,7 +131,7 @@ static cll::opt<uint32_t> COMPONENT_SAMPLES(
     cll::init(1024));
 
 struct Node : public galois::UnionFindNode<Node> {
-  using component_type = Node*;
+  using ComponentType = Node*;
 
   Node() : galois::UnionFindNode<Node>(const_cast<Node*>(this)) {}
   Node(const Node& o) : galois::UnionFindNode<Node>(o.m_component) {}
@@ -142,7 +142,7 @@ struct Node : public galois::UnionFindNode<Node> {
     return *this;
   }
 
-  component_type component() { return this->get(); }
+  ComponentType component() { return this->get(); }
   bool isRepComp(unsigned int) { return false; }
 };
 
@@ -152,71 +152,87 @@ const unsigned int LABEL_INF = std::numeric_limits<unsigned int>::max();
  * Serial connected components algorithm. Just use union-find.
  */
 struct SerialAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
   }
 
-  void operator()(Graph& graph) {
-    for (const GNode& src : graph) {
-      Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-      for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-        GNode dst = graph.getEdgeDst(ii);
-        Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-        sdata.merge(&ddata);
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+
+  void operator()(Graph* graph) {
+    for (const GNode& src : *graph) {
+      auto& sdata = graph->GetData<NodeComponent>(src);
+      for (const auto& ii : graph->edges(src)) {
+        const auto& dest = graph->GetEdgeDest(ii);
+        auto& ddata = graph->GetData<NodeComponent>(dest);
+        sdata->merge(ddata);
       }
     }
 
-    for (const GNode& src : graph) {
-      Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-      sdata.compress();
+    for (const GNode& src : *graph) {
+      auto& sdata = graph->GetData<NodeComponent>(src);
+      sdata->compress();
     }
   }
 };
 
 struct LabelPropAlgo {
-  struct LNode {
-    using component_type = unsigned int;
-    std::atomic<unsigned int> comp_current;
-    unsigned int comp_old;
-
-    component_type component() { return comp_current; }
-    bool isRep() { return false; }
-    bool isRepComp(unsigned int x) { return x == comp_current; }
+  using ComponentType = unsigned int;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<ComponentType>::ArrowType;
+    using ViewType = galois::PODPropertyView<std::atomic<ComponentType>>;
   };
+  struct NodeOldComponent : public galois::PODProperty<ComponentType> {};
 
-  using Graph =
-      galois::graphs::LC_CSR_Graph<LNode, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
-  using component_type = LNode::component_type;
+  using NodeData = std::tuple<NodeComponent, NodeOldComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node).store(node);
+      graph->GetData<NodeOldComponent>(node) = LABEL_INF;
+    });
   }
 
-  void operator()(Graph& graph) {
+  void Deallocate(Graph*) {}
+
+  void operator()(Graph* graph) {
     galois::GReduceLogicalOr changed;
     do {
       changed.reset();
       galois::do_all(
-          galois::iterate(graph),
+          galois::iterate(*graph),
           [&](const GNode& src) {
-            LNode& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-            if (sdata.comp_old > sdata.comp_current) {
-              sdata.comp_old = sdata.comp_current;
+            auto& sdata_current_comp = graph->GetData<NodeComponent>(src);
+            auto& sdata_old_comp = graph->GetData<NodeOldComponent>(src);
+            if (sdata_old_comp > sdata_current_comp) {
+              sdata_old_comp = sdata_current_comp;
 
               changed.update(true);
 
-              for (auto e : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-                GNode dst = graph.getEdgeDst(e);
-                auto& ddata = graph.getData(dst);
-                unsigned int label_new = sdata.comp_current;
-                galois::atomicMin(ddata.comp_current, label_new);
+              for (auto e : graph->edges(src)) {
+                auto dest = graph->GetEdgeDest(e);
+                auto& ddata_current_comp = graph->GetData<NodeComponent>(*dest);
+                ComponentType label_new = sdata_current_comp;
+                galois::atomicMin(ddata_current_comp, label_new);
               }
             }
           },
@@ -236,14 +252,16 @@ struct LabelPropAlgo {
  * component.
  */
 struct SynchronousAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
-  }
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
 
   struct Edge {
     GNode src;
@@ -253,81 +271,90 @@ struct SynchronousAlgo {
         : src(src), ddata(ddata), count(count) {}
   };
 
-  void operator()(Graph& graph) {
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
+  }
+
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+
+  void operator()(Graph* graph) {
     size_t rounds = 0;
-    galois::GAccumulator<size_t> emptyMerges;
+    galois::GAccumulator<size_t> empty_merges;
 
     galois::InsertBag<Edge> wls[2];
-    galois::InsertBag<Edge>* next;
-    galois::InsertBag<Edge>* cur;
+    galois::InsertBag<Edge>* next_bag;
+    galois::InsertBag<Edge>* current_bag;
 
-    cur = &wls[0];
-    next = &wls[1];
+    current_bag = &wls[0];
+    next_bag = &wls[1];
 
-    galois::do_all(galois::iterate(graph), [&](const GNode& src) {
-      for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-        GNode dst = graph.getEdgeDst(ii);
-        if (src >= dst)
+    galois::do_all(galois::iterate(*graph), [&](const GNode& src) {
+      for (auto ii : graph->edges(src)) {
+        const auto& dest = graph->GetEdgeDest(ii);
+        if (src >= *dest)
           continue;
-        Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-        cur->push(Edge(src, &ddata, 0));
+        auto& ddata = graph->GetData<NodeComponent>(dest);
+        current_bag->push(Edge(src, ddata, 0));
         break;
       }
     });
 
-    while (!cur->empty()) {
+    while (!current_bag->empty()) {
       galois::do_all(
-          galois::iterate(*cur),
+          galois::iterate(*current_bag),
           [&](const Edge& edge) {
-            Node& sdata =
-                graph.getData(edge.src, galois::MethodFlag::UNPROTECTED);
-            if (!sdata.merge(edge.ddata))
-              emptyMerges += 1;
+            auto& sdata = graph->GetData<NodeComponent>(edge.src);
+            if (!sdata->merge(edge.ddata))
+              empty_merges += 1;
           },
           galois::loopname("Merge"));
 
       galois::do_all(
-          galois::iterate(*cur),
+          galois::iterate(*current_bag),
           [&](const Edge& edge) {
             GNode src = edge.src;
-            Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-            Node* scomponent = sdata.findAndCompress();
-            Graph::edge_iterator ii =
-                graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-            Graph::edge_iterator ei =
-                graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+            auto& sdata = graph->GetData<NodeComponent>(src);
+            Node* src_component = sdata->findAndCompress();
+            Graph::edge_iterator ii = graph->edge_begin(src);
+            Graph::edge_iterator ei = graph->edge_end(src);
             int count = edge.count + 1;
             std::advance(ii, count);
             for (; ii != ei; ++ii, ++count) {
-              GNode dst = graph.getEdgeDst(ii);
-              if (src >= dst)
+              const auto& dest = graph->GetEdgeDest(ii);
+              if (src >= *dest)
                 continue;
-              Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-              Node* dcomponent = ddata.findAndCompress();
-              if (scomponent != dcomponent) {
-                next->push(Edge(src, dcomponent, count));
+              auto& ddata = graph->GetData<NodeComponent>(dest);
+              Node* dest_component = ddata->findAndCompress();
+              if (src_component != dest_component) {
+                next_bag->push(Edge(src, dest_component, count));
                 break;
               }
             }
           },
           galois::loopname("Find"));
 
-      cur->clear();
-      std::swap(cur, next);
+      current_bag->clear();
+      std::swap(current_bag, next_bag);
       rounds += 1;
     }
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("Compress"));
 
     galois::runtime::reportStat_Single("CC-Sync", "rounds", rounds);
     galois::runtime::reportStat_Single(
-        "CC-Sync", "emptyMerges", emptyMerges.reduce());
+        "CC-Sync", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -336,70 +363,98 @@ struct SynchronousAlgo {
  * @link{UnionFindNode}), we can perform unions and finds concurrently.
  */
 struct AsyncAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
   }
 
-  void operator()(Graph& graph) {
-    galois::GAccumulator<size_t> emptyMerges;
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+
+  void operator()(Graph* graph) {
+    galois::GAccumulator<size_t> empty_merges;
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+          auto& sdata = graph->GetData<NodeComponent>(src);
 
-          for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-            GNode dst = graph.getEdgeDst(ii);
-            Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+          for (const auto& ii : graph->edges(src)) {
+            const auto& dest = graph->GetEdgeDest(ii);
+            auto& ddata = graph->GetData<NodeComponent>(dest);
 
-            if (src >= dst)
+            if (src >= *dest)
               continue;
 
-            if (!sdata.merge(&ddata))
-              emptyMerges += 1;
+            if (!sdata->merge(ddata))
+              empty_merges += 1;
           }
         },
         galois::loopname("CC-Async"));
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
     galois::runtime::reportStat_Single(
-        "CC-Async", "emptyMerges", emptyMerges.reduce());
+        "CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
 struct EdgeAsyncAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
+
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
   }
 
-  void operator()(Graph& graph) {
-    galois::GAccumulator<size_t> emptyMerges;
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+
+  void operator()(Graph* graph) {
+    galois::GAccumulator<size_t> empty_merges;
 
     galois::InsertBag<Edge> works;
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-            if (src < graph.getEdgeDst(ii)) {
+          for (const auto& ii : graph->edges(src)) {
+            if (src < *(graph->GetEdgeDest(ii))) {
               works.push_back(std::make_pair(src, ii));
             }
           }
@@ -409,29 +464,29 @@ struct EdgeAsyncAlgo {
     galois::do_all(
         galois::iterate(works),
         [&](Edge& e) {
-          Node& sdata = graph.getData(e.first, galois::MethodFlag::UNPROTECTED);
-          GNode dst = graph.getEdgeDst(e.second);
-          Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+          auto& sdata = graph->GetData<NodeComponent>(e.first);
+          const auto& dest = graph->GetEdgeDest(e.second);
+          auto& ddata = graph->GetData<NodeComponent>(dest);
 
-          if (e.first > dst)
+          if (e.first > *dest)
             // continue;
             ;
-          else if (!sdata.merge(&ddata)) {
-            emptyMerges += 1;
+          else if (!sdata->merge(ddata)) {
+            empty_merges += 1;
           }
         },
         galois::loopname("CC-EdgeAsync"), galois::steal());
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
     galois::runtime::reportStat_Single(
-        "CC-Async", "emptyMerges", emptyMerges.reduce());
+        "CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -439,38 +494,51 @@ struct EdgeAsyncAlgo {
  * Improve performance of async algorithm by following machine topology.
  */
 struct BlockedAsyncAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
+
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+  using Edge = std::pair<GNode, typename Graph::edge_iterator>;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
+  }
+
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
 
   struct WorkItem {
     GNode src;
     Graph::edge_iterator start;
   };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
-  }
-
   //! Add the next edge between components to the worklist
   template <bool MakeContinuation, int Limit, typename Pusher>
   static void process(
-      Graph& graph, const GNode& src, const Graph::edge_iterator& start,
+      Graph* graph, const GNode& src, const Graph::edge_iterator& start,
       Pusher& pusher) {
-    Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+    auto& sdata = graph->GetData<NodeComponent>(src);
     int count = 1;
-    for (Graph::edge_iterator
-             ii = start,
-             ei = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
-         ii != ei; ++ii, ++count) {
-      GNode dst = graph.getEdgeDst(ii);
-      Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+    for (Graph::edge_iterator ii = start, ei = graph->edge_end(src); ii != ei;
+         ++ii, ++count) {
+      const auto& dest = graph->GetEdgeDest(ii);
+      auto& ddata = graph->GetData<NodeComponent>(*dest);
 
-      if (src >= dst)
+      if (src >= *dest)
         continue;
 
-      if (sdata.merge(&ddata)) {
+      if (sdata->merge(ddata)) {
         if (Limit == 0 || count != Limit)
           continue;
       }
@@ -483,14 +551,13 @@ struct BlockedAsyncAlgo {
     }
   }
 
-  void operator()(Graph& graph) {
+  void operator()(Graph* graph) {
     galois::InsertBag<WorkItem> items;
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Graph::edge_iterator start =
-              graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
+          auto start = graph->edge_begin(src);
           if (galois::substrate::ThreadPool::getSocket() == 0) {
             process<true, 0>(graph, src, start, items);
           } else {
@@ -508,23 +575,38 @@ struct BlockedAsyncAlgo {
         galois::wl<galois::worklists::PerSocketChunkFIFO<128>>());
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
   }
 };
 
 struct EdgeTiledAsyncAlgo {
-  using Graph =
-      galois::graphs::LC_CSR_Graph<Node, void>::with_no_lockable<true>::type;
-  using GNode = Graph::GraphNode;
+  using ComponentType = Node*;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<ComponentType>;
+  };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+  using Edge = std::pair<GNode, typename Graph::edge_iterator>;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new Node();
+    });
+  }
+
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
   }
 
   struct EdgeTile {
@@ -540,8 +622,8 @@ struct EdgeTiledAsyncAlgo {
       }
   };*/
 
-  void operator()(Graph& graph) {
-    galois::GAccumulator<size_t> emptyMerges;
+  void operator()(Graph* graph) {
+    galois::GAccumulator<size_t> empty_merges;
 
     galois::InsertBag<EdgeTile> works;
 
@@ -552,17 +634,15 @@ struct EdgeTiledAsyncAlgo {
         << "WARNING: Do not expect the default to be good for your graph.\n";
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          // Node& sdata=graph.getData(src,
-          // galois::MethodFlag::UNPROTECTED);
-          auto beg = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-          const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+          auto beg = graph->edge_begin(src);
+          const auto& end = graph->edge_end(src);
 
           assert(beg <= end);
           if ((end - beg) > EDGE_TILE_SIZE) {
             for (; beg + EDGE_TILE_SIZE < end;) {
-              auto ne = beg + EDGE_TILE_SIZE;
+              const auto& ne = beg + EDGE_TILE_SIZE;
               assert(ne < end);
               works.push_back(EdgeTile{src, beg, ne});
               beg = ne;
@@ -578,18 +658,17 @@ struct EdgeTiledAsyncAlgo {
     galois::do_all(
         galois::iterate(works),
         [&](const EdgeTile& tile) {
-          // Node& sdata = *(tile.sData);
-          GNode src = tile.src;
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+          const auto& src = tile.src;
+          auto& sdata = graph->GetData<NodeComponent>(src);
 
           for (auto ii = tile.beg; ii != tile.end; ++ii) {
-            GNode dst = graph.getEdgeDst(ii);
-            if (src >= dst)
+            const auto& dest = graph->GetEdgeDest(ii);
+            if (src >= *dest)
               continue;
 
-            Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-            if (!sdata.merge(&ddata))
-              emptyMerges += 1;
+            auto& ddata = graph->GetData<NodeComponent>(dest);
+            if (!sdata->merge(ddata))
+              empty_merges += 1;
           }
         },
         galois::loopname("CC-edgetiledAsync"), galois::steal(),
@@ -597,34 +676,34 @@ struct EdgeTiledAsyncAlgo {
     );
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
     galois::runtime::reportStat_Single(
-        "CC-edgeTiledAsync", "emptyMerges", emptyMerges.reduce());
+        "CC-edgeTiledAsync", "empty_merges", empty_merges.reduce());
   }
 };
 
-template <typename component_type, typename Graph>
-component_type
-approxLargestComponent(Graph& graph) {
+template <typename ComponentType, typename Graph, typename NodeIndex>
+ComponentType
+approxLargestComponent(Graph* graph) {
   using map_type = std::unordered_map<
-      component_type, int, std::hash<component_type>,
-      std::equal_to<component_type>,
-      galois::gstl::Pow2Alloc<std::pair<const component_type, int>>>;
-  using pair_type = std::pair<component_type, int>;
+      ComponentType, int, std::hash<ComponentType>,
+      std::equal_to<ComponentType>,
+      galois::gstl::Pow2Alloc<std::pair<const ComponentType, int>>>;
+  using pair_type = std::pair<ComponentType, int>;
 
   map_type comp_freq(COMPONENT_SAMPLES);
   std::random_device rd;
   std::mt19937 rng(rd());
-  std::uniform_int_distribution<uint32_t> dist(0, graph.size() - 1);
+  std::uniform_int_distribution<uint32_t> dist(0, graph->size() - 1);
   for (uint32_t i = 0; i < COMPONENT_SAMPLES; i++) {
-    auto& ndata = graph.getData(dist(rng), galois::MethodFlag::UNPROTECTED);
-    comp_freq[ndata.component()]++;
+    auto& ndata = graph->template GetData<NodeIndex>(dist(rng));
+    comp_freq[ndata->component()]++;
   }
 
   assert(!comp_freq.empty());
@@ -650,25 +729,27 @@ approxLargestComponent(Graph& graph) {
  * pp. 12-21.
  */
 struct AfforestAlgo {
-  struct NodeData : public galois::UnionFindNode<NodeData> {
-    using component_type = NodeData*;
+  struct NodeAfforest : public galois::UnionFindNode<NodeAfforest> {
+    using ComponentType = NodeAfforest*;
 
-    NodeData() : galois::UnionFindNode<NodeData>(const_cast<NodeData*>(this)) {}
-    NodeData(const NodeData& o)
-        : galois::UnionFindNode<NodeData>(o.m_component) {}
+    NodeAfforest()
+        : galois::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
+    }
+    NodeAfforest(const NodeAfforest& o)
+        : galois::UnionFindNode<NodeAfforest>(o.m_component) {}
 
-    component_type component() { return this->get(); }
+    ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
 
   public:
-    void link(NodeData* b) {
-      NodeData* a = m_component.load(std::memory_order_relaxed);
+    void link(NodeAfforest* b) {
+      NodeAfforest* a = m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
           std::swap(a, b);
         // Now a > b
-        NodeData* ac = a->m_component.load(std::memory_order_relaxed);
+        NodeAfforest* ac = a->m_component.load(std::memory_order_relaxed);
         if ((ac == a && a->m_component.compare_exchange_strong(a, b)) ||
             (b == ac))
           break;
@@ -678,78 +759,85 @@ struct AfforestAlgo {
       }
     }
   };
-  using Graph = galois::graphs::LC_CSR_Graph<NodeData, void>::with_no_lockable<
-      true>::type;
-  using GNode = Graph::GraphNode;
-  using component_type = NodeData::component_type;
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<NodeAfforest::ComponentType>;
+  };
+
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+    });
   }
 
-  void operator()(Graph& graph) {
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+  using ComponentType = NodeAfforest::ComponentType;
+
+  void operator()(Graph* graph) {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     for (uint32_t r = 0; r < NEIGHBOR_SAMPLES; ++r) {
       galois::do_all(
-          galois::iterate(graph),
+          galois::iterate(*graph),
           [&](const GNode& src) {
-            Graph::edge_iterator ii =
-                graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-            Graph::edge_iterator ei =
-                graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+            Graph::edge_iterator ii = graph->edge_begin(src);
+            Graph::edge_iterator ei = graph->edge_end(src);
             for (std::advance(ii, r); ii < ei; ii++) {
-              GNode dst = graph.getEdgeDst(ii);
-              NodeData& sdata =
-                  graph.getData(src, galois::MethodFlag::UNPROTECTED);
-              NodeData& ddata =
-                  graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-              sdata.link(&ddata);
+              const auto& dest = *graph->GetEdgeDest(ii);
+              auto& sdata = graph->GetData<NodeComponent>(src);
+              auto& ddata = graph->GetData<NodeComponent>(dest);
+              sdata->link(ddata);
               break;
             }
           },
           galois::steal(), galois::loopname("Afforest-VNS-Link"));
 
       galois::do_all(
-          galois::iterate(graph),
+          galois::iterate(*graph),
           [&](const GNode& src) {
-            NodeData& sdata =
-                graph.getData(src, galois::MethodFlag::UNPROTECTED);
-            sdata.compress();
+            auto& sdata = graph->GetData<NodeComponent>(src);
+            sdata->compress();
           },
           galois::steal(), galois::loopname("Afforest-VNS-Compress"));
     }
 
     galois::StatTimer StatTimer_Sampling("Afforest-LCS-Sampling");
     StatTimer_Sampling.start();
-    const component_type c = approxLargestComponent<component_type>(graph);
+    const ComponentType c =
+        approxLargestComponent<ComponentType, Graph, NodeComponent>(graph);
     StatTimer_Sampling.stop();
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          if (sdata.component() == c)
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          if (sdata->component() == c)
             return;
-          Graph::edge_iterator ii =
-              graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-          Graph::edge_iterator ei =
-              graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+          Graph::edge_iterator ii = graph->edge_begin(src);
+          Graph::edge_iterator ei = graph->edge_end(src);
           for (std::advance(ii, NEIGHBOR_SAMPLES.getValue()); ii < ei; ++ii) {
-            GNode dst = graph.getEdgeDst(ii);
-            NodeData& ddata =
-                graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-            sdata.link(&ddata);
+            const GNode& dest = *graph->GetEdgeDest(ii);
+            auto& ddata = graph->GetData<NodeComponent>(dest);
+            sdata->link(ddata);
           }
         },
         galois::steal(), galois::loopname("Afforest-LCS-Link"));
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("Afforest-LCS-Compress"));
   }
@@ -759,25 +847,27 @@ struct AfforestAlgo {
  * Edge CC w/ Afforest sampling
  */
 struct EdgeAfforestAlgo {
-  struct NodeData : public galois::UnionFindNode<NodeData> {
-    using component_type = NodeData*;
+  struct NodeAfforestEdge : public galois::UnionFindNode<NodeAfforestEdge> {
+    using ComponentType = NodeAfforestEdge*;
 
-    NodeData() : galois::UnionFindNode<NodeData>(const_cast<NodeData*>(this)) {}
-    NodeData(const NodeData& o)
-        : galois::UnionFindNode<NodeData>(o.m_component) {}
+    NodeAfforestEdge()
+        : galois::UnionFindNode<NodeAfforestEdge>(
+              const_cast<NodeAfforestEdge*>(this)) {}
+    NodeAfforestEdge(const NodeAfforestEdge& o)
+        : galois::UnionFindNode<NodeAfforestEdge>(o.m_component) {}
 
-    component_type component() { return this->get(); }
+    ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
 
   public:
-    NodeData* hook_min(NodeData* b, NodeData* c = 0) {
-      NodeData* a = m_component.load(std::memory_order_relaxed);
+    NodeAfforestEdge* hook_min(NodeAfforestEdge* b, NodeAfforestEdge* c = 0) {
+      NodeAfforestEdge* a = m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
           std::swap(a, b);
         // Now a > b
-        NodeData* ac = a->m_component.load(std::memory_order_relaxed);
+        NodeAfforestEdge* ac = a->m_component.load(std::memory_order_relaxed);
         if (ac == a && a->m_component.compare_exchange_strong(a, b)) {
           if (b == c)
             return a;  //! return victim
@@ -793,74 +883,82 @@ struct EdgeAfforestAlgo {
       return 0;
     }
   };
-  using Graph = galois::graphs::LC_CSR_Graph<NodeData, void>::with_no_lockable<
-      true>::type;
-  using GNode = Graph::GraphNode;
-  using component_type = NodeData::component_type;
+
+  using ComponentType = NodeAfforestEdge::ComponentType;
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<NodeAfforestEdge::ComponentType>;
+  };
+
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
 
   using Edge = std::pair<GNode, GNode>;
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new NodeAfforestEdge();
+    });
   }
 
-  void operator()(Graph& graph) {
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+  void operator()(Graph* graph) {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     for (uint32_t r = 0; r < NEIGHBOR_SAMPLES; ++r) {
       galois::do_all(
-          galois::iterate(graph),
+          galois::iterate(*graph),
           [&](const GNode& src) {
-            Graph::edge_iterator ii =
-                graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-            Graph::edge_iterator ei =
-                graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+            Graph::edge_iterator ii = graph->edge_begin(src);
+            Graph::edge_iterator ei = graph->edge_end(src);
             std::advance(ii, r);
             if (ii < ei) {
-              GNode dst = graph.getEdgeDst(ii);
-              NodeData& sdata =
-                  graph.getData(src, galois::MethodFlag::UNPROTECTED);
-              NodeData& ddata =
-                  graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-              sdata.hook_min(&ddata);
+              const auto& dst = graph->GetEdgeDest(ii);
+              auto& sdata = graph->GetData<NodeComponent>(src);
+              auto& ddata = graph->GetData<NodeComponent>(dst);
+              sdata->hook_min(ddata);
             }
           },
           galois::steal(), galois::loopname("EdgeAfforest-VNS-Link"));
     }
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("EdgeAfforest-VNS-Compress"));
 
     galois::StatTimer StatTimer_Sampling("EdgeAfforest-LCS-Sampling");
     StatTimer_Sampling.start();
-    const component_type c = approxLargestComponent<component_type>(graph);
+    const ComponentType c =
+        approxLargestComponent<ComponentType, Graph, NodeComponent>(graph);
     StatTimer_Sampling.stop();
-    const component_type c0 =
-        &(graph.getData(0, galois::MethodFlag::UNPROTECTED));
+    const ComponentType c0 = (graph->GetData<NodeComponent>(0));
 
     galois::InsertBag<Edge> works;
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          if (sdata.component() == c)
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          if (sdata->component() == c)
             return;
-          auto beg = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-          const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+          auto beg = graph->edge_begin(src);
+          const auto end = graph->edge_end(src);
 
           for (std::advance(beg, NEIGHBOR_SAMPLES.getValue()); beg < end;
                beg++) {
-            GNode dst = graph.getEdgeDst(beg);
-            NodeData& ddata =
-                graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-            if (src < dst || c == ddata.component()) {
-              works.push_back(std::make_pair(src, dst));
+            const auto& dest = *(graph->GetEdgeDest(beg));
+            auto& ddata = graph->GetData<NodeComponent>(dest);
+            if (src < dest || c == ddata->component()) {
+              works.push_back(std::make_pair(src, dest));
             }
           }
         },
@@ -869,18 +967,16 @@ struct EdgeAfforestAlgo {
     galois::for_each(
         galois::iterate(works),
         [&](const Edge& e, auto& ctx) {
-          NodeData& sdata =
-              graph.getData(e.first, galois::MethodFlag::UNPROTECTED);
-          if (sdata.component() == c)
+          auto& sdata = graph->GetData<NodeComponent>(e.first);
+          if (sdata->component() == c)
             return;
-          NodeData& ddata =
-              graph.getData(e.second, galois::MethodFlag::UNPROTECTED);
-          component_type victim = sdata.hook_min(&ddata, c);
+          auto& ddata = graph->GetData<NodeComponent>(e.second);
+          ComponentType victim = sdata->hook_min(ddata, c);
           if (victim) {
-            GNode src = victim - c0;  // TODO (bozhi) tricky!
-            for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
-              GNode dst = graph.getEdgeDst(ii);
-              ctx.push_back(std::make_pair(dst, src));
+            auto src = victim - c0;  // TODO (bozhi) tricky!
+            for (auto ii : graph->edges(src)) {
+              const auto& dest = *graph->GetEdgeDest(ii);
+              ctx.push_back(std::make_pair(dest, src));
             }
           }
         },
@@ -888,10 +984,10 @@ struct EdgeAfforestAlgo {
         galois::loopname("EdgeAfforest-LCS-Link"));
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("EdgeAfforest-LCS-Compress"));
   }
@@ -901,25 +997,27 @@ struct EdgeAfforestAlgo {
  * Edgetiled CC w/ Afforest sampling
  */
 struct EdgeTiledAfforestAlgo {
-  struct NodeData : public galois::UnionFindNode<NodeData> {
-    using component_type = NodeData*;
+  struct NodeAfforest : public galois::UnionFindNode<NodeAfforest> {
+    using ComponentType = NodeAfforest*;
 
-    NodeData() : galois::UnionFindNode<NodeData>(const_cast<NodeData*>(this)) {}
-    NodeData(const NodeData& o)
-        : galois::UnionFindNode<NodeData>(o.m_component) {}
+    NodeAfforest()
+        : galois::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
+    }
+    NodeAfforest(const NodeAfforest& o)
+        : galois::UnionFindNode<NodeAfforest>(o.m_component) {}
 
-    component_type component() { return this->get(); }
+    ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
 
   public:
-    void link(NodeData* b) {
-      NodeData* a = m_component.load(std::memory_order_relaxed);
+    void link(NodeAfforest* b) {
+      NodeAfforest* a = m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
         if (a < b)
           std::swap(a, b);
         // Now a > b
-        NodeData* ac = a->m_component.load(std::memory_order_relaxed);
+        NodeAfforest* ac = a->m_component.load(std::memory_order_relaxed);
         if ((ac == a && a->m_component.compare_exchange_strong(a, b)) ||
             (b == ac))
           break;
@@ -929,10 +1027,30 @@ struct EdgeTiledAfforestAlgo {
       }
     }
   };
-  using Graph = galois::graphs::LC_CSR_Graph<NodeData, void>::with_no_lockable<
-      true>::type;
-  using GNode = Graph::GraphNode;
-  using component_type = NodeData::component_type;
+
+  struct NodeComponent {
+    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
+    using ViewType = galois::PODPropertyView<NodeAfforest::ComponentType>;
+  };
+
+  using NodeData = std::tuple<NodeComponent>;
+  using EdgeData = std::tuple<>;
+  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef typename Graph::Node GNode;
+
+  void Initialize(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+    });
+  }
+
+  void Deallocate(Graph* graph) {
+    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+      delete graph->GetData<NodeComponent>(node);
+    });
+  }
+
+  using ComponentType = NodeAfforest::ComponentType;
 
   struct EdgeTile {
     GNode src;
@@ -940,54 +1058,48 @@ struct EdgeTiledAfforestAlgo {
     Graph::edge_iterator end;
   };
 
-  template <typename G>
-  void readGraph(G& graph) {
-    galois::graphs::readGraph(graph, inputFile);
-  }
-
-  void operator()(Graph& graph) {
+  void operator()(Graph* graph) {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          auto ii = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-          const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+          auto ii = graph->edge_begin(src);
+          const auto end = graph->edge_end(src);
           for (uint32_t r = 0; r < NEIGHBOR_SAMPLES && ii < end; ++r, ++ii) {
-            GNode dst = graph.getEdgeDst(ii);
-            NodeData& sdata =
-                graph.getData(src, galois::MethodFlag::UNPROTECTED);
-            NodeData& ddata =
-                graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-            sdata.link(&ddata);
+            const auto& dest = *graph->GetEdgeDest(ii);
+            auto& sdata = graph->GetData<NodeComponent>(src);
+            auto& ddata = graph->GetData<NodeComponent>(dest);
+            sdata->link(ddata);
           }
         },
         galois::steal(), galois::loopname("EdgetiledAfforest-VNS-Link"));
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("EdgetiledAfforest-VNS-Compress"));
 
     galois::StatTimer StatTimer_Sampling("EdgetiledAfforest-LCS-Sampling");
     StatTimer_Sampling.start();
-    const component_type c = approxLargestComponent<component_type>(graph);
+    const ComponentType c =
+        approxLargestComponent<ComponentType, Graph, NodeComponent>(graph);
     StatTimer_Sampling.stop();
 
     galois::InsertBag<EdgeTile> works;
     std::cout << "INFO: Using edge tile size of " << EDGE_TILE_SIZE
               << " and chunk size of " << CHUNK_SIZE << "\n";
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          if (sdata.component() == c)
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          if (sdata->component() == c)
             return;
-          auto beg = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-          const auto end = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+          auto beg = graph->edge_begin(src);
+          const auto end = graph->edge_end(src);
 
           for (std::advance(beg, NEIGHBOR_SAMPLES.getValue());
                beg + EDGE_TILE_SIZE < end;) {
@@ -1006,55 +1118,53 @@ struct EdgeTiledAfforestAlgo {
     galois::do_all(
         galois::iterate(works),
         [&](const EdgeTile& tile) {
-          NodeData& sdata =
-              graph.getData(tile.src, galois::MethodFlag::UNPROTECTED);
-          if (sdata.component() == c)
+          auto& sdata = graph->GetData<NodeComponent>(tile.src);
+          if (sdata->component() == c)
             return;
           for (auto ii = tile.beg; ii < tile.end; ++ii) {
-            GNode dst = graph.getEdgeDst(ii);
-            NodeData& ddata =
-                graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-            sdata.link(&ddata);
+            const GNode& dest = *graph->GetEdgeDest(ii);
+            auto& ddata = graph->GetData<NodeComponent>(dest);
+            sdata->link(ddata);
           }
         },
         galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
         galois::loopname("EdgetiledAfforest-LCS-Link"));
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& src) {
-          NodeData& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-          sdata.compress();
+          auto& sdata = graph->GetData<NodeComponent>(src);
+          sdata->compress();
         },
         galois::steal(), galois::loopname("EdgetiledAfforest-LCS-Compress"));
   }
 };
 
-template <typename Graph>
+template <typename Graph, typename NodeIndex>
 bool
 verify(
-    Graph&,
+    Graph*,
     typename std::enable_if<galois::graphs::is_segmented<Graph>::value>::type* =
         0) {
   return true;
 }
 
-template <typename Graph>
+template <typename Graph, typename NodeIndex>
 bool
 verify(
-    Graph& graph, typename std::enable_if<
+    Graph* graph, typename std::enable_if<
                       !galois::graphs::is_segmented<Graph>::value>::type* = 0) {
-  using GNode = typename Graph::GraphNode;
+  using GNode = typename Graph::Node;
 
   auto is_bad = [&graph](const GNode& n) {
-    auto& me = graph.getData(n);
-    for (auto ii : graph.edges(n)) {
-      GNode dst = graph.getEdgeDst(ii);
-      auto& data = graph.getData(dst);
-      if (data.component() != me.component()) {
+    auto& me = graph->template GetData<NodeIndex>(n);
+    for (auto ii : graph->edges(n)) {
+      const GNode& dest = *graph->GetEdgeDest(ii);
+      auto& data = graph->template GetData<NodeIndex>(dest);
+      if (data->component() != me->component()) {
         std::cerr << std::dec << "not in same component: " << (unsigned int)n
-                  << " (" << me.component() << ")"
-                  << " and " << (unsigned int)dst << " (" << data.component()
+                  << " (" << me->component() << ")"
+                  << " and " << (unsigned int)dest << " (" << data->component()
                   << ")"
                   << "\n";
         return true;
@@ -1063,17 +1173,44 @@ verify(
     return false;
   };
 
-  return galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) ==
-         graph.end();
+  return galois::ParallelSTL::find_if(graph->begin(), graph->end(), is_bad) ==
+         graph->end();
+}
+
+template <>
+bool
+verify<LabelPropAlgo::Graph, LabelPropAlgo::NodeComponent>(
+    LabelPropAlgo::Graph* graph,
+    typename std::enable_if<
+        !galois::graphs::is_segmented<LabelPropAlgo::Graph>::value>::type*) {
+  using GNode = typename LabelPropAlgo::Graph::Node;
+  auto is_bad = [&graph](const GNode& n) {
+    auto& me = graph->template GetData<LabelPropAlgo::NodeComponent>(n);
+    for (auto ii : graph->edges(n)) {
+      const GNode& dest = *graph->GetEdgeDest(ii);
+      auto& data = graph->template GetData<LabelPropAlgo::NodeComponent>(dest);
+      if (data != me) {
+        std::cerr << std::dec << "not in same component: " << (unsigned int)n
+                  << " (" << me << ")"
+                  << " and " << (unsigned int)dest << " (" << data << ")"
+                  << "\n";
+        return true;
+      }
+    }
+    return false;
+  };
+
+  return galois::ParallelSTL::find_if(graph->begin(), graph->end(), is_bad) ==
+         graph->end();
 }
 
 template <typename Algo, typename Graph>
-typename Graph::node_data_type::component_type
-findLargest(Graph& graph) {
-  using GNode = typename Graph::GraphNode;
-  using component_type = typename Graph::node_data_type::component_type;
+typename Algo::ComponentType
+findLargest(Graph* graph) {
+  using GNode = typename Graph::Node;
+  using ComponentType = typename Algo::ComponentType;
 
-  using Map = galois::gstl::Map<component_type, int>;
+  using Map = galois::gstl::Map<ComponentType, int>;
 
   auto reduce = [](Map& lhs, Map&& rhs) -> Map& {
     Map v{std::move(rhs)};
@@ -1095,32 +1232,24 @@ findLargest(Graph& graph) {
   galois::GAccumulator<size_t> accumReps;
 
   galois::do_all(
-      galois::iterate(graph),
+      galois::iterate(*graph),
       [&](const GNode& x) {
-        auto& n = graph.getData(x, galois::MethodFlag::UNPROTECTED);
-
-        if (std::is_same<Algo, LabelPropAlgo>::value) {
-          if (n.isRepComp((unsigned int)x)) {
-            accumReps += 1;
-            return;
-          }
-        } else {
-          if (n.isRep()) {
-            accumReps += 1;
-            return;
-          }
+        auto& n = graph->template GetData<typename Algo::NodeComponent>(x);
+        if (n->isRep()) {
+          accumReps += 1;
+          return;
         }
 
         // Don't add reps to table to avoid adding components of size
         // 1
-        accumMap.update(Map{std::make_pair(n.component(), 1)});
+        accumMap.update(Map{std::make_pair(n->component(), 1)});
       },
       galois::loopname("CountLargest"));
 
   Map& map = accumMap.reduce();
   size_t reps = accumReps.reduce();
 
-  using ComponentSizePair = std::pair<component_type, int>;
+  using ComponentSizePair = std::pair<ComponentType, int>;
 
   auto sizeMax = [](const ComponentSizePair& a, const ComponentSizePair& b) {
     if (a.second > b.second) {
@@ -1140,7 +1269,7 @@ findLargest(Graph& graph) {
   ComponentSizePair largest = maxComp.reduce();
 
   // Compensate for dropping representative node of components
-  double ratio = graph.size() - reps + map.size();
+  double ratio = graph->size() - reps + map.size();
   size_t largestSize = largest.second + 1;
   if (ratio) {
     ratio = largestSize / ratio;
@@ -1153,21 +1282,83 @@ findLargest(Graph& graph) {
   return largest.first;
 }
 
-template <typename Graph>
-void
-initialize(Graph&) {}
-
 template <>
-void
-initialize<LabelPropAlgo::Graph>(typename LabelPropAlgo::Graph& graph) {
-  unsigned int id = 0;
+typename LabelPropAlgo::ComponentType
+findLargest<LabelPropAlgo, LabelPropAlgo::Graph>(LabelPropAlgo::Graph* graph) {
+  using GNode = typename LabelPropAlgo::Graph::Node;
+  using ComponentType = typename LabelPropAlgo::ComponentType;
 
-  for (typename LabelPropAlgo::Graph::iterator ii = graph.begin(),
-                                               ei = graph.end();
-       ii != ei; ++ii, ++id) {
-    graph.getData(*ii).comp_current = id;
-    graph.getData(*ii).comp_old = LABEL_INF;
+  using Map = galois::gstl::Map<ComponentType, int>;
+
+  auto reduce = [](Map& lhs, Map&& rhs) -> Map& {
+    Map v{std::move(rhs)};
+
+    for (auto& kv : v) {
+      if (lhs.count(kv.first) == 0) {
+        lhs[kv.first] = 0;
+      }
+      lhs[kv.first] += kv.second;
+    }
+
+    return lhs;
+  };
+
+  auto mapIdentity = []() { return Map(); };
+
+  auto accumMap = galois::make_reducible(reduce, mapIdentity);
+
+  galois::GAccumulator<size_t> accumReps;
+
+  galois::do_all(
+      galois::iterate(*graph),
+      [&](const GNode& x) {
+        auto& n =
+            graph->template GetData<typename LabelPropAlgo::NodeComponent>(x);
+        if (n.load() == x) {
+          accumReps += 1;
+          return;
+        }
+
+        // Don't add reps to table to avoid adding components of size
+        // 1
+        accumMap.update(Map{std::make_pair(n.load(), 1)});
+      },
+      galois::loopname("CountLargest"));
+
+  Map& map = accumMap.reduce();
+  size_t reps = accumReps.reduce();
+
+  using ComponentSizePair = std::pair<ComponentType, int>;
+
+  auto sizeMax = [](const ComponentSizePair& a, const ComponentSizePair& b) {
+    if (a.second > b.second) {
+      return a;
+    }
+    return b;
+  };
+
+  auto identity = []() { return ComponentSizePair{}; };
+
+  auto maxComp = galois::make_reducible(sizeMax, identity);
+
+  galois::do_all(galois::iterate(map), [&](const ComponentSizePair& x) {
+    maxComp.update(x);
+  });
+
+  ComponentSizePair largest = maxComp.reduce();
+
+  // Compensate for dropping representative node of components
+  double ratio = graph->size() - reps + map.size();
+  size_t largestSize = largest.second + 1;
+  if (ratio) {
+    ratio = largestSize / ratio;
   }
+
+  std::cout << "Total components: " << reps << "\n";
+  std::cout << "Number of non-trivial components: " << map.size()
+            << " (largest size: " << largestSize << " [" << ratio << "])\n";
+
+  return largest.first;
 }
 
 template <typename Algo>
@@ -1176,32 +1367,49 @@ run() {
   using Graph = typename Algo::Graph;
 
   Algo algo;
-  Graph graph;
 
-  algo.readGraph(graph);
-  std::cout << "Read " << graph.size() << " nodes\n";
+  std::cout << "Reading from file: " << inputFile << "\n";
+  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+      MakeFileGraph(inputFile, edge_property_name);
 
-  initialize(graph);
+  auto result = ConstructNodeProperties<typename Algo::NodeData>(pfg.get());
+  if (!result) {
+    GALOIS_LOG_FATAL("cannot make graph: {}", result.error());
+  }
+
+  auto pg_result = galois::graphs::PropertyGraph<
+      typename Algo::NodeData, typename Algo::EdgeData>::Make(pfg.get());
+  if (!pg_result) {
+    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+  }
+  Graph graph = pg_result.value();
+
+  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
+            << " edges\n";
+
+  algo.Initialize(&graph);
 
   galois::preAlloc(
-      numThreads + (3 * graph.size() * sizeof(typename Graph::node_data_type)) /
+      numThreads + (3 * graph.size() * sizeof(typename Algo::NodeData)) /
                        galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");
   execTime.start();
-  algo(graph);
+  algo(&graph);
   execTime.stop();
 
   galois::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify || largestComponentFilename != "" ||
       permutationFilename != "") {
-    findLargest<Algo, Graph>(graph);
-    if (!verify(graph)) {
+    findLargest<Algo, Graph>(&graph);
+    if (!verify<Graph, typename Algo::NodeComponent>(&graph)) {
+      algo.Initialize(&graph);
       GALOIS_DIE("verification failed");
     }
   }
+  algo.Deallocate(&graph);
 }
 
 int

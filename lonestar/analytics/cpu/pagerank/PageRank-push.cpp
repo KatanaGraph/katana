@@ -19,11 +19,6 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "PageRank-constants.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
 
 /**
  * These implementations are based on the Push-based PageRank computation
@@ -37,7 +32,7 @@
 const char* desc =
     "Computes page ranks a la Page and Brin. This is a push-style algorithm.";
 
-constexpr static const unsigned CHUNK_SIZE = 16;
+constexpr static const unsigned CHUNK_SIZE = 16U;
 
 enum Algo { Async, Sync };  ///< Async has better asbolute performance.
 
@@ -46,50 +41,40 @@ static cll::opt<Algo> algo(
     cll::values(clEnumVal(Async, "Async"), clEnumVal(Sync, "Sync")),
     cll::init(Async));
 
-struct LNode {
-  PRTy value;
-  std::atomic<PRTy> residual;
-
-  void init() {
-    value = 0.0;
-    residual = INIT_RESIDUAL;
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, const LNode& n) {
-    os << "{PR " << n.value << ", residual " << n.residual << "}";
-    return os;
-  }
+struct NodeValue : public galois::PODProperty<PRTy> {};
+struct NodeResidual {
+  using ArrowType = arrow::CTypeTraits<PRTy>::ArrowType;
+  using ViewType = galois::PODPropertyView<std::atomic<PRTy>>;
 };
 
-typedef galois::graphs::LC_CSR_Graph<LNode, void>::with_numa_alloc<
-    true>::type ::with_no_lockable<true>::type Graph;
-typedef typename Graph::GraphNode GNode;
+using NodeData = std::tuple<NodeValue, NodeResidual>;
+using EdgeData = std::tuple<>;
+typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef typename Graph::Node GNode;
 
 void
-asyncPageRank(Graph& graph) {
+asyncPageRank(Graph* graph) {
   typedef galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE> WL;
   galois::for_each(
-      galois::iterate(graph),
-      [&](GNode src, auto& ctx) {
-        LNode& sdata = graph.getData(src);
-        constexpr const galois::MethodFlag flag =
-            galois::MethodFlag::UNPROTECTED;
-
-        if (sdata.residual > tolerance) {
-          PRTy oldResidual = sdata.residual.exchange(0.0);
-          sdata.value += oldResidual;
-          int src_nout = std::distance(
-              graph.edge_begin(src, flag), graph.edge_end(src, flag));
+      galois::iterate(*graph),
+      [&](const GNode& src, auto& ctx) {
+        auto& src_residual = graph->GetData<NodeResidual>(src);
+        if (src_residual > tolerance) {
+          PRTy old_residual = src_residual.exchange(0.0);
+          auto& src_value = graph->GetData<NodeValue>(src);
+          src_value += old_residual;
+          int src_nout =
+              std::distance(graph->edge_begin(src), graph->edge_end(src));
           if (src_nout > 0) {
-            PRTy delta = oldResidual * ALPHA / src_nout;
+            PRTy delta = old_residual * ALPHA / src_nout;
             //! For each out-going neighbors.
-            for (auto jj : graph.edges(src, flag)) {
-              GNode dst = graph.getEdgeDst(jj);
-              LNode& ddata = graph.getData(dst, flag);
+            for (const auto& jj : graph->edges(src)) {
+              auto dest = graph->GetEdgeDest(jj);
+              auto& dest_residual = graph->GetData<NodeResidual>(dest);
               if (delta > 0) {
-                auto old = atomicAdd(ddata.residual, delta);
+                auto old = atomicAdd(dest_residual, delta);
                 if ((old < tolerance) && (old + delta >= tolerance)) {
-                  ctx.push(dst);
+                  ctx.push(*dest);
                 }
               }
             }
@@ -102,7 +87,7 @@ asyncPageRank(Graph& graph) {
 }
 
 void
-syncPageRank(Graph& graph) {
+syncPageRank(Graph* graph) {
   struct Update {
     PRTy delta;
     Graph::edge_iterator beg;
@@ -112,32 +97,30 @@ syncPageRank(Graph& graph) {
   constexpr ptrdiff_t EDGE_TILE_SIZE = 128;
 
   galois::InsertBag<Update> updates;
-  galois::InsertBag<GNode> activeNodes;
+  galois::InsertBag<GNode> active_nodes;
 
   galois::do_all(
-      galois::iterate(graph), [&](const GNode& src) { activeNodes.push(src); },
+      galois::iterate(*graph), [&](const auto& src) { active_nodes.push(src); },
       galois::no_stats());
 
   size_t iter = 0;
-  for (; !activeNodes.empty() && iter < maxIterations; ++iter) {
+  for (; !active_nodes.empty() && iter < maxIterations; ++iter) {
     galois::do_all(
-        galois::iterate(activeNodes),
+        galois::iterate(active_nodes),
         [&](const GNode& src) {
-          constexpr const galois::MethodFlag flag =
-              galois::MethodFlag::UNPROTECTED;
-          LNode& sdata = graph.getData(src, flag);
+          auto& sdata_residual = graph->GetData<NodeResidual>(src);
 
-          if (sdata.residual > tolerance) {
-            PRTy oldResidual = sdata.residual;
-            sdata.value += oldResidual;
-            sdata.residual = 0.0;
+          if (sdata_residual > tolerance) {
+            PRTy old_residual = sdata_residual;
+            graph->GetData<NodeValue>(src) += old_residual;
+            sdata_residual = 0.0;
 
-            int src_nout = std::distance(
-                graph.edge_begin(src, flag), graph.edge_end(src, flag));
-            PRTy delta = oldResidual * ALPHA / src_nout;
+            int src_nout =
+                std::distance(graph->edge_begin(src), graph->edge_end(src));
+            PRTy delta = old_residual * ALPHA / src_nout;
 
-            auto beg = graph.edge_begin(src, flag);
-            const auto end = graph.edge_end(src, flag);
+            auto beg = graph->edge_begin(src);
+            const auto end = graph->edge_end(src);
 
             assert(beg <= end);
 
@@ -158,23 +141,21 @@ syncPageRank(Graph& graph) {
         galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
         galois::loopname("CreateEdgeTiles"), galois::no_stats());
 
-    activeNodes.clear();
+    active_nodes.clear();
 
     galois::do_all(
         galois::iterate(updates),
         [&](const Update& up) {
-          constexpr const galois::MethodFlag flag =
-              galois::MethodFlag::UNPROTECTED;
           //! For each out-going neighbors.
           for (auto jj = up.beg; jj != up.end; ++jj) {
-            GNode dst = graph.getEdgeDst(jj);
-            LNode& ddata = graph.getData(dst, flag);
-            auto old = atomicAdd(ddata.residual, up.delta);
+            auto dest = graph->GetEdgeDest(jj);
+            auto& ddata_residual = graph->GetData<NodeResidual>(dest);
+            auto old = atomicAdd(ddata_residual, up.delta);
             //! If fabs(old) is greater than tolerance, then it would
             //! already have been processed in the previous do_all
             //! loop.
             if ((old <= tolerance) && (old + up.delta >= tolerance)) {
-              activeNodes.push(dst);
+              active_nodes.push(*dest);
             }
           }
         },
@@ -197,22 +178,39 @@ main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  Graph graph;
-  galois::graphs::readGraph(graph, inputFile);
-  std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
+  std::cout << "Reading from file: " << inputFile << "\n";
+  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+      MakeFileGraph(inputFile, edge_property_name);
+
+  auto result = ConstructNodeProperties<NodeData>(pfg.get());
+  if (!result) {
+    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+  }
+
+  auto pg_result =
+      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  if (!pg_result) {
+    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+  }
+  Graph graph = pg_result.value();
+
+  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
             << " edges\n";
 
   galois::preAlloc(
       5 * numThreads +
-      (5 * graph.size() * sizeof(typename Graph::node_data_type)) /
-          galois::runtime::pagePoolSize());
+      (5 * graph.size() * sizeof(NodeData)) / galois::runtime::pagePoolSize());
   galois::reportPageAlloc("MeminfoPre");
 
   std::cout << "tolerance:" << tolerance << ", maxIterations:" << maxIterations
             << "\n";
 
   galois::do_all(
-      galois::iterate(graph), [&graph](GNode n) { graph.getData(n).init(); },
+      galois::iterate(graph),
+      [&graph](const GNode& n) {
+        graph.GetData<NodeResidual>(n) = INIT_RESIDUAL;
+        graph.GetData<NodeValue>(n) = 0;
+      },
       galois::no_stats(), galois::loopname("Initialize"));
 
   galois::StatTimer execTime("Timer_0");
@@ -221,12 +219,12 @@ main(int argc, char** argv) {
   switch (algo) {
   case Async:
     std::cout << "Running Edge Async push version,";
-    asyncPageRank(graph);
+    asyncPageRank(&graph);
     break;
 
   case Sync:
     std::cout << "Running Edge Sync push version,";
-    syncPageRank(graph);
+    syncPageRank(&graph);
     break;
 
   default:
@@ -238,7 +236,7 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify) {
-    printTop(graph);
+    printTop<Graph, NodeValue>(&graph);
   }
 
 #if DEBUG

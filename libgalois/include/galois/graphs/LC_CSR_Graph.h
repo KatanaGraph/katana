@@ -303,6 +303,9 @@ public:
   size_t size() const { return numNodes; }
   size_t sizeEdges() const { return numEdges; }
 
+  uint64_t num_nodes() const { return numNodes; }
+  uint64_t num_edges() const { return numEdges; }
+
   iterator begin() const { return iterator(0); }
   iterator end() const { return iterator(numNodes); }
 

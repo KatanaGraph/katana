@@ -23,13 +23,6 @@
 
 #include "Lonestar/BFS_SSSP.h"
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
-#include "galois/gstl.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
 
@@ -73,11 +66,13 @@ static cll::opt<Algo> algo(
         clEnumVal(SyncTile, "SyncTile"), clEnumVal(Sync, "Sync")),
     cll::init(SyncTile));
 
-using Graph =
-    galois::graphs::LC_CSR_Graph<unsigned, void>::with_no_lockable<true>::type;
-//::with_numa_alloc<true>::type;
+struct NodeDistCurrent : public galois::PODProperty<uint32_t> {};
 
-using GNode = Graph::GraphNode;
+using NodeData = std::tuple<NodeDistCurrent>;
+using EdgeData = std::tuple<>;
+
+typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef typename Graph::Node GNode;
 
 constexpr static const bool TRACK_WORK = false;
 constexpr static const unsigned CHUNK_SIZE = 256U;
@@ -119,7 +114,7 @@ struct NodePushWrap {
 };
 
 struct EdgeTilePushWrap {
-  Graph& graph;
+  Graph* graph;
 
   template <typename C>
   void operator()(C& cont, const GNode& n, const char* const) const {
@@ -133,7 +128,7 @@ struct EdgeTilePushWrap {
 };
 
 struct OneTilePushWrap {
-  Graph& graph;
+  Graph* graph;
 
   template <typename C>
   void operator()(C& cont, const GNode& n, const char* const) const {
@@ -142,9 +137,7 @@ struct OneTilePushWrap {
 
   template <typename C>
   void operator()(C& cont, const GNode& n) const {
-    EdgeTile t{
-        graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
-        graph.edge_end(n, galois::MethodFlag::UNPROTECTED)};
+    EdgeTile t{graph->edge_begin(n), graph->edge_end(n)};
 
     cont.push(t);
   }
@@ -152,7 +145,7 @@ struct OneTilePushWrap {
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
-asyncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
+asyncAlgo(Graph* graph, GNode source, const P& pushWrap, const R& edgeRange) {
   namespace gwl = galois::worklists;
   // typedef PerSocketChunkFIFO<CHUNK_SIZE> dFIFO;
   using FIFO = gwl::PerSocketChunkFIFO<CHUNK_SIZE>;
@@ -171,21 +164,19 @@ asyncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
   galois::GAccumulator<size_t> BadWork;
   galois::GAccumulator<size_t> WLEmptyWork;
 
-  graph.getData(source) = 0;
-  galois::InsertBag<T> initBag;
+  graph->GetData<NodeDistCurrent>(source) = 0;
+  galois::InsertBag<T> init_bag;
 
   if (CONCURRENT) {
-    pushWrap(initBag, source, 1, "parallel");
+    pushWrap(init_bag, source, 1, "parallel");
   } else {
-    pushWrap(initBag, source, 1);
+    pushWrap(init_bag, source, 1);
   }
 
   loop(
-      galois::iterate(initBag),
+      galois::iterate(init_bag),
       [&](const T& item, auto& ctx) {
-        constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
-
-        const auto& sdist = graph.getData(item.src, flag);
+        const auto& sdist = graph->GetData<NodeDistCurrent>(item.src);
 
         if (TRACK_WORK) {
           if (item.dist != sdist) {
@@ -194,32 +185,32 @@ asyncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
           }
         }
 
-        const auto newDist = item.dist;
+        const auto new_dist = item.dist;
 
         for (auto ii : edgeRange(item)) {
-          GNode dst = graph.getEdgeDst(ii);
-          auto& ddata = graph.getData(dst, flag);
+          auto dest = graph->GetEdgeDest(ii);
+          auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
 
           while (true) {
-            Dist oldDist = ddata;
+            Dist old_dist = ddata;
 
-            if (oldDist <= newDist) {
+            if (old_dist <= new_dist) {
               break;
             }
 
             if (!useCAS ||
-                __sync_bool_compare_and_swap(&ddata, oldDist, newDist)) {
+                __sync_bool_compare_and_swap(&ddata, old_dist, new_dist)) {
               if (!useCAS) {
-                ddata = newDist;
+                ddata = new_dist;
               }
 
               if (TRACK_WORK) {
-                if (oldDist != BFS::DIST_INFINITY) {
+                if (old_dist != BFS::DIST_INFINITY) {
                   BadWork += 1;
                 }
               }
 
-              pushWrap(ctx, dst, newDist + 1);
+              pushWrap(ctx, *dest, new_dist + 1);
               break;
             }
           }
@@ -237,21 +228,19 @@ asyncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
-syncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
+syncAlgo(Graph* graph, GNode source, const P& pushWrap, const R& edgeRange) {
   using Cont = typename std::conditional<
       CONCURRENT, galois::InsertBag<T>, galois::SerStack<T>>::type;
   using Loop = typename std::conditional<
       CONCURRENT, galois::DoAll, galois::StdForEach>::type;
-
-  constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
 
   Loop loop;
 
   auto curr = std::make_unique<Cont>();
   auto next = std::make_unique<Cont>();
 
-  Dist nextLevel = 0U;
-  graph.getData(source, flag) = 0U;
+  Dist next_level = 0U;
+  graph->GetData<NodeDistCurrent>(source) = 0U;
 
   if (CONCURRENT) {
     pushWrap(*next, source, "parallel");
@@ -264,18 +253,18 @@ syncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
   while (!next->empty()) {
     std::swap(curr, next);
     next->clear();
-    ++nextLevel;
+    ++next_level;
 
     loop(
         galois::iterate(*curr),
         [&](const T& item) {
           for (auto e : edgeRange(item)) {
-            auto dst = graph.getEdgeDst(e);
-            auto& dstData = graph.getData(dst, flag);
+            auto dest = graph->GetEdgeDest(e);
+            auto& dest_data = graph->GetData<NodeDistCurrent>(*dest);
 
-            if (dstData == BFS::DIST_INFINITY) {
-              dstData = nextLevel;
-              pushWrap(*next, dst);
+            if (dest_data == BFS::DIST_INFINITY) {
+              dest_data = next_level;
+              pushWrap(*next, *dest);
             }
           }
         },
@@ -286,7 +275,7 @@ syncAlgo(Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
 
 template <bool CONCURRENT>
 void
-runAlgo(Graph& graph, const GNode& source) {
+runAlgo(Graph* graph, const GNode& source) {
   switch (algo) {
   case AsyncTile:
     asyncAlgo<CONCURRENT, SrcEdgeTile>(
@@ -317,15 +306,24 @@ main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  Graph graph;
-  GNode source;
-  GNode report;
-
   std::cout << "Reading from file: " << inputFile << "\n";
-  galois::graphs::readGraph(graph, inputFile);
-  std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
+  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+      MakeFileGraph(inputFile, edge_property_name);
+  auto result = ConstructNodeProperties<NodeData>(pfg.get());
+  if (!result) {
+    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+  }
+  auto pg_result =
+      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  if (!pg_result) {
+    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+  }
+  Graph graph = pg_result.value();
+
+  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
             << " edges\n";
 
+  std::cout << "Running " << ALGO_NAMES[algo] << "\n";
   if (startNode >= graph.size() || reportNode >= graph.size()) {
     std::cerr << "failed to set report: " << reportNode
               << " or failed to set source: " << startNode << "\n";
@@ -334,21 +332,20 @@ main(int argc, char** argv) {
 
   auto it = graph.begin();
   std::advance(it, startNode.getValue());
-  source = *it;
+  GNode source = *it;
   it = graph.begin();
   std::advance(it, reportNode.getValue());
-  report = *it;
+  GNode report = *it;
 
-  size_t approxNodeData = 4 * (graph.size() + graph.sizeEdges());
+  size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
   galois::preAlloc(
       8 * numThreads + approxNodeData / galois::runtime::pagePoolSize());
 
   galois::reportPageAlloc("MeminfoPre");
 
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
-    graph.getData(n) = BFS::DIST_INFINITY;
+  galois::do_all(galois::iterate(graph.begin(), graph.end()), [&graph](auto n) {
+    graph.GetData<NodeDistCurrent>(n) = BFS::DIST_INFINITY;
   });
-  graph.getData(source) = 0;
 
   std::cout << "Running " << ALGO_NAMES[algo] << " algorithm with "
             << (bool(execution) ? "PARALLEL" : "SERIAL") << " execution\n";
@@ -357,9 +354,9 @@ main(int argc, char** argv) {
   execTime.start();
 
   if (execution == SERIAL) {
-    runAlgo<false>(graph, source);
+    runAlgo<false>(&graph, source);
   } else if (execution == PARALLEL) {
-    runAlgo<true>(graph, source);
+    runAlgo<true>(&graph, source);
   } else {
     std::cerr << "ERROR: unknown type of execution passed to -exec\n";
   }
@@ -369,39 +366,36 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPost");
 
   std::cout << "Node " << reportNode << " has distance "
-            << graph.getData(report) << "\n";
+            << graph.GetData<NodeDistCurrent>(report) << "\n";
 
   // Sanity checking code
-  galois::GReduceMax<uint64_t> maxDistance;
-  galois::GAccumulator<uint64_t> distanceSum;
-  galois::GAccumulator<uint32_t> visitedNode;
-  maxDistance.reset();
-  distanceSum.reset();
-  visitedNode.reset();
+  galois::GReduceMax<uint64_t> max_dist;
+  galois::GAccumulator<uint64_t> sum_dist;
+  galois::GAccumulator<uint32_t> num_visited;
+  max_dist.reset();
+  sum_dist.reset();
+  num_visited.reset();
 
   galois::do_all(
       galois::iterate(graph),
       [&](uint64_t i) {
-        uint32_t myDistance = graph.getData(i);
+        uint32_t my_distance = graph.GetData<NodeDistCurrent>(i);
 
-        if (myDistance != BFS::DIST_INFINITY) {
-          maxDistance.update(myDistance);
-          distanceSum += myDistance;
-          visitedNode += 1;
+        if (my_distance != BFS::DIST_INFINITY) {
+          max_dist.update(my_distance);
+          sum_dist += my_distance;
+          num_visited += 1;
         }
       },
       galois::loopname("Sanity check"), galois::no_stats());
 
   // report sanity stats
-  uint64_t rMaxDistance = maxDistance.reduce();
-  uint64_t rDistanceSum = distanceSum.reduce();
-  uint64_t rVisitedNode = visitedNode.reduce();
-  galois::gInfo("# visited nodes is ", rVisitedNode);
-  galois::gInfo("Max distance is ", rMaxDistance);
-  galois::gInfo("Sum of visited distances is ", rDistanceSum);
+  galois::gInfo("# visited nodes is ", num_visited.reduce());
+  galois::gInfo("Max distance is ", max_dist.reduce());
+  galois::gInfo("Sum of visited distances is ", sum_dist.reduce());
 
   if (!skipVerify) {
-    if (BFS::verify(graph, source)) {
+    if (BFS::verify<NodeDistCurrent>(&graph, source)) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_DIE("verification failed");

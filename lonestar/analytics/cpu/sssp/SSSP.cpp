@@ -21,15 +21,7 @@
 
 #include "Lonestar/BFS_SSSP.h"
 #include "Lonestar/BoilerPlate.h"
-#include "Lonestar/Utils.h"
 #include "galois/AtomicHelpers.h"
-#include "galois/Galois.h"
-#include "galois/PriorityQueue.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
 
@@ -82,11 +74,22 @@ static cll::opt<Algo> algo(
         clEnumVal(AutoAlgo, "auto: choose among the algorithms automatically")),
     cll::init(AutoAlgo));
 
+//TODO (gill) Remove snippets from documentation
 //! [withnumaalloc]
-using Graph = galois::graphs::LC_CSR_Graph<std::atomic<uint32_t>, uint32_t>::
-    with_no_lockable<true>::type ::with_numa_alloc<true>::type;
 //! [withnumaalloc]
-typedef Graph::GraphNode GNode;
+
+struct NodeDistCurrent {
+  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
+  using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
+};
+
+struct EdgeWeight : public galois::PODProperty<int64_t> {};
+
+using NodeData = std::tuple<NodeDistCurrent>;
+using EdgeData = std::tuple<EdgeWeight>;
+
+typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef typename Graph::Node GNode;
 
 constexpr static const bool TRACK_WORK = false;
 constexpr static const unsigned CHUNK_SIZE = 64U;
@@ -112,22 +115,21 @@ using OBIM_Barrier = gwl::OrderedByIntegerMetric<
 template <typename T, typename OBIMTy = OBIM, typename P, typename R>
 void
 deltaStepAlgo(
-    Graph& graph, GNode source, const P& pushWrap, const R& edgeRange) {
+    Graph* graph, const GNode& source, const P& pushWrap, const R& edgeRange) {
   //! [reducible for self-defined stats]
   galois::GAccumulator<size_t> BadWork;
   //! [reducible for self-defined stats]
   galois::GAccumulator<size_t> WLEmptyWork;
 
-  graph.getData(source) = 0;
+  graph->GetData<NodeDistCurrent>(source) = 0;
 
-  galois::InsertBag<T> initBag;
-  pushWrap(initBag, source, 0, "parallel");
+  galois::InsertBag<T> init_bag;
+  pushWrap(init_bag, source, 0, "parallel");
 
   galois::for_each(
-      galois::iterate(initBag),
+      galois::iterate(init_bag),
       [&](const T& item, auto& ctx) {
-        constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
-        const auto& sdata = graph.getData(item.src, flag);
+        const auto& sdata = graph->GetData<NodeDistCurrent>(item.src);
 
         if (sdata < item.dist) {
           if (TRACK_WORK)
@@ -136,20 +138,20 @@ deltaStepAlgo(
         }
 
         for (auto ii : edgeRange(item)) {
-          GNode dst = graph.getEdgeDst(ii);
-          auto& ddist = graph.getData(dst, flag);
-          Dist ew = graph.getEdgeData(ii, flag);
-          const Dist newDist = sdata + ew;
-          Dist oldDist = galois::atomicMin(ddist, newDist);
-          if (newDist < oldDist) {
+          auto dest = graph->GetEdgeDest(ii);
+          auto& ddist = graph->GetData<NodeDistCurrent>(*dest);
+          Dist ew = graph->GetEdgeData<EdgeWeight>(ii);
+          const Dist new_dist = sdata + ew;
+          Dist old_dist = galois::atomicMin(ddist, new_dist);
+          if (new_dist < old_dist) {
             if (TRACK_WORK) {
               //! [per-thread contribution of self-defined stats]
-              if (oldDist != SSSP::DIST_INFINITY) {
+              if (old_dist != SSSP::DIST_INFINITY) {
                 BadWork += 1;
               }
               //! [per-thread contribution of self-defined stats]
             }
-            pushWrap(ctx, dst, newDist);
+            pushWrap(ctx, *dest, new_dist);
           }
         }
       },
@@ -168,10 +170,10 @@ deltaStepAlgo(
 template <typename T, typename P, typename R>
 void
 serDeltaAlgo(
-    Graph& graph, const GNode& source, const P& pushWrap, const R& edgeRange) {
+    Graph* graph, const GNode& source, const P& pushWrap, const R& edgeRange) {
   SerialBucketWL<T, UpdateRequestIndexer> wl(UpdateRequestIndexer{stepShift});
   ;
-  graph.getData(source) = 0;
+  graph->GetData<NodeDistCurrent>(source) = 0;
 
   pushWrap(wl, source, 0);
 
@@ -184,20 +186,20 @@ serDeltaAlgo(
       auto item = curr.front();
       curr.pop_front();
 
-      if (graph.getData(item.src) < item.dist) {
+      if (graph->GetData<NodeDistCurrent>(item.src) < item.dist) {
         // empty work
         continue;
       }
 
       for (auto e : edgeRange(item)) {
-        GNode dst = graph.getEdgeDst(e);
-        auto& ddata = graph.getData(dst);
+        auto dest = graph->GetEdgeDest(e);
+        auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
 
-        const auto newDist = item.dist + graph.getEdgeData(e);
+        const auto new_dist = item.dist + graph->GetEdgeData<EdgeWeight>(e);
 
-        if (newDist < ddata) {
-          ddata = newDist;
-          pushWrap(wl, dst, newDist);
+        if (new_dist < ddata) {
+          ddata = new_dist;
+          pushWrap(wl, *dest, new_dist);
         }
       }
     }
@@ -214,10 +216,10 @@ serDeltaAlgo(
 template <typename T, typename P, typename R>
 void
 dijkstraAlgo(
-    Graph& graph, const GNode& source, const P& pushWrap, const R& edgeRange) {
+    Graph* graph, const GNode& source, const P& pushWrap, const R& edgeRange) {
   using WL = galois::MinHeap<T>;
 
-  graph.getData(source) = 0;
+  graph->GetData<NodeDistCurrent>(source) = 0;
 
   WL wl;
   pushWrap(wl, source, 0);
@@ -229,20 +231,20 @@ dijkstraAlgo(
 
     T item = wl.pop();
 
-    if (graph.getData(item.src) < item.dist) {
+    if (graph->GetData<NodeDistCurrent>(item.src) < item.dist) {
       // empty work
       continue;
     }
 
     for (auto e : edgeRange(item)) {
-      GNode dst = graph.getEdgeDst(e);
-      auto& ddata = graph.getData(dst);
+      auto dest = graph->GetEdgeDest(e);
+      auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
 
-      const auto newDist = item.dist + graph.getEdgeData(e);
+      const auto new_dist = item.dist + graph->GetEdgeData<EdgeWeight>(e);
 
-      if (newDist < ddata) {
-        ddata = newDist;
-        pushWrap(wl, dst, newDist);
+      if (new_dist < ddata) {
+        ddata = new_dist;
+        pushWrap(wl, *dest, new_dist);
       }
     }
   }
@@ -251,17 +253,17 @@ dijkstraAlgo(
 }
 
 void
-topoAlgo(Graph& graph, const GNode& source) {
-  galois::LargeArray<Dist> oldDist;
-  oldDist.allocateInterleaved(graph.size());
+topoAlgo(Graph* graph, const GNode& source) {
+  galois::LargeArray<Dist> old_dist;
+  old_dist.allocateInterleaved(graph->size());
 
   constexpr Dist INFTY = SSSP::DIST_INFINITY;
   galois::do_all(
-      galois::iterate(size_t{0}, graph.size()),
-      [&](size_t i) { oldDist.constructAt(i, INFTY); }, galois::no_stats(),
+      galois::iterate(size_t{0}, graph->size()),
+      [&](size_t i) { old_dist.constructAt(i, INFTY); }, galois::no_stats(),
       galois::loopname("initDistArray"));
 
-  graph.getData(source) = 0;
+  graph->GetData<NodeDistCurrent>(source) = 0;
 
   galois::GReduceLogicalOr changed;
   size_t rounds = 0;
@@ -271,19 +273,20 @@ topoAlgo(Graph& graph, const GNode& source) {
     changed.reset();
 
     galois::do_all(
-        galois::iterate(graph),
+        galois::iterate(*graph),
         [&](const GNode& n) {
-          const auto& sdata = graph.getData(n);
+          const auto& sdata = graph->GetData<NodeDistCurrent>(n);
 
-          if (oldDist[n] > sdata) {
-            oldDist[n] = sdata;
+          if (old_dist[n] > sdata) {
+            old_dist[n] = sdata;
             changed.update(true);
 
-            for (auto e : graph.edges(n)) {
-              const auto newDist = sdata + graph.getEdgeData(e);
-              auto dst = graph.getEdgeDst(e);
-              auto& ddata = graph.getData(dst);
-              galois::atomicMin(ddata, newDist);
+            for (auto e : graph->edges(n)) {
+              const uint32_t new_dist =
+                  sdata + graph->GetEdgeData<EdgeWeight>(e);
+              auto dest = graph->GetEdgeDest(e);
+              auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+              galois::atomicMin(ddata, new_dist);
             }
           }
         },
@@ -295,13 +298,13 @@ topoAlgo(Graph& graph, const GNode& source) {
 }
 
 void
-topoTileAlgo(Graph& graph, const GNode& source) {
+topoTileAlgo(Graph* graph, const GNode& source) {
   galois::InsertBag<SrcEdgeTile> tiles;
 
-  graph.getData(source) = 0;
+  graph->GetData<NodeDistCurrent>(source) = 0;
 
   galois::do_all(
-      galois::iterate(graph),
+      galois::iterate(*graph),
       [&](const GNode& n) {
         SSSP::pushEdgeTiles(
             tiles, graph, n, SrcEdgeTileMaker{n, SSSP::DIST_INFINITY});
@@ -318,17 +321,18 @@ topoTileAlgo(Graph& graph, const GNode& source) {
     galois::do_all(
         galois::iterate(tiles),
         [&](SrcEdgeTile& t) {
-          const auto& sdata = graph.getData(t.src);
+          const auto& sdata = graph->GetData<NodeDistCurrent>(t.src);
 
           if (t.dist > sdata) {
             t.dist = sdata;
             changed.update(true);
 
             for (auto e = t.beg; e != t.end; ++e) {
-              const auto newDist = sdata + graph.getEdgeData(e);
-              auto dst = graph.getEdgeDst(e);
-              auto& ddata = graph.getData(dst);
-              galois::atomicMin(ddata, newDist);
+              const uint32_t new_dist =
+                  sdata + graph->GetEdgeData<EdgeWeight>(e);
+              auto dest = graph->GetEdgeDest(e);
+              auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+              galois::atomicMin(ddata, new_dist);
             }
           }
         },
@@ -347,13 +351,23 @@ main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  Graph graph;
-  GNode source;
-  GNode report;
-
   std::cout << "Reading from file: " << inputFile << "\n";
-  galois::graphs::readGraph(graph, inputFile);
-  std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
+  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+      MakeFileGraph(inputFile, edge_property_name);
+
+  auto result = ConstructNodeProperties<NodeData>(pfg.get());
+  if (!result) {
+    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+  }
+
+  auto pg_result =
+      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  if (!pg_result) {
+    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+  }
+  Graph graph = pg_result.value();
+
+  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
             << " edges\n";
 
   if (startNode >= graph.size() || reportNode >= graph.size()) {
@@ -365,10 +379,10 @@ main(int argc, char** argv) {
 
   auto it = graph.begin();
   std::advance(it, startNode.getValue());
-  source = *it;
+  GNode source = *it;
   it = graph.begin();
   std::advance(it, reportNode.getValue());
-  report = *it;
+  GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;
   galois::preAlloc(
@@ -384,11 +398,11 @@ main(int argc, char** argv) {
         << "WARNING: Do not expect the default to be good for your graph.\n";
   }
 
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
-    graph.getData(n) = SSSP::DIST_INFINITY;
+  galois::do_all(galois::iterate(graph), [&graph](const GNode& n) {
+    graph.GetData<NodeDistCurrent>(n) = SSSP::DIST_INFINITY;
   });
 
-  graph.getData(source) = 0;
+  graph.GetData<NodeDistCurrent>(source) = 0;
 
   std::cout << "Running " << ALGO_NAMES[algo] << " algorithm\n";
 
@@ -410,38 +424,38 @@ main(int argc, char** argv) {
   switch (algo) {
   case deltaTile:
     deltaStepAlgo<SrcEdgeTile>(
-        graph, source, SrcEdgeTilePushWrap{graph}, TileRangeFn());
+        &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn());
     break;
   case deltaStep:
     deltaStepAlgo<UpdateRequest>(
-        graph, source, ReqPushWrap(), OutEdgeRangeFn{graph});
+        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph});
     break;
   case serDeltaTile:
     serDeltaAlgo<SrcEdgeTile>(
-        graph, source, SrcEdgeTilePushWrap{graph}, TileRangeFn());
+        &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn());
     break;
   case serDelta:
     serDeltaAlgo<UpdateRequest>(
-        graph, source, ReqPushWrap(), OutEdgeRangeFn{graph});
+        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph});
     break;
   case dijkstraTile:
     dijkstraAlgo<SrcEdgeTile>(
-        graph, source, SrcEdgeTilePushWrap{graph}, TileRangeFn());
+        &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn());
     break;
   case dijkstra:
     dijkstraAlgo<UpdateRequest>(
-        graph, source, ReqPushWrap(), OutEdgeRangeFn{graph});
+        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph});
     break;
   case topo:
-    topoAlgo(graph, source);
+    topoAlgo(&graph, source);
     break;
   case topoTile:
-    topoTileAlgo(graph, source);
+    topoTileAlgo(&graph, source);
     break;
 
   case deltaStepBarrier:
     deltaStepAlgo<UpdateRequest, OBIM_Barrier>(
-        graph, source, ReqPushWrap(), OutEdgeRangeFn{graph});
+        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph});
     break;
 
   default:
@@ -453,39 +467,36 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPost");
 
   std::cout << "Node " << reportNode << " has distance "
-            << graph.getData(report) << "\n";
+            << graph.GetData<NodeDistCurrent>(report) << "\n";
 
   // Sanity checking code
-  galois::GReduceMax<uint64_t> maxDistance;
-  galois::GAccumulator<uint64_t> distanceSum;
-  galois::GAccumulator<uint32_t> visitedNode;
-  maxDistance.reset();
-  distanceSum.reset();
-  visitedNode.reset();
+  galois::GReduceMax<uint64_t> max_dist;
+  galois::GAccumulator<uint64_t> sum_dist;
+  galois::GAccumulator<uint32_t> num_visited;
+  max_dist.reset();
+  sum_dist.reset();
+  num_visited.reset();
 
   galois::do_all(
       galois::iterate(graph),
       [&](uint64_t i) {
-        uint32_t myDistance = graph.getData(i);
+        uint32_t my_distance = graph.GetData<NodeDistCurrent>(i);
 
-        if (myDistance != SSSP::DIST_INFINITY) {
-          maxDistance.update(myDistance);
-          distanceSum += myDistance;
-          visitedNode += 1;
+        if (my_distance != SSSP::DIST_INFINITY) {
+          max_dist.update(my_distance);
+          sum_dist += my_distance;
+          num_visited += 1;
         }
       },
       galois::loopname("Sanity check"), galois::no_stats());
 
   // report sanity stats
-  uint64_t rMaxDistance = maxDistance.reduce();
-  uint64_t rDistanceSum = distanceSum.reduce();
-  uint64_t rVisitedNode = visitedNode.reduce();
-  galois::gInfo("# visited nodes is ", rVisitedNode);
-  galois::gInfo("Max distance is ", rMaxDistance);
-  galois::gInfo("Sum of visited distances is ", rDistanceSum);
+  galois::gInfo("# visited nodes is ", num_visited.reduce());
+  galois::gInfo("Max distance is ", max_dist.reduce());
+  galois::gInfo("Sum of visited distances is ", sum_dist.reduce());
 
   if (!skipVerify) {
-    if (SSSP::verify(graph, source)) {
+    if (SSSP::verify<NodeDistCurrent, EdgeWeight>(&graph, source)) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_DIE("verification failed");

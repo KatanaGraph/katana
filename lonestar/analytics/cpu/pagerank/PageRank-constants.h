@@ -76,19 +76,18 @@ atomicAdd(std::atomic<PRTy>& v, PRTy delta) {
   return old;
 }
 
-template <typename Graph>
+template <typename Graph, typename NodeValue>
 void
-printTop(Graph& graph, unsigned topn = PRINT_TOP) {
-  using GNode = typename Graph::GraphNode;
+printTop(Graph* graph, unsigned topn = PRINT_TOP) {
+  using GNode = typename Graph::Node;
   typedef TopPair<GNode> Pair;
   typedef std::map<Pair, GNode> TopMap;
 
   TopMap top;
 
-  for (auto ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
+  for (auto ii = graph->begin(), ei = graph->end(); ii != ei; ++ii) {
     GNode src = *ii;
-    auto& n = graph.getData(src);
-    PRTy value = n.value;
+    PRTy value = graph->template GetData<NodeValue>(ii);
     Pair key(value, src);
 
     if (top.size() < topn) {

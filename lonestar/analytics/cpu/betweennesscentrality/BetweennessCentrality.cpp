@@ -28,7 +28,8 @@ constexpr static const char* const REGION_NAME = "BC";
 
 enum Algo { Level = 0, Async, Outer, AutoAlgo };
 
-const char* const ALGO_NAMES[] = {"Level", "Async", "Outer", "Auto"};
+//TODO (gill): Reintroduce AutoAlgo when porting to propertyGraph
+// const char* const ALGO_NAMES[] = {"Level", "Async", "Outer", "Auto"};
 
 const uint32_t infinity = std::numeric_limits<uint32_t>::max() / 4;
 
@@ -110,19 +111,20 @@ main(int argc, char** argv) {
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  if (algo == AutoAlgo) {
-    galois::graphs::FileGraph degreeGraph;
-    degreeGraph.fromFile(inputFile);
-    degreeGraph.initNodeDegrees();
-    autoAlgoTimer.start();
-    if (isApproximateDegreeDistributionPowerLaw(degreeGraph)) {
-      algo = Async;
-    } else {
-      algo = Level;
-    }
-    autoAlgoTimer.stop();
-    galois::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
-  }
+  //TODO (gill): Reintroduce AutoAlgo when porting to propertyGraph
+  // if (algo == AutoAlgo) {
+  //   galois::graphs::FileGraph degreeGraph;
+  //   degreeGraph.fromFile(inputFile);
+  //   degreeGraph.initNodeDegrees();
+  //   autoAlgoTimer.start();
+  //   if (isApproximateDegreeDistributionPowerLaw(degreeGraph)) {
+  //     algo = Async;
+  //   } else {
+  //     algo = Level;
+  //   }
+  //   autoAlgoTimer.stop();
+  //   galois::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
+  // }
 
   switch (algo) {
   case Level:

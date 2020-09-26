@@ -42,6 +42,11 @@ llvm::cl::opt<bool> symmetricGraph(
     llvm::cl::desc("Specify that the input graph is symmetric"),
     llvm::cl::init(false));
 
+llvm::cl::opt<std::string> edge_property_name(
+    "edgePropertyName",
+    llvm::cl::desc("name of the edge property to the loaded"),
+    llvm::cl::init(""));
+
 static void
 LonestarPrintVersion(llvm::raw_ostream& out) {
   out << "LoneStar Benchmark Suite v" << galois::getVersion() << " ("

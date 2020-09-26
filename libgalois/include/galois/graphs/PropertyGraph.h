@@ -49,6 +49,7 @@ public:
   using edge_iterator = boost::counting_iterator<uint64_t>;
   using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
   using iterator = node_iterator;
+  using Node = uint32_t;
 
   // Standard container concepts
 
@@ -64,9 +65,14 @@ public:
 
   /// GetData returns the data for a node.
   template <typename NodeIndex>
-  PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
+  PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_index = find_trait<NodeIndex, NodeProps>();
-    return std::get<prop_index>(node_view_).GetValue(*node);
+    return std::get<prop_index>(node_view_).GetValue(node);
+  }
+  /// GetData returns the data for a node.
+  template <typename NodeIndex>
+  PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
+    return GetData<NodeIndex>(*node);
   }
 
   /// GetData returns the data for an edge.
@@ -84,14 +90,36 @@ public:
   uint64_t num_nodes() const { return pfg_->topology().num_nodes(); }
   uint64_t num_edges() const { return pfg_->topology().num_edges(); }
 
-  edges_iterator edges(const node_iterator& n) const {
-    auto [begin_edge, end_edge] = pfg_->topology().edge_range(*n);
+  /**
+   * Gets the edge range of some node.
+   *
+   * @param node node to get the edge range of
+   * @returns iterator to edges of node
+   */
+  edges_iterator edges(const node_iterator& node) const {
+    auto [begin_edge, end_edge] = pfg_->topology().edge_range(*node);
     return internal::make_no_deref_range(
         edge_iterator(begin_edge), edge_iterator(end_edge));
   }
 
-  // Graph constructors
+  /**
+   * Gets the first edge of some node.
+   *
+   * @param node node to get the edge of
+   * @returns iterator to first edge of node
+   */
+  edge_iterator edge_begin(Node node) const { return *edges(node).begin(); }
 
+  /**
+   * Gets the end edge boundary of some node.
+   *
+   * @param node node to get the edge of
+   * @returns iterator to the end of the edges of node, i.e. the first edge of
+   *     the next node (or an "end" iterator if there is no next node)
+   */
+  edge_iterator edge_end(Node node) const { return *edges(node).end(); }
+
+  // Graph constructors
   static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
       PropertyFileGraph* pfg);
 };
@@ -113,7 +141,6 @@ PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
       pfg, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
-
 }  // namespace galois::graphs
 
 #endif

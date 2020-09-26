@@ -20,6 +20,7 @@
 #ifndef LONESTAR_BOILERPLATE_H
 #define LONESTAR_BOILERPLATE_H
 
+#include "Lonestar/Utils.h"
 #include "galois/Galois.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Version.h"
@@ -30,6 +31,7 @@ extern llvm::cl::opt<bool> skipVerify;
 extern llvm::cl::opt<int> numThreads;
 extern llvm::cl::opt<std::string> statFile;
 extern llvm::cl::opt<bool> symmetricGraph;
+extern llvm::cl::opt<std::string> edge_property_name;
 
 //! initialize lonestar benchmark
 std::unique_ptr<galois::SharedMemSys> LonestarStart(

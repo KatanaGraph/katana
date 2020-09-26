@@ -60,15 +60,16 @@ static cll::opt<unsigned int> k_core_num(
 
 //! Node deadness can be derived from current degree and k value, so no field
 //! necessary.
-struct NodeData {
-  std::atomic<uint32_t> currentDegree;
+struct NodeCurrentDegree {
+  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
+  using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
 };
 
-//! Typedef for graph used, CSR graph (edge-type is void).
-using Graph =
-    galois::graphs::LC_CSR_Graph<NodeData, void>::with_no_lockable<true>::type;
-//! Typedef for node type in the CSR graph.
-using GNode = Graph::GraphNode;
+using NodeData = std::tuple<NodeCurrentDegree>;
+using EdgeData = std::tuple<>;
+
+typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef typename Graph::Node GNode;
 
 //! Chunksize for for_each worklist: best chunksize will depend on input.
 constexpr static const unsigned CHUNK_SIZE = 64u;
@@ -84,13 +85,13 @@ constexpr static const unsigned CHUNK_SIZE = 64u;
  * @param graph Graph to initialize degrees in
  */
 void
-degreeCounting(Graph& graph) {
+DegreeCounting(Graph* graph) {
   galois::do_all(
-      galois::iterate(graph.begin(), graph.end()),
-      [&](GNode curNode) {
-        NodeData& curData = graph.getData(curNode);
-        curData.currentDegree.store(
-            std::distance(graph.edge_begin(curNode), graph.edge_end(curNode)));
+      galois::iterate(*graph),
+      [&](const GNode& node) {
+        auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
+        node_current_degree.store(
+            std::distance(graph->edge_begin(node), graph->edge_end(node)));
       },
       galois::loopname("DegreeCounting"), galois::no_stats());
 };
@@ -102,14 +103,14 @@ degreeCounting(Graph& graph) {
  * @param initialWorklist Empty worklist to be filled with dead nodes.
  */
 void
-setupInitialWorklist(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
+SetupInitialWorklist(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
   galois::do_all(
-      galois::iterate(graph.begin(), graph.end()),
-      [&](GNode curNode) {
-        NodeData& curData = graph.getData(curNode);
-        if (curData.currentDegree < k_core_num) {
+      galois::iterate(*graph),
+      [&](const GNode& node) {
+        auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
+        if (node_current_degree < k_core_num) {
           //! Dead node, add to initialWorklist for processing later.
-          initialWorklist.emplace(curNode);
+          initialWorklist.emplace(node);
         }
       },
       galois::loopname("InitialWorklistSetup"), galois::no_stats());
@@ -123,12 +124,12 @@ setupInitialWorklist(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
  * @param graph Graph to operate on
  */
 void
-syncCascadeKCore(Graph& graph) {
+SyncCascadeKCore(Graph* graph) {
   galois::InsertBag<GNode>* current = new galois::InsertBag<GNode>;
   galois::InsertBag<GNode>* next = new galois::InsertBag<GNode>;
 
   //! Setup worklist.
-  setupInitialWorklist(graph, *next);
+  SetupInitialWorklist(graph, *next);
 
   while (!next->empty()) {
     //! Make "next" into current.
@@ -137,17 +138,18 @@ syncCascadeKCore(Graph& graph) {
 
     galois::do_all(
         galois::iterate(*current),
-        [&](GNode deadNode) {
+        [&](const GNode& dead_node) {
           //! Decrement degree of all neighbors.
-          for (auto e : graph.edges(deadNode)) {
-            GNode dest = graph.getEdgeDst(e);
-            NodeData& destData = graph.getData(dest);
-            uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
+          for (auto e : graph->edges(dead_node)) {
+            auto dest = graph->GetEdgeDest(e);
+            auto& dest_current_degree =
+                graph->GetData<NodeCurrentDegree>(*dest);
+            uint32_t old_degree = galois::atomicSub(dest_current_degree, 1u);
 
-            if (oldDegree == k_core_num) {
+            if (old_degree == k_core_num) {
               //! This thread was responsible for putting degree of destination
               //! below threshold; add to worklist.
-              next->emplace(dest);
+              next->emplace(*dest);
             }
           }
         },
@@ -168,20 +170,20 @@ syncCascadeKCore(Graph& graph) {
  * @param initialWorklist Worklist containing initial dead nodes
  */
 void
-asyncCascadeKCore(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
+AsyncCascadeKCore(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
   galois::for_each(
       galois::iterate(initialWorklist),
-      [&](GNode deadNode, auto& ctx) {
+      [&](const GNode& dead_node, auto& ctx) {
         //! Decrement degree of all neighbors.
-        for (auto e : graph.edges(deadNode)) {
-          GNode dest = graph.getEdgeDst(e);
-          NodeData& destData = graph.getData(dest);
-          uint32_t oldDegree = galois::atomicSub(destData.currentDegree, 1u);
+        for (auto e : graph->edges(dead_node)) {
+          auto dest = graph->GetEdgeDest(e);
+          auto& dest_current_degree = graph->GetData<NodeCurrentDegree>(dest);
+          uint32_t old_degree = galois::atomicSub(dest_current_degree, 1u);
 
-          if (oldDegree == k_core_num) {
+          if (old_degree == k_core_num) {
             //! This thread was responsible for putting degree of destination
             //! below threshold: add to worklist.
-            ctx.push(dest);
+            ctx.push(*dest);
           }
         }
       },
@@ -199,22 +201,22 @@ asyncCascadeKCore(Graph& graph, galois::InsertBag<GNode>& initialWorklist) {
  * @param graph Graph to get alive count of
  */
 void
-kCoreSanity(Graph& graph) {
-  galois::GAccumulator<uint32_t> aliveNodes;
-  aliveNodes.reset();
+KCoreSanity(Graph* graph) {
+  galois::GAccumulator<uint32_t> alive_nodes;
+  alive_nodes.reset();
 
   galois::do_all(
-      galois::iterate(graph.begin(), graph.end()),
-      [&](GNode curNode) {
-        NodeData& curData = graph.getData(curNode);
-        if (curData.currentDegree >= k_core_num) {
-          aliveNodes += 1;
+      galois::iterate(*graph),
+      [&](const GNode& node) {
+        auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
+        if (node_current_degree >= k_core_num) {
+          alive_nodes += 1;
         }
       },
       galois::loopname("KCoreSanityCheck"), galois::no_stats());
 
   galois::gPrint(
-      "Number of nodes in the ", k_core_num, "-core is ", aliveNodes.reduce(),
+      "Number of nodes in the ", k_core_num, "-core is ", alive_nodes.reduce(),
       "\n");
 }
 
@@ -248,8 +250,25 @@ main(int argc, char** argv) {
   //! Read graph from disk.
   galois::StatTimer graphReadingTimer("GraphConstructTime", REGION_NAME);
   graphReadingTimer.start();
-  Graph graph;
-  galois::graphs::readGraph(graph, inputFile);
+
+  galois::gInfo("Reading from file: ", inputFile);
+  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+      MakeFileGraph(inputFile, edge_property_name);
+
+  auto result = ConstructNodeProperties<NodeData>(pfg.get());
+  if (!result) {
+    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+  }
+
+  auto pg_result =
+      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  if (!pg_result) {
+    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+  }
+  Graph graph = pg_result.value();
+
+  galois::gInfo(
+      "Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges");
   graphReadingTimer.stop();
 
   //! Preallocate pages in memory so allocation doesn't occur during compute.
@@ -262,7 +281,7 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MemAllocMid");
 
   //! Intialization of degrees.
-  degreeCounting(graph);
+  DegreeCounting(&graph);
 
   //! Begins main computation.
   galois::StatTimer execTime("Timer_0");
@@ -274,14 +293,14 @@ main(int argc, char** argv) {
         "Running asynchronous k-core with k-core number ", k_core_num);
     //! Worklist setup of initial dead ndoes.
     galois::InsertBag<GNode> initialWorklist;
-    setupInitialWorklist(graph, initialWorklist);
+    SetupInitialWorklist(&graph, initialWorklist);
     //! Actual work; propagate deadness by decrementing degrees and adding dead
     //! nodes to worklist.
-    asyncCascadeKCore(graph, initialWorklist);
+    AsyncCascadeKCore(&graph, initialWorklist);
   } else if (algo == Sync) {
     galois::gInfo("Running synchronous k-core with k-core number ", k_core_num);
     //! Synchronous k-core.
-    syncCascadeKCore(graph);
+    SyncCascadeKCore(&graph);
   } else {
     GALOIS_DIE("invalid specification of k-core algorithm");
   }
@@ -292,7 +311,7 @@ main(int argc, char** argv) {
 
   //! Sanity check.
   if (!skipVerify) {
-    kCoreSanity(graph);
+    KCoreSanity(&graph);
   }
 
   totalTime.stop();

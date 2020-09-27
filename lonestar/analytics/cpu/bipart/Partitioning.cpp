@@ -31,7 +31,7 @@
  */
 void
 ComputeDegrees(
-    std::vector<GGraph*>& graph,
+    std::vector<HyperGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
   uint32_t total_nodes = combined_node_list.size();
@@ -54,7 +54,7 @@ ComputeDegrees(
         auto hedge_index_pair = combined_edge_list[hedge];
         uint32_t index = hedge_index_pair.second;
         GNode h = hedge_index_pair.first;
-        GGraph& cur_graph = *graph[index];
+        HyperGraph& cur_graph = *graph[index];
         auto edges = cur_graph.edges(h);
 
         uint32_t degree = std::distance(edges.begin(), edges.end());
@@ -89,25 +89,25 @@ PartitionCoarsestGraphs(
   std::vector<galois::GAccumulator<WeightTy>> zero_accum(num_partitions);
   std::vector<GNodeBag> zero_partition_nodes(num_partitions);
   std::vector<GNodeBag> nzero_partition_nodes(num_partitions);
-  std::vector<GGraph*> graph(num_partitions, nullptr);
+  std::vector<HyperGraph*> graph(num_partitions, nullptr);
   uint32_t total_hedges{0};
   uint32_t total_nodes{0};
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (metis_graphs[i] != nullptr) {
-      graph[i] = metis_graphs[i]->GetGraph();
+      graph[i] = metis_graphs[i]->GetHyperGraph();
     }
   }
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (graph[i] != nullptr) {
-      total_hedges += graph[i]->hedges;
+      total_hedges += graph[i]->GetHedges();
     }
   }
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (graph[i] != nullptr) {
-      total_nodes += graph[i]->hnodes;
+      total_nodes += graph[i]->GetHnodes();
     }
   }
 
@@ -134,7 +134,7 @@ PartitionCoarsestGraphs(
       [&](uint32_t hedge) {
         auto hedge_index_pair = combined_edge_list[hedge];
         uint32_t index = hedge_index_pair.second;
-        GGraph& sub_graph = *graph[index];
+        HyperGraph& sub_graph = *graph[index];
         GNode item = hedge_index_pair.first;
 
         for (auto& fedge : sub_graph.edges(item)) {
@@ -168,7 +168,7 @@ PartitionCoarsestGraphs(
     if (graph[i] == nullptr) {
       continue;
     }
-    GGraph& cur_graph = *graph[i];
+    HyperGraph& cur_graph = *graph[i];
 
     WeightTy total_weights = nzero_accum[i].reduce();
     WeightTy zero_partition_weights = zero_accum[i].reduce();

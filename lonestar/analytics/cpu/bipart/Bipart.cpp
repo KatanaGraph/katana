@@ -73,10 +73,6 @@ static cll::opt<bool> hyper_metis_graph(
         "(http://glaros.dtc.umn.edu/gkhome/fetch/sw/hmetis/manual.pdf)"),
     cll::init(false));
 
-static cll::opt<bool> output(
-    "output", cll::desc("Specify if partitions need to be written"),
-    cll::init(false));
-
 static cll::opt<bool> skip_lone_hedges(
     "skip_lone_hedges",
     cll::desc("Specify if degree 1 hyperedges should not be included"),
@@ -126,10 +122,10 @@ Partition(
  * assignment
  */
 uint32_t
-ComputingCut(GGraph& g) {
+ComputingCut(HyperGraph& g) {
   galois::GAccumulator<uint32_t> edgecut;
   galois::do_all(
-      galois::iterate(uint32_t{0}, g.hedges),
+      galois::iterate(uint32_t{0}, g.GetHedges()),
       [&](GNode n) {
         uint32_t first_edge_partition_id =
             g.getData(g.getEdgeDst(g.edge_begin(n))).GetPartition();
@@ -170,13 +166,14 @@ ConstructCombinedLists(
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (metis_graphs[i] != nullptr) {
-      GGraph& g = *(metis_graphs[i]->GetGraph());
+      HyperGraph& g = *(metis_graphs[i]->GetHyperGraph());
+      uint32_t num_hedges = g.GetHedges();
 
-      for (GNode n = 0; n < g.hedges; n++) {
+      for (GNode n = 0; n < num_hedges; n++) {
         combined_edge_list[edge_index] = std::make_pair(n, i);
         edge_index++;
       }
-      for (GNode n = g.hedges; n < static_cast<uint32_t>(g.size()); n++) {
+      for (GNode n = num_hedges; n < static_cast<uint32_t>(g.size()); n++) {
         combined_node_list[node_index] = std::make_pair(n, i);
         node_index++;
       }
@@ -194,9 +191,9 @@ CreateKPartitions(MetisGraph& metis_graph) {
   galois::StatTimer initial_partition_timer("Initial-Partition");
   galois::StatTimer intermediate_partition_timer("Intermediate-Partition");
   galois::StatTimer update_graphtree_timer("Update-GraphTree");
-  GGraph& graph = *metis_graph.GetGraph();
+  HyperGraph& graph = *metis_graph.GetHyperGraph();
   uint32_t total_num_nodes = graph.size();
-  uint32_t num_hedges = graph.hedges;
+  uint32_t num_hedges = graph.GetHedges();
   std::vector<MetisGraph*> metis_graphs;
   metis_graphs.push_back(&metis_graph);
 
@@ -316,7 +313,7 @@ CreateKPartitions(MetisGraph& metis_graph) {
     // The currently processed number of partitions.
     uint32_t num_partitions = current_level_indices.size();
     std::vector<MetisGraph*> metis_graph_vec(num_partitions);
-    std::vector<GGraph*> gr(num_partitions);
+    std::vector<HyperGraph*> gr(num_partitions);
     std::vector<uint32_t> target_partitions(num_partitions);
 
     std::vector<uint32_t> num_hedges_per_partition(num_partitions);
@@ -329,7 +326,7 @@ CreateKPartitions(MetisGraph& metis_graph) {
       if (to_process_partitions[i] > 1) {
         uint32_t index = pgraph_index[i];
         metis_graph_vec[index] = new MetisGraph();
-        gr[index] = metis_graph_vec[index]->GetGraph();
+        gr[index] = metis_graph_vec[index]->GetHyperGraph();
       }
     }
 
@@ -411,7 +408,7 @@ CreateKPartitions(MetisGraph& metis_graph) {
       uint64_t edges = num_edges_acc[index].reduce();
       uint32_t ipart_num_nodes =
           num_hedges_per_partition[index] + num_hnodes_per_partition[index];
-      GGraph& cur_graph = *gr[index];
+      HyperGraph& cur_graph = *gr[index];
       for (uint32_t c = 1; c < ipart_num_nodes; ++c) {
         edges_prefixsum[index][c] += edges_prefixsum[index][c - 1];
       }
@@ -419,14 +416,14 @@ CreateKPartitions(MetisGraph& metis_graph) {
       cur_graph.constructFrom(
           ipart_num_nodes, edges, std::move(edges_prefixsum[index]),
           edges_ids[index]);
-      cur_graph.hedges = num_hedges_per_partition[index];
-      cur_graph.hnodes = num_hnodes_per_partition[index];
+      cur_graph.SetHedges(num_hedges_per_partition[index]);
+      cur_graph.SetHnodes(num_hnodes_per_partition[index]);
     }
 
     for (uint32_t i : current_level_indices) {
       uint32_t index = pgraph_index[i];
-      GGraph& cur_graph = *gr[index];
-      InitNodes(cur_graph, cur_graph.hedges);
+      HyperGraph& cur_graph = *gr[index];
+      InitNodes(cur_graph, cur_graph.GetHedges());
     }
 
     for (uint32_t i : current_level_indices) {
@@ -515,12 +512,12 @@ main(int argc, char** argv) {
   }
 
   MetisGraph metis_graph;
-  GGraph& graph = *metis_graph.GetGraph();
+  HyperGraph& graph = *metis_graph.GetHyperGraph();
 
   ConstructGraph(graph, input_file, skip_lone_hedges);
 
   uint32_t total_num_nodes = graph.size();
-  uint32_t num_hedges = graph.hedges;
+  uint32_t num_hedges = graph.GetHedges();
   GraphStat(graph);
 
   galois::preAlloc(galois::runtime::numPagePoolAllocTotal() * 20);
@@ -533,7 +530,7 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPost");
   total_time.stop();
 
-  if (output) {
+  if (!output_file_name.empty()) {
     galois::gPrint("Number of hyper-edges: ", num_hedges, "\n");
     galois::gPrint(
         "Total graph size (include hyper-edges): ", total_num_nodes, "\n");

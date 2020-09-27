@@ -56,7 +56,7 @@ struct OnlineStat {
 };
 
 uint32_t
-GraphStat(GGraph& graph) {
+GraphStat(HyperGraph& graph) {
   OnlineStat stat;
   for (GNode node : graph) {
     uint64_t dist = std::distance(graph.edge_begin(node), graph.edge_end(node));

@@ -8,7 +8,7 @@
  * @param num_hedges Number of hyperedges in the specified param graph
  */
 void
-InitNodes(GGraph& graph, uint32_t num_hedges) {
+InitNodes(HyperGraph& graph, uint32_t num_hedges) {
   galois::do_all(
       galois::iterate(graph),
       [&](GNode n) {
@@ -27,66 +27,6 @@ InitNodes(GGraph& graph, uint32_t num_hedges) {
 }
 
 /**
- * Calculate the prefix sum for CSR graph construction
- *
- * @param prefix_sum A LargeArray to store prefix sum of nodes
- */
-template <typename T>
-uint64_t
-ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
-  uint32_t num_threads = galois::getActiveThreads();
-  uint32_t size = prefix_sum.size();
-
-  galois::LargeArray<uint64_t> interm_sums;
-  interm_sums.allocateInterleaved(num_threads);
-
-  //! Local summation.
-  galois::on_each([&](uint32_t tid, uint32_t total_threads) {
-    uint32_t block_size = size / total_threads;
-    if ((size % num_threads) > 0) {
-      ++block_size;
-    }
-    uint32_t start = tid * block_size;
-    uint32_t end = (tid + 1) * block_size;
-    if (end > size) {
-      end = size;
-    }
-
-    for (uint32_t idx = start + 1; idx < end; ++idx) {
-      prefix_sum[idx] += prefix_sum[idx - 1];
-    }
-
-    interm_sums[tid] = prefix_sum[end - 1];
-  });
-
-  //! Compute global prefix sum.
-  for (uint32_t tid = 1; tid < num_threads; ++tid) {
-    interm_sums[tid] += interm_sums[tid - 1];
-  }
-
-  galois::on_each([&](uint32_t tid, uint32_t total_threads) {
-    if (tid == 0) {
-      return;
-    }
-    uint32_t block_size = size / total_threads;
-    if ((size % num_threads) > 0) {
-      ++block_size;
-    }
-    uint32_t start = tid * block_size;
-    uint32_t end = (tid + 1) * block_size;
-    if (end > size) {
-      end = size;
-    }
-
-    for (uint32_t idx = start; idx < end; ++idx) {
-      prefix_sum[idx] += interm_sums[tid - 1];
-    }
-  });
-
-  return prefix_sum[size - 1];
-}
-
-/**
  * Constructs LC_CSR graph from the input file
  *
  * @param graph Graph to be constructed
@@ -94,7 +34,7 @@ ParallelPrefixSum(galois::LargeArray<T>& prefix_sum) {
  */
 void
 ConstructGraph(
-    GGraph& graph, const std::string filename,
+    HyperGraph& graph, const std::string filename,
     const bool skip_isolated_hedges) {
   std::ifstream f(filename.c_str());
   std::string line;
@@ -183,8 +123,8 @@ ConstructGraph(
     num_fedges += prefix_edges[num_read_hedges++];
   }
   f.close();
-  graph.hedges = num_hedges;
-  graph.hnodes = num_hnodes;
+  graph.SetHedges(num_hedges);
+  graph.SetHnodes(num_hnodes);
 
   ParallelPrefixSum(prefix_edges);
 
@@ -204,26 +144,26 @@ ConstructGraph(
  * Priority assinging functions.
  */
 void
-PrioritizeHigherDegree(GNode node, GGraph* fine_graph) {
+PrioritizeHigherDegree(GNode node, HyperGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
   fine_graph->getData(node).SetNetval(-num_edges);
 }
 void
-PrioritizeRandom(GNode node, GGraph* fine_graph) {
+PrioritizeRandom(GNode node, HyperGraph* fine_graph) {
   MetisNode& node_data = fine_graph->getData(node);
 
   node_data.SetNetval(-node_data.GetNetrand());
   node_data.SetNetrand(-node_data.GetNetnum());
 }
 void
-PrioritizeLowerDegree(GNode node, GGraph* fine_graph) {
+PrioritizeLowerDegree(GNode node, HyperGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
   fine_graph->getData(node).SetNetval(num_edges);
 }
 void
-PrioritizeHigherWeight(GNode node, GGraph* fine_graph) {
+PrioritizeHigherWeight(GNode node, HyperGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
@@ -232,7 +172,7 @@ PrioritizeHigherWeight(GNode node, GGraph* fine_graph) {
   fine_graph->getData(node).SetNetval(-w);
 }
 void
-PrioritizeDegree(GNode node, GGraph* fine_graph) {
+PrioritizeDegree(GNode node, HyperGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
@@ -243,7 +183,7 @@ PrioritizeDegree(GNode node, GGraph* fine_graph) {
 
 void
 SortNodesByGainAndWeight(
-    GGraph& graph, std::vector<GNode>& nodes, uint32_t end_offset = 0) {
+    HyperGraph& graph, std::vector<GNode>& nodes, uint32_t end_offset = 0) {
   auto end_iter = (end_offset == 0) ? nodes.end() : nodes.begin() + end_offset;
   std::sort(nodes.begin(), end_iter, [&graph](GNode& l_opr, GNode& r_opr) {
     MetisNode& l_data = graph.getData(l_opr);
@@ -267,8 +207,8 @@ SortNodesByGainAndWeight(
 }
 
 void
-InitGain(GGraph& g) {
-  uint32_t num_hedges = g.hedges;
+InitGain(HyperGraph& g) {
+  uint32_t num_hedges = g.GetHedges();
   uint32_t size_graph = static_cast<uint32_t>(g.size());
 
   galois::do_all(
@@ -344,7 +284,7 @@ void
 InitGain(
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
-    std::vector<GGraph*>& g) {
+    std::vector<HyperGraph*>& g) {
   uint32_t total_nodes = combined_nodelist.size();
   uint32_t total_hedges = combined_edgelist.size();
 
@@ -380,7 +320,7 @@ InitGain(
         auto hedge_index_pair = combined_edgelist[n];
         GNode node_id = hedge_index_pair.first;
         uint32_t index = hedge_index_pair.second;
-        GGraph& graph = *g[index];
+        HyperGraph& graph = *g[index];
         uint32_t num_p0_nodes{0}, num_p1_nodes{0};
 
         for (auto& fedge : graph.edges(node_id)) {

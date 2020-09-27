@@ -21,11 +21,11 @@
 
 void
 ProjectPart(MetisGraph* metis_graph) {
-  GGraph* fine_graph = metis_graph->GetParentGraph()->GetGraph();
-  GGraph* coarse_graph = metis_graph->GetGraph();
+  HyperGraph* fine_graph = metis_graph->GetParentGraph()->GetHyperGraph();
+  HyperGraph* coarse_graph = metis_graph->GetHyperGraph();
   galois::do_all(
       galois::iterate(
-          fine_graph->hedges, static_cast<uint32_t>(fine_graph->size())),
+          fine_graph->GetHedges(), static_cast<uint32_t>(fine_graph->size())),
       [&](GNode n) {
         auto parent = fine_graph->getData(n).GetParent();
         auto& cn = coarse_graph->getData(parent);
@@ -36,9 +36,9 @@ ProjectPart(MetisGraph* metis_graph) {
 }
 
 void
-ResetCounter(GGraph& g) {
+ResetCounter(HyperGraph& g) {
   galois::do_all(
-      galois::iterate(g.hedges, static_cast<uint32_t>(g.size())),
+      galois::iterate(g.GetHedges(), static_cast<uint32_t>(g.size())),
       [&](GNode n) { g.getData(n).ResetCounter(); },
       galois::loopname("Refining-Reset-Counter"));
 }
@@ -47,7 +47,7 @@ void
 ParallelSwaps(
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
-    std::vector<GGraph*>& g, uint32_t refine_max_levels) {
+    std::vector<HyperGraph*>& g, uint32_t refine_max_levels) {
   uint32_t num_partitions = g.size();
   std::vector<galois::GAccumulator<WeightTy>> accum(num_partitions);
   std::vector<galois::GAccumulator<WeightTy>> node_size(num_partitions);
@@ -90,7 +90,7 @@ ParallelSwaps(
       if (g[i] == nullptr) {
         continue;
       }
-      GGraph& cur_graph = *g[i];
+      HyperGraph& cur_graph = *g[i];
 
       partition_zero_nodes.clear();
       partition_one_nodes.clear();
@@ -100,7 +100,7 @@ ParallelSwaps(
 
       galois::do_all(
           galois::iterate(
-              cur_graph.hedges, static_cast<uint32_t>(cur_graph.size())),
+              cur_graph.GetHedges(), static_cast<uint32_t>(cur_graph.size())),
           [&](uint32_t n) {
             MetisNode& node_data = cur_graph.getData(n);
 
@@ -187,9 +187,9 @@ ParallelSwaps(
 }
 
 void
-ParallelMakingbalance(GGraph& g, float tol) {
-  uint32_t total_hnodes = g.hnodes;
-  uint32_t total_hedges = g.hedges;
+ParallelMakingbalance(HyperGraph& g, float tol) {
+  uint32_t total_hnodes = g.GetHnodes();
+  uint32_t total_hedges = g.GetHedges();
   uint32_t graph_size = g.size();
   uint32_t sqrt_hnodes = sqrt(total_hnodes);
 
@@ -307,7 +307,7 @@ ParallelMakingbalance(GGraph& g, float tol) {
 
           SortNodesByGainAndWeight(g, cand_nodes_vec_arr[idx], 0);
         },
-        galois::steal(), galois::loopname("Refining-Sort-Bucket"));
+        galois::loopname("Refining-Sort-Bucket"));
 
     uint32_t i{0}, j{0};
 
@@ -404,7 +404,7 @@ Refine(std::vector<MetisGraph*>& coarse_graph) {
   std::vector<float> ratio(num_partitions, 0.0f);
   std::vector<float> tol(num_partitions, 0.0f);
   std::vector<MetisGraph*> fine_graph(num_partitions, nullptr);
-  std::vector<GGraph*> gg(num_partitions, nullptr);
+  std::vector<HyperGraph*> gg(num_partitions, nullptr);
 
   galois::StatTimer construct_timer("Refining-Total-Construct-Lists");
   galois::StatTimer parallel_swap_timer("Refining-Total-Parallel-Swap");
@@ -426,9 +426,9 @@ Refine(std::vector<MetisGraph*>& coarse_graph) {
     for (uint32_t i = 0; i < num_partitions; i++) {
       if (coarse_graph[i] != nullptr) {
         fine_graph[i] = coarse_graph[i]->GetParentGraph();
-        gg[i] = coarse_graph[i]->GetGraph();
-        total_hnodes += gg[i]->hnodes;
-        total_hedges += gg[i]->hedges;
+        gg[i] = coarse_graph[i]->GetHyperGraph();
+        total_hnodes += gg[i]->GetHnodes();
+        total_hedges += gg[i]->GetHedges();
       } else {
         gg[i] = nullptr;
       }

@@ -43,6 +43,7 @@ requirements:
     - libcypher-parser>=0.6.2,<0.7a0
     - nlohmann_json>=3.7.3,<4.0a0
     - howardhinnant_date>=3.0.0,<4.0a0
+    - libcurl>=7.66
   run:
     - boost-cpp
     - arrow-cpp
@@ -54,6 +55,7 @@ requirements:
     - libcypher-parser
     - nlohmann_json
     - howardhinnant_date
+    - libcurl
 
 test:
   requires:

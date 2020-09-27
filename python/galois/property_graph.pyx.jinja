@@ -63,7 +63,7 @@ cdef class PropertyGraph:
         if path:
             handle_result(self.underlying.get().Write(bytes(path, "utf-8")))
         else:
-            handle_result(self.underlying.get().Write())
+            handle_result(self.underlying.get().Commit())
 
     cdef GraphTopology topology(self):
         return self.underlying.get().topology()

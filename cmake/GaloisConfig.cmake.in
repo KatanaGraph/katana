@@ -38,6 +38,7 @@ endif()
 find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
 find_dependency(nlohmann_json REQUIRED)
 find_dependency(date REQUIRED)
+find_dependency(CURL REQUIRED)
 
 find_dependency(Arrow CONFIG REQUIRED)
 if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)

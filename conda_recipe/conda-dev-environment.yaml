@@ -27,3 +27,4 @@ dependencies:
  - jinja2
  - conda-build
  - pytest
+ - libcurl

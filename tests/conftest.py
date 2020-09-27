@@ -7,7 +7,7 @@ from galois.shmem import setActiveThreads
 
 @pytest.fixture
 def property_graph():
-    g = PropertyGraph(get_input("propertygraphs/ldbc_003/meta"))
+    g = PropertyGraph(get_input("propertygraphs/ldbc_003"))
     return g
 
 

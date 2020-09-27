@@ -77,17 +77,15 @@ struct tsuba::RDGHandleImpl {
 
 namespace {
 
-const std::regex kMetaVersion("meta(?:_([0-9]+)|)");
+// galois::RandomAlphanumericString does not include _, making this pattern robust
+// TODO (witchel) meta with no _[0-9]+ is deprecated and should be eliminated eventually
+const std::regex kMetaVersion("meta(?:_([0-9]+)|)$");
 
 // if it doesn't name a meta file, assume it's meant to be a managed URI
 bool
 IsManagedUri(const galois::Uri& uri) {
   return !std::regex_match(uri.BaseName(), kMetaVersion);
 }
-
-// galois::RandomAlphanumericString does not include _, making this pattern robust
-// TODO (witchel) meta with no _[0-9]+ is deprecated and should be eliminated eventually
-const std::regex kMetaVersion("meta(?:_([0-9]+)|)$");
 
 galois::Result<uint64_t>
 Parse(const std::string& str) {
@@ -97,15 +95,6 @@ Parse(const std::string& str) {
     return galois::ResultErrno();
   }
   return val;
-}
-
-galois::Result<uint64_t>
-ParseVersion(const std::string& file) {
-  std::smatch sub_match;
-  if (!std::regex_match(file, sub_match, kMetaVersion)) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
-  return Parse(sub_match[1]);
 }
 
 std::shared_ptr<parquet::WriterProperties>
@@ -535,9 +524,9 @@ AddProperties(
 }
 
 galois::Result<tsuba::RDG>
-ReadMetadataJson(const std::string& partition_path) {
+ReadMetadataJson(const galois::Uri& partition_path) {
   tsuba::FileView fv;
-  if (auto res = fv.Bind(partition_path, true); !res) {
+  if (auto res = fv.Bind(partition_path.string(), true); !res) {
     return res.error();
   }
   if (fv.size() == 0) {
@@ -545,13 +534,14 @@ ReadMetadataJson(const std::string& partition_path) {
   }
 
   tsuba::RDG rdg;
-  auto json_res = JsonParse<tsuba::RDG>(fv, &rdg);
+  auto json_res = galois::JsonParse<tsuba::RDG>(fv, &rdg);
   if (!json_res) {
     return json_res.error();
   }
   return tsuba::RDG(std::move(rdg));
 }
 
+// TODO (witchel) Deprecated.  Remove with ReadMetadataParquet, below
 galois::Result<std::vector<tsuba::PropertyMetadata>>
 MakeProperties(std::vector<std::string>&& values) {
   std::vector v = std::move(values);
@@ -582,6 +572,7 @@ MakeProperties(std::vector<std::string>&& values) {
   return properties;
 }
 
+// TODO (witchel) Deprecated.  Remove when input graphs don't use parquet metadata
 /// ReadMetadata reads metadata from a Parquet file and returns the extracted
 /// property graph specific fields as well as the unparsed fields.
 ///
@@ -666,16 +657,17 @@ ReadMetadataParquet(const galois::Uri& partition_path) {
 
 galois::Result<tsuba::RDG>
 ReadMetadata(const galois::Uri& partition_path) {
+  galois::Result<tsuba::RDG> res = tsuba::RDG();
   try {
-    auto res = ReadMetadataParquet(partition_path);
-    if (!res) {
-      res = ReadMetadataJson(partition_path);
-    }
-    return res;
+    res = ReadMetadataParquet(partition_path);
   } catch (const std::exception& exp) {
     GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
   }
+  if (!res) {
+    res = ReadMetadataJson(partition_path);
+  }
+  return res;
 }
 
 galois::Result<void>
@@ -721,11 +713,13 @@ BindOutIndex(const std::string& topology_path) {
 }
 
 galois::Result<void>
-CommitRDG(tsuba::RDGHandle handle, uint32_t policy_id, bool transpose) {
+CommitRDG(
+    tsuba::RDGHandle handle, uint32_t policy_id, bool transposed,
+    const tsuba::RDGLineage& lineage) {
   galois::CommBackend* comm = tsuba::Comm();
   tsuba::RDGMeta new_meta(
       handle.impl_->rdg_meta.version_ + 1, handle.impl_->rdg_meta.version_,
-      comm->Num, policy_id, transpose, handle.impl_->rdg_meta.dir_);
+      comm->Num, policy_id, transposed, handle.impl_->rdg_meta.dir_, lineage);
   galois::Result<void> ret = galois::ResultSuccess();
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -858,9 +852,62 @@ GetMetaAndPartitionPath(const galois::Uri& uri, bool intend_partial_read) {
   return std::make_pair(meta, path_res.value());
 }
 
+galois::Result<std::vector<std::string>>
+FileList(const std::string& dir) {
+  std::vector<std::string> files;
+  auto list_res = tsuba::FileListAsync(dir, &files);
+  if (!list_res) {
+    return list_res.error();
+  }
+
+  std::unique_ptr<tsuba::FileAsyncWork> work = std::move(list_res.value());
+  if (work != nullptr) {
+    while (!work->Done()) {
+      if (auto res = (*work)(); !res) {
+        return res.error();
+      }
+    }
+  }
+  return files;
+}
+
+galois::Result<tsuba::RDGMeta>
+MakeFromStorage(const galois::Uri& uri) {
+  tsuba::FileView fv;
+  if (auto res = fv.Bind(uri.string(), true); !res) {
+    return res.error();
+  }
+  tsuba::RDGMeta meta(uri.DirName());
+  auto meta_res = galois::JsonParse<tsuba::RDGMeta>(fv, &meta);
+  if (!meta_res) {
+    return meta_res.error();
+  }
+  return meta;
+}
+
 }  // namespace
 
 namespace tsuba {
+galois::Result<uint64_t>
+internal::ParseVersion(const std::string& file) {
+  std::smatch sub_match;
+  if (!std::regex_match(file, sub_match, kMetaVersion)) {
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  return Parse(sub_match[1]);
+}
+
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void
+to_json(json& j, const RDGLineage& lineage) {
+  j = json{{"command_line", lineage.command_line_}};
+}
+
+// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+void
+from_json(const json& j, RDGLineage& lineage) {
+  j.at("command_line").get_to(lineage.command_line_);
+}
 
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void
@@ -872,6 +919,7 @@ to_json(json& j, const RDGMeta& meta) {
       {"num_hosts", meta.num_hosts_},
       {"policy_id", meta.policy_id_},
       {"transpose", meta.transpose_},
+      {"lineage", meta.lineage_},
   };
 }
 
@@ -893,6 +941,9 @@ from_json(const json& j, RDGMeta& meta) {
   if (auto it = j.find("transpose"); it != j.end()) {
     it->get_to(meta.transpose_);
   }
+  if (auto it = j.find("lineage"); it != j.end()) {
+    it->get_to(meta.lineage_);
+  }
 
   if (magic != kRDGMagicNo) {
     // nlohmann::json reports errors using exceptions
@@ -900,18 +951,9 @@ from_json(const json& j, RDGMeta& meta) {
   }
 }
 
-galois::Result<RDGMeta>
-RDGMeta::MakeFromStorage(const galois::Uri& uri) {
-  FileView fv;
-  if (auto res = fv.Bind(uri.string(), true); !res) {
-    return res.error();
-  }
-  RDGMeta meta(uri.DirName());
-  auto meta_res = galois::JsonParse<RDGMeta>(fv, &meta);
-  if (!meta_res) {
-    return meta_res.error();
-  }
-  return meta;
+void
+RDG::AddLineage(const std::string& command_line) {
+  lineage_.command_line_ = command_line;
 }
 
 galois::Result<RDGMeta>
@@ -987,6 +1029,10 @@ to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
 void
 from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   uint32_t magic;
+  if (pmd.state != PartitionMetadata::State::kUninitialized) {
+    GALOIS_LOG_DEBUG(
+        "Overwriting existing part_metadata_ from json state: {}", pmd.state);
+  }
   j.at("magic").get_to(magic);
   j.at("policy_id").get_to(pmd.policy_id_);
   j.at("transposed").get_to(pmd.transposed_);
@@ -999,6 +1045,8 @@ from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   j.at("num_owned").get_to(pmd.num_owned_);
   j.at("num_nodes_with_edges").get_to(pmd.num_nodes_with_edges_);
   j.at("cartesian_grid").get_to(pmd.cartesian_grid_);
+
+  pmd.state = PartitionMetadata::State::kFromStorage;
 
   if (magic != kPartitionMagicNo) {
     // nlohmann::json reports errors using exceptions
@@ -1027,7 +1075,7 @@ to_json(nlohmann::json& j, const RDG& rdg) {
       {node_property_key, rdg.node_properties_},
       {edge_property_key, rdg.edge_properties_},
       {part_property_files_key, rdg.part_properties_},
-      {part_property_meta_key, *rdg.part_metadata_}};
+      {part_property_meta_key, rdg.part_metadata_}};
 }
 
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
@@ -1037,13 +1085,7 @@ from_json(const nlohmann::json& j, RDG& rdg) {
   j.at(node_property_key).get_to(rdg.node_properties_);
   j.at(edge_property_key).get_to(rdg.edge_properties_);
   j.at(part_property_files_key).get_to(rdg.part_properties_);
-  if (rdg.part_metadata_ != nullptr) {
-    GALOIS_LOG_DEBUG(
-        "Overwriting existing part_metadata_ from json top: {}",
-        rdg.topology_path_);
-  }
-  rdg.part_metadata_ = std::make_unique<PartitionMetadata>();
-  j.at(part_property_meta_key).get_to(*rdg.part_metadata_);
+  j.at(part_property_meta_key).get_to(rdg.part_metadata_);
 }
 
 RDGFile::~RDGFile() {
@@ -1053,18 +1095,23 @@ RDGFile::~RDGFile() {
   }
 }
 
-std::string
+galois::Result<std::string>
 RDG::MakeMetadataJson() const {
-  json j = *this;
+  auto json_res = galois::JsonDump(json(*this));
+  if (!json_res) {
+    return json_res.error();
+  }
   // POSIX specifies that text files end in a newline
-  std::string map_s = j.dump() + '\n';
-
-  return map_s;
+  return json_res.value() + '\n';
 }
 
 galois::Result<void>
 RDG::WriteMetadataJson(RDGHandle handle) const {
-  std::string map_s = MakeMetadataJson();
+  galois::Result<std::string> meta_res = MakeMetadataJson();
+  if (!meta_res) {
+    return meta_res.error();
+  }
+  auto map_s = meta_res.value();
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   auto curr_res = tsuba::FileStore(
       RDGMeta::PartitionFileName(
@@ -1132,8 +1179,7 @@ RDG::PrunePropsTo(
 }
 
 galois::Result<void>
-RDG::DoStore(RDGHandle handle) {
-  GALOIS_LOG_DEBUG("Writing out to {}", handle.impl_->rdg_meta.dir_);
+RDG::DoStore(RDGHandle handle, const std::string& command_line) {
   if (topology_path_.empty()) {
     // No topology file; create one
     galois::Uri t_path = handle.impl_->rdg_meta.dir_.RandFile("topology");
@@ -1174,29 +1220,36 @@ RDG::DoStore(RDGHandle handle) {
   }
   edge_properties_ = std::move(edge_write_result.value());
 
-  if (part_metadata_) {
-    if (part_properties_.empty()) {
-      auto part_write_result =
-          WritePartArrays(*part_metadata_, handle.impl_->rdg_meta.dir_);
-      if (!part_write_result) {
-        GALOIS_LOG_DEBUG("WritePartMetadata for part_properties failed");
-        return part_write_result.error();
-      }
-      part_properties_ = std::move(part_write_result.value());
+  if (part_metadata_.state == PartitionMetadata::State::kFromPartitioner) {
+    GALOIS_LOG_VASSERT(
+        part_properties_.empty(),
+        "partition metadata from partitioner, but part_properties is not "
+        "empty!");
+    auto part_write_result =
+        WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_);
+    if (!part_write_result) {
+      GALOIS_LOG_DEBUG("WritePartMetadata for part_properties failed");
+      return part_write_result.error();
     }
+    part_properties_ = std::move(part_write_result.value());
+  } else {
+    GALOIS_LOG_VASSERT(
+        !part_properties_.empty() || handle.impl_->rdg_meta.policy_id_ == 0,
+        "policy_id != 0, partition metadata from storage, but part_properties "
+        "is empty!");
   }
 
   if (auto write_result = WriteMetadataJson(handle); !write_result) {
     GALOIS_LOG_DEBUG("metadata write error");
     return write_result.error();
   }
-  bool transpose = false;
-  uint32_t policy_id = 0;
-  if (part_metadata_) {
-    transpose = part_metadata_->transposed_;
-    policy_id = part_metadata_->policy_id_;
-  }
-  if (auto res = CommitRDG(handle, policy_id, transpose); !res) {
+
+  // Update lineage and commit
+  lineage_.AddCommandLine(command_line);
+  if (auto res = CommitRDG(
+          handle, part_metadata_.policy_id_, part_metadata_.transposed_,
+          lineage_);
+      !res) {
     return res.error();
   }
   return galois::ResultSuccess();
@@ -1229,20 +1282,15 @@ RDG::DoLoad(const galois::Uri& metadata_dir) {
   if (!part_properties_.empty()) {
     for (const auto& [k, v] : other_metadata_) {
       if (k == part_other_metadata_key) {
-        part_metadata_ = std::make_unique<PartitionMetadata>();
-        if (auto res = galois::JsonParse(v, part_metadata_.get()); !res) {
+        if (auto res = galois::JsonParse(v, &part_metadata_); !res) {
           return res;
         }
       }
     }
-    if (!part_metadata_) {
-      GALOIS_LOG_DEBUG("found part properties but not the other metadata");
-      return ErrorCode::InvalidArgument;
-    }
     auto part_result = AddTables(
         metadata_dir, part_properties_,
         [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-          return AddPartitionMetadataArray(rdg->part_metadata_.get(), table);
+          return AddPartitionMetadataArray(&rdg->part_metadata_, table);
         });
     if (!part_result) {
       return edge_result.error();
@@ -1429,11 +1477,26 @@ RDG::LoadPartial(
 }
 
 galois::Result<void>
-RDG::Store(RDGHandle handle, FileFrame* ff) {
+RDG::Store(RDGHandle handle, const std::string& command_line, FileFrame* ff) {
   if (!handle.impl_->AllowsWrite()) {
     GALOIS_LOG_DEBUG("handle does not allow write");
     return ErrorCode::InvalidArgument;
   }
+  if (handle.impl_->rdg_meta.num_hosts_ != 0 &&
+      handle.impl_->rdg_meta.num_hosts_ != tsuba::Comm()->Num) {
+    GALOIS_LOG_ERROR(
+        "number of hosts mismatch old: {} new: {}",
+        handle.impl_->rdg_meta.num_hosts_, tsuba::Comm()->Num);
+    return ErrorCode::InvalidArgument;
+  }
+  if (handle.impl_->rdg_meta.policy_id_ != 0 &&
+      handle.impl_->rdg_meta.policy_id_ != part_metadata_.policy_id_) {
+    GALOIS_LOG_ERROR(
+        "policy_id mismatch old: {} new: {}", handle.impl_->rdg_meta.policy_id_,
+        part_metadata_.policy_id_);
+    return ErrorCode::InvalidArgument;
+  }
+
   if (handle.impl_->rdg_meta.dir_ != rdg_dir_) {
     UnbindFromStorage();
   }
@@ -1449,7 +1512,7 @@ RDG::Store(RDGHandle handle, FileFrame* ff) {
     topology_path_ = t_path.BaseName();
   }
 
-  return DoStore(handle);
+  return DoStore(handle, command_line);
 }
 
 galois::Result<void>
@@ -1511,28 +1574,34 @@ RDG::UnbindFromStorage() {
   topology_path_ = "";
 }
 
+bool
+ContainsValidMetaFile(const std::string& dir) {
+  auto list_res = FileList(dir);
+  if (!list_res) {
+    GALOIS_LOG_DEBUG(
+        "ContainsValidMetaFile dir: {}: {}", dir, list_res.error());
+    return false;
+  }
+  for (const std::string& file : list_res.value()) {
+    if (auto res = internal::ParseVersion(file); res) {
+      return true;
+    }
+  }
+  return false;
+}
+
 galois::Result<galois::Uri>
 FindLatestMetaFile(const galois::Uri& name) {
   assert(IsManagedUri(name));
-
-  std::unordered_set<std::string> files;
-  auto list_res = FileListAsync(name.string(), &files);
+  auto list_res = FileList(name.string());
   if (!list_res) {
     return list_res.error();
   }
 
-  std::unique_ptr<tsuba::FileAsyncWork> work = std::move(list_res.value());
-  if (work != nullptr) {
-    while (!work->Done()) {
-      if (auto res = (*work)(); !res) {
-        return res.error();
-      }
-    }
-  }
   uint64_t version = 0;
   std::string found_meta;
-  for (const std::string& file : files) {
-    if (auto res = ParseVersion(file); res) {
+  for (const std::string& file : list_res.value()) {
+    if (auto res = internal::ParseVersion(file); res) {
       uint64_t new_version = res.value();
       if (new_version >= version) {
         version = new_version;
@@ -1649,6 +1718,10 @@ tsuba::Create(const std::string& name) {
 
   galois::CommBackend* comm = Comm();
   if (comm->ID == 0) {
+    if (ContainsValidMetaFile(name)) {
+      GALOIS_LOG_ERROR("Create in {} contains valid meta file", name);
+      return ErrorCode::InvalidArgument;
+    }
     std::string s = meta.ToJsonString();
     if (auto res = tsuba::FileStore(
             tsuba::RDGMeta::FileName(uri, meta.version_).string(),
@@ -1686,7 +1759,7 @@ tsuba::Register(const std::string& name) {
     uri = std::move(latest_res.value());
   }
 
-  auto meta_res = RDGMeta::MakeFromStorage(uri);
+  auto meta_res = MakeFromStorage(uri);
   if (!meta_res) {
     return meta_res.error();
   }
@@ -1700,25 +1773,28 @@ tsuba::Register(const std::string& name) {
 
 // Return the set of file names that hold this RDG's data by reading partition files
 // Useful to garbage collect unused files
-galois::Result<std::unordered_set<std::string>>
-tsuba::internal::FileNames(const std::string& dir, uint64_t version) {
-  auto rdg_meta_res = tsuba::RDGMeta::Make(dir, version);
+galois::Result<std::set<std::string>>
+tsuba::internal::FileNames(const galois::Uri& uri, uint64_t version) {
+  auto rdg_meta_res = tsuba::RDGMeta::Make(uri, version);
   if (!rdg_meta_res) {
     return rdg_meta_res.error();
   }
   auto rdg_meta = rdg_meta_res.value();
 
-  std::unordered_set<std::string> fnames{};
+  std::set<std::string> fnames{};
+  fnames.emplace(RDGMeta::FileName(uri, rdg_meta.version_).BaseName());
   for (auto i = 0U; i < rdg_meta.num_hosts_; ++i) {
     // All other file names are directory-local, so we pass an empty
     // directory instead of handle.impl_->rdg_meta.path for the partition files
-    fnames.emplace(RDGMeta::PartitionFileName("", i, rdg_meta.version_));
+    fnames.emplace(
+        RDGMeta::PartitionFileName(uri, i, rdg_meta.version_).BaseName());
 
     auto rdg_res = ReadMetadata(
-        tsuba::RDGMeta::PartitionFileName(dir, i, rdg_meta.version_));
-    if(!rdg_res) {
-      GALOIS_LOG_DEBUG("problem dir: {} host: {} ver: {} : {}",
-                       dir, i, rdg_meta.version_, rdg_res.error());
+        tsuba::RDGMeta::PartitionFileName(uri, i, rdg_meta.version_));
+    if (!rdg_res) {
+      GALOIS_LOG_DEBUG(
+          "problem uri: {} host: {} ver: {} : {}", uri, i, rdg_meta.version_,
+          rdg_res.error());
     } else {
       auto rdg = std::move(rdg_res.value());
       std::for_each(
@@ -1735,11 +1811,6 @@ tsuba::internal::FileNames(const std::string& dir, uint64_t version) {
     }
   }
   return fnames;
-}
-
-galois::Result<uint64_t>
-tsuba::internal::ParseVersion(const std::string& file) {
-  return ::ParseVersion(file);
 }
 
 // This shouldn't actually be used outside of this file, just exported for

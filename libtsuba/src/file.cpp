@@ -136,8 +136,9 @@ tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
 
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 tsuba::FileListAsync(
-    const std::string& directory, std::unordered_set<std::string>* list) {
-  return FS(directory)->ListAsync(directory, list);
+    const std::string& directory, std::vector<std::string>* list,
+    std::vector<uint64_t>* size) {
+  return FS(directory)->ListAsync(directory, list, size);
 }
 
 galois::Result<void>

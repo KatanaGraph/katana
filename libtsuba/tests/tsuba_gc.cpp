@@ -1,12 +1,13 @@
 #include "bench_utils.h"
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
+#include "galois/Uri.h"
 #include "tsuba/RDG.h"
 #include "tsuba/RDG_internal.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
 
-std::string src_uri{};
+galois::Uri src_uri;
 uint32_t remaining_versions{10};
 int opt_verbose_level{0};
 bool opt_dry{false};
@@ -50,13 +51,17 @@ parse_arguments(int argc, char* argv[]) {
     fmt::print(stderr, "{} requires property graph URI argument\n", prog_name);
     exit(EXIT_FAILURE);
   }
-  src_uri = argv[index++];
+  auto uri_res = galois::Uri::Make(argv[index]);
+  if (!uri_res) {
+    GALOIS_LOG_ERROR("Bad input Uri {}: {}\n", argv[index], uri_res.error());
+  }
+  src_uri = std::move(uri_res.value());
 }
 
 // Get the meta files from a listing
 std::vector<uint64_t>
-FindMetaVersionsLs(
-    const std::unordered_set<std::string>& files, uint32_t remaining_versions) {
+FindMetaVersionsList(
+    const std::vector<std::string>& files, uint32_t remaining_versions) {
   std::vector<uint64_t> versions;
   for (const std::string& file : files) {
     if (auto res = tsuba::internal::ParseVersion(file); res) {
@@ -67,9 +72,9 @@ FindMetaVersionsLs(
     return a > b;
   });
 
-  fmt::print("Keeping versions: ");
+  fmt::print("  Keeping versions: ");
   for (uint32_t i = 0; i < remaining_versions; ++i) {
-    if(i < versions.size()) {
+    if (i < versions.size()) {
       fmt::print("{} ", versions.at(i));
     }
   }
@@ -95,7 +100,7 @@ GetPreviousRDGMeta(const tsuba::RDGMeta& rdg_meta, const galois::Uri& src_uri) {
 // version Vector can have fewer than remaining_versions entries if there aren't
 // that many previous versions.
 std::vector<tsuba::RDGMeta>
-FindVersions(const galois::Uri& src_uri, uint32_t remaining_versions) {
+FindMetaVersionsPtr(const galois::Uri& src_uri, uint32_t remaining_versions) {
   auto make_res = tsuba::RDGMeta::Make(src_uri);
   if (!make_res) {
     GALOIS_LOG_FATAL("Cannot open {}: {}", src_uri, make_res.error());
@@ -119,101 +124,90 @@ FindVersions(const galois::Uri& src_uri, uint32_t remaining_versions) {
   return versions;
 }
 
-void
-RDGFileNames(
-    const galois::Uri rdg_dir, uint64_t version,
-    std::unordered_set<std::string>& fnames) {
-  auto new_fnames_res = tsuba::internal::FileNames(rdg_dir, version);
-  if (!new_fnames_res) {
-    GALOIS_LOG_DEBUG(
-        "Bad tsuba::FileNames {}: {}", rdg_dir, new_fnames_res.error());
-    return;
-  }
-  auto new_fnames = new_fnames_res.value();
-  fnames.insert(new_fnames.begin(), new_fnames.end());
-}
-
 // Collect file names for the given set of graph versions
-std::unordered_set<std::string>
+std::set<std::string>
 GraphFileNames(
-    const galois::Uri& src_uri, const std::vector<tsuba::RDGMeta>& metas) {
-  std::unordered_set<std::string> fnames{};
-  for (const auto& meta : metas) {
-    // src_uri == ...meta_meta.version
-    RDGFileNames(rdg_dir, meta.version_, fnames);
+    const galois::Uri& src_uri, const std::vector<uint64_t>& versions) {
+  std::set<std::string> fnames{};
+  for (const auto& version : versions) {
+    auto new_fnames_res = tsuba::internal::FileNames(src_uri, version);
+    if (!new_fnames_res) {
+      GALOIS_LOG_DEBUG(
+          "Bad tsuba::FileNames {}: {}", src_uri, new_fnames_res.error());
+    }
+    auto new_fnames = new_fnames_res.value();
+    fnames.insert(new_fnames.begin(), new_fnames.end());
   }
   return fnames;
 }
 
 void
-GC(const galois::Uri& src_uri, uint32_t remaining_versions) {
-  auto versions = FindVersions(src_uri, remaining_versions);
-  fmt::print("Keeping versions: ");
-  std::for_each(versions.begin(), versions.end(), [](const auto& e) {
-    fmt::print("{} ", e.version_);
-  });
-  fmt::print("\n");
-
-  auto save_listing = GraphFileNames(src_uri, versions);
-  if (opt_verbose_level > 0) {
-    fmt::print("Keep files: {}\n", save_listing.size());
-    if (opt_verbose_level > 1) {
-      std::for_each(
-          save_listing.begin(), save_listing.end(),
-          [](const auto& e) { fmt::print("{}\n", e); });
-    }
-  }
-}
-
-std::unordered_set<std::string>
-ListDir(const std::string& src_dir) {
+ListDir(
+    const galois::Uri& dir, std::vector<std::string>* listing,
+    std::vector<uint64_t>* size) {
   // collect the entire contents of directory into listing
-  galois::Uri dir = src_uri.DirName();
-  std::unordered_set<std::string> listing;
-  auto list_res = tsuba::FileListAsync(dir.string(), &listing);
+  listing->clear();
+  size->clear();
+  auto list_res = tsuba::FileListAsync(dir.string(), listing, size);
   if (!list_res) {
-    GALOIS_LOG_ERROR("Bad listing: {}: {}", src_dir, list_res.error());
-    return listing;
+    GALOIS_LOG_ERROR("Bad listing: {}: {}", dir, list_res.error());
+    return;
   }
   auto faw = std::move(list_res.value());
   while (faw != nullptr && !faw->Done()) {
     // Get next round of file entries
     if (auto res = (*faw)(); !res) {
-      GALOIS_LOG_DEBUG("Bad nested listing call {}", src_dir);
+      GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);
     }
   }
   if (opt_verbose_level > 0) {
-    fmt::print("All  files: {}\n", listing.size());
+    fmt::print("  All  files: {}\n", listing->size());
     if (opt_verbose_level > 1) {
-      std::for_each(listing.begin(), listing.end(), [](const auto& e) {
+      std::for_each(listing->cbegin(), listing->cend(), [](const auto& e) {
         fmt::print("{}\n", e);
       });
     }
   }
-  return listing;
 }
 
-// Set difference
-std::unordered_set<std::string>
-SetDiff(std::unordered_set<std::string> a, std::unordered_set<std::string> b) {
-  std::unordered_set<std::string> diff;
-  std::copy_if(
-      a.begin(), a.end(), std::inserter(diff, diff.begin()),
-      [&b](std::string list_file) { return b.find(list_file) == b.end(); });
+uint64_t
+FindSize(
+    const std::string& file, const std::vector<std::string>& listing,
+    const std::vector<uint64_t>& size) {
+  auto itr = std::find(listing.begin(), listing.end(), file);
 
-  if (a.size() - b.size() != diff.size()) {
-    GALOIS_LOG_FATAL(
-        "Listing: {} Save: {} sub: {} diff: {} ", a.size(), b.size(),
-        a.size() - b.size(), diff.size());
+  if (itr != listing.cend()) {
+    auto index = std::distance(listing.begin(), itr);
+    return size.at(index);
   }
-  return diff;
+  return UINT64_C(0);
+}
+
+// Sanity check, all saved files should be in listing
+void
+CheckSavedFilesListed(
+    const galois::Uri& src_uri, const std::vector<std::string>& listing,
+    const std::set<std::string>& save_listing) {
+  // Save time with unordered_set
+  // https://medium.com/@gx578007/searching-vector-set-and-unordered-set-6649d1aa7752
+  std::unordered_set<std::string> listing_set(listing.begin(), listing.end());
+  std::for_each(
+      save_listing.begin(), save_listing.end(),
+      [&listing_set, src_uri](std::string save_file) {
+        if (listing_set.find(save_file) == listing_set.cend()) {
+          GALOIS_LOG_FATAL(
+              "Save file not in listing: [{}] {}", src_uri, save_file);
+        }
+      });
 }
 
 void
-GC(const std::string& src_uri, uint32_t remaining_versions) {
+GC(const galois::Uri& src_uri, uint32_t remaining_versions) {
   // collect the entire contents of directory into listing
-  auto listing = ListDir(src_uri);
-  auto versions = FindMetaVersionsLs(listing, remaining_versions);
+  std::vector<std::string> listing;
+  std::vector<uint64_t> size;
+  ListDir(src_uri, &listing, &size);
+  auto versions = FindMetaVersionsList(listing, remaining_versions);
   auto save_listing = GraphFileNames(src_uri, versions);
   if (opt_verbose_level > 0) {
     fmt::print("Keep files: {}\n", save_listing.size());
@@ -224,41 +218,38 @@ GC(const std::string& src_uri, uint32_t remaining_versions) {
     }
   }
 
-  // Sanity check, all saved files should be in listing
-  std::for_each(
-      save_listing.begin(), save_listing.end(),
-      [&listing, src_uri](std::string save_file) {
-        if (listing.find(save_file) == listing.end()) {
-          GALOIS_LOG_FATAL(
-              "Save file not in listing: [{}] {}", src_uri, save_file);
-        }
-      });
+#ifndef NDEBUG
+  CheckSavedFilesListed(src_uri, listing, save_listing);
+#endif
 
-  // Set difference, listing - save_listing
-  std::unordered_set<std::string> diff = SetDiff(listing, save_listing);
+  // Set difference of std::set listing - save_listing into unordered_set diff
+  std::unordered_set<std::string> diff;
+  std::set_difference(
+      listing.begin(), listing.end(), save_listing.begin(), save_listing.end(),
+      std::inserter(diff, diff.begin()));
 
   // If verbose, output size of files we are deleting
-  // This does a lot of calls, so it can be slow
   if (opt_verbose_level > 0) {
-    uint64_t size{UINT64_C(0)};
-    tsuba::StatBuf stat;
+    uint64_t total_size{UINT64_C(0)};
     for (const auto& file : diff) {
-      if (!stat_res) {
-        GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, stat_res.error());
-      } else {
-        size += stat.size;
-      }
+      total_size += FindSize(file, listing, size);
     }
-    auto [scaled_size, units] = BytesToPair(size);
+    auto [scaled_size, units] = BytesToPair(total_size);
     fmt::print(
-        "Deleting: {} files, {:5.1f}{}\n", diff.size(), scaled_size, units);
+        "{}Deleting: {} files, {:5.1f}{}\n", opt_dry ? "DRY " : "", diff.size(),
+        scaled_size, units);
+    if (opt_verbose_level > 1) {
+      std::for_each(diff.begin(), diff.end(), [](const auto& e) {
+        fmt::print("{}\n", e);
+      });
+    }
   } else {
-    fmt::print("Deleting: {} files\n", diff.size());
+    fmt::print("{}Deleting: {} files\n", opt_dry ? "DRY " : "", diff.size());
   }
 
   // If not a dry run, actually delete
   if (!opt_dry) {
-    auto delete_res = tsuba::FileDelete(dir.string(), diff);
+    auto delete_res = tsuba::FileDelete(src_uri.string(), diff);
     if (!delete_res) {
       GALOIS_LOG_DEBUG("Bad GC delete {}: {}", src_uri, delete_res.error());
     }
@@ -273,18 +264,13 @@ main(int argc, char* argv[]) {
   parse_arguments(argc, argv);
 
   if (opt_dry) {
-    fmt::print("DRY gc count {:d}: {}\n", remaining_versions, src_uri);
+    fmt::print(
+        "DRY gc keep {:d} versions from: {}\n", remaining_versions, src_uri);
   } else {
-    fmt::print("gc count {:d}: {}\n", remaining_versions, src_uri);
+    fmt::print("gc keep {:d} versions from: {}\n", remaining_versions, src_uri);
   }
 
-  auto uri_res = galois::Uri::Make(src_uri);
-  if (!uri_res) {
-    GALOIS_LOG_FATAL(
-        "does not look like a uri ({}): {}", src_uri, uri_res.error());
-  }
-  galois::Uri uri = std::move(uri_res.value());
-  GC(uri, remaining_versions);
+  GC(src_uri, remaining_versions);
 
   return 0;
 }

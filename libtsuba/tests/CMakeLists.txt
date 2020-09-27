@@ -37,12 +37,6 @@ target_link_libraries(tsuba_fault tsuba)
 add_executable(tsuba_fault_runner tsuba_fault_runner.cpp)
 target_link_libraries(tsuba_fault_runner tsuba)
 
-if(GALOIS_ENABLE_DIST)
-  add_executable(tsuba_dist_write tsuba_dist_write.cpp)
-  target_link_libraries(tsuba_dist_write tsuba)
-  target_link_libraries(tsuba_dist_write MPI::MPI_CXX)
-endif()
-
 add_executable(unit-fileobjects fileobjects.cpp)
 target_link_libraries(unit-fileobjects tsuba)
 add_test(NAME unit-fileobjects COMMAND unit-fileobjects)

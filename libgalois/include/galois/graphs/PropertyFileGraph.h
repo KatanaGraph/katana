@@ -7,6 +7,7 @@
 
 #include <arrow/api.h>
 
+#include "galois/ErrorCode.h"
 #include "galois/Properties.h"
 #include "galois/config.h"
 #include "tsuba/RDG.h"
@@ -48,8 +49,10 @@ class GALOIS_EXPORT PropertyFileGraph {
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
 
-  Result<void> DoWrite(tsuba::RDGHandle handle);
-  Result<void> WriteGraph(std::string uri);
+  Result<void> DoWrite(
+      tsuba::RDGHandle handle, const std::string& command_line);
+  Result<void> WriteGraph(
+      const std::string& uri, const std::string& command_line);
 
   /// ExtractArrays returns the array for each column of a table. It returns an
   /// error if there is more than one array for any column.
@@ -125,32 +128,45 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
-  const tsuba::PartitionMetadata* partition_metadata() {
-    return rdg_.part_metadata_.get();
+  const tsuba::PartitionMetadata& partition_metadata() {
+    return rdg_.part_metadata_;
   }
 
-  Result<void> set_partition_metadata(
-      std::unique_ptr<tsuba::PartitionMetadata> meta) {
-    rdg_.part_metadata_ = std::move(meta);
-    return galois::ResultSuccess();
+  Result<void> set_partition_metadata(const tsuba::PartitionMetadata& meta) {
+    if (rdg_.part_metadata_.state ==
+        tsuba::PartitionMetadata::State::kUninitialized) {
+      rdg_.part_metadata_ = std::move(meta);
+    } else {
+      GALOIS_LOG_ERROR(
+          "Repartitioning is not yet supported state {} num_nodes: {}",
+          rdg_.part_metadata_.state, rdg_.part_metadata_.num_nodes_);
+      return ErrorCode::NotImplemented;
+    }
+
+    return ResultSuccess();
   }
 
   /// Write the property graph to the given RDG name.
   ///
   /// \returns io_error if, for instance, a file already exists
-  Result<void> Write(const std::string& rdg_name);
+  Result<void> Write(
+      const std::string& rdg_name, const std::string& command_line);
 
   /// Write updates to the property graph
   ///
-  /// Like \ref Write(const std::string&) but overwrite location graph was read
-  /// from (always an overwrite)
-  Result<void> Commit();
+  /// Like \ref Write(const std::string&, const std::string&) but update
+  /// the original read location of the graph
+  Result<void> Commit(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path) {
+    if (!rdg_.rdg_dir_.empty()) {
+      GALOIS_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir_, input_path);
+    }
     auto uri_res = galois::Uri::Make(input_path);
     if (!uri_res) {
       return uri_res.error();
     }
+
     rdg_.rdg_dir_ = uri_res.value();
     return ResultSuccess();
   }

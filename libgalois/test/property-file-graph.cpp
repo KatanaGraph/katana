@@ -8,6 +8,7 @@
 #include "tsuba/tsuba.h"
 
 namespace fs = boost::filesystem;
+std::string command_line;
 
 template <typename T>
 std::shared_ptr<arrow::Table>
@@ -46,7 +47,7 @@ TestRoundTrip() {
 
   std::string rdg_file{temp_dir};
 
-  auto write_result = g->Write(rdg_file);
+  auto write_result = g->Write(rdg_file, command_line);
 
   GALOIS_LOG_WARN("creating temp file {}", rdg_file);
 
@@ -120,10 +121,18 @@ TestGarbageMetadata() {
 }
 
 int
-main() {
+main(int argc, char** argv) {
   if (auto res = tsuba::Init(); !res) {
     GALOIS_LOG_FATAL("libtsuba failed to init");
   }
+  std::ostringstream cmdout;
+  for (int i = 0; i < argc; ++i) {
+    cmdout << argv[i];
+    if (i != argc - 1)
+      cmdout << " ";
+  }
+  command_line = cmdout.str();
+
   TestRoundTrip();
   TestGarbageMetadata();
   if (auto res = tsuba::Fini(); !res) {

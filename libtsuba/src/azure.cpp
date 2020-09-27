@@ -197,7 +197,7 @@ tsuba::AzurePutAsync(
 galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 tsuba::AzureListAsync(
     const std::string& container, const std::string& blob,
-    std::unordered_set<std::string>* list) {
+    std::vector<std::string>* list, std::vector<uint64_t>* size) {
   auto future = std::async([=]() -> galois::Result<void> {
     auto client_res = GetClient();
     if (!client_res) {
@@ -222,7 +222,10 @@ tsuba::AzureListAsync(
         assert(begin == 0);
         assert(short_name[blob.length()] == '/');
         short_name.erase(begin, blob.length() + 1);
-        list->emplace(short_name);
+        list->emplace_back(short_name);
+        if (size) {
+          size->emplace_back(item.content_length);
+        }
       }
       token = response.next_marker;
     } while (!token.empty());

@@ -63,7 +63,8 @@ public:
     return nullptr;
   }
   galois::Result<std::unique_ptr<FileAsyncWork>> ListAsync(
-      const std::string& uri, std::unordered_set<std::string>* list) override;
+      const std::string& uri, std::vector<std::string>* list,
+      std::vector<uint64_t>* size) override;
 
   galois::Result<void> Delete(
       const std::string& directory,

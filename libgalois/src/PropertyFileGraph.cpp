@@ -181,16 +181,17 @@ galois::graphs::PropertyFileGraph::Validate() {
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::DoWrite(tsuba::RDGHandle handle) {
+galois::graphs::PropertyFileGraph::DoWrite(
+    tsuba::RDGHandle handle, const std::string& command_line) {
   if (!rdg_.topology_file_storage_.Valid()) {
     auto result = WriteTopology(topology_);
     if (!result) {
       return result.error();
     }
-    return rdg_.Store(handle, result.value().get());
+    return rdg_.Store(handle, command_line, result.value().get());
   }
 
-  return rdg_.Store(handle);
+  return rdg_.Store(handle, command_line);
 }
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
@@ -238,14 +239,15 @@ galois::graphs::PropertyFileGraph::Make(
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::WriteGraph(std::string uri) {
+galois::graphs::PropertyFileGraph::WriteGraph(
+    const std::string& uri, const std::string& command_line) {
   auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
   auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
-  if (auto res = DoWrite(*new_file); !res) {
+  if (auto res = DoWrite(*new_file, command_line); !res) {
     return res.error();
   }
 
@@ -255,23 +257,24 @@ galois::graphs::PropertyFileGraph::WriteGraph(std::string uri) {
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::Commit() {
+galois::graphs::PropertyFileGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
     if (rdg_.rdg_dir_.empty()) {
       GALOIS_LOG_ERROR("RDG commit but rdg_dir_ is empty");
       return ErrorCode::InvalidArgument;
     }
-    return WriteGraph(rdg_.rdg_dir_.string());
+    return WriteGraph(rdg_.rdg_dir_.string(), command_line);
   }
-  return DoWrite(*file_);
+  return DoWrite(*file_, command_line);
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::Write(const std::string& rdg_name) {
+galois::graphs::PropertyFileGraph::Write(
+    const std::string& rdg_name, const std::string& command_line) {
   if (auto res = tsuba::Create(rdg_name); !res) {
     return res.error();
   }
-  return WriteGraph(rdg_name);
+  return WriteGraph(rdg_name, command_line);
 }
 
 galois::Result<void>

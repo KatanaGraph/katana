@@ -34,8 +34,8 @@ public:
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override;
   galois::Result<std::unique_ptr<tsuba::FileAsyncWork>> ListAsync(
-      const std::string& directory,
-      std::unordered_set<std::string>* list) override;
+      const std::string& directory, std::vector<std::string>* list,
+      std::vector<uint64_t>* size) override;
   galois::Result<void> Delete(
       const std::string& directory,
       const std::unordered_set<std::string>& files) override;

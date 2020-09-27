@@ -116,12 +116,14 @@ LocalStorage::Create(const std::string& uri, bool overwrite) {
 // Current implementation is not async
 galois::Result<std::unique_ptr<FileAsyncWork>>
 LocalStorage::ListAsync(
-    const std::string& uri, std::unordered_set<std::string>* list) {
+    const std::string& uri, std::vector<std::string>* list,
+    std::vector<uint64_t>* size) {
   // Implement with synchronous calls
   DIR* dirp;
   struct dirent* dp;
   std::string dirname = uri;
   CleanUri(&dirname);
+
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
@@ -133,13 +135,25 @@ LocalStorage::ListAsync(
     return galois::ResultErrno();
   }
 
+  int dfd = dirfd(dirp);
+  struct stat stat_buf;
   do {
     errno = 0;
     if ((dp = readdir(dirp)) != nullptr) {
       // I am filtering "." and ".." from local listing because I can't see how
       // to filter in clients in a reasonable way.
       if (strcmp(".", dp->d_name) && strcmp("..", dp->d_name)) {
-        list->emplace(dp->d_name);
+        list->emplace_back(dp->d_name);
+        if (size) {
+          if (fstatat(dfd, dp->d_name, &stat_buf, 0) == 0) {
+            size->emplace_back(stat_buf.st_size);
+          } else {
+            size->emplace_back(0UL);
+            GALOIS_LOG_DEBUG(
+                "dir file stat failed dir: {} file: {} : {}", dirname,
+                dp->d_name, galois::ResultErrno().message());
+          }
+        }
       }
     }
   } while (dp != nullptr);

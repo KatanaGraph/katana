@@ -67,7 +67,7 @@ DoCopy(const std::string& s3_pg_in, const std::string& s3_pg_out) {
   }
   auto out_handle = out_handle_res.value();
 
-  if (auto res = in_rdg.Store(out_handle); !res) {
+  if (auto res = in_rdg.Store(out_handle, "s3_pg_basics"); !res) {
     GALOIS_LOG_FATAL("Store local rdg: {}", res.error());
   }
 
@@ -104,6 +104,10 @@ main() {
 
   GALOIS_LOG_ASSERT(s3_pg_inputs.size() == s3_pg_outputs.size());
   for (auto i = 0U; i < s3_pg_inputs.size(); ++i) {
+    if (system(fmt::format("aws s3 rm --recursive {}", s3_pg_outputs[i])
+                   .c_str()) != 0) {
+      fmt::print("Problem running aws s3 rm --recursive {}", s3_pg_outputs[i]);
+    }
     fmt::print("Copy {}\n  to {}\n", s3_pg_inputs[i], s3_pg_outputs[i]);
     CopyVerify(s3_pg_inputs[i], s3_pg_outputs[i]);
   }

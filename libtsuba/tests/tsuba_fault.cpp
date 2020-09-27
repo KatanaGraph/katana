@@ -305,7 +305,7 @@ OpenUpdateStore(const std::string& pg_in, uint32_t count) {
   for (auto i = 0U; i < count; ++i) {
     ValidateGraph(rdg);
     MutateGraph(rdg);
-    if (auto res = rdg.Store(handle); !res) {
+    if (auto res = rdg.Store(handle, "tsuba_fault"); !res) {
       GALOIS_LOG_FATAL("Store local rdg: {}", res.error());
     }
   }

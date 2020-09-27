@@ -126,13 +126,14 @@ AzureStorage::GetAsync(
 
 galois::Result<std::unique_ptr<FileAsyncWork>>
 AzureStorage::ListAsync(
-    const std::string& directory, std::unordered_set<std::string>* list) {
+    const std::string& directory, std::vector<std::string>* list,
+    std::vector<uint64_t>* size) {
   auto uri_res = CleanUri(std::string(directory));
   if (!uri_res) {
     return uri_res.error();
   }
   auto [container, blob] = std::move(uri_res.value());
-  return AzureListAsync(container, blob, list);
+  return AzureListAsync(container, blob, list, size);
 }
 
 galois::Result<void>

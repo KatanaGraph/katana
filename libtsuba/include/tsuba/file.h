@@ -58,12 +58,14 @@ FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 /// Async return type allows this function to be called repeatedly (and
 /// synchronously)
 /// \param list is populated with the files found
+/// \param size is populated with the size of the corresponding file
 ///
 /// \return Async work object; files will be in `list` after this object
 /// reports done (or immediately if nullptr is returned)
 GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
 FileListAsync(
-    const std::string& directory, std::unordered_set<std::string>* list);
+    const std::string& directory, std::vector<std::string>* list,
+    std::vector<uint64_t>* size = nullptr);
 
 /// Delete a set of files in a directory
 /// \param directory is a base URI

@@ -71,7 +71,7 @@ TxBnc(const std::string& src_uri, int count) {
 
   start = now();
   for (auto i = 0; i < count; ++i) {
-    if (auto res = rdg.Store(handle); !res) {
+    if (auto res = rdg.Store(handle, "TxBnc"); !res) {
       GALOIS_LOG_FATAL("Store rdg: {}", res.error());
     }
   }

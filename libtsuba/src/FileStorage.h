@@ -52,7 +52,8 @@ public:
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
   virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>> ListAsync(
-      const std::string& directory, std::unordered_set<std::string>* list) = 0;
+      const std::string& directory, std::vector<std::string>* list,
+      std::vector<uint64_t>* size) = 0;
   virtual galois::Result<void> Delete(
       const std::string& directory,
       const std::unordered_set<std::string>& files) = 0;

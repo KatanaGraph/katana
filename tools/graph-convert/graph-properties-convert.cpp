@@ -1797,7 +1797,8 @@ galois::WritePropertyGraph(
   } else {
     meta_file += "/meta";
   }
-  auto result = prop_graph.Write(meta_file);
+
+  auto result = prop_graph.Write(meta_file, "graph-properties-convert");
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs: {}", result.error());
   }

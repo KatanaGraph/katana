@@ -36,7 +36,7 @@ galois::Result<std::unique_ptr<FileAsyncWork>> AzurePutAsync(
 
 galois::Result<std::unique_ptr<FileAsyncWork>> AzureListAsync(
     const std::string& container, const std::string& blob,
-    std::unordered_set<std::string>* list);
+    std::vector<std::string>* list, std::vector<uint64_t>* size);
 
 galois::Result<void> AzureDelete(
     const std::string& container, const std::string& blob,

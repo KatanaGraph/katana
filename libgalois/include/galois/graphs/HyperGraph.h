@@ -24,152 +24,157 @@
 #include "galois/graphs/LC_CSR_Graph.h"
 
 namespace galois::graphs {
-  class MetisNode;
-  class HyperGraph
-      : public galois::graphs::LC_CSR_Graph<MetisNode, void>::with_no_lockable<
-            true>::type::with_numa_alloc<true>::type {
-  private:
-    uint32_t hedges_;
-    uint32_t hnodes_;
-  public:
-    uint32_t GetHedges() { return hedges_; }
-    void SetHedges(uint32_t hedges) { hedges_ = hedges; }
+class MetisNode;
+class HyperGraph
+    : public galois::graphs::LC_CSR_Graph<MetisNode, void>::with_no_lockable<
+          true>::type::with_numa_alloc<true>::type {
+private:
+  uint32_t hedges_;
+  uint32_t hnodes_;
 
-    uint32_t GetHnodes() { return hnodes_; }
-    void SetHnodes(uint32_t hnodes) { hnodes_ = hnodes; }
-  };
+public:
+  uint32_t GetHedges() { return hedges_; }
+  void SetHedges(uint32_t hedges) { hedges_ = hedges; }
 
-  using GNode = HyperGraph::GraphNode;
+  uint32_t GetHnodes() { return hnodes_; }
+  void SetHnodes(uint32_t hnodes) { hnodes_ = hnodes; }
+};
 
-  // Nodes in the metis graph.
-  class MetisNode {
-  public:
-    using GainTy = int;
-    using NetvalTy = int;
-    using NetnumTy = uint32_t;
-    using WeightTy = uint32_t;
+using GNode = HyperGraph::GraphNode;
 
-    inline galois::CopyableAtomic<GainTy>& GetPositiveGain() { return positive_gain_; }
-    inline void SetPositiveGain(GainTy pg) { positive_gain_ = pg; }
+// Nodes in the metis graph.
+class MetisNode {
+public:
+  using GainTy = int;
+  using NetvalTy = int;
+  using NetnumTy = uint32_t;
+  using WeightTy = uint32_t;
 
-    galois::CopyableAtomic<GainTy>& GetNegativeGain() { return negative_gain_; }
-    void SetNegativeGain(GainTy ng) { negative_gain_ = ng; }
+  inline galois::CopyableAtomic<GainTy>& GetPositiveGain() {
+    return positive_gain_;
+  }
+  inline void SetPositiveGain(GainTy pg) { positive_gain_ = pg; }
 
-    inline galois::CopyableAtomic<NetvalTy>& GetNetrand() { return netrand_; }
-    inline void SetNetrand(NetvalTy nr) { netrand_ = nr; }
+  galois::CopyableAtomic<GainTy>& GetNegativeGain() { return negative_gain_; }
+  void SetNegativeGain(GainTy ng) { negative_gain_ = ng; }
 
-    inline galois::CopyableAtomic<NetvalTy>& GetNetval() { return netval_; }
-    inline void SetNetval(NetvalTy nv) { netval_ = nv; }
+  inline galois::CopyableAtomic<NetvalTy>& GetNetrand() { return netrand_; }
+  inline void SetNetrand(NetvalTy nr) { netrand_ = nr; }
 
-    inline galois::CopyableAtomic<NetnumTy>& GetNetnum() { return netnum_; }
-    inline void SetNetnum(NetnumTy nn) { netnum_ = nn; }
+  inline galois::CopyableAtomic<NetvalTy>& GetNetval() { return netval_; }
+  inline void SetNetval(NetvalTy nv) { netval_ = nv; }
 
-    inline galois::CopyableAtomic<uint32_t>& GetDegree() { return degree_; }
-    inline void SetDegree(uint32_t dg) { degree_ = dg; }
+  inline galois::CopyableAtomic<NetnumTy>& GetNetnum() { return netnum_; }
+  inline void SetNetnum(NetnumTy nn) { netnum_ = nn; }
 
-    inline GNode GetChildId() const { return child_id_; }
-    inline void SetChildId(GNode ci) { child_id_ = ci; }
+  inline galois::CopyableAtomic<uint32_t>& GetDegree() { return degree_; }
+  inline void SetDegree(uint32_t dg) { degree_ = dg; }
 
-    inline uint32_t GetGraphIndex() const { return graph_index_; }
-    inline void SetGraphIndex(uint32_t gi) { graph_index_ = gi; }
+  inline GNode GetChildId() const { return child_id_; }
+  inline void SetChildId(GNode ci) { child_id_ = ci; }
 
-    inline uint32_t GetListIndex() const { return list_index_; }
-    inline void SetListIndex(uint32_t li) { list_index_ = li; }
+  inline uint32_t GetGraphIndex() const { return graph_index_; }
+  inline void SetGraphIndex(uint32_t gi) { graph_index_ = gi; }
 
-    inline GNode GetNodeId() const { return node_id_; }
-    inline void SetNodeId(GNode nid) { node_id_ = nid; }
+  inline uint32_t GetListIndex() const { return list_index_; }
+  inline void SetListIndex(uint32_t li) { list_index_ = li; }
 
-    inline WeightTy GetWeight() const { return weight_; }
-    inline void SetWeight(WeightTy w) { weight_ = w; }
+  inline GNode GetNodeId() const { return node_id_; }
+  inline void SetNodeId(GNode nid) { node_id_ = nid; }
 
-    inline GNode GetParent() const { return parent_; }
-    inline void SetParent(GNode p) { parent_ = p; }
+  inline WeightTy GetWeight() const { return weight_; }
+  inline void SetWeight(WeightTy w) { weight_ = w; }
 
-    inline GainTy GetGain() {
-      return (positive_gain_ - (negative_gain_ + counter_));
-    }
+  inline GNode GetParent() const { return parent_; }
+  inline void SetParent(GNode p) { parent_ = p; }
 
-    inline void SetMatched() { matched_ = true; }
-    inline void UnsetMatched() { matched_ = false; }
-    inline bool IsMatched() const { return matched_; }
+  inline GainTy GetGain() {
+    return (positive_gain_ - (negative_gain_ + counter_));
+  }
 
-    inline uint32_t GetPartition() const { return partition_; }
-    inline void SetPartition(uint32_t p) { partition_ = p; }
+  inline void SetMatched() { matched_ = true; }
+  inline void UnsetMatched() { matched_ = false; }
+  inline bool IsMatched() const { return matched_; }
 
-    inline bool IsNotAlone() { return not_alone_; }
-    inline void SetNotAlone() { not_alone_ = true; }
-    inline void UnsetNotAlone() { not_alone_ = false; }
+  inline uint32_t GetPartition() const { return partition_; }
+  inline void SetPartition(uint32_t p) { partition_ = p; }
 
-    inline uint32_t GetCounter() const { return counter_; }
-    inline void ResetCounter() { counter_ = 0; }
-    inline void IncCounter() { counter_++; }
+  inline bool IsNotAlone() { return not_alone_; }
+  inline void SetNotAlone() { not_alone_ = true; }
+  inline void UnsetNotAlone() { not_alone_ = false; }
 
-    explicit MetisNode(WeightTy weight) : weight_(weight) {
-      InitCoarsen();
-      counter_ = 0;
-      partition_ = 0;
-    }
+  inline uint32_t GetCounter() const { return counter_; }
+  inline void ResetCounter() { counter_ = 0; }
+  inline void IncCounter() { counter_++; }
 
-    MetisNode() : weight_(1) {
-      InitCoarsen();
-      counter_ = 0;
-      partition_ = 0;
-      matched_ = false;
-    }
+  explicit MetisNode(WeightTy weight) : weight_(weight) {
+    InitCoarsen();
+    counter_ = 0;
+    partition_ = 0;
+  }
 
-    void InitRefine(uint32_t p = 0) {
-      partition_ = p;
-      counter_ = 0;
-    }
-  private:
-    uint32_t partition_;
-    GNode parent_;
-    GNode node_id_;
-    GNode child_id_;
-    uint32_t graph_index_;
-    uint32_t counter_;
-    uint32_t list_index_;
+  MetisNode() : weight_(1) {
+    InitCoarsen();
+    counter_ = 0;
+    partition_ = 0;
+    matched_ = false;
+  }
 
-    bool not_alone_;
-    bool matched_;
+  void InitRefine(uint32_t p = 0) {
+    partition_ = p;
+    counter_ = 0;
+  }
 
-    WeightTy weight_;
-    galois::CopyableAtomic<GainTy> positive_gain_;
-    galois::CopyableAtomic<GainTy> negative_gain_;
-    galois::CopyableAtomic<uint32_t> degree_;
-    // Net-val and -rand have the same type.
-    galois::CopyableAtomic<NetvalTy> netrand_;
-    galois::CopyableAtomic<NetvalTy> netval_;
-    galois::CopyableAtomic<NetnumTy> netnum_;
+private:
+  uint32_t partition_;
+  GNode parent_;
+  GNode node_id_;
+  GNode child_id_;
+  uint32_t graph_index_;
+  uint32_t counter_;
+  uint32_t list_index_;
 
-    void InitCoarsen() {
-      matched_ = false;
-      parent_ = 0;
-      netval_ = 0;
-    }
-  }; /* Metis Node Done. */
+  bool not_alone_;
+  bool matched_;
 
-  // Structure to keep track of graph hirarchy.
-  class MetisGraph {
-  public:
-    MetisGraph() : coarsened_graph_(nullptr), parent_graph_(nullptr) {}
+  WeightTy weight_;
+  galois::CopyableAtomic<GainTy> positive_gain_;
+  galois::CopyableAtomic<GainTy> negative_gain_;
+  galois::CopyableAtomic<uint32_t> degree_;
+  // Net-val and -rand have the same type.
+  galois::CopyableAtomic<NetvalTy> netrand_;
+  galois::CopyableAtomic<NetvalTy> netval_;
+  galois::CopyableAtomic<NetnumTy> netnum_;
 
-    explicit MetisGraph(MetisGraph* fg)
-        : coarsened_graph_(nullptr), parent_graph_(fg) {
-      parent_graph_->coarsened_graph_ = this;
-    }
+  void InitCoarsen() {
+    matched_ = false;
+    parent_ = 0;
+    netval_ = 0;
+  }
+}; /* Metis Node Done. */
 
-    const HyperGraph* GetHyperGraph() const { return &graph_; }
-    HyperGraph* GetHyperGraph() { return &graph_; }
-    MetisGraph* GetParentGraph() const { return parent_graph_; }
-    MetisGraph* GetCoarsenedGraph() const { return coarsened_graph_; }
-  private:
-    // Coarse root: leaf.
-    MetisGraph* coarsened_graph_;
-    MetisGraph* parent_graph_;
+// Structure to keep track of graph hirarchy.
+class MetisGraph {
+public:
+  MetisGraph() : coarsened_graph_(nullptr), parent_graph_(nullptr) {}
 
-    HyperGraph graph_;
-  };
+  explicit MetisGraph(MetisGraph* fg)
+      : coarsened_graph_(nullptr), parent_graph_(fg) {
+    parent_graph_->coarsened_graph_ = this;
+  }
+
+  const HyperGraph* GetHyperGraph() const { return &graph_; }
+  HyperGraph* GetHyperGraph() { return &graph_; }
+  MetisGraph* GetParentGraph() const { return parent_graph_; }
+  MetisGraph* GetCoarsenedGraph() const { return coarsened_graph_; }
+
+private:
+  // Coarse root: leaf.
+  MetisGraph* coarsened_graph_;
+  MetisGraph* parent_graph_;
+
+  HyperGraph graph_;
+};
 
 }  // namespace galois::graphs
 

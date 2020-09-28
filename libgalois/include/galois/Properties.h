@@ -78,6 +78,10 @@ using PropertyArrowArrayType =
 template <typename Prop>
 using PropertyReferenceType = typename PropertyViewType<Prop>::reference;
 
+template <typename Prop>
+using PropertyConstReferenceType =
+    typename PropertyViewType<Prop>::const_reference;
+
 namespace internal {
 
 template <typename>

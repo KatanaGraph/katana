@@ -58,7 +58,7 @@ public:
 
   galois::Result<void> Init(uint64_t reserve_size);
   galois::Result<void> Init() { return Init(1); }
-  void Bind(const std::string& filename);
+  void Bind(std::string_view filename);
 
   galois::Result<void> Destroy();
 

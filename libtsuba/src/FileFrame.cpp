@@ -50,7 +50,7 @@ FileFrame::Init(uint64_t reserved_size) {
 }
 
 void
-FileFrame::Bind(const std::string& filename) {
+FileFrame::Bind(std::string_view filename) {
   path_ = filename;
 }
 

@@ -14,6 +14,7 @@ namespace galois {
 class GALOIS_EXPORT Uri {
   std::string scheme_;
   std::string path_;
+  std::string string_;
 
   Uri(std::string scheme, std::string path);
 
@@ -25,32 +26,20 @@ public:
   static Result<Uri> Make(const std::string& str);
   static Result<Uri> MakeFromFile(const std::string& str);
 
-  std::string Encode() const {
-    return fmt::format("backend-{}/{}", scheme_, path_);
-  }
+  /// Return the base64 (url variant) encoded version of this uri
+  std::string Encode() const;
 
-  std::string_view scheme() const { return scheme_; }
-  std::string_view path() const { return path_; }
+  const std::string& scheme() const { return scheme_; }
+  const std::string& path() const { return path_; }
+  const std::string& string() const { return string_; }
 
-  std::string string() const {
-    if (empty()) {
-      return "";
-    }
-    return scheme_ + "://" + path_;
-  }
-
-  bool empty() const {
-    if (scheme_.empty()) {
-      assert(path_.empty());
-      return true;
-    }
-    return false;
-  }
+  bool empty() const;
 
   // it's convenient to treat URIs like paths sometimes
   Uri DirName() const;
   std::string BaseName() const;
   Uri Append(std::string_view to_append) const;
+
   /// generate a new uri that is this uri with `prefix-XXXXX` appended where
   /// XXXX is a random alpha numeric string
   Uri RandFile(std::string_view prefix) const;

@@ -59,9 +59,10 @@ FileView::Unbind() {
 
 galois::Result<void>
 FileView::Bind(
-    const std::string& filename, uint64_t begin, uint64_t end, bool resolve) {
+    std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
-  if (auto res = FileStat(filename, &buf); !res) {
+  filename_ = filename;
+  if (auto res = FileStat(filename_, &buf); !res) {
     return res.error();
   }
   uint64_t in_end = std::min<uint64_t>(end, static_cast<uint64_t>(buf.size));
@@ -75,7 +76,6 @@ FileView::Bind(
   // size, type of backing storage, etc. So make it a class member and set it
   // here.
   page_shift_ = 20; /* 1M */
-  filename_ = filename;
   void* tmp = nullptr;
 
   // Map enough virtual memory to hold entire file, but do not populate it

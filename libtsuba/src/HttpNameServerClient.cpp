@@ -64,12 +64,17 @@ galois::Result<void>
 HttpNameServerClient::Create(const galois::Uri& rdg_name, const RDGMeta& meta) {
   // TODO(thunt) we check ID here because MemoryNameServer needs to be able to
   // store separate copies on all hosts for testing (fix it)
+  galois::Result<void> res = galois::ResultSuccess();
   if (Comm()->ID == 0) {
     auto uri_res = BuildUrl(rdg_name);
-    if (!uri_res) {
-      return uri_res.error();
+    if (uri_res) {
+      res = galois::HttpPostJson(uri_res.value(), meta);
+    } else {
+      res = uri_res.error();
     }
-    return galois::HttpPostJson(uri_res.value(), meta);
+  }
+  if (!res) {
+    Comm()->NotifyFailure();
   }
   return galois::ResultSuccess();
 }
@@ -79,15 +84,20 @@ HttpNameServerClient::Update(
     const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   // TODO(thunt) we check ID here because MemoryNameServer needs to be able to
   // store separate copies on all hosts for testing (fix it)
+  galois::Result<void> res = galois::ResultSuccess();
   if (Comm()->ID == 0) {
     auto uri_res = BuildUrl(rdg_name);
-    if (!uri_res) {
-      return uri_res.error();
+    if (uri_res) {
+      auto query_string = fmt::format("?expected-version={}", old_version);
+      res = galois::HttpPutJson(uri_res.value() + query_string, meta);
+    } else {
+      res = uri_res.error();
     }
-    auto query_string = fmt::format("?expected-version={}", old_version);
-    return galois::HttpPutJson(uri_res.value() + query_string, meta);
   }
-  return galois::ResultSuccess();
+  if (!res) {
+    Comm()->NotifyFailure();
+  }
+  return res;
 }
 
 galois::Result<std::unique_ptr<NameServerClient>>

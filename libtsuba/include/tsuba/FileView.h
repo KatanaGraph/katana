@@ -81,12 +81,12 @@ public:
   /// reads internally, but if you intend to use ptr(), you should pass
   /// resolve=true.
   galois::Result<void> Bind(
-      const std::string& filename, uint64_t begin, uint64_t end, bool resolve);
+      std::string_view filename, uint64_t begin, uint64_t end, bool resolve);
   galois::Result<void> Bind(
-      const std::string& filename, uint64_t stop, bool resolve) {
+      std::string_view filename, uint64_t stop, bool resolve) {
     return Bind(filename, 0, stop, resolve);
   }
-  galois::Result<void> Bind(const std::string& filename, bool resolve) {
+  galois::Result<void> Bind(std::string_view filename, bool resolve) {
     return Bind(filename, 0, std::numeric_limits<uint64_t>::max(), resolve);
   }
 

@@ -56,14 +56,11 @@ cdef class PropertyGraph:
             self.underlying = handle_result_value(
                 PropertyFileGraph.Make(bytes(path, "utf-8")))
 
-    def write(self, path=None):
+    def write(self, path, command_line) :
         """
-        Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided).
+        Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided). Provide lineage information in the form of a command line.
         """
-        if path:
-            handle_result(self.underlying.get().Write(bytes(path, "utf-8")))
-        else:
-            handle_result(self.underlying.get().Commit())
+        handle_result(self.underlying.get().Write(bytes(path, "utf-8"), bytes(command_line, "utf-8")))
 
     cdef GraphTopology topology(self):
         return self.underlying.get().topology()

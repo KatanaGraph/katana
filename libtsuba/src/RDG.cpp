@@ -1111,6 +1111,7 @@ RDG::WriteMetadataJson(RDGHandle handle) const {
   if (!meta_res) {
     return meta_res.error();
   }
+
   auto map_s = meta_res.value();
   TSUBA_PTP(internal::FaultSensitivity::Normal);
   auto curr_res = tsuba::FileStore(

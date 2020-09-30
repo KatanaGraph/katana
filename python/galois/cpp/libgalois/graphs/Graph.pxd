@@ -114,8 +114,8 @@ cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
         @staticmethod
         std_result[unique_ptr[PropertyFileGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
 
-        std_result[void] Write(string path)
-        std_result[void] Commit()
+        std_result[void] Write(string path, string command_line)
+        std_result[void] Commit(string command_line)
 
         GraphTopology& topology()
 

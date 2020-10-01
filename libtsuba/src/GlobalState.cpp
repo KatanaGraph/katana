@@ -128,3 +128,19 @@ tsuba::NameServerClient*
 tsuba::NS() {
   return GlobalState::Get().NS();
 }
+
+galois::Result<void>
+tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
+  bool failed = false;
+  if (Comm()->ID == 0) {
+    auto res = cb();
+    if (!res) {
+      GALOIS_LOG_ERROR("OneHostOnly operation failed: {}", res.error());
+      failed = true;
+    }
+  }
+  if (Comm()->Broadcast(0, failed)) {
+    return ErrorCode::MpiError;
+  }
+  return galois::ResultSuccess();
+}

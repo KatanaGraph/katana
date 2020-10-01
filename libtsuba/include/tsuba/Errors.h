@@ -24,6 +24,7 @@ enum class ErrorCode {
   LocalStorageError = 12,
   NoCredentials = 13,
   AzureError = 14,
+  MpiError = 15,
   BadVersion = 16,
 };
 
@@ -67,6 +68,8 @@ public:
       return "Azure error";
     case ErrorCode::BadVersion:
       return "previous version expectation violated";
+    case ErrorCode::MpiError:
+      return "some MPI process reported an error";
     default:
       return "unknown error";
     }
@@ -90,6 +93,7 @@ public:
     case ErrorCode::S3Error:
     case ErrorCode::LocalStorageError:
     case ErrorCode::AzureError:
+    case ErrorCode::MpiError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

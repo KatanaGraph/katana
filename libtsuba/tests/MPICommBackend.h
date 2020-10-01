@@ -53,6 +53,14 @@ struct MPICommBackend : public galois::CommBackend {
       GALOIS_LOG_FATAL("MPI_Abort failed");
     }
   }
+
+  bool Broadcast(uint32_t root, bool val) override {
+    int val_buf = static_cast<int>(val);
+    if (MPI_Bcast(&val_buf, 1, MPI_INT, root, MPI_COMM_WORLD) != 0) {
+      GALOIS_LOG_FATAL("MPI_Bcast failed");
+    }
+    return static_cast<bool>(val_buf);
+  }
 };
 
 static tsuba::MPICommBackend test_backend{};

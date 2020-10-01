@@ -7,6 +7,7 @@
 #include "FileStorage.h"
 #include "galois/CommBackend.h"
 #include "galois/Logging.h"
+#include "galois/Result.h"
 #include "tsuba/NameServerClient.h"
 
 namespace tsuba {
@@ -62,6 +63,11 @@ public:
 galois::CommBackend* Comm();
 FileStorage* FS(std::string_view uri);
 NameServerClient* NS();
+
+/// Execute cb on one host, if it succeeds return success if not print
+/// the error and return MpiError
+galois::Result<void> OneHostOnly(
+    const std::function<galois::Result<void>()>& cb);
 
 }  // namespace tsuba
 

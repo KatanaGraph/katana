@@ -720,7 +720,6 @@ CommitRDG(
   tsuba::RDGMeta new_meta(
       handle.impl_->rdg_meta.version_ + 1, handle.impl_->rdg_meta.version_,
       comm->Num, policy_id, transposed, handle.impl_->rdg_meta.dir_, lineage);
-  galois::Result<void> ret = galois::ResultSuccess();
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
@@ -736,7 +735,7 @@ CommitRDG(
   }
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  if (comm->ID == 0) {
+  galois::Result<void> ret = tsuba::OneHostOnly([&]() -> galois::Result<void> {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_meta.ToJsonString();
@@ -748,23 +747,21 @@ CommitRDG(
 
     if (!curr_res) {
       GALOIS_LOG_ERROR("failed to store current RDGMeta file");
-      ret = curr_res.error();
-    } else {
-      TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-      auto curr_fut = std::move(curr_res.value());
-      while (curr_fut != nullptr && !curr_fut->Done()) {
-        if (auto res = (*curr_fut)(); !res) {
-          GALOIS_LOG_ERROR(
-              "future failed to store previous RDGMeta file {}", res.error());
-        }
+      return curr_res.error();
+    }
+    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+    auto curr_fut = std::move(curr_res.value());
+    while (curr_fut != nullptr && !curr_fut->Done()) {
+      if (auto res = (*curr_fut)(); !res) {
+        GALOIS_LOG_ERROR(
+            "future failed to store previous RDGMeta file {}", res.error());
       }
     }
+    return galois::ResultSuccess();
+  });
+  if (ret) {
+    handle.impl_->rdg_meta = new_meta;
   }
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  comm->Barrier();
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-
-  handle.impl_->rdg_meta = new_meta;
   return ret;
 }
 
@@ -1740,7 +1737,6 @@ tsuba::Create(const std::string& name) {
     return res.error();
   }
 
-  comm->Barrier();
   return galois::ResultSuccess();
 }
 
@@ -1768,7 +1764,6 @@ tsuba::Register(const std::string& name) {
 
   // NS ensures only host 0 creates
   auto res = tsuba::NS()->Create(meta.dir_, meta);
-  Comm()->Barrier();
   return res;
 }
 

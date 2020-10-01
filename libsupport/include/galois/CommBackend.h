@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "galois/Logging.h"
+#include "galois/Result.h"
 #include "galois/config.h"
 
 namespace galois {
@@ -23,6 +25,8 @@ struct CommBackend {
   virtual ~CommBackend() = default;
   /// Wait for all tasks to call Barrier
   virtual void Barrier() = 0;
+  /// Broadcast bool to everyone
+  virtual bool Broadcast(uint32_t root, bool val) = 0;
   /// Notify other tasks that there was a failure; e.g., with MPI_Abort
   virtual void NotifyFailure() = 0;
 };
@@ -30,6 +34,9 @@ struct CommBackend {
 struct NullCommBackend : public CommBackend {
   void Barrier() override {}
   void NotifyFailure() override {}
+  bool Broadcast([[maybe_unused]] uint32_t root, bool val) override {
+    return val;
+  };
 };
 
 }  // namespace galois

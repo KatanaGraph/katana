@@ -2,11 +2,11 @@
 #define GALOIS_LIBTSUBA_FILESTORAGE_H_
 
 #include <cstdint>
+#include <future>
 #include <string_view>
 #include <unordered_set>
 
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -44,14 +44,13 @@ public:
   /// to the LocalStorage when no protocol on the URI is provided
   virtual uint32_t Priority() { return 0; }
 
-  // FileAsyncWork pointer can be null, otherwise contains additional work.
-  // Every call to async work can potentially block (bulk synchronous parallel)
-  virtual galois::Result<std::unique_ptr<FileAsyncWork>> PutAsync(
+  // get on future can potentially block (bulk synchronous parallel)
+  virtual galois::Result<std::future<galois::Result<void>>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
-  virtual galois::Result<std::unique_ptr<FileAsyncWork>> GetAsync(
+  virtual galois::Result<std::future<galois::Result<void>>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
-  virtual galois::Result<std::unique_ptr<tsuba::FileAsyncWork>> ListAsync(
+  virtual galois::Result<std::future<galois::Result<void>>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) = 0;
   virtual galois::Result<void> Delete(

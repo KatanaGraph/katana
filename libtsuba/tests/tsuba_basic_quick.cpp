@@ -1,30 +1,47 @@
 // Run some quick, basic sanity checks on tsuba
+#include <getopt.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <vector>
 
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
+#include "tsuba/file.h"
+#include "tsuba/tsuba.h"
 
 // remove_all (rm -rf) is just too sweet
 #include <boost/filesystem.hpp>
 
+bool self_configure = true;
 int opt_verbose_level{0};
+std::string local_uri = "/tmp/tsuba_basic_quick-";
+std::string remote_uri{};
 std::string prog_name = "tsuba_basic_quick";
 std::string usage_msg =
-    "Usage: {}\n"
+    "Usage: {} [options] <remote uri directory>\n"
+    "  [--no-self-configure]\n"
     "  [-v] verbose, can be repeated (default=false)\n"
     "  [-h] usage message\n";
 
 void
 ParseArguments(int argc, char* argv[]) {
   int c;
+  int option_index = 0;
+  while (1) {
+    static struct option long_options[] = {
+        {"no-self-configure", no_argument, 0, 's'}, {0, 0, 0, 0}};
+    c = getopt_long(argc, argv, "vh", long_options, &option_index);
+    if (c == -1)
+      break;
 
-  while ((c = getopt(argc, argv, "hv")) != -1) {
     switch (c) {
     case 'v':
       opt_verbose_level++;
+      break;
+    case 's':
+      self_configure = false;
       break;
     case 'h':
       fmt::print(stderr, usage_msg, prog_name);
@@ -35,27 +52,15 @@ ParseArguments(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
     }
   }
+  auto index = optind;
+  if (argc <= index) {
+    fmt::print(stderr, usage_msg, prog_name);
+    exit(EXIT_FAILURE);
+  }
+  remote_uri = argv[index++];
 }
 
-enum class TestType {
-  kSystem,
-  kMDsum,
-};
-
-struct Test {
-  TestType type_;
-  std::string name_;
-  std::vector<std::string> cmd_;
-  Test(TestType type, const std::string& name, const std::string& cmd)
-      : type_(type), name_(name) {
-    cmd_.push_back(cmd);
-  }
-  Test(
-      TestType type, const std::string& name,
-      const std::vector<std::string>& cmd)
-      : type_(type), name_(name), cmd_(cmd) {}
-};
-
+////////////////////////////////////////////////////////////////////
 std::string
 Bytes2Str(uint64_t bytes) {
   for (auto unit : {"B", "KB", "MB", "GB", "TB"}) {
@@ -68,20 +73,117 @@ Bytes2Str(uint64_t bytes) {
   return "Invalid size";
 }
 
+static constexpr auto chars =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+static auto chars_len = std::strlen(chars);
+
+// 19 chars, with 1 null byte
+void
+get_time_string(char* buf, int32_t limit) {
+  time_t rawtime;
+  struct tm* timeinfo;
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buf, limit, "%Y/%m/%d %H:%M:%S ", timeinfo);
+}
+
+void
+init_data(uint8_t* buf, int32_t limit) {
+  if (limit < 0)
+    return;
+  if (limit < 19) {
+    for (; limit; limit--) {
+      *buf++ = 'a';
+    }
+    return;
+  } else {
+    char tmp[32];              // Generous with space
+    get_time_string(tmp, 31);  // Trailing null
+                               // Copy without trailing null
+    memcpy(buf, tmp, 19);
+    buf += 19;
+    if (limit > 19) {
+      *buf++ = ' ';
+      uint64_t char_idx = UINT64_C(0);
+      for (limit -= 20; limit; limit--) {
+        *buf++ = chars[char_idx++ % chars_len];  // We could make this faster...
+      }
+    }
+  }
+}
+
+void
+mkfile(const std::string& dst_uri, uint64_t size) {
+  std::vector<uint8_t> buf(size);
+  init_data(buf.data(), size);
+  if (opt_verbose_level > 0) {
+    fmt::print(" mkfile {}: {}\n", dst_uri, Bytes2Str(size));
+  }
+  if (auto res = tsuba::FileStore(dst_uri, buf.data(), size); !res) {
+    GALOIS_LOG_FATAL("FileStore error {}\n", res.error());
+  }
+}
+
+void
+cp(const std::string& dst_uri, const std::string& src_uri) {
+  tsuba::StatBuf stat_buf;
+  if (auto res = tsuba::FileStat(src_uri, &stat_buf); !res) {
+    GALOIS_LOG_FATAL("Cannot stat {}\n", src_uri);
+  }
+
+  if (opt_verbose_level > 0) {
+    fmt::print("cp {} to {}\n", src_uri, dst_uri);
+  }
+
+  auto buf_res = tsuba::FileMmap(src_uri, UINT64_C(0), stat_buf.size);
+  if (!buf_res) {
+    GALOIS_LOG_FATAL(
+        "Failed mmap {} start 0 size {:#x}\n", src_uri, stat_buf.size);
+  }
+  uint8_t* buf = buf_res.value();
+
+  if (auto res = tsuba::FileStore(dst_uri, buf, stat_buf.size); !res) {
+    GALOIS_LOG_FATAL("FileStore error {}\n", res.error());
+  }
+}
+///////////////////////////////////////////////////////////////////
+
+enum class TestType {
+  kSystem,
+  kCall,
+  kMDsum,
+};
+
+struct Test {
+  TestType type_;
+  std::string name_;
+  std::vector<std::string> cmds_;
+  std::function<void()> func_;
+  Test(
+      TestType type, const std::string& name, const std::string& cmd,
+      std::function<void()> func)
+      : type_(type), name_(name), func_(func) {
+    cmds_.push_back(cmd);
+  }
+  Test(
+      TestType type, const std::string& name,
+      const std::vector<std::string>& cmds)
+      : type_(type), name_(name), cmds_(cmds) {}
+};
+
 void
 MkCpSumLocal(
     uint64_t num_bytes, const std::string& local, const std::string& s3,
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
-      TestType::kSystem, fmt::format("Make a local file ({})", bytes_str),
-      (opt_verbose_level > 0)
-          ? fmt::format("tsuba_mkfile -v {} {}", bytes_str, local)
-          : fmt::format("tsuba_mkfile {} {}", bytes_str, local)));
+      TestType::kCall, fmt::format("Make a local file ({})", bytes_str), "",
+      [=]() { mkfile(local, num_bytes); }));
   tests.push_back(Test(
-      TestType::kSystem, fmt::format("Copy local file to S3 ({})", bytes_str),
-      (opt_verbose_level > 0) ? fmt::format("tsuba_cp -v {} {}", local, s3)
-                              : fmt::format("tsuba_cp {} {}", local, s3)));
+      TestType::kCall, fmt::format("Copy local file to S3 ({})", bytes_str), "",
+      [=]() { cp(s3, local); }));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
       fmt::format("tsuba_md5sum {}", s3)};
@@ -90,26 +192,26 @@ MkCpSumLocal(
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
   // Note, no tsuba_rm yet
-  tests.push_back(Test(
-      TestType::kSystem, "Remove S3 file via aws cli",
-      (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
-                              : fmt::format("aws s3 rm --quiet {}", s3)));
+  if (s3.size() > 2 && s3[0] == 's' && s3[1] == '3') {
+    tests.push_back(Test(
+        TestType::kSystem, "Remove S3 file via aws cli",
+        (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
+                                : fmt::format("aws s3 rm --quiet {}", s3),
+        [=]() {}));
+  }
 }
 
 void
-MkCpSumS3(
+MkCpSumRemote(
     uint64_t num_bytes, const std::string& local, const std::string& s3,
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
-      TestType::kSystem, fmt::format("Make S3 file ({})", bytes_str),
-      (opt_verbose_level > 0)
-          ? fmt::format("tsuba_mkfile -v {} {}", bytes_str, s3)
-          : fmt::format("tsuba_mkfile {} {}", bytes_str, s3)));
+      TestType::kCall, fmt::format("Make remote file ({})", bytes_str), "",
+      [=]() { mkfile(s3, num_bytes); }));
   tests.push_back(Test(
-      TestType::kSystem, fmt::format("Copy S3 file to local ({})", bytes_str),
-      (opt_verbose_level > 0) ? fmt::format("tsuba_cp -v {} {}", s3, local)
-                              : fmt::format("tsuba_cp {} {}", s3, local)));
+      TestType::kCall, fmt::format("Copy remote file to local ({})", bytes_str),
+      "", [=]() { cp(s3, local); }));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
       fmt::format("tsuba_md5sum {}", s3)};
@@ -118,10 +220,13 @@ MkCpSumS3(
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
   // Note, no tsuba_rm yet and local directory cleaned at end.
-  tests.push_back(Test(
-      TestType::kSystem, "Remove S3 file via aws cli",
-      (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
-                              : fmt::format("aws s3 rm --quiet {}", s3)));
+  if (s3.size() > 2 && s3[0] == 's' && s3[1] == '3') {
+    tests.push_back(Test(
+        TestType::kSystem, "Remove S3 file via aws cli",
+        (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
+                                : fmt::format("aws s3 rm --quiet {}", s3),
+        [=]() {}));
+  }
 }
 
 std::vector<Test>
@@ -136,9 +241,9 @@ ConstructTests(std::string local_dir, std::string s3_dir) {
   MkCpSumLocal(UINT64_C(1) << 13, local_rnd, s3_rnd, tests);
   MkCpSumLocal(UINT64_C(1) << 15, local_rnd, s3_rnd, tests);
 
-  MkCpSumS3(15, local_rnd, s3_rnd, tests);
-  MkCpSumS3((UINT64_C(1) << 13) - 1, local_rnd, s3_rnd, tests);
-  MkCpSumS3((UINT64_C(1) << 15) - 1, local_rnd, s3_rnd, tests);
+  MkCpSumRemote(15, local_rnd, s3_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, s3_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, s3_rnd, tests);
 
   return tests;
 }
@@ -148,12 +253,16 @@ RunPopen(const std::string& cmd, std::string& out) {
   char buff[4096];
   FILE* fp = popen(cmd.c_str(), "r");
   if (fp == NULL) {
+    GALOIS_LOG_ERROR("Cannot popen: {}", galois::ResultErrno());
     return -1;
   }
   while (fgets(buff, sizeof(buff), fp)) {
     out += buff;
   }
   pclose(fp);
+  if(opt_verbose_level > 1) {
+    fmt::print("out: {} cmd: {}\n", out, cmd);
+  }
   return 0;
 }
 
@@ -175,29 +284,23 @@ MD5sumRun(const std::string& cmd, std::string& out) {
 
 int
 main(int argc, char* argv[]) {
-  bool self_configure = true;
-  if (argc > 1) {
-    if (std::string(argv[1]) == "--no-self-configure") {
-      self_configure = false;
-    }
-  }
-
   int main_ret = 0;
+  ParseArguments(argc, argv);
+
   if (self_configure) {
-    // Not sure if this PATH hack is kosher or treif
+    // Add bin to path for manual testing
     std::string path = getenv("PATH");
     path.insert(0, "bin:");
     setenv("PATH", path.c_str(), 1);
-    // CI buckets are in us-east-1
-    setenv("AWS_DEFAULT_REGION", "us-east-1", 1);
+  }
+  if (auto init_good = tsuba::Init(); !init_good) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 
-  ParseArguments(argc, argv);
-
-  auto unique_result = galois::CreateUniqueDirectory("/tmp/tsuba_basic_quick-");
+  auto unique_result = galois::CreateUniqueDirectory(local_uri);
   GALOIS_LOG_ASSERT(unique_result);
   std::string tmp_dir(std::move(unique_result.value()));
-  auto tests = ConstructTests(tmp_dir, "s3://katana-ci/delete_me/");
+  auto tests = ConstructTests(tmp_dir, remote_uri);
 
   for (auto const& test : tests) {
     if (opt_verbose_level > 0) {
@@ -205,16 +308,19 @@ main(int argc, char* argv[]) {
     }
     switch (test.type_) {
     case TestType::kSystem: {
-      int res = system(test.cmd_[0].c_str());
+      int res = system(test.cmds_[0].c_str());
       if (res != 0) {
         main_ret = EXIT_FAILURE;
         fmt::print("Test FAILED\n");
         break;
       }
     } break;
+    case TestType::kCall: {
+      test.func_();
+    } break;
     case TestType::kMDsum: {
       std::vector<std::string> results;
-      for (auto const& cmd : test.cmd_) {
+      for (auto const& cmd : test.cmds_) {
         std::string out;
         int res = MD5sumRun(cmd, out);
         if (res != 0) {

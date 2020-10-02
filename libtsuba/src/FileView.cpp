@@ -457,12 +457,12 @@ FileView::Resolve(int64_t start, int64_t size) {
     if (fetch->first_page <= page_number(start + size) ||
         fetch->last_page >= page_number(start)) {
       // Complete the remaining work if there is some
-      if (fetch->work != nullptr) {
-        while (!fetch->work->Done()) {
-          if (auto res = (*fetch->work)(); !res) {
-            return res.error();
-          }
+      if (fetch->work.valid()) {
+        if (auto res = fetch->work.get(); !res) {
+          return res.error();
         }
+      } else {
+        GALOIS_LOG_DEBUG("bad future in FileView::Resolve {} {}", start, size);
       }
       it = fetches_->erase(it);
     } else {

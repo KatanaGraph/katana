@@ -153,12 +153,9 @@ ListDir(
     GALOIS_LOG_ERROR("Bad listing: {}: {}", dir, list_res.error());
     return;
   }
-  auto faw = std::move(list_res.value());
-  while (faw != nullptr && !faw->Done()) {
-    // Get next round of file entries
-    if (auto res = (*faw)(); !res) {
-      GALOIS_LOG_DEBUG("Bad nested listing call {}", dir);
-    }
+  auto fut = std::move(list_res.value());
+  if (auto res = fut.get(); !res) {
+    GALOIS_LOG_DEBUG("Bad nested listing call {}", dir, res.error());
   }
   if (opt_verbose_level > 0) {
     fmt::print("  All  files: {}\n", listing->size());

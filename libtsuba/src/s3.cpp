@@ -619,7 +619,7 @@ internal::S3PutSingleAsyncFinish(internal::CountingSemaphore* sema) {
   return galois::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 S3PutAsync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size) {
@@ -636,7 +636,7 @@ S3PutAsync(
       }
       return galois::ResultSuccess();
     });
-    return std::make_unique<FileAsyncWork>(std::move(future));
+    return std::move(future);
   } else {
     auto future = std::async([=]() -> galois::Result<void> {
       auto pm = internal::S3PutMultiAsync1(bucket, object, data, size);
@@ -652,7 +652,7 @@ S3PutAsync(
       }
       return galois::ResultSuccess();
     });
-    return std::make_unique<FileAsyncWork>(std::move(future));
+    return std::move(future);
   }
 }
 
@@ -723,7 +723,7 @@ internal::S3GetMultiAsyncFinish(internal::CountingSemaphore* sema) {
   return galois::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 S3GetAsync(
     const std::string& bucket, const std::string& object, uint64_t start,
     uint64_t size, uint8_t* result_buf) {
@@ -742,7 +742,7 @@ S3GetAsync(
     }
     return galois::ResultSuccess();
   });
-  return std::make_unique<FileAsyncWork>(std::move(future));
+  return std::move(future);
 }
 
 galois::Result<void>
@@ -816,7 +816,7 @@ S3DownloadRange(
 // use a big directory, e.g., this way
 // tsuba_fault -c 2000 URI
 // tsuba_gc -n -v  URI; tsuba_gc URI
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 S3ListAsync(
     const std::string& bucket, const std::string& object,
     std::vector<std::string>* list, std::vector<uint64_t>* size) {
@@ -865,7 +865,7 @@ S3ListAsync(
     } while (token.size() > 0);
     return galois::ResultSuccess();
   });
-  return std::make_unique<FileAsyncWork>(std::move(future));
+  return std::move(future);
 }
 
 static galois::Result<void>

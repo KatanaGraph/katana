@@ -2,12 +2,12 @@
 #define GALOIS_LIBTSUBA_AZURE_H_
 
 #include <cstdint>
+#include <future>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -26,15 +26,15 @@ galois::Result<void> AzurePutSync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size);
 
-galois::Result<std::unique_ptr<FileAsyncWork>> AzureGetAsync(
+galois::Result<std::future<galois::Result<void>>> AzureGetAsync(
     const std::string& container, const std::string& blob, uint64_t start,
     uint64_t size, char* result_buf);
 
-galois::Result<std::unique_ptr<FileAsyncWork>> AzurePutAsync(
+galois::Result<std::future<galois::Result<void>>> AzurePutAsync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size);
 
-galois::Result<std::unique_ptr<FileAsyncWork>> AzureListAsync(
+galois::Result<std::future<galois::Result<void>>> AzureListAsync(
     const std::string& container, const std::string& blob,
     std::vector<std::string>* list, std::vector<uint64_t>* size);
 

@@ -164,8 +164,7 @@ tsuba_put_sync(const Experiment& exp) {
 std::vector<int64_t>
 tsuba_put_async(const Experiment& exp) {
   std::vector<std::string> s3urls;
-  std::vector<std::unique_ptr<tsuba::FileAsyncWork>> async_works{
-      (std::size_t)exp.batch_};
+  std::vector<std::future<galois::Result<void>>> futs{(std::size_t)exp.batch_};
   for (auto i = 0; i < exp.batch_; ++i) {
     s3urls.push_back(galois::JoinPath(src_uri, MkS3obj(i, 4)));
   }
@@ -181,17 +180,16 @@ tsuba_put_async(const Experiment& exp) {
         GALOIS_LOG_ERROR(
             "Tsuba storeasync bad return: {}\n  {}", res.error(), s3urls[i]);
       }
-      async_works[i] = std::move(res.value());
+      futs[i] = std::move(res.value());
     }
     bool done = false;
     while (!done) {
       done = true;
-      for (const auto& async_work : async_works) {
-        if (async_work != nullptr && !async_work->Done()) {
-          done = false;
-          if (auto res = (*async_work)(); !res) {
+      for (auto& fut : futs) {
+        if (fut.valid()) {
+          if (auto res = fut.get(); !res) {
             GALOIS_LOG_ERROR(
-                "Tsuba storeasync work bad return {}", res.error());
+                "Tsuba storeasync work bad future return {}", res.error());
           }
         }
       }
@@ -240,24 +238,20 @@ tsuba_get_async(const Experiment& exp) {
   struct timespec start;
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     memset(rbuf, 0, exp.size_);
-    std::vector<std::unique_ptr<tsuba::FileAsyncWork>> work;
+    std::vector<std::future<galois::Result<void>>> work;
     start = now();
     for (const std::string& object : objects) {
-      auto async_work_res = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
-      if (!async_work_res) {
-        GALOIS_LOG_ERROR("FilePeekAsync: {}", async_work_res.error());
+      auto fut_res = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
+      if (!fut_res) {
+        GALOIS_LOG_ERROR("FilePeekAsync: {}", fut_res.error());
       } else {
-        work.emplace_back(std::move(async_work_res.value()));
+        work.emplace_back(std::move(fut_res.value()));
       }
     }
-    for (std::unique_ptr<tsuba::FileAsyncWork>& item : work) {
-      if (!item) {
-        continue;
-      }
-      while (!item->Done()) {
-        if (auto res = (*item)(); !res) {
-          GALOIS_LOG_ERROR("Work item returned: {}", res.error());
-          break;
+    for (auto& fut : work) {
+      if (fut.valid()) {
+        if (auto res = fut.get(); !res) {
+          GALOIS_LOG_ERROR("Work item error: {}", res.error());
         }
       }
     }

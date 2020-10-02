@@ -2,13 +2,13 @@
 #define GALOIS_LIBTSUBA_TSUBA_FILE_H_
 
 #include <cstdint>
+#include <future>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 
 #include "galois/Result.h"
 #include "galois/config.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -50,8 +50,8 @@ GALOIS_EXPORT galois::Result<void> FileStore(
     const std::string& uri, const uint8_t* data, uint64_t size);
 
 // Take whatever is in @data and start putting it a the file called @uri
-GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
+GALOIS_EXPORT galois::Result<std::future<galois::Result<void>>> FileStoreAsync(
+    const std::string& uri, const uint8_t* data, uint64_t size);
 
 /// List the set of files in a directory
 /// \param directory is URI whose contents are listed. It can be
@@ -60,10 +60,9 @@ FileStoreAsync(const std::string& uri, const uint8_t* data, uint64_t size);
 /// \param list is populated with the files found
 /// \param size is populated with the size of the corresponding file
 ///
-/// \return Async work object; files will be in `list` after this object
-/// reports done (or immediately if nullptr is returned)
-GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-FileListAsync(
+/// \return future; files will be in `list` after this object
+/// reports its return value
+GALOIS_EXPORT galois::Result<std::future<galois::Result<void>>> FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size = nullptr);
 
@@ -80,8 +79,7 @@ GALOIS_EXPORT galois::Result<void> FilePeek(
     uint64_t size);
 
 // start reading a part of the file into a caller defined buffer
-GALOIS_EXPORT galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
-FilePeekAsync(
+GALOIS_EXPORT galois::Result<std::future<galois::Result<void>>> FilePeekAsync(
     const std::string& filename, uint8_t* result_buffer, uint64_t begin,
     uint64_t size);
 

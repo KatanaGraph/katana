@@ -2,6 +2,7 @@
 #define GALOIS_LIBTSUBA_S3_H_
 
 #include <cstdint>
+#include <future>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -9,7 +10,6 @@
 #include <aws/core/utils/memory/stl/AWSString.h>
 
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -28,19 +28,19 @@ galois::Result<void> S3UploadOverwrite(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size);
 
-galois::Result<std::unique_ptr<FileAsyncWork>> S3GetAsync(
+galois::Result<std::future<galois::Result<void>>> S3GetAsync(
     const std::string& bucket, const std::string& object, uint64_t start,
     uint64_t size, uint8_t* result_buf);
 
 // Call this function to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface
-galois::Result<std::unique_ptr<FileAsyncWork>> S3PutAsync(
+galois::Result<std::future<galois::Result<void>>> S3PutAsync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size);
 
 // Listing relative to the full path of the provided directory
-galois::Result<std::unique_ptr<FileAsyncWork>> S3ListAsync(
+galois::Result<std::future<galois::Result<void>>> S3ListAsync(
     const std::string& bucket, const std::string& object,
     std::vector<std::string>* list, std::vector<uint64_t>* size);
 

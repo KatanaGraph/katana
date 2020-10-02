@@ -1,6 +1,8 @@
 #ifndef GALOIS_LIBTSUBA_AZURESTORAGE_H_
 #define GALOIS_LIBTSUBA_AZURESTORAGE_H_
 
+#include <future>
+
 #include "FileStorage.h"
 
 namespace tsuba {
@@ -26,14 +28,13 @@ public:
   galois::Result<void> PutMultiSync(
       const std::string& uri, const uint8_t* data, uint64_t size) override;
 
-  // FileAsyncWork pointer can be null, otherwise contains additional work.
-  // Every call to async work can potentially block (bulk synchronous parallel)
-  galois::Result<std::unique_ptr<FileAsyncWork>> PutAsync(
+  // get on future can potentially block (bulk synchronous parallel)
+  galois::Result<std::future<galois::Result<void>>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) override;
-  galois::Result<std::unique_ptr<FileAsyncWork>> GetAsync(
+  galois::Result<std::future<galois::Result<void>>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override;
-  galois::Result<std::unique_ptr<tsuba::FileAsyncWork>> ListAsync(
+  galois::Result<std::future<galois::Result<void>>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) override;
   galois::Result<void> Delete(

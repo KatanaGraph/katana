@@ -2,6 +2,7 @@
 #define GALOIS_LIBTSUBA_TSUBA_FILEVIEW_H_
 
 #include <cstdint>
+#include <future>
 #include <string>
 
 #include <parquet/arrow/reader.h>
@@ -9,7 +10,6 @@
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "galois/config.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -17,7 +17,7 @@ class GALOIS_EXPORT FileView : public arrow::io::RandomAccessFile {
   struct FillingRange {
     uint64_t first_page;
     uint64_t last_page;
-    std::unique_ptr<FileAsyncWork> work;
+    std::future<galois::Result<void>> work;
   };
 
   uint8_t* map_start_;

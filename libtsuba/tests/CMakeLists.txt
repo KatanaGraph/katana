@@ -13,12 +13,6 @@ target_link_libraries(fo_bench tsuba)
 add_executable(s3_pg_basics s3_pg_basics.cpp)
 target_link_libraries(s3_pg_basics tsuba)
 
-add_executable(tsuba_mkfile tsuba_mkfile.cpp)
-target_link_libraries(tsuba_mkfile tsuba)
-
-add_executable(tsuba_cp tsuba_cp.cpp)
-target_link_libraries(tsuba_cp tsuba)
-
 add_executable(tsuba_ll tsuba_ll.cpp)
 target_link_libraries(tsuba_ll tsuba)
 
@@ -48,6 +42,6 @@ add_test(NAME unit-loadpartial COMMAND unit-loadpartial)
 
 add_executable(tsuba_basic_quick tsuba_basic_quick.cpp)
 target_link_libraries(tsuba_basic_quick tsuba)
-add_test(NAME tsuba_basic_quick COMMAND tsuba_basic_quick --no-self-configure)
-set(new_path "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
+add_test(NAME tsuba_basic_quick COMMAND tsuba_basic_quick --no-self-configure s3://katana-ci/delete_me)
+set(new_path "${CMAKE_BINARY_DIR}/bin:${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
 set_tests_properties(tsuba_basic_quick PROPERTIES ENVIRONMENT "AWS_DEFAULT_REGION=us-east-1;PATH=${new_path}")

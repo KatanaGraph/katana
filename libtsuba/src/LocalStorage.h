@@ -4,11 +4,12 @@
 #include <sys/mman.h>
 
 #include <cstdint>
+#include <future>
 #include <string>
+#include <thread>
 
 #include "FileStorage.h"
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 
 namespace tsuba {
 
@@ -43,26 +44,27 @@ public:
     return WriteFile(uri, data, size);
   }
 
-  // FileAsyncWork pointer can be null, otherwise contains additional work.
-  // Every call to async work can potentially block (bulk synchronous parallel)
-  galois::Result<std::unique_ptr<FileAsyncWork>> PutAsync(
+  // get on future can potentially block (bulk synchronous parallel)
+  galois::Result<std::future<galois::Result<void>>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) override {
     // No need for AsyncPut to local storage right now
     if (auto write_res = WriteFile(uri, data, size); !write_res) {
       return write_res.error();
     }
-    return nullptr;
+    return std::move(std::async(
+        []() -> galois::Result<void> { return galois::ResultSuccess(); }));
   }
-  galois::Result<std::unique_ptr<FileAsyncWork>> GetAsync(
+  galois::Result<std::future<galois::Result<void>>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override {
     // I suppose there is no need for AsyncGet to local storage either
     if (auto read_res = ReadFile(uri, start, size, result_buf); !read_res) {
       return read_res.error();
     }
-    return nullptr;
+    return std::move(std::async(
+        []() -> galois::Result<void> { return galois::ResultSuccess(); }));
   }
-  galois::Result<std::unique_ptr<FileAsyncWork>> ListAsync(
+  galois::Result<std::future<galois::Result<void>>> ListAsync(
       const std::string& uri, std::vector<std::string>* list,
       std::vector<uint64_t>* size) override;
 

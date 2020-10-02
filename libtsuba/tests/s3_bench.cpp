@@ -9,7 +9,6 @@
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
-#include "tsuba/FileAsyncWork.h"
 #include "tsuba/file.h"
 #include "tsuba/s3_internal.h"
 #include "tsuba/tsuba.h"

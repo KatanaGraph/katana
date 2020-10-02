@@ -751,11 +751,22 @@ CommitRDG(
     }
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
     auto curr_fut = std::move(curr_res.value());
-    while (curr_fut != nullptr && !curr_fut->Done()) {
-      if (auto res = (*curr_fut)(); !res) {
+    // Add unified timeout?
+    if (curr_fut.valid()) {
+      if (auto res = curr_fut.get(); !res) {
         GALOIS_LOG_ERROR(
-            "future failed to store previous RDGMeta file {}", res.error());
+            "CommitRDG future failed {}: {}",
+            tsuba::RDGMeta::FileName(
+                handle.impl_->rdg_meta.dir_, new_meta.version_),
+            res.error());
+        return res.error();
       }
+    } else {
+      GALOIS_LOG_ERROR(
+          "future invalid in commitRDG {}",
+          tsuba::RDGMeta::FileName(
+              handle.impl_->rdg_meta.dir_, new_meta.version_));
+      return tsuba::ErrorCode::InvalidArgument;
     }
     return galois::ResultSuccess();
   });
@@ -857,13 +868,13 @@ FileList(const std::string& dir) {
     return list_res.error();
   }
 
-  std::unique_ptr<tsuba::FileAsyncWork> work = std::move(list_res.value());
-  if (work != nullptr) {
-    while (!work->Done()) {
-      if (auto res = (*work)(); !res) {
-        return res.error();
-      }
+  auto work = std::move(list_res.value());
+  if (work.valid()) {
+    if (auto res = work.get(); !res) {
+      return res.error();
     }
+  } else {
+    GALOIS_LOG_DEBUG("failed listing future dir: {}", dir);
   }
   return files;
 }

@@ -8,7 +8,6 @@
 
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
-#include "tsuba/FileAsyncWork.h"
 
 // Don't call these directly.  They are intended for use only in s3.cpp and
 // testing code

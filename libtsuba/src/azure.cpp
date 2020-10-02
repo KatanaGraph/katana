@@ -145,7 +145,7 @@ tsuba::AzurePutSync(
   return galois::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 tsuba::AzureGetAsync(
     const std::string& container, const std::string& blob, uint64_t start,
     uint64_t size, char* result_buf) {
@@ -166,10 +166,10 @@ tsuba::AzureGetAsync(
     }
     return galois::ResultSuccess();
   });
-  return std::make_unique<tsuba::FileAsyncWork>(std::move(future));
+  return std::move(future);
 }
 
-galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 tsuba::AzurePutAsync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size) {
@@ -191,10 +191,10 @@ tsuba::AzurePutAsync(
     }
     return galois::ResultSuccess();
   });
-  return std::make_unique<FileAsyncWork>(std::move(future));
+  return std::move(future);
 }
 
-galois::Result<std::unique_ptr<tsuba::FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 tsuba::AzureListAsync(
     const std::string& container, const std::string& blob,
     std::vector<std::string>* list, std::vector<uint64_t>* size) {
@@ -231,7 +231,7 @@ tsuba::AzureListAsync(
     } while (!token.empty());
     return galois::ResultSuccess();
   });
-  return std::make_unique<tsuba::FileAsyncWork>(std::move(future));
+  return std::move(future);
 }
 
 galois::Result<void>

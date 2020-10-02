@@ -23,9 +23,13 @@ sudo bash -x "${REPO_ROOT}/.github/workflows/setup_ubuntu.sh" --no-setup-toolcha
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
 sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
 
-# If you want a build directory that is a subdir of Katana root
+# --If you want a build directory that is a subdir of Katana root and some cmake options
 # mkdir build
 # cd build
-# cmake ../ -DGALOIS_AUTO_CONAN=on -DGALOIS_ENABLE_DIST=on
-# The build does rely on git submodules
+# cmake ../ -DGALOIS_AUTO_CONAN=on -DGALOIS_ENABLE_DIST=on -DCMAKE_BUILD_TYPE=Release -DGALOIS_STORAGE_BACKEND="local;s3;azure"
+#
+# --The build does rely on git submodules
 # git submoudle update --init
+#
+# --Azure cli  https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt
+# curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash

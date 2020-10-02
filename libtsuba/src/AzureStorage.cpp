@@ -96,7 +96,7 @@ AzureStorage::PutMultiSync(
       size);
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 AzureStorage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanUri(std::string(uri));
@@ -110,7 +110,7 @@ AzureStorage::PutAsync(
       size);
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 AzureStorage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
@@ -124,7 +124,7 @@ AzureStorage::GetAsync(
       reinterpret_cast<char*>(result_buf));  // NOLINT
 }
 
-galois::Result<std::unique_ptr<FileAsyncWork>>
+galois::Result<std::future<galois::Result<void>>>
 AzureStorage::ListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {

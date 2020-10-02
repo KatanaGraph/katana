@@ -739,34 +739,21 @@ CommitRDG(
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_meta.ToJsonString();
-    auto curr_res = tsuba::FileStoreAsync(
+    auto curr_fut = tsuba::FileStoreAsync(
         tsuba::RDGMeta::FileName(handle.impl_->rdg_meta.dir_, new_meta.version_)
             .string(),
         reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
-    if (!curr_res) {
-      GALOIS_LOG_ERROR("failed to store current RDGMeta file");
-      return curr_res.error();
-    }
+    GALOIS_LOG_ASSERT(curr_fut.valid());
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-    auto curr_fut = std::move(curr_res.value());
-    // Add unified timeout?
-    if (curr_fut.valid()) {
-      if (auto res = curr_fut.get(); !res) {
-        GALOIS_LOG_ERROR(
-            "CommitRDG future failed {}: {}",
-            tsuba::RDGMeta::FileName(
-                handle.impl_->rdg_meta.dir_, new_meta.version_),
-            res.error());
-        return res.error();
-      }
-    } else {
+    if (auto res = curr_fut.get(); !res) {
       GALOIS_LOG_ERROR(
-          "future invalid in commitRDG {}",
+          "CommitRDG future failed {}: {}",
           tsuba::RDGMeta::FileName(
-              handle.impl_->rdg_meta.dir_, new_meta.version_));
-      return tsuba::ErrorCode::InvalidArgument;
+              handle.impl_->rdg_meta.dir_, new_meta.version_),
+          res.error());
+      return res.error();
     }
     return galois::ResultSuccess();
   });
@@ -863,18 +850,11 @@ GetMetaAndPartitionPath(const galois::Uri& uri, bool intend_partial_read) {
 galois::Result<std::vector<std::string>>
 FileList(const std::string& dir) {
   std::vector<std::string> files;
-  auto list_res = tsuba::FileListAsync(dir, &files);
-  if (!list_res) {
-    return list_res.error();
-  }
+  auto list_fut = tsuba::FileListAsync(dir, &files);
+  GALOIS_LOG_ASSERT(list_fut.valid());
 
-  auto work = std::move(list_res.value());
-  if (work.valid()) {
-    if (auto res = work.get(); !res) {
-      return res.error();
-    }
-  } else {
-    GALOIS_LOG_DEBUG("failed listing future dir: {}", dir);
+  if (auto res = list_fut.get(); !res) {
+    return res.error();
   }
   return files;
 }

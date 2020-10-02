@@ -114,7 +114,7 @@ LocalStorage::Create(const std::string& uri, bool overwrite) {
 }
 
 // Current implementation is not async
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 LocalStorage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
@@ -127,13 +127,14 @@ LocalStorage::ListAsync(
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
-      return std::move(std::async(
-          []() -> galois::Result<void> { return galois::ResultSuccess(); }));
+      return std::async(
+          []() -> galois::Result<void> { return galois::ResultSuccess(); });
     }
-    GALOIS_LOG_ERROR(
+    GALOIS_LOG_DEBUG(
         "\n  Open dir failed: {}: {}", dirname,
         galois::ResultErrno().message());
-    return galois::ResultErrno();
+    return std::async(
+        []() -> galois::Result<void> { return galois::ResultErrno(); });
   }
 
   int dfd = dirfd(dirp);
@@ -162,12 +163,13 @@ LocalStorage::ListAsync(
   if (errno != 0) {
     GALOIS_LOG_ERROR(
         "\n  readdir failed: {}: {}", dirname, galois::ResultErrno().message());
-    return ErrorCode::LocalStorageError;
+    return std::async(
+        []() -> galois::Result<void> { return ErrorCode::LocalStorageError; });
   }
   (void)closedir(dirp);
 
-  return std::move(std::async(
-      []() -> galois::Result<void> { return galois::ResultSuccess(); }));
+  return std::async(
+      []() -> galois::Result<void> { return galois::ResultSuccess(); });
 }
 
 galois::Result<void>

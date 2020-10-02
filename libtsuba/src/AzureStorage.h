@@ -29,12 +29,12 @@ public:
       const std::string& uri, const uint8_t* data, uint64_t size) override;
 
   // get on future can potentially block (bulk synchronous parallel)
-  galois::Result<std::future<galois::Result<void>>> PutAsync(
+  std::future<galois::Result<void>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) override;
-  galois::Result<std::future<galois::Result<void>>> GetAsync(
+  std::future<galois::Result<void>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override;
-  galois::Result<std::future<galois::Result<void>>> ListAsync(
+  std::future<galois::Result<void>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) override;
   galois::Result<void> Delete(

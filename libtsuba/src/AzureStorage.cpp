@@ -96,12 +96,13 @@ AzureStorage::PutMultiSync(
       size);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 AzureStorage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [container, blob] = std::move(uri_res.value());
   return AzurePutAsync(
@@ -110,13 +111,14 @@ AzureStorage::PutAsync(
       size);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 AzureStorage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [container, blob] = std::move(uri_res.value());
   return AzureGetAsync(
@@ -124,13 +126,14 @@ AzureStorage::GetAsync(
       reinterpret_cast<char*>(result_buf));  // NOLINT
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 AzureStorage::ListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   auto uri_res = CleanUri(std::string(directory));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [container, blob] = std::move(uri_res.value());
   return AzureListAsync(container, blob, list, size);

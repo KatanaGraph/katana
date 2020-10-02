@@ -226,9 +226,7 @@ test_s3_async_one(const Experiment& exp) {
         GALOIS_LOG_ERROR("S3PutSingleAsync return {}", res.error());
       }
       // Only 1 outstanding store at a time
-      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR("S3PutSingleAsyncFinish bad return {}", res.error());
-      }
+      tsuba::internal::S3PutSingleAsyncFinish(&sema);
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
@@ -258,10 +256,7 @@ test_s3_single_async_batch(const Experiment& exp) {
       i++;
     }
     for (auto& sema : semas) {
-      if (auto res = tsuba::internal::S3PutSingleAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR(
-            "S3PutSingleAsyncFinish batch bad return {}", res.error());
-      }
+      tsuba::internal::S3PutSingleAsyncFinish(&sema);
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
   }
@@ -317,9 +312,7 @@ test_s3_async_get_one(const Experiment& exp) {
         GALOIS_LOG_ERROR("S3GetMultiAsync return {}", res.error());
       }
       // Only 1 outstanding load at a time
-      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR("S3GetMultiAsyncFinish bad return {}", res.error());
-      }
+      tsuba::internal::S3GetMultiAsyncFinish(&sema);
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
     GALOIS_LOG_ASSERT(!memcmp(rbuf, exp.buffer_.data(), exp.size_));
@@ -354,10 +347,7 @@ test_s3_async_get_batch(const Experiment& exp) {
       i++;
     }
     for (auto& sema : semas) {
-      if (auto res = tsuba::internal::S3GetMultiAsyncFinish(&sema); !res) {
-        GALOIS_LOG_ERROR(
-            "S3GetMultiAsyncFinish batch bad return {}", res.error());
-      }
+      tsuba::internal::S3GetMultiAsyncFinish(&sema);
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
     GALOIS_LOG_ASSERT(!memcmp(rbuf, exp.buffer_.data(), exp.size_));

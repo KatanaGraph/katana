@@ -133,12 +133,10 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
         (last_page + 1) * (1UL << page_shift_) - file_off,
         file_size_ - file_off);
     if (found_empty) {
-      auto peek_res =
+      auto peek_fut =
           FilePeekAsync(filename_, map_start_ + file_off, file_off, map_size);
-      if (!peek_res) {
-        return peek_res.error();
-      }
-      FillingRange fetch = {first_page, last_page, std::move(peek_res.value())};
+      GALOIS_LOG_ASSERT(peek_fut.valid());
+      FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));
       if (auto res = MarkFilled(&filling_[0], first_page, last_page); !res) {
         return res.error();

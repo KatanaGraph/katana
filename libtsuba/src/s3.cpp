@@ -613,32 +613,29 @@ internal::S3PutSingleAsync(
   return galois::ResultSuccess();
 }
 
-galois::Result<void>
+void
 internal::S3PutSingleAsyncFinish(internal::CountingSemaphore* sema) {
   sema->WaitGoal();
-  return galois::ResultSuccess();
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3PutAsync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size) {
   if (size < kS3DefaultBufSize) {
-    auto future = std::async([=]() -> galois::Result<void> {
+    auto fut_res = std::async([=]() -> galois::Result<void> {
       auto sema = internal::CountingSemaphore();
       if (auto res =
               internal::S3PutSingleAsync(bucket, object, data, size, &sema);
           !res) {
         return res.error();
       }
-      if (auto res = internal::S3PutSingleAsyncFinish(&sema); !res) {
-        return res.error();
-      }
+      internal::S3PutSingleAsyncFinish(&sema);
       return galois::ResultSuccess();
     });
-    return std::move(future);
+    return fut_res;
   } else {
-    auto future = std::async([=]() -> galois::Result<void> {
+    auto fut_res = std::async([=]() -> galois::Result<void> {
       auto pm = internal::S3PutMultiAsync1(bucket, object, data, size);
       if (auto res = internal::S3PutMultiAsync2(bucket, object, pm); !res) {
         return res.error();
@@ -652,7 +649,7 @@ S3PutAsync(
       }
       return galois::ResultSuccess();
     });
-    return std::move(future);
+    return fut_res;
   }
 }
 
@@ -689,6 +686,9 @@ internal::S3GetMultiAsync(
     return galois::ResultSuccess();
   }
 
+  GALOIS_LOG_DEBUG(
+      "\n  GetAsync {} size: {} parts: {}\n", object, size, parts.size());
+
   sema->SetGoal(parts.size());
 
   auto callback = [=](const Aws::S3::S3Client* /*client*/,
@@ -698,6 +698,7 @@ internal::S3GetMultiAsync(
                           const Aws::Client::AsyncCallerContext>& /*ctx*/) {
     if (outcome.IsSuccess()) {
       sema->GoalMinusOne();
+      GALOIS_LOG_DEBUG("\n  GetAsync MinusOne\n");
     } else {
       /* TODO there are likely some errors we can handle gracefully
        * i.e., with retries */
@@ -716,33 +717,31 @@ internal::S3GetMultiAsync(
   return galois::ResultSuccess();
 }
 
-galois::Result<void>
+void
 internal::S3GetMultiAsyncFinish(internal::CountingSemaphore* sema) {
   sema->WaitGoal();
   // result_buf should have the data here
-  return galois::ResultSuccess();
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3GetAsync(
     const std::string& bucket, const std::string& object, uint64_t start,
     uint64_t size, uint8_t* result_buf) {
   if (size == (uint64_t)0) {
-    return galois::ResultSuccess();
+    return std::async(
+        []() -> galois::Result<void> { return galois::ResultSuccess(); });
   }
-  auto future = std::async([=]() -> galois::Result<void> {
+  auto fut_res = std::async([=]() -> galois::Result<void> {
     auto sema = internal::CountingSemaphore();
     if (auto res = internal::S3GetMultiAsync(
             bucket, object, start, size, result_buf, &sema);
         !res) {
       return res.error();
     }
-    if (auto res = internal::S3GetMultiAsyncFinish(&sema); !res) {
-      return res.error();
-    }
+    internal::S3GetMultiAsyncFinish(&sema);
     return galois::ResultSuccess();
   });
-  return std::move(future);
+  return fut_res;
 }
 
 galois::Result<void>
@@ -816,14 +815,14 @@ S3DownloadRange(
 // use a big directory, e.g., this way
 // tsuba_fault -c 2000 URI
 // tsuba_gc -n -v  URI; tsuba_gc URI
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3ListAsync(
     const std::string& bucket, const std::string& object,
     std::vector<std::string>* list, std::vector<uint64_t>* size) {
   GALOIS_LOG_VASSERT(
       library_init == true, "Must call tsuba::Init before S3 interaction");
 
-  auto future = std::async([=]() -> galois::Result<void> {
+  auto fut_res = std::async([=]() -> galois::Result<void> {
     std::string token{};
     Aws::S3::Model::ListObjectsV2Request request;
     request.SetBucket(ToAwsString(bucket));
@@ -865,7 +864,7 @@ S3ListAsync(
     } while (token.size() > 0);
     return galois::ResultSuccess();
   });
-  return std::move(future);
+  return fut_res;
 }
 
 static galois::Result<void>

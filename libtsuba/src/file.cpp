@@ -109,7 +109,7 @@ tsuba::FileStore(const std::string& uri, const uint8_t* data, uint64_t size) {
   return FS(uri)->PutMultiSync(uri, data, size);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::FileStoreAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   return FS(uri)->PutAsync(uri, data, size);
@@ -122,7 +122,7 @@ tsuba::FilePeek(
   return FS(uri)->GetMultiSync(uri, begin, size, result_buffer);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::FilePeekAsync(
     const std::string& uri, uint8_t* result_buffer, uint64_t begin,
     uint64_t size) {
@@ -134,7 +134,7 @@ tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {

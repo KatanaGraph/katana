@@ -57,8 +57,7 @@ struct PutMultiHandle {
 GALOIS_EXPORT galois::Result<void> S3GetMultiAsync(
     const std::string& bucket, const std::string& object, uint64_t start,
     uint64_t size, uint8_t* result_buf, CountingSemaphore* sema);
-GALOIS_EXPORT galois::Result<void> S3GetMultiAsyncFinish(
-    CountingSemaphore* sema);
+GALOIS_EXPORT void S3GetMultiAsyncFinish(CountingSemaphore* sema);
 
 GALOIS_EXPORT galois::Result<void> S3PutSingleSync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
@@ -77,8 +76,7 @@ GALOIS_EXPORT galois::Result<void> S3PutMultiAsyncFinish(
 GALOIS_EXPORT galois::Result<void> S3PutSingleAsync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size, CountingSemaphore* sema);
-GALOIS_EXPORT galois::Result<void> S3PutSingleAsyncFinish(
-    CountingSemaphore* sema);
+GALOIS_EXPORT void S3PutSingleAsyncFinish(CountingSemaphore* sema);
 
 }  // namespace tsuba::internal
 

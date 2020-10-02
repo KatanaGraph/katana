@@ -148,12 +148,8 @@ ListDir(
   // collect the entire contents of directory into listing
   listing->clear();
   size->clear();
-  auto list_res = tsuba::FileListAsync(dir.string(), listing, size);
-  if (!list_res) {
-    GALOIS_LOG_ERROR("Bad listing: {}: {}", dir, list_res.error());
-    return;
-  }
-  auto fut = std::move(list_res.value());
+  auto fut = tsuba::FileListAsync(dir.string(), listing, size);
+  GALOIS_LOG_ASSERT(fut.valid());
   if (auto res = fut.get(); !res) {
     GALOIS_LOG_DEBUG("Bad nested listing call {}", dir, res.error());
   }

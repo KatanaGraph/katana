@@ -1,4 +1,4 @@
-// Run some quick, basic sanity checks on tsuba
+// Run some quick, basic sanity checks on tsuba's file functionality
 #include <getopt.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -115,36 +115,66 @@ init_data(uint8_t* buf, int32_t limit) {
 }
 
 void
-mkfile(const std::string& dst_uri, uint64_t size) {
+DeleteFile(const std::string& dst_uri) {
+  if (opt_verbose_level > 0) {
+    fmt::print(" DeleteFile: {}\n", dst_uri);
+  }
+  auto dir_res = galois::ExtractDirName(dst_uri);
+  if (!dir_res) {
+    GALOIS_LOG_FATAL("FileDelete bad URI {}\n", dir_res.error());
+  }
+  std::unordered_set<std::string> files;
+  files.emplace(galois::ExtractFileName(dst_uri));
+  if (auto res = tsuba::FileDelete(dir_res.value(), files); !res) {
+    GALOIS_LOG_FATAL("FileDelete error {}\n", res.error());
+  }
+}
+
+void
+Mkfile(const std::string& dst_uri, uint64_t size) {
   std::vector<uint8_t> buf(size);
   init_data(buf.data(), size);
   if (opt_verbose_level > 0) {
-    fmt::print(" mkfile {}: {}\n", dst_uri, Bytes2Str(size));
+    fmt::print(" Mkfile {}: {}\n", dst_uri, Bytes2Str(size));
   }
   if (auto res = tsuba::FileStore(dst_uri, buf.data(), size); !res) {
     GALOIS_LOG_FATAL("FileStore error {}\n", res.error());
   }
 }
 
-void
-cp(const std::string& dst_uri, const std::string& src_uri) {
+int
+FileExists(const std::string& uri, uint64_t* size = nullptr) {
   tsuba::StatBuf stat_buf;
-  if (auto res = tsuba::FileStat(src_uri, &stat_buf); !res) {
+  if (auto res = tsuba::FileStat(uri, &stat_buf); !res) {
+    if (opt_verbose_level > 0) {
+      fmt::print(" Stat failed {}: {}\n", uri, res.error());
+    }
+    return 0;
+  }
+  if (size) {
+    *size = stat_buf.size;
+  }
+  return 1;
+}
+
+void
+Cp(const std::string& dst_uri, const std::string& src_uri) {
+  uint64_t size{UINT64_C(0)};
+  if (!FileExists(src_uri, &size)) {
     GALOIS_LOG_FATAL("Cannot stat {}\n", src_uri);
   }
 
   if (opt_verbose_level > 0) {
-    fmt::print("cp {} to {}\n", src_uri, dst_uri);
+    fmt::print(" Cp {} to {}\n", src_uri, dst_uri);
   }
 
-  auto buf_res = tsuba::FileMmap(src_uri, UINT64_C(0), stat_buf.size);
+  auto buf_res = tsuba::FileMmap(src_uri, UINT64_C(0), size);
   if (!buf_res) {
-    GALOIS_LOG_FATAL(
-        "Failed mmap {} start 0 size {:#x}\n", src_uri, stat_buf.size);
+    GALOIS_LOG_FATAL("Failed mmap {} start 0 size {:#x}\n", src_uri, size);
   }
   uint8_t* buf = buf_res.value();
 
-  if (auto res = tsuba::FileStore(dst_uri, buf, stat_buf.size); !res) {
+  if (auto res = tsuba::FileStore(dst_uri, buf, size); !res) {
     GALOIS_LOG_FATAL("FileStore error {}\n", res.error());
   }
 }
@@ -175,75 +205,83 @@ struct Test {
 
 void
 MkCpSumLocal(
-    uint64_t num_bytes, const std::string& local, const std::string& s3,
+    uint64_t num_bytes, const std::string& local, const std::string& remote,
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
       TestType::kCall, fmt::format("Make a local file ({})", bytes_str), "",
-      [=]() { mkfile(local, num_bytes); }));
+      [=]() { Mkfile(local, num_bytes); }));
   tests.push_back(Test(
-      TestType::kCall, fmt::format("Copy local file to S3 ({})", bytes_str), "",
-      [=]() { cp(s3, local); }));
+      TestType::kCall, fmt::format("Copy local file to remote ({})", bytes_str),
+      "", [=]() { Cp(remote, local); }));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
-      fmt::format("tsuba_md5sum {}", s3)};
+      fmt::format("tsuba_md5sum {}", remote)};
   tests.push_back(Test(
       TestType::kMDsum,
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
-  // Note, no tsuba_rm yet
-  if (s3.size() > 2 && s3[0] == 's' && s3[1] == '3') {
-    tests.push_back(Test(
-        TestType::kSystem, "Remove S3 file via aws cli",
-        (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
-                                : fmt::format("aws s3 rm --quiet {}", s3),
-        [=]() {}));
-  }
+  tests.push_back(Test(
+      TestType::kCall,
+      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
+        DeleteFile(local);
+        DeleteFile(remote);
+      }));
+  tests.push_back(Test(
+      TestType::kCall,
+      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
+      }));
 }
 
 void
 MkCpSumRemote(
-    uint64_t num_bytes, const std::string& local, const std::string& s3,
+    uint64_t num_bytes, const std::string& local, const std::string& remote,
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
       TestType::kCall, fmt::format("Make remote file ({})", bytes_str), "",
-      [=]() { mkfile(s3, num_bytes); }));
+      [=]() { Mkfile(remote, num_bytes); }));
   tests.push_back(Test(
       TestType::kCall, fmt::format("Copy remote file to local ({})", bytes_str),
-      "", [=]() { cp(s3, local); }));
+      "", [=]() { Cp(local, remote); }));
   std::vector<std::string> cmds{
       fmt::format("tsuba_md5sum {}", local),
-      fmt::format("tsuba_md5sum {}", s3)};
+      fmt::format("tsuba_md5sum {}", remote)};
   tests.push_back(Test(
       TestType::kMDsum,
       fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
       cmds));
-  // Note, no tsuba_rm yet and local directory cleaned at end.
-  if (s3.size() > 2 && s3[0] == 's' && s3[1] == '3') {
-    tests.push_back(Test(
-        TestType::kSystem, "Remove S3 file via aws cli",
-        (opt_verbose_level > 0) ? fmt::format("aws s3 rm {}", s3)
-                                : fmt::format("aws s3 rm --quiet {}", s3),
-        [=]() {}));
-  }
+  tests.push_back(Test(
+      TestType::kCall,
+      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
+        DeleteFile(local);
+        DeleteFile(remote);
+      }));
+  tests.push_back(Test(
+      TestType::kCall,
+      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
+      }));
 }
 
 std::vector<Test>
-ConstructTests(std::string local_dir, std::string s3_dir) {
+ConstructTests(std::string local_dir, std::string remote_dir) {
   std::vector<Test> tests;
   std::string rnd_str = galois::RandomAlphanumericString(12);
   std::string local_rnd = galois::JoinPath(local_dir, "ci-test-" + rnd_str);
-  std::string s3_rnd = galois::JoinPath(s3_dir, "ci-test-" + rnd_str);
+  std::string remote_rnd = galois::JoinPath(remote_dir, "ci-test-" + rnd_str);
 
   // Each of these could be done on a different thread
-  MkCpSumLocal(8, local_rnd, s3_rnd, tests);
-  MkCpSumLocal(UINT64_C(1) << 13, local_rnd, s3_rnd, tests);
-  MkCpSumLocal(UINT64_C(1) << 15, local_rnd, s3_rnd, tests);
+  MkCpSumLocal(8, local_rnd, remote_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 13, local_rnd, remote_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 15, local_rnd, remote_rnd, tests);
 
-  MkCpSumRemote(15, local_rnd, s3_rnd, tests);
-  MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, s3_rnd, tests);
-  MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, s3_rnd, tests);
+  MkCpSumRemote(15, local_rnd, remote_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, remote_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, remote_rnd, tests);
 
   return tests;
 }
@@ -260,7 +298,7 @@ RunPopen(const std::string& cmd, std::string& out) {
     out += buff;
   }
   pclose(fp);
-  if(opt_verbose_level > 1) {
+  if (opt_verbose_level > 1) {
     fmt::print("out: {} cmd: {}\n", out, cmd);
   }
   return 0;

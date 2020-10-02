@@ -114,9 +114,11 @@ tsuba::AzureGetSync(
 
   std::unique_ptr<az::blob_client> client = std::move(client_res.value());
 
+  // set parallelism to size to work around azure library's dubious:
+  //   block_size = size / parallelism;
   auto ret = client
                  ->download_blob_to_buffer(
-                     container, blob, start, size, result_buf, INT_MAX)
+                     container, blob, start, size, result_buf, size)
                  .get();
   if (!ret.success()) {
     return ErrorCode::AzureError;
@@ -145,7 +147,7 @@ tsuba::AzurePutSync(
   return galois::ResultSuccess();
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::AzureGetAsync(
     const std::string& container, const std::string& blob, uint64_t start,
     uint64_t size, char* result_buf) {
@@ -166,10 +168,10 @@ tsuba::AzureGetAsync(
     }
     return galois::ResultSuccess();
   });
-  return std::move(future);
+  return future;
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::AzurePutAsync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size) {
@@ -191,10 +193,10 @@ tsuba::AzurePutAsync(
     }
     return galois::ResultSuccess();
   });
-  return std::move(future);
+  return future;
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 tsuba::AzureListAsync(
     const std::string& container, const std::string& blob,
     std::vector<std::string>* list, std::vector<uint64_t>* size) {
@@ -231,7 +233,7 @@ tsuba::AzureListAsync(
     } while (!token.empty());
     return galois::ResultSuccess();
   });
-  return std::move(future);
+  return future;
 }
 
 galois::Result<void>

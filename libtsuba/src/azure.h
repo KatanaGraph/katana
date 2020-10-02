@@ -26,15 +26,15 @@ galois::Result<void> AzurePutSync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size);
 
-galois::Result<std::future<galois::Result<void>>> AzureGetAsync(
+std::future<galois::Result<void>> AzureGetAsync(
     const std::string& container, const std::string& blob, uint64_t start,
     uint64_t size, char* result_buf);
 
-galois::Result<std::future<galois::Result<void>>> AzurePutAsync(
+std::future<galois::Result<void>> AzurePutAsync(
     const std::string& container, const std::string& blob, const char* data,
     uint64_t size);
 
-galois::Result<std::future<galois::Result<void>>> AzureListAsync(
+std::future<galois::Result<void>> AzureListAsync(
     const std::string& container, const std::string& blob,
     std::vector<std::string>* list, std::vector<uint64_t>* size);
 

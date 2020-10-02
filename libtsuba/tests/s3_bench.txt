@@ -1,3 +1,21 @@
+// 2020/10/04
+** size   19B
+Tsuba::FileStore          (8) 437.7 ms (N=3) sd 120.3  43.0 B/s
+Tsuba::FileStoreAsync     (8)  49.4 ms (N=3) sd  25.6 384.0 B/s
+Tsuba::FilePeekAsync      (8)  27.3 ms (N=3) sd  27.5 697.0 B/s
+** size  10MB
+Tsuba::FileStore          (8)   2.6 s  (N=3) sd   0.6   3.8 MB/s
+Tsuba::FileStoreAsync     (8)   3.8 s  (N=3) sd   4.8   2.6 MB/s
+Tsuba::FilePeekAsync      (8) 724.8 ms (N=3) sd  29.0  13.8 MB/s
+** size 100MB
+Tsuba::FileStore          (8)   9.3 s  (N=3) sd   1.1  10.7 MB/s
+Tsuba::FileStoreAsync     (8)   7.2 s  (N=3) sd   0.3  13.9 MB/s
+Tsuba::FilePeekAsync      (8)   6.9 s  (N=3) sd   0.0  14.5 MB/s
+** size 500MB
+Tsuba::FileStore          (8)  39.2 s  (N=3) sd   4.5  12.8 MB/s
+Tsuba::FileStoreAsync     (8)  39.1 s  (N=3) sd   4.6  12.8 MB/s
+Tsuba::FilePeekAsync      (8)  34.3 s  (N=3) sd   0.1  14.6 MB/s
+
 // 2020/09/01 future based implementation slower than 20/08/29,
 // but consistent with previous implementation on 20/09/01
 // probably due to S3 vagaries (my VM might be in us-east-2c

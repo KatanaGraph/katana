@@ -45,12 +45,12 @@ public:
   virtual uint32_t Priority() { return 0; }
 
   // get on future can potentially block (bulk synchronous parallel)
-  virtual galois::Result<std::future<galois::Result<void>>> PutAsync(
+  virtual std::future<galois::Result<void>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
-  virtual galois::Result<std::future<galois::Result<void>>> GetAsync(
+  virtual std::future<galois::Result<void>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
-  virtual galois::Result<std::future<galois::Result<void>>> ListAsync(
+  virtual std::future<galois::Result<void>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) = 0;
   virtual galois::Result<void> Delete(

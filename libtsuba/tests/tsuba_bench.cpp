@@ -12,7 +12,7 @@ int opt_verbose_level{0};
 
 std::string prog_name = "tsuba_bench";
 std::string usage_msg =
-    "Usage: {} <RDG URI>\n"
+    "Usage: {} <RDG URI if -t> <Directory URI otherwise>\n"
     "  [-t] execute ARG transactions as fast as possible (default=20)\n"
     "  [-v] verbose, can be repeated (default=false)\n"
     "  [-h] usage message\n";
@@ -174,24 +174,13 @@ tsuba_put_async(const Experiment& exp) {
   for (auto j = 0; j < exp.numTransfers_; ++j) {
     start = now();
     for (auto i = 0; i < exp.batch_; ++i) {
-      auto res =
-          tsuba::FileStoreAsync(s3urls[i], exp.buffer_.data(), exp.size_);
-      if (!res) {
-        GALOIS_LOG_ERROR(
-            "Tsuba storeasync bad return: {}\n  {}", res.error(), s3urls[i]);
-      }
-      futs[i] = std::move(res.value());
+      futs[i] = tsuba::FileStoreAsync(s3urls[i], exp.buffer_.data(), exp.size_);
+      GALOIS_LOG_ASSERT(futs[i].valid());
     }
-    bool done = false;
-    while (!done) {
-      done = true;
-      for (auto& fut : futs) {
-        if (fut.valid()) {
-          if (auto res = fut.get(); !res) {
-            GALOIS_LOG_ERROR(
-                "Tsuba storeasync work bad future return {}", res.error());
-          }
-        }
+    for (auto& fut : futs) {
+      if (auto res = fut.get(); !res) {
+        GALOIS_LOG_ERROR(
+            "Tsuba storeasync work bad future return {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));
@@ -241,18 +230,13 @@ tsuba_get_async(const Experiment& exp) {
     std::vector<std::future<galois::Result<void>>> work;
     start = now();
     for (const std::string& object : objects) {
-      auto fut_res = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
-      if (!fut_res) {
-        GALOIS_LOG_ERROR("FilePeekAsync: {}", fut_res.error());
-      } else {
-        work.emplace_back(std::move(fut_res.value()));
-      }
+      auto fut = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
+      GALOIS_LOG_ASSERT(fut.valid());
+      work.emplace_back(std::move(fut));
     }
     for (auto& fut : work) {
-      if (fut.valid()) {
-        if (auto res = fut.get(); !res) {
-          GALOIS_LOG_ERROR("Work item error: {}", res.error());
-        }
+      if (auto res = fut.get(); !res) {
+        GALOIS_LOG_ERROR("Work item error: {}", res.error());
       }
     }
     results.push_back(timespec_to_us(timespec_sub(now(), start)));

@@ -91,36 +91,39 @@ S3Storage::PutMultiSync(
   return tsuba::S3UploadOverwrite(bucket, object, data, size);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3Storage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
   return tsuba::S3PutAsync(bucket, object, data, size);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3Storage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
   return tsuba::S3GetAsync(bucket, object, start, size, result_buf);
 }
 
-galois::Result<std::future<galois::Result<void>>>
+std::future<galois::Result<void>>
 S3Storage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
-    return uri_res.error();
+    return std::async(
+        [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
   return tsuba::S3ListAsync(bucket, object, list, size);

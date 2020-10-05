@@ -264,7 +264,7 @@ if(GALOIS_ENABLE_DIST)
     set(num_threads ${GALOIS_NUM_TEST_THREADS})
 
     ## NOTE: Restricting to limited set of policies on push-style algorithms for property-graphs for now.
-    foreach (part blocked-o blocked-i cartesian hybrid)
+    foreach (part blocked-o blocked-i cartesian hybrid fennel)
       if(NOT ${X_NO_ASYNC})
         add_test_dist_for_partitions(${app} sync ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Sync)
         add_test_dist_for_partitions(${app} async ${num_threads} ${num_gpus} ${part} ${X_UNPARSED_ARGUMENTS} -exec=Async)

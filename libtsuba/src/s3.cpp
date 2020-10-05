@@ -664,6 +664,10 @@ PrepareObjectRequest(
   range << "bytes=" << part.start << "-" << part.end - 1;
   object_request->SetRange(ToAwsString(range.str()));
 
+  GALOIS_LOG_DEBUG(
+      "\n  range {} dest: {} size: {}\n", range.str(),
+      static_cast<void*>(part.dest), part.end - part.start + 1);
+
   object_request->SetResponseStreamFactory([part]() {
     auto* bufferStream = Aws::New<Aws::Utils::Stream::DefaultUnderlyingStream>(
         kAwsTag, Aws::MakeUnique<Aws::Utils::Stream::PreallocatedStreamBuf>(
@@ -698,7 +702,6 @@ internal::S3GetMultiAsync(
                           const Aws::Client::AsyncCallerContext>& /*ctx*/) {
     if (outcome.IsSuccess()) {
       sema->GoalMinusOne();
-      GALOIS_LOG_DEBUG("\n  GetAsync MinusOne\n");
     } else {
       /* TODO there are likely some errors we can handle gracefully
        * i.e., with retries */

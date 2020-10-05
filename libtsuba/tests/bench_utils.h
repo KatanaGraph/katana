@@ -36,6 +36,52 @@ timespec_to_us(struct timespec ts) {
   return ts.tv_sec * 1'000'000 + ts.tv_nsec / 1'000;  // '
 }
 
+// 19 chars, with 1 null byte
+inline void
+get_time_string(char* buf, int32_t limit) {
+  time_t rawtime;
+  struct tm* timeinfo;
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buf, limit, "%Y/%m/%d %H:%M:%S ", timeinfo);
+}
+
+inline void
+init_data(uint8_t* buf, int32_t limit) {
+  static constexpr auto chars =
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz"
+      "!@#$%^&*()-_{}[]|;:/?.,<>`~";
+
+  static auto chars_len = std::strlen(chars);
+  if (limit < 0)
+    return;
+  if (limit < 19) {
+    for (; limit; limit--) {
+      *buf++ = 'a';
+    }
+    return;
+  } else {
+    char tmp[32];              // Generous with space
+    get_time_string(tmp, 31);  // Trailing null
+    memcpy(buf, tmp, 19);      // Copy without trailing null
+    buf += 19;
+    if (limit > 19) {
+      *buf++ = ' ';
+      uint64_t char_idx =
+          (timespec_to_us(now()) %
+           chars_len);  // diversity of starting position
+      for (limit -= 20; limit; limit--) {
+        *buf++ = chars[char_idx++ % chars_len];  // We could make this faster...
+        if ((limit & 0x3FF) == 0) {
+          char_idx += (timespec_to_us(now()) % chars_len);
+        }
+      }
+    }
+  }
+}
+
 // Input: microseconds
 // Output: scaled time and units
 inline std::pair<float, std::string>

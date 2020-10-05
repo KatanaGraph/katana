@@ -42,35 +42,6 @@ MkS3URL(const std::string& bucket, const std::string& object) {
 }
 
 class Experiment {
-  // 19 chars, with 1 null byte
-  void get_time_string(char* buf, int32_t limit) {
-    time_t rawtime;
-    struct tm* timeinfo;
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(buf, limit, "%Y/%m/%d %H:%M:%S ", timeinfo);
-  }
-
-  void init_data(uint8_t* buf, uint64_t limit) {
-    if (limit < 19) {
-      for (; limit; limit--) {
-        *buf++ = 'a';
-      }
-      return;
-    } else {
-      char tmp[32];              // Generous with space
-      get_time_string(tmp, 31);  // Trailing null
-      memcpy(buf, tmp, 19);      // Copy without trailing null
-      buf += 19;
-      if (limit > 19) {
-        *buf++ = ' ';
-        for (limit -= 20; limit; limit--) {
-          *buf++ = 'a';
-        }
-      }
-    }
-  }
-
 public:
   std::string name_{};
   uint64_t size_{UINT64_C(0)};

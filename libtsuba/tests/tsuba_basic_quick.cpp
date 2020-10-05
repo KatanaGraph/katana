@@ -140,112 +140,6 @@ Cp(const std::string& dst_uri, const std::string& src_uri) {
 }
 ///////////////////////////////////////////////////////////////////
 
-enum class TestType {
-  kSystem,
-  kCall,
-  kMDsum,
-};
-
-struct Test {
-  TestType type_;
-  std::string name_;
-  std::vector<std::string> cmds_;
-  std::function<void()> func_;
-  Test(
-      TestType type, const std::string& name, const std::string& cmd,
-      std::function<void()> func)
-      : type_(type), name_(name), func_(func) {
-    cmds_.push_back(cmd);
-  }
-  Test(
-      TestType type, const std::string& name,
-      const std::vector<std::string>& cmds)
-      : type_(type), name_(name), cmds_(cmds) {}
-};
-
-void
-MkCpSumLocal(
-    uint64_t num_bytes, const std::string& local, const std::string& remote,
-    std::vector<Test>& tests) {
-  std::string bytes_str = Bytes2Str(num_bytes);
-  tests.push_back(Test(
-      TestType::kCall, fmt::format("Make a local file ({})", bytes_str), "",
-      [=]() { Mkfile(local, num_bytes); }));
-  tests.push_back(Test(
-      TestType::kCall, fmt::format("Copy local file to remote ({})", bytes_str),
-      "", [=]() { Cp(remote, local); }));
-  std::vector<std::string> cmds{
-      fmt::format("tsuba_md5sum {}", local),
-      fmt::format("tsuba_md5sum {}", remote)};
-  tests.push_back(Test(
-      TestType::kMDsum,
-      fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
-      cmds));
-  tests.push_back(Test(
-      TestType::kCall,
-      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
-        DeleteFile(local);
-        DeleteFile(remote);
-      }));
-  tests.push_back(Test(
-      TestType::kCall,
-      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
-        GALOIS_LOG_ASSERT(!FileExists(local));
-        GALOIS_LOG_ASSERT(!FileExists(remote));
-      }));
-}
-
-void
-MkCpSumRemote(
-    uint64_t num_bytes, const std::string& local, const std::string& remote,
-    std::vector<Test>& tests) {
-  std::string bytes_str = Bytes2Str(num_bytes);
-  tests.push_back(Test(
-      TestType::kCall, fmt::format("Make remote file ({})", bytes_str), "",
-      [=]() { Mkfile(remote, num_bytes); }));
-  tests.push_back(Test(
-      TestType::kCall, fmt::format("Copy remote file to local ({})", bytes_str),
-      "", [=]() { Cp(local, remote); }));
-  std::vector<std::string> cmds{
-      fmt::format("tsuba_md5sum {}", local),
-      fmt::format("tsuba_md5sum {}", remote)};
-  tests.push_back(Test(
-      TestType::kMDsum,
-      fmt::format("Compare MD5sum of local and remote files ({})", bytes_str),
-      cmds));
-  tests.push_back(Test(
-      TestType::kCall,
-      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
-        DeleteFile(local);
-        DeleteFile(remote);
-      }));
-  tests.push_back(Test(
-      TestType::kCall,
-      fmt::format("Delete local and remote files ({})", bytes_str), "", [=]() {
-        GALOIS_LOG_ASSERT(!FileExists(local));
-        GALOIS_LOG_ASSERT(!FileExists(remote));
-      }));
-}
-
-std::vector<Test>
-ConstructTests(std::string local_dir, std::string remote_dir) {
-  std::vector<Test> tests;
-  std::string rnd_str = galois::RandomAlphanumericString(12);
-  std::string local_rnd = galois::JoinPath(local_dir, "ci-test-" + rnd_str);
-  std::string remote_rnd = galois::JoinPath(remote_dir, "ci-test-" + rnd_str);
-
-  // Each of these could be done on a different thread
-  MkCpSumLocal(8, local_rnd, remote_rnd, tests);
-  MkCpSumLocal(UINT64_C(1) << 13, local_rnd, remote_rnd, tests);
-  MkCpSumLocal(UINT64_C(1) << 15, local_rnd, remote_rnd, tests);
-
-  MkCpSumRemote(15, local_rnd, remote_rnd, tests);
-  MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, remote_rnd, tests);
-  MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, remote_rnd, tests);
-
-  return tests;
-}
-
 int
 RunPopen(const std::string& cmd, std::string& out) {
   char buff[4096];
@@ -281,6 +175,94 @@ MD5sumRun(const std::string& cmd, std::string& out) {
 }
 
 int
+RunMd5Check(const std::vector<std::string>& args) {
+  std::vector<std::string> results;
+  for (auto const& arg : args) {
+    std::string out;
+    int res = MD5sumRun(fmt::format("tsuba_md5sum {}", arg), out);
+    if (res != 0) {
+      fmt::print("Test FAILED: {}\n", arg);
+      return -1;
+    }
+    results.push_back(out);
+  }
+  // Now test that they are all equal
+  auto first = results[0];
+  for (auto const& result : results) {
+    if (first != result) {
+      fmt::print(
+          "Test FAILED, outputs\n  first: {}\n  other: {}\n", first, result);
+      return -2;
+    }
+  }
+  return 0;
+}
+
+///////////////////////////
+
+struct Test {
+  std::string name_;
+  std::function<void()> func_;
+  Test(const std::string& name, std::function<void()> func)
+      : name_(name), func_(func) {}
+};
+
+void
+MkCpSumLocal(
+    uint64_t num_bytes, const std::string& local, const std::string& remote,
+    std::vector<Test>& tests) {
+  std::string bytes_str = Bytes2Str(num_bytes);
+  tests.push_back(
+      Test(fmt::format("Make local, copy, delete ({})", bytes_str), [=]() {
+        Mkfile(local, num_bytes);
+        Cp(remote, local);
+        std::vector<std::string> args{local, remote};
+        RunMd5Check(args);
+        DeleteFile(local);
+        DeleteFile(remote);
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
+      }));
+}
+
+void
+MkCpSumRemote(
+    uint64_t num_bytes, const std::string& local, const std::string& remote,
+    std::vector<Test>& tests) {
+  std::string bytes_str = Bytes2Str(num_bytes);
+  tests.push_back(Test(
+      fmt::format("Make remote, copy local, delete ({})", bytes_str), [=]() {
+        Mkfile(remote, num_bytes);
+        Cp(local, remote);
+        std::vector<std::string> args{local, remote};
+        RunMd5Check(args);
+        DeleteFile(local);
+        DeleteFile(remote);
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
+      }));
+}
+
+std::vector<Test>
+ConstructTests(std::string local_dir, std::string remote_dir) {
+  std::vector<Test> tests;
+  std::string rnd_str = galois::RandomAlphanumericString(12);
+  std::string local_rnd = galois::JoinPath(local_dir, "ci-test-" + rnd_str);
+  std::string remote_rnd = galois::JoinPath(remote_dir, "ci-test-" + rnd_str);
+
+  // Each of these could be done on a different thread
+  MkCpSumLocal(8, local_rnd, remote_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 13, local_rnd, remote_rnd, tests);
+  MkCpSumLocal(UINT64_C(1) << 15, local_rnd, remote_rnd, tests);
+
+  MkCpSumRemote(15, local_rnd, remote_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, remote_rnd, tests);
+  MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, remote_rnd, tests);
+
+  return tests;
+}
+
+int
 main(int argc, char* argv[]) {
   int main_ret = 0;
   ParseArguments(argc, argv);
@@ -304,46 +286,7 @@ main(int argc, char* argv[]) {
     if (opt_verbose_level > 0) {
       fmt::print("Running: {}\n", test.name_);
     }
-    switch (test.type_) {
-    case TestType::kSystem: {
-      int res = system(test.cmds_[0].c_str());
-      if (res != 0) {
-        main_ret = EXIT_FAILURE;
-        fmt::print("Test FAILED\n");
-        break;
-      }
-    } break;
-    case TestType::kCall: {
-      test.func_();
-    } break;
-    case TestType::kMDsum: {
-      std::vector<std::string> results;
-      for (auto const& cmd : test.cmds_) {
-        std::string out;
-        int res = MD5sumRun(cmd, out);
-        if (res != 0) {
-          main_ret = EXIT_FAILURE;
-          fmt::print("Test FAILED\n");
-          break;
-        }
-        results.push_back(out);
-      }
-      // Now test that they are all equal
-      auto first = results[0];
-      for (auto const& result : results) {
-        if (first != result) {
-          fmt::print(
-              "Test FAILED, outputs\n  first: {}\n  other: {}\n", first,
-              result);
-          main_ret = EXIT_FAILURE;
-          break;
-        }
-      }
-    } break;
-    default:
-      fmt::print("Unknown test type {}\n", test.name_);
-      main_ret = EXIT_FAILURE;
-    }
+    test.func_();
   }
 
   boost::filesystem::remove_all(tmp_dir);

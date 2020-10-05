@@ -14,13 +14,19 @@ using json = nlohmann::json;
 
 namespace {
 
-struct HealthResponse {
+struct HttpResponse {
   std::string status;
+  std::string error;
 };
 
 void
-from_json(const json& j, HealthResponse& resp) {
-  j.at("status").get_to(resp.status);
+from_json(const json& j, HttpResponse& resp) {
+  if (j.find("status") != j.end()) {
+    j.at("status").get_to(resp.status);
+  }
+  if (j.find("error") != j.end()) {
+    j.at("error").get_to(resp.status);
+  }
 }
 
 }  // namespace
@@ -35,11 +41,11 @@ HttpNameServerClient::BuildUrl(const galois::Uri& rdg_name) {
 galois::Result<void>
 HttpNameServerClient::CheckHealth() {
   auto health_res =
-      galois::HttpGetJson<HealthResponse>(prefix_ + "health-status");
+      galois::HttpGetJson<HttpResponse>(prefix_ + "health-status");
   if (!health_res) {
     return health_res.error();
   }
-  HealthResponse health = std::move(health_res.value());
+  HttpResponse health = std::move(health_res.value());
   if (health.status != "ok") {
     GALOIS_LOG_ERROR("name server reports status {}", health.status);
     return ErrorCode::TODO;
@@ -69,7 +75,17 @@ HttpNameServerClient::Create(const galois::Uri& rdg_name, const RDGMeta& meta) {
     if (!uri_res) {
       return uri_res.error();
     }
-    return galois::HttpPostJson(uri_res.value(), meta);
+    auto resp_res =
+        galois::HttpPostJson<RDGMeta, HttpResponse>(uri_res.value(), meta);
+    if (!resp_res) {
+      return resp_res.error();
+    }
+    HttpResponse resp = std::move(resp_res.value());
+    if (resp.status != "ok") {
+      GALOIS_LOG_DEBUG("request succeeded but reported error {}", resp.error);
+      return ErrorCode::TODO;
+    }
+    return galois::ResultSuccess();
   });
 }
 
@@ -84,7 +100,19 @@ HttpNameServerClient::Update(
       return uri_res.error();
     }
     auto query_string = fmt::format("?expected-version={}", old_version);
-    return galois::HttpPutJson(uri_res.value() + query_string, meta);
+
+    auto resp_res = galois::HttpPutJson<RDGMeta, HttpResponse>(
+        uri_res.value() + query_string, meta);
+    if (!resp_res) {
+      return resp_res.error();
+    }
+
+    HttpResponse resp = std::move(resp_res.value());
+    if (resp.status != "ok") {
+      GALOIS_LOG_DEBUG("request succeeded but reported error {}", resp.error);
+      return ErrorCode::TODO;
+    }
+    return galois::ResultSuccess();
   });
 }
 

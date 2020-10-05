@@ -1,20 +1,58 @@
 // 2020/10/04
 ** size   19B
-Tsuba::FileStore          (8) 437.7 ms (N=3) sd 120.3  43.0 B/s
-Tsuba::FileStoreAsync     (8)  49.4 ms (N=3) sd  25.6 384.0 B/s
-Tsuba::FilePeekAsync      (8)  27.3 ms (N=3) sd  27.5 697.0 B/s
+Tsuba::FileStore          (8) 480.5 ms (N=3) sd 128.6  39.0 B/s
+Tsuba::FileStoreAsync     (8) 390.1 ms (N=3) sd 539.1  48.0 B/s
+Tsuba::FilePeekAsync      (8)  15.8 ms (N=3) sd   1.4   1.2 KB/s
 ** size  10MB
-Tsuba::FileStore          (8)   2.6 s  (N=3) sd   0.6   3.8 MB/s
-Tsuba::FileStoreAsync     (8)   3.8 s  (N=3) sd   4.8   2.6 MB/s
-Tsuba::FilePeekAsync      (8) 724.8 ms (N=3) sd  29.0  13.8 MB/s
+Tsuba::FileStore          (8)   3.2 s  (N=3) sd   0.3   3.2 MB/s
+Tsuba::FileStoreAsync     (8) 901.0 ms (N=3) sd  26.0  11.1 MB/s
+Tsuba::FilePeekAsync      (8) 707.2 ms (N=3) sd  11.8  14.1 MB/s
 ** size 100MB
-Tsuba::FileStore          (8)   9.3 s  (N=3) sd   1.1  10.7 MB/s
+Tsuba::FileStore          (8)   8.7 s  (N=3) sd   0.2  11.5 MB/s
 Tsuba::FileStoreAsync     (8)   7.2 s  (N=3) sd   0.3  13.9 MB/s
 Tsuba::FilePeekAsync      (8)   6.9 s  (N=3) sd   0.0  14.5 MB/s
 ** size 500MB
-Tsuba::FileStore          (8)  39.2 s  (N=3) sd   4.5  12.8 MB/s
-Tsuba::FileStoreAsync     (8)  39.1 s  (N=3) sd   4.6  12.8 MB/s
-Tsuba::FilePeekAsync      (8)  34.3 s  (N=3) sd   0.1  14.6 MB/s
+Tsuba::FileStore          (8)  43.9 s  (N=3) sd   5.0  11.4 MB/s
+Tsuba::FileStoreAsync     (8)  36.7 s  (N=3) sd   4.0  13.6 MB/s
+Tsuba::FilePeekAsync      (8)  34.4 s  (N=3) sd   0.1  14.5 MB/s
+
+*** VM and bucket same region
+** size   19B
+memfd_create              (8)  39.0 us (N=4) sd  18.9 469.7 KB/s
+/tmp create               (8)  20.3 ms (N=4) sd   0.7 936.0 B/s
+S3 Put ASync One          (8) 216.8 ms (N=4) sd  62.5  87.0 B/s
+S3 Put Sync               (8) 338.1 ms (N=4) sd  31.8  56.0 B/s
+S3 Put Single Async Batch (8)  37.8 ms (N=4) sd  15.0 502.0 B/s
+S3 Get ASync One          (8)  89.0 ms (N=4) sd   5.4 213.0 B/s
+S3 Get Async Batch        (8)  28.6 ms (N=4) sd  29.1 663.0 B/s
+S3 Put Multi Async Batch  (8) 258.4 ms (N=4) sd 108.0  73.0 B/s
+** size  10MB
+memfd_create              (8)  35.6 ms (N=4) sd   2.5 280.7 MB/s
+/tmp create               (8) 401.9 ms (N=4) sd 169.8  24.9 MB/s
+S3 Put ASync One          (8)   1.5 s  (N=4) sd   0.1   6.7 MB/s
+S3 Put Sync               (8)   2.2 s  (N=4) sd   0.6   4.5 MB/s
+S3 Put Single Async Batch (8) 794.4 ms (N=4) sd  53.1  12.6 MB/s
+S3 Get ASync One          (8) 839.6 ms (N=4) sd  45.4  11.9 MB/s
+S3 Get Async Batch        (8) 705.2 ms (N=4) sd   9.5  14.2 MB/s
+S3 Put Multi Async Batch  (8)   1.8 s  (N=4) sd   1.3   5.4 MB/s
+** size 100MB
+memfd_create              (8) 412.8 ms (N=4) sd   1.5 242.3 MB/s
+/tmp create               (8)   6.2 s  (N=4) sd   0.4  16.0 MB/s
+S3 Put ASync One          (8)  10.5 s  (N=4) sd   0.4   9.5 MB/s
+S3 Put Sync               (8)  11.0 s  (N=4) sd   1.0   9.1 MB/s
+S3 Put Single Async Batch (8)   6.9 s  (N=4) sd   0.0  14.4 MB/s
+S3 Get ASync One          (8)   7.2 s  (N=4) sd   0.1  13.9 MB/s
+S3 Get Async Batch        (8)   7.0 s  (N=4) sd   0.1  14.3 MB/s
+S3 Put Multi Async Batch  (8)   7.0 s  (N=4) sd   0.0  14.2 MB/s
+** size 500MB
+memfd_create              (8)   2.0 s  (N=4) sd   0.0 250.1 MB/s
+/tmp create               (8)  32.2 s  (N=4) sd   0.1  15.5 MB/s
+S3 Put ASync One          (8)  49.2 s  (N=4) sd   2.0  10.2 MB/s
+S3 Put Sync               (8)  49.1 s  (N=4) sd   0.9  10.2 MB/s
+S3 Put Single Async Batch (8)  34.4 s  (N=4) sd   0.0  14.5 MB/s
+S3 Get ASync One          (8)  34.7 s  (N=4) sd   0.2  14.4 MB/s
+S3 Get Async Batch        (8)  34.4 s  (N=4) sd   0.1  14.5 MB/s
+S3 Put Multi Async Batch  (8)  34.5 s  (N=4) sd   0.0  14.5 MB/s
 
 // 2020/09/01 future based implementation slower than 20/08/29,
 // but consistent with previous implementation on 20/09/01

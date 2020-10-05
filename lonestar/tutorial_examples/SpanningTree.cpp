@@ -102,8 +102,8 @@ specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, nullptr, nullptr);
+  galois::SharedMemSys G;
 
   Graph graph;
 

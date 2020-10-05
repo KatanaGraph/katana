@@ -499,8 +499,8 @@ CreateKPartitions(MetisGraph& metis_graph) {
  */
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, &input_file);
+  std::unique_ptr<galois::SharedMemSys> G =
+      LonestarStart(argc, argv, name, desc, url, &input_file);
 
   galois::StatTimer total_time("TimerTotal");
   total_time.start();

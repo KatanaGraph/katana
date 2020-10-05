@@ -19,6 +19,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/Utils.h"
+#include "galois/SharedMemSys.h"
 #include "llvm/Support/CommandLine.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,8 +103,8 @@ static const char* desc =
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
+  std::unique_ptr<galois::SharedMemSys> G =
+      LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
   galois::StatTimer autoAlgoTimer("AutoAlgo_0");
   galois::StatTimer totalTime("TimerTotal");

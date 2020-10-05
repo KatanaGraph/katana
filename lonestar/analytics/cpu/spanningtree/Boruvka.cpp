@@ -417,8 +417,8 @@ run() {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
   LonestarStart(argc, argv, name, desc, url, &inputFilename);
+  galois::SharedMemSys G;
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

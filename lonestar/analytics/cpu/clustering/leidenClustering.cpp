@@ -320,8 +320,8 @@ runMultiPhaseLouvainAlgorithm(
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url, &inputFile);
+  std::unique_ptr<galois::SharedMemSys> G =
+      LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   if (!symmetricGraph) {
     GALOIS_DIE(

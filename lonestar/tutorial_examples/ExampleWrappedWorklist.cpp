@@ -57,8 +57,7 @@ public:
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
-  LonestarStart(argc, argv);
+  std::unique_ptr<galois::SharedMemSys> G = LonestarStart(argc, argv);
 
   ExampleWrappedWorklist q;
   for (unsigned i = 0; i < galois::getActiveThreads(); i++) {

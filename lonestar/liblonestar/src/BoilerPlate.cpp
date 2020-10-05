@@ -21,6 +21,8 @@
 
 #include <sstream>
 
+#include "galois/SharedMemSys.h"
+
 //! standard global options to the benchmarks
 llvm::cl::opt<bool> skipVerify(
     "noverify", llvm::cl::desc("Skip verification step (default value false)"),
@@ -48,18 +50,21 @@ LonestarPrintVersion(llvm::raw_ostream& out) {
 }
 
 //! initialize lonestar benchmark
-void
+std::unique_ptr<galois::SharedMemSys>
 LonestarStart(int argc, char** argv) {
-  LonestarStart(argc, argv, nullptr, nullptr, nullptr, nullptr);
+  return LonestarStart(argc, argv, nullptr, nullptr, nullptr, nullptr);
 }
 
 //! initialize lonestar benchmark
-void
+std::unique_ptr<galois::SharedMemSys>
 LonestarStart(
     int argc, char** argv, const char* app, const char* desc, const char* url,
     llvm::cl::opt<std::string>* input) {
   llvm::cl::SetVersionPrinter(LonestarPrintVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  auto shared_mem_sys = std::make_unique<galois::SharedMemSys>();
+
   numThreads = galois::setActiveThreads(numThreads);
 
   galois::runtime::setStatFile(statFile);
@@ -97,4 +102,5 @@ LonestarStart(
   char name[256];
   gethostname(name, 256);
   galois::runtime::reportParam("(NULL)", "Hostname", name);
+  return shared_mem_sys;
 }

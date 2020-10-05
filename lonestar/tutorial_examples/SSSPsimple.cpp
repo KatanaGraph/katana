@@ -56,8 +56,8 @@ relax_edge(unsigned src_data, Graph::edge_iterator ii, C& ctx) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
   LonestarStart(argc, argv);
+  galois::SharedMemSys G;
 
   //! [ReadGraph]
   galois::graphs::readGraph(graph, inputFile);

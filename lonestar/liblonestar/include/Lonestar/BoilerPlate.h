@@ -21,6 +21,7 @@
 #define LONESTAR_BOILERPLATE_H
 
 #include "galois/Galois.h"
+#include "galois/SharedMemSys.h"
 #include "galois/Version.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -31,8 +32,8 @@ extern llvm::cl::opt<std::string> statFile;
 extern llvm::cl::opt<bool> symmetricGraph;
 
 //! initialize lonestar benchmark
-void LonestarStart(
+std::unique_ptr<galois::SharedMemSys> LonestarStart(
     int argc, char** argv, const char* app, const char* desc, const char* url,
     llvm::cl::opt<std::string>* input);
-void LonestarStart(int argc, char** argv);
+std::unique_ptr<galois::SharedMemSys> LonestarStart(int argc, char** argv);
 #endif

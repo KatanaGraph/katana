@@ -203,8 +203,8 @@ isSupportNoLessThanJ(Graph& g, GNode src, GNode dst, unsigned int j) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
+  std::unique_ptr<galois::SharedMemSys> G =
+      LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

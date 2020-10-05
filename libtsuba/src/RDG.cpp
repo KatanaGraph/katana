@@ -1345,6 +1345,8 @@ RDG::Make(
     const std::vector<std::string>* edge_props, const SliceArg* slice) {
   auto rdg_res = ReadMetadata(partition_path);
   if (!rdg_res) {
+    GALOIS_LOG_DEBUG(
+        "ReadMetaData failed (path: {}): {}", partition_path, rdg_res.error());
     return rdg_res.error();
   }
   RDG rdg(std::move(rdg_res.value()));
@@ -1460,6 +1462,7 @@ RDG::LoadPartial(
   }
   auto part_path_res = GetPartPath(uri_res.value(), true);
   if (!part_path_res) {
+    GALOIS_LOG_DEBUG("GetPartPath failed: {}", part_path_res.error());
     return part_path_res.error();
   }
   return RDG::Make(part_path_res.value(), node_props, edge_props, &slice);
@@ -1755,6 +1758,24 @@ tsuba::Register(const std::string& name) {
 
   // NS ensures only host 0 creates
   auto res = tsuba::NS()->Create(meta.dir_, meta);
+  return res;
+}
+
+galois::Result<void>
+tsuba::Forget(const std::string& name) {
+  auto uri_res = galois::Uri::Make(name);
+  if (!uri_res) {
+    return uri_res.error();
+  }
+  galois::Uri uri = std::move(uri_res.value());
+
+  if (!IsManagedUri(uri)) {
+    GALOIS_LOG_DEBUG("uri does not look like a graph name (ends in meta)");
+    return ErrorCode::InvalidArgument;
+  }
+
+  // NS ensures only host 0 creates
+  auto res = tsuba::NS()->Delete(uri);
   return res;
 }
 

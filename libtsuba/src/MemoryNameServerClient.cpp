@@ -54,6 +54,17 @@ MemoryNameServerClient::Create(
 }
 
 galois::Result<void>
+MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = server_state_.find(rdg_name.Encode());
+  if (it == server_state_.end()) {
+    return ErrorCode::NotFound;
+  }
+  server_state_.erase(it);
+  return galois::ResultSuccess();
+}
+
+galois::Result<void>
 MemoryNameServerClient::Update(
     const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   if (old_version >= meta.version_) {

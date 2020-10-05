@@ -90,6 +90,29 @@ HttpNameServerClient::Create(const galois::Uri& rdg_name, const RDGMeta& meta) {
 }
 
 galois::Result<void>
+HttpNameServerClient::Delete(const galois::Uri& rdg_name) {
+  // TODO(thunt) we check ID here because MemoryNameServer needs to be able to
+  // store separate copies on all hosts for testing (fix it)
+  return OneHostOnly([&]() -> galois::Result<void> {
+    auto uri_res = BuildUrl(rdg_name);
+    if (!uri_res) {
+      return uri_res.error();
+    }
+    auto resp_res = galois::HttpDeleteJson<HttpResponse>(uri_res.value());
+    if (!resp_res) {
+      return resp_res.error();
+    }
+
+    HttpResponse resp = std::move(resp_res.value());
+    if (resp.status != "ok") {
+      GALOIS_LOG_DEBUG("request succeeded but reported error {}", resp.error);
+      return ErrorCode::TODO;
+    }
+    return galois::ResultSuccess();
+  });
+}
+
+galois::Result<void>
 HttpNameServerClient::Update(
     const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   // TODO(thunt) we check ID here because MemoryNameServer needs to be able to

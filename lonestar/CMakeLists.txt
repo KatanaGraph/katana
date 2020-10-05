@@ -145,10 +145,13 @@ if(GALOIS_ENABLE_DIST)
       COMMAND ${CMAKE_COMMAND} -E make_directory ${output_location})
 
     if (${X_STORE_PART})
+      add_test(NAME setup-unlink${suffix}
+        COMMAND $<TARGET_FILE:tsuba_forget> -f ${X_INPUT_URI})
       add_test(NAME setup-partition${suffix}
         COMMAND mpiexec --bind-to none -n ${np} $<TARGET_FILE:partition-dist> -newRDG=${X_INPUT_URI} ${partitioner_input} --edgePropertyName=value -t=${threads} -partition=${part})
     else()
       add_test(NAME setup-partition${suffix} COMMAND ${CMAKE_COMMAND} -E true)
+      add_test(NAME setup-unlink${suffix} COMMAND ${CMAKE_COMMAND} -E true)
     endif()
 
     add_test(NAME run${suffix} COMMAND ${command})
@@ -166,15 +169,19 @@ if(GALOIS_ENABLE_DIST)
     # is just a collection of tests with the same FIXTURES_SETUP property. The
     # fixture name is just an arbitrary string
     set_tests_properties(setup-make${suffix} setup-clean${suffix}
+        setup-unlink${suffix}
       PROPERTIES
         FIXTURES_SETUP setup${suffix})
     set_tests_properties(setup-make${suffix}
       PROPERTIES
         DEPENDS setup-clean${suffix})
+    set_tests_properties(setup-unlink${suffix}
+      PROPERTIES
+        DEPENDS setup-make${suffix})
     set_tests_properties(setup-partition${suffix}
       PROPERTIES
         FIXTURES_SETUP setup${suffix}
-        DEPENDS setup-make${suffix}
+        DEPENDS setup-unlink${suffix}
         # OpenMPI triggers a lot of leak warnings. Disable it during
         # sanitizer builds for now.
         ENVIRONMENT "GALOIS_DO_NOT_BIND_THREADS=1;ASAN_OPTIONS=detect_leaks=0")

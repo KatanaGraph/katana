@@ -24,6 +24,8 @@ public:
   galois::Result<void> Create(
       const galois::Uri& rdg_name, const RDGMeta& meta) override;
 
+  galois::Result<void> Delete(const galois::Uri& rdg_name) override;
+
   galois::Result<void> Update(
       const galois::Uri& rdg_name, uint64_t old_version,
       const RDGMeta& meta) override;

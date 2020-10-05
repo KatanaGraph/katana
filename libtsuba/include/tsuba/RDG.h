@@ -293,7 +293,11 @@ GALOIS_EXPORT galois::Result<void> Create(const std::string& name);
 /// Register a previously created RDG attaching it to the namespace; infer the
 /// version by examining files in name
 /// \param name is storage location prefix that the RDG is stored in
-galois::Result<void> Register(const std::string& name);
+GALOIS_EXPORT galois::Result<void> Register(const std::string& name);
+
+/// Forget an RDG, detaching it from the namespace
+/// \param name is storage location prefix that the RDG is stored in
+GALOIS_EXPORT galois::Result<void> Forget(const std::string& name);
 
 /// Get Information about the graph
 GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);

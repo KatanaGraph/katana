@@ -18,6 +18,7 @@ public:
   virtual galois::Result<RDGMeta> Get(const galois::Uri& rdg_name) = 0;
   virtual galois::Result<void> Create(
       const galois::Uri& rdg_name, const RDGMeta& meta) = 0;
+  virtual galois::Result<void> Delete(const galois::Uri& rdg_name) = 0;
   virtual galois::Result<void> Update(
       const galois::Uri& rdg_name, uint64_t old_version,
       const RDGMeta& meta) = 0;

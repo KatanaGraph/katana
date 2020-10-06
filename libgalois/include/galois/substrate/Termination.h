@@ -200,7 +200,7 @@ class TreeTerminationDetection : public TerminationDetection {
       }
     }
 
-    // recieved a down token, propagate
+    // received a down token, propagate
     if (th.down_token) {
       th.down_token = false;
       th.hasToken = true;

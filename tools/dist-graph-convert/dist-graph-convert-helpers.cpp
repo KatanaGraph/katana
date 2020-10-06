@@ -296,10 +296,10 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
   for (unsigned h = 0; h < totalNumHosts; h++) {
     if (h == hostID)
       continue;
-    decltype(net.recieveTagged(galois::runtime::evilPhase, nullptr)) rBuffer;
+    galois::runtime::RecvResult rBuffer;
 
     do {
-      rBuffer = net.recieveTagged(galois::runtime::evilPhase, nullptr);
+      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
     } while (!rBuffer);
 
     galois::runtime::gDeserialize(rBuffer->second, recvChunkCounts);
@@ -436,12 +436,12 @@ receiveEdgeCounts() {
   for (unsigned h = 0; h < totalNumHosts; h++) {
     if (h == hostID)
       continue;
-    decltype(net.recieveTagged(galois::runtime::evilPhase, nullptr)) rBuffer;
+    galois::runtime::RecvResult rBuffer;
 
     uint64_t recvCount;
 
     do {
-      rBuffer = net.recieveTagged(galois::runtime::evilPhase, nullptr);
+      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
     } while (!rBuffer);
     galois::runtime::gDeserialize(rBuffer->second, recvCount);
 
@@ -472,9 +472,7 @@ receiveAssignedEdges(
         std::vector<uint32_t> recvDataVector;
 
         while (edgesToReceive) {
-          decltype(
-              net.recieveTagged(galois::runtime::evilPhase, nullptr)) rBuffer;
-          rBuffer = net.recieveTagged(galois::runtime::evilPhase, nullptr);
+          auto rBuffer = net.RecvTagged(galois::runtime::evilPhase);
 
           // the buffer will have edge data as well if localsrctodata is
           // nonempty (it will be nonempty if initialized to non-empty by the
@@ -547,10 +545,10 @@ getEdgesPerHost(uint64_t localAssignedEdges) {
       continue;
     }
 
-    decltype(net.recieveTagged(galois::runtime::evilPhase, nullptr)) rBuffer;
+    galois::runtime::RecvResult rBuffer;
     uint64_t otherAssignedEdges;
     do {
-      rBuffer = net.recieveTagged(galois::runtime::evilPhase, nullptr);
+      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
     } while (!rBuffer);
     galois::runtime::gDeserialize(rBuffer->second, otherAssignedEdges);
 

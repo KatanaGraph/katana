@@ -334,12 +334,6 @@ determineUnitRangesLoopGraph(
       // unit assinged no nodes, copy last one
       returnRanges[i + 1] = returnRanges[i];
     }
-
-    galois::gDebug(
-        "LoopGraph Unit ", i, " gets nodes ", returnRanges[i], " to ",
-        returnRanges[i + 1], ", num edges is ",
-        edge_end(graph, returnRanges[i + 1] - 1) -
-            edge_begin(graph, returnRanges[i]));
   }
 }
 
@@ -402,10 +396,6 @@ determineUnitRangesLoopPrefixSum(
       // unit assinged no nodes
       returnRanges[i + 1] = returnRanges[i];
     }
-
-    galois::gDebug(
-        "Unit ", i, " gets nodes ", returnRanges[i], " to ",
-        returnRanges[i + 1]);
   }
 }
 
@@ -567,9 +557,6 @@ determineUnitRangesFromPrefixSum(
       // unit assinged no nodes
       nodeRanges[i + 1] = nodeRanges[i];
     }
-
-    galois::gDebug(
-        "Unit ", i, " gets nodes ", nodeRanges[i], " to ", nodeRanges[i + 1]);
   }
 
   return nodeRanges;

@@ -286,7 +286,7 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
       continue;
     galois::runtime::SendBuffer b;
     galois::runtime::gSerialize(b, chunkCounts);
-    net.sendTagged(h, galois::runtime::evilPhase, b);
+    net.SendTagged(h, galois::runtime::evilPhase, std::move(b));
   }
 
   // receive chunk counts
@@ -535,7 +535,7 @@ getEdgesPerHost(uint64_t localAssignedEdges) {
       continue;
     galois::runtime::SendBuffer b;
     galois::runtime::gSerialize(b, localAssignedEdges);
-    net.sendTagged(h, galois::runtime::evilPhase, b);
+    net.SendTagged(h, galois::runtime::evilPhase, std::move(b));
   }
 
   // receive

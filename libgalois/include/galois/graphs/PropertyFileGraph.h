@@ -113,7 +113,9 @@ public:
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyFileGraph>> Make(
-      const std::string& rdg_name);
+      const std::string& rdg_name,
+      const std::vector<std::string>* node_props = nullptr,
+      const std::vector<std::string>* edge_props = nullptr);
 
   /// Make a property graph from an RDG but only load the named node and edge
   /// properties.

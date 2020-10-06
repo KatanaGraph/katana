@@ -1184,14 +1184,13 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
     topology_path_ = t_path.BaseName();
   }
 
-  // TODO (witchel) replace with more robust naming convention
-  // Don't persist ephemeral columns whose names start with "Column_"
+  // Don't persist ephemeral columns whose names start with ",Column_"
   std::vector<tsuba::PropertyMetadata> filtered_node_properties{};
   std::copy_if(
       node_properties_.begin(), node_properties_.end(),
       std::back_inserter(filtered_node_properties),
       [](tsuba::PropertyMetadata pmd) {
-        return pmd.name.find("Column_") != 0;
+        return pmd.name.find(",Column_") != 0;
       });
   auto node_write_result = WriteTable(
       *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_);

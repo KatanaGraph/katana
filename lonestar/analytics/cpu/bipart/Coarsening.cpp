@@ -26,6 +26,7 @@
 
 #include "Helper.h"
 #include "galois/AtomicHelpers.h"
+#include "galois/DynamicBitset.h"
 
 // maximum weight limit for a coarsened node
 WeightTy kLimitWeights[100];
@@ -185,7 +186,7 @@ ParallelPrioRand(
  * finer-graphs in specified param graph
  * @param nodes Vector of GNodeBags containing node ids to be created in
  * the coarsened graphs
- * @param hedges Vector of DynamicBitSet that represents whether a hyperedge
+ * @param hedges Vector of DynamicBitset that represents whether a hyperedge
  * needs to be added to the coarsened graph
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
@@ -195,7 +196,7 @@ void
 ParallelHMatchAndCreateNodes(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-    std::vector<GNodeBag>& nodes, std::vector<galois::DynamicBitSet>& hedges,
+    std::vector<GNodeBag>& nodes, std::vector<galois::DynamicBitset>& hedges,
     std::vector<std::vector<WeightTy>>& weight) {
   ParallelPrioRand<Matcher>(graph, combined_edge_list);
 
@@ -439,7 +440,7 @@ MoreCoarse(
  * @param graph Vector containing finer-graphs
  * @param combined_edge_list Concatenated list of hyperedges of the
  * finer-graphs in specified param graph
- * @param hedges Vector of DynamicBitSet that represents whether a hyperedge
+ * @param hedges Vector of DynamicBitset that represents whether a hyperedge
  * needs to be added to the coarsened graph
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
@@ -448,7 +449,7 @@ void
 CoarsePhaseII(
     std::vector<MetisGraph*>& graph,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-    std::vector<galois::DynamicBitSet>& hedges,
+    std::vector<galois::DynamicBitset>& hedges,
     std::vector<std::vector<WeightTy>>& weight) {
   MoreCoarse(graph, combined_edge_list, weight);
 
@@ -562,7 +563,7 @@ FindLoneNodes(
  * @param combined_node_list Concatenated list of nodes of the
  * finer-graphs
  * @param bag Vector of nodes to be added to the coarsened graphs
- * @param hedges Vector of DynamicBitSet that represents whether a hyperedge
+ * @param hedges Vector of DynamicBitset that represents whether a hyperedge
  * needs to be added to the coarsened graph
  * @param weight Vector of vectors containing the weight value of the
  * coarsened nodes
@@ -573,7 +574,7 @@ ParallelCreateEdges(
     std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
     std::vector<GNodeBag>& nodes_bag,
-    std::vector<galois::DynamicBitSet>& hedges,
+    std::vector<galois::DynamicBitset>& hedges,
     std::vector<std::vector<WeightTy>>& weight) {
   uint32_t num_partitions = coarse_metis_graph.size();
   NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
@@ -655,7 +656,7 @@ ParallelCreateEdges(
         std::vector<GNode> repr_node_ids(
             kLoneNodesCoarsenFactor, std::numeric_limits<GNode>::max());
         // FIXME(HCLee) need better name.
-        galois::DynamicBitSet new_match_filter;
+        galois::DynamicBitset new_match_filter;
         new_match_filter.resize(kLoneNodesCoarsenFactor);
 
         // 1) Find minimum node id from a match.
@@ -721,7 +722,7 @@ ParallelCreateEdges(
         }
         uint32_t num_hedges = fine_graphs[i]->hedges;
         uint32_t tot_size = fine_graphs[i]->size();
-        galois::DynamicBitSet new_match_filter;
+        galois::DynamicBitset new_match_filter;
         new_match_filter.resize(tot_size);
 
         // Set nodes which were newly included in a match.
@@ -896,7 +897,7 @@ FindMatching(
   assert(coarse_mgraph.size() == fine_mgraph.size());
   uint32_t num_fine_hedges = fine_mgraph.size();
   std::vector<GNodeBag> nodes(num_fine_hedges);
-  std::vector<galois::DynamicBitSet> hedges(num_fine_hedges);
+  std::vector<galois::DynamicBitset> hedges(num_fine_hedges);
   // Maintain total weights of nodes inside of a match.
   std::vector<std::vector<WeightTy>> weight(num_fine_hedges);
 
@@ -991,7 +992,7 @@ Coarsen(
   std::vector<uint32_t> current_num_nodes(num_partitions);
   std::vector<uint32_t> new_num_nodes(num_partitions);
   std::vector<MetisGraph*> final_graph(num_partitions, nullptr);
-  galois::DynamicBitSet graph_is_done;
+  galois::DynamicBitset graph_is_done;
 
   graph_is_done.resize(num_partitions);
   graph_is_done.reset();

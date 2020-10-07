@@ -263,7 +263,7 @@ template <typename EdgeDataTy>
 void
 findUniqueSourceNodes(
     const std::vector<uint32_t>& localEdges,
-    galois::DynamicBitSet& uniqueNodeBitset) {
+    galois::DynamicBitset& uniqueNodeBitset) {
   uint64_t hostID = galois::runtime::getSystemNetworkInterface().ID;
   std::cout << "[" << hostID << "] Finding unique nodes\n";
   uniqueNodeBitset.reset();
@@ -296,9 +296,9 @@ findUniqueSourceNodes(
  * those nodes are included in)
  */
 void findUniqueChunks(
-    galois::DynamicBitSet& uniqueNodeBitset,
+    galois::DynamicBitset& uniqueNodeBitset,
     const std::vector<Uint64Pair>& chunkToNode,
-    galois::DynamicBitSet& uniqueChunkBitset);
+    galois::DynamicBitset& uniqueChunkBitset);
 
 /**
  * Get the edge counts for chunks of edges that we have locally.
@@ -314,7 +314,7 @@ void findUniqueChunks(
 template <typename EdgeDataTy>
 void
 accumulateLocalEdgesToChunks(
-    galois::DynamicBitSet& uniqueChunkBitset,
+    galois::DynamicBitset& uniqueChunkBitset,
     const std::vector<uint32_t>& localEdges,
     const std::vector<Uint64Pair>& chunkToNode,
     std::vector<uint64_t>& chunkCounts) {
@@ -384,7 +384,7 @@ void sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts);
 template <typename EdgeDataTy>
 std::vector<uint64_t>
 getChunkEdgeCounts(
-    galois::DynamicBitSet& uniqueChunkBitset,
+    galois::DynamicBitset& uniqueChunkBitset,
     const std::vector<uint32_t>& localEdges,
     const std::vector<Uint64Pair>& chunkToNode) {
   std::vector<uint64_t> chunkCounts;
@@ -450,11 +450,11 @@ getEvenNodeToHostMapping(
 
   std::cout << "[" << hostID << "] Determining edge to chunk counts\n";
 
-  galois::DynamicBitSet uniqueNodeBitset;
+  galois::DynamicBitset uniqueNodeBitset;
   uniqueNodeBitset.resize(totalNodeCount);
   findUniqueSourceNodes<EdgeDataTy>(localEdges, uniqueNodeBitset);
 
-  galois::DynamicBitSet uniqueChunkBitset;
+  galois::DynamicBitset uniqueChunkBitset;
   uniqueChunkBitset.resize(numNodeChunks);
   findUniqueChunks(uniqueNodeBitset, chunkToNode, uniqueChunkBitset);
 

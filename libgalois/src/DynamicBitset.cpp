@@ -25,10 +25,10 @@
 
 #include "galois/Galois.h"
 
-GALOIS_EXPORT galois::DynamicBitSet galois::EmptyBitset;
+GALOIS_EXPORT galois::DynamicBitset galois::EmptyBitset;
 
 void
-galois::DynamicBitSet::bitwise_or(const DynamicBitSet& other) {
+galois::DynamicBitset::bitwise_or(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   galois::do_all(
@@ -37,7 +37,7 @@ galois::DynamicBitSet::bitwise_or(const DynamicBitSet& other) {
 }
 
 void
-galois::DynamicBitSet::bitwise_and(const DynamicBitSet& other) {
+galois::DynamicBitset::bitwise_and(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   galois::do_all(
@@ -46,8 +46,8 @@ galois::DynamicBitSet::bitwise_and(const DynamicBitSet& other) {
 }
 
 void
-galois::DynamicBitSet::bitwise_and(
-    const DynamicBitSet& other1, const DynamicBitSet& other2) {
+galois::DynamicBitset::bitwise_and(
+    const DynamicBitset& other1, const DynamicBitset& other2) {
   assert(size() == other1.size());
   assert(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
@@ -60,7 +60,7 @@ galois::DynamicBitSet::bitwise_and(
 }
 
 void
-galois::DynamicBitSet::bitwise_xor(const DynamicBitSet& other) {
+galois::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   galois::do_all(
@@ -69,8 +69,8 @@ galois::DynamicBitSet::bitwise_xor(const DynamicBitSet& other) {
 }
 
 void
-galois::DynamicBitSet::bitwise_xor(
-    const DynamicBitSet& other1, const DynamicBitSet& other2) {
+galois::DynamicBitset::bitwise_xor(
+    const DynamicBitset& other1, const DynamicBitset& other2) {
   assert(size() == other1.size());
   assert(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
@@ -83,7 +83,7 @@ galois::DynamicBitSet::bitwise_xor(
 }
 
 uint64_t
-galois::DynamicBitSet::count() const {
+galois::DynamicBitset::count() const {
   galois::GAccumulator<uint64_t> ret;
   galois::do_all(
       galois::iterate(bitvec.begin(), bitvec.end()),
@@ -102,7 +102,7 @@ galois::DynamicBitSet::count() const {
 }
 
 std::vector<uint32_t>
-galois::DynamicBitSet::getOffsets() const {
+galois::DynamicBitset::getOffsets() const {
   // TODO uint32_t is somewhat dangerous; change in the future
   uint32_t activeThreads = galois::getActiveThreads();
   std::vector<unsigned int> tPrefixBitCounts(activeThreads);

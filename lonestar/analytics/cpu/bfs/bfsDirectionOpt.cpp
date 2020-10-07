@@ -175,7 +175,7 @@ struct OneTilePushWrap {
 
 template <typename WL>
 void
-WlToBitset(WL& wl, galois::DynamicBitSet& bitset) {
+WlToBitset(WL& wl, galois::DynamicBitset& bitset) {
   galois::do_all(
       galois::iterate(wl), [&](const GNode& src) { bitset.set(src); },
       galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
@@ -184,7 +184,7 @@ WlToBitset(WL& wl, galois::DynamicBitSet& bitset) {
 
 template <typename WL>
 void
-BitsetToWl(const Graph& graph, const galois::DynamicBitSet& bitset, WL& wl) {
+BitsetToWl(const Graph& graph, const galois::DynamicBitset& bitset, WL& wl) {
   wl.clear();
   galois::do_all(
       galois::iterate(graph),
@@ -212,7 +212,7 @@ syncDOAlgo(
 
   Loop loop;
 
-  galois::DynamicBitSet front_bitset, next_bitset;
+  galois::DynamicBitset front_bitset, next_bitset;
   front_bitset.resize(graph.size());
   next_bitset.resize(graph.size());
 

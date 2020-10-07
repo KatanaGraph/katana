@@ -251,9 +251,9 @@ binSearchDivision(
 
 void
 findUniqueChunks(
-    galois::DynamicBitSet& uniqueNodeBitset,
+    galois::DynamicBitset& uniqueNodeBitset,
     const std::vector<Uint64Pair>& chunkToNode,
-    galois::DynamicBitSet& uniqueChunkBitset) {
+    galois::DynamicBitset& uniqueChunkBitset) {
   uint64_t hostID = galois::runtime::getSystemNetworkInterface().ID;
   std::cout << "[" << hostID << "] Finding unique chunks\n";
   uniqueChunkBitset.reset();

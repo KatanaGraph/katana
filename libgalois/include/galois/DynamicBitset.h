@@ -20,7 +20,7 @@
 /**
  * @file galois/DynamicBitset.h
  *
- * Contains the DynamicBitSet class and most of its implementation.
+ * Contains the DynamicBitset class and most of its implementation.
  */
 
 #ifndef GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
@@ -41,7 +41,7 @@ namespace galois {
 /**
  * Concurrent dynamically allocated bitset
  **/
-class GALOIS_EXPORT DynamicBitSet {
+class GALOIS_EXPORT DynamicBitset {
   galois::PODResizeableArray<galois::CopyableAtomic<uint64_t>> bitvec;
   size_t num_bits{0};
 
@@ -49,7 +49,7 @@ public:
   static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
 
   //! Constructor which initializes to an empty bitset.
-  DynamicBitSet() = default;
+  DynamicBitset() = default;
 
   /**
    * Returns the underlying bitset representation to the user
@@ -238,7 +238,7 @@ public:
   }
 
   // assumes bit_vector is not updated (set) in parallel
-  void bitwise_or(const DynamicBitSet& other);
+  void bitwise_or(const DynamicBitset& other);
 
   // assumes bit_vector is not updated (set) in parallel
 
@@ -247,7 +247,7 @@ public:
    *
    * @param other Other bitset to do bitwise and with
    */
-  void bitwise_and(const DynamicBitSet& other);
+  void bitwise_and(const DynamicBitset& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -256,14 +256,14 @@ public:
    * @param other1 Bitset to and with other 2
    * @param other2 Bitset to and with other 1
    */
-  void bitwise_and(const DynamicBitSet& other1, const DynamicBitSet& other2);
+  void bitwise_and(const DynamicBitset& other1, const DynamicBitset& other2);
 
   /**
    * Does an IN-PLACE bitwise xor of this bitset and another bitset
    *
    * @param other Other bitset to do bitwise xor with
    */
-  void bitwise_xor(const DynamicBitSet& other);
+  void bitwise_xor(const DynamicBitset& other);
 
   /**
    * Does an IN-PLACE bitwise and of 2 passed in bitsets and saves to this
@@ -272,7 +272,7 @@ public:
    * @param other1 Bitset to xor with other 2
    * @param other2 Bitset to xor with other 1
    */
-  void bitwise_xor(const DynamicBitSet& other1, const DynamicBitSet& other2);
+  void bitwise_xor(const DynamicBitset& other1, const DynamicBitset& other2);
 
   /**
    * Count how many bits are set in the bitset
@@ -295,7 +295,7 @@ public:
 };
 
 //! An empty bitset object; used mainly by InvalidBitsetFn
-extern galois::DynamicBitSet EmptyBitset;
+extern galois::DynamicBitset EmptyBitset;
 
 //! A structure representing an empty bitset.
 struct GALOIS_EXPORT InvalidBitsetFn {
@@ -303,7 +303,7 @@ struct GALOIS_EXPORT InvalidBitsetFn {
   static constexpr bool is_valid() { return false; }
 
   //! Returns the empty bitset
-  static galois::DynamicBitSet& get() { return EmptyBitset; }
+  static galois::DynamicBitset& get() { return EmptyBitset; }
 
   //! No-op since it's an empty bitset
   static void reset_range(size_t, size_t) {}

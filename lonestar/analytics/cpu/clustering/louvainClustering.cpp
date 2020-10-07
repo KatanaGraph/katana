@@ -25,7 +25,6 @@
 #include "Lonestar/BoilerPlate.h"
 #include "clustering.h"
 #include "galois/AtomicHelpers.h"
-#include "galois/DynamicBitset.h"
 #include "galois/Galois.h"
 #include "galois/Reduction.h"
 #include "galois/Timer.h"

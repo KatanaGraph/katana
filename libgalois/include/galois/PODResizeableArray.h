@@ -185,10 +185,12 @@ public:
       [[maybe_unused]] iterator position, InputIterator first,
       InputIterator last) {
     assert(position == end());
-    size_t old_size = size_;
     size_t to_add = last - first;
-    resize(old_size + to_add);
-    std::copy_n(first, to_add, begin() + old_size);
+    if (to_add > 0) {
+      size_t old_size = size_;
+      resize(old_size + to_add);
+      std::copy_n(first, to_add, begin() + old_size);
+    }
   }
 
   void swap(PODResizeableArray& v) {

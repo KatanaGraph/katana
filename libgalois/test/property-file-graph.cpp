@@ -35,11 +35,17 @@ TestRoundTrip() {
   auto add_node_result = g->AddNodeProperties(node_table);
   GALOIS_LOG_ASSERT(add_node_result);
 
+  auto mark_node_persistent = g->MarkNodePropertiesPersistent({"node-name"});
+  GALOIS_LOG_ASSERT(mark_node_persistent);
+
   std::shared_ptr<arrow::Table> edge_table =
       MakeTable<ValueType>("edge-name", test_length);
 
   auto add_edge_result = g->AddEdgeProperties(edge_table);
   GALOIS_LOG_ASSERT(add_edge_result);
+
+  auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({"edge-name"});
+  GALOIS_LOG_ASSERT(mark_edge_persistent);
 
   auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
   GALOIS_LOG_ASSERT(unique_result);

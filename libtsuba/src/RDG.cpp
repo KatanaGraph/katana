@@ -32,6 +32,7 @@
 constexpr uint32_t kPartitionMagicNo = 0x4B808284;  // KPRT
 constexpr uint32_t kRDGMagicNo = 0x4B524447;        // KRDG
 
+// TODO (witchel) these key are deprecated as part of parquet
 static const char* topology_path_key = "kg.v1.topology.path";
 static const char* node_property_path_key = "kg.v1.node_property.path";
 static const char* node_property_name_key = "kg.v1.node_property.name";
@@ -39,7 +40,6 @@ static const char* edge_property_path_key = "kg.v1.edge_property.path";
 static const char* edge_property_name_key = "kg.v1.edge_property.name";
 static const char* part_property_path_key = "kg.v1.part_property.path";
 static const char* part_property_name_key = "kg.v1.part_property.name";
-
 static const char* part_other_metadata_key = "kg.v1.other_part_metadata.key";
 
 static const char* node_property_key = "kg.v1.node_property";
@@ -363,8 +363,9 @@ WriteTable(
     if (!properties[i].path.empty()) {
       continue;
     }
-    auto name_res =
-        StoreArrowArrayAtName(table.column(i), dir, schema->field(i)->name());
+    auto name = properties[i].name.empty() ? schema->field(i)->name()
+                                           : properties[i].name;
+    auto name_res = StoreArrowArrayAtName(table.column(i), dir, name);
     if (!name_res) {
       return name_res.error();
     }
@@ -498,7 +499,7 @@ AddProperties(
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
-    GALOIS_LOG_DEBUG("column names are not distinct");
+    GALOIS_LOG_DEBUG("failed: column names are not distinct");
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -547,7 +548,7 @@ MakeProperties(std::vector<std::string>&& values) {
   std::vector v = std::move(values);
 
   if ((v.size() % 2) != 0) {
-    GALOIS_LOG_DEBUG("number of values {} is not even", v.size());
+    GALOIS_LOG_DEBUG("failed: number of values {} is not even", v.size());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -1133,6 +1134,7 @@ RDG::PrunePropsTo(
     for (const std::string& s : *node_properties) {
       auto it = node_paths.find(s);
       if (it == node_paths.end()) {
+        GALOIS_LOG_DEBUG("failed: node property {} not found", s);
         return ErrorCode::PropertyNotFound;
       }
 
@@ -1154,6 +1156,7 @@ RDG::PrunePropsTo(
     for (const std::string& s : *edge_properties) {
       auto it = edge_paths.find(s);
       if (it == edge_paths.end()) {
+        GALOIS_LOG_DEBUG("failed: node property {} not found", s);
         return ErrorCode::PropertyNotFound;
       }
 
@@ -1184,28 +1187,34 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
     topology_path_ = t_path.BaseName();
   }
 
-  // Don't persist ephemeral columns whose names start with ",Column_"
+  // Only persist marked columns
   std::vector<tsuba::PropertyMetadata> filtered_node_properties{};
   std::copy_if(
-      node_properties_.begin(), node_properties_.end(),
+      node_properties_.cbegin(), node_properties_.cend(),
       std::back_inserter(filtered_node_properties),
-      [](tsuba::PropertyMetadata pmd) {
-        return pmd.name.find(",Column_") != 0;
-      });
+      [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
   auto node_write_result = WriteTable(
       *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_);
   if (!node_write_result) {
-    GALOIS_LOG_DEBUG("unable to write node properties");
+    GALOIS_LOG_DEBUG("failed to write node properties");
     return node_write_result.error();
   }
+  // One could argue that writing a graph should be idempotent and not change node_properties_
   node_properties_ = std::move(node_write_result.value());
 
-  auto edge_write_result =
-      WriteTable(*edge_table_, edge_properties_, handle.impl_->rdg_meta.dir_);
+  // Only persist marked columns
+  std::vector<tsuba::PropertyMetadata> filtered_edge_properties{};
+  std::copy_if(
+      edge_properties_.begin(), edge_properties_.end(),
+      std::back_inserter(filtered_edge_properties),
+      [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
+  auto edge_write_result = WriteTable(
+      *edge_table_, filtered_edge_properties, handle.impl_->rdg_meta.dir_);
   if (!edge_write_result) {
-    GALOIS_LOG_DEBUG("unable to write edge properties");
+    GALOIS_LOG_DEBUG("failed to write edge properties");
     return edge_write_result.error();
   }
+  // One could argue that writing a graph should be idempotent and not change edge_properties_
   edge_properties_ = std::move(edge_write_result.value());
 
   if (part_metadata_.state == PartitionMetadata::State::kFromPartitioner) {
@@ -1216,7 +1225,7 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
     auto part_write_result =
         WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_);
     if (!part_write_result) {
-      GALOIS_LOG_DEBUG("WritePartMetadata for part_properties failed");
+      GALOIS_LOG_DEBUG("failed: WritePartMetadata for part_properties");
       return part_write_result.error();
     }
     part_properties_ = std::move(part_write_result.value());
@@ -1228,7 +1237,7 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
   }
 
   if (auto write_result = WriteMetadataJson(handle); !write_result) {
-    GALOIS_LOG_DEBUG("metadata write error");
+    GALOIS_LOG_DEBUG("error: metadata write");
     return write_result.error();
   }
 
@@ -1345,7 +1354,7 @@ RDG::Make(
   auto rdg_res = ReadMetadata(partition_path);
   if (!rdg_res) {
     GALOIS_LOG_DEBUG(
-        "ReadMetaData failed (path: {}): {}", partition_path, rdg_res.error());
+        "failed: ReadMetaData (path: {}): {}", partition_path, rdg_res.error());
     return rdg_res.error();
   }
   RDG rdg(std::move(rdg_res.value()));
@@ -1364,6 +1373,7 @@ RDG::Make(
       return res.error();
     }
   }
+
   return RDG(std::move(rdg));
 }
 
@@ -1372,24 +1382,27 @@ RDG::Validate() const {
   for (const auto& md : node_properties_) {
     if (md.path.find('/') != std::string::npos) {
       GALOIS_LOG_DEBUG(
-          "node_property path doesn't contain a slash: \"{}\"", md.path);
+          "failed: node_property path doesn't contain a slash: \"{}\"",
+          md.path);
       return ErrorCode::InvalidArgument;
     }
   }
   for (const auto& md : edge_properties_) {
     if (md.path.find('/') != std::string::npos) {
       GALOIS_LOG_DEBUG(
-          "edge_property path doesn't contain a slash: \"{}\"", md.path);
+          "failed: edge_property path doesn't contain a slash: \"{}\"",
+          md.path);
       return ErrorCode::InvalidArgument;
     }
   }
   if (topology_path_.empty()) {
-    GALOIS_LOG_DEBUG("either topology_path: \"{}\" is empty", topology_path_);
+    GALOIS_LOG_DEBUG("failed: topology_path: \"{}\" is empty", topology_path_);
     return ErrorCode::InvalidArgument;
   }
   if (topology_path_.find('/') != std::string::npos) {
     GALOIS_LOG_DEBUG(
-        "topology_path doesn't contain a slash: \"{}\"", topology_path_);
+        "failed: topology_path doesn't contain a slash: \"{}\"",
+        topology_path_);
     return ErrorCode::InvalidArgument;
   }
   return galois::ResultSuccess();
@@ -1412,7 +1425,7 @@ RDG::Load(
     RDGHandle handle, const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!handle.impl_->AllowsRead()) {
-    GALOIS_LOG_DEBUG("handle does not allow full read");
+    GALOIS_LOG_DEBUG("failed: handle does not allow full read");
     return ErrorCode::InvalidArgument;
   }
   return RDG::Make(
@@ -1443,7 +1456,7 @@ RDG::LoadPartial(
     const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!handle.impl_->AllowsReadPartial()) {
-    GALOIS_LOG_DEBUG("handle does not allow partial read");
+    GALOIS_LOG_DEBUG("failed: handle does not allow partial read");
     return ErrorCode::InvalidArgument;
   }
   return RDG::Make(
@@ -1461,7 +1474,7 @@ RDG::LoadPartial(
   }
   auto part_path_res = GetPartPath(uri_res.value(), true);
   if (!part_path_res) {
-    GALOIS_LOG_DEBUG("GetPartPath failed: {}", part_path_res.error());
+    GALOIS_LOG_DEBUG("failed: GetPartPath: {}", part_path_res.error());
     return part_path_res.error();
   }
   return RDG::Make(part_path_res.value(), node_props, edge_props, &slice);
@@ -1470,7 +1483,7 @@ RDG::LoadPartial(
 galois::Result<void>
 RDG::Store(RDGHandle handle, const std::string& command_line, FileFrame* ff) {
   if (!handle.impl_->AllowsWrite()) {
-    GALOIS_LOG_DEBUG("handle does not allow write");
+    GALOIS_LOG_DEBUG("failed: handle does not allow write");
     return ErrorCode::InvalidArgument;
   }
   if (handle.impl_->rdg_meta.num_hosts_ != 0 &&
@@ -1555,6 +1568,55 @@ RDG::DropEdgeProperty(int i) {
 }
 
 void
+RDG::MarkAllPropertiesPersistent() {
+  std::for_each(node_properties_.begin(), node_properties_.end(), [](auto& p) {
+    return p.persist = true;
+  });
+
+  std::for_each(edge_properties_.begin(), edge_properties_.end(), [](auto& p) {
+    return p.persist = true;
+  });
+}
+
+galois::Result<void>
+RDG::MarkNodePropertiesPersistent(
+    const std::vector<std::string>& persist_node_props) {
+  if (persist_node_props.size() > node_properties_.size()) {
+    GALOIS_LOG_DEBUG(
+        "failed: persist props {} names, rdg.node_properties_ {}",
+        persist_node_props.size(), node_properties_.size());
+    return ErrorCode::InvalidArgument;
+  }
+  for (uint32_t i = 0; i < persist_node_props.size(); ++i) {
+    if (!persist_node_props[i].empty()) {
+      node_properties_[i].name = persist_node_props[i];
+      node_properties_[i].path = "";
+      node_properties_[i].persist = true;
+    }
+  }
+  return galois::ResultSuccess();
+}
+
+galois::Result<void>
+RDG::MarkEdgePropertiesPersistent(
+    const std::vector<std::string>& persist_edge_props) {
+  if (persist_edge_props.size() > edge_properties_.size()) {
+    GALOIS_LOG_DEBUG(
+        "failed: persist props {} names, rdg.edge_properties_ {}",
+        persist_edge_props.size(), edge_properties_.size());
+    return ErrorCode::InvalidArgument;
+  }
+  for (uint32_t i = 0; i < persist_edge_props.size(); ++i) {
+    if (!persist_edge_props[i].empty()) {
+      edge_properties_[i].name = persist_edge_props[i];
+      edge_properties_[i].path = "";
+      edge_properties_[i].persist = true;
+    }
+  }
+  return galois::ResultSuccess();
+}
+
+void
 RDG::UnbindFromStorage() {
   for (PropertyMetadata& prop : node_properties_) {
     prop.path = "";
@@ -1601,7 +1663,7 @@ FindLatestMetaFile(const galois::Uri& name) {
     }
   }
   if (found_meta.empty()) {
-    GALOIS_LOG_DEBUG("could not find meta file in {}", name);
+    GALOIS_LOG_DEBUG("failed: could not find meta file in {}", name);
     return ErrorCode::InvalidArgument;
   }
   return name.Append(found_meta);
@@ -1627,7 +1689,7 @@ tsuba::ExaminePrefix(const std::string& uri_str) {
 galois::Result<tsuba::RDGPrefix>
 tsuba::ExaminePrefix(RDGHandle handle) {
   if (!handle.impl_->AllowsReadPartial()) {
-    GALOIS_LOG_DEBUG("handle not intended for partial read");
+    GALOIS_LOG_DEBUG("failed: handle not intended for partial read");
     return ErrorCode::InvalidArgument;
   }
   return DoExaminePrefix(
@@ -1647,7 +1709,8 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
 
   if (!IsManagedUri(uri)) {
     GALOIS_LOG_DEBUG(
-        "{} is probably a literal rdg file and not suited for open", uri);
+        "failed: {} is probably a literal rdg file and not suited for open",
+        uri);
     return ErrorCode::InvalidArgument;
   }
 

@@ -113,9 +113,7 @@ public:
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyFileGraph>> Make(
-      const std::string& rdg_name,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+      const std::string& rdg_name);
 
   /// Make a property graph from an RDG but only load the named node and edge
   /// properties.
@@ -187,6 +185,25 @@ public:
 
   std::shared_ptr<arrow::ChunkedArray> EdgeProperty(int i) const {
     return rdg_.edge_table_->column(i);
+  }
+
+  void MarkAllPropertiesPersistent() {
+    return rdg_.MarkAllPropertiesPersistent();
+  }
+
+  /// MarkNodePropertiesPersistent indicates which node properties will be
+  /// serialized when this graph is written.
+  ///
+  /// Properties are "named" by position, so an empty string means don't persist that
+  /// property.
+  Result<void> MarkNodePropertiesPersistent(
+      const std::vector<std::string>& persist_node_props) {
+    return rdg_.MarkNodePropertiesPersistent(persist_node_props);
+  }
+
+  Result<void> MarkEdgePropertiesPersistent(
+      const std::vector<std::string>& persist_edge_props) {
+    return rdg_.MarkEdgePropertiesPersistent(persist_edge_props);
   }
 
   const GraphTopology& topology() const { return topology_; }

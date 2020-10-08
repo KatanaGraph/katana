@@ -103,18 +103,6 @@ PrintStrings(std::shared_ptr<arrow::ChunkedArray> arr) {
   }
 }
 
-// TODO(witchel) Should use table->ToString();
-static void
-PrintTable(std::shared_ptr<arrow::Table> table) {
-  const auto& schema = table->schema();
-  for (int i = 0, n = schema->num_fields(); i < n; i++) {
-    fmt::print("Schema {:d} {}\n", i, schema->field(i)->name());
-  }
-  fmt::print(
-      "Table num col {:d} num row {:d} col 0 chunks {:d}\n",
-      table->num_columns(), table->num_rows(), table->column(0)->num_chunks());
-}
-
 /******************************************************************************/
 // Construct arrow tables, which are node & edge properties
 // Schemas
@@ -329,13 +317,13 @@ PrintGraph(const std::string& src_uri) {
   }
   auto rdg = std::move(rdg_res.value());
   fmt::print("NODE\n");
-  PrintTable(rdg.node_table_);
+  fmt::print("{}\n", rdg.node_table_->schema()->ToString());
   for (auto i = 0; i < rdg.node_table_->num_columns(); ++i) {
     PrintInts(rdg.node_table_->column(i));
   }
 
   fmt::print("EDGE\n");
-  PrintTable(rdg.edge_table_);
+  fmt::print("{}\n", rdg.edge_table_->schema()->ToString());
   PrintStrings(rdg.edge_table_->GetColumnByName("str"));
 }
 

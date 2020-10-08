@@ -61,6 +61,7 @@ public:
 struct PropertyMetadata {
   std::string name;
   std::string path;
+  bool persist{false};
 };
 
 struct GALOIS_EXPORT RDGStat {
@@ -201,6 +202,12 @@ public:
 
   galois::Result<void> DropNodeProperty(int i);
   galois::Result<void> DropEdgeProperty(int i);
+
+  void MarkAllPropertiesPersistent();
+  galois::Result<void> MarkNodePropertiesPersistent(
+      const std::vector<std::string>& persist_node_props);
+  galois::Result<void> MarkEdgePropertiesPersistent(
+      const std::vector<std::string>& persist_edge_props);
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);

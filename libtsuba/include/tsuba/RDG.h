@@ -204,6 +204,7 @@ public:
   galois::Result<void> DropEdgeProperty(int i);
 
   void MarkAllPropertiesPersistent();
+
   galois::Result<void> MarkNodePropertiesPersistent(
       const std::vector<std::string>& persist_node_props);
   galois::Result<void> MarkEdgePropertiesPersistent(

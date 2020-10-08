@@ -1571,6 +1571,44 @@ RDG::DropEdgeProperty(int i) {
   return galois::ResultSuccess();
 }
 
+galois::Result<void>
+RDG::MarkNodePropertiesPersistent(
+    const std::vector<std::string>& persist_node_props) {
+  if (persist_node_props.size() > node_properties_.size()) {
+    GALOIS_LOG_DEBUG(
+        "persist props {} names, rdg.node_properties_ {}",
+        persist_node_props.size(), node_properties_.size());
+    return ErrorCode::InvalidArgument;
+  }
+  for (uint32_t i = 0; i < persist_node_props.size(); ++i) {
+    if (!persist_node_props[i].empty()) {
+      node_properties_[i].name = persist_node_props[i];
+      node_properties_[i].path = "";
+      node_properties_[i].persist = true;
+    }
+  }
+  return galois::ResultSuccess();
+}
+
+galois::Result<void>
+RDG::MarkEdgePropertiesPersistent(
+    const std::vector<std::string>& persist_edge_props) {
+  if (persist_edge_props.size() > edge_properties_.size()) {
+    GALOIS_LOG_DEBUG(
+        "persist props {} names, rdg.edge_properties_ {}",
+        persist_edge_props.size(), edge_properties_.size());
+    return ErrorCode::InvalidArgument;
+  }
+  for (uint32_t i = 0; i < persist_edge_props.size(); ++i) {
+    if (!persist_edge_props[i].empty()) {
+      edge_properties_[i].name = persist_edge_props[i];
+      edge_properties_[i].path = "";
+      edge_properties_[i].persist = true;
+    }
+  }
+  return galois::ResultSuccess();
+}
+
 void
 RDG::MarkAllPropertiesPersistent() {
   std::for_each(node_properties_.begin(), node_properties_.end(), [](auto& p) {

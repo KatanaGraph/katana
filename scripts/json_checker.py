@@ -8,6 +8,7 @@
 import argparse
 import os
 import json
+import sys
 
 def main(resultjson, truthdir):
   failures = 0

@@ -33,7 +33,7 @@ struct OnlineStat {
         max_distance(0),
         distance_square(0) {}
 
-  void AddDistance(uint64_t distance) {
+  void AddDistance(const uint64_t distance) {
     ++num_nodes;
     total_distance += distance;
     distance_square += distance * distance;
@@ -56,7 +56,7 @@ struct OnlineStat {
 };
 
 uint32_t
-GraphStat(HyperGraph& graph) {
+GraphStat(const HyperGraph& graph) {
   OnlineStat stat;
   for (GNode node : graph) {
     uint64_t dist = std::distance(graph.edge_begin(node), graph.edge_end(node));

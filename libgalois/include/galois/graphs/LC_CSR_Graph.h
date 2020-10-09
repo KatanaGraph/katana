@@ -340,6 +340,10 @@ public:
     return raw_end(N);
   }
 
+  edge_iterator edge_begin(GraphNode N) const { return raw_begin(N); }
+
+  edge_iterator edge_end(GraphNode N) const { return raw_end(N); }
+
   auto getDegree(GraphNode N) const {
     return std::distance(raw_begin(N), raw_end(N));
   }

@@ -1,6 +1,5 @@
-
-
 #include "Helper.h"
+
 /**
  * Initialize the nodes in the graph
  *
@@ -8,19 +7,19 @@
  * @param num_hedges Number of hyperedges in the specified param graph
  */
 void
-InitNodes(HyperGraph& graph, uint32_t num_hedges) {
+InitNodes(HyperGraph* graph, const uint32_t num_hedges) {
   galois::do_all(
-      galois::iterate(graph),
+      galois::iterate(*graph),
       [&](GNode n) {
-        MetisNode& node = graph.getData(n);
+        MetisNode& node = graph->getData(n);
         NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
         NetvalTy max_netval = std::numeric_limits<NetvalTy>::max();
-        //! only hyper edge has its own indices.
-        node.SetNetnum((n < num_hedges) ? (n + 1) : max_netnum);
-        node.SetNetrand(max_netval);
-        node.SetNetval(max_netval);
-        node.SetNodeId(n + 1);  ///< all nodes/hedges have indices.
-        node.SetGraphIndex(0);
+        // only hyper edge has its own indices.
+        node.netnum = (n < num_hedges) ? (n + 1) : max_netnum;
+        node.netrand = max_netval;
+        node.netval = max_netval;
+        node.node_id = n + 1;  ///< all nodes/hedges have indices.
+        node.graph_index = 0;
         node.InitRefine();  ///< partition <- 0, bound <- true.
       },
       galois::loopname("Init-Nodes"));
@@ -34,7 +33,7 @@ InitNodes(HyperGraph& graph, uint32_t num_hedges) {
  */
 void
 ConstructGraph(
-    HyperGraph& graph, const std::string filename,
+    HyperGraph* graph, const std::string filename,
     const bool skip_isolated_hedges) {
   std::ifstream f(filename.c_str());
   std::string line;
@@ -123,15 +122,16 @@ ConstructGraph(
     num_fedges += prefix_edges[num_read_hedges++];
   }
   f.close();
-  graph.SetHedges(num_hedges);
-  graph.SetHnodes(num_hnodes);
+  graph->SetHedges(num_hedges);
+  graph->SetHnodes(num_hnodes);
 
-  ParallelPrefixSum(prefix_edges);
+  galois::ParallelSTL::partial_sum(
+      prefix_edges.begin(), prefix_edges.end(), prefix_edges.begin());
 
   // # nodes = (# of hyper edges + # of nodes), which means each hyper edge
   // is considered as a node.
   // # edges = (# of normal edges).
-  graph.constructFrom(
+  graph->constructFrom(
       total_num_nodes, num_fedges, std::move(prefix_edges), edges_id);
   InitNodes(graph, num_hedges);
 
@@ -147,57 +147,58 @@ void
 PrioritizeHigherDegree(GNode node, HyperGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
-  fine_graph->getData(node).SetNetval(-num_edges);
+  fine_graph->getData(node).netval = -num_edges;
 }
 void
 PrioritizeRandom(GNode node, HyperGraph* fine_graph) {
   MetisNode& node_data = fine_graph->getData(node);
 
-  node_data.SetNetval(-node_data.GetNetrand());
-  node_data.SetNetrand(-node_data.GetNetnum());
+  node_data.netval = -node_data.netrand;
+  node_data.netrand = -node_data.netnum;
 }
 void
 PrioritizeLowerDegree(GNode node, HyperGraph* fine_graph) {
   NetvalTy num_edges =
       std::distance(fine_graph->edge_begin(node), fine_graph->edge_end(node));
-  fine_graph->getData(node).SetNetval(num_edges);
+  fine_graph->getData(node).netval = num_edges;
 }
 void
 PrioritizeHigherWeight(GNode node, HyperGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
-    w += fine_graph->getData(dst).GetWeight();
+    w += fine_graph->getData(dst).weight;
   }
-  fine_graph->getData(node).SetNetval(-w);
+  fine_graph->getData(node).netval = -w;
 }
 void
 PrioritizeDegree(GNode node, HyperGraph* fine_graph) {
   WeightTy w = 0;
   for (auto& e : fine_graph->edges(node)) {
     GNode dst = fine_graph->getEdgeDst(e);
-    w += fine_graph->getData(dst).GetWeight();
+    w += fine_graph->getData(dst).weight;
   }
-  fine_graph->getData(node).SetNetval(w);
+  fine_graph->getData(node).netval = w;
 }
 
 void
 SortNodesByGainAndWeight(
-    HyperGraph& graph, std::vector<GNode>& nodes, uint32_t end_offset = 0) {
-  auto end_iter = (end_offset == 0) ? nodes.end() : nodes.begin() + end_offset;
-  std::sort(nodes.begin(), end_iter, [&graph](GNode& l_opr, GNode& r_opr) {
-    MetisNode& l_data = graph.getData(l_opr);
-    MetisNode& r_data = graph.getData(r_opr);
+    HyperGraph* graph, std::vector<GNode>* nodes, uint32_t end_offset = 0) {
+  auto end_iter =
+      (end_offset == 0) ? nodes->end() : nodes->begin() + end_offset;
+  std::sort(nodes->begin(), end_iter, [&graph](GNode& l_opr, GNode& r_opr) {
+    MetisNode& l_data = graph->getData(l_opr);
+    MetisNode& r_data = graph->getData(r_opr);
     float l_gain = l_data.GetGain();
     float r_gain = r_data.GetGain();
-    float l_weight = l_data.GetWeight();
-    float r_weight = r_data.GetWeight();
+    float l_weight = l_data.weight;
+    float r_weight = r_data.weight;
     float l_cost = l_gain / l_weight;
     float r_cost = r_gain / r_weight;
 
     if (fabs(l_cost - r_cost) < 0.00001f) {
-      uint32_t l_nid = l_data.GetNodeId();
-      uint32_t r_nid = r_data.GetNodeId();
+      uint32_t l_nid = l_data.node_id;
+      uint32_t r_nid = r_data.node_id;
 
       return l_nid < r_nid;
     }
@@ -207,16 +208,16 @@ SortNodesByGainAndWeight(
 }
 
 void
-InitGain(HyperGraph& g) {
-  uint32_t num_hedges = g.GetHedges();
-  uint32_t size_graph = static_cast<uint32_t>(g.size());
+InitGain(HyperGraph* g) {
+  uint32_t num_hedges = g->GetHedges();
+  uint32_t size_graph = static_cast<uint32_t>(g->size());
 
   galois::do_all(
       galois::iterate(num_hedges, size_graph),
       [&](uint32_t n) {
-        MetisNode& node = g.getData(n);
-        node.SetPositiveGain(0);
-        node.SetNegativeGain(0);
+        MetisNode& node = g->getData(n);
+        node.positive_gain = 0;
+        node.negative_gain = 0;
       },
       galois::loopname("Init-Gains"));
 
@@ -234,10 +235,13 @@ InitGain(HyperGraph& g) {
       galois::iterate(uint32_t{0}, num_hedges),
       [&](uint32_t n) {
         uint32_t num_p0_nodes{0}, num_p1_nodes{0};
-        for (auto& fedge : g.edges(n)) {
-          GNode node = g.getEdgeDst(fedge);
-          (g.getData(node).GetPartition() == 0) ? ++num_p0_nodes
-                                                : ++num_p1_nodes;
+        for (auto& fedge : g->edges(n)) {
+          GNode node = g->getEdgeDst(fedge);
+          if (g->getData(node).partition == 0) {
+            ++num_p0_nodes;
+          } else {
+            ++num_p1_nodes;
+          }
 
           if (num_p0_nodes > 1 && num_p1_nodes > 1) {
             break;
@@ -249,10 +253,10 @@ InitGain(HyperGraph& g) {
         // --> p1 = 1 or 0/ p2 = 1 or 0
         if (!(num_p0_nodes > 1 && num_p1_nodes > 1) &&
             (num_p0_nodes + num_p1_nodes > 1)) {
-          for (auto& fedge : g.edges(n)) {
-            GNode node = g.getEdgeDst(fedge);
-            MetisNode& node_data = g.getData(node);
-            uint32_t part = node_data.GetPartition();
+          for (auto& fedge : g->edges(n)) {
+            GNode node = g->getEdgeDst(fedge);
+            MetisNode& node_data = g->getData(node);
+            uint32_t part = node_data.partition;
             uint32_t nodep = (part == 0) ? num_p0_nodes : num_p1_nodes;
             if (nodep == 1) {
               gain_vector[node - num_hedges] += 1;
@@ -275,16 +279,16 @@ InitGain(HyperGraph& g) {
           gain += (*(thread_local_gain_vector.getRemote(i)))[index_n];
         }
 
-        g.getData(n).SetPositiveGain(gain);
+        g->getData(n).positive_gain = gain;
       },
       galois::loopname("Reduce-Gains"));
 }
 
 void
 InitGain(
-    std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
-    std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
-    std::vector<HyperGraph*>& g) {
+    const std::vector<std::pair<uint32_t, uint32_t>>& combined_edgelist,
+    const std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
+    const std::vector<HyperGraph*>& g) {
   uint32_t total_nodes = combined_nodelist.size();
   uint32_t total_hedges = combined_edgelist.size();
 
@@ -295,9 +299,9 @@ InitGain(
         GNode node_id = node_index_pair.first;
         uint32_t index = node_index_pair.second;
         MetisNode& node_data = g[index]->getData(node_id);
-        node_data.SetPositiveGain(0);
-        node_data.SetNegativeGain(0);
-        node_data.SetListIndex(n);
+        node_data.positive_gain = 0;
+        node_data.negative_gain = 0;
+        node_data.list_index = n;
       },
       galois::loopname("Init-Gains"));
 
@@ -325,8 +329,11 @@ InitGain(
 
         for (auto& fedge : graph.edges(node_id)) {
           GNode node = graph.getEdgeDst(fedge);
-          (graph.getData(node).GetPartition() == 0) ? ++num_p0_nodes
-                                                    : ++num_p1_nodes;
+          if (graph.getData(node).partition == 0) {
+            ++num_p0_nodes;
+          } else {
+            ++num_p1_nodes;
+          }
 
           if (num_p0_nodes > 1 && num_p1_nodes > 1) {
             break;
@@ -344,9 +351,9 @@ InitGain(
           for (auto& fedge : graph.edges(node_id)) {
             GNode dst_id = graph.getEdgeDst(fedge);
             MetisNode& node_data = graph.getData(dst_id);
-            uint32_t part = node_data.GetPartition();
+            uint32_t part = node_data.partition;
             uint32_t nodep = (part == 0) ? num_p0_nodes : num_p1_nodes;
-            uint32_t list_index = node_data.GetListIndex();
+            uint32_t list_index = node_data.list_index;
 
             if (nodep == 1) {
               positive_gain_vector[list_index] += 1;
@@ -377,8 +384,8 @@ InitGain(
         GNode node_id = node_index_pair.first;
         uint32_t index = node_index_pair.second;
         MetisNode& node_data = g[index]->getData(node_id);
-        node_data.SetPositiveGain(positive_gain);
-        node_data.SetNegativeGain(negative_gain);
+        node_data.positive_gain = positive_gain;
+        node_data.negative_gain = negative_gain;
       },
       galois::loopname("Reduce-Gains"));
 }

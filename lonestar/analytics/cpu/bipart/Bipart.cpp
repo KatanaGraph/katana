@@ -89,9 +89,9 @@ static cll::opt<bool> skip_lone_hedges(
  */
 void
 Partition(
-    std::vector<MetisGraph*> metis_graphs, uint32_t max_coarsen_level,
-    std::vector<uint32_t>& target_partitions) {
-  assert(metis_graphs.size() == target_partitions.size());
+    std::vector<MetisGraph*>* metis_graphs, const uint32_t max_coarsen_level,
+    const std::vector<uint32_t>& target_partitions) {
+  assert(metis_graphs->size() == target_partitions.size());
   galois::StatTimer exec_timer("Total-Partition");
   exec_timer.start();
 
@@ -102,7 +102,7 @@ Partition(
 
   galois::StatTimer timer_partitioning("Total-Partitioning-CoarsestGraph");
   timer_partitioning.start();
-  PartitionCoarsestGraphs(metis_graphs, target_partitions);
+  PartitionCoarsestGraphs(*metis_graphs, target_partitions);
   timer_partitioning.stop();
 
   galois::StatTimer timer_refining("Total-Refining");
@@ -122,17 +122,17 @@ Partition(
  * assignment
  */
 uint32_t
-ComputingCut(HyperGraph& g) {
+ComputingCut(HyperGraph* g) {
   galois::GAccumulator<uint32_t> edgecut;
   galois::do_all(
-      galois::iterate(uint32_t{0}, g.GetHedges()),
+      galois::iterate(uint32_t{0}, g->GetHedges()),
       [&](GNode n) {
         uint32_t first_edge_partition_id =
-            g.getData(g.getEdgeDst(g.edge_begin(n))).GetPartition();
+            g->getData(g->getEdgeDst(g->edge_begin(n))).partition;
         bool edges_are_cut = false;
-        for (auto e = g.edge_begin(n) + 1; e < g.edge_end(n); e++) {
-          GNode dst = g.getEdgeDst(e);
-          uint32_t partition_id = g.getData(dst).GetPartition();
+        for (auto e = g->edge_begin(n) + 1; e < g->edge_end(n); e++) {
+          GNode dst = g->getEdgeDst(e);
+          uint32_t partition_id = g->getData(dst).partition;
           if (partition_id != first_edge_partition_id) {
             edges_are_cut = true;
             break;
@@ -157,24 +157,24 @@ ComputingCut(HyperGraph& g) {
  */
 void
 ConstructCombinedLists(
-    std::vector<MetisGraph*>& metis_graphs,
-    std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-    std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
+    const std::vector<MetisGraph*>& metis_graphs,
+    std::vector<std::pair<uint32_t, uint32_t>>* combined_edge_list,
+    std::vector<std::pair<uint32_t, uint32_t>>* combined_node_list) {
   uint32_t edge_index{0};
   uint32_t node_index{0};
   uint32_t num_partitions = metis_graphs.size();
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (metis_graphs[i] != nullptr) {
-      HyperGraph& g = *(metis_graphs[i]->GetHyperGraph());
+      HyperGraph& g = (metis_graphs[i]->graph);
       uint32_t num_hedges = g.GetHedges();
 
       for (GNode n = 0; n < num_hedges; n++) {
-        combined_edge_list[edge_index] = std::make_pair(n, i);
+        combined_edge_list->at(edge_index) = std::make_pair(n, i);
         edge_index++;
       }
-      for (GNode n = num_hedges; n < static_cast<uint32_t>(g.size()); n++) {
-        combined_node_list[node_index] = std::make_pair(n, i);
+      for (GNode n = num_hedges; n < static_cast<GNode>(g.size()); n++) {
+        combined_node_list->at(node_index) = std::make_pair(n, i);
         node_index++;
       }
     }
@@ -182,7 +182,11 @@ ConstructCombinedLists(
 }
 
 /**
+ * Assigns a partition to each hyperedge based on the current partitioning
+ * assignment of the nodes.
  *
+ * @param graph Graph
+ * @param num_hedges Number of hyperedges in the specified param graph
  */
 void
 SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
@@ -191,12 +195,12 @@ SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
       [&](uint32_t hedge) {
         auto f_edge = *(graph->edges(hedge).begin());
         GNode f_dst = graph->getEdgeDst(f_edge);
-        uint32_t f_partition = graph->getData(f_dst).GetPartition();
+        uint32_t f_partition = graph->getData(f_dst).partition;
         bool flag{true};
 
         for (auto& fedge : graph->edges(hedge)) {
           GNode dst = graph->getEdgeDst(fedge);
-          uint32_t partition = graph->getData(dst).GetPartition();
+          uint32_t partition = graph->getData(dst).partition;
 
           if (partition != f_partition) {
             flag = false;
@@ -215,19 +219,31 @@ SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
           h_partition = kInfPartition;
         }
 
-        graph->getData(hedge).SetPartition(h_partition);
+        graph->getData(hedge).partition = h_partition;
       },
       galois::steal(), galois::loopname("Set-CompleteHEdge-Partition"));
 }
 
 /**
+ * Assigns an id to the nodes and hyperedges in each child partition
  *
+ * @param current_level_indices Set containing indexes of current
+ * child partitions
+ * @param mem_nodes_of_parts Vector of InsertBags containing nodes for
+ * each child partition
+ * @param mem_hedges_of_parts Vector of InsertBags containing hyperedges for
+ * each child partition
+ * @param hnodes_bag InsertBag of pair of the partition index and
+ * the node's child id, for each node
+ * @param hedges_bag InsertBag of pair of the partition index and
+ * the hyperedges's child id, for each node
+ * @param graph Graph
  */
 void
 SetChildId(
-    std::set<uint32_t>& current_level_indices,
-    std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
-    std::vector<galois::InsertBag<GNode>>& mem_hedges_of_parts,
+    const std::set<uint32_t>& current_level_indices,
+    const std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
+    const std::vector<galois::InsertBag<GNode>>& mem_hedges_of_parts,
     galois::InsertBag<std::pair<uint32_t, uint32_t>>* hnodes_bag,
     galois::InsertBag<std::pair<uint32_t, uint32_t>>* hedges_bag,
     HyperGraph* graph) {
@@ -236,7 +252,7 @@ SetChildId(
       [&](uint32_t i) {
         uint32_t ed = 0;
         for (GNode h : mem_hedges_of_parts[i]) {
-          graph->getData(h).SetChildId(ed++);
+          graph->getData(h).child_id = ed++;
         }
 
         uint32_t id = ed;
@@ -244,7 +260,7 @@ SetChildId(
         hedges_bag->emplace(std::make_pair(i, ed));
 
         for (GNode n : mem_nodes_of_parts[i]) {
-          graph->getData(n).SetChildId(id++);
+          graph->getData(n).child_id = id++;
         }
         // <partition no, # of member nodes>.
         hnodes_bag->emplace(std::make_pair(i, id - ed));
@@ -252,16 +268,14 @@ SetChildId(
       galois::steal(), galois::loopname("Set-Child-IDs"));
 }
 
-/**
- *
- */
 void
 ConstructNewGraph(
-    std::set<uint32_t>& current_level_indices,
-    std::vector<uint32_t>& pgraph_index,
-    std::vector<uint32_t>& num_hnodes_per_partition,
-    std::vector<uint32_t>& num_hedges_per_partition, const uint32_t num_hedges,
-    HyperGraph* graph, std::vector<HyperGraph*>& gr) {
+    const std::set<uint32_t>& current_level_indices,
+    const std::vector<uint32_t>& pgraph_index,
+    const std::vector<uint32_t>& num_hnodes_per_partition,
+    const std::vector<uint32_t>& num_hedges_per_partition,
+    const uint32_t num_hedges, HyperGraph* graph,
+    const std::vector<HyperGraph*>& gr) {
   std::vector<galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>>
       edges_ids(num_partitions);
   std::vector<LargeArrayUint64Ty> edges_prefixsum(num_partitions);
@@ -278,16 +292,16 @@ ConstructNewGraph(
       galois::iterate(uint32_t{0}, num_hedges),
       [&](GNode src) {
         MetisNode& src_node = graph->getData(src);
-        uint32_t partition = src_node.GetPartition();
+        uint32_t partition = src_node.partition;
         if (partition == kInfPartition) {
           return;
         }
         uint32_t index = pgraph_index[partition];
-        GNode slot_id = src_node.GetChildId();
+        GNode slot_id = src_node.child_id;
 
         for (auto& e : graph->edges(src)) {
           GNode dst = graph->getEdgeDst(e);
-          GNode dst_slot_id = graph->getData(dst).GetChildId();
+          GNode dst_slot_id = graph->getData(dst).child_id;
           edges_ids[index][slot_id].push_back(dst_slot_id);
         }
       },
@@ -309,33 +323,30 @@ ConstructNewGraph(
     uint64_t edges = num_edges_acc[index].reduce();
     uint32_t ipart_num_nodes =
         num_hedges_per_partition[index] + num_hnodes_per_partition[index];
-    HyperGraph& cur_graph = *gr[index];
+    HyperGraph* cur_graph = gr[index];
     for (uint32_t c = 1; c < ipart_num_nodes; ++c) {
       edges_prefixsum[index][c] += edges_prefixsum[index][c - 1];
     }
 
-    cur_graph.constructFrom(
+    cur_graph->constructFrom(
         ipart_num_nodes, edges, std::move(edges_prefixsum[index]),
         edges_ids[index]);
-    cur_graph.SetHedges(num_hedges_per_partition[index]);
-    cur_graph.SetHnodes(num_hnodes_per_partition[index]);
+    cur_graph->SetHedges(num_hedges_per_partition[index]);
+    cur_graph->SetHnodes(num_hnodes_per_partition[index]);
   }
 
   for (uint32_t i : current_level_indices) {
     uint32_t index = pgraph_index[i];
-    HyperGraph& cur_graph = *gr[index];
-    InitNodes(cur_graph, cur_graph.GetHedges());
+    HyperGraph* cur_graph = gr[index];
+    InitNodes(cur_graph, cur_graph->GetHedges());
   }
 }
 
-/**
- *
- */
 void
 UpdateGraphTree(
-    std::set<uint32_t>& current_level_indices,
-    std::vector<uint32_t>& pgraph_index,
-    std::vector<MetisGraph*>& metis_graph_vec) {
+    const std::set<uint32_t>& current_level_indices,
+    const std::vector<uint32_t>& pgraph_index,
+    const std::vector<MetisGraph*>& metis_graph_vec) {
   for (uint32_t i : current_level_indices) {
     uint32_t index = pgraph_index[i];
     MetisGraph* mcg = metis_graph_vec[index];
@@ -344,29 +355,27 @@ UpdateGraphTree(
       continue;
     }
 
-    while (mcg->GetCoarsenedGraph() != nullptr) {
-      mcg = mcg->GetCoarsenedGraph();
+    while (mcg->coarsened_graph != nullptr) {
+      mcg = mcg->coarsened_graph;
     }
 
-    while (mcg->GetParentGraph() != nullptr &&
-           mcg->GetParentGraph()->GetParentGraph() != nullptr) {
-      mcg = mcg->GetParentGraph();
-      delete mcg->GetCoarsenedGraph();
+    while (mcg->parent_graph != nullptr &&
+           mcg->parent_graph->parent_graph != nullptr) {
+      mcg = mcg->parent_graph;
+      delete mcg->coarsened_graph;
     }
   }
 }
 
-/**
- *
- */
 void
 PostReassignPartition(
-    uint32_t* to_process_partitions, std::set<uint32_t>& current_level_indices,
+    uint32_t* to_process_partitions,
+    const std::set<uint32_t>& current_level_indices,
     std::set<uint32_t>* next_level_indices,
-    std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
-    std::vector<uint32_t>& pgraph_index, HyperGraph* graph,
-    std::vector<HyperGraph*>& gr) {
-  for (uint32_t i : current_level_indices) {
+    const std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
+    const std::vector<uint32_t>& pgraph_index, HyperGraph* graph,
+    const std::vector<HyperGraph*>& gr) {
+  for (const uint32_t i : current_level_indices) {
     uint32_t tmp = to_process_partitions[i];
     uint32_t second_partition = (tmp + 1) / 2;
     to_process_partitions[i] = second_partition;
@@ -378,12 +387,12 @@ PostReassignPartition(
         galois::iterate(mem_nodes_of_parts[i]),
         [&](GNode src) {
           MetisNode& src_data = graph->getData(src);
-          GNode n = src_data.GetChildId();
-          uint32_t partition = gr[pgraph_index[i]]->getData(n).GetPartition();
+          GNode n = src_data.child_id;
+          uint32_t partition = gr[pgraph_index[i]]->getData(n).partition;
           if (partition == 0) {
-            src_data.SetPartition(i);
+            src_data.partition = i;
           } else if (partition == 1) {
-            src_data.SetPartition(i + second_partition);
+            src_data.partition = i + second_partition;
           }
         },
         galois::loopname("Reassign-Partition"));
@@ -396,15 +405,15 @@ PostReassignPartition(
  * @param metis_graph Metis graph representing the original input graph
  */
 void
-CreateKPartitions(MetisGraph& metis_graph) {
+CreateKPartitions(MetisGraph* metis_graph) {
   galois::StatTimer initial_partition_timer("Initial-Partition");
   galois::StatTimer intermediate_partition_timer("Intermediate-Partition");
   galois::StatTimer update_graphtree_timer("Update-GraphTree");
-  HyperGraph& graph = *metis_graph.GetHyperGraph();
-  uint32_t total_num_nodes = graph.size();
-  uint32_t num_hedges = graph.GetHedges();
+  HyperGraph* graph = &metis_graph->graph;
+  uint32_t total_num_nodes = graph->size();
+  uint32_t num_hedges = graph->GetHedges();
   std::vector<MetisGraph*> metis_graphs;
-  metis_graphs.push_back(&metis_graph);
+  metis_graphs.push_back(metis_graph);
 
   // Number of partitions to create.
   std::vector<uint32_t> partitions_list;
@@ -412,7 +421,7 @@ CreateKPartitions(MetisGraph& metis_graph) {
 
   initial_partition_timer.start();
   // Initial partitioning into two cgraphs.
-  Partition(metis_graphs, max_coarse_graph_size, partitions_list);
+  Partition(&metis_graphs, max_coarse_graph_size, partitions_list);
   initial_partition_timer.stop();
 
   // Calculate number of iterations/levels required.
@@ -427,11 +436,11 @@ CreateKPartitions(MetisGraph& metis_graph) {
   galois::do_all(
       galois::iterate(num_hedges, total_num_nodes),
       [&](uint32_t n) {
-        MetisNode& node = graph.getData(n);
-        uint32_t partition_of_node = node.GetPartition();
+        MetisNode& node = graph->getData(n);
+        uint32_t partition_of_node = node.partition;
         // Change the second partition as the middle.
         if (partition_of_node == 1) {
-          node.SetPartition(second_partition);
+          node.partition = second_partition;
         }
       },
       galois::loopname("Initial-Assign-Partition"));
@@ -441,7 +450,6 @@ CreateKPartitions(MetisGraph& metis_graph) {
   current_level_indices.insert(0);
   current_level_indices.insert(second_partition);
 
-  // FIXME(HCLee) we may replace this with a vector.
   std::vector<galois::InsertBag<GNode>> mem_nodes_of_parts;
   std::vector<galois::InsertBag<GNode>> mem_hedges_of_parts;
   mem_nodes_of_parts.resize(num_partitions);
@@ -465,24 +473,24 @@ CreateKPartitions(MetisGraph& metis_graph) {
     }
 
     for (uint32_t n = num_hedges; n < total_num_nodes; n++) {
-      MetisNode& node = graph.getData(n);
-      uint32_t partition = node.GetPartition();
+      MetisNode& node = graph->getData(n);
+      uint32_t partition = node.partition;
       mem_nodes_of_parts[partition].emplace(n);
       // Assign graph index.
-      node.SetGraphIndex(pgraph_index[partition]);
+      node.graph_index = pgraph_index[partition];
     }
 
     // 1): Graph index of the nodes is assigned.
 
-    SetCompleteHEdgePartition(&graph, num_hedges);
+    SetCompleteHEdgePartition(graph, num_hedges);
 
     // 2): Candidate partitions of the hedges is assigned.
 
     for (uint32_t h = 0; h < num_hedges; h++) {
-      uint32_t partition = graph.getData(h).GetPartition();
+      uint32_t partition = graph->getData(h).partition;
       if (partition != kInfPartition) {
         mem_hedges_of_parts[partition].emplace(h);
-        graph.getData(h).SetGraphIndex(pgraph_index[partition]);
+        graph->getData(h).graph_index = pgraph_index[partition];
       }
     }
 
@@ -504,13 +512,13 @@ CreateKPartitions(MetisGraph& metis_graph) {
       if (to_process_partitions[i] > 1) {
         uint32_t index = pgraph_index[i];
         metis_graph_vec[index] = new MetisGraph();
-        gr[index] = metis_graph_vec[index]->GetHyperGraph();
+        gr[index] = &metis_graph_vec[index]->graph;
       }
     }
 
     SetChildId(
         current_level_indices, mem_nodes_of_parts, mem_hedges_of_parts,
-        &hnodes_bag, &hedges_bag, &graph);
+        &hnodes_bag, &hedges_bag, graph);
 
     // 4): Assign slot id for hyper edge and its member nodes.
 
@@ -524,14 +532,14 @@ CreateKPartitions(MetisGraph& metis_graph) {
 
     ConstructNewGraph(
         current_level_indices, pgraph_index, num_hnodes_per_partition,
-        num_hedges_per_partition, num_hedges, &graph, gr);
+        num_hedges_per_partition, num_hedges, graph, gr);
 
     for (uint32_t i : current_level_indices) {
       target_partitions[pgraph_index[i]] = to_process_partitions[i];
     }
 
     intermediate_partition_timer.start();
-    Partition(metis_graph_vec, max_coarse_graph_size, target_partitions);
+    Partition(&metis_graph_vec, max_coarse_graph_size, target_partitions);
     intermediate_partition_timer.stop();
 
     update_graphtree_timer.start();
@@ -540,7 +548,7 @@ CreateKPartitions(MetisGraph& metis_graph) {
 
     PostReassignPartition(
         to_process_partitions, current_level_indices, &next_level_indices,
-        mem_nodes_of_parts, pgraph_index, &graph, gr);
+        mem_nodes_of_parts, pgraph_index, graph, gr);
 
     for (uint32_t i : current_level_indices) {
       MetisGraph* mcg = metis_graph_vec[pgraph_index[i]];
@@ -576,19 +584,19 @@ main(int argc, char** argv) {
   }
 
   MetisGraph metis_graph;
-  HyperGraph& graph = *metis_graph.GetHyperGraph();
+  HyperGraph* graph = &metis_graph.graph;
 
   ConstructGraph(graph, input_file, skip_lone_hedges);
 
-  uint32_t total_num_nodes = graph.size();
-  uint32_t num_hedges = graph.GetHedges();
-  GraphStat(graph);
+  uint32_t total_num_nodes = graph->size();
+  uint32_t num_hedges = graph->GetHedges();
+  GraphStat(*graph);
 
   galois::preAlloc(galois::runtime::numPagePoolAllocTotal() * 20);
   galois::reportPageAlloc("MeminfoPre");
 
   create_partition_time.start();
-  CreateKPartitions(metis_graph);
+  CreateKPartitions(&metis_graph);
   create_partition_time.stop();
 
   galois::reportPageAlloc("MeminfoPost");
@@ -602,7 +610,7 @@ main(int argc, char** argv) {
     std::vector<uint32_t> IDs(total_num_nodes - num_hedges);
 
     for (GNode n = num_hedges; n < total_num_nodes; n++) {
-      parts[n - num_hedges] = graph.getData(n).GetPartition();
+      parts[n - num_hedges] = graph->getData(n).partition;
       IDs[n - num_hedges] = n - num_hedges + 1;
     }
 

@@ -54,8 +54,11 @@ public:
   class Iterator : public boost::iterator_facade<
                        Iterator<U>, U, boost::forward_traversal_tag> {
     friend class boost::iterator_core_access;
+    using Storage =
+        galois::substrate::PerThreadStorage<std::pair<header*, header*>>;
+    using Head = std::conditional_t<std::is_const_v<U>, const Storage, Storage>;
 
-    galois::substrate::PerThreadStorage<std::pair<header*, header*>>* hd;
+    Head* hd;
     unsigned int thr;
     header* p;
     U* v;
@@ -112,10 +115,7 @@ public:
     Iterator(const Iterator<OtherTy>& o)
         : hd(o.hd), thr(o.thr), p(o.p), v(o.v) {}
 
-    Iterator(
-        galois::substrate::PerThreadStorage<std::pair<header*, header*>>* h,
-        unsigned t)
-        : hd(h), thr(t), p(0), v(0) {
+    Iterator(Head* h, unsigned t) : hd(h), thr(t), p(0), v(0) {
       // find first valid item
       if (!init_thread())
         advance_thread();

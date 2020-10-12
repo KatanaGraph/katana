@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>

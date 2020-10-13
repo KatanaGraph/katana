@@ -852,7 +852,7 @@ sendEdgeCounts(
       continue;
     galois::runtime::SendBuffer b;
     galois::runtime::gSerialize(b, numEdgesPerHost[h].reduce());
-    net.SendTagged(h, galois::runtime::evilPhase, std::move(b));
+    net.Send(h, std::move(b));
   }
 };
 
@@ -943,9 +943,7 @@ sendAssignedEdges(
                   hostSendBuffer, globalSourceID, dstVector);
               dstVector.clear();
               if (hostSendBuffer.size() > 1400) {
-                net.SendTagged(
-                    edgeOwner, galois::runtime::evilPhase,
-                    std::move(hostSendBuffer));
+                net.Send(edgeOwner, std::move(hostSendBuffer));
                 hostSendBuffer = galois::runtime::SendBuffer();
               }
             }
@@ -982,8 +980,7 @@ sendAssignedEdges(
           }
 
           if (hostSendBuffer.size() > 0) {
-            net.SendTagged(
-                h, galois::runtime::evilPhase, std::move(hostSendBuffer));
+            net.Send(h, std::move(hostSendBuffer));
             hostSendBuffer = galois::runtime::SendBuffer();
           }
         }
@@ -1067,9 +1064,7 @@ sendAssignedEdges(
               dstVector.clear();
               dataVector.clear();
               if (hostSendBuffer.size() > 1400) {
-                net.SendTagged(
-                    edgeOwner, galois::runtime::evilPhase,
-                    std::move(hostSendBuffer));
+                net.Send(edgeOwner, std::move(hostSendBuffer));
                 hostSendBuffer = galois::runtime::SendBuffer();
               }
             }
@@ -1110,8 +1105,7 @@ sendAssignedEdges(
           }
 
           if (hostSendBuffer.size() > 0) {
-            net.SendTagged(
-                h, galois::runtime::evilPhase, std::move(hostSendBuffer));
+            net.Send(h, std::move(hostSendBuffer));
             hostSendBuffer = galois::runtime::SendBuffer();
           }
         }

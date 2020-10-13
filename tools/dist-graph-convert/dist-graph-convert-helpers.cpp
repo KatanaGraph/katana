@@ -286,7 +286,7 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
       continue;
     galois::runtime::SendBuffer b;
     galois::runtime::gSerialize(b, chunkCounts);
-    net.SendTagged(h, galois::runtime::evilPhase, std::move(b));
+    net.Send(h, std::move(b));
   }
 
   // receive chunk counts
@@ -299,7 +299,7 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
     galois::runtime::RecvResult rBuffer;
 
     do {
-      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
+      rBuffer = net.Recv();
     } while (!rBuffer);
 
     galois::runtime::gDeserialize(rBuffer->second, recvChunkCounts);
@@ -308,7 +308,7 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
       chunkCounts[i] += recvChunkCounts[i];
     }
   }
-  galois::runtime::evilPhase++;
+  net.EndCommunicationPhase();
 }
 
 std::vector<Uint64Pair>
@@ -441,14 +441,14 @@ receiveEdgeCounts() {
     uint64_t recvCount;
 
     do {
-      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
+      rBuffer = net.Recv();
     } while (!rBuffer);
     galois::runtime::gDeserialize(rBuffer->second, recvCount);
 
     edgesToReceive += recvCount;
   }
 
-  galois::runtime::evilPhase++;
+  net.EndCommunicationPhase();
 
   return edgesToReceive;
 }
@@ -472,7 +472,7 @@ receiveAssignedEdges(
         std::vector<uint32_t> recvDataVector;
 
         while (edgesToReceive) {
-          auto rBuffer = net.RecvTagged(galois::runtime::evilPhase);
+          auto rBuffer = net.Recv();
 
           // the buffer will have edge data as well if localsrctodata is
           // nonempty (it will be nonempty if initialized to non-empty by the
@@ -514,7 +514,7 @@ receiveAssignedEdges(
         }
       },
       galois::loopname("EdgeReceiving"));
-  galois::runtime::evilPhase++;
+  net.EndCommunicationPhase();
 
   std::cout << "[" << hostID << "] Receive assigned edges finished\n";
 }
@@ -535,7 +535,7 @@ getEdgesPerHost(uint64_t localAssignedEdges) {
       continue;
     galois::runtime::SendBuffer b;
     galois::runtime::gSerialize(b, localAssignedEdges);
-    net.SendTagged(h, galois::runtime::evilPhase, std::move(b));
+    net.Send(h, std::move(b));
   }
 
   // receive
@@ -548,13 +548,13 @@ getEdgesPerHost(uint64_t localAssignedEdges) {
     galois::runtime::RecvResult rBuffer;
     uint64_t otherAssignedEdges;
     do {
-      rBuffer = net.RecvTagged(galois::runtime::evilPhase);
+      rBuffer = net.Recv();
     } while (!rBuffer);
     galois::runtime::gDeserialize(rBuffer->second, otherAssignedEdges);
 
     edgesPerHost[rBuffer->first] = otherAssignedEdges;
   }
-  galois::runtime::evilPhase++;
+  net.EndCommunicationPhase();
 
   return edgesPerHost;
 }

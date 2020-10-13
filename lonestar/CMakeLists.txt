@@ -148,7 +148,7 @@ if(GALOIS_ENABLE_DIST)
       add_test(NAME setup-unlink${suffix}
         COMMAND $<TARGET_FILE:tsuba_forget> -f ${X_INPUT_URI})
       add_test(NAME setup-partition${suffix}
-        COMMAND mpiexec --bind-to none -n ${np} $<TARGET_FILE:partition-dist> -newRDG=${X_INPUT_URI} ${partitioner_input} --edgePropertyName=value -t=${threads} -partition=${part})
+        COMMAND mpiexec --bind-to none -n ${np} $<TARGET_FILE:partition-dist> -newRDG=${X_INPUT_URI} ${partitioner_input} --edgePropertyName=value -t=${threads} -partition=${part} -properties)
     else()
       add_test(NAME setup-partition${suffix} COMMAND ${CMAKE_COMMAND} -E true)
       add_test(NAME setup-unlink${suffix} COMMAND ${CMAKE_COMMAND} -E true)

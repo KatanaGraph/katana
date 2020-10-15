@@ -22,21 +22,4 @@ ResultErrno() {
 
 }  // namespace galois
 
-// NOTE: on older compilers auto conversion to Result will fail for types
-// that can't be copied. We've adopted the workaround of returning such objects
-// like so:
-//
-// Result<Thing> MakeMoveOnlyThing() {
-//   Thing t;
-//   ...
-//   ...
-//   ...
-//   return Thing(std::move(t));
-// }
-//
-// Other wise builds on the supported compiler: GCC 7 will fail.
-//
-// TODO(all) fix instances of this when we drop GCC 7 since it is not required
-// after that point.
-
 #endif

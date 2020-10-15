@@ -157,7 +157,7 @@ The LLVM project provides many useful development tools for C++:
 [clangd](https://clangd.llvm.org/).  Most IDEs can be configured to use these
 tools automatically.
 
-# Adding new e(x)ternal dependencies
+# Adding New E(x)ternal Dependencies
 
 Adding new dependencies should generally be avoided since it makes it more
 likely that satisfying local development requirements, conda build requirements,
@@ -227,7 +227,7 @@ So far there is only one useful label:
   with other quick tests. Each quick test should run in a second or less. These
   tests are run as part of our continuous integration pipeline.
 
-# Code style and conventions
+# Code Style and Conventions
 
 We automatically test for some code style adherence at merge-time; so the
 automatic tools have the final word. Nevertheless, there are some conventions
@@ -266,6 +266,30 @@ everything that is not `libtsuba`, `libsupport` and `libquery`). In those cases,
 it is acceptable to follow the convention in that module; though in general, it
 would be preferable to follow the motto of "leave the codebase in better shape
 than you found it."
+
+## galois::Result
+
+On older compilers, auto conversion to `galois::Result` will fail for types
+that can't be copied. One symptom is compiler errors on GCC 7 but not on GCC 9.
+We've adopted the workaround of returning such objects like so:
+
+```cpp
+Result<Thing> MakeMoveOnlyThing() {
+  Thing t;
+  ....
+  return Thing(std::move(t));
+}
+```
+
+If you are looking to simplify error handling, if a function returns a
+`galois::Result<void>`, you can define the result and check it in a single if
+statement:
+
+```cpp
+if (auto r = ReturnsAResult(); !r) {
+  return r.error();
+}
+```
 
 # Continuous Integration
 

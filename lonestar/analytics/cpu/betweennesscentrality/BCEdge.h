@@ -31,8 +31,8 @@ struct BCEdge {
   unsigned level;
 
   BCEdge(NodeType* _src, NodeType* _dst)
-      : src(_src), dst(_dst), val(0), level(infinity) {}
-  BCEdge() : src(0), dst(0), val(0), level(infinity) {}
+      : src(_src), dst(_dst), val(0), level(kInfinity) {}
+  BCEdge() : src(0), dst(0), val(0), level(kInfinity) {}
 
   BCEdge& operator=(BCEdge const& from) {
     if (this != &from) {
@@ -45,13 +45,13 @@ struct BCEdge {
   }
 
   inline void reset() {
-    if (level != infinity) {
-      level = infinity;
+    if (level != kInfinity) {
+      level = kInfinity;
     }
   }
 
   void checkClear(int j) {
-    if (level != infinity) {
+    if (level != kInfinity) {
       galois::gError(j, " PROBLEM WITH LEVEL OF ", toString());
     }
     if (val != 0) {

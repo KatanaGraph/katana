@@ -20,7 +20,7 @@ using AsyncGraph =
 struct ForwardPhaseWorkItem {
   uint32_t nodeID;
   uint32_t distance;
-  ForwardPhaseWorkItem() : nodeID(infinity), distance(infinity){};
+  ForwardPhaseWorkItem() : nodeID(kInfinity), distance(kInfinity){};
   ForwardPhaseWorkItem(uint32_t _n, uint32_t _d) : nodeID(_n), distance(_d){};
 };
 
@@ -106,8 +106,8 @@ struct BetweenessCentralityAsync {
         correctNodeP1Count.update(1);
         dstData.unlock();
 
-        if (edgeLevel != infinity) {
-          inEdgeData.level = infinity;
+        if (edgeLevel != kInfinity) {
+          inEdgeData.level = kInfinity;
           if (edgeLevel == srcData.distance) {
             correctNodeP2Count.update(1);
             srcData.nsuccs--;
@@ -334,7 +334,7 @@ struct BetweenessCentralityAsync {
         [&](auto i) {
           NodeType& n = graph.getData(i);
 
-          if (n.nsuccs == 0 && n.distance < infinity) {
+          if (n.nsuccs == 0 && n.distance < kInfinity) {
             leafCount.update(1);
             fringeWL.push(i);
           }

@@ -50,7 +50,7 @@ struct BCNode {
   BCNode()
       : spinLock(),
         preds(),
-        distance(infinity),
+        distance(kInfinity),
         nsuccs(0),
         sigma(0),
         delta(0),
@@ -116,7 +116,7 @@ struct BCNode {
    */
   void reset() {
     preds.clear();
-    distance = infinity;
+    distance = kInfinity;
     nsuccs = 0;
     sigma = 0;
     delta = 0;
@@ -131,7 +131,7 @@ struct BCNode {
       galois::gWarn("Problem, node not clear");
 
     assert(preds.empty());
-    assert(distance == infinity);
+    assert(distance == kInfinity);
     assert(nsuccs == 0 && sigma == 0 && delta == 0);
   }
 

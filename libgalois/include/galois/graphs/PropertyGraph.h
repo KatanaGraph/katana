@@ -63,26 +63,71 @@ public:
 
   // Graph accessors
 
-  /// GetData returns the data for a node.
+  /**
+   * Gets the node data.
+   *
+   * @param node node to get the data of
+   * @returns reference to the node data
+   */
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const Node& node) {
     constexpr size_t prop_index = find_trait<NodeIndex, NodeProps>();
     return std::get<prop_index>(node_view_).GetValue(node);
   }
-  /// GetData returns the data for a node.
   template <typename NodeIndex>
   PropertyReferenceType<NodeIndex> GetData(const node_iterator& node) {
     return GetData<NodeIndex>(*node);
   }
 
-  /// GetData returns the data for an edge.
+  /**
+   * Gets the node data.
+   *
+   * @param node node to get the data of
+   * @returns const reference to the node data
+   */
+  template <typename NodeIndex>
+  PropertyConstReferenceType<NodeIndex> GetData(const Node& node) const {
+    constexpr size_t prop_index = find_trait<NodeIndex, NodeProps>();
+    return std::get<prop_index>(node_view_).GetValue(node);
+  }
+  template <typename NodeIndex>
+  PropertyConstReferenceType<NodeIndex> GetData(
+      const node_iterator& node) const {
+    return GetData<NodeIndex>(*node);
+  }
+
+  /**
+   * Gets the edge data.
+   *
+   * @param edge edge iterator to get the data of
+   * @returns reference to the edge data
+   */
   template <typename EdgeIndex>
   PropertyReferenceType<EdgeIndex> GetEdgeData(const edge_iterator& edge) {
     constexpr size_t prop_index = find_trait<EdgeIndex, EdgeProps>();
     return std::get<prop_index>(edge_view_).GetValue(*edge);
   }
 
-  node_iterator GetEdgeDest(const edge_iterator& edge) {
+  /**
+   * Gets the edge data.
+   *
+   * @param edge edge iterator to get the data of
+   * @returns const reference to the edge data
+   */
+  template <typename EdgeIndex>
+  PropertyConstReferenceType<EdgeIndex> GetEdgeData(
+      const edge_iterator& edge) const {
+    constexpr size_t prop_index = find_trait<EdgeIndex, EdgeProps>();
+    return std::get<prop_index>(edge_view_).GetValue(*edge);
+  }
+
+  /**
+   * Gets the destination for an edge.
+   *
+   * @param edge edge iterator to get the destination of
+   * @returns node iterator to the edge destination
+   */
+  node_iterator GetEdgeDest(const edge_iterator& edge) const {
     auto node_id = pfg_->topology().out_dests->Value(*edge);
     return node_iterator(node_id);
   }
@@ -119,10 +164,35 @@ public:
    */
   edge_iterator edge_end(Node node) const { return *edges(node).end(); }
 
+  /**
+   * Accessor for the underlying PropertyFileGraph.
+   *
+   * @returns pointer to the underlying PropertyFileGraph.
+   */
+  const PropertyFileGraph& GetPropertyFileGraph() const { return *pfg_; }
+
   // Graph constructors
   static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
       PropertyFileGraph* pfg);
 };
+
+/**
+   * Finds a node in the sorted edgelist of some other node using binary search.
+   *
+   * @param graph graph to search in the topology of
+   * @param node node to find in the edgelist of
+   * @param node_to_find node id of the node to find in the edgelist of "node"
+   * @returns iterator to the edge with id "node_to_find" if present else return "end" iterator
+   */
+template <typename GraphTy>
+GALOIS_EXPORT typename GraphTy::edge_iterator
+FindEdgeSortedByDest(
+    const GraphTy& graph, typename GraphTy::Node node,
+    typename GraphTy::Node node_to_find) {
+  auto edge_matched = galois::graphs::FindEdgeSortedByDest(
+      graph.GetPropertyFileGraph(), node, node_to_find);
+  return typename GraphTy::edge_iterator(edge_matched);
+}
 
 template <typename NodeProps, typename EdgeProps>
 Result<PropertyGraph<NodeProps, EdgeProps>>
@@ -141,6 +211,7 @@ PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
       pfg, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
+
 }  // namespace galois::graphs
 
 #endif

@@ -8,6 +8,7 @@
 #include <arrow/api.h>
 
 #include "galois/ErrorCode.h"
+#include "galois/LargeArray.h"
 #include "galois/Properties.h"
 #include "galois/config.h"
 #include "tsuba/RDG.h"
@@ -264,6 +265,33 @@ public:
     return this->MakePropertyViews<PropTuple>(rdg_.edge_table_.get());
   }
 };
+
+/// SortAllEdgesByDest sorts edges for each node by destination
+/// ids (ascending order).
+///
+/// This function modifies the PropertyFileGraph topology by doing
+/// in-place sorting of the edgelists of each nodes in the
+/// ascending order.
+/// This also returns the permutation vector (mapping from old
+/// indices to the new indices) which results due to the sorting.
+GALOIS_EXPORT Result<std::vector<uint64_t>> SortAllEdgesByDest(
+    PropertyFileGraph* pfg);
+
+/// FindEdgeSortedByDest finds the "node_to_find" id in the
+/// sorted edgelist of the "node" using binary search.
+///
+/// This returns the matched edge index if 'node_to_find' is present
+/// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
+GALOIS_EXPORT uint64_t FindEdgeSortedByDest(
+    const PropertyFileGraph& graph, uint32_t node, uint32_t node_to_find);
+
+/// SortNodesByDegree relables node ids by sorting in the descending
+/// order by node degree
+///
+/// This function modifies the PropertyFileGraph topology by in-place
+/// relabeling and sorting the node ids by their degree in the
+/// descending order.
+GALOIS_EXPORT Result<void> SortNodesByDegree(PropertyFileGraph* pfg);
 
 template <typename PropTuple>
 Result<PropertyViewTuple<PropTuple>>

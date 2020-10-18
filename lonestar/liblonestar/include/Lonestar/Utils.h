@@ -113,7 +113,7 @@ ConstructNodeProperties(galois::graphs::PropertyFileGraph* pfg) {
 
   auto result = pfg->AddNodeProperties(res_table.value());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    GALOIS_LOG_FATAL("failed to add node properties: {}", result.error());
   }
   return galois::ResultSuccess();
 }
@@ -122,15 +122,15 @@ template <typename EdgeProps>
 inline galois::Result<void>
 ConstructEdgeProperties(galois::graphs::PropertyFileGraph* pfg) {
   auto res_table =
-      galois::AllocateTable<EdgeProps>(pfg->topology().num_nodes());
+      galois::AllocateTable<EdgeProps>(pfg->topology().num_edges());
   if (!res_table) {
     GALOIS_LOG_FATAL(
-        "failed to allocate node properties table: {}", res_table.error());
+        "failed to allocate edge properties table: {}", res_table.error());
   }
 
-  auto result = pfg->AddNodeProperties(res_table.value());
+  auto result = pfg->AddEdgeProperties(res_table.value());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    GALOIS_LOG_FATAL("failed to add edge properties: {}", result.error());
   }
   return galois::ResultSuccess();
 }

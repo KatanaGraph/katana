@@ -31,7 +31,7 @@ enum Algo { Level = 0, Async, Outer, AutoAlgo };
 //TODO (gill): Reintroduce AutoAlgo when porting to propertyGraph
 // const char* const ALGO_NAMES[] = {"Level", "Async", "Outer", "Auto"};
 
-const uint32_t infinity = std::numeric_limits<uint32_t>::max() / 4;
+const uint32_t kInfinity = std::numeric_limits<uint32_t>::max() / 4;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -130,17 +130,18 @@ main(int argc, char** argv) {
   case Level:
     // see LevelStructs.h
     galois::gInfo("Running level BC");
-    doLevelBC();
+    DoLevelBC();
     break;
-  case Async:
-    // see AsyncStructs.h
-    galois::gInfo("Running async BC");
-    doAsyncBC();
-    break;
+    //TODO (gill) Needs bidirectional graph (CSR_CSC)
+    //   case Async:
+    //     // see AsyncStructs.h
+    //     galois::gInfo("Running async BC");
+    //     doAsyncBC();
+    //     break;
   case Outer:
     // see OuterStructs.h
     galois::gInfo("Running outer BC");
-    doOuterBC();
+    DoOuterBC();
     break;
   default:
     GALOIS_DIE("Unknown BC algorithm type");

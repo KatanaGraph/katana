@@ -83,7 +83,7 @@ struct NodeDistCurrent {
   using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
 };
 
-struct EdgeWeight : public galois::PODProperty<int64_t> {};
+struct EdgeWeight : public galois::PODProperty<uint32_t> {};
 
 using NodeData = std::tuple<NodeDistCurrent>;
 using EdgeData = std::tuple<EdgeWeight>;

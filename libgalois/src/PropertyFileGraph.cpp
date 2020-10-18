@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 
 #include "galois/Logging.h"
+#include "galois/Loops.h"
 #include "galois/Platform.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
@@ -334,4 +335,154 @@ galois::graphs::PropertyFileGraph::ExtractArrays(arrow::Table* table) {
   }
 
   return ret;
+}
+
+galois::Result<std::vector<uint64_t>>
+galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
+  auto view_result_dests =
+      galois::ConstructPropertyView<galois::UInt32Property>(
+          pfg->topology().out_dests.get());
+  if (!view_result_dests) {
+    return view_result_dests.error();
+  }
+
+  auto out_dests_view = std::move(view_result_dests.value());
+
+  std::vector<uint64_t> permutation_vec(pfg->topology().num_edges());
+  std::iota(permutation_vec.begin(), permutation_vec.end(), 0);
+  auto comparator = [&](uint64_t a, uint64_t b) {
+    return out_dests_view[a] < out_dests_view[b];
+  };
+
+  galois::do_all(
+      galois::iterate(uint64_t{0}, pfg->topology().num_nodes()),
+      [&](uint64_t n) {
+        auto edge_range = pfg->topology().edge_range(n);
+        std::sort(
+            permutation_vec.begin() + edge_range.first,
+            permutation_vec.begin() + edge_range.second, comparator);
+        std::sort(
+            &out_dests_view[0] + edge_range.first,
+            &out_dests_view[0] + edge_range.second);
+      },
+      galois::steal());
+
+  return permutation_vec;
+}
+
+uint64_t
+galois::graphs::FindEdgeSortedByDest(
+    const galois::graphs::PropertyFileGraph& graph, uint32_t node,
+    uint32_t node_to_find) {
+  auto view_result_dests =
+      galois::ConstructPropertyView<galois::UInt32Property>(
+          graph.topology().out_dests.get());
+  if (!view_result_dests) {
+    GALOIS_LOG_FATAL(
+        "Unable to construct property view on topology destinations : {}",
+        view_result_dests.error());
+  }
+
+  auto out_dests_view = std::move(view_result_dests.value());
+
+  auto edge_range = graph.topology().edge_range(node);
+  using edge_iterator = boost::counting_iterator<uint64_t>;
+  auto edge_matched = std::lower_bound(
+      edge_iterator(edge_range.first), edge_iterator(edge_range.second),
+      node_to_find,
+      [=](edge_iterator e, uint32_t n) { return out_dests_view[*e] < n; });
+
+  return (
+      out_dests_view[*edge_matched] == node_to_find ? *edge_matched
+                                                    : edge_range.second);
+}
+
+galois::Result<void>
+galois::graphs::SortNodesByDegree(galois::graphs::PropertyFileGraph* pfg) {
+  uint64_t num_nodes = pfg->topology().num_nodes();
+  uint64_t num_edges = pfg->topology().num_edges();
+
+  using DegreeNodePair = std::pair<uint64_t, uint32_t>;
+  std::vector<DegreeNodePair> dn_pairs(num_nodes);
+  galois::do_all(galois::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
+    auto node_edge_range = pfg->topology().edge_range(node);
+    size_t node_degree = node_edge_range.second - node_edge_range.first;
+    dn_pairs[node] = DegreeNodePair(node_degree, node);
+  });
+
+  // sort by degree (first item)
+  galois::ParallelSTL::sort(
+      dn_pairs.begin(), dn_pairs.end(), std::greater<DegreeNodePair>());
+
+  // create mapping, get degrees out to another vector to get prefix sum
+  std::vector<uint32_t> old_to_new_mapping(num_nodes);
+  galois::LargeArray<uint64_t> new_prefix_sum;
+  new_prefix_sum.allocateBlocked(num_nodes);
+  galois::do_all(galois::iterate(uint64_t{0}, num_nodes), [&](uint64_t index) {
+    // save degree, which is pair.first
+    new_prefix_sum[index] = dn_pairs[index].first;
+    // save mapping; original index is in .second, map it to current index
+    old_to_new_mapping[dn_pairs[index].second] = index;
+  });
+
+  galois::ParallelSTL::partial_sum(
+      new_prefix_sum.begin(), new_prefix_sum.end(), new_prefix_sum.begin());
+
+  galois::LargeArray<uint32_t> new_out_dest;
+  new_out_dest.allocateBlocked(num_edges);
+
+  auto view_result_indices =
+      ConstructPropertyView<UInt64Property>(pfg->topology().out_indices.get());
+  if (!view_result_indices) {
+    return view_result_indices.error();
+  }
+
+  auto out_indices_view = std::move(view_result_indices.value());
+
+  auto view_result_dests =
+      ConstructPropertyView<UInt32Property>(pfg->topology().out_dests.get());
+  if (!view_result_dests) {
+    return view_result_dests.error();
+  }
+
+  auto out_dests_view = std::move(view_result_dests.value());
+
+  galois::do_all(
+      galois::iterate(uint64_t{0}, num_nodes),
+      [&](uint32_t old_node_id) {
+        uint32_t new_node_id = old_to_new_mapping[old_node_id];
+
+        // get the start location of this reindex'd nodes edges
+        uint64_t new_out_index =
+            (new_node_id == 0) ? 0 : new_prefix_sum[new_node_id - 1];
+
+        // construct the graph, reindexing as it goes along
+        auto node_edge_range = pfg->topology().edge_range(old_node_id);
+        for (auto e = node_edge_range.first; e != node_edge_range.second; ++e) {
+          // get destination, reindex
+          uint32_t old_edge_dest = out_dests_view[e];
+          uint32_t new_edge_dest = old_to_new_mapping[old_edge_dest];
+
+          new_out_dest[new_out_index] = new_edge_dest;
+
+          new_out_index++;
+        }
+        // this assert makes sure reindex was correct + makes sure all edges
+        // are accounted for
+        assert(new_out_index == new_prefix_sum[new_node_id]);
+      },
+      galois::steal());
+
+  //Update the underlying propertyFileGraph topology
+  galois::do_all(
+      galois::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
+        out_indices_view[node_id] = new_prefix_sum[node_id];
+      });
+
+  galois::do_all(
+      galois::iterate(uint64_t{0}, num_edges), [&](uint32_t edge_id) {
+        out_dests_view[edge_id] = new_out_dest[edge_id];
+      });
+
+  return galois::ResultSuccess();
 }

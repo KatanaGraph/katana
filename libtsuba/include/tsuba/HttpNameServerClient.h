@@ -16,8 +16,8 @@ class GALOIS_EXPORT HttpNameServerClient : public NameServerClient {
   std::string prefix_;
   galois::Result<std::string> BuildUrl(const galois::Uri& rdg_name);
 
-  HttpNameServerClient(std::string_view host, int port)
-      : prefix_(fmt::format("http://{}:{}/apiV1/", host, port)) {}
+  HttpNameServerClient(std::string_view url)
+      : prefix_(fmt::format("{}/apiV1/", url)) {}
 
 public:
   galois::Result<RDGMeta> Get(const galois::Uri& rdg_name) override;
@@ -34,7 +34,7 @@ public:
   galois::Result<void> CheckHealth() override;
 
   static galois::Result<std::unique_ptr<tsuba::NameServerClient>> Make(
-      std::string_view host, int port);
+      std::string_view url);
 };
 
 }  // namespace tsuba

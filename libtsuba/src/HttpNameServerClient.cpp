@@ -140,13 +140,12 @@ HttpNameServerClient::Update(
 }
 
 galois::Result<std::unique_ptr<NameServerClient>>
-HttpNameServerClient::Make(std::string_view host, int port) {
+HttpNameServerClient::Make(std::string_view url) {
   // HttpInit is idempotent
   if (auto res = galois::HttpInit(); !res) {
     return res.error();
   }
-  return std::unique_ptr<NameServerClient>(
-      new HttpNameServerClient(host, port));
+  return std::unique_ptr<NameServerClient>(new HttpNameServerClient(url));
 }
 
 }  // namespace tsuba

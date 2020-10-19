@@ -14,19 +14,17 @@ static tsuba::MemoryNameServerClient default_ns_client;
 /// (memory client provides no cross instance guarantees, good only for testing)
 galois::Result<std::unique_ptr<tsuba::NameServerClient>>
 tsuba::GetNameServerClient() {
-  std::string host;
-  int port = 0;
+  std::string url;
 
-  galois::GetEnv("GALOIS_NS_HOST", &host);
-  galois::GetEnv("GALOIS_NS_PORT", &port);
+  galois::GetEnv("GALOIS_NS_URL", &url);
 
-  if (host.empty()) {
+  if (url.empty()) {
     GALOIS_LOG_WARN(
         "name server not configured, no consistency guarantees "
         "between Katana instances");
     return std::make_unique<MemoryNameServerClient>();
   }
-  return HttpNameServerClient::Make(host, port);
+  return HttpNameServerClient::Make(url);
 }
 
 galois::Result<void>

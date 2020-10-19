@@ -134,7 +134,11 @@ galois::HttpGet(const std::string& url, std::vector<char>* response) {
   if (auto res = curl.SetOpt(CURLOPT_HTTPGET, 1L); !res) {
     return res.error();
   }
-  return curl.Perform();
+  if (auto res = curl.Perform(); !res) {
+    GALOIS_LOG_DEBUG("GET failed for url: {}", url);
+    return res;
+  }
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>
@@ -143,9 +147,15 @@ galois::HttpPost(
     std::vector<char>* response) {
   auto handle_res = CurlHandle::Make(url, response);
   if (!handle_res) {
+    GALOIS_LOG_ERROR("POST failed for url: {}", url);
     return handle_res.error();
   }
-  return HttpUploadCommon(std::move(handle_res.value()), data);
+
+  if (auto res = HttpUploadCommon(std::move(handle_res.value()), data); !res) {
+    GALOIS_LOG_DEBUG("POST failed for url: {}", url);
+    return res.error();
+  }
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>
@@ -159,7 +169,11 @@ galois::HttpDelete(const std::string& url, std::vector<char>* response) {
   if (auto res = curl.SetOpt(CURLOPT_CUSTOMREQUEST, "DELETE"); !res) {
     return res.error();
   }
-  return curl.Perform();
+  if (auto res = curl.Perform(); !res) {
+    GALOIS_LOG_DEBUG("DELETE failed for url: {}", url);
+    return res;
+  }
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>
@@ -176,7 +190,11 @@ galois::HttpPut(
     return res.error();
   }
 
-  return HttpUploadCommon(std::move(curl), data);
+  if (auto res = HttpUploadCommon(std::move(curl), data); !res) {
+    GALOIS_LOG_DEBUG("PUT failed for url: {}", url);
+    return res.error();
+  }
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>

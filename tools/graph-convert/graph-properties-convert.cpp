@@ -1792,11 +1792,6 @@ void
 galois::WritePropertyGraph(
     galois::graphs::PropertyFileGraph prop_graph, const std::string& dir) {
   std::string meta_file = dir;
-  if (meta_file[meta_file.length() - 1] == '/') {
-    meta_file += "meta";
-  } else {
-    meta_file += "/meta";
-  }
 
   auto result = prop_graph.Write(meta_file, "graph-properties-convert");
   if (!result) {

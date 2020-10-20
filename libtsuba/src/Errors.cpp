@@ -8,9 +8,9 @@ tsuba::internal::GetErrorCodeCategory() {
 
 tsuba::ErrorCode
 tsuba::ArrowToTsuba(arrow::StatusCode code) {
+  assert(code != arrow::StatusCode::OK);
+
   switch (code) {
-  case arrow::StatusCode::OK:
-    return tsuba::ErrorCode::Success;
   case arrow::StatusCode::Invalid:
     return tsuba::ErrorCode::InvalidArgument;
   case arrow::StatusCode::OutOfMemory:

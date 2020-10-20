@@ -10,7 +10,7 @@
 namespace tsuba {
 
 enum class ErrorCode {
-  Success = 0,
+  // Success = 0,
   InvalidArgument = 1,
   ArrowError = 2,
   NotImplemented = 3,
@@ -34,14 +34,12 @@ GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
 
 namespace tsuba::internal {
 
-class ErrorCodeCategory : public std::error_category {
+class GALOIS_EXPORT ErrorCodeCategory : public std::error_category {
 public:
-  const char* name() const noexcept final { return "GaloisError"; }
+  const char* name() const noexcept final { return "TsubaError"; }
 
   std::string message(int c) const final {
     switch (static_cast<ErrorCode>(c)) {
-    case ErrorCode::Success:
-      return "success";
     case ErrorCode::InvalidArgument:
       return "invalid argument";
     case ErrorCode::ArrowError:

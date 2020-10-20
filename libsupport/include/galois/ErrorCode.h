@@ -9,7 +9,10 @@
 namespace galois {
 
 enum class ErrorCode {
-  Success = 0,
+  // It is probably a bug to return Success explicitly rather than using
+  // something like ResultSuccess(). Comment it out to be safe.
+  //
+  // Success = 0,
   InvalidArgument = 1,
   NotImplemented = 2,
   NotFound = 3,
@@ -17,20 +20,19 @@ enum class ErrorCode {
   JsonParseFailed = 5,
   JsonDumpFailed = 6,
   HttpError = 7,
+  TODO = 8,
 };
 
 }  // namespace galois
 
 namespace galois::internal {
 
-class ErrorCodeCategory : public std::error_category {
+class GALOIS_EXPORT ErrorCodeCategory : public std::error_category {
 public:
   const char* name() const noexcept final { return "GaloisError"; }
 
   std::string message(int c) const final {
     switch (static_cast<ErrorCode>(c)) {
-    case ErrorCode::Success:
-      return "success";
     case ErrorCode::InvalidArgument:
       return "invalid argument";
     case ErrorCode::NotImplemented:
@@ -45,6 +47,8 @@ public:
       return "could not dump json";
     case ErrorCode::HttpError:
       return "http operation failed";
+    case ErrorCode::TODO:
+      return "TODO";
     default:
       return "unknown error";
     }
@@ -52,6 +56,7 @@ public:
 
   std::error_condition default_error_condition(int c) const noexcept final {
     switch (static_cast<ErrorCode>(c)) {
+    case ErrorCode::TODO:
     case ErrorCode::InvalidArgument:
     case ErrorCode::ArrowError:
     case ErrorCode::JsonParseFailed:

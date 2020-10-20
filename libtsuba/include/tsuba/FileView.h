@@ -41,9 +41,9 @@ public:
         page_shift_(other.page_shift_),
         cursor_(other.cursor_),
         mem_start_(other.mem_start_),
-        filename_(other.filename_),
+        filename_(std::move(other.filename_)),
         valid_(other.valid_),
-        filling_(other.filling_),
+        filling_(std::move(other.filling_)),
         fetches_(std::move(other.fetches_)) {
     other.valid_ = false;
   }
@@ -58,9 +58,9 @@ public:
       page_shift_ = other.page_shift_;
       cursor_ = other.cursor_;
       mem_start_ = other.mem_start_;
-      filename_ = other.filename_;
+      filename_ = std::move(other.filename_);
       valid_ = other.valid_;
-      filling_ = other.filling_;
+      filling_ = std::move(other.filling_);
       fetches_ =
           std::unique_ptr<std::vector<FillingRange>>(std::move(other.fetches_));
       other.valid_ = false;

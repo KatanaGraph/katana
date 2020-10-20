@@ -94,7 +94,10 @@ public:
   LargeArray() = default;
 
   LargeArray(LargeArray&& o) noexcept
-      : real_data_(std::move(o.real_data_)), data_(o.data_), size_(o.size_) {}
+      : real_data_(std::move(o.real_data_)), data_(o.data_), size_(o.size_) {
+    o.data_ = nullptr;
+    o.size_ = 0;
+  }
 
   LargeArray& operator=(LargeArray&& o) {
     auto tmp = std::move(o);

@@ -128,14 +128,14 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
-  const tsuba::PartitionMetadata& partition_metadata() {
+  const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata_;
   }
 
   Result<void> set_partition_metadata(const tsuba::PartitionMetadata& meta) {
     if (rdg_.part_metadata_.state ==
         tsuba::PartitionMetadata::State::kUninitialized) {
-      rdg_.part_metadata_ = std::move(meta);
+      rdg_.part_metadata_ = meta;
     } else {
       GALOIS_LOG_ERROR(
           "Repartitioning is not yet supported state {} num_nodes: {}",

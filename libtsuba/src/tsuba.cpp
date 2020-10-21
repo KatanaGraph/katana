@@ -1,6 +1,7 @@
 #include "tsuba/tsuba.h"
 
 #include "GlobalState.h"
+#include "galois/Backtrace.h"
 #include "galois/CommBackend.h"
 #include "galois/Env.h"
 #include "tsuba/HttpNameServerClient.h"
@@ -31,6 +32,7 @@ tsuba::GetNameServerClient() {
 galois::Result<void>
 tsuba::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
   tsuba::Preload();
+  galois::InitBacktrace(comm->ID);
   return GlobalState::Init(comm, ns);
 }
 

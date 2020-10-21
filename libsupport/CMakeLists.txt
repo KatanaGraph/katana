@@ -10,6 +10,7 @@ add_dependencies(lib galois_support)
 configure_file(include/galois/config.h.in include/galois/config.h)
 
 set(sources
+        src/Backtrace.cpp
         src/ErrorCode.cpp
         src/Env.cpp
         src/Http.cpp
@@ -53,12 +54,19 @@ if(fmt_VERSION VERSION_LESS 4)
 endif()
 target_link_libraries(galois_support PUBLIC fmt::fmt)
 
+#target_compile_definitions(galois_support PUBLIC BOOST_STACKTRACE_LINK=0)
 if(TARGET Boost::Boost)
   target_link_libraries(galois_support PUBLIC Boost::Boost)
 else()
   # Standard CMake Boost module, shorten the link time if we can
   target_link_libraries(galois_support PUBLIC Boost::boost)
   target_link_libraries(galois_support PUBLIC Boost::filesystem)
+endif()
+
+string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
+if(build_type STREQUAL "debug")
+  find_package(Backward REQUIRED)
+  target_link_libraries(galois_support PUBLIC Backward::Backward)
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)

@@ -16,6 +16,7 @@
 #include <parquet/properties.h>
 
 #include "GlobalState.h"
+#include "galois/Backtrace.h"
 #include "galois/JSON.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
@@ -310,7 +311,6 @@ DoStoreArrowArrayAtName(
   galois::Uri next_path = dir.RandFile(name);
 
   // Metadata paths should relative to dir
-
   std::shared_ptr<arrow::Table> column = arrow::Table::Make(
       arrow::schema({arrow::field(name, array->type())}), {array});
 
@@ -402,6 +402,20 @@ WritePartArrays(
     const tsuba::PartitionMetadata& part_meta, const galois::Uri& dir) {
   std::vector<tsuba::PropertyMetadata> next_properties;
 
+  GALOIS_LOG_DEBUG(
+      "WritePartArrays master sz: {} mirros sz: {} l2g sz: {} g2l keys sz: {} "
+      "g2l val sz: {}",
+      part_meta.master_nodes_.size(), part_meta.mirror_nodes_.size(),
+      part_meta.local_to_global_vector_ == nullptr
+          ? 0
+          : part_meta.local_to_global_vector_->length(),
+      part_meta.global_to_local_keys_ == nullptr
+          ? 0
+          : part_meta.global_to_local_keys_->length(),
+      part_meta.global_to_local_values_ == nullptr
+          ? 0
+          : part_meta.global_to_local_values_->length());
+
   for (unsigned i = 0; i < part_meta.mirror_nodes_.size(); ++i) {
     auto name = MirrorPropName(i);
     auto mirr_res =
@@ -428,33 +442,40 @@ WritePartArrays(
     });
   }
 
-  auto l2g_res = StoreArrowArrayAtName(
-      part_meta.local_to_global_vector_, dir, local_to_global_prop_name);
-  if (!l2g_res) {
-    return l2g_res.error();
+  if (part_meta.local_to_global_vector_ != nullptr) {
+    auto l2g_res = StoreArrowArrayAtName(
+        part_meta.local_to_global_vector_, dir, local_to_global_prop_name);
+    if (!l2g_res) {
+      return l2g_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropertyMetadata{
+        .name = local_to_global_prop_name, .path = std::move(l2g_res.value())});
   }
-  next_properties.emplace_back(tsuba::PropertyMetadata{
-      .name = local_to_global_prop_name, .path = std::move(l2g_res.value())});
 
-  auto g2l_keys_res = StoreArrowArrayAtName(
-      part_meta.global_to_local_keys_, dir, global_to_local_keys_prop_name);
-  if (!g2l_keys_res) {
-    return g2l_keys_res.error();
-  }
-  next_properties.emplace_back(tsuba::PropertyMetadata{
-      .name = global_to_local_keys_prop_name,
-      .path = std::move(g2l_keys_res.value()),
-  });
+  if (part_meta.global_to_local_keys_ != nullptr) {
+    auto g2l_keys_res = StoreArrowArrayAtName(
+        part_meta.global_to_local_keys_, dir, global_to_local_keys_prop_name);
+    if (!g2l_keys_res) {
+      return g2l_keys_res.error();
+    }
 
-  auto g2l_vals_res = StoreArrowArrayAtName(
-      part_meta.global_to_local_values_, dir, global_to_local_vals_prop_name);
-  if (!g2l_vals_res) {
-    return g2l_vals_res.error();
+    next_properties.emplace_back(tsuba::PropertyMetadata{
+        .name = global_to_local_keys_prop_name,
+        .path = std::move(g2l_keys_res.value()),
+    });
   }
-  next_properties.emplace_back(tsuba::PropertyMetadata{
-      .name = global_to_local_vals_prop_name,
-      .path = std::move(g2l_vals_res.value()),
-  });
+
+  if (part_meta.global_to_local_values_ != nullptr) {
+    auto g2l_vals_res = StoreArrowArrayAtName(
+        part_meta.global_to_local_values_, dir, global_to_local_vals_prop_name);
+    if (!g2l_vals_res) {
+      return g2l_vals_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropertyMetadata{
+        .name = global_to_local_vals_prop_name,
+        .path = std::move(g2l_vals_res.value()),
+    });
+  }
 
   return next_properties;
 }
@@ -777,7 +798,8 @@ PartitionFileName(const tsuba::RDGMeta& meta, bool intend_partial_read) {
     }
     return tsuba::RDGMeta::PartitionFileName(meta.dir_, 0, meta.version_);
   }
-  if (meta.num_hosts_ != 0 && meta.num_hosts_ != tsuba::Comm()->Num) {
+  if (meta.policy_id_ != 0 && meta.num_hosts_ != 0 &&
+      meta.num_hosts_ != tsuba::Comm()->Num) {
     GALOIS_LOG_ERROR(
         "number of hosts for partitioned graph {} does not "
         "match number of current hosts {}",
@@ -1022,10 +1044,6 @@ to_json(nlohmann::json& j, const PartitionMetadata& pmd) {
 void
 from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   uint32_t magic;
-  if (pmd.state != PartitionMetadata::State::kUninitialized) {
-    GALOIS_LOG_DEBUG(
-        "Overwriting existing part_metadata_ from json state: {}", pmd.state);
-  }
   j.at("magic").get_to(magic);
   j.at("policy_id").get_to(pmd.policy_id_);
   j.at("transposed").get_to(pmd.transposed_);
@@ -1038,8 +1056,6 @@ from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   j.at("num_owned").get_to(pmd.num_owned_);
   j.at("num_nodes_with_edges").get_to(pmd.num_nodes_with_edges_);
   j.at("cartesian_grid").get_to(pmd.cartesian_grid_);
-
-  pmd.state = PartitionMetadata::State::kFromStorage;
 
   if (magic != kPartitionMagicNo) {
     // nlohmann::json reports errors using exceptions
@@ -1221,24 +1237,13 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
   // One could argue that writing a graph should be idempotent and not change edge_properties_
   edge_properties_ = std::move(edge_write_result.value());
 
-  if (part_metadata_.state == PartitionMetadata::State::kFromPartitioner) {
-    GALOIS_LOG_VASSERT(
-        part_properties_.empty(),
-        "partition metadata from partitioner, but part_properties is not "
-        "empty!");
-    auto part_write_result =
-        WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_);
-    if (!part_write_result) {
-      GALOIS_LOG_DEBUG("failed: WritePartMetadata for part_properties");
-      return part_write_result.error();
-    }
-    part_properties_ = std::move(part_write_result.value());
-  } else {
-    GALOIS_LOG_VASSERT(
-        !part_properties_.empty() || handle.impl_->rdg_meta.policy_id_ == 0,
-        "policy_id != 0, partition metadata from storage, but part_properties "
-        "is empty!");
+  auto part_write_result =
+      WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_);
+  if (!part_write_result) {
+    GALOIS_LOG_DEBUG("failed: WritePartMetadata for part_properties");
+    return part_write_result.error();
   }
+  part_properties_ = std::move(part_write_result.value());
 
   if (auto write_result = WriteMetadataJson(handle); !write_result) {
     GALOIS_LOG_DEBUG("error: metadata write");
@@ -1490,36 +1495,30 @@ RDG::Store(RDGHandle handle, const std::string& command_line, FileFrame* ff) {
     GALOIS_LOG_DEBUG("failed: handle does not allow write");
     return ErrorCode::InvalidArgument;
   }
-  if (handle.impl_->rdg_meta.num_hosts_ != 0 &&
-      handle.impl_->rdg_meta.num_hosts_ != tsuba::Comm()->Num) {
-    GALOIS_LOG_ERROR(
-        "number of hosts mismatch old: {} new: {}",
-        handle.impl_->rdg_meta.num_hosts_, tsuba::Comm()->Num);
-    return ErrorCode::InvalidArgument;
-  }
-  if (handle.impl_->rdg_meta.policy_id_ != 0 &&
-      handle.impl_->rdg_meta.policy_id_ != part_metadata_.policy_id_) {
-    GALOIS_LOG_ERROR(
-        "policy_id mismatch old: {} new: {}", handle.impl_->rdg_meta.policy_id_,
-        part_metadata_.policy_id_);
-    return ErrorCode::InvalidArgument;
-  }
-
+  // We trust the partitioner to give us a valid graph, but we
+  // report our assumptions
+  GALOIS_LOG_DEBUG(
+      "RDG::Store meta.num_hosts: {} meta.policy_id: {} num_hosts: {} "
+      "policy_id: {}",
+      handle.impl_->rdg_meta.num_hosts_, handle.impl_->rdg_meta.policy_id_,
+      tsuba::Comm()->Num, part_metadata_.policy_id_);
   if (handle.impl_->rdg_meta.dir_ != rdg_dir_) {
     UnbindFromStorage();
   }
 
   if (ff) {
     galois::Uri t_path = handle.impl_->rdg_meta.dir_.RandFile("topology");
+
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     if (auto res = ff->Persist(); !res) {
+      GALOIS_LOG_DEBUG(
+          "RDG::Store persist {} failed: {}", t_path.string(), res.error());
       return res.error();
     }
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     topology_path_ = t_path.BaseName();
   }
-
   return DoStore(handle, command_line);
 }
 
@@ -1571,46 +1570,9 @@ RDG::DropEdgeProperty(int i) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void>
-RDG::MarkNodePropertiesPersistent(
-    const std::vector<std::string>& persist_node_props) {
-  if (persist_node_props.size() > node_properties_.size()) {
-    GALOIS_LOG_DEBUG(
-        "persist props {} names, rdg.node_properties_ {}",
-        persist_node_props.size(), node_properties_.size());
-    return ErrorCode::InvalidArgument;
-  }
-  for (uint32_t i = 0; i < persist_node_props.size(); ++i) {
-    if (!persist_node_props[i].empty()) {
-      node_properties_[i].name = persist_node_props[i];
-      node_properties_[i].path = "";
-      node_properties_[i].persist = true;
-    }
-  }
-  return galois::ResultSuccess();
-}
-
-galois::Result<void>
-RDG::MarkEdgePropertiesPersistent(
-    const std::vector<std::string>& persist_edge_props) {
-  if (persist_edge_props.size() > edge_properties_.size()) {
-    GALOIS_LOG_DEBUG(
-        "persist props {} names, rdg.edge_properties_ {}",
-        persist_edge_props.size(), edge_properties_.size());
-    return ErrorCode::InvalidArgument;
-  }
-  for (uint32_t i = 0; i < persist_edge_props.size(); ++i) {
-    if (!persist_edge_props[i].empty()) {
-      edge_properties_[i].name = persist_edge_props[i];
-      edge_properties_[i].path = "";
-      edge_properties_[i].persist = true;
-    }
-  }
-  return galois::ResultSuccess();
-}
-
 void
 RDG::MarkAllPropertiesPersistent() {
+  GALOIS_LOG_DEBUG("mark all properties persistent");
   std::for_each(node_properties_.begin(), node_properties_.end(), [](auto& p) {
     return p.persist = true;
   });
@@ -1625,7 +1587,7 @@ RDG::MarkNodePropertiesPersistent(
     const std::vector<std::string>& persist_node_props) {
   if (persist_node_props.size() > node_properties_.size()) {
     GALOIS_LOG_DEBUG(
-        "failed: persist props {} names, rdg.node_properties_ {}",
+        "failed: persist props sz: {} names, rdg.node_properties_ sz: {}",
         persist_node_props.size(), node_properties_.size());
     return ErrorCode::InvalidArgument;
   }
@@ -1634,6 +1596,7 @@ RDG::MarkNodePropertiesPersistent(
       node_properties_[i].name = persist_node_props[i];
       node_properties_[i].path = "";
       node_properties_[i].persist = true;
+      GALOIS_LOG_DEBUG("node persist {}", node_properties_[i].name);
     }
   }
   return galois::ResultSuccess();
@@ -1644,7 +1607,7 @@ RDG::MarkEdgePropertiesPersistent(
     const std::vector<std::string>& persist_edge_props) {
   if (persist_edge_props.size() > edge_properties_.size()) {
     GALOIS_LOG_DEBUG(
-        "failed: persist props {} names, rdg.edge_properties_ {}",
+        "failed: persist props sz: {} names, rdg.edge_properties_ sz: {}",
         persist_edge_props.size(), edge_properties_.size());
     return ErrorCode::InvalidArgument;
   }
@@ -1653,6 +1616,7 @@ RDG::MarkEdgePropertiesPersistent(
       edge_properties_[i].name = persist_edge_props[i];
       edge_properties_[i].path = "";
       edge_properties_[i].persist = true;
+      GALOIS_LOG_DEBUG("edge persist {}", edge_properties_[i].name);
     }
   }
   return galois::ResultSuccess();

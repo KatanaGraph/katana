@@ -125,12 +125,6 @@ public:
 };
 
 struct GALOIS_EXPORT PartitionMetadata {
-  enum class State {
-    kUninitialized,
-    kFromStorage,
-    kFromPartitioner,
-  };
-  State state{State::kUninitialized};
   uint32_t policy_id_{0};
   bool transposed_{false};
   bool is_outgoing_edge_cut_{false};

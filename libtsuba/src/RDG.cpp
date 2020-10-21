@@ -956,7 +956,7 @@ RDGMeta::Make(const galois::Uri& rdg) {
     if (!ns_res) {
       // try to be helpful and look for RDGs that we don't know about
       if (auto res = Register(rdg.string()); !res) {
-        return res.error();
+        GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
       }
       ns_res = NS()->Get(rdg);
     }

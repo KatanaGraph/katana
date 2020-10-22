@@ -171,14 +171,13 @@ private:
     uint32_t my_thread_id = substrate::ThreadPool::getTID();
     uint32_t total_threads = runtime::activeThreads;
 
-    const auto& beginnings = *thread_beginnings_;
-
-    iterator local_begin = beginnings[my_thread_id];
-    iterator local_end = beginnings[my_thread_id + 1];
+    iterator local_begin = thread_beginnings_[my_thread_id];
+    iterator local_end = thread_beginnings_[my_thread_id + 1];
 
     assert(local_begin <= local_end);
 
-    if (beginnings[total_threads] == *global_end_ && *global_begin_ == 0) {
+    if (thread_beginnings_[total_threads] == *global_end_ &&
+        *global_begin_ == 0) {
       return std::make_pair(local_begin, local_end);
     }
 
@@ -222,14 +221,13 @@ private:
 
   IterTy global_begin_;
   IterTy global_end_;
-  const std::vector<uint32_t>* thread_beginnings_;
+  std::vector<uint32_t> thread_beginnings_;
 
 public:
-  SpecificRange(
-      IterTy begin, IterTy end, const std::vector<uint32_t>& thread_ranges)
+  SpecificRange(IterTy begin, IterTy end, std::vector<uint32_t> thread_ranges)
       : global_begin_(begin),
         global_end_(end),
-        thread_beginnings_(&thread_ranges) {}
+        thread_beginnings_(std::move(thread_ranges)) {}
 
   iterator begin() const { return global_begin_; }
   iterator end() const { return global_end_; }

@@ -26,6 +26,7 @@ enum class ErrorCode {
   AzureError = 14,
   MpiError = 15,
   BadVersion = 16,
+  GSError = 17,
 };
 
 GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
@@ -68,6 +69,8 @@ public:
       return "previous version expectation violated";
     case ErrorCode::MpiError:
       return "some MPI process reported an error";
+    case ErrorCode::GSError:
+      return "Google storage error";
     default:
       return "unknown error";
     }
@@ -92,6 +95,7 @@ public:
     case ErrorCode::LocalStorageError:
     case ErrorCode::AzureError:
     case ErrorCode::MpiError:
+    case ErrorCode::GSError:
       return make_error_condition(std::errc::io_error);
     default:
       return std::error_condition(c, *this);

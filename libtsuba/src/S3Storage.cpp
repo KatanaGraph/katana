@@ -50,25 +50,6 @@ S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
 }
 
 galois::Result<void>
-S3Storage::Create(const std::string& uri, bool overwrite) {
-  auto uri_res = CleanUri(std::string(uri));
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto [bucket, object] = std::move(uri_res.value());
-  auto exists_res = tsuba::S3Exists(bucket, object);
-  if (!exists_res) {
-    return exists_res.error();
-  }
-
-  if (!overwrite && exists_res.value()) {
-    return tsuba::ErrorCode::Exists;
-  }
-  // S3 has atomic puts, so create on write.
-  return galois::ResultSuccess();
-}
-
-galois::Result<void>
 S3Storage::GetMultiSync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {

@@ -50,12 +50,14 @@ public:
   /// store object is selected based on scheme:
   /// s3://...    -> S3Store
   /// abfs://...  -> AzureStore
+  /// gs://...    -> GSStore
   /// file://...  -> LocalStore
   /// {no scheme} -> LocalStore
   FileStorage* FS(std::string_view uri) const;
 
   static galois::Result<void> Init(
-      galois::CommBackend* comm, tsuba::NameServerClient* ns);
+      galois::CommBackend* comm, tsuba::NameServerClient* ns,
+      const std::string& fs_supress);
   static galois::Result<void> Fini();
   static const GlobalState& Get();
 };

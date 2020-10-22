@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_AZURESTORAGE_H_
-#define GALOIS_LIBTSUBA_AZURESTORAGE_H_
+#ifndef GALOIS_LIBTSUBA_GSSTORAGE_H_
+#define GALOIS_LIBTSUBA_GSSTORAGE_H_
 
 #include <future>
 
@@ -7,14 +7,13 @@
 
 namespace tsuba {
 
-class AzureStorage : public FileStorage {
+class GSStorage : public FileStorage {
   galois::Result<std::pair<std::string, std::string>> CleanUri(
       const std::string& uri);
 
 public:
-  // "abfs://" is the uri style used by the hadoop plug in for azure blob store
-  // https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-introduction-abfs-uri
-  AzureStorage() : FileStorage("abfs://") {}
+  // Google uses "gs://" for their gcs URIs
+  GSStorage() : FileStorage("gs://") {}
 
   galois::Result<void> Init() override;
   galois::Result<void> Fini() override;

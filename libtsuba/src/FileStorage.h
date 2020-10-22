@@ -29,8 +29,6 @@ public:
   virtual galois::Result<void> Init() = 0;
   virtual galois::Result<void> Fini() = 0;
   virtual galois::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
-  virtual galois::Result<void> Create(
-      const std::string& uri, bool overwrite) = 0;
 
   virtual galois::Result<void> GetMultiSync(
       const std::string& uri, uint64_t start, uint64_t size,

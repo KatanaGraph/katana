@@ -6,6 +6,7 @@
 #include <stack>
 #include <string>
 
+#include "galois/Logging.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
 
@@ -77,6 +78,13 @@ GALOIS_EXPORT galois::Result<void> S3PutSingleAsync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size, CountingSemaphore* sema);
 GALOIS_EXPORT void S3PutSingleAsyncFinish(CountingSemaphore* sema);
+
+// Google storage compatability
+GALOIS_EXPORT std::future<galois::Result<void>> S3ListAsyncV1(
+    const std::string& bucket, const std::string& object,
+    std::vector<std::string>* list, std::vector<uint64_t>* size);
+GALOIS_EXPORT galois::Result<void> S3SingleDelete(
+    const std::string& bucket, const std::string& object);
 
 }  // namespace tsuba::internal
 

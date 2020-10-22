@@ -87,3 +87,22 @@ bool
 galois::GetEnv(const std::string& var_name) {
   return std::getenv(var_name.c_str()) != nullptr;
 }
+
+// https://stackoverflow.com/questions/30292642/c-standard-library-stdsetenv-vs-setenv
+bool
+galois::SetEnv(
+    const std::string& var_name, const std::string& val, bool overwrite) {
+  if (GetEnv(var_name)) {
+    if (overwrite) {
+      if (setenv(var_name.c_str(), val.c_str(), 1) == 0) {
+        return true;
+      }
+      return false;
+    }
+    return true;
+  }
+  if (setenv(var_name.c_str(), val.c_str(), 0) == 0) {
+    return true;
+  }
+  return false;
+}

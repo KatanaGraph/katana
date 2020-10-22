@@ -9,6 +9,7 @@
 
 namespace tsuba {
 
+extern GlobalFileStorageAllocator gs_storage_allocator;
 extern GlobalFileStorageAllocator azure_storage_allocator;
 extern GlobalFileStorageAllocator local_storage_allocator;
 extern GlobalFileStorageAllocator s3_storage_allocator;
@@ -18,6 +19,9 @@ extern GlobalFileStorageAllocator s3_storage_allocator;
 namespace {
 
 std::vector<tsuba::GlobalFileStorageAllocator*> available_storage_allocators{
+#ifdef GALOIS_HAVE_GS_BACKEND
+    &tsuba::gs_storage_allocator,
+#endif
 #ifdef GALOIS_HAVE_AZURE_BACKEND
     &tsuba::azure_storage_allocator,
 #endif
@@ -63,7 +67,9 @@ GlobalState::NS() const {
 }
 
 galois::Result<void>
-GlobalState::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
+GlobalState::Init(
+    galois::CommBackend* comm, tsuba::NameServerClient* ns,
+    const std::string& uri_scheme) {
   assert(ref_ == nullptr);
 
   // quick ping to say hello and fail fast if something was misconfigured
@@ -86,8 +92,13 @@ GlobalState::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
       });
 
   for (std::unique_ptr<FileStorage>& storage : global_state->file_stores_) {
-    if (auto res = storage->Init(); !res) {
-      return res.error();
+    // GS and S3 should not both call Init
+    //   galois::Uri::scheme returns the scheme prefix, uri_scheme() includes "://"
+    if (uri_scheme.empty() ||
+        (storage->uri_scheme().rfind(uri_scheme, 0) == 0)) {
+      if (auto res = storage->Init(); !res) {
+        return res.error();
+      }
     }
   }
 

@@ -1,7 +1,7 @@
-// Run some quick, basic sanity checks on tsuba's file functionality
+// Test every libtsuba::file.h routine except get/put async functions which are tested by tsuba_bench
+#include "tsuba/tsuba.h"
+
 #include <getopt.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include <vector>
 
@@ -9,8 +9,8 @@
 #include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
+#include "md5.h"
 #include "tsuba/file.h"
-#include "tsuba/tsuba.h"
 
 // remove_all (rm -rf) is just too sweet
 #include <boost/filesystem.hpp>
@@ -86,7 +86,9 @@ DeleteFile(const std::string& dst_uri) {
   std::unordered_set<std::string> files;
   files.emplace(galois::ExtractFileName(dst_uri));
   if (auto res = tsuba::FileDelete(dir_res.value(), files); !res) {
-    GALOIS_LOG_FATAL("FileDelete error {}\n", res.error());
+    GALOIS_LOG_FATAL(
+        "FileDelete error [{}] sz: {} files[0]: {} err: {}\n", dir_res.value(),
+        files.size(), files.size() > 0 ? *files.begin() : "", res.error());
   }
 }
 
@@ -127,75 +129,43 @@ Cp(const std::string& dst_uri, const std::string& src_uri) {
   if (opt_verbose_level > 0) {
     fmt::print(" Cp {} to {}\n", src_uri, dst_uri);
   }
-
-  auto buf_res = tsuba::FileMmap(src_uri, UINT64_C(0), size);
+  std::vector<uint8_t> vec(size);
+  auto buf_res = tsuba::FileGet(src_uri, vec.data(), UINT64_C(0), size);
   if (!buf_res) {
-    GALOIS_LOG_FATAL("Failed mmap {} start 0 size {:#x}\n", src_uri, size);
+    GALOIS_LOG_FATAL("Failed get {} start 0 size {:#x}\n", src_uri, size);
   }
-  uint8_t* buf = buf_res.value();
 
-  if (auto res = tsuba::FileStore(dst_uri, buf, size); !res) {
+  if (auto res = tsuba::FileStore(dst_uri, vec.data(), size); !res) {
     GALOIS_LOG_FATAL("FileStore error {}\n", res.error());
   }
 }
+
 ///////////////////////////////////////////////////////////////////
 
-int
-RunPopen(const std::string& cmd, std::string& out) {
-  char buff[4096];
-  FILE* fp = popen(cmd.c_str(), "r");
-  if (fp == NULL) {
-    GALOIS_LOG_ERROR("Cannot popen: {}", galois::ResultErrno());
-    return -1;
-  }
-  while (fgets(buff, sizeof(buff), fp)) {
-    out += buff;
-  }
-  pclose(fp);
-  if (opt_verbose_level > 1) {
-    fmt::print("out: {} cmd: {}\n", out, cmd);
-  }
-  return 0;
-}
-
-int
-MD5sumRun(const std::string& cmd, std::string& out) {
-  std::string cmd_out;
-  int res = RunPopen(cmd, cmd_out);
-  if (res != 0) {
-    return res;
+std::string
+DoMD5(const std::string& path) {
+  constexpr uint64_t read_block_size = (1 << 29);
+  tsuba::StatBuf stat_buf;
+  if (auto res = tsuba::FileStat(path, &stat_buf); !res) {
+    GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
   }
 
-  std::size_t first_space = cmd_out.find(' ');
-  if (first_space == std::string::npos) {
-    return -1;
-  }
-  out = cmd_out.substr(0, first_space);
-  return 0;
-}
-
-int
-RunMd5Check(const std::vector<std::string>& args) {
-  std::vector<std::string> results;
-  for (auto const& arg : args) {
-    std::string out;
-    int res = MD5sumRun(fmt::format("tsuba_md5sum {}", arg), out);
-    if (res != 0) {
-      fmt::print("Test FAILED: {}\n", arg);
-      return -1;
+  MD5 md5;
+  std::vector<uint8_t> vec;
+  uint64_t size;
+  for (uint64_t so_far = UINT64_C(0); so_far < stat_buf.size;
+       so_far += read_block_size) {
+    size = std::min(read_block_size, (stat_buf.size - so_far));
+    vec.reserve(size);
+    auto res = tsuba::FileGet(path, vec.data(), so_far, size);
+    if (!res) {
+      GALOIS_LOG_FATAL(
+          "\n  Failed mmap start {:#x} size {:#x} total {:#x}\n", so_far, size,
+          stat_buf.size);
     }
-    results.push_back(out);
+    md5.add(vec.data(), size);
   }
-  // Now test that they are all equal
-  auto first = results[0];
-  for (auto const& result : results) {
-    if (first != result) {
-      fmt::print(
-          "Test FAILED, outputs\n  first: {}\n  other: {}\n", first, result);
-      return -2;
-    }
-  }
-  return 0;
+  return fmt::format("{}", md5.getHash());
 }
 
 ///////////////////////////
@@ -207,17 +177,48 @@ struct Test {
       : name_(name), func_(func) {}
 };
 
+std::pair<std::vector<std::string>, std::vector<uint64_t>>
+ListDir(const std::string& dir) {
+  std::vector<std::string> files;
+  std::vector<uint64_t> size;
+  auto fut = tsuba::FileListAsync(dir, &files, &size);
+  if (auto res = fut.get(); !res) {
+    GALOIS_LOG_FATAL("Bad return from ListAsync: {}", res.error());
+  }
+  return std::make_pair(files, size);
+}
+
+void
+TestDir(const std::string& file, uint64_t num_bytes) {
+  auto dir = galois::ExtractDirName(file);
+  GALOIS_LOG_ASSERT(dir);
+  auto [files, size] = ListDir(dir.value());
+  GALOIS_LOG_ASSERT(files.size() == 1);
+  GALOIS_LOG_ASSERT(files[0] == galois::ExtractFileName(file));
+  GALOIS_LOG_ASSERT(size.size() == 1);
+  GALOIS_LOG_ASSERT(size[0] == num_bytes);
+}
 void
 MkCpSumLocal(
     uint64_t num_bytes, const std::string& local, const std::string& remote,
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
-  tests.push_back(
-      Test(fmt::format("Make local, copy, delete ({})", bytes_str), [=]() {
+  tests.push_back(Test(
+      fmt::format("Make local, copy (get), delete ({})", bytes_str), [=]() {
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
         Mkfile(local, num_bytes);
         Cp(remote, local);
-        std::vector<std::string> args{local, remote};
-        RunMd5Check(args);
+
+        GALOIS_LOG_ASSERT(FileExists(local));
+        GALOIS_LOG_ASSERT(FileExists(remote));
+        TestDir(local, num_bytes);
+        TestDir(remote, num_bytes);
+
+        auto m1 = DoMD5(local);
+        auto m2 = DoMD5(remote);
+        GALOIS_LOG_ASSERT(m1 == m2);
+
         DeleteFile(local);
         DeleteFile(remote);
         GALOIS_LOG_ASSERT(!FileExists(local));
@@ -231,15 +232,68 @@ MkCpSumRemote(
     std::vector<Test>& tests) {
   std::string bytes_str = Bytes2Str(num_bytes);
   tests.push_back(Test(
-      fmt::format("Make remote, copy local, delete ({})", bytes_str), [=]() {
+      fmt::format("Make remote, copy (get) local, delete ({})", bytes_str),
+      [=]() {
+        GALOIS_LOG_ASSERT(!FileExists(local));
+        GALOIS_LOG_ASSERT(!FileExists(remote));
         Mkfile(remote, num_bytes);
         Cp(local, remote);
-        std::vector<std::string> args{local, remote};
-        RunMd5Check(args);
+
+        GALOIS_LOG_ASSERT(FileExists(local));
+        GALOIS_LOG_ASSERT(FileExists(remote));
+        TestDir(local, num_bytes);
+        TestDir(remote, num_bytes);
+
+        auto m1 = DoMD5(local);
+        auto m2 = DoMD5(remote);
+        GALOIS_LOG_ASSERT(m1 == m2);
+
         DeleteFile(local);
         DeleteFile(remote);
         GALOIS_LOG_ASSERT(!FileExists(local));
         GALOIS_LOG_ASSERT(!FileExists(remote));
+      }));
+}
+
+void
+DirPrefixRemote(
+    uint64_t num_files, std::vector<std::string> fnames,
+    const std::string& remote_dir, std::vector<Test>& tests) {
+  constexpr int file_size = 16;
+  tests.push_back(Test(
+      fmt::format("Create, list, delete many files in ({})", remote_dir),
+      [=]() {
+        auto [files, size] = ListDir(remote_dir);
+        GALOIS_LOG_ASSERT(files.size() == 0);
+        GALOIS_LOG_ASSERT(size.size() == 0);
+        for (uint64_t i = 0; i < num_files; ++i) {
+          Mkfile(galois::JoinPath(remote_dir, fnames[i]), file_size);
+        }
+        {
+          auto [files, size] = ListDir(remote_dir);
+          if (opt_verbose_level > 0) {
+            fmt::print(
+                "Dir: {} files: {} Byte size: {}\n", remote_dir, files.size(),
+                std::accumulate(
+                    size.begin(), size.end(), decltype(size)::value_type(0)));
+          }
+          GALOIS_LOG_ASSERT(files.size() == num_files);
+          GALOIS_LOG_ASSERT(size.size() == num_files);
+
+          GALOIS_LOG_ASSERT(
+              std::accumulate(
+                  size.begin(), size.end(), decltype(size)::value_type(0)) ==
+              num_files * file_size);
+
+          for (uint64_t i = 0; i < num_files; ++i) {
+            DeleteFile(galois::JoinPath(remote_dir, fnames[i]));
+          }
+        }
+        {
+          auto [files, size] = ListDir(remote_dir);
+          GALOIS_LOG_ASSERT(files.size() == 0);
+          GALOIS_LOG_ASSERT(size.size() == 0);
+        }
       }));
 }
 
@@ -259,6 +313,18 @@ ConstructTests(std::string local_dir, std::string remote_dir) {
   MkCpSumRemote((UINT64_C(1) << 13) - 1, local_rnd, remote_rnd, tests);
   MkCpSumRemote((UINT64_C(1) << 15) - 1, local_rnd, remote_rnd, tests);
 
+  // Create a repository of random names
+  constexpr int fnum = 5107;
+  std::vector<std::string> fnames(fnum);
+  for (auto& fname : fnames) {
+    fname = galois::RandomAlphanumericString(12);
+  }
+
+  DirPrefixRemote(55, fnames, remote_dir, tests);
+  // GS compatability mode is limited to pseudo-directories with 1,000 items
+  // DirPrefixRemote(1010, fnames, remote_dir, tests);
+  // DirPrefixRemote(fnum, fnames, remote_dir, tests);
+
   return tests;
 }
 
@@ -273,20 +339,42 @@ main(int argc, char* argv[]) {
     path.insert(0, "bin:");
     setenv("PATH", path.c_str(), 1);
   }
-  if (auto init_good = tsuba::Init(); !init_good) {
+  auto uri_res = galois::Uri::Make(remote_uri);
+  if (!uri_res) {
+    GALOIS_LOG_FATAL("bad remote_uri: {}: {}", remote_uri, uri_res.error());
+  }
+  auto uri = uri_res.value();
+  if (auto init_good = tsuba::Init(uri.scheme()); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 
   auto unique_result = galois::CreateUniqueDirectory(local_uri);
   GALOIS_LOG_ASSERT(unique_result);
   std::string tmp_dir(std::move(unique_result.value()));
+  GALOIS_LOG_VASSERT(
+      !FileExists(remote_uri), "Remote URI must not exist at start of test");
   auto tests = ConstructTests(tmp_dir, remote_uri);
+
+  // Create annoyance files
+  auto dir = remote_uri;
+  while (dir[dir.size() - 1] == '/') {
+    dir.pop_back();
+  }
+  for (char ch = 'a'; ch < 'z' + 1; ++ch) {
+    Mkfile(dir + ch, 0);
+    GALOIS_LOG_ASSERT(FileExists(dir + ch));
+  }
 
   for (auto const& test : tests) {
     if (opt_verbose_level > 0) {
       fmt::print("Running: {}\n", test.name_);
     }
     test.func_();
+  }
+
+  for (char ch = 'a'; ch < 'z' + 1; ++ch) {
+    DeleteFile(dir + ch);
+    GALOIS_LOG_ASSERT(!FileExists(dir + ch));
   }
 
   boost::filesystem::remove_all(tmp_dir);

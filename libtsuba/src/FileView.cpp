@@ -134,7 +134,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
         file_size_ - file_off);
     if (found_empty) {
       auto peek_fut =
-          FilePeekAsync(filename_, map_start_ + file_off, file_off, map_size);
+          FileGetAsync(filename_, map_start_ + file_off, file_off, map_size);
       GALOIS_LOG_ASSERT(peek_fut.valid());
       FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));

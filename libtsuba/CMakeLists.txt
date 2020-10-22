@@ -64,6 +64,9 @@ foreach(backend ${GALOIS_STORAGE_BACKEND})
     set(TSUBA_BACKEND_S3 ON)
   elseif("${lc_backend}" STREQUAL "azure")
     set(TSUBA_BACKEND_AZURE ON)
+  elseif("${lc_backend}" STREQUAL "gs")
+  # Our google cloud storage layer uses the S3 libraries
+    set(TSUBA_BACKEND_GS ON)
   else()
     message(FATAL_ERROR "Unknown value for GALOIS_STORAGE_BACKEND. Accepted values: local s3 azure")
   endif()
@@ -101,6 +104,22 @@ if(TSUBA_BACKEND_AZURE)
   endif()
   target_link_libraries(tsuba PUBLIC azure-storage-lite)
 endif()
+
+if(TSUBA_BACKEND_GS)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_GS_BACKEND)
+  # Our google cloud storage layer uses the S3 libraries
+  target_sources(tsuba PRIVATE src/s3.cpp src/GSStorage.cpp src/gs.cpp)
+  # The conan generated package name is aws-sdk-cpp while the
+  # package name when built from source is AWSSDK.
+  find_package(aws-sdk-cpp QUIET)
+  if(aws-sdk-cpp_FOUND)
+    target_link_libraries(tsuba PRIVATE aws-sdk-cpp::aws-sdk-cpp)
+  else()
+    find_package(AWSSDK REQUIRED COMPONENTS transfer)
+    target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
+  endif()
+endif()
+
 
 if(TSUBA_BACKEND_LOCAL)
   target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_LOCAL_BACKEND)

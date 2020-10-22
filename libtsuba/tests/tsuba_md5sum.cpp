@@ -13,7 +13,7 @@
 #include "tsuba/tsuba.h"
 
 uint64_t bytes_to_write{0};
-uint64_t read_block_size = (1 << 29);
+constexpr uint64_t read_block_size = (1 << 29);
 
 std::string usage_msg = "Usage: {} <list of file path>\n";
 
@@ -47,22 +47,19 @@ DoMD5(const std::string& path, MD5& md5) {
     GALOIS_LOG_FATAL("\n  Cannot stat {}\n", path);
   }
 
-  uint8_t* buf{nullptr};
+  std::vector<uint8_t> vec;
   uint64_t size;
   for (uint64_t so_far = UINT64_C(0); so_far < stat_buf.size;
        so_far += read_block_size) {
     size = std::min(read_block_size, (stat_buf.size - so_far));
-    auto res = tsuba::FileMmap(path, so_far, size);
+    vec.reserve(size);
+    auto res = tsuba::FileGet(path, vec.data(), so_far, size);
     if (!res) {
       GALOIS_LOG_FATAL(
           "\n  Failed mmap start {:#x} size {:#x} total {:#x}\n", so_far, size,
           stat_buf.size);
     }
-    buf = res.value();
-    md5.add(buf, size);
-    if (auto res = tsuba::FileMunmap(buf); !res) {
-      GALOIS_LOG_FATAL("\n  Failed munmap: {}\n", res.error());
-    }
+    md5.add(vec.data(), size);
   }
 }
 

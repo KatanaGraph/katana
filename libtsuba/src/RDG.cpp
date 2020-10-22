@@ -697,7 +697,7 @@ AddPartitionMetadataArray(
 galois::Result<tsuba::RDGPrefix>
 BindOutIndex(const std::string& topology_path) {
   tsuba::GRHeader header;
-  if (auto res = tsuba::FilePeek(topology_path, &header); !res) {
+  if (auto res = tsuba::FileGet(topology_path, &header); !res) {
     return res.error();
   }
   tsuba::FileView fv;

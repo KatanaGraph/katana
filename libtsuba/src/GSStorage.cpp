@@ -1,100 +1,97 @@
-#include "AzureStorage.h"
+#include "GSStorage.h"
 
 #include <regex>
 #include <unordered_set>
 
 #include "GlobalState.h"
-#include "azure.h"
 #include "galois/Result.h"
+#include "gs.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
 namespace {
 
-const std::regex kAzureUriRegex("abfs://([-a-z0-9.]+)/(.+)");
+const std::regex kGSUriRegex("gs://([-a-z0-9.]+)/(.+)");
+const std::regex kGSBucketRegex("gs://([-a-z0-9.]+)");
 
 }  // namespace
 
 namespace tsuba {
 
-GlobalFileStorageAllocator azure_storage_allocator([]() {
-  return std::unique_ptr<FileStorage>(new AzureStorage());
+GlobalFileStorageAllocator gs_storage_allocator([]() {
+  return std::unique_ptr<FileStorage>(new GSStorage());
 });
 
 galois::Result<std::pair<std::string, std::string>>
-AzureStorage::CleanUri(const std::string& uri) {
+GSStorage::CleanUri(const std::string& uri) {
   std::smatch sub_match;
-  if (!std::regex_match(uri, sub_match, kAzureUriRegex)) {
+  if (!std::regex_match(uri, sub_match, kGSUriRegex)) {
+    if (std::regex_match(uri, sub_match, kGSBucketRegex)) {
+      // This can happen with FileDelete
+      return std::make_pair(sub_match[1], "");
+    }
     return ErrorCode::InvalidArgument;
   }
   return std::make_pair(sub_match[1], sub_match[2]);
 }
 
 galois::Result<void>
-AzureStorage::Init() {
-  return AzureInit();
+GSStorage::Init() {
+  return GSInit();
 }
 
 galois::Result<void>
-AzureStorage::Fini() {
-  return AzureFini();
+GSStorage::Fini() {
+  return GSFini();
 }
 
 galois::Result<void>
-AzureStorage::Stat(const std::string& uri, StatBuf* s_buf) {
+GSStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzureGetSize(container, blob, &s_buf->size);
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSGetSize(bucket, object, &s_buf->size);
 }
 
 galois::Result<void>
-AzureStorage::GetMultiSync(
+GSStorage::GetMultiSync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzureGetSync(
-      container, blob, start, size,
-      reinterpret_cast<char*>(result_buf));  // NOLINT
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSGetSync(bucket, object, start, size, result_buf);
 }
 
 galois::Result<void>
-AzureStorage::PutMultiSync(
+GSStorage::PutMultiSync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return uri_res.error();
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzurePutSync(
-      container, blob,
-      reinterpret_cast<const char*>(data),  // NOLINT
-      size);
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSPutSync(bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
-AzureStorage::PutAsync(
+GSStorage::PutAsync(
     const std::string& uri, const uint8_t* data, uint64_t size) {
   auto uri_res = CleanUri(std::string(uri));
   if (!uri_res) {
     return std::async(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzurePutAsync(
-      container, blob,
-      reinterpret_cast<const char*>(data),  // NOLINT
-      size);
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSPutAsync(bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
-AzureStorage::GetAsync(
+GSStorage::GetAsync(
     const std::string& uri, uint64_t start, uint64_t size,
     uint8_t* result_buf) {
   auto uri_res = CleanUri(std::string(uri));
@@ -102,14 +99,12 @@ AzureStorage::GetAsync(
     return std::async(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzureGetAsync(
-      container, blob, start, size,
-      reinterpret_cast<char*>(result_buf));  // NOLINT
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSGetAsync(bucket, object, start, size, result_buf);
 }
 
 std::future<galois::Result<void>>
-AzureStorage::ListAsync(
+GSStorage::ListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   auto uri_res = CleanUri(std::string(directory));
@@ -117,20 +112,20 @@ AzureStorage::ListAsync(
     return std::async(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzureListAsync(container, blob, list, size);
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSListAsync(bucket, object, list, size);
 }
 
 galois::Result<void>
-AzureStorage::Delete(
+GSStorage::Delete(
     const std::string& directory,
     const std::unordered_set<std::string>& files) {
   auto uri_res = CleanUri(std::string(directory));
   if (!uri_res) {
     return uri_res.error();
   }
-  auto [container, blob] = std::move(uri_res.value());
-  return AzureDelete(container, blob, files);
+  auto [bucket, object] = std::move(uri_res.value());
+  return GSDelete(bucket, object, files);
 }
 
 }  // namespace tsuba

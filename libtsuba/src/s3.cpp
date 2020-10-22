@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <stack>
 #include <string_view>
 
 #include <aws/core/Aws.h>
@@ -24,6 +23,9 @@
 #include <aws/s3/model/ObjectIdentifier.h>
 #include <aws/transfer/TransferManager.h>
 #include <fmt/core.h>
+// For google storage compatability
+#include <aws/s3/model/DeleteObjectRequest.h>
+#include <aws/s3/model/ListObjectsRequest.h>
 
 #include "SegmentedBufferView.h"
 #include "galois/FileSystem.h"
@@ -59,7 +61,9 @@ static constexpr const uint64_t kNumS3Threads = 36;
 // Initialized in S3Init
 static std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
     default_executor{nullptr};
-static std::shared_ptr<Aws::S3::S3Client> async_s3_client{nullptr};
+// https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/using-service-client.html
+// --All client classes for all AWS services are thread-safe.
+static std::shared_ptr<Aws::S3::S3Client> s3_client{nullptr};
 static bool library_init{false};
 
 class WarnOnEmptyDefaultCredentialsChain
@@ -202,13 +206,14 @@ struct internal::PutMultiImpl {
 
 galois::Result<void>
 S3Init() {
+  // GlobalState will allow both GS and S3 to initialize
   library_init = true;
   Aws::InitAPI(sdk_options);
   default_executor =
       Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
           kAwsTag, kNumS3Threads);
-  // Need context for async uploads
-  async_s3_client = GetS3Client();
+  // Single s3 client used by all operations
+  s3_client = GetS3Client();
   return galois::ResultSuccess();
 }
 
@@ -221,7 +226,6 @@ S3Fini() {
 galois::Result<void>
 S3GetSize(
     const std::string& bucket, const std::string& object, uint64_t* size) {
-  auto s3_client = GetS3Client();
   /* skip all of the thread management overhead if we only have one request */
   Aws::S3::Model::HeadObjectRequest request;
   request.SetBucket(ToAwsString(bucket));
@@ -246,7 +250,6 @@ S3GetSize(
 /// Return 1 if bucket/object exists, 0 otherwise
 galois::Result<bool>
 S3Exists(const std::string& bucket, const std::string& object) {
-  auto s3_client = GetS3Client();
   /* skip all of the thread management overhead if we only have one request */
   Aws::S3::Model::HeadObjectRequest request;
   request.SetBucket(ToAwsString(bucket));
@@ -262,7 +265,6 @@ galois::Result<void>
 internal::S3PutSingleSync(
     const std::string& bucket, const std::string& object, const uint8_t* data,
     uint64_t size) {
-  auto s3_client = GetS3Client();
   Aws::S3::Model::PutObjectRequest object_request;
 
   object_request.SetBucket(ToAwsString(bucket));
@@ -301,8 +303,6 @@ S3UploadOverwrite(
         kS3DefaultBufSize);
     return internal::S3PutSingleSync(bucket, object, data, size);
   }
-
-  auto s3_client = GetS3Client();
 
   Aws::S3::Model::CreateMultipartUploadRequest createMpRequest;
   createMpRequest.WithBucket(ToAwsString(bucket));
@@ -442,7 +442,7 @@ internal::S3PutMultiAsync1(
       std::vector<SegmentedBufferView::BufPart>(bufView.begin(), bufView.end());
   pm.impl_->sema.SetGoal(std::distance(bufView.begin(), bufView.end()));
   pm.impl_->create_fut_ =
-      async_s3_client->CreateMultipartUploadCallable(createMpRequest);
+      s3_client->CreateMultipartUploadCallable(createMpRequest);
   pm.impl_->part_e_tags_.resize(bufView.NumSegments());
   pm.impl_->upload_id_ = "";
 
@@ -519,7 +519,7 @@ internal::S3PutMultiAsync2(
             bucket, object);
       }
     };
-    async_s3_client->UploadPartAsync(uploadPartRequest, callback);
+    s3_client->UploadPartAsync(uploadPartRequest, callback);
   }
 
   return galois::ResultSuccess();
@@ -546,7 +546,7 @@ internal::S3PutMultiAsync3(
       .WithUploadId(ToAwsString(pmh.impl_->upload_id_))
       .WithMultipartUpload(completedUpload);
 
-  pmh.impl_->outcome_fut_ = async_s3_client->CompleteMultipartUploadCallable(
+  pmh.impl_->outcome_fut_ = s3_client->CompleteMultipartUploadCallable(
       completeMultipartUploadRequest);
 
   return galois::ResultSuccess();
@@ -608,7 +608,7 @@ internal::S3PutSingleAsync(
           error.GetExceptionName(), error.GetMessage(), bucket, object);
     }
   };
-  async_s3_client->PutObjectAsync(object_request, callback);
+  s3_client->PutObjectAsync(object_request, callback);
 
   return galois::ResultSuccess();
 }
@@ -715,7 +715,7 @@ internal::S3GetMultiAsync(
   for (auto& part : parts) {
     Aws::S3::Model::GetObjectRequest request;
     PrepareObjectRequest(&request, bucket, object, part);
-    async_s3_client->GetObjectAsync(request, callback);
+    s3_client->GetObjectAsync(request, callback);
   }
   return galois::ResultSuccess();
 }
@@ -751,7 +751,6 @@ galois::Result<void>
 S3DownloadRange(
     const std::string& bucket, const std::string& object, uint64_t start,
     uint64_t size, uint8_t* result_buf) {
-  auto s3_client = GetS3Client();
   SegmentedBufferView bufView = SegmentBuf(start, result_buf, size);
   std::vector<SegmentedBufferView::BufPart> parts(
       bufView.begin(), bufView.end());
@@ -835,11 +834,11 @@ S3ListAsync(
         request.SetContinuationToken(ToAwsString(token));
       }
 
-      auto s3outcome = async_s3_client->ListObjectsV2(request);
+      auto s3outcome = s3_client->ListObjectsV2(request);
       if (!s3outcome.IsSuccess()) {
         const auto& error = s3outcome.GetError();
         GALOIS_LOG_FATAL(
-            "\n  Failed ListAsyncAW\n  {}: {}\n  [{}] {}",
+            "\n  Failed ListAsync\n  {}: {}\n  [{}] {}",
             error.GetExceptionName(), error.GetMessage(), bucket, object);
       }
       auto s3result = s3outcome.GetResult();
@@ -883,7 +882,6 @@ S3SendDelete(
   GALOIS_LOG_DEBUG(
       "\n  DELETE [{}] files: {} {}\n", bucket, aws_objs.size(),
       (*aws_objs.begin()).GetKey());
-  auto s3_client = GetS3Client();
   auto s3outcome = s3_client->DeleteObjects(object_request);
   if (!s3outcome.IsSuccess()) {
     GALOIS_LOG_DEBUG(
@@ -930,6 +928,76 @@ S3Delete(
   }
 
   return res;
+}
+
+//////////////////////////////////////////////////////////////////
+// These functions support accessing google storage via S3's libraries
+
+// Use V1 interface for google storage ONLY
+std::future<galois::Result<void>>
+internal::S3ListAsyncV1(
+    const std::string& bucket, const std::string& object,
+    std::vector<std::string>* list, std::vector<uint64_t>* size) {
+  GALOIS_LOG_VASSERT(
+      library_init == true, "Must call tsuba::Init before S3 interaction");
+
+  auto fut_res = std::async([=]() -> galois::Result<void> {
+    Aws::S3::Model::ListObjectsRequest request;
+    request.SetBucket(ToAwsString(bucket));
+    request.SetPrefix(ToAwsString(object));
+    auto s3outcome = s3_client->ListObjects(request);
+    if (!s3outcome.IsSuccess()) {
+      const auto& error = s3outcome.GetError();
+      GALOIS_LOG_FATAL(
+          "\n  Failed ListAsyncV1\n  {}: {}\n  [{}] {}",
+          error.GetExceptionName(), error.GetMessage(), bucket, object);
+    }
+    auto s3result = s3outcome.GetResult();
+    for (const auto& content : s3result.GetContents()) {
+      std::string short_name(FromAwsString(content.GetKey()));
+      size_t begin = short_name.find(object);
+      GALOIS_LOG_ASSERT(begin == 0);
+      // object might be rmat15/, but if rmat15s/ also exists, S3
+      // will send us those entries
+      if (object[object.length() - 1] == '/') {
+        short_name.erase(begin, object.length());
+        list->emplace_back(short_name);
+        if (size != NULL) {
+          size->emplace_back(content.GetSize());
+        }
+      } else if (short_name[object.length()] == '/') {
+        short_name.erase(begin, object.length() + 1);
+        list->emplace_back(short_name);
+        if (size != NULL) {
+          size->emplace_back(content.GetSize());
+        }
+      }
+    }
+    return galois::ResultSuccess();
+  });
+  return fut_res;
+}
+
+// Use non-batched delete for google storage ONLY
+galois::Result<void>
+internal::S3SingleDelete(const std::string& bucket, const std::string& object) {
+  Aws::S3::Model::DeleteObjectRequest del_req;
+  del_req.SetBucket(ToAwsString(bucket));
+  del_req.SetKey(ToAwsString(object));
+
+  auto outcome = s3_client->DeleteObject(del_req);
+
+  if (auto res = CheckS3Error(outcome); !res) {
+    if (res.error() == ErrorCode::S3Error) {
+      GALOIS_LOG_DEBUG(
+          "S3SingleDelete\n  [{}] {}\n  {}: {} {}\n", bucket, object,
+          outcome.GetError().GetResponseCode(),
+          outcome.GetError().GetExceptionName(),
+          outcome.GetError().GetMessage());
+    }
+    return res;
+  }
+  return galois::ResultSuccess();
 }
 
 } /* namespace tsuba */

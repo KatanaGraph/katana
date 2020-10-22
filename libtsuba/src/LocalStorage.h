@@ -29,7 +29,6 @@ public:
   galois::Result<void> Init() override { return galois::ResultSuccess(); }
   galois::Result<void> Fini() override { return galois::ResultSuccess(); }
   galois::Result<void> Stat(const std::string& uri, StatBuf* size) override;
-  galois::Result<void> Create(const std::string& uri, bool overwrite) override;
 
   uint32_t Priority() override { return 1; }
 

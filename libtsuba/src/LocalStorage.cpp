@@ -97,25 +97,6 @@ tsuba::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   return galois::ResultSuccess();
 }
 
-galois::Result<void>
-tsuba::LocalStorage::Create(const std::string& uri, bool overwrite) {
-  std::string filename = uri;
-  CleanUri(&filename);
-  fs::path m_path{filename};
-  if (overwrite && fs::exists(m_path)) {
-    return ErrorCode::Exists;
-  }
-  fs::path dir = m_path.parent_path();
-  if (boost::system::error_code err; !fs::create_directories(dir, err)) {
-    if (err) {
-      return err;
-    }
-  }
-  // Creates an empty file
-  std::ofstream output(m_path.string());
-  return galois::ResultSuccess();
-}
-
 // Current implementation is not async
 std::future<galois::Result<void>>
 tsuba::LocalStorage::ListAsync(
@@ -181,6 +162,7 @@ tsuba::LocalStorage::Delete(
     const std::unordered_set<std::string>& files) {
   std::string dir = directory_uri;
   CleanUri(&dir);
+
   for (const auto& file : files) {
     auto path = galois::JoinPath(dir, file);
     unlink(path.c_str());

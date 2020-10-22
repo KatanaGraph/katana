@@ -200,7 +200,7 @@ tsuba_get_async(const Experiment& exp) {
     std::vector<std::future<galois::Result<void>>> work;
     start = now();
     for (const std::string& object : objects) {
-      auto fut = tsuba::FilePeekAsync(object, rbuf, 0, exp.size_);
+      auto fut = tsuba::FileGetAsync(object, rbuf, 0, exp.size_);
       GALOIS_LOG_ASSERT(fut.valid());
       work.emplace_back(std::move(fut));
     }
@@ -228,15 +228,21 @@ struct Test {
 std::vector<Test> tests = {
     Test("Tsuba::FileStore", tsuba_put_sync),
     Test("Tsuba::FileStoreAsync", tsuba_put_async),
-    Test("Tsuba::FilePeekAsync", tsuba_get_async),
+    Test("Tsuba::FileGetAsync", tsuba_get_async),
 };
 
 int
 main(int argc, char* argv[]) {
-  if (auto init_good = tsuba::Init(); !init_good) {
+  parse_arguments(argc, argv);
+  auto uri_res = galois::Uri::Make(src_uri);
+  if (!uri_res) {
+    GALOIS_LOG_FATAL("bad remote_uri: {}: {}", src_uri, uri_res.error());
+  }
+  auto uri = uri_res.value();
+
+  if (auto init_good = tsuba::Init(uri.scheme()); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
-  parse_arguments(argc, argv);
 
   if (opt_transaction_bnc) {
     TxBnc(src_uri, tx_bnc_count);

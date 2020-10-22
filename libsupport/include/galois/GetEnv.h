@@ -26,6 +26,14 @@ GALOIS_EXPORT bool GetEnv(const std::string& var_name, int* ret);
 GALOIS_EXPORT bool GetEnv(const std::string& var_name, double* ret);
 GALOIS_EXPORT bool GetEnv(const std::string& var_name, std::string* ret);
 
+/// Set environment variable
+/// \param var_name name of the variable
+/// \param[in] val new value
+/// \param[in] overwrite if true, and var_name exists, overwrite previous value
+/// \return true if env not previously set or successfully overwritten
+GALOIS_EXPORT bool SetEnv(
+    const std::string& var_name, const std::string& val, bool overwrite);
+
 }  // end namespace galois
 
 #endif

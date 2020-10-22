@@ -28,8 +28,15 @@ tsuba::GetNameServerClient() {
 }
 
 galois::Result<void>
-tsuba::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
-  return GlobalState::Init(comm, ns);
+tsuba::Init(
+    galois::CommBackend* comm, tsuba::NameServerClient* ns,
+    const std::string& uri_scheme) {
+  return GlobalState::Init(comm, ns, uri_scheme);
+}
+
+galois::Result<void>
+tsuba::Init(const std::string& uri_scheme) {
+  return Init(&default_comm_backend, &default_ns_client, uri_scheme);
 }
 
 galois::Result<void>

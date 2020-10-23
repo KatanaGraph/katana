@@ -78,6 +78,7 @@ enum ConvertMode {
   gr2trigr,
   gr2totem,
   gr2neo4j,
+  gr2kg,
   mtx2gr,
   nodelist2gr,
   pbbs2gr,
@@ -191,6 +192,8 @@ static cll::opt<ConvertMode> convertMode(
             "removing reverse edges"),
         clEnumVal(gr2totem, "Convert binary gr totem input format"),
         clEnumVal(gr2neo4j, "Convert binary gr to a vertex/edge csv for neo4j"),
+        clEnumVal(
+            gr2kg, "Convert binary gr to a property graph for katana graph"),
         clEnumVal(mtx2gr, "Convert matrix market format to binary gr"),
         clEnumVal(nodelist2gr, "Convert node list to binary gr"),
         clEnumVal(pbbs2gr, "Convert pbbs graph to binary gr"),
@@ -2822,6 +2825,129 @@ struct Gr2Neo4j : public Conversion {
 };
 
 /**
+ * This is Required gr to kg conversion to append edge data 
+ * as the edge property. 
+ */
+template <typename EdgeTy>
+galois::Result<void>
+AppendEdgeData(
+    galois::graphs::PropertyFileGraph* pfg,
+    const galois::LargeArray<EdgeTy>& edge_data) {
+  using Builder = typename arrow::CTypeTraits<EdgeTy>::BuilderType;
+  using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
+  Builder builder;
+  if (auto r = builder.AppendValues(edge_data.begin(), edge_data.end());
+      !r.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", r);
+    return galois::ErrorCode::ArrowError;
+  }
+
+  std::shared_ptr<arrow::Array> ret;
+  if (auto r = builder.Finish(&ret); !r.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", r);
+    return galois::ErrorCode::ArrowError;
+  }
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  std::vector<std::shared_ptr<arrow::Array>> columns;
+  fields.emplace_back(arrow::field(("value"), std::make_shared<ArrowType>()));
+  columns.emplace_back(ret);
+  auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
+  if (auto r = pfg->AddEdgeProperties(edge_data_table); !r) {
+    GALOIS_LOG_DEBUG("could not add edge property: {}", r.error());
+    return r;
+  }
+  return galois::ResultSuccess();
+}
+
+template <>
+galois::Result<void>
+AppendEdgeData<void>(
+    galois::graphs::PropertyFileGraph*, const galois::LargeArray<void>&) {
+  return galois::ResultSuccess();
+}
+
+/**
+ * Gr2Kg reads in the binary csr (.gr) files and produces
+ * katana graph property graphs. 
+ */
+struct Gr2Kg : public Conversion {
+  template <typename EdgeTy>
+  void convert(const std::string& infilename, const std::string& outfilename) {
+    using Graph = galois::graphs::FileGraph;
+    using GNode = Graph::GraphNode;
+    using EdgeData = galois::LargeArray<EdgeTy>;
+    using edge_value_type = typename EdgeData::value_type;
+
+    Graph graph;
+    graph.fromFile(infilename);
+
+    galois::LargeArray<uint64_t> out_indices;
+    out_indices.allocateBlocked(graph.size());
+
+    galois::LargeArray<uint32_t> out_dests;
+    out_dests.allocateBlocked(graph.sizeEdges());
+
+    galois::LargeArray<EdgeTy> out_dests_data;
+    if (EdgeData::has_value) {
+      out_dests_data.allocateBlocked(graph.sizeEdges());
+    }
+
+    // write edges
+    for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
+      GNode src = *ii;
+      out_indices[src] = *graph.edge_end(src);
+      for (Graph::edge_iterator jj = graph.edge_begin(src),
+                                ej = graph.edge_end(src);
+           jj != ej; ++jj) {
+        GNode dst = graph.getEdgeDst(jj);
+        out_dests[*jj] = dst;
+        if (EdgeData::has_value) {
+          out_dests_data.set(*jj, graph.getEdgeData<edge_value_type>(jj));
+        }
+      }
+    }
+
+    auto numeric_array_out_indices =
+        std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
+            static_cast<int64_t>(graph.size()),
+            arrow::MutableBuffer::Wrap(out_indices.data(), graph.size()));
+
+    auto numeric_array_out_dests =
+        std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
+            static_cast<int64_t>(graph.sizeEdges()),
+            arrow::MutableBuffer::Wrap(out_dests.data(), graph.sizeEdges()));
+
+    auto pfg = std::make_unique<galois::graphs::PropertyFileGraph>();
+    auto set_result = pfg->SetTopology(galois::graphs::GraphTopology{
+        .out_indices = std::move(numeric_array_out_indices),
+        .out_dests = std::move(numeric_array_out_dests),
+    });
+
+    if (!set_result) {
+      GALOIS_LOG_FATAL(
+          "Failed to set topology for property file graph: {}",
+          set_result.error());
+    }
+
+    if (EdgeData::has_value) {
+      if (auto r = AppendEdgeData<EdgeTy>(pfg.get(), out_dests_data); !r) {
+        GALOIS_LOG_FATAL("could not add edge property: {}", r.error());
+      }
+    }
+
+    pfg->MarkAllPropertiesPersistent();
+
+    galois::gPrint("Edge Schema : ", pfg->edge_schema()->ToString(), "\n");
+    galois::gPrint("Node Schema : ", pfg->node_schema()->ToString(), "\n");
+
+    if (auto r = pfg->Write(outfilename, "cmd"); !r) {
+      GALOIS_LOG_FATAL("Failed to write property file graph: {}", r.error());
+    }
+    printStatus(graph.size(), graph.sizeEdges());
+  }
+};
+
+/**
  * METIS format (1-indexed). See METIS 4.10 manual, section 4.5.
  *  % comment prefix
  *  <num nodes> <num edges> [<data format> [<weights per vertex>]]
@@ -3197,6 +3323,9 @@ main(int argc, char** argv) {
     break;
   case gr2neo4j:
     convert<Gr2Neo4j>();
+    break;
+  case gr2kg:
+    convert<Gr2Kg>();
     break;
   case mtx2gr:
     convert<Mtx2Gr>();

@@ -159,7 +159,7 @@ tsuba::FileMmap(const std::string& filename, uint64_t begin, uint64_t size) {
       allocated_memory.emplace(new_mapping.ptr(), std::move(new_mapping));
   if (!inserted) {
     GALOIS_LOG_ERROR("Failed to emplace! (impossible?)");
-    return galois::ResultErrno();
+    return tsuba::ErrorCode::OutOfMemory;
   }
   return it->second.ptr();
 }

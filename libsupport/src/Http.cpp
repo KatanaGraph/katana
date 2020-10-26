@@ -40,7 +40,7 @@ public:
       const std::string& url, std::vector<char>* response) {
     CURL* curl = curl_easy_init();
     if (!curl) {
-      return galois::ResultErrno();
+      return galois::ErrorCode::HttpError;
     }
     CurlHandle handle(curl);
     if (auto res = handle.SetOpt(CURLOPT_URL, url.c_str()); !res) {

@@ -25,8 +25,10 @@ GlobalFileStorageAllocator local_storage_allocator([]() {
   return std::unique_ptr<FileStorage>(new LocalStorage());
 });
 
+}  // namespace tsuba
+
 void
-LocalStorage::CleanUri(std::string* uri) {
+tsuba::LocalStorage::CleanUri(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {
     return;
   }
@@ -34,7 +36,8 @@ LocalStorage::CleanUri(std::string* uri) {
 }
 
 galois::Result<void>
-LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
+tsuba::LocalStorage::WriteFile(
+    std::string uri, const uint8_t* data, uint64_t size) {
   CleanUri(&uri);
   fs::path m_path{uri};
   fs::path dir = m_path.parent_path();
@@ -46,17 +49,17 @@ LocalStorage::WriteFile(std::string uri, const uint8_t* data, uint64_t size) {
 
   std::ofstream ofile(uri);
   if (!ofile.good()) {
-    return galois::ResultErrno();
+    return ErrorCode::LocalStorageError;
   }
   ofile.write(reinterpret_cast<const char*>(data), size); /* NOLINT */
   if (!ofile.good()) {
-    return galois::ResultErrno();
+    return ErrorCode::LocalStorageError;
   }
   return galois::ResultSuccess();
 }
 
 galois::Result<void>
-LocalStorage::ReadFile(
+tsuba::LocalStorage::ReadFile(
     std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
   CleanUri(&uri);
   std::ifstream ifile(uri);
@@ -64,25 +67,25 @@ LocalStorage::ReadFile(
   ifile.seekg(start);
   if (!ifile) {
     GALOIS_LOG_DEBUG("failed to seek");
-    return galois::ResultErrno();
+    return ErrorCode::LocalStorageError;
   }
 
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */
   if (!ifile) {
     GALOIS_LOG_DEBUG("failed to read");
-    return galois::ResultErrno();
+    return ErrorCode::LocalStorageError;
   }
 
   // if the difference in what was read from what we wanted is less  than a
   // block it's because the file size isn't well aligned so don't complain.
   if (size - ifile.gcount() > kBlockSize) {
-    return galois::ResultErrno();
+    return ErrorCode::LocalStorageError;
   }
   return galois::ResultSuccess();
 }
 
 galois::Result<void>
-LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
+tsuba::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   std::string filename = uri;
   CleanUri(&filename);
   struct stat local_s_buf;
@@ -95,7 +98,7 @@ LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
 }
 
 galois::Result<void>
-LocalStorage::Create(const std::string& uri, bool overwrite) {
+tsuba::LocalStorage::Create(const std::string& uri, bool overwrite) {
   std::string filename = uri;
   CleanUri(&filename);
   fs::path m_path{filename};
@@ -115,7 +118,7 @@ LocalStorage::Create(const std::string& uri, bool overwrite) {
 
 // Current implementation is not async
 std::future<galois::Result<void>>
-LocalStorage::ListAsync(
+tsuba::LocalStorage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   // Implement with synchronous calls
@@ -134,7 +137,7 @@ LocalStorage::ListAsync(
         "\n  Open dir failed: {}: {}", dirname,
         galois::ResultErrno().message());
     return std::async(
-        []() -> galois::Result<void> { return galois::ResultErrno(); });
+        []() -> galois::Result<void> { return ErrorCode::LocalStorageError; });
   }
 
   int dfd = dirfd(dirp);
@@ -173,7 +176,7 @@ LocalStorage::ListAsync(
 }
 
 galois::Result<void>
-LocalStorage::Delete(
+tsuba::LocalStorage::Delete(
     const std::string& directory_uri,
     const std::unordered_set<std::string>& files) {
   std::string dir = directory_uri;
@@ -184,5 +187,3 @@ LocalStorage::Delete(
   }
   return galois::ResultSuccess();
 }
-
-}  // namespace tsuba

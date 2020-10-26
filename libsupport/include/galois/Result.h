@@ -1,6 +1,7 @@
 #ifndef GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
 #define GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
 
+#include <cassert>
 #include <cerrno>
 
 #include <boost/outcome/outcome.hpp>
@@ -17,6 +18,7 @@ ResultSuccess() {
 
 static inline auto
 ResultErrno() {
+  assert(errno);
   return std::error_code(errno, std::system_category());
 }
 

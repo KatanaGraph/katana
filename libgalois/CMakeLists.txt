@@ -43,7 +43,6 @@ set(sources
         src/Threads.cpp
         src/ThreadTimer.cpp
         src/Timer.cpp
-        src/Tracer.cpp
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

@@ -389,7 +389,7 @@ Memory allocation plays an important role in making parallel programs scalable. 
 
 <ol>
 <li> Allocate objects with fixed size, e.g. set elements, from galois::FixedSizeAllocator.
-<li> Allocate objects with variable size, e.g. vectors, from galois::Pow_2_VarSizeAlloc.
+<li> Allocate objects with variable size, e.g. vectors, from galois::Pow2VarSizeAlloc.
 <li> Allocate objects used only in a loop iteration from galois::PerIterAllocTy. To use the per-iteration allocator, you need to pass galois::per_iter_alloc to galois::for_each. Here is an example of how to use it:
 @code
 using Graph = /* graph type definition */;
@@ -424,7 +424,7 @@ Performance tuning is required to make a parallel program fast and scalable. Rea
 <li> Chunk size can be tuned to trade-off work balance and overhead to access the worklist and may hurt priority enforcement when it is large.
 <li> Schedules play an important role in performance. They trade-off the amount of wasted work and parallelism. However, there is overhead in managing additional information.
 <li> NUMA-awareness in data structure and loop execution is critical for performance. For this reason, galois::iterate prefers local_iterator over iterator if provided a container. For more information, see @ref numa.
-<li> Memory allocation in parallel loops can kill the scalability of a parallel program. Use `galois::preAlloc` to pre-allocate memory pages instead of on-demand page allocation in parallel loops.
+<li> Memory allocation in parallel loops can kill the scalability of a parallel program. Use `galois::Prealloc` to pre-allocate memory pages instead of on-demand page allocation in parallel loops.
 </ol>
 
 @section tutorial_conclusion Concluding Remarks

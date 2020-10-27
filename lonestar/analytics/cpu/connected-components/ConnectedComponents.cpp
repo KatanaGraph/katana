@@ -1389,9 +1389,7 @@ run() {
 
   algo.Initialize(&graph);
 
-  galois::preAlloc(
-      numThreads + (3 * graph.size() * sizeof(typename Algo::NodeData)) /
-                       galois::runtime::pagePoolSize());
+  galois::Prealloc(1, 3 * graph.size() * sizeof(typename Algo::NodeData));
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");

@@ -467,7 +467,7 @@ struct ChooseDoAllImpl {
         R, OperatorReferenceType<decltype(std::forward<F>(func))>, ArgsT>
         exec(range, std::forward<F>(func), argsTuple);
 
-    substrate::Barrier& barrier = getBarrier(activeThreads);
+    substrate::Barrier& barrier = substrate::getBarrier(activeThreads);
 
     substrate::getThreadPool().run(
         activeThreads, [&exec](void) { exec.initThread(); }, std::ref(barrier),

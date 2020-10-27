@@ -76,9 +76,7 @@ run(Graph& g, galois::StatTimer& timer, std::string prompt) {
   size_t approxGraphSize =
       120 * f.sizeEdges() *
       sizeof(typename Graph::edge_data_type);  // 120*|E|*sizeof(E)
-  size_t numThreads = galois::getActiveThreads();
-  galois::preAlloc(
-      numThreads + approxGraphSize / galois::runtime::pagePoolSize());
+  galois::Prealloc(1, approxGraphSize);
   galois::reportPageAlloc("MeminfoPre");
 
   timer.start();

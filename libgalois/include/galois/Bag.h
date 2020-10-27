@@ -154,7 +154,7 @@ private:
       return newHeaderFromHeap(heap.allocate(BlockSize), BlockSize);
     } else {
       return newHeaderFromHeap(
-          galois::runtime::pagePoolAlloc(), galois::runtime::pagePoolSize());
+          galois::substrate::pagePoolAlloc(), galois::substrate::allocSize());
     }
   }
 
@@ -169,7 +169,7 @@ private:
         if (BlockSize)
           heap.deallocate(h2);
         else
-          galois::runtime::pagePoolFree(h2);
+          galois::substrate::pagePoolFree(h2);
       }
       hpair.second = 0;
     }
@@ -187,7 +187,7 @@ private:
             if (BlockSize)
               heap.deallocate(h2);
             else
-              galois::runtime::pagePoolFree(h2);
+              galois::substrate::pagePoolFree(h2);
           }
           hpair.second = 0;
         },

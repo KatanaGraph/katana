@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_PAGEPOOL_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_PAGEPOOL_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEPOOL_H_
+#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEPOOL_H_
 
 #include <cstddef>
 #include <deque>
@@ -28,24 +28,19 @@
 #include <vector>
 
 #include "galois/config.h"
-#include "galois/gIO.h"
 #include "galois/substrate/CacheLineStorage.h"
 #include "galois/substrate/PageAlloc.h"
 #include "galois/substrate/PtrLock.h"
 #include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/ThreadPool.h"
 
-namespace galois {
-namespace runtime {
+namespace galois::substrate {
 
 //! Low level page pool (individual pages, use largeMalloc for large blocks)
 
 GALOIS_EXPORT void* pagePoolAlloc();
 GALOIS_EXPORT void pagePoolFree(void*);
 GALOIS_EXPORT void pagePoolPreAlloc(unsigned);
-
-// Size of returned pages
-GALOIS_EXPORT size_t pagePoolSize();
 
 //! Returns total large pages allocated by Galois memory management subsystem
 GALOIS_EXPORT int numPagePoolAllocTotal();
@@ -87,7 +82,7 @@ public:
     pool.resize(num);
   }
 
-  int count(int tid) const { return counts[tid]; }
+  int count(unsigned tid) const { return counts[tid]; }
 
   int countAll() const {
     return std::accumulate(counts.begin(), counts.end(), 0);
@@ -129,7 +124,6 @@ GALOIS_EXPORT void setPagePoolState(PageAllocState<>* pa);
 
 }  // end namespace internal
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace galois::substrate
 
 #endif

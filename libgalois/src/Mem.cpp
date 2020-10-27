@@ -22,24 +22,51 @@
 #include <map>
 #include <mutex>
 
-using namespace galois::runtime;
+#include "galois/Mem.h"
+#include "galois/runtime/Executor_OnEach.h"
+
+void
+galois::Prealloc(size_t pagesPerThread, size_t bytes) {
+  size_t allocSize = (pagesPerThread * galois::runtime::activeThreads) +
+                     (bytes / substrate::allocSize());
+  // If the user requested a non-zero allocation, at the very least
+  // allocate a page.
+  if (allocSize == 0 && bytes > 0) {
+    allocSize = 1;
+  }
+
+  galois::Prealloc(allocSize);
+}
+
+void
+galois::Prealloc(size_t pages) {
+  unsigned pagesPerThread = (pages + galois::runtime::activeThreads - 1) /
+                            galois::runtime::activeThreads;
+  galois::substrate::getThreadPool().run(galois::runtime::activeThreads, [=]() {
+    galois::substrate::pagePoolPreAlloc(pagesPerThread);
+  });
+}
 
 // Anchor the class
-SystemHeap::SystemHeap() { assert(AllocSize == runtime::pagePoolSize()); }
+galois::runtime::SystemHeap::SystemHeap() {
+  assert(AllocSize == galois::substrate::allocSize());
+}
 
-SystemHeap::~SystemHeap() {}
+galois::runtime::SystemHeap::~SystemHeap() = default;
 
-thread_local SizedHeapFactory::HeapMap* SizedHeapFactory::localHeaps = 0;
+thread_local galois::runtime::SizedHeapFactory::HeapMap*
+    galois::runtime::SizedHeapFactory::localHeaps = nullptr;
 
-SizedHeapFactory::SizedHeap*
-SizedHeapFactory::getHeapForSize(const size_t size) {
-  if (size == 0)
+galois::runtime::SizedHeapFactory::SizedHeap*
+galois::runtime::SizedHeapFactory::getHeapForSize(const size_t size) {
+  if (size == 0) {
     return nullptr;
+  }
   return Base::getInstance()->getHeap(size);
 }
 
-SizedHeapFactory::SizedHeap*
-SizedHeapFactory::getHeap(const size_t size) {
+galois::runtime::SizedHeapFactory::SizedHeap*
+galois::runtime::SizedHeapFactory::getHeap(const size_t size) {
   typedef SizedHeapFactory::HeapMap HeapMap;
 
   if (!localHeaps) {
@@ -49,31 +76,33 @@ SizedHeapFactory::getHeap(const size_t size) {
   }
 
   auto& lentry = (*localHeaps)[size];
-  if (lentry)
+  if (lentry) {
     return lentry;
+  }
 
   {
     std::lock_guard<galois::substrate::SimpleLock> ll(lock);
     auto& gentry = heaps[size];
-    if (!gentry)
+    if (!gentry) {
       gentry = new SizedHeap();
+    }
     lentry = gentry;
     return lentry;
   }
 }
 
-Pow_2_BlockHeap::Pow_2_BlockHeap(void) noexcept : heapTable() {
-  populateTable();
-}
+galois::runtime::Pow2BlockHeap::Pow2BlockHeap() noexcept { populateTable(); }
 
-SizedHeapFactory::SizedHeapFactory() : lock() {}
+galois::runtime::SizedHeapFactory::SizedHeapFactory() = default;
 
-SizedHeapFactory::~SizedHeapFactory() {
+galois::runtime::SizedHeapFactory::~SizedHeapFactory() {
   // TODO destructor ordering problem: there may be pointers to deleted
   // SizedHeap when this Factory is destroyed before dependent
   // FixedSizeHeaps.
-  for (auto entry : heaps)
+  for (const auto& entry : heaps) {
     delete entry.second;
-  for (auto mptr : allLocalHeaps)
+  }
+  for (const auto& mptr : allLocalHeaps) {
     delete mptr;
+  }
 }

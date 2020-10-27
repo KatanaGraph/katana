@@ -397,9 +397,7 @@ main(int argc, char** argv) {
 
   timer_graph_read.stop();
 
-  galois::preAlloc(
-      numThreads + 16 * (graph.num_nodes() + graph.num_edges()) /
-                       galois::runtime::pagePoolSize());
+  galois::Prealloc(1, 16 * (graph.num_nodes() + graph.num_edges()));
   galois::reportPageAlloc("MeminfoPre");
 
   galois::gInfo("Starting triangle counting...");

@@ -27,8 +27,7 @@
 #include "galois/gIO.h"
 #include "galois/substrate/ThreadPool.h"
 
-namespace galois {
-namespace substrate {
+namespace galois::substrate {
 
 class GALOIS_EXPORT Barrier {
 public:
@@ -41,14 +40,25 @@ public:
   virtual void wait() = 0;
 
   // wait at this barrier
-  void operator()(void) { wait(); }
+  void operator()() { wait(); }
 
   // barrier type.
   virtual const char* name() const = 0;
 };
 
 /**
- * Return a reference to system barrier
+ * Return a reference to system barrier.
+ *
+ * Have a pre-instantiated barrier available for use.
+ * This is initialized to the current activeThreads. This barrier
+ * is designed to be fast and should be used in the common
+ * case.
+ *
+ * However, there is a race if the number of active threads
+ * is modified after using this barrier: some threads may still
+ * be in the barrier while the main thread reinitializes this
+ * barrier to the new number of active threads. If that may
+ * happen, use {@link createSimpleBarrier()} instead.
  */
 GALOIS_EXPORT Barrier& getBarrier(unsigned activeThreads);
 
@@ -78,7 +88,7 @@ struct BarrierInstance {
   unsigned m_num_threads;
   std::unique_ptr<Barrier> m_barrier;
 
-  BarrierInstance(void) {
+  BarrierInstance() {
     m_num_threads = getThreadPool().getMaxThreads();
     m_barrier = createTopoBarrier(m_num_threads);
   }
@@ -88,7 +98,7 @@ struct BarrierInstance {
         numT > 0, "substrate::getBarrier() number of threads must be > 0");
 
     numT = std::min(numT, getThreadPool().getMaxUsableThreads());
-    numT = std::max(numT, 1u);
+    numT = std::max(numT, 1U);
 
     if (numT != m_num_threads) {
       m_num_threads = numT;
@@ -103,7 +113,6 @@ void setBarrierInstance(BarrierInstance<>* bi);
 
 }  // end namespace internal
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace galois::substrate
 
 #endif

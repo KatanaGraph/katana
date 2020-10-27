@@ -26,15 +26,15 @@
 #include "galois/substrate/ThreadPool.h"
 
 galois::substrate::SharedMem::SharedMem() {
-  internal::setThreadPool(&m_tpool);
+  internal::setThreadPool(&thread_pool_);
 
-  // delayed initialization because both call getThreadPool in constructor
-  // which is valid only after setThreadPool() above
-  m_biPtr = std::make_unique<internal::BarrierInstance<>>();
-  m_termPtr = std::make_unique<internal::LocalTerminationDetection<>>();
+  // The thread pool must be initialized first because termination
+  // detection and barrier may call getThreadPool in their constructors
+  barrier_ = std::make_unique<internal::BarrierInstance<>>();
+  term_ = std::make_unique<internal::LocalTerminationDetection<>>();
 
-  internal::setBarrierInstance(m_biPtr.get());
-  internal::setTermDetect(m_termPtr.get());
+  internal::setBarrierInstance(barrier_.get());
+  internal::setTermDetect(term_.get());
 }
 
 galois::substrate::SharedMem::~SharedMem() {
@@ -43,8 +43,8 @@ galois::substrate::SharedMem::~SharedMem() {
 
   // destructors can call getThreadPool(), hence must be destroyed before
   // setThreadPool() below
-  m_termPtr.reset();
-  m_biPtr.reset();
+  term_.reset();
+  barrier_.reset();
 
   internal::setThreadPool(nullptr);
 }

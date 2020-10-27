@@ -390,10 +390,7 @@ run() {
   algo.initializeGraph();
   Tinitial.stop();
 
-  galois::preAlloc(
-      8 * galois::getActiveThreads() +
-      16 * (algo.graph.size() + algo.graph.sizeEdges()) /
-          galois::runtime::pagePoolSize());
+  galois::Prealloc(8, 16 * (algo.graph.size() + algo.graph.sizeEdges()));
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");

@@ -31,10 +31,9 @@
 #include <boost/utility.hpp>
 
 #include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/runtime/PagePool.h"
 #include "galois/substrate/CacheLineStorage.h"
 #include "galois/substrate/NumaMem.h"
+#include "galois/substrate/PagePool.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/PtrLock.h"
 #include "galois/substrate/SimpleLock.h"
@@ -44,25 +43,10 @@ namespace runtime {
 
 extern unsigned activeThreads;
 
-//! Memory management functionality.
-
-GALOIS_EXPORT void preAlloc_impl(unsigned num);
-
-// const size_t hugePageSize = 2*1024*1024;
-
-//! Preallocate numpages large pages for each thread
-GALOIS_EXPORT void pagePreAlloc(int numpages);
 //! Forces the given block to be paged into physical memory
 GALOIS_EXPORT void pageIn(void* buf, size_t len, size_t stride);
 //! Forces the given readonly block to be paged into physical memory
 GALOIS_EXPORT void pageInReadOnly(void* buf, size_t len, size_t stride);
-
-//! Returns total small pages allocated by OS on a NUMA node
-GALOIS_EXPORT int numNumaAllocForNode(unsigned nodeid);
-
-//! Print lines from /proc/pid/numa_maps that contain at least n (non-huge)
-//! pages
-GALOIS_EXPORT void printInterleavedStats(int minPages = 16 * 1024);
 
 //! [Example Third Party Allocator]
 class MallocHeap {
@@ -189,8 +173,6 @@ class FreeListHeap : public SourceHeap {
   };
   FreeNode* head;
 
-  using dbg = galois::debug<0>;
-
 public:
   enum { AllocSize = SourceHeap::AllocSize };
 
@@ -209,11 +191,9 @@ public:
     if (head) {
       void* ptr = head;
       head = head->next;
-      dbg::print(this, " picking from free list, ptr = ", ptr);
       return ptr;
     } else {
       void* ptr = SourceHeap::allocate(size);
-      dbg::print(this, " allocating from SourceHeap, ptr = ", ptr);
       return ptr;
     }
   }
@@ -225,7 +205,6 @@ public:
     FreeNode* NH = (FreeNode*)ptr;
     NH->next = head;
     head = NH;
-    dbg::print(this, " adding block to list, head = ", head);
   }
 };
 
@@ -516,9 +495,9 @@ public:
   SystemHeap();
   ~SystemHeap();
 
-  inline void* allocate(size_t) { return pagePoolAlloc(); }
+  inline void* allocate(size_t) { return substrate::pagePoolAlloc(); }
 
-  inline void deallocate(void* ptr) { pagePoolFree(ptr); }
+  inline void deallocate(void* ptr) { substrate::pagePoolFree(ptr); }
 };
 
 template <typename Derived>
@@ -560,16 +539,11 @@ substrate::PtrLock<Derived> StaticSingleInstance<Derived>::ptr =
 class PageHeap : public StaticSingleInstance<PageHeap> {
   using Base = StaticSingleInstance<PageHeap>;
 
-  /* template <typename _U> */ friend class StaticSingleInstance<PageHeap>;
+  friend class StaticSingleInstance<PageHeap>;
 
   using InnerHeap = ThreadPrivateHeap<FreeListHeap<SystemHeap>>;
-  // using InnerHeap = SystemHeap;
 
   InnerHeap innerHeap;
-
-  using dbg = galois::debug<0>;
-
-  PageHeap() : innerHeap() { dbg::print("New instance of PageHeap: ", this); }
 
 public:
   enum { AllocSize = InnerHeap::AllocSize };
@@ -577,13 +551,11 @@ public:
   inline void* allocate(size_t size) {
     assert(size <= AllocSize);
     void* ptr = innerHeap.allocate(size);
-    dbg::print(this, " PageHeap allocate, ptr = ", ptr);
     return ptr;
   }
 
   inline void deallocate(void* ptr) {
     assert(ptr);
-    dbg::print(this, " PageHeap  deallocate ptr = ", ptr);
     innerHeap.deallocate(ptr);
   }
 };
@@ -772,11 +744,10 @@ public:
   }
 };
 
-class GALOIS_EXPORT Pow_2_BlockHeap
-    : public StaticSingleInstance<Pow_2_BlockHeap> {
+class GALOIS_EXPORT Pow2BlockHeap : public StaticSingleInstance<Pow2BlockHeap> {
 private:
-  using Base = StaticSingleInstance<Pow_2_BlockHeap>;
-  /* template <typename> */ friend class StaticSingleInstance<Pow_2_BlockHeap>;
+  using Base = StaticSingleInstance<Pow2BlockHeap>;
+  /* template <typename> */ friend class StaticSingleInstance<Pow2BlockHeap>;
 
   static const bool USE_MALLOC_AS_BACKUP = true;
 
@@ -813,7 +784,7 @@ private:
     }
   }
 
-  Pow_2_BlockHeap() noexcept;  // NOLINT(modernize-use-equals-delete)
+  Pow2BlockHeap() noexcept;  // NOLINT(modernize-use-equals-delete)
 
 public:
   void* allocateBlock(const size_t allocSize) {
@@ -848,7 +819,7 @@ public:
 };
 
 template <typename Ty>
-class Pow_2_BlockAllocator {
+class Pow2BlockAllocator {
   template <typename T>
   static inline void destruct(T* t) {
     if (!std::is_scalar<T>::value) {
@@ -867,18 +838,15 @@ public:
 
   template <class Other>
   struct rebind {
-    typedef Pow_2_BlockAllocator<Other> other;
+    typedef Pow2BlockAllocator<Other> other;
   };
 
-  Pow_2_BlockHeap* heap;
+  Pow2BlockHeap* heap;
 
-  Pow_2_BlockAllocator() noexcept : heap(Pow_2_BlockHeap::getInstance()) {}
-
-  // template <typename U>
-  // friend class Pow_2_BlockAllocator<U>;
+  Pow2BlockAllocator() noexcept : heap(Pow2BlockHeap::getInstance()) {}
 
   template <typename U>
-  Pow_2_BlockAllocator(const Pow_2_BlockAllocator<U>& that) noexcept
+  Pow2BlockAllocator(const Pow2BlockAllocator<U>& that) noexcept
       : heap(that.heap) {}
 
   inline pointer address(reference val) const { return &val; }
@@ -903,18 +871,18 @@ public:
   size_type max_size() const noexcept { return size_type(-1); }
 
   template <typename T1>
-  bool operator!=(const Pow_2_BlockAllocator<T1>& rhs) const {
+  bool operator!=(const Pow2BlockAllocator<T1>& rhs) const {
     return heap != rhs.heap;
   }
 
   template <typename T1>
-  bool operator==(const Pow_2_BlockAllocator<T1>& rhs) const {
+  bool operator==(const Pow2BlockAllocator<T1>& rhs) const {
     return heap == rhs.heap;
   }
 };
 
 template <>
-class Pow_2_BlockAllocator<void> {
+class Pow2BlockAllocator<void> {
 public:
   typedef size_t size_type;
   typedef ptrdiff_t difference_type;
@@ -924,7 +892,7 @@ public:
 
   template <typename Other>
   struct rebind {
-    typedef Pow_2_BlockAllocator<Other> other;
+    typedef Pow2BlockAllocator<Other> other;
   };
 };
 

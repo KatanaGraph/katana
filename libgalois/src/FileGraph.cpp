@@ -638,23 +638,23 @@ FileGraph::pageInByNode(size_t id, size_t total, size_t sizeofEdgeData) {
   // page in the outIdx array
   pageInReadOnly(
       outIdx + *r.first, std::distance(r.first, r.second) * sizeof(*outIdx),
-      runtime::pagePoolSize());
+      substrate::allocSize());
 
   // page in outs array
   if (graphVersion == 1) {
     pageInReadOnly(
         (uint32_t*)outs + ebegin, (eend - ebegin) * sizeof(uint32_t),
-        runtime::pagePoolSize());
+        substrate::allocSize());
   } else {
     pageInReadOnly(
         (uint64_t*)outs + ebegin, (eend - ebegin) * sizeof(uint64_t),
-        runtime::pagePoolSize());
+        substrate::allocSize());
   }
 
   // page in edge data
   pageInReadOnly(
       edgeData + ebegin * sizeofEdgeData, (eend - ebegin) * sizeofEdgeData,
-      runtime::pagePoolSize());
+      substrate::allocSize());
 }
 
 void*

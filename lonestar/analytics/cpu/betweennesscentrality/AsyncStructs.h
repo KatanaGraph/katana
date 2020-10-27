@@ -418,7 +418,7 @@ doAsyncBC() {
 
   galois::reportPageAlloc("MemAllocPre");
   galois::gInfo("Going to pre-allocate pages");
-  galois::preAlloc(
+  galois::Prealloc(
       std::min(
           static_cast<uint64_t>(
               std::min(galois::getActiveThreads(), 100U) *

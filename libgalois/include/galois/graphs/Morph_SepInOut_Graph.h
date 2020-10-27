@@ -323,7 +323,7 @@ private:
     // typedef llvm::SmallVector<EdgeInfo, 3> EdgesTy;
     // typedef galois::gstl::Vector<EdgeInfo> EdgesTy;
     typedef boost::container::small_vector<
-        EdgeInfo, 3, galois::runtime::Pow_2_BlockAllocator<EdgeInfo>>
+        EdgeInfo, 3, galois::runtime::Pow2BlockAllocator<EdgeInfo>>
         EdgesTy;
 
     typedef typename EdgesTy::iterator iterator;

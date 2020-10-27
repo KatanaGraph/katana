@@ -21,6 +21,7 @@
 
 #include "Helper.h"
 #include "Lonestar/BoilerPlate.h"
+#include "galois/substrate/PageAlloc.h"
 
 namespace cll = llvm::cl;
 
@@ -592,7 +593,7 @@ main(int argc, char** argv) {
   uint32_t num_hedges = graph->GetHedges();
   GraphStat(*graph);
 
-  galois::preAlloc(galois::runtime::numPagePoolAllocTotal() * 20);
+  galois::Prealloc(galois::substrate::numPagePoolAllocTotal() * 20);
   galois::reportPageAlloc("MeminfoPre");
 
   create_partition_time.start();

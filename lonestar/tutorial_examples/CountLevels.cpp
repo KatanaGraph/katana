@@ -133,10 +133,8 @@ main(int argc, char** argv) {
   std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
             << " edges\n";
 
-  galois::preAlloc(
-      5 * numThreads +
-      (2 * graph.size() * sizeof(typename Graph::node_data_type)) /
-          galois::runtime::pagePoolSize());
+  galois::Prealloc(
+      5, 2 * graph.size() * sizeof(typename Graph::node_data_type));
   galois::reportPageAlloc("MeminfoPre");
 
   galois::do_all(

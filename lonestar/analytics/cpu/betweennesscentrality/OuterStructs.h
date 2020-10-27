@@ -319,7 +319,7 @@ DoOuterBC() {
 
   // preallocate pages for use in algorithm
   galois::reportPageAlloc("MeminfoPre");
-  galois::preAlloc(galois::getActiveThreads() * num_nodes_ / 1650);
+  galois::Prealloc(galois::getActiveThreads() * num_nodes_ / 1650);
   galois::reportPageAlloc("MeminfoMid");
 
   // vector of sources to process; initialized if doing outSources

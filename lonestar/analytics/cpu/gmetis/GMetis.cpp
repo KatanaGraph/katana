@@ -201,7 +201,7 @@ main(int argc, char** argv) {
   graphStat(graph);
   std::cout << "\n";
 
-  galois::preAlloc(galois::runtime::numPagePoolAllocTotal() * 5);
+  galois::Prealloc(galois::substrate::numPagePoolAllocTotal() * 5);
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");

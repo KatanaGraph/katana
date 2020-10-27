@@ -23,27 +23,27 @@
 #include <string>
 
 #include "galois/config.h"
-#include "galois/runtime/PagePool.h"
 #include "galois/runtime/Statistics.h"
+#include "galois/substrate/PagePool.h"
 #include "galois/substrate/SharedMem.h"
 
 namespace galois::runtime {
 
 template <typename SM>
 class SharedMem : public galois::substrate::SharedMem {
-  internal::PageAllocState<> m_pa;
+  substrate::internal::PageAllocState<> m_pa;
   SM m_sm;
 
 public:
   explicit SharedMem() : m_pa(), m_sm() {
-    internal::setPagePoolState(&m_pa);
+    substrate::internal::setPagePoolState(&m_pa);
     internal::setSysStatManager(&m_sm);
   }
 
   ~SharedMem() {
     m_sm.Print();
     internal::setSysStatManager(nullptr);
-    internal::setPagePoolState(nullptr);
+    substrate::internal::setPagePoolState(nullptr);
   }
 
   SharedMem(const SharedMem&) = delete;

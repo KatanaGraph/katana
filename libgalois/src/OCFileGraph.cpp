@@ -83,15 +83,14 @@ OCFileGraph::Block::load(
 
   offset_t start = offset + begin * sizeof_data;
   offset_t aligned =
-      start & ~static_cast<offset_t>(galois::runtime::pagePoolSize() - 1);
+      start & ~static_cast<offset_t>(galois::substrate::allocSize() - 1);
 
   int _MAP_BASE = MAP_PRIVATE;
 #ifdef MAP_POPULATE
   _MAP_BASE |= MAP_POPULATE;
 #endif
-  m_length = len * sizeof_data +
-             galois::runtime::
-                 pagePoolSize();  // account for round off due to alignment
+  // account for round off due to alignment
+  m_length = len * sizeof_data + galois::substrate::allocSize();
   m_mapping = mmap_big(nullptr, m_length, PROT_READ, _MAP_BASE, fd, aligned);
   if (m_mapping == MAP_FAILED) {
     GALOIS_SYS_DIE("failed allocating ", fd);
@@ -100,8 +99,7 @@ OCFileGraph::Block::load(
   m_data = reinterpret_cast<char*>(m_mapping);
   assert(aligned <= start);
   assert(
-      start - aligned <=
-      static_cast<offset_t>(galois::runtime::pagePoolSize()));
+      start - aligned <= static_cast<offset_t>(galois::substrate::allocSize()));
   m_data += start - aligned;
   m_begin = begin;
   m_sizeof_data = sizeof_data;

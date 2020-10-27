@@ -338,8 +338,7 @@ main(int argc, char** argv) {
   GNode report = *it;
 
   size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
-  galois::preAlloc(
-      8 * numThreads + approxNodeData / galois::runtime::pagePoolSize());
+  galois::Prealloc(8, approxNodeData);
 
   galois::reportPageAlloc("MeminfoPre");
 

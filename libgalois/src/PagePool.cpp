@@ -17,49 +17,40 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#define __is_trivial(type)                                                     \
-  __has_trivial_constructor(type) && __has_trivial_copy(type)
+#include "galois/substrate/PagePool.h"
 
-#include "galois/runtime/PagePool.h"
+#include "galois/Logging.h"
 
-using namespace galois::runtime;
-
-static galois::runtime::internal::PageAllocState<>* PA;
+static galois::substrate::internal::PageAllocState<>* PA;
 
 void
-galois::runtime::internal::setPagePoolState(PageAllocState<>* pa) {
-  GALOIS_ASSERT(
-      !(PA && pa), "PagePool.cpp: Double Initialization of PageAllocState");
+galois::substrate::internal::setPagePoolState(PageAllocState<>* pa) {
+  GALOIS_LOG_VASSERT(!(PA && pa), "double Initialization of PageAllocState");
   PA = pa;
 }
 
 int
-galois::runtime::numPagePoolAllocTotal() {
+galois::substrate::numPagePoolAllocTotal() {
   return PA->countAll();
 }
 
 int
-galois::runtime::numPagePoolAllocForThread(unsigned tid) {
+galois::substrate::numPagePoolAllocForThread(unsigned tid) {
   return PA->count(tid);
 }
 
 void*
-galois::runtime::pagePoolAlloc() {
+galois::substrate::pagePoolAlloc() {
   return PA->pageAlloc();
 }
 
 void
-galois::runtime::pagePoolPreAlloc(unsigned num) {
+galois::substrate::pagePoolPreAlloc(unsigned num) {
   while (num--)
     PA->pagePreAlloc();
 }
 
 void
-galois::runtime::pagePoolFree(void* ptr) {
+galois::substrate::pagePoolFree(void* ptr) {
   PA->pageFree(ptr);
-}
-
-size_t
-galois::runtime::pagePoolSize() {
-  return substrate::allocSize();
 }

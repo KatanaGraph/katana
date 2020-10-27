@@ -89,17 +89,6 @@ on_each(FunctionTy&& fn, Args&&... args) {
 }
 
 /**
- * Preallocates hugepages on each thread.
- *
- * @param num number of pages to allocate of size {@link
- * galois::runtime::MM::hugePageSize}
- */
-static inline void
-preAlloc(int num) {
-  runtime::preAlloc_impl(num);
-}
-
-/**
  * Reports number of hugepages allocated by the Galois system so far. The value
  * is printing using the statistics infrastructure.
  *

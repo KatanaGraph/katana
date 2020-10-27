@@ -40,8 +40,8 @@
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/Mem.h"
 #include "galois/runtime/Statistics.h"
-#include "galois/runtime/Substrate.h"
 #include "galois/runtime/UserContextAccess.h"
+#include "galois/substrate/Barrier.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
 #include "galois/worklists/WorkList.h"
@@ -555,7 +555,7 @@ class DAGManagerBase<OptionsTy, true> {
 public:
   DAGManagerBase()
       : term(substrate::getSystemTermination(activeThreads)),
-        barrier(getBarrier(activeThreads)) {}
+        barrier(substrate::getBarrier(activeThreads)) {}
 
   void destroyDAGManager() { data.getLocal()->heap.clear(); }
 
@@ -750,7 +750,7 @@ class BreakManagerBase<OptionsTy, true> {
 public:
   BreakManagerBase(const OptionsTy& o)
       : breakFn(get_trait_value<det_parallel_break_tag>(o.args).value),
-        barrier(getBarrier(activeThreads)) {}
+        barrier(substrate::getBarrier(activeThreads)) {}
 
   bool checkBreak() {
     if (substrate::ThreadPool::getTID() == 0)
@@ -780,7 +780,7 @@ class IntentToReadManagerBase<OptionsTy, true> {
   substrate::Barrier& barrier;
 
 public:
-  IntentToReadManagerBase() : barrier(getBarrier(activeThreads)) {}
+  IntentToReadManagerBase() : barrier(substrate::getBarrier(activeThreads)) {}
 
   void pushIntentToReadTask(Context* ctx) {
     pending.getLocal()->push_back(ctx);
@@ -1256,7 +1256,7 @@ public:
         alloc(&heap),
         mergeBuf(alloc),
         distributeBuf(alloc),
-        barrier(getBarrier(activeThreads)) {
+        barrier(substrate::getBarrier(activeThreads)) {
     numActive = getActiveThreads();
   }
 
@@ -1390,7 +1390,7 @@ public:
       : BreakManager<OptionsTy>(o),
         NewWorkManager<OptionsTy>(o),
         options(o),
-        barrier(getBarrier(activeThreads)),
+        barrier(substrate::getBarrier(activeThreads)),
         loopname(galois::internal::getLoopName(o.args)) {
     static_assert(
         !OptionsTy::needsBreak || OptionsTy::hasBreak,

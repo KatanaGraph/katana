@@ -197,9 +197,7 @@ main(int argc, char** argv) {
   std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
             << " edges\n";
 
-  galois::preAlloc(
-      5 * numThreads +
-      (5 * graph.size() * sizeof(NodeData)) / galois::runtime::pagePoolSize());
+  galois::Prealloc(5, 5 * graph.size() * sizeof(NodeData));
   galois::reportPageAlloc("MeminfoPre");
 
   std::cout << "tolerance:" << tolerance << ", maxIterations:" << maxIterations

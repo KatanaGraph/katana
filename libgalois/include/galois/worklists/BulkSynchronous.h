@@ -23,7 +23,7 @@
 #include <atomic>
 
 #include "galois/config.h"
-#include "galois/runtime/Substrate.h"
+#include "galois/substrate/Barrier.h"
 #include "galois/worklists/Chunk.h"
 #include "galois/worklists/WLCompileCheck.h"
 
@@ -68,7 +68,7 @@ public:
   typedef T value_type;
 
   BulkSynchronous()
-      : barrier(runtime::getBarrier(runtime::activeThreads)),
+      : barrier(substrate::getBarrier(runtime::activeThreads)),
         some(false),
         isEmpty(false) {}
 

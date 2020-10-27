@@ -25,7 +25,7 @@
 #include <type_traits>
 
 #include "galois/FlatMap.h"
-#include "galois/runtime/Substrate.h"
+#include "galois/substrate/Barrier.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/Termination.h"
 #include "galois/worklists/Chunk.h"
@@ -55,7 +55,7 @@ protected:
   substrate::Barrier& barrier;
 
   OrderedByIntegerMetricData()
-      : barrier(runtime::getBarrier(runtime::activeThreads)) {}
+      : barrier(substrate::getBarrier(runtime::activeThreads)) {}
 
   bool hasStored(ThreadData& p, Index idx) {
     for (auto& e : p.stored) {

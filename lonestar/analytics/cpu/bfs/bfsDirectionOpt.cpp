@@ -32,6 +32,7 @@
 #include "galois/DynamicBitset.h"
 #include "galois/Galois.h"
 #include "galois/Reduction.h"
+#include "galois/Threads.h"
 #include "galois/Timer.h"
 #include "galois/graphs/LCGraph.h"
 #include "galois/graphs/LC_CSR_CSC_Graph.h"
@@ -435,7 +436,7 @@ main(int argc, char** argv) {
   std::advance(it, reportNode.getValue());
   report = *it;
 
-  galois::preAlloc(preAlloc);
+  galois::Prealloc(preAlloc);
   galois::gPrint("Fixed preAlloc done : ", preAlloc, "\n");
   galois::reportPageAlloc("MeminfoPre");
 

@@ -287,7 +287,8 @@ void
 galois::runtime::reportPageAlloc(const char* category) {
   galois::runtime::on_each_gen(
       [category](unsigned int tid, unsigned int) {
-        reportStat_Tsum("PageAlloc", category, numPagePoolAllocForThread(tid));
+        reportStat_Tsum(
+            "PageAlloc", category, substrate::numPagePoolAllocForThread(tid));
       },
       std::make_tuple());
 }

@@ -445,8 +445,8 @@ public:
         std::distance(local_edges->begin, local_edges->end) < nedges) {
       EdgeHolder* old = local_edges;
       // FIXME: this seems to leak
-      size_t size = runtime::pagePoolSize();
-      void* block = runtime::pagePoolAlloc();
+      size_t size = substrate::allocSize();
+      void* block = substrate::pagePoolAlloc();
       local_edges = reinterpret_cast<EdgeHolder*>(block);
       local_edges->next = old;
 

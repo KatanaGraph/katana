@@ -36,9 +36,9 @@
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
 #include "galois/runtime/Statistics.h"
-#include "galois/runtime/Substrate.h"
 #include "galois/runtime/ThreadTimer.h"
 #include "galois/runtime/UserContextAccess.h"
+#include "galois/substrate/Barrier.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
 #include "galois/worklists/Chunk.h"
@@ -363,7 +363,7 @@ protected:
   template <typename... WArgsTy>
   ForEachExecutor(T2, FunctionTy f, const ArgsTy& args, WArgsTy... wargs)
       : term(substrate::getSystemTermination(activeThreads)),
-        barrier(getBarrier(activeThreads)),
+        barrier(substrate::getBarrier(activeThreads)),
         wl(std::forward<WArgsTy>(wargs)...),
         origFunction(f),
         loopname(galois::internal::getLoopName(args)),
@@ -455,7 +455,7 @@ for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
       OperatorReferenceType<decltype(std::forward<FunctionTy>(fn))>;
   typedef ForEachExecutor<WorkListTy, FuncRefType, ArgsTy> WorkTy;
 
-  auto& barrier = getBarrier(activeThreads);
+  auto& barrier = substrate::getBarrier(activeThreads);
   FuncRefType fn_ref = fn;
   WorkTy W(fn_ref, args);
   W.init(range);

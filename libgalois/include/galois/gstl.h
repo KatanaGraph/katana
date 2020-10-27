@@ -39,18 +39,18 @@ namespace galois {
 
 namespace gstl {
 
-//! [define Pow_2_VarSizeAlloc]
+//! [define Pow2VarSizeAlloc]
 template <typename T>
-using Pow2Alloc = typename runtime::Pow_2_BlockAllocator<T>;
-//! [define Pow_2_VarSizeAlloc]
+using Pow2Alloc = typename runtime::Pow2BlockAllocator<T>;
+//! [define Pow2VarSizeAlloc]
 
 template <typename T>
 using FixedSizeAlloc = typename runtime::FixedSizeAllocator<T>;
 
-//! [STL vector using Pow_2_VarSizeAlloc]
+//! [STL vector using Pow2VarSizeAlloc]
 template <typename T>
 using Vector = std::vector<T, Pow2Alloc<T>>;
-//! [STL vector using Pow_2_VarSizeAlloc]
+//! [STL vector using Pow2VarSizeAlloc]
 
 template <typename T>
 using Deque = std::deque<T, Pow2Alloc<T>>;

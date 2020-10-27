@@ -274,7 +274,7 @@ main(int argc, char** argv) {
   //! Preallocate pages in memory so allocation doesn't occur during compute.
   galois::StatTimer preallocTime("PreAllocTime", REGION_NAME);
   preallocTime.start();
-  galois::preAlloc(std::max(
+  galois::Prealloc(std::max(
       size_t{galois::getActiveThreads()} * (graph.size() / 1000000),
       std::max(10U, galois::getActiveThreads()) * size_t{10}));
   preallocTime.stop();

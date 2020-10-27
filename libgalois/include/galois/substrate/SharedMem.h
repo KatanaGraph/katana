@@ -29,22 +29,22 @@
 
 namespace galois::substrate {
 
+/// A SharedMem represents global initialization required for the shared
+/// memory subsystem, i.e., thread pools and barriers. As a side-effect of
+/// construction, this class sets global internal state.
+///
+/// Data structures that require per-thread allocation typically ask for the
+/// thread pool. If their construction is not guaranteed to happen after the
+/// construction of a SharedMem, initialization races can occur.
 class GALOIS_EXPORT SharedMem {
-  // Order is critical here
-  ThreadPool m_tpool;
+  ThreadPool thread_pool_;
 
-  std::unique_ptr<internal::LocalTerminationDetection<>> m_termPtr;
-  std::unique_ptr<internal::BarrierInstance<>> m_biPtr;
+  std::unique_ptr<internal::LocalTerminationDetection<>> term_;
+  std::unique_ptr<internal::BarrierInstance<>> barrier_;
 
 public:
-  /**
-   * Initializes the Substrate library components
-   */
   SharedMem();
 
-  /**
-   * Destroys the Substrate library components
-   */
   ~SharedMem();
 
   SharedMem(const SharedMem&) = delete;

@@ -121,8 +121,6 @@ main(int argc, char** argv) {
     sdata.setComponent(sdata.findAndCompress());
   };
 
-  // galois::preAlloc(numThreads + graph.size() /
-  // galois::runtime::MM::hugePageSize * 60);
   galois::reportPageAlloc("MeminfoPre");
   galois::StatTimer T;
   T.start();

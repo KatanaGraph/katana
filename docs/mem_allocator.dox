@@ -60,14 +60,14 @@ galois::for_each(
 );
 @endcode
 
-@subsection Pow_2_allocator Power-of-2 Allocator
+@subsection Pow2allocator Power-of-2 Allocator
 
-Power-of-2 allocator {@link galois::Pow_2_VarSizeAlloc} is a scalable allocator for dynamic data structures that allocate objects with variable size. This is a suitable allocator for STL data structures such as std::vector, std::deque, etc. It allocates blocks of sizes in powers of 2 so that insertion operations on containers like std::vector get amortized over time.
+Power-of-2 allocator {@link galois::Pow2VarSizeAlloc} is a scalable allocator for dynamic data structures that allocate objects with variable size. This is a suitable allocator for STL data structures such as std::vector, std::deque, etc. It allocates blocks of sizes in powers of 2 so that insertion operations on containers like std::vector get amortized over time.
 
 The following snippet shows how to define and use a std::vector of integers using power-of-2 allocator:
 
 @code
-using VectorInt = std::vector<int, galois::Pow_2_VarSizeAlloc<int>>;
+using VectorInt = std::vector<int, galois::Pow2VarSizeAlloc<int>>;
 VectorInt v;
 // use of v afterwards
 @endcode

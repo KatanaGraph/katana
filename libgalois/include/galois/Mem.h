@@ -25,6 +25,20 @@
 
 namespace galois {
 
+/**
+ * Preallocates memory on each thread. The allocation size is given in pages
+ * per thread and total bytes which will be divided amongst the threads.
+ */
+GALOIS_EXPORT
+void Prealloc(size_t pagesPerThread, size_t bytes);
+
+/**
+ * Preallocates memory on each thread. The allocation size is given in total pages
+ * which will be divided amongst the threads.
+ */
+GALOIS_EXPORT
+void Prealloc(size_t pages);
+
 //! [PerIterAllocTy example]
 //! Base allocator for per-iteration allocator
 typedef galois::runtime::BumpWithMallocHeap<
@@ -45,7 +59,7 @@ using FixedSizeAllocator = galois::runtime::FixedSizeAllocator<Ty>;
 //! powers of 2 Useful for small and medium sized allocations, e.g. small or
 //! medium vectors, strings, deques
 template <typename T>
-using Pow_2_VarSizeAlloc = typename runtime::Pow_2_BlockAllocator<T>;
+using Pow2VarSizeAlloc = typename runtime::Pow2BlockAllocator<T>;
 
 }  // namespace galois
 #endif

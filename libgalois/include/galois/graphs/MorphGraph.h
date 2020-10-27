@@ -355,7 +355,7 @@ private
     //! The storage type for edges
     // typedef galois::gstl::Vector<EdgeInfo> EdgesTy;
     using EdgesTy = boost::container::small_vector<
-        EdgeInfo, 3, galois::runtime::Pow_2_BlockAllocator<EdgeInfo>>;
+        EdgeInfo, 3, galois::runtime::Pow2BlockAllocator<EdgeInfo>>;
 
     using iterator = typename EdgesTy::iterator;
   };

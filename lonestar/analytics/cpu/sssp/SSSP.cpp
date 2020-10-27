@@ -385,8 +385,7 @@ main(int argc, char** argv) {
   GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;
-  galois::preAlloc(
-      numThreads + approxNodeData / galois::runtime::pagePoolSize());
+  galois::Prealloc(1, approxNodeData);
   galois::reportPageAlloc("MeminfoPre");
 
   if (algo == deltaStep || algo == deltaTile || algo == serDelta ||

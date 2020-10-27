@@ -30,7 +30,6 @@ set(sources
         src/PagePool.cpp
         src/ParaMeter.cpp
         src/PerThreadStorage.cpp
-        src/PreAlloc.cpp
         src/Profile.cpp
         src/PropertyFileGraph.cpp
         src/PtrLock.cpp
@@ -38,7 +37,6 @@ set(sources
         src/SharedMemSys.cpp
         src/SimpleLock.cpp
         src/Statistics.cpp
-        src/Substrate.cpp
         src/Support.cpp
         src/Termination.cpp
         src/ThreadPool.cpp

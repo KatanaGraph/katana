@@ -838,8 +838,7 @@ main(int argc, char** argv) {
   std::cout << "Global relabel interval: " << app.global_relabel_interval
             << "\n";
 
-  galois::preAlloc(
-      numThreads * app.graph.size() / galois::runtime::pagePoolSize());
+  galois::Prealloc(1, app.graph.size());
   galois::reportPageAlloc("MeminfoPre");
 
   galois::StatTimer execTime("Timer_0");

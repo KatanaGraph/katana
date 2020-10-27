@@ -24,19 +24,17 @@
 
 #include "galois/config.h"
 
-namespace galois {
-namespace substrate {
+namespace galois::substrate {
 
 // size of pages
-size_t allocSize();
+GALOIS_EXPORT size_t allocSize();
 
 // allocate contiguous pages, optionally faulting them in
-void* allocPages(unsigned num, bool preFault);
+GALOIS_EXPORT void* allocPages(unsigned num, bool preFault);
 
 // free page range
-void freePages(void* ptr, unsigned num);
+GALOIS_EXPORT void freePages(void* ptr, unsigned num);
 
-}  // namespace substrate
-}  // namespace galois
+}  // namespace galois::substrate
 
 #endif

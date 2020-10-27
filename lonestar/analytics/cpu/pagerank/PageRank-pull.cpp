@@ -310,9 +310,7 @@ main(int argc, char** argv) {
   std::cout << "Read " << transposeGraph.num_nodes() << " nodes, "
             << transposeGraph.num_edges() << " edges\n";
 
-  galois::preAlloc(
-      2 * numThreads + (3 * transposeGraph.size() * sizeof(NodeData)) /
-                           galois::runtime::pagePoolSize());
+  galois::Prealloc(2, 3 * transposeGraph.size() * sizeof(NodeData));
   galois::reportPageAlloc("MeminfoPre");
 
   switch (algo) {

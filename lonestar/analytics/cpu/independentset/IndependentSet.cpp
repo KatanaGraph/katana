@@ -700,9 +700,8 @@ run() {
 
   Algo algo;
 
-  galois::preAlloc(
-      numThreads + 64 * (sizeof(GNode) + sizeof(typename Algo::NodeFlag)) *
-                       graph.size() / galois::runtime::pagePoolSize());
+  galois::Prealloc(
+      1, 64 * (sizeof(GNode) + sizeof(typename Algo::NodeFlag)) * graph.size());
 
   galois::reportPageAlloc("MeminfoPre");
   galois::StatTimer execTime("Timer_0");

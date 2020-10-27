@@ -457,8 +457,7 @@ run() {
             << trussNum << "-truss\n";
 
   size_t approxEdgeData = 4 * (graph.num_nodes() + graph.num_edges());
-  galois::preAlloc(
-      numThreads + 4 * (approxEdgeData) / galois::runtime::pagePoolSize());
+  galois::Prealloc(1, 4 * approxEdgeData);
   galois::reportPageAlloc("MeminfoPre");
 
   initialize(&graph);

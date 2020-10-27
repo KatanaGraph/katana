@@ -1,23 +1,24 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
 #define GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
 
+#include <memory>
+
 #include "galois/config.h"
-#include "galois/runtime/SharedMem.h"
-
-namespace tsuba {
-
-class NameServerClient;
-
-}  // namespace tsuba
 
 namespace galois {
 
 /**
- * SharedMemSys is an explicit class to initialize the Galois runtime. The
- * runtime is destroyed when this object is destroyed.
+ * SharedMemSys initializes the Galois library for shared memory. Most Galois
+ * library operations are only valid during the lifetime of a SharedMemSys or a
+ * DistMemSys.
+ *
+ * It is not advisable to create a SharedMemSys more than once. Certain
+ * downstream implementation dependencies like the AWS SDK cannot be
+ * reinitialized.
  */
-class GALOIS_EXPORT SharedMemSys : public runtime::SharedMem<StatManager> {
-  std::unique_ptr<tsuba::NameServerClient> ns_;
+class GALOIS_EXPORT SharedMemSys {
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 
 public:
   SharedMemSys();

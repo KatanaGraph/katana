@@ -23,9 +23,6 @@
 #include <memory>
 
 #include "galois/config.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/Termination.h"
-#include "galois/substrate/ThreadPool.h"
 
 namespace galois::substrate {
 
@@ -37,14 +34,11 @@ namespace galois::substrate {
 /// thread pool. If their construction is not guaranteed to happen after the
 /// construction of a SharedMem, initialization races can occur.
 class GALOIS_EXPORT SharedMem {
-  ThreadPool thread_pool_;
-
-  std::unique_ptr<internal::LocalTerminationDetection<>> term_;
-  std::unique_ptr<internal::BarrierInstance<>> barrier_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 
 public:
   SharedMem();
-
   ~SharedMem();
 
   SharedMem(const SharedMem&) = delete;

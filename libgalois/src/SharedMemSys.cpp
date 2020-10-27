@@ -19,7 +19,10 @@
 
 #include "galois/SharedMemSys.h"
 
+#include "galois/CommBackend.h"
 #include "galois/Logging.h"
+#include "galois/Statistics.h"
+#include "galois/substrate/SharedMem.h"
 #include "tsuba/tsuba.h"
 
 namespace {
@@ -28,19 +31,31 @@ galois::NullCommBackend comm_backend;
 
 }  // namespace
 
-galois::SharedMemSys::SharedMemSys() {
+struct galois::SharedMemSys::Impl {
+  galois::substrate::SharedMem shared_mem;
+  galois::StatManager stat_manager;
+  std::unique_ptr<tsuba::NameServerClient> ns;
+};
+
+galois::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
   auto ns_res = tsuba::GetNameServerClient();
   if (!ns_res) {
     GALOIS_LOG_FATAL(
         "failed to initialize name server client: {}", ns_res.error());
   }
-  ns_ = std::move(ns_res.value());
-  if (auto init_good = tsuba::Init(&comm_backend, ns_.get()); !init_good) {
+  impl_->ns = std::move(ns_res.value());
+  if (auto init_good = tsuba::Init(&comm_backend, impl_->ns.get());
+      !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
+
+  galois::internal::setSysStatManager(&impl_->stat_manager);
 }
 
 galois::SharedMemSys::~SharedMemSys() {
+  impl_->stat_manager.Print();
+  galois::internal::setSysStatManager(nullptr);
+
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     GALOIS_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }

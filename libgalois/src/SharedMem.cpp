@@ -22,29 +22,41 @@
 #include <memory>
 
 #include "galois/substrate/Barrier.h"
+#include "galois/substrate/PagePool.h"
 #include "galois/substrate/Termination.h"
 #include "galois/substrate/ThreadPool.h"
 
-galois::substrate::SharedMem::SharedMem() {
-  internal::setThreadPool(&thread_pool_);
+struct galois::substrate::SharedMem::Impl {
+  struct Dependents {
+    internal::LocalTerminationDetection<> term;
+    internal::BarrierInstance<> barrier;
+    internal::PageAllocState<> page_pool;
+  };
 
-  // The thread pool must be initialized first because termination
-  // detection and barrier may call getThreadPool in their constructors
-  barrier_ = std::make_unique<internal::BarrierInstance<>>();
-  term_ = std::make_unique<internal::LocalTerminationDetection<>>();
+  ThreadPool thread_pool;
+  std::unique_ptr<Dependents> deps;
+};
 
-  internal::setBarrierInstance(barrier_.get());
-  internal::setTermDetect(term_.get());
+galois::substrate::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
+  internal::setThreadPool(&impl_->thread_pool);
+
+  // The thread pool must be initialized first because other substrate classes
+  // may call getThreadPool() in their constructors
+  impl_->deps = std::make_unique<Impl::Dependents>();
+
+  internal::setBarrierInstance(&impl_->deps->barrier);
+  internal::setTermDetect(&impl_->deps->term);
+  internal::setPagePoolState(&impl_->deps->page_pool);
 }
 
 galois::substrate::SharedMem::~SharedMem() {
+  internal::setPagePoolState(nullptr);
   internal::setTermDetect(nullptr);
   internal::setBarrierInstance(nullptr);
 
-  // destructors can call getThreadPool(), hence must be destroyed before
-  // setThreadPool() below
-  term_.reset();
-  barrier_.reset();
+  // Other substrate classes destructors may call getThreadPool() so destroy
+  // them first before reseting the thread pool.
+  impl_->deps.reset();
 
   internal::setThreadPool(nullptr);
 }

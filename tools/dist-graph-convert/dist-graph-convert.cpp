@@ -23,7 +23,7 @@
 #include <utility>
 
 #include "dist-graph-convert-helpers.h"
-#include "galois/DistGalois.h"
+#include "galois/DistMemSys.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;

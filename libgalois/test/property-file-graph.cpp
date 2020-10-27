@@ -2,8 +2,8 @@
 #include <boost/filesystem.hpp>
 
 #include "TestPropertyGraph.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
+#include "galois/Uri.h"
 #include "galois/graphs/PropertyFileGraph.h"
 #include "tsuba/tsuba.h"
 
@@ -47,9 +47,10 @@ TestRoundTrip() {
   auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({"edge-name"});
   GALOIS_LOG_ASSERT(mark_edge_persistent);
 
-  auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
-  GALOIS_LOG_ASSERT(unique_result);
-  std::string temp_dir(std::move(unique_result.value()));
+  auto uri_res = galois::Uri::Make("/tmp");
+  GALOIS_LOG_ASSERT(uri_res);
+  auto unique_result = uri_res.value().RandFile("propertyfilegraph-");
+  std::string temp_dir(unique_result.path());
 
   std::string rdg_file{temp_dir};
 
@@ -110,9 +111,10 @@ TestRoundTrip() {
 
 void
 TestGarbageMetadata() {
-  auto unique_result = galois::CreateUniqueDirectory("/tmp/propertyfilegraph-");
-  GALOIS_LOG_ASSERT(unique_result);
-  std::string temp_dir(std::move(unique_result.value()));
+  auto uri_res = galois::Uri::Make("/tmp");
+  GALOIS_LOG_ASSERT(uri_res);
+  auto unique_result = uri_res.value().RandFile("propertyfilegraph-");
+  std::string temp_dir(unique_result.path());
 
   std::string rdg_file{temp_dir};
   rdg_file += "/meta";

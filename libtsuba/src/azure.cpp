@@ -9,10 +9,10 @@
 
 #include <blob/blob_client.h>
 
-#include "galois/FileSystem.h"
 #include "galois/GetEnv.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "tsuba/Errors.h"
 
 namespace az = azure::storage_lite;
@@ -249,7 +249,7 @@ tsuba::AzureDelete(
   futures.reserve(files.size());
   for (const std::string& file : files) {
     futures.emplace_back(client->delete_blob(
-        container, galois::JoinPath(blob, file),
+        container, galois::Uri::JoinPath(blob, file),
         /* delete_snapshots */ false));
   }
   for (std::future<az::storage_outcome<void>>& future : futures) {

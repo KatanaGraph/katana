@@ -1,5 +1,4 @@
 #include "bench_utils.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "tsuba/RDG.h"
 #include "tsuba/file.h"
@@ -113,7 +112,7 @@ std::vector<int64_t>
 tsuba_put_sync(const Experiment& exp) {
   std::vector<std::string> s3urls;
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3urls.push_back(galois::JoinPath(src_uri, MkS3obj(i, 4)));
+    s3urls.push_back(galois::Uri::JoinPath(src_uri, MkS3obj(i, 4)));
   }
   std::vector<int64_t> results;
 
@@ -136,7 +135,7 @@ tsuba_put_async(const Experiment& exp) {
   std::vector<std::string> s3urls;
   std::vector<std::future<galois::Result<void>>> futs{(std::size_t)exp.batch_};
   for (auto i = 0; i < exp.batch_; ++i) {
-    s3urls.push_back(galois::JoinPath(src_uri, MkS3obj(i, 4)));
+    s3urls.push_back(galois::Uri::JoinPath(src_uri, MkS3obj(i, 4)));
   }
   std::vector<int64_t> results;
 
@@ -188,7 +187,7 @@ tsuba_get_async(const Experiment& exp) {
   uint8_t* rbuf = read_buffer.data();
 
   for (auto i = 0; i < exp.batch_; ++i) {
-    std::string obj = galois::JoinPath(src_uri, MkS3obj(i, 4));
+    std::string obj = galois::Uri::JoinPath(src_uri, MkS3obj(i, 4));
     objects.push_back(obj);
     // Confirm that the data we need is present
     CheckFile(obj, exp.size_);

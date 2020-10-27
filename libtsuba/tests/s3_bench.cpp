@@ -6,7 +6,6 @@
 #include <list>
 
 #include "bench_utils.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "tsuba/file.h"

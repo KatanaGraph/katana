@@ -5,7 +5,6 @@
 
 #include "arrow/api.h"
 #include "bench_utils.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
 #include "parquet/file_reader.h"

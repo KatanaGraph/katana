@@ -3,8 +3,8 @@
 #include <boost/filesystem.hpp>
 
 #include "arrow/api.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
+#include "galois/Uri.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG.h"
 #include "tsuba/RDG_internal.h"
@@ -22,7 +22,8 @@ namespace fs = boost::filesystem;
 namespace {
 
 const int64_t BIG_ARRAY_SIZE = 1 << 27;
-const std::string TEST_DIR = "/tmp/partial-load";
+const std::string TEST_DIR = "/tmp";
+const std::string TEST_DIR_PREFIX = "partial-load";
 
 // Schema
 std::shared_ptr<arrow::Schema>
@@ -102,13 +103,13 @@ main() {
     GALOIS_LOG_FATAL("tsuba::Init: {}", res.error());
   }
 
-  auto unique_result = galois::CreateUniqueDirectory(TEST_DIR);
-  if (!unique_result) {
-    GALOIS_LOG_FATAL("galois:CreateUniqueDirectory: {}", unique_result.error());
-  }
-  std::string temp_dir(std::move(unique_result.value()));
+  auto uri_res = galois::Uri::Make(TEST_DIR);
+  GALOIS_LOG_ASSERT(uri_res);
+  auto uri = uri_res.value();
+  auto unique_dir = uri.RandFile(TEST_DIR_PREFIX);
+  std::string temp_dir(unique_dir.string());
 
-  std::string path = galois::NewPath(temp_dir, "big_parquet");
+  std::string path = unique_dir.Join("big_parquet").string();
   WriteInit(table, path);
 
   // Run several tests

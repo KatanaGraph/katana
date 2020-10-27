@@ -11,7 +11,6 @@ configure_file(include/galois/config.h.in include/galois/config.h)
 
 set(sources
         src/ErrorCode.cpp
-        src/FileSystem.cpp
         src/GetEnv.cpp
         src/Http.cpp
         src/JSON.cpp

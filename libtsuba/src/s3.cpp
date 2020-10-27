@@ -28,10 +28,10 @@
 #include <aws/s3/model/ListObjectsRequest.h>
 
 #include "SegmentedBufferView.h"
-#include "galois/FileSystem.h"
 #include "galois/GetEnv.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/s3_internal.h"
@@ -41,6 +41,7 @@ namespace tsuba {
 
 static Aws::SDKOptions sdk_options;
 
+static constexpr const char* kSepStr = "/";
 static constexpr const char* kDefaultS3Region = "us-east-1";
 static constexpr const char* kAwsTag = "TsubaS3Client";
 // TODO: Could explore policies
@@ -848,7 +849,13 @@ S3ListAsync(
         GALOIS_LOG_ASSERT(begin == 0);
         // object might be rmat15/, but if rmat15s/ also exists, S3
         // will send us those entries
-        if (short_name[object.length()] == '/') {
+        if (object[object.length() - 1] == galois::Uri::kSepChar) {
+          short_name.erase(begin, object.length());
+          list->emplace_back(short_name);
+          if (size != NULL) {
+            size->emplace_back(content.GetSize());
+          }
+        } else if (short_name[object.length()] == galois::Uri::kSepChar) {
           short_name.erase(begin, object.length() + 1);
           list->emplace_back(short_name);
           if (size != NULL) {
@@ -915,7 +922,7 @@ S3Delete(
       aws_objs.clear();
     }
     Aws::S3::Model::ObjectIdentifier oid;
-    oid.SetKey(ToAwsString(galois::JoinPath(object, file)));
+    oid.SetKey(ToAwsString(galois::Uri::JoinPath(object, file)));
     aws_objs.push_back(oid);
     index++;
   }
@@ -945,34 +952,50 @@ internal::S3ListAsyncV1(
     Aws::S3::Model::ListObjectsRequest request;
     request.SetBucket(ToAwsString(bucket));
     request.SetPrefix(ToAwsString(object));
-    auto s3outcome = s3_client->ListObjects(request);
-    if (!s3outcome.IsSuccess()) {
-      const auto& error = s3outcome.GetError();
-      GALOIS_LOG_FATAL(
-          "\n  Failed ListAsyncV1\n  {}: {}\n  [{}] {}",
-          error.GetExceptionName(), error.GetMessage(), bucket, object);
-    }
-    auto s3result = s3outcome.GetResult();
-    for (const auto& content : s3result.GetContents()) {
-      std::string short_name(FromAwsString(content.GetKey()));
-      size_t begin = short_name.find(object);
-      GALOIS_LOG_ASSERT(begin == 0);
-      // object might be rmat15/, but if rmat15s/ also exists, S3
-      // will send us those entries
-      if (object[object.length() - 1] == '/') {
-        short_name.erase(begin, object.length());
-        list->emplace_back(short_name);
-        if (size != NULL) {
-          size->emplace_back(content.GetSize());
-        }
-      } else if (short_name[object.length()] == '/') {
-        short_name.erase(begin, object.length() + 1);
-        list->emplace_back(short_name);
-        if (size != NULL) {
-          size->emplace_back(content.GetSize());
+    request.SetDelimiter(kSepStr);
+    std::string marker{};
+    do {
+      if (marker.size() > 0) {
+        request.SetMarker(ToAwsString(marker));
+      }
+      auto s3outcome = s3_client->ListObjects(request);
+      if (!s3outcome.IsSuccess()) {
+        const auto& error = s3outcome.GetError();
+        GALOIS_LOG_FATAL(
+            "\n  Failed ListAsyncV1\n  {}: {}\n  [{}] {}",
+            error.GetExceptionName(), error.GetMessage(), bucket, object);
+      }
+      auto s3result = s3outcome.GetResult();
+
+      for (const auto& content : s3result.GetContents()) {
+        std::string short_name(FromAwsString(content.GetKey()));
+        size_t begin = short_name.find(object);
+        GALOIS_LOG_ASSERT(begin == 0);
+        // object might be rmat15/, but if rmat15s/ also exists, S3
+        // will send us those entries
+        if (object[object.length() - 1] == galois::Uri::kSepChar) {
+          short_name.erase(begin, object.length());
+          list->emplace_back(short_name);
+          if (size != NULL) {
+            size->emplace_back(content.GetSize());
+          }
+        } else if (short_name[object.length()] == galois::Uri::kSepChar) {
+          short_name.erase(begin, object.length() + 1);
+          list->emplace_back(short_name);
+          if (size != NULL) {
+            size->emplace_back(content.GetSize());
+          }
         }
       }
-    }
+      marker.clear();
+      if (s3result.GetIsTruncated()) {
+        // Get more listings
+        marker = FromAwsString(s3result.GetNextMarker());
+        GALOIS_LOG_VASSERT(
+            marker.length() > 0,
+            "ListAsyncV1 IsTruncated true, but marker empty");
+      }
+    } while (marker.size() > 0);
     return galois::ResultSuccess();
   });
   return fut_res;

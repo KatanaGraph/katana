@@ -45,6 +45,7 @@ add_test(NAME unit-loadpartial COMMAND unit-loadpartial)
 
 add_executable(tsuba_test tsuba_test.cpp md5.cpp)
 target_link_libraries(tsuba_test tsuba)
-add_test(NAME tsuba_test COMMAND tsuba_test --no-self-configure s3://katana-ci/delete_me)
-set(new_path "${CMAKE_BINARY_DIR}/bin:${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
-set_tests_properties(tsuba_test PROPERTIES ENVIRONMENT "AWS_DEFAULT_REGION=us-east-1;PATH=${new_path}")
+add_test(NAME tsuba_test COMMAND tsuba_test s3://katana-ci/delete_me)
+# new_path no longer needed, but instructive
+# set(new_path "${CMAKE_BINARY_DIR}/bin:${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
+set_tests_properties(tsuba_test PROPERTIES ENVIRONMENT "AWS_DEFAULT_REGION=us-east-1")

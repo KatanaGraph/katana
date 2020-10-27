@@ -1,10 +1,10 @@
 #include "gs.h"
 
-#include "galois/FileSystem.h"
 #include "galois/GetEnv.h"
 #include "galois/Logging.h"
 #include "galois/Random.h"
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "s3.h"
 #include "tsuba/Errors.h"
 #include "tsuba/s3_internal.h"
@@ -86,8 +86,8 @@ tsuba::GSDelete(
     const std::unordered_set<std::string>& files) {
   galois::Result<void> ret = galois::ResultSuccess();
   for (const auto& file : files) {
-    auto res =
-        tsuba::internal::S3SingleDelete(bucket, galois::JoinPath(object, file));
+    auto res = tsuba::internal::S3SingleDelete(
+        bucket, galois::Uri::JoinPath(object, file));
     if (!res && ret == galois::ResultSuccess()) {
       ret = res.error();
     }

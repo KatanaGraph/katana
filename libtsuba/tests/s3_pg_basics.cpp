@@ -1,7 +1,6 @@
 #include <time.h>
 
 #include "bench_utils.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"

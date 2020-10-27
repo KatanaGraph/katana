@@ -5,6 +5,7 @@
 
 #include "GlobalState.h"
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "gs.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
@@ -113,6 +114,12 @@ GSStorage::ListAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
+  // TODO (witchel) gs requires prefix to end in /.  Does S3 have this requirement?
+  if (!object.empty()) {
+    if (object[object.size() - 1] != galois::Uri::kSepChar) {
+      object += galois::Uri::kSepChar;
+    }
+  }
   return GSListAsync(bucket, object, list, size);
 }
 

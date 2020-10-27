@@ -1,6 +1,5 @@
 #include <boost/filesystem.hpp>
 
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
@@ -185,9 +184,12 @@ main() {
   uint8_t bits[num_bytes];
   fill_bits(bits, num_bytes);
 
-  auto unique_result = galois::CreateUniqueDirectory("/tmp/fileobjects-");
-  GALOIS_LOG_ASSERT(unique_result);
-  std::string temp_dir(std::move(unique_result.value()));
+  auto uri_res = galois::Uri::Make("/tmp");
+  GALOIS_LOG_ASSERT(uri_res);
+  auto uri = uri_res.value();
+  auto unique_result = uri.RandFile("fileobjects");
+  std::string temp_dir(
+      unique_result.path());  // path not string because it is local
 
   exponential(bits, temp_dir);
   the_big_one(bits, num_bytes, temp_dir);

@@ -10,7 +10,8 @@
 #include <fmt/format.h>
 
 #include "galois/ErrorCode.h"
-#include "galois/FileSystem.h"
+#include "galois/Logging.h"
+#include "galois/Random.h"
 #include "galois/Result.h"
 
 namespace {
@@ -59,6 +60,98 @@ Base64Encode(std::string_view s) {
   return res;
 }
 
+// This function does not recognize any path seperator other than '/'. This
+// could be a problem for Windows or "non-standard S3" paths.
+std::string
+ExtractFileName(std::string_view path) {
+  size_t last_slash =
+      path.find_last_of(galois::Uri::kSepChar, std::string::npos);
+  size_t name_end_plus1 = path.length();
+  if (last_slash == std::string::npos) {
+    return std::string(path);
+  }
+  if (last_slash == (path.length() - 1)) {
+    // Find end of file name
+    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+      last_slash--;
+    }
+    name_end_plus1 =
+        last_slash + 1;  // name_end_plus1 points to last slash in group
+    while (last_slash > 0 && path[last_slash] != galois::Uri::kSepChar) {
+      last_slash--;
+    }
+  }
+  return std::string(
+      path.substr(last_slash + 1, name_end_plus1 - last_slash - 1));
+}
+
+// Use same rules as python's os.path.dirname
+std::string
+ExtractDirName(std::string_view path) {
+  size_t last_slash =
+      path.find_last_of(galois::Uri::kSepChar, std::string::npos);
+  if (last_slash == std::string::npos) {
+    return "";
+  }
+  if (last_slash == (path.length() - 1)) {
+    // Find end of file name
+    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+      last_slash--;
+    }
+    // Find first slash before file name
+    while (last_slash > 0 && path[last_slash] != galois::Uri::kSepChar) {
+      last_slash--;
+    }
+    // Find first slash after directory name
+    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+      last_slash--;
+    }
+    last_slash++;
+  }
+  return std::string(path.substr(0, last_slash));
+}
+
+std::string
+NewPath(std::string_view dir, std::string_view prefix) {
+  std::string name(prefix);
+  if (prefix.front() == galois::Uri::kSepChar) {
+    name = name.substr(1, std::string::npos);
+  }
+  name += "-";
+  name += galois::RandomAlphanumericString(12);
+  std::string p{dir};
+  if (p.back() == galois::Uri::kSepChar) {
+    p = p.substr(0, p.length() - 1);
+  }
+  return p.append(1, galois::Uri::kSepChar).append(name);
+}
+
+std::string
+DoJoinPath(std::string_view dir, std::string_view file) {
+  if (dir.empty()) {
+    return std::string(file);
+  }
+  if (dir[dir.size() - 1] != galois::Uri::kSepChar) {
+    if (file[0] != galois::Uri::kSepChar) {
+      return fmt::format("{}{}{}", dir, galois::Uri::kSepChar, file);
+    } else {
+      while (file[1] == galois::Uri::kSepChar) {
+        file.remove_prefix(1);
+      }
+      return fmt::format("{}{}", dir, file);
+    }
+  } else {
+    while (dir[dir.size() - 2] == galois::Uri::kSepChar) {
+      dir.remove_suffix(1);
+    }
+    while (file[0] == galois::Uri::kSepChar) {
+      file.remove_prefix(1);
+    }
+  }
+  GALOIS_LOG_ASSERT(dir[dir.size() - 1] == galois::Uri::kSepChar);
+  return fmt::format("{}{}", dir, file);
+}
+
 }  // namespace
 
 namespace galois {
@@ -94,6 +187,11 @@ Uri::Make(const std::string& str) {
   return Uri(scheme, path);
 }
 
+std::string
+Uri::JoinPath(const std::string& dir, const std::string& file) {
+  return DoJoinPath(dir, file);
+}
+
 bool
 Uri::empty() const {
   if (scheme_.empty()) {
@@ -115,19 +213,23 @@ Uri::BaseName() const {
 
 Uri
 Uri::DirName() const {
-  auto dir_res = ExtractDirName(path());
-  if (!dir_res) {
-    return Uri();
-  }
-  return Uri(scheme_, dir_res.value());
+  return Uri(scheme_, ExtractDirName(path()));
 }
 
 Uri
-Uri::Append(std::string_view to_append) const {
+Uri::Join(std::string_view to_join) const {
   if (empty()) {
     return Uri();
   }
-  return Uri(scheme_, JoinPath(path_, to_append));
+  return Uri(scheme_, DoJoinPath(path_, to_join));
+}
+Uri
+Uri::StripSep() const {
+  std::string path = path_;
+  while (path[path.size() - 1] == kSepChar) {
+    path.pop_back();
+  }
+  return Uri(scheme_, path);
 }
 
 Uri
@@ -146,6 +248,11 @@ operator==(const Uri& lhs, const Uri& rhs) {
 bool
 operator!=(const Uri& lhs, const Uri& rhs) {
   return !(lhs == rhs);
+}
+
+Uri
+operator+(const Uri& lhs, char rhs) {
+  return Uri(lhs.scheme_, lhs.path_ + rhs);
 }
 
 }  // namespace galois

@@ -18,4 +18,4 @@ endfunction()
 
 add_test_unit(getenv)
 add_test_unit(logging)
-add_test_unit(filesystem)
+add_test_unit(uri)

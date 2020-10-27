@@ -11,7 +11,7 @@
 namespace {
 
 const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
-
+const std::regex kS3BucketRegex("s3://([-a-z0-9.]+)");
 }  // namespace
 
 namespace tsuba {
@@ -24,6 +24,10 @@ galois::Result<std::pair<std::string, std::string>>
 S3Storage::CleanUri(const std::string& uri) {
   std::smatch sub_match;
   if (!std::regex_match(uri, sub_match, kS3UriRegex)) {
+    if (std::regex_match(uri, sub_match, kS3BucketRegex)) {
+      // This can happen with FileDelete
+      return std::make_pair(sub_match[1], "");
+    }
     return ErrorCode::InvalidArgument;
   }
   return std::make_pair(sub_match[1], sub_match[2]);

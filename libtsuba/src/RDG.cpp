@@ -16,7 +16,6 @@
 #include <parquet/properties.h>
 
 #include "GlobalState.h"
-#include "galois/FileSystem.h"
 #include "galois/JSON.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
@@ -258,7 +257,7 @@ AddTables(
     const galois::Uri& uri,
     const std::vector<tsuba::PropertyMetadata>& properties, AddFn add_fn) {
   for (const tsuba::PropertyMetadata& properties : properties) {
-    auto p_path = uri.Append(properties.path);
+    auto p_path = uri.Join(properties.path);
 
     auto load_result = LoadTable(properties.name, p_path);
     if (!load_result) {
@@ -283,7 +282,7 @@ AddPartialTables(
     const std::vector<tsuba::PropertyMetadata>& properties,
     std::pair<uint64_t, uint64_t> range, AddFn add_fn) {
   for (const tsuba::PropertyMetadata& properties : properties) {
-    galois::Uri p_path = dir.Append(properties.path);
+    galois::Uri p_path = dir.Join(properties.path);
 
     auto load_result = tsuba::internal::LoadPartialTable(
         properties.name, p_path, range.first, range.second - range.first);
@@ -821,7 +820,7 @@ DoExaminePrefix(const galois::Uri& partition_path, const galois::Uri& dir) {
     return tsuba::RDGPrefix(std::move(pfx));
   }
 
-  galois::Uri t_path = dir.Append(rdg.topology_path_);
+  galois::Uri t_path = dir.Join(rdg.topology_path_);
   auto out_idx_res = BindOutIndex(t_path.string());
   if (!out_idx_res) {
     return out_idx_res.error();
@@ -981,7 +980,7 @@ galois::Uri
 RDGMeta::FileName(const galois::Uri& uri, uint64_t version) {
   assert(uri.empty() || IsManagedUri(uri));
 
-  return uri.Append(fmt::format("meta_{}", version));
+  return uri.Join(fmt::format("meta_{}", version));
 }
 
 std::string
@@ -993,7 +992,7 @@ galois::Uri
 RDGMeta::PartitionFileName(
     const galois::Uri& uri, uint32_t node_id, uint64_t version) {
   assert(IsManagedUri(uri));
-  return uri.Append(PartitionFileName(node_id, version));
+  return uri.Join(PartitionFileName(node_id, version));
 }
 
 // NOLINTNEXTLINE needed non-const ref for nlohmann compat
@@ -1294,7 +1293,7 @@ RDG::DoLoad(const galois::Uri& metadata_dir) {
     }
   }
 
-  galois::Uri t_path = metadata_dir.Append(topology_path_);
+  galois::Uri t_path = metadata_dir.Join(topology_path_);
   if (auto res = topology_file_storage_.Bind(t_path.string(), true); !res) {
     return res.error();
   }
@@ -1305,7 +1304,7 @@ RDG::DoLoad(const galois::Uri& metadata_dir) {
 
 galois::Result<void>
 RDG::DoLoadPartial(const galois::Uri& metadata_dir, const SliceArg& slice) {
-  galois::Uri t_path = metadata_dir.Append(topology_path_);
+  galois::Uri t_path = metadata_dir.Join(topology_path_);
 
   if (auto res = topology_file_storage_.Bind(
           t_path.string(), slice.topo_off, slice.topo_off + slice.topo_size,
@@ -1666,7 +1665,7 @@ FindLatestMetaFile(const galois::Uri& name) {
     GALOIS_LOG_DEBUG("failed: could not find meta file in {}", name);
     return ErrorCode::InvalidArgument;
   }
-  return name.Append(found_meta);
+  return name.Join(found_meta);
 }
 
 }  // namespace tsuba

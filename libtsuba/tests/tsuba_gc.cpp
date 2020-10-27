@@ -1,5 +1,4 @@
 #include "bench_utils.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Uri.h"
 #include "tsuba/RDG.h"

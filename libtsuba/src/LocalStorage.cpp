@@ -11,9 +11,9 @@
 #include <boost/filesystem.hpp>
 
 #include "GlobalState.h"
-#include "galois/FileSystem.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -164,7 +164,7 @@ tsuba::LocalStorage::Delete(
   CleanUri(&dir);
 
   for (const auto& file : files) {
-    auto path = galois::JoinPath(dir, file);
+    auto path = galois::Uri::JoinPath(dir, file);
     unlink(path.c_str());
   }
   return galois::ResultSuccess();

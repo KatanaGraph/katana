@@ -72,9 +72,9 @@ foreach(backend ${GALOIS_STORAGE_BACKEND})
   endif()
 endforeach()
 
-if(TSUBA_BACKEND_S3)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_S3_BACKEND)
-  target_sources(tsuba PRIVATE src/S3Storage.cpp src/s3.cpp)
+if(TSUBA_BACKEND_S3 OR TSUBA_BACKEND_GS)
+  # Common file and S3 libraries
+  target_sources(tsuba PRIVATE src/s3.cpp)
   # The conan generated package name is aws-sdk-cpp while the
   # package name when built from source is AWSSDK.
   find_package(aws-sdk-cpp QUIET)
@@ -84,6 +84,17 @@ if(TSUBA_BACKEND_S3)
     find_package(AWSSDK REQUIRED COMPONENTS transfer)
     target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
   endif()
+endif()
+
+if(TSUBA_BACKEND_S3)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_S3_BACKEND)
+  target_sources(tsuba PRIVATE src/S3Storage.cpp)
+endif()
+
+if(TSUBA_BACKEND_GS)
+  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_GS_BACKEND)
+  # Our google cloud storage layer uses the S3 libraries
+  target_sources(tsuba PRIVATE src/GSStorage.cpp src/gs.cpp)
 endif()
 
 if(TSUBA_BACKEND_AZURE)
@@ -103,21 +114,6 @@ if(TSUBA_BACKEND_AZURE)
     add_subdirectory(${azurestorage_SOURCE_DIR} ${azurestorage_BINARY_DIR})
   endif()
   target_link_libraries(tsuba PUBLIC azure-storage-lite)
-endif()
-
-if(TSUBA_BACKEND_GS)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_GS_BACKEND)
-  # Our google cloud storage layer uses the S3 libraries
-  target_sources(tsuba PRIVATE src/s3.cpp src/GSStorage.cpp src/gs.cpp)
-  # The conan generated package name is aws-sdk-cpp while the
-  # package name when built from source is AWSSDK.
-  find_package(aws-sdk-cpp QUIET)
-  if(aws-sdk-cpp_FOUND)
-    target_link_libraries(tsuba PRIVATE aws-sdk-cpp::aws-sdk-cpp)
-  else()
-    find_package(AWSSDK REQUIRED COMPONENTS transfer)
-    target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
-  endif()
 endif()
 
 

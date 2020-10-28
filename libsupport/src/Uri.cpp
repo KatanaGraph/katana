@@ -60,7 +60,7 @@ Base64Encode(std::string_view s) {
   return res;
 }
 
-// This function does not recognize any path seperator other than '/'. This
+// This function does not recognize any path seperator other than kSepChar. This
 // could be a problem for Windows or "non-standard S3" paths.
 std::string
 ExtractFileName(std::string_view path) {
@@ -112,13 +112,20 @@ ExtractDirName(std::string_view path) {
 }
 
 std::string
+AddRandComponent(const std::string& str) {
+  std::string name(str);
+  name += "-";
+  name += galois::RandomAlphanumericString(12);
+  return name;
+}
+
+std::string
 NewPath(std::string_view dir, std::string_view prefix) {
   std::string name(prefix);
   if (prefix.front() == galois::Uri::kSepChar) {
     name = name.substr(1, std::string::npos);
   }
-  name += "-";
-  name += galois::RandomAlphanumericString(12);
+  name = AddRandComponent(name);
   std::string p{dir};
   if (p.back() == galois::Uri::kSepChar) {
     p = p.substr(0, p.length() - 1);
@@ -185,6 +192,15 @@ Uri::Make(const std::string& str) {
     return MakeFromFile(path);
   }
   return Uri(scheme, path);
+}
+
+Result<Uri>
+Uri::MakeRand(const std::string& str) {
+  auto res = Make(AddRandComponent(str));
+  if (!res) {
+    return res.error();
+  }
+  return res.value();
 }
 
 std::string

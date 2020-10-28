@@ -17,6 +17,7 @@
 constexpr static const char* const s3bucket = "witchel-tests-east2";
 constexpr static const char* const kSepStr = "/";
 constexpr static const char* const tmpDir = "/tmp/s3_test/";
+tsuba::internal::S3Client s3_client;
 
 // TODO: 2020/06/15 - Across different regions
 
@@ -165,7 +166,7 @@ test_s3_sync(const Experiment& exp) {
     for (const auto& s3obj : s3objs) {
       // Current API rejects empty writes
       if (auto res = tsuba::internal::S3PutSingleSync(
-              s3bucket, s3obj, exp.buffer_.data(), exp.size_);
+              s3_client, s3bucket, s3obj, exp.buffer_.data(), exp.size_);
           !res) {
         GALOIS_WARN_ONCE("S3PutSingleSync bad return {}", res.error());
       }
@@ -191,7 +192,8 @@ test_s3_async_one(const Experiment& exp) {
       tsuba::internal::CountingSemaphore sema;
       // Current API rejects empty writes
       if (auto res = tsuba::internal::S3PutSingleAsync(
-              s3bucket, object, exp.buffer_.data(), exp.size_, &sema);
+              s3_client, s3bucket, object, exp.buffer_.data(), exp.size_,
+              &sema);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync return {}", res.error());
       }
@@ -219,7 +221,8 @@ test_s3_single_async_batch(const Experiment& exp) {
     int i = 0;
     for (auto& sema : semas) {
       if (auto res = tsuba::internal::S3PutSingleAsync(
-              s3bucket, objects[i], exp.buffer_.data(), exp.size_, &sema);
+              s3_client, s3bucket, objects[i], exp.buffer_.data(), exp.size_,
+              &sema);
           !res) {
         GALOIS_LOG_ERROR("S3PutSingleAsync batch bad return {}", res.error());
       }
@@ -277,7 +280,7 @@ test_s3_async_get_one(const Experiment& exp) {
     for (const auto& object : objects) {
       tsuba::internal::CountingSemaphore sema;
       if (auto res = tsuba::internal::S3GetMultiAsync(
-              s3bucket, object, 0, exp.size_, rbuf, &sema);
+              s3_client, s3bucket, object, 0, exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync return {}", res.error());
       }
@@ -310,7 +313,7 @@ test_s3_async_get_batch(const Experiment& exp) {
     int i = 0;
     for (auto& sema : semas) {
       if (auto res = tsuba::internal::S3GetMultiAsync(
-              s3bucket, objects[i], 0, exp.size_, rbuf, &sema);
+              s3_client, s3bucket, objects[i], 0, exp.size_, rbuf, &sema);
           !res) {
         GALOIS_LOG_ERROR("S3GetMultiAsync batch bad return {}", res.error());
       }
@@ -340,18 +343,18 @@ test_s3_multi_async_batch(const Experiment& exp) {
     start = now();
     for (int i = 0; i < exp.batch_; ++i) {
       pmhs[i] = tsuba::internal::S3PutMultiAsync1(
-          s3bucket, objects[i], exp.buffer_.data(), exp.size_);
+          s3_client, s3bucket, objects[i], exp.buffer_.data(), exp.size_);
     }
     for (int i = 0; i < exp.batch_; ++i) {
-      if (auto res =
-              tsuba::internal::S3PutMultiAsync2(s3bucket, objects[i], pmhs[i]);
+      if (auto res = tsuba::internal::S3PutMultiAsync2(
+              s3_client, s3bucket, objects[i], pmhs[i]);
           !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync2 bad return {}", res.error());
       }
     }
     for (int i = 0; i < exp.batch_; ++i) {
-      if (auto res =
-              tsuba::internal::S3PutMultiAsync3(s3bucket, objects[i], pmhs[i]);
+      if (auto res = tsuba::internal::S3PutMultiAsync3(
+              s3_client, s3bucket, objects[i], pmhs[i]);
           !res) {
         GALOIS_LOG_ERROR("S3PutMultiAsync3 bad return {}", res.error());
       }
@@ -395,9 +398,11 @@ std::vector<Test> tests = {
 
 int
 main() {
-  if (auto init_good = tsuba::Init(); !init_good) {
-    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
+  auto res = tsuba::internal::S3Init();
+  if (!res) {
+    GALOIS_LOG_FATAL("tsuba::Init: {}", res.error());
   }
+  s3_client = res.value();
   std::vector<Experiment> experiments{
       Experiment("  19B", 19), Experiment(" 10MB", 10 * (UINT64_C(1) << 20)),
       Experiment("100MB", 100 * (UINT64_C(1) << 20)),

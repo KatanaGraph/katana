@@ -10,43 +10,46 @@
 #include <aws/core/utils/memory/stl/AWSString.h>
 
 #include "galois/Result.h"
+#include "tsuba/s3_internal.h"
 
 namespace tsuba {
 
-galois::Result<void> S3Init();
-galois::Result<void> S3Fini();
+// NB: S3Init and S3Fini are in s3_internal.h
+
 galois::Result<void> S3GetSize(
-    const std::string& bucket, const std::string& object, uint64_t* size);
-galois::Result<bool> S3Exists(
-    const std::string& bucket, const std::string& object);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t* size);
 
 galois::Result<void> S3DownloadRange(
-    const std::string& bucket, const std::string& object, uint64_t start,
-    uint64_t size, uint8_t* result_buf);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t start, uint64_t size,
+    uint8_t* result_buf);
 
 galois::Result<void> S3UploadOverwrite(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const uint8_t* data, uint64_t size);
 
 std::future<galois::Result<void>> S3GetAsync(
-    const std::string& bucket, const std::string& object, uint64_t start,
-    uint64_t size, uint8_t* result_buf);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t start, uint64_t size,
+    uint8_t* result_buf);
 
 // Call this function to do an async multipart put
 // All but the first call can block, making this a bulk synchronous parallel
 // interface
 std::future<galois::Result<void>> S3PutAsync(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const uint8_t* data, uint64_t size);
 
 // Listing relative to the full path of the provided directory
 std::future<galois::Result<void>> S3ListAsync(
-    const std::string& bucket, const std::string& object,
-    std::vector<std::string>* list, std::vector<uint64_t>* size);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, std::vector<std::string>* list,
+    std::vector<uint64_t>* size);
 
 galois::Result<void> S3Delete(
-    const std::string& bucket, const std::string& object,
-    const std::unordered_set<std::string>& files);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const std::unordered_set<std::string>& files);
 
 /* Utility functions for converting between Aws::String and std::string */
 inline std::string_view

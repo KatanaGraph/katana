@@ -56,8 +56,7 @@ public:
   FileStorage* FS(std::string_view uri) const;
 
   static galois::Result<void> Init(
-      galois::CommBackend* comm, tsuba::NameServerClient* ns,
-      const std::string& fs_supress);
+      galois::CommBackend* comm, tsuba::NameServerClient* ns);
   static galois::Result<void> Fini();
   static const GlobalState& Get();
 };

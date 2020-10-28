@@ -50,41 +50,52 @@ public:
   }
 };
 
+struct S3ClientImpl;
+/// S3Client is an opaque handle
+struct S3Client {
+  S3ClientImpl* impl_{};
+};
+
+GALOIS_EXPORT galois::Result<S3Client> S3Init(const std::string& endpoint = "");
+GALOIS_EXPORT galois::Result<void> S3Fini(S3Client s3_client);
+
 struct PutMultiImpl;
 struct PutMultiHandle {
   PutMultiImpl* impl_;
 };
 
 GALOIS_EXPORT galois::Result<void> S3GetMultiAsync(
-    const std::string& bucket, const std::string& object, uint64_t start,
-    uint64_t size, uint8_t* result_buf, CountingSemaphore* sema);
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    uint64_t start, uint64_t size, uint8_t* result_buf,
+    CountingSemaphore* sema);
 GALOIS_EXPORT void S3GetMultiAsyncFinish(CountingSemaphore* sema);
 
 GALOIS_EXPORT galois::Result<void> S3PutSingleSync(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size);
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    const uint8_t* data, uint64_t size);
 GALOIS_EXPORT PutMultiHandle S3PutMultiAsync1(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size);
-
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    const uint8_t* data, uint64_t size);
 GALOIS_EXPORT galois::Result<void> S3PutMultiAsync2(
-    const std::string& bucket, const std::string& object, PutMultiHandle pmh);
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    PutMultiHandle pmh);
 GALOIS_EXPORT galois::Result<void> S3PutMultiAsync3(
-    const std::string& bucket, const std::string& object, PutMultiHandle pmh);
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    PutMultiHandle pmh);
 GALOIS_EXPORT galois::Result<void> S3PutMultiAsyncFinish(
     const std::string& bucket, const std::string& object, PutMultiHandle pmh);
 
 GALOIS_EXPORT galois::Result<void> S3PutSingleAsync(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size, CountingSemaphore* sema);
+    S3Client s3_client, const std::string& bucket, const std::string& object,
+    const uint8_t* data, uint64_t size, CountingSemaphore* sema);
 GALOIS_EXPORT void S3PutSingleAsyncFinish(CountingSemaphore* sema);
 
 // Google storage compatability
 GALOIS_EXPORT std::future<galois::Result<void>> S3ListAsyncV1(
-    const std::string& bucket, const std::string& object,
+    S3Client s3_client, const std::string& bucket, const std::string& object,
     std::vector<std::string>* list, std::vector<uint64_t>* size);
 GALOIS_EXPORT galois::Result<void> S3SingleDelete(
-    const std::string& bucket, const std::string& object);
+    S3Client s3_client, const std::string& bucket, const std::string& object);
 
 }  // namespace tsuba::internal
 

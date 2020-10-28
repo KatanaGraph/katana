@@ -9,60 +9,57 @@
 #include "tsuba/Errors.h"
 #include "tsuba/s3_internal.h"
 
-galois::Result<void>
+galois::Result<tsuba::internal::S3Client>
 tsuba::GSInit() {
-  galois::SetEnv(
-      "GALOIS_AWS_TEST_ENDPOINT", "https://storage.googleapis.com",
-      /*overwrite*/ true);
-  return S3Init();
+  return tsuba::internal::S3Init("https://storage.googleapis.com");
 }
 
 galois::Result<void>
-tsuba::GSFini() {
-  return S3Fini();
+tsuba::GSFini(tsuba::internal::S3Client s3_client) {
+  return tsuba::internal::S3Fini(s3_client);
 }
 
 galois::Result<void>
 tsuba::GSGetSize(
-    const std::string& bucket, const std::string& object, uint64_t* size) {
-  return S3GetSize(bucket, object, size);
-}
-
-galois::Result<bool>
-tsuba::GSExists(const std::string& bucket, const std::string& object) {
-  return S3Exists(bucket, object);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t* size) {
+  return S3GetSize(s3_client, bucket, object, size);
 }
 
 galois::Result<void>
 tsuba::GSGetSync(
-    const std::string& bucket, const std::string& object, uint64_t start,
-    uint64_t size, uint8_t* result_buf) {
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t start, uint64_t size,
+    uint8_t* result_buf) {
   // Multi-part
-  return tsuba::S3DownloadRange(bucket, object, start, size, result_buf);
+  return tsuba::S3DownloadRange(
+      s3_client, bucket, object, start, size, result_buf);
 }
 
 galois::Result<void>
 tsuba::GSPutSync(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size) {
-  return tsuba::internal::S3PutSingleSync(bucket, object, data, size);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const uint8_t* data, uint64_t size) {
+  return tsuba::internal::S3PutSingleSync(
+      s3_client, bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
 tsuba::GSGetAsync(
-    const std::string& bucket, const std::string& object, uint64_t start,
-    uint64_t size, uint8_t* result_buf) {
-  return tsuba::S3GetAsync(bucket, object, start, size, result_buf);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, uint64_t start, uint64_t size,
+    uint8_t* result_buf) {
+  return tsuba::S3GetAsync(s3_client, bucket, object, start, size, result_buf);
 }
 
 std::future<galois::Result<void>>
 tsuba::GSPutAsync(
-    const std::string& bucket, const std::string& object, const uint8_t* data,
-    uint64_t size) {
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const uint8_t* data, uint64_t size) {
   auto future = std::async([=]() -> galois::Result<void> {
     tsuba::internal::CountingSemaphore sema;
     if (auto res = tsuba::internal::S3PutSingleAsync(
-            bucket, object, data, size, &sema);
+            s3_client, bucket, object, data, size, &sema);
         !res) {
       GALOIS_LOG_ERROR("GSPutSingleAsync return {}", res.error());
     }
@@ -75,19 +72,20 @@ tsuba::GSPutAsync(
 
 std::future<galois::Result<void>>
 tsuba::GSListAsync(
-    const std::string& bucket, const std::string& object,
-    std::vector<std::string>* list, std::vector<uint64_t>* size) {
-  return tsuba::internal::S3ListAsyncV1(bucket, object, list, size);
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, std::vector<std::string>* list,
+    std::vector<uint64_t>* size) {
+  return tsuba::internal::S3ListAsyncV1(s3_client, bucket, object, list, size);
 }
 
 galois::Result<void>
 tsuba::GSDelete(
-    const std::string& bucket, const std::string& object,
-    const std::unordered_set<std::string>& files) {
+    tsuba::internal::S3Client s3_client, const std::string& bucket,
+    const std::string& object, const std::unordered_set<std::string>& files) {
   galois::Result<void> ret = galois::ResultSuccess();
   for (const auto& file : files) {
     auto res = tsuba::internal::S3SingleDelete(
-        bucket, galois::Uri::JoinPath(object, file));
+        s3_client, bucket, galois::Uri::JoinPath(object, file));
     if (!res && ret == galois::ResultSuccess()) {
       ret = res.error();
     }

@@ -12,6 +12,7 @@ namespace {
 
 const std::regex kS3UriRegex("s3://([-a-z0-9.]+)/(.+)");
 const std::regex kS3BucketRegex("s3://([-a-z0-9.]+)");
+
 }  // namespace
 
 namespace tsuba {
@@ -35,12 +36,18 @@ S3Storage::CleanUri(const std::string& uri) {
 
 galois::Result<void>
 S3Storage::Init() {
-  return S3Init();
+  auto res = internal::S3Init();
+  if (!res) {
+    GALOIS_LOG_WARN("failed to initailize S3: {}", res.error());
+    return ErrorCode::InvalidArgument;
+  }
+  s3_client = res.value();
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>
 S3Storage::Fini() {
-  return S3Fini();
+  return internal::S3Fini(s3_client);
 }
 
 galois::Result<void>
@@ -50,7 +57,7 @@ S3Storage::Stat(const std::string& uri, StatBuf* s_buf) {
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return S3GetSize(bucket, object, &s_buf->size);
+  return S3GetSize(s3_client, bucket, object, &s_buf->size);
 }
 
 galois::Result<void>
@@ -62,7 +69,8 @@ S3Storage::GetMultiSync(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3DownloadRange(bucket, object, start, size, result_buf);
+  return tsuba::S3DownloadRange(
+      s3_client, bucket, object, start, size, result_buf);
 }
 
 galois::Result<void>
@@ -73,7 +81,7 @@ S3Storage::PutMultiSync(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3UploadOverwrite(bucket, object, data, size);
+  return tsuba::S3UploadOverwrite(s3_client, bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
@@ -85,7 +93,7 @@ S3Storage::PutAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3PutAsync(bucket, object, data, size);
+  return tsuba::S3PutAsync(s3_client, bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
@@ -98,7 +106,7 @@ S3Storage::GetAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3GetAsync(bucket, object, start, size, result_buf);
+  return tsuba::S3GetAsync(s3_client, bucket, object, start, size, result_buf);
 }
 
 std::future<galois::Result<void>>
@@ -111,7 +119,7 @@ S3Storage::ListAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3ListAsync(bucket, object, list, size);
+  return tsuba::S3ListAsync(s3_client, bucket, object, list, size);
 }
 
 galois::Result<void>
@@ -122,7 +130,7 @@ S3Storage::Delete(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return tsuba::S3Delete(bucket, object, files);
+  return tsuba::S3Delete(s3_client, bucket, object, files);
 }
 
 }  // namespace tsuba

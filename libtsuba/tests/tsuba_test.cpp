@@ -17,8 +17,7 @@
 
 int opt_verbose_level{0};
 int opt_test_level{0};
-std::string local_dir = "/tmp";
-std::string local_prefix = "tsuba_test";
+std::string local_dir = "/tmp/tsuba_test";
 galois::Uri remote_dir;
 std::string prog_name = "tsuba_test";
 std::string usage_msg =
@@ -211,8 +210,7 @@ ListDir(const galois::Uri& dir) {
 
 void
 TestDir(const galois::Uri& file, uint64_t num_bytes) {
-  // GS (and S3?) require pseudo-directory names to end with /
-  auto dir = file.DirName() + galois::Uri::kSepChar;
+  auto dir = file.DirName();
   auto [files, size] = ListDir(dir);
   if (opt_verbose_level > 0) {
     fmt::print(" Listing {} numFiles: {}\n", dir, files.size());
@@ -346,8 +344,7 @@ ConstructTests(const galois::Uri& local_dir, const galois::Uri& remote_dir) {
 
   DirPrefixRemote(55, fnames, remote_dir, tests);
   if (opt_test_level > 0) {
-    // S3 batch operations might make this faster.  Bottleneck is file creation
-    // https://docs.aws.amazon.com/AmazonS3/latest/user-guide/batch-ops-create-job.html
+    // Bottleneck is file creation
     DirPrefixRemote(fnum, fnames, remote_dir, tests);
   }
 
@@ -359,17 +356,21 @@ main(int argc, char* argv[]) {
   int main_ret = 0;
   ParseArguments(argc, argv);
 
-  if (auto init_good = tsuba::Init(remote_dir.scheme()); !init_good) {
+  if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
-  auto local_uri_res = galois::Uri::Make(local_dir);
+  auto local_uri_res = galois::Uri::MakeRand(local_dir);
   GALOIS_LOG_ASSERT(local_uri_res);
-  auto local_uri = local_uri_res.value();
-  auto local_rand_dir = local_uri.RandFile(local_prefix);
-
+  auto local_rand_dir = local_uri_res.value();
   std::string tmp_dir(local_rand_dir.path());  // path for local file
+
   GALOIS_LOG_VASSERT(
       !FileExists(remote_dir), "Remote URI must not exist at start of test");
+  auto [files, size] = ListDir(remote_dir);
+  GALOIS_LOG_VASSERT(
+      files.size() == 0 && size.size() == 0,
+      "Remote URI must not exist at start of test");
+
   auto tests = ConstructTests(local_rand_dir, remote_dir);
 
   // Create annoyance files
@@ -388,7 +389,7 @@ main(int argc, char* argv[]) {
 
   std::unordered_set<std::string> file_set;
   for (char ch = 'a'; ch < 'z' + 1; ++ch) {
-    file_set.emplace(dir.string() + ch);
+    file_set.emplace((dir + ch).BaseName());
   }
   DeleteFiles(dir.DirName(), file_set);
   // No assert that all files have disappeared

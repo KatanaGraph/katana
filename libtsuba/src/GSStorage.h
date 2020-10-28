@@ -4,12 +4,15 @@
 #include <future>
 
 #include "FileStorage.h"
+#include "tsuba/s3_internal.h"
 
 namespace tsuba {
 
 class GSStorage : public FileStorage {
   galois::Result<std::pair<std::string, std::string>> CleanUri(
       const std::string& uri);
+  // Google storage uses S3 libraries
+  internal::S3Client s3_client;
 
 public:
   // Google uses "gs://" for their gcs URIs

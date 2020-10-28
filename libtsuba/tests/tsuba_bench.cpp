@@ -239,7 +239,7 @@ main(int argc, char* argv[]) {
   }
   auto uri = uri_res.value();
 
-  if (auto init_good = tsuba::Init(uri.scheme()); !init_good) {
+  if (auto init_good = tsuba::Init(); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 

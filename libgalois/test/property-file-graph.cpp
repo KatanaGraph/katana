@@ -47,25 +47,22 @@ TestRoundTrip() {
   auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({"edge-name"});
   GALOIS_LOG_ASSERT(mark_edge_persistent);
 
-  auto uri_res = galois::Uri::Make("/tmp");
+  auto uri_res = galois::Uri::MakeRand("/tmp/propertyfilegraph");
   GALOIS_LOG_ASSERT(uri_res);
-  auto unique_result = uri_res.value().RandFile("propertyfilegraph-");
-  std::string temp_dir(unique_result.path());
+  std::string rdg_dir(uri_res.value().path());  // path() because local
 
-  std::string rdg_file{temp_dir};
+  auto write_result = g->Write(rdg_dir, command_line);
 
-  auto write_result = g->Write(rdg_file, command_line);
-
-  GALOIS_LOG_WARN("creating temp file {}", rdg_file);
+  GALOIS_LOG_WARN("creating temp file {}", rdg_dir);
 
   if (!write_result) {
-    fs::remove_all(temp_dir);
+    fs::remove_all(rdg_dir);
     GALOIS_LOG_FATAL("writing result: {}", write_result.error());
   }
 
   galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
-      make_result = galois::graphs::PropertyFileGraph::Make(rdg_file);
-  fs::remove_all(temp_dir);
+      make_result = galois::graphs::PropertyFileGraph::Make(rdg_dir);
+  fs::remove_all(rdg_dir);
   if (!make_result) {
     GALOIS_LOG_FATAL("making result: {}", make_result.error());
   }
@@ -111,10 +108,9 @@ TestRoundTrip() {
 
 void
 TestGarbageMetadata() {
-  auto uri_res = galois::Uri::Make("/tmp");
+  auto uri_res = galois::Uri::MakeRand("/tmp/propertyfilegraph");
   GALOIS_LOG_ASSERT(uri_res);
-  auto unique_result = uri_res.value().RandFile("propertyfilegraph-");
-  std::string temp_dir(unique_result.path());
+  std::string temp_dir(uri_res.value().path());  // path because local
 
   std::string rdg_file{temp_dir};
   rdg_file += "/meta";

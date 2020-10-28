@@ -184,12 +184,10 @@ main() {
   uint8_t bits[num_bytes];
   fill_bits(bits, num_bytes);
 
-  auto uri_res = galois::Uri::Make("/tmp");
+  auto uri_res = galois::Uri::MakeRand("/tmp/fileobjects");
   GALOIS_LOG_ASSERT(uri_res);
-  auto uri = uri_res.value();
-  auto unique_result = uri.RandFile("fileobjects");
   std::string temp_dir(
-      unique_result.path());  // path not string because it is local
+      uri_res.value().path());  // path not string because it is local
 
   exponential(bits, temp_dir);
   the_big_one(bits, num_bytes, temp_dir);

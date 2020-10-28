@@ -67,9 +67,7 @@ GlobalState::NS() const {
 }
 
 galois::Result<void>
-GlobalState::Init(
-    galois::CommBackend* comm, tsuba::NameServerClient* ns,
-    const std::string& uri_scheme) {
+GlobalState::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
   assert(ref_ == nullptr);
 
   // quick ping to say hello and fail fast if something was misconfigured
@@ -92,13 +90,8 @@ GlobalState::Init(
       });
 
   for (std::unique_ptr<FileStorage>& storage : global_state->file_stores_) {
-    // GS and S3 should not both call Init
-    //   galois::Uri::scheme returns the scheme prefix, uri_scheme() includes "://"
-    if (uri_scheme.empty() ||
-        (storage->uri_scheme().rfind(uri_scheme, 0) == 0)) {
-      if (auto res = storage->Init(); !res) {
-        return res.error();
-      }
+    if (auto res = storage->Init(); !res) {
+      return res.error();
     }
   }
 

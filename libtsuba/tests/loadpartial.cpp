@@ -22,8 +22,7 @@ namespace fs = boost::filesystem;
 namespace {
 
 const int64_t BIG_ARRAY_SIZE = 1 << 27;
-const std::string TEST_DIR = "/tmp";
-const std::string TEST_DIR_PREFIX = "partial-load";
+const std::string TEST_DIR = "/tmp/partial-load";
 
 // Schema
 std::shared_ptr<arrow::Schema>
@@ -103,13 +102,11 @@ main() {
     GALOIS_LOG_FATAL("tsuba::Init: {}", res.error());
   }
 
-  auto uri_res = galois::Uri::Make(TEST_DIR);
+  auto uri_res = galois::Uri::MakeRand(TEST_DIR);
   GALOIS_LOG_ASSERT(uri_res);
-  auto uri = uri_res.value();
-  auto unique_dir = uri.RandFile(TEST_DIR_PREFIX);
-  std::string temp_dir(unique_dir.string());
+  auto temp_dir = uri_res.value();
 
-  std::string path = unique_dir.Join("big_parquet").string();
+  std::string path = temp_dir.Join("big_parquet").path();
   WriteInit(table, path);
 
   // Run several tests
@@ -123,7 +120,7 @@ main() {
   Test(table, path, dist(gen), dist(gen));
   Test(table, path, dist(gen), dist(gen));
 
-  fs::remove_all(temp_dir);
+  fs::remove_all(temp_dir.path());  // path not string because it is local
 
   if (auto res = tsuba::Fini(); !res) {
     GALOIS_LOG_FATAL("tusba::Fini: {}", res.error());

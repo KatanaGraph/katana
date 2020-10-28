@@ -26,6 +26,8 @@ public:
   /// file path which and scheme is assumed to be `file://`
   static Result<Uri> Make(const std::string& str);
   static Result<Uri> MakeFromFile(const std::string& str);
+  /// Append a '-' and then a random string to input
+  static Result<Uri> MakeRand(const std::string& str);
   static std::string JoinPath(const std::string& dir, const std::string& file);
 
   /// Return the base64 (url variant) encoded version of this uri
@@ -48,7 +50,7 @@ public:
   /// XXXX is a random alpha numeric string
   Uri RandFile(std::string_view prefix) const;
 
-  friend Uri operator+(const Uri& lhs, char rhs);
+  GALOIS_EXPORT friend Uri operator+(const Uri& lhs, char rhs);
 };
 
 GALOIS_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);

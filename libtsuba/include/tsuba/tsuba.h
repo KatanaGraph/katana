@@ -18,9 +18,7 @@ GetNameServerClient();
 
 // Setup and tear down
 GALOIS_EXPORT galois::Result<void> Init(
-    galois::CommBackend* comm, NameServerClient* ns,
-    const std::string& uri_scheme = "");
-GALOIS_EXPORT galois::Result<void> Init(const std::string& uri_scheme);
+    galois::CommBackend* comm, NameServerClient* ns);
 GALOIS_EXPORT galois::Result<void> Init();
 
 GALOIS_EXPORT galois::Result<void> Fini();

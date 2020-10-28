@@ -6,6 +6,7 @@
 
 #include "FileStorage.h"
 #include "galois/Result.h"
+#include "tsuba/s3_internal.h"
 
 namespace tsuba {
 
@@ -13,6 +14,8 @@ class S3Storage : public FileStorage {
   friend class GlobalState;
   galois::Result<std::pair<std::string, std::string>> CleanUri(
       const std::string& uri);
+
+  internal::S3Client s3_client;
 
 public:
   S3Storage() : FileStorage("s3://") {}

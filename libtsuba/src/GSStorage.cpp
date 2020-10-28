@@ -38,12 +38,18 @@ GSStorage::CleanUri(const std::string& uri) {
 
 galois::Result<void>
 GSStorage::Init() {
-  return GSInit();
+  auto res = GSInit();
+  if (!res) {
+    GALOIS_LOG_WARN("failed to initailize GS: {}", res.error());
+    return ErrorCode::InvalidArgument;
+  }
+  s3_client = res.value();
+  return galois::ResultSuccess();
 }
 
 galois::Result<void>
 GSStorage::Fini() {
-  return GSFini();
+  return GSFini(s3_client);
 }
 
 galois::Result<void>
@@ -53,7 +59,7 @@ GSStorage::Stat(const std::string& uri, StatBuf* s_buf) {
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSGetSize(bucket, object, &s_buf->size);
+  return GSGetSize(s3_client, bucket, object, &s_buf->size);
 }
 
 galois::Result<void>
@@ -65,7 +71,7 @@ GSStorage::GetMultiSync(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSGetSync(bucket, object, start, size, result_buf);
+  return GSGetSync(s3_client, bucket, object, start, size, result_buf);
 }
 
 galois::Result<void>
@@ -76,7 +82,7 @@ GSStorage::PutMultiSync(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSPutSync(bucket, object, data, size);
+  return GSPutSync(s3_client, bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
@@ -88,7 +94,7 @@ GSStorage::PutAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSPutAsync(bucket, object, data, size);
+  return GSPutAsync(s3_client, bucket, object, data, size);
 }
 
 std::future<galois::Result<void>>
@@ -101,7 +107,7 @@ GSStorage::GetAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSGetAsync(bucket, object, start, size, result_buf);
+  return GSGetAsync(s3_client, bucket, object, start, size, result_buf);
 }
 
 std::future<galois::Result<void>>
@@ -114,13 +120,13 @@ GSStorage::ListAsync(
         [=]() -> galois::Result<void> { return uri_res.error(); });
   }
   auto [bucket, object] = std::move(uri_res.value());
-  // TODO (witchel) gs requires prefix to end in /.  Does S3 have this requirement?
+  // TODO (witchel) gs requires prefix to end in /.
   if (!object.empty()) {
-    if (object[object.size() - 1] != galois::Uri::kSepChar) {
-      object += galois::Uri::kSepChar;
+    if (object[object.size() - 1] != '/') {
+      object += '/';
     }
   }
-  return GSListAsync(bucket, object, list, size);
+  return GSListAsync(s3_client, bucket, object, list, size);
 }
 
 galois::Result<void>
@@ -132,7 +138,7 @@ GSStorage::Delete(
     return uri_res.error();
   }
   auto [bucket, object] = std::move(uri_res.value());
-  return GSDelete(bucket, object, files);
+  return GSDelete(s3_client, bucket, object, files);
 }
 
 }  // namespace tsuba

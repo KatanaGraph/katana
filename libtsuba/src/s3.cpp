@@ -64,6 +64,7 @@ struct internal::S3ClientImpl {
   Aws::SDKOptions sdk_options;
   S3ClientImpl() {}
 };
+static int32_t api_init_count{0};
 
 class WarnOnEmptyDefaultCredentialsChain
     : public Aws::Auth::DefaultAWSCredentialsProviderChain {
@@ -141,7 +142,9 @@ GetS3Client(
   // No official AWS environment analog so use GALOIS prefix
   galois::GetEnv("GALOIS_AWS_TEST_ENDPOINT", &test_endpoint);
   if (test_endpoint.empty()) {
-    test_endpoint = endpoint;
+    if (!endpoint.empty()) {
+      test_endpoint = endpoint;
+    }
   }
   if (!test_endpoint.empty()) {
     cfg.endpointOverride = test_endpoint;
@@ -157,6 +160,31 @@ GetS3Client(
       kAwsTag, Aws::MakeShared<WarnOnEmptyDefaultCredentialsChain>(kAwsTag),
       cfg, Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
       use_virtual_addressing);
+}
+
+galois::Result<internal::S3Client>
+internal::S3Init(const std::string& endpoint) {
+  auto cimpl = new internal::S3ClientImpl();
+  if (api_init_count == 0) {
+    api_init_count++;
+    Aws::InitAPI(cimpl->sdk_options);
+  }
+  std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
+      default_executor =
+          Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
+              kAwsTag, kNumS3Threads);
+  cimpl->p_ = GetS3Client(default_executor, endpoint);
+  // Use this client for all operations
+  return internal::S3Client{.impl_ = cimpl};
+}
+
+galois::Result<void>
+internal::S3Fini(internal::S3Client s3_client) {
+  if (--api_init_count == 0) {
+    Aws::ShutdownAPI(s3_client.impl_->sdk_options);
+  }
+  delete s3_client.impl_;
+  return galois::ResultSuccess();
 }
 
 template <class OutcomeType>
@@ -200,26 +228,6 @@ struct internal::PutMultiImpl {
   // Just a container
   PutMultiImpl() {}
 };
-
-galois::Result<internal::S3Client>
-internal::S3Init(const std::string& endpoint) {
-  auto cimpl = new internal::S3ClientImpl();
-  Aws::InitAPI(cimpl->sdk_options);
-  std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>
-      default_executor =
-          Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
-              kAwsTag, kNumS3Threads);
-  cimpl->p_ = GetS3Client(default_executor, endpoint);
-  // Use this client for all operations
-  return internal::S3Client{.impl_ = cimpl};
-}
-
-galois::Result<void>
-internal::S3Fini(internal::S3Client s3_client) {
-  Aws::ShutdownAPI(s3_client.impl_->sdk_options);
-  delete s3_client.impl_;
-  return galois::ResultSuccess();
-}
 
 galois::Result<void>
 S3GetSize(

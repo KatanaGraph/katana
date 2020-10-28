@@ -520,7 +520,7 @@ public:
    * Report the number of probe block failures to statistics.
    */
   ~Fixed2DGraphTiledExecutor() {
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "TiledExecutor", "ProbeFailures", failedProbes.reduce());
   }
 

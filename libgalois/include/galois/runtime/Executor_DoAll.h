@@ -20,12 +20,12 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
 
+#include "galois/Statistics.h"
 #include "galois/Timer.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/runtime/Executor_OnEach.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/runtime/Statistics.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
 #include "galois/substrate/PaddedLock.h"
@@ -454,7 +454,7 @@ public:
     assert(!ctx.hasWork());
 
     if (NEED_STATS) {
-      galois::runtime::reportStat_Tsum(loopname, "Iterations", ctx.num_iter);
+      galois::ReportStatSum(loopname, "Iterations", ctx.num_iter);
     }
   }
 };
@@ -515,7 +515,7 @@ struct ChooseDoAllImpl<false> {
           totalTime.stop();
 
           if (NEED_STATS) {
-            galois::runtime::reportStat_Tsum(loopname, "Iterations", iter);
+            galois::ReportStatSum(loopname, "Iterations", iter);
           }
         },
         std::make_tuple());

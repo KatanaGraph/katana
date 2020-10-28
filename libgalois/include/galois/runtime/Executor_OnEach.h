@@ -20,14 +20,13 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
 
+#include "galois/ThreadTimer.h"
 #include "galois/Threads.h"
 #include "galois/Timer.h"
 #include "galois/Traits.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/runtime/Statistics.h"
-#include "galois/runtime/ThreadTimer.h"
 #include "galois/substrate/ThreadPool.h"
 
 namespace galois {

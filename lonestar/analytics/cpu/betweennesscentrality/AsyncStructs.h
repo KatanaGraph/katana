@@ -42,9 +42,7 @@ struct Counter : public T {
 
   Counter(std::string s) : name(std::move(s)) {}
 
-  ~Counter() {
-    galois::runtime::reportStat_Single("(NULL)", name, this->reduce());
-  }
+  ~Counter() { galois::ReportStatSingle("(NULL)", name, this->reduce()); }
 };
 
 template <typename T>
@@ -414,7 +412,7 @@ doAsyncBC() {
   galois::gInfo(
       "Note that optimal chunk size may differ depending on input "
       "graph");
-  galois::runtime::reportStat_Single("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
+  galois::ReportStatSingle("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
 
   galois::reportPageAlloc("MemAllocPre");
   galois::gInfo("Going to pre-allocate pages");

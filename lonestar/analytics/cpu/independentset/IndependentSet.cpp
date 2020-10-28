@@ -325,8 +325,7 @@ struct PullAlgo {
       size -= numTaken.reduce();
     }
 
-    galois::runtime::reportStat_Single(
-        "IndependentSet-PullAlgo", "rounds", rounds);
+    galois::ReportStatSingle("IndependentSet-PullAlgo", "rounds", rounds);
   }
 };
 
@@ -426,7 +425,7 @@ struct PrioAlgo {
       rounds += 1;
     } while (unmatched.reduce());
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "IndependentSet-prioAlgo", "rounds", rounds.reduce());
   }
 };
@@ -588,7 +587,7 @@ struct EdgeTiledPrioAlgo {
       rounds += 1;
     } while (unmatched.reduce());
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "IndependentSet-prioAlgo", "rounds", rounds.reduce());
   }
 };

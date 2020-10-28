@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_STATISTICS_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_STATISTICS_H_
+#define GALOIS_LIBGALOIS_GALOIS_STATISTICS_H_
 
 #include <limits>
 #include <string>
@@ -29,7 +29,6 @@
 #include "galois/gstl.h"
 
 namespace galois {
-namespace runtime {
 
 template <typename T>
 class RunningMin {
@@ -210,11 +209,11 @@ public:
 };
 
 template <typename T>
-using VecStat_with_MinMaxSum =
+using VecStatMinMaxSum =
     typename AggregStat<T>::with_mem::with_min::with_max::with_sum;
 
 template <typename T>
-struct VecStat : public VecStat_with_MinMaxSum<T> {
+struct VecStat : public VecStatMinMaxSum<T> {
   StatTotal::Type m_totalTy;
 
   explicit VecStat(const StatTotal::Type& type) : m_totalTy(type) {}
@@ -372,14 +371,14 @@ GALOIS_EXPORT StatManager* sysStatManager();
 
 template <typename T>
 void
-reportParam(
+ReportParam(
     const std::string& region, const std::string& category, const T& value) {
   internal::sysStatManager()->AddParam(region, category, gstl::makeStr(value));
 }
 
 template <typename T>
 void
-reportStat(
+ReportStat(
     const std::string& region, const std::string& category, const T& value,
     const StatTotal::Type& type,
     std::enable_if_t<std::is_integral_v<T>>* = nullptr) {
@@ -388,7 +387,7 @@ reportStat(
 
 template <typename T>
 void
-reportStat(
+ReportStat(
     const std::string& region, const std::string& category, const T& value,
     const StatTotal::Type& type,
     std::enable_if_t<std::is_floating_point_v<T>>* = nullptr) {
@@ -397,37 +396,37 @@ reportStat(
 
 template <typename T>
 void
-reportStat_Single(
+ReportStatSingle(
     const std::string& region, const std::string& category, const T& value) {
-  reportStat(region, category, value, StatTotal::SINGLE);
+  ReportStat(region, category, value, StatTotal::SINGLE);
 }
 
 template <typename T>
 void
-reportStat_Tmin(
+ReportStatMin(
     const std::string& region, const std::string& category, const T& value) {
-  reportStat(region, category, value, StatTotal::TMIN);
+  ReportStat(region, category, value, StatTotal::TMIN);
 }
 
 template <typename T>
 void
-reportStat_Tmax(
+ReportStatMax(
     const std::string& region, const std::string& category, const T& value) {
-  reportStat(region, category, value, StatTotal::TMAX);
+  ReportStat(region, category, value, StatTotal::TMAX);
 }
 
 template <typename T>
 void
-reportStat_Tsum(
+ReportStatSum(
     const std::string& region, const std::string& category, const T& value) {
-  reportStat(region, category, value, StatTotal::TSUM);
+  ReportStat(region, category, value, StatTotal::TSUM);
 }
 
 template <typename T>
 void
-reportStat_Tavg(
+ReportStatAvg(
     const std::string& region, const std::string& category, const T& value) {
-  reportStat(region, category, value, StatTotal::TAVG);
+  ReportStat(region, category, value, StatTotal::TAVG);
 }
 
 GALOIS_EXPORT void setStatFile(const std::string& f);
@@ -440,7 +439,6 @@ GALOIS_EXPORT void reportRUsage(const std::string& id);
 //! Reports Galois system memory stats for all threads
 GALOIS_EXPORT void reportPageAlloc(const char* category);
 
-}  // end namespace runtime
 }  // end namespace galois
 
 #endif

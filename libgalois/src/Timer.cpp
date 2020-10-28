@@ -19,7 +19,7 @@
 
 #include "galois/Timer.h"
 
-#include "galois/runtime/Statistics.h"
+#include "galois/Statistics.h"
 
 using namespace galois;
 
@@ -96,7 +96,7 @@ StatTimer::~StatTimer() {
 
   // only report non-zero stat
   if (TimeAccumulator::get()) {
-    galois::runtime::reportStat_Tmax(
+    galois::ReportStatMax(
         region_.c_str(), name_.c_str(), TimeAccumulator::get());
   }
 }

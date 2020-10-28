@@ -89,17 +89,6 @@ on_each(FunctionTy&& fn, Args&&... args) {
 }
 
 /**
- * Reports number of hugepages allocated by the Galois system so far. The value
- * is printing using the statistics infrastructure.
- *
- * @param label Label to associated with report at this program point
- */
-static inline void
-reportPageAlloc(const char* label) {
-  runtime::reportPageAlloc(label);
-}
-
-/**
  * Galois ordered set iterator for stable source algorithms.
  *
  * Operator should conform to <code>fn(item, UserContext<T>&)</code> where item

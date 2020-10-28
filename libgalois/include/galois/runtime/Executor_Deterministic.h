@@ -39,7 +39,6 @@
 #include "galois/runtime/Executor_ForEach.h"
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/Mem.h"
-#include "galois/runtime/Statistics.h"
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/Termination.h"
@@ -1501,8 +1500,8 @@ Executor<OptionsTy>::go() {
 
   if (OptionsTy::needStats) {
     if (substrate::ThreadPool::getTID() == 0) {
-      reportStat_Single(loopname, "RoundsExecuted", tld.rounds);
-      reportStat_Single(loopname, "OuterRoundsExecuted", tld.outerRounds);
+      ReportStatSingle(loopname, "RoundsExecuted", tld.rounds);
+      ReportStatSingle(loopname, "OuterRoundsExecuted", tld.outerRounds);
     }
   }
 }

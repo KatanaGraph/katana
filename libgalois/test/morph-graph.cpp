@@ -111,7 +111,7 @@ main(int argc, char** argv) {
             << " threads.\n";
 
   if (argc >= 5) {
-    galois::runtime::setStatFile(argv[4]);
+    galois::setStatFile(argv[4]);
   }
 
   if ("out" == graphtype) {
@@ -128,8 +128,8 @@ main(int argc, char** argv) {
     run(symG, symT, "symmetric graph");
   }
 
-  galois::runtime::reportParam("Load MorphGraph", "Threads", numThreads);
-  galois::runtime::reportParam("Load MorphGraph", "File", filename);
-  galois::runtime::reportParam("Load MorphGraph", "Graph Type", graphtype);
+  galois::ReportParam("Load MorphGraph", "Threads", numThreads);
+  galois::ReportParam("Load MorphGraph", "File", filename);
+  galois::ReportParam("Load MorphGraph", "Graph Type", graphtype);
   return 0;
 }

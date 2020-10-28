@@ -160,7 +160,7 @@ papiStop(V1& eventSets, V2& papiResults, V3& eventNames, const char* region) {
         eventNames.size() == papiResults.getLocal()->size() &&
         "Both vectors should be of equal length");
     for (size_t i = 0; i < eventNames.size(); ++i) {
-      galois::runtime::reportStat_Tsum(
+      galois::ReportStatSum(
           region, eventNames[i], (*papiResults.getLocal())[i]);
     }
 

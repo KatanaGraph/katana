@@ -559,8 +559,8 @@ CreateKPartitions(MetisGraph* metis_graph) {
     current_level_indices = next_level_indices;
     next_level_indices.clear();
   }
-  galois::runtime::reportStat_Single("BiPart", "Edge-Cut", ComputingCut(graph));
-  galois::runtime::reportStat_Single(
+  galois::ReportStatSingle("BiPart", "Edge-Cut", ComputingCut(graph));
+  galois::ReportStatSingle(
       "BiPart", "Partitions", static_cast<uint32_t>(num_partitions));
 }
 

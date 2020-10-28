@@ -160,10 +160,9 @@ deltaStepAlgo(
 
   if (TRACK_WORK) {
     //! [report self-defined stats]
-    galois::runtime::reportStat_Single("SSSP", "BadWork", BadWork.reduce());
+    galois::ReportStatSingle("SSSP", "BadWork", BadWork.reduce());
     //! [report self-defined stats]
-    galois::runtime::reportStat_Single(
-        "SSSP", "WLEmptyWork", WLEmptyWork.reduce());
+    galois::ReportStatSingle("SSSP", "WLEmptyWork", WLEmptyWork.reduce());
   }
 }
 
@@ -210,7 +209,7 @@ serDeltaAlgo(
   if (!wl.allEmpty()) {
     std::abort();
   }
-  galois::runtime::reportStat_Single("SSSP-Serial-Delta", "Iterations", iter);
+  galois::ReportStatSingle("SSSP-Serial-Delta", "Iterations", iter);
 }
 
 template <typename T, typename P, typename R>
@@ -249,7 +248,7 @@ dijkstraAlgo(
     }
   }
 
-  galois::runtime::reportStat_Single("SSSP-Dijkstra", "Iterations", iter);
+  galois::ReportStatSingle("SSSP-Dijkstra", "Iterations", iter);
 }
 
 void
@@ -294,7 +293,7 @@ topoAlgo(Graph* graph, const GNode& source) {
 
   } while (changed.reduce());
 
-  galois::runtime::reportStat_Single("SSSP-topo", "rounds", rounds);
+  galois::ReportStatSingle("SSSP-topo", "rounds", rounds);
 }
 
 void
@@ -340,7 +339,7 @@ topoTileAlgo(Graph* graph, const GNode& source) {
 
   } while (changed.reduce());
 
-  galois::runtime::reportStat_Single("SSSP-topo", "rounds", rounds);
+  galois::ReportStatSingle("SSSP-topo", "rounds", rounds);
 }
 
 int

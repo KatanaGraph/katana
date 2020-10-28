@@ -72,7 +72,7 @@ LonestarStart(
 
   numThreads = galois::setActiveThreads(numThreads);
 
-  galois::runtime::setStatFile(statFile);
+  galois::setStatFile(statFile);
 
   LonestarPrintVersion(llvm::outs());
   llvm::outs() << "Copyright (C) " << galois::getCopyrightYear()
@@ -97,15 +97,15 @@ LonestarStart(
     }
   }
 
-  galois::runtime::reportParam("(NULL)", "CommandLine", cmdout.str());
-  galois::runtime::reportParam("(NULL)", "Threads", numThreads);
-  galois::runtime::reportParam("(NULL)", "Hosts", 1);
+  galois::ReportParam("(NULL)", "CommandLine", cmdout.str());
+  galois::ReportParam("(NULL)", "Threads", numThreads);
+  galois::ReportParam("(NULL)", "Hosts", 1);
   if (input) {
-    galois::runtime::reportParam("(NULL)", "Input", input->getValue());
+    galois::ReportParam("(NULL)", "Input", input->getValue());
   }
 
   char name[256];
   gethostname(name, 256);
-  galois::runtime::reportParam("(NULL)", "Hostname", name);
+  galois::ReportParam("(NULL)", "Hostname", name);
   return shared_mem_sys;
 }

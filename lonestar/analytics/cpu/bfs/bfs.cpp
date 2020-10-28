@@ -220,9 +220,8 @@ asyncAlgo(Graph* graph, GNode source, const P& pushWrap, const R& edgeRange) {
       galois::disable_conflict_detection());
 
   if (TRACK_WORK) {
-    galois::runtime::reportStat_Single("BFS", "BadWork", BadWork.reduce());
-    galois::runtime::reportStat_Single(
-        "BFS", "EmptyWork", WLEmptyWork.reduce());
+    galois::ReportStatSingle("BFS", "BadWork", BadWork.reduce());
+    galois::ReportStatSingle("BFS", "EmptyWork", WLEmptyWork.reduce());
   }
 }
 

@@ -238,7 +238,7 @@ computePRTopological(Graph* graph) {
 
   }  ///< End while(true).
 
-  galois::runtime::reportStat_Single("PageRank", "Rounds", iteration);
+  galois::ReportStatSingle("PageRank", "Rounds", iteration);
   if (iteration >= maxIterations) {
     std::cerr << "ERROR: failed to converge in " << iteration
               << " iterations\n";

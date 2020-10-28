@@ -27,6 +27,7 @@
 
 #include "galois/Mem.h"
 #include "galois/Range.h"
+#include "galois/ThreadTimer.h"
 #include "galois/Threads.h"
 #include "galois/Timer.h"
 #include "galois/Traits.h"
@@ -35,8 +36,6 @@
 #include "galois/runtime/Context.h"
 #include "galois/runtime/LoopStatistics.h"
 #include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/runtime/Statistics.h"
-#include "galois/runtime/ThreadTimer.h"
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/Termination.h"

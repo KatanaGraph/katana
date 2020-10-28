@@ -238,8 +238,7 @@ DoLevelBC() {
   galois::gInfo(
       "Worklist chunk size of ", LEVEL_CHUNK_SIZE,
       ": best size may depend on input.");
-  galois::runtime::reportStat_Single(
-      REGION_NAME, "ChunkSize", LEVEL_CHUNK_SIZE);
+  galois::ReportStatSingle(REGION_NAME, "ChunkSize", LEVEL_CHUNK_SIZE);
   galois::reportPageAlloc("MemAllocPre");
 
   // LevelGraph construction

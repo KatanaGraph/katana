@@ -1,14 +1,12 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_THREADTIMER_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_THREADTIMER_H_
-
-#include <ctime>
+#ifndef GALOIS_LIBGALOIS_GALOIS_THREADTIMER_H_
+#define GALOIS_LIBGALOIS_GALOIS_THREADTIMER_H_
 
 #include "galois/config.h"
 #include "galois/substrate/PerThreadStorage.h"
 
-namespace galois::runtime {
+namespace galois {
 
-class ThreadTimer {
+class GALOIS_EXPORT ThreadTimer {
   timespec start_;
   timespec stop_;
   uint64_t nsec_{0};
@@ -16,13 +14,9 @@ class ThreadTimer {
 public:
   ThreadTimer() = default;
 
-  void start() { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_); }
+  void start();
 
-  void stop() {
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stop_);
-    nsec_ += (stop_.tv_nsec - start_.tv_nsec);
-    nsec_ += ((stop_.tv_sec - start_.tv_sec) * 1000000000);
-  }
+  void stop();
 
   uint64_t get_nsec() const { return nsec_; }
 
@@ -31,7 +25,7 @@ public:
   uint64_t get_msec() const { return (nsec_ / 1000000); }
 };
 
-class ThreadTimers {
+class GALOIS_EXPORT ThreadTimers {
 protected:
   substrate::PerThreadStorage<ThreadTimer> timers_;
 
@@ -78,6 +72,6 @@ public:
   void stop() const {}
 };
 
-}  // end namespace galois::runtime
+}  // end namespace galois
 
 #endif

@@ -85,7 +85,7 @@ main(int argc, char* argv[]) {
         "Test received too many command line arguments");
   }
 
-  galois::runtime::reportParam("NULL", "Threads", numThreads);
+  galois::ReportParam("NULL", "Threads", numThreads);
 
   size_t vecSz = 1024 * 1024;
 

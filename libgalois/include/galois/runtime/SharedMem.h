@@ -22,8 +22,8 @@
 
 #include <string>
 
+#include "galois/Statistics.h"
 #include "galois/config.h"
-#include "galois/runtime/Statistics.h"
 #include "galois/substrate/PagePool.h"
 #include "galois/substrate/SharedMem.h"
 
@@ -37,12 +37,12 @@ class SharedMem : public galois::substrate::SharedMem {
 public:
   explicit SharedMem() : m_pa(), m_sm() {
     substrate::internal::setPagePoolState(&m_pa);
-    internal::setSysStatManager(&m_sm);
+    galois::internal::setSysStatManager(&m_sm);
   }
 
   ~SharedMem() {
     m_sm.Print();
-    internal::setSysStatManager(nullptr);
+    galois::internal::setSysStatManager(nullptr);
     substrate::internal::setPagePoolState(nullptr);
   }
 

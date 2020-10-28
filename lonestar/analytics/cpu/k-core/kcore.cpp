@@ -244,7 +244,7 @@ main(int argc, char** argv) {
       "Worklist chunk size of ", CHUNK_SIZE,
       ": best size may depend"
       " on input.");
-  galois::runtime::reportStat_Single(REGION_NAME, "ChunkSize", CHUNK_SIZE);
+  galois::ReportStatSingle(REGION_NAME, "ChunkSize", CHUNK_SIZE);
   galois::reportPageAlloc("MemAllocPre");
 
   //! Read graph from disk.

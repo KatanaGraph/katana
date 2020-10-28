@@ -20,8 +20,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_LOOPSTATISTICS_H_
 #define GALOIS_LIBGALOIS_GALOIS_RUNTIME_LOOPSTATISTICS_H_
 
+#include "galois/Statistics.h"
 #include "galois/config.h"
-#include "galois/runtime/Statistics.h"
 
 namespace galois {
 namespace runtime {
@@ -40,17 +40,17 @@ public:
       : m_iterations(0), m_pushes(0), m_conflicts(0), loopname(ln) {}
 
   ~LoopStatistics() {
-    reportStat_Tsum(loopname, "Iterations", m_iterations);
-    reportStat_Tsum(loopname, "Commits", (m_iterations - m_conflicts));
-    reportStat_Tsum(loopname, "Pushes", m_pushes);
-    reportStat_Tsum(loopname, "Conflicts", m_conflicts);
+    ReportStatSum(loopname, "Iterations", m_iterations);
+    ReportStatSum(loopname, "Commits", (m_iterations - m_conflicts));
+    ReportStatSum(loopname, "Pushes", m_pushes);
+    ReportStatSum(loopname, "Conflicts", m_conflicts);
   }
 
-  size_t iterations(void) const { return m_iterations; }
-  size_t pushes(void) const { return m_pushes; }
-  size_t conflicts(void) const { return m_conflicts; }
+  size_t iterations() const { return m_iterations; }
+  size_t pushes() const { return m_pushes; }
+  size_t conflicts() const { return m_conflicts; }
 
-  inline void inc_pushes(size_t v = 1) { m_pushes += v; }
+  inline void inc_pushes(size_t v) { m_pushes += v; }
 
   inline void inc_iterations() { ++m_iterations; }
 
@@ -62,12 +62,12 @@ class LoopStatistics<false> {
 public:
   explicit LoopStatistics(const char*) {}
 
-  size_t iterations(void) const { return 0; }
-  size_t pushes(void) const { return 0; }
-  size_t conflicts(void) const { return 0; }
+  size_t iterations() const { return 0; }
+  size_t pushes() const { return 0; }
+  size_t conflicts() const { return 0; }
 
   inline void inc_iterations() const {}
-  inline void inc_pushes(size_t = 0) const {}
+  inline void inc_pushes(size_t) const {}
   inline void inc_conflicts() const {}
 };
 

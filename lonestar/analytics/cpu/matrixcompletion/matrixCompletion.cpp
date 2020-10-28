@@ -734,7 +734,7 @@ public:
 
     executeTimer.stop();
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "sgdItemsAlgo", "EdgesVisited", edgesVisited.reduce());
   }
 };
@@ -836,7 +836,7 @@ public:
 
     executeTimer.stop();
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "sgdEdgeItem", "EdgesVisited", edgesVisited.reduce());
   }
 };
@@ -911,7 +911,7 @@ public:
 
     executeTimer.stop();
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "sgdBlockEdgeAlgo", "EdgesVisited", edgesVisited.reduce());
   }
 };

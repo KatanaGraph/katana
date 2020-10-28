@@ -262,7 +262,7 @@ struct ParallelAlgo {
       limit *= 2;
     }
 
-    galois::runtime::reportStat_Single("Boruvka", "rounds", rounds);
+    galois::ReportStatSingle("Boruvka", "rounds", rounds);
   }
 
   void processExp() { GALOIS_DIE("not supported"); }

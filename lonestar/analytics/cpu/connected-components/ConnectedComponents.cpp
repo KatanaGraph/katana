@@ -352,9 +352,8 @@ struct SynchronousAlgo {
         },
         galois::steal(), galois::loopname("Compress"));
 
-    galois::runtime::reportStat_Single("CC-Sync", "rounds", rounds);
-    galois::runtime::reportStat_Single(
-        "CC-Sync", "empty_merges", empty_merges.reduce());
+    galois::ReportStatSingle("CC-Sync", "rounds", rounds);
+    galois::ReportStatSingle("CC-Sync", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -415,8 +414,7 @@ struct AsyncAlgo {
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
-    galois::runtime::reportStat_Single(
-        "CC-Async", "empty_merges", empty_merges.reduce());
+    galois::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -485,8 +483,7 @@ struct EdgeAsyncAlgo {
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
-    galois::runtime::reportStat_Single(
-        "CC-Async", "empty_merges", empty_merges.reduce());
+    galois::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -683,7 +680,7 @@ struct EdgeTiledAsyncAlgo {
         },
         galois::steal(), galois::loopname("CC-Async-Compress"));
 
-    galois::runtime::reportStat_Single(
+    galois::ReportStatSingle(
         "CC-edgeTiledAsync", "empty_merges", empty_merges.reduce());
   }
 };

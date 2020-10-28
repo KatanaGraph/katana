@@ -112,10 +112,27 @@ def check_results_string_column(
                 print("ERROR: output longer than input")
                 return (0, errors, mrows)
 
+            if len(split_line1) != len(split_line2):
+                print("NOT MATCHED \n")
+                print(line1)
+                print(line2)
+                errors = errors + 1
+
+            if len(split_line1) == 2:
+                exact_cols = [0]
+                numeric_col = 1
+            elif len(split_line1) == 3:
+                exact_cols = [0, 1]
+                numeric_col = 2
+            else:
+                print("FIELD COUNT ISSUE:", split_line1)
+            
+
             # check to make sure row matches exactly between the files
-            if split_line1[0] == split_line2[0]:
+            if all([ split_line1[i] == split_line2[i] for i in exact_cols ]):
                 # absolute value of difference in fields
-                field_difference = abs(float(split_line1[1]) - float(split_line2[1]))
+                field_difference = abs(float(split_line1[numeric_col]) -
+                                       float(split_line2[numeric_col]))
                 global_error_squared += field_difference ** 2
                 num_nodes += 1
 

@@ -12,36 +12,53 @@ import sys
 import logging
 
 def compare(resultfile, truthfile):
+  correct = True
   try:
     with open(resultfile) as result:
-      result_lines = [ line.strip() for line in result ]
+      result_dicts = [ json.loads(line.strip()) for line in result ]
     with open(truthfile) as truth:
-      truth_lines = [ line.strip() for line in truth ]
-    if len(result_lines) != len(truth_lines):
-      logging.error("length mismatch: result=%s truth=%s", len(result_lines), len(truth_lines))
-      return False
-    for r,t in zip(result_lines, truth_lines):
-      jr = json.loads(r)
-      jt = json.loads(t)
-      if jr != jt:
-        logging.error("mismatch: %s VS %s", jr, jt)
-        return False
-    return True
+      truth_dicts = [ json.loads(line.strip()) for line in truth ]
+    if len(result_dicts) != len(truth_dicts):
+      logging.error("length mismatch: result=%s truth=%s", len(result_dicts), len(truth_dicts))
+      correct = False
+    for r,t in zip(result_dicts, truth_dicts):
+      if r != t:
+        logging.error("first mismatch: %s VS %s", r, t)
+        correct = False
+        break
+    if not correct:
+      left = [ dict(sorted(a.items())) for a in result_dicts if a not in truth_dicts ]
+      logging.error("only in results: %s items:\n%s", len(left), '\n'.join([ str(x) for x in left ]))
+      right = [ dict(sorted(b.items())) for b in truth_dicts if b not in result_dicts ]
+      logging.error("only in truth: %s items:\n%s", len(right), '\n'.join([ str(x) for x in right ]))
   except FileNotFoundError:
     logging.error("a file is missing!")
-    return False
+    correct = False
   except Exception as e:
     logging.error("exception: %s", str(e))
-    return False
+    correct = False
+  finally:
+    return correct
 
 def main(querylist, resultprefix, truthdir, delete):
   successes = 0
   failures = 0
   with open(querylist) as queries_file:
-    for query_name in queries_file:
-      query_name = query_name.strip()
-      query_filename = resultprefix + "_" + query_name + ".json"
-      truth_filename = truthdir + "/" + query_name + ".truth"
+    for line in queries_file:
+      if line[0].startswith('#'):
+        continue
+      query_args = line.strip().split()
+      query_name = query_args[0]
+      if len(query_args) == 1:
+        query_filename = resultprefix + "_" + query_name + ".json"
+        truth_filename = truthdir + "/" + query_name + ".truth"
+      elif len(query_args) == 2:
+        param_name = query_args[1]
+        query_filename = resultprefix + "_" + query_name + "_" + param_name + ".json"
+        truth_filename = truthdir + "/" + query_name + "_" + param_name + ".truth"
+      else:
+        print("query args unclear:", query_args)
+        return 1
       ret = compare(query_filename, truth_filename)
       if ret:
         successes += 1
@@ -49,7 +66,7 @@ def main(querylist, resultprefix, truthdir, delete):
           os.remove(query_filename)
       else:
         failures += 1
-        logging.error('mismatch at query %s', query_name)
+        logging.error('mismatch with query args %s', str(query_args))
   if failures > 0:
     print("\nFAILED (", failures, "/", (successes+failures), ")\n")
     return 1

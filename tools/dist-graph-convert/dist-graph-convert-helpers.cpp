@@ -296,13 +296,9 @@ sendAndReceiveEdgeChunkCounts(std::vector<uint64_t>& chunkCounts) {
   for (unsigned h = 0; h < totalNumHosts; h++) {
     if (h == hostID)
       continue;
-    galois::runtime::RecvResult rBuffer;
+    galois::runtime::RecvResult rBuffer = net.Recv();
 
-    do {
-      rBuffer = net.Recv();
-    } while (!rBuffer);
-
-    galois::runtime::gDeserialize(rBuffer->second, recvChunkCounts);
+    galois::runtime::gDeserialize(rBuffer.second, recvChunkCounts);
 
     for (unsigned i = 0; i < chunkCounts.size(); i++) {
       chunkCounts[i] += recvChunkCounts[i];
@@ -436,14 +432,11 @@ receiveEdgeCounts() {
   for (unsigned h = 0; h < totalNumHosts; h++) {
     if (h == hostID)
       continue;
-    galois::runtime::RecvResult rBuffer;
 
     uint64_t recvCount;
 
-    do {
-      rBuffer = net.Recv();
-    } while (!rBuffer);
-    galois::runtime::gDeserialize(rBuffer->second, recvCount);
+    galois::runtime::RecvResult rBuffer = net.Recv();
+    galois::runtime::gDeserialize(rBuffer.second, recvCount);
 
     edgesToReceive += recvCount;
   }
@@ -472,7 +465,7 @@ receiveAssignedEdges(
         std::vector<uint32_t> recvDataVector;
 
         while (edgesToReceive) {
-          auto rBuffer = net.Recv();
+          auto rBuffer = net.TryRecv();
 
           // the buffer will have edge data as well if localsrctodata is
           // nonempty (it will be nonempty if initialized to non-empty by the
@@ -545,14 +538,11 @@ getEdgesPerHost(uint64_t localAssignedEdges) {
       continue;
     }
 
-    galois::runtime::RecvResult rBuffer;
     uint64_t otherAssignedEdges;
-    do {
-      rBuffer = net.Recv();
-    } while (!rBuffer);
-    galois::runtime::gDeserialize(rBuffer->second, otherAssignedEdges);
+    galois::runtime::RecvResult rBuffer = net.Recv();
+    galois::runtime::gDeserialize(rBuffer.second, otherAssignedEdges);
 
-    edgesPerHost[rBuffer->first] = otherAssignedEdges;
+    edgesPerHost[rBuffer.first] = otherAssignedEdges;
   }
   net.EndCommunicationPhase();
 

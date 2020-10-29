@@ -344,8 +344,8 @@ topoTileAlgo(Graph* graph, const GNode& source) {
 
 int
 main(int argc, char** argv) {
-  LonestarStart(argc, argv, name, desc, url, &inputFile);
-  galois::SharedMemSys G;
+  std::unique_ptr<galois::SharedMemSys> G =
+      LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   galois::StatTimer totalTime("TimerTotal");
   totalTime.start();

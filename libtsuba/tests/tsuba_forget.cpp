@@ -85,5 +85,8 @@ main(int argc, char* argv[]) {
   if (failed > 0 && !force) {
     return 1;
   }
+  if (auto fini_good = tsuba::Fini(); !fini_good) {
+    GALOIS_LOG_FATAL("tsuba::Fini: {}", fini_good.error());
+  }
   return 0;
 }

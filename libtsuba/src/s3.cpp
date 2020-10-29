@@ -141,11 +141,6 @@ GetS3Client(
   std::string test_endpoint;
   // No official AWS environment analog so use GALOIS prefix
   galois::GetEnv("GALOIS_AWS_TEST_ENDPOINT", &test_endpoint);
-  if (test_endpoint.empty()) {
-    if (!endpoint.empty()) {
-      test_endpoint = endpoint;
-    }
-  }
   if (!test_endpoint.empty()) {
     cfg.endpointOverride = test_endpoint;
     cfg.scheme = Aws::Http::Scheme::HTTP;
@@ -154,6 +149,10 @@ GetS3Client(
     // "virtual-host-style" URLs LocalStack only supports the former but they
     // are deprecated for new buckets in s3
     use_virtual_addressing = false;
+  } else {
+    if (!endpoint.empty()) {
+      cfg.endpointOverride = endpoint;
+    }
   }
 
   return Aws::MakeShared<Aws::S3::S3Client>(

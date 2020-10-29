@@ -23,6 +23,7 @@
 #include "galois/Logging.h"
 #include "galois/Statistics.h"
 #include "galois/substrate/SharedMem.h"
+#include "tsuba/FileStorage.h"
 #include "tsuba/tsuba.h"
 
 namespace {
@@ -44,6 +45,7 @@ galois::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
         "failed to initialize name server client: {}", ns_res.error());
   }
   impl_->ns = std::move(ns_res.value());
+
   if (auto init_good = tsuba::Init(&comm_backend, impl_->ns.get());
       !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());

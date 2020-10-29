@@ -1,37 +1,45 @@
-if(GALOIS_FORCE_NON_STATIC)
-  add_library(tsuba)
-else()
-  add_library(tsuba STATIC)
-endif()
-set_target_properties(tsuba PROPERTIES EXPORT_NAME tsuba)
+# Link-time reconfiguration via tsuba::Preload and tsuba::RegisterFileStorage
+# is easiest to maintain if tsuba and its related libraries are always shared.
+#
+# Runtime customization of tsuba can be achieved in the standard ways, e.g.,
+# - LD_PRELOAD=<my-lib>
+#   where my-lib implements tsuba::Preload/tsuba::PreloadFini
+# - Symbolically link libtsuba-preload.so to my-lib
+# - Adjust LD_LIBRARY_PATH to include a directory, which has
+#   libtsuba-preload.so that points to my-lib
+add_library(tsuba-preload SHARED)
+add_library(tsuba SHARED)
+
+add_dependencies(lib tsuba tsuba-preload)
 
 set(sources
   src/Errors.cpp
   src/FaultTest.cpp
   src/file.cpp
   src/FileFrame.cpp
+  src/FileStorage.cpp
   src/FileView.cpp
   src/GlobalState.cpp
   src/HttpNameServerClient.cpp
+  src/LocalStorage.cpp
   src/MemoryNameServerClient.cpp
   src/RDG.cpp
   src/tsuba.cpp
 )
 
 target_sources(tsuba PRIVATE ${sources})
+target_sources(tsuba-preload PRIVATE src/Preload.cpp)
 
-target_include_directories(tsuba PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
+foreach(target tsuba tsuba-preload)
+  target_include_directories(${target} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_compile_definitions(${target} PRIVATE GALOIS_SHARED_LIB_BUILDING)
+endforeach()
 
-target_link_libraries(tsuba PUBLIC galois_support)
-
-if(BUILD_SHARED_LIBS)
-  target_compile_definitions(tsuba PRIVATE GALOIS_SHARED_LIB_BUILDING)
-else()
-  target_compile_definitions(tsuba PRIVATE GALOIS_STATIC_LIB)
-endif()
+target_link_libraries(tsuba-preload PUBLIC galois_support)
+target_link_libraries(tsuba PUBLIC tsuba-preload galois_support)
 
 find_package(Arrow CONFIG REQUIRED)
 if(${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)
@@ -52,80 +60,6 @@ else()
   target_link_libraries(tsuba PUBLIC Boost::boost)
 endif()
 
-if(NOT GALOIS_STORAGE_BACKEND)
-  message(FATAL_ERROR "Must provide a storage backend")
-endif()
-
-foreach(backend ${GALOIS_STORAGE_BACKEND})
-  string(TOLOWER "${backend}" lc_backend)
-  if("${lc_backend}" STREQUAL "local")
-    set(TSUBA_BACKEND_LOCAL ON)
-  elseif("${lc_backend}" STREQUAL "s3")
-    set(TSUBA_BACKEND_S3 ON)
-  elseif("${lc_backend}" STREQUAL "azure")
-    set(TSUBA_BACKEND_AZURE ON)
-  elseif("${lc_backend}" STREQUAL "gs")
-  # Our google cloud storage layer uses the S3 libraries
-    set(TSUBA_BACKEND_GS ON)
-  else()
-    message(FATAL_ERROR "Unknown value for GALOIS_STORAGE_BACKEND. Accepted values: local s3 azure")
-  endif()
-endforeach()
-
-if(TSUBA_BACKEND_S3 OR TSUBA_BACKEND_GS)
-  # Common file and S3 libraries
-  target_sources(tsuba PRIVATE src/s3.cpp)
-  # The conan generated package name is aws-sdk-cpp while the
-  # package name when built from source is AWSSDK.
-  find_package(aws-sdk-cpp QUIET)
-  if(aws-sdk-cpp_FOUND)
-    target_link_libraries(tsuba PRIVATE aws-sdk-cpp::aws-sdk-cpp)
-  else()
-    find_package(AWSSDK REQUIRED COMPONENTS transfer)
-    target_link_libraries(tsuba PRIVATE ${AWSSDK_LINK_LIBRARIES})
-  endif()
-endif()
-
-if(TSUBA_BACKEND_S3)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_S3_BACKEND)
-  target_sources(tsuba PRIVATE src/S3Storage.cpp)
-endif()
-
-if(TSUBA_BACKEND_GS)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_GS_BACKEND)
-  # Our google cloud storage layer uses the S3 libraries
-  target_sources(tsuba PRIVATE src/GSStorage.cpp src/gs.cpp)
-endif()
-
-if(TSUBA_BACKEND_AZURE)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_AZURE_BACKEND)
-  target_sources(tsuba PRIVATE src/AzureStorage.cpp src/azure.cpp)
-  # The Azure storage sdk isn't in conan or conda-forge so handle it ourselves
-  # and leave it statically linked
-  FetchContent_Declare(
-    AzureStorage
-    GIT_REPOSITORY https://github.com/Azure/azure-storage-cpplite.git
-    GIT_TAG 2aa4e3155777ccddcd4a8562456d50059f34492c
-    PATCH_COMMAND git reset --hard HEAD && git apply "${PROJECT_SOURCE_DIR}/external/azure-storage-cpplite/fix_build.patch"
-  )
-  FetchContent_GetProperties(AzureStorage)
-  if(NOT azurestorage_POPULATED)
-    FetchContent_Populate(AzureStorage)
-    add_subdirectory(${azurestorage_SOURCE_DIR} ${azurestorage_BINARY_DIR})
-  endif()
-  target_link_libraries(tsuba PUBLIC azure-storage-lite)
-endif()
-
-
-if(TSUBA_BACKEND_LOCAL)
-  target_compile_definitions(tsuba PRIVATE GALOIS_HAVE_LOCAL_BACKEND)
-  target_sources(tsuba PRIVATE src/LocalStorage.cpp)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
-  add_subdirectory(tests)
-endif()
-
 install(
   DIRECTORY include/
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
@@ -133,7 +67,7 @@ install(
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(TARGETS tsuba
+install(TARGETS tsuba tsuba-preload
   EXPORT GaloisTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"

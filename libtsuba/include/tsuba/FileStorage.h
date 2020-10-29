@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_FILESTORAGE_H_
-#define GALOIS_LIBTSUBA_FILESTORAGE_H_
+#ifndef GALOIS_LIBTSUBA_TSUBA_FILESTORAGE_H_
+#define GALOIS_LIBTSUBA_TSUBA_FILESTORAGE_H_
 
 #include <cstdint>
 #include <future>
@@ -7,12 +7,13 @@
 #include <unordered_set>
 
 #include "galois/Result.h"
+#include "galois/config.h"
 
 namespace tsuba {
 
 struct StatBuf;
 
-class FileStorage {
+class GALOIS_EXPORT FileStorage {
   std::string uri_scheme_;
 
 protected:
@@ -25,7 +26,7 @@ public:
   FileStorage& operator=(FileStorage&& no_move) = delete;
   virtual ~FileStorage() = default;
 
-  std::string_view uri_scheme() { return uri_scheme_; }
+  std::string_view uri_scheme() const { return uri_scheme_; }
   virtual galois::Result<void> Init() = 0;
   virtual galois::Result<void> Fini() = 0;
   virtual galois::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
@@ -40,7 +41,7 @@ public:
   /// Storage classes with higher priority will be tried by GlobalState earlier
   /// currently only used to enforce local fs default; GlobalState defaults
   /// to the LocalStorage when no protocol on the URI is provided
-  virtual uint32_t Priority() { return 0; }
+  virtual uint32_t Priority() const { return 0; }
 
   // get on future can potentially block (bulk synchronous parallel)
   virtual std::future<galois::Result<void>> PutAsync(
@@ -55,6 +56,11 @@ public:
       const std::string& directory,
       const std::unordered_set<std::string>& files) = 0;
 };
+
+/// RegisterFileStorage adds a file storage backend to the tsuba library. File
+/// storage backends must be registered before tsuba::Init. Backends need to be
+/// registered for each tsuba::Init call.
+GALOIS_EXPORT void RegisterFileStorage(FileStorage* fs);
 
 }  // namespace tsuba
 

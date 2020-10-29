@@ -8,15 +8,14 @@
 #include <string>
 #include <thread>
 
-#include "FileStorage.h"
 #include "galois/Result.h"
+#include "tsuba/FileStorage.h"
 
 namespace tsuba {
 
 /// Store byte arrays to the local file system; Provided as a convenience for
 /// testing only (un-optimized)
 class LocalStorage : public FileStorage {
-  friend class GlobalState;
   void CleanUri(std::string* uri);
   galois::Result<void> WriteFile(
       std::string, const uint8_t* data, uint64_t size);
@@ -30,7 +29,7 @@ public:
   galois::Result<void> Fini() override { return galois::ResultSuccess(); }
   galois::Result<void> Stat(const std::string& uri, StatBuf* size) override;
 
-  uint32_t Priority() override { return 1; }
+  uint32_t Priority() const override { return 1; }
 
   galois::Result<void> GetMultiSync(
       const std::string& uri, uint64_t start, uint64_t size,

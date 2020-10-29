@@ -4,34 +4,29 @@
 #include <memory>
 #include <vector>
 
-#include "FileStorage.h"
+#include "LocalStorage.h"
 #include "galois/CommBackend.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "tsuba/FileStorage.h"
 #include "tsuba/NameServerClient.h"
 
 namespace tsuba {
 
-class GlobalFileStorageAllocator {
-  std::function<std::unique_ptr<FileStorage>()> gen_fun_;
-
-public:
-  GlobalFileStorageAllocator(
-      std::function<std::unique_ptr<FileStorage>()> gen_fun)
-      : gen_fun_(std::move(gen_fun)) {}
-
-  std::unique_ptr<FileStorage> allocate() { return gen_fun_(); }
-};
-
 class GlobalState {
   static std::unique_ptr<GlobalState> ref_;
 
-  std::vector<std::unique_ptr<FileStorage>> file_stores_;
+  std::vector<FileStorage*> file_stores_;
   galois::CommBackend* comm_;
   tsuba::NameServerClient* name_server_client_;
 
+  tsuba::LocalStorage local_storage_;
+
   GlobalState(galois::CommBackend* comm, tsuba::NameServerClient* ns)
-      : comm_(comm), name_server_client_(ns){};
+      : comm_(comm), name_server_client_(ns) {
+    file_stores_.emplace_back(&local_storage_);
+  }
+
   FileStorage* GetDefaultFS() const;
 
 public:

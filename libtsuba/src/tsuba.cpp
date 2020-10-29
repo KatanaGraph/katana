@@ -5,6 +5,7 @@
 #include "galois/GetEnv.h"
 #include "tsuba/HttpNameServerClient.h"
 #include "tsuba/MemoryNameServerClient.h"
+#include "tsuba/Preload.h"
 
 static galois::NullCommBackend default_comm_backend;
 static tsuba::MemoryNameServerClient default_ns_client;
@@ -29,6 +30,7 @@ tsuba::GetNameServerClient() {
 
 galois::Result<void>
 tsuba::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
+  tsuba::Preload();
   return GlobalState::Init(comm, ns);
 }
 
@@ -39,5 +41,7 @@ tsuba::Init() {
 
 galois::Result<void>
 tsuba::Fini() {
-  return GlobalState::Fini();
+  auto r = GlobalState::Fini();
+  tsuba::PreloadFini();
+  return r;
 }

@@ -6,3 +6,4 @@ target_include_directories(lonestar PUBLIC
 )
 
 target_link_libraries(lonestar Galois::shmem LLVMSupport)
+add_dependencies(lonestar tsuba-fs)

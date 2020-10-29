@@ -27,7 +27,8 @@ GALOIS_EXPORT void FaultTestReport();
   do {                                                                         \
     ::tsuba::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                 \
   } while (0)
-void PtP(
+
+GALOIS_EXPORT void PtP(
     const char* file, int line,
     FaultSensitivity sensitivity = FaultSensitivity::Normal);
 

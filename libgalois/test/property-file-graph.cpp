@@ -3,9 +3,9 @@
 
 #include "TestPropertyGraph.h"
 #include "galois/Logging.h"
+#include "galois/SharedMemSys.h"
 #include "galois/Uri.h"
 #include "galois/graphs/PropertyFileGraph.h"
-#include "tsuba/tsuba.h"
 
 namespace fs = boost::filesystem;
 std::string command_line;
@@ -126,9 +126,8 @@ TestGarbageMetadata() {
 
 int
 main(int argc, char** argv) {
-  if (auto res = tsuba::Init(); !res) {
-    GALOIS_LOG_FATAL("libtsuba failed to init");
-  }
+  galois::SharedMemSys sys;
+
   std::ostringstream cmdout;
   for (int i = 0; i < argc; ++i) {
     cmdout << argv[i];
@@ -139,9 +138,6 @@ main(int argc, char** argv) {
 
   TestRoundTrip();
   TestGarbageMetadata();
-  if (auto res = tsuba::Fini(); !res) {
-    GALOIS_LOG_FATAL("libtsuba failed to fini");
-  }
 
   return 0;
 }

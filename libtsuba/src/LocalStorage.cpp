@@ -19,14 +19,6 @@
 
 namespace fs = boost::filesystem;
 
-namespace tsuba {
-
-GlobalFileStorageAllocator local_storage_allocator([]() {
-  return std::unique_ptr<FileStorage>(new LocalStorage());
-});
-
-}  // namespace tsuba
-
 void
 tsuba::LocalStorage::CleanUri(std::string* uri) {
   if (uri->find(uri_scheme()) != 0) {

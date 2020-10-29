@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_GETENV_H_
-#define GALOIS_LIBSUPPORT_GALOIS_GETENV_H_
+#ifndef GALOIS_LIBSUPPORT_GALOIS_ENV_H_
+#define GALOIS_LIBSUPPORT_GALOIS_ENV_H_
 
 #include <string>
 
@@ -33,6 +33,7 @@ GALOIS_EXPORT bool GetEnv(const std::string& var_name, std::string* ret);
 /// \return true if env not previously set or successfully overwritten
 GALOIS_EXPORT bool SetEnv(
     const std::string& var_name, const std::string& val, bool overwrite);
+GALOIS_EXPORT bool UnsetEnv(const std::string& var_name);
 
 }  // end namespace galois
 

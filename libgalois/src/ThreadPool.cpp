@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "galois/Logging.h"
 #include "galois/substrate/HWTopo.h"
 

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <mutex>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 
 namespace {
 

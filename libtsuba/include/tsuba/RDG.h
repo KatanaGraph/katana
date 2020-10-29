@@ -262,10 +262,10 @@ private:
 };
 
 struct GRHeader {
-  uint64_t version;
-  uint64_t edge_type_size;
-  uint64_t num_nodes;
-  uint64_t num_edges;
+  uint64_t version{0};
+  uint64_t edge_type_size{0};
+  uint64_t num_nodes{0};
+  uint64_t num_edges{0};
 };
 
 /// includes the header and the list of indexes

@@ -2,7 +2,7 @@
 
 #include "GlobalState.h"
 #include "galois/CommBackend.h"
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "tsuba/HttpNameServerClient.h"
 #include "tsuba/MemoryNameServerClient.h"
 #include "tsuba/Preload.h"

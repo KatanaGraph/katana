@@ -32,7 +32,7 @@
 #include <iostream>
 #include <mutex>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "galois/substrate/SimpleLock.h"
 #include "galois/substrate/ThreadPool.h"
 

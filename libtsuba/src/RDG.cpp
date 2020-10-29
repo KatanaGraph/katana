@@ -697,6 +697,9 @@ galois::Result<tsuba::RDGPrefix>
 BindOutIndex(const std::string& topology_path) {
   tsuba::GRHeader header;
   if (auto res = tsuba::FileGet(topology_path, &header); !res) {
+    GALOIS_LOG_DEBUG(
+        "file get failed: {}: sz: {}: {}", topology_path, sizeof(header),
+        res.error());
     return res.error();
   }
   tsuba::FileView fv;
@@ -704,6 +707,8 @@ BindOutIndex(const std::string& topology_path) {
           topology_path, sizeof(header) + (header.num_nodes * sizeof(uint64_t)),
           true);
       !res) {
+    GALOIS_LOG_DEBUG(
+        "fileview bind failed: {}: {}", topology_path, res.error());
     return res.error();
   }
   tsuba::RDGPrefix pfx;

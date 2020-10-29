@@ -7,7 +7,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "galois/JSON.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"

@@ -19,7 +19,7 @@
 
 #include <ctime>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "galois/gIO.h"
 #include "galois/runtime/Executor_ParaMeter.h"
 

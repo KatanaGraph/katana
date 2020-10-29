@@ -25,7 +25,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 #include "galois/Logging.h"
 #include "galois/runtime/Executor_OnEach.h"
 #include "galois/substrate/PerThreadStorage.h"

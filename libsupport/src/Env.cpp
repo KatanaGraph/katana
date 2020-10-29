@@ -1,4 +1,4 @@
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 
 #include <cstdlib>
 #include <stdexcept>
@@ -105,4 +105,10 @@ galois::SetEnv(
     return true;
   }
   return false;
+}
+
+bool
+galois::UnsetEnv(const std::string& var_name) {
+  int res = unsetenv(var_name.c_str());
+  return res == 0;
 }

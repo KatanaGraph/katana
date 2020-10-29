@@ -16,6 +16,6 @@ function(add_test_unit name)
     )
 endfunction()
 
-add_test_unit(getenv)
+add_test_unit(env)
 add_test_unit(logging)
 add_test_unit(uri)

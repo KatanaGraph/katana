@@ -1,4 +1,4 @@
-#include "galois/GetEnv.h"
+#include "galois/Env.h"
 
 #include "galois/Logging.h"
 

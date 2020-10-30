@@ -15,7 +15,7 @@ function(add_test_scale type app)
   list(APPEND threads "1")
 
   foreach (thr ${threads})
-    set(name run-${type}-${app}-${thr})
+    set(name run-${app}.input=${type}.threads=${thr})
     add_test(NAME ${name} COMMAND ${app} ${X_UNPARSED_ARGUMENTS} -t ${thr})
     if(NOT X_NOT_QUICK)
       # Allow parallel tests
@@ -41,14 +41,16 @@ function(add_test_gpu app input output baseoutputext)
   set(suffix "-${app}-${input}-gpu")
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
+  # TODO: add verification log support
+
   string(REPLACE "_" ";" app_list ${app})
   list(GET app_list 0 app_id)
 
-  # TODO: add verification log support
-  add_test(NAME run${suffix} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
+  set(name run-${app}-gpu.input=${input})
+  add_test(NAME ${name} COMMAND ${app}-gpu ${X_UNPARSED_ARGUMENTS})
 
   if(NOT X_NOT_QUICK)
-    set_tests_properties(run${suffix} PROPERTIES LABELS quick)
+    set_tests_properties(${name} PROPERTIES LABELS quick)
   endif()
 endfunction(add_test_gpu)
 
@@ -121,9 +123,9 @@ if(GALOIS_ENABLE_DIST)
     set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${X_INPUT})
 
     if (${X_STORE_PART})
-      set(suffix "-${app}-${X_INPUT}-${type}-${part}-${N}-${np}-store_part")
+      set(suffix "-${app}-store-part.input=${X_INPUT}.mode=${type}.policy=${part}.partitions=${N}.hosts=${np}")
     else()
-      set(suffix "-${app}-${X_INPUT}-${type}-${part}-${N}-${np}")
+      set(suffix "-${app}.input=${X_INPUT}.mode=${type}.policy=${part}.partitions=${N}.hosts=${np}")
     endif()
 
     set(output_location ${PROJECT_BINARY_DIR}/Testing/verify/run${suffix})

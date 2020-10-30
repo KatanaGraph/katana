@@ -32,7 +32,7 @@ def compare(resultfile, truthfile):
       right = [ dict(sorted(b.items())) for b in truth_dicts if b not in result_dicts ]
       logging.error("only in truth: %s items:\n%s", len(right), '\n'.join([ str(x) for x in right ]))
   except FileNotFoundError:
-    logging.error("a file is missing!")
+    logging.error("missing either %s or %s", resultfile, truthfile)
     correct = False
   except Exception as e:
     logging.error("exception: %s", str(e))

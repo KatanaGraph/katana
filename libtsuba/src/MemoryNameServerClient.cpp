@@ -27,18 +27,7 @@ MemoryNameServerClient::lookup(const std::string& key) {
 
 galois::Result<RDGMeta>
 MemoryNameServerClient::Get(const galois::Uri& rdg_name) {
-  // take the lock in lookup to avoid deadlock since Register will call Create
-  auto meta_res = lookup(rdg_name.Encode());
-  if (!meta_res && meta_res.error() == ErrorCode::NotFound) {
-    // The real NameServer is a service that outlives engine instances;
-    // emulate that by trying to register graphs that we don't know about.
-    GALOIS_LOG_DEBUG("attempting to auto-register rdg: {}", rdg_name.string());
-    if (auto res = Register(rdg_name.string()); !res) {
-      return res.error();
-    }
-    meta_res = lookup(rdg_name.Encode());
-  }
-  return meta_res;
+  return lookup(rdg_name.Encode());
 }
 
 galois::Result<void>

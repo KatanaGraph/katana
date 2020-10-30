@@ -150,7 +150,7 @@ ListDir(
   auto fut = tsuba::FileListAsync(dir.string(), listing, size);
   GALOIS_LOG_ASSERT(fut.valid());
   if (auto res = fut.get(); !res) {
-    GALOIS_LOG_DEBUG("Bad nested listing call {}", dir, res.error());
+    GALOIS_LOG_DEBUG("Bad nested listing call {} {}", dir, res.error());
   }
   if (opt_verbose_level > 0) {
     fmt::print("  All  files: {}\n", listing->size());

@@ -142,8 +142,7 @@ SyncCascadeKCore(Graph* graph) {
           //! Decrement degree of all neighbors.
           for (auto e : graph->edges(dead_node)) {
             auto dest = graph->GetEdgeDest(e);
-            auto& dest_current_degree =
-                graph->GetData<NodeCurrentDegree>(*dest);
+            auto& dest_current_degree = graph->GetData<NodeCurrentDegree>(dest);
             uint32_t old_degree = galois::atomicSub(dest_current_degree, 1u);
 
             if (old_degree == k_core_num) {

@@ -139,7 +139,7 @@ deltaStepAlgo(
 
         for (auto ii : edgeRange(item)) {
           auto dest = graph->GetEdgeDest(ii);
-          auto& ddist = graph->GetData<NodeDistCurrent>(*dest);
+          auto& ddist = graph->GetData<NodeDistCurrent>(dest);
           Dist ew = graph->GetEdgeData<EdgeWeight>(ii);
           const Dist new_dist = sdata + ew;
           Dist old_dist = galois::atomicMin(ddist, new_dist);
@@ -192,7 +192,7 @@ serDeltaAlgo(
 
       for (auto e : edgeRange(item)) {
         auto dest = graph->GetEdgeDest(e);
-        auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+        auto& ddata = graph->GetData<NodeDistCurrent>(dest);
 
         const auto new_dist = item.dist + graph->GetEdgeData<EdgeWeight>(e);
 
@@ -237,7 +237,7 @@ dijkstraAlgo(
 
     for (auto e : edgeRange(item)) {
       auto dest = graph->GetEdgeDest(e);
-      auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+      auto& ddata = graph->GetData<NodeDistCurrent>(dest);
 
       const auto new_dist = item.dist + graph->GetEdgeData<EdgeWeight>(e);
 
@@ -284,7 +284,7 @@ topoAlgo(Graph* graph, const GNode& source) {
               const uint32_t new_dist =
                   sdata + graph->GetEdgeData<EdgeWeight>(e);
               auto dest = graph->GetEdgeDest(e);
-              auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+              auto& ddata = graph->GetData<NodeDistCurrent>(dest);
               galois::atomicMin(ddata, new_dist);
             }
           }
@@ -330,7 +330,7 @@ topoTileAlgo(Graph* graph, const GNode& source) {
               const uint32_t new_dist =
                   sdata + graph->GetEdgeData<EdgeWeight>(e);
               auto dest = graph->GetEdgeDest(e);
-              auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+              auto& ddata = graph->GetData<NodeDistCurrent>(dest);
               galois::atomicMin(ddata, new_dist);
             }
           }

@@ -299,9 +299,9 @@ EdgeIteratingAlgo(const Graph& graph) {
       galois::iterate(graph),
       [&](GNode n) {
         for (auto edge : graph.edges(n)) {
-          GNode dest = *graph.GetEdgeDest(edge);
-          if (n < dest)
-            items.push(WorkItem(n, dest));
+          auto dest = graph.GetEdgeDest(edge);
+          if (n < *dest)
+            items.push(WorkItem(n, *dest));
         }
       },
       galois::loopname("Initialize"));

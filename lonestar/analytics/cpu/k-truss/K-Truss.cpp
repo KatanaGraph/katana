@@ -111,9 +111,10 @@ reportKTruss(const Graph& g) {
 
   for (auto n = g.begin(); n != g.end(); ++n) {
     for (auto e : g.edges(n)) {
-      auto dest = *g.GetEdgeDest(e);
-      if (*n < dest && (g.template GetEdgeData<EdgeFlag>(e) & 0x1) != removed) {
-        of << *n << " " << dest << " " << g.template GetEdgeData<EdgeFlag>(e)
+      auto dest = g.GetEdgeDest(e);
+      if (*n < *dest &&
+          (g.template GetEdgeData<EdgeFlag>(e) & 0x1) != removed) {
+        of << *n << " " << *dest << " " << g.template GetEdgeData<EdgeFlag>(e)
            << "\n";
       }
     }
@@ -236,9 +237,9 @@ struct BSPTrussJacobiAlgo {
         galois::iterate(*g),
         [&](GNode n) {
           for (auto e : g->edges(n)) {
-            auto dest = *g->GetEdgeDest(e);
-            if (dest > n) {
-              cur->push_back(std::make_pair(n, dest));
+            auto dest = g->GetEdgeDest(e);
+            if (*dest > n) {
+              cur->push_back(std::make_pair(n, *dest));
             }
           }
         },
@@ -315,9 +316,9 @@ struct BSPTrussAlgo {
         galois::iterate(*g),
         [&g, cur](GNode n) {
           for (auto e : g->edges(n)) {
-            auto dest = *g->GetEdgeDest(e);
-            if (dest > n) {
-              cur->push_back(std::make_pair(n, dest));
+            auto dest = g->GetEdgeDest(e);
+            if (*dest > n) {
+              cur->push_back(std::make_pair(n, *dest));
             }
           }
         },
@@ -364,11 +365,11 @@ struct BSPCoreAlgo {
         s.push_back(n);
       } else {
         for (auto e : g->edges(n)) {
-          auto dest = *g->GetEdgeDest(e);
+          auto dest = g->GetEdgeDest(e);
           g->GetEdgeData<EdgeFlag>(
-              galois::graphs::FindEdgeSortedByDest(*g, n, dest)) = removed;
+              galois::graphs::FindEdgeSortedByDest(*g, n, *dest)) = removed;
           g->GetEdgeData<EdgeFlag>(
-              galois::graphs::FindEdgeSortedByDest(*g, dest, n)) = removed;
+              galois::graphs::FindEdgeSortedByDest(*g, *dest, n)) = removed;
         }
       }
     }
@@ -474,8 +475,8 @@ run() {
 
   for (auto n : graph) {
     for (auto e : graph.edges(n)) {
-      auto dest = *graph.GetEdgeDest(e);
-      if (n < dest && (graph.GetEdgeData<EdgeFlag>(e) & 0x1) != removed) {
+      auto dest = graph.GetEdgeDest(e);
+      if (n < *dest && (graph.GetEdgeData<EdgeFlag>(e) & 0x1) != removed) {
         numEdges++;
       }
     }

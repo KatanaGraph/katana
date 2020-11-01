@@ -189,7 +189,7 @@ asyncAlgo(Graph* graph, GNode source, const P& pushWrap, const R& edgeRange) {
 
         for (auto ii : edgeRange(item)) {
           auto dest = graph->GetEdgeDest(ii);
-          auto& ddata = graph->GetData<NodeDistCurrent>(*dest);
+          auto& ddata = graph->GetData<NodeDistCurrent>(dest);
 
           while (true) {
             Dist old_dist = ddata;
@@ -259,7 +259,7 @@ syncAlgo(Graph* graph, GNode source, const P& pushWrap, const R& edgeRange) {
         [&](const T& item) {
           for (auto e : edgeRange(item)) {
             auto dest = graph->GetEdgeDest(e);
-            auto& dest_data = graph->GetData<NodeDistCurrent>(*dest);
+            auto& dest_data = graph->GetData<NodeDistCurrent>(dest);
 
             if (dest_data == BFS::DIST_INFINITY) {
               dest_data = next_level;

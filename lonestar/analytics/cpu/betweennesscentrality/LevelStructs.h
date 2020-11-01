@@ -108,7 +108,7 @@ LevelSSSP(LevelGraph* graph) {
           GALOIS_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
 
           for (auto e : graph->edges(n)) {
-            LevelGNode dest = *graph->GetEdgeDest(e);
+            auto dest = graph->GetEdgeDest(e);
 
             if (graph->GetData<NodeCurrentDist>(dest) == kInfinity) {
               uint32_t oldVal = __sync_val_compare_and_swap(
@@ -116,7 +116,7 @@ LevelSSSP(LevelGraph* graph) {
                   next_level);
               // only 1 thread should add to worklist
               if (oldVal == kInfinity) {
-                vector_of_worklists[next_level].emplace(dest);
+                vector_of_worklists[next_level].emplace(*dest);
               }
 
               galois::atomicAdd(
@@ -165,7 +165,7 @@ LevelBackwardBrandes(
             GALOIS_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
 
             for (auto e : graph->edges(n)) {
-              LevelGNode dest = *graph->GetEdgeDest(e);
+              auto dest = graph->GetEdgeDest(e);
 
               if (graph->GetData<NodeCurrentDist>(dest) == successor_Level) {
                 // grab dependency, add to self

@@ -58,8 +58,8 @@ algo(Graph* graph, const GNode& base) {
 
   // Collect all the neighbors of the base node into a hash set.
   for (const auto& e : graph->edges(base)) {
-    const GNode& dest = *graph->GetEdgeDest(e);
-    base_neighbors.emplace(dest);
+    auto dest = graph->GetEdgeDest(e);
+    base_neighbors.emplace(*dest);
   }
 
   // Compute the similarity for each node

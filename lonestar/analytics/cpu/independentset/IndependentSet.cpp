@@ -93,7 +93,7 @@ struct SerialAlgo {
       return false;
 
     for (auto ii : graph.edges(src)) {
-      GNode dest = *graph.GetEdgeDest(ii);
+      auto dest = graph.GetEdgeDest(ii);
       auto& dest_flag = graph.GetData<NodeFlag>(dest);
       if (dest_flag == MatchFlag::Matched)
         return false;
@@ -104,7 +104,7 @@ struct SerialAlgo {
   void match(Graph* graph, GNode src) {
     auto& src_flag = graph->GetData<NodeFlag>(src);
     for (auto ii : graph->edges(src)) {
-      GNode dest = *graph->GetEdgeDest(ii);
+      auto dest = graph->GetEdgeDest(ii);
       auto& dest_flag = graph->GetData<NodeFlag>(dest);
       dest_flag = MatchFlag::KOtherMatched;
     }
@@ -140,7 +140,7 @@ struct DefaultAlgo {
       return false;
 
     for (auto ii : graph.edges(src)) {
-      GNode dest = *graph.GetEdgeDest(ii);
+      auto dest = graph.GetEdgeDest(ii);
       auto& dest_flag = graph.template GetData<NodeFlag>(dest);
       if (dest_flag == MatchFlag::Matched)
         return false;
@@ -151,7 +151,7 @@ struct DefaultAlgo {
   void modify(Graph* graph, GNode src) {
     auto& src_flag = graph->template GetData<NodeFlag>(src);
     for (auto ii : graph->edges(src)) {
-      GNode dest = *graph->GetEdgeDest(ii);
+      auto dest = graph->GetEdgeDest(ii);
       auto& dest_flag = graph->template GetData<NodeFlag>(dest);
       dest_flag = MatchFlag::KOtherMatched;
     }
@@ -238,8 +238,8 @@ struct PullAlgo {
 
           MatchFlag flag = MatchFlag::Matched;
           for (auto edge : graph.edges(src)) {
-            GNode dest = *graph.GetEdgeDest(edge);
-            if (dest >= src) {
+            auto dest = graph.GetEdgeDest(edge);
+            if (*dest >= src) {
               continue;
             }
 
@@ -391,7 +391,7 @@ struct PrioAlgo {
               return;
 
             for (auto edge : graph->edges(src)) {
-              GNode dest = *graph->GetEdgeDest(edge);
+              auto dest = graph->GetEdgeDest(edge);
 
               auto& dest_flag = graph->GetData<NodeFlag>(dest);
 
@@ -404,9 +404,9 @@ struct PrioAlgo {
               if (src_flag > dest_flag)
                 continue;
               else if (src_flag == dest_flag) {
-                if (src > dest)
+                if (src > *dest)
                   continue;
-                else if (src == dest) {
+                else if (src == *dest) {
                   src_flag = uint8_t{0x00};  // other_matched
                   return;
                 } else {
@@ -516,7 +516,7 @@ struct EdgeTiledPrioAlgo {
             if ((src_flag & uint8_t{1})) {  // is undecided
 
               for (auto edge = tile.beg; edge != tile.end; ++edge) {
-                GNode dest = *graph->GetEdgeDest(edge);
+                auto dest = graph->GetEdgeDest(edge);
 
                 auto& dest_flag = graph->GetData<NodeFlag>(dest);
 
@@ -529,9 +529,9 @@ struct EdgeTiledPrioAlgo {
                 if (src_flag > dest_flag)
                   continue;
                 else if (src_flag == dest_flag) {
-                  if (src > dest)
+                  if (src > *dest)
                     continue;
-                  else if (src == dest) {
+                  else if (src == *dest) {
                     src_flag = uint8_t{0x00};  // other_matched
                     tile.flag = false;
                     return;
@@ -572,7 +572,7 @@ struct EdgeTiledPrioAlgo {
               if ((src_flag & uint8_t{0x02}) != 0) {  // temporary yes
                 src_flag = uint8_t{0xfe};  // 0x1111 1110, permanent yes
                 for (auto edge : graph->edges(src)) {
-                  GNode dest = *graph->GetEdgeDest(edge);
+                  auto dest = graph->GetEdgeDest(edge);
 
                   auto& dest_flag = graph->GetData<NodeFlag>(dest);
                   dest_flag =
@@ -604,10 +604,10 @@ struct is_bad {
     auto& src_flag = graph_.template GetData<typename Algo::NodeFlag>(n);
     if (src_flag == MatchFlag::Matched) {
       for (auto ii : graph_.edges(n)) {
-        GNode dest = *graph_.GetEdgeDest(ii);
+        auto dest = graph_.GetEdgeDest(ii);
         auto& dest_flag =
             graph_.template GetData<typename Algo::NodeFlag>(dest);
-        if (dest != n && dest_flag == MatchFlag::Matched) {
+        if (*dest != n && dest_flag == MatchFlag::Matched) {
           std::cerr << "double match\n";
           return true;
         }
@@ -615,7 +615,7 @@ struct is_bad {
     } else if (src_flag == MatchFlag::KUnMatched) {
       bool ok = false;
       for (auto ii : graph_.edges(n)) {
-        GNode dest = *graph_.GetEdgeDest(ii);
+        auto dest = graph_.GetEdgeDest(ii);
         auto& dest_flag =
             graph_.template GetData<typename Algo::NodeFlag>(dest);
         if (dest_flag != MatchFlag::KUnMatched) {

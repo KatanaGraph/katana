@@ -179,7 +179,7 @@ struct SerialAlgo {
     for (const GNode& src : *graph) {
       auto& sdata = graph->GetData<NodeComponent>(src);
       for (const auto& ii : graph->edges(src)) {
-        const auto& dest = graph->GetEdgeDest(ii);
+        auto dest = graph->GetEdgeDest(ii);
         auto& ddata = graph->GetData<NodeComponent>(dest);
         sdata->merge(ddata);
       }
@@ -230,7 +230,7 @@ struct LabelPropAlgo {
 
               for (auto e : graph->edges(src)) {
                 auto dest = graph->GetEdgeDest(e);
-                auto& ddata_current_comp = graph->GetData<NodeComponent>(*dest);
+                auto& ddata_current_comp = graph->GetData<NodeComponent>(dest);
                 ComponentType label_new = sdata_current_comp;
                 galois::atomicMin(ddata_current_comp, label_new);
               }
@@ -296,7 +296,7 @@ struct SynchronousAlgo {
 
     galois::do_all(galois::iterate(*graph), [&](const GNode& src) {
       for (auto ii : graph->edges(src)) {
-        const auto& dest = graph->GetEdgeDest(ii);
+        auto dest = graph->GetEdgeDest(ii);
         if (src >= *dest)
           continue;
         auto& ddata = graph->GetData<NodeComponent>(dest);
@@ -326,7 +326,7 @@ struct SynchronousAlgo {
             int count = edge.count + 1;
             std::advance(ii, count);
             for (; ii != ei; ++ii, ++count) {
-              const auto& dest = graph->GetEdgeDest(ii);
+              auto dest = graph->GetEdgeDest(ii);
               if (src >= *dest)
                 continue;
               auto& ddata = graph->GetData<NodeComponent>(dest);
@@ -394,7 +394,7 @@ struct AsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
 
           for (const auto& ii : graph->edges(src)) {
-            const auto& dest = graph->GetEdgeDest(ii);
+            auto dest = graph->GetEdgeDest(ii);
             auto& ddata = graph->GetData<NodeComponent>(dest);
 
             if (src >= *dest)
@@ -463,7 +463,7 @@ struct EdgeAsyncAlgo {
         galois::iterate(works),
         [&](Edge& e) {
           auto& sdata = graph->GetData<NodeComponent>(e.first);
-          const auto& dest = graph->GetEdgeDest(e.second);
+          auto dest = graph->GetEdgeDest(e.second);
           auto& ddata = graph->GetData<NodeComponent>(dest);
 
           if (e.first > *dest)
@@ -529,8 +529,8 @@ struct BlockedAsyncAlgo {
     int count = 1;
     for (Graph::edge_iterator ii = start, ei = graph->edge_end(src); ii != ei;
          ++ii, ++count) {
-      const auto& dest = graph->GetEdgeDest(ii);
-      auto& ddata = graph->GetData<NodeComponent>(*dest);
+      auto dest = graph->GetEdgeDest(ii);
+      auto& ddata = graph->GetData<NodeComponent>(dest);
 
       if (src >= *dest)
         continue;
@@ -659,7 +659,7 @@ struct EdgeTiledAsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
 
           for (auto ii = tile.beg; ii != tile.end; ++ii) {
-            const auto& dest = graph->GetEdgeDest(ii);
+            auto dest = graph->GetEdgeDest(ii);
             if (src >= *dest)
               continue;
 
@@ -699,7 +699,7 @@ approxLargestComponent(Graph* graph) {
   std::mt19937 rng(rd());
   std::uniform_int_distribution<uint32_t> dist(0, graph->size() - 1);
   for (uint32_t i = 0; i < COMPONENT_SAMPLES; i++) {
-    auto& ndata = graph->template GetData<NodeIndex>(dist(rng));
+    ComponentType ndata = graph->template GetData<NodeIndex>(dist(rng));
     comp_freq[ndata->component()]++;
   }
 
@@ -790,9 +790,9 @@ struct AfforestAlgo {
             Graph::edge_iterator ii = graph->edge_begin(src);
             Graph::edge_iterator ei = graph->edge_end(src);
             for (std::advance(ii, r); ii < ei; ii++) {
-              const auto& dest = *graph->GetEdgeDest(ii);
+              auto dest = graph->GetEdgeDest(ii);
               auto& sdata = graph->GetData<NodeComponent>(src);
-              auto& ddata = graph->GetData<NodeComponent>(dest);
+              ComponentType ddata = graph->GetData<NodeComponent>(dest);
               sdata->link(ddata);
               break;
             }
@@ -823,7 +823,7 @@ struct AfforestAlgo {
           Graph::edge_iterator ii = graph->edge_begin(src);
           Graph::edge_iterator ei = graph->edge_end(src);
           for (std::advance(ii, NEIGHBOR_SAMPLES.getValue()); ii < ei; ++ii) {
-            const GNode& dest = *graph->GetEdgeDest(ii);
+            auto dest = graph->GetEdgeDest(ii);
             auto& ddata = graph->GetData<NodeComponent>(dest);
             sdata->link(ddata);
           }
@@ -916,9 +916,9 @@ struct EdgeAfforestAlgo {
             Graph::edge_iterator ei = graph->edge_end(src);
             std::advance(ii, r);
             if (ii < ei) {
-              const auto& dst = graph->GetEdgeDest(ii);
+              auto dest = graph->GetEdgeDest(ii);
               auto& sdata = graph->GetData<NodeComponent>(src);
-              auto& ddata = graph->GetData<NodeComponent>(dst);
+              auto& ddata = graph->GetData<NodeComponent>(dest);
               sdata->hook_min(ddata);
             }
           },
@@ -952,10 +952,10 @@ struct EdgeAfforestAlgo {
 
           for (std::advance(beg, NEIGHBOR_SAMPLES.getValue()); beg < end;
                beg++) {
-            const auto& dest = *(graph->GetEdgeDest(beg));
+            auto dest = graph->GetEdgeDest(beg);
             auto& ddata = graph->GetData<NodeComponent>(dest);
-            if (src < dest || c == ddata->component()) {
-              works.push_back(std::make_pair(src, dest));
+            if (src < *dest || c == ddata->component()) {
+              works.push_back(std::make_pair(src, *dest));
             }
           }
         },
@@ -972,8 +972,8 @@ struct EdgeAfforestAlgo {
           if (victim) {
             auto src = victim - c0;  // TODO (bozhi) tricky!
             for (auto ii : graph->edges(src)) {
-              const auto& dest = *graph->GetEdgeDest(ii);
-              ctx.push_back(std::make_pair(dest, src));
+              auto dest = graph->GetEdgeDest(ii);
+              ctx.push_back(std::make_pair(*dest, src));
             }
           }
         },
@@ -1064,7 +1064,7 @@ struct EdgeTiledAfforestAlgo {
           auto ii = graph->edge_begin(src);
           const auto end = graph->edge_end(src);
           for (uint32_t r = 0; r < NEIGHBOR_SAMPLES && ii < end; ++r, ++ii) {
-            const auto& dest = *graph->GetEdgeDest(ii);
+            auto dest = graph->GetEdgeDest(ii);
             auto& sdata = graph->GetData<NodeComponent>(src);
             auto& ddata = graph->GetData<NodeComponent>(dest);
             sdata->link(ddata);
@@ -1119,7 +1119,7 @@ struct EdgeTiledAfforestAlgo {
           if (sdata->component() == c)
             return;
           for (auto ii = tile.beg; ii < tile.end; ++ii) {
-            const GNode& dest = *graph->GetEdgeDest(ii);
+            auto dest = graph->GetEdgeDest(ii);
             auto& ddata = graph->GetData<NodeComponent>(dest);
             sdata->link(ddata);
           }
@@ -1156,13 +1156,13 @@ verify(
   auto is_bad = [&graph](const GNode& n) {
     auto& me = graph->template GetData<NodeIndex>(n);
     for (auto ii : graph->edges(n)) {
-      const GNode& dest = *graph->GetEdgeDest(ii);
+      auto dest = graph->GetEdgeDest(ii);
       auto& data = graph->template GetData<NodeIndex>(dest);
       if (data->component() != me->component()) {
         std::cerr << std::dec << "not in same component: " << (unsigned int)n
                   << " (" << me->component() << ")"
-                  << " and " << (unsigned int)dest << " (" << data->component()
-                  << ")"
+                  << " and " << (unsigned int)(*dest) << " ("
+                  << data->component() << ")"
                   << "\n";
         return true;
       }
@@ -1184,12 +1184,12 @@ verify<LabelPropAlgo::Graph, LabelPropAlgo::NodeComponent>(
   auto is_bad = [&graph](const GNode& n) {
     auto& me = graph->template GetData<LabelPropAlgo::NodeComponent>(n);
     for (auto ii : graph->edges(n)) {
-      const GNode& dest = *graph->GetEdgeDest(ii);
+      auto dest = graph->GetEdgeDest(ii);
       auto& data = graph->template GetData<LabelPropAlgo::NodeComponent>(dest);
       if (data != me) {
         std::cerr << std::dec << "not in same component: " << (unsigned int)n
                   << " (" << me << ")"
-                  << " and " << (unsigned int)dest << " (" << data << ")"
+                  << " and " << (unsigned int)(*dest) << " (" << data << ")"
                   << "\n";
         return true;
       }

@@ -64,16 +64,16 @@ public:
       int src = *qq;
 
       for (auto edge : graph_.edges(src)) {
-        auto dest = *graph_.GetEdgeDest(edge);
+        auto dest = graph_.GetEdgeDest(edge);
 
-        if (!distance[dest]) {
-          source_queue.push_back(dest);
-          distance[dest] = distance[src] + 1;
+        if (!distance[*dest]) {
+          source_queue.push_back(*dest);
+          distance[*dest] = distance[src] + 1;
         }
 
-        if (distance[dest] == distance[src] + 1) {
-          sigma[dest] = sigma[dest] + sigma[src];
-          successor[src].push_back(dest);
+        if (distance[*dest] == distance[src] + 1) {
+          sigma[*dest] = sigma[*dest] + sigma[src];
+          successor[src].push_back(*dest);
         }
       }
     }

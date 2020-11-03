@@ -63,7 +63,7 @@ on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
   };
 
   timer.start();
-  substrate::getThreadPool().run(numT, runFun);
+  substrate::GetThreadPool().run(numT, runFun);
   timer.stop();
 }
 

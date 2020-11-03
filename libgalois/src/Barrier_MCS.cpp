@@ -26,83 +26,84 @@
 namespace {
 
 class MCSBarrier : public galois::substrate::Barrier {
-  struct treenode {
-    // vpid is galois::runtime::LL::getTID()
-    std::atomic<bool>* parentpointer;  // null for vpid == 0
-    std::atomic<bool>* childpointers[2];
-    bool havechild[4];
+  struct TreeNode {
+    std::atomic<bool>* parent_pointer;  // null for vpid == 0
+    std::atomic<bool>* child_pointers[2];
+    bool have_child[4];
 
-    std::atomic<bool> childnotready[4];
-    std::atomic<bool> parentsense;
+    std::atomic<bool> child_not_ready[4];
+    std::atomic<bool> parent_sense;
     bool sense;
-    treenode() {}
-    treenode(const treenode& rhs)
-        : parentpointer(rhs.parentpointer), sense(rhs.sense) {
-      childpointers[0] = rhs.childpointers[0];
-      childpointers[1] = rhs.childpointers[1];
+
+    TreeNode() = default;
+
+    TreeNode(const TreeNode& rhs)
+        : parent_pointer(rhs.parent_pointer), sense(rhs.sense) {
+      child_pointers[0] = rhs.child_pointers[0];
+      child_pointers[1] = rhs.child_pointers[1];
       for (int i = 0; i < 4; ++i) {
-        havechild[i] = rhs.havechild[i];
-        childnotready[i] = rhs.childnotready[i].load();
+        have_child[i] = rhs.have_child[i];
+        child_not_ready[i] = rhs.child_not_ready[i].load();
       }
-      parentsense = rhs.parentsense.load();
+      parent_sense = rhs.parent_sense.load();
     }
   };
 
-  std::vector<galois::substrate::CacheLineStorage<treenode>> nodes;
+  std::vector<galois::substrate::CacheLineStorage<TreeNode>> nodes_;
 
   void _reinit(unsigned P) {
-    nodes.resize(P);
+    nodes_.resize(P);
     for (unsigned i = 0; i < P; ++i) {
-      treenode& n = nodes.at(i).get();
+      TreeNode& n = nodes_.at(i).get();
       n.sense = true;
-      n.parentsense = false;
+      n.parent_sense = false;
       for (int j = 0; j < 4; ++j)
-        n.childnotready[j] = n.havechild[j] = ((4 * i + j + 1) < P);
-      n.parentpointer =
+        n.child_not_ready[j] = n.have_child[j] = ((4 * i + j + 1) < P);
+      n.parent_pointer =
           (i == 0) ? 0
-                   : &nodes.at((i - 1) / 4).get().childnotready[(i - 1) % 4];
-      n.childpointers[0] =
-          ((2 * i + 1) >= P) ? 0 : &nodes.at(2 * i + 1).get().parentsense;
-      n.childpointers[1] =
-          ((2 * i + 2) >= P) ? 0 : &nodes.at(2 * i + 2).get().parentsense;
+                   : &nodes_.at((i - 1) / 4).get().child_not_ready[(i - 1) % 4];
+      n.child_pointers[0] =
+          ((2 * i + 1) >= P) ? 0 : &nodes_.at(2 * i + 1).get().parent_sense;
+      n.child_pointers[1] =
+          ((2 * i + 2) >= P) ? 0 : &nodes_.at(2 * i + 2).get().parent_sense;
     }
   }
 
 public:
   MCSBarrier(unsigned v) { _reinit(v); }
 
-  virtual void reinit(unsigned val) { _reinit(val); }
+  void Reinit(unsigned val) override { _reinit(val); }
 
-  virtual void wait() {
-    treenode& n = nodes.at(galois::substrate::ThreadPool::getTID()).get();
-    while (n.childnotready[0] || n.childnotready[1] || n.childnotready[2] ||
-           n.childnotready[3]) {
+  void Wait() override {
+    TreeNode& n = nodes_.at(galois::substrate::ThreadPool::getTID()).get();
+    while (n.child_not_ready[0] || n.child_not_ready[1] ||
+           n.child_not_ready[2] || n.child_not_ready[3]) {
       galois::substrate::asmPause();
     }
     for (int i = 0; i < 4; ++i)
-      n.childnotready[i] = n.havechild[i];
-    if (n.parentpointer) {
+      n.child_not_ready[i] = n.have_child[i];
+    if (n.parent_pointer) {
       // FIXME: make sure the compiler doesn't do a RMW because of the as-if
       // rule
-      *n.parentpointer = false;
-      while (n.parentsense != n.sense) {
+      *n.parent_pointer = false;
+      while (n.parent_sense != n.sense) {
         galois::substrate::asmPause();
       }
     }
     // signal children in wakeup tree
-    if (n.childpointers[0])
-      *n.childpointers[0] = n.sense;
-    if (n.childpointers[1])
-      *n.childpointers[1] = n.sense;
+    if (n.child_pointers[0])
+      *n.child_pointers[0] = n.sense;
+    if (n.child_pointers[1])
+      *n.child_pointers[1] = n.sense;
     n.sense = !n.sense;
   }
 
-  virtual const char* name() const { return "MCSBarrier"; }
+  const char* name() const override { return "MCSBarrier"; }
 };
 
 }  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createMCSBarrier(unsigned activeThreads) {
-  return std::unique_ptr<Barrier>(new MCSBarrier(activeThreads));
+galois::substrate::CreateMCSBarrier(unsigned active_threads) {
+  return std::make_unique<MCSBarrier>(active_threads);
 }

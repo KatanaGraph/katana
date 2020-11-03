@@ -68,7 +68,7 @@ public:
   typedef T value_type;
 
   BulkSynchronous()
-      : barrier(substrate::getBarrier(runtime::activeThreads)),
+      : barrier(substrate::GetBarrier(runtime::activeThreads)),
         some(false),
         isEmpty(false) {}
 
@@ -101,14 +101,14 @@ public:
       if (r)
         return r;
 
-      barrier.wait();
+      barrier.Wait();
       if (substrate::ThreadPool::getTID() == 0) {
         if (!some.get())
           isEmpty = true;
         some.get() = false;
       }
       tld.round = (tld.round + 1) & 1;
-      barrier.wait();
+      barrier.Wait();
 
       r = wls[tld.round].pop();
       if (r) {

@@ -26,103 +26,105 @@
 namespace {
 
 class TopoBarrier : public galois::substrate::Barrier {
-  struct treenode {
-    // vpid is galois::runtime::LL::getTID()
-
+  struct TreeNode {
     // socket binary tree
-    treenode* parentpointer;  // null of vpid == 0
-    treenode* childpointers[2];
+    TreeNode* parent_pointer;  // null of vpid == 0
+    TreeNode* child_pointers[2];
 
     // waiting values:
-    unsigned havechild;
-    std::atomic<unsigned> childnotready;
+    unsigned have_child;
+    std::atomic<unsigned> child_not_ready;
 
     // signal values
-    std::atomic<unsigned> parentsense;
+    std::atomic<unsigned> parent_sense;
   };
 
-  galois::substrate::PerSocketStorage<treenode> nodes;
-  galois::substrate::PerThreadStorage<unsigned> sense;
+  galois::substrate::PerSocketStorage<TreeNode> nodes_;
+  galois::substrate::PerThreadStorage<unsigned> sense_;
 
   void _reinit(unsigned P) {
-    auto& tp = galois::substrate::getThreadPool();
+    auto& tp = galois::substrate::GetThreadPool();
     unsigned pkgs = tp.getCumulativeMaxSocket(P - 1) + 1;
     for (unsigned i = 0; i < pkgs; ++i) {
-      treenode& n = *nodes.getRemoteByPkg(i);
-      n.childnotready = 0;
-      n.havechild = 0;
+      TreeNode& n = *nodes_.getRemoteByPkg(i);
+      n.child_not_ready = 0;
+      n.have_child = 0;
       for (int j = 0; j < 4; ++j) {
         if ((4 * i + j + 1) < pkgs) {
-          ++n.childnotready;
-          ++n.havechild;
+          ++n.child_not_ready;
+          ++n.have_child;
         }
       }
       for (unsigned j = 0; j < P; ++j) {
         if (tp.getSocket(j) == i && !tp.isLeader(j)) {
-          ++n.childnotready;
-          ++n.havechild;
+          ++n.child_not_ready;
+          ++n.have_child;
         }
       }
-      n.parentpointer = (i == 0) ? 0 : nodes.getRemoteByPkg((i - 1) / 4);
-      n.childpointers[0] =
-          ((2 * i + 1) >= pkgs) ? 0 : nodes.getRemoteByPkg(2 * i + 1);
-      n.childpointers[1] =
-          ((2 * i + 2) >= pkgs) ? 0 : nodes.getRemoteByPkg(2 * i + 2);
-      n.parentsense = 0;
+      n.parent_pointer = (i == 0) ? 0 : nodes_.getRemoteByPkg((i - 1) / 4);
+      n.child_pointers[0] =
+          ((2 * i + 1) >= pkgs) ? 0 : nodes_.getRemoteByPkg(2 * i + 1);
+      n.child_pointers[1] =
+          ((2 * i + 2) >= pkgs) ? 0 : nodes_.getRemoteByPkg(2 * i + 2);
+      n.parent_sense = 0;
     }
-    for (unsigned i = 0; i < P; ++i)
-      *sense.getRemote(i) = 1;
+    for (unsigned i = 0; i < P; ++i) {
+      *sense_.getRemote(i) = 1;
+    }
   }
 
 public:
   TopoBarrier(unsigned v) { _reinit(v); }
 
   // not safe if any thread is in wait
-  virtual void reinit(unsigned val) { _reinit(val); }
+  void Reinit(unsigned val) override { _reinit(val); }
 
-  virtual void wait() {
+  void Wait() override {
     unsigned id = galois::substrate::ThreadPool::getTID();
-    treenode& n = *nodes.getLocal();
-    unsigned& s = *sense.getLocal();
+    TreeNode& n = *nodes_.getLocal();
+    unsigned& s = *sense_.getLocal();
     bool leader = galois::substrate::ThreadPool::isLeader();
     // completion tree
     if (leader) {
-      while (n.childnotready) {
+      while (n.child_not_ready) {
         galois::substrate::asmPause();
       }
-      n.childnotready = n.havechild;
-      if (n.parentpointer) {
-        --n.parentpointer->childnotready;
+      n.child_not_ready = n.have_child;
+      if (n.parent_pointer) {
+        --n.parent_pointer->child_not_ready;
       }
     } else {
-      --n.childnotready;
+      --n.child_not_ready;
     }
 
     // wait for signal
     if (id != 0) {
-      while (n.parentsense != s) {
+      while (n.parent_sense != s) {
         galois::substrate::asmPause();
       }
     }
 
     // signal children in wakeup tree
     if (leader) {
-      if (n.childpointers[0])
-        n.childpointers[0]->parentsense = s;
-      if (n.childpointers[1])
-        n.childpointers[1]->parentsense = s;
-      if (id == 0)
-        n.parentsense = s;
+      if (n.child_pointers[0]) {
+        n.child_pointers[0]->parent_sense = s;
+      }
+      if (n.child_pointers[1]) {
+        n.child_pointers[1]->parent_sense = s;
+      }
+      if (id == 0) {
+        n.parent_sense = s;
+      }
     }
     ++s;
   }
 
-  virtual const char* name() const { return "TopoBarrier"; }
+  const char* name() const override { return "TopoBarrier"; }
 };
 
 }  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createTopoBarrier(unsigned activeThreads) {
-  return std::unique_ptr<Barrier>(new TopoBarrier(activeThreads));
+galois::substrate::CreateTopoBarrier(unsigned active_threads) {
+  return std::make_unique<TopoBarrier>(active_threads);
 }

@@ -45,25 +45,26 @@ class DisseminationBarrier : public galois::substrate::Barrier {
     int parity;
     int sense;
     node myflags[32];
-    // std::array<node, 32> myflags;
   };
 
-  std::vector<galois::substrate::CacheLineStorage<LocalData>> nodes;
-  unsigned LogP;
+  std::vector<galois::substrate::CacheLineStorage<LocalData>> nodes_;
+  unsigned log_p_;
 
   void _reinit(unsigned P) {
-    LogP = FAST_LOG2_UP(P);
-    nodes.resize(P);
+    log_p_ = FAST_LOG2_UP(P);
+    nodes_.resize(P);
     for (unsigned i = 0; i < P; ++i) {
-      LocalData& lhs = nodes.at(i).get();
+      LocalData& lhs = nodes_.at(i).get();
       lhs.parity = 0;
       lhs.sense = 1;
-      for (unsigned j = 0; j < sizeof(lhs.myflags) / sizeof(*lhs.myflags); ++j)
+      for (unsigned j = 0; j < sizeof(lhs.myflags) / sizeof(*lhs.myflags);
+           ++j) {
         lhs.myflags[j].flag[0] = lhs.myflags[j].flag[1] = 0;
+      }
 
       int d = 1;
-      for (unsigned j = 0; j < LogP; ++j) {
-        LocalData& rhs = nodes.at((i + d) % P).get();
+      for (unsigned j = 0; j < log_p_; ++j) {
+        LocalData& rhs = nodes_.at((i + d) % P).get();
         lhs.myflags[j].partner = &rhs.myflags[j];
         d *= 2;
       }
@@ -73,29 +74,30 @@ class DisseminationBarrier : public galois::substrate::Barrier {
 public:
   DisseminationBarrier(unsigned v) { _reinit(v); }
 
-  virtual void reinit(unsigned val) { _reinit(val); }
+  void Reinit(unsigned val) override { _reinit(val); }
 
-  virtual void wait() {
-    auto& ld = nodes.at(galois::substrate::ThreadPool::getTID()).get();
+  void Wait() override {
+    auto& ld = nodes_.at(galois::substrate::ThreadPool::getTID()).get();
     auto& sense = ld.sense;
     auto& parity = ld.parity;
-    for (unsigned r = 0; r < LogP; ++r) {
+    for (unsigned r = 0; r < log_p_; ++r) {
       ld.myflags[r].partner->flag[parity] = sense;
       while (ld.myflags[r].flag[parity] != sense) {
         galois::substrate::asmPause();
       }
     }
-    if (parity == 1)
+    if (parity == 1) {
       sense = 1 - ld.sense;
+    }
     parity = 1 - parity;
   }
 
-  virtual const char* name() const { return "DisseminationBarrier"; }
+  const char* name() const override { return "DisseminationBarrier"; }
 };
 
 }  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createDisseminationBarrier(unsigned activeThreads) {
-  return std::unique_ptr<Barrier>(new DisseminationBarrier(activeThreads));
+galois::substrate::CreateDisseminationBarrier(unsigned active_threads) {
+  return std::make_unique<DisseminationBarrier>(active_threads);
 }

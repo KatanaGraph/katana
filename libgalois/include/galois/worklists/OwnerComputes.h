@@ -63,7 +63,7 @@ public:
 
   void push(const value_type& val) {
     unsigned int index = Fn(val);
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned int mindex = tp.getSocket(index);
     // std::cerr << "[" << index << "," << index % active << "]\n";
     if (mindex == substrate::ThreadPool::getSocket())

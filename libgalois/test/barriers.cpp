@@ -36,7 +36,7 @@ struct emp {
 
   void go() {
     for (unsigned i = 0; i < iter; ++i) {
-      b.wait();
+      b.Wait();
     }
   }
 
@@ -63,7 +63,7 @@ test(std::unique_ptr<galois::substrate::Barrier> b) {
     M /= 2;
   while (M) {
     galois::setActiveThreads(M);
-    b->reinit(M);
+    b->Reinit(M);
     galois::Timer t;
     t.start();
     emp e{*b.get()};
@@ -85,14 +85,14 @@ main(int argc, char** argv) {
   if (argc > 2)
     numThreads = atoi(argv[2]);
   else
-    numThreads = galois::substrate::getThreadPool().getMaxThreads();
+    numThreads = galois::substrate::GetThreadPool().getMaxThreads();
 
   gethostname(bname, sizeof(bname));
   using namespace galois::substrate;
-  test(createPthreadBarrier(1));
-  test(createCountingBarrier(1));
-  test(createMCSBarrier(1));
-  test(createTopoBarrier(1));
-  test(createDisseminationBarrier(1));
+  test(CreatePthreadBarrier(1));
+  test(CreateCountingBarrier(1));
+  test(CreateMCSBarrier(1));
+  test(CreateTopoBarrier(1));
+  test(CreateDisseminationBarrier(1));
   return 0;
 }

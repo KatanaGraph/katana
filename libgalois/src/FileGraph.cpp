@@ -385,7 +385,7 @@ static void
 pageInterleaved(
     void* ptr, uint64_t length, uint32_t hugePageSize,
     unsigned int numThreads) {
-  galois::substrate::getThreadPool().run(
+  galois::substrate::GetThreadPool().run(
       numThreads, [ptr, length, hugePageSize, numThreads]() {
         auto myID = galois::substrate::ThreadPool::getTID();
 

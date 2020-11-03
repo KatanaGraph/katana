@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/gIO.h"
+#include "galois/Logging.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/CompilerSpecific.h"
 
@@ -39,51 +39,50 @@ class PthreadBarrier : public galois::substrate::Barrier {
 public:
   PthreadBarrier() {
     int err = 0;
-    if ((err = pthread_barrier_init(&bar, 0, ~0)))
-      GALOIS_DIE("pthread ", err);
+    if ((err = pthread_barrier_init(&bar, 0, ~0))) {
+      GALOIS_LOG_FATAL("pthread {}", err);
+    }
   }
 
   PthreadBarrier(unsigned int v) {
     int err = 0;
-    if ((err = pthread_barrier_init(&bar, 0, v)))
-      GALOIS_DIE("pthread ", err);
+    if ((err = pthread_barrier_init(&bar, 0, v))) {
+      GALOIS_LOG_FATAL("pthread {}", err);
+    }
   }
 
-  virtual ~PthreadBarrier() {
+  ~PthreadBarrier() override {
     int err = 0;
-    if ((err = pthread_barrier_destroy(&bar)))
-      GALOIS_DIE("pthread ", err);
+    if ((err = pthread_barrier_destroy(&bar))) {
+      GALOIS_LOG_FATAL("pthread {}", err);
+    }
   }
 
-  virtual void reinit(unsigned val) {
+  void Reinit(unsigned val) override {
     int err = 0;
-    if ((err = pthread_barrier_destroy(&bar)))
-      GALOIS_DIE("pthread ", err);
-    if ((err = pthread_barrier_init(&bar, 0, val)))
-      GALOIS_DIE("pthread ", err);
+    if ((err = pthread_barrier_destroy(&bar))) {
+      GALOIS_LOG_FATAL("pthread {}", err);
+    }
+    if ((err = pthread_barrier_init(&bar, 0, val))) {
+      GALOIS_LOG_FATAL("pthread {}", err);
+    }
   }
 
-  virtual void wait() {
+  void Wait() override {
     int rc = pthread_barrier_wait(&bar);
-    if (rc && rc != PTHREAD_BARRIER_SERIAL_THREAD)
-      GALOIS_DIE("pthread ", rc);
+    if (rc && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
+      GALOIS_LOG_FATAL("pthread {}", rc);
+    }
   }
 
-  virtual const char* name() const { return "PthreadBarrier"; }
+  const char* name() const override { return "PthreadBarrier"; }
 };
 
 }  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createPthreadBarrier(unsigned activeThreads) {
-  return std::unique_ptr<Barrier>(new PthreadBarrier(activeThreads));
-}
-
-#else
-
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createPthreadBarrier(unsigned) {
-  return std::unique_ptr<Barrier>(nullptr);
+galois::substrate::CreatePthreadBarrier(unsigned active_threads) {
+  return std::make_unique<PthreadBarrier>(active_threads);
 }
 
 #endif

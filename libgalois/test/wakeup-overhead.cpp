@@ -44,7 +44,7 @@ static cll::opt<unsigned> threads(
 
 void
 runDoAllBurn(int num) {
-  galois::substrate::getThreadPool().burnPower(galois::getActiveThreads());
+  galois::substrate::GetThreadPool().burnPower(galois::getActiveThreads());
 
   for (int r = 0; r < rounds; ++r) {
     galois::do_all(galois::iterate(0, num), [&](int) {
@@ -52,7 +52,7 @@ runDoAllBurn(int num) {
     });
   }
 
-  galois::substrate::getThreadPool().beKind();
+  galois::substrate::GetThreadPool().beKind();
 }
 
 void
@@ -67,7 +67,7 @@ runDoAll(int num) {
 void
 runExplicitThread(int num) {
   galois::substrate::Barrier& barrier =
-      galois::substrate::getBarrier(galois::getActiveThreads());
+      galois::substrate::GetBarrier(galois::getActiveThreads());
 
   galois::on_each([&](unsigned tid, unsigned total) {
     auto range = galois::block_range(
@@ -77,7 +77,7 @@ runExplicitThread(int num) {
       for (auto ii = range.first, ei = range.second; ii != ei; ++ii) {
         asm volatile("" ::: "memory");
       }
-      barrier();
+      barrier.Wait();
     }
   });
 }
@@ -107,7 +107,7 @@ main(int argc, char* argv[]) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   };
-  galois::substrate::getThreadPool().runDedicated(f);
+  galois::substrate::GetThreadPool().runDedicated(f);
 
   for (int t = 0; t < trials; ++t) {
     run(runDoAll, "DoAll");
@@ -117,7 +117,7 @@ main(int argc, char* argv[]) {
   EXIT = 1;
 
   std::cout << "threads: " << galois::getActiveThreads() << " usable threads: "
-            << galois::substrate::getThreadPool().getMaxUsableThreads()
+            << galois::substrate::GetThreadPool().getMaxUsableThreads()
             << " rounds: " << rounds << " size: " << size << "\n";
 
   return 0;

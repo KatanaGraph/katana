@@ -24,46 +24,45 @@
 namespace {
 
 class CountingBarrier : public galois::substrate::Barrier {
-  std::atomic<unsigned> count;
-  std::atomic<bool> sense;
-  unsigned num;
-  std::vector<galois::substrate::CacheLineStorage<bool>> local_sense;
+  std::atomic<unsigned> count_;
+  std::atomic<bool> sense_;
+  unsigned num_;
+  std::vector<galois::substrate::CacheLineStorage<bool>> local_sense_;
 
   void _reinit(unsigned val) {
-    count = num = val;
-    sense = false;
-    local_sense.resize(val);
-    for (unsigned i = 0; i < val; ++i)
-      local_sense.at(i).get() = false;
+    count_ = num_ = val;
+    sense_ = false;
+    local_sense_.resize(val);
+    for (unsigned i = 0; i < val; ++i) {
+      local_sense_.at(i).get() = false;
+    }
   }
 
 public:
-  CountingBarrier(unsigned int activeT) { _reinit(activeT); }
+  CountingBarrier(unsigned int active_threads) { _reinit(active_threads); }
 
-  virtual ~CountingBarrier() {}
+  void Reinit(unsigned val) override { _reinit(val); }
 
-  virtual void reinit(unsigned val) { _reinit(val); }
-
-  virtual void wait() {
+  void Wait() override {
     bool& lsense =
-        local_sense.at(galois::substrate::ThreadPool::getTID()).get();
+        local_sense_.at(galois::substrate::ThreadPool::getTID()).get();
     lsense = !lsense;
-    if (--count == 0) {
-      count = num;
-      sense = lsense;
+    if (--count_ == 0) {
+      count_ = num_;
+      sense_ = lsense;
     } else {
-      while (sense != lsense) {
+      while (sense_ != lsense) {
         galois::substrate::asmPause();
       }
     }
   }
 
-  virtual const char* name() const { return "CountingBarrier"; }
+  const char* name() const override { return "CountingBarrier"; }
 };
 
 }  // namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createCountingBarrier(unsigned activeThreads) {
-  return std::unique_ptr<Barrier>(new CountingBarrier(activeThreads));
+galois::substrate::CreateCountingBarrier(unsigned active_threads) {
+  return std::make_unique<CountingBarrier>(active_threads);
 }

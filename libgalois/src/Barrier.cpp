@@ -19,25 +19,39 @@
 
 #include "galois/substrate/Barrier.h"
 
+#include "galois/Logging.h"
+#include "galois/substrate/ThreadPool.h"
+
 // anchor vtable
-galois::substrate::Barrier::~Barrier() {}
+galois::substrate::Barrier::~Barrier() = default;
 
-// galois::substrate::Barrier& galois::substrate::getSystemBarrier(unsigned
-// activeThreads) {
-//  return benchmarking::getTopoBarrier(activeThreads);
-//}
-
-static galois::substrate::internal::BarrierInstance<>* BI = nullptr;
+static galois::substrate::Barrier* kBarrier = nullptr;
+static unsigned kBarrierThreads = 0;
 
 void
-galois::substrate::internal::setBarrierInstance(
-    internal::BarrierInstance<>* bi) {
-  GALOIS_ASSERT(!(bi && BI), "Double initialization of BarrierInstance");
-  BI = bi;
+galois::substrate::internal::SetBarrier(galois::substrate::Barrier* barrier) {
+  GALOIS_LOG_VASSERT(
+      !(barrier && kBarrier), "Double initialization of Barrier");
+
+  kBarrier = barrier;
+
+  if (barrier) {
+    kBarrierThreads = GetThreadPool().getMaxUsableThreads();
+    kBarrier->Reinit(kBarrierThreads);
+  }
 }
 
 galois::substrate::Barrier&
-galois::substrate::getBarrier(unsigned numT) {
-  GALOIS_ASSERT(BI, "BarrierInstance not initialized");
-  return BI->get(numT);
+galois::substrate::GetBarrier(unsigned active_threads) {
+  GALOIS_LOG_VASSERT(kBarrier, "Barrier not initialized");
+  active_threads =
+      std::min(active_threads, GetThreadPool().getMaxUsableThreads());
+  active_threads = std::max(active_threads, 1U);
+
+  if (active_threads != kBarrierThreads) {
+    kBarrierThreads = active_threads;
+    kBarrier->Reinit(kBarrierThreads);
+  }
+
+  return *kBarrier;
 }

@@ -30,7 +30,7 @@
 #include "galois/substrate/CompilerSpecific.h"
 #include "galois/substrate/PaddedLock.h"
 #include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/Termination.h"
+#include "galois/substrate/TerminationDetection.h"
 #include "galois/substrate/ThreadPool.h"
 
 namespace galois::runtime {
@@ -63,7 +63,7 @@ class DoAllStealingExec {
 
     ThreadContext()
         : work_mutex(),
-          id(substrate::getThreadPool().getMaxThreads()),
+          id(substrate::GetThreadPool().getMaxThreads()),
           shared_beg(),
           shared_end(),
           m_size(0),
@@ -262,7 +262,7 @@ private:
     bool sawWork = false;
     bool stoleWork = false;
 
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
 
     const unsigned maxT = galois::getActiveThreads();
     const unsigned my_pack = substrate::ThreadPool::getSocket();
@@ -297,7 +297,7 @@ private:
     bool sawWork = false;
     bool stoleWork = false;
 
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned myPkg = substrate::ThreadPool::getSocket();
     // unsigned maxT = LL::getMaxThreads ();
     unsigned maxT = galois::getActiveThreads();
@@ -333,7 +333,7 @@ private:
 
     substrate::asmPause();
 
-    if (substrate::getThreadPool().isLeader(poor.id)) {
+    if (substrate::GetThreadPool().isLeader(poor.id)) {
       ret = stealOutsideSocket(poor, HALF);
 
       if (ret) {
@@ -373,7 +373,7 @@ public:
         func(_func),
         loopname(galois::internal::getLoopName(argsTuple)),
         chunk_size(get_trait_value<chunk_size_tag>(argsTuple).value),
-        term(substrate::getSystemTermination(activeThreads)),
+        term(substrate::GetTerminationDetection(activeThreads)),
         totalTime(loopname, "Total"),
         initTime(loopname, "Init"),
         execTime(loopname, "Execute"),
@@ -386,7 +386,7 @@ public:
   void initThread(void) {
     initTime.start();
 
-    term.initializeThread();
+    term.InitializeThread();
 
     unsigned id = substrate::ThreadPool::getTID();
 
@@ -436,9 +436,9 @@ public:
         assert(!ctx.hasWork());
         if (USE_TERM) {
           termTime.start();
-          term.localTermination(workHappened);
+          term.SignalWorked(workHappened);
 
-          bool quit = term.globalTermination();
+          bool quit = !term.Working();
           termTime.stop();
 
           if (quit) {
@@ -467,11 +467,11 @@ struct ChooseDoAllImpl {
         R, OperatorReferenceType<decltype(std::forward<F>(func))>, ArgsT>
         exec(range, std::forward<F>(func), argsTuple);
 
-    substrate::Barrier& barrier = substrate::getBarrier(activeThreads);
+    substrate::Barrier& barrier = substrate::GetBarrier(activeThreads);
 
-    substrate::getThreadPool().run(
-        activeThreads, [&exec](void) { exec.initThread(); }, std::ref(barrier),
-        std::ref(exec));
+    substrate::GetThreadPool().run(
+        activeThreads, [&exec]() { exec.initThread(); },
+        [&barrier]() { barrier.Wait(); }, std::ref(exec));
   }
 };
 

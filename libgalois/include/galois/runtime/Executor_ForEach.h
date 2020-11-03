@@ -38,7 +38,7 @@
 #include "galois/runtime/OperatorReferenceTypes.h"
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Barrier.h"
-#include "galois/substrate/Termination.h"
+#include "galois/substrate/TerminationDetection.h"
 #include "galois/substrate/ThreadPool.h"
 #include "galois/worklists/Chunk.h"
 #include "galois/worklists/Simple.h"
@@ -62,7 +62,7 @@ class AbortHandler {
    * Policy: serialize via tree over sockets.
    */
   void basicPolicy(const Item& item) {
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned socket = tp.getSocket();
     queues.getRemote(tp.getLeaderForSocket(socket / 2))->push(item);
   }
@@ -79,7 +79,7 @@ class AbortHandler {
     }
 
     unsigned tid = substrate::ThreadPool::getTID();
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned socket = substrate::ThreadPool::getSocket();
     unsigned leader = substrate::ThreadPool::getLeader();
     if (tid != leader) {
@@ -102,7 +102,7 @@ class AbortHandler {
     }
 
     unsigned tid = substrate::ThreadPool::getTID();
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned socket = substrate::ThreadPool::getSocket();
     unsigned leader = tp.getLeaderForSocket(socket);
     if (retries < 5 && tid != leader) {
@@ -120,7 +120,7 @@ class AbortHandler {
 
 public:
   AbortHandler() {
-    useBasicPolicy = substrate::getThreadPool().getMaxSockets() > 2;
+    useBasicPolicy = substrate::GetThreadPool().getMaxSockets() > 2;
   }
 
   value_type& value(Item& item) const { return item.val; }
@@ -334,9 +334,9 @@ protected:
         }
 
         // Update node color and prop token
-        term.localTermination(didWork);
+        term.SignalWorked(didWork);
         substrate::asmPause();  // Let token propagate
-      } while (!term.globalTermination() && (!needsBreak || !broke));
+      } while (term.Working() && (!needsBreak || !broke));
 
       if (checkEmpty(wl, tld, 0)) {
         execTime.stop();
@@ -348,8 +348,8 @@ protected:
         break;
       }
 
-      term.initializeThread();
-      barrier.wait();
+      term.InitializeThread();
+      barrier.Wait();
     }
 
     if (couldAbort)
@@ -361,8 +361,8 @@ protected:
 
   template <typename... WArgsTy>
   ForEachExecutor(T2, FunctionTy f, const ArgsTy& args, WArgsTy... wargs)
-      : term(substrate::getSystemTermination(activeThreads)),
-        barrier(substrate::getBarrier(activeThreads)),
+      : term(substrate::GetTerminationDetection(activeThreads)),
+        barrier(substrate::GetBarrier(activeThreads)),
         wl(std::forward<WArgsTy>(wargs)...),
         origFunction(f),
         loopname(galois::internal::getLoopName(args)),
@@ -397,7 +397,7 @@ public:
     initTime.start();
 
     wl.push_initial(range);
-    term.initializeThread();
+    term.InitializeThread();
 
     initTime.stop();
   }
@@ -454,13 +454,13 @@ for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
       OperatorReferenceType<decltype(std::forward<FunctionTy>(fn))>;
   typedef ForEachExecutor<WorkListTy, FuncRefType, ArgsTy> WorkTy;
 
-  auto& barrier = substrate::getBarrier(activeThreads);
+  auto& barrier = substrate::GetBarrier(activeThreads);
   FuncRefType fn_ref = fn;
   WorkTy W(fn_ref, args);
   W.init(range);
-  substrate::getThreadPool().run(
-      activeThreads, [&W, &range]() { W.initThread(range); }, std::ref(barrier),
-      std::ref(W));
+  substrate::GetThreadPool().run(
+      activeThreads, [&W, &range]() { W.initThread(range); },
+      [&barrier] { barrier.Wait(); }, std::ref(W));
 }
 
 // TODO: Need to decide whether user should provide num_run tag or

@@ -87,7 +87,7 @@ t_doall(
     unsigned th) {
   galois::setActiveThreads(th);  // galois::runtime::LL::getMaxThreads());
   if (burn)
-    galois::substrate::getThreadPool().burnPower(th);
+    galois::substrate::GetThreadPool().burnPower(th);
 
   galois::Timer t;
   t.start();
@@ -101,7 +101,7 @@ unsigned
 t_foreach(bool burn, std::vector<unsigned>& V, unsigned num, unsigned th) {
   galois::setActiveThreads(th);
   if (burn)
-    galois::substrate::getThreadPool().burnPower(th);
+    galois::substrate::GetThreadPool().burnPower(th);
 
   galois::Timer t;
   t.start();
@@ -150,7 +150,7 @@ main(int argc, char** argv) {
   if (!maxVector)
     maxVector = 1024 * 1024;
 
-  unsigned M = galois::substrate::getThreadPool().getMaxThreads() / 2;
+  unsigned M = galois::substrate::GetThreadPool().getMaxThreads() / 2;
   test(
       "inline\t", 1, 16, maxVector,
       [](std::vector<unsigned>& V, unsigned num, unsigned th) {

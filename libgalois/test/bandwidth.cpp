@@ -82,7 +82,7 @@ run_interleaved(size_t seed, size_t mega, bool full) {
   size_t size = mega * 1024 * 1024;
   auto ptr = galois::substrate::largeMallocInterleaved(
       size * sizeof(int),
-      full ? galois::substrate::getThreadPool().getMaxThreads()
+      full ? galois::substrate::GetThreadPool().getMaxThreads()
            : galois::runtime::activeThreads);
   int* block = (int*)ptr.get();
 
@@ -118,7 +118,7 @@ struct F2 {
 int
 main(int argc, char** argv) {
   galois::SharedMemSys Galois_runtime;
-  unsigned M = galois::substrate::getThreadPool().getMaxThreads() / 2;
+  unsigned M = galois::substrate::GetThreadPool().getMaxThreads() / 2;
   size_t mega = 1;
   if (argc > 1)
     mega = atoi(argv[1]);

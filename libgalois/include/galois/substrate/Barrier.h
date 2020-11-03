@@ -20,27 +20,26 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_BARRIER_H_
 #define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_BARRIER_H_
 
-#include <functional>
 #include <memory>
 
 #include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/substrate/ThreadPool.h"
 
 namespace galois::substrate {
 
 class GALOIS_EXPORT Barrier {
 public:
+  Barrier() = default;
   virtual ~Barrier();
+  Barrier(const Barrier&) = delete;
+  Barrier& operator=(const Barrier&) = delete;
+  Barrier(Barrier&&) = delete;
+  Barrier& operator=(Barrier&&) = delete;
 
   // not safe if any thread is in wait
-  virtual void reinit(unsigned val) = 0;
+  virtual void Reinit(unsigned val) = 0;
 
   // Wait at this barrier
-  virtual void wait() = 0;
-
-  // wait at this barrier
-  void operator()() { wait(); }
+  virtual void Wait() = 0;
 
   // barrier type.
   virtual const char* name() const = 0;
@@ -58,61 +57,35 @@ public:
  * is modified after using this barrier: some threads may still
  * be in the barrier while the main thread reinitializes this
  * barrier to the new number of active threads. If that may
- * happen, use {@link createSimpleBarrier()} instead.
+ * happen, use {@link CreateSimpleBarrier()} instead.
  */
-GALOIS_EXPORT Barrier& getBarrier(unsigned activeThreads);
+GALOIS_EXPORT Barrier& GetBarrier(unsigned active_threads);
 
 /**
  * Create specific types of barriers.  For benchmarking only.  Use
- * getBarrier() for all production code
+ * GetBarrier() for all production code
  */
-GALOIS_EXPORT std::unique_ptr<Barrier> createPthreadBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> createMCSBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> createTopoBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> createCountingBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> createDisseminationBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreatePthreadBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreateMCSBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreateTopoBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreateCountingBarrier(unsigned);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreateDisseminationBarrier(unsigned);
 
 /**
  * Creates a new simple barrier. This barrier is not designed to be fast but
- * does gaurantee that all threads have left the barrier before returning
+ * does guarantee that all threads have left the barrier before returning
  * control. Useful when the number of active threads is modified to avoid a
- * race in {@link getBarrier()}.  Client is reponsible for deallocating
- * returned barrier.
+ * race in GetBarrier().  Client is responsible for deallocating returned
+ * barrier.
  */
-GALOIS_EXPORT std::unique_ptr<Barrier> createSimpleBarrier(unsigned int);
+GALOIS_EXPORT std::unique_ptr<Barrier> CreateSimpleBarrier(unsigned);
 
 namespace internal {
 
-template <typename _UNUSED = void>
-struct BarrierInstance {
-  unsigned m_num_threads;
-  std::unique_ptr<Barrier> m_barrier;
+void SetBarrier(Barrier* barrier);
 
-  BarrierInstance() {
-    m_num_threads = getThreadPool().getMaxThreads();
-    m_barrier = createTopoBarrier(m_num_threads);
-  }
+}  // namespace internal
 
-  Barrier& get(unsigned numT) {
-    GALOIS_ASSERT(
-        numT > 0, "substrate::getBarrier() number of threads must be > 0");
-
-    numT = std::min(numT, getThreadPool().getMaxUsableThreads());
-    numT = std::max(numT, 1U);
-
-    if (numT != m_num_threads) {
-      m_num_threads = numT;
-      m_barrier->reinit(numT);
-    }
-
-    return *m_barrier;
-  }
-};
-
-void setBarrierInstance(BarrierInstance<>* bi);
-
-}  // end namespace internal
-
-}  // end namespace galois::substrate
+}  // namespace galois::substrate
 
 #endif

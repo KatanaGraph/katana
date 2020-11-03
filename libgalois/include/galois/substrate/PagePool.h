@@ -77,7 +77,7 @@ class PageAllocState {
 
 public:
   PageAllocState() {
-    auto num = galois::substrate::getThreadPool().getMaxThreads();
+    auto num = galois::substrate::GetThreadPool().getMaxThreads();
     counts.resize(num);
     pool.resize(num);
   }

@@ -44,6 +44,7 @@ struct CacheLineStorage {
   explicit operator T() { return data; }
 
   T& get() { return data; }
+
   template <typename V>
   CacheLineStorage& operator=(const V& v) {
     data = v;

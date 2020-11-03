@@ -39,7 +39,7 @@ pageIn(
     for (size_t x = 0; x < len; x += pageSize / 2)
       ptr[x] = 0;
   } else {
-    getThreadPool().run(
+    GetThreadPool().run(
         numThreads, [ptr, len, pageSize, numThreads, finegrained]() {
           auto myID = ThreadPool::getTID();
 
@@ -87,7 +87,7 @@ pageInSpecified(
   char* ptr = static_cast<char*>(_ptr);
 
   if (numThreads > 1) {
-    getThreadPool().run(
+    GetThreadPool().run(
         numThreads, [ptr, pageSize, threadRanges, elementSize]() {
           auto myID = ThreadPool::getTID();
 

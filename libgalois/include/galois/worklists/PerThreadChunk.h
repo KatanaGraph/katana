@@ -248,7 +248,7 @@ class StealingQueue : private boost::noncopyable {
   GALOIS_ATTRIBUTE_NOINLINE
   ChunkHeader* doSteal() {
     std::pair<InnerWL, unsigned>& me = *local.getLocal();
-    auto& tp = substrate::getThreadPool();
+    auto& tp = substrate::GetThreadPool();
     unsigned id = tp.getTID();
     unsigned pkg = substrate::ThreadPool::getSocket();
     unsigned num = galois::getActiveThreads();

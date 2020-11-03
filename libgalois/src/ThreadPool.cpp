@@ -280,13 +280,13 @@ ThreadPool::runDedicated(std::function<void(void)>& f) {
 static galois::substrate::ThreadPool* TPOOL = nullptr;
 
 void
-galois::substrate::internal::setThreadPool(ThreadPool* tp) {
+galois::substrate::internal::SetThreadPool(ThreadPool* tp) {
   GALOIS_LOG_VASSERT(!(TPOOL && tp), "Double initialization of ThreadPool");
   TPOOL = tp;
 }
 
 galois::substrate::ThreadPool&
-galois::substrate::getThreadPool() {
+galois::substrate::GetThreadPool() {
   GALOIS_LOG_VASSERT(TPOOL, "ThreadPool not initialized");
   return *TPOOL;
 }

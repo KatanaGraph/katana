@@ -27,7 +27,7 @@
 #include "galois/FlatMap.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/Termination.h"
+#include "galois/substrate/TerminationDetection.h"
 #include "galois/worklists/Chunk.h"
 #include "galois/worklists/WorkListHelpers.h"
 
@@ -55,7 +55,7 @@ protected:
   substrate::Barrier& barrier;
 
   OrderedByIntegerMetricData()
-      : barrier(substrate::getBarrier(runtime::activeThreads)) {}
+      : barrier(substrate::GetBarrier(runtime::activeThreads)) {}
 
   bool hasStored(ThreadData& p, Index idx) {
     for (auto& e : p.stored) {
@@ -438,7 +438,7 @@ public:
     }
     p.hasWork = !p.stored.empty();
 
-    this->barrier.wait();
+    this->barrier.Wait();
 
     // align with the earliest level from threads that have works
     bool hasWork = p.hasWork;
@@ -454,7 +454,7 @@ public:
       hasWork |= o.hasWork;
     }
 
-    this->barrier.wait();
+    this->barrier.Wait();
 
     p.current = C;
     p.curIndex = curIndex;

@@ -42,7 +42,7 @@ void
 galois::Prealloc(size_t pages) {
   unsigned pagesPerThread = (pages + galois::runtime::activeThreads - 1) /
                             galois::runtime::activeThreads;
-  galois::substrate::getThreadPool().run(galois::runtime::activeThreads, [=]() {
+  galois::substrate::GetThreadPool().run(galois::runtime::activeThreads, [=]() {
     galois::substrate::pagePoolPreAlloc(pagesPerThread);
   });
 }

@@ -32,23 +32,21 @@ class OneWayBarrier : public galois::substrate::Barrier {
   unsigned total;
 
 public:
-  OneWayBarrier(unsigned p) { reinit(p); }
+  OneWayBarrier(unsigned p) { Reinit(p); }
 
-  virtual ~OneWayBarrier() {}
-
-  virtual void reinit(unsigned val) {
+  void Reinit(unsigned val) override {
     count = 0;
     total = val;
   }
 
-  virtual void wait() {
+  void Wait() override {
     std::unique_lock<std::mutex> tmp(lock);
     count += 1;
     cond.wait(tmp, [this]() { return count >= total; });
     cond.notify_all();
   }
 
-  virtual const char* name() const { return "OneWayBarrier"; }
+  const char* name() const override { return "OneWayBarrier"; }
 };
 
 class SimpleBarrier : public galois::substrate::Barrier {
@@ -59,29 +57,29 @@ class SimpleBarrier : public galois::substrate::Barrier {
 public:
   SimpleBarrier(unsigned p) : barrier1(p), barrier2(p), total(p) {}
 
-  virtual ~SimpleBarrier() {}
-
-  virtual void reinit(unsigned val) {
+  void Reinit(unsigned val) override {
     total = val;
-    barrier1.reinit(val);
-    barrier2.reinit(val);
+    barrier1.Reinit(val);
+    barrier2.Reinit(val);
   }
 
-  virtual void wait() {
-    barrier1.wait();
-    if (galois::substrate::ThreadPool::getTID() == 0)
-      barrier1.reinit(total);
-    barrier2.wait();
-    if (galois::substrate::ThreadPool::getTID() == 0)
-      barrier2.reinit(total);
+  void Wait() override {
+    barrier1.Wait();
+    if (galois::substrate::ThreadPool::getTID() == 0) {
+      barrier1.Reinit(total);
+    }
+    barrier2.Wait();
+    if (galois::substrate::ThreadPool::getTID() == 0) {
+      barrier2.Reinit(total);
+    }
   }
 
-  virtual const char* name() const { return "SimpleBarrier"; }
+  const char* name() const override { return "SimpleBarrier"; }
 };
 
 }  // end anonymous namespace
 
 std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::createSimpleBarrier(unsigned int v) {
-  return std::unique_ptr<Barrier>(new SimpleBarrier(v));
+galois::substrate::CreateSimpleBarrier(unsigned active_threads) {
+  return std::make_unique<SimpleBarrier>(active_threads);
 }

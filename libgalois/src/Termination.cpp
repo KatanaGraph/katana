@@ -17,24 +17,25 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/Termination.h"
-
-#include "galois/gIO.h"
+#include "galois/Logging.h"
+#include "galois/substrate/TerminationDetection.h"
 
 // vtable anchoring
-galois::substrate::TerminationDetection::~TerminationDetection(void) {}
+galois::substrate::TerminationDetection::~TerminationDetection() = default;
 
-static galois::substrate::TerminationDetection* TERM = nullptr;
+static galois::substrate::TerminationDetection* kTerminationDetection = nullptr;
 
 void
-galois::substrate::internal::setTermDetect(
+galois::substrate::internal::SetTerminationDetection(
     galois::substrate::TerminationDetection* t) {
-  GALOIS_ASSERT(!(TERM && t), "Double initialization of TerminationDetection");
-  TERM = t;
+  GALOIS_LOG_VASSERT(
+      !(kTerminationDetection && t),
+      "Double initialization of TerminationDetection");
+  kTerminationDetection = t;
 }
 
 galois::substrate::TerminationDetection&
-galois::substrate::getSystemTermination(unsigned activeThreads) {
-  TERM->init(activeThreads);
-  return *TERM;
+galois::substrate::GetTerminationDetection(unsigned active_threads) {
+  kTerminationDetection->Init(active_threads);
+  return *kTerminationDetection;
 }

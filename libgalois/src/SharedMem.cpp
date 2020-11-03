@@ -23,13 +23,196 @@
 
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/PagePool.h"
-#include "galois/substrate/Termination.h"
+#include "galois/substrate/TerminationDetection.h"
 #include "galois/substrate/ThreadPool.h"
+
+namespace {
+// Dijkstra style 2-pass ring termination detection
+class LocalTerminationDetection
+    : public galois::substrate::TerminationDetection {
+  struct TokenHolder {
+    std::atomic<long> token_is_black;
+    std::atomic<long> has_token;
+    long process_is_black;
+    bool last_was_white;  // only used by the master
+  };
+
+  galois::substrate::PerThreadStorage<TokenHolder> data_;
+
+  unsigned active_threads_;
+
+  // send token onwards
+  void PropToken(bool is_black) {
+    unsigned id = galois::substrate::ThreadPool::getTID();
+    TokenHolder& th = *data_.getRemote((id + 1) % active_threads_);
+    th.token_is_black = is_black;
+    th.has_token = true;
+  }
+
+  bool IsSysMaster() const {
+    return galois::substrate::ThreadPool::getTID() == 0;
+  }
+
+protected:
+  void Init(unsigned active_threads) override {
+    active_threads_ = active_threads;
+  }
+
+public:
+  void InitializeThread() override {
+    TokenHolder& th = *data_.getLocal();
+    th.token_is_black = false;
+    th.process_is_black = true;
+    th.last_was_white = true;
+    ResetTerminated();
+    if (IsSysMaster())
+      th.has_token = true;
+    else
+      th.has_token = false;
+  }
+
+  void SignalWorked(bool work_happened) override {
+    assert(!(work_happened && !Working()));
+    TokenHolder& th = *data_.getLocal();
+    th.process_is_black |= work_happened;
+    if (th.has_token) {
+      if (IsSysMaster()) {
+        bool failed = th.token_is_black || th.process_is_black;
+        th.token_is_black = th.process_is_black = false;
+        if (th.last_was_white && !failed) {
+          // This was the second success
+          SetTerminated();
+          return;
+        }
+        th.last_was_white = !failed;
+      }
+      // Normal thread or recirc by master
+      assert(Working() && "no token should be in progress after globalTerm");
+      bool taint = th.process_is_black || th.token_is_black;
+      th.process_is_black = th.token_is_black = false;
+      th.has_token = false;
+      PropToken(taint);
+    }
+  }
+};
+
+// Dijkstra style 2-pass tree termination detection
+class TreeTerminationDetection
+    : public galois::substrate::TerminationDetection {
+  static constexpr int kNumChildren = 2;
+
+  struct TokenHolder {
+    // incoming from above
+    volatile long down_token;
+    // incoming from below
+    volatile long up_token[kNumChildren];
+    // my state
+    long process_is_black;
+    bool has_token;
+    bool last_was_white;  // only used by the master
+    int parent;
+    int parent_offset;
+    TokenHolder* child[kNumChildren];
+  };
+
+  galois::substrate::PerThreadStorage<TokenHolder> data_;
+
+  unsigned active_threads_;
+
+  void ProcessToken() {
+    TokenHolder& th = *data_.getLocal();
+    // int myid = LL::getTID();
+    // have all up tokens?
+    bool have_all = th.has_token;
+    bool black = th.process_is_black;
+    for (int i = 0; i < kNumChildren; ++i) {
+      if (th.child[i]) {
+        if (th.up_token[i] == -1) {
+          have_all = false;
+        } else {
+          black |= th.up_token[i];
+        }
+      }
+    }
+    // Have the tokens, propagate
+    if (have_all) {
+      th.process_is_black = false;
+      th.has_token = false;
+      if (IsSysMaster()) {
+        if (th.last_was_white && !black) {
+          // This was the second success
+          SetTerminated();
+          return;
+        }
+        th.last_was_white = !black;
+        th.down_token = true;
+      } else {
+        data_.getRemote(th.parent)->up_token[th.parent_offset] = black;
+      }
+    }
+
+    // received a down token, propagate
+    if (th.down_token) {
+      th.down_token = false;
+      th.has_token = true;
+      for (int i = 0; i < kNumChildren; ++i) {
+        th.up_token[i] = -1;
+        if (th.child[i])
+          th.child[i]->down_token = true;
+      }
+    }
+  }
+
+  bool IsSysMaster() const {
+    return galois::substrate::ThreadPool::getTID() == 0;
+  }
+
+protected:
+  void Init(unsigned active_threads) override {
+    active_threads_ = active_threads;
+  }
+
+public:
+  void InitializeThread() override {
+    TokenHolder& th = *data_.getLocal();
+    th.down_token = false;
+    for (int i = 0; i < kNumChildren; ++i) {
+      th.up_token[i] = false;
+    }
+    th.process_is_black = true;
+    th.has_token = false;
+    th.last_was_white = false;
+    ResetTerminated();
+    auto tid = galois::substrate::ThreadPool::getTID();
+    th.parent = (tid - 1) / kNumChildren;
+    th.parent_offset = (tid - 1) % kNumChildren;
+    for (unsigned i = 0; i < kNumChildren; ++i) {
+      unsigned cn = tid * kNumChildren + i + 1;
+      if (cn < active_threads_) {
+        th.child[i] = data_.getRemote(cn);
+      } else {
+        th.child[i] = 0;
+      }
+    }
+    if (IsSysMaster()) {
+      th.down_token = true;
+    }
+  }
+
+  void SignalWorked(bool work_happened) override {
+    assert(!(work_happened && !Working()));
+    TokenHolder& th = *data_.getLocal();
+    th.process_is_black |= work_happened;
+    ProcessToken();
+  }
+};
+
+}  // namespace
 
 struct galois::substrate::SharedMem::Impl {
   struct Dependents {
-    internal::LocalTerminationDetection<> term;
-    internal::BarrierInstance<> barrier;
+    LocalTerminationDetection term;
+    std::unique_ptr<Barrier> barrier;
     internal::PageAllocState<> page_pool;
   };
 
@@ -38,25 +221,27 @@ struct galois::substrate::SharedMem::Impl {
 };
 
 galois::substrate::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
-  internal::setThreadPool(&impl_->thread_pool);
+  internal::SetThreadPool(&impl_->thread_pool);
 
   // The thread pool must be initialized first because other substrate classes
-  // may call getThreadPool() in their constructors
+  // may call GetThreadPool() in their constructors
   impl_->deps = std::make_unique<Impl::Dependents>();
+  impl_->deps->barrier = galois::substrate::CreateTopoBarrier(
+      impl_->thread_pool.getMaxUsableThreads());
 
-  internal::setBarrierInstance(&impl_->deps->barrier);
-  internal::setTermDetect(&impl_->deps->term);
+  internal::SetBarrier(impl_->deps->barrier.get());
+  internal::SetTerminationDetection(&impl_->deps->term);
   internal::setPagePoolState(&impl_->deps->page_pool);
 }
 
 galois::substrate::SharedMem::~SharedMem() {
   internal::setPagePoolState(nullptr);
-  internal::setTermDetect(nullptr);
-  internal::setBarrierInstance(nullptr);
+  internal::SetTerminationDetection(nullptr);
+  internal::SetBarrier(nullptr);
 
-  // Other substrate classes destructors may call getThreadPool() so destroy
+  // Other substrate classes destructors may call GetThreadPool() so destroy
   // them first before reseting the thread pool.
   impl_->deps.reset();
 
-  internal::setThreadPool(nullptr);
+  internal::SetThreadPool(nullptr);
 }

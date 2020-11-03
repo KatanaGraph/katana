@@ -52,7 +52,7 @@ galois::substrate::PerSocketStorage<double*> socket_weights;
 
 galois::on_each([](unsigned tid, unsigned total) {
   //Only one thread in a socket is allowed to access
-  if (galois::substrate::getThreadPool().isLeader(tid)) {
+  if (galois::substrate::GetThreadPool().isLeader(tid)) {
     double* p = new double[NUM_VARIABLES];
     *socket_weights.getLocal() = p;
     std::fill(p, p + NUM_VARIABLES, 0);

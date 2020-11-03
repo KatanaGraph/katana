@@ -95,7 +95,7 @@ class PerThreadStorage {
       return;
     }
 
-    for (unsigned n = 0; n < getThreadPool().getMaxThreads(); ++n) {
+    for (unsigned n = 0; n < GetThreadPool().getMaxThreads(); ++n) {
       reinterpret_cast<T*>(b->getRemote(n, offset))->~T();
     }
     b->deallocOffset(offset, sizeof(T));
@@ -138,7 +138,7 @@ public:
   PerThreadStorage(Args&&... args) : b(&getPTSBackend()) {
     // In case we make one of these before initializing the thread pool, this
     // will call initPTS for each thread if it hasn't already
-    auto& tp = getThreadPool();
+    auto& tp = GetThreadPool();
 
     offset = b->allocOffset(sizeof(T));
     for (unsigned n = 0; n < tp.getMaxThreads(); ++n) {
@@ -194,7 +194,7 @@ public:
     return reinterpret_cast<T*>(ditem);
   }
 
-  unsigned size() const { return getThreadPool().getMaxThreads(); }
+  unsigned size() const { return GetThreadPool().getMaxThreads(); }
 
   iterator begin() { return iterator(*this, 0); }
 
@@ -211,7 +211,7 @@ class PerSocketStorage {
   PerBackend* b;
 
   void destruct() {
-    auto& tp = getThreadPool();
+    auto& tp = GetThreadPool();
     for (unsigned n = 0; n < tp.getMaxSockets(); ++n) {
       reinterpret_cast<T*>(b->getRemote(tp.getLeaderForSocket(n), offset))
           ->~T();
@@ -224,10 +224,10 @@ public:
   PerSocketStorage(Args&&... args) : b(&getPPSBackend()) {
     // in case we make one of these before initializing the thread pool
     // This will call initPTS for each thread if it hasn't already
-    getThreadPool();
+    GetThreadPool();
 
     offset = b->allocOffset(sizeof(T));
-    auto& tp = getThreadPool();
+    auto& tp = GetThreadPool();
     for (unsigned n = 0; n < tp.getMaxSockets(); ++n) {
       new (b->getRemote(tp.getLeaderForSocket(n), offset))
           T(std::forward<Args>(args)...);
@@ -281,16 +281,16 @@ public:
   }
 
   T* getRemoteByPkg(unsigned int pkg) {
-    void* ditem = b->getRemote(getThreadPool().getLeaderForSocket(pkg), offset);
+    void* ditem = b->getRemote(GetThreadPool().getLeaderForSocket(pkg), offset);
     return reinterpret_cast<T*>(ditem);
   }
 
   const T* getRemoteByPkg(unsigned int pkg) const {
-    void* ditem = b->getRemote(getThreadPool().getLeaderForSocket(pkg), offset);
+    void* ditem = b->getRemote(GetThreadPool().getLeaderForSocket(pkg), offset);
     return reinterpret_cast<T*>(ditem);
   }
 
-  unsigned size() const { return getThreadPool().getMaxThreads(); }
+  unsigned size() const { return GetThreadPool().getMaxThreads(); }
 };
 
 }  // end namespace galois::substrate

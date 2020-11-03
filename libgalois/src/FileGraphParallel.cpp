@@ -34,7 +34,7 @@ FileGraph::fromFileInterleaved(
 
   std::mutex lock;
   std::condition_variable cond;
-  auto& tp = substrate::getThreadPool();
+  auto& tp = substrate::GetThreadPool();
   unsigned maxSockets = tp.getMaxSockets();
   unsigned count = maxSockets;
 

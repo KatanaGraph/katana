@@ -214,13 +214,13 @@ public:
 /**
  * return a reference to system thread pool
  */
-GALOIS_EXPORT ThreadPool& getThreadPool();
+GALOIS_EXPORT ThreadPool& GetThreadPool();
 
 }  // namespace galois::substrate
 
 namespace galois::substrate::internal {
 
-GALOIS_EXPORT void setThreadPool(ThreadPool* tp);
+GALOIS_EXPORT void SetThreadPool(ThreadPool* tp);
 
 }  // namespace galois::substrate::internal
 

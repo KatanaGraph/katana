@@ -41,7 +41,7 @@
 #include "galois/runtime/Mem.h"
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Barrier.h"
-#include "galois/substrate/Termination.h"
+#include "galois/substrate/TerminationDetection.h"
 #include "galois/substrate/ThreadPool.h"
 #include "galois/worklists/WorkList.h"
 
@@ -553,8 +553,8 @@ class DAGManagerBase<OptionsTy, true> {
 
 public:
   DAGManagerBase()
-      : term(substrate::getSystemTermination(activeThreads)),
-        barrier(substrate::getBarrier(activeThreads)) {}
+      : term(substrate::GetTerminationDetection(activeThreads)),
+        barrier(substrate::GetBarrier(activeThreads)) {}
 
   void destroyDAGManager() { data.getLocal()->heap.clear(); }
 
@@ -602,9 +602,9 @@ public:
         sourceList.push(ctx);
     }
 
-    term.initializeThread();
+    term.InitializeThread();
 
-    barrier.wait();
+    barrier.Wait();
 
     size_t oldCommitted = 0;
     size_t committed = 0;
@@ -634,10 +634,10 @@ public:
         }
       }
 
-      term.localTermination(oldCommitted != committed);
+      term.SignalWorked(oldCommitted != committed);
       oldCommitted = committed;
       substrate::asmPause();
-    } while (!term.globalTermination());
+    } while (term.Working());
 
     if (OptionsTy::needsPia && OptionsTy::useLocalState)
       etld.facing.resetAlloc();
@@ -749,12 +749,12 @@ class BreakManagerBase<OptionsTy, true> {
 public:
   BreakManagerBase(const OptionsTy& o)
       : breakFn(get_trait_value<det_parallel_break_tag>(o.args).value),
-        barrier(substrate::getBarrier(activeThreads)) {}
+        barrier(substrate::GetBarrier(activeThreads)) {}
 
   bool checkBreak() {
     if (substrate::ThreadPool::getTID() == 0)
       done.get() = breakFn();
-    barrier.wait();
+    barrier.Wait();
     return done.get();
   }
 };
@@ -779,7 +779,7 @@ class IntentToReadManagerBase<OptionsTy, true> {
   substrate::Barrier& barrier;
 
 public:
-  IntentToReadManagerBase() : barrier(substrate::getBarrier(activeThreads)) {}
+  IntentToReadManagerBase() : barrier(substrate::GetBarrier(activeThreads)) {}
 
   void pushIntentToReadTask(Context* ctx) {
     pending.getLocal()->push_back(ctx);
@@ -790,7 +790,7 @@ public:
   bool buildIntentToRead() {
     for (Context* ctx : *pending.getLocal())
       ctx->build();
-    barrier.wait();
+    barrier.Wait();
     for (Context* ctx : *pending.getLocal())
       ctx->propagate();
     pending.getLocal()->clear();
@@ -1134,9 +1134,9 @@ class NewWorkManager : public IdManager<OptionsTy> {
     if (tid == 0) {
       distributeBuf.resize(dist);
     }
-    barrier.wait();
+    barrier.Wait();
     redistribute(ii, ei, dist, window, tid);
-    barrier.wait();
+    barrier.Wait();
     copyMine(distributeBuf.begin(), distributeBuf.end(), dist, wl, window, tid);
   }
 
@@ -1156,7 +1156,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
     initialLimits(ii, ei);
     local.size = local.newItems.size();
 
-    barrier.wait();
+    barrier.Wait();
 
     if (tid == 0) {
       receiveLimits(local);
@@ -1167,7 +1167,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
       }
     }
 
-    barrier.wait();
+    barrier.Wait();
 
     if (OptionsTy::hasId) {
       size_t window = wm.nextWindow(
@@ -1255,7 +1255,7 @@ public:
         alloc(&heap),
         mergeBuf(alloc),
         distributeBuf(alloc),
-        barrier(substrate::getBarrier(activeThreads)) {
+        barrier(substrate::GetBarrier(activeThreads)) {
     numActive = getActiveThreads();
   }
 
@@ -1389,7 +1389,7 @@ public:
       : BreakManager<OptionsTy>(o),
         NewWorkManager<OptionsTy>(o),
         options(o),
-        barrier(substrate::getBarrier(activeThreads)),
+        barrier(substrate::GetBarrier(activeThreads)),
         loopname(galois::internal::getLoopName(o.args)) {
     static_assert(
         !OptionsTy::needsBreak || OptionsTy::hasBreak,
@@ -1432,20 +1432,20 @@ Executor<OptionsTy>::go() {
       bool nextPending = pendingLoop(tld);
       innerDone.get() = true;
 
-      barrier.wait();
+      barrier.Wait();
 
       if (this->buildDAG())
-        barrier.wait();
+        barrier.Wait();
 
       if (this->buildIntentToRead())
-        barrier.wait();
+        barrier.Wait();
 
       bool nextCommit = false;
       outerDone.get() = true;
 
       if (this->executeDAG(*this, tld)) {
         if (OptionsTy::needsBreak)
-          barrier.wait();
+          barrier.Wait();
         drainPending(tld);
         break;
       }
@@ -1455,14 +1455,14 @@ Executor<OptionsTy>::go() {
       if (nextPending || nextCommit)
         innerDone.get() = false;
 
-      barrier.wait();
+      barrier.Wait();
 
       if (innerDone.get())
         break;
 
       this->calculateWindow(true);
 
-      barrier.wait();
+      barrier.Wait();
 
       this->pushNextWindow(tld.wlnext, local.nextWindow());
     }
@@ -1476,7 +1476,7 @@ Executor<OptionsTy>::go() {
     if (this->checkBreak())
       break;
 
-    barrier.wait();
+    barrier.Wait();
 
     if (outerDone.get()) {
       if (!OptionsTy::needsPush)

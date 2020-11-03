@@ -1,0 +1,30 @@
+# This file may be used to create an environment using:
+# $ conda env create --name <env> --file <this file>.yaml
+# (This file must be named <something>.yaml)
+channels:
+ - katanagraph
+ - conda-forge
+dependencies:
+ - cxx-compiler
+ - cmake
+ - arrow-cpp
+ - parquet-cpp
+ - aws-sdk-cpp
+ - libxml2
+ - awscli
+ - boost-cpp
+ - eigen
+ - fmt
+ - llvmdev
+ - howardhinnant_date
+ - nlohmann_json
+ - libcypher-parser
+ - cython
+ - pyarrow
+ - numpy
+ - numba
+ - scikit-build
+ - jinja2
+ - conda-build
+ - pytest
+ - libcurl

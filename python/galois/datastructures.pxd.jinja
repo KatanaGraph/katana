@@ -1,0 +1,72 @@
+# -*- mode: cython -*-
+
+# {{generated_banner()}}
+
+
+from .cpp.libgalois cimport datastructures
+from libc.stdint cimport uintptr_t
+import numpy as np
+{{type_instantiation_imports}}
+
+{% macro build_opaque(inst) %}
+{% set element_type = inst.element_c_type -%}
+cdef extern from * nogil:
+    """
+struct {{element_type}} {
+    char data[{{inst.size}}];
+};
+    """
+    struct {{element_type}}:
+        char data[{{inst.size}}]
+{% endmacro %}
+
+{% for inst in opaque_type_instantiations %}
+{{build_opaque(inst)}}
+{% endfor %}
+
+{% macro wrap_insert_bag(inst) %}
+{% set element_type = inst.element_c_type -%}
+{% set underlying_type %}datastructures.InsertBag[{{element_type}}]{% endset -%}
+{% set class_name %}InsertBag_{{element_type}}{% endset -%}
+cdef class {{class_name}}
+
+cdef class {{class_name}}_Iterator:
+    cdef {{class_name}} obj
+    cdef {{underlying_type}}.iterator it
+    cdef {{underlying_type}}.iterator end
+
+cdef class {{class_name}}:
+    cdef {{underlying_type}} underlying
+    cdef readonly object dtype
+{% endmacro %}
+
+{% for inst in type_instantiations %}
+{{wrap_insert_bag(inst)}}
+{% endfor %}
+
+{% macro wrap_large_array(inst) %}
+{% set element_type = inst.element_c_type -%}
+{% set underlying_type %}datastructures.LargeArray[{{element_type}}]{% endset -%}
+{% set class_name %}LargeArray_{{element_type}}{% endset -%}
+cdef class {{class_name}}_Iterator:
+    cdef object obj
+    cdef {{underlying_type}}.iterator it
+    cdef {{underlying_type}}.iterator end
+
+cdef class {{class_name}}:
+    cdef {{underlying_type}} underlying
+    cdef readonly object dtype
+
+    # Stored here so we can pass out pointers to them.
+    cdef Py_ssize_t shape
+    cdef Py_ssize_t stride
+
+    cdef bint _check_not_allocated({{class_name}} self) except False
+    cdef bint _check_allocated({{class_name}} self) except False
+    cdef bint _mark_allocated({{class_name}} self) except False
+
+{% endmacro %}
+
+{% for inst in type_instantiations %}
+{{wrap_large_array(inst)}}
+{% endfor %}

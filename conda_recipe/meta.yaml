@@ -1,0 +1,82 @@
+{% set version %}{% include "version.txt" %}{% endset %}
+
+# Check environment variables to determine build context
+{% set ci_build = environ.get("CI", False) %}
+{% set dev_build = environ.get("GALOIS_DEV_BUILD", ci_build) %}
+
+# For dev builds, add ".devN" to the version number, for N being the git commit count since the last tag.
+# This makes the build come BEFORE the plain version.
+{% set version %}{{ version }}{{ ".dev" + environ.get("GIT_DESCRIBE_NUMBER", "") if dev_build }}{% endset %}
+# The number is the github run number or if that is not set the git describe number (commit count since last tag).
+{% set build_number = environ.get("GITHUB_RUN_NUMBER", environ.get("GIT_DESCRIBE_NUMBER")) %}
+
+package:
+  name: galois
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  number: {{ build_number }}
+  # For dev builds, the build string includes the git hash and a tag stating where the build is happening.
+  {% if dev_build %}
+  string: {{ environ.get("GIT_DESCRIBE_HASH") }}_{{ "ci_" if ci_build }}{{ build_number }}
+  {% endif %}
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}    
+    - {{ cdt('numactl-devel') }}
+    - cmake>=3.13
+    - make
+  host:
+    - boost-cpp>=1.71,<2.0a0
+    - arrow-cpp>=0.17.1,<2.0a0
+    - aws-sdk-cpp>=1.7.164,<2.0a0
+    - fmt>=6.2.1,<7.0a0
+    - zlib>=1.2.11
+    - ncurses>=6.1
+    - llvm>=8
+    - {{ cdt('numactl-devel') }}
+    - libxml2>=2.9.10
+    - libcypher-parser>=0.6.2,<0.7a0
+    - nlohmann_json>=3.7.3,<4.0a0
+    - howardhinnant_date>=3.0.0,<4.0a0
+    - libcurl>=7.66
+  run:
+    - boost-cpp
+    - arrow-cpp
+    - aws-sdk-cpp
+    - fmt
+    - zlib
+    - ncurses
+    - libxml2
+    - libcypher-parser
+    - nlohmann_json
+    - howardhinnant_date
+    - libcurl
+
+test:
+  requires:
+    - {{ compiler('cxx') }}
+    - {{ cdt('numactl') }}
+    - cmake>=3.13
+    - make
+  files:
+    - test_app/CMakeLists.txt
+    - test_app/test_app.cpp
+  commands:
+    - graph-convert --help
+      
+about:
+  home: https://katanagraph.com/
+  license: BSD
+  license_file: LICENSE.txt
+  summary: Library for building parallel graph algorithms.
+
+extra:
+  recipe-maintainers:
+    - katanagraph
+    - amp
+    - insertinterestingnamehere

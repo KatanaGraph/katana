@@ -1,0 +1,12 @@
+FindCython.cmake
+UseCython.cmake
+
+These files override the released Cython cmake files to work around the bug:
+https://github.com/scikit-build/scikit-build/issues/292
+The patched files are taked from:
+https://github.com/jcfr/scikit-build/tree/fix-cython (commit a1073b3cd6ab60e33080e1e34f2ff67b1feb0ce3)
+There is a PR for this fix at: https://github.com/scikit-build/scikit-build/pull/414
+
+The patched files enable the Cython cmake functions to correctly handle
+generated Cython code. Without the patch, generated Cython is effectively
+impossible within cmake.

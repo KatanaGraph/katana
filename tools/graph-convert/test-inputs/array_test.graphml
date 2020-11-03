@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+<key id="name" for="node" attr.name="name"/>
+<key id="tagline" for="node" attr.name="tagline"/>
+<key id="label" for="node" attr.name="label"/>
+<key id="title" for="node" attr.name="title"/>
+<key id="released" for="node" attr.name="released" attr.type="long"/>
+<key id="roles" for="edge" attr.name="roles" attr.type="string" attr.list="string"/>
+<key id="numbers" for="edge" attr.name="numbers" attr.type="string" attr.list="long"/>
+<key id="bools" for="edge" attr.name="bools" attr.type="string" attr.list="boolean"/>
+<key id="label" for="edge" attr.name="label"/>
+<key id="text" for="edge" attr.name="text"/>
+<graph id="G" edgedefault="directed">
+<node id="n0" labels=":Movie"><data key="labels">:Movie</data><data key="title">The Matrix</data><data key="tagline">Welcome to the Real World</data><data key="released">1999</data></node>
+<node id="n1" labels=":Person"><data key="labels">:Person</data><data key="born">1964</data><data key="name">Keanu Reeves</data></node>
+<node id="n2" labels=":Person"><data key="labels">:Person</data><data key="born">1967</data><data key="name">Carrie-Anne Moss</data></node>
+<node id="n3" labels=":Person"><data key="labels">:Person</data><data key="born">1961</data><data key="name">Laurence Fishburne</data></node>
+<node id="n4" labels=":Person"><data key="labels">:Person</data><data key="born">1960</data><data key="name">Hugo Weaving</data></node>
+<node id="n5" labels=":Person"><data key="labels">:Person</data><data key="born">1967</data><data key="name">Lilly Wachowski</data></node>
+<node id="n6" labels=":Person"><data key="labels">:Person</data><data key="born">1965</data><data key="name">Lana Wachowski</data></node>
+<node id="n7" labels=":Person"><data key="labels">:Person</data><data key="born">1952</data><data key="name">Joel Silver</data></node>
+<node id="n9" labels=":Other:Person:Random"><data key="labels">:Other:Person:Random</data><data key="born">1963</data></node>
+<edge id="e2" source="n3" target="n0" label="ACTED_IN"><data key="label">ACTED_IN</data><data key="roles">["Morpheus","some stuff","test\nn"]</data><data key="numbers">[12,53,67,32,-1]</data><data key="bools">[false,true,false,false]</data></edge>
+<edge id="e1" source="n2" target="n0" label="ACTED_IN"><data key="label">ACTED_IN</data><data key="roles">["Trinity","more","another"]</data></edge>
+<edge id="e0" source="n1" target="n0" label="ACTED_IN"><data key="label">ACTED_IN</data><data key="roles">["Neo"]</data></edge>
+<edge id="e4" source="n5" target="n0" label="DIRECTED"><data key="label">DIRECTED</data><data key="numbers">[2,43,76543]</data><data key="bools">[false,false]</data></edge>
+<edge id="e6" source="n7" target="n0" label="PRODUCED"><data key="label">PRODUCED</data></edge>
+<edge id="e5" source="n6" target="n0" label="DIRECTED"><data key="label">DIRECTED</data></edge>
+<edge id="e3" source="n4" target="n0" label="ACTED_IN"><data key="label">ACTED_IN</data><data key="roles">["Agent Smith","alter"]</data><data key="numbers">[53,5324,2435,65756,352,3442,2342454,56]</data><data key="bools">[false,false,false,true,true]</data></edge>
+<edge id="e7" source="n3" target="n7" label="IN_SAME_MOVIE"><data key="label">IN_SAME_MOVIE</data><data key="text">stuff</data></edge>
+</graph>
+</graphml>

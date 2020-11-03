@@ -1,0 +1,400 @@
+# -*- mode: cython -*-
+#{# This Jinja2 generates the Cython wrapper for Galois' do_all and for_each #}
+
+# {{generated_banner()}}
+
+import cython
+import numba.core.ccallback
+import ctypes
+import logging
+from libcpp.memory cimport shared_ptr
+from cython.operator cimport dereference as deref
+cimport numpy as np
+import numpy as np
+
+{{type_instantiation_imports}}
+
+import galois
+import galois.loops
+import galois.numba_support.closure
+from numba import from_dtype
+
+from .cpp.libgalois cimport Galois, datastructures
+from .cpp.libgalois.graphs cimport Graph
+from .cpp.libgalois cimport Worklist
+
+from galois.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
+from galois.numpy_structs import StructInstance
+
+from .datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
+{% for inst in type_instantiations -%}
+from .datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
+{% endfor -%}
+from .datastructures import InsertBag_uint64_t, LargeArray_uint64_t, InsertBag_Opaque16, StructInstance
+from .property_graph cimport PropertyGraph
+from .property_graph import PropertyGraph
+
+from galois.util.template_type import make_template_type1_with_opaque
+
+
+_logger = logging.getLogger(__name__)
+
+{% import "numba_wrapper_support.pyx.jinja" as numba %}
+
+{{numba.header()}}
+
+
+cdef class FunctionAndDtype:
+    cdef readonly object function
+    cdef readonly object dtype
+
+    def __init__(self, function, dtype):
+        self.function = function
+        self.dtype = dtype
+
+# Adds PerSocketChunkFIFO worklist
+cdef extern from * nogil:
+    """
+auto make_per_socket_chunk_fifo() {
+  constexpr static const unsigned CHUNK_SIZE      = 64U;
+  using PSchunk = galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE>;
+  return galois::wl<PSchunk>();
+}
+    """
+    Galois.CPPAuto make_per_socket_chunk_fifo()
+
+
+{% macro wrap_loop_utilities(inst) %}
+{% set scab = inst.type_scab %}
+{% set element_type = inst.element_c_type %}
+cdef as_dtype_struct_{{scab}}(const {{element_type}}* v, dtype):
+    tv = <{{element_type}}[:1]>v
+    return as_struct_instance(np.asarray(tv), dtype)
+
+{% set UserContext_name %}UserContext_{{scab}}{% endset %}
+{% set UserContext_underlying_type %}Galois.UserContext[{{element_type}}]{% endset %}
+cdef class {{UserContext_name}}:
+    cdef {{UserContext_underlying_type}} *underlying
+    cdef readonly object dtype
+
+    def __init__(self):
+        raise Exception("UserContext cannot be created from Python.")
+
+    @staticmethod
+    cdef {{UserContext_name}} make({{UserContext_underlying_type}} * u, object dtype):
+        f = <{{UserContext_name}}>{{UserContext_name}}.__new__({{UserContext_name}})
+        f.underlying = u
+        f.dtype = dtype
+        return f
+
+    def push(self, v):
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.push((<{{element_type}}*>arr.data)[0])
+{% else %}
+        self.underlying.push(<{{element_type}}>v)
+{% endif %}
+
+    def push_back(self, v):
+{%- if inst.by_pointer %}
+        arr = argument_to_ndarray_dtype(v, self.dtype)
+        self.underlying.push_back((<{{element_type}}*>arr.data)[0])
+{% else %}
+        self.underlying.push_back(<{{element_type}}>v)
+{% endif %}
+
+    def isFirstPass(self):
+        return self.underlying.isFirstPass()
+
+    def cautiousPoint(self):
+        self.underlying.cautiousPoint()
+
+    def breakLoop(self):
+        self.underlying.breakLoop()
+
+    def abort(self):
+        self.underlying.abort()
+
+    @property
+    def address(self):
+        return <unsigned long int>self.underlying
+
+    @property
+    def storage_size(self):
+        return sizeof({{element_type}})
+
+{% call numba.class_(UserContext_name, UserContext_underlying_type, True) %}
+{% if inst.by_pointer %}
+{{numba.method("push", "void", [element_type + " dtype"])}}
+{{numba.method("push_back", "void", [element_type + " dtype"])}}
+{% else %}
+{{numba.method("push", "void", [element_type])}}
+{{numba.method("push_back", "void", [element_type])}}
+{% endif %}
+{{numba.method("isFirstPass", "bint", [])}}
+{{numba.method("cautiousPoint", "void", [])}}
+{{numba.method("breakLoop", "void", [])}}
+{{numba.method("abort", "void", [])}}
+{% endcall %}
+
+
+cdef extern from * nogil:
+    """
+typedef int64_t (*obim_metric_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, void*);
+
+struct AdapterFunctor_{{scab}} {
+    obim_metric_type_{{scab}} func;
+    void* userdata;    
+    int64_t operator()(const {{element_type}}{{"&" if inst.by_pointer}} arg) { 
+        return func({{"&" if inst.by_pointer}}arg, userdata);
+    }
+};
+
+auto make_order_by_integer_metric_with_callback_{{scab}}(obim_metric_type_{{scab}} func, void* userdata) {
+  constexpr static const unsigned CHUNK_SIZE      = 64U;
+  using PSchunk = galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE>;
+
+  return galois::wl<galois::worklists::OrderedByIntegerMetric<AdapterFunctor_{{scab}}, PSchunk>>(AdapterFunctor_{{scab}}{func, userdata});
+}
+    """
+    ctypedef int64_t (*obim_metric_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, void*) except *
+    Galois.CPPAuto make_order_by_integer_metric_with_callback_{{scab}}(obim_metric_type_{{scab}} func, void* userdata)
+
+cdef int64_t wrap_python_callable_obim_metric_{{scab}}(const {{element_type}}{{"*" if inst.by_pointer}} arg, void* userdata) nogil:
+    with gil:
+        data = <FunctionAndDtype><object>userdata
+{% if inst.by_pointer %}
+        return (data.function)(as_dtype_struct_{{scab}}(arg, data.dtype))
+{% else %}
+        return (data.function)(arg)
+{% endif %}
+
+cdef extern from * nogil:
+    """
+    typedef void (*do_all_operator_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, void*);
+    #define do_all_operator_lambda_{{scab}}(func, user_data) [&](const {{element_type}}{{"&" if inst.by_pointer}} arg) { func({{"&" if inst.by_pointer}}arg, user_data); }
+    """
+    ctypedef void (*do_all_operator_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, void*) except *
+    Galois.CPPAuto do_all_operator_lambda_{{scab}}(do_all_operator_type_{{scab}}, void*)
+
+cdef extern from * nogil:
+    """
+    typedef void (*for_each_operator_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, galois::UserContext<{{element_type}}>*, void*);
+    #define for_each_operator_lambda_{{scab}}(func, user_data) [&](const {{element_type}}{{"&" if inst.by_pointer}} arg, auto& ctx) { func({{"&" if inst.by_pointer}}arg, &ctx, user_data); }
+    """
+    ctypedef void (*for_each_operator_type_{{scab}})(const {{element_type}}{{"*" if inst.by_pointer}}, Galois.UserContext[{{element_type}}]*, void*) except *
+    Galois.CPPAuto for_each_operator_lambda_{{scab}}(for_each_operator_type_{{scab}}, void*)
+
+
+cdef void wrap_python_callable_do_all_operator_{{scab}}(const {{element_type}}{{"*" if inst.by_pointer}} arg, void* userdata) nogil:
+    with gil:
+        data = <FunctionAndDtype><object>userdata
+{% if inst.by_pointer %}
+        (data.function)(as_dtype_struct_{{scab}}(arg, data.dtype))
+{% else %}
+        (data.function)(arg)
+{% endif %}
+
+cdef void wrap_python_callable_for_each_operator_{{scab}}(const {{element_type}}{{"*" if inst.by_pointer}} arg, Galois.UserContext[{{element_type}}] *ctx, void* userdata) nogil:
+    with gil:
+        data = <FunctionAndDtype><object>userdata
+{% if inst.by_pointer %}
+        (data.function)(as_dtype_struct_{{scab}}(arg, data.dtype), UserContext_{{scab}}.make(ctx, data.dtype))
+{% else %}
+        (data.function)(arg, UserContext_{{scab}}.make(ctx, data.dtype))
+{% endif %}
+
+{% endmacro %}
+
+{{numba.wrap_all_instances("UserContext", wrap_loop_utilities, True)}}
+
+{# These handle_* and extract_* macros are stacked together using nested_statements from generate_from_jinja.py.
+ #  Each macro calls inner which is a function that encapulates all the remaining macros that need to be
+ #  stacked together. Multiple calls to inner cause the rest of the stack to be duplicated (with different arguments
+ #  generally). Arguments before inner are bound (with partial) before executing the stack of functions; arguments
+ #  after inner are passed from each layer to the next. The first argument to inner is the number of (4 space)
+ #  indentation level that should be added to the code generated.
+}#}
+
+{% macro handle_descriptors(descriptors, inner, iterable, args, loop_variable_type) -%}
+if False:
+    pass
+{%- for ss in all_combinations(descriptors) %}
+elif True {%- for d in descriptors %} and {% if d in ss -%} {{d}} {%- else -%} not {{d}} {%- endif -%} {%- endfor -%}:
+    {% set args = args.copy() %}
+    {% for d in ss -%}
+    {% set _ = args.append("Galois."+d+"()") %}
+    {%- endfor %}
+    {{inner(1, iterable, args, loop_variable_type)}}
+{%- endfor %}
+{% endmacro %}
+
+{% macro handle_worklist(inner, iterable, args, loop_variable_type) -%}
+{{"FATAL: loop_variable_type must be set." if not loop_variable_type}}
+if worklist is None:
+    {{inner(1, iterable, args, loop_variable_type)}}
+elif isinstance(worklist, PerSocketChunkFIFO):
+    {{inner(1, iterable, args + ["make_per_socket_chunk_fifo()"], loop_variable_type)}}
+elif isinstance(worklist, OrderedByIntegerMetric):
+    obim_func = worklist.indexer
+    if isinstance(obim_func, galois.numba_support.closure.UninstantiatedClosure):
+        obim_func = obim_func.instantiate(from_dtype(dtype))
+
+    if isinstance(obim_func, numba.core.ccallback.CFunc):
+        if not galois.loops.is_obim_metric_cfunc(obim_func):
+            raise TypeError("Function has incorrect signature")
+        obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.address)
+        obim_userdata = NULL
+    elif isinstance(obim_func, galois.numba_support.closure.Closure):
+        if not galois.loops.is_obim_metric_closure(obim_func):
+            raise TypeError("Function has incorrect signature")
+        obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.__function_address__)
+        obim_userdata = <void*><unsigned long int>(obim_func.__userdata_address__)
+    elif callable(obim_func):
+        _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(obim_func, "__name__", "<unknown function>"))
+        obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}>&wrap_python_callable_obim_metric_{{loop_variable_type}}
+        obim_function_and_dtype = FunctionAndDtype(obim_func, dtype)
+        obim_userdata = <void*>obim_function_and_dtype
+    else:
+        raise TypeError(obim_func)
+
+    {{inner(1, iterable, args + ["make_order_by_integer_metric_with_callback_"+loop_variable_type+"(obim_cb_"+loop_variable_type+", obim_userdata)"], loop_variable_type)}}
+else:
+    raise TypeError(worklist)
+{% endmacro %}
+
+{% macro release_gil(inner, iterable, args, loop_variable_type) -%}
+with nogil:
+    {{inner(1, iterable, args, loop_variable_type)}}
+{% endmacro %}
+
+{% macro handle_loop_name(inner, iterable, args, loop_variable_type) -%}
+{{inner(0, iterable, args + ["Galois.loopname(c_name)"], loop_variable_type)}}
+{% endmacro %}
+
+{% macro handle_iterable(inner, iterable, args, loop_variable_type) -%}
+{{"FATAL: loop_variable_type already set to: " + loop_variable_type if loop_variable_type}}
+if isinstance(iterable, PropertyGraph):
+    iterable = range((<PropertyGraph>iterable).num_nodes())
+
+if isinstance(iterable, range) and iterable.step == 1:
+    frm = <uint64_t>iterable.start
+    to = <uint64_t>iterable.stop
+    dtype = np.uint64
+    {{inner(1, "Galois.iterate(frm, to)", args, "uint64_t")}}
+{% for inst in type_instantiations %}
+elif isinstance(iterable, InsertBag_{{inst.type_scab}}):
+    {% set variable_name %}insert_bag_{{inst.type_scab}}{% endset -%}
+    {{variable_name}} = &(<InsertBag_{{inst.type_scab}}>iterable).underlying
+    dtype = {{inst.dtype("iterable.dtype")}}
+    {{inner(1, "Galois.iterate(" + variable_name + "[0])", args, inst.element_c_type)}}
+{% endfor %}
+elif isinstance(iterable, LargeArray_uint64_t):
+    large_array = &(<LargeArray_uint64_t>iterable).underlying
+    dtype = np.uint64
+    {{inner(1, "Galois.iterate(large_array[0])", args, "uint64_t")}}
+else:
+    raise ValueError("iterable unsupported")
+{% endmacro %}
+
+{% macro extract_loop_name(inner, iterable, args, loop_variable_type) -%}
+if not loop_name:
+    loop_name = getattr(func, "__qualname__", getattr(func, "__name__", "<unnamed>"))
+if not isinstance(loop_name, str):
+    raise TypeError("Expected str loop_name")
+loop_name_bytes = bytes(loop_name, "utf-8")
+c_name = <const char*>loop_name_bytes
+
+{{inner(0, iterable, args, loop_variable_type)}}
+{% endmacro %}
+
+{% macro extract_callback(loop_type, inner, iterable, args, loop_variable_type) -%}
+{{"FATAL: loop_variable_type must be set." if not loop_variable_type}}
+if isinstance(func, galois.numba_support.closure.UninstantiatedClosure):
+    {% if loop_type == "do_all" %}
+    func = func.instantiate(from_dtype(dtype))
+    {% else %}
+    func = func.instantiate(from_dtype(dtype), UserContext_numba_type[dtype])
+    {% endif %}
+
+if isinstance(func, numba.core.ccallback.CFunc):
+    if not galois.loops.is_{{loop_type}}_operator_cfunc(func):
+        raise TypeError("Function has incorrect signature")
+    cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.address)
+    userdata = NULL
+elif isinstance(func, galois.numba_support.closure.Closure):
+    if not galois.loops.is_{{loop_type}}_operator_closure(func):
+        raise TypeError("Function has incorrect signature")
+    cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.__function_address__)
+    userdata = <void*><unsigned long int>(func.__userdata_address__)
+elif callable(func):
+    _logger.info("PERFORMANCE WARNING: Using Python callable in Galois loop: %s", getattr(func, "__name__", "<unknown function>"))
+    cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}>&wrap_python_callable_{{loop_type}}_operator_{{loop_variable_type}}
+    function_and_dtype = FunctionAndDtype(func, dtype)
+    userdata = <void*>function_and_dtype
+else:
+    raise TypeError(func)
+
+{{inner(0, iterable, args, loop_variable_type)}}
+{% endmacro %}
+
+{% macro generate_call(loop_type, inner, iterable, args, loop_variable_type) -%}
+Galois.{{loop_type}}({{iterable}},
+                     {{loop_type}}_operator_lambda_{{loop_variable_type}}(cb_{{loop_variable_type}}, userdata),
+                     {{args|join(", ")}})
+{%- endmacro %}
+
+
+{% set descriptors = ["steal"] %}
+def do_all(object iterable, func,
+                    loop_name = None
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %}):
+    cdef:
+        const char *c_name
+
+    {{indent(1, nested_statements([
+        extract_loop_name,
+        handle_loop_name,
+        handle_iterable,
+        partial(extract_callback, "do_all"),
+        partial(handle_descriptors, descriptors|sort),
+        release_gil,
+        partial(generate_call, "do_all")], "", [], None))}}
+
+
+class Worklist:
+    pass
+
+class PerSocketChunkFIFO(Worklist):
+    pass
+    
+class OrderedByIntegerMetric(Worklist):
+    def __init__(self, indexer):
+        self.indexer = indexer
+
+{% set descriptors = ["steal", "no_pushes"] %}
+def for_each(object iterable, func,
+                    loop_name = None,
+                    worklist = None
+                    {% for d in descriptors|sort %}, bint {{d}} = False{% endfor %},
+                    disable_conflict_detection=True):
+    cdef:
+        const char *c_name
+
+    if not disable_conflict_detection:
+        raise ValueError("disable_conflict_detection=False is not supported")
+
+    {{indent(1, nested_statements([
+        extract_loop_name,
+        handle_loop_name,
+        handle_iterable,
+        partial(extract_callback, "for_each"),
+        handle_worklist,
+        release_gil,
+        partial(handle_descriptors, descriptors|sort),
+        partial(generate_call, "for_each")], "", ["Galois.disable_conflict_detection()"], None))}}
+
+
+{{numba.register_all_wrappers()}}
+
+{{numba.build_numba_type_dict("UserContext", True)}}

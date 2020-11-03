@@ -1,0 +1,21 @@
+[requires]
+benchmark/1.5.0
+boost/1.71.0
+date/2.4.1
+eigen/3.3.7
+fmt/6.2.1
+libmysqlclient/8.0.17
+mongo-c-driver/1.16.1@bincrafters/stable
+nlohmann_json/3.7.3
+openssl/1.1.1g
+
+[options]
+date:header_only = True
+libcurl:shared=True
+
+[generators]
+cmake_find_package
+cmake_paths
+
+[imports]
+lib, *.dylib* -> /usr/local/lib/

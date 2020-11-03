@@ -55,7 +55,6 @@ At the minimum, Galois depends on the following software:
 - libllvm (>= 7.0 with RTTI support)
 - libfmt (>= 4.0)
 - libxml2 (>=  2.9.1)
-- libcypher-parser (>= 0.6.0)
 - libarrow (>= 0.17)
 - libuuid (>= 2.31.1)
 - [nlohmann/json](https://github.com/nlohmann/json) (>= 3.7.3)
@@ -80,9 +79,6 @@ Here are the dependencies for the optional features:
 - Doxygen (>= 1.8.5) for compiling documentation as webpages or latex files 
 - PAPI (>= 5.2.0.0 ) for profiling sections of code
 - Vtune (>= 2017 ) for profiling sections of code
-- MPICH2 (>= 3.2) if you are interested in building and running distributed system
-  applications in Galois
-- CUDA (>= 8.0) if you want to build GPU or distributed heterogeneous applications
 - Eigen (3.3.1 works for us) for some matrix-completion app variants
 
 
@@ -201,18 +197,6 @@ time of various sections, parallel loop iterations and memory usage, etc. These
 stats are in CSV format and can be redirected to a file using `-statFile` option.
 Please refer to the manual for details on stats. 
 
-Running LonestarGPU applications
---------------------------
-
-Please refer to `lonestar/analytics/gpu/README.md` and `lonestar/scientific/gpu/README.md` for more details on
-compiling and running LonestarGPU applications.
-
-Running Distributed Galois
---------------------------
-
-Please refer to `lonestar/analytics/distributed/README.md` for more details on
-running distributed benchmarks.
-
 Documentation
 =============
 
@@ -235,10 +219,6 @@ Source-Tree Organization
 
 - `libgalois` contains the source code for the shared-memory Galois library, e.g., runtime, graphs, worklists, etc. 
 - `lonestar` contains the Lonestar benchmark applications and tutorial examples for Galois
-- `libdist` contains the source code for the distributed-memory and heterogeneous Galois library
-- `lonestardist` contains the source code for the distributed-memory and heterogeneous
-  benchmark applications. Please refer to `lonestardist/README.md` for instructions on
-  building and running these apps. 
 - `tools` contains various helper programs such as graph-converter to convert
   between graph file formats and graph-stats to print graph properties
 
@@ -281,24 +261,13 @@ specific commands vary by system) are:
 ```Shell
 c++ -std=c++14 app.cpp -I$INSTALL_DIR/include -L$INSTALL_DIR/lib -lgalois_shmem
 ```
-Third-Party Libraries and Licensing
-====================
-
-Galois includes some third party libraries that do not use the same license as
-Galois. This includes the bliss library (located in lonestar/include/Mining/bliss)
-and Modern GPU (located in libgpu/moderngpu). Please be aware of this when
-using Galois.
-
 Contact Us
 ==========
 For bugs, please raise an
-[issue](https://github.com/IntelligentSoftwareSystems/Galois/issues) on
+[issue](https://github.com/KatanaGraph/katana/issues) on
 GiHub.
-Questions and comments are also welcome at the Galois users mailing list:
-[galois-users@utlists.utexas.edu](galois-users@utlists.utexas.edu). You may
-[subscribe here](https://utlists.utexas.edu/sympa/subscribe/galois-users).
 
-If you find a bug, it would help us if you sent (1) the command line and
+If you file an issue, it would help us if you sent (1) the command line and
 program inputs and outputs and (2) a core dump, preferably from an executable
 built with the debug build.
 
@@ -326,6 +295,5 @@ my-app with-failing-input
 exit
 ```
 
-This will generate a file `debug-log.txt`, which you can send to the mailing
-list:[galois-users@utlists.utexas.edu](galois-users@utlists.utexas.edu) for
-further debugging or supply when opening a GitHub issue.
+This will generate a file `debug-log.txt`, which you can supply when opening a
+GitHub issue.

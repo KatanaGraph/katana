@@ -7,7 +7,7 @@ channels:
 dependencies:
  - cxx-compiler
  - cmake
- - arrow-cpp
+ - arrow-cpp<2.0.0
  - parquet-cpp
  - aws-sdk-cpp
  - libxml2

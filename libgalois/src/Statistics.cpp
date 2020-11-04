@@ -276,8 +276,13 @@ galois::internal::sysStatManager() {
 }
 
 void
-galois::setStatFile(const std::string& f) {
+galois::SetStatFile(const std::string& f) {
   internal::sysStatManager()->SetStatFile(f);
+}
+
+void
+galois::PrintStats() {
+  internal::sysStatManager()->Print();
 }
 
 void

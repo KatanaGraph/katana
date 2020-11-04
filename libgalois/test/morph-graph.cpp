@@ -111,7 +111,7 @@ main(int argc, char** argv) {
             << " threads.\n";
 
   if (argc >= 5) {
-    galois::setStatFile(argv[4]);
+    galois::SetStatFile(argv[4]);
   }
 
   if ("out" == graphtype) {

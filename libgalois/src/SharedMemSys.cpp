@@ -55,7 +55,7 @@ galois::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
 }
 
 galois::SharedMemSys::~SharedMemSys() {
-  impl_->stat_manager.Print();
+  galois::PrintStats();
   galois::internal::setSysStatManager(nullptr);
 
   if (auto fini_good = tsuba::Fini(); !fini_good) {

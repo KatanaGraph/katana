@@ -429,8 +429,6 @@ ReportStatAvg(
   ReportStat(region, category, value, StatTotal::TAVG);
 }
 
-GALOIS_EXPORT void setStatFile(const std::string& f);
-
 //! Reports maximum resident set size and page faults stats using
 //! rusage
 //! @param id Identifier to prefix stat with in statistics output
@@ -438,6 +436,12 @@ GALOIS_EXPORT void reportRUsage(const std::string& id);
 
 //! Reports Galois system memory stats for all threads
 GALOIS_EXPORT void reportPageAlloc(const char* category);
+
+/// Prints statistics out to standard out or to the file indicated by
+/// SetStatFile
+GALOIS_EXPORT void PrintStats();
+
+GALOIS_EXPORT void SetStatFile(const std::string& f);
 
 }  // end namespace galois
 

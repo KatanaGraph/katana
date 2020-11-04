@@ -72,7 +72,7 @@ LonestarStart(
 
   numThreads = galois::setActiveThreads(numThreads);
 
-  galois::setStatFile(statFile);
+  galois::SetStatFile(statFile);
 
   LonestarPrintVersion(llvm::outs());
   llvm::outs() << "Copyright (C) " << galois::getCopyrightYear()

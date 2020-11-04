@@ -43,7 +43,6 @@ set(BUILD_TESTING ON CACHE BOOL "Build tests")
 
 ###### Developer features ######
 set(GALOIS_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical cores)")
-set(GALOIS_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
 # GALOIS_FORCE_NON_STATIC is a transitional flag intended to turn symbol export
 # errors into linker errors while the codebase transitions to hidden visibility
 # by default.
@@ -69,16 +68,6 @@ endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CTest)
-endif()
-
-###### Install dependencies ######
-
-if(GALOIS_AUTO_CONAN)
-  include(cmake/Modules/conan.cmake)
-  conan_cmake_run(CONANFILE config/conanfile.txt
-                  BASIC_SETUP CMAKE_TARGETS
-                  BUILD missing)
-  include("${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake")
 endif()
 
 ###### Configure compiler ######

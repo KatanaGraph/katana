@@ -87,8 +87,9 @@ public:
 
   //! move assignment operator
   PODResizeableArray& operator=(PODResizeableArray&& v) {
-    if (data_ != NULL)
+    if (data_ != NULL) {
       free(data_);
+    }
     data_ = v.data_;
     capacity_ = v.capacity_;
     size_ = v.size_;
@@ -99,8 +100,9 @@ public:
   }
 
   ~PODResizeableArray() {
-    if (data_ != NULL)
+    if (data_ != NULL) {
       free(data_);
+    }
   }
 
   // iterators:
@@ -128,17 +130,36 @@ public:
   size_type max_size() const { return capacity_; }
   bool empty() const { return size_ == 0; }
 
-  void reserve(size_t n) {
-    if (n > capacity_) {
-      if (capacity_ == 0) {
-        capacity_ = 1;
+  void trim() {
+    if (size_ == 0) {
+      if (data_ != NULL) {
+        free(data_);
+        data_ = NULL;
       }
-      while (capacity_ < n) {
-        capacity_ <<= 1;
-      }
+    } else if (size_ < capacity_) {
       data_ = static_cast<_Tp*>(
-          realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
+          realloc(reinterpret_cast<void*>(data_), size_ * sizeof(_Tp)));
     }
+  }
+
+  void reserve(size_t n) {
+    if (n <= capacity_) {
+      return;
+    }
+
+    // When reallocing, don't pay for elements greater than size_
+    trim();
+
+    // increase capacity in powers-of-2
+    if (capacity_ == 0) {
+      capacity_ = 1;
+    }
+    while (capacity_ < n) {
+      capacity_ <<= 1;
+    }
+
+    data_ = static_cast<_Tp*>(
+        realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
   }
 
   void resize(size_t n) {

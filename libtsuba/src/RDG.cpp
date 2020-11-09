@@ -1160,7 +1160,7 @@ RDG::PrunePropsTo(
     for (const std::string& s : *edge_properties) {
       auto it = edge_paths.find(s);
       if (it == edge_paths.end()) {
-        GALOIS_LOG_DEBUG("failed: node property {} not found", s);
+        GALOIS_LOG_DEBUG("failed: edge property {} not found", s);
         return ErrorCode::PropertyNotFound;
       }
 

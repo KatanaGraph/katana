@@ -54,7 +54,6 @@ if(fmt_VERSION VERSION_LESS 4)
 endif()
 target_link_libraries(galois_support PUBLIC fmt::fmt)
 
-#target_compile_definitions(galois_support PUBLIC BOOST_STACKTRACE_LINK=0)
 if(TARGET Boost::Boost)
   target_link_libraries(galois_support PUBLIC Boost::Boost)
 else()

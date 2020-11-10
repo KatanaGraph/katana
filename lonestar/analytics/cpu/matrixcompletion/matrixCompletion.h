@@ -96,7 +96,7 @@ static cll::opt<std::string> outputFilename(
 static cll::opt<std::string> transposeGraphName(
     "graphTranspose", cll::desc("Transpose of input graph"));
 static cll::opt<OutputType> outputType(
-    "output", cll::desc("Output type:"),
+    "outputType", cll::desc("Output type:"),
     cll::values(
         clEnumValN(OutputType::binary, "binary", "Binary"),
         clEnumValN(OutputType::ascii, "ascii", "ASCII")),

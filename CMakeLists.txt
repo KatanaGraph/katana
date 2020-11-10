@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(Galois)
+#project(Galois)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 

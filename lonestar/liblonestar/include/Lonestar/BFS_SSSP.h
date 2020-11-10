@@ -33,7 +33,7 @@ struct BFS_SSSP {
   using Dist = _DistLabel;
 
   constexpr static const Dist DIST_INFINITY =
-      std::numeric_limits<Dist>::max() / 2 - 1;
+      std::numeric_limits<Dist>::max() / 4;
 
   using GNode = typename Graph::Node;
   using EI = typename Graph::edge_iterator;

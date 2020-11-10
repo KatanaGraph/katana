@@ -170,6 +170,23 @@ syncPageRank(Graph* graph) {
   }
 }
 
+/******************************************************************************/
+/* Make results */
+/******************************************************************************/
+
+std::vector<PRTy>
+makeResults(const Graph& graph) {
+  std::vector<PRTy> values;
+
+  values.reserve(graph.num_nodes());
+  for (auto node : graph) {
+    auto& value = graph.GetData<NodeValue>(node);
+    values.push_back(value);
+  }
+
+  return values;
+}
+
 int
 main(int argc, char** argv) {
   std::unique_ptr<galois::SharedMemSys> G =
@@ -235,6 +252,13 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     printTop<Graph, NodeValue>(&graph);
+  }
+
+  if (output) {
+    std::vector<PRTy> results = makeResults(graph);
+    assert(results.size() == graph.size());
+
+    writeOutput(outputLocation, results.data(), results.size());
   }
 
 #if DEBUG

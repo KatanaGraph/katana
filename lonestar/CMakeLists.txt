@@ -1,13 +1,25 @@
 set(RESULT_CHECKER ${PROJECT_SOURCE_DIR}/scripts/result_checker.py)
 
+
+# Return canonical name of an application, e.g., pagerank-pull-cpu => pagerank-pull
+function(stem_app app output)
+	string(REPLACE "-" ";" app_list ${app})
+	list(POP_BACK app_list)
+	list(JOIN app_list "-" result)
+
+	set(${output} ${result} PARENT_SCOPE)
+endfunction()
+
 function(add_test_scale type app)
-  set(options NOT_QUICK)
-  set(one_value_args)
+  set(options NOT_QUICK NO_VERIFY)
+  set(one_value_args INPUT INPUT_URI)
   set(multi_value_args)
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
   set(threads)
   set(thr "${GALOIS_NUM_TEST_THREADS}")
+  stem_app(${app} app_id)
+  set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${X_INPUT})
   while (${thr} GREATER 1)
     list(APPEND threads ${thr})
     math(EXPR thr "${thr} / 2")
@@ -15,12 +27,46 @@ function(add_test_scale type app)
   list(APPEND threads "1")
 
   foreach (thr ${threads})
-    set(name run-${app}.input=${type}.threads=${thr})
-    add_test(NAME ${name} COMMAND ${app} ${X_UNPARSED_ARGUMENTS} -t ${thr})
+    set(suffix -${app}.input=${type}.threads=${thr})
+    set(command ${app} ${X_INPUT_URI} ${X_UNPARSED_ARGUMENTS} -t ${thr})
+    set(output_location ${PROJECT_BINARY_DIR}/Testing/verify/run${suffix})
+    if(NOT X_NO_VERIFY)
+	    list(APPEND command -output -outputLocation=${output_location})
+    endif()
+
+    add_test(NAME setup-clean${suffix}
+      COMMAND ${CMAKE_COMMAND} -E remove_directory ${output_location})
+    add_test(NAME setup-make${suffix}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${output_location})
+
+    add_test(NAME run${suffix} COMMAND ${command})
+
+    if(X_NO_VERIFY)
+      add_test(NAME verify${suffix}
+        COMMAND ${CMAKE_COMMAND} -E true)
+    else()
+      add_test(NAME verify${suffix}
+        COMMAND python3 ${RESULT_CHECKER} -t=0.01 -m=0.001 -sort=1 ${verification_log} ${output_location})
+    endif()
+
     if(NOT X_NOT_QUICK)
       # Allow parallel tests
-      set_tests_properties(${name}
-        PROPERTIES ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1 LABELS quick)
+      set_tests_properties(setup-make${suffix} setup-clean${suffix}
+      PROPERTIES
+        FIXTURES_SETUP run${suffix})
+      set_tests_properties(setup-make${suffix}
+        PROPERTIES
+          DEPENDS setup-clean${suffix})
+      set_tests_properties(run${suffix}
+        PROPERTIES
+          FIXTURES_REQUIRED run${suffix}
+          FIXTURES_SETUP verify${suffix}
+          ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1 LABELS quick)
+      set_tests_properties(verify${suffix}
+        PROPERTIES
+          DEPENDS run${suffix}
+          FIXTURES_REQUIRED verify${suffix}
+          LABELS quick)
     endif()
   endforeach()
 endfunction(add_test_scale)

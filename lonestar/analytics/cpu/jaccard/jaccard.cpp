@@ -73,8 +73,8 @@ algo(Graph* graph, const GNode& base) {
         // Count the number of neighbors of n2 and the number that are shared
         // with base
         for (const auto& e : graph->edges(n2)) {
-          const GNode& neighbor = *graph->GetEdgeDest(e);
-          if (base_neighbors.count(neighbor) > 0)
+          auto neighbor = graph->GetEdgeDest(e);
+          if (base_neighbors.count(*neighbor) > 0)
             intersection_size++;
           n2_size++;
         }

@@ -342,6 +342,23 @@ topoTileAlgo(Graph* graph, const GNode& source) {
   galois::ReportStatSingle("SSSP-topo", "rounds", rounds);
 }
 
+/******************************************************************************/
+/* Make results */
+/******************************************************************************/
+
+std::vector<uint32_t>
+makeResults(const Graph& graph) {
+  std::vector<uint32_t> values;
+
+  values.reserve(graph.num_nodes());
+  for (auto node : graph) {
+    auto& dist_current = graph.GetData<NodeDistCurrent>(node);
+    values.push_back(dist_current);
+  }
+
+  return values;
+}
+
 int
 main(int argc, char** argv) {
   std::unique_ptr<galois::SharedMemSys> G =
@@ -501,6 +518,12 @@ main(int argc, char** argv) {
     }
   }
 
+  if (output) {
+    std::vector<uint32_t> results = makeResults(graph);
+    assert(results.size() == graph.size());
+
+    writeOutput(outputLocation, results.data(), results.size());
+  }
   totalTime.stop();
 
   return 0;

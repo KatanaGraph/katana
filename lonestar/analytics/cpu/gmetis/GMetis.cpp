@@ -68,8 +68,8 @@ static cll::opt<bool> weighted(
 static cll::opt<bool> verbose(
     "verbose", cll::desc("verbose output (debugging mode, takes extra time)"),
     cll::init(false));
-static cll::opt<std::string> outfile(
-    "output", cll::desc("output partition file name"));
+static cll::opt<std::string> outputFilename(
+    "outputFilename", cll::desc("output partition file name"));
 static cll::opt<std::string> orderedfile(
     "ordered", cll::desc("output ordered graph file name"));
 static cll::opt<std::string> permutationfile(
@@ -213,11 +213,11 @@ main(int argc, char** argv) {
 
   std::cout << "Total edge cut: " << computeCut(graph) << "\n";
 
-  if (outfile != "") {
+  if (outputFilename != "") {
     MetisGraph* coarseGraph = &metisGraph;
     while (coarseGraph->getCoarserGraph())
       coarseGraph = coarseGraph->getCoarserGraph();
-    std::ofstream outFile(outfile.c_str());
+    std::ofstream outFile(outputFilename.c_str());
     for (auto it = graph.begin(), ie = graph.end(); it != ie; it++) {
       unsigned gPart = graph.getData(*it).getPart();
       outFile << gPart << '\n';

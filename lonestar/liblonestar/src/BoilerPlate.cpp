@@ -47,6 +47,15 @@ llvm::cl::opt<std::string> edge_property_name(
     llvm::cl::desc("name of the edge property to the loaded"),
     llvm::cl::init(""));
 
+llvm::cl::opt<std::string> outputLocation(
+    "outputLocation",
+    llvm::cl::desc(
+        "Location (directory) to write results to when output is true"));
+
+llvm::cl::opt<bool> output(
+    "output", llvm::cl::desc("Write result (default false)"),
+    llvm::cl::init(false));
+
 static void
 LonestarPrintVersion(llvm::raw_ostream& out) {
   out << "LoneStar Benchmark Suite v" << galois::getVersion() << " ("

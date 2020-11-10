@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <arrow/stl.h>
+#include <boost/filesystem.hpp>
 
 #include "galois/ErrorCode.h"
 #include "galois/Result.h"
@@ -133,6 +134,28 @@ ConstructEdgeProperties(galois::graphs::PropertyFileGraph* pfg) {
     GALOIS_LOG_FATAL("failed to add edge properties: {}", result.error());
   }
   return galois::ResultSuccess();
+}
+
+template <typename T>
+void
+writeOutput(const std::string& outputDir, T* values, size_t length) {
+  namespace fs = boost::filesystem;
+  fs::path filename{outputDir};
+  filename = filename.append("output");
+
+  std::ofstream outputFile(filename.string().c_str());
+
+  if (!outputFile) {
+    GALOIS_LOG_FATAL("could not open file: {}", filename);
+  }
+
+  for (size_t i = 0; i < length; i++) {
+    outputFile << i << " " << *(values++) << "\n";
+  }
+
+  if (!outputFile) {
+    GALOIS_LOG_FATAL("failed to write file: {}", filename);
+  }
 }
 
 #endif

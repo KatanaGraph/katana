@@ -219,6 +219,27 @@ KCoreSanity(Graph* graph) {
       "\n");
 }
 
+/******************************************************************************/
+/* Make results */
+/******************************************************************************/
+
+std::vector<uint32_t>
+makeResults(const Graph& graph) {
+  std::vector<uint32_t> values;
+
+  values.reserve(graph.num_nodes());
+  for (auto node : graph) {
+    auto& node_current_degree = graph.GetData<NodeCurrentDegree>(node);
+    if (node_current_degree >= k_core_num) {
+      values.push_back(1);
+    } else {
+      values.push_back(0);
+    }
+  }
+
+  return values;
+}
+
 /*******************************************************************************
  * Main method for running
  ******************************************************************************/
@@ -311,6 +332,13 @@ main(int argc, char** argv) {
   //! Sanity check.
   if (!skipVerify) {
     KCoreSanity(&graph);
+  }
+
+  if (output) {
+    std::vector<uint32_t> results = makeResults(graph);
+    assert(results.size() == graph.size());
+
+    writeOutput(outputLocation, results.data(), results.size());
   }
 
   totalTime.stop();

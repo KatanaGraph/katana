@@ -190,6 +190,18 @@ public:
     }
   }
 
+  void PrintBCValues(size_t begin, size_t end, std::vector<double>& out) {
+    for (; begin != end; ++begin) {
+      double bc = (*centrality_measure_.getRemote(0))[begin];
+
+      for (unsigned j = 1; j < galois::getActiveThreads(); ++j) {
+        bc += (*centrality_measure_.getRemote(j))[begin];
+      }
+
+      out.push_back(bc);
+    }
+  }
+
   /**
    * Print all betweeness centrality values in the graph.
    */
@@ -203,6 +215,19 @@ public:
     PrintBCValues(0, num_nodes_, outf, 9);
 
     outf.close();
+  }
+
+  /******************************************************************************/
+  /* Make results */
+  /******************************************************************************/
+
+  std::vector<double> makeResults(const OuterGraph& graph) {
+    std::vector<double> values;
+
+    values.reserve(graph.num_nodes());
+    PrintBCValues(0, graph.num_nodes(), values);
+
+    return values;
   }
 
   //! sanity check of BC values
@@ -361,8 +386,12 @@ DoOuterBC() {
 
   bc_outer.PrintBCValues(0, std::min(10UL, num_nodes_), std::cout, 6);
   bc_outer.OuterSanity(graph);
-  if (output)
-    bc_outer.PrintBCcertificate();
+  if (output) {
+    std::vector<double> results = bc_outer.makeResults(graph);
+    assert(results.size() == graph.size());
+
+    writeOutput(outputLocation, results.data(), results.size());
+  }
 
   if (!skipVerify)
     bc_outer.verify();

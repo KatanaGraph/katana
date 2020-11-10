@@ -225,6 +225,22 @@ LevelSanity(const LevelGraph& graph) {
 }
 
 /******************************************************************************/
+/* Make results */
+/******************************************************************************/
+
+std::vector<double>
+makeResults(const LevelGraph& graph) {
+  std::vector<double> values;
+
+  values.reserve(graph.num_nodes());
+
+  for (auto node : graph) {
+    auto& bc_value = graph.GetData<NodeBC>(node);
+    values.push_back(bc_value);
+  }
+  return values;
+}
+/******************************************************************************/
 /* Running */
 /******************************************************************************/
 
@@ -343,13 +359,10 @@ DoLevelBC() {
   // Verify, i.e. print out graph data for examination
   // @todo print to file instead of stdout
   if (output) {
-    char* v_out = (char*)malloc(40);
-    for (auto ii = graph.begin(); ii != graph.end(); ++ii) {
-      // outputs betweenness centrality
-      sprintf(v_out, "%u %.9f\n", (*ii), graph.GetData<NodeBC>(*ii));
-      galois::gPrint(v_out);
-    }
-    free(v_out);
+    std::vector<double> results = makeResults(graph);
+    assert(results.size() == graph.size());
+
+    writeOutput(outputLocation, results.data(), results.size());
   }
 }
 #endif

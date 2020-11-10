@@ -70,10 +70,6 @@ static cll::opt<uint64_t> startSource(
               "singleSource flag only"),
     cll::init(0));
 
-static cll::opt<bool> output(
-    "output", cll::desc("Output BC (Level/Async) (default: false)"),
-    cll::init(false));
-
 static cll::opt<Algo> algo(
     "algo", cll::desc("Choose an algorithm (default value AutoAlgo):"),
     cll::values(

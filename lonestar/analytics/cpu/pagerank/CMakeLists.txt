@@ -11,5 +11,5 @@ add_dependencies(apps pagerank-push-cpu)
 target_link_libraries(pagerank-push-cpu PRIVATE Galois::shmem lonestar)
 install(TARGETS pagerank-push-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
-add_test_scale(small pagerank-push-cpu -tolerance=0.01 "${BASEINPUT}/propertygraphs/rmat15")
-add_test_scale(small-sync pagerank-push-cpu -tolerance=0.01 -algo=Sync "${BASEINPUT}/propertygraphs/rmat15")
+add_test_scale(small pagerank-push-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -maxIterations=100)
+#add_test_scale(small-sync pagerank-push-cpu -tolerance=0.01 -algo=Sync "${BASEINPUT}/propertygraphs/rmat15")

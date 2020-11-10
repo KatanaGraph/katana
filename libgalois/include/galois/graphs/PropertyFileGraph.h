@@ -129,11 +129,11 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
-  const tsuba::PartitionMetadata& GetPartitionMetadata() const {
+  const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata_;
   }
 
-  Result<void> SetPartitionMetadata(const tsuba::PartitionMetadata& meta) {
+  Result<void> set_partition_metadata(const tsuba::PartitionMetadata& meta) {
     rdg_.part_metadata_ = meta;
     return ResultSuccess();
   }

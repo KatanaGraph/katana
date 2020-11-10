@@ -4,6 +4,7 @@
 
 #include "galois/Logging.h"
 #include "galois/Platform.h"
+#include "galois/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -98,7 +99,7 @@ FileFrame::Persist() {
   if (!valid_) {
     return tsuba::ErrorCode::InvalidArgument;
   }
-  if (!path_.length()) {
+  if (path_.empty()) {
     GALOIS_LOG_DEBUG("No path provided to FileFrame");
     return tsuba::ErrorCode::InvalidArgument;
   }
@@ -106,6 +107,18 @@ FileFrame::Persist() {
     return res.error();
   }
   return galois::ResultSuccess();
+}
+
+std::future<galois::Result<void>>
+FileFrame::PersistAsync() {
+  if (!valid_) {
+    return galois::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+  }
+  if (path_.empty()) {
+    GALOIS_LOG_DEBUG("No path provided to FileFrame");
+    return galois::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+  }
+  return tsuba::FileStoreAsync(path_, map_start_, cursor_);
 }
 
 /////// Begin arrow::io::BufferOutputStream method definitions //////

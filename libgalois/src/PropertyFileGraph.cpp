@@ -93,9 +93,9 @@ LoadTopology(
   return galois::ResultSuccess();
 }
 
-galois::Result<std::shared_ptr<tsuba::FileFrame>>
+galois::Result<std::unique_ptr<tsuba::FileFrame>>
 WriteTopology(const galois::graphs::GraphTopology& topology) {
-  auto ff = std::make_shared<tsuba::FileFrame>();
+  auto ff = std::make_unique<tsuba::FileFrame>();
   if (auto res = ff->Init(); !res) {
     return res.error();
   }
@@ -129,7 +129,7 @@ WriteTopology(const galois::graphs::GraphTopology& topology) {
       return tsuba::ArrowToTsuba(aro_sts.code());
     }
   }
-  return ff;
+  return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
@@ -188,7 +188,7 @@ galois::graphs::PropertyFileGraph::DoWrite(
     if (!result) {
       return result.error();
     }
-    return rdg_.Store(handle, command_line, result.value().get());
+    return rdg_.Store(handle, command_line, std::move(result.value()));
   }
 
   return rdg_.Store(handle, command_line);

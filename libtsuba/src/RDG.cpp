@@ -23,7 +23,6 @@
 #include "galois/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
-#include "tsuba/FileFrame.h"
 #include "tsuba/RDG_internal.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
@@ -307,7 +306,7 @@ AddPartialTables(
 galois::Result<std::string>
 DoStoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const galois::Uri& dir,
-    const std::string& name) {
+    const std::string& name, tsuba::WriteGroup* desc) {
   galois::Uri next_path = dir.RandFile(name);
 
   // Metadata paths should relative to dir
@@ -331,19 +330,16 @@ DoStoreArrowArrayAtName(
 
   ff->Bind(next_path.string());
   TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-  if (auto res = ff->Persist(); !res) {
-    return res.error();
-  }
-
+  desc->StartStore(std::move(ff));
   return next_path.BaseName();
 }
 
 galois::Result<std::string>
 StoreArrowArrayAtName(
     const std::shared_ptr<arrow::ChunkedArray>& array, const galois::Uri& dir,
-    const std::string& name) {
+    const std::string& name, tsuba::WriteGroup* desc) {
   try {
-    return DoStoreArrowArrayAtName(array, dir, name);
+    return DoStoreArrowArrayAtName(array, dir, name, desc);
   } catch (const std::exception& exp) {
     GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
@@ -354,7 +350,7 @@ galois::Result<std::vector<tsuba::PropertyMetadata>>
 WriteTable(
     const arrow::Table& table,
     const std::vector<tsuba::PropertyMetadata>& properties,
-    const galois::Uri& dir) {
+    const galois::Uri& dir, tsuba::WriteGroup* desc) {
   const auto& schema = table.schema();
 
   std::vector<std::string> next_paths;
@@ -364,7 +360,7 @@ WriteTable(
     }
     auto name = properties[i].name.empty() ? schema->field(i)->name()
                                            : properties[i].name;
-    auto name_res = StoreArrowArrayAtName(table.column(i), dir, name);
+    auto name_res = StoreArrowArrayAtName(table.column(i), dir, name, desc);
     if (!name_res) {
       return name_res.error();
     }
@@ -399,7 +395,8 @@ MasterPropName(unsigned i) {
 
 galois::Result<std::vector<tsuba::PropertyMetadata>>
 WritePartArrays(
-    const tsuba::PartitionMetadata& part_meta, const galois::Uri& dir) {
+    const tsuba::PartitionMetadata& part_meta, const galois::Uri& dir,
+    tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropertyMetadata> next_properties;
 
   GALOIS_LOG_DEBUG(
@@ -419,7 +416,7 @@ WritePartArrays(
   for (unsigned i = 0; i < part_meta.mirror_nodes_.size(); ++i) {
     auto name = MirrorPropName(i);
     auto mirr_res =
-        StoreArrowArrayAtName(part_meta.mirror_nodes_[i], dir, name);
+        StoreArrowArrayAtName(part_meta.mirror_nodes_[i], dir, name, desc);
     if (!mirr_res) {
       return mirr_res.error();
     }
@@ -432,7 +429,7 @@ WritePartArrays(
   for (unsigned i = 0; i < part_meta.master_nodes_.size(); ++i) {
     auto name = MasterPropName(i);
     auto mast_res =
-        StoreArrowArrayAtName(part_meta.master_nodes_[i], dir, name);
+        StoreArrowArrayAtName(part_meta.master_nodes_[i], dir, name, desc);
     if (!mast_res) {
       return mast_res.error();
     }
@@ -444,7 +441,8 @@ WritePartArrays(
 
   if (part_meta.local_to_global_vector_ != nullptr) {
     auto l2g_res = StoreArrowArrayAtName(
-        part_meta.local_to_global_vector_, dir, local_to_global_prop_name);
+        part_meta.local_to_global_vector_, dir, local_to_global_prop_name,
+        desc);
     if (!l2g_res) {
       return l2g_res.error();
     }
@@ -454,7 +452,8 @@ WritePartArrays(
 
   if (part_meta.global_to_local_keys_ != nullptr) {
     auto g2l_keys_res = StoreArrowArrayAtName(
-        part_meta.global_to_local_keys_, dir, global_to_local_keys_prop_name);
+        part_meta.global_to_local_keys_, dir, global_to_local_keys_prop_name,
+        desc);
     if (!g2l_keys_res) {
       return g2l_keys_res.error();
     }
@@ -467,7 +466,8 @@ WritePartArrays(
 
   if (part_meta.global_to_local_values_ != nullptr) {
     auto g2l_vals_res = StoreArrowArrayAtName(
-        part_meta.global_to_local_values_, dir, global_to_local_vals_prop_name);
+        part_meta.global_to_local_values_, dir, global_to_local_vals_prop_name,
+        desc);
     if (!g2l_vals_res) {
       return g2l_vals_res.error();
     }
@@ -741,12 +741,18 @@ BindOutIndex(const std::string& topology_path) {
 galois::Result<void>
 CommitRDG(
     tsuba::RDGHandle handle, uint32_t policy_id, bool transposed,
-    const tsuba::RDGLineage& lineage) {
+    const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
   galois::CommBackend* comm = tsuba::Comm();
   tsuba::RDGMeta new_meta(
       handle.impl_->rdg_meta.version_ + 1, handle.impl_->rdg_meta.version_,
       comm->Num, policy_id, transposed, handle.impl_->rdg_meta.dir_, lineage);
 
+  // wait for all the work we queued to finish
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
+  if (auto res = desc->Finish(); !res) {
+    GALOIS_LOG_ERROR("at least one async write failed: {}", res.error());
+    return res.error();
+  }
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
 
@@ -765,15 +771,11 @@ CommitRDG(
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_meta.ToJsonString();
-    auto curr_fut = tsuba::FileStoreAsync(
+    auto res = tsuba::FileStore(
         tsuba::RDGMeta::FileName(handle.impl_->rdg_meta.dir_, new_meta.version_)
             .string(),
         reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
-    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-
-    GALOIS_LOG_ASSERT(curr_fut.valid());
-    TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-    if (auto res = curr_fut.get(); !res) {
+    if (!res) {
       GALOIS_LOG_ERROR(
           "CommitRDG future failed {}: {}",
           tsuba::RDGMeta::FileName(
@@ -1115,7 +1117,7 @@ RDG::MakeMetadataJson() const {
 }
 
 galois::Result<void>
-RDG::WriteMetadataJson(RDGHandle handle) const {
+RDG::WriteMetadataJson(RDGHandle handle, WriteGroup* desc) const {
   galois::Result<std::string> meta_res = MakeMetadataJson();
   if (!meta_res) {
     return meta_res.error();
@@ -1123,14 +1125,22 @@ RDG::WriteMetadataJson(RDGHandle handle) const {
 
   auto map_s = meta_res.value();
   TSUBA_PTP(internal::FaultSensitivity::Normal);
-  auto curr_res = tsuba::FileStore(
-      RDGMeta::PartitionFileName(
-          handle.impl_->rdg_meta.dir_, Comm()->ID,
-          handle.impl_->rdg_meta.version_ + 1)
-          .string(),
-      reinterpret_cast<const uint8_t*>(map_s.data()), map_s.size());
+  auto ff = std::make_unique<FileFrame>();
+  if (auto res = ff->Init(map_s.size()); !res) {
+    return res.error();
+  }
+  if (auto res = ff->Write(map_s.data(), map_s.size()); !res.ok()) {
+    GALOIS_LOG_DEBUG("arrow error: {}", res);
+    return ArrowToTsuba(res.code());
+  }
+  ff->Bind(RDGMeta::PartitionFileName(
+               handle.impl_->rdg_meta.dir_, Comm()->ID,
+               handle.impl_->rdg_meta.version_ + 1)
+               .string());
+
+  desc->StartStore(std::move(ff));
   TSUBA_PTP(internal::FaultSensitivity::Normal);
-  return curr_res;
+  return galois::ResultSuccess();
 }
 
 // const * so that they are nullable
@@ -1191,18 +1201,19 @@ RDG::PrunePropsTo(
 }
 
 galois::Result<void>
-RDG::DoStore(RDGHandle handle, const std::string& command_line) {
+RDG::DoStore(
+    RDGHandle handle, const std::string& command_line,
+    std::unique_ptr<WriteGroup> desc) {
   if (topology_path_.empty()) {
     // No topology file; create one
     galois::Uri t_path = handle.impl_->rdg_meta.dir_.RandFile("topology");
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    if (auto res = FileStore(
-            t_path.string(), topology_file_storage_.ptr<uint8_t>(),
-            topology_file_storage_.size());
-        !res) {
-      return res.error();
-    }
+
+    // depends on `topology_file_storage_` outliving desc
+    desc->StartStore(
+        t_path.string(), topology_file_storage_.ptr<uint8_t>(),
+        topology_file_storage_.size());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     topology_path_ = t_path.BaseName();
   }
@@ -1214,7 +1225,8 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
       std::back_inserter(filtered_node_properties),
       [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
   auto node_write_result = WriteTable(
-      *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_);
+      *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_,
+      desc.get());
   if (!node_write_result) {
     GALOIS_LOG_DEBUG("failed to write node properties");
     return node_write_result.error();
@@ -1229,7 +1241,8 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
       std::back_inserter(filtered_edge_properties),
       [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
   auto edge_write_result = WriteTable(
-      *edge_table_, filtered_edge_properties, handle.impl_->rdg_meta.dir_);
+      *edge_table_, filtered_edge_properties, handle.impl_->rdg_meta.dir_,
+      desc.get());
   if (!edge_write_result) {
     GALOIS_LOG_DEBUG("failed to write edge properties");
     return edge_write_result.error();
@@ -1238,14 +1251,15 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
   edge_properties_ = std::move(edge_write_result.value());
 
   auto part_write_result =
-      WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_);
+      WritePartArrays(part_metadata_, handle.impl_->rdg_meta.dir_, desc.get());
   if (!part_write_result) {
     GALOIS_LOG_DEBUG("failed: WritePartMetadata for part_properties");
     return part_write_result.error();
   }
   part_properties_ = std::move(part_write_result.value());
 
-  if (auto write_result = WriteMetadataJson(handle); !write_result) {
+  if (auto write_result = WriteMetadataJson(handle, desc.get());
+      !write_result) {
     GALOIS_LOG_DEBUG("error: metadata write");
     return write_result.error();
   }
@@ -1254,7 +1268,7 @@ RDG::DoStore(RDGHandle handle, const std::string& command_line) {
   lineage_.AddCommandLine(command_line);
   if (auto res = CommitRDG(
           handle, part_metadata_.policy_id_, part_metadata_.transposed_,
-          lineage_);
+          lineage_, std::move(desc));
       !res) {
     return res.error();
   }
@@ -1490,7 +1504,9 @@ RDG::LoadPartial(
 }
 
 galois::Result<void>
-RDG::Store(RDGHandle handle, const std::string& command_line, FileFrame* ff) {
+RDG::Store(
+    RDGHandle handle, const std::string& command_line,
+    std::unique_ptr<FileFrame> ff) {
   if (!handle.impl_->AllowsWrite()) {
     GALOIS_LOG_DEBUG("failed: handle does not allow write");
     return ErrorCode::InvalidArgument;
@@ -1506,20 +1522,24 @@ RDG::Store(RDGHandle handle, const std::string& command_line, FileFrame* ff) {
     UnbindFromStorage();
   }
 
+  auto desc_res = WriteGroup::Make();
+  if (!desc_res) {
+    return desc_res.error();
+  }
+  // All write buffers must outlive desc
+  std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
+
   if (ff) {
     galois::Uri t_path = handle.impl_->rdg_meta.dir_.RandFile("topology");
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
-    if (auto res = ff->Persist(); !res) {
-      GALOIS_LOG_DEBUG(
-          "RDG::Store persist {} failed: {}", t_path.string(), res.error());
-      return res.error();
-    }
+    desc->StartStore(std::move(ff));
     TSUBA_PTP(internal::FaultSensitivity::Normal);
     topology_path_ = t_path.BaseName();
   }
-  return DoStore(handle, command_line);
+
+  return DoStore(handle, command_line, std::move(desc));
 }
 
 galois::Result<void>

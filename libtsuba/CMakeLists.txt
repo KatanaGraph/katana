@@ -25,6 +25,7 @@ set(sources
   src/MemoryNameServerClient.cpp
   src/RDG.cpp
   src/tsuba.cpp
+  src/WriteGroup.cpp
 )
 
 target_sources(tsuba PRIVATE ${sources})

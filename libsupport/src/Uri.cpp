@@ -239,6 +239,7 @@ Uri::Join(std::string_view to_join) const {
   }
   return Uri(scheme_, DoJoinPath(path_, to_join));
 }
+
 Uri
 Uri::StripSep() const {
   std::string path = path_;

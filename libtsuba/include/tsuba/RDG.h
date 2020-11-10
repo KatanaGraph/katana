@@ -14,6 +14,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
+#include "tsuba/WriteGroup.h"
 
 namespace tsuba {
 
@@ -186,7 +187,7 @@ public:
   /// an updated topology and persisted as such
   galois::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
-      FileFrame* ff = nullptr);
+      std::unique_ptr<FileFrame> ff = nullptr);
 
   galois::Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& table);
@@ -244,14 +245,16 @@ private:
   std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
       const;
 
-  galois::Result<void> WriteMetadataJson(RDGHandle handle) const;
+  galois::Result<void> WriteMetadataJson(
+      RDGHandle handle, WriteGroup* desc) const;
 
   galois::Result<void> PrunePropsTo(
       const std::vector<std::string>* node_properties,
       const std::vector<std::string>* edge_properties);
 
   galois::Result<void> DoStore(
-      RDGHandle handle, const std::string& command_line);
+      RDGHandle handle, const std::string& command_line,
+      std::unique_ptr<WriteGroup> desc);
 
   void UnbindFromStorage();
 };

@@ -2,6 +2,7 @@
 #define GALOIS_LIBTSUBA_TSUBA_FILEFRAME_H_
 
 #include <cstdint>
+#include <future>
 #include <string>
 
 #include <parquet/arrow/writer.h>
@@ -63,11 +64,14 @@ public:
   galois::Result<void> Destroy();
 
   galois::Result<void> Persist();
+  std::future<galois::Result<void>> PersistAsync();
 
   template <typename T>
   galois::Result<T*> ptr() const {
     return reinterpret_cast<T*>(map_start_); /* NOLINT */
   }
+
+  const std::string& path() const { return path_; }
 
   ///// Begin arrow::io::BufferOutputStream methods ///////
 

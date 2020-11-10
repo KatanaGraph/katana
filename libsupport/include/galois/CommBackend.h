@@ -2,6 +2,7 @@
 #define GALOIS_LIBSUPPORT_GALOIS_COMMBACKEND_H_
 
 #include <cstdint>
+#include <string>
 
 #include "galois/Logging.h"
 #include "galois/Result.h"
@@ -27,6 +28,9 @@ struct CommBackend {
   virtual void Barrier() = 0;
   /// Broadcast bool to everyone
   virtual bool Broadcast(uint32_t root, bool val) = 0;
+  /// Broadcast a string of at most max_size to everyone
+  virtual std::string Broadcast(
+      uint32_t root, const std::string& val, uint64_t max_size) = 0;
   /// Notify other tasks that there was a failure; e.g., with MPI_Abort
   virtual void NotifyFailure() = 0;
 };
@@ -37,6 +41,11 @@ struct NullCommBackend : public CommBackend {
   bool Broadcast([[maybe_unused]] uint32_t root, bool val) override {
     return val;
   };
+  std::string Broadcast(
+      [[maybe_unused]] uint32_t root, const std::string& val,
+      uint64_t max_size) override {
+    return val.substr(0, max_size);
+  }
 };
 
 }  // namespace galois

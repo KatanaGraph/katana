@@ -1,9 +1,8 @@
 #include "TimeParser.h"
-#include "galois/Logging.h"
 
 void
 TestBasic() {
-  galois::TimeParser<std::chrono::seconds> parser;
+  galois::TimeParser<arrow::TimestampType, std::chrono::seconds> parser;
 
   {
     auto r = parser.Parse("1970-01-01T00:00:01Z");

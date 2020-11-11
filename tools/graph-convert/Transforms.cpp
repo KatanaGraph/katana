@@ -3,7 +3,6 @@
 #include <arrow/type.h>
 
 #include "TimeParser.h"
-#include "galois/Logging.h"
 
 namespace {
 
@@ -55,7 +54,7 @@ ApplyTransform(
 }  // namespace
 
 std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
-galois::ConvertTimestamps::operator()(
+galois::ConvertDateTime::operator()(
     arrow::Field* field, arrow::ChunkedArray* chunked_array) {
   std::vector<int64_t> values;
   std::vector<bool> is_valid;
@@ -63,7 +62,12 @@ galois::ConvertTimestamps::operator()(
   values.reserve(chunked_array->length());
   is_valid.reserve(chunked_array->length());
 
-  TimeParser<std::chrono::nanoseconds> parser;
+  std::unique_ptr<arrow::ArrayBuilder> builder;
+  if (auto st =
+          arrow::MakeBuilder(arrow::default_memory_pool(), dtype_, &builder);
+      !st.ok()) {
+    GALOIS_LOG_FATAL("failed to create builder");
+  }
 
   for (int cidx = 0, num_chunks = chunked_array->num_chunks();
        cidx < num_chunks; ++cidx) {
@@ -74,49 +78,36 @@ galois::ConvertTimestamps::operator()(
       GALOIS_LOG_FATAL("column not string");
     }
 
-    for (int64_t i = 0, n = array->length(); i < n; ++i) {
-      int64_t ts = 0;
-      bool valid = array->IsValid(i);
-
-      if (valid) {
-        std::string str = array->GetString(i);
-        auto r = parser.Parse(str);
-        if (r) {
-          valid = true;
-          ts = *r;
-        } else {
-          GALOIS_LOG_WARN("could not parse datetime string {}", str);
-          valid = false;
-        }
-      }
-
-      values.emplace_back(ts);
-      is_valid.emplace_back(valid);
+    switch (dtype_->id()) {
+    case arrow::Type::TIMESTAMP: {
+      TimeParser<arrow::TimestampType, std::chrono::nanoseconds> parser;
+      parser.ParseInto(*array, builder.get());
+      break;
+    }
+    case arrow::Type::DATE32: {
+      TimeParser<arrow::Date32Type, date::days> parser;
+      parser.ParseInto(*array, builder.get());
+      break;
+    }
+    case arrow::Type::DATE64: {
+      TimeParser<arrow::Date64Type, std::chrono::milliseconds> parser;
+      parser.ParseInto(*array, builder.get());
+      break;
+    }
+    default:
+      GALOIS_LOG_FATAL("unsupported type: ({})", dtype_->ToString());
     }
   }
 
-  // Technically, a Unix timestamp is not in UTC because it does not account
-  // for leap seconds since the beginning of the epoch. Parquet and arrow use
-  // Unix timestamps throughout so they also avoid accounting for this
-  // distinction.
-  auto timestamp_type =
-      std::make_shared<arrow::TimestampType>(arrow::TimeUnit::NANO, "UTC");
-
-  auto new_field = field->WithType(timestamp_type)->WithNullable(true);
-
-  arrow::TimestampBuilder builder(
-      new_field->type(), arrow::default_memory_pool());
-  if (auto result = builder.AppendValues(values, is_valid); !result.ok()) {
-    GALOIS_LOG_FATAL("could not append array: {}", result);
-  }
+  auto new_field = field->WithType(dtype_)->WithNullable(true);
 
   std::shared_ptr<arrow::Array> new_array;
-  if (auto result = builder.Finish(&new_array); !result.ok()) {
-    GALOIS_LOG_FATAL("could not finish array: {}", result);
+  if (auto st = builder->Finish(&new_array); !st.ok()) {
+    GALOIS_LOG_FATAL("could not finish array: {}", st);
   }
 
   auto new_column = std::make_shared<arrow::ChunkedArray>(
-      std::vector<std::shared_ptr<arrow::Array>>{new_array});
+      std::vector<std::shared_ptr<arrow::Array>>{std::move(new_array)});
 
   return std::make_pair(new_field, new_column);
 }

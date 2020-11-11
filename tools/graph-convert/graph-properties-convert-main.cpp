@@ -67,6 +67,10 @@ static cll::opt<bool> generate_mapping(
 
 cll::list<std::string> timestamp_properties(
     "timestamp", cll::desc("Timestamp properties"));
+cll::list<std::string> date32_properties(
+    "date32", cll::desc("Date32 properties"));
+cll::list<std::string> date64_properties(
+    "date64", cll::desc("Date64 properties"));
 
 static cll::opt<std::string> host(
     "host",
@@ -88,16 +92,34 @@ ConvertKatana(const std::string& rdg_file) {
   std::unique_ptr<galois::graphs::PropertyFileGraph> graph =
       std::move(result.value());
 
-  std::vector<std::string> t_fields;
-  std::copy(
-      timestamp_properties.begin(), timestamp_properties.end(),
-      std::back_insert_iterator<std::vector<std::string>>(t_fields));
-
   std::vector<std::unique_ptr<galois::ColumnTransformer>> transformers;
+
   transformers.emplace_back(std::make_unique<galois::SparsifyBooleans>());
-  if (!t_fields.empty()) {
+
+  if (!timestamp_properties.empty()) {
+    std::vector<std::string> t_fields(
+        timestamp_properties.begin(), timestamp_properties.end());
+    // Technically, a Unix timestamp is not in UTC because it does not account
+    // for leap seconds since the beginning of the epoch. Parquet and arrow use
+    // Unix timestamps throughout so they also avoid accounting for this
+    // distinction.
+    // TODO(danielmawhirter) leap seconds
+    transformers.emplace_back(std::make_unique<galois::ConvertDateTime>(
+        arrow::timestamp(arrow::TimeUnit::NANO, "UTC"), t_fields));
+  }
+
+  if (!date32_properties.empty()) {
+    std::vector<std::string> t_fields(
+        date32_properties.begin(), date32_properties.end());
     transformers.emplace_back(
-        std::make_unique<galois::ConvertTimestamps>(t_fields));
+        std::make_unique<galois::ConvertDateTime>(arrow::date32(), t_fields));
+  }
+
+  if (!date64_properties.empty()) {
+    std::vector<std::string> t_fields(
+        date64_properties.begin(), date64_properties.end());
+    transformers.emplace_back(
+        std::make_unique<galois::ConvertDateTime>(arrow::date64(), t_fields));
   }
 
   ApplyTransforms(graph.get(), transformers);

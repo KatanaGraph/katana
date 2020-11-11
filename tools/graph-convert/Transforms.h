@@ -38,7 +38,7 @@ struct SparsifyBooleans : public ColumnTransformer {
   operator()(arrow::Field* field, arrow::ChunkedArray* chunked_array) override;
 };
 
-/// ConvertTimestamps parses RFC 3339 / ISO 8601 style timestamp strings into
+/// ConvertDateTime parses RFC 3339 / ISO 8601 style timestamp strings into
 /// Unix timestamp integers.
 ///
 /// A timestamp string looks like:
@@ -55,13 +55,16 @@ struct SparsifyBooleans : public ColumnTransformer {
 /// are nanoseconds since the beginning of the Unix epoch [1].
 ///
 /// [1] https://arrow.apache.org/docs/python/timestamps.html
-struct ConvertTimestamps : public ColumnTransformer {
+struct ConvertDateTime : public ColumnTransformer {
+  const std::shared_ptr<arrow::DataType> dtype_;
   std::vector<std::string> property_names_;
 
-  ConvertTimestamps(std::vector<std::string> property_names)
-      : property_names_(std::move(property_names)) {}
+  ConvertDateTime(
+      const std::shared_ptr<arrow::DataType>& dtype,
+      std::vector<std::string> property_names)
+      : dtype_(dtype), property_names_(std::move(property_names)) {}
 
-  std::string name() override { return "ConvertTimestamps"; }
+  std::string name() override { return "ConvertDateTime"; }
 
   bool Matches(arrow::Field* field) override {
     if (!field->type()->Equals(arrow::StringType())) {

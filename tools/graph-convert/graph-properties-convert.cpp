@@ -1791,8 +1791,18 @@ galois::WritePropertyGraph(
 void
 galois::WritePropertyGraph(
     galois::graphs::PropertyFileGraph prop_graph, const std::string& dir) {
+  for (auto field : prop_graph.node_schema()->fields()) {
+    GALOIS_LOG_VERBOSE(
+        "node prop: ({}) {}", field->type()->ToString(), field->name());
+  }
+  for (auto field : prop_graph.edge_schema()->fields()) {
+    GALOIS_LOG_VERBOSE(
+        "edge prop: ({}) {}", field->type()->ToString(), field->name());
+  }
+
   std::string meta_file = dir;
 
+  prop_graph.MarkAllPropertiesPersistent();
   auto result = prop_graph.Write(meta_file, "graph-properties-convert");
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs: {}", result.error());

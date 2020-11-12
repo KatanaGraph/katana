@@ -5,6 +5,7 @@
 #include <future>
 #include <string_view>
 #include <unordered_set>
+#include <vector>
 
 #include "galois/Result.h"
 #include "galois/config.h"

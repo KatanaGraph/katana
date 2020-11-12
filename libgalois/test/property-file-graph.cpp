@@ -31,7 +31,7 @@ TestRoundTrip() {
   auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
 
   std::shared_ptr<arrow::Table> node_throw_away =
-      MakeTable<ThrowAwayType>("throw_away", test_length);
+      MakeTable<ThrowAwayType>("node-throw-away", test_length);
 
   auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
   GALOIS_LOG_ASSERT(add_throw_away_node_result);

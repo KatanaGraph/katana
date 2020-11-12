@@ -11,7 +11,6 @@ set(sources
         src/Barrier.cpp
         src/Barrier_Dissemination.cpp
         src/Barrier_MCS.cpp
-        src/Barrier_Pthread.cpp
         src/Barrier_Simple.cpp
         src/Barrier_Topo.cpp
         src/Context.cpp
@@ -85,10 +84,6 @@ endif()
 if(SCHED_SETAFFINITY_FOUND)
   target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_SCHED_SETAFFINITY)
   target_link_libraries(galois_shmem PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
-endif()
-
-if(CMAKE_HAVE_PTHREAD_H)
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_HAVE_PTHREAD)
 endif()
 
 if(NUMA_FOUND)

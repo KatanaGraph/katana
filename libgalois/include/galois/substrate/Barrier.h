@@ -65,7 +65,6 @@ GALOIS_EXPORT Barrier& GetBarrier(unsigned active_threads);
  * Create specific types of barriers.  For benchmarking only.  Use
  * GetBarrier() for all production code
  */
-GALOIS_EXPORT std::unique_ptr<Barrier> CreatePthreadBarrier(unsigned);
 GALOIS_EXPORT std::unique_ptr<Barrier> CreateMCSBarrier(unsigned);
 GALOIS_EXPORT std::unique_ptr<Barrier> CreateTopoBarrier(unsigned);
 GALOIS_EXPORT std::unique_ptr<Barrier> CreateCountingBarrier(unsigned);

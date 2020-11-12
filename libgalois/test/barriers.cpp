@@ -89,7 +89,6 @@ main(int argc, char** argv) {
 
   gethostname(bname, sizeof(bname));
   using namespace galois::substrate;
-  test(CreatePthreadBarrier(1));
   test(CreateCountingBarrier(1));
   test(CreateMCSBarrier(1));
   test(CreateTopoBarrier(1));

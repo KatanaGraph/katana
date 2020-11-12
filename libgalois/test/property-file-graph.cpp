@@ -26,8 +26,23 @@ void
 TestRoundTrip() {
   constexpr size_t test_length = 10;
   using ValueType = int32_t;
+  using ThrowAwayType = int64_t;
 
   auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
+
+  std::shared_ptr<arrow::Table> node_throw_away =
+      MakeTable<ThrowAwayType>("throw_away", test_length);
+
+  auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
+  GALOIS_LOG_ASSERT(add_throw_away_node_result);
+
+  std::shared_ptr<arrow::Table> edge_throw_away_table =
+      MakeTable<ThrowAwayType>("edge-throw-away", test_length);
+
+  auto add_edge_throw_away_result = g->AddEdgeProperties(edge_throw_away_table);
+  GALOIS_LOG_ASSERT(add_edge_throw_away_result);
+
+  // don't persist throwaway properties
 
   std::shared_ptr<arrow::Table> node_table =
       MakeTable<ValueType>("node-name", test_length);
@@ -35,7 +50,8 @@ TestRoundTrip() {
   auto add_node_result = g->AddNodeProperties(node_table);
   GALOIS_LOG_ASSERT(add_node_result);
 
-  auto mark_node_persistent = g->MarkNodePropertiesPersistent({"node-name"});
+  auto mark_node_persistent =
+      g->MarkNodePropertiesPersistent({"", "node-name"});
   GALOIS_LOG_ASSERT(mark_node_persistent);
 
   std::shared_ptr<arrow::Table> edge_table =
@@ -44,7 +60,8 @@ TestRoundTrip() {
   auto add_edge_result = g->AddEdgeProperties(edge_table);
   GALOIS_LOG_ASSERT(add_edge_result);
 
-  auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({"edge-name"});
+  auto mark_edge_persistent =
+      g->MarkEdgePropertiesPersistent({"", "edge-name"});
   GALOIS_LOG_ASSERT(mark_edge_persistent);
 
   auto uri_res = galois::Uri::MakeRand("/tmp/propertyfilegraph");
@@ -80,6 +97,12 @@ TestRoundTrip() {
 
   GALOIS_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
   GALOIS_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
+
+  // the throwaway type was int64; make sure we didn't alias
+  GALOIS_LOG_ASSERT(
+      g2->edge_schema()->field(0)->type()->Equals(arrow::int32()));
+  GALOIS_LOG_ASSERT(
+      g2->node_schema()->field(0)->type()->Equals(arrow::int32()));
 
   std::shared_ptr<arrow::ChunkedArray> node_property = node_properties[0];
   std::shared_ptr<arrow::ChunkedArray> edge_property = edge_properties[0];

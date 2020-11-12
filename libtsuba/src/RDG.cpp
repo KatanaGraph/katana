@@ -355,7 +355,7 @@ WriteTable(
 
   std::vector<std::string> next_paths;
   for (size_t i = 0, n = properties.size(); i < n; ++i) {
-    if (!properties[i].path.empty()) {
+    if (!properties[i].persist || !properties[i].path.empty()) {
       continue;
     }
     auto name = properties[i].name.empty() ? schema->field(i)->name()
@@ -375,7 +375,7 @@ WriteTable(
   std::vector<tsuba::PropertyMetadata> next_properties = properties;
   auto it = next_paths.begin();
   for (auto& v : next_properties) {
-    if (v.path.empty()) {
+    if (v.persist && v.path.empty()) {
       v.path = *it++;
     }
   }
@@ -423,6 +423,7 @@ WritePartArrays(
     next_properties.emplace_back(tsuba::PropertyMetadata{
         .name = name,
         .path = std::move(mirr_res.value()),
+        .persist = true,
     });
   }
 
@@ -436,6 +437,7 @@ WritePartArrays(
     next_properties.emplace_back(tsuba::PropertyMetadata{
         .name = name,
         .path = std::move(mast_res.value()),
+        .persist = true,
     });
   }
 
@@ -447,7 +449,10 @@ WritePartArrays(
       return l2g_res.error();
     }
     next_properties.emplace_back(tsuba::PropertyMetadata{
-        .name = local_to_global_prop_name, .path = std::move(l2g_res.value())});
+        .name = local_to_global_prop_name,
+        .path = std::move(l2g_res.value()),
+        .persist = true,
+    });
   }
 
   if (part_meta.global_to_local_keys_ != nullptr) {
@@ -461,6 +466,7 @@ WritePartArrays(
     next_properties.emplace_back(tsuba::PropertyMetadata{
         .name = global_to_local_keys_prop_name,
         .path = std::move(g2l_keys_res.value()),
+        .persist = true,
     });
   }
 
@@ -474,6 +480,7 @@ WritePartArrays(
     next_properties.emplace_back(tsuba::PropertyMetadata{
         .name = global_to_local_vals_prop_name,
         .path = std::move(g2l_vals_res.value()),
+        .persist = true,
     });
   }
 
@@ -663,6 +670,11 @@ ReadMetadataParquet(const galois::Uri& partition_path) {
   auto part_properties_result = MakeProperties(std::move(part_values));
   if (!part_properties_result) {
     return part_properties_result.error();
+  }
+
+  // these arrays are always persisted
+  for (auto& prop : part_properties_result.value()) {
+    prop.persist = true;
   }
 
   tsuba::RDG rdg;
@@ -1065,22 +1077,33 @@ from_json(const nlohmann::json& j, PartitionMetadata& pmd) {
   }
 }
 
-// NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void
-to_json(nlohmann::json& j, const PropertyMetadata& propmd) {
-  j = json{propmd.name, propmd.path};
+to_json(json& j, const PropertyMetadata& propmd) {
+  if (propmd.persist) {
+    j = json{propmd.name, propmd.path};
+  }
+  // creates a null value if property wasn't supposed to be persisted
 }
 
-// NOLINTNEXTLINE needed non-const ref for nlohmann compat
 void
-from_json(const nlohmann::json& j, PropertyMetadata& propmd) {
+from_json(const json& j, PropertyMetadata& propmd) {
   j.at(0).get_to(propmd.name);
   j.at(1).get_to(propmd.path);
 }
 
-// NOLINTNEXTLINE needed non-const ref for nlohmann compat
+// specalized PropertyMetadata vec transformation to avoid nulls in the output
 void
-to_json(nlohmann::json& j, const RDG& rdg) {
+to_json(json& j, const std::vector<tsuba::PropertyMetadata>& vec_pmd) {
+  j = json::array();
+  for (const auto& pmd : vec_pmd) {
+    if (pmd.persist) {
+      j.push_back(pmd);
+    }
+  }
+}
+
+void
+to_json(json& j, const RDG& rdg) {
   j = json{
       {topology_path_key, rdg.topology_path_},
       {node_property_key, rdg.node_properties_},
@@ -1155,9 +1178,9 @@ RDG::PrunePropsTo(
   assert(edge_table_->num_columns() == 0);
 
   if (node_properties != nullptr) {
-    std::unordered_map<std::string, std::string> node_paths;
+    std::unordered_map<std::string, const PropertyMetadata&> node_paths;
     for (const PropertyMetadata& m : node_properties_) {
-      node_paths.insert({m.name, m.path});
+      node_paths.insert({m.name, m});
     }
 
     std::vector<PropertyMetadata> next_node_properties;
@@ -1168,18 +1191,15 @@ RDG::PrunePropsTo(
         return ErrorCode::PropertyNotFound;
       }
 
-      next_node_properties.emplace_back(PropertyMetadata{
-          .name = it->first,
-          .path = it->second,
-      });
+      next_node_properties.emplace_back(it->second);
     }
     node_properties_ = next_node_properties;
   }
 
   if (edge_properties != nullptr) {
-    std::unordered_map<std::string, std::string> edge_paths;
+    std::unordered_map<std::string, const PropertyMetadata&> edge_paths;
     for (const PropertyMetadata& m : edge_properties_) {
-      edge_paths.insert({m.name, m.path});
+      edge_paths.insert({m.name, m});
     }
 
     std::vector<PropertyMetadata> next_edge_properties;
@@ -1190,10 +1210,7 @@ RDG::PrunePropsTo(
         return ErrorCode::PropertyNotFound;
       }
 
-      next_edge_properties.emplace_back(PropertyMetadata{
-          .name = it->first,
-          .path = it->second,
-      });
+      next_edge_properties.emplace_back(it->second);
     }
     edge_properties_ = next_edge_properties;
   }
@@ -1218,36 +1235,24 @@ RDG::DoStore(
     topology_path_ = t_path.BaseName();
   }
 
-  // Only persist marked columns
-  std::vector<tsuba::PropertyMetadata> filtered_node_properties{};
-  std::copy_if(
-      node_properties_.cbegin(), node_properties_.cend(),
-      std::back_inserter(filtered_node_properties),
-      [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
   auto node_write_result = WriteTable(
-      *node_table_, filtered_node_properties, handle.impl_->rdg_meta.dir_,
-      desc.get());
+      *node_table_, node_properties_, handle.impl_->rdg_meta.dir_, desc.get());
   if (!node_write_result) {
     GALOIS_LOG_DEBUG("failed to write node properties");
     return node_write_result.error();
   }
-  // One could argue that writing a graph should be idempotent and not change node_properties_
+
+  // update node properties with newly written locations
   node_properties_ = std::move(node_write_result.value());
 
-  // Only persist marked columns
-  std::vector<tsuba::PropertyMetadata> filtered_edge_properties{};
-  std::copy_if(
-      edge_properties_.begin(), edge_properties_.end(),
-      std::back_inserter(filtered_edge_properties),
-      [](tsuba::PropertyMetadata pmd) { return pmd.persist; });
   auto edge_write_result = WriteTable(
-      *edge_table_, filtered_edge_properties, handle.impl_->rdg_meta.dir_,
-      desc.get());
+      *edge_table_, edge_properties_, handle.impl_->rdg_meta.dir_, desc.get());
   if (!edge_write_result) {
     GALOIS_LOG_DEBUG("failed to write edge properties");
     return edge_write_result.error();
   }
-  // One could argue that writing a graph should be idempotent and not change edge_properties_
+
+  // update edge properties with newly written locations
   edge_properties_ = std::move(edge_write_result.value());
 
   auto part_write_result =

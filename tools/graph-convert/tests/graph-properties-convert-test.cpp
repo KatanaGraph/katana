@@ -1159,15 +1159,18 @@ GenerateAndConvertBson(size_t chunk_size) {
       "_id", BCON_OID(&george_oid), "name", BCON_UTF8("George"), "born",
       BCON_DOUBLE(1985));
   galois::HandleNodeDocumentMongoDB(&builder, george, "person");
+  bson_destroy(george);
   bson_t* frank = BCON_NEW(
       "_id", BCON_OID(&frank_oid), "name", BCON_UTF8("Frank"), "born",
       BCON_DOUBLE(1989));
   galois::HandleNodeDocumentMongoDB(&builder, frank, "person");
+  bson_destroy(frank);
 
   bson_t* friend_doc = BCON_NEW(
       "_id", BCON_OID(&friend_oid), "friend1", BCON_OID(&george_oid), "friend2",
       BCON_OID(&frank_oid), "met", BCON_DOUBLE(2000));
   galois::HandleEdgeDocumentMongoDB(&builder, friend_doc, "friend");
+  bson_destroy(friend_doc);
 
   return builder.Finish();
 }
@@ -1291,6 +1294,8 @@ main(int argc, char** argv) {
     VerifyMongodbSet(graph);
     break;
 #endif
+  default:
+    GALOIS_LOG_FATAL("unknown option {}", test_type);
   }
 
   return 0;

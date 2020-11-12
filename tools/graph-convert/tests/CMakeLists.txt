@@ -31,7 +31,7 @@ if(mongoc-1.0_FOUND)
   add_test(NAME convert-properties-mongodb
     COMMAND graph-properties-convert-test --mongodb --mongo friend
   )
-  set_tests_properties(convert-properties-graphml PROPERTIES LABELS quick)
+  set_tests_properties(convert-properties-mongodb PROPERTIES LABELS quick)
 else()
   message(STATUS "Skipping mongodb tests")
 endif()

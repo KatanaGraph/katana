@@ -186,17 +186,13 @@ endif()
 
 find_package(Boost 1.58.0 REQUIRED COMPONENTS filesystem serialization iostreams)
 
-find_package(mongoc-1.0 1.6 QUIET)
-if(mongoc-1.0_FOUND)
-  set(GALOIS_MONGOC_FOUND true)
-else()
+find_package(mongoc-1.0 1.6)
+if(NOT mongoc-1.0_FOUND)
   message(STATUS "Library mongoc not found, not building MongoDB support")
 endif()
 
-find_package(MySQL 8.0 QUIET)
-if(MySQL_FOUND)
-  set(GALOIS_MYSQL_FOUND true)
-else()
+find_package(MySQL 8.0)
+if(NOT MySQL_FOUND)
   message(STATUS "Library MySQL not found, not building MySQL support")
 endif()
 

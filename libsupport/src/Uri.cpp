@@ -18,7 +18,6 @@ namespace {
 
 // get scheme and path, always drop trailing slash
 const std::regex kUriRegex("(?:([a-zA-Z0-9]+)://)?(.+)/?");
-constexpr const char* kFileScheme = "file";
 
 // base64 based on https://web.stanford.edu/class/archive/cs/cs106b/cs106b.1186/lectures/08-Fractals/code/expressions/lib/StanfordCPPLib/io/base64.cpp
 const std::array<char, 64> kBase64Alphabet{

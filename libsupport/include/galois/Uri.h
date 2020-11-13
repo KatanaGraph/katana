@@ -19,7 +19,9 @@ class GALOIS_EXPORT Uri {
   Uri(std::string scheme, std::string path);
 
 public:
-  static constexpr char kSepChar = '/';
+  static constexpr const char kSepChar = '/';
+  static constexpr const char* kFileScheme = "file";
+
   Uri() = default;
 
   /// build a URI based on str. If no scheme is given, str is assumed to be a

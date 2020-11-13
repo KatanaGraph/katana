@@ -155,9 +155,13 @@ tsuba::LocalStorage::Delete(
   std::string dir = directory_uri;
   CleanUri(&dir);
 
-  for (const auto& file : files) {
-    auto path = galois::Uri::JoinPath(dir, file);
-    unlink(path.c_str());
+  if (files.empty()) {
+    rmdir(dir.c_str());
+  } else {
+    for (const auto& file : files) {
+      auto path = galois::Uri::JoinPath(dir, file);
+      unlink(path.c_str());
+    }
   }
   return galois::ResultSuccess();
 }

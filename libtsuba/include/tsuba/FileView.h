@@ -92,7 +92,7 @@ public:
 
   galois::Result<void> Fill(uint64_t begin, uint64_t end, bool resolve);
 
-  bool Valid() { return valid_; }
+  bool Valid() const { return valid_; }
 
   galois::Result<void> Unbind();
 

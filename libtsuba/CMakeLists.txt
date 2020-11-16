@@ -13,6 +13,7 @@ add_library(tsuba SHARED)
 add_dependencies(lib tsuba tsuba-preload)
 
 set(sources
+  src/AddTables.cpp
   src/Errors.cpp
   src/FaultTest.cpp
   src/file.cpp
@@ -24,6 +25,13 @@ set(sources
   src/LocalStorage.cpp
   src/MemoryNameServerClient.cpp
   src/RDG.cpp
+  src/RDGCore.cpp
+  src/RDGHandleImpl.cpp
+  src/RDGLineage.cpp
+  src/RDGMeta.cpp
+  src/RDGPartHeader.cpp
+  src/RDGPrefix.cpp
+  src/RDGSlice.cpp
   src/tsuba.cpp
   src/WriteGroup.cpp
 )

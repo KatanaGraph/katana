@@ -56,7 +56,7 @@ MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
 galois::Result<void>
 MemoryNameServerClient::Update(
     const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
-  if (old_version >= meta.version_) {
+  if (old_version >= meta.version()) {
     return ErrorCode::InvalidArgument;
   }
   std::lock_guard<std::mutex> lock(mutex_);
@@ -64,7 +64,7 @@ MemoryNameServerClient::Update(
   if (it == server_state_.end()) {
     return ErrorCode::NotFound;
   }
-  if (it->second.version_ != old_version) {
+  if (it->second.version() != old_version) {
     return ErrorCode::BadVersion;
   }
   server_state_.erase(it);

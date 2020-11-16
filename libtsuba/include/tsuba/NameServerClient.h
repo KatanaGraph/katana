@@ -3,7 +3,7 @@
 
 #include "galois/Result.h"
 #include "galois/Uri.h"
-#include "tsuba/RDG.h"
+#include "tsuba/RDGMeta.h"
 
 namespace tsuba {
 

@@ -61,7 +61,7 @@ HttpNameServerClient::Get(const galois::Uri& rdg_name) {
   }
   auto meta_res = galois::HttpGetJson<RDGMeta>(uri_res.value());
   if (meta_res) {
-    meta_res.value().dir_ = rdg_name;
+    meta_res.value().set_dir(rdg_name);
   }
   return meta_res;
 }

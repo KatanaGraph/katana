@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <arrow/api.h>
+#include <arrow/chunked_array.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/LargeArray.h"
@@ -130,12 +131,45 @@ public:
       const std::vector<std::string>& edge_properties);
 
   const tsuba::PartitionMetadata& partition_metadata() const {
-    return rdg_.part_metadata_;
+    return rdg_.part_metadata();
+  }
+  void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
+    rdg_.set_part_metadata(meta);
   }
 
-  Result<void> set_partition_metadata(const tsuba::PartitionMetadata& meta) {
-    rdg_.part_metadata_ = meta;
-    return ResultSuccess();
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() {
+    return rdg_.local_to_global_vector();
+  }
+  void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_local_to_global_vector(std::move(a));
+  }
+
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() {
+    return rdg_.master_nodes();
+  }
+  void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    rdg_.set_master_nodes(std::move(a));
+  }
+
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes() {
+    return rdg_.mirror_nodes();
+  }
+  void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    rdg_.set_mirror_nodes(std::move(a));
+  }
+
+  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_keys() {
+    return rdg_.global_to_local_keys();
+  }
+  void set_global_to_local_keys(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_global_to_local_keys(std::move(a));
+  }
+
+  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_values() {
+    return rdg_.global_to_local_values();
+  }
+  void set_global_to_local_values(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_global_to_local_values(std::move(a));
   }
 
   /// Write the property graph to the given RDG name.
@@ -151,32 +185,32 @@ public:
   Result<void> Commit(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path) {
-    if (!rdg_.rdg_dir_.empty()) {
-      GALOIS_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir_, input_path);
+    if (!rdg_.rdg_dir().empty()) {
+      GALOIS_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
     }
     auto uri_res = galois::Uri::Make(input_path);
     if (!uri_res) {
       return uri_res.error();
     }
 
-    rdg_.rdg_dir_ = uri_res.value();
+    rdg_.set_rdg_dir(uri_res.value());
     return ResultSuccess();
   }
 
   std::shared_ptr<arrow::Schema> node_schema() const {
-    return rdg_.node_table_->schema();
+    return rdg_.node_table()->schema();
   }
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
-    return rdg_.edge_table_->schema();
+    return rdg_.edge_table()->schema();
   }
 
   std::shared_ptr<arrow::ChunkedArray> NodeProperty(int i) const {
-    return rdg_.node_table_->column(i);
+    return rdg_.node_table()->column(i);
   }
 
   std::shared_ptr<arrow::ChunkedArray> EdgeProperty(int i) const {
-    return rdg_.edge_table_->column(i);
+    return rdg_.edge_table()->column(i);
   }
 
   void MarkAllPropertiesPersistent() {
@@ -201,11 +235,11 @@ public:
   const GraphTopology& topology() const { return topology_; }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> NodeProperties() const {
-    return rdg_.node_table_->columns();
+    return rdg_.node_table()->columns();
   }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> EdgeProperties() const {
-    return rdg_.edge_table_->columns();
+    return rdg_.edge_table()->columns();
   }
 
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
@@ -245,7 +279,7 @@ public:
   /// arrow::Array.
   template <typename PropTuple>
   Result<PropertyViewTuple<PropTuple>> MakeNodePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.node_table_.get());
+    return this->MakePropertyViews<PropTuple>(rdg_.node_table().get());
   }
 
   /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
@@ -253,7 +287,7 @@ public:
   /// \see MakeNodePropertyViews
   template <typename PropTuple>
   Result<PropertyViewTuple<PropTuple>> MakeEdgePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.edge_table_.get());
+    return this->MakePropertyViews<PropTuple>(rdg_.edge_table().get());
   }
 };
 

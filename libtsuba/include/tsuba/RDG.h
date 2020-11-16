@@ -6,6 +6,7 @@
 #include <string>
 
 #include <arrow/api.h>
+#include <arrow/chunked_array.h>
 #include <nlohmann/json.hpp>
 
 #include "galois/Result.h"
@@ -13,169 +14,17 @@
 #include "galois/config.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
-#include "tsuba/FileView.h"
+#include "tsuba/RDGCore.h"
+#include "tsuba/RDGMeta.h"
+#include "tsuba/RDGPartHeader.h"
 #include "tsuba/WriteGroup.h"
+#include "tsuba/tsuba.h"
 
 namespace tsuba {
 
-struct RDGHandleImpl;
-
-/// RDGHandle is an opaque indentifier for an RDG.
-struct RDGHandle {
-  RDGHandleImpl* impl_{};
-};
-
-/// RDGFile wraps an RDGHandle to close the handle when RDGFile is destroyed.
-class GALOIS_EXPORT RDGFile {
-  RDGHandle handle_;
-
-public:
-  explicit RDGFile(RDGHandle handle) : handle_(handle) {}
-
-  RDGFile(const RDGFile&) = delete;
-  RDGFile& operator=(const RDGFile&) = delete;
-
-  RDGFile(RDGFile&& f) noexcept : handle_(f.handle_) {}
-  RDGFile& operator=(RDGFile&& f) noexcept {
-    std::swap(handle_, f.handle_);
-    return *this;
-  }
-
-  operator RDGHandle&() { return handle_; }
-
-  ~RDGFile();
-};
-
-class RDGLineage {
-public:
-  std::string command_line_{};
-  void AddCommandLine(const std::string& cmd) {
-    if (!command_line_.empty()) {
-      GALOIS_LOG_DEBUG(
-          "Add command line to lineage was: {} is: {}", command_line_, cmd);
-    }
-    command_line_ = cmd;
-  }
-  void ClearLineage() { command_line_.clear(); }
-};
-
-struct PropertyMetadata {
-  std::string name;
-  std::string path;
-  bool persist{false};
-};
-
-struct GALOIS_EXPORT RDGStat {
-  uint64_t num_hosts{0};
-  uint32_t policy_id{0};
-  bool transpose{false};
-};
-
-// Struct version of main graph metadatafile
-class GALOIS_EXPORT RDGMeta {
-public:
-  uint64_t version_{0};
-  uint64_t previous_version_{0};
-  uint32_t num_hosts_{0};  // 0 is a reserved value for the empty RDG when
-  // tsuba views policy_id as zero (not partitioned) or not zero (partitioned
-  // according to a CuSP-specific policy)
-  uint32_t policy_id_{0};
-  bool transpose_{false};
-  RDGLineage lineage_;
-
-  galois::Uri dir_;  // not persisted; inferred from name
-
-  RDGMeta(galois::Uri dir) : dir_(std::move(dir)) {}
-  RDGMeta(
-      uint64_t version, uint64_t previous_version, uint32_t num_hosts,
-      uint32_t policy_id, bool transpose, galois::Uri dir,
-      const RDGLineage& lineage)
-      : version_(version),
-        previous_version_(previous_version),
-        num_hosts_(num_hosts),
-        policy_id_(policy_id),
-        transpose_(transpose),
-        lineage_(lineage),
-        dir_(std::move(dir)) {}
-  RDGMeta() = default;
-
-  /// Create an RDGMeta
-  /// \param uri a uri that either names a registered RDG or an explicit
-  ///    rdg file
-  /// \returns the constructed RDGMeta and the directory of its contents
-  static galois::Result<RDGMeta> Make(const galois::Uri& uri);
-
-  /// Create an RDGMeta
-  /// \param uri is a storage prefix where the RDG is stored
-  /// \param version is the version of the meta_dir to load
-  /// \returns the constructed RDGMeta and the directory of its contents
-  static galois::Result<RDGMeta> Make(const galois::Uri& uri, uint64_t version);
-
-  // Canonical naming
-  static galois::Uri FileName(const galois::Uri& uri, uint64_t version);
-
-  static galois::Uri PartitionFileName(
-      const galois::Uri& uri, uint32_t node_id, uint64_t version);
-  std::string ToJsonString() const;
-
-  static std::string PartitionFileName(uint32_t node_id, uint64_t version);
-
-  // Required by nlohmann
-  friend void to_json(nlohmann::json& j, const RDGMeta& meta);
-  friend void from_json(const nlohmann::json& j, RDGMeta& meta);
-};
-
-struct GALOIS_EXPORT PartitionMetadata {
-  uint32_t policy_id_{0};
-  bool transposed_{false};
-  bool is_outgoing_edge_cut_{false};
-  bool is_incoming_edge_cut_{false};
-  uint64_t num_global_nodes_{0UL};
-  uint64_t num_global_edges_{0UL};
-  uint64_t num_edges_{0UL};
-  uint32_t num_nodes_{0};
-  uint32_t num_owned_{0};
-  uint32_t num_nodes_with_edges_{0};
-  std::pair<uint32_t, uint32_t> cartesian_grid_{0, 0};
-
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
-  std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_{};
-  std::shared_ptr<arrow::ChunkedArray> global_to_local_keys_{};
-  std::shared_ptr<arrow::ChunkedArray> global_to_local_values_{};
-};
-
 class GALOIS_EXPORT RDG {
 public:
-  struct SliceArg {
-    std::pair<uint64_t, uint64_t> node_range;
-    std::pair<uint64_t, uint64_t> edge_range;
-    uint64_t topo_off;
-    uint64_t topo_size;
-  };
-
-  // arrow lib returns shared_ptr's to tables; match that for now
-  std::shared_ptr<arrow::Table> node_table_;
-  std::shared_ptr<arrow::Table> edge_table_;
-
-  std::vector<tsuba::PropertyMetadata> node_properties_;
-  std::vector<tsuba::PropertyMetadata> edge_properties_;
-  std::vector<tsuba::PropertyMetadata> part_properties_;
-  // Deprecated, will go away with parquet-format partition files
-  std::vector<std::pair<std::string, std::string>> other_metadata_;
-  /// Metadata filled in by CuSP, or from storage (meta partition file)
-  PartitionMetadata part_metadata_;
-
-  std::string topology_path_;
-  uint64_t topology_size_;
-  FileView topology_file_storage_;
-
-  /// name of the graph that was used to load this RDG
-  galois::Uri rdg_dir_;
-  // How this graph was derived from the previous version
-  RDGLineage lineage_;
-
-  RDG();
+  RDG() = default;
 
   /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const;
@@ -195,15 +44,21 @@ public:
   galois::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> DropNodeProperty(int i);
-  galois::Result<void> DropEdgeProperty(int i);
+  galois::Result<void> DropNodeProperty(uint32_t i);
+  galois::Result<void> DropEdgeProperty(uint32_t i);
 
-  void MarkAllPropertiesPersistent();
+  void MarkAllPropertiesPersistent() {
+    core_.part_header().MarkAllPropertiesPersistent();
+  }
 
   galois::Result<void> MarkNodePropertiesPersistent(
-      const std::vector<std::string>& persist_node_props);
+      const std::vector<std::string>& persist_node_props) {
+    return core_.part_header().MarkNodePropertiesPersistent(persist_node_props);
+  }
   galois::Result<void> MarkEdgePropertiesPersistent(
-      const std::vector<std::string>& persist_edge_props);
+      const std::vector<std::string>& persist_edge_props) {
+    return core_.part_header().MarkEdgePropertiesPersistent(persist_edge_props);
+  }
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
@@ -218,94 +73,116 @@ public:
       const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  /// Load a contiguous piece of an RDG described by the metadata in the handle
-  /// into memory
-  static galois::Result<RDG> LoadPartial(
-      RDGHandle handle, const SliceArg& slice,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+  galois::Result<void> UnbindTopologyFileStorage() {
+    return core_.topology_file_storage().Unbind();
+  }
 
-  static galois::Result<RDG> LoadPartial(
-      const std::string& rdg_meta_path, const SliceArg& slice,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+  void AddMirrorNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    mirror_nodes_.emplace_back(std::move(a));
+  }
+
+  void AddMasterNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    master_nodes_.emplace_back(std::move(a));
+  }
+
+  //
+  // accessors and mutators
+  //
+
+  const galois::Uri& rdg_dir() const { return rdg_dir_; }
+  void set_rdg_dir(const galois::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
+
+  const std::shared_ptr<arrow::Table>& node_table() const {
+    return core_.node_table();
+  }
+  const std::shared_ptr<arrow::Table>& edge_table() const {
+    return core_.edge_table();
+  }
+
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() {
+    return master_nodes_;
+  }
+  void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    master_nodes_ = std::move(a);
+  }
+
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes() {
+    return mirror_nodes_;
+  }
+  void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    mirror_nodes_ = std::move(a);
+  }
+
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() {
+    return local_to_global_vector_;
+  }
+  void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    local_to_global_vector_ = std::move(a);
+  }
+
+  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_keys() {
+    return global_to_local_keys_;
+  }
+  void set_global_to_local_keys(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    global_to_local_keys_ = std::move(a);
+  }
+
+  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_values() {
+    return global_to_local_values_;
+  }
+  void set_global_to_local_values(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    global_to_local_values_ = std::move(a);
+  }
+
+  const PartitionMetadata& part_metadata() const {
+    return core_.part_header().metadata();
+  }
+  void set_part_metadata(const PartitionMetadata& metadata) {
+    core_.part_header().set_metadata(metadata);
+  }
+
+  const FileView& topology_file_storage() const {
+    return core_.topology_file_storage();
+  }
 
 private:
+  RDG(RDGPartHeader&& part_header) : core_(std::move(part_header)) {}
+
+  void InitEmptyTables();
+
   galois::Result<void> DoLoad(const galois::Uri& metadata_dir);
 
-  galois::Result<void> DoLoadPartial(
-      const galois::Uri& metadata_dir, const SliceArg& slice);
-
   static galois::Result<RDG> Make(
-      const galois::Uri& partition_path,
-      const std::vector<std::string>* node_props,
-      const std::vector<std::string>* edge_props, const SliceArg* slice);
+      const RDGMeta& meta, const std::vector<std::string>* node_props,
+      const std::vector<std::string>* edge_props);
 
-  galois::Result<std::string> MakeMetadataJson() const;
-  std::pair<std::vector<std::string>, std::vector<std::string>> MakeMetadata()
-      const;
+  galois::Result<void> AddPartitionMetadataArray(
+      const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> WriteMetadataJson(
-      RDGHandle handle, WriteGroup* desc) const;
-
-  galois::Result<void> PrunePropsTo(
-      const std::vector<std::string>* node_properties,
-      const std::vector<std::string>* edge_properties);
+  galois::Result<std::vector<tsuba::PropStorageInfo>> WritePartArrays(
+      const galois::Uri& dir, tsuba::WriteGroup* desc);
 
   galois::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
       std::unique_ptr<WriteGroup> desc);
 
-  void UnbindFromStorage();
+  //
+  // Data
+  //
+
+  RDGCore core_;
+
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
+  std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
+  std::shared_ptr<arrow::ChunkedArray> global_to_local_keys_;
+  std::shared_ptr<arrow::ChunkedArray> global_to_local_values_;
+
+  /// name of the graph that was used to load this RDG
+  galois::Uri rdg_dir_;
+  // How this graph was derived from the previous version
+  RDGLineage lineage_;
 };
-
-struct GRHeader {
-  uint64_t version{0};
-  uint64_t edge_type_size{0};
-  uint64_t num_nodes{0};
-  uint64_t num_edges{0};
-};
-
-/// includes the header and the list of indexes
-struct GRPrefix {
-  tsuba::GRHeader header;
-  uint64_t out_indexes[]; /* NOLINT length is defined by num_nodes_ in header */
-};
-
-struct RDGPrefix {
-  FileView prefix_storage;
-  uint64_t view_offset;
-  const GRPrefix* prefix{nullptr};
-};
-
-GALOIS_EXPORT galois::Result<RDGPrefix> ExaminePrefix(RDGHandle handle);
-GALOIS_EXPORT galois::Result<RDGPrefix> ExaminePrefix(const std::string& uri);
-
-// acceptable values for Open's flags
-constexpr int kReadOnly = 0;
-constexpr int kReadWrite = 1;
-constexpr int kReadPartial = 2;
-GALOIS_EXPORT galois::Result<RDGHandle> Open(
-    const std::string& rdg_name, uint32_t flags);
-
-/// Close an RDGHandle object
-GALOIS_EXPORT galois::Result<void> Close(RDGHandle handle);
-
-/// Create a managed RDG
-/// \param name is storage location prefix that will be used to store the RDG
-GALOIS_EXPORT galois::Result<void> Create(const std::string& name);
-
-/// Register a previously created RDG attaching it to the namespace; infer the
-/// version by examining files in name
-/// \param name is storage location prefix that the RDG is stored in
-GALOIS_EXPORT galois::Result<void> Register(const std::string& name);
-
-/// Forget an RDG, detaching it from the namespace
-/// \param name is storage location prefix that the RDG is stored in
-GALOIS_EXPORT galois::Result<void> Forget(const std::string& name);
-
-/// Get Information about the graph
-GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
 }  // namespace tsuba
 

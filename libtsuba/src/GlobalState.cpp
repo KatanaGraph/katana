@@ -6,6 +6,7 @@
 #include "FileStorage_internal.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
+#include "tsuba/Errors.h"
 #include "tsuba/NameServerClient.h"
 
 std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref_ = nullptr;

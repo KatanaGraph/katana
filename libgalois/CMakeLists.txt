@@ -24,7 +24,6 @@ set(sources
         src/Mem.cpp
         src/NumaMem.cpp
         src/OCFileGraph.cpp
-        src/OutIndexView.cpp
         src/PageAlloc.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp

@@ -183,7 +183,7 @@ galois::graphs::PropertyFileGraph::Validate() {
 galois::Result<void>
 galois::graphs::PropertyFileGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line) {
-  if (!rdg_.topology_file_storage_.Valid()) {
+  if (!rdg_.topology_file_storage().Valid()) {
     auto result = WriteTopology(topology_);
     if (!result) {
       return result.error();
@@ -201,7 +201,7 @@ galois::graphs::PropertyFileGraph::Make(
       new PropertyFileGraph(std::move(rdg_file), std::move(rdg)));
 
   auto load_result =
-      LoadTopology(&g->topology_, g->rdg_.topology_file_storage_);
+      LoadTopology(&g->topology_, g->rdg_.topology_file_storage());
   if (!load_result) {
     return load_result.error();
   }
@@ -259,11 +259,11 @@ galois::graphs::PropertyFileGraph::WriteGraph(
 galois::Result<void>
 galois::graphs::PropertyFileGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
-    if (rdg_.rdg_dir_.empty()) {
+    if (rdg_.rdg_dir().empty()) {
       GALOIS_LOG_ERROR("RDG commit but rdg_dir_ is empty");
       return ErrorCode::InvalidArgument;
     }
-    return WriteGraph(rdg_.rdg_dir_.string(), command_line);
+    return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
   return DoWrite(*file_, command_line);
 }
@@ -316,7 +316,7 @@ galois::graphs::PropertyFileGraph::RemoveEdgeProperty(int i) {
 galois::Result<void>
 galois::graphs::PropertyFileGraph::SetTopology(
     const galois::graphs::GraphTopology& topology) {
-  if (auto res = rdg_.topology_file_storage_.Unbind(); !res) {
+  if (auto res = rdg_.UnbindTopologyFileStorage(); !res) {
     return res.error();
   }
   topology_ = topology;

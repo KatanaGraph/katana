@@ -10,20 +10,15 @@
 
 namespace galois {
 
-struct CommBackend {
-  // TODO(thunt) these names are chosen because of NetworkInterface changing
-  // them is very disruptive so I'll defer for a time in the future where we're
-  // not worried about upstream and can global replace.
-  /// The number of tasks involved
-  uint32_t Num{1};
-  /// The id number of this task
-  uint32_t ID{0};
+class CommBackend {
+public:
   CommBackend() = default;
-  CommBackend(const CommBackend& other) = default;
-  CommBackend(CommBackend&& other) = default;
-  CommBackend& operator=(const CommBackend& other) = default;
-  CommBackend& operator=(CommBackend&& other) = default;
+  CommBackend(const CommBackend& other) = delete;
+  CommBackend(CommBackend&& other) = delete;
+  CommBackend& operator=(const CommBackend& other) = delete;
+  CommBackend& operator=(CommBackend&& other) = delete;
   virtual ~CommBackend() = default;
+
   /// Wait for all tasks to call Barrier
   virtual void Barrier() = 0;
   /// Broadcast bool to everyone
@@ -33,9 +28,19 @@ struct CommBackend {
       uint32_t root, const std::string& val, uint64_t max_size) = 0;
   /// Notify other tasks that there was a failure; e.g., with MPI_Abort
   virtual void NotifyFailure() = 0;
+
+  // TODO(thunt): Num and ID were chosen because of NetworkInterface. Changing
+  // them is very disruptive so I'll defer for a time in the future where we're
+  // not worried about upstream and can global replace.
+
+  /// The number of tasks involved
+  uint32_t Num{1};
+  /// The id number of this task
+  uint32_t ID{0};
 };
 
-struct NullCommBackend : public CommBackend {
+class NullCommBackend : public CommBackend {
+public:
   void Barrier() override {}
   void NotifyFailure() override {}
   bool Broadcast([[maybe_unused]] uint32_t root, bool val) override {

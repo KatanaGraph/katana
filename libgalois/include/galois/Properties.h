@@ -269,48 +269,20 @@ private:
 };
 
 /// StringPropertyReadOnlyView provides a read-only property view over
-/// arrow::Arrays of string elements.
-template <typename OffsetType>
+/// arrow::Arrays of string elements
+/// (i.e., arrow::StringArray or arrow::LargeStringArray).
+template <typename ArrowArrayType>
 class StringPropertyReadOnlyView {
 public:
-  using value_type = std::string_view;
+  using value_type = std::string;
 
-  /// Make creates a string property view from a large string array.
-  template <
-      typename T = OffsetType,
-      std::enable_if_t<std::is_same<int64_t, T>::value, int>* = nullptr>
-  static Result<StringPropertyReadOnlyView> Make(
-      const arrow::LargeStringArray& array) {
-    return StringPropertyReadOnlyView(
-        array.data()->GetMutableValues<uint8_t>(2),
-        array.data()->GetValues<OffsetType>(1),
-        array.data()->GetValues<uint8_t>(0));
+  static Result<StringPropertyReadOnlyView> Make(const ArrowArrayType& array) {
+    return StringPropertyReadOnlyView(array);
   }
 
-  /// Make creates a string property view from a string array.
-  ///
-  /// Note that we cannot guarantee all the values will fit in single array
-  /// because string array size is limited to 2^32.
-  template <
-      typename T = OffsetType,
-      std::enable_if_t<std::is_same<int32_t, T>::value, int>* = nullptr>
-  static Result<StringPropertyReadOnlyView> Make(
-      const arrow::StringArray& array) {
-    return StringPropertyReadOnlyView(
-        array.data()->GetMutableValues<uint8_t>(2),
-        array.data()->GetValues<OffsetType>(1),
-        array.data()->GetValues<uint8_t>(0));
-  }
+  bool IsValid(size_t i) const { return array_.IsValid(i); }
 
-  bool IsValid(size_t i) const {
-    return null_bitmap_ != nullptr && arrow::BitUtil::GetBit(null_bitmap_, i);
-  }
-
-  value_type GetValue(size_t i) const {
-    const OffsetType pos = offsets_[i];
-    return value_type(
-        reinterpret_cast<char*>(values_ + pos), offsets_[i + 1] - pos);
-  }
+  value_type GetValue(size_t i) const { return array_.GetString(i); }
 
   value_type operator[](size_t i) const {
     if (!IsValid(i)) {
@@ -320,13 +292,9 @@ public:
   }
 
 private:
-  StringPropertyReadOnlyView(
-      uint8_t* values, const OffsetType* offsets, const uint8_t* null_bitmap)
-      : values_(values), offsets_(offsets), null_bitmap_(null_bitmap) {}
+  StringPropertyReadOnlyView(const ArrowArrayType& array) : array_(array) {}
 
-  uint8_t* values_{};
-  const OffsetType* offsets_{};
-  const uint8_t* null_bitmap_{};
+  const ArrowArrayType& array_;
 };
 
 template <typename T>
@@ -350,12 +318,12 @@ struct BooleanReadOnlyProperty {
 
 struct StringReadOnlyProperty {
   using ArrowType = arrow::StringType;
-  using ViewType = StringPropertyReadOnlyView<int32_t>;
+  using ViewType = StringPropertyReadOnlyView<arrow::StringArray>;
 };
 
 struct LargeStringReadOnlyProperty {
   using ArrowType = arrow::LargeStringType;
-  using ViewType = StringPropertyReadOnlyView<int64_t>;
+  using ViewType = StringPropertyReadOnlyView<arrow::LargeStringArray>;
 };
 
 template <typename Props>

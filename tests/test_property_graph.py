@@ -12,7 +12,7 @@ from galois.property_graph import PropertyGraph
 def test_load(property_graph):
     assert property_graph.num_nodes() == 29092
     assert property_graph.num_edges() == 39283
-    assert len(property_graph.node_schema()) == 32
+    assert len(property_graph.node_schema()) == 31
     assert len(property_graph.edge_schema()) == 19
 
 
@@ -25,7 +25,7 @@ def test_reachable_from_10(property_graph):
     reachable = []
     for eid in property_graph.edges(10):
         reachable.append(property_graph.get_edge_dst(eid))
-    assert reachable == [2011, 1422, 1409, 5712, 10575]
+    assert reachable == [2011, 1422, 1409, 4798, 9483]
 
 
 def test_nodes_count_edges(property_graph):
@@ -43,7 +43,7 @@ def test_get_node_property_exception(property_graph):
 
 
 def test_get_node_property(property_graph):
-    prop1 = property_graph.get_node_property(4)
+    prop1 = property_graph.get_node_property(3)
     assert prop1[10].as_py() == 82
     prop2 = property_graph.get_node_property("length")
     assert prop1 == prop2
@@ -59,10 +59,10 @@ def test_get_node_property_chunked(property_graph):
 
 def test_remove_node_property(property_graph):
     property_graph.remove_node_property(10)
-    assert len(property_graph.node_schema()) == 31
-    property_graph.remove_node_property("length")
     assert len(property_graph.node_schema()) == 30
-    assert property_graph.node_schema()[4].name == "language"
+    property_graph.remove_node_property("length")
+    assert len(property_graph.node_schema()) == 29
+    assert property_graph.node_schema()[4].name == "title"
 
 
 def test_add_node_property_exception(property_graph):
@@ -75,7 +75,7 @@ def test_add_node_property_exception(property_graph):
 def test_add_node_property(property_graph):
     t = pyarrow.table(dict(new_prop=range(property_graph.num_nodes())))
     property_graph.add_node_property(t)
-    assert len(property_graph.node_schema()) == 33
+    assert len(property_graph.node_schema()) == 32
     assert property_graph.get_node_property_chunked("new_prop") == pyarrow.chunked_array(
         [range(property_graph.num_nodes())]
     )
@@ -83,7 +83,7 @@ def test_add_node_property(property_graph):
 
 
 def test_get_edge_property(property_graph):
-    prop1 = property_graph.get_edge_property(5)
+    prop1 = property_graph.get_edge_property(15)
     assert prop1[10].as_py() == False
     prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     assert prop1 == prop2
@@ -102,7 +102,7 @@ def test_remove_edge_property(property_graph):
     assert len(property_graph.edge_schema()) == 18
     property_graph.remove_edge_property("classYear")
     assert len(property_graph.edge_schema()) == 17
-    assert property_graph.edge_schema()[3].name == "IS_LOCATED_IN"
+    assert property_graph.edge_schema()[3].name == "REPLY_OF"
 
 
 def test_add_edge_property_exception(property_graph):

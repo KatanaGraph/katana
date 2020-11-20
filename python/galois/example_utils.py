@@ -17,10 +17,10 @@ def get_cache_directory():
 def get_inputs_directory():
     cache_dir = get_cache_directory()
     inputs_dir = cache_dir + "/inputs"
-    if os.path.isdir(inputs_dir) and os.path.isfile(inputs_dir + "/propertygraphs/ldbc_003"):
+    if os.path.isdir(inputs_dir) and os.path.isdir(inputs_dir + "/propertygraphs/ldbc_003"):
         return inputs_dir
     fn, _headers = urllib.request.urlretrieve(
-        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v7.tar.gz"
+        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v12.tar.gz"
     )
     try:
         with tarfile.open(fn) as tar:

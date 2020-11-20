@@ -2,7 +2,6 @@ add_executable(graph-convert graph-convert.cpp)
 target_link_libraries(graph-convert galois_shmem LLVMSupport)
 install(TARGETS graph-convert
   EXPORT GaloisTargets
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT tools
 )
 
@@ -53,7 +52,6 @@ else()
 endif()
 install(TARGETS graph-convert-huge
   EXPORT GaloisTargets
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT tools
 )
 
@@ -92,7 +90,6 @@ target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-
 
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT tools
 )
 

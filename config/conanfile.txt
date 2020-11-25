@@ -8,6 +8,7 @@ libmysqlclient/8.0.17
 mongo-c-driver/1.16.1@bincrafters/stable
 nlohmann_json/3.7.3
 openssl/1.1.1g
+libcurl/7.73.0
 
 [options]
 date:header_only = True

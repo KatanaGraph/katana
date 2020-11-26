@@ -10,6 +10,7 @@
 #include <arrow/type_fwd.h>
 #include <arrow/type_traits.h>
 
+#include "galois/ErrorCode.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "galois/Traits.h"

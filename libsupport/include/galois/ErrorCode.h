@@ -21,6 +21,7 @@ enum class ErrorCode {
   JsonDumpFailed = 6,
   HttpError = 7,
   TODO = 8,
+  PropertyNotFound = 9,
 };
 
 }  // namespace galois
@@ -49,6 +50,8 @@ public:
       return "http operation failed";
     case ErrorCode::TODO:
       return "TODO";
+    case ErrorCode::PropertyNotFound:
+      return "no such property";
     default:
       return "unknown error";
     }

@@ -747,7 +747,8 @@ tsuba::Create(const std::string& name) {
   galois::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     if (ContainsValidMetaFile(name)) {
-      GALOIS_LOG_ERROR("Create in {} contains valid meta file", name);
+      GALOIS_LOG_ERROR(
+          "unable to create {}: path already contains a valid meta file", name);
       return ErrorCode::InvalidArgument;
     }
     std::string s = meta.ToJsonString();

@@ -55,13 +55,14 @@ RDGMeta::Make(const galois::Uri& uri, uint64_t version) {
 Result<RDGMeta>
 RDGMeta::Make(const galois::Uri& uri) {
   if (!IsMetaUri(uri)) {
+    // try to be helpful and look for RDGs that we don't know about
+    if (auto res = RegisterIfAbsent(uri.string()); !res) {
+      GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
+      return res.error();
+    }
     auto ns_res = NS()->Get(uri);
     if (!ns_res) {
-      // try to be helpful and look for RDGs that we don't know about
-      if (auto res = Register(uri.string()); !res) {
-        GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
-      }
-      ns_res = NS()->Get(uri);
+      return ns_res.error();
     }
     if (ns_res) {
       ns_res.value().dir_ = uri;

@@ -102,11 +102,25 @@ MakeFileGraph(
   return std::move(pfg_result.value());
 }
 
+template <typename Props>
+std::vector<std::string>
+DefaultPropertyNames() {
+  auto num_tuple_elem = std::tuple_size<Props>::value;
+  std::vector<std::string> names(num_tuple_elem);
+
+  for (size_t i = 0; i < names.size(); ++i) {
+    names[i] = "Column_" + std::to_string(i);
+  }
+  return names;
+}
+
 template <typename NodeProps>
 inline galois::Result<void>
-ConstructNodeProperties(galois::graphs::PropertyFileGraph* pfg) {
+ConstructNodeProperties(
+    galois::graphs::PropertyFileGraph* pfg,
+    const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto res_table =
-      galois::AllocateTable<NodeProps>(pfg->topology().num_nodes());
+      galois::AllocateTable<NodeProps>(pfg->topology().num_nodes(), names);
   if (!res_table) {
     GALOIS_LOG_FATAL(
         "failed to allocate node properties table: {}", res_table.error());
@@ -121,9 +135,11 @@ ConstructNodeProperties(galois::graphs::PropertyFileGraph* pfg) {
 
 template <typename EdgeProps>
 inline galois::Result<void>
-ConstructEdgeProperties(galois::graphs::PropertyFileGraph* pfg) {
+ConstructEdgeProperties(
+    galois::graphs::PropertyFileGraph* pfg,
+    const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto res_table =
-      galois::AllocateTable<EdgeProps>(pfg->topology().num_edges());
+      galois::AllocateTable<EdgeProps>(pfg->topology().num_edges(), names);
   if (!res_table) {
     GALOIS_LOG_FATAL(
         "failed to allocate edge properties table: {}", res_table.error());

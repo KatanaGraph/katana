@@ -328,16 +328,12 @@ struct LargeStringReadOnlyProperty {
 
 template <typename Props>
 Result<std::shared_ptr<arrow::Table>>
-AllocateTable(uint64_t num_rows) {
-  static_assert(std::tuple_size_v<Props> != 0);
+AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
+  constexpr auto num_tuple_elem = std::tuple_size<Props>::value;
+  static_assert(num_tuple_elem != 0);
   std::shared_ptr<arrow::Table> table;
-  auto num_tuple_elem = std::tuple_size<Props>::value;
   std::vector<galois::PropertyArrowTuple<Props>> rows(num_rows);
-  std::vector<std::string> names(num_tuple_elem);
-
-  for (size_t i = 0; i < names.size(); ++i) {
-    names[i] = "Column_" + std::to_string(i);
-  }
+  GALOIS_ASSERT(names.size() == num_tuple_elem);
   // TODO(gill): Replace this with NUMA allocated buffers.
   if (auto r = arrow::stl::TableFromTupleRange(
           arrow::default_memory_pool(), std::move(rows), names, &table);

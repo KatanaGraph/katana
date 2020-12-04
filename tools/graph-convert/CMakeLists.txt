@@ -88,6 +88,9 @@ target_sources(graph-properties-convert PRIVATE graph-properties-convert-main.cp
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
 
+add_executable(oplog-rdg oplog-rdg.cpp)
+target_link_libraries(oplog-rdg graph-properties-convert-common)
+
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets
   COMPONENT tools

@@ -87,9 +87,11 @@ public:
   const galois::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const galois::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
 
+  /// The table of node properties
   const std::shared_ptr<arrow::Table>& node_table() const {
     return core_.node_table();
   }
+  /// The table of edge properties
   const std::shared_ptr<arrow::Table>& edge_table() const {
     return core_.edge_table();
   }

@@ -31,14 +31,21 @@ MemoryNameServerClient::Get(const galois::Uri& rdg_name) {
 }
 
 galois::Result<void>
-MemoryNameServerClient::Create(
+MemoryNameServerClient::CreateIfAbsent(
     const galois::Uri& rdg_name, const RDGMeta& meta) {
+  std::string key = rdg_name.Encode();
+
   std::lock_guard<std::mutex> lock(mutex_);
-  bool good = false;
-  std::tie(std::ignore, good) = server_state_.emplace(rdg_name.Encode(), meta);
-  if (!good) {
-    return ErrorCode::Exists;
+
+  if (server_state_.find(key) == server_state_.end()) {
+    server_state_.emplace(key, meta);
+  } else if (server_state_[key].version() != meta.version()) {
+    GALOIS_LOG_DEBUG(
+        "mismatched versions {} != {}", server_state_[key].version(),
+        meta.version());
+    return ErrorCode::TODO;
   }
+
   return galois::ResultSuccess();
 }
 

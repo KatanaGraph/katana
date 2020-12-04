@@ -5,6 +5,7 @@
 #include "galois/Logging.h"
 #include "galois/Loops.h"
 #include "galois/Platform.h"
+#include "galois/Properties.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
@@ -322,19 +323,6 @@ galois::graphs::PropertyFileGraph::SetTopology(
   topology_ = topology;
 
   return galois::ResultSuccess();
-}
-
-galois::Result<std::vector<arrow::Array*>>
-galois::graphs::PropertyFileGraph::ExtractArrays(arrow::Table* table) {
-  std::vector<arrow::Array*> ret;
-  for (auto& column : table->columns()) {
-    if (column->num_chunks() != 1) {
-      return std::errc::invalid_argument;
-    }
-    ret.emplace_back(column->chunks()[0].get());
-  }
-
-  return ret;
 }
 
 galois::Result<std::vector<uint64_t>>

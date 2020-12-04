@@ -650,7 +650,12 @@ galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
     }
     xmlFreeTextReader(reader);
     if (ret < 0) {
-      GALOIS_LOG_FATAL("Failed to parse {}", infilename);
+      GALOIS_LOG_FATAL(
+          "Failed to parse {}, incorrect xml format\n"
+          "Please verify there are no illegal characters in the GraphML file\n"
+          "To remove invalid characters use: \"sed -i $'s/[^[:print:]\t]//g' "
+          "{}\", warning this will alter the original file",
+          infilename, infilename);
     }
   } else {
     GALOIS_LOG_FATAL("Unable to open {}", infilename);

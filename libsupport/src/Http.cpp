@@ -73,7 +73,7 @@ public:
   template <typename T>
   galois::Result<void> SetOpt(CURLoption option, T param) {
     if (auto err = curl_easy_setopt(handle_, option, param); err != CURLE_OK) {
-      GALOIS_LOG_DEBUG("CURL error: {}", curl_easy_strerror(err));
+      GALOIS_LOG_ERROR("CURL error: {}", curl_easy_strerror(err));
       return galois::ErrorCode::InvalidArgument;
     }
     return galois::ResultSuccess();
@@ -99,9 +99,11 @@ public:
     case 404:
       return galois::ErrorCode::NotFound;
     case 400:
-      return galois::ErrorCode::InvalidArgument;
+      return galois::ErrorCode::HttpError;
+    case 409:
+      return galois::ErrorCode::AlreadyExists;
     default:
-      GALOIS_LOG_DEBUG(
+      GALOIS_LOG_ERROR(
           "HTTP request returned unhandled code: {}", response_code);
       return galois::ErrorCode::HttpError;
     }

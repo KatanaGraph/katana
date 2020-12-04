@@ -17,6 +17,12 @@ import subprocess
 import sys
 import tempfile
 
+mismatch_printed = 0
+def print_mismatch(line1, line2):
+  global mismatch_printed
+  if mismatch_printed < 20:
+    print("ERROR: NOT MATCHED:\n\tExpected ({})\n\tFound ({})".format(line1.strip(), line2.strip()))
+  mismatch_printed += 1
 
 def check_results(
     master_file,
@@ -44,7 +50,7 @@ def check_results(
                 return (0, errors, mrows, None, None)
 
             while split_line1[0] < split_line2[0]:
-                print("MISSING ROW: ", split_line1[0])
+                print("ERROR: MISSING ROW: ", split_line1[0])
                 mrows = mrows + 1
                 line1 = mfile.readline()
                 offset = offset + len(line1)
@@ -62,9 +68,7 @@ def check_results(
                 num_nodes += 1
 
                 if field_difference > tolerance:
-                    print("NOT MATCHED \n")
-                    print(line1)
-                    print(line2)
+                    print_mismatch(line1, line2)
                     errors = errors + 1
                 # TODO (Loc) make more general: deals with 2 fields in output (should
                 # optimally deal with arbitrary # of fields
@@ -73,12 +77,10 @@ def check_results(
                         float(split_line1[2]) - float(split_line2[2])
                     )
                     if field_difference2 > tolerance:
-                        print("NOT MATCHED \n")
-                        print(line1)
-                        print(line2)
+                        print_mismatch(line1, line2)
                         errors = errors + 1
             else:
-                print("OFFSET MISMATCH: ", split_line1[0], split_line2[0])
+                print("ERROR: OFFSET MISMATCH: ", split_line1[0], split_line2[0])
                 return (-1, errors, mrows, global_error_squared, num_nodes)
 
     return (offset, errors, mrows, global_error_squared, num_nodes)
@@ -113,9 +115,7 @@ def check_results_string_column(
                 return (0, errors, mrows)
 
             if len(split_line1) != len(split_line2):
-                print("NOT MATCHED \n")
-                print(line1)
-                print(line2)
+                print_mismatch(line1, line2)
                 errors = errors + 1
 
             if len(split_line1) == 2:
@@ -137,12 +137,10 @@ def check_results_string_column(
                 num_nodes += 1
 
                 if field_difference > tolerance:
-                    print("NOT MATCHED \n")
-                    print(line1)
-                    print(line2)
+                    print_mismatch(line1, line2)
                     errors = errors + 1
             else:
-                print("OFFSET MISMATCH: ", split_line1[0], split_line2[0])
+                print("ERROR: OFFSET MISMATCH: ", split_line1[0], split_line2[0])
                 return (-1, errors, mrows, global_error_squared, num_nodes)
 
     return (offset, errors, mrows, global_error_squared, num_nodes)
@@ -290,7 +288,6 @@ if __name__ == "__main__":
     mean_tolerance = parsed_arguments.mean_tolerance
     stringcolumn = parsed_arguments.stringcolumn
 
-    print("Starting comparison...")
     ret = main(master_file, all_files, tolerance, mean_tolerance, stringcolumn)
 
     if not parsed_arguments.sort:

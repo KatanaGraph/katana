@@ -16,7 +16,7 @@ public:
   NameServerClient& operator=(const NameServerClient& no_copy) = delete;
   virtual ~NameServerClient() = default;
   virtual galois::Result<RDGMeta> Get(const galois::Uri& rdg_name) = 0;
-  virtual galois::Result<void> Create(
+  virtual galois::Result<void> CreateIfAbsent(
       const galois::Uri& rdg_name, const RDGMeta& meta) = 0;
   virtual galois::Result<void> Delete(const galois::Uri& rdg_name) = 0;
   virtual galois::Result<void> Update(

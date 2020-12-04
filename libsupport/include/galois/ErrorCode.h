@@ -21,6 +21,8 @@ enum class ErrorCode {
   JsonDumpFailed = 6,
   HttpError = 7,
   TODO = 8,
+  PropertyNotFound = 9,
+  AlreadyExists = 10,
 };
 
 }  // namespace galois
@@ -49,6 +51,10 @@ public:
       return "http operation failed";
     case ErrorCode::TODO:
       return "TODO";
+    case ErrorCode::PropertyNotFound:
+      return "no such property";
+    case ErrorCode::AlreadyExists:
+      return "already exists";
     default:
       return "unknown error";
     }
@@ -62,6 +68,8 @@ public:
     case ErrorCode::JsonParseFailed:
     case ErrorCode::JsonDumpFailed:
       return make_error_condition(std::errc::invalid_argument);
+    case ErrorCode::AlreadyExists:
+      return make_error_condition(std::errc::file_exists);
     case ErrorCode::NotImplemented:
       return make_error_condition(std::errc::function_not_supported);
     case ErrorCode::NotFound:

@@ -93,7 +93,8 @@ RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
   try {
     md = parquet::ReadMetaData(fv);
   } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG("arrow error: {}", exp.what());
+    GALOIS_LOG_DEBUG(
+        "arrow error reading {}: {}", partition_path.string(), exp.what());
     return ErrorCode::ArrowError;
   }
 

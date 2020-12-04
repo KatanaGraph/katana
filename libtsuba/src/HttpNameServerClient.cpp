@@ -67,7 +67,8 @@ HttpNameServerClient::Get(const galois::Uri& rdg_name) {
 }
 
 galois::Result<void>
-HttpNameServerClient::Create(const galois::Uri& rdg_name, const RDGMeta& meta) {
+HttpNameServerClient::CreateIfAbsent(
+    const galois::Uri& rdg_name, const RDGMeta& meta) {
   // TODO(thunt) we check ID here because MemoryNameServer needs to be able to
   // store separate copies on all hosts for testing (fix it)
   return OneHostOnly([&]() -> galois::Result<void> {
@@ -75,11 +76,41 @@ HttpNameServerClient::Create(const galois::Uri& rdg_name, const RDGMeta& meta) {
     if (!uri_res) {
       return uri_res.error();
     }
+
+    auto get_res = Get(rdg_name);
+    if (get_res) {
+      RDGMeta remote = std::move(get_res.value());
+      if (remote.version() != meta.version()) {
+        GALOIS_LOG_DEBUG(
+            "mismatched versions {} != {}", remote.version(), meta.version());
+        return ErrorCode::TODO;
+      }
+
+      return galois::ResultSuccess();
+    }
+
     auto resp_res =
         galois::HttpPostJson<RDGMeta, HttpResponse>(uri_res.value(), meta);
     if (!resp_res) {
-      return resp_res.error();
+      if (resp_res.error() != galois::ErrorCode::AlreadyExists) {
+        return resp_res.error();
+      }
+
+      auto get_res = Get(rdg_name);
+      if (!get_res) {
+        return get_res.error();
+      }
+
+      RDGMeta remote = std::move(get_res.value());
+      if (remote.version() != meta.version()) {
+        GALOIS_LOG_DEBUG(
+            "mismatched versions {} != {}", remote.version(), meta.version());
+        return ErrorCode::TODO;
+      }
+
+      return galois::ResultSuccess();
     }
+
     HttpResponse resp = std::move(resp_res.value());
     if (resp.status != "ok") {
       GALOIS_LOG_DEBUG("request succeeded but reported error {}", resp.error);

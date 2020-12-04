@@ -7,10 +7,12 @@
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "galois/NoDerefIterator.h"
+#include "galois/Properties.h"
 #include "galois/Result.h"
 #include "galois/Traits.h"
 #include "galois/graphs/Details.h"
 #include "galois/graphs/PropertyFileGraph.h"
+#include "galois/graphs/PropertyViews.h"
 
 namespace galois::graphs {
 
@@ -173,6 +175,9 @@ public:
 
   // Graph constructors
   static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
+      PropertyFileGraph* pfg, const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties);
+  static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
       PropertyFileGraph* pfg);
 };
 
@@ -196,13 +201,17 @@ FindEdgeSortedByDest(
 
 template <typename NodeProps, typename EdgeProps>
 Result<PropertyGraph<NodeProps, EdgeProps>>
-PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
-  auto node_view_result = pfg->MakeNodePropertyViews<NodeProps>();
+PropertyGraph<NodeProps, EdgeProps>::Make(
+    PropertyFileGraph* pfg, const std::vector<std::string>& node_properties,
+    const std::vector<std::string>& edge_properties) {
+  auto node_view_result =
+      internal::MakeNodePropertyViews<NodeProps>(pfg, node_properties);
   if (!node_view_result) {
     return node_view_result.error();
   }
 
-  auto edge_view_result = pfg->MakeEdgePropertyViews<EdgeProps>();
+  auto edge_view_result =
+      internal::MakeEdgePropertyViews<EdgeProps>(pfg, edge_properties);
   if (!edge_view_result) {
     return edge_view_result.error();
   }
@@ -210,6 +219,14 @@ PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
   return PropertyGraph(
       pfg, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
+}
+
+template <typename NodeProps, typename EdgeProps>
+Result<PropertyGraph<NodeProps, EdgeProps>>
+PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
+  return PropertyGraph<NodeProps, EdgeProps>::Make(
+      pfg, pfg->node_schema()->field_names(),
+      pfg->edge_schema()->field_names());
 }
 
 }  // namespace galois::graphs

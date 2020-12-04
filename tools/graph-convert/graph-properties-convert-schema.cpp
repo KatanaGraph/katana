@@ -3,10 +3,55 @@
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 using galois::ImportDataType;
 using galois::LabelRule;
 using galois::PropertyKey;
+
+struct GraphmlList {
+  std::string list;
+  int64_t elts;
+
+  GraphmlList() {
+    list = std::string{"["};
+    elts = 0;
+  }
+
+  void AddStringElt(const std::string& elt) {
+    if (elts > 0) {
+      list += ",";
+    }
+    list += "\"" + elt + "\"";
+    elts++;
+  }
+
+  template <typename T>
+  void AddNumericElt(T elt) {
+    if (elts > 0) {
+      list += ",";
+    }
+    list += boost::lexical_cast<std::string>(elt);
+    elts++;
+  }
+
+  void AddBoolElt(bool elt) {
+    if (elts > 0) {
+      list += ",";
+    }
+    if (elt) {
+      list += "true";
+    } else {
+      list += "false";
+    }
+    elts++;
+  }
+
+  std::string Finish() {
+    list += "]";
+    return list;
+  }
+};
 
 /***************************************/
 /* Functions for writing GraphML files */
@@ -74,6 +119,59 @@ galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
 }
 
 void
+galois::StartGraphmlNode(
+    xmlTextWriterPtr writer, const std::string& node_id,
+    const std::string& labels) {
+  xmlTextWriterStartElement(writer, BAD_CAST "node");
+  xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST node_id.c_str());
+  if (!labels.empty()) {
+    xmlTextWriterWriteAttribute(
+        writer, BAD_CAST "labels", BAD_CAST labels.c_str());
+  }
+}
+
+void
+galois::FinishGraphmlNode(xmlTextWriterPtr writer) {
+  xmlTextWriterEndElement(writer);
+}
+
+void
+galois::StartGraphmlEdge(
+    xmlTextWriterPtr writer, const std::string& edge_id,
+    const std::string& src_node, const std::string& dest_node,
+    const std::string& labels) {
+  xmlTextWriterStartElement(writer, BAD_CAST "edge");
+  xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST edge_id.c_str());
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "source", BAD_CAST src_node.c_str());
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "target", BAD_CAST dest_node.c_str());
+  if (!labels.empty()) {
+    xmlTextWriterWriteAttribute(
+        writer, BAD_CAST "labels", BAD_CAST labels.c_str());
+  }
+}
+
+void
+galois::FinishGraphmlEdge(xmlTextWriterPtr writer) {
+  xmlTextWriterEndElement(writer);
+}
+
+void
+galois::AddGraphmlProperty(
+    xmlTextWriterPtr writer, const std::string& property_name,
+    const std::string& property_value) {
+  xmlTextWriterStartElement(writer, BAD_CAST "data");
+  xmlTextWriterWriteAttribute(
+      writer, BAD_CAST "key", BAD_CAST property_name.c_str());
+
+  // write value here
+  xmlTextWriterWriteString(writer, BAD_CAST property_value.c_str());
+
+  xmlTextWriterEndElement(writer);
+}
+
+void
 galois::FinishGraphmlFile(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);  // end graphml
   xmlTextWriterEndDocument(writer);
@@ -94,6 +192,319 @@ galois::ExportSchemaMapping(
 
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
   xmlTextWriterEndElement(writer);
+
+  FinishGraphmlFile(writer);
+}
+
+std::vector<PropertyKey>
+ExtractSchema(
+    std::shared_ptr<arrow::Schema> schema, bool is_node,
+    std::vector<uint64_t>* property_indexes,
+    std::vector<uint64_t>* label_indexes) {
+  std::vector<PropertyKey> keys;
+  int fields = schema->num_fields();
+
+  for (auto i = 0; i < fields; i++) {
+    std::shared_ptr<arrow::Field> field = schema->field(i);
+    std::string name = field->name();
+    std::shared_ptr<arrow::DataType> type = field->type();
+    // ignore boolean fields since for now we assume they are labels
+    if (type->id() != arrow::Type::UINT8) {
+      bool is_list = type->id() == arrow::Type::LIST;
+      ImportDataType import_type = galois::ParseType(type);
+      // TODO(Patrick) clean this up properly
+      if (import_type == ImportDataType::kUnsupported) {
+        import_type = ImportDataType::kString;
+      }
+      // TODO(Patrick) when we add graphml parsing support for timestamps delete this
+      if (import_type == ImportDataType::kTimestampMilli) {
+        import_type = ImportDataType::kString;
+      }
+
+      PropertyKey key{name, is_node, !is_node, name, import_type, is_list};
+      keys.emplace_back(key);
+      property_indexes->emplace_back(i);
+    } else {
+      label_indexes->emplace_back(i);
+    }
+  }
+  return keys;
+}
+
+std::string
+ExtractList(std::shared_ptr<arrow::ListArray> array, int64_t index) {
+  GraphmlList data{};
+  int32_t start = array->value_offset(index);
+  int32_t end = array->value_offset(index + 1);
+
+  switch (array->value_type()->id()) {
+  case arrow::Type::STRING: {
+    auto sb = std::static_pointer_cast<arrow::StringArray>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddStringElt(sb->GetString(s));
+    }
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto sb = std::static_pointer_cast<arrow::Int64Array>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto sb = std::static_pointer_cast<arrow::Int32Array>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto sb = std::static_pointer_cast<arrow::DoubleArray>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto sb = std::static_pointer_cast<arrow::FloatArray>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto sb = std::static_pointer_cast<arrow::BooleanArray>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddBoolElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::TIMESTAMP: {
+    auto sb = std::static_pointer_cast<arrow::TimestampArray>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  case arrow::Type::UINT8: {
+    auto sb = std::static_pointer_cast<arrow::UInt8Array>(array->values());
+
+    for (int32_t s = start; s < end; s++) {
+      data.AddNumericElt(sb->Value(s));
+    }
+    break;
+  }
+  default: {
+    GALOIS_LOG_ERROR(
+        "Attempted to export a property type that this exporter does not yet "
+        "support: {}",
+        array->type()->ToString());
+  }
+  }
+  return data.Finish();
+}
+
+std::string
+ExtractData(std::shared_ptr<arrow::Array> array, int64_t index) {
+  switch (array->type()->id()) {
+  case arrow::Type::STRING: {
+    auto sb = std::static_pointer_cast<arrow::StringArray>(array);
+    return sb->GetString(index);
+  }
+  case arrow::Type::INT64: {
+    auto lb = std::static_pointer_cast<arrow::Int64Array>(array);
+    return boost::lexical_cast<std::string>(lb->Value(index));
+  }
+  case arrow::Type::INT32: {
+    auto ib = std::static_pointer_cast<arrow::Int32Array>(array);
+    return boost::lexical_cast<std::string>(ib->Value(index));
+  }
+  case arrow::Type::DOUBLE: {
+    auto db = std::static_pointer_cast<arrow::DoubleArray>(array);
+    return boost::lexical_cast<std::string>(db->Value(index));
+  }
+  case arrow::Type::FLOAT: {
+    auto fb = std::static_pointer_cast<arrow::FloatArray>(array);
+    return boost::lexical_cast<std::string>(fb->Value(index));
+  }
+  case arrow::Type::BOOL: {
+    auto bb = std::static_pointer_cast<arrow::BooleanArray>(array);
+    return boost::lexical_cast<std::string>(bb->Value(index));
+  }
+  case arrow::Type::TIMESTAMP: {
+    auto tb = std::static_pointer_cast<arrow::TimestampArray>(array);
+    return boost::lexical_cast<std::string>(tb->Value(index));
+  }
+  // for now uint8_t is an alias for a struct
+  case arrow::Type::UINT8: {
+    auto bb = std::static_pointer_cast<arrow::UInt8Array>(array);
+    return boost::lexical_cast<std::string>(bb->Value(index));
+  }
+  case arrow::Type::LIST: {
+    auto lb = std::static_pointer_cast<arrow::ListArray>(array);
+    return ExtractList(lb, index);
+  }
+  default: {
+    GALOIS_LOG_ERROR(
+        "Attempted to export a property type that this exporter does not yet "
+        "support: {}",
+        array->type()->ToString());
+    return std::string{};
+  }
+  }
+}
+
+bool
+InRange(uint32_t id, const std::pair<uint64_t, uint64_t>& interval) {
+  return interval.first <= id && id < interval.second;
+}
+
+void
+galois::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
+  auto result = galois::graphs::PropertyFileGraph::Make(rdg_file);
+  if (!result) {
+    GALOIS_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
+  }
+  std::unique_ptr<galois::graphs::PropertyFileGraph> graph =
+      std::move(result.value());
+
+  xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
+
+  // export schema
+  std::shared_ptr<arrow::Schema> node_schema = graph->node_schema();
+  std::shared_ptr<arrow::Schema> edge_schema = graph->edge_schema();
+
+  std::vector<uint64_t> node_property_indexes;
+  std::vector<uint64_t> node_label_indexes;
+  std::vector<uint64_t> edge_property_indexes;
+  std::vector<uint64_t> edge_label_indexes;
+
+  std::vector<PropertyKey> node_keys = ExtractSchema(
+      node_schema, true, &node_property_indexes, &node_label_indexes);
+  for (const PropertyKey& key : node_keys) {
+    WriteGraphmlKey(writer, key);
+  }
+  std::vector<PropertyKey> edge_keys = ExtractSchema(
+      edge_schema, false, &edge_property_indexes, &edge_label_indexes);
+  for (const PropertyKey& key : edge_keys) {
+    WriteGraphmlKey(writer, key);
+  }
+
+  xmlTextWriterStartElement(writer, BAD_CAST "graph");
+
+  // export nodes and edges here
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> node_props =
+      graph->NodeProperties();
+
+  std::vector<int64_t> chunk_indexes;
+  std::vector<int64_t> sub_indexes;
+  for (uint64_t i = 0; i < node_props.size(); i++) {
+    chunk_indexes.emplace_back(0);
+    sub_indexes.emplace_back(0);
+  }
+  for (int64_t i = 0; i < node_props[0]->length(); i++) {
+    // find labels
+    std::string labels;
+    for (auto j : node_label_indexes) {
+      if (sub_indexes[j] >= node_props[j]->chunk(chunk_indexes[j])->length()) {
+        sub_indexes[j] = 0;
+        chunk_indexes[j]++;
+      }
+      if (!node_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+        auto node_labels = std::static_pointer_cast<arrow::UInt8Array>(
+            node_props[j]->chunk(chunk_indexes[j]));
+        if (node_labels->Value(sub_indexes[j]) > 0) {
+          labels += ":" + node_schema->field(j)->name();
+        }
+      }
+      sub_indexes[j]++;
+    }
+
+    StartGraphmlNode(writer, boost::lexical_cast<std::string>(i), labels);
+
+    // add properties
+    for (auto j : node_property_indexes) {
+      if (sub_indexes[j] >= node_props[j]->chunk(chunk_indexes[j])->length()) {
+        sub_indexes[j] = 0;
+        chunk_indexes[j]++;
+      }
+      if (!node_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+        auto name = node_schema->field(j)->name();
+        auto data =
+            ExtractData(node_props[j]->chunk(chunk_indexes[j]), sub_indexes[j]);
+        AddGraphmlProperty(writer, name, data);
+      }
+      sub_indexes[j]++;
+    }
+    FinishGraphmlNode(writer);
+  }
+
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> edge_props =
+      graph->EdgeProperties();
+  galois::graphs::GraphTopology topology = graph->topology();
+  uint32_t src_node = 0;
+
+  chunk_indexes.clear();
+  sub_indexes.clear();
+  for (uint64_t i = 0; i < edge_props.size(); i++) {
+    chunk_indexes.emplace_back(0);
+    sub_indexes.emplace_back(0);
+  }
+  for (int64_t i = 0; i < edge_props[0]->length(); i++) {
+    // find labels
+    std::string labels;
+    for (auto j : edge_label_indexes) {
+      if (sub_indexes[j] >= edge_props[j]->chunk(chunk_indexes[j])->length()) {
+        sub_indexes[j] = 0;
+        chunk_indexes[j]++;
+      }
+      if (!edge_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+        auto edge_labels = std::static_pointer_cast<arrow::UInt8Array>(
+            edge_props[j]->chunk(chunk_indexes[j]));
+        if (edge_labels->Value(sub_indexes[j]) > 0) {
+          // TODO(Patrick) when the parser is altered to handle multiple labels, use this line instead
+          //labels += ":" + edge_schema->field(j)->name();
+          labels = edge_schema->field(j)->name();
+        }
+      }
+      sub_indexes[j]++;
+    }
+
+    while (!InRange(i, topology.edge_range(src_node))) {
+      src_node++;
+    }
+    std::string src = boost::lexical_cast<std::string>(src_node);
+    std::string dest =
+        boost::lexical_cast<std::string>(topology.out_dests->Value(i));
+    StartGraphmlEdge(
+        writer, boost::lexical_cast<std::string>(i), src, dest, labels);
+
+    // add properties
+    for (auto j : edge_property_indexes) {
+      if (sub_indexes[j] >= edge_props[j]->chunk(chunk_indexes[j])->length()) {
+        sub_indexes[j] = 0;
+        chunk_indexes[j]++;
+      }
+      if (!edge_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+        std::string name = edge_schema->field(j)->name();
+        std::string data =
+            ExtractData(edge_props[j]->chunk(chunk_indexes[j]), sub_indexes[j]);
+        AddGraphmlProperty(writer, name, data);
+      }
+      sub_indexes[j]++;
+    }
+    FinishGraphmlEdge(writer);
+  }
+
+  xmlTextWriterEndElement(writer);  // end graph
 
   FinishGraphmlFile(writer);
 }
@@ -400,7 +811,7 @@ galois::TypeName(ImportDataType type) {
 
 ImportDataType
 galois::ParseType(const std::string& in) {
-  auto type = boost::to_lower_copy<std::string>(in);
+  std::string type = boost::to_lower_copy<std::string>(in);
   if (type == std::string("string")) {
     return ImportDataType::kString;
   }
@@ -425,5 +836,35 @@ galois::ParseType(const std::string& in) {
   if (type == std::string("struct")) {
     return ImportDataType::kStruct;
   }
+  return ImportDataType::kUnsupported;
+}
+
+ImportDataType
+galois::ParseType(std::shared_ptr<arrow::DataType> in) {
+  arrow::Type::type type = in->id();
+  if (type == arrow::Type::STRING) {
+    return ImportDataType::kString;
+  }
+  if (type == arrow::Type::DOUBLE) {
+    return ImportDataType::kDouble;
+  }
+  if (type == arrow::Type::FLOAT) {
+    return ImportDataType::kFloat;
+  }
+  if (type == arrow::Type::INT64) {
+    return ImportDataType::kInt64;
+  }
+  if (type == arrow::Type::INT32) {
+    return ImportDataType::kInt32;
+  }
+  if (type == arrow::Type::BOOL || type == arrow::Type::UINT8) {
+    return ImportDataType::kBoolean;
+  }
+  if (type == arrow::Type::TIMESTAMP) {
+    return ImportDataType::kTimestampMilli;
+  }
+  //if (type == std::string("struct")) {
+  //  return ImportDataType::kStruct;
+  //}
   return ImportDataType::kUnsupported;
 }

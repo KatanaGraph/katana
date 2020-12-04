@@ -11,10 +11,28 @@ namespace galois {
 xmlTextWriterPtr CreateGraphmlFile(const std::string& outfile);
 void WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule);
 void WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key);
+
+void StartGraphmlNode(
+    xmlTextWriterPtr writer, const std::string& node_id,
+    const std::string& labels);
+void FinishGraphmlNode(xmlTextWriterPtr writer);
+
+void StartGraphmlEdge(
+    xmlTextWriterPtr writer, const std::string& edge_id,
+    const std::string& src_node, const std::string& dest_node,
+    const std::string& labels);
+void FinishGraphmlEdge(xmlTextWriterPtr writer);
+
+void AddGraphmlProperty(
+    xmlTextWriterPtr writer, const std::string& property_name,
+    const std::string& property_value);
+
 void FinishGraphmlFile(xmlTextWriterPtr writer);
+
 void ExportSchemaMapping(
     const std::string& outfile, const std::vector<LabelRule>& rules,
     const std::vector<PropertyKey>& keys);
+void ExportGraph(const std::string& outfile, const std::string& rdg_file);
 
 ImportDataType ExtractTypeGraphML(xmlChar* value);
 PropertyKey ProcessKey(xmlTextReaderPtr reader);
@@ -28,6 +46,7 @@ ProcessSchemaMapping(const std::string& mapping);
 
 std::string TypeName(ImportDataType type);
 ImportDataType ParseType(const std::string& in);
+ImportDataType ParseType(std::shared_ptr<arrow::DataType> in);
 
 }  // namespace galois
 

@@ -747,7 +747,8 @@ tsuba::Create(const std::string& name) {
   galois::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     if (ContainsValidMetaFile(name)) {
-      GALOIS_LOG_ERROR("Create in {} contains valid meta file", name);
+      GALOIS_LOG_ERROR(
+          "unable to create {}: path already contains a valid meta file", name);
       return ErrorCode::InvalidArgument;
     }
     std::string s = meta.ToJsonString();
@@ -762,7 +763,7 @@ tsuba::Create(const std::string& name) {
   }
 
   // NS handles MPI coordination
-  if (auto res = tsuba::NS()->Create(uri, meta); !res) {
+  if (auto res = tsuba::NS()->CreateIfAbsent(uri, meta); !res) {
     GALOIS_LOG_ERROR("failed to create RDG name");
     return res.error();
   }
@@ -771,7 +772,7 @@ tsuba::Create(const std::string& name) {
 }
 
 galois::Result<void>
-tsuba::Register(const std::string& name) {
+tsuba::RegisterIfAbsent(const std::string& name) {
   auto uri_res = galois::Uri::Make(name);
   if (!uri_res) {
     return uri_res.error();
@@ -793,7 +794,7 @@ tsuba::Register(const std::string& name) {
   RDGMeta meta = std::move(meta_res.value());
 
   // NS ensures only host 0 creates
-  auto res = tsuba::NS()->Create(meta.dir(), meta);
+  auto res = tsuba::NS()->CreateIfAbsent(meta.dir(), meta);
   return res;
 }
 

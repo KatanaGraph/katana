@@ -20,7 +20,7 @@ def get_inputs_directory():
     if os.path.isdir(inputs_dir) and os.path.isdir(inputs_dir + "/propertygraphs/ldbc_003"):
         return inputs_dir
     fn, _headers = urllib.request.urlretrieve(
-        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v12.tar.gz"
+        "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v13.tar.gz"
     )
     try:
         with tarfile.open(fn) as tar:

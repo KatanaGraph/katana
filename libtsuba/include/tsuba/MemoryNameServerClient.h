@@ -21,7 +21,7 @@ class GALOIS_EXPORT MemoryNameServerClient : public NameServerClient {
 public:
   galois::Result<RDGMeta> Get(const galois::Uri& rdg_name) override;
 
-  galois::Result<void> Create(
+  galois::Result<void> CreateIfAbsent(
       const galois::Uri& rdg_name, const RDGMeta& meta) override;
 
   galois::Result<void> Delete(const galois::Uri& rdg_name) override;

@@ -79,9 +79,7 @@ FileView::Bind(
   void* tmp = nullptr;
 
   // Map enough virtual memory to hold entire file, but do not populate it
-  tmp = mmap(
-      nullptr, buf.size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
-      -1, 0);
+  tmp = mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (tmp == MAP_FAILED) {
     GALOIS_LOG_ERROR("mmap: {}", std::strerror(errno));
     return galois::ResultErrno();
@@ -133,6 +131,14 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
         (last_page + 1) * (1UL << page_shift_) - file_off,
         file_size_ - file_off);
     if (found_empty) {
+      // Get physical pages for the region we are about to write
+      int err =
+          mprotect(map_start_ + file_off, map_size, PROT_READ | PROT_WRITE);
+      if (err == -1) {
+        GALOIS_LOG_ERROR("mprotect: {}", std::strerror(errno));
+        return galois::ResultErrno();
+      }
+
       auto peek_fut =
           FileGetAsync(filename_, map_start_ + file_off, file_off, map_size);
       GALOIS_LOG_ASSERT(peek_fut.valid());

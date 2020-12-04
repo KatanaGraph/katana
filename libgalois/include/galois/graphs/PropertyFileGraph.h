@@ -10,7 +10,6 @@
 
 #include "galois/ErrorCode.h"
 #include "galois/LargeArray.h"
-#include "galois/Properties.h"
 #include "galois/config.h"
 #include "tsuba/RDG.h"
 
@@ -55,14 +54,6 @@ class GALOIS_EXPORT PropertyFileGraph {
       tsuba::RDGHandle handle, const std::string& command_line);
   Result<void> WriteGraph(
       const std::string& uri, const std::string& command_line);
-
-  /// ExtractArrays returns the array for each column of a table. It returns an
-  /// error if there is more than one array for any column.
-  static Result<std::vector<arrow::Array*>> ExtractArrays(arrow::Table* table);
-
-  template <typename PropTuple>
-  Result<PropertyViewTuple<PropTuple>> static MakePropertyViews(
-      arrow::Table* table);
 
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
@@ -272,22 +263,11 @@ public:
 
   Result<void> SetTopology(const GraphTopology& topology);
 
-  /// MakeNodePropertyViews asserts a typed view on top of runtime properties.
-  ///
-  /// It returns an error if there are fewer properties than elements of the
-  /// view or if the underlying arrow::ChunkedArray has more than one
-  /// arrow::Array.
-  template <typename PropTuple>
-  Result<PropertyViewTuple<PropTuple>> MakeNodePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.node_table().get());
+  const std::shared_ptr<arrow::Table>& node_table() const {
+    return rdg_.node_table();
   }
-
-  /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
-  ///
-  /// \see MakeNodePropertyViews
-  template <typename PropTuple>
-  Result<PropertyViewTuple<PropTuple>> MakeEdgePropertyViews() {
-    return this->MakePropertyViews<PropTuple>(rdg_.edge_table().get());
+  const std::shared_ptr<arrow::Table>& edge_table() const {
+    return rdg_.edge_table();
   }
 };
 
@@ -317,27 +297,6 @@ GALOIS_EXPORT uint64_t FindEdgeSortedByDest(
 /// relabeling and sorting the node ids by their degree in the
 /// descending order.
 GALOIS_EXPORT Result<void> SortNodesByDegree(PropertyFileGraph* pfg);
-
-template <typename PropTuple>
-Result<PropertyViewTuple<PropTuple>>
-PropertyFileGraph::MakePropertyViews(arrow::Table* table) {
-  auto arrays_result = ExtractArrays(table);
-  if (!arrays_result) {
-    return arrays_result.error();
-  }
-
-  auto arrays = std::move(arrays_result.value());
-
-  if (arrays.size() < std::tuple_size_v<PropTuple>) {
-    return std::errc::invalid_argument;
-  }
-
-  auto views_result = ConstructPropertyViews<PropTuple>(arrays);
-  if (!views_result) {
-    return views_result.error();
-  }
-  return views_result.value();
-}
 
 }  // namespace galois::graphs
 

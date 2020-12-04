@@ -107,6 +107,10 @@ tsuba::NS() {
 
 galois::Result<void>
 tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
+  // Prevent a race when the callback affects a condition guarding the
+  // execution of OneHostOnly
+  Comm()->Barrier();
+
   bool failed = false;
   if (Comm()->ID == 0) {
     auto res = cb();
@@ -115,8 +119,10 @@ tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
       failed = true;
     }
   }
+
   if (Comm()->Broadcast(0, failed)) {
     return ErrorCode::MpiError;
   }
+
   return galois::ResultSuccess();
 }

@@ -68,11 +68,6 @@ public:
       RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  static galois::Result<RDG> Load(
-      const std::string& rdg_meta_path,
-      const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
-
   galois::Result<void> UnbindTopologyFileStorage() {
     return core_.topology_file_storage().Unbind();
   }

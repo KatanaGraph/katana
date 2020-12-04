@@ -229,12 +229,53 @@ FileList(const std::string& dir) {
   return files;
 }
 
+bool
+ContainsValidMetaFile(const std::string& dir) {
+  auto list_res = FileList(dir);
+  if (!list_res) {
+    GALOIS_LOG_DEBUG(
+        "ContainsValidMetaFile dir: {}: {}", dir, list_res.error());
+    return false;
+  }
+  for (const std::string& file : list_res.value()) {
+    if (auto res = tsuba::RDGMeta::ParseVersionFromName(file); res) {
+      return true;
+    }
+  }
+  return false;
+}
+
+galois::Result<galois::Uri>
+FindLatestMetaFile(const galois::Uri& name) {
+  assert(!tsuba::RDGMeta::IsMetaUri(name));
+  auto list_res = FileList(name.string());
+  if (!list_res) {
+    return list_res.error();
+  }
+
+  uint64_t version = 0;
+  std::string found_meta;
+  for (const std::string& file : list_res.value()) {
+    if (auto res = tsuba::RDGMeta::ParseVersionFromName(file); res) {
+      uint64_t new_version = res.value();
+      if (new_version >= version) {
+        version = new_version;
+        found_meta = file;
+      }
+    }
+  }
+  if (found_meta.empty()) {
+    GALOIS_LOG_DEBUG("failed: could not find meta file in {}", name);
+    return tsuba::ErrorCode::InvalidArgument;
+  }
+  return name.Join(found_meta);
+}
+
 }  // namespace
 
-namespace tsuba {
-
 galois::Result<void>
-RDG::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& table) {
+tsuba::RDG::AddPartitionMetadataArray(
+    const std::shared_ptr<arrow::Table>& table) {
   auto field = table->schema()->field(0);
   const std::string& name = field->name();
   std::shared_ptr<arrow::ChunkedArray> col = table->column(0);
@@ -255,11 +296,11 @@ RDG::AddPartitionMetadataArray(const std::shared_ptr<arrow::Table>& table) {
 }
 
 void
-RDG::AddLineage(const std::string& command_line) {
+tsuba::RDG::AddLineage(const std::string& command_line) {
   lineage_.AddCommandLine(command_line);
 }
 
-RDGFile::~RDGFile() {
+tsuba::RDGFile::~RDGFile() {
   auto result = Close(handle_);
   if (!result) {
     GALOIS_LOG_ERROR("closing RDGFile: {}", result.error());
@@ -267,7 +308,7 @@ RDGFile::~RDGFile() {
 }
 
 galois::Result<std::vector<tsuba::PropStorageInfo>>
-RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
+tsuba::RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   GALOIS_LOG_DEBUG(
@@ -350,7 +391,7 @@ RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
 }
 
 galois::Result<void>
-RDG::DoStore(
+tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     std::unique_ptr<WriteGroup> write_group) {
   if (core_.part_header().topology_path().empty()) {
@@ -419,7 +460,7 @@ RDG::DoStore(
 }
 
 galois::Result<void>
-RDG::DoLoad(const galois::Uri& metadata_dir) {
+tsuba::RDG::DoLoad(const galois::Uri& metadata_dir) {
   auto node_result = AddTables(
       metadata_dir, core_.part_header().node_prop_info_list(),
       [rdg = this](const std::shared_ptr<arrow::Table>& table) {
@@ -461,8 +502,8 @@ RDG::DoLoad(const galois::Uri& metadata_dir) {
   return galois::ResultSuccess();
 }
 
-galois::Result<RDG>
-RDG::Make(
+galois::Result<tsuba::RDG>
+tsuba::RDG::Make(
     const RDGMeta& meta, const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   auto name_res = meta.PartitionFileName(false);
@@ -496,7 +537,7 @@ RDG::Make(
 }
 
 galois::Result<void>
-RDG::Validate() const {
+tsuba::RDG::Validate() const {
   if (auto res = core_.part_header().Validate(); !res) {
     return res.error();
   }
@@ -504,12 +545,12 @@ RDG::Validate() const {
 }
 
 bool
-RDG::Equals(const RDG& other) const {
+tsuba::RDG::Equals(const RDG& other) const {
   return core_.Equals(other.core_);
 }
 
-galois::Result<RDG>
-RDG::Load(
+galois::Result<tsuba::RDG>
+tsuba::RDG::Load(
     RDGHandle handle, const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!handle.impl_->AllowsRead()) {
@@ -519,24 +560,8 @@ RDG::Load(
   return RDG::Make(handle.impl_->rdg_meta, node_props, edge_props);
 }
 
-galois::Result<RDG>
-RDG::Load(
-    const std::string& rdg_meta_uri, const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
-  auto uri_res = galois::Uri::Make(rdg_meta_uri);
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto meta_res = tsuba::RDGMeta::Make(uri_res.value());
-  if (!meta_res) {
-    return meta_res.error();
-  }
-
-  return RDG::Make(meta_res.value(), node_props, edge_props);
-}
-
 galois::Result<void>
-RDG::Store(
+tsuba::RDG::Store(
     RDGHandle handle, const std::string& command_line,
     std::unique_ptr<FileFrame> ff) {
   if (!handle.impl_->AllowsWrite()) {
@@ -575,7 +600,7 @@ RDG::Store(
 }
 
 galois::Result<void>
-RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
+tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
   if (auto res = core_.AddNodeProperties(table); !res) {
     return res.error();
   }
@@ -596,7 +621,7 @@ RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
 }
 
 galois::Result<void>
-RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
+tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
   if (auto res = core_.AddEdgeProperties(table); !res) {
     return res.error();
   }
@@ -617,58 +642,14 @@ RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
 }
 
 galois::Result<void>
-RDG::DropNodeProperty(uint32_t i) {
+tsuba::RDG::DropNodeProperty(uint32_t i) {
   return core_.DropNodeProperty(i);
 }
 
 galois::Result<void>
-RDG::DropEdgeProperty(uint32_t i) {
+tsuba::RDG::DropEdgeProperty(uint32_t i) {
   return core_.DropEdgeProperty(i);
 }
-
-bool
-ContainsValidMetaFile(const std::string& dir) {
-  auto list_res = FileList(dir);
-  if (!list_res) {
-    GALOIS_LOG_DEBUG(
-        "ContainsValidMetaFile dir: {}: {}", dir, list_res.error());
-    return false;
-  }
-  for (const std::string& file : list_res.value()) {
-    if (auto res = RDGMeta::ParseVersionFromName(file); res) {
-      return true;
-    }
-  }
-  return false;
-}
-
-galois::Result<galois::Uri>
-FindLatestMetaFile(const galois::Uri& name) {
-  assert(!RDGMeta::IsMetaUri(name));
-  auto list_res = FileList(name.string());
-  if (!list_res) {
-    return list_res.error();
-  }
-
-  uint64_t version = 0;
-  std::string found_meta;
-  for (const std::string& file : list_res.value()) {
-    if (auto res = RDGMeta::ParseVersionFromName(file); res) {
-      uint64_t new_version = res.value();
-      if (new_version >= version) {
-        version = new_version;
-        found_meta = file;
-      }
-    }
-  }
-  if (found_meta.empty()) {
-    GALOIS_LOG_DEBUG("failed: could not find meta file in {}", name);
-    return ErrorCode::InvalidArgument;
-  }
-  return name.Join(found_meta);
-}
-
-}  // namespace tsuba
 
 galois::Result<tsuba::RDGHandle>
 tsuba::Open(const std::string& rdg_name, uint32_t flags) {
@@ -688,6 +669,14 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
     return ErrorCode::InvalidArgument;
   }
 
+  if (!RDGMeta::IsMetaUri(uri)) {
+    // try to be helpful and look for RDGs that we don't know about
+    if (auto res = RegisterIfAbsent(uri.string()); !res) {
+      GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
+      return res.error();
+    }
+  }
+
   auto meta_path_res = GetMetaAndPartitionPath(uri, flags & kReadPartial);
   if (!meta_path_res) {
     return meta_path_res.error();
@@ -705,8 +694,17 @@ tsuba::Stat(const std::string& rdg_name) {
   if (!uri_res) {
     return uri_res.error();
   }
+  galois::Uri uri = std::move(uri_res.value());
 
-  auto rdg_res = RDGMeta::Make(uri_res.value());
+  if (!RDGMeta::IsMetaUri(uri)) {
+    // try to be helpful and look for RDGs that we don't know about
+    if (auto res = RegisterIfAbsent(uri.string()); !res) {
+      GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
+      return res.error();
+    }
+  }
+
+  auto rdg_res = RDGMeta::Make(uri);
   if (!rdg_res) {
     if (rdg_res.error() == galois::ErrorCode::JsonParseFailed) {
       return RDGStat{
@@ -793,9 +791,7 @@ tsuba::RegisterIfAbsent(const std::string& name) {
   }
   RDGMeta meta = std::move(meta_res.value());
 
-  // NS ensures only host 0 creates
-  auto res = tsuba::NS()->CreateIfAbsent(meta.dir(), meta);
-  return res;
+  return tsuba::NS()->CreateIfAbsent(meta.dir(), meta);
 }
 
 galois::Result<void>

@@ -16,7 +16,7 @@ namespace tsuba::internal {
 // Used for garbage collection
 // Return all file names that store data for this handle
 GALOIS_EXPORT galois::Result<std::set<std::string>> FileNames(
-    const galois::Uri& dir, uint64_t version);
+    const galois::Uri& uri, uint64_t version);
 
 }  // namespace tsuba::internal
 

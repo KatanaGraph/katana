@@ -7,6 +7,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
+#include "GlobalState.h"
 #include "galois/Env.h"
 #include "galois/JSON.h"
 #include "galois/Logging.h"
@@ -35,6 +36,9 @@ MemoryNameServerClient::CreateIfAbsent(
     const galois::Uri& rdg_name, const RDGMeta& meta) {
   std::string key = rdg_name.Encode();
 
+  // CreateIfAbsent, Delete and Update are collective operations
+  Comm()->Barrier();
+
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (server_state_.find(key) == server_state_.end()) {
@@ -51,6 +55,8 @@ MemoryNameServerClient::CreateIfAbsent(
 
 galois::Result<void>
 MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
+  Comm()->Barrier();
+
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = server_state_.find(rdg_name.Encode());
   if (it == server_state_.end()) {
@@ -63,6 +69,8 @@ MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
 galois::Result<void>
 MemoryNameServerClient::Update(
     const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
+  Comm()->Barrier();
+
   if (old_version >= meta.version()) {
     return ErrorCode::InvalidArgument;
   }

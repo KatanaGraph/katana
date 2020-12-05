@@ -133,7 +133,7 @@ ConstructPropertyView(arrow::Array* array) {
   auto* t = dynamic_cast<ArrowArrayType*>(array);
 
   if (!t) {
-    return std::errc::invalid_argument;
+    return galois::ErrorCode::TypeError;
   }
 
   return ViewType::Make(*t);

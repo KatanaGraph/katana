@@ -202,38 +202,48 @@ public:
     static_assert(
         sizeof(typename arrow::NumericArray<U>::value_type) == sizeof(T),
         "incompatible types");
+    assert(array.offset() >= 0);
     return PODPropertyView(
-        array.data()->template GetMutableValues<T>(1),
-        array.data()->template GetValues<uint8_t>(0));
+        array.data()->template GetMutableValues<T>(1, 0),
+        array.data()->template GetValues<uint8_t>(0, 0), array.length(),
+        array.offset());
   }
 
   static Result<PODPropertyView> Make(
       const arrow::FixedSizeBinaryArray& array) {
     assert(array.byte_width() == sizeof(T));
-
+    assert(array.offset() >= 0);
     return PODPropertyView(
-        array.data()->GetMutableValues<T>(1),
-        array.data()->GetValues<uint8_t>(0));
+        array.data()->template GetMutableValues<T>(1, 0),
+        array.data()->template GetValues<uint8_t>(0, 0), array.length(),
+        array.offset());
   }
 
   bool IsValid(size_t i) const {
-    return null_bitmap_ != nullptr && arrow::BitUtil::GetBit(null_bitmap_, i);
+    assert(i < length_);
+    return null_bitmap_ == nullptr ||
+           arrow::BitUtil::GetBit(null_bitmap_, i + offset_);
   }
 
-  reference GetValue(size_t i) { return values_[i]; }
+  reference GetValue(size_t i) { return values_[i + offset_]; }
 
-  const_reference GetValue(size_t i) const { return values_[i]; }
+  const_reference GetValue(size_t i) const { return values_[i + offset_]; }
 
   reference operator[](size_t i) { return GetValue(i); }
 
   const_reference operator[](size_t i) const { return GetValue(i); }
 
 private:
-  PODPropertyView(T* values, const uint8_t* null_bitmap)
-      : values_(values), null_bitmap_(null_bitmap) {}
+  PODPropertyView(
+      T* values, const uint8_t* null_bitmap, size_t length, size_t offset)
+      : values_(values),
+        null_bitmap_(null_bitmap),
+        length_(length),
+        offset_(offset) {}
 
   T* values_;
   const uint8_t* null_bitmap_;
+  size_t length_, offset_;
 };
 
 /// BooleanPropertyReadOnlyView provides a read-only property view over
@@ -250,9 +260,15 @@ public:
     return BooleanPropertyReadOnlyView(array);
   }
 
-  bool IsValid(size_t i) const { return array_.IsValid(i); }
+  bool IsValid(size_t i) const {
+    assert(i < (size_t)array_.length());
+    return array_.IsValid(i);
+  }
 
-  value_type GetValue(size_t i) const { return array_.Value(i); }
+  value_type GetValue(size_t i) const {
+    assert(IsValid(i));
+    return array_.Value(i);
+  }
 
   value_type operator[](size_t i) const {
     if (!IsValid(i)) {
@@ -282,11 +298,14 @@ public:
 
   bool IsValid(size_t i) const { return array_.IsValid(i); }
 
-  value_type GetValue(size_t i) const { return array_.GetString(i); }
+  value_type GetValue(size_t i) const {
+    assert(IsValid(i));
+    return array_.GetString(i);
+  }
 
   value_type operator[](size_t i) const {
     if (!IsValid(i)) {
-      return value_type();
+      return value_type{};
     }
     return GetValue(i);
   }

@@ -7,10 +7,10 @@ set -eu
 
 REPO_ROOT=$(cd "$(dirname $0)"/..; pwd)
 
-EXPECTED_RELEASE="bionic"
+EXPECTED_RELEASE="bionic|focal"
 RELEASE=$(lsb_release --codename | awk '{print $2}')
 
-if [[ "${RELEASE}" != "${EXPECTED_RELEASE}" ]]
+if echo "${RELEASE}" | grep -q -e "${EXPECTED_RELEASE}" > /dev/null;
 then
   echo "This script was intended for ${EXPECTED_RELEASE} (you have ${RELEASE}) exiting!" >&2
   exit 1

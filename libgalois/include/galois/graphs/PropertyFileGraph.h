@@ -190,6 +190,14 @@ public:
     return rdg_.edge_table()->column(i);
   }
 
+  std::shared_ptr<arrow::ChunkedArray> NodeProperty(std::string name) const {
+    return rdg_.node_table()->GetColumnByName(name);
+  }
+
+  std::shared_ptr<arrow::ChunkedArray> EdgeProperty(std::string name) const {
+    return rdg_.edge_table()->GetColumnByName(name);
+  }
+
   void MarkAllPropertiesPersistent() {
     return rdg_.MarkAllPropertiesPersistent();
   }

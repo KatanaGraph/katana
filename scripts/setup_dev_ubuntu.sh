@@ -23,13 +23,19 @@ sudo bash -x "${REPO_ROOT}/.github/workflows/setup_ubuntu.sh" --no-setup-toolcha
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90
 sudo update-alternatives --verbose --install /usr/bin/clang-format clang-format /usr/bin/clang-format-10 90
 
-# --If you want a build directory that is a subdir of Katana root and some cmake options
-# mkdir build
-# cd build
-# cmake ../ -DGALOIS_AUTO_CONAN=on -DCMAKE_BUILD_TYPE=Release -DGALOIS_STORAGE_BACKEND="local;s3;azure"
-#
-# --The build does rely on git submodules
-# git submoudle update --init
-#
+
+cat <<EOF
+OK, your system is almost ready to build Katana. Next:
+
+export PATH=\$PATH:\$HOME/.local/bin  # To get conan into your PATH
+cd $REPO_ROOT
+mkdir build; cd build
+conan install -if . $REPO_ROOT/config --build=missing
+CC=gcc CXX=g++ cmake -DCMAKE_BUILD_TYPE=Release $REPO_ROOT -DCMAKE_TOOLCHAIN_FILE=conan_paths.cmake
+make                 # Feel free to use -j or similar.
+
+(You should be able to copy and paste the whole script above into your terminal.)
+EOF
+
 # --Azure cli  https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt
 # curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash

@@ -34,6 +34,7 @@
 #include <boost/mpl/has_xxx.hpp>
 
 #include "galois/AtomicWrapper.h"
+#include "galois/Galois.h"
 #include "galois/PODResizeableArray.h"
 #include "galois/config.h"
 
@@ -288,11 +289,18 @@ public:
    *
    * @returns vector with offsets into set bits
    */
-  std::vector<uint32_t> getOffsets() const;
+  template <typename integer>
+  std::vector<integer> getOffsets() const;
 
   //! this is defined to
   using tt_is_copyable = int;
 };
+
+template <>
+std::vector<uint32_t> DynamicBitset::getOffsets() const;
+
+template <>
+std::vector<uint64_t> DynamicBitset::getOffsets() const;
 
 //! An empty bitset object; used mainly by InvalidBitsetFn
 extern galois::DynamicBitset EmptyBitset;

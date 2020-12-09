@@ -44,6 +44,7 @@ requirements:
     - nlohmann_json>=3.7.3,<4.0a0
     - howardhinnant_date>=3.0.0,<4.0a0
     - libcurl>=7.66
+    - backward-cpp>=1.4
   run:
     - boost-cpp
     - arrow-cpp
@@ -56,6 +57,7 @@ requirements:
     - nlohmann_json
     - howardhinnant_date
     - libcurl
+    - backward-cpp
 
 test:
   requires:

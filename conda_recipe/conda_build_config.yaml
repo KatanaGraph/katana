@@ -9,4 +9,5 @@ pin_run_as_build:
   howardhinnant_date: x
   libxml2: x
   ncurses: x
+  backward-cpp: x
   zlib: x

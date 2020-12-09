@@ -48,6 +48,10 @@ else()
   target_link_libraries(galois_support PUBLIC CURL::libcurl)
 endif()
 
+# Backtrace support
+find_package(Backward REQUIRED)
+target_link_libraries(galois_support PUBLIC Backward::Backward)
+
 find_package(fmt REQUIRED)
 if(fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")
@@ -60,12 +64,6 @@ else()
   # Standard CMake Boost module, shorten the link time if we can
   target_link_libraries(galois_support PUBLIC Boost::boost)
   target_link_libraries(galois_support PUBLIC Boost::filesystem)
-endif()
-
-string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
-if(build_type STREQUAL "debug")
-  find_package(Backward REQUIRED)
-  target_link_libraries(galois_support PUBLIC Backward::Backward)
 endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)

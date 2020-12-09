@@ -7,7 +7,6 @@
 
 static uint32_t backtrace_id{0};
 
-#ifndef NDEBUG
 #include <backward.hpp>
 // Install signal handlers
 backward::SignalHandling sh;
@@ -34,12 +33,6 @@ galois::PrintBacktrace() {
     p.print(st);
   }
 }
-#else
-static void
-default_signals() {}
-GALOIS_EXPORT void
-galois::PrintBacktrace() {}
-#endif
 
 GALOIS_EXPORT void
 galois::InitBacktrace(uint32_t ID) {

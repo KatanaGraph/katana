@@ -16,7 +16,7 @@ fi
 cd $SRC_DIR
 rm -rf _skbuild
 
-export GALOIS_CMAKE_ARGS="-DBUILD_LIBGALOIS=OFF -DCMAKE_BUILD_TYPE=Release -DUSE_ARCH=none $CMAKE_CCACHE_OPTION $CMAKE_DOCS_OPTION"
+export GALOIS_CMAKE_ARGS="-DBUILD_LIBGALOIS=OFF -DCMAKE_BUILD_TYPE=Release $CMAKE_CCACHE_OPTION $CMAKE_DOCS_OPTION"
 $PYTHON setup.py --verbose build_ext --verbose install -- -- -j2
 
 if [ -n "$GALOIS_DOCS_OUTPUT" ]; then

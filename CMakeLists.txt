@@ -29,11 +29,12 @@ set(GALOIS_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
 set(GALOIS_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
 set(GALOIS_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
 set(GALOIS_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
-set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon list specifying clang-tidy command and arguments")
-set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon list specifying command to wrap compiler invocations (e.g., ccache)")
-set(USE_ARCH native CACHE STRING "Optimize for a specific processor architecture ('none' to disable)")
-set(GALOIS_USE_SANITIZER "" CACHE STRING "Semi-colon list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
-# This option is automatically handled by CMake.  # It makes add_library build a shared lib unless STATIC is explicitly specified.
+set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
+set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
+set(GALOIS_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to atttempt to optimize for; use the first valid configuration ('none' to disable)")
+set(GALOIS_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
+# This option is automatically handled by CMake.
+# It makes add_library build a shared lib unless STATIC is explicitly specified.
 # Putting this here is mostly just a placeholder so people know it's an option.
 # Currently this is really only intended to change anything for the libgalois_shmem target.
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")

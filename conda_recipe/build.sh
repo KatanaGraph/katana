@@ -16,7 +16,6 @@ cmake \
   -DBUILD_TESTING=OFF \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$PREFIX \
-  -DUSE_ARCH=none \
   $CMAKE_CCACHE_OPTION \
   -S "$SRC_DIR"
 make -j2

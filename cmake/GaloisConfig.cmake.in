@@ -27,7 +27,7 @@ get_filename_component(GALOIS_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 find_dependency(fmt REQUIRED)
 find_dependency(Threads REQUIRED)
 find_dependency(Boost 1.58.0 REQUIRED COMPONENTS serialization iostreams filesystem)
-
+find_dependency(Backward REQUIRED)
 
 if (@NUMA_FOUND@)
   # This is effectively `find_dependency(NUMA)` however amp could not find a
@@ -64,3 +64,4 @@ check_required_components(Boost)
 check_required_components(AWSSDK)
 check_required_components(nlohmann_json)
 check_required_components(date)
+check_required_components(Backward)

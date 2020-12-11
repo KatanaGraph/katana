@@ -149,20 +149,6 @@ public:
     rdg_.set_mirror_nodes(std::move(a));
   }
 
-  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_keys() {
-    return rdg_.global_to_local_keys();
-  }
-  void set_global_to_local_keys(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_global_to_local_keys(std::move(a));
-  }
-
-  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_values() {
-    return rdg_.global_to_local_values();
-  }
-  void set_global_to_local_values(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_global_to_local_values(std::move(a));
-  }
-
   /// Write the property graph to the given RDG name.
   ///
   /// \returns io_error if, for instance, a file already exists

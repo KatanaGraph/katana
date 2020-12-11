@@ -38,8 +38,6 @@ namespace {
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
 const char* kLocalToTGlobalPropName = "local_to_global_vector";
-const char* kGlobalToLocalKeysPropName = "global_to_local_keys";
-const char* kGlobalToLocalValsPropName = "global_to_local_values";
 
 std::shared_ptr<parquet::WriterProperties>
 StandardWriterProperties() {
@@ -285,10 +283,6 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMasterNodes(std::move(col));
   } else if (name == kLocalToTGlobalPropName) {
     set_local_to_global_vector(std::move(col));
-  } else if (name == kGlobalToLocalKeysPropName) {
-    set_global_to_local_keys(std::move(col));
-  } else if (name == kGlobalToLocalValsPropName) {
-    set_global_to_local_values(std::move(col));
   } else {
     return tsuba::ErrorCode::InvalidArgument;
   }
@@ -312,14 +306,10 @@ tsuba::RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   GALOIS_LOG_DEBUG(
-      "WritePartArrays master sz: {} mirros sz: {} l2g sz: {} g2l keys sz: {} "
-      "g2l val sz: {}",
+      "WritePartArrays master sz: {} mirros sz: {} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
       local_to_global_vector_ == nullptr ? 0
-                                         : local_to_global_vector_->length(),
-      global_to_local_keys_ == nullptr ? 0 : global_to_local_keys_->length(),
-      global_to_local_values_ == nullptr ? 0
-                                         : global_to_local_values_->length());
+                                         : local_to_global_vector_->length());
 
   for (unsigned i = 0; i < mirror_nodes_.size(); ++i) {
     auto name = MirrorPropName(i);
@@ -356,33 +346,6 @@ tsuba::RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = kLocalToTGlobalPropName,
         .path = std::move(l2g_res.value()),
-        .persist = true,
-    });
-  }
-
-  if (global_to_local_keys_ != nullptr) {
-    auto g2l_keys_res = StoreArrowArrayAtName(
-        global_to_local_keys_, dir, kGlobalToLocalKeysPropName, desc);
-    if (!g2l_keys_res) {
-      return g2l_keys_res.error();
-    }
-
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kGlobalToLocalKeysPropName,
-        .path = std::move(g2l_keys_res.value()),
-        .persist = true,
-    });
-  }
-
-  if (global_to_local_values_ != nullptr) {
-    auto g2l_vals_res = StoreArrowArrayAtName(
-        global_to_local_values_, dir, kGlobalToLocalValsPropName, desc);
-    if (!g2l_vals_res) {
-      return g2l_vals_res.error();
-    }
-    next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kGlobalToLocalValsPropName,
-        .path = std::move(g2l_vals_res.value()),
         .persist = true,
     });
   }

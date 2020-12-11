@@ -117,20 +117,6 @@ public:
     local_to_global_vector_ = std::move(a);
   }
 
-  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_keys() {
-    return global_to_local_keys_;
-  }
-  void set_global_to_local_keys(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    global_to_local_keys_ = std::move(a);
-  }
-
-  const std::shared_ptr<arrow::ChunkedArray>& global_to_local_values() {
-    return global_to_local_values_;
-  }
-  void set_global_to_local_values(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    global_to_local_values_ = std::move(a);
-  }
-
   const PartitionMetadata& part_metadata() const {
     return core_.part_header().metadata();
   }
@@ -172,8 +158,6 @@ private:
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
   std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
-  std::shared_ptr<arrow::ChunkedArray> global_to_local_keys_;
-  std::shared_ptr<arrow::ChunkedArray> global_to_local_values_;
 
   /// name of the graph that was used to load this RDG
   galois::Uri rdg_dir_;

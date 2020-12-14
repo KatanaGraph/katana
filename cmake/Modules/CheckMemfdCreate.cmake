@@ -1,12 +1,4 @@
 include(CheckSymbolExists)
 
-if(MEMFD_CREATE_FOUND)
-
-else()
-  set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
-  CHECK_SYMBOL_EXISTS(memfd_create CHECK_SYMBOL_EXISTS HAVE_MEMFD_CREATE_INTERNAL)
-  if(HAVE_MEMFD_CREATE_INTERNAL)
-    message(STATUS "memfd_create found")
-    set(MEMFD_CREATE_FOUND "${HAVE_MEMFD_CREATE_INTERNAL}")
-  endif()
-endif()
+set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+check_symbol_exists(memfd_create sys/mman.h MEMFD_CREATE_FOUND)

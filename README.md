@@ -217,7 +217,10 @@ See online documentation at:
 Source-Tree Organization
 ========================
 
-- `libgalois` contains the source code for the shared-memory Galois library, e.g., runtime, graphs, worklists, etc. 
+- `libgalois` contains the source code for the shared-memory Galois library, e.g., runtime, graphs, worklists, etc.
+  - Packaged algorithms are include in `libgalois` in two places: `include/galois/analytics` and `src/analytics`.
+    Each abstract generic algorithm (e.g., BFS) has a subdirectory in both those places to contain header and source,
+    respectively, implementing it.
 - `lonestar` contains the Lonestar benchmark applications and tutorial examples for Galois
 - `tools` contains various helper programs such as graph-converter to convert
   between graph file formats and graph-stats to print graph properties

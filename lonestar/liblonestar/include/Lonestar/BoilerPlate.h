@@ -24,7 +24,11 @@
 #include "galois/Galois.h"
 #include "galois/SharedMemSys.h"
 #include "galois/Version.h"
+#include "galois/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
+
+using galois::analytics::ConstructEdgeProperties;
+using galois::analytics::ConstructNodeProperties;
 
 //! standard global options to the benchmarks
 extern llvm::cl::opt<bool> skipVerify;

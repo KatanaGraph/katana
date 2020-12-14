@@ -1,4 +1,4 @@
-add_executable(sssp-cpu SSSP.cpp)
+add_executable(sssp-cpu sssp_cli.cpp)
 add_dependencies(apps sssp-cpu)
 target_link_libraries(sssp-cpu PRIVATE Galois::shmem lonestar)
 install(TARGETS sssp-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)

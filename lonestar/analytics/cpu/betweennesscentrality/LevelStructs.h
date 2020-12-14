@@ -8,6 +8,8 @@
 #include "galois/Reduction.h"
 #include "galois/gstl.h"
 
+using galois::analytics::ConstructNodeProperties;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static uint64_t kLevelCurrentSrcNode = 0;

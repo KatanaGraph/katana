@@ -51,4 +51,4 @@ PERFORMANCE
   tuned for machine and input graph. 
 * Tile variants of algorithms provide better load balancing and performance
   for graphs with high-degree nodes. Tile size is controlled via
-  EDGE_TILE_SIZE constant, which needs to be tuned. 
+  BFS_EDGE_TILE_SIZE constant, which needs to be tuned. 

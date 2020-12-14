@@ -45,7 +45,7 @@ See galois::graphs::LC_CSR_Graph for more details on which template parameters a
 
 These member type definitions can be chained together to get a graph type with multiple options specified. Below is an example of defining an LC_CSR_Graph with node data of type std::atomic<uint32_t>, edge data of type uint32_t, node locks removed and NUMA-aware allocation enabled:
 
-@snippet lonestar/analytics/cpu/sssp/SSSP.cpp withnumaalloc
+@snippet lonestar/analytics/cpu/sssp/sssp_cli.cpp withnumaalloc
 
 @subsubsection lc_graph_api APIs
 

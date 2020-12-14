@@ -26,7 +26,6 @@
 #include <iostream>
 #include <type_traits>
 
-#include "Lonestar/BFS_SSSP.h"
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/Utils.h"
 #include "galois/DynamicBitset.h"
@@ -34,12 +33,15 @@
 #include "galois/Reduction.h"
 #include "galois/Threads.h"
 #include "galois/Timer.h"
+#include "galois/analytics/BfsSsspImplementationBase.h"
 #include "galois/graphs/LCGraph.h"
 #include "galois/graphs/LC_CSR_CSC_Graph.h"
 #include "galois/graphs/TypeTraits.h"
 #include "galois/gstl.h"
 #include "galois/runtime/Profile.h"
 #include "llvm/Support/CommandLine.h"
+
+using namespace galois::analytics::internal;
 
 namespace cll = llvm::cl;
 
@@ -268,7 +270,7 @@ syncDOAlgo(
             galois::iterate(graph),
             [&](const T& dst) {
               auto& ddata = graph.getData(dst, flag);
-              if (ddata == BFS::DIST_INFINITY) {
+              if (ddata == BFS::kDistanceInfinity) {
                 for (auto e : graph.in_edges(dst)) {
                   auto src = graph.getInEdgeDst(e);
 
@@ -310,7 +312,7 @@ syncDOAlgo(
               auto dst = graph.getEdgeDst(e);
               auto& ddata = graph.getData(dst, flag);
 
-              if (ddata == BFS::DIST_INFINITY) {
+              if (ddata == BFS::kDistanceInfinity) {
                 Dist oldDist = ddata;
                 /*
                  * Currently assigning parents on the bfs path.
@@ -373,7 +375,7 @@ asyncAlgo(
           GNode dst = graph.getEdgeDst(ii);
           auto& ddata = graph.getData(dst, flag);
 
-          if (ddata == BFS::DIST_INFINITY) {
+          if (ddata == BFS::kDistanceInfinity) {
             Dist oldDist = ddata;
             if (__sync_bool_compare_and_swap(&ddata, oldDist, src)) {
               ctx.push(dst);
@@ -441,7 +443,7 @@ main(int argc, char** argv) {
   galois::reportPageAlloc("MeminfoPre");
 
   galois::do_all(galois::iterate(graph), [&graph](GNode n) {
-    graph.getData(n) = BFS::DIST_INFINITY;
+    graph.getData(n) = BFS::kDistanceInfinity;
   });
 
   graph.getData(source) = 0;
@@ -497,7 +499,7 @@ main(int argc, char** argv) {
     if ((run + 1) != numRuns) {
       for (unsigned int i = 0; i < 1; ++i) {
         galois::do_all(galois::iterate(graph), [&graph](GNode n) {
-          graph.getData(n) = BFS::DIST_INFINITY;
+          graph.getData(n) = BFS::kDistanceInfinity;
         });
       }
     }

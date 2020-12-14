@@ -39,7 +39,7 @@ AddProperties(
 
   if (!next->schema()->HasDistinctFieldNames()) {
     GALOIS_LOG_DEBUG("failed: column names are not distinct");
-    return tsuba::ErrorCode::InvalidArgument;
+    return tsuba::ErrorCode::Exists;
   }
 
   *to_update = next;

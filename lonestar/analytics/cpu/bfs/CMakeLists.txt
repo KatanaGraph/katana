@@ -1,4 +1,4 @@
-add_executable(bfs-cpu bfs.cpp)
+add_executable(bfs-cpu bfs_cli.cpp)
 add_dependencies(apps bfs-cpu)
 target_link_libraries(bfs-cpu PRIVATE Galois::shmem lonestar)
 install(TARGETS bfs-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)

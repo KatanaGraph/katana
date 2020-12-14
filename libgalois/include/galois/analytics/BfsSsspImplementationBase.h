@@ -17,22 +17,27 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef LONESTAR_BFS_SSSP_H
-#define LONESTAR_BFS_SSSP_H
+#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
+#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
 
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
 
-#include "Lonestar/Utils.h"
+#include "galois/analytics/Utils.h"
 
-template <
-    typename Graph, typename _DistLabel, bool USE_EDGE_WT,
-    ptrdiff_t EDGE_TILE_SIZE = 256>
-struct BFS_SSSP {
+namespace galois::analytics {
+
+template <typename _Graph, typename _DistLabel, bool USE_EDGE_WT>
+struct BfsSsspImplementationBase {
+  const ptrdiff_t edge_tile_size;
+
+  using Graph = _Graph;
   using Dist = _DistLabel;
 
-  constexpr static const Dist DIST_INFINITY =
+  constexpr static const bool kTrackWork = false;
+
+  constexpr static const Dist kDistanceInfinity =
       std::numeric_limits<Dist>::max() / 4;
 
   using GNode = typename Graph::Node;
@@ -53,10 +58,14 @@ struct BFS_SSSP {
 
   struct UpdateRequestIndexer {
     unsigned shift;
+    unsigned long divisor;
+
+    UpdateRequestIndexer(const unsigned _shift)
+        : shift(_shift), divisor(std::pow(2, shift)) {}
 
     template <typename R>
     unsigned int operator()(const R& req) const {
-      unsigned int t = req.dist >> shift;
+      unsigned int t = req.dist / divisor;
       return t;
     }
   };
@@ -83,12 +92,12 @@ struct BFS_SSSP {
   };
 
   template <typename WL, typename TileMaker>
-  static void pushEdgeTiles(WL& wl, EI beg, const EI end, const TileMaker& f) {
+  void PushEdgeTiles(WL& wl, EI beg, const EI end, const TileMaker& f) {
     assert(beg <= end);
 
-    if ((end - beg) > EDGE_TILE_SIZE) {
-      for (; beg + EDGE_TILE_SIZE < end;) {
-        auto ne = beg + EDGE_TILE_SIZE;
+    if ((end - beg) > edge_tile_size) {
+      for (; beg + edge_tile_size < end;) {
+        auto ne = beg + edge_tile_size;
         assert(ne < end);
         wl.push(f(beg, ne));
         beg = ne;
@@ -101,21 +110,20 @@ struct BFS_SSSP {
   }
 
   template <typename WL, typename TileMaker>
-  static void pushEdgeTiles(
-      WL& wl, Graph* graph, GNode src, const TileMaker& f) {
+  void PushEdgeTiles(WL& wl, Graph* graph, GNode src, const TileMaker& f) {
     auto beg = graph->edge_begin(src);
     const auto end = graph->edge_end(src);
 
-    pushEdgeTiles(wl, beg, end, f);
+    PushEdgeTiles(wl, beg, end, f);
   }
 
   template <typename WL, typename TileMaker>
-  static void pushEdgeTilesParallel(
+  void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
     auto beg = graph->edge_begin(src);
     const auto end = graph->edge_end(src);
 
-    if ((end - beg) > EDGE_TILE_SIZE) {
+    if ((end - beg) > edge_tile_size) {
       galois::on_each(
           [&](const unsigned tid, const unsigned numT) {
             auto p = galois::block_range(beg, end, tid, numT);
@@ -123,7 +131,7 @@ struct BFS_SSSP {
             auto b = p.first;
             const auto e = p.second;
 
-            pushEdgeTiles(wl, b, e, f);
+            PushEdgeTiles(wl, b, e, f);
           },
           galois::loopname("Init-Tiling"));
 
@@ -147,16 +155,17 @@ struct BFS_SSSP {
 
   struct SrcEdgeTilePushWrap {
     Graph* graph;
+    BfsSsspImplementationBase& impl;
 
     template <typename C>
     void operator()(
         C& cont, const GNode& n, const Dist& dist, const char* const) const {
-      pushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
+      impl.PushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
     }
 
     template <typename C>
     void operator()(C& cont, const GNode& n, const Dist& dist) const {
-      pushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, dist});
+      impl.PushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, dist});
     }
   };
 
@@ -177,10 +186,17 @@ struct BFS_SSSP {
   };
 
   template <typename NodeProp, typename EdgeProp>
-  struct not_consistent {
+  struct NotConsistent {
     Graph* g;
     std::atomic<bool>& refb;
-    not_consistent(Graph* g, std::atomic<bool>& refb) : g(g), refb(refb) {}
+    NotConsistent(Graph* g, std::atomic<bool>& refb) : g(g), refb(refb) {}
+
+    // TODO: Why can't this use USE_EDGE_WT directly. It's in scope, but fails.
+    template <bool useWt, typename iiTy>
+    Dist getEdgeWeight(
+        iiTy ii, typename std::enable_if<useWt>::type* = nullptr) const {
+      return g->template GetEdgeData<EdgeProp>(ii);
+    }
 
     template <bool useWt, typename iiTy>
     Dist getEdgeWeight(
@@ -188,15 +204,9 @@ struct BFS_SSSP {
       return 1;
     }
 
-    template <bool useWt, typename iiTy>
-    Dist getEdgeWeight(
-        iiTy ii, typename std::enable_if<useWt>::type* = nullptr) const {
-      return g->template GetEdgeData<EdgeProp>(ii);
-    }
-
     void operator()(typename Graph::Node node) const {
       Dist sd = g->template GetData<NodeProp>(node);
-      if (sd == DIST_INFINITY)
+      if (sd == kDistanceInfinity)
         return;
 
       for (auto ii : g->edges(node)) {
@@ -215,22 +225,22 @@ struct BFS_SSSP {
   };
 
   template <typename NodeProp>
-  struct max_dist {
+  struct MaxDist {
     Graph* g;
     galois::GReduceMax<Dist>& m;
 
-    max_dist(Graph* g, galois::GReduceMax<Dist>& m) : g(g), m(m) {}
+    MaxDist(Graph* g, galois::GReduceMax<Dist>& m) : g(g), m(m) {}
 
     void operator()(typename Graph::Node node) const {
       Dist d = g->template GetData<NodeProp>(node);
-      if (d == DIST_INFINITY)
+      if (d == kDistanceInfinity)
         return;
       m.update(d);
     }
   };
 
-  template <typename NodeProp, typename EdgeProp = galois::PODProperty<int64_t>>
-  static bool verify(Graph* graph, GNode source) {
+  template <typename NodeProp, typename EdgeProp>
+  static bool Verify(Graph* graph, GNode source) {
     if (graph->template GetData<NodeProp>(source) != 0) {
       std::cerr << "ERROR: source has non-zero dist value == "
                 << graph->template GetData<NodeProp>(source) << std::endl;
@@ -239,7 +249,7 @@ struct BFS_SSSP {
 
     std::atomic<size_t> not_visited(0);
     galois::do_all(galois::iterate(*graph), [&not_visited, &graph](GNode node) {
-      if (graph->template GetData<NodeProp>(node) >= DIST_INFINITY)
+      if (graph->template GetData<NodeProp>(node) >= kDistanceInfinity)
         ++not_visited;
     });
 
@@ -251,7 +261,7 @@ struct BFS_SSSP {
     std::atomic<bool> not_c(false);
     galois::do_all(
         galois::iterate(*graph),
-        not_consistent<NodeProp, EdgeProp>(graph, not_c));
+        NotConsistent<NodeProp, EdgeProp>(graph, not_c));
 
     if (not_c) {
       std::cerr << "node found with incorrect distance\n";
@@ -259,7 +269,7 @@ struct BFS_SSSP {
     }
 
     galois::GReduceMax<Dist> m;
-    galois::do_all(galois::iterate(*graph), max_dist<NodeProp>(graph, m));
+    galois::do_all(galois::iterate(*graph), MaxDist<NodeProp>(graph, m));
 
     std::cout << "max dist: " << m.reduce() << "\n";
 
@@ -333,5 +343,7 @@ private:
     return m_lastBucket.empty();
   }
 };
+
+}  // namespace galois::analytics
 
 #endif  //  LONESTAR_BFS_SSSP_H

@@ -373,7 +373,7 @@ main(int argc, char** argv) {
 
   if (!relabel) {
     timer_auto_algo.start();
-    relabel = isApproximateDegreeDistributionPowerLaw(graph);
+    relabel = galois::analytics::isApproximateDegreeDistributionPowerLaw(graph);
     timer_auto_algo.stop();
   }
 

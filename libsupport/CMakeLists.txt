@@ -36,17 +36,20 @@ endif()
 
 find_package(nlohmann_json 3.7.3 REQUIRED)
 target_link_libraries(galois_support PUBLIC nlohmann_json::nlohmann_json)
+
 find_package(libcurl QUIET)
 if(libcurl_FOUND)
-  if(libcurl_VERSION VERSION_LESS 7.66)
-    message(FATAL_ERROR "libcurl must be version 7.66 or higher. Found ${7.66}.")
+  # Older conan-generated package name is libcurl. More recent versions (at
+  # least 1.29) generate the cmake standard name CURL.
+  if("${libcurl_VERSION}" VERSION_LESS 7.66)
+    message(FATAL_ERROR "curl must be version 7.66 or higher. Found ${libcurl_VERSION}.")
   endif()
-  target_link_libraries(galois_support PUBLIC libcurl::libcurl)
+  set(curl_lib libcurl::libcurl)
 else()
-  # if not using conan try the more standard way
   find_package(CURL REQUIRED)
-  target_link_libraries(galois_support PUBLIC CURL::libcurl)
+  set(curl_lib CURL::libcurl)
 endif()
+target_link_libraries(galois_support PUBLIC ${curl_lib})
 
 # Backtrace support
 find_package(Backward REQUIRED)

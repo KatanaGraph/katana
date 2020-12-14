@@ -2,7 +2,7 @@ function(add_test_unit name)
   set(test_name unit-${name})
 
   add_executable(${test_name} ${name}.cpp)
-  target_link_libraries(${test_name} galois_support)
+  target_link_libraries(${test_name} galois_support Threads::Threads)
 
   set(command_line "$<TARGET_FILE:${test_name}>")
 

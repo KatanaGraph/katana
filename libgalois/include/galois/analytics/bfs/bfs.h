@@ -13,8 +13,8 @@ public:
   enum Algorithm { kAsyncTile = 0, kAsync, kSyncTile, kSync };
 
 private:
-  const Algorithm algorithm_;
-  const ptrdiff_t edge_tile_size_;
+  Algorithm algorithm_;
+  ptrdiff_t edge_tile_size_;
 
   BfsPlan(
       Architecture architecture, Algorithm algorithm, ptrdiff_t edge_tile_size)
@@ -23,6 +23,8 @@ private:
         edge_tile_size_(edge_tile_size) {}
 
 public:
+  BfsPlan() : BfsPlan{kCPU, kSyncTile, 256} {}
+
   Algorithm algorithm() const { return algorithm_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
@@ -38,7 +40,7 @@ public:
 
   static BfsPlan Sync() { return {kCPU, kSync, 0}; }
 
-  static BfsPlan Automatic() { return SyncTile(); }
+  static BfsPlan Automatic() { return {}; }
 
   static BfsPlan FromAlgorithm(Algorithm algo) {
     switch (algo) {

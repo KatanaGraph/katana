@@ -4,7 +4,7 @@
 
 from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_array, pyarrow_unwrap_table
 
-from .cpp.libstd.boost cimport std_result
+from .cpp.libstd.boost cimport std_result, handle_result_void, raise_error_code
 from .numba_support._pyarrow_wrappers import unchunked
 from libcpp.memory cimport shared_ptr, unique_ptr
 
@@ -17,14 +17,9 @@ cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
 
 
-cdef void handle_result(std_result[void] res) except *:
-    if not res.has_value():
-        raise RuntimeError(str(res.error().message(), "ascii"))
-
-
 cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) except *:
     if not res.has_value():
-        raise RuntimeError(str(res.error().message(), "ascii"))
+        raise_error_code(res.error())
     return to_shared(res.value())
 
 #
@@ -60,7 +55,7 @@ cdef class PropertyGraph:
         """
         Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided). Provide lineage information in the form of a command line.
         """
-        handle_result(self.underlying.get().Write(bytes(path, "utf-8"), bytes(command_line, "utf-8")))
+        handle_result_void(self.underlying.get().Write(bytes(path, "utf-8"), bytes(command_line, "utf-8")))
 
     cdef GraphTopology topology(self):
         return self.underlying.get().topology()
@@ -153,6 +148,8 @@ cdef class PropertyGraph:
         Can be called from numba compiled code.
         """
         cdef uint64_t prev
+        if n > self.num_nodes():
+            raise IndexError(n)
         if n == 0:
             prev = 0
         else:
@@ -167,6 +164,8 @@ cdef class PropertyGraph:
 
         Can be called from numba compiled code.
         """
+        if e > self.num_edges():
+            raise IndexError(e)
         return self.topology().out_dests.get().Value(e)
 
     def get_node_property(self, prop):
@@ -221,7 +220,7 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the property (the name is taken from the table). The table must have length `len(self)`.
         """
-        handle_result(self.underlying.get().AddNodeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying.get().AddNodeProperties(pyarrow_unwrap_table(table)))
 
     def add_edge_property(self, table):
         """
@@ -231,7 +230,7 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the property (the name is taken from the table). The table must have length `self.num_edges()`.
         """
-        handle_result(self.underlying.get().AddEdgeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying.get().AddEdgeProperties(pyarrow_unwrap_table(table)))
 
     def remove_node_property(self, prop):
         """
@@ -239,7 +238,7 @@ cdef class PropertyGraph:
 
         Remove a node property from the graph by name or index.
         """
-        handle_result(self.underlying.get().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
+        handle_result_void(self.underlying.get().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
 
     def remove_edge_property(self, prop):
         """
@@ -247,7 +246,7 @@ cdef class PropertyGraph:
 
         Remove an edge property from the graph by name or index.
         """
-        handle_result(self.underlying.get().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
+        handle_result_void(self.underlying.get().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
 
     @property
     def address(self):

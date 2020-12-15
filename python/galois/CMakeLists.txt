@@ -90,6 +90,7 @@ target_link_libraries(timer Galois::shmem)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lonestar/analytics)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/numba_support)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/util)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analytics)
 file(GLOB_RECURSE PY_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
 foreach(X IN LISTS PY_FILES)
     file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/${X} ${CMAKE_CURRENT_BINARY_DIR}/${X} SYMBOLIC)
@@ -97,6 +98,7 @@ endforeach()
 
 add_subdirectory(numba_support)
 add_subdirectory(lonestar/analytics)
+add_subdirectory(analytics)
 
 install(
   TARGETS shmem numpy_structs graphs timer atomic datastructures _loops property_graph

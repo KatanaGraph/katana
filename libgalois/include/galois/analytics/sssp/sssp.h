@@ -50,6 +50,8 @@ private:
         edge_tile_size_(edge_tile_size) {}
 
 public:
+  SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
+
   Algorithm algorithm() const { return algorithm_; }
   unsigned delta() const { return delta_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
@@ -63,8 +65,8 @@ public:
     return {kCPU, kDeltaStep, delta, 0};
   }
 
-  static SsspPlan DeltaStepBarrier(ptrdiff_t edge_tile_size = 512) {
-    return {kCPU, kDeltaStepBarrier, 0, edge_tile_size};
+  static SsspPlan DeltaStepBarrier(unsigned delta = 13) {
+    return {kCPU, kDeltaStepBarrier, delta, 0};
   }
 
   static SsspPlan SerialDeltaTile(
@@ -89,7 +91,7 @@ public:
     return {kCPU, kTopoTile, 0, edge_tile_size};
   }
 
-  static SsspPlan Automatic() { return {kCPU, kAutomatic, 0, 0}; }
+  static SsspPlan Automatic() { return {}; }
 
   static SsspPlan Automatic(const galois::graphs::PropertyFileGraph* pfg) {
     // TODO: What to do about const cast? We know we don't modify pfg, but there

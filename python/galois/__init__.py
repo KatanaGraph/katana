@@ -19,6 +19,8 @@ Galois Python also leverages numba to compile the "operators" which are run
 by Galois C++.
 """
 
+from typing import Type, Dict, Union
+
 # Initialize the galois runtime immediately.
 import galois.shmem
 
@@ -30,3 +32,22 @@ def load_ipython_extension(ipython):
     from .ipython import GaloisMagics
 
     ipython.register_magics(GaloisMagics)
+
+
+class TsubaError(IOError):
+    pass
+
+
+class GaloisError(RuntimeError):
+    pass
+
+
+class QueryError(RuntimeError):
+    pass
+
+
+error_category_to_exception_class: Dict[str, Type[Exception]] = {
+    "TsubaError": TsubaError,
+    "GaloisError": GaloisError,
+    "QueryError": QueryError,
+}

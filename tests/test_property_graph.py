@@ -7,6 +7,7 @@ import pytest
 
 from galois.loops import do_all_operator, do_all
 from galois.property_graph import PropertyGraph
+from galois import TsubaError
 
 
 def test_load(property_graph):
@@ -123,12 +124,12 @@ def test_add_edge_property(property_graph):
 
 
 def test_load_invalid_path():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TsubaError):
         PropertyGraph("non-existent")
 
 
 def test_load_directory():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TsubaError):
         PropertyGraph("/tmp")
 
 
@@ -137,7 +138,7 @@ def test_load_garbage_file():
     try:
         with fi:
             fi.write(b"Test")
-        with pytest.raises(RuntimeError):
+        with pytest.raises(TsubaError):
             PropertyGraph(fi.name)
     finally:
         os.unlink(fi.name)

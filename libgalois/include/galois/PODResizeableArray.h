@@ -137,8 +137,10 @@ public:
         data_ = NULL;
       }
     } else if (size_ < capacity_) {
-      data_ = static_cast<_Tp*>(
+      _Tp* new_data_ = static_cast<_Tp*>(
           realloc(reinterpret_cast<void*>(data_), size_ * sizeof(_Tp)));
+      assert(new_data_);
+      data_ = new_data_;
     }
   }
 
@@ -158,8 +160,10 @@ public:
       capacity_ <<= 1;
     }
 
-    data_ = static_cast<_Tp*>(
+    _Tp* new_data_ = static_cast<_Tp*>(
         realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
+    assert(new_data_);
+    data_ = new_data_;
   }
 
   void resize(size_t n) {

@@ -50,25 +50,14 @@ endforeach()
 target_link_libraries(tsuba-preload PUBLIC galois_support)
 target_link_libraries(tsuba PUBLIC tsuba-preload galois_support)
 
-find_package(Arrow CONFIG REQUIRED)
-if(${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)
-  message(FATAL_ERROR "libarrow must be version 0.17 or 1.0; found ${ARROW_VERSION} instead")
-endif()
-
-get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
-find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
-if(GALOIS_LINK_STATIC_ARROW)
-  # The libarrow 1.0 static library target is missing a few dependencies; add them
-  # manually
-  find_package(Brotli REQUIRED)
-  find_package(lz4 REQUIRED)
-  find_package(Snappy REQUIRED)
-  find_package(Thrift REQUIRED)
-  find_package(utf8proc REQUIRED)
-  find_package(zstd REQUIRED)
-  target_link_libraries(tsuba PUBLIC arrow_static parquet_static
-    Brotli::Brotli lz4::lz4 Snappy::Snappy thrift::thrift utf8proc::utf8proc zstd::zstd)
+find_package(Arrow REQUIRED)
+if(TARGET arrow::arrow)
+  # Conan package
+  target_link_libraries(tsuba PUBLIC arrow::arrow arrow::parquet)
 else()
+  # Libarrow project cmake
+  get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
+  find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
   target_link_libraries(tsuba PUBLIC arrow_shared parquet_shared)
 endif()
 

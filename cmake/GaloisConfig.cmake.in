@@ -40,11 +40,7 @@ find_dependency(nlohmann_json REQUIRED)
 find_dependency(date REQUIRED)
 find_dependency(CURL REQUIRED)
 
-find_dependency(Arrow CONFIG REQUIRED)
-if (${ARROW_VERSION} VERSION_LESS 0.17 OR ${ARROW_VERSION} VERSION_GREATER_EQUAL 2.0.0)
-  message(FATAL_ERROR "libarrow must be version 0.17 or 1.0; found ${ARROW_VERSION} instead")
-endif()
-
+find_dependency(Arrow REQUIRED)
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
 find_dependency(Parquet HINTS ${ARROW_CONFIG_DIR})
 

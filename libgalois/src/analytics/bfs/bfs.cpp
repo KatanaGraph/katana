@@ -18,7 +18,6 @@
  */
 
 #include <deque>
-#include <iostream>
 #include <type_traits>
 
 #include "galois/analytics/bfs/bfs_internal.h"

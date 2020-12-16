@@ -41,6 +41,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
+set(GALOIS_LINK_STATIC_ARROW OFF CACHE BOOL "If true, link arrow statically")
 
 ###### Developer features ######
 set(GALOIS_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical cores)")

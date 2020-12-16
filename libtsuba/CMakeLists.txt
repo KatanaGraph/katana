@@ -57,7 +57,20 @@ endif()
 
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
 find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
-target_link_libraries(tsuba PUBLIC arrow_shared parquet_shared)
+if(GALOIS_LINK_STATIC_ARROW)
+  # The libarrow 1.0 static library target is missing a few dependencies; add them
+  # manually
+  find_package(Brotli REQUIRED)
+  find_package(lz4 REQUIRED)
+  find_package(Snappy REQUIRED)
+  find_package(Thrift REQUIRED)
+  find_package(utf8proc REQUIRED)
+  find_package(zstd REQUIRED)
+  target_link_libraries(tsuba PUBLIC arrow_static parquet_static
+    Brotli::Brotli lz4::lz4 Snappy::Snappy thrift::thrift utf8proc::utf8proc zstd::zstd)
+else()
+  target_link_libraries(tsuba PUBLIC arrow_shared parquet_shared)
+endif()
 
 if(TARGET Boost::headers)
   # New conan-generated package (at least 1.29); it also defines Boost::Boost

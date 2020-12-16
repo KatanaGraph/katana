@@ -70,7 +70,7 @@ set(sources
 
 if(mongoc-1.0_FOUND)
   list(APPEND sources graph-properties-convert-mongodb.cpp)
-  target_link_libraries(graph-properties-convert-common PUBLIC mongo::mongoc_shared)
+  target_link_libraries(graph-properties-convert-common PUBLIC mongo::mongoc_static)
   target_compile_definitions(graph-properties-convert-common PUBLIC GALOIS_MONGOC_FOUND)
 endif()
 if(MySQL_FOUND)

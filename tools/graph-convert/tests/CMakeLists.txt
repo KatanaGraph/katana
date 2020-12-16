@@ -8,10 +8,6 @@ target_link_libraries(graph-properties-convert-test PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert-test PRIVATE LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert-test PRIVATE graph-properties-convert-common)
 
-if(mongoc-1.0_FOUND)
-  target_link_libraries(graph-properties-convert-test PRIVATE mongo::mongoc_shared)
-endif()
-
 add_test(NAME convert-properties-graphml
   COMMAND graph-properties-convert-test --neo4j --movies ${CMAKE_CURRENT_SOURCE_DIR}/../test-inputs/movies.graphml
 )

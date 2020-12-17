@@ -45,6 +45,7 @@ requirements:
     - howardhinnant_date>=3.0.0,<4.0a0
     - libcurl>=7.66
     - backward-cpp>=1.4
+    - elfutils
   run:
     - boost-cpp
     - arrow-cpp
@@ -58,6 +59,7 @@ requirements:
     - howardhinnant_date
     - libcurl
     - backward-cpp
+    - elfutils
 
 test:
   requires:
@@ -81,4 +83,3 @@ extra:
   recipe-maintainers:
     - katanagraph
     - amp
-    - insertinterestingnamehere

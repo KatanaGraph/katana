@@ -36,7 +36,7 @@ requirements:
     - galois={{ version }}
     - cython>=0.29.12
     - numba>=0.50,<1.0
-    - pyarrow>=0.17.1,<2.0.0
+    - pyarrow
     - sphinx
   host:
     - python
@@ -46,7 +46,7 @@ requirements:
     - galois={{ version }}
     - cython>=0.29.12
     - numba>=0.50,<1.0
-    - pyarrow>=0.17.1,<2.0.0
+    - pyarrow
   run:
     - python
     - galois={{ version }}

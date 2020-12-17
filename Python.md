@@ -110,8 +110,8 @@ Building Galois-Python Conda Packages
 To build the `galois` and `galois-python` packages in the development environment (created above), run:
 
 ```Shell
-conda build -c conda-forge -c katanagraph $SRC_DIR/conda_recipe/
-conda build -c conda-forge -c katanagraph --use-local $SRC_DIR/python/conda_recipe/
+conda build -c katanagraph -c conda-forge $SRC_DIR/conda_recipe/
+conda build -c local -c katanagraph -c conda-forge $SRC_DIR/python/conda_recipe/
 ```
 (*WARNING:* This takes a while.)
 

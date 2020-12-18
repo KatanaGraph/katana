@@ -11,12 +11,13 @@ configure_file(include/galois/config.h.in include/galois/config.h)
 
 set(sources
         src/Backtrace.cpp
-        src/ErrorCode.cpp
         src/Env.cpp
+        src/ErrorCode.cpp
         src/Http.cpp
         src/JSON.cpp
         src/Logging.cpp
         src/Random.cpp
+        src/Strings.cpp
         src/Uri.cpp
 )
 

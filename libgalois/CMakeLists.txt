@@ -47,6 +47,7 @@ set(sources
         src/analytics/bfs/bfs.cpp
         src/analytics/sssp/sssp.cpp
         src/analytics/connected_components/connected_components.cpp
+        src/analytics/jaccard/jaccard.cpp
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

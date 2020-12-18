@@ -10,7 +10,7 @@ namespace galois::analytics {
 
 /// A computational plan to for BFS, specifying the algorithm and any parameters
 /// associated with it.
-class BfsPlan : Plan {
+class BfsPlan : public Plan {
 public:
   enum Algorithm { kAsyncTile = 0, kAsync, kSyncTile, kSync };
 

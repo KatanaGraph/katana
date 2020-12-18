@@ -5,23 +5,20 @@ from libcpp.string cimport string
 from libcpp cimport bool
 from galois.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
 from galois.property_graph cimport PropertyGraph
+from galois.analytics.plan cimport _Plan, Plan
 from libc.stdint cimport uint64_t, uint32_t
 
 from enum import Enum
 
-cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
-    enum Architecture:
-        kCPU
-        kGPU
-        kDistributed
-
-    cppclass Plan:
-        Architecture architecture() const
+cdef inline default_value(v, d):
+    if v is None:
+        return d
+    return v
 
 # BFS
 
 cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
-    cppclass _BfsPlan "galois::analytics::BfsPlan":
+    cppclass _BfsPlan "galois::analytics::BfsPlan" (_Plan):
         enum Algorithm:
             kAsyncTile "galois::analytics::BfsPlan::kAsyncTile"
             kAsync "galois::analytics::BfsPlan::kAsync"
@@ -79,25 +76,28 @@ class _BfsAlgorithm(Enum):
     Sync = _BfsPlan.Algorithm.kSync
 
 
-cdef class BfsPlan:
+cdef class BfsPlan(Plan):
     cdef:
-        _BfsPlan underlying
+        _BfsPlan underlying_
+
+    cdef _Plan* underlying(self) except NULL:
+        return &self.underlying_
 
     @staticmethod
     cdef BfsPlan make(_BfsPlan u):
         f = <BfsPlan>BfsPlan.__new__(BfsPlan)
-        f.underlying = u
+        f.underlying_ = u
         return f
 
     Algorithm = _BfsAlgorithm
 
     @property
     def algorithm(self) -> _BfsAlgorithm:
-        return _BfsAlgorithm(self.underlying.algorithm())
+        return _BfsAlgorithm(self.underlying_.algorithm())
 
     @property
     def edge_tile_size(self) -> int:
-        return self.underlying.edge_tile_size()
+        return self.underlying_.edge_tile_size()
 
     @staticmethod
     def async_tile(edge_tile_size=None):
@@ -129,7 +129,7 @@ def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan p
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying))
+        handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying_))
 
 def bfs_assert_valid(PropertyGraph pg, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
@@ -181,7 +181,7 @@ cdef class BfsStatistics:
 # SSSP
 
 cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
-    cppclass _SsspPlan "galois::analytics::SsspPlan":
+    cppclass _SsspPlan "galois::analytics::SsspPlan" (_Plan):
         enum Algorithm:
             kDeltaTile "galois::analytics::SsspPlan::kDeltaTile"
             kDeltaStep "galois::analytics::SsspPlan::kDeltaStep"
@@ -275,44 +275,42 @@ class _SsspAlgorithm(Enum):
     Automatic = _SsspPlan.Algorithm.kAutomatic
 
 
-cdef default_value(v, d):
-    if v is None:
-        return d
-    return v
 
-
-cdef class SsspPlan:
+cdef class SsspPlan(Plan):
     cdef:
-        _SsspPlan underlying
+        _SsspPlan underlying_
+
+    cdef _Plan* underlying(self) except NULL:
+        return &self.underlying_
 
     @staticmethod
     cdef SsspPlan make(_SsspPlan u):
         f = <SsspPlan>SsspPlan.__new__(SsspPlan)
-        f.underlying = u
+        f.underlying_ = u
         return f
 
 
     def __init__(self, graph = None):
         if graph is None:
-            self.underlying = _SsspPlan()
+            self.underlying_ = _SsspPlan()
         else:
             if not isinstance(graph, PropertyGraph):
                 raise TypeError(graph)
-            self.underlying = _SsspPlan((<PropertyGraph>graph).underlying.get())
+            self.underlying_ = _SsspPlan((<PropertyGraph>graph).underlying.get())
 
     Algorithm = _SsspAlgorithm
 
     @property
     def algorithm(self) -> _SsspAlgorithm:
-        return _BfsAlgorithm(self.underlying.algorithm())
+        return _BfsAlgorithm(self.underlying_.algorithm())
 
     @property
     def delta(self) -> int:
-        return self.underlying.delta()
+        return self.underlying_.delta()
 
     @property
     def edge_tile_size(self) -> int:
-        return self.underlying.edge_tile_size()
+        return self.underlying_.edge_tile_size()
 
     @staticmethod
     def delta_tile(delta=None, edge_tile_size=None):
@@ -381,7 +379,7 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
         handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_cstr,
-                                output_property_name_cstr, plan.underlying))
+                                output_property_name_cstr, plan.underlying_))
 
 def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
@@ -428,5 +426,76 @@ cdef class SsspStatistics:
         self.underlying.Print(ss)
         return str(ss.str(), "ascii")
 
+
+# Jaccard
+
+
+cdef extern from "galois/analytics/jaccard/jaccard.h" namespace "galois::analytics" nogil:
+    cppclass _JaccardPlan "galois::analytics::JaccardPlan" (_Plan):
+        enum EdgeSorting:
+            kSorted "galois::analytics::JaccardPlan::kSorted"
+            kUnsorted "galois::analytics::JaccardPlan::kUnsorted"
+            kUnknown "galois::analytics::JaccardPlan::kUnknown"
+
+        _JaccardPlan.EdgeSorting edge_sorting() const
+
+        @staticmethod
+        _JaccardPlan Sorted()
+
+        @staticmethod
+        _JaccardPlan Unsorted()
+
+        @staticmethod
+        _JaccardPlan Automatic()
+
+
+    std_result[void] Jaccard(PropertyFileGraph* pfg, size_t compare_node,
+        string output_property_name, _JaccardPlan plan)
+
+
+class _JaccardEdgeSorting(Enum):
+    Sorted = _JaccardPlan.EdgeSorting.kSorted
+    Unsorted = _JaccardPlan.EdgeSorting.kUnsorted
+    kUnknown = _JaccardPlan.EdgeSorting.kUnknown
+
+
+cdef class JaccardPlan(Plan):
+    cdef:
+        _JaccardPlan underlying_
+
+    cdef _Plan* underlying(self) except NULL:
+        return &self.underlying_
+
+    EdgeSorting = _JaccardEdgeSorting
+
+    @staticmethod
+    cdef JaccardPlan make(_JaccardPlan u):
+        f = <JaccardPlan>JaccardPlan.__new__(JaccardPlan)
+        f.underlying_ = u
+        return f
+
+    @property
+    def edge_sorting(self) -> _JaccardEdgeSorting:
+        return _JaccardEdgeSorting(self.underlying_.edge_sorting())
+
+    @staticmethod
+    def sorted():
+        return JaccardPlan.make(_JaccardPlan.Sorted())
+
+    @staticmethod
+    def unsorted():
+        return JaccardPlan.make(_JaccardPlan.Unsorted())
+
+    @staticmethod
+    def automatic():
+        return JaccardPlan.make(_JaccardPlan.Automatic())
+
+
+def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
+            JaccardPlan plan = JaccardPlan.automatic()):
+    output_property_name_bytes = bytes(output_property_name, "utf-8")
+    output_property_name_cstr = <string>output_property_name_bytes
+    with nogil:
+        handle_result_void(Jaccard(pg.underlying.get(), compare_node, output_property_name_cstr, plan.underlying_))
 
 # TODO(amp): Wrap ConnectedComponents

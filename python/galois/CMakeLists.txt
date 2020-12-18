@@ -87,10 +87,10 @@ python_extension_module(timer)
 target_link_libraries(timer Galois::shmem)
 
 # Symlink all python source file into binary directory so that documentation generation can load python modules correctly.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analytics)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lonestar/analytics)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/numba_support)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/util)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analytics)
 file(GLOB_RECURSE PY_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
 foreach(X IN LISTS PY_FILES)
     file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/${X} ${CMAKE_CURRENT_BINARY_DIR}/${X} SYMBOLIC)

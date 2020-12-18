@@ -13,7 +13,7 @@ namespace galois::analytics {
 
 /// A computational plan to for SSSP, specifying the algorithm and any
 /// parameters associated with it.
-class SsspPlan : Plan {
+class SsspPlan : public Plan {
 public:
   /// Algorithm selectors for Single-Source Shortest Path
   enum Algorithm {

@@ -80,6 +80,8 @@ galois::Result<RDGPartHeader>
 RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
   auto fv = std::make_shared<FileView>();
   if (auto res = fv->Bind(partition_path.string(), false); !res) {
+    GALOIS_LOG_DEBUG(
+        "cannot open {}: {}", partition_path.string(), res.error());
     return res.error();
   }
 

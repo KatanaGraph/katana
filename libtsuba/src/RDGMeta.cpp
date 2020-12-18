@@ -42,6 +42,7 @@ RDGMeta::MakeFromStorage(const galois::Uri& uri) {
   tsuba::RDGMeta meta(uri.DirName());
   auto meta_res = galois::JsonParse<tsuba::RDGMeta>(fv, &meta);
   if (!meta_res) {
+    GALOIS_LOG_ERROR("cannot parse: {}", uri.string());
     return meta_res.error();
   }
   return meta;

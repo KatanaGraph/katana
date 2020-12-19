@@ -2,6 +2,8 @@
 
 set -eu
 
+RELEASE=$(lsb_release --codename | awk '{print $2}')
+
 SETUP_TOOLCHAIN_VARIANTS=${SETUP_TOOLCHAIN_VARIANTS:-yes}
 
 ORIGINAL_USER=${ORIGINAL_USER:-${SUDO_USER:-}}
@@ -39,12 +41,12 @@ curl -fL --output /tmp/arrow-keyring.deb https://apache.bintray.com/arrow/ubuntu
   && rm /tmp/arrow-keyring.deb
 
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
-apt-add-repository -y --no-update 'deb https://apt.kitware.com/ubuntu/ bionic main'
+apt-add-repository -y --no-update "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
 
 curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository -y --no-update 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
+apt-add-repository -y --no-update "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
 
-add-apt-repository -y ppa:git-core/ppa
+add-apt-repository -y --no-update ppa:git-core/ppa
 
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt-add-repository -y --no-update ppa:ubuntu-toolchain-r/test
@@ -56,6 +58,9 @@ fi
 
 apt update
 
+# Install pip3
+apt install -yq --allow-downgrades  python3-pip
+
 run_as_original_user pip3 install --upgrade pip setuptools
 run_as_original_user pip3 install conan==1.31
 
@@ -63,10 +68,10 @@ run_as_original_user pip3 install conan==1.31
 apt install -yq clang-format-10 clang-tidy-10 doxygen graphviz
 
 # github actions require a more recent git
-apt upgrade git
+apt install -yq git
 
 # Minimal build environment
-apt install -yq --allow-downgrades ccache cmake=3.18.4-0kitware1 cmake-data=3.18.4-0kitware1 python3-pip
+apt install -yq --allow-downgrades ccache cmake cmake-data python3-pip
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
@@ -78,7 +83,7 @@ fi
 # Install llvm via apt instead of as a conan package because existing
 # conan packages do yet enable RTTI, which is required for boost
 # serialization.
-apt install -yq \
+apt install -yq --allow-downgrades \
   libarrow100 \
   libarrow-dev=1.0.1-1 \
   libcypher-parser-dev \

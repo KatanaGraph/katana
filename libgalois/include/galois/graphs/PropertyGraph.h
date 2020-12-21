@@ -195,7 +195,7 @@ FindEdgeSortedByDest(
     const GraphTy& graph, typename GraphTy::Node node,
     typename GraphTy::Node node_to_find) {
   auto edge_matched = galois::graphs::FindEdgeSortedByDest(
-      graph.GetPropertyFileGraph(), node, node_to_find);
+      &graph.GetPropertyFileGraph(), node, node_to_find);
   return typename GraphTy::edge_iterator(edge_matched);
 }
 

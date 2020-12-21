@@ -362,7 +362,7 @@ public:
 /// ascending order.
 /// This also returns the permutation vector (mapping from old
 /// indices to the new indices) which results due to the sorting.
-GALOIS_EXPORT Result<std::vector<uint64_t>> SortAllEdgesByDest(
+GALOIS_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
     PropertyFileGraph* pfg);
 
 /// FindEdgeSortedByDest finds the "node_to_find" id in the
@@ -371,7 +371,7 @@ GALOIS_EXPORT Result<std::vector<uint64_t>> SortAllEdgesByDest(
 /// This returns the matched edge index if 'node_to_find' is present
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
 GALOIS_EXPORT uint64_t FindEdgeSortedByDest(
-    const PropertyFileGraph& graph, uint32_t node, uint32_t node_to_find);
+    const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
 
 /// SortNodesByDegree relables node ids by sorting in the descending
 /// order by node degree

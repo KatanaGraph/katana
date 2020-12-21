@@ -315,7 +315,7 @@ galois::graphs::PropertyFileGraph::SetTopology(
   return galois::ResultSuccess();
 }
 
-galois::Result<std::vector<uint64_t>>
+galois::Result<std::shared_ptr<arrow::UInt64Array>>
 galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
   auto view_result_dests =
       galois::ConstructPropertyView<galois::UInt32Property>(
@@ -326,8 +326,19 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
 
   auto out_dests_view = std::move(view_result_dests.value());
 
-  std::vector<uint64_t> permutation_vec(pfg->topology().num_edges());
-  std::iota(permutation_vec.begin(), permutation_vec.end(), uint64_t{0});
+  arrow::UInt64Builder permutation_vec_builder;
+  if (auto r = permutation_vec_builder.Resize(pfg->topology().num_edges());
+      !r.ok()) {
+    return ErrorCode::ArrowError;
+  }
+  // Getting a mutable reference to an index is definitely allowed. It's
+  // less clear if taking a pointer to it and using offsets is officially
+  // supported. But, ArrayBuilder::Advance explicitly mentions memcpy into the
+  // internal buffer. So I think it actually is.
+  uint64_t* permutation_vec_data = &permutation_vec_builder[0];
+  std::iota(
+      permutation_vec_data,
+      permutation_vec_data + permutation_vec_builder.capacity(), uint64_t{0});
   auto comparator = [&](uint64_t a, uint64_t b) {
     return out_dests_view[a] < out_dests_view[b];
   };
@@ -337,24 +348,34 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
       [&](uint64_t n) {
         auto edge_range = pfg->topology().edge_range(n);
         std::sort(
-            permutation_vec.begin() + edge_range.first,
-            permutation_vec.begin() + edge_range.second, comparator);
+            permutation_vec_data + edge_range.first,
+            permutation_vec_data + edge_range.second, comparator);
         std::sort(
             &out_dests_view[0] + edge_range.first,
             &out_dests_view[0] + edge_range.second);
       },
       galois::steal());
 
-  return permutation_vec;
+  if (auto r = permutation_vec_builder.Advance(pfg->topology().num_edges());
+      !r.ok()) {
+    return ErrorCode::ArrowError;
+  }
+
+  std::shared_ptr<arrow::UInt64Array> out;
+  if (permutation_vec_builder.Finish(&out).ok()) {
+    return out;
+  } else {
+    return ErrorCode::ArrowError;
+  }
 }
 
 uint64_t
 galois::graphs::FindEdgeSortedByDest(
-    const galois::graphs::PropertyFileGraph& graph, uint32_t node,
+    const galois::graphs::PropertyFileGraph* graph, uint32_t node,
     uint32_t node_to_find) {
   auto view_result_dests =
       galois::ConstructPropertyView<galois::UInt32Property>(
-          graph.topology().out_dests.get());
+          graph->topology().out_dests.get());
   if (!view_result_dests) {
     GALOIS_LOG_FATAL(
         "Unable to construct property view on topology destinations : {}",
@@ -363,7 +384,7 @@ galois::graphs::FindEdgeSortedByDest(
 
   auto out_dests_view = std::move(view_result_dests.value());
 
-  auto edge_range = graph.topology().edge_range(node);
+  auto edge_range = graph->topology().edge_range(node);
   using edge_iterator = boost::counting_iterator<uint64_t>;
   auto edge_matched = std::lower_bound(
       edge_iterator(edge_range.first), edge_iterator(edge_range.second),

@@ -1,4 +1,4 @@
-add_executable(connected-components-cpu ConnectedComponents.cpp)
+add_executable(connected-components-cpu connected_components_cli.cpp)
 add_dependencies(apps connected-components-cpu)
 target_link_libraries(connected-components-cpu PRIVATE Galois::shmem lonestar)
 install(TARGETS connected-components-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)

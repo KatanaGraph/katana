@@ -1,12 +1,15 @@
+from libc.stddef cimport ptrdiff_t
+from libc.stdint cimport uint64_t, uint32_t
+from libcpp.string cimport string
+from libcpp.memory cimport shared_ptr, static_pointer_cast
+
+from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
+
 from galois.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
 from galois.cpp.libstd.iostream cimport ostream, ostringstream
-from libc.stddef cimport ptrdiff_t
-from libcpp.string cimport string
-from libcpp cimport bool
 from galois.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
 from galois.property_graph cimport PropertyGraph
 from galois.analytics.plan cimport _Plan, Plan
-from libc.stdint cimport uint64_t, uint32_t
 
 from enum import Enum
 
@@ -14,6 +17,43 @@ cdef inline default_value(v, d):
     if v is None:
         return d
     return v
+
+cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(std_result[shared_ptr[CUInt64Array]] res) \
+        nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+
+# "Algorithms" from PropertyFileGraph
+
+cdef extern from "galois/graphs/PropertyFileGraph.h" namespace "galois::graphs" nogil:
+    std_result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(PropertyFileGraph* pfg);
+
+    uint64_t FindEdgeSortedByDest(const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
+
+    std_result[void] SortNodesByDegree(PropertyFileGraph* pfg);
+
+
+def sort_all_edges_by_dest(PropertyGraph pg):
+    with nogil:
+        res = handle_result_shared_cuint64array(SortAllEdgesByDest(pg.underlying.get()))
+    return pyarrow_wrap_array(static_pointer_cast[CArray, CUInt64Array](res))
+
+
+def find_edge_sorted_by_dest(PropertyGraph pg, uint32_t node, uint32_t node_to_find):
+    with nogil:
+        res = FindEdgeSortedByDest(pg.underlying.get(), node, node_to_find)
+    if res == pg.edges(node)[-1] + 1:
+        return None
+    return res
+
+
+def sort_nodes_by_degree(PropertyGraph pg):
+    with nogil:
+        handle_result_void(SortNodesByDegree(pg.underlying.get()))
+
 
 # BFS
 

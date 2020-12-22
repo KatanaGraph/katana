@@ -17,9 +17,10 @@ cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
 
 
-cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) except *:
+cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) nogil except *:
     if not res.has_value():
-        raise_error_code(res.error())
+        with gil:
+            raise_error_code(res.error())
     return to_shared(res.value())
 
 #

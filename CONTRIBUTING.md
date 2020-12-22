@@ -171,7 +171,7 @@ to require a new 3rd party library for a good reason you should:
   different (and you should consider picking another library since this puts an
   extra burden on developers).
 
-  1. Add the dependency to the [conan config](config/conanfile.txt) in the style
+  1. Add the dependency to the [conan config](config/conanfile.py) in the style
   of the dependendices that are already there.
 
   2. Add the dependency to the [conda recipe](conda_recipe/meta.yaml) in the
@@ -199,18 +199,62 @@ absolutely necessary, discuss it with the current conda package maintainer
 (currently @arthurp). Not handling them correctly there will totally break the
 conda packages.
 
+# Debugging
+
+Printing and its more production-oriented cousin, logging, are simple ways to
+get started with debugging, especially if you are in an environment where you
+can build executables from source. Just remember to prefix your debugging messages
+with an easy-to-find string like `XXX` so you can find and remove them later.
+
+For more interactive debugging, you can use `gdb`. A typical `gdb` session looks
+like this:
+```shell
+gdb --args application arg1 arg2 arg3
+> break SourceFile.cpp:LineNumber
+> run
+> next
+> print
+# edit some code
+> make
+> run
+```
+
+If you are debugging an MPI application, you can use a command like `mpirun -np
+4 xterm -e gdb application` to spawn a `gdb` session for each MPI host or use
+[tmpi](https://github.com/Azrael3000/tmpi) which will spawn `gdb` sessions in
+`tmux` panes instead of `xterm` windows. These commands work best if all the
+MPI processes are running on the same machine. If not, you will have to work
+out how to open connections to each worker machine. The OpenMPI project gives
+some [pointers](https://www.open-mpi.org/faq/?category=debugging), but in
+practice, it is usually easier to fallback to print-statement debugging or
+trying to reproduce your issue on a single host if possible.
+
+An alternative to running a debugger is to load a core dump. Most machines
+disable core dumps by default, but you can enable them with:
+
+```shell
+ulimit -c unlimited
+sudo sysctl -w kernel.core_pattern=/tmp/core-%e.%p.%h.%t
+```
+
+And you can load them in `gdb`:
+
+```shell
+gdb application -c core-file
+```
+
 # Testing
 
 Many tests require sample graphs that are too big to keep in this repository.
 You can get them with `make input`.
 
 If you need to update the inputs, they are referenced as
-  https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-<version>.tar.gz
-in `.github/workflows` and in `inputs/CMakeLists.txt`. You can use a command
-like `tar -czvf <new>.tar.gz --owner 0 --group 0 -C <path-to-input-dir> .` to
-create a new input collection. Make sure that new inputs contain just input
-files and not any CMake build files. After creating the tar file, you will need
-to upload the file to the public S3 bucket.
+  https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
+in `.github/workflows`, `inputs/CMakeLists.txt` and
+`external/katana/python/galois/exmaple_utils.py`.  `vN` is a monotonically
+increasing version number. You can use a command `inputs/update_inputs.sh` to
+create create a new input collection. After creating the tar file, you will
+need to upload the file to the public S3 bucket.
 
 Tests are just executables created by the CMake `add_test` command.  A test
 succeeds if it can be run and it returns a zero exit value; otherwise, the test
@@ -255,8 +299,13 @@ in terms of feedback latency, to run these checks locally first.
  * `scripts/check_ifndef.py [-fix] lib*`: checks that header guards are well
  formed.
  * `scripts/check_format.sh [-fix] lib*`: applies `clang-format` to check style.
-We also have a `clang-tidy` configuration; `clang-tidy` is useful, but not run
-currently by continuous integration.
+ * `scripts/check_go_format.sh [-fix] .`: applies `gofmt` to format go code.
+ * `scripts/check_go_lint.sh .`: applies `golangci-lint` to check check style.
+ * `scripts/check_python_format.sh .`: applies `black` to format python code.
+
+We also have a `clang-tidy` and `pylint` configuration. Both these are useful
+tools for checking your code locally but they are not currently by continuous
+integration.
 
 None of these checks are exhaustive (on their own or combined)!
 
@@ -295,7 +344,8 @@ if (auto r = ReturnsAResult(); !r) {
 
 ## Caching
 
-For reference, the caches (`actions/cache`) are scoped to
+GitHub actions allows for build data to be cached between CI runs. For
+reference, the caches (`actions/cache`) are scoped to
 [branches](https://github.com/actions/cache#cache-scopes). The cache matching
 policy is:
 

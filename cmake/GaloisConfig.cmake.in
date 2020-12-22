@@ -61,3 +61,5 @@ check_required_components(AWSSDK)
 check_required_components(nlohmann_json)
 check_required_components(date)
 check_required_components(Backward)
+
+@KATANA_ENTERPRISE_CMAKE_ADDITIONS@

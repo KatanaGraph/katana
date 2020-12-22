@@ -76,6 +76,8 @@ endif()
 
 ###### Install dependencies ######
 
+find_package(PkgConfig REQUIRED)
+
 if(GALOIS_AUTO_CONAN)
     include(${CMAKE_CURRENT_LIST_DIR}/conan.cmake)
     # config/conanfile.py is relative to the current project, so it will be either enterprise or open depending on who

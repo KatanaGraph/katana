@@ -1,13 +1,24 @@
 import pytest
 from pytest import raises, approx
 
-from galois.analytics import bfs, bfs_assert_valid, BfsStatistics, sssp, sssp_assert_valid, SsspStatistics, jaccard, JaccardPlan
-from galois.property_graph import PropertyGraph
 from pyarrow import Schema, table
 
 import numpy as np
 
 from galois.property_graph import PropertyGraph
+from galois.analytics import (
+    bfs,
+    bfs_assert_valid,
+    BfsStatistics,
+    sssp,
+    sssp_assert_valid,
+    SsspStatistics,
+    jaccard,
+    JaccardPlan,
+    sort_all_edges_by_dest,
+    find_edge_sorted_by_dest,
+    sort_nodes_by_degree,
+)
 from galois.lonestar.analytics.bfs import verify_bfs
 from galois.lonestar.analytics.sssp import verify_sssp
 
@@ -26,6 +37,33 @@ def test_assert_valid(property_graph: PropertyGraph):
 
     with raises(AssertionError):
         bfs_assert_valid(property_graph, "Prop2")
+
+
+def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
+    nodes_to_check = 10
+    original_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(nodes_to_check)]
+    print(original_dests[0])
+    mapping = sort_all_edges_by_dest(property_graph)
+    new_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(nodes_to_check)]
+    for n in range(nodes_to_check):
+        assert len(original_dests[n]) == len(new_dests[n])
+        my_mapping = [mapping[e].as_py() for e in property_graph.edges(n)]
+        for i in range(len(my_mapping)):
+            assert original_dests[n][i] == new_dests[n][my_mapping[i] - property_graph.edges(n)[0]]
+        original_dests[n].sort()
+        assert original_dests[n] == new_dests[n]
+
+
+def test_find_edge_sorted_by_dest(property_graph: PropertyGraph):
+    sort_all_edges_by_dest(property_graph)
+    assert find_edge_sorted_by_dest(property_graph, 0, 1000) is None
+    assert find_edge_sorted_by_dest(property_graph, 0, 1967) == 2
+
+
+def test_sort_nodes_by_degree(property_graph: PropertyGraph):
+    sort_nodes_by_degree(property_graph)
+    assert len(property_graph.edges(0)) == 108
+    # TODO: More detailed check.
 
 
 def test_bfs(property_graph: PropertyGraph):

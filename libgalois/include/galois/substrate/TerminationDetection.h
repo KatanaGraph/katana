@@ -32,7 +32,7 @@ class TerminationDetection;
 
 /*
  * Returns the termination detection instance. The instance will be reused, but
- * reinitialized to activeThreads. 
+ * reinitialized to activeThreads.
  */
 GALOIS_EXPORT TerminationDetection& GetTerminationDetection(
     unsigned active_threads);

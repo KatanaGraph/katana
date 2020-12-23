@@ -148,13 +148,13 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
 
 #
 # Main callsite for Bfs
-#        
+#
 def bfs(PropertyGraph graph, unsigned int source, str propertyName):
     try:
         graph.remove_node_property(propertyName)
     except ValueError:
         pass # Ignore non-existance of the property.
     bfs_sync_pg(graph, source, bytes(propertyName, "utf-8"))
-    
+
 
 

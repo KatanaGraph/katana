@@ -465,7 +465,7 @@ endmacro()
 
 macro(conan_cmake_run)
     parse_arguments(${ARGV})
-    
+
     if(ARGUMENTS_CONFIGURATION_TYPES AND NOT CMAKE_CONFIGURATION_TYPES)
         message(WARNING "CONFIGURATION_TYPES should only be specified for multi-configuration generators")
     elseif(ARGUMENTS_CONFIGURATION_TYPES AND ARGUMENTS_BUILD_TYPE)

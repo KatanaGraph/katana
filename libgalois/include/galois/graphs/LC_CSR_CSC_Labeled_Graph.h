@@ -299,7 +299,7 @@ public:
   }
 
   /**
-   * Returns an edge iterator to an edge with some node and key with some label 
+   * Returns an edge iterator to an edge with some node and key with some label
    * by searching for the key via the node's outgoing or incoming edges.
    * If not found, returns nothing.
    */

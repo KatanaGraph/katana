@@ -28,10 +28,10 @@ IF (APPLE)
 ELSE (APPLE)
 
 	IF (WIN32)
-	
+
 	    FIND_PATH(OPENCL_INCLUDE_DIRS CL/cl.h)
 	    FIND_PATH(_OPENCL_CPP_INCLUDE_DIRS CL/cl.hpp)
-	
+
 	    # The AMD SDK currently installs both x86 and x86_64 libraries
 	    # This is only a hack to find out architecture
 	    IF( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
@@ -42,21 +42,21 @@ ELSE (APPLE)
 	   		SET(OPENCL_LIB_DIR "$ENV{ATIINTERNALSTREAMSDKROOT}/lib/x86")
 	    ENDIF( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
 
-	    # find out if the user asked for a 64-bit build, and use the corresponding 
+	    # find out if the user asked for a 64-bit build, and use the corresponding
 	    # 64 or 32 bit NVIDIA library paths to the search:
 	    STRING(REGEX MATCH "Win64" ISWIN64 ${CMAKE_GENERATOR})
-	    IF("${ISWIN64}" STREQUAL "Win64") 
+	    IF("${ISWIN64}" STREQUAL "Win64")
 	    	FIND_LIBRARY(OPENCL_LIBRARIES OpenCL.lib ${OPENCL_LIB_DIR} $ENV{CUDA_LIB_PATH} $ENV{CUDA_PATH}/lib/x64)
-	    ELSE("${ISWIN64}" STREQUAL "Win64") 
+	    ELSE("${ISWIN64}" STREQUAL "Win64")
 	    	FIND_LIBRARY(OPENCL_LIBRARIES OpenCL.lib ${OPENCL_LIB_DIR} $ENV{CUDA_LIB_PATH} $ENV{CUDA_PATH}/lib/Win32)
-	    ENDIF("${ISWIN64}" STREQUAL "Win64") 
+	    ENDIF("${ISWIN64}" STREQUAL "Win64")
 
 	    GET_FILENAME_COMPONENT(_OPENCL_INC_CAND ${OPENCL_LIB_DIR}/../../include ABSOLUTE)
-	    
+
 	    # On Win32 search relative to the library
 	    FIND_PATH(OPENCL_INCLUDE_DIRS CL/cl.h PATHS "${_OPENCL_INC_CAND}" $ENV{CUDA_INC_PATH} $ENV{CUDA_PATH}/include)
 	    FIND_PATH(_OPENCL_CPP_INCLUDE_DIRS CL/cl.hpp PATHS "${_OPENCL_INC_CAND}" $ENV{CUDA_INC_PATH} $ENV{CUDA_PATH}/include)
-	
+
 	ELSE (WIN32)
 
             # Unix style platforms

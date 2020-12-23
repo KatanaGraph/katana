@@ -144,8 +144,8 @@ typedef int64_t (*obim_metric_type_{{scab}})(const {{element_type}}{{"*" if inst
 
 struct AdapterFunctor_{{scab}} {
     obim_metric_type_{{scab}} func;
-    void* userdata;    
-    int64_t operator()(const {{element_type}}{{"&" if inst.by_pointer}} arg) { 
+    void* userdata;
+    int64_t operator()(const {{element_type}}{{"&" if inst.by_pointer}} arg) {
         return func({{"&" if inst.by_pointer}}arg, userdata);
     }
 };
@@ -367,7 +367,7 @@ class Worklist:
 
 class PerSocketChunkFIFO(Worklist):
     pass
-    
+
 class OrderedByIntegerMetric(Worklist):
     def __init__(self, indexer):
         self.indexer = indexer

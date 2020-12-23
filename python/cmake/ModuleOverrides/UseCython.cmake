@@ -214,7 +214,7 @@ function(add_cython_target _name)
   # Get the include directories.
   get_source_file_property(pyx_location ${_source_file} LOCATION)
   get_filename_component(pyx_path ${pyx_location} PATH)
-  
+
   if(EXISTS "${_source_file}")
     get_directory_property(cmake_include_directories
                           DIRECTORY ${pyx_path}
@@ -240,7 +240,7 @@ function(add_cython_target _name)
     list(APPEND pxd_dependencies "${corresponding_pxd_file}")
   endif()
 
-  
+
   # pxd files to check for additional dependencies
   set(pxds_to_check "${_source_file}" "${pxd_dependencies}")
   set(pxds_checked "")
@@ -292,7 +292,7 @@ function(add_cython_target _name)
       # check for pxi dependencies
       # Look for include statements.
       set(include_dependencies "")
-      file(STRINGS "${pxd}" include_statements REGEX include)        
+      file(STRINGS "${pxd}" include_statements REGEX include)
       foreach(statement IN LISTS include_statements)
         string(REGEX REPLACE
                "include[ ]+[\"]([^\"]+)[\"].*" "\\1"
@@ -355,7 +355,7 @@ function(add_cython_target _name)
     if(NOT "${pxd_relative}" MATCHES "^\\.\\.")
         while(1)
           get_filename_component(pxd_relative "${pxd_relative}/" DIRECTORY)
-          
+
           message(STATUS "In ${_name}, checking ${CMAKE_SOURCE_DIR}/${pxd_relative}/__init__.py")
 
           if(EXISTS "${CMAKE_SOURCE_DIR}/${pxd_relative}/__init__.py")
@@ -378,7 +378,7 @@ function(add_cython_target _name)
       ARGS -E touch "${cython_binary_include_directory}/__init__.py"
     )
   endforeach()
-  
+
   list(APPEND cython_include_directories ${cython_binary_include_directories})
 
   # Set additional flags.

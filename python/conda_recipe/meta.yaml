@@ -61,7 +61,7 @@ test:
   source_files:
     - tests
     - python/examples/jupyter
-  
+
 
 about:
   home: https://katanagraph.com/

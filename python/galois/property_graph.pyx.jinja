@@ -76,9 +76,9 @@ cdef class PropertyGraph:
     cpdef uint64_t num_edges(PropertyGraph self):
         """
         num_edges(self)
-        
+
         Return the number of edges in the graph.
-        
+
         Can be called from numba compiled code.
         """
         return self.topology().num_edges()
@@ -159,7 +159,7 @@ cdef class PropertyGraph:
     cpdef uint64_t get_edge_dst(PropertyGraph self, uint64_t e):
         """
         get_edge_dst(self, e)
-        
+
         Return the destination node ID of the edge `e`.
 
         Can be called from numba compiled code.

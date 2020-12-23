@@ -1,5 +1,5 @@
 # Galois: taken from:
-#   https://github.com/llvm/llvm-project/blob/master/llvm/cmake/modules/HandleLLVMOptions.cmake 
+#   https://github.com/llvm/llvm-project/blob/master/llvm/cmake/modules/HandleLLVMOptions.cmake
 
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)

@@ -1,4 +1,4 @@
-# Find libcypher-parser 
+# Find libcypher-parser
 # defines
 # CypherParser_FOUND
 # CypherParser_INCLUDE_DIRS

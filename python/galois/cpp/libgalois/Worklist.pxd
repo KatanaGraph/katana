@@ -12,6 +12,3 @@ cdef extern from "galois/worklists/Chunk.h" namespace "galois::worklists" nogil:
 cdef extern from "galois/worklists/Obim.h" namespace "galois::worklists" nogil:
     cppclass OrderedByIntegerMetric[UpdateFuncTy, WorkListTy]:
         pass
-
-
-        

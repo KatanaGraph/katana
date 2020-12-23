@@ -191,7 +191,7 @@ cdef api void LC_CSR_Graph_{{template_name}}_setData(void* self, unsigned int no
     d[0] = v
 {%- endif %}
 {% endmacro %}
-       
+
 {% macro wrap_LC_CSR_Graph_primitive_both(node_type, edge_type) -%}
 {{wrap_LC_CSR_Graph_primitive("Directed_" + node_type + "_" + edge_type, node_type, edge_type, "template_parameter_true")}}
 LC_CSR_Graph_Directed_primitive[("{{node_type}}", "{{edge_type}}")] = LC_CSR_Graph_Directed_{{node_type}}_{{edge_type}}

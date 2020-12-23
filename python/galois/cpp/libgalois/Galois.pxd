@@ -2,7 +2,7 @@ from ..libstd cimport CPPAuto
 
 cdef extern from "galois/Galois.h" namespace "galois" nogil:
     unsigned int setActiveThreads(unsigned int)
-    
+
     cppclass UserContext[T]:
         void push(...)
         void push_back(...)

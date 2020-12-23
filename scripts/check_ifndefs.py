@@ -120,19 +120,9 @@ def main(files, root, fix):
 
 
 if __name__ == "__main__":
-    default_root = os.path.dirname(os.path.abspath(__file__))
-    default_root = os.path.dirname(default_root)
-
     parser = argparse.ArgumentParser(description="check or fix ifndef guards in files")
     parser.add_argument("files", nargs="+", help="files or directories to examine")
-    parser.add_argument(
-        "--root", help="root directory to determine import name", default=default_root
-    )
-    parser.add_argument(
-        "-fix",
-        help="fix files instead of checking them",
-        action="store_true",
-        default=False,
-    )
+    parser.add_argument("--root", help="root directory to determine import name", required=True)
+    parser.add_argument("-fix", help="fix files instead of checking them", action="store_true", default=False)
     args = parser.parse_args()
     sys.exit(main(**vars(args)))

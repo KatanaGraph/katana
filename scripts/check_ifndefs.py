@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import tempfile
+import shutil
 
 
 guard_pattern = re.compile(
@@ -95,7 +96,7 @@ def run_fix(root, filename):
 
     with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
         f.write(contents)
-        os.rename(f.name, filename)
+    shutil.move(f.name, filename)
 
     return False
 

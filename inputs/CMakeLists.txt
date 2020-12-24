@@ -12,7 +12,7 @@ file(
   "file(DOWNLOAD ${INPUT_URL} ${INPUTS_DIR}/inputs-${INPUT_VERSION}.tar.gz SHOW_PROGRESS)")
 
 add_custom_command(
-  OUTPUT inputs-${INPUT_VERSION}.tar.gz
+  OUTPUT ${INPUTS_DIR}/inputs-${INPUT_VERSION}.tar.gz
   COMMAND ${CMAKE_COMMAND} -P ${INPUTS_DIR}/download.cmake
   COMMAND ${CMAKE_COMMAND} -E make_directory ${INPUTS_DIR}/${INPUT_VERSION}
   COMMENT "Downloading inputs"
@@ -20,8 +20,8 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT ${INPUT_VERSION}/extracted
-  DEPENDS inputs-${INPUT_VERSION}.tar.gz
+  OUTPUT ${INPUTS_DIR}/${INPUT_VERSION}/extracted
+  DEPENDS ${INPUTS_DIR}/inputs-${INPUT_VERSION}.tar.gz
   COMMAND ${CMAKE_COMMAND} -E tar xJf ${INPUTS_DIR}/inputs-${INPUT_VERSION}.tar.gz
   COMMAND ${CMAKE_COMMAND} -E touch extracted
   WORKING_DIRECTORY ${INPUTS_DIR}/${INPUT_VERSION}
@@ -30,8 +30,8 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT current/current-${INPUT_VERSION}
-  DEPENDS ${INPUT_VERSION}/extracted
+  OUTPUT ${INPUTS_DIR}/current/current-${INPUT_VERSION}
+  DEPENDS ${INPUTS_DIR}/${INPUT_VERSION}/extracted
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${INPUT_VERSION} current
   COMMAND ${CMAKE_COMMAND} -E touch ${INPUT_VERSION}/current-${INPUT_VERSION}
   WORKING_DIRECTORY ${INPUTS_DIR}
@@ -39,4 +39,4 @@ add_custom_command(
   VERBATIM
 )
 
-add_custom_target(input ALL DEPENDS current/current-${INPUT_VERSION})
+add_custom_target(input ALL DEPENDS ${INPUTS_DIR}/current/current-${INPUT_VERSION})

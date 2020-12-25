@@ -3,23 +3,31 @@
 
 #include <cstdint>
 
+#include "RDGMeta.h"
 #include "galois/Uri.h"
-#include "tsuba/RDGMeta.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {
 
-struct RDGHandleImpl {
-  // Property paths are relative rdg_meta.dir_
-  galois::Uri partition_path;
-  uint32_t flags;
-  RDGMeta rdg_meta;
+class RDGHandleImpl {
+public:
+  RDGHandleImpl(uint32_t flags, RDGMeta&& rdg_meta)
+      : flags_(flags), rdg_meta_(std::move(rdg_meta)) {}
 
   /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const;
-  constexpr bool AllowsReadPartial() const { return flags & kReadPartial; }
-  constexpr bool AllowsRead() const { return !AllowsReadPartial(); }
-  constexpr bool AllowsWrite() const { return flags & kReadWrite; }
+  constexpr bool AllowsRead() const { return true; }
+  constexpr bool AllowsWrite() const { return flags_ & kReadWrite; }
+
+  //
+  // Accessors and Mutators
+  //
+  const RDGMeta& rdg_meta() const { return rdg_meta_; }
+  void set_rdg_meta(RDGMeta&& rdg_meta) { rdg_meta_ = std::move(rdg_meta); }
+
+private:
+  uint32_t flags_;
+  RDGMeta rdg_meta_;
 };
 
 }  // namespace tsuba

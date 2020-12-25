@@ -10,7 +10,7 @@
 
 namespace tsuba {
 
-struct RDGHandleImpl;
+class RDGHandleImpl;
 
 /// RDGHandle is an opaque indentifier for an RDG.
 struct RDGHandle {
@@ -39,11 +39,18 @@ public:
 };
 
 // acceptable values for Open's flags
-constexpr int kReadOnly = 0;
-constexpr int kReadWrite = 1;
-constexpr int kReadPartial = 2;
+constexpr uint32_t kReadOnly = 0;
+constexpr uint32_t kReadWrite = 1;
+constexpr bool
+OpenFlagsValid(uint32_t flags) {
+  return (flags & ~(kReadOnly | kReadWrite)) == 0;
+}
+
 GALOIS_EXPORT galois::Result<RDGHandle> Open(
     const std::string& rdg_name, uint32_t flags);
+
+GALOIS_EXPORT galois::Result<RDGHandle> Open(
+    const std::string& rdg_name, uint64_t version, uint32_t flags);
 
 /// Close an RDGHandle object
 GALOIS_EXPORT galois::Result<void> Close(RDGHandle handle);

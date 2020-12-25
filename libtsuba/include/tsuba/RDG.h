@@ -14,17 +14,27 @@
 #include "galois/config.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
-#include "tsuba/RDGCore.h"
-#include "tsuba/RDGMeta.h"
-#include "tsuba/RDGPartHeader.h"
+#include "tsuba/FileView.h"
+#include "tsuba/PartitionMetadata.h"
+#include "tsuba/RDGLineage.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {
 
+class RDGMeta;
+class RDGCore;
+struct PropStorageInfo;
+
 class GALOIS_EXPORT RDG {
 public:
-  RDG() = default;
+  RDG(const RDG& no_copy) = delete;
+  RDG& operator=(const RDG& no_dopy) = delete;
+
+  RDG();
+  ~RDG();
+  RDG(RDG&& other) noexcept;
+  RDG& operator=(RDG&& other) noexcept;
 
   /// Perform some checks on assumed invariants
   galois::Result<void> Validate() const;
@@ -47,30 +57,22 @@ public:
   galois::Result<void> DropNodeProperty(uint32_t i);
   galois::Result<void> DropEdgeProperty(uint32_t i);
 
-  void MarkAllPropertiesPersistent() {
-    core_.part_header().MarkAllPropertiesPersistent();
-  }
+  void MarkAllPropertiesPersistent();
 
   galois::Result<void> MarkNodePropertiesPersistent(
-      const std::vector<std::string>& persist_node_props) {
-    return core_.part_header().MarkNodePropertiesPersistent(persist_node_props);
-  }
+      const std::vector<std::string>& persist_node_props);
   galois::Result<void> MarkEdgePropertiesPersistent(
-      const std::vector<std::string>& persist_edge_props) {
-    return core_.part_header().MarkEdgePropertiesPersistent(persist_edge_props);
-  }
+      const std::vector<std::string>& persist_edge_props);
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
 
   /// Load the RDG described by the metadata in handle into memory
-  static galois::Result<RDG> Load(
+  static galois::Result<RDG> Make(
       RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  galois::Result<void> UnbindTopologyFileStorage() {
-    return core_.topology_file_storage().Unbind();
-  }
+  galois::Result<void> UnbindTopologyFileStorage();
 
   void AddMirrorNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
     mirror_nodes_.emplace_back(std::move(a));
@@ -88,13 +90,10 @@ public:
   void set_rdg_dir(const galois::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
 
   /// The table of node properties
-  const std::shared_ptr<arrow::Table>& node_table() const {
-    return core_.node_table();
-  }
+  const std::shared_ptr<arrow::Table>& node_table() const;
+
   /// The table of edge properties
-  const std::shared_ptr<arrow::Table>& edge_table() const {
-    return core_.edge_table();
-  }
+  const std::shared_ptr<arrow::Table>& edge_table() const;
 
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() {
     return master_nodes_;
@@ -117,23 +116,17 @@ public:
     local_to_global_vector_ = std::move(a);
   }
 
-  const PartitionMetadata& part_metadata() const {
-    return core_.part_header().metadata();
-  }
-  void set_part_metadata(const PartitionMetadata& metadata) {
-    core_.part_header().set_metadata(metadata);
-  }
+  const PartitionMetadata& part_metadata() const;
+  void set_part_metadata(const PartitionMetadata& metadata);
 
-  const FileView& topology_file_storage() const {
-    return core_.topology_file_storage();
-  }
+  const FileView& topology_file_storage() const;
 
 private:
-  RDG(RDGPartHeader&& part_header) : core_(std::move(part_header)) {}
+  RDG(std::unique_ptr<RDGCore>&& core);
 
   void InitEmptyTables();
 
-  galois::Result<void> DoLoad(const galois::Uri& metadata_dir);
+  galois::Result<void> DoMake(const galois::Uri& metadata_dir);
 
   static galois::Result<RDG> Make(
       const RDGMeta& meta, const std::vector<std::string>* node_props,
@@ -153,7 +146,7 @@ private:
   // Data
   //
 
-  RDGCore core_;
+  std::unique_ptr<RDGCore> core_;
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;

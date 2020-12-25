@@ -139,7 +139,7 @@ MakePropertyFileGraph(
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
   auto rdg_result =
-      tsuba::RDG::Load(*rdg_file, &node_properties, &edge_properties);
+      tsuba::RDG::Make(*rdg_file, &node_properties, &edge_properties);
   if (!rdg_result) {
     return rdg_result.error();
   }
@@ -150,7 +150,7 @@ MakePropertyFileGraph(
 
 galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
 MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
-  auto rdg_result = tsuba::RDG::Load(*rdg_file);
+  auto rdg_result = tsuba::RDG::Make(*rdg_file);
   if (!rdg_result) {
     return rdg_result.error();
   }

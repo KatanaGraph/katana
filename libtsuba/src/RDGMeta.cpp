@@ -1,7 +1,9 @@
-#include "tsuba/RDGMeta.h"
+#include "RDGMeta.h"
 
 #include "Constants.h"
 #include "GlobalState.h"
+#include "RDGHandleImpl.h"
+#include "RDGPartHeader.h"
 #include "galois/JSON.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
@@ -54,6 +56,11 @@ RDGMeta::Make(const galois::Uri& uri, uint64_t version) {
 }
 
 Result<RDGMeta>
+RDGMeta::Make(RDGHandle handle) {
+  return handle.impl_->rdg_meta();
+}
+
+Result<RDGMeta>
 RDGMeta::Make(const galois::Uri& uri) {
   if (!IsMetaUri(uri)) {
     auto ns_res = NS()->Get(uri);
@@ -80,29 +87,9 @@ RDGMeta::PartitionFileName(
   return uri.Join(PartitionFileName(node_id, version));
 }
 
-Result<galois::Uri>
-RDGMeta::PartitionFileName(bool intend_partial_read) const {
-  if (intend_partial_read) {
-    if (num_hosts() != 1) {
-      GALOIS_LOG_ERROR("cannot partially read partitioned graph");
-      return ErrorCode::InvalidArgument;
-    }
-    return PartitionFileName(dir(), 0, version());
-  }
-  if (policy_id() != 0 && num_hosts() != 0 && num_hosts() != Comm()->Num) {
-    GALOIS_LOG_ERROR(
-        "number of hosts for partitioned graph {} does not "
-        "match number of current hosts {}",
-        num_hosts(), Comm()->Num);
-    // Query depends on being able to load a graph this way
-    if (num_hosts() == 1) {
-      // TODO(thunt) eliminate this special case after query is updated not
-      // to depend on this behavior
-      return PartitionFileName(dir(), 0, version());
-    }
-    return ErrorCode::InvalidArgument;
-  }
-  return RDGMeta::PartitionFileName(dir(), Comm()->ID, version());
+galois::Uri
+RDGMeta::PartitionFileName(uint32_t node_id) const {
+  return RDGMeta::PartitionFileName(dir_, node_id, version());
 }
 
 std::string
@@ -133,6 +120,42 @@ RDGMeta::ParseVersionFromName(const std::string& file) {
     return tsuba::ErrorCode::InvalidArgument;
   }
   return Parse(sub_match[1]);
+}
+
+// Return the set of file names that hold this RDG's data by reading partition files
+// Useful to garbage collect unused files
+Result<std::set<std::string>>
+RDGMeta::FileNames() {
+  std::set<std::string> fnames{};
+  fnames.emplace(FileName().BaseName());
+  for (auto i = 0U; i < num_hosts(); ++i) {
+    // All other file names are directory-local, so we pass an empty
+    // directory instead of handle.impl_->rdg_meta.path for the partition files
+    fnames.emplace(PartitionFileName(i, version()));
+
+    auto header_res =
+        RDGPartHeader::Make(PartitionFileName(dir(), i, version()));
+
+    if (!header_res) {
+      GALOIS_LOG_DEBUG(
+          "problem uri: {} host: {} ver: {} : {}", dir(), i, version(),
+          header_res.error());
+    } else {
+      auto header = std::move(header_res.value());
+      for (const auto& node_prop : header.node_prop_info_list()) {
+        fnames.emplace(node_prop.path);
+      }
+      for (const auto& edge_prop : header.edge_prop_info_list()) {
+        fnames.emplace(edge_prop.path);
+      }
+      for (const auto& part_prop : header.part_prop_info_list()) {
+        fnames.emplace(part_prop.path);
+      }
+      // Duplicates eliminated by set
+      fnames.emplace(header.topology_path());
+    }
+  }
+  return fnames;
 }
 
 }  // namespace tsuba

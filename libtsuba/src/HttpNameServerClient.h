@@ -1,10 +1,11 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_HTTPNAMESERVERCLIENT_H_
-#define GALOIS_LIBTSUBA_TSUBA_HTTPNAMESERVERCLIENT_H_
+#ifndef GALOIS_LIBTSUBA_HTTPNAMESERVERCLIENT_H_
+#define GALOIS_LIBTSUBA_HTTPNAMESERVERCLIENT_H_
 
 #include <cstdint>
 #include <memory>
 #include <string>
 
+#include "RDGMeta.h"
 #include "galois/Result.h"
 #include "galois/Uri.h"
 #include "tsuba/NameServerClient.h"

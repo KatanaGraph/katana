@@ -3,9 +3,9 @@
 
 #include <arrow/api.h>
 
+#include "RDGPartHeader.h"
 #include "galois/Result.h"
 #include "galois/Uri.h"
-#include "tsuba/RDGPartHeader.h"
 
 namespace tsuba {
 

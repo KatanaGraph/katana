@@ -3,9 +3,10 @@
 
 #include "galois/Result.h"
 #include "galois/Uri.h"
-#include "tsuba/RDGMeta.h"
 
 namespace tsuba {
+
+class RDGMeta;
 
 class GALOIS_EXPORT NameServerClient {
 public:

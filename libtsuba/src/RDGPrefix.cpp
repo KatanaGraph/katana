@@ -1,20 +1,16 @@
 #include "tsuba/RDGPrefix.h"
 
 #include "RDGHandleImpl.h"
+#include "RDGPartHeader.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
-#include "tsuba/RDGPartHeader.h"
 #include "tsuba/file.h"
 
 namespace tsuba {
 
 galois::Result<tsuba::RDGPrefix>
 RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
-  auto part_file_res = meta.PartitionFileName(true);
-  if (!part_file_res) {
-    return part_file_res.error();
-  }
-  auto meta_res = RDGPartHeader::Make(part_file_res.value());
+  auto meta_res = RDGPartHeader::Make(meta.PartitionFileName(0));
   if (!meta_res) {
     return meta_res.error();
   }
@@ -38,7 +34,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
           t_path.string(),
           sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t)), true);
       !res) {
-    GALOIS_LOG_DEBUG("fileview bind failed: {}: {}", t_path, res.error());
+    GALOIS_LOG_DEBUG("FileView bind failed: {}: {}", t_path, res.error());
     return res.error();
   }
 
@@ -48,25 +44,13 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
 }
 
 galois::Result<tsuba::RDGPrefix>
-RDGPrefix::Make(const std::string& uri_str) {
-  auto uri_res = galois::Uri::Make(uri_str);
-  if (!uri_res) {
-    return uri_res.error();
-  }
-  auto meta_res = RDGMeta::Make(uri_res.value());
-  if (!meta_res) {
-    return meta_res.error();
-  }
-  return DoMakePrefix(meta_res.value());
-}
-
-galois::Result<tsuba::RDGPrefix>
 RDGPrefix::Make(RDGHandle handle) {
-  if (!handle.impl_->AllowsReadPartial()) {
-    GALOIS_LOG_DEBUG("failed: handle not intended for partial read");
-    return ErrorCode::InvalidArgument;
+  if (handle.impl_->rdg_meta().num_hosts() != 1) {
+    GALOIS_LOG_ERROR("cannot construct RDGPrefix for partitioned graph");
+    return ErrorCode::NotImplemented;
   }
-  return DoMakePrefix(handle.impl_->rdg_meta);
+
+  return DoMakePrefix(handle.impl_->rdg_meta());
 }
 
 }  // namespace tsuba

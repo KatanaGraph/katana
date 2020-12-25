@@ -1,4 +1,4 @@
-#include "tsuba/HttpNameServerClient.h"
+#include "HttpNameServerClient.h"
 
 #include <cassert>
 #include <future>

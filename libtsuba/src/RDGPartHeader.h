@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGPARTHEADER_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGPARTHEADER_H_
+#ifndef GALOIS_LIBTSUBA_RDGPARTHEADER_H_
+#define GALOIS_LIBTSUBA_RDGPARTHEADER_H_
 
 #include <cassert>
 #include <vector>
@@ -9,6 +9,7 @@
 #include "galois/JSON.h"
 #include "galois/Result.h"
 #include "galois/Uri.h"
+#include "tsuba/PartitionMetadata.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
 
@@ -18,20 +19,6 @@ struct PropStorageInfo {
   std::string name;
   std::string path;
   bool persist{false};
-};
-
-struct GALOIS_EXPORT PartitionMetadata {
-  uint32_t policy_id_{0};
-  bool transposed_{false};
-  bool is_outgoing_edge_cut_{false};
-  bool is_incoming_edge_cut_{false};
-  uint64_t num_global_nodes_{0UL};
-  uint64_t num_global_edges_{0UL};
-  uint64_t num_edges_{0UL};
-  uint32_t num_nodes_{0};
-  uint32_t num_owned_{0};
-  uint32_t num_nodes_with_edges_{0};
-  std::pair<uint32_t, uint32_t> cartesian_grid_{0, 0};
 };
 
 class GALOIS_EXPORT RDGPartHeader {

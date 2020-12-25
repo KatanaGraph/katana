@@ -1,4 +1,4 @@
-#include "tsuba/RDGPartHeader.h"
+#include "RDGPartHeader.h"
 
 #include "Constants.h"
 #include "GlobalState.h"
@@ -190,21 +190,20 @@ RDGPartHeader::MakeJson(const galois::Uri& partition_path) {
 
 galois::Result<RDGPartHeader>
 RDGPartHeader::Make(const galois::Uri& partition_path) {
-  galois::Result<RDGPartHeader> res = RDGPartHeader();
+  galois::Result<RDGPartHeader> res = MakeJson(partition_path);
+  if (res) {
+    return res;
+  }
+
+  GALOIS_LOG_ERROR("failed to parse JSON RDGPartHeader: {}", res.error());
+  GALOIS_LOG_ERROR("falling back on Parquet (deprecated)");
+
   try {
-    res = MakeParquet(partition_path);
+    return MakeParquet(partition_path);
   } catch (const std::exception& exp) {
     GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
     return ErrorCode::ArrowError;
   }
-
-  if (!res) {
-    if (res = MakeJson(partition_path); !res) {
-      return res;
-    }
-  }
-
-  return res;
 }
 
 Result<void>
@@ -230,8 +229,8 @@ RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
   }
 
   ff->Bind(RDGMeta::PartitionFileName(
-               handle.impl_->rdg_meta.dir(), Comm()->ID,
-               handle.impl_->rdg_meta.version() + 1)
+               handle.impl_->rdg_meta().dir(), Comm()->ID,
+               handle.impl_->rdg_meta().version() + 1)
                .string());
 
   writes->StartStore(std::move(ff));
@@ -254,7 +253,7 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *node_properties) {
       auto it = node_paths.find(s);
       if (it == node_paths.end()) {
-        GALOIS_LOG_DEBUG("failed: node property {} not found", s);
+        GALOIS_LOG_DEBUG("failed: node property `{}` not found", s);
         return ErrorCode::PropertyNotFound;
       }
 
@@ -273,7 +272,7 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *edge_properties) {
       auto it = edge_paths.find(s);
       if (it == edge_paths.end()) {
-        GALOIS_LOG_DEBUG("failed: edge property {} not found", s);
+        GALOIS_LOG_DEBUG("failed: edge property `{}` not found", s);
         return ErrorCode::PropertyNotFound;
       }
 

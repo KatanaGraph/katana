@@ -8,6 +8,8 @@
 
 namespace tsuba {
 
+class RDGMeta;
+
 /// An RDGPrefix loads the header information from the topology CSR, this is
 /// used by the partitioner to avoid downloading the whole RDG to make
 /// partitioning decisions
@@ -28,7 +30,6 @@ class GALOIS_EXPORT RDGPrefix {
 
 public:
   static galois::Result<RDGPrefix> Make(RDGHandle handle);
-  static galois::Result<RDGPrefix> Make(const std::string& uri);
 
   uint64_t num_nodes() const { return prefix_->header.num_nodes; }
   uint64_t num_edges() const { return prefix_->header.num_edges; }

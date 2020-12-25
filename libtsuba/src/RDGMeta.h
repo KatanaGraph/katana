@@ -1,14 +1,16 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGMETA_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGMETA_H_
+#ifndef GALOIS_LIBTSUBA_RDGMETA_H_
+#define GALOIS_LIBTSUBA_RDGMETA_H_
 
 #include <cstdint>
 #include <regex>
+#include <set>
 
 #include "galois/JSON.h"
 #include "galois/Logging.h"
 #include "galois/Uri.h"
 #include "galois/config.h"
 #include "tsuba/RDGLineage.h"
+#include "tsuba/tsuba.h"
 
 namespace tsuba {
 
@@ -58,6 +60,10 @@ public:
         version_ + 1, version_, num_hosts, policy_id, transpose, dir_, lineage);
   }
 
+  bool IsEmptyRDG() const { return num_hosts() == 0; }
+
+  static galois::Result<RDGMeta> Make(RDGHandle handle);
+
   /// Create an RDGMeta
   /// \param uri a uri that either names a registered RDG or an explicit
   ///    rdg file
@@ -79,8 +85,9 @@ public:
 
   void set_dir(galois::Uri dir) { dir_ = std::move(dir); }
 
-  galois::Result<galois::Uri> PartitionFileName(
-      bool intend_partial_read = false) const;
+  galois::Uri PartitionFileName(uint32_t host_id) const;
+
+  galois::Uri FileName() { return FileName(dir_, version_); }
 
   // Canonical naming
   static galois::Uri FileName(const galois::Uri& uri, uint64_t version);
@@ -93,6 +100,10 @@ public:
   static bool IsMetaUri(const galois::Uri& uri);
 
   std::string ToJsonString() const;
+
+  /// Return the set of file names that hold this RDG's data by reading partition files
+  /// Useful to garbage collect unused files
+  galois::Result<std::set<std::string>> FileNames();
 
   // Required by nlohmann
   friend void to_json(nlohmann::json& j, const RDGMeta& meta);

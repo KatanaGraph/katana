@@ -1,11 +1,12 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_MEMORYNAMESERVERCLIENT_H_
-#define GALOIS_LIBTSUBA_TSUBA_MEMORYNAMESERVERCLIENT_H_
+#ifndef GALOIS_LIBTSUBA_MEMORYNAMESERVERCLIENT_H_
+#define GALOIS_LIBTSUBA_MEMORYNAMESERVERCLIENT_H_
 
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
 
+#include "RDGMeta.h"
 #include "galois/Result.h"
 #include "tsuba/NameServerClient.h"
 #include "tsuba/RDG.h"

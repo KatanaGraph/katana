@@ -1,4 +1,4 @@
-#include "tsuba/MemoryNameServerClient.h"
+#include "MemoryNameServerClient.h"
 
 #include <cassert>
 #include <future>

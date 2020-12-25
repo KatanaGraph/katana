@@ -1,5 +1,6 @@
-#include "tsuba/RDGCore.h"
+#include "RDGCore.h"
 
+#include "RDGPartHeader.h"
 #include "tsuba/Errors.h"
 
 namespace {

@@ -1,13 +1,13 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGCORE_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGCORE_H_
+#ifndef GALOIS_LIBTSUBA_RDGCORE_H_
+#define GALOIS_LIBTSUBA_RDGCORE_H_
 
 #include <memory>
 
 #include <arrow/api.h>
 
+#include "RDGPartHeader.h"
 #include "galois/config.h"
 #include "tsuba/FileView.h"
-#include "tsuba/RDGPartHeader.h"
 
 namespace tsuba {
 

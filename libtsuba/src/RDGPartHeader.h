@@ -47,13 +47,13 @@ public:
     edge_prop_info_list_.emplace_back(std::move(pmd));
   }
 
-  void DropNodeProperty(uint32_t i) {
+  void RemoveNodeProperty(uint32_t i) {
     auto& p = node_prop_info_list_;
     assert(i < p.size());
     p.erase(p.begin() + i);
   }
 
-  void DropEdgeProperty(uint32_t i) {
+  void RemoveEdgeProperty(uint32_t i) {
     auto& p = edge_prop_info_list_;
     assert(i < p.size());
     p.erase(p.begin() + i);

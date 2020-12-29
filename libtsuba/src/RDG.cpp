@@ -547,13 +547,13 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
 }
 
 galois::Result<void>
-tsuba::RDG::DropNodeProperty(uint32_t i) {
-  return core_->DropNodeProperty(i);
+tsuba::RDG::RemoveNodeProperty(uint32_t i) {
+  return core_->RemoveNodeProperty(i);
 }
 
 galois::Result<void>
-tsuba::RDG::DropEdgeProperty(uint32_t i) {
-  return core_->DropEdgeProperty(i);
+tsuba::RDG::RemoveEdgeProperty(uint32_t i) {
+  return core_->RemoveEdgeProperty(i);
 }
 
 void

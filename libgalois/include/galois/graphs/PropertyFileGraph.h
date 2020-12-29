@@ -25,6 +25,11 @@ struct GraphTopology {
 
   uint64_t num_edges() const { return out_dests ? out_dests->length() : 0; }
 
+  bool Equals(const GraphTopology& other) const {
+    return out_indices->Equals(*other.out_indices) &&
+           out_dests->Equals(*other.out_dests);
+  }
+
   std::pair<uint64_t, uint64_t> edge_range(uint32_t node_id) const {
     auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
     auto edge_end = out_indices->Value(node_id);
@@ -174,6 +179,13 @@ public:
     return ResultSuccess();
   }
 
+  /// Determine if two PropertyFileGraphss are Equal
+  bool Equals(const PropertyFileGraph* other) const {
+    return topology().Equals(other->topology()) &&
+           rdg_.node_table()->Equals(*other->node_table()) &&
+           rdg_.edge_table()->Equals(*other->edge_table());
+  }
+
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_table()->schema();
   }
@@ -222,16 +234,38 @@ public:
   std::vector<std::shared_ptr<arrow::ChunkedArray>> NodeProperties() const {
     return rdg_.node_table()->columns();
   }
+  std::vector<std::string> NodePropertyNames() const {
+    return rdg_.node_table()->ColumnNames();
+  }
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> EdgeProperties() const {
     return rdg_.edge_table()->columns();
+  }
+  std::vector<std::string> EdgePropertyNames() const {
+    return rdg_.edge_table()->ColumnNames();
   }
 
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
   Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& table);
 
-  Result<void> RemoveNodeProperty(int i);
-  Result<void> RemoveEdgeProperty(int i);
+  Result<void> RemoveNodeProperty(int i) { return rdg_.RemoveNodeProperty(i); }
+  Result<void> RemoveNodeProperty(const std::string& prop_name) {
+    auto col_names = NodePropertyNames();
+    auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+    if (pos != col_names.cend()) {
+      return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
+    }
+    return galois::ErrorCode::PropertyNotFound;
+  }
+  Result<void> RemoveEdgeProperty(int i) { return rdg_.RemoveEdgeProperty(i); }
+  Result<void> RemoveEdgeProperty(const std::string& prop_name) {
+    auto col_names = EdgePropertyNames();
+    auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+    if (pos != col_names.cend()) {
+      return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
+    }
+    return galois::ErrorCode::PropertyNotFound;
+  }
 
   PropertyView node_property_view() {
     return PropertyView{

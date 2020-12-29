@@ -1,4 +1,4 @@
-#include "graph-properties-convert.h"
+#include "galois/BuildGraph.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -24,6 +24,7 @@
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
 
+#include "galois/ArrowInterchange.h"
 #include "galois/ErrorCode.h"
 #include "galois/Galois.h"
 #include "galois/Logging.h"
@@ -1627,7 +1628,7 @@ galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
 
 // Build CSR format and rearrange edge tables to correspond to the CSR
 galois::GraphComponent
-galois::PropertyGraphBuilder::BuildFinalEdges() {
+galois::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
   galois::ParallelSTL::partial_sum(
       topology_builder_.out_indices.begin(),
       topology_builder_.out_indices.end(),
@@ -1654,10 +1655,12 @@ galois::PropertyGraphBuilder::BuildFinalEdges() {
   auto final_type_builders =
       RearrangeTypeTable(initial_types, edge_mapping, &properties_);
 
-  std::cout << "Edge Properties Post:\n";
-  WriteNullStats(final_edge_builders, &properties_, edges_);
-  std::cout << "Edge Types Post:\n";
-  WriteFalseStats(final_type_builders, &properties_, edges_);
+  if (verbose) {
+    std::cout << "Edge Properties Post:\n";
+    WriteNullStats(final_edge_builders, &properties_, edges_);
+    std::cout << "Edge Types Post:\n";
+    WriteFalseStats(final_type_builders, &properties_, edges_);
+  }
 
   return GraphComponent{
       BuildTable(&final_edge_builders, &edge_properties_.schema),
@@ -1665,7 +1668,7 @@ galois::PropertyGraphBuilder::BuildFinalEdges() {
 }
 
 galois::GraphComponents
-galois::PropertyGraphBuilder::Finish() {
+galois::PropertyGraphBuilder::Finish(bool verbose) {
   topology_builder_.out_dests.resize(
       edges_, std::numeric_limits<uint32_t>::max());
   this->ResolveIntermediateIDs();
@@ -1682,14 +1685,16 @@ galois::PropertyGraphBuilder::Finish() {
   EvenOutChunkBuilders(
       &edge_types_.builders, &edge_types_.chunks, &properties_, edges_);
 
-  std::cout << "Node Properties:\n";
-  WriteNullStats(node_properties_.chunks, &properties_, nodes_);
-  std::cout << "Node Labels:\n";
-  WriteFalseStats(node_labels_.chunks, &properties_, nodes_);
-  std::cout << "Edge Properties Pre:\n";
-  WriteNullStats(edge_properties_.chunks, &properties_, edges_);
-  std::cout << "Edge Types Pre:\n";
-  WriteFalseStats(edge_types_.chunks, &properties_, edges_);
+  if (verbose) {
+    std::cout << "Node Properties:\n";
+    WriteNullStats(node_properties_.chunks, &properties_, nodes_);
+    std::cout << "Node Labels:\n";
+    WriteFalseStats(node_labels_.chunks, &properties_, nodes_);
+    std::cout << "Edge Properties Pre:\n";
+    WriteNullStats(edge_properties_.chunks, &properties_, edges_);
+    std::cout << "Edge Types Pre:\n";
+    WriteFalseStats(edge_types_.chunks, &properties_, edges_);
+  }
 
   // build final nodes
   auto final_node_table =
@@ -1698,12 +1703,16 @@ galois::PropertyGraphBuilder::Finish() {
       BuildTable(&node_labels_.chunks, &node_labels_.schema);
   GraphComponent nodes_tables{final_node_table, final_label_table};
 
-  std::cout << "Finished building nodes\n";
+  if (verbose) {
+    std::cout << "Finished building nodes\n";
+  }
 
   // rearrange edges to match implicit edge IDs
-  auto edges_tables = this->BuildFinalEdges();
+  auto edges_tables = this->BuildFinalEdges(verbose);
 
-  std::cout << "Finished topology and ordering edges\n";
+  if (verbose) {
+    std::cout << "Finished topology and ordering edges\n";
+  }
 
   // build topology
   auto topology = std::make_shared<galois::graphs::GraphTopology>();
@@ -1730,62 +1739,119 @@ galois::PropertyGraphBuilder::Finish() {
     GALOIS_LOG_FATAL("Error building arrow array for topology");
   }
 
-  std::cout << "Finished mongodb conversion to arrow\n";
-  std::cout << "Nodes: " << topology->out_indices->length() << "\n";
-  std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
-            << "\n";
-  std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
-  std::cout << "Edges: " << topology->out_dests->length() << "\n";
-  std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
-            << "\n";
-  std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
+  if (verbose) {
+    std::cout << "Finished mongodb conversion to arrow\n";
+    std::cout << "Nodes: " << topology->out_indices->length() << "\n";
+    std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
+              << "\n";
+    std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
+    std::cout << "Edges: " << topology->out_dests->length() << "\n";
+    std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
+              << "\n";
+    std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
+  }
 
   return galois::GraphComponents{nodes_tables, edges_tables, topology};
 }
 
-/// WritePropertyGraph formally builds katana form via
-/// PropertyFileGraph from imported components and writes the result to target
-/// directory
-///
-/// \param graph_comps imported components to convert into a PropertyFileGraph
-/// \param dir local FS directory or s3 directory to write PropertyFileGraph
-/// to
-void
-galois::WritePropertyGraph(
-    const galois::GraphComponents& graph_comps, const std::string& dir) {
-  galois::graphs::PropertyFileGraph graph;
-
-  auto result = graph.SetTopology(*graph_comps.topology);
+std::unique_ptr<galois::graphs::PropertyFileGraph>
+galois::MakeGraph(const galois::GraphComponents& graph_comps) {
+  auto graph = std::make_unique<galois::graphs::PropertyFileGraph>();
+  auto result = graph->SetTopology(*graph_comps.topology);
   if (!result) {
     GALOIS_LOG_FATAL("Error adding topology: {}", result.error());
   }
 
   if (graph_comps.nodes.properties->num_columns() > 0) {
-    result = graph.AddNodeProperties(graph_comps.nodes.properties);
+    result = graph->AddNodeProperties(graph_comps.nodes.properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node properties: {}", result.error());
     }
   }
   if (graph_comps.nodes.labels->num_columns() > 0) {
-    result = graph.AddNodeProperties(graph_comps.nodes.labels);
+    result = graph->AddNodeProperties(graph_comps.nodes.labels);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding node labels: {}", result.error());
     }
   }
   if (graph_comps.edges.properties->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graph_comps.edges.properties);
+    result = graph->AddEdgeProperties(graph_comps.edges.properties);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge properties: {}", result.error());
     }
   }
   if (graph_comps.edges.labels->num_columns() > 0) {
-    result = graph.AddEdgeProperties(graph_comps.edges.labels);
+    result = graph->AddEdgeProperties(graph_comps.edges.labels);
     if (!result) {
       GALOIS_LOG_FATAL("Error adding edge types: {}", result.error());
     }
   }
+  return graph;
+}
 
-  WritePropertyGraph(std::move(graph), dir);
+void
+ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
+  switch (scalar->type->id()) {
+  case arrow::Type::STRING: {
+    type = ImportDataType::kString;
+    value = std::static_pointer_cast<arrow::StringScalar>(scalar)->ToString();
+    break;
+  }
+  case arrow::Type::INT64: {
+    type = ImportDataType::kInt64;
+    value = std::static_pointer_cast<arrow::Int64Scalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::INT32: {
+    type = ImportDataType::kInt32;
+    value = std::static_pointer_cast<arrow::Int32Scalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    type = ImportDataType::kDouble;
+    value = std::static_pointer_cast<arrow::DoubleScalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    type = ImportDataType::kFloat;
+    value = std::static_pointer_cast<arrow::FloatScalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::BOOL: {
+    type = ImportDataType::kBoolean;
+    value = std::static_pointer_cast<arrow::BooleanScalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::TIMESTAMP: {
+    type = ImportDataType::kTimestampMilli;
+    // TODO (witchel) Is this kosher?
+    value = std::static_pointer_cast<arrow::Int64Scalar>(scalar)->value;
+    break;
+  }
+  // for now uint8_t is an alias for a struct
+  case arrow::Type::UINT8: {
+    type = ImportDataType::kStruct;
+    value = std::static_pointer_cast<arrow::Int8Scalar>(scalar)->value;
+    break;
+  }
+  case arrow::Type::LIST: {
+    GALOIS_LOG_FATAL("not yet supported");
+    break;
+  }
+  default: {
+    GALOIS_LOG_FATAL("not yet supported");
+    break;
+  }
+  }
+}
+
+/// WritePropertyGraph writes an RDG from the provided \param graph_comps
+/// to the directory \param dir
+void
+galois::WritePropertyGraph(
+    const galois::GraphComponents& graph_comps, const std::string& dir) {
+  auto graph_ptr = MakeGraph(graph_comps);
+  WritePropertyGraph(std::move(*graph_ptr), dir);
 }
 
 void
@@ -1807,4 +1873,138 @@ galois::WritePropertyGraph(
   if (!result) {
     GALOIS_LOG_FATAL("Error writing to fs: {}", result.error());
   }
+}
+
+std::vector<galois::ImportData>
+galois::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
+  std::vector<galois::ImportData> ret;
+  if (arr->num_chunks() == 0) {
+    return ret;
+  }
+  if (arr->chunk(0)->length() == 0) {
+    return ret;
+  }
+  auto res = arr->chunk(0)->GetScalar(0);
+  if (!res.ok()) {
+    return ret;
+  }
+  auto id = res.ValueOrDie()->type->id();
+  auto num = arr->length();
+  ret.reserve(num);
+  switch (id) {
+  case arrow::Type::STRING: {
+    auto vec_res = galois::UnmarshalVector<std::string>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kString;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::INT64: {
+    auto vec_res = galois::UnmarshalVector<int64_t>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kInt64;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::INT32: {
+    auto vec_res = galois::UnmarshalVector<int32_t>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kInt32;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    auto vec_res = galois::UnmarshalVector<double>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kDouble;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    auto vec_res = galois::UnmarshalVector<float>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kFloat;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::BOOL: {
+    auto vec_res = galois::UnmarshalVector<bool>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kBoolean;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::TIMESTAMP: {
+    auto vec_res = galois::UnmarshalVector<std::int64_t>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kTimestampMilli;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  // for now uint8_t is an alias for a struct
+  case arrow::Type::UINT8: {
+    auto vec_res = galois::UnmarshalVector<std::uint8_t>(arr);
+    if (!vec_res) {
+      return ret;
+    }
+    auto vec = vec_res.value();
+    for (size_t i = 0; i < vec.size(); ++i) {
+      ret[i].type = galois::ImportDataType::kStruct;
+      ret[i].is_list = false;
+      ret[i].value = vec[i];
+    }
+    break;
+  }
+  case arrow::Type::LIST: {
+    GALOIS_LOG_FATAL("not yet supported");
+    break;
+  }
+  default: {
+    GALOIS_LOG_FATAL("not yet supported");
+    break;
+  }
+  }
+  return ret;
 }

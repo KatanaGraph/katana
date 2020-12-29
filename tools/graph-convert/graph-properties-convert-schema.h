@@ -4,7 +4,7 @@
 #include <libxml/xmlreader.h>
 #include <libxml/xmlwriter.h>
 
-#include "graph-properties-convert.h"
+#include "galois/BuildGraph.h"
 
 namespace galois {
 

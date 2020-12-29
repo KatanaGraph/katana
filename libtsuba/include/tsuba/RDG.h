@@ -54,8 +54,8 @@ public:
   galois::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> DropNodeProperty(uint32_t i);
-  galois::Result<void> DropEdgeProperty(uint32_t i);
+  galois::Result<void> RemoveNodeProperty(uint32_t i);
+  galois::Result<void> RemoveEdgeProperty(uint32_t i);
 
   void MarkAllPropertiesPersistent();
 
@@ -95,21 +95,23 @@ public:
   /// The table of edge properties
   const std::shared_ptr<arrow::Table>& edge_table() const;
 
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() {
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
+      const {
     return master_nodes_;
   }
   void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
     master_nodes_ = std::move(a);
   }
 
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes() {
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
+      const {
     return mirror_nodes_;
   }
   void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
     mirror_nodes_ = std::move(a);
   }
 
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() {
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
     return local_to_global_vector_;
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {

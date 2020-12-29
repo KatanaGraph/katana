@@ -13,6 +13,7 @@ set(sources
         src/Barrier_MCS.cpp
         src/Barrier_Simple.cpp
         src/Barrier_Topo.cpp
+        src/BuildGraph.cpp
         src/Context.cpp
         src/Deterministic.cpp
         src/DynamicBitset.cpp
@@ -24,6 +25,7 @@ set(sources
         src/Mem.cpp
         src/NumaMem.cpp
         src/OCFileGraph.cpp
+        src/OpLog.cpp
         src/PageAlloc.cpp
         src/PagePool.cpp
         src/ParaMeter.cpp

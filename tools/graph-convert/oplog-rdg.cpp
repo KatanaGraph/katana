@@ -1,4 +1,4 @@
-#include "graph-properties-convert.h"
+#include "galois/BuildGraph.h"
 
 constexpr uint64_t kNumNodes = 100;
 

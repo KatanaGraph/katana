@@ -13,7 +13,7 @@ std::string command_line;
 template <typename T>
 std::shared_ptr<arrow::Table>
 MakeTable(const std::string& name, size_t size) {
-  TableBuilder builder{size};
+  galois::TableBuilder builder{size};
 
   ColumnOptions options;
   options.name = name;

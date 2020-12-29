@@ -4,7 +4,7 @@
 #include <bson/bson.h>
 #include <mongoc/mongoc.h>
 
-#include "graph-properties-convert.h"
+#include "galois/BuildGraph.h"
 
 namespace galois {
 

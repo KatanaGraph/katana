@@ -62,7 +62,6 @@ find_package(LibXml2 2.9.1 REQUIRED)
 find_package(date REQUIRED)
 
 set(sources
-  graph-properties-convert.cpp
   graph-properties-convert-schema.cpp
   graph-properties-convert-graphml.cpp
   Transforms.cpp
@@ -70,26 +69,28 @@ set(sources
 
 if(mongoc-1.0_FOUND)
   list(APPEND sources graph-properties-convert-mongodb.cpp)
-  target_link_libraries(graph-properties-convert-common PUBLIC mongo::mongoc_static)
+  target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem mongo::mongoc_static)
   target_compile_definitions(graph-properties-convert-common PUBLIC GALOIS_MONGOC_FOUND)
 endif()
 if(MySQL_FOUND)
   list(APPEND sources graph-properties-convert-mysql.cpp)
-  target_link_libraries(graph-properties-convert-common PUBLIC MySQL::MySQL)
+  target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem MySQL::MySQL)
   target_compile_definitions(graph-properties-convert-common PUBLIC GALOIS_MYSQL_FOUND)
 endif()
 
 target_sources(graph-properties-convert-common PRIVATE ${sources})
 target_include_directories(graph-properties-convert-common PUBLIC .)
 target_link_libraries(graph-properties-convert-common PUBLIC LibXml2::LibXml2)
-target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem date::date)
+target_link_libraries(graph-properties-convert-common PUBLIC date::date)
+target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem)
 
 target_sources(graph-properties-convert PRIVATE graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
+target_link_libraries(graph-properties-convert PUBLIC galois_shmem)
 
 add_executable(oplog-rdg oplog-rdg.cpp)
-target_link_libraries(oplog-rdg graph-properties-convert-common)
+target_link_libraries(oplog-rdg graph-properties-convert-common galois_shmem)
 
 install(TARGETS graph-properties-convert
   EXPORT GaloisTargets

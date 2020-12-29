@@ -39,6 +39,7 @@ Result<tsuba::RDGMeta>
 RDGMeta::MakeFromStorage(const galois::Uri& uri) {
   tsuba::FileView fv;
   if (auto res = fv.Bind(uri.string(), true); !res) {
+    GALOIS_LOG_DEBUG("RDGMeta::MakeFromStorage bind failed: {}", res.error());
     return res.error();
   }
   tsuba::RDGMeta meta(uri.DirName());
@@ -65,6 +66,7 @@ RDGMeta::Make(const galois::Uri& uri) {
   if (!IsMetaUri(uri)) {
     auto ns_res = NS()->Get(uri);
     if (!ns_res) {
+      GALOIS_LOG_DEBUG("NS->Get failed: {}", ns_res.error());
       return ns_res.error();
     }
     if (ns_res) {

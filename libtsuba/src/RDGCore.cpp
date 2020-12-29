@@ -82,7 +82,7 @@ RDGCore::Equals(const RDGCore& other) const {
 }
 
 galois::Result<void>
-RDGCore::DropNodeProperty(uint32_t i) {
+RDGCore::RemoveNodeProperty(uint32_t i) {
   auto result = node_table_->RemoveColumn(i);
   if (!result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", result.status());
@@ -91,13 +91,13 @@ RDGCore::DropNodeProperty(uint32_t i) {
 
   node_table_ = std::move(result.ValueOrDie());
 
-  part_header_.DropNodeProperty(i);
+  part_header_.RemoveNodeProperty(i);
 
   return galois::ResultSuccess();
 }
 
 galois::Result<void>
-RDGCore::DropEdgeProperty(uint32_t i) {
+RDGCore::RemoveEdgeProperty(uint32_t i) {
   auto result = edge_table_->RemoveColumn(i);
   if (!result.ok()) {
     GALOIS_LOG_DEBUG("arrow error: {}", result.status());
@@ -106,7 +106,7 @@ RDGCore::DropEdgeProperty(uint32_t i) {
 
   edge_table_ = std::move(result.ValueOrDie());
 
-  part_header_.DropEdgeProperty(i);
+  part_header_.RemoveEdgeProperty(i);
 
   return galois::ResultSuccess();
 }

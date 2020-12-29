@@ -305,16 +305,6 @@ galois::graphs::PropertyFileGraph::AddEdgeProperties(
 }
 
 galois::Result<void>
-galois::graphs::PropertyFileGraph::RemoveNodeProperty(int i) {
-  return rdg_.DropNodeProperty(i);
-}
-
-galois::Result<void>
-galois::graphs::PropertyFileGraph::RemoveEdgeProperty(int i) {
-  return rdg_.DropEdgeProperty(i);
-}
-
-galois::Result<void>
 galois::graphs::PropertyFileGraph::SetTopology(
     const galois::graphs::GraphTopology& topology) {
   if (auto res = rdg_.UnbindTopologyFileStorage(); !res) {

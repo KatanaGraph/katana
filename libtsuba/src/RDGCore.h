@@ -27,9 +27,9 @@ public:
   galois::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> DropNodeProperty(uint32_t i);
+  galois::Result<void> RemoveNodeProperty(uint32_t i);
 
-  galois::Result<void> DropEdgeProperty(uint32_t i);
+  galois::Result<void> RemoveEdgeProperty(uint32_t i);
 
   //
   // Accessors and Mutators

@@ -1,5 +1,7 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_BUILDGRAPH_H_
+#define GALOIS_LIBGALOIS_GALOIS_BUILDGRAPH_H_
+
+/// Construct a PropertyFileGraph in memory.
 
 #include <functional>
 #include <iostream>
@@ -9,6 +11,7 @@
 #include <vector>
 
 #include <arrow/api.h>
+#include <arrow/stl.h>
 
 #include "galois/graphs/PropertyFileGraph.h"
 
@@ -37,6 +40,7 @@ enum ImportDataType {
 };
 
 struct ImportData {
+  void ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar);
   ImportDataType type;
   bool is_list;
   std::variant<
@@ -47,6 +51,9 @@ struct ImportData {
 
   ImportData(ImportDataType type_, bool is_list_)
       : type(type_), is_list(is_list_) {}
+  ImportData(std::shared_ptr<arrow::Scalar> scalar) : is_list(false) {
+    ValueFromArrowScalar(scalar);
+  }
 };
 
 struct PropertyKey {
@@ -162,7 +169,7 @@ struct GraphComponents {
   }
 };
 
-class PropertyGraphBuilder {
+class GALOIS_EXPORT PropertyGraphBuilder {
   WriterProperties properties_;
   PropertiesState node_properties_;
   PropertiesState edge_properties_;
@@ -206,7 +213,7 @@ public:
       std::function<ImportData(ImportDataType, bool)> ResolveValue);
   void AddLabel(const std::string& name);
 
-  GraphComponents Finish();
+  GraphComponents Finish(bool verbose = true);
 
   size_t GetNodeIndex();
   size_t GetNodes();
@@ -214,17 +221,23 @@ public:
 
 private:
   void ResolveIntermediateIDs();
-  GraphComponent BuildFinalEdges();
+  GraphComponent BuildFinalEdges(bool verbose);
 };
 
-galois::graphs::PropertyFileGraph ConvertKatana(
+GALOIS_EXPORT galois::graphs::PropertyFileGraph ConvertKatana(
     const std::string& input_filename);
 
-void WritePropertyGraph(
+GALOIS_EXPORT std::unique_ptr<galois::graphs::PropertyFileGraph> MakeGraph(
+    const GraphComponents& graph_comps);
+GALOIS_EXPORT void WritePropertyGraph(
     const GraphComponents& graph_comps, const std::string& dir);
-void WritePropertyGraph(
+GALOIS_EXPORT void WritePropertyGraph(
     graphs::PropertyFileGraph prop_graph, const std::string& dir);
 
-}  // end of namespace galois
+/// Convert an Arrow chunked array to a vector of ImportData
+GALOIS_EXPORT std::vector<galois::ImportData> ArrowToImport(
+    std::shared_ptr<arrow::ChunkedArray> arr);
+
+}  // namespace galois
 
 #endif

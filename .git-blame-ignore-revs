@@ -14,22 +14,22 @@
 02ecf4f4ea6ed8618a3826f98c3ea192ee38ca2d
 
 # Re-run clang-format.
-47ddbe14de2e61b87749cd20bd368f07ef3c322f
+9fd4da0517d0767498fe9657e31341d3ade6053c
 
 # Reorganize the lonestar directories.
-6ade1c5ac3cf0c261aff7bee863e46b2c124d174
+4219de0953fc6dc6e751b5579fe277b258786b50
 
 # Run clang-format.
-517fca343c75f842096b661e3ff883bb93f5c09e
+0e924f9f868ea0a20af6962f9a9927f80dbc4c6c
 
 # Another round of clang-format
-2264b05ece3f9ec2b9bf397594cc14ef99f498de
+33ff998c198a0c2276a06eb3f4e326831a48a7fb
 
 # Format python code with black
 a61765cb8f58171db10a647a64885ff753f10ae6
 
 # Format files
-c5c87b3ee2844d377fcb2ab64f7877764d592b4e
+18574ea59060d6362d8d73c84003174c767515eb
 
 # Apply text formating rules
-f6dbb905e54afacef9f2c4202de216b4af4790ce
+73ec10f60ca6524c8142e6334de7148914d6e48f

@@ -15,7 +15,7 @@ std::shared_ptr<arrow::Table>
 MakeTable(const std::string& name, size_t size) {
   galois::TableBuilder builder{size};
 
-  ColumnOptions options;
+  galois::ColumnOptions options;
   options.name = name;
   options.ascending_values = true;
   builder.AddColumn<T>(options);

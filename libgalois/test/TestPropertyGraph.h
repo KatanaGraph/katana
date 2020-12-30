@@ -76,10 +76,10 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
   auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
 
   auto set_result = g->SetTopology(galois::graphs::GraphTopology{
-      .out_indices =
-          std::static_pointer_cast<arrow::UInt64Array>(BuildArray(indices)),
-      .out_dests =
-          std::static_pointer_cast<arrow::UInt32Array>(BuildArray(dests)),
+      .out_indices = std::static_pointer_cast<arrow::UInt64Array>(
+          galois::BuildArray(indices)),
+      .out_dests = std::static_pointer_cast<arrow::UInt32Array>(
+          galois::BuildArray(dests)),
   });
   GALOIS_LOG_ASSERT(set_result);
 
@@ -89,8 +89,8 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
   galois::TableBuilder edge_builder{num_edges};
 
   for (size_t i = 0; i < num_properties; ++i) {
-    node_builder.AddColumn<ValueType>(ColumnOptions());
-    edge_builder.AddColumn<ValueType>(ColumnOptions());
+    node_builder.AddColumn<ValueType>(galois::ColumnOptions());
+    edge_builder.AddColumn<ValueType>(galois::ColumnOptions());
   }
 
   if (auto r = g->AddEdgeProperties(edge_builder.Finish()); !r) {

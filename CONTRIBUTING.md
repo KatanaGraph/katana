@@ -1,10 +1,5 @@
 # Contributing to Katana
 
-This repository is currently maintained as a fork the [Galois
-project](https://github.com/IntelligentSoftwareSystems/Galois). At some point
-in the future, these repositories may diverge. Katana Graph members should
-focus their development here.
-
 The instructions in README.md give unopinionated instructions on how to install
 and use this repository, which is appropriate to general users. This file
 contains instructions and details more appropriate to people who need to
@@ -34,7 +29,15 @@ make
 ```
 
 Note: Katana builds with a variety of compilers as long as they support the
-C++17 standard. See README.md for specific tested versions.
+C++17 standard. See [README.md](README.md) for specific tested versions.
+
+## Repository History
+
+This repository began life as a fork the [Galois project](https://github.com/IntelligentSoftwareSystems/Galois).
+As part of the commercialization process, this repository was combined with proprietary parts of the Katana system and later disentangled.
+Disentangling the open-source and proprietary components required rewriting the git history of this repository.
+Because of this, commits from 2020-06-30 until 2020-10-29 (marked with `[REWRITTEN COMMIT: incomplete subtree]`) are unbuildable and inconsistent; they are included to provide context only.
+Commits from 2020-10-29 until 2020-01-01 are consistent (marked with `[REWRITTEN COMMIT: self-contained subtree]`), but may have removed changes mentioned in the commit messages.
 
 ## Specifying and Resolving C++ Dependencies
 

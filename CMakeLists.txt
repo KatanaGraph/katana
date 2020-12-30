@@ -22,8 +22,7 @@ add_subdirectory(libsupport)
 add_subdirectory(libtsuba)
 add_subdirectory(libgalois)
 
-string(FIND "${CMAKE_PROJECT_NAME}" "${PROJECT_NAME}" project_name_position)
-if(project_name_position EQUAL 0 AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(lonestar)
   # If we are testing and there is no custom input location, add rules to
   # download inputs

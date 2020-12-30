@@ -97,6 +97,6 @@ install(TARGETS graph-properties-convert
   COMPONENT tools
 )
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(tests)
 endif()

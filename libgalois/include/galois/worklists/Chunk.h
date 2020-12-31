@@ -30,7 +30,7 @@
 namespace galois {
 namespace runtime {
 extern unsigned activeThreads;
-}
+}  // end namespace runtime
 namespace worklists {
 
 namespace internal {

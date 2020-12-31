@@ -41,7 +41,7 @@ MakePropertyViews(
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
 template <typename PropTuple>
-static Result<PropertyViewTuple<PropTuple>>
+static Result<galois::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
   return MakePropertyViews<PropTuple>(pfg->node_table().get(), properties);
@@ -53,7 +53,7 @@ MakeNodePropertyViews(
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
 template <typename PropTuple>
-static Result<PropertyViewTuple<PropTuple>>
+static Result<galois::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(const PropertyFileGraph* pfg) {
   return MakeNodePropertyViews<PropTuple>(
       pfg, pfg->node_schema()->field_names());
@@ -65,7 +65,7 @@ MakeNodePropertyViews(const PropertyFileGraph* pfg) {
 ///
 /// \see MakeNodePropertyViews
 template <typename PropTuple>
-static Result<PropertyViewTuple<PropTuple>>
+static Result<galois::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
   return MakePropertyViews<PropTuple>(pfg->edge_table().get(), properties);
@@ -75,7 +75,7 @@ MakeEdgePropertyViews(
 ///
 /// \see MakeNodePropertyViews
 template <typename PropTuple>
-static Result<PropertyViewTuple<PropTuple>>
+static Result<galois::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(const PropertyFileGraph* pfg) {
   return MakeEdgePropertyViews<PropTuple>(
       pfg, pfg->edge_schema()->field_names());

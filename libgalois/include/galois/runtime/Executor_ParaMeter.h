@@ -42,7 +42,7 @@
 namespace galois {
 namespace runtime {
 
-namespace ParaMeter {
+namespace parameter {
 
 struct StepStatsBase {
   static inline void printHeader(FILE* out) {
@@ -420,14 +420,14 @@ public:
   void operator()() {}
 };
 
-}  // namespace ParaMeter
+}  // namespace parameter
 }  // namespace runtime
 
 namespace worklists {
 
 template <
     class T = int,
-    runtime::ParaMeter::SchedType SCHED = runtime::ParaMeter::SchedType::FIFO>
+    runtime::parameter::SchedType SCHED = runtime::parameter::SchedType::FIFO>
 class ParaMeter {
 public:
   template <bool _concurrent>
@@ -438,11 +438,11 @@ public:
 
   using value_type = T;
 
-  constexpr static const runtime::ParaMeter::SchedType SCHEDULE = SCHED;
+  constexpr static const runtime::parameter::SchedType SCHEDULE = SCHED;
 
-  using fifo = ParaMeter<T, runtime::ParaMeter::SchedType::FIFO>;
-  using random = ParaMeter<T, runtime::ParaMeter::SchedType::RAND>;
-  using lifo = ParaMeter<T, runtime::ParaMeter::SchedType::LIFO>;
+  using fifo = ParaMeter<T, runtime::parameter::SchedType::FIFO>;
+  using random = ParaMeter<T, runtime::parameter::SchedType::RAND>;
+  using lifo = ParaMeter<T, runtime::parameter::SchedType::LIFO>;
 };
 
 }  // namespace worklists
@@ -453,8 +453,8 @@ namespace runtime {
 // wl<galois::worklists::ParaMeter<> >
 template <class T, class FunctionTy, class ArgsTy>
 struct ForEachExecutor<galois::worklists::ParaMeter<T>, FunctionTy, ArgsTy>
-    : public ParaMeter::ParaMeterExecutor<T, FunctionTy, ArgsTy> {
-  using SuperTy = ParaMeter::ParaMeterExecutor<T, FunctionTy, ArgsTy>;
+    : public parameter::ParaMeterExecutor<T, FunctionTy, ArgsTy> {
+  using SuperTy = parameter::ParaMeterExecutor<T, FunctionTy, ArgsTy>;
   ForEachExecutor(const FunctionTy& f, const ArgsTy& args) : SuperTy(f, args) {}
 };
 
@@ -470,7 +470,7 @@ for_each_ParaMeter(const R& range, const F& func, const ArgsTuple& argsTuple) {
 
   using Tpl_ty = decltype(tpl);
 
-  using Exec = runtime::ParaMeter::ParaMeterExecutor<T, F, Tpl_ty>;
+  using Exec = runtime::parameter::ParaMeterExecutor<T, F, Tpl_ty>;
   Exec exec(func, tpl);
 
   exec.execute(range);

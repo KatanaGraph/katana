@@ -27,15 +27,15 @@
 
 void
 galois::Prealloc(size_t pagesPerThread, size_t bytes) {
-  size_t allocSize = (pagesPerThread * galois::runtime::activeThreads) +
-                     (bytes / substrate::allocSize());
+  size_t size = (pagesPerThread * galois::runtime::activeThreads) +
+                (bytes / substrate::allocSize());
   // If the user requested a non-zero allocation, at the very least
   // allocate a page.
-  if (allocSize == 0 && bytes > 0) {
-    allocSize = 1;
+  if (size == 0 && bytes > 0) {
+    size = 1;
   }
 
-  galois::Prealloc(allocSize);
+  galois::Prealloc(size);
 }
 
 void

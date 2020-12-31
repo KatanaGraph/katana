@@ -7,13 +7,14 @@ on:
   pull_request:
 
 jobs:
-  cancel_previous:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: styfle/cancel-workflow-action@0.6.0
-      if: ${{ github.event_name == 'pull_request' }}
-      with:
-        access_token: ${{ github.token }}
+# Canceling other workflows doesn't work on the open repo because it requires write permissions.
+#  cancel_previous:
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: styfle/cancel-workflow-action@0.6.0
+#      if: ${{ github.event_name == 'pull_request' }}
+#      with:
+#        access_token: ${{ github.token }}
 
   ###################################################################
   # lint
@@ -139,6 +140,13 @@ jobs:
       with:
         key: ${{matrix.os}}-conan-${{hashFiles('config/conanfile.py')}}
         path: ~/.conan/data
+    - name: Cache ccache objects
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-${{github.sha}}
+        restore-keys: |
+          ${{matrix.os}}-${{matrix.build_type}}-${{matrix.cxx}}-ccache-
+        path: ~/.ccache
 
     ###
     # Install platform-level dependencies (OS-specific)
@@ -161,6 +169,10 @@ jobs:
         conan install -if $HOME/build --build=missing config || \
           (rm -rf ~/.conan && .github/workflows/setup_conan.sh && \
              conan install -if $HOME/build --build=missing config)
+
+    - name: Setup ccache
+      run: |
+        ccache --max-files 400  # Roughly two builds worth of objects
 
     ###
     # Standard CMake build process
@@ -228,8 +240,9 @@ jobs:
     - name: Build
       run: |
         ccache --zero-stats
-        cmake --build $HOME/build --parallel 1
+        cmake --build $HOME/build --parallel 2
         ccache --show-stats
+        ccache --cleanup
 
     - name: Install
       run: DESTDIR=/tmp cmake --install $HOME/build

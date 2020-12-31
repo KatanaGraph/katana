@@ -7,13 +7,14 @@ on:
   pull_request:
 
 jobs:
-  cancel_previous:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: styfle/cancel-workflow-action@0.6.0
-      if: ${{ github.event_name == 'pull_request' }}
-      with:
-        access_token: ${{ github.token }}
+# Canceling other workflows doesn't work on the open repo because it requires write permissions.
+#  cancel_previous:
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: styfle/cancel-workflow-action@0.6.0
+#      if: ${{ github.event_name == 'pull_request' }}
+#      with:
+#        access_token: ${{ github.token }}
 
   build_and_package:
     runs-on: ${{matrix.os}}
@@ -52,9 +53,6 @@ jobs:
         restore-keys: |
           ${{matrix.os}}-ccache-
         path: ~/.ccache
-    - name: Setup ccache
-      run: |
-        ccache --max-files 600
 
     ###
     # Install platform-level dependencies (OS-specific)
@@ -68,7 +66,11 @@ jobs:
       run: |
         brew install ccache curl
       # TODO: Does brew install need bzip2, libz-dev, and make?
-    
+
+    - name: Setup ccache
+      run: |
+        ccache --max-files 400  # Roughly two builds worth of objects
+
     ###
     # Install Conda environment
     ###
@@ -92,7 +94,7 @@ jobs:
         bash "$HOME/.cache/miniconda/miniconda.sh" -f -b -p $HOME/miniconda
         export PATH=$HOME/miniconda/bin:$PATH
         source activate
-        conda install -y -q -c conda-forge conda-build
+        conda install -y -q -c conda-forge conda-build conda-verify
 
     ###
     # Conda build process for two packages

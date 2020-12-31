@@ -1,18 +1,19 @@
 #include "tsuba/tsuba.h"
 
 #include "GlobalState.h"
-#include "HttpNameServerClient.h"
-#include "MemoryNameServerClient.h"
 #include "RDGHandleImpl.h"
 #include "galois/Backtrace.h"
 #include "galois/CommBackend.h"
 #include "galois/Env.h"
+#include "tsuba/Errors.h"
+#include "tsuba/NameServerClient.h"
 #include "tsuba/Preload.h"
+#include "tsuba/file.h"
 
 namespace {
 
 galois::NullCommBackend default_comm_backend;
-tsuba::MemoryNameServerClient default_ns_client;
+std::unique_ptr<tsuba::NameServerClient> default_ns_client;
 
 galois::Result<std::vector<std::string>>
 FileList(const std::string& dir) {
@@ -231,34 +232,21 @@ tsuba::Stat(const std::string& rdg_name) {
   };
 }
 
-/// get a name server client based on the environment. If GALOIS_NS_HOST and
-/// GALOIS_NS_PORT are set, connect to HTTP server, else use the memory client
-/// (memory client provides no cross instance guarantees, good only for testing)
-galois::Result<std::unique_ptr<tsuba::NameServerClient>>
-tsuba::GetNameServerClient() {
-  std::string url;
-
-  galois::GetEnv("GALOIS_NS_URL", &url);
-
-  if (url.empty()) {
-    GALOIS_LOG_WARN(
-        "name server not configured, no consistency guarantees "
-        "between Katana instances");
-    return std::make_unique<MemoryNameServerClient>();
-  }
-  return HttpNameServerClient::Make(url);
-}
-
 galois::Result<void>
-tsuba::Init(galois::CommBackend* comm, tsuba::NameServerClient* ns) {
+tsuba::Init(galois::CommBackend* comm) {
   tsuba::Preload();
+  auto client_res = GlobalState::MakeNameServerClient();
+  if (!client_res) {
+    return client_res.error();
+  }
+  default_ns_client = std::move(client_res.value());
   galois::InitBacktrace(comm->ID);
-  return GlobalState::Init(comm, ns);
+  return GlobalState::Init(comm, default_ns_client.get());
 }
 
 galois::Result<void>
 tsuba::Init() {
-  return Init(&default_comm_backend, &default_ns_client);
+  return Init(&default_comm_backend);
 }
 
 galois::Result<void>

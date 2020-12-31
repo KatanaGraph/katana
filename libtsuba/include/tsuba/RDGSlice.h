@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "galois/Result.h"
+#include "galois/Uri.h"
 #include "galois/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/tsuba.h"

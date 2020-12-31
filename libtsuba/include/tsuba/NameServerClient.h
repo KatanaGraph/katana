@@ -42,6 +42,12 @@ public:
   virtual galois::Result<void> CheckHealth() = 0;
 };
 
+/// SetNameServerClientCB sets the callback that tsuba uses when
+/// the user requests a NameServerClient via `tsuba::GetNameServerClient`
+GALOIS_EXPORT void SetMakeNameServerClientCB(
+    std::function<galois::Result<std::unique_ptr<tsuba::NameServerClient>>()>
+        cb);
+
 }  // namespace tsuba
 
 #endif

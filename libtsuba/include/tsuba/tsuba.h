@@ -6,7 +6,6 @@
 #include "galois/CommBackend.h"
 #include "galois/Result.h"
 #include "galois/config.h"
-#include "tsuba/NameServerClient.h"
 
 namespace tsuba {
 
@@ -79,15 +78,8 @@ struct GALOIS_EXPORT RDGStat {
 /// Get Information about the graph
 GALOIS_EXPORT galois::Result<RDGStat> Stat(const std::string& rdg_name);
 
-/// get a name server client based on the environment. If GALOIS_NS_HOST and
-/// GALOIS_NS_PORT are set, connect to HTTP server, else use the memory client
-/// (memory client provides no cross instance guarantees, good only for testing)
-GALOIS_EXPORT galois::Result<std::unique_ptr<NameServerClient>>
-GetNameServerClient();
-
 // Setup and tear down
-GALOIS_EXPORT galois::Result<void> Init(
-    galois::CommBackend* comm, NameServerClient* ns);
+GALOIS_EXPORT galois::Result<void> Init(galois::CommBackend* comm);
 GALOIS_EXPORT galois::Result<void> Init();
 
 GALOIS_EXPORT galois::Result<void> Fini();

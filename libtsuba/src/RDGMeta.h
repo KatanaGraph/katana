@@ -110,8 +110,8 @@ public:
   friend void from_json(const nlohmann::json& j, RDGMeta& meta);
 };
 
-void to_json(nlohmann::json& j, const RDGMeta& meta);
-void from_json(const nlohmann::json& j, RDGMeta& meta);
+GALOIS_EXPORT void to_json(nlohmann::json& j, const RDGMeta& meta);
+GALOIS_EXPORT void from_json(const nlohmann::json& j, RDGMeta& meta);
 
 }  // namespace tsuba
 

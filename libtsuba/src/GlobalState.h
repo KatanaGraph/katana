@@ -15,6 +15,9 @@ namespace tsuba {
 
 class GlobalState {
   static std::unique_ptr<GlobalState> ref_;
+  static std::function<
+      galois::Result<std::unique_ptr<tsuba::NameServerClient>>()>
+      make_name_server_client_cb_;
 
   std::vector<FileStorage*> file_stores_;
   galois::CommBackend* comm_;
@@ -54,6 +57,16 @@ public:
       galois::CommBackend* comm, tsuba::NameServerClient* ns);
   static galois::Result<void> Fini();
   static const GlobalState& Get();
+
+  static void set_make_name_server_client_cb(
+      std::function<galois::Result<std::unique_ptr<tsuba::NameServerClient>>()>
+          cb) {
+    make_name_server_client_cb_ = cb;
+  }
+  static galois::Result<std::unique_ptr<tsuba::NameServerClient>>
+  MakeNameServerClient() {
+    return make_name_server_client_cb_();
+  }
 };
 
 galois::CommBackend* Comm();
@@ -62,7 +75,7 @@ NameServerClient* NS();
 
 /// Execute cb on one host, if it succeeds return success if not print
 /// the error and return MpiError
-galois::Result<void> OneHostOnly(
+GALOIS_EXPORT galois::Result<void> OneHostOnly(
     const std::function<galois::Result<void>()>& cb);
 
 }  // namespace tsuba

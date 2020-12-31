@@ -4,12 +4,24 @@
 #include <cassert>
 
 #include "FileStorage_internal.h"
+#include "MemoryNameServerClient.h"
 #include "galois/Logging.h"
 #include "galois/Result.h"
 #include "tsuba/Errors.h"
-#include "tsuba/NameServerClient.h"
+
+namespace {
+
+galois::Result<std::unique_ptr<tsuba::NameServerClient>>
+GetMemoryClient() {
+  return std::make_unique<tsuba::MemoryNameServerClient>();
+}
+
+}  // namespace
 
 std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref_ = nullptr;
+
+std::function<galois::Result<std::unique_ptr<tsuba::NameServerClient>>()>
+    tsuba::GlobalState::make_name_server_client_cb_ = GetMemoryClient;
 
 galois::CommBackend*
 tsuba::GlobalState::Comm() const {

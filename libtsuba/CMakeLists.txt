@@ -21,9 +21,9 @@ set(sources
   src/FileStorage.cpp
   src/FileView.cpp
   src/GlobalState.cpp
-  src/HttpNameServerClient.cpp
   src/LocalStorage.cpp
   src/MemoryNameServerClient.cpp
+  src/NameServerClient.cpp
   src/RDG.cpp
   src/RDGCore.cpp
   src/RDGHandleImpl.cpp

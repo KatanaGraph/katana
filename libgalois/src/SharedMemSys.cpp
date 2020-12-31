@@ -35,19 +35,10 @@ galois::NullCommBackend comm_backend;
 struct galois::SharedMemSys::Impl {
   galois::substrate::SharedMem shared_mem;
   galois::StatManager stat_manager;
-  std::unique_ptr<tsuba::NameServerClient> ns;
 };
 
 galois::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
-  auto ns_res = tsuba::GetNameServerClient();
-  if (!ns_res) {
-    GALOIS_LOG_FATAL(
-        "failed to initialize name server client: {}", ns_res.error());
-  }
-  impl_->ns = std::move(ns_res.value());
-
-  if (auto init_good = tsuba::Init(&comm_backend, impl_->ns.get());
-      !init_good) {
+  if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
     GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 

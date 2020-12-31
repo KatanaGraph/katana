@@ -28,11 +28,11 @@
 
 #include "galois/Bag.h"
 #include "galois/Galois.h"
+#include "galois/Mem.h"
 #include "galois/Timer.h"
 #include "galois/gIO.h"
 #include "galois/gdeque.h"
 #include "galois/gslist.h"
-#include "galois/runtime/Mem.h"
 
 template <typename C>
 auto constexpr needs_heap(int)

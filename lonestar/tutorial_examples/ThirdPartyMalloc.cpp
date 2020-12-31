@@ -22,7 +22,7 @@
 #include <iostream>
 
 #include "galois/Galois.h"
-#include "galois/runtime/Mem.h"
+#include "galois/Mem.h"
 
 int
 main() {

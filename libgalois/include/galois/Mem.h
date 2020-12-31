@@ -21,7 +21,7 @@
 #define GALOIS_LIBGALOIS_GALOIS_MEM_H_
 
 #include "galois/config.h"
-#include "galois/runtime/Mem.h"
+#include "galois/runtime/Allocators.h"
 
 namespace galois {
 

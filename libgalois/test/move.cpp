@@ -20,9 +20,9 @@
 #include "galois/Bag.h"
 #include "galois/FlatMap.h"
 #include "galois/LargeArray.h"
+#include "galois/Mem.h"
 #include "galois/gdeque.h"
 #include "galois/gslist.h"
-#include "galois/runtime/Mem.h"
 #include "galois/substrate/PerThreadStorage.h"
 
 struct MoveOnly {

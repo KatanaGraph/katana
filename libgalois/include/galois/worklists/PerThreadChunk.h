@@ -21,8 +21,8 @@
 #define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
 
 #include "galois/FixedSizeRing.h"
+#include "galois/Mem.h"
 #include "galois/Threads.h"
-#include "galois/runtime/Mem.h"
 #include "galois/substrate/CompilerSpecific.h"
 #include "galois/substrate/PerThreadStorage.h"
 #include "galois/substrate/PtrLock.h"

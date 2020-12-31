@@ -21,8 +21,8 @@
 #define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_CHUNK_H_
 
 #include "galois/FixedSizeRing.h"
+#include "galois/Mem.h"
 #include "galois/config.h"
-#include "galois/runtime/Mem.h"
 #include "galois/substrate/PaddedLock.h"
 #include "galois/worklists/WLCompileCheck.h"
 #include "galois/worklists/WorkListHelpers.h"

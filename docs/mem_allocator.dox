@@ -96,16 +96,16 @@ Several heap implementations are just wrappers around another heap implementatio
 Per-iteration allocator, from {@link include/galois/Mem.h}, shows how heap implementations can be combined together to form useful allocators:
 @snippet include/galois/Mem.h PerIterAllocTy example
 
-Another example, from {@link include/galois/runtime/Mem.h}, shows how the Fixed Size allocator is defined:
-@snippet include/galois/runtime/Mem.h FixedSizeAllocator example
+Another example, from {@link include/galois/runtime/Allocators.h}, shows how the Fixed Size allocator is defined:
+@snippet include/galois/runtime/Allocators.h FixedSizeAllocator example
 
 @subsection plugin-other-alloc Plugging in 3rd Party Allocators
 
 {@link galois::runtime::ExternalHeapAllocator} is a wrapper class that can be used to wrap any third-party heap implementation, and make it use-able by Galois and STL data structures. It takes the type-name of the heap implementation as a
 template parameter and a reference to it for instantiating the allocator object.
 
-As an example, we can have a C++ memory allocator by wrapping \b malloc and \b free, from C, as follows (see file {@link include/galois/runtime/Mem.h}):
-@snippet include/galois/runtime/Mem.h Example Third Party Allocator
+As an example, we can have a C++ memory allocator by wrapping \b malloc and \b free, from C, as follows (see file {@link include/galois/runtime/Allocators.h}):
+@snippet include/galois/runtime/Allocators.h Example Third Party Allocator
 
 Now we can wrap MallocHeap with galois::runtime::ExternalHeapAllocator, and use the wrapped allocator with STL containers. Below shows an example from {@link lonestar/tutorial_examples/ThirdPartyMalloc.cpp}:
 @snippet lonestar/tutorial_examples/ThirdPartyMalloc.cpp heap wrapping example

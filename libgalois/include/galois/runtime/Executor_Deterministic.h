@@ -29,6 +29,7 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "galois/Bag.h"
+#include "galois/Mem.h"
 #include "galois/ParallelSTL.h"
 #include "galois/Range.h"
 #include "galois/Threads.h"
@@ -38,7 +39,6 @@
 #include "galois/gslist.h"
 #include "galois/runtime/Executor_ForEach.h"
 #include "galois/runtime/LoopStatistics.h"
-#include "galois/runtime/Mem.h"
 #include "galois/runtime/UserContextAccess.h"
 #include "galois/substrate/Barrier.h"
 #include "galois/substrate/TerminationDetection.h"

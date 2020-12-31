@@ -25,11 +25,11 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include "galois/Mem.h"
 #include "galois/config.h"
 #include "galois/gIO.h"
 #include "galois/gstl.h"
 #include "galois/runtime/Executor_OnEach.h"
-#include "galois/runtime/Mem.h"
 #include "galois/substrate/PerThreadStorage.h"
 
 namespace galois {

@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Mem.h"
+#include "galois/Mem.h"
 
 #include <map>
 #include <mutex>

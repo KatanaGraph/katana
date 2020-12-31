@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_MEM_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_MEM_H_
+#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_ALLOCATORS_H_
+#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_ALLOCATORS_H_
 
 #include <cstddef>
 #include <cstdio>
@@ -45,8 +45,6 @@ extern unsigned activeThreads;
 
 //! Forces the given block to be paged into physical memory
 GALOIS_EXPORT void pageIn(void* buf, size_t len, size_t stride);
-//! Forces the given readonly block to be paged into physical memory
-GALOIS_EXPORT void pageInReadOnly(void* buf, size_t len, size_t stride);
 
 //! [Example Third Party Allocator]
 class MallocHeap {

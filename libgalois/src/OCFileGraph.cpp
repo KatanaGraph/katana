@@ -21,9 +21,9 @@
 
 #include <cassert>
 
+#include "galois/Mem.h"
 #include "galois/gIO.h"
 #include "galois/graphs/OCGraph.h"
-#include "galois/runtime/Mem.h"
 #ifdef __linux__
 #include <linux/mman.h>
 #endif

@@ -22,8 +22,8 @@
 #include <map>
 
 #include "galois/Galois.h"
+#include "galois/Mem.h"
 #include "galois/gIO.h"
-#include "galois/runtime/Mem.h"
 
 int
 main(int argc, char** argv) {

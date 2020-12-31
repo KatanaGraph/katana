@@ -21,8 +21,8 @@
 #define GALOIS_LIBGALOIS_GALOIS_GALOIS_H_
 
 #include "galois/Loops.h"
+#include "galois/Mem.h"
 #include "galois/SharedMemSys.h"
 #include "galois/config.h"
-#include "galois/runtime/Mem.h"
 
 #endif

@@ -1,0 +1,205 @@
+name: Conda Package and Python Formatting
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+
+jobs:
+  cancel_previous:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: styfle/cancel-workflow-action@0.6.0
+      if: ${{ github.event_name == 'pull_request' }}
+      with:
+        access_token: ${{ github.token }}
+
+  build_and_package:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-18.04
+        # - macOS-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    ###
+    # Caching between builds
+    ###
+    - name: Cache conda packages
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
+        path: |
+            ~/miniconda/pkgs/*.tar.bz2
+            !~/miniconda/pkgs/galois-*
+    - name: Cache miniconda
+      id: cache-miniconda
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+        path: ~/.cache/miniconda
+    - name: Cache ccache objects
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-ccache-${{github.sha}}
+        restore-keys: |
+          ${{matrix.os}}-ccache-
+        path: ~/.ccache
+    - name: Setup ccache
+      run: |
+        ccache --max-files 600
+
+    ###
+    # Install platform-level dependencies (OS-specific)
+    ###
+    - name: Install dependencies
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        sudo apt install -yq ccache curl libz-dev bzip2 make libnuma1
+    - name: Install dependencies
+      if: startsWith(matrix.os, 'macOS-')
+      run: |
+        brew install ccache curl
+      # TODO: Does brew install need bzip2, libz-dev, and make?
+    
+    ###
+    # Install Conda environment
+    ###
+    - name: Download miniconda
+      run: |
+        MINICONDA_FILE="$HOME/.cache/miniconda/miniconda.sh"
+        case ${{matrix.os}} in
+          ubuntu-*) PLAT=Linux-x86_64 ;;
+          macOS-*)  PLAT=MacOSX-x86_64 ;;
+          *)        echo "Unknown OS"; exit 10 ;;
+        esac
+
+        INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-${PLAT}.sh"
+        mkdir -p "$(dirname $MINICONDA_FILE)"
+        curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"
+      if: steps.cache-miniconda.outputs.cache-hit != 'true'
+    - name: Create directories
+      run: mkdir -p $HOME/build
+    - name: Install Conda dependencies
+      run: |
+        bash "$HOME/.cache/miniconda/miniconda.sh" -f -b -p $HOME/miniconda
+        export PATH=$HOME/miniconda/bin:$PATH
+        source activate
+        conda install -y -q -c conda-forge conda-build
+
+    ###
+    # Conda build process for two packages
+    ###
+    - name: Build galois Package
+      run: |
+        export PATH=$HOME/miniconda/bin:$PATH
+        source activate
+        ccache --zero-stats
+        conda build -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
+    - name: Build galois-python Package
+      run: |
+        export PATH=$HOME/miniconda/bin:$PATH
+        source activate
+        cd python
+        export GALOIS_DOCS_OUTPUT=$HOME/docs
+        conda build -c local -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
+        ccache --show-stats
+        ccache --cleanup
+
+    # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
+    # not seem to be expanded, so hard code HOME for now.
+    - name: Upload Python documentation
+      uses: actions/upload-artifact@v1
+      if: startsWith(matrix.os, 'ubuntu-')
+      with:
+        name: galois-python-docs-${{matrix.os}}
+        path: /home/runner/docs
+    - name: Upload built packages
+      uses: actions/upload-artifact@v1
+      if: startsWith(matrix.os, 'ubuntu-')
+      with:
+        name: conda-pkgs-${{matrix.os}}
+        path: /home/runner/build
+    - name: Upload built packages
+      uses: actions/upload-artifact@v1
+      if: startsWith(matrix.os, 'macOS-')
+      with:
+        name: conda-pkgs-${{matrix.os}}
+        path: /Users/runner/build
+
+
+  python_format:
+    name: Python formatting
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    ###
+    # Caching between builds
+    ###
+    - name: Cache conda packages
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
+        path: |
+            ~/miniconda/pkgs/*.tar.bz2
+            !~/miniconda/pkgs/galois-*
+    - name: Cache miniconda
+      id: cache-miniconda
+      uses: actions/cache@v2
+      with:
+        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+        path: ~/.cache/miniconda
+
+    ###
+    # Install platform-level dependencies (OS-specific)
+    ###
+    - name: Install dependencies
+      run: |
+        sudo apt install -yq curl
+
+    ###
+    # Install Conda environment
+    ###
+    - name: Download miniconda
+      run: |
+        MINICONDA_FILE="$HOME/.cache/miniconda/miniconda.sh"
+        case ${{matrix.os}} in
+          ubuntu-*) PLAT=Linux-x86_64 ;;
+          macOS-*)  PLAT=MacOSX-x86_64 ;;
+          *)        echo "Unknown OS"; exit 10 ;;
+        esac
+
+        INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-${PLAT}.sh"
+        mkdir -p "$(dirname $MINICONDA_FILE)"
+        curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"
+      if: steps.cache-miniconda.outputs.cache-hit != 'true'
+    - name: Install dependencies
+      run: |
+        bash "$HOME/.cache/miniconda/miniconda.sh" -f -b -p $HOME/miniconda
+        export PATH=$HOME/miniconda/bin:$PATH
+        source activate
+        conda install -y -q -c conda-forge black=19.10b0 pylint
+    - name: Check formating
+      run: |
+        export PATH=$HOME/miniconda/bin:$PATH
+        source activate
+        ./scripts/check_python_format.sh python tests
+#    - name: Check for lint
+#      run: |
+#        export PATH=$HOME/miniconda/bin:$PATH
+#        source activate
+#        ./scripts/check_python_lint.sh python

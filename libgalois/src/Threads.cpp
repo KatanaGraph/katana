@@ -22,11 +22,9 @@
 #include <algorithm>
 
 #include "galois/substrate/ThreadPool.h"
-namespace galois {
-namespace runtime {
+namespace galois::runtime {
 GALOIS_EXPORT unsigned int activeThreads = 1;
-}
-}  // namespace galois
+}  // namespace galois::runtime
 
 unsigned int
 galois::setActiveThreads(unsigned int num) noexcept {

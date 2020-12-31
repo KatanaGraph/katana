@@ -59,7 +59,7 @@ struct StatsFileManager {
       statsFH = fopen(statsFileName.c_str(), "w");
       GALOIS_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
-      galois::runtime::ParaMeter::StepStatsBase::printHeader(statsFH);
+      galois::runtime::parameter::StepStatsBase::printHeader(statsFH);
 
       fclose(statsFH);
     }
@@ -90,11 +90,11 @@ getStatsFileManager(void) {
 }
 
 FILE*
-galois::runtime::ParaMeter::getStatsFile(void) {
+galois::runtime::parameter::getStatsFile(void) {
   return getStatsFileManager().get();
 }
 
 void
-galois::runtime::ParaMeter::closeStatsFile(void) {
+galois::runtime::parameter::closeStatsFile(void) {
   getStatsFileManager().close();
 }

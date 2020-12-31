@@ -28,6 +28,8 @@
 
 #include <fstream>
 
+#include <boost/iterator/counting_iterator.hpp>
+
 #include "galois/Reduction.h"
 #include "galois/config.h"
 #include "galois/gIO.h"

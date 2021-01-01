@@ -1,7 +1,7 @@
-add_library(galois_shmem)
-add_library(Galois::shmem ALIAS galois_shmem)
-set_target_properties(galois_shmem PROPERTIES EXPORT_NAME shmem)
-add_dependencies(lib galois_shmem)
+add_library(katana_galois)
+add_library(Katana::galois ALIAS katana_galois)
+set_target_properties(katana_galois PROPERTIES EXPORT_NAME galois)
+add_dependencies(lib katana_galois)
 
 configure_file(src/Version.cpp.in Version.cpp @ONLY)
 
@@ -55,52 +55,52 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 else()
   include(CheckSchedSetAffinity)
   if (NOT SCHED_SETAFFINITY_FOUND)
-    if (GALOIS_STRICT_CONFIG)
+    if (KATANA_STRICT_CONFIG)
       message(FATAL_ERROR "Need sched_setaffinity")
     endif()
   endif()
   list(APPEND sources src/HWTopoLinux.cpp)
 endif()
 
-target_sources(galois_shmem PRIVATE ${sources})
+target_sources(katana_galois PRIVATE ${sources})
 
-target_include_directories(galois_shmem PUBLIC
+target_include_directories(katana_galois PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(galois_shmem PUBLIC tsuba)
-target_link_libraries(galois_shmem PRIVATE Threads::Threads)
-target_link_libraries(galois_shmem PUBLIC galois_support)
+target_link_libraries(katana_galois PUBLIC tsuba)
+target_link_libraries(katana_galois PRIVATE Threads::Threads)
+target_link_libraries(katana_galois PUBLIC katana_support)
 
 # Some careful defines and build directives to ensure things work on Windows
 # (see config.h):
 #
-# 1. When we build our shared library, GALOIS_EXPORT => dllexport
-# 2. When someone uses our shared library, GALOIS_EXPORT => dllimport
-# 3. When we build a static library, GALOIS_EXPORT => ""
+# 1. When we build our shared library, KATANA_EXPORT => dllexport
+# 2. When someone uses our shared library, KATANA_EXPORT => dllimport
+# 3. When we build a static library, KATANA_EXPORT => ""
 #
 # In the world of ELF, 1 and 2 can both be handled with visibility("default")
 if(BUILD_SHARED_LIBS)
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_SHARED_LIB_BUILDING)
+  target_compile_definitions(katana_galois PRIVATE KATANA_SHARED_LIB_BUILDING)
 else()
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_STATIC_LIB)
+  target_compile_definitions(katana_galois PRIVATE KATANA_STATIC_LIB)
 endif()
 
 if(SCHED_SETAFFINITY_FOUND)
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_SCHED_SETAFFINITY)
-  target_link_libraries(galois_shmem PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
+  target_compile_definitions(katana_galois PRIVATE KATANA_USE_SCHED_SETAFFINITY)
+  target_link_libraries(katana_galois PRIVATE ${SCHED_SETAFFINITY_LIBRARIES})
 endif()
 
 if(NUMA_FOUND)
-  target_compile_definitions(galois_shmem PRIVATE GALOIS_USE_NUMA)
-  target_link_libraries(galois_shmem PRIVATE ${NUMA_LIBRARY})
+  target_compile_definitions(katana_galois PRIVATE KATANA_USE_NUMA)
+  target_link_libraries(katana_galois PRIVATE ${NUMA_LIBRARY})
 else()
   message(WARNING "No NUMA Support.  Likely poor performance for multi-socket systems.")
 endif()
 
 if(VTune_FOUND)
-  target_link_libraries(galois_shmem PRIVATE ${VTune_LIBRARIES})
+  target_link_libraries(katana_galois PRIVATE ${VTune_LIBRARIES})
 endif()
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
@@ -115,8 +115,8 @@ install(
 )
 
 install(
-  TARGETS galois_shmem
-  EXPORT GaloisTargets
+  TARGETS katana_galois
+  EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT shlib

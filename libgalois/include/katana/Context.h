@@ -17,26 +17,25 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_CONTEXT_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_CONTEXT_H_
+#ifndef KATANA_LIBGALOIS_KATANA_CONTEXT_H_
+#define KATANA_LIBGALOIS_KATANA_CONTEXT_H_
 
 #include <cassert>
 #include <cstdlib>
 
 #include <boost/utility.hpp>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
 #include <csetjmp>
 #endif
 
-#include "galois/MethodFlags.h"
-#include "galois/gIO.h"
-#include "galois/substrate/PtrLock.h"
+#include "katana/MethodFlags.h"
+#include "katana/PtrLock.h"
+#include "katana/gIO.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 enum ConflictFlag {
   CONFLICT = -1,
@@ -51,20 +50,20 @@ class Lockable;
 
 [[noreturn]] inline void
 signalConflict(Lockable* = nullptr) {
-#if defined(GALOIS_USE_LONGJMP_ABORT)
+#if defined(KATANA_USE_LONGJMP_ABORT)
   std::longjmp(execFrame, CONFLICT);
   std::abort();  // shouldn't reach here after longjmp
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   throw CONFLICT;
 #endif
 }
 
 [[noreturn]] inline void
 signalFailSafe(void) {
-#if defined(GALOIS_USE_LONGJMP_ABORT)
-  std::longjmp(galois::runtime::execFrame, galois::runtime::REACHED_FAILSAFE);
+#if defined(KATANA_USE_LONGJMP_ABORT)
+  std::longjmp(katana::execFrame, katana::REACHED_FAILSAFE);
   std::abort();  // shouldn't reach here after longjmp
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   throw REACHED_FAILSAFE;
 #endif
 }
@@ -79,8 +78,8 @@ class LockManagerBase;
  * All objects that may be locked (nodes primarily) must inherit from
  * Lockable.
  */
-class GALOIS_EXPORT Lockable {
-  substrate::PtrLock<LockManagerBase> owner;
+class KATANA_EXPORT Lockable {
+  PtrLock<LockManagerBase> owner;
   //! Use an intrusive list to track neighborhood of a context without
   //! allocation overhead. Works for cases where a Lockable needs to be only in
   //! one context's neighborhood list
@@ -92,7 +91,7 @@ public:
   Lockable() : next(0) {}
 };
 
-class GALOIS_EXPORT LockManagerBase : private boost::noncopyable {
+class KATANA_EXPORT LockManagerBase : private boost::noncopyable {
 protected:
   enum AcquireStatus { FAIL, NEW_OWNER, ALREADY_OWNER };
 
@@ -131,20 +130,20 @@ protected:
   }
 };
 
-class GALOIS_EXPORT SimpleRuntimeContext : public LockManagerBase {
+class KATANA_EXPORT SimpleRuntimeContext : public LockManagerBase {
   //! The locks we hold
   Lockable* locks;
   bool customAcquire;
 
 protected:
-  friend void doAcquire(Lockable*, galois::MethodFlag);
+  friend void doAcquire(Lockable*, katana::MethodFlag);
 
   static SimpleRuntimeContext* getOwner(Lockable* lockable) {
     LockManagerBase* owner = LockManagerBase::getOwner(lockable);
     return static_cast<SimpleRuntimeContext*>(owner);
   }
 
-  virtual void subAcquire(Lockable* lockable, galois::MethodFlag m);
+  virtual void subAcquire(Lockable* lockable, katana::MethodFlag m);
 
   void addToNhood(Lockable* lockable) {
     assert(!lockable->next);
@@ -152,7 +151,7 @@ protected:
     locks = lockable;
   }
 
-  void acquire(Lockable* lockable, galois::MethodFlag m) {
+  void acquire(Lockable* lockable, katana::MethodFlag m) {
     AcquireStatus i;
     if (customAcquire) {
       subAcquire(lockable, m);
@@ -179,16 +178,16 @@ public:
 
 //! get the current conflict detection class, may be null if not in parallel
 //! region
-GALOIS_EXPORT SimpleRuntimeContext* getThreadContext();
+KATANA_EXPORT SimpleRuntimeContext* getThreadContext();
 
 //! used by the parallel code to set up conflict detection per thread
-GALOIS_EXPORT void setThreadContext(SimpleRuntimeContext* n);
+KATANA_EXPORT void setThreadContext(SimpleRuntimeContext* n);
 
 //! Helper function to decide if the conflict detection lock should be taken
 inline bool
-shouldLock(const galois::MethodFlag g) {
+shouldLock(const katana::MethodFlag g) {
   // Mask out additional "optional" flags
-  switch (g & galois::MethodFlag::INTERNAL_MASK) {
+  switch (g & katana::MethodFlag::INTERNAL_MASK) {
   case MethodFlag::UNPROTECTED:
   case MethodFlag::PREVIOUS:
     return false;
@@ -207,7 +206,7 @@ shouldLock(const galois::MethodFlag g) {
 
 //! actual locking function.  Will always lock.
 inline void
-doAcquire(Lockable* lockable, galois::MethodFlag m) {
+doAcquire(Lockable* lockable, katana::MethodFlag m) {
   SimpleRuntimeContext* ctx = getThreadContext();
   if (ctx)
     ctx->acquire(lockable, m);
@@ -216,24 +215,23 @@ doAcquire(Lockable* lockable, galois::MethodFlag m) {
 //! Master function which handles conflict detection
 //! used to acquire a lockable thing
 inline void
-acquire(Lockable* lockable, galois::MethodFlag m) {
+acquire(Lockable* lockable, katana::MethodFlag m) {
   if (shouldLock(m))
     doAcquire(lockable, m);
 }
 
 struct AlwaysLockObj {
   void operator()(Lockable* lockable) const {
-    doAcquire(lockable, galois::MethodFlag::WRITE);
+    doAcquire(lockable, katana::MethodFlag::WRITE);
   }
 };
 
 struct CheckedLockObj {
-  galois::MethodFlag m;
-  CheckedLockObj(galois::MethodFlag _m) : m(_m) {}
+  katana::MethodFlag m;
+  CheckedLockObj(katana::MethodFlag _m) : m(_m) {}
   void operator()(Lockable* lockable) const { acquire(lockable, m); }
 };
 
-}  // namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

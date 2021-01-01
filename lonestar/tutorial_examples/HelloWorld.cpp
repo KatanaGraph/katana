@@ -21,7 +21,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/Galois.h"
+#include "katana/Galois.h"
 
 //! [do_all example]
 struct HelloWorld {
@@ -35,7 +35,7 @@ helloWorld(int i) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 3) {
     std::cerr << "<num threads> <num of iterations>\n";
@@ -44,19 +44,19 @@ main(int argc, char** argv) {
   unsigned int numThreads = atoi(argv[1]);
   int n = atoi(argv[2]);
 
-  numThreads = galois::setActiveThreads(numThreads);
+  numThreads = katana::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " threads and " << n
             << " iterations\n";
 
   std::cout << "Using a lambda\n";
-  galois::do_all(
-      galois::iterate(0, n), [](int i) { std::cout << "Hello " << i << "\n"; });
+  katana::do_all(
+      katana::iterate(0, n), [](int i) { std::cout << "Hello " << i << "\n"; });
 
   std::cout << "Using a function object\n";
-  galois::do_all(galois::iterate(0, n), HelloWorld());
+  katana::do_all(katana::iterate(0, n), HelloWorld());
 
   std::cout << "Using a function pointer (discouraged)\n";
-  galois::do_all(galois::iterate(0, n), &helloWorld);
+  katana::do_all(katana::iterate(0, n), &helloWorld);
 
   //! [do_all example]
 

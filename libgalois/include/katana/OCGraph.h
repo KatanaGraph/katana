@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_OCGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_OCGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OCGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_OCGRAPH_H_
 
 #include <string>
 #include <type_traits>
@@ -26,14 +26,13 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/utility.hpp>
 
-#include "galois/LargeArray.h"
-#include "galois/LazyObject.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/optional.h"
+#include "katana/Details.h"
+#include "katana/LargeArray.h"
+#include "katana/LazyObject.h"
+#include "katana/config.h"
+#include "katana/optional.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Binds the segment parameter of an out-of-core graph so that it can be used in
@@ -356,7 +355,7 @@ public:
   };
 
 private:
-  galois::optional<segment_type> memorySegment;
+  katana::optional<segment_type> memorySegment;
 
   segment_type computeSegment(size_t startNode, size_t numEdges) {
     typedef typename OCFileGraph::edge_offset_iterator edge_offset_iterator;
@@ -404,7 +403,7 @@ private:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<!_A1 && !_A2>::type* = 0) {
-    galois::runtime::acquire(&nodeData[N], mflag);
+    katana::acquire(&nodeData[N], mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -428,7 +427,7 @@ public:
   }
 
   void keepInMemory() {
-    memorySegment = galois::optional<segment_type>(computeSegment(0, numEdges));
+    memorySegment = katana::optional<segment_type>(computeSegment(0, numEdges));
     load(*memorySegment, LazyObject<EdgeTy>::size_of::value);
   }
 
@@ -472,7 +471,7 @@ public:
 
   node_data_reference getData(
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     NodeInfo& NI = nodeData[N];
     acquireNode(N, mflag);
     return NI.getData();
@@ -481,7 +480,7 @@ public:
   edge_data_reference getEdgeData(
       const segment_type& segment, edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     return outGraph.getEdgeData<EdgeTy>(segment.out, ni);
   }
 
@@ -512,7 +511,7 @@ public:
       const segment_type& segment, GraphNode N,
       MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (katana::shouldLock(mflag)) {
       for (edge_iterator ii = outGraph.edge_begin(N), ee = outGraph.edge_end(N);
            ii != ee; ++ii) {
         acquireNode(outGraph.getEdgeDst(segment.out, *ii), mflag);
@@ -530,7 +529,7 @@ public:
   edge_data_reference getInEdgeData(
       const segment_type& segment, edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     return inGraph->getEdgeData<EdgeTy>(segment.in, ni);
   }
 
@@ -542,7 +541,7 @@ public:
       const segment_type& segment, GraphNode N,
       MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (katana::shouldLock(mflag)) {
       for (in_edge_iterator ii = inGraph->edge_begin(N),
                             ee = inGraph->edge_end(N);
            ii != ee; ++ii) {
@@ -579,7 +578,7 @@ public:
     inGraphStorage.fromFile(transpose);
     numNodes = outGraph.size();
     if (numNodes != inGraphStorage.size())
-      GALOIS_DIE(
+      KATANA_DIE(
           "graph does not have the same number of nodes as its transpose");
     numEdges = outGraph.sizeEdges();
     nodeData.create(numNodes);
@@ -597,7 +596,6 @@ readGraphDispatch(
   graph.createFrom(std::forward<Args>(args)...);
 }
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif

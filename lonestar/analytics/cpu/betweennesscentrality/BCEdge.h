@@ -52,10 +52,10 @@ struct BCEdge {
 
   void checkClear(int j) {
     if (level != kInfinity) {
-      galois::gError(j, " PROBLEM WITH LEVEL OF ", toString());
+      katana::gError(j, " PROBLEM WITH LEVEL OF ", toString());
     }
     if (val != 0) {
-      galois::gError(j, " PROBLEM WITH VAL OF ", toString());
+      katana::gError(j, " PROBLEM WITH VAL OF ", toString());
     }
   }
 

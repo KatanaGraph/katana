@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Bag.h"
-#include "galois/FlatMap.h"
-#include "galois/LargeArray.h"
-#include "galois/Mem.h"
-#include "galois/gdeque.h"
-#include "galois/gslist.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Bag.h"
+#include "katana/FlatMap.h"
+#include "katana/LargeArray.h"
+#include "katana/Mem.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/gdeque.h"
+#include "katana/gslist.h"
 
 struct MoveOnly {
   MoveOnly() = default;
@@ -62,7 +62,7 @@ testContainerA(T&& x, U&& y) {
 template <typename T, typename U>
 void
 testContainerAA(T&& x, U&& y) {
-  galois::runtime::FixedSizeHeap heap(sizeof(typename T::block_type));
+  katana::FixedSizeHeap heap(sizeof(typename T::block_type));
 
   T a = std::move(x);
   T b;
@@ -91,23 +91,23 @@ testContainerC(T&& x, U&& y) {
 
 int
 main() {
-  galois::SharedMemSys Galois_runtime;
-  // test(galois::FixedSizeBag<MoveOnly>());
-  // test(galois::ConcurrentFixedSizeBag<MoveOnly>());
-  // test(galois::FixedSizeRing<MoveOnly>());
-  test(galois::gdeque<MoveOnly>());
-  test(galois::gslist<MoveOnly>());
-  test(galois::concurrent_gslist<MoveOnly>());
-  test(galois::InsertBag<MoveOnly>());
-  test(galois::LargeArray<MoveOnly>());
-  test(galois::substrate::PerSocketStorage<MoveOnly>());
-  test(galois::substrate::PerThreadStorage<MoveOnly>());
+  katana::SharedMemSys Katana_runtime;
+  // test(katana::FixedSizeBag<MoveOnly>());
+  // test(katana::ConcurrentFixedSizeBag<MoveOnly>());
+  // test(katana::FixedSizeRing<MoveOnly>());
+  test(katana::gdeque<MoveOnly>());
+  test(katana::gslist<MoveOnly>());
+  test(katana::concurrent_gslist<MoveOnly>());
+  test(katana::InsertBag<MoveOnly>());
+  test(katana::LargeArray<MoveOnly>());
+  test(katana::PerSocketStorage<MoveOnly>());
+  test(katana::PerThreadStorage<MoveOnly>());
 
-  testContainerA(galois::gdeque<MoveOnly>(), MoveOnly());
-  testContainerAA(galois::gslist<MoveOnly>(), MoveOnly());
-  // testContainerAA(galois::concurrent_gslist<MoveOnly>(), MoveOnly());
-  testContainerA(galois::InsertBag<MoveOnly>(), MoveOnly());
-  testContainerC(galois::gdeque<MoveOnly>(), MoveOnly());
+  testContainerA(katana::gdeque<MoveOnly>(), MoveOnly());
+  testContainerAA(katana::gslist<MoveOnly>(), MoveOnly());
+  // testContainerAA(katana::concurrent_gslist<MoveOnly>(), MoveOnly());
+  testContainerA(katana::InsertBag<MoveOnly>(), MoveOnly());
+  testContainerC(katana::gdeque<MoveOnly>(), MoveOnly());
 
   return 0;
 }

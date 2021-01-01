@@ -17,37 +17,37 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/PerThreadStorage.h"
 
 #include <atomic>
 #include <mutex>
 
-#include "galois/gIO.h"
-#include "galois/substrate/PageAlloc.h"
+#include "katana/PageAlloc.h"
+#include "katana/gIO.h"
 
-GALOIS_EXPORT thread_local char* galois::substrate::ptsBase;
+KATANA_EXPORT thread_local char* katana::ptsBase;
 
-galois::substrate::PerBackend&
-galois::substrate::getPTSBackend() {
-  static galois::substrate::PerBackend b;
+katana::PerBackend&
+katana::getPTSBackend() {
+  static katana::PerBackend b;
   return b;
 }
 
-GALOIS_EXPORT thread_local char* galois::substrate::pssBase;
+KATANA_EXPORT thread_local char* katana::pssBase;
 
-galois::substrate::PerBackend&
-galois::substrate::getPPSBackend() {
-  static galois::substrate::PerBackend b;
+katana::PerBackend&
+katana::getPPSBackend() {
+  static katana::PerBackend b;
   return b;
 }
 
-const size_t ptAllocSize = galois::substrate::allocSize();
+const size_t ptAllocSize = katana::allocSize();
 inline void*
 alloc() {
   // alloc a single page, don't prefault
-  void* toReturn = galois::substrate::allocPages(1, true);
+  void* toReturn = katana::allocPages(1, true);
   if (toReturn == nullptr) {
-    GALOIS_DIE("per-thread storage out of memory");
+    KATANA_DIE("per-thread storage out of memory");
   }
   return toReturn;
 }
@@ -57,12 +57,12 @@ constexpr unsigned MAX_SIZE = 30;
 // expense of fragmentation by restricting all allocations to be cache-aligned.
 constexpr unsigned MIN_SIZE = 7;
 
-static_assert((1 << MIN_SIZE) == galois::substrate::GALOIS_CACHE_LINE_SIZE);
+static_assert((1 << MIN_SIZE) == katana::KATANA_CACHE_LINE_SIZE);
 
-galois::substrate::PerBackend::PerBackend() { freeOffsets.resize(MAX_SIZE); }
+katana::PerBackend::PerBackend() { freeOffsets.resize(MAX_SIZE); }
 
 unsigned
-galois::substrate::PerBackend::nextLog2(unsigned size) {
+katana::PerBackend::nextLog2(unsigned size) {
   unsigned i = MIN_SIZE;
   while ((1U << i) < size) {
     ++i;
@@ -74,7 +74,7 @@ galois::substrate::PerBackend::nextLog2(unsigned size) {
 }
 
 unsigned
-galois::substrate::PerBackend::allocOffset(const unsigned sz) {
+katana::PerBackend::allocOffset(const unsigned sz) {
   unsigned ll = nextLog2(sz);
   unsigned size = (1 << ll);
 
@@ -87,7 +87,7 @@ galois::substrate::PerBackend::allocOffset(const unsigned sz) {
   }
 
   if (invalid) {
-    GALOIS_DIE("allocating after delete");
+    KATANA_DIE("allocating after delete");
     return ptAllocSize;
   }
 
@@ -106,7 +106,7 @@ galois::substrate::PerBackend::allocOffset(const unsigned sz) {
     ;
 
   if (index == MAX_SIZE) {
-    GALOIS_DIE("per-thread storage out of memory");
+    KATANA_DIE("per-thread storage out of memory");
     return ptAllocSize;
   }
 
@@ -130,8 +130,7 @@ galois::substrate::PerBackend::allocOffset(const unsigned sz) {
 }
 
 void
-galois::substrate::PerBackend::deallocOffset(
-    const unsigned offset, const unsigned sz) {
+katana::PerBackend::deallocOffset(const unsigned offset, const unsigned sz) {
   unsigned ll = nextLog2(sz);
   unsigned size = (1 << ll);
   unsigned expected = offset + size;
@@ -142,7 +141,7 @@ galois::substrate::PerBackend::deallocOffset(
   }
 
   if (invalid) {
-    GALOIS_DIE("deallocing after delete");
+    KATANA_DIE("deallocing after delete");
     return;
   }
 
@@ -152,14 +151,14 @@ galois::substrate::PerBackend::deallocOffset(
 }
 
 void*
-galois::substrate::PerBackend::getRemote(unsigned thread, unsigned offset) {
+katana::PerBackend::getRemote(unsigned thread, unsigned offset) {
   char* rbase = heads[thread].load(std::memory_order_relaxed);
   assert(rbase);
   return &rbase[offset];
 }
 
 void
-galois::substrate::PerBackend::initCommon(unsigned maxT) {
+katana::PerBackend::initCommon(unsigned maxT) {
   if (!heads) {
     assert(ThreadPool::getTID() == 0);
     heads = new std::atomic<char*>[maxT] {};
@@ -167,7 +166,7 @@ galois::substrate::PerBackend::initCommon(unsigned maxT) {
 }
 
 char*
-galois::substrate::PerBackend::initPerThread(unsigned maxT) {
+katana::PerBackend::initPerThread(unsigned maxT) {
   initCommon(maxT);
   char* b = heads[ThreadPool::getTID()] = (char*)alloc();
   memset(b, 0, ptAllocSize);
@@ -175,7 +174,7 @@ galois::substrate::PerBackend::initPerThread(unsigned maxT) {
 }
 
 char*
-galois::substrate::PerBackend::initPerSocket(unsigned maxT) {
+katana::PerBackend::initPerSocket(unsigned maxT) {
   initCommon(maxT);
   unsigned id = ThreadPool::getTID();
   unsigned leader = ThreadPool::getLeader();
@@ -187,14 +186,14 @@ galois::substrate::PerBackend::initPerSocket(unsigned maxT) {
   char* expected = nullptr;
   // wait for leader to fix up socket
   while (heads[leader].compare_exchange_weak(expected, nullptr)) {
-    substrate::asmPause();
+    asmPause();
   }
   heads[id] = heads[leader].load();
   return heads[id];
 }
 
 void
-galois::substrate::initPTS(unsigned maxT) {
+katana::initPTS(unsigned maxT) {
   if (!ptsBase) {
     // unguarded initialization as initPTS will run in the master thread
     // before any other threads are generated

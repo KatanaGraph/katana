@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PERTHREADSTORAGE_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PERTHREADSTORAGE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PERTHREADSTORAGE_H_
+#define KATANA_LIBGALOIS_KATANA_PERTHREADSTORAGE_H_
 
 #include <cassert>
 #include <cstddef>
@@ -27,15 +27,15 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "galois/config.h"
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/PaddedLock.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/HWTopo.h"
+#include "katana/PaddedLock.h"
+#include "katana/ThreadPool.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
-class GALOIS_EXPORT PerBackend {
-  typedef substrate::SimpleLock Lock;
+class KATANA_EXPORT PerBackend {
+  typedef SimpleLock Lock;
 
   std::atomic<unsigned int> nextLoc{0};
   std::atomic<char*>* heads{nullptr};
@@ -78,12 +78,12 @@ public:
 };
 
 extern thread_local char* ptsBase;
-GALOIS_EXPORT PerBackend& getPTSBackend();
+KATANA_EXPORT PerBackend& getPTSBackend();
 
 extern thread_local char* pssBase;
-GALOIS_EXPORT PerBackend& getPPSBackend();
+KATANA_EXPORT PerBackend& getPPSBackend();
 
-GALOIS_EXPORT void initPTS(unsigned maxT);
+KATANA_EXPORT void initPTS(unsigned maxT);
 
 template <typename T>
 class PerThreadStorage {
@@ -293,5 +293,5 @@ public:
   unsigned size() const { return GetThreadPool().getMaxThreads(); }
 };
 
-}  // end namespace galois::substrate
+}  // end namespace katana
 #endif

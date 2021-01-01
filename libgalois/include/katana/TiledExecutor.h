@@ -17,22 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_TILEDEXECUTOR_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_TILEDEXECUTOR_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TILEDEXECUTOR_H_
+#define KATANA_LIBGALOIS_KATANA_TILEDEXECUTOR_H_
 
-#include "galois/Galois.h"
-#include "galois/LargeArray.h"
-#include "galois/NoDerefIterator.h"
-#include "galois/config.h"
+#include "katana/Galois.h"
+#include "katana/LargeArray.h"
+#include "katana/NoDerefIterator.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 template <typename Graph, bool UseExp = false>
 class Fixed2DGraphTiledExecutor {
   static constexpr int numDims = 2;  // code is specialized to 2
 
-  using SpinLock = galois::substrate::PaddedLock<true>;
+  using SpinLock = katana::PaddedLock<true>;
   using GNode = typename Graph::GraphNode;
   using iterator = typename Graph::iterator;
   using edge_iterator = typename Graph::edge_iterator;
@@ -73,19 +72,19 @@ class Fixed2DGraphTiledExecutor {
     GNode operator()(edge_iterator ii) const { return g->getEdgeDst(ii); }
   };
 
-  using no_deref_iterator = galois::NoDerefIterator<edge_iterator>;
+  using no_deref_iterator = katana::NoDerefIterator<edge_iterator>;
   using edge_dst_iterator =
       boost::transform_iterator<GetDst, no_deref_iterator>;
 
   Graph& g;
-  // std::array<galois::LargeArray<SpinLock>, numDims> locks;
-  // galois::LargeArray<Task> tasks;
+  // std::array<katana::LargeArray<SpinLock>, numDims> locks;
+  // katana::LargeArray<Task> tasks;
   std::array<std::vector<SpinLock>, numDims> locks;
   std::vector<Task> tasks;
   size_t numTasks;
   unsigned maxUpdates;
   bool useLocks;
-  galois::GAccumulator<unsigned> failedProbes;
+  katana::GAccumulator<unsigned> failedProbes;
 
   /**
    * Advance point p in the specified dimension by delta and account for
@@ -353,8 +352,8 @@ class Fixed2DGraphTiledExecutor {
 
     for (auto ii = task.startX; ii != task.endX; ++ii) {
       no_deref_iterator nbegin(
-          g.edge_begin(*ii, galois::MethodFlag::UNPROTECTED));
-      no_deref_iterator nend(g.edge_end(*ii, galois::MethodFlag::UNPROTECTED));
+          g.edge_begin(*ii, katana::MethodFlag::UNPROTECTED));
+      no_deref_iterator nend(g.edge_end(*ii, katana::MethodFlag::UNPROTECTED));
 
       // iterates over the edges, but edge_dst_iterator xforms it to the dest
       // node itself
@@ -400,19 +399,17 @@ class Fixed2DGraphTiledExecutor {
       start[i] = std::min(block[i] * tid, numBlocks[i] - 1);  // block to start
     }
 
-    unsigned coresPerSocket =
-        galois::substrate::GetThreadPool().getMaxCores() /
-        galois::substrate::GetThreadPool().getMaxSockets();
+    unsigned coresPerSocket = katana::GetThreadPool().getMaxCores() /
+                              katana::GetThreadPool().getMaxSockets();
 
     // if using locks, readjust start Y location of this thread to location of
     // the thread's socket
     if (useLocks) {
       start = {
-          {start[0],
-           std::min(
-               block[1] * galois::substrate::GetThreadPool().getSocket(tid) *
-                   coresPerSocket,
-               numBlocks[1] - 1)}};
+          {start[0], std::min(
+                         block[1] * katana::GetThreadPool().getSocket(tid) *
+                             coresPerSocket,
+                         numBlocks[1] - 1)}};
     }
 
     Point p = start;
@@ -484,11 +481,11 @@ class Fixed2DGraphTiledExecutor {
       Task& task = tasks[i];
       task.coord = {{i % numXBlocks, i / numXBlocks}};
       std::tie(task.startX, task.endX) =
-          galois::block_range(firstX, lastX, task.coord[0], numXBlocks);
+          katana::block_range(firstX, lastX, task.coord[0], numXBlocks);
       iterator s;
       iterator e;
       std::tie(s, e) =
-          galois::block_range(firstY, lastY, task.coord[1], numYBlocks);
+          katana::block_range(firstY, lastY, task.coord[1], numYBlocks);
       // Works for CSR graphs
       task.startY = *s;
       task.endYInclusive = *e - 1;
@@ -520,7 +517,7 @@ public:
    * Report the number of probe block failures to statistics.
    */
   ~Fixed2DGraphTiledExecutor() {
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "TiledExecutor", "ProbeFailures", failedProbes.reduce());
   }
 
@@ -554,13 +551,13 @@ public:
 
     Process<false, Function> p{this, fn};
 
-    galois::on_each(p);
+    katana::on_each(p);
 
     // TODO remove after worklist fix
     if (std::any_of(tasks.begin(), tasks.end(), [this](Task& t) {
           return t.updates.value < maxUpdates;
         })) {
-      galois::gWarn("Missing tasks");
+      katana::gWarn("Missing tasks");
     }
   }
 
@@ -592,17 +589,16 @@ public:
     maxUpdates = numIterations;
     useLocks = _useLocks;
     Process<true, Function> p{this, fn};
-    galois::on_each(p);
+    katana::on_each(p);
 
     // TODO remove after worklist fix
     if (std::any_of(tasks.begin(), tasks.end(), [this](Task& t) {
           return t.updates.value < maxUpdates;
         })) {
-      galois::gWarn("Missing tasks");
+      katana::gWarn("Missing tasks");
     }
   }
 };
 
-}  // namespace runtime
-}  // namespace galois
+}  // namespace katana
 #endif

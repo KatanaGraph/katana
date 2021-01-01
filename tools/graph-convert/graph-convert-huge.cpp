@@ -36,9 +36,9 @@
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/mpl/if.hpp>
 
-#include "galois/LargeArray.h"
-#include "galois/graphs/FileGraph.h"
-#include "galois/graphs/OfflineGraph.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
+#include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -178,7 +178,7 @@ go(std::istream& input) {
         [&edgeCount](uint64_t nodes, uint64_t) { edgeCount.resize(nodes); });
     input.clear();
     input.seekg(0, std::ios_base::beg);
-    galois::graphs::OfflineGraphWriter outFile(outputFilename, useSmallData);
+    katana::OfflineGraphWriter outFile(outputFilename, useSmallData);
     outFile.setCounts(edgeCount);
     perEdge(
         input,
@@ -202,8 +202,7 @@ go_edgesSorted(std::istream& input, uint64_t numNodes) {
     std::deque<uint64_t> edgeCount(numNodes, 0);
     input.clear();
     input.seekg(0, std::ios_base::beg);
-    galois::graphs::OfflineGraphWriter outFile(
-        outputFilename, useSmallData, numNodes);
+    katana::OfflineGraphWriter outFile(outputFilename, useSmallData, numNodes);
     outFile.setCounts(edgeCount);
     outFile.seekEdgesDstStart();
     uint64_t curr_src = 0;

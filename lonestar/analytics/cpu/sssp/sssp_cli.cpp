@@ -20,9 +20,9 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/analytics/sssp/sssp.h"
+#include "katana/analytics/sssp/sssp.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 namespace cll = llvm::cl;
 
@@ -102,10 +102,10 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
 
 template <typename Weight>
 static void
-OutputResults(galois::graphs::PropertyFileGraph* pfg) {
+OutputResults(katana::PropertyFileGraph* pfg) {
   auto r = pfg->NodePropertyTyped<Weight>("distance");
   if (!r) {
-    GALOIS_LOG_FATAL("Error getting results: {}", r.error().message());
+    KATANA_LOG_FATAL("Error getting results: {}", r.error().message());
   }
   auto results = r.value();
   assert(uint64_t(results->length()) == pfg->topology().num_nodes());
@@ -115,14 +115,14 @@ OutputResults(galois::graphs::PropertyFileGraph* pfg) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
@@ -130,12 +130,12 @@ main(int argc, char** argv) {
 
   if (startNode >= pfg->topology().num_nodes() ||
       reportNode >= pfg->topology().num_nodes()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "failed to set report: {} or failed to set source: {}", reportNode,
         startNode);
   }
 
-  galois::reportPageAlloc("MeminfoPre");
+  katana::reportPageAlloc("MeminfoPre");
 
   if (algo == SsspPlan::kDeltaStep || algo == SsspPlan::kDeltaTile ||
       algo == SsspPlan::kSerialDelta || algo == SsspPlan::kSerialDeltaTile) {
@@ -180,18 +180,18 @@ main(int argc, char** argv) {
     plan = SsspPlan();
     break;
   default:
-    GALOIS_LOG_FATAL("Invalid algorithm selected");
+    KATANA_LOG_FATAL("Invalid algorithm selected");
   }
 
   auto pg_result =
       Sssp(pfg.get(), startNode, edge_property_name, "distance", plan);
   if (!pg_result) {
-    GALOIS_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
+    KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
   }
 
   auto stats_result = SsspStatistics::Compute(pfg.get(), "distance");
   if (!stats_result) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Computing statistics: {}", stats_result.error().message());
   }
   auto stats = stats_result.value();
@@ -199,7 +199,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (stats.n_reached_nodes < pfg->topology().num_nodes()) {
-      GALOIS_LOG_WARN(
+      KATANA_LOG_WARN(
           "{} unvisited nodes; this is an error if the graph is strongly "
           "connected",
           pfg->topology().num_nodes() - stats.n_reached_nodes);
@@ -209,7 +209,7 @@ main(int argc, char** argv) {
         r) {
       std::cout << "Verification successful.\n";
     } else {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "verification failed: ", r.has_error() ? r.error().message() : "");
     }
   }
@@ -235,7 +235,7 @@ main(int argc, char** argv) {
       OutputResults<double>(pfg.get());
       break;
     default:
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "Unsupported type: {}", pfg->NodeProperty("distance")->type());
       break;
     }

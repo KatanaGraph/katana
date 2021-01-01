@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_FILE_H_
-#define GALOIS_LIBTSUBA_TSUBA_FILE_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_FILE_H_
+#define KATANA_LIBTSUBA_TSUBA_FILE_H_
 
 #include <cstdint>
 #include <future>
@@ -7,8 +7,8 @@
 #include <string_view>
 #include <unordered_set>
 
-#include "galois/Result.h"
-#include "galois/config.h"
+#include "katana/Result.h"
+#include "katana/config.h"
 
 namespace tsuba {
 
@@ -32,24 +32,24 @@ struct StatBuf {
 };
 
 // Returns an error file filename does not exist
-GALOIS_EXPORT galois::Result<void> FileStat(
+KATANA_EXPORT katana::Result<void> FileStat(
     const std::string& filename, StatBuf* s_buf);
 
 // Take whatever is in @data and put it a file called @uri
-GALOIS_EXPORT galois::Result<void> FileStore(
+KATANA_EXPORT katana::Result<void> FileStore(
     const std::string& uri, const uint8_t* data, uint64_t size);
 
 // Take whatever is in @data and start putting it a the file called @uri
-GALOIS_EXPORT std::future<galois::Result<void>> FileStoreAsync(
+KATANA_EXPORT std::future<katana::Result<void>> FileStoreAsync(
     const std::string& uri, const uint8_t* data, uint64_t size);
 
 // read a part of the file into a caller defined buffer
-GALOIS_EXPORT galois::Result<void> FileGet(
+KATANA_EXPORT katana::Result<void> FileGet(
     const std::string& filename, uint8_t* result_buffer, uint64_t begin,
     uint64_t size);
 
 template <typename StrType, typename T>
-static inline galois::Result<void>
+static inline katana::Result<void>
 FileGet(const StrType& filename, T* obj) {
   return FileGet(
       filename, reinterpret_cast<uint8_t*>(obj), /* NOLINT */
@@ -57,7 +57,7 @@ FileGet(const StrType& filename, T* obj) {
 }
 
 // start reading a part of the file into a caller defined buffer
-GALOIS_EXPORT std::future<galois::Result<void>> FileGetAsync(
+KATANA_EXPORT std::future<katana::Result<void>> FileGetAsync(
     const std::string& filename, uint8_t* result_buffer, uint64_t begin,
     uint64_t size);
 
@@ -70,7 +70,7 @@ GALOIS_EXPORT std::future<galois::Result<void>> FileGetAsync(
 ///
 /// \return future; files will be in `list` after this object
 /// reports its return value
-GALOIS_EXPORT std::future<galois::Result<void>> FileListAsync(
+KATANA_EXPORT std::future<katana::Result<void>> FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size = nullptr);
 
@@ -78,7 +78,7 @@ GALOIS_EXPORT std::future<galois::Result<void>> FileListAsync(
 /// \param directory is a base URI
 /// \param files is a set of file names relative to the directory that should be
 /// deleted
-GALOIS_EXPORT galois::Result<void> FileDelete(
+KATANA_EXPORT katana::Result<void> FileDelete(
     const std::string& directory, const std::unordered_set<std::string>& files);
 
 }  // namespace tsuba

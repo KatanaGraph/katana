@@ -2,15 +2,15 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/UserContext.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/UserContext.h"
 
 class ExampleWrappedWorklist {
 private:
-  galois::InsertBag<int> bag;
-  galois::substrate::PerThreadStorage<galois::UserContext<int>*> ctxPtr;
+  katana::InsertBag<int> bag;
+  katana::PerThreadStorage<katana::UserContext<int>*> ctxPtr;
   bool inParallelPhase;
 
 private:
@@ -35,8 +35,8 @@ public:
   void execute() {
     inParallelPhase = true;
 
-    galois::for_each(
-        galois::iterate(bag),
+    katana::for_each(
+        katana::iterate(bag),
         [&](int item, auto& ctx) {
           if (nullptr == *(ctxPtr.getLocal())) {
             *(ctxPtr.getLocal()) = &ctx;
@@ -48,7 +48,7 @@ public:
             this->enqueue(item + item);
           }
         },
-        galois::loopname("execute"), galois::disable_conflict_detection());
+        katana::loopname("execute"), katana::disable_conflict_detection());
 
     inParallelPhase = false;
     reset();
@@ -57,10 +57,10 @@ public:
 
 int
 main(int argc, char* argv[]) {
-  std::unique_ptr<galois::SharedMemSys> G = LonestarStart(argc, argv);
+  std::unique_ptr<katana::SharedMemSys> G = LonestarStart(argc, argv);
 
   ExampleWrappedWorklist q;
-  for (unsigned i = 0; i < galois::getActiveThreads(); i++) {
+  for (unsigned i = 0; i < katana::getActiveThreads(); i++) {
     q.enqueue(i + 1);
   }
   q.execute();

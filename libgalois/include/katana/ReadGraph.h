@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_READGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_READGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_READGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_READGRAPH_H_
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/Details.h"
+#include "katana/FileGraph.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
+#include "katana/config.h"
 
-namespace galois::graphs {
+namespace katana {
 
 /**
  * Allocates and constructs a graph from a file. Tries to balance
@@ -78,7 +78,7 @@ readGraphDispatch(
   graph.allocateFrom(f);
 
   ReadGraphConstructFrom<GraphTy> reader(graph, f, readUnweighted);
-  galois::on_each(reader);
+  katana::on_each(reader);
 }
 
 template <typename GraphTy, typename Aux>
@@ -123,10 +123,10 @@ readGraphDispatch(GraphTy& graph, read_with_aux_graph_tag, FileGraph& f) {
   graph.allocateFrom(f, aux);
 
   ReadGraphConstructNodesFrom<GraphTy, Aux> nodeReader(graph, f, aux);
-  galois::on_each(nodeReader);
+  katana::on_each(nodeReader);
 
   ReadGraphConstructEdgesFrom<GraphTy, Aux> edgeReader(graph, f, aux);
-  galois::on_each(edgeReader);
+  katana::on_each(edgeReader);
 }
 
 template <typename GraphTy, typename Aux>
@@ -159,31 +159,31 @@ readGraphDispatch(GraphTy& graph, read_with_aux_first_graph_tag, FileGraph& f) {
   typedef typename GraphTy::ReadGraphAuxData Aux;
   constexpr static const bool profile = false;
 
-  galois::CondStatTimer<profile> TAlloc("AllocateAux");
+  katana::CondStatTimer<profile> TAlloc("AllocateAux");
   TAlloc.start();
   Aux* auxPtr = new Aux;
   graph.allocateFrom(f, *auxPtr);
   TAlloc.stop();
 
-  galois::CondStatTimer<profile> TNode("ConstructNode");
+  katana::CondStatTimer<profile> TNode("ConstructNode");
   TNode.start();
   ReadGraphConstructNodesFrom<GraphTy, Aux> nodeReader(graph, f, *auxPtr);
-  galois::on_each(nodeReader);
+  katana::on_each(nodeReader);
   TNode.stop();
 
-  galois::CondStatTimer<profile> TOutEdge("ConstructOutEdge");
+  katana::CondStatTimer<profile> TOutEdge("ConstructOutEdge");
   TOutEdge.start();
   ReadGraphConstructOutEdgesFrom<GraphTy, Aux> outEdgeReader(graph, f, *auxPtr);
-  galois::on_each(outEdgeReader);
+  katana::on_each(outEdgeReader);
   TOutEdge.stop();
 
-  galois::CondStatTimer<profile> TInEdge("ConstructInEdge");
+  katana::CondStatTimer<profile> TInEdge("ConstructInEdge");
   TInEdge.start();
   ReadGraphConstructInEdgesFrom<GraphTy, Aux> inEdgeReader(graph, f, *auxPtr);
-  galois::on_each(inEdgeReader);
+  katana::on_each(inEdgeReader);
   TInEdge.stop();
 
-  galois::CondStatTimer<profile> TDestruct("DestructAux");
+  katana::CondStatTimer<profile> TDestruct("DestructAux");
   TDestruct.start();
   delete auxPtr;
   TDestruct.stop();
@@ -241,6 +241,6 @@ readGraphDispatch(
   readGraphDispatch(graph, tag1, f1);
 }
 
-}  // namespace galois::graphs
+}  // namespace katana
 
 #endif

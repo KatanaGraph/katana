@@ -19,7 +19,7 @@
 
 #include <cstdlib>
 
-#include "galois/substrate/SimpleLock.h"
+#include "katana/SimpleLock.h"
 
 volatile int V;
 
@@ -30,7 +30,7 @@ main(int argc, char** argv) {
     M = atoi(argv[1]);
   if (!M)
     M = 1000000000;
-  galois::substrate::SimpleLock L;
+  katana::SimpleLock L;
   for (unsigned x = 0; x < M; ++x) {
     V = 0;
     L.lock();

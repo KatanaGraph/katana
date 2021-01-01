@@ -17,18 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_LOCALQUEUE_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_LOCALQUEUE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LOCALQUEUE_H_
+#define KATANA_LIBGALOIS_KATANA_LOCALQUEUE_H_
 
 #include <type_traits>
 
 #include <boost/mpl/if.hpp>
 
-#include "galois/config.h"
-#include "galois/worklists/Simple.h"
+#include "katana/Simple.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 template <typename T = int>
 struct NoGlobalQueue {
@@ -59,7 +58,7 @@ struct LocalQueue : private boost::noncopyable {
 
 private:
   typedef typename Local::template rethread<false> lWLTy;
-  substrate::PerThreadStorage<lWLTy> local;
+  PerThreadStorage<lWLTy> local;
   Global global;
 
   template <
@@ -79,12 +78,12 @@ private:
   }
 
   template <bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  galois::optional<T> popGlobal(typename std::enable_if<Enable>::type* = 0) {
-    return galois::optional<value_type>();
+  katana::optional<T> popGlobal(typename std::enable_if<Enable>::type* = 0) {
+    return katana::optional<value_type>();
   }
 
   template <bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  galois::optional<T> popGlobal(typename std::enable_if<!Enable>::type* = 0) {
+  katana::optional<T> popGlobal(typename std::enable_if<!Enable>::type* = 0) {
     return global.pop();
   }
 
@@ -103,16 +102,15 @@ public:
     pushGlobal(range);
   }
 
-  galois::optional<value_type> pop() {
-    galois::optional<value_type> ret = local.getLocal()->pop();
+  katana::optional<value_type> pop() {
+    katana::optional<value_type> ret = local.getLocal()->pop();
     if (ret)
       return ret;
     return popGlobal();
   }
 };
-GALOIS_WLCOMPILECHECK(LocalQueue)
+KATANA_WLCOMPILECHECK(LocalQueue)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

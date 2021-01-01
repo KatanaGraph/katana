@@ -1,20 +1,20 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 
 #include <tuple>
 
 #include <arrow/type_fwd.h>
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/NoDerefIterator.h"
-#include "galois/Properties.h"
-#include "galois/Result.h"
-#include "galois/Traits.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/PropertyViews.h"
+#include "katana/Details.h"
+#include "katana/NoDerefIterator.h"
+#include "katana/Properties.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyViews.h"
+#include "katana/Result.h"
+#include "katana/Traits.h"
 
-namespace galois::graphs {
+namespace katana {
 
 /// A property graph is a graph that has properties associated with its nodes
 /// and edges. A property has a name and value. Its value may be a primitive
@@ -190,11 +190,11 @@ public:
    * @returns iterator to the edge with id "node_to_find" if present else return "end" iterator
    */
 template <typename GraphTy>
-GALOIS_EXPORT typename GraphTy::edge_iterator
+KATANA_EXPORT typename GraphTy::edge_iterator
 FindEdgeSortedByDest(
     const GraphTy& graph, typename GraphTy::Node node,
     typename GraphTy::Node node_to_find) {
-  auto edge_matched = galois::graphs::FindEdgeSortedByDest(
+  auto edge_matched = katana::FindEdgeSortedByDest(
       &graph.GetPropertyFileGraph(), node, node_to_find);
   return typename GraphTy::edge_iterator(edge_matched);
 }
@@ -229,6 +229,6 @@ PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
       pfg->edge_schema()->field_names());
 }
 
-}  // namespace galois::graphs
+}  // namespace katana
 
 #endif

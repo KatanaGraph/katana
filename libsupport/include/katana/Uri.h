@@ -1,17 +1,17 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_URI_H_
-#define GALOIS_LIBSUPPORT_GALOIS_URI_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_URI_H_
+#define KATANA_LIBSUPPORT_KATANA_URI_H_
 
 #include <string>
 #include <string_view>
 
 #include <fmt/format.h>
 
-#include "galois/Result.h"
-#include "galois/config.h"
+#include "katana/Result.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
-class GALOIS_EXPORT Uri {
+class KATANA_EXPORT Uri {
   std::string scheme_;
   std::string path_;
   std::string string_;
@@ -52,18 +52,18 @@ public:
   /// XXXX is a random alpha numeric string
   Uri RandFile(std::string_view prefix) const;
 
-  GALOIS_EXPORT friend Uri operator+(const Uri& lhs, char rhs);
+  KATANA_EXPORT friend Uri operator+(const Uri& lhs, char rhs);
 };
 
-GALOIS_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);
-GALOIS_EXPORT bool operator!=(const Uri& lhs, const Uri& rhs);
+KATANA_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);
+KATANA_EXPORT bool operator!=(const Uri& lhs, const Uri& rhs);
 
-}  // namespace galois
+}  // namespace katana
 
 template <>
-struct GALOIS_EXPORT fmt::formatter<galois::Uri> : formatter<std::string> {
+struct KATANA_EXPORT fmt::formatter<katana::Uri> : formatter<std::string> {
   template <typename FormatContext>
-  auto format(const galois::Uri& uri, FormatContext& ctx) {
+  auto format(const katana::Uri& uri, FormatContext& ctx) {
     return formatter<std::string>::format(uri.string(), ctx);
   }
 };

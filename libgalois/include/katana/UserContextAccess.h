@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_USERCONTEXTACCESS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_USERCONTEXTACCESS_H_
+#define KATANA_LIBGALOIS_KATANA_USERCONTEXTACCESS_H_
 
-#include "galois/UserContext.h"
-#include "galois/config.h"
+#include "katana/UserContext.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 //! Backdoor to allow runtime methods to access private data in UserContext
 template <typename T>
-class UserContextAccess : public galois::UserContext<T> {
+class UserContextAccess : public katana::UserContext<T> {
 public:
-  typedef galois::UserContext<T> SuperTy;
+  typedef katana::UserContext<T> SuperTy;
   typedef typename SuperTy::PushBufferTy PushBufferTy;
   typedef typename SuperTy::FastPushBack FastPushBack;
 
@@ -48,7 +47,6 @@ public:
   void resetFirstPass(void) { SuperTy::__resetFirstPass(); }
 };
 
-}  // namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

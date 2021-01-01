@@ -1,5 +1,5 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_TRANSFORMS_H
-#define GALOIS_TOOLS_GRAPH_CONVERT_TRANSFORMS_H
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_TRANSFORMS_H
+#define KATANA_TOOLS_GRAPH_CONVERT_TRANSFORMS_H
 
 #include <memory>
 #include <string>
@@ -9,9 +9,9 @@
 #include <arrow/api.h>
 #include <arrow/type.h>
 
-#include "galois/graphs/PropertyFileGraph.h"
+#include "katana/PropertyFileGraph.h"
 
-namespace galois {
+namespace katana {
 
 /// A ColumnTransformer rewrites a column when matches is true.
 class ColumnTransformer {
@@ -81,9 +81,9 @@ struct ConvertDateTime : public ColumnTransformer {
 };
 
 void ApplyTransforms(
-    galois::graphs::PropertyFileGraph* graph,
+    katana::PropertyFileGraph* graph,
     const std::vector<std::unique_ptr<ColumnTransformer>>& transformers);
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

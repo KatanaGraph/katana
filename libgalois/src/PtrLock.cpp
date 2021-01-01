@@ -17,10 +17,10 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PtrLock.h"
+#include "katana/PtrLock.h"
 
 void
-galois::substrate::internal::ptr_slow_lock(std::atomic<uintptr_t>& _l) {
+katana::internal::ptr_slow_lock(std::atomic<uintptr_t>& _l) {
   uintptr_t oldval;
   do {
     while ((_l.load(std::memory_order_acquire) & 1) != 0) {

@@ -21,9 +21,9 @@
 #include <iostream>
 #include <vector>
 
-#include "galois/Galois.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/OfflineGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -62,7 +62,7 @@ static cll::opt<int> numBins(
 static cll::opt<int> columns(
     "columns", cll::desc("Columns for sparsity"), cll::init(80));
 
-typedef galois::graphs::OfflineGraph Graph;
+typedef katana::OfflineGraph Graph;
 typedef Graph::GraphNode GNode;
 
 void
@@ -134,7 +134,7 @@ doSparsityPattern(
 
   for (int i = 0; i < columns; ++i) {
     std::vector<bool> row(columns);
-    auto p = galois::block_range(graph.begin(), graph.end(), i, columns);
+    auto p = katana::block_range(graph.begin(), graph.end(), i, columns);
     for (auto ii = p.first, ei = p.second; ii != ei; ++ii) {
       for (auto jj : graph.edges(*ii)) {
         row[graph.getEdgeDst(jj) / blockSize] = true;
@@ -171,7 +171,7 @@ doInDegreeHistogram(Graph& graph) {
 }
 
 struct EdgeComp {
-  typedef galois::graphs::EdgeSortValue<GNode, void> Edge;
+  typedef katana::EdgeSortValue<GNode, void> Edge;
 
   bool operator()(const Edge& a, const Edge& b) const { return a.dst < b.dst; }
 };
@@ -203,7 +203,7 @@ doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
   // hists.emplace_back();
   // auto hist = &hists.back();
   // int curHist = 0;
-  // auto p = galois::block_range(
+  // auto p = katana::block_range(
   //     boost::counting_iterator<size_t>(0),
   //     boost::counting_iterator<size_t>(graph.sizeEdges()),
   //     curHist,
@@ -228,7 +228,7 @@ doSortedLogOffsetHistogram([[maybe_unused]] Graph& graph) {
   //       hists.emplace_back();
   //       hist = &hists.back();
   //       curHist += 1;
-  //       p = galois::block_range(
+  //       p = katana::block_range(
   //           boost::counting_iterator<size_t>(0),
   //           boost::counting_iterator<size_t>(graph.sizeEdges()),
   //           curHist,

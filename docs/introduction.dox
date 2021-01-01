@@ -37,7 +37,7 @@ In addition, users can create their own data structures, as listed out in chapte
 @section exec_model Galois Execution Model
 
 Galois implements a serial/parallel execution model implicitly. A Galois program starts execution like a serial program with a single thread in the
-main method. Upon Galois library initialization (explained in section \ref galois_as_lib below) a thread pool is created, but all threads except
+main method. Upon Galois library initialization (explained in section \ref katana_as_lib below) a thread pool is created, but all threads except
 the master thread go to sleep and the execution proceeds serially until it
 encounters a parallel loop construct. Upon encountering a parallel loop construct, Galois
 wakes up the threads in the thread pool and hands off work to them. Upon
@@ -48,15 +48,15 @@ The number of threads in the thread pool that Galois creates is equal to the num
 of cores or hardware threads in case of hyper threading. A user may choose to run
 the program with lesser number of threads, but not more. 
 
-@image html galois_execution_model.png "Galois Execution Model"
+@image html katana_execution_model.png "Galois Execution Model"
 
-@section galois_as_lib Galois as a Library
+@section katana_as_lib Galois as a Library
 
 Galois has been implemented as a C++ library, therefore, other libraries and
 programs can use it. However, before using any Galois features, they must
-initialize galois by creating an object of type galois::SharedMemSys. Similarly,
+initialize galois by creating an object of type katana::SharedMemSys. Similarly,
 all Galois objects (objects of types from Galois library) must destruct before the
-galois::SharedMemSys object destructs. 
+katana::SharedMemSys object destructs. 
 
 @section rest_of Rest of the Manual
 

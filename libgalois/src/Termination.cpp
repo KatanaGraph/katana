@@ -17,25 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Logging.h"
-#include "galois/substrate/TerminationDetection.h"
+#include "katana/Logging.h"
+#include "katana/TerminationDetection.h"
 
 // vtable anchoring
-galois::substrate::TerminationDetection::~TerminationDetection() = default;
+katana::TerminationDetection::~TerminationDetection() = default;
 
-static galois::substrate::TerminationDetection* kTerminationDetection = nullptr;
+static katana::TerminationDetection* kTerminationDetection = nullptr;
 
 void
-galois::substrate::internal::SetTerminationDetection(
-    galois::substrate::TerminationDetection* t) {
-  GALOIS_LOG_VASSERT(
+katana::internal::SetTerminationDetection(katana::TerminationDetection* t) {
+  KATANA_LOG_VASSERT(
       !(kTerminationDetection && t),
       "Double initialization of TerminationDetection");
   kTerminationDetection = t;
 }
 
-galois::substrate::TerminationDetection&
-galois::substrate::GetTerminationDetection(unsigned active_threads) {
+katana::TerminationDetection&
+katana::GetTerminationDetection(unsigned active_threads) {
   kTerminationDetection->Init(active_threads);
   return *kTerminationDetection;
 }

@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_LAZYARRAY_H_
-#define GALOIS_LIBGALOIS_GALOIS_LAZYARRAY_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LAZYARRAY_H_
+#define KATANA_LIBGALOIS_KATANA_LAZYARRAY_H_
 
 #include <algorithm>
 #include <cstddef>
@@ -27,10 +27,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "galois/LazyObject.h"
-#include "galois/config.h"
+#include "katana/LazyObject.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * This is a container that encapsulates space for a constant size array.  The
@@ -122,5 +122,5 @@ public:
   void destroy(size_type __n) { (get(__n))->~_Tp(); }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from galois.atomic import (
+from katana.atomic import (
     GAccumulator,
     GReduceMax,
     GReduceMin,
@@ -12,8 +12,8 @@ from galois.atomic import (
     atomic_max,
     atomic_min,
 )
-from galois.datastructures import LargeArray
-from galois.loops import do_all_operator, do_all
+from katana.datastructures import LargeArray
+from katana.loops import do_all_operator, do_all
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),

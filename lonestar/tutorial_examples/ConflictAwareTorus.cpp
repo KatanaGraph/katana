@@ -27,8 +27,8 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/Galois.h"
-#include "galois/LargeArray.h"
+#include "katana/Galois.h"
+#include "katana/LargeArray.h"
 
 template <typename T>
 class Torus2D {
@@ -36,7 +36,7 @@ class Torus2D {
   //************************************************************************
   // internal type to combine user data with Lockable object
   //************************************************************************
-  struct NodeData : public galois::runtime::Lockable {
+  struct NodeData : public katana::Lockable {
   public:
     using reference = T&;
 
@@ -51,9 +51,9 @@ class Torus2D {
   //! [Array of internal type]
   size_t numRows, numCols;
 
-  // use galois::LargeArray for NUMA-aware allocation
+  // use katana::LargeArray for NUMA-aware allocation
   // will allocate numRows*numCols elements in constructors
-  galois::LargeArray<NodeData> data;
+  katana::LargeArray<NodeData> data;
   //! [Array of internal type]
 
   //! [Types for STL]
@@ -104,12 +104,12 @@ public:
   // functions to acquire node ownership
   //************************************************************************
   void acquireNode(
-      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+      TorusNode n, katana::MethodFlag mflag = katana::MethodFlag::WRITE) {
     // sanity check
     assert(n < size());
 
     // use this call to detect conflicts and handling aborts
-    galois::runtime::acquire(&data[n], mflag);
+    katana::acquire(&data[n], mflag);
   }
   //! [Acquire node ownership]
 
@@ -118,7 +118,7 @@ public:
   // function to access node data
   //************************************************************************
   typename NodeData::reference getData(
-      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+      TorusNode n, katana::MethodFlag mflag = katana::MethodFlag::WRITE) {
     acquireNode(n, mflag);
 
     // use the internal wrapper type to encapsulate users from Lockable objects
@@ -159,7 +159,7 @@ public:
   // similar to edge_begin(), edge_end() or edges() in a general graph
   //************************************************************************
   void acquireAllNeighbors(
-      TorusNode n, galois::MethodFlag mflag = galois::MethodFlag::WRITE) {
+      TorusNode n, katana::MethodFlag mflag = katana::MethodFlag::WRITE) {
     acquireNode(*upNeighbor(n), mflag);
     acquireNode(*downNeighbor(n), mflag);
     acquireNode(*leftNeighbor(n), mflag);
@@ -170,7 +170,7 @@ public:
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 4) {
     std::cerr << "Usage: " << argv[0]
@@ -178,7 +178,7 @@ main(int argc, char* argv[]) {
     return 1;
   }
 
-  galois::setActiveThreads(std::atoi(argv[3]));
+  katana::setActiveThreads(std::atoi(argv[3]));
 
   //! [Use torus]
   using Torus = Torus2D<unsigned int>;
@@ -186,17 +186,17 @@ main(int argc, char* argv[]) {
 
   Torus torus(std::atoi(argv[1]), std::atoi(argv[2]));
 
-  galois::do_all(
-      galois::iterate(
+  katana::do_all(
+      katana::iterate(
           size_t{0},
           torus.size()),  // range as a pair of unsigned integers
       [&](TorusNode n) { torus.getData(n) = 0; }  // operator
       ,
-      galois::loopname("do_all_torus_reset_self")  // options
+      katana::loopname("do_all_torus_reset_self")  // options
   );
 
-  galois::for_each(
-      galois::iterate(
+  katana::for_each(
+      katana::iterate(
           torus),  // range as a container. assuming begin() and end()
       [&](TorusNode n, auto&) {  // operator
         // cautious point
@@ -207,18 +207,18 @@ main(int argc, char* argv[]) {
         torus.getData(*torus.leftNeighbor(n)) += 1;
         torus.getData(*torus.rightNeighbor(n)) += 1;
       },
-      galois::loopname("for_each_torus_add_neighbors")  // options
+      katana::loopname("for_each_torus_add_neighbors")  // options
       ,
-      galois::no_pushes());
+      katana::no_pushes());
   //! [Use torus]
 
   //! [Turn off conflict detection]
   // serial verification, no conflict is possible
   size_t numWrongAnswer = 0;
   for (auto n : torus) {
-    // use galois::MethodFlag::UNPROTECTED to notify Galois runtime
+    // use katana::MethodFlag::UNPROTECTED to notify Galois runtime
     // that do not acquire lock for this call
-    if (torus.getData(n, galois::MethodFlag::UNPROTECTED) != 4) {
+    if (torus.getData(n, katana::MethodFlag::UNPROTECTED) != 4) {
       numWrongAnswer++;
     }
   }

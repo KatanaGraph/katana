@@ -20,12 +20,12 @@
 #ifndef METIS_H_
 #define METIS_H_
 
-#include "galois/graphs/LC_Morph_Graph.h"
+#include "katana/LC_Morph_Graph.h"
 
 class MetisNode;
-using GGraph = galois::graphs::LC_Morph_Graph<MetisNode, int>;
+using GGraph = katana::LC_Morph_Graph<MetisNode, int>;
 using GNode = GGraph::GraphNode;
-using GNodeBag = galois::InsertBag<GNode>;
+using GNodeBag = katana::InsertBag<GNode>;
 
 // algorithms
 enum InitialPartMode { GGP, GGGP, MGGGP };

@@ -33,7 +33,7 @@ def find_artifacts(repo, auth):
                 conda_package_ubuntu_artifact = artifact
             if artifact["name"].startswith("conda-pkgs-MacOS") and not conda_package_macos_artifact:
                 conda_package_macos_artifact = artifact
-            if artifact["name"].startswith("galois-python-docs") and not docs_artifact:
+            if artifact["name"].startswith("katana-python-docs") and not docs_artifact:
                 docs_artifact = artifact
         if conda_package_ubuntu_artifact and docs_artifact:  # Don't require conda_package_macos_url for now
             print(f"Found artifacts at commit: {run['head_commit']['message']}")
@@ -136,7 +136,7 @@ def main():
         print(" ".join(pkgs_upload_cmd))
         print()
         # TODO: Add instructions for docs upload
-        print(f"This script leaves the downloaded galois-python documentation in: {docs_dir}")
+        print(f"This script leaves the downloaded katana-python documentation in: {docs_dir}")
         print(f"This script leaves the downloaded conda packages in: {pkgs_dir}")
         print(f"To clean up after this script delete: {dir}")
 

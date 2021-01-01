@@ -17,21 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/gslist.h"
+#include "katana/gslist.h"
 
 #include <map>
 
-#include "galois/Galois.h"
-#include "galois/Mem.h"
-#include "galois/gIO.h"
+#include "katana/Galois.h"
+#include "katana/Mem.h"
+#include "katana/gIO.h"
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
-  typedef galois::runtime::FixedSizeHeap Heap;
+  katana::SharedMemSys Katana_runtime;
+  typedef katana::FixedSizeHeap Heap;
   typedef std::unique_ptr<Heap> HeapPtr;
-  typedef galois::substrate::PerThreadStorage<HeapPtr> Heaps;
-  typedef galois::concurrent_gslist<int> Collection;
+  typedef katana::PerThreadStorage<HeapPtr> Heaps;
+  typedef katana::concurrent_gslist<int> Collection;
   int numThreads = 2;
   unsigned size = 100;
   if (argc > 1)
@@ -43,12 +43,12 @@ main(int argc, char** argv) {
   if (size <= 0)
     size = 10000;
 
-  galois::setActiveThreads(numThreads);
+  katana::setActiveThreads(numThreads);
 
   Heaps heaps;
   Collection c;
 
-  galois::on_each([&](unsigned int, unsigned int) {
+  katana::on_each([&](unsigned int, unsigned int) {
     HeapPtr& hp = *heaps.getLocal();
     hp = HeapPtr(new Heap(sizeof(Collection::block_type)));
     for (unsigned i = 0; i < size; ++i)
@@ -60,11 +60,11 @@ main(int argc, char** argv) {
     counter[i] += 1;
   }
   for (unsigned i = 0; i < size; ++i) {
-    GALOIS_ASSERT(counter[i] == numThreads);
+    KATANA_ASSERT(counter[i] == numThreads);
   }
-  GALOIS_ASSERT(counter.size() == size);
+  KATANA_ASSERT(counter.size() == size);
 
-  galois::on_each([&](unsigned int, unsigned int) {
+  katana::on_each([&](unsigned int, unsigned int) {
     while (c.pop_front(Collection::promise_to_dealloc()))
       ;
   });

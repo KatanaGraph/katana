@@ -1,10 +1,10 @@
 #include "tsuba/WriteGroup.h"
 
 #include "GlobalState.h"
-#include "galois/Random.h"
+#include "katana/Random.h"
 
 template <typename T>
-using Result = galois::Result<T>;
+using Result = katana::Result<T>;
 
 namespace {
 
@@ -19,7 +19,7 @@ WriteGroup::Make() {
   // Don't use `OneHostOnly` because we can skip its broadcast
   std::string tag;
   if (Comm()->ID == 0) {
-    tag = galois::RandomAlphanumericString(kTagLen);
+    tag = katana::RandomAlphanumericString(kTagLen);
   }
   tag = Comm()->Broadcast(0, tag, kTagLen);
   return std::unique_ptr<WriteGroup>(new WriteGroup(tag));
@@ -27,13 +27,13 @@ WriteGroup::Make() {
 
 Result<void>
 WriteGroup::Finish() {
-  Result<void> return_val = galois::ResultSuccess();
+  Result<void> return_val = katana::ResultSuccess();
   uint32_t errors = 0;
 
   for (AsyncOp& op : pending_ops_) {
     auto res = op.result.get();
     if (!res) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "async write op for {} returned {}", op.location, res.error());
       errors++;
       return_val = res.error();
@@ -41,7 +41,7 @@ WriteGroup::Finish() {
   }
 
   if (errors > 0) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "{} of {} async write ops returned errors", errors,
         pending_ops_.size());
   }
@@ -50,7 +50,7 @@ WriteGroup::Finish() {
 }
 
 void
-WriteGroup::AddOp(std::future<galois::Result<void>> future, std::string file) {
+WriteGroup::AddOp(std::future<katana::Result<void>> future, std::string file) {
   pending_ops_.emplace_back(AsyncOp{
       .result = std::move(future),
       .location = std::move(file),

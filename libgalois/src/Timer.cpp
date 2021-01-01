@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Timer.h"
+#include "katana/Timer.h"
 
-#include "galois/Statistics.h"
+#include "katana/Statistics.h"
 
-using namespace galois;
+using namespace katana;
 
 void
 Timer::start() {
@@ -96,7 +96,7 @@ StatTimer::~StatTimer() {
 
   // only report non-zero stat
   if (TimeAccumulator::get()) {
-    galois::ReportStatMax(
+    katana::ReportStatMax(
         region_.c_str(), name_.c_str(), TimeAccumulator::get());
   }
 }

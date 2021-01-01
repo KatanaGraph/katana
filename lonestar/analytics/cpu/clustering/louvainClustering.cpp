@@ -24,13 +24,13 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "clustering.h"
-#include "galois/AtomicHelpers.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/TypeTraits.h"
-#include "galois/gstl.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
+#include "katana/TypeTraits.h"
+#include "katana/gstl.h"
 #include "llvm/Support/CommandLine.h"
 
 static const char* name = "Louvain Clustering";
@@ -67,7 +67,7 @@ struct Comm {
   EdgeTy internal_edge_wt;
 };
 
-typedef galois::LargeArray<Comm> CommArray;
+typedef katana::LargeArray<Comm> CommArray;
 
 // Graph Node information
 struct Node {
@@ -77,17 +77,17 @@ struct Node {
   int64_t colorId;
 };
 
-using Graph = galois::graphs::LC_CSR_Graph<Node, EdgeTy>::with_no_lockable<
+using Graph = katana::LC_CSR_Graph<Node, EdgeTy>::with_no_lockable<
     false>::type::with_numa_alloc<true>::type;
 using GNode = Graph::GraphNode;
 
 double
 algoLouvainWithLocking(
     Graph& graph, double lower, double threshold, uint32_t& iter) {
-  galois::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
+  katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
   TimerClusteringTotal.start();
 
-  galois::gPrint("Inside algoLouvainWithLocking\n");
+  katana::gPrint("Inside algoLouvainWithLocking\n");
 
   CommArray c_info;    // Community info
   CommArray c_update;  // Used for updating community
@@ -104,42 +104,42 @@ algoLouvainWithLocking(
   c_update.allocateBlocked(graph.size());
 
   /* Initialization each node to its own cluster */
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n).curr_comm_ass = n;
     graph.getData(n).prev_comm_ass = n;
   });
 
-  galois::gPrint("Init Done\n");
+  katana::gPrint("Init Done\n");
   /* Calculate the weighted degree sum for each vertex */
   sumVertexDegreeWeight(graph, c_info);
-  galois::gPrint("c_info[0] : ", c_info[0].degree_wt.load(), "\n");
+  katana::gPrint("c_info[0] : ", c_info[0].degree_wt.load(), "\n");
 
   /* Compute the total weight (2m) and 1/2m terms */
   constant_for_second_term = calConstantForSecondTerm(graph);
-  galois::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
+  katana::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
 
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
-  galois::gPrint(
+  katana::gPrint(
       "Itr      Explore_xx            A_x2          Prev-Prev-Mod   "
       "      Prev-Mod           Curr-Mod\n");
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
 
-  galois::StatTimer TimerClusteringWhile("Timer_Clustering_While");
+  katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
   TimerClusteringWhile.start();
   while (true) {
     num_iter++;
 
-    galois::do_all(galois::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       c_update[n].degree_wt = 0;
       c_update[n].size = 0;
     });
 
-    galois::for_each(
-        galois::iterate(graph),
+    katana::for_each(
+        katana::iterate(graph),
         [&](GNode n, auto&) {
           auto& n_data = graph.getData(n, flag_write_lock);
           uint64_t degree = std::distance(
@@ -168,17 +168,17 @@ algoLouvainWithLocking(
           /* Update cluster info */
           if (local_target != n_data.curr_comm_ass &&
               local_target != UNASSIGNED) {
-            galois::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
-            galois::atomicAdd(c_info[local_target].size, (uint64_t)1);
-            galois::atomicSub(
+            katana::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
+            katana::atomicAdd(c_info[local_target].size, (uint64_t)1);
+            katana::atomicSub(
                 c_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
-            galois::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
+            katana::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
 
             /* Set the new cluster id */
             n_data.curr_comm_ass = local_target;
           }
         },
-        galois::loopname("louvain algo: Phase 1"), galois::no_pushes());
+        katana::loopname("louvain algo: Phase 1"), katana::no_pushes());
 
     /* Calculate the overall modularity */
     double e_xx = 0;
@@ -187,12 +187,12 @@ algoLouvainWithLocking(
     curr_mod =
         calModularity(graph, c_info, e_xx, a2_x, constant_for_second_term);
 
-    galois::gPrint(
+    katana::gPrint(
         num_iter, "        ", e_xx, "        ", a2_x, "        ", lower,
         "      ", prev_mod, "       ", curr_mod, "\n");
 
     if ((curr_mod - prev_mod) < threshold_mod) {
-      galois::gPrint(
+      katana::gPrint(
           "Modularity gain: ", (curr_mod - prev_mod), " < ", threshold_mod,
           " \n");
       prev_mod = curr_mod;
@@ -219,10 +219,10 @@ algoLouvainWithLocking(
 double
 algoLouvainWithoutLockingDoAll(
     Graph& graph, double lower, double threshold, uint32_t& iter) {
-  galois::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
+  katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
   TimerClusteringTotal.start();
 
-  galois::gPrint("Inside algoLouvainWithLocking\n");
+  katana::gPrint("Inside algoLouvainWithLocking\n");
 
   CommArray c_info;    // Community info
   CommArray c_update;  // Used for updating community
@@ -239,43 +239,43 @@ algoLouvainWithoutLockingDoAll(
   c_update.allocateBlocked(graph.size());
 
   /* Initialization each node to its own cluster */
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n).curr_comm_ass = n;
     graph.getData(n).prev_comm_ass = n;
     graph.getData(n).colorId = -1;
   });
 
-  galois::gPrint("Init Done\n");
+  katana::gPrint("Init Done\n");
   /* Calculate the weighted degree sum for each vertex */
   sumVertexDegreeWeight(graph, c_info);
-  galois::gPrint("c_info[0] : ", c_info[0].degree_wt.load(), "\n");
+  katana::gPrint("c_info[0] : ", c_info[0].degree_wt.load(), "\n");
 
   /* Compute the total weight (2m) and 1/2m terms */
   constant_for_second_term = calConstantForSecondTerm(graph);
-  galois::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
+  katana::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
 
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
-  galois::gPrint(
+  katana::gPrint(
       "Itr      Explore_xx            A_x2          Prev-Prev-Mod   "
       "      Prev-Mod           Curr-Mod\n");
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
 
-  galois::StatTimer TimerClusteringWhile("Timer_Clustering_While");
+  katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
   TimerClusteringWhile.start();
   while (true) {
     num_iter++;
 
-    galois::do_all(galois::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       c_update[n].degree_wt = 0;
       c_update[n].size = 0;
     });
 
-    galois::do_all(
-        galois::iterate(graph),
+    katana::do_all(
+        katana::iterate(graph),
         [&](GNode n) {
           auto& n_data = graph.getData(n, flag_write_lock);
           uint64_t degree = std::distance(
@@ -305,17 +305,17 @@ algoLouvainWithoutLockingDoAll(
           /* Update cluster info */
           if (local_target != n_data.curr_comm_ass &&
               local_target != UNASSIGNED) {
-            galois::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
-            galois::atomicAdd(c_info[local_target].size, (uint64_t)1);
-            galois::atomicSub(
+            katana::atomicAdd(c_info[local_target].degree_wt, n_data.degree_wt);
+            katana::atomicAdd(c_info[local_target].size, (uint64_t)1);
+            katana::atomicSub(
                 c_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
-            galois::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
+            katana::atomicSub(c_info[n_data.curr_comm_ass].size, (uint64_t)1);
 
             /* Set the new cluster id */
             n_data.curr_comm_ass = local_target;
           }
         },
-        galois::loopname("louvain algo: Phase 1"));
+        katana::loopname("louvain algo: Phase 1"));
 
     /* Calculate the overall modularity */
     double e_xx = 0;
@@ -324,12 +324,12 @@ algoLouvainWithoutLockingDoAll(
     curr_mod =
         calModularity(graph, c_info, e_xx, a2_x, constant_for_second_term);
 
-    galois::gPrint(
+    katana::gPrint(
         num_iter, "        ", e_xx, "        ", a2_x, "        ", lower,
         "      ", prev_mod, "       ", curr_mod, "\n");
 
     if ((curr_mod - prev_mod) < threshold_mod) {
-      galois::gPrint(
+      katana::gPrint(
           "Modularity gain: ", (curr_mod - prev_mod), " < ", threshold_mod,
           " \n");
       prev_mod = curr_mod;
@@ -356,9 +356,9 @@ algoLouvainWithoutLockingDoAll(
 double
 algoLouvainWithLockingDelayUpdate(
     Graph& graph, double lower, double threshold, uint32_t& iter) {
-  galois::gPrint("Inside algoLouvainWithLockingDelay\n");
+  katana::gPrint("Inside algoLouvainWithLockingDelay\n");
 
-  galois::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
+  katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
   TimerClusteringTotal.start();
 
   CommArray c_info;    // Community info
@@ -376,45 +376,45 @@ algoLouvainWithLockingDelayUpdate(
   c_update.allocateBlocked(graph.size());
 
   /* Initialization each node to its own cluster */
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n).curr_comm_ass = n;
     graph.getData(n).prev_comm_ass = n;
     graph.getData(n).colorId = -1;
   });
 
-  galois::gPrint("Init Done\n");
+  katana::gPrint("Init Done\n");
   /* Calculate the weighted degree sum for each vertex */
   sumVertexDegreeWeight(graph, c_info);
-  galois::gPrint("c_info[5] : ", c_info[0].degree_wt.load(), "\n");
+  katana::gPrint("c_info[5] : ", c_info[0].degree_wt.load(), "\n");
 
   /* Compute the total weight (2m) and 1/2m terms */
   constant_for_second_term = calConstantForSecondTerm(graph);
-  galois::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
+  katana::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
 
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
-  galois::gPrint(
+  katana::gPrint(
       "Itr      Explore_xx            A_x2          Prev-Prev-Mod   "
       "      Prev-Mod           Curr-Mod\n");
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
 
-  galois::StatTimer TimerClusteringWhile("Timer_Clustering_While");
+  katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
   TimerClusteringWhile.start();
   while (true) {
     num_iter++;
 
-    galois::do_all(galois::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       c_update[n].degree_wt = 0;
       c_update[n].size = 0;
     });
 
     std::vector<uint64_t> local_target(graph.size(), UNASSIGNED);
-    galois::GAccumulator<uint32_t> syncRound;
-    galois::do_all(
-        galois::iterate(graph),
+    katana::GAccumulator<uint32_t> syncRound;
+    katana::do_all(
+        katana::iterate(graph),
         [&](GNode n) {
           auto& n_data = graph.getData(n, flag_write_lock);
           uint64_t degree = std::distance(
@@ -442,15 +442,15 @@ algoLouvainWithLockingDelayUpdate(
           /* Update cluster info */
           if (local_target[n] != n_data.curr_comm_ass &&
               local_target[n] != UNASSIGNED) {
-            galois::atomicAdd(
+            katana::atomicAdd(
                 c_update[local_target[n]].degree_wt, n_data.degree_wt);
-            galois::atomicAdd(c_update[local_target[n]].size, (uint64_t)1);
-            galois::atomicSub(
+            katana::atomicAdd(c_update[local_target[n]].size, (uint64_t)1);
+            katana::atomicSub(
                 c_update[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
-            galois::atomicSub(c_update[n_data.curr_comm_ass].size, (uint64_t)1);
+            katana::atomicSub(c_update[n_data.curr_comm_ass].size, (uint64_t)1);
           }
         },
-        galois::loopname("louvain algo: Phase 1"));
+        katana::loopname("louvain algo: Phase 1"));
 
     /* Calculate the overall modularity */
     double e_xx = 0;
@@ -458,12 +458,12 @@ algoLouvainWithLockingDelayUpdate(
     curr_mod = calModularityDelay(
         graph, c_info, c_update, e_xx, a2_x, constant_for_second_term,
         local_target);
-    galois::gPrint(
+    katana::gPrint(
         num_iter, "        ", e_xx, "        ", a2_x, "        ", lower,
         "      ", prev_mod, "       ", curr_mod, "\n");
 
     if ((curr_mod - prev_mod) < threshold_mod) {
-      galois::gPrint(
+      katana::gPrint(
           "Modularity gain: ", (curr_mod - prev_mod), " < ", threshold_mod,
           " \n");
       prev_mod = curr_mod;
@@ -474,12 +474,12 @@ algoLouvainWithLockingDelayUpdate(
     if (prev_mod < lower)
       prev_mod = lower;
 
-    galois::do_all(galois::iterate(graph), [&](GNode n) {
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto& n_data = graph.getData(n, flag_no_lock);
       n_data.prev_comm_ass = n_data.curr_comm_ass;
       n_data.curr_comm_ass = local_target[n];
-      galois::atomicAdd(c_info[n].size, c_update[n].size.load());
-      galois::atomicAdd(c_info[n].degree_wt, c_update[n].degree_wt.load());
+      katana::atomicAdd(c_info[n].size, c_update[n].size.load());
+      katana::atomicAdd(c_info[n].degree_wt, c_update[n].degree_wt.load());
 
       c_update[n].size = 0;
       c_update[n].degree_wt = 0;
@@ -502,8 +502,8 @@ algoLouvainWithLockingDelayUpdate(
 
 uint64_t
 coloringDistanceOne(Graph& graph) {
-  galois::for_each(
-      galois::iterate(graph),
+  katana::for_each(
+      katana::iterate(graph),
       [&](GNode n, auto&) {
         auto& n_data = graph.getData(n, flag_write_lock);
 
@@ -554,13 +554,13 @@ coloringDistanceOne(Graph& graph) {
         }
         n_data.colorId = my_color;
       },
-      galois::loopname("Coloring loop"));
+      katana::loopname("Coloring loop"));
 
-  galois::gPrint("Checking for conflicts\n");
+  katana::gPrint("Checking for conflicts\n");
   /* Check for conflicts */
-  galois::GAccumulator<uint64_t> conflicts;
-  galois::do_all(
-      galois::iterate(graph),
+  katana::GAccumulator<uint64_t> conflicts;
+  katana::do_all(
+      katana::iterate(graph),
       [&](GNode n) {
         auto& n_data = graph.getData(n, flag_no_lock);
         for (auto ii = graph.edge_begin(n, flag_write_lock);
@@ -571,8 +571,8 @@ coloringDistanceOne(Graph& graph) {
             conflicts += 1;
         }
       },
-      galois::loopname("Coloring conflicts"));
-  galois::gPrint("WARNING: Conflicts found : ", conflicts.reduce(), "\n");
+      katana::loopname("Coloring conflicts"));
+  katana::gPrint("WARNING: Conflicts found : ", conflicts.reduce(), "\n");
 
   int64_t num_colors = 0;
   for (GNode n = 0; n < graph.size(); ++n) {
@@ -587,10 +587,10 @@ coloringDistanceOne(Graph& graph) {
 double
 algoLouvainWithColoring(
     Graph& graph, double lower, double threshold, uint32_t& iter) {
-  galois::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
+  katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
   TimerClusteringTotal.start();
 
-  galois::gPrint("Inside algoLouvainWithColoring\n");
+  katana::gPrint("Inside algoLouvainWithColoring\n");
 
   CommArray c_info;    // Community info
   CommArray c_update;  // Used for updating community
@@ -607,50 +607,50 @@ algoLouvainWithColoring(
   c_update.allocateBlocked(graph.size());
 
   /* Initialization each node to its own cluster */
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n).curr_comm_ass = n;
     graph.getData(n).prev_comm_ass = n;
     graph.getData(n).colorId = -1;
   });
 
-  galois::gPrint("Coloring\n");
-  galois::StatTimer TimerColoring("Timer_Cloring");
+  katana::gPrint("Coloring\n");
+  katana::StatTimer TimerColoring("Timer_Cloring");
   TimerColoring.start();
   int64_t num_colors = coloringDistanceOne(graph);
   TimerColoring.stop();
 
   /* Calculate the weighted degree sum for each vertex */
   sumVertexDegreeWeight(graph, c_info);
-  galois::gPrint("c_info[5] : ", c_info[0].degree_wt.load(), "\n");
+  katana::gPrint("c_info[5] : ", c_info[0].degree_wt.load(), "\n");
 
   /* Compute the total weight (2m) and 1/2m terms */
   constant_for_second_term = calConstantForSecondTerm(graph);
-  galois::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
+  katana::gPrint("constant_for_second_term : ", constant_for_second_term, "\n");
 
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
-  galois::gPrint(
+  katana::gPrint(
       "Itr      Explore_xx            A_x2           Prev-Mod           "
       "Curr-Mod         Time-1(s)       Time-2(s)        T/Itr(s)\n");
-  galois::gPrint(
+  katana::gPrint(
       "============================================================="
       "===========================================\n");
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     c_update[n].degree_wt = 0;
     c_update[n].size = 0;
   });
 
-  galois::StatTimer TimerClusteringWhile("Timer_Clustering_While");
+  katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
   TimerClusteringWhile.start();
   while (true) {
     num_iter++;
 
     for (int64_t c = 0; c < num_colors; ++c) {
-      // galois::gPrint("Color : ", c, "\n");
-      galois::do_all(
-          galois::iterate(graph),
+      // katana::gPrint("Color : ", c, "\n");
+      katana::do_all(
+          katana::iterate(graph),
           [&](GNode n) {
             auto& n_data = graph.getData(n, flag_write_lock);
             if (n_data.colorId == c) {
@@ -679,23 +679,23 @@ algoLouvainWithColoring(
               /* Update cluster info */
               if (local_target != n_data.curr_comm_ass &&
                   local_target != UNASSIGNED) {
-                galois::atomicAdd(
+                katana::atomicAdd(
                     c_update[local_target].degree_wt, n_data.degree_wt);
-                galois::atomicAdd(c_update[local_target].size, (uint64_t)1);
-                galois::atomicSub(
+                katana::atomicAdd(c_update[local_target].size, (uint64_t)1);
+                katana::atomicSub(
                     c_update[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
-                galois::atomicSub(
+                katana::atomicSub(
                     c_update[n_data.curr_comm_ass].size, (uint64_t)1);
                 /* Set the new cluster id */
                 n_data.curr_comm_ass = local_target;
               }
             }
           },
-          galois::loopname("louvain algo: Phase 1"));
+          katana::loopname("louvain algo: Phase 1"));
 
-      galois::do_all(galois::iterate(graph), [&](GNode n) {
-        galois::atomicAdd(c_info[n].size, c_update[n].size.load());
-        galois::atomicAdd(c_info[n].degree_wt, c_update[n].degree_wt.load());
+      katana::do_all(katana::iterate(graph), [&](GNode n) {
+        katana::atomicAdd(c_info[n].size, c_update[n].size.load());
+        katana::atomicAdd(c_info[n].degree_wt, c_update[n].degree_wt.load());
         c_update[n].size = 0;
         c_update[n].degree_wt = 0;
       });
@@ -707,12 +707,12 @@ algoLouvainWithColoring(
     curr_mod =
         calModularity(graph, c_info, e_xx, a2_x, constant_for_second_term);
 
-    galois::gPrint(
+    katana::gPrint(
         num_iter, "        ", e_xx, "        ", a2_x, "        ", prev_mod,
         "       ", curr_mod, "\n");
 
     if ((curr_mod - prev_mod) < threshold_mod) {
-      galois::gPrint(
+      katana::gPrint(
           "Modularity gain: ", (curr_mod - prev_mod), " < ", threshold_mod,
           " \n");
       prev_mod = curr_mod;
@@ -740,7 +740,7 @@ void
 runMultiPhaseLouvainAlgorithm(
     Graph& graph, uint32_t min_graph_size, double c_threshold,
     largeArray& clusters_orig) {
-  galois::gPrint("Inside runMultiPhaseLouvainAlgorithm\n");
+  katana::gPrint("Inside runMultiPhaseLouvainAlgorithm\n");
   double prev_mod = -1;  // Previous modularity
   double curr_mod = -1;  // Current modularity
   uint32_t phase = 0;
@@ -752,8 +752,8 @@ runMultiPhaseLouvainAlgorithm(
   while (true) {
     iter++;
     phase++;
-    galois::gPrint("Starting Phase : ", phase, "\n");
-    galois::gPrint("Graph size : ", (*graph_curr).size(), "\n");
+    katana::gPrint("Starting Phase : ", phase, "\n");
+    katana::gPrint("Graph size : ", (*graph_curr).size(), "\n");
 
     if ((*graph_curr).size() > min_graph_size) {
       switch (algo) {
@@ -779,20 +779,20 @@ runMultiPhaseLouvainAlgorithm(
     }
 
     uint64_t num_unique_clusters = renumberClustersContiguously(*graph_curr);
-    galois::gPrint(
+    katana::gPrint(
         "Number of unique clusters (renumber): ", num_unique_clusters, "\n");
 
-    galois::gPrint("Prev_mod main: ", prev_mod, "\n");
+    katana::gPrint("Prev_mod main: ", prev_mod, "\n");
     if (iter < max_iter && (curr_mod - prev_mod) > threshold) {
       if (!enable_VF && phase == 1) {
         assert(num_nodes_orig == (*graph_curr).size());
-        galois::do_all(galois::iterate(*graph_curr), [&](GNode n) {
+        katana::do_all(katana::iterate(*graph_curr), [&](GNode n) {
           clusters_orig[n] =
               (*graph_curr).getData(n, flag_no_lock).curr_comm_ass;
         });
       } else {
-        galois::do_all(
-            galois::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
+        katana::do_all(
+            katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
               if (clusters_orig[n] != UNASSIGNED) {
                 assert(clusters_orig[n] < graph_curr->size());
                 clusters_orig[n] = (*graph_curr)
@@ -809,23 +809,23 @@ runMultiPhaseLouvainAlgorithm(
       break;
     }
   }
-  galois::gPrint("Phases : ", phase, "\n");
-  galois::gPrint("Iter : ", iter, "\n");
+  katana::gPrint("Phases : ", phase, "\n");
+  katana::gPrint("Iter : ", iter, "\n");
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
   }
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   Graph graph;
@@ -835,7 +835,7 @@ main(int argc, char** argv) {
   std::cout << "Reading from file: " << inputFile << "\n";
   std::cout << "[WARNING:] Make sure " << inputFile
             << " is symmetric graph without duplicate edges\n";
-  galois::graphs::readGraph(graph, inputFile);
+  katana::readGraph(graph, inputFile);
   std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
             << " edges\n";
 
@@ -854,15 +854,15 @@ main(int argc, char** argv) {
   if (enable_VF) {
     uint64_t num_nodes_to_fix =
         vertexFollowing(graph);  // Find nodes that follow other nodes
-    galois::gPrint("Isolated nodes : ", num_nodes_to_fix, "\n");
+    katana::gPrint("Isolated nodes : ", num_nodes_to_fix, "\n");
 
     uint64_t num_unique_clusters = renumberClustersContiguously(*graph_curr);
-    galois::gPrint(
+    katana::gPrint(
         "Number of unique clusters (renumber): ", num_unique_clusters, "\n");
     /*
      *Initialize node cluster id.
      */
-    galois::do_all(galois::iterate(*graph_curr), [&](GNode n) {
+    katana::do_all(katana::iterate(*graph_curr), [&](GNode n) {
       clusters_orig[n] = graph.getData(n, flag_no_lock).curr_comm_ass;
     });
 
@@ -874,13 +874,13 @@ main(int argc, char** argv) {
     /*
      *Initialize node cluster id.
      */
-    galois::do_all(
-        galois::iterate(*graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
+    katana::do_all(
+        katana::iterate(*graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
 
     printGraphCharateristics(*graph_curr);
   }
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   runMultiPhaseLouvainAlgorithm(
       *graph_curr, min_graph_size, c_threshold, clusters_orig);

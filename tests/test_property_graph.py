@@ -5,9 +5,9 @@ import numpy as np
 import pyarrow
 import pytest
 
-from galois.loops import do_all_operator, do_all
-from galois.property_graph import PropertyGraph
-from galois import TsubaError
+from katana.loops import do_all_operator, do_all
+from katana.property_graph import PropertyGraph
+from katana import TsubaError
 
 
 def test_load(property_graph):

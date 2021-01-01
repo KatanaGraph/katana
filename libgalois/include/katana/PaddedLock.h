@@ -17,14 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PADDEDLOCK_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PADDEDLOCK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PADDEDLOCK_H_
+#define KATANA_LIBGALOIS_KATANA_PADDEDLOCK_H_
 
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/SimpleLock.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 /// PaddedLock is a spinlock.  If the second template parameter is
 /// false, the lock is a noop.
@@ -49,7 +48,6 @@ public:
   void unlock() const {}
 };
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

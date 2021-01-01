@@ -22,7 +22,7 @@ by Galois C++.
 from typing import Type, Dict, Union
 
 # Initialize the galois runtime immediately.
-import galois.shmem
+import katana.galois
 
 
 def load_ipython_extension(ipython):

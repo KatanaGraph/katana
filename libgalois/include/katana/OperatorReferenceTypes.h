@@ -17,13 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_OPERATORREFERENCETYPES_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_OPERATORREFERENCETYPES_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OPERATORREFERENCETYPES_H_
+#define KATANA_LIBGALOIS_KATANA_OPERATORREFERENCETYPES_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 namespace internal {
 
@@ -65,7 +64,6 @@ template <typename T>
 using OperatorReferenceType =
     typename internal::OperatorReferenceType_impl<T>::type;
 
-}  // namespace runtime
-}  // namespace galois
+}  // namespace katana
 
 #endif

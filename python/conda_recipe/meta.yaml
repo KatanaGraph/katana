@@ -2,7 +2,7 @@
 
 # Check environment variables to determine build context
 {% set ci_build = environ.get("CI", False) %}
-{% set dev_build = environ.get("GALOIS_DEV_BUILD", ci_build) %}
+{% set dev_build = environ.get("KATANA_DEV_BUILD", ci_build) %}
 
 # For dev builds, add ".devN" to the version number, for N being the git commit count since the last tag.
 # This makes the build come BEFORE the plain version.
@@ -11,7 +11,7 @@
 {% set build_number = environ.get("GITHUB_RUN_NUMBER", environ.get("GIT_DESCRIBE_NUMBER")) %}
 
 package:
-  name: galois-python
+  name: katana-python
   version: {{ version }}
 
 source:
@@ -24,7 +24,7 @@ build:
   string: {{ environ.get("GIT_DESCRIBE_HASH") }}_{{ "ci_" if ci_build }}{{ build_number }}
   {% endif %}
   script_env:
-    - GALOIS_DOCS_OUTPUT
+    - KATANA_DOCS_OUTPUT
 
 requirements:
   build:
@@ -33,7 +33,7 @@ requirements:
     - make
     - jinja2
     - {{ compiler('cxx') }}
-    - galois={{ version }}
+    - katana={{ version }}
     - cython>=0.29.12
     - numba>=0.50,<1.0
     - pyarrow
@@ -43,13 +43,13 @@ requirements:
     - scikit-build
     - jinja2
     - {{ compiler('cxx') }}
-    - galois={{ version }}
+    - katana={{ version }}
     - cython>=0.29.12
     - numba>=0.50,<1.0
     - pyarrow
   run:
     - python
-    - galois={{ version }}
+    - katana={{ version }}
     - numba
     - pyarrow
 

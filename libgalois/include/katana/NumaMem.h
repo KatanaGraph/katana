@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_NUMAMEM_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_NUMAMEM_H_
+#ifndef KATANA_LIBGALOIS_KATANA_NUMAMEM_H_
+#define KATANA_LIBGALOIS_KATANA_NUMAMEM_H_
 
 #include <cstddef>
 #include <memory>
 #include <vector>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 namespace internal {
-struct GALOIS_EXPORT largeFreer {
+struct KATANA_EXPORT largeFreer {
   size_t bytes;
   void operator()(void* ptr) const;
 };
@@ -38,13 +37,13 @@ struct GALOIS_EXPORT largeFreer {
 
 typedef std::unique_ptr<void, internal::largeFreer> LAptr;
 
-GALOIS_EXPORT LAptr largeMallocLocal(size_t bytes);  // fault in locally
-GALOIS_EXPORT LAptr
+KATANA_EXPORT LAptr largeMallocLocal(size_t bytes);  // fault in locally
+KATANA_EXPORT LAptr
 largeMallocFloating(size_t bytes);  // leave numa mapping undefined
 // fault in interleaved mapping
-GALOIS_EXPORT LAptr largeMallocInterleaved(size_t bytes, unsigned numThreads);
+KATANA_EXPORT LAptr largeMallocInterleaved(size_t bytes, unsigned numThreads);
 // fault in block interleaved mapping
-GALOIS_EXPORT LAptr largeMallocBlocked(size_t bytes, unsigned numThreads);
+KATANA_EXPORT LAptr largeMallocBlocked(size_t bytes, unsigned numThreads);
 
 // fault in specified regions for each thread (threadRanges)
 template <typename RangeArrayTy>
@@ -52,7 +51,6 @@ LAptr largeMallocSpecified(
     size_t bytes, uint32_t numThreads, RangeArrayTy& threadRanges,
     size_t elementSize);
 
-}  // namespace substrate
-}  // namespace galois
+}  // namespace katana
 
 #endif

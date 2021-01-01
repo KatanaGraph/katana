@@ -44,11 +44,11 @@ foreach(target tsuba tsuba-preload)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
-  target_compile_definitions(${target} PRIVATE GALOIS_SHARED_LIB_BUILDING)
+  target_compile_definitions(${target} PRIVATE KATANA_SHARED_LIB_BUILDING)
 endforeach()
 
-target_link_libraries(tsuba-preload PUBLIC galois_support)
-target_link_libraries(tsuba PUBLIC tsuba-preload galois_support)
+target_link_libraries(tsuba-preload PUBLIC katana_support)
+target_link_libraries(tsuba PUBLIC tsuba-preload katana_support)
 
 find_package(Arrow REQUIRED)
 if(TARGET arrow::arrow)
@@ -69,7 +69,7 @@ install(
 )
 
 install(TARGETS tsuba tsuba-preload
-  EXPORT GaloisTargets
+  EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT lib

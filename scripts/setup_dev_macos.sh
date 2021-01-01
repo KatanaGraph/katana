@@ -13,6 +13,6 @@ bash -x "${REPO_ROOT}/scripts/setup_macos.sh"
 # If you want a build directory that is a subdir of Katana root
 # mkdir build
 # cd build
-# cmake ../ -DGALOIS_AUTO_CONAN=on
+# cmake ../ -DKATANA_AUTO_CONAN=on
 # The build does rely on git submodules
 # git submoudle update --init

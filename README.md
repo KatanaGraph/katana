@@ -171,7 +171,7 @@ make graph-properties-convert
 Many Galois/Lonestar applications work with graphs. We store graphs in a binary format
 called *galois graph file* 
 (`.gr` file extension). Other formats such as edge-list or Matrix-Market can be
-converted to `.gr` format with `graph-convert` tool provided in galois. 
+converted to `.gr` format with `graph-convert` tool provided in katana. 
 This tool does not work for property graphs.
 You can build graph-convert as follows:
 
@@ -218,7 +218,7 @@ Source-Tree Organization
 ========================
 
 - `libgalois` contains the source code for the shared-memory Galois library, e.g., runtime, graphs, worklists, etc.
-  - Packaged algorithms are include in `libgalois` in two places: `include/galois/analytics` and `src/analytics`.
+  - Packaged algorithms are include in `libgalois` in two places: `include/katana/analytics` and `src/analytics`.
     Each abstract generic algorithm (e.g., BFS) has a subdirectory in both those places to contain header and source,
     respectively, implementing it.
 - `lonestar` contains the Lonestar benchmark applications and tutorial examples for Galois
@@ -235,7 +235,7 @@ you can put the following in your CMakeLists.txt:
 ```CMake
 add_subdirectory(galois EXCLUDE_FROM_ALL)
 add_executable(app ...)
-target_link_libraries(app Galois::shmem)
+target_link_libraries(app Katana::galois)
 ```
 
 The other common method is to install Galois outside your project and import it
@@ -253,16 +253,16 @@ Then, you can put something like the following in CMakeLists.txt:
 
 ```CMake
 list(APPEND CMAKE_PREFIX_PATH ${INSTALL_DIR})
-find_package(Galois REQUIRED)
+find_package(Katana REQUIRED)
 add_executable(app ...)
-target_link_libraries(app Galois::shmem)
+target_link_libraries(app Katana::galois)
 ```
 
 If you are not using CMake, the corresponding basic commands (although the
 specific commands vary by system) are:
 
 ```Shell
-c++ -std=c++14 app.cpp -I$INSTALL_DIR/include -L$INSTALL_DIR/lib -lgalois_shmem
+c++ -std=c++14 app.cpp -I$INSTALL_DIR/include -L$INSTALL_DIR/lib -lkatana_galois
 ```
 Contact Us
 ==========

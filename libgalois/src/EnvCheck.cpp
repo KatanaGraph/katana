@@ -17,18 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/EnvCheck.h"
+#include "katana/EnvCheck.h"
 
 #include <cstdlib>
 
 bool
-galois::substrate::EnvCheck(const char* varName) {
+katana::EnvCheck(const char* varName) {
   if (std::getenv(varName))
     return true;
   return false;
 }
 
 bool
-galois::substrate::EnvCheck(const std::string& varName) {
-  return galois::substrate::EnvCheck(varName.c_str());
+katana::EnvCheck(const std::string& varName) {
+  return katana::EnvCheck(varName.c_str());
 }

@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBGALOIS_TESTPROPERTYGRAPH_H_
-#define GALOIS_LIBGALOIS_TESTPROPERTYGRAPH_H_
+#ifndef KATANA_LIBGALOIS_TESTPROPERTYGRAPH_H_
+#define KATANA_LIBGALOIS_TESTPROPERTYGRAPH_H_
 
 #include <arrow/api.h>
 #include <arrow/type_traits.h>
 
-#include "galois/ArrowInterchange.h"
-#include "galois/Logging.h"
-#include "galois/Random.h"
-#include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/PropertyGraph.h"
+#include "katana/ArrowInterchange.h"
+#include "katana/Logging.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
+#include "katana/Random.h"
 
 /// Generate property graphs for testing.
 ///
@@ -49,7 +49,7 @@ public:
       [[maybe_unused]] size_t node_id, size_t num_nodes) override {
     std::vector<uint32_t> r;
     for (size_t i = 0; i < width_; ++i) {
-      size_t neighbor = galois::RandomUniformInt(num_nodes);
+      size_t neighbor = katana::RandomUniformInt(num_nodes);
       r.emplace_back(neighbor);
     }
     return r;
@@ -61,7 +61,7 @@ public:
 ///
 /// \tparam ValueType is the type of column data
 template <typename ValueType>
-std::unique_ptr<galois::graphs::PropertyFileGraph>
+std::unique_ptr<katana::PropertyFileGraph>
 MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
   std::vector<uint32_t> dests;
   std::vector<uint64_t> indices;
@@ -73,31 +73,31 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
     indices.push_back(dests.size());
   }
 
-  auto g = std::make_unique<galois::graphs::PropertyFileGraph>();
+  auto g = std::make_unique<katana::PropertyFileGraph>();
 
-  auto set_result = g->SetTopology(galois::graphs::GraphTopology{
+  auto set_result = g->SetTopology(katana::GraphTopology{
       .out_indices = std::static_pointer_cast<arrow::UInt64Array>(
-          galois::BuildArray(indices)),
+          katana::BuildArray(indices)),
       .out_dests = std::static_pointer_cast<arrow::UInt32Array>(
-          galois::BuildArray(dests)),
+          katana::BuildArray(dests)),
   });
-  GALOIS_LOG_ASSERT(set_result);
+  KATANA_LOG_ASSERT(set_result);
 
   size_t num_edges = dests.size();
 
-  galois::TableBuilder node_builder{num_nodes};
-  galois::TableBuilder edge_builder{num_edges};
+  katana::TableBuilder node_builder{num_nodes};
+  katana::TableBuilder edge_builder{num_edges};
 
   for (size_t i = 0; i < num_properties; ++i) {
-    node_builder.AddColumn<ValueType>(galois::ColumnOptions());
-    edge_builder.AddColumn<ValueType>(galois::ColumnOptions());
+    node_builder.AddColumn<ValueType>(katana::ColumnOptions());
+    edge_builder.AddColumn<ValueType>(katana::ColumnOptions());
   }
 
   if (auto r = g->AddEdgeProperties(edge_builder.Finish()); !r) {
-    GALOIS_LOG_FATAL("could not add edge property: {}", r.error());
+    KATANA_LOG_FATAL("could not add edge property: {}", r.error());
   }
   if (auto r = g->AddNodeProperties(node_builder.Finish()); !r) {
-    GALOIS_LOG_FATAL("could not add node property: {}", r.error());
+    KATANA_LOG_FATAL("could not add node property: {}", r.error());
   }
 
   return g;
@@ -108,12 +108,12 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
 /// a node property and edge property array.
 template <typename NodeType, typename EdgeType>
 size_t
-BaselineIterate(galois::graphs::PropertyFileGraph* g, int num_properties) {
-  using NodeArrowType = typename galois::PropertyArrowType<NodeType>;
-  using EdgeArrowType = typename galois::PropertyArrowType<EdgeType>;
+BaselineIterate(katana::PropertyFileGraph* g, int num_properties) {
+  using NodeArrowType = typename katana::PropertyArrowType<NodeType>;
+  using EdgeArrowType = typename katana::PropertyArrowType<EdgeType>;
 
-  using NodeProperty = typename galois::PropertyArrowArrayType<NodeType>;
-  using EdgeProperty = typename galois::PropertyArrowArrayType<EdgeType>;
+  using NodeProperty = typename katana::PropertyArrowArrayType<NodeType>;
+  using EdgeProperty = typename katana::PropertyArrowArrayType<EdgeType>;
 
   using NodePointer = typename arrow::TypeTraits<NodeArrowType>::CType*;
   using EdgePointer = typename arrow::TypeTraits<EdgeArrowType>::CType*;
@@ -130,13 +130,13 @@ BaselineIterate(galois::graphs::PropertyFileGraph* g, int num_properties) {
     auto edge_property = std::dynamic_pointer_cast<EdgeProperty>(
         g->EdgeProperty(prop)->chunk(0));
 
-    GALOIS_LOG_ASSERT(node_property);
-    GALOIS_LOG_ASSERT(edge_property);
+    KATANA_LOG_ASSERT(node_property);
+    KATANA_LOG_ASSERT(edge_property);
 
-    GALOIS_LOG_ASSERT(
+    KATANA_LOG_ASSERT(
         static_cast<size_t>(node_property->length()) ==
         g->topology().num_nodes());
-    GALOIS_LOG_ASSERT(
+    KATANA_LOG_ASSERT(
         static_cast<size_t>(edge_property->length()) ==
         g->topology().num_edges());
 
@@ -227,7 +227,7 @@ SumEdgePropertyV(Graph g, typename Graph::edge_iterator edge, size_t limit) {
 
 template <typename NodeType, typename EdgeType>
 size_t
-Iterate(galois::graphs::PropertyGraph<NodeType, EdgeType> g, size_t limit) {
+Iterate(katana::PropertyGraph<NodeType, EdgeType> g, size_t limit) {
   size_t result = 0;
   for (const auto& node : g) {
     result += SumNodePropertyV(g, node, limit);
@@ -246,7 +246,7 @@ size_t
 ExpectedValue(
     size_t num_nodes, size_t num_edges, size_t num_properties,
     bool ascending_values) {
-  GALOIS_ASSERT(!ascending_values);
+  KATANA_ASSERT(!ascending_values);
 
   return (num_nodes + 2 * num_edges) * num_properties;
 }

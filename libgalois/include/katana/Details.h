@@ -17,38 +17,38 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_DETAILS_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_DETAILS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_DETAILS_H_
+#define KATANA_LIBGALOIS_KATANA_DETAILS_H_
 
 #include <algorithm>
 
 #include <boost/mpl/if.hpp>
 
-#include "galois/LargeArray.h"
-#include "galois/LazyObject.h"
-#include "galois/NoDerefIterator.h"
-#include "galois/Range.h"
-#include "galois/Threads.h"
-#include "galois/config.h"
-#include "galois/runtime/Context.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Context.h"
+#include "katana/LargeArray.h"
+#include "katana/LazyObject.h"
+#include "katana/NoDerefIterator.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/Range.h"
+#include "katana/Threads.h"
+#include "katana/config.h"
 
-namespace galois::graphs {
+namespace katana {
 
 struct read_default_graph_tag {};
 struct read_with_aux_graph_tag {};
 struct read_lc_inout_graph_tag {};
 struct read_with_aux_first_graph_tag {};
 
-}  // namespace galois::graphs
+}  // namespace katana
 
-namespace galois::graphs::internal {
+namespace katana::internal {
 
 template <typename, typename, typename, typename, typename>
 struct EdgeSortReference;
-}  // namespace galois::graphs::internal
+}  // namespace katana::internal
 
-namespace galois::graphs {
+namespace katana {
 
 //! Proxy object for internal EdgeSortReference
 template <typename GraphNode, typename EdgeTy>
@@ -72,14 +72,14 @@ public:
   }
 };
 
-}  // namespace galois::graphs
+}  // namespace katana
 
-namespace galois::graphs::internal {
+namespace katana::internal {
 
 template <bool Enable>
 class LocalIteratorFeature {
   typedef std::pair<uint64_t, uint64_t> Range;
-  substrate::PerThreadStorage<Range> localIterators;
+  PerThreadStorage<Range> localIterators;
 
 public:
   uint64_t localBegin(uint64_t numNodes) const {
@@ -100,15 +100,15 @@ public:
 template <>
 struct LocalIteratorFeature<false> {
   uint64_t localBegin(uint64_t numNodes) const {
-    unsigned int id = substrate::ThreadPool::getTID();
-    unsigned int num = galois::getActiveThreads();
+    unsigned int id = ThreadPool::getTID();
+    unsigned int num = katana::getActiveThreads();
     uint64_t begin = (numNodes + num - 1) / num * id;
     return std::min(begin, numNodes);
   }
 
   uint64_t localEnd(uint64_t numNodes) const {
-    unsigned int id = substrate::ThreadPool::getTID();
-    unsigned int num = galois::getActiveThreads();
+    unsigned int id = ThreadPool::getTID();
+    unsigned int num = katana::getActiveThreads();
     uint64_t end = (numNodes + num - 1) / num * (id + 1);
     return std::min(end, numNodes);
   }
@@ -270,8 +270,7 @@ struct NodeInfoBaseTypes<void, HasLockable> {
 //! Specializations for void node data
 template <typename NodeTy, bool HasLockable>
 class NodeInfoBase
-    : public boost::mpl::if_c<
-          HasLockable, galois::runtime::Lockable, NoLockable>::type,
+    : public boost::mpl::if_c<HasLockable, katana::Lockable, NoLockable>::type,
       public NodeInfoBaseTypes<NodeTy, HasLockable> {
   NodeTy data;
 
@@ -285,8 +284,7 @@ public:
 
 template <bool HasLockable>
 struct NodeInfoBase<void, HasLockable>
-    : public boost::mpl::if_c<
-          HasLockable, galois::runtime::Lockable, NoLockable>::type,
+    : public boost::mpl::if_c<HasLockable, katana::Lockable, NoLockable>::type,
       public NodeInfoBaseTypes<void, HasLockable> {
   typename NodeInfoBase::reference getData() { return 0; }
   typename NodeInfoBase::const_reference getData() const { return 0; }
@@ -303,7 +301,7 @@ public:
   };
 
   void outOfLineAcquire(size_t n, MethodFlag mflag) {
-    galois::runtime::acquire(&outOfLineLocks[n], mflag);
+    katana::acquire(&outOfLineLocks[n], mflag);
   }
   void outOfLineAllocateLocal(size_t numNodes) {
     outOfLineLocks.allocateLocal(numNodes);
@@ -364,6 +362,6 @@ swap(EdgeSortReference<A, B, C, D, E> a, EdgeSortReference<A, B, C, D, E> b) {
   b = aa;
 }
 
-}  // namespace galois::graphs::internal
+}  // namespace katana::internal
 
 #endif

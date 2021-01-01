@@ -25,8 +25,8 @@
  * @todo finish up doxygen
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_FILEGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_FILEGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_FILEGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_FILEGRAPH_H_
 
 #include <cstring>
 #include <deque>
@@ -36,25 +36,24 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "galois/Endian.h"
-#include "galois/LargeArray.h"
-#include "galois/MethodFlags.h"
-#include "galois/Reduction.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/GraphHelpers.h"
-#include "galois/runtime/Context.h"
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/NumaMem.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/Context.h"
+#include "katana/Details.h"
+#include "katana/Endian.h"
+#include "katana/GraphHelpers.h"
+#include "katana/LargeArray.h"
+#include "katana/MethodFlags.h"
+#include "katana/NumaMem.h"
+#include "katana/Reduction.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 // TODO(ddn): Refactor to eliminate OCFileGraph
 
 //! Graph that mmaps Galois gr files for access
-class GALOIS_EXPORT FileGraph {
+class KATANA_EXPORT FileGraph {
 public:
   //! type of a node
   using GraphNode = uint64_t;
@@ -103,7 +102,7 @@ private:
   LargeArray<uint64_t> node_degrees;
 
   // graph reading speed variables
-  galois::GAccumulator<uint64_t> numBytesReadIndex, numBytesReadEdgeDst,
+  katana::GAccumulator<uint64_t> numBytesReadIndex, numBytesReadEdgeDst,
       numBytesReadEdgeData;
 
   /**
@@ -334,7 +333,7 @@ public:
           internal::EdgeSortCompWrapper<
               EdgeSortValue<GraphNode, EdgeTy>, CompTy>(comp));
     } else {
-      GALOIS_DIE("unknown file version: ", graphVersion);
+      KATANA_DIE("unknown file version: ", graphVersion);
     }
   }
 
@@ -379,7 +378,7 @@ public:
           &edgeDst, &ed);
       std::sort(begin, end, comp);
     } else {
-      GALOIS_DIE("unknown file version: ", graphVersion);
+      KATANA_DIE("unknown file version: ", graphVersion);
     }
   }
 
@@ -925,6 +924,5 @@ permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
   out = std::move(g);
 }
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 #endif

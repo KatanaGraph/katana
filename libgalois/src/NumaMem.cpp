@@ -17,15 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/NumaMem.h"
+#include "katana/NumaMem.h"
 
 #include <cassert>
 
-#include "galois/gIO.h"
-#include "galois/substrate/PageAlloc.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/PageAlloc.h"
+#include "katana/ThreadPool.h"
+#include "katana/gIO.h"
 
-using namespace galois::substrate;
+using namespace katana;
 
 /* Access pages on each thread so each thread has some pages already loaded
  * (preferably ones it will use) */
@@ -141,7 +141,7 @@ largeFree(void* ptr, size_t bytes) {
 }
 
 void
-galois::substrate::internal::largeFreer::operator()(void* ptr) const {
+katana::internal::largeFreer::operator()(void* ptr) const {
   largeFree(ptr, bytes);
 }
 
@@ -156,11 +156,11 @@ roundup(size_t data, size_t mult) {
 }
 
 LAptr
-galois::substrate::largeMallocInterleaved(size_t bytes, unsigned numThreads) {
+katana::largeMallocInterleaved(size_t bytes, unsigned numThreads) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
 
-#ifdef GALOIS_USE_NUMA
+#ifdef KATANA_USE_NUMA
   // We don't use numa_alloc_interleaved_subset because we really want huge
   // pages
   // yes this is a comment in a ifdef, but if libnuma improves, this is where
@@ -178,7 +178,7 @@ galois::substrate::largeMallocInterleaved(size_t bytes, unsigned numThreads) {
 }
 
 LAptr
-galois::substrate::largeMallocLocal(size_t bytes) {
+katana::largeMallocLocal(size_t bytes) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a prefaulted allocation
@@ -187,7 +187,7 @@ galois::substrate::largeMallocLocal(size_t bytes) {
 }
 
 LAptr
-galois::substrate::largeMallocFloating(size_t bytes) {
+katana::largeMallocFloating(size_t bytes) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a non-prefaulted allocation
@@ -196,7 +196,7 @@ galois::substrate::largeMallocFloating(size_t bytes) {
 }
 
 LAptr
-galois::substrate::largeMallocBlocked(size_t bytes, unsigned numThreads) {
+katana::largeMallocBlocked(size_t bytes, unsigned numThreads) {
   // round up to hugePageSize
   bytes = roundup(bytes, allocSize());
   // Get a non-prefaulted allocation
@@ -222,7 +222,7 @@ galois::substrate::largeMallocBlocked(size_t bytes, unsigned numThreads) {
  */
 template <typename RangeArrayTy>
 LAptr
-galois::substrate::largeMallocSpecified(
+katana::largeMallocSpecified(
     size_t bytes, uint32_t numThreads, RangeArrayTy& threadRanges,
     size_t elementSize) {
   // ceiling to nearest page
@@ -239,11 +239,11 @@ galois::substrate::largeMallocSpecified(
 }
 // Explicit template declarations since the template is defined in the .h
 // file
-template LAptr GALOIS_EXPORT
-galois::substrate::largeMallocSpecified<std::vector<uint32_t>>(
+template LAptr KATANA_EXPORT
+katana::largeMallocSpecified<std::vector<uint32_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint32_t>& threadRanges,
     size_t elementSize);
-template LAptr GALOIS_EXPORT
-galois::substrate::largeMallocSpecified<std::vector<uint64_t>>(
+template LAptr KATANA_EXPORT
+katana::largeMallocSpecified<std::vector<uint64_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint64_t>& threadRanges,
     size_t elementSize);

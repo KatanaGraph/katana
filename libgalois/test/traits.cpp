@@ -1,9 +1,9 @@
-#include "galois/Traits.h"
+#include "katana/Traits.h"
 
 #include <iostream>
 #include <utility>
 
-#include "galois/gIO.h"
+#include "katana/gIO.h"
 
 struct A {};
 
@@ -29,32 +29,32 @@ Print(Tuple tup) {
 
 void
 TestGet() {
-  auto pull_from_default = galois::get_default_trait_values(
+  auto pull_from_default = katana::get_default_trait_values(
       std::make_tuple(Unrelated{}), std::make_tuple(A{}), std::make_tuple(B{}));
   static_assert(
       std::is_same<decltype(pull_from_default), std::tuple<B>>::value);
 
-  auto no_pull_from_default_when_same = galois::get_default_trait_values(
+  auto no_pull_from_default_when_same = katana::get_default_trait_values(
       std::make_tuple(A{}), std::make_tuple(A{}), std::make_tuple(B{}));
   static_assert(std::is_same<
                 decltype(no_pull_from_default_when_same), std::tuple<>>::value);
 
-  auto no_pull_from_default_when_derived = galois::get_default_trait_values(
+  auto no_pull_from_default_when_derived = katana::get_default_trait_values(
       std::make_tuple(B{}), std::make_tuple(A{}), std::make_tuple(B{}));
   static_assert(
       std::is_same<
           decltype(no_pull_from_default_when_derived), std::tuple<>>::value);
 
-  auto empty_tuple = galois::get_default_trait_values(
+  auto empty_tuple = katana::get_default_trait_values(
       std::make_tuple(), std::make_tuple(), std::make_tuple());
   static_assert(std::is_same<decltype(empty_tuple), std::tuple<>>::value);
 
-  auto value_from_default = galois::get_default_trait_values(
+  auto value_from_default = katana::get_default_trait_values(
       std::make_tuple(), std::make_tuple(A{}), std::make_tuple(B{"name"}));
-  GALOIS_ASSERT(std::get<0>(value_from_default).name_ == "name");
+  KATANA_ASSERT(std::get<0>(value_from_default).name_ == "name");
 
-  auto get_value = galois::get_trait_value<A>(std::tuple<B>(B{"name"}));
-  GALOIS_ASSERT(get_value.name_ == "name");
+  auto get_value = katana::get_trait_value<A>(std::tuple<B>(B{"name"}));
+  KATANA_ASSERT(get_value.name_ == "name");
 }
 
 struct HasFunctionTraits {
@@ -63,10 +63,10 @@ struct HasFunctionTraits {
 
 void
 TestHasFunctionTraits() {
-  static_assert(galois::has_function_traits_v<HasFunctionTraits>);
+  static_assert(katana::has_function_traits_v<HasFunctionTraits>);
   static_assert(std::is_same<
                 HasFunctionTraits::function_traits,
-                galois::function_traits<HasFunctionTraits>::type>::value);
+                katana::function_traits<HasFunctionTraits>::type>::value);
 }
 
 struct Functor {
@@ -77,13 +77,13 @@ struct Functor {
 
 auto
 MakePRValueArgument() {
-  return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(1);
+  return katana::wl<katana::OrderedByIntegerMetric<Functor>>(1);
 }
 
 auto
 MakeLValueArgument() {
   int v = 2;
-  return galois::wl<galois::worklists::OrderedByIntegerMetric<Functor>>(v);
+  return katana::wl<katana::OrderedByIntegerMetric<Functor>>(v);
 }
 
 void
@@ -92,7 +92,7 @@ TestCopy() {
   std::cout << std::get<0>(MakePRValueArgument().args);
   std::cout << "\n";
 
-  // If galois::wl incorrectly stores references to arguments, we will get an
+  // If katana::wl incorrectly stores references to arguments, we will get an
   // uninitialized reference here, which will be detected statically by gcc 7
   // -Werror=uninitialized.
   auto args = MakeLValueArgument().args;

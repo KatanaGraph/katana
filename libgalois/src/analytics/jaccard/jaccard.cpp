@@ -17,21 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/analytics/jaccard/jaccard.h"
+#include "katana/analytics/jaccard/jaccard.h"
 
 #include <deque>
 #include <iostream>
 #include <type_traits>
 #include <unordered_set>
 
-#include "galois/analytics/Utils.h"
+#include "katana/analytics/Utils.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 using NodeData = std::tuple<JaccardSimilarity>;
 using EdgeData = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 namespace {
@@ -97,13 +97,12 @@ public:
 };
 
 template <typename IntersectAlgorithm>
-galois::Result<void>
+katana::Result<void>
 JaccardImpl(
-    galois::graphs::PropertyGraph<std::tuple<JaccardSimilarity>, std::tuple<>>&
-        graph,
+    katana::PropertyGraph<std::tuple<JaccardSimilarity>, std::tuple<>>& graph,
     size_t compare_node, JaccardPlan /*plan*/) {
   if (compare_node >= graph.size()) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   auto it = graph.begin();
@@ -115,8 +114,8 @@ JaccardImpl(
   IntersectAlgorithm intersect_with_base{graph, base};
 
   // Compute the similarity for each node
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& n2) {
         double& n2_data = graph.GetData<JaccardSimilarity>(n2);
         uint32_t n2_size = graph.edge_end(n2) - graph.edge_begin(n2);
@@ -130,16 +129,16 @@ JaccardImpl(
         // Store the similarity back into the graph.
         n2_data = similarity;
       },
-      galois::loopname("Jaccard"));
+      katana::loopname("Jaccard"));
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 }  // namespace
 
-galois::Result<void>
-galois::analytics::Jaccard(
-    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+katana::Result<void>
+katana::analytics::Jaccard(
+    PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan) {
   if (auto result =
           ConstructNodeProperties<NodeData>(pfg, {output_property_name});
@@ -152,7 +151,7 @@ galois::analytics::Jaccard(
     return pg_result.error();
   }
 
-  galois::Result<void> r = galois::ResultSuccess();
+  katana::Result<void> r = katana::ResultSuccess();
   switch (plan.edge_sorting()) {
   case JaccardPlan::kUnknown:
     // TODO(amp): It would be possible to start with the sorted case and then
@@ -172,19 +171,19 @@ galois::analytics::Jaccard(
 
 constexpr static const double EPSILON = 1e-6;
 
-galois::Result<void>
-galois::analytics::JaccardAssertValid(
-    galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+katana::Result<void>
+katana::analytics::JaccardAssertValid(
+    katana::PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result = galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(
-      pfg, {property_name}, {});
+  auto pg_result =
+      katana::PropertyGraph<NodeData, EdgeData>::Make(pfg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
   Graph graph = pg_result.value();
 
   if (abs(graph.GetData<JaccardSimilarity>(compare_node) - 1.0) > EPSILON) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
   auto is_bad = [&graph](const GNode& n) {
@@ -195,31 +194,31 @@ galois::analytics::JaccardAssertValid(
     return false;
   };
 
-  if (galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
+  if (katana::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
       graph.end()) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<JaccardStatistics>
-galois::analytics::JaccardStatistics::Compute(
-    galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+katana::Result<JaccardStatistics>
+katana::analytics::JaccardStatistics::Compute(
+    katana::PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result = galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(
-      pfg, {property_name}, {});
+  auto pg_result =
+      katana::PropertyGraph<NodeData, EdgeData>::Make(pfg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
   Graph graph = pg_result.value();
 
-  galois::GReduceMax<double> max_similarity;
-  galois::GReduceMin<double> min_similarity;
-  galois::GAccumulator<double> total_similarity;
+  katana::GReduceMax<double> max_similarity;
+  katana::GReduceMin<double> min_similarity;
+  katana::GAccumulator<double> total_similarity;
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& i) {
         double similarity = graph.GetData<JaccardSimilarity>(i);
         if ((unsigned int)i != (unsigned int)compare_node) {
@@ -228,7 +227,7 @@ galois::analytics::JaccardStatistics::Compute(
           total_similarity += similarity;
         }
       },
-      galois::loopname("Jaccard Statistics"), galois::no_stats());
+      katana::loopname("Jaccard Statistics"), katana::no_stats());
 
   return JaccardStatistics{
       max_similarity.reduce(), min_similarity.reduce(),
@@ -236,7 +235,7 @@ galois::analytics::JaccardStatistics::Compute(
 }
 
 void
-galois::analytics::JaccardStatistics::Print(std::ostream& os) {
+katana::analytics::JaccardStatistics::Print(std::ostream& os) {
   os << "Maximum similarity = " << max_similarity << std::endl;
   os << "Minimum similarity = " << min_similarity << std::endl;
   os << "Average similarity = " << average_similarity << std::endl;

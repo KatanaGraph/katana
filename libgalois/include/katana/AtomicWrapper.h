@@ -22,14 +22,14 @@
  *
  * Contains a copyable atomics class.
  */
-#ifndef GALOIS_LIBGALOIS_GALOIS_ATOMICWRAPPER_H_
-#define GALOIS_LIBGALOIS_GALOIS_ATOMICWRAPPER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ATOMICWRAPPER_H_
+#define KATANA_LIBGALOIS_KATANA_ATOMICWRAPPER_H_
 
 #include <atomic>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 /**
  * Class that inherits from std::atomic to make it copyable by defining a copy
  * constructor.
@@ -57,5 +57,5 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

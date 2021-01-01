@@ -1,8 +1,8 @@
 import pytest
 
-from galois.example_utils import get_input
-from galois.property_graph import PropertyGraph
-from galois.shmem import setActiveThreads
+from katana.example_utils import get_input
+from katana.property_graph import PropertyGraph
+from katana.galois import setActiveThreads
 
 
 @pytest.fixture

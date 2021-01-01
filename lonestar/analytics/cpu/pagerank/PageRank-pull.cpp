@@ -39,38 +39,38 @@ static cll::opt<bool> transposedGraph(
 
 constexpr static const unsigned CHUNK_SIZE = 32;
 
-struct NodeValue : public galois::PODProperty<PRTy> {};
-struct NodeNout : public galois::PODProperty<uint32_t> {};
+struct NodeValue : public katana::PODProperty<PRTy> {};
+struct NodeNout : public katana::PODProperty<uint32_t> {};
 
 using NodeData = std::tuple<NodeValue, NodeNout>;
 using EdgeData = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
-using DeltaArray = galois::LargeArray<PRTy>;
-using ResidualArray = galois::LargeArray<PRTy>;
+using DeltaArray = katana::LargeArray<PRTy>;
+using ResidualArray = katana::LargeArray<PRTy>;
 
 //! Initialize nodes for the topological algorithm.
 void
 initNodeDataTopological(Graph* graph) {
   PRTy init_value = 1.0f / graph->size();
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& n) {
         auto& sdata_value = graph->GetData<NodeValue>(n);
         auto& sdata_nout = graph->GetData<NodeNout>(n);
         sdata_value = init_value;
         sdata_nout = 0;
       },
-      galois::no_stats(), galois::loopname("initNodeData"));
+      katana::no_stats(), katana::loopname("initNodeData"));
 }
 
 //! Initialize nodes for the residual algorithm.
 void
 initNodeDataResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& n) {
         auto& sdata_value = graph->GetData<NodeValue>(n);
         auto& sdata_nout = graph->GetData<NodeNout>(n);
@@ -79,42 +79,42 @@ initNodeDataResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
         delta[n] = 0;
         residual[n] = INIT_RESIDUAL;
       },
-      galois::no_stats(), galois::loopname("initNodeData"));
+      katana::no_stats(), katana::loopname("initNodeData"));
 }
 
 //! Computing outdegrees in the tranpose graph is equivalent to computing the
 //! indegrees in the original graph.
 void
 computeOutDeg(Graph* graph) {
-  galois::StatTimer outDegreeTimer("computeOutDegFunc");
+  katana::StatTimer outDegreeTimer("computeOutDegFunc");
   outDegreeTimer.start();
 
-  galois::LargeArray<std::atomic<size_t>> vec;
+  katana::LargeArray<std::atomic<size_t>> vec;
   vec.allocateInterleaved(graph->size());
 
-  galois::do_all(
-      galois::iterate(*graph),
-      [&](const GNode& src) { vec.constructAt(src, 0ul); }, galois::no_stats(),
-      galois::loopname("InitDegVec"));
+  katana::do_all(
+      katana::iterate(*graph),
+      [&](const GNode& src) { vec.constructAt(src, 0ul); }, katana::no_stats(),
+      katana::loopname("InitDegVec"));
 
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& src) {
         for (auto nbr : graph->edges(src)) {
           auto dest = graph->GetEdgeDest(nbr);
           vec[*dest].fetch_add(1ul);
         };
       },
-      galois::steal(), galois::chunk_size<CHUNK_SIZE>(), galois::no_stats(),
-      galois::loopname("computeOutDeg"));
+      katana::steal(), katana::chunk_size<CHUNK_SIZE>(), katana::no_stats(),
+      katana::loopname("computeOutDeg"));
 
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& src) {
         auto& src_nout = graph->GetData<NodeNout>(src);
         src_nout = vec[src];
       },
-      galois::no_stats(), galois::loopname("CopyDeg"));
+      katana::no_stats(), katana::loopname("CopyDeg"));
 
   outDegreeTimer.stop();
 }
@@ -130,11 +130,11 @@ computeOutDeg(Graph* graph) {
 void
 computePRResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
   unsigned int iterations = 0;
-  galois::GAccumulator<unsigned int> accum;
+  katana::GAccumulator<unsigned int> accum;
 
   while (true) {
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata_value = graph->GetData<NodeValue>(src);
           auto& sdata_nout = graph->GetData<NodeNout>(src);
@@ -152,10 +152,10 @@ computePRResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
             }
           }
         },
-        galois::no_stats(), galois::loopname("PageRank_delta"));
+        katana::no_stats(), katana::loopname("PageRank_delta"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           float sum = 0;
           for (auto nbr : graph->edges(src)) {
@@ -168,8 +168,8 @@ computePRResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
             residual[src] = sum;
           }
         },
-        galois::steal(), galois::chunk_size<CHUNK_SIZE>(), galois::no_stats(),
-        galois::loopname("PageRank"));
+        katana::steal(), katana::chunk_size<CHUNK_SIZE>(), katana::no_stats(),
+        katana::loopname("PageRank"));
 
 #if DEBUG
     std::cout << "iteration: " << iterations << "\n";
@@ -195,12 +195,12 @@ computePRResidual(Graph* graph, DeltaArray& delta, ResidualArray& residual) {
 void
 computePRTopological(Graph* graph) {
   unsigned int iteration = 0;
-  galois::GAccumulator<float> accum;
+  katana::GAccumulator<float> accum;
 
   float base_score = (1.0f - ALPHA) / graph->size();
   while (true) {
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata_value = graph->GetData<NodeValue>(src);
           float sum = 0.0;
@@ -223,8 +223,8 @@ computePRTopological(Graph* graph) {
           sdata_value = value;
           accum += diff;
         },
-        galois::no_stats(), galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-        galois::loopname("PageRank"));
+        katana::no_stats(), katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+        katana::loopname("PageRank"));
 
 #if DEBUG
     std::cout << "iteration: " << iteration << " max delta: " << delta << "\n";
@@ -238,7 +238,7 @@ computePRTopological(Graph* graph) {
 
   }  ///< End while(true).
 
-  galois::ReportStatSingle("PageRank", "Rounds", iteration);
+  katana::ReportStatSingle("PageRank", "Rounds", iteration);
   if (iteration >= maxIterations) {
     std::cerr << "ERROR: failed to converge in " << iteration
               << " iterations\n";
@@ -250,7 +250,7 @@ prTopological(Graph* graph) {
   initNodeDataTopological(graph);
   computeOutDeg(graph);
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   computePRTopological(graph);
   execTime.stop();
@@ -266,7 +266,7 @@ prResidual(Graph* graph) {
   initNodeDataResidual(graph, delta, residual);
   computeOutDeg(graph);
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   computePRResidual(graph, delta, residual);
   execTime.stop();
@@ -291,16 +291,16 @@ makeResults(const Graph& graph) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
   if (!transposedGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a transposed graph input;"
         " please use the -transposedGraph flag "
         " to indicate the input is a transposed graph.");
   }
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
   std::cout << "WARNING: pull style algorithms work on the transpose of the "
                "actual graph\n"
@@ -309,26 +309,25 @@ main(int argc, char** argv) {
             << "Reading graph: " << inputFile << "\n";
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<NodeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
-  auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph transposeGraph = pg_result.value();
 
   std::cout << "Read " << transposeGraph.num_nodes() << " nodes, "
             << transposeGraph.num_edges() << " edges\n";
 
-  galois::Prealloc(2, 3 * transposeGraph.size() * sizeof(NodeData));
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(2, 3 * transposeGraph.size() * sizeof(NodeData));
+  katana::reportPageAlloc("MeminfoPre");
 
   switch (algo) {
   case Topo:
@@ -345,19 +344,19 @@ main(int argc, char** argv) {
     std::abort();
   }
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   //! Sanity checking code.
-  galois::GReduceMax<PRTy> maxRank;
-  galois::GReduceMin<PRTy> minRank;
-  galois::GAccumulator<PRTy> distanceSum;
+  katana::GReduceMax<PRTy> maxRank;
+  katana::GReduceMin<PRTy> minRank;
+  katana::GAccumulator<PRTy> distanceSum;
   maxRank.reset();
   minRank.reset();
   distanceSum.reset();
 
   //! [example of no_stats]
-  galois::do_all(
-      galois::iterate(transposeGraph),
+  katana::do_all(
+      katana::iterate(transposeGraph),
       [&](GNode i) {
         PRTy rank = transposeGraph.GetData<NodeValue>(i);
 
@@ -365,15 +364,15 @@ main(int argc, char** argv) {
         minRank.update(rank);
         distanceSum += rank;
       },
-      galois::loopname("Sanity check"), galois::no_stats());
+      katana::loopname("Sanity check"), katana::no_stats());
   //! [example of no_stats]
 
   PRTy rMaxRank = maxRank.reduce();
   PRTy rMinRank = minRank.reduce();
   PRTy rSum = distanceSum.reduce();
-  galois::gInfo("Max rank is ", rMaxRank);
-  galois::gInfo("Min rank is ", rMinRank);
-  galois::gInfo("Sum is ", rSum);
+  katana::gInfo("Max rank is ", rMaxRank);
+  katana::gInfo("Min rank is ", rMinRank);
+  katana::gInfo("Sum is ", rSum);
 
   if (!skipVerify) {
     printTop<Graph, NodeValue>(&transposeGraph);

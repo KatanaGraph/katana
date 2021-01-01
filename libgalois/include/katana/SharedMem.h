@@ -17,14 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_SHAREDMEM_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_SHAREDMEM_H_
+#ifndef KATANA_LIBGALOIS_KATANA_SHAREDMEM_H_
+#define KATANA_LIBGALOIS_KATANA_SHAREDMEM_H_
 
 #include <memory>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 /// A SharedMem represents global initialization required for the shared
 /// memory subsystem, i.e., thread pools and barriers. As a side-effect of
@@ -33,7 +33,7 @@ namespace galois::substrate {
 /// Data structures that require per-thread allocation typically ask for the
 /// thread pool. If their construction is not guaranteed to happen after the
 /// construction of a SharedMem, initialization races can occur.
-class GALOIS_EXPORT SharedMem {
+class KATANA_EXPORT SharedMem {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 
@@ -48,6 +48,6 @@ public:
   SharedMem& operator=(SharedMem&&) = delete;
 };
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

@@ -5,14 +5,14 @@
 
 namespace {
 
-galois::Result<void>
+katana::Result<void>
 AddProperties(
     const std::shared_ptr<arrow::Table>& table,
     std::shared_ptr<arrow::Table>* to_update) {
   std::shared_ptr<arrow::Table> current = *to_update;
 
   if (current->num_columns() > 0 && current->num_rows() != table->num_rows()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", current->num_rows(),
         table->num_rows());
     return tsuba::ErrorCode::InvalidArgument;
@@ -30,7 +30,7 @@ AddProperties(
       auto result =
           next->AddColumn(last + i, schema->field(i), table->column(i));
       if (!result.ok()) {
-        GALOIS_LOG_DEBUG("arrow error: {}", result.status());
+        KATANA_LOG_DEBUG("arrow error: {}", result.status());
         return tsuba::ErrorCode::ArrowError;
       }
 
@@ -39,25 +39,25 @@ AddProperties(
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
-    GALOIS_LOG_DEBUG("failed: column names are not distinct");
+    KATANA_LOG_DEBUG("failed: column names are not distinct");
     return tsuba::ErrorCode::Exists;
   }
 
   *to_update = next;
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 }  // namespace
 
 namespace tsuba {
 
-galois::Result<void>
+katana::Result<void>
 RDGCore::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
   return AddProperties(table, &node_table_);
 }
 
-galois::Result<void>
+katana::Result<void>
 RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
   return AddProperties(table, &edge_table_);
 }
@@ -81,11 +81,11 @@ RDGCore::Equals(const RDGCore& other) const {
          edge_table_->Equals(*other.edge_table_, true);
 }
 
-galois::Result<void>
+katana::Result<void>
 RDGCore::RemoveNodeProperty(uint32_t i) {
   auto result = node_table_->RemoveColumn(i);
   if (!result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", result.status());
+    KATANA_LOG_DEBUG("arrow error: {}", result.status());
     return ErrorCode::ArrowError;
   }
 
@@ -93,14 +93,14 @@ RDGCore::RemoveNodeProperty(uint32_t i) {
 
   part_header_.RemoveNodeProperty(i);
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 RDGCore::RemoveEdgeProperty(uint32_t i) {
   auto result = edge_table_->RemoveColumn(i);
   if (!result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", result.status());
+    KATANA_LOG_DEBUG("arrow error: {}", result.status());
     return ErrorCode::ArrowError;
   }
 
@@ -108,7 +108,7 @@ RDGCore::RemoveEdgeProperty(uint32_t i) {
 
   part_header_.RemoveEdgeProperty(i);
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 }  // namespace tsuba

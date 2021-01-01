@@ -19,14 +19,14 @@
 
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/runtime/Profile.h"
+#include "katana/Galois.h"
+#include "katana/Profile.h"
+#include "katana/Timer.h"
 
 template <typename V>
 size_t
 vecSumSerial(V& vec) {
-  galois::runtime::profilePapi(
+  katana::profilePapi(
       [&](void) {
         for (size_t i = 0, sz = vec.size(); i < sz; ++i) {
           vec[i] = i;
@@ -36,7 +36,7 @@ vecSumSerial(V& vec) {
 
   size_t sum = 0;
 
-  galois::runtime::profilePapi(
+  katana::profilePapi(
       [&](void) {
         for (size_t i = 0, sz = vec.size(); i < sz; ++i) {
           sum += vec[i];
@@ -50,9 +50,9 @@ vecSumSerial(V& vec) {
 template <typename V>
 size_t
 vecSumParallel(V& vec) {
-  galois::runtime::profilePapi(
+  katana::profilePapi(
       [&](void) {
-        galois::do_all(galois::iterate(size_t{0}, vec.size()), [&](size_t i) {
+        katana::do_all(katana::iterate(size_t{0}, vec.size()), [&](size_t i) {
           vec[i] = i;
         });
       },
@@ -60,9 +60,9 @@ vecSumParallel(V& vec) {
 
   size_t sum = 0;
 
-  galois::runtime::profilePapi(
+  katana::profilePapi(
       [&](void) {
-        galois::do_all(galois::iterate(size_t{0}, vec.size()), [&](size_t i) {
+        katana::do_all(katana::iterate(size_t{0}, vec.size()), [&](size_t i) {
           sum += vec[i];
         });
       },
@@ -73,19 +73,19 @@ vecSumParallel(V& vec) {
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   unsigned long long numThreads;
   if (argc == 1) {
     numThreads = 1;
   } else if (argc == 2) {
-    numThreads = galois::setActiveThreads(std::stoull(argv[1]));
+    numThreads = katana::setActiveThreads(std::stoull(argv[1]));
   } else {
     throw std::invalid_argument(
         "Test received too many command line arguments");
   }
 
-  galois::ReportParam("NULL", "Threads", numThreads);
+  katana::ReportParam("NULL", "Threads", numThreads);
 
   size_t vecSz = 1024 * 1024;
 

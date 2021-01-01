@@ -1,9 +1,8 @@
 #pragma once
 
-#include "galois/graphs/LC_CSR_CSC_Graph.h"
+#include "katana/LC_CSR_CSC_Graph.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * A LC_CSR_CSC_Graph specialized for edge labels.
@@ -71,9 +70,9 @@ protected:
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
   //! out degrees of the data graph
-  galois::gstl::Vector<uint32_t> degrees_;  // TODO: change these to LargeArray
+  katana::gstl::Vector<uint32_t> degrees_;  // TODO: change these to LargeArray
   //! in degrees of the data graph
-  galois::gstl::Vector<uint32_t> in_degrees_;
+  katana::gstl::Vector<uint32_t> in_degrees_;
 
 public:
   using node_data_const_reference =
@@ -127,7 +126,7 @@ public:
   edge_iterator edge_begin(
       GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
-    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && katana::shouldLock(mflag)) {
       for (edge_iterator ii = raw_begin(N, data), ee = raw_end(N, data);
            ii != ee; ++ii) {
         this->acquireNode(this->edgeDst[*ii], mflag);
@@ -212,7 +211,7 @@ public:
   edge_iterator in_edge_begin(
       GraphNode N, const EdgeTy& data, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
-    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && katana::shouldLock(mflag)) {
       for (edge_iterator ii = in_raw_begin(N, data), ee = in_raw_end(N, data);
            ii != ee; ++ii) {
         this->acquireNode(this->inEdgeDst[*ii], mflag);
@@ -409,8 +408,8 @@ public:
    * the moment).
    */
   void SortVectorByDataThenDst(std::vector<uint64_t>& vector_to_sort) {
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [&](size_t node_id) {
           // get this node's first and last edge
           uint32_t first_edge = *(BaseGraph::edge_begin(node_id));
@@ -439,8 +438,8 @@ public:
                 }
               });
         },
-        galois::steal(), galois::no_stats(),
-        galois::loopname("SortVectorByDataThenDst"));
+        katana::steal(), katana::no_stats(),
+        katana::loopname("SortVectorByDataThenDst"));
   }
 
   void ConstructAndSortIndex() {
@@ -463,9 +462,9 @@ public:
 
 private:
   void ConstructEdgeLabelIndex() {
-    galois::substrate::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::PerThreadStorage<std::set<EdgeTy>> edgeLabels;
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
           for (auto e : BaseGraph::edges(N)) {
             const uint64_t& data = this->getEdgeData(e);
@@ -476,11 +475,11 @@ private:
             edgeLabels.getLocal()->insert(data);
           }
         },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
 
     // ordered map
     std::map<EdgeTy, uint32_t> sortedMap;
-    for (uint32_t i = 0; i < galois::runtime::activeThreads; ++i) {
+    for (uint32_t i = 0; i < katana::activeThreads; ++i) {
       auto& edgeLabelsSet = *edgeLabels.getRemote(i);
       for (auto edgeLabel : edgeLabelsSet) {
         sortedMap[edgeLabel] = 1;
@@ -503,8 +502,8 @@ private:
       edgeIndDataLabeled.allocateInterleaved(size);
     }
 
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
           auto offset = N * this->numEdgeLabels;
           uint32_t index = 0;
@@ -522,7 +521,7 @@ private:
             index++;
           }
         },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 
   void ConstructInEdgeIndDataLabeled() {
@@ -533,8 +532,8 @@ private:
       inEdgeIndDataLabeled.allocateInterleaved(size);
     }
 
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [&](GraphNode N) {
           auto offset = N * this->numEdgeLabels;
           uint32_t index = 0;
@@ -552,7 +551,7 @@ private:
             index++;
           }
         },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 
   /**
@@ -582,10 +581,10 @@ private:
    * getEdgeData(e) and then getEdgeDst(e).
    */
   void SortAllEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [=](GraphNode N) { this->SortEdgesByDataThenDst(N, mflag); },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 
   /**
@@ -619,12 +618,11 @@ private:
    * getEdgeData(e) and then getEdgeDst(e).
    */
   void SortAllInEdgesByDataThenDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [=](GraphNode N) { this->SortInEdgesByDataThenDst(N, mflag); },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana

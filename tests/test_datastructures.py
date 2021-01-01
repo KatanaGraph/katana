@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 
-from galois.datastructures import InsertBag, LargeArray, AllocationPolicy
-from galois.loops import do_all_operator, do_all
+from katana.datastructures import InsertBag, LargeArray, AllocationPolicy
+from katana.loops import do_all_operator, do_all
 
 types = [
     pytest.param(int, id="int"),
@@ -224,7 +224,7 @@ def test_LargeArray_numpy_parallel_opaque():
 
 def test_InsertBag_numba_type():
     import numba.types
-    from galois.datastructures import InsertBag_numba_type
+    from katana.datastructures import InsertBag_numba_type
 
     assert isinstance(InsertBag_numba_type[int], numba.types.Type)
 
@@ -234,7 +234,7 @@ def test_InsertBag_numba_type():
 
 def test_LargeArray_numba_type():
     import numba.types
-    from galois.datastructures import LargeArray_numba_type
+    from katana.datastructures import LargeArray_numba_type
 
     assert isinstance(LargeArray_numba_type[int], numba.types.Type)
 

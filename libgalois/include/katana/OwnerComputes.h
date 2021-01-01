@@ -17,14 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_OWNERCOMPUTES_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_OWNERCOMPUTES_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OWNERCOMPUTES_H_
+#define KATANA_LIBGALOIS_KATANA_OWNERCOMPUTES_H_
 
-#include "galois/config.h"
-#include "galois/worklists/WLCompileCheck.h"
+#include "katana/WLCompileCheck.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 template <
     typename OwnerFn = DummyIndexer<int>, typename Container = ChunkLIFO<>,
@@ -55,18 +54,18 @@ private:
   typedef lWLTy pWL;
 
   OwnerFn Fn;
-  substrate::PerSocketStorage<cWL> items;
-  substrate::PerSocketStorage<pWL> pushBuffer;
+  PerSocketStorage<cWL> items;
+  PerSocketStorage<pWL> pushBuffer;
 
 public:
   typedef T value_type;
 
   void push(const value_type& val) {
     unsigned int index = Fn(val);
-    auto& tp = substrate::GetThreadPool();
+    auto& tp = GetThreadPool();
     unsigned int mindex = tp.getSocket(index);
     // std::cerr << "[" << index << "," << index % active << "]\n";
-    if (mindex == substrate::ThreadPool::getSocket())
+    if (mindex == ThreadPool::getSocket())
       items.getLocal()->push(val);
     else
       pushBuffer.getRemote(mindex)->push(val);
@@ -85,9 +84,9 @@ public:
       pushBuffer.getRemote(x)->flush();
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     cWL& wl = *items.getLocal();
-    galois::optional<value_type> retval = wl.pop();
+    katana::optional<value_type> retval = wl.pop();
     if (retval)
       return retval;
     pWL& p = *pushBuffer.getLocal();
@@ -96,9 +95,8 @@ public:
     return wl.pop();
   }
 };
-GALOIS_WLCOMPILECHECK(OwnerComputes)
+KATANA_WLCOMPILECHECK(OwnerComputes)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

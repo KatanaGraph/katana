@@ -1,5 +1,5 @@
-# Find architecture-specific flags based on the value of GALOIS_USE_ARCH.
-# GALOIS_USE_ARCH is a cmake list of possible architecture names. Return the
+# Find architecture-specific flags based on the value of KATANA_USE_ARCH.
+# KATANA_USE_ARCH is a cmake list of possible architecture names. Return the
 # flags corresponding to the first architecture available for the current
 # compiler toolchain.
 #
@@ -14,10 +14,10 @@ if(ARCH_FLAGS_FOUND)
   return()
 endif()
 
-if(NOT GALOIS_USE_ARCH OR GALOIS_USE_ARCH STREQUAL "none" OR ARCH_FLAGS_FOUND)
+if(NOT KATANA_USE_ARCH OR KATANA_USE_ARCH STREQUAL "none" OR ARCH_FLAGS_FOUND)
   set(ARCH_CXX_FLAGS_CANDIDATES)
 else()
-  foreach(FLAG ${GALOIS_USE_ARCH})
+  foreach(FLAG ${KATANA_USE_ARCH})
     if(FLAG STREQUAL "mic")
       if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
         list(APPEND ARCH_CXX_FLAGS_CANDIDATES -mmic)

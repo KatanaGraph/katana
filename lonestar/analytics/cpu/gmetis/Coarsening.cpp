@@ -20,10 +20,10 @@
 #include <iostream>
 
 #include "Metis.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/gstl.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Galois.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/Reduction.h"
+#include "katana/gstl.h"
 
 namespace {
 
@@ -35,12 +35,12 @@ HEMmatch(GNode node, GGraph* graph, bool) {
   GNode retval = node;  // match self if nothing else
   int maxwgt = std::numeric_limits<int>::min();
   //    nume += std::distance(graph->edge_begin(node), graph->edge_end(node));
-  for (auto jj : graph->edges(node, galois::MethodFlag::UNPROTECTED)) {
+  for (auto jj : graph->edges(node, katana::MethodFlag::UNPROTECTED)) {
     //      ++checked;
     GNode neighbor = graph->getEdgeDst(jj);
     MetisNode& neighMNode =
-        graph->getData(neighbor, galois::MethodFlag::UNPROTECTED);
-    int edgeData = graph->getEdgeData(jj, galois::MethodFlag::UNPROTECTED);
+        graph->getData(neighbor, katana::MethodFlag::UNPROTECTED);
+    int edgeData = graph->getEdgeData(jj, katana::MethodFlag::UNPROTECTED);
     if (!neighMNode.isMatched() && neighbor != node && maxwgt < edgeData) {
       maxwgt = edgeData;
       retval = neighbor;
@@ -55,9 +55,9 @@ HEMmatch(GNode node, GGraph* graph) {
 
 GNode
 RMmatch(GNode node, GGraph* graph) {
-  for (auto jj : graph->edges(node, galois::MethodFlag::UNPROTECTED)) {
+  for (auto jj : graph->edges(node, katana::MethodFlag::UNPROTECTED)) {
     GNode neighbor = graph->getEdgeDst(jj);
-    if (!graph->getData(neighbor, galois::MethodFlag::UNPROTECTED)
+    if (!graph->getData(neighbor, katana::MethodFlag::UNPROTECTED)
              .isMatched() &&
         neighbor != node)
       return neighbor;
@@ -73,7 +73,7 @@ template <MatchingSubPolicy matcher>
 GNode
 TwoHopMatcher(GNode node, GGraph* graph) {
   std::pair<GNode, int> retval(node, std::numeric_limits<int>::min());
-  for (auto jj : graph->edges(node, galois::MethodFlag::UNPROTECTED)) {
+  for (auto jj : graph->edges(node, katana::MethodFlag::UNPROTECTED)) {
     GNode neighbor = graph->getEdgeDst(jj);
     std::pair<GNode, int> tval = matcher(neighbor, graph, true);
     if (tval.first != node && tval.first != neighbor &&
@@ -83,7 +83,7 @@ TwoHopMatcher(GNode node, GGraph* graph) {
   return retval.first;
 }
 
-typedef galois::GAccumulator<unsigned> Pcounter;
+typedef katana::GAccumulator<unsigned> Pcounter;
 
 /*
  *This function is responsible for matching.
@@ -104,14 +104,14 @@ parallelMatchAndCreateNodes(
   GGraph* coarseGGraph = graph->getGraph();
   assert(fineGGraph != coarseGGraph);
 
-  galois::for_each(
-      galois::iterate(*fineGGraph),
-      [&](GNode item, galois::UserContext<GNode>&) {
+  katana::for_each(
+      katana::iterate(*fineGGraph),
+      [&](GNode item, katana::UserContext<GNode>&) {
         if (fineGGraph->getData(item).isMatched())
           return;
 
-        if (fineGGraph->edge_begin(item, galois::MethodFlag::UNPROTECTED) ==
-            fineGGraph->edge_end(item, galois::MethodFlag::UNPROTECTED)) {
+        if (fineGGraph->edge_begin(item, katana::MethodFlag::UNPROTECTED) ==
+            fineGGraph->edge_end(item, katana::MethodFlag::UNPROTECTED)) {
           noEdgeBag.push(item);
           return;
         }
@@ -130,8 +130,8 @@ parallelMatchAndCreateNodes(
         // matched
 
         unsigned numEdges = std::distance(
-            fineGGraph->edge_begin(item, galois::MethodFlag::UNPROTECTED),
-            fineGGraph->edge_end(item, galois::MethodFlag::UNPROTECTED));
+            fineGGraph->edge_begin(item, katana::MethodFlag::UNPROTECTED),
+            fineGGraph->edge_end(item, katana::MethodFlag::UNPROTECTED));
         // assert(numEdges == std::distance(fineGGraph->edge_begin(item),
         // fineGGraph->edge_end(item)));
 
@@ -139,8 +139,8 @@ parallelMatchAndCreateNodes(
         if (ret != item) {
           // match found
           numEdges += std::distance(
-              fineGGraph->edge_begin(ret, galois::MethodFlag::UNPROTECTED),
-              fineGGraph->edge_end(ret, galois::MethodFlag::UNPROTECTED));
+              fineGGraph->edge_begin(ret, katana::MethodFlag::UNPROTECTED),
+              fineGGraph->edge_end(ret, katana::MethodFlag::UNPROTECTED));
           // Cautious point
           N = coarseGGraph->createNode(
               numEdges,
@@ -164,7 +164,7 @@ parallelMatchAndCreateNodes(
           }
         }
       },
-      galois::wl<WL>(), galois::no_pushes(), galois::loopname("match"));
+      katana::wl<WL>(), katana::no_pushes(), katana::loopname("match"));
 }
 
 /*
@@ -178,29 +178,29 @@ createCoarseEdges(MetisGraph* graph) {
   GGraph* fineGGraph = graph->getFinerGraph()->getGraph();
   assert(fineGGraph != coarseGGraph);
 
-  typedef galois::gstl::Vector<std::pair<GNode, unsigned>> VecTy;
-  typedef galois::substrate::PerThreadStorage<VecTy> ThreadLocalData;
+  typedef katana::gstl::Vector<std::pair<GNode, unsigned>> VecTy;
+  typedef katana::PerThreadStorage<VecTy> ThreadLocalData;
   ThreadLocalData edgesThreadLocal;
 
-  galois::do_all(
-      galois::iterate(*coarseGGraph),
+  katana::do_all(
+      katana::iterate(*coarseGGraph),
       [&](GNode node) {
         //    std::cout << 'p';
         // fineGGraph is read only in this loop, so skip locks
         MetisNode& nodeData =
-            coarseGGraph->getData(node, galois::MethodFlag::UNPROTECTED);
+            coarseGGraph->getData(node, katana::MethodFlag::UNPROTECTED);
 
         auto& edges = *edgesThreadLocal.getLocal();
         edges.clear();
         for (unsigned x = 0; x < nodeData.numChildren(); ++x) {
           for (auto ii : fineGGraph->edges(
-                   nodeData.getChild(x), galois::MethodFlag::UNPROTECTED)) {
+                   nodeData.getChild(x), katana::MethodFlag::UNPROTECTED)) {
             GNode dst = fineGGraph->getEdgeDst(ii);
-            GNode p = fineGGraph->getData(dst, galois::MethodFlag::UNPROTECTED)
+            GNode p = fineGGraph->getData(dst, katana::MethodFlag::UNPROTECTED)
                           .getParent();
             edges.emplace_back(
                 p,
-                fineGGraph->getEdgeData(ii, galois::MethodFlag::UNPROTECTED));
+                fineGGraph->getEdgeData(ii, katana::MethodFlag::UNPROTECTED));
           }
         }
 
@@ -220,27 +220,27 @@ createCoarseEdges(MetisGraph* graph) {
               ++pp;
             }
             coarseGGraph->addMultiEdge(
-                node, dst, galois::MethodFlag::UNPROTECTED, sum);
+                node, dst, katana::MethodFlag::UNPROTECTED, sum);
           }
         }
         //    assert(e);
         // nodeData.setNumEdges(e);
       },
-      galois::steal(), galois::loopname("popedge"));
+      katana::steal(), katana::loopname("popedge"));
 }
 
 struct HighDegreeIndexer {
   static GGraph* indexgraph;
   unsigned int operator()(const GNode& val) const {
-    return indexgraph->getData(val, galois::MethodFlag::UNPROTECTED)
+    return indexgraph->getData(val, katana::MethodFlag::UNPROTECTED)
                    .isFailedMatch()
                ? std::numeric_limits<unsigned int>::max()
                : (std::numeric_limits<unsigned int>::max() -
                   ((std::distance(
                        indexgraph->edge_begin(
-                           val, galois::MethodFlag::UNPROTECTED),
+                           val, katana::MethodFlag::UNPROTECTED),
                        indexgraph->edge_end(
-                           val, galois::MethodFlag::UNPROTECTED))) >>
+                           val, katana::MethodFlag::UNPROTECTED))) >>
                    2));
   }
 };
@@ -250,9 +250,9 @@ struct LowDegreeIndexer {
   unsigned int operator()(const GNode& val) const {
     unsigned x = std::distance(
         HighDegreeIndexer::indexgraph->edge_begin(
-            val, galois::MethodFlag::UNPROTECTED),
+            val, katana::MethodFlag::UNPROTECTED),
         HighDegreeIndexer::indexgraph->edge_end(
-            val, galois::MethodFlag::UNPROTECTED));
+            val, katana::MethodFlag::UNPROTECTED));
     return x;  // >> 2;
     // int targetlevel = 0;
     // while (x >>= 1) ++targetlevel;
@@ -263,7 +263,7 @@ struct LowDegreeIndexer {
 struct WeightIndexer {
   int operator()(const GNode& val) const {
     return HighDegreeIndexer::indexgraph
-        ->getData(val, galois::MethodFlag::UNPROTECTED)
+        ->getData(val, katana::MethodFlag::UNPROTECTED)
         .getWeight();
   }
 };
@@ -316,27 +316,26 @@ findMatching(
    * Different worklist versions tried, PerSocketChunkFIFO 256 works best with
    * LC_MORPH_graph. Another good type would be Lazy Iter.
    */
-  // typedef galois::worklists::ChunkLIFO<64, GNode> WL;
+  // typedef katana::ChunkLIFO<64, GNode> WL;
   // typedef
-  // galois::worklists::LazyIter<decltype(fineGGraph->local_begin()),false> WL;
+  // katana::LazyIter<decltype(fineGGraph->local_begin()),false> WL;
 
   GNodeBag bagOfLoners;
   Pcounter pc;
 
   bool useOBIM = true;
 
-  typedef galois::worklists::StableIterator<true> WL;
+  typedef katana::StableIterator<true> WL;
   if (useRM) {
     parallelMatchAndCreateNodes<RMmatch, WL>(
         coarseMetisGraph, pc, bagOfLoners, !use2Hop);
   } else {
     // FIXME: use obim for SHEM matching
-    typedef galois::worklists::PerSocketChunkLIFO<32> Chunk;
-    // typedef galois::worklists::OrderedByIntegerMetric<WeightIndexer, Chunk>
+    typedef katana::PerSocketChunkLIFO<32> Chunk;
+    // typedef katana::OrderedByIntegerMetric<WeightIndexer, Chunk>
     // pW;
-    typedef galois::worklists::OrderedByIntegerMetric<LowDegreeIndexer, Chunk>
-        pLD;
-    // typedef galois::worklists::OrderedByIntegerMetric<HighDegreeIndexer,
+    typedef katana::OrderedByIntegerMetric<LowDegreeIndexer, Chunk> pLD;
+    // typedef katana::OrderedByIntegerMetric<HighDegreeIndexer,
     // Chunk> pHD;
 
     HighDegreeIndexer::indexgraph = fineMetisGraph->getGraph();
@@ -352,12 +351,11 @@ findMatching(
   if (verbose && c)
     std::cout << "\n\tLone Matches " << c;
   if (use2Hop) {
-    typedef galois::worklists::PerSocketChunkLIFO<32> Chunk;
-    // typedef galois::worklists::OrderedByIntegerMetric<WeightIndexer, Chunk>
+    typedef katana::PerSocketChunkLIFO<32> Chunk;
+    // typedef katana::OrderedByIntegerMetric<WeightIndexer, Chunk>
     // pW;
-    typedef galois::worklists::OrderedByIntegerMetric<LowDegreeIndexer, Chunk>
-        pLD;
-    // typedef galois::worklists::OrderedByIntegerMetric<HighDegreeIndexer,
+    typedef katana::OrderedByIntegerMetric<LowDegreeIndexer, Chunk> pLD;
+    // typedef katana::OrderedByIntegerMetric<HighDegreeIndexer,
     // Chunk> pHD;
 
     HighDegreeIndexer::indexgraph = fineMetisGraph->getGraph();
@@ -378,7 +376,7 @@ coarsenOnce(
     MetisGraph* fineMetisGraph, unsigned& rem, bool useRM, bool with2Hop,
     bool verbose) {
   MetisGraph* coarseMetisGraph = new MetisGraph(fineMetisGraph);
-  galois::Timer t, t2;
+  katana::Timer t, t2;
   if (verbose)
     t.start();
   rem = findMatching(coarseMetisGraph, useRM, with2Hop, verbose);

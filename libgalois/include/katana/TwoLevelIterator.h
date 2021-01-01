@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H_
-#define GALOIS_LIBGALOIS_GALOIS_TWOLEVELITERATOR_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TWOLEVELITERATOR_H_
+#define KATANA_LIBGALOIS_KATANA_TWOLEVELITERATOR_H_
 
 #include <algorithm>
 #include <cassert>
@@ -28,9 +28,9 @@
 
 #include <boost/iterator/iterator_adaptor.hpp>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 //! Helper functor, returns <code>t.end()</code>
 struct GetBegin {
@@ -421,6 +421,6 @@ make_two_level_iterator(OuterIter outer_begin, OuterIter outer_end) {
       Iter(outer_begin, outer_end, outer_end, InnerBeginFn(), InnerEndFn()));
 }
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

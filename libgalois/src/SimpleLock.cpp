@@ -17,10 +17,10 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/SimpleLock.h"
+#include "katana/SimpleLock.h"
 
 void
-galois::substrate::SimpleLock::slow_lock() const {
+katana::SimpleLock::slow_lock() const {
   int oldval = 0;
   do {
     while (_lock.load(std::memory_order_acquire) != 0) {

@@ -17,15 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_STABLEITERATOR_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_STABLEITERATOR_H_
+#ifndef KATANA_LIBGALOIS_KATANA_STABLEITERATOR_H_
+#define KATANA_LIBGALOIS_KATANA_STABLEITERATOR_H_
 
-#include "galois/config.h"
-#include "galois/gstl.h"
-#include "galois/worklists/Chunk.h"
+#include "katana/Chunk.h"
+#include "katana/config.h"
+#include "katana/gstl.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 /**
  * Low-overhead worklist when initial range is not invalidated by the
@@ -70,12 +69,12 @@ private:
   struct shared_state {
     Iterator stealBegin;
     Iterator stealEnd;
-    substrate::SimpleLock stealLock;
+    SimpleLock stealLock;
     bool stealAvail;
   };
 
   struct state {
-    substrate::CacheLineStorage<shared_state> stealState;
+    CacheLineStorage<shared_state> stealState;
     Iterator localBegin;
     Iterator localEnd;
     unsigned int nextVictim;
@@ -86,7 +85,7 @@ private:
         shared_state& s = stealState.data;
         s.stealLock.lock();
         s.stealEnd = localEnd;
-        s.stealBegin = localEnd = galois::split_range(localBegin, localEnd);
+        s.stealBegin = localEnd = katana::split_range(localBegin, localEnd);
         if (s.stealBegin != s.stealEnd)
           s.stealAvail = true;
         s.stealLock.unlock();
@@ -94,7 +93,7 @@ private:
     }
   };
 
-  substrate::PerThreadStorage<state> TLDS;
+  PerThreadStorage<state> TLDS;
   Container inner;
 
   bool doSteal(state& dst, state& src, bool wait) {
@@ -108,7 +107,7 @@ private:
       if (s.stealBegin != s.stealEnd) {
         dst.localBegin = s.stealBegin;
         s.stealBegin = dst.localEnd =
-            galois::split_range(s.stealBegin, s.stealEnd);
+            katana::split_range(s.stealBegin, s.stealEnd);
         s.stealAvail = s.stealBegin != s.stealEnd;
       }
       s.stealLock.unlock();
@@ -117,21 +116,21 @@ private:
   }
 
   // pop already failed, try again with stealing
-  galois::optional<value_type> pop_steal(state& data) {
+  katana::optional<value_type> pop_steal(state& data) {
     // always try stealing self
     if (doSteal(data, data, true))
       return *data.localBegin++;
     // only try stealing one other
     if (doSteal(data, *TLDS.getRemote(data.nextVictim), false)) {
       // share the wealth
-      if (data.nextVictim != substrate::ThreadPool::getTID())
+      if (data.nextVictim != ThreadPool::getTID())
         data.populateSteal();
       return *data.localBegin++;
     }
     ++data.nextVictim;
     ++data.numStealFailures;
-    data.nextVictim %= runtime::activeThreads;
-    return galois::optional<value_type>();
+    data.nextVictim %= activeThreads;
+    return katana::optional<value_type>();
   }
 
 public:
@@ -142,19 +141,19 @@ public:
     state& data = *TLDS.getLocal();
     data.localBegin = r.local_begin();
     data.localEnd = r.local_end();
-    data.nextVictim = substrate::ThreadPool::getTID();
+    data.nextVictim = ThreadPool::getTID();
     data.numStealFailures = 0;
     data.populateSteal();
   }
 
   //! pop a value from the queue.
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     state& data = *TLDS.getLocal();
     if (data.localBegin != data.localEnd)
       return *data.localBegin++;
 
-    galois::optional<value_type> item;
-    if (Steal && 2 * data.numStealFailures > runtime::activeThreads)
+    katana::optional<value_type> item;
+    if (Steal && 2 * data.numStealFailures > activeThreads)
       if ((item = pop_steal(data)))
         return item;
     if ((item = inner.pop()))
@@ -172,8 +171,7 @@ public:
       push(*b++);
   }
 };
-GALOIS_WLCOMPILECHECK(StableIterator)
+KATANA_WLCOMPILECHECK(StableIterator)
 
-}  // namespace worklists
-}  // namespace galois
+}  // namespace katana
 #endif

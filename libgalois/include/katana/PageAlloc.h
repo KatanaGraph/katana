@@ -17,24 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEALLOC_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEALLOC_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PAGEALLOC_H_
+#define KATANA_LIBGALOIS_KATANA_PAGEALLOC_H_
 
 #include <cstddef>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 // size of pages
-GALOIS_EXPORT size_t allocSize();
+KATANA_EXPORT size_t allocSize();
 
 // allocate contiguous pages, optionally faulting them in
-GALOIS_EXPORT void* allocPages(unsigned num, bool preFault);
+KATANA_EXPORT void* allocPages(unsigned num, bool preFault);
 
 // free page range
-GALOIS_EXPORT void freePages(void* ptr, unsigned num);
+KATANA_EXPORT void freePages(void* ptr, unsigned num);
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

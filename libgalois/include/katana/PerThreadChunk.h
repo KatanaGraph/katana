@@ -17,19 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_PERTHREADCHUNK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PERTHREADCHUNK_H_
+#define KATANA_LIBGALOIS_KATANA_PERTHREADCHUNK_H_
 
-#include "galois/FixedSizeRing.h"
-#include "galois/Mem.h"
-#include "galois/Threads.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/PtrLock.h"
-#include "galois/worklists/WLCompileCheck.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/FixedSizeRing.h"
+#include "katana/Mem.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/PtrLock.h"
+#include "katana/Threads.h"
+#include "katana/WLCompileCheck.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 struct ChunkHeader {
   ChunkHeader* next;
@@ -37,7 +36,7 @@ struct ChunkHeader {
 };
 
 class PerThreadChunkQueue {
-  substrate::PtrLock<ChunkHeader> head;
+  PtrLock<ChunkHeader> head;
   ChunkHeader* tail;
 
   void prepend(ChunkHeader* C) {
@@ -149,7 +148,7 @@ public:
 };
 
 class PerThreadChunkStack {
-  substrate::PtrLock<ChunkHeader> head;
+  PtrLock<ChunkHeader> head;
 
   void prepend(ChunkHeader* C) {
     // Find tail of stolen stuff
@@ -243,15 +242,15 @@ public:
 
 template <typename InnerWL>
 class StealingQueue : private boost::noncopyable {
-  substrate::PerThreadStorage<std::pair<InnerWL, unsigned>> local;
+  PerThreadStorage<std::pair<InnerWL, unsigned>> local;
 
-  GALOIS_ATTRIBUTE_NOINLINE
+  KATANA_ATTRIBUTE_NOINLINE
   ChunkHeader* doSteal() {
     std::pair<InnerWL, unsigned>& me = *local.getLocal();
-    auto& tp = substrate::GetThreadPool();
+    auto& tp = GetThreadPool();
     unsigned id = tp.getTID();
-    unsigned pkg = substrate::ThreadPool::getSocket();
-    unsigned num = galois::getActiveThreads();
+    unsigned pkg = ThreadPool::getSocket();
+    unsigned num = katana::getActiveThreads();
 
     // First steal from this socket
     for (unsigned eid = id + 1; eid < num; ++eid) {
@@ -270,7 +269,7 @@ class StealingQueue : private boost::noncopyable {
     }
 
     // Leaders can cross socket
-    if (substrate::ThreadPool::isLeader()) {
+    if (ThreadPool::isLeader()) {
       unsigned eid = (id + me.second) % num;
       ++me.second;
       if (id != eid && tp.isLeader(eid)) {
@@ -306,10 +305,10 @@ struct PerThreadChunkMaster : private boost::noncopyable {
 
 private:
   class Chunk : public ChunkHeader,
-                public galois::FixedSizeRing<T, ChunkSize> {};
+                public katana::FixedSizeRing<T, ChunkSize> {};
 
-  runtime::FixedSizeAllocator<Chunk> alloc;
-  substrate::PerThreadStorage<std::pair<Chunk*, Chunk*>> data;
+  FixedSizeAllocator<Chunk> alloc;
+  PerThreadStorage<std::pair<Chunk*, Chunk*>> data;
   Container worklist;
 
   Chunk* mkChunk() {
@@ -339,7 +338,7 @@ private:
 
   bool doPush(Chunk* c, const T& val) { return c->push_back(val); }
 
-  galois::optional<T> doPop(Chunk* c) {
+  katana::optional<T> doPop(Chunk* c) {
     if (!IsLocallyLIFO)
       return c->extract_front();
     else
@@ -383,10 +382,10 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     std::pair<Chunk*, Chunk*>& tld = *data.getLocal();
     Chunk*& n = getPopChunk(tld);
-    galois::optional<value_type> retval;
+    katana::optional<value_type> retval;
     // simple case, things in current chunk
     if (n && (retval = doPop(n)))
       return retval;
@@ -408,13 +407,12 @@ public:
 template <int ChunkSize = 64, typename T = int>
 using PerThreadChunkLIFO = PerThreadChunkMaster<
     true, ChunkSize, StealingQueue<PerThreadChunkStack>, T>;
-GALOIS_WLCOMPILECHECK(PerThreadChunkLIFO)
+KATANA_WLCOMPILECHECK(PerThreadChunkLIFO)
 
 template <int ChunkSize = 64, typename T = int>
 using PerThreadChunkFIFO = PerThreadChunkMaster<
     false, ChunkSize, StealingQueue<PerThreadChunkQueue>, T>;
-GALOIS_WLCOMPILECHECK(PerThreadChunkFIFO)
+KATANA_WLCOMPILECHECK(PerThreadChunkFIFO)
 
-}  // namespace worklists
-}  // namespace galois
+}  // namespace katana
 #endif

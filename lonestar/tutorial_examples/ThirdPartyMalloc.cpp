@@ -17,23 +17,23 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-// This example shows how to use galois::runtime::ExternalHeapAllocator
+// This example shows how to use katana::ExternalHeapAllocator
 // to wrap up 3rd-party allocators and use the wrapped heap for STL containers.
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Mem.h"
+#include "katana/Galois.h"
+#include "katana/Mem.h"
 
 int
 main() {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   //! [heap wrapping example]
   // Our 3rd-party heap
-  using RealHeap = galois::runtime::MallocHeap;
+  using RealHeap = katana::MallocHeap;
 
   // Wrap RealHeap to conform to STL allocators
-  using WrappedHeap = galois::runtime::ExternalHeapAllocator<int, RealHeap>;
+  using WrappedHeap = katana::ExternalHeapAllocator<int, RealHeap>;
 
   // Instantiate heaps
   RealHeap externalHeap;
@@ -46,7 +46,7 @@ main() {
   }
 
   std::cout << "Use of a std::vector with a third-party allocator wrapped by "
-               "galois::runtime::ExternalHeapAllocator.\n";
+               "katana::ExternalHeapAllocator.\n";
   for (auto& j : v) {
     std::cout << j << std::endl;
   }

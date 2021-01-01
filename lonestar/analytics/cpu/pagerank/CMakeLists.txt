@@ -1,6 +1,6 @@
 add_executable(pagerank-pull-cpu PageRank-pull.cpp)
 add_dependencies(apps pagerank-pull-cpu)
-target_link_libraries(pagerank-pull-cpu PRIVATE Galois::shmem lonestar)
+target_link_libraries(pagerank-pull-cpu PRIVATE Katana::galois lonestar)
 install(TARGETS pagerank-pull-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
 #add_test_scale(small pagerank-pull-cpu -transposedGraph -tolerance=0.01 "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
@@ -8,7 +8,7 @@ install(TARGETS pagerank-pull-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONEN
 
 add_executable(pagerank-push-cpu PageRank-push.cpp)
 add_dependencies(apps pagerank-push-cpu)
-target_link_libraries(pagerank-push-cpu PRIVATE Galois::shmem lonestar)
+target_link_libraries(pagerank-push-cpu PRIVATE Katana::galois lonestar)
 install(TARGETS pagerank-push-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
 add_test_scale(small pagerank-push-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -maxIterations=100)

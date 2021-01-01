@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_BUILDGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_BUILDGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_BUILDGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_BUILDGRAPH_H_
 
 /// Construct a PropertyFileGraph in memory.
 
@@ -13,9 +13,9 @@
 #include <arrow/api.h>
 #include <arrow/stl.h>
 
-#include "galois/graphs/PropertyFileGraph.h"
+#include "katana/PropertyFileGraph.h"
 
-namespace galois {
+namespace katana {
 
 using ArrayBuilders = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
 using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
@@ -146,11 +146,11 @@ struct GraphComponent {
 struct GraphComponents {
   GraphComponent nodes;
   GraphComponent edges;
-  std::shared_ptr<galois::graphs::GraphTopology> topology;
+  std::shared_ptr<katana::GraphTopology> topology;
 
   GraphComponents(
       GraphComponent nodes_, GraphComponent edges_,
-      std::shared_ptr<galois::graphs::GraphTopology> topology_)
+      std::shared_ptr<katana::GraphTopology> topology_)
       : nodes(std::move(nodes_)),
         edges(std::move(edges_)),
         topology(std::move(topology_)) {}
@@ -169,7 +169,7 @@ struct GraphComponents {
   }
 };
 
-class GALOIS_EXPORT PropertyGraphBuilder {
+class KATANA_EXPORT PropertyGraphBuilder {
   WriterProperties properties_;
   PropertiesState node_properties_;
   PropertiesState edge_properties_;
@@ -224,20 +224,20 @@ private:
   GraphComponent BuildFinalEdges(bool verbose);
 };
 
-GALOIS_EXPORT galois::graphs::PropertyFileGraph ConvertKatana(
+KATANA_EXPORT katana::PropertyFileGraph ConvertKatana(
     const std::string& input_filename);
 
-GALOIS_EXPORT std::unique_ptr<galois::graphs::PropertyFileGraph> MakeGraph(
+KATANA_EXPORT std::unique_ptr<katana::PropertyFileGraph> MakeGraph(
     const GraphComponents& graph_comps);
-GALOIS_EXPORT void WritePropertyGraph(
+KATANA_EXPORT void WritePropertyGraph(
     const GraphComponents& graph_comps, const std::string& dir);
-GALOIS_EXPORT void WritePropertyGraph(
-    graphs::PropertyFileGraph prop_graph, const std::string& dir);
+KATANA_EXPORT void WritePropertyGraph(
+    PropertyFileGraph prop_graph, const std::string& dir);
 
 /// Convert an Arrow chunked array to a vector of ImportData
-GALOIS_EXPORT std::vector<galois::ImportData> ArrowToImport(
+KATANA_EXPORT std::vector<katana::ImportData> ArrowToImport(
     std::shared_ptr<arrow::ChunkedArray> arr);
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

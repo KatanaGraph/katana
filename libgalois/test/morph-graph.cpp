@@ -20,17 +20,15 @@
 #include <iostream>
 #include <string>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/Graph.h"
-#include "galois/graphs/TypeTraits.h"
-#include "galois/runtime/Profile.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
+#include "katana/Profile.h"
+#include "katana/Timer.h"
+#include "katana/TypeTraits.h"
 
-using OutGraph =
-    galois::graphs::MorphGraph<unsigned int, unsigned int, true, false>;
-using InOutGraph =
-    galois::graphs::MorphGraph<unsigned int, unsigned int, true, true>;
-using SymGraph = galois::graphs::MorphGraph<unsigned int, unsigned int, false>;
+using OutGraph = katana::MorphGraph<unsigned int, unsigned int, true, false>;
+using InOutGraph = katana::MorphGraph<unsigned int, unsigned int, true, true>;
+using SymGraph = katana::MorphGraph<unsigned int, unsigned int, false>;
 
 std::string filename;
 std::string statfile;
@@ -67,27 +65,27 @@ traverseGraph(Graph& g) {
 
 template <typename Graph>
 void
-run(Graph& g, galois::StatTimer& timer, std::string prompt) {
+run(Graph& g, katana::StatTimer& timer, std::string prompt) {
   std::cout << prompt << "\n";
 
-  galois::graphs::FileGraph f;
+  katana::FileGraph f;
   f.fromFileInterleaved<typename Graph::file_edge_data_type>(filename);
 
   size_t approxGraphSize =
       120 * f.sizeEdges() *
       sizeof(typename Graph::edge_data_type);  // 120*|E|*sizeof(E)
-  galois::Prealloc(1, approxGraphSize);
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(1, approxGraphSize);
+  katana::reportPageAlloc("MeminfoPre");
 
   timer.start();
-  galois::runtime::profileVtune(
+  katana::profileVtune(
       [&g, &f]() {
-        galois::graphs::readGraphDispatch(g, typename Graph::read_tag(), f);
+        katana::readGraphDispatch(g, typename Graph::read_tag(), f);
       },
       "Construct MorphGraph");
   timer.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   initGraph(g);
   traverseGraph(g);
@@ -95,7 +93,7 @@ run(Graph& g, galois::StatTimer& timer, std::string prompt) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 4) {
     std::cout << "Usage: ./test-morphgraph <input> <num_threads> "
@@ -106,30 +104,30 @@ main(int argc, char** argv) {
   filename = argv[1];
   graphtype = argv[3];
 
-  auto numThreads = galois::setActiveThreads(std::stoul(argv[2]));
+  auto numThreads = katana::setActiveThreads(std::stoul(argv[2]));
   std::cout << "Loading " << filename << " with " << numThreads
             << " threads.\n";
 
   if (argc >= 5) {
-    galois::SetStatFile(argv[4]);
+    katana::SetStatFile(argv[4]);
   }
 
   if ("out" == graphtype) {
-    galois::StatTimer outT("OutGraphTime");
+    katana::StatTimer outT("OutGraphTime");
     OutGraph outG;
     run(outG, outT, "out graph");
   } else if ("in-out" == graphtype) {
-    galois::StatTimer inoutT("InOutGraphTime");
+    katana::StatTimer inoutT("InOutGraphTime");
     InOutGraph inoutG;
     run(inoutG, inoutT, "in-out graph");
   } else if ("symmetric" == graphtype) {
-    galois::StatTimer symT("SymGraphTime");
+    katana::StatTimer symT("SymGraphTime");
     SymGraph symG;
     run(symG, symT, "symmetric graph");
   }
 
-  galois::ReportParam("Load MorphGraph", "Threads", numThreads);
-  galois::ReportParam("Load MorphGraph", "File", filename);
-  galois::ReportParam("Load MorphGraph", "Graph Type", graphtype);
+  katana::ReportParam("Load MorphGraph", "Threads", numThreads);
+  katana::ReportParam("Load MorphGraph", "File", filename);
+  katana::ReportParam("Load MorphGraph", "Graph Type", graphtype);
   return 0;
 }

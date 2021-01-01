@@ -20,10 +20,10 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
 
 static const char* name = "Count levels";
 static const char* desc = "Computes the number of degree levels";
@@ -44,16 +44,16 @@ struct LNode {
   COLOR color;
 };
 
-using Graph = galois::graphs::LC_CSR_Graph<LNode, void>::with_numa_alloc<
+using Graph = katana::LC_CSR_Graph<LNode, void>::with_numa_alloc<
     true>::type ::with_no_lockable<true>::type;
 using GNode = Graph::GraphNode;
 
 static const unsigned int DIST_INFINITY =
     std::numeric_limits<unsigned int>::max();
 
-const galois::gstl::Vector<size_t>&
+const katana::gstl::Vector<size_t>&
 countLevels(Graph& graph) {
-  using Vec = galois::gstl::Vector<size_t>;
+  using Vec = katana::gstl::Vector<size_t>;
 
   //! [Define GReducible]
   auto merge = [](Vec& lhs, Vec&& rhs) -> Vec& {
@@ -70,9 +70,9 @@ countLevels(Graph& graph) {
 
   auto identity = []() -> Vec { return Vec(); };
 
-  auto r = galois::make_reducible(merge, identity);
+  auto r = katana::make_reducible(merge, identity);
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     LNode srcdata = graph.getData(n);
     if (srcdata.dist == DIST_INFINITY) {
       return;
@@ -91,7 +91,7 @@ countLevels(Graph& graph) {
 
 void
 bfsSerial(Graph& graph, GNode source) {
-  constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
+  constexpr katana::MethodFlag flag = katana::MethodFlag::UNPROTECTED;
 
   LNode& sdata = graph.getData(source, flag);
   sdata.dist = 0u;
@@ -122,29 +122,29 @@ bfsSerial(Graph& graph, GNode source) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer OT("OverheadTime");
+  katana::StatTimer OT("OverheadTime");
   OT.start();
 
   Graph graph;
-  galois::graphs::readGraph(graph, inputFile);
+  katana::readGraph(graph, inputFile);
   std::cout << "Read " << graph.size() << " nodes, " << graph.sizeEdges()
             << " edges\n";
 
-  galois::Prealloc(
+  katana::Prealloc(
       5, 2 * graph.size() * sizeof(typename Graph::node_data_type));
-  galois::reportPageAlloc("MeminfoPre");
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& src) {
         LNode& sdata = graph.getData(src);
         sdata.color = WHITE;
         sdata.dist = DIST_INFINITY;
       },
-      galois::no_stats());
+      katana::no_stats());
 
   if (startNode >= graph.size()) {
     std::cerr << "Source node index " << startNode
@@ -158,13 +158,13 @@ main(int argc, char** argv) {
   std::advance(it, startNode.getValue());
   source = *it;
 
-  galois::StatTimer T;
+  katana::StatTimer T;
   T.start();
   bfsSerial(graph, source);
   const auto& counts = countLevels(graph);
   T.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
 #if DEBUG
   for (auto n : graph) {

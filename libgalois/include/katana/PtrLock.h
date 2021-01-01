@@ -17,21 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PTRLOCK_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PTRLOCK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PTRLOCK_H_
+#define KATANA_LIBGALOIS_KATANA_PTRLOCK_H_
 
 #include <atomic>
 #include <cassert>
 #include <cstdint>
 
-#include "galois/config.h"
-#include "galois/substrate/CompilerSpecific.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 namespace internal {
-GALOIS_EXPORT void ptr_slow_lock(std::atomic<uintptr_t>& l);
+KATANA_EXPORT void ptr_slow_lock(std::atomic<uintptr_t>& l);
 }
 
 /// PtrLock is a spinlock and a pointer.  This wraps a pointer and
@@ -155,7 +154,6 @@ public:
   inline bool stealing_CAS(T* oldval, T* newval) { return CAS(oldval, newval); }
 };
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

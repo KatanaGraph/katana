@@ -23,8 +23,8 @@
 #include <vector>
 using namespace std;
 
-typedef galois::graphs::LC_CSR_Graph<int, unsigned int> InputGraph;
-typedef galois::graphs::LC_CSR_Graph<int, unsigned int>::GraphNode InputGNode;
+typedef katana::LC_CSR_Graph<int, unsigned int> InputGraph;
+typedef katana::LC_CSR_Graph<int, unsigned int>::GraphNode InputGNode;
 
 while (true) {
   int index = strtol(items, &remaining, 10) - 1;
@@ -35,7 +35,7 @@ while (true) {
   if (n1 == n2) {
     continue;
   }
-  graph->addEdge(n1, n2, galois::MethodFlag::WRITE, 1);
+  graph->addEdge(n1, n2, katana::MethodFlag::WRITE, 1);
   graph->getData(n1).setEdgeWeight(graph->getData(n1).getEdgeWeight() + 1);
   graph->getData(n1).setNumEdges(graph->getData(n1).getNumEdges() + 1);
   countEdges++;
@@ -44,10 +44,10 @@ while (true) {
 
 parallelMakeNodes(
     GGraph* g, vector<GNode>& gn, InputGraph* in,
-    galois::GAccumulator<int>& numNodes)
+    katana::GAccumulator<int>& numNodes)
     : graph(g), inputGraph(in), gnodes(gn), pnumNodes(numNodes) {}
 void
-operator()(InputGNode node, galois::UserContext<InputGNode>& ctx) {
+operator()(InputGNode node, katana::UserContext<InputGNode>& ctx) {
   int id = inputGraph->getData(node);
   GNode item = graph->createNode(100, 1);  // FIXME: edge num
   //    graph->addNode(item);
@@ -63,17 +63,17 @@ struct parallelMakeEdges {
   vector<GNode>& gnodes;
   bool weighted;
   bool directed;
-  galois::GAccumulator<int>& pnumEdges;
+  katana::GAccumulator<int>& pnumEdges;
 
   parallelMakeEdges(
       GGraph* g, vector<GNode>& gn, InputGraph* in,
-      galois::GAccumulator<int>& numE, bool w = false, bool dir = true)
+      katana::GAccumulator<int>& numE, bool w = false, bool dir = true)
       : graph(g), inputGraph(in), gnodes(gn), pnumEdges(numE) {
     weighted = w;
     directed = dir;
   }
 
-  void operator()(InputGNode inNode, galois::UserContext<InputGNode>& ctx) {
+  void operator()(InputGNode inNode, katana::UserContext<InputGNode>& ctx) {
     int nodeId = inputGraph->getData(inNode);
     GNode node = gnodes[nodeId];
     MetisNode& nodeData = graph->getData(node);
@@ -88,7 +88,7 @@ struct parallelMakeEdges {
       if (weighted) {
         weight = inputGraph->getEdgeData(jj);
       }
-      graph->addEdge(node, gnodes[neighId], galois::MethodFlag::WRITE, weight);
+      graph->addEdge(node, gnodes[neighId], katana::MethodFlag::WRITE, weight);
       nodeData.setNumEdges(nodeData.getNumEdges() + 1);
       nodeData.setEdgeWeight(nodeData.getEdgeWeight() + weight);
       /*if(!directed){
@@ -109,7 +109,7 @@ readGraph(
     MetisGraph* metisGraph, const char* filename, bool weighted = false,
     bool directed = true) {
   InputGraph inputGraph;
-  galois::graphs::readGraph(inputGraph, filename);
+  katana::readGraph(inputGraph, filename);
   cout << "start to transfer data to GGraph\n";
   int id = 0;
   for (InputGraph::iterator ii = inputGraph.begin(), ee = inputGraph.end();
@@ -127,19 +127,19 @@ readGraph(
     gnodes[id++] = node;
     }*/
 
-  typedef galois::worklists::PerSocketChunkFIFO<256> WL;
-  galois::GAccumulator<int> pnumNodes;
-  galois::GAccumulator<int> pnumEdges;
+  typedef katana::PerSocketChunkFIFO<256> WL;
+  katana::GAccumulator<int> pnumNodes;
+  katana::GAccumulator<int> pnumEdges;
 
-  galois::Timer t;
+  katana::Timer t;
   t.start();
-  galois::for_each<WL>(
+  katana::for_each<WL>(
       inputGraph.begin(), inputGraph.end(),
       parallelMakeNodes(graph, gnodes, &inputGraph, pnumNodes), "NodesLoad");
   t.stop();
   cout << t.get() << " ms\n";
   t.start();
-  galois::for_each<WL>(
+  katana::for_each<WL>(
       inputGraph.begin(), inputGraph.end(),
       parallelMakeEdges(graph, gnodes, &inputGraph, pnumEdges, weighted, true),
       "EdgesLoad");

@@ -2,7 +2,7 @@
 #define BIPART_HELPER_H_
 
 #include "Bipart.h"
-#include "galois/ParallelSTL.h"
+#include "katana/ParallelSTL.h"
 
 /**
  * Initialize the nodes in the graph

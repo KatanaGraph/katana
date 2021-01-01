@@ -19,12 +19,12 @@
 
 #include <iostream>
 
-#include <galois/analytics/bfs/bfs.h>
+#include <katana/analytics/bfs/bfs.h>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/analytics/bfs/bfs_internal.h"
+#include "katana/analytics/bfs/bfs_internal.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 namespace cll = llvm::cl;
 
@@ -72,14 +72,14 @@ AlgorithmName(BfsPlan::Algorithm algorithm) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
@@ -94,7 +94,7 @@ main(int argc, char** argv) {
     abort();
   }
 
-  galois::reportPageAlloc("MeminfoPre");
+  katana::reportPageAlloc("MeminfoPre");
 
   if (auto r = Bfs(pfg.get(), startNode, "level", BfsPlan::FromAlgorithm(algo));
       !r) {
@@ -114,7 +114,7 @@ main(int argc, char** argv) {
   std::advance(it, reportNode.getValue());
   BfsImplementation::Graph::Node report = *it;
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   std::cout << "Node " << reportNode << " has distance "
             << graph.GetData<BfsNodeDistance>(report) << "\n";
@@ -136,14 +136,14 @@ main(int argc, char** argv) {
     if (BfsAssertValid(pfg.get(), "level")) {
       std::cout << "Verification successful.\n";
     } else {
-      GALOIS_DIE("verification failed");
+      KATANA_DIE("verification failed");
     }
   }
 
   if (output) {
     auto r = pfg->NodePropertyTyped<uint32_t>("level");
     if (!r) {
-      GALOIS_LOG_FATAL("Failed to get node property {}", r.error());
+      KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     assert(uint64_t(results->length()) == graph.size());

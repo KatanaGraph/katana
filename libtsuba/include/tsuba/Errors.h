@@ -1,11 +1,11 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_ERRORS_H_
-#define GALOIS_LIBTSUBA_TSUBA_ERRORS_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_ERRORS_H_
+#define KATANA_LIBTSUBA_TSUBA_ERRORS_H_
 
 #include <system_error>
 
 #include <arrow/api.h>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 namespace tsuba {
 
@@ -29,13 +29,13 @@ enum class ErrorCode {
   GSError = 17,
 };
 
-GALOIS_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
+KATANA_EXPORT ErrorCode ArrowToTsuba(arrow::StatusCode);
 
 }  // namespace tsuba
 
 namespace tsuba::internal {
 
-class GALOIS_EXPORT ErrorCodeCategory : public std::error_category {
+class KATANA_EXPORT ErrorCodeCategory : public std::error_category {
 public:
   const char* name() const noexcept final { return "TsubaError"; }
 
@@ -104,7 +104,7 @@ public:
 };
 
 /// Return singleton category
-GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
+KATANA_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
 }  // namespace tsuba::internal
 

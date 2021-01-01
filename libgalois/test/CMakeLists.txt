@@ -14,7 +14,7 @@ function(add_test_unit name)
   set(test_name unit-${name})
 
   add_executable(${test_name} ${name}.cpp)
-  target_link_libraries(${test_name} galois_shmem)
+  target_link_libraries(${test_name} katana_galois)
 
   list(APPEND command_line "$<TARGET_FILE:${test_name}>")
   list(APPEND command_line ${X_UNPARSED_ARGUMENTS})
@@ -23,7 +23,7 @@ function(add_test_unit name)
 
   set_tests_properties(${test_name}
     PROPERTIES
-      ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1)
+      ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1)
 
   # Allow parallel tests
   if(NOT X_NOT_QUICK)

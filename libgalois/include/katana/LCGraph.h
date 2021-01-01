@@ -17,15 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCGRAPH_H_
 
-#include "galois/config.h"
-#include "galois/graphs/LC_CSR_Graph.h"
-#include "galois/graphs/LC_InOut_Graph.h"
-#include "galois/graphs/LC_InlineEdge_Graph.h"
-#include "galois/graphs/LC_Linear_Graph.h"
-#include "galois/graphs/LC_Morph_Graph.h"
-#include "galois/graphs/ReadGraph.h"
+#include "katana/LC_CSR_Graph.h"
+#include "katana/LC_InOut_Graph.h"
+#include "katana/LC_InlineEdge_Graph.h"
+#include "katana/LC_Linear_Graph.h"
+#include "katana/LC_Morph_Graph.h"
+#include "katana/ReadGraph.h"
+#include "katana/config.h"
 
 #endif

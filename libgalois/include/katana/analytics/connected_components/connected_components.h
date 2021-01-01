@@ -1,16 +1,16 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_CONNECTEDCOMPONENTS_CONNECTEDCOMPONENTS_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_CONNECTEDCOMPONENTS_CONNECTEDCOMPONENTS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_CONNECTEDCOMPONENTS_CONNECTEDCOMPONENTS_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_CONNECTEDCOMPONENTS_CONNECTEDCOMPONENTS_H_
 
 #include <iostream>
 
-#include <galois/analytics/Plan.h>
+#include <katana/analytics/Plan.h>
 
-#include "galois/AtomicHelpers.h"
-#include "galois/analytics/Utils.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/analytics/Utils.h"
 
 // API
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 /// A computational plan to for ConnectedComponents, specifying the algorithm and any
 /// parameters associated with it.
@@ -151,14 +151,14 @@ public:
 /// are used by the algorithms.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
-GALOIS_EXPORT Result<void> ConnectedComponents(
-    graphs::PropertyFileGraph* pfg, const std::string& output_property_name,
+KATANA_EXPORT Result<void> ConnectedComponents(
+    PropertyFileGraph* pfg, const std::string& output_property_name,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
-GALOIS_EXPORT Result<void> ConnectedComponentsAssertValid(
-    graphs::PropertyFileGraph* pfg, const std::string& property_name);
+KATANA_EXPORT Result<void> ConnectedComponentsAssertValid(
+    PropertyFileGraph* pfg, const std::string& property_name);
 
-struct GALOIS_EXPORT ConnectedComponentsStatistics {
+struct KATANA_EXPORT ConnectedComponentsStatistics {
   /// Total number of unique components in the graph.
   uint64_t total_components;
   /// Total number of components with more than 1 node.
@@ -171,9 +171,9 @@ struct GALOIS_EXPORT ConnectedComponentsStatistics {
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout);
 
-  static galois::Result<ConnectedComponentsStatistics> Compute(
-      galois::graphs::PropertyFileGraph* pfg, const std::string& property_name);
+  static katana::Result<ConnectedComponentsStatistics> Compute(
+      katana::PropertyFileGraph* pfg, const std::string& property_name);
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 #endif

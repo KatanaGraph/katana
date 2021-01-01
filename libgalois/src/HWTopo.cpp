@@ -1,9 +1,9 @@
-#include "galois/substrate/HWTopo.h"
+#include "katana/HWTopo.h"
 
 #include <stdexcept>
 
 std::vector<int>
-galois::substrate::parseCPUList(const std::string& line) {
+katana::parseCPUList(const std::string& line) {
   std::vector<int> vals;
 
   size_t current;

@@ -22,9 +22,9 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Galois.h"
+#include "katana/ThreadPool.h"
+#include "katana/Timer.h"
 
 int
 RandomNumber() {
@@ -35,17 +35,17 @@ unsigned iter = 1;
 struct emp {
   template <typename T>
   void operator()(const T& t) const {
-    galois::substrate::compilerBarrier();
+    katana::compilerBarrier();
   }
   template <typename T, typename C>
   void operator()(const T& t, const C& c) const {
-    galois::substrate::compilerBarrier();
+    katana::compilerBarrier();
   }
 };
 
 unsigned
 t_inline(std::vector<unsigned>& V, unsigned num) {
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   emp e;
   for (unsigned x = 0; x < iter; ++x)
@@ -57,7 +57,7 @@ t_inline(std::vector<unsigned>& V, unsigned num) {
 
 unsigned
 t_stl(std::vector<unsigned>& V, unsigned num) {
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   for (unsigned x = 0; x < iter; ++x)
     std::for_each(V.begin(), V.begin() + num, emp());
@@ -67,9 +67,9 @@ t_stl(std::vector<unsigned>& V, unsigned num) {
 
 unsigned
 t_omp(std::vector<unsigned>& V, unsigned num, unsigned th) {
-  omp_set_num_threads(th);  // galois::runtime::LL::getMaxThreads());
+  omp_set_num_threads(th);  // katana::LL::getMaxThreads());
 
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   for (unsigned x = 0; x < iter; ++x) {
     emp f;
@@ -85,31 +85,31 @@ unsigned
 t_doall(
     bool burn, bool steal, std::vector<unsigned>& V, unsigned num,
     unsigned th) {
-  galois::setActiveThreads(th);  // galois::runtime::LL::getMaxThreads());
+  katana::setActiveThreads(th);  // katana::LL::getMaxThreads());
   if (burn)
-    galois::substrate::GetThreadPool().burnPower(th);
+    katana::GetThreadPool().burnPower(th);
 
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   for (unsigned x = 0; x < iter; ++x)
-    galois::do_all(galois::iterate(V.begin(), V.begin() + num), emp());
+    katana::do_all(katana::iterate(V.begin(), V.begin() + num), emp());
   t.stop();
   return t.get();
 }
 
 unsigned
 t_foreach(bool burn, std::vector<unsigned>& V, unsigned num, unsigned th) {
-  galois::setActiveThreads(th);
+  katana::setActiveThreads(th);
   if (burn)
-    galois::substrate::GetThreadPool().burnPower(th);
+    katana::GetThreadPool().burnPower(th);
 
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   for (unsigned x = 0; x < iter; ++x)
-    galois::for_each(
-        galois::iterate(V.begin(), V.begin() + num), emp(), galois::no_pushes(),
-        galois::disable_conflict_detection(),
-        galois::wl<galois::worklists::StableIterator<>>());
+    katana::for_each(
+        katana::iterate(V.begin(), V.begin() + num), emp(), katana::no_pushes(),
+        katana::disable_conflict_detection(),
+        katana::wl<katana::StableIterator<>>());
   t.stop();
   return t.get();
 }
@@ -150,7 +150,7 @@ main(int argc, char** argv) {
   if (!maxVector)
     maxVector = 1024 * 1024;
 
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads() / 2;
+  unsigned M = katana::GetThreadPool().getMaxThreads() / 2;
   test(
       "inline\t", 1, 16, maxVector,
       [](std::vector<unsigned>& V, unsigned num, unsigned th) {

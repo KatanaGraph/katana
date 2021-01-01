@@ -25,8 +25,8 @@
  */
 
 #include "Helper.h"
-#include "galois/AtomicHelpers.h"
-#include "galois/DynamicBitset.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/DynamicBitset.h"
 
 // maximum weight limit for a coarsened node
 WeightTy kLimitWeights[100];
@@ -63,8 +63,8 @@ void
 ParallelRand(
     const std::vector<MetisGraph*>& graph,
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list) {
-  galois::do_all(
-      galois::iterate(
+  katana::do_all(
+      katana::iterate(
           uint32_t{0}, static_cast<uint32_t>(combined_edge_list.size())),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
@@ -77,7 +77,7 @@ ParallelRand(
         NetvalTy netrand = Hash(node.netnum);
         node.netrand = netrand;
       },
-      galois::loopname("Coarsening-Assign-Rand"));
+      katana::loopname("Coarsening-Assign-Rand"));
 }
 
 /**
@@ -97,8 +97,8 @@ ParallelPrioRand(
   uint32_t total_hedge_size = combined_edge_list.size();
 
   // Make partitioning deterministic.
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -114,16 +114,16 @@ ParallelPrioRand(
         // Iterate inside normal edges of the hyper edge.
         for (auto& fedge : fine_graph->edges(hedge)) {
           GNode dst = fine_graph->getEdgeDst(fedge);
-          galois::atomicMin(
+          katana::atomicMin(
               fine_graph->getData(dst).netval,
               fine_graph->getData(hedge).netval.load());
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-PrioRand-netval"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-PrioRand-netval"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -140,15 +140,15 @@ ParallelPrioRand(
           MetisNode& dst_node_data = fine_graph->getData(dst);
 
           if (dst_node_data.netval == hedge_data.netval) {
-            galois::atomicMin(dst_node_data.netrand, hedge_data.netrand.load());
+            katana::atomicMin(dst_node_data.netrand, hedge_data.netrand.load());
           }
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-PrioRand-netrand"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-PrioRand-netrand"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -165,12 +165,12 @@ ParallelPrioRand(
           MetisNode& dst_node_data = fine_graph->getData(dst);
 
           if (dst_node_data.netrand == hedge_data.netrand) {
-            galois::atomicMin(dst_node_data.netnum, hedge_data.netnum.load());
+            katana::atomicMin(dst_node_data.netnum, hedge_data.netnum.load());
           }
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-PrioRand-netnum"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-PrioRand-netnum"));
 }
 
 /**
@@ -193,16 +193,16 @@ void
 ParallelHMatchAndCreateNodes(
     const std::vector<MetisGraph*>& graph,
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-    std::vector<GNodeBag>* nodes, std::vector<galois::DynamicBitset>* hedges,
+    std::vector<GNodeBag>* nodes, std::vector<katana::DynamicBitset>* hedges,
     std::vector<std::vector<WeightTy>>* weight) {
   ParallelPrioRand<Matcher>(graph, combined_edge_list);
 
   uint32_t total_hedge_size = combined_edge_list.size();
   uint32_t num_partitions = graph.size();
-  std::vector<galois::InsertBag<GNode>> hedge_bag(num_partitions);
+  std::vector<katana::InsertBag<GNode>> hedge_bag(num_partitions);
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t index = hedge_index_pair.second;
@@ -275,11 +275,11 @@ ParallelHMatchAndCreateNodes(
               total_member_node_weight;
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-EdgeMatching-phaseI"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-EdgeMatching-phaseI"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_partitions),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_partitions),
       [&](uint32_t i) {
         if (graph[i] == nullptr) {
           return;
@@ -294,7 +294,7 @@ ParallelHMatchAndCreateNodes(
           hedges->at(i).set(hedge);
         }
       },
-      galois::steal(), galois::loopname("Coarsening-Set-MatchedHEdge"));
+      katana::steal(), katana::loopname("Coarsening-Set-MatchedHEdge"));
 }
 
 /**
@@ -319,8 +319,8 @@ MoreCoarse(
   uint32_t total_hedge_size = combined_edge_list.size();
   NetvalTy min_netval = std::numeric_limits<NetvalTy>::min();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -344,11 +344,11 @@ MoreCoarse(
           }
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-Find-MatchedNode-InsideHEdge"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-Find-MatchedNode-InsideHEdge"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -407,11 +407,11 @@ MoreCoarse(
           }
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-Update-MatchedNode-Info"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-Update-MatchedNode-Info"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_partitions),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_partitions),
       [&](uint32_t i) {
         if (graph[i] == nullptr) {
           return;
@@ -428,7 +428,7 @@ MoreCoarse(
               nym_node.weight;
         }
       },
-      galois::loopname("Coarsening-Update-MatchedNode-Weights"));
+      katana::loopname("Coarsening-Update-MatchedNode-Weights"));
 }
 
 /**
@@ -447,15 +447,15 @@ void
 CoarseUnmatchedNodes(
     const std::vector<MetisGraph*>& graph,
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
-    std::vector<galois::DynamicBitset>* hedges,
+    std::vector<katana::DynamicBitset>* hedges,
     std::vector<std::vector<WeightTy>>* weight) {
   MoreCoarse(graph, combined_edge_list, weight);
 
   uint32_t total_hedge_size = combined_edge_list.size();
-  galois::InsertBag<std::pair<uint32_t, GNode>> hedge_bag;
+  katana::InsertBag<std::pair<uint32_t, GNode>> hedge_bag;
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](GNode h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t g_index = hedge_index_pair.second;
@@ -499,7 +499,7 @@ CoarseUnmatchedNodes(
           hedge_bag.push(std::make_pair(g_index, hedge));
         }
       },
-      galois::steal(), galois::loopname("Coarsening-Count-HEdges"));
+      katana::steal(), katana::loopname("Coarsening-Count-HEdges"));
 
   for (auto& pair : hedge_bag) {
     hedges->at(pair.first).set(pair.second);
@@ -525,20 +525,20 @@ FindLoneNodes(
 
   // All nodes are initialized as 'lone' nodes,
   // which implies that they are not in hyper edges.
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n_id) {
         auto node_index_pair = combined_node_list[n_id];
         uint32_t index = node_index_pair.second;
         GNode node = node_index_pair.first;
         graph->at(index)->getData(node).UnsetNotAlone();
       },
-      galois::loopname("Coarsening-Initialize-LoneNodes"));
+      katana::loopname("Coarsening-Initialize-LoneNodes"));
 
   // Now, nodes connected to hyper edges are set as
   // 'not lone' nodes.
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedge_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedge_size),
       [&](uint32_t hedge_id) {
         auto hedge_index_pair = combined_edge_list[hedge_id];
         uint32_t index = hedge_index_pair.second;
@@ -549,7 +549,7 @@ FindLoneNodes(
           h_graph->getData(dst).SetNotAlone();
         }
       },
-      galois::steal(), galois::loopname("Coarsening-Initialize-NotLoneEdges"));
+      katana::steal(), katana::loopname("Coarsening-Initialize-NotLoneEdges"));
 }
 
 /**
@@ -572,7 +572,7 @@ ParallelCreateEdges(
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
     std::vector<GNodeBag>* nodes_bag,
-    const std::vector<galois::DynamicBitset>& hedges,
+    const std::vector<katana::DynamicBitset>& hedges,
     std::vector<std::vector<WeightTy>>* weight) {
   uint32_t num_partitions = coarse_metis_graph.size();
   NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
@@ -594,12 +594,12 @@ ParallelCreateEdges(
   }
 
   // The number of hyperedges which are still in progress.
-  std::vector<galois::GAccumulator<uint32_t>> num_wip_hg(num_partitions);
+  std::vector<katana::GAccumulator<uint32_t>> num_wip_hg(num_partitions);
 
   uint32_t total_hedges = combined_edge_list.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t h) {
         auto hedge_index_pair = combined_edge_list[h];
         uint32_t h_index = hedge_index_pair.second;
@@ -608,15 +608,15 @@ ParallelCreateEdges(
           num_wip_hg[h_index] += 1;
         }
       },
-      galois::loopname("Coarsening-Count-HEdges"));
+      katana::loopname("Coarsening-Count-HEdges"));
 
   // Find lone nodes.
   FindLoneNodes(&fine_graphs, combined_edge_list, combined_node_list);
-  std::vector<galois::InsertBag<GNode>> postponded_nodes(num_partitions);
+  std::vector<katana::InsertBag<GNode>> postponded_nodes(num_partitions);
   uint32_t total_nodes_size = combined_node_list.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
         uint32_t n_index = node_index_pair.second;
@@ -639,13 +639,13 @@ ParallelCreateEdges(
           postponded_nodes[n_index].emplace(node);
         }
       },
-      galois::loopname("Coarsening-Count-PostponedNodes"));
+      katana::loopname("Coarsening-Count-PostponedNodes"));
 
   // Process not matched `lone` nodes.
   // Merge lone nodes and create coarsened node.
   // The number of these nodes is less than 1000.
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_partitions),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_partitions),
       [&](uint32_t i) {
         if (fine_graphs[i] == nullptr || postponded_nodes[i].empty()) {
           return;
@@ -653,7 +653,7 @@ ParallelCreateEdges(
 
         std::vector<GNode> repr_node_ids(
             kLoneNodesCoarsenFactor, std::numeric_limits<GNode>::max());
-        galois::DynamicBitset new_coarsen_node_filter;
+        katana::DynamicBitset new_coarsen_node_filter;
         new_coarsen_node_filter.resize(kLoneNodesCoarsenFactor);
 
         // 1) Find minimum node id from a match.
@@ -684,7 +684,7 @@ ParallelCreateEdges(
               node_data.weight;
         }
       },
-      galois::loopname("Coarsening-Process-LoneNodes"));
+      katana::loopname("Coarsening-Process-LoneNodes"));
 
   std::vector<uint32_t> hnum(num_partitions);
   std::vector<uint32_t> nodes(num_partitions);
@@ -706,15 +706,15 @@ ParallelCreateEdges(
     new_weight[i].resize(nodes[i]);
   }
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_partitions),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_partitions),
       [&](uint32_t i) {
         if (fine_graphs[i] == nullptr) {
           return;
         }
         uint32_t num_hedges = fine_graphs[i]->GetHedges();
         uint32_t tot_size = fine_graphs[i]->size();
-        galois::DynamicBitset new_coarsen_node_filter;
+        katana::DynamicBitset new_coarsen_node_filter;
         new_coarsen_node_filter.resize(tot_size);
 
         // Set nodes which were newly included in a match.
@@ -734,12 +734,12 @@ ParallelCreateEdges(
           }
         }
       },
-      galois::steal(),
-      galois::loopname("Coarsening-Update-MatchedNode-Weights"));
+      katana::steal(),
+      katana::loopname("Coarsening-Update-MatchedNode-Weights"));
 
   // Update parents of the coarsened node.
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes_size),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes_size),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
         uint32_t g_index = node_index_pair.second;
@@ -750,15 +750,15 @@ ParallelCreateEdges(
         node_data.parent =
             idmap[g_index][par_id - fine_graphs[g_index]->GetHedges()];
       },
-      galois::loopname("Coarsening-Update-Parents"));
+      katana::loopname("Coarsening-Update-Parents"));
 
-  std::vector<galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>>
+  std::vector<katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>>
       edges_id(num_partitions);
   std::vector<std::vector<NetnumTy>> old_id(num_partitions);
   std::vector<uint32_t> num_nodes_next(num_partitions);
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_partitions),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_partitions),
       [&](uint32_t i) {
         if (fine_graphs[i] == nullptr) {
           return;
@@ -781,10 +781,10 @@ ParallelCreateEdges(
           }
         }
       },
-      galois::steal(), galois::loopname("Coarsening-Set-NodeIds"));
+      katana::steal(), katana::loopname("Coarsening-Set-NodeIds"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t v) {
         auto hedge_index_pair = combined_edge_list[v];
         uint32_t index = hedge_index_pair.second;
@@ -811,11 +811,11 @@ ParallelCreateEdges(
           }
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Coarsening-Build-EdgeIds"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Coarsening-Build-EdgeIds"));
 
-  std::vector<galois::LargeArray<uint64_t>> edges_prefixsum(num_partitions);
-  std::vector<galois::GAccumulator<uint64_t>> num_edges_acc(num_partitions);
+  std::vector<katana::LargeArray<uint64_t>> edges_prefixsum(num_partitions);
+  std::vector<katana::GAccumulator<uint64_t>> num_edges_acc(num_partitions);
 
   for (uint32_t i = 0; i < num_partitions; ++i) {
     if (fine_graphs[i] == nullptr) {
@@ -824,13 +824,13 @@ ParallelCreateEdges(
     uint32_t num_ith_nodes = num_nodes_next[i];
     edges_prefixsum[i].allocateInterleaved(num_ith_nodes);
 
-    galois::do_all(
-        galois::iterate(uint32_t{0}, num_ith_nodes),
+    katana::do_all(
+        katana::iterate(uint32_t{0}, num_ith_nodes),
         [&](uint32_t c) {
           edges_prefixsum[i][c] = edges_id[i][c].size();
           num_edges_acc[i] += edges_prefixsum[i][c];
         },
-        galois::loopname("Coarsening-PrefixSum"));
+        katana::loopname("Coarsening-PrefixSum"));
   }
 
   for (uint32_t i = 0; i < num_partitions; ++i) {
@@ -841,7 +841,7 @@ ParallelCreateEdges(
     uint32_t num_ith_nodes = num_nodes_next[i];
     uint64_t num_edges_next = num_edges_acc[i].reduce();
 
-    galois::ParallelSTL::partial_sum(
+    katana::ParallelSTL::partial_sum(
         edges_prefixsum[i].begin(), edges_prefixsum[i].end(),
         edges_prefixsum[i].begin());
 
@@ -851,8 +851,8 @@ ParallelCreateEdges(
         edges_id[i]);
     c_graph->SetHedges(hnum[i]);
     c_graph->SetHnodes(nodes[i]);
-    galois::do_all(
-        galois::iterate(*c_graph),
+    katana::do_all(
+        katana::iterate(*c_graph),
         [&](GNode n) {
           MetisNode& node_data = c_graph->getData(n);
           node_data.netval = max_netval;
@@ -865,7 +865,7 @@ ParallelCreateEdges(
             node_data.weight = new_weight[i][n - c_graph->GetHedges()];
           }
         },
-        galois::loopname("Coarsening-Construct-Graph"));
+        katana::loopname("Coarsening-Construct-Graph"));
   }
 }
 
@@ -891,7 +891,7 @@ FindMatching(
   assert(coarse_mgraph.size() == fine_mgraph.size());
   uint32_t num_fine_hedges = fine_mgraph.size();
   std::vector<GNodeBag> nodes(num_fine_hedges);
-  std::vector<galois::DynamicBitset> hedges(num_fine_hedges);
+  std::vector<katana::DynamicBitset> hedges(num_fine_hedges);
   // Maintain total weights of nodes inside of a match.
   std::vector<std::vector<WeightTy>> weight(num_fine_hedges);
 
@@ -987,7 +987,7 @@ Coarsen(
   std::vector<uint32_t> current_num_nodes(num_partitions);
   std::vector<uint32_t> new_num_nodes(num_partitions);
   std::vector<MetisGraph*> final_graph(num_partitions, nullptr);
-  galois::DynamicBitset graph_is_done;
+  katana::DynamicBitset graph_is_done;
 
   graph_is_done.resize(num_partitions);
   graph_is_done.reset();

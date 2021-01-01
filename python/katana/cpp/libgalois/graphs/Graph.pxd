@@ -3,7 +3,7 @@ from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 from libcpp.memory cimport unique_ptr, shared_ptr
 from libcpp.vector cimport vector
 from libc.stdint cimport uint64_t
-from galois.cpp.libstd.boost cimport std_result
+from katana.cpp.libstd.boost cimport std_result
 from pyarrow.lib cimport CSchema, CChunkedArray, CArray, CTable, CUInt32Array, CUInt64Array
 
 # Omit the exception specifications here to
@@ -15,7 +15,7 @@ from pyarrow.lib cimport CSchema, CChunkedArray, CArray, CTable, CUInt32Array, C
 # thrown in the code written using these forward declarations
 # are forwarded properly into the Galois library rather than
 # being converted into Python exceptions.
-cdef extern from "galois/graphs/Graph.h" namespace "galois::graphs" nogil:
+cdef extern from "katana/Graph.h" namespace "katana" nogil:
     cppclass MorphGraph[node_data, edge_data, is_directed]:
 
         morph_graph()

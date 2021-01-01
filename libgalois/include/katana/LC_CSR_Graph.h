@@ -17,20 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCCSRGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCCSRGRAPH_H_
 
 #include <fstream>
 #include <type_traits>
 
-#include "galois/Galois.h"
-#include "galois/PODResizeableArray.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/FileGraph.h"
-#include "galois/graphs/GraphHelpers.h"
+#include "katana/Details.h"
+#include "katana/FileGraph.h"
+#include "katana/Galois.h"
+#include "katana/GraphHelpers.h"
+#include "katana/PODResizeableArray.h"
+#include "katana/config.h"
 
-namespace galois::graphs {
+namespace katana {
 /**
  * Local computation graph (i.e., graph structure does not change). The data
  * representation is the traditional compressed-sparse-row (CSR) format.
@@ -190,7 +190,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<!_A1 && !_A2>::type* = 0) {
-    galois::runtime::acquire(&nodeData[N], mflag);
+    katana::acquire(&nodeData[N], mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -285,7 +285,7 @@ public:
 
   node_data_reference getData(
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     NodeInfo& NI = nodeData[N];
     acquireNode(N, mflag);
     return NI.getData();
@@ -294,7 +294,7 @@ public:
   edge_data_reference getEdgeData(
       edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     return edgeData[*ni];
   }
 
@@ -327,7 +327,7 @@ public:
 
   edge_iterator edge_begin(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && katana::shouldLock(mflag)) {
       for (edge_iterator ii = raw_begin(N), ee = raw_end(N); ii != ee; ++ii) {
         acquireNode(edgeDst[*ii], mflag);
       }
@@ -413,10 +413,10 @@ public:
    * getEdgeDst(e).
    */
   void sortAllEdgesByDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(
-        galois::iterate(size_t{0}, this->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, this->size()),
         [=](GraphNode N) { this->sortEdgesByDst(N, mflag); },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 
   void allocateFrom(const FileGraph& graph) {
@@ -477,19 +477,19 @@ public:
   }
 
   void constructNodes() {
-#ifndef GALOIS_GRAPH_CONSTRUCT_SERIAL
+#ifndef KATANA_GRAPH_CONSTRUCT_SERIAL
     for (uint32_t x = 0; x < numNodes; ++x) {
       nodeData.constructAt(x);
       this->outOfLineConstructAt(x);
     }
 #else
-    galois::do_all(
-        galois::iterate(UINT64_C(0), numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), numNodes),
         [&](uint64_t x) {
           nodeData.constructAt(x);
           this->outOfLineConstructAt(x);
         },
-        galois::no_stats(), galois::loopname("CONSTRUCT_NODES"));
+        katana::no_stats(), katana::loopname("CONSTRUCT_NODES"));
 #endif
   }
 
@@ -522,7 +522,7 @@ public:
    * CSR to CSC
    */
   void transpose(const char* regionName = NULL) {
-    galois::StatTimer timer("TIMER_GRAPH_TRANSPOSE", regionName);
+    katana::StatTimer timer("TIMER_GRAPH_TRANSPOSE", regionName);
     timer.start();
 
     EdgeDst edgeDst_old;
@@ -543,17 +543,17 @@ public:
     }
 
     // Copy old node->index location + initialize the temp array
-    galois::do_all(
-        galois::iterate(UINT64_C(0), numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), numNodes),
         [&](uint64_t n) {
           edgeIndData_old[n] = edgeIndData[n];
           edgeIndData_temp[n] = 0;
         },
-        galois::no_stats(), galois::loopname("TRANSPOSE_EDGEINTDATA_COPY"));
+        katana::no_stats(), katana::loopname("TRANSPOSE_EDGEINTDATA_COPY"));
 
     // get destination of edge, copy to array, and
-    galois::do_all(
-        galois::iterate(UINT64_C(0), numEdges),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), numEdges),
         [&](uint64_t e) {
           auto dst = edgeDst[e];
           edgeDst_old[e] = dst;
@@ -561,7 +561,7 @@ public:
           // counting incoming edges in the original graph
           __sync_add_and_fetch(&edgeIndData_temp[dst], 1);
         },
-        galois::no_stats(), galois::loopname("TRANSPOSE_EDGEINTDATA_INC"));
+        katana::no_stats(), katana::loopname("TRANSPOSE_EDGEINTDATA_INC"));
 
     // TODO is it worth doing parallel prefix sum?
     // prefix sum calculation of the edge index array
@@ -570,23 +570,23 @@ public:
     }
 
     // copy over the new tranposed edge index data
-    galois::do_all(
-        galois::iterate(UINT64_C(0), numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), numNodes),
         [&](uint64_t n) { edgeIndData[n] = edgeIndData_temp[n]; },
-        galois::no_stats(), galois::loopname("TRANSPOSE_EDGEINTDATA_SET"));
+        katana::no_stats(), katana::loopname("TRANSPOSE_EDGEINTDATA_SET"));
 
     // edgeIndData_temp[i] will now hold number of edges that all nodes
     // before the ith node have
     if (numNodes >= 1) {
       edgeIndData_temp[0] = 0;
-      galois::do_all(
-          galois::iterate(UINT64_C(1), numNodes),
+      katana::do_all(
+          katana::iterate(UINT64_C(1), numNodes),
           [&](uint64_t n) { edgeIndData_temp[n] = edgeIndData[n - 1]; },
-          galois::no_stats(), galois::loopname("TRANSPOSE_EDGEINTDATA_TEMP"));
+          katana::no_stats(), katana::loopname("TRANSPOSE_EDGEINTDATA_TEMP"));
     }
 
-    galois::do_all(
-        galois::iterate(UINT64_C(0), numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), numNodes),
         [&](uint64_t src) {
           // e = start index into edge array for a particular node
           uint64_t e = (src == 0) ? 0 : edgeIndData_old[src - 1];
@@ -605,14 +605,14 @@ public:
             e++;
           }
         },
-        galois::no_stats(), galois::loopname("TRANSPOSE_EDGEDST"));
+        katana::no_stats(), katana::loopname("TRANSPOSE_EDGEDST"));
 
     // if edge weights, then overwrite edgeData with new edge data
     if (EdgeData::has_value) {
-      galois::do_all(
-          galois::iterate(UINT64_C(0), numEdges),
+      katana::do_all(
+          katana::iterate(UINT64_C(0), numEdges),
           [&](uint64_t e) { edgeDataCopy(edgeData, edgeData_new, e, e); },
-          galois::no_stats(), galois::loopname("TRANSPOSE_EDGEDATA_SET"));
+          katana::no_stats(), katana::loopname("TRANSPOSE_EDGEDATA_SET"));
     }
 
     timer.stop();
@@ -714,7 +714,7 @@ public:
   }
 
   auto divideByNode(size_t nodeSize, size_t edgeSize, size_t id, size_t total) {
-    return galois::graphs::divideNodesBinarySearch(
+    return katana::divideNodesBinarySearch(
         numNodes, numEdges, nodeSize, edgeSize, id, total, edgeIndData);
   }
 
@@ -735,11 +735,11 @@ public:
     destroyAndAllocateFrom(numNodes, numEdges);
     constructNodes();
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       edgeIndData[n] = prefix_sum[n];
     });
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
@@ -762,16 +762,16 @@ public:
   }
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges, std::vector<uint64_t>& prefix_sum,
-      galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>& edges_id,
+      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id,
       std::vector<std::vector<EdgeTy>>& edges_data) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       edgeIndData[n] = prefix_sum[n];
     });
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
@@ -798,15 +798,15 @@ public:
       std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
-      galois::LargeArray<uint64_t>&& prefix_sum,
-      galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>& edges_id,
+      katana::LargeArray<uint64_t>&& prefix_sum,
+      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id,
       std::vector<std::vector<EdgeTy>>& edges_data) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
 
     edgeIndData = std::move(prefix_sum);
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
@@ -833,14 +833,14 @@ public:
       std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
-      galois::LargeArray<uint64_t>&& prefix_sum,
-      galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>& edges_id) {
+      katana::LargeArray<uint64_t>&& prefix_sum,
+      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
 
     edgeIndData = std::move(prefix_sum);
 
-    galois::do_all(galois::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
+    katana::do_all(katana::iterate((uint32_t)0, numNodes), [&](uint32_t n) {
       if (n == 0) {
         if (edgeIndData[n] > 0) {
           std::copy(edges_id[n].begin(), edges_id[n].end(), edgeDst.begin());
@@ -872,12 +872,12 @@ public:
     uint64_t header[4];
     graphFile.read(reinterpret_cast<char*>(header), sizeof(uint64_t) * 4);
     if (!graphFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
     uint64_t version = header[0];
     numNodes = header[2];
     numEdges = header[3];
-    galois::gPrint(
+    katana::gPrint(
         "Number of Nodes: ", numNodes, ", Number of Edges: ", numEdges, "\n");
     allocateFrom(numNodes, numEdges);
     constructNodes();
@@ -886,7 +886,7 @@ public:
      **/
     assert(edgeIndData.data());
     if (!edgeIndData.data()) {
-      GALOIS_DIE("out of memory");
+      KATANA_DIE("out of memory");
     }
 
     // start position to read index data
@@ -896,7 +896,7 @@ public:
         reinterpret_cast<char*>(edgeIndData.data()),
         sizeof(uint64_t) * numNodes);
     if (!graphFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
 
     /**
@@ -904,7 +904,7 @@ public:
      **/
     assert(edgeDst.data());
     if (!edgeDst.data()) {
-      GALOIS_DIE("out of memory");
+      KATANA_DIE("out of memory");
     }
 
     readPosition = ((4 + numNodes) * sizeof(uint64_t));
@@ -913,7 +913,7 @@ public:
       graphFile.read(
           reinterpret_cast<char*>(edgeDst.data()), sizeof(uint32_t) * numEdges);
       if (!graphFile) {
-        GALOIS_DIE("failed to read file");
+        KATANA_DIE("failed to read file");
       }
       readPosition =
           ((4 + numNodes) * sizeof(uint64_t) + numEdges * sizeof(uint32_t));
@@ -925,7 +925,7 @@ public:
       graphFile.read(
           reinterpret_cast<char*>(edgeDst.data()), sizeof(uint64_t) * numEdges);
       if (!graphFile) {
-        GALOIS_DIE("failed to read file");
+        KATANA_DIE("failed to read file");
       }
       readPosition =
           ((4 + numNodes) * sizeof(uint64_t) + numEdges * sizeof(uint64_t));
@@ -933,20 +933,20 @@ public:
         readPosition += sizeof(uint64_t);
       }
     } else {
-      GALOIS_DIE("unknown file version: ", version);
+      KATANA_DIE("unknown file version: ", version);
     }
     /**
      * Load edge data array
      **/
     assert(edgeData.data());
     if (!edgeData.data()) {
-      GALOIS_DIE("out of memory");
+      KATANA_DIE("out of memory");
     }
     graphFile.seekg(readPosition);
     graphFile.read(
         reinterpret_cast<char*>(edgeData.data()), sizeof(EdgeTy) * numEdges);
     if (!graphFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
 
     initializeLocalRanges();
@@ -967,13 +967,13 @@ public:
     uint64_t header[4];
     graphFile.read(reinterpret_cast<char*>(header), sizeof(uint64_t) * 4);
     if (!graphFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
 
     uint64_t version = header[0];
     numNodes = header[2];
     numEdges = header[3];
-    galois::gPrint(
+    katana::gPrint(
         "Number of Nodes: ", numNodes, ", Number of Edges: ", numEdges, "\n");
     allocateFrom(numNodes, numEdges);
     constructNodes();
@@ -982,7 +982,7 @@ public:
      **/
     assert(edgeIndData.data());
     if (!edgeIndData.data()) {
-      GALOIS_DIE("out of memory");
+      KATANA_DIE("out of memory");
     }
     // start position to read index data
     uint64_t readPosition = (4 * sizeof(uint64_t));
@@ -991,7 +991,7 @@ public:
         reinterpret_cast<char*>(edgeIndData.data()),
         sizeof(uint64_t) * numNodes);
     if (!graphFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
 
     /**
@@ -999,7 +999,7 @@ public:
      **/
     assert(edgeDst.data());
     if (!edgeDst.data()) {
-      GALOIS_DIE("out of memory");
+      KATANA_DIE("out of memory");
     }
     readPosition = ((4 + numNodes) * sizeof(uint64_t));
     graphFile.seekg(readPosition);
@@ -1007,16 +1007,16 @@ public:
       graphFile.read(
           reinterpret_cast<char*>(edgeDst.data()), sizeof(uint32_t) * numEdges);
       if (!graphFile) {
-        GALOIS_DIE("failed to read file");
+        KATANA_DIE("failed to read file");
       }
     } else if (version == 2) {
       graphFile.read(
           reinterpret_cast<char*>(edgeDst.data()), sizeof(uint64_t) * numEdges);
       if (!graphFile) {
-        GALOIS_DIE("failed to read file");
+        KATANA_DIE("failed to read file");
       }
     } else {
-      GALOIS_DIE("unknown file version: ", version);
+      KATANA_DIE("unknown file version: ", version);
     }
 
     initializeLocalRanges();
@@ -1027,7 +1027,7 @@ public:
    * so that threads can iterate over a balanced number of vertices.
    */
   void initializeLocalRanges() {
-    galois::on_each([&](unsigned tid, unsigned total) {
+    katana::on_each([&](unsigned tid, unsigned total) {
       auto r = divideByNode(0, 1, tid, total).first;
       this->setLocalRange(*r.first, *r.second);
     });
@@ -1039,14 +1039,14 @@ public:
    */
   gstl::Vector<uint32_t> countDegrees() const {
     gstl::Vector<uint32_t> savedDegrees(numNodes);
-    galois::do_all(
-        galois::iterate(this->begin(), this->end()),
+    katana::do_all(
+        katana::iterate(this->begin(), this->end()),
         [&](unsigned v) { savedDegrees[v] = this->getDegree(v); },
-        galois::loopname("DegreeCounting"));
+        katana::loopname("DegreeCounting"));
     return savedDegrees;
   }
 };
 
-}  // namespace galois::graphs
+}  // namespace katana
 
 #endif

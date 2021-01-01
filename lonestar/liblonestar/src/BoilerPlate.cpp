@@ -21,7 +21,7 @@
 
 #include <sstream>
 
-#include "galois/SharedMemSys.h"
+#include "katana/SharedMemSys.h"
 
 //! standard global options to the benchmarks
 llvm::cl::opt<bool> skipVerify(
@@ -58,41 +58,41 @@ llvm::cl::opt<bool> output(
 
 static void
 LonestarPrintVersion(llvm::raw_ostream& out) {
-  out << "LoneStar Benchmark Suite v" << galois::getVersion() << " ("
-      << galois::getRevision() << ")\n";
+  out << "LoneStar Benchmark Suite v" << katana::getVersion() << " ("
+      << katana::getRevision() << ")\n";
   out.flush();
 }
 
 //! initialize lonestar benchmark
-std::unique_ptr<galois::SharedMemSys>
+std::unique_ptr<katana::SharedMemSys>
 LonestarStart(int argc, char** argv) {
   return LonestarStart(argc, argv, nullptr, nullptr, nullptr, nullptr);
 }
 
 //! initialize lonestar benchmark
-std::unique_ptr<galois::SharedMemSys>
+std::unique_ptr<katana::SharedMemSys>
 LonestarStart(
     int argc, char** argv, const char* app, const char* desc, const char* url,
     llvm::cl::opt<std::string>* input) {
   llvm::cl::SetVersionPrinter(LonestarPrintVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  auto shared_mem_sys = std::make_unique<galois::SharedMemSys>();
+  auto shared_mem_sys = std::make_unique<katana::SharedMemSys>();
 
-  numThreads = galois::setActiveThreads(numThreads);
+  numThreads = katana::setActiveThreads(numThreads);
 
-  galois::SetStatFile(statFile);
+  katana::SetStatFile(statFile);
 
   LonestarPrintVersion(llvm::outs());
-  llvm::outs() << "Copyright (C) " << galois::getCopyrightYear()
+  llvm::outs() << "Copyright (C) " << katana::getCopyrightYear()
                << " The University of Texas at Austin\n";
-  llvm::outs() << "http://iss.ices.utexas.edu/galois/\n\n";
+  llvm::outs() << "http://iss.ices.utexas.edu/katana/\n\n";
   llvm::outs() << "application: " << (app ? app : "unspecified") << "\n";
   if (desc) {
     llvm::outs() << desc << "\n";
   }
   if (url) {
-    llvm::outs() << "http://iss.ices.utexas.edu/?p=projects/galois/benchmarks/"
+    llvm::outs() << "http://iss.ices.utexas.edu/?p=projects/katana/benchmarks/"
                  << url << "\n";
   }
   llvm::outs() << "\n";
@@ -106,15 +106,15 @@ LonestarStart(
     }
   }
 
-  galois::ReportParam("(NULL)", "CommandLine", cmdout.str());
-  galois::ReportParam("(NULL)", "Threads", numThreads);
-  galois::ReportParam("(NULL)", "Hosts", 1);
+  katana::ReportParam("(NULL)", "CommandLine", cmdout.str());
+  katana::ReportParam("(NULL)", "Threads", numThreads);
+  katana::ReportParam("(NULL)", "Hosts", 1);
   if (input) {
-    galois::ReportParam("(NULL)", "Input", input->getValue());
+    katana::ReportParam("(NULL)", "Input", input->getValue());
   }
 
   char name[256];
   gethostname(name, 256);
-  galois::ReportParam("(NULL)", "Hostname", name);
+  katana::ReportParam("(NULL)", "Hostname", name);
   return shared_mem_sys;
 }

@@ -17,13 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_EXTERNALREFERENCE_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_EXTERNALREFERENCE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXTERNALREFERENCE_H_
+#define KATANA_LIBGALOIS_KATANA_EXTERNALREFERENCE_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 template <typename Container, bool IgnorePushInitial = false>
 class ExternalReference {
@@ -57,9 +56,8 @@ public:
   }
 
   //! pop a value from the queue.
-  galois::optional<value_type> pop() { return wl.pop(); }
+  katana::optional<value_type> pop() { return wl.pop(); }
 };
 
-}  // namespace worklists
-}  // namespace galois
+}  // namespace katana
 #endif

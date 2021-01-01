@@ -1,7 +1,7 @@
-#include "galois/ErrorCode.h"
+#include "katana/ErrorCode.h"
 
-const galois::internal::ErrorCodeCategory&
-galois::internal::GetErrorCodeCategory() {
+const katana::internal::ErrorCodeCategory&
+katana::internal::GetErrorCodeCategory() {
   static ErrorCodeCategory c;
   return c;
 }

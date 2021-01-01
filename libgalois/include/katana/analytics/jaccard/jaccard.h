@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_JACCARD_JACCARD_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_JACCARD_JACCARD_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_JACCARD_JACCARD_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_JACCARD_JACCARD_H_
 
 #include <iostream>
 
-#include "galois/Properties.h"
-#include "galois/analytics/Plan.h"
-#include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/PropertyGraph.h"
+#include "katana/Properties.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
+#include "katana/analytics/Plan.h"
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 /// A computational plan to for Jaccard, specifying the algorithm and any parameters
 /// associated with it.
@@ -51,22 +51,22 @@ public:
 };
 
 /// The tag for the output property of Jaccard in PropertyGraphs.
-using JaccardSimilarity = galois::PODProperty<double>;
+using JaccardSimilarity = katana::PODProperty<double>;
 
 /// Compute the Jaccard similarity between each node and compare_node. The
 /// result is stored in a property named by output_property_name. The plan
 /// controls the assumptions made about edge list ordering.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
-GALOIS_EXPORT Result<void> Jaccard(
-    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+KATANA_EXPORT Result<void> Jaccard(
+    PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan = {});
 
-GALOIS_EXPORT Result<void> JaccardAssertValid(
-    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+KATANA_EXPORT Result<void> JaccardAssertValid(
+    PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& property_name);
 
-struct GALOIS_EXPORT JaccardStatistics {
+struct KATANA_EXPORT JaccardStatistics {
   /// The maximum similarity excluding the comparison node.
   double max_similarity;
   /// The minimum similarity
@@ -77,11 +77,11 @@ struct GALOIS_EXPORT JaccardStatistics {
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout);
 
-  static galois::Result<JaccardStatistics> Compute(
-      galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+  static katana::Result<JaccardStatistics> Compute(
+      katana::PropertyFileGraph* pfg, uint32_t compare_node,
       const std::string& property_name);
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
 #endif

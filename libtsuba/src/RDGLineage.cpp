@@ -1,6 +1,6 @@
 #include "tsuba/RDGLineage.h"
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
 using json = nlohmann::json;
 
@@ -9,7 +9,7 @@ namespace tsuba {
 void
 RDGLineage::AddCommandLine(const std::string& cmd) {
   if (!command_line_.empty()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "Add command line to lineage was: {} is: {}", command_line_, cmd);
   }
   command_line_ = cmd;

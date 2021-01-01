@@ -1,20 +1,19 @@
-#ifndef GALOIS_BC_ASYNC
-#define GALOIS_BC_ASYNC
+#ifndef KATANA_BC_ASYNC
+#define KATANA_BC_ASYNC
 
 #include <iomanip>
 #include <iostream>
 
 #include "BCEdge.h"
 #include "BCNode.h"
-#include "galois/Bag.h"
-#include "galois/graphs/BufferedGraph.h"
-#include "galois/graphs/LC_CSR_CSC_Graph.h"
+#include "katana/Bag.h"
+#include "katana/BufferedGraph.h"
+#include "katana/LC_CSR_CSC_Graph.h"
 
 // WARNING: optimal chunk size may differ depending on input graph
 constexpr static const unsigned ASYNC_CHUNK_SIZE = 64U;
 using NodeType = BCNode<BC_USE_MARKING, BC_CONCURRENT>;
-using AsyncGraph =
-    galois::graphs::LC_CSR_CSC_Graph<NodeType, BCEdge, false, true>;
+using AsyncGraph = katana::LC_CSR_CSC_Graph<NodeType, BCEdge, false, true>;
 
 // Work items for the forward phase
 struct ForwardPhaseWorkItem {
@@ -32,7 +31,7 @@ struct FPWorkItemIndexer {
 };
 
 // obim worklist type declaration
-namespace gwl = galois::worklists;
+namespace gwl = katana;
 using PSchunk = gwl::PerSocketChunkFIFO<ASYNC_CHUNK_SIZE>;
 using OBIM = gwl::OrderedByIntegerMetric<FPWorkItemIndexer, PSchunk>;
 
@@ -42,7 +41,7 @@ struct Counter : public T {
 
   Counter(std::string s) : name(std::move(s)) {}
 
-  ~Counter() { galois::ReportStatSingle("(NULL)", name, this->reduce()); }
+  ~Counter() { katana::ReportStatSingle("(NULL)", name, this->reduce()); }
 };
 
 template <typename T>
@@ -59,7 +58,7 @@ struct BetweenessCentralityAsync {
   BetweenessCentralityAsync(AsyncGraph& _graph) : graph(_graph) {}
 
   using SumCounter =
-      Counter<galois::GAccumulator<unsigned long>, BC_COUNT_ACTIONS>;
+      Counter<katana::GAccumulator<unsigned long>, BC_COUNT_ACTIONS>;
   SumCounter spfuCount{"SP&FU"};
   SumCounter updateSigmaP1Count{"UpdateSigmaBefore"};
   SumCounter updateSigmaP2Count{"RealUS"};
@@ -69,11 +68,11 @@ struct BetweenessCentralityAsync {
   SumCounter noActionCount{"NoAction"};
 
   using MaxCounter =
-      Counter<galois::GReduceMax<unsigned long>, BC_COUNT_ACTIONS>;
+      Counter<katana::GReduceMax<unsigned long>, BC_COUNT_ACTIONS>;
   MaxCounter largestNodeDist{"Largest node distance"};
 
   using LeafCounter =
-      Counter<galois::GAccumulator<unsigned long>, BC_COUNT_LEAVES>;
+      Counter<katana::GAccumulator<unsigned long>, BC_COUNT_LEAVES>;
 
   void correctNode(uint32_t dstID, BCEdge&) {
     NodeType& dstData = graph.getData(dstID);
@@ -172,7 +171,7 @@ struct BetweenessCentralityAsync {
       dstData.sigma += diff;
 
       // if (old >= dstData.sigma) {
-      //  galois::gDebug("Overflow detected; capping at max uint64_t");
+      //  katana::gDebug("Overflow detected; capping at max uint64_t");
       //  dstData.sigma = std::numeric_limits<uint64_t>::max();
       //}
 
@@ -204,7 +203,7 @@ struct BetweenessCentralityAsync {
     // ShortPathType old = dstData.sigma;
     dstData.sigma = dstSigma + srcSigma;
     // if (old >= dstData.sigma) {
-    //  galois::gDebug("Overflow detected; capping at max uint64_t");
+    //  katana::gDebug("Overflow detected; capping at max uint64_t");
     //  dstData.sigma = std::numeric_limits<uint64_t>::max();
     //}
 
@@ -219,9 +218,9 @@ struct BetweenessCentralityAsync {
     dstData.unlock();
   }
 
-  void dagConstruction(galois::InsertBag<ForwardPhaseWorkItem>& wl) {
-    galois::for_each(
-        galois::iterate(wl),
+  void dagConstruction(katana::InsertBag<ForwardPhaseWorkItem>& wl) {
+    katana::for_each(
+        katana::iterate(wl),
         [&](ForwardPhaseWorkItem& wi, auto& ctx) {
           uint32_t srcID = wi.nodeID;
           NodeType& srcData = graph.getData(srcID);
@@ -268,13 +267,13 @@ struct BetweenessCentralityAsync {
             }
           }
         },
-        galois::wl<OBIM>(FPWorkItemIndexer()),
-        galois::disable_conflict_detection(), galois::loopname("ForwardPhase"));
+        katana::wl<OBIM>(FPWorkItemIndexer()),
+        katana::disable_conflict_detection(), katana::loopname("ForwardPhase"));
   }
 
-  void dependencyBackProp(galois::InsertBag<uint32_t>& wl) {
-    galois::for_each(
-        galois::iterate(wl),
+  void dependencyBackProp(katana::InsertBag<uint32_t>& wl) {
+    katana::for_each(
+        katana::iterate(wl),
         [&](uint32_t srcID, auto& ctx) {
           NodeType& srcData = graph.getData(srcID);
           srcData.lock();
@@ -296,7 +295,7 @@ struct BetweenessCentralityAsync {
               const double term =
                   (double)predData.sigma * (1.0 + srcDelta) / srcData.sigma;
               // if (std::isnan(term)) {
-              //  galois::gPrint(predData.sigma, " ", srcDelta, "
+              //  katana::gPrint(predData.sigma, " ", srcDelta, "
               //  ", srcData.sigma, "\n");
               //}
               predData.lock();
@@ -321,14 +320,14 @@ struct BetweenessCentralityAsync {
             srcData.unlock();
           }
         },
-        galois::disable_conflict_detection(),
-        galois::loopname("BackwardPhase"));
+        katana::disable_conflict_detection(),
+        katana::loopname("BackwardPhase"));
   }
 
-  void findLeaves(galois::InsertBag<uint32_t>& fringeWL, unsigned nnodes) {
+  void findLeaves(katana::InsertBag<uint32_t>& fringeWL, unsigned nnodes) {
     LeafCounter leafCount{"leaf nodes in DAG"};
-    galois::do_all(
-        galois::iterate(0u, nnodes),
+    katana::do_all(
+        katana::iterate(0u, nnodes),
         [&](auto i) {
           NodeType& n = graph.getData(i);
 
@@ -337,33 +336,33 @@ struct BetweenessCentralityAsync {
             fringeWL.push(i);
           }
         },
-        galois::loopname("LeafFind"));
+        katana::loopname("LeafFind"));
   }
 };
 
 void
 AsyncSanity(AsyncGraph& graph) {
-  galois::GReduceMax<float> accumMax;
-  galois::GReduceMin<float> accumMin;
-  galois::GAccumulator<float> accumSum;
+  katana::GReduceMax<float> accumMax;
+  katana::GReduceMin<float> accumMin;
+  katana::GAccumulator<float> accumSum;
   accumMax.reset();
   accumMin.reset();
   accumSum.reset();
 
   // get max, min, sum of BC values using accumulators and reducers
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](unsigned n) {
         auto& nodeData = graph.getData(n);
         accumMax.update(nodeData.bc);
         accumMin.update(nodeData.bc);
         accumSum += nodeData.bc;
       },
-      galois::no_stats(), galois::loopname("AsyncSanity"));
+      katana::no_stats(), katana::loopname("AsyncSanity"));
 
-  galois::gPrint("Max BC is ", accumMax.reduce(), "\n");
-  galois::gPrint("Min BC is ", accumMin.reduce(), "\n");
-  galois::gPrint("BC sum is ", accumSum.reduce(), "\n");
+  katana::gPrint("Max BC is ", accumMax.reduce(), "\n");
+  katana::gPrint("Min BC is ", accumMin.reduce(), "\n");
+  katana::gPrint("BC sum is ", accumSum.reduce(), "\n");
 }
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -371,24 +370,24 @@ AsyncSanity(AsyncGraph& graph) {
 void
 doAsyncBC() {
   if (BC_CONCURRENT) {
-    galois::gInfo("Running in concurrent mode with ", numThreads, " threads");
+    katana::gInfo("Running in concurrent mode with ", numThreads, " threads");
   } else {
-    galois::gInfo("Running in serial mode");
+    katana::gInfo("Running in serial mode");
   }
 
-  galois::gInfo("Constructing async BC graph");
+  katana::gInfo("Constructing async BC graph");
   // create bidirectional graph
   AsyncGraph bcGraph;
 
-  galois::StatTimer graphConstructTimer("GRAPH_CONSTRUCT");
+  katana::StatTimer graphConstructTimer("GRAPH_CONSTRUCT");
   graphConstructTimer.start();
 
-  galois::graphs::FileGraph fileReader;
+  katana::FileGraph fileReader;
   fileReader.fromFile(inputFile);
   bcGraph.allocateFrom(fileReader.size(), fileReader.sizeEdges());
   bcGraph.constructNodes();
 
-  galois::do_all(galois::iterate(fileReader), [&](uint32_t i) {
+  katana::do_all(katana::iterate(fileReader), [&](uint32_t i) {
     auto b = fileReader.edge_begin(i);
     auto e = fileReader.edge_end(i);
 
@@ -407,30 +406,30 @@ doAsyncBC() {
 
   unsigned nnodes = bcGraph.size();
   uint64_t nedges = bcGraph.sizeEdges();
-  galois::gInfo("Num nodes is ", nnodes, ", num edges is ", nedges);
-  galois::gInfo("Using OBIM chunk size: ", ASYNC_CHUNK_SIZE);
-  galois::gInfo(
+  katana::gInfo("Num nodes is ", nnodes, ", num edges is ", nedges);
+  katana::gInfo("Using OBIM chunk size: ", ASYNC_CHUNK_SIZE);
+  katana::gInfo(
       "Note that optimal chunk size may differ depending on input "
       "graph");
-  galois::ReportStatSingle("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
+  katana::ReportStatSingle("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
 
-  galois::reportPageAlloc("MemAllocPre");
-  galois::gInfo("Going to pre-allocate pages");
-  galois::Prealloc(
+  katana::reportPageAlloc("MemAllocPre");
+  katana::gInfo("Going to pre-allocate pages");
+  katana::Prealloc(
       std::min(
           static_cast<uint64_t>(
-              std::min(galois::getActiveThreads(), 100U) *
+              std::min(katana::getActiveThreads(), 100U) *
               std::max((nnodes / 4500000), unsigned{5}) *
               std::max((nedges / 30000000), uint64_t{5}) * 2.5),
           uint64_t{1500}) +
       5);
-  galois::gInfo("Pre-allocation complete");
-  galois::reportPageAlloc("MemAllocMid");
+  katana::gInfo("Pre-allocation complete");
+  katana::reportPageAlloc("MemAllocMid");
 
   // reset everything in preparation for run
-  galois::do_all(
-      galois::iterate(0u, nnodes), [&](auto i) { bcGraph.getData(i).reset(); });
-  galois::do_all(galois::iterate(UINT64_C(0), nedges), [&](auto i) {
+  katana::do_all(
+      katana::iterate(0u, nnodes), [&](auto i) { bcGraph.getData(i).reset(); });
+  katana::do_all(katana::iterate(UINT64_C(0), nedges), [&](auto i) {
     bcGraph.getEdgeData(i).reset();
   });
 
@@ -466,12 +465,12 @@ doAsyncBC() {
     }
   }
 
-  galois::InsertBag<ForwardPhaseWorkItem> forwardPhaseWL;
-  galois::InsertBag<uint32_t> backwardPhaseWL;
+  katana::InsertBag<ForwardPhaseWorkItem> forwardPhaseWL;
+  katana::InsertBag<uint32_t> backwardPhaseWL;
 
-  galois::gInfo("Beginning execution");
+  katana::gInfo("Beginning execution");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   for (uint32_t i = 0; i < numOfSources; ++i) {
     uint32_t sourceToUse = i;
@@ -482,14 +481,14 @@ doAsyncBC() {
     // ignore nodes with no neighbors
     if (!std::distance(
             bcGraph.edge_begin(sourceToUse), bcGraph.edge_end(sourceToUse))) {
-      galois::gDebug(sourceToUse, " has no outgoing edges");
+      katana::gDebug(sourceToUse, " has no outgoing edges");
       continue;
     }
 
     forwardPhaseWL.push_back(ForwardPhaseWorkItem(sourceToUse, 0));
     NodeType& active = bcGraph.getData(sourceToUse);
     active.initAsSource();
-    galois::gDebug("Source is ", sourceToUse);
+    katana::gDebug("Source is ", sourceToUse);
 
     bcExecutor.dagConstruction(forwardPhaseWL);
     forwardPhaseWL.clear();
@@ -511,9 +510,9 @@ doAsyncBC() {
   }
   execTime.stop();
 
-  galois::gInfo("Number of sources with outgoing edges was ", goodSource);
+  katana::gInfo("Number of sources with outgoing edges was ", goodSource);
 
-  galois::reportPageAlloc("MemAllocPost");
+  katana::reportPageAlloc("MemAllocPost");
 
   // sanity
   AsyncSanity(bcGraph);
@@ -522,7 +521,7 @@ doAsyncBC() {
   if (!skipVerify) {
     int count = 0;
     for (unsigned i = 0; i < nnodes && count < 10; ++i, ++count) {
-      galois::gPrint(
+      katana::gPrint(
           count, ": ", std::setiosflags(std::ios::fixed), std::setprecision(6),
           bcGraph.getData(i).bc, "\n");
     }

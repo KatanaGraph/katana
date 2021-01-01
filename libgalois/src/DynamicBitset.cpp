@@ -21,72 +21,72 @@
  * @file DynamicBitset.cpp
  */
 
-#include "galois/DynamicBitset.h"
+#include "katana/DynamicBitset.h"
 
-#include "galois/Galois.h"
+#include "katana/Galois.h"
 
-GALOIS_EXPORT galois::DynamicBitset galois::EmptyBitset;
+KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset;
 
 void
-galois::DynamicBitset::bitwise_or(const DynamicBitset& other) {
+katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
-  galois::do_all(
-      galois::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] |= other_bitvec[i]; }, galois::no_stats());
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
+      [&](size_t i) { bitvec[i] |= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
-galois::DynamicBitset::bitwise_and(const DynamicBitset& other) {
+katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
-  galois::do_all(
-      galois::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] &= other_bitvec[i]; }, galois::no_stats());
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
+      [&](size_t i) { bitvec[i] &= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
-galois::DynamicBitset::bitwise_and(
+katana::DynamicBitset::bitwise_and(
     const DynamicBitset& other1, const DynamicBitset& other2) {
   assert(size() == other1.size());
   assert(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
   const auto& other_bitvec2 = other2.get_vec();
 
-  galois::do_all(
-      galois::iterate(size_t{0}, bitvec.size()),
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
       [&](size_t i) { bitvec[i] = other_bitvec1[i] & other_bitvec2[i]; },
-      galois::no_stats());
+      katana::no_stats());
 }
 
 void
-galois::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
+katana::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();
-  galois::do_all(
-      galois::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] ^= other_bitvec[i]; }, galois::no_stats());
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
+      [&](size_t i) { bitvec[i] ^= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
-galois::DynamicBitset::bitwise_xor(
+katana::DynamicBitset::bitwise_xor(
     const DynamicBitset& other1, const DynamicBitset& other2) {
   assert(size() == other1.size());
   assert(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
   const auto& other_bitvec2 = other2.get_vec();
 
-  galois::do_all(
-      galois::iterate(size_t{0}, bitvec.size()),
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
       [&](size_t i) { bitvec[i] = other_bitvec1[i] ^ other_bitvec2[i]; },
-      galois::no_stats());
+      katana::no_stats());
 }
 
 uint64_t
-galois::DynamicBitset::count() const {
-  galois::GAccumulator<uint64_t> ret;
-  galois::do_all(
-      galois::iterate(bitvec.begin(), bitvec.end()),
+katana::DynamicBitset::count() const {
+  katana::GAccumulator<uint64_t> ret;
+  katana::do_all(
+      katana::iterate(bitvec.begin(), bitvec.end()),
       [&](uint64_t n) {
 #ifdef __GNUC__
         ret += __builtin_popcountll(n);
@@ -97,22 +97,22 @@ galois::DynamicBitset::count() const {
                56;
 #endif
       },
-      galois::no_stats());
+      katana::no_stats());
   return ret.reduce();
 }
 
 namespace {
 template <typename Integer>
 std::vector<Integer>
-GetOffsets(const galois::DynamicBitset& bitset) {
+GetOffsets(const katana::DynamicBitset& bitset) {
   // TODO uint32_t is somewhat dangerous; change in the future
-  uint32_t activeThreads = galois::getActiveThreads();
+  uint32_t activeThreads = katana::getActiveThreads();
   std::vector<Integer> tPrefixBitCounts(activeThreads);
 
   // count how many bits are set on each thread
-  galois::on_each([&](unsigned tid, unsigned nthreads) {
+  katana::on_each([&](unsigned tid, unsigned nthreads) {
     auto [start, end] =
-        galois::block_range(size_t{0}, bitset.size(), tid, nthreads);
+        katana::block_range(size_t{0}, bitset.size(), tid, nthreads);
 
     Integer count = 0;
     for (Integer i = start; i < end; ++i) {
@@ -137,9 +137,9 @@ GetOffsets(const galois::DynamicBitset& bitset) {
   // vector
   if (bitsetCount > 0) {
     offsets.resize(bitsetCount);
-    galois::on_each([&](unsigned tid, unsigned nthreads) {
+    katana::on_each([&](unsigned tid, unsigned nthreads) {
       auto [start, end] =
-          galois::block_range(size_t{0}, bitset.size(), tid, nthreads);
+          katana::block_range(size_t{0}, bitset.size(), tid, nthreads);
       Integer count = 0;
       Integer tPrefixBitCount;
       if (tid == 0) {
@@ -163,12 +163,12 @@ GetOffsets(const galois::DynamicBitset& bitset) {
 
 template <>
 std::vector<uint32_t>
-galois::DynamicBitset::getOffsets<uint32_t>() const {
+katana::DynamicBitset::getOffsets<uint32_t>() const {
   return GetOffsets<uint32_t>(*this);
 }
 
 template <>
 std::vector<uint64_t>
-galois::DynamicBitset::getOffsets<uint64_t>() const {
+katana::DynamicBitset::getOffsets<uint64_t>() const {
   return GetOffsets<uint64_t>(*this);
 }

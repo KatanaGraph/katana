@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_LOGGING_H_
-#define GALOIS_LIBSUPPORT_GALOIS_LOGGING_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_LOGGING_H_
+#define KATANA_LIBSUPPORT_KATANA_LOGGING_H_
 
 #include <mutex>
 #include <sstream>
@@ -9,7 +9,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 // Small patch to work with libfmt 4.0, which is the version in Ubuntu 18.04.
 #ifndef FMT_STRING
@@ -28,7 +28,7 @@ struct fmt::formatter<std::error_code> : formatter<string_view> {
 };
 #endif
 
-namespace galois {
+namespace katana {
 
 enum class LogLevel {
   Debug = 0,
@@ -40,7 +40,7 @@ enum class LogLevel {
 
 namespace internal {
 
-GALOIS_EXPORT void LogString(LogLevel level, const std::string& s);
+KATANA_EXPORT void LogString(LogLevel level, const std::string& s);
 
 }
 
@@ -75,71 +75,71 @@ LogLine(
   internal::LogString(level, with_line);
 }
 
-}  // end namespace galois
+}  // end namespace katana
 
-#define GALOIS_LOG_FATAL(fmt_string, ...)                                      \
+#define KATANA_LOG_FATAL(fmt_string, ...)                                      \
   do {                                                                         \
-    ::galois::LogLine(                                                         \
-        ::galois::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
+    ::katana::LogLine(                                                         \
+        ::katana::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
         ##__VA_ARGS__);                                                        \
     ::std::abort();                                                            \
   } while (0)
-#define GALOIS_LOG_ERROR(fmt_string, ...)                                      \
+#define KATANA_LOG_ERROR(fmt_string, ...)                                      \
   do {                                                                         \
-    ::galois::LogLine(                                                         \
-        ::galois::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
+    ::katana::LogLine(                                                         \
+        ::katana::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
         ##__VA_ARGS__);                                                        \
   } while (0)
-#define GALOIS_LOG_WARN(fmt_string, ...)                                       \
+#define KATANA_LOG_WARN(fmt_string, ...)                                       \
   do {                                                                         \
-    ::galois::LogLine(                                                         \
-        ::galois::LogLevel::Warning, __FILE__, __LINE__,                       \
+    ::katana::LogLine(                                                         \
+        ::katana::LogLevel::Warning, __FILE__, __LINE__,                       \
         FMT_STRING(fmt_string), ##__VA_ARGS__);                                \
   } while (0)
-#define GALOIS_LOG_VERBOSE(fmt_string, ...)                                    \
+#define KATANA_LOG_VERBOSE(fmt_string, ...)                                    \
   do {                                                                         \
-    ::galois::LogLine(                                                         \
-        ::galois::LogLevel::Verbose, __FILE__, __LINE__,                       \
+    ::katana::LogLine(                                                         \
+        ::katana::LogLevel::Verbose, __FILE__, __LINE__,                       \
         FMT_STRING(fmt_string), ##__VA_ARGS__);                                \
   } while (0)
 
 #ifndef NDEBUG
-#define GALOIS_LOG_DEBUG(fmt_string, ...)                                      \
+#define KATANA_LOG_DEBUG(fmt_string, ...)                                      \
   do {                                                                         \
-    ::galois::LogLine(                                                         \
-        ::galois::LogLevel::Debug, __FILE__, __LINE__, FMT_STRING(fmt_string), \
+    ::katana::LogLine(                                                         \
+        ::katana::LogLevel::Debug, __FILE__, __LINE__, FMT_STRING(fmt_string), \
         ##__VA_ARGS__);                                                        \
   } while (0)
 #else
-#define GALOIS_LOG_DEBUG(...)
+#define KATANA_LOG_DEBUG(...)
 #endif
 
-#define GALOIS_LOG_ASSERT(cond)                                                \
+#define KATANA_LOG_ASSERT(cond)                                                \
   do {                                                                         \
     if (!(cond)) {                                                             \
-      ::galois::LogLine(                                                       \
-          ::galois::LogLevel::Error, __FILE__, __LINE__,                       \
+      ::katana::LogLine(                                                       \
+          ::katana::LogLevel::Error, __FILE__, __LINE__,                       \
           "assertion not true: {}", #cond);                                    \
       ::std::abort();                                                          \
     }                                                                          \
   } while (0)
 
-#define GALOIS_LOG_VASSERT(cond, fmt_string, ...)                              \
+#define KATANA_LOG_VASSERT(cond, fmt_string, ...)                              \
   do {                                                                         \
     if (!(cond)) {                                                             \
-      ::galois::LogLine(                                                       \
-          ::galois::LogLevel::Error, __FILE__, __LINE__,                       \
+      ::katana::LogLine(                                                       \
+          ::katana::LogLevel::Error, __FILE__, __LINE__,                       \
           FMT_STRING(fmt_string), ##__VA_ARGS__);                              \
       ::std::abort();                                                          \
     }                                                                          \
   } while (0)
 
-#define GALOIS_WARN_ONCE(fmt_string, ...)                                      \
+#define KATANA_WARN_ONCE(fmt_string, ...)                                      \
   do {                                                                         \
-    static std::once_flag __galois_warn_once_flag;                             \
-    std::call_once(__galois_warn_once_flag, [&]() {                            \
-      ::galois::LogLine(                                                       \
-          ::galois::LogLevel::Warning, __FILE__, __LINE__,                     \
+    static std::once_flag __katana_warn_once_flag;                             \
+    std::call_once(__katana_warn_once_flag, [&]() {                            \
+      ::katana::LogLine(                                                       \
+          ::katana::LogLevel::Warning, __FILE__, __LINE__,                     \
           FMT_STRING(fmt_string), ##__VA_ARGS__);                              \
     });                                                                        \
   } while (0)

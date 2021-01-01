@@ -1,11 +1,11 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
-#define GALOIS_LIBGALOIS_GALOIS_SHAREDMEMSYS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_SHAREDMEMSYS_H_
+#define KATANA_LIBGALOIS_KATANA_SHAREDMEMSYS_H_
 
 #include <memory>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * SharedMemSys initializes the Galois library for shared memory. Most Galois
@@ -16,7 +16,7 @@ namespace galois {
  * downstream implementation dependencies like the AWS SDK cannot be
  * reinitialized.
  */
-class GALOIS_EXPORT SharedMemSys {
+class KATANA_EXPORT SharedMemSys {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 
@@ -31,6 +31,6 @@ public:
   SharedMemSys& operator=(SharedMemSys&&) = delete;
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

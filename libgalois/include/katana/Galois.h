@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GALOIS_H_
-#define GALOIS_LIBGALOIS_GALOIS_GALOIS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GALOIS_H_
+#define KATANA_LIBGALOIS_KATANA_GALOIS_H_
 
-#include "galois/Loops.h"
-#include "galois/Mem.h"
-#include "galois/SharedMemSys.h"
-#include "galois/config.h"
+#include "katana/Loops.h"
+#include "katana/Mem.h"
+#include "katana/SharedMemSys.h"
+#include "katana/config.h"
 
 #endif

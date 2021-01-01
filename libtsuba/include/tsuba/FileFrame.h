@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_FILEFRAME_H_
-#define GALOIS_LIBTSUBA_TSUBA_FILEFRAME_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_FILEFRAME_H_
+#define KATANA_LIBTSUBA_TSUBA_FILEFRAME_H_
 
 #include <cstdint>
 #include <future>
@@ -7,12 +7,12 @@
 
 #include <parquet/arrow/writer.h>
 
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 
 namespace tsuba {
 
-class GALOIS_EXPORT FileFrame : public arrow::io::OutputStream {
+class KATANA_EXPORT FileFrame : public arrow::io::OutputStream {
   std::string path_;
   uint8_t* map_start_;
   uint64_t map_size_;
@@ -20,7 +20,7 @@ class GALOIS_EXPORT FileFrame : public arrow::io::OutputStream {
   uint64_t cursor_;
   bool valid_ = false;
   bool synced_ = false;
-  galois::Result<void> GrowBuffer(int64_t accommodate);
+  katana::Result<void> GrowBuffer(int64_t accommodate);
 
 public:
   FileFrame() = default;
@@ -41,7 +41,7 @@ public:
   FileFrame& operator=(FileFrame&& other) noexcept {
     if (&other != this) {
       if (auto res = Destroy(); !res) {
-        GALOIS_LOG_ERROR("Destroy: {}", res.error());
+        KATANA_LOG_ERROR("Destroy: {}", res.error());
       }
       path_ = other.path_;
       map_start_ = other.map_start_;
@@ -57,17 +57,17 @@ public:
 
   ~FileFrame() override;
 
-  galois::Result<void> Init(uint64_t reserve_size);
-  galois::Result<void> Init() { return Init(1); }
+  katana::Result<void> Init(uint64_t reserve_size);
+  katana::Result<void> Init() { return Init(1); }
   void Bind(std::string_view filename);
 
-  galois::Result<void> Destroy();
+  katana::Result<void> Destroy();
 
-  galois::Result<void> Persist();
-  std::future<galois::Result<void>> PersistAsync();
+  katana::Result<void> Persist();
+  std::future<katana::Result<void>> PersistAsync();
 
   template <typename T>
-  galois::Result<T*> ptr() const {
+  katana::Result<T*> ptr() const {
     return reinterpret_cast<T*>(map_start_); /* NOLINT */
   }
 

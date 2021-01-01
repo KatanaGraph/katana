@@ -1,12 +1,12 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFS_BFS_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFS_BFS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_BFS_BFS_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_BFS_BFS_H_
 
 #include <iostream>
 
-#include "galois/analytics/Plan.h"
-#include "galois/analytics/Utils.h"
+#include "katana/analytics/Plan.h"
+#include "katana/analytics/Utils.h"
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 /// A computational plan to for BFS, specifying the algorithm and any parameters
 /// associated with it.
@@ -59,15 +59,15 @@ public:
 };
 
 /// The tag for the output property of BFS in PropertyGraphs.
-using BfsNodeDistance = galois::PODProperty<uint32_t>;
+using BfsNodeDistance = katana::PODProperty<uint32_t>;
 
 /// Compute BFS level of nodes in the graph pfg starting from start_node. The
 /// result is stored in a property named by output_property_name. The plan
 /// controls the algorithm and parameters used to compute the BFS.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
-GALOIS_EXPORT Result<void> Bfs(
-    graphs::PropertyFileGraph* pfg, size_t start_node,
+KATANA_EXPORT Result<void> Bfs(
+    PropertyFileGraph* pfg, size_t start_node,
     const std::string& output_property_name, BfsPlan algo = {});
 
 /// Do a quick validation of the results of a BFS computation where the results
@@ -75,11 +75,11 @@ GALOIS_EXPORT Result<void> Bfs(
 /// The results are approximate and may have false-negatives.
 /// @return a failure if the BFS results do not pass validation or if there is a
 ///     failure during checking.
-GALOIS_EXPORT Result<void> BfsAssertValid(
-    graphs::PropertyFileGraph* pfg, const std::string& property_name);
+KATANA_EXPORT Result<void> BfsAssertValid(
+    PropertyFileGraph* pfg, const std::string& property_name);
 
 /// Statistics about a graph that can be extracted from the results of BFS.
-struct GALOIS_EXPORT BfsStatistics {
+struct KATANA_EXPORT BfsStatistics {
   /// The source node for the distances.
   uint32_t source_node;
   /// The maximum distance across all nodes.
@@ -95,10 +95,10 @@ struct GALOIS_EXPORT BfsStatistics {
   void Print(std::ostream& os = std::cout);
 
   /// Compute the statistics of BFS results stored in property_name.
-  static galois::Result<BfsStatistics> Compute(
-      galois::graphs::PropertyFileGraph* pfg, const std::string& property_name);
+  static katana::Result<BfsStatistics> Compute(
+      katana::PropertyFileGraph* pfg, const std::string& property_name);
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
 #endif

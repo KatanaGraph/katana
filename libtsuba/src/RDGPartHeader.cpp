@@ -3,13 +3,13 @@
 #include "Constants.h"
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/FileView.h"
 
 template <typename T>
-using Result = galois::Result<T>;
+using Result = katana::Result<T>;
 using json = nlohmann::json;
 
 namespace {
@@ -36,12 +36,12 @@ const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
 // special partition property names
 
 // TODO (witchel) Deprecated.  Remove with ReadMetadataParquet, below
-galois::Result<std::vector<tsuba::PropStorageInfo>>
+katana::Result<std::vector<tsuba::PropStorageInfo>>
 MakeProperties(std::vector<std::string>&& values) {
   std::vector v = std::move(values);
 
   if ((v.size() % 2) != 0) {
-    GALOIS_LOG_DEBUG("failed: number of values {} is not even", v.size());
+    KATANA_LOG_DEBUG("failed: number of values {} is not even", v.size());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
@@ -76,11 +76,11 @@ namespace tsuba {
 ///
 /// The order of metadata fields is significant, and repeated metadata fields
 /// are used to encode lists of values.
-galois::Result<RDGPartHeader>
-RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
+katana::Result<RDGPartHeader>
+RDGPartHeader::MakeParquet(const katana::Uri& partition_path) {
   auto fv = std::make_shared<FileView>();
   if (auto res = fv->Bind(partition_path.string(), false); !res) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "cannot open {}: {}", partition_path.string(), res.error());
     return res.error();
   }
@@ -93,7 +93,7 @@ RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
   try {
     md = parquet::ReadMetaData(fv);
   } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "arrow error reading {}: {}", partition_path.string(), exp.what());
     return ErrorCode::ArrowError;
   }
@@ -153,7 +153,7 @@ RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
   PartitionMetadata part_metadata;
   for (const auto& [k, v] : other_metadata) {
     if (k == kPartOtherMetadataKey) {
-      if (auto res = galois::JsonParse(v, &part_metadata); !res) {
+      if (auto res = katana::JsonParse(v, &part_metadata); !res) {
         return res.error();
       }
     }
@@ -170,8 +170,8 @@ RDGPartHeader::MakeParquet(const galois::Uri& partition_path) {
   return RDGPartHeader(std::move(header));
 }
 
-galois::Result<RDGPartHeader>
-RDGPartHeader::MakeJson(const galois::Uri& partition_path) {
+katana::Result<RDGPartHeader>
+RDGPartHeader::MakeJson(const katana::Uri& partition_path) {
   tsuba::FileView fv;
   if (auto res = fv.Bind(partition_path.string(), true); !res) {
     return res.error();
@@ -181,34 +181,34 @@ RDGPartHeader::MakeJson(const galois::Uri& partition_path) {
   }
 
   tsuba::RDGPartHeader header;
-  auto json_res = galois::JsonParse<tsuba::RDGPartHeader>(fv, &header);
+  auto json_res = katana::JsonParse<tsuba::RDGPartHeader>(fv, &header);
   if (!json_res) {
     return json_res.error();
   }
   return header;
 }
 
-galois::Result<RDGPartHeader>
-RDGPartHeader::Make(const galois::Uri& partition_path) {
-  galois::Result<RDGPartHeader> res = MakeJson(partition_path);
+katana::Result<RDGPartHeader>
+RDGPartHeader::Make(const katana::Uri& partition_path) {
+  katana::Result<RDGPartHeader> res = MakeJson(partition_path);
   if (res) {
     return res;
   }
 
-  GALOIS_LOG_ERROR("failed to parse JSON RDGPartHeader: {}", res.error());
-  GALOIS_LOG_ERROR("falling back on Parquet (deprecated)");
+  KATANA_LOG_ERROR("failed to parse JSON RDGPartHeader: {}", res.error());
+  KATANA_LOG_ERROR("falling back on Parquet (deprecated)");
 
   try {
     return MakeParquet(partition_path);
   } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    KATANA_LOG_DEBUG("arrow exception: {}", exp.what());
     return ErrorCode::ArrowError;
   }
 }
 
 Result<void>
 RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
-  auto serialized_res = galois::JsonDump(*this);
+  auto serialized_res = katana::JsonDump(*this);
   if (!serialized_res) {
     return serialized_res.error();
   }
@@ -224,7 +224,7 @@ RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
     return res.error();
   }
   if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", res);
+    KATANA_LOG_DEBUG("arrow error: {}", res);
     return ArrowToTsuba(res.code());
   }
 
@@ -235,11 +235,11 @@ RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
 
   writes->StartStore(std::move(ff));
   TSUBA_PTP(internal::FaultSensitivity::Normal);
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 // const * so that they are nullable
-galois::Result<void>
+katana::Result<void>
 RDGPartHeader::PrunePropsTo(
     const std::vector<std::string>* node_properties,
     const std::vector<std::string>* edge_properties) {
@@ -253,7 +253,7 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *node_properties) {
       auto it = node_paths.find(s);
       if (it == node_paths.end()) {
-        GALOIS_LOG_DEBUG("failed: node property `{}` not found", s);
+        KATANA_LOG_DEBUG("failed: node property `{}` not found", s);
         return ErrorCode::PropertyNotFound;
       }
 
@@ -272,7 +272,7 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *edge_properties) {
       auto it = edge_paths.find(s);
       if (it == edge_paths.end()) {
-        GALOIS_LOG_DEBUG("failed: edge property `{}` not found", s);
+        KATANA_LOG_DEBUG("failed: edge property `{}` not found", s);
         return ErrorCode::PropertyNotFound;
       }
 
@@ -280,14 +280,14 @@ RDGPartHeader::PrunePropsTo(
     }
     edge_prop_info_list_ = next_edge_prop_info_list;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 Result<void>
 RDGPartHeader::Validate() const {
   for (const auto& md : node_prop_info_list_) {
     if (md.path.find('/') != std::string::npos) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "failed: node_property path doesn't contain a slash: \"{}\"",
           md.path);
       return ErrorCode::InvalidArgument;
@@ -295,23 +295,23 @@ RDGPartHeader::Validate() const {
   }
   for (const auto& md : edge_prop_info_list_) {
     if (md.path.find('/') != std::string::npos) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "failed: edge_property path doesn't contain a slash: \"{}\"",
           md.path);
       return ErrorCode::InvalidArgument;
     }
   }
   if (topology_path_.empty()) {
-    GALOIS_LOG_DEBUG("failed: topology_path: \"{}\" is empty", topology_path_);
+    KATANA_LOG_DEBUG("failed: topology_path: \"{}\" is empty", topology_path_);
     return ErrorCode::InvalidArgument;
   }
   if (topology_path_.find('/') != std::string::npos) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: topology_path doesn't contain a slash: \"{}\"",
         topology_path_);
     return ErrorCode::InvalidArgument;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 void
@@ -329,7 +329,7 @@ Result<void>
 RDGPartHeader::MarkNodePropertiesPersistent(
     const std::vector<std::string>& persist_node_props) {
   if (persist_node_props.size() > node_prop_info_list_.size()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: persist props sz: {} names, rdg.node_prop_info_list_ sz: {}",
         persist_node_props.size(), node_prop_info_list_.size());
     return ErrorCode::InvalidArgument;
@@ -339,17 +339,17 @@ RDGPartHeader::MarkNodePropertiesPersistent(
       node_prop_info_list_[i].name = persist_node_props[i];
       node_prop_info_list_[i].path = "";
       node_prop_info_list_[i].persist = true;
-      GALOIS_LOG_DEBUG("node persist {}", node_prop_info_list_[i].name);
+      KATANA_LOG_DEBUG("node persist {}", node_prop_info_list_[i].name);
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 Result<void>
 RDGPartHeader::MarkEdgePropertiesPersistent(
     const std::vector<std::string>& persist_edge_props) {
   if (persist_edge_props.size() > edge_prop_info_list_.size()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: persist props sz: {} names, rdg.edge_prop_info_list_ sz: {}",
         persist_edge_props.size(), edge_prop_info_list_.size());
     return ErrorCode::InvalidArgument;
@@ -359,10 +359,10 @@ RDGPartHeader::MarkEdgePropertiesPersistent(
       edge_prop_info_list_[i].name = persist_edge_props[i];
       edge_prop_info_list_[i].path = "";
       edge_prop_info_list_[i].persist = true;
-      GALOIS_LOG_DEBUG("edge persist {}", edge_prop_info_list_[i].name);
+      KATANA_LOG_DEBUG("edge persist {}", edge_prop_info_list_[i].name);
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 void

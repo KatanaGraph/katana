@@ -1,11 +1,11 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_WRITEGROUP_H_
-#define GALOIS_LIBTSUBA_TSUBA_WRITEGROUP_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_WRITEGROUP_H_
+#define KATANA_LIBTSUBA_TSUBA_WRITEGROUP_H_
 
 #include <future>
 #include <list>
 #include <memory>
 
-#include "galois/Result.h"
+#include "katana/Result.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/file.h"
 
@@ -15,7 +15,7 @@ namespace tsuba {
 /// that they have all completed
 class WriteGroup {
   struct AsyncOp {
-    std::future<galois::Result<void>> result;
+    std::future<katana::Result<void>> result;
     std::string location;
   };
 
@@ -26,18 +26,18 @@ class WriteGroup {
 
   /// Add future to the list of futures this descriptor will wait for, note
   /// the file name for debugging
-  void AddOp(std::future<galois::Result<void>> future, std::string file);
+  void AddOp(std::future<katana::Result<void>> future, std::string file);
 
 public:
   /// Build a descriptor with a tag. If running with multiple hosts, Make should
   /// be Called BSP style and all hosts will have the same tag
-  static galois::Result<std::unique_ptr<WriteGroup>> Make();
+  static katana::Result<std::unique_ptr<WriteGroup>> Make();
 
   /// Return a random tag that uniquely identifies this op
   const std::string& tag() const { return tag_; }
 
   /// Wait until all operations this descriptor knows about have completed
-  galois::Result<void> Finish();
+  katana::Result<void> Finish();
 
   /// Start async store op, we hold onto the data until op finishes
   void StartStore(std::shared_ptr<FileFrame> ff);

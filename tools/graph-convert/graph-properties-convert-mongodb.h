@@ -1,12 +1,12 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MONGODB_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MONGODB_H_
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MONGODB_H_
+#define KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MONGODB_H_
 
 #include <bson/bson.h>
 #include <mongoc/mongoc.h>
 
-#include "galois/BuildGraph.h"
+#include "katana/BuildGraph.h"
 
-namespace galois {
+namespace katana {
 
 void HandleNodeDocumentMongoDB(
     PropertyGraphBuilder* builder, const bson_t* doc,
@@ -21,6 +21,6 @@ GraphComponents ConvertMongoDB(
 void GenerateMappingMongoDB(
     const std::string& db_name, const std::string& outfile);
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

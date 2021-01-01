@@ -1,12 +1,12 @@
 #include <arrow/api.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/LargeArray.h"
-#include "galois/Logging.h"
-#include "galois/Properties.h"
-#include "galois/Result.h"
+#include "katana/ErrorCode.h"
+#include "katana/LargeArray.h"
+#include "katana/Logging.h"
+#include "katana/Properties.h"
+#include "katana/Result.h"
 
-namespace galois {
+namespace katana {
 
 namespace {
 
@@ -32,19 +32,19 @@ public:
 
   size_t size() const { return data_.size(); }
 
-  galois::Result<std::shared_ptr<arrow::Array>> Finalize() const {
+  katana::Result<std::shared_ptr<arrow::Array>> Finalize() const {
     using ArrowBuilder = typename arrow::TypeTraits<ArrowType>::BuilderType;
     ArrowBuilder builder;
     if (data_.size() > 0) {
       if (auto r = builder.AppendValues(data_); !r.ok()) {
-        GALOIS_LOG_DEBUG("arrow error: {}", r);
-        return galois::ErrorCode::ArrowError;
+        KATANA_LOG_DEBUG("arrow error: {}", r);
+        return katana::ErrorCode::ArrowError;
       }
     }
     std::shared_ptr<arrow::Array> array;
     if (auto r = builder.Finish(&array); !r.ok()) {
-      GALOIS_LOG_DEBUG("arrow error: {}", r);
-      return galois::ErrorCode::ArrowError;
+      KATANA_LOG_DEBUG("arrow error: {}", r);
+      return katana::ErrorCode::ArrowError;
     }
     return array;
   }
@@ -79,7 +79,7 @@ public:
 
   size_t size() const { return data_.size(); }
 
-  galois::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) const {
+  katana::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) const {
     using ArrowBuilder = typename arrow::TypeTraits<ArrowType>::BuilderType;
     ArrowBuilder builder;
     if (data_.size() > 0) {
@@ -92,8 +92,8 @@ public:
         if (auto r =
                 builder.AppendValues(data_.data(), data_.size(), valid_.data());
             !r.ok()) {
-          GALOIS_LOG_DEBUG("arrow error: {}", r);
-          return galois::ErrorCode::ArrowError;
+          KATANA_LOG_DEBUG("arrow error: {}", r);
+          return katana::ErrorCode::ArrowError;
         }
       } else {
         // TODO(danielmawhirter) find a better way to handle this
@@ -101,16 +101,16 @@ public:
         // AppendValues(vector<string>, uint8_t*)
         // AppendValues(char**, int64_t, uint8_t*)
         if (auto r = builder.AppendValues(data_, valid_.data()); !r.ok()) {
-          GALOIS_LOG_DEBUG("arrow error: {}", r);
-          return galois::ErrorCode::ArrowError;
+          KATANA_LOG_DEBUG("arrow error: {}", r);
+          return katana::ErrorCode::ArrowError;
         }
       }
     }
     if (auto r = builder.Finish(array); !r.ok()) {
-      GALOIS_LOG_DEBUG("arrow error: {}", r);
-      return galois::ErrorCode::ArrowError;
+      KATANA_LOG_DEBUG("arrow error: {}", r);
+      return katana::ErrorCode::ArrowError;
     }
-    return galois::ResultSuccess();
+    return katana::ResultSuccess();
   }
 
 private:
@@ -166,11 +166,11 @@ public:
 
   bool IsValid(size_t index) { return builder_.IsValid(index); }
 
-  galois::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) {
+  katana::Result<void> Finalize(std::shared_ptr<arrow::Array>* array) {
     return builder_.Finalize(array);
   }
 
-  galois::Result<std::shared_ptr<arrow::Array>> Finalize() {
+  katana::Result<std::shared_ptr<arrow::Array>> Finalize() {
     std::shared_ptr<arrow::Array> array;
     auto res = Finalize(&array);
     if (!res) {
@@ -185,4 +185,4 @@ private:
   RandomBuilderType builder_;
 };
 
-}  // namespace galois
+}  // namespace katana

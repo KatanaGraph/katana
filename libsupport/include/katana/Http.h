@@ -1,29 +1,29 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_HTTP_H_
-#define GALOIS_LIBSUPPORT_GALOIS_HTTP_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_HTTP_H_
+#define KATANA_LIBSUPPORT_KATANA_HTTP_H_
 
-#include "galois/JSON.h"
-#include "galois/Result.h"
+#include "katana/JSON.h"
+#include "katana/Result.h"
 
-namespace galois {
+namespace katana {
 
-GALOIS_EXPORT Result<void> HttpInit();
+KATANA_EXPORT Result<void> HttpInit();
 
 /// Perform an HTTP get request on url and fill buffer with the result on success
-GALOIS_EXPORT Result<void> HttpGet(
+KATANA_EXPORT Result<void> HttpGet(
     const std::string& url, std::vector<char>* response);
 
 /// Perform an HTTP post request on url and send the contents of buffer
-GALOIS_EXPORT Result<void> HttpPost(
+KATANA_EXPORT Result<void> HttpPost(
     const std::string& url, const std::string& data,
     std::vector<char>* response);
 
 /// Perform an HTTP put request on url and send the contents of buffer
-GALOIS_EXPORT Result<void> HttpPut(
+KATANA_EXPORT Result<void> HttpPut(
     const std::string& url, const std::string& data,
     std::vector<char>* response);
 
 /// Perform an HTTP delete request on url and send the contents of buffer
-GALOIS_EXPORT Result<void> HttpDelete(
+KATANA_EXPORT Result<void> HttpDelete(
     const std::string& url, std::vector<char>* response);
 
 template <typename T, typename Callable, typename... Args>
@@ -70,6 +70,6 @@ HttpPutJson(const std::string& url, const T& obj) {
   return HttpOpJson<U>(HttpPut, url, std::move(json_res.value()));
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

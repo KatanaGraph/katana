@@ -1,7 +1,7 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_H_
 
-#include <galois/analytics/bfs/bfs.h>
-#include <galois/analytics/sssp/sssp.h>
+#include <katana/analytics/bfs/bfs.h>
+#include <katana/analytics/sssp/sssp.h>
 
 #endif

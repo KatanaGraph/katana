@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_FLATMAP_H_
-#define GALOIS_LIBGALOIS_GALOIS_FLATMAP_H_
+#ifndef KATANA_LIBGALOIS_KATANA_FLATMAP_H_
+#define KATANA_LIBGALOIS_KATANA_FLATMAP_H_
 
 #include <algorithm>
 #include <stdexcept>
@@ -26,9 +26,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 //! Simple map data structure, based off a single array.
 template <
@@ -373,16 +373,16 @@ operator>=(
   return !(__x < __y);
 }
 
-}  // namespace galois
+}  // namespace katana
 
 namespace std {
 
-/// See galois::flat_map::swap().
+/// See katana::flat_map::swap().
 template <typename _Key, typename _Tp, typename _Compare, typename _Alloc>
 inline void
 swap(
-    galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
-    galois::flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
+    katana::flat_map<_Key, _Tp, _Compare, _Alloc>& __x,
+    katana::flat_map<_Key, _Tp, _Compare, _Alloc>& __y) {
   __x.swap(__y);
 }
 

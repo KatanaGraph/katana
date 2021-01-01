@@ -17,26 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_ORDEREDLIST_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_ORDEREDLIST_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ORDEREDLIST_H_
+#define KATANA_LIBGALOIS_KATANA_ORDEREDLIST_H_
 
-#include "galois/FlatMap.h"
-#include "galois/config.h"
+#include "katana/FlatMap.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 template <
     class Compare = std::less<int>, typename T = int, bool concurrent = true>
-class OrderedList : private boost::noncopyable,
-                    private substrate::PaddedLock<concurrent> {
-  typedef galois::flat_map<T, std::deque<T>, Compare> Map;
+class OrderedList : private boost::noncopyable, private PaddedLock<concurrent> {
+  typedef katana::flat_map<T, std::deque<T>, Compare> Map;
 
   Map map;
 
-  using substrate::PaddedLock<concurrent>::lock;
-  using substrate::PaddedLock<concurrent>::try_lock;
-  using substrate::PaddedLock<concurrent>::unlock;
+  using PaddedLock<concurrent>::lock;
+  using PaddedLock<concurrent>::try_lock;
+  using PaddedLock<concurrent>::unlock;
 
 public:
   template <typename Tnew>
@@ -67,19 +65,19 @@ public:
 
   template <typename RangeTy>
   void push_initial(RangeTy range) {
-    if (substrate::ThreadPool::getTID() == 0)
+    if (ThreadPool::getTID() == 0)
       push(range.begin(), range.end());
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     lock();
     if (map.empty()) {
       unlock();
-      return galois::optional<value_type>();
+      return katana::optional<value_type>();
     }
     auto ii = map.begin();
     std::deque<T>& list = ii->second;
-    galois::optional<value_type> v(list.front());
+    katana::optional<value_type> v(list.front());
     list.pop_front();
     if (list.empty())
       map.erase(ii);
@@ -87,7 +85,7 @@ public:
     return v;
   }
 };
-GALOIS_WLCOMPILECHECK(OrderedList)
-}  // namespace worklists
-}  // namespace galois
+KATANA_WLCOMPILECHECK(OrderedList)
+
+}  // namespace katana
 #endif

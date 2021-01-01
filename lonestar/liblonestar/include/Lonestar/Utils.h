@@ -24,10 +24,10 @@
 
 #include <boost/filesystem.hpp>
 
-#include "galois/analytics/Utils.h"
-#include "galois/graphs/PropertyGraph.h"
+#include "katana/PropertyGraph.h"
+#include "katana/analytics/Utils.h"
 
-inline std::unique_ptr<galois::graphs::PropertyFileGraph>
+inline std::unique_ptr<katana::PropertyFileGraph>
 MakeFileGraph(
     const std::string& rdg_name, const std::string& edge_property_name) {
   std::vector<std::string> edge_properties;
@@ -35,10 +35,10 @@ MakeFileGraph(
   if (!edge_property_name.empty())
     edge_properties.emplace_back(edge_property_name);
 
-  auto pfg_result = galois::graphs::PropertyFileGraph::Make(
+  auto pfg_result = katana::PropertyFileGraph::Make(
       rdg_name, node_properties, edge_properties);
   if (!pfg_result) {
-    GALOIS_LOG_FATAL("cannot make graph: {}", pfg_result.error());
+    KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());
   }
   return std::move(pfg_result.value());
 }
@@ -53,7 +53,7 @@ writeOutput(const std::string& outputDir, T* values, size_t length) {
   std::ofstream outputFile(filename.string().c_str());
 
   if (!outputFile) {
-    GALOIS_LOG_FATAL("could not open file: {}", filename);
+    KATANA_LOG_FATAL("could not open file: {}", filename);
   }
 
   for (size_t i = 0; i < length; i++) {
@@ -61,7 +61,7 @@ writeOutput(const std::string& outputDir, T* values, size_t length) {
   }
 
   if (!outputFile) {
-    GALOIS_LOG_FATAL("failed to write file: {}", filename);
+    KATANA_LOG_FATAL("failed to write file: {}", filename);
   }
 }
 

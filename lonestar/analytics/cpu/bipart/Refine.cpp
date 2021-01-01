@@ -23,8 +23,8 @@ void
 ProjectPart(MetisGraph* metis_graph) {
   HyperGraph* fine_graph = &metis_graph->parent_graph->graph;
   HyperGraph* coarse_graph = &metis_graph->graph;
-  galois::do_all(
-      galois::iterate(
+  katana::do_all(
+      katana::iterate(
           fine_graph->GetHedges(), static_cast<uint32_t>(fine_graph->size())),
       [&](GNode n) {
         GNode parent = fine_graph->getData(n).parent;
@@ -32,15 +32,15 @@ ProjectPart(MetisGraph* metis_graph) {
         uint32_t partition = cn.partition;
         fine_graph->getData(n).partition = partition;
       },
-      galois::loopname("Refining-Project-Partition"));
+      katana::loopname("Refining-Project-Partition"));
 }
 
 void
 ResetCounter(HyperGraph* g) {
-  galois::do_all(
-      galois::iterate(g->GetHedges(), static_cast<uint32_t>(g->size())),
+  katana::do_all(
+      katana::iterate(g->GetHedges(), static_cast<uint32_t>(g->size())),
       [&](GNode n) { g->getData(n).ResetCounter(); },
-      galois::loopname("Refining-Reset-Counter"));
+      katana::loopname("Refining-Reset-Counter"));
 }
 
 void
@@ -49,13 +49,13 @@ ParallelSwaps(
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_nodelist,
     std::vector<HyperGraph*>* g, const uint32_t refine_max_levels) {
   uint32_t num_partitions = g->size();
-  std::vector<galois::GAccumulator<WeightTy>> accum(num_partitions);
-  std::vector<galois::GAccumulator<WeightTy>> node_size(num_partitions);
+  std::vector<katana::GAccumulator<WeightTy>> accum(num_partitions);
+  std::vector<katana::GAccumulator<WeightTy>> node_size(num_partitions);
 
   uint32_t total_nodes = combined_nodelist.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t v) {
         auto node_index_pair = combined_nodelist[v];
         uint32_t index = node_index_pair.second;
@@ -68,7 +68,7 @@ ParallelSwaps(
           accum[index] += weight;
         }
       },
-      galois::loopname("Refining-Make-Balance-Swap"));
+      katana::loopname("Refining-Make-Balance-Swap"));
 
   GNodeBag partition_zero_nodes;
   GNodeBag partition_one_nodes;
@@ -78,8 +78,8 @@ ParallelSwaps(
   uint32_t num_partition_zero_nodes{0};
   uint32_t num_partition_one_nodes{0};
 
-  galois::StatTimer init_gain_timer("Refining-Init-Gains");
-  galois::StatTimer sort_timer("Refining-Sort");
+  katana::StatTimer init_gain_timer("Refining-Init-Gains");
+  katana::StatTimer sort_timer("Refining-Sort");
 
   for (uint32_t pass = 0; pass < refine_max_levels; pass++) {
     init_gain_timer.start();
@@ -98,8 +98,8 @@ ParallelSwaps(
       partition_one_nodes_bag.clear();
       swap_bag.clear();
 
-      galois::do_all(
-          galois::iterate(
+      katana::do_all(
+          katana::iterate(
               cur_graph.GetHedges(), static_cast<uint32_t>(cur_graph.size())),
           [&](uint32_t n) {
             MetisNode& node_data = cur_graph.getData(n);
@@ -122,7 +122,7 @@ ParallelSwaps(
               partition_one_nodes.push(n);
             }
           },
-          galois::loopname("Refining-Find-Partition-Nodes"));
+          katana::loopname("Refining-Find-Partition-Nodes"));
 
       num_partition_zero_nodes = std::distance(
           partition_zero_nodes.begin(), partition_zero_nodes.end());
@@ -168,15 +168,15 @@ ParallelSwaps(
         swap_bag.push(partition_one_nodes_bag[i]);
         swap_bag.push(partition_zero_nodes_bag[i]);
       }
-      galois::do_all(
-          galois::iterate(swap_bag),
+      katana::do_all(
+          katana::iterate(swap_bag),
           [&](GNode n) {
             MetisNode& node_data = cur_graph.getData(n);
             uint32_t partition = node_data.partition;
             node_data.partition = 1 - partition;
             node_data.IncCounter();
           },
-          galois::loopname("Refining-Swap"));
+          katana::loopname("Refining-Swap"));
     }
   }
   for (uint32_t i = 0; i < num_partitions; i++) {
@@ -194,10 +194,10 @@ ParallelMakingbalance(HyperGraph* g, const float tol) {
   uint32_t graph_size = g->size();
   uint32_t sqrt_hnodes = sqrt(total_hnodes);
 
-  galois::GAccumulator<WeightTy> accum;
-  galois::GAccumulator<WeightTy> node_size;
-  galois::do_all(
-      galois::iterate(total_hedges, graph_size),
+  katana::GAccumulator<WeightTy> accum;
+  katana::GAccumulator<WeightTy> node_size;
+  katana::do_all(
+      katana::iterate(total_hedges, graph_size),
       [&](GNode n) {
         MetisNode& node_data = g->getData(n);
         WeightTy weight = node_data.weight;
@@ -206,15 +206,15 @@ ParallelMakingbalance(HyperGraph* g, const float tol) {
           accum += weight;
         }
       },
-      galois::loopname("Refining-Make-Balance"));
+      katana::loopname("Refining-Make-Balance"));
 
   const WeightTy hi = (1 + tol) * node_size.reduce() / (2 + tol);
   const WeightTy lo = node_size.reduce() - hi;
   WeightTy balance = accum.reduce();
 
-  galois::StatTimer init_gain_timer("Refining-Init-Gains");
-  galois::StatTimer sort_timer("Refining-Sort");
-  galois::StatTimer make_balance_timer("Refining-Make-Balance");
+  katana::StatTimer init_gain_timer("Refining-Init-Gains");
+  katana::StatTimer sort_timer("Refining-Sort");
+  katana::StatTimer make_balance_timer("Refining-Make-Balance");
 
   while (true) {
     if (balance >= lo && balance <= hi) {
@@ -251,8 +251,8 @@ ParallelMakingbalance(HyperGraph* g, const float tol) {
 
     // Placing each node in an appropriate bucket using the gain by weight
     // ratio.
-    galois::do_all(
-        galois::iterate(total_hedges, graph_size),
+    katana::do_all(
+        katana::iterate(total_hedges, graph_size),
         [&](GNode n) {
           MetisNode& node_data = g->getData(n);
           float gain =
@@ -280,11 +280,11 @@ ParallelMakingbalance(HyperGraph* g, const float tol) {
             neg_cand_nodes_bag.emplace(n);
           }
         },
-        galois::loopname("Refining-Bucket-Gain"));
+        katana::loopname("Refining-Bucket-Gain"));
 
     // Sorting each bucket in parallel.
-    galois::do_all(
-        galois::iterate(cand_nodes_bag_arr),
+    katana::do_all(
+        katana::iterate(cand_nodes_bag_arr),
         [&](GNodeBag& cand_nodes_bag) {
           if (cand_nodes_bag.empty()) {
             return;
@@ -308,7 +308,7 @@ ParallelMakingbalance(HyperGraph* g, const float tol) {
 
           SortNodesByGainAndWeight(g, &cand_nodes_vec_arr[idx], 0);
         },
-        galois::loopname("Refining-Sort-Bucket"));
+        katana::loopname("Refining-Sort-Bucket"));
 
     uint32_t i{0}, j{0};
 
@@ -407,10 +407,10 @@ Refine(std::vector<MetisGraph*>* coarse_graph) {
   std::vector<MetisGraph*> fine_graph(num_partitions, nullptr);
   std::vector<HyperGraph*> gg(num_partitions, nullptr);
 
-  galois::StatTimer construct_timer("Refining-Total-Construct-Lists");
-  galois::StatTimer parallel_swap_timer("Refining-Total-Parallel-Swap");
-  galois::StatTimer make_balance_timer("Refining-Total-Make-Balance");
-  galois::StatTimer project_partition_timer("Refining-Total-Project-Partition");
+  katana::StatTimer construct_timer("Refining-Total-Construct-Lists");
+  katana::StatTimer parallel_swap_timer("Refining-Total-Parallel-Swap");
+  katana::StatTimer make_balance_timer("Refining-Total-Make-Balance");
+  katana::StatTimer project_partition_timer("Refining-Total-Project-Partition");
 
   for (uint32_t i = 0; i < num_partitions; i++) {
     if (coarse_graph->at(i) == nullptr) {

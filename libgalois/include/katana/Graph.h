@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_GRAPH_H_
 
-#include "galois/config.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/MorphGraph.h"
-#include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/ReadGraph.h"
+#include "katana/LCGraph.h"
+#include "katana/MorphGraph.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/ReadGraph.h"
+#include "katana/config.h"
 
 #endif

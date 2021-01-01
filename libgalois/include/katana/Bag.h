@@ -17,22 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_BAG_H_
-#define GALOIS_LIBGALOIS_GALOIS_BAG_H_
+#ifndef KATANA_LIBGALOIS_KATANA_BAG_H_
+#define KATANA_LIBGALOIS_KATANA_BAG_H_
 
 #include <algorithm>
 #include <stdexcept>
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "galois/Mem.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/gstl.h"
-#include "galois/runtime/Executor_OnEach.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Mem.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
+#include "katana/gstl.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Unordered collection of elements. This data structure supports scalable
@@ -54,8 +54,7 @@ public:
   class Iterator : public boost::iterator_facade<
                        Iterator<U>, U, boost::forward_traversal_tag> {
     friend class boost::iterator_core_access;
-    using Storage =
-        galois::substrate::PerThreadStorage<std::pair<header*, header*>>;
+    using Storage = katana::PerThreadStorage<std::pair<header*, header*>>;
     using Head = std::conditional_t<std::is_const_v<U>, const Storage, Storage>;
 
     Head* hd;
@@ -123,8 +122,8 @@ public:
   };
 
 private:
-  galois::runtime::FixedSizeHeap heap;
-  galois::substrate::PerThreadStorage<PerThread> heads;
+  katana::FixedSizeHeap heap;
+  katana::PerThreadStorage<PerThread> heads;
 
   void insHeader(header* h) {
     PerThread& hpair = *heads.getLocal();
@@ -153,8 +152,7 @@ private:
     if (BlockSize) {
       return newHeaderFromHeap(heap.allocate(BlockSize), BlockSize);
     } else {
-      return newHeaderFromHeap(
-          galois::substrate::pagePoolAlloc(), galois::substrate::allocSize());
+      return newHeaderFromHeap(katana::pagePoolAlloc(), katana::allocSize());
     }
   }
 
@@ -169,14 +167,14 @@ private:
         if (BlockSize)
           heap.deallocate(h2);
         else
-          galois::substrate::pagePoolFree(h2);
+          katana::pagePoolFree(h2);
       }
       hpair.second = 0;
     }
   }
 
   void destruct_parallel(void) {
-    galois::runtime::on_each_gen(
+    katana::on_each_gen(
         [this](const unsigned int tid, const unsigned int) {
           PerThread& hpair = *heads.getLocal(tid);
           header*& h = hpair.first;
@@ -187,11 +185,11 @@ private:
             if (BlockSize)
               heap.deallocate(h2);
             else
-              galois::substrate::pagePoolFree(h2);
+              katana::pagePoolFree(h2);
           }
           hpair.second = 0;
         },
-        std::make_tuple(galois::no_stats()));
+        std::make_tuple(katana::no_stats()));
   }
 
 public:
@@ -240,10 +238,10 @@ public:
   const_iterator end() const { return const_iterator(&heads, heads.size()); }
 
   local_iterator local_begin() {
-    return local_iterator(&heads, galois::substrate::ThreadPool::getTID());
+    return local_iterator(&heads, katana::ThreadPool::getTID());
   }
   local_iterator local_end() {
-    return local_iterator(&heads, galois::substrate::ThreadPool::getTID() + 1);
+    return local_iterator(&heads, katana::ThreadPool::getTID() + 1);
   }
 
   bool empty() const {
@@ -299,6 +297,6 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

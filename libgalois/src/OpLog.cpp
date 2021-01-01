@@ -1,33 +1,33 @@
-#include "galois/OpLog.h"
+#include "katana/OpLog.h"
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
-galois::Operation
-galois::OpLog::GetOp(uint64_t index) const {
+katana::Operation
+katana::OpLog::GetOp(uint64_t index) const {
   if (index >= log_.size()) {
-    GALOIS_LOG_WARN(
+    KATANA_LOG_WARN(
         "Log index {} >= {}, which is log size", index, log_.size());
   }
   return log_[index];
 }
 
 uint64_t
-galois::OpLog::AppendOp(const Operation& op) {
+katana::OpLog::AppendOp(const Operation& op) {
   auto sz = log_.size();
   log_.emplace_back(op);
   return sz;
 }
 
 uint64_t
-galois::OpLog::size() const {
+katana::OpLog::size() const {
   return log_.size();
 }
 
 void
-galois::OpLog::Clear() {
+katana::OpLog::Clear() {
   log_.clear();
 }
 
-galois::OpLog::OpLog(const galois::Uri& uri) {
-  GALOIS_LOG_FATAL("Persistent log not yet implemented: {}", uri);
+katana::OpLog::OpLog(const katana::Uri& uri) {
+  KATANA_LOG_FATAL("Persistent log not yet implemented: {}", uri);
 }

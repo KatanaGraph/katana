@@ -17,14 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/graphs/LCGraph.h"
+#include "katana/LCGraph.h"
 
 int
 main() {
-  constexpr size_t intvoid =
-      sizeof(galois::graphs::internal::EdgeInfoBase<int, void>);
-  constexpr size_t intint =
-      sizeof(galois::graphs::internal::EdgeInfoBase<int, int>);
+  constexpr size_t intvoid = sizeof(katana::internal::EdgeInfoBase<int, void>);
+  constexpr size_t intint = sizeof(katana::internal::EdgeInfoBase<int, int>);
   static_assert(intvoid < intint, "Failed to do empty member optimization");
   return intvoid < intint ? 0 : 1;
 }

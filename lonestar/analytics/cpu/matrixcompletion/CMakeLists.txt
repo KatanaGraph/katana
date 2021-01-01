@@ -1,6 +1,6 @@
 add_executable(matrixcompletion-cpu matrixCompletion.cpp)
 add_dependencies(apps matrixcompletion-cpu)
-target_link_libraries(matrixcompletion-cpu PRIVATE Galois::shmem lonestar)
+target_link_libraries(matrixcompletion-cpu PRIVATE Katana::galois lonestar)
 install(TARGETS matrixcompletion-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
 

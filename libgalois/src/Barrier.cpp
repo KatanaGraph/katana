@@ -17,20 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/Barrier.h"
+#include "katana/Barrier.h"
 
-#include "galois/Logging.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Logging.h"
+#include "katana/ThreadPool.h"
 
 // anchor vtable
-galois::substrate::Barrier::~Barrier() = default;
+katana::Barrier::~Barrier() = default;
 
-static galois::substrate::Barrier* kBarrier = nullptr;
+static katana::Barrier* kBarrier = nullptr;
 static unsigned kBarrierThreads = 0;
 
 void
-galois::substrate::internal::SetBarrier(galois::substrate::Barrier* barrier) {
-  GALOIS_LOG_VASSERT(
+katana::internal::SetBarrier(katana::Barrier* barrier) {
+  KATANA_LOG_VASSERT(
       !(barrier && kBarrier), "Double initialization of Barrier");
 
   kBarrier = barrier;
@@ -41,9 +41,9 @@ galois::substrate::internal::SetBarrier(galois::substrate::Barrier* barrier) {
   }
 }
 
-galois::substrate::Barrier&
-galois::substrate::GetBarrier(unsigned active_threads) {
-  GALOIS_LOG_VASSERT(kBarrier, "Barrier not initialized");
+katana::Barrier&
+katana::GetBarrier(unsigned active_threads) {
+  KATANA_LOG_VASSERT(kBarrier, "Barrier not initialized");
   active_threads =
       std::min(active_threads, GetThreadPool().getMaxUsableThreads());
   active_threads = std::max(active_threads, 1U);

@@ -1,4 +1,4 @@
-cdef extern from "galois/Bag.h" namespace "galois" nogil:
+cdef extern from "katana/Bag.h" namespace "katana" nogil:
     cppclass InsertBag[T]:
         cppclass iterator:
             T& operator*()
@@ -15,7 +15,7 @@ cdef extern from "galois/Bag.h" namespace "galois" nogil:
         iterator begin()
         iterator end()
 
-cdef extern from "galois/LargeArray.h" namespace "galois" nogil:
+cdef extern from "katana/LargeArray.h" namespace "katana" nogil:
     cppclass LargeArray[T]:
         cppclass iterator:
             T& operator*()

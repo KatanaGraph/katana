@@ -19,11 +19,11 @@ cdef extern from "<boost/outcome/outcome.hpp>" namespace "BOOST_OUTCOME_V2_NAMES
 
 cdef inline void raise_error_code(error_code err) except *:
     # Importing error_category_to_exception_class directly into this module does not work due to how cython importing works.
-    import galois
+    import katana
 
     category_name = str(err.category().name(), "ascii")
-    exception_type = galois.error_category_to_exception_class.get(category_name, RuntimeError)
-    if category_name in galois.error_category_to_exception_class:
+    exception_type = katana.error_category_to_exception_class.get(category_name, RuntimeError)
+    if category_name in katana.error_category_to_exception_class:
         prefix = ""
     else:
         prefix = category_name + ": "

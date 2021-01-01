@@ -11,9 +11,9 @@
 #include <boost/filesystem.hpp>
 
 #include "GlobalState.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "galois/Uri.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
+#include "katana/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -27,7 +27,7 @@ tsuba::LocalStorage::CleanUri(std::string* uri) {
   *uri = std::string(uri->begin() + uri_scheme().size(), uri->end());
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::LocalStorage::WriteFile(
     std::string uri, const uint8_t* data, uint64_t size) {
   CleanUri(&uri);
@@ -47,10 +47,10 @@ tsuba::LocalStorage::WriteFile(
   if (!ofile.good()) {
     return ErrorCode::LocalStorageError;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::LocalStorage::ReadFile(
     std::string uri, uint64_t start, uint64_t size, uint8_t* data) {
   CleanUri(&uri);
@@ -58,13 +58,13 @@ tsuba::LocalStorage::ReadFile(
 
   ifile.seekg(start);
   if (!ifile) {
-    GALOIS_LOG_DEBUG("failed to seek");
+    KATANA_LOG_DEBUG("failed to seek");
     return ErrorCode::LocalStorageError;
   }
 
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */
   if (!ifile) {
-    GALOIS_LOG_DEBUG("failed to read");
+    KATANA_LOG_DEBUG("failed to read");
     return ErrorCode::LocalStorageError;
   }
 
@@ -73,24 +73,24 @@ tsuba::LocalStorage::ReadFile(
   if (size - ifile.gcount() > kBlockSize) {
     return ErrorCode::LocalStorageError;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::LocalStorage::Stat(const std::string& uri, StatBuf* s_buf) {
   std::string filename = uri;
   CleanUri(&filename);
   struct stat local_s_buf;
 
   if (int ret = stat(filename.c_str(), &local_s_buf); ret) {
-    return galois::ResultErrno();
+    return katana::ResultErrno();
   }
   s_buf->size = local_s_buf.st_size;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 // Current implementation is not async
-std::future<galois::Result<void>>
+std::future<katana::Result<void>>
 tsuba::LocalStorage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
@@ -104,13 +104,13 @@ tsuba::LocalStorage::ListAsync(
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
       return std::async(
-          []() -> galois::Result<void> { return galois::ResultSuccess(); });
+          []() -> katana::Result<void> { return katana::ResultSuccess(); });
     }
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "\n  Open dir failed: {}: {}", dirname,
-        galois::ResultErrno().message());
+        katana::ResultErrno().message());
     return std::async(
-        []() -> galois::Result<void> { return ErrorCode::LocalStorageError; });
+        []() -> katana::Result<void> { return ErrorCode::LocalStorageError; });
   }
 
   int dfd = dirfd(dirp);
@@ -127,9 +127,9 @@ tsuba::LocalStorage::ListAsync(
             size->emplace_back(stat_buf.st_size);
           } else {
             size->emplace_back(0UL);
-            GALOIS_LOG_DEBUG(
+            KATANA_LOG_DEBUG(
                 "dir file stat failed dir: {} file: {} : {}", dirname,
-                dp->d_name, galois::ResultErrno().message());
+                dp->d_name, katana::ResultErrno().message());
           }
         }
       }
@@ -137,18 +137,18 @@ tsuba::LocalStorage::ListAsync(
   } while (dp != nullptr);
 
   if (errno != 0) {
-    GALOIS_LOG_ERROR(
-        "\n  readdir failed: {}: {}", dirname, galois::ResultErrno().message());
+    KATANA_LOG_ERROR(
+        "\n  readdir failed: {}: {}", dirname, katana::ResultErrno().message());
     return std::async(
-        []() -> galois::Result<void> { return ErrorCode::LocalStorageError; });
+        []() -> katana::Result<void> { return ErrorCode::LocalStorageError; });
   }
   (void)closedir(dirp);
 
   return std::async(
-      []() -> galois::Result<void> { return galois::ResultSuccess(); });
+      []() -> katana::Result<void> { return katana::ResultSuccess(); });
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::LocalStorage::Delete(
     const std::string& directory_uri,
     const std::unordered_set<std::string>& files) {
@@ -159,9 +159,9 @@ tsuba::LocalStorage::Delete(
     rmdir(dir.c_str());
   } else {
     for (const auto& file : files) {
-      auto path = galois::Uri::JoinPath(dir, file);
+      auto path = katana::Uri::JoinPath(dir, file);
       unlink(path.c_str());
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }

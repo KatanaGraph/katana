@@ -1,7 +1,7 @@
-#include <galois/graphs/PropertyViews.h>
+#include <katana/PropertyViews.h>
 
-galois::Result<std::vector<arrow::Array*>>
-galois::graphs::internal::ExtractArrays(
+katana::Result<std::vector<arrow::Array*>>
+katana::internal::ExtractArrays(
     const arrow::Table* table, const std::vector<std::string>& properties) {
   std::vector<arrow::Array*> ret;
   for (auto& property : properties) {

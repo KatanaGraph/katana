@@ -24,15 +24,15 @@
  * possible.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_ARRAYWRAPPER_H_
-#define GALOIS_LIBGALOIS_GALOIS_ARRAYWRAPPER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ARRAYWRAPPER_H_
+#define KATANA_LIBGALOIS_KATANA_ARRAYWRAPPER_H_
 
 #include <array>
 
-#include "galois/config.h"
-#include "galois/runtime/ExtraTraits.h"
+#include "katana/ExtraTraits.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 /**
  * A subclass of std::array that is marked trivially copyable if the type is
  * also memory copyable. Useful when you need a trivially copyable type for
@@ -46,8 +46,8 @@ class CopyableArray : public std::array<T, N> {
 public:
   //! Only typedef tt_is_copyable if T is trivially copyable.
   //! Allows the use of memcopy in serialize/deserialize.
-  using tt_is_copyable = typename std::enable_if<
-      galois::runtime::is_memory_copyable<T>::value, int>::type;
+  using tt_is_copyable =
+      typename std::enable_if<katana::is_memory_copyable<T>::value, int>::type;
 };
-}  // namespace galois
+}  // namespace katana
 #endif

@@ -17,19 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_PRIORITYQUEUE_H_
-#define GALOIS_LIBGALOIS_GALOIS_PRIORITYQUEUE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PRIORITYQUEUE_H_
+#define KATANA_LIBGALOIS_KATANA_PRIORITYQUEUE_H_
 
 #include <algorithm>
 #include <set>
 #include <vector>
 
-#include "galois/Mem.h"
-#include "galois/config.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/PaddedLock.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/Mem.h"
+#include "katana/PaddedLock.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Thread-safe ordered set. Faster than STL heap operations (about 10%-15%
@@ -38,7 +38,7 @@ namespace galois {
  */
 template <
     typename T, typename Cmp = std::less<T>,
-    typename Alloc = galois::FixedSizeAllocator<T>>
+    typename Alloc = katana::FixedSizeAllocator<T>>
 class ThreadSafeOrderedSet {
   typedef std::set<T, Cmp, Alloc> Set;
 
@@ -54,16 +54,16 @@ public:
   typedef typename container_type::const_reverse_iterator reverse_iterator;
   typedef
       typename container_type::const_reverse_iterator const_reverse_iterator;
-  typedef galois::substrate::SimpleLock Lock_ty;
+  typedef katana::SimpleLock Lock_ty;
 
 private:
-  alignas(substrate::GALOIS_CACHE_LINE_SIZE) Lock_ty mutex;
+  alignas(KATANA_CACHE_LINE_SIZE) Lock_ty mutex;
   Set orderedSet;
 
 public:
   template <
       typename _T, typename _Cmp = std::less<_T>,
-      typename _Alloc = galois::FixedSizeAllocator<_T>>
+      typename _Alloc = katana::FixedSizeAllocator<_T>>
   using retype = ThreadSafeOrderedSet<
       _T, _Cmp,
       _Alloc>;  // FIXME: loses Alloc and Cmp types
@@ -158,10 +158,10 @@ public:
 
 template <
     typename T, typename Cmp = std::less<T>,
-    typename Cont = std::vector<T, runtime::Pow2BlockAllocator<T>>>
+    typename Cont = std::vector<T, Pow2BlockAllocator<T>>>
 class MinHeap {
 public:
-  typedef runtime::Pow2BlockAllocator<T> alloc_type;
+  typedef Pow2BlockAllocator<T> alloc_type;
   typedef Cont container_type;
 
   typedef typename container_type::value_type value_type;
@@ -291,9 +291,9 @@ public:
       typename container_type::const_reverse_iterator const_reverse_iterator;
 
 protected:
-  typedef galois::substrate::SimpleLock Lock_ty;
+  typedef katana::SimpleLock Lock_ty;
 
-  alignas(substrate::GALOIS_CACHE_LINE_SIZE) Lock_ty mutex;
+  alignas(KATANA_CACHE_LINE_SIZE) Lock_ty mutex;
   container_type heap;
 
 public:
@@ -376,6 +376,6 @@ public:
   void reserve(size_type s) { heap.reserve(s); }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

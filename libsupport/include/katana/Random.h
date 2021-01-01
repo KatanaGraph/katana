@@ -1,20 +1,20 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_RANDOM_H_
-#define GALOIS_LIBSUPPORT_GALOIS_RANDOM_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_RANDOM_H_
+#define KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 
 #include <string>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
-GALOIS_EXPORT std::string RandomAlphanumericString(uint64_t len);
+KATANA_EXPORT std::string RandomAlphanumericString(uint64_t len);
 // Range 0..len-1, inclusive
-GALOIS_EXPORT int64_t RandomUniformInt(int64_t len);
+KATANA_EXPORT int64_t RandomUniformInt(int64_t len);
 // Range min+1..max-1, inclusive
-GALOIS_EXPORT int64_t RandomUniformInt(int64_t min, int64_t max);
+KATANA_EXPORT int64_t RandomUniformInt(int64_t min, int64_t max);
 // Range 0.0f..max, inclusive
-GALOIS_EXPORT float RandomUniformFloat(float max);
+KATANA_EXPORT float RandomUniformFloat(float max);
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

@@ -1,11 +1,11 @@
 import numpy as np
 import pyarrow
 
-from galois.atomic import GAccumulator, GReduceLogicalOr, atomic_min
-from galois.loops import do_all, do_all_operator
-from galois.property_graph import PropertyGraph
-from galois.shmem import setActiveThreads
-from galois.timer import StatTimer
+from katana.atomic import GAccumulator, GReduceLogicalOr, atomic_min
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
+from katana.galois import setActiveThreads
+from katana.timer import StatTimer
 
 
 ################################################

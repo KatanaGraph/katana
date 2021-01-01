@@ -1,13 +1,13 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_ARROWINTERCHANGE_H_
-#define GALOIS_LIBSUPPORT_GALOIS_ARROWINTERCHANGE_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_ARROWINTERCHANGE_H_
+#define KATANA_LIBSUPPORT_KATANA_ARROWINTERCHANGE_H_
 
 #include <arrow/api.h>
 #include <arrow/stl.h>
 #include <arrow/type_traits.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/ErrorCode.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 
 /// We have two strategies for Arrow conversion.  One uses
 /// arrow::stl::TableFromTupleRange, the other uses Builders. TableFromTupleRange is
@@ -17,7 +17,7 @@
 /// NB: The schema for a table returned by TableFromTupleRange will contain
 /// "not null."  We make the type nullable in VectorToArrowTable.
 
-namespace galois {
+namespace katana {
 
 template <typename T>
 std::vector<T>*
@@ -60,7 +60,7 @@ TupleView(const std::vector<T>* v) {
 }
 
 template <typename T>
-galois::Result<std::vector<T>>
+katana::Result<std::vector<T>>
 UnmarshalVector(const std::shared_ptr<arrow::ChunkedArray>& source) {
   using Row = std::tuple<T>;
 
@@ -77,14 +77,14 @@ UnmarshalVector(const std::shared_ptr<arrow::ChunkedArray>& source) {
   if (auto r =
           arrow::stl::TupleRangeFromTable(*table, cast_options, &ctx, &dest);
       !r.ok()) {
-    GALOIS_LOG_DEBUG("UnmarshalVector arrow error: {}", r.ToString());
-    return galois::ErrorCode::ArrowError;
+    KATANA_LOG_DEBUG("UnmarshalVector arrow error: {}", r.ToString());
+    return katana::ErrorCode::ArrowError;
   }
   return std::vector<T>(std::move(*SingleView(&dest)));
 }
 
 template <typename T>
-galois::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 MarshalVector(const std::vector<T>& source) {
   using Row = std::tuple<T>;
 
@@ -96,14 +96,14 @@ MarshalVector(const std::vector<T>& source) {
   if (auto r = arrow::stl::TableFromTupleRange(
           pool, *source_view, {"column1"}, &table);
       !r.ok()) {
-    GALOIS_LOG_DEBUG("MarshalVector arrow error: {}", r.ToString());
-    return galois::ErrorCode::ArrowError;
+    KATANA_LOG_DEBUG("MarshalVector arrow error: {}", r.ToString());
+    return katana::ErrorCode::ArrowError;
   }
   return table->column(0);
 }
 
 template <typename T>
-galois::Result<std::shared_ptr<arrow::Table>>
+katana::Result<std::shared_ptr<arrow::Table>>
 VectorToArrowTable(const std::string& name, const std::vector<T>& source) {
   using Row = std::tuple<T>;
 
@@ -115,23 +115,23 @@ VectorToArrowTable(const std::string& name, const std::vector<T>& source) {
   if (auto r =
           arrow::stl::TableFromTupleRange(pool, *source_view, {name}, &table);
       !r.ok()) {
-    GALOIS_LOG_DEBUG("VectorToArrowTable arrow error: {}", r.ToString());
-    return galois::ErrorCode::ArrowError;
+    KATANA_LOG_DEBUG("VectorToArrowTable arrow error: {}", r.ToString());
+    return katana::ErrorCode::ArrowError;
   }
   // Jump through hoops to make the type nullable even though we are not using
   // a builder and there are no null values.  Documented to be zero copy.
   auto nullable_field = table->schema()->field(0)->WithNullable(true);
   auto nullable_table = table->SetColumn(0, nullable_field, table->column(0));
   if (!nullable_table.ok()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "VectorToArrowTable set column error: {}", nullable_table.status());
-    return galois::ErrorCode::ArrowError;
+    return katana::ErrorCode::ArrowError;
   }
   return nullable_table.ValueOrDie();
 }
 
 template <typename T>
-galois::Result<void>
+katana::Result<void>
 UnmarshalVectorOfVectors(
     const std::vector<std::shared_ptr<arrow::ChunkedArray>>& source,
     std::vector<std::vector<T>>* dest) {
@@ -140,23 +140,23 @@ UnmarshalVectorOfVectors(
   for (size_t i = 0; i < source.size(); ++i) {
     auto res = UnmarshalVector<T>(source[i]);
     if (!res) {
-      GALOIS_LOG_DEBUG("UnmarshalVectorOfVectors arrow error: {}", res.error());
+      KATANA_LOG_DEBUG("UnmarshalVectorOfVectors arrow error: {}", res.error());
       return res.error();
     }
     dest->at(i) = std::move(res.value());
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 template <typename T>
-galois::Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
+katana::Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
 MarshalVectorOfVectors(const std::vector<std::vector<T>>& source) {
   std::vector<std::shared_ptr<arrow::ChunkedArray>> dest;
 
   for (const auto& vec : source) {
     auto res = MarshalVector(vec);
     if (!res) {
-      GALOIS_LOG_DEBUG("MarshalVectorOfVectors arrow error: {}", res.error());
+      KATANA_LOG_DEBUG("MarshalVectorOfVectors arrow error: {}", res.error());
       return res.error();
     }
     dest.emplace_back(res.value());
@@ -175,11 +175,11 @@ BuildArray(std::vector<T>& data) {
 
   Builder builder;
   auto append_status = builder.AppendValues(data);
-  GALOIS_LOG_ASSERT(append_status.ok());
+  KATANA_LOG_ASSERT(append_status.ok());
 
   std::shared_ptr<arrow::Array> array;
   auto finish_status = builder.Finish(&array);
-  GALOIS_LOG_ASSERT(finish_status.ok());
+  KATANA_LOG_ASSERT(finish_status.ok());
   return array;
 }
 
@@ -242,13 +242,13 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 
     Builder builder;
     auto append_status = builder.AppendValues(data);
-    GALOIS_LOG_ASSERT(append_status.ok());
+    KATANA_LOG_ASSERT(append_status.ok());
 
     data.clear();
 
     std::shared_ptr<arrow::Array> array;
     auto finish_status = builder.Finish(&array);
-    GALOIS_LOG_ASSERT(finish_status.ok());
+    KATANA_LOG_ASSERT(finish_status.ok());
 
     chunks.emplace_back(std::move(array));
   }
@@ -262,6 +262,6 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
   columns_.emplace_back(std::make_shared<arrow::ChunkedArray>(chunks));
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

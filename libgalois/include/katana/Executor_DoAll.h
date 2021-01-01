@@ -17,23 +17,23 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDOALL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORDOALL_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORDOALL_H_
 
-#include "galois/Statistics.h"
-#include "galois/Timer.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/runtime/Executor_OnEach.h"
-#include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/PaddedLock.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/TerminationDetection.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/OperatorReferenceTypes.h"
+#include "katana/PaddedLock.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/Statistics.h"
+#include "katana/TerminationDetection.h"
+#include "katana/ThreadPool.h"
+#include "katana/Timer.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois::runtime {
+namespace katana {
 
 namespace internal {
 
@@ -45,13 +45,13 @@ class DoAllStealingExec {
   enum StealAmt { HALF, FULL };
 
   constexpr static const bool NEED_STATS =
-      galois::internal::NeedStats<ArgsTuple>::value;
+      katana::internal::NeedStats<ArgsTuple>::value;
   constexpr static const bool MORE_STATS =
       NEED_STATS && has_trait<more_stats_tag, ArgsTuple>();
   constexpr static const bool USE_TERM = false;
 
   struct ThreadContext {
-    alignas(substrate::GALOIS_CACHE_LINE_SIZE) substrate::SimpleLock work_mutex;
+    alignas(KATANA_CACHE_LINE_SIZE) SimpleLock work_mutex;
     unsigned id;
 
     Iter shared_beg;
@@ -63,7 +63,7 @@ class DoAllStealingExec {
 
     ThreadContext()
         : work_mutex(),
-          id(substrate::GetThreadPool().getMaxThreads()),
+          id(GetThreadPool().getMaxThreads()),
           shared_beg(),
           shared_end(),
           m_size(0),
@@ -233,11 +233,11 @@ class DoAllStealingExec {
   };
 
 private:
-  GALOIS_ATTRIBUTE_NOINLINE bool transferWork(
+  KATANA_ATTRIBUTE_NOINLINE bool transferWork(
       ThreadContext& rich, ThreadContext& poor, StealAmt amount) {
     assert(rich.id != poor.id);
-    assert(rich.id < galois::getActiveThreads());
-    assert(poor.id < galois::getActiveThreads());
+    assert(rich.id < katana::getActiveThreads());
+    assert(poor.id < katana::getActiveThreads());
 
     Iter steal_beg;
     Iter steal_end;
@@ -258,14 +258,14 @@ private:
     return succ;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE bool stealWithinSocket(ThreadContext& poor) {
+  KATANA_ATTRIBUTE_NOINLINE bool stealWithinSocket(ThreadContext& poor) {
     bool sawWork = false;
     bool stoleWork = false;
 
-    auto& tp = substrate::GetThreadPool();
+    auto& tp = GetThreadPool();
 
-    const unsigned maxT = galois::getActiveThreads();
-    const unsigned my_pack = substrate::ThreadPool::getSocket();
+    const unsigned maxT = katana::getActiveThreads();
+    const unsigned my_pack = ThreadPool::getSocket();
     const unsigned per_pack = tp.getMaxThreads() / tp.getMaxSockets();
 
     const unsigned pack_beg = my_pack * per_pack;
@@ -292,15 +292,15 @@ private:
     return sawWork || stoleWork;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE bool stealOutsideSocket(
+  KATANA_ATTRIBUTE_NOINLINE bool stealOutsideSocket(
       ThreadContext& poor, const StealAmt& amt) {
     bool sawWork = false;
     bool stoleWork = false;
 
-    auto& tp = substrate::GetThreadPool();
-    unsigned myPkg = substrate::ThreadPool::getSocket();
+    auto& tp = GetThreadPool();
+    unsigned myPkg = ThreadPool::getSocket();
     // unsigned maxT = LL::getMaxThreads ();
-    unsigned maxT = galois::getActiveThreads();
+    unsigned maxT = katana::getActiveThreads();
 
     for (unsigned i = 0; i < maxT; ++i) {
       ThreadContext& rich = *(workers.getRemote((poor.id + i) % maxT));
@@ -322,7 +322,7 @@ private:
     return sawWork || stoleWork;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE bool trySteal(ThreadContext& poor) {
+  KATANA_ATTRIBUTE_NOINLINE bool trySteal(ThreadContext& poor) {
     bool ret = false;
 
     ret = stealWithinSocket(poor);
@@ -331,22 +331,22 @@ private:
       return true;
     }
 
-    substrate::asmPause();
+    asmPause();
 
-    if (substrate::GetThreadPool().isLeader(poor.id)) {
+    if (GetThreadPool().isLeader(poor.id)) {
       ret = stealOutsideSocket(poor, HALF);
 
       if (ret) {
         return true;
       }
-      substrate::asmPause();
+      asmPause();
     }
 
     ret = stealOutsideSocket(poor, HALF);
     if (ret) {
       return true;
     }
-    substrate::asmPause();
+    asmPause();
 
     return ret;
   }
@@ -356,9 +356,9 @@ private:
   F func;
   const char* loopname;
   Diff_ty chunk_size;
-  substrate::PerThreadStorage<ThreadContext> workers;
+  PerThreadStorage<ThreadContext> workers;
 
-  substrate::TerminationDetection& term;
+  TerminationDetection& term;
 
   // for stats
   PerThreadTimer<MORE_STATS> totalTime;
@@ -371,9 +371,9 @@ public:
   DoAllStealingExec(const R& _range, F _func, const ArgsTuple& argsTuple)
       : range(_range),
         func(_func),
-        loopname(galois::internal::getLoopName(argsTuple)),
+        loopname(katana::internal::getLoopName(argsTuple)),
         chunk_size(get_trait_value<chunk_size_tag>(argsTuple).value),
-        term(substrate::GetTerminationDetection(activeThreads)),
+        term(GetTerminationDetection(activeThreads)),
         totalTime(loopname, "Total"),
         initTime(loopname, "Init"),
         execTime(loopname, "Execute"),
@@ -388,7 +388,7 @@ public:
 
     term.InitializeThread();
 
-    unsigned id = substrate::ThreadPool::getTID();
+    unsigned id = ThreadPool::getTID();
 
     *workers.getLocal(id) =
         ThreadContext(id, range.local_begin(), range.local_end());
@@ -454,7 +454,7 @@ public:
     assert(!ctx.hasWork());
 
     if (NEED_STATS) {
-      galois::ReportStatSum(loopname, "Iterations", ctx.num_iter);
+      katana::ReportStatSum(loopname, "Iterations", ctx.num_iter);
     }
   }
 };
@@ -467,9 +467,9 @@ struct ChooseDoAllImpl {
         R, OperatorReferenceType<decltype(std::forward<F>(func))>, ArgsT>
         exec(range, std::forward<F>(func), argsTuple);
 
-    substrate::Barrier& barrier = substrate::GetBarrier(activeThreads);
+    Barrier& barrier = GetBarrier(activeThreads);
 
-    substrate::GetThreadPool().run(
+    GetThreadPool().run(
         activeThreads, [&exec]() { exec.initThread(); },
         [&barrier]() { barrier.Wait(); }, std::ref(exec));
   }
@@ -479,14 +479,14 @@ template <>
 struct ChooseDoAllImpl<false> {
   template <typename R, typename F, typename ArgsT>
   static void call(const R& range, F func, const ArgsT& argsTuple) {
-    runtime::on_each_gen(
+    on_each_gen(
         [&](const unsigned int, const unsigned int) {
           static constexpr bool NEED_STATS =
-              galois::internal::NeedStats<ArgsT>::value;
+              katana::internal::NeedStats<ArgsT>::value;
           static constexpr bool MORE_STATS =
               NEED_STATS && has_trait<more_stats_tag, ArgsT>();
 
-          const char* const loopname = galois::internal::getLoopName(argsTuple);
+          const char* const loopname = katana::internal::getLoopName(argsTuple);
 
           PerThreadTimer<MORE_STATS> totalTime(loopname, "Total");
           PerThreadTimer<MORE_STATS> initTime(loopname, "Init");
@@ -515,7 +515,7 @@ struct ChooseDoAllImpl<false> {
           totalTime.stop();
 
           if (NEED_STATS) {
-            galois::ReportStatSum(loopname, "Iterations", iter);
+            katana::ReportStatSum(loopname, "Iterations", iter);
           }
         },
         std::make_tuple());
@@ -539,7 +539,7 @@ do_all_gen(const R& range, F&& func, const ArgsTuple& argsTuple) {
   using ArgsT = decltype(argsT);
 
   constexpr bool TIME_IT = has_trait<loopname_tag, ArgsT>();
-  CondStatTimer<TIME_IT> timer(galois::internal::getLoopName(argsT));
+  CondStatTimer<TIME_IT> timer(katana::internal::getLoopName(argsT));
 
   timer.start();
 
@@ -551,6 +551,6 @@ do_all_gen(const R& range, F&& func, const ArgsTuple& argsTuple) {
   timer.stop();
 }
 
-}  // namespace galois::runtime
+}  // namespace katana
 
 #endif

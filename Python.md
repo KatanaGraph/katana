@@ -3,14 +3,14 @@ Overview
 
 ![Conda Package CI](https://github.com/KatanaGraph/katana/workflows/Conda%20Package%20CI/badge.svg)
 
-The Galois-Python interface allows Python programs to utilize Galois for high-performance parallelism.
+The Katana-Python interface allows Python programs to utilize Galois for high-performance parallelism.
 The parallel loops execute Python functions compiled with [Numba](https://numba.pydata.org/).
 Parallel optimized data structures provided by Galois are also exposed to Python along with atomic operations for optimized reductions.
 
-Currently, Galois-Python only supports 64-bit Linux (Primary testing is on Ubuntu LTS).
+Currently, Katana-Python only supports 64-bit Linux (Primary testing is on Ubuntu LTS).
 Other OS support will become available eventually.
 
-Installing Galois-Python
+Installing Katana-Python
 ------------------------
 
 Install [libnuma](https://github.com/numactl/numactl) as required in your distribution
@@ -28,16 +28,16 @@ You will need to log out and back in again to get conda properly configured.
 Then create an environment (or use one you already have) and activate it:
 
 ```Shell
-conda create -n galois-env
-conda activate galois-env
+conda create -n katana-env
+conda activate katana-env
 ```
-(Replace `galois-env` with any name you like.)
+(Replace `katana-env` with any name you like.)
 
-Then install the `galois-python` package from Katanagraph in your environment.
+Then install the `katana-python` package from Katanagraph in your environment.
 The `katanagraph` channel contains packages based on the latest Katanagraph release (or snapshots before we do that first release).
 
 ```Shell
-conda install -c conda-forge -c katanagraph galois-python
+conda install -c conda-forge -c katanagraph katana-python
 ```
 
 (You can access a more up to date, but less stable, Galois by adding `-c katanagraph/label/dev`.)
@@ -46,48 +46,48 @@ conda install -c conda-forge -c katanagraph galois-python
 Once the package and its dependencies are installed you can run the Galois utilities (e.g., `graph-properties-convert`).
 The installation does not include the Lonestar applications.
 
-You can run the Galois-Python applications using command like this:
+You can run the Katana-Python applications using command like this:
 
 ```Shell
-python -m galois.pagerank_property_graph <path/to/property/graph> \
+python -m katana.pagerank_property_graph <path/to/property/graph> \
     -t 16 --maxIterations=10 --tolerance=0.000001
 ```
 
 For more information about how to invoke each application, invoke the application with `--help`:
 
 ```Shell
-python -m galois.sssp_property_graph --help
+python -m katana.sssp_property_graph --help
 ```
 
-The Galois-Python package includes connected components, Jaccard similarity, k-core, Pagerank, and SSSP.
+The Katana-Python package includes connected components, Jaccard similarity, k-core, Pagerank, and SSSP.
 The arguments of these applications are similar to those of the Lonestar applications.
-The Python version can also be imported (`from galois.pagerank_property_graph import pagerank_pull_sync_residual`) so that the algorithm can be used from other Python code.
+The Python version can also be imported (`from katana.pagerank_property_graph import pagerank_pull_sync_residual`) so that the algorithm can be used from other Python code.
 
 
-Building Galois-Python
+Building Katana-Python
 ----------------------
 
 Install [libnuma](https://github.com/numactl/numactl) development files as required in your distribution
 (`sudo apt install libnuma-dev` for Ubuntu or Debian, `sudo yum install numactl-devel` for CentOS or RHEL).
 
-The easiest way to setup a Galois-Python build and development environment is Conda.
+The easiest way to setup a Katana-Python build and development environment is Conda.
 So first, install Conda, as above.
 Then create and activate the development environment:
 
 ```Shell
 SRC_DIR=<repo/root>
-conda env create --name galois-dev --file $SRC_DIR/conda_recipe/conda-dev-environment.yaml
-conda activate galois-dev
+conda env create --name katana-dev --file $SRC_DIR/conda_recipe/conda-dev-environment.yaml
+conda activate katana-dev
 ```
-(Replace `galois-dev` with any name you like.)
+(Replace `katana-dev` with any name you like.)
 
-To build Galois-Python, change to the repository root directory and run:
+To build Katana-Python, change to the repository root directory and run:
 
 ```Shell
 python setup.py build
 ```
 
-This will build Galois-Python and place the artifacts in `$SRC_DIR/_skbuild/linux-x86_64-3.8/cmake-install/`.
+This will build Katana-Python and place the artifacts in `$SRC_DIR/_skbuild/linux-x86_64-3.8/cmake-install/`.
 If you wish to use these artifacts directly you can set the search paths as follows:
 
 ```Shell
@@ -104,10 +104,10 @@ export CPLUS_INCLUDE_PATH=$SRC_DIR/_skbuild/linux-x86_64-3.8/cmake-install/inclu
 ```
 
 
-Building Galois-Python Conda Packages
+Building Katana-Python Conda Packages
 -------------------------------------
 
-To build the `galois` and `galois-python` packages in the development environment (created above), run:
+To build the `katana` and `katana-python` packages in the development environment (created above), run:
 
 ```Shell
 conda build -c katanagraph -c conda-forge $SRC_DIR/conda_recipe/
@@ -122,7 +122,7 @@ After each package builds successfully, `conda build` will print the path to the
 conda install <path/to/package>
 conda install -c conda-forge -c katanagraph <package-name>
 ```
-(where the `<path/to/package>` is the path printed by `conda build` and `<package-name>` is `galois` or `galois-python`.)
+(where the `<path/to/package>` is the path printed by `conda build` and `<package-name>` is `katana` or `katana-python`.)
 
 The second `conda install` works around a bug in conda by forcing the installation of dependencies;
 conda fails to install dependencies when a package is installed from a local path.

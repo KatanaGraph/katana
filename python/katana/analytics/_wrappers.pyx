@@ -5,11 +5,11 @@ from libcpp.memory cimport shared_ptr, static_pointer_cast
 
 from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
 
-from galois.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
-from galois.cpp.libstd.iostream cimport ostream, ostringstream
-from galois.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
-from galois.property_graph cimport PropertyGraph
-from galois.analytics.plan cimport _Plan, Plan
+from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.property_graph cimport PropertyGraph
+from katana.analytics.plan cimport _Plan, Plan
 
 from enum import Enum
 
@@ -28,7 +28,7 @@ cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(std_result[share
 
 # "Algorithms" from PropertyFileGraph
 
-cdef extern from "galois/graphs/PropertyFileGraph.h" namespace "galois::graphs" nogil:
+cdef extern from "katana/PropertyFileGraph.h" namespace "katana" nogil:
     std_result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(PropertyFileGraph* pfg);
 
     uint64_t FindEdgeSortedByDest(const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
@@ -57,13 +57,13 @@ def sort_nodes_by_degree(PropertyGraph pg):
 
 # BFS
 
-cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
-    cppclass _BfsPlan "galois::analytics::BfsPlan" (_Plan):
+cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
+    cppclass _BfsPlan "katana::analytics::BfsPlan" (_Plan):
         enum Algorithm:
-            kAsyncTile "galois::analytics::BfsPlan::kAsyncTile"
-            kAsync "galois::analytics::BfsPlan::kAsync"
-            kSyncTile "galois::analytics::BfsPlan::kSyncTile"
-            kSync "galois::analytics::BfsPlan::kSync"
+            kAsyncTile "katana::analytics::BfsPlan::kAsyncTile"
+            kAsync "katana::analytics::BfsPlan::kAsync"
+            kSyncTile "katana::analytics::BfsPlan::kSyncTile"
+            kSync "katana::analytics::BfsPlan::kSync"
 
         _BfsPlan.Algorithm algorithm() const
         ptrdiff_t edge_tile_size() const
@@ -95,7 +95,7 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
     std_result[void] BfsAssertValid(PropertyFileGraph* pfg,
                                  string property_name);
 
-    cppclass _BfsStatistics "galois::analytics::BfsStatistics":
+    cppclass _BfsStatistics "katana::analytics::BfsStatistics":
         uint32_t source_node;
         uint32_t max_distance;
         uint64_t total_distance;
@@ -220,19 +220,19 @@ cdef class BfsStatistics:
 
 # SSSP
 
-cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
-    cppclass _SsspPlan "galois::analytics::SsspPlan" (_Plan):
+cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
+    cppclass _SsspPlan "katana::analytics::SsspPlan" (_Plan):
         enum Algorithm:
-            kDeltaTile "galois::analytics::SsspPlan::kDeltaTile"
-            kDeltaStep "galois::analytics::SsspPlan::kDeltaStep"
-            kDeltaStepBarrier "galois::analytics::SsspPlan::kDeltaStepBarrier"
-            kSerialDeltaTile "galois::analytics::SsspPlan::kSerialDeltaTile"
-            kSerialDelta "galois::analytics::SsspPlan::kSerialDelta"
-            kDijkstraTile "galois::analytics::SsspPlan::kDijkstraTile"
-            kDijkstra "galois::analytics::SsspPlan::kDijkstra"
-            kTopo "galois::analytics::SsspPlan::kTopo"
-            kTopoTile "galois::analytics::SsspPlan::kTopoTile"
-            kAutomatic "galois::analytics::SsspPlan::kAutomatic"
+            kDeltaTile "katana::analytics::SsspPlan::kDeltaTile"
+            kDeltaStep "katana::analytics::SsspPlan::kDeltaStep"
+            kDeltaStepBarrier "katana::analytics::SsspPlan::kDeltaStepBarrier"
+            kSerialDeltaTile "katana::analytics::SsspPlan::kSerialDeltaTile"
+            kSerialDelta "katana::analytics::SsspPlan::kSerialDelta"
+            kDijkstraTile "katana::analytics::SsspPlan::kDijkstraTile"
+            kDijkstra "katana::analytics::SsspPlan::kDijkstra"
+            kTopo "katana::analytics::SsspPlan::kTopo"
+            kTopoTile "katana::analytics::SsspPlan::kTopoTile"
+            kAutomatic "katana::analytics::SsspPlan::kAutomatic"
 
         _SsspPlan()
         _SsspPlan(const PropertyFileGraph * pfg)
@@ -289,7 +289,7 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
         string edge_weight_property_name,
         string output_property_name);
 
-    cppclass _SsspStatistics  "galois::analytics::SsspStatistics":
+    cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
         double max_distance
         double total_distance
         uint32_t n_reached_nodes
@@ -470,12 +470,12 @@ cdef class SsspStatistics:
 # Jaccard
 
 
-cdef extern from "galois/analytics/jaccard/jaccard.h" namespace "galois::analytics" nogil:
-    cppclass _JaccardPlan "galois::analytics::JaccardPlan" (_Plan):
+cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analytics" nogil:
+    cppclass _JaccardPlan "katana::analytics::JaccardPlan" (_Plan):
         enum EdgeSorting:
-            kSorted "galois::analytics::JaccardPlan::kSorted"
-            kUnsorted "galois::analytics::JaccardPlan::kUnsorted"
-            kUnknown "galois::analytics::JaccardPlan::kUnknown"
+            kSorted "katana::analytics::JaccardPlan::kSorted"
+            kUnsorted "katana::analytics::JaccardPlan::kUnsorted"
+            kUnknown "katana::analytics::JaccardPlan::kUnknown"
 
         _JaccardPlan.EdgeSorting edge_sorting() const
 
@@ -493,7 +493,7 @@ cdef extern from "galois/analytics/jaccard/jaccard.h" namespace "galois::analyti
     std_result[void] JaccardAssertValid(PropertyFileGraph* pfg, size_t compare_node,
         string output_property_name)
 
-    cppclass _JaccardStatistics  "galois::analytics::JaccardStatistics":
+    cppclass _JaccardStatistics  "katana::analytics::JaccardStatistics":
         double max_similarity
         double min_similarity
         double average_similarity

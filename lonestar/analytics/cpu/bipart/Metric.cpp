@@ -62,7 +62,7 @@ GraphStat(const HyperGraph& graph) {
     uint64_t dist = std::distance(graph.edge_begin(node), graph.edge_end(node));
     stat.AddDistance(dist);
   }
-  galois::gPrint(
+  katana::gPrint(
       "Nodes ", stat.GetNodeCount(), " Edges(total, var, min, max) ",
       stat.GetTotalDistance(), " ", stat.GetVariance(), " ",
       stat.GetMinDistance(), " ", stat.GetMaxDistance(), "\n");

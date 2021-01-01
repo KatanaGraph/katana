@@ -19,13 +19,13 @@
 
 #include <atomic>
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Barrier.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/PerThreadStorage.h"
 
 namespace {
 
-class TopoBarrier : public galois::substrate::Barrier {
+class TopoBarrier : public katana::Barrier {
   struct TreeNode {
     // socket binary tree
     TreeNode* parent_pointer;  // null of vpid == 0
@@ -39,11 +39,11 @@ class TopoBarrier : public galois::substrate::Barrier {
     std::atomic<unsigned> parent_sense;
   };
 
-  galois::substrate::PerSocketStorage<TreeNode> nodes_;
-  galois::substrate::PerThreadStorage<unsigned> sense_;
+  katana::PerSocketStorage<TreeNode> nodes_;
+  katana::PerThreadStorage<unsigned> sense_;
 
   void _reinit(unsigned P) {
-    auto& tp = galois::substrate::GetThreadPool();
+    auto& tp = katana::GetThreadPool();
     unsigned pkgs = tp.getCumulativeMaxSocket(P - 1) + 1;
     for (unsigned i = 0; i < pkgs; ++i) {
       TreeNode& n = *nodes_.getRemoteByPkg(i);
@@ -80,14 +80,14 @@ public:
   void Reinit(unsigned val) override { _reinit(val); }
 
   void Wait() override {
-    unsigned id = galois::substrate::ThreadPool::getTID();
+    unsigned id = katana::ThreadPool::getTID();
     TreeNode& n = *nodes_.getLocal();
     unsigned& s = *sense_.getLocal();
-    bool leader = galois::substrate::ThreadPool::isLeader();
+    bool leader = katana::ThreadPool::isLeader();
     // completion tree
     if (leader) {
       while (n.child_not_ready) {
-        galois::substrate::asmPause();
+        katana::asmPause();
       }
       n.child_not_ready = n.have_child;
       if (n.parent_pointer) {
@@ -100,7 +100,7 @@ public:
     // wait for signal
     if (id != 0) {
       while (n.parent_sense != s) {
-        galois::substrate::asmPause();
+        katana::asmPause();
       }
     }
 
@@ -124,7 +124,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::CreateTopoBarrier(unsigned active_threads) {
+std::unique_ptr<katana::Barrier>
+katana::CreateTopoBarrier(unsigned active_threads) {
   return std::make_unique<TopoBarrier>(active_threads);
 }

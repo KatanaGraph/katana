@@ -4,9 +4,9 @@ add_cython_target(_bfs_property_graph _bfs_property_graph.pyx CXX OUTPUT_VAR BFS
 add_library(_bfs_property_graph MODULE ${BFSPG_SOURCES})
 python_extension_module(_bfs_property_graph)
 add_dependencies(_bfs_property_graph graphs)
-target_link_libraries(_bfs_property_graph Galois::shmem)
+target_link_libraries(_bfs_property_graph Katana::galois)
 
 install(
   TARGETS _bfs_property_graph
-  LIBRARY DESTINATION python/galois/lonestar/analytics
+  LIBRARY DESTINATION python/katana/lonestar/analytics
 )

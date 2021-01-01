@@ -20,9 +20,9 @@
 #include <deque>
 #include <type_traits>
 
-#include "galois/analytics/bfs/bfs_internal.h"
+#include "katana/analytics/bfs/bfs_internal.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 using Graph = BfsImplementation::Graph;
 
@@ -98,26 +98,26 @@ template <bool CONCURRENT, typename T, typename P, typename R>
 void
 AsyncAlgo(
     Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
-  namespace gwl = galois::worklists;
+  namespace gwl = katana;
   // typedef PerSocketChunkFIFO<kChunkSize> dFIFO;
   using FIFO = gwl::PerSocketChunkFIFO<kChunkSize>;
   using BSWL = gwl::BulkSynchronous<gwl::PerSocketChunkLIFO<kChunkSize>>;
   using WL = FIFO;
 
   using Loop = typename std::conditional<
-      CONCURRENT, galois::ForEach, galois::WhileQ<galois::SerFIFO<T>>>::type;
+      CONCURRENT, katana::ForEach, katana::WhileQ<katana::SerFIFO<T>>>::type;
 
-  GALOIS_GCC7_IGNORE_UNUSED_BUT_SET
+  KATANA_GCC7_IGNORE_UNUSED_BUT_SET
   constexpr bool useCAS = CONCURRENT && !std::is_same<WL, BSWL>::value;
-  GALOIS_END_GCC7_IGNORE_UNUSED_BUT_SET
+  KATANA_END_GCC7_IGNORE_UNUSED_BUT_SET
 
   Loop loop;
 
-  galois::GAccumulator<size_t> BadWork;
-  galois::GAccumulator<size_t> WLEmptyWork;
+  katana::GAccumulator<size_t> BadWork;
+  katana::GAccumulator<size_t> WLEmptyWork;
 
   graph->GetData<BfsNodeDistance>(source) = 0;
-  galois::InsertBag<T> init_bag;
+  katana::InsertBag<T> init_bag;
 
   if (CONCURRENT) {
     pushWrap(init_bag, source, 1, "parallel");
@@ -126,7 +126,7 @@ AsyncAlgo(
   }
 
   loop(
-      galois::iterate(init_bag),
+      katana::iterate(init_bag),
       [&](const T& item, auto& ctx) {
         const auto& sdist = graph->GetData<BfsNodeDistance>(item.src);
 
@@ -168,12 +168,12 @@ AsyncAlgo(
           }
         }
       },
-      galois::wl<WL>(), galois::loopname("runBFS"),
-      galois::disable_conflict_detection());
+      katana::wl<WL>(), katana::loopname("runBFS"),
+      katana::disable_conflict_detection());
 
   if (kTrackWork) {
-    galois::ReportStatSingle("BFS", "BadWork", BadWork.reduce());
-    galois::ReportStatSingle("BFS", "EmptyWork", WLEmptyWork.reduce());
+    katana::ReportStatSingle("BFS", "BadWork", BadWork.reduce());
+    katana::ReportStatSingle("BFS", "EmptyWork", WLEmptyWork.reduce());
   }
 }
 
@@ -182,9 +182,9 @@ void
 SyncAlgo(
     Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
   using Cont = typename std::conditional<
-      CONCURRENT, galois::InsertBag<T>, galois::SerStack<T>>::type;
+      CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
   using Loop = typename std::conditional<
-      CONCURRENT, galois::DoAll, galois::StdForEach>::type;
+      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
 
   Loop loop;
 
@@ -208,7 +208,7 @@ SyncAlgo(
     ++next_level;
 
     loop(
-        galois::iterate(*curr),
+        katana::iterate(*curr),
         [&](const T& item) {
           for (auto e : edgeRange(item)) {
             auto dest = graph->GetEdgeDest(e);
@@ -220,8 +220,8 @@ SyncAlgo(
             }
           }
         },
-        galois::steal(), galois::chunk_size<kChunkSize>(),
-        galois::loopname("Sync"));
+        katana::steal(), katana::chunk_size<kChunkSize>(),
+        katana::loopname("Sync"));
   }
 }
 
@@ -251,13 +251,12 @@ RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
   }
 }
 
-static galois::Result<void>
+static katana::Result<void>
 BfsImpl(
-    galois::graphs::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>&
-        graph,
+    katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>& graph,
     size_t start_node, BfsPlan algo) {
   if (start_node >= graph.size()) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   auto it = graph.begin();
@@ -265,25 +264,25 @@ BfsImpl(
   Graph::Node source = *it;
 
   size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
-  galois::Prealloc(8, approxNodeData);
+  katana::Prealloc(8, approxNodeData);
 
-  galois::do_all(galois::iterate(graph.begin(), graph.end()), [&graph](auto n) {
+  katana::do_all(katana::iterate(graph.begin(), graph.end()), [&graph](auto n) {
     graph.GetData<BfsNodeDistance>(n) = BfsImplementation::kDistanceInfinity;
   });
 
-  galois::StatTimer execTime("BFS");
+  katana::StatTimer execTime("BFS");
   execTime.start();
 
   RunAlgo<true>(algo, &graph, source);
 
   execTime.stop();
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::analytics::Bfs(
-    galois::graphs::PropertyFileGraph* pfg, size_t start_node,
+katana::Result<void>
+katana::analytics::Bfs(
+    katana::PropertyFileGraph* pfg, size_t start_node,
     const std::string& output_property_name, BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeDistance>>(
           pfg, {output_property_name});
@@ -299,9 +298,9 @@ galois::analytics::Bfs(
   return BfsImpl(pg_result.value(), start_node, algo);
 }
 
-galois::Result<void>
-galois::analytics::BfsAssertValid(
-    graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+katana::Result<void>
+katana::analytics::BfsAssertValid(
+    PropertyFileGraph* pfg, const std::string& property_name) {
   auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
@@ -317,7 +316,7 @@ galois::analytics::BfsAssertValid(
   });
 
   if (n_zeros.reduce() != 1) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
   std::atomic<bool> not_consistent(false);
@@ -327,15 +326,15 @@ galois::analytics::BfsAssertValid(
           &graph, not_consistent));
 
   if (not_consistent) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<BfsStatistics>
-galois::analytics::BfsStatistics::Compute(
-    galois::graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+katana::Result<BfsStatistics>
+katana::analytics::BfsStatistics::Compute(
+    katana::PropertyFileGraph* pfg, const std::string& property_name) {
   auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
@@ -374,7 +373,7 @@ galois::analytics::BfsStatistics::Compute(
 }
 
 void
-galois::analytics::BfsStatistics::Print(std::ostream& os) {
+katana::analytics::BfsStatistics::Print(std::ostream& os) {
   os << "Source node = " << source_node << std::endl;
   os << "Number of reached nodes = " << n_reached_nodes << std::endl;
   os << "Maximum distance = " << max_distance << std::endl;

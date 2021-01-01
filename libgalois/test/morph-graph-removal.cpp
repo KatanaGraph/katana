@@ -4,21 +4,19 @@
 #include <type_traits>
 #include <vector>
 
-#include "galois/graphs/MorphGraph.h"
+#include "katana/MorphGraph.h"
 
 static unsigned int numNodes = 10;
 static bool verbose = false;
 
 // only tracks out-going edges
-using OutGraph =
-    galois::graphs::MorphGraph<unsigned int, unsigned int, true, false>;
+using OutGraph = katana::MorphGraph<unsigned int, unsigned int, true, false>;
 
 // tracks out-going and incoming edges w/ shared edge data
-using InOutGraph =
-    galois::graphs::MorphGraph<unsigned int, unsigned int, true, true>;
+using InOutGraph = katana::MorphGraph<unsigned int, unsigned int, true, true>;
 
 // tracks outgoing edges symmetrically w/ shared edge data
-using SymGraph = galois::graphs::MorphGraph<unsigned int, unsigned int, false>;
+using SymGraph = katana::MorphGraph<unsigned int, unsigned int, false>;
 
 template <class G>
 void
@@ -276,7 +274,7 @@ testGraphInEdgeRemoval(G& g, std::vector<typename G::GraphNode>& v) {
 
 int
 main() {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
   unsigned int numFailure = 0;
 
   OutGraph outG;

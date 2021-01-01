@@ -23,21 +23,20 @@
  * Contains the LC_Morph_Graph class.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCMORPHGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCMORPHGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCMORPHGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCMORPHGRAPH_H_
 
 #include <type_traits>
 
 #include <boost/mpl/if.hpp>
 
-#include "galois/Bag.h"
-#include "galois/LargeArray.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/Bag.h"
+#include "katana/Details.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Local computation graph that allows addition of nodes (but not removals)
@@ -143,7 +142,7 @@ protected:
   //! EdgeInfo keeps destination of edges
   using EdgeInfo = internal::EdgeInfoBase<NodeInfo*, EdgeTy>;
   //! Nodes are stored in an insert bag
-  using Nodes = galois::InsertBag<NodeInfo>;
+  using Nodes = katana::InsertBag<NodeInfo>;
   //! Type of nodes
   using NodeInfoTypes = internal::NodeInfoBaseTypes<
       NodeTy, !HasNoLockable && !HasOutOfLineLockable>;
@@ -235,7 +234,7 @@ protected:
   //! Nodes in this graph
   Nodes nodes;
   //! Memory for edges in this graph (memory held in EdgeHolders)
-  galois::substrate::PerThreadStorage<EdgeHolder*> edgesL;
+  katana::PerThreadStorage<EdgeHolder*> edgesL;
 
   /**
    * Acquire a node for the scope in which the function is called.
@@ -248,7 +247,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<!_A1 && !_A2>::type* = 0) {
-    galois::runtime::acquire(N, mflag);
+    katana::acquire(N, mflag);
   }
 
   /**
@@ -281,11 +280,11 @@ protected:
       using FEDV = typename LargeArray<FileEdgeTy>::value_type;
       // add an edge with edge data
       addMultiEdge(
-          src, dst, galois::MethodFlag::UNPROTECTED,
+          src, dst, katana::MethodFlag::UNPROTECTED,
           graph.getEdgeData<FEDV>(nn));
     } else {
       // add an edge without edge data
-      addMultiEdge(src, dst, galois::MethodFlag::UNPROTECTED);
+      addMultiEdge(src, dst, katana::MethodFlag::UNPROTECTED);
     }
   }
 
@@ -299,7 +298,7 @@ protected:
   void constructEdgeValue(
       FileGraph&, typename FileGraph::edge_iterator, GraphNode src,
       GraphNode dst, typename std::enable_if<_A1 && !_A2>::type* = 0) {
-    addMultiEdge(src, dst, galois::MethodFlag::UNPROTECTED);
+    addMultiEdge(src, dst, katana::MethodFlag::UNPROTECTED);
   }
 
   /**
@@ -343,7 +342,7 @@ public:
    */
   node_data_reference getData(
       const GraphNode& N, MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     acquireNode(N, mflag);
     return N->getData();
   }
@@ -353,7 +352,7 @@ public:
    */
   edge_data_reference getEdgeData(
       edge_iterator ni, MethodFlag mflag = MethodFlag::UNPROTECTED) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     acquireNode(ni->dst, mflag);
     return ni->get();
   }
@@ -362,7 +361,7 @@ public:
    * Get the destination of an edge given an iterator to the edge.
    */
   GraphNode getEdgeDst(edge_iterator ni) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     // acquireNode(ni->dst, mflag);
     return GraphNode(ni->dst);
   }
@@ -395,7 +394,7 @@ public:
   edge_iterator edge_begin(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
     // Locks all destinations before returning edge iterator.
-    if (galois::runtime::shouldLock(mflag)) {
+    if (katana::shouldLock(mflag)) {
       for (edge_iterator ii = N->edgeBegin, ee = N->edgeEnd; ii != ee; ++ii) {
         acquireNode(ii->dst, mflag);
       }
@@ -445,8 +444,8 @@ public:
         std::distance(local_edges->begin, local_edges->end) < nedges) {
       EdgeHolder* old = local_edges;
       // FIXME: this seems to leak
-      size_t size = substrate::allocSize();
-      void* block = substrate::pagePoolAlloc();
+      size_t size = allocSize();
+      void* block = pagePoolAlloc();
       local_edges = reinterpret_cast<EdgeHolder*>(block);
       local_edges->next = old;
 
@@ -455,14 +454,14 @@ public:
 
       if (!std::align(
               std::alignment_of_v<EdgeInfo>, sizeof(EdgeInfo), block, size)) {
-        GALOIS_DIE("not enough space for EdgeInfo");
+        KATANA_DIE("not enough space for EdgeInfo");
       }
 
       local_edges->begin = reinterpret_cast<EdgeInfo*>(block);
       local_edges->end = local_edges->begin;
       local_edges->end += size / sizeof(EdgeInfo);
       if (std::distance(local_edges->begin, local_edges->end) < nedges) {
-        GALOIS_DIE("not enough space for EdgeInfo");
+        KATANA_DIE("not enough space for EdgeInfo");
       }
     }
 
@@ -485,8 +484,8 @@ public:
    */
   template <typename... Args>
   edge_iterator addEdge(
-      GraphNode src, GraphNode dst, galois::MethodFlag mflag, Args&&... args) {
-    // galois::runtime::checkWrite(mflag, true);
+      GraphNode src, GraphNode dst, katana::MethodFlag mflag, Args&&... args) {
+    // katana::checkWrite(mflag, true);
     acquireNode(src, mflag);
     auto it = std::find_if(src->edgeBegin, src->edgeEnd, dst_equals(dst));
     if (it == src->edgeEnd) {
@@ -510,7 +509,7 @@ public:
    */
   template <typename... Args>
   edge_iterator addMultiEdge(
-      GraphNode src, GraphNode dst, galois::MethodFlag mflag, Args&&... args) {
+      GraphNode src, GraphNode dst, katana::MethodFlag mflag, Args&&... args) {
     acquireNode(src, mflag);
     auto it = src->edgeEnd;
     it->dst = dst;
@@ -527,8 +526,8 @@ public:
    */
   void removeEdge(
       GraphNode src, edge_iterator dst,
-      galois::MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, true);
+      katana::MethodFlag mflag = MethodFlag::WRITE) {
+    // katana::checkWrite(mflag, true);
     acquireNode(src, mflag);
     src->edgeEnd--;
     assert(src->edgeBegin <= src->edgeEnd);
@@ -541,8 +540,8 @@ public:
    */
   edge_iterator findEdge(
       GraphNode src, GraphNode dst,
-      galois::MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, true); // TODO: double check 'true'
+      katana::MethodFlag mflag = MethodFlag::WRITE) {
+    // katana::checkWrite(mflag, true); // TODO: double check 'true'
     // here
     acquireNode(src, mflag);
     return std::find_if(src->edgeBegin, src->edgeEnd, dst_equals(dst));
@@ -626,7 +625,6 @@ public:
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif /* LC_MORPH_GRAPH_H_ */

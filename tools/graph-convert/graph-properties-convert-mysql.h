@@ -1,9 +1,9 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MYSQL_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MYSQL_H_
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MYSQL_H_
+#define KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_MYSQL_H_
 
-#include "galois/BuildGraph.h"
+#include "katana/BuildGraph.h"
 
-namespace galois {
+namespace katana {
 
 GraphComponents ConvertMysql(
     const std::string& db_name, const std::string& mapping,
@@ -12,6 +12,6 @@ void GenerateMappingMysql(
     const std::string& db_name, const std::string& outfile,
     const std::string& host, const std::string& user);
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

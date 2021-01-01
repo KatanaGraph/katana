@@ -17,9 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Profile.h"
+#include "katana/Profile.h"
 
-#ifdef GALOIS_ENABLE_PAPI
+#ifdef KATANA_ENABLE_PAPI
 extern "C" {
 #include <papi.h>
 #include <papiStdEventDefs.h>
@@ -27,7 +27,7 @@ extern "C" {
 #include <iostream>
 
 unsigned long
-galois::runtime::internal::papiGetTID(void) {
-  return galois::substrate::ThreadPool::getTID();
+katana::internal::papiGetTID(void) {
+  return katana::ThreadPool::getTID();
 }
 #endif

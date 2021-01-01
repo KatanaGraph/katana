@@ -4,8 +4,8 @@ from pyarrow import Schema, table
 
 import numpy as np
 
-from galois.property_graph import PropertyGraph
-from galois.analytics import (
+from katana.property_graph import PropertyGraph
+from katana.analytics import (
     bfs,
     bfs_assert_valid,
     BfsStatistics,
@@ -20,8 +20,8 @@ from galois.analytics import (
     jaccard_assert_valid,
     JaccardStatistics,
 )
-from galois.lonestar.analytics.bfs import verify_bfs
-from galois.lonestar.analytics.sssp import verify_sssp
+from katana.lonestar.analytics.bfs import verify_bfs
+from katana.lonestar.analytics.sssp import verify_sssp
 
 
 NODES_TO_SAMPLE = 10

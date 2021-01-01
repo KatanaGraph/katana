@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYFILEGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYFILEGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYFILEGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_PROPERTYFILEGRAPH_H_
 
 #include <string>
 #include <utility>
@@ -9,12 +9,12 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type_traits.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/LargeArray.h"
-#include "galois/config.h"
+#include "katana/ErrorCode.h"
+#include "katana/LargeArray.h"
+#include "katana/config.h"
 #include "tsuba/RDG.h"
 
-namespace galois::graphs {
+namespace katana {
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
@@ -50,7 +50,7 @@ struct GraphTopology {
 /// The main way to load and store a property graph is via an RDG. An RDG
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
-class GALOIS_EXPORT PropertyFileGraph {
+class KATANA_EXPORT PropertyFileGraph {
   PropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   /// Validate performs a sanity check on the the graph after loading
@@ -169,9 +169,9 @@ public:
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path) {
     if (!rdg_.rdg_dir().empty()) {
-      GALOIS_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
+      KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
     }
-    auto uri_res = galois::Uri::Make(input_path);
+    auto uri_res = katana::Uri::Make(input_path);
     if (!uri_res) {
       return uri_res.error();
     }
@@ -310,7 +310,7 @@ public:
     if (pos != col_names.cend()) {
       return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
     }
-    return galois::ErrorCode::PropertyNotFound;
+    return katana::ErrorCode::PropertyNotFound;
   }
   Result<void> RemoveEdgeProperty(int i) { return rdg_.RemoveEdgeProperty(i); }
   Result<void> RemoveEdgeProperty(const std::string& prop_name) {
@@ -319,7 +319,7 @@ public:
     if (pos != col_names.cend()) {
       return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
     }
-    return galois::ErrorCode::PropertyNotFound;
+    return katana::ErrorCode::PropertyNotFound;
   }
 
   PropertyView node_property_view() {
@@ -362,7 +362,7 @@ public:
 /// ascending order.
 /// This also returns the permutation vector (mapping from old
 /// indices to the new indices) which results due to the sorting.
-GALOIS_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
+KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
     PropertyFileGraph* pfg);
 
 /// FindEdgeSortedByDest finds the "node_to_find" id in the
@@ -370,7 +370,7 @@ GALOIS_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
 ///
 /// This returns the matched edge index if 'node_to_find' is present
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
-GALOIS_EXPORT uint64_t FindEdgeSortedByDest(
+KATANA_EXPORT uint64_t FindEdgeSortedByDest(
     const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
 
 /// SortNodesByDegree relables node ids by sorting in the descending
@@ -379,8 +379,8 @@ GALOIS_EXPORT uint64_t FindEdgeSortedByDest(
 /// This function modifies the PropertyFileGraph topology by in-place
 /// relabeling and sorting the node ids by their degree in the
 /// descending order.
-GALOIS_EXPORT Result<void> SortNodesByDegree(PropertyFileGraph* pfg);
+KATANA_EXPORT Result<void> SortNodesByDegree(PropertyFileGraph* pfg);
 
-}  // namespace galois::graphs
+}  // namespace katana
 
 #endif

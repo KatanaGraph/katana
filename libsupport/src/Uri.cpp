@@ -1,4 +1,4 @@
-#include "galois/Uri.h"
+#include "katana/Uri.h"
 
 #include <libgen.h>
 
@@ -9,10 +9,10 @@
 
 #include <fmt/format.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/Logging.h"
-#include "galois/Random.h"
-#include "galois/Result.h"
+#include "katana/ErrorCode.h"
+#include "katana/Logging.h"
+#include "katana/Random.h"
+#include "katana/Result.h"
 
 namespace {
 
@@ -64,19 +64,19 @@ Base64Encode(std::string_view s) {
 std::string
 ExtractFileName(std::string_view path) {
   size_t last_slash =
-      path.find_last_of(galois::Uri::kSepChar, std::string::npos);
+      path.find_last_of(katana::Uri::kSepChar, std::string::npos);
   size_t name_end_plus1 = path.length();
   if (last_slash == std::string::npos) {
     return std::string(path);
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
       last_slash--;
     }
     name_end_plus1 =
         last_slash + 1;  // name_end_plus1 points to last slash in group
-    while (last_slash > 0 && path[last_slash] != galois::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] != katana::Uri::kSepChar) {
       last_slash--;
     }
   }
@@ -88,21 +88,21 @@ ExtractFileName(std::string_view path) {
 std::string
 ExtractDirName(std::string_view path) {
   size_t last_slash =
-      path.find_last_of(galois::Uri::kSepChar, std::string::npos);
+      path.find_last_of(katana::Uri::kSepChar, std::string::npos);
   if (last_slash == std::string::npos) {
     return "";
   }
   if (last_slash == (path.length() - 1)) {
     // Find end of file name
-    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
       last_slash--;
     }
     // Find first slash before file name
-    while (last_slash > 0 && path[last_slash] != galois::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] != katana::Uri::kSepChar) {
       last_slash--;
     }
     // Find first slash after directory name
-    while (last_slash > 0 && path[last_slash] == galois::Uri::kSepChar) {
+    while (last_slash > 0 && path[last_slash] == katana::Uri::kSepChar) {
       last_slash--;
     }
     last_slash++;
@@ -114,22 +114,22 @@ std::string
 AddRandComponent(const std::string& str) {
   std::string name(str);
   name += "-";
-  name += galois::RandomAlphanumericString(12);
+  name += katana::RandomAlphanumericString(12);
   return name;
 }
 
 std::string
 NewPath(std::string_view dir, std::string_view prefix) {
   std::string name(prefix);
-  if (prefix.front() == galois::Uri::kSepChar) {
+  if (prefix.front() == katana::Uri::kSepChar) {
     name = name.substr(1, std::string::npos);
   }
   name = AddRandComponent(name);
   std::string p{dir};
-  if (p.back() == galois::Uri::kSepChar) {
+  if (p.back() == katana::Uri::kSepChar) {
     p = p.substr(0, p.length() - 1);
   }
-  return p.append(1, galois::Uri::kSepChar).append(name);
+  return p.append(1, katana::Uri::kSepChar).append(name);
 }
 
 std::string
@@ -137,30 +137,30 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   if (dir.empty()) {
     return std::string(file);
   }
-  if (dir[dir.size() - 1] != galois::Uri::kSepChar) {
-    if (file[0] != galois::Uri::kSepChar) {
-      return fmt::format("{}{}{}", dir, galois::Uri::kSepChar, file);
+  if (dir[dir.size() - 1] != katana::Uri::kSepChar) {
+    if (file[0] != katana::Uri::kSepChar) {
+      return fmt::format("{}{}{}", dir, katana::Uri::kSepChar, file);
     } else {
-      while (file[1] == galois::Uri::kSepChar) {
+      while (file[1] == katana::Uri::kSepChar) {
         file.remove_prefix(1);
       }
       return fmt::format("{}{}", dir, file);
     }
   } else {
-    while (dir[dir.size() - 2] == galois::Uri::kSepChar) {
+    while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
       dir.remove_suffix(1);
     }
-    while (file[0] == galois::Uri::kSepChar) {
+    while (file[0] == katana::Uri::kSepChar) {
       file.remove_prefix(1);
     }
   }
-  GALOIS_LOG_ASSERT(dir[dir.size() - 1] == galois::Uri::kSepChar);
+  KATANA_LOG_ASSERT(dir[dir.size() - 1] == katana::Uri::kSepChar);
   return fmt::format("{}{}", dir, file);
 }
 
 }  // namespace
 
-namespace galois {
+namespace katana {
 
 Uri::Uri(std::string scheme, std::string path)
     : scheme_(std::move(scheme)),
@@ -271,4 +271,4 @@ operator+(const Uri& lhs, char rhs) {
   return Uri(lhs.scheme_, lhs.path_ + rhs);
 }
 
-}  // namespace galois
+}  // namespace katana

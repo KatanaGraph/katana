@@ -1,12 +1,12 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_THREADTIMER_H_
-#define GALOIS_LIBGALOIS_GALOIS_THREADTIMER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_THREADTIMER_H_
+#define KATANA_LIBGALOIS_KATANA_THREADTIMER_H_
 
-#include "galois/config.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
-class GALOIS_EXPORT ThreadTimer {
+class KATANA_EXPORT ThreadTimer {
   timespec start_;
   timespec stop_;
   uint64_t nsec_{0};
@@ -25,9 +25,9 @@ public:
   uint64_t get_msec() const { return (nsec_ / 1000000); }
 };
 
-class GALOIS_EXPORT ThreadTimers {
+class KATANA_EXPORT ThreadTimers {
 protected:
-  substrate::PerThreadStorage<ThreadTimer> timers_;
+  PerThreadStorage<ThreadTimer> timers_;
 
   void reportTimes(const char* category, const char* region);
 };
@@ -72,6 +72,6 @@ public:
   void stop() const {}
 };
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

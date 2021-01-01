@@ -1,4 +1,4 @@
-#include "galois/Range.h"
+#include "katana/Range.h"
 
 struct LocalContainer {
   using iterator = int*;
@@ -21,7 +21,7 @@ struct StandardContainer {
 
 template <typename T>
 constexpr std::true_type
-IsLocalRange(galois::LocalRange<T>) {
+IsLocalRange(katana::LocalRange<T>) {
   return std::true_type();
 }
 
@@ -36,11 +36,11 @@ TestLocal() {
   LocalContainer local{};
   StandardContainer standard{};
 
-  static_assert(galois::has_local_iterator_v<LocalContainer>);
-  static_assert(!galois::has_local_iterator_v<StandardContainer>);
+  static_assert(katana::has_local_iterator_v<LocalContainer>);
+  static_assert(!katana::has_local_iterator_v<StandardContainer>);
 
-  static_assert(decltype(IsLocalRange(galois::iterate(local)))::value);
-  static_assert(!decltype(IsLocalRange(galois::iterate(standard)))::value);
+  static_assert(decltype(IsLocalRange(katana::iterate(local)))::value);
+  static_assert(!decltype(IsLocalRange(katana::iterate(standard)))::value);
 }
 
 int

@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/FlatMap.h"
+#include "katana/FlatMap.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -26,8 +26,8 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
 
 struct element {
   volatile int val;
@@ -53,7 +53,7 @@ struct Fn2 {
   MapTy* m;
   void operator()(const int& x) const {
     int v = (*m)[x].val;
-    GALOIS_ASSERT(v == x || v == 0);
+    KATANA_ASSERT(v == x || v == 0);
   }
 };
 
@@ -61,12 +61,12 @@ template <typename MapTy>
 void
 timeMapParallel(std::string c, const std::vector<int>& keys) {
   MapTy m;
-  galois::Timer t1, t2;
+  katana::Timer t1, t2;
   t1.start();
-  galois::do_all(galois::iterate(keys), Fn1<MapTy>{&m});
+  katana::do_all(katana::iterate(keys), Fn1<MapTy>{&m});
   t1.stop();
   t2.start();
-  galois::do_all(galois::iterate(keys), Fn2<MapTy>{&m});
+  katana::do_all(katana::iterate(keys), Fn2<MapTy>{&m});
   t2.stop();
   std::cout << c << " " << t1.get() << " " << t2.get() << "\n";
 }
@@ -75,7 +75,7 @@ template <typename MapTy>
 void
 timeMap(std::string c, const std::vector<int>& keys) {
   MapTy m;
-  galois::Timer t1, t2;
+  katana::Timer t1, t2;
   t1.start();
   for (auto& x : keys) {
     m[x] = element(x);
@@ -84,7 +84,7 @@ timeMap(std::string c, const std::vector<int>& keys) {
   t2.start();
   for (auto& x : keys) {
     int v = m[x].val;
-    GALOIS_ASSERT(v == x);
+    KATANA_ASSERT(v == x);
   }
   t2.stop();
   std::cout << c << " " << t1.get() << " " << t2.get() << "\n";
@@ -153,15 +153,15 @@ timeTests(std::string prefix, const std::vector<int>& keys) {
   for (int i = 0; i < 3; ++i)
     timeMap<std::map<int, element>>(prefix + "std::map", keys);
   for (int i = 0; i < 3; ++i)
-    timeMap<galois::flat_map<int, element>>(prefix + "flat_map", keys);
+    timeMap<katana::flat_map<int, element>>(prefix + "flat_map", keys);
 }
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   testMap<std::map<int, element>>();
-  testMap<galois::flat_map<int, element>>();
-  galois::setActiveThreads(8);
+  testMap<katana::flat_map<int, element>>();
+  katana::setActiveThreads(8);
 
   int size = 100;
   if (argc > 1)

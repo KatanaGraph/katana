@@ -17,20 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RANGE_H_
-#define GALOIS_LIBGALOIS_GALOIS_RANGE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_RANGE_H_
+#define KATANA_LIBGALOIS_KATANA_RANGE_H_
 
 #include <iterator>
 #include <type_traits>
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/TwoLevelIterator.h"
-#include "galois/config.h"
-#include "galois/gstl.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/ThreadPool.h"
+#include "katana/TwoLevelIterator.h"
+#include "katana/config.h"
+#include "katana/gstl.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * A LocalRange is a range specialized to containers that have a concept of
@@ -78,7 +78,7 @@ MakeLocalRange(T& obj) {
 template <typename T>
 class LocalTwoLevelRange {
 public:
-  typedef typename galois::TwoLevelIterator<typename T::iterator> iterator;
+  typedef typename katana::TwoLevelIterator<typename T::iterator> iterator;
   typedef typename std::iterator_traits<
       typename T::local_iterator>::value_type::iterator local_iterator;
   typedef typename std::iterator_traits<iterator>::value_type value_type;
@@ -129,9 +129,8 @@ public:
 
 private:
   std::pair<local_iterator, local_iterator> local_pair() const {
-    return galois::block_range(
-        begin_, end_, substrate::ThreadPool::getTID(),
-        galois::runtime::activeThreads);
+    return katana::block_range(
+        begin_, end_, ThreadPool::getTID(), katana::activeThreads);
   }
 
   IterTy begin_;
@@ -168,8 +167,8 @@ private:
    * of the range for this particular thread.
    */
   std::pair<local_iterator, local_iterator> local_pair() const {
-    uint32_t my_thread_id = substrate::ThreadPool::getTID();
-    uint32_t total_threads = runtime::activeThreads;
+    uint32_t my_thread_id = ThreadPool::getTID();
+    uint32_t total_threads = activeThreads;
 
     iterator local_begin = thread_beginnings_[my_thread_id];
     iterator local_end = thread_beginnings_[my_thread_id + 1];
@@ -317,5 +316,5 @@ iterate(const T& begin, const T& end) {
   return MakeStandardRange(begin, end);
 }
 
-}  // end namespace galois
+}  // end namespace katana
 #endif

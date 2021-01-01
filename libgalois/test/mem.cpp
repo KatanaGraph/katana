@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Mem.h"
+#include "katana/Mem.h"
 
-#include "galois/Galois.h"
-#include "galois/gIO.h"
+#include "katana/Galois.h"
+#include "katana/gIO.h"
 
-using namespace galois::runtime;
-using namespace galois::substrate;
+using namespace katana;
+using namespace katana;
 
 struct element {
   unsigned val;
@@ -33,7 +33,7 @@ struct element {
 
 int
 main() {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   unsigned baseAllocSize = SystemHeap::AllocSize;
 
   FixedSizeAllocator<element> falloc;
@@ -45,29 +45,29 @@ main() {
     last = ptr;
   }
   for (unsigned i = 0; i < baseAllocSize; ++i) {
-    GALOIS_ASSERT(last);
-    GALOIS_ASSERT(last->val == baseAllocSize - 1 - i);
+    KATANA_ASSERT(last);
+    KATANA_ASSERT(last->val == baseAllocSize - 1 - i);
     element* next = last->next;
     falloc.destroy(last);
     falloc.deallocate(last, 1);
     last = next;
   }
-  GALOIS_ASSERT(!last);
+  KATANA_ASSERT(!last);
 
   VariableSizeHeap valloc;
   size_t allocated;
-  GALOIS_ASSERT(1 < baseAllocSize);
+  KATANA_ASSERT(1 < baseAllocSize);
   valloc.allocate(1, allocated);
-  GALOIS_ASSERT(allocated == 1);
+  KATANA_ASSERT(allocated == 1);
 
   valloc.allocate(baseAllocSize + 1, allocated);
-  GALOIS_ASSERT(allocated <= baseAllocSize);
+  KATANA_ASSERT(allocated <= baseAllocSize);
 
   int toAllocate = baseAllocSize + 1;
   while (toAllocate) {
     valloc.allocate(toAllocate, allocated);
     toAllocate -= allocated;
-    GALOIS_ASSERT(allocated);
+    KATANA_ASSERT(allocated);
   }
 
   return 0;

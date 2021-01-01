@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_METHODFLAGS_H_
-#define GALOIS_LIBGALOIS_GALOIS_METHODFLAGS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_METHODFLAGS_H_
+#define KATANA_LIBGALOIS_KATANA_METHODFLAGS_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * What should the runtime do when executing a method.
@@ -50,6 +50,6 @@ inline MethodFlag
 operator|(MethodFlag x, MethodFlag y) {
   return (MethodFlag)(((int)x) | ((int)y));
 }
-}  // namespace galois
+}  // namespace katana
 
 #endif

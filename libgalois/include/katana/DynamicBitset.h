@@ -18,13 +18,13 @@
  */
 
 /**
- * @file galois/DynamicBitset.h
+ * @file katana/DynamicBitset.h
  *
  * Contains the DynamicBitset class and most of its implementation.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
-#define GALOIS_LIBGALOIS_GALOIS_DYNAMICBITSET_H_
+#ifndef KATANA_LIBGALOIS_KATANA_DYNAMICBITSET_H_
+#define KATANA_LIBGALOIS_KATANA_DYNAMICBITSET_H_
 
 #include <cassert>
 #include <climits>
@@ -33,17 +33,17 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/mpl/has_xxx.hpp>
 
-#include "galois/AtomicWrapper.h"
-#include "galois/Galois.h"
-#include "galois/PODResizeableArray.h"
-#include "galois/config.h"
+#include "katana/AtomicWrapper.h"
+#include "katana/Galois.h"
+#include "katana/PODResizeableArray.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 /**
  * Concurrent dynamically allocated bitset
  **/
-class GALOIS_EXPORT DynamicBitset {
-  galois::PODResizeableArray<galois::CopyableAtomic<uint64_t>> bitvec;
+class KATANA_EXPORT DynamicBitset {
+  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec;
   size_t num_bits{0};
 
 public:
@@ -285,7 +285,7 @@ public:
   /**
    * Returns a vector containing the set bits in this bitset in order
    * from left to right.
-   * Do NOT call in a parallel region as it uses galois::on_each.
+   * Do NOT call in a parallel region as it uses katana::on_each.
    *
    * @returns vector with offsets into set bits
    */
@@ -303,18 +303,18 @@ template <>
 std::vector<uint64_t> DynamicBitset::getOffsets() const;
 
 //! An empty bitset object; used mainly by InvalidBitsetFn
-extern galois::DynamicBitset EmptyBitset;
+extern katana::DynamicBitset EmptyBitset;
 
 //! A structure representing an empty bitset.
-struct GALOIS_EXPORT InvalidBitsetFn {
+struct KATANA_EXPORT InvalidBitsetFn {
   //! Returns false as this is an empty bitset (invalid)
   static constexpr bool is_valid() { return false; }
 
   //! Returns the empty bitset
-  static galois::DynamicBitset& get() { return EmptyBitset; }
+  static katana::DynamicBitset& get() { return EmptyBitset; }
 
   //! No-op since it's an empty bitset
   static void reset_range(size_t, size_t) {}
 };
-}  // namespace galois
+}  // namespace katana
 #endif

@@ -17,7 +17,7 @@ function(add_test_scale type app)
   cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
   set(threads)
-  set(thr "${GALOIS_NUM_TEST_THREADS}")
+  set(thr "${KATANA_NUM_TEST_THREADS}")
   stem_app(${app} app_id)
   set(verification_log ${BASE_VERIFICATION}/verify/${app_id}.${X_INPUT})
   while (${thr} GREATER 1)
@@ -61,7 +61,7 @@ function(add_test_scale type app)
         PROPERTIES
           FIXTURES_REQUIRED run${suffix}
           FIXTURES_SETUP verify${suffix}
-          ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1 LABELS quick)
+          ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1 LABELS quick)
       set_tests_properties(verify${suffix}
         PROPERTIES
           DEPENDS run${suffix}

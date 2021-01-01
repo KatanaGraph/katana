@@ -19,9 +19,9 @@ from enum import Enum
 import numpy as np
 cimport numpy as np
 
-from galois.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
-from galois.numpy_structs import StructInstance
-from galois.util.template_type import make_template_type1, make_template_type1_with_opaque
+from katana.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
+from katana.numpy_structs import StructInstance
+from katana.util.template_type import make_template_type1, make_template_type1_with_opaque
 from .cpp.libgalois cimport datastructures
 from libc.stdint cimport uintptr_t
 from cython.operator cimport preincrement, dereference as deref

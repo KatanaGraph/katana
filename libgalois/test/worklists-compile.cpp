@@ -19,8 +19,8 @@
 
 #include <cstdlib>
 
-#include "galois/Galois.h"
-#include "galois/Range.h"
+#include "katana/Galois.h"
+#include "katana/Range.h"
 
 int run = 1;
 
@@ -40,29 +40,29 @@ struct checker {
       return;
 
     wl.push(0);
-    wl.push_initial(galois::MakeStandardRange(&a[0], &a[4]));
+    wl.push_initial(katana::MakeStandardRange(&a[0], &a[4]));
     wl.push(&a[0], &a[4]);
     wl.pop();
 
     wl2.push(0);
-    wl2.push_initial(galois::MakeStandardRange(&a[0], &a[4]));
+    wl2.push_initial(katana::MakeStandardRange(&a[0], &a[4]));
     wl2.push(&a[0], &a[4]);
     wl2.pop();
 
     wl3.push(0);
-    wl3.push_initial(galois::MakeStandardRange(&a[0], &a[4]));
+    wl3.push_initial(katana::MakeStandardRange(&a[0], &a[4]));
     wl3.push(&a[0], &a[4]);
     wl3.pop();
   }
 };
 
-#undef GALOIS_WLCOMPILECHECK
-#define GALOIS_WLCOMPILECHECK(name) checker<name<>> ck_##name;
-#include "galois/worklists/WorkList.h"
+#undef KATANA_WLCOMPILECHECK
+#define KATANA_WLCOMPILECHECK(name) checker<name<>> ck_##name;
+#include "katana/WorkList.h"
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   if (argc > 1)
     run = atoi(argv[1]);
 

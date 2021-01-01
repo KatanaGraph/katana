@@ -19,11 +19,11 @@
 #include "GlobalState.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
-#include "galois/Backtrace.h"
-#include "galois/JSON.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "galois/Uri.h"
+#include "katana/Backtrace.h"
+#include "katana/JSON.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
+#include "katana/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/file.h"
@@ -56,11 +56,11 @@ StandardArrowProperties() {
 
 /// Store the arrow array as a table in a unique file, return
 /// the final name of that file
-galois::Result<std::string>
+katana::Result<std::string>
 DoStoreArrowArrayAtName(
-    const std::shared_ptr<arrow::ChunkedArray>& array, const galois::Uri& dir,
+    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
     const std::string& name, tsuba::WriteGroup* desc) {
-  galois::Uri next_path = dir.RandFile(name);
+  katana::Uri next_path = dir.RandFile(name);
 
   // Metadata paths should relative to dir
   std::shared_ptr<arrow::Table> column = arrow::Table::Make(
@@ -77,7 +77,7 @@ DoStoreArrowArrayAtName(
       StandardArrowProperties());
 
   if (!write_result.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", write_result);
+    KATANA_LOG_DEBUG("arrow error: {}", write_result);
     return tsuba::ErrorCode::ArrowError;
   }
 
@@ -87,14 +87,14 @@ DoStoreArrowArrayAtName(
   return next_path.BaseName();
 }
 
-galois::Result<std::string>
+katana::Result<std::string>
 StoreArrowArrayAtName(
-    const std::shared_ptr<arrow::ChunkedArray>& array, const galois::Uri& dir,
+    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
     const std::string& name, tsuba::WriteGroup* desc) {
   try {
     return DoStoreArrowArrayAtName(array, dir, name, desc);
   } catch (const std::exception& exp) {
-    GALOIS_LOG_DEBUG("arrow exception: {}", exp.what());
+    KATANA_LOG_DEBUG("arrow exception: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
   }
 }
@@ -109,11 +109,11 @@ MasterPropName(unsigned i) {
   return std::string(kMasterNodesPropName) + "_" + std::to_string(i);
 }
 
-galois::Result<std::vector<tsuba::PropStorageInfo>>
+katana::Result<std::vector<tsuba::PropStorageInfo>>
 WriteTable(
     const arrow::Table& table,
     const std::vector<tsuba::PropStorageInfo>& properties,
-    const galois::Uri& dir, tsuba::WriteGroup* desc) {
+    const katana::Uri& dir, tsuba::WriteGroup* desc) {
   const auto& schema = table.schema();
 
   std::vector<std::string> next_paths;
@@ -146,18 +146,18 @@ WriteTable(
   return next_properties;
 }
 
-galois::Result<void>
+katana::Result<void>
 CommitRDG(
     tsuba::RDGHandle handle, uint32_t policy_id, bool transposed,
     const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
-  galois::CommBackend* comm = tsuba::Comm();
+  katana::CommBackend* comm = tsuba::Comm();
   tsuba::RDGMeta new_meta = handle.impl_->rdg_meta().NextVersion(
       comm->Num, policy_id, transposed, lineage);
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   if (auto res = desc->Finish(); !res) {
-    GALOIS_LOG_ERROR("at least one async write failed: {}", res.error());
+    KATANA_LOG_ERROR("at least one async write failed: {}", res.error());
     return res.error();
   }
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -168,13 +168,13 @@ CommitRDG(
           handle.impl_->rdg_meta().dir(), handle.impl_->rdg_meta().version(),
           new_meta);
       !res) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "unable to update rdg at {}: {}", handle.impl_->rdg_meta().dir(),
         res.error());
   }
 
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
-  galois::Result<void> ret = tsuba::OneHostOnly([&]() -> galois::Result<void> {
+  katana::Result<void> ret = tsuba::OneHostOnly([&]() -> katana::Result<void> {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
     std::string curr_s = new_meta.ToJsonString();
@@ -184,14 +184,14 @@ CommitRDG(
             .string(),
         reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
     if (!res) {
-      GALOIS_LOG_ERROR(
+      KATANA_LOG_ERROR(
           "CommitRDG future failed {}: {}",
           tsuba::RDGMeta::FileName(
               handle.impl_->rdg_meta().dir(), new_meta.version()),
           res.error());
       return res.error();
     }
-    return galois::ResultSuccess();
+    return katana::ResultSuccess();
   });
   if (ret) {
     handle.impl_->set_rdg_meta(std::move(new_meta));
@@ -201,7 +201,7 @@ CommitRDG(
 
 }  // namespace
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::AddPartitionMetadataArray(
     const std::shared_ptr<arrow::Table>& table) {
   auto field = table->schema()->field(0);
@@ -216,7 +216,7 @@ tsuba::RDG::AddPartitionMetadataArray(
   } else {
     return tsuba::ErrorCode::InvalidArgument;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 void
@@ -227,15 +227,15 @@ tsuba::RDG::AddLineage(const std::string& command_line) {
 tsuba::RDGFile::~RDGFile() {
   auto result = Close(handle_);
   if (!result) {
-    GALOIS_LOG_ERROR("closing RDGFile: {}", result.error());
+    KATANA_LOG_ERROR("closing RDGFile: {}", result.error());
   }
 }
 
-galois::Result<std::vector<tsuba::PropStorageInfo>>
-tsuba::RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
+katana::Result<std::vector<tsuba::PropStorageInfo>>
+tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
-  GALOIS_LOG_DEBUG(
+  KATANA_LOG_DEBUG(
       "WritePartArrays master sz: {} mirros sz: {} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
       local_to_global_vector_ == nullptr ? 0
@@ -283,13 +283,13 @@ tsuba::RDG::WritePartArrays(const galois::Uri& dir, tsuba::WriteGroup* desc) {
   return next_properties;
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
     std::unique_ptr<WriteGroup> write_group) {
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
-    galois::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
+    katana::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
@@ -305,7 +305,7 @@ tsuba::RDG::DoStore(
       *core_->node_table(), core_->part_header().node_prop_info_list(),
       handle.impl_->rdg_meta().dir(), write_group.get());
   if (!node_write_result) {
-    GALOIS_LOG_DEBUG("failed to write node properties");
+    KATANA_LOG_DEBUG("failed to write node properties");
     return node_write_result.error();
   }
 
@@ -317,7 +317,7 @@ tsuba::RDG::DoStore(
       *core_->edge_table(), core_->part_header().edge_prop_info_list(),
       handle.impl_->rdg_meta().dir(), write_group.get());
   if (!edge_write_result) {
-    GALOIS_LOG_DEBUG("failed to write edge properties");
+    KATANA_LOG_DEBUG("failed to write edge properties");
     return edge_write_result.error();
   }
 
@@ -329,7 +329,7 @@ tsuba::RDG::DoStore(
       WritePartArrays(handle.impl_->rdg_meta().dir(), write_group.get());
 
   if (!part_write_result) {
-    GALOIS_LOG_DEBUG("failed: WritePartMetadata for part_prop_info_list");
+    KATANA_LOG_DEBUG("failed: WritePartMetadata for part_prop_info_list");
     return part_write_result.error();
   }
   core_->part_header().set_part_properties(
@@ -337,7 +337,7 @@ tsuba::RDG::DoStore(
 
   if (auto write_result = core_->part_header().Write(handle, write_group.get());
       !write_result) {
-    GALOIS_LOG_DEBUG("error: metadata write");
+    KATANA_LOG_DEBUG("error: metadata write");
     return write_result.error();
   }
 
@@ -350,11 +350,11 @@ tsuba::RDG::DoStore(
       !res) {
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-tsuba::RDG::DoMake(const galois::Uri& metadata_dir) {
+katana::Result<void>
+tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
   auto node_result = AddTables(
       metadata_dir, core_->part_header().node_prop_info_list(),
       [rdg = this](const std::shared_ptr<arrow::Table>& table) {
@@ -386,22 +386,22 @@ tsuba::RDG::DoMake(const galois::Uri& metadata_dir) {
     }
   }
 
-  galois::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
+  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
   if (auto res = core_->topology_file_storage().Bind(t_path.string(), true);
       !res) {
     return res.error();
   }
 
   rdg_dir_ = metadata_dir;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<tsuba::RDG>
+katana::Result<tsuba::RDG>
 tsuba::RDG::Make(
     const RDGMeta& meta, const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!meta.IsEmptyRDG() && meta.num_hosts() != Comm()->Num) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "number of hosts for partitioned graph does not current number of "
         "hosts: {} vs {}",
         meta.num_hosts(), Comm()->Num);
@@ -416,11 +416,11 @@ tsuba::RDG::Make(
     return ErrorCode::InvalidArgument;
   }
 
-  galois::Uri partition_path = meta.PartitionFileName(Comm()->ID);
+  katana::Uri partition_path = meta.PartitionFileName(Comm()->ID);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: ReadMetaData (path: {}): {}", partition_path,
         part_header_res.error());
     return part_header_res.error();
@@ -440,12 +440,12 @@ tsuba::RDG::Make(
   return RDG(std::move(rdg));
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::Validate() const {
   if (auto res = core_->part_header().Validate(); !res) {
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 bool
@@ -453,28 +453,28 @@ tsuba::RDG::Equals(const RDG& other) const {
   return core_->Equals(*other.core_);
 }
 
-galois::Result<tsuba::RDG>
+katana::Result<tsuba::RDG>
 tsuba::RDG::Make(
     RDGHandle handle, const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!handle.impl_->AllowsRead()) {
-    GALOIS_LOG_DEBUG("failed: handle does not allow full read");
+    KATANA_LOG_DEBUG("failed: handle does not allow full read");
     return ErrorCode::InvalidArgument;
   }
   return RDG::Make(handle.impl_->rdg_meta(), node_props, edge_props);
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::Store(
     RDGHandle handle, const std::string& command_line,
     std::unique_ptr<FileFrame> ff) {
   if (!handle.impl_->AllowsWrite()) {
-    GALOIS_LOG_DEBUG("failed: handle does not allow write");
+    KATANA_LOG_DEBUG("failed: handle does not allow write");
     return ErrorCode::InvalidArgument;
   }
   // We trust the partitioner to give us a valid graph, but we
   // report our assumptions
-  GALOIS_LOG_DEBUG(
+  KATANA_LOG_DEBUG(
       "RDG::Store meta.num_hosts: {} meta.policy_id: {} num_hosts: {} "
       "policy_id: {}",
       handle.impl_->rdg_meta().num_hosts(),
@@ -492,7 +492,7 @@ tsuba::RDG::Store(
   std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
 
   if (ff) {
-    galois::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
+    katana::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -504,7 +504,7 @@ tsuba::RDG::Store(
   return DoStore(handle, command_line, std::move(desc));
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
   if (auto res = core_->AddNodeProperties(table); !res) {
     return res.error();
@@ -522,10 +522,10 @@ tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
       static_cast<size_t>(core_->node_table()->num_columns()) ==
       core_->part_header().node_prop_info_list().size());
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
   if (auto res = core_->AddEdgeProperties(table); !res) {
     return res.error();
@@ -543,15 +543,15 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
       static_cast<size_t>(core_->edge_table()->num_columns()) ==
       core_->part_header().edge_prop_info_list().size());
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::RemoveNodeProperty(uint32_t i) {
   return core_->RemoveNodeProperty(i);
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::RemoveEdgeProperty(uint32_t i) {
   return core_->RemoveEdgeProperty(i);
 }
@@ -561,13 +561,13 @@ tsuba::RDG::MarkAllPropertiesPersistent() {
   core_->part_header().MarkAllPropertiesPersistent();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::MarkNodePropertiesPersistent(
     const std::vector<std::string>& persist_node_props) {
   return core_->part_header().MarkNodePropertiesPersistent(persist_node_props);
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::MarkEdgePropertiesPersistent(
     const std::vector<std::string>& persist_edge_props) {
   return core_->part_header().MarkEdgePropertiesPersistent(persist_edge_props);
@@ -598,7 +598,7 @@ tsuba::RDG::topology_file_storage() const {
   return core_->topology_file_storage();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RDG::UnbindTopologyFileStorage() {
   return core_->topology_file_storage().Unbind();
 }

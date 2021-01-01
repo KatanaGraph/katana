@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_UNION_FIND
-#define GALOIS_UNION_FIND
+#ifndef KATANA_UNION_FIND
+#define KATANA_UNION_FIND
 
 #include <cstddef>
 
@@ -58,4 +58,4 @@ void
 test_uf() {
   UnionFind<int, -1> sample(10000);
 }
-#endif  // def GALOIS_UNION_FIND
+#endif  // def KATANA_UNION_FIND

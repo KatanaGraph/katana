@@ -17,17 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_LARGEARRAY_H_
-#define GALOIS_LIBGALOIS_GALOIS_LARGEARRAY_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LARGEARRAY_H_
+#define KATANA_LIBGALOIS_KATANA_LARGEARRAY_H_
 
 #include <utility>
 
-#include "galois/Galois.h"
-#include "galois/ParallelSTL.h"
-#include "galois/config.h"
-#include "galois/substrate/NumaMem.h"
+#include "katana/Galois.h"
+#include "katana/NumaMem.h"
+#include "katana/ParallelSTL.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Large array of objects with proper specialization for void type and
@@ -39,7 +39,7 @@ template <typename T>
 class LargeArray {
   enum class AllocType { Blocked, Local, Interleaved, Floating };
 
-  substrate::LAptr real_data_;
+  LAptr real_data_;
   T* data_{};
   size_t size_{};
 
@@ -48,18 +48,16 @@ class LargeArray {
     size_ = n;
     switch (t) {
     case AllocType::Blocked:
-      real_data_ =
-          substrate::largeMallocBlocked(n * sizeof(T), runtime::activeThreads);
+      real_data_ = largeMallocBlocked(n * sizeof(T), activeThreads);
       break;
     case AllocType::Interleaved:
-      real_data_ = substrate::largeMallocInterleaved(
-          n * sizeof(T), runtime::activeThreads);
+      real_data_ = largeMallocInterleaved(n * sizeof(T), activeThreads);
       break;
     case AllocType::Local:
-      real_data_ = substrate::largeMallocLocal(n * sizeof(T));
+      real_data_ = largeMallocLocal(n * sizeof(T));
       break;
     case AllocType::Floating:
-      real_data_ = substrate::largeMallocFloating(n * sizeof(T));
+      real_data_ = largeMallocFloating(n * sizeof(T));
       break;
     default:
       assert(false);
@@ -165,8 +163,8 @@ public:
   void allocateSpecified(size_type num, RangeArray& ranges) {
     assert(!data_);
 
-    real_data_ = substrate::largeMallocSpecified(
-        num * sizeof(T), runtime::activeThreads, ranges, sizeof(T));
+    real_data_ =
+        largeMallocSpecified(num * sizeof(T), activeThreads, ranges, sizeof(T));
 
     size_ = num;
     data_ = reinterpret_cast<T*>(real_data_.get());
@@ -202,7 +200,7 @@ public:
     if (!data_) {
       return;
     }
-    galois::ParallelSTL::destroy(data_, data_ + size_);
+    katana::ParallelSTL::destroy(data_, data_ + size_);
   }
 
   // The following methods are not shared with void specialization
@@ -271,5 +269,5 @@ public:
   pointer data() { return nullptr; }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

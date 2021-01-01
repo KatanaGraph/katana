@@ -19,19 +19,19 @@
 
 #include <iostream>
 
-#include "galois/Galois.h"
+#include "katana/Galois.h"
 
 int
 main() {
-  galois::SharedMemSys Galois_runtime;
-  galois::substrate::SimpleLock l;
-  galois::setActiveThreads(10000);
-  galois::on_each(
+  katana::SharedMemSys Katana_runtime;
+  katana::SimpleLock l;
+  katana::setActiveThreads(10000);
+  katana::on_each(
       [&l](int t, int num) {
         l.lock();
         std::cout << t << "," << num << "\n";
         l.unlock();
       },
-      galois::loopname("simple loop"));
+      katana::loopname("simple loop"));
   return 0;
 }

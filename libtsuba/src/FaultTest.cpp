@@ -3,8 +3,8 @@
 
 #include "tsuba/FaultTest.h"
 
-#include "galois/Logging.h"
-#include "galois/Random.h"
+#include "katana/Logging.h"
+#include "katana/Random.h"
 
 static tsuba::internal::FaultMode mode_{tsuba::internal::FaultMode::None};
 static float independent_prob_{0.0f};
@@ -33,9 +33,9 @@ tsuba::internal::FaultTestInit(
   run_length_ = run_length;
   // Configuration sanity check
   if (run_length > (1UL << 40)) {
-    GALOIS_LOG_WARN("Large run length {:d}", run_length);
+    KATANA_LOG_WARN("Large run length {:d}", run_length);
   }
-  GALOIS_LOG_VASSERT(
+  KATANA_LOG_VASSERT(
       independent_prob_ >= 0.0f && independent_prob_ <= 0.5f,
       "Failure probability must be between 0.0f and 0.5f");
   switch (mode_) {
@@ -44,10 +44,10 @@ tsuba::internal::FaultTestInit(
     fmt::print("FaultTest RunLength {:d}\n", run_length_);
   } break;
   case tsuba::internal::FaultMode::UniformOverRun: {
-    GALOIS_LOG_VASSERT(
+    KATANA_LOG_VASSERT(
         run_length > 0,
         "For UniformOverRun, max run length must be larger than 0");
-    fault_run_length_ = galois::RandomUniformInt(1, run_length);
+    fault_run_length_ = katana::RandomUniformInt(1, run_length);
     fmt::print(
         "FaultTest UniformOverRun {:d} ({:d})\n", fault_run_length_,
         run_length_);
@@ -86,7 +86,7 @@ tsuba::internal::PtP(
       // Do nothing
       break;
     }
-    if (galois::RandomUniformFloat(1.0f) < threshold) {
+    if (katana::RandomUniformFloat(1.0f) < threshold) {
       fmt::print("  PtP count {:d}\n", ptp_count_);
       die_now(file, line);
     }

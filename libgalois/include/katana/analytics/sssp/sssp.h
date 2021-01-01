@@ -1,15 +1,15 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_SSSP_SSSP_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_SSSP_SSSP_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
 
-#include <galois/analytics/Plan.h>
+#include <katana/analytics/Plan.h>
 
-#include "galois/AtomicHelpers.h"
-#include "galois/analytics/BfsSsspImplementationBase.h"
-#include "galois/analytics/Utils.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/analytics/BfsSsspImplementationBase.h"
+#include "katana/analytics/Utils.h"
 
 // API
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 /// A computational plan to for SSSP, specifying the algorithm and any
 /// parameters associated with it.
@@ -52,18 +52,17 @@ private:
 public:
   SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
 
-  SsspPlan(const galois::graphs::PropertyFileGraph* pfg) : Plan(kCPU) {
+  SsspPlan(const katana::PropertyFileGraph* pfg) : Plan(kCPU) {
     // TODO(amp): We know we don't modify pfg, but there is no way to construct
     //   a const PropertyGraph. https://github.com/KatanaGraph/katana/issues/23
-    auto graph =
-        galois::graphs::PropertyGraph<std::tuple<>, std::tuple<>>::Make(
-            const_cast<galois::graphs::PropertyFileGraph*>(pfg), {}, {});
+    auto graph = katana::PropertyGraph<std::tuple<>, std::tuple<>>::Make(
+        const_cast<katana::PropertyFileGraph*>(pfg), {}, {});
     if (!graph) {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "PropertyGraph should always be constructable here: {}",
           graph.error());
     }
-    galois::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
+    katana::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
     autoAlgoTimer.start();
     bool isPowerLaw = isApproximateDegreeDistributionPowerLaw(graph.value());
     autoAlgoTimer.stop();
@@ -117,11 +116,11 @@ public:
 template <typename Weight>
 struct SsspNodeDistance {
   using ArrowType = typename arrow::CTypeTraits<Weight>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<Weight>>;
+  using ViewType = katana::PODPropertyView<std::atomic<Weight>>;
 };
 
 template <typename Weight>
-using SsspEdgeWeight = galois::PODProperty<Weight>;
+using SsspEdgeWeight = katana::PODProperty<Weight>;
 
 /// Compute the Single-Source Shortest Path for pfg starting from start_node.
 /// The edge weights are taken from the property named
@@ -131,17 +130,17 @@ using SsspEdgeWeight = galois::PODProperty<Weight>;
 /// parameter can be specified, but have reasonable defaults.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
-GALOIS_EXPORT Result<void> Sssp(
-    graphs::PropertyFileGraph* pfg, size_t start_node,
+KATANA_EXPORT Result<void> Sssp(
+    PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan = {});
 
-GALOIS_EXPORT Result<void> SsspAssertValid(
-    graphs::PropertyFileGraph* pfg, size_t start_node,
+KATANA_EXPORT Result<void> SsspAssertValid(
+    PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name);
 
-struct GALOIS_EXPORT SsspStatistics {
+struct KATANA_EXPORT SsspStatistics {
   /// The maximum distance across all nodes.
   double max_distance;
   /// The sum of all node distances.
@@ -154,10 +153,10 @@ struct GALOIS_EXPORT SsspStatistics {
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout);
 
-  static galois::Result<SsspStatistics> Compute(
-      graphs::PropertyFileGraph* pfg, const std::string& output_property_name);
+  static katana::Result<SsspStatistics> Compute(
+      PropertyFileGraph* pfg, const std::string& output_property_name);
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
 #endif

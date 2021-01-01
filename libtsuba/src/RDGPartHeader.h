@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBTSUBA_RDGPARTHEADER_H_
-#define GALOIS_LIBTSUBA_RDGPARTHEADER_H_
+#ifndef KATANA_LIBTSUBA_RDGPARTHEADER_H_
+#define KATANA_LIBTSUBA_RDGPARTHEADER_H_
 
 #include <cassert>
 #include <vector>
 
 #include <arrow/api.h>
 
-#include "galois/JSON.h"
-#include "galois/Result.h"
-#include "galois/Uri.h"
+#include "katana/JSON.h"
+#include "katana/Result.h"
+#include "katana/Uri.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
@@ -21,17 +21,17 @@ struct PropStorageInfo {
   bool persist{false};
 };
 
-class GALOIS_EXPORT RDGPartHeader {
+class KATANA_EXPORT RDGPartHeader {
 public:
-  static galois::Result<RDGPartHeader> Make(const galois::Uri& partition_path);
+  static katana::Result<RDGPartHeader> Make(const katana::Uri& partition_path);
 
-  galois::Result<void> Validate() const;
+  katana::Result<void> Validate() const;
 
-  galois::Result<void> PrunePropsTo(
+  katana::Result<void> PrunePropsTo(
       const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props);
 
-  galois::Result<void> Write(RDGHandle handle, WriteGroup* writes) const;
+  katana::Result<void> Write(RDGHandle handle, WriteGroup* writes) const;
 
   void UnbindFromStorage();
 
@@ -65,10 +65,10 @@ public:
 
   void MarkAllPropertiesPersistent();
 
-  galois::Result<void> MarkNodePropertiesPersistent(
+  katana::Result<void> MarkNodePropertiesPersistent(
       const std::vector<std::string>& persist_node_props);
 
-  galois::Result<void> MarkEdgePropertiesPersistent(
+  katana::Result<void> MarkEdgePropertiesPersistent(
       const std::vector<std::string>& persist_edge_props);
 
   //
@@ -108,10 +108,10 @@ public:
   friend void from_json(const nlohmann::json& j, RDGPartHeader& header);
 
 private:
-  static galois::Result<RDGPartHeader> MakeJson(
-      const galois::Uri& partition_path);
-  static galois::Result<RDGPartHeader> MakeParquet(
-      const galois::Uri& partition_path);
+  static katana::Result<RDGPartHeader> MakeJson(
+      const katana::Uri& partition_path);
+  static katana::Result<RDGPartHeader> MakeParquet(
+      const katana::Uri& partition_path);
 
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;

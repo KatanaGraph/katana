@@ -17,24 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Threads.h"
+#include "katana/Threads.h"
 
 #include <algorithm>
 
-#include "galois/substrate/ThreadPool.h"
-namespace galois::runtime {
-GALOIS_EXPORT unsigned int activeThreads = 1;
-}  // namespace galois::runtime
+#include "katana/ThreadPool.h"
+namespace katana {
+KATANA_EXPORT unsigned int activeThreads = 1;
+}  // namespace katana
 
 unsigned int
-galois::setActiveThreads(unsigned int num) noexcept {
-  num = std::min(num, galois::substrate::GetThreadPool().getMaxUsableThreads());
+katana::setActiveThreads(unsigned int num) noexcept {
+  num = std::min(num, katana::GetThreadPool().getMaxUsableThreads());
   num = std::max(num, 1U);
-  galois::runtime::activeThreads = num;
+  katana::activeThreads = num;
   return num;
 }
 
 unsigned int
-galois::getActiveThreads() noexcept {
-  return galois::runtime::activeThreads;
+katana::getActiveThreads() noexcept {
+  return katana::activeThreads;
 }

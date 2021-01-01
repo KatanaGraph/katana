@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_FILESTORAGE_H_
-#define GALOIS_LIBTSUBA_TSUBA_FILESTORAGE_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_FILESTORAGE_H_
+#define KATANA_LIBTSUBA_TSUBA_FILESTORAGE_H_
 
 #include <cstdint>
 #include <future>
@@ -7,14 +7,14 @@
 #include <unordered_set>
 #include <vector>
 
-#include "galois/Result.h"
-#include "galois/config.h"
+#include "katana/Result.h"
+#include "katana/config.h"
 
 namespace tsuba {
 
 struct StatBuf;
 
-class GALOIS_EXPORT FileStorage {
+class KATANA_EXPORT FileStorage {
   std::string uri_scheme_;
 
 protected:
@@ -28,15 +28,15 @@ public:
   virtual ~FileStorage() = default;
 
   std::string_view uri_scheme() const { return uri_scheme_; }
-  virtual galois::Result<void> Init() = 0;
-  virtual galois::Result<void> Fini() = 0;
-  virtual galois::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
+  virtual katana::Result<void> Init() = 0;
+  virtual katana::Result<void> Fini() = 0;
+  virtual katana::Result<void> Stat(const std::string& uri, StatBuf* size) = 0;
 
-  virtual galois::Result<void> GetMultiSync(
+  virtual katana::Result<void> GetMultiSync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
 
-  virtual galois::Result<void> PutMultiSync(
+  virtual katana::Result<void> PutMultiSync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
 
   /// Storage classes with higher priority will be tried by GlobalState earlier
@@ -45,15 +45,15 @@ public:
   virtual uint32_t Priority() const { return 0; }
 
   // get on future can potentially block (bulk synchronous parallel)
-  virtual std::future<galois::Result<void>> PutAsync(
+  virtual std::future<katana::Result<void>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
-  virtual std::future<galois::Result<void>> GetAsync(
+  virtual std::future<katana::Result<void>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) = 0;
-  virtual std::future<galois::Result<void>> ListAsync(
+  virtual std::future<katana::Result<void>> ListAsync(
       const std::string& directory, std::vector<std::string>* list,
       std::vector<uint64_t>* size) = 0;
-  virtual galois::Result<void> Delete(
+  virtual katana::Result<void> Delete(
       const std::string& directory,
       const std::unordered_set<std::string>& files) = 0;
 };
@@ -61,7 +61,7 @@ public:
 /// RegisterFileStorage adds a file storage backend to the tsuba library. File
 /// storage backends must be registered before tsuba::Init. Backends need to be
 /// registered for each tsuba::Init call.
-GALOIS_EXPORT void RegisterFileStorage(FileStorage* fs);
+KATANA_EXPORT void RegisterFileStorage(FileStorage* fs);
 
 }  // namespace tsuba
 

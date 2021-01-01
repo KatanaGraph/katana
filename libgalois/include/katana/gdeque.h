@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GDEQUE_H_
-#define GALOIS_LIBGALOIS_GALOIS_GDEQUE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GDEQUE_H_
+#define KATANA_LIBGALOIS_KATANA_GDEQUE_H_
 
 #include <algorithm>
 #include <utility>
@@ -26,11 +26,11 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
 
-#include "galois/FixedSizeRing.h"
-#include "galois/Mem.h"
-#include "galois/config.h"
+#include "katana/FixedSizeRing.h"
+#include "katana/Mem.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 //! Like std::deque but use Galois memory management functionality
 template <
@@ -56,7 +56,7 @@ private:
   unsigned num;
 
   //! [Example Fixed Size Allocator]
-  galois::FixedSizeAllocator<Block> heap;
+  katana::FixedSizeAllocator<Block> heap;
 
   template <typename... Args>
   Block* alloc_block(Args&&... args) {
@@ -341,7 +341,7 @@ public:
   }
 
   iterator erase(iterator pos) {
-    GALOIS_DIE("not yet implemented");
+    KATANA_DIE("not yet implemented");
     return pos;
   }
 
@@ -405,5 +405,5 @@ public:
 };
 
 #undef _NEW_ITERATOR
-}  // namespace galois
+}  // namespace katana
 #endif

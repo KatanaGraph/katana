@@ -17,14 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_LOOPSTATISTICS_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_LOOPSTATISTICS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LOOPSTATISTICS_H_
+#define KATANA_LIBGALOIS_KATANA_LOOPSTATISTICS_H_
 
-#include "galois/Statistics.h"
-#include "galois/config.h"
+#include "katana/Statistics.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 // Usually instantiated per thread
 template <bool Enabled>
@@ -71,6 +70,5 @@ public:
   inline void inc_conflicts() const {}
 };
 
-}  // namespace runtime
-}  // namespace galois
+}  // namespace katana
 #endif

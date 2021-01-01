@@ -4,14 +4,14 @@
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
 #include "RDGPartHeader.h"
-#include "galois/JSON.h"
-#include "galois/Result.h"
+#include "katana/JSON.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 #include "tsuba/tsuba.h"
 
 template <typename T>
-using Result = galois::Result<T>;
+using Result = katana::Result<T>;
 using json = nlohmann::json;
 
 namespace {
@@ -20,8 +20,8 @@ Result<uint64_t>
 Parse(const std::string& str) {
   uint64_t val = strtoul(str.c_str(), nullptr, 10);
   if (errno == ERANGE) {
-    GALOIS_LOG_ERROR("meta file found with out of range version");
-    return galois::ResultErrno();
+    KATANA_LOG_ERROR("meta file found with out of range version");
+    return katana::ResultErrno();
   }
   return val;
 }
@@ -30,29 +30,29 @@ Parse(const std::string& str) {
 
 namespace tsuba {
 
-// galois::RandomAlphanumericString does not include _, making this pattern robust
+// katana::RandomAlphanumericString does not include _, making this pattern robust
 // TODO (witchel) meta with no _[0-9]+ is deprecated and should be
 // eliminated eventually
 const std::regex RDGMeta::kMetaVersion("meta(?:_([0-9]+)|)(?:-[0-9A-Za-z]+|)$");
 
 Result<tsuba::RDGMeta>
-RDGMeta::MakeFromStorage(const galois::Uri& uri) {
+RDGMeta::MakeFromStorage(const katana::Uri& uri) {
   tsuba::FileView fv;
   if (auto res = fv.Bind(uri.string(), true); !res) {
-    GALOIS_LOG_DEBUG("RDGMeta::MakeFromStorage bind failed: {}", res.error());
+    KATANA_LOG_DEBUG("RDGMeta::MakeFromStorage bind failed: {}", res.error());
     return res.error();
   }
   tsuba::RDGMeta meta(uri.DirName());
-  auto meta_res = galois::JsonParse<tsuba::RDGMeta>(fv, &meta);
+  auto meta_res = katana::JsonParse<tsuba::RDGMeta>(fv, &meta);
   if (!meta_res) {
-    GALOIS_LOG_ERROR("cannot parse: {}", uri.string());
+    KATANA_LOG_ERROR("cannot parse: {}", uri.string());
     return meta_res.error();
   }
   return meta;
 }
 
 Result<RDGMeta>
-RDGMeta::Make(const galois::Uri& uri, uint64_t version) {
+RDGMeta::Make(const katana::Uri& uri, uint64_t version) {
   return MakeFromStorage(FileName(uri, version));
 }
 
@@ -62,11 +62,11 @@ RDGMeta::Make(RDGHandle handle) {
 }
 
 Result<RDGMeta>
-RDGMeta::Make(const galois::Uri& uri) {
+RDGMeta::Make(const katana::Uri& uri) {
   if (!IsMetaUri(uri)) {
     auto ns_res = NS()->Get(uri);
     if (!ns_res) {
-      GALOIS_LOG_DEBUG("NS->Get failed: {}", ns_res.error());
+      KATANA_LOG_DEBUG("NS->Get failed: {}", ns_res.error());
       return ns_res.error();
     }
     if (ns_res) {
@@ -82,14 +82,14 @@ RDGMeta::PartitionFileName(uint32_t node_id, uint64_t version) {
   return fmt::format("meta_{}_{}", node_id, version);
 }
 
-galois::Uri
+katana::Uri
 RDGMeta::PartitionFileName(
-    const galois::Uri& uri, uint32_t node_id, uint64_t version) {
+    const katana::Uri& uri, uint32_t node_id, uint64_t version) {
   assert(!IsMetaUri(uri));
   return uri.Join(PartitionFileName(node_id, version));
 }
 
-galois::Uri
+katana::Uri
 RDGMeta::PartitionFileName(uint32_t node_id) const {
   return RDGMeta::PartitionFileName(dir_, node_id, version());
 }
@@ -102,8 +102,8 @@ RDGMeta::ToJsonString() const {
 }
 
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
-galois::Uri
-RDGMeta::FileName(const galois::Uri& uri, uint64_t version) {
+katana::Uri
+RDGMeta::FileName(const katana::Uri& uri, uint64_t version) {
   assert(uri.empty() || !IsMetaUri(uri));
 
   return uri.Join(fmt::format("meta_{}", version));
@@ -111,7 +111,7 @@ RDGMeta::FileName(const galois::Uri& uri, uint64_t version) {
 
 // if it doesn't name a meta file, assume it's meant to be a managed URI
 bool
-RDGMeta::IsMetaUri(const galois::Uri& uri) {
+RDGMeta::IsMetaUri(const katana::Uri& uri) {
   return std::regex_match(uri.BaseName(), kMetaVersion);
 }
 
@@ -139,7 +139,7 @@ RDGMeta::FileNames() {
         RDGPartHeader::Make(PartitionFileName(dir(), i, version()));
 
     if (!header_res) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "problem uri: {} host: {} ver: {} : {}", dir(), i, version(),
           header_res.error());
     } else {

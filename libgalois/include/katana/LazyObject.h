@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_LAZYOBJECT_H_
-#define GALOIS_LIBGALOIS_GALOIS_LAZYOBJECT_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LAZYOBJECT_H_
+#define KATANA_LIBGALOIS_KATANA_LAZYOBJECT_H_
 
 #include <type_traits>
 #include <utility>
 
-#include "galois/config.h"
-#include "galois/gIO.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Single object with specialization for void type. To take advantage of empty
@@ -96,7 +96,7 @@ public:
   typedef const T& const_reference;
   const static bool has_value = true;
   // Can't support incomplete T's but provide same interface as
-  // {@link galois::LargeArray} for consistency
+  // {@link katana::LargeArray} for consistency
   struct size_of {
     const static size_t value = sizeof(T);
   };
@@ -132,5 +132,5 @@ struct LazyObject<void> {
   const_reference get() const { return 0; }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

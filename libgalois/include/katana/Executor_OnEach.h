@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORONEACH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORONEACH_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORONEACH_H_
 
-#include "galois/ThreadTimer.h"
-#include "galois/Threads.h"
-#include "galois/Timer.h"
-#include "galois/Traits.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/OperatorReferenceTypes.h"
+#include "katana/ThreadPool.h"
+#include "katana/ThreadTimer.h"
+#include "katana/Threads.h"
+#include "katana/Timer.h"
+#include "katana/Traits.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 namespace internal {
 
@@ -44,7 +43,7 @@ on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
   static constexpr bool MORE_STATS =
       NEEDS_STATS && has_trait<more_stats_tag, ArgsTy>();
 
-  const char* const loopname = galois::internal::getLoopName(argsTuple);
+  const char* const loopname = katana::internal::getLoopName(argsTuple);
 
   CondStatTimer<NEEDS_STATS> timer(loopname);
 
@@ -57,13 +56,13 @@ on_each_impl(FunctionTy&& fn, const ArgsTy& argsTuple) {
   auto runFun = [&] {
     execTime.start();
 
-    fn_ref(substrate::ThreadPool::getTID(), numT);
+    fn_ref(ThreadPool::getTID(), numT);
 
     execTime.stop();
   };
 
   timer.start();
-  substrate::GetThreadPool().run(numT, runFun);
+  GetThreadPool().run(numT, runFun);
   timer.stop();
 }
 
@@ -75,7 +74,6 @@ on_each_gen(FunctionTy&& fn, const TupleTy& tpl) {
   internal::on_each_impl(std::forward<FunctionTy>(fn), tpl);
 }
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

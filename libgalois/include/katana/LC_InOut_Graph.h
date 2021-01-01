@@ -17,19 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINOUTGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINOUTGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCINOUTGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCINOUTGRAPH_H_
 
 #include <boost/fusion/include/at_c.hpp>
 #include <boost/fusion/include/vector.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "galois/Galois.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
+#include "katana/Details.h"
+#include "katana/Galois.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Modify a LC_Graph to have in and out edges. In edges are stored by value, so
@@ -150,7 +149,7 @@ public:
   edge_data_reference getInEdgeData(
       in_edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     if (ni.type == 0) {
       return this->getEdgeData(boost::fusion::at_c<0>(ni.its));
     } else {
@@ -171,7 +170,7 @@ public:
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     this->acquireNode(N, mflag);
     if (!asymmetric) {
-      if (galois::runtime::shouldLock(mflag)) {
+      if (katana::shouldLock(mflag)) {
         for (edge_iterator ii = this->raw_begin(N), ei = this->raw_end(N);
              ii != ei; ++ii) {
           this->acquireNode(this->getEdgeDst(ii), mflag);
@@ -179,7 +178,7 @@ public:
       }
       return in_edge_iterator(this->raw_begin(N));
     } else {
-      if (galois::runtime::shouldLock(mflag)) {
+      if (katana::shouldLock(mflag)) {
         for (typename InGraph::edge_iterator
                  ii = inGraph.raw_begin(inGraphNode(N)),
                  ei = inGraph.raw_end(inGraphNode(N));
@@ -280,10 +279,10 @@ public:
    * Sorts incoming edges of all nodes. Comparison is by getInEdgeDst(e).
    */
   void sortAllInEdgesByDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(
-        galois::iterate(*this),
+    katana::do_all(
+        katana::iterate(*this),
         [=](GraphNode N) { this->sortInEdgesByDst(N, mflag); },
-        galois::steal());
+        katana::steal());
   }
 
   size_t idFromNode(GraphNode N) { return this->getId(N); }
@@ -291,6 +290,5 @@ public:
   GraphNode nodeFromId(size_t N) { return this->getNode(N); }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 #endif

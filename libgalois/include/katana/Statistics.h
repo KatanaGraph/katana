@@ -17,18 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_STATISTICS_H_
-#define GALOIS_LIBGALOIS_GALOIS_STATISTICS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_STATISTICS_H_
+#define KATANA_LIBGALOIS_KATANA_STATISTICS_H_
 
 #include <limits>
 #include <string>
 #include <type_traits>
 
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/gstl.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
+#include "katana/gstl.h"
 
-namespace galois {
+namespace katana {
 
 template <typename T>
 class RunningMin {
@@ -88,7 +88,7 @@ public:
 
 template <typename T>
 class NamedStat {
-  using Str = galois::gstl::Str;
+  using Str = katana::gstl::Str;
 
   Str m_name;
 
@@ -131,9 +131,9 @@ namespace internal {
 template <typename Stat_tp>
 struct BasicStatMap {
   using Stat = Stat_tp;
-  using Str = galois::gstl::Str;
-  using StrSet = galois::gstl::Set<Str>;
-  using StatMap = galois::gstl::Map<std::tuple<const Str*, const Str*>, Stat>;
+  using Str = katana::gstl::Str;
+  using StrSet = katana::gstl::Set<Str>;
+  using StatMap = katana::gstl::Map<std::tuple<const Str*, const Str*>, Stat>;
   using const_iterator = typename StatMap::const_iterator;
 
 protected:
@@ -239,7 +239,7 @@ struct VecStat : public VecStatMinMaxSum<T> {
       return this->avg();
 
     default:
-      GALOIS_DIE("unreachable");
+      KATANA_DIE("unreachable");
     }
   }
 };
@@ -259,7 +259,7 @@ struct VecStat<gstl::Str> : public AggregStat<gstl::Str>::with_mem {
       return values()[0];
 
     default:
-      GALOIS_DIE("unreachable");
+      KATANA_DIE("unreachable");
     }
   }
 };
@@ -286,13 +286,13 @@ using ScalarStatManager = BasicStatMap<ScalarStat<T>>;
 
 }  // end namespace internal
 
-class GALOIS_EXPORT StatManager {
+class KATANA_EXPORT StatManager {
   class Impl;
 
   std::unique_ptr<Impl> impl_;
 
 public:
-  using Str = galois::gstl::Str;
+  using Str = katana::gstl::Str;
   using int_const_iterator =
       typename internal::VecStatManager<int64_t>::const_iterator;
   using fp_const_iterator =
@@ -364,8 +364,8 @@ public:
 
 namespace internal {
 
-GALOIS_EXPORT void setSysStatManager(StatManager* sm);
-GALOIS_EXPORT StatManager* sysStatManager();
+KATANA_EXPORT void setSysStatManager(StatManager* sm);
+KATANA_EXPORT StatManager* sysStatManager();
 
 }  // end namespace internal
 
@@ -432,17 +432,17 @@ ReportStatAvg(
 //! Reports maximum resident set size and page faults stats using
 //! rusage
 //! @param id Identifier to prefix stat with in statistics output
-GALOIS_EXPORT void reportRUsage(const std::string& id);
+KATANA_EXPORT void reportRUsage(const std::string& id);
 
 //! Reports Galois system memory stats for all threads
-GALOIS_EXPORT void reportPageAlloc(const char* category);
+KATANA_EXPORT void reportPageAlloc(const char* category);
 
 /// Prints statistics out to standard out or to the file indicated by
 /// SetStatFile
-GALOIS_EXPORT void PrintStats();
+KATANA_EXPORT void PrintStats();
 
-GALOIS_EXPORT void SetStatFile(const std::string& f);
+KATANA_EXPORT void SetStatFile(const std::string& f);
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

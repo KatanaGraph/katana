@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_UTILS_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_UTILS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_UTILS_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_UTILS_H_
 
 #include <algorithm>
 #include <random>
 
-#include "galois/ErrorCode.h"
-#include "galois/Result.h"
-#include "galois/graphs/PropertyGraph.h"
+#include "katana/ErrorCode.h"
+#include "katana/PropertyGraph.h"
+#include "katana/Result.h"
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 //! Used to pick random non-zero degree starting points for search algorithms
 //! This code has been copied from GAP benchmark suite
@@ -78,12 +78,12 @@ DefaultPropertyNames() {
 }
 
 template <typename NodeProps>
-inline galois::Result<void>
+inline katana::Result<void>
 ConstructNodeProperties(
-    galois::graphs::PropertyFileGraph* pfg,
+    katana::PropertyFileGraph* pfg,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
   auto res_table =
-      galois::AllocateTable<NodeProps>(pfg->topology().num_nodes(), names);
+      katana::AllocateTable<NodeProps>(pfg->topology().num_nodes(), names);
   if (!res_table) {
     return res_table.error();
   }
@@ -92,12 +92,12 @@ ConstructNodeProperties(
 }
 
 template <typename EdgeProps>
-inline galois::Result<void>
+inline katana::Result<void>
 ConstructEdgeProperties(
-    galois::graphs::PropertyFileGraph* pfg,
+    katana::PropertyFileGraph* pfg,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
   auto res_table =
-      galois::AllocateTable<EdgeProps>(pfg->topology().num_edges(), names);
+      katana::AllocateTable<EdgeProps>(pfg->topology().num_edges(), names);
   if (!res_table) {
     return res_table.error();
   }
@@ -105,6 +105,6 @@ ConstructEdgeProperties(
   return pfg->AddEdgeProperties(res_table.value());
 }
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
 #endif

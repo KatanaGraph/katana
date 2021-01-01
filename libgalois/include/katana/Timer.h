@@ -17,18 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_TIMER_H_
-#define GALOIS_LIBGALOIS_GALOIS_TIMER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TIMER_H_
+#define KATANA_LIBGALOIS_KATANA_TIMER_H_
 
 #include <chrono>
 
-#include "galois/config.h"
-#include "galois/gstl.h"
+#include "katana/config.h"
+#include "katana/gstl.h"
 
-namespace galois {
+namespace katana {
 
 //! A simple timer
-class GALOIS_EXPORT Timer {
+class KATANA_EXPORT Timer {
   typedef std::chrono::steady_clock clockTy;
   // typedef std::chrono::high_resolution_clock clockTy;
   std::chrono::time_point<clockTy> startT, stopT;
@@ -42,7 +42,7 @@ public:
 
 //! A multi-start time accumulator.
 //! Gives the final runtime for a series of intervals
-class GALOIS_EXPORT TimeAccumulator {
+class KATANA_EXPORT TimeAccumulator {
   Timer ltimer;
   uint64_t acc;
 
@@ -60,7 +60,7 @@ public:
 
 //! Galois Timer that automatically reports stats upon destruction
 //! Provides statistic interface around timer
-class GALOIS_EXPORT StatTimer : public TimeAccumulator {
+class KATANA_EXPORT StatTimer : public TimeAccumulator {
   gstl::Str name_;
   gstl::Str region_;
   bool valid_;
@@ -116,5 +116,5 @@ timeThis(const F& f, const char* const name) {
   t.stop();
 }
 
-}  // end namespace galois
+}  // end namespace katana
 #endif

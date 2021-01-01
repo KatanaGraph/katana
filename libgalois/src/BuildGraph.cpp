@@ -1,4 +1,4 @@
-#include "galois/BuildGraph.h"
+#include "katana/BuildGraph.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -24,14 +24,14 @@
 #include <parquet/arrow/reader.h>
 #include <parquet/arrow/writer.h>
 
-#include "galois/ArrowInterchange.h"
-#include "galois/ErrorCode.h"
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/ParallelSTL.h"
-#include "galois/SharedMemSys.h"
-#include "galois/Threads.h"
-#include "galois/graphs/PropertyFileGraph.h"
+#include "katana/ArrowInterchange.h"
+#include "katana/ErrorCode.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/ParallelSTL.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/SharedMemSys.h"
+#include "katana/Threads.h"
 
 using ArrayBuilders = std::vector<std::shared_ptr<arrow::ArrayBuilder>>;
 using BooleanBuilders = std::vector<std::shared_ptr<arrow::BooleanBuilder>>;
@@ -42,15 +42,15 @@ using NullMaps = std::pair<
     std::unordered_map<int, std::shared_ptr<arrow::Array>>,
     std::unordered_map<int, std::shared_ptr<arrow::Array>>>;
 
-using galois::GraphComponents;
-using galois::ImportData;
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::LabelsState;
-using galois::PropertiesState;
-using galois::PropertyKey;
-using galois::TopologyState;
-using galois::WriterProperties;
+using katana::GraphComponents;
+using katana::ImportData;
+using katana::ImportDataType;
+using katana::LabelRule;
+using katana::LabelsState;
+using katana::PropertiesState;
+using katana::PropertyKey;
+using katana::TopologyState;
+using katana::WriterProperties;
 
 namespace {
 
@@ -64,7 +64,7 @@ BuildArray(std::shared_ptr<T> builder) {
   std::shared_ptr<arrow::Array> array;
   auto st = builder->Finish(&array);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building arrow array: {}", st.ToString());
+    KATANA_LOG_FATAL("Error building arrow array: {}", st.ToString());
   }
   return array;
 }
@@ -113,7 +113,7 @@ AddNullArrays(
       builder->type()->id(), BuildArray(list_builder)));
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error creating null builders: {}", st.ToString());
+    KATANA_LOG_FATAL("Error creating null builders: {}", st.ToString());
   }
 }
 
@@ -139,7 +139,7 @@ AddNullArrays(
       builder->type()->id(), BuildArray(list_builder)));
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error creating null builders: {}", st.ToString());
+    KATANA_LOG_FATAL("Error creating null builders: {}", st.ToString());
   }
 }
 
@@ -170,7 +170,7 @@ GetFalseArray(size_t elts) {
     st = builder->Append(false);
   }
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error appending to an arrow array builder: {}", st.ToString());
   }
   return BuildArray(builder);
@@ -381,7 +381,7 @@ AppendArray(
   }
   }
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error adding value to arrow list array builder: {}", st.ToString());
   }
 }
@@ -470,7 +470,7 @@ AppendValue(
   }
   }
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error adding value to arrow array builder, parquet error: {}",
         st.ToString());
   }
@@ -518,7 +518,7 @@ AddNulls(
   st = builder->AppendNulls(nulls_needed);
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error appending to an arrow array builder: {}", st.ToString());
   }
 }
@@ -584,7 +584,7 @@ AddFalses(
   }
 
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error appending to an arrow array builder: {}", st.ToString());
   }
 }
@@ -600,7 +600,7 @@ AddTypedValue(
   AddNulls(builder, chunks, null_array, properties, total);
   auto st = builder->Append(val);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error appending to an arrow array builder: {}", st.ToString());
   }
 
@@ -629,7 +629,7 @@ AddArray(
   for (int32_t s = start; s < end; s++) {
     st = type_builder->Append(vals->Value(s));
     if (!st.ok()) {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "Error appending value to an arrow array builder: {}", st.ToString());
     }
   }
@@ -658,7 +658,7 @@ AddArray(
   for (int32_t s = start; s < end; s++) {
     st = type_builder->Append(vals->GetView(s));
     if (!st.ok()) {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "Error appending value to an arrow array builder: {}", st.ToString());
     }
   }
@@ -693,7 +693,7 @@ AddLabelInternal(
   AddFalses(builder, chunks, properties, total);
   auto st = builder->Append(true);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error appending to an arrow array builder: {}", st.ToString());
   }
 
@@ -755,8 +755,8 @@ void
 EvenOutChunkBuilders(
     ArrayBuilders* builders, std::vector<ArrowArrays>* chunks,
     WriterProperties* properties, size_t total) {
-  galois::do_all(
-      galois::iterate(static_cast<size_t>(0), builders->size()),
+  katana::do_all(
+      katana::iterate(static_cast<size_t>(0), builders->size()),
       [&](const size_t& i) {
         AddNulls(builders->at(i), &chunks->at(i), properties, total);
 
@@ -771,8 +771,8 @@ void
 EvenOutChunkBuilders(
     BooleanBuilders* builders, std::vector<ArrowArrays>* chunks,
     WriterProperties* properties, size_t total) {
-  galois::do_all(
-      galois::iterate(static_cast<size_t>(0), builders->size()),
+  katana::do_all(
+      katana::iterate(static_cast<size_t>(0), builders->size()),
       [&](const size_t& i) {
         AddFalses(builders->at(i), &chunks->at(i), properties, total);
 
@@ -797,7 +797,7 @@ RearrangeArray(
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
@@ -831,7 +831,7 @@ RearrangeArray(
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
@@ -865,7 +865,7 @@ RearrangeArray(
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
@@ -896,7 +896,7 @@ RearrangeArray(
   ArrowArrays chunks;
   auto st = builder->Reserve(chunk_size);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Error reserving space for arrow array: {}", st.ToString());
   }
   // cast and store array chunks for use in loop
@@ -1002,7 +1002,7 @@ RearrangeListArray(
     break;
   }
   default: {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Unsupported arrow array type passed to RearrangeListArray: {}",
         list_type);
   }
@@ -1019,8 +1019,8 @@ RearrangeTable(
   std::vector<ArrowArrays> rearranged;
   rearranged.resize(initial.size());
 
-  galois::do_all(
-      galois::iterate(static_cast<size_t>(0), initial.size()),
+  katana::do_all(
+      katana::iterate(static_cast<size_t>(0), initial.size()),
       [&](const size_t& n) {
         auto array = initial[n];
         auto arrayType = array->type()->id();
@@ -1080,7 +1080,7 @@ RearrangeTable(
           break;
         }
         default: {
-          GALOIS_LOG_FATAL(
+          KATANA_LOG_FATAL(
               "Unsupported arrow array type passed to RearrangeTable: {}",
               arrayType);
         }
@@ -1100,8 +1100,8 @@ RearrangeTypeTable(
   std::vector<ArrowArrays> rearranged;
   rearranged.resize(initial.size());
 
-  galois::do_all(
-      galois::iterate(static_cast<size_t>(0), initial.size()),
+  katana::do_all(
+      katana::iterate(static_cast<size_t>(0), initial.size()),
       [&](const size_t& n) {
         auto array = initial[n];
 
@@ -1116,7 +1116,7 @@ RearrangeTypeTable(
 
 }  // end of unnamed namespace
 
-galois::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
+katana::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
     : properties_(GetWriterProperties(chunk_size)),
       node_properties_(PropertiesState{}),
       edge_properties_(PropertiesState{}),
@@ -1133,7 +1133,7 @@ galois::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
 /***************************/
 
 size_t
-galois::PropertyGraphBuilder::GetNodeIndex() {
+katana::PropertyGraphBuilder::GetNodeIndex() {
   if (building_node_) {
     return nodes_;
   }
@@ -1141,12 +1141,12 @@ galois::PropertyGraphBuilder::GetNodeIndex() {
 }
 
 size_t
-galois::PropertyGraphBuilder::GetNodes() {
+katana::PropertyGraphBuilder::GetNodes() {
   return nodes_;
 }
 
 size_t
-galois::PropertyGraphBuilder::GetEdges() {
+katana::PropertyGraphBuilder::GetEdges() {
   return edges_;
 }
 
@@ -1155,7 +1155,7 @@ galois::PropertyGraphBuilder::GetEdges() {
 /****************************************************************/
 
 bool
-galois::PropertyGraphBuilder::StartNode() {
+katana::PropertyGraphBuilder::StartNode() {
   if (building_node_ || building_edge_) {
     return false;
   }
@@ -1166,7 +1166,7 @@ galois::PropertyGraphBuilder::StartNode() {
 }
 
 bool
-galois::PropertyGraphBuilder::StartNode(const std::string& id) {
+katana::PropertyGraphBuilder::StartNode(const std::string& id) {
   if (this->StartNode()) {
     this->AddNodeId(id);
     return true;
@@ -1175,13 +1175,13 @@ galois::PropertyGraphBuilder::StartNode(const std::string& id) {
 }
 
 void
-galois::PropertyGraphBuilder::AddNodeId(const std::string& id) {
+katana::PropertyGraphBuilder::AddNodeId(const std::string& id) {
   topology_builder_.node_indexes.insert(
       std::pair<std::string, size_t>(id, nodes_));
 }
 
 void
-galois::PropertyGraphBuilder::AddOutgoingEdge(
+katana::PropertyGraphBuilder::AddOutgoingEdge(
     const std::string& target, const std::string& label) {
   if (!building_node_) {
     return;
@@ -1207,7 +1207,7 @@ galois::PropertyGraphBuilder::AddOutgoingEdge(
 }
 
 void
-galois::PropertyGraphBuilder::AddOutgoingEdge(
+katana::PropertyGraphBuilder::AddOutgoingEdge(
     uint32_t target, const std::string& label) {
   if (!building_node_) {
     return;
@@ -1228,7 +1228,7 @@ galois::PropertyGraphBuilder::AddOutgoingEdge(
 }
 
 bool
-galois::PropertyGraphBuilder::FinishNode() {
+katana::PropertyGraphBuilder::FinishNode() {
   if (!building_node_) {
     return false;
   }
@@ -1239,14 +1239,14 @@ galois::PropertyGraphBuilder::FinishNode() {
 }
 
 bool
-galois::PropertyGraphBuilder::AddNode(const std::string& id) {
+katana::PropertyGraphBuilder::AddNode(const std::string& id) {
   std::cout << "Adding placeholder node: " << id << std::endl;
   this->StartNode(id);
   return this->FinishNode();
 }
 
 bool
-galois::PropertyGraphBuilder::StartEdge() {
+katana::PropertyGraphBuilder::StartEdge() {
   if (building_node_ || building_edge_) {
     return false;
   }
@@ -1255,7 +1255,7 @@ galois::PropertyGraphBuilder::StartEdge() {
 }
 
 bool
-galois::PropertyGraphBuilder::StartEdge(
+katana::PropertyGraphBuilder::StartEdge(
     const std::string& source, const std::string& target) {
   if (building_node_ || building_edge_) {
     return false;
@@ -1269,12 +1269,12 @@ galois::PropertyGraphBuilder::StartEdge(
 }
 
 void
-galois::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
+katana::PropertyGraphBuilder::AddEdgeId(const std::string& id) {
   topology_builder_.edge_ids.insert(id);
 }
 
 void
-galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
+katana::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
   if (!building_edge_) {
     return;
   }
@@ -1292,7 +1292,7 @@ galois::PropertyGraphBuilder::AddEdgeSource(const std::string& source) {
 }
 
 void
-galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
+katana::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
   if (!building_edge_) {
     return;
   }
@@ -1309,7 +1309,7 @@ galois::PropertyGraphBuilder::AddEdgeTarget(const std::string& target) {
 }
 
 bool
-galois::PropertyGraphBuilder::FinishEdge() {
+katana::PropertyGraphBuilder::FinishEdge() {
   if (!building_edge_) {
     return false;
   }
@@ -1320,14 +1320,14 @@ galois::PropertyGraphBuilder::FinishEdge() {
 }
 
 bool
-galois::PropertyGraphBuilder::AddEdge(
+katana::PropertyGraphBuilder::AddEdge(
     const std::string& source, const std::string& target) {
   this->StartEdge(source, target);
   return this->FinishEdge();
 }
 
 bool
-galois::PropertyGraphBuilder::AddEdge(
+katana::PropertyGraphBuilder::AddEdge(
     uint32_t source, const std::string& target, const std::string& label) {
   // if dest is an edge, do not create a shallow edge to it
   if (topology_builder_.edge_ids.find(target) !=
@@ -1345,7 +1345,7 @@ galois::PropertyGraphBuilder::AddEdge(
 }
 
 bool
-galois::PropertyGraphBuilder::AddEdge(
+katana::PropertyGraphBuilder::AddEdge(
     uint32_t source, uint32_t target, const std::string& label) {
   this->StartEdge();
   topology_builder_.sources.emplace_back(source);
@@ -1363,7 +1363,7 @@ galois::PropertyGraphBuilder::AddEdge(
 // Special case for building label builders where the empty value is false,
 // not null
 size_t
-galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
+katana::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
   LabelsState* labels = rule.for_node ? &node_labels_ : &edge_types_;
 
   size_t index;
@@ -1389,7 +1389,7 @@ galois::PropertyGraphBuilder::AddLabelBuilder(const LabelRule& rule) {
 
 // Case for adding properties for which we know their type
 size_t
-galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
+katana::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
   PropertiesState* properties =
       key.for_node ? &node_properties_ : &edge_properties_;
 
@@ -1448,7 +1448,7 @@ galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
     }
     default:
       // for now handle uncaught types as strings
-      GALOIS_LOG_WARN("treating unknown type {} as string", key.type);
+      KATANA_LOG_WARN("treating unknown type {} as string", key.type);
       properties->schema.emplace_back(arrow::field(key.name, arrow::utf8()));
       properties->builders.emplace_back(
           std::make_shared<arrow::StringBuilder>());
@@ -1511,7 +1511,7 @@ galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
     }
     default:
       // for now handle uncaught types as strings
-      GALOIS_LOG_WARN(
+      KATANA_LOG_WARN(
           "treating unknown array type {} as a string array", key.type);
       properties->schema.emplace_back(
           arrow::field(key.name, arrow::list(arrow::utf8())));
@@ -1533,7 +1533,7 @@ galois::PropertyGraphBuilder::AddBuilder(const PropertyKey& key) {
 // Add nulls until the array is even and then append val so that length = total
 // + 1 at the end
 void
-galois::PropertyGraphBuilder::AddValue(
+katana::PropertyGraphBuilder::AddValue(
     const std::string& id, std::function<PropertyKey()> process_element,
     std::function<ImportData(ImportDataType, bool)> resolve_value) {
   if (!building_node_ && !building_edge_) {
@@ -1567,7 +1567,7 @@ galois::PropertyGraphBuilder::AddValue(
 // Add falses until the array is even and then append true so that length =
 // total + 1 at the end
 void
-galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
+katana::PropertyGraphBuilder::AddLabel(const std::string& name) {
   if (!building_node_ && !building_edge_) {
     return;
   }
@@ -1596,7 +1596,7 @@ galois::PropertyGraphBuilder::AddLabel(const std::string& name) {
 // Resolve string node IDs to node indexes, if a node does not exist create an
 // empty node
 void
-galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
+katana::PropertyGraphBuilder::ResolveIntermediateIDs() {
   TopologyState* topology = &topology_builder_;
 
   for (auto [index, str_id] : topology->destinations_intermediate) {
@@ -1627,9 +1627,9 @@ galois::PropertyGraphBuilder::ResolveIntermediateIDs() {
 }
 
 // Build CSR format and rearrange edge tables to correspond to the CSR
-galois::GraphComponent
-galois::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
-  galois::ParallelSTL::partial_sum(
+katana::GraphComponent
+katana::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
+  katana::ParallelSTL::partial_sum(
       topology_builder_.out_indices.begin(),
       topology_builder_.out_indices.end(),
       topology_builder_.out_indices.begin());
@@ -1667,8 +1667,8 @@ galois::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
       BuildTable(&final_type_builders, &edge_types_.schema)};
 }
 
-galois::GraphComponents
-galois::PropertyGraphBuilder::Finish(bool verbose) {
+katana::GraphComponents
+katana::PropertyGraphBuilder::Finish(bool verbose) {
   topology_builder_.out_dests.resize(
       edges_, std::numeric_limits<uint32_t>::max());
   this->ResolveIntermediateIDs();
@@ -1715,28 +1715,28 @@ galois::PropertyGraphBuilder::Finish(bool verbose) {
   }
 
   // build topology
-  auto topology = std::make_shared<galois::graphs::GraphTopology>();
+  auto topology = std::make_shared<katana::GraphTopology>();
   arrow::Status st;
   std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
   st = topology_indices_builder->AppendValues(topology_builder_.out_indices);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building topology");
+    KATANA_LOG_FATAL("Error building topology");
   }
   std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
   st = topology_dests_builder->AppendValues(topology_builder_.out_dests);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building topology");
+    KATANA_LOG_FATAL("Error building topology");
   }
 
   st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building arrow array for topology");
+    KATANA_LOG_FATAL("Error building arrow array for topology");
   }
   st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
-    GALOIS_LOG_FATAL("Error building arrow array for topology");
+    KATANA_LOG_FATAL("Error building arrow array for topology");
   }
 
   if (verbose) {
@@ -1751,39 +1751,39 @@ galois::PropertyGraphBuilder::Finish(bool verbose) {
     std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
   }
 
-  return galois::GraphComponents{nodes_tables, edges_tables, topology};
+  return katana::GraphComponents{nodes_tables, edges_tables, topology};
 }
 
-std::unique_ptr<galois::graphs::PropertyFileGraph>
-galois::MakeGraph(const galois::GraphComponents& graph_comps) {
-  auto graph = std::make_unique<galois::graphs::PropertyFileGraph>();
+std::unique_ptr<katana::PropertyFileGraph>
+katana::MakeGraph(const katana::GraphComponents& graph_comps) {
+  auto graph = std::make_unique<katana::PropertyFileGraph>();
   auto result = graph->SetTopology(*graph_comps.topology);
   if (!result) {
-    GALOIS_LOG_FATAL("Error adding topology: {}", result.error());
+    KATANA_LOG_FATAL("Error adding topology: {}", result.error());
   }
 
   if (graph_comps.nodes.properties->num_columns() > 0) {
     result = graph->AddNodeProperties(graph_comps.nodes.properties);
     if (!result) {
-      GALOIS_LOG_FATAL("Error adding node properties: {}", result.error());
+      KATANA_LOG_FATAL("Error adding node properties: {}", result.error());
     }
   }
   if (graph_comps.nodes.labels->num_columns() > 0) {
     result = graph->AddNodeProperties(graph_comps.nodes.labels);
     if (!result) {
-      GALOIS_LOG_FATAL("Error adding node labels: {}", result.error());
+      KATANA_LOG_FATAL("Error adding node labels: {}", result.error());
     }
   }
   if (graph_comps.edges.properties->num_columns() > 0) {
     result = graph->AddEdgeProperties(graph_comps.edges.properties);
     if (!result) {
-      GALOIS_LOG_FATAL("Error adding edge properties: {}", result.error());
+      KATANA_LOG_FATAL("Error adding edge properties: {}", result.error());
     }
   }
   if (graph_comps.edges.labels->num_columns() > 0) {
     result = graph->AddEdgeProperties(graph_comps.edges.labels);
     if (!result) {
-      GALOIS_LOG_FATAL("Error adding edge types: {}", result.error());
+      KATANA_LOG_FATAL("Error adding edge types: {}", result.error());
     }
   }
   return graph;
@@ -1835,11 +1835,11 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
     break;
   }
   case arrow::Type::LIST: {
-    GALOIS_LOG_FATAL("not yet supported");
+    KATANA_LOG_FATAL("not yet supported");
     break;
   }
   default: {
-    GALOIS_LOG_FATAL("not yet supported");
+    KATANA_LOG_FATAL("not yet supported");
     break;
   }
   }
@@ -1848,21 +1848,21 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
 /// WritePropertyGraph writes an RDG from the provided \param graph_comps
 /// to the directory \param dir
 void
-galois::WritePropertyGraph(
-    const galois::GraphComponents& graph_comps, const std::string& dir) {
+katana::WritePropertyGraph(
+    const katana::GraphComponents& graph_comps, const std::string& dir) {
   auto graph_ptr = MakeGraph(graph_comps);
   WritePropertyGraph(std::move(*graph_ptr), dir);
 }
 
 void
-galois::WritePropertyGraph(
-    galois::graphs::PropertyFileGraph prop_graph, const std::string& dir) {
+katana::WritePropertyGraph(
+    katana::PropertyFileGraph prop_graph, const std::string& dir) {
   for (auto field : prop_graph.node_schema()->fields()) {
-    GALOIS_LOG_VERBOSE(
+    KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());
   }
   for (auto field : prop_graph.edge_schema()->fields()) {
-    GALOIS_LOG_VERBOSE(
+    KATANA_LOG_VERBOSE(
         "edge prop: ({}) {}", field->type()->ToString(), field->name());
   }
 
@@ -1871,13 +1871,13 @@ galois::WritePropertyGraph(
   prop_graph.MarkAllPropertiesPersistent();
   auto result = prop_graph.Write(meta_file, "graph-properties-convert");
   if (!result) {
-    GALOIS_LOG_FATAL("Error writing to fs: {}", result.error());
+    KATANA_LOG_FATAL("Error writing to fs: {}", result.error());
   }
 }
 
-std::vector<galois::ImportData>
-galois::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
-  std::vector<galois::ImportData> ret;
+std::vector<katana::ImportData>
+katana::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
+  std::vector<katana::ImportData> ret;
   if (arr->num_chunks() == 0) {
     return ret;
   }
@@ -1893,91 +1893,91 @@ galois::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
   ret.reserve(num);
   switch (id) {
   case arrow::Type::STRING: {
-    auto vec_res = galois::UnmarshalVector<std::string>(arr);
+    auto vec_res = katana::UnmarshalVector<std::string>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kString;
+      ret[i].type = katana::ImportDataType::kString;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::INT64: {
-    auto vec_res = galois::UnmarshalVector<int64_t>(arr);
+    auto vec_res = katana::UnmarshalVector<int64_t>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kInt64;
+      ret[i].type = katana::ImportDataType::kInt64;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::INT32: {
-    auto vec_res = galois::UnmarshalVector<int32_t>(arr);
+    auto vec_res = katana::UnmarshalVector<int32_t>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kInt32;
+      ret[i].type = katana::ImportDataType::kInt32;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::DOUBLE: {
-    auto vec_res = galois::UnmarshalVector<double>(arr);
+    auto vec_res = katana::UnmarshalVector<double>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kDouble;
+      ret[i].type = katana::ImportDataType::kDouble;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::FLOAT: {
-    auto vec_res = galois::UnmarshalVector<float>(arr);
+    auto vec_res = katana::UnmarshalVector<float>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kFloat;
+      ret[i].type = katana::ImportDataType::kFloat;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::BOOL: {
-    auto vec_res = galois::UnmarshalVector<bool>(arr);
+    auto vec_res = katana::UnmarshalVector<bool>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kBoolean;
+      ret[i].type = katana::ImportDataType::kBoolean;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::TIMESTAMP: {
-    auto vec_res = galois::UnmarshalVector<std::int64_t>(arr);
+    auto vec_res = katana::UnmarshalVector<std::int64_t>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kTimestampMilli;
+      ret[i].type = katana::ImportDataType::kTimestampMilli;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
@@ -1985,24 +1985,24 @@ galois::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
   }
   // for now uint8_t is an alias for a struct
   case arrow::Type::UINT8: {
-    auto vec_res = galois::UnmarshalVector<std::uint8_t>(arr);
+    auto vec_res = katana::UnmarshalVector<std::uint8_t>(arr);
     if (!vec_res) {
       return ret;
     }
     auto vec = vec_res.value();
     for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = galois::ImportDataType::kStruct;
+      ret[i].type = katana::ImportDataType::kStruct;
       ret[i].is_list = false;
       ret[i].value = vec[i];
     }
     break;
   }
   case arrow::Type::LIST: {
-    GALOIS_LOG_FATAL("not yet supported");
+    KATANA_LOG_FATAL("not yet supported");
     break;
   }
   default: {
-    GALOIS_LOG_FATAL("not yet supported");
+    KATANA_LOG_FATAL("not yet supported");
     break;
   }
   }

@@ -60,18 +60,18 @@ static cll::opt<Algo> algo(
 
 using NodeData = std::tuple<>;
 
-struct EdgeFlag : public galois::PODProperty<uint32_t> {};
+struct EdgeFlag : public katana::PODProperty<uint32_t> {};
 using EdgeData = std::tuple<EdgeFlag>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 using Edge = std::pair<GNode, GNode>;
-using EdgeVec = galois::InsertBag<Edge>;
-using NodeVec = galois::InsertBag<GNode>;
+using EdgeVec = katana::InsertBag<Edge>;
+using NodeVec = katana::InsertBag<GNode>;
 
 template <typename T>
-using PerIterAlloc = typename galois::PerIterAllocTy::rebind<T>::other;
+using PerIterAlloc = typename katana::PerIterAllocTy::rebind<T>::other;
 
 static const uint32_t valid = 0x0;
 static const uint32_t removed = 0x1;
@@ -83,14 +83,14 @@ template <typename Graph>
 void
 initialize(Graph* g) {
   //! Initializa all edges to valid.
-  galois::do_all(
-      galois::iterate(*g),
+  katana::do_all(
+      katana::iterate(*g),
       [&g](typename Graph::Node N) {
         for (auto e : g->edges(N)) {
           g->template GetEdgeData<EdgeFlag>(e) = valid;
         }
       },
-      galois::steal());
+      katana::steal());
 }
 
 /**
@@ -233,8 +233,8 @@ struct BSPTrussJacobiAlgo {
 
     //! Symmetry breaking:
     //! Consider only edges (i, j) where i < j.
-    galois::do_all(
-        galois::iterate(*g),
+    katana::do_all(
+        katana::iterate(*g),
         [&](GNode n) {
           for (auto e : g->edges(n)) {
             auto dest = g->GetEdgeDest(e);
@@ -243,27 +243,27 @@ struct BSPTrussJacobiAlgo {
             }
           }
         },
-        galois::steal());
+        katana::steal());
 
     while (true) {
-      galois::do_all(
-          galois::iterate(*cur),
-          PickUnsupportedEdges{g, k - 2, unsupported, *next}, galois::steal());
+      katana::do_all(
+          katana::iterate(*cur),
+          PickUnsupportedEdges{g, k - 2, unsupported, *next}, katana::steal());
 
       if (std::distance(unsupported.begin(), unsupported.end()) == 0) {
         break;
       }
 
       //! Mark unsupported edges as removed.
-      galois::do_all(
-          galois::iterate(unsupported),
+      katana::do_all(
+          katana::iterate(unsupported),
           [&](Edge e) {
-            g->GetEdgeData<EdgeFlag>(galois::graphs::FindEdgeSortedByDest(
-                *g, e.first, e.second)) = removed;
-            g->GetEdgeData<EdgeFlag>(galois::graphs::FindEdgeSortedByDest(
-                *g, e.second, e.first)) = removed;
+            g->GetEdgeData<EdgeFlag>(
+                katana::FindEdgeSortedByDest(*g, e.first, e.second)) = removed;
+            g->GetEdgeData<EdgeFlag>(
+                katana::FindEdgeSortedByDest(*g, e.second, e.first)) = removed;
           },
-          galois::steal());
+          katana::steal());
 
       unsupported.clear();
       cur->clear();
@@ -293,10 +293,10 @@ struct BSPTrussAlgo {
       if (isSupportNoLessThanJ(*g, e.first, e.second, j)) {
         s.push_back(e);
       } else {
-        g->GetEdgeData<EdgeFlag>(galois::graphs::FindEdgeSortedByDest(
-            *g, e.first, e.second)) = removed;
-        g->GetEdgeData<EdgeFlag>(galois::graphs::FindEdgeSortedByDest(
-            *g, e.second, e.first)) = removed;
+        g->GetEdgeData<EdgeFlag>(
+            katana::FindEdgeSortedByDest(*g, e.first, e.second)) = removed;
+        g->GetEdgeData<EdgeFlag>(
+            katana::FindEdgeSortedByDest(*g, e.second, e.first)) = removed;
       }
     }
   };
@@ -312,8 +312,8 @@ struct BSPTrussAlgo {
 
     //! Symmetry breaking:
     //! Consider only edges (i, j) where i < j.
-    galois::do_all(
-        galois::iterate(*g),
+    katana::do_all(
+        katana::iterate(*g),
         [&g, cur](GNode n) {
           for (auto e : g->edges(n)) {
             auto dest = g->GetEdgeDest(e);
@@ -322,14 +322,14 @@ struct BSPTrussAlgo {
             }
           }
         },
-        galois::steal());
+        katana::steal());
     curSize = std::distance(cur->begin(), cur->end());
 
     //! Remove unsupported edges until no more edges can be removed.
     while (true) {
-      galois::do_all(
-          galois::iterate(*cur), KeepSupportedEdges{g, k - 2, *next},
-          galois::steal());
+      katana::do_all(
+          katana::iterate(*cur), KeepSupportedEdges{g, k - 2, *next},
+          katana::steal());
       nextSize = std::distance(next->begin(), next->end());
 
       if (curSize == nextSize) {
@@ -366,10 +366,10 @@ struct BSPCoreAlgo {
       } else {
         for (auto e : g->edges(n)) {
           auto dest = g->GetEdgeDest(e);
-          g->GetEdgeData<EdgeFlag>(
-              galois::graphs::FindEdgeSortedByDest(*g, n, *dest)) = removed;
-          g->GetEdgeData<EdgeFlag>(
-              galois::graphs::FindEdgeSortedByDest(*g, *dest, n)) = removed;
+          g->GetEdgeData<EdgeFlag>(katana::FindEdgeSortedByDest(*g, n, *dest)) =
+              removed;
+          g->GetEdgeData<EdgeFlag>(katana::FindEdgeSortedByDest(*g, *dest, n)) =
+              removed;
         }
       }
     }
@@ -380,8 +380,8 @@ struct BSPCoreAlgo {
     NodeVec *cur = &work[0], *next = &work[1];
     size_t curSize = g->num_nodes(), nextSize;
 
-    galois::do_all(
-        galois::iterate(*g), KeepValidNodes{g, k, *next}, galois::steal());
+    katana::do_all(
+        katana::iterate(*g), KeepValidNodes{g, k, *next}, katana::steal());
     nextSize = std::distance(next->begin(), next->end());
 
     while (curSize != nextSize) {
@@ -389,8 +389,8 @@ struct BSPCoreAlgo {
       curSize = nextSize;
       std::swap(cur, next);
 
-      galois::do_all(
-          galois::iterate(*cur), KeepValidNodes{g, k, *next}, galois::steal());
+      katana::do_all(
+          katana::iterate(*cur), KeepValidNodes{g, k, *next}, katana::steal());
       nextSize = std::distance(next->begin(), next->end());
     }
   }
@@ -409,7 +409,7 @@ struct BSPCoreThenTrussAlgo {
       return;
     }
 
-    galois::StatTimer TCore("Reduce_to_(k-1)-core");
+    katana::StatTimer TCore("Reduce_to_(k-1)-core");
     TCore.start();
 
     BSPCoreAlgo bspCore;
@@ -417,7 +417,7 @@ struct BSPCoreThenTrussAlgo {
 
     TCore.stop();
 
-    galois::StatTimer TTruss("Reduce_to_k-truss");
+    katana::StatTimer TTruss("Reduce_to_k-truss");
     TTruss.start();
 
     BSPTrussAlgo bspTrussIm;
@@ -433,21 +433,20 @@ run() {
   Algo algo;
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
   auto result = ConstructEdgeProperties<EdgeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
-  auto res = galois::graphs::SortAllEdgesByDest(pfg.get());
+  auto res = katana::SortAllEdgesByDest(pfg.get());
   if (!res) {
-    GALOIS_LOG_FATAL("Sorting property file graph failed: {}", res.error());
+    KATANA_LOG_FATAL("Sorting property file graph failed: {}", res.error());
   }
 
-  auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
@@ -458,17 +457,17 @@ run() {
             << trussNum << "-truss\n";
 
   size_t approxEdgeData = 4 * (graph.num_nodes() + graph.num_edges());
-  galois::Prealloc(1, 4 * approxEdgeData);
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(1, 4 * approxEdgeData);
+  katana::reportPageAlloc("MeminfoPre");
 
   initialize(&graph);
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   algo(&graph, trussNum);
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
   reportKTruss(graph);
 
   uint64_t numEdges = 0;
@@ -482,19 +481,19 @@ run() {
     }
   }
 
-  galois::gInfo("Number of edges left in truss is ", numEdges);
+  katana::gInfo("Number of edges left in truss is ", numEdges);
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");

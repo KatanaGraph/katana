@@ -17,15 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_OPTIONAL_H_
-#define GALOIS_LIBGALOIS_GALOIS_OPTIONAL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OPTIONAL_H_
+#define KATANA_LIBGALOIS_KATANA_OPTIONAL_H_
 
 #include <cassert>
 
-#include "galois/LazyObject.h"
-#include "galois/config.h"
+#include "katana/LazyObject.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Galois version of <code>boost::optional</code>.
@@ -145,6 +145,6 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

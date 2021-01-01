@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from numba import from_dtype
 
-from galois.loops import (
+from katana.loops import (
     do_all_operator,
     do_all,
     for_each_operator,
@@ -103,7 +103,7 @@ def test_do_all(modes):
 
 @pytest.mark.parametrize("modes", simple_modes)
 def test_do_all_opaque(modes):
-    from galois.datastructures import InsertBag
+    from katana.datastructures import InsertBag
 
     @do_all_operator()
     def f(out, s):
@@ -123,7 +123,7 @@ def test_do_all_opaque(modes):
 @pytest.mark.parametrize("modes", simple_modes)
 @pytest.mark.parametrize("typ", types)
 def test_do_all_specific_type(modes, typ):
-    from galois.datastructures import InsertBag
+    from katana.datastructures import InsertBag
 
     @do_all_operator()
     def f(out, i):
@@ -166,7 +166,7 @@ def test_for_each(modes):
 
 @pytest.mark.parametrize("modes", simple_modes)
 def test_for_each_opaque(modes):
-    from galois.datastructures import InsertBag
+    from katana.datastructures import InsertBag
 
     @for_each_operator()
     def f(out, s, ctx):

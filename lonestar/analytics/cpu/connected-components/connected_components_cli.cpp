@@ -20,9 +20,9 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/analytics/connected_components/connected_components.h"
+#include "katana/analytics/connected_components/connected_components.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 namespace cll = llvm::cl;
 
@@ -121,21 +121,21 @@ AlgorithmName(ConnectedComponentsPlan::Algorithm algorithm) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
@@ -146,7 +146,7 @@ main(int argc, char** argv) {
     abort();
   }
 
-  galois::reportPageAlloc("MeminfoPre");
+  katana::reportPageAlloc("MeminfoPre");
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
@@ -168,35 +168,35 @@ main(int argc, char** argv) {
     plan = ConnectedComponentsPlan::EdgeAsynchronous();
     break;
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
-    galois::gInfo("INFO: Using edge tile size: ", edgeTileSize);
-    galois::gInfo("WARNING: Performance may vary due to parameter");
+    katana::gInfo("INFO: Using edge tile size: ", edgeTileSize);
+    katana::gInfo("WARNING: Performance may vary due to parameter");
     plan = ConnectedComponentsPlan::EdgeTiledAsynchronous(edgeTileSize);
     break;
   case ConnectedComponentsPlan::kBlockedAsynchronous:
     plan = ConnectedComponentsPlan::BlockedAsynchronous();
     break;
   case ConnectedComponentsPlan::kAfforest:
-    galois::gInfo(
+    katana::gInfo(
         "INFO: Using neighbor sample size: ", neighborSampleSize,
         " component sample frequency: ", componentSampleFrequency);
-    galois::gInfo("WARNING: Performance may vary due to the parameters");
+    katana::gInfo("WARNING: Performance may vary due to the parameters");
     plan = ConnectedComponentsPlan::Afforest(
         neighborSampleSize, componentSampleFrequency);
     break;
   case ConnectedComponentsPlan::kEdgeAfforest:
-    galois::gInfo(
+    katana::gInfo(
         "INFO: Using neighbor sample size: ", neighborSampleSize,
         " component sample frequency: ", componentSampleFrequency);
-    galois::gInfo("WARNING: Performance may vary due to the parameters");
+    katana::gInfo("WARNING: Performance may vary due to the parameters");
     plan = ConnectedComponentsPlan::EdgeAfforest(
         neighborSampleSize, componentSampleFrequency);
     break;
   case ConnectedComponentsPlan::kEdgeTiledAfforest:
-    galois::gInfo(
+    katana::gInfo(
         "INFO: Using edge tile size: ", edgeTileSize,
         " neighbor sample size: ", neighborSampleSize,
         " component sample frequency: ", componentSampleFrequency);
-    galois::gInfo("WARNING: Performance may vary due to the parameters");
+    katana::gInfo("WARNING: Performance may vary due to the parameters");
     plan = ConnectedComponentsPlan::EdgeTiledAfforest(
         neighborSampleSize, componentSampleFrequency);
     break;
@@ -207,14 +207,14 @@ main(int argc, char** argv) {
 
   auto pg_result = ConnectedComponents(pfg.get(), "component", plan);
   if (!pg_result) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Failed to run ConnectedComponents: {}", pg_result.error());
   }
 
   auto stats_result =
       ConnectedComponentsStatistics::Compute(pfg.get(), "component");
   if (!stats_result) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Failed to compute ConnectedComponents statistics: {}",
         stats_result.error());
   }
@@ -225,14 +225,14 @@ main(int argc, char** argv) {
     if (ConnectedComponentsAssertValid(pfg.get(), "component")) {
       std::cout << "Verification successful.\n";
     } else {
-      GALOIS_LOG_FATAL("verification failed");
+      KATANA_LOG_FATAL("verification failed");
     }
   }
 
   if (output) {
     auto r = pfg->NodePropertyTyped<uint64_t>("component");
     if (!r) {
-      GALOIS_LOG_FATAL("Failed to get node property {}", r.error());
+      KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     assert(uint64_t(results->length()) == pfg->topology().num_nodes());

@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_CHECKEDOBJECT_H_
-#define GALOIS_LIBGALOIS_GALOIS_CHECKEDOBJECT_H_
+#ifndef KATANA_LIBGALOIS_KATANA_CHECKEDOBJECT_H_
+#define KATANA_LIBGALOIS_KATANA_CHECKEDOBJECT_H_
 
-#include "galois/config.h"
-#include "galois/runtime/Context.h"
+#include "katana/Context.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Conflict-checking wrapper for any type.  Performs global conflict detection
@@ -31,32 +31,32 @@ namespace galois {
  * Galois runtime.
  */
 template <typename T>
-class GChecked : public galois::runtime::Lockable {
+class GChecked : public katana::Lockable {
   T val;
 
 public:
   template <typename... Args>
   GChecked(Args&&... args) : val(std::forward<Args>(args)...) {}
 
-  T& get(galois::MethodFlag m = MethodFlag::WRITE) {
-    galois::runtime::acquire(this, m);
+  T& get(katana::MethodFlag m = MethodFlag::WRITE) {
+    katana::acquire(this, m);
     return val;
   }
 
-  const T& get(galois::MethodFlag m = MethodFlag::WRITE) const {
-    galois::runtime::acquire(const_cast<GChecked*>(this), m);
+  const T& get(katana::MethodFlag m = MethodFlag::WRITE) const {
+    katana::acquire(const_cast<GChecked*>(this), m);
     return val;
   }
 };
 
 template <>
-class GChecked<void> : public galois::runtime::Lockable {
+class GChecked<void> : public katana::Lockable {
 public:
-  void get(galois::MethodFlag m = MethodFlag::WRITE) const {
-    galois::runtime::acquire(const_cast<GChecked*>(this), m);
+  void get(katana::MethodFlag m = MethodFlag::WRITE) const {
+    katana::acquire(const_cast<GChecked*>(this), m);
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

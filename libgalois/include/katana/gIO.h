@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GIO_H_
-#define GALOIS_LIBGALOIS_GALOIS_GIO_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GIO_H_
+#define KATANA_LIBGALOIS_KATANA_GIO_H_
 
 #include <string.h>
 
@@ -26,22 +26,22 @@
 #include <cstdlib>
 #include <sstream>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 // FIXME: move to Runtime
 
-namespace galois {
+namespace katana {
 
 //! Prints a string
-GALOIS_EXPORT void gPrintStr(const std::string&);
+KATANA_EXPORT void gPrintStr(const std::string&);
 //! Prints an info string (for easy parsing)
-GALOIS_EXPORT void gInfoStr(const std::string&);
+KATANA_EXPORT void gInfoStr(const std::string&);
 //! Prints a warning string (for easy parsing)
-GALOIS_EXPORT void gWarnStr(const std::string&);
+KATANA_EXPORT void gWarnStr(const std::string&);
 //! Prints a debug string (for easy parsing)
-GALOIS_EXPORT void gDebugStr(const std::string&);
+KATANA_EXPORT void gDebugStr(const std::string&);
 //! Prints an error string (for easy parsing)
-GALOIS_EXPORT void gErrorStr(const std::string&);
+KATANA_EXPORT void gErrorStr(const std::string&);
 
 //! Prints a sequence of things
 template <typename... Args>
@@ -91,25 +91,25 @@ gError(Args&&... args) {
   gErrorStr(os.str());
 }
 
-GALOIS_EXPORT void gFlush();
+KATANA_EXPORT void gFlush();
 
-#define GALOIS_SYS_DIE(...)                                                    \
+#define KATANA_SYS_DIE(...)                                                    \
   do {                                                                         \
-    galois::gError(                                                            \
+    katana::gError(                                                            \
         __FILE__, ":", __LINE__, ": ", strerror(errno), ": ", ##__VA_ARGS__);  \
     abort();                                                                   \
   } while (0)
-#define GALOIS_DIE(...)                                                        \
+#define KATANA_DIE(...)                                                        \
   do {                                                                         \
-    galois::gError(__FILE__, ":", __LINE__, ": ", ##__VA_ARGS__);              \
+    katana::gError(__FILE__, ":", __LINE__, ": ", ##__VA_ARGS__);              \
     abort();                                                                   \
   } while (0)
 //! Like assert but unconditionally executed
-#define GALOIS_ASSERT(cond, ...)                                               \
+#define KATANA_ASSERT(cond, ...)                                               \
   do {                                                                         \
     bool b = (cond);                                                           \
     if (!b) {                                                                  \
-      galois::gError(                                                          \
+      katana::gError(                                                          \
           __FILE__, ":", __LINE__, ": assertion failed: ", #cond, " ",         \
           ##__VA_ARGS__);                                                      \
       abort();                                                                 \
@@ -130,6 +130,6 @@ struct debug<0> {
   inline static void print(const Args&...) {}
 };
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

@@ -19,9 +19,9 @@
 
 #include <atomic>
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/ThreadPool.h"
 
 namespace {
 
@@ -30,7 +30,7 @@ namespace {
 #define FAST_LOG2_UP(x)                                                        \
   (((x) - (1 << FAST_LOG2(x))) ? FAST_LOG2(x) + 1 : FAST_LOG2(x))
 
-class DisseminationBarrier : public galois::substrate::Barrier {
+class DisseminationBarrier : public katana::Barrier {
   struct node {
     std::atomic<int> flag[2];
     node* partner;
@@ -47,7 +47,7 @@ class DisseminationBarrier : public galois::substrate::Barrier {
     node myflags[32];
   };
 
-  std::vector<galois::substrate::CacheLineStorage<LocalData>> nodes_;
+  std::vector<katana::CacheLineStorage<LocalData>> nodes_;
   unsigned log_p_;
 
   void _reinit(unsigned P) {
@@ -77,13 +77,13 @@ public:
   void Reinit(unsigned val) override { _reinit(val); }
 
   void Wait() override {
-    auto& ld = nodes_.at(galois::substrate::ThreadPool::getTID()).get();
+    auto& ld = nodes_.at(katana::ThreadPool::getTID()).get();
     auto& sense = ld.sense;
     auto& parity = ld.parity;
     for (unsigned r = 0; r < log_p_; ++r) {
       ld.myflags[r].partner->flag[parity] = sense;
       while (ld.myflags[r].flag[parity] != sense) {
-        galois::substrate::asmPause();
+        katana::asmPause();
       }
     }
     if (parity == 1) {
@@ -97,7 +97,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::CreateDisseminationBarrier(unsigned active_threads) {
+std::unique_ptr<katana::Barrier>
+katana::CreateDisseminationBarrier(unsigned active_threads) {
   return std::make_unique<DisseminationBarrier>(active_threads);
 }

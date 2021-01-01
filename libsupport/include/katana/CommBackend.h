@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_COMMBACKEND_H_
-#define GALOIS_LIBSUPPORT_GALOIS_COMMBACKEND_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_COMMBACKEND_H_
+#define KATANA_LIBSUPPORT_KATANA_COMMBACKEND_H_
 
 #include <cstdint>
 #include <string>
 
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "galois/config.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 class CommBackend {
 public:
@@ -53,6 +53,6 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

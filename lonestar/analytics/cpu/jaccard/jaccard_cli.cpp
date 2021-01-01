@@ -21,7 +21,7 @@
 #include <iostream>
 #include <unordered_set>
 
-#include <galois/analytics/jaccard/jaccard.h>
+#include <katana/analytics/jaccard/jaccard.h>
 
 #include "Lonestar/BoilerPlate.h"
 
@@ -45,24 +45,24 @@ static cll::opt<unsigned int> report_node(
     cll::desc("Node to report the similarity of (default value 1)"),
     cll::init(1));
 
-using NodeValue = galois::PODProperty<double>;
+using NodeValue = katana::PODProperty<double>;
 
 using NodeData = std::tuple<NodeValue>;
 using EdgeData = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
   std::string output_property_name = "jaccard_output_property";
 
@@ -76,49 +76,49 @@ main(int argc, char** argv) {
     abort();
   }
 
-  galois::reportPageAlloc("MeminfoPre");
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
 
-  if (auto r = galois::analytics::Jaccard(
+  if (auto r = katana::analytics::Jaccard(
           pfg.get(), base_node, output_property_name,
-          galois::analytics::JaccardPlan());
+          katana::analytics::JaccardPlan());
       !r) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Jaccard failed: {} {}", r.error().category().name(),
         r.error().message());
   }
 
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
-  auto pg_result = galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(
       pfg.get(), {output_property_name}, {});
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
   std::cout << "Node " << report_node << " has similarity "
             << graph.GetData<NodeValue>(report_node) << "\n";
 
-  auto stats_result = galois::analytics::JaccardStatistics::Compute(
+  auto stats_result = katana::analytics::JaccardStatistics::Compute(
       pfg.get(), base_node, output_property_name);
   if (!stats_result) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "could not make compute statistics: {}", stats_result.error());
   }
 
   stats_result.value().Print();
 
   if (!skipVerify) {
-    if (galois::analytics::JaccardAssertValid(
+    if (katana::analytics::JaccardAssertValid(
             pfg.get(), base_node, output_property_name)) {
       std::cout << "Verification successful.\n";
     } else {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "verification failed (this algorithm does not support graphs "
           "with duplicate edges)");
     }

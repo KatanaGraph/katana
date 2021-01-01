@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Statistics.h"
+#include "katana/Statistics.h"
 
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -25,16 +25,16 @@
 #include <fstream>
 #include <iostream>
 
-#include "galois/Env.h"
-#include "galois/Logging.h"
-#include "galois/runtime/Executor_OnEach.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Env.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Logging.h"
+#include "katana/PerThreadStorage.h"
 
 namespace {
 
 bool
 CheckPrintingThreadVals() {
-  return galois::GetEnv("PRINT_PER_THREAD_STATS");
+  return katana::GetEnv("PRINT_PER_THREAD_STATS");
 }
 
 void
@@ -46,22 +46,22 @@ PrintHeader(std::ostream& out, const char* sep) {
 
 template <typename T>
 struct StatImpl {
-  using MergedStats = galois::internal::VecStatManager<T>;
+  using MergedStats = katana::internal::VecStatManager<T>;
   using Stat = typename MergedStats::Stat;
   using const_iterator = typename MergedStats::const_iterator;
 
   static constexpr const char* StatKind() {
-    return std::is_same<T, galois::gstl::Str>::value ? "PARAM" : "STAT";
+    return std::is_same<T, katana::gstl::Str>::value ? "PARAM" : "STAT";
   }
 
-  galois::substrate::PerThreadStorage<galois::internal::ScalarStatManager<T>>
+  katana::PerThreadStorage<katana::internal::ScalarStatManager<T>>
       perThreadManagers_;
   MergedStats result_;
   bool merged_{};
 
   void Add(
-      const galois::gstl::Str& region, const galois::gstl::Str& category,
-      const T& val, const galois::StatTotal::Type& type) {
+      const katana::gstl::Str& region, const katana::gstl::Str& category,
+      const T& val, const katana::StatTotal::Type& type) {
     perThreadManagers_.getLocal()->addToStat(region, category, val, type);
   }
 
@@ -85,9 +85,9 @@ struct StatImpl {
   }
 
   void Read(
-      const_iterator i, galois::gstl::Str& region, galois::gstl::Str& category,
-      T& total, galois::StatTotal::Type& type,
-      galois::gstl::Vector<T>& values) const {
+      const_iterator i, katana::gstl::Str& region, katana::gstl::Str& category,
+      T& total, katana::StatTotal::Type& type,
+      katana::gstl::Vector<T>& values) const {
     region = result_.region(i);
     category = result_.category(i);
 
@@ -105,7 +105,7 @@ struct StatImpl {
           << result_.category(i) << sep;
 
       const auto& s = result_.stat(i);
-      out << galois::StatTotal::str(s.totalTy()) << sep << s.total();
+      out << katana::StatTotal::str(s.totalTy()) << sep << s.total();
       out << "\n";
 
       if (CheckPrintingThreadVals()) {
@@ -127,7 +127,7 @@ struct StatImpl {
 
 }  // end unnamed namespace
 
-class galois::StatManager::Impl {
+class katana::StatManager::Impl {
 public:
   StatImpl<int64_t> int_stats_;
   StatImpl<double> fp_stats_;
@@ -135,22 +135,22 @@ public:
   std::string outfile_;
 };
 
-galois::StatManager::StatManager() { impl_ = std::make_unique<Impl>(); }
+katana::StatManager::StatManager() { impl_ = std::make_unique<Impl>(); }
 
-galois::StatManager::~StatManager() = default;
+katana::StatManager::~StatManager() = default;
 
 void
-galois::StatManager::SetStatFile(const std::string& outfile) {
+katana::StatManager::SetStatFile(const std::string& outfile) {
   impl_->outfile_ = outfile;
 }
 
 bool
-galois::StatManager::IsPrintingThreadVals() const {
+katana::StatManager::IsPrintingThreadVals() const {
   return CheckPrintingThreadVals();
 }
 
 void
-galois::StatManager::PrintStats(std::ostream& out) {
+katana::StatManager::PrintStats(std::ostream& out) {
   MergeStats();
 
   if (int_cbegin() == int_cend() && fp_cbegin() == fp_cend() &&
@@ -165,65 +165,65 @@ galois::StatManager::PrintStats(std::ostream& out) {
 }
 
 auto
-galois::StatManager::int_cbegin() const -> int_const_iterator {
+katana::StatManager::int_cbegin() const -> int_const_iterator {
   return impl_->int_stats_.result_.cbegin();
 }
 
 auto
-galois::StatManager::int_cend() const -> int_const_iterator {
+katana::StatManager::int_cend() const -> int_const_iterator {
   return impl_->int_stats_.result_.cend();
 }
 
 auto
-galois::StatManager::fp_cbegin() const -> fp_const_iterator {
+katana::StatManager::fp_cbegin() const -> fp_const_iterator {
   return impl_->fp_stats_.result_.cbegin();
 }
 
 auto
-galois::StatManager::fp_cend() const -> fp_const_iterator {
+katana::StatManager::fp_cend() const -> fp_const_iterator {
   return impl_->fp_stats_.result_.cend();
 }
 
 auto
-galois::StatManager::param_cbegin() const -> param_const_iterator {
+katana::StatManager::param_cbegin() const -> param_const_iterator {
   return impl_->str_stats_.result_.cbegin();
 }
 
 auto
-galois::StatManager::param_cend() const -> param_const_iterator {
+katana::StatManager::param_cend() const -> param_const_iterator {
   return impl_->str_stats_.result_.cend();
 }
 
 void
-galois::StatManager::MergeStats() {
+katana::StatManager::MergeStats() {
   impl_->int_stats_.Merge();
   impl_->fp_stats_.Merge();
   impl_->str_stats_.Merge();
 }
 
 void
-galois::StatManager::ReadInt(
+katana::StatManager::ReadInt(
     int_const_iterator i, Str& region, Str& category, int64_t& total,
     StatTotal::Type& type, gstl::Vector<int64_t>& vec) const {
   impl_->int_stats_.Read(i, region, category, total, type, vec);
 }
 
 void
-galois::StatManager::ReadFP(
+katana::StatManager::ReadFP(
     fp_const_iterator i, Str& region, Str& category, double& total,
     StatTotal::Type& type, gstl::Vector<double>& vec) const {
   impl_->fp_stats_.Read(i, region, category, total, type, vec);
 }
 
 void
-galois::StatManager::ReadParam(
+katana::StatManager::ReadParam(
     param_const_iterator i, Str& region, Str& category, Str& total,
     StatTotal::Type& type, gstl::Vector<Str>& vec) const {
   impl_->str_stats_.Read(i, region, category, total, type, vec);
 }
 
 void
-galois::StatManager::AddInt(
+katana::StatManager::AddInt(
     const std::string& region, const std::string& category, int64_t val,
     const StatTotal::Type& type) {
   impl_->int_stats_.Add(
@@ -231,7 +231,7 @@ galois::StatManager::AddInt(
 }
 
 void
-galois::StatManager::AddFP(
+katana::StatManager::AddFP(
     const std::string& region, const std::string& category, double val,
     const StatTotal::Type& type) {
   impl_->fp_stats_.Add(
@@ -239,69 +239,68 @@ galois::StatManager::AddFP(
 }
 
 void
-galois::StatManager::AddParam(
+katana::StatManager::AddParam(
     const std::string& region, const std::string& category, const Str& val) {
   impl_->str_stats_.Add(
       gstl::makeStr(region), gstl::makeStr(category), val, StatTotal::SINGLE);
 }
 
 void
-galois::StatManager::Print() {
+katana::StatManager::Print() {
   if (impl_->outfile_.empty()) {
     return PrintStats(std::cout);
   }
 
   std::ofstream out(impl_->outfile_.c_str());
   if (!out) {
-    GALOIS_LOG_ERROR("could not print stats to {} ", impl_->outfile_);
+    KATANA_LOG_ERROR("could not print stats to {} ", impl_->outfile_);
     return PrintStats(std::cerr);
   }
 
   PrintStats(out);
 }
 
-static galois::StatManager* stat_manager_singleton;
+static katana::StatManager* stat_manager_singleton;
 
 void
-galois::internal::setSysStatManager(galois::StatManager* sm) {
-  GALOIS_LOG_VASSERT(
+katana::internal::setSysStatManager(katana::StatManager* sm) {
+  KATANA_LOG_VASSERT(
       !(stat_manager_singleton && sm),
       "StatManager.cpp: Double Initialization of SM");
   stat_manager_singleton = sm;
 }
 
-galois::StatManager*
-galois::internal::sysStatManager() {
+katana::StatManager*
+katana::internal::sysStatManager() {
   return stat_manager_singleton;
 }
 
 void
-galois::SetStatFile(const std::string& f) {
+katana::SetStatFile(const std::string& f) {
   internal::sysStatManager()->SetStatFile(f);
 }
 
 void
-galois::PrintStats() {
+katana::PrintStats() {
   internal::sysStatManager()->Print();
 }
 
 void
-galois::reportPageAlloc(const char* category) {
-  galois::runtime::on_each_gen(
+katana::reportPageAlloc(const char* category) {
+  katana::on_each_gen(
       [category](unsigned int tid, unsigned int) {
-        ReportStatSum(
-            "PageAlloc", category, substrate::numPagePoolAllocForThread(tid));
+        ReportStatSum("PageAlloc", category, numPagePoolAllocForThread(tid));
       },
       std::make_tuple());
 }
 
 void
-galois::reportRUsage(const std::string& id) {
+katana::reportRUsage(const std::string& id) {
   // get rusage at this point in time
   struct rusage usage_stats;
   int rusage_result = getrusage(RUSAGE_SELF, &usage_stats);
   if (rusage_result != 0) {
-    GALOIS_LOG_FATAL("getrusage failed: {}", rusage_result);
+    KATANA_LOG_FATAL("getrusage failed: {}", rusage_result);
   }
 
   // report stats using ID to identify them

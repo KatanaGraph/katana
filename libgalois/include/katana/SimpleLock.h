@@ -17,23 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_SIMPLELOCK_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_SIMPLELOCK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_SIMPLELOCK_H_
+#define KATANA_LIBGALOIS_KATANA_SIMPLELOCK_H_
 
 #include <atomic>
 #include <cassert>
 #include <mutex>
 
-#include "galois/config.h"
-#include "galois/substrate/CompilerSpecific.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 /// SimpleLock is a spinlock.
 /// Copying a lock is unsynchronized (relaxed ordering)
 
-class GALOIS_EXPORT SimpleLock {
+class KATANA_EXPORT SimpleLock {
   mutable std::atomic<int> _lock;
   void slow_lock() const;
 
@@ -87,7 +86,6 @@ slow_path:
   }
 };
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

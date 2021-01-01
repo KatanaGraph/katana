@@ -22,11 +22,11 @@
 #include <iostream>
 #include <type_traits>
 
-#include "galois/substrate/PtrLock.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/StaticInstance.h"
+#include "katana/PtrLock.h"
+#include "katana/SimpleLock.h"
+#include "katana/StaticInstance.h"
 
-using namespace galois::substrate;
+using namespace katana;
 
 int
 main() {

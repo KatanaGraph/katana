@@ -118,16 +118,16 @@ struct K_SSSP {
     const auto end = graph->edge_end(src);
 
     if ((end - beg) > EdgeTileSize) {
-      galois::on_each(
+      katana::on_each(
           [&](const unsigned tid, const unsigned numT) {
-            auto p = galois::block_range(beg, end, tid, numT);
+            auto p = katana::block_range(beg, end, tid, numT);
 
             auto b = p.first;
             const auto e = p.second;
 
             PushEdgeTiles(wl, b, e, f);
           },
-          galois::loopname("Init-Tiling"));
+          katana::loopname("Init-Tiling"));
 
     } else if ((end - beg) > 0) {
       wl.push(f(beg, end));
@@ -181,7 +181,7 @@ struct K_SSSP {
   struct TileRangeFn {
     template <typename T>
     auto operator()(const T& tile) const {
-      return galois::makeIterRange(tile.beg, tile.end);
+      return katana::makeIterRange(tile.beg, tile.end);
     }
   };
 
@@ -214,7 +214,7 @@ struct K_SSSP {
         Distance dd = g->template GetData<NodeProp>(*dest);
         Distance ew = GetEdgeWeight<UseEdgeWt>(ii);
         if (dd > sd + ew) {
-          galois::gPrint(
+          katana::gPrint(
               "Wrong label: ", dd, ", on node: ", *dest,
               ", correct label from src node ", node, " is ", sd + ew, "\n");
           refb = true;
@@ -227,9 +227,9 @@ struct K_SSSP {
   template <typename NodeProp>
   struct MaxDist {
     Graph* g;
-    galois::GReduceMax<Distance>& m;
+    katana::GReduceMax<Distance>& m;
 
-    MaxDist(Graph* g, galois::GReduceMax<Distance>& m) : g(g), m(m) {}
+    MaxDist(Graph* g, katana::GReduceMax<Distance>& m) : g(g), m(m) {}
 
     void operator()(typename Graph::Node node) const {
       Distance d = g->template GetData<NodeProp>(node);
@@ -239,42 +239,42 @@ struct K_SSSP {
     }
   };
 
-  template <typename NodeProp, typename EdgeProp = galois::PODProperty<int64_t>>
+  template <typename NodeProp, typename EdgeProp = katana::PODProperty<int64_t>>
   static bool Verify(Graph* graph, GNode source) {
     if (graph->template GetData<NodeProp>(source) != 0) {
-      GALOIS_LOG_ERROR(
+      KATANA_LOG_ERROR(
           "ERROR: source has non-zero dist value == ",
           graph->template GetData<NodeProp>(source), "\n");
       return false;
     }
 
     std::atomic<size_t> not_visited(0);
-    galois::do_all(galois::iterate(*graph), [&not_visited, &graph](GNode node) {
+    katana::do_all(katana::iterate(*graph), [&not_visited, &graph](GNode node) {
       if (graph->template GetData<NodeProp>(node) >= kDistInfinity) {
         ++not_visited;
       }
     });
 
     if (not_visited) {
-      GALOIS_LOG_WARN(
+      KATANA_LOG_WARN(
           "{} unvisited nodes; this is an error if the graph is strongly "
           "connected\n",
           not_visited);
     }
 
     std::atomic<bool> not_c(false);
-    galois::do_all(
-        galois::iterate(*graph), SanityCheck<NodeProp, EdgeProp>(graph, not_c));
+    katana::do_all(
+        katana::iterate(*graph), SanityCheck<NodeProp, EdgeProp>(graph, not_c));
 
     if (not_c) {
-      GALOIS_LOG_ERROR("node found with incorrect distance\n");
+      KATANA_LOG_ERROR("node found with incorrect distance\n");
       return false;
     }
 
-    galois::GReduceMax<Distance> m;
-    galois::do_all(galois::iterate(*graph), MaxDist<NodeProp>(graph, m));
+    katana::GReduceMax<Distance> m;
+    katana::do_all(katana::iterate(*graph), MaxDist<NodeProp>(graph, m));
 
-    galois::gPrint("max dist: ", m.reduce(), "\n");
+    katana::gPrint("max dist: ", m.reduce(), "\n");
 
     return true;
   }

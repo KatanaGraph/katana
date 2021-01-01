@@ -25,11 +25,11 @@
 #include <boost/iterator/counting_iterator.hpp>
 #include <llvm/Support/CommandLine.h>
 
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
 
-typedef galois::GAccumulator<double> AccumDouble;
+typedef katana::GAccumulator<double> AccumDouble;
 
 namespace cll = llvm::cl;
 
@@ -44,21 +44,21 @@ static cll::opt<unsigned> threads(
 
 void
 runDoAllBurn(int num) {
-  galois::substrate::GetThreadPool().burnPower(galois::getActiveThreads());
+  katana::GetThreadPool().burnPower(katana::getActiveThreads());
 
   for (int r = 0; r < rounds; ++r) {
-    galois::do_all(galois::iterate(0, num), [&](int) {
+    katana::do_all(katana::iterate(0, num), [&](int) {
       asm volatile("" ::: "memory");
     });
   }
 
-  galois::substrate::GetThreadPool().beKind();
+  katana::GetThreadPool().beKind();
 }
 
 void
 runDoAll(int num) {
   for (int r = 0; r < rounds; ++r) {
-    galois::do_all(galois::iterate(0, num), [&](int) {
+    katana::do_all(katana::iterate(0, num), [&](int) {
       asm volatile("" ::: "memory");
     });
   }
@@ -66,11 +66,10 @@ runDoAll(int num) {
 
 void
 runExplicitThread(int num) {
-  galois::substrate::Barrier& barrier =
-      galois::substrate::GetBarrier(galois::getActiveThreads());
+  katana::Barrier& barrier = katana::GetBarrier(katana::getActiveThreads());
 
-  galois::on_each([&](unsigned tid, unsigned total) {
-    auto range = galois::block_range(
+  katana::on_each([&](unsigned tid, unsigned total) {
+    auto range = katana::block_range(
         boost::counting_iterator<int>(0), boost::counting_iterator<int>(num),
         tid, total);
     for (int r = 0; r < rounds; ++r) {
@@ -84,7 +83,7 @@ runExplicitThread(int num) {
 
 void
 run(std::function<void(int)> fn, std::string name) {
-  galois::Timer t;
+  katana::Timer t;
   t.start();
   fn(size);
   t.stop();
@@ -95,10 +94,10 @@ std::atomic<int> EXIT;
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  galois::setActiveThreads(threads);
+  katana::setActiveThreads(threads);
 
   EXIT = 0;
   std::function<void(void)> f = []() {
@@ -107,7 +106,7 @@ main(int argc, char* argv[]) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   };
-  galois::substrate::GetThreadPool().runDedicated(f);
+  katana::GetThreadPool().runDedicated(f);
 
   for (int t = 0; t < trials; ++t) {
     run(runDoAll, "DoAll");
@@ -116,8 +115,8 @@ main(int argc, char* argv[]) {
   }
   EXIT = 1;
 
-  std::cout << "threads: " << galois::getActiveThreads() << " usable threads: "
-            << galois::substrate::GetThreadPool().getMaxUsableThreads()
+  std::cout << "threads: " << katana::getActiveThreads() << " usable threads: "
+            << katana::GetThreadPool().getMaxUsableThreads()
             << " rounds: " << rounds << " size: " << size << "\n";
 
   return 0;

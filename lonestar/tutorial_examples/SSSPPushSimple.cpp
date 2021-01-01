@@ -25,11 +25,11 @@
 #include <iostream>
 #include <string>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 
-using Graph = galois::graphs::LC_Linear_Graph<unsigned int, unsigned int>;
+using Graph = katana::LC_Linear_Graph<unsigned int, unsigned int>;
 using GNode = Graph::GraphNode;
 using UpdateRequest = std::pair<unsigned, GNode>;
 
@@ -40,8 +40,8 @@ constexpr unsigned int stepShift = 14;
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
-  galois::setActiveThreads(256);  // Galois will cap at hw max
+  katana::SharedMemSys G;
+  katana::setActiveThreads(256);  // Galois will cap at hw max
 
   if (argc != 3) {
     std::cout << "Usage: " << argv[0]
@@ -53,24 +53,23 @@ main(int argc, char** argv) {
   }
 
   Graph graph;
-  galois::graphs::readGraph(
-      graph,
-      argv[1]);  // argv[1] is the file name for graph
+  katana::readGraph(graph,
+                    argv[1]);  // argv[1] is the file name for graph
 
   // initialization
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&graph](GNode N) {
         graph.getData(N) = DIST_INFINITY;
       }  // operator as lambda expression
   );
 
-  galois::StatTimer T;
+  katana::StatTimer T;
   T.start();
 
   //! [SSSP push operator]
   // SSSP operator
-  // auto& ctx expands to galois::UserContext<GNode>& ctx
+  // auto& ctx expands to katana::UserContext<GNode>& ctx
   auto SSSP = [&](GNode active_node, auto& ctx) {
     // Get the value on the node
     auto srcData = graph.getData(active_node);
@@ -92,10 +91,10 @@ main(int argc, char** argv) {
   // Priority Function in SSSPPushSimple
   // Map user-defined priority to a bucket number in OBIM
   auto reqIndexer = [&](const GNode& N) {
-    return (graph.getData(N, galois::MethodFlag::UNPROTECTED) >> stepShift);
+    return (graph.getData(N, katana::MethodFlag::UNPROTECTED) >> stepShift);
   };
 
-  using namespace galois::worklists;
+  using namespace katana;
   using PSchunk = PerSocketChunkLIFO<16>;  // chunk size 16
   using OBIM = OrderedByIntegerMetric<decltype(reqIndexer), PSchunk>;
   //! [Scheduler examples]
@@ -108,53 +107,53 @@ main(int argc, char** argv) {
 
   if ("dchunk16" == schedule) {
     //! [chunk worklist]
-    galois::for_each(
-        galois::iterate(
+    katana::for_each(
+        katana::iterate(
             {*graph.begin()}),  // initial range using initializer list
         SSSP                    // operator
         ,
-        galois::wl<PSchunk>()  // options. PSchunk expands to
-                               // galois::worklists::PerSocketChunkLIFO<16>,
+        katana::wl<PSchunk>()  // options. PSchunk expands to
+                               // katana::PerSocketChunkLIFO<16>,
                                // where 16 is chunk size
         ,
-        galois::loopname("sssp_dchunk16"));
+        katana::loopname("sssp_dchunk16"));
     //! [chunk worklist]
   } else if ("obim" == schedule) {
     //! [OBIM]
-    galois::for_each(
-        galois::iterate(
+    katana::for_each(
+        katana::iterate(
             {*graph.begin()}),  // initial range using initializer list
         SSSP                    // operator
         ,
-        galois::wl<OBIM>(reqIndexer)  // options. Pass an indexer instance for
+        katana::wl<OBIM>(reqIndexer)  // options. Pass an indexer instance for
                                       // OBIM construction.
         ,
-        galois::loopname("sssp_obim"));
+        katana::loopname("sssp_obim"));
     //! [OBIM]
   }
   //! [Data-driven loops]
 
   else if ("ParaMeter" == schedule) {
     //! [ParaMeter loop iterator]
-    galois::for_each(
-        galois::iterate(
+    katana::for_each(
+        katana::iterate(
             {*graph.begin()}),  // initial range using initializer list
         SSSP                    // operator
         ,
-        galois::wl<galois::worklists::ParaMeter<>>()  // options
+        katana::wl<katana::ParaMeter<>>()  // options
         ,
-        galois::loopname("sssp_ParaMeter"));
+        katana::loopname("sssp_ParaMeter"));
     //! [ParaMeter loop iterator]
   } else if ("det") {
     //! [Deterministic loop iterator]
-    galois::for_each(
-        galois::iterate(
+    katana::for_each(
+        katana::iterate(
             {*graph.begin()}),  // initial range using initializer list
         SSSP                    // operator
         ,
-        galois::wl<galois::worklists::Deterministic<>>()  // options
+        katana::wl<katana::Deterministic<>>()  // options
         ,
-        galois::loopname("sssp_deterministic"));
+        katana::loopname("sssp_deterministic"));
     //! [Deterministic loop iterator]
   } else {
     std::cerr << "Unknown schedule " << schedule << std::endl;

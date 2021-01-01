@@ -18,13 +18,13 @@
  */
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 #include "llvm/Support/CommandLine.h"
 
 //! [Define LC Graph]
-typedef galois::graphs::LC_Linear_Graph<unsigned int, unsigned int> Graph;
+typedef katana::LC_Linear_Graph<unsigned int, unsigned int> Graph;
 //! [Define LC Graph]
 typedef Graph::GraphNode GNode;
 typedef std::pair<unsigned, GNode> UpdateRequest;
@@ -56,13 +56,13 @@ relax_edge(unsigned src_data, Graph::edge_iterator ii, C& ctx) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G = LonestarStart(argc, argv);
+  std::unique_ptr<katana::SharedMemSys> G = LonestarStart(argc, argv);
 
   //! [ReadGraph]
-  galois::graphs::readGraph(graph, inputFile);
+  katana::readGraph(graph, inputFile);
   //! [ReadGraph]
 
-  galois::for_each(galois::iterate(graph), [&](GNode n, auto&) {
+  katana::for_each(katana::iterate(graph), [&](GNode n, auto&) {
     graph.getData(n) = DIST_INFINITY;
   });
 
@@ -71,17 +71,17 @@ main(int argc, char** argv) {
     return (req.first >> stepShift);
   };
 
-  using namespace galois::worklists;
+  using namespace katana;
   typedef PerSocketChunkLIFO<16> PSchunk;
   typedef OrderedByIntegerMetric<decltype(reqIndexer), PSchunk> OBIM;
   //! [OrderedByIntegerMetic in SSSPsimple]
 
-  galois::StatTimer T;
+  katana::StatTimer T;
   T.start();
   graph.getData(*graph.begin()) = 0;
   //! [for_each in SSSPsimple]
-  galois::for_each(
-      galois::iterate({std::make_pair(0U, *graph.begin())}),
+  katana::for_each(
+      katana::iterate({std::make_pair(0U, *graph.begin())}),
       //! [Operator in SSSPsimple]
       [&](UpdateRequest& req, auto& ctx) {
         GNode active_node = req.second;
@@ -95,7 +95,7 @@ main(int argc, char** argv) {
       }
       //! [Operator in SSSPsimple]
       ,
-      galois::wl<OBIM>(reqIndexer), galois::loopname("sssp_run_loop"));
+      katana::wl<OBIM>(reqIndexer), katana::loopname("sssp_run_loop"));
   //! [for_each in SSSPsimple]
   T.stop();
   return 0;

@@ -17,22 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_VERSION_H_
-#define GALOIS_LIBGALOIS_GALOIS_VERSION_H_
+#ifndef KATANA_LIBGALOIS_KATANA_VERSION_H_
+#define KATANA_LIBGALOIS_KATANA_VERSION_H_
 
 #include <string>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
-GALOIS_EXPORT std::string getVersion();
-GALOIS_EXPORT std::string getRevision();
-GALOIS_EXPORT int getVersionMajor();
-GALOIS_EXPORT int getVersionMinor();
-GALOIS_EXPORT int getVersionPatch();
-GALOIS_EXPORT int getCopyrightYear();
+KATANA_EXPORT std::string getVersion();
+KATANA_EXPORT std::string getRevision();
+KATANA_EXPORT int getVersionMajor();
+KATANA_EXPORT int getVersionMinor();
+KATANA_EXPORT int getVersionPatch();
+KATANA_EXPORT int getCopyrightYear();
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

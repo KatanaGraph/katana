@@ -6,7 +6,7 @@
 #
 # The standard define pattern is:
 #
-#   GALOIS_<PATH_WITH_UNDERSCORES>_H_
+#   KATANA_<PATH_WITH_UNDERSCORES>_H_
 #
 # where path is the path to the header file without its extension and with
 # the components "include", "src", "test", "tests" removed.
@@ -55,7 +55,7 @@ def make_guard(root, filename):
     # Differentiate between snake_case file names and directories
     p = p.replace("_", "", -1)
     p = p.replace("/", "_")
-    return "GALOIS_{p}_H_".format(p=p)
+    return "KATANA_{p}_H_".format(p=p)
 
 
 def run_check(root, filename):

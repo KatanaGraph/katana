@@ -25,15 +25,15 @@
 #include <stack>
 
 #include "Metis.h"
-#include "galois/Galois.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
 const bool multiSeed = true;
 
 namespace {
 
 // gain of moving n from it's current part to new part
 int
-gain_limited(GGraph& g, GNode n, unsigned newpart, galois::MethodFlag flag) {
+gain_limited(GGraph& g, GNode n, unsigned newpart, katana::MethodFlag flag) {
   int retval = 0;
   unsigned nPart = g.getData(n, flag).getPart();
   for (auto ii : g.edges(n, flag)) {
@@ -48,7 +48,7 @@ gain_limited(GGraph& g, GNode n, unsigned newpart, galois::MethodFlag flag) {
 }
 
 GNode
-findSeed(GGraph& g, unsigned partNum, int partWeight, galois::MethodFlag flag) {
+findSeed(GGraph& g, unsigned partNum, int partWeight, katana::MethodFlag flag) {
   // pick a seed
 
   int rWeight = (int)(drand48() * (partWeight));
@@ -89,7 +89,7 @@ bisect_GGP(
   unsigned targetWeight =
       oldPart.partWeight * ratio.second / (ratio.first + ratio.second);
 
-  auto flag = galois::MethodFlag::UNPROTECTED;
+  auto flag = katana::MethodFlag::UNPROTECTED;
 
   do {
     boundary.push_back(findSeed(g, oldPart.partNum, oldPart.partWeight, flag));
@@ -126,7 +126,7 @@ bisect_GGGP(
       oldPart.partWeight * ratio.second / (ratio.first + ratio.second);
   // pick a seed
 
-  auto flag = galois::MethodFlag::UNPROTECTED;
+  auto flag = katana::MethodFlag::UNPROTECTED;
 
   do {
     // boundary[0].insert(findSeed(g, oldPart.partNum, oldPart.partWeight,
@@ -186,12 +186,12 @@ computeEdgeCut(GGraph& g) {
 }
 
 /*int node_gain(GGraph &graph, GNode node) {
-  auto nData = graph.getData(node,galois::MethodFlag::UNPROTECTED);
+  auto nData = graph.getData(node,katana::MethodFlag::UNPROTECTED);
   int gain = 0;
   for (auto ei : graph.edges(node)) {
     auto neigh = graph.getEdgeDst(ei);
     int ew = graph.getEdgeData(ei);
-    auto neighData = graph.getData(neigh,galois::MethodFlag::UNPROTECTED);
+    auto neighData = graph.getData(neigh,katana::MethodFlag::UNPROTECTED);
     if (nData.getPart() != neighData.getPart()) {
       gain += ew;
     } else {
@@ -202,7 +202,7 @@ computeEdgeCut(GGraph& g) {
 }*/
 
 typedef std::pair<int, std::pair<GNode, GNode>> PartMatch;
-typedef galois::substrate::PerThreadStorage<PartMatch> PerThreadPartInfo;
+typedef katana::PerThreadStorage<PartMatch> PerThreadPartInfo;
 void
 KLMatch(
     GGraph& graph, std::vector<GNode>& boundary, PerThreadPartInfo& threadInfo,
@@ -214,10 +214,10 @@ KLMatch(
     return !node.isLocked() && isPartOk(node.getPart());
   };
 
-  galois::for_each(
-      galois::iterate(boundary),
+  katana::for_each(
+      katana::iterate(boundary),
       [&](GNode node, auto&) {
-        auto flag = galois::MethodFlag::UNPROTECTED;
+        auto flag = katana::MethodFlag::UNPROTECTED;
         PartMatch* localInfo = threadInfo.getLocal();
         int gain = localInfo->first;
         auto& srcData = graph.getData(node, flag);
@@ -269,8 +269,7 @@ KLMatch(
           }
         }
       },
-      galois::loopname("KLMatch"),
-      galois::wl<galois::worklists::ChunkLIFO<32>>());
+      katana::loopname("KLMatch"), katana::wl<katana::ChunkLIFO<32>>());
 };
 
 void
@@ -390,8 +389,8 @@ parallelBisect(
     MetisGraph* mg, unsigned int, unsigned int nparts,
     std::vector<partInfo>& parts) {
   GGraph* graph = mg->getGraph();
-  galois::for_each(
-      galois::iterate({&parts[0]}),
+  katana::for_each(
+      katana::iterate({&parts[0]}),
       [&](partInfo* item, auto& cnx) {
         if (item->splitID() >= nparts)  // when to stop
           return;
@@ -406,8 +405,7 @@ parallelBisect(
         cnx.push(&parts[newPart.partNum]);
         cnx.push(item);
       },
-      galois::loopname("parallelBisect"),
-      galois::wl<galois::worklists::ChunkLIFO<1>>());
+      katana::loopname("parallelBisect"), katana::wl<katana::ChunkLIFO<1>>());
 }
 
 }  // namespace
@@ -420,13 +418,13 @@ partition(
   assert(fineMetisGraphWeight == mcg->getTotalWeight());
   parts[0] = partInfo(fineMetisGraphWeight);
 
-  galois::do_all(
-      galois::iterate(*mcg->getGraph()),
+  katana::do_all(
+      katana::iterate(*mcg->getGraph()),
       [g = mcg->getGraph()](GNode item) {
-        g->getData(item, galois::MethodFlag::UNPROTECTED).initRefine(0, true);
-        g->getData(item, galois::MethodFlag::UNPROTECTED).initPartition();
+        g->getData(item, katana::MethodFlag::UNPROTECTED).initRefine(0, true);
+        g->getData(item, katana::MethodFlag::UNPROTECTED).initPartition();
       },
-      galois::loopname("initPart"));
+      katana::loopname("initPart"));
 
   bool serialPartition = false;
   if (serialPartition) {
@@ -477,7 +475,7 @@ edgeCount(GGraph& g) {
 std::vector<partInfo>
 BisectAll(MetisGraph* mcg, unsigned numPartitions, unsigned int) {
   std::cout << "\nSorting initial partitioning using MGGGP:\n";
-  auto flag = galois::MethodFlag::UNPROTECTED;
+  auto flag = katana::MethodFlag::UNPROTECTED;
   GGraph& g = *mcg->getGraph();
 
   int bestCut = edgeCount(g);

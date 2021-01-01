@@ -1,17 +1,17 @@
 #include <benchmark/benchmark.h>
 
 #include "TestPropertyGraph.h"
-#include "galois/Logging.h"
-#include "galois/graphs/PropertyFileGraph.h"
-#include "galois/graphs/PropertyGraph.h"
+#include "katana/Logging.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 
-namespace gg = galois::graphs;
+namespace gg = katana;
 
 using DataType = int64_t;
 
 #define FIELD(Number)                                                          \
   struct Field##Number {                                                       \
-    using ViewType = galois::PODPropertyView<DataType>;                        \
+    using ViewType = katana::PODPropertyView<DataType>;                        \
     using ArrowType = arrow::CTypeTraits<DataType>::ArrowType;                 \
   }
 
@@ -74,7 +74,7 @@ IterateProperty(benchmark::State& state, gg::PropertyFileGraph* g) {
 
   auto r = gg::PropertyGraph<P, P>::Make(g);
   if (!r) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", r.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
 
   for (auto _ : state) {
@@ -82,7 +82,7 @@ IterateProperty(benchmark::State& state, gg::PropertyFileGraph* g) {
     size_t expected = ExpectedValue(
         g->topology().num_nodes(), g->topology().num_edges(), num_properties,
         false);
-    GALOIS_LOG_VASSERT(
+    KATANA_LOG_VASSERT(
         r_iterate == expected, "expected {} found {}", expected, r_iterate);
   }
 }
@@ -107,7 +107,7 @@ IterateProperty(benchmark::State& state) {
   case 10:
     return IterateProperty<10>(state, g.get());
   default:
-    GALOIS_LOG_FATAL("unexpected number of properties: {}", num_properties);
+    KATANA_LOG_FATAL("unexpected number of properties: {}", num_properties);
   }
 }
 
@@ -126,7 +126,7 @@ IterateBaseline(benchmark::State& state) {
     size_t expected = ExpectedValue(
         g->topology().num_nodes(), g->topology().num_edges(), num_properties,
         false);
-    GALOIS_LOG_VASSERT(r == expected, "expected {} found {}", expected, r);
+    KATANA_LOG_VASSERT(r == expected, "expected {} found {}", expected, r);
   }
 }
 

@@ -24,9 +24,9 @@
  */
 #pragma once
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Struct that contains 2 elements. Used over std::pair as std::pair memory
@@ -80,4 +80,4 @@ struct TupleOfThree {
   }
 };
 
-}  // namespace galois
+}  // namespace katana

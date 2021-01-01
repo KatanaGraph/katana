@@ -17,17 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLISTHELPERS_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLISTHELPERS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_WORKLISTHELPERS_H_
+#define KATANA_LIBGALOIS_KATANA_WORKLISTHELPERS_H_
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "galois/config.h"
-#include "galois/substrate/PtrLock.h"
-#include "galois/worklists/WLCompileCheck.h"
+#include "katana/PtrLock.h"
+#include "katana/WLCompileCheck.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 template <typename T>
 class ConExtListNode {
@@ -65,7 +64,7 @@ public:
 template <typename T, bool concurrent>
 class ConExtLinkedStack {
   // fixme: deal with concurrent
-  substrate::PtrLock<T> head;
+  PtrLock<T> head;
 
 public:
   typedef ConExtListNode<T> ListNode;
@@ -113,7 +112,7 @@ public:
 template <typename T, bool concurrent>
 class ConExtLinkedQueue {
   // Fixme: deal with concurrent
-  substrate::PtrLock<T> head;
+  PtrLock<T> head;
   T* tail;
 
 public:
@@ -178,7 +177,6 @@ struct DummyIndexer {
   unsigned operator()(const T&) { return 0; }
 };
 
-}  // namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

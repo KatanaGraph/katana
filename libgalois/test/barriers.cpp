@@ -22,9 +22,9 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/substrate/Barrier.h"
+#include "katana/Barrier.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
 
 unsigned iter = 0;
 unsigned numThreads = 0;
@@ -32,7 +32,7 @@ unsigned numThreads = 0;
 char bname[100];
 
 struct emp {
-  galois::substrate::Barrier& b;
+  katana::Barrier& b;
 
   void go() {
     for (unsigned i = 0; i < iter; ++i) {
@@ -52,7 +52,7 @@ struct emp {
 };
 
 void
-test(std::unique_ptr<galois::substrate::Barrier> b) {
+test(std::unique_ptr<katana::Barrier> b) {
   if (b == nullptr) {
     std::cout << "skipping " << bname << "\n";
     return;
@@ -62,12 +62,12 @@ test(std::unique_ptr<galois::substrate::Barrier> b) {
   if (M > 16)
     M /= 2;
   while (M) {
-    galois::setActiveThreads(M);
+    katana::setActiveThreads(M);
     b->Reinit(M);
-    galois::Timer t;
+    katana::Timer t;
     t.start();
     emp e{*b.get()};
-    galois::on_each(e);
+    katana::on_each(e);
     t.stop();
     std::cout << bname << "," << b->name() << "," << M << "," << t.get()
               << "\n";
@@ -77,7 +77,7 @@ test(std::unique_ptr<galois::substrate::Barrier> b) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   if (argc > 1)
     iter = atoi(argv[1]);
   else
@@ -85,10 +85,10 @@ main(int argc, char** argv) {
   if (argc > 2)
     numThreads = atoi(argv[2]);
   else
-    numThreads = galois::substrate::GetThreadPool().getMaxThreads();
+    numThreads = katana::GetThreadPool().getMaxThreads();
 
   gethostname(bname, sizeof(bname));
-  using namespace galois::substrate;
+  using namespace katana;
   test(CreateCountingBarrier(1));
   test(CreateMCSBarrier(1));
   test(CreateTopoBarrier(1));

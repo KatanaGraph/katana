@@ -96,15 +96,15 @@ __numba_wrapper_table_{{class_name}}.append(
 
 {# Emit code to actually register all the numba wrappers with numba. #}
 {% macro register_all_wrappers() -%}
-import galois.numba_support.wrappers
-galois.numba_support.wrappers.interpret_numba_wrapper_tables(_numba_wrapper_tables, globals())
+import katana.numba_support.wrappers
+katana.numba_support.wrappers.interpret_numba_wrapper_tables(_numba_wrapper_tables, globals())
 {% endmacro -%}
 
 
 {% macro build_numba_type_dict(base_type, with_dtype) -%}
-import galois.util.template_type
+import katana.util.template_type
 cdef _make_{{base_type}}_numba_type():
-    numba_type = galois.util.template_type.DtypeDict{{"WithOpaque" if with_dtype}}()
+    numba_type = katana.util.template_type.DtypeDict{{"WithOpaque" if with_dtype}}()
     {% for inst in type_instantiations -%}
     numba_type[{{inst.type_key}}] = globals()["{{base_type}}_{{inst.type_scab}}_numba_type"]
     {% endfor -%}

@@ -19,12 +19,12 @@
 
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/Graph.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
+#include "katana/Timer.h"
 
 //! Graph has int node data, void edge data and is directed
-typedef galois::graphs::MorphGraph<int, void, true> Graph;
+typedef katana::MorphGraph<int, void, true> Graph;
 //! Opaque pointer to graph node
 typedef Graph::GraphNode GNode;
 
@@ -78,7 +78,7 @@ constructTorus(Graph& g, int height, int width) {
   // Using space-filling order, assign nodes and create (and allocate) them in
   // parallel
   std::vector<GNode> nodes(numNodes);
-  galois::do_all(galois::iterate(points), [&](const Point2D& p) {
+  katana::do_all(katana::iterate(points), [&](const Point2D& p) {
     auto n = g.createNode(0);
     g.addNode(n);
     nodes[p.x() * height + p.y()] = n;
@@ -102,7 +102,7 @@ constructTorus(Graph& g, int height, int width) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 3) {
     std::cerr << "<num threads> <sqrt grid size>\n";
@@ -111,19 +111,19 @@ main(int argc, char** argv) {
   unsigned int numThreads = atoi(argv[1]);
   int n = atoi(argv[2]);
 
-  GALOIS_ASSERT(n > 2);
+  KATANA_ASSERT(n > 2);
 
-  numThreads = galois::setActiveThreads(numThreads);
+  numThreads = katana::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " threads and " << n << " x " << n
             << " torus\n";
 
   Graph graph;
   constructTorus(graph, n, n);
 
-  galois::Timer T;
+  katana::Timer T;
   T.start();
 
-  galois::for_each(galois::iterate(graph), [&](GNode n, auto&) {
+  katana::for_each(katana::iterate(graph), [&](GNode n, auto&) {
     // For each outgoing edge (n, dst)
     for (auto ii : graph.edges(n)) {
       GNode dst = graph.getEdgeDst(ii);

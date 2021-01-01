@@ -22,8 +22,8 @@
 #include <cstdio>
 #include <random>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
 
 template <typename Gen>
 void
@@ -44,7 +44,7 @@ struct run_local_helper {
   void operator()(unsigned int tid, unsigned int num) {
     std::mt19937 gen(seed + tid);
     std::uniform_int_distribution<int> randSeed;
-    auto r = galois::block_range(block, block + size, tid, num);
+    auto r = katana::block_range(block, block + size, tid, num);
     size_t d = std::distance(r.first, r.second);
     random_access(gen, r.first, d, d);
   }
@@ -57,7 +57,7 @@ run_local(size_t seed, size_t mega) {
 
   // Assuming first touch policy
   run_local_helper r(block, seed, size);
-  galois::on_each(r);
+  katana::on_each(r);
   free(block);
 }
 
@@ -71,7 +71,7 @@ struct run_interleaved_helper {
   void operator()(unsigned int tid, unsigned int num) {
     std::mt19937 gen(seed + tid);
     std::uniform_int_distribution<int> randSeed;
-    auto r = galois::block_range(block, block + size, tid, num);
+    auto r = katana::block_range(block, block + size, tid, num);
     size_t d = std::distance(r.first, r.second);
     random_access(gen, block, size, d);
   }
@@ -80,20 +80,19 @@ struct run_interleaved_helper {
 void
 run_interleaved(size_t seed, size_t mega, bool full) {
   size_t size = mega * 1024 * 1024;
-  auto ptr = galois::substrate::largeMallocInterleaved(
+  auto ptr = katana::largeMallocInterleaved(
       size * sizeof(int),
-      full ? galois::substrate::GetThreadPool().getMaxThreads()
-           : galois::runtime::activeThreads);
+      full ? katana::GetThreadPool().getMaxThreads() : katana::activeThreads);
   int* block = (int*)ptr.get();
 
   run_interleaved_helper r(block, seed, size);
-  galois::on_each(r);
+  katana::on_each(r);
 }
 
 template <typename Fn>
 long
 time_run(Fn fn) {
-  galois::Timer t1;
+  katana::Timer t1;
   t1.start();
   fn();
   t1.stop();
@@ -117,8 +116,8 @@ struct F2 {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads() / 2;
+  katana::SharedMemSys Katana_runtime;
+  unsigned M = katana::GetThreadPool().getMaxThreads() / 2;
   size_t mega = 1;
   if (argc > 1)
     mega = atoi(argv[1]);
@@ -130,7 +129,7 @@ main(int argc, char** argv) {
   printf("Effective random-access bandwidth (MB/s)\n");
   printf("T    LOCAL    INTERLEAVE    FULL-INTERLEAVE\n");
   for (unsigned threads = 1; threads <= M; ++threads) {
-    galois::setActiveThreads(threads);
+    katana::setActiveThreads(threads);
 
     long local_millis = time_run(F1(seed, mega));
     long interleave_millis = time_run(F2(seed, mega, false));

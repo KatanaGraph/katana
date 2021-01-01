@@ -1,10 +1,10 @@
-#include "galois/Http.h"
+#include "katana/Http.h"
 
 #include <curl/curl.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/ErrorCode.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 
 namespace {
 
@@ -36,11 +36,11 @@ public:
     return *this;
   }
 
-  static galois::Result<CurlHandle> Make(
+  static katana::Result<CurlHandle> Make(
       const std::string& url, std::vector<char>* response) {
     CURL* curl = curl_easy_init();
     if (!curl) {
-      return galois::ErrorCode::HttpError;
+      return katana::ErrorCode::HttpError;
     }
     CurlHandle handle(curl);
     if (auto res = handle.SetOpt(CURLOPT_URL, url.c_str()); !res) {
@@ -71,15 +71,15 @@ public:
   }
 
   template <typename T>
-  galois::Result<void> SetOpt(CURLoption option, T param) {
+  katana::Result<void> SetOpt(CURLoption option, T param) {
     if (auto err = curl_easy_setopt(handle_, option, param); err != CURLE_OK) {
-      GALOIS_LOG_ERROR("CURL error: {}", curl_easy_strerror(err));
-      return galois::ErrorCode::InvalidArgument;
+      KATANA_LOG_ERROR("CURL error: {}", curl_easy_strerror(err));
+      return katana::ErrorCode::InvalidArgument;
     }
-    return galois::ResultSuccess();
+    return katana::ResultSuccess();
   }
 
-  galois::Result<void> Perform() {
+  katana::Result<void> Perform() {
     if (headers_ != nullptr) {
       if (auto res = SetOpt(CURLOPT_HTTPHEADER, headers_); !res) {
         return res.error();
@@ -87,30 +87,30 @@ public:
     }
     CURLcode request_res = curl_easy_perform(handle_);
     if (request_res != CURLE_OK) {
-      GALOIS_LOG_ERROR("CURL error: {}", curl_easy_strerror(request_res));
-      return galois::ErrorCode::HttpError;
+      KATANA_LOG_ERROR("CURL error: {}", curl_easy_strerror(request_res));
+      return katana::ErrorCode::HttpError;
     }
 
     int64_t response_code;
     curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE, &response_code);
     switch (response_code) {
     case 200:
-      return galois::ResultSuccess();
+      return katana::ResultSuccess();
     case 404:
-      return galois::ErrorCode::NotFound;
+      return katana::ErrorCode::NotFound;
     case 400:
-      return galois::ErrorCode::HttpError;
+      return katana::ErrorCode::HttpError;
     case 409:
-      return galois::ErrorCode::AlreadyExists;
+      return katana::ErrorCode::AlreadyExists;
     default:
-      GALOIS_LOG_ERROR(
+      KATANA_LOG_ERROR(
           "HTTP request returned unhandled code: {}", response_code);
-      return galois::ErrorCode::HttpError;
+      return katana::ErrorCode::HttpError;
     }
   }
 };
 
-galois::Result<void>
+katana::Result<void>
 HttpUploadCommon(CurlHandle&& holder, const std::string& data) {
   if (auto res = holder.SetOpt(CURLOPT_POSTFIELDS, data.c_str()); !res) {
     return res.error();
@@ -125,8 +125,8 @@ HttpUploadCommon(CurlHandle&& holder, const std::string& data) {
 
 }  // namespace
 
-galois::Result<void>
-galois::HttpGet(const std::string& url, std::vector<char>* response) {
+katana::Result<void>
+katana::HttpGet(const std::string& url, std::vector<char>* response) {
   auto curl_res = CurlHandle::Make(url, response);
   if (!curl_res) {
     return curl_res.error();
@@ -137,31 +137,31 @@ galois::HttpGet(const std::string& url, std::vector<char>* response) {
     return res.error();
   }
   if (auto res = curl.Perform(); !res) {
-    GALOIS_LOG_DEBUG("GET failed for url: {}", url);
+    KATANA_LOG_DEBUG("GET failed for url: {}", url);
     return res;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::HttpPost(
+katana::Result<void>
+katana::HttpPost(
     const std::string& url, const std::string& data,
     std::vector<char>* response) {
   auto handle_res = CurlHandle::Make(url, response);
   if (!handle_res) {
-    GALOIS_LOG_ERROR("POST failed for url: {}", url);
+    KATANA_LOG_ERROR("POST failed for url: {}", url);
     return handle_res.error();
   }
 
   if (auto res = HttpUploadCommon(std::move(handle_res.value()), data); !res) {
-    GALOIS_LOG_DEBUG("POST failed for url: {}", url);
+    KATANA_LOG_DEBUG("POST failed for url: {}", url);
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::HttpDelete(const std::string& url, std::vector<char>* response) {
+katana::Result<void>
+katana::HttpDelete(const std::string& url, std::vector<char>* response) {
   auto curl_res = CurlHandle::Make(url, response);
   if (!curl_res) {
     return curl_res.error();
@@ -172,14 +172,14 @@ galois::HttpDelete(const std::string& url, std::vector<char>* response) {
     return res.error();
   }
   if (auto res = curl.Perform(); !res) {
-    GALOIS_LOG_DEBUG("DELETE failed for url: {}", url);
+    KATANA_LOG_DEBUG("DELETE failed for url: {}", url);
     return res;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::HttpPut(
+katana::Result<void>
+katana::HttpPut(
     const std::string& url, const std::string& data,
     std::vector<char>* response) {
   auto curl_res = CurlHandle::Make(url, response);
@@ -193,19 +193,19 @@ galois::HttpPut(
   }
 
   if (auto res = HttpUploadCommon(std::move(curl), data); !res) {
-    GALOIS_LOG_DEBUG("PUT failed for url: {}", url);
+    KATANA_LOG_DEBUG("PUT failed for url: {}", url);
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::HttpInit() {
+katana::Result<void>
+katana::HttpInit() {
   auto init_ret = curl_global_init(CURL_GLOBAL_ALL);
   if (init_ret != CURLE_OK) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "libcurl initialization failed: {}", curl_easy_strerror(init_ret));
     return ErrorCode::HttpError;
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }

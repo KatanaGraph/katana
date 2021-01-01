@@ -1,12 +1,12 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_SCHEMA_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_SCHEMA_H_
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_SCHEMA_H_
+#define KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_SCHEMA_H_
 
 #include <libxml/xmlreader.h>
 #include <libxml/xmlwriter.h>
 
-#include "galois/BuildGraph.h"
+#include "katana/BuildGraph.h"
 
-namespace galois {
+namespace katana {
 
 xmlTextWriterPtr CreateGraphmlFile(const std::string& outfile);
 void WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule);
@@ -48,6 +48,6 @@ std::string TypeName(ImportDataType type);
 ImportDataType ParseType(const std::string& in);
 ImportDataType ParseType(std::shared_ptr<arrow::DataType> in);
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

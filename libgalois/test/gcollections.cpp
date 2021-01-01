@@ -26,13 +26,13 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/Mem.h"
-#include "galois/Timer.h"
-#include "galois/gIO.h"
-#include "galois/gdeque.h"
-#include "galois/gslist.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/Mem.h"
+#include "katana/Timer.h"
+#include "katana/gIO.h"
+#include "katana/gdeque.h"
+#include "katana/gslist.h"
 
 template <typename C>
 auto constexpr needs_heap(int)
@@ -76,7 +76,7 @@ struct Heap {};
 
 template <typename C>
 struct Heap<C, true> {
-  galois::runtime::FixedSizeHeap heap;
+  katana::FixedSizeHeap heap;
   Heap() : heap(sizeof(typename C::block_type)) {}
 };
 
@@ -95,14 +95,14 @@ testBasic(std::string prefix, C&& collection, int N) {
     ;
   }
 
-  GALOIS_ASSERT(N == std::distance(c.begin(), c.end()), prefix);
+  KATANA_ASSERT(N == std::distance(c.begin(), c.end()), prefix);
 
   i = N - 1;
   for (; !c.empty(); --i, removeFromCollection(c)) {
     ;
   }
 
-  GALOIS_ASSERT(0 == std::distance(c.begin(), c.end()), prefix);
+  KATANA_ASSERT(0 == std::distance(c.begin(), c.end()), prefix);
 }
 
 template <typename C>
@@ -117,26 +117,26 @@ testNormal(std::string prefix, C&& collection, int N) {
 
   int i = 0;
   for (auto it = c.begin(); it != c.end(); ++it, ++i) {
-    GALOIS_ASSERT(*it == i, prefix);
+    KATANA_ASSERT(*it == i, prefix);
   }
 
   i = N - 1;
   for (auto it = c.rbegin(); it != c.rend(); ++it, --i) {
-    GALOIS_ASSERT(*it == i, prefix);
+    KATANA_ASSERT(*it == i, prefix);
   }
 
-  GALOIS_ASSERT(static_cast<int>(c.size()) == N, prefix);
+  KATANA_ASSERT(static_cast<int>(c.size()) == N, prefix);
 
-  GALOIS_ASSERT(
+  KATANA_ASSERT(
       static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
 
   i = N - 1;
   for (; !c.empty(); --i, removeFromCollection(c)) {
-    GALOIS_ASSERT(c.back() == i, prefix);
+    KATANA_ASSERT(c.back() == i, prefix);
   }
 
-  GALOIS_ASSERT(static_cast<int>(c.size()) == 0, prefix);
-  GALOIS_ASSERT(
+  KATANA_ASSERT(static_cast<int>(c.size()) == 0, prefix);
+  KATANA_ASSERT(
       static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
 }
 
@@ -156,14 +156,14 @@ testSort(std::string prefix, C&& collection, int N) {
 
   int last = c.front();
   for (auto it = c.begin() + 1; it != c.end(); ++it) {
-    GALOIS_ASSERT(last <= *it, prefix);
+    KATANA_ASSERT(last <= *it, prefix);
     last = *it;
   }
 
   last = c.back();
   removeFromCollection(c);
   for (; !c.empty(); removeFromCollection(c)) {
-    GALOIS_ASSERT(last >= c.back(), prefix);
+    KATANA_ASSERT(last >= c.back(), prefix);
     last = c.back();
   }
 }
@@ -173,7 +173,7 @@ void
 timeAccess(std::string prefix, C&& c, Iterator first, Iterator last) {
   Heap<C, needs_heap<C>(0)> heap;
 
-  galois::Timer t1, t2;
+  katana::Timer t1, t2;
   t1.start();
   while (first != last) {
     addToCollection(c, heap, *first++);
@@ -204,10 +204,10 @@ struct element {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
-  testBasic("galois::gslist", galois::gslist<int>(), 32 * 32);
-  testNormal("galois::gdeque", galois::gdeque<int>(), 32 * 32);
-  // testSort("galois::gdeque", galois::gdeque<int>(), 32 * 32);
+  katana::SharedMemSys Katana_runtime;
+  testBasic("katana::gslist", katana::gslist<int>(), 32 * 32);
+  testNormal("katana::gdeque", katana::gdeque<int>(), 32 * 32);
+  // testSort("katana::gdeque", katana::gdeque<int>(), 32 * 32);
 
   int size = 100;
   if (argc > 1)
@@ -216,11 +216,11 @@ main(int argc, char** argv) {
     size = 1000000;
   timeAccesses("std::deque", std::deque<element>(), size);
   timeAccesses("std::vector", std::vector<element>(), size);
-  timeAccesses("galois::gdeque", galois::gdeque<element>(), size);
-  timeAccesses("galois::gslist", galois::gslist<element>(), size);
+  timeAccesses("katana::gdeque", katana::gdeque<element>(), size);
+  timeAccesses("katana::gslist", katana::gslist<element>(), size);
   timeAccesses(
-      "galois::concurrent_gslist", galois::concurrent_gslist<element>(), size);
-  timeAccesses("galois::InsertBag", galois::InsertBag<element>(), size);
+      "katana::concurrent_gslist", katana::concurrent_gslist<element>(), size);
+  timeAccesses("katana::InsertBag", katana::InsertBag<element>(), size);
 
   return 0;
 }

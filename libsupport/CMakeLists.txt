@@ -1,13 +1,13 @@
-if(GALOIS_FORCE_NON_STATIC)
-  add_library(galois_support)
+if(KATANA_FORCE_NON_STATIC)
+  add_library(katana_support)
 else()
-  add_library(galois_support STATIC)
+  add_library(katana_support STATIC)
 endif()
-add_library(Galois::support ALIAS galois_support)
-set_target_properties(galois_support PROPERTIES EXPORT_NAME support)
-add_dependencies(lib galois_support)
+add_library(Katana::support ALIAS katana_support)
+set_target_properties(katana_support PROPERTIES EXPORT_NAME support)
+add_dependencies(lib katana_support)
 
-configure_file(include/galois/config.h.in include/galois/config.h)
+configure_file(include/katana/config.h.in include/katana/config.h)
 
 set(sources
         src/Backtrace.cpp
@@ -21,22 +21,22 @@ set(sources
         src/Uri.cpp
 )
 
-target_sources(galois_support PRIVATE ${sources})
+target_sources(katana_support PRIVATE ${sources})
 
-target_include_directories(galois_support PUBLIC
+target_include_directories(katana_support PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
 if(BUILD_SHARED_LIBS)
-  target_compile_definitions(galois_support PRIVATE GALOIS_SHARED_LIB_BUILDING)
+  target_compile_definitions(katana_support PRIVATE KATANA_SHARED_LIB_BUILDING)
 else()
-  target_compile_definitions(galois_support PRIVATE GALOIS_STATIC_LIB)
+  target_compile_definitions(katana_support PRIVATE KATANA_STATIC_LIB)
 endif()
 
 find_package(nlohmann_json 3.7.3 REQUIRED)
-target_link_libraries(galois_support PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(katana_support PUBLIC nlohmann_json::nlohmann_json)
 
 find_package(libcurl QUIET)
 if(libcurl_FOUND)
@@ -50,24 +50,24 @@ else()
   find_package(CURL REQUIRED)
   set(curl_lib CURL::libcurl)
 endif()
-target_link_libraries(galois_support PUBLIC ${curl_lib})
+target_link_libraries(katana_support PUBLIC ${curl_lib})
 
 # Backtrace support
 find_package(Backward REQUIRED)
-target_link_libraries(galois_support PUBLIC Backward::Backward)
+target_link_libraries(katana_support PUBLIC Backward::Backward)
 
 find_package(fmt REQUIRED)
 if(fmt_VERSION VERSION_LESS 4)
   message(FATAL_ERROR "fmt must be version 4 or higher. Found ${fmt_VERSION}.")
 endif()
-target_link_libraries(galois_support PUBLIC fmt::fmt)
+target_link_libraries(katana_support PUBLIC fmt::fmt)
 
 if(TARGET Boost::Boost)
-  target_link_libraries(galois_support PUBLIC Boost::Boost)
+  target_link_libraries(katana_support PUBLIC Boost::Boost)
 else()
   # Standard CMake Boost module, shorten the link time if we can
-  target_link_libraries(galois_support PUBLIC Boost::boost)
-  target_link_libraries(galois_support PUBLIC Boost::filesystem)
+  target_link_libraries(katana_support PUBLIC Boost::boost)
+  target_link_libraries(katana_support PUBLIC Boost::filesystem)
 endif()
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
@@ -89,8 +89,8 @@ install(
 )
 
 install(
-  TARGETS galois_support
-  EXPORT GaloisTargets
+  TARGETS katana_support
+  EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT shlib

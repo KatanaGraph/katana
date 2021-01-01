@@ -21,16 +21,16 @@
 // 0. reading in a graph from a file
 // 1. serial iteration over nodes
 // 2. access to node and edge data
-// 3. usage of galois::StatTimer
+// 3. usage of katana::StatTimer
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " filename" << std::endl;
@@ -39,19 +39,19 @@ main(int argc, char* argv[]) {
 
   //! [Define LC_CSR_Graph]
   // An LC_CSR_Graph whose node data type is int and edge data type is int
-  using Graph = galois::graphs::LC_CSR_Graph<int, int>;
+  using Graph = katana::LC_CSR_Graph<int, int>;
   //! [Define LC_CSR_Graph]
 
   //! [Read a graph]
   Graph g;
-  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
+  katana::readGraph(g, argv[1]);  // argv[1] is the file name for graph
   //! [Read a graph]
 
   //! [use of a StatTimer]
   //******************************************************
   // serial traversal over a graph
   // sum over nodes and edges in C++11 syntax
-  galois::StatTimer T("sum_serial");
+  katana::StatTimer T("sum_serial");
   T.start();
   //! [Graph traversal]
   // iterate over nodes

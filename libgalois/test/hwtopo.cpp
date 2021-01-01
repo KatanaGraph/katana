@@ -17,15 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/HWTopo.h"
+#include "katana/HWTopo.h"
 
 #include <iostream>
 
-#include "galois/gIO.h"
+#include "katana/gIO.h"
 
 void
 printMyTopo() {
-  auto t = galois::substrate::getHWTopo();
+  auto t = katana::getHWTopo();
   std::cout << "T,C,P,N: " << t.machineTopoInfo.maxThreads << " "
             << t.machineTopoInfo.maxCores << " " << t.machineTopoInfo.maxSockets
             << " " << t.machineTopoInfo.maxNumaNodes << "\n";
@@ -65,7 +65,7 @@ int
 main() {
   printMyTopo();
 
-  using namespace galois::substrate;
+  using namespace katana;
 
   test("parse with spaces", parseCPUList("     0   \n"), std::vector<int>{0});
   test("parse empty", parseCPUList("        \n"), std::vector<int>{});

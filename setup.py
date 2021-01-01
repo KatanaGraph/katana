@@ -31,12 +31,12 @@ def package_setup():
     with open("config/version.txt") as f:
         version = f.read().strip()
 
-    pxd_files = find_files("python/galois", ".pxd")
+    pxd_files = find_files("python/katana", ".pxd")
 
     # "pip wheel --build-option=..." disables use of wheels for dependencies.
     # In order to support passing build arguments directly, accept arguments
     # via the environment.
-    cmake_args = os.environ.get("GALOIS_CMAKE_ARGS", "").split()
+    cmake_args = os.environ.get("KATANA_CMAKE_ARGS", "").split()
     cmake_args.append("-DBUILD_SHARED_LIBS=ON")
     cmake_args.append("-DBUILD_TESTING=OFF")
 
@@ -45,9 +45,9 @@ def package_setup():
 
     setup(
         version=version,
-        name="galois",
+        name="katana",
         packages=setuptools.find_packages("python"),
-        package_data={"galois": pxd_files},
+        package_data={"katana": pxd_files},
         package_dir={"": "python"},
         tests_require=["pytest"],
         setup_requires=setup_requires,

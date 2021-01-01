@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEPOOL_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_PAGEPOOL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PAGEPOOL_H_
+#define KATANA_LIBGALOIS_KATANA_PAGEPOOL_H_
 
 #include <cstddef>
 #include <deque>
@@ -27,26 +27,26 @@
 #include <unordered_map>
 #include <vector>
 
-#include "galois/config.h"
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/PageAlloc.h"
-#include "galois/substrate/PtrLock.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/PageAlloc.h"
+#include "katana/PtrLock.h"
+#include "katana/SimpleLock.h"
+#include "katana/ThreadPool.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 //! Low level page pool (individual pages, use largeMalloc for large blocks)
 
-GALOIS_EXPORT void* pagePoolAlloc();
-GALOIS_EXPORT void pagePoolFree(void*);
-GALOIS_EXPORT void pagePoolPreAlloc(unsigned);
+KATANA_EXPORT void* pagePoolAlloc();
+KATANA_EXPORT void pagePoolFree(void*);
+KATANA_EXPORT void pagePoolPreAlloc(unsigned);
 
 //! Returns total large pages allocated by Galois memory management subsystem
-GALOIS_EXPORT int numPagePoolAllocTotal();
+KATANA_EXPORT int numPagePoolAllocTotal();
 //! Returns total large pages allocated for thread by Galois memory management
 //! subsystem
-GALOIS_EXPORT int numPagePoolAllocForThread(unsigned tid);
+KATANA_EXPORT int numPagePoolAllocForThread(unsigned tid);
 
 namespace internal {
 
@@ -54,8 +54,8 @@ struct FreeNode {
   FreeNode* next;
 };
 
-typedef galois::substrate::PtrLock<FreeNode> HeadPtr;
-typedef galois::substrate::CacheLineStorage<HeadPtr> HeadPtrStorage;
+typedef katana::PtrLock<FreeNode> HeadPtr;
+typedef katana::CacheLineStorage<HeadPtr> HeadPtrStorage;
 
 // Tracks pages allocated
 template <typename _UNUSED = void>
@@ -63,21 +63,21 @@ class PageAllocState {
   std::deque<std::atomic<int>> counts;
   std::vector<HeadPtrStorage> pool;
   std::unordered_map<void*, int> ownerMap;
-  galois::substrate::SimpleLock mapLock;
+  katana::SimpleLock mapLock;
 
   void* allocFromOS() {
-    void* ptr = galois::substrate::allocPages(1, true);
+    void* ptr = katana::allocPages(1, true);
     assert(ptr);
-    auto tid = galois::substrate::ThreadPool::getTID();
+    auto tid = katana::ThreadPool::getTID();
     counts[tid] += 1;
-    std::lock_guard<galois::substrate::SimpleLock> lg(mapLock);
+    std::lock_guard<katana::SimpleLock> lg(mapLock);
     ownerMap[ptr] = tid;
     return ptr;
   }
 
 public:
   PageAllocState() {
-    auto num = galois::substrate::GetThreadPool().getMaxThreads();
+    auto num = katana::GetThreadPool().getMaxThreads();
     counts.resize(num);
     pool.resize(num);
   }
@@ -89,7 +89,7 @@ public:
   }
 
   void* pageAlloc() {
-    auto tid = galois::substrate::ThreadPool::getTID();
+    auto tid = katana::ThreadPool::getTID();
     HeadPtr& hp = pool[tid].data;
     if (hp.getValue()) {
       hp.lock();
@@ -119,11 +119,11 @@ public:
   void pagePreAlloc() { pageFree(allocFromOS()); }
 };
 
-//! Initialize PagePool, used by runtime::init();
-GALOIS_EXPORT void setPagePoolState(PageAllocState<>* pa);
+//! Initialize PagePool, used by init();
+KATANA_EXPORT void setPagePoolState(PageAllocState<>* pa);
 
 }  // end namespace internal
 
-}  // end namespace galois::substrate
+}  // end namespace katana
 
 #endif

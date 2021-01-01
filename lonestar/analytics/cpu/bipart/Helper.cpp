@@ -8,8 +8,8 @@
  */
 void
 InitNodes(HyperGraph* graph, const uint32_t num_hedges) {
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](GNode n) {
         MetisNode& node = graph->getData(n);
         NetnumTy max_netnum = std::numeric_limits<NetnumTy>::max();
@@ -22,7 +22,7 @@ InitNodes(HyperGraph* graph, const uint32_t num_hedges) {
         node.graph_index = 0;
         node.InitRefine();  ///< partition <- 0, bound <- true.
       },
-      galois::loopname("Init-Nodes"));
+      katana::loopname("Init-Nodes"));
 }
 
 /**
@@ -44,23 +44,23 @@ ConstructGraph(
 
   ss >> num_hedges >> num_hnodes;
 
-  galois::gPrint(" Number of hedges: ", num_hedges, "\n");
-  galois::gPrint(" Number of nodes: ", num_hnodes, "\n");
+  katana::gPrint(" Number of hedges: ", num_hedges, "\n");
+  katana::gPrint(" Number of nodes: ", num_hnodes, "\n");
 
-  galois::StatTimer timer_graph_construt("MetisGraphConstruct");
+  katana::StatTimer timer_graph_construt("MetisGraphConstruct");
   timer_graph_construt.start();
   // Inspection phase: count the number of hyper edges.
   uint32_t num_read_hedges{0};
   while (std::getline(f, line)) {
     if (num_read_hedges >= num_hedges) {
-      GALOIS_LOG_FATAL("ERROR: too many lines in input file");
+      KATANA_LOG_FATAL("ERROR: too many lines in input file");
     }
     std::stringstream ss(line);
     uint32_t node_id;
     uint32_t num_nodes_in_hedge{0};
     while (ss >> node_id) {
       if ((node_id < 1) || (node_id > num_hnodes)) {
-        GALOIS_LOG_FATAL("ERROR: node value {} out of bounds", node_id);
+        KATANA_LOG_FATAL("ERROR: node value {} out of bounds", node_id);
       }
       num_nodes_in_hedge++;
     }
@@ -84,7 +84,7 @@ ConstructGraph(
   num_read_hedges = 0;
   while (std::getline(f, line)) {
     if (num_read_hedges > num_hedges) {
-      GALOIS_LOG_FATAL("ERROR: too many lines in input file");
+      KATANA_LOG_FATAL("ERROR: too many lines in input file");
     }
     std::stringstream ss(line);
     GNode node_id;
@@ -92,7 +92,7 @@ ConstructGraph(
     uint32_t num_nodes_in_hedge{0};
     while (ss >> node_id) {
       if (node_id < 1 || node_id > num_hnodes) {
-        GALOIS_LOG_FATAL("ERROR: node id {} out of bounds", node_id);
+        KATANA_LOG_FATAL("ERROR: node id {} out of bounds", node_id);
       }
       // Node is relocated to the next slots of the hyper edge.
       GNode new_node_id = num_hedges + (node_id - 1);
@@ -125,7 +125,7 @@ ConstructGraph(
   graph->SetHedges(num_hedges);
   graph->SetHnodes(num_hnodes);
 
-  galois::ParallelSTL::partial_sum(
+  katana::ParallelSTL::partial_sum(
       prefix_edges.begin(), prefix_edges.end(), prefix_edges.begin());
 
   // # nodes = (# of hyper edges + # of nodes), which means each hyper edge
@@ -136,7 +136,7 @@ ConstructGraph(
   InitNodes(graph, num_hedges);
 
   timer_graph_construt.stop();
-  galois::gPrint(
+  katana::gPrint(
       " Time to construct Metis Graph ", timer_graph_construt.get(), "\n");
 }
 
@@ -212,27 +212,27 @@ InitGain(HyperGraph* g) {
   uint32_t num_hedges = g->GetHedges();
   uint32_t size_graph = static_cast<uint32_t>(g->size());
 
-  galois::do_all(
-      galois::iterate(num_hedges, size_graph),
+  katana::do_all(
+      katana::iterate(num_hedges, size_graph),
       [&](uint32_t n) {
         MetisNode& node = g->getData(n);
         node.positive_gain = 0;
         node.negative_gain = 0;
       },
-      galois::loopname("Init-Gains"));
+      katana::loopname("Init-Gains"));
 
   typedef std::vector<GainTy> LocalGainVector;
-  galois::substrate::PerThreadStorage<LocalGainVector> thread_local_gain_vector;
+  katana::PerThreadStorage<LocalGainVector> thread_local_gain_vector;
 
-  uint32_t num_threads = galois::getActiveThreads();
+  uint32_t num_threads = katana::getActiveThreads();
   uint32_t subvec_size = size_graph - num_hedges;
 
-  galois::do_all(galois::iterate(uint32_t{0}, num_threads), [&](uint32_t i) {
+  katana::do_all(katana::iterate(uint32_t{0}, num_threads), [&](uint32_t i) {
     thread_local_gain_vector.getRemote(i)->resize(subvec_size, 0);
   });
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_hedges),
       [&](uint32_t n) {
         uint32_t num_p0_nodes{0}, num_p1_nodes{0};
         for (auto& fedge : g->edges(n)) {
@@ -268,10 +268,10 @@ InitGain(HyperGraph* g) {
           }
         }
       },
-      galois::steal(), galois::loopname("Calculate-Gains"));
+      katana::steal(), katana::loopname("Calculate-Gains"));
 
-  galois::do_all(
-      galois::iterate(num_hedges, size_graph),
+  katana::do_all(
+      katana::iterate(num_hedges, size_graph),
       [&](GNode n) {
         GainTy gain{0};
         uint32_t index_n = n - num_hedges;
@@ -281,7 +281,7 @@ InitGain(HyperGraph* g) {
 
         g->getData(n).positive_gain = gain;
       },
-      galois::loopname("Reduce-Gains"));
+      katana::loopname("Reduce-Gains"));
 }
 
 void
@@ -292,8 +292,8 @@ InitGain(
   uint32_t total_nodes = combined_nodelist.size();
   uint32_t total_hedges = combined_edgelist.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_nodelist[n];
         GNode node_id = node_index_pair.first;
@@ -303,23 +303,21 @@ InitGain(
         node_data.negative_gain = 0;
         node_data.list_index = n;
       },
-      galois::loopname("Init-Gains"));
+      katana::loopname("Init-Gains"));
 
   typedef std::vector<GainTy> LocalGainVector;
-  galois::substrate::PerThreadStorage<LocalGainVector>
-      thread_local_positive_gain_vector;
-  galois::substrate::PerThreadStorage<LocalGainVector>
-      thread_local_negative_gain_vector;
+  katana::PerThreadStorage<LocalGainVector> thread_local_positive_gain_vector;
+  katana::PerThreadStorage<LocalGainVector> thread_local_negative_gain_vector;
 
-  uint32_t num_threads = galois::getActiveThreads();
+  uint32_t num_threads = katana::getActiveThreads();
 
-  galois::do_all(galois::iterate(uint32_t{0}, num_threads), [&](uint32_t i) {
+  katana::do_all(katana::iterate(uint32_t{0}, num_threads), [&](uint32_t i) {
     thread_local_positive_gain_vector.getRemote(i)->resize(total_nodes, 0);
     thread_local_negative_gain_vector.getRemote(i)->resize(total_nodes, 0);
   });
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t n) {
         auto hedge_index_pair = combined_edgelist[n];
         GNode node_id = hedge_index_pair.first;
@@ -365,10 +363,10 @@ InitGain(
           }
         }
       },
-      galois::steal(), galois::loopname("Calculate-Gains"));
+      katana::steal(), katana::loopname("Calculate-Gains"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         GainTy positive_gain{0};
         GainTy negative_gain{0};
@@ -387,5 +385,5 @@ InitGain(
         node_data.positive_gain = positive_gain;
         node_data.negative_gain = negative_gain;
       },
-      galois::loopname("Reduce-Gains"));
+      katana::loopname("Reduce-Gains"));
 }

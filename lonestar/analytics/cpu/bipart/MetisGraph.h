@@ -1,13 +1,13 @@
 #ifndef BIPART_METISGRAPH_H_
 #define BIPART_METISGRAPH_H_
 
-#include "galois/graphs/HyperGraph.h"
+#include "katana/HyperGraph.h"
 
 struct MetisNode;
 
-using HyperGraph = galois::graphs::HyperGraph<MetisNode>;
+using HyperGraph = katana::HyperGraph<MetisNode>;
 using GNode = HyperGraph::GraphNode;
-using GNodeBag = galois::InsertBag<GNode>;
+using GNodeBag = katana::InsertBag<GNode>;
 
 // Nodes in the metis graph.
 struct MetisNode {
@@ -28,11 +28,11 @@ struct MetisNode {
   WeightTy weight;
   GainTy positive_gain;
   GainTy negative_gain;
-  galois::CopyableAtomic<uint32_t> degree;
+  katana::CopyableAtomic<uint32_t> degree;
   // Net-val and -rand have the same type.
-  galois::CopyableAtomic<NetvalTy> netrand;
-  galois::CopyableAtomic<NetvalTy> netval;
-  galois::CopyableAtomic<NetnumTy> netnum;
+  katana::CopyableAtomic<NetvalTy> netrand;
+  katana::CopyableAtomic<NetvalTy> netval;
+  katana::CopyableAtomic<NetnumTy> netnum;
 
   inline GainTy GetGain() const {
     return (positive_gain - (negative_gain + counter));

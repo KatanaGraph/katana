@@ -17,13 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORORDERED_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORORDERED_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORORDERED_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORORDERED_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 // TODO(ddn): Pull in and integrate in executors from exp
 
@@ -34,7 +33,7 @@ for_each_ordered_impl(
     [[maybe_unused]] const Cmp& cmp, [[maybe_unused]] const NhFunc& nhFunc,
     [[maybe_unused]] const OpFunc& opFunc,
     [[maybe_unused]] const char* loopname) {
-  GALOIS_DIE("not yet implemented");
+  KATANA_DIE("not yet implemented");
 }
 
 template <
@@ -47,10 +46,9 @@ for_each_ordered_impl(
     [[maybe_unused]] const OpFunc& opFunc,
     [[maybe_unused]] const StableTest& stabilityTest,
     [[maybe_unused]] const char* loopname) {
-  GALOIS_DIE("not yet implemented");
+  KATANA_DIE("not yet implemented");
 }
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_STRINGS_H_
-#define GALOIS_LIBSUPPORT_GALOIS_STRINGS_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_STRINGS_H_
+#define KATANA_LIBSUPPORT_KATANA_STRINGS_H_
 
 #include <initializer_list>
 #include <string>
@@ -8,7 +8,7 @@
 
 #include <fmt/format.h>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 /// @file Strings.h
 ///
@@ -17,21 +17,21 @@
 ///
 /// C++20 will have string.starts_with and string.ends_with.
 
-namespace galois {
+namespace katana {
 
 /// TrimPrefix returns a string without the given prefix. If the string does
 /// not have the prefix, return the string unchanged.
-GALOIS_EXPORT std::string TrimPrefix(
+KATANA_EXPORT std::string TrimPrefix(
     const std::string& s, const std::string& prefix);
 
-GALOIS_EXPORT bool HasPrefix(const std::string& s, const std::string& prefix);
+KATANA_EXPORT bool HasPrefix(const std::string& s, const std::string& prefix);
 
 /// TrimSuffix returns a string without the given suffix. If the string does
 /// not have the suffix, return the string unchanged.
-GALOIS_EXPORT std::string TrimSuffix(
+KATANA_EXPORT std::string TrimSuffix(
     const std::string& s, const std::string& suffix);
 
-GALOIS_EXPORT bool HasSuffix(const std::string& s, const std::string& suffix);
+KATANA_EXPORT bool HasSuffix(const std::string& s, const std::string& suffix);
 
 /// Join returns a string that is the concatenation of every object in
 /// \param items all separated by an instance of \param sep
@@ -58,6 +58,6 @@ Join(std::string_view sep, const std::initializer_list<T> items) {
   return Join(sep, std::vector<T>(items));
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

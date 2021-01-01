@@ -22,13 +22,13 @@
 #include <utility>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/ParallelSTL.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/UnionFind.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/ParallelSTL.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
+#include "katana/UnionFind.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -48,8 +48,8 @@ static cll::opt<Algo> algo(
         clEnumVal(blockedasync, "Blocked Asynchronous")),
     cll::init(blockedasync));
 
-struct Node : public galois::UnionFindNode<Node> {
-  Node() : galois::UnionFindNode<Node>(const_cast<Node*>(this)) {}
+struct Node : public katana::UnionFindNode<Node> {
+  Node() : katana::UnionFindNode<Node>(const_cast<Node*>(this)) {}
   Node* component() { return find(); }
   void setComponent(Node* n) { m_component = n; }
 };
@@ -60,8 +60,7 @@ operator<<(std::ostream& os, const Node& n) {
   return os;
 }
 
-typedef galois::graphs::LC_Linear_Graph<Node, void>::with_numa_alloc<true>::type
-    Graph;
+typedef katana::LC_Linear_Graph<Node, void>::with_numa_alloc<true>::type Graph;
 typedef Graph::GraphNode GNode;
 typedef std::pair<GNode, GNode> Edge;
 
@@ -72,18 +71,18 @@ struct BlockedWorkItem {
 
 template <bool MakeContinuation, int Limit>
 auto
-specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
+specialized_process(Graph& graph, katana::InsertBag<Edge>& mst)
     -> decltype(auto) {
   return
       [&](const GNode& src, const Graph::edge_iterator& start, auto& pusher) {
-        Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+        Node& sdata = graph.getData(src, katana::MethodFlag::UNPROTECTED);
         int count = 1;
         for (Graph::edge_iterator
                  ii = start,
-                 ei = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+                 ei = graph.edge_end(src, katana::MethodFlag::UNPROTECTED);
              ii != ei; ++ii, ++count) {
           GNode dst = graph.getEdgeDst(ii);
-          Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+          Node& ddata = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
           if (sdata.merge(&ddata)) {
             mst.push(std::make_pair(src, dst));
             if (Limit == 0 || count != Limit) {
@@ -102,27 +101,27 @@ specialized_process(Graph& graph, galois::InsertBag<Edge>& mst)
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, nullptr);
 
   Graph graph;
 
-  galois::InsertBag<Edge> mst;
+  katana::InsertBag<Edge> mst;
 
-  galois::StatTimer Tinitial("InitializeTime");
+  katana::StatTimer Tinitial("InitializeTime");
   Tinitial.start();
-  galois::graphs::readGraph(graph, inputFilename);
+  katana::readGraph(graph, inputFilename);
   std::cout << "Num nodes: " << graph.size() << "\n";
   Tinitial.stop();
 
   //! Normalize component by doing find with path compression
   auto Normalize = [&](const GNode& src) {
-    Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+    Node& sdata = graph.getData(src, katana::MethodFlag::UNPROTECTED);
     sdata.setComponent(sdata.findAndCompress());
   };
 
-  galois::reportPageAlloc("MeminfoPre");
-  galois::StatTimer T;
+  katana::reportPageAlloc("MeminfoPre");
+  katana::StatTimer T;
   T.start();
   switch (algo) {
   /**
@@ -136,12 +135,12 @@ main(int argc, char** argv) {
     Graph::iterator ii = graph.begin(), ei = graph.end();
     if (ii != ei) {
       Node* root = &graph.getData(*ii);
-      galois::for_each(
-          galois::iterate({*ii}),
+      katana::for_each(
+          katana::iterate({*ii}),
           [&](GNode src, auto& ctx) {
-            for (auto ii : graph.edges(src, galois::MethodFlag::WRITE)) {
+            for (auto ii : graph.edges(src, katana::MethodFlag::WRITE)) {
               GNode dst = graph.getEdgeDst(ii);
-              Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+              Node& ddata = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
               if (ddata.component() == root)
                 continue;
               ddata.setComponent(root);
@@ -149,8 +148,8 @@ main(int argc, char** argv) {
               ctx.push(dst);
             }
           },
-          galois::loopname("DemoAlgo"),
-          galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+          katana::loopname("DemoAlgo"),
+          katana::wl<katana::PerSocketChunkFIFO<32>>());
     }
   } break;
 
@@ -159,21 +158,21 @@ main(int argc, char** argv) {
      * Like asynchronous connected components algorithm.
      */
     {
-      galois::do_all(
-          galois::iterate(graph),
+      katana::do_all(
+          katana::iterate(graph),
           [&](const GNode& src) {
-            Node& sdata = graph.getData(src, galois::MethodFlag::UNPROTECTED);
-            for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
+            Node& sdata = graph.getData(src, katana::MethodFlag::UNPROTECTED);
+            for (auto ii : graph.edges(src, katana::MethodFlag::UNPROTECTED)) {
               GNode dst = graph.getEdgeDst(ii);
-              Node& ddata = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+              Node& ddata = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
               if (sdata.merge(&ddata)) {
                 mst.push(std::make_pair(src, dst));
               }
             }
           },
-          galois::loopname("Merge"), galois::steal());
-      galois::do_all(
-          galois::iterate(graph), Normalize, galois::loopname("Normalize"));
+          katana::loopname("Merge"), katana::steal());
+      katana::do_all(
+          katana::iterate(graph), Normalize, katana::loopname("Normalize"));
     }
     break;
 
@@ -182,29 +181,29 @@ main(int argc, char** argv) {
      * Improve performance of async algorithm by following machine topology.
      */
     {
-      galois::InsertBag<BlockedWorkItem> items;
-      galois::do_all(
-          galois::iterate(graph),
+      katana::InsertBag<BlockedWorkItem> items;
+      katana::do_all(
+          katana::iterate(graph),
           [&](const GNode& src) {
             Graph::edge_iterator start =
-                graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-            if (galois::substrate::ThreadPool::getSocket() == 0) {
+                graph.edge_begin(src, katana::MethodFlag::UNPROTECTED);
+            if (katana::ThreadPool::getSocket() == 0) {
               specialized_process<true, 0>(graph, mst)(src, start, items);
             } else {
               specialized_process<true, 1>(graph, mst)(src, start, items);
             }
           },
-          galois::loopname("Initialize"));
-      galois::for_each(
-          galois::iterate(items),
+          katana::loopname("Initialize"));
+      katana::for_each(
+          katana::iterate(items),
           [&](const BlockedWorkItem& i, auto& ctx) {
             specialized_process<true, 0>(graph, mst)(i.src, i.start, ctx);
           },
-          galois::loopname("Merge"), galois::disable_conflict_detection(),
-          galois::wl<galois::worklists::PerSocketChunkFIFO<128>>());
+          katana::loopname("Merge"), katana::disable_conflict_detection(),
+          katana::wl<katana::PerSocketChunkFIFO<128>>());
       //! Normalize component by doing find with path compression
-      galois::do_all(
-          galois::iterate(graph), Normalize, galois::loopname("Normalize"));
+      katana::do_all(
+          katana::iterate(graph), Normalize, katana::loopname("Normalize"));
     }
     break;
 
@@ -212,7 +211,7 @@ main(int argc, char** argv) {
     std::cerr << "Unknown algo: " << algo << "\n";
   }
   T.stop();
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   /* Verification Routines */
   auto is_bad_graph = [&](const GNode& n) {
@@ -234,8 +233,8 @@ main(int argc, char** argv) {
   };
 
   auto checkAcyclic = [&]() {
-    galois::GAccumulator<unsigned> roots;
-    galois::do_all(galois::iterate(graph), [&](const GNode& n) {
+    katana::GAccumulator<unsigned> roots;
+    katana::do_all(katana::iterate(graph), [&](const GNode& n) {
       Node& data = graph.getData(n);
       if (data.component() == &data)
         roots += 1;
@@ -254,9 +253,9 @@ main(int argc, char** argv) {
   };
 
   auto verify = [&]() {
-    if (galois::ParallelSTL::find_if(
+    if (katana::ParallelSTL::find_if(
             graph.begin(), graph.end(), is_bad_graph) == graph.end()) {
-      if (galois::ParallelSTL::find_if(mst.begin(), mst.end(), is_bad_mst) ==
+      if (katana::ParallelSTL::find_if(mst.begin(), mst.end(), is_bad_mst) ==
           mst.end()) {
         return checkAcyclic();
       }

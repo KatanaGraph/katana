@@ -27,11 +27,11 @@
 #include <vector>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/FileGraph.h"
-#include "galois/graphs/Graph.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/FileGraph.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -87,8 +87,8 @@ static cll::opt<bool> runIteratively(
 // TODO(ddn): switch to this graph for FF and ABMP algos when we fix reading
 // graphs
 template <typename NodeTy, typename EdgeTy>
-struct BipartiteGraph : public galois::graphs::LC_Morph_Graph<NodeTy, EdgeTy> {
-  typedef galois::graphs::LC_Morph_Graph<NodeTy, EdgeTy> Super;
+struct BipartiteGraph : public katana::LC_Morph_Graph<NodeTy, EdgeTy> {
+  typedef katana::LC_Morph_Graph<NodeTy, EdgeTy> Super;
   typedef std::vector<typename Super::GraphNode> NodeList;
 
   NodeList A;
@@ -96,9 +96,8 @@ struct BipartiteGraph : public galois::graphs::LC_Morph_Graph<NodeTy, EdgeTy> {
 };
 
 template <typename NodeTy, typename EdgeTy>
-struct MFBipartiteGraph
-    : public galois::graphs::MorphGraph<NodeTy, EdgeTy, true> {
-  typedef galois::graphs::MorphGraph<NodeTy, EdgeTy, true> Super;
+struct MFBipartiteGraph : public katana::MorphGraph<NodeTy, EdgeTy, true> {
+  typedef katana::MorphGraph<NodeTy, EdgeTy, true> Super;
   typedef std::vector<typename Super::GraphNode> NodeList;
 
   NodeList A;
@@ -256,10 +255,10 @@ struct MatchingFF {
   typedef std::vector<GraphNode> SerialReached;
 
   typedef std::vector<
-      Edge, typename galois::PerIterAllocTy::rebind<Edge>::other>
+      Edge, typename katana::PerIterAllocTy::rebind<Edge>::other>
       ParallelRevs;
   typedef std::vector<
-      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+      GraphNode, typename katana::PerIterAllocTy::rebind<GraphNode>::other>
       ParallelReached;
 
   typedef InstanceWrapper<SerialRevs, ParallelRevs, Concurrent> RevsWrapper;
@@ -267,14 +266,14 @@ struct MatchingFF {
       ReachedWrapper;
 
   typedef std::deque<
-      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+      GraphNode, typename katana::PerIterAllocTy::rebind<GraphNode>::other>
       Queue;
   typedef std::vector<
-      GraphNode, typename galois::PerIterAllocTy::rebind<GraphNode>::other>
+      GraphNode, typename katana::PerIterAllocTy::rebind<GraphNode>::other>
       Preds;
 
-  static const galois::MethodFlag flag =
-      Concurrent ? galois::MethodFlag::WRITE : galois::MethodFlag::UNPROTECTED;
+  static const katana::MethodFlag flag =
+      Concurrent ? katana::MethodFlag::WRITE : katana::MethodFlag::UNPROTECTED;
 
   static const bool canRunIteratively = true;
 
@@ -302,7 +301,7 @@ struct MatchingFF {
 
       for (auto ii : g.edges(src, flag)) {
         GraphNode dst = g.getEdgeDst(ii);
-        node_data_type& ddst = g.getData(dst, galois::MethodFlag::UNPROTECTED);
+        node_data_type& ddst = g.getData(dst, katana::MethodFlag::UNPROTECTED);
         if (ddst.reached)
           continue;
 
@@ -318,7 +317,7 @@ struct MatchingFF {
           GraphNode cur = dst;
           while (cur != root) {
             GraphNode pred =
-                preds[g.getData(cur, galois::MethodFlag::UNPROTECTED).pred];
+                preds[g.getData(cur, katana::MethodFlag::UNPROTECTED).pred];
             revs.push_back(Edge(pred, cur));
             cur = pred;
           }
@@ -328,10 +327,10 @@ struct MatchingFF {
           for (auto jj : g.edges(dst, flag)) {
             GraphNode cur = g.getEdgeDst(jj);
 
-            g.getData(cur, galois::MethodFlag::UNPROTECTED).pred = preds.size();
+            g.getData(cur, katana::MethodFlag::UNPROTECTED).pred = preds.size();
             preds.push_back(dst);
 
-            g.getData(cur, galois::MethodFlag::UNPROTECTED).reached = true;
+            g.getData(cur, katana::MethodFlag::UNPROTECTED).reached = true;
             reached.push_back(cur);
 
             queue.push_back(cur);
@@ -363,8 +362,8 @@ struct MatchingFF {
       for (typename ReachedWrapper::Type::iterator ii = reached.begin(),
                                                    ei = reached.end();
            ii != ei; ++ii) {
-        assert(g.getData(*ii, galois::MethodFlag::UNPROTECTED).reached);
-        g.getData(*ii, galois::MethodFlag::UNPROTECTED).reached = false;
+        assert(g.getData(*ii, katana::MethodFlag::UNPROTECTED).reached);
+        g.getData(*ii, katana::MethodFlag::UNPROTECTED).reached = false;
       }
       reached.clear();
     }
@@ -377,17 +376,17 @@ struct MatchingFF {
     ReachedCleanup cleanup(g, reached);
 
     if (findAugmentingPath(g, src, ctx, revs, reached)) {
-      g.getData(src, galois::MethodFlag::UNPROTECTED).free = false;
+      g.getData(src, katana::MethodFlag::UNPROTECTED).free = false;
 
       // Reverse edges in augmenting path
       for (typename RevsWrapper::Type::iterator jj = revs.begin(),
                                                 ej = revs.end();
            jj != ej; ++jj) {
         auto edge =
-            g.findEdge(jj->first, jj->second, galois::MethodFlag::UNPROTECTED);
+            g.findEdge(jj->first, jj->second, katana::MethodFlag::UNPROTECTED);
         assert(edge != g.edge_end(jj->first));
-        g.removeEdge(jj->first, edge, galois::MethodFlag::UNPROTECTED);
-        g.addEdge(jj->second, jj->first, galois::MethodFlag::UNPROTECTED);
+        g.removeEdge(jj->first, edge, katana::MethodFlag::UNPROTECTED);
+        g.addEdge(jj->second, jj->first, katana::MethodFlag::UNPROTECTED);
       }
       revs.clear();
 
@@ -399,10 +398,10 @@ struct MatchingFF {
     SerialRevs revs;
     SerialReached reached;
 
-    galois::setActiveThreads(Concurrent ? numThreads : 1);
+    katana::setActiveThreads(Concurrent ? numThreads : 1);
 
-    galois::for_each(
-        galois::iterate(g.A),
+    katana::for_each(
+        katana::iterate(g.A),
         [&, this](const GraphNode& node, auto& ctx) {
           if (!g.getData(node, flag).free)
             return;
@@ -414,8 +413,8 @@ struct MatchingFF {
               g, node, ctx, RevsWrapper(revs, parallelRevs).get(),
               ReachedWrapper(reached, parallelReached).get());
         },
-        galois::loopname("MatchingFF"), galois::per_iter_alloc(),
-        galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+        katana::loopname("MatchingFF"), katana::per_iter_alloc(),
+        katana::wl<katana::PerSocketChunkFIFO<32>>());
   }
 };
 
@@ -441,12 +440,12 @@ struct MatchingABMP {
   typedef typename G::node_data_type node_data_type;
   typedef typename GraphTypes<G>::Edge Edge;
   typedef std::vector<
-      Edge, typename galois::PerIterAllocTy::rebind<Edge>::other>
+      Edge, typename katana::PerIterAllocTy::rebind<Edge>::other>
       Revs;
   typedef std::pair<GraphNode, unsigned> WorkItem;
 
-  static const galois::MethodFlag flag =
-      Concurrent ? galois::MethodFlag::WRITE : galois::MethodFlag::UNPROTECTED;
+  static const katana::MethodFlag flag =
+      Concurrent ? katana::MethodFlag::WRITE : katana::MethodFlag::UNPROTECTED;
 
   static const bool canRunIteratively = true;
 
@@ -456,7 +455,7 @@ struct MatchingABMP {
   }
 
   bool nextEdge(G& g, const GraphNode& src, GraphNode& next) {
-    node_data_type& dsrc = g.getData(src, galois::MethodFlag::UNPROTECTED);
+    node_data_type& dsrc = g.getData(src, katana::MethodFlag::UNPROTECTED);
     unsigned l = dsrc.layer - 1;
 
     // Start search where we last left off
@@ -465,7 +464,7 @@ struct MatchingABMP {
     assert(dsrc.next <= std::distance(ii, ei));
     std::advance(ii, dsrc.next);
     for (; ii != ei &&
-           g.getData(g.getEdgeDst(ii), galois::MethodFlag::UNPROTECTED).layer !=
+           g.getData(g.getEdgeDst(ii), katana::MethodFlag::UNPROTECTED).layer !=
                l;
          ++ii, ++dsrc.next) {
       ;
@@ -491,21 +490,21 @@ struct MatchingABMP {
 
     while (true) {
       GraphNode next;
-      if (g.getData(cur, galois::MethodFlag::UNPROTECTED).free &&
-          g.getData(cur, galois::MethodFlag::UNPROTECTED).layer == 0) {
-        assert(g.getData(root, galois::MethodFlag::UNPROTECTED).free);
+      if (g.getData(cur, katana::MethodFlag::UNPROTECTED).free &&
+          g.getData(cur, katana::MethodFlag::UNPROTECTED).layer == 0) {
+        assert(g.getData(root, katana::MethodFlag::UNPROTECTED).free);
         // (1) Breakthrough
-        g.getData(cur, galois::MethodFlag::UNPROTECTED).free =
-            g.getData(root, galois::MethodFlag::UNPROTECTED).free = false;
+        g.getData(cur, katana::MethodFlag::UNPROTECTED).free =
+            g.getData(root, katana::MethodFlag::UNPROTECTED).free = false;
 
         // Reverse edges in augmenting path
         for (typename Revs::iterator ii = revs.begin(), ei = revs.end();
              ii != ei; ++ii) {
           auto edge = g.findEdge(
-              ii->first, ii->second, galois::MethodFlag::UNPROTECTED);
+              ii->first, ii->second, katana::MethodFlag::UNPROTECTED);
           assert(edge != g.edge_end(ii->first));
-          g.removeEdge(ii->first, edge, galois::MethodFlag::UNPROTECTED);
-          g.addEdge(ii->second, ii->first, galois::MethodFlag::UNPROTECTED);
+          g.removeEdge(ii->first, edge, katana::MethodFlag::UNPROTECTED);
+          g.addEdge(ii->second, ii->first, katana::MethodFlag::UNPROTECTED);
         }
         // revs.clear();
         if (revs.size() > 1024) {
@@ -519,9 +518,9 @@ struct MatchingABMP {
         cur = next;
       } else {
         // (3) Retreat
-        unsigned& layer = g.getData(cur, galois::MethodFlag::UNPROTECTED).layer;
+        unsigned& layer = g.getData(cur, katana::MethodFlag::UNPROTECTED).layer;
         layer += 2;
-        g.getData(cur, galois::MethodFlag::UNPROTECTED).next = 0;
+        g.getData(cur, katana::MethodFlag::UNPROTECTED).next = 0;
         if (revs.empty()) {
           ctx.push(std::make_pair(cur, layer));
           return true;
@@ -533,7 +532,7 @@ struct MatchingABMP {
   }
 
   void operator()(G& g) {
-    galois::StatTimer t("serial");
+    katana::StatTimer t("serial");
     t.start();
     std::vector<WorkItem> initial;
     for (typename NodeList::iterator ii = g.A.begin(), ei = g.A.end(); ii != ei;
@@ -547,17 +546,17 @@ struct MatchingABMP {
     unsigned maxLayer =
         (unsigned)(0.1 * sqrt(std::distance(g.begin(), g.end())));
     // size_t size = initial.size();
-    galois::setActiveThreads(Concurrent ? numThreads : 1);
+    katana::setActiveThreads(Concurrent ? numThreads : 1);
 
-    using namespace galois::worklists;
+    using namespace katana;
 
     auto indexer = [](const WorkItem& n) { return n.second; };
 
     typedef PerSocketChunkFIFO<1024> PSchunk;
     typedef OrderedByIntegerMetric<decltype(indexer), PSchunk> OBIM;
 
-    galois::for_each(
-        galois::iterate(initial),
+    katana::for_each(
+        katana::iterate(initial),
         [&, this](const WorkItem& item, auto& ctx) {
           unsigned curLayer = item.second;
           if (curLayer > maxLayer) {
@@ -574,8 +573,8 @@ struct MatchingABMP {
             //__sync_fetch_and_add(&size, -1);
           }
         },
-        galois::per_iter_alloc(), galois::parallel_break(),
-        galois::loopname("MatchingABMP"), galois::wl<OBIM>(indexer));
+        katana::per_iter_alloc(), katana::parallel_break(),
+        katana::loopname("MatchingABMP"), katana::wl<OBIM>(indexer));
 
     t.start();
     MatchingFF<G, false> algo;
@@ -614,8 +613,8 @@ struct MatchingMF {
   typedef typename G::iterator iterator;
   typedef typename G::node_data_type node_data_type;
   typedef typename G::edge_data_type edge_data_type;
-  static const galois::MethodFlag flag =
-      Concurrent ? galois::MethodFlag::WRITE : galois::MethodFlag::UNPROTECTED;
+  static const katana::MethodFlag flag =
+      Concurrent ? katana::MethodFlag::WRITE : katana::MethodFlag::UNPROTECTED;
   static const bool canRunIteratively = false;
 
   /**
@@ -656,7 +655,7 @@ struct MatchingMF {
     }
 
     while (true) {
-      galois::MethodFlag f = relabeled ? galois::MethodFlag::UNPROTECTED : flag;
+      katana::MethodFlag f = relabeled ? katana::MethodFlag::UNPROTECTED : flag;
       bool finished = false;
       int current = -1;
 
@@ -667,7 +666,7 @@ struct MatchingMF {
         if (edge.cap == 0 || current < node.current)
           continue;
 
-        node_data_type& dnode = g.getData(dst, galois::MethodFlag::UNPROTECTED);
+        node_data_type& dnode = g.getData(dst, katana::MethodFlag::UNPROTECTED);
         if (node.height - 1 != dnode.height)
           continue;
 
@@ -676,7 +675,7 @@ struct MatchingMF {
         reduceCapacity(
             edge,
             g.getEdgeData(
-                g.findEdge(dst, src, galois::MethodFlag::UNPROTECTED)),
+                g.findEdge(dst, src, katana::MethodFlag::UNPROTECTED)),
             amount);
 
         // Only add once
@@ -710,12 +709,12 @@ struct MatchingMF {
     int minEdge = 0;  // TODO: not sure of initial value
 
     int current = -1;
-    for (auto ii : g.edges(src, galois::MethodFlag::UNPROTECTED)) {
+    for (auto ii : g.edges(src, katana::MethodFlag::UNPROTECTED)) {
       ++current;
       GraphNode dst = g.getEdgeDst(ii);
       int cap = g.getEdgeData(ii).cap;
       if (cap > 0) {
-        node_data_type& dnode = g.getData(dst, galois::MethodFlag::UNPROTECTED);
+        node_data_type& dnode = g.getData(dst, katana::MethodFlag::UNPROTECTED);
         if (dnode.height < minHeight) {
           minHeight = dnode.height;
           minEdge = current;
@@ -726,7 +725,7 @@ struct MatchingMF {
     assert(minHeight != std::numeric_limits<unsigned>::max());
     ++minHeight;
 
-    node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
+    node_data_type& node = g.getData(src, katana::MethodFlag::UNPROTECTED);
     node.height = minHeight;
     node.current = minEdge;
   }
@@ -736,7 +735,7 @@ struct MatchingMF {
       std::vector<GraphNode>& incoming) {
     for (iterator ii = g.begin(), ei = g.end(); ii != ei; ++ii) {
       GraphNode src = *ii;
-      node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
+      node_data_type& node = g.getData(src, katana::MethodFlag::UNPROTECTED);
       node.height = numNodes;
       node.current = 0;
       if (src == sink)
@@ -745,21 +744,21 @@ struct MatchingMF {
 
     constexpr bool useCAS = false;
 
-    galois::StatTimer T("BfsTime");
+    katana::StatTimer T("BfsTime");
     T.start();
-    galois::for_each(
-        galois::iterate({sink}),
+    katana::for_each(
+        katana::iterate({sink}),
         [&](const GraphNode& src, auto& ctx) {
           for (auto ii :
-               g.edges(src, useCAS ? galois::MethodFlag::UNPROTECTED : flag)) {
+               g.edges(src, useCAS ? katana::MethodFlag::UNPROTECTED : flag)) {
             GraphNode dst = g.getEdgeDst(ii);
             if (g.getEdgeData(
-                     g.findEdge(dst, src, galois::MethodFlag::UNPROTECTED))
+                     g.findEdge(dst, src, katana::MethodFlag::UNPROTECTED))
                     .cap > 0) {
               node_data_type& node =
-                  g.getData(dst, galois::MethodFlag::UNPROTECTED);
+                  g.getData(dst, katana::MethodFlag::UNPROTECTED);
               unsigned newHeight =
-                  g.getData(src, galois::MethodFlag::UNPROTECTED).height + 1;
+                  g.getData(src, katana::MethodFlag::UNPROTECTED).height + 1;
               if (useCAS) {
                 unsigned oldHeight = 0;
                 while (newHeight < (oldHeight = node.height)) {
@@ -778,12 +777,12 @@ struct MatchingMF {
             }
           }
         },
-        galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+        katana::wl<katana::PerSocketChunkFIFO<32>>());
     T.stop();
 
     for (iterator ii = g.begin(), ei = g.end(); ii != ei; ++ii) {
       GraphNode src = *ii;
-      node_data_type& node = g.getData(src, galois::MethodFlag::UNPROTECTED);
+      node_data_type& node = g.getData(src, katana::MethodFlag::UNPROTECTED);
       if (src == sink || src == source)
         continue;
       if (node.excess > 0)
@@ -821,7 +820,7 @@ struct MatchingMF {
     for (auto src : g.A) {
       for (auto ii : g.edges(src)) {
         GraphNode dst = g.getEdgeDst(ii);
-        g.getEdgeData(g.addMultiEdge(dst, src, galois::MethodFlag::WRITE)) =
+        g.getEdgeData(g.addMultiEdge(dst, src, katana::MethodFlag::WRITE)) =
             edge_data_type(0);
         ++numEdges;
       }
@@ -830,9 +829,9 @@ struct MatchingMF {
     // Add edge from source to each node in A
     for (typename NodeList::iterator src = g.A.begin(), esrc = g.A.end();
          src != esrc; ++src) {
-      g.getEdgeData(g.addMultiEdge(source, *src, galois::MethodFlag::WRITE)) =
+      g.getEdgeData(g.addMultiEdge(source, *src, katana::MethodFlag::WRITE)) =
           edge_data_type();
-      g.getEdgeData(g.addMultiEdge(*src, source, galois::MethodFlag::WRITE)) =
+      g.getEdgeData(g.addMultiEdge(*src, source, katana::MethodFlag::WRITE)) =
           edge_data_type(0);
       ++numEdges;
     }
@@ -840,9 +839,9 @@ struct MatchingMF {
     // Add edge to sink from each node in B
     for (typename NodeList::iterator src = g.B.begin(), esrc = g.B.end();
          src != esrc; ++src) {
-      g.getEdgeData(g.addMultiEdge(*src, sink, galois::MethodFlag::WRITE)) =
+      g.getEdgeData(g.addMultiEdge(*src, sink, katana::MethodFlag::WRITE)) =
           edge_data_type();
-      g.getEdgeData(g.addMultiEdge(sink, *src, galois::MethodFlag::WRITE)) =
+      g.getEdgeData(g.addMultiEdge(sink, *src, katana::MethodFlag::WRITE)) =
           edge_data_type(0);
       ++numEdges;
     }
@@ -863,7 +862,7 @@ struct MatchingMF {
   }
 
   void operator()(G& g) {
-    galois::StatTimer t("serial");
+    katana::StatTimer t("serial");
 
     t.start();
     GraphNode source;
@@ -878,11 +877,11 @@ struct MatchingMF {
 
     bool shouldGlobalRelabel = false;
     unsigned counter = 0;
-    galois::setActiveThreads(Concurrent ? numThreads : 1);
+    katana::setActiveThreads(Concurrent ? numThreads : 1);
 
     while (!initial.empty()) {
-      galois::for_each(
-          galois::iterate(initial),
+      katana::for_each(
+          katana::iterate(initial),
           [&, this](const GraphNode& src, auto& ctx) {
             int increment = 1;
             if (this->discharge(g, src, ctx, source, sink, numNodes)) {
@@ -896,8 +895,8 @@ struct MatchingMF {
               return;
             }
           },
-          galois::loopname("MatchingMF"), galois::parallel_break(),
-          galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+          katana::loopname("MatchingMF"), katana::parallel_break(),
+          katana::wl<katana::PerSocketChunkFIFO<32>>());
 
       if (!shouldGlobalRelabel)
         break;
@@ -1015,10 +1014,10 @@ generateRandomInput(
 
   std::cout << "numGroups: " << numGroups << " seed: " << seed << "\n";
 
-  galois::graphs::FileGraphWriter p;
+  katana::FileGraphWriter p;
   p.setNumNodes(numA + numB);
   p.setNumEdges(numEdges);
-  p.setSizeofEdgeData(galois::LargeArray<edge_data_type>::size_of::value);
+  p.setSizeofEdgeData(katana::LargeArray<edge_data_type>::size_of::value);
 
   for (int phase = 0; phase < 2; ++phase) {
     if (phase == 0)
@@ -1072,7 +1071,7 @@ generateRandomInput(
 
   // Leave edge data uninitialized
   p.finish<edge_data_type>();
-  galois::graphs::readGraph(g, p);
+  katana::readGraph(g, p);
 }
 
 /**
@@ -1085,7 +1084,7 @@ generateRandomInput(
 template <typename G>
 void
 readInput(const std::string& filename, G& g) {
-  galois::graphs::readGraph(g, filename);
+  katana::readGraph(g, filename);
 }
 
 template <template <typename, bool> class Algo, typename G>
@@ -1127,7 +1126,7 @@ start(int N, int numEdges, int numGroups) {
   G g;
 
   if (runIteratively && !algo.canRunIteratively)
-    GALOIS_DIE("algo does not support iterative execution");
+    KATANA_DIE("algo does not support iterative execution");
 
   switch (inputType) {
   case generated:
@@ -1137,7 +1136,7 @@ start(int N, int numEdges, int numGroups) {
     readInput(inputFile, g);
     break;
   default:
-    GALOIS_DIE("unknown input type");
+    KATANA_DIE("unknown input type");
   }
 
   size_t id = 0;
@@ -1153,7 +1152,7 @@ start(int N, int numEdges, int numGroups) {
 
   std::cout << "Starting " << algo.name() << "\n";
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
 
   while (true) {
     execTime.start();
@@ -1164,7 +1163,7 @@ start(int N, int numEdges, int numGroups) {
       typename GraphTypes<G>::Matching matching;
       PrepareForVerifier<G, Algo>()(g, &matching);
       if (!Verifier<G>()(g, matching)) {
-        GALOIS_DIE("verification failed");
+        KATANA_DIE("verification failed");
       } else {
         std::cout << "Verification successful.\n";
       }
@@ -1199,20 +1198,20 @@ start() {
         N, numEdges, numGroups);
     break;
   default:
-    GALOIS_DIE("unknown algo");
+    KATANA_DIE("unknown algo");
   }
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
@@ -1226,7 +1225,7 @@ main(int argc, char** argv) {
     start<true>();
     break;
   default:
-    GALOIS_DIE("unknown execution type");
+    KATANA_DIE("unknown execution type");
   }
 
   totalTime.stop();

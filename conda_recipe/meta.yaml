@@ -2,7 +2,7 @@
 
 # Check environment variables to determine build context
 {% set ci_build = environ.get("CI", False) %}
-{% set dev_build = environ.get("GALOIS_DEV_BUILD", ci_build) %}
+{% set dev_build = environ.get("KATANA_DEV_BUILD", ci_build) %}
 
 # For dev builds, add ".devN" to the version number, for N being the git commit count since the last tag.
 # This makes the build come BEFORE the plain version.
@@ -11,7 +11,7 @@
 {% set build_number = environ.get("GITHUB_RUN_NUMBER", environ.get("GIT_DESCRIBE_NUMBER")) %}
 
 package:
-  name: galois
+  name: katana
   version: {{ version }}
 
 source:

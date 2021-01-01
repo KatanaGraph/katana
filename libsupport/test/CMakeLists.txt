@@ -2,7 +2,7 @@ function(add_test_unit name)
   set(test_name unit-${name})
 
   add_executable(${test_name} ${name}.cpp)
-  target_link_libraries(${test_name} galois_support Threads::Threads)
+  target_link_libraries(${test_name} katana_support Threads::Threads)
 
   set(command_line "$<TARGET_FILE:${test_name}>")
 
@@ -11,7 +11,7 @@ function(add_test_unit name)
   # Allow parallel tests
   set_tests_properties(${test_name}
     PROPERTIES
-      ENVIRONMENT GALOIS_DO_NOT_BIND_THREADS=1
+      ENVIRONMENT KATANA_DO_NOT_BIND_THREADS=1
       LABELS quick
     )
 endfunction()

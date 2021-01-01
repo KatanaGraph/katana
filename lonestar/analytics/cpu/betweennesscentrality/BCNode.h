@@ -27,16 +27,16 @@
 #include <vector>
 
 #include "control.h"
-#include "galois/gstl.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/SimpleLock.h"
+#include "katana/gstl.h"
 
 template <bool UseMarking = false, bool Concurrent = true>
 struct BCNode {
-  using LockType = typename std::conditional<
-      Concurrent, galois::substrate::SimpleLock, char>::type;
+  using LockType =
+      typename std::conditional<Concurrent, katana::SimpleLock, char>::type;
   LockType spinLock;
 
-  using predTY = galois::gstl::Vector<uint32_t>;
+  using predTY = katana::gstl::Vector<uint32_t>;
   predTY preds;
 
   unsigned distance;
@@ -128,7 +128,7 @@ struct BCNode {
    */
   void checkClear() const {
     if (!preds.empty() || nsuccs != 0 || sigma != 0 || delta != 0)
-      galois::gWarn("Problem, node not clear");
+      katana::gWarn("Problem, node not clear");
 
     assert(preds.empty());
     assert(distance == kInfinity);

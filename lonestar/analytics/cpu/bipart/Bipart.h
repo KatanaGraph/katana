@@ -21,14 +21,14 @@
 #define BIPART_H_
 
 #include "MetisGraph.h"
-#include "galois/DynamicBitset.h"
+#include "katana/DynamicBitset.h"
 
 constexpr static const uint32_t kChunkSize = 512u;
 constexpr static const uint32_t kInfPartition =
     std::numeric_limits<uint32_t>::max();
 
-using EdgeDstVecTy = galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>;
-using LargeArrayUint64Ty = galois::LargeArray<uint64_t>;
+using EdgeDstVecTy = katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>;
+using LargeArrayUint64Ty = katana::LargeArray<uint64_t>;
 using GainTy = MetisNode::GainTy;
 using NetvalTy = MetisNode::NetvalTy;
 using NetnumTy = MetisNode::NetnumTy;

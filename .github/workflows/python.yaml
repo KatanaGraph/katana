@@ -39,7 +39,7 @@ jobs:
         key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
         path: |
             ~/miniconda/pkgs/*.tar.bz2
-            !~/miniconda/pkgs/galois-*
+            !~/miniconda/pkgs/katana-*
     - name: Cache miniconda
       id: cache-miniconda
       uses: actions/cache@v2
@@ -88,16 +88,16 @@ jobs:
     ###
     # Conda build process for two packages
     ###
-    - name: Build galois Package
+    - name: Build katana Package
       run: |
         . .github/workflows/activate_miniconda.sh
         ccache --zero-stats
         conda build -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
-    - name: Build galois-python Package
+    - name: Build katana-python Package
       run: |
         . .github/workflows/activate_miniconda.sh
         cd python
-        export GALOIS_DOCS_OUTPUT=$HOME/docs
+        export KATANA_DOCS_OUTPUT=$HOME/docs
         conda build -c local -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
         ccache --show-stats
         ccache --cleanup
@@ -108,7 +108,7 @@ jobs:
       uses: actions/upload-artifact@v1
       if: startsWith(matrix.os, 'ubuntu-')
       with:
-        name: galois-python-docs-${{matrix.os}}
+        name: katana-python-docs-${{matrix.os}}
         path: /home/runner/docs
     - name: Upload built packages
       uses: actions/upload-artifact@v1
@@ -145,7 +145,7 @@ jobs:
         key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
         path: |
             ~/miniconda/pkgs/*.tar.bz2
-            !~/miniconda/pkgs/galois-*
+            !~/miniconda/pkgs/katana-*
     - name: Cache miniconda
       id: cache-miniconda
       uses: actions/cache@v2

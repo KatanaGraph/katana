@@ -17,15 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/analytics/sssp/sssp.h"
+#include "katana/analytics/sssp/sssp.h"
 
 // Implementation
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 template <typename Weight>
-struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
-                                graphs::PropertyGraph<
+struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
+                                PropertyGraph<
                                     std::tuple<SsspNodeDistance<Weight>>,
                                     std::tuple<SsspEdgeWeight<Weight>>>,
                                 Weight, true> {
@@ -34,10 +34,10 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
 
   using NodeData = typename std::tuple<NodeDistance>;
   using EdgeData = typename std::tuple<EdgeWeight>;
-  using Graph = graphs::PropertyGraph<NodeData, EdgeData>;
+  using Graph = PropertyGraph<NodeData, EdgeData>;
 
   using Base =
-      galois::analytics::BfsSsspImplementationBase<Graph, Weight, true>;
+      katana::analytics::BfsSsspImplementationBase<Graph, Weight, true>;
 
   using Dist = typename Base::Dist;
   using UpdateRequest = typename Base::UpdateRequest;
@@ -53,10 +53,9 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
   static constexpr unsigned kChunkSize = 64;
   static constexpr Dist kDistanceInfinity = Base::kDistanceInfinity;
 
-  using PSchunk = galois::worklists::PerSocketChunkFIFO<kChunkSize>;
-  using OBIM =
-      galois::worklists::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
-  using OBIMBarrier = typename galois::worklists::OrderedByIntegerMetric<
+  using PSchunk = katana::PerSocketChunkFIFO<kChunkSize>;
+  using OBIM = katana::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
+  using OBIMBarrier = typename katana::OrderedByIntegerMetric<
       UpdateRequestIndexer, PSchunk>::template with_barrier<true>::type;
 
   template <typename T, typename OBIMTy = OBIM, typename P, typename R>
@@ -64,17 +63,17 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
       Graph* graph, const typename Graph::Node& source, const P& pushWrap,
       const R& edgeRange, unsigned stepShift) {
     //! [reducible for self-defined stats]
-    galois::GAccumulator<size_t> BadWork;
+    katana::GAccumulator<size_t> BadWork;
     //! [reducible for self-defined stats]
-    galois::GAccumulator<size_t> WLEmptyWork;
+    katana::GAccumulator<size_t> WLEmptyWork;
 
     graph->template GetData<NodeDistance>(source) = 0;
 
-    galois::InsertBag<T> init_bag;
+    katana::InsertBag<T> init_bag;
     pushWrap(init_bag, source, 0, "parallel");
 
-    galois::for_each(
-        galois::iterate(init_bag),
+    katana::for_each(
+        katana::iterate(init_bag),
         [&](const T& item, auto& ctx) {
           const auto& sdata = graph->template GetData<NodeDistance>(item.src);
 
@@ -89,7 +88,7 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
             auto& ddist = graph->template GetData<NodeDistance>(dest);
             Dist ew = graph->template GetEdgeData<EdgeWeight>(ii);
             const Dist new_dist = sdata + ew;
-            Dist old_dist = galois::atomicMin(ddist, new_dist);
+            Dist old_dist = katana::atomicMin(ddist, new_dist);
             if (new_dist < old_dist) {
               if (kTrackWork) {
                 //! [per-thread contribution of self-defined stats]
@@ -102,14 +101,14 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
             }
           }
         },
-        galois::wl<OBIMTy>(UpdateRequestIndexer{stepShift}),
-        galois::disable_conflict_detection(), galois::loopname("SSSP"));
+        katana::wl<OBIMTy>(UpdateRequestIndexer{stepShift}),
+        katana::disable_conflict_detection(), katana::loopname("SSSP"));
 
     if (kTrackWork) {
       //! [report self-defined stats]
-      galois::ReportStatSingle("SSSP", "BadWork", BadWork.reduce());
+      katana::ReportStatSingle("SSSP", "BadWork", BadWork.reduce());
       //! [report self-defined stats]
-      galois::ReportStatSingle("SSSP", "WLEmptyWork", WLEmptyWork.reduce());
+      katana::ReportStatSingle("SSSP", "WLEmptyWork", WLEmptyWork.reduce());
     }
   }
 
@@ -157,14 +156,14 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
     if (!wl.allEmpty()) {
       std::abort();
     }
-    galois::ReportStatSingle("SSSP-Serial-Delta", "Iterations", iter);
+    katana::ReportStatSingle("SSSP-Serial-Delta", "Iterations", iter);
   }
 
   template <typename T, typename P, typename R>
   static void DijkstraAlgo(
       Graph* graph, const typename Graph::Node& source, const P& pushWrap,
       const R& edgeRange) {
-    using WL = galois::MinHeap<T>;
+    using WL = katana::MinHeap<T>;
 
     graph->template GetData<NodeDistance>(source) = 0;
 
@@ -197,29 +196,29 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
       }
     }
 
-    galois::ReportStatSingle("SSSP-Dijkstra", "Iterations", iter);
+    katana::ReportStatSingle("SSSP-Dijkstra", "Iterations", iter);
   }
 
   static void TopoAlgo(Graph* graph, const typename Graph::Node& source) {
-    galois::LargeArray<Dist> old_dist;
+    katana::LargeArray<Dist> old_dist;
     old_dist.allocateInterleaved(graph->size());
 
-    galois::do_all(
-        galois::iterate(size_t{0}, graph->size()),
+    katana::do_all(
+        katana::iterate(size_t{0}, graph->size()),
         [&](size_t i) { old_dist.constructAt(i, kDistanceInfinity); },
-        galois::no_stats(), galois::loopname("initDistArray"));
+        katana::no_stats(), katana::loopname("initDistArray"));
 
     graph->template GetData<NodeDistance>(source) = 0;
 
-    galois::GReduceLogicalOr changed;
+    katana::GReduceLogicalOr changed;
     size_t rounds = 0;
 
     do {
       ++rounds;
       changed.reset();
 
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const typename Graph::Node& n) {
             const auto& sdata = graph->template GetData<NodeDistance>(n);
 
@@ -232,39 +231,39 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
                     sdata + graph->template GetEdgeData<EdgeWeight>(e);
                 auto dest = graph->GetEdgeDest(e);
                 auto& ddata = graph->template GetData<NodeDistance>(dest);
-                galois::atomicMin(ddata, new_dist);
+                katana::atomicMin(ddata, new_dist);
               }
             }
           },
-          galois::steal(), galois::loopname("Update"));
+          katana::steal(), katana::loopname("Update"));
 
     } while (changed.reduce());
 
-    galois::ReportStatSingle("SSSP-Topo", "rounds", rounds);
+    katana::ReportStatSingle("SSSP-Topo", "rounds", rounds);
   }
 
   void TopoTileAlgo(Graph* graph, const typename Graph::Node& source) {
-    galois::InsertBag<SrcEdgeTile> tiles;
+    katana::InsertBag<SrcEdgeTile> tiles;
 
     graph->template GetData<NodeDistance>(source) = 0;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const typename Graph::Node& n) {
           Base::PushEdgeTiles(
               tiles, graph, n, SrcEdgeTileMaker{n, kDistanceInfinity});
         },
-        galois::steal(), galois::loopname("MakeTiles"));
+        katana::steal(), katana::loopname("MakeTiles"));
 
-    galois::GReduceLogicalOr changed;
+    katana::GReduceLogicalOr changed;
     size_t rounds = 0;
 
     do {
       ++rounds;
       changed.reset();
 
-      galois::do_all(
-          galois::iterate(tiles),
+      katana::do_all(
+          katana::iterate(tiles),
           [&](SrcEdgeTile& t) {
             const auto& sdata = graph->template GetData<NodeDistance>(t.src);
 
@@ -277,21 +276,21 @@ struct SsspImplementation : public galois::analytics::BfsSsspImplementationBase<
                     sdata + graph->template GetEdgeData<EdgeWeight>(e);
                 auto dest = graph->GetEdgeDest(e);
                 auto& ddata = graph->template GetData<NodeDistance>(dest);
-                galois::atomicMin(ddata, new_dist);
+                katana::atomicMin(ddata, new_dist);
               }
             }
           },
-          galois::steal(), galois::loopname("Update"));
+          katana::steal(), katana::loopname("Update"));
 
     } while (changed.reduce());
 
-    galois::ReportStatSingle("SSSP-Topo", "rounds", rounds);
+    katana::ReportStatSingle("SSSP-Topo", "rounds", rounds);
   }
 
 public:
-  galois::Result<void> SSSP(Graph& graph, size_t start_node, SsspPlan plan) {
+  katana::Result<void> SSSP(Graph& graph, size_t start_node, SsspPlan plan) {
     if (start_node >= graph.size()) {
-      return galois::ErrorCode::InvalidArgument;
+      return katana::ErrorCode::InvalidArgument;
     }
 
     auto it = graph.begin();
@@ -299,16 +298,16 @@ public:
     typename Graph::Node source = *it;
 
     size_t approxNodeData = graph.size() * 64;
-    galois::Prealloc(1, approxNodeData);
+    katana::Prealloc(1, approxNodeData);
 
-    galois::do_all(
-        galois::iterate(graph), [&graph](const typename Graph::Node& n) {
+    katana::do_all(
+        katana::iterate(graph), [&graph](const typename Graph::Node& n) {
           graph.template GetData<NodeDistance>(n) = kDistanceInfinity;
         });
 
     graph.template GetData<NodeDistance>(source) = 0;
 
-    galois::StatTimer execTime("SSSP");
+    katana::StatTimer execTime("SSSP");
     execTime.start();
 
     if (plan.algorithm() == SsspPlan::kAutomatic) {
@@ -353,35 +352,35 @@ public:
           &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, plan.delta());
       break;
     default:
-      return galois::ErrorCode::InvalidArgument;
+      return katana::ErrorCode::InvalidArgument;
     }
 
     execTime.stop();
 
-    return galois::ResultSuccess();
+    return katana::ResultSuccess();
   }
 };
 
 template <typename Weight>
 Result<void>
 Sssp(
-    graphs::PropertyGraph<
+    PropertyGraph<
         std::tuple<SsspNodeDistance<Weight>>,
         std::tuple<SsspEdgeWeight<Weight>>>& pg,
     size_t start_node, SsspPlan plan) {
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-  galois::analytics::SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
+  katana::analytics::SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
   return impl.SSSP(pg, start_node, plan);
 }
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 template <typename Weight>
-static galois::Result<void>
+static katana::Result<void>
 SSSPWithWrap(
-    galois::graphs::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyFileGraph* pfg, size_t start_node,
     std::string edge_weight_property_name, std::string output_property_name,
     SsspPlan plan) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
@@ -389,12 +388,12 @@ SSSPWithWrap(
       !r) {
     return r.error();
   }
-  auto graph = galois::graphs::PropertyGraph<
+  auto graph = katana::PropertyGraph<
       std::tuple<SsspNodeDistance<Weight>>,
       std::tuple<SsspEdgeWeight<Weight>>>::
       Make(pfg, {output_property_name}, {edge_weight_property_name});
-  if (!graph && graph.error() == galois::ErrorCode::TypeError) {
-    GALOIS_LOG_DEBUG(
+  if (!graph && graph.error() == katana::ErrorCode::TypeError) {
+    KATANA_LOG_DEBUG(
         "Incorrect edge property type: {}",
         pfg->edge_table()
             ->GetColumnByName(edge_weight_property_name)
@@ -405,12 +404,12 @@ SSSPWithWrap(
     return graph.error();
   }
 
-  return galois::analytics::Sssp(graph.value(), start_node, plan);
+  return katana::analytics::Sssp(graph.value(), start_node, plan);
 }
 
-galois::Result<void>
-galois::analytics::Sssp(
-    graphs::PropertyFileGraph* pfg, size_t start_node,
+katana::Result<void>
+katana::analytics::Sssp(
+    PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
   switch (pfg->EdgeProperty(edge_weight_property_name)->type()->id()) {
@@ -433,14 +432,14 @@ galois::analytics::Sssp(
     return SSSPWithWrap<double>(
         pfg, start_node, edge_weight_property_name, output_property_name, plan);
   default:
-    return galois::ErrorCode::TypeError;
+    return katana::ErrorCode::TypeError;
   }
 }
 
 template <typename Weight>
-static galois::Result<void>
+static katana::Result<void>
 SsspValidateImpl(
-    galois::graphs::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
   using Impl = SsspImplementation<Weight>;
@@ -453,7 +452,7 @@ SsspValidateImpl(
   typename Impl::Graph graph = pg_result.value();
 
   if (graph.template GetData<SsspNodeDistance<Weight>>(start_node) != 0) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
   std::atomic<bool> not_consistent(false);
@@ -463,15 +462,15 @@ SsspValidateImpl(
                           &graph, not_consistent));
 
   if (not_consistent) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::analytics::SsspAssertValid(
-    galois::graphs::PropertyFileGraph* pfg, size_t start_node,
+katana::Result<void>
+katana::analytics::SsspAssertValid(
+    katana::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
   switch (pfg->NodeProperty(output_property_name)->type()->id()) {
@@ -494,16 +493,15 @@ galois::analytics::SsspAssertValid(
     return SsspValidateImpl<double>(
         pfg, start_node, edge_weight_property_name, output_property_name);
   default:
-    return galois::ErrorCode::TypeError;
+    return katana::ErrorCode::TypeError;
   }
 }
 
 template <typename Weight>
-static galois::Result<SsspStatistics>
+static katana::Result<SsspStatistics>
 ComputeStatistics(
-    galois::graphs::PropertyFileGraph* pfg,
-    const std::string& output_property_name) {
-  auto pg_result = galois::graphs::PropertyGraph<
+    katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
+  auto pg_result = katana::PropertyGraph<
       typename SsspImplementation<Weight>::NodeData,
       std::tuple<>>::Make(pfg, {output_property_name}, {});
   if (!pg_result) {
@@ -512,15 +510,15 @@ ComputeStatistics(
 
   auto graph = pg_result.value();
 
-  galois::GReduceMax<Weight> max_dist;
-  galois::GAccumulator<Weight> sum_dist;
-  galois::GAccumulator<uint32_t> num_visited;
+  katana::GReduceMax<Weight> max_dist;
+  katana::GAccumulator<Weight> sum_dist;
+  katana::GAccumulator<uint32_t> num_visited;
   max_dist.reset();
   sum_dist.reset();
   num_visited.reset();
 
   do_all(
-      galois::iterate(graph),
+      katana::iterate(graph),
       [&](uint64_t i) {
         uint32_t my_distance =
             graph.template GetData<SsspNodeDistance<Weight>>(i);
@@ -531,16 +529,16 @@ ComputeStatistics(
           num_visited += 1;
         }
       },
-      galois::loopname("Sanity check"), galois::no_stats());
+      katana::loopname("Sanity check"), katana::no_stats());
 
   return SsspStatistics{
       double(max_dist.reduce()), double(sum_dist.reduce()),
       num_visited.reduce()};
 }
 
-galois::Result<SsspStatistics>
+katana::Result<SsspStatistics>
 SsspStatistics::Compute(
-    graphs::PropertyFileGraph* pfg, const std::string& output_property_name) {
+    PropertyFileGraph* pfg, const std::string& output_property_name) {
   switch (pfg->NodeProperty(output_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return ComputeStatistics<uint32_t>(pfg, output_property_name);
@@ -555,7 +553,7 @@ SsspStatistics::Compute(
   case arrow::DoubleType::type_id:
     return ComputeStatistics<double>(pfg, output_property_name);
   default:
-    return galois::ErrorCode::TypeError;
+    return katana::ErrorCode::TypeError;
   }
 }
 

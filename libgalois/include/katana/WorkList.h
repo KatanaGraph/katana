@@ -17,22 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLIST_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WORKLIST_H_
+#ifndef KATANA_LIBGALOIS_KATANA_WORKLIST_H_
+#define KATANA_LIBGALOIS_KATANA_WORKLIST_H_
 
-#include "galois/config.h"
-#include "galois/optional.h"
-#include "galois/worklists/BulkSynchronous.h"
-#include "galois/worklists/Chunk.h"
-#include "galois/worklists/LocalQueue.h"
-#include "galois/worklists/Obim.h"
-#include "galois/worklists/OrderedList.h"
-#include "galois/worklists/OwnerComputes.h"
-#include "galois/worklists/PerThreadChunk.h"
-#include "galois/worklists/Simple.h"
-#include "galois/worklists/StableIterator.h"
+#include "katana/BulkSynchronous.h"
+#include "katana/Chunk.h"
+#include "katana/LocalQueue.h"
+#include "katana/Obim.h"
+#include "katana/OrderedList.h"
+#include "katana/OwnerComputes.h"
+#include "katana/PerThreadChunk.h"
+#include "katana/Simple.h"
+#include "katana/StableIterator.h"
+#include "katana/config.h"
+#include "katana/optional.h"
 
-namespace galois {
+namespace katana {
 /**
  * Scheduling policies for Galois iterators. Unless you have very specific
  * scheduling requirement, \ref PerSocketChunkLIFO or \ref PerSocketChunkFIFO is
@@ -44,11 +44,11 @@ namespace galois {
  * \ref for_each(). For example,
  *
  * \code
- * galois::for_each(galois::iterate(beg,end), fn,
- * galois::wl<galois::worklists::PerSocketChunkFIFO<32>>());
+ * katana::for_each(katana::iterate(beg,end), fn,
+ * katana::wl<katana::PerSocketChunkFIFO<32>>());
  * \endcode
  */
-namespace worklists {
+
 namespace {  // don't pollute the symbol table with the example
 
 // Worklists may not be copied.
@@ -87,7 +87,7 @@ public:
   void push_initial(const RangeTy&);
 
   //! Pops a value from the queue.
-  galois::optional<value_type> pop();
+  katana::optional<value_type> pop();
 
   /**
    * (optional) Returns true if the worklist is empty. Called infrequently
@@ -98,7 +98,7 @@ public:
 };
 
 }  // namespace
-}  // end namespace worklists
-}  // end namespace galois
+
+}  // end namespace katana
 
 #endif

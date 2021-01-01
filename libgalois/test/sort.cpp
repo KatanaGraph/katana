@@ -21,9 +21,9 @@
 #include <iostream>
 #include <numeric>
 
-#include "galois/Galois.h"
-#include "galois/ParallelSTL.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/ParallelSTL.h"
+#include "katana/Timer.h"
 
 int
 RandomNumber() {
@@ -42,23 +42,23 @@ int vectorSize = 1;
 
 int
 do_sort() {
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads();
+  unsigned M = katana::GetThreadPool().getMaxThreads();
   std::cout << "sort:\n";
 
   while (M) {
-    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
+    katana::setActiveThreads(M);  // katana::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
     std::generate(V.begin(), V.end(), RandomNumber);
     std::vector<unsigned> C = V;
 
-    galois::Timer t;
+    katana::Timer t;
     t.start();
-    galois::ParallelSTL::sort(V.begin(), V.end());
+    katana::ParallelSTL::sort(V.begin(), V.end());
     t.stop();
 
-    galois::Timer t2;
+    katana::Timer t2;
     t2.start();
     std::sort(C.begin(), C.end());
     t2.stop();
@@ -94,11 +94,11 @@ do_sort() {
 
 int
 do_count_if() {
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads();
+  unsigned M = katana::GetThreadPool().getMaxThreads();
   std::cout << "count_if:\n";
 
   while (M) {
-    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
+    katana::setActiveThreads(M);  // katana::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
@@ -106,12 +106,12 @@ do_count_if() {
 
     unsigned x1, x2;
 
-    galois::Timer t;
+    katana::Timer t;
     t.start();
-    x1 = galois::ParallelSTL::count_if(V.begin(), V.end(), IsOddS());
+    x1 = katana::ParallelSTL::count_if(V.begin(), V.end(), IsOddS());
     t.stop();
 
-    galois::Timer t2;
+    katana::Timer t2;
     t2.start();
     x2 = std::count_if(V.begin(), V.end(), IsOddS());
     t2.stop();
@@ -131,11 +131,11 @@ struct mymax {
 
 int
 do_accumulate() {
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads();
+  unsigned M = katana::GetThreadPool().getMaxThreads();
   std::cout << "accumulate:\n";
 
   while (M) {
-    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
+    katana::setActiveThreads(M);  // katana::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     std::vector<unsigned> V(vectorSize);
@@ -143,13 +143,13 @@ do_accumulate() {
 
     unsigned x1, x2;
 
-    galois::Timer t;
+    katana::Timer t;
     t.start();
-    x1 = galois::ParallelSTL::accumulate(
+    x1 = katana::ParallelSTL::accumulate(
         V.begin(), V.end(), 0u, mymax<unsigned>());
     t.stop();
 
-    galois::Timer t2;
+    katana::Timer t2;
     t2.start();
     x2 = std::accumulate(V.begin(), V.end(), 0u, mymax<unsigned>());
     t2.stop();
@@ -166,7 +166,7 @@ do_accumulate() {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   if (argc > 1)
     vectorSize = atoi(argv[1]);
   if (vectorSize <= 0)

@@ -20,11 +20,11 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/Galois.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/Timer.h"
 
-using namespace galois::substrate;
+using namespace katana;
 
 int num = 1;
 
@@ -58,31 +58,31 @@ testf(const char* str) {
   PerThreadStorage<T> b;
   std::cout << "\nRunning: " << str << " sizeof " << sizeof(PerThreadStorage<T>)
             << "\n";
-  galois::Timer tL;
+  katana::Timer tL;
   tL.start();
   testL<T> L(b);
-  galois::on_each(L);
+  katana::on_each(L);
   tL.stop();
-  galois::Timer tR;
+  katana::Timer tR;
   tR.start();
   testR<T> R(b);
-  galois::on_each(R);
+  katana::on_each(R);
   tR.stop();
   std::cout << str << " L: " << tL.get() << " R: " << tR.get() << '\n';
 }
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys Galois_runtime;
+  katana::SharedMemSys Katana_runtime;
   if (argc > 1)
     num = atoi(argv[1]);
   if (num <= 0)
     num = 1024 * 1024 * 1024;
 
-  unsigned M = galois::substrate::GetThreadPool().getMaxThreads();
+  unsigned M = katana::GetThreadPool().getMaxThreads();
 
   while (M) {
-    galois::setActiveThreads(M);  // galois::runtime::LL::getMaxThreads());
+    katana::setActiveThreads(M);  // katana::LL::getMaxThreads());
     std::cout << "Using " << M << " threads\n";
 
     testf<int>("int");

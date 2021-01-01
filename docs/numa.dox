@@ -45,7 +45,7 @@ Specify exactly how pages are to be distributed among threads in contiguous chun
 
 @section numa-large-array NUMA and Large Arrays
 
-Currently, Galois supports NUMA-aware allocation for galois::LargeArray objects. After we construct a LargeArray object, we can specify the type of NUMA allocation by calling the following appropriate function:
+Currently, Galois supports NUMA-aware allocation for katana::LargeArray objects. After we construct a LargeArray object, we can specify the type of NUMA allocation by calling the following appropriate function:
 
 @snippet LargeArray.h allocatefunctions
 
@@ -59,7 +59,7 @@ Here is an example of blocked allocation of LargeArrays for storing the data of 
 @section numa-galois-graphs NUMA Allocation in Galois Graphs
 
 Galois also supports NUMA-aware allocation for graph data structures. Graph data structures have a template parameter called UseNumaAlloc. If it is set to true, then the graph will use Blocked NUMA allocation 
-(galois::graphs::LC_Linear_Graph and galois::graphs::LC_Morph_Graph will use Local allocation if UseNumaAlloc is true). Otherwise, it will use Interleaved NUMA allocation.
+(katana::LC_Linear_Graph and katana::LC_Morph_Graph will use Local allocation if UseNumaAlloc is true). Otherwise, it will use Interleaved NUMA allocation.
 
 The following code snippet shows the template argument for LC_CSR_Graph from LC_CSR_Graph.h:
 
@@ -69,7 +69,7 @@ The NUMA allocation can also be specified using the following pattern (taken fro
 
 @snippet lonestar/analytics/cpu/sssp/sssp_cli.cpp withnumaalloc
 
-Note that if the numaMap parameter in galois::graphs::FileGraph::partFromFile is true, then Interleaved NUMA allocation is used.
+Note that if the numaMap parameter in katana::FileGraph::partFromFile is true, then Interleaved NUMA allocation is used.
 
 @section numa-best-behavior NUMA Guidelines
 

@@ -17,21 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_CHUNK_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_CHUNK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_CHUNK_H_
+#define KATANA_LIBGALOIS_KATANA_CHUNK_H_
 
-#include "galois/FixedSizeRing.h"
-#include "galois/Mem.h"
-#include "galois/config.h"
-#include "galois/substrate/PaddedLock.h"
-#include "galois/worklists/WLCompileCheck.h"
-#include "galois/worklists/WorkListHelpers.h"
+#include "katana/FixedSizeRing.h"
+#include "katana/Mem.h"
+#include "katana/PaddedLock.h"
+#include "katana/WLCompileCheck.h"
+#include "katana/WorkListHelpers.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
+
 extern unsigned activeThreads;
-}  // end namespace runtime
-namespace worklists {
 
 namespace internal {
 // This overly complex specialization avoids a pointer indirection for
@@ -41,8 +39,8 @@ struct squeue {
   PS<TQ> queues;
   TQ& get(int i) { return *queues.getRemote(i); }
   TQ& get() { return *queues.getLocal(); }
-  int myEffectiveID() { return substrate::ThreadPool::getTID(); }
-  int size() { return runtime::activeThreads; }
+  int myEffectiveID() { return ThreadPool::getTID(); }
+  int size() { return activeThreads; }
 };
 
 template <template <typename> class PS, typename TQ>
@@ -75,7 +73,7 @@ private:
   class Chunk : public FixedSizeRing<T, ChunkSize>,
                 public QT<Chunk, Concurrent>::ListNode {};
 
-  runtime::FixedSizeAllocator<Chunk> alloc;
+  FixedSizeAllocator<Chunk> alloc;
 
   struct p {
     Chunk* cur;
@@ -85,8 +83,8 @@ private:
 
   typedef QT<Chunk, Concurrent> LevelItem;
 
-  squeue<Concurrent, substrate::PerThreadStorage, p> data;
-  squeue<Distributed, substrate::PerSocketStorage, LevelItem> Q;
+  squeue<Concurrent, PerThreadStorage, p> data;
+  squeue<Distributed, PerSocketStorage, LevelItem> Q;
 
   Chunk* mkChunk() {
     Chunk* ptr = alloc.allocate(1);
@@ -235,9 +233,9 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     p& n = data.get();
-    galois::optional<value_type> retval;
+    katana::optional<value_type> retval;
     if (IsStack) {
       if (n.next && (retval = n.next->extract_back()))
         return retval;
@@ -246,7 +244,7 @@ public:
       n.next = popChunk();
       if (n.next)
         return n.next->extract_back();
-      return galois::optional<value_type>();
+      return katana::optional<value_type>();
     } else {
       if (n.cur && (retval = n.cur->extract_front()))
         return retval;
@@ -259,7 +257,7 @@ public:
       }
       if (n.cur)
         return n.cur->extract_front();
-      return galois::optional<value_type>();
+      return katana::optional<value_type>();
     }
   }
 };
@@ -274,7 +272,7 @@ public:
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
 using ChunkFIFO = internal::ChunkMaster<
     T, ConExtLinkedQueue, false, false, ChunkSize, Concurrent>;
-GALOIS_WLCOMPILECHECK(ChunkFIFO)
+KATANA_WLCOMPILECHECK(ChunkFIFO)
 
 /**
  * Chunk LIFO. A global LIFO of chunks of some fixed size.
@@ -284,7 +282,7 @@ GALOIS_WLCOMPILECHECK(ChunkFIFO)
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
 using ChunkLIFO = internal::ChunkMaster<
     T, ConExtLinkedStack, false, true, ChunkSize, Concurrent>;
-GALOIS_WLCOMPILECHECK(ChunkLIFO)
+KATANA_WLCOMPILECHECK(ChunkLIFO)
 
 /**
  * Distributed chunked FIFO. A more scalable version of {@link ChunkFIFO}.
@@ -294,7 +292,7 @@ GALOIS_WLCOMPILECHECK(ChunkLIFO)
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
 using PerSocketChunkFIFO = internal::ChunkMaster<
     T, ConExtLinkedQueue, true, false, ChunkSize, Concurrent>;
-GALOIS_WLCOMPILECHECK(PerSocketChunkFIFO)
+KATANA_WLCOMPILECHECK(PerSocketChunkFIFO)
 
 /**
  * Distributed chunked LIFO. A more scalable version of {@link ChunkLIFO}.
@@ -304,7 +302,7 @@ GALOIS_WLCOMPILECHECK(PerSocketChunkFIFO)
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
 using PerSocketChunkLIFO = internal::ChunkMaster<
     T, ConExtLinkedStack, true, true, ChunkSize, Concurrent>;
-GALOIS_WLCOMPILECHECK(PerSocketChunkLIFO)
+KATANA_WLCOMPILECHECK(PerSocketChunkLIFO)
 
 /**
  * Distributed chunked bag. A scalable and resource-efficient policy when you
@@ -315,9 +313,8 @@ GALOIS_WLCOMPILECHECK(PerSocketChunkLIFO)
 template <int ChunkSize = 64, typename T = int, bool Concurrent = true>
 using PerSocketChunkBag = internal::ChunkMaster<
     T, ConExtLinkedQueue, true, true, ChunkSize, Concurrent>;
-GALOIS_WLCOMPILECHECK(PerSocketChunkBag)
+KATANA_WLCOMPILECHECK(PerSocketChunkBag)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

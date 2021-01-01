@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCLINEARGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCLINEARGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCLINEARGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCLINEARGRAPH_H_
 
 #include <type_traits>
 
 #include <boost/mpl/if.hpp>
 
-#include "galois/LargeArray.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/Details.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Local computation graph (i.e., graph structure does not change). The data
@@ -171,7 +170,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<!_A1 && !_A2>::type* = 0) {
-    galois::runtime::acquire(N, mflag);
+    katana::acquire(N, mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -239,7 +238,7 @@ public:
 
   node_data_reference getData(
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     acquireNode(N, mflag);
     return N->getData();
   }
@@ -247,7 +246,7 @@ public:
   edge_data_reference getEdgeData(
       edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) const {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     return ni->get();
   }
 
@@ -271,7 +270,7 @@ public:
 
   edge_iterator edge_begin(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (katana::shouldLock(mflag)) {
       for (edge_iterator ii = N->edgeBegin(), ee = N->edgeEnd(); ii != ee;
            ++ii) {
         acquireNode(ii->dst, mflag);
@@ -385,7 +384,6 @@ public:
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif

@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_TERMINATIONDETECTION_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_TERMINATIONDETECTION_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TERMINATIONDETECTION_H_
+#define KATANA_LIBGALOIS_KATANA_TERMINATIONDETECTION_H_
 
 #include <atomic>
 
-#include "galois/config.h"
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 class TerminationDetection;
 
@@ -34,7 +34,7 @@ class TerminationDetection;
  * Returns the termination detection instance. The instance will be reused, but
  * reinitialized to activeThreads.
  */
-GALOIS_EXPORT TerminationDetection& GetTerminationDetection(
+KATANA_EXPORT TerminationDetection& GetTerminationDetection(
     unsigned active_threads);
 
 /// Termination detection is the process of determining whether multiple
@@ -67,7 +67,7 @@ GALOIS_EXPORT TerminationDetection& GetTerminationDetection(
 ///
 ///   } while (term.Working());
 ///
-class GALOIS_EXPORT TerminationDetection {
+class KATANA_EXPORT TerminationDetection {
   // So that GetTerminationDetection can call init.
   friend TerminationDetection& GetTerminationDetection(unsigned);
 
@@ -112,6 +112,6 @@ namespace internal {
 void SetTerminationDetection(TerminationDetection* term);
 }  // end namespace internal
 
-}  // end namespace galois::substrate
+}  // end namespace katana
 
 #endif

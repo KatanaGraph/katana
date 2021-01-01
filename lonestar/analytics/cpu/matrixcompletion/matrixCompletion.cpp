@@ -25,9 +25,9 @@
 #include <ostream>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/ParallelSTL.h"
-#include "galois/graphs/Graph.h"
-#include "galois/runtime/TiledExecutor.h"
+#include "katana/Graph.h"
+#include "katana/ParallelSTL.h"
+#include "katana/TiledExecutor.h"
 
 #ifdef HAS_EIGEN
 #include <Eigen/Dense>
@@ -132,10 +132,10 @@ sumSquaredError(Graph& g) {
   typedef typename Graph::GraphNode GNode;
   // computing Root Mean Square Error
   // Assuming only item nodes have edges
-  galois::GAccumulator<double> error;
+  katana::GAccumulator<double> error;
 
-  galois::do_all(
-      galois::iterate(g.begin(), g.begin() + NUM_ITEM_NODES), [&](GNode n) {
+  katana::do_all(
+      katana::iterate(g.begin(), g.begin() + NUM_ITEM_NODES), [&](GNode n) {
         for (auto ii = g.edge_begin(n), ei = g.edge_end(n); ii != ei; ++ii) {
           GNode dst = g.getEdgeDst(ii);
           LatentValue e = predictionError(
@@ -151,8 +151,8 @@ template <typename Graph>
 size_t
 countEdges(Graph& g) {
   typedef typename Graph::GraphNode GNode;
-  galois::GAccumulator<size_t> edges;
-  galois::runtime::Fixed2DGraphTiledExecutor<Graph> executor(g);
+  katana::GAccumulator<size_t> edges;
+  katana::Fixed2DGraphTiledExecutor<Graph> executor(g);
   std::cout << "NUM_ITEM_NODES : " << NUM_ITEM_NODES << "\n";
   executor.execute(
       g.begin(), g.begin() + NUM_ITEM_NODES, g.begin() + NUM_ITEM_NODES,
@@ -167,7 +167,7 @@ void
 verify(Graph& g, const std::string& prefix) {
   std::cout << countEdges(g) << " : " << g.sizeEdges() << "\n";
   if (countEdges(g) != g.sizeEdges()) {
-    GALOIS_DIE("edge list of input graph probably not sorted");
+    KATANA_DIE("edge list of input graph probably not sorted");
   }
 
   double error = sumSquaredError(g);
@@ -266,14 +266,14 @@ countFlops(size_t nnz, int rounds, int k) {
 template <typename Graph, typename Fn>
 void
 executeUntilConverged(const StepFunction& sf, Graph& g, Fn fn) {
-  galois::GAccumulator<double> errorAccum;
+  katana::GAccumulator<double> errorAccum;
   std::vector<LatentValue> steps(updatesPerEdge);
   LatentValue last = -1.0;
   unsigned deltaRound = updatesPerEdge;
   LatentValue rate = learningRate;
 
-  galois::StatTimer executeAlgoTimer("Algorithm Execution Time");
-  galois::TimeAccumulator elapsed;
+  katana::StatTimer executeAlgoTimer("Algorithm Execution Time");
+  katana::TimeAccumulator elapsed;
   elapsed.start();
 
   unsigned long lastTime = 0;
@@ -308,18 +308,18 @@ executeUntilConverged(const StepFunction& sf, Graph& g, Fn fn) {
                     millis / 1e6;
 
     int curRound = round + deltaRound;
-    galois::gPrint(
+    katana::gPrint(
         "R: ", curRound, " elapsed (ms): ", curElapsed, " GFLOP/s: ", gflops);
     if (useExactError) {
-      galois::gPrint(
+      katana::gPrint(
           " RMSE (R ", curRound, "): ", std::sqrt(error / g.sizeEdges()), "\n");
     } else {
-      galois::gPrint(
+      katana::gPrint(
           " Approx. RMSE (R ", (curRound - 1),
           ".5): ", std::sqrt(std::abs(error / g.sizeEdges())), "\n");
     }
 
-    galois::gPrint("Error Change : ", std::abs((last - error) / last), "\n");
+    katana::gPrint("Error Change : ", std::abs((last - error) / last), "\n");
     if (!isFinite(error))
       break;
     if (fixedRounds <= 0 &&
@@ -342,7 +342,7 @@ executeUntilConverged(const StepFunction& sf, Graph& g, Fn fn) {
  */
 struct SGDBlockJumpAlgo {
   bool isSgd() const { return true; }
-  typedef galois::substrate::PaddedLock<true> SpinLock;
+  typedef katana::PaddedLock<true> SpinLock;
   static const bool precomputeOffsets = true;  // false;
 
   std::string name() const { return "sgdBlockJumpAlgo"; }
@@ -351,12 +351,12 @@ struct SGDBlockJumpAlgo {
     LatentValue latentVector[LATENT_VECTOR_SIZE];
   };
 
-  typedef galois::graphs::LC_CSR_Graph<Node, EdgeType>
+  typedef katana::LC_CSR_Graph<Node, EdgeType>
       //    ::with_numa_alloc<true>::type
       ::with_no_lockable<true>::type Graph;
   typedef Graph::GraphNode GNode;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   size_t userIdToUserNode(size_t userId) { return userId + NUM_ITEM_NODES; }
 
@@ -391,7 +391,7 @@ struct SGDBlockJumpAlgo {
     size_t numXBlocks, numYBlocks;
     const LatentValue* steps;
     size_t maxUpdates;
-    galois::GAccumulator<double>* errorAccum;
+    katana::GAccumulator<double>* errorAccum;
 
     struct GetDst {
       Graph* g;
@@ -413,7 +413,7 @@ struct SGDBlockJumpAlgo {
         BlockInfo& si, typename std::enable_if<!Enable>::type* = 0) {
       if (si.updates >= maxUpdates)
         return 0;
-      typedef galois::NoDerefIterator<Graph::edge_iterator> no_deref_iterator;
+      typedef katana::NoDerefIterator<Graph::edge_iterator> no_deref_iterator;
       typedef boost::transform_iterator<GetDst, no_deref_iterator>
           edge_dst_iterator;
 
@@ -437,11 +437,11 @@ struct SGDBlockJumpAlgo {
 
         edge_dst_iterator start(
             no_deref_iterator(
-                g.edge_begin(item, galois::MethodFlag::UNPROTECTED)),
+                g.edge_begin(item, katana::MethodFlag::UNPROTECTED)),
             fn);
         edge_dst_iterator end(
             no_deref_iterator(
-                g.edge_end(item, galois::MethodFlag::UNPROTECTED)),
+                g.edge_end(item, katana::MethodFlag::UNPROTECTED)),
             fn);
 
         // For each edge in the range
@@ -550,10 +550,10 @@ struct SGDBlockJumpAlgo {
     }
 
     void operator()(unsigned tid, unsigned total) {
-      galois::StatTimer timer("PerThreadTime");
+      katana::StatTimer timer("PerThreadTime");
       // TODO: Report Accumulators at the end
-      galois::GAccumulator<size_t> edgesVisited;
-      galois::GAccumulator<size_t> blocksVisited;
+      katana::GAccumulator<size_t> edgesVisited;
+      katana::GAccumulator<size_t> blocksVisited;
       size_t numBlocks = numXBlocks * numYBlocks;
       size_t xBlock = (numXBlocks + total - 1) / total;
       size_t xStart = std::min(xBlock * tid, numXBlocks - 1);
@@ -579,7 +579,7 @@ struct SGDBlockJumpAlgo {
   };
 
   void operator()(Graph& g, const StepFunction& sf) {
-    galois::StatTimer preProcessTimer("PreProcessingTime");
+    katana::StatTimer preProcessTimer("PreProcessingTime");
     preProcessTimer.start();
     const size_t numUsers = g.size() - NUM_ITEM_NODES;
     const size_t numYBlocks =
@@ -619,8 +619,8 @@ struct SGDBlockJumpAlgo {
     // Partition item edges in blocks to users according to range [userStart,
     // userEnd)
     if (precomputeOffsets) {
-      galois::do_all(
-          galois::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
+      katana::do_all(
+          katana::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
           [&](GNode item) {
             size_t sliceY = item / itemsPerBlock;
             BlockInfo* s = &blocks[sliceY * numXBlocks];
@@ -645,15 +645,15 @@ struct SGDBlockJumpAlgo {
     }
     preProcessTimer.stop();
 
-    galois::StatTimer executeTimer("Time");
+    katana::StatTimer executeTimer("Time");
     executeTimer.start();
     executeUntilConverged(
         sf, g,
         [&](LatentValue* steps, size_t maxUpdates,
-            galois::GAccumulator<double>* errorAccum) {
+            katana::GAccumulator<double>* errorAccum) {
           Process fn{g,          xLocks, yLocks,     blocks,    numXBlocks,
                      numYBlocks, steps,  maxUpdates, errorAccum};
-          galois::on_each(fn);
+          katana::on_each(fn);
         });
     executeTimer.stop();
 
@@ -679,12 +679,12 @@ class SGDItemsAlgo {
 public:
   bool isSgd() const { return true; }
 
-  typedef typename galois::graphs::LC_CSR_Graph<Node, EdgeType>
+  typedef typename katana::LC_CSR_Graph<Node, EdgeType>
       //::template with_numa_alloc<true>::type
       ::template with_out_of_line_lockable<true>::type ::
           template with_no_lockable<!makeSerializable>::type Graph;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   std::string name() const { return "sgdItemsAlgo"; }
 
@@ -696,18 +696,18 @@ private:
 
   struct Execute {
     Graph& g;
-    galois::GAccumulator<unsigned>& edgesVisited;
+    katana::GAccumulator<unsigned>& edgesVisited;
 
     void operator()(
-        LatentValue* steps, int, galois::GAccumulator<double>* errorAccum) {
+        LatentValue* steps, int, katana::GAccumulator<double>* errorAccum) {
       const LatentValue stepSize = steps[0];
-      galois::for_each(
-          galois::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
+      katana::for_each(
+          katana::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
           [&](GNode src, auto&) {
             for (auto ii : g.edges(src)) {
               GNode dst = g.getEdgeDst(ii);
               LatentValue error = doGradientUpdate(
-                  g.getData(src, galois::MethodFlag::UNPROTECTED).latentVector,
+                  g.getData(src, katana::MethodFlag::UNPROTECTED).latentVector,
                   g.getData(dst).latentVector, lambda, g.getEdgeData(ii),
                   stepSize);
 
@@ -716,17 +716,17 @@ private:
                 *errorAccum += error;
             }
           },
-          galois::wl<galois::worklists::PerSocketChunkFIFO<64>>(),
-          galois::no_pushes(), galois::loopname("sgdItemsAlgo"));
+          katana::wl<katana::PerSocketChunkFIFO<64>>(), katana::no_pushes(),
+          katana::loopname("sgdItemsAlgo"));
     }
   };
 
 public:
   void operator()(Graph& g, const StepFunction& sf) {
     verify(g, "sgdItemsAlgo");
-    galois::GAccumulator<unsigned> edgesVisited;
+    katana::GAccumulator<unsigned> edgesVisited;
 
-    galois::StatTimer executeTimer("Time");
+    katana::StatTimer executeTimer("Time");
     executeTimer.start();
 
     Execute fn{g, edgesVisited};
@@ -734,7 +734,7 @@ public:
 
     executeTimer.stop();
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "sgdItemsAlgo", "EdgesVisited", edgesVisited.reduce());
   }
 };
@@ -758,12 +758,12 @@ class SGDEdgeItem {
 public:
   bool isSgd() const { return true; }
 
-  typedef typename galois::graphs::LC_CSR_Graph<Node, EdgeType>
+  typedef typename katana::LC_CSR_Graph<Node, EdgeType>
       //::template with_numa_alloc<true>::type
       ::template with_out_of_line_lockable<true>::type ::
           template with_no_lockable<!makeSerializable>::type Graph;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   std::string name() const { return "sgdEdgeItem"; }
 
@@ -775,22 +775,22 @@ private:
 
   struct Execute {
     Graph& g;
-    galois::GAccumulator<unsigned>& edgesVisited;
+    katana::GAccumulator<unsigned>& edgesVisited;
     void operator()(
-        LatentValue* steps, int, galois::GAccumulator<double>* errorAccum) {
+        LatentValue* steps, int, katana::GAccumulator<double>* errorAccum) {
       const LatentValue stepSize = steps[0];
-      galois::for_each(
-          galois::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
+      katana::for_each(
+          katana::iterate(g.begin(), g.begin() + NUM_ITEM_NODES),
           [&](GNode src, auto& ctx) {
-            auto ii = g.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-            auto ee = g.edge_end(src, galois::MethodFlag::UNPROTECTED);
+            auto ii = g.edge_begin(src, katana::MethodFlag::UNPROTECTED);
+            auto ee = g.edge_end(src, katana::MethodFlag::UNPROTECTED);
 
             if (ii == ee)
               return;
 
             // Do not need lock on the source node, since only one thread can
             // work on a given src(item).
-            auto& srcData = g.getData(src, galois::MethodFlag::UNPROTECTED);
+            auto& srcData = g.getData(src, katana::MethodFlag::UNPROTECTED);
             // Advance to the edge that has not been worked yet.
             std::advance(ii, srcData.edge_offset);
             // Take lock on the destination as multiple source may update the
@@ -818,17 +818,17 @@ private:
               ctx.push(src);
             }
           },
-          galois::wl<galois::worklists::PerSocketChunkLIFO<8>>(),
-          galois::loopname("sgdEdgeItem"));
+          katana::wl<katana::PerSocketChunkLIFO<8>>(),
+          katana::loopname("sgdEdgeItem"));
     }
   };
 
 public:
   void operator()(Graph& g, const StepFunction& sf) {
     verify(g, "sgdEdgeItem");
-    galois::GAccumulator<unsigned> edgesVisited;
+    katana::GAccumulator<unsigned> edgesVisited;
 
-    galois::StatTimer executeTimer("Time");
+    katana::StatTimer executeTimer("Time");
     executeTimer.start();
 
     Execute fn{g, edgesVisited};
@@ -836,7 +836,7 @@ public:
 
     executeTimer.stop();
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "sgdEdgeItem", "EdgesVisited", edgesVisited.reduce());
   }
 };
@@ -859,12 +859,12 @@ class SGDBlockEdgeAlgo {
 public:
   bool isSgd() const { return true; }
 
-  typedef typename galois::graphs::LC_CSR_Graph<Node, EdgeType>
+  typedef typename katana::LC_CSR_Graph<Node, EdgeType>
       //::template with_numa_alloc<true>::type
       ::template with_out_of_line_lockable<true>::type ::
           template with_no_lockable<!makeSerializable>::type Graph;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   std::string name() const { return "sgdBlockEdge"; }
 
@@ -876,11 +876,11 @@ private:
 
   struct Execute {
     Graph& g;
-    galois::GAccumulator<unsigned>& edgesVisited;
+    katana::GAccumulator<unsigned>& edgesVisited;
 
     void operator()(
-        LatentValue* steps, int, galois::GAccumulator<double>* errorAccum) {
-      galois::runtime::Fixed2DGraphTiledExecutor<Graph> executor(g);
+        LatentValue* steps, int, katana::GAccumulator<double>* errorAccum) {
+      katana::Fixed2DGraphTiledExecutor<Graph> executor(g);
       executor.execute(
           g.begin(), g.begin() + NUM_ITEM_NODES, g.begin() + NUM_ITEM_NODES,
           g.end(), itemsPerBlock, usersPerBlock,
@@ -901,9 +901,9 @@ private:
 public:
   void operator()(Graph& g, const StepFunction& sf) {
     verify(g, "sgdBlockEdgeAlgo");
-    galois::GAccumulator<unsigned> edgesVisited;
+    katana::GAccumulator<unsigned> edgesVisited;
 
-    galois::StatTimer executeTimer("Time");
+    katana::StatTimer executeTimer("Time");
     executeTimer.start();
 
     Execute fn{g, edgesVisited};
@@ -911,7 +911,7 @@ public:
 
     executeTimer.stop();
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "sgdBlockEdgeAlgo", "EdgesVisited", edgesVisited.reduce());
   }
 };
@@ -929,8 +929,8 @@ struct SimpleALSalgo {
     LatentValue latentVector[LATENT_VECTOR_SIZE];
   };
 
-  typedef typename galois::graphs::LC_CSR_Graph<
-      Node, EdgeType>::with_no_lockable<true>::type Graph;
+  typedef typename katana::LC_CSR_Graph<Node, EdgeType>::with_no_lockable<
+      true>::type Graph;
   typedef Graph::GraphNode GNode;
   // Column-major access
   typedef Eigen::SparseMatrix<LatentValue> Sp;
@@ -941,7 +941,7 @@ struct SimpleALSalgo {
   Sp A;
   Sp AT;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   void copyToGraph(Graph& g, MT& WT, MT& HT) {
     // Copy out
@@ -984,7 +984,7 @@ struct SimpleALSalgo {
   }
 
   void operator()(Graph& g, const StepFunction&) {
-    galois::TimeAccumulator elapsed;
+    katana::TimeAccumulator elapsed;
     elapsed.start();
 
     // Find W, H that minimize ||W H^T - A||_2^2 by solving alternating least
@@ -996,22 +996,22 @@ struct SimpleALSalgo {
     typedef Eigen::Matrix<LatentValue, LATENT_VECTOR_SIZE, LATENT_VECTOR_SIZE>
         XTX;
     typedef Eigen::Matrix<LatentValue, LATENT_VECTOR_SIZE, Eigen::Dynamic> XTSp;
-    typedef galois::substrate::PerThreadStorage<XTX> PerThrdXTX;
+    typedef katana::PerThreadStorage<XTX> PerThrdXTX;
 
-    galois::gPrint("ALS::Start initializeA\n");
+    katana::gPrint("ALS::Start initializeA\n");
     initializeA(g);
-    galois::gPrint("ALS::End initializeA\n");
-    galois::gPrint("ALS::Start copyFromGraph\n");
+    katana::gPrint("ALS::End initializeA\n");
+    katana::gPrint("ALS::Start copyFromGraph\n");
     copyFromGraph(g, WT, HT);
-    galois::gPrint("ALS::End copyFromGraph\n");
+    katana::gPrint("ALS::End copyFromGraph\n");
 
     double last = -1.0;
-    galois::StatTimer mmTime("MMTime");
-    galois::StatTimer update1Time("UpdateTime1");
-    galois::StatTimer update2Time("UpdateTime2");
-    galois::StatTimer copyTime("CopyTime");
-    galois::StatTimer totalExecTime("totalExecTime");
-    galois::StatTimer totalAlgoTime("Time");
+    katana::StatTimer mmTime("MMTime");
+    katana::StatTimer update1Time("UpdateTime1");
+    katana::StatTimer update2Time("UpdateTime2");
+    katana::StatTimer copyTime("CopyTime");
+    katana::StatTimer totalExecTime("totalExecTime");
+    katana::StatTimer totalAlgoTime("Time");
     PerThrdXTX xtxs;
 
     totalAlgoTime.start();
@@ -1024,11 +1024,11 @@ struct SimpleALSalgo {
 
       update1Time.start();
       // TODO: Change to Do_all, pass ints to iterator
-      galois::for_each(
-          galois::iterate(
+      katana::for_each(
+          katana::iterate(
               boost::counting_iterator<int>(0),
               boost::counting_iterator<int>(A.outerSize())),
-          [&](int col, galois::UserContext<int>&) {
+          [&](int col, katana::UserContext<int>&) {
             // Compute WTW = W^T * W for sparse A
             XTX& WTW = *xtxs.getLocal();
             WTW.setConstant(0);
@@ -1047,11 +1047,11 @@ struct SimpleALSalgo {
       mmTime.stop();
 
       update2Time.start();
-      galois::for_each(
-          galois::iterate(
+      katana::for_each(
+          katana::iterate(
               boost::counting_iterator<int>(0),
               boost::counting_iterator<int>(AT.outerSize())),
-          [&](int col, galois::UserContext<int>&) {
+          [&](int col, katana::UserContext<int>&) {
             // Compute HTH = H^T * H for sparse A
             XTX& HTH = *xtxs.getLocal();
             HTH.setConstant(0);
@@ -1099,7 +1099,7 @@ struct SyncALSalgo {
   };
 
   static const bool NEEDS_LOCKS = false;
-  typedef typename galois::graphs::LC_CSR_Graph<Node, EdgeType> BaseGraph;
+  typedef typename katana::LC_CSR_Graph<Node, EdgeType> BaseGraph;
   typedef typename std::conditional<
       NEEDS_LOCKS,
       typename BaseGraph::template with_out_of_line_lockable<true>::type,
@@ -1114,13 +1114,13 @@ struct SyncALSalgo {
       XTX;
   typedef Eigen::Matrix<LatentValue, LATENT_VECTOR_SIZE, Eigen::Dynamic> XTSp;
 
-  typedef galois::substrate::PerThreadStorage<XTX> PerThrdXTX;
-  typedef galois::substrate::PerThreadStorage<V> PerThrdV;
+  typedef katana::PerThreadStorage<XTX> PerThrdXTX;
+  typedef katana::PerThreadStorage<V> PerThrdV;
 
   Sp A;
   Sp AT;
 
-  void readGraph(Graph& g) { galois::graphs::readGraph(g, inputFile); }
+  void readGraph(Graph& g) { katana::readGraph(g, inputFile); }
 
   void copyToGraph(Graph& g, MT& WT, MT& HT) {
     // Copy out
@@ -1202,7 +1202,7 @@ struct SyncALSalgo {
 
   struct Process {
     struct LocalState {
-      LocalState(Process&, galois::PerIterAllocTy&) {}
+      LocalState(Process&, katana::PerIterAllocTy&) {}
     };
 
     struct DeterministicId {
@@ -1210,12 +1210,12 @@ struct SyncALSalgo {
     };
 
     typedef std::tuple<
-        galois::per_iter_alloc, galois::intent_to_read,
-        galois::local_state<LocalState>, galois::det_id<DeterministicId>>
+        katana::per_iter_alloc, katana::intent_to_read,
+        katana::local_state<LocalState>, katana::det_id<DeterministicId>>
         ikdg_function_traits;
     typedef std::tuple<
-        galois::per_iter_alloc, galois::fixed_neighborhood,
-        galois::local_state<LocalState>, galois::det_id<DeterministicId>>
+        katana::per_iter_alloc, katana::fixed_neighborhood,
+        katana::local_state<LocalState>, katana::det_id<DeterministicId>>
         add_remove_function_traits;
     typedef std::tuple<> nondet_function_traits;
 
@@ -1231,18 +1231,18 @@ struct SyncALSalgo {
         PerThrdV& rhs)
         : self(self), g(g), WT(WT), HT(HT), xtxs(xtxs), rhs(rhs) {}
 
-    void operator()(size_t col, galois::UserContext<size_t>& ctx) {
+    void operator()(size_t col, katana::UserContext<size_t>& ctx) {
       self.update(g, col, WT, HT, xtxs, rhs);
     }
   };
 
   void operator()(Graph& g, const StepFunction&) {
     if (!useSameLatentVector) {
-      galois::gWarn(
+      katana::gWarn(
           "Results are not deterministic with different numbers of "
           "threads unless -useSameLatentVector is true");
     }
-    galois::TimeAccumulator elapsed;
+    katana::TimeAccumulator elapsed;
     elapsed.start();
 
     // Find W, H that minimize ||W H^T - A||_2^2 by solving alternating least
@@ -1256,10 +1256,10 @@ struct SyncALSalgo {
     copyFromGraph(g, WT, HT);
 
     double last = -1.0;
-    galois::StatTimer updateTime("UpdateTime");
-    galois::StatTimer copyTime("CopyTime");
-    galois::StatTimer totalExecTime("totalExecTime");
-    galois::StatTimer totalAlgoTime("Time");
+    katana::StatTimer updateTime("UpdateTime");
+    katana::StatTimer copyTime("CopyTime");
+    katana::StatTimer totalExecTime("totalExecTime");
+    katana::StatTimer totalAlgoTime("Time");
     PerThrdXTX xtxs;
     PerThrdV rhs;
 
@@ -1268,19 +1268,19 @@ struct SyncALSalgo {
       totalExecTime.start();
       updateTime.start();
 
-      typedef galois::worklists::PerThreadChunkLIFO<ALS_CHUNK_SIZE> WL_ty;
-      galois::for_each(
-          galois::iterate(
+      typedef katana::PerThreadChunkLIFO<ALS_CHUNK_SIZE> WL_ty;
+      katana::for_each(
+          katana::iterate(
               boost::counting_iterator<size_t>(0),
               boost::counting_iterator<size_t>(NUM_ITEM_NODES)),
-          Process(*this, g, WT, HT, xtxs, rhs), galois::wl<WL_ty>(),
-          galois::loopname("syncALS-users"));
-      galois::for_each(
-          galois::iterate(
+          Process(*this, g, WT, HT, xtxs, rhs), katana::wl<WL_ty>(),
+          katana::loopname("syncALS-users"));
+      katana::for_each(
+          katana::iterate(
               boost::counting_iterator<size_t>(NUM_ITEM_NODES),
               boost::counting_iterator<size_t>(g.size())),
-          Process(*this, g, WT, HT, xtxs, rhs), galois::wl<WL_ty>(),
-          galois::loopname("syncALS-items"));
+          Process(*this, g, WT, HT, xtxs, rhs), katana::wl<WL_ty>(),
+          katana::loopname("syncALS-items"));
 
       updateTime.stop();
 
@@ -1323,11 +1323,11 @@ struct SyncALSalgo {
 template <typename Graph>
 size_t
 initializeGraphData(Graph& g) {
-  galois::gPrint("initializeGraphData\n");
-  galois::StatTimer initTimer("InitializeGraph");
+  katana::gPrint("initializeGraphData\n");
+  katana::StatTimer initTimer("InitializeGraph");
   initTimer.start();
   double top = 1.0 / std::sqrt(LATENT_VECTOR_SIZE);
-  galois::substrate::PerThreadStorage<std::mt19937> gen;
+  katana::PerThreadStorage<std::mt19937> gen;
 
 #if __cplusplus >= 201103L || defined(HAVE_CXX11_UNIFORM_INT_DISTRIBUTION)
   std::uniform_real_distribution<LatentValue> dist(0, top);
@@ -1336,7 +1336,7 @@ initializeGraphData(Graph& g) {
 #endif
 
   if (useDetInit) {
-    galois::do_all(galois::iterate(g), [&](typename Graph::GraphNode n) {
+    katana::do_all(katana::iterate(g), [&](typename Graph::GraphNode n) {
       auto& data = g.getData(n);
       auto val = genVal(n);
       for (int i = 0; i < LATENT_VECTOR_SIZE; i++) {
@@ -1344,7 +1344,7 @@ initializeGraphData(Graph& g) {
       }
     });
   } else {
-    galois::do_all(galois::iterate(g), [&](typename Graph::GraphNode n) {
+    katana::do_all(katana::iterate(g), [&](typename Graph::GraphNode n) {
       auto& data = g.getData(n);
 
       // all threads initialize their assignment with same generator or
@@ -1362,10 +1362,10 @@ initializeGraphData(Graph& g) {
     });
   }
 
-  auto activeThreads = galois::getActiveThreads();
+  auto activeThreads = katana::getActiveThreads();
   std::vector<uint32_t> largestNodeID_perThread(activeThreads);
 
-  galois::on_each([&](unsigned tid, unsigned nthreads) {
+  katana::on_each([&](unsigned tid, unsigned nthreads) {
     unsigned int block_size = g.size() / nthreads;
     if ((g.size() % nthreads) > 0)
       ++block_size;
@@ -1409,7 +1409,7 @@ newStepFunction() {
   case Step::bold:
     return new BoldStepFunction;
   default:
-    GALOIS_DIE("unknown step function");
+    KATANA_DIE("unknown step function");
   }
 }
 
@@ -1481,7 +1481,7 @@ run() {
   }
 
   // algorithm call
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   algo(g, *sf);
   execTime.stop();
@@ -1500,17 +1500,17 @@ run() {
       writeAsciiLatentVectors(g, outputFilename);
       break;
     default:
-      GALOIS_DIE("invalid output type for latent vector output");
+      KATANA_DIE("invalid output type for latent vector output");
     }
   }
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   switch (algo) {
@@ -1535,7 +1535,7 @@ main(int argc, char** argv) {
     run<SGDBlockJumpAlgo>();
     break;
   default:
-    GALOIS_DIE("unknown algorithm");
+    KATANA_DIE("unknown algorithm");
     break;
   }
 

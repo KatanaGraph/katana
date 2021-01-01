@@ -1,20 +1,20 @@
-#include "galois/Properties.h"
+#include "katana/Properties.h"
 
 template <typename ViewType, typename T, typename U>
 void
 Compare(
     const std::vector<std::optional<T>>& vec, const std::shared_ptr<U>& array) {
-  GALOIS_LOG_ASSERT(vec.size() == (size_t)array->length());
+  KATANA_LOG_ASSERT(vec.size() == (size_t)array->length());
   auto res = ViewType::Make(*array);
-  GALOIS_LOG_ASSERT(res);
+  KATANA_LOG_ASSERT(res);
   auto view = std::move(res.value());
   for (size_t i = 0, n = vec.size(); i < n; ++i) {
     if (vec[i]) {
-      GALOIS_LOG_ASSERT(view.IsValid(i));
-      GALOIS_LOG_ASSERT(*vec[i] == view[i]);
+      KATANA_LOG_ASSERT(view.IsValid(i));
+      KATANA_LOG_ASSERT(*vec[i] == view[i]);
     } else {
-      GALOIS_LOG_ASSERT(!view.IsValid(i));
-      GALOIS_LOG_ASSERT(view[i] == T{});
+      KATANA_LOG_ASSERT(!view.IsValid(i));
+      KATANA_LOG_ASSERT(view[i] == T{});
     }
   }
 }
@@ -28,14 +28,14 @@ MakeArray(const std::vector<std::optional<T>>& vec) {
   BuilderType builder;
   for (auto v : vec) {
     if (v) {
-      GALOIS_LOG_ASSERT(builder.Append(*v).ok());
+      KATANA_LOG_ASSERT(builder.Append(*v).ok());
     } else {
-      GALOIS_LOG_ASSERT(builder.AppendNull().ok());
+      KATANA_LOG_ASSERT(builder.AppendNull().ok());
     }
   }
   std::shared_ptr<ArrayType> array;
-  GALOIS_LOG_ASSERT(builder.Finish(&array).ok());
-  GALOIS_LOG_ASSERT(array);
+  KATANA_LOG_ASSERT(builder.Finish(&array).ok());
+  KATANA_LOG_ASSERT(array);
   return array;
 }
 
@@ -44,7 +44,7 @@ void
 TestSliced(
     const std::vector<std::optional<T>>& vec, const std::shared_ptr<U>& array,
     size_t offset, size_t length) {
-  GALOIS_LOG_ASSERT(offset + length <= vec.size());
+  KATANA_LOG_ASSERT(offset + length <= vec.size());
   auto begin = vec.begin() + offset;
   std::vector<std::optional<T>> slice_vec(begin, begin + length);
   auto slice_array = array->Slice(offset, length);
@@ -56,7 +56,7 @@ template <typename T>
 void
 TestPOD() {
   using VecType = std::vector<std::optional<T>>;
-  using ViewType = typename galois::PODProperty<T>::ViewType;
+  using ViewType = typename katana::PODProperty<T>::ViewType;
   VecType vec{1, 2, std::nullopt, 3, std::nullopt, std::nullopt, 6, 7,
               8, 9, std::nullopt};
   auto array = MakeArray(vec);
@@ -68,7 +68,7 @@ TestPOD() {
 void
 TestString() {
   using VecType = std::vector<std::optional<std::string>>;
-  using ViewType = galois::StringReadOnlyProperty::ViewType;
+  using ViewType = katana::StringReadOnlyProperty::ViewType;
   VecType vec{"1", "2", std::nullopt, "3", std::nullopt, std::nullopt,
               "6", "7", "8",          "9", std::nullopt};
   auto array = MakeArray(vec);
@@ -80,7 +80,7 @@ TestString() {
 void
 TestBool() {
   using VecType = std::vector<std::optional<bool>>;
-  using ViewType = galois::BooleanReadOnlyProperty::ViewType;
+  using ViewType = katana::BooleanReadOnlyProperty::ViewType;
   VecType vec{true,  false, std::nullopt, true, std::nullopt, std::nullopt,
               false, false, false,        true, std::nullopt};
   auto array = MakeArray(vec);
@@ -103,6 +103,6 @@ main() {
   TestPOD<double>();
   TestString();
   TestBool();
-  GALOIS_LOG_VERBOSE("success");
+  KATANA_LOG_VERBOSE("success");
   return 0;
 }

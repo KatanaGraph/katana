@@ -8,15 +8,15 @@
 #include <nlohmann/json.hpp>
 
 #include "GlobalState.h"
-#include "galois/Env.h"
-#include "galois/JSON.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/Env.h"
+#include "katana/JSON.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 
 namespace tsuba {
 
-galois::Result<RDGMeta>
+katana::Result<RDGMeta>
 MemoryNameServerClient::lookup(const std::string& key) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = server_state_.find(key);
@@ -26,14 +26,14 @@ MemoryNameServerClient::lookup(const std::string& key) {
   return it->second;
 }
 
-galois::Result<RDGMeta>
-MemoryNameServerClient::Get(const galois::Uri& rdg_name) {
+katana::Result<RDGMeta>
+MemoryNameServerClient::Get(const katana::Uri& rdg_name) {
   return lookup(rdg_name.Encode());
 }
 
-galois::Result<void>
+katana::Result<void>
 MemoryNameServerClient::CreateIfAbsent(
-    const galois::Uri& rdg_name, const RDGMeta& meta) {
+    const katana::Uri& rdg_name, const RDGMeta& meta) {
   std::string key = rdg_name.Encode();
 
   // CreateIfAbsent, Delete and Update are collective operations
@@ -44,17 +44,17 @@ MemoryNameServerClient::CreateIfAbsent(
   if (server_state_.find(key) == server_state_.end()) {
     server_state_.emplace(key, meta);
   } else if (server_state_[key].version() != meta.version()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "mismatched versions {} != {}", server_state_[key].version(),
         meta.version());
     return ErrorCode::TODO;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
+katana::Result<void>
+MemoryNameServerClient::Delete(const katana::Uri& rdg_name) {
   Comm()->Barrier();
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -63,12 +63,12 @@ MemoryNameServerClient::Delete(const galois::Uri& rdg_name) {
     return ErrorCode::NotFound;
   }
   server_state_.erase(it);
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 MemoryNameServerClient::Update(
-    const galois::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
+    const katana::Uri& rdg_name, uint64_t old_version, const RDGMeta& meta) {
   Comm()->Barrier();
 
   if (old_version >= meta.version()) {
@@ -84,12 +84,12 @@ MemoryNameServerClient::Update(
   }
   server_state_.erase(it);
   server_state_.emplace(rdg_name.Encode(), meta);
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 MemoryNameServerClient::CheckHealth() {
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 }  // namespace tsuba

@@ -17,18 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/graphs/Graph.h"
+#include "katana/Graph.h"
 
 #include <string>
 
 int
 useGraph(std::string inputfile) {
   //! [Using a graph]
-  typedef galois::graphs::LC_CSR_Graph<int, int> Graph;
+  typedef katana::LC_CSR_Graph<int, int> Graph;
 
   // Create graph
   Graph g;
-  galois::graphs::readGraph(g, inputfile);
+  katana::readGraph(g, inputfile);
 
   int sum = 0;
 
@@ -51,11 +51,11 @@ useGraph(std::string inputfile) {
 int
 useGraphCxx11(std::string inputfile) {
   //! [Using a graph cxx11]
-  typedef galois::graphs::LC_CSR_Graph<int, int> Graph;
+  typedef katana::LC_CSR_Graph<int, int> Graph;
 
   // Create graph
   Graph g;
-  galois::graphs::readGraph(g, inputfile);
+  katana::readGraph(g, inputfile);
 
   int sum = 0;
 
@@ -75,7 +75,7 @@ useGraphCxx11(std::string inputfile) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
   if (argc > 1) {
     useGraph(argv[1]);
     useGraphCxx11(argv[1]);

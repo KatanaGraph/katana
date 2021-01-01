@@ -1,14 +1,14 @@
-#ifndef GALOIS_BC_LEVEL
-#define GALOIS_BC_LEVEL
+#ifndef KATANA_BC_LEVEL
+#define KATANA_BC_LEVEL
 
 #include <fstream>
 #include <limits>
 
-#include "galois/AtomicHelpers.h"
-#include "galois/Reduction.h"
-#include "galois/gstl.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/Reduction.h"
+#include "katana/gstl.h"
 
-using galois::analytics::ConstructNodeProperties;
+using katana::analytics::ConstructNodeProperties;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -18,22 +18,22 @@ using LevelShortPathType = double;
 
 // NOTE: types assume that these values will not reach uint64_t: it may
 // need to be changed for very large graphs
-struct NodeCurrentDist : public galois::PODProperty<uint32_t> {};
+struct NodeCurrentDist : public katana::PODProperty<uint32_t> {};
 struct NodeNumShortestPaths {
   using ArrowType = arrow::CTypeTraits<LevelShortPathType>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<LevelShortPathType>>;
+  using ViewType = katana::PODPropertyView<std::atomic<LevelShortPathType>>;
 };
-struct NodeDependency : public galois::PODProperty<float> {};
-struct NodeBC : public galois::PODProperty<float> {};
+struct NodeDependency : public katana::PODProperty<float> {};
+struct NodeBC : public katana::PODProperty<float> {};
 
 using NodeDataLevel =
     std::tuple<NodeCurrentDist, NodeNumShortestPaths, NodeDependency, NodeBC>;
 using EdgeDataLevel = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
+typedef katana::PropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
 typedef typename LevelGraph::Node LevelGNode;
 
-using LevelWorklistType = galois::InsertBag<LevelGNode, 4096>;
+using LevelWorklistType = katana::InsertBag<LevelGNode, 4096>;
 
 constexpr static const unsigned LEVEL_CHUNK_SIZE = 256u;
 
@@ -46,15 +46,15 @@ constexpr static const unsigned LEVEL_CHUNK_SIZE = 256u;
  */
 void
 LevelInitializeGraph(LevelGraph* graph) {
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](LevelGNode n) {
         graph->GetData<NodeCurrentDist>(n) = 0;
         graph->GetData<NodeNumShortestPaths>(n) = 0;
         graph->GetData<NodeDependency>(n) = 0;
         graph->GetData<NodeBC>(n) = 0;
       },
-      galois::no_stats(), galois::loopname("InitializeGraph"));
+      katana::no_stats(), katana::loopname("InitializeGraph"));
 }
 
 /**
@@ -64,8 +64,8 @@ LevelInitializeGraph(LevelGraph* graph) {
  */
 void
 LevelInitializeIteration(LevelGraph* graph) {
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](LevelGNode n) {
         bool is_source = (n == kLevelCurrentSrcNode);
         // source nodes have distance 0 and initialize short paths to 1, else
@@ -80,7 +80,7 @@ LevelInitializeIteration(LevelGraph* graph) {
         // dependency reset for new source
         graph->GetData<NodeDependency>(n) = 0;
       },
-      galois::no_stats(), galois::loopname("InitializeIteration"));
+      katana::no_stats(), katana::loopname("InitializeIteration"));
 };
 
 /**
@@ -89,9 +89,9 @@ LevelInitializeIteration(LevelGraph* graph) {
  * Worklist-based push. Save worklists on a stack for reuse in backward
  * Brandes dependency propagation.
  */
-galois::gstl::Vector<LevelWorklistType>
+katana::gstl::Vector<LevelWorklistType>
 LevelSSSP(LevelGraph* graph) {
-  galois::gstl::Vector<LevelWorklistType> vector_of_worklists;
+  katana::gstl::Vector<LevelWorklistType> vector_of_worklists;
   uint32_t current_level = 0;
 
   // construct first level worklist which consists only of source
@@ -104,10 +104,10 @@ LevelSSSP(LevelGraph* graph) {
     vector_of_worklists.emplace_back();
     uint32_t next_level = current_level + 1;
 
-    galois::do_all(
-        galois::iterate(vector_of_worklists[current_level]),
+    katana::do_all(
+        katana::iterate(vector_of_worklists[current_level]),
         [&](LevelGNode n) {
-          GALOIS_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
+          KATANA_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
 
           for (auto e : graph->edges(n)) {
             auto dest = graph->GetEdgeDest(e);
@@ -121,18 +121,18 @@ LevelSSSP(LevelGraph* graph) {
                 vector_of_worklists[next_level].emplace(*dest);
               }
 
-              galois::atomicAdd(
+              katana::atomicAdd(
                   graph->GetData<NodeNumShortestPaths>(dest),
                   graph->GetData<NodeNumShortestPaths>(n).load());
             } else if (graph->GetData<NodeCurrentDist>(dest) == next_level) {
-              galois::atomicAdd(
+              katana::atomicAdd(
                   graph->GetData<NodeNumShortestPaths>(dest),
                   graph->GetData<NodeNumShortestPaths>(n).load());
             }
           }
         },
-        galois::steal(), galois::chunk_size<LEVEL_CHUNK_SIZE>(),
-        galois::no_stats(), galois::loopname("SSSP"));
+        katana::steal(), katana::chunk_size<LEVEL_CHUNK_SIZE>(),
+        katana::no_stats(), katana::loopname("SSSP"));
 
     // move on to next level
     current_level++;
@@ -149,7 +149,7 @@ LevelSSSP(LevelGraph* graph) {
 void
 LevelBackwardBrandes(
     LevelGraph* graph,
-    galois::gstl::Vector<LevelWorklistType>* vector_of_worklists) {
+    katana::gstl::Vector<LevelWorklistType>* vector_of_worklists) {
   // minus 3 because last one is empty, one after is leaf nodes, and one
   // to correct indexing to 0 index
   if (vector_of_worklists->size() >= 3) {
@@ -161,10 +161,10 @@ LevelBackwardBrandes(
           (*vector_of_worklists)[current_level];
       uint32_t successor_Level = current_level + 1;
 
-      galois::do_all(
-          galois::iterate(current_worklist),
+      katana::do_all(
+          katana::iterate(current_worklist),
           [&](LevelGNode n) {
-            GALOIS_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
+            KATANA_ASSERT(graph->GetData<NodeCurrentDist>(n) == current_level);
 
             for (auto e : graph->edges(n)) {
               auto dest = graph->GetEdgeDest(e);
@@ -184,8 +184,8 @@ LevelBackwardBrandes(
             // accumulate dependency into bc
             graph->GetData<NodeBC>(n) += graph->GetData<NodeDependency>(n);
           },
-          galois::steal(), galois::chunk_size<LEVEL_CHUNK_SIZE>(),
-          galois::no_stats(), galois::loopname("Brandes"));
+          katana::steal(), katana::chunk_size<LEVEL_CHUNK_SIZE>(),
+          katana::no_stats(), katana::loopname("Brandes"));
 
       // move on to next level lower
       current_level--;
@@ -204,26 +204,26 @@ LevelBackwardBrandes(
  */
 void
 LevelSanity(const LevelGraph& graph) {
-  galois::GReduceMax<float> accum_max;
-  galois::GReduceMin<float> accum_min;
-  galois::GAccumulator<float> accum_sum;
+  katana::GReduceMax<float> accum_max;
+  katana::GReduceMin<float> accum_min;
+  katana::GAccumulator<float> accum_sum;
   accum_max.reset();
   accum_min.reset();
   accum_sum.reset();
 
   // get max, min, sum of BC values using accumulators and reducers
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](LevelGNode n) {
         accum_max.update(graph.GetData<NodeBC>(n));
         accum_min.update(graph.GetData<NodeBC>(n));
         accum_sum += graph.GetData<NodeBC>(n);
       },
-      galois::no_stats(), galois::loopname("LevelSanity"));
+      katana::no_stats(), katana::loopname("LevelSanity"));
 
-  galois::gPrint("Max BC is ", accum_max.reduce(), "\n");
-  galois::gPrint("Min BC is ", accum_min.reduce(), "\n");
-  galois::gPrint("BC sum is ", accum_sum.reduce(), "\n");
+  katana::gPrint("Max BC is ", accum_max.reduce(), "\n");
+  katana::gPrint("Min BC is ", accum_min.reduce(), "\n");
+  katana::gPrint("BC sum is ", accum_sum.reduce(), "\n");
 }
 
 /******************************************************************************/
@@ -253,30 +253,29 @@ DoLevelBC() {
   std::vector<uint64_t> source_vector;
 
   // some initial stat reporting
-  galois::gInfo(
+  katana::gInfo(
       "Worklist chunk size of ", LEVEL_CHUNK_SIZE,
       ": best size may depend on input.");
-  galois::ReportStatSingle(REGION_NAME, "ChunkSize", LEVEL_CHUNK_SIZE);
-  galois::reportPageAlloc("MemAllocPre");
+  katana::ReportStatSingle(REGION_NAME, "ChunkSize", LEVEL_CHUNK_SIZE);
+  katana::reportPageAlloc("MemAllocPre");
 
   // LevelGraph construction
-  galois::StatTimer graphConstructTimer("TimerConstructGraph", "BFS");
+  katana::StatTimer graphConstructTimer("TimerConstructGraph", "BFS");
   graphConstructTimer.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<NodeDataLevel>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
   auto pg_result =
-      galois::graphs::PropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(
-          pfg.get());
+      katana::PropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   LevelGraph graph = pg_result.value();
 
@@ -284,16 +283,16 @@ DoLevelBC() {
             << " edges\n";
 
   graphConstructTimer.stop();
-  galois::gInfo("Graph construction complete");
+  katana::gInfo("Graph construction complete");
 
   // preallocate pages in memory so allocation doesn't occur during compute
-  galois::StatTimer preallocTime("PreAllocTime", REGION_NAME);
+  katana::StatTimer preallocTime("PreAllocTime", REGION_NAME);
   preallocTime.start();
-  galois::Prealloc(std::max(
-      size_t{galois::getActiveThreads()} * (graph.size() / 2000000),
-      std::max(10U, galois::getActiveThreads()) * size_t{10}));
+  katana::Prealloc(std::max(
+      size_t{katana::getActiveThreads()} * (graph.size() / 2000000),
+      std::max(10U, katana::getActiveThreads()) * size_t{10}));
   preallocTime.stop();
-  galois::reportPageAlloc("MemAllocMid");
+  katana::reportPageAlloc("MemAllocMid");
 
   // If particular set of sources was specified, use them
   if (sourcesToUse != "") {
@@ -327,15 +326,15 @@ DoLevelBC() {
   // graph initialization, then main loop
   LevelInitializeGraph(&graph);
 
-  galois::gInfo("Beginning main computation");
-  galois::StatTimer execTime("Timer_0");
+  katana::gInfo("Beginning main computation");
+  katana::StatTimer execTime("Timer_0");
 
   // loop over all specified sources for SSSP/Brandes calculation
   for (uint64_t i = 0; i < loop_end; i++) {
     if (singleSourceBC) {
       // only 1 source; specified start source in command line
       assert(loop_end == 1);
-      galois::gDebug("This is single source node BC");
+      katana::gDebug("This is single source node BC");
       kLevelCurrentSrcNode = startSource;
     } else if (s_sources) {
       kLevelCurrentSrcNode = source_vector[i];
@@ -348,12 +347,12 @@ DoLevelBC() {
     execTime.start();
     LevelInitializeIteration(&graph);
     // worklist; last one will be empty
-    galois::gstl::Vector<LevelWorklistType> worklists = LevelSSSP(&graph);
+    katana::gstl::Vector<LevelWorklistType> worklists = LevelSSSP(&graph);
     LevelBackwardBrandes(&graph, &worklists);
     execTime.stop();
   }
 
-  galois::reportPageAlloc("MemAllocPost");
+  katana::reportPageAlloc("MemAllocPost");
 
   // sanity checking numbers
   LevelSanity(graph);

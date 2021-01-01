@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_HYPERGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_HYPERGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_HYPERGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_HYPERGRAPH_H_
 
-#include "galois/DynamicBitset.h"
-#include "galois/graphs/LC_CSR_Graph.h"
+#include "katana/DynamicBitset.h"
+#include "katana/LC_CSR_Graph.h"
 
-namespace galois::graphs {
+namespace katana {
 template <typename NodeTy, bool HasNoLockable = true, bool UseNumaAlloc = true>
-class HyperGraph : public galois::graphs::LC_CSR_Graph<
-                       NodeTy, void, HasNoLockable, UseNumaAlloc> {
+class HyperGraph
+    : public katana::LC_CSR_Graph<NodeTy, void, HasNoLockable, UseNumaAlloc> {
 public:
   uint32_t GetHedges() const { return hedges_; }
   void SetHedges(uint32_t hedges) { hedges_ = hedges; }
@@ -38,6 +38,6 @@ private:
   uint32_t hedges_;
   uint32_t hnodes_;
 };
-}  // namespace galois::graphs
+}  // namespace katana
 
 #endif

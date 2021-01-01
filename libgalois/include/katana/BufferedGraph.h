@@ -23,19 +23,18 @@
  * Contains the implementation of BufferedGraph
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_BUFFEREDGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_BUFFEREDGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_BUFFEREDGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_BUFFEREDGRAPH_H_
 
 #include <fstream>
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/Reduction.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
+#include "katana/Reduction.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Class that loads a portion of a Galois graph from disk directly into
@@ -77,11 +76,11 @@ private:
 
   // accumulators for tracking bytes read
   //! number of bytes read related to the out index buffer
-  galois::GAccumulator<uint64_t> numBytesReadOutIndex;
+  katana::GAccumulator<uint64_t> numBytesReadOutIndex;
   //! number of bytes read related to the edge dest buffer
-  galois::GAccumulator<uint64_t> numBytesReadEdgeDest;
+  katana::GAccumulator<uint64_t> numBytesReadEdgeDest;
   //! number of bytes read related to the edge data buffer
-  galois::GAccumulator<uint64_t> numBytesReadEdgeData;
+  katana::GAccumulator<uint64_t> numBytesReadEdgeData;
 
   /**
    * Load the out indices (i.e. where a particular node's edges begin in the
@@ -100,7 +99,7 @@ private:
     outIndexBuffer = (uint64_t*)malloc(sizeof(uint64_t) * numNodesToLoad);
 
     if (outIndexBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for out index buffer.");
+      KATANA_DIE("Failed to allocate memory for out index buffer.");
     }
 
     // position to start of contiguous chunk of nodes to read
@@ -142,7 +141,7 @@ private:
     edgeDestBuffer = (uint32_t*)malloc(sizeof(uint32_t) * numEdgesToLoad);
 
     if (edgeDestBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for edge dest buffer.");
+      KATANA_DIE("Failed to allocate memory for edge dest buffer.");
     }
 
     // position to start of contiguous chunk of edges to read
@@ -182,7 +181,7 @@ private:
   void loadEdgeData(
       std::ifstream& graphFile, uint64_t edgeStart, uint64_t numEdgesToLoad,
       uint64_t numGlobalNodes, uint64_t numGlobalEdges) {
-    galois::gDebug("Loading edge data");
+    katana::gDebug("Loading edge data");
 
     if (numEdgesToLoad == 0) {
       return;
@@ -193,7 +192,7 @@ private:
         (EdgeDataType*)malloc(sizeof(EdgeDataType) * numEdgesToLoad);
 
     if (edgeDataBuffer == nullptr) {
-      GALOIS_DIE("Failed to allocate memory for edge data buffer.");
+      KATANA_DIE("Failed to allocate memory for edge data buffer.");
     }
 
     // position after nodes + edges
@@ -234,7 +233,7 @@ private:
       typename EdgeType,
       typename std::enable_if<std::is_void<EdgeType>::value>::type* = nullptr>
   void loadEdgeData(std::ifstream&, uint64_t, uint64_t, uint64_t, uint64_t) {
-    galois::gDebug("Not loading edge data");
+    katana::gDebug("Not loading edge data");
     // do nothing (edge data is void, i.e. no edge data)
   }
 
@@ -315,7 +314,7 @@ public:
    */
   void loadGraph(const std::string& filename) {
     if (graphLoaded) {
-      GALOIS_DIE("Cannot load an buffered graph more than once.");
+      KATANA_DIE("Cannot load an buffered graph more than once.");
     }
 
     std::ifstream graphFile(filename.c_str());
@@ -354,7 +353,7 @@ public:
       uint64_t edgeStart, uint64_t edgeEnd, uint64_t numGlobalNodes,
       uint64_t numGlobalEdges) {
     if (graphLoaded) {
-      GALOIS_DIE("Cannot load an buffered graph more than once.");
+      KATANA_DIE("Cannot load an buffered graph more than once.");
     }
 
     std::ifstream graphFile(filename.c_str());
@@ -388,7 +387,7 @@ public:
    */
   EdgeIterator edgeBegin(uint64_t globalNodeID) {
     if (!graphLoaded) {
-      GALOIS_DIE("Graph hasn't been loaded yet.");
+      KATANA_DIE("Graph hasn't been loaded yet.");
     }
 
     if (numLocalNodes == 0) {
@@ -416,7 +415,7 @@ public:
    */
   EdgeIterator edgeEnd(uint64_t globalNodeID) {
     if (!graphLoaded) {
-      GALOIS_DIE("Graph hasn't been loaded yet.");
+      KATANA_DIE("Graph hasn't been loaded yet.");
     }
 
     if (numLocalNodes == 0) {
@@ -439,7 +438,7 @@ public:
    */
   uint64_t edgeDestination(uint64_t globalEdgeID) {
     if (!graphLoaded) {
-      GALOIS_DIE("Graph hasn't been loaded yet.");
+      KATANA_DIE("Graph hasn't been loaded yet.");
     }
 
     if (numLocalEdges == 0) {
@@ -465,10 +464,10 @@ public:
       typename std::enable_if<!std::is_void<K>::value>::type* = nullptr>
   EdgeDataType edgeData(uint64_t globalEdgeID) {
     if (!graphLoaded) {
-      GALOIS_DIE("Graph hasn't been loaded yet.");
+      KATANA_DIE("Graph hasn't been loaded yet.");
     }
     if (edgeDataBuffer == nullptr) {
-      GALOIS_DIE("Trying to get edge data when graph has no edge data.");
+      KATANA_DIE("Trying to get edge data when graph has no edge data.");
     }
 
     if (numLocalEdges == 0) {
@@ -491,7 +490,7 @@ public:
       typename K = EdgeDataType,
       typename std::enable_if<std::is_void<K>::value>::type* = nullptr>
   unsigned edgeData(uint64_t) {
-    galois::gWarn("Getting edge data on graph when it doesn't exist\n");
+    katana::gWarn("Getting edge data on graph when it doesn't exist\n");
     return 0;
   }
 
@@ -523,6 +522,6 @@ public:
     resetGraphStatus();
   }
 };
-}  // namespace graphs
-}  // namespace galois
+
+}  // namespace katana
 #endif

@@ -17,38 +17,38 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_PROFILE_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_PROFILE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROFILE_H_
+#define KATANA_LIBGALOIS_KATANA_PROFILE_H_
 
 #include <cstdlib>
 
-#ifdef GALOIS_ENABLE_VTUNE
+#ifdef KATANA_ENABLE_VTUNE
 #include "ittnotify.h"
 #endif
 
-#ifdef GALOIS_ENABLE_PAPI
+#ifdef KATANA_ENABLE_PAPI
 extern "C" {
 #include <papi.h>
 #include <papiStdEventDefs.h>
 }
 #endif
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
+#include "katana/Galois.h"
+#include "katana/Timer.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois::runtime {
+namespace katana {
 
-#ifdef GALOIS_ENABLE_VTUNE
+#ifdef KATANA_ENABLE_VTUNE
 
 template <typename F>
 void
 profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
 
-  GALOIS_ASSERT(
-      galois::substrate::ThreadPool::getTID() == 0,
+  KATANA_ASSERT(
+      katana::ThreadPool::getTID() == 0,
       "profileVtune can only be called from master thread (thread 0)");
 
   __itt_resume();
@@ -64,14 +64,14 @@ template <typename F>
 void
 profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
-  galois::gWarn("Vtune not enabled or found");
+  katana::gWarn("Vtune not enabled or found");
 
   timeThis(func, region);
 }
 
 #endif
 
-#ifdef GALOIS_ENABLE_PAPI
+#ifdef KATANA_ENABLE_PAPI
 
 namespace internal {
 
@@ -84,16 +84,16 @@ papiInit() {
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
 
   if (retval != PAPI_VER_CURRENT && retval > 0) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "PAPI library version mismatch: ", retval, " != ", PAPI_VER_CURRENT);
   }
 
   if (retval < 0) {
-    GALOIS_DIE("initialization error!");
+    KATANA_DIE("initialization error!");
   }
 
   if ((retval = PAPI_thread_init(&papiGetTID)) != PAPI_OK) {
-    GALOIS_DIE("PAPI thread init failed");
+    KATANA_DIE("PAPI thread init failed");
   }
 }
 
@@ -104,7 +104,7 @@ decodePapiEvents(const V1& eventNames, V2& papiEvents) {
     char buf[256];
     std::strcpy(buf, eventNames[i].c_str());
     if (PAPI_event_name_to_code(buf, &papiEvents[i]) != PAPI_OK) {
-      GALOIS_DIE(
+      KATANA_DIE(
           "failed to recognize eventName = ", eventNames[i],
           ", event code: ", papiEvents[i]);
     }
@@ -114,9 +114,9 @@ decodePapiEvents(const V1& eventNames, V2& papiEvents) {
 template <typename V1, typename V2, typename V3>
 void
 papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
-  galois::on_each([&](const unsigned tid, const unsigned numT) {
+  katana::on_each([&](const unsigned tid, const unsigned numT) {
     if (PAPI_register_thread() != PAPI_OK) {
-      GALOIS_DIE("failed to register thread with PAPI");
+      KATANA_DIE("failed to register thread with PAPI");
     }
 
     int& eventSet = *eventSets.getLocal();
@@ -125,15 +125,15 @@ papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
     papiResults.getLocal()->resize(papiEvents.size());
 
     if (PAPI_create_eventset(&eventSet) != PAPI_OK) {
-      GALOIS_DIE("failed to init event set");
+      KATANA_DIE("failed to init event set");
     }
     if (PAPI_add_events(eventSet, papiEvents.data(), papiEvents.size()) !=
         PAPI_OK) {
-      GALOIS_DIE("failed to add events");
+      KATANA_DIE("failed to add events");
     }
 
     if (PAPI_start(eventSet) != PAPI_OK) {
-      GALOIS_DIE("failed to start PAPI");
+      KATANA_DIE("failed to start PAPI");
     }
   });
 }
@@ -141,31 +141,31 @@ papiStart(V1& eventSets, V2& papiResults, V3& papiEvents) {
 template <typename V1, typename V2, typename V3>
 void
 papiStop(V1& eventSets, V2& papiResults, V3& eventNames, const char* region) {
-  galois::on_each([&](const unsigned tid, const unsigned numT) {
+  katana::on_each([&](const unsigned tid, const unsigned numT) {
     int& eventSet = *eventSets.getLocal();
 
     if (PAPI_stop(eventSet, papiResults.getLocal()->data()) != PAPI_OK) {
-      GALOIS_DIE("PAPI_stop failed");
+      KATANA_DIE("PAPI_stop failed");
     }
 
     if (PAPI_cleanup_eventset(eventSet) != PAPI_OK) {
-      GALOIS_DIE("PAPI_cleanup_eventset failed");
+      KATANA_DIE("PAPI_cleanup_eventset failed");
     }
 
     if (PAPI_destroy_eventset(&eventSet) != PAPI_OK) {
-      GALOIS_DIE("PAPI_destroy_eventset failed");
+      KATANA_DIE("PAPI_destroy_eventset failed");
     }
 
     assert(
         eventNames.size() == papiResults.getLocal()->size() &&
         "Both vectors should be of equal length");
     for (size_t i = 0; i < eventNames.size(); ++i) {
-      galois::ReportStatSum(
+      katana::ReportStatSum(
           region, eventNames[i], (*papiResults.getLocal())[i]);
     }
 
     if (PAPI_unregister_thread() != PAPI_OK) {
-      GALOIS_DIE("failed to un-register thread with PAPI");
+      KATANA_DIE("failed to un-register thread with PAPI");
     }
   });
 }
@@ -189,11 +189,11 @@ profilePapi(const F& func, const char* region) {
 
   std::string eventNamesCSV;
 
-  if (!galois::GetEnv("GALOIS_PAPI_EVENTS", &eventNamesCSV) ||
+  if (!katana::GetEnv("KATANA_PAPI_EVENTS", &eventNamesCSV) ||
       eventNamesCSV.empty()) {
-    galois::gWarn(
-        "No Events specified. Set environment variable GALOIS_PAPI_EVENTS");
-    galois::timeThis(func, region);
+    katana::gWarn(
+        "No Events specified. Set environment variable KATANA_PAPI_EVENTS");
+    katana::timeThis(func, region);
     return;
   }
 
@@ -207,12 +207,12 @@ profilePapi(const F& func, const char* region) {
 
   internal::decodePapiEvents(eventNames, papiEvents);
 
-  galois::substrate::PerThreadStorage<int> eventSets;
-  galois::substrate::PerThreadStorage<std::vector<long_long>> papiResults;
+  katana::PerThreadStorage<int> eventSets;
+  katana::PerThreadStorage<std::vector<long_long>> papiResults;
 
   internal::papiStart(eventSets, papiResults, papiEvents);
 
-  galois::timeThis(func, region);
+  katana::timeThis(func, region);
 
   internal::papiStop(eventSets, papiResults, eventNames, region);
 }
@@ -223,13 +223,13 @@ template <typename F>
 void
 profilePapi(const F& func, const char* region) {
   region = region ? region : "(NULL)";
-  galois::gWarn("PAPI not enabled or found");
+  katana::gWarn("PAPI not enabled or found");
 
   timeThis(func, region);
 }
 
 #endif
 
-}  // namespace galois::runtime
+}  // namespace katana
 
 #endif

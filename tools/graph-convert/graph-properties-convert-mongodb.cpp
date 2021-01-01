@@ -18,19 +18,19 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "galois/ErrorCode.h"
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/SharedMemSys.h"
-#include "galois/Threads.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
+#include "katana/ErrorCode.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/SharedMemSys.h"
+#include "katana/Threads.h"
 
-using galois::GraphComponents;
-using galois::ImportData;
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::PropertyKey;
+using katana::GraphComponents;
+using katana::ImportData;
+using katana::ImportDataType;
+using katana::LabelRule;
+using katana::PropertyKey;
 
 namespace {
 
@@ -335,7 +335,7 @@ ProcessElement(const bson_value_t* elt, const std::string& name) {
 
 void
 HandleEmbeddedEdgeStruct(
-    galois::PropertyGraphBuilder* builder, const bson_value_t* doc_ptr,
+    katana::PropertyGraphBuilder* builder, const bson_value_t* doc_ptr,
     const std::string& prefix) {
   bson_t doc;
   bson_iter_t iter;
@@ -371,7 +371,7 @@ HandleEmbeddedEdgeStruct(
 
 void
 HandleEmbeddedDocuments(
-    galois::PropertyGraphBuilder* builder,
+    katana::PropertyGraphBuilder* builder,
     const std::vector<std::pair<std::string, bson_value_t_wrapper>>& docs,
     const std::string& parent_name, size_t parent_index) {
   for (auto [name, elt_wrapper] : docs) {
@@ -385,7 +385,7 @@ HandleEmbeddedDocuments(
         builder->AddEdge(
             static_cast<uint32_t>(parent_index),
             static_cast<uint32_t>(builder->GetNodes()), edge_type);
-        galois::HandleNodeDocumentMongoDB(builder, &doc, name);
+        katana::HandleNodeDocumentMongoDB(builder, &doc, name);
       }
     } else {
       bson_t array;
@@ -403,7 +403,7 @@ HandleEmbeddedDocuments(
                 builder->AddEdge(
                     static_cast<uint32_t>(parent_index),
                     static_cast<uint32_t>(builder->GetNodes()), name);
-                galois::HandleNodeDocumentMongoDB(builder, &doc, name);
+                katana::HandleNodeDocumentMongoDB(builder, &doc, name);
               }
             }
           }
@@ -416,7 +416,7 @@ HandleEmbeddedDocuments(
 
 bool
 HandleNonPropertyNodeElement(
-    galois::PropertyGraphBuilder* builder,
+    katana::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
     const std::string& name, const bson_value_t* elt,
     const std::string& collection_name) {
@@ -465,7 +465,7 @@ HandleNonPropertyNodeElement(
 
 void
 HandleEmbeddedNodeStruct(
-    galois::PropertyGraphBuilder* builder,
+    katana::PropertyGraphBuilder* builder,
     std::vector<std::pair<std::string, bson_value_t_wrapper>>* docs,
     const std::string& name, const bson_value_t* doc_ptr,
     const std::string& prefix) {
@@ -511,14 +511,14 @@ GetMongoClient(const char* uri_string) {
   bson_error_t error;
   mongoc_uri_t* uri = mongoc_uri_new_with_error(uri_string, &error);
   if (!uri) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Failed to parse URI: {}\n"
         "Error message: {}\n",
         uri_string, error.message);
   }
   mongoc_client_t* client = mongoc_client_new_from_uri(uri);
   if (!client) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Could not connect to URI: {}\n"
         "Error message: {}\n",
         uri_string, error.message);
@@ -561,7 +561,7 @@ QueryEntireCollection(
     document_op();
   }
   if (mongoc_cursor_error(cursor, &error)) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "An error occurred with a mongodb cursor: {}", error.message);
   }
 
@@ -807,10 +807,10 @@ GetUserInputForLabels(
     std::string existing_key;
     if (res.empty()) {
       LabelRule rule{coll_name, for_node, !for_node, coll_name};
-      galois::WriteGraphmlRule(writer, rule);
+      katana::WriteGraphmlRule(writer, rule);
     } else {
       LabelRule rule{coll_name, for_node, !for_node, res};
-      galois::WriteGraphmlRule(writer, rule);
+      katana::WriteGraphmlRule(writer, rule);
     }
   }
 }
@@ -831,7 +831,7 @@ GetUserInputForFields(
     }
 
     bool done = false;
-    auto type_name = galois::TypeName(key.type);
+    auto type_name = katana::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
       if (key.is_list) {
@@ -845,7 +845,7 @@ GetUserInputForFields(
             std::istream_iterator<std::string>{iss},
             std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
-          auto new_type = galois::ParseType(tokens[0]);
+          auto new_type = katana::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
@@ -886,7 +886,7 @@ GetUserInputForFields(
     }
     key.for_node = for_node;
     key.for_edge = !for_node;
-    galois::WriteGraphmlKey(writer, key);
+    katana::WriteGraphmlKey(writer, key);
   }
 }
 
@@ -950,10 +950,10 @@ GetMappingInput(
   }
 
   if (GetUserBool("Generate default mapping now")) {
-    galois::ExportSchemaMapping(outfile, rules, keys);
+    katana::ExportSchemaMapping(outfile, rules, keys);
     return;
   }
-  auto writer = galois::CreateGraphmlFile(outfile);
+  auto writer = katana::CreateGraphmlFile(outfile);
 
   // finalize labels for nodes and edges mappings
   std::cout << "Nodes: " << nodes.size() << "\n";
@@ -975,7 +975,7 @@ GetMappingInput(
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
   xmlTextWriterEndElement(writer);
 
-  galois::FinishGraphmlFile(writer);
+  katana::FinishGraphmlFile(writer);
 }
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
@@ -1007,8 +1007,8 @@ GetUserInput(
 
 // for now only handle arrays and data all of same type
 void
-galois::HandleEdgeDocumentMongoDB(
-    galois::PropertyGraphBuilder* builder, const bson_t* doc,
+katana::HandleEdgeDocumentMongoDB(
+    katana::PropertyGraphBuilder* builder, const bson_t* doc,
     const std::string& collection_name) {
   builder->StartEdge();
 
@@ -1055,8 +1055,8 @@ galois::HandleEdgeDocumentMongoDB(
 
 // for now only handle arrays and data all of same type
 void
-galois::HandleNodeDocumentMongoDB(
-    galois::PropertyGraphBuilder* builder, const bson_t* doc,
+katana::HandleNodeDocumentMongoDB(
+    katana::PropertyGraphBuilder* builder, const bson_t* doc,
     const std::string& collection_name) {
   builder->StartNode();
   auto node_index = builder->GetNodeIndex();
@@ -1093,7 +1093,7 @@ galois::HandleNodeDocumentMongoDB(
 }
 
 void
-galois::GenerateMappingMongoDB(
+katana::GenerateMappingMongoDB(
     const std::string& db_name, const std::string& outfile) {
   const char* uri_string = "mongodb://localhost:27017";
 
@@ -1110,14 +1110,14 @@ galois::GenerateMappingMongoDB(
   mongoc_cleanup();
 }
 
-galois::GraphComponents
-galois::ConvertMongoDB(
+katana::GraphComponents
+katana::ConvertMongoDB(
     const std::string& db_name, const std::string& mapping, size_t chunk_size) {
   const char* uri_string = "mongodb://localhost:27017";
   const bson_t* document = nullptr;
 
-  galois::PropertyGraphBuilder builder{chunk_size};
-  galois::setActiveThreads(1000);
+  katana::PropertyGraphBuilder builder{chunk_size};
+  katana::setActiveThreads(1000);
 
   mongoc_init();
   MongoClient client_wrapper{GetMongoClient(uri_string)};
@@ -1130,7 +1130,7 @@ galois::ConvertMongoDB(
   std::vector<std::string> nodes;
   std::vector<std::string> edges;
   if (!mapping.empty()) {
-    auto res = galois::ProcessSchemaMapping(&builder, mapping, coll_names);
+    auto res = katana::ProcessSchemaMapping(&builder, mapping, coll_names);
     nodes = res.first;
     edges = res.second;
   } else {
@@ -1142,13 +1142,13 @@ galois::ConvertMongoDB(
   // add all edges first
   for (auto coll_name : edges) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      galois::HandleEdgeDocumentMongoDB(&builder, document, coll_name);
+      katana::HandleEdgeDocumentMongoDB(&builder, document, coll_name);
     });
   }
   // then add all nodes
   for (auto coll_name : nodes) {
     QueryEntireCollection(database, &document, coll_name, [&]() {
-      galois::HandleNodeDocumentMongoDB(&builder, document, coll_name);
+      katana::HandleNodeDocumentMongoDB(&builder, document, coll_name);
     });
   }
 

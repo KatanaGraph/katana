@@ -1,6 +1,6 @@
 from ..libstd cimport CPPAuto
 
-cdef extern from "galois/Galois.h" namespace "galois" nogil:
+cdef extern from "katana/Galois.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)
 
     cppclass UserContext[T]:
@@ -32,22 +32,22 @@ cdef extern from "galois/Galois.h" namespace "galois" nogil:
     cppclass disable_conflict_detection:
         disable_conflict_detection()
 
-cdef extern from "galois/MethodFlags.h" namespace "galois" nogil:
+cdef extern from "katana/MethodFlags.h" namespace "katana" nogil:
     cppclass MethodFlag:
         bint operator==(MethodFlag)
 
-    MethodFlag FLAG_UNPROTECTED "galois::MethodFlag::UNPROTECTED"
-    MethodFlag FLAG_WRITE "galois::MethodFlag::WRITE"
-    MethodFlag FLAG_READ "galois::MethodFlag::READ"
-    MethodFlag FLAG_INTERNAL_MASK "galois::MethodFlag::INTERNAL_MASK"
-    MethodFlag PREVIOUS "galois::MethodFlag::PREVIOUS"
+    MethodFlag FLAG_UNPROTECTED "katana::MethodFlag::UNPROTECTED"
+    MethodFlag FLAG_WRITE "katana::MethodFlag::WRITE"
+    MethodFlag FLAG_READ "katana::MethodFlag::READ"
+    MethodFlag FLAG_INTERNAL_MASK "katana::MethodFlag::INTERNAL_MASK"
+    MethodFlag PREVIOUS "katana::MethodFlag::PREVIOUS"
 
-cdef extern from "galois/Range.h" namespace "galois" nogil:
+cdef extern from "katana/Range.h" namespace "katana" nogil:
     cppclass StandardRange[it]:
         it begin()
         it end()
 
-cdef extern from "galois/NoDerefIterator.h" namespace "galois" nogil:
+cdef extern from "katana/NoDerefIterator.h" namespace "katana" nogil:
     cppclass NoDerefIterator[it]:
         bint operator==(NoDerefIterator[it])
         bint operator!=(NoDerefIterator[it])

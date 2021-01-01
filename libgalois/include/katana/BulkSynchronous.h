@@ -17,18 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_BULKSYNCHRONOUS_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_BULKSYNCHRONOUS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_BULKSYNCHRONOUS_H_
+#define KATANA_LIBGALOIS_KATANA_BULKSYNCHRONOUS_H_
 
 #include <atomic>
 
-#include "galois/config.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/worklists/Chunk.h"
-#include "galois/worklists/WLCompileCheck.h"
+#include "katana/Barrier.h"
+#include "katana/Chunk.h"
+#include "katana/WLCompileCheck.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 /**
  * Bulk-synchronous scheduling. Work is processed in rounds, and all newly
@@ -59,18 +58,16 @@ private:
   };
 
   CTy wls[2];
-  substrate::PerThreadStorage<TLD> tlds;
-  substrate::Barrier& barrier;
-  substrate::CacheLineStorage<std::atomic<bool>> some;
+  PerThreadStorage<TLD> tlds;
+  Barrier& barrier;
+  CacheLineStorage<std::atomic<bool>> some;
   std::atomic<bool> isEmpty;
 
 public:
   typedef T value_type;
 
   BulkSynchronous()
-      : barrier(substrate::GetBarrier(runtime::activeThreads)),
-        some(false),
-        isEmpty(false) {}
+      : barrier(GetBarrier(activeThreads)), some(false), isEmpty(false) {}
 
   void push(const value_type& val) {
     wls[(tlds.getLocal()->round + 1) & 1].push(val);
@@ -89,9 +86,9 @@ public:
     some.get() = true;
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     TLD& tld = *tlds.getLocal();
-    galois::optional<value_type> r;
+    katana::optional<value_type> r;
 
     while (true) {
       if (isEmpty)
@@ -102,7 +99,7 @@ public:
         return r;
 
       barrier.Wait();
-      if (substrate::ThreadPool::getTID() == 0) {
+      if (ThreadPool::getTID() == 0) {
         if (!some.get())
           isEmpty = true;
         some.get() = false;
@@ -118,9 +115,8 @@ public:
     }
   }
 };
-GALOIS_WLCOMPILECHECK(BulkSynchronous)
+KATANA_WLCOMPILECHECK(BulkSynchronous)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

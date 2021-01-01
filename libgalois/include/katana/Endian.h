@@ -17,14 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_ENDIAN_H_
-#define GALOIS_LIBGALOIS_GALOIS_ENDIAN_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ENDIAN_H_
+#define KATANA_LIBGALOIS_KATANA_ENDIAN_H_
 
 #include <cstdint>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 static inline uint32_t
 bswap32(uint32_t x) {
@@ -108,5 +108,5 @@ convert_htole32(uint32_t x) {
 #endif
 }
 
-}  // namespace galois
+}  // namespace katana
 #endif

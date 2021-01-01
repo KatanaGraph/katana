@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_ALLOCATORS_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_ALLOCATORS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ALLOCATORS_H_
+#define KATANA_LIBGALOIS_KATANA_ALLOCATORS_H_
 
 #include <cstddef>
 #include <cstdio>
@@ -30,21 +30,22 @@
 
 #include <boost/utility.hpp>
 
-#include "galois/config.h"
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/NumaMem.h"
-#include "galois/substrate/PagePool.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/PtrLock.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/NumaMem.h"
+#include "katana/PagePool.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/PtrLock.h"
+#include "katana/SimpleLock.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace runtime {
+// TODO(ddn): Merge with Mem.h. Users should not include this file directly.
+
+namespace katana {
 
 extern unsigned activeThreads;
 
 //! Forces the given block to be paged into physical memory
-GALOIS_EXPORT void pageIn(void* buf, size_t len, size_t stride);
+KATANA_EXPORT void pageIn(void* buf, size_t len, size_t stride);
 
 //! [Example Third Party Allocator]
 class MallocHeap {
@@ -62,7 +63,7 @@ public:
 //! Per-thread heaps using Galois thread aware construct
 template <class SourceHeap>
 class ThreadPrivateHeap {
-  substrate::PerThreadStorage<SourceHeap> heaps;
+  PerThreadStorage<SourceHeap> heaps;
 
 public:
   enum { AllocSize = SourceHeap::AllocSize };
@@ -86,7 +87,7 @@ public:
 //! Apply a lock to a heap
 template <class SourceHeap>
 class LockedHeap : public SourceHeap {
-  substrate::SimpleLock lock;
+  SimpleLock lock;
 
 public:
   enum { AllocSize = SourceHeap::AllocSize };
@@ -233,7 +234,7 @@ public:
   ~SelfLockFreeListHeap() { clear(); }
 
   inline void* allocate(size_t size) {
-    static substrate::SimpleLock lock;
+    static SimpleLock lock;
 
     lock.lock();
     FreeNode* OH = 0;
@@ -485,7 +486,7 @@ public:
 
 //! This is the base source of memory for all allocators.
 //! It maintains a freelist of chunks acquired from the system
-class GALOIS_EXPORT SystemHeap {
+class KATANA_EXPORT SystemHeap {
 public:
   // FIXME: actually check!
   enum { AllocSize = 2 * 1024 * 1024 };
@@ -493,15 +494,15 @@ public:
   SystemHeap();
   ~SystemHeap();
 
-  inline void* allocate(size_t) { return substrate::pagePoolAlloc(); }
+  inline void* allocate(size_t) { return pagePoolAlloc(); }
 
-  inline void deallocate(void* ptr) { substrate::pagePoolFree(ptr); }
+  inline void deallocate(void* ptr) { pagePoolFree(ptr); }
 };
 
 template <typename Derived>
-class GALOIS_EXPORT StaticSingleInstance : private boost::noncopyable {
+class KATANA_EXPORT StaticSingleInstance : private boost::noncopyable {
   // static std::unique_ptr<Derived> instance;
-  static substrate::PtrLock<Derived> ptr;
+  static PtrLock<Derived> ptr;
 
 public:
   static Derived* getInstance() {
@@ -531,8 +532,7 @@ public:
 // std::unique_ptr<Derived>();
 
 template <typename Derived>
-substrate::PtrLock<Derived> StaticSingleInstance<Derived>::ptr =
-    substrate::PtrLock<Derived>();
+PtrLock<Derived> StaticSingleInstance<Derived>::ptr = PtrLock<Derived>();
 
 class PageHeap : public StaticSingleInstance<PageHeap> {
   using Base = StaticSingleInstance<PageHeap>;
@@ -558,7 +558,7 @@ public:
   }
 };
 
-class GALOIS_EXPORT SizedHeapFactory
+class KATANA_EXPORT SizedHeapFactory
     : public StaticSingleInstance<SizedHeapFactory> {
   using Base = StaticSingleInstance<SizedHeapFactory>;
   friend class StaticSingleInstance<SizedHeapFactory>;
@@ -575,7 +575,7 @@ private:
   static thread_local HeapMap* localHeaps;
   HeapMap heaps;
   std::list<HeapMap*> allLocalHeaps;
-  substrate::SimpleLock lock;
+  SimpleLock lock;
 
   SizedHeapFactory();
 
@@ -634,23 +634,21 @@ public:
 
 class SerialNumaHeap {
   enum {
-    offset = (sizeof(substrate::LAptr) + (sizeof(double) - 1)) &
-             ~(sizeof(double) - 1)
+    offset = (sizeof(LAptr) + (sizeof(double) - 1)) & ~(sizeof(double) - 1)
   };
 
 public:
   enum { AllocSize = 0 };
 
   void* allocate(size_t size) {
-    auto ptr = substrate::largeMallocInterleaved(size + offset, activeThreads);
-    substrate::LAptr* header =
-        new ((char*)ptr.get()) substrate::LAptr{std::move(ptr)};
+    auto ptr = largeMallocInterleaved(size + offset, activeThreads);
+    LAptr* header = new ((char*)ptr.get()) LAptr{std::move(ptr)};
     return (char*)(header->get()) + offset;
   }
 
   void deallocate(void* ptr) {
     char* realPtr = ((char*)ptr - offset);
-    substrate::LAptr dptr{std::move(*(substrate::LAptr*)realPtr)};
+    LAptr dptr{std::move(*(LAptr*)realPtr)};
   }
 };
 
@@ -658,7 +656,8 @@ public:
 // Now adapt to standard std allocators
 ////////////////////////////////////////////////////////////////////////////////
 
-//! A fixed size block allocator
+//! Scalable fixed-sized allocator for T that conforms to STL allocator
+//! interface but does not support variable sized allocations
 template <typename Ty>
 class FixedSizeAllocator;
 
@@ -742,7 +741,7 @@ public:
   }
 };
 
-class GALOIS_EXPORT Pow2BlockHeap : public StaticSingleInstance<Pow2BlockHeap> {
+class KATANA_EXPORT Pow2BlockHeap : public StaticSingleInstance<Pow2BlockHeap> {
 private:
   using Base = StaticSingleInstance<Pow2BlockHeap>;
   /* template <typename> */ friend class StaticSingleInstance<Pow2BlockHeap>;
@@ -998,7 +997,6 @@ public:
   SerialNumaAllocator() : Super(&heap) {}
 };
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

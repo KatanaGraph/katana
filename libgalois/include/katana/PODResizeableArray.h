@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
-#define GALOIS_LIBGALOIS_GALOIS_PODRESIZEABLEARRAY_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PODRESIZEABLEARRAY_H_
+#define KATANA_LIBGALOIS_KATANA_PODRESIZEABLEARRAY_H_
 
 #include <algorithm>
 #include <cassert>
@@ -29,9 +29,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * This is a container that encapsulates a resizeable array
@@ -226,5 +226,5 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

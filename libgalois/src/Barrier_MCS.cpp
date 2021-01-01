@@ -19,13 +19,13 @@
 
 #include <atomic>
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/ThreadPool.h"
 
 namespace {
 
-class MCSBarrier : public galois::substrate::Barrier {
+class MCSBarrier : public katana::Barrier {
   struct TreeNode {
     std::atomic<bool>* parent_pointer;  // null for vpid == 0
     std::atomic<bool>* child_pointers[2];
@@ -49,7 +49,7 @@ class MCSBarrier : public galois::substrate::Barrier {
     }
   };
 
-  std::vector<galois::substrate::CacheLineStorage<TreeNode>> nodes_;
+  std::vector<katana::CacheLineStorage<TreeNode>> nodes_;
 
   void _reinit(unsigned P) {
     nodes_.resize(P);
@@ -75,10 +75,10 @@ public:
   void Reinit(unsigned val) override { _reinit(val); }
 
   void Wait() override {
-    TreeNode& n = nodes_.at(galois::substrate::ThreadPool::getTID()).get();
+    TreeNode& n = nodes_.at(katana::ThreadPool::getTID()).get();
     while (n.child_not_ready[0] || n.child_not_ready[1] ||
            n.child_not_ready[2] || n.child_not_ready[3]) {
-      galois::substrate::asmPause();
+      katana::asmPause();
     }
     for (int i = 0; i < 4; ++i)
       n.child_not_ready[i] = n.have_child[i];
@@ -87,7 +87,7 @@ public:
       // rule
       *n.parent_pointer = false;
       while (n.parent_sense != n.sense) {
-        galois::substrate::asmPause();
+        katana::asmPause();
       }
     }
     // signal children in wakeup tree
@@ -103,7 +103,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::CreateMCSBarrier(unsigned active_threads) {
+std::unique_ptr<katana::Barrier>
+katana::CreateMCSBarrier(unsigned active_threads) {
   return std::make_unique<MCSBarrier>(active_threads);
 }

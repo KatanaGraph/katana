@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDETERMINISTIC_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORDETERMINISTIC_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORDETERMINISTIC_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORDETERMINISTIC_H_
 
 #include <deque>
 #include <queue>
@@ -28,22 +28,22 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "galois/Bag.h"
-#include "galois/Mem.h"
-#include "galois/ParallelSTL.h"
-#include "galois/Range.h"
-#include "galois/Threads.h"
-#include "galois/UnionFind.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/gslist.h"
-#include "galois/runtime/Executor_ForEach.h"
-#include "galois/runtime/LoopStatistics.h"
-#include "galois/runtime/UserContextAccess.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/TerminationDetection.h"
-#include "galois/substrate/ThreadPool.h"
-#include "galois/worklists/WorkList.h"
+#include "katana/Bag.h"
+#include "katana/Barrier.h"
+#include "katana/Executor_ForEach.h"
+#include "katana/LoopStatistics.h"
+#include "katana/Mem.h"
+#include "katana/ParallelSTL.h"
+#include "katana/Range.h"
+#include "katana/TerminationDetection.h"
+#include "katana/ThreadPool.h"
+#include "katana/Threads.h"
+#include "katana/UnionFind.h"
+#include "katana/UserContextAccess.h"
+#include "katana/WorkList.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
+#include "katana/gslist.h"
 
 // TODO deterministic hash
 // TODO deterministic hash: only give ids to window
@@ -52,8 +52,8 @@
 // TODO fixed neighborhood: reduce list contention
 // TODO fixed neighborhood: profile, reuse graph
 // TODO fixed neighborhood: still ~2X slower than implicit version on bfs
-namespace galois {
-namespace runtime {
+namespace katana {
+
 //! Implementation of deterministic execution
 namespace internal {
 
@@ -105,9 +105,9 @@ public:
 
   void resetFirstPass(void) { firstPassFlag = false; }
 
-  virtual void alwaysAcquire(Lockable*, galois::MethodFlag) = 0;
+  virtual void alwaysAcquire(Lockable*, katana::MethodFlag) = 0;
 
-  virtual void subAcquire(Lockable* lockable, galois::MethodFlag f) {
+  virtual void subAcquire(Lockable* lockable, katana::MethodFlag f) {
     if (isFirstPass()) {
       alwaysAcquire(lockable, f);
     }
@@ -131,7 +131,7 @@ public:
 
   bool isReady() { return !notReady; }
 
-  virtual void alwaysAcquire(Lockable* lockable, galois::MethodFlag) {
+  virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag) {
     if (this->tryLock(lockable))
       this->addToNhood(lockable);
 
@@ -172,14 +172,14 @@ public:
   bool isReady() { return !notReady; }
 };
 
-class ReaderContext : public galois::UnionFindNode<ReaderContext>,
+class ReaderContext : public katana::UnionFindNode<ReaderContext>,
                       public HasIntentToReadContext {
   template <typename, bool, bool>
   friend class DeterministicContextBase;
 
 public:
   ReaderContext(unsigned long id)
-      : galois::UnionFindNode<ReaderContext>(const_cast<ReaderContext*>(this)),
+      : katana::UnionFindNode<ReaderContext>(const_cast<ReaderContext*>(this)),
         HasIntentToReadContext(id, false) {}
 
   void build() {
@@ -192,8 +192,8 @@ public:
 
   bool propagate() { return this->find()->isReady(); }
 
-  virtual void alwaysAcquire(Lockable*, galois::MethodFlag) {
-    GALOIS_DIE("unreachable");
+  virtual void alwaysAcquire(Lockable*, katana::MethodFlag) {
+    KATANA_DIE("unreachable");
   }
 };
 
@@ -272,7 +272,7 @@ public:
       this->notReady = true;
   }
 
-  virtual void alwaysAcquire(Lockable* lockable, galois::MethodFlag m) {
+  virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag m) {
     assert(m == MethodFlag::READ || m == MethodFlag::WRITE);
 
     if (this->tryLock(lockable))
@@ -293,7 +293,7 @@ template <typename OptionsTy>
 class DeterministicContextBase<OptionsTy, true, false> : public FirstPassBase {
 public:
   typedef DItem<OptionsTy> Item;
-  typedef galois::concurrent_gslist<DeterministicContextBase*, 8> ContextList;
+  typedef katana::concurrent_gslist<DeterministicContextBase*, 8> ContextList;
   Item item;
   ContextList edges;
   ContextList succs;
@@ -330,7 +330,7 @@ public:
 
   bool isReady() { return false; }
 
-  virtual void alwaysAcquire(Lockable* lockable, galois::MethodFlag) {
+  virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag) {
     // First to lock becomes representative
     DeterministicContextBase* owner =
         static_cast<DeterministicContextBase*>(this->getOwner(lockable));
@@ -403,34 +403,34 @@ safe_advance(InputIteratorTy& it, size_t d, size_t& cur, size_t dist) {
   cur += d;
 }
 
-//! Wrapper around worklists::ChunkFIFO to allow peek() and empty() and still
+//! Wrapper around ChunkFIFO to allow peek() and empty() and still
 //! have FIFO order
 template <int ChunkSize, typename T>
 struct FIFO {
-  worklists::ChunkFIFO<ChunkSize, T, false> m_data;
-  worklists::ChunkLIFO<16, T, false> m_buffer;
+  ChunkFIFO<ChunkSize, T, false> m_data;
+  ChunkLIFO<16, T, false> m_buffer;
   size_t m_size;
 
   FIFO() : m_size(0) {}
 
   ~FIFO() {
-    galois::optional<T> p;
+    katana::optional<T> p;
     while ((p = m_buffer.pop()))
       ;
     while ((p = m_data.pop()))
       ;
   }
 
-  galois::optional<T> pop() {
-    galois::optional<T> p;
+  katana::optional<T> pop() {
+    katana::optional<T> p;
     if ((p = m_buffer.pop()) || (p = m_data.pop())) {
       --m_size;
     }
     return p;
   }
 
-  galois::optional<T> peek() {
-    galois::optional<T> p;
+  katana::optional<T> peek() {
+    katana::optional<T> p;
     if ((p = m_buffer.pop())) {
       m_buffer.push(*p);
     } else if ((p = m_data.pop())) {
@@ -455,7 +455,7 @@ struct OptionsCommon {
   typedef FunctionTy function2_type;
   typedef ArgsTy args_type;
 
-  constexpr static bool needStats = galois::internal::NeedStats<ArgsTy>::value;
+  constexpr static bool needStats = katana::internal::NeedStats<ArgsTy>::value;
   constexpr static bool needsPush = !has_trait<no_pushes_tag, ArgsTy>();
   constexpr static bool needsAborts =
       !has_trait<disable_conflict_detection_tag, ArgsTy>();
@@ -530,9 +530,9 @@ public:
 template <typename OptionsTy>
 class DAGManagerBase<OptionsTy, true> {
   typedef DeterministicContext<OptionsTy> Context;
-  typedef worklists::PerSocketChunkFIFO<OptionsTy::ChunkSize * 2, Context*> WL1;
-  typedef worklists::PerThreadChunkLIFO<OptionsTy::ChunkSize * 2, Context*> WL2;
-  typedef worklists::PerSocketChunkFIFO<32, Context*> WL3;
+  typedef PerSocketChunkFIFO<OptionsTy::ChunkSize * 2, Context*> WL1;
+  typedef PerThreadChunkLIFO<OptionsTy::ChunkSize * 2, Context*> WL2;
+  typedef PerSocketChunkFIFO<32, Context*> WL3;
 
   struct ThreadLocalData : private boost::noncopyable {
     typedef std::vector<
@@ -544,17 +544,17 @@ class DAGManagerBase<OptionsTy, true> {
     ThreadLocalData() : alloc(&heap), sortBuf(alloc) {}
   };
 
-  substrate::PerThreadStorage<ThreadLocalData> data;
+  PerThreadStorage<ThreadLocalData> data;
   WL1 taskList;
   WL2 taskList2;
   WL3 sourceList;
-  substrate::TerminationDetection& term;
-  substrate::Barrier& barrier;
+  TerminationDetection& term;
+  Barrier& barrier;
 
 public:
   DAGManagerBase()
-      : term(substrate::GetTerminationDetection(activeThreads)),
-        barrier(substrate::GetBarrier(activeThreads)) {}
+      : term(GetTerminationDetection(activeThreads)),
+        barrier(GetBarrier(activeThreads)) {}
 
   void destroyDAGManager() { data.getLocal()->heap.clear(); }
 
@@ -562,7 +562,7 @@ public:
 
   bool buildDAG() {
     ThreadLocalData& tld = *data.getLocal();
-    galois::optional<Context*> p;
+    katana::optional<Context*> p;
     while ((p = taskList.pop())) {
       Context* ctx = *p;
       tld.sortBuf.clear();
@@ -592,7 +592,7 @@ public:
   template <typename Executor, typename ExecutorTLD>
   bool executeDAG(Executor& e, ExecutorTLD& etld) {
     auto& local = e.getLocalWindowManager();
-    galois::optional<Context*> p;
+    katana::optional<Context*> p;
     Context* ctx;
 
     // Go through all tasks to find intial sources and
@@ -609,7 +609,7 @@ public:
     size_t oldCommitted = 0;
     size_t committed = 0;
     do {
-      galois::optional<Context*> p;
+      katana::optional<Context*> p;
       while ((p = sourceList.pop())) {
         ctx = *p;
         assert(ctx->preds == 0);
@@ -636,7 +636,7 @@ public:
 
       term.SignalWorked(oldCommitted != committed);
       oldCommitted = committed;
-      substrate::asmPause();
+      asmPause();
     } while (term.Working());
 
     if (OptionsTy::needsPia && OptionsTy::useLocalState)
@@ -743,16 +743,16 @@ class BreakManagerBase<OptionsTy, true> {
       det_parallel_break_tag, typename OptionsTy::args_type>::type::type
       BreakFn;
   BreakFn breakFn;
-  substrate::Barrier& barrier;
-  substrate::CacheLineStorage<volatile long> done;
+  Barrier& barrier;
+  CacheLineStorage<volatile long> done;
 
 public:
   BreakManagerBase(const OptionsTy& o)
       : breakFn(get_trait_value<det_parallel_break_tag>(o.args).value),
-        barrier(substrate::GetBarrier(activeThreads)) {}
+        barrier(GetBarrier(activeThreads)) {}
 
   bool checkBreak() {
-    if (substrate::ThreadPool::getTID() == 0)
+    if (ThreadPool::getTID() == 0)
       done.get() = breakFn();
     barrier.Wait();
     return done.get();
@@ -774,12 +774,12 @@ public:
 template <typename OptionsTy>
 class IntentToReadManagerBase<OptionsTy, true> {
   typedef DeterministicContext<OptionsTy> Context;
-  typedef galois::gdeque<Context*> WL;
-  substrate::PerThreadStorage<WL> pending;
-  substrate::Barrier& barrier;
+  typedef katana::gdeque<Context*> WL;
+  PerThreadStorage<WL> pending;
+  Barrier& barrier;
 
 public:
-  IntentToReadManagerBase() : barrier(substrate::GetBarrier(activeThreads)) {}
+  IntentToReadManagerBase() : barrier(GetBarrier(activeThreads)) {}
 
   void pushIntentToReadTask(Context* ctx) {
     pending.getLocal()->push_back(ctx);
@@ -828,7 +828,7 @@ public:
   };
 
 private:
-  substrate::PerThreadStorage<ThreadLocalData> data;
+  PerThreadStorage<ThreadLocalData> data;
   unsigned numActive;
 
 public:
@@ -888,7 +888,7 @@ public:
 
     // Useful debugging info
     if (false) {
-      if (substrate::ThreadPool::getTID() == 0) {
+      if (ThreadPool::getTID() == 0) {
         char buf[1024];
         snprintf(
             buf, 1024, "%d %.3f (%zu/%zu) window: %zu delta: %zu\n", inner,
@@ -963,7 +963,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
       NewItemsTy;
   typedef typename NewItemsTy::iterator NewItemsIterator;
   typedef FIFO<1024, Item> ReserveTy;
-  typedef worklists::PerSocketChunkFIFO<OptionsTy::ChunkSize, NewItem> NewWork;
+  typedef PerSocketChunkFIFO<OptionsTy::ChunkSize, NewItem> NewWork;
 
   struct GetNewItem {
     NewWorkManager* self;
@@ -995,11 +995,11 @@ class NewWorkManager : public IdManager<OptionsTy> {
 
   IterAllocBaseTy heap;
   PerIterAllocTy alloc;
-  substrate::PerThreadStorage<ThreadLocalData> data;
+  PerThreadStorage<ThreadLocalData> data;
   NewWork new_;
   MergeBuf mergeBuf;
   DistributeBuf distributeBuf;
-  substrate::Barrier& barrier;
+  Barrier& barrier;
   unsigned numActive;
 
   bool merge(int begin, int end) {
@@ -1145,7 +1145,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
     ThreadLocalData& local = *data.getLocal();
 
     local.newItems.clear();
-    galois::optional<NewItem> p;
+    katana::optional<NewItem> p;
     while ((p = this->new_.pop())) {
       local.newItems.push_back(*p);
     }
@@ -1255,7 +1255,7 @@ public:
         alloc(&heap),
         mergeBuf(alloc),
         distributeBuf(alloc),
-        barrier(substrate::GetBarrier(activeThreads)) {
+        barrier(GetBarrier(activeThreads)) {
     numActive = getActiveThreads();
   }
 
@@ -1264,7 +1264,7 @@ public:
   template <typename WL>
   void pushNextWindow(WL* wl, size_t window) {
     ThreadLocalData& local = *data.getLocal();
-    galois::optional<Item> p;
+    katana::optional<Item> p;
     while ((p = local.reserve.peek())) {
       if (p->id >= window)
         break;
@@ -1289,19 +1289,18 @@ public:
       ThreadLocalData& local = *data.getLocal();
       size_t window = wm.initialWindow(dist, OptionsTy::MinDelta, local.minId);
       if (OptionsTy::hasFixedNeighborhood) {
-        copyMine(b, e, dist, wl, window, substrate::ThreadPool::getTID());
+        copyMine(b, e, dist, wl, window, ThreadPool::getTID());
       } else {
         copyMine(
             boost::make_transform_iterator(
                 mergeBuf.begin(), typename NewItem::GetValue()),
             boost::make_transform_iterator(
                 mergeBuf.end(), typename NewItem::GetValue()),
-            mergeBuf.size(), wl, window, substrate::ThreadPool::getTID());
+            mergeBuf.size(), wl, window, ThreadPool::getTID());
       }
     } else {
       size_t window = wm.initialWindow(dist, OptionsTy::MinDelta);
-      copyMineAfterRedistribute(
-          b, e, dist, wl, window, substrate::ThreadPool::getTID());
+      copyMineAfterRedistribute(b, e, dist, wl, window, ThreadPool::getTID());
     }
   }
 
@@ -1319,7 +1318,7 @@ public:
 
   template <typename WL>
   void distributeNewWork(WindowManager<OptionsTy>& wm, WL* wl) {
-    parallelSort(wm, wl, substrate::ThreadPool::getTID());
+    parallelSort(wm, wl, ThreadPool::getTID());
   }
 };
 
@@ -1334,11 +1333,9 @@ class Executor : public BreakManager<OptionsTy>,
   typedef DItem<OptionsTy> Item;
   typedef DeterministicContext<OptionsTy> Context;
 
-  typedef worklists::PerSocketChunkFIFO<OptionsTy::ChunkSize, Item> WL;
-  typedef worklists::PerSocketChunkFIFO<OptionsTy::ChunkSize, Context>
-      PendingWork;
-  typedef worklists::ChunkFIFO<OptionsTy::ChunkSize, Context, false>
-      LocalPendingWork;
+  typedef PerSocketChunkFIFO<OptionsTy::ChunkSize, Item> WL;
+  typedef PerSocketChunkFIFO<OptionsTy::ChunkSize, Context> PendingWork;
+  typedef ChunkFIFO<OptionsTy::ChunkSize, Context, false> LocalPendingWork;
 
   // Truly thread-local
   using LoopStat = LoopStatistics<OptionsTy::needStats>;
@@ -1362,13 +1359,13 @@ class Executor : public BreakManager<OptionsTy>,
   };
 
   OptionsTy options;
-  substrate::Barrier& barrier;
+  Barrier& barrier;
   WL worklists[2];
   PendingWork pending;
   const char* loopname;
-  substrate::CacheLineStorage<volatile long> innerDone;
-  substrate::CacheLineStorage<volatile long> outerDone;
-  substrate::CacheLineStorage<volatile long> hasNewWork;
+  CacheLineStorage<volatile long> innerDone;
+  CacheLineStorage<volatile long> outerDone;
+  CacheLineStorage<volatile long> hasNewWork;
 
   int runFunction(ThreadLocalData& tld, Context* ctx);
 
@@ -1389,8 +1386,8 @@ public:
       : BreakManager<OptionsTy>(o),
         NewWorkManager<OptionsTy>(o),
         options(o),
-        barrier(substrate::GetBarrier(activeThreads)),
-        loopname(galois::internal::getLoopName(o.args)) {
+        barrier(GetBarrier(activeThreads)),
+        loopname(katana::internal::getLoopName(o.args)) {
     static_assert(
         !OptionsTy::needsBreak || OptionsTy::hasBreak,
         "need to use break function to break loop");
@@ -1499,7 +1496,7 @@ Executor<OptionsTy>::go() {
   this->clearNewWork();
 
   if (OptionsTy::needStats) {
-    if (substrate::ThreadPool::getTID() == 0) {
+    if (ThreadPool::getTID() == 0) {
       ReportStatSingle(loopname, "RoundsExecuted", tld.rounds);
       ReportStatSingle(loopname, "OuterRoundsExecuted", tld.outerRounds);
     }
@@ -1510,17 +1507,17 @@ template <typename OptionsTy>
 int
 Executor<OptionsTy>::runFunction(ThreadLocalData& tld, Context* ctx) {
   int result = 0;
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
   if ((result = setjmp(execFrame)) == 0) {
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   try {
 #endif
     tld.fn1(ctx->item.val, tld.facing.data());
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
   } else {
     clearConflictLock();
   }
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   } catch (const ConflictFlag& flag) {
     clearConflictLock();
     result = flag;
@@ -1534,7 +1531,7 @@ bool
 Executor<OptionsTy>::pendingLoop(ThreadLocalData& tld) {
   auto& local = this->getLocalWindowManager();
   bool retval = false;
-  galois::optional<Item> p;
+  katana::optional<Item> p;
   while ((p = tld.wlcur->pop())) {
     // Use a new context for each item because there is a race when reusing
     // between aborted iterations.
@@ -1588,17 +1585,17 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
   tld.facing.resetFirstPass();
   ctx->resetFirstPass();
   int result = 0;
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
   if ((result = setjmp(execFrame)) == 0) {
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   try {
 #endif
     tld.fn2(ctx->item.val, tld.facing.data());
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
   } else {
     clearConflictLock();
   }
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
   } catch (const ConflictFlag& flag) {
     clearConflictLock();
     result = flag;
@@ -1612,7 +1609,7 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
     return false;
     break;
   default:
-    GALOIS_DIE("unknown conflict flag");
+    KATANA_DIE("unknown conflict flag");
     break;
   }
 
@@ -1624,7 +1621,7 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
     for (auto& item : tld.facing.getPushBuffer()) {
       this->pushNew(item, parent, ++count);
       if (count == 0) {
-        GALOIS_DIE("counter overflow");
+        KATANA_DIE("counter overflow");
       }
     }
     if (count)
@@ -1679,9 +1676,6 @@ Executor<OptionsTy>::commitLoop(ThreadLocalData& tld) {
 }
 
 }  // namespace internal
-}  // namespace runtime
-
-namespace worklists {
 
 /**
  * Deterministic execution. Operator should be cautious.
@@ -1697,12 +1691,8 @@ struct Deterministic {
   typedef T value_type;
 };
 
-}  // namespace worklists
-
-namespace runtime {
-
 template <class T, class FunctionTy, class ArgsTy>
-struct ForEachExecutor<worklists::Deterministic<T>, FunctionTy, ArgsTy>
+struct ForEachExecutor<Deterministic<T>, FunctionTy, ArgsTy>
     : public internal::Executor<internal::Options<T, FunctionTy, ArgsTy>> {
   typedef internal::Options<T, FunctionTy, ArgsTy> OptionsTy;
   typedef internal::Executor<OptionsTy> SuperTy;
@@ -1710,7 +1700,5 @@ struct ForEachExecutor<worklists::Deterministic<T>, FunctionTy, ArgsTy>
       : SuperTy(OptionsTy(f, args)) {}
 };
 
-}  // namespace runtime
-
-}  // namespace galois
+}  // namespace katana
 #endif

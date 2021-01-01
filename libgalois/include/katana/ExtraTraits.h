@@ -23,15 +23,14 @@
  * Defines particular traits used by the distributed runtime.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXTRATRAITS_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXTRATRAITS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXTRATRAITS_H_
+#define KATANA_LIBGALOIS_KATANA_EXTRATRAITS_H_
 
 #include <type_traits>
 
 #include <boost/mpl/has_xxx.hpp>
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(tt_has_serialize)
 //! Indicates if T has the serialize trait
@@ -59,7 +58,6 @@ struct is_serializable {
       has_serialize<T>::value || is_memory_copyable<T>::value;
 };
 
-}  // namespace runtime
-}  // namespace galois
+}  // namespace katana
 
 #endif

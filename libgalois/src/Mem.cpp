@@ -17,60 +17,58 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Mem.h"
+#include "katana/Mem.h"
 
 #include <map>
 #include <mutex>
 
-#include "galois/Mem.h"
-#include "galois/runtime/Executor_OnEach.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Mem.h"
 
 void
-galois::Prealloc(size_t pagesPerThread, size_t bytes) {
-  size_t size = (pagesPerThread * galois::runtime::activeThreads) +
-                (bytes / substrate::allocSize());
+katana::Prealloc(size_t pagesPerThread, size_t bytes) {
+  size_t size =
+      (pagesPerThread * katana::activeThreads) + (bytes / allocSize());
   // If the user requested a non-zero allocation, at the very least
   // allocate a page.
   if (size == 0 && bytes > 0) {
     size = 1;
   }
 
-  galois::Prealloc(size);
+  katana::Prealloc(size);
 }
 
 void
-galois::Prealloc(size_t pages) {
-  unsigned pagesPerThread = (pages + galois::runtime::activeThreads - 1) /
-                            galois::runtime::activeThreads;
-  galois::substrate::GetThreadPool().run(galois::runtime::activeThreads, [=]() {
-    galois::substrate::pagePoolPreAlloc(pagesPerThread);
+katana::Prealloc(size_t pages) {
+  unsigned pagesPerThread =
+      (pages + katana::activeThreads - 1) / katana::activeThreads;
+  katana::GetThreadPool().run(katana::activeThreads, [=]() {
+    katana::pagePoolPreAlloc(pagesPerThread);
   });
 }
 
 // Anchor the class
-galois::runtime::SystemHeap::SystemHeap() {
-  assert(AllocSize == galois::substrate::allocSize());
-}
+katana::SystemHeap::SystemHeap() { assert(AllocSize == katana::allocSize()); }
 
-galois::runtime::SystemHeap::~SystemHeap() = default;
+katana::SystemHeap::~SystemHeap() = default;
 
-thread_local galois::runtime::SizedHeapFactory::HeapMap*
-    galois::runtime::SizedHeapFactory::localHeaps = nullptr;
+thread_local katana::SizedHeapFactory::HeapMap*
+    katana::SizedHeapFactory::localHeaps = nullptr;
 
-galois::runtime::SizedHeapFactory::SizedHeap*
-galois::runtime::SizedHeapFactory::getHeapForSize(const size_t size) {
+katana::SizedHeapFactory::SizedHeap*
+katana::SizedHeapFactory::getHeapForSize(const size_t size) {
   if (size == 0) {
     return nullptr;
   }
   return Base::getInstance()->getHeap(size);
 }
 
-galois::runtime::SizedHeapFactory::SizedHeap*
-galois::runtime::SizedHeapFactory::getHeap(const size_t size) {
+katana::SizedHeapFactory::SizedHeap*
+katana::SizedHeapFactory::getHeap(const size_t size) {
   typedef SizedHeapFactory::HeapMap HeapMap;
 
   if (!localHeaps) {
-    std::lock_guard<galois::substrate::SimpleLock> ll(lock);
+    std::lock_guard<katana::SimpleLock> ll(lock);
     localHeaps = new HeapMap;
     allLocalHeaps.push_front(localHeaps);
   }
@@ -81,7 +79,7 @@ galois::runtime::SizedHeapFactory::getHeap(const size_t size) {
   }
 
   {
-    std::lock_guard<galois::substrate::SimpleLock> ll(lock);
+    std::lock_guard<katana::SimpleLock> ll(lock);
     auto& gentry = heaps[size];
     if (!gentry) {
       gentry = new SizedHeap();
@@ -91,11 +89,11 @@ galois::runtime::SizedHeapFactory::getHeap(const size_t size) {
   }
 }
 
-galois::runtime::Pow2BlockHeap::Pow2BlockHeap() noexcept { populateTable(); }
+katana::Pow2BlockHeap::Pow2BlockHeap() noexcept { populateTable(); }
 
-galois::runtime::SizedHeapFactory::SizedHeapFactory() = default;
+katana::SizedHeapFactory::SizedHeapFactory() = default;
 
-galois::runtime::SizedHeapFactory::~SizedHeapFactory() {
+katana::SizedHeapFactory::~SizedHeapFactory() {
   // TODO destructor ordering problem: there may be pointers to deleted
   // SizedHeap when this Factory is destroyed before dependent
   // FixedSizeHeaps.

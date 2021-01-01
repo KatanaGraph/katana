@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_BFSSSSPIMPLEMENTATIONBASE_H_
 
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
 
-#include "galois/analytics/Utils.h"
+#include "katana/analytics/Utils.h"
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 template <typename _Graph, typename _DistLabel, bool USE_EDGE_WT>
 struct BfsSsspImplementationBase {
@@ -124,16 +124,16 @@ struct BfsSsspImplementationBase {
     const auto end = graph->edge_end(src);
 
     if ((end - beg) > edge_tile_size) {
-      galois::on_each(
+      katana::on_each(
           [&](const unsigned tid, const unsigned numT) {
-            auto p = galois::block_range(beg, end, tid, numT);
+            auto p = katana::block_range(beg, end, tid, numT);
 
             auto b = p.first;
             const auto e = p.second;
 
             PushEdgeTiles(wl, b, e, f);
           },
-          galois::loopname("Init-Tiling"));
+          katana::loopname("Init-Tiling"));
 
     } else if ((end - beg) > 0) {
       wl.push(f(beg, end));
@@ -181,7 +181,7 @@ struct BfsSsspImplementationBase {
   struct TileRangeFn {
     template <typename T>
     auto operator()(const T& tile) const {
-      return galois::makeIterRange(tile.beg, tile.end);
+      return katana::makeIterRange(tile.beg, tile.end);
     }
   };
 
@@ -214,7 +214,7 @@ struct BfsSsspImplementationBase {
         Dist dd = g->template GetData<NodeProp>(*dest);
         Dist ew = getEdgeWeight<USE_EDGE_WT>(ii);
         if (dd > sd + ew) {
-          GALOIS_LOG_DEBUG(
+          KATANA_LOG_DEBUG(
               "Wrong label: {}, on node: {}, correct label from src node {} is "
               "{}",
               dd, *dest, node, sd + ew);
@@ -228,9 +228,9 @@ struct BfsSsspImplementationBase {
   template <typename NodeProp>
   struct MaxDist {
     Graph* g;
-    galois::GReduceMax<Dist>& m;
+    katana::GReduceMax<Dist>& m;
 
-    MaxDist(Graph* g, galois::GReduceMax<Dist>& m) : g(g), m(m) {}
+    MaxDist(Graph* g, katana::GReduceMax<Dist>& m) : g(g), m(m) {}
 
     void operator()(typename Graph::Node node) const {
       Dist d = g->template GetData<NodeProp>(node);
@@ -249,7 +249,7 @@ struct BfsSsspImplementationBase {
     }
 
     std::atomic<size_t> not_visited(0);
-    galois::do_all(galois::iterate(*graph), [&not_visited, &graph](GNode node) {
+    katana::do_all(katana::iterate(*graph), [&not_visited, &graph](GNode node) {
       if (graph->template GetData<NodeProp>(node) >= kDistanceInfinity)
         ++not_visited;
     });
@@ -260,8 +260,8 @@ struct BfsSsspImplementationBase {
                    "strongly connected\n";
 
     std::atomic<bool> not_c(false);
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         NotConsistent<NodeProp, EdgeProp>(graph, not_c));
 
     if (not_c) {
@@ -269,8 +269,8 @@ struct BfsSsspImplementationBase {
       return false;
     }
 
-    galois::GReduceMax<Dist> m;
-    galois::do_all(galois::iterate(*graph), MaxDist<NodeProp>(graph, m));
+    katana::GReduceMax<Dist> m;
+    katana::do_all(katana::iterate(*graph), MaxDist<NodeProp>(graph, m));
 
     std::cout << "max dist: " << m.reduce() << "\n";
 
@@ -345,6 +345,6 @@ private:
   }
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
 #endif  //  LONESTAR_BFS_SSSP_H

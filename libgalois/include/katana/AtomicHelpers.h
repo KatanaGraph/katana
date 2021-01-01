@@ -22,9 +22,9 @@
 #include <atomic>
 #include <type_traits>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 template <typename T>
 T
@@ -100,4 +100,4 @@ atomicSub(
 }
 #endif
 
-}  // end namespace galois
+}  // end namespace katana

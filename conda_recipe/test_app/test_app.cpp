@@ -1,7 +1,7 @@
-#include <galois/SharedMemSys.h>
+#include <katana/SharedMemSys.h>
 
 int
 main() {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
   return 0;
 }

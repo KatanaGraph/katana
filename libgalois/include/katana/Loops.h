@@ -17,20 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
-#define GALOIS_LIBGALOIS_GALOIS_LOOPS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LOOPS_H_
+#define KATANA_LIBGALOIS_KATANA_LOOPS_H_
 
-#include "galois/LoopsDecl.h"
-#include "galois/config.h"
-#include "galois/runtime/Executor_Deterministic.h"
-#include "galois/runtime/Executor_DoAll.h"
-#include "galois/runtime/Executor_ForEach.h"
-#include "galois/runtime/Executor_OnEach.h"
-#include "galois/runtime/Executor_Ordered.h"
-#include "galois/runtime/Executor_ParaMeter.h"
-#include "galois/worklists/WorkList.h"
+#include "katana/Executor_Deterministic.h"
+#include "katana/Executor_DoAll.h"
+#include "katana/Executor_ForEach.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Executor_Ordered.h"
+#include "katana/Executor_ParaMeter.h"
+#include "katana/LoopsDecl.h"
+#include "katana/WorkList.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Foreach
@@ -42,7 +42,7 @@ namespace galois {
  * Operator should conform to <code>fn(item, UserContext<T>&)</code> where item
  * is a value from the iteration range and T is the type of item.
  *
- * @param range an iterator range typically returned by @ref galois::iterate
+ * @param range an iterator range typically returned by @ref katana::iterate
  * @param fn operator
  * @param args optional arguments to loop, e.g., {@see loopname}, {@see wl}
  */
@@ -51,7 +51,7 @@ template <typename Range, typename FunctionTy, typename... Args>
 void
 for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
   auto tpl = std::make_tuple(std::forward<Args>(args)...);
-  runtime::for_each_gen(range, std::forward<FunctionTy>(fn), tpl);
+  for_each_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
 
 /**
@@ -60,7 +60,7 @@ for_each(const Range& range, FunctionTy&& fn, Args&&... args) {
  * Operator should conform to <code>fn(item)</code> where item is a value from
  * the iteration range.
  *
- * @param range an iterator range typically returned by @ref galois::iterate
+ * @param range an iterator range typically returned by @ref katana::iterate
  * @param fn operator
  * @param args optional arguments to loop
  */
@@ -68,7 +68,7 @@ template <typename Range, typename FunctionTy, typename... Args>
 void
 do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
   auto tpl = std::make_tuple(std::forward<Args>(args)...);
-  runtime::do_all_gen(range, std::forward<FunctionTy>(fn), tpl);
+  do_all_gen(range, std::forward<FunctionTy>(fn), tpl);
 }
 
 /**
@@ -83,7 +83,7 @@ do_all(const Range& range, FunctionTy&& fn, Args&&... args) {
 template <typename FunctionTy, typename... Args>
 void
 on_each(FunctionTy&& fn, Args&&... args) {
-  runtime::on_each_gen(
+  on_each_gen(
       std::forward<FunctionTy>(fn),
       std::make_tuple(std::forward<Args>(args)...));
 }
@@ -110,7 +110,7 @@ void
 for_each_ordered(
     Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc, const OpFunc& fn,
     const char* loopname = 0) {
-  runtime::for_each_ordered_impl(b, e, cmp, nhFunc, fn, loopname);
+  for_each_ordered_impl(b, e, cmp, nhFunc, fn, loopname);
 }
 
 /**
@@ -140,26 +140,25 @@ void
 for_each_ordered(
     Iter b, Iter e, const Cmp& cmp, const NhFunc& nhFunc, const OpFunc& fn,
     const StableTest& stabilityTest, const char* loopname = 0) {
-  runtime::for_each_ordered_impl(
-      b, e, cmp, nhFunc, fn, stabilityTest, loopname);
+  for_each_ordered_impl(b, e, cmp, nhFunc, fn, stabilityTest, loopname);
 }
 
 /**
- * Helper functor class to invoke galois::do_all on provided args
- * Can be used to choose between galois::do_all and other equivalents such as
+ * Helper functor class to invoke katana::do_all on provided args
+ * Can be used to choose between katana::do_all and other equivalents such as
  * std::for_each
  */
 struct DoAll {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
-    galois::do_all(
+    katana::do_all(
         range, std::forward<FunctionTy>(fn), std::forward<Args>(args)...);
   }
 };
 
 /**
  * Helper functor to invoke std::for_each with the same interface as
- * galois::do_all
+ * katana::do_all
  */
 
 struct StdForEach {
@@ -174,7 +173,7 @@ struct StdForEach {
 struct ForEach {
   template <typename Range, typename FunctionTy, typename... Args>
   void operator()(const Range& range, FunctionTy&& fn, Args&&... args) const {
-    galois::for_each(
+    katana::for_each(
         range, std::forward<FunctionTy>(fn), std::forward<Args>(args)...);
   }
 };
@@ -198,6 +197,6 @@ struct WhileQ {
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

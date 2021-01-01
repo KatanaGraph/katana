@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADPOOL_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADPOOL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_THREADPOOL_H_
+#define KATANA_LIBGALOIS_KATANA_THREADPOOL_H_
 
 #include <atomic>
 #include <cassert>
@@ -28,10 +28,10 @@
 #include <thread>
 #include <vector>
 
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/HWTopo.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/HWTopo.h"
 
-namespace galois::substrate::internal {
+namespace katana::internal {
 
 template <typename tpl, int s, int r>
 struct ExecuteTupleImpl {
@@ -46,11 +46,11 @@ struct ExecuteTupleImpl<tpl, s, 0> {
   static inline void execute(tpl&) {}
 };
 
-}  // namespace galois::substrate::internal
+}  // namespace katana::internal
 
-namespace galois::substrate {
+namespace katana {
 
-class GALOIS_EXPORT ThreadPool {
+class KATANA_EXPORT ThreadPool {
   friend class SharedMem;
 
 protected:
@@ -214,14 +214,14 @@ public:
 /**
  * return a reference to system thread pool
  */
-GALOIS_EXPORT ThreadPool& GetThreadPool();
+KATANA_EXPORT ThreadPool& GetThreadPool();
 
-}  // namespace galois::substrate
+}  // namespace katana
 
-namespace galois::substrate::internal {
+namespace katana::internal {
 
-GALOIS_EXPORT void SetThreadPool(ThreadPool* tp);
+KATANA_EXPORT void SetThreadPool(ThreadPool* tp);
 
-}  // namespace galois::substrate::internal
+}  // namespace katana::internal
 
 #endif

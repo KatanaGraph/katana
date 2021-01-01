@@ -26,9 +26,9 @@
 
 #include <llvm/Support/CommandLine.h>
 
-#include "galois/AtomicHelpers.h"
-#include "galois/Galois.h"
-#include "galois/LargeArray.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/Galois.h"
+#include "katana/LargeArray.h"
 
 namespace cll = llvm::cl;
 static cll::opt<bool> enable_VF(
@@ -77,23 +77,23 @@ constexpr static const uint64_t UNASSIGNED =
 constexpr static const double DOUBLE_MAX =
     std::numeric_limits<double>::max() / 4;
 
-constexpr galois::MethodFlag flag_no_lock = galois::MethodFlag::UNPROTECTED;
-constexpr galois::MethodFlag flag_read_lock = galois::MethodFlag::READ;
-constexpr galois::MethodFlag flag_write_lock = galois::MethodFlag::WRITE;
+constexpr katana::MethodFlag flag_no_lock = katana::MethodFlag::UNPROTECTED;
+constexpr katana::MethodFlag flag_read_lock = katana::MethodFlag::READ;
+constexpr katana::MethodFlag flag_write_lock = katana::MethodFlag::WRITE;
 
-typedef galois::LargeArray<uint64_t> largeArray;
+typedef katana::LargeArray<uint64_t> largeArray;
 typedef float EdgeTy;
 // typedef uint32_t EdgeTy;
-typedef galois::LargeArray<EdgeTy> largeArrayEdgeTy;
+typedef katana::LargeArray<EdgeTy> largeArrayEdgeTy;
 
 template <typename GraphTy>
 void
 printGraphCharateristics(GraphTy& graph) {
-  galois::gPrint("/******************************************/\n");
-  galois::gPrint("/************ Graph Properties ************/\n");
-  galois::gPrint("/******************************************/\n");
-  galois::gPrint("Number of Nodes: ", graph.size(), "\n");
-  galois::gPrint("Number of Edges: ", graph.sizeEdges(), "\n");
+  katana::gPrint("/******************************************/\n");
+  katana::gPrint("/************ Graph Properties ************/\n");
+  katana::gPrint("/******************************************/\n");
+  katana::gPrint("Number of Nodes: ", graph.size(), "\n");
+  katana::gPrint("Number of Edges: ", graph.sizeEdges(), "\n");
 }
 
 /**
@@ -147,17 +147,17 @@ uint64_t
 vertexFollowing(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   // Initialize each node to its own cluster
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n).curr_comm_ass = n;
   });
 
   // Remove isolated and degree-one nodes
-  galois::GAccumulator<uint64_t> isolatedNodes;
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::GAccumulator<uint64_t> isolatedNodes;
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     auto& n_data = graph.getData(n);
     uint64_t degree = std::distance(
-        graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
-        graph.edge_end(n, galois::MethodFlag::UNPROTECTED));
+        graph.edge_begin(n, katana::MethodFlag::UNPROTECTED),
+        graph.edge_end(n, katana::MethodFlag::UNPROTECTED));
     if (degree == 0) {
       isolatedNodes += 1;
       n_data.curr_comm_ass = UNASSIGNED;
@@ -165,10 +165,10 @@ vertexFollowing(GraphTy& graph) {
       if (degree == 1) {
         // Check if the destination has degree greater than one
         auto dst = graph.getEdgeDst(
-            graph.edge_end(n, galois::MethodFlag::UNPROTECTED));
+            graph.edge_end(n, katana::MethodFlag::UNPROTECTED));
         uint64_t dst_degree = std::distance(
-            graph.edge_begin(dst, galois::MethodFlag::UNPROTECTED),
-            graph.edge_end(dst, galois::MethodFlag::UNPROTECTED));
+            graph.edge_begin(dst, katana::MethodFlag::UNPROTECTED),
+            graph.edge_end(dst, katana::MethodFlag::UNPROTECTED));
         if ((dst_degree > 1 || (n > dst))) {
           isolatedNodes += 1;
           n_data.curr_comm_ass = graph.getData(dst).curr_comm_ass;
@@ -184,7 +184,7 @@ template <typename GraphTy, typename CommArrayTy>
 void
 sumVertexDegreeWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
     auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
@@ -199,7 +199,7 @@ template <typename GraphTy, typename CommArrayTy>
 void
 sumVertexDegreeWeightWithNodeWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
     auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
@@ -216,7 +216,7 @@ template <typename GraphTy, typename CommArrayTy>
 void
 sumClusterWeight(GraphTy& graph, CommArrayTy& c_info) {
   using GNode = typename GraphTy::GraphNode;
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     EdgeTy total_weight = 0;
     auto& n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
@@ -226,10 +226,10 @@ sumClusterWeight(GraphTy& graph, CommArrayTy& c_info) {
     c_info[n].degree_wt = 0;
   });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     auto& n_data = graph.getData(n);
     if (n_data.curr_comm_ass != UNASSIGNED)
-      galois::atomicAdd(
+      katana::atomicAdd(
           c_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
   });
 }
@@ -241,8 +241,8 @@ calConstantForSecondTerm(GraphTy& graph) {
   /**
    * Using double to avoid overflow
    */
-  galois::GAccumulator<double> local_weight;
-  galois::do_all(galois::iterate(graph), [&graph, &local_weight](GNode n) {
+  katana::GAccumulator<double> local_weight;
+  katana::do_all(katana::iterate(graph), [&graph, &local_weight](GNode n) {
     local_weight += graph.getData(n).degree_wt;
   });
   /* This is twice since graph is symmetric */
@@ -305,13 +305,13 @@ calCPMQuality(
   cluster_wt_internal.allocateBlocked(graph.size());
 
   /* Calculate the overall modularity */
-  galois::GAccumulator<double> acc_e_xx;
-  galois::GAccumulator<double> acc_a2_x;
+  katana::GAccumulator<double> acc_e_xx;
+  katana::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(
-      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
+  katana::do_all(
+      katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       if (graph.getData(graph.getEdgeDst(ii)).curr_comm_ass ==
@@ -321,7 +321,7 @@ calCPMQuality(
     }
   });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     acc_e_xx += cluster_wt_internal[n];
     acc_a2_x +=
         (double)(c_info[n].node_wt) * ((double)(c_info[n].node_wt - 1) * 0.5f);
@@ -441,13 +441,13 @@ calModularityDelay(
   cluster_wt_internal.allocateBlocked(graph.size());
 
   /* Calculate the overall modularity */
-  galois::GAccumulator<double> acc_e_xx;
-  galois::GAccumulator<double> acc_a2_x;
+  katana::GAccumulator<double> acc_e_xx;
+  katana::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(
-      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
+  katana::do_all(
+      katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       if (local_target[graph.getEdgeDst(ii)] == local_target[n]) {
         cluster_wt_internal[n] += graph.getEdgeData(ii);
@@ -455,7 +455,7 @@ calModularityDelay(
     }
   });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     acc_e_xx += cluster_wt_internal[n];
     acc_a2_x += (double)(c_info[n].degree_wt + c_update[n].degree_wt) *
                 ((double)(c_info[n].degree_wt + c_update[n].degree_wt) *
@@ -485,13 +485,13 @@ calModularity(
   cluster_wt_internal.allocateBlocked(graph.size());
 
   /* Calculate the overall modularity */
-  galois::GAccumulator<double> acc_e_xx;
-  galois::GAccumulator<double> acc_a2_x;
+  katana::GAccumulator<double> acc_e_xx;
+  katana::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(
-      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
+  katana::do_all(
+      katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       if (graph.getData(graph.getEdgeDst(ii)).curr_comm_ass ==
@@ -501,7 +501,7 @@ calModularity(
     }
   });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     acc_e_xx += cluster_wt_internal[n];
     acc_a2_x +=
         (double)(c_info[n].degree_wt) *
@@ -548,14 +548,14 @@ calModularityFinal(GraphTy& graph) {
 
   /* Calculate the overall modularity */
   double e_xx = 0;
-  galois::GAccumulator<double> acc_e_xx;
+  katana::GAccumulator<double> acc_e_xx;
   double a2_x = 0;
-  galois::GAccumulator<double> acc_a2_x;
+  katana::GAccumulator<double> acc_a2_x;
 
-  galois::do_all(
-      galois::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
+  katana::do_all(
+      katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     auto n_data = graph.getData(n);
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
       if (graph.getData(graph.getEdgeDst(ii)).curr_comm_ass ==
@@ -567,7 +567,7 @@ calModularityFinal(GraphTy& graph) {
     }
   });
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     acc_e_xx += cluster_wt_internal[n];
     acc_a2_x +=
         (double)(c_info[n].degree_wt) *
@@ -658,7 +658,7 @@ printGraph(GraphTy& graph) {
   using GNode = typename GraphTy::GraphNode;
   for (GNode n = 0; n < graph.size(); ++n) {
     for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-      galois::gPrint(
+      katana::gPrint(
           n, " --> ", graph.getEdgeDst(ii), " , ", graph.getEdgeData(ii), "\n");
     }
   }
@@ -679,17 +679,17 @@ template <typename GraphTy, typename CommArrayTy>
 void
 checkModularity(GraphTy& graph, largeArray& clusters_orig) {
   using GNode = typename GraphTy::GraphNode;
-  galois::gPrint("checkModularity\n");
+  katana::gPrint("checkModularity\n");
 
-  galois::do_all(galois::iterate(graph), [&](GNode n) {
+  katana::do_all(katana::iterate(graph), [&](GNode n) {
     graph.getData(n, flag_no_lock).curr_comm_ass = clusters_orig[n];
   });
 
   uint64_t num_unique_clusters = renumberClustersContiguously(graph);
-  galois::gPrint(
+  katana::gPrint(
       "Number of unique clusters (renumber): ", num_unique_clusters, "\n");
   auto mod = calModularityFinal<GraphTy, CommArrayTy>(graph);
-  galois::gPrint("FINAL MOD: ", mod, "\n");
+  katana::gPrint("FINAL MOD: ", mod, "\n");
 }
 
 /***********************************************
@@ -1031,10 +1031,10 @@ mergeNodesSubset(
          * Move the currently selected node to its new cluster and
          * update the clustering statistics.
          */
-        galois::atomicAdd(
+        katana::atomicAdd(
             subcomm_info[new_subcomm_ass].node_wt, n_data.node_wt);
-        galois::atomicAdd(subcomm_info[new_subcomm_ass].size, (uint64_t)1);
-        galois::atomicAdd(
+        katana::atomicAdd(subcomm_info[new_subcomm_ass].size, (uint64_t)1);
+        katana::atomicAdd(
             subcomm_info[new_subcomm_ass].degree_wt, n_data.degree_wt);
 
         for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
@@ -1063,12 +1063,12 @@ refinePartition(GraphTy& graph, double constant_for_second_term) {
   using GNode = typename GraphTy::GraphNode;
   using CommArray = CommArrayTy;
 
-  galois::gPrint("Refining\n");
+  katana::gPrint("Refining\n");
 
   // set singleton subcommunities
-  galois::do_all(
-      galois::iterate(graph),
-      [&](GNode n) { graph.getData(n).curr_subcomm_ass = n; }, galois::steal());
+  katana::do_all(
+      katana::iterate(graph),
+      [&](GNode n) { graph.getData(n).curr_subcomm_ass = n; }, katana::steal());
 
   // populate nodes into communities
   std::vector<std::vector<GNode>> cluster_bags(2 * graph.size() + 1);
@@ -1076,21 +1076,21 @@ refinePartition(GraphTy& graph, double constant_for_second_term) {
 
   comm_info.allocateBlocked(2 * graph.size() + 1);
 
-  galois::do_all(
-      galois::iterate((uint32_t)0, (uint32_t)(2 * graph.size() + 1)),
+  katana::do_all(
+      katana::iterate((uint32_t)0, (uint32_t)(2 * graph.size() + 1)),
       [&](uint32_t n) {
         comm_info[n].node_wt = (uint64_t)0;
         comm_info[n].degree_wt = (uint64_t)0;
       },
-      galois::steal());
+      katana::steal());
 
   for (GNode n : graph) {
     auto& n_data = graph.getData(n, flag_no_lock);
     if (n_data.curr_comm_ass != UNASSIGNED)
       cluster_bags[n_data.curr_comm_ass].push_back(n);
 
-    galois::atomicAdd(comm_info[n_data.curr_comm_ass].node_wt, n_data.node_wt);
-    galois::atomicAdd(
+    katana::atomicAdd(comm_info[n_data.curr_comm_ass].node_wt, n_data.node_wt);
+    katana::atomicAdd(
         comm_info[n_data.curr_comm_ass].degree_wt, n_data.degree_wt);
   }
 
@@ -1099,8 +1099,8 @@ refinePartition(GraphTy& graph, double constant_for_second_term) {
   subcomm_info.allocateBlocked(graph.size() + 1);
 
   // call mergeNodesSubset for each community in parallel
-  galois::do_all(
-      galois::iterate((uint64_t)0, (uint64_t)graph.size()), [&](uint64_t c) {
+  katana::do_all(
+      katana::iterate((uint64_t)0, (uint64_t)graph.size()), [&](uint64_t c) {
         /*
                     * Only nodes belonging to singleton clusters can be moved to
                     * a different cluster. This guarantees that clusters will
@@ -1131,7 +1131,7 @@ buildNextLevelGraph(
   using GNode = typename GraphTy::GraphNode;
   std::cerr << "Inside buildNextLevelGraph\n";
 
-  galois::StatTimer TimerGraphBuild("Timer_Graph_build");
+  katana::StatTimer TimerGraphBuild("Timer_Graph_build");
   TimerGraphBuild.start();
   uint32_t num_nodes_next = num_unique_clusters;
   uint64_t num_edges_next = 0;  // Unknown right now
@@ -1148,8 +1148,8 @@ buildNextLevelGraph(
   std::vector<std::vector<EdgeTy>> edges_data(num_unique_clusters);
 
   /* First pass to find the number of edges */
-  galois::do_all(
-      galois::iterate((uint64_t)0, num_unique_clusters),
+  katana::do_all(
+      katana::iterate((uint64_t)0, num_unique_clusters),
       [&](uint64_t c) {
         std::map<uint64_t, uint64_t> cluster_local_map;
         uint64_t num_unique_clusters = 0;
@@ -1177,12 +1177,12 @@ buildNextLevelGraph(
           }  // End edge loop
         }
       },
-      galois::steal(), galois::loopname("BuildGrah: Find edges"));
+      katana::steal(), katana::loopname("BuildGrah: Find edges"));
 
   /* Serial loop to reduce all the edge counts */
   std::vector<uint64_t> prefix_edges_count(num_unique_clusters);
-  galois::GAccumulator<uint64_t> num_edges_acc;
-  galois::do_all(galois::iterate((uint32_t)0, num_nodes_next), [&](uint32_t c) {
+  katana::GAccumulator<uint64_t> num_edges_acc;
+  katana::do_all(katana::iterate((uint32_t)0, num_nodes_next), [&](uint32_t c) {
     prefix_edges_count[c] = edges_id[c].size();
     num_edges_acc += prefix_edges_count[c];
   });
@@ -1193,18 +1193,18 @@ buildNextLevelGraph(
   }
 
   assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
-  galois::gPrint(
+  katana::gPrint(
       "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
   std::cerr << "Graph construction started"
             << "\n";
-  galois::StatTimer TimerConstructFrom("Timer_Construct_From");
+  katana::StatTimer TimerConstructFrom("Timer_Construct_From");
   TimerConstructFrom.start();
   graph_next.constructFrom(
       num_nodes_next, num_edges_next, prefix_edges_count, edges_id, edges_data);
   TimerConstructFrom.stop();
 
   TimerGraphBuild.stop();
-  galois::gPrint("Graph construction done\n");
+  katana::gPrint("Graph construction done\n");
 }
 
 template <typename GraphTy>
@@ -1215,7 +1215,7 @@ buildNextLevelGraphSubComm(
     std::vector<uint64_t>& cluster_node_wt) {
   using GNode = typename GraphTy::GraphNode;
 
-  galois::StatTimer TimerGraphBuild("Timer_Graph_build");
+  katana::StatTimer TimerGraphBuild("Timer_Graph_build");
   TimerGraphBuild.start();
   uint32_t num_nodes_next = num_unique_clusters;
   uint64_t num_edges_next = 0;  // Unknown right now
@@ -1235,8 +1235,8 @@ buildNextLevelGraphSubComm(
   std::vector<std::vector<EdgeTy>> edges_data(num_unique_clusters);
 
   /* First pass to find the number of edges */
-  galois::do_all(
-      galois::iterate((uint64_t)0, num_unique_clusters),
+  katana::do_all(
+      katana::iterate((uint64_t)0, num_unique_clusters),
       [&](uint64_t c) {
         std::map<uint64_t, uint64_t> cluster_local_map;
         uint64_t num_unique_clusters = 0;
@@ -1265,12 +1265,12 @@ buildNextLevelGraphSubComm(
           }  // End edge loop
         }
       },
-      galois::steal(), galois::loopname("BuildGrah: Find edges"));
+      katana::steal(), katana::loopname("BuildGrah: Find edges"));
 
   /* Serial loop to reduce all the edge counts */
   std::vector<uint64_t> prefix_edges_count(num_unique_clusters);
-  galois::GAccumulator<uint64_t> num_edges_acc;
-  galois::do_all(galois::iterate((uint32_t)0, num_nodes_next), [&](uint32_t c) {
+  katana::GAccumulator<uint64_t> num_edges_acc;
+  katana::do_all(katana::iterate((uint32_t)0, num_nodes_next), [&](uint32_t c) {
     prefix_edges_count[c] = edges_id[c].size();
     num_edges_acc += prefix_edges_count[c];
   });
@@ -1281,15 +1281,15 @@ buildNextLevelGraphSubComm(
   }
 
   assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
-  galois::gPrint(
+  katana::gPrint(
       "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
-  galois::gPrint(
+  katana::gPrint(
       "#prefix last : ", prefix_edges_count[num_unique_clusters - 1], "\n");
 
   std::cerr << "Graph construction started"
             << "\n";
 
-  galois::StatTimer TimerConstructFrom("Timer_Construct_From");
+  katana::StatTimer TimerConstructFrom("Timer_Construct_From");
   TimerConstructFrom.start();
   graph_next.constructFrom(
       num_nodes_next, num_edges_next, prefix_edges_count, edges_id, edges_data);
@@ -1297,7 +1297,7 @@ buildNextLevelGraphSubComm(
 
   std::cout << " c1:" << calConstantForSecondTerm(graph) << "\n";
   TimerGraphBuild.stop();
-  galois::gPrint("Graph construction done\n");
+  katana::gPrint("Graph construction done\n");
 }
 
 #endif  // CLUSTERING_H

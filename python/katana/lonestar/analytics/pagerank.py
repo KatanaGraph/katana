@@ -1,18 +1,18 @@
 import numpy as np
 import pyarrow
 
-from galois.atomic import (
+from katana.atomic import (
     GAccumulator,
     GReduceLogicalOr,
     atomic_add,
     GReduceMin,
     GReduceMax,
 )
-from galois.datastructures import LargeArray, AllocationPolicy
-from galois.loops import do_all, do_all_operator
-from galois.property_graph import PropertyGraph
-from galois.shmem import setActiveThreads
-from galois.timer import StatTimer
+from katana.datastructures import LargeArray, AllocationPolicy
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
+from katana.galois import setActiveThreads
+from katana.timer import StatTimer
 
 # Constants for Pagerank
 ALPHA = 0.85

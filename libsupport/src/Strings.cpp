@@ -1,7 +1,7 @@
-#include "galois/Strings.h"
+#include "katana/Strings.h"
 
 bool
-galois::HasPrefix(const std::string& s, const std::string& prefix) {
+katana::HasPrefix(const std::string& s, const std::string& prefix) {
   size_t prefix_len = prefix.length();
   size_t s_len = s.length();
 
@@ -13,7 +13,7 @@ galois::HasPrefix(const std::string& s, const std::string& prefix) {
 }
 
 std::string
-galois::TrimPrefix(const std::string& s, const std::string& prefix) {
+katana::TrimPrefix(const std::string& s, const std::string& prefix) {
   if (HasPrefix(s, prefix)) {
     size_t prefix_len = prefix.length();
     return s.substr(prefix_len, s.length() - prefix_len);
@@ -22,7 +22,7 @@ galois::TrimPrefix(const std::string& s, const std::string& prefix) {
 }
 
 bool
-galois::HasSuffix(const std::string& s, const std::string& suffix) {
+katana::HasSuffix(const std::string& s, const std::string& suffix) {
   size_t suffix_len = suffix.length();
   size_t s_len = s.length();
 
@@ -34,7 +34,7 @@ galois::HasSuffix(const std::string& s, const std::string& suffix) {
 }
 
 std::string
-galois::TrimSuffix(const std::string& s, const std::string& suffix) {
+katana::TrimSuffix(const std::string& s, const std::string& suffix) {
   if (HasSuffix(s, suffix)) {
     size_t suffix_len = suffix.length();
     return s.substr(0, s.length() - suffix_len);

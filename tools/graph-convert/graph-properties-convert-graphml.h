@@ -1,13 +1,13 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_GRAPHML_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_GRAPHML_H_
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_GRAPHML_H_
+#define KATANA_TOOLS_GRAPH_CONVERT_GRAPH_PROPERTIES_CONVERT_GRAPHML_H_
 
-#include "galois/BuildGraph.h"
+#include "katana/BuildGraph.h"
 
-namespace galois {
+namespace katana {
 
 GraphComponents ConvertGraphML(
     const std::string& input_filename, size_t chunk_size);
 
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

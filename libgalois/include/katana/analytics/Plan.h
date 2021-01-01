@@ -1,7 +1,7 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_PLAN_H_
-#define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_PLAN_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_PLAN_H_
+#define KATANA_LIBGALOIS_KATANA_ANALYTICS_PLAN_H_
 
-namespace galois::analytics {
+namespace katana::analytics {
 
 enum Architecture {
   /// Local execution using CPUs only
@@ -22,6 +22,6 @@ public:
   Architecture architecture() const { return architecture_; }
 };
 
-}  // namespace galois::analytics
+}  // namespace katana::analytics
 
-#endif  //GALOIS_PLAN_H_
+#endif  //KATANA_PLAN_H_

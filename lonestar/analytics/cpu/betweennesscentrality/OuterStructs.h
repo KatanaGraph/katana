@@ -1,5 +1,5 @@
-#ifndef GALOIS_BC_OUTER
-#define GALOIS_BC_OUTER
+#ifndef KATANA_BC_OUTER
+#define KATANA_BC_OUTER
 
 #include <fstream>
 #include <iomanip>
@@ -7,12 +7,12 @@
 #include <boost/iterator/filter_iterator.hpp>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Galois.h"
+#include "katana/Galois.h"
 
 using NodeDataOuter = std::tuple<>;
 using EdgeDataOuter = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeDataOuter, EdgeDataOuter> OuterGraph;
+typedef katana::PropertyGraph<NodeDataOuter, EdgeDataOuter> OuterGraph;
 typedef typename OuterGraph::Node OuterGNode;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -21,13 +21,11 @@ class BCOuter {
   const OuterGraph& graph_;
   int num_nodes_;
 
-  galois::substrate::PerThreadStorage<double*>
-      centrality_measure_;  // betweeness measure
-  galois::substrate::PerThreadStorage<double*> per_thread_sigma_;
-  galois::substrate::PerThreadStorage<int*> per_thread_distance_;
-  galois::substrate::PerThreadStorage<double*> per_thread_delta_;
-  galois::substrate::PerThreadStorage<galois::gdeque<OuterGNode>*>
-      per_thread_successor_;
+  katana::PerThreadStorage<double*> centrality_measure_;  // betweeness measure
+  katana::PerThreadStorage<double*> per_thread_sigma_;
+  katana::PerThreadStorage<int*> per_thread_distance_;
+  katana::PerThreadStorage<double*> per_thread_delta_;
+  katana::PerThreadStorage<katana::gdeque<OuterGNode>*> per_thread_successor_;
 
 public:
   /**
@@ -44,12 +42,12 @@ public:
 
   //! Function that does BC for a single source; called by a thread
   void ComputeBC(const OuterGNode current_source) {
-    galois::gdeque<OuterGNode> source_queue;
+    katana::gdeque<OuterGNode> source_queue;
 
     double* sigma = *per_thread_sigma_.getLocal();
     int* distance = *per_thread_distance_.getLocal();
     double* delta = *per_thread_delta_.getLocal();
-    galois::gdeque<OuterGNode>* successor = *per_thread_successor_.getLocal();
+    katana::gdeque<OuterGNode>* successor = *per_thread_successor_.getLocal();
 
     sigma[current_source] = 1;
     distance[current_source] = 1;
@@ -116,10 +114,10 @@ public:
    */
   void RunAll(unsigned num_sources) {
     // Each thread works on an individual source node
-    galois::do_all(
-        galois::iterate(0u, num_sources),
+    katana::do_all(
+        katana::iterate(0u, num_sources),
         [&](const OuterGNode& current_source) { ComputeBC(current_source); },
-        galois::steal(), galois::loopname("Main"));
+        katana::steal(), katana::loopname("Main"));
   }
 
   /**
@@ -134,10 +132,10 @@ public:
   template <typename Cont>
   void Run(const Cont& source_vector) {
     // Each thread works on an individual source node
-    galois::do_all(
-        galois::iterate(source_vector),
+    katana::do_all(
+        katana::iterate(source_vector),
         [&](const OuterGNode& current_source) { ComputeBC(current_source); },
-        galois::steal(), galois::loopname("Main"));
+        katana::steal(), katana::loopname("Main"));
   }
 
   /**
@@ -151,17 +149,17 @@ public:
     for (int i = 0; i < num_nodes_; ++i) {
       double bc = (*centrality_measure_.getRemote(0))[i];
 
-      for (unsigned j = 1; j < galois::getActiveThreads(); ++j)
+      for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
         bc += (*centrality_measure_.getRemote(j))[i];
 
       if (first_time) {
         sample_bc = bc;
-        galois::gInfo("BC: ", sample_bc);
+        katana::gInfo("BC: ", sample_bc);
         first_time = false;
       } else {
         // check if over some tolerance value
         if ((bc - sample_bc) > 0.0001) {
-          galois::gInfo(
+          katana::gInfo(
               "If torus graph, verification failed ", (bc - sample_bc));
           return;
         }
@@ -182,7 +180,7 @@ public:
     for (; begin != end; ++begin) {
       double bc = (*centrality_measure_.getRemote(0))[begin];
 
-      for (unsigned j = 1; j < galois::getActiveThreads(); ++j)
+      for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
         bc += (*centrality_measure_.getRemote(j))[begin];
 
       out << begin << " " << std::setiosflags(std::ios::fixed)
@@ -194,7 +192,7 @@ public:
     for (; begin != end; ++begin) {
       double bc = (*centrality_measure_.getRemote(0))[begin];
 
-      for (unsigned j = 1; j < galois::getActiveThreads(); ++j) {
+      for (unsigned j = 1; j < katana::getActiveThreads(); ++j) {
         bc += (*centrality_measure_.getRemote(j))[begin];
       }
 
@@ -207,10 +205,10 @@ public:
    */
   void PrintBCcertificate() {
     std::stringstream foutname;
-    foutname << "outer_certificate_" << galois::getActiveThreads();
+    foutname << "outer_certificate_" << katana::getActiveThreads();
 
     std::ofstream outf(foutname.str().c_str());
-    galois::gInfo("Writing certificate...");
+    katana::gInfo("Writing certificate...");
 
     PrintBCValues(0, num_nodes_, outf, 9);
 
@@ -232,31 +230,31 @@ public:
 
   //! sanity check of BC values
   void OuterSanity(const OuterGraph& graph) {
-    galois::GReduceMax<float> accum_max;
-    galois::GReduceMin<float> accum_min;
-    galois::GAccumulator<float> accum_sum;
+    katana::GReduceMax<float> accum_max;
+    katana::GReduceMin<float> accum_min;
+    katana::GAccumulator<float> accum_sum;
     accum_max.reset();
     accum_min.reset();
     accum_sum.reset();
 
     // get max, min, sum of BC values using accumulators and reducers
-    galois::do_all(
-        galois::iterate(graph),
+    katana::do_all(
+        katana::iterate(graph),
         [&](LevelGNode n) {
           double bc = (*centrality_measure_.getRemote(0))[n];
 
-          for (unsigned j = 1; j < galois::getActiveThreads(); ++j)
+          for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
             bc += (*centrality_measure_.getRemote(j))[n];
 
           accum_max.update(bc);
           accum_min.update(bc);
           accum_sum += bc;
         },
-        galois::no_stats(), galois::loopname("OuterSanity"));
+        katana::no_stats(), katana::loopname("OuterSanity"));
 
-    galois::gPrint("Max BC is ", accum_max.reduce(), "\n");
-    galois::gPrint("Min BC is ", accum_min.reduce(), "\n");
-    galois::gPrint("BC sum is ", accum_sum.reduce(), "\n");
+    katana::gPrint("Max BC is ", accum_max.reduce(), "\n");
+    katana::gPrint("Min BC is ", accum_min.reduce(), "\n");
+    katana::gPrint("BC sum is ", accum_sum.reduce(), "\n");
   }
 
 private:
@@ -284,7 +282,7 @@ private:
    * Initialize local thread storage.
    */
   void InitializeLocal(void) {
-    galois::on_each([this](unsigned, unsigned) {
+    katana::on_each([this](unsigned, unsigned) {
       this->InitArray(centrality_measure_.getLocal());
       this->InitArray(per_thread_sigma_.getLocal());
       this->InitArray(per_thread_distance_.getLocal());
@@ -297,7 +295,7 @@ private:
    * Destroy local thread storage.
    */
   void DeleteLocal(void) {
-    galois::on_each([this](unsigned, unsigned) {
+    katana::on_each([this](unsigned, unsigned) {
       this->DeleteArray(centrality_measure_.getLocal());
       this->DeleteArray(per_thread_sigma_.getLocal());
       this->DeleteArray(per_thread_distance_.getLocal());
@@ -324,14 +322,13 @@ struct HasOut {
 void
 DoOuterBC() {
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto pg_result =
-      galois::graphs::PropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(
-          pfg.get());
+      katana::PropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   OuterGraph graph = pg_result.value();
 
@@ -343,9 +340,9 @@ DoOuterBC() {
   size_t num_nodes_ = graph.num_nodes();
 
   // preallocate pages for use in algorithm
-  galois::reportPageAlloc("MeminfoPre");
-  galois::Prealloc(galois::getActiveThreads() * num_nodes_ / 1650);
-  galois::reportPageAlloc("MeminfoMid");
+  katana::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(katana::getActiveThreads() * num_nodes_ / 1650);
+  katana::reportPageAlloc("MeminfoMid");
 
   // vector of sources to process; initialized if doing outSources
   std::vector<OuterGNode> source_vector;
@@ -360,10 +357,10 @@ DoOuterBC() {
     // adjustedEnd = last node we will process based on how many iterations
     // (i.e. sources) we want to do
     boost::filter_iterator<HasOut, OuterGraph::iterator> adjustedEnd =
-        iterLimit ? galois::safe_advance(begin, end, (int)iterLimit) : end;
+        iterLimit ? katana::safe_advance(begin, end, (int)iterLimit) : end;
 
     size_t iterations = std::distance(begin, adjustedEnd);
-    galois::gPrint(
+    katana::gPrint(
         "Num Nodes: ", num_nodes_, " Start Node: ", startSource,
         " Iterations: ", iterations, "\n");
     // vector of nodes we want to process
@@ -373,7 +370,7 @@ DoOuterBC() {
   }
 
   // execute algorithm
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   // either Run a contiguous chunk of sources from beginning or Run using
   // sources with outgoing edges only
@@ -396,6 +393,6 @@ DoOuterBC() {
   if (!skipVerify)
     bc_outer.verify();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 }
 #endif

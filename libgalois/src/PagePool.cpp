@@ -17,40 +17,40 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PagePool.h"
+#include "katana/PagePool.h"
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
-static galois::substrate::internal::PageAllocState<>* PA;
+static katana::internal::PageAllocState<>* PA;
 
 void
-galois::substrate::internal::setPagePoolState(PageAllocState<>* pa) {
-  GALOIS_LOG_VASSERT(!(PA && pa), "double Initialization of PageAllocState");
+katana::internal::setPagePoolState(PageAllocState<>* pa) {
+  KATANA_LOG_VASSERT(!(PA && pa), "double Initialization of PageAllocState");
   PA = pa;
 }
 
 int
-galois::substrate::numPagePoolAllocTotal() {
+katana::numPagePoolAllocTotal() {
   return PA->countAll();
 }
 
 int
-galois::substrate::numPagePoolAllocForThread(unsigned tid) {
+katana::numPagePoolAllocForThread(unsigned tid) {
   return PA->count(tid);
 }
 
 void*
-galois::substrate::pagePoolAlloc() {
+katana::pagePoolAlloc() {
   return PA->pageAlloc();
 }
 
 void
-galois::substrate::pagePoolPreAlloc(unsigned num) {
+katana::pagePoolPreAlloc(unsigned num) {
   while (num--)
     PA->pagePreAlloc();
 }
 
 void
-galois::substrate::pagePoolFree(void* ptr) {
+katana::pagePoolFree(void* ptr) {
   PA->pageFree(ptr);
 }

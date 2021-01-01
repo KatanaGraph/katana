@@ -1,14 +1,14 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGSLICE_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGSLICE_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_RDGSLICE_H_
+#define KATANA_LIBTSUBA_TSUBA_RDGSLICE_H_
 
 #include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "galois/Result.h"
-#include "galois/Uri.h"
-#include "galois/config.h"
+#include "katana/Result.h"
+#include "katana/Uri.h"
+#include "katana/config.h"
 #include "tsuba/FileView.h"
 #include "tsuba/tsuba.h"
 
@@ -18,7 +18,7 @@ class RDGMeta;
 class RDGCore;
 
 /// A contiguous piece of an RDG
-class GALOIS_EXPORT RDGSlice {
+class KATANA_EXPORT RDGSlice {
 public:
   RDGSlice(const RDGSlice& no_copy) = delete;
   RDGSlice& operator=(const RDGSlice& no_copy) = delete;
@@ -34,12 +34,12 @@ public:
     uint64_t topo_size;
   };
 
-  static galois::Result<RDGSlice> Make(
+  static katana::Result<RDGSlice> Make(
       RDGHandle handle, const SliceArg& slice,
       const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  static galois::Result<RDGSlice> Make(
+  static katana::Result<RDGSlice> Make(
       const std::string& rdg_meta_path, const SliceArg& slice,
       const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
@@ -49,14 +49,14 @@ public:
   const FileView& topology_file_storage() const;
 
 private:
-  static galois::Result<RDGSlice> Make(
+  static katana::Result<RDGSlice> Make(
       const RDGMeta& meta, const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props, const SliceArg& slice);
 
   RDGSlice(std::unique_ptr<RDGCore>&& core);
 
-  galois::Result<void> DoMake(
-      const galois::Uri& metadata_dir, const SliceArg& slice);
+  katana::Result<void> DoMake(
+      const katana::Uri& metadata_dir, const SliceArg& slice);
 
   //
   // Data

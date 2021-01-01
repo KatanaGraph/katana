@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
-#define GALOIS_LIBSUPPORT_GALOIS_RESULT_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_RESULT_H_
+#define KATANA_LIBSUPPORT_KATANA_RESULT_H_
 
 #include <cassert>
 #include <cerrno>
@@ -7,7 +7,7 @@
 
 #include <boost/outcome/outcome.hpp>
 
-namespace galois {
+namespace katana {
 
 template <class T>
 using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<T>;
@@ -27,11 +27,11 @@ template <typename ResType, typename ErrType>
 static inline std::future<Result<ResType>>
 AsyncError(ErrType errCode) {
   // deferred to try and avoid dispatch since there's no async work to do
-  return std::async(std::launch::deferred, [=]() -> galois::Result<ResType> {
+  return std::async(std::launch::deferred, [=]() -> katana::Result<ResType> {
     return errCode;
   });
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

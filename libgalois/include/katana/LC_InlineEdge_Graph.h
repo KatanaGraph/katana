@@ -17,18 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINLINEEDGEGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCINLINEEDGEGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCINLINEEDGEGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCINLINEEDGEGRAPH_H_
 
 #include <type_traits>
 
-#include "galois/LargeArray.h"
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/Details.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * Local computation graph (i.e., graph structure does not change). The data
@@ -150,8 +149,8 @@ public:
   typedef typename NodeInfoTypes::reference node_data_reference;
   typedef EdgeInfo* edge_iterator;
   typedef StandardRange<NoDerefIterator<edge_iterator>> edges_iterator;
-  typedef galois::NoDerefIterator<NodeInfo*> iterator;
-  typedef galois::NoDerefIterator<const NodeInfo*> const_iterator;
+  typedef katana::NoDerefIterator<NodeInfo*> iterator;
+  typedef katana::NoDerefIterator<const NodeInfo*> const_iterator;
   typedef iterator local_iterator;
   typedef const_iterator const_local_iterator;
 
@@ -191,7 +190,7 @@ protected:
   void acquireNode(
       GraphNode N, MethodFlag mflag,
       typename std::enable_if<!_A1 && !_A2>::type* = 0) {
-    galois::runtime::acquire(N, mflag);
+    katana::acquire(N, mflag);
   }
 
   template <bool _A1 = HasOutOfLineLockable, bool _A2 = HasNoLockable>
@@ -251,7 +250,7 @@ public:
 
   node_data_reference getData(
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     acquireNode(N, mflag);
     return N->getData();
   }
@@ -259,7 +258,7 @@ public:
   edge_data_reference getEdgeData(
       edge_iterator ni,
       [[maybe_unused]] MethodFlag mflag = MethodFlag::UNPROTECTED) const {
-    // galois::runtime::checkWrite(mflag, false);
+    // katana::checkWrite(mflag, false);
     return ni->get();
   }
 
@@ -288,7 +287,7 @@ public:
 
   edge_iterator edge_begin(GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     acquireNode(N, mflag);
-    if (galois::runtime::shouldLock(mflag)) {
+    if (katana::shouldLock(mflag)) {
       for (edge_iterator ii = N->edgeBegin(), ee = N->edgeEnd(); ii != ee;
            ++ii) {
         acquireNode(getDst(ii), mflag);
@@ -317,7 +316,7 @@ public:
    */
   template<typename CompTy>
   void sortEdgesByEdgeData(GraphNode N, const CompTy& comp = std::less<EdgeTy>(), MethodFlag mflag = MethodFlag::WRITE) {
-    galois::runtime::acquire(N, mflag);
+    katana::acquire(N, mflag);
     std::sort(edge_sort_begin(N), edge_sort_end(N), EdgeSortCompWrapper<EdgeSortValue<GraphNode,EdgeTy>,CompTy>(comp));
   }
 
@@ -326,7 +325,7 @@ public:
    */
   template<typename CompTy>
   void sortEdges(GraphNode N, const CompTy& comp, MethodFlag mflag = MethodFlag::WRITE) {
-    galois::runtime::acquire(N, mflag);
+    katana::acquire(N, mflag);
     std::sort(edge_sort_begin(N), edge_sort_end(N), comp);
   }
 #endif
@@ -374,7 +373,6 @@ public:
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif

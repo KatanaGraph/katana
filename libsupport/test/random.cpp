@@ -1,17 +1,17 @@
-#include "galois/Random.h"
+#include "katana/Random.h"
 
 #include <thread>
 #include <vector>
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
 int
 main() {
   std::vector<std::thread> threads;
   for (int i = 0; i < 128; ++i) {
     threads.emplace_back([]() {
-      std::string s = galois::RandomAlphanumericString(12);
-      GALOIS_LOG_DEBUG("Got {}", s);
+      std::string s = katana::RandomAlphanumericString(12);
+      KATANA_LOG_DEBUG("Got {}", s);
     });
   }
 

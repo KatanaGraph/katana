@@ -22,25 +22,25 @@
 // 1. serial iteration over nodes
 // 2. for_each iteration over nodes
 // 3. access to node and edge data
-// 4. usage of galois::StatTimer
+// 4. usage of katana::StatTimer
 // 5. how to change # of threads
 // 6. push-style operator using atomic intrinsics in do_all
 // 7. push-style operator using atomic intrinsics in for_each w/o conflict
 // detection
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 
-using Graph = galois::graphs::LC_CSR_Graph<int, int>;
+using Graph = katana::LC_CSR_Graph<int, int>;
 using GNode = Graph::GraphNode;
 
 //! [Initialization]
 void
 initialize(Graph& g) {
-  galois::do_all(
-      galois::iterate(g.begin(), g.end()),  // range
+  katana::do_all(
+      katana::iterate(g.begin(), g.end()),  // range
       [&](GNode n) { g.getData(n) = 0; }    // operator
   );
 };
@@ -48,7 +48,7 @@ initialize(Graph& g) {
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 3) {
     std::cerr << "Usage: " << argv[0] << " filename num_threads" << std::endl;
@@ -56,13 +56,13 @@ main(int argc, char* argv[]) {
   }
 
   Graph g;
-  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
-  galois::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
+  katana::readGraph(g, argv[1]);  // argv[1] is the file name for graph
+  katana::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
 
   //******************************************************
   // serial traversal over a graph
   // sum over nodes and edges in C++11 syntax
-  galois::StatTimer T("sum_serial");
+  katana::StatTimer T("sum_serial");
   T.start();
   for (auto n : g) {
     auto& sum = g.getData(n);
@@ -75,20 +75,20 @@ main(int argc, char* argv[]) {
 
   //! [For each with conflict detection]
   //******************************************************
-  // parallel traversal over a graph using galois::for_each
+  // parallel traversal over a graph using katana::for_each
   // 1. push operator is specified using lambda expression
   // 2. for_each is named "sum_in_for_each_with_push_operator" to show stat
   // after this program finishes
   initialize(g);
-  galois::for_each(
-      galois::iterate(g.begin(), g.end()),  // range
+  katana::for_each(
+      katana::iterate(g.begin(), g.end()),  // range
       [&](GNode n, auto&) {                 // operator
         for (auto e : g.edges(n)) {         // cautious point
           auto dst = g.getEdgeDst(e);
           g.getData(dst) += g.getEdgeData(e);
         }
       },
-      galois::loopname("sum_in_for_each_with_push_operator")  // options
+      katana::loopname("sum_in_for_each_with_push_operator")  // options
   );
   //! [For each with conflict detection]
 
@@ -104,31 +104,31 @@ main(int argc, char* argv[]) {
   };
 
   //******************************************************
-  // parallel traversal over a graph using galois::do_all w/o work stealing
+  // parallel traversal over a graph using katana::do_all w/o work stealing
   // 1. push operator uses atomic intrinsic
   // 2. do_all is named "sum_in_do_all_with_push_atomic" to show stat after this
   // program finishes
   initialize(g);
-  galois::do_all(
-      galois::iterate(g.begin(), g.end()),  // range
+  katana::do_all(
+      katana::iterate(g.begin(), g.end()),  // range
       sumEdgeWeightsAtomically              // operator
       ,
-      galois::loopname("sum_in_do_all_with_push_atomic")  // options
+      katana::loopname("sum_in_do_all_with_push_atomic")  // options
   );
 
   //******************************************************
-  // parallel traversal over a graph using galois::for_each
+  // parallel traversal over a graph using katana::for_each
   // 1. push operator uses atomic intrinsic
   // 2. for_each is named "sum_in_do_for_each_with_push_atomic" to show stat
   // after this program finishes
   initialize(g);
-  galois::for_each(
-      galois::iterate(g.begin(), g.end()),                  // range
+  katana::for_each(
+      katana::iterate(g.begin(), g.end()),                  // range
       [&](GNode n, auto&) { sumEdgeWeightsAtomically(n); }  // operator
       ,
-      galois::loopname("sum_in_for_each_with_push_atomic")  // options
+      katana::loopname("sum_in_for_each_with_push_atomic")  // options
       ,
-      galois::no_pushes(), galois::disable_conflict_detection());
+      katana::no_pushes(), katana::disable_conflict_detection());
   //! [For each and do all without conflict detection]
 
   return 0;

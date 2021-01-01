@@ -19,13 +19,13 @@
 
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/Graph.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
+#include "katana/Timer.h"
 
 //! Graph has int node data, void edge data and is directed
 //! [define a graph]
-typedef galois::graphs::MorphGraph<int, void, true> Graph;
+typedef katana::MorphGraph<int, void, true> Graph;
 //! [define a graph]
 //! Opaque pointer to graph node
 typedef Graph::GraphNode GNode;
@@ -77,13 +77,13 @@ verify(Graph& graph, int n) {
 
 void
 initialize(Graph& graph) {
-  galois::do_all(
-      galois::iterate(graph), [&](GNode n) { graph.getData(n) = 0; });
+  katana::do_all(
+      katana::iterate(graph), [&](GNode n) { graph.getData(n) = 0; });
 }
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 3) {
     std::cerr << "<num threads> <sqrt grid size>\n";
@@ -92,7 +92,7 @@ main(int argc, char** argv) {
   unsigned int numThreads = atoi(argv[1]);
   int N = atoi(argv[2]);
 
-  numThreads = galois::setActiveThreads(numThreads);
+  numThreads = katana::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " thread(s) and " << N << " x " << N
             << " torus\n";
 
@@ -100,19 +100,19 @@ main(int argc, char** argv) {
   constructTorus(graph, N, N);
 
   // read/write only a node itself
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](GNode n) {
         graph.getData(n) =
             std::distance(graph.edge_begin(n), graph.edge_end(n));
       },
-      galois::loopname("do_all"));
+      katana::loopname("do_all"));
   verify(graph, N);
 
   // push operator with Galois synchronization
   initialize(graph);
-  galois::for_each(
-      galois::iterate(graph),
+  katana::for_each(
+      katana::iterate(graph),
       [&](GNode n, auto&) {
         for (auto ii : graph.edges(n)) {
           GNode dst = graph.getEdgeDst(ii);
@@ -120,7 +120,7 @@ main(int argc, char** argv) {
           data += 1;
         }
       },
-      galois::loopname("for_each"), galois::no_pushes());
+      katana::loopname("for_each"), katana::no_pushes());
   verify(graph, N);
 
   auto incrementNeighborsAtomically = [&](GNode n) {
@@ -134,20 +134,20 @@ main(int argc, char** argv) {
   // push operator with self synchronization in do_all
   initialize(graph);
   //! [work stealing]
-  galois::do_all(
-      galois::iterate(graph), incrementNeighborsAtomically,
-      galois::loopname("do_all_self_sync"), galois::steal(),
-      galois::chunk_size<32>());
+  katana::do_all(
+      katana::iterate(graph), incrementNeighborsAtomically,
+      katana::loopname("do_all_self_sync"), katana::steal(),
+      katana::chunk_size<32>());
   //! [work stealing]
   verify(graph, N);
 
   // push operator with self synchronization in optimized for_each
   initialize(graph);
-  galois::for_each(
-      galois::iterate(graph),
+  katana::for_each(
+      katana::iterate(graph),
       [&](GNode n, auto&) { incrementNeighborsAtomically(n); },
-      galois::loopname("for_each_self_sync"),
-      galois::disable_conflict_detection(), galois::no_pushes());
+      katana::loopname("for_each_self_sync"),
+      katana::disable_conflict_detection(), katana::no_pushes());
   verify(graph, N);
 
   return 0;

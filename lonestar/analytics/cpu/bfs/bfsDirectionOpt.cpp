@@ -28,20 +28,20 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/Utils.h"
-#include "galois/DynamicBitset.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Threads.h"
-#include "galois/Timer.h"
-#include "galois/analytics/BfsSsspImplementationBase.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/graphs/LC_CSR_CSC_Graph.h"
-#include "galois/graphs/TypeTraits.h"
-#include "galois/gstl.h"
-#include "galois/runtime/Profile.h"
+#include "katana/DynamicBitset.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/LC_CSR_CSC_Graph.h"
+#include "katana/Profile.h"
+#include "katana/Reduction.h"
+#include "katana/Threads.h"
+#include "katana/Timer.h"
+#include "katana/TypeTraits.h"
+#include "katana/analytics/BfsSsspImplementationBase.h"
+#include "katana/gstl.h"
 #include "llvm/Support/CommandLine.h"
 
-using namespace galois::analytics::internal;
+using namespace katana::analytics::internal;
 
 namespace cll = llvm::cl;
 
@@ -106,9 +106,9 @@ static cll::opt<Algo> algo(
     cll::init(AutoAlgo));
 
 using Graph =
-    // galois::graphs::LC_CSR_CSC_Graph<unsigned, void, false, true, true>;
-    galois::graphs::LC_CSR_CSC_Graph<unsigned, void, false, true, true>;
-// galois::graphs::LC_CSR_CSC_Graph<unsigned,
+    // katana::LC_CSR_CSC_Graph<unsigned, void, false, true, true>;
+    katana::LC_CSR_CSC_Graph<unsigned, void, false, true, true>;
+// katana::LC_CSR_CSC_Graph<unsigned,
 // void>::with_no_lockable<true>::type::with_numa_alloc<true>::type;
 using GNode = Graph::GraphNode;
 
@@ -169,8 +169,8 @@ struct OneTilePushWrap {
   template <typename C>
   void operator()(C& cont, const GNode& n) const {
     EdgeTile t{
-        graph.edge_begin(n, galois::MethodFlag::UNPROTECTED),
-        graph.edge_end(n, galois::MethodFlag::UNPROTECTED)};
+        graph.edge_begin(n, katana::MethodFlag::UNPROTECTED),
+        graph.edge_end(n, katana::MethodFlag::UNPROTECTED)};
 
     cont.push(t);
   }
@@ -178,26 +178,26 @@ struct OneTilePushWrap {
 
 template <typename WL>
 void
-WlToBitset(WL& wl, galois::DynamicBitset& bitset) {
-  galois::do_all(
-      galois::iterate(wl), [&](const GNode& src) { bitset.set(src); },
-      galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-      galois::loopname("WlToBitset"));
+WlToBitset(WL& wl, katana::DynamicBitset& bitset) {
+  katana::do_all(
+      katana::iterate(wl), [&](const GNode& src) { bitset.set(src); },
+      katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+      katana::loopname("WlToBitset"));
 }
 
 template <typename WL>
 void
-BitsetToWl(const Graph& graph, const galois::DynamicBitset& bitset, WL& wl) {
+BitsetToWl(const Graph& graph, const katana::DynamicBitset& bitset, WL& wl) {
   wl.clear();
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& src) {
         if (bitset.test(src))
           // pushWrap(wl, src);
           wl.push(src);
       },
-      galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-      galois::loopname("BitsetToWl"));
+      katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+      katana::loopname("BitsetToWl"));
 }
 
 template <bool CONCURRENT, typename T, typename P, typename R>
@@ -206,16 +206,16 @@ syncDOAlgo(
     Graph& graph, GNode source, const P& pushWrap,
     [[maybe_unused]] const R& edgeRange, const uint32_t runID) {
   using Cont = typename std::conditional<
-      CONCURRENT, galois::InsertBag<T>, galois::SerStack<T>>::type;
+      CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
   using Loop = typename std::conditional<
-      CONCURRENT, galois::DoAll, galois::StdForEach>::type;
+      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
 
-  constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
-  galois::GAccumulator<uint32_t> work_items;
+  constexpr katana::MethodFlag flag = katana::MethodFlag::UNPROTECTED;
+  katana::GAccumulator<uint32_t> work_items;
 
   Loop loop;
 
-  galois::DynamicBitset front_bitset, next_bitset;
+  katana::DynamicBitset front_bitset, next_bitset;
   front_bitset.resize(graph.size());
   next_bitset.resize(graph.size());
 
@@ -240,13 +240,13 @@ syncDOAlgo(
   int64_t edges_to_check = graph.sizeEdges();
   int64_t scout_count =
       std::distance(graph.edge_begin(source), graph.edge_end(source));
-  galois::gPrint("source: ", source, " has OutDegree:", scout_count, "\n");
+  katana::gPrint("source: ", source, " has OutDegree:", scout_count, "\n");
   assert(!next->empty());
 
   uint64_t old_workItemNum = 0;
   uint64_t numNodes = graph.size();
   // uint32_t c_pull = 0, c_push = 0;
-  galois::GAccumulator<uint64_t> writes_pull, writes_push;
+  katana::GAccumulator<uint64_t> writes_pull, writes_push;
   writes_push.reset();
   writes_pull.reset();
   // std::vector<uint32_t> pull_levels;
@@ -267,7 +267,7 @@ syncDOAlgo(
 
         // PULL from in-edges
         loop(
-            galois::iterate(graph),
+            katana::iterate(graph),
             [&](const T& dst) {
               auto& ddata = graph.getData(dst, flag);
               if (ddata == BFS::kDistanceInfinity) {
@@ -288,8 +288,8 @@ syncDOAlgo(
                 }
               }
             },
-            galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-            galois::loopname(
+            katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+            katana::loopname(
                 (std::string("Sync-pull_") + std::to_string(runID)).c_str()));
 
         std::swap(front_bitset, next_bitset);
@@ -306,7 +306,7 @@ syncDOAlgo(
       work_items.reset();
       // PUSH to out-edges
       loop(
-          galois::iterate(*curr),
+          katana::iterate(*curr),
           [&](const T& src) {
             for (auto e : graph.edges(src)) {
               auto dst = graph.getEdgeDst(e);
@@ -327,8 +327,8 @@ syncDOAlgo(
               }
             }
           },
-          galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-          galois::loopname(
+          katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+          katana::loopname(
               (std::string("Sync-push_") + std::to_string(runID)).c_str()));
 
       scout_count = work_items.reduce();
@@ -344,21 +344,21 @@ void
 asyncAlgo(
     Graph& graph, GNode source, const P& pushWrap,
     [[maybe_unused]] const R& edgeRange) {
-  namespace gwl = galois::worklists;
+  namespace gwl = katana;
   // typedef PerSocketChunkFIFO<CHUNK_SIZE> dFIFO;
   using FIFO = gwl::PerSocketChunkFIFO<CHUNK_SIZE>;
   using WL = FIFO;
 
   using Loop = typename std::conditional<
-      CONCURRENT, galois::ForEach, galois::WhileQ<galois::SerFIFO<T>>>::type;
+      CONCURRENT, katana::ForEach, katana::WhileQ<katana::SerFIFO<T>>>::type;
 
   Loop loop;
 
-  galois::GAccumulator<size_t> BadWork;
-  galois::GAccumulator<size_t> WLEmptyWork;
+  katana::GAccumulator<size_t> BadWork;
+  katana::GAccumulator<size_t> WLEmptyWork;
 
   graph.getData(source) = 0;
-  galois::InsertBag<T> initBag;
+  katana::InsertBag<T> initBag;
 
   if (CONCURRENT) {
     pushWrap(initBag, source, "parallel");
@@ -367,9 +367,9 @@ asyncAlgo(
   }
 
   loop(
-      galois::iterate(initBag),
+      katana::iterate(initBag),
       [&](const GNode& src, auto& ctx) {
-        constexpr galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
+        constexpr katana::MethodFlag flag = katana::MethodFlag::UNPROTECTED;
 
         for (auto ii : graph.edges(src)) {
           GNode dst = graph.getEdgeDst(ii);
@@ -383,8 +383,8 @@ asyncAlgo(
           }
         }
       },
-      galois::wl<WL>(), galois::loopname("runBFS"),
-      galois::disable_conflict_detection());
+      katana::wl<WL>(), katana::loopname("runBFS"),
+      katana::disable_conflict_detection());
 }
 
 template <bool CONCURRENT>
@@ -407,17 +407,17 @@ runAlgo(Graph& graph, const GNode& source, const uint32_t runID) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   Graph graph;
   GNode source;
   GNode report;
 
-  galois::StatTimer StatTimer_graphConstuct("TimerConstructGraph", "BFS");
+  katana::StatTimer StatTimer_graphConstuct("TimerConstructGraph", "BFS");
   StatTimer_graphConstuct.start();
   graph.readAndConstructBiGraphFromGRFile(inputFile);
   StatTimer_graphConstuct.stop();
@@ -438,11 +438,11 @@ main(int argc, char** argv) {
   std::advance(it, reportNode.getValue());
   report = *it;
 
-  galois::Prealloc(preAlloc);
-  galois::gPrint("Fixed preAlloc done : ", preAlloc, "\n");
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(preAlloc);
+  katana::gPrint("Fixed preAlloc done : ", preAlloc, "\n");
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.getData(n) = BFS::kDistanceInfinity;
   });
 
@@ -463,8 +463,8 @@ main(int argc, char** argv) {
 
   std::cout << " Execution started\n";
 
-  galois::StatTimer autoAlgoTimer("AutoAlgo_0");
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer autoAlgoTimer("AutoAlgo_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
 
   if (algo == AutoAlgo) {
@@ -475,19 +475,19 @@ main(int argc, char** argv) {
       algo = Async;
     }
     autoAlgoTimer.stop();
-    galois::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
+    katana::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
   }
 
   for (unsigned int run = 0; run < numRuns; ++run) {
-    galois::gPrint("BFS::go run ", run, " called\n");
+    katana::gPrint("BFS::go run ", run, " called\n");
     std::string timer_str("Timer_Run" + std::to_string(run));
-    galois::StatTimer StatTimer_main(timer_str.c_str(), "BFS");
+    katana::StatTimer StatTimer_main(timer_str.c_str(), "BFS");
     StatTimer_main.start();
 
     if (execution == SERIAL) {
       runAlgo<false>(graph, source, run);
     } else if (execution == PARALLEL) {
-      galois::runtime::profileVtune(
+      katana::profileVtune(
           [&]() { runAlgo<true>(graph, source, run); }, "runAlgo");
     } else {
       std::cerr << "ERROR: unknown type of execution passed to -exec\n";
@@ -498,7 +498,7 @@ main(int argc, char** argv) {
 
     if ((run + 1) != numRuns) {
       for (unsigned int i = 0; i < 1; ++i) {
-        galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+        katana::do_all(katana::iterate(graph), [&graph](GNode n) {
           graph.getData(n) = BFS::kDistanceInfinity;
         });
       }
@@ -507,14 +507,14 @@ main(int argc, char** argv) {
 
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   std::cout << "Node " << reportNode << " has parent " << graph.getData(report)
             << "\n";
 
   if (!skipVerify) {
     for (GNode n = 0; n < numPrint; n++) {
-      galois::gPrint("parent[", n, "] : ", graph.getData(n), "\n");
+      katana::gPrint("parent[", n, "] : ", graph.getData(n), "\n");
     }
   }
 

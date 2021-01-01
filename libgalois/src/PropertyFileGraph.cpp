@@ -1,12 +1,12 @@
-#include "galois/graphs/PropertyFileGraph.h"
+#include "katana/PropertyFileGraph.h"
 
 #include <sys/mman.h>
 
-#include "galois/Logging.h"
-#include "galois/Loops.h"
-#include "galois/Platform.h"
-#include "galois/Properties.h"
-#include "galois/Result.h"
+#include "katana/Logging.h"
+#include "katana/Loops.h"
+#include "katana/Platform.h"
+#include "katana/Properties.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/RDG.h"
@@ -39,19 +39,19 @@ GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
 ///
 /// Since property graphs store their edge data separately, we will consider
 /// any topology file with non-zero sizeof_edge_data invalid.
-galois::Result<galois::graphs::GraphTopology>
+katana::Result<katana::GraphTopology>
 MapTopology(const tsuba::FileView& file_view) {
   const auto* data = file_view.ptr<uint64_t>();
   if (file_view.size() < 4) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   if (data[0] != 1) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   if (data[1] != 0) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   uint64_t num_nodes = data[2];
@@ -60,7 +60,7 @@ MapTopology(const tsuba::FileView& file_view) {
   uint64_t expected_size = GetGraphSize(num_nodes, num_edges);
 
   if (file_view.size() < expected_size) {
-    return galois::ErrorCode::InvalidArgument;
+    return katana::ErrorCode::InvalidArgument;
   }
 
   uint64_t* out_indices = const_cast<uint64_t*>(&data[4]);
@@ -73,7 +73,7 @@ MapTopology(const tsuba::FileView& file_view) {
   auto dests_buffer = std::make_shared<arrow::MutableBuffer>(
       reinterpret_cast<uint8_t*>(out_dests), num_edges);
 
-  return galois::graphs::GraphTopology{
+  return katana::GraphTopology{
       .out_indices = std::make_shared<arrow::UInt64Array>(
           indices_buffer->size(), indices_buffer),
       .out_dests = std::make_shared<arrow::UInt32Array>(
@@ -81,9 +81,9 @@ MapTopology(const tsuba::FileView& file_view) {
   };
 }
 
-galois::Result<void>
+katana::Result<void>
 LoadTopology(
-    galois::graphs::GraphTopology* topology,
+    katana::GraphTopology* topology,
     const tsuba::FileView& topology_file_storage) {
   auto map_result = MapTopology(topology_file_storage);
   if (!map_result) {
@@ -91,11 +91,11 @@ LoadTopology(
   }
   *topology = std::move(map_result.value());
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<std::unique_ptr<tsuba::FileFrame>>
-WriteTopology(const galois::graphs::GraphTopology& topology) {
+katana::Result<std::unique_ptr<tsuba::FileFrame>>
+WriteTopology(const katana::GraphTopology& topology) {
   auto ff = std::make_unique<tsuba::FileFrame>();
   if (auto res = ff->Init(); !res) {
     return res.error();
@@ -133,7 +133,7 @@ WriteTopology(const galois::graphs::GraphTopology& topology) {
   return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
-galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
 MakePropertyFileGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file,
     const std::vector<std::string>& node_properties,
@@ -144,31 +144,31 @@ MakePropertyFileGraph(
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(
+  return katana::PropertyFileGraph::Make(
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
-galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
+katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
 MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
   auto rdg_result = tsuba::RDG::Make(*rdg_file);
   if (!rdg_result) {
     return rdg_result.error();
   }
 
-  return galois::graphs::PropertyFileGraph::Make(
+  return katana::PropertyFileGraph::Make(
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
 }  // namespace
 
-galois::graphs::PropertyFileGraph::PropertyFileGraph() = default;
+katana::PropertyFileGraph::PropertyFileGraph() = default;
 
-galois::graphs::PropertyFileGraph::PropertyFileGraph(
+katana::PropertyFileGraph::PropertyFileGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg)
     : rdg_(std::move(rdg)), file_(std::move(rdg_file)) {}
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::Validate() {
+katana::Result<void>
+katana::PropertyFileGraph::Validate() {
   // TODO (thunt) check that arrow table sizes match topology
   // if (topology_.out_dests &&
   //    topology_.out_dests->length() != table->num_rows()) {
@@ -178,11 +178,11 @@ galois::graphs::PropertyFileGraph::Validate() {
   //    topology_.out_indices->length() != table->num_rows()) {
   //  return ErrorCode::InvalidArgument;
   //}
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::DoWrite(
+katana::Result<void>
+katana::PropertyFileGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line) {
   if (!rdg_.topology_file_storage().Valid()) {
     auto result = WriteTopology(topology_);
@@ -195,8 +195,8 @@ galois::graphs::PropertyFileGraph::DoWrite(
   return rdg_.Store(handle, command_line);
 }
 
-galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
-galois::graphs::PropertyFileGraph::Make(
+katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
+katana::PropertyFileGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
   auto g = std::unique_ptr<PropertyFileGraph>(
       new PropertyFileGraph(std::move(rdg_file), std::move(rdg)));
@@ -213,8 +213,8 @@ galois::graphs::PropertyFileGraph::Make(
   return std::unique_ptr<PropertyFileGraph>(std::move(g));
 }
 
-galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
-galois::graphs::PropertyFileGraph::Make(const std::string& rdg_name) {
+katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
+katana::PropertyFileGraph::Make(const std::string& rdg_name) {
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
@@ -224,8 +224,8 @@ galois::graphs::PropertyFileGraph::Make(const std::string& rdg_name) {
       std::make_unique<tsuba::RDGFile>(handle.value()));
 }
 
-galois::Result<std::unique_ptr<galois::graphs::PropertyFileGraph>>
-galois::graphs::PropertyFileGraph::Make(
+katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
+katana::PropertyFileGraph::Make(
     const std::string& rdg_name,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
@@ -239,8 +239,8 @@ galois::graphs::PropertyFileGraph::Make(
       edge_properties);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::WriteGraph(
+katana::Result<void>
+katana::PropertyFileGraph::WriteGraph(
     const std::string& uri, const std::string& command_line) {
   auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
   if (!open_res) {
@@ -254,14 +254,14 @@ galois::graphs::PropertyFileGraph::WriteGraph(
 
   file_ = std::move(new_file);
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::Commit(const std::string& command_line) {
+katana::Result<void>
+katana::PropertyFileGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
     if (rdg_.rdg_dir().empty()) {
-      GALOIS_LOG_ERROR("RDG commit but rdg_dir_ is empty");
+      KATANA_LOG_ERROR("RDG commit but rdg_dir_ is empty");
       return ErrorCode::InvalidArgument;
     }
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
@@ -269,8 +269,8 @@ galois::graphs::PropertyFileGraph::Commit(const std::string& command_line) {
   return DoWrite(*file_, command_line);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::Write(
+katana::Result<void>
+katana::PropertyFileGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
   if (auto res = tsuba::Create(rdg_name); !res) {
     return res.error();
@@ -278,12 +278,12 @@ galois::graphs::PropertyFileGraph::Write(
   return WriteGraph(rdg_name, command_line);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::AddNodeProperties(
+katana::Result<void>
+katana::PropertyFileGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_indices &&
       topology_.out_indices->length() != table->num_rows()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", topology_.out_indices->length(),
         table->num_rows());
     return ErrorCode::InvalidArgument;
@@ -291,12 +291,12 @@ galois::graphs::PropertyFileGraph::AddNodeProperties(
   return rdg_.AddNodeProperties(table);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::AddEdgeProperties(
+katana::Result<void>
+katana::PropertyFileGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& table) {
   if (topology_.out_dests &&
       topology_.out_dests->length() != table->num_rows()) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", topology_.out_dests->length(),
         table->num_rows());
     return ErrorCode::InvalidArgument;
@@ -304,21 +304,20 @@ galois::graphs::PropertyFileGraph::AddEdgeProperties(
   return rdg_.AddEdgeProperties(table);
 }
 
-galois::Result<void>
-galois::graphs::PropertyFileGraph::SetTopology(
-    const galois::graphs::GraphTopology& topology) {
+katana::Result<void>
+katana::PropertyFileGraph::SetTopology(const katana::GraphTopology& topology) {
   if (auto res = rdg_.UnbindTopologyFileStorage(); !res) {
     return res.error();
   }
   topology_ = topology;
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<std::shared_ptr<arrow::UInt64Array>>
-galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
+katana::Result<std::shared_ptr<arrow::UInt64Array>>
+katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
   auto view_result_dests =
-      galois::ConstructPropertyView<galois::UInt32Property>(
+      katana::ConstructPropertyView<katana::UInt32Property>(
           pfg->topology().out_dests.get());
   if (!view_result_dests) {
     return view_result_dests.error();
@@ -343,8 +342,8 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
     return out_dests_view[a] < out_dests_view[b];
   };
 
-  galois::do_all(
-      galois::iterate(uint64_t{0}, pfg->topology().num_nodes()),
+  katana::do_all(
+      katana::iterate(uint64_t{0}, pfg->topology().num_nodes()),
       [&](uint64_t n) {
         auto edge_range = pfg->topology().edge_range(n);
         std::sort(
@@ -354,7 +353,7 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
             &out_dests_view[0] + edge_range.first,
             &out_dests_view[0] + edge_range.second);
       },
-      galois::steal());
+      katana::steal());
 
   if (auto r = permutation_vec_builder.Advance(pfg->topology().num_edges());
       !r.ok()) {
@@ -370,14 +369,14 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
 }
 
 uint64_t
-galois::graphs::FindEdgeSortedByDest(
-    const galois::graphs::PropertyFileGraph* graph, uint32_t node,
+katana::FindEdgeSortedByDest(
+    const katana::PropertyFileGraph* graph, uint32_t node,
     uint32_t node_to_find) {
   auto view_result_dests =
-      galois::ConstructPropertyView<galois::UInt32Property>(
+      katana::ConstructPropertyView<katana::UInt32Property>(
           graph->topology().out_dests.get());
   if (!view_result_dests) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Unable to construct property view on topology destinations : {}",
         view_result_dests.error());
   }
@@ -396,38 +395,38 @@ galois::graphs::FindEdgeSortedByDest(
                                                     : edge_range.second);
 }
 
-galois::Result<void>
-galois::graphs::SortNodesByDegree(galois::graphs::PropertyFileGraph* pfg) {
+katana::Result<void>
+katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
   uint64_t num_nodes = pfg->topology().num_nodes();
   uint64_t num_edges = pfg->topology().num_edges();
 
   using DegreeNodePair = std::pair<uint64_t, uint32_t>;
   std::vector<DegreeNodePair> dn_pairs(num_nodes);
-  galois::do_all(galois::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
+  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
     auto node_edge_range = pfg->topology().edge_range(node);
     size_t node_degree = node_edge_range.second - node_edge_range.first;
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
 
   // sort by degree (first item)
-  galois::ParallelSTL::sort(
+  katana::ParallelSTL::sort(
       dn_pairs.begin(), dn_pairs.end(), std::greater<DegreeNodePair>());
 
   // create mapping, get degrees out to another vector to get prefix sum
   std::vector<uint32_t> old_to_new_mapping(num_nodes);
-  galois::LargeArray<uint64_t> new_prefix_sum;
+  katana::LargeArray<uint64_t> new_prefix_sum;
   new_prefix_sum.allocateBlocked(num_nodes);
-  galois::do_all(galois::iterate(uint64_t{0}, num_nodes), [&](uint64_t index) {
+  katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](uint64_t index) {
     // save degree, which is pair.first
     new_prefix_sum[index] = dn_pairs[index].first;
     // save mapping; original index is in .second, map it to current index
     old_to_new_mapping[dn_pairs[index].second] = index;
   });
 
-  galois::ParallelSTL::partial_sum(
+  katana::ParallelSTL::partial_sum(
       new_prefix_sum.begin(), new_prefix_sum.end(), new_prefix_sum.begin());
 
-  galois::LargeArray<uint32_t> new_out_dest;
+  katana::LargeArray<uint32_t> new_out_dest;
   new_out_dest.allocateBlocked(num_edges);
 
   auto view_result_indices =
@@ -446,8 +445,8 @@ galois::graphs::SortNodesByDegree(galois::graphs::PropertyFileGraph* pfg) {
 
   auto out_dests_view = std::move(view_result_dests.value());
 
-  galois::do_all(
-      galois::iterate(uint64_t{0}, num_nodes),
+  katana::do_all(
+      katana::iterate(uint64_t{0}, num_nodes),
       [&](uint32_t old_node_id) {
         uint32_t new_node_id = old_to_new_mapping[old_node_id];
 
@@ -470,18 +469,18 @@ galois::graphs::SortNodesByDegree(galois::graphs::PropertyFileGraph* pfg) {
         // are accounted for
         assert(new_out_index == new_prefix_sum[new_node_id]);
       },
-      galois::steal());
+      katana::steal());
 
   //Update the underlying propertyFileGraph topology
-  galois::do_all(
-      galois::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
+  katana::do_all(
+      katana::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
         out_indices_view[node_id] = new_prefix_sum[node_id];
       });
 
-  galois::do_all(
-      galois::iterate(uint64_t{0}, num_edges), [&](uint32_t edge_id) {
+  katana::do_all(
+      katana::iterate(uint64_t{0}, num_edges), [&](uint32_t edge_id) {
         out_dests_view[edge_id] = new_out_dest[edge_id];
       });
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }

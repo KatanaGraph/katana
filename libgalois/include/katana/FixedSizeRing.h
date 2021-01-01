@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_FIXEDSIZERING_H_
-#define GALOIS_LIBGALOIS_GALOIS_FIXEDSIZERING_H_
+#ifndef KATANA_LIBGALOIS_KATANA_FIXEDSIZERING_H_
+#define KATANA_LIBGALOIS_KATANA_FIXEDSIZERING_H_
 
 #include <atomic>
 #include <utility>
@@ -27,11 +27,11 @@
 #include <boost/iterator/reverse_iterator.hpp>
 #include <boost/mpl/if.hpp>
 
-#include "galois/LazyArray.h"
-#include "galois/config.h"
-#include "galois/optional.h"
+#include "katana/LazyArray.h"
+#include "katana/config.h"
+#include "katana/optional.h"
 
-namespace galois {
+namespace katana {
 
 //! Unordered collection of bounded size
 template <typename T, unsigned ChunkSize, bool Concurrent>
@@ -137,7 +137,7 @@ public:
 
   reference back() { return front(); }
   const_reference back() const { return front(); }
-  galois::optional<value_type> extract_back() { return extract_front(); }
+  katana::optional<value_type> extract_back() { return extract_front(); }
 
   bool pop_back() { return pop_front(); }
 
@@ -151,13 +151,13 @@ public:
 
   template <bool C = Concurrent>
   auto extract_front() ->
-      typename std::enable_if<!C, galois::optional<value_type>>::type {
+      typename std::enable_if<!C, katana::optional<value_type>>::type {
     if (!empty()) {
-      galois::optional<value_type> retval(back());
+      katana::optional<value_type> retval(back());
       pop_back();
       return retval;
     }
-    return galois::optional<value_type>();
+    return katana::optional<value_type>();
   }
 
   //! returns true if something was popped
@@ -386,13 +386,13 @@ public:
     return *at(start);
   }
 
-  galois::optional<value_type> extract_front() {
+  katana::optional<value_type> extract_front() {
     if (!empty()) {
-      galois::optional<value_type> retval(front());
+      katana::optional<value_type> retval(front());
       pop_front();
       return retval;
     }
-    return galois::optional<value_type>();
+    return katana::optional<value_type>();
   }
 
   void pop_front() {
@@ -415,13 +415,13 @@ public:
     return *at((start + count - 1) % ChunkSize);
   }
 
-  galois::optional<value_type> extract_back() {
+  katana::optional<value_type> extract_back() {
     if (!empty()) {
-      galois::optional<value_type> retval(back());
+      katana::optional<value_type> retval(back());
       pop_back();
       return retval;
     }
-    return galois::optional<value_type>();
+    return katana::optional<value_type>();
   }
 
   void pop_back() {
@@ -444,5 +444,5 @@ public:
   const_iterator rend() const { const_reverse_iterator(this->begin()); }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

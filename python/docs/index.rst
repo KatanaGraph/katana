@@ -1,17 +1,17 @@
 Galois Parallel Programming System
 ==================================
 
-.. automodule:: galois
+.. automodule:: katana
    :no-members:
 
 :Version: |release|
 
 .. toctree::
-   galois.atomic
-   galois.datastructures
-   galois.loops
-   galois.property_graph
-   galois.timer
+   katana.atomic
+   katana.datastructures
+   katana.loops
+   katana.property_graph
+   katana.timer
 
 Indices and tables
 ==================

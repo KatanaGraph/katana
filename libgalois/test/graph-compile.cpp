@@ -19,7 +19,7 @@
 
 #include <iostream>
 
-#include "galois/graphs/Graph.h"
+#include "katana/Graph.h"
 
 struct NoDefault {
   int x;
@@ -46,10 +46,10 @@ check() {
   g.addNode(n3);
   g.addNode(n4);
   g.addNode(n5);
-  g.addMultiEdge(n1, n2, galois::MethodFlag::WRITE, v);
-  g.addMultiEdge(n5, n2, galois::MethodFlag::WRITE, v);
-  g.addMultiEdge(n2, n3, galois::MethodFlag::WRITE, v);
-  g.addMultiEdge(n2, n4, galois::MethodFlag::WRITE, v);
+  g.addMultiEdge(n1, n2, katana::MethodFlag::WRITE, v);
+  g.addMultiEdge(n5, n2, katana::MethodFlag::WRITE, v);
+  g.addMultiEdge(n2, n3, katana::MethodFlag::WRITE, v);
+  g.addMultiEdge(n2, n4, katana::MethodFlag::WRITE, v);
   for (auto ii : g.edges(n2))
     std::cout << "o " << g.getData(g.getEdgeDst(ii)).x << "\n";
   for (auto ii : g.in_edges(n2))
@@ -71,11 +71,11 @@ check() {
 
 int
 main() {
-  galois::SharedMemSys Galois_runtime;
-  check<galois::graphs::MorphGraph<NoDefault, NoDefault, true>>();
-  check<galois::graphs::MorphGraph<NoDefault, NoDefault, false>>();
-  check<galois::graphs::MorphGraph<NoDefault, NoDefault, true, true>>();
-  check<galois::graphs::MorphGraph<NoDefault, NoDefault, false, true>>();
+  katana::SharedMemSys Katana_runtime;
+  check<katana::MorphGraph<NoDefault, NoDefault, true>>();
+  check<katana::MorphGraph<NoDefault, NoDefault, false>>();
+  check<katana::MorphGraph<NoDefault, NoDefault, true, true>>();
+  check<katana::MorphGraph<NoDefault, NoDefault, false, true>>();
 
   return 0;
 }

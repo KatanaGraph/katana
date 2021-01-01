@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WLCOMPILECHECK_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_WLCOMPILECHECK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_WLCOMPILECHECK_H_
+#define KATANA_LIBGALOIS_KATANA_WLCOMPILECHECK_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-#ifndef GALOIS_WLCOMPILECHECK
-#define GALOIS_WLCOMPILECHECK(name)  //
+#ifndef KATANA_WLCOMPILECHECK
+#define KATANA_WLCOMPILECHECK(name)  //
 #endif
 
 #endif

@@ -1,25 +1,25 @@
-#include "galois/ThreadTimer.h"
+#include "katana/ThreadTimer.h"
 
 #include <ctime>
 #include <limits>
 
-#include "galois/Statistics.h"
-#include "galois/runtime/Executor_OnEach.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Statistics.h"
 
 void
-galois::ThreadTimer::start() {
+katana::ThreadTimer::start() {
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_);
 }
 
 void
-galois::ThreadTimer::stop() {
+katana::ThreadTimer::stop() {
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stop_);
   nsec_ += (stop_.tv_nsec - start_.tv_nsec);
   nsec_ += ((stop_.tv_sec - start_.tv_sec) * 1000000000);
 }
 
 void
-galois::ThreadTimers::reportTimes(const char* category, const char* region) {
+katana::ThreadTimers::reportTimes(const char* category, const char* region) {
   uint64_t minTime = std::numeric_limits<uint64_t>::max();
 
   for (unsigned i = 0; i < timers_.size(); ++i) {
@@ -30,7 +30,7 @@ galois::ThreadTimers::reportTimes(const char* category, const char* region) {
   std::string timeCat = category + std::string("PerThreadTimes");
   std::string lagCat = category + std::string("PerThreadLag");
 
-  runtime::on_each_gen(
+  on_each_gen(
       [&](auto, auto) {
         auto ns = timers_.getLocal()->get_nsec();
         auto lag = ns - minTime;

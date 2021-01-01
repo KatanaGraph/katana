@@ -20,12 +20,11 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "galois/graphs/FileGraph.h"
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/FileGraph.h"
+#include "katana/HWTopo.h"
+#include "katana/ThreadPool.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 void
 FileGraph::fromFileInterleaved(
@@ -34,16 +33,15 @@ FileGraph::fromFileInterleaved(
 
   std::mutex lock;
   std::condition_variable cond;
-  auto& tp = substrate::GetThreadPool();
+  auto& tp = GetThreadPool();
   unsigned maxSockets = tp.getMaxSockets();
   unsigned count = maxSockets;
 
   // Interleave across all NUMA nodes
   tp.run(tp.getMaxThreads(), [&]() {
     std::unique_lock<std::mutex> lk(lock);
-    if (substrate::ThreadPool::isLeader()) {
-      pageInByNode(
-          substrate::ThreadPool::getSocket(), maxSockets, sizeofEdgeData);
+    if (ThreadPool::isLeader()) {
+      pageInByNode(ThreadPool::getSocket(), maxSockets, sizeofEdgeData);
       if (--count == 0)
         cond.notify_all();
     } else {
@@ -52,5 +50,4 @@ FileGraph::fromFileInterleaved(
   });
 }
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana

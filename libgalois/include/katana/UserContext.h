@@ -17,17 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_USERCONTEXT_H_
-#define GALOIS_LIBGALOIS_GALOIS_USERCONTEXT_H_
+#ifndef KATANA_LIBGALOIS_KATANA_USERCONTEXT_H_
+#define KATANA_LIBGALOIS_KATANA_USERCONTEXT_H_
 
 #include <functional>
 
-#include "galois/Mem.h"
-#include "galois/config.h"
-#include "galois/gdeque.h"
-#include "galois/runtime/Context.h"
+#include "katana/Context.h"
+#include "katana/Mem.h"
+#include "katana/config.h"
+#include "katana/gdeque.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * This is the object passed to the user's parallel loop.  This
@@ -84,7 +84,7 @@ public:
   //! Push new work
   template <typename... Args>
   void push(Args&&... args) {
-    // galois::runtime::checkWrite(MethodFlag::WRITE, true);
+    // katana::checkWrite(MethodFlag::WRITE, true);
     pushBuffer.emplace_back(std::forward<Args>(args)...);
     if (fastPushBack && pushBuffer.size() > fastPushBackLimit)
       fastPushBack(pushBuffer);
@@ -103,7 +103,7 @@ public:
   }
 
   //! Force the abort of this iteration
-  void abort() { galois::runtime::signalConflict(); }
+  void abort() { katana::signalConflict(); }
 
   //! Store and retrieve local state for deterministic
   template <typename LS>
@@ -128,11 +128,11 @@ public:
   //! acquired.
   void cautiousPoint() {
     if (isFirstPass()) {
-      galois::runtime::signalFailSafe();
+      katana::signalFailSafe();
     }
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

@@ -1,8 +1,8 @@
-from galois.analytics import bfs_assert_valid, sssp_assert_valid, SsspStatistics, BfsStatistics
-from galois.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
-from galois.lonestar.analytics.jaccard import jaccard
-from galois.lonestar.analytics.sssp import sssp, verify_sssp
-from galois.property_graph import PropertyGraph
+from katana.analytics import bfs_assert_valid, sssp_assert_valid, SsspStatistics, BfsStatistics
+from katana.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
+from katana.lonestar.analytics.jaccard import jaccard
+from katana.lonestar.analytics.sssp import sssp, verify_sssp
+from katana.property_graph import PropertyGraph
 
 
 def test_bfs(property_graph: PropertyGraph):

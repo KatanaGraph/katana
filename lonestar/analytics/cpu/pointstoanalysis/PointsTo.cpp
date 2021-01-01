@@ -23,7 +23,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "SparseBitVector.h"
-#include "galois/Galois.h"
+#include "katana/Galois.h"
 #include "llvm/Support/CommandLine.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +42,7 @@ static cll::opt<std::string> inputFile(
 static cll::opt<bool> useSerial(
     "serial",
     cll::desc("Runs serial version of the algorithm "
-              "(i.e. 1 thread, no galois::for_each) "
+              "(i.e. 1 thread, no katana::for_each) "
               "(default false)"),
     cll::init(false));
 
@@ -134,14 +134,14 @@ public:
 template <bool IsConcurrent>
 class PTABase {
   // sparse bit vector is concurrent or serial based on template parameter
-  using SparseBitVector = galois::SparseBitVector<IsConcurrent>;
+  using SparseBitVector = katana::SparseBitVector<IsConcurrent>;
 
   using PointsToConstraints = std::vector<PtsToCons>;
   using PointsToInfo = std::vector<SparseBitVector>;
   using EdgeVector = std::vector<SparseBitVector>;
 
   using NodeAllocator =
-      galois::FixedSizeAllocator<typename SparseBitVector::Node>;
+      katana::FixedSizeAllocator<typename SparseBitVector::Node>;
 
 protected:
   PointsToInfo pointsToResult;  // pointsTo results for nodes
@@ -161,10 +161,10 @@ protected:
     PTABase<IsConcurrent>&
         outerPTA;  // reference to outer PTA instance to get runtime info
 
-    galois::gstl::Vector<unsigned>
+    katana::gstl::Vector<unsigned>
         ancestors;                       // TODO find better representation
-    galois::gstl::Vector<bool> visited;  // TODO use better representation
-    galois::gstl::Vector<unsigned> representative;
+    katana::gstl::Vector<bool> visited;  // TODO use better representation
+    katana::gstl::Vector<unsigned> representative;
 
     unsigned NoRepresentative;  // "constant" that represents no representative
 
@@ -245,7 +245,7 @@ protected:
 
       for (auto ii = ancestors.begin(); ii != ancestors.end(); ++ii) {
         if (*ii == repr) {
-          galois::gDebug("collapsing cycle for ", repr);
+          katana::gDebug("collapsing cycle for ", repr);
           // cycle exists between nodes ancestors[*ii..end].
           for (auto jj = ii; jj != ancestors.end(); ++jj) {
             // jjRepr has no representative.
@@ -266,7 +266,7 @@ protected:
      */
     void makeRepr(unsigned nodeID, unsigned repr) {
       if (repr != nodeID) {
-        galois::gDebug("change repr[", nodeID, "] = ", repr);
+        katana::gDebug("change repr[", nodeID, "] = ", repr);
 
         representative[nodeID] = repr;
 
@@ -350,7 +350,7 @@ protected:
       unsigned cycleNode = NoRepresentative;  // set to invalid id.
 
       for (unsigned update : updates) {
-        galois::gDebug("cycle process ", update);
+        katana::gDebug("cycle process ", update);
 
         if (cycleDetect(update, cycleNode)) {
           cycleCollapse(cycleNode);
@@ -383,7 +383,7 @@ protected:
   template <typename LoopInvoker, typename VecType>
   void processLoadStore(
       const PointsToConstraints& constraints, VecType& updates) {
-    LoopInvoker()(galois::iterate(constraints), [&](auto constraint) {
+    LoopInvoker()(katana::iterate(constraints), [&](auto constraint) {
       unsigned src;
       unsigned dst;
       std::tie(src, dst) = constraint.getSrcDst();
@@ -448,7 +448,7 @@ protected:
   VecType processAddressOfCopy(const PointsToConstraints& constraints) {
     VecType updates;
 
-    LoopInvoker()(galois::iterate(constraints), [&](auto ii) {
+    LoopInvoker()(katana::iterate(constraints), [&](auto ii) {
       unsigned src;
       unsigned dst;
 
@@ -484,7 +484,7 @@ protected:
       // propogate src's points to info to dst
       if (srcRepr != dstRepr &&
           !pointsToResult[srcRepr].isSubsetEq(pointsToResult[dstRepr])) {
-        // galois::gDebug("unifying ", dstRepr, " by ", srcRepr);
+        // katana::gDebug("unifying ", dstRepr, " by ", srcRepr);
         // newPtsTo is positive if changes are made
         newPtsTo += pointsToResult[dstRepr].unify(pointsToResult[srcRepr]);
       }
@@ -535,7 +535,7 @@ public:
    * @returns number of nodes in the constraint graph
    */
   unsigned readConstraints(const char* file) {
-    galois::gInfo(
+    katana::gInfo(
         "GEP constraints (constraint type 4) and any constraints "
         "with offsets are ignored.");
 
@@ -615,7 +615,7 @@ public:
     for (unsigned ii = 0; ii < pointsToResult.size(); ++ii) {
       unsigned repr = ocd.getFinalRepresentative(ii);
       if (repr != ii && !pointsToResult[ii].isSubsetEq(pointsToResult[repr])) {
-        galois::gError(
+        katana::gError(
             "pointsto(", ii,
             ") is not less than its "
             "representative pointsto(",
@@ -632,7 +632,7 @@ public:
     for (unsigned ii = 0; ii < outgoingEdges.size(); ++ii) {
       unsigned repr = ocd.getFinalRepresentative(ii);
       if (repr != ii && !outgoingEdges[ii].isSubsetEq(outgoingEdges[repr])) {
-        galois::gError(
+        katana::gError(
             "edges(", ii,
             ") is not less than its "
             "representative edges(",
@@ -678,15 +678,15 @@ public:
    * Run points-to-analysis on a single thread.
    */
   void run() {
-    galois::gDebug(
+    katana::gDebug(
         "no of addr+copy constraints = ", addressCopyConstraints.size(),
         ", no of load+store constraints = ", loadStoreConstraints.size());
-    galois::gDebug("no of nodes = ", numNodes);
+    katana::gDebug("no of nodes = ", numNodes);
 
     std::deque<unsigned> updates;
-    updates = processAddressOfCopy<galois::StdForEach, std::deque<unsigned>>(
+    updates = processAddressOfCopy<katana::StdForEach, std::deque<unsigned>>(
         addressCopyConstraints);
-    processLoadStore<galois::StdForEach>(loadStoreConstraints, updates);
+    processLoadStore<katana::StdForEach>(loadStoreConstraints, updates);
 
     unsigned numUps = 0;
 
@@ -707,13 +707,13 @@ public:
       }
 
       if (updates.empty() || numUps >= THRESHOLD_LS) {
-        galois::gDebug(
+        katana::gDebug(
             "No of points-to facts computed = ", countPointsToFacts());
         numUps = 0;
 
         // After propagating all constraints, see if load/store
         // constraints need to be added in since graph was potentially updated
-        processLoadStore<galois::StdForEach>(loadStoreConstraints, updates);
+        processLoadStore<katana::StdForEach>(loadStoreConstraints, updates);
 
         // do cycle squashing
         ocd.process(updates);
@@ -728,22 +728,22 @@ public:
 class PTAConcurrent : public PTABase<true> {
 public:
   /**
-   * Run points-to-analysis using galois::for_each as the main loop.
+   * Run points-to-analysis using katana::for_each as the main loop.
    */
   void run() {
-    galois::gDebug(
+    katana::gDebug(
         "no of addr+copy constraints = ", addressCopyConstraints.size(),
         ", no of load+store constraints = ", loadStoreConstraints.size());
-    galois::gDebug("no of nodes = ", numNodes);
+    katana::gDebug("no of nodes = ", numNodes);
 
-    galois::InsertBag<unsigned> updates;
-    updates = processAddressOfCopy<galois::DoAll, galois::InsertBag<unsigned>>(
+    katana::InsertBag<unsigned> updates;
+    updates = processAddressOfCopy<katana::DoAll, katana::InsertBag<unsigned>>(
         addressCopyConstraints);
-    processLoadStore<galois::DoAll>(loadStoreConstraints, updates);
+    processLoadStore<katana::DoAll>(loadStoreConstraints, updates);
 
     while (!updates.empty()) {
-      galois::for_each(
-          galois::iterate(updates),
+      katana::for_each(
+          katana::iterate(updates),
           [this](unsigned req, auto& ctx) {
             for (auto dst = this->outgoingEdges[req].begin();
                  dst != this->outgoingEdges[req].end(); dst++) {
@@ -753,17 +753,17 @@ public:
                 ctx.push(this->ocd.getFinalRepresentative(*dst));
             }
           },
-          galois::loopname("PointsToMainUpdateLoop"),
-          galois::disable_conflict_detection(),
-          galois::wl<galois::worklists::PerSocketChunkFIFO<8>>());
+          katana::loopname("PointsToMainUpdateLoop"),
+          katana::disable_conflict_detection(),
+          katana::wl<katana::PerSocketChunkFIFO<8>>());
 
-      galois::gDebug("No of points-to facts computed = ", countPointsToFacts());
+      katana::gDebug("No of points-to facts computed = ", countPointsToFacts());
 
       updates.clear();
 
       // After propagating all constraints, see if load/store constraints need
       // to be added in since graph was potentially updated
-      processLoadStore<galois::DoAll>(loadStoreConstraints, updates);
+      processLoadStore<katana::DoAll>(loadStoreConstraints, updates);
 
       // do cycle squashing
       // ocd.process(updates); // TODO have parallel OCD, if possible
@@ -780,16 +780,16 @@ runPTA(PTAClass& pta, Alloc& nodeAllocator) {
   size_t numNodes = pta.readConstraints(inputFile.c_str());
   pta.initialize(numNodes, nodeAllocator);
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
 
   execTime.start();
   pta.run();
   execTime.stop();
 
-  galois::gInfo("No of points-to facts computed = ", pta.countPointsToFacts());
+  katana::gInfo("No of points-to facts computed = ", pta.countPointsToFacts());
 
   if (!skipVerify) {
-    galois::gInfo("Doing verification step");
+    katana::gInfo("Doing verification step");
     pta.checkReprPointsTo();
     pta.checkReprEdges();
   }
@@ -804,33 +804,33 @@ runPTA(PTAClass& pta, Alloc& nodeAllocator) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   // depending on serial or concurrent, create the correct class and pass it
   // into the run harness which takes care of the rest
   if (!useSerial) {
-    galois::gInfo(
-        "-------- Parallel version: ", galois::getActiveThreads(), " threads.");
-    galois::gInfo(
+    katana::gInfo(
+        "-------- Parallel version: ", katana::getActiveThreads(), " threads.");
+    katana::gInfo(
         "Note correctness of this version is relative to the serial "
         "version.");
 
     PTAConcurrent p;
-    galois::FixedSizeAllocator<typename galois::SparseBitVector<true>::Node>
+    katana::FixedSizeAllocator<typename katana::SparseBitVector<true>::Node>
         nodeAllocator;
     runPTA(p, nodeAllocator);
   } else {
-    galois::gInfo("-------- Sequential version.");
-    galois::gInfo(
+    katana::gInfo("-------- Sequential version.");
+    katana::gInfo(
         "The load store threshold (-lsThreshold) may need tweaking for "
         "best performance; its current setting may not be the best for "
         "your input and may actually degrade performance.");
     PTASerial p;
-    galois::FixedSizeAllocator<typename galois::SparseBitVector<false>::Node>
+    katana::FixedSizeAllocator<typename katana::SparseBitVector<false>::Node>
         nodeAllocator;
     runPTA(p, nodeAllocator);
   }

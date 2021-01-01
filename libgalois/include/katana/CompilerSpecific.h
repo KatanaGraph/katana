@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_COMPILERSPECIFIC_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_COMPILERSPECIFIC_H_
+#ifndef KATANA_LIBGALOIS_KATANA_COMPILERSPECIFIC_H_
+#define KATANA_LIBGALOIS_KATANA_COMPILERSPECIFIC_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 inline static void
 asmPause() {
@@ -38,18 +38,18 @@ compilerBarrier() {
 }
 
 // xeons have 64 byte cache lines, but will prefetch 2 at a time
-constexpr int GALOIS_CACHE_LINE_SIZE = 128;
+constexpr int KATANA_CACHE_LINE_SIZE = 128;
 
 #if defined(__INTEL_COMPILER)
-#define GALOIS_ATTRIBUTE_NOINLINE __attribute__((noinline))
+#define KATANA_ATTRIBUTE_NOINLINE __attribute__((noinline))
 
 #elif defined(__GNUC__)
-#define GALOIS_ATTRIBUTE_NOINLINE __attribute__((noinline))
+#define KATANA_ATTRIBUTE_NOINLINE __attribute__((noinline))
 
 #else
-#define GALOIS_ATTRIBUTE_NOINLINE
+#define KATANA_ATTRIBUTE_NOINLINE
 #endif
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

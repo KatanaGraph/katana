@@ -1,31 +1,31 @@
 def test_import_applications_property_graph():
-    import galois.lonestar.analytics.bfs
-    import galois.lonestar.analytics.jaccard
-    import galois.lonestar.analytics.pagerank
-    import galois.lonestar.analytics.connected_components
-    import galois.lonestar.analytics.kcore
+    import katana.lonestar.analytics.bfs
+    import katana.lonestar.analytics.jaccard
+    import katana.lonestar.analytics.pagerank
+    import katana.lonestar.analytics.connected_components
+    import katana.lonestar.analytics.kcore
 
 
 def test_import_loops():
-    import galois.loops
+    import katana.loops
 
 
 def test_import_property_graph():
-    import galois.property_graph
+    import katana.property_graph
 
 
 def test_import_graph():
-    import galois.graphs
+    import katana.graphs
 
 
 def test_import_datastructures():
-    import galois.datastructures
+    import katana.datastructures
 
 
 def test_import_atomic():
-    import galois.atomic
+    import katana.atomic
 
 
 def test_import_numba():
-    import galois.numba_support.pyarrow
-    import galois.numba_support.galois
+    import katana.numba_support.pyarrow
+    import katana.numba_support.galois

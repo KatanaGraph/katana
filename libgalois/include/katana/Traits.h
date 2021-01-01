@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_TRAITS_H_
-#define GALOIS_LIBGALOIS_GALOIS_TRAITS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TRAITS_H_
+#define KATANA_LIBGALOIS_KATANA_TRAITS_H_
 
 #include <tuple>
 #include <type_traits>
 
-#include "galois/config.h"
-#include "galois/worklists/WorkList.h"
+#include "katana/WorkList.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 // Trait classifications
 
@@ -305,7 +305,7 @@ struct neighborhood_visitor : public trait_has_value<T>,
 };
 
 /**
- * Indicates the operator has a function that allows a \ref galois::for_each
+ * Indicates the operator has a function that allows a \ref katana::for_each
  * loop to be exited deterministically.
  *
  * The function should have the signature <code>bool()</code>.
@@ -359,9 +359,9 @@ struct chunk_size_tag {
  * Specify chunk size for do_all_coupled & do_all_choice at compile time or at
  * runtime.
  *
- * For compile time, use the template argument, e.g., galois::chunk_size<16> ()
+ * For compile time, use the template argument, e.g., katana::chunk_size<16> ()
  * Additionally, user may provide a runtime argument, e.g,
- * galois::chunk_size<16> (8)
+ * katana::chunk_size<16> (8)
  *
  * Currently, only do_all_coupled can take advantage of the runtime argument.
  * TODO: allow runtime provision/tuning of chunk_size in other loop executors
@@ -383,7 +383,7 @@ public:
   chunk_size(unsigned cs = SZ) : trait_has_value(clamp(cs)) {}
 };
 
-typedef worklists::PerSocketChunkFIFO<chunk_size<>::value> defaultWL;
+typedef PerSocketChunkFIFO<chunk_size<>::value> defaultWL;
 
 namespace internal {
 
@@ -406,6 +406,6 @@ getLoopName(const Tup&) {
 }
 }  // namespace internal
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

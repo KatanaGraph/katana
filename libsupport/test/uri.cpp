@@ -1,13 +1,13 @@
-#include "galois/Uri.h"
+#include "katana/Uri.h"
 
 #include <vector>
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
-galois::Uri
+katana::Uri
 Str2Uri(const std::string& str) {
-  auto path_res = galois::Uri::Make(str);
-  GALOIS_LOG_ASSERT(path_res);
+  auto path_res = katana::Uri::Make(str);
+  KATANA_LOG_ASSERT(path_res);
   return path_res.value();
 }
 
@@ -21,28 +21,28 @@ main() {
   };
   for (const auto& path : all_paths) {
     auto uri = Str2Uri(path);
-    GALOIS_LOG_ASSERT(uri.path() == path);
-    GALOIS_LOG_ASSERT(uri.BaseName() == "path");
-    GALOIS_LOG_ASSERT(uri.DirName().path() == "/some/long");
+    KATANA_LOG_ASSERT(uri.path() == path);
+    KATANA_LOG_ASSERT(uri.BaseName() == "path");
+    KATANA_LOG_ASSERT(uri.DirName().path() == "/some/long");
   }
 
-  GALOIS_LOG_ASSERT(Str2Uri("path").BaseName() == "path");
-  GALOIS_LOG_ASSERT(Str2Uri("path///////").StripSep().path() == "path");
+  KATANA_LOG_ASSERT(Str2Uri("path").BaseName() == "path");
+  KATANA_LOG_ASSERT(Str2Uri("path///////").StripSep().path() == "path");
 
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long", "path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long/", "path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long", "/path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long//", "path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long///", "path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long///", "/path") == "/some/long/path");
-  GALOIS_LOG_ASSERT(
-      galois::Uri::JoinPath("/some/long///", "//path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long", "path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long/", "path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long", "/path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long//", "path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long///", "path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long///", "/path") == "/some/long/path");
+  KATANA_LOG_ASSERT(
+      katana::Uri::JoinPath("/some/long///", "//path") == "/some/long/path");
 
   return 0;
 }

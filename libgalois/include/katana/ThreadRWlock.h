@@ -17,20 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADRWLOCK_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_THREADRWLOCK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_THREADRWLOCK_H_
+#define KATANA_LIBGALOIS_KATANA_THREADRWLOCK_H_
 
-#include "galois/config.h"
-#include "galois/substrate/PaddedLock.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/PaddedLock.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 class ThreadRWlock {
-  typedef substrate::PaddedLock<true> Lock_ty;
-  // typedef galois::runtime::LL::SimpleLock<true> Lock_ty;
-  typedef substrate::PerThreadStorage<Lock_ty> PerThreadLock;
+  typedef PaddedLock<true> Lock_ty;
+  // typedef katana::LL::SimpleLock<true> Lock_ty;
+  typedef PerThreadStorage<Lock_ty> PerThreadLock;
 
   PerThreadLock locks;
 
@@ -82,7 +81,6 @@ readUpdateProtected(L& rwmutex, R& readAndCheck, W& write) {
   }
 }
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

@@ -17,9 +17,9 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Galois.h"
-#include "galois/graphs/BufferedGraph.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/BufferedGraph.h"
+#include "katana/FileGraph.h"
+#include "katana/Galois.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -31,26 +31,26 @@ static cll::opt<std::string> mappingFilename(
 static cll::opt<std::string> outputFilename(
     cll::Positional, cll::desc("<output file>"), cll::Required);
 
-using Writer = galois::graphs::FileGraphWriter;
+using Writer = katana::FileGraphWriter;
 
 /**
  * Create node map from file
  */
 std::map<uint32_t, uint32_t>
 createNodeMap() {
-  galois::gInfo("Creating node map");
+  katana::gInfo("Creating node map");
   // read new mapping
   std::ifstream mapFile(mappingFilename);
   mapFile.seekg(0, std::ios_base::end);
 
   int64_t endOfFile = mapFile.tellg();
   if (!mapFile) {
-    GALOIS_DIE("failed to read file");
+    KATANA_DIE("failed to read file");
   }
 
   mapFile.seekg(0, std::ios_base::beg);
   if (!mapFile) {
-    GALOIS_DIE("failed to read file");
+    KATANA_DIE("failed to read file");
   }
 
   // remap node listed on line n in the mapping to node n
@@ -60,30 +60,30 @@ createNodeMap() {
     uint64_t nodeID;
     mapFile >> nodeID;
     if (!mapFile) {
-      GALOIS_DIE("failed to read file");
+      KATANA_DIE("failed to read file");
     }
     remapper[nodeID] = counter++;
   }
 
-  GALOIS_ASSERT(remapper.size() == counter);
-  galois::gInfo("Remapping ", counter, " nodes");
+  KATANA_ASSERT(remapper.size() == counter);
+  katana::gInfo("Remapping ", counter, " nodes");
 
-  galois::gInfo("Node map created");
+  katana::gInfo("Node map created");
 
   return remapper;
 }
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   std::map<uint32_t, uint32_t> remapper = createNodeMap();
 
-  galois::gInfo("Loading graph to remap");
-  galois::graphs::BufferedGraph<void> graphToRemap;
+  katana::gInfo("Loading graph to remap");
+  katana::BufferedGraph<void> graphToRemap;
   graphToRemap.loadGraph(inputFilename);
-  galois::gInfo("Graph loaded");
+  katana::gInfo("Graph loaded");
 
   Writer graphWriter;
   graphWriter.setNumNodes(remapper.size());
@@ -91,13 +91,13 @@ main(int argc, char** argv) {
 
   // phase 1: count degrees
   graphWriter.phase1();
-  galois::gInfo("Starting degree counting");
+  katana::gInfo("Starting degree counting");
   size_t prevNumNodes = graphToRemap.size();
   size_t nodeIDCounter = 0;
   for (size_t i = 0; i < prevNumNodes; i++) {
     // see if current node is to be remapped, i.e. exists in the map
     if (remapper.find(i) != remapper.end()) {
-      GALOIS_ASSERT(nodeIDCounter == remapper[i]);
+      KATANA_ASSERT(nodeIDCounter == remapper[i]);
       for (auto e = graphToRemap.edgeBegin(i); e < graphToRemap.edgeEnd(i);
            e++) {
         graphWriter.incrementDegree(nodeIDCounter);
@@ -105,33 +105,33 @@ main(int argc, char** argv) {
       nodeIDCounter++;
     }
   }
-  GALOIS_ASSERT(nodeIDCounter == remapper.size());
+  KATANA_ASSERT(nodeIDCounter == remapper.size());
 
   // phase 2: edge construction
   graphWriter.phase2();
-  galois::gInfo("Starting edge construction");
+  katana::gInfo("Starting edge construction");
   nodeIDCounter = 0;
   for (size_t i = 0; i < prevNumNodes; i++) {
     // see if current node is to be remapped, i.e. exists in the map
     if (remapper.find(i) != remapper.end()) {
-      GALOIS_ASSERT(nodeIDCounter == remapper[i]);
+      KATANA_ASSERT(nodeIDCounter == remapper[i]);
       for (auto e = graphToRemap.edgeBegin(i); e < graphToRemap.edgeEnd(i);
            e++) {
         uint32_t dst = graphToRemap.edgeDestination(*e);
-        GALOIS_ASSERT(remapper.find(dst) != remapper.end());
+        KATANA_ASSERT(remapper.find(dst) != remapper.end());
         graphWriter.addNeighbor(nodeIDCounter, remapper[dst]);
       }
       nodeIDCounter++;
     }
   }
-  GALOIS_ASSERT(nodeIDCounter == remapper.size());
+  KATANA_ASSERT(nodeIDCounter == remapper.size());
 
-  galois::gInfo("Finishing up: outputting graph shortly");
+  katana::gInfo("Finishing up: outputting graph shortly");
 
   graphWriter.finish<void>();
   graphWriter.toFile(outputFilename);
 
-  galois::gInfo(
+  katana::gInfo(
       "new size is ", graphWriter.size(), " num edges ",
       graphWriter.sizeEdges());
 

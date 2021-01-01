@@ -8,12 +8,12 @@ from numba.experimental import jitclass
 from numba.extending import lower_builtin
 from numba.extending import type_callable
 
-from galois.numba_support.galois_compiler import OperatorCompiler, cfunc
-from galois.timer import StatTimer
+from katana.numba_support.galois_compiler import OperatorCompiler, cfunc
+from katana.timer import StatTimer
 
 PointerPair = ctypes.c_void_p * 2
 
-_compilation_timer = StatTimer("Compilation", "Galois-Python")
+_compilation_timer = StatTimer("Compilation", "Katana-Python")
 atexit.register(_compilation_timer.finalize)
 
 

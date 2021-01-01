@@ -28,16 +28,16 @@
 #include <mutex>
 #include <set>
 
-#include "galois/gIO.h"
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/HWTopo.h"
+#include "katana/SimpleLock.h"
+#include "katana/gIO.h"
 
-#ifdef GALOIS_USE_NUMA
+#ifdef KATANA_USE_NUMA
 #include <numa.h>
 #include <numaif.h>
 #endif
 
-#ifdef GALOIS_USE_SCHED_SETAFFINITY
+#ifdef KATANA_USE_SCHED_SETAFFINITY
 #include <sched.h>
 #endif
 
@@ -69,7 +69,7 @@ operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
 unsigned
 getNumaNode(cpuinfo& c) {
   static bool warnOnce = false;
-#ifdef GALOIS_USE_NUMA
+#ifdef KATANA_USE_NUMA
   static bool numaAvail = false;
 
   if (!warnOnce) {
@@ -77,7 +77,7 @@ getNumaNode(cpuinfo& c) {
     numaAvail = numa_available() >= 0;
     numaAvail = numaAvail && numa_num_configured_nodes() > 0;
     if (!numaAvail)
-      galois::gWarn(
+      katana::gWarn(
           "Numa support configured but not present at runtime.  "
           "Assuming numa topology matches socket topology.");
   }
@@ -86,12 +86,12 @@ getNumaNode(cpuinfo& c) {
     return c.physid;
   int i = numa_node_of_cpu(c.proc);
   if (i < 0)
-    GALOIS_SYS_DIE("failed finding numa node for ", c.proc);
+    KATANA_SYS_DIE("failed finding numa node for ", c.proc);
   return i;
 #else
   if (!warnOnce) {
     warnOnce = true;
-    galois::gWarn(
+    katana::gWarn(
         "Numa Support Not configured (install libnuma-dev).  "
         "Assuming numa topology matches socket topology.");
   }
@@ -109,7 +109,7 @@ parseCPUInfo() {
 
   std::ifstream procInfo("/proc/cpuinfo");
   if (!procInfo)
-    GALOIS_SYS_DIE("failed opening /proc/cpuinfo");
+    KATANA_SYS_DIE("failed opening /proc/cpuinfo");
 
   int cur = -1;
 
@@ -206,7 +206,7 @@ parseCPUSet() {
 
   line = line.substr(prefix.size());
 
-  return galois::substrate::parseCPUList(line);
+  return katana::parseCPUList(line);
 }
 
 void
@@ -222,9 +222,9 @@ markValid(std::vector<cpuinfo>& info) {
   }
 }
 
-galois::substrate::HWTopoInfo
+katana::HWTopoInfo
 makeHWTopo() {
-  galois::substrate::MachineTopoInfo retMTI;
+  katana::MachineTopoInfo retMTI;
 
   auto info = parseCPUInfo();
   std::sort(info.begin(), info.end());
@@ -243,7 +243,7 @@ makeHWTopo() {
   retMTI.maxCores = countCores(info);
   retMTI.maxNumaNodes = countNumaNodes(info);
 
-  std::vector<galois::substrate::ThreadTopoInfo> retTTI;
+  std::vector<katana::ThreadTopoInfo> retTTI;
   retTTI.reserve(retMTI.maxThreads);
   // compute renumberings
   std::set<unsigned> sockets;
@@ -263,7 +263,7 @@ makeHWTopo() {
         std::find_if(info.begin(), info.end(), [pid](const cpuinfo& c) {
           return c.physid == pid;
         }));
-    retTTI.push_back(galois::substrate::ThreadTopoInfo{
+    retTTI.push_back(katana::ThreadTopoInfo{
         i, leader, repid,
         (unsigned)std::distance(
             numaNodes.begin(), numaNodes.find(info[i].numaNode)),
@@ -278,8 +278,8 @@ makeHWTopo() {
 
 }  // namespace
 
-galois::substrate::HWTopoInfo
-galois::substrate::getHWTopo() {
+katana::HWTopoInfo
+katana::getHWTopo() {
   static SimpleLock lock;
   static std::unique_ptr<HWTopoInfo> data;
 
@@ -292,8 +292,8 @@ galois::substrate::getHWTopo() {
 
 //! binds current thread to OS HW context "proc"
 bool
-galois::substrate::bindThreadSelf(unsigned osContext) {
-#ifdef GALOIS_USE_SCHED_SETAFFINITY
+katana::bindThreadSelf(unsigned osContext) {
+#ifdef KATANA_USE_SCHED_SETAFFINITY
   cpu_set_t mask;
   /* CPU_ZERO initializes all the bits in the mask to zero. */
   CPU_ZERO(&mask);
@@ -304,13 +304,13 @@ galois::substrate::bindThreadSelf(unsigned osContext) {
 
   /* sched_setaffinity returns 0 in success */
   if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
-    galois::gWarn(
+    katana::gWarn(
         "Could not set CPU affinity to ", osContext, "(", strerror(errno), ")");
     return false;
   }
   return true;
 #else
-  galois::gWarn(
+  katana::gWarn(
       "Cannot set cpu affinity on this platform.  Performance will be bad.");
   return false;
 #endif

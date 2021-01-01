@@ -1,6 +1,6 @@
 from libc.stdint cimport uint64_t
 
-cdef extern from "galois/Timer.h" namespace "galois" nogil:
+cdef extern from "katana/Timer.h" namespace "katana" nogil:
     cppclass Timer:
         Timer()
         void start()

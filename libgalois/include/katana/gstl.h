@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GSTL_H_
-#define GALOIS_LIBGALOIS_GALOIS_GSTL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GSTL_H_
+#define KATANA_LIBGALOIS_KATANA_GSTL_H_
 
 #include <algorithm>
 #include <cassert>
@@ -32,20 +32,20 @@
 #include <utility>
 #include <vector>
 
-#include "galois/PriorityQueue.h"
-#include "galois/config.h"
+#include "katana/PriorityQueue.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 namespace gstl {
 
 //! [define Pow2VarSizeAlloc]
 template <typename T>
-using Pow2Alloc = typename runtime::Pow2BlockAllocator<T>;
+using Pow2Alloc = Pow2BlockAllocator<T>;
 //! [define Pow2VarSizeAlloc]
 
 template <typename T>
-using FixedSizeAlloc = typename runtime::FixedSizeAllocator<T>;
+using FixedSizeAlloc = FixedSizeAllocator<T>;
 
 //! [STL vector using Pow2VarSizeAlloc]
 template <typename T>
@@ -297,5 +297,5 @@ template <class I>
 std::enable_if_t<std::is_scalar<internal::Val_ty<I>>::value>
 uninitialized_destroy(I, I) {}
 
-}  // namespace galois
+}  // namespace katana
 #endif

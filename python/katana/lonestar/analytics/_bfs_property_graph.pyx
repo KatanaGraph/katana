@@ -1,19 +1,19 @@
 from pyarrow.lib cimport CTable, CUInt32Array, CArray
 
 from cython.operator cimport dereference as deref
-from galois.cpp.libgalois.datastructures cimport InsertBag
-from galois.cpp.libgalois.Galois cimport do_all, iterate, no_pushes, steal, loopname
-from galois.cpp.libgalois.atomic cimport GReduceMax
-from galois.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
-from galois.cpp.libstd.atomic cimport atomic
-from galois.cpp.libstd cimport bind_leading
-from galois.property_graph cimport PropertyGraph
+from katana.cpp.libgalois.datastructures cimport InsertBag
+from katana.cpp.libgalois.Galois cimport do_all, iterate, no_pushes, steal, loopname
+from katana.cpp.libgalois.atomic cimport GReduceMax
+from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libstd.atomic cimport atomic
+from katana.cpp.libstd cimport bind_leading
+from katana.property_graph cimport PropertyGraph
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.memory cimport shared_ptr, static_pointer_cast
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
-from galois.timer import StatTimer
+from katana.timer import StatTimer
 
 ctypedef atomic[uint32_t] atomuint32_t
 
@@ -24,12 +24,12 @@ std::shared_ptr<arrow::Table> MakeTable(const std::string& name,
   arrow::NumericBuilder<arrow::UInt32Type> builder;
 
   auto append_status = builder.AppendValues(data.begin(), data.end());
-  GALOIS_LOG_ASSERT(append_status.ok());
+  KATANA_LOG_ASSERT(append_status.ok());
 
   std::shared_ptr<arrow::Array> array;
 
   auto finish_status = builder.Finish(&array);
-  GALOIS_LOG_ASSERT(finish_status.ok());
+  KATANA_LOG_ASSERT(finish_status.ok());
 
   std::shared_ptr<arrow::Schema> schema =
       arrow::schema({arrow::field(name, arrow::uint32())});

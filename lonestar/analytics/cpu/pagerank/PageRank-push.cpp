@@ -41,22 +41,22 @@ static cll::opt<Algo> algo(
     cll::values(clEnumVal(Async, "Async"), clEnumVal(Sync, "Sync")),
     cll::init(Async));
 
-struct NodeValue : public galois::PODProperty<PRTy> {};
+struct NodeValue : public katana::PODProperty<PRTy> {};
 struct NodeResidual {
   using ArrowType = arrow::CTypeTraits<PRTy>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<PRTy>>;
+  using ViewType = katana::PODPropertyView<std::atomic<PRTy>>;
 };
 
 using NodeData = std::tuple<NodeValue, NodeResidual>;
 using EdgeData = std::tuple<>;
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 void
 asyncPageRank(Graph* graph) {
-  typedef galois::worklists::PerSocketChunkFIFO<CHUNK_SIZE> WL;
-  galois::for_each(
-      galois::iterate(*graph),
+  typedef katana::PerSocketChunkFIFO<CHUNK_SIZE> WL;
+  katana::for_each(
+      katana::iterate(*graph),
       [&](const GNode& src, auto& ctx) {
         auto& src_residual = graph->GetData<NodeResidual>(src);
         if (src_residual > tolerance) {
@@ -81,9 +81,9 @@ asyncPageRank(Graph* graph) {
           }
         }
       },
-      galois::loopname("PushResidualAsync"),
-      galois::disable_conflict_detection(), galois::no_stats(),
-      galois::wl<WL>());
+      katana::loopname("PushResidualAsync"),
+      katana::disable_conflict_detection(), katana::no_stats(),
+      katana::wl<WL>());
 }
 
 void
@@ -96,17 +96,17 @@ syncPageRank(Graph* graph) {
 
   constexpr ptrdiff_t EDGE_TILE_SIZE = 128;
 
-  galois::InsertBag<Update> updates;
-  galois::InsertBag<GNode> active_nodes;
+  katana::InsertBag<Update> updates;
+  katana::InsertBag<GNode> active_nodes;
 
-  galois::do_all(
-      galois::iterate(*graph), [&](const auto& src) { active_nodes.push(src); },
-      galois::no_stats());
+  katana::do_all(
+      katana::iterate(*graph), [&](const auto& src) { active_nodes.push(src); },
+      katana::no_stats());
 
   size_t iter = 0;
   for (; !active_nodes.empty() && iter < maxIterations; ++iter) {
-    galois::do_all(
-        galois::iterate(active_nodes),
+    katana::do_all(
+        katana::iterate(active_nodes),
         [&](const GNode& src) {
           auto& sdata_residual = graph->GetData<NodeResidual>(src);
 
@@ -138,13 +138,13 @@ syncPageRank(Graph* graph) {
             }
           }
         },
-        galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-        galois::loopname("CreateEdgeTiles"), galois::no_stats());
+        katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+        katana::loopname("CreateEdgeTiles"), katana::no_stats());
 
     active_nodes.clear();
 
-    galois::do_all(
-        galois::iterate(updates),
+    katana::do_all(
+        katana::iterate(updates),
         [&](const Update& up) {
           //! For each out-going neighbors.
           for (auto jj = up.beg; jj != up.end; ++jj) {
@@ -159,8 +159,8 @@ syncPageRank(Graph* graph) {
             }
           }
         },
-        galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-        galois::loopname("PushResidualSync"), galois::no_stats());
+        katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+        katana::loopname("PushResidualSync"), katana::no_stats());
 
     updates.clear();
   }
@@ -189,46 +189,45 @@ makeResults(const Graph& graph) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<NodeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
-  auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
   std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
             << " edges\n";
 
-  galois::Prealloc(5, 5 * graph.size() * sizeof(NodeData));
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(5, 5 * graph.size() * sizeof(NodeData));
+  katana::reportPageAlloc("MeminfoPre");
 
   std::cout << "tolerance:" << tolerance << ", maxIterations:" << maxIterations
             << "\n";
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&graph](const GNode& n) {
         graph.GetData<NodeResidual>(n) = INIT_RESIDUAL;
         graph.GetData<NodeValue>(n) = 0;
       },
-      galois::no_stats(), galois::loopname("Initialize"));
+      katana::no_stats(), katana::loopname("Initialize"));
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
 
   switch (algo) {
@@ -248,7 +247,7 @@ main(int argc, char** argv) {
 
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify) {
     printTop<Graph, NodeValue>(&graph);

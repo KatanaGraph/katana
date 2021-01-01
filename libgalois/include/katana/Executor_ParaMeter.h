@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORPARAMETER_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORPARAMETER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORPARAMETER_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORPARAMETER_H_
 
 #include <algorithm>
 #include <cstdio>
@@ -28,19 +28,18 @@
 #include <random>
 #include <vector>
 
-#include "galois/Mem.h"
-#include "galois/Reduction.h"
-#include "galois/Traits.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/runtime/Context.h"
-#include "galois/runtime/Executor_DoAll.h"
-#include "galois/runtime/Executor_ForEach.h"
-#include "galois/runtime/Executor_OnEach.h"
-#include "galois/worklists/Simple.h"
+#include "katana/Context.h"
+#include "katana/Executor_DoAll.h"
+#include "katana/Executor_ForEach.h"
+#include "katana/Executor_OnEach.h"
+#include "katana/Mem.h"
+#include "katana/Reduction.h"
+#include "katana/Simple.h"
+#include "katana/Traits.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
-namespace runtime {
+namespace katana {
 
 namespace parameter {
 
@@ -107,12 +106,12 @@ struct UnorderedStepStats : public StepStatsBase {
 // Single ParaMeter stats file per run of an app
 // which includes all instances of for_each loops
 // run with ParaMeter Executor
-GALOIS_EXPORT FILE* getStatsFile();
-GALOIS_EXPORT void closeStatsFile();
+KATANA_EXPORT FILE* getStatsFile();
+KATANA_EXPORT void closeStatsFile();
 
 template <typename T>
 class FIFO_WL {
-  using PTcont = galois::substrate::PerThreadStorage<galois::gstl::Vector<T>>;
+  using PTcont = katana::PerThreadStorage<katana::gstl::Vector<T>>;
 
   std::array<PTcont, 2> worklists;
 
@@ -122,13 +121,13 @@ class FIFO_WL {
 public:
   FIFO_WL() : curr(&worklists[0]), next(&worklists[1]) {}
 
-  auto iterateCurr() { return galois::MakeLocalTwoLevelRange(*curr); }
+  auto iterateCurr() { return katana::MakeLocalTwoLevelRange(*curr); }
 
   void pushNext(const T& item) { next->getLocal()->push_back(item); }
 
   void nextStep() {
     std::swap(curr, next);
-    galois::runtime::on_each_gen(
+    katana::on_each_gen(
         [this](const unsigned, const unsigned) { next->getLocal()->clear(); },
         std::make_tuple());
   }
@@ -149,7 +148,7 @@ template <typename T>
 class RAND_WL : public FIFO_WL<T> {
 public:
   auto iterateCurr() {
-    galois::runtime::on_each_gen(
+    katana::on_each_gen(
         [&](int, int) {
           auto& lwl = *this->currentWorklist()->getLocal();
 
@@ -168,7 +167,7 @@ class LIFO_WL : public FIFO_WL<T> {
 public:
   auto iterateCurr() {
     // TODO: use reverse iterator instead of std::reverse
-    galois::runtime::on_each_gen(
+    katana::on_each_gen(
         [&](int, int) {
           auto& lwl = *this->currentWorklist()->getLocal();
           std::reverse(lwl.begin(), lwl.end());
@@ -204,7 +203,7 @@ class ParaMeterExecutor {
   using value_type = T;
   using GenericWL = typename trait_type<wl_tag, ArgsTy>::type::type;
   using WorkListTy = typename GenericWL::template retype<T>;
-  using dbg = galois::debug<1>;
+  using dbg = katana::debug<1>;
 
   constexpr static bool needsStats = !has_trait<no_stats_tag, ArgsTy>();
   constexpr static bool needsPush = !has_trait<no_pushes_tag, ArgsTy>();
@@ -216,7 +215,7 @@ class ParaMeterExecutor {
   struct IterationContext {
     T item;
     bool doabort;
-    galois::runtime::UserContextAccess<value_type> facing;
+    katana::UserContextAccess<value_type> facing;
     SimpleRuntimeContext ctx;
 
     explicit IterationContext(const T& v) : item(v), doabort(false) {}
@@ -239,7 +238,7 @@ private:
   const char* loopname;
   FILE* m_statsFile;
   FixedSizeAllocator<IterationContext> m_iterAlloc;
-  galois::GReduceLogicalOr m_broken;
+  katana::GReduceLogicalOr m_broken;
 
   IterationContext* newIteration(const T& item) {
     IterationContext* it = m_iterAlloc.allocate(1);
@@ -285,7 +284,7 @@ private:
 
 private:
   void runSimpleStep(UnorderedStepStats& stats) {
-    galois::runtime::do_all_gen(
+    katana::do_all_gen(
         m_wl.iterateCurr(),
         [&, this](IterationContext* it) {
           stats.wlSize += 1;
@@ -299,11 +298,11 @@ private:
 
           setThreadContext(nullptr);
         },
-        std::make_tuple(galois::steal(), galois::loopname("ParaM-Simple")));
+        std::make_tuple(katana::steal(), katana::loopname("ParaM-Simple")));
   }
 
   void runCautiousStep(UnorderedStepStats& stats) {
-    galois::runtime::do_all_gen(
+    katana::do_all_gen(
         m_wl.iterateCurr(),
         [&, this](IterationContext* it) {
           stats.wlSize += 1;
@@ -314,12 +313,12 @@ private:
           if (needsBreak) {
             it->facing.setBreakFlag(&broke);
           }
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
           int flag = 0;
           if ((flag = setjmp(execFrame)) == 0) {
             m_func(it->item, it->facing.data());
           } else
-#elif GALOIS_USE_EXCEPTION_ABORT
+#elif KATANA_USE_EXCEPTION_ABORT
           try {
             m_func(it->item, it->facing.data());
 
@@ -328,7 +327,7 @@ private:
           {
             clearConflictLock();
             switch (flag) {
-            case galois::runtime::CONFLICT:
+            case katana::CONFLICT:
               it->doabort = true;
               break;
             default:
@@ -342,9 +341,9 @@ private:
 
           setThreadContext(nullptr);
         },
-        std::make_tuple(galois::steal(), galois::loopname("ParaM-Expand-NH")));
+        std::make_tuple(katana::steal(), katana::loopname("ParaM-Expand-NH")));
 
-    galois::runtime::do_all_gen(
+    katana::do_all_gen(
         m_wl.iterateCurr(),
         [&, this](IterationContext* it) {
           if (it->doabort) {
@@ -356,12 +355,12 @@ private:
             stats.nhSize += nh;
           }
         },
-        std::make_tuple(galois::steal(), galois::loopname("ParaM-Commit")));
+        std::make_tuple(katana::steal(), katana::loopname("ParaM-Commit")));
   }
 
   template <typename R>
   void execute(const R& range) {
-    galois::runtime::on_each_gen(
+    katana::on_each_gen(
         [&, this](const unsigned, const unsigned) {
           auto begin = range.local_begin();
           auto end = range.local_end();
@@ -404,7 +403,7 @@ private:
 public:
   ParaMeterExecutor(const FunctionTy& f, const ArgsTy& args)
       : m_func(f),
-        loopname(galois::internal::getLoopName(args)),
+        loopname(katana::internal::getLoopName(args)),
         m_statsFile(getStatsFile()) {}
 
   // called serially once
@@ -421,13 +420,9 @@ public:
 };
 
 }  // namespace parameter
-}  // namespace runtime
-
-namespace worklists {
 
 template <
-    class T = int,
-    runtime::parameter::SchedType SCHED = runtime::parameter::SchedType::FIFO>
+    class T = int, parameter::SchedType SCHED = parameter::SchedType::FIFO>
 class ParaMeter {
 public:
   template <bool _concurrent>
@@ -438,21 +433,17 @@ public:
 
   using value_type = T;
 
-  constexpr static const runtime::parameter::SchedType SCHEDULE = SCHED;
+  constexpr static const parameter::SchedType SCHEDULE = SCHED;
 
-  using fifo = ParaMeter<T, runtime::parameter::SchedType::FIFO>;
-  using random = ParaMeter<T, runtime::parameter::SchedType::RAND>;
-  using lifo = ParaMeter<T, runtime::parameter::SchedType::LIFO>;
+  using fifo = ParaMeter<T, parameter::SchedType::FIFO>;
+  using random = ParaMeter<T, parameter::SchedType::RAND>;
+  using lifo = ParaMeter<T, parameter::SchedType::LIFO>;
 };
 
-}  // namespace worklists
-
-namespace runtime {
-
-// hookup into galois::for_each. Invoke galois::for_each with
-// wl<galois::worklists::ParaMeter<> >
+// hookup into katana::for_each. Invoke katana::for_each with
+// wl<katana::ParaMeter<> >
 template <class T, class FunctionTy, class ArgsTy>
-struct ForEachExecutor<galois::worklists::ParaMeter<T>, FunctionTy, ArgsTy>
+struct ForEachExecutor<katana::ParaMeter<T>, FunctionTy, ArgsTy>
     : public parameter::ParaMeterExecutor<T, FunctionTy, ArgsTy> {
   using SuperTy = parameter::ParaMeterExecutor<T, FunctionTy, ArgsTy>;
   ForEachExecutor(const FunctionTy& f, const ArgsTy& args) : SuperTy(f, args) {}
@@ -464,20 +455,19 @@ void
 for_each_ParaMeter(const R& range, const F& func, const ArgsTuple& argsTuple) {
   using T = typename R::values_type;
 
-  auto tpl = galois::get_default_trait_values(
+  auto tpl = katana::get_default_trait_values(
       argsTuple, std::make_tuple(wl_tag{}),
-      std::make_tuple(wl<galois::worklists::ParaMeter<>>()));
+      std::make_tuple(wl<katana::ParaMeter<>>()));
 
   using Tpl_ty = decltype(tpl);
 
-  using Exec = runtime::parameter::ParaMeterExecutor<T, F, Tpl_ty>;
+  using Exec = parameter::ParaMeterExecutor<T, F, Tpl_ty>;
   Exec exec(func, tpl);
 
   exec.execute(range);
 }
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 #endif
 
 /*

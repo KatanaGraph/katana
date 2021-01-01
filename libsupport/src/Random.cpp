@@ -1,4 +1,4 @@
-#include "galois/Random.h"
+#include "katana/Random.h"
 
 #include <array>
 #include <chrono>
@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
 namespace {
 
@@ -54,7 +54,7 @@ MakeSystemGenerator() {
   try {
     return MakeRandomGenerator(dev);
   } catch (std::exception& e) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "trying alternative random seed method due to error: {}", e.what());
   }
 
@@ -83,7 +83,7 @@ GetGenerator() {
 }  // namespace
 
 std::string
-galois::RandomAlphanumericString(uint64_t len) {
+katana::RandomAlphanumericString(uint64_t len) {
   static constexpr auto chars =
       "0123456789"
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -97,23 +97,23 @@ galois::RandomAlphanumericString(uint64_t len) {
 
 // Range 0..len-1, inclusive
 int64_t
-galois::RandomUniformInt(int64_t len) {
-  GALOIS_LOG_ASSERT(len > 0);
+katana::RandomUniformInt(int64_t len) {
+  KATANA_LOG_ASSERT(len > 0);
   std::uniform_int_distribution dist({}, len - 1);
   return dist(GetGenerator());
 }
 
 // Range min+1..max-1, inclusive
 int64_t
-galois::RandomUniformInt(int64_t min, int64_t max) {
-  GALOIS_LOG_ASSERT(min < max);
+katana::RandomUniformInt(int64_t min, int64_t max) {
+  KATANA_LOG_ASSERT(min < max);
   std::uniform_int_distribution dist(min + 1, max - 1);
   return dist(GetGenerator());
 }
 
 // Range 0.0f..max, inclusive
 float
-galois::RandomUniformFloat(float max) {
+katana::RandomUniformFloat(float max) {
   std::uniform_real_distribution<float> dist(
       0.0f, std::nextafter(max, std::numeric_limits<float>::max()));
   return dist(GetGenerator());

@@ -17,39 +17,39 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/SharedMemSys.h"
+#include "katana/SharedMemSys.h"
 
-#include "galois/CommBackend.h"
-#include "galois/Logging.h"
-#include "galois/Statistics.h"
-#include "galois/substrate/SharedMem.h"
+#include "katana/CommBackend.h"
+#include "katana/Logging.h"
+#include "katana/SharedMem.h"
+#include "katana/Statistics.h"
 #include "tsuba/FileStorage.h"
 #include "tsuba/tsuba.h"
 
 namespace {
 
-galois::NullCommBackend comm_backend;
+katana::NullCommBackend comm_backend;
 
 }  // namespace
 
-struct galois::SharedMemSys::Impl {
-  galois::substrate::SharedMem shared_mem;
-  galois::StatManager stat_manager;
+struct katana::SharedMemSys::Impl {
+  katana::SharedMem shared_mem;
+  katana::StatManager stat_manager;
 };
 
-galois::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
+katana::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
   if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
-    GALOIS_LOG_FATAL("tsuba::Init: {}", init_good.error());
+    KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
 
-  galois::internal::setSysStatManager(&impl_->stat_manager);
+  katana::internal::setSysStatManager(&impl_->stat_manager);
 }
 
-galois::SharedMemSys::~SharedMemSys() {
-  galois::PrintStats();
-  galois::internal::setSysStatManager(nullptr);
+katana::SharedMemSys::~SharedMemSys() {
+  katana::PrintStats();
+  katana::internal::setSysStatManager(nullptr);
 
   if (auto fini_good = tsuba::Fini(); !fini_good) {
-    GALOIS_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
+    KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }
 }

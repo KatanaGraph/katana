@@ -28,11 +28,11 @@
 #include <mach/mach_interface.h>
 #include <mach/thread_policy.h>
 
-#include "galois/gIO.h"
-#include "galois/substrate/HWTopo.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/HWTopo.h"
+#include "katana/SimpleLock.h"
+#include "katana/gIO.h"
 
-using namespace galois::substrate;
+using namespace katana;
 
 namespace {
 
@@ -42,7 +42,7 @@ getIntValue(const char* name) {
   size_t len = sizeof(value);
 
   if (sysctlbyname(name, &value, &len, nullptr, 0) == -1) {
-    GALOIS_SYS_DIE(
+    KATANA_SYS_DIE(
         "could not get sysctl value for ", name, ": ", strerror(errno));
   }
 
@@ -117,14 +117,14 @@ makeHWTopo() {
 
 //! binds current thread to OS HW context "proc"
 bool
-galois::substrate::bindThreadSelf(unsigned osContext) {
+katana::bindThreadSelf(unsigned osContext) {
   pthread_t thread = pthread_self();
   thread_affinity_policy policy = {int(osContext)};
   thread_t machThread = pthread_mach_thread_np(thread);
   if (thread_policy_set(
           machThread, THREAD_AFFINITY_POLICY, thread_policy_t(&policy),
           THREAD_AFFINITY_POLICY_COUNT)) {
-    galois::gWarn(
+    katana::gWarn(
         "Could not set CPU affinity to ", osContext, " (", strerror(errno),
         ")");
     return false;
@@ -134,7 +134,7 @@ galois::substrate::bindThreadSelf(unsigned osContext) {
 }
 
 HWTopoInfo
-galois::substrate::getHWTopo() {
+katana::getHWTopo() {
   static SimpleLock lock;
   static std::unique_ptr<HWTopoInfo> data;
 

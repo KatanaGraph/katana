@@ -1,9 +1,9 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGLINEAGE_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGLINEAGE_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_RDGLINEAGE_H_
+#define KATANA_LIBTSUBA_TSUBA_RDGLINEAGE_H_
 
 #include <string>
 
-#include "galois/JSON.h"
+#include "katana/JSON.h"
 
 namespace tsuba {
 

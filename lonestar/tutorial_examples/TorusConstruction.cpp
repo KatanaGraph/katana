@@ -23,12 +23,12 @@
 // 3. addEdge
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/graphs/Graph.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
 
 //! [Define a MorphGraph]
 // Graph has int node data, void edge data and is directed
-using Graph = galois::graphs::MorphGraph<int, void, true>;
+using Graph = katana::MorphGraph<int, void, true>;
 // Opaque pointer to graph node
 using GNode = Graph::GraphNode;
 //! [Define a MorphGraph]
@@ -65,7 +65,7 @@ constructTorus(Graph& g, int height, int width) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 2) {
     std::cerr << "<sqrt grid size>\n";

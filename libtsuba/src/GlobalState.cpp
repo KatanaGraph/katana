@@ -5,13 +5,13 @@
 
 #include "FileStorage_internal.h"
 #include "MemoryNameServerClient.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 
 namespace {
 
-galois::Result<std::unique_ptr<tsuba::NameServerClient>>
+katana::Result<std::unique_ptr<tsuba::NameServerClient>>
 GetMemoryClient() {
   return std::make_unique<tsuba::MemoryNameServerClient>();
 }
@@ -20,10 +20,10 @@ GetMemoryClient() {
 
 std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref_ = nullptr;
 
-std::function<galois::Result<std::unique_ptr<tsuba::NameServerClient>>()>
+std::function<katana::Result<std::unique_ptr<tsuba::NameServerClient>>()>
     tsuba::GlobalState::make_name_server_client_cb_ = GetMemoryClient;
 
-galois::CommBackend*
+katana::CommBackend*
 tsuba::GlobalState::Comm() const {
   assert(comm_ != nullptr);
   return comm_;
@@ -50,9 +50,9 @@ tsuba::GlobalState::NS() const {
   return name_server_client_;
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::GlobalState::Init(
-    galois::CommBackend* comm, tsuba::NameServerClient* ns) {
+    katana::CommBackend* comm, tsuba::NameServerClient* ns) {
   assert(ref_ == nullptr);
 
   // quick ping to say hello and fail fast if something was misconfigured
@@ -82,10 +82,10 @@ tsuba::GlobalState::Init(
   }
 
   ref_ = std::move(global_state);
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::GlobalState::Fini() {
   for (FileStorage* fs : ref_->file_stores_) {
     if (auto res = fs->Fini(); !res) {
@@ -93,7 +93,7 @@ tsuba::GlobalState::Fini() {
     }
   }
   ref_.reset(nullptr);
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 const tsuba::GlobalState&
@@ -102,7 +102,7 @@ tsuba::GlobalState::Get() {
   return *ref_;
 }
 
-galois::CommBackend*
+katana::CommBackend*
 tsuba::Comm() {
   return GlobalState::Get().Comm();
 }
@@ -117,8 +117,8 @@ tsuba::NS() {
   return GlobalState::Get().NS();
 }
 
-galois::Result<void>
-tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
+katana::Result<void>
+tsuba::OneHostOnly(const std::function<katana::Result<void>()>& cb) {
   // Prevent a race when the callback affects a condition guarding the
   // execution of OneHostOnly
   Comm()->Barrier();
@@ -127,7 +127,7 @@ tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
   if (Comm()->ID == 0) {
     auto res = cb();
     if (!res) {
-      GALOIS_LOG_ERROR("OneHostOnly operation failed: {}", res.error());
+      KATANA_LOG_ERROR("OneHostOnly operation failed: {}", res.error());
       failed = true;
     }
   }
@@ -136,5 +136,5 @@ tsuba::OneHostOnly(const std::function<galois::Result<void>()>& cb) {
     return ErrorCode::MpiError;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }

@@ -18,18 +18,18 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "galois/ErrorCode.h"
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/SharedMemSys.h"
-#include "galois/Threads.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
+#include "katana/ErrorCode.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/SharedMemSys.h"
+#include "katana/Threads.h"
 
-using galois::ImportData;
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::PropertyKey;
+using katana::ImportData;
+using katana::ImportDataType;
+using katana::LabelRule;
+using katana::PropertyKey;
 
 namespace {
 
@@ -46,7 +46,7 @@ ParseStringList(std::string raw_list) {
     raw_list.erase(0, 1);
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "The provided list was not formatted like neo4j, returning null");
     return std::nullopt;
   }
@@ -129,7 +129,7 @@ ParseStringList(std::string raw_list) {
           elem.append("\xFF");
           break;
         default:
-          GALOIS_LOG_WARN(
+          KATANA_LOG_WARN(
               "Unhandled escape character: {}", elem_rough[next_slash + 1]);
         }
 
@@ -154,7 +154,7 @@ ParseNumberList(std::string raw_list) {
     raw_list.erase(0, 1);
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "The provided list was not formatted like neo4j, "
         "returning empty vector");
     return std::nullopt;
@@ -179,7 +179,7 @@ ParseBooleanList(std::string raw_list) {
     raw_list.erase(0, 1);
     raw_list.erase(raw_list.length() - 1, 1);
   } else {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "The provided list was not formatted like neo4j, "
         "returning empty vector");
     return std::nullopt;
@@ -300,7 +300,7 @@ ProcessData(xmlTextReaderPtr reader) {
       if (xmlStrEqual(name, BAD_CAST "key")) {
         key = std::string((const char*)value);
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Attribute on node: {}, was not recognized",
             std::string((const char*)name));
       }
@@ -335,7 +335,7 @@ ProcessData(xmlTextReaderPtr reader) {
  * parses the node from a GraphML file into readable form
  */
 void
-ProcessNode(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
+ProcessNode(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -365,7 +365,7 @@ ProcessNode(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
         boost::split(labels, data, boost::is_any_of(":"));
         extractedLabels = true;
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Attribute on node: {}, with value {} was not recognized",
             std::string((const char*)name), std::string((const char*)value));
       }
@@ -423,7 +423,7 @@ ProcessNode(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
           }
         }
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "In node found element: {}, which was ignored",
             std::string((const char*)name));
       }
@@ -450,7 +450,7 @@ ProcessNode(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
  * parses the edge from a GraphML file into readable form
  */
 void
-ProcessEdge(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
+ProcessEdge(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
 
   int ret = xmlTextReaderMoveToNextAttribute(reader);
@@ -478,7 +478,7 @@ ProcessEdge(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
         type = std::string((const char*)value);
         extracted_type = true;
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Attribute on edge: {}, with value {} was not recognized",
             std::string((const char*)name), std::string((const char*)value));
       }
@@ -531,7 +531,7 @@ ProcessEdge(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
           }
         }
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "In edge found element: {}, which was ignored",
             std::string((const char*)name));
       }
@@ -555,7 +555,7 @@ ProcessEdge(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
  * parses the graph structure from a GraphML file into Galois format
  */
 void
-ProcessGraph(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
+ProcessGraph(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
   auto minimum_depth = xmlTextReaderDepth(reader);
   int ret = xmlTextReaderRead(reader);
 
@@ -581,7 +581,7 @@ ProcessGraph(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
         // if elt is an "egde" xml node read it in
         ProcessEdge(reader, builder);
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Found element: {}, which was ignored",
             std::string((const char*)name));
       }
@@ -600,14 +600,14 @@ ProcessGraph(xmlTextReaderPtr reader, galois::PropertyGraphBuilder* builder) {
 /// \param infilename path to source graphml file
 /// \returns arrow tables of node properties/labels, edge properties/types, and
 /// csr topology
-galois::GraphComponents
-galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
+katana::GraphComponents
+katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
   xmlTextReaderPtr reader;
   int ret = 0;
 
-  galois::PropertyGraphBuilder builder{chunk_size};
+  katana::PropertyGraphBuilder builder{chunk_size};
 
-  galois::setActiveThreads(1000);
+  katana::setActiveThreads(1000);
   bool finishedGraph = false;
   std::cout << "Start converting GraphML file: " << infilename << "\n";
 
@@ -629,7 +629,7 @@ galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
       if (xmlTextReaderNodeType(reader) == 1) {
         // if elt is a "key" xml node read it in
         if (xmlStrEqual(name, BAD_CAST "key")) {
-          PropertyKey key = galois::ProcessKey(reader);
+          PropertyKey key = katana::ProcessKey(reader);
           if (!key.id.empty() && key.id != std::string("label") &&
               key.id != std::string("IGNORE")) {
             if (key.for_node) {
@@ -650,7 +650,7 @@ galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
     }
     xmlFreeTextReader(reader);
     if (ret < 0) {
-      GALOIS_LOG_FATAL(
+      KATANA_LOG_FATAL(
           "Failed to parse {}, incorrect xml format\n"
           "Please verify there are no illegal characters in the GraphML file\n"
           "To remove invalid characters use: \"sed -i $'s/[^[:print:]\t]//g' "
@@ -658,7 +658,7 @@ galois::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
           infilename, infilename);
     }
   } else {
-    GALOIS_LOG_FATAL("Unable to open {}", infilename);
+    KATANA_LOG_FATAL("Unable to open {}", infilename);
   }
   return builder.Finish();
 }

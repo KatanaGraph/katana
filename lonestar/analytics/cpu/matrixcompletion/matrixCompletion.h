@@ -23,7 +23,7 @@
 #include <cassert>
 #include <string>
 
-#include <galois/gstl.h>
+#include <katana/gstl.h>
 
 #include "llvm/Support/CommandLine.h"
 

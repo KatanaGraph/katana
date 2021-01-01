@@ -1,6 +1,6 @@
 add_executable(betweennesscentrality-cpu BetweennessCentrality.cpp)
 add_dependencies(apps betweennesscentrality-cpu)
-target_link_libraries(betweennesscentrality-cpu PRIVATE Galois::shmem lonestar)
+target_link_libraries(betweennesscentrality-cpu PRIVATE Katana::galois lonestar)
 install(TARGETS betweennesscentrality-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 add_test_scale(small-level betweennesscentrality-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -algo=Level -numOfSources=4 )
 #add_test_scale(small-async betweennesscentrality-cpu -algo=Async -numOfSources=4 "${BASEINPUT}/propertygraphs/rmat15")

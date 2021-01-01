@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
-#define GALOIS_LIBGALOIS_GALOIS_PROPERTIES_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROPERTIES_H_
+#define KATANA_LIBGALOIS_KATANA_PROPERTIES_H_
 
 #include <cassert>
 #include <string_view>
@@ -10,12 +10,12 @@
 #include <arrow/type_fwd.h>
 #include <arrow/type_traits.h>
 
-#include "galois/ErrorCode.h"
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "galois/Traits.h"
+#include "katana/ErrorCode.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
+#include "katana/Traits.h"
 
-namespace galois {
+namespace katana {
 
 /// A property is a value associated with a node or edge of a graph. Properies
 /// are stored in arrow::Arrays, and the arrow library collects multiple
@@ -42,7 +42,7 @@ namespace galois {
 ///
 ///   struct Rank {
 ///     using ArrowType = arrow::Int32;
-///     using ViewType = galois::PODPropertyView<int32_t>;
+///     using ViewType = katana::PODPropertyView<int32_t>;
 ///   };
 ///
 /// The other way would be to partially specialize PropertyArrowType,
@@ -92,7 +92,7 @@ struct PropertyViewTuple;
 
 template <typename... Args>
 struct PropertyViewTuple<std::tuple<Args...>> {
-  using type = std::tuple<galois::PropertyViewType<Args>...>;
+  using type = std::tuple<katana::PropertyViewType<Args>...>;
 };
 
 template <typename>
@@ -101,7 +101,7 @@ struct PropertyArrowTuple;
 template <typename... Args>
 struct PropertyArrowTuple<std::tuple<Args...>> {
   using type = std::tuple<
-      typename arrow::TypeTraits<galois::PropertyArrowType<Args>>::CType...>;
+      typename arrow::TypeTraits<katana::PropertyArrowType<Args>>::CType...>;
 };
 
 }  // namespace internal
@@ -133,7 +133,7 @@ ConstructPropertyView(arrow::Array* array) {
   auto* t = dynamic_cast<ArrowArrayType*>(array);
 
   if (!t) {
-    return galois::ErrorCode::TypeError;
+    return katana::ErrorCode::TypeError;
   }
 
   return ViewType::Make(*t);
@@ -224,12 +224,12 @@ public:
         sizeof(typename arrow::NumericArray<U>::value_type) == sizeof(T),
         "incompatible types");
     if (array.offset() < 0) {
-      GALOIS_LOG_DEBUG("arrow error: Offset not supported");
+      KATANA_LOG_DEBUG("arrow error: Offset not supported");
       return ErrorCode::ArrowError;
     }
     if (array.data()->buffers.size() <= 1 ||
         !array.data()->buffers[1]->is_mutable()) {
-      GALOIS_LOG_DEBUG("arrow error: immutable buffers not supported");
+      KATANA_LOG_DEBUG("arrow error: immutable buffers not supported");
       return ErrorCode::ArrowError;
     }
     return PODPropertyView(
@@ -241,18 +241,18 @@ public:
   static Result<PODPropertyView> Make(
       const arrow::FixedSizeBinaryArray& array) {
     if (array.byte_width() != sizeof(T)) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "arrow error: bad byte width of data: {} != {}", array.byte_width(),
           sizeof(T));
       return ErrorCode::ArrowError;
     }
     if (array.offset() < 0) {
-      GALOIS_LOG_DEBUG("arrow error: Offset not supported");
+      KATANA_LOG_DEBUG("arrow error: Offset not supported");
       return ErrorCode::ArrowError;
     }
     if (array.data()->buffers.size() <= 1 ||
         !array.data()->buffers[1]->is_mutable()) {
-      GALOIS_LOG_DEBUG("arrow error: immutable buffers not supported");
+      KATANA_LOG_DEBUG("arrow error: immutable buffers not supported");
       return ErrorCode::ArrowError;
     }
     return PODPropertyView(
@@ -393,17 +393,17 @@ AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
   constexpr auto num_tuple_elem = std::tuple_size<Props>::value;
   static_assert(num_tuple_elem != 0);
   std::shared_ptr<arrow::Table> table;
-  std::vector<galois::PropertyArrowTuple<Props>> rows(num_rows);
-  GALOIS_ASSERT(names.size() == num_tuple_elem);
+  std::vector<katana::PropertyArrowTuple<Props>> rows(num_rows);
+  KATANA_ASSERT(names.size() == num_tuple_elem);
   // TODO(gill): Replace this with NUMA allocated buffers.
   if (auto r = arrow::stl::TableFromTupleRange(
           arrow::default_memory_pool(), std::move(rows), names, &table);
       !r.ok()) {
-    GALOIS_LOG_DEBUG("arrow error: {}", r);
-    return galois::ErrorCode::ArrowError;
+    KATANA_LOG_DEBUG("arrow error: {}", r);
+    return katana::ErrorCode::ArrowError;
   }
   return table;
 }
 
-}  // namespace galois
+}  // namespace katana
 #endif

@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_BARRIER_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_BARRIER_H_
+#ifndef KATANA_LIBGALOIS_KATANA_BARRIER_H_
+#define KATANA_LIBGALOIS_KATANA_BARRIER_H_
 
 #include <memory>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
-class GALOIS_EXPORT Barrier {
+class KATANA_EXPORT Barrier {
 public:
   Barrier() = default;
   virtual ~Barrier();
@@ -59,16 +59,16 @@ public:
  * barrier to the new number of active threads. If that may
  * happen, use {@link CreateSimpleBarrier()} instead.
  */
-GALOIS_EXPORT Barrier& GetBarrier(unsigned active_threads);
+KATANA_EXPORT Barrier& GetBarrier(unsigned active_threads);
 
 /**
  * Create specific types of barriers.  For benchmarking only.  Use
  * GetBarrier() for all production code
  */
-GALOIS_EXPORT std::unique_ptr<Barrier> CreateMCSBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> CreateTopoBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> CreateCountingBarrier(unsigned);
-GALOIS_EXPORT std::unique_ptr<Barrier> CreateDisseminationBarrier(unsigned);
+KATANA_EXPORT std::unique_ptr<Barrier> CreateMCSBarrier(unsigned);
+KATANA_EXPORT std::unique_ptr<Barrier> CreateTopoBarrier(unsigned);
+KATANA_EXPORT std::unique_ptr<Barrier> CreateCountingBarrier(unsigned);
+KATANA_EXPORT std::unique_ptr<Barrier> CreateDisseminationBarrier(unsigned);
 
 /**
  * Creates a new simple barrier. This barrier is not designed to be fast but
@@ -77,7 +77,7 @@ GALOIS_EXPORT std::unique_ptr<Barrier> CreateDisseminationBarrier(unsigned);
  * race in GetBarrier().  Client is responsible for deallocating returned
  * barrier.
  */
-GALOIS_EXPORT std::unique_ptr<Barrier> CreateSimpleBarrier(unsigned);
+KATANA_EXPORT std::unique_ptr<Barrier> CreateSimpleBarrier(unsigned);
 
 namespace internal {
 
@@ -85,6 +85,6 @@ void SetBarrier(Barrier* barrier);
 
 }  // namespace internal
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

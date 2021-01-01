@@ -17,16 +17,16 @@ For thread-safe memory allocation, these functions often use a single lock on th
 
 Keeping these design goals in mind, in Galois, we have designed scalable parallel allocators for some of the common usage patterns. Some of them are described below.
 
-@section galois_alloc Memory Allocators in Galois
+@section katana_alloc Memory Allocators in Galois
 
 @subsection fixed-size-alloc Fixed Size Allocator
 
-A common usage pattern is to allocate objects of the same type inside a parallel loop. Such an allocator can be implemented easily in a scalable manner. Galois provides {@link galois::FixedSizeAllocator}, which takes a template parameter as the type of object to be allocated. It only supports objects of fixed size type and always allocates the chunk of memory required to store one element of that size. Therefore, it cannot be used with STL data structures like std::vector and std::deque, which may need to allocate variable sized chunks of memory in order to keep all the elements contiguous in memory.
+A common usage pattern is to allocate objects of the same type inside a parallel loop. Such an allocator can be implemented easily in a scalable manner. Galois provides {@link katana::FixedSizeAllocator}, which takes a template parameter as the type of object to be allocated. It only supports objects of fixed size type and always allocates the chunk of memory required to store one element of that size. Therefore, it cannot be used with STL data structures like std::vector and std::deque, which may need to allocate variable sized chunks of memory in order to keep all the elements contiguous in memory.
 
-galois::FixedSizeAllocator can be used to allocate elements of STL data structures like std::set, and std::list, etc., which always allocate objects of fixed size type and elements are not required to be contiguous in memory. The source for {@link galois::ThreadSafeOrderedSet} shows how a fixed size allocator can be passed to std::set. Below is an example of using galois::FixedSizeAllocator:
+katana::FixedSizeAllocator can be used to allocate elements of STL data structures like std::set, and std::list, etc., which always allocate objects of fixed size type and elements are not required to be contiguous in memory. The source for {@link katana::ThreadSafeOrderedSet} shows how a fixed size allocator can be passed to std::set. Below is an example of using katana::FixedSizeAllocator:
 
 @code
-using SetInt = std::set<int, std::less<int>, galois::FixedSizeAllocator<int>>;
+using SetInt = std::set<int, std::less<int>, katana::FixedSizeAllocator<int>>;
 SetInt s;
 // use of s afterwards
 @endcode
@@ -34,18 +34,18 @@ SetInt s;
 
 @subsection per-iter-alloc Per-iteration Allocator
 
-Per-iteration allocator {@link galois::PerIterAllocTy} can be used when dynamic data structures are defined inside the parallel loop and live for only one iteration of the loop. This allocator can be used inside the operators for galois::for_each. It can be used with STL data structures, e.g., std::vector and std::set etc., and supports variable size allocations.
+Per-iteration allocator {@link katana::PerIterAllocTy} can be used when dynamic data structures are defined inside the parallel loop and live for only one iteration of the loop. This allocator can be used inside the operators for katana::for_each. It can be used with STL data structures, e.g., std::vector and std::set etc., and supports variable size allocations.
 
-To use per-iteration allocator, you need to pass galois::per_iter_alloc to galois::for_each. Here is an example of how to use it:
+To use per-iteration allocator, you need to pass katana::per_iter_alloc to katana::for_each. Here is an example of how to use it:
 @code
 using Graph = /* graph type definition */;
 using GNode = Graph::GraphNode;
 Graph g;
-galois::for_each(
-    galois::iterate(graph),
+katana::for_each(
+    katana::iterate(graph),
     [&] (GNode n, auto& ctx) {
       // syntax for conforming to STL allocator interface
-      using Alloc = galois::PerIterAllocTy::rebind<GNode>::other;
+      using Alloc = katana::PerIterAllocTy::rebind<GNode>::other;
 
       // fast, scalable allocation for v, a per-iteration vector
       // get per-iteration allocator from ctx to initialize the v
@@ -55,19 +55,19 @@ galois::for_each(
       std::copy(d.begin(), d.end(), std::back_inserter(v));
       // use of v below
     }
-    , galois::per_iter_alloc()
-    , galois::loopname("per_iter_alloc_example")
+    , katana::per_iter_alloc()
+    , katana::loopname("per_iter_alloc_example")
 );
 @endcode
 
 @subsection Pow2allocator Power-of-2 Allocator
 
-Power-of-2 allocator {@link galois::Pow2VarSizeAlloc} is a scalable allocator for dynamic data structures that allocate objects with variable size. This is a suitable allocator for STL data structures such as std::vector, std::deque, etc. It allocates blocks of sizes in powers of 2 so that insertion operations on containers like std::vector get amortized over time.
+Power-of-2 allocator {@link katana::Pow2VarSizeAlloc} is a scalable allocator for dynamic data structures that allocate objects with variable size. This is a suitable allocator for STL data structures such as std::vector, std::deque, etc. It allocates blocks of sizes in powers of 2 so that insertion operations on containers like std::vector get amortized over time.
 
 The following snippet shows how to define and use a std::vector of integers using power-of-2 allocator:
 
 @code
-using VectorInt = std::vector<int, galois::Pow2VarSizeAlloc<int>>;
+using VectorInt = std::vector<int, katana::Pow2VarSizeAlloc<int>>;
 VectorInt v;
 // use of v afterwards
 @endcode
@@ -83,31 +83,31 @@ The allocators in Galois are implemented in a modular fashion. An allocator can 
 
 Several heap implementations are just wrappers around another heap implementation to modify its interface in some way. In the following we list a few of them and show an example:
 
-- {@link galois::runtime::SystemHeap} defines the basic heap implementation used by Galois allocators, and is the source of all heap memory. It is implemented as a list of pages stored by each thread.
+- {@link katana::SystemHeap} defines the basic heap implementation used by Galois allocators, and is the source of all heap memory. It is implemented as a list of pages stored by each thread.
 
-- {@link galois::runtime::FreeListHeap} maintains a linked list of blocks of size *B*, where *B* is the size of the objects being allocated. This is a fixed size heap, and is a wrapper around a source heap implementation that is passed as a template argument.
+- {@link katana::FreeListHeap} maintains a linked list of blocks of size *B*, where *B* is the size of the objects being allocated. This is a fixed size heap, and is a wrapper around a source heap implementation that is passed as a template argument.
 
-- {@link galois::runtime::BumpHeap} allows allocating different size objects within a block of memory by simply moving a pointer within the block. The size of the block is determined by the source heap implementation provided as a template argument. The memory within a block cannot be freed; however, blocks are freed only at the end of the program when the BumpHeap's destructor is called.
+- {@link katana::BumpHeap} allows allocating different size objects within a block of memory by simply moving a pointer within the block. The size of the block is determined by the source heap implementation provided as a template argument. The memory within a block cannot be freed; however, blocks are freed only at the end of the program when the BumpHeap's destructor is called.
 
-- {@link galois::runtime::ThreadPrivateHeap} creates a per-thread instance of a source heap provided as a template argument. This is used for defining some of the parallel allocators.
+- {@link katana::ThreadPrivateHeap} creates a per-thread instance of a source heap provided as a template argument. This is used for defining some of the parallel allocators.
 
 @subsection build-custom-alloc Building Custom Allocators
 
-Per-iteration allocator, from {@link include/galois/Mem.h}, shows how heap implementations can be combined together to form useful allocators:
-@snippet include/galois/Mem.h PerIterAllocTy example
+Per-iteration allocator, from {@link include/katana/Mem.h}, shows how heap implementations can be combined together to form useful allocators:
+@snippet include/katana/Mem.h PerIterAllocTy example
 
-Another example, from {@link include/galois/runtime/Allocators.h}, shows how the Fixed Size allocator is defined:
-@snippet include/galois/runtime/Allocators.h FixedSizeAllocator example
+Another example, from {@link include/katana/Allocators.h}, shows how the Fixed Size allocator is defined:
+@snippet include/katana/Allocators.h FixedSizeAllocator example
 
 @subsection plugin-other-alloc Plugging in 3rd Party Allocators
 
-{@link galois::runtime::ExternalHeapAllocator} is a wrapper class that can be used to wrap any third-party heap implementation, and make it use-able by Galois and STL data structures. It takes the type-name of the heap implementation as a
+{@link katana::ExternalHeapAllocator} is a wrapper class that can be used to wrap any third-party heap implementation, and make it use-able by Galois and STL data structures. It takes the type-name of the heap implementation as a
 template parameter and a reference to it for instantiating the allocator object.
 
-As an example, we can have a C++ memory allocator by wrapping \b malloc and \b free, from C, as follows (see file {@link include/galois/runtime/Allocators.h}):
-@snippet include/galois/runtime/Allocators.h Example Third Party Allocator
+As an example, we can have a C++ memory allocator by wrapping \b malloc and \b free, from C, as follows (see file {@link include/katana/Allocators.h}):
+@snippet include/katana/Allocators.h Example Third Party Allocator
 
-Now we can wrap MallocHeap with galois::runtime::ExternalHeapAllocator, and use the wrapped allocator with STL containers. Below shows an example from {@link lonestar/tutorial_examples/ThirdPartyMalloc.cpp}:
+Now we can wrap MallocHeap with katana::ExternalHeapAllocator, and use the wrapped allocator with STL containers. Below shows an example from {@link lonestar/tutorial_examples/ThirdPartyMalloc.cpp}:
 @snippet lonestar/tutorial_examples/ThirdPartyMalloc.cpp heap wrapping example
 
 <br>

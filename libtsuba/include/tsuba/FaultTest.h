@@ -1,10 +1,10 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_FAULTTEST_H_
-#define GALOIS_LIBTSUBA_TSUBA_FAULTTEST_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_FAULTTEST_H_
+#define KATANA_LIBTSUBA_TSUBA_FAULTTEST_H_
 
 #include <cstdint>
 #include <unordered_map>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 namespace tsuba::internal {
 
@@ -16,11 +16,11 @@ enum class FaultMode {
   UniformOverRun,  // Choose uniform run length 1..run_length (exclusive)
 };
 
-GALOIS_EXPORT void FaultTestInit(
+KATANA_EXPORT void FaultTestInit(
     FaultMode mode = FaultMode::None, float independent_prob = 0.0f,
     uint64_t run_length = UINT64_C(0));
 // LOG_VERBOSE stats
-GALOIS_EXPORT void FaultTestReport();
+KATANA_EXPORT void FaultTestReport();
 
 // PullThePlug (virtually) Compile this out if NDEBUG?
 #define TSUBA_PTP(...)                                                         \
@@ -28,7 +28,7 @@ GALOIS_EXPORT void FaultTestReport();
     ::tsuba::internal::PtP(__FILE__, __LINE__, ##__VA_ARGS__);                 \
   } while (0)
 
-GALOIS_EXPORT void PtP(
+KATANA_EXPORT void PtP(
     const char* file, int line,
     FaultSensitivity sensitivity = FaultSensitivity::Normal);
 

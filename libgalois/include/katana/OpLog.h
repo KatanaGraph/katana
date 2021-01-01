@@ -1,10 +1,10 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_OPLOG_H_
-#define GALOIS_LIBGALOIS_GALOIS_OPLOG_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OPLOG_H_
+#define KATANA_LIBGALOIS_KATANA_OPLOG_H_
 
-#include "galois/BuildGraph.h"
-#include "galois/Uri.h"
+#include "katana/BuildGraph.h"
+#include "katana/Uri.h"
 
-namespace galois {
+namespace katana {
 
 // https://neo4j.com/docs/cypher-manual/current/clauses/create/
 enum class OpTypes {
@@ -19,19 +19,19 @@ enum class OpTypes {
   kOpEdgePropVal,
 };
 
-class GALOIS_EXPORT Operation {
+class KATANA_EXPORT Operation {
   OpTypes opcode_{0};
-  galois::PropertyKey property_key_{
-      "", false, false, "", galois::ImportDataType::kUnsupported, false};
-  galois::ImportData data_{galois::ImportDataType::kUnsupported, false};
+  katana::PropertyKey property_key_{
+      "", false, false, "", katana::ImportDataType::kUnsupported, false};
+  katana::ImportData data_{katana::ImportDataType::kUnsupported, false};
 
 public:
   /// For everything except kOpNodePropVal, kOpEdgePropVal
-  Operation(OpTypes opcode, galois::PropertyKey property_key)
+  Operation(OpTypes opcode, katana::PropertyKey property_key)
       : opcode_(opcode), property_key_(property_key) {}
   /// For kOpNodePropVal, kOpEdgePropVal
   Operation(
-      OpTypes opcode, galois::PropertyKey property_key, galois::ImportData data)
+      OpTypes opcode, katana::PropertyKey property_key, katana::ImportData data)
       : opcode_(opcode), property_key_(property_key), data_(data) {}
 
   OpTypes opcode() const { return opcode_; }
@@ -41,17 +41,17 @@ public:
     }
     return std::stoul(property_key_.id, nullptr, 0);
   }
-  galois::PropertyKey key() const { return property_key_; }
-  galois::ImportData data() const { return data_; }
+  katana::PropertyKey key() const { return property_key_; }
+  katana::ImportData data() const { return data_; }
 };
 
-class GALOIS_EXPORT OpLog {
+class KATANA_EXPORT OpLog {
   std::vector<Operation> log_;
 
 public:
   OpLog() = default;
   /// Read/write operation log to URI
-  OpLog(const galois::Uri& uri);
+  OpLog(const katana::Uri& uri);
   /// Read an operation at the given index
   Operation GetOp(uint64_t idx) const;
   /// Write an operation, return the log offset that was written
@@ -71,7 +71,7 @@ public:
 ///
 /// The ingest process takes a GraphUpdate object and its log and merges it into an existing
 /// graph.
-class GALOIS_EXPORT GraphUpdate {
+class KATANA_EXPORT GraphUpdate {
   // A vector of node and edge property updates, one per property
   // Each property update has an entry for each local node/edge.
   // Each update is an index into an OpLog
@@ -89,7 +89,7 @@ class GALOIS_EXPORT GraphUpdate {
     uint32_t index = names.size();
     names.emplace_back(name);
     std::vector<uint64_t> initial(num);
-    GALOIS_LOG_ASSERT((uint64_t)index == prop.size());
+    KATANA_LOG_ASSERT((uint64_t)index == prop.size());
     prop.emplace_back(initial);
     return index;
   }
@@ -98,12 +98,12 @@ class GALOIS_EXPORT GraphUpdate {
       uint32_t pnum, uint64_t index, uint64_t op_log_index,
       std::vector<std::vector<uint64_t>>& prop) {
     if (pnum >= prop.size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property number {} is out of bounds ({})", pnum, prop.size());
       return;
     }
     if (index >= prop[pnum].size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property index {} is out of bounds ({})", index, prop[pnum].size());
       return;
     }
@@ -127,7 +127,7 @@ public:
   }
   std::string GetNName(uint32_t pnum) {
     if (pnum >= nprop_names_.size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property number {} is out of bounds ({})", pnum,
           nprop_names_.size());
       return "";
@@ -136,7 +136,7 @@ public:
   }
   std::vector<uint64_t> GetNIndices(uint32_t pnum) {
     if (pnum >= nprop_names_.size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property number {} is out of bounds ({})", pnum,
           nprop_names_.size());
       return {};
@@ -145,7 +145,7 @@ public:
   }
   std::string GetEName(uint32_t pnum) {
     if (pnum >= eprop_names_.size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property number {} is out of bounds ({})", pnum,
           eprop_names_.size());
       return "";
@@ -154,7 +154,7 @@ public:
   }
   std::vector<uint64_t> GetEIndices(uint32_t pnum) {
     if (pnum >= eprop_names_.size()) {
-      GALOIS_LOG_DEBUG(
+      KATANA_LOG_DEBUG(
           "Property number {} is out of bounds ({})", pnum,
           eprop_names_.size());
       return {};
@@ -170,5 +170,5 @@ public:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

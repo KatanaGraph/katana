@@ -1,26 +1,26 @@
-# Config file for the Galois package
+# Config file for the Katana package
 #
 # It exports the following targets:
-#   Galois::shmem
-#   Galois::dist
+#   Katana::galois
+#   Katana::dist
 #   ...
-#   (see GaloisTargets.cmake for all of them)
+#   (see KatanaTargets.cmake for all of them)
 #
 # It defines the following variables for legacy importing:
-#   Galois_INCLUDE_DIRS
-#   Galois_LIBRARIES
-#   Galois_LIBRARY_DIRS
-#   Galois_BIN_DIRS
+#   Katana_INCLUDE_DIRS
+#   Katana_LIBRARIES
+#   Katana_LIBRARY_DIRS
+#   Katana_BIN_DIRS
 include(CMakeFindDependencyMacro)
 
 @PACKAGE_INIT@
 
-set_and_check(Galois_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
-set_and_check(Galois_LIBRARY_DIRS "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
-set_and_check(Galois_BIN_DIRS "@PACKAGE_CMAKE_INSTALL_BINDIR@")
-set(Galois_LIBRARIES galois_shmem)
+set_and_check(Katana_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set_and_check(Katana_LIBRARY_DIRS "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
+set_and_check(Katana_BIN_DIRS "@PACKAGE_CMAKE_INSTALL_BINDIR@")
+set(Katana_LIBRARIES katana_galois)
 
-get_filename_component(GALOIS_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(KATANA_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
 ###### dependencies ######
 
@@ -32,7 +32,7 @@ find_dependency(Backward REQUIRED)
 if (@NUMA_FOUND@)
   # This is effectively `find_dependency(NUMA)` however amp could not find a
   # clean way to install this cmake file to make that work.
-  include("${GALOIS_CMAKE_DIR}/FindNUMA.cmake")
+  include("${KATANA_CMAKE_DIR}/FindNUMA.cmake")
 endif()
 
 find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
@@ -44,16 +44,16 @@ find_dependency(Arrow REQUIRED)
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
 find_dependency(Parquet HINTS ${ARROW_CONFIG_DIR})
 
-if (@GALOIS_ENABLE_VTUNE@)
+if (@KATANA_ENABLE_VTUNE@)
   find_dependency(VTune REQUIRED)
 endif()
 
-if (@GALOIS_ENABLE_PAPI@)
+if (@KATANA_ENABLE_PAPI@)
   find_dependency(PAPI REQUIRED)
 endif()
 
-if (NOT Galois::shmem)
-  include("${GALOIS_CMAKE_DIR}/GaloisTargets.cmake")
+if (NOT Katana::galois)
+  include("${KATANA_CMAKE_DIR}/KatanaTargets.cmake")
 endif()
 
 check_required_components(Boost)

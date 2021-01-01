@@ -4,13 +4,13 @@ include(GNUInstallDirs)
 include(FetchContent)
 include(GitHeadSHA)
 
-file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../../config/version.txt GALOIS_VERSION)
-string(REGEX REPLACE "[ \t\n]" "" GALOIS_VERSION ${GALOIS_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" GALOIS_VERSION_MAJOR ${GALOIS_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" GALOIS_VERSION_MINOR ${GALOIS_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" GALOIS_VERSION_PATCH ${GALOIS_VERSION})
-set(GALOIS_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
-set(GALOIS_GIT_SHA "${GIT_HEAD_SHA}")
+file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../../config/version.txt KATANA_VERSION)
+string(REGEX REPLACE "[ \t\n]" "" KATANA_VERSION ${KATANA_VERSION})
+string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" KATANA_VERSION_MAJOR ${KATANA_VERSION})
+string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" KATANA_VERSION_MINOR ${KATANA_VERSION})
+string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" KATANA_VERSION_PATCH ${KATANA_VERSION})
+set(KATANA_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
+set(KATANA_GIT_SHA "${GIT_HEAD_SHA}")
 
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
@@ -21,18 +21,18 @@ endif ()
 
 ###### Options (alternatively pass as options to cmake -DName=Value) ######
 ###### General features ######
-set(GALOIS_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
-set(GALOIS_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
-set(GALOIS_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
-set(GALOIS_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
+set(KATANA_ENABLE_PAPI OFF CACHE BOOL "Use PAPI counters for profiling")
+set(KATANA_ENABLE_VTUNE OFF CACHE BOOL "Use VTune for profiling")
+set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fail")
+set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
-set(GALOIS_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to atttempt to optimize for; use the first valid configuration ('none' to disable)")
-set(GALOIS_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
+set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to atttempt to optimize for; use the first valid configuration ('none' to disable)")
+set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
 # Putting this here is mostly just a placeholder so people know it's an option.
-# Currently this is really only intended to change anything for the libgalois_shmem target.
+# Currently this is really only intended to change anything for the libkatana_galois target.
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
@@ -42,29 +42,29 @@ set(BUILD_TESTING ON CACHE BOOL "Build tests")
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
 
 ###### Developer features ######
-set(GALOIS_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
-set(GALOIS_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
-set(GALOIS_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
-set(GALOIS_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical core)")
-set(GALOIS_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
-# GALOIS_FORCE_NON_STATIC is a transitional flag intended to turn symbol export
+set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
+set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
+set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
+set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical core)")
+set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
+# KATANA_FORCE_NON_STATIC is a transitional flag intended to turn symbol export
 # errors into linker errors while the codebase transitions to hidden visibility
 # by default.
-set(GALOIS_FORCE_NON_STATIC OFF CACHE BOOL "Allow libraries intended to be used statically to be built as shared if BUILD_SHARED_LIBS=ON")
-mark_as_advanced(GALOIS_FORCE_NON_STATIC)
+set(KATANA_FORCE_NON_STATIC OFF CACHE BOOL "Allow libraries intended to be used statically to be built as shared if BUILD_SHARED_LIBS=ON")
+mark_as_advanced(KATANA_FORCE_NON_STATIC)
 
-if (NOT GALOIS_NUM_TEST_THREADS)
-  cmake_host_system_information(RESULT GALOIS_NUM_TEST_THREADS QUERY NUMBER_OF_PHYSICAL_CORES)
+if (NOT KATANA_NUM_TEST_THREADS)
+  cmake_host_system_information(RESULT KATANA_NUM_TEST_THREADS QUERY NUMBER_OF_PHYSICAL_CORES)
 endif ()
-if (GALOIS_NUM_TEST_THREADS LESS_EQUAL 0)
-  set(GALOIS_NUM_TEST_THREADS 1)
+if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
+  set(KATANA_NUM_TEST_THREADS 1)
 endif ()
 
-if (NOT GALOIS_NUM_TEST_GPUS)
-  if (GALOIS_ENABLE_GPU)
-    set(GALOIS_NUM_TEST_GPUS 1)
+if (NOT KATANA_NUM_TEST_GPUS)
+  if (KATANA_ENABLE_GPU)
+    set(KATANA_NUM_TEST_GPUS 1)
   else ()
-    set(GALOIS_NUM_TEST_GPUS 0)
+    set(KATANA_NUM_TEST_GPUS 0)
   endif ()
 endif ()
 
@@ -87,7 +87,7 @@ endif ()
 
 find_package(PkgConfig REQUIRED)
 
-if (GALOIS_AUTO_CONAN)
+if (KATANA_AUTO_CONAN)
   include(${CMAKE_CURRENT_LIST_DIR}/conan.cmake)
   # config/conanfile.py is relative to the current project, so it will be either enterprise or open depending on who
   # includes us.
@@ -191,16 +191,16 @@ endif ()
 
 ###### Configure features ######
 
-if (GALOIS_ENABLE_VTUNE)
+if (KATANA_ENABLE_VTUNE)
   find_package(VTune REQUIRED PATHS /opt/intel/vtune_amplifier)
   include_directories(${VTune_INCLUDE_DIRS})
-  add_definitions(-DGALOIS_ENABLE_VTUNE)
+  add_definitions(-DKATANA_ENABLE_VTUNE)
 endif ()
 
-if (GALOIS_ENABLE_PAPI)
+if (KATANA_ENABLE_PAPI)
   find_package(PAPI REQUIRED)
   include_directories(${PAPI_INCLUDE_DIRS})
-  add_definitions(-DGALOIS_ENABLE_PAPI)
+  add_definitions(-DKATANA_ENABLE_PAPI)
 endif ()
 
 find_package(NUMA)
@@ -210,7 +210,7 @@ find_package(Threads REQUIRED)
 include(CheckMmap)
 
 include(CheckHugePages)
-if (NOT HAVE_HUGEPAGES AND GALOIS_STRICT_CONFIG)
+if (NOT HAVE_HUGEPAGES AND KATANA_STRICT_CONFIG)
   message(FATAL_ERROR "Need huge pages")
 endif ()
 
@@ -261,18 +261,18 @@ endif ()
 
 ###### Test Inputs ######
 
-if (GALOIS_GRAPH_LOCATION)
-  set(BASEINPUT "${GALOIS_GRAPH_LOCATION}")
-  set(BASE_VERIFICATION "${GALOIS_GRAPH_LOCATION}")
-  set(GALOIS_ENABLE_INPUTS OFF)
-  message(STATUS "Using graph input and verification logs location ${GALOIS_GRAPH_LOCATION}")
+if (KATANA_GRAPH_LOCATION)
+  set(BASEINPUT "${KATANA_GRAPH_LOCATION}")
+  set(BASE_VERIFICATION "${KATANA_GRAPH_LOCATION}")
+  set(KATANA_ENABLE_INPUTS OFF)
+  message(STATUS "Using graph input and verification logs location ${KATANA_GRAPH_LOCATION}")
 else ()
   set(BASEINPUT "${PROJECT_BINARY_DIR}/inputs/current")
   set(BASE_VERIFICATION "${PROJECT_BINARY_DIR}/inputs/current")
-  set(GALOIS_ENABLE_INPUTS ON)
+  set(KATANA_ENABLE_INPUTS ON)
 endif ()
 # Set a common graph location for any nested projects.
-set(GALOIS_GRAPH_LOCATION ${BASEINPUT})
+set(KATANA_GRAPH_LOCATION ${BASEINPUT})
 
 ###### Documentation ######
 
@@ -297,28 +297,28 @@ list(PREPEND CMAKE_INSTALL_RPATH /usr/local/katana/lib)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/GaloisConfigVersion.cmake
-    VERSION ${GALOIS_VERSION}
+    ${CMAKE_CURRENT_BINARY_DIR}/KatanaConfigVersion.cmake
+    VERSION ${KATANA_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 configure_package_config_file(
-    ${CMAKE_CURRENT_LIST_DIR}/../GaloisConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/GaloisConfig.cmake
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Galois"
+    ${CMAKE_CURRENT_LIST_DIR}/../KatanaConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/KatanaConfig.cmake
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Katana"
     PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR
 )
 install(
     FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfigVersion.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/GaloisConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/KatanaConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/KatanaConfig.cmake"
     "${CMAKE_CURRENT_LIST_DIR}/FindNUMA.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Galois"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Katana"
     COMPONENT dev
 )
 install(
-    EXPORT GaloisTargets
-    NAMESPACE Galois::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Galois"
+    EXPORT KatanaTargets
+    NAMESPACE Katana::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Katana"
     COMPONENT dev
 )
 

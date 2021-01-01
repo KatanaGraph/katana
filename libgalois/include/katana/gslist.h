@@ -17,19 +17,19 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GSLIST_H_
-#define GALOIS_LIBGALOIS_GALOIS_GSLIST_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GSLIST_H_
+#define KATANA_LIBGALOIS_KATANA_GSLIST_H_
 
 #include <type_traits>
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/mpl/if.hpp>
 
-#include "galois/FixedSizeRing.h"
-#include "galois/TwoLevelIterator.h"
-#include "galois/config.h"
+#include "katana/FixedSizeRing.h"
+#include "katana/TwoLevelIterator.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 template <typename T, int ChunkSize, bool Concurrent>
 class gslist_base {
@@ -163,11 +163,11 @@ public:
   //! External allocator must be able to allocate this type
   typedef Block block_type;
   typedef T value_type;
-  typedef galois::TwoLevelIterator<
+  typedef katana::TwoLevelIterator<
       outer_iterator<Block>, typename Block::iterator,
       std::forward_iterator_tag, GetBegin, GetEnd>
       iterator;
-  typedef galois::TwoLevelIterator<
+  typedef katana::TwoLevelIterator<
       outer_iterator<const Block>, typename Block::const_iterator,
       std::forward_iterator_tag, GetBegin, GetEnd>
       const_iterator;
@@ -194,28 +194,28 @@ public:
   }
 
   iterator begin() {
-    return galois::make_two_level_iterator(
+    return katana::make_two_level_iterator(
                outer_iterator<Block>(get_first()),
                outer_iterator<Block>(nullptr))
         .first;
   }
 
   iterator end() {
-    return galois::make_two_level_iterator(
+    return katana::make_two_level_iterator(
                outer_iterator<Block>(get_first()),
                outer_iterator<Block>(nullptr))
         .second;
   }
 
   const_iterator begin() const {
-    return galois::make_two_level_iterator(
+    return katana::make_two_level_iterator(
                outer_iterator<const Block>(get_first()),
                outer_iterator<const Block>(nullptr))
         .first;
   }
 
   const_iterator end() const {
-    return galois::make_two_level_iterator(
+    return katana::make_two_level_iterator(
                outer_iterator<const Block>(get_first()),
                outer_iterator<const Block>(nullptr))
         .second;
@@ -287,5 +287,5 @@ using gslist = gslist_base<T, chunksize, false>;
 template <typename T, unsigned chunksize = 16>
 using concurrent_gslist = gslist_base<T, chunksize, true>;
 
-}  // namespace galois
+}  // namespace katana
 #endif

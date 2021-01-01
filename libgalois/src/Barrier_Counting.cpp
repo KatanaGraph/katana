@@ -17,17 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/CompilerSpecific.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/ThreadPool.h"
 
 namespace {
 
-class CountingBarrier : public galois::substrate::Barrier {
+class CountingBarrier : public katana::Barrier {
   std::atomic<unsigned> count_;
   std::atomic<bool> sense_;
   unsigned num_;
-  std::vector<galois::substrate::CacheLineStorage<bool>> local_sense_;
+  std::vector<katana::CacheLineStorage<bool>> local_sense_;
 
   void _reinit(unsigned val) {
     count_ = num_ = val;
@@ -44,15 +44,14 @@ public:
   void Reinit(unsigned val) override { _reinit(val); }
 
   void Wait() override {
-    bool& lsense =
-        local_sense_.at(galois::substrate::ThreadPool::getTID()).get();
+    bool& lsense = local_sense_.at(katana::ThreadPool::getTID()).get();
     lsense = !lsense;
     if (--count_ == 0) {
       count_ = num_;
       sense_ = lsense;
     } else {
       while (sense_ != lsense) {
-        galois::substrate::asmPause();
+        katana::asmPause();
       }
     }
   }
@@ -62,7 +61,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::CreateCountingBarrier(unsigned active_threads) {
+std::unique_ptr<katana::Barrier>
+katana::CreateCountingBarrier(unsigned active_threads) {
   return std::make_unique<CountingBarrier>(active_threads);
 }

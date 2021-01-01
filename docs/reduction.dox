@@ -12,15 +12,15 @@ Data structures that support reductions in Galois are conceptually divided into 
 
 @section scalar-reduction Scalar Reduction
 
-{@link galois::Reducible} is the base class to help reduce values of
-primitive types or types that are cheap to copy. For example, {@link galois::GAccumulator}
+{@link katana::Reducible} is the base class to help reduce values of
+primitive types or types that are cheap to copy. For example, {@link katana::GAccumulator}
 is for accumulating values of types such as ints.
 
 @subsection scalar-define Defining a Reducer
 
-{@link galois::Reducible} is used to reduce mutliple values of type `T` to a
+{@link katana::Reducible} is used to reduce mutliple values of type `T` to a
 single value. It is optimized for basic types or types that have low overheads
-while copying. {@link galois::Reducible} takes the type `T` of the
+while copying. {@link katana::Reducible} takes the type `T` of the
 values to be reduced and a functor `MergeFunc` as template parameters, where the
 `MergeFunc` conforms to:
 
@@ -30,24 +30,24 @@ values to be reduced and a functor `MergeFunc` as template parameters, where the
 
 @subsection scalar-reduce Reducing Values
 
-{@link galois::Reducible} starts with the default value of type `T`. {@link galois::Reducible::update()} updates the thread local value by applying the reduction operator to the thread local and provided value. After a parallel region, the final value can be retrieved using {@link galois::Reducible::reduce()}. Note, that {@link galois::Reducible::reduce()} can only be used outside of parallel regions (e.g., {@link galois::for_each}).
+{@link katana::Reducible} starts with the default value of type `T`. {@link katana::Reducible::update()} updates the thread local value by applying the reduction operator to the thread local and provided value. After a parallel region, the final value can be retrieved using {@link katana::Reducible::reduce()}. Note, that {@link katana::Reducible::reduce()} can only be used outside of parallel regions (e.g., {@link katana::for_each}).
 
 The following figure shows the inheritance hierarachy of Galois classes that implement support for scalar reduction operations.
 
 \htmlonly <style>div.image img[src="scalar-reductions.png"]{width:700px;}</style> \endhtmlonly
 \image html scalar-reductions.png "Scalar reducers in Galois"
 
-These specialized reducer classes implement support for different types of reduction operations by inheriting from {@link galois::Reducible}:
+These specialized reducer classes implement support for different types of reduction operations by inheriting from {@link katana::Reducible}:
 
-- {@link galois::GAccumulator} is used to accumulate a set of values. It provides {@link galois::GAccumulator::operator+=} and {@link galois::GAccumulator::operator-=} for adding or subtracting values.
-- {@link galois::GReduceMax} is used to reduce to the maximum value. Type `T` has to meet the type requirements of `std::max`.
-- {@link galois::GReduceMin} is used to reduce to the minimum value. Type `T` has to meet the type requirements of `std::min`.
-- {@link galois::GReduceLogicalAnd} is used to perform a `logical and` of the accumulated values. Type `T` has to meet the type requirements of `std::logical_and`.
-- {@link galois::GReduceLogicalOr} is used to perform a `logical or` of the accumulated values. Type `T` has to meet the type requirements of `std::logical_or`.
+- {@link katana::GAccumulator} is used to accumulate a set of values. It provides {@link katana::GAccumulator::operator+=} and {@link katana::GAccumulator::operator-=} for adding or subtracting values.
+- {@link katana::GReduceMax} is used to reduce to the maximum value. Type `T` has to meet the type requirements of `std::max`.
+- {@link katana::GReduceMin} is used to reduce to the minimum value. Type `T` has to meet the type requirements of `std::min`.
+- {@link katana::GReduceLogicalAnd} is used to perform a `logical and` of the accumulated values. Type `T` has to meet the type requirements of `std::logical_and`.
+- {@link katana::GReduceLogicalOr} is used to perform a `logical or` of the accumulated values. Type `T` has to meet the type requirements of `std::logical_or`.
 
 @subsection scalar-example Example
 
-In the following, we show an example of using reduction operations in a common graph analytics application, PageRank. The residual pull-based algorithm for PageRank uses {@link galois::GAccumulator} to keep track of whether a node with outgoing neighbors has new PageRank contribution that needs to be propagated. The PageRank computation can terminate if the reduced value across all nodes in the graph is zero (i.e., implying no more work).
+In the following, we show an example of using reduction operations in a common graph analytics application, PageRank. The residual pull-based algorithm for PageRank uses {@link katana::GAccumulator} to keep track of whether a node with outgoing neighbors has new PageRank contribution that needs to be propagated. The PageRank computation can terminate if the reduced value across all nodes in the graph is zero (i.e., implying no more work).
 
 @snippet lonestar/analytics/cpu/pagerank/PageRank-pull.cpp scalarreduction
 

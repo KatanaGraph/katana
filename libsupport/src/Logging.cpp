@@ -1,9 +1,9 @@
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
 #include <iostream>
 #include <mutex>
 
-#include "galois/Env.h"
+#include "katana/Env.h"
 
 namespace {
 
@@ -26,10 +26,10 @@ PrintString(
 }  // end unnamed namespace
 
 void
-galois::internal::LogString(galois::LogLevel level, const std::string& s) {
+katana::internal::LogString(katana::LogLevel level, const std::string& s) {
   int env_log_level = static_cast<int32_t>(LogLevel::Debug);
-  GetEnv("GALOIS_LOG_LEVEL", &env_log_level);
-  // Only log GALOIS_LOG_LEVEL and above (default, log everything)
+  GetEnv("KATANA_LOG_LEVEL", &env_log_level);
+  // Only log KATANA_LOG_LEVEL and above (default, log everything)
   if (static_cast<int32_t>(level) < env_log_level) {
     return;
   }

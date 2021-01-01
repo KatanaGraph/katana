@@ -17,13 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_NODEREFITERATOR_H_
-#define GALOIS_LIBGALOIS_GALOIS_NODEREFITERATOR_H_
+#ifndef KATANA_LIBGALOIS_KATANA_NODEREFITERATOR_H_
+#define KATANA_LIBGALOIS_KATANA_NODEREFITERATOR_H_
 
 #include "boost/iterator/iterator_adaptor.hpp"
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 //! Modify an iterator so that *it == it
 template <typename Iterator>
@@ -48,6 +48,6 @@ make_no_deref_iterator(Iterator it) {
   return NoDerefIterator<Iterator>(it);
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

@@ -19,7 +19,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/Utils.h"
-#include "galois/SharedMemSys.h"
+#include "katana/SharedMemSys.h"
 #include "llvm/Support/CommandLine.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -100,16 +100,16 @@ static const char* desc =
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer autoAlgoTimer("AutoAlgo_0");
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer autoAlgoTimer("AutoAlgo_0");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   //TODO (gill): Reintroduce AutoAlgo when porting to propertyGraph
   // if (algo == AutoAlgo) {
-  //   galois::graphs::FileGraph degreeGraph;
+  //   katana::FileGraph degreeGraph;
   //   degreeGraph.fromFile(inputFile);
   //   degreeGraph.initNodeDegrees();
   //   autoAlgoTimer.start();
@@ -119,28 +119,28 @@ main(int argc, char** argv) {
   //     algo = Level;
   //   }
   //   autoAlgoTimer.stop();
-  //   galois::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
+  //   katana::gInfo("Choosing ", ALGO_NAMES[algo], " algorithm");
   // }
 
   switch (algo) {
   case Level:
     // see LevelStructs.h
-    galois::gInfo("Running level BC");
+    katana::gInfo("Running level BC");
     DoLevelBC();
     break;
     //TODO (gill) Needs bidirectional graph (CSR_CSC)
     //   case Async:
     //     // see AsyncStructs.h
-    //     galois::gInfo("Running async BC");
+    //     katana::gInfo("Running async BC");
     //     doAsyncBC();
     //     break;
   case Outer:
     // see OuterStructs.h
-    galois::gInfo("Running outer BC");
+    katana::gInfo("Running outer BC");
     DoOuterBC();
     break;
   default:
-    GALOIS_DIE("Unknown BC algorithm type");
+    KATANA_DIE("Unknown BC algorithm type");
   }
 
   totalTime.stop();

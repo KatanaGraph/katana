@@ -1,10 +1,10 @@
 import numpy as np
 import pyarrow
 
-from galois.loops import do_all, do_all_operator
-from galois.property_graph import PropertyGraph
-from galois.timer import StatTimer
-from galois.shmem import setActiveThreads
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
+from katana.timer import StatTimer
+from katana.galois import setActiveThreads
 
 
 @do_all_operator()

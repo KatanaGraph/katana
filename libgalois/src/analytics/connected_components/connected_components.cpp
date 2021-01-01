@@ -17,11 +17,11 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/analytics/connected_components/connected_components.h"
+#include "katana/analytics/connected_components/connected_components.h"
 
-#include "galois/ArrowRandomAccessBuilder.h"
+#include "katana/ArrowRandomAccessBuilder.h"
 
-using namespace galois::analytics;
+using namespace katana::analytics;
 
 const int ConnectedComponentsPlan::kChunkSize = 1;
 
@@ -29,14 +29,14 @@ namespace {
 
 const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
 struct ConnectedComponentsNode
-    : public galois::UnionFindNode<ConnectedComponentsNode> {
+    : public katana::UnionFindNode<ConnectedComponentsNode> {
   using ComponentType = ConnectedComponentsNode*;
 
   ConnectedComponentsNode()
-      : galois::UnionFindNode<ConnectedComponentsNode>(
+      : katana::UnionFindNode<ConnectedComponentsNode>(
             const_cast<ConnectedComponentsNode*>(this)) {}
   ConnectedComponentsNode(const ConnectedComponentsNode& o)
-      : galois::UnionFindNode<ConnectedComponentsNode>(o.m_component) {}
+      : katana::UnionFindNode<ConnectedComponentsNode>(o.m_component) {}
 
   ConnectedComponentsNode& operator=(const ConnectedComponentsNode& o) {
     ConnectedComponentsNode c(o);
@@ -52,25 +52,25 @@ struct ConnectedComponentsSerialAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
   ConnectedComponentsSerialAlgo(ConnectedComponentsPlan& plan) : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -99,22 +99,22 @@ struct ConnectedComponentsLabelPropAlgo {
   using ComponentType = uint64_t;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<ComponentType>::ArrowType;
-    using ViewType = galois::PODPropertyView<std::atomic<ComponentType>>;
+    using ViewType = katana::PODPropertyView<std::atomic<ComponentType>>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  galois::LargeArray<ComponentType> old_component_;
+  katana::LargeArray<ComponentType> old_component_;
   ConnectedComponentsPlan& plan_;
   ConnectedComponentsLabelPropAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     old_component_.allocateBlocked(graph->size());
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node).store(node);
       old_component_[node] = kInfinity;
     });
@@ -123,11 +123,11 @@ struct ConnectedComponentsLabelPropAlgo {
   void Deallocate(Graph*) {}
 
   void operator()(Graph* graph) {
-    galois::GReduceLogicalOr changed;
+    katana::GReduceLogicalOr changed;
     do {
       changed.reset();
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             auto& sdata_current_comp = graph->GetData<NodeComponent>(src);
             auto& sdata_old_comp = old_component_[src];
@@ -140,12 +140,12 @@ struct ConnectedComponentsLabelPropAlgo {
                 auto dest = graph->GetEdgeDest(e);
                 auto& ddata_current_comp = graph->GetData<NodeComponent>(dest);
                 ComponentType label_new = sdata_current_comp;
-                galois::atomicMin(ddata_current_comp, label_new);
+                katana::atomicMin(ddata_current_comp, label_new);
               }
             }
           },
-          galois::disable_conflict_detection(), galois::steal(),
-          galois::loopname("ConnectedComponentsLabelPropAlgo"));
+          katana::disable_conflict_detection(), katana::steal(),
+          katana::loopname("ConnectedComponentsLabelPropAlgo"));
     } while (changed.reduce());
   }
 };
@@ -154,12 +154,12 @@ struct ConnectedComponentsSynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   struct Edge {
@@ -175,13 +175,13 @@ struct ConnectedComponentsSynchronousAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -191,16 +191,16 @@ struct ConnectedComponentsSynchronousAlgo {
 
   void operator()(Graph* graph) {
     size_t rounds = 0;
-    galois::GAccumulator<size_t> empty_merges;
+    katana::GAccumulator<size_t> empty_merges;
 
-    galois::InsertBag<Edge> wls[2];
-    galois::InsertBag<Edge>* next_bag;
-    galois::InsertBag<Edge>* current_bag;
+    katana::InsertBag<Edge> wls[2];
+    katana::InsertBag<Edge>* next_bag;
+    katana::InsertBag<Edge>* current_bag;
 
     current_bag = &wls[0];
     next_bag = &wls[1];
 
-    galois::do_all(galois::iterate(*graph), [&](const GNode& src) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& src) {
       for (auto ii : graph->edges(src)) {
         auto dest = graph->GetEdgeDest(ii);
         if (src >= *dest)
@@ -212,17 +212,17 @@ struct ConnectedComponentsSynchronousAlgo {
     });
 
     while (!current_bag->empty()) {
-      galois::do_all(
-          galois::iterate(*current_bag),
+      katana::do_all(
+          katana::iterate(*current_bag),
           [&](const Edge& edge) {
             auto& sdata = graph->GetData<NodeComponent>(edge.src);
             if (!sdata->merge(edge.ddata))
               empty_merges += 1;
           },
-          galois::loopname("Merge"));
+          katana::loopname("Merge"));
 
-      galois::do_all(
-          galois::iterate(*current_bag),
+      katana::do_all(
+          katana::iterate(*current_bag),
           [&](const Edge& edge) {
             GNode src = edge.src;
             auto& sdata = graph->GetData<NodeComponent>(src);
@@ -244,23 +244,23 @@ struct ConnectedComponentsSynchronousAlgo {
               }
             }
           },
-          galois::loopname("Find"));
+          katana::loopname("Find"));
 
       current_bag->clear();
       std::swap(current_bag, next_bag);
       rounds += 1;
     }
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("Compress"));
+        katana::steal(), katana::loopname("Compress"));
 
-    galois::ReportStatSingle("CC-Sync", "rounds", rounds);
-    galois::ReportStatSingle("CC-Sync", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle("CC-Sync", "rounds", rounds);
+    katana::ReportStatSingle("CC-Sync", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -268,25 +268,25 @@ struct ConnectedComponentsAsyncAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
   ConnectedComponentsAsyncAlgo(ConnectedComponentsPlan& plan) : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -295,10 +295,10 @@ struct ConnectedComponentsAsyncAlgo {
   }
 
   void operator()(Graph* graph) {
-    galois::GAccumulator<size_t> empty_merges;
+    katana::GAccumulator<size_t> empty_merges;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
 
@@ -313,17 +313,17 @@ struct ConnectedComponentsAsyncAlgo {
               empty_merges += 1;
           }
         },
-        galois::loopname("CC-Async"));
+        katana::loopname("CC-Async"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Async-Compress"));
 
-    galois::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -331,12 +331,12 @@ struct ConnectedComponentsEdgeAsyncAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -345,13 +345,13 @@ struct ConnectedComponentsEdgeAsyncAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -360,12 +360,12 @@ struct ConnectedComponentsEdgeAsyncAlgo {
   }
 
   void operator()(Graph* graph) {
-    galois::GAccumulator<size_t> empty_merges;
+    katana::GAccumulator<size_t> empty_merges;
 
-    galois::InsertBag<Edge> works;
+    katana::InsertBag<Edge> works;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           for (const auto& ii : graph->edges(src)) {
             if (src < *(graph->GetEdgeDest(ii))) {
@@ -373,10 +373,10 @@ struct ConnectedComponentsEdgeAsyncAlgo {
             }
           }
         },
-        galois::loopname("CC-EdgeAsyncInit"), galois::steal());
+        katana::loopname("CC-EdgeAsyncInit"), katana::steal());
 
-    galois::do_all(
-        galois::iterate(works),
+    katana::do_all(
+        katana::iterate(works),
         [&](Edge& e) {
           auto& sdata = graph->GetData<NodeComponent>(e.first);
           auto dest = graph->GetEdgeDest(e.second);
@@ -389,17 +389,17 @@ struct ConnectedComponentsEdgeAsyncAlgo {
             empty_merges += 1;
           }
         },
-        galois::loopname("CC-EdgeAsync"), galois::steal());
+        katana::loopname("CC-EdgeAsync"), katana::steal());
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Async-Compress"));
 
-    galois::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -407,12 +407,12 @@ struct ConnectedComponentsBlockedAsyncAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -421,13 +421,13 @@ struct ConnectedComponentsBlockedAsyncAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -469,35 +469,35 @@ struct ConnectedComponentsBlockedAsyncAlgo {
   }
 
   void operator()(Graph* graph) {
-    galois::InsertBag<WorkItem> items;
+    katana::InsertBag<WorkItem> items;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto start = graph->edge_begin(src);
-          if (galois::substrate::ThreadPool::getSocket() == 0) {
+          if (katana::ThreadPool::getSocket() == 0) {
             process<true, 0>(graph, src, start, items);
           } else {
             process<true, 1>(graph, src, start, items);
           }
         },
-        galois::loopname("Initialize"));
+        katana::loopname("Initialize"));
 
-    galois::for_each(
-        galois::iterate(items),
+    katana::for_each(
+        katana::iterate(items),
         [&](const WorkItem& item, auto& ctx) {
           process<true, 0>(graph, item.src, item.start, ctx);
         },
-        galois::loopname("Merge"),
-        galois::wl<galois::worklists::PerSocketChunkFIFO<128>>());
+        katana::loopname("Merge"),
+        katana::wl<katana::PerSocketChunkFIFO<128>>());
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Async-Compress"));
   }
 };
 
@@ -505,12 +505,12 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -519,13 +519,13 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -547,11 +547,11 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
   };*/
 
   void operator()(Graph* graph) {
-    galois::GAccumulator<size_t> empty_merges;
+    katana::GAccumulator<size_t> empty_merges;
 
-    galois::InsertBag<EdgeTile> works;
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::InsertBag<EdgeTile> works;
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto beg = graph->edge_begin(src);
           const auto& end = graph->edge_end(src);
@@ -570,10 +570,10 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
             works.push_back(EdgeTile{src, beg, end});
           }
         },
-        galois::loopname("CC-EdgeTiledAsyncInit"), galois::steal());
+        katana::loopname("CC-EdgeTiledAsyncInit"), katana::steal());
 
-    galois::do_all(
-        galois::iterate(works),
+    katana::do_all(
+        katana::iterate(works),
         [&](const EdgeTile& tile) {
           const auto& src = tile.src;
           auto& sdata = graph->GetData<NodeComponent>(src);
@@ -588,19 +588,19 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
               empty_merges += 1;
           }
         },
-        galois::loopname("CC-edgetiledAsync"), galois::steal(),
-        galois::chunk_size<ConnectedComponentsPlan::kChunkSize>()  // 16 -> 1
+        katana::loopname("CC-edgetiledAsync"), katana::steal(),
+        katana::chunk_size<ConnectedComponentsPlan::kChunkSize>()  // 16 -> 1
     );
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Async-Compress"));
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "CC-edgeTiledAsync", "empty_merges", empty_merges.reduce());
   }
 };
@@ -611,7 +611,7 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
   using map_type = std::unordered_map<
       ComponentType, int, std::hash<ComponentType>,
       std::equal_to<ComponentType>,
-      galois::gstl::Pow2Alloc<std::pair<const ComponentType, int>>>;
+      katana::gstl::Pow2Alloc<std::pair<const ComponentType, int>>>;
   using pair_type = std::pair<ComponentType, int>;
 
   map_type comp_freq(component_sample_frequency);
@@ -630,7 +630,7 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
         return a.second < b.second;
       });
 
-  galois::gDebug(
+  katana::gDebug(
       "Approximate largest intermediate component: ", most_frequent->first,
       " (hit rate ",
       100.0 * (most_frequent->second) / component_sample_frequency, "%)");
@@ -639,14 +639,14 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
 }
 
 struct ConnectedComponentsAfforestAlgo {
-  struct NodeAfforest : public galois::UnionFindNode<NodeAfforest> {
+  struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
 
     NodeAfforest()
-        : galois::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
+        : katana::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
     }
     NodeAfforest(const NodeAfforest& o)
-        : galois::UnionFindNode<NodeAfforest>(o.m_component) {}
+        : katana::UnionFindNode<NodeAfforest>(o.m_component) {}
 
     ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
@@ -672,12 +672,12 @@ struct ConnectedComponentsAfforestAlgo {
 
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<NodeAfforest::ComponentType>;
+    using ViewType = katana::PODPropertyView<NodeAfforest::ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -685,13 +685,13 @@ struct ConnectedComponentsAfforestAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new NodeAfforest();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -704,8 +704,8 @@ struct ConnectedComponentsAfforestAlgo {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     for (uint32_t r = 0; r < plan_.neighbor_sample_size(); ++r) {
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             Graph::edge_iterator ii = graph->edge_begin(src);
             Graph::edge_iterator ei = graph->edge_end(src);
@@ -717,26 +717,26 @@ struct ConnectedComponentsAfforestAlgo {
               break;
             }
           },
-          galois::steal(), galois::loopname("Afforest-VNS-Link"));
+          katana::steal(), katana::loopname("Afforest-VNS-Link"));
 
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             auto& sdata = graph->GetData<NodeComponent>(src);
             sdata->compress();
           },
-          galois::steal(), galois::loopname("Afforest-VNS-Compress"));
+          katana::steal(), katana::loopname("Afforest-VNS-Compress"));
     }
 
-    galois::StatTimer StatTimer_Sampling("Afforest-LCS-Sampling");
+    katana::StatTimer StatTimer_Sampling("Afforest-LCS-Sampling");
     StatTimer_Sampling.start();
     const ComponentType c =
         approxLargestComponent<ComponentType, Graph, NodeComponent>(
             graph, plan_.component_sample_frequency());
     StatTimer_Sampling.stop();
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           if (sdata->component() == c)
@@ -749,27 +749,27 @@ struct ConnectedComponentsAfforestAlgo {
             sdata->link(ddata);
           }
         },
-        galois::steal(), galois::loopname("Afforest-LCS-Link"));
+        katana::steal(), katana::loopname("Afforest-LCS-Link"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("Afforest-LCS-Compress"));
+        katana::steal(), katana::loopname("Afforest-LCS-Compress"));
   }
 };
 
 struct ConnectedComponentsEdgeAfforestAlgo {
-  struct NodeAfforestEdge : public galois::UnionFindNode<NodeAfforestEdge> {
+  struct NodeAfforestEdge : public katana::UnionFindNode<NodeAfforestEdge> {
     using ComponentType = NodeAfforestEdge*;
 
     NodeAfforestEdge()
-        : galois::UnionFindNode<NodeAfforestEdge>(
+        : katana::UnionFindNode<NodeAfforestEdge>(
               const_cast<NodeAfforestEdge*>(this)) {}
     NodeAfforestEdge(const NodeAfforestEdge& o)
-        : galois::UnionFindNode<NodeAfforestEdge>(o.m_component) {}
+        : katana::UnionFindNode<NodeAfforestEdge>(o.m_component) {}
 
     ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
@@ -802,12 +802,12 @@ struct ConnectedComponentsEdgeAfforestAlgo {
   using ComponentType = NodeAfforestEdge::ComponentType;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<NodeAfforestEdge::ComponentType>;
+    using ViewType = katana::PODPropertyView<NodeAfforestEdge::ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   using Edge = std::pair<GNode, GNode>;
@@ -817,13 +817,13 @@ struct ConnectedComponentsEdgeAfforestAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new NodeAfforestEdge();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -834,8 +834,8 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     for (uint32_t r = 0; r < plan_.neighbor_sample_size(); ++r) {
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             Graph::edge_iterator ii = graph->edge_begin(src);
             Graph::edge_iterator ei = graph->edge_end(src);
@@ -847,17 +847,17 @@ struct ConnectedComponentsEdgeAfforestAlgo {
               sdata->hook_min(ddata);
             }
           },
-          galois::steal(), galois::loopname("EdgeAfforest-VNS-Link"));
+          katana::steal(), katana::loopname("EdgeAfforest-VNS-Link"));
     }
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("EdgeAfforest-VNS-Compress"));
+        katana::steal(), katana::loopname("EdgeAfforest-VNS-Compress"));
 
-    galois::StatTimer StatTimer_Sampling("EdgeAfforest-LCS-Sampling");
+    katana::StatTimer StatTimer_Sampling("EdgeAfforest-LCS-Sampling");
     StatTimer_Sampling.start();
     const ComponentType c =
         approxLargestComponent<ComponentType, Graph, NodeComponent>(
@@ -865,10 +865,10 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     StatTimer_Sampling.stop();
     const ComponentType c0 = (graph->GetData<NodeComponent>(0));
 
-    galois::InsertBag<Edge> works;
+    katana::InsertBag<Edge> works;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           if (sdata->component() == c)
@@ -885,10 +885,10 @@ struct ConnectedComponentsEdgeAfforestAlgo {
             }
           }
         },
-        galois::loopname("EdgeAfforest-LCS-Assembling"), galois::steal());
+        katana::loopname("EdgeAfforest-LCS-Assembling"), katana::steal());
 
-    galois::for_each(
-        galois::iterate(works),
+    katana::for_each(
+        katana::iterate(works),
         [&](const Edge& e, auto& ctx) {
           auto& sdata = graph->GetData<NodeComponent>(e.first);
           if (sdata->component() == c)
@@ -903,28 +903,28 @@ struct ConnectedComponentsEdgeAfforestAlgo {
             }
           }
         },
-        galois::disable_conflict_detection(),
-        galois::loopname("EdgeAfforest-LCS-Link"));
+        katana::disable_conflict_detection(),
+        katana::loopname("EdgeAfforest-LCS-Link"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("EdgeAfforest-LCS-Compress"));
+        katana::steal(), katana::loopname("EdgeAfforest-LCS-Compress"));
   }
 };
 
 struct ConnectedComponentsEdgeTiledAfforestAlgo {
-  struct NodeAfforest : public galois::UnionFindNode<NodeAfforest> {
+  struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
 
     NodeAfforest()
-        : galois::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
+        : katana::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
     }
     NodeAfforest(const NodeAfforest& o)
-        : galois::UnionFindNode<NodeAfforest>(o.m_component) {}
+        : katana::UnionFindNode<NodeAfforest>(o.m_component) {}
 
     ComponentType component() { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
@@ -950,12 +950,12 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<NodeAfforest::ComponentType>;
+    using ViewType = katana::PODPropertyView<NodeAfforest::ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -963,13 +963,13 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       graph->GetData<NodeComponent>(node) = new NodeAfforest();
     });
   }
 
   void Deallocate(Graph* graph) {
-    galois::do_all(galois::iterate(*graph), [&](const GNode& node) {
+    katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
       delete sdata;
@@ -988,8 +988,8 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
   void operator()(Graph* graph) {
     // (bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto ii = graph->edge_begin(src);
           const auto end = graph->edge_end(src);
@@ -1001,26 +1001,26 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
             sdata->link(ddata);
           }
         },
-        galois::steal(), galois::loopname("EdgetiledAfforest-VNS-Link"));
+        katana::steal(), katana::loopname("EdgetiledAfforest-VNS-Link"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("EdgetiledAfforest-VNS-Compress"));
+        katana::steal(), katana::loopname("EdgetiledAfforest-VNS-Compress"));
 
-    galois::StatTimer StatTimer_Sampling("EdgetiledAfforest-LCS-Sampling");
+    katana::StatTimer StatTimer_Sampling("EdgetiledAfforest-LCS-Sampling");
     StatTimer_Sampling.start();
     const ComponentType c =
         approxLargestComponent<ComponentType, Graph, NodeComponent>(
             graph, plan_.component_sample_frequency());
     StatTimer_Sampling.stop();
 
-    galois::InsertBag<EdgeTile> works;
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::InsertBag<EdgeTile> works;
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           if (sdata->component() == c)
@@ -1040,10 +1040,10 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
             works.push_back(EdgeTile{src, beg, end});
           }
         },
-        galois::loopname("EdgetiledAfforest-LCS-Tiling"), galois::steal());
+        katana::loopname("EdgetiledAfforest-LCS-Tiling"), katana::steal());
 
-    galois::do_all(
-        galois::iterate(works),
+    katana::do_all(
+        katana::iterate(works),
         [&](const EdgeTile& tile) {
           auto& sdata = graph->GetData<NodeComponent>(tile.src);
           if (sdata->component() == c)
@@ -1054,26 +1054,26 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
             sdata->link(ddata);
           }
         },
-        galois::steal(),
-        galois::chunk_size<ConnectedComponentsPlan::kChunkSize>(),
-        galois::loopname("EdgetiledAfforest-LCS-Link"));
+        katana::steal(),
+        katana::chunk_size<ConnectedComponentsPlan::kChunkSize>(),
+        katana::loopname("EdgetiledAfforest-LCS-Link"));
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        galois::steal(), galois::loopname("EdgetiledAfforest-LCS-Compress"));
+        katana::steal(), katana::loopname("EdgetiledAfforest-LCS-Compress"));
   }
 };
 
 }  //namespace
 
 template <typename Algorithm>
-static galois::Result<void>
+static katana::Result<void>
 ConnectedComponentsWithWrap(
-    galois::graphs::PropertyFileGraph* pfg, std::string output_property_name,
+    katana::PropertyFileGraph* pfg, std::string output_property_name,
     ConnectedComponentsPlan plan) {
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(
@@ -1092,7 +1092,7 @@ ConnectedComponentsWithWrap(
 
   algo.Initialize(&graph);
 
-  galois::StatTimer execTime("ConnectedComponent");
+  katana::StatTimer execTime("ConnectedComponent");
   execTime.start();
 
   algo(&graph);
@@ -1102,12 +1102,12 @@ ConnectedComponentsWithWrap(
 
   execTime.stop();
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
-galois::analytics::ConnectedComponents(
-    graphs::PropertyFileGraph* pfg, const std::string& output_property_name,
+katana::Result<void>
+katana::analytics::ConnectedComponents(
+    PropertyFileGraph* pfg, const std::string& output_property_name,
     ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
@@ -1156,15 +1156,15 @@ galois::analytics::ConnectedComponents(
   }
 }
 
-galois::Result<void>
-galois::analytics::ConnectedComponentsAssertValid(
-    graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+katana::Result<void>
+katana::analytics::ConnectedComponentsAssertValid(
+    PropertyFileGraph* pfg, const std::string& property_name) {
   using ComponentType = uint64_t;
-  struct NodeComponent : public galois::PODProperty<ComponentType> {};
+  struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   auto pg_result = Graph::Make(pfg, {property_name}, {});
@@ -1180,7 +1180,7 @@ galois::analytics::ConnectedComponentsAssertValid(
       auto dest = graph.GetEdgeDest(ii);
       auto& data = graph.template GetData<NodeComponent>(dest);
       if (data != me) {
-        GALOIS_LOG_DEBUG(
+        KATANA_LOG_DEBUG(
             "{} (component: {}) must be in same component as {} (component: "
             "{})",
             uint32_t{*dest}, data, n, me);
@@ -1190,23 +1190,23 @@ galois::analytics::ConnectedComponentsAssertValid(
     return false;
   };
 
-  if (galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
+  if (katana::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
       graph.end()) {
-    return galois::ErrorCode::AssertionFailed;
+    return katana::ErrorCode::AssertionFailed;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<ConnectedComponentsStatistics>
-galois::analytics::ConnectedComponentsStatistics::Compute(
-    galois::graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+katana::Result<ConnectedComponentsStatistics>
+katana::analytics::ConnectedComponentsStatistics::Compute(
+    katana::PropertyFileGraph* pfg, const std::string& property_name) {
   using ComponentType = uint64_t;
-  struct NodeComponent : public galois::PODProperty<ComponentType> {};
+  struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   auto pg_result = Graph::Make(pfg, {property_name}, {});
@@ -1216,7 +1216,7 @@ galois::analytics::ConnectedComponentsStatistics::Compute(
 
   auto graph = pg_result.value();
 
-  using Map = galois::gstl::Map<ComponentType, int>;
+  using Map = katana::gstl::Map<ComponentType, int>;
 
   auto reduce = [](Map& lhs, Map&& rhs) -> Map& {
     Map v{std::move(rhs)};
@@ -1233,17 +1233,17 @@ galois::analytics::ConnectedComponentsStatistics::Compute(
 
   auto mapIdentity = []() { return Map(); };
 
-  auto accumMap = galois::make_reducible(reduce, mapIdentity);
+  auto accumMap = katana::make_reducible(reduce, mapIdentity);
 
-  galois::GAccumulator<size_t> accumReps;
+  katana::GAccumulator<size_t> accumReps;
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& x) {
         auto& n = graph.template GetData<NodeComponent>(x);
         accumMap.update(Map{std::make_pair(n, 1)});
       },
-      galois::loopname("CountLargest"));
+      katana::loopname("CountLargest"));
 
   Map& map = accumMap.reduce();
   size_t reps = map.size();
@@ -1259,10 +1259,10 @@ galois::analytics::ConnectedComponentsStatistics::Compute(
 
   auto identity = []() { return ComponentSizePair{}; };
 
-  auto maxComp = galois::make_reducible(sizeMax, identity);
+  auto maxComp = katana::make_reducible(sizeMax, identity);
 
-  galois::GAccumulator<uint64_t> non_trivial_components;
-  galois::do_all(galois::iterate(map), [&](const ComponentSizePair& x) {
+  katana::GAccumulator<uint64_t> non_trivial_components;
+  katana::do_all(katana::iterate(map), [&](const ComponentSizePair& x) {
     maxComp.update(x);
     if (x.second > 1) {
       non_trivial_components += 1;
@@ -1284,7 +1284,7 @@ galois::analytics::ConnectedComponentsStatistics::Compute(
 }
 
 void
-galois::analytics::ConnectedComponentsStatistics::Print(std::ostream& os) {
+katana::analytics::ConnectedComponentsStatistics::Print(std::ostream& os) {
   os << "Total number of components = " << total_components << std::endl;
   os << "Total number of non trivial components = "
      << total_non_trivial_components << std::endl;

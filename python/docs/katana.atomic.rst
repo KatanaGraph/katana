@@ -1,7 +1,7 @@
-Atomic Operations (galois.atomic)
+Atomic Operations (katana.atomic)
 =================================
 
-.. automodule:: galois.atomic
+.. automodule:: katana.atomic
    :members:
    :undoc-members:
    :special-members: __init__, __iter__, __getitem__, __setitem__, __len__

@@ -17,13 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_SPATIALTREE_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_SPATIALTREE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_SPATIALTREE_H_
+#define KATANA_LIBGALOIS_KATANA_SPATIALTREE_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 //! Stores sets of objects at specific spatial coordinates in a quad tree.
 //! Lookup returns an approximation of the closest item
@@ -78,7 +77,7 @@ class SpatialTree2d {
     }
   };
 
-  galois::runtime::FixedSizeAllocator<Node> nodeAlloc;
+  katana::FixedSizeAllocator<Node> nodeAlloc;
 
   Node* root;
   Box2d bounds;
@@ -188,7 +187,6 @@ public:
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif

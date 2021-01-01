@@ -17,10 +17,10 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <galois/graphs/GraphHelpers.h>
+#include <katana/GraphHelpers.h>
 
-namespace galois {
-namespace graphs {
+namespace katana {
+
 namespace internal {
 
 uint32_t
@@ -114,5 +114,5 @@ unitRangeSanity(
 }
 
 }  // namespace internal
-}  // namespace graphs
-}  // namespace galois
+
+}  // namespace katana

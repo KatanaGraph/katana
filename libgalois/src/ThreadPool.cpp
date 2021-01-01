@@ -17,24 +17,24 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/ThreadPool.h"
+#include "katana/ThreadPool.h"
 
 #include <algorithm>
 #include <iostream>
 
-#include "galois/Env.h"
-#include "galois/Logging.h"
-#include "galois/substrate/HWTopo.h"
+#include "katana/Env.h"
+#include "katana/HWTopo.h"
+#include "katana/Logging.h"
 
 // Forward declare this to avoid including PerThreadStorage.
 // We avoid this to stress that the thread Pool MUST NOT depend on PTS.
-namespace galois::substrate {
+namespace katana {
 
 extern void initPTS(unsigned);
 
 }
 
-using galois::substrate::ThreadPool;
+using katana::ThreadPool;
 
 thread_local ThreadPool::per_signal ThreadPool::my_box;
 
@@ -131,17 +131,17 @@ ThreadPool::initThread(unsigned tid) {
   signals[tid] = &my_box;
   my_box.topo = getHWTopo().threadTopoInfo[tid];
   // Initialize
-  substrate::initPTS(mi.maxThreads);
+  initPTS(mi.maxThreads);
 
-  if (!GetEnv("GALOIS_DO_NOT_BIND_THREADS")) {
+  if (!GetEnv("KATANA_DO_NOT_BIND_THREADS")) {
     bool bind_main = false;
-    if (GetEnv("GALOIS_DO_NOT_BIND_MAIN_THREAD")) {
-      GALOIS_WARN_ONCE(
-          "GALOIS_DO_NOT_MAIN_THREAD is deprecated.\n"
+    if (GetEnv("KATANA_DO_NOT_BIND_MAIN_THREAD")) {
+      KATANA_WARN_ONCE(
+          "KATANA_DO_NOT_MAIN_THREAD is deprecated.\n"
           "The default behavior is to not bind the main thread.\n"
-          "Use GALOIS_BIND_MAIN_THREAD to override.");
+          "Use KATANA_BIND_MAIN_THREAD to override.");
     }
-    if (GetEnv("GALOIS_BIND_MAIN_THREAD")) {
+    if (GetEnv("KATANA_BIND_MAIN_THREAD")) {
       bind_main = true;
     }
 
@@ -230,7 +230,7 @@ void
 ThreadPool::runInternal(unsigned num) {
   // sanitize num
   // seq write to starting should make work safe
-  GALOIS_LOG_VASSERT(!running, "Recursive thread pool execution not supported");
+  KATANA_LOG_VASSERT(!running, "Recursive thread pool execution not supported");
   running = true;
   num = std::min(std::max(1U, num), getMaxUsableThreads());
   // my_box is tid 0
@@ -257,14 +257,14 @@ ThreadPool::runInternal(unsigned num) {
 
 void
 ThreadPool::runDedicated(std::function<void(void)>& f) {
-  // TODO(ddn): update galois::runtime::activeThreads to reflect the dedicated
-  // thread but we don't want to depend on galois::runtime symbols and too many
-  // clients access galois::runtime::activeThreads directly.
-  GALOIS_LOG_VASSERT(
+  // TODO(ddn): update katana::activeThreads to reflect the dedicated
+  // thread but we don't want to depend on katana symbols and too many
+  // clients access katana::activeThreads directly.
+  KATANA_LOG_VASSERT(
       !running, "Can't start dedicated thread during parallel section");
   ++reserved;
 
-  GALOIS_LOG_VASSERT(reserved < mi.maxThreads, "Too many dedicated threads");
+  KATANA_LOG_VASSERT(reserved < mi.maxThreads, "Too many dedicated threads");
   work = [&f]() { throw dedicated_ty{f}; };
   auto* child = signals[mi.maxThreads - reserved];
   child->wbegin = 0;
@@ -277,16 +277,16 @@ ThreadPool::runDedicated(std::function<void(void)>& f) {
   work = nullptr;
 }
 
-static galois::substrate::ThreadPool* TPOOL = nullptr;
+static katana::ThreadPool* TPOOL = nullptr;
 
 void
-galois::substrate::internal::SetThreadPool(ThreadPool* tp) {
-  GALOIS_LOG_VASSERT(!(TPOOL && tp), "Double initialization of ThreadPool");
+katana::internal::SetThreadPool(ThreadPool* tp) {
+  KATANA_LOG_VASSERT(!(TPOOL && tp), "Double initialization of ThreadPool");
   TPOOL = tp;
 }
 
-galois::substrate::ThreadPool&
-galois::substrate::GetThreadPool() {
-  GALOIS_LOG_VASSERT(TPOOL, "ThreadPool not initialized");
+katana::ThreadPool&
+katana::GetThreadPool() {
+  KATANA_LOG_VASSERT(TPOOL, "ThreadPool not initialized");
   return *TPOOL;
 }

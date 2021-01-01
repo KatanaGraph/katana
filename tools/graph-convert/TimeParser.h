@@ -1,5 +1,5 @@
-#ifndef GALOIS_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
-#define GALOIS_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
+#ifndef KATANA_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
+#define KATANA_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
 
 #include <array>
 #include <chrono>
@@ -9,9 +9,9 @@
 #include <arrow/api.h>
 #include <date/date.h>
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
-namespace galois {
+namespace katana {
 
 /// A TimeParser parses various string formats into a Unix timestamp.
 ///
@@ -33,11 +33,11 @@ public:
       const arrow::StringArray& strings, arrow::ArrayBuilder* builder);
 };
 
-}  // namespace galois
+}  // namespace katana
 
 template <class ArrowDateTimeType, typename Duration>
-std::optional<typename galois::TimeParser<ArrowDateTimeType, Duration>::CType>
-galois::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
+std::optional<typename katana::TimeParser<ArrowDateTimeType, Duration>::CType>
+katana::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
   if (str.empty()) {
     return std::nullopt;
   }
@@ -83,36 +83,36 @@ galois::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
 
     if (in.peek(); in.eof()) {
       if (!tz_abbrev.empty() && tz_abbrev != "Z") {
-        GALOIS_LOG_WARN(
+        KATANA_LOG_WARN(
             "datetime string ({}) references unsupported timezone ({})", str,
             tz_abbrev);
       }
       if (tz_offset != std::chrono::minutes{0}) {
-        GALOIS_LOG_WARN(
+        KATANA_LOG_WARN(
             "datetime string ({}) references unsupported offset ({})", str,
             tz_offset.count());
       }
       last_format_ = idx;
       return tp.time_since_epoch().count();
     } else {
-      GALOIS_LOG_WARN(
+      KATANA_LOG_WARN(
           "incomplete parsing of ({}) using ({})", str, formats.at(idx));
     }
   }
 
-  GALOIS_LOG_WARN("could not parse datetime string ({})", str);
+  KATANA_LOG_WARN("could not parse datetime string ({})", str);
 
   return std::nullopt;
 }
 
 template <class ArrowDateTimeType, typename Duration>
 void
-galois::TimeParser<ArrowDateTimeType, Duration>::ParseInto(
+katana::TimeParser<ArrowDateTimeType, Duration>::ParseInto(
     const arrow::StringArray& strings, arrow::ArrayBuilder* untyped_builder) {
   BuilderType* builder = dynamic_cast<BuilderType*>(untyped_builder);
   assert(builder);
   if (auto st = builder->Reserve(strings.length()); !st.ok()) {
-    GALOIS_LOG_FATAL("builder failed to reserve space");
+    KATANA_LOG_FATAL("builder failed to reserve space");
   }
   for (size_t i = 0, n = strings.length(); i < n; ++i) {
     std::string str = strings.GetString(i);

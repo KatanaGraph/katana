@@ -27,12 +27,12 @@
 #include <vector>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/ParallelSTL.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/runtime/Profile.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/ParallelSTL.h"
+#include "katana/Profile.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
 #include "llvm/Support/CommandLine.h"
 
 const char* name = "Maximal Independent Set";
@@ -67,12 +67,12 @@ enum MatchFlag : char { KUnMatched, KOtherMatched, Matched };
 struct SerialAlgo {
   struct NodeFlag {
     using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<MatchFlag>;
+    using ViewType = katana::PODPropertyView<MatchFlag>;
   };
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -116,12 +116,12 @@ template <Algo algo>
 struct DefaultAlgo {
   struct NodeFlag {
     using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<MatchFlag>;
+    using ViewType = katana::PODPropertyView<MatchFlag>;
   };
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -174,21 +174,21 @@ struct DefaultAlgo {
   void run(Graph* graph, Args&&... args) {
     auto detID = [](const GNode& x) { return x; };
 
-    galois::for_each(
-        galois::iterate(*graph),
+    katana::for_each(
+        katana::iterate(*graph),
         [&, this](const GNode& src, auto& ctx) {
           this->processNode(graph, src, ctx);
         },
-        galois::no_pushes(), galois::wl<WL>(), galois::loopname("DefaultAlgo"),
-        galois::det_id<decltype(detID)>(detID),
-        galois::local_state<LocalState>(), std::forward<Args>(args)...);
+        katana::no_pushes(), katana::wl<WL>(), katana::loopname("DefaultAlgo"),
+        katana::det_id<decltype(detID)>(detID),
+        katana::local_state<LocalState>(), std::forward<Args>(args)...);
   }
 
   void operator()(Graph* graph) {
-    using DWL = galois::worklists::Deterministic<>;
+    using DWL = katana::Deterministic<>;
 
-    using BSWL = galois::worklists::BulkSynchronous<
-        typename galois::worklists::PerSocketChunkFIFO<64>>;
+    using BSWL =
+        katana::BulkSynchronous<typename katana::PerSocketChunkFIFO<64>>;
 
     switch (algo) {
     case nondet:
@@ -207,28 +207,28 @@ struct DefaultAlgo {
 struct PullAlgo {
   struct NodeFlag {
     using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = galois::PODPropertyView<MatchFlag>;
+    using ViewType = katana::PODPropertyView<MatchFlag>;
   };
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  using Bag = galois::InsertBag<GNode>;
+  using Bag = katana::InsertBag<GNode>;
 
   void Initialize(Graph* graph) {
     for (auto n : *graph)
       graph->GetData<NodeFlag>(n) = MatchFlag::KUnMatched;
   }
 
-  using Counter = galois::GAccumulator<size_t>;
+  using Counter = katana::GAccumulator<size_t>;
 
   template <typename R>
   void pull(
       const R& range, const Graph& graph, Bag& matched, Bag& otherMatched,
       Bag& next, Counter& numProcessed) {
-    galois::do_all(
+    katana::do_all(
         range,
         [&](const GNode& src) {
           numProcessed += 1;
@@ -260,19 +260,19 @@ struct PullAlgo {
             otherMatched.push_back(src);
           }
         },
-        galois::loopname("pull"));
+        katana::loopname("pull"));
   }
 
   template <MatchFlag Flag>
   void take(Bag& bag, Graph* graph, Counter& numTaken) {
-    galois::do_all(
-        galois::iterate(bag),
+    katana::do_all(
+        katana::iterate(bag),
         [&](const GNode& src) {
           auto& n_flag = graph->GetData<NodeFlag>(src);
           numTaken += 1;
           n_flag = Flag;
         },
-        galois::loopname("take"));
+        katana::loopname("take"));
   }
 
   void operator()(Graph* graph) {
@@ -296,7 +296,7 @@ struct PullAlgo {
 
       if (!cur->empty()) {
         pull(
-            galois::iterate(*cur), *graph, matched, otherMatched, *next,
+            katana::iterate(*cur), *graph, matched, otherMatched, *next,
             numProcessed);
       }
 
@@ -305,7 +305,7 @@ struct PullAlgo {
 
       if (ii != ei) {
         pull(
-            galois::iterate(ii, ei), *graph, matched, otherMatched, *next,
+            katana::iterate(ii, ei), *graph, matched, otherMatched, *next,
             numProcessed);
       }
 
@@ -325,17 +325,17 @@ struct PullAlgo {
       size -= numTaken.reduce();
     }
 
-    galois::ReportStatSingle("IndependentSet-PullAlgo", "rounds", rounds);
+    katana::ReportStatSingle("IndependentSet-PullAlgo", "rounds", rounds);
   }
 };
 
 struct PrioAlgo {
-  struct NodeFlag : public galois::PODProperty<uint8_t> {};
+  struct NodeFlag : public katana::PODProperty<uint8_t> {};
 
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -350,25 +350,25 @@ struct PrioAlgo {
   }
 
   void operator()(Graph* graph) {
-    galois::GAccumulator<size_t> rounds;
-    galois::GAccumulator<float> nedges;
-    galois::GReduceLogicalOr unmatched;
-    galois::substrate::PerThreadStorage<std::mt19937*> generator;
+    katana::GAccumulator<size_t> rounds;
+    katana::GAccumulator<float> nedges;
+    katana::GReduceLogicalOr unmatched;
+    katana::PerThreadStorage<std::mt19937*> generator;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           nedges += std::distance(graph->edge_begin(src), graph->edge_end(src));
         },
-        galois::loopname("cal_degree"), galois::steal());
+        katana::loopname("cal_degree"), katana::steal());
 
     float nedges_tmp = nedges.reduce();
     float avg_degree = nedges_tmp / (float)graph->size();
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& src_flag = graph->GetData<NodeFlag>(src);
           float degree = (float)std::distance(
@@ -378,12 +378,12 @@ struct PrioAlgo {
           uint8_t val = (res + res) | 1;
           src_flag = val;
         },
-        galois::loopname("init-prio"), galois::steal());
+        katana::loopname("init-prio"), katana::steal());
 
     do {
       unmatched.reset();
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             auto& src_flag = graph->GetData<NodeFlag>(src);
 
@@ -420,23 +420,23 @@ struct PrioAlgo {
             }
             src_flag = uint8_t{0xfe};  // matched, highest prio
           },
-          galois::loopname("execute"), galois::steal());
+          katana::loopname("execute"), katana::steal());
 
       rounds += 1;
     } while (unmatched.reduce());
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "IndependentSet-prioAlgo", "rounds", rounds.reduce());
   }
 };
 
 struct EdgeTiledPrioAlgo {
-  struct NodeFlag : public galois::PODProperty<uint8_t> {};
+  struct NodeFlag : public katana::PODProperty<uint8_t> {};
 
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -458,26 +458,26 @@ struct EdgeTiledPrioAlgo {
   }
 
   void operator()(Graph* graph) {
-    galois::GAccumulator<size_t> rounds;
-    galois::GAccumulator<float> nedges;
-    galois::GReduceLogicalOr unmatched;
-    galois::substrate::PerThreadStorage<std::mt19937*> generator;
-    galois::InsertBag<EdgeTile> works;
+    katana::GAccumulator<size_t> rounds;
+    katana::GAccumulator<float> nedges;
+    katana::GReduceLogicalOr unmatched;
+    katana::PerThreadStorage<std::mt19937*> generator;
+    katana::InsertBag<EdgeTile> works;
     const int EDGE_TILE_SIZE = 64;
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           nedges += std::distance(graph->edge_begin(src), graph->edge_end(src));
         },
-        galois::loopname("cal_degree"), galois::steal());
+        katana::loopname("cal_degree"), katana::steal());
 
     float nedges_tmp = nedges.reduce();
     float avg_degree = nedges_tmp / (float)graph->size();
     uint8_t in = ~1;
     float scale_avg = ((in / 2) - 1) * avg_degree;
 
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& src_flag = graph->GetData<NodeFlag>(src);
           auto beg = graph->edge_begin(src);
@@ -502,12 +502,12 @@ struct EdgeTiledPrioAlgo {
             works.push_back(EdgeTile{src, beg, end, false});
           }
         },
-        galois::loopname("init-prio"), galois::steal());
+        katana::loopname("init-prio"), katana::steal());
 
     do {
       unmatched.reset();
-      galois::do_all(
-          galois::iterate(works),
+      katana::do_all(
+          katana::iterate(works),
           [&](EdgeTile& tile) {
             GNode src = tile.src;
 
@@ -549,10 +549,10 @@ struct EdgeTiledPrioAlgo {
               tile.flag = true;  // temporary-matched
             }
           },
-          galois::loopname("execute"), galois::steal());
+          katana::loopname("execute"), katana::steal());
 
-      galois::do_all(
-          galois::iterate(works),
+      katana::do_all(
+          katana::iterate(works),
           [&](EdgeTile& tile) {
             auto src = tile.src;
             auto& src_flag = graph->GetData<NodeFlag>(src);
@@ -562,10 +562,10 @@ struct EdgeTiledPrioAlgo {
               src_flag &= uint8_t{0xfd};  // 0x1111 1101, not temporary yes
             }
           },
-          galois::loopname("match_reduce"), galois::steal());
+          katana::loopname("match_reduce"), katana::steal());
 
-      galois::do_all(
-          galois::iterate(*graph),
+      katana::do_all(
+          katana::iterate(*graph),
           [&](const GNode& src) {
             auto& src_flag = graph->GetData<NodeFlag>(src);
             if ((src_flag & uint8_t{0x01}) != 0) {    // undecided
@@ -582,12 +582,12 @@ struct EdgeTiledPrioAlgo {
                 src_flag |= uint8_t{0x03};  // 0x0000 0011, temp yes, undecided
             }
           },
-          galois::loopname("match_update"), galois::steal());
+          katana::loopname("match_update"), katana::steal());
 
       rounds += 1;
     } while (unmatched.reduce());
 
-    galois::ReportStatSingle(
+    katana::ReportStatSingle(
         "IndependentSet-prioAlgo", "rounds", rounds.reduce());
   }
 };
@@ -651,8 +651,8 @@ verify(Graph* graph, Algo&) {
 
   if (std::is_same<Algo, PrioAlgo>::value ||
       std::is_same<Algo, EdgeTiledPrioAlgo>::value) {
-    galois::do_all(
-        galois::iterate(*graph),
+    katana::do_all(
+        katana::iterate(*graph),
         [&](const GNode& src) {
           auto& src_flag =
               graph->template GetData<typename Algo::NodeFlag>(src);
@@ -664,10 +664,10 @@ verify(Graph* graph, Algo&) {
             std::cout << "error in verify_change! Some nodes are not decided."
                       << "\n";
         },
-        galois::loopname("verify_change"));
+        katana::loopname("verify_change"));
   }
 
-  return galois::ParallelSTL::find_if(
+  return katana::ParallelSTL::find_if(
              graph->begin(), graph->end(), is_bad<Graph, Algo>(*graph)) ==
          graph->end();
 }
@@ -679,18 +679,18 @@ run() {
   using GNode = typename Graph::Node;
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<typename Algo::NodeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
-  auto pg_result = galois::graphs::PropertyGraph<
+  auto pg_result = katana::PropertyGraph<
       typename Algo::NodeData, typename Algo::EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
@@ -699,17 +699,17 @@ run() {
 
   Algo algo;
 
-  galois::Prealloc(
+  katana::Prealloc(
       1, 64 * (sizeof(GNode) + sizeof(typename Algo::NodeFlag)) * graph.size());
 
-  galois::reportPageAlloc("MeminfoPre");
-  galois::StatTimer execTime("Timer_0");
+  katana::reportPageAlloc("MeminfoPre");
+  katana::StatTimer execTime("Timer_0");
 
   execTime.start();
   algo(&graph);
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify && !verify(&graph, algo)) {
     std::cerr << "verification failed\n";
@@ -718,28 +718,28 @@ run() {
   }
 
   std::cout << "Cardinality of maximal independent set: "
-            << galois::ParallelSTL::count_if(
+            << katana::ParallelSTL::count_if(
                    graph.begin(), graph.end(), is_matched<Graph, Algo>(graph))
             << "\n";
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "independent set requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph");
   }
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
@@ -751,13 +751,13 @@ main(int argc, char** argv) {
     break;
   //TODO (gill) This algorithm needs locks and cautious operator.
   case nondet:
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "This algorithm requires cautious operator which is not supported at "
         "the moment. Please try a different algorithm.");
     run<DefaultAlgo<nondet>>();
     break;
   case detBase:
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "This algorithm requires cautious operator which is not supported at "
         "the moment. Please try a different algorithm.");
     run<DefaultAlgo<detBase>>();

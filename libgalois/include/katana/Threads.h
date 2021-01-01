@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_THREADS_H_
-#define GALOIS_LIBGALOIS_GALOIS_THREADS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_THREADS_H_
+#define KATANA_LIBGALOIS_KATANA_THREADS_H_
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Sets the number of threads to use when running any Galois iterator. Returns
@@ -30,12 +30,12 @@ namespace galois {
  * value. System behavior is undefined if this function is called during
  * parallel execution or after the first parallel execution.
  */
-GALOIS_EXPORT unsigned int setActiveThreads(unsigned int num) noexcept;
+KATANA_EXPORT unsigned int setActiveThreads(unsigned int num) noexcept;
 
 /**
  * Returns the number of threads in use.
  */
-GALOIS_EXPORT unsigned int getActiveThreads() noexcept;
+KATANA_EXPORT unsigned int getActiveThreads() noexcept;
 
-}  // namespace galois
+}  // namespace katana
 #endif

@@ -5,9 +5,9 @@ project(pygalois)
 # TODO(amp): Deduplicate this with katana/CMakeLists.txt or even better merge this into that build so there is
 #  only one build entry point.
 
-file(STRINGS ../config/version.txt GALOIS_VERSION)
-string(REGEX REPLACE "[ \t\n]" "" GALOIS_VERSION ${GALOIS_VERSION})
-set(GALOIS_COPYRIGHT_YEAR "2020") # Also in COPYRIGHT
+file(STRINGS ../config/version.txt KATANA_VERSION)
+string(REGEX REPLACE "[ \t\n]" "" KATANA_VERSION ${KATANA_VERSION})
+set(KATANA_COPYRIGHT_YEAR "2020") # Also in COPYRIGHT
 
 # Override the scikit-build Cython modules since they are bugged in a
 # way that prevents the use of generated Cython code.
@@ -41,10 +41,10 @@ if (NOT PY_JINJA2)
 endif()
 
 if(BUILD_LIBGALOIS)
-  add_subdirectory(.. ${CMAKE_BINARY_DIR}/../cmake-galois-build EXCLUDE_FROM_ALL)
+  add_subdirectory(.. ${CMAKE_BINARY_DIR}/../cmake-katana-build EXCLUDE_FROM_ALL)
 else()
-  find_package(Galois REQUIRED)
+  find_package(Katana REQUIRED)
 endif()
 
-add_subdirectory(galois)
+add_subdirectory(katana)
 add_subdirectory(docs)

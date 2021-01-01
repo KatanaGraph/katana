@@ -22,20 +22,20 @@
 // 1. serial iteration over nodes
 // 2. do_all iteration over nodes
 // 3. access to node and edge data
-// 4. usage of galois::StatTimer
+// 4. usage of katana::StatTimer
 // 5. how to change # of threads
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Timer.h"
 
-using Graph = galois::graphs::LC_CSR_Graph<int, int>;
+using Graph = katana::LC_CSR_Graph<int, int>;
 using GNode = Graph::GraphNode;
 
 int
 main(int argc, char* argv[]) {
-  galois::SharedMemSys G;
+  katana::SharedMemSys G;
 
   if (argc < 3) {
     std::cerr << "Usage: " << argv[0] << " filename num_threads" << std::endl;
@@ -43,13 +43,13 @@ main(int argc, char* argv[]) {
   }
 
   Graph g;
-  galois::graphs::readGraph(g, argv[1]);  // argv[1] is the file name for graph
-  galois::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
+  katana::readGraph(g, argv[1]);  // argv[1] is the file name for graph
+  katana::setActiveThreads(std::atoi(argv[2]));  // argv[2] is # of threads
 
   //******************************************************************************************
   // serial traversal over a graph
   // sum over nodes and edges in C++11 syntax
-  galois::StatTimer T("sum_serial");
+  katana::StatTimer T("sum_serial");
   T.start();
   for (auto n : g) {
     auto& sum = g.getData(n);
@@ -61,13 +61,13 @@ main(int argc, char* argv[]) {
   T.stop();
 
   //*****************************************************************************************
-  // parallel traversal over a graph using galois::do_all w/o work stealing
+  // parallel traversal over a graph using katana::do_all w/o work stealing
   // 1. operator is specified using lambda expression
   // 2. do_all is named "sum_in_do_all_with_lambda" to show stat after this
   // program finishes
   //! [Graph traversal in pull using do_all]
-  galois::do_all(
-      galois::iterate(g.begin(), g.end()),  // range
+  katana::do_all(
+      katana::iterate(g.begin(), g.end()),  // range
       [&](GNode n) {                        // operator
         auto& sum = g.getData(n);
         sum = 0;
@@ -75,7 +75,7 @@ main(int argc, char* argv[]) {
           sum += g.getEdgeData(e);
         }
       },
-      galois::loopname("sum_in_do_all_with_lambda")  // options
+      katana::loopname("sum_in_do_all_with_lambda")  // options
   );
   //! [Graph traversal in pull using do_all]
 

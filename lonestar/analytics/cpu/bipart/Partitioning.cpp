@@ -18,7 +18,7 @@
  */
 
 #include "Helper.h"
-#include "galois/AtomicHelpers.h"
+#include "katana/AtomicHelpers.h"
 
 /**
  * Computes the degrees of the nodes
@@ -36,20 +36,20 @@ ComputeDegrees(
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list) {
   uint32_t total_nodes = combined_node_list.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
         uint32_t index = node_index_pair.second;
         GNode node = node_index_pair.first;
         graph->at(index)->getData(node).degree = 0;
       },
-      galois::loopname("Partitioning-Init-Degrees"));
+      katana::loopname("Partitioning-Init-Degrees"));
 
   uint32_t total_hedges = combined_edge_list.size();
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedges),
       [&](GNode hedge) {
         auto hedge_index_pair = combined_edge_list[hedge];
         uint32_t index = hedge_index_pair.second;
@@ -66,10 +66,10 @@ ComputeDegrees(
 
         for (auto& fedge : edges) {
           GNode member_node = cur_graph.getEdgeDst(fedge);
-          galois::atomicAdd(cur_graph.getData(member_node).degree, uint32_t{1});
+          katana::atomicAdd(cur_graph.getData(member_node).degree, uint32_t{1});
         }
       },
-      galois::loopname("Partitioning-Calculate-Degrees"));
+      katana::loopname("Partitioning-Calculate-Degrees"));
 }
 
 /**
@@ -85,8 +85,8 @@ PartitionCoarsestGraphs(
     const std::vector<unsigned>& target_partitions) {
   assert(metis_graphs.size() == target_partitions.size());
   uint32_t num_partitions = metis_graphs.size();
-  std::vector<galois::GAccumulator<WeightTy>> nzero_accum(num_partitions);
-  std::vector<galois::GAccumulator<WeightTy>> zero_accum(num_partitions);
+  std::vector<katana::GAccumulator<WeightTy>> nzero_accum(num_partitions);
+  std::vector<katana::GAccumulator<WeightTy>> zero_accum(num_partitions);
   std::vector<GNodeBag> zero_partition_nodes(num_partitions);
   std::vector<GNodeBag> nzero_partition_nodes(num_partitions);
   std::vector<HyperGraph*> graph(num_partitions, nullptr);
@@ -117,8 +117,8 @@ PartitionCoarsestGraphs(
   ConstructCombinedLists(
       metis_graphs, &combined_edge_list, &combined_node_list);
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t n) {
         auto node_index_pair = combined_node_list[n];
         uint32_t index = node_index_pair.second;
@@ -128,10 +128,10 @@ PartitionCoarsestGraphs(
         nzero_accum[index] += node_data.weight;
         node_data.InitRefine(1);
       },
-      galois::loopname("Partitioning-Init-PartitionOne"));
+      katana::loopname("Partitioning-Init-PartitionOne"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_hedges),
       [&](uint32_t hedge) {
         auto hedge_index_pair = combined_edge_list[hedge];
         uint32_t index = hedge_index_pair.second;
@@ -144,10 +144,10 @@ PartitionCoarsestGraphs(
           node_data.partition = 0;
         }
       },
-      galois::steal(), galois::loopname("Partitioning-Init-PartitionZero"));
+      katana::steal(), katana::loopname("Partitioning-Init-PartitionZero"));
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, total_nodes),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, total_nodes),
       [&](uint32_t node) {
         auto node_index_pair = combined_node_list[node];
         uint32_t index = node_index_pair.second;
@@ -161,7 +161,7 @@ PartitionCoarsestGraphs(
           nzero_partition_nodes[index].push(item);
         }
       },
-      galois::loopname("Partitioning-Aggregate-Nodes"));
+      katana::loopname("Partitioning-Aggregate-Nodes"));
 
   // first compute degree of every node
   ComputeDegrees(&graph, combined_edge_list, combined_node_list);
@@ -196,10 +196,10 @@ PartitionCoarsestGraphs(
       node_vec[idx++] = item;
     }
 
-    galois::StatTimer init_gain_timer("Partitioning-Init-Gains");
-    galois::StatTimer aggregate_node_timer("Partitioning-Aggregate-Nodes");
-    galois::StatTimer sort_timer("Partitioning-Sort");
-    galois::StatTimer find_partitionone_timer("Partitioning-Find-PartitionOne");
+    katana::StatTimer init_gain_timer("Partitioning-Init-Gains");
+    katana::StatTimer aggregate_node_timer("Partitioning-Aggregate-Nodes");
+    katana::StatTimer sort_timer("Partitioning-Sort");
+    katana::StatTimer find_partitionone_timer("Partitioning-Find-PartitionOne");
     while (true) {
       init_gain_timer.start();
       InitGain(cur_graph);
@@ -207,8 +207,8 @@ PartitionCoarsestGraphs(
 
       node_bag.clear();
 
-      galois::do_all(
-          galois::iterate(uint32_t{0}, idx),
+      katana::do_all(
+          katana::iterate(uint32_t{0}, idx),
           [&](uint32_t node_id) {
             GNode node = node_vec[node_id];
             uint32_t partition = cur_graph->getData(node).partition;
@@ -217,7 +217,7 @@ PartitionCoarsestGraphs(
               node_bag.emplace(node);
             }
           },
-          galois::loopname("Partitioning-Aggregate-Nodes"));
+          katana::loopname("Partitioning-Aggregate-Nodes"));
 
       aggregate_node_timer.start();
       idx = 0;

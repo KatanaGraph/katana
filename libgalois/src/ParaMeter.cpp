@@ -19,9 +19,9 @@
 
 #include <ctime>
 
-#include "galois/Env.h"
-#include "galois/gIO.h"
-#include "galois/runtime/Executor_ParaMeter.h"
+#include "katana/Env.h"
+#include "katana/Executor_ParaMeter.h"
+#include "katana/gIO.h"
 
 struct StatsFileManager {
   bool init = false;
@@ -51,22 +51,22 @@ struct StatsFileManager {
     if (!init) {
       init = true;
 
-      if (!galois::GetEnv("GALOIS_PARAMETER_OUTFILE", &statsFileName)) {
+      if (!katana::GetEnv("KATANA_PARAMETER_OUTFILE", &statsFileName)) {
         // statsFileName = "ParaMeter-Stats.csv";
         getTimeStampedName(statsFileName);
       }
 
       statsFH = fopen(statsFileName.c_str(), "w");
-      GALOIS_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
+      KATANA_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
-      galois::runtime::parameter::StepStatsBase::printHeader(statsFH);
+      katana::parameter::StepStatsBase::printHeader(statsFH);
 
       fclose(statsFH);
     }
 
     if (!isOpen) {
       statsFH = fopen(statsFileName.c_str(), "a");  // open in append mode
-      GALOIS_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
+      KATANA_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
       isOpen = true;
     }
@@ -90,11 +90,11 @@ getStatsFileManager(void) {
 }
 
 FILE*
-galois::runtime::parameter::getStatsFile(void) {
+katana::parameter::getStatsFile(void) {
   return getStatsFileManager().get();
 }
 
 void
-galois::runtime::parameter::closeStatsFile(void) {
+katana::parameter::closeStatsFile(void) {
   getStatsFileManager().close();
 }

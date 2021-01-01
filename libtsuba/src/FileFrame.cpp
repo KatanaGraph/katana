@@ -2,9 +2,9 @@
 
 #include <sys/mman.h>
 
-#include "galois/Logging.h"
-#include "galois/Platform.h"
-#include "galois/Result.h"
+#include "katana/Logging.h"
+#include "katana/Platform.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -12,34 +12,34 @@ namespace tsuba {
 
 FileFrame::~FileFrame() {
   if (auto res = Destroy(); !res) {
-    GALOIS_LOG_ERROR("Destroy failed in ~FileFrame");
+    KATANA_LOG_ERROR("Destroy failed in ~FileFrame");
   }
 }
 
-galois::Result<void>
+katana::Result<void>
 FileFrame::Destroy() {
   if (valid_) {
     int err = munmap(map_start_, map_size_);
     valid_ = false;
     if (err) {
-      return galois::ResultErrno();
+      return katana::ResultErrno();
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 FileFrame::Init(uint64_t reserved_size) {
   size_t size_to_reserve = reserved_size <= 0 ? 1 : reserved_size;
   uint64_t map_size = tsuba::RoundUpToBlock(size_to_reserve);
-  void* ptr = galois::MmapPopulate(
+  void* ptr = katana::MmapPopulate(
       nullptr, map_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
       -1, 0);
   if (ptr == MAP_FAILED) {
-    return galois::ResultErrno();
+    return katana::ResultErrno();
   }
   if (auto res = Destroy(); !res) {
-    GALOIS_LOG_ERROR("Destroy: {}", res.error());
+    KATANA_LOG_ERROR("Destroy: {}", res.error());
   }
   path_ = "";
   map_size_ = map_size;
@@ -47,7 +47,7 @@ FileFrame::Init(uint64_t reserved_size) {
   synced_ = false;
   valid_ = true;
   cursor_ = 0;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 void
@@ -55,14 +55,14 @@ FileFrame::Bind(std::string_view filename) {
   path_ = filename;
 }
 
-galois::Result<void>
+katana::Result<void>
 FileFrame::GrowBuffer(int64_t accomodate) {
   // We need a bigger buffer
   auto new_size = map_size_ * 2;
   while (cursor_ + accomodate > new_size) {
     new_size *= 2;
   }
-  void* ptr = galois::MmapPopulate(
+  void* ptr = katana::MmapPopulate(
       map_start_ + map_size_, new_size - map_size_, PROT_READ | PROT_WRITE,
       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ptr != map_start_ + map_size_) {
@@ -70,53 +70,53 @@ FileFrame::GrowBuffer(int64_t accomodate) {
       // Mapping succeeded, but not where we wanted it
       int err = munmap(ptr, new_size - map_size_);
       if (err) {
-        return galois::ResultErrno();
+        return katana::ResultErrno();
       }
     } else {
-      return galois::ResultErrno();
+      return katana::ResultErrno();
     }
     // Just allocate a brand new buffer :(
     ptr = nullptr;
-    ptr = galois::MmapPopulate(
+    ptr = katana::MmapPopulate(
         nullptr, new_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
         -1, 0);
     if (ptr == MAP_FAILED) {
-      return galois::ResultErrno();
+      return katana::ResultErrno();
     }
     memcpy(ptr, map_start_, cursor_);
     int err = munmap(map_start_, map_size_);
     if (err) {
-      return galois::ResultErrno();
+      return katana::ResultErrno();
     }
     map_start_ = static_cast<uint8_t*>(ptr);
   }
   map_size_ = new_size;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 FileFrame::Persist() {
   if (!valid_) {
     return tsuba::ErrorCode::InvalidArgument;
   }
   if (path_.empty()) {
-    GALOIS_LOG_DEBUG("No path provided to FileFrame");
+    KATANA_LOG_DEBUG("No path provided to FileFrame");
     return tsuba::ErrorCode::InvalidArgument;
   }
   if (auto res = tsuba::FileStore(path_, map_start_, cursor_); !res) {
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-std::future<galois::Result<void>>
+std::future<katana::Result<void>>
 FileFrame::PersistAsync() {
   if (!valid_) {
-    return galois::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+    return katana::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
   }
   if (path_.empty()) {
-    GALOIS_LOG_DEBUG("No path provided to FileFrame");
-    return galois::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+    KATANA_LOG_DEBUG("No path provided to FileFrame");
+    return katana::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
   }
   return tsuba::FileStoreAsync(path_, map_start_, cursor_);
 }

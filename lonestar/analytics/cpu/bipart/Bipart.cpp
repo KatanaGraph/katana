@@ -21,7 +21,7 @@
 
 #include "Helper.h"
 #include "Lonestar/BoilerPlate.h"
-#include "galois/substrate/PageAlloc.h"
+#include "katana/PageAlloc.h"
 
 namespace cll = llvm::cl;
 
@@ -93,20 +93,20 @@ Partition(
     std::vector<MetisGraph*>* metis_graphs, const uint32_t max_coarsen_level,
     const std::vector<uint32_t>& target_partitions) {
   assert(metis_graphs->size() == target_partitions.size());
-  galois::StatTimer exec_timer("Total-Partition");
+  katana::StatTimer exec_timer("Total-Partition");
   exec_timer.start();
 
-  galois::StatTimer timer_coarsing("Total-Coarsening");
+  katana::StatTimer timer_coarsing("Total-Coarsening");
   timer_coarsing.start();
   Coarsen(metis_graphs, max_coarsen_level, matching_policy);
   timer_coarsing.stop();
 
-  galois::StatTimer timer_partitioning("Total-Partitioning-CoarsestGraph");
+  katana::StatTimer timer_partitioning("Total-Partitioning-CoarsestGraph");
   timer_partitioning.start();
   PartitionCoarsestGraphs(*metis_graphs, target_partitions);
   timer_partitioning.stop();
 
-  galois::StatTimer timer_refining("Total-Refining");
+  katana::StatTimer timer_refining("Total-Refining");
   timer_refining.start();
   Refine(metis_graphs);
   timer_refining.stop();
@@ -124,9 +124,9 @@ Partition(
  */
 uint32_t
 ComputingCut(HyperGraph* g) {
-  galois::GAccumulator<uint32_t> edgecut;
-  galois::do_all(
-      galois::iterate(uint32_t{0}, g->GetHedges()),
+  katana::GAccumulator<uint32_t> edgecut;
+  katana::do_all(
+      katana::iterate(uint32_t{0}, g->GetHedges()),
       [&](GNode n) {
         uint32_t first_edge_partition_id =
             g->getData(g->getEdgeDst(g->edge_begin(n))).partition;
@@ -143,7 +143,7 @@ ComputingCut(HyperGraph* g) {
           edgecut += 1;
         }
       },
-      galois::loopname("Compute-CutSize"));
+      katana::loopname("Compute-CutSize"));
   return edgecut.reduce();
 }
 
@@ -191,8 +191,8 @@ ConstructCombinedLists(
  */
 void
 SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_hedges),
       [&](uint32_t hedge) {
         auto f_edge = *(graph->edges(hedge).begin());
         GNode f_dst = graph->getEdgeDst(f_edge);
@@ -222,7 +222,7 @@ SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
 
         graph->getData(hedge).partition = h_partition;
       },
-      galois::steal(), galois::loopname("Set-CompleteHEdge-Partition"));
+      katana::steal(), katana::loopname("Set-CompleteHEdge-Partition"));
 }
 
 /**
@@ -243,13 +243,13 @@ SetCompleteHEdgePartition(HyperGraph* graph, const uint32_t num_hedges) {
 void
 SetChildId(
     const std::set<uint32_t>& current_level_indices,
-    const std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
-    const std::vector<galois::InsertBag<GNode>>& mem_hedges_of_parts,
-    galois::InsertBag<std::pair<uint32_t, uint32_t>>* hnodes_bag,
-    galois::InsertBag<std::pair<uint32_t, uint32_t>>* hedges_bag,
+    const std::vector<katana::InsertBag<GNode>>& mem_nodes_of_parts,
+    const std::vector<katana::InsertBag<GNode>>& mem_hedges_of_parts,
+    katana::InsertBag<std::pair<uint32_t, uint32_t>>* hnodes_bag,
+    katana::InsertBag<std::pair<uint32_t, uint32_t>>* hedges_bag,
     HyperGraph* graph) {
-  galois::do_all(
-      galois::iterate(current_level_indices),
+  katana::do_all(
+      katana::iterate(current_level_indices),
       [&](uint32_t i) {
         uint32_t ed = 0;
         for (GNode h : mem_hedges_of_parts[i]) {
@@ -266,7 +266,7 @@ SetChildId(
         // <partition no, # of member nodes>.
         hnodes_bag->emplace(std::make_pair(i, id - ed));
       },
-      galois::steal(), galois::loopname("Set-Child-IDs"));
+      katana::steal(), katana::loopname("Set-Child-IDs"));
 }
 
 void
@@ -277,7 +277,7 @@ ConstructNewGraph(
     const std::vector<uint32_t>& num_hedges_per_partition,
     const uint32_t num_hedges, HyperGraph* graph,
     const std::vector<HyperGraph*>& gr) {
-  std::vector<galois::gstl::Vector<galois::PODResizeableArray<uint32_t>>>
+  std::vector<katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>>
       edges_ids(num_partitions);
   std::vector<LargeArrayUint64Ty> edges_prefixsum(num_partitions);
 
@@ -289,8 +289,8 @@ ConstructNewGraph(
     edges_prefixsum[index].allocateInterleaved(total_nodes);
   }
 
-  galois::do_all(
-      galois::iterate(uint32_t{0}, num_hedges),
+  katana::do_all(
+      katana::iterate(uint32_t{0}, num_hedges),
       [&](GNode src) {
         MetisNode& src_node = graph->getData(src);
         uint32_t partition = src_node.partition;
@@ -306,10 +306,10 @@ ConstructNewGraph(
           edges_ids[index][slot_id].push_back(dst_slot_id);
         }
       },
-      galois::steal(), galois::chunk_size<kChunkSize>(),
-      galois::loopname("Build-EdgeIds"));
+      katana::steal(), katana::chunk_size<kChunkSize>(),
+      katana::loopname("Build-EdgeIds"));
 
-  std::vector<galois::GAccumulator<uint64_t>> num_edges_acc(num_partitions);
+  std::vector<katana::GAccumulator<uint64_t>> num_edges_acc(num_partitions);
 
   for (uint32_t i : current_level_indices) {
     uint32_t index = pgraph_index[i];
@@ -373,7 +373,7 @@ PostReassignPartition(
     uint32_t* to_process_partitions,
     const std::set<uint32_t>& current_level_indices,
     std::set<uint32_t>* next_level_indices,
-    const std::vector<galois::InsertBag<GNode>>& mem_nodes_of_parts,
+    const std::vector<katana::InsertBag<GNode>>& mem_nodes_of_parts,
     const std::vector<uint32_t>& pgraph_index, HyperGraph* graph,
     const std::vector<HyperGraph*>& gr) {
   for (const uint32_t i : current_level_indices) {
@@ -384,8 +384,8 @@ PostReassignPartition(
     next_level_indices->insert(i);
     next_level_indices->insert(i + second_partition);
 
-    galois::do_all(
-        galois::iterate(mem_nodes_of_parts[i]),
+    katana::do_all(
+        katana::iterate(mem_nodes_of_parts[i]),
         [&](GNode src) {
           MetisNode& src_data = graph->getData(src);
           GNode n = src_data.child_id;
@@ -396,7 +396,7 @@ PostReassignPartition(
             src_data.partition = i + second_partition;
           }
         },
-        galois::loopname("Reassign-Partition"));
+        katana::loopname("Reassign-Partition"));
   }
 }
 
@@ -407,9 +407,9 @@ PostReassignPartition(
  */
 void
 CreateKPartitions(MetisGraph* metis_graph) {
-  galois::StatTimer initial_partition_timer("Initial-Partition");
-  galois::StatTimer intermediate_partition_timer("Intermediate-Partition");
-  galois::StatTimer update_graphtree_timer("Update-GraphTree");
+  katana::StatTimer initial_partition_timer("Initial-Partition");
+  katana::StatTimer intermediate_partition_timer("Intermediate-Partition");
+  katana::StatTimer update_graphtree_timer("Update-GraphTree");
   HyperGraph* graph = &metis_graph->graph;
   uint32_t total_num_nodes = graph->size();
   uint32_t num_hedges = graph->GetHedges();
@@ -434,8 +434,8 @@ CreateKPartitions(MetisGraph* metis_graph) {
   to_process_partitions[0] = second_partition;
   to_process_partitions[second_partition] = num_partitions / 2;
 
-  galois::do_all(
-      galois::iterate(num_hedges, total_num_nodes),
+  katana::do_all(
+      katana::iterate(num_hedges, total_num_nodes),
       [&](uint32_t n) {
         MetisNode& node = graph->getData(n);
         uint32_t partition_of_node = node.partition;
@@ -444,15 +444,15 @@ CreateKPartitions(MetisGraph* metis_graph) {
           node.partition = second_partition;
         }
       },
-      galois::loopname("Initial-Assign-Partition"));
+      katana::loopname("Initial-Assign-Partition"));
 
   std::set<uint32_t> current_level_indices;
   std::set<uint32_t> next_level_indices;
   current_level_indices.insert(0);
   current_level_indices.insert(second_partition);
 
-  std::vector<galois::InsertBag<GNode>> mem_nodes_of_parts;
-  std::vector<galois::InsertBag<GNode>> mem_hedges_of_parts;
+  std::vector<katana::InsertBag<GNode>> mem_nodes_of_parts;
+  std::vector<katana::InsertBag<GNode>> mem_hedges_of_parts;
   mem_nodes_of_parts.resize(num_partitions);
   mem_hedges_of_parts.resize(num_partitions);
 
@@ -506,8 +506,8 @@ CreateKPartitions(MetisGraph* metis_graph) {
     std::vector<uint32_t> num_hedges_per_partition(num_partitions);
     std::vector<uint32_t> num_hnodes_per_partition(num_partitions);
 
-    galois::InsertBag<std::pair<uint32_t, uint32_t>> hedges_bag;
-    galois::InsertBag<std::pair<uint32_t, uint32_t>> hnodes_bag;
+    katana::InsertBag<std::pair<uint32_t, uint32_t>> hedges_bag;
+    katana::InsertBag<std::pair<uint32_t, uint32_t>> hnodes_bag;
 
     for (uint32_t i : current_level_indices) {
       if (to_process_partitions[i] > 1) {
@@ -559,8 +559,8 @@ CreateKPartitions(MetisGraph* metis_graph) {
     current_level_indices = next_level_indices;
     next_level_indices.clear();
   }
-  galois::ReportStatSingle("BiPart", "Edge-Cut", ComputingCut(graph));
-  galois::ReportStatSingle(
+  katana::ReportStatSingle("BiPart", "Edge-Cut", ComputingCut(graph));
+  katana::ReportStatSingle(
       "BiPart", "Partitions", static_cast<uint32_t>(num_partitions));
 }
 
@@ -569,15 +569,15 @@ CreateKPartitions(MetisGraph* metis_graph) {
  */
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &input_file);
 
-  galois::StatTimer total_time("TimerTotal");
+  katana::StatTimer total_time("TimerTotal");
   total_time.start();
-  galois::StatTimer create_partition_time("Create-Partitions");
+  katana::StatTimer create_partition_time("Create-Partitions");
 
   if (!hyper_metis_graph) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "This application requires a HyperGraph Metis input;"
         " please use the -hyperMetisGraph flag "
         " to indicate the input is a valid HyperGraph Metis format "
@@ -593,19 +593,19 @@ main(int argc, char** argv) {
   uint32_t num_hedges = graph->GetHedges();
   GraphStat(*graph);
 
-  galois::Prealloc(galois::substrate::numPagePoolAllocTotal() * 20);
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(katana::numPagePoolAllocTotal() * 20);
+  katana::reportPageAlloc("MeminfoPre");
 
   create_partition_time.start();
   CreateKPartitions(&metis_graph);
   create_partition_time.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
   total_time.stop();
 
   if (!output_file_name.empty()) {
-    galois::gPrint("Number of hyper-edges: ", num_hedges, "\n");
-    galois::gPrint(
+    katana::gPrint("Number of hyper-edges: ", num_hedges, "\n");
+    katana::gPrint(
         "Total graph size (include hyper-edges): ", total_num_nodes, "\n");
     std::vector<uint32_t> parts(total_num_nodes - num_hedges);
     std::vector<uint32_t> IDs(total_num_nodes - num_hedges);

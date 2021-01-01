@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/config.h"
+#include "katana/config.h"
 
 /// Forward declarations of parallel loops. This is for internal cases where
 /// types used in the implementation of parallel loops also require parallel
@@ -25,7 +25,7 @@
 ///
 /// @file LoopsDecl.h
 
-namespace galois {
+namespace katana {
 
 template <typename Range, typename FunctionTy, typename... Args>
 void for_each(const Range& range, FunctionTy&& fn, Args&&... args);
@@ -36,4 +36,4 @@ void do_all(const Range& range, FunctionTy&& fn, Args&&... args);
 template <typename FunctionTy, typename... Args>
 void on_each(FunctionTy&& fn, Args&&... args);
 
-}  // end namespace galois
+}  // end namespace katana

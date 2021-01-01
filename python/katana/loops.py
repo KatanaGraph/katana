@@ -157,5 +157,5 @@ def is_obim_metric_closure(v):
 
 # Import the numba wrappers people are likely to need.
 # TODO: This imports should probably be elsewhere, but this will work for now.
-import galois.numba_support.galois
-import galois.numba_support.pyarrow
+import katana.numba_support.galois
+import katana.numba_support.pyarrow

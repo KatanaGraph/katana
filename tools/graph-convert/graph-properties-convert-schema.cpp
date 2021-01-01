@@ -5,9 +5,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::PropertyKey;
+using katana::ImportDataType;
+using katana::LabelRule;
+using katana::PropertyKey;
 
 struct GraphmlList {
   std::string list;
@@ -58,7 +58,7 @@ struct GraphmlList {
 /***************************************/
 
 xmlTextWriterPtr
-galois::CreateGraphmlFile(const std::string& outfile) {
+katana::CreateGraphmlFile(const std::string& outfile) {
   xmlTextWriterPtr writer;
   writer = xmlNewTextWriterFilename(outfile.c_str(), 0);
   xmlTextWriterStartDocument(writer, "1.0", "UTF-8", NULL);
@@ -82,7 +82,7 @@ galois::CreateGraphmlFile(const std::string& outfile) {
 }
 
 void
-galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
+katana::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
   xmlTextWriterStartElement(writer, BAD_CAST "rule");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST rule.id.c_str());
   if (rule.for_node) {
@@ -97,7 +97,7 @@ galois::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
 }
 
 void
-galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
+katana::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
   xmlTextWriterStartElement(writer, BAD_CAST "key");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST key.id.c_str());
   if (key.for_node) {
@@ -119,7 +119,7 @@ galois::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
 }
 
 void
-galois::StartGraphmlNode(
+katana::StartGraphmlNode(
     xmlTextWriterPtr writer, const std::string& node_id,
     const std::string& labels) {
   xmlTextWriterStartElement(writer, BAD_CAST "node");
@@ -131,12 +131,12 @@ galois::StartGraphmlNode(
 }
 
 void
-galois::FinishGraphmlNode(xmlTextWriterPtr writer) {
+katana::FinishGraphmlNode(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);
 }
 
 void
-galois::StartGraphmlEdge(
+katana::StartGraphmlEdge(
     xmlTextWriterPtr writer, const std::string& edge_id,
     const std::string& src_node, const std::string& dest_node,
     const std::string& labels) {
@@ -153,12 +153,12 @@ galois::StartGraphmlEdge(
 }
 
 void
-galois::FinishGraphmlEdge(xmlTextWriterPtr writer) {
+katana::FinishGraphmlEdge(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);
 }
 
 void
-galois::AddGraphmlProperty(
+katana::AddGraphmlProperty(
     xmlTextWriterPtr writer, const std::string& property_name,
     const std::string& property_value) {
   xmlTextWriterStartElement(writer, BAD_CAST "data");
@@ -172,13 +172,13 @@ galois::AddGraphmlProperty(
 }
 
 void
-galois::FinishGraphmlFile(xmlTextWriterPtr writer) {
+katana::FinishGraphmlFile(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);  // end graphml
   xmlTextWriterEndDocument(writer);
   xmlFreeTextWriter(writer);
 }
 void
-galois::ExportSchemaMapping(
+katana::ExportSchemaMapping(
     const std::string& outfile, const std::vector<LabelRule>& rules,
     const std::vector<PropertyKey>& keys) {
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
@@ -211,7 +211,7 @@ ExtractSchema(
     // ignore boolean fields since for now we assume they are labels
     if (type->id() != arrow::Type::UINT8) {
       bool is_list = type->id() == arrow::Type::LIST;
-      ImportDataType import_type = galois::ParseType(type);
+      ImportDataType import_type = katana::ParseType(type);
       // TODO(Patrick) clean this up properly
       if (import_type == ImportDataType::kUnsupported) {
         import_type = ImportDataType::kString;
@@ -303,7 +303,7 @@ ExtractList(std::shared_ptr<arrow::ListArray> array, int64_t index) {
     break;
   }
   default: {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "Attempted to export a property type that this exporter does not yet "
         "support: {}",
         array->type()->ToString());
@@ -353,7 +353,7 @@ ExtractData(std::shared_ptr<arrow::Array> array, int64_t index) {
     return ExtractList(lb, index);
   }
   default: {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "Attempted to export a property type that this exporter does not yet "
         "support: {}",
         array->type()->ToString());
@@ -368,13 +368,12 @@ InRange(uint32_t id, const std::pair<uint64_t, uint64_t>& interval) {
 }
 
 void
-galois::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
-  auto result = galois::graphs::PropertyFileGraph::Make(rdg_file);
+katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
+  auto result = katana::PropertyFileGraph::Make(rdg_file);
   if (!result) {
-    GALOIS_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
+    KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
-  std::unique_ptr<galois::graphs::PropertyFileGraph> graph =
-      std::move(result.value());
+  std::unique_ptr<katana::PropertyFileGraph> graph = std::move(result.value());
 
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
 
@@ -449,7 +448,7 @@ galois::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> edge_props =
       graph->EdgeProperties();
-  galois::graphs::GraphTopology topology = graph->topology();
+  katana::GraphTopology topology = graph->topology();
   uint32_t src_node = 0;
 
   chunk_indexes.clear();
@@ -515,7 +514,7 @@ galois::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
 
 // extract the type from an attr.type or attr.list attribute from a key element
 ImportDataType
-galois::ExtractTypeGraphML(xmlChar* value) {
+katana::ExtractTypeGraphML(xmlChar* value) {
   ImportDataType type = ImportDataType::kString;
   if (xmlStrEqual(value, BAD_CAST "string")) {
     type = ImportDataType::kString;
@@ -540,7 +539,7 @@ galois::ExtractTypeGraphML(xmlChar* value) {
   } else if (xmlStrEqual(value, BAD_CAST "struct")) {
     type = ImportDataType::kStruct;
   } else {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "Came across attr.type: {}, that is not supported",
         std::string((const char*)value));
     type = ImportDataType::kString;
@@ -554,7 +553,7 @@ galois::ExtractTypeGraphML(xmlChar* value) {
  * extracts key attribute information for use later
  */
 PropertyKey
-galois::ProcessKey(xmlTextReaderPtr reader) {
+katana::ProcessKey(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -585,7 +584,7 @@ galois::ProcessKey(xmlTextReaderPtr reader) {
         is_list = true;
         type = ExtractTypeGraphML(value);
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Attribute on key: {}, was not recognized",
             std::string((const char*)name));
       }
@@ -606,7 +605,7 @@ galois::ProcessKey(xmlTextReaderPtr reader) {
  * extracts key attribute information for use later
  */
 LabelRule
-galois::ProcessRule(xmlTextReaderPtr reader) {
+katana::ProcessRule(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -627,7 +626,7 @@ galois::ProcessRule(xmlTextReaderPtr reader) {
       } else if (xmlStrEqual(name, BAD_CAST "attr.label")) {
         attr_label = std::string((const char*)value);
       } else {
-        GALOIS_LOG_ERROR(
+        KATANA_LOG_ERROR(
             "Attribute on key: {}, was not recognized",
             std::string((const char*)name));
       }
@@ -650,8 +649,8 @@ galois::ProcessRule(xmlTextReaderPtr reader) {
 /**************************************************/
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
-galois::ProcessSchemaMapping(
-    galois::PropertyGraphBuilder* builder, const std::string& mapping,
+katana::ProcessSchemaMapping(
+    katana::PropertyGraphBuilder* builder, const std::string& mapping,
     const std::vector<std::string>& coll_names) {
   xmlTextReaderPtr reader;
   int ret = 0;
@@ -716,17 +715,17 @@ galois::ProcessSchemaMapping(
     }
     xmlFreeTextReader(reader);
     if (ret < 0) {
-      GALOIS_LOG_FATAL("Failed to parse {}", mapping);
+      KATANA_LOG_FATAL("Failed to parse {}", mapping);
     }
   } else {
-    GALOIS_LOG_FATAL("Unable to open {}", mapping);
+    KATANA_LOG_FATAL("Unable to open {}", mapping);
   }
   return std::pair<std::vector<std::string>, std::vector<std::string>>(
       nodes, edges);
 }
 
 std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
-galois::ProcessSchemaMapping(const std::string& mapping) {
+katana::ProcessSchemaMapping(const std::string& mapping) {
   xmlTextReaderPtr reader;
   int ret = 0;
   bool finished_header = false;
@@ -774,10 +773,10 @@ galois::ProcessSchemaMapping(const std::string& mapping) {
     }
     xmlFreeTextReader(reader);
     if (ret < 0) {
-      GALOIS_LOG_FATAL("Failed to parse {}", mapping);
+      KATANA_LOG_FATAL("Failed to parse {}", mapping);
     }
   } else {
-    GALOIS_LOG_FATAL("Unable to open {}", mapping);
+    KATANA_LOG_FATAL("Unable to open {}", mapping);
   }
   return std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>(
       rules, keys);
@@ -788,7 +787,7 @@ galois::ProcessSchemaMapping(const std::string& mapping) {
 /**************************************************/
 
 std::string
-galois::TypeName(ImportDataType type) {
+katana::TypeName(ImportDataType type) {
   switch (type) {
   case ImportDataType::kString:
     return std::string("string");
@@ -810,7 +809,7 @@ galois::TypeName(ImportDataType type) {
 }
 
 ImportDataType
-galois::ParseType(const std::string& in) {
+katana::ParseType(const std::string& in) {
   std::string type = boost::to_lower_copy<std::string>(in);
   if (type == std::string("string")) {
     return ImportDataType::kString;
@@ -840,7 +839,7 @@ galois::ParseType(const std::string& in) {
 }
 
 ImportDataType
-galois::ParseType(std::shared_ptr<arrow::DataType> in) {
+katana::ParseType(std::shared_ptr<arrow::DataType> in) {
   arrow::Type::type type = in->id();
   if (type == arrow::Type::STRING) {
     return ImportDataType::kString;

@@ -8,8 +8,8 @@ namespace {
 
 void
 ApplyTransform(
-    galois::graphs::PropertyFileGraph::PropertyView view,
-    galois::ColumnTransformer* transform) {
+    katana::PropertyFileGraph::PropertyView view,
+    katana::ColumnTransformer* transform) {
   int cur_field = 0;
   int num_fields = view.schema()->num_fields();
   std::vector<std::shared_ptr<arrow::Field>> new_fields;
@@ -22,13 +22,13 @@ ApplyTransform(
       continue;
     }
 
-    GALOIS_LOG_WARN(
+    KATANA_LOG_WARN(
         "applying {} to property {}", transform->name(), field->name());
 
     std::shared_ptr<arrow::ChunkedArray> property = view.Property(cur_field);
 
     if (auto result = view.RemoveProperty(cur_field); !result) {
-      GALOIS_LOG_FATAL("failed to remove {}: {}", cur_field, result.error());
+      KATANA_LOG_FATAL("failed to remove {}: {}", cur_field, result.error());
     }
 
     // Reread num_fields from view.schema rather than caching schema() value
@@ -46,7 +46,7 @@ ApplyTransform(
     std::shared_ptr<arrow::Table> new_table =
         arrow::Table::Make(schema, new_columns);
     if (auto result = view.AddProperties(new_table); !result) {
-      GALOIS_LOG_FATAL("failed to add properties: {}", result.error());
+      KATANA_LOG_FATAL("failed to add properties: {}", result.error());
     }
   }
 }
@@ -54,7 +54,7 @@ ApplyTransform(
 }  // namespace
 
 std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
-galois::ConvertDateTime::operator()(
+katana::ConvertDateTime::operator()(
     arrow::Field* field, arrow::ChunkedArray* chunked_array) {
   std::vector<int64_t> values;
   std::vector<bool> is_valid;
@@ -66,7 +66,7 @@ galois::ConvertDateTime::operator()(
   if (auto st =
           arrow::MakeBuilder(arrow::default_memory_pool(), dtype_, &builder);
       !st.ok()) {
-    GALOIS_LOG_FATAL("failed to create builder");
+    KATANA_LOG_FATAL("failed to create builder");
   }
 
   for (int cidx = 0, num_chunks = chunked_array->num_chunks();
@@ -75,7 +75,7 @@ galois::ConvertDateTime::operator()(
     auto array = std::dynamic_pointer_cast<arrow::StringArray>(chunk);
 
     if (!array) {
-      GALOIS_LOG_FATAL("column not string");
+      KATANA_LOG_FATAL("column not string");
     }
 
     switch (dtype_->id()) {
@@ -95,7 +95,7 @@ galois::ConvertDateTime::operator()(
       break;
     }
     default:
-      GALOIS_LOG_FATAL("unsupported type: ({})", dtype_->ToString());
+      KATANA_LOG_FATAL("unsupported type: ({})", dtype_->ToString());
     }
   }
 
@@ -103,7 +103,7 @@ galois::ConvertDateTime::operator()(
 
   std::shared_ptr<arrow::Array> new_array;
   if (auto st = builder->Finish(&new_array); !st.ok()) {
-    GALOIS_LOG_FATAL("could not finish array: {}", st);
+    KATANA_LOG_FATAL("could not finish array: {}", st);
   }
 
   auto new_column = std::make_shared<arrow::ChunkedArray>(
@@ -113,7 +113,7 @@ galois::ConvertDateTime::operator()(
 }
 
 std::pair<std::shared_ptr<arrow::Field>, std::shared_ptr<arrow::ChunkedArray>>
-galois::SparsifyBooleans::operator()(
+katana::SparsifyBooleans::operator()(
     arrow::Field* field, arrow::ChunkedArray* chunked_array) {
   std::vector<uint8_t> values;
 
@@ -125,7 +125,7 @@ galois::SparsifyBooleans::operator()(
     auto array = std::dynamic_pointer_cast<arrow::BooleanArray>(chunk);
 
     if (!array) {
-      GALOIS_LOG_FATAL("column not boolean");
+      KATANA_LOG_FATAL("column not boolean");
     }
 
     for (int64_t i = 0, n = array->length(); i < n; ++i) {
@@ -136,12 +136,12 @@ galois::SparsifyBooleans::operator()(
 
   arrow::UInt8Builder builder;
   if (auto result = builder.AppendValues(values); !result.ok()) {
-    GALOIS_LOG_FATAL("could not append array: {}", result);
+    KATANA_LOG_FATAL("could not append array: {}", result);
   }
 
   std::shared_ptr<arrow::Array> new_array;
   if (auto result = builder.Finish(&new_array); !result.ok()) {
-    GALOIS_LOG_FATAL("could not finish array: {}", result);
+    KATANA_LOG_FATAL("could not finish array: {}", result);
   }
 
   auto new_field = field->WithType(arrow::uint8())->WithNullable(false);
@@ -152,9 +152,9 @@ galois::SparsifyBooleans::operator()(
 }
 
 void
-galois::ApplyTransforms(
-    galois::graphs::PropertyFileGraph* graph,
-    const std::vector<std::unique_ptr<galois::ColumnTransformer>>&
+katana::ApplyTransforms(
+    katana::PropertyFileGraph* graph,
+    const std::vector<std::unique_ptr<katana::ColumnTransformer>>&
         transformers) {
   for (const auto& t : transformers) {
     ApplyTransform(graph->node_property_view(), t.get());

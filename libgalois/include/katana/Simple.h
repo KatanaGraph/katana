@@ -17,24 +17,23 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_SIMPLE_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_SIMPLE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_SIMPLE_H_
+#define KATANA_LIBGALOIS_KATANA_SIMPLE_H_
 
 #include <deque>
 #include <mutex>
 
-#include "galois/config.h"
-#include "galois/gdeque.h"
-#include "galois/substrate/PaddedLock.h"
-#include "galois/worklists/WLCompileCheck.h"
+#include "katana/PaddedLock.h"
+#include "katana/WLCompileCheck.h"
+#include "katana/config.h"
+#include "katana/gdeque.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 //! Simple Container Wrapper worklist (not scalable).
 template <typename T, typename container = std::deque<T>, bool popBack = true>
 class Wrapper : private boost::noncopyable {
-  substrate::PaddedLock<true> lock;
+  PaddedLock<true> lock;
   container wl;
 
 public:
@@ -47,25 +46,25 @@ public:
   typedef T value_type;
 
   void push(const value_type& val) {
-    std::lock_guard<substrate::PaddedLock<true>> lg(lock);
+    std::lock_guard<PaddedLock<true>> lg(lock);
     wl.push_back(val);
   }
 
   template <typename Iter>
   void push(Iter b, Iter e) {
-    std::lock_guard<substrate::PaddedLock<true>> lg(lock);
+    std::lock_guard<PaddedLock<true>> lg(lock);
     wl.insert(wl.end(), b, e);
   }
 
   template <typename RangeTy>
   void push_initial(const RangeTy& range) {
-    if (substrate::ThreadPool::getTID() == 0)
+    if (ThreadPool::getTID() == 0)
       push(range.begin(), range.end());
   }
 
-  galois::optional<value_type> pop() {
-    galois::optional<value_type> retval;
-    std::lock_guard<substrate::PaddedLock<true>> lg(lock);
+  katana::optional<value_type> pop() {
+    katana::optional<value_type> retval;
+    std::lock_guard<PaddedLock<true>> lg(lock);
     if (!wl.empty()) {
       if (popBack) {
         retval = wl.back();
@@ -83,20 +82,19 @@ template <typename T = int>
 using FIFO = Wrapper<T, std::deque<T>, false>;
 
 template <typename T = int>
-using GFIFO = Wrapper<T, galois::gdeque<T>, false>;
+using GFIFO = Wrapper<T, katana::gdeque<T>, false>;
 
 template <typename T = int>
 using LIFO = Wrapper<T, std::deque<T>, true>;
 
 template <typename T = int>
-using GLIFO = Wrapper<T, galois::gdeque<T>, true>;
+using GLIFO = Wrapper<T, katana::gdeque<T>, true>;
 
-GALOIS_WLCOMPILECHECK(FIFO)
-GALOIS_WLCOMPILECHECK(GFIFO)
-GALOIS_WLCOMPILECHECK(LIFO)
-GALOIS_WLCOMPILECHECK(GLIFO)
+KATANA_WLCOMPILECHECK(FIFO)
+KATANA_WLCOMPILECHECK(GFIFO)
+KATANA_WLCOMPILECHECK(LIFO)
+KATANA_WLCOMPILECHECK(GLIFO)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

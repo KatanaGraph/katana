@@ -2,9 +2,9 @@ import numpy as np
 import numba.types
 import pyarrow
 
-from galois.atomic import atomic_min, GAccumulator, GReduceMax
-from galois.datastructures import InsertBag
-from galois.loops import (
+from katana.atomic import atomic_min, GAccumulator, GReduceMax
+from katana.datastructures import InsertBag
+from katana.loops import (
     for_each_operator,
     for_each,
     UserContext,
@@ -13,9 +13,9 @@ from galois.loops import (
     do_all_operator,
     do_all,
 )
-from galois.property_graph import PropertyGraph
-from galois.timer import StatTimer
-from galois.shmem import setActiveThreads
+from katana.property_graph import PropertyGraph
+from katana.timer import StatTimer
+from katana.galois import setActiveThreads
 
 
 UpdateRequest = np.dtype([("src", np.uint64), ("dist", np.uint32),])

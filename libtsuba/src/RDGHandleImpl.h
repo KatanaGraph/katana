@@ -1,10 +1,10 @@
-#ifndef GALOIS_LIBTSUBA_RDGHANDLEIMPL_H_
-#define GALOIS_LIBTSUBA_RDGHANDLEIMPL_H_
+#ifndef KATANA_LIBTSUBA_RDGHANDLEIMPL_H_
+#define KATANA_LIBTSUBA_RDGHANDLEIMPL_H_
 
 #include <cstdint>
 
 #include "RDGMeta.h"
-#include "galois/Uri.h"
+#include "katana/Uri.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {
@@ -15,7 +15,7 @@ public:
       : flags_(flags), rdg_meta_(std::move(rdg_meta)) {}
 
   /// Perform some checks on assumed invariants
-  galois::Result<void> Validate() const;
+  katana::Result<void> Validate() const;
   constexpr bool AllowsRead() const { return true; }
   constexpr bool AllowsWrite() const { return flags_ & kReadWrite; }
 

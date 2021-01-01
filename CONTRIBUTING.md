@@ -211,7 +211,7 @@ to require a new 3rd party library for a good reason you should:
   a shared library at run time), can be in `host` only.
 
   3. It is possible that you may have to modify the
-  [package config](cmake/GaloisConfig.cmake.in) as well so `cmake` will find
+  [package config](cmake/KatanaConfig.cmake.in) as well so `cmake` will find
   your dependency during the conda build (again the best advice is to look at how other
   dependencies handle this). This should only be necessary if the new dependency
   is a runtime or user-code dependency. For instance, this should not be
@@ -281,7 +281,7 @@ You can get them with `make input`.
 If you need to update the inputs, they are referenced as
   https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-vN.tar.gz
 in `.github/workflows`, `inputs/CMakeLists.txt` and
-`external/katana/python/galois/exmaple_utils.py`.  `vN` is a monotonically
+`external/katana/python/katana/exmaple_utils.py`.  `vN` is a monotonically
 increasing version number. You can use a command `inputs/update_inputs.sh` to
 create create a new input collection. After creating the tar file, you will
 need to upload the file to the public S3 bucket.
@@ -346,9 +346,9 @@ it is acceptable to follow the convention in that module; though in general, it
 would be preferable to follow the motto of "leave the codebase in better shape
 than you found it."
 
-## galois::Result
+## katana::Result
 
-On older compilers, auto conversion to `galois::Result` will fail for types
+On older compilers, auto conversion to `katana::Result` will fail for types
 that can't be copied. One symptom is compiler errors on GCC 7 but not on GCC 9.
 We've adopted the workaround of returning such objects like so:
 
@@ -361,7 +361,7 @@ Result<Thing> MakeMoveOnlyThing() {
 ```
 
 If you are looking to simplify error handling, if a function returns a
-`galois::Result<void>`, you can define the result and check it in a single if
+`katana::Result<void>`, you can define the result and check it in a single if
 statement:
 
 ```cpp

@@ -2,9 +2,9 @@
 
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
-#include "galois/Backtrace.h"
-#include "galois/CommBackend.h"
-#include "galois/Env.h"
+#include "katana/Backtrace.h"
+#include "katana/CommBackend.h"
+#include "katana/Env.h"
 #include "tsuba/Errors.h"
 #include "tsuba/NameServerClient.h"
 #include "tsuba/Preload.h"
@@ -12,14 +12,14 @@
 
 namespace {
 
-galois::NullCommBackend default_comm_backend;
+katana::NullCommBackend default_comm_backend;
 std::unique_ptr<tsuba::NameServerClient> default_ns_client;
 
-galois::Result<std::vector<std::string>>
+katana::Result<std::vector<std::string>>
 FileList(const std::string& dir) {
   std::vector<std::string> files;
   auto list_fut = tsuba::FileListAsync(dir, &files);
-  GALOIS_LOG_ASSERT(list_fut.valid());
+  KATANA_LOG_ASSERT(list_fut.valid());
 
   if (auto res = list_fut.get(); !res) {
     return res.error();
@@ -31,7 +31,7 @@ bool
 ContainsValidMetaFile(const std::string& dir) {
   auto list_res = FileList(dir);
   if (!list_res) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "ContainsValidMetaFile dir: {}: {}", dir, list_res.error());
     return false;
   }
@@ -43,8 +43,8 @@ ContainsValidMetaFile(const std::string& dir) {
   return false;
 }
 
-galois::Result<galois::Uri>
-FindLatestMetaFile(const galois::Uri& name) {
+katana::Result<katana::Uri>
+FindLatestMetaFile(const katana::Uri& name) {
   assert(!tsuba::RDGMeta::IsMetaUri(name));
   auto list_res = FileList(name.string());
   if (!list_res) {
@@ -63,7 +63,7 @@ FindLatestMetaFile(const galois::Uri& name) {
     }
   }
   if (found_meta.empty()) {
-    GALOIS_LOG_DEBUG("failed: could not find meta file in {}", name);
+    KATANA_LOG_DEBUG("failed: could not find meta file in {}", name);
     return tsuba::ErrorCode::InvalidArgument;
   }
   return name.Join(found_meta);
@@ -71,21 +71,21 @@ FindLatestMetaFile(const galois::Uri& name) {
 
 }  // namespace
 
-galois::Result<tsuba::RDGHandle>
+katana::Result<tsuba::RDGHandle>
 tsuba::Open(const std::string& rdg_name, uint32_t flags) {
   if (!OpenFlagsValid(flags)) {
-    GALOIS_LOG_ERROR("invalid value for flags ({:#x})", flags);
+    KATANA_LOG_ERROR("invalid value for flags ({:#x})", flags);
     return ErrorCode::InvalidArgument;
   }
 
-  auto uri_res = galois::Uri::Make(rdg_name);
+  auto uri_res = katana::Uri::Make(rdg_name);
   if (!uri_res) {
     return uri_res.error();
   }
-  galois::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = std::move(uri_res.value());
 
   if (RDGMeta::IsMetaUri(uri)) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: {} is probably a literal rdg file and not suited for open",
         uri);
     return ErrorCode::InvalidArgument;
@@ -94,7 +94,7 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
   if (!RDGMeta::IsMetaUri(uri)) {
     // try to be helpful and look for RDGs that we don't know about
     if (auto res = RegisterIfAbsent(uri.string()); !res) {
-      GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
+      KATANA_LOG_DEBUG("failed to auto-register: {}", res.error());
       return res.error();
     }
   }
@@ -108,28 +108,28 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
       .impl_ = new RDGHandleImpl(flags, std::move(meta_res.value()))};
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::Close(RDGHandle handle) {
   delete handle.impl_;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::Create(const std::string& name) {
-  auto uri_res = galois::Uri::Make(name);
+  auto uri_res = katana::Uri::Make(name);
   if (!uri_res) {
     return uri_res.error();
   }
-  galois::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = std::move(uri_res.value());
 
   assert(!RDGMeta::IsMetaUri(uri));
   // the default construction is the empty RDG
   tsuba::RDGMeta meta{};
 
-  galois::CommBackend* comm = Comm();
+  katana::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     if (ContainsValidMetaFile(name)) {
-      GALOIS_LOG_ERROR(
+      KATANA_LOG_ERROR(
           "unable to create {}: path already contains a valid meta file", name);
       return ErrorCode::InvalidArgument;
     }
@@ -138,7 +138,7 @@ tsuba::Create(const std::string& name) {
             tsuba::RDGMeta::FileName(uri, meta.version()).string(),
             reinterpret_cast<const uint8_t*>(s.data()), s.size());
         !res) {
-      GALOIS_LOG_ERROR("failed to store RDG file");
+      KATANA_LOG_ERROR("failed to store RDG file");
       comm->NotifyFailure();
       return res.error();
     }
@@ -146,20 +146,20 @@ tsuba::Create(const std::string& name) {
 
   // NS handles MPI coordination
   if (auto res = tsuba::NS()->CreateIfAbsent(uri, meta); !res) {
-    GALOIS_LOG_ERROR("failed to create RDG name");
+    KATANA_LOG_ERROR("failed to create RDG name");
     return res.error();
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::RegisterIfAbsent(const std::string& name) {
-  auto uri_res = galois::Uri::Make(name);
+  auto uri_res = katana::Uri::Make(name);
   if (!uri_res) {
     return uri_res.error();
   }
-  galois::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = std::move(uri_res.value());
 
   if (!RDGMeta::IsMetaUri(uri)) {
     auto latest_res = FindLatestMetaFile(uri);
@@ -178,16 +178,16 @@ tsuba::RegisterIfAbsent(const std::string& name) {
   return tsuba::NS()->CreateIfAbsent(meta.dir(), meta);
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::Forget(const std::string& name) {
-  auto uri_res = galois::Uri::Make(name);
+  auto uri_res = katana::Uri::Make(name);
   if (!uri_res) {
     return uri_res.error();
   }
-  galois::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = std::move(uri_res.value());
 
   if (RDGMeta::IsMetaUri(uri)) {
-    GALOIS_LOG_DEBUG("uri does not look like a graph name (ends in meta)");
+    KATANA_LOG_DEBUG("uri does not look like a graph name (ends in meta)");
     return ErrorCode::InvalidArgument;
   }
 
@@ -196,25 +196,25 @@ tsuba::Forget(const std::string& name) {
   return res;
 }
 
-galois::Result<tsuba::RDGStat>
+katana::Result<tsuba::RDGStat>
 tsuba::Stat(const std::string& rdg_name) {
-  auto uri_res = galois::Uri::Make(rdg_name);
+  auto uri_res = katana::Uri::Make(rdg_name);
   if (!uri_res) {
     return uri_res.error();
   }
-  galois::Uri uri = std::move(uri_res.value());
+  katana::Uri uri = std::move(uri_res.value());
 
   if (!RDGMeta::IsMetaUri(uri)) {
     // try to be helpful and look for RDGs that we don't know about
     if (auto res = RegisterIfAbsent(uri.string()); !res) {
-      GALOIS_LOG_DEBUG("failed to auto-register: {}", res.error());
+      KATANA_LOG_DEBUG("failed to auto-register: {}", res.error());
       return res.error();
     }
   }
 
   auto rdg_res = RDGMeta::Make(uri);
   if (!rdg_res) {
-    if (rdg_res.error() == galois::ErrorCode::JsonParseFailed) {
+    if (rdg_res.error() == katana::ErrorCode::JsonParseFailed) {
       return RDGStat{
           .num_hosts = 1,
           .policy_id = 0,
@@ -232,24 +232,24 @@ tsuba::Stat(const std::string& rdg_name) {
   };
 }
 
-galois::Result<void>
-tsuba::Init(galois::CommBackend* comm) {
+katana::Result<void>
+tsuba::Init(katana::CommBackend* comm) {
   tsuba::Preload();
   auto client_res = GlobalState::MakeNameServerClient();
   if (!client_res) {
     return client_res.error();
   }
   default_ns_client = std::move(client_res.value());
-  galois::InitBacktrace(comm->ID);
+  katana::InitBacktrace(comm->ID);
   return GlobalState::Init(comm, default_ns_client.get());
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::Init() {
   return Init(&default_comm_backend);
 }
 
-galois::Result<void>
+katana::Result<void>
 tsuba::Fini() {
   auto r = GlobalState::Fini();
   tsuba::PreloadFini();

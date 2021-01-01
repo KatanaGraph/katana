@@ -1,18 +1,18 @@
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYVIEWS_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_PROPERTYVIEWS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYVIEWS_H_
+#define KATANA_LIBGALOIS_KATANA_PROPERTYVIEWS_H_
 
-#include <galois/Properties.h>
-#include <galois/graphs/PropertyFileGraph.h>
+#include <katana/Properties.h>
+#include <katana/PropertyFileGraph.h>
 
-namespace galois::graphs::internal {
+namespace katana::internal {
 
 /// ExtractArrays returns the array for each column of a table. It returns an
 /// error if there is more than one array for any column.
-Result<std::vector<arrow::Array*>> GALOIS_EXPORT ExtractArrays(
+Result<std::vector<arrow::Array*>> KATANA_EXPORT ExtractArrays(
     const arrow::Table* table, const std::vector<std::string>& properties);
 
 template <typename PropTuple>
-Result<galois::PropertyViewTuple<PropTuple>>
+Result<katana::PropertyViewTuple<PropTuple>>
 MakePropertyViews(
     const arrow::Table* table, const std::vector<std::string>& properties) {
   auto arrays_result = ExtractArrays(table, properties);
@@ -41,7 +41,7 @@ MakePropertyViews(
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
 template <typename PropTuple>
-static Result<galois::PropertyViewTuple<PropTuple>>
+static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
   return MakePropertyViews<PropTuple>(pfg->node_table().get(), properties);
@@ -53,7 +53,7 @@ MakeNodePropertyViews(
 /// view or if the underlying arrow::ChunkedArray has more than one
 /// arrow::Array.
 template <typename PropTuple>
-static Result<galois::PropertyViewTuple<PropTuple>>
+static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(const PropertyFileGraph* pfg) {
   return MakeNodePropertyViews<PropTuple>(
       pfg, pfg->node_schema()->field_names());
@@ -65,7 +65,7 @@ MakeNodePropertyViews(const PropertyFileGraph* pfg) {
 ///
 /// \see MakeNodePropertyViews
 template <typename PropTuple>
-static Result<galois::PropertyViewTuple<PropTuple>>
+static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
   return MakePropertyViews<PropTuple>(pfg->edge_table().get(), properties);
@@ -75,12 +75,12 @@ MakeEdgePropertyViews(
 ///
 /// \see MakeNodePropertyViews
 template <typename PropTuple>
-static Result<galois::PropertyViewTuple<PropTuple>>
+static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(const PropertyFileGraph* pfg) {
   return MakeEdgePropertyViews<PropTuple>(
       pfg, pfg->edge_schema()->field_names());
 }
 
-}  // namespace galois::graphs::internal
+}  // namespace katana::internal
 
 #endif

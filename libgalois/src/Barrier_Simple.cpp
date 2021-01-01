@@ -20,12 +20,12 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/ThreadPool.h"
 
 namespace {
 
-class OneWayBarrier : public galois::substrate::Barrier {
+class OneWayBarrier : public katana::Barrier {
   std::mutex lock;
   std::condition_variable cond;
   unsigned count;
@@ -49,7 +49,7 @@ public:
   const char* name() const override { return "OneWayBarrier"; }
 };
 
-class SimpleBarrier : public galois::substrate::Barrier {
+class SimpleBarrier : public katana::Barrier {
   OneWayBarrier barrier1;
   OneWayBarrier barrier2;
   unsigned total;
@@ -65,11 +65,11 @@ public:
 
   void Wait() override {
     barrier1.Wait();
-    if (galois::substrate::ThreadPool::getTID() == 0) {
+    if (katana::ThreadPool::getTID() == 0) {
       barrier1.Reinit(total);
     }
     barrier2.Wait();
-    if (galois::substrate::ThreadPool::getTID() == 0) {
+    if (katana::ThreadPool::getTID() == 0) {
       barrier2.Reinit(total);
     }
   }
@@ -79,7 +79,7 @@ public:
 
 }  // end anonymous namespace
 
-std::unique_ptr<galois::substrate::Barrier>
-galois::substrate::CreateSimpleBarrier(unsigned active_threads) {
+std::unique_ptr<katana::Barrier>
+katana::CreateSimpleBarrier(unsigned active_threads) {
   return std::make_unique<SimpleBarrier>(active_threads);
 }

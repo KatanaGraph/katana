@@ -21,14 +21,14 @@
 #define LONESTAR_BOILERPLATE_H
 
 #include "Lonestar/Utils.h"
-#include "galois/Galois.h"
-#include "galois/SharedMemSys.h"
-#include "galois/Version.h"
-#include "galois/analytics/Utils.h"
+#include "katana/Galois.h"
+#include "katana/SharedMemSys.h"
+#include "katana/Version.h"
+#include "katana/analytics/Utils.h"
 #include "llvm/Support/CommandLine.h"
 
-using galois::analytics::ConstructEdgeProperties;
-using galois::analytics::ConstructNodeProperties;
+using katana::analytics::ConstructEdgeProperties;
+using katana::analytics::ConstructNodeProperties;
 
 //! standard global options to the benchmarks
 extern llvm::cl::opt<bool> skipVerify;
@@ -41,8 +41,8 @@ extern llvm::cl::opt<std::string> outputLocation;
 extern llvm::cl::opt<bool> output;
 
 //! initialize lonestar benchmark
-std::unique_ptr<galois::SharedMemSys> LonestarStart(
+std::unique_ptr<katana::SharedMemSys> LonestarStart(
     int argc, char** argv, const char* app, const char* desc, const char* url,
     llvm::cl::opt<std::string>* input);
-std::unique_ptr<galois::SharedMemSys> LonestarStart(int argc, char** argv);
+std::unique_ptr<katana::SharedMemSys> LonestarStart(int argc, char** argv);
 #endif

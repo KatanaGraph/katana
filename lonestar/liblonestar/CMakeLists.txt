@@ -5,4 +5,4 @@ target_include_directories(lonestar PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(lonestar Galois::shmem LLVMSupport)
+target_link_libraries(lonestar Katana::galois LLVMSupport)

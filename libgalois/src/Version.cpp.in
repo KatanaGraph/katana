@@ -17,22 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/Version.h"
+#include "katana/Version.h"
 
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
 
-std::string galois::getVersion() { return STR(@GALOIS_VERSION@); }
+std::string katana::getVersion() { return STR(@KATANA_VERSION@); }
 
 std::string
-galois::getRevision() {
-  return STR(@GALOIS_GIT_SHA@) "-" STR(@CMAKE_BUILD_TYPE@);
+katana::getRevision() {
+  return STR(@KATANA_GIT_SHA@) "-" STR(@CMAKE_BUILD_TYPE@);
 }
 
-int galois::getVersionMajor() { return @GALOIS_VERSION_MAJOR@; }
+int katana::getVersionMajor() { return @KATANA_VERSION_MAJOR@; }
 
-int galois::getVersionMinor() { return @GALOIS_VERSION_MINOR@; }
+int katana::getVersionMinor() { return @KATANA_VERSION_MINOR@; }
 
-int galois::getVersionPatch() { return @GALOIS_VERSION_PATCH@; }
+int katana::getVersionPatch() { return @KATANA_VERSION_PATCH@; }
 
-int galois::getCopyrightYear() { return @GALOIS_COPYRIGHT_YEAR@; }
+int katana::getCopyrightYear() { return @KATANA_COPYRIGHT_YEAR@; }

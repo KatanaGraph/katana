@@ -3,14 +3,14 @@
 #include "AddTables.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 #include "tsuba/Errors.h"
 
 namespace tsuba {
 
-galois::Result<void>
-RDGSlice::DoMake(const galois::Uri& metadata_dir, const SliceArg& slice) {
-  galois::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
+katana::Result<void>
+RDGSlice::DoMake(const katana::Uri& metadata_dir, const SliceArg& slice) {
+  katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
 
   if (auto res = core_->topology_file_storage().Bind(
           t_path.string(), slice.topo_off, slice.topo_off + slice.topo_size,
@@ -39,24 +39,24 @@ RDGSlice::DoMake(const galois::Uri& metadata_dir, const SliceArg& slice) {
     return edge_result.error();
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<RDGSlice>
+katana::Result<RDGSlice>
 RDGSlice::Make(
     RDGHandle handle, const SliceArg& slice,
     const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   const RDGMeta& meta = handle.impl_->rdg_meta();
   if (meta.num_hosts() != 1) {
-    GALOIS_LOG_ERROR("cannot construct RDGSlice for partitioned graph");
+    KATANA_LOG_ERROR("cannot construct RDGSlice for partitioned graph");
     return ErrorCode::NotImplemented;
   }
-  galois::Uri partition_path(meta.PartitionFileName(0));
+  katana::Uri partition_path(meta.PartitionFileName(0));
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
-    GALOIS_LOG_DEBUG(
+    KATANA_LOG_DEBUG(
         "failed: ReadMetaData (path: {}): {}", partition_path,
         part_header_res.error());
     return part_header_res.error();

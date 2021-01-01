@@ -3,13 +3,13 @@
 
 \tableofcontents
 
-When optimizing Galois apps, you may need to work with an external profiling infrastructure to have an idea about the performance in micro-architectural level. Currently Galois supports profiling with Intel VTune and PAPI. For this to work, you need to include the header galois/runtime/Profile.h, and instrument your code as the following sections suggest.
+When optimizing Galois apps, you may need to work with an external profiling infrastructure to have an idea about the performance in micro-architectural level. Currently Galois supports profiling with Intel VTune and PAPI. For this to work, you need to include the header katana/Profile.h, and instrument your code as the following sections suggest.
 
 @section profile_w_vtune Profiling with Intel VTune
 
 <a href="https://software.intel.com/en-us/intel-vtune-amplifier-xe">Intel VTune</a> is a profiling tool offered by Intel in Intel Parallel Studio. 
 
-Turn on the use of Intel VTune by running cmake with -DGALOIS_ENABLE_VTUNE=1 option. Instrument the code region of interest with galois::runtime::profileVtune, which expects two arguments: (1) the code region to be profiled as a lambda expression, functor, etc., and (2) the name for the code region. Below is an example of profiling the node-iterator algorithm for triangle counting with Intel VTune:
+Turn on the use of Intel VTune by running cmake with -DKATANA_ENABLE_VTUNE=1 option. Instrument the code region of interest with katana::profileVtune, which expects two arguments: (1) the code region to be profiled as a lambda expression, functor, etc., and (2) the name for the code region. Below is an example of profiling the node-iterator algorithm for triangle counting with Intel VTune:
 
 @snippet lonestar/analytics/cpu/triangle-counting/Triangles.cpp profile w/ vtune
 
@@ -19,13 +19,13 @@ Compile your code and run with Intel VTune to collect statistics.
 
 <a href="http://icl.cs.utk.edt/papi/">PAPI</a> stands for "Performance Application Programming Interface". 
 
-Turn on the use of PAPI by running cmake with -DGALOIS_ENABLE_PAPI=1 option. Instrument the code region of interest with galois::runtime::profilePapi, which expects two arguments: (1) the code region to be profiled as a lambda expression, functor, etc., and (2) the name for the code region. Below is an example of profiling the edge-iterator algorithm for triangle counting with PAPI:
+Turn on the use of PAPI by running cmake with -DKATANA_ENABLE_PAPI=1 option. Instrument the code region of interest with katana::profilePapi, which expects two arguments: (1) the code region to be profiled as a lambda expression, functor, etc., and (2) the name for the code region. Below is an example of profiling the edge-iterator algorithm for triangle counting with PAPI:
 
 @snippet lonestar/analytics/cpu/triangle-counting/Triangles.cpp profile w/ papi
 
 Compile your code and run with a sequence of PAPI counters you want to collect. Below is an example command-line:
 
-$> GALOIS_PAPI_EVENTS="PAPI_L1_DCM,PAPI_L2_DCM,PAPI_BR_MSP,PAPI_TOT_INS,PAPI_TOT_CYC" ./triangles input_graph -algo edgeiterator -t 24
+$> KATANA_PAPI_EVENTS="PAPI_L1_DCM,PAPI_L2_DCM,PAPI_BR_MSP,PAPI_TOT_INS,PAPI_TOT_CYC" ./triangles input_graph -algo edgeiterator -t 24
 
 Upon program termination, the value of PAPI counters will be reported along with other statistics in csv output, similar to the following:
 
@@ -46,6 +46,6 @@ STAT, (NULL), Time, TMAX, 263<br>
 STAT, (NULL), GraphReadingTime, TMAX, 26<br>
 ...
 
-Note that the PAPI counters are reported as categories for the region "edgeIteratorAlgo", the name provided to the galois::runtime::profilePapi call.
+Note that the PAPI counters are reported as categories for the region "edgeIteratorAlgo", the name provided to the katana::profilePapi call.
 
 */

@@ -17,22 +17,21 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_WORKLISTS_OBIM_H_
-#define GALOIS_LIBGALOIS_GALOIS_WORKLISTS_OBIM_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OBIM_H_
+#define KATANA_LIBGALOIS_KATANA_OBIM_H_
 
 #include <deque>
 #include <limits>
 #include <type_traits>
 
-#include "galois/FlatMap.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/PerThreadStorage.h"
-#include "galois/substrate/TerminationDetection.h"
-#include "galois/worklists/Chunk.h"
-#include "galois/worklists/WorkListHelpers.h"
+#include "katana/Barrier.h"
+#include "katana/Chunk.h"
+#include "katana/FlatMap.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/TerminationDetection.h"
+#include "katana/WorkListHelpers.h"
 
-namespace galois {
-namespace worklists {
+namespace katana {
 
 namespace internal {
 
@@ -41,7 +40,7 @@ class OrderedByIntegerMetricData {
 protected:
   struct ThreadData {};
   bool hasStored(ThreadData&, Index) { return false; }
-  galois::optional<T> popStored(ThreadData&, Index) { return {}; }
+  katana::optional<T> popStored(ThreadData&, Index) { return {}; }
 };
 
 template <typename T, typename Index>
@@ -52,10 +51,9 @@ protected:
     std::deque<std::pair<Index, T>> stored;
   };
 
-  substrate::Barrier& barrier;
+  Barrier& barrier;
 
-  OrderedByIntegerMetricData()
-      : barrier(substrate::GetBarrier(runtime::activeThreads)) {}
+  OrderedByIntegerMetricData() : barrier(GetBarrier(activeThreads)) {}
 
   bool hasStored(ThreadData& p, Index idx) {
     for (auto& e : p.stored) {
@@ -67,8 +65,8 @@ protected:
     return false;
   }
 
-  galois::optional<T> popStored(ThreadData& p, Index idx) {
-    galois::optional<T> item;
+  katana::optional<T> popStored(ThreadData& p, Index idx) {
+    katana::optional<T> item;
     for (auto ii = p.stored.begin(), ei = p.stored.end(); ii != ei; ++ii) {
       if (ii->first == idx) {
         item = ii->second;
@@ -88,7 +86,7 @@ struct OrderedByIntegerMetricComparator {
 
   template <typename C>
   struct with_local_map {
-    typedef galois::flat_map<Index, C, std::less<Index>> type;
+    typedef katana::flat_map<Index, C, std::less<Index>> type;
   };
   OrderedByIntegerMetricComparator()
       : identity(std::numeric_limits<Index>::max()),
@@ -103,7 +101,7 @@ struct OrderedByIntegerMetricComparator<Index, true> {
 
   template <typename C>
   struct with_local_map {
-    typedef galois::flat_map<Index, C, std::greater<Index>> type;
+    typedef katana::flat_map<Index, C, std::greater<Index>> type;
   };
   OrderedByIntegerMetricComparator()
       : identity(std::numeric_limits<Index>::min()),
@@ -127,8 +125,8 @@ struct OrderedByIntegerMetricComparator<Index, true> {
  *   int operator()(Item i) const { return i.index; }
  * };
  *
- * typedef galois::worklists::OrderedByIntegerMetric<Indexer> WL;
- * galois::for_each<WL>(galois::iterate(items), Fn);
+ * typedef katana::OrderedByIntegerMetric<Indexer> WL;
+ * katana::for_each<WL>(katana::iterate(items), Fn);
  * \endcode
  *
  * @tparam Indexer        Indexer class
@@ -254,8 +252,8 @@ private:
 
   // NB: Place dynamically growing masterLog after fixed-size PerThreadStorage
   // members to give higher likelihood of reclaiming PerThreadStorage
-  substrate::PerThreadStorage<ThreadData> data;
-  substrate::PaddedLock<Concurrent> masterLock;
+  PerThreadStorage<ThreadData> data;
+  PaddedLock<Concurrent> masterLock;
   MasterLog masterLog;
 
   std::atomic<unsigned int> masterVersion;
@@ -275,9 +273,9 @@ private:
     return false;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE
-  galois::optional<T> slowPop(ThreadData& p) {
-    bool localLeader = substrate::ThreadPool::isLeader();
+  KATANA_ATTRIBUTE_NOINLINE
+  katana::optional<T> slowPop(ThreadData& p) {
+    bool localLeader = ThreadPool::isLeader();
     Index msS = this->earliest;
 
     updateLocal(p);
@@ -285,13 +283,13 @@ private:
     if (BSP && !UseMonotonic) {
       msS = p.scanStart;
       if (localLeader) {
-        for (unsigned i = 0; i < runtime::activeThreads; ++i) {
+        for (unsigned i = 0; i < activeThreads; ++i) {
           Index o = data.getRemote(i)->scanStart;
           if (this->compare(o, msS))
             msS = o;
         }
       } else {
-        Index o = data.getRemote(substrate::ThreadPool::getLeader())->scanStart;
+        Index o = data.getRemote(ThreadPool::getLeader())->scanStart;
         if (this->compare(o, msS))
           msS = o;
       }
@@ -299,7 +297,7 @@ private:
 
     for (auto ii = p.local.lower_bound(msS), ei = p.local.end(); ii != ei;
          ++ii) {
-      galois::optional<T> item;
+      katana::optional<T> item;
       if ((item = ii->second->pop())) {
         p.current = ii->second;
         p.curIndex = ii->first;
@@ -308,10 +306,10 @@ private:
       }
     }
 
-    return galois::optional<value_type>();
+    return katana::optional<value_type>();
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE
+  KATANA_ATTRIBUTE_NOINLINE
   CTy* slowUpdateLocalOrCreate(ThreadData& p, Index i) {
     // update local until we find it or we get the write lock
     do {
@@ -392,7 +390,7 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  galois::optional<value_type> pop() {
+  katana::optional<value_type> pop() {
     // Find a successful pop
     ThreadData& p = *data.getLocal();
     CTy* C = p.current;
@@ -404,7 +402,7 @@ public:
         ((p.numPops++ & ((1 << BlockPeriod) - 1)) == 0))
       return slowPop(p);
 
-    galois::optional<value_type> item;
+    katana::optional<value_type> item;
     if (C && (item = C->pop()))
       return item;
 
@@ -417,7 +415,7 @@ public:
 
   template <bool Barrier = UseBarrier>
   auto empty() -> typename std::enable_if<Barrier, bool>::type {
-    galois::optional<value_type> item;
+    katana::optional<value_type> item;
     ThreadData& p = *data.getLocal();
 
     // try to pop from global worklist
@@ -445,7 +443,7 @@ public:
     Index curIndex = (hasWork) ? p.curIndex : this->identity;
     CTy* C = (hasWork) ? p.current : nullptr;
 
-    for (unsigned i = 0; i < runtime::activeThreads; ++i) {
+    for (unsigned i = 0; i < activeThreads; ++i) {
       ThreadData& o = *data.getRemote(i);
       if (o.hasWork && this->compare(o.curIndex, curIndex)) {
         curIndex = o.curIndex;
@@ -471,9 +469,8 @@ public:
     return !hasWork;
   }
 };
-GALOIS_WLCOMPILECHECK(OrderedByIntegerMetric)
+KATANA_WLCOMPILECHECK(OrderedByIntegerMetric)
 
-}  // end namespace worklists
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

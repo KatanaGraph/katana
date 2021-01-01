@@ -17,7 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/gIO.h"
+#include "katana/gIO.h"
 
 #include <unistd.h>
 
@@ -32,14 +32,14 @@
 #include <iostream>
 #include <mutex>
 
-#include "galois/Env.h"
-#include "galois/substrate/SimpleLock.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Env.h"
+#include "katana/SimpleLock.h"
+#include "katana/ThreadPool.h"
 
 static void
 printString(
     bool error, bool newline, const std::string& prefix, const std::string& s) {
-  static galois::substrate::SimpleLock IOLock;
+  static katana::SimpleLock IOLock;
   std::lock_guard<decltype(IOLock)> lock(IOLock);
   std::ostream& o = error ? std::cerr : std::cout;
   if (prefix.length())
@@ -50,8 +50,8 @@ printString(
 }
 
 void
-galois::gDebugStr(const std::string& s) {
-  static bool skip = GetEnv("GALOIS_DEBUG_SKIP");
+katana::gDebugStr(const std::string& s) {
+  static bool skip = GetEnv("KATANA_DEBUG_SKIP");
   if (skip)
     return;
   static const unsigned TIME_STR_SIZE = 32;
@@ -65,11 +65,11 @@ galois::gDebugStr(const std::string& s) {
   strftime(time_str, TIME_STR_SIZE, "[%H:%M:%S]", timeinfo);
 
   std::ostringstream os;
-  os << "[" << time_str << " " << std::setw(3)
-     << galois::substrate::ThreadPool::getTID() << "] " << s;
+  os << "[" << time_str << " " << std::setw(3) << katana::ThreadPool::getTID()
+     << "] " << s;
 
-  if (GetEnv("GALOIS_DEBUG_TO_FILE")) {
-    static galois::substrate::SimpleLock dIOLock;
+  if (GetEnv("KATANA_DEBUG_TO_FILE")) {
+    static katana::SimpleLock dIOLock;
     std::lock_guard<decltype(dIOLock)> lock(dIOLock);
     static std::ofstream debugOut;
     if (!debugOut.is_open()) {
@@ -87,26 +87,26 @@ galois::gDebugStr(const std::string& s) {
 }
 
 void
-galois::gPrintStr(const std::string& s) {
+katana::gPrintStr(const std::string& s) {
   printString(false, false, "", s);
 }
 
 void
-galois::gInfoStr(const std::string& s) {
+katana::gInfoStr(const std::string& s) {
   printString(false, true, "INFO", s);
 }
 
 void
-galois::gWarnStr(const std::string& s) {
+katana::gWarnStr(const std::string& s) {
   printString(false, true, "WARNING", s);
 }
 
 void
-galois::gErrorStr(const std::string& s) {
+katana::gErrorStr(const std::string& s) {
   printString(true, true, "ERROR", s);
 }
 
 void
-galois::gFlush() {
+katana::gFlush() {
   fflush(stdout);
 }

@@ -1,35 +1,35 @@
-#include "galois/Strings.h"
+#include "katana/Strings.h"
 
 #include <list>
 
-#include "galois/Logging.h"
+#include "katana/Logging.h"
 
 int
 main() {
-  GALOIS_LOG_ASSERT(galois::HasSuffix("prefix.suffix", ".suffix"));
-  GALOIS_LOG_ASSERT(galois::HasSuffix("prefix.suffix", ""));
-  GALOIS_LOG_ASSERT(!galois::HasSuffix("prefix.suffix", "none"));
-  GALOIS_LOG_ASSERT(!galois::HasSuffix("", "none"));
-  GALOIS_LOG_ASSERT(galois::TrimSuffix("prefix.suffix", ".suffix") == "prefix");
-  GALOIS_LOG_ASSERT(
-      galois::TrimSuffix("prefix.suffix", "none") == "prefix.suffix");
+  KATANA_LOG_ASSERT(katana::HasSuffix("prefix.suffix", ".suffix"));
+  KATANA_LOG_ASSERT(katana::HasSuffix("prefix.suffix", ""));
+  KATANA_LOG_ASSERT(!katana::HasSuffix("prefix.suffix", "none"));
+  KATANA_LOG_ASSERT(!katana::HasSuffix("", "none"));
+  KATANA_LOG_ASSERT(katana::TrimSuffix("prefix.suffix", ".suffix") == "prefix");
+  KATANA_LOG_ASSERT(
+      katana::TrimSuffix("prefix.suffix", "none") == "prefix.suffix");
 
-  GALOIS_LOG_ASSERT(galois::HasPrefix("prefix.suffix", "prefix."));
-  GALOIS_LOG_ASSERT(galois::HasPrefix("prefix.suffix", ""));
-  GALOIS_LOG_ASSERT(!galois::HasPrefix("prefix.suffix", "none"));
-  GALOIS_LOG_ASSERT(!galois::HasPrefix("", "none"));
-  GALOIS_LOG_ASSERT(galois::TrimPrefix("prefix.suffix", "prefix.") == "suffix");
-  GALOIS_LOG_ASSERT(
-      galois::TrimSuffix("prefix.suffix", "none") == "prefix.suffix");
+  KATANA_LOG_ASSERT(katana::HasPrefix("prefix.suffix", "prefix."));
+  KATANA_LOG_ASSERT(katana::HasPrefix("prefix.suffix", ""));
+  KATANA_LOG_ASSERT(!katana::HasPrefix("prefix.suffix", "none"));
+  KATANA_LOG_ASSERT(!katana::HasPrefix("", "none"));
+  KATANA_LOG_ASSERT(katana::TrimPrefix("prefix.suffix", "prefix.") == "suffix");
+  KATANA_LOG_ASSERT(
+      katana::TrimSuffix("prefix.suffix", "none") == "prefix.suffix");
 
-  GALOIS_LOG_ASSERT(
-      galois::Join(" ", {"list", "of", "strings"}) == "list of strings");
-  GALOIS_LOG_ASSERT(
-      galois::Join("", {"list", "of", "strings"}) == "listofstrings");
-  GALOIS_LOG_ASSERT(galois::Join(" ", {"string"}) == "string");
-  GALOIS_LOG_ASSERT(galois::Join(" ", std::vector<std::string>{}).empty());
-  GALOIS_LOG_ASSERT(
-      galois::Join(" ", {"list", "of", "", "strings"}) == "list of  strings");
+  KATANA_LOG_ASSERT(
+      katana::Join(" ", {"list", "of", "strings"}) == "list of strings");
+  KATANA_LOG_ASSERT(
+      katana::Join("", {"list", "of", "strings"}) == "listofstrings");
+  KATANA_LOG_ASSERT(katana::Join(" ", {"string"}) == "string");
+  KATANA_LOG_ASSERT(katana::Join(" ", std::vector<std::string>{}).empty());
+  KATANA_LOG_ASSERT(
+      katana::Join(" ", {"list", "of", "", "strings"}) == "list of  strings");
 
-  GALOIS_LOG_ASSERT(galois::Join(" ", std::list<int>{1, 2, 3}) == "1 2 3");
+  KATANA_LOG_ASSERT(katana::Join(" ", std::list<int>{1, 2, 3}) == "1 2 3");
 }

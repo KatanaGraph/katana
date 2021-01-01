@@ -34,5 +34,5 @@ if(BUILD_DOCS)
             "${SPHINX_HTML_DIR}"
         COMMENT "Building HTML documentation with Sphinx")
 
-    add_dependencies(python_doc shmem graphs timer atomic datastructures _loops property_graph)
+    add_dependencies(python_doc galois graphs timer atomic datastructures _loops property_graph)
 endif()

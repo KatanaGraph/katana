@@ -21,19 +21,19 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "galois/ErrorCode.h"
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/SharedMemSys.h"
-#include "galois/Threads.h"
-#include "galois/graphs/PropertyFileGraph.h"
 #include "graph-properties-convert-schema.h"
+#include "katana/ErrorCode.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/SharedMemSys.h"
+#include "katana/Threads.h"
 
-using galois::GraphComponents;
-using galois::ImportData;
-using galois::ImportDataType;
-using galois::LabelRule;
-using galois::PropertyKey;
+using katana::GraphComponents;
+using katana::ImportData;
+using katana::ImportDataType;
+using katana::LabelRule;
+using katana::PropertyKey;
 
 namespace {
 
@@ -251,14 +251,14 @@ std::vector<std::string> FetchFieldNames(MysqlRes* table) {
 MysqlRes
 RunQuery(MYSQL* con, const std::string& query) {
   if (mysql_real_query(con, query.c_str(), query.size())) {
-    GALOIS_LOG_FATAL("Could not run query {}: {}", query, mysql_error(con));
+    KATANA_LOG_FATAL("Could not run query {}: {}", query, mysql_error(con));
   }
   return MysqlRes(mysql_use_result(con));
 }
 
 void
 AddNodeTable(
-    galois::PropertyGraphBuilder* builder, MYSQL* con,
+    katana::PropertyGraphBuilder* builder, MYSQL* con,
     const TableData& table_data) {
   MysqlRes table = RunQuery(con, GenerateFetchTableQuery(table_data.name));
   MYSQL_ROW row;
@@ -311,7 +311,7 @@ AddNodeTable(
 
 void
 AddEdgeTable(
-    galois::PropertyGraphBuilder* builder, MYSQL* con,
+    katana::PropertyGraphBuilder* builder, MYSQL* con,
     const TableData& table_data) {
   MysqlRes table = RunQuery(con, GenerateFetchTableQuery(table_data.name));
   MYSQL_ROW row;
@@ -395,10 +395,10 @@ GetUserInputForLabels(
       std::string existing_key;
       if (res.empty()) {
         LabelRule rule{name, for_node, !for_node, name};
-        galois::WriteGraphmlRule(writer, rule);
+        katana::WriteGraphmlRule(writer, rule);
       } else {
         LabelRule rule{name, for_node, !for_node, res};
-        galois::WriteGraphmlRule(writer, rule);
+        katana::WriteGraphmlRule(writer, rule);
       }
     }
   }
@@ -416,10 +416,10 @@ GetUserInputForLabels(
 
     std::string existing_key;
     if (res.empty()) {
-      galois::WriteGraphmlRule(writer, rule);
+      katana::WriteGraphmlRule(writer, rule);
     } else {
       rule.label = res;
-      galois::WriteGraphmlRule(writer, rule);
+      katana::WriteGraphmlRule(writer, rule);
     }
   }
 }
@@ -439,7 +439,7 @@ GetUserInputForFields(
     }
 
     bool done = false;
-    auto type_name = galois::TypeName(key.type);
+    auto type_name = katana::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
       if (key.is_list) {
@@ -453,7 +453,7 @@ GetUserInputForFields(
             std::istream_iterator<std::string>{iss},
             std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
-          auto new_type = galois::ParseType(tokens[0]);
+          auto new_type = katana::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
@@ -492,7 +492,7 @@ GetUserInputForFields(
         done = true;
       }
     }
-    galois::WriteGraphmlKey(writer, key);
+    katana::WriteGraphmlKey(writer, key);
   }
 }
 
@@ -692,7 +692,7 @@ PreprocessFields(
 
 std::unordered_map<std::string, TableData>
 PreprocessTables(
-    MYSQL* con, galois::PropertyGraphBuilder* builder,
+    MYSQL* con, katana::PropertyGraphBuilder* builder,
     const std::vector<std::string>& table_names) {
   std::unordered_map<std::string, TableData> table_data;
   std::map<std::string, PropertyKey> node_fields;
@@ -732,7 +732,7 @@ PreprocessTables(
 
 std::unordered_map<std::string, TableData>
 PreprocessTables(
-    MYSQL* con, galois::PropertyGraphBuilder* builder,
+    MYSQL* con, katana::PropertyGraphBuilder* builder,
     const std::vector<std::string>& table_names,
     const std::vector<LabelRule>& rules, const std::vector<PropertyKey>& keys) {
   std::unordered_map<std::string, TableData> table_data;
@@ -829,10 +829,10 @@ GetMappingInput(
   }
 
   if (GetUserBool("Generate default mapping now")) {
-    galois::ExportSchemaMapping(outfile, rules, keys);
+    katana::ExportSchemaMapping(outfile, rules, keys);
     return;
   }
-  auto writer = galois::CreateGraphmlFile(outfile);
+  auto writer = katana::CreateGraphmlFile(outfile);
 
   // finalize labels for nodes and edges mappings
   std::cout << "Nodes: " << nodes << "\n";
@@ -851,32 +851,32 @@ GetMappingInput(
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
   xmlTextWriterEndElement(writer);
 
-  galois::FinishGraphmlFile(writer);
+  katana::FinishGraphmlFile(writer);
 }
 
 }  // end of unnamed namespace
 
 GraphComponents
-galois::ConvertMysql(
+katana::ConvertMysql(
     const std::string& db_name, const std::string& mapping,
     const size_t chunk_size, const std::string& host, const std::string& user) {
-  galois::PropertyGraphBuilder builder{chunk_size};
+  katana::PropertyGraphBuilder builder{chunk_size};
   std::string password{getpass("MySQL Password: ")};
 
   MYSQL* con = mysql_init(NULL);
   if (con == nullptr) {
-    GALOIS_LOG_FATAL("mysql_init() failed");
+    KATANA_LOG_FATAL("mysql_init() failed");
   }
   if (mysql_real_connect(
           con, host.c_str(), user.c_str(), password.c_str(), db_name.c_str(), 0,
           NULL, 0) == NULL) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Could not establish mysql connection: {}", mysql_error(con));
   }
   std::vector<std::string> table_names = FetchTableNames(con);
   std::unordered_map<std::string, TableData> table_data;
   if (!mapping.empty()) {
-    auto res = galois::ProcessSchemaMapping(mapping);
+    auto res = katana::ProcessSchemaMapping(mapping);
     std::vector<LabelRule> rules = res.first;
     std::vector<PropertyKey> keys = res.second;
     table_data = PreprocessTables(con, &builder, table_names, rules, keys);
@@ -898,19 +898,19 @@ galois::ConvertMysql(
 }
 
 void
-galois::GenerateMappingMysql(
+katana::GenerateMappingMysql(
     const std::string& db_name, const std::string& outfile,
     const std::string& host, const std::string& user) {
   std::string password{getpass("MySQL Password: ")};
 
   MYSQL* con = mysql_init(NULL);
   if (con == nullptr) {
-    GALOIS_LOG_FATAL("mysql_init() failed");
+    KATANA_LOG_FATAL("mysql_init() failed");
   }
   if (mysql_real_connect(
           con, host.c_str(), user.c_str(), password.c_str(), db_name.c_str(), 0,
           NULL, 0) == NULL) {
-    GALOIS_LOG_FATAL(
+    KATANA_LOG_FATAL(
         "Could not establish mysql connection: {}", mysql_error(con));
   }
   std::vector<std::string> table_names = FetchTableNames(con);

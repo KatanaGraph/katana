@@ -17,20 +17,20 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_PARALLELSTL_H_
-#define GALOIS_LIBGALOIS_GALOIS_PARALLELSTL_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PARALLELSTL_H_
+#define KATANA_LIBGALOIS_KATANA_PARALLELSTL_H_
 
-#include "galois/LoopsDecl.h"
-#include "galois/NoDerefIterator.h"
-#include "galois/Range.h"
-#include "galois/Reduction.h"
-#include "galois/Threads.h"
-#include "galois/Traits.h"
-#include "galois/UserContext.h"
-#include "galois/config.h"
-#include "galois/worklists/Chunk.h"
+#include "katana/Chunk.h"
+#include "katana/LoopsDecl.h"
+#include "katana/NoDerefIterator.h"
+#include "katana/Range.h"
+#include "katana/Reduction.h"
+#include "katana/Threads.h"
+#include "katana/Traits.h"
+#include "katana/UserContext.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 //! Parallel versions of STL library algorithms.
 // TODO: rename to gstl?
 namespace ParallelSTL {
@@ -38,9 +38,9 @@ namespace ParallelSTL {
 template <class InputIterator, class Predicate>
 size_t
 count_if(InputIterator first, InputIterator last, Predicate pred) {
-  galois::GAccumulator<size_t> count;
+  katana::GAccumulator<size_t> count;
 
-  galois::do_all(galois::iterate(first, last), [&](const auto& v) {
+  katana::do_all(katana::iterate(first, last), [&](const auto& v) {
     if (pred(v)) {
       count += 1;
     }
@@ -51,8 +51,8 @@ count_if(InputIterator first, InputIterator last, Predicate pred) {
 
 template <typename InputIterator, class Predicate>
 struct find_if_helper {
-  typedef galois::optional<InputIterator> ElementTy;
-  typedef substrate::PerThreadStorage<ElementTy> AccumulatorTy;
+  typedef katana::optional<InputIterator> ElementTy;
+  typedef PerThreadStorage<ElementTy> AccumulatorTy;
   AccumulatorTy& accum;
   Predicate& f;
 
@@ -70,14 +70,14 @@ InputIterator
 find_if(InputIterator first, InputIterator last, Predicate pred) {
   typedef find_if_helper<InputIterator, Predicate> HelperTy;
   typedef typename HelperTy::AccumulatorTy AccumulatorTy;
-  typedef galois::worklists::PerSocketChunkFIFO<256> WL;
+  typedef katana::PerSocketChunkFIFO<256> WL;
   AccumulatorTy accum;
   HelperTy helper(accum, pred);
   for_each(
-      galois::iterate(
+      katana::iterate(
           make_no_deref_iterator(first), make_no_deref_iterator(last)),
-      helper, galois::disable_conflict_detection(), galois::no_pushes(),
-      galois::parallel_break(), galois::wl<WL>());
+      helper, katana::disable_conflict_detection(), katana::no_pushes(),
+      katana::parallel_break(), katana::wl<WL>());
   for (unsigned i = 0; i < accum.size(); ++i) {
     if (*accum.getRemote(i))
       return **accum.getRemote(i);
@@ -165,7 +165,7 @@ struct partition_helper {
   struct partition_helper_state {
     RandomAccessIterator first, last;
     RandomAccessIterator rfirst, rlast;
-    substrate::SimpleLock Lock;
+    SimpleLock Lock;
     Predicate pred;
     typename std::iterator_traits<RandomAccessIterator>::difference_type
     BlockSize() {
@@ -255,18 +255,18 @@ sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp) {
     std::sort(first, last, comp);
     return;
   }
-  typedef galois::worklists::PerSocketChunkFIFO<1> WL;
+  typedef katana::PerSocketChunkFIFO<1> WL;
 
   for_each(
-      galois::iterate({std::make_pair(first, last)}),
-      sort_helper<Compare>(comp), galois::disable_conflict_detection(),
-      galois::wl<WL>());
+      katana::iterate({std::make_pair(first, last)}),
+      sort_helper<Compare>(comp), katana::disable_conflict_detection(),
+      katana::wl<WL>());
 }
 
 template <class RandomAccessIterator>
 void
 sort(RandomAccessIterator first, RandomAccessIterator last) {
-  galois::ParallelSTL::sort(
+  katana::ParallelSTL::sort(
       first, last,
       std::less<
           typename std::iterator_traits<RandomAccessIterator>::value_type>());
@@ -281,7 +281,7 @@ accumulate(
 
   auto r = make_reducible(binary_op, id_fn);
 
-  do_all(galois::iterate(first, last), [&](const T& v) { r.update(v); });
+  do_all(katana::iterate(first, last), [&](const T& v) { r.update(v); });
 
   return r.reduce();
 }
@@ -301,7 +301,7 @@ map_reduce(
 
   auto r = make_reducible(reduce_fn, id_fn);
 
-  galois::do_all(galois::iterate(first, last), [&](const auto& v) {
+  katana::do_all(katana::iterate(first, last), [&](const auto& v) {
     r.update(map_fn(v));
   });
 
@@ -332,15 +332,15 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
 
   // only bother with parallel execution if vector is larger than some size
   if (sizeOfVector >= 1024) {
-    const size_t numBlocks = galois::getActiveThreads();
+    const size_t numBlocks = katana::getActiveThreads();
     const size_t blockSize = (sizeOfVector + numBlocks - 1) / numBlocks;
     assert(numBlocks * blockSize >= sizeOfVector);
 
     std::vector<ValueType> localSums(numBlocks);
 
     // get the block sums
-    galois::do_all(
-        galois::iterate((size_t)0, numBlocks), [&](const size_t& block) {
+    katana::do_all(
+        katana::iterate((size_t)0, numBlocks), [&](const size_t& block) {
           // block start can extend past sizeOfVector if doesn't divide evenly
           size_t blockStart = std::min(block * blockSize, sizeOfVector);
           size_t blockEnd = std::min((block + 1) * blockSize, sizeOfVector);
@@ -369,8 +369,8 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
       runningSum += localSums[i];
     }
 
-    galois::do_all(
-        galois::iterate((size_t)0, numBlocks), [&](const size_t& block) {
+    katana::do_all(
+        katana::iterate((size_t)0, numBlocks), [&](const size_t& block) {
           // add the sums of previous elements to blocks
           ValueType numToAdd = bulkPrefix[block];
           size_t blockStart = std::min(block * blockSize, sizeOfVector);
@@ -392,5 +392,5 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
 }
 
 }  // end namespace ParallelSTL
-}  // end namespace galois
+}  // end namespace katana
 #endif

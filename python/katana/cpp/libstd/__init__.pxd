@@ -1,4 +1,4 @@
-# Hack to make auto return type for galois::iterate work.
+# Hack to make auto return type for katana::iterate work.
 # It may be necessary to write a wrapper header around for_each,
 # but this should be good enough for the forseeable future either way.
 cdef extern from * nogil:

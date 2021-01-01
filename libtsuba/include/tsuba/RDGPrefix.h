@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDGPREFIX_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDGPREFIX_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_RDGPREFIX_H_
+#define KATANA_LIBTSUBA_TSUBA_RDGPREFIX_H_
 
 #include <cstdint>
 
@@ -13,7 +13,7 @@ class RDGMeta;
 /// An RDGPrefix loads the header information from the topology CSR, this is
 /// used by the partitioner to avoid downloading the whole RDG to make
 /// partitioning decisions
-class GALOIS_EXPORT RDGPrefix {
+class KATANA_EXPORT RDGPrefix {
   struct GRHeader {
     uint64_t version{0};
     uint64_t edge_type_size{0};
@@ -29,7 +29,7 @@ class GALOIS_EXPORT RDGPrefix {
   };
 
 public:
-  static galois::Result<RDGPrefix> Make(RDGHandle handle);
+  static katana::Result<RDGPrefix> Make(RDGHandle handle);
 
   uint64_t num_nodes() const { return prefix_->header.num_nodes; }
   uint64_t num_edges() const { return prefix_->header.num_edges; }
@@ -62,7 +62,7 @@ private:
   uint64_t view_offset_;
   const GRPrefix* prefix_{nullptr};
 
-  static galois::Result<RDGPrefix> DoMakePrefix(const RDGMeta& meta);
+  static katana::Result<RDGPrefix> DoMakePrefix(const RDGMeta& meta);
 };
 
 }  // namespace tsuba

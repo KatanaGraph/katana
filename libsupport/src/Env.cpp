@@ -1,4 +1,4 @@
-#include "galois/Env.h"
+#include "katana/Env.h"
 
 #include <cstdlib>
 #include <stdexcept>
@@ -64,33 +64,33 @@ GenericGetEnv(const std::string& var_name, T* ret) {
 }  // namespace
 
 bool
-galois::GetEnv(const std::string& var_name, bool* ret) {
+katana::GetEnv(const std::string& var_name, bool* ret) {
   return GenericGetEnv(var_name, ret);
 }
 
 bool
-galois::GetEnv(const std::string& var_name, int* ret) {
+katana::GetEnv(const std::string& var_name, int* ret) {
   return GenericGetEnv(var_name, ret);
 }
 
 bool
-galois::GetEnv(const std::string& var_name, std::string* ret) {
+katana::GetEnv(const std::string& var_name, std::string* ret) {
   return GenericGetEnv(var_name, ret);
 }
 
 bool
-galois::GetEnv(const std::string& var_name, double* ret) {
+katana::GetEnv(const std::string& var_name, double* ret) {
   return GenericGetEnv(var_name, ret);
 }
 
 bool
-galois::GetEnv(const std::string& var_name) {
+katana::GetEnv(const std::string& var_name) {
   return std::getenv(var_name.c_str()) != nullptr;
 }
 
 // https://stackoverflow.com/questions/30292642/c-standard-library-stdsetenv-vs-setenv
 bool
-galois::SetEnv(
+katana::SetEnv(
     const std::string& var_name, const std::string& val, bool overwrite) {
   if (GetEnv(var_name)) {
     if (overwrite) {
@@ -108,7 +108,7 @@ galois::SetEnv(
 }
 
 bool
-galois::UnsetEnv(const std::string& var_name) {
+katana::UnsetEnv(const std::string& var_name) {
   int res = unsetenv(var_name.c_str());
   return res == 0;
 }

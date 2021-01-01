@@ -1,83 +1,83 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_CONFIG_H_
-#define GALOIS_LIBSUPPORT_GALOIS_CONFIG_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_CONFIG_H_
+#define KATANA_LIBSUPPORT_KATANA_CONFIG_H_
 
-#if !(defined(GALOIS_USE_LONGJMP_ABORT) || defined(GALOIS_USE_EXCEPTION_ABORT))
-#define GALOIS_USE_LONGJMP_ABORT
+#if !(defined(KATANA_USE_LONGJMP_ABORT) || defined(KATANA_USE_EXCEPTION_ABORT))
+#define KATANA_USE_LONGJMP_ABORT
 #endif
-#if !(defined(GALOIS_USE_LONGJMP_ABORT) ^ defined(GALOIS_USE_EXCEPTION_ABORT))
-#error Exactly one of GALOIS_USE_LONGJMP_ABORT or GALOIS_USE_EXCEPTION_ABORT must be defined.
+#if !(defined(KATANA_USE_LONGJMP_ABORT) ^ defined(KATANA_USE_EXCEPTION_ABORT))
+#error Exactly one of KATANA_USE_LONGJMP_ABORT or KATANA_USE_EXCEPTION_ABORT must be defined.
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_UNUSED_PARAMETERS                                        \
+#define KATANA_IGNORE_UNUSED_PARAMETERS                                        \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-#define GALOIS_END_IGNORE_UNUSED_PARAMETERS _Pragma("GCC diagnostic pop")
+#define KATANA_END_IGNORE_UNUSED_PARAMETERS _Pragma("GCC diagnostic pop")
 #else
-#define GALOIS_IGNORE_UNUSED_PARAMETERS
-#define GALOIS_END_IGNORE_UNUSED_PARAMETERS
+#define KATANA_IGNORE_UNUSED_PARAMETERS
+#define KATANA_END_IGNORE_UNUSED_PARAMETERS
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
-#define GALOIS_IGNORE_MAYBE_UNINITIALIZED                                      \
+#define KATANA_IGNORE_MAYBE_UNINITIALIZED                                      \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-#define GALOIS_END_IGNORE_MAYBE_UNINITIALIZED _Pragma("GCC diagnostic pop")
+#define KATANA_END_IGNORE_MAYBE_UNINITIALIZED _Pragma("GCC diagnostic pop")
 #else
-#define GALOIS_IGNORE_MAYBE_UNINITIALIZED
-#define GALOIS_END_IGNORE_MAYBE_UNINITIALIZED
+#define KATANA_IGNORE_MAYBE_UNINITIALIZED
+#define KATANA_END_IGNORE_MAYBE_UNINITIALIZED
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_UNUSED_BUT_SET                                           \
+#define KATANA_IGNORE_UNUSED_BUT_SET                                           \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
-#define GALOIS_END_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
+#define KATANA_END_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
 #else
-#define GALOIS_IGNORE_UNUSED_BUT_SET
-#define GALOIS_END_IGNORE_UNUSED_BUT_SET
+#define KATANA_IGNORE_UNUSED_BUT_SET
+#define KATANA_END_IGNORE_UNUSED_BUT_SET
 #endif
 
 // Macro to suppress compiler warnings that a variable is set but unused.
 // This warning is buggy in gcc 7.
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 8
-#define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET                                      \
+#define KATANA_GCC7_IGNORE_UNUSED_BUT_SET                                      \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"")
-#define GALOIS_END_GCC7_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
+#define KATANA_END_GCC7_IGNORE_UNUSED_BUT_SET _Pragma("GCC diagnostic pop")
 #else
-#define GALOIS_GCC7_IGNORE_UNUSED_BUT_SET
-#define GALOIS_END_GCC7_IGNORE_UNUSED_BUT_SET
+#define KATANA_GCC7_IGNORE_UNUSED_BUT_SET
+#define KATANA_END_GCC7_IGNORE_UNUSED_BUT_SET
 #endif
 
 #if defined(__GNUC__)
-#define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS                               \
+#define KATANA_IGNORE_EXTERNAL_UNUSED_PARAMETERS                               \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-#define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS                           \
+#define KATANA_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS                           \
   _Pragma("GCC diagnostic pop")
 #else
-#define GALOIS_IGNORE_EXTERNAL_UNUSED_PARAMETERS
-#define GALOIS_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS
+#define KATANA_IGNORE_EXTERNAL_UNUSED_PARAMETERS
+#define KATANA_END_IGNORE_EXTERNAL_UNUSED_PARAMETERS
 #endif
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 // Windows
-#define GALOIS_NO_EXPORT
-#if defined(GALOIS_STATIC_LIB)
-#define GALOIS_EXPORT
-#elif defined(GALOIS_SHARED_LIB_BUILDING)
-#define GALOIS_EXPORT __declspec(dllexport)
+#define KATANA_NO_EXPORT
+#if defined(KATANA_STATIC_LIB)
+#define KATANA_EXPORT
+#elif defined(KATANA_SHARED_LIB_BUILDING)
+#define KATANA_EXPORT __declspec(dllexport)
 #else
-#define GALOIS_EXPORT __declspec(dllimport)
+#define KATANA_EXPORT __declspec(dllimport)
 #endif
 #else
 // Not Windows
-#define GALOIS_NO_EXPORT __attribute__((visibility("hidden")))
-#if defined(GALOIS_STATIC_LIB)
-#define GALOIS_EXPORT
+#define KATANA_NO_EXPORT __attribute__((visibility("hidden")))
+#if defined(KATANA_STATIC_LIB)
+#define KATANA_EXPORT
 #else
-#define GALOIS_EXPORT __attribute__((visibility("default")))
+#define KATANA_EXPORT __attribute__((visibility("default")))
 #endif
 #endif
 

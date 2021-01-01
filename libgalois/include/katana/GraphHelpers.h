@@ -16,20 +16,19 @@
  * including but not limited to those resulting from defects in Software and/or
  * Documentation, or loss or inaccuracy of data of any kind.
  */
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPHHELPERS_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_GRAPHHELPERS_H_
+#ifndef KATANA_LIBGALOIS_KATANA_GRAPHHELPERS_H_
+#define KATANA_LIBGALOIS_KATANA_GRAPHHELPERS_H_
 
 #include <cassert>
 #include <vector>
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/graphs/PropertyFileGraph.h"
+#include "katana/PropertyFileGraph.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 namespace internal {
 
@@ -132,7 +131,7 @@ findIndexPrefixSum(
  *
  * @returns The total number of blocks to split among all divisions
  */
-GALOIS_EXPORT uint32_t determine_block_division(
+KATANA_EXPORT uint32_t determine_block_division(
     uint32_t numDivisions, std::vector<unsigned>& scaleFactor);
 
 }  // end namespace internal
@@ -201,7 +200,7 @@ divideNodesBinarySearch(
   // weight of a block (one block for each division by default; if scale
   // factor specifies something different, then use that instead)
   uint64_t blockWeight = (weight + numBlocks - 1) / numBlocks;
-  // galois::gDebug("weight ", weight, " numblock ", numBlocks, " blockwegith ",
+  // katana::gDebug("weight ", weight, " numblock ", numBlocks, " blockwegith ",
   //               blockWeight);
 
   // lower and upper blocks that this division should use determined
@@ -216,7 +215,7 @@ divideNodesBinarySearch(
   uint32_t blockUpper = scaleFactor[id];
 
   assert(blockLower <= blockUpper);
-  // galois::gDebug("Unit ", id, " block ", blockLower, " to ",
+  // katana::gDebug("Unit ", id, " block ", blockLower, " to ",
   //               blockUpper, "; ", blockLower * blockWeight, " ",
   //               blockUpper * blockWeight);
 
@@ -253,7 +252,7 @@ divideNodesBinarySearch(
         edgeOffset;
   }
 
-  // galois::gDebug("Unit ", id, " nodes ", nodesLower, " to ",
+  // katana::gDebug("Unit ", id, " nodes ", nodesLower, " to ",
   //               nodesUpper, " edges ", edgesLower, " ",
   //               edgesUpper);
 
@@ -276,7 +275,7 @@ namespace internal {
  * @returns true if a corner case was found (indicates that returnRanges has
  * been finalized)
  */
-GALOIS_EXPORT bool unitRangeCornerCaseHandle(
+KATANA_EXPORT bool unitRangeCornerCaseHandle(
     uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
     std::vector<uint32_t>& returnRanges);
 
@@ -407,7 +406,7 @@ determineUnitRangesLoopPrefixSum(
  * @param endNode End of range, non-inclusive
  * @param returnRanges Ranges to sanity check
  */
-GALOIS_EXPORT void unitRangeSanity(
+KATANA_EXPORT void unitRangeSanity(
     uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
     std::vector<uint32_t>& returnRanges);
 
@@ -601,7 +600,6 @@ determineUnitRangesFromPrefixSum(
   return returnRanges;
 }
 
-}  // end namespace graphs
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

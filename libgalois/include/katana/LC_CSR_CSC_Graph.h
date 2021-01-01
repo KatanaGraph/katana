@@ -22,14 +22,13 @@
  *
  * Contains the implementation of a bidirectional LC_CS_Graph.
  */
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRCSCGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_LCCSRCSCGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_LCCSRCSCGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_LCCSRCSCGRAPH_H_
 
-#include "galois/config.h"
-#include "galois/graphs/LC_CSR_Graph.h"
+#include "katana/LC_CSR_Graph.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 /**
  * An bidirectional LC_CSR_Graph that allows the construction of in-edges from
@@ -150,8 +149,8 @@ protected:
   void determineInEdgeIndices(EdgeIndData& dataBuffer) {
     // counting outgoing edges in the tranpose graph by
     // counting incoming edges in the original graph
-    galois::do_all(
-        galois::iterate(UINT64_C(0), BaseGraph::numEdges), [&](uint64_t e) {
+    katana::do_all(
+        katana::iterate(UINT64_C(0), BaseGraph::numEdges), [&](uint64_t e) {
           auto dst = BaseGraph::edgeDst[e];
           __sync_add_and_fetch(&(dataBuffer[dst]), 1);
         });
@@ -163,8 +162,8 @@ protected:
 
     // copy over the new tranposed edge index data
     inEdgeIndData.allocateInterleaved(BaseGraph::numNodes);
-    galois::do_all(
-        galois::iterate(UINT64_C(0), BaseGraph::numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), BaseGraph::numNodes),
         [&](uint64_t n) { inEdgeIndData[n] = dataBuffer[n]; });
   }
 
@@ -180,8 +179,8 @@ protected:
     // saving an edge for a node
     if (BaseGraph::numNodes >= 1) {
       dataBuffer[0] = 0;
-      galois::do_all(
-          galois::iterate(UINT64_C(1), BaseGraph::numNodes),
+      katana::do_all(
+          katana::iterate(UINT64_C(1), BaseGraph::numNodes),
           [&](uint64_t n) { dataBuffer[n] = inEdgeIndData[n - 1]; });
     }
 
@@ -192,8 +191,8 @@ protected:
       inEdgeData.allocateInterleaved(BaseGraph::numEdges);
     }
 
-    galois::do_all(
-        galois::iterate(UINT64_C(0), BaseGraph::numNodes), [&](uint64_t src) {
+    katana::do_all(
+        katana::iterate(UINT64_C(0), BaseGraph::numNodes), [&](uint64_t src) {
           // e = start index into edge array for a particular node
           uint64_t e = (src == 0) ? 0 : BaseGraph::edgeIndData[src - 1];
 
@@ -230,14 +229,14 @@ public:
    * Creates the in edge data by reading from the out edge data.
    */
   void constructIncomingEdges() {
-    galois::StatTimer incomingEdgeConstructTimer("IncomingEdgeConstruct");
+    katana::StatTimer incomingEdgeConstructTimer("IncomingEdgeConstruct");
     incomingEdgeConstructTimer.start();
 
     // initialize the temp array
     EdgeIndData dataBuffer;
     dataBuffer.allocateInterleaved(BaseGraph::numNodes);
-    galois::do_all(
-        galois::iterate(UINT64_C(0), BaseGraph::numNodes),
+    katana::do_all(
+        katana::iterate(UINT64_C(0), BaseGraph::numNodes),
         [&](uint64_t n) { dataBuffer[n] = 0; });
 
     determineInEdgeIndices(dataBuffer);
@@ -281,7 +280,7 @@ public:
   edge_iterator in_edge_begin(
       GraphNode N, MethodFlag mflag = MethodFlag::WRITE) {
     BaseGraph::acquireNode(N, mflag);
-    if (!HasNoLockable && galois::runtime::shouldLock(mflag)) {
+    if (!HasNoLockable && katana::shouldLock(mflag)) {
       for (edge_iterator ii = in_raw_begin(N), ee = in_raw_end(N); ii != ee;
            ++ii) {
         BaseGraph::acquireNode(inEdgeDst[*ii], mflag);
@@ -420,10 +419,10 @@ public:
    * getEdgeDst(e).
    */
   void sortAllInEdgesByDst(MethodFlag mflag = MethodFlag::WRITE) {
-    galois::do_all(
-        galois::iterate((size_t)0, this->size()),
+    katana::do_all(
+        katana::iterate((size_t)0, this->size()),
         [=](GraphNode N) { this->sortInEdgesByDst(N, mflag); },
-        galois::no_stats(), galois::steal());
+        katana::no_stats(), katana::steal());
   }
 
   /**
@@ -443,14 +442,13 @@ public:
    */
   gstl::Vector<uint32_t> countInDegrees() const {
     gstl::Vector<uint32_t> savedInDegrees(BaseGraph::numNodes);
-    galois::do_all(
-        galois::iterate(this->begin(), this->end()),
+    katana::do_all(
+        katana::iterate(this->begin(), this->end()),
         [&](unsigned v) { savedInDegrees[v] = this->getInDegree(v); },
-        galois::loopname("InDegreeCounting"));
+        katana::loopname("InDegreeCounting"));
     return savedInDegrees;
   }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 #endif

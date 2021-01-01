@@ -3,18 +3,18 @@
 #include <llvm/Support/CommandLine.h>
 
 #include "Transforms.h"
-#include "galois/ErrorCode.h"
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/Timer.h"
-#include "galois/config.h"
 #include "graph-properties-convert-graphml.h"
 #include "graph-properties-convert-schema.h"
+#include "katana/ErrorCode.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/Timer.h"
+#include "katana/config.h"
 
-#if defined(GALOIS_MONGOC_FOUND)
+#if defined(KATANA_MONGOC_FOUND)
 #include "graph-properties-convert-mongodb.h"
 #endif
-#if defined(GALOIS_MYSQL_FOUND)
+#if defined(KATANA_MYSQL_FOUND)
 #include "graph-properties-convert-mysql.h"
 #endif
 
@@ -27,26 +27,26 @@ cll::opt<std::string> input_filename(
 cll::opt<std::string> output_directory(
     cll::Positional, cll::desc("<local output directory/s3 directory>"),
     cll::Required);
-cll::opt<galois::SourceType> type(
+cll::opt<katana::SourceType> type(
     cll::desc("Input file type:"),
     cll::values(
         clEnumValN(
-            galois::SourceType::kGraphml, "graphml",
+            katana::SourceType::kGraphml, "graphml",
             "source file is of type GraphML"),
         clEnumValN(
-            galois::SourceType::kKatana, "katana",
+            katana::SourceType::kKatana, "katana",
             "source file is of type Katana")),
-    cll::init(galois::SourceType::kGraphml));
-cll::opt<galois::SourceDatabase> database(
+    cll::init(katana::SourceType::kGraphml));
+cll::opt<katana::SourceDatabase> database(
     cll::desc("Database the data is from:"),
     cll::values(
         clEnumValN(
-            galois::SourceDatabase::kNeo4j, "neo4j",
+            katana::SourceDatabase::kNeo4j, "neo4j",
             "source data came from Neo4j"),
         clEnumValN(
-            galois::SourceDatabase::kMongodb, "mongodb", "source is mongodb"),
-        clEnumValN(galois::SourceDatabase::kMysql, "mysql", "source is mysql")),
-    cll::init(galois::SourceDatabase::kNone));
+            katana::SourceDatabase::kMongodb, "mongodb", "source is mongodb"),
+        clEnumValN(katana::SourceDatabase::kMysql, "mysql", "source is mysql")),
+    cll::init(katana::SourceDatabase::kNone));
 cll::opt<int> chunk_size(
     "chunk-size",
     cll::desc("Chunk size for in memory arrow representation during "
@@ -89,19 +89,18 @@ cll::opt<bool> export_graphml(
               "The file is created at the output destination specified\n"),
     cll::init(false));
 
-galois::graphs::PropertyFileGraph
+katana::PropertyFileGraph
 ConvertKatana(const std::string& rdg_file) {
-  auto result = galois::graphs::PropertyFileGraph::Make(rdg_file);
+  auto result = katana::PropertyFileGraph::Make(rdg_file);
   if (!result) {
-    GALOIS_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
+    KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
 
-  std::unique_ptr<galois::graphs::PropertyFileGraph> graph =
-      std::move(result.value());
+  std::unique_ptr<katana::PropertyFileGraph> graph = std::move(result.value());
 
-  std::vector<std::unique_ptr<galois::ColumnTransformer>> transformers;
+  std::vector<std::unique_ptr<katana::ColumnTransformer>> transformers;
 
-  transformers.emplace_back(std::make_unique<galois::SparsifyBooleans>());
+  transformers.emplace_back(std::make_unique<katana::SparsifyBooleans>());
 
   if (!timestamp_properties.empty()) {
     std::vector<std::string> t_fields(
@@ -111,7 +110,7 @@ ConvertKatana(const std::string& rdg_file) {
     // Unix timestamps throughout so they also avoid accounting for this
     // distinction.
     // TODO(danielmawhirter) leap seconds
-    transformers.emplace_back(std::make_unique<galois::ConvertDateTime>(
+    transformers.emplace_back(std::make_unique<katana::ConvertDateTime>(
         arrow::timestamp(arrow::TimeUnit::NANO, "UTC"), t_fields));
   }
 
@@ -119,73 +118,73 @@ ConvertKatana(const std::string& rdg_file) {
     std::vector<std::string> t_fields(
         date32_properties.begin(), date32_properties.end());
     transformers.emplace_back(
-        std::make_unique<galois::ConvertDateTime>(arrow::date32(), t_fields));
+        std::make_unique<katana::ConvertDateTime>(arrow::date32(), t_fields));
   }
 
   if (!date64_properties.empty()) {
     std::vector<std::string> t_fields(
         date64_properties.begin(), date64_properties.end());
     transformers.emplace_back(
-        std::make_unique<galois::ConvertDateTime>(arrow::date64(), t_fields));
+        std::make_unique<katana::ConvertDateTime>(arrow::date64(), t_fields));
   }
 
   ApplyTransforms(graph.get(), transformers);
 
-  return galois::graphs::PropertyFileGraph(std::move(*graph));
+  return katana::PropertyFileGraph(std::move(*graph));
 }
 
 void
 ParseWild() {
   switch (type) {
-  case galois::SourceType::kGraphml:
-    return galois::WritePropertyGraph(
-        galois::ConvertGraphML(input_filename, chunk_size), output_directory);
-  case galois::SourceType::kKatana:
-    return galois::WritePropertyGraph(
+  case katana::SourceType::kGraphml:
+    return katana::WritePropertyGraph(
+        katana::ConvertGraphML(input_filename, chunk_size), output_directory);
+  case katana::SourceType::kKatana:
+    return katana::WritePropertyGraph(
         ConvertKatana(input_filename), output_directory);
   default:
-    GALOIS_LOG_ERROR("Unsupported input type {}", type);
+    KATANA_LOG_ERROR("Unsupported input type {}", type);
   }
 }
 
 void
 ParseNeo4j() {
   switch (type) {
-  case galois::SourceType::kGraphml:
-    return galois::WritePropertyGraph(
-        galois::ConvertGraphML(input_filename, chunk_size), output_directory);
+  case katana::SourceType::kGraphml:
+    return katana::WritePropertyGraph(
+        katana::ConvertGraphML(input_filename, chunk_size), output_directory);
   default:
-    GALOIS_LOG_ERROR("Unsupported input type {}", type);
+    KATANA_LOG_ERROR("Unsupported input type {}", type);
   }
 }
 
 void
 ParseMongoDB() {
-#if defined(GALOIS_MONGOC_FOUND)
+#if defined(KATANA_MONGOC_FOUND)
   if (generate_mapping) {
-    galois::GenerateMappingMongoDB(input_filename, output_directory);
+    katana::GenerateMappingMongoDB(input_filename, output_directory);
   } else {
-    galois::WritePropertyGraph(
-        galois::ConvertMongoDB(input_filename, mapping, chunk_size),
+    katana::WritePropertyGraph(
+        katana::ConvertMongoDB(input_filename, mapping, chunk_size),
         output_directory);
   }
 #else
-  GALOIS_LOG_FATAL("Dependencies not present for MongoDB");
+  KATANA_LOG_FATAL("Dependencies not present for MongoDB");
 #endif
 }
 
 void
 ParseMysql() {
-#if defined(GALOIS_MYSQL_FOUND)
+#if defined(KATANA_MYSQL_FOUND)
   if (generate_mapping) {
-    galois::GenerateMappingMysql(input_filename, output_directory, host, user);
+    katana::GenerateMappingMysql(input_filename, output_directory, host, user);
   } else {
-    galois::WritePropertyGraph(
-        galois::ConvertMysql(input_filename, mapping, chunk_size, host, user),
+    katana::WritePropertyGraph(
+        katana::ConvertMysql(input_filename, mapping, chunk_size, host, user),
         output_directory);
   }
 #else
-  GALOIS_LOG_FATAL("Dependencies not present for MySQL");
+  KATANA_LOG_FATAL("Dependencies not present for MySQL");
 #endif
 }
 
@@ -193,29 +192,29 @@ ParseMysql() {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys sys;
+  katana::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  galois::StatTimer total_timer("TimerTotal");
+  katana::StatTimer total_timer("TimerTotal");
   total_timer.start();
   if (chunk_size <= 0) {
     chunk_size = 25000;
   }
 
   if (export_graphml) {
-    galois::ExportGraph(output_directory, input_filename);
+    katana::ExportGraph(output_directory, input_filename);
   } else {
     switch (database) {
-    case galois::SourceDatabase::kNone:
+    case katana::SourceDatabase::kNone:
       ParseWild();
       break;
-    case galois::SourceDatabase::kNeo4j:
+    case katana::SourceDatabase::kNeo4j:
       ParseNeo4j();
       break;
-    case galois::SourceDatabase::kMongodb:
+    case katana::SourceDatabase::kMongodb:
       ParseMongoDB();
       break;
-    case galois::SourceDatabase::kMysql:
+    case katana::SourceDatabase::kMysql:
       ParseMysql();
       break;
     }

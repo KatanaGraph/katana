@@ -17,9 +17,9 @@ STAT, for_each_1, Commits, TSUM, 9000000<br>
 STAT, for_each_1, Pushes, TSUM, 0<br>
 STAT, for_each_1, Conflicts, TSUM, 28387<br>
 
-The first row is the header of the csv output. REGION tells you which parallel loop the statistics are related. For example, "for_each_1" corresponds to the parallel loop which has an option of galois::loopname("for_each_1").
+The first row is the header of the csv output. REGION tells you which parallel loop the statistics are related. For example, "for_each_1" corresponds to the parallel loop which has an option of katana::loopname("for_each_1").
 
-CATEGORY specifies what are being reported for the parallel region. For galois::for_each loops, the following five statistics are reported:
+CATEGORY specifies what are being reported for the parallel region. For katana::for_each loops, the following five statistics are reported:
 <ol>
 <li> Iterations: the number of iterations executed
 <li> Time: the runtime, in milliseconds
@@ -28,7 +28,7 @@ CATEGORY specifies what are being reported for the parallel region. For galois::
 <li> Conflicts: the number of iterations aborted due to conflicts
 </ol>
 
-For galois::do_all loops, only time and iterations are reported, since there are no conflicts and pushes in galois::do_all loops.
+For katana::do_all loops, only time and iterations are reported, since there are no conflicts and pushes in katana::do_all loops.
 
 TOTAL_TYPE tells you how the statistics are derived. TSUM means that the value is the sum of all iterations' contributions; TMAX means it is the maximum among all threads for this statistic. Apart from TMAX and TSUM, Galois offers the following derivation of statistics:
 <ul>
@@ -46,13 +46,13 @@ Users can choose the amount of output statistics reported in the following ways.
 <ol>
 <li> Turn off reporting statistics for a parallel loop by
   <ul>
-  <li> Not passing a galois::loopname option to the galois::do_all or galois::for_each call; or
-  <li> Passing galois::no_stats as an option to the galois::do_all or galois::for_each call if the loopname is required, as shown in the following code snippet.
+  <li> Not passing a katana::loopname option to the katana::do_all or katana::for_each call; or
+  <li> Passing katana::no_stats as an option to the katana::do_all or katana::for_each call if the loopname is required, as shown in the following code snippet.
 
 @snippet lonestar/analytics/cpu/pagerank/PageRank-pull.cpp example of no_stats
 
   </ul>
-<li> Report more statistics for a parallel loop by passing galois::more_stats as an option to the galois::do_all or galois::for_each call. 
+<li> Report more statistics for a parallel loop by passing katana::more_stats as an option to the katana::do_all or katana::for_each call. 
 <li> Report per-thread contribution by setting the environmental variable "PRINT_PER_THREAD_STATS" before executing a Galois app. Below is an example execution asking for per-thread stats:
 
 $> PRINT_PER_THREAD_STATS=1 ./sssp input_graph -t 8
@@ -92,7 +92,7 @@ Monitor algorithm-specific statistics with the following steps.
 <li> Reduce and report the statistics after the parallel loop of interest.
 </ol>
 
-Let us use single-source shortest path (SSSP) problem to illustrate the use of self-defined statistics. In SSSP, "bad works" mean the number of iterations in which the node distance is lowered more than once. Since the amount of bad works is the sum of the bad works encountered by each thread, bad works should be collected and reduced using sum operation, which calls for a galois::GAccumulator. We declare the collector before the parallel loop for SSSP as the following:
+Let us use single-source shortest path (SSSP) problem to illustrate the use of self-defined statistics. In SSSP, "bad works" mean the number of iterations in which the node distance is lowered more than once. Since the amount of bad works is the sum of the bad works encountered by each thread, bad works should be collected and reduced using sum operation, which calls for a katana::GAccumulator. We declare the collector before the parallel loop for SSSP as the following:
 
 @snippet libgalois/src/analytics/sssp/sssp.cpp reducible for self-defined stats
 
@@ -106,11 +106,11 @@ Finally, after the parallel loop for SSSP is done, report the number of bad work
 
 In the above example, the TOTAL_TYPE for BadWork is SINGLE.
 
-galois::ReportStatSingle can be used if the statistic is reduced to a single value before being reported. Other stat reporting functions are galois::ReportStatMax, galois::ReportStatMin, galois::ReportStatSum, and galois::runtime::ReportStatAvg, but they are rarely used in user code. The suffix of a stat reporting function indicates the TOTAL_TYPE for the statistic being reported. All the stat reporting functions take three parameters: name for the region, name for the statistic, and the value to be aggregated/reported.
+katana::ReportStatSingle can be used if the statistic is reduced to a single value before being reported. Other stat reporting functions are katana::ReportStatMax, katana::ReportStatMin, katana::ReportStatSum, and katana::ReportStatAvg, but they are rarely used in user code. The suffix of a stat reporting function indicates the TOTAL_TYPE for the statistic being reported. All the stat reporting functions take three parameters: name for the region, name for the statistic, and the value to be aggregated/reported.
 
 @section stat_timer Timing Serial Code Region
 
-The runtime of a serial code region, in milliseconds, can be measured by enclosing the code region in between calls to galois::StatTimer::start and galois::StatTimer::stop. The following code snippet shows an example from {@link lonestar/tutorial_examples/GraphTraversalSerial.cpp}:
+The runtime of a serial code region, in milliseconds, can be measured by enclosing the code region in between calls to katana::StatTimer::start and katana::StatTimer::stop. The following code snippet shows an example from {@link lonestar/tutorial_examples/GraphTraversalSerial.cpp}:
 
 @snippet lonestar/tutorial_examples/GraphTraversalSerial.cpp use of a StatTimer
 

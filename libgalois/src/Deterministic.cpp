@@ -17,7 +17,6 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Executor_Deterministic.h"
+#include "katana/Executor_Deterministic.h"
 
-thread_local galois::runtime::SizedHeapFactory::SizedHeap*
-    galois::runtime::internal::dagListHeap;
+thread_local katana::SizedHeapFactory::SizedHeap* katana::internal::dagListHeap;

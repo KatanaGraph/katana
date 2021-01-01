@@ -2,7 +2,7 @@ from functools import wraps, partial, lru_cache
 
 import numpy as np
 
-from galois.util import wraps_class
+from katana.util import wraps_class
 
 
 def find_size_for_dtype(dtype, sizes=(8, 16, 32, 48, 64, 128)):

@@ -17,12 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/PageAlloc.h"
+#include "katana/PageAlloc.h"
 
 #include <mutex>
 
-#include "galois/Logging.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/Logging.h"
+#include "katana/SimpleLock.h"
 
 #ifdef __linux__
 #include <linux/mman.h>
@@ -32,11 +32,11 @@
 // figure this out dynamically
 const size_t hugePageSize = 2 * 1024 * 1024;
 // protect mmap, munmap since linux has issues
-static galois::substrate::SimpleLock allocLock;
+static katana::SimpleLock allocLock;
 
 static void*
 trymmap(size_t size, int flag) {
-  std::lock_guard<galois::substrate::SimpleLock> lg(allocLock);
+  std::lock_guard<katana::SimpleLock> lg(allocLock);
   const int _PROT = PROT_READ | PROT_WRITE;
   void* ptr = mmap(0, size, _PROT, flag, -1, 0);
   if (ptr == MAP_FAILED) {
@@ -71,12 +71,12 @@ static const int _MAP_HUGE = _MAP;
 #endif
 
 size_t
-galois::substrate::allocSize() {
+katana::allocSize() {
   return hugePageSize;
 }
 
 void*
-galois::substrate::allocPages(unsigned num, bool preFault) {
+katana::allocPages(unsigned num, bool preFault) {
   if (num == 0) {
     return nullptr;
   }
@@ -84,13 +84,13 @@ galois::substrate::allocPages(unsigned num, bool preFault) {
   void* ptr = trymmap(num * hugePageSize, preFault ? _MAP_HUGE_POP : _MAP_HUGE);
   if (!ptr) {
 #ifndef NDEBUG
-    GALOIS_WARN_ONCE("huge page alloc failed, falling back to regular pages");
+    KATANA_WARN_ONCE("huge page alloc failed, falling back to regular pages");
 #endif
     ptr = trymmap(num * hugePageSize, preFault ? _MAP_POP : _MAP);
   }
 
   if (!ptr) {
-    GALOIS_LOG_FATAL("failed to allocate: {}", errno);
+    KATANA_LOG_FATAL("failed to allocate: {}", errno);
   }
 
   if (preFault && doHandMap) {
@@ -103,9 +103,9 @@ galois::substrate::allocPages(unsigned num, bool preFault) {
 }
 
 void
-galois::substrate::freePages(void* ptr, unsigned num) {
+katana::freePages(void* ptr, unsigned num) {
   std::lock_guard<SimpleLock> lg(allocLock);
   if (munmap(ptr, num * hugePageSize) != 0) {
-    GALOIS_LOG_FATAL("munmap failed: {}", errno);
+    KATANA_LOG_FATAL("munmap failed: {}", errno);
   }
 }

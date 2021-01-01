@@ -17,14 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_STATICINSTANCE_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_STATICINSTANCE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_STATICINSTANCE_H_
+#define KATANA_LIBGALOIS_KATANA_STATICINSTANCE_H_
 
-#include "galois/config.h"
-#include "galois/substrate/CompilerSpecific.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 // This should be much simpler in c++03 mode, but be general for now
 // This exists because ptrlock is not a pod, but this is.
@@ -37,7 +36,7 @@ struct StaticInstance {
     int oldval;
     do {
       while (_lock != 0) {
-        substrate::asmPause();
+        asmPause();
       }
       oldval = __sync_fetch_and_or(&_lock, 1);
     } while (oldval & 1);
@@ -61,7 +60,6 @@ struct StaticInstance {
   }
 };
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

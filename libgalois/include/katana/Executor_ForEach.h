@@ -17,35 +17,34 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORFOREACH_H_
-#define GALOIS_LIBGALOIS_GALOIS_RUNTIME_EXECUTORFOREACH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_EXECUTORFOREACH_H_
+#define KATANA_LIBGALOIS_KATANA_EXECUTORFOREACH_H_
 
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <utility>
 
-#include "galois/Mem.h"
-#include "galois/Range.h"
-#include "galois/ThreadTimer.h"
-#include "galois/Threads.h"
-#include "galois/Timer.h"
-#include "galois/Traits.h"
-#include "galois/config.h"
-#include "galois/gIO.h"
-#include "galois/runtime/Context.h"
-#include "galois/runtime/LoopStatistics.h"
-#include "galois/runtime/OperatorReferenceTypes.h"
-#include "galois/runtime/UserContextAccess.h"
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/TerminationDetection.h"
-#include "galois/substrate/ThreadPool.h"
-#include "galois/worklists/Chunk.h"
-#include "galois/worklists/Simple.h"
+#include "katana/Barrier.h"
+#include "katana/Chunk.h"
+#include "katana/Context.h"
+#include "katana/LoopStatistics.h"
+#include "katana/Mem.h"
+#include "katana/OperatorReferenceTypes.h"
+#include "katana/Range.h"
+#include "katana/Simple.h"
+#include "katana/TerminationDetection.h"
+#include "katana/ThreadPool.h"
+#include "katana/ThreadTimer.h"
+#include "katana/Threads.h"
+#include "katana/Timer.h"
+#include "katana/Traits.h"
+#include "katana/UserContextAccess.h"
+#include "katana/config.h"
+#include "katana/gIO.h"
 
-namespace galois {
+namespace katana {
 //! Internal Galois functionality - Use at your own risk.
-namespace runtime {
 
 template <typename value_type>
 class AbortHandler {
@@ -54,15 +53,15 @@ class AbortHandler {
     int retries;
   };
 
-  typedef worklists::GFIFO<Item> AbortedList;
-  substrate::PerThreadStorage<AbortedList> queues;
+  typedef GFIFO<Item> AbortedList;
+  PerThreadStorage<AbortedList> queues;
   bool useBasicPolicy;
 
   /**
    * Policy: serialize via tree over sockets.
    */
   void basicPolicy(const Item& item) {
-    auto& tp = substrate::GetThreadPool();
+    auto& tp = GetThreadPool();
     unsigned socket = tp.getSocket();
     queues.getRemote(tp.getLeaderForSocket(socket / 2))->push(item);
   }
@@ -78,10 +77,10 @@ class AbortHandler {
       return;
     }
 
-    unsigned tid = substrate::ThreadPool::getTID();
-    auto& tp = substrate::GetThreadPool();
-    unsigned socket = substrate::ThreadPool::getSocket();
-    unsigned leader = substrate::ThreadPool::getLeader();
+    unsigned tid = ThreadPool::getTID();
+    auto& tp = GetThreadPool();
+    unsigned socket = ThreadPool::getSocket();
+    unsigned leader = ThreadPool::getLeader();
     if (tid != leader) {
       unsigned next = leader + (tid - leader) / 2;
       queues.getRemote(next)->push(item);
@@ -101,9 +100,9 @@ class AbortHandler {
       return;
     }
 
-    unsigned tid = substrate::ThreadPool::getTID();
-    auto& tp = substrate::GetThreadPool();
-    unsigned socket = substrate::ThreadPool::getSocket();
+    unsigned tid = ThreadPool::getTID();
+    auto& tp = GetThreadPool();
+    unsigned socket = ThreadPool::getSocket();
     unsigned leader = tp.getLeaderForSocket(socket);
     if (retries < 5 && tid != leader) {
       unsigned next = leader + (tid - leader) / 2;
@@ -119,9 +118,7 @@ class AbortHandler {
   void eagerPolicy(const Item& item) { queues.getLocal()->push(item); }
 
 public:
-  AbortHandler() {
-    useBasicPolicy = substrate::GetThreadPool().getMaxSockets() > 2;
-  }
+  AbortHandler() { useBasicPolicy = GetThreadPool().getMaxSockets() > 2; }
 
   value_type& value(Item& item) const { return item.val; }
   value_type& value(value_type& val) const { return val; }
@@ -147,7 +144,7 @@ public:
 template <class WorkListTy, class FunctionTy, typename ArgsTy>
 class ForEachExecutor {
 public:
-  static constexpr bool needStats = galois::internal::NeedStats<ArgsTy>::value;
+  static constexpr bool needStats = katana::internal::NeedStats<ArgsTy>::value;
   static constexpr bool needsPush = !has_trait<no_pushes_tag, ArgsTy>();
   static constexpr bool needsAborts =
       !has_trait<disable_conflict_detection_tag, ArgsTy>();
@@ -179,15 +176,15 @@ protected:
   template <typename WL>
   struct RunQueueState {
     unsigned int num = 0;
-    galois::optional<typename WL::value_type> item;
+    katana::optional<typename WL::value_type> item;
   };
 
   // NB: Place dynamically growing wl after fixed-size PerThreadStorage
   // members to give higher likelihood of reclaiming PerThreadStorage
 
   AbortHandler<value_type> aborted;
-  substrate::TerminationDetection& term;
-  substrate::Barrier& barrier;
+  TerminationDetection& term;
+  Barrier& barrier;
 
   WorkListTy wl;
   FunctionTy origFunction;
@@ -217,7 +214,7 @@ protected:
   }
 
   template <typename Item>
-  GALOIS_ATTRIBUTE_NOINLINE void abortIteration(
+  KATANA_ATTRIBUTE_NOINLINE void abortIteration(
       const Item& item, ThreadLocalData& tld) {
     assert(needsAborts);
     tld.ctx.cancelIteration();
@@ -241,7 +238,7 @@ protected:
   }
 
   bool runQueueSimple(ThreadLocalData& tld) {
-    galois::optional<value_type> p;
+    katana::optional<value_type> p;
     bool didWork = false;
     while ((p = wl.pop())) {
       didWork = true;
@@ -252,7 +249,7 @@ protected:
 
   template <unsigned int limit, typename WL>
   void runQueueDispatch(ThreadLocalData& tld, WL& lwl, RunQueueState<WL>& s) {
-#ifdef GALOIS_USE_LONGJMP_ABORT
+#ifdef KATANA_USE_LONGJMP_ABORT
     if (setjmp(execFrame) == 0) {
       while ((!limit || s.num < limit) && (s.item = lwl.pop())) {
         ++s.num;
@@ -262,7 +259,7 @@ protected:
       clearConflictLock();
       abortIteration(*s.item, tld);
     }
-#elif defined(GALOIS_USE_EXCEPTION_ABORT)
+#elif defined(KATANA_USE_EXCEPTION_ABORT)
     try {
       while ((!limit || s.num < limit) && (s.item = lwl.pop())) {
         ++s.num;
@@ -282,7 +279,7 @@ protected:
     return s.num > 0;
   }
 
-  GALOIS_ATTRIBUTE_NOINLINE
+  KATANA_ATTRIBUTE_NOINLINE
   bool handleAborts(ThreadLocalData& tld) {
     return runQueue<0>(tld, *aborted.getQueue());
   }
@@ -335,7 +332,7 @@ protected:
 
         // Update node color and prop token
         term.SignalWorked(didWork);
-        substrate::asmPause();  // Let token propagate
+        asmPause();  // Let token propagate
       } while (term.Working() && (!needsBreak || !broke));
 
       if (checkEmpty(wl, tld, 0)) {
@@ -361,11 +358,11 @@ protected:
 
   template <typename... WArgsTy>
   ForEachExecutor(T2, FunctionTy f, const ArgsTy& args, WArgsTy... wargs)
-      : term(substrate::GetTerminationDetection(activeThreads)),
-        barrier(substrate::GetBarrier(activeThreads)),
+      : term(GetTerminationDetection(activeThreads)),
+        barrier(GetBarrier(activeThreads)),
         wl(std::forward<WArgsTy>(wargs)...),
         origFunction(f),
-        loopname(galois::internal::getLoopName(args)),
+        loopname(katana::internal::getLoopName(args)),
         broke(false),
         initTime(loopname, "Init"),
         execTime(loopname, "Execute") {}
@@ -403,7 +400,7 @@ public:
   }
 
   void operator()() {
-    bool isLeader = substrate::ThreadPool::isLeader();
+    bool isLeader = ThreadPool::isLeader();
     bool couldAbort = needsAborts && activeThreads > 1;
     if (couldAbort && isLeader)
       go<true, true>();
@@ -454,11 +451,11 @@ for_each_impl(const RangeTy& range, FunctionTy&& fn, const ArgsTy& args) {
       OperatorReferenceType<decltype(std::forward<FunctionTy>(fn))>;
   typedef ForEachExecutor<WorkListTy, FuncRefType, ArgsTy> WorkTy;
 
-  auto& barrier = substrate::GetBarrier(activeThreads);
+  auto& barrier = GetBarrier(activeThreads);
   FuncRefType fn_ref = fn;
   WorkTy W(fn_ref, args);
   W.init(range);
-  substrate::GetThreadPool().run(
+  GetThreadPool().run(
       activeThreads, [&W, &range]() { W.initThread(range); },
       [&barrier] { barrier.Wait(); }, std::ref(W));
 }
@@ -482,15 +479,14 @@ for_each_gen(const RangeTy& r, FunctionTy&& fn, const TupleTy& tpl) {
           tpl, std::make_tuple(wl_tag{}), std::make_tuple(wl<defaultWL>())));
 
   constexpr bool TIME_IT = has_trait<loopname_tag, decltype(xtpl)>();
-  CondStatTimer<TIME_IT> timer(galois::internal::getLoopName(xtpl));
+  CondStatTimer<TIME_IT> timer(katana::internal::getLoopName(xtpl));
 
   timer.start();
 
-  runtime::for_each_impl(r, std::forward<FunctionTy>(fn), xtpl);
+  for_each_impl(r, std::forward<FunctionTy>(fn), xtpl);
 
   timer.stop();
 }
 
-}  // end namespace runtime
-}  // end namespace galois
+}  // end namespace katana
 #endif

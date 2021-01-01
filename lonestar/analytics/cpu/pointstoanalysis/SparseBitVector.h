@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef _GALOIS_SPARSEBITVECTOR_
-#define _GALOIS_SPARSEBITVECTOR_
+#ifndef _KATANA_SPARSEBITVECTOR_
+#define _KATANA_SPARSEBITVECTOR_
 
 #include <utility>
 
 #include <boost/iterator/iterator_facade.hpp>
-#include <galois/AtomicWrapper.h>
-#include <galois/Mem.h>
+#include <katana/AtomicWrapper.h>
+#include <katana/Mem.h>
 
-namespace galois {
+namespace katana {
 
 /**
  * Sparse bit vector using a linked list. Also thread safe; however, only
@@ -48,11 +48,11 @@ struct SparseBitVector {
     unsigned _base;  // base to multiply by/used to sort linked list
     // If concurrent, then wrap these in a copyable atomic
     using WordType = typename std::conditional<
-        IsConcurrent, galois::CopyableAtomic<WORD>, WORD>::type;
+        IsConcurrent, katana::CopyableAtomic<WORD>, WORD>::type;
     WordType _bitVector;  // stores set bits for a base
 
     using NodeType = typename std::conditional<
-        IsConcurrent, galois::CopyableAtomic<Node*>, Node*>::type;
+        IsConcurrent, katana::CopyableAtomic<Node*>, Node*>::type;
     NodeType _next;  // pointer to next node in linked list
 
     /**
@@ -193,7 +193,7 @@ struct SparseBitVector {
      * @returns a pointer to a copy of this word without the preservation
      * of the linked list
      */
-    Node* clone(galois::FixedSizeAllocator<Node>* nodeAllocator) const {
+    Node* clone(katana::FixedSizeAllocator<Node>* nodeAllocator) const {
       Node* newWord = nodeAllocator->allocate(1);
       nodeAllocator->construct(newWord, 0);
 
@@ -357,11 +357,11 @@ struct SparseBitVector {
   //////////////////////////////////////////////////////////////////////////////
 
   using NodeType = typename std::conditional<
-      IsConcurrent, galois::CopyableAtomic<Node*>, Node*>::type;
+      IsConcurrent, katana::CopyableAtomic<Node*>, Node*>::type;
   // head of linked list
   NodeType head;
   // allocator of new nodes
-  galois::FixedSizeAllocator<Node>* nodeAllocator;
+  katana::FixedSizeAllocator<Node>* nodeAllocator;
 
   /**
    * Default constructor = nullptrs
@@ -400,7 +400,7 @@ struct SparseBitVector {
    * @param _nodeAllocator allocator object for nodes to use when creating
    * a new linked list node
    */
-  void init(galois::FixedSizeAllocator<Node>* _nodeAllocator) {
+  void init(katana::FixedSizeAllocator<Node>* _nodeAllocator) {
     head = nullptr;
     nodeAllocator = _nodeAllocator;
   }
@@ -855,6 +855,6 @@ private:
   }
 };
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

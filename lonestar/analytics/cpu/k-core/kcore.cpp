@@ -18,11 +18,11 @@
  */
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/AtomicHelpers.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/graphs/LCGraph.h"
-#include "galois/gstl.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Reduction.h"
+#include "katana/gstl.h"
 #include "llvm/Support/CommandLine.h"
 
 constexpr static const char* const REGION_NAME = "k-core";
@@ -62,13 +62,13 @@ static cll::opt<unsigned int> k_core_num(
 //! necessary.
 struct NodeCurrentDegree {
   using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
+  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
 };
 
 using NodeData = std::tuple<NodeCurrentDegree>;
 using EdgeData = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 //! Chunksize for for_each worklist: best chunksize will depend on input.
@@ -86,14 +86,14 @@ constexpr static const unsigned CHUNK_SIZE = 64u;
  */
 void
 DegreeCounting(Graph* graph) {
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& node) {
         auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
         node_current_degree.store(
             std::distance(graph->edge_begin(node), graph->edge_end(node)));
       },
-      galois::loopname("DegreeCounting"), galois::no_stats());
+      katana::loopname("DegreeCounting"), katana::no_stats());
 };
 
 /**
@@ -103,9 +103,9 @@ DegreeCounting(Graph* graph) {
  * @param initialWorklist Empty worklist to be filled with dead nodes.
  */
 void
-SetupInitialWorklist(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
-  galois::do_all(
-      galois::iterate(*graph),
+SetupInitialWorklist(Graph* graph, katana::InsertBag<GNode>& initialWorklist) {
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& node) {
         auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
         if (node_current_degree < k_core_num) {
@@ -113,7 +113,7 @@ SetupInitialWorklist(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
           initialWorklist.emplace(node);
         }
       },
-      galois::loopname("InitialWorklistSetup"), galois::no_stats());
+      katana::loopname("InitialWorklistSetup"), katana::no_stats());
 }
 
 /**
@@ -125,8 +125,8 @@ SetupInitialWorklist(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
  */
 void
 SyncCascadeKCore(Graph* graph) {
-  galois::InsertBag<GNode>* current = new galois::InsertBag<GNode>;
-  galois::InsertBag<GNode>* next = new galois::InsertBag<GNode>;
+  katana::InsertBag<GNode>* current = new katana::InsertBag<GNode>;
+  katana::InsertBag<GNode>* next = new katana::InsertBag<GNode>;
 
   //! Setup worklist.
   SetupInitialWorklist(graph, *next);
@@ -136,14 +136,14 @@ SyncCascadeKCore(Graph* graph) {
     std::swap(current, next);
     next->clear();
 
-    galois::do_all(
-        galois::iterate(*current),
+    katana::do_all(
+        katana::iterate(*current),
         [&](const GNode& dead_node) {
           //! Decrement degree of all neighbors.
           for (auto e : graph->edges(dead_node)) {
             auto dest = graph->GetEdgeDest(e);
             auto& dest_current_degree = graph->GetData<NodeCurrentDegree>(dest);
-            uint32_t old_degree = galois::atomicSub(dest_current_degree, 1u);
+            uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
 
             if (old_degree == k_core_num) {
               //! This thread was responsible for putting degree of destination
@@ -152,8 +152,8 @@ SyncCascadeKCore(Graph* graph) {
             }
           }
         },
-        galois::steal(), galois::chunk_size<CHUNK_SIZE>(),
-        galois::loopname("SyncCascadeDeadNodes"));
+        katana::steal(), katana::chunk_size<CHUNK_SIZE>(),
+        katana::loopname("SyncCascadeDeadNodes"));
   }
 
   delete current;
@@ -169,15 +169,15 @@ SyncCascadeKCore(Graph* graph) {
  * @param initialWorklist Worklist containing initial dead nodes
  */
 void
-AsyncCascadeKCore(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
-  galois::for_each(
-      galois::iterate(initialWorklist),
+AsyncCascadeKCore(Graph* graph, katana::InsertBag<GNode>& initialWorklist) {
+  katana::for_each(
+      katana::iterate(initialWorklist),
       [&](const GNode& dead_node, auto& ctx) {
         //! Decrement degree of all neighbors.
         for (auto e : graph->edges(dead_node)) {
           auto dest = graph->GetEdgeDest(e);
           auto& dest_current_degree = graph->GetData<NodeCurrentDegree>(dest);
-          uint32_t old_degree = galois::atomicSub(dest_current_degree, 1u);
+          uint32_t old_degree = katana::atomicSub(dest_current_degree, 1u);
 
           if (old_degree == k_core_num) {
             //! This thread was responsible for putting degree of destination
@@ -186,8 +186,8 @@ AsyncCascadeKCore(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
           }
         }
       },
-      galois::disable_conflict_detection(), galois::chunk_size<CHUNK_SIZE>(),
-      galois::loopname("AsyncCascadeDeadNodes"));
+      katana::disable_conflict_detection(), katana::chunk_size<CHUNK_SIZE>(),
+      katana::loopname("AsyncCascadeDeadNodes"));
 }
 
 /*******************************************************************************
@@ -201,20 +201,20 @@ AsyncCascadeKCore(Graph* graph, galois::InsertBag<GNode>& initialWorklist) {
  */
 void
 KCoreSanity(Graph* graph) {
-  galois::GAccumulator<uint32_t> alive_nodes;
+  katana::GAccumulator<uint32_t> alive_nodes;
   alive_nodes.reset();
 
-  galois::do_all(
-      galois::iterate(*graph),
+  katana::do_all(
+      katana::iterate(*graph),
       [&](const GNode& node) {
         auto& node_current_degree = graph->GetData<NodeCurrentDegree>(node);
         if (node_current_degree >= k_core_num) {
           alive_nodes += 1;
         }
       },
-      galois::loopname("KCoreSanityCheck"), galois::no_stats());
+      katana::loopname("KCoreSanityCheck"), katana::no_stats());
 
-  galois::gPrint(
+  katana::gPrint(
       "Number of nodes in the ", k_core_num, "-core is ", alive_nodes.reduce(),
       "\n");
 }
@@ -246,88 +246,87 @@ makeResults(const Graph& graph) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
   }
 
   //! Some initial stat reporting.
-  galois::gInfo(
+  katana::gInfo(
       "Worklist chunk size of ", CHUNK_SIZE,
       ": best size may depend"
       " on input.");
-  galois::ReportStatSingle(REGION_NAME, "ChunkSize", CHUNK_SIZE);
-  galois::reportPageAlloc("MemAllocPre");
+  katana::ReportStatSingle(REGION_NAME, "ChunkSize", CHUNK_SIZE);
+  katana::reportPageAlloc("MemAllocPre");
 
   //! Read graph from disk.
-  galois::StatTimer graphReadingTimer("GraphConstructTime", REGION_NAME);
+  katana::StatTimer graphReadingTimer("GraphConstructTime", REGION_NAME);
   graphReadingTimer.start();
 
-  galois::gInfo("Reading from file: ", inputFile);
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  katana::gInfo("Reading from file: ", inputFile);
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<NodeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
-  auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
-  galois::gInfo(
+  katana::gInfo(
       "Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges");
   graphReadingTimer.stop();
 
   //! Preallocate pages in memory so allocation doesn't occur during compute.
-  galois::StatTimer preallocTime("PreAllocTime", REGION_NAME);
+  katana::StatTimer preallocTime("PreAllocTime", REGION_NAME);
   preallocTime.start();
-  galois::Prealloc(std::max(
-      size_t{galois::getActiveThreads()} * (graph.size() / 1000000),
-      std::max(10U, galois::getActiveThreads()) * size_t{10}));
+  katana::Prealloc(std::max(
+      size_t{katana::getActiveThreads()} * (graph.size() / 1000000),
+      std::max(10U, katana::getActiveThreads()) * size_t{10}));
   preallocTime.stop();
-  galois::reportPageAlloc("MemAllocMid");
+  katana::reportPageAlloc("MemAllocMid");
 
   //! Intialization of degrees.
   DegreeCounting(&graph);
 
   //! Begins main computation.
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
 
   execTime.start();
 
   if (algo == Async) {
-    galois::gInfo(
+    katana::gInfo(
         "Running asynchronous k-core with k-core number ", k_core_num);
     //! Worklist setup of initial dead ndoes.
-    galois::InsertBag<GNode> initialWorklist;
+    katana::InsertBag<GNode> initialWorklist;
     SetupInitialWorklist(&graph, initialWorklist);
     //! Actual work; propagate deadness by decrementing degrees and adding dead
     //! nodes to worklist.
     AsyncCascadeKCore(&graph, initialWorklist);
   } else if (algo == Sync) {
-    galois::gInfo("Running synchronous k-core with k-core number ", k_core_num);
+    katana::gInfo("Running synchronous k-core with k-core number ", k_core_num);
     //! Synchronous k-core.
     SyncCascadeKCore(&graph);
   } else {
-    GALOIS_DIE("invalid specification of k-core algorithm");
+    KATANA_DIE("invalid specification of k-core algorithm");
   }
 
   execTime.stop();
 
-  galois::reportPageAlloc("MemAllocPost");
+  katana::reportPageAlloc("MemAllocPost");
 
   //! Sanity check.
   if (!skipVerify) {

@@ -23,12 +23,12 @@
 #include <unordered_set>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/Graph.h"
-#include "galois/graphs/TypeTraits.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/Graph.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
+#include "katana/TypeTraits.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -57,26 +57,26 @@ static const uint32_t removed = 0x1;
 //   set LSB of an edge weight to indicate the removal of the edge.
 //   << 1 to track # triangles an edge supports,
 //   >> 1 when computing edge supports
-typedef galois::graphs::LC_CSR_Graph<void, uint32_t>::template with_numa_alloc<
+typedef katana::LC_CSR_Graph<void, uint32_t>::template with_numa_alloc<
     true>::type ::template with_no_lockable<true>::type Graph;
 typedef Graph::GraphNode GNode;
 
 typedef std::pair<GNode, GNode> Edge;
-typedef galois::InsertBag<Edge> EdgeVec;
+typedef katana::InsertBag<Edge> EdgeVec;
 
 void
 initialize(Graph& g) {
   g.sortAllEdgesByDst();
 
   // initializa all edges to removed
-  galois::do_all(
-      galois::iterate(g),
+  katana::do_all(
+      katana::iterate(g),
       [&g](typename Graph::GraphNode N) {
-        for (auto e : g.edges(N, galois::MethodFlag::UNPROTECTED)) {
+        for (auto e : g.edges(N, katana::MethodFlag::UNPROTECTED)) {
           g.getEdgeData(e) = removed;
         }
       },
-      galois::steal());
+      katana::steal());
 }
 
 // TODO: can we read in edges in parallel?
@@ -85,7 +85,7 @@ readTruss(Graph& g) {
   std::ifstream edgelist(trussFile);
   if (!edgelist.is_open()) {
     std::string errMsg = "Failed to open " + trussFile;
-    GALOIS_DIE(errMsg);
+    KATANA_DIE(errMsg);
   }
 
   unsigned int n1, n2;
@@ -116,12 +116,12 @@ readTruss(Graph& g) {
 
   if (ktrussEdges && edges != ktrussEdges) {
     std::cerr << "edges read not equal to -trussEdges=" << ktrussEdges << "\n";
-    GALOIS_DIE("verification error");
+    KATANA_DIE("verification error");
   }
 
   if (ktrussNodes && nodes.size() != ktrussNodes) {
     std::cerr << "nodes read not equal to -trussNodes=" << ktrussNodes << "\n";
-    GALOIS_DIE("verification error");
+    KATANA_DIE("verification error");
   }
 }
 
@@ -129,7 +129,7 @@ void
 printGraph(Graph& g) {
   for (auto n : g) {
     std::cout << "node " << n << "\n";
-    for (auto e : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
+    for (auto e : g.edges(n, katana::MethodFlag::UNPROTECTED)) {
       auto d = g.getEdgeDst(e);
       if (d >= n)
         continue;
@@ -141,13 +141,13 @@ printGraph(Graph& g) {
 
 std::pair<size_t, size_t>
 countValidNodesAndEdges(Graph& g) {
-  galois::GAccumulator<size_t> numNodes, numEdges;
+  katana::GAccumulator<size_t> numNodes, numEdges;
 
-  galois::do_all(
-      galois::iterate(g),
+  katana::do_all(
+      katana::iterate(g),
       [&g, &numNodes, &numEdges](GNode n) {
         size_t numN = 0;
-        for (auto e : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
+        for (auto e : g.edges(n, katana::MethodFlag::UNPROTECTED)) {
           if (!(g.getEdgeData(e) & removed)) {
             if (g.getEdgeDst(e) > n) {
               numEdges += 1;
@@ -157,7 +157,7 @@ countValidNodesAndEdges(Graph& g) {
         }
         numNodes += numN;
       },
-      galois::steal());
+      katana::steal());
 
   return std::make_pair(numNodes.reduce(), numEdges.reduce());
 }
@@ -165,10 +165,10 @@ countValidNodesAndEdges(Graph& g) {
 bool
 isSupportNoLessThanJ(Graph& g, GNode src, GNode dst, unsigned int j) {
   size_t numValidEqual = 0;
-  auto srcI = g.edge_begin(src, galois::MethodFlag::UNPROTECTED),
-       srcE = g.edge_end(src, galois::MethodFlag::UNPROTECTED),
-       dstI = g.edge_begin(dst, galois::MethodFlag::UNPROTECTED),
-       dstE = g.edge_end(dst, galois::MethodFlag::UNPROTECTED);
+  auto srcI = g.edge_begin(src, katana::MethodFlag::UNPROTECTED),
+       srcE = g.edge_end(src, katana::MethodFlag::UNPROTECTED),
+       dstI = g.edge_begin(dst, katana::MethodFlag::UNPROTECTED),
+       dstE = g.edge_end(dst, katana::MethodFlag::UNPROTECTED);
 
   while (true) {
     // find the first valid edge
@@ -203,14 +203,14 @@ isSupportNoLessThanJ(Graph& g, GNode src, GNode dst, unsigned int j) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
@@ -228,10 +228,10 @@ main(int argc, char** argv) {
   Graph g;
   EdgeVec work, shouldBeInvalid, shouldBeValid;
 
-  galois::graphs::readGraph(g, inputFile, true);
+  katana::readGraph(g, inputFile, true);
   std::cout << "Read " << g.size() << " nodes\n";
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
 
   initialize(g);
@@ -248,23 +248,23 @@ main(int argc, char** argv) {
 
   // symmetry breaking:
   // consider only edges (i, j) where i < j
-  galois::do_all(
-      galois::iterate(g),
+  katana::do_all(
+      katana::iterate(g),
       [&g, &work](GNode n) {
-        for (auto e : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
+        for (auto e : g.edges(n, katana::MethodFlag::UNPROTECTED)) {
           auto dst = g.getEdgeDst(e);
           if (dst > n) {
             work.push_back(std::make_pair(n, dst));
           }
         }
       },
-      galois::steal());
+      katana::steal());
 
   // pick out the following:
   // 1. valid edges whose support < trussNum-2
   // 2. removed edges whose support >= trussNum-2
-  galois::do_all(
-      galois::iterate(work),
+  katana::do_all(
+      katana::iterate(work),
       [&g, &shouldBeInvalid, &shouldBeValid](Edge e) {
         bool isSupportEnough =
             isSupportNoLessThanJ(g, e.first, e.second, trussNum - 2);
@@ -276,7 +276,7 @@ main(int argc, char** argv) {
           shouldBeValid.push_back(e);
         }
       },
-      galois::steal());
+      katana::steal());
 
   auto numShouldBeInvalid =
       std::distance(shouldBeInvalid.begin(), shouldBeInvalid.end());

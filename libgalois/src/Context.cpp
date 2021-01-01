@@ -17,25 +17,25 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/runtime/Context.h"
+#include "katana/Context.h"
 
 #include <stdio.h>
 
-#include "galois/substrate/CacheLineStorage.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/CacheLineStorage.h"
+#include "katana/SimpleLock.h"
 
 //! Global thread context for each active thread
-static thread_local galois::runtime::SimpleRuntimeContext* thread_ctx = 0;
+static thread_local katana::SimpleRuntimeContext* thread_ctx = 0;
 
-GALOIS_EXPORT thread_local jmp_buf galois::runtime::execFrame;
+KATANA_EXPORT thread_local jmp_buf katana::execFrame;
 
 void
-galois::runtime::setThreadContext(galois::runtime::SimpleRuntimeContext* ctx) {
+katana::setThreadContext(katana::SimpleRuntimeContext* ctx) {
   thread_ctx = ctx;
 }
 
-galois::runtime::SimpleRuntimeContext*
-galois::runtime::getThreadContext() {
+katana::SimpleRuntimeContext*
+katana::getThreadContext() {
   return thread_ctx;
 }
 
@@ -43,9 +43,8 @@ galois::runtime::getThreadContext() {
 // LockManagerBase & SimpleRuntimeContext
 ////////////////////////////////////////////////////////////////////////////////
 
-galois::runtime::LockManagerBase::AcquireStatus
-galois::runtime::LockManagerBase::tryAcquire(
-    galois::runtime::Lockable* lockable) {
+katana::LockManagerBase::AcquireStatus
+katana::LockManagerBase::tryAcquire(katana::Lockable* lockable) {
   assert(lockable);
   if (lockable->owner.try_lock()) {
     lockable->owner.setValue(this);
@@ -57,8 +56,7 @@ galois::runtime::LockManagerBase::tryAcquire(
 }
 
 void
-galois::runtime::SimpleRuntimeContext::release(
-    galois::runtime::Lockable* lockable) {
+katana::SimpleRuntimeContext::release(katana::Lockable* lockable) {
   assert(lockable);
   // The deterministic executor, for instance, steals locks from other
   // iterations
@@ -68,14 +66,14 @@ galois::runtime::SimpleRuntimeContext::release(
 }
 
 unsigned
-galois::runtime::SimpleRuntimeContext::commitIteration() {
+katana::SimpleRuntimeContext::commitIteration() {
   unsigned numLocks = 0;
   while (locks) {
     // ORDER MATTERS!
     Lockable* lockable = locks;
     locks = lockable->next;
     lockable->next = 0;
-    substrate::compilerBarrier();
+    compilerBarrier();
     release(lockable);
     ++numLocks;
   }
@@ -84,12 +82,12 @@ galois::runtime::SimpleRuntimeContext::commitIteration() {
 }
 
 unsigned
-galois::runtime::SimpleRuntimeContext::cancelIteration() {
+katana::SimpleRuntimeContext::cancelIteration() {
   return commitIteration();
 }
 
 void
-galois::runtime::SimpleRuntimeContext::subAcquire(
-    galois::runtime::Lockable*, galois::MethodFlag) {
-  GALOIS_DIE("unreachable");
+katana::SimpleRuntimeContext::subAcquire(
+    katana::Lockable*, katana::MethodFlag) {
+  KATANA_DIE("unreachable");
 }

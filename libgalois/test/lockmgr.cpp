@@ -19,9 +19,9 @@
 
 #include <iostream>
 
-#include "galois/runtime/Lockable.h"
+#include "katana/Lockable.h"
 
-using namespace galois::runtime;
+using namespace katana;
 
 struct simple : public Lockable {
   int foo;

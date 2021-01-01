@@ -21,9 +21,9 @@
 #include <set>
 
 #include "Metis.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
+#include "katana/Galois.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
 
 namespace {
 
@@ -39,38 +39,38 @@ isBoundary(GGraph& g, GNode n) {
 // This is only used on the terminal graph (find graph)
 void
 findBoundary(GNodeBag& bag, GGraph& cg) {
-  galois::do_all(
-      galois::iterate(cg),
+  katana::do_all(
+      katana::iterate(cg),
       [&](GNode n) {
-        auto& cn = cg.getData(n, galois::MethodFlag::UNPROTECTED);
+        auto& cn = cg.getData(n, katana::MethodFlag::UNPROTECTED);
         if (cn.getmaybeBoundary())
           cn.setmaybeBoundary(isBoundary(cg, n));
         if (cn.getmaybeBoundary())
           bag.push(n);
       },
-      galois::loopname("findBoundary"));
+      katana::loopname("findBoundary"));
 }
 
 // this is used on the coarse graph to project to the fine graph
 void
 findBoundaryAndProject(GNodeBag& bag, GGraph& cg, GGraph& fg) {
-  galois::do_all(
-      galois::iterate(cg),
+  katana::do_all(
+      katana::iterate(cg),
       [&](GNode n) {
-        auto& cn = cg.getData(n, galois::MethodFlag::UNPROTECTED);
+        auto& cn = cg.getData(n, katana::MethodFlag::UNPROTECTED);
         if (cn.getmaybeBoundary())
           cn.setmaybeBoundary(isBoundary(cg, n));
 
         // project part and maybe boundary
         // unsigned part = cn.getPart();
         for (unsigned x = 0; x < cn.numChildren(); ++x) {
-          fg.getData(cn.getChild(x), galois::MethodFlag::UNPROTECTED)
+          fg.getData(cn.getChild(x), katana::MethodFlag::UNPROTECTED)
               .initRefine(cn.getPart(), cn.getmaybeBoundary());
         }
         if (cn.getmaybeBoundary())
           bag.push(n);
       },
-      galois::loopname("findBoundaryAndProject"));
+      katana::loopname("findBoundaryAndProject"));
 }
 
 template <bool balance>
@@ -80,7 +80,7 @@ refine_BKL2(
     std::vector<partInfo>& parts) {
   auto gainIndexer = [&cg](GNode n) -> int {
     int retval = 0;
-    galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
+    katana::MethodFlag flag = katana::MethodFlag::UNPROTECTED;
     unsigned int nPart = cg.getData(n, flag).getPart();
     for (auto ii = cg.edge_begin(n, flag), ee = cg.edge_end(n); ii != ee;
          ++ii) {
@@ -93,10 +93,8 @@ refine_BKL2(
     return -retval / 16;
   };
 
-  typedef galois::worklists::PerSocketChunkFIFO<8> Chunk;
-  typedef galois::worklists::OrderedByIntegerMetric<
-      decltype(gainIndexer), Chunk, 10>
-      pG;
+  typedef katana::PerSocketChunkFIFO<8> Chunk;
+  typedef katana::OrderedByIntegerMetric<decltype(gainIndexer), Chunk, 10> pG;
 
   GNodeBag boundary;
 
@@ -106,8 +104,8 @@ refine_BKL2(
     findBoundary(boundary, cg);
 
   //! [Example Per-Thread-Storage Declaration]
-  typedef galois::gstl::Vector<unsigned> VecTy;
-  typedef galois::substrate::PerThreadStorage<VecTy> ThreadLocalData;
+  typedef katana::gstl::Vector<unsigned> VecTy;
+  typedef katana::PerThreadStorage<VecTy> ThreadLocalData;
   ThreadLocalData edgesThreadLocal;
   //! [Example Per-Thread-Storage Declaration]
 
@@ -148,8 +146,8 @@ refine_BKL2(
         edges.begin(), std::min_element(edges.begin(), edges.end()));
   };
 
-  galois::for_each(
-      galois::iterate(boundary),
+  katana::for_each(
+      katana::iterate(boundary),
       [&](GNode n, auto& cnx) {
         auto& nd = cg.getData(n);
         unsigned curpart = nd.getPart();
@@ -168,7 +166,7 @@ refine_BKL2(
               ned.setmaybeBoundary(true);
               if (fg)
                 for (unsigned x = 0; x < ned.numChildren(); ++x)
-                  fg->getData(ned.getChild(x), galois::MethodFlag::UNPROTECTED)
+                  fg->getData(ned.getChild(x), katana::MethodFlag::UNPROTECTED)
                       .setmaybeBoundary(true);
             }
             // if (ned.getPart() != newpart)
@@ -176,11 +174,11 @@ refine_BKL2(
           }
           if (fg)
             for (unsigned x = 0; x < nd.numChildren(); ++x)
-              fg->getData(nd.getChild(x), galois::MethodFlag::UNPROTECTED)
+              fg->getData(nd.getChild(x), katana::MethodFlag::UNPROTECTED)
                   .setPart(newpart);
         }
       },
-      galois::loopname("refine"), galois::wl<pG>(gainIndexer));
+      katana::loopname("refine"), katana::wl<pG>(gainIndexer));
 }
 
 void
@@ -188,8 +186,8 @@ projectPart(MetisGraph* Graph, std::vector<partInfo>&) {
   GGraph* fineGraph = Graph->getFinerGraph()->getGraph();
   GGraph* coarseGraph = Graph->getGraph();
 
-  galois::do_all(
-      galois::iterate(*coarseGraph),
+  katana::do_all(
+      katana::iterate(*coarseGraph),
       [&](GNode n) {
         auto& cn = coarseGraph->getData(n);
         unsigned part = cn.getPart();
@@ -197,7 +195,7 @@ projectPart(MetisGraph* Graph, std::vector<partInfo>&) {
           fineGraph->getData(cn.getChild(x)).setPart(part);
         }
       },
-      galois::loopname("project"));
+      katana::loopname("project"));
 }
 
 int
@@ -216,13 +214,13 @@ gain(GGraph& g, GNode n) {
 
 void
 parallelBoundary(GNodeBag& bag, GGraph& graph) {
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](GNode n) {
         if (gain(graph, n) > 0)
           bag.push(n);
       },
-      galois::loopname("Get-Boundary"));
+      katana::loopname("Get-Boundary"));
 }
 
 void
@@ -319,32 +317,32 @@ GraclusRefining(GGraph* graph, int nbParti, int nbIter) {
   std::vector<int> card(nbParti);
   std::vector<int> degreeIn(nbParti);
 
-  using Accum = galois::GAccumulator<size_t>;
+  using Accum = katana::GAccumulator<size_t>;
   std::vector<Accum> cardAccum(nbParti);
   std::vector<Accum> degreeInAccum(nbParti);
 
   for (int j = 0; j < nbIter; j++) {
     GGraph& g = *graph;
-    galois::do_all(
-        galois::iterate(g),
+    katana::do_all(
+        katana::iterate(g),
         [&](GNode n) {
           unsigned int clust =
-              g.getData(n, galois::MethodFlag::UNPROTECTED).getPart();
+              g.getData(n, katana::MethodFlag::UNPROTECTED).getPart();
           int degreet = 0;
 
-          g.getData(n, galois::MethodFlag::UNPROTECTED).OldPartCpyNew();
+          g.getData(n, katana::MethodFlag::UNPROTECTED).OldPartCpyNew();
 
-          for (auto ii : g.edges(n, galois::MethodFlag::UNPROTECTED))
-            if (g.getData(g.getEdgeDst(ii), galois::MethodFlag::UNPROTECTED)
+          for (auto ii : g.edges(n, katana::MethodFlag::UNPROTECTED))
+            if (g.getData(g.getEdgeDst(ii), katana::MethodFlag::UNPROTECTED)
                     .getPart() == clust)
               degreet +=
-                  (int)g.getEdgeData(ii, galois::MethodFlag::UNPROTECTED);
+                  (int)g.getEdgeData(ii, katana::MethodFlag::UNPROTECTED);
 
           cardAccum[clust] +=
-              g.getData(n, galois::MethodFlag::UNPROTECTED).getWeight();
+              g.getData(n, katana::MethodFlag::UNPROTECTED).getWeight();
           degreeInAccum[clust] += degreet;
         },
-        galois::loopname("compute dists"));
+        katana::loopname("compute dists"));
 
     for (int i = 0; i < nbParti; i++) {
       card[i] = cardAccum[i].reduce();
@@ -358,20 +356,20 @@ GraclusRefining(GGraph* graph, int nbParti, int nbIter) {
                                : 0;
     }
 
-    galois::do_all(
-        galois::iterate(g),
+    katana::do_all(
+        katana::iterate(g),
         [&](GNode n) {
           double dmin = std::numeric_limits<double>::min();
           int partition = -1;
-          galois::gstl::Map<int, int> degreein;
-          degreein[g.getData(n, galois::MethodFlag::UNPROTECTED)
+          katana::gstl::Map<int, int> degreein;
+          degreein[g.getData(n, katana::MethodFlag::UNPROTECTED)
                        .getOldPart()] += 1;
-          for (auto ii : g.edges(n, galois::MethodFlag::UNPROTECTED)) {
+          for (auto ii : g.edges(n, katana::MethodFlag::UNPROTECTED)) {
             int nclust =
-                g.getData(g.getEdgeDst(ii), galois::MethodFlag::UNPROTECTED)
+                g.getData(g.getEdgeDst(ii), katana::MethodFlag::UNPROTECTED)
                     .getOldPart();
             degreein[nclust] +=
-                (int)g.getEdgeData(ii, galois::MethodFlag::UNPROTECTED);
+                (int)g.getEdgeData(ii, katana::MethodFlag::UNPROTECTED);
           }
 
           for (auto clust = degreein.begin(), ee = degreein.end(); clust != ee;
@@ -384,9 +382,9 @@ GraclusRefining(GGraph* graph, int nbParti, int nbIter) {
               partition = clust->first;
             }
           }
-          g.getData(n, galois::MethodFlag::UNPROTECTED).setPart(partition);
+          g.getData(n, katana::MethodFlag::UNPROTECTED).setPart(partition);
         },
-        galois::loopname("make moves"));
+        katana::loopname("make moves"));
   }
 }
 

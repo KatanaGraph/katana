@@ -26,7 +26,7 @@
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/runtime/Profile.h"
+#include "katana/Profile.h"
 
 const char* name = "Triangles";
 const char* desc = "Counts the triangles in a graph";
@@ -57,7 +57,7 @@ static cll::opt<bool> relabel(
 using NodeData = std::tuple<>;
 using EdgeData = std::tuple<>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 /**
  * Like std::lower_bound but doesn't dereference iterators. Returns the first
@@ -169,8 +169,8 @@ struct GetDegree {
 template <typename Node, typename EdgeTy>
 struct IdLess {
   bool operator()(
-      const galois::graphs::EdgeSortValue<Node, EdgeTy>& e1,
-      const galois::graphs::EdgeSortValue<Node, EdgeTy>& e2) const {
+      const katana::EdgeSortValue<Node, EdgeTy>& e1,
+      const katana::EdgeSortValue<Node, EdgeTy>& e2) const {
     return e1.dst < e2.dst;
   }
 };
@@ -189,13 +189,13 @@ struct IdLess {
  */
 void
 NodeIteratingAlgo(const Graph& graph) {
-  galois::GAccumulator<size_t> numTriangles;
+  katana::GAccumulator<size_t> numTriangles;
 
   //! [profile w/ vtune]
-  galois::runtime::profileVtune(
+  katana::profileVtune(
       [&]() {
-        galois::do_all(
-            galois::iterate(graph),
+        katana::do_all(
+            katana::iterate(graph),
             [&](const GNode& n) {
               // Partition neighbors
               // [first, ea) [n] [bb, last)
@@ -220,8 +220,8 @@ NodeIteratingAlgo(const Graph& graph) {
                 }
               }
             },
-            galois::chunk_size<CHUNK_SIZE>(), galois::steal(),
-            galois::loopname("NodeIteratingAlgo"));
+            katana::chunk_size<CHUNK_SIZE>(), katana::steal(),
+            katana::loopname("NodeIteratingAlgo"));
       },
       "nodeIteratorAlgo");
   //! [profile w/ vtune]
@@ -234,7 +234,7 @@ NodeIteratingAlgo(const Graph& graph) {
  */
 void
 OrderedCountFunc(
-    const Graph& graph, GNode n, galois::GAccumulator<size_t>& numTriangles) {
+    const Graph& graph, GNode n, katana::GAccumulator<size_t>& numTriangles) {
   size_t numTriangles_local = 0;
   for (auto it_v : graph.edges(n)) {
     auto v = *graph.GetEdgeDest(it_v);
@@ -261,14 +261,14 @@ OrderedCountFunc(
  */
 void
 OrderedCountAlgo(const Graph& graph) {
-  galois::GAccumulator<size_t> numTriangles;
-  galois::do_all(
-      galois::iterate(graph),
+  katana::GAccumulator<size_t> numTriangles;
+  katana::do_all(
+      katana::iterate(graph),
       [&](const GNode& n) { OrderedCountFunc(graph, n, numTriangles); },
-      galois::chunk_size<CHUNK_SIZE>(), galois::steal(),
-      galois::loopname("OrderedCountAlgo"));
+      katana::chunk_size<CHUNK_SIZE>(), katana::steal(),
+      katana::loopname("OrderedCountAlgo"));
 
-  galois::gPrint("Num Triangles: ", numTriangles.reduce(), "\n");
+  katana::gPrint("Num Triangles: ", numTriangles.reduce(), "\n");
 }
 
 /**
@@ -292,11 +292,11 @@ EdgeIteratingAlgo(const Graph& graph) {
     WorkItem(const GNode& a1, const GNode& a2) : src(a1), dst(a2) {}
   };
 
-  galois::InsertBag<WorkItem> items;
-  galois::GAccumulator<size_t> numTriangles;
+  katana::InsertBag<WorkItem> items;
+  katana::GAccumulator<size_t> numTriangles;
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](GNode n) {
         for (auto edge : graph.edges(n)) {
           auto dest = graph.GetEdgeDest(edge);
@@ -304,14 +304,14 @@ EdgeIteratingAlgo(const Graph& graph) {
             items.push(WorkItem(n, *dest));
         }
       },
-      galois::loopname("Initialize"));
+      katana::loopname("Initialize"));
 
-  //  galois::runtime::profileVtune(
+  //  katana::profileVtune(
   //! [profile w/ papi]
-  galois::runtime::profilePapi(
+  katana::profilePapi(
       [&]() {
-        galois::do_all(
-            galois::iterate(items),
+        katana::do_all(
+            katana::iterate(items),
             [&](const WorkItem& w) {
               // Compute intersection of range (w.src, w.dst) in neighbors of
               // w.src and w.dst
@@ -331,8 +331,8 @@ EdgeIteratingAlgo(const Graph& graph) {
 
               numTriangles += CountEqual(graph, aa, ea, bb, eb);
             },
-            galois::loopname("EdgeIteratingAlgo"),
-            galois::chunk_size<CHUNK_SIZE>(), galois::steal());
+            katana::loopname("EdgeIteratingAlgo"),
+            katana::chunk_size<CHUNK_SIZE>(), katana::steal());
       },
       "edgeIteratorAlgo");
   //! [profile w/ papi]
@@ -342,54 +342,53 @@ EdgeIteratingAlgo(const Graph& graph) {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   if (!symmetricGraph) {
-    GALOIS_DIE(
+    KATANA_DIE(
         "This application requires a symmetric graph input;"
         " please use the -symmetricGraph flag "
         " to indicate the input is a symmetric graph.");
   }
 
-  galois::StatTimer timer_graph_read("GraphReadingTime");
-  galois::StatTimer timer_auto_algo("AutoAlgo_0");
+  katana::StatTimer timer_graph_read("GraphReadingTime");
+  katana::StatTimer timer_auto_algo("AutoAlgo_0");
 
   timer_graph_read.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
   if (!relabel) {
     timer_auto_algo.start();
-    relabel = galois::analytics::isApproximateDegreeDistributionPowerLaw(graph);
+    relabel = katana::analytics::isApproximateDegreeDistributionPowerLaw(graph);
     timer_auto_algo.stop();
   }
 
   if (relabel) {
-    galois::gInfo("Relabeling and sorting graph...");
-    galois::StatTimer timer_relabel("GraphRelabelTimer");
+    katana::gInfo("Relabeling and sorting graph...");
+    katana::StatTimer timer_relabel("GraphRelabelTimer");
     timer_relabel.start();
-    if (auto r = galois::graphs::SortNodesByDegree(pfg.get()); !r) {
-      GALOIS_LOG_FATAL(
+    if (auto r = katana::SortNodesByDegree(pfg.get()); !r) {
+      KATANA_LOG_FATAL(
           "Relabeling and sorting by node degree failed: {}", r.error());
     }
     timer_relabel.stop();
   }
 
-  if (auto r = galois::graphs::SortAllEdgesByDest(pfg.get()); !r) {
-    GALOIS_LOG_FATAL("Sorting edge destination failed: {}", r.error());
+  if (auto r = katana::SortAllEdgesByDest(pfg.get()); !r) {
+    KATANA_LOG_FATAL("Sorting edge destination failed: {}", r.error());
   }
 
   std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
@@ -397,12 +396,12 @@ main(int argc, char** argv) {
 
   timer_graph_read.stop();
 
-  galois::Prealloc(1, 16 * (graph.num_nodes() + graph.num_edges()));
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(1, 16 * (graph.num_nodes() + graph.num_edges()));
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::gInfo("Starting triangle counting...");
+  katana::gInfo("Starting triangle counting...");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   // case by case preAlloc to avoid allocating unnecessarily
   switch (algo) {
@@ -423,7 +422,7 @@ main(int argc, char** argv) {
   }
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   totalTime.stop();
 

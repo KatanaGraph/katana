@@ -21,9 +21,9 @@
 
 #include <cassert>
 
-#include "galois/Mem.h"
-#include "galois/gIO.h"
-#include "galois/graphs/OCGraph.h"
+#include "katana/Mem.h"
+#include "katana/OCGraph.h"
+#include "katana/gIO.h"
 #ifdef __linux__
 #include <linux/mman.h>
 #endif
@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-using namespace galois::graphs;
+using namespace katana;
 
 // File format V1:
 // version (1) {uint64_t LE}
@@ -71,7 +71,7 @@ OCFileGraph::Block::unload() {
     return;
 
   if (munmap(m_mapping, m_length) != 0) {
-    GALOIS_SYS_DIE("failed unallocating");
+    KATANA_SYS_DIE("failed unallocating");
   }
   m_mapping = 0;
 }
@@ -82,24 +82,22 @@ OCFileGraph::Block::load(
   assert(m_mapping == 0);
 
   offset_t start = offset + begin * sizeof_data;
-  offset_t aligned =
-      start & ~static_cast<offset_t>(galois::substrate::allocSize() - 1);
+  offset_t aligned = start & ~static_cast<offset_t>(katana::allocSize() - 1);
 
   int _MAP_BASE = MAP_PRIVATE;
 #ifdef MAP_POPULATE
   _MAP_BASE |= MAP_POPULATE;
 #endif
   // account for round off due to alignment
-  m_length = len * sizeof_data + galois::substrate::allocSize();
+  m_length = len * sizeof_data + katana::allocSize();
   m_mapping = mmap_big(nullptr, m_length, PROT_READ, _MAP_BASE, fd, aligned);
   if (m_mapping == MAP_FAILED) {
-    GALOIS_SYS_DIE("failed allocating ", fd);
+    KATANA_SYS_DIE("failed allocating ", fd);
   }
 
   m_data = reinterpret_cast<char*>(m_mapping);
   assert(aligned <= start);
-  assert(
-      start - aligned <= static_cast<offset_t>(galois::substrate::allocSize()));
+  assert(start - aligned <= static_cast<offset_t>(katana::allocSize()));
   m_data += start - aligned;
   m_begin = begin;
   m_sizeof_data = sizeof_data;
@@ -126,7 +124,7 @@ static void
 readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
   void* m = mmap(0, 4 * sizeof(uint64_t), PROT_READ, MAP_PRIVATE, fd, 0);
   if (m == MAP_FAILED) {
-    GALOIS_SYS_DIE("failed reading ", fd);
+    KATANA_SYS_DIE("failed reading ", fd);
   }
 
   uint64_t* ptr = reinterpret_cast<uint64_t*>(m);
@@ -135,7 +133,7 @@ readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
   numEdges = ptr[3];
 
   if (munmap(m, 4 * sizeof(uint64_t))) {
-    GALOIS_SYS_DIE("failed reading ", fd);
+    KATANA_SYS_DIE("failed reading ", fd);
   }
 }
 
@@ -143,7 +141,7 @@ void
 OCFileGraph::fromFile(const std::string& filename) {
   masterFD = open(filename.c_str(), O_RDONLY);
   if (masterFD == -1) {
-    GALOIS_SYS_DIE("failed opening ", filename);
+    KATANA_SYS_DIE("failed opening ", filename);
   }
 
   readHeader(masterFD, numNodes, numEdges);
@@ -154,7 +152,7 @@ OCFileGraph::fromFile(const std::string& filename) {
 #endif
   masterMapping = mmap(0, masterLength, PROT_READ, _MAP_BASE, masterFD, 0);
   if (masterMapping == MAP_FAILED) {
-    GALOIS_SYS_DIE("failed reading ", filename);
+    KATANA_SYS_DIE("failed reading ", filename);
   }
 
   outIdx = reinterpret_cast<uint64_t*>(masterMapping);

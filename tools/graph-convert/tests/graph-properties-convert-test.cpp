@@ -3,12 +3,12 @@
 
 #include <llvm/Support/CommandLine.h>
 
-#include "galois/Galois.h"
-#include "galois/Logging.h"
-#include "galois/config.h"
 #include "graph-properties-convert-graphml.h"
+#include "katana/Galois.h"
+#include "katana/Logging.h"
+#include "katana/config.h"
 
-#if defined(GALOIS_MONGOC_FOUND)
+#if defined(KATANA_MONGOC_FOUND)
 #include "graph-properties-convert-mongodb.h"
 #endif
 
@@ -20,12 +20,12 @@ namespace cll = llvm::cl;
 
 static cll::opt<std::string> input_filename(
     cll::Positional, cll::desc("<input file/directory>"), cll::Required);
-static cll::opt<galois::SourceDatabase> fileType(
+static cll::opt<katana::SourceDatabase> fileType(
     cll::desc("Input file type:"),
     cll::values(clEnumValN(
-        galois::SourceDatabase::kNeo4j, "neo4j", "source file is from neo4j")),
+        katana::SourceDatabase::kNeo4j, "neo4j", "source file is from neo4j")),
     cll::values(clEnumValN(
-        galois::SourceDatabase::kMongodb, "mongodb", "source is from MongoDB")),
+        katana::SourceDatabase::kMongodb, "mongodb", "source is from MongoDB")),
     cll::Required);
 static cll::opt<ConvertTest> test_type(
     cll::desc("Input file type:"),
@@ -50,24 +50,24 @@ template <typename T, typename U>
 std::shared_ptr<T>
 safe_cast(const std::shared_ptr<U>& r) noexcept {
   auto p = std::dynamic_pointer_cast<T>(r);
-  GALOIS_LOG_ASSERT(p);
+  KATANA_LOG_ASSERT(p);
   return p;
 }
 
 void
-VerifyMovieSet(const galois::GraphComponents& graph) {
-  GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
-  GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
-  GALOIS_ASSERT(graph.edges.properties->num_columns() == 2);
-  GALOIS_ASSERT(graph.edges.labels->num_columns() == 4);
+VerifyMovieSet(const katana::GraphComponents& graph) {
+  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_ASSERT(graph.edges.properties->num_columns() == 2);
+  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  GALOIS_ASSERT(graph.nodes.properties->num_rows() == 9);
-  GALOIS_ASSERT(graph.nodes.labels->num_rows() == 9);
-  GALOIS_ASSERT(graph.edges.properties->num_rows() == 8);
-  GALOIS_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  GALOIS_ASSERT(graph.topology->out_indices->length() == 9);
-  GALOIS_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -84,7 +84,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   \"Joel Silver\",\n\
   null\n\
 ]");
-  GALOIS_ASSERT(names->ToString() == names_expected);
+  KATANA_ASSERT(names->ToString() == names_expected);
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
@@ -100,7 +100,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
@@ -116,7 +116,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(titles->ToString() == titles_expected);
+  KATANA_ASSERT(titles->ToString() == titles_expected);
 
   auto released = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
@@ -132,7 +132,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(released->ToString() == released_expected);
+  KATANA_ASSERT(released->ToString() == released_expected);
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -148,7 +148,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   \"1952\",\n\
   \"1963\"\n\
 ]");
-  GALOIS_ASSERT(borns->ToString() == borns_expected);
+  KATANA_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
@@ -165,7 +165,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(movies->ToString() == movies_expected);
+  KATANA_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
@@ -181,7 +181,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   true,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(persons->ToString() == persons_expected);
+  KATANA_ASSERT(persons->ToString() == persons_expected);
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
@@ -197,7 +197,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(others->ToString() == others_expected);
+  KATANA_ASSERT(others->ToString() == others_expected);
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
@@ -213,7 +213,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = safe_cast<arrow::StringArray>(
@@ -229,7 +229,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(roles->ToString() == roles_expected);
+  KATANA_ASSERT(roles->ToString() == roles_expected);
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
@@ -244,7 +244,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(texts->ToString() == texts_expected);
+  KATANA_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
@@ -260,7 +260,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(actors->ToString() == actors_expected);
+  KATANA_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
@@ -275,7 +275,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   true,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(directors->ToString() == directors_expected);
+  KATANA_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
@@ -290,7 +290,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(producers->ToString() == producers_expected);
+  KATANA_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
@@ -305,7 +305,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(partners->ToString() == partners_expected);
+  KATANA_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -321,7 +321,7 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   8,\n\
   8\n\
 ]");
-  GALOIS_ASSERT(indices->ToString() == indices_expected);
+  KATANA_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -335,23 +335,23 @@ VerifyMovieSet(const galois::GraphComponents& graph) {
   0,\n\
   0\n\
 ]");
-  GALOIS_ASSERT(dests->ToString() == dests_expected);
+  KATANA_ASSERT(dests->ToString() == dests_expected);
 }
 
 void
-VerifyTypesSet(galois::GraphComponents graph) {
-  GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
-  GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
-  GALOIS_ASSERT(graph.edges.properties->num_columns() == 4);
-  GALOIS_ASSERT(graph.edges.labels->num_columns() == 4);
+VerifyTypesSet(katana::GraphComponents graph) {
+  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_ASSERT(graph.edges.properties->num_columns() == 4);
+  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  GALOIS_ASSERT(graph.nodes.properties->num_rows() == 9);
-  GALOIS_ASSERT(graph.nodes.labels->num_rows() == 9);
-  GALOIS_ASSERT(graph.edges.properties->num_rows() == 8);
-  GALOIS_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  GALOIS_ASSERT(graph.topology->out_indices->length() == 9);
-  GALOIS_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -368,7 +368,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   \"Joel Silver\",\n\
   null\n\
 ]");
-  GALOIS_ASSERT(names->ToString() == names_expected);
+  KATANA_ASSERT(names->ToString() == names_expected);
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
@@ -384,7 +384,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
@@ -400,7 +400,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(titles->ToString() == titles_expected);
+  KATANA_ASSERT(titles->ToString() == titles_expected);
 
   auto released = safe_cast<arrow::Int64Array>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
@@ -416,7 +416,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(released->ToString() == released_expected);
+  KATANA_ASSERT(released->ToString() == released_expected);
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -432,7 +432,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   \"1952\",\n\
   \"1963\"\n\
 ]");
-  GALOIS_ASSERT(borns->ToString() == borns_expected);
+  KATANA_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
@@ -449,7 +449,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(movies->ToString() == movies_expected);
+  KATANA_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
@@ -465,7 +465,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   true,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(persons->ToString() == persons_expected);
+  KATANA_ASSERT(persons->ToString() == persons_expected);
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
@@ -481,7 +481,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(others->ToString() == others_expected);
+  KATANA_ASSERT(others->ToString() == others_expected);
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
@@ -497,7 +497,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = safe_cast<arrow::ListArray>(
@@ -526,7 +526,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(roles->ToString() == roles_expected);
+  KATANA_ASSERT(roles->ToString() == roles_expected);
 
   auto numbers = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("numbers")->chunk(0));
@@ -560,7 +560,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(numbers->ToString() == numbers_expected);
+  KATANA_ASSERT(numbers->ToString() == numbers_expected);
 
   auto bools = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("bools")->chunk(0));
@@ -589,7 +589,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(bools->ToString() == bools_expected);
+  KATANA_ASSERT(bools->ToString() == bools_expected);
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
@@ -604,7 +604,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  GALOIS_ASSERT(texts->ToString() == texts_expected);
+  KATANA_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
@@ -620,7 +620,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(actors->ToString() == actors_expected);
+  KATANA_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
@@ -635,7 +635,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   true,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(directors->ToString() == directors_expected);
+  KATANA_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
@@ -650,7 +650,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(producers->ToString() == producers_expected);
+  KATANA_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
@@ -665,7 +665,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  GALOIS_ASSERT(partners->ToString() == partners_expected);
+  KATANA_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -681,7 +681,7 @@ VerifyTypesSet(galois::GraphComponents graph) {
   8,\n\
   8\n\
 ]");
-  GALOIS_ASSERT(indices->ToString() == indices_expected);
+  KATANA_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -695,23 +695,23 @@ VerifyTypesSet(galois::GraphComponents graph) {
   0,\n\
   0\n\
 ]");
-  GALOIS_ASSERT(dests->ToString() == dests_expected);
+  KATANA_ASSERT(dests->ToString() == dests_expected);
 }
 
 void
-VerifyChunksSet(galois::GraphComponents graph) {
-  GALOIS_ASSERT(graph.nodes.properties->num_columns() == 5);
-  GALOIS_ASSERT(graph.nodes.labels->num_columns() == 4);
-  GALOIS_ASSERT(graph.edges.properties->num_columns() == 4);
-  GALOIS_ASSERT(graph.edges.labels->num_columns() == 4);
+VerifyChunksSet(katana::GraphComponents graph) {
+  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_ASSERT(graph.edges.properties->num_columns() == 4);
+  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  GALOIS_ASSERT(graph.nodes.properties->num_rows() == 9);
-  GALOIS_ASSERT(graph.nodes.labels->num_rows() == 9);
-  GALOIS_ASSERT(graph.edges.properties->num_rows() == 8);
-  GALOIS_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  GALOIS_ASSERT(graph.topology->out_indices->length() == 9);
-  GALOIS_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = graph.nodes.properties->GetColumnByName("name");
@@ -733,7 +733,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(names->ToString() == names_expected);
+  KATANA_ASSERT(names->ToString() == names_expected);
 
   auto taglines = graph.nodes.properties->GetColumnByName("tagline");
   std::string taglines_expected = std::string(
@@ -754,7 +754,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = graph.nodes.properties->GetColumnByName("title");
   std::string titles_expected = std::string(
@@ -775,7 +775,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(titles->ToString() == titles_expected);
+  KATANA_ASSERT(titles->ToString() == titles_expected);
 
   auto released = graph.nodes.properties->GetColumnByName("released");
   std::string released_expected = std::string(
@@ -796,7 +796,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(released->ToString() == released_expected);
+  KATANA_ASSERT(released->ToString() == released_expected);
 
   auto borns = graph.nodes.properties->GetColumnByName("born");
   std::string borns_expected = std::string(
@@ -817,7 +817,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     \"1963\"\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(borns->ToString() == borns_expected);
+  KATANA_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = graph.nodes.labels->GetColumnByName("Movie");
@@ -839,7 +839,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(movies->ToString() == movies_expected);
+  KATANA_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = graph.nodes.labels->GetColumnByName("Person");
   std::string persons_expected = std::string(
@@ -860,7 +860,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(persons->ToString() == persons_expected);
+  KATANA_ASSERT(persons->ToString() == persons_expected);
 
   auto others = graph.nodes.labels->GetColumnByName("Other");
   std::string others_expected = std::string(
@@ -881,7 +881,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(others->ToString() == others_expected);
+  KATANA_ASSERT(others->ToString() == others_expected);
 
   auto randoms = graph.nodes.labels->GetColumnByName("Random");
   std::string randoms_expected = std::string(
@@ -902,7 +902,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = graph.edges.properties->GetColumnByName("roles");
@@ -936,7 +936,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(roles->ToString() == roles_expected);
+  KATANA_ASSERT(roles->ToString() == roles_expected);
 
   auto numbers = graph.edges.properties->GetColumnByName("numbers");
   std::string numbers_expected = std::string(
@@ -975,7 +975,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(numbers->ToString() == numbers_expected);
+  KATANA_ASSERT(numbers->ToString() == numbers_expected);
 
   auto bools = graph.edges.properties->GetColumnByName("bools");
   std::string bools_expected = std::string(
@@ -1009,7 +1009,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(bools->ToString() == bools_expected);
+  KATANA_ASSERT(bools->ToString() == bools_expected);
 
   auto texts = graph.edges.properties->GetColumnByName("text");
   std::string texts_expected = std::string(
@@ -1029,7 +1029,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(texts->ToString() == texts_expected);
+  KATANA_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = graph.edges.labels->GetColumnByName("ACTED_IN");
@@ -1050,7 +1050,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(actors->ToString() == actors_expected);
+  KATANA_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = graph.edges.labels->GetColumnByName("DIRECTED");
   std::string directors_expected = std::string(
@@ -1070,7 +1070,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(directors->ToString() == directors_expected);
+  KATANA_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = graph.edges.labels->GetColumnByName("PRODUCED");
   std::string producers_expected = std::string(
@@ -1090,7 +1090,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(producers->ToString() == producers_expected);
+  KATANA_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = graph.edges.labels->GetColumnByName("IN_SAME_MOVIE");
   std::string partners_expected = std::string(
@@ -1110,7 +1110,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  GALOIS_ASSERT(partners->ToString() == partners_expected);
+  KATANA_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -1126,7 +1126,7 @@ VerifyChunksSet(galois::GraphComponents graph) {
   8,\n\
   8\n\
 ]");
-  GALOIS_ASSERT(indices->ToString() == indices_expected);
+  KATANA_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -1140,13 +1140,13 @@ VerifyChunksSet(galois::GraphComponents graph) {
   0,\n\
   0\n\
 ]");
-  GALOIS_ASSERT(dests->ToString() == dests_expected);
+  KATANA_ASSERT(dests->ToString() == dests_expected);
 }
 
-#if defined(GALOIS_MONGOC_FOUND)
-galois::GraphComponents
+#if defined(KATANA_MONGOC_FOUND)
+katana::GraphComponents
 GenerateAndConvertBson(size_t chunk_size) {
-  galois::PropertyGraphBuilder builder{chunk_size};
+  katana::PropertyGraphBuilder builder{chunk_size};
 
   bson_oid_t george_oid;
   bson_oid_init_from_string(&george_oid, "5efca3f859a16711627b03f7");
@@ -1158,39 +1158,39 @@ GenerateAndConvertBson(size_t chunk_size) {
   bson_t* george = BCON_NEW(
       "_id", BCON_OID(&george_oid), "name", BCON_UTF8("George"), "born",
       BCON_DOUBLE(1985));
-  galois::HandleNodeDocumentMongoDB(&builder, george, "person");
+  katana::HandleNodeDocumentMongoDB(&builder, george, "person");
   bson_destroy(george);
   bson_t* frank = BCON_NEW(
       "_id", BCON_OID(&frank_oid), "name", BCON_UTF8("Frank"), "born",
       BCON_DOUBLE(1989));
-  galois::HandleNodeDocumentMongoDB(&builder, frank, "person");
+  katana::HandleNodeDocumentMongoDB(&builder, frank, "person");
   bson_destroy(frank);
 
   bson_t* friend_doc = BCON_NEW(
       "_id", BCON_OID(&friend_oid), "friend1", BCON_OID(&george_oid), "friend2",
       BCON_OID(&frank_oid), "met", BCON_DOUBLE(2000));
-  galois::HandleEdgeDocumentMongoDB(&builder, friend_doc, "friend");
+  katana::HandleEdgeDocumentMongoDB(&builder, friend_doc, "friend");
   bson_destroy(friend_doc);
 
   return builder.Finish();
 }
 #endif
 
-#if defined(GALOIS_MONGOC_FOUND)
+#if defined(KATANA_MONGOC_FOUND)
 void
-VerifyMongodbSet(const galois::GraphComponents& graph) {
-  GALOIS_ASSERT(graph.nodes.properties->num_columns() == 2);
-  GALOIS_ASSERT(graph.nodes.labels->num_columns() == 1);
-  GALOIS_ASSERT(graph.edges.properties->num_columns() == 1);
-  GALOIS_ASSERT(graph.edges.labels->num_columns() == 1);
+VerifyMongodbSet(const katana::GraphComponents& graph) {
+  KATANA_ASSERT(graph.nodes.properties->num_columns() == 2);
+  KATANA_ASSERT(graph.nodes.labels->num_columns() == 1);
+  KATANA_ASSERT(graph.edges.properties->num_columns() == 1);
+  KATANA_ASSERT(graph.edges.labels->num_columns() == 1);
 
-  GALOIS_ASSERT(graph.nodes.properties->num_rows() == 2);
-  GALOIS_ASSERT(graph.nodes.labels->num_rows() == 2);
-  GALOIS_ASSERT(graph.edges.properties->num_rows() == 1);
-  GALOIS_ASSERT(graph.edges.labels->num_rows() == 1);
+  KATANA_ASSERT(graph.nodes.properties->num_rows() == 2);
+  KATANA_ASSERT(graph.nodes.labels->num_rows() == 2);
+  KATANA_ASSERT(graph.edges.properties->num_rows() == 1);
+  KATANA_ASSERT(graph.edges.labels->num_rows() == 1);
 
-  GALOIS_ASSERT(graph.topology->out_indices->length() == 2);
-  GALOIS_ASSERT(graph.topology->out_dests->length() == 1);
+  KATANA_ASSERT(graph.topology->out_indices->length() == 2);
+  KATANA_ASSERT(graph.topology->out_dests->length() == 1);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -1200,7 +1200,7 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
   \"George\",\n\
   \"Frank\"\n\
 ]");
-  GALOIS_ASSERT(names->ToString() == names_expected);
+  KATANA_ASSERT(names->ToString() == names_expected);
 
   auto born = safe_cast<arrow::DoubleArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -1209,7 +1209,7 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
   1985,\n\
   1989\n\
 ]");
-  GALOIS_ASSERT(born->ToString() == born_expected);
+  KATANA_ASSERT(born->ToString() == born_expected);
 
   // test node labels
   auto people = safe_cast<arrow::BooleanArray>(
@@ -1219,7 +1219,7 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
   true,\n\
   true\n\
 ]");
-  GALOIS_ASSERT(people->ToString() == people_expected);
+  KATANA_ASSERT(people->ToString() == people_expected);
 
   // test edge properties
   auto mets = safe_cast<arrow::DoubleArray>(
@@ -1228,7 +1228,7 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
       "[\n\
   2000\n\
 ]");
-  GALOIS_ASSERT(mets->ToString() == mets_expected);
+  KATANA_ASSERT(mets->ToString() == mets_expected);
 
   // test edge labels
   auto friends = safe_cast<arrow::BooleanArray>(
@@ -1237,7 +1237,7 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
       "[\n\
   true\n\
 ]");
-  GALOIS_ASSERT(friends->ToString() == friends_expected);
+  KATANA_ASSERT(friends->ToString() == friends_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -1246,14 +1246,14 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
   1,\n\
   1\n\
 ]");
-  GALOIS_ASSERT(indices->ToString() == indices_expected);
+  KATANA_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
       "[\n\
   1\n\
 ]");
-  GALOIS_ASSERT(dests->ToString() == dests_expected);
+  KATANA_ASSERT(dests->ToString() == dests_expected);
 }
 #endif
 
@@ -1261,22 +1261,22 @@ VerifyMongodbSet(const galois::GraphComponents& graph) {
 
 int
 main(int argc, char** argv) {
-  galois::SharedMemSys sys;
+  katana::SharedMemSys sys;
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  galois::GraphComponents graph;
+  katana::GraphComponents graph;
 
   switch (fileType) {
-  case galois::SourceDatabase::kNeo4j:
-    graph = galois::ConvertGraphML(input_filename, chunk_size);
+  case katana::SourceDatabase::kNeo4j:
+    graph = katana::ConvertGraphML(input_filename, chunk_size);
     break;
-#if defined(GALOIS_MONGOC_FOUND)
-  case galois::SourceDatabase::kMongodb:
+#if defined(KATANA_MONGOC_FOUND)
+  case katana::SourceDatabase::kMongodb:
     graph = GenerateAndConvertBson(chunk_size);
     break;
 #endif
   default:
-    GALOIS_LOG_FATAL("unknown option {}", fileType);
+    KATANA_LOG_FATAL("unknown option {}", fileType);
   }
 
   switch (test_type) {
@@ -1289,13 +1289,13 @@ main(int argc, char** argv) {
   case ConvertTest::kChunks:
     VerifyChunksSet(graph);
     break;
-#if defined(GALOIS_MONGOC_FOUND)
+#if defined(KATANA_MONGOC_FOUND)
   case ConvertTest::kMongodb:
     VerifyMongodbSet(graph);
     break;
 #endif
   default:
-    GALOIS_LOG_FATAL("unknown option {}", test_type);
+    KATANA_LOG_FATAL("unknown option {}", test_type);
   }
 
   return 0;

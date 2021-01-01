@@ -1,7 +1,7 @@
-Performance Timers (galois.timer)
+Performance Timers (katana.timer)
 =================================
 
-.. automodule:: galois.timer
+.. automodule:: katana.timer
    :members:
    :undoc-members:
    :special-members: __enter__, __exit__

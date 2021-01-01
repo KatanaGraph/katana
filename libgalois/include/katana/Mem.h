@@ -17,49 +17,42 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_MEM_H_
-#define GALOIS_LIBGALOIS_GALOIS_MEM_H_
+#ifndef KATANA_LIBGALOIS_KATANA_MEM_H_
+#define KATANA_LIBGALOIS_KATANA_MEM_H_
 
-#include "galois/config.h"
-#include "galois/runtime/Allocators.h"
+#include "katana/Allocators.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * Preallocates memory on each thread. The allocation size is given in pages
  * per thread and total bytes which will be divided amongst the threads.
  */
-GALOIS_EXPORT
+KATANA_EXPORT
 void Prealloc(size_t pagesPerThread, size_t bytes);
 
 /**
  * Preallocates memory on each thread. The allocation size is given in total pages
  * which will be divided amongst the threads.
  */
-GALOIS_EXPORT
+KATANA_EXPORT
 void Prealloc(size_t pages);
 
 //! [PerIterAllocTy example]
 //! Base allocator for per-iteration allocator
-typedef galois::runtime::BumpWithMallocHeap<
-    galois::runtime::FreeListHeap<galois::runtime::SystemHeap>>
+typedef katana::BumpWithMallocHeap<katana::FreeListHeap<katana::SystemHeap>>
     IterAllocBaseTy;
 
 //! Per-iteration allocator that conforms to STL allocator interface
-typedef galois::runtime::ExternalHeapAllocator<char, IterAllocBaseTy>
-    PerIterAllocTy;
+typedef katana::ExternalHeapAllocator<char, IterAllocBaseTy> PerIterAllocTy;
 //! [PerIterAllocTy example]
-
-//! Scalable fixed-sized allocator for T that conforms to STL allocator
-//! interface but does not support variable sized allocations
-template <typename Ty>
-using FixedSizeAllocator = galois::runtime::FixedSizeAllocator<Ty>;
 
 //! Scalable variable-sized allocator for T that allocates blocks of sizes in
 //! powers of 2 Useful for small and medium sized allocations, e.g. small or
 //! medium vectors, strings, deques
 template <typename T>
-using Pow2VarSizeAlloc = typename runtime::Pow2BlockAllocator<T>;
+using Pow2VarSizeAlloc = Pow2BlockAllocator<T>;
 
-}  // namespace galois
+}  // namespace katana
 #endif

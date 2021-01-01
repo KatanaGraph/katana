@@ -44,6 +44,6 @@ PERFORMANCE
 
 * The performance of all algorithms depend on an optimal choice of the compile 
   time constant, CHUNK_SIZE, the granularity of stolen work when work stealing is 
-  enabled (via galois::steal()). The optimal value of the constant might depend on 
+  enabled (via katana::steal()). The optimal value of the constant might depend on 
   the architecture, so you might want to evaluate the performance over a range of 
   values (say [16-4096]).

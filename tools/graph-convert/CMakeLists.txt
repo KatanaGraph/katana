@@ -1,7 +1,7 @@
 add_executable(graph-convert graph-convert.cpp)
-target_link_libraries(graph-convert galois_shmem LLVMSupport)
+target_link_libraries(graph-convert katana_galois LLVMSupport)
 install(TARGETS graph-convert
-  EXPORT GaloisTargets
+  EXPORT KatanaTargets
   COMPONENT tools
 )
 
@@ -44,14 +44,14 @@ compare_with_sample(-csv2gr -gr2edgelist test-inputs/sample.csv test-inputs/with
 compare_with_sample(-edgelist2gr -gr2edgelist test-inputs/with-comments.edgelist test-inputs/with-comments.edgelist.expected)
 
 add_executable(graph-convert-huge graph-convert-huge.cpp)
-target_link_libraries(graph-convert-huge galois_shmem LLVMSupport)
+target_link_libraries(graph-convert-huge katana_galois LLVMSupport)
 if (TARGET Boost::Boost)
   target_link_libraries(graph-convert-huge Boost::Boost)
 else()
   target_link_libraries(graph-convert-huge Boost::iostreams)
 endif()
 install(TARGETS graph-convert-huge
-  EXPORT GaloisTargets
+  EXPORT KatanaTargets
   COMPONENT tools
 )
 
@@ -69,31 +69,31 @@ set(sources
 
 if(mongoc-1.0_FOUND)
   list(APPEND sources graph-properties-convert-mongodb.cpp)
-  target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem mongo::mongoc_static)
-  target_compile_definitions(graph-properties-convert-common PUBLIC GALOIS_MONGOC_FOUND)
+  target_link_libraries(graph-properties-convert-common PUBLIC katana_galois mongo::mongoc_static)
+  target_compile_definitions(graph-properties-convert-common PUBLIC KATANA_MONGOC_FOUND)
 endif()
 if(MySQL_FOUND)
   list(APPEND sources graph-properties-convert-mysql.cpp)
-  target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem MySQL::MySQL)
-  target_compile_definitions(graph-properties-convert-common PUBLIC GALOIS_MYSQL_FOUND)
+  target_link_libraries(graph-properties-convert-common PUBLIC katana_galois MySQL::MySQL)
+  target_compile_definitions(graph-properties-convert-common PUBLIC KATANA_MYSQL_FOUND)
 endif()
 
 target_sources(graph-properties-convert-common PRIVATE ${sources})
 target_include_directories(graph-properties-convert-common PUBLIC .)
 target_link_libraries(graph-properties-convert-common PUBLIC LibXml2::LibXml2)
 target_link_libraries(graph-properties-convert-common PUBLIC date::date)
-target_link_libraries(graph-properties-convert-common PUBLIC galois_shmem)
+target_link_libraries(graph-properties-convert-common PUBLIC katana_galois)
 
 target_sources(graph-properties-convert PRIVATE graph-properties-convert-main.cpp)
 target_link_libraries(graph-properties-convert PRIVATE LLVMSupport)
 target_link_libraries(graph-properties-convert PRIVATE graph-properties-convert-common)
-target_link_libraries(graph-properties-convert PUBLIC galois_shmem)
+target_link_libraries(graph-properties-convert PUBLIC katana_galois)
 
 add_executable(oplog-rdg oplog-rdg.cpp)
-target_link_libraries(oplog-rdg graph-properties-convert-common galois_shmem)
+target_link_libraries(oplog-rdg graph-properties-convert-common katana_galois)
 
 install(TARGETS graph-properties-convert
-  EXPORT GaloisTargets
+  EXPORT KatanaTargets
   COMPONENT tools
 )
 

@@ -24,14 +24,14 @@
  * for FileGraph.
  */
 
-#include "galois/graphs/FileGraph.h"
+#include "katana/FileGraph.h"
 
 #include <cassert>
 #include <fstream>
 
-#include "galois/Logging.h"
-#include "galois/gIO.h"
-#include "galois/substrate/PageAlloc.h"
+#include "katana/Logging.h"
+#include "katana/PageAlloc.h"
+#include "katana/gIO.h"
 #include "tsuba/file.h"
 
 #ifdef __linux__
@@ -72,8 +72,8 @@ mmap_big(Args... args) {
 typedef off_t offset_t;
 #endif
 
-namespace galois {
-namespace graphs {
+namespace katana {
+
 // Graph file format:
 // version (1 or 2) {uint64_t LE}
 // EdgeType size {uint64_t LE}
@@ -159,7 +159,7 @@ FileGraph::fromMem(
   graphVersion = convert_le64toh(*fptr++);
 
   if (graphVersion != 1 && graphVersion != 2) {
-    GALOIS_DIE("unknown file version ", graphVersion);
+    KATANA_DIE("unknown file version ", graphVersion);
   }
 
   sizeofEdge = convert_le64toh(*fptr++);
@@ -221,7 +221,7 @@ rawBlockSize(
     bytes += sizeof(uint64_t) * numEdges;
     // no padding necessary in version 2 TODO verify this
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 
   bytes += sizeofEdgeData * numEdges;
@@ -246,7 +246,7 @@ FileGraph::fromArrays(
   char* base = (char*)mmap_big(
       nullptr, bytes, PROT_READ | PROT_WRITE, _MAP_ANON | MAP_PRIVATE, -1, 0);
   if (base == MAP_FAILED)
-    GALOIS_SYS_DIE("failed allocating graph");
+    KATANA_SYS_DIE("failed allocating graph");
 
   mappings.push_back({base, bytes});
 
@@ -257,7 +257,7 @@ FileGraph::fromArrays(
   } else if (oGraphVersion == 2) {
     *fptr++ = convert_htole64(2);
   } else {
-    GALOIS_DIE("unknown file version: ", oGraphVersion);
+    KATANA_DIE("unknown file version: ", oGraphVersion);
   }
   *fptr++ = convert_htole64(sizeof_edge_data);
   *fptr++ = convert_htole64(num_nodes);
@@ -328,12 +328,12 @@ void
 FileGraph::fromFile(const std::string& filename) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1)
-    GALOIS_SYS_DIE("failed opening ", "'", filename, "'");
+    KATANA_SYS_DIE("failed opening ", "'", filename, "'");
   fds.push_back(fd);
 
   struct stat buf;
   if (fstat(fd, &buf) == -1)
-    GALOIS_SYS_DIE("failed reading ", "'", filename, "'");
+    KATANA_SYS_DIE("failed reading ", "'", filename, "'");
 
   // mmap file, then load from mem using fromMem function
   int _MAP_BASE = MAP_PRIVATE;
@@ -342,7 +342,7 @@ FileGraph::fromFile(const std::string& filename) {
 #endif
   void* base = mmap_big(nullptr, buf.st_size, PROT_READ, _MAP_BASE, fd, 0);
   if (base == MAP_FAILED)
-    GALOIS_SYS_DIE("failed reading ", "'", filename, "'");
+    KATANA_SYS_DIE("failed reading ", "'", filename, "'");
   mappings.push_back({base, static_cast<size_t>(buf.st_size)});
 
   fromMem(base, 0, 0, buf.st_size);
@@ -361,13 +361,12 @@ template <typename Mappings>
 static void*
 loadFromOffset(int fd, offset_t offset, size_t length, Mappings& mappings) {
   // mmap needs page-aligned offsets
-  offset_t aligned =
-      offset & ~static_cast<offset_t>(galois::substrate::allocSize() - 1);
+  offset_t aligned = offset & ~static_cast<offset_t>(katana::allocSize() - 1);
   offset_t alignment = offset - aligned;
   length += alignment;
   void* base = mmap_big(nullptr, length, PROT_READ, MAP_PRIVATE, fd, aligned);
   if (base == MAP_FAILED)
-    GALOIS_SYS_DIE("failed allocating for fd ", fd);
+    KATANA_SYS_DIE("failed allocating for fd ", fd);
   mappings.push_back({base, length});
   return static_cast<char*>(base) + alignment;
 }
@@ -385,9 +384,9 @@ static void
 pageInterleaved(
     void* ptr, uint64_t length, uint32_t hugePageSize,
     unsigned int numThreads) {
-  galois::substrate::GetThreadPool().run(
+  katana::GetThreadPool().run(
       numThreads, [ptr, length, hugePageSize, numThreads]() {
-        auto myID = galois::substrate::ThreadPool::getTID();
+        auto myID = katana::ThreadPool::getTID();
 
         volatile char* cptr = reinterpret_cast<volatile char*>(ptr);
 
@@ -407,13 +406,13 @@ FileGraph::partFromFile(
     bool numaMap) {
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1)
-    GALOIS_SYS_DIE("failed opening ", "'", filename, "'");
+    KATANA_SYS_DIE("failed opening ", "'", filename, "'");
   fds.push_back(fd);
 
   size_t headerSize = 4 * sizeof(uint64_t);
   void* base = mmap(nullptr, headerSize, PROT_READ, MAP_PRIVATE, fd, 0);
   if (base == MAP_FAILED)
-    GALOIS_SYS_DIE("failed reading ", "'", filename, "'");
+    KATANA_SYS_DIE("failed reading ", "'", filename, "'");
   mappings.push_back({base, headerSize});
 
   // Read metadata of whole graph
@@ -440,7 +439,7 @@ FileGraph::partFromFile(
              edgeOffset * sizeof(uint64_t);
     outs = loadFromOffset(fd, offset, length, mappings);
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 
   edgeData = 0;
@@ -456,7 +455,7 @@ FileGraph::partFromFile(
 
   // do interleaved numa allocation with current number of threads
   if (numaMap) {
-    unsigned int numThreads = galois::runtime::activeThreads;
+    unsigned int numThreads = katana::activeThreads;
     const size_t hugePageSize = 2 * 1024 * 1024;  // 2MB
 
     void* ptr;
@@ -514,7 +513,7 @@ FileGraph::divideByNode(
     size_t nodeSize, size_t edgeSize, size_t id, size_t total) -> GraphRange {
   std::vector<unsigned> dummy_scale_factor;  // dummy passed in to function call
 
-  return galois::graphs::divideNodesBinarySearch(
+  return katana::divideNodesBinarySearch(
       numNodes, numEdges, nodeSize, edgeSize, id, total, outIdx,
       dummy_scale_factor, edgeOffset);
 }
@@ -533,7 +532,7 @@ FileGraph::divideByEdge(size_t, size_t, size_t id, size_t total)
   size_t eb = findIndex(0, 1, ea, bb, numNodes);
 
   if (true) {
-    galois::gInfo(
+    katana::gInfo(
         "(", id, "/", total, ") [", bb, " ", eb, " ", eb - bb, "], [", aa, " ",
         ea, " ", ea - aa, "]");
   }
@@ -546,7 +545,7 @@ FileGraph::divideByEdge(size_t, size_t, size_t id, size_t total)
 void
 FileGraph::toFile(const std::string& file) {
   // FIXME handle files with multiple mappings
-  GALOIS_ASSERT(mappings.size() == 1);
+  KATANA_ASSERT(mappings.size() == 1);
 
   ssize_t retval;
   mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -559,9 +558,9 @@ FileGraph::toFile(const std::string& file) {
   while (total) {
     retval = write(fd, ptr, total);
     if (retval == -1) {
-      GALOIS_SYS_DIE("failed writing to ", "'", file, "'");
+      KATANA_SYS_DIE("failed writing to ", "'", file, "'");
     } else if (retval == 0) {
-      GALOIS_DIE("ran out of space writing to ", "'", file, "'");
+      KATANA_DIE("ran out of space writing to ", "'", file, "'");
     }
     total -= retval;
     ptr += retval;
@@ -591,7 +590,7 @@ FileGraph::getEdgeIdx(GraphNode src, GraphNode dst) {
 
     return ~static_cast<uint64_t>(0);
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 }
 
@@ -619,7 +618,7 @@ FileGraph::pageInByNode(size_t id, size_t total, size_t sizeofEdgeData) {
   } else if (graphVersion == 2) {
     edgeSize = sizeof(uint64_t);
   } else {
-    GALOIS_DIE("unknown file version at pageInByNode", graphVersion);
+    KATANA_DIE("unknown file version at pageInByNode", graphVersion);
   }
 
   // determine which nodes this id is responsible for paging in
@@ -638,23 +637,23 @@ FileGraph::pageInByNode(size_t id, size_t total, size_t sizeofEdgeData) {
   // page in the outIdx array
   pageInReadOnly(
       outIdx + *r.first, std::distance(r.first, r.second) * sizeof(*outIdx),
-      substrate::allocSize());
+      allocSize());
 
   // page in outs array
   if (graphVersion == 1) {
     pageInReadOnly(
         (uint32_t*)outs + ebegin, (eend - ebegin) * sizeof(uint32_t),
-        substrate::allocSize());
+        allocSize());
   } else {
     pageInReadOnly(
         (uint64_t*)outs + ebegin, (eend - ebegin) * sizeof(uint64_t),
-        substrate::allocSize());
+        allocSize());
   }
 
   // page in edge data
   pageInReadOnly(
       edgeData + ebegin * sizeofEdgeData, (eend - ebegin) * sizeofEdgeData,
-      substrate::allocSize());
+      allocSize());
 }
 
 void*
@@ -664,7 +663,7 @@ FileGraph::raw_neighbor_begin(GraphNode N) {
   } else if (graphVersion == 2) {
     return &(((uint64_t*)outs)[*edge_begin(N)]);
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 
   return nullptr;
@@ -677,7 +676,7 @@ FileGraph::raw_neighbor_end(GraphNode N) {
   } else if (graphVersion == 2) {
     return &(((uint64_t*)outs)[*edge_end(N)]);
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 
   return nullptr;
@@ -725,7 +724,7 @@ FileGraph::getEdgeDst(edge_iterator it) {
     numBytesReadEdgeDst += 8;
     return convert_le64toh(((uint64_t*)outs)[*it]);
   } else {
-    GALOIS_DIE("unknown file version: ", graphVersion);
+    KATANA_DIE("unknown file version: ", graphVersion);
   }
 
   return -1;
@@ -773,8 +772,8 @@ FileGraph::initNodeDegrees() {
     // allocate memory
     this->node_degrees.create(this->numNodes);
     // loop over all nodes, calculate degrees
-    galois::do_all(
-        galois::iterate((uint64_t)0, this->numNodes),
+    katana::do_all(
+        katana::iterate((uint64_t)0, this->numNodes),
         [&](unsigned long n) {
           // calculate and save degrees
           if (n != 0) {
@@ -783,7 +782,7 @@ FileGraph::initNodeDegrees() {
             this->node_degrees.set(n, this->outIdx[0]);
           }
         },
-        galois::loopname("FileGraphInitNodeDegrees"), galois::no_stats());
+        katana::loopname("FileGraphInitNodeDegrees"), katana::no_stats());
   }
 }
 
@@ -794,5 +793,4 @@ FileGraph::getDegree(uint32_t node_id) const {
   return this->node_degrees[node_id];
 }
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana

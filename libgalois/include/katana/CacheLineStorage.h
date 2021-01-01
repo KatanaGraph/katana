@@ -17,23 +17,23 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_CACHELINESTORAGE_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_CACHELINESTORAGE_H_
+#ifndef KATANA_LIBGALOIS_KATANA_CACHELINESTORAGE_H_
+#define KATANA_LIBGALOIS_KATANA_CACHELINESTORAGE_H_
 
 #include <utility>
 
-#include "galois/config.h"
-#include "galois/substrate/CompilerSpecific.h"
+#include "katana/CompilerSpecific.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
 // Store an item with padding
 template <typename T>
 struct CacheLineStorage {
-  alignas(GALOIS_CACHE_LINE_SIZE) T data;
+  alignas(KATANA_CACHE_LINE_SIZE) T data;
 
-  char buffer[GALOIS_CACHE_LINE_SIZE - (sizeof(T) % GALOIS_CACHE_LINE_SIZE)];
-  // static_assert(sizeof(T) < GALOIS_CACHE_LINE_SIZE, "Too large a type");
+  char buffer[KATANA_CACHE_LINE_SIZE - (sizeof(T) % KATANA_CACHE_LINE_SIZE)];
+  // static_assert(sizeof(T) < KATANA_CACHE_LINE_SIZE, "Too large a type");
 
   CacheLineStorage() : data() {}
   CacheLineStorage(const T& v) : data(v) {}
@@ -52,6 +52,6 @@ struct CacheLineStorage {
   }
 };
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

@@ -30,12 +30,12 @@
 #include <vector>
 
 #include "Metis.h"
-#include "galois/Timer.h"
-#include "galois/graphs/ReadGraph.h"
+#include "katana/ReadGraph.h"
+#include "katana/Timer.h"
 //#include "GraphReader.h"
 #include "Lonestar/BoilerPlate.h"
-#include "galois/LargeArray.h"
-#include "galois/graphs/FileGraph.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
 
 namespace cll = llvm::cl;
 
@@ -94,7 +94,7 @@ Partition(MetisGraph* metisGraph, unsigned nparts) {
 
   if (verbose)
     std::cout << "Starting coarsening: \n";
-  galois::StatTimer T("Coarsen");
+  katana::StatTimer T("Coarsen");
   T.start();
   auto mcg =
       std::unique_ptr<MetisGraph>(coarsen(metisGraph, coarsenTo, verbose));
@@ -102,7 +102,7 @@ Partition(MetisGraph* metisGraph, unsigned nparts) {
   if (verbose)
     std::cout << "Time coarsen: " << T.get() << "\n";
 
-  galois::StatTimer T2("Partition");
+  katana::StatTimer T2("Partition");
   T2.start();
   std::vector<partInfo> parts;
   parts = partition(mcg.get(), fineMetisGraphWeight, nparts, partMode);
@@ -134,7 +134,7 @@ Partition(MetisGraph* metisGraph, unsigned nparts) {
     }
   }
 
-  galois::StatTimer T3("Refine");
+  katana::StatTimer T3("Refine");
   T3.start();
   refine(
       mcg.get(), parts, meanWeight - (unsigned)(meanWeight * imbalance),
@@ -152,7 +152,7 @@ Partition(MetisGraph* metisGraph, unsigned nparts) {
   std::cout << "\n";
 }
 
-typedef galois::graphs::FileGraph FG;
+typedef katana::FileGraph FG;
 typedef FG::GraphNode FN;
 template <typename GNode, typename Weights>
 struct order_by_degree {
@@ -162,8 +162,8 @@ struct order_by_degree {
   bool operator()(const GNode& a, const GNode& b) {
     uint64_t wa = weights[a];
     uint64_t wb = weights[b];
-    int pa = graph.getData(a, galois::MethodFlag::UNPROTECTED).getPart();
-    int pb = graph.getData(b, galois::MethodFlag::UNPROTECTED).getPart();
+    int pa = graph.getData(a, katana::MethodFlag::UNPROTECTED).getPart();
+    int pb = graph.getData(b, katana::MethodFlag::UNPROTECTED).getPart();
     if (pa != pb) {
       return pa < pb;
     }
@@ -171,45 +171,44 @@ struct order_by_degree {
   }
 };
 
-typedef galois::substrate::PerThreadStorage<std::map<GNode, uint64_t>>
-    PerThreadDegInfo;
+typedef katana::PerThreadStorage<std::map<GNode, uint64_t>> PerThreadDegInfo;
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   srand(-1);
   MetisGraph metisGraph;
   GGraph& graph = *metisGraph.getGraph();
 
-  galois::graphs::readGraph(graph, inputFile);
+  katana::readGraph(graph, inputFile);
 
-  galois::do_all(
-      galois::iterate(graph),
+  katana::do_all(
+      katana::iterate(graph),
       [&](GNode node) {
         for (auto jj : graph.edges(node)) {
           graph.getEdgeData(jj) = 1;
           // weight+=1;
         }
       },
-      galois::loopname("initMorphGraph"));
+      katana::loopname("initMorphGraph"));
 
   graphStat(graph);
   std::cout << "\n";
 
-  galois::Prealloc(galois::substrate::numPagePoolAllocTotal() * 5);
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(katana::numPagePoolAllocTotal() * 5);
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   Partition(&metisGraph, numPartitions);
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   std::cout << "Total edge cut: " << computeCut(graph) << "\n";
 
@@ -225,9 +224,9 @@ main(int argc, char** argv) {
   }
 
   if (orderedfile != "" || permutationfile != "") {
-    galois::graphs::FileGraph g;
+    katana::FileGraph g;
     g.fromFile(inputFile);
-    typedef galois::LargeArray<GNode> Permutation;
+    typedef katana::LargeArray<GNode> Permutation;
     Permutation perm;
     perm.create(g.size());
     std::copy(graph.begin(), graph.end(), perm.begin());
@@ -237,15 +236,15 @@ main(int argc, char** argv) {
       parts[i] = i;
     }
 
-    using WL = galois::worklists::PerSocketChunkFIFO<16>;
+    using WL = katana::PerSocketChunkFIFO<16>;
 
-    galois::for_each(
-        galois::iterate(parts),
+    katana::for_each(
+        katana::iterate(parts),
         [&](int part, auto& lwl) {
-          constexpr auto flag = galois::MethodFlag::UNPROTECTED;
+          constexpr auto flag = katana::MethodFlag::UNPROTECTED;
           typedef std::vector<
               std::pair<unsigned, GNode>,
-              galois::PerIterAllocTy::rebind<std::pair<unsigned, GNode>>::other>
+              katana::PerIterAllocTy::rebind<std::pair<unsigned, GNode>>::other>
               GD;
           // copy and translate all edges
           GD orderedNodes(GD::allocator_type(lwl.getPerIterAlloc()));
@@ -273,8 +272,8 @@ main(int argc, char** argv) {
             index++;
           }
         },
-        galois::wl<WL>(), galois::per_iter_alloc(),
-        galois::loopname("Order Graph"));
+        katana::wl<WL>(), katana::per_iter_alloc(),
+        katana::loopname("Order Graph"));
 
     std::map<GNode, uint64_t> globalMap;
     for (unsigned int i = 0; i < threadDegInfo.size(); i++) {
@@ -292,7 +291,7 @@ main(int argc, char** argv) {
     }
     // compute inverse
     std::stable_sort(perm.begin(), perm.end(), fn);
-    galois::LargeArray<uint64_t> perm2;
+    katana::LargeArray<uint64_t> perm2;
     perm2.create(g.size());
     // compute permutation
     id = 0;
@@ -301,13 +300,13 @@ main(int argc, char** argv) {
       perm2[prevId] = id;
       id++;
     }
-    galois::graphs::FileGraph out;
-    galois::graphs::permute<int>(g, perm2, out);
+    katana::FileGraph out;
+    katana::permute<int>(g, perm2, out);
     if (orderedfile != "")
       out.toFile(orderedfile);
     if (permutationfile != "") {
       std::ofstream file(permutationfile.c_str());
-      galois::LargeArray<uint64_t> transpose;
+      katana::LargeArray<uint64_t> transpose;
       transpose.create(g.size());
       uint64_t id = 0;
       for (auto& ii : perm2) {

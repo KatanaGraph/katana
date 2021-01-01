@@ -2,12 +2,12 @@ import numpy as np
 import pyarrow
 from numba import jit
 
-from galois.atomic import GAccumulator, GReduceMax
-from galois.datastructures import InsertBag
+from katana.atomic import GAccumulator, GReduceMax
+from katana.datastructures import InsertBag
 from ._bfs_property_graph import bfs as cython_bfs, verify_bfs as cython_verify_bfs
-from galois.loops import do_all, do_all_operator
-from galois.property_graph import PropertyGraph
-from galois.timer import StatTimer
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
+from katana.timer import StatTimer
 
 
 # Use the same infinity as C++ bfs
@@ -98,7 +98,7 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 
 def main():
     import argparse
-    from galois.shmem import setActiveThreads
+    from katana.galois import setActiveThreads
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)

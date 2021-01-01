@@ -23,11 +23,11 @@
 #include <boost/iterator/iterator_adaptor.hpp>
 
 #include "Lonestar/BoilerPlate.h"
-#include "galois/Bag.h"
-#include "galois/Galois.h"
-#include "galois/Reduction.h"
-#include "galois/Timer.h"
-#include "galois/graphs/LCGraph.h"
+#include "katana/Bag.h"
+#include "katana/Galois.h"
+#include "katana/LCGraph.h"
+#include "katana/Reduction.h"
+#include "katana/Timer.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace cll = llvm::cl;
@@ -100,10 +100,9 @@ operator<<(std::ostream& os, const Node& n) {
   return os;
 }
 
-using Graph =
-    galois::graphs::LC_CSR_Graph<Node, int32_t>::with_numa_alloc<false>::type;
+using Graph = katana::LC_CSR_Graph<Node, int32_t>::with_numa_alloc<false>::type;
 using GNode = Graph::GraphNode;
-using Counter = galois::GAccumulator<int>;
+using Counter = katana::GAccumulator<int>;
 
 struct PreflowPush {
   Graph graph;
@@ -111,7 +110,7 @@ struct PreflowPush {
   GNode source;
   int global_relabel_interval;
   bool should_global_relabel = false;
-  galois::LargeArray<Graph::edge_iterator>
+  katana::LargeArray<Graph::edge_iterator>
       reverseDirectionEdgeIterator;  // ideally should be on the graph as
                                      // graph.getReverseEdgeIterator()
 
@@ -124,8 +123,8 @@ struct PreflowPush {
   }
 
   Graph::edge_iterator findEdge(GNode src, GNode dst) {
-    auto i = graph.edge_begin(src, galois::MethodFlag::UNPROTECTED);
-    auto end_i = graph.edge_end(src, galois::MethodFlag::UNPROTECTED);
+    auto i = graph.edge_begin(src, katana::MethodFlag::UNPROTECTED);
+    auto end_i = graph.edge_end(src, katana::MethodFlag::UNPROTECTED);
 
     if ((end_i - i) < 32) {
       return findEdgeLinear(dst, i, end_i);
@@ -194,9 +193,9 @@ struct PreflowPush {
 
   void acquire(const GNode& src) {
     // LC Graphs have a different idea of locking
-    for (auto ii : graph.edges(src, galois::MethodFlag::WRITE)) {
+    for (auto ii : graph.edges(src, katana::MethodFlag::WRITE)) {
       GNode dst = graph.getEdgeDst(ii);
-      graph.getData(dst, galois::MethodFlag::WRITE);
+      graph.getData(dst, katana::MethodFlag::WRITE);
     }
   }
 
@@ -205,11 +204,11 @@ struct PreflowPush {
     int minEdge = 0;
 
     int current = 0;
-    for (auto ii : graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
+    for (auto ii : graph.edges(src, katana::MethodFlag::UNPROTECTED)) {
       GNode dst = graph.getEdgeDst(ii);
       int64_t cap = graph.getEdgeData(ii);
       if (cap > 0) {
-        const Node& dnode = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+        const Node& dnode = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
         if (dnode.height < minHeight) {
           minHeight = dnode.height;
           minEdge = current;
@@ -221,7 +220,7 @@ struct PreflowPush {
     assert(minHeight != std::numeric_limits<int>::max());
     ++minHeight;
 
-    Node& node = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+    Node& node = graph.getData(src, katana::MethodFlag::UNPROTECTED);
     if (minHeight < (int)graph.size()) {
       node.height = minHeight;
       node.current = minEdge;
@@ -232,7 +231,7 @@ struct PreflowPush {
 
   template <typename C>
   bool discharge(const GNode& src, C& ctx) {
-    Node& node = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+    Node& node = graph.getData(src, katana::MethodFlag::UNPROTECTED);
     bool relabeled = false;
 
     if (node.excess == 0 || node.height >= (int)graph.size()) {
@@ -240,7 +239,7 @@ struct PreflowPush {
     }
 
     while (true) {
-      galois::MethodFlag flag = galois::MethodFlag::UNPROTECTED;
+      katana::MethodFlag flag = katana::MethodFlag::UNPROTECTED;
       bool finished = false;
       int current = node.current;
 
@@ -255,7 +254,7 @@ struct PreflowPush {
         if (cap == 0)  // || current < node.current)
           continue;
 
-        Node& dnode = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+        Node& dnode = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
         if (node.height - 1 != dnode.height)
           continue;
 
@@ -294,15 +293,15 @@ struct PreflowPush {
   }
 
   template <DetAlgo version>
-  void detDischarge(galois::InsertBag<GNode>& initial, Counter& counter) {
-    typedef galois::worklists::Deterministic<> DWL;
+  void detDischarge(katana::InsertBag<GNode>& initial, Counter& counter) {
+    typedef katana::Deterministic<> DWL;
 
     auto detIDfn = [this](const GNode& item) -> uint32_t {
-      return graph.getData(item, galois::MethodFlag::UNPROTECTED).id;
+      return graph.getData(item, katana::MethodFlag::UNPROTECTED).id;
     };
 
     const int relabel_interval =
-        global_relabel_interval / galois::getActiveThreads();
+        global_relabel_interval / katana::getActiveThreads();
 
     auto detBreakFn = [&, this](void) -> bool {
       if (this->global_relabel_interval > 0 &&
@@ -314,8 +313,8 @@ struct PreflowPush {
       }
     };
 
-    galois::for_each(
-        galois::iterate(initial),
+    katana::for_each(
+        katana::iterate(initial),
         [&, this](GNode& src, auto& ctx) {
           if (version != nondet) {
             if (ctx.isFirstPass()) {
@@ -324,7 +323,7 @@ struct PreflowPush {
             if (version == detDisjoint && ctx.isFirstPass()) {
               return;
             } else {
-              this->graph.getData(src, galois::MethodFlag::WRITE);
+              this->graph.getData(src, katana::MethodFlag::WRITE);
               ctx.cautiousPoint();
             }
           }
@@ -336,20 +335,20 @@ struct PreflowPush {
 
           counter += increment;
         },
-        galois::loopname("detDischarge"), galois::wl<DWL>(),
-        galois::per_iter_alloc(), galois::det_id<decltype(detIDfn)>(detIDfn),
-        galois::det_parallel_break<decltype(detBreakFn)>(detBreakFn));
+        katana::loopname("detDischarge"), katana::wl<DWL>(),
+        katana::per_iter_alloc(), katana::det_id<decltype(detIDfn)>(detIDfn),
+        katana::det_parallel_break<decltype(detBreakFn)>(detBreakFn));
   }
 
   template <typename W>
   void nonDetDischarge(
-      galois::InsertBag<GNode>& initial, Counter& counter, const W& wl_opt) {
+      katana::InsertBag<GNode>& initial, Counter& counter, const W& wl_opt) {
     // per thread
     const int relabel_interval =
-        global_relabel_interval / galois::getActiveThreads();
+        global_relabel_interval / katana::getActiveThreads();
 
-    galois::for_each(
-        galois::iterate(initial),
+    katana::for_each(
+        katana::iterate(initial),
         [&counter, relabel_interval, this](GNode& src, auto& ctx) {
           int increment = 1;
           this->acquire(src);
@@ -366,7 +365,7 @@ struct PreflowPush {
             return;
           }
         },
-        galois::loopname("nonDetDischarge"), galois::parallel_break(), wl_opt);
+        katana::loopname("nonDetDischarge"), katana::parallel_break(), wl_opt);
   }
 
   /**
@@ -374,18 +373,18 @@ struct PreflowPush {
    */
   template <DetAlgo version, typename WL, bool useCAS = true>
   void updateHeights() {
-    galois::for_each(
-        galois::iterate({sink}),
+    katana::for_each(
+        katana::iterate({sink}),
         [&, this](const GNode& src, auto& ctx) {
           if (version != nondet) {
             if (ctx.isFirstPass()) {
               for (auto ii :
-                   this->graph.edges(src, galois::MethodFlag::WRITE)) {
+                   this->graph.edges(src, katana::MethodFlag::WRITE)) {
                 GNode dst = this->graph.getEdgeDst(ii);
                 int64_t rdata =
                     this->graph.getEdgeData(reverseDirectionEdgeIterator[*ii]);
                 if (rdata > 0) {
-                  this->graph.getData(dst, galois::MethodFlag::WRITE);
+                  this->graph.getData(dst, katana::MethodFlag::WRITE);
                 }
               }
             }
@@ -393,22 +392,22 @@ struct PreflowPush {
             if (version == detDisjoint && ctx.isFirstPass()) {
               return;
             } else {
-              this->graph.getData(src, galois::MethodFlag::WRITE);
+              this->graph.getData(src, katana::MethodFlag::WRITE);
               ctx.cautiousPoint();
             }
           }
 
           for (auto ii : this->graph.edges(
-                   src, useCAS ? galois::MethodFlag::UNPROTECTED
-                               : galois::MethodFlag::WRITE)) {
+                   src, useCAS ? katana::MethodFlag::UNPROTECTED
+                               : katana::MethodFlag::WRITE)) {
             GNode dst = this->graph.getEdgeDst(ii);
             int64_t rdata =
                 this->graph.getEdgeData(reverseDirectionEdgeIterator[*ii]);
             if (rdata > 0) {
               Node& node =
-                  this->graph.getData(dst, galois::MethodFlag::UNPROTECTED);
+                  this->graph.getData(dst, katana::MethodFlag::UNPROTECTED);
               int newHeight =
-                  this->graph.getData(src, galois::MethodFlag::UNPROTECTED)
+                  this->graph.getData(src, katana::MethodFlag::UNPROTECTED)
                       .height +
                   1;
               if (useCAS) {
@@ -429,25 +428,25 @@ struct PreflowPush {
             }
           }  // end for
         },
-        galois::wl<WL>(), galois::disable_conflict_detection(),
-        galois::loopname("updateHeights"));
+        katana::wl<WL>(), katana::disable_conflict_detection(),
+        katana::loopname("updateHeights"));
   }
 
   template <typename IncomingWL>
   void globalRelabel(IncomingWL& incoming) {
-    galois::do_all(
-        galois::iterate(graph),
+    katana::do_all(
+        katana::iterate(graph),
         [&](const GNode& src) {
-          Node& node = graph.getData(src, galois::MethodFlag::UNPROTECTED);
+          Node& node = graph.getData(src, katana::MethodFlag::UNPROTECTED);
           node.height = graph.size();
           node.current = 0;
           if (src == sink)
             node.height = 0;
         },
-        galois::loopname("ResetHeights"));
+        katana::loopname("ResetHeights"));
 
-    using BSWL = galois::worklists::BulkSynchronous<>;
-    using DWL = galois::worklists::Deterministic<>;
+    using BSWL = katana::BulkSynchronous<>;
+    using DWL = katana::Deterministic<>;
     switch (detAlgo) {
     case nondet:
       updateHeights<nondet, BSWL>();
@@ -463,18 +462,18 @@ struct PreflowPush {
       abort();
     }
 
-    galois::do_all(
-        galois::iterate(graph),
+    katana::do_all(
+        katana::iterate(graph),
         [&incoming, this](const GNode& src) {
           Node& node =
-              this->graph.getData(src, galois::MethodFlag::UNPROTECTED);
+              this->graph.getData(src, katana::MethodFlag::UNPROTECTED);
           if (src == this->sink || src == this->source ||
               node.height >= (int)this->graph.size())
             return;
           if (node.excess > 0)
             incoming.push_back(src);
         },
-        galois::loopname("FindWork"));
+        katana::loopname("FindWork"));
   }
 
   template <typename C>
@@ -493,28 +492,26 @@ struct PreflowPush {
   void run() {
     Graph* captured_graph = &graph;
     auto obimIndexer = [=](const GNode& n) {
-      return -captured_graph->getData(n, galois::MethodFlag::UNPROTECTED)
+      return -captured_graph->getData(n, katana::MethodFlag::UNPROTECTED)
                   .height;
     };
 
-    typedef galois::worklists::PerSocketChunkFIFO<16> Chunk;
-    typedef galois::worklists::OrderedByIntegerMetric<
-        decltype(obimIndexer), Chunk>
-        OBIM;
+    typedef katana::PerSocketChunkFIFO<16> Chunk;
+    typedef katana::OrderedByIntegerMetric<decltype(obimIndexer), Chunk> OBIM;
 
-    galois::InsertBag<GNode> initial;
+    katana::InsertBag<GNode> initial;
     initializePreflow(initial);
 
     while (initial.begin() != initial.end()) {
-      galois::StatTimer T_discharge("DischargeTime");
+      katana::StatTimer T_discharge("DischargeTime");
       T_discharge.start();
       Counter counter;
       switch (detAlgo) {
       case nondet:
         if (useHLOrder) {
-          nonDetDischarge(initial, counter, galois::wl<OBIM>(obimIndexer));
+          nonDetDischarge(initial, counter, katana::wl<OBIM>(obimIndexer));
         } else {
-          nonDetDischarge(initial, counter, galois::wl<Chunk>());
+          nonDetDischarge(initial, counter, katana::wl<Chunk>());
         }
         break;
       case detBase:
@@ -530,7 +527,7 @@ struct PreflowPush {
       T_discharge.stop();
 
       if (should_global_relabel) {
-        galois::StatTimer T_global_relabel("GlobalRelabelTime");
+        katana::StatTimer T_global_relabel("GlobalRelabelTime");
         T_global_relabel.start();
         initial.clear();
         globalRelabel(initial);
@@ -547,14 +544,14 @@ struct PreflowPush {
   template <typename EdgeTy>
   static void writePfpGraph(
       const std::string& inputFile, const std::string& outputFile) {
-    typedef galois::graphs::FileGraph ReaderGraph;
+    typedef katana::FileGraph ReaderGraph;
     typedef ReaderGraph::GraphNode ReaderGNode;
 
     ReaderGraph reader;
     reader.fromFile(inputFile);
 
-    typedef galois::graphs::FileGraphWriter Writer;
-    typedef galois::LargeArray<EdgeTy> EdgeData;
+    typedef katana::FileGraphWriter Writer;
+    typedef katana::LargeArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;
@@ -595,7 +592,7 @@ struct PreflowPush {
 
     EdgeTy one = 1;
     static_assert(sizeof(one) == sizeof(uint32_t), "Unexpected edge data size");
-    one = galois::convert_le32toh(one);
+    one = katana::convert_le32toh(one);
 
     p.phase2();
     edgeData.create(numEdges);
@@ -622,9 +619,8 @@ struct PreflowPush {
 
     struct IdLess {
       bool operator()(
-          const galois::graphs::EdgeSortValue<Wnode, edge_value_type>& e1,
-          const galois::graphs::EdgeSortValue<Wnode, edge_value_type>& e2)
-          const {
+          const katana::EdgeSortValue<Wnode, edge_value_type>& e1,
+          const katana::EdgeSortValue<Wnode, edge_value_type>& e2) const {
         return e1.dst < e2.dst;
       }
     };
@@ -639,7 +635,7 @@ struct PreflowPush {
   void initializeGraph(
       std::string inputFile, uint32_t sourceId, uint32_t sinkId) {
     if (useSymmetricDirectly) {
-      galois::graphs::readGraph(graph, inputFile);
+      katana::readGraph(graph, inputFile);
       for (auto ss : graph)
         for (auto ii : graph.edges(ss))
           graph.getEdgeData(ii) = 1;
@@ -648,13 +644,13 @@ struct PreflowPush {
         std::string pfpName = inputFile + ".pfp";
         std::ifstream pfpFile(pfpName.c_str());
         if (!pfpFile.good()) {
-          galois::gPrint("Writing new input file: ", pfpName, "\n");
+          katana::gPrint("Writing new input file: ", pfpName, "\n");
           writePfpGraph<Graph::edge_data_type>(inputFile, pfpName);
         }
         inputFile = pfpName;
       }
-      galois::gPrint("Reading graph: ", inputFile, "\n");
-      galois::graphs::readGraph(graph, inputFile);
+      katana::gPrint("Reading graph: ", inputFile, "\n");
+      katana::readGraph(graph, inputFile);
     }
 
     if (sourceId == sinkId || sourceId >= graph.size() ||
@@ -677,31 +673,31 @@ struct PreflowPush {
 
     reverseDirectionEdgeIterator.allocateInterleaved(graph.sizeEdges());
     // memoize the reverse direction edge-iterators
-    galois::do_all(
-        galois::iterate(graph.begin(), graph.end()),
+    katana::do_all(
+        katana::iterate(graph.begin(), graph.end()),
         [&, this](const GNode& src) {
           for (auto ii :
-               this->graph.edges(src, galois::MethodFlag::UNPROTECTED)) {
+               this->graph.edges(src, katana::MethodFlag::UNPROTECTED)) {
             GNode dst = this->graph.getEdgeDst(ii);
             reverseDirectionEdgeIterator[*ii] = this->findEdge(dst, src);
           }
         },
-        galois::loopname("FindReverseDirectionEdges"));
+        katana::loopname("FindReverseDirectionEdges"));
   }
 
   void checkSorting(void) {
     for (auto n : graph) {
-      galois::optional<GNode> prevDst;
-      for (auto e : graph.edges(n, galois::MethodFlag::UNPROTECTED)) {
+      katana::optional<GNode> prevDst;
+      for (auto e : graph.edges(n, katana::MethodFlag::UNPROTECTED)) {
         GNode dst = graph.getEdgeDst(e);
         if (prevDst.is_initialized()) {
           Node& prevNode =
-              graph.getData(*prevDst, galois::MethodFlag::UNPROTECTED);
-          Node& currNode = graph.getData(dst, galois::MethodFlag::UNPROTECTED);
-          GALOIS_ASSERT(
+              graph.getData(*prevDst, katana::MethodFlag::UNPROTECTED);
+          Node& currNode = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
+          KATANA_ASSERT(
               prevNode.id != currNode.id,
               "Adjacency list cannot have duplicates");
-          GALOIS_ASSERT(prevNode.id <= currNode.id, "Adjacency list unsorted");
+          KATANA_ASSERT(prevNode.id <= currNode.id, "Adjacency list unsorted");
         }
         prevDst = dst;
       }
@@ -817,10 +813,10 @@ struct PreflowPush {
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
   PreflowPush app;
@@ -838,15 +834,15 @@ main(int argc, char** argv) {
   std::cout << "Global relabel interval: " << app.global_relabel_interval
             << "\n";
 
-  galois::Prealloc(1, app.graph.size());
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(1, app.graph.size());
+  katana::reportPageAlloc("MeminfoPre");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
   app.run();
   execTime.stop();
 
-  galois::reportPageAlloc("MeminfoPost");
+  katana::reportPageAlloc("MeminfoPost");
 
   std::cout << "Flow is " << app.graph.getData(app.sink).excess << "\n";
 

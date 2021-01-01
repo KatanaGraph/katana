@@ -17,16 +17,15 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_ENVCHECK_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_ENVCHECK_H_
+#ifndef KATANA_LIBGALOIS_KATANA_ENVCHECK_H_
+#define KATANA_LIBGALOIS_KATANA_ENVCHECK_H_
 
 #include <cassert>
 #include <string>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace substrate {
+namespace katana {
 
 namespace internal {
 
@@ -94,7 +93,6 @@ EnvCheck(const std::string& varName, T& retVal) {
   return EnvCheck(varName.c_str(), retVal);
 }
 
-}  // end namespace substrate
-}  // end namespace galois
+}  // end namespace katana
 
 #endif

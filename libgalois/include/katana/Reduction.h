@@ -17,16 +17,16 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_REDUCTION_H_
-#define GALOIS_LIBGALOIS_GALOIS_REDUCTION_H_
+#ifndef KATANA_LIBGALOIS_KATANA_REDUCTION_H_
+#define KATANA_LIBGALOIS_KATANA_REDUCTION_H_
 
 #include <functional>
 #include <limits>
 
-#include "galois/config.h"
-#include "galois/substrate/PerThreadStorage.h"
+#include "katana/PerThreadStorage.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 /**
  * A Reducible stores per-thread values of a variable of type T and merges
@@ -63,7 +63,7 @@ namespace galois {
  */
 template <typename T, typename MergeFunc, typename IdFunc>
 class Reducible : public MergeFunc, public IdFunc {
-  galois::substrate::PerThreadStorage<T> data_;
+  katana::PerThreadStorage<T> data_;
 
   void merge(T& lhs, T&& rhs) {
     T v{std::move(MergeFunc::operator()(lhs, std::move(rhs)))};
@@ -226,5 +226,5 @@ public:
       : base_type(std::logical_or<bool>(), identity_value<bool, false>()) {}
 };
 
-}  // namespace galois
+}  // namespace katana
 #endif

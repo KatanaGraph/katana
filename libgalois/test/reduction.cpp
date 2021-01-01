@@ -1,11 +1,11 @@
-#include "galois/Reduction.h"
+#include "katana/Reduction.h"
 
 #include <algorithm>
 #include <functional>
 #include <iostream>
 
-#include "galois/Galois.h"
-#include "galois/SharedMemSys.h"
+#include "katana/Galois.h"
+#include "katana/SharedMemSys.h"
 
 struct Move {
   Move() = default;
@@ -22,7 +22,7 @@ test_move() {
 
   auto identity_fn = []() { return Move(); };
 
-  auto r = galois::make_reducible(merge_fn, identity_fn);
+  auto r = katana::make_reducible(merge_fn, identity_fn);
 
   Move x;
   r.update(std::move(x));
@@ -51,11 +51,11 @@ test_map() {
 
   auto zero_fn = []() -> Map { return Map(); };
 
-  auto r = galois::make_reducible(reduce, zero_fn);
+  auto r = katana::make_reducible(reduce, zero_fn);
   r.update(Map{std::make_pair("key", 1)});
   Map& result = r.reduce();
 
-  GALOIS_ASSERT(result["key"] == 1);
+  KATANA_ASSERT(result["key"] == 1);
 }
 
 void
@@ -66,35 +66,35 @@ test_max() {
   const int& (*int_max)(const int&, const int&) = std::max<int>;
   std::function<const int&(const int&, const int&)> fn{int_max};
 
-  auto r = galois::make_reducible(fn, []() { return 0; });
+  auto r = katana::make_reducible(fn, []() { return 0; });
 
   constexpr int num = 10;
 
   r.update(num);
   r.update(1);
 
-  GALOIS_ASSERT(r.reduce() == num);
+  KATANA_ASSERT(r.reduce() == num);
 }
 
 void
 test_accum() {
-  galois::GAccumulator<int> accum;
+  katana::GAccumulator<int> accum;
 
   constexpr int num = 123456;
 
-  galois::do_all(galois::iterate(0, num), [&](int) { accum += 1; });
+  katana::do_all(katana::iterate(0, num), [&](int) { accum += 1; });
 
-  GALOIS_ASSERT(accum.reduce() == num);
+  KATANA_ASSERT(accum.reduce() == num);
 }
 
 int
 main() {
-  galois::SharedMemSys sys;
-  galois::setActiveThreads(2);
+  katana::SharedMemSys sys;
+  katana::setActiveThreads(2);
 
   static_assert(
-      sizeof(galois::GAccumulator<int>) <=
-      sizeof(galois::substrate::PerThreadStorage<int>));
+      sizeof(katana::GAccumulator<int>) <=
+      sizeof(katana::PerThreadStorage<int>));
 
   test_map();
   test_move();

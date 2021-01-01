@@ -1,17 +1,17 @@
-#ifndef GALOIS_LIBTSUBA_RDGCORE_H_
-#define GALOIS_LIBTSUBA_RDGCORE_H_
+#ifndef KATANA_LIBTSUBA_RDGCORE_H_
+#define KATANA_LIBTSUBA_RDGCORE_H_
 
 #include <memory>
 
 #include <arrow/api.h>
 
 #include "RDGPartHeader.h"
-#include "galois/config.h"
+#include "katana/config.h"
 #include "tsuba/FileView.h"
 
 namespace tsuba {
 
-class GALOIS_EXPORT RDGCore {
+class KATANA_EXPORT RDGCore {
 public:
   RDGCore() { InitEmptyTables(); }
 
@@ -21,15 +21,15 @@ public:
 
   bool Equals(const RDGCore& other) const;
 
-  galois::Result<void> AddNodeProperties(
+  katana::Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> AddEdgeProperties(
+  katana::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> RemoveNodeProperty(uint32_t i);
+  katana::Result<void> RemoveNodeProperty(uint32_t i);
 
-  galois::Result<void> RemoveEdgeProperty(uint32_t i);
+  katana::Result<void> RemoveEdgeProperty(uint32_t i);
 
   //
   // Accessors and Mutators

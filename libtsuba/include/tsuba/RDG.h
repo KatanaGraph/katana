@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_RDG_H_
-#define GALOIS_LIBTSUBA_TSUBA_RDG_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_RDG_H_
+#define KATANA_LIBTSUBA_TSUBA_RDG_H_
 
 #include <cstdint>
 #include <memory>
@@ -9,9 +9,9 @@
 #include <arrow/chunked_array.h>
 #include <nlohmann/json.hpp>
 
-#include "galois/Result.h"
-#include "galois/Uri.h"
-#include "galois/config.h"
+#include "katana/Result.h"
+#include "katana/Uri.h"
+#include "katana/config.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/FileView.h"
@@ -26,7 +26,7 @@ class RDGMeta;
 class RDGCore;
 struct PropStorageInfo;
 
-class GALOIS_EXPORT RDG {
+class KATANA_EXPORT RDG {
 public:
   RDG(const RDG& no_copy) = delete;
   RDG& operator=(const RDG& no_dopy) = delete;
@@ -37,42 +37,42 @@ public:
   RDG& operator=(RDG&& other) noexcept;
 
   /// Perform some checks on assumed invariants
-  galois::Result<void> Validate() const;
+  katana::Result<void> Validate() const;
 
   /// Determine if two RDGs are Equal
   bool Equals(const RDG& other) const;
 
   /// Store this RDG at `handle`, if `ff` is not null, it is assumed to contain
   /// an updated topology and persisted as such
-  galois::Result<void> Store(
+  katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
       std::unique_ptr<FileFrame> ff = nullptr);
 
-  galois::Result<void> AddNodeProperties(
+  katana::Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> AddEdgeProperties(
+  katana::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<void> RemoveNodeProperty(uint32_t i);
-  galois::Result<void> RemoveEdgeProperty(uint32_t i);
+  katana::Result<void> RemoveNodeProperty(uint32_t i);
+  katana::Result<void> RemoveEdgeProperty(uint32_t i);
 
   void MarkAllPropertiesPersistent();
 
-  galois::Result<void> MarkNodePropertiesPersistent(
+  katana::Result<void> MarkNodePropertiesPersistent(
       const std::vector<std::string>& persist_node_props);
-  galois::Result<void> MarkEdgePropertiesPersistent(
+  katana::Result<void> MarkEdgePropertiesPersistent(
       const std::vector<std::string>& persist_edge_props);
 
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
 
   /// Load the RDG described by the metadata in handle into memory
-  static galois::Result<RDG> Make(
+  static katana::Result<RDG> Make(
       RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  galois::Result<void> UnbindTopologyFileStorage();
+  katana::Result<void> UnbindTopologyFileStorage();
 
   void AddMirrorNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
     mirror_nodes_.emplace_back(std::move(a));
@@ -86,8 +86,8 @@ public:
   // accessors and mutators
   //
 
-  const galois::Uri& rdg_dir() const { return rdg_dir_; }
-  void set_rdg_dir(const galois::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
+  const katana::Uri& rdg_dir() const { return rdg_dir_; }
+  void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
 
   /// The table of node properties
   const std::shared_ptr<arrow::Table>& node_table() const;
@@ -128,19 +128,19 @@ private:
 
   void InitEmptyTables();
 
-  galois::Result<void> DoMake(const galois::Uri& metadata_dir);
+  katana::Result<void> DoMake(const katana::Uri& metadata_dir);
 
-  static galois::Result<RDG> Make(
+  static katana::Result<RDG> Make(
       const RDGMeta& meta, const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props);
 
-  galois::Result<void> AddPartitionMetadataArray(
+  katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& table);
 
-  galois::Result<std::vector<tsuba::PropStorageInfo>> WritePartArrays(
-      const galois::Uri& dir, tsuba::WriteGroup* desc);
+  katana::Result<std::vector<tsuba::PropStorageInfo>> WritePartArrays(
+      const katana::Uri& dir, tsuba::WriteGroup* desc);
 
-  galois::Result<void> DoStore(
+  katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
       std::unique_ptr<WriteGroup> desc);
 
@@ -155,7 +155,7 @@ private:
   std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
 
   /// name of the graph that was used to load this RDG
-  galois::Uri rdg_dir_;
+  katana::Uri rdg_dir_;
   // How this graph was derived from the previous version
   RDGLineage lineage_;
 };

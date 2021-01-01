@@ -17,14 +17,14 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_UNIONFIND_H_
-#define GALOIS_LIBGALOIS_GALOIS_UNIONFIND_H_
+#ifndef KATANA_LIBGALOIS_KATANA_UNIONFIND_H_
+#define KATANA_LIBGALOIS_KATANA_UNIONFIND_H_
 
 #include <atomic>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 /**
  * Intrusive union-find implementation. Users subclass this to get disjoint
  * functionality for the subclass object.
@@ -121,5 +121,5 @@ public:
     }
   }
 };
-}  // namespace galois
+}  // namespace katana
 #endif

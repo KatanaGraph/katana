@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
-#define GALOIS_LIBGALOIS_GALOIS_GRAPHS_OFFLINEGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_OFFLINEGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_OFFLINEGRAPH_H_
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -31,13 +31,12 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "galois/config.h"
-#include "galois/graphs/Details.h"
-#include "galois/graphs/GraphHelpers.h"
-#include "galois/substrate/SimpleLock.h"
+#include "katana/Details.h"
+#include "katana/GraphHelpers.h"
+#include "katana/SimpleLock.h"
+#include "katana/config.h"
 
-namespace galois {
-namespace graphs {
+namespace katana {
 
 // File format V1:
 // version (1) {uint64_t LE}
@@ -72,7 +71,7 @@ class OfflineGraph {
   uint64_t numSeeksEdgeDst, numSeeksIndex, numSeeksEdgeData;
   uint64_t numBytesReadEdgeDst, numBytesReadIndex, numBytesReadEdgeData;
 
-  galois::substrate::SimpleLock lock;
+  katana::SimpleLock lock;
 
   uint64_t outIndexs(uint64_t node) {
     std::lock_guard<decltype(lock)> lg(lock);
@@ -332,7 +331,7 @@ public:
       size_t nodeWeight, size_t edgeWeight, size_t id, size_t total,
       std::vector<unsigned> scaleFactor = std::vector<unsigned>())
       -> GraphRange {
-    return galois::graphs::divideNodesBinarySearch<OfflineGraph>(
+    return katana::divideNodesBinarySearch<OfflineGraph>(
         numNodes, numEdges, nodeWeight, edgeWeight, id, total, *this,
         scaleFactor);
   }
@@ -459,7 +458,6 @@ public:
   void seekEdgesDstStart() { file.seekg(offsetOfDst(0), std::ios_base::beg); }
 };
 
-}  // namespace graphs
-}  // namespace galois
+}  // namespace katana
 
 #endif

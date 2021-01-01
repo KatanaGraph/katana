@@ -17,17 +17,17 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_HWTOPO_H_
-#define GALOIS_LIBGALOIS_GALOIS_SUBSTRATE_HWTOPO_H_
+#ifndef KATANA_LIBGALOIS_KATANA_HWTOPO_H_
+#define KATANA_LIBGALOIS_KATANA_HWTOPO_H_
 
 #include <string>
 #include <vector>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois::substrate {
+namespace katana {
 
-struct GALOIS_EXPORT ThreadTopoInfo {
+struct KATANA_EXPORT ThreadTopoInfo {
   unsigned tid;                  // this thread (galois id)
   unsigned socketLeader;         // first thread id in tid's socket
   unsigned socket;               // socket (L3 normally) of thread
@@ -37,14 +37,14 @@ struct GALOIS_EXPORT ThreadTopoInfo {
   unsigned osNumaNode;           // OS ID for numa node
 };
 
-struct GALOIS_EXPORT MachineTopoInfo {
+struct KATANA_EXPORT MachineTopoInfo {
   unsigned maxThreads;
   unsigned maxCores;
   unsigned maxSockets;
   unsigned maxNumaNodes;
 };
 
-struct GALOIS_EXPORT HWTopoInfo {
+struct KATANA_EXPORT HWTopoInfo {
   MachineTopoInfo machineTopoInfo;
   std::vector<ThreadTopoInfo> threadTopoInfo;
 };
@@ -53,19 +53,19 @@ struct GALOIS_EXPORT HWTopoInfo {
  * getHWTopo determines the machine topology from the process information
  * exposed in /proc and /dev filesystems.
  */
-GALOIS_EXPORT HWTopoInfo getHWTopo();
+KATANA_EXPORT HWTopoInfo getHWTopo();
 
 /**
  * parseCPUList parses cpuset information in "List format" as described in
  * cpuset(7) and available under /proc/self/status
  */
-GALOIS_EXPORT std::vector<int> parseCPUList(const std::string& in);
+KATANA_EXPORT std::vector<int> parseCPUList(const std::string& in);
 
 /**
  * bindThreadSelf binds a thread to an osContext as returned by getHWTopo.
  */
-GALOIS_EXPORT bool bindThreadSelf(unsigned osContext);
+KATANA_EXPORT bool bindThreadSelf(unsigned osContext);
 
-}  // namespace galois::substrate
+}  // namespace katana
 
 #endif

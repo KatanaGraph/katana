@@ -1,12 +1,12 @@
-#ifndef GALOIS_LIBSUPPORT_GALOIS_ERRORCODE_H_
-#define GALOIS_LIBSUPPORT_GALOIS_ERRORCODE_H_
+#ifndef KATANA_LIBSUPPORT_KATANA_ERRORCODE_H_
+#define KATANA_LIBSUPPORT_KATANA_ERRORCODE_H_
 
 #include <string>
 #include <system_error>
 
-#include "galois/config.h"
+#include "katana/config.h"
 
-namespace galois {
+namespace katana {
 
 enum class ErrorCode {
   // It is probably a bug to return Success explicitly rather than using
@@ -27,11 +27,11 @@ enum class ErrorCode {
   AssertionFailed = 12,
 };
 
-}  // namespace galois
+}  // namespace katana
 
-namespace galois::internal {
+namespace katana::internal {
 
-class GALOIS_EXPORT ErrorCodeCategory : public std::error_category {
+class KATANA_EXPORT ErrorCodeCategory : public std::error_category {
 public:
   const char* name() const noexcept final { return "GaloisError"; }
 
@@ -92,19 +92,19 @@ public:
 };
 
 /// Return singleton category
-GALOIS_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
+KATANA_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
-}  // namespace galois::internal
+}  // namespace katana::internal
 
 namespace std {
 
 /// Tell STL about our error code.
 template <>
-struct is_error_code_enum<galois::ErrorCode> : true_type {};
+struct is_error_code_enum<katana::ErrorCode> : true_type {};
 
 }  // namespace std
 
-namespace galois {
+namespace katana {
 
 /// Overload free function make_error_code with our error code. This will be
 /// found with ADL if necessary.
@@ -113,6 +113,6 @@ make_error_code(ErrorCode e) noexcept {
   return {static_cast<int>(e), internal::GetErrorCodeCategory()};
 }
 
-}  // namespace galois
+}  // namespace katana
 
 #endif

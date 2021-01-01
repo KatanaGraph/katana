@@ -7,8 +7,8 @@
 #include <cstdio>
 #include <string>
 
-#include "galois/Logging.h"
-#include "galois/Result.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 
@@ -34,13 +34,13 @@ namespace tsuba {
 
 FileView::~FileView() {
   if (auto res = Unbind(); !res) {
-    GALOIS_LOG_ERROR("Unbind: {}", res.error());
+    KATANA_LOG_ERROR("Unbind: {}", res.error());
   }
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::Unbind() {
-  galois::Result<void> res = galois::ResultSuccess();
+  katana::Result<void> res = katana::ResultSuccess();
   if (valid_) {
     // Resolve all outstanding reads so they don't write to the memory we are
     // about to unmap
@@ -49,7 +49,7 @@ FileView::Unbind() {
     }
     if (map_start_ != nullptr) {
       if (int err = munmap(map_start_, file_size_); err) {
-        return galois::ResultErrno();
+        return katana::ResultErrno();
       }
     }
     valid_ = false;
@@ -57,7 +57,7 @@ FileView::Unbind() {
   return res;
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::Bind(
     std::string_view filename, uint64_t begin, uint64_t end, bool resolve) {
   StatBuf buf;
@@ -81,8 +81,8 @@ FileView::Bind(
   // Map enough virtual memory to hold entire file, but do not populate it
   tmp = mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (tmp == MAP_FAILED) {
-    GALOIS_LOG_ERROR("mmap: {}", std::strerror(errno));
-    return galois::ResultErrno();
+    KATANA_LOG_ERROR("mmap: {}", std::strerror(errno));
+    return katana::ResultErrno();
   }
 
   if (auto res = Unbind(); !res) {
@@ -100,10 +100,10 @@ FileView::Bind(
 
   cursor_ = 0;
   valid_ = true;
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   uint64_t in_end = std::min<uint64_t>(end, file_size_);
   uint64_t in_begin = std::min<uint64_t>(begin, in_end);
@@ -135,13 +135,13 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
       int err =
           mprotect(map_start_ + file_off, map_size, PROT_READ | PROT_WRITE);
       if (err == -1) {
-        GALOIS_LOG_ERROR("mprotect: {}", std::strerror(errno));
-        return galois::ResultErrno();
+        KATANA_LOG_ERROR("mprotect: {}", std::strerror(errno));
+        return katana::ResultErrno();
       }
 
       auto peek_fut =
           FileGetAsync(filename_, map_start_ + file_off, file_off, map_size);
-      GALOIS_LOG_ASSERT(peek_fut.valid());
+      KATANA_LOG_ASSERT(peek_fut.valid());
       FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));
       if (auto res = MarkFilled(&filling_[0], first_page, last_page); !res) {
@@ -158,7 +158,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
       }
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
 bool
@@ -425,7 +425,7 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   }
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   uint64_t begin_mask;
   if (begin % 64) {
@@ -448,10 +448,10 @@ FileView::MarkFilled(uint64_t* bitmap, uint64_t begin, uint64_t end) {
     bitmap[end_block] |= end_mask;
   }
 
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::Resolve(int64_t start, int64_t size) {
   // This loop could do less work by sorting the vector or storing an
   // interval tree, but that seems like overkill unless this becomes a
@@ -466,17 +466,17 @@ FileView::Resolve(int64_t start, int64_t size) {
           return res.error();
         }
       } else {
-        GALOIS_LOG_DEBUG("bad future in FileView::Resolve {} {}", start, size);
+        KATANA_LOG_DEBUG("bad future in FileView::Resolve {} {}", start, size);
       }
       it = fetches_->erase(it);
     } else {
       ++it;
     }
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 
-galois::Result<void>
+katana::Result<void>
 FileView::PreFetch(int64_t start, int64_t size) {
   // Our highly sophisticated prefetching algorithm is to crudely approximate
   // the size of the last read plus 10%. This is largely motivated by parquet
@@ -490,6 +490,6 @@ FileView::PreFetch(int64_t start, int64_t size) {
   if (auto res = Fill(begin, end, false); !res) {
     return res.error();
   }
-  return galois::ResultSuccess();
+  return katana::ResultSuccess();
 }
 }  // namespace tsuba

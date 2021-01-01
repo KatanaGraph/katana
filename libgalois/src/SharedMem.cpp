@@ -17,19 +17,18 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "galois/substrate/SharedMem.h"
+#include "katana/SharedMem.h"
 
 #include <memory>
 
-#include "galois/substrate/Barrier.h"
-#include "galois/substrate/PagePool.h"
-#include "galois/substrate/TerminationDetection.h"
-#include "galois/substrate/ThreadPool.h"
+#include "katana/Barrier.h"
+#include "katana/PagePool.h"
+#include "katana/TerminationDetection.h"
+#include "katana/ThreadPool.h"
 
 namespace {
 // Dijkstra style 2-pass ring termination detection
-class LocalTerminationDetection
-    : public galois::substrate::TerminationDetection {
+class LocalTerminationDetection : public katana::TerminationDetection {
   struct TokenHolder {
     std::atomic<long> token_is_black;
     std::atomic<long> has_token;
@@ -37,21 +36,19 @@ class LocalTerminationDetection
     bool last_was_white;  // only used by the master
   };
 
-  galois::substrate::PerThreadStorage<TokenHolder> data_;
+  katana::PerThreadStorage<TokenHolder> data_;
 
   unsigned active_threads_;
 
   // send token onwards
   void PropToken(bool is_black) {
-    unsigned id = galois::substrate::ThreadPool::getTID();
+    unsigned id = katana::ThreadPool::getTID();
     TokenHolder& th = *data_.getRemote((id + 1) % active_threads_);
     th.token_is_black = is_black;
     th.has_token = true;
   }
 
-  bool IsSysMaster() const {
-    return galois::substrate::ThreadPool::getTID() == 0;
-  }
+  bool IsSysMaster() const { return katana::ThreadPool::getTID() == 0; }
 
 protected:
   void Init(unsigned active_threads) override {
@@ -97,8 +94,7 @@ public:
 };
 
 // Dijkstra style 2-pass tree termination detection
-class TreeTerminationDetection
-    : public galois::substrate::TerminationDetection {
+class TreeTerminationDetection : public katana::TerminationDetection {
   static constexpr int kNumChildren = 2;
 
   struct TokenHolder {
@@ -115,7 +111,7 @@ class TreeTerminationDetection
     TokenHolder* child[kNumChildren];
   };
 
-  galois::substrate::PerThreadStorage<TokenHolder> data_;
+  katana::PerThreadStorage<TokenHolder> data_;
 
   unsigned active_threads_;
 
@@ -163,9 +159,7 @@ class TreeTerminationDetection
     }
   }
 
-  bool IsSysMaster() const {
-    return galois::substrate::ThreadPool::getTID() == 0;
-  }
+  bool IsSysMaster() const { return katana::ThreadPool::getTID() == 0; }
 
 protected:
   void Init(unsigned active_threads) override {
@@ -183,7 +177,7 @@ public:
     th.has_token = false;
     th.last_was_white = false;
     ResetTerminated();
-    auto tid = galois::substrate::ThreadPool::getTID();
+    auto tid = katana::ThreadPool::getTID();
     th.parent = (tid - 1) / kNumChildren;
     th.parent_offset = (tid - 1) % kNumChildren;
     for (unsigned i = 0; i < kNumChildren; ++i) {
@@ -209,7 +203,7 @@ public:
 
 }  // namespace
 
-struct galois::substrate::SharedMem::Impl {
+struct katana::SharedMem::Impl {
   struct Dependents {
     LocalTerminationDetection term;
     std::unique_ptr<Barrier> barrier;
@@ -220,21 +214,21 @@ struct galois::substrate::SharedMem::Impl {
   std::unique_ptr<Dependents> deps;
 };
 
-galois::substrate::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
+katana::SharedMem::SharedMem() : impl_(std::make_unique<Impl>()) {
   internal::SetThreadPool(&impl_->thread_pool);
 
   // The thread pool must be initialized first because other substrate classes
   // may call GetThreadPool() in their constructors
   impl_->deps = std::make_unique<Impl::Dependents>();
-  impl_->deps->barrier = galois::substrate::CreateTopoBarrier(
-      impl_->thread_pool.getMaxUsableThreads());
+  impl_->deps->barrier =
+      katana::CreateTopoBarrier(impl_->thread_pool.getMaxUsableThreads());
 
   internal::SetBarrier(impl_->deps->barrier.get());
   internal::SetTerminationDetection(&impl_->deps->term);
   internal::setPagePoolState(&impl_->deps->page_pool);
 }
 
-galois::substrate::SharedMem::~SharedMem() {
+katana::SharedMem::~SharedMem() {
   internal::setPagePoolState(nullptr);
   internal::SetTerminationDetection(nullptr);
   internal::SetBarrier(nullptr);

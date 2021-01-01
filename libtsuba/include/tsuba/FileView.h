@@ -1,5 +1,5 @@
-#ifndef GALOIS_LIBTSUBA_TSUBA_FILEVIEW_H_
-#define GALOIS_LIBTSUBA_TSUBA_FILEVIEW_H_
+#ifndef KATANA_LIBTSUBA_TSUBA_FILEVIEW_H_
+#define KATANA_LIBTSUBA_TSUBA_FILEVIEW_H_
 
 #include <cstdint>
 #include <future>
@@ -7,17 +7,17 @@
 
 #include <parquet/arrow/reader.h>
 
-#include "galois/Logging.h"
-#include "galois/Result.h"
-#include "galois/config.h"
+#include "katana/Logging.h"
+#include "katana/Result.h"
+#include "katana/config.h"
 
 namespace tsuba {
 
-class GALOIS_EXPORT FileView : public arrow::io::RandomAccessFile {
+class KATANA_EXPORT FileView : public arrow::io::RandomAccessFile {
   struct FillingRange {
     uint64_t first_page;
     uint64_t last_page;
-    std::future<galois::Result<void>> work;
+    std::future<katana::Result<void>> work;
   };
 
   uint8_t* map_start_;
@@ -51,7 +51,7 @@ public:
   FileView& operator=(FileView&& other) noexcept {
     if (&other != this) {
       if (auto res = Unbind(); !res) {
-        GALOIS_LOG_ERROR("Unbind: {}", res.error());
+        KATANA_LOG_ERROR("Unbind: {}", res.error());
       }
       map_start_ = other.map_start_;
       file_size_ = other.file_size_;
@@ -80,21 +80,21 @@ public:
   /// Calls to Read will handle asynchronous
   /// reads internally, but if you intend to use ptr(), you should pass
   /// resolve=true.
-  galois::Result<void> Bind(
+  katana::Result<void> Bind(
       std::string_view filename, uint64_t begin, uint64_t end, bool resolve);
-  galois::Result<void> Bind(
+  katana::Result<void> Bind(
       std::string_view filename, uint64_t stop, bool resolve) {
     return Bind(filename, 0, stop, resolve);
   }
-  galois::Result<void> Bind(std::string_view filename, bool resolve) {
+  katana::Result<void> Bind(std::string_view filename, bool resolve) {
     return Bind(filename, 0, std::numeric_limits<uint64_t>::max(), resolve);
   }
 
-  galois::Result<void> Fill(uint64_t begin, uint64_t end, bool resolve);
+  katana::Result<void> Fill(uint64_t begin, uint64_t end, bool resolve);
 
   bool Valid() const { return valid_; }
 
-  galois::Result<void> Unbind();
+  katana::Result<void> Unbind();
 
   /// Be very careful with this function. It is the caller's responsibility to
   /// ensure that the region returned holds meaningful data.
@@ -160,15 +160,15 @@ private:
   std::optional<std::pair<uint64_t, uint64_t>> MustFill(
       uint64_t* bitmap, uint64_t begin, uint64_t end);
 
-  galois::Result<void> MarkFilled(
+  katana::Result<void> MarkFilled(
       uint64_t* bitmap, uint64_t begin, uint64_t end);
 
   // Resolve all outstanding reads that overlap with the range [cursor_, nbytes]
-  galois::Result<void> Resolve(int64_t start, int64_t size);
+  katana::Result<void> Resolve(int64_t start, int64_t size);
 
   // Start asynchronously fetching data that we think we might need from storage
   // @start and @size give the location and range of the previous read
-  galois::Result<void> PreFetch(int64_t start, int64_t size);
+  katana::Result<void> PreFetch(int64_t start, int64_t size);
 };
 }  // namespace tsuba
 

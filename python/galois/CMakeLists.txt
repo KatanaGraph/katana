@@ -107,7 +107,7 @@ install(
 
 if(BUILD_LIBGALOIS)
   install(
-    TARGETS galois_shmem
+    TARGETS galois_shmem tsuba tsuba-preload
     PUBLIC_HEADER DESTINATION include
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib

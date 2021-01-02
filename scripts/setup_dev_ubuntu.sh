@@ -16,8 +16,8 @@ then
   exit 1
 fi
 
-sudo bash -x "${REPO_ROOT}/.github/workflows/setup_ubuntu.sh" --no-setup-toolchain-variants
-"${REPO_ROOT}/.github/workflows/setup_conan.sh"
+sudo bash -x "${REPO_ROOT}/scripts/setup_ubuntu.sh" --no-setup-toolchain-variants
+"${REPO_ROOT}/scripts/setup_conan.sh"
 
 # make clang-{tidy,format}-10 the default
 sudo update-alternatives --verbose --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 90

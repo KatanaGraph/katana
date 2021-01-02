@@ -6,9 +6,9 @@ set -eu
 
 REPO_ROOT=$(cd "$(dirname $0)"/..; pwd)
 
-bash -x "${REPO_ROOT}/.github/workflows/setup_macos.sh"
+bash -x "${REPO_ROOT}/scripts/setup_macos.sh"
 
-"${REPO_ROOT}/.github/workflows/setup_conan.sh"
+"${REPO_ROOT}/scripts/setup_conan.sh"
 
 # If you want a build directory that is a subdir of Katana root
 # mkdir build

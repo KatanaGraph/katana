@@ -36,10 +36,6 @@ apt install -yq curl software-properties-common
 #
 # Add custom repositories
 #
-curl -fL --output /tmp/arrow-keyring.deb https://apache.bintray.com/arrow/ubuntu/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb \
-  && apt install -yq /tmp/arrow-keyring.deb \
-  && rm /tmp/arrow-keyring.deb
-
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
 apt-add-repository -y --no-update "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
 
@@ -83,13 +79,14 @@ fi
 # Install llvm via apt instead of as a conan package because existing
 # conan packages do yet enable RTTI, which is required for boost
 # serialization.
-apt install -yq --allow-downgrades \
-  libarrow100 \
-  libarrow-dev=1.0.1-1 \
+apt install -yq \
   libcypher-parser-dev \
   libopenmpi-dev \
-  libparquet100 \
-  libparquet-dev=1.0.1-1 \
   libxml2-dev \
   llvm-10-dev \
   uuid-dev
+
+GO_URL=https://golang.org/dl/go1.15.5.linux-amd64.tar.gz
+TMP_GO=/tmp/go.tar.gz
+(which go || test -f /usr/local/go/bin/go) ||\
+  (curl -fL -o ${TMP_GO} ${GO_URL} && tar -C /usr/local -xzf ${TMP_GO} && rm ${TMP_GO})

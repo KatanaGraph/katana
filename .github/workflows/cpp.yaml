@@ -151,6 +151,7 @@ jobs:
 
     - name: Setup ccache
       run: |
+        ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
         ccache --max-files 400  # Roughly two builds worth of objects
 
     ###

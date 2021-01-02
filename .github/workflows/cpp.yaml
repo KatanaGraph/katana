@@ -47,7 +47,7 @@ jobs:
     - name: Install dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
-        sudo external/katana/scripts/setup_ubuntu.sh
+        sudo scripts/setup_ubuntu.sh
     - name: Pre-build
       run: mkdir -p $HOME/build
     - name: Install C++ dependencies
@@ -142,11 +142,10 @@ jobs:
     - name: Install dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
-        sudo external/katana/scripts/setup_ubuntu.sh
+        sudo scripts/setup_ubuntu.sh
     - name: Install dependencies
       if: startsWith(matrix.os, 'macOS-')
-      run: |
-        external/katana/scripts/setup_macos.sh
+      run: scripts/setup_macos.sh
     - name: Install C++ dependencies
       run: .github/workflows/setup_conan_install.sh $HOME/build
 

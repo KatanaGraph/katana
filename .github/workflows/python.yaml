@@ -75,25 +75,13 @@ jobs:
     # Install Conda environment
     ###
     - name: Download miniconda
-      run: |
-        MINICONDA_FILE="$HOME/.cache/miniconda/miniconda.sh"
-        case ${{matrix.os}} in
-          ubuntu-*) PLAT=Linux-x86_64 ;;
-          macOS-*)  PLAT=MacOSX-x86_64 ;;
-          *)        echo "Unknown OS"; exit 10 ;;
-        esac
-
-        INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-${PLAT}.sh"
-        mkdir -p "$(dirname $MINICONDA_FILE)"
-        curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"
+      run: .github/workflows/download_miniconda.sh ${{matrix.os}}
       if: steps.cache-miniconda.outputs.cache-hit != 'true'
     - name: Create directories
       run: mkdir -p $HOME/build
     - name: Install Conda dependencies
       run: |
-        bash "$HOME/.cache/miniconda/miniconda.sh" -f -b -p $HOME/miniconda
-        export PATH=$HOME/miniconda/bin:$PATH
-        source activate
+        . .github/workflows/activate_miniconda.sh
         conda install -y -q -c conda-forge conda-build conda-verify
 
     ###
@@ -101,14 +89,12 @@ jobs:
     ###
     - name: Build galois Package
       run: |
-        export PATH=$HOME/miniconda/bin:$PATH
-        source activate
+        . .github/workflows/activate_miniconda.sh
         ccache --zero-stats
         conda build -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
     - name: Build galois-python Package
       run: |
-        export PATH=$HOME/miniconda/bin:$PATH
-        source activate
+        . .github/workflows/activate_miniconda.sh
         cd python
         export GALOIS_DOCS_OUTPUT=$HOME/docs
         conda build -c local -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
@@ -177,31 +163,17 @@ jobs:
     # Install Conda environment
     ###
     - name: Download miniconda
-      run: |
-        MINICONDA_FILE="$HOME/.cache/miniconda/miniconda.sh"
-        case ${{matrix.os}} in
-          ubuntu-*) PLAT=Linux-x86_64 ;;
-          macOS-*)  PLAT=MacOSX-x86_64 ;;
-          *)        echo "Unknown OS"; exit 10 ;;
-        esac
-
-        INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-${PLAT}.sh"
-        mkdir -p "$(dirname $MINICONDA_FILE)"
-        curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"
+      run: .github/workflows/download_miniconda.sh ${{matrix.os}}
       if: steps.cache-miniconda.outputs.cache-hit != 'true'
     - name: Install dependencies
       run: |
-        bash "$HOME/.cache/miniconda/miniconda.sh" -f -b -p $HOME/miniconda
-        export PATH=$HOME/miniconda/bin:$PATH
-        source activate
+        . .github/workflows/activate_miniconda.sh
         conda install -y -q -c conda-forge black=19.10b0 pylint
     - name: Check formating
       run: |
-        export PATH=$HOME/miniconda/bin:$PATH
-        source activate
+        . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_format.sh python tests
 #    - name: Check for lint
 #      run: |
-#        export PATH=$HOME/miniconda/bin:$PATH
-#        source activate
+#        . .github/workflows/activate_miniconda.sh
 #        ./scripts/check_python_lint.sh python

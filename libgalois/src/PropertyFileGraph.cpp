@@ -327,7 +327,7 @@ galois::graphs::SortAllEdgesByDest(galois::graphs::PropertyFileGraph* pfg) {
   auto out_dests_view = std::move(view_result_dests.value());
 
   std::vector<uint64_t> permutation_vec(pfg->topology().num_edges());
-  std::iota(permutation_vec.begin(), permutation_vec.end(), 0);
+  std::iota(permutation_vec.begin(), permutation_vec.end(), uint64_t{0});
   auto comparator = [&](uint64_t a, uint64_t b) {
     return out_dests_view[a] < out_dests_view[b];
   };

@@ -94,15 +94,15 @@ Monitor algorithm-specific statistics with the following steps.
 
 Let us use single-source shortest path (SSSP) problem to illustrate the use of self-defined statistics. In SSSP, "bad works" mean the number of iterations in which the node distance is lowered more than once. Since the amount of bad works is the sum of the bad works encountered by each thread, bad works should be collected and reduced using sum operation, which calls for a galois::GAccumulator. We declare the collector before the parallel loop for SSSP as the following:
 
-@snippet libgalois/include/galois/analytics/sssp/sssp.h reducible for self-defined stats
+@snippet libgalois/src/analytics/sssp/sssp.cpp reducible for self-defined stats
 
 Then in the operator for the parallel loop for SSSP, collect per-thread contribution of bad works as the following:
 
-@snippet libgalois/include/galois/analytics/sssp/sssp.h per-thread contribution of self-defined stats
+@snippet libgalois/src/analytics/sssp/sssp.cpp per-thread contribution of self-defined stats
 
 Finally, after the parallel loop for SSSP is done, report the number of bad works as the following:
 
-@snippet libgalois/include/galois/analytics/sssp/sssp.h report self-defined stats
+@snippet libgalois/src/analytics/sssp/sssp.cpp report self-defined stats
 
 In the above example, the TOTAL_TYPE for BadWork is SINGLE.
 

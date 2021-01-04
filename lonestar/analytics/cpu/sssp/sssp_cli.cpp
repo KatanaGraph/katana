@@ -65,93 +65,6 @@ static cll::opt<SsspPlan::Algorithm> algo(
 //! [withnumaalloc]
 //! [withnumaalloc]
 
-/******************************************************************************/
-/* Make results */
-/******************************************************************************/
-
-template <typename Weight>
-static std::vector<Weight>
-MakeResults(const typename SsspImplementation<Weight>::Graph& graph) {
-  std::vector<Weight> values;
-
-  values.reserve(graph.num_nodes());
-  for (auto node : graph) {
-    auto& dist_current = graph.template GetData<SsspNodeDistance<Weight>>(node);
-    values.push_back(dist_current);
-  }
-
-  return values;
-}
-
-template <typename Weight>
-static void
-ProcessOutput(
-    galois::graphs::PropertyFileGraph* pfg,
-    const std::string& edge_weight_property_name,
-    const std::string& output_property_name) {
-  using Impl = galois::analytics::SsspImplementation<Weight>;
-
-  auto pg_result = galois::graphs::
-      PropertyGraph<typename Impl::NodeData, typename Impl::EdgeData>::Make(
-          pfg, {output_property_name}, {edge_weight_property_name});
-  auto graph = pg_result.value();
-
-  galois::reportPageAlloc("MeminfoPost");
-
-  auto it = graph.begin();
-  std::advance(it, startNode.getValue());
-  auto source = *it;
-  it = graph.begin();
-  std::advance(it, reportNode.getValue());
-  auto report = *it;
-
-  std::cout << "Node " << reportNode << " has distance "
-            << graph.template GetData<SsspNodeDistance<Weight>>(report) << "\n";
-
-  // Sanity checking code
-  galois::GReduceMax<uint64_t> max_dist;
-  galois::GAccumulator<uint64_t> sum_dist;
-  galois::GAccumulator<uint32_t> num_visited;
-  max_dist.reset();
-  sum_dist.reset();
-  num_visited.reset();
-
-  galois::do_all(
-      galois::iterate(graph),
-      [&](uint64_t i) {
-        uint32_t my_distance =
-            graph.template GetData<SsspNodeDistance<Weight>>(i);
-
-        if (my_distance != Impl::kDistanceInfinity) {
-          max_dist.update(my_distance);
-          sum_dist += my_distance;
-          num_visited += 1;
-        }
-      },
-      galois::loopname("Sanity check"), galois::no_stats());
-
-  // report sanity stats
-  galois::gInfo("# visited nodes is ", num_visited.reduce());
-  galois::gInfo("Max distance is ", max_dist.reduce());
-  galois::gInfo("Sum of visited distances is ", sum_dist.reduce());
-
-  if (!skipVerify) {
-    if (Impl::template Verify<SsspNodeDistance<Weight>, SsspEdgeWeight<Weight>>(
-            &graph, source)) {
-      std::cout << "Verification successful.\n";
-    } else {
-      GALOIS_DIE("verification failed");
-    }
-  }
-
-  if (output) {
-    std::vector<Weight> results = MakeResults<Weight>(graph);
-    assert(results.size() == graph.size());
-
-    writeOutput(outputLocation, results.data(), results.size());
-  }
-}
-
 std::string
 AlgorithmName(SsspPlan::Algorithm algorithm) {
   switch (algorithm) {
@@ -180,6 +93,19 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
   }
 }
 
+template <typename Weight>
+static void
+OutputResults(galois::graphs::PropertyFileGraph* pfg) {
+  auto r = pfg->NodePropertyTyped<Weight>("distance");
+  if (!r) {
+    GALOIS_LOG_FATAL("Error getting results: {}", r.error().message());
+  }
+  auto results = r.value();
+  assert(uint64_t(results->length()) == pfg->topology().num_nodes());
+
+  writeOutput(outputLocation, results->raw_values(), results->length());
+}
+
 int
 main(int argc, char** argv) {
   std::unique_ptr<galois::SharedMemSys> G =
@@ -197,9 +123,9 @@ main(int argc, char** argv) {
 
   if (startNode >= pfg->topology().num_nodes() ||
       reportNode >= pfg->topology().num_nodes()) {
-    std::cerr << "failed to set report: " << reportNode
-              << " or failed to set source: " << startNode << "\n";
-    abort();
+    GALOIS_LOG_FATAL(
+        "failed to set report: {} or failed to set source: {}", reportNode,
+        startNode);
   }
 
   galois::reportPageAlloc("MeminfoPre");
@@ -247,8 +173,7 @@ main(int argc, char** argv) {
     plan = SsspPlan::Automatic();
     break;
   default:
-    std::cerr << "Invalid algorithm\n";
-    abort();
+    GALOIS_LOG_FATAL("Invalid algorithm selected");
   }
 
   auto pg_result =
@@ -257,27 +182,56 @@ main(int argc, char** argv) {
     GALOIS_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
   }
 
-  switch (pfg->EdgeProperty(edge_property_name)->type()->id()) {
-  case arrow::UInt32Type::type_id:
-    ProcessOutput<uint32_t>(pfg.get(), edge_property_name, "distance");
-    break;
-  case arrow::Int32Type::type_id:
-    ProcessOutput<int32_t>(pfg.get(), edge_property_name, "distance");
-    break;
-  case arrow::UInt64Type::type_id:
-    ProcessOutput<uint64_t>(pfg.get(), edge_property_name, "distance");
-    break;
-  case arrow::Int64Type::type_id:
-    ProcessOutput<int64_t>(pfg.get(), edge_property_name, "distance");
-    break;
-  case arrow::FloatType::type_id:
-    ProcessOutput<float>(pfg.get(), edge_property_name, "distance");
-    break;
-  case arrow::DoubleType::type_id:
-    ProcessOutput<double>(pfg.get(), edge_property_name, "distance");
-    break;
-  default:
-    abort();
+  auto stats_result = SsspStatistics::Compute(pfg.get(), "distance");
+  if (!stats_result) {
+    GALOIS_LOG_FATAL(
+        "Computing statistics: {}", stats_result.error().message());
+  }
+  auto stats = stats_result.value();
+  stats.Print();
+
+  if (!skipVerify) {
+    if (stats.n_reached_nodes < pfg->topology().num_nodes()) {
+      GALOIS_LOG_WARN(
+          "{} unvisited nodes; this is an error if the graph is strongly "
+          "connected",
+          pfg->topology().num_nodes() - stats.n_reached_nodes);
+    }
+    if (auto r =
+            SsspValidate(pfg.get(), startNode, edge_property_name, "distance");
+        r && r.value()) {
+      std::cout << "Verification successful.\n";
+    } else {
+      GALOIS_LOG_FATAL(
+          "verification failed: ", r.has_error() ? r.error().message() : "");
+    }
+  }
+
+  if (output) {
+    switch (pfg->NodeProperty("distance")->type()->id()) {
+    case arrow::UInt32Type::type_id:
+      OutputResults<uint32_t>(pfg.get());
+      break;
+    case arrow::Int32Type::type_id:
+      OutputResults<int32_t>(pfg.get());
+      break;
+    case arrow::UInt64Type::type_id:
+      OutputResults<uint64_t>(pfg.get());
+      break;
+    case arrow::Int64Type::type_id:
+      OutputResults<int64_t>(pfg.get());
+      break;
+    case arrow::FloatType::type_id:
+      OutputResults<float>(pfg.get());
+      break;
+    case arrow::DoubleType::type_id:
+      OutputResults<double>(pfg.get());
+      break;
+    default:
+      GALOIS_LOG_FATAL(
+          "Unsupported type: {}", pfg->NodeProperty("distance")->type());
+      break;
+    }
   }
 
   totalTime.stop();

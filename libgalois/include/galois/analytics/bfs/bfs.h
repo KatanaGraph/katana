@@ -1,6 +1,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFS_BFS_H_
 #define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_BFS_BFS_H_
 
+#include <iostream>
+
 #include "galois/analytics/Plan.h"
 #include "galois/analytics/Utils.h"
 
@@ -60,9 +62,6 @@ public:
 
 /// The tag for the output property of BFS in PropertyGraphs.
 using BfsNodeDistance = galois::PODProperty<uint32_t>;
-// TODO: Should this be a struct to make it distinct from other types? Or should
-//  it be an alias like this so it's compatible with other properties of the
-//  same type?
 
 /// Compute BFS level of nodes in the graph pfg starting from start_node. The
 /// result is stored in a property named by output_property_name. The plan
@@ -74,12 +73,27 @@ GALOIS_EXPORT Result<void> Bfs(
     const std::string& output_property_name,
     BfsPlan algo = BfsPlan::Automatic());
 
-/// Compute BFS level of nodes in the graph pfg starting from start_node. The
-/// result is stored in the node data of the graph. The plan controls the
-/// algorithm and parameters used to compute the BFS.
-GALOIS_EXPORT Result<void> Bfs(
-    graphs::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>& graph,
-    size_t start_node, BfsPlan algo = BfsPlan::Automatic());
+GALOIS_EXPORT Result<bool> BfsValidate(
+    graphs::PropertyFileGraph* pfg, const std::string& property_name);
+
+struct GALOIS_EXPORT BfsStatistics {
+  /// The source node for the distances.
+  uint32_t source_node;
+  /// The maximum distance across all nodes.
+  uint32_t max_distance;
+  /// The sum of all node distances.
+  uint64_t total_distance;
+  /// The number of nodes reachable from the source node.
+  uint32_t n_reached_nodes;
+
+  float average_distance() { return float(total_distance) / n_reached_nodes; }
+
+  /// Print the statistics in a human readable form.
+  void Print(std::ostream& os = std::cout);
+
+  static galois::Result<BfsStatistics> Compute(
+      galois::graphs::PropertyFileGraph* pfg, const std::string& property_name);
+};
 
 }  // namespace galois::analytics
 

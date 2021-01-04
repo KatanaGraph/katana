@@ -251,9 +251,10 @@ RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
   }
 }
 
-galois::Result<void>
-galois::analytics::Bfs(
-    graphs::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>& graph,
+static galois::Result<void>
+BfsImpl(
+    galois::graphs::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>&
+        graph,
     size_t start_node, BfsPlan algo) {
   if (start_node >= graph.size()) {
     return galois::ErrorCode::InvalidArgument;
@@ -295,5 +296,86 @@ galois::analytics::Bfs(
     return pg_result.error();
   }
 
-  return Bfs(pg_result.value(), start_node, algo);
+  return BfsImpl(pg_result.value(), start_node, algo);
+}
+
+galois::Result<bool>
+galois::analytics::BfsValidate(
+    graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+  auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
+  if (!pg_result) {
+    return pg_result.error();
+  }
+
+  BfsImplementation::Graph graph = pg_result.value();
+
+  GAccumulator<uint64_t> n_zeros;
+  do_all(iterate(graph), [&](uint32_t node) {
+    if (graph.GetData<BfsNodeDistance>(node) == 0) {
+      n_zeros += 1;
+    }
+  });
+
+  if (n_zeros.reduce() != 1) {
+    return false;
+  }
+
+  std::atomic<bool> not_consistent(false);
+  do_all(
+      iterate(graph),
+      BfsImplementation::NotConsistent<BfsNodeDistance, BfsNodeDistance>(
+          &graph, not_consistent));
+
+  if (not_consistent) {
+    return false;
+  }
+
+  return true;
+}
+
+galois::Result<BfsStatistics>
+galois::analytics::BfsStatistics::Compute(
+    galois::graphs::PropertyFileGraph* pfg, const std::string& property_name) {
+  auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
+  if (!pg_result) {
+    return pg_result.error();
+  }
+
+  BfsImplementation::Graph graph = pg_result.value();
+
+  uint32_t source_node;
+  GReduceMax<uint32_t> max_dist;
+  GAccumulator<uint64_t> sum_dist;
+  GAccumulator<uint32_t> num_visited;
+  max_dist.reset();
+  sum_dist.reset();
+  num_visited.reset();
+
+  do_all(
+      iterate(graph),
+      [&](uint64_t i) {
+        uint32_t my_distance = graph.GetData<BfsNodeDistance>(i);
+
+        if (my_distance == 0) {
+          source_node = i;
+        }
+        if (my_distance != BfsImplementation::kDistanceInfinity) {
+          max_dist.update(my_distance);
+          sum_dist += my_distance;
+          num_visited += 1;
+        }
+      },
+      loopname("Sanity check"), no_stats());
+
+  return BfsStatistics{
+      source_node, max_dist.reduce(), sum_dist.reduce(), num_visited.reduce()};
+}
+
+void
+galois::analytics::BfsStatistics::Print(std::ostream& os) {
+  os << "Source node = " << source_node << std::endl;
+  os << "Number of reached nodes = " << n_reached_nodes << std::endl;
+  os << "Maximum distance = " << max_distance << std::endl;
+  os << "Sum of distances = " << total_distance << std::endl;
+  os << "Average distance = " << average_distance() << std::endl;
 }

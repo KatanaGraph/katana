@@ -214,9 +214,10 @@ struct BfsSsspImplementationBase {
         Dist dd = g->template GetData<NodeProp>(*dest);
         Dist ew = getEdgeWeight<USE_EDGE_WT>(ii);
         if (dd > sd + ew) {
-          std::cout << "Wrong label: " << dd << ", on node: " << *dest
-                    << ", correct label from src node " << node << " is "
-                    << sd + ew << "\n";
+          GALOIS_LOG_DEBUG(
+              "Wrong label: {}, on node: {}, correct label from src node {} is "
+              "{}",
+              dd, *dest, node, sd + ew);
           refb = true;
           // return;
         }

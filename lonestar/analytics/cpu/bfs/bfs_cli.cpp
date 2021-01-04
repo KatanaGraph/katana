@@ -19,6 +19,8 @@
 
 #include <iostream>
 
+#include <galois/analytics/bfs/bfs.h>
+
 #include "Lonestar/BoilerPlate.h"
 #include "galois/analytics/bfs/bfs_internal.h"
 
@@ -68,23 +70,6 @@ AlgorithmName(BfsPlan::Algorithm algorithm) {
   }
 }
 
-/******************************************************************************/
-/* Make results */
-/******************************************************************************/
-
-std::vector<uint32_t>
-MakeResults(const BfsImplementation::Graph& graph) {
-  std::vector<uint32_t> values;
-
-  values.reserve(graph.num_nodes());
-  for (auto node : graph) {
-    auto& dist_current = graph.GetData<BfsNodeDistance>(node);
-    values.push_back(dist_current);
-  }
-
-  return values;
-}
-
 int
 main(int argc, char** argv) {
   std::unique_ptr<galois::SharedMemSys> G =
@@ -126,9 +111,6 @@ main(int argc, char** argv) {
   BfsImplementation::Graph graph = pg_result.value();
 
   auto it = graph.begin();
-  std::advance(it, startNode.getValue());
-  BfsImplementation::Graph::Node source = *it;
-  it = graph.begin();
   std::advance(it, reportNode.getValue());
   BfsImplementation::Graph::Node report = *it;
 
@@ -137,35 +119,21 @@ main(int argc, char** argv) {
   std::cout << "Node " << reportNode << " has distance "
             << graph.GetData<BfsNodeDistance>(report) << "\n";
 
-  // Sanity checking code
-  galois::GReduceMax<uint64_t> max_dist;
-  galois::GAccumulator<uint64_t> sum_dist;
-  galois::GAccumulator<uint32_t> num_visited;
-  max_dist.reset();
-  sum_dist.reset();
-  num_visited.reset();
-
-  galois::do_all(
-      galois::iterate(graph),
-      [&](uint64_t i) {
-        uint32_t my_distance = graph.GetData<BfsNodeDistance>(i);
-
-        if (my_distance != BfsImplementation::kDistanceInfinity) {
-          max_dist.update(my_distance);
-          sum_dist += my_distance;
-          num_visited += 1;
-        }
-      },
-      galois::loopname("Sanity check"), galois::no_stats());
-
-  // report sanity stats
-  galois::gInfo("# visited nodes is ", num_visited.reduce());
-  galois::gInfo("Max distance is ", max_dist.reduce());
-  galois::gInfo("Sum of visited distances is ", sum_dist.reduce());
+  auto stats_result = BfsStatistics::Compute(pfg.get(), "level");
+  if (!stats_result) {
+    std::cerr << stats_result.error().message() << "\n";
+    abort();
+  }
+  auto stats = stats_result.value();
+  stats.Print();
 
   if (!skipVerify) {
-    if (BfsImplementation::Verify<BfsNodeDistance, BfsNodeDistance>(
-            &graph, source)) {
+    if (stats.n_reached_nodes < graph.num_nodes()) {
+      std::cerr << (graph.num_nodes() - stats.n_reached_nodes)
+                << " unvisited nodes; this is an error if the graph is "
+                   "strongly connected\n";
+    }
+    if (auto r = BfsValidate(pfg.get(), "level"); r && r.value()) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_DIE("verification failed");
@@ -173,10 +141,15 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    std::vector<uint32_t> results = MakeResults(graph);
-    assert(results.size() == graph.size());
+    auto r = pfg->NodePropertyTyped<uint32_t>("level");
+    if (!r) {
+      std::cerr << r.error().message() << "\n";
+      abort();
+    }
+    auto results = r.value();
+    assert(uint64_t(results->length()) == graph.size());
 
-    writeOutput(outputLocation, results.data(), results.size());
+    writeOutput(outputLocation, results->raw_values(), results->length());
   }
 
   totalTime.stop();

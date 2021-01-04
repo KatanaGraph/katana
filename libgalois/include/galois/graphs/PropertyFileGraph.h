@@ -7,6 +7,7 @@
 
 #include <arrow/api.h>
 #include <arrow/chunked_array.h>
+#include <arrow/type_traits.h>
 
 #include "galois/ErrorCode.h"
 #include "galois/LargeArray.h"
@@ -202,12 +203,66 @@ public:
     return rdg_.edge_table()->column(i);
   }
 
-  std::shared_ptr<arrow::ChunkedArray> NodeProperty(std::string name) const {
+  /**
+   * Get a node property by name.
+   *
+   * @param name The name of the property to get.
+   * @return The property data or NULL if the property is not found.
+   */
+  std::shared_ptr<arrow::ChunkedArray> NodeProperty(
+      const std::string& name) const {
     return rdg_.node_table()->GetColumnByName(name);
   }
 
-  std::shared_ptr<arrow::ChunkedArray> EdgeProperty(std::string name) const {
+  std::shared_ptr<arrow::ChunkedArray> EdgeProperty(
+      const std::string& name) const {
     return rdg_.edge_table()->GetColumnByName(name);
+  }
+
+  /**
+   * Get a node property by name specifying it's type.
+   * @tparam T The type of the property.
+   * @param name The name of the property.
+   * @return The property array or an error if the property does not exist or has a different type.
+   */
+  template <typename T>
+  Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
+  NodePropertyTyped(const std::string& name) {
+    auto chunked_array = NodeProperty(name);
+    if (!chunked_array) {
+      return ErrorCode::PropertyNotFound;
+    }
+
+    auto array =
+        std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
+            chunked_array->chunk(0));
+    if (!array) {
+      return ErrorCode::TypeError;
+    }
+    return array;
+  }
+
+  /**
+    * Get an edge property by name specifying it's type.
+    * @tparam T The type of the property.
+    * @param name The name of the property.
+    * @return The property array or an error if the property does not exist or has a different type.
+    */
+  template <typename T>
+  Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
+  EdgePropertyTyped(const std::string& name) {
+    auto chunked_array = EdgeProperty(name);
+    if (!chunked_array) {
+      return ErrorCode::PropertyNotFound;
+    }
+
+    auto array =
+        std::dynamic_pointer_cast<typename arrow::CTypeTraits<T>::ArrayType>(
+            chunked_array->chunk(0));
+    if (!array) {
+      return ErrorCode::TypeError;
+    }
+    return array;
   }
 
   void MarkAllPropertiesPersistent() {

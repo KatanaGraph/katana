@@ -13,7 +13,7 @@ enum class DataTypes {
 };
 
 // https://neo4j.com/docs/cypher-manual/current/clauses/create/
-enum OpTypes {
+enum class OpTypes {
   kInvalid,
   kOpNodeAdd = 1,
   kOpNodeDel,
@@ -39,7 +39,7 @@ const char* const optypes_enum2str[] = {
 };
 
 class GALOIS_EXPORT Operation {
-  OpTypes opcode_{kInvalid};
+  OpTypes opcode_{0};
   galois::PropertyKey property_key_{
       "", false, false, "", galois::ImportDataType::kUnsupported, false};
   galois::ImportData data_{galois::ImportDataType::kUnsupported, false};

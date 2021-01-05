@@ -6,12 +6,6 @@
 
 namespace galois {
 
-enum class DataTypes {
-  kEmpty,
-  kNode,
-  kEdge,
-};
-
 // https://neo4j.com/docs/cypher-manual/current/clauses/create/
 enum class OpTypes {
   kInvalid,

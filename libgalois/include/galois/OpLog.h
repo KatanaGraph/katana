@@ -6,8 +6,14 @@
 
 namespace galois {
 
+enum class DataTypes {
+  kEmpty,
+  kNode,
+  kEdge,
+};
+
 // https://neo4j.com/docs/cypher-manual/current/clauses/create/
-enum class OpTypes {
+enum OpTypes {
   kInvalid,
   kOpNodeAdd = 1,
   kOpNodeDel,
@@ -19,8 +25,21 @@ enum class OpTypes {
   kOpEdgePropVal,
 };
 
+const char* const optypes_enum2str[] = {
+    "Invalid",     /* kInvalid */
+    "NodeAdd",     /* kOpNodeAdd */
+    "NodeDel",     /* kOpNodeDel */
+    "EdgeAdd",     /* kOpEdgeAdd */
+    "EdgeDel",     /* kOpEdgeDel */
+    "NodePropDel", /* kOpNodePropDel */
+    "EdgePropDel", /* kOpEdgePropDel */
+    "NodePropVal", /* kOpNodePropVal */
+    "EdgePropVal", /* kOpEdgePropVal */
+    "Consumed",    /* kConsumed */
+};
+
 class GALOIS_EXPORT Operation {
-  OpTypes opcode_{0};
+  OpTypes opcode_{kInvalid};
   galois::PropertyKey property_key_{
       "", false, false, "", galois::ImportDataType::kUnsupported, false};
   galois::ImportData data_{galois::ImportDataType::kUnsupported, false};

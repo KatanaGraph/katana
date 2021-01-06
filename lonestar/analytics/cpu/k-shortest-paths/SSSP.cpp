@@ -159,9 +159,11 @@ DeltaStepAlgo(
   graph->GetData<NodeCount>(source) = 1;
 
   galois::InsertBag<Item> init_bag;
+  galois::InsertBag<Path*> path_pointers;
 
   Path* path = new Path();
   path->last = NULL;
+  path_pointers.push(path);
 
   pushWrap(init_bag, source, 0, path, "parallel");
 
@@ -183,6 +185,7 @@ DeltaStepAlgo(
           path = new Path();
           path->parent = item.src;
           path->last = item.path;
+          path_pointers.push(path);
 
           if (ddata_count < numPaths) {
             galois::atomicAdd<uint32_t>(ddata_count, (uint32_t)1);
@@ -209,6 +212,8 @@ DeltaStepAlgo(
     //! [report self-defined stats]
     galois::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
   }
+
+  galois::do_all(galois::iterate(path_pointers), [&](Path* p) { delete (p); });
 }
 
 int

@@ -88,6 +88,33 @@ overview of this process, this
 [description](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow)
 from Atlassian.
 
+# Merging Changes
+
+If you are an external contributor (i.e., someone who does not have write
+access to this repo), the main reviewer of your pull request is responsible for
+finally merging your code after it has been reviewed.
+
+If you are an internal contributor (e.g., a member of Katana Graph), you are
+responsible for merging your code after it has been reviewed.
+
+When writing your change and during the review process, it is common to just
+append commits to your pull request branch, but prior to merging, these process
+commits should be reorganized with the interest of future developers in mind.
+This usually means structuring commits to be less about your process and more
+about the logical outcomes.
+
+A common pattern is a refactoring commit followed by the actual new feature.
+Each commit is usually buildable and testable on its own but altogether they
+comprise the work done. You can look at the git history of this repo for
+inspiration, but if you have any doubts, squashing all your commits into one is
+usually a safe choice.
+
+You can use `git rebase --interactive` to reorganize your commits and  `git
+push --force`  to update your branch. Depending on your IDE, there are various
+features or plugins to streamline this process (e.g.,
+[vim-fugitive](https://github.com/tpope/vim-fugitive),
+[magit](https://magit.vc/)).
+
 # Some Helpful Commands
 
 ```shell
@@ -344,6 +371,16 @@ if (auto r = ReturnsAResult(); !r) {
 ```
 
 # Continuous Integration
+
+## Dealing with CI Errors
+
+If the error is due to a transient external failure, you can re-run jobs in the
+GitHub UI.
+
+When debugging a CI failure, it is good to confirm that tests pass locally in
+your developer environment first. You can also run many of the source checks
+locally as well. Take a look at the GitHub workflow definitions under `.github`
+directory to see what script and build parameters are used.
 
 ## Caching
 

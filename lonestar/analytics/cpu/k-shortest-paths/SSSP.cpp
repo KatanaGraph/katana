@@ -24,17 +24,6 @@
 #include "Lonestar/K_SSSP.h"
 #include "galois/AtomicHelpers.h"
 
-//include "galois/Galois.h"
-//include "galois/Reduction.h"
-//include "galois/PriorityQueue.h"
-//include "galois/Timer.h"
-//include "galois/graphs/LCGraph.h"
-//include "galois/graphs/TypeTraits.h"
-//include "Lonestar/BoilerPlate.h"
-//include "BFS_SSSP.h"
-
-//include "llvm/Support/CommandLine.h"
-
 namespace cll = llvm::cl;
 
 static const char* name = "Single Source k Shortest Paths";
@@ -51,15 +40,15 @@ static cll::opt<unsigned int> startNode(
     cll::init(0));
 static cll::opt<unsigned int> reportNode(
     "reportNode", cll::desc("Node to report distance to (default value 1)"),
-    cll::init(1));
+    cll::init(0));
 static cll::opt<unsigned int> stepShift(
     "delta", cll::desc("Shift value for the deltastep (default value 13)"),
     cll::init(13));
 static cll::opt<unsigned int> numPaths(
     "numPaths",
     cll::desc("Number of paths to compute from source to report node (default "
-              "value 10)"),
-    cll::init(10));
+              "value 1)"),
+    cll::init(1));
 enum Algo { deltaTile = 0, deltaStep, deltaStepBarrier };
 
 const char* const ALGO_NAMES[] = {"deltaTile", "deltaStep", "deltaStepBarrier"};
@@ -115,10 +104,50 @@ using OBIM = gwl::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
 using OBIM_Barrier = gwl::OrderedByIntegerMetric<
     UpdateRequestIndexer, PSchunk>::with_barrier<true>::type;
 
+bool
+CheckIfReachable(Graph* graph, const GNode& source) {
+  galois::InsertBag<GNode> current_bag;
+  galois::InsertBag<GNode> next_bag;
+
+  current_bag.push(source);
+  graph->GetData<NodeCount>(source) = 1;
+
+  while (true) {
+    if (current_bag.begin() == current_bag.end())
+      break;
+
+    galois::do_all(
+        galois::iterate(current_bag),
+        [&](GNode n) {
+          for (auto edge : graph->edges(n)) {
+            auto dest = *(graph->GetEdgeDest(edge));
+            if (graph->GetData<NodeCount>(dest) == 0) {
+              graph->GetData<NodeCount>(dest) = 1;
+              next_bag.push(dest);
+            }
+          }
+        },
+        galois::steal());
+
+    current_bag.clear();
+    std::swap(current_bag, next_bag);
+  }
+
+  if (graph->GetData<NodeCount>(reportNode) == 0) {
+    return false;
+  }
+
+  galois::do_all(galois::iterate(*graph), [&graph](GNode n) {
+    graph->GetData<NodeCount>(n) = 0;
+  });
+
+  return true;
+}
+
 //delta stepping implementation for finding a shortest path from source to report node
 template <typename Item, typename OBIMTy, typename PushWrap, typename EdgeRange>
 void
-deltaStepAlgo(
+DeltaStepAlgo(
     Graph* graph, const GNode& source, const PushWrap& pushWrap,
     const EdgeRange& edgeRange,
     galois::InsertBag<std::pair<uint32_t, Path*>>* bag) {
@@ -163,8 +192,12 @@ deltaStepAlgo(
           if (dst == reportNode)
             bag->push(std::make_pair(new_dist, path));
 
-          const Path* const_path = path;
-          pushWrap(ctx, dst, new_dist, const_path);
+          if ((graph->GetData<NodeCount>(reportNode) < numPaths) ||
+              ((graph->GetData<NodeCount>(reportNode) >= numPaths) &&
+               (graph->GetData<NodeMax>(reportNode) > new_dist))) {
+            const Path* const_path = path;
+            pushWrap(ctx, dst, new_dist, const_path);
+          }
         }
       },
       galois::wl<OBIM>(UpdateRequestIndexer{stepShift}),
@@ -243,55 +276,61 @@ main(int argc, char** argv) {
 
   galois::InsertBag<std::pair<uint32_t, Path*>> paths;
 
-  switch (algo) {
-  case deltaTile:
-    deltaStepAlgo<SrcEdgeTile, OBIM>(
-        &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn(), &paths);
-    break;
-  case deltaStep:
-    deltaStepAlgo<UpdateRequest, OBIM>(
-        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
-    break;
-  case deltaStepBarrier:
-    std::cout << "Using OBIM with barrier\n";
-    deltaStepAlgo<UpdateRequest, OBIM_Barrier>(
-        &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
-    break;
+  bool reachable = CheckIfReachable(&graph, source);
 
-  default:
-    std::abort();
+  if (reachable) {
+    switch (algo) {
+    case deltaTile:
+      DeltaStepAlgo<SrcEdgeTile, OBIM>(
+          &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn(), &paths);
+      break;
+    case deltaStep:
+      DeltaStepAlgo<UpdateRequest, OBIM>(
+          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
+      break;
+    case deltaStepBarrier:
+      galois::gInfo("Using OBIM with barrier\n");
+      DeltaStepAlgo<UpdateRequest, OBIM_Barrier>(
+          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
+      break;
+
+    default:
+      std::abort();
+    }
   }
 
   execTime.stop();
-  std::multimap<uint32_t, Path*> paths_map;
 
-  for (auto pair : paths) {
-    paths_map.insert(std::make_pair(pair.first, pair.second));
-  }
+  if (reachable) {
+    std::multimap<uint32_t, Path*> paths_map;
 
-  galois::reportPageAlloc("MeminfoPost");
-
-  galois::gPrint("Node ", report, " has these k paths:\n");
-
-  uint32_t num = (paths_map.size() > numPaths) ? numPaths : paths_map.size();
-
-  auto it_report = paths_map.begin();
-
-  for (uint32_t iter = 0; iter < num; iter++) {
-    galois::gPrint(" ", report);
-    GNode parent = report;
-
-    const Path* path = it_report->second;
-    it_report++;
-
-    while (path->last != NULL) {
-      parent = path->parent;
-      galois::gPrint(" ", parent);
-      path = path->last;
+    for (auto pair : paths) {
+      paths_map.insert(std::make_pair(pair.first, pair.second));
     }
-    galois::gPrint("\n");
-  }
 
+    galois::reportPageAlloc("MeminfoPost");
+
+    galois::gPrint("Node ", report, " has these k paths:\n");
+
+    uint32_t num = (paths_map.size() > numPaths) ? numPaths : paths_map.size();
+
+    auto it_report = paths_map.begin();
+
+    for (uint32_t iter = 0; iter < num; iter++) {
+      galois::gPrint(" ", report);
+      GNode parent = report;
+
+      const Path* path = it_report->second;
+      it_report++;
+
+      while (path->last != NULL) {
+        parent = path->parent;
+        galois::gPrint(" ", parent);
+        path = path->last;
+      }
+      galois::gPrint("\n");
+    }
+  }
   totalTime.stop();
 
   return 0;

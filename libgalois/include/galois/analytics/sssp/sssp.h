@@ -52,6 +52,28 @@ private:
 public:
   SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
 
+  SsspPlan(const galois::graphs::PropertyFileGraph* pfg) : Plan(kCPU) {
+    // TODO(amp): We know we don't modify pfg, but there is no way to construct
+    //   a const PropertyGraph. https://github.com/KatanaGraph/katana/issues/23
+    auto graph =
+        galois::graphs::PropertyGraph<std::tuple<>, std::tuple<>>::Make(
+            const_cast<galois::graphs::PropertyFileGraph*>(pfg), {}, {});
+    if (!graph) {
+      GALOIS_LOG_FATAL(
+          "PropertyGraph should always be constructable here: {}",
+          graph.error());
+    }
+    galois::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
+    autoAlgoTimer.start();
+    bool isPowerLaw = isApproximateDegreeDistributionPowerLaw(graph.value());
+    autoAlgoTimer.stop();
+    if (isPowerLaw) {
+      *this = DeltaStep();
+    } else {
+      *this = DeltaStepBarrier();
+    }
+  }
+
   Algorithm algorithm() const { return algorithm_; }
   unsigned delta() const { return delta_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
@@ -90,29 +112,6 @@ public:
   static SsspPlan TopoTile(ptrdiff_t edge_tile_size = 512) {
     return {kCPU, kTopoTile, 0, edge_tile_size};
   }
-
-  static SsspPlan Automatic() { return {}; }
-
-  static SsspPlan Automatic(const galois::graphs::PropertyFileGraph* pfg) {
-    // TODO: What to do about const cast? We know we don't modify pfg, but there
-    //  is no way to construct a const PropertyGraph.
-    auto graph =
-        galois::graphs::PropertyGraph<std::tuple<>, std::tuple<>>::Make(
-            const_cast<galois::graphs::PropertyFileGraph*>(pfg), {}, {});
-    if (!graph)
-      GALOIS_LOG_FATAL(
-          "PropertyGraph should always be constructable here: {}",
-          graph.error());
-    galois::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
-    autoAlgoTimer.start();
-    bool isPowerLaw = isApproximateDegreeDistributionPowerLaw(graph.value());
-    autoAlgoTimer.stop();
-    if (isPowerLaw) {
-      return DeltaStep();
-    } else {
-      return DeltaStepBarrier();
-    }
-  }
 };
 
 template <typename Weight>
@@ -135,8 +134,7 @@ using SsspEdgeWeight = galois::PODProperty<Weight>;
 GALOIS_EXPORT Result<void> Sssp(
     graphs::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name,
-    SsspPlan plan = SsspPlan::Automatic());
+    const std::string& output_property_name, SsspPlan plan = {});
 
 GALOIS_EXPORT Result<bool> SsspValidate(
     graphs::PropertyFileGraph* pfg, size_t start_node,

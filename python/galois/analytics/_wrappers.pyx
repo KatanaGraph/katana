@@ -48,9 +48,6 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
         _BfsPlan Sync()
 
         @staticmethod
-        _BfsPlan Automatic()
-
-        @staticmethod
         _BfsPlan FromAlgorithm(_BfsPlan.Algorithm algo)
 
     std_result[void] Bfs(PropertyFileGraph * pfg,
@@ -124,15 +121,11 @@ cdef class BfsPlan:
         return BfsPlan.make(_BfsPlan.Sync())
 
     @staticmethod
-    def automatic():
-        return BfsPlan.make(_BfsPlan.Automatic())
-
-    @staticmethod
     def from_algorithm(algorithm):
         return BfsPlan.make(_BfsPlan.FromAlgorithm(int(algorithm)))
 
 
-def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan plan = BfsPlan.automatic()):
+def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -202,6 +195,9 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
             kTopoTile "galois::analytics::SsspPlan::kTopoTile"
             kAutomatic "galois::analytics::SsspPlan::kAutomatic"
 
+        _SsspPlan()
+        _SsspPlan(const PropertyFileGraph * pfg)
+
         _SsspPlan.Algorithm algorithm() const
         unsigned delta() const
         ptrdiff_t edge_tile_size() const
@@ -243,11 +239,6 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
         _SsspPlan TopoTile()
         @staticmethod
         _SsspPlan TopoTile_1 "TopoTile"(ptrdiff_t edge_tile_size)
-
-        @staticmethod
-        _SsspPlan Automatic()
-        @staticmethod
-        _SsspPlan Automatic_1 "Automatic"(const PropertyFileGraph * pfg)
 
 
     std_result[void] Sssp(PropertyFileGraph* pfg, size_t start_node,
@@ -300,6 +291,15 @@ cdef class SsspPlan:
         f = <SsspPlan>SsspPlan.__new__(SsspPlan)
         f.underlying = u
         return f
+
+
+    def __init__(self, graph = None):
+        if graph is None:
+            self.underlying = _SsspPlan()
+        else:
+            if not isinstance(graph, PropertyGraph):
+                raise TypeError(graph)
+            self.underlying = _SsspPlan((<PropertyGraph>graph).underlying.get())
 
     Algorithm = _SsspAlgorithm
 
@@ -373,15 +373,9 @@ cdef class SsspPlan:
     def topo():
         return SsspPlan.make(_SsspPlan.Topo())
 
-    @staticmethod
-    def automatic(graph = None):
-        if graph is None:
-            return SsspPlan.make(_SsspPlan.Automatic())
-        return SsspPlan.make(_SsspPlan.Automatic_1((<PropertyGraph>graph).underlying.get()))
-
 
 def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
-         SsspPlan plan = SsspPlan.automatic()):
+         SsspPlan plan = SsspPlan()):
     edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
     edge_weight_property_name_cstr = <string>edge_weight_property_name_bytes
     output_property_name_bytes = bytes(output_property_name, "utf-8")

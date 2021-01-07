@@ -140,7 +140,7 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
-  SsspPlan plan = SsspPlan::Automatic();
+  SsspPlan plan;
   switch (algo) {
   case SsspPlan::kDeltaTile:
     plan = SsspPlan::DeltaTile(stepShift);
@@ -170,7 +170,7 @@ main(int argc, char** argv) {
     plan = SsspPlan::TopoTile();
     break;
   case SsspPlan::kAutomatic:
-    plan = SsspPlan::Automatic();
+    plan = SsspPlan();
     break;
   default:
     GALOIS_LOG_FATAL("Invalid algorithm selected");

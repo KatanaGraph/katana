@@ -10,6 +10,10 @@ from galois.property_graph import PropertyGraph
 from galois.timer import StatTimer
 
 
+# Use the same infinity as C++ bfs
+distance_infinity = (2 ** 32) // 4
+
+
 @jit(nopython=True)
 def initialize(graph: PropertyGraph, source: int, distance: np.ndarray):
     num_nodes = graph.num_nodes()
@@ -17,20 +21,20 @@ def initialize(graph: PropertyGraph, source: int, distance: np.ndarray):
         if n == source:
             distance[n] = 0
         else:
-            distance[n] = num_nodes
+            distance[n] = distance_infinity
 
 
 @do_all_operator()
-def not_visited_operator(num_nodes: int, not_visited: GAccumulator[int], data, nid):
+def not_visited_operator(not_visited: GAccumulator[int], data, nid):
     val = data[nid]
-    if val >= num_nodes:
+    if val >= distance_infinity:
         not_visited.update(1)
 
 
 @do_all_operator()
-def max_dist_operator(num_nodes: int, max_dist: GReduceMax[int], data, nid):
+def max_dist_operator(max_dist: GReduceMax[int], data, nid):
     val = data[nid]
-    if val < num_nodes:
+    if val < distance_infinity:
         max_dist.update(val)
 
 
@@ -40,9 +44,7 @@ def verify_bfs(graph: PropertyGraph, _source_i: int, property_id: int):
     max_dist = GReduceMax[int]()
 
     do_all(
-        range(len(chunk_array)),
-        not_visited_operator(graph.num_nodes(), not_visited, chunk_array),
-        loop_name="not_visited_op",
+        range(len(chunk_array)), not_visited_operator(not_visited, chunk_array), loop_name="not_visited_op",
     )
 
     if not_visited.reduce() > 0:
@@ -51,30 +53,24 @@ def verify_bfs(graph: PropertyGraph, _source_i: int, property_id: int):
         )
 
     do_all(
-        range(len(chunk_array)),
-        max_dist_operator(graph.num_nodes(), max_dist, chunk_array),
-        steal=True,
-        loop_name="max_dist_operator",
+        range(len(chunk_array)), max_dist_operator(max_dist, chunk_array), steal=True, loop_name="max_dist_operator",
     )
 
-    print("Max distance:", max_dist.reduce())
+    print("BFS Max distance:", max_dist.reduce())
 
 
 @do_all_operator()
 def bfs_sync_operator_pg(
     graph: PropertyGraph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
-    num_nodes = graph.num_nodes()
-
     for ii in graph.edges(nid):
         dst = graph.get_edge_dst(ii)
-        if distance[dst] == num_nodes:
+        if distance[dst] == distance_infinity:
             distance[dst] = next_level_number
             next_level.push(dst)
 
 
 def bfs_sync_pg(graph: PropertyGraph, source, property_name):
-    num_nodes = graph.num_nodes()
     next_level_number = 0
 
     curr_level = InsertBag[np.uint64]()
@@ -82,7 +78,7 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 
     timer = StatTimer("BFS Property Graph Numba: " + property_name)
     timer.start()
-    distance = np.empty((num_nodes,), dtype=int)
+    distance = np.empty((len(graph),), dtype=np.uint32)
     initialize(graph, source, distance)
     next_level.push(source)
     while not next_level.empty():

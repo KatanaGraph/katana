@@ -351,6 +351,8 @@ galois::analytics::BfsStatistics::Compute(
   sum_dist.reset();
   num_visited.reset();
 
+  auto max_possible_distance = graph.num_nodes();
+
   do_all(
       iterate(graph),
       [&](uint64_t i) {
@@ -359,13 +361,13 @@ galois::analytics::BfsStatistics::Compute(
         if (my_distance == 0) {
           source_node = i;
         }
-        if (my_distance != BfsImplementation::kDistanceInfinity) {
+        if (my_distance <= max_possible_distance) {
           max_dist.update(my_distance);
           sum_dist += my_distance;
           num_visited += 1;
         }
       },
-      loopname("Sanity check"), no_stats());
+      loopname("BFS Sanity check"), no_stats());
 
   return BfsStatistics{
       source_node, max_dist.reduce(), sum_dist.reduce(), num_visited.reduce()};

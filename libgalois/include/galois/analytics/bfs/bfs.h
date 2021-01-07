@@ -73,9 +73,15 @@ GALOIS_EXPORT Result<void> Bfs(
     const std::string& output_property_name,
     BfsPlan algo = BfsPlan::Automatic());
 
+/// Do a quick validation of the results of a BFS computation where the results
+/// are stored in property_name. This function does not do an exhaustive check.
+/// The results are approximate and make have false-negatives.
+/// @return True iff the results pass the validation checks, false if they do
+///   not, or an error resulting from the check algorithm itself.
 GALOIS_EXPORT Result<bool> BfsValidate(
     graphs::PropertyFileGraph* pfg, const std::string& property_name);
 
+/// Statistics about a graph that can be extracted from the results of BFS.
 struct GALOIS_EXPORT BfsStatistics {
   /// The source node for the distances.
   uint32_t source_node;
@@ -91,6 +97,7 @@ struct GALOIS_EXPORT BfsStatistics {
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout);
 
+  /// Compute the statistics of BFS results stored in property_name.
   static galois::Result<BfsStatistics> Compute(
       galois::graphs::PropertyFileGraph* pfg, const std::string& property_name);
 };

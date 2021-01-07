@@ -1,4 +1,5 @@
 from libcpp.string cimport string
+from libcpp cimport bool
 
 cdef extern from "<system_error>" namespace "std" nogil:
     cdef cppclass error_category:
@@ -28,9 +29,19 @@ cdef inline void raise_error_code(error_code err) except *:
         prefix = category_name + ": "
     raise exception_type(prefix + str(err.message(), "ascii"))
 
+
 cdef inline int handle_result_void(std_result[void] res) nogil except 0:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())
     return 1
 
+
+cdef inline bool handle_result_bool(std_result[bool] res) nogil except? False:
+    # Using "except? False" will make for some spurious exception checks, however amp doesn't see how to avoid this
+    # without requiring manual handling at every call site. We are already transitioning to Python so it shouldn't
+    # matter.
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()

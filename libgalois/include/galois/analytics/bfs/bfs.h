@@ -42,8 +42,6 @@ public:
 
   static BfsPlan Sync() { return {kCPU, kSync, 0}; }
 
-  static BfsPlan Automatic() { return {}; }
-
   static BfsPlan FromAlgorithm(Algorithm algo) {
     switch (algo) {
     case kAsync:
@@ -55,7 +53,7 @@ public:
     case kSyncTile:
       return SyncTile();
     default:
-      return Automatic();
+      return {};
     }
   }
 };
@@ -70,12 +68,11 @@ using BfsNodeDistance = galois::PODProperty<uint32_t>;
 /// not exist before the call.
 GALOIS_EXPORT Result<void> Bfs(
     graphs::PropertyFileGraph* pfg, size_t start_node,
-    const std::string& output_property_name,
-    BfsPlan algo = BfsPlan::Automatic());
+    const std::string& output_property_name, BfsPlan algo = {});
 
 /// Do a quick validation of the results of a BFS computation where the results
 /// are stored in property_name. This function does not do an exhaustive check.
-/// The results are approximate and make have false-negatives.
+/// The results are approximate and may have false-negatives.
 /// @return True iff the results pass the validation checks, false if they do
 ///   not, or an error resulting from the check algorithm itself.
 GALOIS_EXPORT Result<bool> BfsValidate(

@@ -312,7 +312,7 @@ public:
     execTime.start();
 
     if (plan.algorithm() == SsspPlan::kAutomatic) {
-      plan = SsspPlan::Automatic(&graph.GetPropertyFileGraph());
+      plan = SsspPlan(&graph.GetPropertyFileGraph());
     }
 
     switch (plan.algorithm()) {

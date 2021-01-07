@@ -1,8 +1,11 @@
-from galois.cpp.libstd.boost cimport std_result, handle_result_void
+from galois.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_bool, raise_error_code
+from galois.cpp.libstd.iostream cimport ostream, ostringstream
 from libc.stddef cimport ptrdiff_t
 from libcpp.string cimport string
+from libcpp cimport bool
 from galois.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
 from galois.property_graph cimport PropertyGraph
+from libc.stdint cimport uint64_t, uint32_t
 
 from enum import Enum
 
@@ -55,6 +58,23 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
                          string output_property_name,
                          _BfsPlan algo)
 
+    std_result[bool] BfsValidate(PropertyFileGraph* pfg,
+                                 string property_name);
+
+    cppclass _BfsStatistics "galois::analytics::BfsStatistics":
+        uint32_t source_node;
+        uint32_t max_distance;
+        uint64_t total_distance;
+        uint32_t n_reached_nodes;
+
+        float average_distance()
+
+        void Print(ostream os)
+
+        @staticmethod
+        std_result[_BfsStatistics] Compute(PropertyFileGraph* pfg,
+                                           string property_name);
+
 class _BfsAlgorithm(Enum):
     AsyncTile = _BfsPlan.Algorithm.kAsyncTile
     Async = _BfsPlan.Algorithm.kAsync
@@ -84,6 +104,7 @@ cdef class BfsPlan:
 
     @staticmethod
     def async_tile(edge_tile_size=None):
+
         if edge_tile_size is not None:
             return BfsPlan.make(_BfsPlan.AsyncTile_1(edge_tile_size))
         return BfsPlan.make(_BfsPlan.AsyncTile())
@@ -116,6 +137,54 @@ def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan p
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
         handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying))
+
+def bfs_validate(PropertyGraph pg, str property_name):
+    output_property_name_bytes = bytes(property_name, "utf-8")
+    output_property_name_cstr = <string>output_property_name_bytes
+    with nogil:
+        r = handle_result_bool(BfsValidate(pg.underlying.get(), output_property_name_cstr))
+    return r
+
+cdef _BfsStatistics handle_result_BfsStatistics(std_result[_BfsStatistics] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+cdef class BfsStatistics:
+    cdef _BfsStatistics underlying
+
+    def __init__(self, PropertyGraph pg, str property_name):
+        output_property_name_bytes = bytes(property_name, "utf-8")
+        output_property_name_cstr = <string> output_property_name_bytes
+        with nogil:
+            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying.get(), output_property_name_cstr))
+
+    @property
+    def source_node(self):
+        return self.underlying.source_node
+
+    @property
+    def max_distance(self):
+        return self.underlying.max_distance
+
+    @property
+    def total_distance(self):
+        return self.underlying.total_distance
+
+    @property
+    def n_reached_nodes(self):
+        return self.underlying.n_reached_nodes
+
+    @property
+    def average_distance(self):
+        return self.underlying.average_distance()
+
+    def __str__(self) -> str:
+        cdef ostringstream ss
+        self.underlying.Print(ss)
+        return str(ss.str(), "ascii")
+
 
 # SSSP
 
@@ -185,6 +254,23 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
         string edge_weight_property_name, string output_property_name,
         _SsspPlan plan)
 
+    std_result[bool] SsspValidate(
+        PropertyFileGraph* pfg, size_t start_node,
+        string edge_weight_property_name,
+        string output_property_name);
+
+    cppclass _SsspStatistics  "galois::analytics::SsspStatistics":
+        double max_distance
+        double total_distance
+        uint32_t n_reached_nodes
+
+        double average_distance()
+
+        void Print(ostream)
+
+        @staticmethod
+        std_result[_SsspStatistics] Compute(
+            PropertyFileGraph* pfg, string output_property_name);
 
 class _SsspAlgorithm(Enum):
     DeltaTile = _SsspPlan.Algorithm.kDeltaTile
@@ -303,3 +389,49 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
     with nogil:
         handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_cstr,
                                 output_property_name_cstr, plan.underlying))
+
+def sssp_validate(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+    edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
+    edge_weight_property_name_cstr = <string>edge_weight_property_name_bytes
+    output_property_name_bytes = bytes(output_property_name, "utf-8")
+    output_property_name_cstr = <string>output_property_name_bytes
+    with nogil:
+        r = handle_result_bool(SsspValidate(pg.underlying.get(), start_node, edge_weight_property_name_cstr, output_property_name_cstr))
+    return r
+
+cdef _SsspStatistics handle_result_SsspStatistics(std_result[_SsspStatistics] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+cdef class SsspStatistics:
+    cdef _SsspStatistics underlying
+
+    def __init__(self, PropertyGraph pg, str output_property_name):
+        output_property_name_bytes = bytes(output_property_name, "utf-8")
+        output_property_name_cstr = <string> output_property_name_bytes
+        with nogil:
+            self.underlying = handle_result_SsspStatistics(_SsspStatistics.Compute(
+                pg.underlying.get(), output_property_name_cstr))
+
+    @property
+    def max_distance(self):
+        return self.underlying.max_distance
+
+    @property
+    def total_distance(self):
+        return self.underlying.total_distance
+
+    @property
+    def n_reached_nodes(self):
+        return self.underlying.n_reached_nodes
+
+    @property
+    def average_distance(self):
+        return self.underlying.average_distance()
+
+    def __str__(self) -> str:
+        cdef ostringstream ss
+        self.underlying.Print(ss)
+        return str(ss.str(), "ascii")

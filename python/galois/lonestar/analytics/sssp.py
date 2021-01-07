@@ -21,12 +21,18 @@ from galois.shmem import setActiveThreads
 UpdateRequest = np.dtype([("src", np.uint64), ("dist", np.uint32),])
 
 
-def create_distance_array(g: PropertyGraph, source):
+def create_distance_array(g: PropertyGraph, source, length_property):
     inf_distance = numba.types.uint64.maxval
-    a = np.empty(len(g), dtype=np.uint64)
+    a = np.empty(len(g), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
     a[:] = inf_distance
     a[source] = 0
     return a
+
+
+def dtype_of_pyarrow_array(a):
+    # TODO(amp): This is a hack. But I actually think it will work pretty reliably. Ideally pyarrow would provide a
+    #  conversion.
+    return str(a.type)
 
 
 @for_each_operator()
@@ -48,7 +54,7 @@ def obim_indexer(shift, item):
 
 
 def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
-    dists = create_distance_array(graph, source)
+    dists = create_distance_array(graph, source, length_property)
     init_bag = InsertBag[UpdateRequest]()
     init_bag.push((source, 0))
 

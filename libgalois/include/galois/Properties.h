@@ -182,6 +182,27 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays) {
       arrays, std::make_index_sequence<std::tuple_size_v<PropTuple>>());
 }
 
+namespace {
+/// Get the mutable values pointer of a mutable ArrayData.
+/// This function works around a bug in NumPyBuffer (arrow's wrapper around numpy
+/// arrays) which claims to be mutable but returns null from mutable_data().
+template <typename T>
+T*
+GetMutableValuesWorkAround(
+    const std::shared_ptr<arrow::ArrayData>& data, int i,
+    int64_t absolute_offset) {
+  if (data->buffers.size() > (size_t)i && data->buffers[i]->is_mutable()) {
+    if (auto r = data->template GetMutableValues<T>(i, absolute_offset); r) {
+      return r;
+    } else {
+      return const_cast<T*>(data->template GetValues<T>(i, absolute_offset));
+    }
+  } else {
+    return data->template GetMutableValues<T>(i, absolute_offset);
+  }
+}
+}  // namespace
+
 /// PODPropertyView provides a property view over arrow::Arrays of elements
 /// with trivial constructors (std::is_trivial) and standard layout
 /// (std::is_standard_layout).
@@ -202,19 +223,40 @@ public:
     static_assert(
         sizeof(typename arrow::NumericArray<U>::value_type) == sizeof(T),
         "incompatible types");
-    assert(array.offset() >= 0);
+    if (array.offset() < 0) {
+      GALOIS_LOG_DEBUG("arrow error: Offset not supported");
+      return ErrorCode::ArrowError;
+    }
+    if (array.data()->buffers.size() <= 1 ||
+        !array.data()->buffers[1]->is_mutable()) {
+      GALOIS_LOG_DEBUG("arrow error: immutable buffers not supported");
+      return ErrorCode::ArrowError;
+    }
     return PODPropertyView(
-        array.data()->template GetMutableValues<T>(1, 0),
+        GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
         array.offset());
   }
 
   static Result<PODPropertyView> Make(
       const arrow::FixedSizeBinaryArray& array) {
-    assert(array.byte_width() == sizeof(T));
-    assert(array.offset() >= 0);
+    if (array.byte_width() != sizeof(T)) {
+      GALOIS_LOG_DEBUG(
+          "arrow error: bad byte width of data: {} != {}", array.byte_width(),
+          sizeof(T));
+      return ErrorCode::ArrowError;
+    }
+    if (array.offset() < 0) {
+      GALOIS_LOG_DEBUG("arrow error: Offset not supported");
+      return ErrorCode::ArrowError;
+    }
+    if (array.data()->buffers.size() <= 1 ||
+        !array.data()->buffers[1]->is_mutable()) {
+      GALOIS_LOG_DEBUG("arrow error: immutable buffers not supported");
+      return ErrorCode::ArrowError;
+    }
     return PODPropertyView(
-        array.data()->template GetMutableValues<T>(1, 0),
+        GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
         array.offset());
   }

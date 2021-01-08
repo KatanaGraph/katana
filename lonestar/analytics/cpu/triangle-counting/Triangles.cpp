@@ -372,7 +372,8 @@ main(int argc, char** argv) {
 
   if (!relabel) {
     timer_auto_algo.start();
-    relabel = katana::analytics::isApproximateDegreeDistributionPowerLaw(graph);
+    relabel = katana::analytics::IsApproximateDegreeDistributionPowerLaw(
+        graph.GetPropertyFileGraph());
     timer_auto_algo.stop();
   }
 

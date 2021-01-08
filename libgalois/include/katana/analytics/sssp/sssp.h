@@ -53,18 +53,9 @@ public:
   SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
 
   SsspPlan(const katana::PropertyFileGraph* pfg) : Plan(kCPU) {
-    // TODO(amp): We know we don't modify pfg, but there is no way to construct
-    //   a const PropertyGraph. https://github.com/KatanaGraph/katana/issues/23
-    auto graph = katana::PropertyGraph<std::tuple<>, std::tuple<>>::Make(
-        const_cast<katana::PropertyFileGraph*>(pfg), {}, {});
-    if (!graph) {
-      KATANA_LOG_FATAL(
-          "PropertyGraph should always be constructable here: {}",
-          graph.error());
-    }
     katana::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
     autoAlgoTimer.start();
-    bool isPowerLaw = isApproximateDegreeDistributionPowerLaw(graph.value());
+    bool isPowerLaw = IsApproximateDegreeDistributionPowerLaw(*pfg);
     autoAlgoTimer.stop();
     if (isPowerLaw) {
       *this = DeltaStep();

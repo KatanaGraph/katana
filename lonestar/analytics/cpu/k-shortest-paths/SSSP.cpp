@@ -150,7 +150,8 @@ void
 DeltaStepAlgo(
     Graph* graph, const GNode& source, const PushWrap& pushWrap,
     const EdgeRange& edgeRange,
-    galois::InsertBag<std::pair<uint32_t, Path*>>* bag) {
+    galois::InsertBag<std::pair<uint32_t, Path*>>* bag,
+    galois::InsertBag<Path*>* path_pointers) {
   //! [reducible for self-defined stats]
   galois::GAccumulator<size_t> bad_work;
   //! [reducible for self-defined stats]
@@ -159,11 +160,10 @@ DeltaStepAlgo(
   graph->GetData<NodeCount>(source) = 1;
 
   galois::InsertBag<Item> init_bag;
-  galois::InsertBag<Path*> path_pointers;
 
   Path* path = new Path();
   path->last = NULL;
-  path_pointers.push(path);
+  path_pointers->push(path);
 
   pushWrap(init_bag, source, 0, path, "parallel");
 
@@ -185,7 +185,7 @@ DeltaStepAlgo(
           path = new Path();
           path->parent = item.src;
           path->last = item.path;
-          path_pointers.push(path);
+          path_pointers->push(path);
 
           if (ddata_count < numPaths) {
             galois::atomicAdd<uint32_t>(ddata_count, (uint32_t)1);
@@ -212,8 +212,6 @@ DeltaStepAlgo(
     //! [report self-defined stats]
     galois::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
   }
-
-  galois::do_all(galois::iterate(path_pointers), [&](Path* p) { delete (p); });
 }
 
 int
@@ -280,6 +278,7 @@ main(int argc, char** argv) {
   execTime.start();
 
   galois::InsertBag<std::pair<uint32_t, Path*>> paths;
+  galois::InsertBag<Path*> path_pointers;
 
   bool reachable = CheckIfReachable(&graph, source);
 
@@ -287,16 +286,19 @@ main(int argc, char** argv) {
     switch (algo) {
     case deltaTile:
       DeltaStepAlgo<SrcEdgeTile, OBIM>(
-          &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn(), &paths);
+          &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn(), &paths,
+          &path_pointers);
       break;
     case deltaStep:
       DeltaStepAlgo<UpdateRequest, OBIM>(
-          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
+          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths,
+          &path_pointers);
       break;
     case deltaStepBarrier:
       galois::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<UpdateRequest, OBIM_Barrier>(
-          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths);
+          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths,
+          &path_pointers);
       break;
 
     default:
@@ -335,6 +337,9 @@ main(int argc, char** argv) {
       }
       galois::gPrint("\n");
     }
+
+    galois::do_all(
+        galois::iterate(path_pointers), [&](Path* p) { delete (p); });
   }
   totalTime.stop();
 

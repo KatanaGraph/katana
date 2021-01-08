@@ -24,6 +24,7 @@ enum class ErrorCode {
   PropertyNotFound = 9,
   AlreadyExists = 10,
   TypeError = 11,
+  AssertionFailed = 12,
 };
 
 }  // namespace galois
@@ -58,6 +59,8 @@ public:
       return "already exists";
     case ErrorCode::TypeError:
       return "type error";
+    case ErrorCode::AssertionFailed:
+      return "assertion failed";
     default:
       return "unknown error";
     }
@@ -71,6 +74,7 @@ public:
     case ErrorCode::JsonParseFailed:
     case ErrorCode::JsonDumpFailed:
     case ErrorCode::TypeError:
+    case ErrorCode::AssertionFailed:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::AlreadyExists:
       return make_error_condition(std::errc::file_exists);

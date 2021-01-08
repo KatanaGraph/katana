@@ -1,4 +1,3 @@
-import pytest
 from pytest import raises, approx
 
 from pyarrow import Schema, table
@@ -18,9 +17,14 @@ from galois.analytics import (
     sort_all_edges_by_dest,
     find_edge_sorted_by_dest,
     sort_nodes_by_degree,
+    jaccard_assert_valid,
+    JaccardStatistics,
 )
 from galois.lonestar.analytics.bfs import verify_bfs
 from galois.lonestar.analytics.sssp import verify_sssp
+
+
+NODES_TO_SAMPLE = 10
 
 
 def test_assert_valid(property_graph: PropertyGraph):
@@ -40,17 +44,17 @@ def test_assert_valid(property_graph: PropertyGraph):
 
 
 def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
-    nodes_to_check = 10
-    original_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(nodes_to_check)]
+    original_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
     print(original_dests[0])
     mapping = sort_all_edges_by_dest(property_graph)
-    new_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(nodes_to_check)]
-    for n in range(nodes_to_check):
+    new_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
+    for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
         my_mapping = [mapping[e].as_py() for e in property_graph.edges(n)]
         for i in range(len(my_mapping)):
             assert original_dests[n][i] == new_dests[n][my_mapping[i] - property_graph.edges(n)[0]]
         original_dests[n].sort()
+
         assert original_dests[n] == new_dests[n]
 
 
@@ -63,7 +67,11 @@ def test_find_edge_sorted_by_dest(property_graph: PropertyGraph):
 def test_sort_nodes_by_degree(property_graph: PropertyGraph):
     sort_nodes_by_degree(property_graph)
     assert len(property_graph.edges(0)) == 108
-    # TODO: More detailed check.
+    last_node_n_edges = 108
+    for n in range(1, NODES_TO_SAMPLE):
+        v = len(property_graph.edges(n))
+        assert v <= last_node_n_edges
+        last_node_n_edges = v
 
 
 def test_bfs(property_graph: PropertyGraph):
@@ -125,13 +133,20 @@ def test_jaccard(property_graph: PropertyGraph):
     new_property_id = num_node_properties - 1
     assert node_schema.names[new_property_id] == property_name
 
+    jaccard_assert_valid(property_graph, compare_node, property_name)
+
+    stats = JaccardStatistics(property_graph, compare_node, property_name)
+
+    assert stats.max_similarity == approx(1)
+    assert stats.min_similarity == approx(0)
+    assert stats.average_similarity == approx(0.000637853)
+
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1
     assert similarities[1917] == approx(0.28571428)
     assert similarities[2812] == approx(0.01428571)
 
 
-@pytest.mark.skip("Not supported yet")
 def test_jaccard_sorted(property_graph: PropertyGraph):
     sort_all_edges_by_dest(property_graph)
 
@@ -139,6 +154,8 @@ def test_jaccard_sorted(property_graph: PropertyGraph):
     compare_node = 0
 
     jaccard(property_graph, compare_node, property_name, JaccardPlan.sorted())
+
+    jaccard_assert_valid(property_graph, compare_node, property_name)
 
     similarities: np.ndarray = property_graph.get_node_property(property_name).to_numpy()
     assert similarities[compare_node] == 1

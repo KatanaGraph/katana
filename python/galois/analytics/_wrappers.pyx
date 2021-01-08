@@ -479,18 +479,29 @@ cdef extern from "galois/analytics/jaccard/jaccard.h" namespace "galois::analyti
 
         _JaccardPlan.EdgeSorting edge_sorting() const
 
+        _JaccardPlan()
+
         @staticmethod
         _JaccardPlan Sorted()
 
         @staticmethod
         _JaccardPlan Unsorted()
 
-        @staticmethod
-        _JaccardPlan Automatic()
-
-
     std_result[void] Jaccard(PropertyFileGraph* pfg, size_t compare_node,
         string output_property_name, _JaccardPlan plan)
+
+    std_result[void] JaccardAssertValid(PropertyFileGraph* pfg, size_t compare_node,
+        string output_property_name)
+
+    cppclass _JaccardStatistics  "galois::analytics::JaccardStatistics":
+        double max_similarity
+        double min_similarity
+        double average_similarity
+        void Print(ostream)
+
+        @staticmethod
+        std_result[_JaccardStatistics] Compute(PropertyFileGraph* pfg, size_t compare_node,
+            string output_property_name)
 
 
 class _JaccardEdgeSorting(Enum):
@@ -526,16 +537,55 @@ cdef class JaccardPlan(Plan):
     def unsorted():
         return JaccardPlan.make(_JaccardPlan.Unsorted())
 
-    @staticmethod
-    def automatic():
-        return JaccardPlan.make(_JaccardPlan.Automatic())
-
 
 def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
-            JaccardPlan plan = JaccardPlan.automatic()):
+            JaccardPlan plan = JaccardPlan()):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
         handle_result_void(Jaccard(pg.underlying.get(), compare_node, output_property_name_cstr, plan.underlying_))
+
+
+def jaccard_assert_valid(PropertyGraph pg, size_t compare_node, str output_property_name):
+    output_property_name_bytes = bytes(output_property_name, "utf-8")
+    output_property_name_cstr = <string>output_property_name_bytes
+    with nogil:
+        handle_result_assert(JaccardAssertValid(pg.underlying.get(), compare_node, output_property_name_cstr))
+
+
+cdef _JaccardStatistics handle_result_JaccardStatistics(std_result[_JaccardStatistics] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
+
+
+cdef class JaccardStatistics:
+    cdef _JaccardStatistics underlying
+
+    def __init__(self, PropertyGraph pg, size_t compare_node, str output_property_name):
+        output_property_name_bytes = bytes(output_property_name, "utf-8")
+        output_property_name_cstr = <string> output_property_name_bytes
+        with nogil:
+            self.underlying = handle_result_JaccardStatistics(_JaccardStatistics.Compute(
+                pg.underlying.get(), compare_node, output_property_name_cstr))
+
+    @property
+    def max_similarity(self):
+        return self.underlying.max_similarity
+
+    @property
+    def min_similarity(self):
+        return self.underlying.min_similarity
+
+    @property
+    def average_similarity(self):
+        return self.underlying.average_similarity
+
+    def __str__(self) -> str:
+        cdef ostringstream ss
+        self.underlying.Print(ss)
+        return str(ss.str(), "ascii")
+
 
 # TODO(amp): Wrap ConnectedComponents

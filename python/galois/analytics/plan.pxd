@@ -7,5 +7,6 @@ cdef extern from "galois/analytics/Plan.h" namespace "galois::analytics" nogil:
     cppclass _Plan "galois::analytics::Plan":
         _Architecture architecture() const
 
+
 cdef class Plan:
     cdef _Plan* underlying(self) except NULL

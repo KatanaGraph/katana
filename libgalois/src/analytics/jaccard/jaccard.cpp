@@ -139,7 +139,7 @@ JaccardImpl(
 
 galois::Result<void>
 galois::analytics::Jaccard(
-    graphs::PropertyFileGraph* pfg, size_t compare_node,
+    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan) {
   if (auto result =
           ConstructNodeProperties<NodeData>(pfg, {output_property_name});
@@ -155,7 +155,7 @@ galois::analytics::Jaccard(
   galois::Result<void> r = galois::ResultSuccess();
   switch (plan.edge_sorting()) {
   case JaccardPlan::kUnknown:
-    // TODO: It would be possible to start with the sorted case and then
+    // TODO(amp): It would be possible to start with the sorted case and then
     //  fail to the unsorted case if unsorted nodes are detected.
   case JaccardPlan::kUnsorted:
     r = JaccardImpl<IntersectWithUnsortedEdgeList>(
@@ -167,12 +167,77 @@ galois::analytics::Jaccard(
     break;
   }
 
-  if (!r) {
-    // Undo property creation.
-    if (auto r1 = pfg->RemoveNodeProperty(output_property_name); !r1) {
-      GALOIS_LOG_WARN("{}", r1.error());
-    }
+  return r;
+}
+
+constexpr static const double EPSILON = 1e-6;
+
+galois::Result<void>
+galois::analytics::JaccardAssertValid(
+    galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+    const std::string& property_name) {
+  auto pg_result = galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(
+      pfg, {property_name}, {});
+  if (!pg_result) {
+    return pg_result.error();
+  }
+  Graph graph = pg_result.value();
+
+  if (abs(graph.GetData<JaccardSimilarity>(compare_node) - 1.0) > EPSILON) {
+    return galois::ErrorCode::AssertionFailed;
   }
 
-  return r;
+  auto is_bad = [&graph](const GNode& n) {
+    auto& similarity = graph.template GetData<JaccardSimilarity>(n);
+    if (similarity > 1 || similarity < 0) {
+      return true;
+    }
+    return false;
+  };
+
+  if (galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
+      graph.end()) {
+    return galois::ErrorCode::AssertionFailed;
+  }
+
+  return galois::ResultSuccess();
+}
+
+galois::Result<JaccardStatistics>
+galois::analytics::JaccardStatistics::Compute(
+    galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+    const std::string& property_name) {
+  auto pg_result = galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(
+      pfg, {property_name}, {});
+  if (!pg_result) {
+    return pg_result.error();
+  }
+  Graph graph = pg_result.value();
+
+  galois::GReduceMax<double> max_similarity;
+  galois::GReduceMin<double> min_similarity;
+  galois::GAccumulator<double> total_similarity;
+
+  galois::do_all(
+      galois::iterate(graph),
+      [&](const GNode& i) {
+        double similarity = graph.GetData<JaccardSimilarity>(i);
+        if ((unsigned int)i != (unsigned int)compare_node) {
+          max_similarity.update(similarity);
+          min_similarity.update(similarity);
+          total_similarity += similarity;
+        }
+      },
+      galois::loopname("Jaccard Statistics"), galois::no_stats());
+
+  return JaccardStatistics{
+      max_similarity.reduce(), min_similarity.reduce(),
+      total_similarity.reduce() / (graph.size() - 1)};
+}
+
+void
+galois::analytics::JaccardStatistics::Print(std::ostream& os) {
+  os << "Maximum similarity = " << max_similarity << std::endl;
+  os << "Minimum similarity = " << min_similarity << std::endl;
+  os << "Average similarity = " << average_similarity << std::endl;
 }

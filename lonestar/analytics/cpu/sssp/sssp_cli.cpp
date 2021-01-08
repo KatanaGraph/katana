@@ -47,17 +47,24 @@ static cll::opt<unsigned int> stepShift(
 static cll::opt<SsspPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value auto):"),
     cll::values(
-        clEnumVal(SsspPlan::kDeltaTile, "DeltaTile"),
-        clEnumVal(SsspPlan::kDeltaStep, "DeltaStep"),
-        clEnumVal(SsspPlan::kDeltaStepBarrier, "DeltaStepBarrier"),
-        clEnumVal(SsspPlan::kSerialDeltaTile, "SerialDeltaTile"),
-        clEnumVal(SsspPlan::kSerialDelta, "SerialDelta"),
-        clEnumVal(SsspPlan::kDijkstraTile, "DijkstraTile"),
-        clEnumVal(SsspPlan::kDijkstra, "Dijkstra"),
-        clEnumVal(SsspPlan::kTopo, "Topo"),
-        clEnumVal(SsspPlan::kTopoTile, "TopoTile"),
-        clEnumVal(
-            SsspPlan::kAutomatic,
+        clEnumValN(SsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
+        clEnumValN(SsspPlan::kDeltaStep, "DeltaStep", "Delta stepping"),
+        clEnumValN(
+            SsspPlan::kDeltaStepBarrier, "DeltaStepBarrier",
+            "Delta stepping with barrier"),
+        clEnumValN(
+            SsspPlan::kSerialDeltaTile, "SerialDeltaTile",
+            "Serial delta stepping tiled"),
+        clEnumValN(
+            SsspPlan::kSerialDelta, "SerialDelta", "Serial delta stepping"),
+        clEnumValN(
+            SsspPlan::kDijkstraTile, "DijkstraTile",
+            "Dijkstra's algorithm tiled"),
+        clEnumValN(SsspPlan::kDijkstra, "Dijkstra", "Dijkstra's algorithm"),
+        clEnumValN(SsspPlan::kTopo, "Topo", "Topological"),
+        clEnumValN(SsspPlan::kTopoTile, "TopoTile", "Topological tiled"),
+        clEnumValN(
+            SsspPlan::kAutomatic, "Automatic",
             "Automatic: choose among the algorithms automatically")),
     cll::init(SsspPlan::kAutomatic));
 

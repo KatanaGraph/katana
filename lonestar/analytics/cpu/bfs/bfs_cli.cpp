@@ -48,10 +48,10 @@ static cll::opt<unsigned int> reportNode(
 static cll::opt<BfsPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value SyncTile):"),
     cll::values(
-        clEnumVal(BfsPlan::kAsyncTile, "AsyncTile"),
-        clEnumVal(BfsPlan::kAsync, "Async"),
-        clEnumVal(BfsPlan::kSyncTile, "SyncTile"),
-        clEnumVal(BfsPlan::kSync, "Sync")),
+        clEnumValN(BfsPlan::kAsyncTile, "AsyncTile", "Asynchronous tiled"),
+        clEnumValN(BfsPlan::kAsync, "Async", "Asynchronous"),
+        clEnumValN(BfsPlan::kSyncTile, "SyncTile", "Synchronous tiled"),
+        clEnumValN(BfsPlan::kSync, "Sync", "Synchronous")),
     cll::init(BfsPlan::kSyncTile));
 
 std::string

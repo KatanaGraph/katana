@@ -209,6 +209,33 @@ TestSimplePGs() {
   KATANA_LOG_ASSERT(make_result);
 }
 
+void
+TestTopologyAccess() {
+  RandomPolicy policy{3};
+  auto g = MakeFileGraph<uint32_t>(10, 1, &policy);
+
+  KATANA_LOG_ASSERT(g->size() == 10);
+  KATANA_LOG_ASSERT(g->num_nodes() == 10);
+  KATANA_LOG_ASSERT(g->num_edges() == 30);
+
+  for (int i = 0; i < 10; ++i) {
+    KATANA_LOG_ASSERT(
+        std::distance(g->edges(i).begin(), g->edges(i).end()) == 3);
+  }
+  int n_nodes = 0;
+  for (katana::PropertyFileGraph::Node i : *g) {
+    auto _ignore = g->NodeProperty(0)->chunk(0)->GetScalar(i);
+    n_nodes++;
+    int n_edges = 0;
+    for (auto e : g->edges(i)) {
+      auto __ignore = g->EdgeProperty(0)->chunk(0)->GetScalar(e);
+      n_edges++;
+    }
+    KATANA_LOG_ASSERT(n_edges == 3);
+  }
+  KATANA_LOG_ASSERT(n_nodes == 10);
+}
+
 int
 main(int argc, char** argv) {
   katana::SharedMemSys sys;
@@ -224,6 +251,7 @@ main(int argc, char** argv) {
   TestRoundTrip();
   TestGarbageMetadata();
   TestSimplePGs();
+  TestTopologyAccess();
 
   return 0;
 }

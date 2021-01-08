@@ -9,6 +9,7 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type_traits.h>
 
+#include "katana/Details.h"
 #include "katana/ErrorCode.h"
 #include "katana/LargeArray.h"
 #include "katana/config.h"
@@ -18,7 +19,14 @@ namespace katana {
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
-struct GraphTopology {
+struct KATANA_EXPORT GraphTopology {
+  using Node = uint64_t;
+  using Edge = uint32_t;
+  using node_iterator = boost::counting_iterator<Node>;
+  using edge_iterator = boost::counting_iterator<Edge>;
+  using edges_range = StandardRange<edge_iterator>;
+  using iterator = node_iterator;
+
   std::shared_ptr<arrow::UInt64Array> out_indices;
   std::shared_ptr<arrow::UInt32Array> out_dests;
 
@@ -31,11 +39,44 @@ struct GraphTopology {
            out_dests->Equals(*other.out_dests);
   }
 
-  std::pair<uint64_t, uint64_t> edge_range(uint32_t node_id) const {
+  // Edge accessors
+
+  // TODO(amp): [[deprecated("use edges(node)")]]
+  std::pair<Edge, Edge> edge_range(Node node_id) const {
     auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
     auto edge_end = out_indices->Value(node_id);
     return std::make_pair(edge_start, edge_end);
   }
+
+  /**
+   * Gets the edge range of some node.
+   *
+   * @param node an iterator pointing to the node to get the edge range of
+   * @returns iterable edge range for node.
+   */
+  edges_range edges(node_iterator node) const { return edges(*node); }
+  // TODO(amp): [[deprecated("use edges(Node node)")]]
+
+  /**
+   * Gets the edge range of some node.
+   *
+   * @param node node to get the edge range of
+   * @returns iterable edge range for node.
+   */
+  edges_range edges(Node node) const {
+    auto [begin_edge, end_edge] = edge_range(node);
+    return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
+  }
+
+  // Standard container concepts
+
+  node_iterator begin() const { return node_iterator(0); }
+
+  node_iterator end() const { return node_iterator(num_nodes()); }
+
+  size_t size() const { return num_nodes(); }
+
+  bool empty() const { return num_nodes() == 0; }
 };
 
 /// A property graph is a graph that has properties associated with its nodes
@@ -352,6 +393,36 @@ public:
   const std::shared_ptr<arrow::Table>& edge_table() const {
     return rdg_.edge_table();
   }
+
+  // Pass through topology API to match PropertyGraph API
+
+  using node_iterator = GraphTopology::node_iterator;
+  using edge_iterator = GraphTopology::edge_iterator;
+  using edges_range = GraphTopology::edges_range;
+  using iterator = GraphTopology::iterator;
+  using Node = GraphTopology::Node;
+  using Edge = GraphTopology::Edge;
+
+  // Standard container concepts
+
+  node_iterator begin() const { return topology().begin(); }
+
+  node_iterator end() const { return topology().end(); }
+
+  size_t size() const { return topology().size(); }
+
+  bool empty() const { return topology().empty(); }
+
+  uint64_t num_nodes() const { return topology().num_nodes(); }
+  uint64_t num_edges() const { return topology().num_edges(); }
+
+  /**
+   * Gets the edge range of some node.
+   *
+   * @param node node to get the edge range of
+   * @returns iterable edge range for node.
+   */
+  edges_range edges(Node node) const { return topology().edges(node); }
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination
@@ -370,8 +441,9 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
 ///
 /// This returns the matched edge index if 'node_to_find' is present
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
-KATANA_EXPORT uint64_t FindEdgeSortedByDest(
-    const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
+KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
+    const PropertyFileGraph* graph, GraphTopology::Node node,
+    GraphTopology::Node node_to_find);
 
 /// SortNodesByDegree relables node ids by sorting in the descending
 /// order by node degree

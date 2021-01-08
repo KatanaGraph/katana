@@ -47,21 +47,22 @@ class PropertyGraph {
 public:
   using node_properties = NodeProps;
   using edge_properties = EdgeProps;
-  using node_iterator = boost::counting_iterator<uint32_t>;
-  using edge_iterator = boost::counting_iterator<uint64_t>;
-  using edges_iterator = StandardRange<NoDerefIterator<edge_iterator>>;
-  using iterator = node_iterator;
-  using Node = uint32_t;
+  using node_iterator = GraphTopology::node_iterator;
+  using edge_iterator = GraphTopology::edge_iterator;
+  using edges_range = GraphTopology::edges_range;
+  using iterator = GraphTopology::iterator;
+  using Node = GraphTopology::Node;
+  using Edge = GraphTopology::Edge;
 
   // Standard container concepts
 
-  node_iterator begin() const { return node_iterator(0); }
+  node_iterator begin() const { return pfg_->begin(); }
 
-  node_iterator end() const { return node_iterator(num_nodes()); }
+  node_iterator end() const { return pfg_->end(); }
 
-  size_t size() const { return num_nodes(); }
+  size_t size() const { return pfg_->size(); }
 
-  bool empty() const { return num_nodes() == 0; }
+  bool empty() const { return pfg_->empty(); }
 
   // Graph accessors
 
@@ -134,20 +135,25 @@ public:
     return node_iterator(node_id);
   }
 
-  uint64_t num_nodes() const { return pfg_->topology().num_nodes(); }
-  uint64_t num_edges() const { return pfg_->topology().num_edges(); }
+  uint64_t num_nodes() const { return pfg_->num_nodes(); }
+  uint64_t num_edges() const { return pfg_->num_edges(); }
 
   /**
    * Gets the edge range of some node.
    *
    * @param node node to get the edge range of
-   * @returns iterator to edges of node
+   * @returns iterable edge range for node.
    */
-  edges_iterator edges(const node_iterator& node) const {
-    auto [begin_edge, end_edge] = pfg_->topology().edge_range(*node);
-    return internal::make_no_deref_range(
-        edge_iterator(begin_edge), edge_iterator(end_edge));
-  }
+  edges_range edges(Node node) const { return pfg_->edges(node); }
+
+  /**
+   * Gets the edge range of some node.
+   *
+   * @param node node to get the edge range of
+   * @returns iterable edge range for node.
+   */
+  edges_range edges(node_iterator node) const { return pfg_->edges(*node); }
+  // TODO(amp): [[deprecated("use edges(Node node)")]]
 
   /**
    * Gets the first edge of some node.
@@ -155,7 +161,10 @@ public:
    * @param node node to get the edge of
    * @returns iterator to first edge of node
    */
-  edge_iterator edge_begin(Node node) const { return *edges(node).begin(); }
+  edge_iterator edge_begin(Node node) const {
+    return pfg_->edges(node).begin();
+  }
+  // TODO(amp): [[deprecated("use edges(node)")]]
 
   /**
    * Gets the end edge boundary of some node.
@@ -164,7 +173,8 @@ public:
    * @returns iterator to the end of the edges of node, i.e. the first edge of
    *     the next node (or an "end" iterator if there is no next node)
    */
-  edge_iterator edge_end(Node node) const { return *edges(node).end(); }
+  edge_iterator edge_end(Node node) const { return pfg_->edges(node).end(); }
+  // TODO(amp): [[deprecated("use edges(node)")]]
 
   /**
    * Accessor for the underlying PropertyFileGraph.

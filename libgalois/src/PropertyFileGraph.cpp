@@ -368,10 +368,10 @@ katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
   }
 }
 
-uint64_t
+katana::GraphTopology::Edge
 katana::FindEdgeSortedByDest(
-    const katana::PropertyFileGraph* graph, uint32_t node,
-    uint32_t node_to_find) {
+    const PropertyFileGraph* graph, GraphTopology::Node node,
+    GraphTopology::Node node_to_find) {
   auto view_result_dests =
       katana::ConstructPropertyView<katana::UInt32Property>(
           graph->topology().out_dests.get());

@@ -1183,7 +1183,7 @@ katana::analytics::ConnectedComponentsAssertValid(
         KATANA_LOG_DEBUG(
             "{} (component: {}) must be in same component as {} (component: "
             "{})",
-            uint32_t{*dest}, data, n, me);
+            *dest, data, n, me);
         return true;
       }
     }

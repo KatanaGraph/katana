@@ -136,7 +136,7 @@ GALOIS_EXPORT Result<void> Sssp(
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan = {});
 
-GALOIS_EXPORT Result<bool> SsspValidate(
+GALOIS_EXPORT Result<void> SsspAssertValid(
     graphs::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name);

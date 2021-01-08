@@ -45,3 +45,12 @@ cdef inline bool handle_result_bool(std_result[bool] res) nogil except? False:
         with gil:
             raise_error_code(res.error())
     return res.value()
+
+
+cdef inline int handle_result_assert(std_result[void] res) nogil except 0:
+    if not res.has_value():
+        with gil:
+            err = res.error()
+            category_name = str(err.category().name(), "ascii")
+            raise AssertionError(category_name + ": " + str(err.message(), "ascii"))
+    return 1

@@ -1,4 +1,4 @@
-from galois.analytics import bfs_validate, sssp_validate, SsspStatistics, BfsStatistics
+from galois.analytics import bfs_assert_valid, sssp_assert_valid, SsspStatistics, BfsStatistics
 from galois.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
 from galois.lonestar.analytics.jaccard import jaccard
 from galois.lonestar.analytics.sssp import sssp, verify_sssp
@@ -20,7 +20,7 @@ def test_bfs(property_graph: PropertyGraph):
     assert stats.source_node == start_node
     assert stats.max_distance == 7
 
-    assert bfs_validate(property_graph, property_name)
+    bfs_assert_valid(property_graph, property_name)
 
 
 def test_sssp(property_graph):
@@ -34,7 +34,7 @@ def test_sssp(property_graph):
     new_property_id = num_node_properties - 1
     verify_sssp(property_graph, start_node, new_property_id)
 
-    assert sssp_validate(property_graph, start_node, weight_name, property_name)
+    sssp_assert_valid(property_graph, start_node, weight_name, property_name)
 
     stats = SsspStatistics(property_graph, property_name)
 

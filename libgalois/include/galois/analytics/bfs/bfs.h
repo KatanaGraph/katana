@@ -73,9 +73,9 @@ GALOIS_EXPORT Result<void> Bfs(
 /// Do a quick validation of the results of a BFS computation where the results
 /// are stored in property_name. This function does not do an exhaustive check.
 /// The results are approximate and may have false-negatives.
-/// @return True iff the results pass the validation checks, false if they do
-///   not, or an error resulting from the check algorithm itself.
-GALOIS_EXPORT Result<bool> BfsValidate(
+/// @return a failure if the BFS results do not pass validation or if there is a
+///     failure during checking.
+GALOIS_EXPORT Result<void> BfsAssertValid(
     graphs::PropertyFileGraph* pfg, const std::string& property_name);
 
 /// Statistics about a graph that can be extracted from the results of BFS.

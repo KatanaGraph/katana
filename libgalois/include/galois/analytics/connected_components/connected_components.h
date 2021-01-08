@@ -155,11 +155,11 @@ GALOIS_EXPORT Result<void> ConnectedComponents(
     graphs::PropertyFileGraph* pfg, const std::string& output_property_name,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
-GALOIS_EXPORT Result<bool> ConnectedComponentsValidate(
+GALOIS_EXPORT Result<void> ConnectedComponentsAssertValid(
     graphs::PropertyFileGraph* pfg, const std::string& property_name);
 
 struct GALOIS_EXPORT ConnectedComponentsStatistics {
-  /// Total number of unique componets in the graph.
+  /// Total number of unique components in the graph.
   uint64_t total_components;
   /// Total number of components with more than 1 node.
   uint64_t total_non_trivial_components;

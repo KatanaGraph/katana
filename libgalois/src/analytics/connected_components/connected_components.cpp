@@ -1156,8 +1156,8 @@ galois::analytics::ConnectedComponents(
   }
 }
 
-galois::Result<bool>
-galois::analytics::ConnectedComponentsValidate(
+galois::Result<void>
+galois::analytics::ConnectedComponentsAssertValid(
     graphs::PropertyFileGraph* pfg, const std::string& property_name) {
   using ComponentType = uint64_t;
   struct NodeComponent : public galois::PODProperty<ComponentType> {};
@@ -1190,8 +1190,12 @@ galois::analytics::ConnectedComponentsValidate(
     return false;
   };
 
-  return galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) ==
-         graph.end();
+  if (galois::ParallelSTL::find_if(graph.begin(), graph.end(), is_bad) !=
+      graph.end()) {
+    return galois::ErrorCode::AssertionFailed;
+  }
+
+  return galois::ResultSuccess();
 }
 
 galois::Result<ConnectedComponentsStatistics>

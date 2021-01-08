@@ -1,6 +1,8 @@
 #ifndef GALOIS_LIBGALOIS_GALOIS_ANALYTICS_JACCARD_JACCARD_H_
 #define GALOIS_LIBGALOIS_GALOIS_ANALYTICS_JACCARD_JACCARD_H_
 
+#include <iostream>
+
 #include "galois/Properties.h"
 #include "galois/analytics/Plan.h"
 #include "galois/graphs/PropertyFileGraph.h"
@@ -32,7 +34,11 @@ private:
       : Plan(architecture), edge_sorting_(edge_sorting) {}
 
 public:
+  /// Automatically choose an algorithm.
+  /// May either use the unsorted algorithm, or use an algorithm that attempts
+  /// the sorted algorithm, but checks for out of order edges.
   JaccardPlan() : JaccardPlan(kCPU, kUnknown) {}
+
   JaccardPlan& operator=(const JaccardPlan&) = default;
 
   EdgeSorting edge_sorting() const { return edge_sorting_; }
@@ -42,18 +48,10 @@ public:
 
   /// The graph's edge lists are sorted; optimize based on this.
   static JaccardPlan Sorted() { return {kCPU, kSorted}; }
-
-  /// Automatically choose an algorithm.
-  /// May either use the unsorted algorithm, or use an algorithm that attempts
-  /// the sorted algorithm, but checks for out of order edges.
-  static JaccardPlan Automatic() { return {}; }
 };
 
 /// The tag for the output property of Jaccard in PropertyGraphs.
 using JaccardSimilarity = galois::PODProperty<double>;
-
-// TODO: Do we need to support float output? (For large graphs that want to use
-//  less memory, maybe)
 
 /// Compute the Jaccard similarity between each node and compare_node. The
 /// result is stored in a property named by output_property_name. The plan
@@ -61,9 +59,28 @@ using JaccardSimilarity = galois::PODProperty<double>;
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 GALOIS_EXPORT Result<void> Jaccard(
-    graphs::PropertyFileGraph* pfg, size_t compare_node,
-    const std::string& output_property_name,
-    JaccardPlan plan = JaccardPlan::Automatic());
+    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+    const std::string& output_property_name, JaccardPlan plan = {});
+
+GALOIS_EXPORT Result<void> JaccardAssertValid(
+    graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+    const std::string& property_name);
+
+struct GALOIS_EXPORT JaccardStatistics {
+  /// The maximum similarity excluding the comparison node.
+  double max_similarity;
+  /// The minimum similarity
+  double min_similarity;
+  /// The average similarity excluding the comparison node.
+  double average_similarity;
+
+  /// Print the statistics in a human readable form.
+  void Print(std::ostream& os = std::cout);
+
+  static galois::Result<JaccardStatistics> Compute(
+      galois::graphs::PropertyFileGraph* pfg, uint32_t compare_node,
+      const std::string& property_name);
+};
 
 }  // namespace galois::analytics
 

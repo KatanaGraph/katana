@@ -83,7 +83,7 @@ main(int argc, char** argv) {
 
   if (auto r = galois::analytics::Jaccard(
           pfg.get(), base_node, output_property_name,
-          galois::analytics::JaccardPlan::Automatic());
+          galois::analytics::JaccardPlan());
       !r) {
     GALOIS_LOG_FATAL(
         "Jaccard failed: {} {}", r.error().category().name(),
@@ -104,32 +104,18 @@ main(int argc, char** argv) {
   std::cout << "Node " << report_node << " has similarity "
             << graph.GetData<NodeValue>(report_node) << "\n";
 
-  // Sanity checking code
-  galois::GReduceMax<double> max_similarity;
-  galois::GReduceMin<double> min_similarity;
-  max_similarity.reset();
-  min_similarity.reset();
+  auto stats_result = galois::analytics::JaccardStatistics::Compute(
+      pfg.get(), base_node, output_property_name);
+  if (!stats_result) {
+    GALOIS_LOG_FATAL(
+        "could not make compute statistics: {}", stats_result.error());
+  }
 
-  galois::do_all(
-      galois::iterate(graph),
-      [&](const GNode& i) {
-        double similarity = graph.GetData<NodeValue>(i);
-        if ((unsigned int)i != (unsigned int)base_node) {
-          max_similarity.update(similarity);
-          min_similarity.update(similarity);
-        }
-      },
-      galois::loopname("Sanity check"), galois::no_stats());
-
-  galois::gInfo(
-      "Maximum similarity (excluding base) is ", max_similarity.reduce());
-  galois::gInfo("Minimum similarity is ", min_similarity.reduce());
-  galois::gInfo("Base similarity is ", graph.GetData<NodeValue>(base_node));
-
-  // TODO: Verify?
+  stats_result.value().Print();
 
   if (!skipVerify) {
-    if (graph.GetData<NodeValue>(base_node) == 1.0) {
+    if (galois::analytics::JaccardAssertValid(
+            pfg.get(), base_node, output_property_name)) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_LOG_FATAL(

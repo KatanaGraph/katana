@@ -197,9 +197,9 @@ main(int argc, char** argv) {
           "connected",
           pfg->topology().num_nodes() - stats.n_reached_nodes);
     }
-    if (auto r =
-            SsspValidate(pfg.get(), startNode, edge_property_name, "distance");
-        r && r.value()) {
+    if (auto r = SsspAssertValid(
+            pfg.get(), startNode, edge_property_name, "distance");
+        r) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_LOG_FATAL(

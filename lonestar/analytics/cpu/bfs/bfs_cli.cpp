@@ -133,7 +133,7 @@ main(int argc, char** argv) {
                 << " unvisited nodes; this is an error if the graph is "
                    "strongly connected\n";
     }
-    if (auto r = BfsValidate(pfg.get(), "level"); r && r.value()) {
+    if (BfsAssertValid(pfg.get(), "level")) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_DIE("verification failed");
@@ -143,8 +143,7 @@ main(int argc, char** argv) {
   if (output) {
     auto r = pfg->NodePropertyTyped<uint32_t>("level");
     if (!r) {
-      std::cerr << r.error().message() << "\n";
-      abort();
+      GALOIS_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     assert(uint64_t(results->length()) == graph.size());

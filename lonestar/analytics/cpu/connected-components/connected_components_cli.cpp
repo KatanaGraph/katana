@@ -222,8 +222,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (auto r = ConnectedComponentsValidate(pfg.get(), "component");
-        r && r.value()) {
+    if (ConnectedComponentsAssertValid(pfg.get(), "component")) {
       std::cout << "Verification successful.\n";
     } else {
       GALOIS_LOG_FATAL("verification failed");
@@ -233,7 +232,7 @@ main(int argc, char** argv) {
   if (output) {
     auto r = pfg->NodePropertyTyped<uint64_t>("component");
     if (!r) {
-      GALOIS_LOG_FATAL("Failed to get node property {}", stats_result.error());
+      GALOIS_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     assert(uint64_t(results->length()) == pfg->topology().num_nodes());

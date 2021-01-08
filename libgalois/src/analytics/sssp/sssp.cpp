@@ -438,7 +438,7 @@ galois::analytics::Sssp(
 }
 
 template <typename Weight>
-static galois::Result<bool>
+static galois::Result<void>
 SsspValidateImpl(
     galois::graphs::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
@@ -453,7 +453,7 @@ SsspValidateImpl(
   typename Impl::Graph graph = pg_result.value();
 
   if (graph.template GetData<SsspNodeDistance<Weight>>(start_node) != 0) {
-    return false;
+    return galois::ErrorCode::AssertionFailed;
   }
 
   std::atomic<bool> not_consistent(false);
@@ -463,14 +463,14 @@ SsspValidateImpl(
                           &graph, not_consistent));
 
   if (not_consistent) {
-    return false;
+    return galois::ErrorCode::AssertionFailed;
   }
 
-  return true;
+  return galois::ResultSuccess();
 }
 
-galois::Result<bool>
-galois::analytics::SsspValidate(
+galois::Result<void>
+galois::analytics::SsspAssertValid(
     galois::graphs::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {

@@ -299,8 +299,8 @@ galois::analytics::Bfs(
   return BfsImpl(pg_result.value(), start_node, algo);
 }
 
-galois::Result<bool>
-galois::analytics::BfsValidate(
+galois::Result<void>
+galois::analytics::BfsAssertValid(
     graphs::PropertyFileGraph* pfg, const std::string& property_name) {
   auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
   if (!pg_result) {
@@ -317,7 +317,7 @@ galois::analytics::BfsValidate(
   });
 
   if (n_zeros.reduce() != 1) {
-    return false;
+    return galois::ErrorCode::AssertionFailed;
   }
 
   std::atomic<bool> not_consistent(false);
@@ -327,10 +327,10 @@ galois::analytics::BfsValidate(
           &graph, not_consistent));
 
   if (not_consistent) {
-    return false;
+    return galois::ErrorCode::AssertionFailed;
   }
 
-  return true;
+  return galois::ResultSuccess();
 }
 
 galois::Result<BfsStatistics>

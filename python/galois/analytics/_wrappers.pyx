@@ -1,4 +1,4 @@
-from galois.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_bool, raise_error_code
+from galois.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
 from galois.cpp.libstd.iostream cimport ostream, ostringstream
 from libc.stddef cimport ptrdiff_t
 from libcpp.string cimport string
@@ -55,7 +55,7 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
                          string output_property_name,
                          _BfsPlan algo)
 
-    std_result[bool] BfsValidate(PropertyFileGraph* pfg,
+    std_result[void] BfsAssertValid(PropertyFileGraph* pfg,
                                  string property_name);
 
     cppclass _BfsStatistics "galois::analytics::BfsStatistics":
@@ -131,12 +131,11 @@ def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan p
     with nogil:
         handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying))
 
-def bfs_validate(PropertyGraph pg, str property_name):
+def bfs_assert_valid(PropertyGraph pg, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        r = handle_result_bool(BfsValidate(pg.underlying.get(), output_property_name_cstr))
-    return r
+        handle_result_assert(BfsAssertValid(pg.underlying.get(), output_property_name_cstr))
 
 cdef _BfsStatistics handle_result_BfsStatistics(std_result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
@@ -245,7 +244,7 @@ cdef extern from "galois/Analytics.h" namespace "galois::analytics" nogil:
         string edge_weight_property_name, string output_property_name,
         _SsspPlan plan)
 
-    std_result[bool] SsspValidate(
+    std_result[void] SsspAssertValid(
         PropertyFileGraph* pfg, size_t start_node,
         string edge_weight_property_name,
         string output_property_name);
@@ -384,14 +383,13 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
         handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_cstr,
                                 output_property_name_cstr, plan.underlying))
 
-def sssp_validate(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
     edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
     edge_weight_property_name_cstr = <string>edge_weight_property_name_bytes
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        r = handle_result_bool(SsspValidate(pg.underlying.get(), start_node, edge_weight_property_name_cstr, output_property_name_cstr))
-    return r
+        handle_result_assert(SsspAssertValid(pg.underlying.get(), start_node, edge_weight_property_name_cstr, output_property_name_cstr))
 
 cdef _SsspStatistics handle_result_SsspStatistics(std_result[_SsspStatistics] res) nogil except *:
     if not res.has_value():
@@ -429,3 +427,6 @@ cdef class SsspStatistics:
         cdef ostringstream ss
         self.underlying.Print(ss)
         return str(ss.str(), "ascii")
+
+
+# TODO(amp): Wrap ConnectedComponents

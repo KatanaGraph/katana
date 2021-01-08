@@ -44,6 +44,7 @@ set(sources
         src/Threads.cpp
         src/ThreadTimer.cpp
         src/Timer.cpp
+        src/analytics/Utils.cpp
         src/analytics/bfs/bfs.cpp
         src/analytics/sssp/sssp.cpp
         src/analytics/connected_components/connected_components.cpp

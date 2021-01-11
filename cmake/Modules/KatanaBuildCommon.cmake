@@ -85,7 +85,7 @@ endif ()
 
 ###### Install dependencies ######
 
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 
 if (KATANA_AUTO_CONAN)
   include(${CMAKE_CURRENT_LIST_DIR}/conan.cmake)

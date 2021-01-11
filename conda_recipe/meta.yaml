@@ -40,14 +40,15 @@ requirements:
     - llvm>=8
     - {{ cdt('numactl-devel') }}
     - libxml2>=2.9.10
-    - libcypher-parser>=0.6.2,<0.7a0
     - nlohmann_json>=3.7.3
     - openblas>=0.3.12
     - howardhinnant_date>=3.0.0
     - libcurl>=7.66
     - backward-cpp>=1.4
     - elfutils
-    - librdkafka
+# TODO(amp): These deps are needed for enterprise, add to enterprise conda build when it exists.
+#    - libcypher-parser>=0.6.2,<0.7a0
+#    - librdkafka
   run:
     - boost-cpp
     - arrow-cpp
@@ -56,7 +57,6 @@ requirements:
     - zlib
     - ncurses
     - libxml2
-    - libcypher-parser
     - nlohmann_json
     - openblas
     - howardhinnant_date

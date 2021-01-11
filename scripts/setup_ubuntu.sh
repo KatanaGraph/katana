@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu
+set -xeuo pipefail
 
 RELEASE=$(lsb_release --codename | awk '{print $2}')
 
@@ -61,32 +61,22 @@ run_as_original_user pip3 install --upgrade pip setuptools
 run_as_original_user pip3 install conan==1.31
 
 # Developer tools
-apt install -yq clang-format-10 clang-tidy-10 doxygen graphviz
-
+DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake"
 # github actions require a more recent git
-apt install -yq git
-
-# Minimal build environment
-apt install -yq --allow-downgrades ccache cmake cmake-data python3-pip
-
-# Toolchain variants
-if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
-  apt install -yq gcc-9 g++-9 clang-10 clang++-10
-fi
-
+GIT=git
 # Library dependencies
 #
 # Install llvm via apt instead of as a conan package because existing
 # conan packages do yet enable RTTI, which is required for boost
 # serialization.
-apt install -yq \
-  libcypher-parser-dev \
-  libopenmpi-dev \
-  libxml2-dev \
-  llvm-10-dev \
-  uuid-dev
+LIBRARIES="libxml2-dev llvm-10-dev"
 
-GO_URL=https://golang.org/dl/go1.15.5.linux-amd64.tar.gz
-TMP_GO=/tmp/go.tar.gz
-(which go || test -f /usr/local/go/bin/go) ||\
-  (curl -fL -o ${TMP_GO} ${GO_URL} && tar -C /usr/local -xzf ${TMP_GO} && rm ${TMP_GO})
+apt install -yq --allow-downgrades \
+  $DEVELOPER_TOOLS \
+  $GIT \
+  $LIBRARIES
+
+# Toolchain variants
+if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
+  apt install -yq gcc-9 g++-9 clang-10 clang++-10
+fi

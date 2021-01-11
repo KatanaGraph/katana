@@ -1,13 +1,13 @@
 arrow_cpp:
-- 1
-- 2
+  # TODO(amp): Reenable pyarrow 1 builds once we work out conda package version tagging.
+  #  - 1
+  - 2
 
 pin_run_as_build:
   boost-cpp: x.x
   arrow-cpp: x
   fmt: x
   aws-sdk-cpp: x.x
-  libcypher-parser: x.x
   nlohmann_json: x.x
   libcurl: x.x
   howardhinnant_date: x

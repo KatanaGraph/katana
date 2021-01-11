@@ -6,96 +6,110 @@ from galois.loops import do_all, do_all_operator
 from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
 
+#QUESTIONS: ask about correct way to pass parameters :) example: line 76
+#TODO: fix indentation
 
-#method is correct
-def avg_n_sum(arrNid)
-    sum:0
+#method to get the sum of the average neighbor degree for nodes with degree k 
+def avg_n_sum(arrNid):
+    sum=0
 
     for nid in arrNid:
         sum += average_neighbor_degree(nid)
 
-    returns sum
+    return sum
 
+#method that creates a dictionary of all the out degrees seen in graph g
+#where key = degree and value = array of node_id's with that degree 
+def fill_graph_out_deg(graph):
+    #get out degree ARRAY
+    out_array = graph.get_node_property(outPop)
+    out_dict = dict()
 
-def fill_graph_out_deg(graph: PropertyGraph) 
-    #get out degree table 
-
-    outDict = dict()
-
-    for node_id, deg in enumerate(outdeg table of graph):
-        if deg in outDict:
+    for node_id, deg in enumerate(out_array):
+        if deg in out_dict.keys():
             #update value array
-            #get value 
-            newvalue = outDict.get(get) 
-            #add nid to value -----> am i allowed to use append?
+            #get value array
+            newvalue = out_dict.get(deg) 
+            #add nid to value -----> am i allowed to use append, not with large arrays, but can use with 
+            #python arrays
             newvalue.append(node_id)
             #add new value
             outDict[deg] = newvalue
         else: 
             #add key and value 
-            #create an array with no finite size -----> can I do that?
-            nid_array = LargeArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
+            #create an array with no finite size
+            nid_array = []
             #add nid to value array
             nid_array.append(node_id)
-            outDict[deg] = value array
+            out_dict[deg] = value array
 
-    returns outDict
+    return out_dict
 
-def fill_graph_in_deg(graph: PropertyGraph)
-#get in degree table
-inDict = dict()
+#method that creates a dictionary of all the in degrees seen in graph g
+#where key = degree and value = array of node_id's with that degree 
+def fill_graph_in_deg(graph):
+#get in degree array
+in_array = graph.get_node_property(inPop)
+in_dict = dict()
 
-for node_id, deg in enumerate(indeg table of graph): 
-        if deg in inDict:
+for node_id, deg in enumerate(in_array): 
+        if deg in in_dict:
             #update value array
             #get value 
-            newvalue = inDict.get(deg) 
-            #add nid to value -----> am i allowed to use append?
+            newvalue = in_dict.get(deg) 
+            #add nid to value 
             newvalue.append(node_id)
             #add new value
-            inDict[deg] = newvalue
+            in_dict[deg] = newvalue
 
         else: 
             #add key and value 
-            #create an array with no finite size -----> can I do that?
-            nid_array = LargeArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
+            #create an array with no finite size 
+            nid_array = []
             #add nid to value array
             nid_array.append(node_id)
-            inDict[deg] = value array 
+            in_dict[deg] = value array 
 
-returns inDict
+return in_dict
 
-@do_all_operator
-def get_avg_degconn(Graph: PropertyGraph, source, target, nodes, weight)
+#method that calculates the average degree connectivity of a graph g
+#returns dictionary where key = degree and value = degree's average degree connectivity
+@do_all_operator()
+def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
 
     calculate_degree(graph: PropertyGraph, weight_propery=None)
-    inDict: fill_graph_in_deg(graph: PropertyGraph)
-    outDict: fill_graph_out_deg(graph: PropertyGraph)
 
-    #create map that will hold the results key = deg and value = avg_degconn
-    Dict = dict()
+    #ask about correct way to pass in parameters :)
+    in_dict= fill_graph_in_deg(graph)
+    out_dict= fill_graph_out_deg(graph)
 
-    if(source = "in" AND target == "in"):
+    #create map that will hold the results 
+    #where key = deg and value = avg_degconn
+    result_dict = dict()
 
-        for degree in inDict: 
+    if source = "in" and target == "in":
 
-            #get value (array of NID's)
-            value: inDict.get(degree)
-            avg_degree_connectivity = avg_n_sum(value) / len(value)
-
-            Dict[degree] = avg_degree_connectivity
-
-    else(source = "out" AND target == "out"):
-
-        for degree in inDict: 
+        for degree in in_dict.keys(): 
 
             #get value (array of NID's)
-            value: outDict.get(degree)
+            value= inDict.get(degree)
+            avg_degree_connectivity = avg_n_sum(value) / len(value)
+            
+            #add key value pair
+            result_dict[degree] = avg_degree_connectivity
+
+    elif source = "out" and target == "out":
+
+        for degree in out_dict.keys(): 
+
+            #get value (array of NID's)
+            value= outDict.get(degree)
             avg_degree_connectivity = avg_n_sum(value) / len(value)
 
-            Dict[degree] = avg_degree_connectivity
+            #add key value pair
+            result_dict[degree] = avg_degree_connectivity
 
-    print list(Dict)
+    print() list(Dict)
 
 
 

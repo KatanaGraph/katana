@@ -35,7 +35,7 @@ def fill_graph_out_deg(graph):
             newvalue.append(node_id)
             #add new value
             outDict[deg] = newvalue
-        else: 
+        elif: 
             #add key and value 
             #create an array with no finite size
             nid_array = []
@@ -48,11 +48,11 @@ def fill_graph_out_deg(graph):
 #method that creates a dictionary of all the in degrees seen in graph g
 #where key = degree and value = array of node_id's with that degree 
 def fill_graph_in_deg(graph):
-#get in degree array
-in_array = graph.get_node_property(inPop)
-in_dict = dict()
+    #get in degree array
+    in_array = graph.get_node_property(inPop)
+    in_dict = dict()
 
-for node_id, deg in enumerate(in_array): 
+    for node_id, deg in enumerate(in_array): 
         if deg in in_dict:
             #update value array
             #get value 
@@ -62,7 +62,7 @@ for node_id, deg in enumerate(in_array):
             #add new value
             in_dict[deg] = newvalue
 
-        else: 
+        elif: 
             #add key and value 
             #create an array with no finite size 
             nid_array = []
@@ -70,7 +70,7 @@ for node_id, deg in enumerate(in_array):
             nid_array.append(node_id)
             in_dict[deg] = nid_array 
 
-return in_dict
+    return in_dict
 
 #method that calculates the average degree connectivity of a graph g
 #returns dictionary where key = degree and value = degree's average degree connectivity
@@ -80,30 +80,30 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
     calculate_degree(graph: PropertyGraph, weight_propery=None)
 
     #ask about correct way to pass in parameters :)
-    in_dict= fill_graph_in_deg(graph)
-    out_dict= fill_graph_out_deg(graph)
+    in_dict = fill_graph_in_deg(graph)
+    out_dict = fill_graph_out_deg(graph)
 
     #create map that will hold the results 
     #where key = deg and value = avg_degconn
     result_dict = dict()
 
-    if source = "in" and target == "in":
+    if source = "in" and target = "in":
 
         for degree in in_dict.keys(): 
 
             #get value (array of NID's)
-            value= inDict.get(degree)
+            value = inDict.get(degree)
             avg_degree_connectivity = avg_n_sum(value) / len(value)
             
             #add key value pair
             result_dict[degree] = avg_degree_connectivity
 
-    elif source = "out" and target == "out":
+    elif source = "out" and target = "out":
 
         for degree in out_dict.keys(): 
 
             #get value (array of NID's)
-            value= outDict.get(degree)
+            value = outDict.get(degree)
             avg_degree_connectivity = avg_n_sum(value) / len(value)
 
             #add key value pair

@@ -5,27 +5,33 @@ channels:
  - katanagraph
  - conda-forge
 dependencies:
- - cxx-compiler
- - cmake
- - arrow-cpp<3.0.0
- - parquet-cpp
- - aws-sdk-cpp
- - libxml2
+ - arrow-cpp<3.0.0a0
+ - aws-sdk-cpp>=1.7.164,<2.0a0
  - awscli
- - boost-cpp
- - eigen
- - fmt
- - llvmdev
- - howardhinnant_date
- - nlohmann_json
- - libcypher-parser
- - cython
- - pyarrow
- - numpy
- - numba
- - scikit-build
- - jinja2
+ - backward-cpp>=1.4
+ - boost-cpp>=1.71
+ - cmake
  - conda-build
+ - conda-verify
+ - cxx-compiler
+ - cython
+ - eigen
+ - elfutils
+ - fmt>=6.2.1
+ - howardhinnant_date>=3.0.0
+ - jinja2
+ - libcurl>=7.66
+ - libcypher-parser
+ - libxml2>=2.9.10
+ - llvmdev>=8
+ - ncurses>=6.1
+ - nlohmann_json>=3.7.3
+ - numba
+ - numpy
+ - openblas>=0.3.12
+ - parquet-cpp
+ - pyarrow
  - pytest
- - libcurl
- - backward-cpp
+ - scikit-build
+ - sphinx
+ - zlib>=1.2.11

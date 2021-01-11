@@ -1,11 +1,10 @@
 #!/bin/bash
 #
-# This script sets up a development environment on Ubuntu 18.04. Feel free to
-# use these as a starting point for your distribution of choice.
+# This script sets up a development environment on selected Ubuntu versions.
+# Feel free to use these as a starting point for your distribution of choice.
 
-set -eu
-
-REPO_ROOT=$(cd "$(dirname $0)"/..; pwd)
+set -xeuo pipefail
+REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
 EXPECTED_RELEASE="bionic|focal"
 RELEASE=$(lsb_release --codename | awk '{print $2}')

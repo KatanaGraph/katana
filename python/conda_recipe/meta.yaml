@@ -35,8 +35,8 @@ requirements:
     - {{ compiler('cxx') }}
     - katana={{ version }}
     - cython>=0.29.12
-    - numba>=0.50,<1.0
-    - pyarrow
+    - numba>=0.50,<1.0a0
+    - pyarrow {{ arrow_cpp }}
     - sphinx
   host:
     - python
@@ -45,8 +45,8 @@ requirements:
     - {{ compiler('cxx') }}
     - katana={{ version }}
     - cython>=0.29.12
-    - numba>=0.50,<1.0
-    - pyarrow
+    - numba>=0.50,<1.0a0
+    - pyarrow {{ arrow_cpp }}
   run:
     - python
     - katana={{ version }}

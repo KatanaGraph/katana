@@ -12,17 +12,12 @@ class KatanaConan(ConanFile):
         "backward-cpp/1.5",
         "benchmark/1.5.0",
         "boost/1.71.0",
-        "brotli/1.0.9",
         "date/2.4.1",
         "eigen/3.3.7",
         "fmt/6.2.1",
         "libcurl/7.74.0",
-        "lz4/1.9.3",
         "nlohmann_json/3.7.3",
         "openssl/1.1.1h",
-        "snappy/1.1.8",
-        "utf8proc/2.6.0",
-        "zstd/1.4.5",
     )
 
     default_options = {

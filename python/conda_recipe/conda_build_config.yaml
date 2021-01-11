@@ -1,3 +1,8 @@
+arrow_cpp:
+# TODO(amp): Reenable pyarrow 1 builds once we work out conda package version tagging.
+#  - 1
+  - 2
+
 pin_run_as_build:
   numba: x.x
   pyarrow: x.x

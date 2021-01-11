@@ -6,6 +6,7 @@ import numpy
 import setuptools
 import Cython.Build
 import configparser
+from packaging.version import Version
 
 try:
     from sphinx.setup_command import BuildDoc
@@ -14,7 +15,7 @@ except ImportError:
 
 import generate_from_jinja
 
-__all__ = ["cythonize", "setup", "collect_cython_files"]
+__all__ = ["setup"]
 
 
 def split_cmake_list(s):
@@ -209,11 +210,10 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
 
 
 def get_katana_version():
-    version = os.environ.get("KATANA_VERSION")
-    if not version:
-        with open("config/version.txt") as f:
-            version = f.read().strip()
-    return version
+    sys.path.append(str((Path(__file__).parent.parent / "scripts").absolute()))
+    import katana_version.version
+
+    return str(katana_version.version.get_version())
 
 
 def get_katana_copyright_year():

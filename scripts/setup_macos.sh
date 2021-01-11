@@ -28,3 +28,5 @@ brew_install_if_missing libcypher-parser
 # https://github.com/KatanaGraph/homebrew-dependencies
 #brew tap KatanaGraph/dependencies
 brew uninstall apache-arrow || true
+
+pip3 install PyGithub packaging

@@ -26,7 +26,7 @@ std::string katana::getVersion() { return STR(@KATANA_VERSION@); }
 
 std::string
 katana::getRevision() {
-  return STR(@KATANA_GIT_SHA@) "-" STR(@CMAKE_BUILD_TYPE@);
+  return STR(@KATANA_VERSION_LOCAL@) "-" STR(@CMAKE_BUILD_TYPE@);
 }
 
 int katana::getVersionMajor() { return @KATANA_VERSION_MAJOR@; }

@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
+
+PYTHONPATH="$REPO_ROOT/external/katana/scripts:$REPO_ROOT/scripts:${PYTHONPATH:+:${PYTHONPATH}}" python3 -m katana_version "$@"

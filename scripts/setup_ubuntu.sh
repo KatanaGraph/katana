@@ -82,7 +82,7 @@ else
 fi
 
 run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPTOOLS_VERSION"
-run_as_original_user pip3 install conan==1.33
+run_as_original_user pip3 install conan==1.33 PyGithub packaging
 
 # Developer tools
 DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck"

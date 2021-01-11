@@ -5,11 +5,8 @@ include(FetchContent)
 include(GitHeadSHA)
 include(KatanaPythonSetupSubdirectory)
 
-file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../../config/version.txt KATANA_VERSION)
-string(REGEX REPLACE "[ \t\n]" "" KATANA_VERSION ${KATANA_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" KATANA_VERSION_MAJOR ${KATANA_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" KATANA_VERSION_MINOR ${KATANA_VERSION})
-string(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" KATANA_VERSION_PATCH ${KATANA_VERSION})
+include(KatanaVersion)
+
 set(KATANA_COPYRIGHT_YEAR "2018") # Also in COPYRIGHT
 set(KATANA_GIT_SHA "${GIT_HEAD_SHA}")
 

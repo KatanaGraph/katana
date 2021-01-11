@@ -133,6 +133,8 @@ function(add_python_setuptools_target TARGET_NAME)
 
   _symlink_tree(${TARGET_NAME}_python_tree ${PYTHON_SETUP_DIR}/python ${PYTHON_BINARY_DIR})
   _symlink_tree(${TARGET_NAME}_setup_tree ${PYTHON_SETUP_DIR}/setup.py ${PYTHON_BINARY_DIR})
+  # Needed for scripts/katana_version
+  _symlink_tree(${TARGET_NAME}_scripts_tree ${PYTHON_SETUP_DIR}/scripts ${PYTHON_BINARY_DIR})
 
   _generate_build_configuration_ini(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
 
@@ -182,7 +184,7 @@ function(add_python_setuptools_target TARGET_NAME)
       COMMENT "Building ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
   )
 
-  add_dependencies(${TARGET_NAME} ${TARGET_NAME}_python_tree ${TARGET_NAME}_setup_tree)
+  add_dependencies(${TARGET_NAME} ${TARGET_NAME}_python_tree ${TARGET_NAME}_setup_tree ${TARGET_NAME}_scripts_tree)
   if(X_DEPENDS)
     add_dependencies(${TARGET_NAME} ${X_DEPENDS})
   endif()

@@ -1,17 +1,15 @@
-{% set version %}{% include "version.txt" %}{% endset %}
-
 package:
   name: katana
-  version: {{ version }}
+  version: "{{ KATANA_VERSION }}"
 
 source:
   path: ../
 
 build:
-  number: 9
+  number: 10
   script_env:
     - KATANA_DOCS_OUTPUT
-#    - CMAKE_BUILD_PARALLEL_LEVEL
+    - KATANA_VERSION
 
 requirements:
   build:
@@ -28,6 +26,8 @@ requirements:
     #
     # TODO(ddn): revisit (each instance of sphinx<3.5.0, there are 4)
     - sphinx<3.5.0
+    - pygithub
+    - packaging
   host:
     - jinja2
     - cython>=0.29.12

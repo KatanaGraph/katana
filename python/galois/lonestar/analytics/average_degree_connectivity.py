@@ -30,7 +30,7 @@ def fill_graph_out_deg(graph):
             #update value array
             #get value array
             newvalue = out_dict.get(deg) 
-            #add nid to value -----> am i allowed to use append, not with large arrays, but can use with 
+            #add nid to value -----> am i allowed to use append? not with large arrays, but can use with 
             #python arrays
             newvalue.append(node_id)
             #add new value
@@ -41,7 +41,7 @@ def fill_graph_out_deg(graph):
             nid_array = []
             #add nid to value array
             nid_array.append(node_id)
-            out_dict[deg] = value array
+            out_dict[deg] = nid_array
 
     return out_dict
 
@@ -68,7 +68,7 @@ for node_id, deg in enumerate(in_array):
             nid_array = []
             #add nid to value array
             nid_array.append(node_id)
-            in_dict[deg] = value array 
+            in_dict[deg] = nid_array 
 
 return in_dict
 

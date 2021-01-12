@@ -104,7 +104,7 @@ using OBIM_Barrier = katana::OrderedByIntegerMetric<
     UpdateRequestIndexer, PSchunk>::with_barrier<true>::type;
 
 bool
-CheckIfReachable(Graph* graph, const GNode& source) {
+CheckReachability(Graph* graph, const GNode& source) {
   katana::InsertBag<GNode> current_bag;
   katana::InsertBag<GNode> next_bag;
 
@@ -278,7 +278,7 @@ main(int argc, char** argv) {
   katana::InsertBag<std::pair<uint32_t, Path*>> paths;
   katana::InsertBag<Path*> path_pointers;
 
-  bool reachable = CheckIfReachable(&graph, source);
+  bool reachable = CheckReachability(&graph, source);
 
   if (reachable) {
     switch (algo) {

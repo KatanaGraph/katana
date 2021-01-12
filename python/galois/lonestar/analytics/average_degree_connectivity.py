@@ -11,7 +11,7 @@ from galois.shmem import setActiveThreads
 
 #method to get the sum of the average neighbor degree for nodes with degree k 
 def avg_n_sum(arrNid):
-    sum=0
+    sum = 0
 
     for nid in arrNid:
         sum += average_neighbor_degree(nid)

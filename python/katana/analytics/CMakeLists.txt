@@ -12,7 +12,13 @@ python_extension_module(_wrappers)
 add_dependencies(_wrappers plan)
 target_link_libraries(_wrappers Katana::galois)
 
+add_cython_target(_pagerank _pagerank.pyx CXX OUTPUT_VAR PAGERANK_SOURCES)
+add_library(_pagerank MODULE ${PAGERANK_SOURCES})
+python_extension_module(_pagerank)
+add_dependencies(_pagerank plan)
+target_link_libraries(_pagerank Katana::galois)
+
 install(
-  TARGETS _wrappers plan
+  TARGETS _wrappers _pagerank plan
   LIBRARY DESTINATION python/katana/analytics
 )

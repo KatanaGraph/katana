@@ -1,15 +1,10 @@
-add_executable(pagerank-pull-cpu PageRank-pull.cpp)
-add_dependencies(apps pagerank-pull-cpu)
-target_link_libraries(pagerank-pull-cpu PRIVATE Katana::galois lonestar)
-install(TARGETS pagerank-pull-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
+add_executable(pagerank-cpu pagerank-cli.cpp)
+add_dependencies(apps pagerank-cpu)
+target_link_libraries(pagerank-cpu PRIVATE Katana::galois lonestar)
+install(TARGETS pagerank-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
-#add_test_scale(small pagerank-pull-cpu -transposedGraph -tolerance=0.01 "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
-#add_test_scale(small-topo pagerank-pull-cpu -transposedGraph -tolerance=0.01 -algo=Topo "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
+add_test_scale(small pagerank-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -maxIterations=100 -algo=PushAsync)
 
-add_executable(pagerank-push-cpu PageRank-push.cpp)
-add_dependencies(apps pagerank-push-cpu)
-target_link_libraries(pagerank-push-cpu PRIVATE Katana::galois lonestar)
-install(TARGETS pagerank-push-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
-
-add_test_scale(small pagerank-push-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -maxIterations=100)
-#add_test_scale(small-sync pagerank-push-cpu -tolerance=0.01 -algo=Sync "${BASEINPUT}/propertygraphs/rmat15")
+#add_test_scale(small pagerank-cpu -transposedGraph -tolerance=0.01 "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
+#add_test_scale(small-topo pagerank-cpu -transposedGraph -tolerance=0.01 -algo=Topo "${BASEINPUT}/scalefree/transpose/rmat10.tgr")
+#add_test_scale(small-sync pagerank-cpu -tolerance=0.01 -algo=Sync "${BASEINPUT}/propertygraphs/rmat15")

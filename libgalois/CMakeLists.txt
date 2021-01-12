@@ -47,6 +47,9 @@ set(sources
         src/analytics/Utils.cpp
         src/analytics/bfs/bfs.cpp
         src/analytics/sssp/sssp.cpp
+        src/analytics/pagerank/pagerank-pull.cpp
+        src/analytics/pagerank/pagerank-push.cpp
+        src/analytics/pagerank/pagerank.cpp
         src/analytics/connected_components/connected_components.cpp
         src/analytics/jaccard/jaccard.cpp
 )

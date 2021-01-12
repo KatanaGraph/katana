@@ -22,7 +22,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/K_SSSP.h"
-#include "galois/AtomicHelpers.h"
+#include "katana/AtomicHelpers.h"
 
 namespace cll = llvm::cl;
 
@@ -67,20 +67,20 @@ struct Path {
 
 struct NodeCount {
   using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
+  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
 };
 
 struct NodeMax {
   using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = galois::PODPropertyView<std::atomic<uint32_t>>;
+  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
 };
 
-struct EdgeWeight : public galois::PODProperty<uint32_t> {};
+struct EdgeWeight : public katana::PODProperty<uint32_t> {};
 
 using NodeData = std::tuple<NodeCount, NodeMax>;
 using EdgeData = std::tuple<EdgeWeight>;
 
-typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 constexpr static const bool kTrackWork = false;
@@ -98,16 +98,15 @@ using ReqPushWrap = SSSP::ReqPushWrap;
 using OutEdgeRangeFn = SSSP::OutEdgeRangeFn;
 using TileRangeFn = SSSP::TileRangeFn;
 
-namespace gwl = galois::worklists;
-using PSchunk = gwl::PerSocketChunkFIFO<kChunkSize>;
-using OBIM = gwl::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
-using OBIM_Barrier = gwl::OrderedByIntegerMetric<
+using PSchunk = katana::PerSocketChunkFIFO<kChunkSize>;
+using OBIM = katana::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
+using OBIM_Barrier = katana::OrderedByIntegerMetric<
     UpdateRequestIndexer, PSchunk>::with_barrier<true>::type;
 
 bool
 CheckIfReachable(Graph* graph, const GNode& source) {
-  galois::InsertBag<GNode> current_bag;
-  galois::InsertBag<GNode> next_bag;
+  katana::InsertBag<GNode> current_bag;
+  katana::InsertBag<GNode> next_bag;
 
   current_bag.push(source);
   graph->GetData<NodeCount>(source) = 1;
@@ -116,8 +115,8 @@ CheckIfReachable(Graph* graph, const GNode& source) {
     if (current_bag.begin() == current_bag.end())
       break;
 
-    galois::do_all(
-        galois::iterate(current_bag),
+    katana::do_all(
+        katana::iterate(current_bag),
         [&](GNode n) {
           for (auto edge : graph->edges(n)) {
             auto dest = *(graph->GetEdgeDest(edge));
@@ -127,7 +126,7 @@ CheckIfReachable(Graph* graph, const GNode& source) {
             }
           }
         },
-        galois::steal());
+        katana::steal());
 
     current_bag.clear();
     std::swap(current_bag, next_bag);
@@ -137,7 +136,7 @@ CheckIfReachable(Graph* graph, const GNode& source) {
     return false;
   }
 
-  galois::do_all(galois::iterate(*graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
     graph->GetData<NodeCount>(n) = 0;
   });
 
@@ -150,16 +149,16 @@ void
 DeltaStepAlgo(
     Graph* graph, const GNode& source, const PushWrap& pushWrap,
     const EdgeRange& edgeRange,
-    galois::InsertBag<std::pair<uint32_t, Path*>>* bag,
-    galois::InsertBag<Path*>* path_pointers) {
+    katana::InsertBag<std::pair<uint32_t, Path*>>* bag,
+    katana::InsertBag<Path*>* path_pointers) {
   //! [reducible for self-defined stats]
-  galois::GAccumulator<size_t> bad_work;
+  katana::GAccumulator<size_t> bad_work;
   //! [reducible for self-defined stats]
-  galois::GAccumulator<size_t> wl_empty_work;
+  katana::GAccumulator<size_t> wl_empty_work;
 
   graph->GetData<NodeCount>(source) = 1;
 
-  galois::InsertBag<Item> init_bag;
+  katana::InsertBag<Item> init_bag;
 
   Path* path = new Path();
   path->last = NULL;
@@ -167,8 +166,8 @@ DeltaStepAlgo(
 
   pushWrap(init_bag, source, 0, path, "parallel");
 
-  galois::for_each(
-      galois::iterate(init_bag),
+  katana::for_each(
+      katana::iterate(init_bag),
       [&](const Item& item, auto& ctx) {
         for (auto ii : edgeRange(item)) {
           GNode dst = *(graph->GetEdgeDest(ii));
@@ -188,8 +187,8 @@ DeltaStepAlgo(
           path_pointers->push(path);
 
           if (ddata_count < numPaths) {
-            galois::atomicAdd<uint32_t>(ddata_count, (uint32_t)1);
-            galois::atomicMax<uint32_t>(ddata_max, new_dist);
+            katana::atomicAdd<uint32_t>(ddata_count, (uint32_t)1);
+            katana::atomicMax<uint32_t>(ddata_max, new_dist);
           }
 
           if (dst == reportNode)
@@ -203,46 +202,46 @@ DeltaStepAlgo(
           }
         }
       },
-      galois::wl<OBIM>(UpdateRequestIndexer{stepShift}),
-      galois::disable_conflict_detection(), galois::loopname("SSSP"));
+      katana::wl<OBIM>(UpdateRequestIndexer{stepShift}),
+      katana::disable_conflict_detection(), katana::loopname("SSSP"));
 
   if (kTrackWork) {
     //! [report self-defined stats]
-    galois::ReportStatSingle("SSSP", "BadWork", bad_work.reduce());
+    katana::ReportStatSingle("SSSP", "BadWork", bad_work.reduce());
     //! [report self-defined stats]
-    galois::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
+    katana::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
   }
 }
 
 int
 main(int argc, char** argv) {
-  std::unique_ptr<galois::SharedMemSys> G =
+  std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
-  galois::StatTimer totalTime("TimerTotal");
+  katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  galois::gInfo("Reading from file: ", inputFile, "\n");
-  std::unique_ptr<galois::graphs::PropertyFileGraph> pfg =
+  katana::gInfo("Reading from file: ", inputFile, "\n");
+  std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
   auto result = ConstructNodeProperties<NodeData>(pfg.get());
   if (!result) {
-    GALOIS_LOG_FATAL("failed to construct node properties: {}", result.error());
+    KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
   auto pg_result =
-      galois::graphs::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+      katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
   if (!pg_result) {
-    GALOIS_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
   Graph graph = pg_result.value();
 
-  galois::gPrint(
+  katana::gPrint(
       "Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges\n");
 
   if (startNode >= graph.size() || reportNode >= graph.size()) {
-    GALOIS_LOG_ERROR(
+    KATANA_LOG_ERROR(
         "failed to set report: ", reportNode,
         " or failed to set source: ", startNode, "\n");
     assert(0);
@@ -257,28 +256,28 @@ main(int argc, char** argv) {
   GNode report = *it;
 
   size_t approxNodeData = graph.size() * 64;
-  galois::Prealloc(1, approxNodeData);
-  galois::reportPageAlloc("MeminfoPre");
+  katana::Prealloc(1, approxNodeData);
+  katana::reportPageAlloc("MeminfoPre");
 
   if (algo == deltaStep || algo == deltaTile) {
-    galois::gInfo("Using delta-step of ", (1 << stepShift), "\n");
-    GALOIS_LOG_WARN(
+    katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
+    KATANA_LOG_WARN(
         "Performance varies considerably due to delta parameter.\n");
-    GALOIS_LOG_WARN("Do not expect the default to be good for your graph.\n");
+    KATANA_LOG_WARN("Do not expect the default to be good for your graph.\n");
   }
 
-  galois::do_all(galois::iterate(graph), [&graph](GNode n) {
+  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
     graph.GetData<NodeMax>(n) = 0;
     graph.GetData<NodeCount>(n) = 0;
   });
 
-  galois::gInfo("Running ", ALGO_NAMES[algo], " algorithm\n");
+  katana::gInfo("Running ", ALGO_NAMES[algo], " algorithm\n");
 
-  galois::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Timer_0");
   execTime.start();
 
-  galois::InsertBag<std::pair<uint32_t, Path*>> paths;
-  galois::InsertBag<Path*> path_pointers;
+  katana::InsertBag<std::pair<uint32_t, Path*>> paths;
+  katana::InsertBag<Path*> path_pointers;
 
   bool reachable = CheckIfReachable(&graph, source);
 
@@ -295,7 +294,7 @@ main(int argc, char** argv) {
           &path_pointers);
       break;
     case deltaStepBarrier:
-      galois::gInfo("Using OBIM with barrier\n");
+      katana::gInfo("Using OBIM with barrier\n");
       DeltaStepAlgo<UpdateRequest, OBIM_Barrier>(
           &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths,
           &path_pointers);
@@ -315,16 +314,16 @@ main(int argc, char** argv) {
       paths_map.insert(std::make_pair(pair.first, pair.second));
     }
 
-    galois::reportPageAlloc("MeminfoPost");
+    katana::reportPageAlloc("MeminfoPost");
 
-    galois::gPrint("Node ", report, " has these k paths:\n");
+    katana::gPrint("Node ", report, " has these k paths:\n");
 
     uint32_t num = (paths_map.size() > numPaths) ? numPaths : paths_map.size();
 
     auto it_report = paths_map.begin();
 
     for (uint32_t iter = 0; iter < num; iter++) {
-      galois::gPrint(" ", report);
+      katana::gPrint(" ", report);
       GNode parent = report;
 
       const Path* path = it_report->second;
@@ -332,14 +331,14 @@ main(int argc, char** argv) {
 
       while (path->last != NULL) {
         parent = path->parent;
-        galois::gPrint(" ", parent);
+        katana::gPrint(" ", parent);
         path = path->last;
       }
-      galois::gPrint("\n");
+      katana::gPrint("\n");
     }
 
-    galois::do_all(
-        galois::iterate(path_pointers), [&](Path* p) { delete (p); });
+    katana::do_all(
+        katana::iterate(path_pointers), [&](Path* p) { delete (p); });
   }
   totalTime.stop();
 

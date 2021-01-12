@@ -14,7 +14,8 @@ import sys
 import tempfile
 import shutil
 
-FILENAME_RE = re.compile(r"""
+FILENAME_RE = re.compile(
+    r"""
     (
         \.(
             c|cxx|cc|C|cpp|cu|  # C/C++ source
@@ -32,11 +33,14 @@ FILENAME_RE = re.compile(r"""
     |
     (
         ^README                # README with odd suffix
-    ) 
-    """, re.VERBOSE)
+    )
+    """,
+    re.VERBOSE,
+)
 
 TRAILING_WHITESPACE_RE = re.compile(r"[\t ]+$", re.MULTILINE)
 NO_TRAILING_NEWLINE_RE = re.compile(r"(?<=[^\n])\Z", re.MULTILINE)
+
 
 def run_check(filename):
     try:
@@ -53,6 +57,9 @@ def run_check(filename):
     except UnicodeDecodeError:
         # Ignore any binary files.
         return False
+    except FileNotFoundError:
+        print("{filename} does not exist.".format(filename=filename), file=sys.stderr)
+        return False
 
 
 def run_fix(filename):
@@ -63,8 +70,12 @@ def run_fix(filename):
             contents, n_trailing_newline_fixes = NO_TRAILING_NEWLINE_RE.subn("\n", contents, count=1)
 
             if n_trailing_whitespace_fixes:
-                print("{filename}: Fixed {n_trailing_whitespace_fixes} trailing white space error(s).".format(
-                    filename=filename, n_trailing_whitespace_fixes=n_trailing_whitespace_fixes), file=sys.stderr)
+                print(
+                    "{filename}: Fixed {n_trailing_whitespace_fixes} trailing white space error(s).".format(
+                        filename=filename, n_trailing_whitespace_fixes=n_trailing_whitespace_fixes
+                    ),
+                    file=sys.stderr,
+                )
             if n_trailing_newline_fixes:
                 print("{filename}: Fixed missing newline at end of file.".format(filename=filename), file=sys.stderr)
 
@@ -72,6 +83,9 @@ def run_fix(filename):
                 return False
     except UnicodeDecodeError:
         # Ignore any binary files.
+        return False
+    except FileNotFoundError:
+        print("{filename} does not exist.".format(filename=filename), file=sys.stderr)
         return False
 
     with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
@@ -108,10 +122,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="check or fix ifndef guards in files")
     parser.add_argument("files", nargs="+", help="files or directories to examine")
     parser.add_argument(
-        "-fix",
-        help="fix files instead of checking them",
-        action="store_true",
-        default=False,
+        "-fix", help="fix files instead of checking them", action="store_true", default=False,
     )
     args = parser.parse_args()
     sys.exit(main(**vars(args)))

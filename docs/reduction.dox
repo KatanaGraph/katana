@@ -49,7 +49,7 @@ These specialized reducer classes implement support for different types of reduc
 
 In the following, we show an example of using reduction operations in a common graph analytics application, PageRank. The residual pull-based algorithm for PageRank uses {@link katana::GAccumulator} to keep track of whether a node with outgoing neighbors has new PageRank contribution that needs to be propagated. The PageRank computation can terminate if the reduced value across all nodes in the graph is zero (i.e., implying no more work).
 
-@snippet lonestar/analytics/cpu/pagerank/PageRank-pull.cpp scalarreduction
+@snippet libgalois/src/analytics/pagerank/pagerank-pull.cpp scalarreduction
 
 <br>
 */

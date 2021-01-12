@@ -19,6 +19,9 @@ from katana.analytics import (
     sort_nodes_by_degree,
     jaccard_assert_valid,
     JaccardStatistics,
+    pagerank,
+    pagerank_assert_valid,
+    PagerankStatistics,
 )
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
@@ -161,6 +164,25 @@ def test_jaccard_sorted(property_graph: PropertyGraph):
     assert similarities[compare_node] == 1
     assert similarities[1917] == approx(0.28571428)
     assert similarities[2812] == approx(0.01428571)
+
+
+def test_pagerank(property_graph: PropertyGraph):
+    property_name = "NewProp"
+
+    pagerank(property_graph, property_name)
+
+    node_schema: Schema = property_graph.node_schema()
+    num_node_properties = len(node_schema)
+    new_property_id = num_node_properties - 1
+    assert node_schema.names[new_property_id] == property_name
+
+    pagerank_assert_valid(property_graph, property_name)
+
+    stats = PagerankStatistics(property_graph, property_name)
+
+    assert stats.min_rank == approx(0.1499999761581421)
+    assert stats.max_rank == approx(1328.6629638671875, abs=0.06)
+    assert stats.average_rank == approx(0.5205338001251221, abs=0.001)
 
 
 # TODO: Add more tests.

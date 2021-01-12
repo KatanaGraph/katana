@@ -49,7 +49,7 @@ Users can choose the amount of output statistics reported in the following ways.
   <li> Not passing a katana::loopname option to the katana::do_all or katana::for_each call; or
   <li> Passing katana::no_stats as an option to the katana::do_all or katana::for_each call if the loopname is required, as shown in the following code snippet.
 
-@snippet lonestar/analytics/cpu/pagerank/PageRank-pull.cpp example of no_stats
+@snippet libgalois/src/analytics/pagerank/pagerank.cpp example of no_stats
 
   </ul>
 <li> Report more statistics for a parallel loop by passing katana::more_stats as an option to the katana::do_all or katana::for_each call. 

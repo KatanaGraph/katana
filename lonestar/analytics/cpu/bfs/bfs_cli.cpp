@@ -98,14 +98,12 @@ main(int argc, char** argv) {
 
   if (auto r = Bfs(pfg.get(), startNode, "level", BfsPlan::FromAlgorithm(algo));
       !r) {
-    std::cerr << r.error().message() << "\n";
-    abort();
+    KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
   }
 
   auto pg_result = BfsImplementation::Graph::Make(pfg.get(), {"level"}, {});
   if (!pg_result) {
-    std::cerr << pg_result.error().message() << "\n";
-    abort();
+    KATANA_LOG_FATAL("Failed to create graph {}", pg_result.error());
   }
 
   BfsImplementation::Graph graph = pg_result.value();
@@ -121,8 +119,7 @@ main(int argc, char** argv) {
 
   auto stats_result = BfsStatistics::Compute(pfg.get(), "level");
   if (!stats_result) {
-    std::cerr << stats_result.error().message() << "\n";
-    abort();
+    KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
   }
   auto stats = stats_result.value();
   stats.Print();

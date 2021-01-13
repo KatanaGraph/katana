@@ -5,6 +5,7 @@ import pyarrow
 from galois.loops import do_all, do_all_operator
 from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
+from .deg_count import calculate_degree
 
 #QUESTIONS: what is the legal way to get value from certain index of an array in pyarrow?
 #           what is the legal way to pass parameters? 
@@ -19,12 +20,11 @@ def sum_neighbor_degree(graph, nid, result_dict, deg_array, weight):
         #get destination node 
         dst = graph.get_edge_dst(edge)
 
-        if weight = "None":
+        if weight == "None":
             sum_neighbor_degree += deg_array[nid]
 
-        elif: 
+        else: 
             sum_neighbor_degree += (deg_array[nid] * getEdgeData(edge))
-
 
     avg_neighbor_degree: sum_neighbor_degree() / deg_array[nid]
     result_dict[nid] = avg_neighbor_degree
@@ -48,14 +48,13 @@ def helper(graph, nid, deg_array, weight):
 
 
 
-def average_neighbor_degree(graph: PropertyGraph, source, target, nodes, weight):
+def average_neighbor_degree(graph: PropertyGraph, source, target, weight):
    
-    calculate_degree(graph: PropertyGraph, weight_property = weight)
+    calculate_degree(graph, in_degree_property, out_degree_property, weight_property = weight)
 
-    if source = "in" and target = "in":
+    if source == "in" and target == "in":
         deg_array = graph.get_node_property(inPop)
-    elif: 
+    else: 
         deg_array = graph.get_node_property(outPop)
 
-    print() list(helper(graph: PropertyGraph, deg_array, weight))
-   
+    print(list(helper(graph, deg_array, weight)))

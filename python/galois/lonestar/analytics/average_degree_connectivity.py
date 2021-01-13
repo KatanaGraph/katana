@@ -28,19 +28,19 @@ def fill_graph_out_deg(graph: PropertyGraph):
     for node_id, deg in enumerate(out_array):
         if deg in out_dict.keys():
             #update value array
-            #get value array
+            #but first get value
             newvalue = out_dict.get(deg) 
-            #add nid to value -----> am i allowed to use append? not with large arrays, but can use with 
-            #python arrays
+            #add nid to new value
             newvalue.append(node_id)
-            #add new value
+            #set new value as this degrees value
             outDict[deg] = newvalue
-        elif: 
+        else: 
             #add key and value 
             #create an array with no finite size
             nid_array = []
             #add nid to value array
             nid_array.append(node_id)
+            #set nid array as this degrees value
             out_dict[deg] = nid_array
 
     return out_dict
@@ -55,19 +55,20 @@ def fill_graph_in_deg(graph: PropertyGraph):
     for node_id, deg in enumerate(in_array): 
         if deg in in_dict.keys():
             #update value array
-            #get value 
+            #but first get value 
             newvalue = in_dict.get(deg) 
-            #add nid to value 
+            #add nid to new value 
             newvalue.append(node_id)
-            #add new value
+            #set new value as this degrees value
             in_dict[deg] = newvalue
 
-        elif: 
+        else: 
             #add key and value 
             #create an array with no finite size 
             nid_array = []
             #add nid to value array
             nid_array.append(node_id)
+            #set nid array as this degrees value
             in_dict[deg] = nid_array 
 
     return in_dict

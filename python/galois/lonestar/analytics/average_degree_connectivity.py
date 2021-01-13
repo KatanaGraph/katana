@@ -20,7 +20,7 @@ def avg_n_sum(arrNid):
 
 #method that creates a dictionary of all the out degrees seen in graph g
 #where key = degree and value = array of node_id's with that degree 
-def fill_graph_out_deg(graph):
+def fill_graph_out_deg(graph: PropertyGraph):
     #get out degree ARRAY
     out_array = graph.get_node_property(outPop)
     out_dict = dict()
@@ -47,7 +47,7 @@ def fill_graph_out_deg(graph):
 
 #method that creates a dictionary of all the in degrees seen in graph g
 #where key = degree and value = array of node_id's with that degree 
-def fill_graph_in_deg(graph):
+def fill_graph_in_deg(graph: PropertyGraph):
     #get in degree array
     in_array = graph.get_node_property(inPop)
     in_dict = dict()
@@ -87,7 +87,7 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
     #where key = deg and value = avg_degconn
     result_dict = dict()
 
-    if source = "in" and target = "in":
+    if source == "in" and target == "in":
 
         for degree in in_dict.keys(): 
 
@@ -98,7 +98,7 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
             #add key value pair
             result_dict[degree] = avg_degree_connectivity
 
-    elif source = "out" and target = "out":
+    elif source == "out" and target == "out":
 
         for degree in out_dict.keys(): 
 
@@ -109,7 +109,7 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
             #add key value pair
             result_dict[degree] = avg_degree_connectivity
 
-    print() list(Dict)
+    print(list(result_dict))
 
 
 

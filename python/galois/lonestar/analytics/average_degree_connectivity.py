@@ -22,7 +22,7 @@ def avg_n_sum(arrNid):
 #where key = degree and value = array of node_id's with that degree 
 def fill_graph_out_deg(graph: PropertyGraph):
     #get out degree ARRAY
-    out_array = graph.get_node_property(outPop)
+    out_array = graph.get_node_property("out_degree_property")
     out_dict = dict()
 
     for node_id, deg in enumerate(out_array):
@@ -49,11 +49,11 @@ def fill_graph_out_deg(graph: PropertyGraph):
 #where key = degree and value = array of node_id's with that degree 
 def fill_graph_in_deg(graph: PropertyGraph):
     #get in degree array
-    in_array = graph.get_node_property(inPop)
+    in_array = graph.get_node_property("in_degree_property")
     in_dict = dict()
 
     for node_id, deg in enumerate(in_array): 
-        if deg in in_dict:
+        if deg in in_dict.keys():
             #update value array
             #get value 
             newvalue = in_dict.get(deg) 
@@ -77,7 +77,7 @@ def fill_graph_in_deg(graph: PropertyGraph):
 @do_all_operator()
 def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
 
-    calculate_degree(graph: PropertyGraph, weight_propery=None)
+    calculate_degree(graph, in_degree_property="in_degree_property", out_degree_property="out_degree_property", weight_property= weight)
 
     #ask about correct way to pass in parameters :)
     in_dict = fill_graph_in_deg(graph)
@@ -109,7 +109,7 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
             #add key value pair
             result_dict[degree] = avg_degree_connectivity
 
-    print(list(result_dict))
+    print(result_dict)
 
 
 

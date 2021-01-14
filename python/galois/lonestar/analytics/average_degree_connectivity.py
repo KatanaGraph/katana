@@ -134,7 +134,8 @@ def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
             #add key value pair
             result_dict[degree] = avg_degree_connectivity
 
-    print(result_dict)
+    for key, value in result_dict.items():
+        print(key, ':', value)
 
 
 

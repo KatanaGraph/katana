@@ -75,7 +75,6 @@ def fill_graph_in_deg(graph: PropertyGraph):
 
 #method that calculates the average degree connectivity of a graph g
 #returns dictionary where key = degree and value = degree's average degree connectivity
-@do_all_operator()
 def get_avg_degconn(graph: PropertyGraph, source, target, nodes, weight):
 
     calculate_degree(graph, in_degree_property="in_degree_property", out_degree_property="out_degree_property", weight_property= weight)

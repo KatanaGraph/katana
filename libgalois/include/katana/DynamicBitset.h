@@ -182,13 +182,14 @@ public:
 
   /**
    * Check a bit to see if it is currently set.
-   * Using this is recommeneded only if set() and reset()
+   * Using this is recommended only if set() and reset()
    * are not being used in that parallel section/phase
    *
    * @param index Bit to check to see if set
    * @returns true if index is set
    */
   bool test(size_t index) const {
+    assert(index < num_bits);
     size_t bit_index = index / bits_uint64;
     uint64_t bit_offset = 1;
     bit_offset <<= (index % bits_uint64);
@@ -240,6 +241,9 @@ public:
 
   // assumes bit_vector is not updated (set) in parallel
   void bitwise_or(const DynamicBitset& other);
+
+  // assumes bit_vector is not updated (set) in parallel
+  void bitwise_not();
 
   // assumes bit_vector is not updated (set) in parallel
 

@@ -13,22 +13,20 @@ from .deg_count import calculate_degree
 
 ##method that sums up the nonweighted or weighted degrees of the current node's neighbors
 @do_all_operator()
-def sum_neighbor_degree(graph: PropertyGraph, nid, result_array, deg_array, weight):
+def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, weight_array, nid):
     # fill in map that will hold the results key = node id and value = avg_neighbor_deg
     sum_neighbor_degree = 0
     #for edge connected to curr node: 
     for edge in graph.edges(nid):
         #get destination node 
-
-        ##graph.get_edge_dst gives you the distance, not the node on the other end of the edge!!!
-        ## HUGE ERROR
         dst = graph.get_edge_dst(edge)
-
+        deg_of_dst_node = deg_array[dst]
         if weight == "None":
-            sum_neighbor_degree += deg_array[nid]
+            sum_neighbor_degree += deg_of_dst_node
 
         else: 
-            sum_neighbor_degree += (deg_array[nid] * graph.getEdgeData(edge))
+            weight_of_edge = weight_array[edge]
+            sum_neighbor_degree += (deg_of_dst_node * weight_of_edge)
 
         #should I use steal = true here?
 
@@ -47,9 +45,8 @@ def helper(graph: PropertyGraph, deg_array, weight):
     #for each node in graph G
     do_all(
         range(num_nodes),
-
         #taking out nid parameter
-        sum_neighbor_degree(graph, result_array, deg_array, weight),
+        sum_neighbor_degree(graph, result_array, deg_array, weight, graph.get_edge_property(weight_property = weight)),
 
         #I think I dont necessarily need this here
         steal=True,

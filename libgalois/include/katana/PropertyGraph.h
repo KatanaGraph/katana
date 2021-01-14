@@ -167,6 +167,16 @@ public:
   edge_iterator edge_end(Node node) const { return *edges(node).end(); }
 
   /**
+   * Returns the degree of some node
+   *
+   * @param node Node to get degree of
+   * @returns Number of edges the node has (outgoing)
+   */
+  uint64_t GetDegree(Node node) const {
+    return std::distance(edge_begin(node), edge_end(node));
+  }
+
+  /**
    * Accessor for the underlying PropertyFileGraph.
    *
    * @returns pointer to the underlying PropertyFileGraph.

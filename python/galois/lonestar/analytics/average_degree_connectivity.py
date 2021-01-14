@@ -5,7 +5,7 @@ import pyarrow
 from galois.loops import do_all, do_all_operator
 from galois.property_graph import PropertyGraph
 from galois.shmem import setActiveThreads
-
+from .average_neighbor_degree import average_neighbor_degree
 
 #SUMMARY OF THE ALGORITHM: 
 ##the average degree connectivity of a degree in graph g is the sum 

@@ -37,6 +37,13 @@ katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
 }
 
 void
+katana::DynamicBitset::bitwise_not() {
+  katana::do_all(
+      katana::iterate(size_t{0}, bitvec.size()),
+      [&](size_t i) { bitvec[i] = ~bitvec[i]; }, katana::no_stats());
+}
+
+void
 katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
   assert(size() == other.size());
   const auto& other_bitvec = other.get_vec();

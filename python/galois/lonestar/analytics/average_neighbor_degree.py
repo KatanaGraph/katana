@@ -20,8 +20,6 @@ from .deg_count import calculate_degree
 #respectively connects the two nodes, all of that divided by the weighted degree
 #of node k 
 
-#Most recent error when running 
-
 
 #QUESTIONS: what is the legal way to get value from certain index of an array in pyarrow?
 

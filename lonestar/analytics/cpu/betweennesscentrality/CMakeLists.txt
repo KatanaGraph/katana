@@ -1,4 +1,4 @@
-add_executable(betweennesscentrality-cpu BetweennessCentrality.cpp)
+add_executable(betweennesscentrality-cpu betweenness_centrality_cli.cpp)
 add_dependencies(apps betweennesscentrality-cpu)
 target_link_libraries(betweennesscentrality-cpu PRIVATE Katana::galois lonestar)
 install(TARGETS betweennesscentrality-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)

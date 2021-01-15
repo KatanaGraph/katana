@@ -71,6 +71,42 @@ ConstructEdgeProperties(
   return pfg->AddEdgeProperties(res_table.value());
 }
 
+class TemporaryPropertyGuard {
+  katana::PropertyFileGraph* pfg_;
+  std::string name_;
+
+  std::string GetPropertyName() {
+    // Use this as part of the property name since this will delete the property
+    // when it is deconstructed so this name should be unique at any given time.
+    return fmt::format(
+        "__katana_temporary_property_{}", reinterpret_cast<uintptr_t>(this));
+  }
+
+public:
+  TemporaryPropertyGuard(PropertyFileGraph* pfg, std::string name)
+      : pfg_(pfg), name_(name) {}
+
+  explicit TemporaryPropertyGuard(katana::PropertyFileGraph* pfg)
+      : TemporaryPropertyGuard(pfg, GetPropertyName()) {}
+
+  const TemporaryPropertyGuard& operator=(const TemporaryPropertyGuard&) =
+      delete;
+  TemporaryPropertyGuard(const TemporaryPropertyGuard&) = delete;
+
+  std::string name() const { return name_; }
+
+  ~TemporaryPropertyGuard() {
+    if (auto r = pfg_->RemoveNodeProperty(name_); !r) {
+      if (r.error() != katana::ErrorCode::PropertyNotFound) {
+        // Log an error if something goes wrong other than the property not
+        // existing.
+        KATANA_LOG_WARN(
+            "Failed to remove temporary property: {}", r.error().message());
+      }
+    }
+  }
+};
+
 }  // namespace katana::analytics
 
 #endif

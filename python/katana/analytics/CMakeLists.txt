@@ -24,7 +24,13 @@ python_extension_module(_betweenness_centrality)
 add_dependencies(_betweenness_centrality plan)
 target_link_libraries(_betweenness_centrality Katana::galois)
 
+add_cython_target(_triangle_count _triangle_count.pyx CXX OUTPUT_VAR TRIANGLE_COUNT_SOURCES)
+add_library(_triangle_count MODULE ${TRIANGLE_COUNT_SOURCES})
+python_extension_module(_triangle_count)
+add_dependencies(_triangle_count plan)
+target_link_libraries(_triangle_count Katana::galois)
+
 install(
-  TARGETS _wrappers _pagerank _betweenness_centrality plan
+  TARGETS _wrappers _pagerank _betweenness_centrality _triangle_count plan
   LIBRARY DESTINATION python/katana/analytics
 )

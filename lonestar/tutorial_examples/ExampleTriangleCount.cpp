@@ -18,9 +18,7 @@
  */
 
 #include <algorithm>
-#include <fstream>
 #include <iostream>
-#include <utility>
 #include <vector>
 
 #include <boost/iterator/transform_iterator.hpp>
@@ -32,7 +30,7 @@ const char* name = "Triangles";
 const char* desc = "Counts the triangles in a graph";
 
 constexpr static const unsigned CHUNK_SIZE = 64U;
-enum Algo { nodeiterator, edgeiterator, orderedCount };
+enum Algo { nodeiterator, edgeiterator };
 
 namespace cll = llvm::cl;
 
@@ -42,23 +40,15 @@ static cll::opt<Algo> algo(
     "algo", cll::desc("Choose an algorithm:"),
     cll::values(
         clEnumValN(Algo::nodeiterator, "nodeiterator", "Node Iterator"),
-        clEnumValN(Algo::edgeiterator, "edgeiterator", "Edge Iterator"),
-        clEnumValN(
-            Algo::orderedCount, "orderedCount",
-            "Ordered Simple Count (default)")),
-    cll::init(Algo::orderedCount));
-
-static cll::opt<bool> relabel(
-    "relabel",
-    cll::desc("Relabel nodes of the graph (default value of false => "
-              "choose automatically)"),
-    cll::init(false));
+        clEnumValN(Algo::edgeiterator, "edgeiterator", "Edge Iterator")),
+    cll::init(Algo::nodeiterator));
 
 using NodeData = std::tuple<>;
 using EdgeData = std::tuple<>;
 
 typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
+
 /**
  * Like std::lower_bound but doesn't dereference iterators. Returns the first
  * element for which comp is not true.
@@ -133,48 +123,6 @@ struct GreaterThanOrEqual {
   }
 };
 
-template <typename G>
-struct DegreeLess {
-  typedef typename G::Node N;
-  const G& g;
-  DegreeLess(const G& g) : g(g) {}
-
-  bool operator()(const N& n1, const N& n2) const {
-    return std::distance(g.edge_begin(n1), g.edge_end(n1)) <
-           std::distance(g.edge_begin(n2), g.edge_end(n2));
-  }
-};
-template <typename G>
-struct DegreeGreater {
-  typedef typename G::Node N;
-  const G& g;
-  DegreeGreater(const G& g) : g(g) {}
-
-  bool operator()(const N& n1, const N& n2) const {
-    return std::distance(g.edge_begin(n1), g.edge_end(n1)) >
-           std::distance(g.edge_begin(n2), g.edge_end(n2));
-  }
-};
-template <typename G>
-struct GetDegree {
-  typedef typename G::Node N;
-  const G& g;
-  GetDegree(const G& g) : g(g) {}
-
-  ptrdiff_t operator()(const N& n) const {
-    return std::distance(g.edge_begin(n), g.edge_end(n));
-  }
-};
-
-template <typename Node, typename EdgeTy>
-struct IdLess {
-  bool operator()(
-      const katana::EdgeSortValue<Node, EdgeTy>& e1,
-      const katana::EdgeSortValue<Node, EdgeTy>& e2) const {
-    return e1.dst < e2.dst;
-  }
-};
-
 /**
  * Node Iterator algorithm for counting triangles.
  * <code>
@@ -227,48 +175,6 @@ NodeIteratingAlgo(const Graph& graph) {
   //! [profile w/ vtune]
 
   std::cout << "Num Triangles: " << numTriangles.reduce() << "\n";
-}
-
-/**
- * Lambda function to count triangles
- */
-void
-OrderedCountFunc(
-    const Graph& graph, GNode n, katana::GAccumulator<size_t>& numTriangles) {
-  size_t numTriangles_local = 0;
-  for (auto it_v : graph.edges(n)) {
-    auto v = *graph.GetEdgeDest(it_v);
-    if (v > n)
-      break;
-    Graph::edge_iterator it_n = graph.edge_begin(n);
-
-    for (auto it_vv : graph.edges(v)) {
-      auto vv = *graph.GetEdgeDest(it_vv);
-      if (vv > v)
-        break;
-      while (*graph.GetEdgeDest(it_n) < vv)
-        it_n++;
-      if (vv == *graph.GetEdgeDest(it_n)) {
-        numTriangles_local += 1;
-      }
-    }
-  }
-  numTriangles += numTriangles_local;
-}
-
-/*
- * Simple counting loop, instead of binary searching.
- */
-void
-OrderedCountAlgo(const Graph& graph) {
-  katana::GAccumulator<size_t> numTriangles;
-  katana::do_all(
-      katana::iterate(graph),
-      [&](const GNode& n) { OrderedCountFunc(graph, n, numTriangles); },
-      katana::chunk_size<CHUNK_SIZE>(), katana::steal(),
-      katana::loopname("OrderedCountAlgo"));
-
-  katana::gPrint("Num Triangles: ", numTriangles.reduce(), "\n");
 }
 
 /**
@@ -370,12 +276,10 @@ main(int argc, char** argv) {
   }
   Graph graph = pg_result.value();
 
-  if (!relabel) {
-    timer_auto_algo.start();
-    relabel = katana::analytics::IsApproximateDegreeDistributionPowerLaw(
-        graph.GetPropertyFileGraph());
-    timer_auto_algo.stop();
-  }
+  timer_auto_algo.start();
+  bool relabel =
+      katana::analytics::IsApproximateDegreeDistributionPowerLaw(*pfg);
+  timer_auto_algo.stop();
 
   if (relabel) {
     katana::gInfo("Relabeling and sorting graph...");
@@ -412,10 +316,6 @@ main(int argc, char** argv) {
 
   case edgeiterator:
     EdgeIteratingAlgo(graph);
-    break;
-
-  case orderedCount:
-    OrderedCountAlgo(graph);
     break;
 
   default:

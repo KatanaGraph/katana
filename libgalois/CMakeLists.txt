@@ -45,17 +45,18 @@ set(sources
         src/Threads.cpp
         src/Timer.cpp
         src/analytics/Utils.cpp
-        src/analytics/bfs/bfs.cpp
         src/analytics/betweenness_centrality/betweenness_centrality.cpp
         src/analytics/betweenness_centrality/level.cpp
         src/analytics/betweenness_centrality/outer.cpp
+        src/analytics/bfs/bfs.cpp
         src/analytics/connected_components/connected_components.cpp
         src/analytics/jaccard/jaccard.cpp
         src/analytics/pagerank/pagerank-pull.cpp
         src/analytics/pagerank/pagerank-push.cpp
         src/analytics/pagerank/pagerank.cpp
         src/analytics/sssp/sssp.cpp
-)
+        src/analytics/triangle_count/triangle_count.cpp
+    )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND sources src/HWTopoDarwin.cpp)

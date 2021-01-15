@@ -25,7 +25,10 @@ from katana.analytics import (
     betweenness_centrality,
     BetweennessCentralityStatistics,
     BetweennessCentralityPlan,
+    triangle_count,
+    TriangleCountPlan,
 )
+from katana.example_utils import get_input
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
 
@@ -218,10 +221,36 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 
     stats = BetweennessCentralityStatistics(property_graph, property_name)
 
-    print(stats)
     assert stats.min_centrality == 0
     assert stats.max_centrality == approx(8210.38)
     assert stats.average_centrality == approx(1.3645)
+
+
+def test_triangle_count():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    original_first_edge_list = [property_graph.get_edge_dst(e) for e in property_graph.edges(0)]
+    n = triangle_count(property_graph,)
+    assert n == 282617
+
+    n = triangle_count(property_graph, TriangleCountPlan.node_iteration())
+    assert n == 282617
+
+    n = triangle_count(property_graph, TriangleCountPlan.edge_iteration())
+    assert n == 282617
+
+    assert [property_graph.get_edge_dst(e) for e in property_graph.edges(0)] == original_first_edge_list
+
+    sort_all_edges_by_dest(property_graph)
+    n = triangle_count(property_graph, TriangleCountPlan.ordered_count(edges_sorted=True))
+    assert n == 282617
+
+
+def test_triangle_count_presorted(property_graph: PropertyGraph):
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    sort_nodes_by_degree(property_graph)
+    sort_all_edges_by_dest(property_graph)
+    n = triangle_count(property_graph, TriangleCountPlan.node_iteration(relabeling=False, edges_sorted=True))
+    assert n == 282617
 
 
 # TODO: Add more tests.

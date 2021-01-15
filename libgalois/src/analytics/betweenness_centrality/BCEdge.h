@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef _ED_H_
-#define _ED_H_
+#ifndef KATANA_LIBGALOIS_ANALYTICS_BETWEENNESSCENTRALITY_BCEDGE_H_
+#define KATANA_LIBGALOIS_ANALYTICS_BETWEENNESSCENTRALITY_BCEDGE_H_
 
 #include "BCNode.h"
 #include "control.h"

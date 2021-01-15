@@ -1,6 +1,3 @@
-#ifndef KATANA_BC_ASYNC
-#define KATANA_BC_ASYNC
-
 #include <iomanip>
 #include <iostream>
 
@@ -13,7 +10,8 @@
 // WARNING: optimal chunk size may differ depending on input graph
 constexpr static const unsigned ASYNC_CHUNK_SIZE = 64U;
 using NodeType = BCNode<BC_USE_MARKING, BC_CONCURRENT>;
-using AsyncGraph = katana::LC_CSR_CSC_Graph<NodeType, BCEdge, false, true>;
+using AsynchronousGraph =
+    katana::LC_CSR_CSC_Graph<NodeType, BCEdge, false, true>;
 
 // Work items for the forward phase
 struct ForwardPhaseWorkItem {
@@ -31,9 +29,8 @@ struct FPWorkItemIndexer {
 };
 
 // obim worklist type declaration
-namespace gwl = katana;
-using PSchunk = gwl::PerSocketChunkFIFO<ASYNC_CHUNK_SIZE>;
-using OBIM = gwl::OrderedByIntegerMetric<FPWorkItemIndexer, PSchunk>;
+using PSchunk = katana::PerSocketChunkFIFO<ASYNC_CHUNK_SIZE>;
+using OBIM = katana::OrderedByIntegerMetric<FPWorkItemIndexer, PSchunk>;
 
 template <typename T, bool enable>
 struct Counter : public T {
@@ -52,10 +49,10 @@ struct Counter<T, false> {
   void update(Args...) {}
 };
 
-struct BetweenessCentralityAsync {
-  AsyncGraph& graph;
+struct BetweenessCentralityAsynchronous {
+  AsynchronousGraph& graph;
 
-  BetweenessCentralityAsync(AsyncGraph& _graph) : graph(_graph) {}
+  BetweenessCentralityAsynchronous(AsynchronousGraph& _graph) : graph(_graph) {}
 
   using SumCounter =
       Counter<katana::GAccumulator<unsigned long>, BC_COUNT_ACTIONS>;
@@ -74,7 +71,7 @@ struct BetweenessCentralityAsync {
   using LeafCounter =
       Counter<katana::GAccumulator<unsigned long>, BC_COUNT_LEAVES>;
 
-  void correctNode(uint32_t dstID, BCEdge&) {
+  void CorrectNode(uint32_t dstID, BCEdge&) {
     NodeType& dstData = graph.getData(dstID);
 
     // loop through in edges
@@ -119,7 +116,7 @@ struct BetweenessCentralityAsync {
   }
 
   template <typename CTXType>
-  void spAndFU(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
+  void SpAndFU(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
     spfuCount.update(1);
 
     NodeType& srcData = graph.getData(srcID);
@@ -151,7 +148,7 @@ struct BetweenessCentralityAsync {
   }
 
   template <typename CTXType>
-  void updateSigma(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
+  void UpdateSigma(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
     updateSigmaP1Count.update(1);
 
     NodeType& srcData = graph.getData(srcID);
@@ -188,7 +185,7 @@ struct BetweenessCentralityAsync {
   }
 
   template <typename CTXType>
-  void firstUpdate(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
+  void FirstUpdate(uint32_t srcID, uint32_t dstID, BCEdge& ed, CTXType& ctx) {
     firstUpdateCount.update(1);
 
     NodeType& srcData = graph.getData(srcID);
@@ -218,7 +215,7 @@ struct BetweenessCentralityAsync {
     dstData.unlock();
   }
 
-  void dagConstruction(katana::InsertBag<ForwardPhaseWorkItem>& wl) {
+  void DagConstruction(katana::InsertBag<ForwardPhaseWorkItem>& wl) {
     katana::for_each(
         katana::iterate(wl),
         [&](ForwardPhaseWorkItem& wi, auto& ctx) {
@@ -271,7 +268,7 @@ struct BetweenessCentralityAsync {
         katana::disable_conflict_detection(), katana::loopname("ForwardPhase"));
   }
 
-  void dependencyBackProp(katana::InsertBag<uint32_t>& wl) {
+  void DependencyBackProp(katana::InsertBag<uint32_t>& wl) {
     katana::for_each(
         katana::iterate(wl),
         [&](uint32_t srcID, auto& ctx) {
@@ -324,7 +321,7 @@ struct BetweenessCentralityAsync {
         katana::loopname("BackwardPhase"));
   }
 
-  void findLeaves(katana::InsertBag<uint32_t>& fringeWL, unsigned nnodes) {
+  void FindLeaves(katana::InsertBag<uint32_t>& fringeWL, unsigned nnodes) {
     LeafCounter leafCount{"leaf nodes in DAG"};
     katana::do_all(
         katana::iterate(0u, nnodes),
@@ -341,34 +338,34 @@ struct BetweenessCentralityAsync {
 };
 
 void
-AsyncSanity(AsyncGraph& graph) {
-  katana::GReduceMax<float> accumMax;
-  katana::GReduceMin<float> accumMin;
-  katana::GAccumulator<float> accumSum;
-  accumMax.reset();
-  accumMin.reset();
-  accumSum.reset();
+AsynchronousSanity(AsynchronousGraph& graph) {
+  katana::GReduceMax<float> accum_max;
+  katana::GReduceMin<float> accum_min;
+  katana::GAccumulator<float> accum_sum;
+  accum_max.reset();
+  accum_min.reset();
+  accum_sum.reset();
 
   // get max, min, sum of BC values using accumulators and reducers
   katana::do_all(
       katana::iterate(graph),
       [&](unsigned n) {
         auto& nodeData = graph.getData(n);
-        accumMax.update(nodeData.bc);
-        accumMin.update(nodeData.bc);
-        accumSum += nodeData.bc;
+        accum_max.update(nodeData.bc);
+        accum_min.update(nodeData.bc);
+        accum_sum += nodeData.bc;
       },
-      katana::no_stats(), katana::loopname("AsyncSanity"));
+      katana::no_stats(), katana::loopname("AsynchronousSanity"));
 
-  katana::gPrint("Max BC is ", accumMax.reduce(), "\n");
-  katana::gPrint("Min BC is ", accumMin.reduce(), "\n");
-  katana::gPrint("BC sum is ", accumSum.reduce(), "\n");
+  katana::gPrint("Max BC is ", accum_max.reduce(), "\n");
+  katana::gPrint("Min BC is ", accum_min.reduce(), "\n");
+  katana::gPrint("BC sum is ", accum_sum.reduce(), "\n");
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 //! runs asynchronous BC
 void
-doAsyncBC() {
+BetweennessCentralityAsynchronous() {
   if (BC_CONCURRENT) {
     katana::gInfo("Running in concurrent mode with ", numThreads, " threads");
   } else {
@@ -377,10 +374,10 @@ doAsyncBC() {
 
   katana::gInfo("Constructing async BC graph");
   // create bidirectional graph
-  AsyncGraph bcGraph;
+  AsynchronousGraph bcGraph;
 
-  katana::StatTimer graphConstructTimer("GRAPH_CONSTRUCT");
-  graphConstructTimer.start();
+  katana::StatTimer graph_construct_timer("GRAPH_CONSTRUCT");
+  graph_construct_timer.start();
 
   katana::FileGraph fileReader;
   fileReader.fromFile(inputFile);
@@ -400,9 +397,9 @@ doAsyncBC() {
   });
   bcGraph.constructIncomingEdges();
 
-  graphConstructTimer.stop();
+  graph_construct_timer.stop();
 
-  BetweenessCentralityAsync bcExecutor(bcGraph);
+  BetweenessCentralityAsynchronous bcExecutor(bcGraph);
 
   unsigned nnodes = bcGraph.size();
   uint64_t nedges = bcGraph.sizeEdges();
@@ -411,7 +408,8 @@ doAsyncBC() {
   katana::gInfo(
       "Note that optimal chunk size may differ depending on input "
       "graph");
-  katana::ReportStatSingle("BCAsync", "ChunkSize", ASYNC_CHUNK_SIZE);
+  katana::ReportStatSingle(
+      "BetweennessCentralityAsynchronous", "ChunkSize", ASYNC_CHUNK_SIZE);
 
   katana::reportPageAlloc("MemAllocPre");
   katana::gInfo("Going to pre-allocate pages");
@@ -470,8 +468,8 @@ doAsyncBC() {
 
   katana::gInfo("Beginning execution");
 
-  katana::StatTimer execTime("Timer_0");
-  execTime.start();
+  katana::StatTimer exec_time("BetweennessCentralityAsynchronous");
+  exec_time.start();
   for (uint32_t i = 0; i < numOfSources; ++i) {
     uint32_t sourceToUse = i;
     if (sourceVector.size() != 0) {
@@ -508,14 +506,14 @@ doAsyncBC() {
     if (iterLimit != 0 && goodSource >= iterLimit)
       break;
   }
-  execTime.stop();
+  exec_time.stop();
 
   katana::gInfo("Number of sources with outgoing edges was ", goodSource);
 
   katana::reportPageAlloc("MemAllocPost");
 
   // sanity
-  AsyncSanity(bcGraph);
+  AsynchronousSanity(bcGraph);
 
   // prints out first 10 node BC values
   if (!skipVerify) {
@@ -541,4 +539,3 @@ doAsyncBC() {
     outfile.close();
   }
 }
-#endif

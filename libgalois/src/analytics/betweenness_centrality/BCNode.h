@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef _BCNODE_H_
-#define _BCNODE_H_
+#ifndef KATANA_LIBGALOIS_ANALYTICS_BETWEENNESSCENTRALITY_BCNODE_H_
+#define KATANA_LIBGALOIS_ANALYTICS_BETWEENNESSCENTRALITY_BCNODE_H_
 
 #include <algorithm>
 #include <limits>

@@ -1,13 +1,11 @@
-#ifndef KATANA_BC_OUTER
-#define KATANA_BC_OUTER
-
-#include <fstream>
-#include <iomanip>
-
 #include <boost/iterator/filter_iterator.hpp>
 
-#include "Lonestar/BoilerPlate.h"
-#include "katana/Galois.h"
+#include "betweenness_centrality_impl.h"
+#include "katana/PropertyGraph.h"
+
+using namespace katana::analytics;
+
+namespace {
 
 using NodeDataOuter = std::tuple<>;
 using EdgeDataOuter = std::tuple<>;
@@ -21,10 +19,13 @@ class BCOuter {
   const OuterGraph& graph_;
   int num_nodes_;
 
-  katana::PerThreadStorage<double*> centrality_measure_;  // betweeness measure
-  katana::PerThreadStorage<double*> per_thread_sigma_;
+  // TODO(amp): centrality_measure_ is basically a manual implementation of
+  //  vector GAccumulator. This should use the Reducible framework to hide the
+  //  details.
+  katana::PerThreadStorage<float*> centrality_measure_;  // Output value
+  katana::PerThreadStorage<float*> per_thread_sigma_;
   katana::PerThreadStorage<int*> per_thread_distance_;
-  katana::PerThreadStorage<double*> per_thread_delta_;
+  katana::PerThreadStorage<float*> per_thread_delta_;
   katana::PerThreadStorage<katana::gdeque<OuterGNode>*> per_thread_successor_;
 
 public:
@@ -44,9 +45,9 @@ public:
   void ComputeBC(const OuterGNode current_source) {
     katana::gdeque<OuterGNode> source_queue;
 
-    double* sigma = *per_thread_sigma_.getLocal();
+    float* sigma = *per_thread_sigma_.getLocal();
     int* distance = *per_thread_distance_.getLocal();
-    double* delta = *per_thread_delta_.getLocal();
+    float* delta = *per_thread_delta_.getLocal();
     katana::gdeque<OuterGNode>* successor = *per_thread_successor_.getLocal();
 
     sigma[current_source] = 1;
@@ -82,21 +83,21 @@ public:
       int leaf = source_queue.back();
       source_queue.pop_back();
 
-      double sigma_leaf = sigma[leaf];  // has finalized short path value
-      double delta_leaf = delta[leaf];
+      float sigma_leaf = sigma[leaf];  // has finalized short path value
+      float delta_leaf = delta[leaf];
       auto& succ_list = successor[leaf];
 
-      for (auto successor = succ_list.begin(), succ_end = succ_list.end();
-           successor != succ_end; ++successor) {
+      for (auto current_succ = succ_list.begin(), succ_end = succ_list.end();
+           current_succ != succ_end; ++current_succ) {
         delta_leaf +=
-            (sigma_leaf / sigma[*successor]) * (1.0 + delta[*successor]);
+            (sigma_leaf / sigma[*current_succ]) * (1.0 + delta[*current_succ]);
       }
       delta[leaf] = delta_leaf;
     }
 
     // save result of this source's BC, reset all local values for next
     // source
-    double* Vec = *centrality_measure_.getLocal();
+    float* Vec = *centrality_measure_.getLocal();
     for (int i = 0; i < num_nodes_; ++i) {
       Vec[i] += delta[i];
       delta[i] = 0;
@@ -107,27 +108,13 @@ public:
   }
 
   /**
-   * Runs betweeness-centrality proper. Instead of a vector of sources,
-   * it will operate on the first num_sources sources.
-   *
-   * @param num_sources Num sources to get BC contribution for
-   */
-  void RunAll(unsigned num_sources) {
-    // Each thread works on an individual source node
-    katana::do_all(
-        katana::iterate(0u, num_sources),
-        [&](const OuterGNode& current_source) { ComputeBC(current_source); },
-        katana::steal(), katana::loopname("Main"));
-  }
-
-  /**
-   * Runs betweeness-centrality proper.
+   * Runs betweenness-centrality proper.
    *
    * @tparam Cont type of the data structure that holds the nodes to treat
    * as a source during betweeness-centrality.
    *
    * @param source_vector Data structure that holds nodes to treat as a source during
-   * betweeness-centrality
+   * betweenness-centrality
    */
   template <typename Cont>
   void Run(const Cont& source_vector) {
@@ -143,11 +130,11 @@ public:
    * All nodes should have the same betweenness value up to
    * some tolerance.
    */
-  void verify() {
-    double sample_bc = 0.0;
+  void Verify() {
+    float sample_bc = 0.0;
     bool first_time = true;
     for (int i = 0; i < num_nodes_; ++i) {
-      double bc = (*centrality_measure_.getRemote(0))[i];
+      float bc = (*centrality_measure_.getRemote(0))[i];
 
       for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
         bc += (*centrality_measure_.getRemote(j))[i];
@@ -167,94 +154,28 @@ public:
     }
   }
 
-  /**
-   * Print betweeness-centrality measures.
-   *
-   * @param begin first node to print BC measure of
-   * @param end iterator after last node to print
-   * @param out stream to output to
-   * @param precision precision of the floating points outputted by the function
-   */
-  void PrintBCValues(
-      size_t begin, size_t end, std::ostream& out, int precision = 6) {
-    for (; begin != end; ++begin) {
-      double bc = (*centrality_measure_.getRemote(0))[begin];
-
-      for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
-        bc += (*centrality_measure_.getRemote(j))[begin];
-
-      out << begin << " " << std::setiosflags(std::ios::fixed)
-          << std::setprecision(precision) << bc << "\n";
+  katana::Result<std::shared_ptr<arrow::FloatArray>> ExtractBCValues(
+      size_t begin, size_t end) {
+    arrow::FloatBuilder builder;
+    if (auto r = builder.Resize(end - begin); !r.ok()) {
+      return katana::ErrorCode::ArrowError;
     }
-  }
-
-  void PrintBCValues(size_t begin, size_t end, std::vector<double>& out) {
     for (; begin != end; ++begin) {
-      double bc = (*centrality_measure_.getRemote(0))[begin];
+      float bc = (*centrality_measure_.getRemote(0))[begin];
 
       for (unsigned j = 1; j < katana::getActiveThreads(); ++j) {
         bc += (*centrality_measure_.getRemote(j))[begin];
       }
 
-      out.push_back(bc);
+      if (auto r = builder.Append(bc); !r.ok()) {
+        return katana::ErrorCode::ArrowError;
+      }
     }
-  }
-
-  /**
-   * Print all betweeness centrality values in the graph.
-   */
-  void PrintBCcertificate() {
-    std::stringstream foutname;
-    foutname << "outer_certificate_" << katana::getActiveThreads();
-
-    std::ofstream outf(foutname.str().c_str());
-    katana::gInfo("Writing certificate...");
-
-    PrintBCValues(0, num_nodes_, outf, 9);
-
-    outf.close();
-  }
-
-  /******************************************************************************/
-  /* Make results */
-  /******************************************************************************/
-
-  std::vector<double> makeResults(const OuterGraph& graph) {
-    std::vector<double> values;
-
-    values.reserve(graph.num_nodes());
-    PrintBCValues(0, graph.num_nodes(), values);
-
-    return values;
-  }
-
-  //! sanity check of BC values
-  void OuterSanity(const OuterGraph& graph) {
-    katana::GReduceMax<float> accum_max;
-    katana::GReduceMin<float> accum_min;
-    katana::GAccumulator<float> accum_sum;
-    accum_max.reset();
-    accum_min.reset();
-    accum_sum.reset();
-
-    // get max, min, sum of BC values using accumulators and reducers
-    katana::do_all(
-        katana::iterate(graph),
-        [&](LevelGNode n) {
-          double bc = (*centrality_measure_.getRemote(0))[n];
-
-          for (unsigned j = 1; j < katana::getActiveThreads(); ++j)
-            bc += (*centrality_measure_.getRemote(j))[n];
-
-          accum_max.update(bc);
-          accum_min.update(bc);
-          accum_sum += bc;
-        },
-        katana::no_stats(), katana::loopname("OuterSanity"));
-
-    katana::gPrint("Max BC is ", accum_max.reduce(), "\n");
-    katana::gPrint("Min BC is ", accum_min.reduce(), "\n");
-    katana::gPrint("BC sum is ", accum_sum.reduce(), "\n");
+    std::shared_ptr<arrow::FloatArray> ret;
+    if (auto r = builder.Finish(&ret); !r.ok()) {
+      return katana::ErrorCode::ArrowError;
+    }
+    return ret;
   }
 
 private:
@@ -316,39 +237,35 @@ struct HasOut {
     return *graph.edge_begin(n) != *graph.edge_end(n);
   }
 };
+}  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void
-DoOuterBC() {
-  std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
-      MakeFileGraph(inputFile, edge_property_name);
-
+katana::Result<void>
+BetweennessCentralityOuter(
+    katana::PropertyFileGraph* pfg, BetweennessCentralitySources sources,
+    const std::string& output_property_name,
+    BetweennessCentralityPlan plan [[maybe_unused]]) {
   auto pg_result =
-      katana::PropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(pfg.get());
+      katana::PropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(pfg, {}, {});
   if (!pg_result) {
-    KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
+    return pg_result.error();
   }
   OuterGraph graph = pg_result.value();
 
-  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
-            << " edges\n";
-
   BCOuter bc_outer(graph);
-
-  size_t num_nodes_ = graph.num_nodes();
 
   // preallocate pages for use in algorithm
   katana::reportPageAlloc("MeminfoPre");
-  katana::Prealloc(katana::getActiveThreads() * num_nodes_ / 1650);
+  katana::Prealloc(katana::getActiveThreads() * graph.num_nodes() / 1650);
   katana::reportPageAlloc("MeminfoMid");
 
   // vector of sources to process; initialized if doing outSources
-  std::vector<OuterGNode> source_vector;
+  std::vector<uint32_t> source_vector;
   // preprocessing: find the nodes with out edges we will process and skip
   // over nodes with no out edges; only done if numOfSources isn't specified
-  if (numOfSources == 0) {
+  if (std::holds_alternative<uint32_t>(sources) &&
+      sources != kBetweennessCentralityAllNodes) {
     // find first node with out edges
     boost::filter_iterator<HasOut, OuterGraph::iterator> begin =
         boost::make_filter_iterator(HasOut(graph), graph.begin(), graph.end());
@@ -357,42 +274,38 @@ DoOuterBC() {
     // adjustedEnd = last node we will process based on how many iterations
     // (i.e. sources) we want to do
     boost::filter_iterator<HasOut, OuterGraph::iterator> adjustedEnd =
-        iterLimit ? katana::safe_advance(begin, end, (int)iterLimit) : end;
+        katana::safe_advance(begin, end, (int)std::get<uint32_t>(sources));
 
-    size_t iterations = std::distance(begin, adjustedEnd);
-    katana::gPrint(
-        "Num Nodes: ", num_nodes_, " Start Node: ", startSource,
-        " Iterations: ", iterations, "\n");
     // vector of nodes we want to process
     for (auto node = begin; node != adjustedEnd; ++node) {
       source_vector.push_back(*node);
     }
+  } else if (std::holds_alternative<std::vector<uint32_t>>(sources)) {
+    source_vector = std::get<std::vector<uint32_t>>(sources);
   }
 
   // execute algorithm
-  katana::StatTimer execTime("Timer_0");
-  execTime.start();
-  // either Run a contiguous chunk of sources from beginning or Run using
-  // sources with outgoing edges only
-  if (numOfSources > 0) {
-    bc_outer.RunAll(numOfSources);
+  katana::StatTimer exec_time("Betweenness Centrality Outer");
+  exec_time.start();
+  if (sources == kBetweennessCentralityAllNodes) {
+    bc_outer.Run(katana::iterate(*pfg));
   } else {
     bc_outer.Run(source_vector);
   }
-  execTime.stop();
+  exec_time.stop();
 
-  bc_outer.PrintBCValues(0, std::min(10UL, num_nodes_), std::cout, 6);
-  bc_outer.OuterSanity(graph);
-  if (output) {
-    std::vector<double> results = bc_outer.makeResults(graph);
-    assert(results.size() == graph.size());
-
-    writeOutput(outputLocation, results.data(), results.size());
+  auto data_result = bc_outer.ExtractBCValues(0, graph.num_nodes());
+  if (!data_result) {
+    return data_result.error();
   }
 
-  if (!skipVerify)
-    bc_outer.verify();
-
+  auto table = arrow::Table::Make(
+      arrow::schema({arrow::field(output_property_name, arrow::float32())}),
+      {data_result.value()});
+  if (auto r = pfg->AddNodeProperties(table); !r) {
+    return r.error();
+  }
   katana::reportPageAlloc("MeminfoPost");
+
+  return katana::ResultSuccess();
 }
-#endif

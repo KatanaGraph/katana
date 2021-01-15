@@ -18,7 +18,13 @@ python_extension_module(_pagerank)
 add_dependencies(_pagerank plan)
 target_link_libraries(_pagerank Katana::galois)
 
+add_cython_target(_betweenness_centrality _betweenness_centrality.pyx CXX OUTPUT_VAR BETWEENNESS_CENTRALITY_SOURCES)
+add_library(_betweenness_centrality MODULE ${BETWEENNESS_CENTRALITY_SOURCES})
+python_extension_module(_betweenness_centrality)
+add_dependencies(_betweenness_centrality plan)
+target_link_libraries(_betweenness_centrality Katana::galois)
+
 install(
-  TARGETS _wrappers _pagerank plan
+  TARGETS _wrappers _pagerank _betweenness_centrality plan
   LIBRARY DESTINATION python/katana/analytics
 )

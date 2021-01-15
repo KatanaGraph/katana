@@ -22,6 +22,9 @@ from katana.analytics import (
     pagerank,
     pagerank_assert_valid,
     PagerankStatistics,
+    betweenness_centrality,
+    BetweennessCentralityStatistics,
+    BetweennessCentralityPlan,
 )
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
@@ -183,6 +186,42 @@ def test_pagerank(property_graph: PropertyGraph):
     assert stats.min_rank == approx(0.1499999761581421)
     assert stats.max_rank == approx(1328.6629638671875, abs=0.06)
     assert stats.average_rank == approx(0.5205338001251221, abs=0.001)
+
+
+def test_betweenness_centrality_outer(property_graph: PropertyGraph):
+    property_name = "NewProp"
+
+    betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.outer())
+
+    node_schema: Schema = property_graph.node_schema()
+    num_node_properties = len(node_schema)
+    new_property_id = num_node_properties - 1
+    assert node_schema.names[new_property_id] == property_name
+
+    stats = BetweennessCentralityStatistics(property_graph, property_name)
+
+    print(stats)
+    assert stats.min_centrality == 0
+    assert stats.max_centrality == approx(8210.38)
+    assert stats.average_centrality == approx(1.3645)
+
+
+def test_betweenness_centrality_level(property_graph: PropertyGraph):
+    property_name = "NewProp"
+
+    betweenness_centrality(property_graph, property_name, 16, BetweennessCentralityPlan.level())
+
+    node_schema: Schema = property_graph.node_schema()
+    num_node_properties = len(node_schema)
+    new_property_id = num_node_properties - 1
+    assert node_schema.names[new_property_id] == property_name
+
+    stats = BetweennessCentralityStatistics(property_graph, property_name)
+
+    print(stats)
+    assert stats.min_centrality == 0
+    assert stats.max_centrality == approx(8210.38)
+    assert stats.average_centrality == approx(1.3645)
 
 
 # TODO: Add more tests.

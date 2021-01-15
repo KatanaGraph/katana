@@ -68,12 +68,12 @@ def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, w
 
 #helper method that fills the result dictionary where key = nid and value = its average neighbor degree 
 def helper(graph: PropertyGraph, deg_array, weight, weight_property):
-    # create map that will hold the results key = node id and value = avg_neighbor_deg
+    # create an array that will hold the results index = node id and value = avg_neighbor_deg
     #result_dict= dict()
 
     num_nodes = graph.num_nodes()
 
-    result_array = [0] * num_nodes
+    result_array = np.empty((num_nodes,), dtype=int)
 
     #for each node in graph G
     do_all(

@@ -38,7 +38,7 @@ def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, w
         #get destination node 
         dst = graph.get_edge_dst(edge)
         deg_of_dst_node = deg_array[dst]
-        if weight == "None":
+        if weight == None:
             sum_neighbor_degree += deg_of_dst_node
 
         else: 

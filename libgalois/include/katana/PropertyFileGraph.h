@@ -168,6 +168,24 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
+  /**
+   * @return A copy of this with the same set of properties. The copy shares no
+   *        state with this.
+   */
+  Result<std::unique_ptr<PropertyFileGraph>> Copy();
+
+  /**
+   * @param node_properties The node properties to copy.
+   * @param edge_properties The edge properties to copy.
+   * @return A copy of this with a subset of the properties. The copy shares no
+   *        state with this.
+   */
+  Result<std::unique_ptr<PropertyFileGraph>> Copy(
+      const std::vector<std::string>& node_properties,
+      const std::vector<std::string>& edge_properties);
+
+  const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
+
   const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata();
   }
@@ -423,6 +441,17 @@ public:
    * @returns iterable edge range for node.
    */
   edges_range edges(Node node) const { return topology().edges(node); }
+
+  /**
+   * Gets the destination for an edge.
+   *
+   * @param edge edge iterator to get the destination of
+   * @returns node iterator to the edge destination
+   */
+  node_iterator GetEdgeDest(const edge_iterator& edge) const {
+    auto node_id = topology().out_dests->Value(*edge);
+    return node_iterator(node_id);
+  }
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination

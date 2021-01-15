@@ -131,8 +131,7 @@ public:
    * @returns node iterator to the edge destination
    */
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = pfg_->topology().out_dests->Value(*edge);
-    return node_iterator(node_id);
+    return pfg_->GetEdgeDest(edge);
   }
 
   uint64_t num_nodes() const { return pfg_->num_nodes(); }

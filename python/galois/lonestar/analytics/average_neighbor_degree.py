@@ -21,10 +21,25 @@ from .deg_count import calculate_degree
 #of node k 
 
 #Most recent error when running 
-#avg_n_deg.average_neighbor_degree(g, source="in", target="in", weight=None, weight_property=None)
-# Unknown attribute 'get_edge_property' of type PropertyGraph in
-# else: 
-    #weight_array = graph.get_edge_property(weight_property)
+#Failed in nopython mode pipeline (step: nopython mode backend)
+#NRT required but not enabled
+
+#File "_skbuild/linux-x86_64-3.8/cmake-install/python/galois/lonestar/analytics/average_neighbor_degree.py", line 52:
+#def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, weight_property, nid):
+    #<source elided>
+    #avg_neighbor_degree= sum_neighbor_degree / deg_array[nid]
+    #result_array[nid] = avg_neighbor_degree
+    ^
+
+#During: lowering "result_array[nid] = avg_neighbor_degree" at /home/pamvazquez/katana/_skbuild/linux-x86_64-3.8/cmake-install/python/galois/lonestar/analytics/average_neighbor_degree.py (52)
+#During: resolving callee type: type(CPUDispatcher(<function sum_neighbor_degree at 0x7f5eca43ee50>))
+#During: typing of call at <string> (5)
+
+#Enable logging at debug level for details.
+
+#File "<string>", line 5:
+#<source missing, REPL/exec in use?>
+
 #QUESTIONS: what is the legal way to get value from certain index of an array in pyarrow?
 
 

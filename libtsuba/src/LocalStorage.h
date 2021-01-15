@@ -21,6 +21,9 @@ class LocalStorage : public FileStorage {
       std::string, const uint8_t* data, uint64_t size);
   katana::Result<void> ReadFile(
       std::string uri, uint64_t start, uint64_t size, uint8_t* data);
+  katana::Result<void> RemoteCopyFile(
+      std::string source_uri, std::string dest_uri, uint64_t begin,
+      uint64_t size);
 
 public:
   LocalStorage() : FileStorage("file://") {}
@@ -40,6 +43,12 @@ public:
   katana::Result<void> PutMultiSync(
       const std::string& uri, const uint8_t* data, uint64_t size) override {
     return WriteFile(uri, data, size);
+  }
+
+  katana::Result<void> RemoteCopy(
+      const std::string& source_uri, const std::string& dest_uri,
+      uint64_t begin, uint64_t size) override {
+    return RemoteCopyFile(source_uri, dest_uri, begin, size);
   }
 
   // get on future can potentially block (bulk synchronous parallel)

@@ -20,13 +20,13 @@ class KATANA_EXPORT FileView : public arrow::io::RandomAccessFile {
     std::future<katana::Result<void>> work;
   };
 
-  uint8_t* map_start_;
-  int64_t file_size_;
-  uint8_t page_shift_;
-  int64_t cursor_;
-  int64_t mem_start_;
+  uint8_t* map_start_{nullptr};
+  int64_t file_size_{0};
+  uint8_t page_shift_{0};
+  int64_t cursor_{0};
+  int64_t mem_start_{0};
   std::string filename_;
-  bool valid_ = false;
+  bool valid_{false};
   std::vector<uint64_t> filling_;
   std::unique_ptr<std::vector<FillingRange>> fetches_;
 

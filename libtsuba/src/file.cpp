@@ -46,6 +46,21 @@ tsuba::FileGetAsync(
 }
 
 katana::Result<void>
+tsuba::FileRemoteCopy(
+    const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
+    uint64_t size) {
+  auto source_fs = FS(source_uri);
+  auto dest_fs = FS(dest_uri);
+
+  if (source_fs != dest_fs) {
+    KATANA_LOG_ERROR("cannot copy between different back-ends");
+    return ErrorCode::NotImplemented;
+  }
+
+  return dest_fs->RemoteCopy(source_uri, dest_uri, begin, size);
+}
+
+katana::Result<void>
 tsuba::FileStat(const std::string& uri, StatBuf* s_buf) {
   return FS(uri)->Stat(uri, s_buf);
 }

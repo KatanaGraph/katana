@@ -39,6 +39,16 @@ KATANA_EXPORT katana::Result<void> FileStat(
 KATANA_EXPORT katana::Result<void> FileStore(
     const std::string& uri, const uint8_t* data, uint64_t size);
 
+/// Copy a slice of a file from \param source_uri into \param dest_uri
+/// using a remote operation (avoiding a roundt rip through memory) if possible.
+/// The slice starts at \param begin and extends \param size bytes.
+/// The caller is responsible for ensuring that the slice is valid. This
+/// operation is only well defined if \param source_uri and \param dest_uri
+/// map to the (i.e., one of: s3, gs, azure blob store, or local file system)
+KATANA_EXPORT katana::Result<void> FileRemoteCopy(
+    const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
+    uint64_t size);
+
 // Take whatever is in @data and start putting it a the file called @uri
 KATANA_EXPORT std::future<katana::Result<void>> FileStoreAsync(
     const std::string& uri, const uint8_t* data, uint64_t size);

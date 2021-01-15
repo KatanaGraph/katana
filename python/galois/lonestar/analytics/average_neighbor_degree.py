@@ -34,7 +34,7 @@ def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, w
     result_array[nid] = avg_neighbor_degree
 
 #helper method that fills the result dictionary where key = nid and value = its average neighbor degree 
-def helper(graph: PropertyGraph, deg_array, weight):
+def helper(graph: PropertyGraph, deg_array, weight, weight_property=None):
     # create map that will hold the results key = node id and value = avg_neighbor_deg
     #result_dict= dict()
 
@@ -46,7 +46,7 @@ def helper(graph: PropertyGraph, deg_array, weight):
     do_all(
         range(num_nodes),
         #taking out nid parameter
-        sum_neighbor_degree(graph, result_array, deg_array, weight, graph.get_edge_property(weight_property = weight)),
+        sum_neighbor_degree(graph, result_array, deg_array, weight, graph.get_edge_property(weight_property)),
 
         #I think I dont necessarily need this here
         steal=True,
@@ -65,7 +65,7 @@ def average_neighbor_degree(graph: PropertyGraph, source, target, weight):
     else: 
         deg_array = graph.get_node_property("out_degree_property")
 
-    result_array = helper(graph, deg_array, weight)
+    result_array = helper(graph, deg_array, weight, weight_property=None)
 
     for node_id, avg_neighbor in enumerate(result_array):
         print(node_id, ' : ', avg_neighbor)

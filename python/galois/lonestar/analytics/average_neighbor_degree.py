@@ -48,7 +48,7 @@ def sum_neighbor_degree(graph: PropertyGraph, result_array, deg_array, weight, w
 
         #should I use steal = true here?
 
-    avg_neighbor_degree= sum_neighbor_degree() / deg_array[nid]
+    avg_neighbor_degree= sum_neighbor_degree / deg_array[nid]
     result_array[nid] = avg_neighbor_degree
 
 #helper method that fills the result dictionary where key = nid and value = its average neighbor degree 

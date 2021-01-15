@@ -42,8 +42,9 @@ public:
   /// Determine if two RDGs are Equal
   bool Equals(const RDG& other) const;
 
-  /// Store this RDG at `handle`, if `ff` is not null, it is assumed to contain
-  /// an updated topology and persisted as such
+  /// Store this RDG at \param handle; if \param ff is not null, it is persisted
+  /// as the topology for this RDG. Add \param command_line to metadata to aid
+  /// in tracking lineage
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
       std::unique_ptr<FileFrame> ff = nullptr);
@@ -73,6 +74,11 @@ public:
       const std::vector<std::string>* edge_props = nullptr);
 
   katana::Result<void> UnbindTopologyFileStorage();
+
+  /// Inform this RDG that it's topology is in storage at this location
+  /// without loading it into memory. \param new_top must exist and be in
+  /// the correct directory for this RDG
+  katana::Result<void> SetTopologyFile(const katana::Uri& new_top);
 
   void AddMirrorNodes(std::shared_ptr<arrow::ChunkedArray>&& a) {
     mirror_nodes_.emplace_back(std::move(a));

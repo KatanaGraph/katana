@@ -5,6 +5,7 @@
 
 #include "katana/CommBackend.h"
 #include "katana/Result.h"
+#include "katana/Uri.h"
 #include "katana/config.h"
 
 namespace tsuba {
@@ -50,6 +51,14 @@ KATANA_EXPORT katana::Result<RDGHandle> Open(
 
 KATANA_EXPORT katana::Result<RDGHandle> Open(
     const std::string& rdg_name, uint64_t version, uint32_t flags);
+
+/// Generate a new canonically named topology file name in the
+/// directory associated with handle. Exported to support
+/// out-of-core conversion
+KATANA_EXPORT katana::Uri MakeTopologyFileName(RDGHandle handle);
+
+/// Get the storage directory associated with this handle
+KATANA_EXPORT katana::Uri GetRDGDir(RDGHandle handle);
 
 /// Close an RDGHandle object
 KATANA_EXPORT katana::Result<void> Close(RDGHandle handle);

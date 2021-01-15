@@ -33,9 +33,14 @@
 #include <boost/mpl/if.hpp>
 #include <llvm/Support/CommandLine.h>
 
+#include "katana/ErrorCode.h"
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "katana/LargeArray.h"
+#include "katana/Strings.h"
+#include "tsuba/CSRTopology.h"
+#include "tsuba/Errors.h"
+#include "tsuba/file.h"
 
 // TODO: move these enums to a common location for all graph convert tools
 enum ConvertMode {
@@ -89,6 +94,8 @@ enum ConvertMode {
 enum EdgeType { float32_, float64_, int32_, int64_, uint32_, uint64_, void_ };
 
 namespace cll = llvm::cl;
+
+static std::string kCommandLine;
 
 static cll::opt<std::string> inputFilename(
     cll::Positional, cll::desc("<input file>"), cll::Required);
@@ -2868,18 +2875,91 @@ AppendEdgeData<void>(
 
 /**
  * Gr2Kg reads in the binary csr (.gr) files and produces
- * katana graph property graphs. 
+ * katana graph property graphs.
  */
 struct Gr2Kg : public Conversion {
+  katana::Result<void> OutOfCoreConvert(
+      const std::string& in_file_name, const std::string& out_file_name) {
+    tsuba::CSRTopologyHeader header;
+    if (auto res = tsuba::FileGet(in_file_name, &header); !res) {
+      return res.error();
+    }
+
+    if (header.version != 1) {
+      KATANA_LOG_ERROR("Out of core not possible, katana expects GR v1");
+      return katana::ErrorCode::NotImplemented;
+    }
+
+    if (header.edge_type_size != 0) {
+      KATANA_LOG_WARN("ignoring existing edge property in conversion");
+      header.edge_type_size = 0;
+    }
+
+    tsuba::StatBuf stat_buf;
+    if (auto res = tsuba::FileStat(in_file_name, &stat_buf); !res) {
+      KATANA_LOG_DEBUG("could not stat {}", out_file_name);
+      return res.error();
+    }
+
+    uint64_t new_size = tsuba::CSRTopologyFileSize(header);
+    if (stat_buf.size < new_size) {
+      KATANA_LOG_ERROR(
+          "{} does not appear to be well formed (too small)", in_file_name);
+      return katana::ErrorCode::InvalidArgument;
+    }
+
+    if (auto res = tsuba::Create(out_file_name); !res) {
+      return res.error();
+    }
+
+    auto handle_res = tsuba::Open(out_file_name, tsuba::kReadWrite);
+    if (!handle_res) {
+      return handle_res.error();
+    }
+
+    tsuba::RDGFile handle(std::move(handle_res.value()));
+
+    katana::Uri top_file_name = tsuba::MakeTopologyFileName(handle);
+    if (auto res = tsuba::FileRemoteCopy(
+            in_file_name, top_file_name.string(), 0, new_size);
+        !res) {
+      return res.error();
+    }
+
+    tsuba::RDG rdg;
+    rdg.set_rdg_dir(tsuba::GetRDGDir(handle));
+    if (auto res = rdg.SetTopologyFile(top_file_name); !res) {
+      return res.error();
+    }
+    return rdg.Store(handle, kCommandLine);
+  }
+
   template <typename EdgeTy>
-  void convert(const std::string& infilename, const std::string& outfilename) {
+  void convert(
+      const std::string& in_file_name, const std::string& out_file_name) {
     using Graph = katana::FileGraph;
     using GNode = Graph::GraphNode;
     using EdgeData = katana::LargeArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
 
+    if constexpr (std::is_same<EdgeTy, void>::value) {
+      // the property graph topology file format is very close to gr, so we can
+      // use this shortcut. This shortcut also avoids reading the graph on one
+      // host so it's important to do this to support large graphs
+      fmt::print(stderr, "attempting out-of-core conversion\n");
+
+      auto res = OutOfCoreConvert(in_file_name, out_file_name);
+      if (res) {
+        return;
+      }
+      if (res.error() != katana::ErrorCode::NotImplemented) {
+        KATANA_LOG_FATAL("Failed out-of-core conversion: {}", res.error());
+      }
+      fmt::print(stderr, "out-of-core not supported for input trying in-core");
+    }
+
     Graph graph;
-    graph.fromFile(infilename);
+    graph.fromFile(in_file_name);
 
     katana::LargeArray<uint64_t> out_indices;
     out_indices.allocateBlocked(graph.size());
@@ -2940,7 +3020,7 @@ struct Gr2Kg : public Conversion {
     katana::gPrint("Edge Schema : ", pfg->edge_schema()->ToString(), "\n");
     katana::gPrint("Node Schema : ", pfg->node_schema()->ToString(), "\n");
 
-    if (auto r = pfg->Write(outfilename, "cmd"); !r) {
+    if (auto r = pfg->Write(out_file_name, "cmd"); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());
@@ -3200,6 +3280,7 @@ struct Svmlight2Gr : public HasNoVoidSpecialization {
 
 int
 main(int argc, char** argv) {
+  kCommandLine = katana::Join(" ", argv, argv + argc);
   katana::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(
       argc, argv,

@@ -22,7 +22,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
 
   katana::Uri t_path = meta.dir().Join(part_header.topology_path());
 
-  RDGPrefix::GRHeader gr_header;
+  CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {
     KATANA_LOG_DEBUG(
         "file get failed: {}: sz: {}: {}", t_path, sizeof(gr_header),

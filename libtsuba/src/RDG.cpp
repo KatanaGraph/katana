@@ -289,7 +289,7 @@ tsuba::RDG::DoStore(
     std::unique_ptr<WriteGroup> write_group) {
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
-    katana::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
+    katana::Uri t_path = MakeTopologyFileName(handle);
 
     TSUBA_PTP(internal::FaultSensitivity::Normal);
 
@@ -601,6 +601,17 @@ tsuba::RDG::topology_file_storage() const {
 katana::Result<void>
 tsuba::RDG::UnbindTopologyFileStorage() {
   return core_->topology_file_storage().Unbind();
+}
+
+katana::Result<void>
+tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
+  katana::Uri dir = new_top.DirName();
+  if (dir != rdg_dir_) {
+    KATANA_LOG_ERROR(
+        "new topology file must be in this RDG's directory ({})", rdg_dir_);
+    return ErrorCode::InvalidArgument;
+  }
+  return core_->RegisterTopologyFile(new_top.BaseName());
 }
 
 tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}

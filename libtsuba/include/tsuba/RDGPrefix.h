@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "tsuba/CSRTopology.h"
 #include "tsuba/FileView.h"
 #include "tsuba/tsuba.h"
 
@@ -14,20 +15,6 @@ class RDGMeta;
 /// used by the partitioner to avoid downloading the whole RDG to make
 /// partitioning decisions
 class KATANA_EXPORT RDGPrefix {
-  struct GRHeader {
-    uint64_t version{0};
-    uint64_t edge_type_size{0};
-    uint64_t num_nodes{0};
-    uint64_t num_edges{0};
-  };
-
-  /// includes the header and the list of indexes
-  struct GRPrefix {
-    GRHeader header;
-    uint64_t
-        out_indexes[]; /* NOLINT length is defined by num_nodes_ in header */
-  };
-
 public:
   static katana::Result<RDGPrefix> Make(RDGHandle handle);
 
@@ -54,13 +41,13 @@ private:
   RDGPrefix(FileView&& prefix_storage, uint64_t view_offset)
       : prefix_storage_(std::move(prefix_storage)),
         view_offset_(view_offset),
-        prefix_(prefix_storage_.ptr<GRPrefix>()) {}
+        prefix_(prefix_storage_.ptr<CSRTopologyPrefix>()) {}
 
   RDGPrefix() = default;
 
   FileView prefix_storage_;
   uint64_t view_offset_;
-  const GRPrefix* prefix_{nullptr};
+  const CSRTopologyPrefix* prefix_{nullptr};
 
   static katana::Result<RDGPrefix> DoMakePrefix(const RDGMeta& meta);
 };

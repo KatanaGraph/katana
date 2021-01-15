@@ -6,7 +6,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <fstream>
+#include <iterator>
 
 #include <boost/filesystem.hpp>
 
@@ -47,6 +49,32 @@ tsuba::LocalStorage::WriteFile(
   if (!ofile.good()) {
     return ErrorCode::LocalStorageError;
   }
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::LocalStorage::RemoteCopyFile(
+    std::string source_uri, std::string dest_uri, uint64_t begin,
+    uint64_t size) {
+  CleanUri(&source_uri);
+  CleanUri(&dest_uri);
+
+  std::ifstream ifile(source_uri, std::ios_base::binary);
+  if (!ifile) {
+    KATANA_LOG_ERROR("failed to open source file");
+    return ErrorCode::LocalStorageError;
+  }
+  ifile.seekg(begin, std::ios_base::beg);
+
+  std::ofstream ofile(dest_uri, std::ios_base::binary | std::ios_base::trunc);
+  if (!ofile) {
+    KATANA_LOG_ERROR("failed to open dest file");
+    return ErrorCode::LocalStorageError;
+  }
+
+  std::copy_n(
+      std::istreambuf_iterator<char>(ifile), size,
+      std::ostreambuf_iterator<char>(ofile));
   return katana::ResultSuccess();
 }
 

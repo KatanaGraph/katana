@@ -39,6 +39,10 @@ public:
   virtual katana::Result<void> PutMultiSync(
       const std::string& uri, const uint8_t* data, uint64_t size) = 0;
 
+  virtual katana::Result<void> RemoteCopy(
+      const std::string& source_uri, const std::string& dest_uri,
+      uint64_t begin, uint64_t size) = 0;
+
   /// Storage classes with higher priority will be tried by GlobalState earlier
   /// currently only used to enforce local fs default; GlobalState defaults
   /// to the LocalStorage when no protocol on the URI is provided

@@ -232,6 +232,16 @@ tsuba::Stat(const std::string& rdg_name) {
   };
 }
 
+katana::Uri
+tsuba::MakeTopologyFileName(tsuba::RDGHandle handle) {
+  return GetRDGDir(handle).RandFile("topology");
+}
+
+katana::Uri
+tsuba::GetRDGDir(tsuba::RDGHandle handle) {
+  return handle.impl_->rdg_meta().dir();
+}
+
 katana::Result<void>
 tsuba::Init(katana::CommBackend* comm) {
   tsuba::Preload();

@@ -56,7 +56,9 @@ set(sources
         src/analytics/pagerank/pagerank.cpp
         src/analytics/sssp/sssp.cpp
         src/analytics/triangle_count/triangle_count.cpp
-    )
+        src/analytics/k_core/k_core.cpp
+        src/analytics/k_truss/k_truss.cpp
+)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND sources src/HWTopoDarwin.cpp)

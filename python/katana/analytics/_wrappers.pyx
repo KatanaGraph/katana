@@ -60,29 +60,29 @@ def sort_nodes_by_degree(PropertyGraph pg):
 cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     cppclass _BfsPlan "katana::analytics::BfsPlan" (_Plan):
         enum Algorithm:
-            kAsyncTile "katana::analytics::BfsPlan::kAsyncTile"
-            kAsync "katana::analytics::BfsPlan::kAsync"
-            kSyncTile "katana::analytics::BfsPlan::kSyncTile"
-            kSync "katana::analytics::BfsPlan::kSync"
+            kAsynchronousTile "katana::analytics::BfsPlan::kAsynchronousTile"
+            kAsynchronous "katana::analytics::BfsPlan::kAsynchronous"
+            kSynchronousTile "katana::analytics::BfsPlan::kSynchronousTile"
+            kSynchronous "katana::analytics::BfsPlan::kSynchronous"
 
         _BfsPlan.Algorithm algorithm() const
         ptrdiff_t edge_tile_size() const
 
         @staticmethod
-        _BfsPlan AsyncTile()
+        _BfsPlan AsynchronousTile()
         @staticmethod
-        _BfsPlan AsyncTile_1 "AsyncTile"(ptrdiff_t edge_tile_size)
+        _BfsPlan AsynchronousTile_1 "AsynchronousTile"(ptrdiff_t edge_tile_size)
 
         @staticmethod
-        _BfsPlan Async()
+        _BfsPlan Asynchronous()
 
         @staticmethod
-        _BfsPlan SyncTile()
+        _BfsPlan SynchronousTile()
         @staticmethod
-        _BfsPlan SyncTile_1 "SyncTile"(ptrdiff_t edge_tile_size)
+        _BfsPlan SynchronousTile_1 "SynchronousTile"(ptrdiff_t edge_tile_size)
 
         @staticmethod
-        _BfsPlan Sync()
+        _BfsPlan Synchronous()
 
         @staticmethod
         _BfsPlan FromAlgorithm(_BfsPlan.Algorithm algo)
@@ -110,10 +110,10 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
                                            string property_name);
 
 class _BfsAlgorithm(Enum):
-    AsyncTile = _BfsPlan.Algorithm.kAsyncTile
-    Async = _BfsPlan.Algorithm.kAsync
-    SyncTile = _BfsPlan.Algorithm.kSyncTile
-    Sync = _BfsPlan.Algorithm.kSync
+    AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
+    Asynchronous = _BfsPlan.Algorithm.kAsynchronous
+    SynchronousTile = _BfsPlan.Algorithm.kSynchronousTile
+    Synchronous = _BfsPlan.Algorithm.kSynchronous
 
 
 cdef class BfsPlan(Plan):
@@ -140,25 +140,25 @@ cdef class BfsPlan(Plan):
         return self.underlying_.edge_tile_size()
 
     @staticmethod
-    def async_tile(edge_tile_size=None):
+    def asynchronous_tile(edge_tile_size=None):
 
         if edge_tile_size is not None:
-            return BfsPlan.make(_BfsPlan.AsyncTile_1(edge_tile_size))
-        return BfsPlan.make(_BfsPlan.AsyncTile())
+            return BfsPlan.make(_BfsPlan.AsynchronousTile_1(edge_tile_size))
+        return BfsPlan.make(_BfsPlan.AsynchronousTile())
 
     @staticmethod
-    def async_():
-        return BfsPlan.make(_BfsPlan.Async())
+    def asynchronous():
+        return BfsPlan.make(_BfsPlan.Asynchronous())
 
     @staticmethod
-    def sync_tile(edge_tile_size=None):
+    def synchronous_tile(edge_tile_size=None):
         if edge_tile_size is not None:
-            return BfsPlan.make(_BfsPlan.SyncTile_1(edge_tile_size))
-        return BfsPlan.make(_BfsPlan.SyncTile())
+            return BfsPlan.make(_BfsPlan.SynchronousTile_1(edge_tile_size))
+        return BfsPlan.make(_BfsPlan.SynchronousTile())
 
     @staticmethod
-    def sync():
-        return BfsPlan.make(_BfsPlan.Sync())
+    def synchronous():
+        return BfsPlan.make(_BfsPlan.Synchronous())
 
     @staticmethod
     def from_algorithm(algorithm):

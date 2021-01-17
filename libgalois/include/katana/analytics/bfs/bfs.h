@@ -12,7 +12,12 @@ namespace katana::analytics {
 /// associated with it.
 class BfsPlan : public Plan {
 public:
-  enum Algorithm { kAsyncTile = 0, kAsync, kSyncTile, kSync };
+  enum Algorithm {
+    kAsynchronousTile = 0,
+    kAsynchronous,
+    kSynchronousTile,
+    kSynchronous
+  };
 
 private:
   Algorithm algorithm_;
@@ -25,33 +30,33 @@ private:
         edge_tile_size_(edge_tile_size) {}
 
 public:
-  BfsPlan() : BfsPlan{kCPU, kSyncTile, 256} {}
+  BfsPlan() : BfsPlan{kCPU, kSynchronousTile, 256} {}
 
   Algorithm algorithm() const { return algorithm_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
-  static BfsPlan AsyncTile(ptrdiff_t edge_tile_size = 256) {
-    return {kCPU, kAsyncTile, edge_tile_size};
+  static BfsPlan AsynchronousTile(ptrdiff_t edge_tile_size = 256) {
+    return {kCPU, kAsynchronousTile, edge_tile_size};
   }
 
-  static BfsPlan Async() { return {kCPU, kAsync, 0}; }
+  static BfsPlan Asynchronous() { return {kCPU, kAsynchronous, 0}; }
 
-  static BfsPlan SyncTile(ptrdiff_t edge_tile_size = 256) {
-    return {kCPU, kSyncTile, edge_tile_size};
+  static BfsPlan SynchronousTile(ptrdiff_t edge_tile_size = 256) {
+    return {kCPU, kSynchronousTile, edge_tile_size};
   }
 
-  static BfsPlan Sync() { return {kCPU, kSync, 0}; }
+  static BfsPlan Synchronous() { return {kCPU, kSynchronous, 0}; }
 
   static BfsPlan FromAlgorithm(Algorithm algo) {
     switch (algo) {
-    case kAsync:
-      return Async();
-    case kAsyncTile:
-      return AsyncTile();
-    case kSync:
-      return Sync();
-    case kSyncTile:
-      return SyncTile();
+    case kAsynchronous:
+      return Asynchronous();
+    case kAsynchronousTile:
+      return AsynchronousTile();
+    case kSynchronous:
+      return Synchronous();
+    case kSynchronousTile:
+      return SynchronousTile();
     default:
       return {};
     }

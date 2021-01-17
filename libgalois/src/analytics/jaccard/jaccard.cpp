@@ -19,11 +19,6 @@
 
 #include "katana/analytics/jaccard/jaccard.h"
 
-#include <deque>
-#include <iostream>
-#include <type_traits>
-#include <unordered_set>
-
 #include "katana/analytics/Utils.h"
 
 using namespace katana::analytics;

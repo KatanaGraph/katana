@@ -1,10 +1,9 @@
 #ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
 #define KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
 
-#include <katana/analytics/Plan.h>
-
 #include "katana/AtomicHelpers.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
+#include "katana/analytics/Plan.h"
 #include "katana/analytics/Utils.h"
 
 // API
@@ -139,7 +138,7 @@ struct KATANA_EXPORT SsspStatistics {
   /// The number of nodes reachable from the source node.
   uint32_t n_reached_nodes;
 
-  double average_distance() { return total_distance / n_reached_nodes; }
+  double average_distance() const { return total_distance / n_reached_nodes; }
 
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout);

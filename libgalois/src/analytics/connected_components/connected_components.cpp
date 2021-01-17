@@ -259,12 +259,13 @@ struct ConnectedComponentsSynchronousAlgo {
         },
         katana::steal(), katana::loopname("Compress"));
 
-    katana::ReportStatSingle("CC-Sync", "rounds", rounds);
-    katana::ReportStatSingle("CC-Sync", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle("CC-Synchronous", "rounds", rounds);
+    katana::ReportStatSingle(
+        "CC-Synchronous", "empty_merges", empty_merges.reduce());
   }
 };
 
-struct ConnectedComponentsAsyncAlgo {
+struct ConnectedComponentsAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
@@ -277,7 +278,8 @@ struct ConnectedComponentsAsyncAlgo {
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
-  ConnectedComponentsAsyncAlgo(ConnectedComponentsPlan& plan) : plan_(plan) {}
+  ConnectedComponentsAsynchronousAlgo(ConnectedComponentsPlan& plan)
+      : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
@@ -313,7 +315,7 @@ struct ConnectedComponentsAsyncAlgo {
               empty_merges += 1;
           }
         },
-        katana::loopname("CC-Async"));
+        katana::loopname("CC-Asynchronous"));
 
     katana::do_all(
         katana::iterate(*graph),
@@ -321,13 +323,14 @@ struct ConnectedComponentsAsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        katana::steal(), katana::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
 
-    katana::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle(
+        "CC-Asynchronous", "empty_merges", empty_merges.reduce());
   }
 };
 
-struct ConnectedComponentsEdgeAsyncAlgo {
+struct ConnectedComponentsEdgeAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
@@ -341,7 +344,7 @@ struct ConnectedComponentsEdgeAsyncAlgo {
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
   ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeAsyncAlgo(ConnectedComponentsPlan& plan)
+  ConnectedComponentsEdgeAsynchronousAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
@@ -373,7 +376,7 @@ struct ConnectedComponentsEdgeAsyncAlgo {
             }
           }
         },
-        katana::loopname("CC-EdgeAsyncInit"), katana::steal());
+        katana::loopname("CC-EdgeAsynchronousInit"), katana::steal());
 
     katana::do_all(
         katana::iterate(works),
@@ -389,7 +392,7 @@ struct ConnectedComponentsEdgeAsyncAlgo {
             empty_merges += 1;
           }
         },
-        katana::loopname("CC-EdgeAsync"), katana::steal());
+        katana::loopname("CC-EdgeAsynchronous"), katana::steal());
 
     katana::do_all(
         katana::iterate(*graph),
@@ -397,13 +400,14 @@ struct ConnectedComponentsEdgeAsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        katana::steal(), katana::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
 
-    katana::ReportStatSingle("CC-Async", "empty_merges", empty_merges.reduce());
+    katana::ReportStatSingle(
+        "CC-Asynchronous", "empty_merges", empty_merges.reduce());
   }
 };
 
-struct ConnectedComponentsBlockedAsyncAlgo {
+struct ConnectedComponentsBlockedAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
@@ -417,7 +421,7 @@ struct ConnectedComponentsBlockedAsyncAlgo {
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
   ConnectedComponentsPlan& plan_;
-  ConnectedComponentsBlockedAsyncAlgo(ConnectedComponentsPlan& plan)
+  ConnectedComponentsBlockedAsynchronousAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
@@ -497,11 +501,11 @@ struct ConnectedComponentsBlockedAsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        katana::steal(), katana::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
   }
 };
 
-struct ConnectedComponentsEdgeTiledAsyncAlgo {
+struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
@@ -515,7 +519,7 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
   ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeTiledAsyncAlgo(ConnectedComponentsPlan& plan)
+  ConnectedComponentsEdgeTiledAsynchronousAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
@@ -570,7 +574,7 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
             works.push_back(EdgeTile{src, beg, end});
           }
         },
-        katana::loopname("CC-EdgeTiledAsyncInit"), katana::steal());
+        katana::loopname("CC-EdgeTiledAsynchronousInit"), katana::steal());
 
     katana::do_all(
         katana::iterate(works),
@@ -588,7 +592,7 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
               empty_merges += 1;
           }
         },
-        katana::loopname("CC-edgetiledAsync"), katana::steal(),
+        katana::loopname("CC-edgetiledAsynchronous"), katana::steal(),
         katana::chunk_size<ConnectedComponentsPlan::kChunkSize>()  // 16 -> 1
     );
 
@@ -598,10 +602,10 @@ struct ConnectedComponentsEdgeTiledAsyncAlgo {
           auto& sdata = graph->GetData<NodeComponent>(src);
           sdata->compress();
         },
-        katana::steal(), katana::loopname("CC-Async-Compress"));
+        katana::steal(), katana::loopname("CC-Asynchronous-Compress"));
 
     katana::ReportStatSingle(
-        "CC-edgeTiledAsync", "empty_merges", empty_merges.reduce());
+        "CC-edgeTiledAsynchronous", "empty_merges", empty_merges.reduce());
   }
 };
 
@@ -1123,19 +1127,21 @@ katana::analytics::ConnectedComponents(
         pfg, output_property_name, plan);
     break;
   case ConnectedComponentsPlan::kAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsAsyncAlgo>(
+    return ConnectedComponentsWithWrap<ConnectedComponentsAsynchronousAlgo>(
         pfg, output_property_name, plan);
     break;
   case ConnectedComponentsPlan::kEdgeAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsyncAlgo>(
+    return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsynchronousAlgo>(
         pfg, output_property_name, plan);
     break;
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsEdgeTiledAsyncAlgo>(
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsEdgeTiledAsynchronousAlgo>(
         pfg, output_property_name, plan);
     break;
   case ConnectedComponentsPlan::kBlockedAsynchronous:
-    return ConnectedComponentsWithWrap<ConnectedComponentsBlockedAsyncAlgo>(
+    return ConnectedComponentsWithWrap<
+        ConnectedComponentsBlockedAsynchronousAlgo>(
         pfg, output_property_name, plan);
     break;
   case ConnectedComponentsPlan::kAfforest:

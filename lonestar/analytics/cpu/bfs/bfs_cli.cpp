@@ -48,22 +48,23 @@ static cll::opt<unsigned int> reportNode(
 static cll::opt<BfsPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value SyncTile):"),
     cll::values(
-        clEnumValN(BfsPlan::kAsyncTile, "AsyncTile", "Asynchronous tiled"),
-        clEnumValN(BfsPlan::kAsync, "Async", "Asynchronous"),
-        clEnumValN(BfsPlan::kSyncTile, "SyncTile", "Synchronous tiled"),
-        clEnumValN(BfsPlan::kSync, "Sync", "Synchronous")),
-    cll::init(BfsPlan::kSyncTile));
+        clEnumValN(
+            BfsPlan::kAsynchronousTile, "AsyncTile", "Asynchronous tiled"),
+        clEnumValN(BfsPlan::kAsynchronous, "Async", "Asynchronous"),
+        clEnumValN(BfsPlan::kSynchronousTile, "SyncTile", "Synchronous tiled"),
+        clEnumValN(BfsPlan::kSynchronous, "Sync", "Synchronous")),
+    cll::init(BfsPlan::kSynchronousTile));
 
 std::string
 AlgorithmName(BfsPlan::Algorithm algorithm) {
   switch (algorithm) {
-  case BfsPlan::kAsyncTile:
+  case BfsPlan::kAsynchronousTile:
     return "AsyncTile";
-  case BfsPlan::kAsync:
+  case BfsPlan::kAsynchronous:
     return "Async";
-  case BfsPlan::kSyncTile:
+  case BfsPlan::kSynchronousTile:
     return "SyncTile";
-  case BfsPlan::kSync:
+  case BfsPlan::kSynchronous:
     return "Sync";
   default:
     return "Unknown";

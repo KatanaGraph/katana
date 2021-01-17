@@ -1,8 +1,8 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PROPERTYVIEWS_H_
 #define KATANA_LIBGALOIS_KATANA_PROPERTYVIEWS_H_
 
-#include <katana/Properties.h>
-#include <katana/PropertyFileGraph.h>
+#include "katana/Properties.h"
+#include "katana/PropertyFileGraph.h"
 
 namespace katana::internal {
 

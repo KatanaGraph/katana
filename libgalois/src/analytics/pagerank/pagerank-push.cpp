@@ -52,7 +52,7 @@ katana::Result<void>
 PagerankPushAsynchronous(
     katana::PropertyFileGraph* pfg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(5, 5 * pfg->topology().num_nodes() * sizeof(NodeData));
+  katana::Prealloc(5, 5 * pfg->num_nodes() * sizeof(NodeData));
 
   katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
 
@@ -111,7 +111,7 @@ katana::Result<void>
 PagerankPushSynchronous(
     katana::PropertyFileGraph* pfg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(5, 5 * pfg->topology().num_nodes() * sizeof(NodeData));
+  katana::Prealloc(5, 5 * pfg->num_nodes() * sizeof(NodeData));
 
   katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
 

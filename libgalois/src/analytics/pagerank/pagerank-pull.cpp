@@ -231,7 +231,7 @@ katana::Result<void>
 PagerankPullTopological(
     katana::PropertyFileGraph* pfg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(2, 3 * pfg->topology().num_nodes() * sizeof(NodeData));
+  katana::Prealloc(2, 3 * pfg->num_nodes() * sizeof(NodeData));
 
   katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
 
@@ -263,7 +263,7 @@ katana::Result<void>
 PagerankPullResidual(
     katana::PropertyFileGraph* pfg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(2, 3 * pfg->topology().num_nodes() * sizeof(NodeData));
+  katana::Prealloc(2, 3 * pfg->num_nodes() * sizeof(NodeData));
 
   katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
 
@@ -281,9 +281,9 @@ PagerankPullResidual(
   Graph graph = graph_result.value();
 
   DeltaArray delta;
-  delta.allocateInterleaved(pfg->topology().num_nodes());
+  delta.allocateInterleaved(pfg->num_nodes());
   ResidualArray residual;
-  residual.allocateInterleaved(pfg->topology().num_nodes());
+  residual.allocateInterleaved(pfg->num_nodes());
 
   InitNodeDataResidual(&graph, delta, residual, plan);
   ComputeOutDeg(&graph);

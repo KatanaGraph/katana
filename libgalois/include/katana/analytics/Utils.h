@@ -62,8 +62,7 @@ inline katana::Result<void>
 ConstructEdgeProperties(
     PropertyFileGraph* pfg,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto res_table =
-      katana::AllocateTable<EdgeProps>(pfg->topology().num_edges(), names);
+  auto res_table = katana::AllocateTable<EdgeProps>(pfg->num_edges(), names);
   if (!res_table) {
     return res_table.error();
   }

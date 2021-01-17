@@ -3,9 +3,8 @@
 
 #include <iostream>
 
-#include <katana/analytics/Plan.h>
-
 #include "katana/AtomicHelpers.h"
+#include "katana/analytics/Plan.h"
 #include "katana/analytics/Utils.h"
 
 // API

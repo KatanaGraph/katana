@@ -96,7 +96,7 @@ struct OneTilePushWrap {
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
-AsyncAlgo(
+AsynchronousAlgo(
     Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
   namespace gwl = katana;
   // typedef PerSocketChunkFIFO<kChunkSize> dFIFO;
@@ -179,7 +179,7 @@ AsyncAlgo(
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
-SyncAlgo(
+SynchronousAlgo(
     Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
   using Cont = typename std::conditional<
       CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
@@ -221,7 +221,7 @@ SyncAlgo(
           }
         },
         katana::steal(), katana::chunk_size<kChunkSize>(),
-        katana::loopname("Sync"));
+        katana::loopname("Synchronous"));
   }
 }
 
@@ -230,20 +230,20 @@ void
 RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
   BfsImplementation impl{algo.edge_tile_size()};
   switch (algo.algorithm()) {
-  case BfsPlan::kAsyncTile:
-    AsyncAlgo<CONCURRENT, SrcEdgeTile>(
+  case BfsPlan::kAsynchronousTile:
+    AsynchronousAlgo<CONCURRENT, SrcEdgeTile>(
         graph, source, SrcEdgeTilePushWrap{graph, impl}, TileRangeFn());
     break;
-  case BfsPlan::kAsync:
-    AsyncAlgo<CONCURRENT, UpdateRequest>(
+  case BfsPlan::kAsynchronous:
+    AsynchronousAlgo<CONCURRENT, UpdateRequest>(
         graph, source, ReqPushWrap(), OutEdgeRangeFn{graph});
     break;
-  case BfsPlan::kSyncTile:
-    SyncAlgo<CONCURRENT, EdgeTile>(
+  case BfsPlan::kSynchronousTile:
+    SynchronousAlgo<CONCURRENT, EdgeTile>(
         graph, source, EdgeTilePushWrap{graph, impl}, TileRangeFn());
     break;
-  case BfsPlan::kSync:
-    SyncAlgo<CONCURRENT, Graph::Node>(
+  case BfsPlan::kSynchronous:
+    SynchronousAlgo<CONCURRENT, Graph::Node>(
         graph, source, NodePushWrap(), OutEdgeRangeFn{graph});
     break;
   default:

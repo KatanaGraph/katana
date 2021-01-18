@@ -75,7 +75,7 @@ doSummary(Graph& graph) {
 void
 doDegrees(Graph& graph) {
   for (auto n : graph) {
-    std::cout << std::distance(graph.edge_begin(n), graph.edge_end(n)) << "\n";
+    std::cout << graph.edges(n).size() << "\n";
   }
 }
 
@@ -85,7 +85,7 @@ findMaxDegreeNode(Graph& graph) {
   size_t MaxDegree = 0;
   uint64_t MaxDegreeNode = 0;
   for (auto n : graph) {
-    size_t degree = std::distance(graph.edge_begin(n), graph.edge_end(n));
+    size_t degree = graph.edges(n).size();
     if (MaxDegree < degree) {
       MaxDegree = degree;
       MaxDegreeNode = nodeId;
@@ -150,7 +150,7 @@ void
 doDegreeHistogram(Graph& graph) {
   std::map<uint64_t, uint64_t> hist;
   for (auto ii : graph) {
-    ++hist[std::distance(graph.edge_begin(ii), graph.edge_end(ii))];
+    ++hist[graph.edges(ii).size()];
   }
   printHistogram("Degree", hist);
 }

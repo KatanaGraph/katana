@@ -416,8 +416,7 @@ katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
   using DegreeNodePair = std::pair<uint64_t, uint32_t>;
   std::vector<DegreeNodePair> dn_pairs(num_nodes);
   katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
-    auto node_edge_range = pfg->topology().edge_range(node);
-    size_t node_degree = node_edge_range.second - node_edge_range.first;
+    size_t node_degree = pfg->edges(node).size();
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
 

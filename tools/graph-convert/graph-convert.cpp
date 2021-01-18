@@ -224,7 +224,7 @@ static cll::opt<int> minValue(
     "minValue",
     cll::desc("minimum weight to add for random weight conversions"),
     cll::init(1));
-static cll::opt<int> maxDegree(
+static cll::opt<size_t> maxDegree(
     "maxDegree", cll::desc("maximum degree to keep"), cll::init(2 * 1024));
 
 struct Conversion {};
@@ -1068,8 +1068,7 @@ struct Bipartitegr2Petsc : public HasNoVoidSpecialization {
     for (Graph::iterator ii = graph.begin(), ei = ii + partition; ii != ei;
          ++ii) {
       GNode src = *ii;
-      writeEndian<LittleEndian, int32_t>(
-          file, std::distance(graph.edge_begin(src), graph.edge_end(src)));
+      writeEndian<LittleEndian, int32_t>(file, graph.edges(src).size());
     }
 
     // column indices
@@ -1283,7 +1282,7 @@ struct AddRing : public Conversion {
     p.phase1();
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
-      auto d = std::distance(graph.edge_begin(src), graph.edge_end(src));
+      auto d = graph.edges(src).size();
       if (AddLine && src == 0)
         p.incrementDegree(src, d);
       else
@@ -1369,8 +1368,7 @@ struct AddTree : public Conversion {
     p.phase1();
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
-      p.incrementDegree(
-          src, std::distance(graph.edge_begin(src), graph.edge_end(src)));
+      p.incrementDegree(src, graph.edges(src).size());
       if (src * 2 + 1 < size) {  // (1)
         p.incrementDegree(src);
         if (AddComplement)
@@ -1481,7 +1479,7 @@ struct BipartiteSortByDegree : public Conversion {
                std::distance(
                    transposegraph.edge_begin(x), transposegraph.edge_end(x));
       else
-        return std::distance(ingraph.edge_begin(x), ingraph.edge_end(x));
+        return ingraph.edges(x).size();
     };
 
     std::copy(ingraph.begin(), ingraph.end(), perm.begin());
@@ -1519,8 +1517,7 @@ struct SortByDegree : public Conversion {
 
     std::copy(ingraph.begin(), ingraph.end(), perm.begin());
     std::sort(perm.begin(), perm.end(), [&](GNode lhs, GNode rhs) -> bool {
-      return std::distance(ingraph.edge_begin(lhs), ingraph.edge_end(lhs)) <
-             std::distance(ingraph.edge_begin(rhs), ingraph.edge_end(rhs));
+      return ingraph.edges(lhs).size() < ingraph.edges(rhs).size();
     });
 
     // Finalize by taking the transpose/inverse
@@ -1590,7 +1587,7 @@ struct SortByHighDegreeParent : public Conversion {
         std::cerr << static_cast<double>(count * 100) / sz << "\r";
 
       // get the number of edges this vertex has
-      unsigned dist = std::distance(graph.edge_begin(*ii), graph.edge_end(*ii));
+      unsigned dist = graph.edges(*ii).size();
 
       // for each edge, get destination, and on that destination vertex save
       // the source id (i.e. this is a transpose)
@@ -1689,13 +1686,12 @@ struct RemoveHighDegree : public Conversion {
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
       Graph::edge_iterator jj = graph.edge_begin(src), ej = graph.edge_end(src);
-      if (std::distance(jj, ej) > maxDegree)
+      if (graph.edges(src).size() > maxDegree)
         continue;
       nodeTable[src] = numNodes++;
       for (; jj != ej; ++jj) {
         GNode dst = graph.getEdgeDst(jj);
-        if (std::distance(graph.edge_begin(dst), graph.edge_end(dst)) >
-            maxDegree)
+        if (graph.edges(dst).size() > maxDegree)
           continue;
         ++numEdges;
       }
@@ -1717,12 +1713,11 @@ struct RemoveHighDegree : public Conversion {
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
       Graph::edge_iterator jj = graph.edge_begin(src), ej = graph.edge_end(src);
-      if (std::distance(jj, ej) > maxDegree)
+      if (graph.edges(src).size() > maxDegree)
         continue;
       for (; jj != ej; ++jj) {
         GNode dst = graph.getEdgeDst(jj);
-        if (std::distance(graph.edge_begin(dst), graph.edge_end(dst)) >
-            maxDegree)
+        if (graph.edges(dst).size() > maxDegree)
           continue;
         p.incrementDegree(nodeTable[src]);
       }
@@ -1732,12 +1727,11 @@ struct RemoveHighDegree : public Conversion {
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
       Graph::edge_iterator jj = graph.edge_begin(src), ej = graph.edge_end(src);
-      if (std::distance(jj, ej) > maxDegree)
+      if (graph.edges(src).size() > maxDegree)
         continue;
       for (; jj != ej; ++jj) {
         GNode dst = graph.getEdgeDst(jj);
-        if (std::distance(graph.edge_begin(dst), graph.edge_end(dst)) >
-            maxDegree)
+        if (graph.edges(dst).size() > maxDegree)
           continue;
         if (EdgeData::has_value) {
           edgeData.set(
@@ -1792,8 +1786,7 @@ struct PartitionBySource : public Conversion {
       p.phase1();
       for (Graph::iterator ii = r.first, ei = r.second; ii != ei; ++ii) {
         GNode src = *ii;
-        p.incrementDegree(
-            src, std::distance(graph.edge_begin(src), graph.edge_end(src)));
+        p.incrementDegree(src, graph.edges(src).size());
       }
 
       p.phase2();
@@ -2643,8 +2636,7 @@ struct Gr2Rmat : public HasNoVoidSpecialization {
     file << graph.size() << " " << graph.sizeEdges() << "\n";
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode src = *ii;
-      file << *ii << " "
-           << std::distance(graph.edge_begin(src), graph.edge_end(src));
+      file << *ii << " " << graph.edges(src).size();
       for (Graph::edge_iterator jj = graph.edge_begin(src),
                                 ej = graph.edge_end(src);
            jj != ej; ++jj) {
@@ -2832,8 +2824,8 @@ struct Gr2Neo4j : public Conversion {
 };
 
 /**
- * This is Required gr to kg conversion to append edge data 
- * as the edge property. 
+ * This is Required gr to kg conversion to append edge data
+ * as the edge property.
  */
 template <typename EdgeTy>
 katana::Result<void>

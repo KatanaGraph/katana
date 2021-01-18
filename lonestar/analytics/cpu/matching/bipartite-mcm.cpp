@@ -323,7 +323,7 @@ struct MatchingFF {
           }
           return true;
         } else {
-          assert(std::distance(g.edge_begin(dst), g.edge_end(dst)) == 1);
+          assert(g.edges(dst).size() == 1);
           for (auto jj : g.edges(dst, flag)) {
             GraphNode cur = g.getEdgeDst(jj);
 
@@ -1107,7 +1107,7 @@ void
 removeMatchedEdges(G& g) {
   Exists<G, Algo> exists;
   for (auto n : g.B) {
-    assert(std::distance(g.edge_begin(n), g.edge_end(n)) <= 1);
+    assert(g.edges(n).size() <= 1);
     for (auto edge : g.out_edges(n)) {
       if (exists(g, edge)) {
         g.removeEdge(n, edge);

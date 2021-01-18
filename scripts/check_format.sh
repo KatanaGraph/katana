@@ -16,10 +16,12 @@ fi
 
 ROOTS="$@"
 FAILED=
-PRUNE_LIST="'*/external/cub' '*/external/bliss' 'build*'"
+PRUNE_PATHS="'*/external/cub' '*/external/bliss'"
+PRUNE_NAMES="build*"
 
 emit_prunes() {
-  for p in ${PRUNE_LIST}; do echo "-path ${p} -prune -o"; done | xargs
+  { for p in ${PRUNE_PATHS}; do echo "-path ${p} -prune -o"; done; \
+    for p in ${PRUNE_NAMES}; do echo "-name ${p} -prune -o"; done; } | xargs
 }
 
 while read -d '' filename; do

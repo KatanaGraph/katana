@@ -109,17 +109,26 @@ MakeLocalTwoLevelRange(T& obj) {
 
 /**
  * A StandardRange is a range over standard C++ begin and end iterators.
+ *
+ * Implements std::ranges::sized_range (C++20).
  */
 template <typename IterTy>
 class StandardRange {
 public:
   typedef IterTy iterator;
   typedef iterator local_iterator;
-  typedef typename std::iterator_traits<IterTy>::value_type value_type;
+  typedef typename std::iterator_traits<iterator>::value_type value_type;
+  typedef
+      typename std::iterator_traits<iterator>::difference_type difference_type;
+  typedef typename std::make_unsigned<difference_type>::type size_type;
 
   StandardRange() = default;
 
   StandardRange(IterTy begin, IterTy end) : begin_(begin), end_(end) {}
+
+  constexpr size_type size() { return std::distance(begin(), end()); }
+  constexpr bool empty() { return begin() == end(); }
+  constexpr explicit operator bool() { return !empty(); }
 
   iterator begin() const { return begin_; }
   iterator end() const { return end_; }

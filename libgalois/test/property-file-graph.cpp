@@ -221,6 +221,9 @@ TestTopologyAccess() {
   for (int i = 0; i < 10; ++i) {
     KATANA_LOG_ASSERT(
         std::distance(g->edges(i).begin(), g->edges(i).end()) == 3);
+    KATANA_LOG_ASSERT(g->edges(i).size() == 3);
+    KATANA_LOG_ASSERT(g->edges(i));
+    KATANA_LOG_ASSERT(!g->edges(i).empty());
   }
   int n_nodes = 0;
   for (katana::PropertyFileGraph::Node i : *g) {

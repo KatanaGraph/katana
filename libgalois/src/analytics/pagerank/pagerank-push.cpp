@@ -82,8 +82,7 @@ PagerankPushAsynchronous(
           PRTy old_residual = src_residual.exchange(0.0);
           auto& src_value = graph.GetData<NodeValue>(src);
           src_value += old_residual;
-          int src_nout =
-              std::distance(graph.edge_begin(src), graph.edge_end(src));
+          int src_nout = graph.edges(src).size();
           if (src_nout > 0) {
             PRTy delta = old_residual * plan.alpha() / src_nout;
             //! For each out-going neighbors.
@@ -157,8 +156,7 @@ PagerankPushSynchronous(
             graph.GetData<NodeValue>(src) += old_residual;
             sdata_residual = 0.0;
 
-            int src_nout =
-                std::distance(graph.edge_begin(src), graph.edge_end(src));
+            int src_nout = graph.edges(src).size();
             PRTy delta = old_residual * plan.alpha() / src_nout;
 
             auto beg = graph.edge_begin(src);

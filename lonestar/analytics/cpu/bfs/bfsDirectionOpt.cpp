@@ -238,8 +238,7 @@ syncDOAlgo(
   // next_bitset.set(source);
 
   int64_t edges_to_check = graph.sizeEdges();
-  int64_t scout_count =
-      std::distance(graph.edge_begin(source), graph.edge_end(source));
+  int64_t scout_count = graph.edges(source).size();
   katana::gPrint("source: ", source, " has OutDegree:", scout_count, "\n");
   assert(!next->empty());
 

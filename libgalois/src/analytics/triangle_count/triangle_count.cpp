@@ -108,9 +108,7 @@ struct GetDegree {
   const G& g;
   GetDegree(const G& g) : g(g) {}
 
-  ptrdiff_t operator()(const N& n) const {
-    return std::distance(g.edge_begin(n), g.edge_end(n));
-  }
+  ptrdiff_t operator()(const N& n) const { return g.edges(n).size(); }
 };
 
 template <typename Node, typename EdgeTy>

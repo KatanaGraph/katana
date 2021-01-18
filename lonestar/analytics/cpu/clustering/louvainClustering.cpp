@@ -517,7 +517,7 @@ coloringDistanceOne(Graph& graph) {
 
         int64_t max_color = -1;
         int64_t my_color = 0;
-        int64_t degree = std::distance(graph.edge_begin(n), graph.edge_end(n));
+        int64_t degree = graph.edges(n).size();
         if (degree > 0) {
           std::vector<bool> isColorSet;
           isColorSet.resize(degree, false);

@@ -1377,7 +1377,7 @@ initializeGraphData(Graph& g) {
 
     largestNodeID_perThread[tid] = 0;
     for (uint32_t i = start; i < end; ++i) {
-      if (std::distance(g.edge_begin(i), g.edge_end(i))) {
+      if (g.edges(i).size()) {
         if (largestNodeID_perThread[tid] < i)
           largestNodeID_perThread[tid] = i;
       }

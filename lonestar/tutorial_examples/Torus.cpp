@@ -102,10 +102,7 @@ main(int argc, char** argv) {
   // read/write only a node itself
   katana::do_all(
       katana::iterate(graph),
-      [&](GNode n) {
-        graph.getData(n) =
-            std::distance(graph.edge_begin(n), graph.edge_end(n));
-      },
+      [&](GNode n) { graph.getData(n) = graph.edges(n).size(); },
       katana::loopname("do_all"));
   verify(graph, N);
 

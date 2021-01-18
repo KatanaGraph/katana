@@ -57,7 +57,7 @@ findSeed(GGraph& g, unsigned partNum, int partWeight, katana::MethodFlag flag) {
   for (auto ii = g.begin(), ee = g.end(); ii != ee; ++ii) {
     if (g.getData(*ii, flag).getPart() == partNum) {
       seed = *ii;
-      nodeEd.push_back(std::make_pair(std::distance(g.edge_begin(*ii),g.edge_end(*ii)),*ii));
+      nodeEd.push_back(std::make_pair(g.edges(*ii).size(),*ii));
     }
   }
   std::sort(nodeEd.begin(),nodeEd.end());

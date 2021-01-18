@@ -63,7 +63,7 @@ unsigned
 graphStat(GGraph& graph) {
   onlineStat e;
   for (auto ii = graph.begin(), ee = graph.end(); ii != ee; ++ii) {
-    unsigned val = std::distance(graph.edge_begin(*ii), graph.edge_end(*ii));
+    unsigned val = graph.edges(*ii).size();
     e.add(val);
   }
   std::cout << "Nodes " << e.count() << " Edges(total, var, min, max) "

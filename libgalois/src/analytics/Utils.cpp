@@ -19,15 +19,15 @@
 
 #include "katana/analytics/Utils.h"
 
-#include <katana/Random.h>
+#include "katana/Random.h"
 
 uint32_t
 katana::analytics::SourcePicker::PickNext() {
   uint32_t source;
   do {
     source = RandomUniformInt(graph.size());
-  } while (
-      std::distance(graph.edges(source).begin(), graph.edges(source).end()));
+  } while (graph.edges(source).empty());
+  assert(graph.edges(source));
   return source;
 }
 
@@ -50,8 +50,7 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   std::vector<uint32_t> samples(num_samples);
   for (uint32_t trial = 0; trial < num_samples; trial++) {
     auto node = sp.PickNext();
-    samples[trial] =
-        std::distance(graph.edges(node).begin(), graph.edges(node).end());
+    samples[trial] = graph.edges(node).size();
     sample_total += samples[trial];
   }
   std::sort(samples.begin(), samples.end());

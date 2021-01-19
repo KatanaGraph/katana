@@ -77,7 +77,7 @@ static cll::opt<AlgoBFS> algoBFS(
 
 struct Path {
   uint32_t parent;
-  const Path* last;
+  const Path* last{nullptr};
 };
 
 struct NodeCount {
@@ -241,9 +241,7 @@ DeltaStepAlgo(
 
   katana::InsertBag<Item> init_bag;
 
-  //Path* path = new Path();
-  Path* path;
-  path_alloc.NewPath();
+  Path* path = path_alloc.NewPath();
   path->last = nullptr;
   path_pointers->push(path);
 
@@ -263,9 +261,7 @@ DeltaStepAlgo(
           if ((ddata_count >= numPaths) && (ddata_max <= new_dist))
             continue;
 
-          Path* path;
-          //path = new Path();
-          path_alloc.NewPath();
+          Path* path = path_alloc.NewPath();
           path->parent = item.src;
           path->last = item.path;
           path_pointers->push(path);
@@ -447,7 +443,6 @@ main(int argc, char** argv) {
     }
 
     katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
-      //delete (p);
       path_alloc.DeletePath(p);
     });
   }

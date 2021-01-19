@@ -68,8 +68,6 @@ static cll::opt<AlgoSSSP> algoSSSP(
 
 enum AlgoBFS { asyncBFS = 0, syncBFS };
 
-const char* const ALGO_NAMES_BFS[] = {"asyncBFS", "syncBFS"};
-
 static cll::opt<AlgoBFS> algoBFS(
     "algoBFS", cll::desc("Choose an algorithm:"),
     cll::values(clEnumVal(asyncBFS, "asyncBFS"), clEnumVal(syncBFS, "syncBFS")),

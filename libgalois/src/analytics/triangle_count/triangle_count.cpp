@@ -321,7 +321,8 @@ katana::analytics::TriangleCount(
     timer_relabel.stop();
   }
 
-  if (!plan.edges_sorted()) {
+  // If we relabel we must also sort. Relabeling will break the sorting.
+  if (relabel || !plan.edges_sorted()) {
     if (auto r = katana::SortAllEdgesByDest(pfg); !r) {
       return r.error();
     }

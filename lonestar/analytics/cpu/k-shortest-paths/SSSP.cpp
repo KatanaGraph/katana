@@ -241,6 +241,8 @@ DeltaStepAlgo(
 
   Path* path = path_alloc.NewPath();
   path->last = nullptr;
+  path->parent = source;
+
   path_pointers->push(path);
 
   pushWrap(init_bag, source, 0, path, "parallel");

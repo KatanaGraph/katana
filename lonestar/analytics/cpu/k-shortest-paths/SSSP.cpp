@@ -60,18 +60,18 @@ const char* const ALGO_NAMES_SSSP[] = {
     "deltaTile", "deltaStep", "deltaStepBarrier"};
 
 static cll::opt<AlgoSSSP> algoSSSP(
-    "algoSSSP", cll::desc("Choose an algorithm:"),
+    "algoSSSP", cll::desc("Choose an algorithm for SSSP:"),
     cll::values(
         clEnumVal(deltaTile, "deltaTile"), clEnumVal(deltaStep, "deltaStep"),
         clEnumVal(deltaStepBarrier, "deltaStepBarrier")),
     cll::init(deltaTile));
 
-enum AlgoBFS { asyncBFS = 0, syncBFS };
+enum AlgoReachability { async = 0, syncLevel };
 
-static cll::opt<AlgoBFS> algoBFS(
-    "algoBFS", cll::desc("Choose an algorithm:"),
-    cll::values(clEnumVal(asyncBFS, "asyncBFS"), clEnumVal(syncBFS, "syncBFS")),
-    cll::init(syncBFS));
+static cll::opt<AlgoReachability> algoReachability(
+    "algoReachability", cll::desc("Choose an algorithm for reachability:"),
+    cll::values(clEnumVal(async, "async"), clEnumVal(syncLevel, "syncLevel")),
+    cll::init(syncLevel));
 
 struct Path {
   uint32_t parent;
@@ -379,12 +379,12 @@ main(int argc, char** argv) {
 
   bool reachable = true;
 
-  switch (algoBFS) {
-  case asyncBFS:
+  switch (algoReachability) {
+  case async:
     reachable = CheckReachabilityAsync<BFSUpdateRequest>(
         &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph});
     break;
-  case syncBFS:
+  case syncLevel:
     reachable = CheckReachabilitySync(&graph, source);
     break;
   default:

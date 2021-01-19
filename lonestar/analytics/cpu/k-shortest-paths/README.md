@@ -1,4 +1,4 @@
-Single Source Shortest Path
+k Shortest Path
 ================================================================================
 
 DESCRIPTION 
@@ -24,8 +24,8 @@ RUN
 
 The following are a few example command lines.
 
--`$ ./k-shortest-paths-cpu <path-to-graph> --algo=deltaStep --delta=13 --edgePropertyName=value --numPaths=10 --startNode=1 --reportNode=100 -t 40 
--`$ ./k-shortest-paths-cpu <path-to-graph> --algo=deltaTile --delta=13 --edgePropertyName=value --numPaths=10 --startNode=1 --reportNode=100 -t 40`
+-`$ ./k-shortest-paths-cpu <path-to-graph> --algoSSSP=deltaStep --delta=13 --edgePropertyName=value --numPaths=10 --startNode=1 --reportNode=100 -t 40 
+-`$ ./k-shortest-paths-cpu <path-to-graph> --algoSSSP=deltaTile --delta=13 --edgePropertyName=value --numPaths=10 --startNode=1 --reportNode=100 -t 40`
 
 PERFORMANCE  
 --------------------------------------------------------------------------------
@@ -34,6 +34,4 @@ PERFORMANCE
   graphs, such as road networks. Its performance is sensitive to the *delta* parameter, which is
   provided as a power-of-2 at the commandline. *delta* parameter should be tuned
   for every input graph
-* topo/topoTile algorithms typically perform the best on low diameter graphs, such
-  as social networks and RMAT graphs
-* All algorithms rely on CHUNK_SIZE for load balancing, 
+* All algorithms rely on kChunkSize for load balancing, 

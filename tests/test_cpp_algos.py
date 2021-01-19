@@ -27,6 +27,10 @@ from katana.analytics import (
     BetweennessCentralityPlan,
     triangle_count,
     TriangleCountPlan,
+    independent_set,
+    IndependentSetStatistics,
+    IndependentSetPlan,
+    independent_set_assert_valid,
 )
 from katana.example_utils import get_input
 from katana.lonestar.analytics.bfs import verify_bfs
@@ -54,7 +58,6 @@ def test_assert_valid(property_graph: PropertyGraph):
 
 def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
     original_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
-    print(original_dests[0])
     mapping = sort_all_edges_by_dest(property_graph)
     new_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
     for n in range(NODES_TO_SAMPLE):
@@ -203,7 +206,6 @@ def test_betweenness_centrality_outer(property_graph: PropertyGraph):
 
     stats = BetweennessCentralityStatistics(property_graph, property_name)
 
-    print(stats)
     assert stats.min_centrality == 0
     assert stats.max_centrality == approx(8210.38)
     assert stats.average_centrality == approx(1.3645)
@@ -229,7 +231,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 def test_triangle_count():
     property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     original_first_edge_list = [property_graph.get_edge_dst(e) for e in property_graph.edges(0)]
-    n = triangle_count(property_graph,)
+    n = triangle_count(property_graph)
     assert n == 282617
 
     n = triangle_count(property_graph, TriangleCountPlan.node_iteration())
@@ -251,6 +253,22 @@ def test_triangle_count_presorted(property_graph: PropertyGraph):
     sort_all_edges_by_dest(property_graph)
     n = triangle_count(property_graph, TriangleCountPlan.node_iteration(relabeling=False, edges_sorted=True))
     assert n == 282617
+
+
+def test_independent_set():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    independent_set(property_graph, "output")
+
+    stats = IndependentSetStatistics(property_graph, "output")
+
+    independent_set_assert_valid(property_graph, "output")
+
+    independent_set(property_graph, "output2", IndependentSetPlan.pull())
+
+    stats = IndependentSetStatistics(property_graph, "output2")
+
+    independent_set_assert_valid(property_graph, "output2")
 
 
 # TODO: Add more tests.

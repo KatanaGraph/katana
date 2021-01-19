@@ -30,7 +30,13 @@ python_extension_module(_triangle_count)
 add_dependencies(_triangle_count plan)
 target_link_libraries(_triangle_count Katana::galois)
 
+add_cython_target(_independent_set _independent_set.pyx CXX OUTPUT_VAR INDEPENDENT_SET_SOURCES)
+add_library(_independent_set MODULE ${INDEPENDENT_SET_SOURCES})
+python_extension_module(_independent_set)
+add_dependencies(_independent_set plan)
+target_link_libraries(_independent_set Katana::galois)
+
 install(
-  TARGETS _wrappers _pagerank _betweenness_centrality _triangle_count plan
+  TARGETS _wrappers _pagerank _betweenness_centrality _triangle_count _independent_set plan
   LIBRARY DESTINATION python/katana/analytics
 )

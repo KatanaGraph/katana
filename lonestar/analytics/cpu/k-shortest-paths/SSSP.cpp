@@ -20,9 +20,14 @@
 #include <iostream>
 #include <map>
 
+#include <katana/analytics/bfs/bfs.h>
+
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/K_SSSP.h"
 #include "katana/AtomicHelpers.h"
+#include "katana/analytics/bfs/bfs_internal.h"
+
+using namespace katana::analytics;
 
 namespace cll = llvm::cl;
 
@@ -49,16 +54,26 @@ static cll::opt<unsigned int> numPaths(
     cll::desc("Number of paths to compute from source to report node (default "
               "value 1)"),
     cll::init(1));
-enum Algo { deltaTile = 0, deltaStep, deltaStepBarrier };
+enum AlgoSSSP { deltaTile = 0, deltaStep, deltaStepBarrier };
 
-const char* const ALGO_NAMES[] = {"deltaTile", "deltaStep", "deltaStepBarrier"};
+const char* const ALGO_NAMES_SSSP[] = {
+    "deltaTile", "deltaStep", "deltaStepBarrier"};
 
-static cll::opt<Algo> algo(
-    "algo", cll::desc("Choose an algorithm:"),
+static cll::opt<AlgoSSSP> algoSSSP(
+    "algoSSSP", cll::desc("Choose an algorithm:"),
     cll::values(
         clEnumVal(deltaTile, "deltaTile"), clEnumVal(deltaStep, "deltaStep"),
         clEnumVal(deltaStepBarrier, "deltaStepBarrier")),
     cll::init(deltaTile));
+
+enum AlgoBFS { asyncBFS = 0, syncBFS };
+
+const char* const ALGO_NAMES_BFS[] = {"asyncBFS", "syncBFS"};
+
+static cll::opt<AlgoBFS> algoBFS(
+    "algoBFS", cll::desc("Choose an algorithm:"),
+    cll::values(clEnumVal(asyncBFS, "asyncBFS"), clEnumVal(syncBFS, "syncBFS")),
+    cll::init(syncBFS));
 
 struct Path {
   uint32_t parent;
@@ -75,7 +90,7 @@ struct NodeMax {
   using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
 };
 
-struct EdgeWeight : public katana::PODProperty<uint32_t> {};
+using EdgeWeight = katana::UInt32Property;
 
 using NodeData = std::tuple<NodeCount, NodeMax>;
 using EdgeData = std::tuple<EdgeWeight>;
@@ -89,32 +104,98 @@ constexpr static const ptrdiff_t kEdgeTileSize = 512;
 
 using Distance = uint32_t;
 using SSSP = K_SSSP<Graph, Distance, const Path, true, kEdgeTileSize>;
-using UpdateRequest = SSSP::UpdateRequest;
-using UpdateRequestIndexer = SSSP::UpdateRequestIndexer;
-using SrcEdgeTile = SSSP::SrcEdgeTile;
-using SrcEdgeTileMaker = SSSP::SrcEdgeTileMaker;
-using SrcEdgeTilePushWrap = SSSP::SrcEdgeTilePushWrap;
-using ReqPushWrap = SSSP::ReqPushWrap;
-using OutEdgeRangeFn = SSSP::OutEdgeRangeFn;
-using TileRangeFn = SSSP::TileRangeFn;
+using SSSPUpdateRequest = SSSP::UpdateRequest;
+using SSSPUpdateRequestIndexer = SSSP::UpdateRequestIndexer;
+using SSSPSrcEdgeTile = SSSP::SrcEdgeTile;
+using SSSPSrcEdgeTileMaker = SSSP::SrcEdgeTileMaker;
+using SSSPSrcEdgeTilePushWrap = SSSP::SrcEdgeTilePushWrap;
+using SSSPReqPushWrap = SSSP::ReqPushWrap;
+using SSSPOutEdgeRangeFn = SSSP::OutEdgeRangeFn;
+using SSSPTileRangeFn = SSSP::TileRangeFn;
 
 using PSchunk = katana::PerSocketChunkFIFO<kChunkSize>;
-using OBIM = katana::OrderedByIntegerMetric<UpdateRequestIndexer, PSchunk>;
+using OBIM = katana::OrderedByIntegerMetric<SSSPUpdateRequestIndexer, PSchunk>;
 using OBIM_Barrier = katana::OrderedByIntegerMetric<
-    UpdateRequestIndexer, PSchunk>::with_barrier<true>::type;
+    SSSPUpdateRequestIndexer, PSchunk>::with_barrier<true>::type;
+
+using BFS = BfsSsspImplementationBase<Graph, unsigned int, false>;
+using BFSUpdateRequest = BFS::UpdateRequest;
+using BFSSrcEdgeTile = BFS::SrcEdgeTile;
+using BFSSrcEdgeTileMaker = BFS::SrcEdgeTileMaker;
+using BFSSrcEdgeTilePushWrap = BFS::SrcEdgeTilePushWrap;
+using BFSReqPushWrap = BFS::ReqPushWrap;
+using BFSOutEdgeRangeFn = BFS::OutEdgeRangeFn;
+using BFSTileRangeFn = BFS::TileRangeFn;
+
+class PathAlloc {
+public:
+  Path* NewPath() {
+    Path* path = allocator_.allocate(1);
+    allocator_.construct(path, Path());
+    return path;
+  }
+
+  void DeletePath(Path* path) {
+    allocator_.destroy(path);
+    allocator_.deallocate(path, 1);
+  }
+
+private:
+  katana::FixedSizeAllocator<Path> allocator_;
+};
+
+template <typename Item, typename PushWrap, typename EdgeRange>
+bool
+CheckReachabilityAsync(
+    Graph* graph, const GNode& source, const PushWrap& pushWrap,
+    const EdgeRange& edgeRange) {
+  using FIFO = katana::PerSocketChunkFIFO<kChunkSize>;
+  using WL = FIFO;
+
+  using Loop = typename std::conditional<
+      true, katana::ForEach, katana::WhileQ<katana::SerFIFO<Item>>>::type;
+
+  Loop loop;
+
+  graph->GetData<NodeCount>(source) = 1;
+  katana::InsertBag<Item> initBag;
+
+  pushWrap(initBag, source, 1, "parallel");
+
+  loop(
+      katana::iterate(initBag),
+      [&](const Item& item, auto& ctx) {
+        for (auto ii : edgeRange(item)) {
+          GNode dst = *(graph->GetEdgeDest(ii));
+          if (graph->GetData<NodeCount>(dst) == 0) {
+            graph->GetData<NodeCount>(dst) = 1;
+            pushWrap(ctx, dst, 1);
+          }
+        }
+      },
+      katana::wl<WL>(), katana::loopname("runBFS"),
+      katana::disable_conflict_detection());
+
+  if (graph->GetData<NodeCount>(reportNode) == 0) {
+    return false;
+  }
+
+  katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
+    graph->GetData<NodeCount>(n) = 0;
+  });
+
+  return true;
+}
 
 bool
-CheckReachability(Graph* graph, const GNode& source) {
+CheckReachabilitySync(Graph* graph, const GNode& source) {
   katana::InsertBag<GNode> current_bag;
   katana::InsertBag<GNode> next_bag;
 
   current_bag.push(source);
   graph->GetData<NodeCount>(source) = 1;
 
-  while (true) {
-    if (current_bag.begin() == current_bag.end())
-      break;
-
+  while (current_bag.begin() != current_bag.end()) {
     katana::do_all(
         katana::iterate(current_bag),
         [&](GNode n) {
@@ -149,8 +230,8 @@ void
 DeltaStepAlgo(
     Graph* graph, const GNode& source, const PushWrap& pushWrap,
     const EdgeRange& edgeRange,
-    katana::InsertBag<std::pair<uint32_t, Path*>>* bag,
-    katana::InsertBag<Path*>* path_pointers) {
+    katana::InsertBag<std::pair<uint32_t, Path*>>* report_paths_bag,
+    katana::InsertBag<Path*>* path_pointers, PathAlloc& path_alloc) {
   //! [reducible for self-defined stats]
   katana::GAccumulator<size_t> bad_work;
   //! [reducible for self-defined stats]
@@ -160,8 +241,10 @@ DeltaStepAlgo(
 
   katana::InsertBag<Item> init_bag;
 
-  Path* path = new Path();
-  path->last = NULL;
+  //Path* path = new Path();
+  Path* path;
+  path_alloc.NewPath();
+  path->last = nullptr;
   path_pointers->push(path);
 
   pushWrap(init_bag, source, 0, path, "parallel");
@@ -181,7 +264,8 @@ DeltaStepAlgo(
             continue;
 
           Path* path;
-          path = new Path();
+          //path = new Path();
+          path_alloc.NewPath();
           path->parent = item.src;
           path->last = item.path;
           path_pointers->push(path);
@@ -191,18 +275,23 @@ DeltaStepAlgo(
             katana::atomicMax<uint32_t>(ddata_max, new_dist);
           }
 
-          if (dst == reportNode)
-            bag->push(std::make_pair(new_dist, path));
+          if (dst == reportNode) {
+            report_paths_bag->push(std::make_pair(new_dist, path));
+          }
 
-          if ((graph->GetData<NodeCount>(reportNode) < numPaths) ||
+          //check if this new extended path needs to be added to the worklist
+          bool should_add =
+              (graph->GetData<NodeCount>(reportNode) < numPaths) ||
               ((graph->GetData<NodeCount>(reportNode) >= numPaths) &&
-               (graph->GetData<NodeMax>(reportNode) > new_dist))) {
+               (graph->GetData<NodeMax>(reportNode) > new_dist));
+
+          if (should_add) {
             const Path* const_path = path;
             pushWrap(ctx, dst, new_dist, const_path);
           }
         }
       },
-      katana::wl<OBIM>(UpdateRequestIndexer{stepShift}),
+      katana::wl<OBIM>(SSSPUpdateRequestIndexer{stepShift}),
       katana::disable_conflict_detection(), katana::loopname("SSSP"));
 
   if (kTrackWork) {
@@ -211,6 +300,23 @@ DeltaStepAlgo(
     //! [report self-defined stats]
     katana::ReportStatSingle("SSSP", "WLEmptyWork", wl_empty_work.reduce());
   }
+}
+
+void
+PrintPath(const Path* path) {
+  if (path->last != nullptr) {
+    PrintPath(path->last);
+  }
+
+  katana::gPrint(" ", path->parent);
+}
+
+void
+Initialize(Graph* graph) {
+  katana::do_all(katana::iterate(*graph), [&graph](GNode n) {
+    graph->GetData<NodeMax>(n) = 0;
+    graph->GetData<NodeCount>(n) = 0;
+  });
 }
 
 int
@@ -258,19 +364,16 @@ main(int argc, char** argv) {
   katana::Prealloc(1, approxNodeData);
   katana::reportPageAlloc("MeminfoPre");
 
-  if (algo == deltaStep || algo == deltaTile) {
+  if (algoSSSP == deltaStep || algoSSSP == deltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
     KATANA_LOG_WARN(
         "Performance varies considerably due to delta parameter.\n");
     KATANA_LOG_WARN("Do not expect the default to be good for your graph.\n");
   }
 
-  katana::do_all(katana::iterate(graph), [&graph](GNode n) {
-    graph.GetData<NodeMax>(n) = 0;
-    graph.GetData<NodeCount>(n) = 0;
-  });
+  Initialize(&graph);
 
-  katana::gInfo("Running ", ALGO_NAMES[algo], " algorithm\n");
+  katana::gInfo("Running ", ALGO_NAMES_SSSP[algoSSSP], " algorithm\n");
 
   katana::StatTimer execTime("Timer_0");
   execTime.start();
@@ -278,25 +381,39 @@ main(int argc, char** argv) {
   katana::InsertBag<std::pair<uint32_t, Path*>> paths;
   katana::InsertBag<Path*> path_pointers;
 
-  bool reachable = CheckReachability(&graph, source);
+  bool reachable = true;
+
+  switch (algoBFS) {
+  case asyncBFS:
+    reachable = CheckReachabilityAsync<BFSUpdateRequest>(
+        &graph, source, BFSReqPushWrap(), BFSOutEdgeRangeFn{&graph});
+    break;
+  case syncBFS:
+    reachable = CheckReachabilitySync(&graph, source);
+    break;
+  default:
+    std::abort();
+  }
+
+  PathAlloc path_alloc;
 
   if (reachable) {
-    switch (algo) {
+    switch (algoSSSP) {
     case deltaTile:
-      DeltaStepAlgo<SrcEdgeTile, OBIM>(
-          &graph, source, SrcEdgeTilePushWrap{&graph}, TileRangeFn(), &paths,
-          &path_pointers);
+      DeltaStepAlgo<SSSPSrcEdgeTile, OBIM>(
+          &graph, source, SSSPSrcEdgeTilePushWrap{&graph}, SSSPTileRangeFn(),
+          &paths, &path_pointers, path_alloc);
       break;
     case deltaStep:
-      DeltaStepAlgo<UpdateRequest, OBIM>(
-          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths,
-          &path_pointers);
+      DeltaStepAlgo<SSSPUpdateRequest, OBIM>(
+          &graph, source, SSSPReqPushWrap(), SSSPOutEdgeRangeFn{&graph}, &paths,
+          &path_pointers, path_alloc);
       break;
     case deltaStepBarrier:
       katana::gInfo("Using OBIM with barrier\n");
-      DeltaStepAlgo<UpdateRequest, OBIM_Barrier>(
-          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, &paths,
-          &path_pointers);
+      DeltaStepAlgo<SSSPUpdateRequest, OBIM_Barrier>(
+          &graph, source, SSSPReqPushWrap(), SSSPOutEdgeRangeFn{&graph}, &paths,
+          &path_pointers, path_alloc);
       break;
 
     default:
@@ -322,22 +439,17 @@ main(int argc, char** argv) {
     auto it_report = paths_map.begin();
 
     for (uint32_t iter = 0; iter < num; iter++) {
-      katana::gPrint(" ", report);
-      GNode parent = report;
-
       const Path* path = it_report->second;
+      PrintPath(path);
+      katana::gPrint(" ", report, "\n");
+      katana::gPrint("Weight: ", it_report->first, "\n");
       it_report++;
-
-      while (path->last != NULL) {
-        parent = path->parent;
-        katana::gPrint(" ", parent);
-        path = path->last;
-      }
-      katana::gPrint("\n");
     }
 
-    katana::do_all(
-        katana::iterate(path_pointers), [&](Path* p) { delete (p); });
+    katana::do_all(katana::iterate(path_pointers), [&](Path* p) {
+      //delete (p);
+      path_alloc.DeletePath(p);
+    });
   }
   totalTime.stop();
 

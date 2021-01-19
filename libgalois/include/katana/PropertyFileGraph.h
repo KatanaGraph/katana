@@ -20,8 +20,8 @@ namespace katana {
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
 struct KATANA_EXPORT GraphTopology {
-  using Node = uint64_t;
-  using Edge = uint32_t;
+  using Node = uint32_t;
+  using Edge = uint64_t;
   using node_iterator = boost::counting_iterator<Node>;
   using edge_iterator = boost::counting_iterator<Edge>;
   using edges_range = StandardRange<edge_iterator>;

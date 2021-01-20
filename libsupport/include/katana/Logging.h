@@ -75,6 +75,8 @@ LogLine(
   internal::LogString(level, with_line);
 }
 
+KATANA_EXPORT void AbortApplication [[noreturn]] ();
+
 }  // end namespace katana
 
 #define KATANA_LOG_FATAL(fmt_string, ...)                                      \
@@ -82,7 +84,7 @@ LogLine(
     ::katana::LogLine(                                                         \
         ::katana::LogLevel::Error, __FILE__, __LINE__, FMT_STRING(fmt_string), \
         ##__VA_ARGS__);                                                        \
-    ::std::abort();                                                            \
+    ::katana::AbortApplication();                                              \
   } while (0)
 #define KATANA_LOG_ERROR(fmt_string, ...)                                      \
   do {                                                                         \
@@ -120,7 +122,7 @@ LogLine(
       ::katana::LogLine(                                                       \
           ::katana::LogLevel::Error, __FILE__, __LINE__,                       \
           "assertion not true: {}", #cond);                                    \
-      ::std::abort();                                                          \
+      ::katana::AbortApplication();                                            \
     }                                                                          \
   } while (0)
 
@@ -130,7 +132,7 @@ LogLine(
       ::katana::LogLine(                                                       \
           ::katana::LogLevel::Error, __FILE__, __LINE__,                       \
           FMT_STRING(fmt_string), ##__VA_ARGS__);                              \
-      ::std::abort();                                                          \
+      ::katana::AbortApplication();                                            \
     }                                                                          \
   } while (0)
 
@@ -143,5 +145,19 @@ LogLine(
           FMT_STRING(fmt_string), ##__VA_ARGS__);                              \
     });                                                                        \
   } while (0)
+
+#ifndef NDEBUG
+#define KATANA_LOG_DEBUG_ASSERT(cond) KATANA_LOG_ASSERT(cond)
+
+#define KATANA_LOG_DEBUG_VASSERT(cond, fmt_string, ...)                        \
+  KATANA_LOG_VASSERT(cond, fmt_string, ##__VA_ARGS__)
+
+#define KATANA_DEBUG_WARN_ONCE(fmt_string, ...)                                \
+  KATANA_WARN_ONCE(fmt_string, ##__VA_ARGS__)
+#else
+#define KATANA_LOG_DEBUG_ASSERT(cond)
+#define KATANA_LOG_DEBUG_VASSERT(...)
+#define KATANA_DEBUG_WARN_ONCE(...)
+#endif
 
 #endif

@@ -32,13 +32,12 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "katana/PerThreadStorage.h"
+#include "katana/LargeArray.h"
 
 const char* name = "RandomWalks";
 const char* desc = "Find paths by random walks on the graph";
 
 enum Algo { node2vec, edge2vec };
-
-enum Sampling { scan, acceptance };
 
 namespace cll = llvm::cl;
 
@@ -55,16 +54,6 @@ static cll::opt<Algo> algo(
         clEnumValN(Algo::node2vec, "Node2vec", "Node2vec random walks"),
         clEnumValN(Algo::edge2vec, "Edge2vec", "Heterogeneous Edge2vec ")),
     cll::init(Algo::node2vec));
-
-static cll::opt<Sampling> sampling(
-    "sampling", cll::desc("Choose a sampling strategy:"),
-    cll::values(
-        clEnumValN(
-            Sampling::scan, "Scan", "Scan all outgoing edges to sample one"),
-        clEnumValN(
-            Sampling::acceptance, "Acceptance",
-            "Perform acceptance-rejection sampling")),
-    cll::init(Sampling::acceptance));
 
 static cll::opt<uint32_t> maxIterations(
     "maxIterations", cll::desc("Number of iterations"), cll::init(10));
@@ -102,23 +91,18 @@ std::default_random_engine generator;
 
 std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
-//boost::mt19937 generator(42);
-//boost::uniform_real<> uni_dist(0.0f,1.0f);
-//boost::variate_generator<base_generator_type&, boost::uniform_real<> > uni(generator, uni_dist);
-
 double
 sigmoidCal(double pears) {
   return 1 / (1 + exp(-pears));  //exact sig
-  //return (pears / (1 + abs(pears))); //fast sigmoid
 }
 
 double
 pearsonCorr(
-    uint32_t i, uint32_t j, std::vector<std::vector<uint32_t>>& v,
-    std::vector<double>& means) {
-  //int sum_x = 0, sum_y = 0, sum_xy = 0, squareSum_x = 0, squareSum_y = 0;
-  std::vector<uint32_t> x = v[i];
-  std::vector<uint32_t> y = v[j];
+    uint32_t i, uint32_t j, katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& v,
+    katana::gstl::Vector<double>& means) {
+  
+	katana::gstl::Vector<uint32_t> x = v[i];
+  katana::gstl::Vector<uint32_t> y = v[j];
 
   double sum = 0.0f;
   double sig1 = 0.0f;
@@ -126,11 +110,6 @@ pearsonCorr(
 
   for (uint32_t m = 0; m < x.size(); m++) {
     sum += ((double)x[m] - means[i]) * ((double)y[m] - means[j]);
-    //sum_x = sum_x + x.at(m);
-    //sum_y = sum_y + y.at(m);
-    //sum_xy = sum_xy + x.at(m) * y.at(m);
-    //squareSum_x = squareSum_x + x.at(m) * x.at(m);
-    //squareSum_x = squareSum_y + y.at(m) * y.at(m);
     sig1 += ((double)x[m] - means[i]) * ((double)x[m] - means[i]);
     sig2 += ((double)y[m] - means[j]) * ((double)y[m] - means[j]);
   }
@@ -143,10 +122,6 @@ pearsonCorr(
   sig2 = sig2 / ((double)x.size());
   sig2 = sqrt(sig2);
 
-  //double corr = (double)(x.size() * sum_xy - sum_x * sum_y)
-  //            / sqrt((x.size() * squareSum_x - sum_x * sum_x)
-  //              * (x.size() * squareSum_y - sum_y * sum_y));
-  //
   double corr = sum / (sig1 * sig2);
   return corr;
 }
@@ -162,7 +137,7 @@ struct Node2VecAlgo {
 
   void HomoGraphWalkAcceptRejectSampling(
       const Graph&
-          graph) {  //, galois::InsertBag<std::vector<uint32_t>>& walks) {
+          graph, katana::InsertBag<katana::gstl::Vector<uint32_t>>& walks, katana::LargeArray<uint64_t>& degree) {
 
     katana::GAccumulator<uint64_t> num;
 
@@ -204,8 +179,7 @@ struct Node2VecAlgo {
               double prob = (*dist)(*generator.getLocal());
 
               //Assumption: All edges have weight 1
-              uint32_t total_wt =
-                  std::distance(graph.edge_begin(n), graph.edge_end(n));
+              uint32_t total_wt = degree[n];
 
               prob = prob * ((double)total_wt);
               total_wt = 0;
@@ -221,8 +195,7 @@ struct Node2VecAlgo {
               uint32_t curr = walk[walk_iter - 1];
               uint32_t prev = walk[walk_iter - 2];
 
-              uint32_t total_wt =
-                  std::distance(graph.edge_begin(curr), graph.edge_end(curr));
+              uint32_t total_wt = degree[curr];
 
               //acceptance-rejection sampling
               while (true) {
@@ -267,120 +240,15 @@ struct Node2VecAlgo {
           }
 
           num += 1;
-          //      walks.push(walk);
+          walks.push(walk);
         },
         katana::steal(), katana::loopname("loop"));
 
     katana::gPrint("num: ", num.reduce(), "\n");
   }
-  /*
-  void HomoGraphWalk(
-      const Graph&
-          graph) {  //, galois::InsertBag<std::vector<uint32_t>>& walks) {
-
-    katana::GAccumulator<uint64_t> num;
-
-    katana::do_all(
-        katana::iterate(graph),
-        [&](GNode n) {
-          //std::vector<uint32_t> walk;
-
-          katana::gstl::Vector<uint32_t> walk;
-          walk.push_back(n);
-
-          for (uint32_t walk_iter = 1; walk_iter <= walkLength; walk_iter++) {
-            if (walk_iter == 1) {
-              //random value between 0 and 1
-              double prob = distribution(generator);
-              //double prob = uni();
-
-              //Assumption: All edges have weight 1
-              uint32_t total_wt =
-                  std::distance(graph.edge_begin(n), graph.edge_end(n));
-
-              prob = prob * total_wt;
-              total_wt = 0;
-              uint32_t edge_index = std::floor(prob);
-
-              auto edge = graph.edge_begin(n) + edge_index;
-              //sample a neighbor of curr
-              Graph::Node nbr = *(graph.GetEdgeDest(edge));
-
-              walk.push_back(nbr);
-
-            } else {
-              uint32_t curr = walk[walk_iter - 1];
-              uint32_t prev = walk[walk_iter - 2];
-
-              double total_ew = 0.0f;
-
-              //std::vector<double> vec_ew;
-              //std::vector<uint32_t> neighbors;
-              galois::gstl::Vector<double> vec_ew;
-              galois::gstl::Vector<uint32_t> neighbors;
-
-              std::unordered_set<uint32_t> prev_neighbors;
-
-              for (auto k : graph.edges(prev)) {
-                auto next = *(graph.GetEdgeDest(k));
-                prev_neighbors.insert(next);
-              }
-
-              for (auto k : graph.edges(curr)) {
-                double alpha;
-                auto next = graph.GetEdgeDest(k);
-
-                if (*next == prev)
-                  alpha = 1.0f / probBack;
-               */ /*         else if (
-                galois::graphs::FindEdgeSortedByDest(graph, *next, prev) !=
-                    graph.edge_end(*next)) ||
-                galois::graphs::FindEdgeSortedByDest(graph, prev, *next) !=
-                    graph.edge_end(prev))*/
-  /*else if (prev_neighbors.find(*next) != prev_neighbors.end())
-                  alpha = 1.0f;
-                else
-                  alpha = 1.0f / probForward;
-
-                vec_ew.push_back(alpha);
-                total_ew += alpha;
-                neighbors.push_back(*next);
-              }
-
-              //randomly sample a neighbor of curr
-              //random value between 0 and 1
-              double prob = distribution(generator);
-              prob = prob * total_ew;
-              total_ew = 0.0f;
-
-              //sample a neighbor of curr
-              uint32_t nbr;
-
-              int32_t idx = 0;
-              for (auto k : neighbors) {
-                total_ew += vec_ew[idx];
-                if (total_ew >= prob) {
-                  nbr = k;
-                  break;
-                }
-                idx++;
-              }
-
-              walk.push_back(nbr);
-
-            }  //end if-else loop
-          }
-
-          num += 1;
-          //walks.push(walk);
-        },
-        galois::steal(), galois::loopname("loop"));
-
-    galois::gPrint("num: ", num.reduce(), "\n");
-  }
-*/
+  
   void RandomWalks(
-      const Graph& graph, katana::InsertBag<std::vector<uint32_t>>& walks) {
+      const Graph& graph, katana::InsertBag<katana::gstl::Vector<uint32_t>>& walks, katana::LargeArray<uint64_t>& degree) {
     walks.clear();
 
     uint32_t num_walks = 0;
@@ -388,60 +256,69 @@ struct Node2VecAlgo {
     while (num_walks < numWalks) {
       katana::gInfo("Walk No. : ", num_walks);
       num_walks++;
-      //HomoGraphWalk(graph, walks);
-      HomoGraphWalkAcceptRejectSampling(graph);
-      /*
-      switch (sampling) {
-  case Sampling::acceptance:
-    HomoGraphWalkAcceptRejectSampling(graph);
-    break;
-  case Sampling::scan:
-    HomoGraphWalk(graph);
-    break;
-  default:
-    std::cerr << "Unknown sampling choice\n";
-    abort();
-  }*/
+      HomoGraphWalkAcceptRejectSampling(graph, walks, degree);
     }
   }
 };
 
-/*struct Edge2VecAlgo {
-  struct EdgeType : public galois::PODProperty<uint32_t> {};
+struct Edge2VecAlgo {
+  using EdgeType = katana::UInt32Property;
 
   using NodeData = std::tuple<>;
   using EdgeData = std::tuple<EdgeType>;
 
-  typedef galois::graphs::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   //transition matrix
-  std::vector<std::vector<double>> transition_matrix;
+  katana::gstl::Vector<katana::gstl::Vector<double>> transition_matrix;
 
   void Initialize() {
-    galois::gInfo("Initializing transistion matrix");
+    katana::gInfo("Initializing transistion matrix");
     transition_matrix.resize(numEdgeTypes + 1);
     //initialize transition matrix
     for (uint32_t i = 0; i <= numEdgeTypes; i++) {
-      for (uint32_t j = 0; j <= numEdgeTypes; j++)
+      for (uint32_t j = 0; j <= numEdgeTypes; j++) {
         transition_matrix[i].push_back(1.0f);
+      }
     }
   }
 
-  void HeteroGraphWalk(const Graph& graph) {
-    galois::do_all(galois::iterate(graph), [&](GNode n) {
-      std::vector<uint32_t> walk;
-      std::vector<uint32_t> types_vec;
+  void HeteroGraphWalkAcceptRejectSampling(const Graph& graph, katana::InsertBag<katana::gstl::Vector<uint32_t>>& walks,  katana::InsertBag<katana::gstl::Vector<uint32_t>>& types_walks,
+		  katana::LargeArray<uint64_t>& degree) {
+
+	  katana::PerThreadStorage<std::mt19937> generator;
+    katana::PerThreadStorage<std::uniform_real_distribution<double>*>
+        distribution;
+
+    for (uint32_t i = 0; i < distribution.size(); i++) {
+      *distribution.getRemote(i) =
+          new std::uniform_real_distribution<double>(0.0f, 1.0f);
+    }
+
+    double upper_bound = 1.0f;
+
+    upper_bound = (upper_bound > (1.0f / probForward)) ? upper_bound
+                                                       : (1.0f / probForward);
+    upper_bound =
+        (upper_bound > (1.0f / probBack)) ? upper_bound : (1.0f / probBack);
+
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
+      std::uniform_real_distribution<double>* dist =
+              *distribution.getLocal();
+		  
+     katana::gstl::Vector<uint32_t> walk;
+      katana::gstl::Vector<uint32_t> types_vec;
 
       walk.push_back(n);
-      while (walk.size() < walkLength) {
-        if (walk.size() == 1) {
+      
+      for (uint32_t walk_iter = 1; walk_iter <= walkLength; walk_iter++) {
+        if (walk_iter == 1) {
           //random value between 0 and 1
-          double prob = distribution(generator);
+          double prob = (*dist)(*generator.getLocal());
 
           //Assumption: All edges have weight 1
-          uint32_t total_wt =
-              std::distance(graph.edge_begin(n), graph.edge_end(n));
+          uint32_t total_wt = degree[n];
 
           prob = prob * total_wt;
           total_wt = 0;
@@ -461,72 +338,60 @@ struct Node2VecAlgo {
 
           uint32_t p1 = types_vec.back();  //last element of types_vec
 
-          double total_ew = 0.0f;
+          double total_wt = degree[curr];
 
-          std::vector<double> vec_ew;
-          std::vector<uint32_t> neighbors;
-          std::vector<uint32_t> types;
+   	  //acceptance-rejection sampling
+              while (true) {
+                //sample x
+		
+		      double prob = (*dist)(*generator.getLocal());
+                prob = prob * ((double)total_wt);
 
-          for (auto k : graph.edges(curr)) {
-            uint32_t p2 = graph.GetEdgeData<EdgeType>(k);
+		uint32_t edge_index = std::floor(prob);
 
-            double alpha;
-            auto next = graph.GetEdgeDest(k);
+		auto edge = graph.edge_begin(curr) + edge_index;
+                Graph::Node nbr = *(graph.GetEdgeDest(edge));
+		uint32_t p2 = graph.GetEdgeData<EdgeType>(edge);
 
-            if (*next == prev)
-              alpha = 1.0f / probBack;
-            else if (
-                galois::graphs::FindEdge(graph, *next, prev) !=
-                    graph.edge_end(*next) ||
-                galois::graphs::FindEdge(graph, prev, *next) !=
-                    graph.edge_end(prev))
-              alpha = 1.0f;
-            else
-              alpha = 1.0f / probForward;
+		//sample y
+		double y = (*dist)(*generator.getLocal());
+                y = y * upper_bound;
 
-            assert(p1 < numEdgeTypes && p2 < numEdgeTypes);
-            double ew = transition_matrix[p1][p2] * alpha;
+	        //compute transition probability
+		double alpha;
+                  if (nbr == prev)
+                    alpha = 1.0f / probBack;
+                  else if (
+                      katana::FindEdgeSortedByDest(graph, prev, nbr) !=
+                      graph.edge_end(prev))
+                    alpha = 1.0f;
+                  else
+                    alpha = 1.0f / probForward;
+  
+		  alpha = alpha*transition_matrix[p1][p2];
+		  if (alpha >= y) {
+			  //accept y
+			 walk.push_back(nbr);
+          		types_vec.push_back(p2);
+	  		break;
+		  }
+	      }//end while
 
-            total_ew += ew;
-            neighbors.push_back(*next);
-            vec_ew.push_back(ew);
-            types.push_back(p2);
-          }
+	}//end if-else loop
+      }    //end for
 
-          //randomly sample a neighbor of curr
-          //random value between 0 and 1
-          double prob = distribution(generator);
-          prob = prob * total_ew;
-          total_ew = 0.0f;
-
-          //sample a neighbor of curr
-          uint32_t nbr, type;
-
-          int32_t idx = 0;
-          for (auto k : neighbors) {
-            total_ew += vec_ew[idx];
-            if (total_ew >= prob) {
-              nbr = k;
-              type = types[idx];
-              break;
-            }
-            idx++;
-          }
-
-          walk.push_back(nbr);
-          types_vec.push_back(type);
-        }  //end if-else loop
-      }    //end while
-    });
+      walks.push(walk);
+      types_walks.push(types_vec);
+    }, katana::steal(), katana::loopname("loop"));
   }
 
   void ComputeVectors(
-      std::vector<std::vector<uint32_t>>& v,
-      galois::InsertBag<std::vector<uint32_t>>& walks) {
-    galois::InsertBag<std::vector<uint32_t>> bag;
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& v,
+      katana::InsertBag<katana::gstl::Vector<uint32_t>>& types_walks) {
+    katana::InsertBag<katana::gstl::Vector<uint32_t>> bag;
 
-    galois::do_all(galois::iterate(walks), [&](std::vector<uint32_t>& walk) {
-      std::vector<uint32_t> vec(numEdgeTypes + 1, 0);
+    katana::do_all(katana::iterate(types_walks), [&](katana::gstl::Vector<uint32_t>& walk) {
+      katana::gstl::Vector<uint32_t> vec(numEdgeTypes + 1, 0);
 
       for (auto type : walk)
         vec[type]++;
@@ -539,8 +404,8 @@ struct Node2VecAlgo {
   }
 
   void TransformVectors(
-      std::vector<std::vector<uint32_t>>& v,
-      std::vector<std::vector<uint32_t>>& transformedV) {
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& v,
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& transformedV) {
     uint32_t rows = v.size();
 
     for (uint32_t j = 0; j <= numEdgeTypes; j++)
@@ -550,9 +415,9 @@ struct Node2VecAlgo {
   }
 
   void ComputeMeans(
-      std::vector<std::vector<uint32_t>>& v, std::vector<double>& means) {
-    galois::do_all(
-        galois::iterate((uint32_t)1, numEdgeTypes + 1), [&](uint32_t i) {
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& v, katana::gstl::Vector<double>& means) {
+    katana::do_all(
+        katana::iterate((uint32_t)1, numEdgeTypes + 1), [&](uint32_t i) {
           uint32_t sum = 0;
           for (auto n : v[i])
             sum += n;
@@ -562,9 +427,9 @@ struct Node2VecAlgo {
   }
 
   void ComputeTransitionMatrix(
-      std::vector<std::vector<uint32_t>>& v, std::vector<double>& means) {
-    galois::do_all(
-        galois::iterate((uint32_t)1, numEdgeTypes + 1), [&](uint32_t i) {
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>>& v, katana::gstl::Vector<double>& means) {
+    katana::do_all(
+        katana::iterate((uint32_t)1, numEdgeTypes + 1), [&](uint32_t i) {
           for (uint32_t j = 1; j <= numEdgeTypes; j++) {
             double pearson_corr = pearsonCorr(i, j, v, means);
             double sigmoid = sigmoidCal(pearson_corr);
@@ -575,7 +440,7 @@ struct Node2VecAlgo {
   }
 
   void RandomWalks(
-      const Graph& graph, galois::InsertBag<std::vector<uint32_t>>& walks) {
+      const Graph& graph, katana::InsertBag<katana::gstl::Vector<uint32_t>>& walks, katana::LargeArray<uint64_t>& degree) {
     uint32_t iterations = maxIterations;
 
     Initialize();
@@ -583,36 +448,47 @@ struct Node2VecAlgo {
     while (iterations > 0) {
       iterations--;
 
-      galois::gInfo("Iteration : ", iterations);
+      katana::gInfo("Iteration : ", iterations);
       //E step; generate walks
       walks.clear();
+      katana::InsertBag<katana::gstl::Vector<uint32_t>> types_walks;
 
       uint32_t num_walks = 0;
 
       while (num_walks < numWalks) {
-        galois::gInfo("Walk No. : ", num_walks);
-        HeteroGraphWalk(graph);
+        katana::gInfo("Walk No. : ", num_walks);
+        HeteroGraphWalkAcceptRejectSampling(graph, walks, types_walks, degree);
+	num_walks++;
       }
 
-      //Update transistion matrix
-      std::vector<std::vector<uint32_t>> v;
-      ComputeVectors(v, walks);
+      //Update transition matrix
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>> v;
+      ComputeVectors(v, types_walks);
 
-      std::vector<std::vector<uint32_t>> transformedV(numEdgeTypes + 1);
+      katana::gstl::Vector<katana::gstl::Vector<uint32_t>> transformedV(numEdgeTypes + 1);
       TransformVectors(v, transformedV);
 
-      std::vector<double> means(numEdgeTypes + 1);
+      katana::gstl::Vector<double> means(numEdgeTypes + 1);
       ComputeMeans(transformedV, means);
 
       ComputeTransitionMatrix(transformedV, means);
     }
   }
 };
-*/
+
+template <typename Graph>
+void InitializeDegrees(Graph* graph, katana::LargeArray<uint64_t>* degree) {
+
+	katana::do_all(katana::iterate(*graph),
+			[&](GNode n){
+
+				(*degree)[n] = std::distance(graph->edge_begin(n), graph->edge_end(n));
+			}, katana::steal());
+}
 
 void
 PrintWalks(
-    const katana::InsertBag<std::vector<uint32_t>>& walks,
+    const katana::InsertBag<katana::gstl::Vector<uint32_t>>& walks,
     const std::string& output_file) {
   std::ofstream f(output_file);
 
@@ -630,7 +506,7 @@ run() {
 
   Algo algo;
 
-  std::cout << "Reading from file: " << inputFile << "\n";
+  katana::gInfo("Reading from file: ", inputFile, "\n");
   std::unique_ptr<katana::PropertyFileGraph> pfg =
       MakeFileGraph(inputFile, edge_property_name);
 
@@ -648,15 +524,22 @@ run() {
 
   Graph graph = pg_result.value();
 
-  std::cout << "Read " << graph.num_nodes() << " nodes, " << graph.num_edges()
-            << " edges\n";
+  katana::gInfo("Read ", graph.num_nodes(), " nodes, ", graph.num_edges(), " edges\n");
 
-  katana::InsertBag<std::vector<uint32_t>> walks;
+  katana::InsertBag<katana::gstl::Vector<uint32_t>> walks;
 
   katana::gInfo("Starting random walks...");
   katana::StatTimer execTime("Timer_0");
   execTime.start();
-  algo.RandomWalks(graph, walks);
+  katana::LargeArray<uint64_t> degree;
+
+  degree.allocateBlocked(graph.size());
+  InitializeDegrees<Graph>(&graph, &degree);
+  algo.RandomWalks(graph, walks, degree);
+
+  degree.destroy();
+  degree.deallocate();
+
   execTime.stop();
 
   if (output) {
@@ -688,7 +571,7 @@ main(int argc, char** argv) {
     run<Node2VecAlgo>();
     break;
   case Algo::edge2vec:
-    //run<Edge2VecAlgo>();
+    run<Edge2VecAlgo>();
     break;
   default:
     std::cerr << "Unknown algorithm\n";

@@ -44,6 +44,13 @@ katana::internal::LogString(katana::LogLevel level, const std::string& s) {
   case LogLevel::Error:
     return PrintString(true, false, "ERROR", s);
   default:
-    std::abort();
+    return PrintString(true, false, "UNKNOWN LOG LEVEL", s);
   }
+}
+
+void
+katana::AbortApplication() {
+  // TODO(amp): Replace this with an exception throw that can be caught in
+  //  language wrappers to avoid low-level aborting the language runtime.
+  std::abort();
 }

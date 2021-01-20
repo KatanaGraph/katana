@@ -56,18 +56,18 @@ safe_cast(const std::shared_ptr<U>& r) noexcept {
 
 void
 VerifyMovieSet(const katana::GraphComponents& graph) {
-  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
-  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
-  KATANA_ASSERT(graph.edges.properties->num_columns() == 2);
-  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_columns() == 2);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
-  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
-  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
-  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -84,7 +84,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   \"Joel Silver\",\n\
   null\n\
 ]");
-  KATANA_ASSERT(names->ToString() == names_expected);
+  KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
@@ -100,7 +100,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_LOG_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
@@ -116,7 +116,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(titles->ToString() == titles_expected);
+  KATANA_LOG_ASSERT(titles->ToString() == titles_expected);
 
   auto released = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
@@ -132,7 +132,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(released->ToString() == released_expected);
+  KATANA_LOG_ASSERT(released->ToString() == released_expected);
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -148,7 +148,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   \"1952\",\n\
   \"1963\"\n\
 ]");
-  KATANA_ASSERT(borns->ToString() == borns_expected);
+  KATANA_LOG_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
@@ -165,7 +165,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(movies->ToString() == movies_expected);
+  KATANA_LOG_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
@@ -181,7 +181,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   true,\n\
   true\n\
 ]");
-  KATANA_ASSERT(persons->ToString() == persons_expected);
+  KATANA_LOG_ASSERT(persons->ToString() == persons_expected);
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
@@ -197,7 +197,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(others->ToString() == others_expected);
+  KATANA_LOG_ASSERT(others->ToString() == others_expected);
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
@@ -213,7 +213,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_LOG_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = safe_cast<arrow::StringArray>(
@@ -229,7 +229,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(roles->ToString() == roles_expected);
+  KATANA_LOG_ASSERT(roles->ToString() == roles_expected);
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
@@ -244,7 +244,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(texts->ToString() == texts_expected);
+  KATANA_LOG_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
@@ -260,7 +260,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(actors->ToString() == actors_expected);
+  KATANA_LOG_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
@@ -275,7 +275,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   true,\n\
   false\n\
 ]");
-  KATANA_ASSERT(directors->ToString() == directors_expected);
+  KATANA_LOG_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
@@ -290,7 +290,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(producers->ToString() == producers_expected);
+  KATANA_LOG_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
@@ -305,7 +305,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(partners->ToString() == partners_expected);
+  KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -321,7 +321,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   8,\n\
   8\n\
 ]");
-  KATANA_ASSERT(indices->ToString() == indices_expected);
+  KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -335,23 +335,23 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   0,\n\
   0\n\
 ]");
-  KATANA_ASSERT(dests->ToString() == dests_expected);
+  KATANA_LOG_ASSERT(dests->ToString() == dests_expected);
 }
 
 void
 VerifyTypesSet(katana::GraphComponents graph) {
-  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
-  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
-  KATANA_ASSERT(graph.edges.properties->num_columns() == 4);
-  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
-  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
-  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
-  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -368,7 +368,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   \"Joel Silver\",\n\
   null\n\
 ]");
-  KATANA_ASSERT(names->ToString() == names_expected);
+  KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
   auto taglines = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("tagline")->chunk(0));
@@ -384,7 +384,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_LOG_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("title")->chunk(0));
@@ -400,7 +400,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(titles->ToString() == titles_expected);
+  KATANA_LOG_ASSERT(titles->ToString() == titles_expected);
 
   auto released = safe_cast<arrow::Int64Array>(
       graph.nodes.properties->GetColumnByName("released")->chunk(0));
@@ -416,7 +416,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(released->ToString() == released_expected);
+  KATANA_LOG_ASSERT(released->ToString() == released_expected);
 
   auto borns = safe_cast<arrow::StringArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -432,7 +432,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   \"1952\",\n\
   \"1963\"\n\
 ]");
-  KATANA_ASSERT(borns->ToString() == borns_expected);
+  KATANA_LOG_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = safe_cast<arrow::BooleanArray>(
@@ -449,7 +449,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(movies->ToString() == movies_expected);
+  KATANA_LOG_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Person")->chunk(0));
@@ -465,7 +465,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   true,\n\
   true\n\
 ]");
-  KATANA_ASSERT(persons->ToString() == persons_expected);
+  KATANA_LOG_ASSERT(persons->ToString() == persons_expected);
 
   auto others = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Other")->chunk(0));
@@ -481,7 +481,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(others->ToString() == others_expected);
+  KATANA_LOG_ASSERT(others->ToString() == others_expected);
 
   auto randoms = safe_cast<arrow::BooleanArray>(
       graph.nodes.labels->GetColumnByName("Random")->chunk(0));
@@ -497,7 +497,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_LOG_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = safe_cast<arrow::ListArray>(
@@ -526,7 +526,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(roles->ToString() == roles_expected);
+  KATANA_LOG_ASSERT(roles->ToString() == roles_expected);
 
   auto numbers = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("numbers")->chunk(0));
@@ -560,7 +560,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(numbers->ToString() == numbers_expected);
+  KATANA_LOG_ASSERT(numbers->ToString() == numbers_expected);
 
   auto bools = safe_cast<arrow::ListArray>(
       graph.edges.properties->GetColumnByName("bools")->chunk(0));
@@ -589,7 +589,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(bools->ToString() == bools_expected);
+  KATANA_LOG_ASSERT(bools->ToString() == bools_expected);
 
   auto texts = safe_cast<arrow::StringArray>(
       graph.edges.properties->GetColumnByName("text")->chunk(0));
@@ -604,7 +604,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   null,\n\
   null\n\
 ]");
-  KATANA_ASSERT(texts->ToString() == texts_expected);
+  KATANA_LOG_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = safe_cast<arrow::BooleanArray>(
@@ -620,7 +620,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(actors->ToString() == actors_expected);
+  KATANA_LOG_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("DIRECTED")->chunk(0));
@@ -635,7 +635,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   true,\n\
   false\n\
 ]");
-  KATANA_ASSERT(directors->ToString() == directors_expected);
+  KATANA_LOG_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("PRODUCED")->chunk(0));
@@ -650,7 +650,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   true\n\
 ]");
-  KATANA_ASSERT(producers->ToString() == producers_expected);
+  KATANA_LOG_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = safe_cast<arrow::BooleanArray>(
       graph.edges.labels->GetColumnByName("IN_SAME_MOVIE")->chunk(0));
@@ -665,7 +665,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   false,\n\
   false\n\
 ]");
-  KATANA_ASSERT(partners->ToString() == partners_expected);
+  KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -681,7 +681,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   8,\n\
   8\n\
 ]");
-  KATANA_ASSERT(indices->ToString() == indices_expected);
+  KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -695,23 +695,23 @@ VerifyTypesSet(katana::GraphComponents graph) {
   0,\n\
   0\n\
 ]");
-  KATANA_ASSERT(dests->ToString() == dests_expected);
+  KATANA_LOG_ASSERT(dests->ToString() == dests_expected);
 }
 
 void
 VerifyChunksSet(katana::GraphComponents graph) {
-  KATANA_ASSERT(graph.nodes.properties->num_columns() == 5);
-  KATANA_ASSERT(graph.nodes.labels->num_columns() == 4);
-  KATANA_ASSERT(graph.edges.properties->num_columns() == 4);
-  KATANA_ASSERT(graph.edges.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_columns() == 5);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_columns() == 4);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_columns() == 4);
 
-  KATANA_ASSERT(graph.nodes.properties->num_rows() == 9);
-  KATANA_ASSERT(graph.nodes.labels->num_rows() == 9);
-  KATANA_ASSERT(graph.edges.properties->num_rows() == 8);
-  KATANA_ASSERT(graph.edges.labels->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_rows() == 9);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
 
   // test node properties
   auto names = graph.nodes.properties->GetColumnByName("name");
@@ -733,7 +733,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(names->ToString() == names_expected);
+  KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
   auto taglines = graph.nodes.properties->GetColumnByName("tagline");
   std::string taglines_expected = std::string(
@@ -754,7 +754,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(taglines->ToString() == taglines_expected);
+  KATANA_LOG_ASSERT(taglines->ToString() == taglines_expected);
 
   auto titles = graph.nodes.properties->GetColumnByName("title");
   std::string titles_expected = std::string(
@@ -775,7 +775,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(titles->ToString() == titles_expected);
+  KATANA_LOG_ASSERT(titles->ToString() == titles_expected);
 
   auto released = graph.nodes.properties->GetColumnByName("released");
   std::string released_expected = std::string(
@@ -796,7 +796,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(released->ToString() == released_expected);
+  KATANA_LOG_ASSERT(released->ToString() == released_expected);
 
   auto borns = graph.nodes.properties->GetColumnByName("born");
   std::string borns_expected = std::string(
@@ -817,7 +817,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     \"1963\"\n\
   ]\n\
 ]");
-  KATANA_ASSERT(borns->ToString() == borns_expected);
+  KATANA_LOG_ASSERT(borns->ToString() == borns_expected);
 
   // test node labels
   auto movies = graph.nodes.labels->GetColumnByName("Movie");
@@ -839,7 +839,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  KATANA_ASSERT(movies->ToString() == movies_expected);
+  KATANA_LOG_ASSERT(movies->ToString() == movies_expected);
 
   auto persons = graph.nodes.labels->GetColumnByName("Person");
   std::string persons_expected = std::string(
@@ -860,7 +860,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  KATANA_ASSERT(persons->ToString() == persons_expected);
+  KATANA_LOG_ASSERT(persons->ToString() == persons_expected);
 
   auto others = graph.nodes.labels->GetColumnByName("Other");
   std::string others_expected = std::string(
@@ -881,7 +881,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  KATANA_ASSERT(others->ToString() == others_expected);
+  KATANA_LOG_ASSERT(others->ToString() == others_expected);
 
   auto randoms = graph.nodes.labels->GetColumnByName("Random");
   std::string randoms_expected = std::string(
@@ -902,7 +902,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  KATANA_ASSERT(randoms->ToString() == randoms_expected);
+  KATANA_LOG_ASSERT(randoms->ToString() == randoms_expected);
 
   // test edge properties
   auto roles = graph.edges.properties->GetColumnByName("roles");
@@ -936,7 +936,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(roles->ToString() == roles_expected);
+  KATANA_LOG_ASSERT(roles->ToString() == roles_expected);
 
   auto numbers = graph.edges.properties->GetColumnByName("numbers");
   std::string numbers_expected = std::string(
@@ -975,7 +975,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(numbers->ToString() == numbers_expected);
+  KATANA_LOG_ASSERT(numbers->ToString() == numbers_expected);
 
   auto bools = graph.edges.properties->GetColumnByName("bools");
   std::string bools_expected = std::string(
@@ -1009,7 +1009,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(bools->ToString() == bools_expected);
+  KATANA_LOG_ASSERT(bools->ToString() == bools_expected);
 
   auto texts = graph.edges.properties->GetColumnByName("text");
   std::string texts_expected = std::string(
@@ -1029,7 +1029,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     null\n\
   ]\n\
 ]");
-  KATANA_ASSERT(texts->ToString() == texts_expected);
+  KATANA_LOG_ASSERT(texts->ToString() == texts_expected);
 
   // test edge types
   auto actors = graph.edges.labels->GetColumnByName("ACTED_IN");
@@ -1050,7 +1050,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  KATANA_ASSERT(actors->ToString() == actors_expected);
+  KATANA_LOG_ASSERT(actors->ToString() == actors_expected);
 
   auto directors = graph.edges.labels->GetColumnByName("DIRECTED");
   std::string directors_expected = std::string(
@@ -1070,7 +1070,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  KATANA_ASSERT(directors->ToString() == directors_expected);
+  KATANA_LOG_ASSERT(directors->ToString() == directors_expected);
 
   auto producers = graph.edges.labels->GetColumnByName("PRODUCED");
   std::string producers_expected = std::string(
@@ -1090,7 +1090,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     true\n\
   ]\n\
 ]");
-  KATANA_ASSERT(producers->ToString() == producers_expected);
+  KATANA_LOG_ASSERT(producers->ToString() == producers_expected);
 
   auto partners = graph.edges.labels->GetColumnByName("IN_SAME_MOVIE");
   std::string partners_expected = std::string(
@@ -1110,7 +1110,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
     false\n\
   ]\n\
 ]");
-  KATANA_ASSERT(partners->ToString() == partners_expected);
+  KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -1126,7 +1126,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
   8,\n\
   8\n\
 ]");
-  KATANA_ASSERT(indices->ToString() == indices_expected);
+  KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
@@ -1140,7 +1140,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
   0,\n\
   0\n\
 ]");
-  KATANA_ASSERT(dests->ToString() == dests_expected);
+  KATANA_LOG_ASSERT(dests->ToString() == dests_expected);
 }
 
 #if defined(KATANA_MONGOC_FOUND)
@@ -1179,18 +1179,18 @@ GenerateAndConvertBson(size_t chunk_size) {
 #if defined(KATANA_MONGOC_FOUND)
 void
 VerifyMongodbSet(const katana::GraphComponents& graph) {
-  KATANA_ASSERT(graph.nodes.properties->num_columns() == 2);
-  KATANA_ASSERT(graph.nodes.labels->num_columns() == 1);
-  KATANA_ASSERT(graph.edges.properties->num_columns() == 1);
-  KATANA_ASSERT(graph.edges.labels->num_columns() == 1);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_columns() == 2);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_columns() == 1);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_columns() == 1);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_columns() == 1);
 
-  KATANA_ASSERT(graph.nodes.properties->num_rows() == 2);
-  KATANA_ASSERT(graph.nodes.labels->num_rows() == 2);
-  KATANA_ASSERT(graph.edges.properties->num_rows() == 1);
-  KATANA_ASSERT(graph.edges.labels->num_rows() == 1);
+  KATANA_LOG_ASSERT(graph.nodes.properties->num_rows() == 2);
+  KATANA_LOG_ASSERT(graph.nodes.labels->num_rows() == 2);
+  KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 1);
+  KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 1);
 
-  KATANA_ASSERT(graph.topology->out_indices->length() == 2);
-  KATANA_ASSERT(graph.topology->out_dests->length() == 1);
+  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 2);
+  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 1);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -1200,7 +1200,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   \"George\",\n\
   \"Frank\"\n\
 ]");
-  KATANA_ASSERT(names->ToString() == names_expected);
+  KATANA_LOG_ASSERT(names->ToString() == names_expected);
 
   auto born = safe_cast<arrow::DoubleArray>(
       graph.nodes.properties->GetColumnByName("born")->chunk(0));
@@ -1209,7 +1209,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   1985,\n\
   1989\n\
 ]");
-  KATANA_ASSERT(born->ToString() == born_expected);
+  KATANA_LOG_ASSERT(born->ToString() == born_expected);
 
   // test node labels
   auto people = safe_cast<arrow::BooleanArray>(
@@ -1219,7 +1219,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   true,\n\
   true\n\
 ]");
-  KATANA_ASSERT(people->ToString() == people_expected);
+  KATANA_LOG_ASSERT(people->ToString() == people_expected);
 
   // test edge properties
   auto mets = safe_cast<arrow::DoubleArray>(
@@ -1228,7 +1228,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
       "[\n\
   2000\n\
 ]");
-  KATANA_ASSERT(mets->ToString() == mets_expected);
+  KATANA_LOG_ASSERT(mets->ToString() == mets_expected);
 
   // test edge labels
   auto friends = safe_cast<arrow::BooleanArray>(
@@ -1237,7 +1237,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
       "[\n\
   true\n\
 ]");
-  KATANA_ASSERT(friends->ToString() == friends_expected);
+  KATANA_LOG_ASSERT(friends->ToString() == friends_expected);
 
   // test topology
   auto indices = graph.topology->out_indices;
@@ -1246,14 +1246,14 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   1,\n\
   1\n\
 ]");
-  KATANA_ASSERT(indices->ToString() == indices_expected);
+  KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
   auto dests = graph.topology->out_dests;
   std::string dests_expected = std::string(
       "[\n\
   1\n\
 ]");
-  KATANA_ASSERT(dests->ToString() == dests_expected);
+  KATANA_LOG_ASSERT(dests->ToString() == dests_expected);
 }
 #endif
 

@@ -108,7 +108,8 @@ OutputResults(katana::PropertyFileGraph* pfg) {
     KATANA_LOG_FATAL("Error getting results: {}", r.error().message());
   }
   auto results = r.value();
-  assert(uint64_t(results->length()) == pfg->topology().num_nodes());
+  KATANA_LOG_DEBUG_ASSERT(
+      uint64_t(results->length()) == pfg->topology().num_nodes());
 
   writeOutput(outputLocation, results->raw_values(), results->length());
 }

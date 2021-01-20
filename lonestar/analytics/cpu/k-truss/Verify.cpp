@@ -244,7 +244,8 @@ main(int argc, char** argv) {
 
   // every valid node should have at least trussNum-1 valid neighbors
   // so # valid edges >= smallest # directed edges among valid nodes
-  assert((validNum.first * (trussNum - 1)) <= validNum.second * 2);
+  KATANA_LOG_DEBUG_ASSERT(
+      (validNum.first * (trussNum - 1)) <= validNum.second * 2);
 
   // symmetry breaking:
   // consider only edges (i, j) where i < j

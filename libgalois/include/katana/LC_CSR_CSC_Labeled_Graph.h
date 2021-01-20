@@ -512,7 +512,7 @@ private:
             while (data != edgeIndexToLabelMap[index]) {
               this->edgeIndDataLabeled[offset + index] = *e;
               index++;
-              assert(index < this->numEdgeLabels);
+              KATANA_LOG_DEBUG_ASSERT(index < this->numEdgeLabels);
             }
           }
           auto e = BaseGraph::edge_end(N);
@@ -542,7 +542,7 @@ private:
             while (data != edgeIndexToLabelMap[index]) {
               this->inEdgeIndDataLabeled[offset + index] = *e;
               index++;
-              assert(index < this->numEdgeLabels);
+              KATANA_LOG_DEBUG_ASSERT(index < this->numEdgeLabels);
             }
           }
           auto e = BaseGraph::in_edge_end(N);

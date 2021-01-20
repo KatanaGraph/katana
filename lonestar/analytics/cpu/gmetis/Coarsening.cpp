@@ -102,7 +102,7 @@ parallelMatchAndCreateNodes(
     MetisGraph* graph, Pcounter& pc, GNodeBag& noEdgeBag, bool selfMatch) {
   GGraph* fineGGraph = graph->getFinerGraph()->getGraph();
   GGraph* coarseGGraph = graph->getGraph();
-  assert(fineGGraph != coarseGGraph);
+  KATANA_LOG_DEBUG_ASSERT(fineGGraph != coarseGGraph);
 
   katana::for_each(
       katana::iterate(*fineGGraph),
@@ -132,7 +132,7 @@ parallelMatchAndCreateNodes(
         unsigned numEdges = std::distance(
             fineGGraph->edge_begin(item, katana::MethodFlag::UNPROTECTED),
             fineGGraph->edge_end(item, katana::MethodFlag::UNPROTECTED));
-        // assert(numEdges == std::distance(fineGGraph->edge_begin(item),
+        // KATANA_LOG_DEBUG_ASSERT(numEdges == std::distance(fineGGraph->edge_begin(item),
         // fineGGraph->edge_end(item)));
 
         GNode N;
@@ -176,7 +176,7 @@ void
 createCoarseEdges(MetisGraph* graph) {
   GGraph* coarseGGraph = graph->getGraph();
   GGraph* fineGGraph = graph->getFinerGraph()->getGraph();
-  assert(fineGGraph != coarseGGraph);
+  KATANA_LOG_DEBUG_ASSERT(fineGGraph != coarseGGraph);
 
   typedef katana::gstl::Vector<std::pair<GNode, unsigned>> VecTy;
   typedef katana::PerThreadStorage<VecTy> ThreadLocalData;
@@ -223,7 +223,7 @@ createCoarseEdges(MetisGraph* graph) {
                 node, dst, katana::MethodFlag::UNPROTECTED, sum);
           }
         }
-        //    assert(e);
+        //    KATANA_LOG_DEBUG_ASSERT(e);
         // nodeData.setNumEdges(e);
       },
       katana::steal(), katana::loopname("popedge"));

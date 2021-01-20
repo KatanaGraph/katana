@@ -52,7 +52,7 @@ struct StepStatsBase {
   static inline void dump(
       FILE* out, const char* loopname, size_t step, size_t parallelism,
       size_t wlSize, size_t nhSize) {
-    assert(out && "StepStatsBase::dump() file handle is null");
+    KATANA_LOG_DEBUG_VASSERT(out, "StepStatsBase::dump() file handle is null");
     fprintf(
         out, "%s, %zu, %zu, %zu, %zu\n", loopname, step, parallelism, wlSize,
         nhSize);
@@ -242,7 +242,7 @@ private:
 
   IterationContext* newIteration(const T& item) {
     IterationContext* it = m_iterAlloc.allocate(1);
-    assert(it && "IterationContext allocation failed");
+    KATANA_LOG_DEBUG_VASSERT(it, "IterationContext allocation failed");
 
     m_iterAlloc.construct(it, item);
 
@@ -251,7 +251,7 @@ private:
   }
 
   unsigned abortIteration(IterationContext* it) {
-    assert(it && "nullptr arg");
+    KATANA_LOG_DEBUG_VASSERT(it, "nullptr arg");
     assert(
         it->doabort &&
         "aborting an iteration without setting its doabort flag");
@@ -264,7 +264,7 @@ private:
   }
 
   unsigned commitIteration(IterationContext* it) {
-    assert(it && "nullptr arg");
+    KATANA_LOG_DEBUG_VASSERT(it, "nullptr arg");
 
     if (needsPush) {
       for (const auto& item : it->facing.getPushBuffer()) {
@@ -386,7 +386,8 @@ private:
 
       // dbg::print("Step: ", stats.step, ", Parallelism: ",
       // stats.parallelism.reduce());
-      assert(stats.parallelism.reduce() && "ERROR: No Progress");
+      KATANA_LOG_DEBUG_VASSERT(
+          stats.parallelism.reduce(), "ERROR: No Progress");
 
       stats.dump(m_statsFile, loopname);
       stats.nextStep();

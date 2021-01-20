@@ -1,5 +1,7 @@
 #include "tsuba/Errors.h"
 
+#include "katana/Logging.h"
+
 const tsuba::internal::ErrorCodeCategory&
 tsuba::internal::GetErrorCodeCategory() {
   static ErrorCodeCategory c;
@@ -8,7 +10,7 @@ tsuba::internal::GetErrorCodeCategory() {
 
 tsuba::ErrorCode
 tsuba::ArrowToTsuba(arrow::StatusCode code) {
-  assert(code != arrow::StatusCode::OK);
+  KATANA_LOG_DEBUG_ASSERT(code != arrow::StatusCode::OK);
 
   switch (code) {
   case arrow::StatusCode::Invalid:

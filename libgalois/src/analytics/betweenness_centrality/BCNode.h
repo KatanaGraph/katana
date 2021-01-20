@@ -130,9 +130,9 @@ struct BCNode {
     if (!preds.empty() || nsuccs != 0 || sigma != 0 || delta != 0)
       katana::gWarn("Problem, node not clear");
 
-    assert(preds.empty());
-    assert(distance == kInfinity);
-    assert(nsuccs == 0 && sigma == 0 && delta == 0);
+    KATANA_LOG_DEBUG_ASSERT(preds.empty());
+    KATANA_LOG_DEBUG_ASSERT(distance == kInfinity);
+    KATANA_LOG_DEBUG_ASSERT(nsuccs == 0 && sigma == 0 && delta == 0);
   }
 
   /**

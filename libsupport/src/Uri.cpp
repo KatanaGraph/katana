@@ -166,8 +166,8 @@ Uri::Uri(std::string scheme, std::string path)
     : scheme_(std::move(scheme)),
       path_(std::move(path)),
       string_(scheme_ + "://" + path_) {
-  assert(!scheme_.empty());
-  assert(!path_.empty());
+  KATANA_LOG_DEBUG_ASSERT(!scheme_.empty());
+  KATANA_LOG_DEBUG_ASSERT(!path_.empty());
 }
 
 Result<Uri>
@@ -210,7 +210,7 @@ Uri::JoinPath(const std::string& dir, const std::string& file) {
 bool
 Uri::empty() const {
   if (scheme_.empty()) {
-    assert(path_.empty());
+    KATANA_LOG_DEBUG_ASSERT(path_.empty());
     return true;
   }
   return false;

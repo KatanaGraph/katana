@@ -191,12 +191,12 @@ protected:
   RevCmp revCmp;
 
   const_reference top_internal() const {
-    assert(!container.empty());
+    KATANA_LOG_DEBUG_ASSERT(!container.empty());
     return container.front();
   }
 
   value_type pop_internal() {
-    assert(!container.empty());
+    KATANA_LOG_DEBUG_ASSERT(!container.empty());
     std::pop_heap(container.begin(), container.end(), revCmp);
 
     value_type x = container.back();
@@ -231,7 +231,7 @@ public:
   }
 
   value_type pop() {
-    assert(!container.empty());
+    KATANA_LOG_DEBUG_ASSERT(!container.empty());
     std::pop_heap(container.begin(), container.end(), revCmp);
 
     value_type x = container.back();

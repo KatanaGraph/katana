@@ -273,7 +273,7 @@ public:
   }
 
   virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag m) {
-    assert(m == MethodFlag::READ || m == MethodFlag::WRITE);
+    KATANA_LOG_DEBUG_ASSERT(m == MethodFlag::READ || m == MethodFlag::WRITE);
 
     if (this->tryLock(lockable))
       this->addToNhood(lockable);
@@ -281,7 +281,7 @@ public:
     if (m == MethodFlag::READ) {
       acquireRead(lockable);
     } else {
-      assert(m == MethodFlag::WRITE);
+      KATANA_LOG_DEBUG_ASSERT(m == MethodFlag::WRITE);
       acquireWrite(lockable);
     }
   }
@@ -316,7 +316,7 @@ public:
       : FirstPassBase(true), item(_item), preds(0) {}
 
   void clear() {
-    assert(preds == 0);
+    KATANA_LOG_DEBUG_ASSERT(preds == 0);
     this->commitIteration();
     // TODO replace with bulk heap
     edges.clear(*dagListHeap);
@@ -612,11 +612,11 @@ public:
       katana::optional<Context*> p;
       while ((p = sourceList.pop())) {
         ctx = *p;
-        assert(ctx->preds == 0);
+        KATANA_LOG_DEBUG_ASSERT(ctx->preds == 0);
         bool commit;
         commit = e.executeTask(etld, ctx);
         local.incrementCommitted();
-        assert(commit);
+        KATANA_LOG_DEBUG_ASSERT(commit);
         committed += 1;
         e.deallocLocalState(etld.facing);
 
@@ -628,7 +628,7 @@ public:
         // enqueue successors
         for (auto& succ : ctx->succs) {
           int v = --succ->preds;
-          assert(v >= 0);
+          KATANA_LOG_DEBUG_ASSERT(v >= 0);
           if (v == 0)
             sourceList.push(succ);
         }
@@ -873,7 +873,8 @@ public:
     if (commitRatio >= target)
       local.delta += local.delta;
     else if (allcommitted == 0) {
-      assert((alliterations == 0) && "someone should have committed");
+      KATANA_LOG_DEBUG_VASSERT(
+          (alliterations == 0), "someone should have committed");
       local.delta += local.delta;
     } else
       local.delta = commitRatio / target * local.delta;
@@ -1047,7 +1048,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
 
     mergeBuf.clear();
 
-    assert(cc.first == cc.second);
+    KATANA_LOG_DEBUG_ASSERT(cc.first == cc.second);
 
     return retval;
   }
@@ -1627,7 +1628,7 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
     if (count)
       tld.hasNewWork = true;
   }
-  assert(
+  KATANA_LOG_DEBUG_ASSERT(
       OptionsTy::needsPush ||
       tld.facing.getPushBuffer().begin() == tld.facing.getPushBuffer().end());
 

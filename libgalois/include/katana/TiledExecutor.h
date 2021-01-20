@@ -95,7 +95,7 @@ class Fixed2DGraphTiledExecutor {
    * @param delta Amount to advance by
    */
   void nextPoint(Point& p, int dim, int delta) {
-    assert(dim < numDims);
+    KATANA_LOG_DEBUG_ASSERT(dim < numDims);
     p[dim] += delta;
     // account for overflow
     while (p[dim] >= locks[dim].size()) {
@@ -115,8 +115,8 @@ class Fixed2DGraphTiledExecutor {
   Task* getTask(const Point& p) {
     Task* t = &tasks[p[0] + p[1] * locks[0].size()];
 
-    assert(t < &tasks[numTasks]);
-    assert(t >= &tasks[0]);
+    KATANA_LOG_DEBUG_ASSERT(t < &tasks[numTasks]);
+    KATANA_LOG_DEBUG_ASSERT(t >= &tasks[0]);
 
     return t;
   }
@@ -140,10 +140,10 @@ class Fixed2DGraphTiledExecutor {
     for (size_t i = 0; i < n; ++i) {
       Task* t = getTask(p);
 
-      assert(p[0] == t->coord[0]);
-      assert(p[1] == t->coord[1]);
-      assert(t->coord[0] < locks[0].size());
-      assert(t->coord[1] < locks[1].size());
+      KATANA_LOG_DEBUG_ASSERT(p[0] == t->coord[0]);
+      KATANA_LOG_DEBUG_ASSERT(p[1] == t->coord[1]);
+      KATANA_LOG_DEBUG_ASSERT(t->coord[0] < locks[0].size());
+      KATANA_LOG_DEBUG_ASSERT(t->coord[1] < locks[1].size());
 
       if (t->updates.relaxedLoad() < maxUpdates) {
         if (std::try_lock(locks[0][t->coord[0]], locks[1][t->coord[1]]) < 0) {
@@ -184,10 +184,10 @@ class Fixed2DGraphTiledExecutor {
     for (size_t i = 0; i < n; ++i) {
       Task* t = getTask(p);
 
-      assert(p[0] == t->coord[0]);
-      assert(p[1] == t->coord[1]);
-      assert(t->coord[0] < locks[0].size());
-      assert(t->coord[1] < locks[1].size());
+      KATANA_LOG_DEBUG_ASSERT(p[0] == t->coord[0]);
+      KATANA_LOG_DEBUG_ASSERT(p[1] == t->coord[1]);
+      KATANA_LOG_DEBUG_ASSERT(t->coord[0] < locks[0].size());
+      KATANA_LOG_DEBUG_ASSERT(t->coord[1] < locks[1].size());
 
       if (t->updates.relaxedLoad() < maxUpdates) {
         if (t->updates.value.fetch_add(1) < maxUpdates) {
@@ -222,7 +222,7 @@ class Fixed2DGraphTiledExecutor {
    * have the lock for the block as well.
    */
   Task* probeBlock(Point& start, int dim, size_t n) {
-    assert(dim < 2);
+    KATANA_LOG_DEBUG_ASSERT(dim < 2);
 
     if (useLocks) {
       return probeBlockWithLock(start, dim, n);

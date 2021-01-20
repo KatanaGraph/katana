@@ -56,11 +56,11 @@ struct UEdgeInfoBase<NTy, ETy, true> {
   ETy Ea;
 
   inline NTy* first() {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     return N;
   }
   inline NTy const* first() const {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     return N;
   }
   inline ETy* second() { return &Ea; }
@@ -87,11 +87,11 @@ struct UEdgeInfoBase<NTy, ETy, false> {
   ETy* Ea;
 
   inline NTy* first() {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     return (NTy*)((uintptr_t)N & ~1);
   }
   inline NTy const* first() const {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     return (NTy*)((uintptr_t)N & ~1);
   }
   inline ETy* second() { return Ea; }
@@ -199,7 +199,7 @@ struct EdgeFactory<void, false> {
  *   Graph::GraphNode src = *ii;
  *   for (Graph::edge_iterator jj = g.edge_begin(src), ej = g.edge_end(src);
  * ++jj) { Graph::GraphNode dst = graph.getEdgeDst(jj); int edgeData =
- * g.getEdgeData(jj); assert(edgeData == 5);
+ * g.getEdgeData(jj); KATANA_LOG_DEBUG_ASSERT(edgeData == 5);
  *   }
  * }
  * \endcode
@@ -212,7 +212,7 @@ struct EdgeFactory<void, false> {
  *   for (Graph::edge_iterator edge : g.out_edges(src)) {
  *     Graph::GraphNode dst = g.getEdgeDst(edge);
  *     int edgeData = g.getEdgeData(edge);
- *     assert(edgeData == 5);
+ *     KATANA_LOG_DEBUG_ASSERT(edgeData == 5);
  *   }
  * }
  * \endcode
@@ -302,12 +302,14 @@ private:
   struct first_lt {
     template <typename T2>
     bool operator()(const T& N2, const T2& ii) const {
-      assert(ii.first() && "UNEXPECTED: invalid item in edgelist");
+      KATANA_LOG_DEBUG_VASSERT(
+          ii.first(), "UNEXPECTED: invalid item in edgelist");
       return N2 < ii.first();
     }
     template <typename T2>
     bool operator()(const T2& ii, const T& N2) const {
-      assert(ii.first() && "UNEXPECTED: invalid item in edgelist");
+      KATANA_LOG_DEBUG_VASSERT(
+          ii.first(), "UNEXPECTED: invalid item in edgelist");
       return ii.first() < N2;
     }
   };
@@ -369,7 +371,7 @@ private:
       auto& edgelist = (inEdge) ? in_edges : edges;
       iterator ii, ei = edgelist.end();
       if (SortedNeighbors) {
-        assert(std::is_sorted(
+        KATANA_LOG_DEBUG_ASSERT(std::is_sorted(
             edgelist.begin(), edgelist.end(),
             [=](const EdgeInfo& e1, const EdgeInfo& e2) {
               return e1.first() < e2.first();
@@ -521,8 +523,8 @@ private:
   template <typename... Args>
   edge_iterator createEdgeWithReuse(
       GraphNode src, GraphNode dst, katana::MethodFlag mflag, Args&&... args) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
     // katana::checkWrite(mflag, true);
     src->acquire(mflag);
     typename gNode::iterator ii = src->find(dst);
@@ -545,8 +547,8 @@ private:
   template <typename... Args>
   edge_iterator createEdge(
       GraphNode src, GraphNode dst, katana::MethodFlag mflag, Args&&... args) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
     // katana::checkWrite(mflag, true);
     src->acquire(mflag);
     typename gNode::iterator ii = src->end();
@@ -571,8 +573,8 @@ private:
   template <typename... Args>
   EdgeTy* createOutEdge(
       GraphNode src, GraphNode dst, katana::MethodFlag mflag, Args&&... args) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
 
     src->acquire(mflag);
     typename gNode::iterator ii = src->end();
@@ -594,8 +596,8 @@ private:
   void createInEdge(
       GraphNode src, GraphNode dst, EdgeTy* e, katana::MethodFlag mflag,
       Args&&... args) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
 
     dst->acquire(mflag);
     typename gNode::iterator ii = dst->end();
@@ -663,7 +665,7 @@ public:
   //! Gets the node data for a node.
   node_data_reference getData(
       const GraphNode& n, katana::MethodFlag mflag = MethodFlag::WRITE) const {
-    assert(n);
+    KATANA_LOG_DEBUG_ASSERT(n);
     // katana::checkWrite(mflag, false);
     n->acquire(mflag);
     return n->getData();
@@ -672,7 +674,7 @@ public:
   //! Checks if a node is in the graph
   bool containsNode(
       const GraphNode& n, katana::MethodFlag mflag = MethodFlag::WRITE) const {
-    assert(n);
+    KATANA_LOG_DEBUG_ASSERT(n);
     n->acquire(mflag);
     return n->active;
   }
@@ -683,7 +685,7 @@ public:
    */
   // FIXME: handle edge memory
   void removeNode(GraphNode n, katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(n);
+    KATANA_LOG_DEBUG_ASSERT(n);
     // katana::checkWrite(mflag, true);
     n->acquire(mflag);
     gNode* N = n;
@@ -701,7 +703,7 @@ public:
   void resizeEdges(
       GraphNode src, size_t size,
       katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(src);
+    KATANA_LOG_DEBUG_ASSERT(src);
     // katana::checkWrite(mflag, false);
     src->acquire(mflag);
     src->resizeEdges(size);
@@ -733,7 +735,7 @@ public:
   void removeEdge(
       GraphNode src, edge_iterator dst,
       katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(src);
+    KATANA_LOG_DEBUG_ASSERT(src);
     // katana::checkWrite(mflag, true);
     src->acquire(mflag);
     if (Directional && !InOut) {
@@ -752,7 +754,7 @@ public:
       GraphNode dst, in_edge_iterator src,
       katana::MethodFlag mflag = MethodFlag::WRITE,
       typename std::enable_if<_DirectedInOut>::type* = 0) {
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(dst);
 
     dst->acquire(mflag);
     src->first()->acquire(mflag);
@@ -765,8 +767,8 @@ public:
   edge_iterator findEdge(
       GraphNode src, GraphNode dst,
       katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
     src->acquire(mflag);
     typename gNodeTypes::iterator ii = src->find(dst), ei = src->end();
     is_out_edge edge_predicate;
@@ -784,10 +786,10 @@ public:
   edge_iterator findEdgeSortedByDst(
       GraphNode src, GraphNode dst,
       katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
     src->acquire(mflag);
-    assert(std::is_sorted(
+    KATANA_LOG_DEBUG_ASSERT(std::is_sorted(
         src->begin(), src->end(),
         [=](const typename gNode::EdgeInfo& e1,
             const typename gNode::EdgeInfo& e2) {
@@ -832,8 +834,8 @@ public:
       GraphNode src, GraphNode dst,
       katana::MethodFlag mflag = MethodFlag::WRITE,
       typename std::enable_if<_DirectedInOut>::type* = 0) {
-    assert(src);
-    assert(dst);
+    KATANA_LOG_DEBUG_ASSERT(src);
+    KATANA_LOG_DEBUG_ASSERT(dst);
     dst->acquire(mflag);
     typename gNodeTypes::iterator ii = dst->find(src, true),
                                   ei = dst->in_edge_end();
@@ -859,7 +861,7 @@ public:
   edge_data_reference getEdgeData(
       edge_iterator ii,
       katana::MethodFlag mflag = MethodFlag::UNPROTECTED) const {
-    assert(ii->first()->active);
+    KATANA_LOG_DEBUG_ASSERT(ii->first()->active);
     // katana::checkWrite(mflag, false);
     ii->first()->acquire(mflag);
     return *ii->second();
@@ -868,7 +870,7 @@ public:
   edge_data_reference getEdgeData(
       in_edge_iterator ii,
       katana::MethodFlag mflag = MethodFlag::UNPROTECTED) const {
-    assert(ii->first()->active);
+    KATANA_LOG_DEBUG_ASSERT(ii->first()->active);
     // katana::checkWrite(mflag, false);
     ii->first()->acquire(mflag);
     return *ii->second();
@@ -876,12 +878,12 @@ public:
 
   //! Returns the destination of an edge
   GraphNode getEdgeDst(edge_iterator ii) {
-    assert(ii->first()->active);
+    KATANA_LOG_DEBUG_ASSERT(ii->first()->active);
     return GraphNode(ii->first());
   }
 
   GraphNode getEdgeDst(in_edge_iterator ii) {
-    assert(ii->first()->active);
+    KATANA_LOG_DEBUG_ASSERT(ii->first()->active);
     return GraphNode(ii->first());
   }
 
@@ -907,7 +909,7 @@ public:
   //! Returns an iterator to the neighbors of a node
   edge_iterator edge_begin(
       GraphNode N, katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     N->acquire(mflag);
 
     if (katana::shouldLock(mflag)) {
@@ -924,7 +926,7 @@ public:
   in_edge_iterator in_edge_begin(
       GraphNode N, katana::MethodFlag mflag = MethodFlag::WRITE,
       typename std::enable_if<!_Undirected>::type* = 0) {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     N->acquire(mflag);
 
     if (katana::shouldLock(mflag)) {
@@ -950,7 +952,7 @@ public:
   edge_iterator edge_end(
       GraphNode N,
       [[maybe_unused]] katana::MethodFlag mflag = MethodFlag::WRITE) {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     // Acquiring lock is not necessary: no valid use for an end pointer should
     // ever require it
     // N->acquire(mflag);
@@ -962,7 +964,7 @@ public:
       GraphNode N,
       [[maybe_unused]] katana::MethodFlag mflag = MethodFlag::WRITE,
       typename std::enable_if<!_Undirected>::type* = 0) {
-    assert(N);
+    KATANA_LOG_DEBUG_ASSERT(N);
     // Acquiring lock is not necessary: no valid use for an end pointer should
     // ever require it
     // N->acquire(mflag);

@@ -31,9 +31,9 @@
 #include <csetjmp>
 #endif
 
+#include "katana/Logging.h"
 #include "katana/MethodFlags.h"
 #include "katana/PtrLock.h"
-#include "katana/gIO.h"
 
 namespace katana {
 
@@ -98,34 +98,34 @@ protected:
   AcquireStatus tryAcquire(Lockable* lockable);
 
   inline bool stealByCAS(Lockable* lockable, LockManagerBase* other) {
-    assert(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
     return lockable->owner.stealing_CAS(other, this);
   }
 
   inline bool CASowner(Lockable* lockable, LockManagerBase* other) {
-    assert(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
     return lockable->owner.CAS(other, this);
   }
 
   inline void setOwner(Lockable* lockable) {
-    assert(lockable != nullptr);
-    assert(!lockable->owner.getValue());
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(!lockable->owner.getValue());
     lockable->owner.setValue(this);
   }
 
   inline void release(Lockable* lockable) {
-    assert(lockable != nullptr);
-    assert(getOwner(lockable) == this);
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(getOwner(lockable) == this);
     lockable->owner.unlock_and_clear();
   }
 
   inline static bool tryLock(Lockable* lockable) {
-    assert(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
     return lockable->owner.try_lock();
   }
 
   inline static LockManagerBase* getOwner(Lockable* lockable) {
-    assert(lockable != nullptr);
+    KATANA_LOG_DEBUG_ASSERT(lockable != nullptr);
     return lockable->owner.getValue();
   }
 };
@@ -146,7 +146,7 @@ protected:
   virtual void subAcquire(Lockable* lockable, katana::MethodFlag m);
 
   void addToNhood(Lockable* lockable) {
-    assert(!lockable->next);
+    KATANA_LOG_DEBUG_ASSERT(!lockable->next);
     lockable->next = locks;
     locks = lockable;
   }
@@ -170,7 +170,7 @@ public:
   SimpleRuntimeContext(bool child = false) : locks(0), customAcquire(child) {}
   virtual ~SimpleRuntimeContext() {}
 
-  void startIteration() { assert(!locks); }
+  void startIteration() { KATANA_LOG_DEBUG_ASSERT(!locks); }
 
   unsigned cancelIteration();
   unsigned commitIteration();

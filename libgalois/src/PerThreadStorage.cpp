@@ -112,7 +112,7 @@ katana::PerBackend::allocOffset(const unsigned sz) {
 
   // Found a bigger free offset. Use the first piece equal to required
   // size and produce vending machine change for the rest.
-  assert(!freeOffsets[index].empty());
+  KATANA_LOG_DEBUG_ASSERT(!freeOffsets[index].empty());
   unsigned offset = freeOffsets[index].back();
   freeOffsets[index].pop_back();
 
@@ -124,7 +124,7 @@ katana::PerBackend::allocOffset(const unsigned sz) {
     start += (1 << i);
   }
 
-  assert(offset != ptAllocSize);
+  KATANA_LOG_DEBUG_ASSERT(offset != ptAllocSize);
 
   return offset;
 }
@@ -153,14 +153,14 @@ katana::PerBackend::deallocOffset(const unsigned offset, const unsigned sz) {
 void*
 katana::PerBackend::getRemote(unsigned thread, unsigned offset) {
   char* rbase = heads[thread].load(std::memory_order_relaxed);
-  assert(rbase);
+  KATANA_LOG_DEBUG_ASSERT(rbase);
   return &rbase[offset];
 }
 
 void
 katana::PerBackend::initCommon(unsigned maxT) {
   if (!heads) {
-    assert(ThreadPool::getTID() == 0);
+    KATANA_LOG_DEBUG_ASSERT(ThreadPool::getTID() == 0);
     heads = new std::atomic<char*>[maxT] {};
   }
 }

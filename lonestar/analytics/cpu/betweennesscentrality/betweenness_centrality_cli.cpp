@@ -93,7 +93,7 @@ main(int argc, char** argv) {
     if (sources == kBetweennessCentralityAllNodes) {
       sources = numOfSources;
     } else {
-      KATANA_ASSERT(std::holds_alternative<std::vector<uint32_t>>(sources));
+      KATANA_LOG_ASSERT(std::holds_alternative<std::vector<uint32_t>>(sources));
       auto& sources_vec = std::get<std::vector<uint32_t>>(sources);
       if (sources_vec.size() > numOfSources) {
         sources_vec.resize(numOfSources);
@@ -124,7 +124,8 @@ main(int argc, char** argv) {
     }
     auto results = results_result.value();
 
-    KATANA_ASSERT((uint64_t)results->length() == pfg->topology().num_nodes());
+    KATANA_LOG_ASSERT(
+        (uint64_t)results->length() == pfg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

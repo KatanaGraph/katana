@@ -65,7 +65,7 @@ createNodeMap() {
     remapper[nodeID] = counter++;
   }
 
-  KATANA_ASSERT(remapper.size() == counter);
+  KATANA_LOG_ASSERT(remapper.size() == counter);
   katana::gInfo("Remapping ", counter, " nodes");
 
   katana::gInfo("Node map created");
@@ -97,7 +97,7 @@ main(int argc, char** argv) {
   for (size_t i = 0; i < prevNumNodes; i++) {
     // see if current node is to be remapped, i.e. exists in the map
     if (remapper.find(i) != remapper.end()) {
-      KATANA_ASSERT(nodeIDCounter == remapper[i]);
+      KATANA_LOG_ASSERT(nodeIDCounter == remapper[i]);
       for (auto e = graphToRemap.edgeBegin(i); e < graphToRemap.edgeEnd(i);
            e++) {
         graphWriter.incrementDegree(nodeIDCounter);
@@ -105,7 +105,7 @@ main(int argc, char** argv) {
       nodeIDCounter++;
     }
   }
-  KATANA_ASSERT(nodeIDCounter == remapper.size());
+  KATANA_LOG_ASSERT(nodeIDCounter == remapper.size());
 
   // phase 2: edge construction
   graphWriter.phase2();
@@ -114,17 +114,17 @@ main(int argc, char** argv) {
   for (size_t i = 0; i < prevNumNodes; i++) {
     // see if current node is to be remapped, i.e. exists in the map
     if (remapper.find(i) != remapper.end()) {
-      KATANA_ASSERT(nodeIDCounter == remapper[i]);
+      KATANA_LOG_ASSERT(nodeIDCounter == remapper[i]);
       for (auto e = graphToRemap.edgeBegin(i); e < graphToRemap.edgeEnd(i);
            e++) {
         uint32_t dst = graphToRemap.edgeDestination(*e);
-        KATANA_ASSERT(remapper.find(dst) != remapper.end());
+        KATANA_LOG_ASSERT(remapper.find(dst) != remapper.end());
         graphWriter.addNeighbor(nodeIDCounter, remapper[dst]);
       }
       nodeIDCounter++;
     }
   }
-  KATANA_ASSERT(nodeIDCounter == remapper.size());
+  KATANA_LOG_ASSERT(nodeIDCounter == remapper.size());
 
   katana::gInfo("Finishing up: outputting graph shortly");
 

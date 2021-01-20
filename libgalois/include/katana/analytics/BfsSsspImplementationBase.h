@@ -93,12 +93,12 @@ struct BfsSsspImplementationBase {
 
   template <typename WL, typename TileMaker>
   void PushEdgeTiles(WL& wl, EI beg, const EI end, const TileMaker& f) {
-    assert(beg <= end);
+    KATANA_LOG_DEBUG_ASSERT(beg <= end);
 
     if ((end - beg) > edge_tile_size) {
       for (; beg + edge_tile_size < end;) {
         auto ne = beg + edge_tile_size;
-        assert(ne < end);
+        KATANA_LOG_DEBUG_ASSERT(ne < end);
         wl.push(f(beg, ne));
         beg = ne;
       }
@@ -299,7 +299,8 @@ public:
 
   void push(const T& item) {
     size_t b = m_func(item);
-    assert(b >= m_minBucket && "can't push below m_minBucket");
+    KATANA_LOG_DEBUG_VASSERT(
+        b >= m_minBucket, "can't push {} below m_minBucket {}", b, m_minBucket);
 
     if (b < m_buckets.size()) {
       m_buckets[b].push_back(item);

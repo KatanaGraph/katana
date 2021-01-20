@@ -176,7 +176,7 @@ public:
 
   //! Returns null if tree is empty
   T* find(double x, double y) {
-    assert(root);
+    KATANA_LOG_DEBUG_ASSERT(root);
     return recfind(root, x, y);
   }
 

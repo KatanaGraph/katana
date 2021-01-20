@@ -135,7 +135,7 @@ katana::Result<void>
 UnmarshalVectorOfVectors(
     const std::vector<std::shared_ptr<arrow::ChunkedArray>>& source,
     std::vector<std::vector<T>>* dest) {
-  assert(source.size() == dest->size());
+  KATANA_LOG_DEBUG_ASSERT(source.size() == dest->size());
 
   for (size_t i = 0; i < source.size(); ++i) {
     auto res = UnmarshalVector<T>(source[i]);

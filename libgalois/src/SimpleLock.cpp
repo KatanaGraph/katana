@@ -29,5 +29,5 @@ katana::SimpleLock::slow_lock() const {
     oldval = 0;
   } while (!_lock.compare_exchange_weak(
       oldval, 1, std::memory_order_acq_rel, std::memory_order_relaxed));
-  assert(is_locked());
+  KATANA_LOG_DEBUG_ASSERT(is_locked());
 }

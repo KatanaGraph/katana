@@ -95,14 +95,14 @@ testBasic(std::string prefix, C&& collection, int N) {
     ;
   }
 
-  KATANA_ASSERT(N == std::distance(c.begin(), c.end()), prefix);
+  KATANA_LOG_VASSERT(N == std::distance(c.begin(), c.end()), "{}", prefix);
 
   i = N - 1;
   for (; !c.empty(); --i, removeFromCollection(c)) {
     ;
   }
 
-  KATANA_ASSERT(0 == std::distance(c.begin(), c.end()), prefix);
+  KATANA_LOG_VASSERT(0 == std::distance(c.begin(), c.end()), "{}", prefix);
 }
 
 template <typename C>
@@ -117,27 +117,29 @@ testNormal(std::string prefix, C&& collection, int N) {
 
   int i = 0;
   for (auto it = c.begin(); it != c.end(); ++it, ++i) {
-    KATANA_ASSERT(*it == i, prefix);
+    KATANA_LOG_VASSERT(*it == i, "{}", prefix);
   }
 
   i = N - 1;
   for (auto it = c.rbegin(); it != c.rend(); ++it, --i) {
-    KATANA_ASSERT(*it == i, prefix);
+    KATANA_LOG_VASSERT(*it == i, "{}", prefix);
   }
 
-  KATANA_ASSERT(static_cast<int>(c.size()) == N, prefix);
+  KATANA_LOG_VASSERT(static_cast<int>(c.size()) == N, "{}", prefix);
 
-  KATANA_ASSERT(
-      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
+  KATANA_LOG_VASSERT(
+      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), "{}",
+      prefix);
 
   i = N - 1;
   for (; !c.empty(); --i, removeFromCollection(c)) {
-    KATANA_ASSERT(c.back() == i, prefix);
+    KATANA_LOG_VASSERT(c.back() == i, "{}", prefix);
   }
 
-  KATANA_ASSERT(static_cast<int>(c.size()) == 0, prefix);
-  KATANA_ASSERT(
-      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), prefix);
+  KATANA_LOG_VASSERT(static_cast<int>(c.size()) == 0, "{}", prefix);
+  KATANA_LOG_VASSERT(
+      static_cast<int>(c.size()) == std::distance(c.begin(), c.end()), "{}",
+      prefix);
 }
 
 template <typename C>
@@ -156,14 +158,14 @@ testSort(std::string prefix, C&& collection, int N) {
 
   int last = c.front();
   for (auto it = c.begin() + 1; it != c.end(); ++it) {
-    KATANA_ASSERT(last <= *it, prefix);
+    KATANA_LOG_VASSERT(last <= *it, "{}", prefix);
     last = *it;
   }
 
   last = c.back();
   removeFromCollection(c);
   for (; !c.empty(); removeFromCollection(c)) {
-    KATANA_ASSERT(last >= c.back(), prefix);
+    KATANA_LOG_VASSERT(last >= c.back(), "{}", prefix);
     last = c.back();
   }
 }

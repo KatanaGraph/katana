@@ -85,7 +85,7 @@ RDGMeta::PartitionFileName(uint32_t node_id, uint64_t version) {
 katana::Uri
 RDGMeta::PartitionFileName(
     const katana::Uri& uri, uint32_t node_id, uint64_t version) {
-  assert(!IsMetaUri(uri));
+  KATANA_LOG_DEBUG_ASSERT(!IsMetaUri(uri));
   return uri.Join(PartitionFileName(node_id, version));
 }
 
@@ -104,7 +104,7 @@ RDGMeta::ToJsonString() const {
 // e.g., rdg_dir == s3://witchel-tests-east2/fault/simple/
 katana::Uri
 RDGMeta::FileName(const katana::Uri& uri, uint64_t version) {
-  assert(uri.empty() || !IsMetaUri(uri));
+  KATANA_LOG_DEBUG_ASSERT(uri.empty() || !IsMetaUri(uri));
 
   return uri.Join(fmt::format("meta_{}", version));
 }

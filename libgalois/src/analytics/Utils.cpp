@@ -27,7 +27,7 @@ katana::analytics::SourcePicker::PickNext() {
   do {
     source = RandomUniformInt(graph.size());
   } while (graph.edges(source).empty());
-  assert(graph.edges(source));
+  KATANA_LOG_DEBUG_ASSERT(graph.edges(source));
   return source;
 }
 

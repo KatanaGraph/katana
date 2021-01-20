@@ -182,7 +182,7 @@ private:
     iterator local_begin = thread_beginnings_[my_thread_id];
     iterator local_end = thread_beginnings_[my_thread_id + 1];
 
-    assert(local_begin <= local_end);
+    KATANA_LOG_DEBUG_ASSERT(local_begin <= local_end);
 
     if (thread_beginnings_[total_threads] == *global_end_ &&
         *global_begin_ == 0) {

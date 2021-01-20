@@ -65,7 +65,7 @@ public:
       tail = obj;
       head.unlock();
     } else {
-      assert(!head.getValue());
+      KATANA_LOG_DEBUG_ASSERT(!head.getValue());
       tail = obj;
       head.unlock_and_set(obj);
     }
@@ -84,7 +84,7 @@ public:
     }
     if (tail == h) {
       tail = 0;
-      assert(!h->next);
+      KATANA_LOG_DEBUG_ASSERT(!h->next);
       head.unlock_and_clear();
     } else {
       head.unlock_and_set(h->next);

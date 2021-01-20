@@ -44,7 +44,7 @@ class LargeArray {
   size_t size_{};
 
   void Allocate(size_t n, AllocType t) {
-    assert(!data_);
+    KATANA_LOG_DEBUG_ASSERT(!data_);
     size_ = n;
     switch (t) {
     case AllocType::Blocked:
@@ -60,7 +60,7 @@ class LargeArray {
       real_data_ = largeMallocFloating(n * sizeof(T));
       break;
     default:
-      assert(false);
+      KATANA_LOG_DEBUG_ASSERT(false);
     };
 
     data_ = reinterpret_cast<T*>(real_data_.get());
@@ -161,7 +161,7 @@ public:
    */
   template <typename RangeArray>
   void allocateSpecified(size_type num, RangeArray& ranges) {
-    assert(!data_);
+    KATANA_LOG_DEBUG_ASSERT(!data_);
 
     real_data_ =
         largeMallocSpecified(num * sizeof(T), activeThreads, ranges, sizeof(T));

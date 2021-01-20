@@ -155,7 +155,7 @@ public:
   }
 
   inline void deallocate(void* ptr) {
-    assert(*(Src::getHeader(ptr)) == this);
+    KATANA_LOG_DEBUG_ASSERT(*(Src::getHeader(ptr)) == this);
     Src::deallocate(ptr);
   }
 
@@ -200,7 +200,7 @@ public:
   inline void deallocate(void* ptr) {
     if (!ptr)
       return;
-    assert((uintptr_t)ptr > 0x100);
+    KATANA_LOG_DEBUG_ASSERT((uintptr_t)ptr > 0x100);
     FreeNode* NH = (FreeNode*)ptr;
     NH->next = head;
     head = NH;
@@ -248,7 +248,7 @@ public:
       NH = OH->next;  // The lock protects this line
     } while (!__sync_bool_compare_and_swap(&head, OH, NH));
     lock.unlock();
-    assert(OH);
+    KATANA_LOG_DEBUG_ASSERT(OH);
     return (void*)OH;
   }
 
@@ -325,7 +325,7 @@ public:
   ~BlockHeap() { clear(); }
 
   inline void* allocate([[maybe_unused]] size_t size) {
-    assert(size == ElemSize);
+    KATANA_LOG_DEBUG_ASSERT(size == ElemSize);
     if (!head || headIndex == TotalFit)
       refill();
     return &head->data[headIndex++];
@@ -400,7 +400,7 @@ public:
     // Check current block
     if (!head || offset + alignedSize > SourceHeap::AllocSize) {
       size_t remaining = SourceHeap::AllocSize - offset;
-      assert(
+      KATANA_LOG_DEBUG_ASSERT(
           (remaining & (sizeof(double) - 1)) == 0);  // should still be aligned
       if (!remaining) {
         refill();
@@ -547,13 +547,13 @@ public:
   enum { AllocSize = InnerHeap::AllocSize };
 
   inline void* allocate(size_t size) {
-    assert(size <= AllocSize);
+    KATANA_LOG_DEBUG_ASSERT(size <= AllocSize);
     void* ptr = innerHeap.allocate(size);
     return ptr;
   }
 
   inline void deallocate(void* ptr) {
-    assert(ptr);
+    KATANA_LOG_DEBUG_ASSERT(ptr);
     innerHeap.deallocate(ptr);
   }
 };
@@ -717,7 +717,7 @@ public:
   }
 
   void deallocate(pointer ptr, [[maybe_unused]] size_type len) {
-    assert(len == 1);
+    KATANA_LOG_DEBUG_ASSERT(len == 1);
     heap.deallocate(ptr);
   }
 
@@ -773,7 +773,7 @@ private:
   }
 
   void populateTable(void) {
-    assert(heapTable.empty());
+    KATANA_LOG_DEBUG_ASSERT(heapTable.empty());
 
     heapTable.clear();
     for (unsigned i = 0; i <= LOG2_MAX_SIZE; ++i) {
@@ -794,7 +794,7 @@ public:
       }
     } else {
       unsigned i = nextLog2(allocSize);
-      assert(i < heapTable.size());
+      KATANA_LOG_DEBUG_ASSERT(i < heapTable.size());
       return heapTable[i].allocate(pow2(i));
     }
   }
@@ -809,7 +809,7 @@ public:
       }
     } else {
       unsigned i = nextLog2(allocSize);
-      assert(i < heapTable.size());
+      KATANA_LOG_DEBUG_ASSERT(i < heapTable.size());
       heapTable[i].deallocate(ptr);
     }
   }

@@ -150,7 +150,6 @@ main(int argc, char** argv) {
     std::cerr << "Source node index " << startNode
               << " is greater than the graph size" << graph.size()
               << ", failed to set source: " << startNode << "\n";
-    assert(0);
     abort();
   }
   GNode source;

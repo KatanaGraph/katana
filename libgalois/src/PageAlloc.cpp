@@ -83,9 +83,8 @@ katana::allocPages(unsigned num, bool preFault) {
 
   void* ptr = trymmap(num * hugePageSize, preFault ? _MAP_HUGE_POP : _MAP_HUGE);
   if (!ptr) {
-#ifndef NDEBUG
-    KATANA_WARN_ONCE("huge page alloc failed, falling back to regular pages");
-#endif
+    KATANA_DEBUG_WARN_ONCE(
+        "huge page alloc failed, falling back to regular pages");
     ptr = trymmap(num * hugePageSize, preFault ? _MAP_POP : _MAP);
   }
 

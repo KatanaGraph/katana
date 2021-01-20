@@ -496,7 +496,6 @@ main(int argc, char** argv) {
     KATANA_LOG_ERROR(
         "failed to set report: ", reportNode,
         " or failed to set source: ", startNode, "\n");
-    assert(0);
     abort();
   }
 

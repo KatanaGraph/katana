@@ -334,7 +334,7 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
   if (sizeOfVector >= 1024) {
     const size_t numBlocks = katana::getActiveThreads();
     const size_t blockSize = (sizeOfVector + numBlocks - 1) / numBlocks;
-    assert(numBlocks * blockSize >= sizeOfVector);
+    KATANA_LOG_DEBUG_ASSERT(numBlocks * blockSize >= sizeOfVector);
 
     std::vector<ValueType> localSums(numBlocks);
 
@@ -344,7 +344,7 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
           // block start can extend past sizeOfVector if doesn't divide evenly
           size_t blockStart = std::min(block * blockSize, sizeOfVector);
           size_t blockEnd = std::min((block + 1) * blockSize, sizeOfVector);
-          assert(blockStart <= blockEnd);
+          KATANA_LOG_DEBUG_ASSERT(blockStart <= blockEnd);
 
           // partial accumulation of each block done now
           std::partial_sum(
@@ -375,7 +375,7 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
           ValueType numToAdd = bulkPrefix[block];
           size_t blockStart = std::min(block * blockSize, sizeOfVector);
           size_t blockEnd = std::min((block + 1) * blockSize, sizeOfVector);
-          assert(blockStart <= blockEnd);
+          KATANA_LOG_DEBUG_ASSERT(blockStart <= blockEnd);
 
           // transform applies addition to appropriate range
           std::transform(

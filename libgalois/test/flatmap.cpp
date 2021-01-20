@@ -53,7 +53,7 @@ struct Fn2 {
   MapTy* m;
   void operator()(const int& x) const {
     int v = (*m)[x].val;
-    KATANA_ASSERT(v == x || v == 0);
+    KATANA_LOG_ASSERT(v == x || v == 0);
   }
 };
 
@@ -84,7 +84,7 @@ timeMap(std::string c, const std::vector<int>& keys) {
   t2.start();
   for (auto& x : keys) {
     int v = m[x].val;
-    KATANA_ASSERT(v == x);
+    KATANA_LOG_ASSERT(v == x);
   }
   t2.stop();
   std::cout << c << " " << t1.get() << " " << t2.get() << "\n";

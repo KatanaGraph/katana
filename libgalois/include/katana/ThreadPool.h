@@ -30,6 +30,7 @@
 
 #include "katana/CacheLineStorage.h"
 #include "katana/HWTopo.h"
+#include "katana/Logging.h"
 
 namespace katana::internal {
 
@@ -157,7 +158,7 @@ public:
     work = std::ref(lwork);
     // work =
     // std::function<void(void)>(ExecuteTuple(std::forward<Args>(args)...));
-    assert(num <= getMaxThreads());
+    KATANA_LOG_DEBUG_ASSERT(num <= getMaxThreads());
     runInternal(num);
   }
 

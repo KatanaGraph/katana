@@ -57,7 +57,7 @@ struct StatsFileManager {
       }
 
       statsFH = fopen(statsFileName.c_str(), "w");
-      KATANA_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
+      KATANA_LOG_VASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
       katana::parameter::StepStatsBase::printHeader(statsFH);
 
@@ -66,7 +66,7 @@ struct StatsFileManager {
 
     if (!isOpen) {
       statsFH = fopen(statsFileName.c_str(), "a");  // open in append mode
-      KATANA_ASSERT(statsFH != nullptr, "ParaMeter stats file error");
+      KATANA_LOG_VASSERT(statsFH != nullptr, "ParaMeter stats file error");
 
       isOpen = true;
     }

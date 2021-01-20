@@ -51,10 +51,10 @@ TestGet() {
 
   auto value_from_default = katana::get_default_trait_values(
       std::make_tuple(), std::make_tuple(A{}), std::make_tuple(B{"name"}));
-  KATANA_ASSERT(std::get<0>(value_from_default).name_ == "name");
+  KATANA_LOG_ASSERT(std::get<0>(value_from_default).name_ == "name");
 
   auto get_value = katana::get_trait_value<A>(std::tuple<B>(B{"name"}));
-  KATANA_ASSERT(get_value.name_ == "name");
+  KATANA_LOG_ASSERT(get_value.name_ == "name");
 }
 
 struct HasFunctionTraits {

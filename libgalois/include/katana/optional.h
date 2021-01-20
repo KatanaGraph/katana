@@ -23,6 +23,7 @@
 #include <cassert>
 
 #include "katana/LazyObject.h"
+#include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -122,21 +123,21 @@ public:
   }
 
   T& get() {
-    assert(initialized_);
+    KATANA_LOG_DEBUG_ASSERT(initialized_);
     return get_impl();
   }
   const T& get() const {
-    assert(initialized_);
+    KATANA_LOG_DEBUG_ASSERT(initialized_);
     return get_impl();
   }
   T& operator*() { return get(); }
   const T& operator*() const { return get(); }
   T* operator->() {
-    assert(initialized_);
+    KATANA_LOG_DEBUG_ASSERT(initialized_);
     return &get_impl();
   }
   const T* operator->() const {
-    assert(initialized_);
+    KATANA_LOG_DEBUG_ASSERT(initialized_);
     return &get_impl();
   }
 

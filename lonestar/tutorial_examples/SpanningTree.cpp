@@ -265,7 +265,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify && !verify()) {
     std::cerr << "verification failed\n";
-    assert(0 && "verification failed");
+    KATANA_LOG_DEBUG_VASSERT(0, "verification failed");
     abort();
   }
 

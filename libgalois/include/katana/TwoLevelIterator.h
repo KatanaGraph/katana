@@ -28,6 +28,7 @@
 
 #include <boost/iterator/iterator_adaptor.hpp>
 
+#include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -191,7 +192,7 @@ private:
     for (end = m_inner_end_fn(*m_outer); m_inner_begin_fn(*m_outer) == end;) {
       bool too_far __attribute__((unused)) =
           safe_decrement(m_outer, m_outer_begin);
-      assert(!too_far);
+      KATANA_LOG_DEBUG_ASSERT(!too_far);
       end = m_inner_end_fn(*m_outer);
     }
 
@@ -207,7 +208,7 @@ private:
     if (m_outer == m_outer_end) {
       bool too_far __attribute__((unused)) =
           safe_decrement(m_outer, m_outer_begin);
-      assert(!too_far);
+      KATANA_LOG_DEBUG_ASSERT(!too_far);
       seek_backward();
     } else if (!safe_decrement(
                    this->base_reference(), m_inner_begin_fn(*m_outer))) {
@@ -217,13 +218,13 @@ private:
       // Reached end of inner range
       bool too_far __attribute__((unused)) =
           safe_decrement(m_outer, m_outer_begin);
-      assert(!too_far);
+      KATANA_LOG_DEBUG_ASSERT(!too_far);
       seek_backward();
     }
 
     bool too_far __attribute__((unused)) =
         safe_decrement(this->base_reference(), m_inner_begin_fn(*m_outer));
-    assert(!too_far);
+    KATANA_LOG_DEBUG_ASSERT(!too_far);
   }
 
   template <class DiffType = difference_type>
@@ -239,7 +240,7 @@ private:
 
   template <class DiffType = difference_type>
   void jump_forward(DiffType n) {
-    assert(n >= 0);
+    KATANA_LOG_DEBUG_ASSERT(n >= 0);
     while (n) {
       difference_type k =
           std::distance(this->base_reference(), m_inner_end_fn(*m_outer));
@@ -255,7 +256,7 @@ private:
   void jump_backward(DiffType n) {
     // Note: not the same as jump_forward due to difference between beginning
     // and end of ranges
-    assert(n >= 0);
+    KATANA_LOG_DEBUG_ASSERT(n >= 0);
     if (n && m_outer == m_outer_end) {
       decrement();
       --n;

@@ -287,7 +287,7 @@ runMultiPhaseLouvainAlgorithm(
         katana::do_all(
             katana::iterate(uint64_t{0}, num_nodes_orig),
             [&](GNode n) {
-              assert(clusters_orig[n] < (*graph_curr).size());
+              KATANA_LOG_DEBUG_ASSERT(clusters_orig[n] < (*graph_curr).size());
               clusters_orig[n] =
                   (*graph_curr).getData(clusters_orig[n]).curr_subcomm_ass;
             },

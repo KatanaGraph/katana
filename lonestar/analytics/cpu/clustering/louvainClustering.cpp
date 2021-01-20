@@ -785,7 +785,7 @@ runMultiPhaseLouvainAlgorithm(
     katana::gPrint("Prev_mod main: ", prev_mod, "\n");
     if (iter < max_iter && (curr_mod - prev_mod) > threshold) {
       if (!enable_VF && phase == 1) {
-        assert(num_nodes_orig == (*graph_curr).size());
+        KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == (*graph_curr).size());
         katana::do_all(katana::iterate(*graph_curr), [&](GNode n) {
           clusters_orig[n] =
               (*graph_curr).getData(n, flag_no_lock).curr_comm_ass;
@@ -794,7 +794,7 @@ runMultiPhaseLouvainAlgorithm(
         katana::do_all(
             katana::iterate((uint64_t)0, num_nodes_orig), [&](GNode n) {
               if (clusters_orig[n] != UNASSIGNED) {
-                assert(clusters_orig[n] < graph_curr->size());
+                KATANA_LOG_DEBUG_ASSERT(clusters_orig[n] < graph_curr->size());
                 clusters_orig[n] = (*graph_curr)
                                        .getData(clusters_orig[n], flag_no_lock)
                                        .curr_comm_ass;

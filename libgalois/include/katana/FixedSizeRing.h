@@ -28,6 +28,7 @@
 #include <boost/mpl/if.hpp>
 
 #include "katana/LazyArray.h"
+#include "katana/Logging.h"
 #include "katana/config.h"
 #include "katana/optional.h"
 
@@ -62,7 +63,7 @@ public:
   template <typename InputIterator>
   FixedSizeBagBase(InputIterator first, InputIterator last) : count(0) {
     while (first != last) {
-      assert(count < ChunkSize);
+      KATANA_LOG_DEBUG_ASSERT(count < ChunkSize);
       datac.emplace(count++, *first++);
     }
   }
@@ -73,22 +74,22 @@ public:
   ~FixedSizeBagBase() { clear(); }
 
   unsigned size() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count;
   }
 
   bool empty() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count == 0;
   }
 
   bool full() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count == ChunkSize;
   }
 
   void clear() {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     for (unsigned x = 0; x < count; ++x)
       datac.destroy(x);
     count = 0;
@@ -142,8 +143,8 @@ public:
   bool pop_back() { return pop_front(); }
 
   reference front() {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at(count - 1);
   }
 
@@ -224,20 +225,20 @@ class FixedSizeRing {
 
     template <typename OtherTy>
     bool equal(const Iterator<OtherTy>& o) const {
-      assert(base && o.base);
+      KATANA_LOG_DEBUG_ASSERT(base && o.base);
       return &base[cur] == &o.base[o.cur] && count == o.count;
     }
 
     U& dereference() const { return base[cur]; }
 
     void increment() {
-      assert(base && count != 0);
+      KATANA_LOG_DEBUG_ASSERT(base && count != 0);
       count -= 1;
       cur = (cur + 1) % ChunkSize;
     }
 
     void decrement() {
-      assert(base && count < ChunkSize);
+      KATANA_LOG_DEBUG_ASSERT(base && count < ChunkSize);
       count += 1;
       cur = (cur + ChunkSize - 1) % ChunkSize;
     }
@@ -278,7 +279,7 @@ public:
   template <typename InputIterator>
   FixedSizeRing(InputIterator first, InputIterator last) : start(0), count(0) {
     while (first != last) {
-      assert(count < ChunkSize);
+      KATANA_LOG_DEBUG_ASSERT(count < ChunkSize);
       datac.emplace(count++, *first++);
     }
   }
@@ -289,34 +290,34 @@ public:
   ~FixedSizeRing() { clear(); }
 
   unsigned size() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count;
   }
 
   bool empty() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count == 0;
   }
 
   bool full() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return count == ChunkSize;
   }
 
   reference getAt(unsigned x) {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at((start + x) % ChunkSize);
   }
 
   const_reference getAt(unsigned x) const {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at((start + x) % ChunkSize);
   }
 
   void clear() {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     for (unsigned x = 0; x < count; ++x)
       datac.destroy((start + x) % ChunkSize);
     count = 0;
@@ -375,14 +376,14 @@ public:
   }
 
   reference front() {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at(start);
   }
 
   const_reference front() const {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at(start);
   }
 
@@ -396,22 +397,22 @@ public:
   }
 
   void pop_front() {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     datac.destroy(start);
     start = (start + 1) % ChunkSize;
     --count;
   }
 
   reference back() {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at((start + count - 1) % ChunkSize);
   }
 
   const_reference back() const {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return *at((start + count - 1) % ChunkSize);
   }
 
@@ -425,8 +426,8 @@ public:
   }
 
   void pop_back() {
-    assert(precondition());
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     datac.destroy((start + count - 1) % ChunkSize);
     --count;
   }

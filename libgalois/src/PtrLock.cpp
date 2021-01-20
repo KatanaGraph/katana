@@ -28,5 +28,5 @@ katana::internal::ptr_slow_lock(std::atomic<uintptr_t>& _l) {
     }
     oldval = _l.fetch_or(1, std::memory_order_acq_rel);
   } while (oldval & 1);
-  assert(_l);
+  KATANA_LOG_DEBUG_ASSERT(_l);
 }

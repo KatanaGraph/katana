@@ -141,7 +141,7 @@ struct PreflowPush {
       if (graph.getEdgeDst(ii) == dst)
         break;
     }
-    assert(ii != end_e);  // Never return the end iterator
+    KATANA_LOG_DEBUG_ASSERT(ii != end_e);  // Never return the end iterator
     return ii;
   }
 
@@ -167,14 +167,14 @@ struct PreflowPush {
       void decrement() { --ei; }
 
       bool equal(const EdgeDstIter& that) const {
-        assert(this->g == that.g);
+        KATANA_LOG_DEBUG_ASSERT(this->g == that.g);
         return this->ei == that.ei;
       }
 
       void advance(ptrdiff_t n) { ei += n; }
 
       ptrdiff_t distance_to(const EdgeDstIter& that) const {
-        assert(this->g == that.g);
+        KATANA_LOG_DEBUG_ASSERT(this->g == that.g);
 
         return that.ei - this->ei;
       }
@@ -185,8 +185,8 @@ struct PreflowPush {
 
     auto ret = std::lower_bound(ai, end_ai, dst);
 
-    assert(ret != end_ai);
-    assert(*ret == dst);
+    KATANA_LOG_DEBUG_ASSERT(ret != end_ai);
+    KATANA_LOG_DEBUG_ASSERT(*ret == dst);
 
     return ret.ei;
   }
@@ -217,7 +217,7 @@ struct PreflowPush {
       ++current;
     }
 
-    assert(minHeight != std::numeric_limits<int>::max());
+    KATANA_LOG_DEBUG_ASSERT(minHeight != std::numeric_limits<int>::max());
     ++minHeight;
 
     Node& node = graph.getData(src, katana::MethodFlag::UNPROTECTED);
@@ -266,7 +266,7 @@ struct PreflowPush {
         if (dst != sink && dst != source && dnode.excess == 0)
           ctx.push(dst);
 
-        assert(node.excess >= amount);
+        KATANA_LOG_DEBUG_ASSERT(node.excess >= amount);
         node.excess -= amount;
         dnode.excess += amount;
 
@@ -694,10 +694,11 @@ struct PreflowPush {
           Node& prevNode =
               graph.getData(*prevDst, katana::MethodFlag::UNPROTECTED);
           Node& currNode = graph.getData(dst, katana::MethodFlag::UNPROTECTED);
-          KATANA_ASSERT(
+          KATANA_LOG_VASSERT(
               prevNode.id != currNode.id,
               "Adjacency list cannot have duplicates");
-          KATANA_ASSERT(prevNode.id <= currNode.id, "Adjacency list unsorted");
+          KATANA_LOG_VASSERT(
+              prevNode.id <= currNode.id, "Adjacency list unsorted");
         }
         prevDst = dst;
       }
@@ -729,7 +730,7 @@ struct PreflowPush {
     }
 
     if (graph.getData(sink).id != 0) {
-      assert(false && "Augmenting path exisits");
+      KATANA_LOG_DEBUG_VASSERT(false, "Augmenting path exisits");
       abort();
     }
   }

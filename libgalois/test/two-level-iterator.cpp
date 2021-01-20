@@ -81,14 +81,15 @@ check_forward() {
   }
 
   auto r = katana::make_two_level_iterator<Tag>(data.begin(), data.end());
-  KATANA_ASSERT(
+  KATANA_LOG_VASSERT(
       std::equal(r.first, r.second, boost::make_counting_iterator<int>(0)),
-      "failed case: forward ", (NonEmpty ? "non-empty" : "empty"),
-      " inner range");
-  KATANA_ASSERT(
-      std::distance(r.first, r.second) == N, "failed case: forward ",
-      (NonEmpty ? "non-empty" : "empty"),
-      " inner range: ", std::distance(r.first, r.second), " != ", N);
+      "failed case: forward {} inner range",
+      (NonEmpty ? "non-empty" : "empty"));
+  KATANA_LOG_VASSERT(
+      std::distance(r.first, r.second) == N,
+      "failed case: forward {} inner range: {}",
+      (NonEmpty ? "non-empty" : "empty"), std::distance(r.first, r.second),
+      " != ", N);
 }
 
 template <bool NonEmpty, class Tag, class D>
@@ -128,20 +129,19 @@ check_backward() {
       GetEnd<D, I>>(data.begin(), data.end());
 #endif
   auto c = boost::make_counting_iterator<int>(0);
-  KATANA_ASSERT(
-      std::distance(r.first, r.second) == N, "failed case: backward ",
-      (NonEmpty ? "non-empty" : "empty"),
-      " inner range: ", std::distance(r.first, r.second), " != ", N);
+  KATANA_LOG_VASSERT(
+      std::distance(r.first, r.second) == N,
+      "failed case: backward {} inner range: {} != {}",
+      (NonEmpty ? "non-empty" : "empty"), std::distance(r.first, r.second), N);
   if (r.first == r.second) {
     return;
   }
 
   --r.second;
   while (true) {
-    KATANA_ASSERT(
-        *r.second == *c, "failed case: backward ",
-        (NonEmpty ? "non-empty" : "empty"), " inner range: ", *r.second,
-        " != ", *c);
+    KATANA_LOG_VASSERT(
+        *r.second == *c, "failed case: backward {} inner range: {} != {}",
+        (NonEmpty ? "non-empty" : "empty"), *r.second, *c);
     if (r.first == r.second)
       break;
     --r.second;
@@ -186,32 +186,31 @@ check_strided() {
       GetEnd<D, I>>(data.begin(), data.end());
 #endif
   auto c = boost::make_counting_iterator<int>(0);
-  KATANA_ASSERT(
-      std::distance(r.first, r.second) == N, "failed case: strided ",
-      (NonEmpty ? "non-empty" : "empty"),
-      " inner range: ", std::distance(r.first, r.second), " != ", N);
+  KATANA_LOG_VASSERT(
+      std::distance(r.first, r.second) == N,
+      "failed case: strided {} inner range: {} != {}",
+      (NonEmpty ? "non-empty" : "empty"), std::distance(r.first, r.second), N);
   if (r.first == r.second) {
     return;
   }
 
   while (r.first != r.second) {
-    KATANA_ASSERT(
-        *r.first == *c, "failed case: strided ",
-        (NonEmpty ? "non-empty" : "empty"), " inner range: ", *r.first,
-        " != ", *c);
+    KATANA_LOG_VASSERT(
+        *r.first == *c, "failed case: strided {} inner range: {} != {}",
+        (NonEmpty ? "non-empty" : "empty"), *r.first, *c);
 
     auto orig = r.first;
 
     int k = std::max((N - *c) / 2, 1);
     std::advance(r.first, k);
-    KATANA_ASSERT(
+    KATANA_LOG_VASSERT(
         std::distance(orig, r.first) == k, "failed case: strided ",
         (NonEmpty ? "non-empty" : "empty"),
         " inner range: ", std::distance(orig, r.first), " != ", k);
     for (int i = 0; i < k - 1; ++i)
       std::advance(r.first, -1);
 
-    KATANA_ASSERT(
+    KATANA_LOG_VASSERT(
         std::distance(orig, r.first) == 1, "failed case: strided ",
         (NonEmpty ? "non-empty" : "empty"),
         " inner range: ", std::distance(orig, r.first), " != 1");
@@ -263,9 +262,9 @@ check_random() {
 
   int last = *r.first;
   for (auto ii = r.first + 1; ii != r.second; ++ii) {
-    KATANA_ASSERT(
-        last <= *ii, "failed case: random ", (NonEmpty ? "non-empty" : "empty"),
-        " inner range: ", last, " > ", *ii);
+    KATANA_LOG_VASSERT(
+        last <= *ii, "failed case: random {} inner range: {} > {}",
+        (NonEmpty ? "non-empty" : "empty"), last, *ii);
     last = *ii;
   }
 }

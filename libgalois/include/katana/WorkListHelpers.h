@@ -131,7 +131,7 @@ public:
       tail = C;
       head.unlock();
     } else {
-      assert(!head.getValue());
+      KATANA_LOG_DEBUG_ASSERT(!head.getValue());
       tail = C;
       head.unlock_and_set(C);
     }
@@ -150,7 +150,7 @@ public:
     }
     if (tail == C) {
       tail = 0;
-      assert(!C->getNext());
+      KATANA_LOG_DEBUG_ASSERT(!C->getNext());
       head.unlock_and_clear();
     } else {
       head.unlock_and_set(C->getNext());

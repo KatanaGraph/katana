@@ -216,7 +216,7 @@ protected:
   template <typename Item>
   KATANA_ATTRIBUTE_NOINLINE void abortIteration(
       const Item& item, ThreadLocalData& tld) {
-    assert(needsAborts);
+    KATANA_LOG_DEBUG_ASSERT(needsAborts);
     tld.ctx.cancelIteration();
     tld.inc_conflicts();
     aborted.push(item);

@@ -109,7 +109,7 @@ template <typename T>
 static unsigned
 findID(std::atomic<T*>& headptr, T* node, unsigned off) {
   T* n = headptr.load();
-  assert(n);
+  KATANA_LOG_DEBUG_ASSERT(n);
   if (n == node) {
     return off;
   }
@@ -204,7 +204,7 @@ ThreadPool::decascade() {
 void
 ThreadPool::cascade(bool fastmode) {
   auto& me = my_box;
-  assert(me.wbegin <= me.wend);
+  KATANA_LOG_DEBUG_ASSERT(me.wbegin <= me.wend);
 
   // nothing to wake up
   if (me.wbegin == me.wend) {
@@ -238,7 +238,7 @@ ThreadPool::runInternal(unsigned num) {
   me.wbegin = 1;
   me.wend = num;
 
-  assert(!masterFastmode || masterFastmode == num);
+  KATANA_LOG_DEBUG_ASSERT(!masterFastmode || masterFastmode == num);
   // launch threads
   cascade(masterFastmode);
   // Do master thread work

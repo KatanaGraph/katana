@@ -479,7 +479,7 @@ katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
         }
         // this assert makes sure reindex was correct + makes sure all edges
         // are accounted for
-        assert(new_out_index == new_prefix_sum[new_node_id]);
+        KATANA_LOG_DEBUG_ASSERT(new_out_index == new_prefix_sum[new_node_id]);
       },
       katana::steal());
 

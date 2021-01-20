@@ -45,7 +45,7 @@ katana::getThreadContext() {
 
 katana::LockManagerBase::AcquireStatus
 katana::LockManagerBase::tryAcquire(katana::Lockable* lockable) {
-  assert(lockable);
+  KATANA_LOG_DEBUG_ASSERT(lockable);
   if (lockable->owner.try_lock()) {
     lockable->owner.setValue(this);
     return NEW_OWNER;
@@ -57,11 +57,11 @@ katana::LockManagerBase::tryAcquire(katana::Lockable* lockable) {
 
 void
 katana::SimpleRuntimeContext::release(katana::Lockable* lockable) {
-  assert(lockable);
+  KATANA_LOG_DEBUG_ASSERT(lockable);
   // The deterministic executor, for instance, steals locks from other
   // iterations
-  assert(customAcquire || getOwner(lockable) == this);
-  assert(!lockable->next);
+  KATANA_LOG_DEBUG_ASSERT(customAcquire || getOwner(lockable) == this);
+  KATANA_LOG_DEBUG_ASSERT(!lockable->next);
   lockable->owner.unlock_and_clear();
 }
 
@@ -89,5 +89,5 @@ katana::SimpleRuntimeContext::cancelIteration() {
 void
 katana::SimpleRuntimeContext::subAcquire(
     katana::Lockable*, katana::MethodFlag) {
-  KATANA_DIE("unreachable");
+  KATANA_LOG_VASSERT(0, "unreachable");
 }

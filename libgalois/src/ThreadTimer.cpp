@@ -34,7 +34,8 @@ katana::ThreadTimers::reportTimes(const char* category, const char* region) {
       [&](auto, auto) {
         auto ns = timers_.getLocal()->get_nsec();
         auto lag = ns - minTime;
-        assert(lag > 0 && "negative time lag from min is impossible");
+        KATANA_LOG_DEBUG_VASSERT(
+            lag > 0, "negative time lag from min is impossible");
 
         ReportStatMax(region, timeCat.c_str(), ns / 1000000);
         ReportStatMax(region, lagCat.c_str(), lag / 1000000);

@@ -92,7 +92,7 @@ void
 Partition(
     std::vector<MetisGraph*>* metis_graphs, const uint32_t max_coarsen_level,
     const std::vector<uint32_t>& target_partitions) {
-  assert(metis_graphs->size() == target_partitions.size());
+  KATANA_LOG_DEBUG_ASSERT(metis_graphs->size() == target_partitions.size());
   katana::StatTimer exec_timer("Total-Partition");
   exec_timer.start();
 

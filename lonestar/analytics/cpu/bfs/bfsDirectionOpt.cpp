@@ -240,7 +240,7 @@ syncDOAlgo(
   int64_t edges_to_check = graph.sizeEdges();
   int64_t scout_count = graph.edges(source).size();
   katana::gPrint("source: ", source, " has OutDegree:", scout_count, "\n");
-  assert(!next->empty());
+  KATANA_LOG_DEBUG_ASSERT(!next->empty());
 
   uint64_t old_workItemNum = 0;
   uint64_t numNodes = graph.size();
@@ -426,7 +426,6 @@ main(int argc, char** argv) {
   if (startNode >= graph.size() || reportNode >= graph.size()) {
     std::cerr << "failed to set report: " << reportNode
               << " or failed to set source: " << startNode << "\n";
-    assert(0);
     abort();
   }
 

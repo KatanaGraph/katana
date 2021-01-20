@@ -888,7 +888,7 @@ FindMatching(
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_edge_list,
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
     const MatchingPolicy matching_policy) {
-  assert(coarse_mgraph.size() == fine_mgraph.size());
+  KATANA_LOG_DEBUG_ASSERT(coarse_mgraph.size() == fine_mgraph.size());
   uint32_t num_fine_hedges = fine_mgraph.size();
   std::vector<GNodeBag> nodes(num_fine_hedges);
   std::vector<katana::DynamicBitset> hedges(num_fine_hedges);
@@ -957,7 +957,7 @@ CoarsenOnce(
     const std::vector<std::pair<uint32_t, uint32_t>>& combined_node_list,
     const MatchingPolicy matching_policy) {
   uint32_t num_partitions = fine_metis_graph.size();
-  assert(next_coarse_graph->size() == num_partitions);
+  KATANA_LOG_DEBUG_ASSERT(next_coarse_graph->size() == num_partitions);
   for (uint32_t i = 0; i < num_partitions; ++i) {
     MetisGraph* graph = fine_metis_graph[i];
     if (graph != nullptr) {

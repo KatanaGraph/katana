@@ -25,13 +25,13 @@ std::function<katana::Result<std::unique_ptr<tsuba::NameServerClient>>()>
 
 katana::CommBackend*
 tsuba::GlobalState::Comm() const {
-  assert(comm_ != nullptr);
+  KATANA_LOG_DEBUG_ASSERT(comm_ != nullptr);
   return comm_;
 }
 
 tsuba::FileStorage*
 tsuba::GlobalState::GetDefaultFS() const {
-  assert(file_stores_.size() > 0);
+  KATANA_LOG_DEBUG_ASSERT(file_stores_.size() > 0);
   return file_stores_[0];
 }
 
@@ -53,7 +53,7 @@ tsuba::GlobalState::NS() const {
 katana::Result<void>
 tsuba::GlobalState::Init(
     katana::CommBackend* comm, tsuba::NameServerClient* ns) {
-  assert(ref_ == nullptr);
+  KATANA_LOG_DEBUG_ASSERT(ref_ == nullptr);
 
   // quick ping to say hello and fail fast if something was misconfigured
   if (auto res = ns->CheckHealth(); !res) {
@@ -98,7 +98,7 @@ tsuba::GlobalState::Fini() {
 
 const tsuba::GlobalState&
 tsuba::GlobalState::Get() {
-  assert(ref_ != nullptr);
+  KATANA_LOG_DEBUG_ASSERT(ref_ != nullptr);
   return *ref_;
 }
 

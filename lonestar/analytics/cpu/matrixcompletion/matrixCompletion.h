@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef LONESTAR_MATRIXCOMPLETION_H
-#define LONESTAR_MATRIXCOMPLETION_H
+#ifndef KATANA_LONESTAR_ANALYTICS_CPU_MATRIXCOMPLETION_MATRIXCOMPLETION_H_
+#define KATANA_LONESTAR_ANALYTICS_CPU_MATRIXCOMPLETION_MATRIXCOMPLETION_H_
 
 #include <cassert>
 #include <string>
@@ -138,7 +138,7 @@ T
 innerProduct(
     T* __restrict__ first1, [[maybe_unused]] T* __restrict__ last1,
     T* __restrict__ first2, T init) {
-  assert(first1 + LATENT_VECTOR_SIZE == last1);
+  KATANA_LOG_DEBUG_ASSERT(first1 + LATENT_VECTOR_SIZE == last1);
   for (int i = 0; i < LATENT_VECTOR_SIZE; ++i) {
     init += first1[i] * first2[i];
   }

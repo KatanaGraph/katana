@@ -492,7 +492,7 @@ public:
       it->dst = dst;
       it->construct(std::forward<Args>(args)...);
       src->edgeEnd++;
-      assert(src->edgeEnd <= src->trueEdgeEnd);
+      KATANA_LOG_DEBUG_ASSERT(src->edgeEnd <= src->trueEdgeEnd);
     }
     return it;
   }
@@ -515,7 +515,7 @@ public:
     it->dst = dst;
     it->construct(std::forward<Args>(args)...);
     src->edgeEnd++;
-    assert(src->edgeEnd <= src->trueEdgeEnd);
+    KATANA_LOG_DEBUG_ASSERT(src->edgeEnd <= src->trueEdgeEnd);
     return it;
   }
 
@@ -530,7 +530,7 @@ public:
     // katana::checkWrite(mflag, true);
     acquireNode(src, mflag);
     src->edgeEnd--;
-    assert(src->edgeBegin <= src->edgeEnd);
+    KATANA_LOG_DEBUG_ASSERT(src->edgeBegin <= src->edgeEnd);
     std::swap(*dst, *src->edgeEnd);
     src->edgeEnd->destroy();
   }

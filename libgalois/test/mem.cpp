@@ -45,29 +45,29 @@ main() {
     last = ptr;
   }
   for (unsigned i = 0; i < baseAllocSize; ++i) {
-    KATANA_ASSERT(last);
-    KATANA_ASSERT(last->val == baseAllocSize - 1 - i);
+    KATANA_LOG_ASSERT(last);
+    KATANA_LOG_ASSERT(last->val == baseAllocSize - 1 - i);
     element* next = last->next;
     falloc.destroy(last);
     falloc.deallocate(last, 1);
     last = next;
   }
-  KATANA_ASSERT(!last);
+  KATANA_LOG_ASSERT(!last);
 
   VariableSizeHeap valloc;
   size_t allocated;
-  KATANA_ASSERT(1 < baseAllocSize);
+  KATANA_LOG_ASSERT(1 < baseAllocSize);
   valloc.allocate(1, allocated);
-  KATANA_ASSERT(allocated == 1);
+  KATANA_LOG_ASSERT(allocated == 1);
 
   valloc.allocate(baseAllocSize + 1, allocated);
-  KATANA_ASSERT(allocated <= baseAllocSize);
+  KATANA_LOG_ASSERT(allocated <= baseAllocSize);
 
   int toAllocate = baseAllocSize + 1;
   while (toAllocate) {
     valloc.allocate(toAllocate, allocated);
     toAllocate -= allocated;
-    KATANA_ASSERT(allocated);
+    KATANA_LOG_ASSERT(allocated);
   }
 
   return 0;

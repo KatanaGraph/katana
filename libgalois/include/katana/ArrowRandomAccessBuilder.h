@@ -24,7 +24,7 @@ public:
   }
 
   reference operator[](size_t index) {
-    assert(index < size());
+    KATANA_LOG_DEBUG_ASSERT(index < size());
     return static_cast<ValueType*>(data_.data())[index];
   }
 
@@ -70,7 +70,7 @@ public:
   // 1) builder[index] = value; where it creates a non-null entry
   // 2) value = builder[index]; ONLY IF option 1 has already used that index
   reference operator[](size_t index) {
-    assert(index < size());
+    KATANA_LOG_DEBUG_ASSERT(index < size());
     valid_[index] = true;
     return reinterpret_cast<ValueType*>(data_.data())[index];
   }

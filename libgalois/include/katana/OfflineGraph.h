@@ -97,7 +97,7 @@ class OfflineGraph {
 
     // metadata update
     auto numBytesRead = fileEdgeDst.gcount();
-    assert(numBytesRead == sizeof(uint64_t));
+    KATANA_LOG_DEBUG_ASSERT(numBytesRead == sizeof(uint64_t));
     locEdgeDst += numBytesRead;
     numBytesReadEdgeDst += numBytesRead;
 
@@ -128,7 +128,7 @@ class OfflineGraph {
       }
 
       auto numBytesRead = fileIndex.gcount();
-      assert(numBytesRead == sizeof(uint64_t));
+      KATANA_LOG_DEBUG_ASSERT(numBytesRead == sizeof(uint64_t));
       locIndex += numBytesRead;
       numBytesReadIndex += numBytesRead;
       return retval;
@@ -143,7 +143,7 @@ class OfflineGraph {
       }
 
       auto numBytesRead = fileIndex.gcount();
-      assert(numBytesRead == sizeof(uint32_t));
+      KATANA_LOG_DEBUG_ASSERT(numBytesRead == sizeof(uint32_t));
       locIndex += numBytesRead;
       numBytesReadIndex += numBytesRead;
       return retval;
@@ -152,7 +152,7 @@ class OfflineGraph {
 
   template <typename T>
   T edgeData(uint64_t edge) {
-    assert(sizeof(T) <= sizeEdgeData);
+    KATANA_LOG_DEBUG_ASSERT(sizeof(T) <= sizeEdgeData);
     std::lock_guard<decltype(lock)> lg(lock);
     std::streamoff pos = (4 + numNodes) * sizeof(uint64_t) +
                          numEdges * (v2 ? sizeof(uint64_t) : sizeof(uint32_t));
@@ -177,7 +177,7 @@ class OfflineGraph {
     }
 
     auto numBytesRead = fileEdgeData.gcount();
-    assert(numBytesRead == sizeof(T));
+    KATANA_LOG_DEBUG_ASSERT(numBytesRead == sizeof(T));
     locEdgeData += numBytesRead;
     numBytesReadEdgeData += numBytesRead;
     /*fprintf(stderr, "READ:: %ld[", edge);

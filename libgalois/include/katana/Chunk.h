@@ -137,7 +137,7 @@ private:
       pushChunk(n.next);
     n.next = mkChunk();
     retval = n.next->emplace_back(std::forward<Args>(args)...);
-    assert(retval);
+    KATANA_LOG_DEBUG_ASSERT(retval);
     return retval;
   }
 

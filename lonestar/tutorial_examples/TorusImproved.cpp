@@ -111,7 +111,7 @@ main(int argc, char** argv) {
   unsigned int numThreads = atoi(argv[1]);
   int n = atoi(argv[2]);
 
-  KATANA_ASSERT(n > 2);
+  KATANA_LOG_ASSERT(n > 2);
 
   numThreads = katana::setActiveThreads(numThreads);
   std::cout << "Using " << numThreads << " threads and " << n << " x " << n

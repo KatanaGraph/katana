@@ -47,7 +47,7 @@ void
 profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
 
-  KATANA_ASSERT(
+  KATANA_LOG_ASSERT(
       katana::ThreadPool::getTID() == 0,
       "profileVtune can only be called from master thread (thread 0)");
 

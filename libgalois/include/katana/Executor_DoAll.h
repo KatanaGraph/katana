@@ -110,7 +110,7 @@ class DoAllStealingExec {
         ret = hasWorkWeak();
 
         if (m_size > 0) {
-          assert(shared_beg != shared_end);
+          KATANA_LOG_DEBUG_ASSERT(shared_beg != shared_end);
         }
       }
       work_mutex.unlock();
@@ -135,7 +135,7 @@ class DoAllStealingExec {
           } else {
             std::advance(nbeg, chunk_size);
             m_size -= chunk_size;
-            assert(m_size > 0);
+            KATANA_LOG_DEBUG_ASSERT(m_size > 0);
           }
 
           priv_beg = shared_beg;
@@ -166,14 +166,14 @@ class DoAllStealingExec {
     }
 
     void steal_from_end(Iter& steal_beg, Iter& steal_end, const Diff_ty sz) {
-      assert(sz > 0);
+      KATANA_LOG_DEBUG_ASSERT(sz > 0);
       steal_from_end_impl(
           steal_beg, steal_end, sz,
           typename std::iterator_traits<Iter>::iterator_category());
     }
 
     void steal_from_beg(Iter& steal_beg, Iter& steal_end, const Diff_ty sz) {
-      assert(sz > 0);
+      KATANA_LOG_DEBUG_ASSERT(sz > 0);
       steal_beg = shared_beg;
       std::advance(shared_beg, sz);
       steal_end = shared_beg;
@@ -220,9 +220,9 @@ class DoAllStealingExec {
     void assignWork(const Iter& beg, const Iter& end, const Diff_ty sz) {
       work_mutex.lock();
       {
-        assert(!hasWorkWeak());
-        assert(beg != end);
-        assert(std::distance(beg, end) == sz);
+        KATANA_LOG_DEBUG_ASSERT(!hasWorkWeak());
+        KATANA_LOG_DEBUG_ASSERT(beg != end);
+        KATANA_LOG_DEBUG_ASSERT(std::distance(beg, end) == sz);
 
         shared_beg = beg;
         shared_end = end;
@@ -235,9 +235,9 @@ class DoAllStealingExec {
 private:
   KATANA_ATTRIBUTE_NOINLINE bool transferWork(
       ThreadContext& rich, ThreadContext& poor, StealAmt amount) {
-    assert(rich.id != poor.id);
-    assert(rich.id < katana::getActiveThreads());
-    assert(poor.id < katana::getActiveThreads());
+    KATANA_LOG_DEBUG_ASSERT(rich.id != poor.id);
+    KATANA_LOG_DEBUG_ASSERT(rich.id < katana::getActiveThreads());
+    KATANA_LOG_DEBUG_ASSERT(poor.id < katana::getActiveThreads());
 
     Iter steal_beg;
     Iter steal_end;
@@ -249,8 +249,9 @@ private:
         rich.stealWork(steal_beg, steal_end, steal_size, amount, chunk_size);
 
     if (succ) {
-      assert(steal_beg != steal_end);
-      assert(std::distance(steal_beg, steal_end) == steal_size);
+      KATANA_LOG_DEBUG_ASSERT(steal_beg != steal_end);
+      KATANA_LOG_DEBUG_ASSERT(
+          std::distance(steal_beg, steal_end) == steal_size);
 
       poor.assignWork(steal_beg, steal_end, steal_size);
     }
@@ -274,7 +275,7 @@ private:
     for (unsigned i = 1; i < pack_end; ++i) {
       // go around the socket in circle starting from the next thread
       unsigned t = (poor.id + i) % per_pack + pack_beg;
-      assert((t >= pack_beg) && (t < pack_end));
+      KATANA_LOG_DEBUG_ASSERT((t >= pack_beg) && (t < pack_end));
 
       if (t < maxT) {
         if (workers.getRemote(t)->hasWorkWeak()) {
@@ -379,7 +380,7 @@ public:
         execTime(loopname, "Execute"),
         stealTime(loopname, "Steal"),
         termTime(loopname, "Term") {
-    assert(chunk_size > 0);
+    KATANA_LOG_DEBUG_ASSERT(chunk_size > 0);
   }
 
   // parallel call
@@ -401,7 +402,7 @@ public:
 #ifndef NDEBUG
     for (unsigned i = 0; i < workers.size(); ++i) {
       auto& ctx = *(workers.getRemote(i));
-      assert(!ctx.hasWork() && "Unprocessed work left");
+      KATANA_LOG_DEBUG_VASSERT(!ctx.hasWork(), "Unprocessed work left");
     }
 #endif
 
@@ -423,7 +424,7 @@ public:
 
       execTime.stop();
 
-      assert(!ctx.hasWork());
+      KATANA_LOG_DEBUG_ASSERT(!ctx.hasWork());
 
       stealTime.start();
       bool stole = trySteal(ctx);
@@ -433,7 +434,7 @@ public:
         continue;
 
       } else {
-        assert(!ctx.hasWork());
+        KATANA_LOG_DEBUG_ASSERT(!ctx.hasWork());
         if (USE_TERM) {
           termTime.start();
           term.SignalWorked(workHappened);
@@ -451,7 +452,7 @@ public:
     }
 
     totalTime.stop();
-    assert(!ctx.hasWork());
+    KATANA_LOG_DEBUG_ASSERT(!ctx.hasWork());
 
     if (NEED_STATS) {
       katana::ReportStatSum(loopname, "Iterations", ctx.num_iter);

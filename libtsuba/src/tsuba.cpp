@@ -45,7 +45,7 @@ ContainsValidMetaFile(const std::string& dir) {
 
 katana::Result<katana::Uri>
 FindLatestMetaFile(const katana::Uri& name) {
-  assert(!tsuba::RDGMeta::IsMetaUri(name));
+  KATANA_LOG_DEBUG_ASSERT(!tsuba::RDGMeta::IsMetaUri(name));
   auto list_res = FileList(name.string());
   if (!list_res) {
     return list_res.error();
@@ -122,7 +122,7 @@ tsuba::Create(const std::string& name) {
   }
   katana::Uri uri = std::move(uri_res.value());
 
-  assert(!RDGMeta::IsMetaUri(uri));
+  KATANA_LOG_DEBUG_ASSERT(!RDGMeta::IsMetaUri(uri));
   // the default construction is the empty RDG
   tsuba::RDGMeta meta{};
 

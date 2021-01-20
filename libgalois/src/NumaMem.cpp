@@ -81,8 +81,8 @@ static void
 pageInSpecified(
     void* _ptr, size_t len, size_t pageSize, unsigned numThreads,
     RangeArrayTy threadRanges, size_t elementSize) {
-  assert(numThreads > 0);
-  assert(elementSize > 0);
+  KATANA_LOG_DEBUG_ASSERT(numThreads > 0);
+  KATANA_LOG_DEBUG_ASSERT(elementSize > 0);
 
   char* ptr = static_cast<char*>(_ptr);
 
@@ -94,7 +94,7 @@ pageInSpecified(
           uint64_t beginLocation = threadRanges[myID];
           uint64_t endLocation = threadRanges[myID + 1];
 
-          assert(beginLocation <= endLocation);
+          KATANA_LOG_DEBUG_ASSERT(beginLocation <= endLocation);
 
           // printf("[%u] begin location %u and end location
           // %u\n", myID,
@@ -108,7 +108,7 @@ pageInSpecified(
             // byte of the next element.
             size_t endByte = endLocation ? (endLocation * elementSize) - 1 : 0;
 
-            assert(beginByte <= endByte);
+            KATANA_LOG_DEBUG_ASSERT(beginByte <= endByte);
 
             // memset(ptr + beginByte, 0, (endByte - beginByte +
             // 1));
@@ -116,7 +116,7 @@ pageInSpecified(
             uint32_t beginPage = beginByte / pageSize;
             uint32_t endPage = endByte / pageSize;
 
-            assert(beginPage <= endPage);
+            KATANA_LOG_DEBUG_ASSERT(beginPage <= endPage);
 
             // printf("thread %u gets begin page %u and end page
             // %u\n", myID,

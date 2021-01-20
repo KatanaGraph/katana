@@ -243,7 +243,7 @@ public:
   //! Get edge data of an edge between 2 nodes
   template <typename EdgeTy>
   EdgeTy& getEdgeData(GraphNode src, GraphNode dst) {
-    assert(sizeofEdge == sizeof(EdgeTy));
+    KATANA_LOG_DEBUG_ASSERT(sizeofEdge == sizeof(EdgeTy));
     numBytesReadEdgeData += sizeof(EdgeTy);
     return reinterpret_cast<EdgeTy*>(edgeData)[getEdgeIdx(src, dst)];
   }
@@ -385,7 +385,7 @@ public:
   //! Get edge data given an edge iterator
   template <typename EdgeTy>
   EdgeTy& getEdgeData(edge_iterator it) {
-    assert(edgeData);
+    KATANA_LOG_DEBUG_ASSERT(edgeData);
     numBytesReadEdgeData += sizeof(EdgeTy);
     return reinterpret_cast<EdgeTy*>(edgeData)[*it];
   }
@@ -429,14 +429,14 @@ public:
 
   template <typename EdgeTy>
   EdgeTy* edge_data_begin() const {
-    assert(edgeData);
+    KATANA_LOG_DEBUG_ASSERT(edgeData);
     return reinterpret_cast<EdgeTy*>(edgeData);
   }
 
   template <typename EdgeTy>
   EdgeTy* edge_data_end() const {
-    assert(edgeData);
-    assert(sizeof(EdgeTy) == sizeofEdge);
+    KATANA_LOG_DEBUG_ASSERT(edgeData);
+    KATANA_LOG_DEBUG_ASSERT(sizeof(EdgeTy) == sizeofEdge);
     EdgeTy* r = reinterpret_cast<EdgeTy*>(edgeData);
     return &r[numEdges];
   }
@@ -708,7 +708,7 @@ public:
 
   //! Increments degree of id by delta
   void incrementDegree(size_t id, int delta = 1) {
-    assert(id < numNodes);
+    KATANA_LOG_DEBUG_ASSERT(id < numNodes);
     outIdx[id] += delta;
   }
 
@@ -723,7 +723,7 @@ public:
          ++ii, ++prev) {
       *ii += *prev;
     }
-    assert(outIdx[numNodes - 1] == numEdges);
+    KATANA_LOG_DEBUG_ASSERT(outIdx[numNodes - 1] == numEdges);
 
     if (numNodes <= std::numeric_limits<uint32_t>::max()) {
       // version 1
@@ -743,13 +743,13 @@ public:
     if (numNodes <= std::numeric_limits<uint32_t>::max()) {
       // version 1
       size_t idx = base + starts[src]++;
-      assert(idx < outIdx[src]);
+      KATANA_LOG_DEBUG_ASSERT(idx < outIdx[src]);
       outs[idx] = dst;
       return idx;
     } else {
       // version 2
       size_t idx = base + (starts64)[src]++;
-      assert(idx < outIdx[src]);
+      KATANA_LOG_DEBUG_ASSERT(idx < outIdx[src]);
       outs64[idx] = dst;
       return idx;
     }

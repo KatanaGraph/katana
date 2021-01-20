@@ -83,7 +83,7 @@ void
 PartitionCoarsestGraphs(
     const std::vector<MetisGraph*>& metis_graphs,
     const std::vector<unsigned>& target_partitions) {
-  assert(metis_graphs.size() == target_partitions.size());
+  KATANA_LOG_DEBUG_ASSERT(metis_graphs.size() == target_partitions.size());
   uint32_t num_partitions = metis_graphs.size();
   std::vector<katana::GAccumulator<WeightTy>> nzero_accum(num_partitions);
   std::vector<katana::GAccumulator<WeightTy>> zero_accum(num_partitions);

@@ -55,7 +55,7 @@ test_map() {
   r.update(Map{std::make_pair("key", 1)});
   Map& result = r.reduce();
 
-  KATANA_ASSERT(result["key"] == 1);
+  KATANA_LOG_ASSERT(result["key"] == 1);
 }
 
 void
@@ -73,7 +73,7 @@ test_max() {
   r.update(num);
   r.update(1);
 
-  KATANA_ASSERT(r.reduce() == num);
+  KATANA_LOG_ASSERT(r.reduce() == num);
 }
 
 void
@@ -84,7 +84,7 @@ test_accum() {
 
   katana::do_all(katana::iterate(0, num), [&](int) { accum += 1; });
 
-  KATANA_ASSERT(accum.reduce() == num);
+  KATANA_LOG_ASSERT(accum.reduce() == num);
 }
 
 int

@@ -266,7 +266,7 @@ private:
            ++p.lastMasterVersion) {
         std::pair<Index, CTy*> logEntry = masterLog[p.lastMasterVersion];
         p.local[logEntry.first] = logEntry.second;
-        assert(logEntry.second);
+        KATANA_LOG_DEBUG_ASSERT(logEntry.second);
       }
       return true;
     }
@@ -359,7 +359,7 @@ public:
     Index index = indexer(val);
     ThreadData& p = *data.getLocal();
 
-    assert(!UseMonotonic || this->compare(p.curIndex, index));
+    KATANA_LOG_DEBUG_ASSERT(!UseMonotonic || this->compare(p.curIndex, index));
 
     // Fast path
     if (index == p.curIndex && p.current) {

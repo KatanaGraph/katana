@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef LONESTAR_K_SSSP_H
-#define LONESTAR_K_SSSP_H
+#ifndef KATANA_LONESTAR_LIBLONESTAR_LONESTAR_KSSSP_H_
+#define KATANA_LONESTAR_LIBLONESTAR_LONESTAR_KSSSP_H_
 
 #include <atomic>
 #include <cstdlib>
@@ -86,12 +86,12 @@ struct K_SSSP {
 
   template <typename WL, typename TileMaker>
   static void PushEdgeTiles(WL& wl, EI beg, const EI end, const TileMaker& f) {
-    assert(beg <= end);
+    KATANA_LOG_DEBUG_ASSERT(beg <= end);
 
     if ((end - beg) > EdgeTileSize) {
       for (; beg + EdgeTileSize < end;) {
         auto ne = beg + EdgeTileSize;
-        assert(ne < end);
+        KATANA_LOG_DEBUG_ASSERT(ne < end);
         wl.push(f(beg, ne));
         beg = ne;
       }

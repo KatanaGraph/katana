@@ -25,6 +25,7 @@
 #include <mutex>
 
 #include "katana/CompilerSpecific.h"
+#include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -58,14 +59,14 @@ public:
     if (!_lock.compare_exchange_weak(
             oldval, 1, std::memory_order_acq_rel, std::memory_order_relaxed))
       goto slow_path;
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     return;
 slow_path:
     slow_lock();
   }
 
   inline void unlock() const {
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     // HMMMM
     _lock.store(0, std::memory_order_release);
     //_lock = 0;
@@ -77,7 +78,7 @@ slow_path:
       return false;
     if (!_lock.compare_exchange_weak(oldval, 1, std::memory_order_acq_rel))
       return false;
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     return true;
   }
 

@@ -125,7 +125,7 @@ struct BetweenessCentralityAsynchronous {
     // make dst a successor of src, src predecessor of dst
     srcData.nsuccs++;
     const ShortPathType srcSigma = srcData.sigma;
-    assert(srcSigma > 0);
+    KATANA_LOG_DEBUG_ASSERT(srcSigma > 0);
     NodeType::predTY& dstPreds = dstData.preds;
     bool dstPredsNotEmpty = !dstPreds.empty();
     dstPreds.clear();
@@ -288,7 +288,7 @@ struct BetweenessCentralityAsynchronous {
               uint32_t predID = srcPreds[i];
               NodeType& predData = graph.getData(predID);
 
-              assert(srcData.sigma >= 1);
+              KATANA_LOG_DEBUG_ASSERT(srcData.sigma >= 1);
               const double term =
                   (double)predData.sigma * (1.0 + srcDelta) / srcData.sigma;
               // if (std::isnan(term)) {

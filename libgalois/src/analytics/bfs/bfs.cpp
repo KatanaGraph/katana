@@ -200,7 +200,7 @@ SynchronousAlgo(
     pushWrap(*next, source);
   }
 
-  assert(!next->empty());
+  KATANA_LOG_DEBUG_ASSERT(!next->empty());
 
   while (!next->empty()) {
     std::swap(curr, next);

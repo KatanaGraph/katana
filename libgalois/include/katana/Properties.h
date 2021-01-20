@@ -262,7 +262,7 @@ public:
   }
 
   bool IsValid(size_t i) const {
-    assert(i < length_);
+    KATANA_LOG_DEBUG_ASSERT(i < length_);
     return null_bitmap_ == nullptr ||
            arrow::BitUtil::GetBit(null_bitmap_, i + offset_);
   }
@@ -303,12 +303,12 @@ public:
   }
 
   bool IsValid(size_t i) const {
-    assert(i < (size_t)array_.length());
+    KATANA_LOG_DEBUG_ASSERT(i < (size_t)array_.length());
     return array_.IsValid(i);
   }
 
   value_type GetValue(size_t i) const {
-    assert(IsValid(i));
+    KATANA_LOG_DEBUG_ASSERT(IsValid(i));
     return array_.Value(i);
   }
 
@@ -341,7 +341,7 @@ public:
   bool IsValid(size_t i) const { return array_.IsValid(i); }
 
   value_type GetValue(size_t i) const {
-    assert(IsValid(i));
+    KATANA_LOG_DEBUG_ASSERT(IsValid(i));
     return array_.GetString(i);
   }
 
@@ -394,7 +394,7 @@ AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
   static_assert(num_tuple_elem != 0);
   std::shared_ptr<arrow::Table> table;
   std::vector<katana::PropertyArrowTuple<Props>> rows(num_rows);
-  KATANA_ASSERT(names.size() == num_tuple_elem);
+  KATANA_LOG_ASSERT(names.size() == num_tuple_elem);
   // TODO(gill): Replace this with NUMA allocated buffers.
   if (auto r = arrow::stl::TableFromTupleRange(
           arrow::default_memory_pool(), std::move(rows), names, &table);

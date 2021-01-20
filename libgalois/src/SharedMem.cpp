@@ -69,7 +69,7 @@ public:
   }
 
   void SignalWorked(bool work_happened) override {
-    assert(!(work_happened && !Working()));
+    KATANA_LOG_DEBUG_ASSERT(!(work_happened && !Working()));
     TokenHolder& th = *data_.getLocal();
     th.process_is_black |= work_happened;
     if (th.has_token) {
@@ -84,7 +84,8 @@ public:
         th.last_was_white = !failed;
       }
       // Normal thread or recirc by master
-      assert(Working() && "no token should be in progress after globalTerm");
+      KATANA_LOG_DEBUG_VASSERT(
+          Working(), "no token should be in progress after globalTerm");
       bool taint = th.process_is_black || th.token_is_black;
       th.process_is_black = th.token_is_black = false;
       th.has_token = false;
@@ -194,7 +195,7 @@ public:
   }
 
   void SignalWorked(bool work_happened) override {
-    assert(!(work_happened && !Working()));
+    KATANA_LOG_DEBUG_ASSERT(!(work_happened && !Working()));
     TokenHolder& th = *data_.getLocal();
     th.process_is_black |= work_happened;
     ProcessToken();

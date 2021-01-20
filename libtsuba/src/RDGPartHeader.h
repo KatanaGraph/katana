@@ -49,13 +49,13 @@ public:
 
   void RemoveNodeProperty(uint32_t i) {
     auto& p = node_prop_info_list_;
-    assert(i < p.size());
+    KATANA_LOG_DEBUG_ASSERT(i < p.size());
     p.erase(p.begin() + i);
   }
 
   void RemoveEdgeProperty(uint32_t i) {
     auto& p = edge_prop_info_list_;
-    assert(i < p.size());
+    KATANA_LOG_DEBUG_ASSERT(i < p.size());
     p.erase(p.begin() + i);
   }
 

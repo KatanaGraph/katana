@@ -25,6 +25,7 @@
 #include <cstdint>
 
 #include "katana/CompilerSpecific.h"
+#include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -65,7 +66,7 @@ public:
             oldval, oldval | 1, std::memory_order_acq_rel,
             std::memory_order_relaxed))
       goto slow_path;
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     return;
 
 slow_path:
@@ -73,20 +74,20 @@ slow_path:
   }
 
   inline void unlock() {
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     _lock.store(
         _lock.load(std::memory_order_relaxed) & ~(uintptr_t)1,
         std::memory_order_release);
   }
 
   inline void unlock_and_clear() {
-    assert(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
     _lock.store(0, std::memory_order_release);
   }
 
   inline void unlock_and_set(T* val) {
-    assert(is_locked());
-    assert(!((uintptr_t)val & 1));
+    KATANA_LOG_DEBUG_ASSERT(is_locked());
+    KATANA_LOG_DEBUG_ASSERT(!((uintptr_t)val & 1));
     _lock.store((uintptr_t)val, std::memory_order_release);
   }
 
@@ -116,7 +117,8 @@ slow_path:
   //! CAS only works on unlocked values
   //! the lock bit will prevent a successful cas
   inline bool CAS(T* oldval, T* newval) {
-    assert(!((uintptr_t)oldval & 1) && !((uintptr_t)newval & 1));
+    KATANA_LOG_DEBUG_ASSERT(
+        !((uintptr_t)oldval & 1) && !((uintptr_t)newval & 1));
     uintptr_t old = (uintptr_t)oldval;
     return _lock.compare_exchange_strong(old, (uintptr_t)newval);
   }

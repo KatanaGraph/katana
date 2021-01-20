@@ -319,7 +319,7 @@ FileGraph::fromArrays(
   fromMem(base, node_offset, edge_offset, 0);
   // graph version should be set in from mem
 
-  assert(graphVersion == oGraphVersion);
+  KATANA_LOG_DEBUG_ASSERT(graphVersion == oGraphVersion);
 
   return edgeData;
 }
@@ -545,7 +545,7 @@ FileGraph::divideByEdge(size_t, size_t, size_t id, size_t total)
 void
 FileGraph::toFile(const std::string& file) {
   // FIXME handle files with multiple mappings
-  KATANA_ASSERT(mappings.size() == 1);
+  KATANA_LOG_ASSERT(mappings.size() == 1);
 
   ssize_t retval;
   mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -789,7 +789,7 @@ FileGraph::initNodeDegrees() {
 uint64_t
 FileGraph::getDegree(uint32_t node_id) const {
   // node_degrees array should be initialized
-  assert(this->node_degrees.size());
+  KATANA_LOG_DEBUG_ASSERT(this->node_degrees.size());
   return this->node_degrees[node_id];
 }
 

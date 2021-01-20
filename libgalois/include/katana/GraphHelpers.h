@@ -94,7 +94,7 @@ findIndexPrefixSum(
     size_t nodeWeight, size_t edgeWeight, size_t targetWeight, uint64_t lb,
     uint64_t ub, PrefixSumType& edgePrefixSum, uint64_t edgeOffset,
     uint64_t nodeOffset) {
-  assert(nodeWeight != 0 || edgeWeight != 0);
+  KATANA_LOG_DEBUG_ASSERT(nodeWeight != 0 || edgeWeight != 0);
 
   while (lb < ub) {
     size_t mid = lb + (ub - lb) / 2;
@@ -188,9 +188,9 @@ divideNodesBinarySearch(
         EdgeRange(edge_iterator(0), edge_iterator(0)));
   }
 
-  assert(nodeWeight != 0 || edgeWeight != 0);
-  assert(total >= 1);
-  assert(id < total);
+  KATANA_LOG_DEBUG_ASSERT(nodeWeight != 0 || edgeWeight != 0);
+  KATANA_LOG_DEBUG_ASSERT(total >= 1);
+  KATANA_LOG_DEBUG_ASSERT(id < total);
 
   // weight of all data
   uint64_t weight = numNodes * nodeWeight + (numEdges + 1) * edgeWeight;
@@ -214,7 +214,7 @@ divideNodesBinarySearch(
 
   uint32_t blockUpper = scaleFactor[id];
 
-  assert(blockLower <= blockUpper);
+  KATANA_LOG_DEBUG_ASSERT(blockLower <= blockUpper);
   // katana::gDebug("Unit ", id, " block ", blockLower, " to ",
   //               blockUpper, "; ", blockLower * blockWeight, " ",
   //               blockUpper * blockWeight);
@@ -301,7 +301,7 @@ void
 determineUnitRangesLoopGraph(
     GraphTy& graph, uint32_t unitsToSplit, uint32_t beginNode, uint32_t endNode,
     std::vector<uint32_t>& returnRanges, uint32_t nodeAlpha) {
-  assert(beginNode != endNode);
+  KATANA_LOG_DEBUG_ASSERT(beginNode != endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
   // uint64_t numEdgesInRange =
@@ -324,9 +324,10 @@ determineUnitRangesLoopGraph(
     // i.e. if there are actually assigned nodes
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
-        assert(returnRanges[i] == *(nodeSplits.first) + beginNode);
+        KATANA_LOG_DEBUG_ASSERT(
+            returnRanges[i] == *(nodeSplits.first) + beginNode);
       } else {  // i == 0
-        assert(returnRanges[i] == beginNode);
+        KATANA_LOG_DEBUG_ASSERT(returnRanges[i] == beginNode);
       }
       returnRanges[i + 1] = *(nodeSplits.second) + beginNode;
     } else {
@@ -358,7 +359,7 @@ void
 determineUnitRangesLoopPrefixSum(
     VectorTy& prefixSum, uint32_t unitsToSplit, uint32_t beginNode,
     uint32_t endNode, std::vector<uint32_t>& returnRanges, uint32_t nodeAlpha) {
-  assert(beginNode != endNode);
+  KATANA_LOG_DEBUG_ASSERT(beginNode != endNode);
 
   uint32_t numNodesInRange = endNode - beginNode;
 
@@ -386,9 +387,10 @@ determineUnitRangesLoopPrefixSum(
     // i.e. if there are actually assigned nodes
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
-        assert(returnRanges[i] == *(nodeSplits.first) + beginNode);
+        KATANA_LOG_DEBUG_ASSERT(
+            returnRanges[i] == *(nodeSplits.first) + beginNode);
       } else {  // i == 0
-        assert(returnRanges[i] == beginNode);
+        KATANA_LOG_DEBUG_ASSERT(returnRanges[i] == beginNode);
       }
       returnRanges[i + 1] = *(nodeSplits.second) + beginNode;
     } else {
@@ -518,7 +520,7 @@ std::vector<uint32_t>
 determineUnitRangesFromPrefixSum(
     uint32_t unitsToSplit, VectorTy& edgePrefixSum, uint64_t numNodes,
     uint32_t nodeAlpha = 0) {
-  assert(unitsToSplit > 0);
+  KATANA_LOG_DEBUG_ASSERT(unitsToSplit > 0);
 
   std::vector<uint32_t> nodeRanges;
   nodeRanges.resize(unitsToSplit + 1);
@@ -547,9 +549,9 @@ determineUnitRangesFromPrefixSum(
     // i.e. if there are actually assigned nodes
     if (nodeSplits.first != nodeSplits.second) {
       if (i != 0) {
-        assert(nodeRanges[i] == *(nodeSplits.first));
+        KATANA_LOG_DEBUG_ASSERT(nodeRanges[i] == *(nodeSplits.first));
       } else {  // i == 0
-        assert(nodeRanges[i] == 0);
+        KATANA_LOG_DEBUG_ASSERT(nodeRanges[i] == 0);
       }
       nodeRanges[i + 1] = *(nodeSplits.second);
     } else {

@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "katana/Logging.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -139,7 +140,7 @@ public:
     } else if (size_ < capacity_) {
       _Tp* new_data_ = static_cast<_Tp*>(
           realloc(reinterpret_cast<void*>(data_), size_ * sizeof(_Tp)));
-      assert(new_data_);
+      KATANA_LOG_DEBUG_ASSERT(new_data_);
       data_ = new_data_;
     }
   }
@@ -162,7 +163,7 @@ public:
 
     _Tp* new_data_ = static_cast<_Tp*>(
         realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
-    assert(new_data_);
+    KATANA_LOG_DEBUG_ASSERT(new_data_);
     data_ = new_data_;
   }
 
@@ -210,7 +211,7 @@ public:
   void insert(
       [[maybe_unused]] iterator position, InputIterator first,
       InputIterator last) {
-    assert(position == end());
+    KATANA_LOG_DEBUG_ASSERT(position == end());
     size_t to_add = last - first;
     if (to_add > 0) {
       size_t old_size = size_;

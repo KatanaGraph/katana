@@ -61,7 +61,7 @@ MakeProperties(std::vector<std::string>&& values) {
     });
   }
 
-  assert(names.size() == prop_info_list.size());
+  KATANA_LOG_DEBUG_ASSERT(names.size() == prop_info_list.size());
 
   return prop_info_list;
 }

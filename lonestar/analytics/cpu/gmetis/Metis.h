@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef METIS_H_
-#define METIS_H_
+#ifndef KATANA_LONESTAR_ANALYTICS_CPU_GMETIS_METIS_H_
+#define KATANA_LONESTAR_ANALYTICS_CPU_GMETIS_METIS_H_
 
 #include "katana/LC_Morph_Graph.h"
 
@@ -86,7 +86,7 @@ public:
 
   void setParent(GNode p) { data.cd.parent = p; }
   GNode getParent() const {
-    assert(data.cd.parent);
+    KATANA_LOG_DEBUG_ASSERT(data.cd.parent);
     return data.cd.parent;
   }
 

@@ -181,7 +181,7 @@ public:
 
   const Stat& getStat(const Str& region, const Str& category) const {
     auto i = findStat(region, category);
-    assert(i != statMap.end());
+    KATANA_LOG_DEBUG_ASSERT(i != statMap.end());
     return i->second;
   }
 
@@ -223,7 +223,7 @@ struct VecStat : public VecStatMinMaxSum<T> {
   T total() const {
     switch (m_totalTy) {
     case StatTotal::SINGLE:
-      assert(this->values().size() > 0);
+      KATANA_LOG_DEBUG_ASSERT(this->values().size() > 0);
       return this->values()[0];
 
     case StatTotal::TMIN:
@@ -255,7 +255,7 @@ struct VecStat<gstl::Str> : public AggregStat<gstl::Str>::with_mem {
   const gstl::Str& total() const {
     switch (m_totalTy) {
     case StatTotal::SINGLE:
-      assert(values().size() > 0);
+      KATANA_LOG_DEBUG_ASSERT(values().size() > 0);
       return values()[0];
 
     default:

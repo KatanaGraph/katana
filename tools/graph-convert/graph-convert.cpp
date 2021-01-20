@@ -1190,7 +1190,7 @@ struct SortByBFS : public Conversion {
         perm[node] = perm_index++;
       }
     }
-    assert(perm_index == graph.size());
+    KATANA_LOG_DEBUG_ASSERT(perm_index == graph.size());
 
     Graph out;
     katana::permute<EdgeTy>(graph, perm, out);
@@ -3050,7 +3050,7 @@ struct Gr2Metis : public HasOnlyVoidSpecialization {
           nedges--;
       }
     }
-    assert((nedges % 2) == 0);
+    KATANA_LOG_DEBUG_ASSERT((nedges % 2) == 0);
     nedges /= 2;  // Do not double-count edges
 
     std::ofstream file(outfilename.c_str());

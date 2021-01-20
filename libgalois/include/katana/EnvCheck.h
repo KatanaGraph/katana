@@ -35,7 +35,7 @@ struct ConvByType {};
 template <>
 struct ConvByType<int> {
   static void go(const char* varVal, int& ret) {
-    assert(varVal);
+    KATANA_LOG_DEBUG_ASSERT(varVal);
     ret = std::atoi(varVal);
   }
 };
@@ -43,7 +43,7 @@ struct ConvByType<int> {
 template <>
 struct ConvByType<double> {
   static void go(const char* varVal, double& ret) {
-    assert(varVal);
+    KATANA_LOG_DEBUG_ASSERT(varVal);
     ret = std::atof(varVal);
   }
 };
@@ -51,7 +51,7 @@ struct ConvByType<double> {
 template <>
 struct ConvByType<std::string> {
   static void go(const char* varVal, std::string& ret) {
-    assert(varVal);
+    KATANA_LOG_DEBUG_ASSERT(varVal);
     ret = varVal;
   }
 };

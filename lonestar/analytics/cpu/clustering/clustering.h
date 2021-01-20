@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef CLUSTERING_H
-#define CLUSTERING_H
+#ifndef KATANA_LONESTAR_ANALYTICS_CPU_CLUSTERING_CLUSTERING_H_
+#define KATANA_LONESTAR_ANALYTICS_CPU_CLUSTERING_CLUSTERING_H_
 
 #include <fstream>
 #include <iostream>
@@ -285,7 +285,7 @@ maxCPMQuality(
   if ((c_info[max_index].size == 1 && c_info[sc].size == 1 && max_index > sc)) {
     max_index = sc;
   }
-  assert(max_gain >= 0);
+  KATANA_LOG_DEBUG_ASSERT(max_gain >= 0);
   return max_index;
 }
 
@@ -372,7 +372,7 @@ maxModularity(
     max_index = sc;
   }
 
-  assert(max_gain >= 0);
+  KATANA_LOG_DEBUG_ASSERT(max_gain >= 0);
   return max_index;
 }
 
@@ -421,7 +421,7 @@ maxModularityWithoutSwaps(
     max_index = sc;
   }
 
-  assert(max_gain >= 0);
+  KATANA_LOG_DEBUG_ASSERT(max_gain >= 0);
   return max_index;
 }
 
@@ -591,7 +591,7 @@ renumberClustersContiguously(GraphTy& graph) {
   for (GNode n = 0; n < graph.size(); ++n) {
     auto& n_data = graph.getData(n, flag_no_lock);
     if (n_data.curr_comm_ass != UNASSIGNED) {
-      assert(n_data.curr_comm_ass < graph.size());
+      KATANA_LOG_DEBUG_ASSERT(n_data.curr_comm_ass < graph.size());
       auto stored_already = cluster_local_map.find(n_data.curr_comm_ass);
       if (stored_already != cluster_local_map.end()) {
         n_data.curr_comm_ass = stored_already->second;
@@ -614,8 +614,8 @@ renumberClustersContiguouslySubcomm(GraphTy& graph) {
 
   for (GNode n = 0; n < graph.size(); ++n) {
     auto& n_data = graph.getData(n, flag_no_lock);
-    assert(n_data.curr_subcomm_ass != UNASSIGNED);
-    assert(n_data.curr_subcomm_ass < graph.size());
+    KATANA_LOG_DEBUG_ASSERT(n_data.curr_subcomm_ass != UNASSIGNED);
+    KATANA_LOG_DEBUG_ASSERT(n_data.curr_subcomm_ass < graph.size());
     auto stored_already = cluster_local_map.find(n_data.curr_subcomm_ass);
     if (stored_already != cluster_local_map.end()) {
       n_data.curr_subcomm_ass = stored_already->second;
@@ -638,7 +638,7 @@ renumberClustersContiguouslyArray(largeArray& arr) {
 
   for (GNode n = 0; n < arr.size(); ++n) {
     if (arr[n] != UNASSIGNED) {
-      assert(arr[n] < arr.size());
+      KATANA_LOG_DEBUG_ASSERT(arr[n] < arr.size());
       auto stored_already = cluster_local_map.find(arr[n]);
       if (stored_already != cluster_local_map.end()) {
         arr[n] = stored_already->second;
@@ -1155,7 +1155,7 @@ buildNextLevelGraph(
         uint64_t num_unique_clusters = 0;
         for (auto cb_ii = cluster_bags[c].begin();
              cb_ii != cluster_bags[c].end(); ++cb_ii) {
-          assert(
+          KATANA_LOG_DEBUG_ASSERT(
               graph.getData(*cb_ii, flag_no_lock).curr_comm_ass ==
               c);  // All nodes in this bag must have same cluster id
 
@@ -1163,7 +1163,7 @@ buildNextLevelGraph(
                ++ii) {
             GNode dst = graph.getEdgeDst(ii);
             auto dst_data = graph.getData(dst, flag_no_lock);
-            assert(dst_data.curr_comm_ass != UNASSIGNED);
+            KATANA_LOG_DEBUG_ASSERT(dst_data.curr_comm_ass != UNASSIGNED);
             auto stored_already = cluster_local_map.find(
                 dst_data.curr_comm_ass);  // Check if it already exists
             if (stored_already != cluster_local_map.end()) {
@@ -1192,7 +1192,8 @@ buildNextLevelGraph(
     prefix_edges_count[c] += prefix_edges_count[c - 1];
   }
 
-  assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
+  KATANA_LOG_DEBUG_ASSERT(
+      prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
   katana::gPrint(
       "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
   std::cerr << "Graph construction started"
@@ -1226,7 +1227,7 @@ buildNextLevelGraphSubComm(
     auto n_data = graph.getData(n, flag_no_lock);
     original_comm_ass[n_data.curr_subcomm_ass] =
         graph.getData(n_data.curr_comm_ass).curr_subcomm_ass;
-    assert(n_data.curr_comm_ass != UNASSIGNED);
+    KATANA_LOG_DEBUG_ASSERT(n_data.curr_comm_ass != UNASSIGNED);
     cluster_bags[n_data.curr_subcomm_ass].push_back(n);
     cluster_node_wt[n_data.curr_subcomm_ass] += n_data.node_wt;
   }
@@ -1242,7 +1243,7 @@ buildNextLevelGraphSubComm(
         uint64_t num_unique_clusters = 0;
         for (auto cb_ii = cluster_bags[c].begin();
              cb_ii != cluster_bags[c].end(); ++cb_ii) {
-          assert(
+          KATANA_LOG_DEBUG_ASSERT(
               graph.getData(*cb_ii, flag_no_lock).curr_subcomm_ass ==
               c);  // All nodes in this bag must have same cluster id
 
@@ -1250,7 +1251,7 @@ buildNextLevelGraphSubComm(
                ++ii) {
             GNode dst = graph.getEdgeDst(ii);
             auto dst_data = graph.getData(dst, flag_no_lock);
-            assert(dst_data.curr_subcomm_ass != UNASSIGNED);
+            KATANA_LOG_DEBUG_ASSERT(dst_data.curr_subcomm_ass != UNASSIGNED);
             auto stored_already = cluster_local_map.find(
                 dst_data.curr_subcomm_ass);  // Check if it already exists
             if (stored_already != cluster_local_map.end()) {
@@ -1280,7 +1281,8 @@ buildNextLevelGraphSubComm(
     prefix_edges_count[c] += prefix_edges_count[c - 1];
   }
 
-  assert(prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
+  KATANA_LOG_DEBUG_ASSERT(
+      prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
   katana::gPrint(
       "#nodes : ", num_nodes_next, ", #edges : ", num_edges_next, "\n");
   katana::gPrint(

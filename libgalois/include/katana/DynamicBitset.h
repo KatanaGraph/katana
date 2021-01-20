@@ -74,7 +74,8 @@ public:
    * @param n Size to change the bitset to
    */
   void resize(uint64_t n) {
-    assert(bits_uint64 == 64);  // compatibility with other devices
+    KATANA_LOG_DEBUG_ASSERT(
+        bits_uint64 == 64);  // compatibility with other devices
     num_bits = n;
     bitvec.resize((n + bits_uint64 - 1) / bits_uint64);
     reset();
@@ -86,7 +87,8 @@ public:
    * @param n Size to reserve the capacity of the bitset to
    */
   void reserve(uint64_t n) {
-    assert(bits_uint64 == 64);  // compatibility with other devices
+    KATANA_LOG_DEBUG_ASSERT(
+        bits_uint64 == 64);  // compatibility with other devices
     bitvec.reserve((n + bits_uint64 - 1) / bits_uint64);
   }
 
@@ -118,8 +120,8 @@ public:
       return;
     }
 
-    assert(begin <= (num_bits - 1));
-    assert(end <= (num_bits - 1));
+    KATANA_LOG_DEBUG_ASSERT(begin <= (num_bits - 1));
+    KATANA_LOG_DEBUG_ASSERT(end <= (num_bits - 1));
 
     // 100% safe implementation, but slow
     // for (unsigned long i = begin; i <= end; i++) {
@@ -152,7 +154,7 @@ public:
       // no fill happened
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
-        assert(diff < 64);
+        KATANA_LOG_DEBUG_ASSERT(diff < 64);
         uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
 
         size_t end_diff = end - vec_end + 1;
@@ -165,14 +167,14 @@ public:
     } else {
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
-        assert(diff < 64);
+        KATANA_LOG_DEBUG_ASSERT(diff < 64);
         uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
         size_t bit_index = begin / bits_uint64;
         bitvec[bit_index] &= mask;
       }
       if (end >= vec_end) {
         size_t diff = end - vec_end + 1;
-        assert(diff < 64);
+        KATANA_LOG_DEBUG_ASSERT(diff < 64);
         uint64_t mask = (uint64_t{1} << diff) - 1;
         size_t bit_index = end / bits_uint64;
         bitvec[bit_index] &= ~mask;
@@ -189,7 +191,7 @@ public:
    * @returns true if index is set
    */
   bool test(size_t index) const {
-    assert(index < num_bits);
+    KATANA_LOG_DEBUG_ASSERT(index < num_bits);
     size_t bit_index = index / bits_uint64;
     uint64_t bit_offset = 1;
     bit_offset <<= (index % bits_uint64);

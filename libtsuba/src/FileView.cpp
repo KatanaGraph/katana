@@ -418,7 +418,7 @@ FileView::MustFill(uint64_t* bitmap, uint64_t begin, uint64_t end) {
   }
 
   if (found_first) {
-    assert(found_last);
+    KATANA_LOG_DEBUG_ASSERT(found_last);
     return std::make_pair(first_page, last_page);
   } else {
     return std::nullopt;
@@ -484,7 +484,7 @@ FileView::PreFetch(int64_t start, int64_t size) {
   // approximately the same size.
   int64_t fetch_size = (size / 10) * 11;
   // Make sure we haven't overflown
-  assert(fetch_size >= 0);
+  KATANA_LOG_DEBUG_ASSERT(fetch_size >= 0);
   uint64_t begin = static_cast<uint64_t>(start + size);
   uint64_t end = static_cast<uint64_t>(start + size + fetch_size);
   if (auto res = Fill(begin, end, false); !res) {

@@ -323,7 +323,7 @@ struct MatchingFF {
           }
           return true;
         } else {
-          assert(g.edges(dst).size() == 1);
+          KATANA_LOG_DEBUG_ASSERT(g.edges(dst).size() == 1);
           for (auto jj : g.edges(dst, flag)) {
             GraphNode cur = g.getEdgeDst(jj);
 
@@ -362,7 +362,8 @@ struct MatchingFF {
       for (typename ReachedWrapper::Type::iterator ii = reached.begin(),
                                                    ei = reached.end();
            ii != ei; ++ii) {
-        assert(g.getData(*ii, katana::MethodFlag::UNPROTECTED).reached);
+        KATANA_LOG_DEBUG_ASSERT(
+            g.getData(*ii, katana::MethodFlag::UNPROTECTED).reached);
         g.getData(*ii, katana::MethodFlag::UNPROTECTED).reached = false;
       }
       reached.clear();
@@ -384,7 +385,7 @@ struct MatchingFF {
            jj != ej; ++jj) {
         auto edge =
             g.findEdge(jj->first, jj->second, katana::MethodFlag::UNPROTECTED);
-        assert(edge != g.edge_end(jj->first));
+        KATANA_LOG_DEBUG_ASSERT(edge != g.edge_end(jj->first));
         g.removeEdge(jj->first, edge, katana::MethodFlag::UNPROTECTED);
         g.addEdge(jj->second, jj->first, katana::MethodFlag::UNPROTECTED);
       }
@@ -461,7 +462,7 @@ struct MatchingABMP {
     // Start search where we last left off
     edge_iterator ii = g.edge_begin(src, flag);
     edge_iterator ei = g.edge_end(src, flag);
-    assert(dsrc.next <= std::distance(ii, ei));
+    KATANA_LOG_DEBUG_ASSERT(dsrc.next <= std::distance(ii, ei));
     std::advance(ii, dsrc.next);
     for (; ii != ei &&
            g.getData(g.getEdgeDst(ii), katana::MethodFlag::UNPROTECTED).layer !=
@@ -492,7 +493,8 @@ struct MatchingABMP {
       GraphNode next;
       if (g.getData(cur, katana::MethodFlag::UNPROTECTED).free &&
           g.getData(cur, katana::MethodFlag::UNPROTECTED).layer == 0) {
-        assert(g.getData(root, katana::MethodFlag::UNPROTECTED).free);
+        KATANA_LOG_DEBUG_ASSERT(
+            g.getData(root, katana::MethodFlag::UNPROTECTED).free);
         // (1) Breakthrough
         g.getData(cur, katana::MethodFlag::UNPROTECTED).free =
             g.getData(root, katana::MethodFlag::UNPROTECTED).free = false;
@@ -502,7 +504,7 @@ struct MatchingABMP {
              ii != ei; ++ii) {
           auto edge = g.findEdge(
               ii->first, ii->second, katana::MethodFlag::UNPROTECTED);
-          assert(edge != g.edge_end(ii->first));
+          KATANA_LOG_DEBUG_ASSERT(edge != g.edge_end(ii->first));
           g.removeEdge(ii->first, edge, katana::MethodFlag::UNPROTECTED);
           g.addEdge(ii->second, ii->first, katana::MethodFlag::UNPROTECTED);
         }
@@ -722,7 +724,7 @@ struct MatchingMF {
       }
     }
 
-    assert(minHeight != std::numeric_limits<unsigned>::max());
+    KATANA_LOG_DEBUG_ASSERT(minHeight != std::numeric_limits<unsigned>::max());
     ++minHeight;
 
     node_data_type& node = g.getData(src, katana::MethodFlag::UNPROTECTED);
@@ -924,8 +926,8 @@ struct Exists<G, MatchingMF> {
   typedef typename G::edge_iterator edge_iterator;
 
   bool operator()(G& g, const edge_iterator& ii) {
-    // assert(g.getEdgeData(src, dst).cap + g.getEdgeData(dst, src).cap == 1);
-    // assert(g.getEdgeData(src, dst).cap != g.getEdgeData(dst, src).cap);
+    // KATANA_LOG_DEBUG_ASSERT(g.getEdgeData(src, dst).cap + g.getEdgeData(dst, src).cap == 1);
+    // KATANA_LOG_DEBUG_ASSERT(g.getEdgeData(src, dst).cap != g.getEdgeData(dst, src).cap);
     return g.getEdgeData(ii).cap == 1;
   }
 };
@@ -1028,7 +1030,7 @@ generateRandomInput(
     std::mt19937 gen(seed);
     std::uniform_int_distribution<> dist(0, 1);
 
-    assert(numA > 0 && numB > 0);
+    KATANA_LOG_DEBUG_ASSERT(numA > 0 && numB > 0);
 
     int d = numEdges / numA;
     if (numGroups > numA)
@@ -1107,7 +1109,7 @@ void
 removeMatchedEdges(G& g) {
   Exists<G, Algo> exists;
   for (auto n : g.B) {
-    assert(g.edges(n).size() <= 1);
+    KATANA_LOG_DEBUG_ASSERT(g.edges(n).size() <= 1);
     for (auto edge : g.out_edges(n)) {
       if (exists(g, edge)) {
         g.removeEdge(n, edge);

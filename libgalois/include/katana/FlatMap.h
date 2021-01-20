@@ -176,7 +176,7 @@ public:
 
   template <typename... Args>
   std::pair<iterator, bool> emplace(Args&&... args) {
-    // assert(std::adjacent_find(_data.begin(), _data.end(), [&](const
+    // KATANA_LOG_DEBUG_ASSERT(std::adjacent_find(_data.begin(), _data.end(), [&](const
     // value_type& a, const value_type& b) {
     //    return key_comp()(b.first, a.first);
     //}) == _data.end());

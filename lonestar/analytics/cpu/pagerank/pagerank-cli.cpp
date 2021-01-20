@@ -112,7 +112,8 @@ main(int argc, char** argv) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
-    assert(uint64_t(results->length()) == pfg->topology().num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(
+        uint64_t(results->length()) == pfg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

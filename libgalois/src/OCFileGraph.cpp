@@ -79,7 +79,7 @@ OCFileGraph::Block::unload() {
 void
 OCFileGraph::Block::load(
     int fd, offset_t offset, size_t begin, size_t len, size_t sizeof_data) {
-  assert(m_mapping == 0);
+  KATANA_LOG_DEBUG_ASSERT(m_mapping == 0);
 
   offset_t start = offset + begin * sizeof_data;
   offset_t aligned = start & ~static_cast<offset_t>(katana::allocSize() - 1);
@@ -96,8 +96,9 @@ OCFileGraph::Block::load(
   }
 
   m_data = reinterpret_cast<char*>(m_mapping);
-  assert(aligned <= start);
-  assert(start - aligned <= static_cast<offset_t>(katana::allocSize()));
+  KATANA_LOG_DEBUG_ASSERT(aligned <= start);
+  KATANA_LOG_DEBUG_ASSERT(
+      start - aligned <= static_cast<offset_t>(katana::allocSize()));
   m_data += start - aligned;
   m_begin = begin;
   m_sizeof_data = sizeof_data;
@@ -128,7 +129,7 @@ readHeader(int fd, uint64_t& numNodes, uint64_t& numEdges) {
   }
 
   uint64_t* ptr = reinterpret_cast<uint64_t*>(m);
-  assert(ptr[0] == 1);
+  KATANA_LOG_DEBUG_ASSERT(ptr[0] == 1);
   numNodes = ptr[2];
   numEdges = ptr[3];
 

@@ -28,7 +28,7 @@ public:
   }
 
   const uint64_t& operator[](uint64_t n) const {
-    assert(n < num_nodes());
+    KATANA_LOG_DEBUG_ASSERT(n < num_nodes());
     return prefix_->out_indexes[n];
   }
 

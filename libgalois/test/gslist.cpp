@@ -22,8 +22,8 @@
 #include <map>
 
 #include "katana/Galois.h"
+#include "katana/Logging.h"
 #include "katana/Mem.h"
-#include "katana/gIO.h"
 
 int
 main(int argc, char** argv) {
@@ -60,9 +60,9 @@ main(int argc, char** argv) {
     counter[i] += 1;
   }
   for (unsigned i = 0; i < size; ++i) {
-    KATANA_ASSERT(counter[i] == numThreads);
+    KATANA_LOG_ASSERT(counter[i] == numThreads);
   }
-  KATANA_ASSERT(counter.size() == size);
+  KATANA_LOG_ASSERT(counter.size() == size);
 
   katana::on_each([&](unsigned int, unsigned int) {
     while (c.pop_front(Collection::promise_to_dealloc()))

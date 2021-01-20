@@ -174,8 +174,9 @@ private:
 
     char* get(size_t index) const {
       char* p = m_data + (m_sizeof_data * (index - m_begin));
-      assert(p < reinterpret_cast<char*>(m_mapping) + m_length);
-      assert(m_mapping <= p);
+      KATANA_LOG_DEBUG_ASSERT(
+          p < reinterpret_cast<char*>(m_mapping) + m_length);
+      KATANA_LOG_DEBUG_ASSERT(m_mapping <= p);
       return p;
     }
   };

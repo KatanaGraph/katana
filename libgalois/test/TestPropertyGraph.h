@@ -246,7 +246,7 @@ size_t
 ExpectedValue(
     size_t num_nodes, size_t num_edges, size_t num_properties,
     bool ascending_values) {
-  KATANA_ASSERT(!ascending_values);
+  KATANA_LOG_ASSERT(!ascending_values);
 
   return (num_nodes + 2 * num_edges) * num_properties;
 }

@@ -884,7 +884,7 @@ public:
     /**
      * Load outIndex array
      **/
-    assert(edgeIndData.data());
+    KATANA_LOG_DEBUG_ASSERT(edgeIndData.data());
     if (!edgeIndData.data()) {
       KATANA_DIE("out of memory");
     }
@@ -902,7 +902,7 @@ public:
     /**
      * Load edgeDst array
      **/
-    assert(edgeDst.data());
+    KATANA_LOG_DEBUG_ASSERT(edgeDst.data());
     if (!edgeDst.data()) {
       KATANA_DIE("out of memory");
     }
@@ -938,7 +938,7 @@ public:
     /**
      * Load edge data array
      **/
-    assert(edgeData.data());
+    KATANA_LOG_DEBUG_ASSERT(edgeData.data());
     if (!edgeData.data()) {
       KATANA_DIE("out of memory");
     }
@@ -980,7 +980,7 @@ public:
     /**
      * Load outIndex array
      **/
-    assert(edgeIndData.data());
+    KATANA_LOG_DEBUG_ASSERT(edgeIndData.data());
     if (!edgeIndData.data()) {
       KATANA_DIE("out of memory");
     }
@@ -997,7 +997,7 @@ public:
     /**
      * Load edgeDst array
      **/
-    assert(edgeDst.data());
+    KATANA_LOG_DEBUG_ASSERT(edgeDst.data());
     if (!edgeDst.data()) {
       KATANA_DIE("out of memory");
     }

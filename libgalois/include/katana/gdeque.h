@@ -225,18 +225,18 @@ public:
   ~gdeque() { clear(); }
 
   iterator begin() {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
 
     return iterator{first, last, 0};
   }
 
   iterator end() {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return iterator{nullptr, last, 0};
   }
 
   const_iterator begin() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
 
     return const_iterator{first, last, 0};
   }
@@ -256,37 +256,37 @@ public:
   }
 
   size_t size() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return num;
   }
 
   bool empty() const {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     return num == 0;
   }
 
   reference front() {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return first->front();
   }
 
   const_reference front() const {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return first->front();
   }
 
   reference back() {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return last->back();
   }
 
   const_reference back() const {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     return last->back();
   }
 
   void pop_back() {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     --num;
     last->pop_back();
     if (last->empty())
@@ -294,7 +294,7 @@ public:
   }
 
   void pop_front() {
-    assert(!empty());
+    KATANA_LOG_DEBUG_ASSERT(!empty());
     --num;
     first->pop_front();
     if (first->empty())
@@ -302,7 +302,7 @@ public:
   }
 
   void clear() {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     Block* b = first;
     while (b) {
       b->clear();
@@ -371,13 +371,13 @@ public:
 
   template <typename... Args>
   void emplace_back(Args&&... args) {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     ++num;
     if (!last || last->full())
       extend_last();
 #ifndef NDEBUG
     pointer p = last->emplace_back(std::forward<Args>(args)...);
-    assert(p);
+    KATANA_LOG_DEBUG_ASSERT(p);
 #else
     last->emplace_back(std::forward<Args>(args)...);
 #endif
@@ -390,12 +390,12 @@ public:
 
   template <typename... Args>
   void emplace_front(Args&&... args) {
-    assert(precondition());
+    KATANA_LOG_DEBUG_ASSERT(precondition());
     ++num;
     if (!first || first->full())
       extend_first();
     pointer p = first->emplace_front(std::forward<Args>(args)...);
-    assert(p);
+    KATANA_LOG_DEBUG_ASSERT(p);
   }
 
   template <typename ValueTy>

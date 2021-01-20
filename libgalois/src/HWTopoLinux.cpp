@@ -120,7 +120,7 @@ parseCPUInfo() {
 
     int num;
     if (sscanf(line.data(), "processor : %d", &num) == 1) {
-      assert(cur < num);
+      KATANA_LOG_DEBUG_ASSERT(cur < num);
       cur = num;
       vals.resize(cur + 1);
       vals.at(cur).proc = num;

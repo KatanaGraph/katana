@@ -1,5 +1,5 @@
-#ifndef KATANA_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
-#define KATANA_TOOLS_GRAPH_CONVERT_TIME_PARSER_H_
+#ifndef KATANA_TOOLS_GRAPHCONVERT_TIMEPARSER_H_
+#define KATANA_TOOLS_GRAPHCONVERT_TIMEPARSER_H_
 
 #include <array>
 #include <chrono>
@@ -110,7 +110,7 @@ void
 katana::TimeParser<ArrowDateTimeType, Duration>::ParseInto(
     const arrow::StringArray& strings, arrow::ArrayBuilder* untyped_builder) {
   BuilderType* builder = dynamic_cast<BuilderType*>(untyped_builder);
-  assert(builder);
+  KATANA_LOG_DEBUG_ASSERT(builder);
   if (auto st = builder->Reserve(strings.length()); !st.ok()) {
     KATANA_LOG_FATAL("builder failed to reserve space");
   }

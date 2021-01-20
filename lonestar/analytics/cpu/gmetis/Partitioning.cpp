@@ -415,7 +415,7 @@ partition(
     MetisGraph* mcg, unsigned fineMetisGraphWeight, unsigned numPartitions,
     InitialPartMode partMode) {
   std::vector<partInfo> parts(numPartitions);
-  assert(fineMetisGraphWeight == mcg->getTotalWeight());
+  KATANA_LOG_DEBUG_ASSERT(fineMetisGraphWeight == mcg->getTotalWeight());
   parts[0] = partInfo(fineMetisGraphWeight);
 
   katana::do_all(

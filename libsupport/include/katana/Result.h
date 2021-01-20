@@ -7,6 +7,8 @@
 
 #include <boost/outcome/outcome.hpp>
 
+#include "katana/Logging.h"
+
 namespace katana {
 
 template <class T>
@@ -19,7 +21,7 @@ ResultSuccess() {
 
 static inline auto
 ResultErrno() {
-  assert(errno);
+  KATANA_LOG_DEBUG_ASSERT(errno);
   return std::error_code(errno, std::system_category());
 }
 

@@ -26,6 +26,7 @@
 #include <boost/mpl/if.hpp>
 
 #include "katana/FixedSizeRing.h"
+#include "katana/Logging.h"
 #include "katana/TwoLevelIterator.h"
 #include "katana/config.h"
 
@@ -189,7 +190,7 @@ public:
 
   ~gslist_base() {
     _clear(promise_to_dealloc());
-    // assert(empty() && "Memory leak if gslist is not empty before
+    // KATANA_LOG_DEBUG_ASSERT(empty() && "Memory leak if gslist is not empty before
     // destruction");
   }
 

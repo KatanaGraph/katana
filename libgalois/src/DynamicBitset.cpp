@@ -29,7 +29,7 @@ KATANA_EXPORT katana::DynamicBitset katana::EmptyBitset;
 
 void
 katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
-  assert(size() == other.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
       katana::iterate(size_t{0}, bitvec.size()),
@@ -45,7 +45,7 @@ katana::DynamicBitset::bitwise_not() {
 
 void
 katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
-  assert(size() == other.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
       katana::iterate(size_t{0}, bitvec.size()),
@@ -55,8 +55,8 @@ katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
 void
 katana::DynamicBitset::bitwise_and(
     const DynamicBitset& other1, const DynamicBitset& other2) {
-  assert(size() == other1.size());
-  assert(size() == other2.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other1.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
   const auto& other_bitvec2 = other2.get_vec();
 
@@ -68,7 +68,7 @@ katana::DynamicBitset::bitwise_and(
 
 void
 katana::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
-  assert(size() == other.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
       katana::iterate(size_t{0}, bitvec.size()),
@@ -78,8 +78,8 @@ katana::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
 void
 katana::DynamicBitset::bitwise_xor(
     const DynamicBitset& other1, const DynamicBitset& other2) {
-  assert(size() == other1.size());
-  assert(size() == other2.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other1.size());
+  KATANA_LOG_DEBUG_ASSERT(size() == other2.size());
   const auto& other_bitvec1 = other1.get_vec();
   const auto& other_bitvec2 = other2.get_vec();
 

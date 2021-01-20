@@ -106,7 +106,7 @@ public:
   void acquireNode(
       TorusNode n, katana::MethodFlag mflag = katana::MethodFlag::WRITE) {
     // sanity check
-    assert(n < size());
+    KATANA_LOG_DEBUG_ASSERT(n < size());
 
     // use this call to detect conflicts and handling aborts
     katana::acquire(&data[n], mflag);

@@ -48,7 +48,9 @@ katana::Prealloc(size_t pages) {
 }
 
 // Anchor the class
-katana::SystemHeap::SystemHeap() { assert(AllocSize == katana::allocSize()); }
+katana::SystemHeap::SystemHeap() {
+  KATANA_LOG_DEBUG_ASSERT(AllocSize == katana::allocSize());
+}
 
 katana::SystemHeap::~SystemHeap() = default;
 

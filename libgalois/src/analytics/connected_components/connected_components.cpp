@@ -560,11 +560,11 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
           auto beg = graph->edge_begin(src);
           const auto& end = graph->edge_end(src);
 
-          assert(beg <= end);
+          KATANA_LOG_DEBUG_ASSERT(beg <= end);
           if ((end - beg) > plan_.edge_tile_size()) {
             for (; beg + plan_.edge_tile_size() < end;) {
               const auto& ne = beg + plan_.edge_tile_size();
-              assert(ne < end);
+              KATANA_LOG_DEBUG_ASSERT(ne < end);
               works.push_back(EdgeTile{src, beg, ne});
               beg = ne;
             }
@@ -627,7 +627,7 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
     comp_freq[ndata->component()]++;
   }
 
-  assert(!comp_freq.empty());
+  KATANA_LOG_DEBUG_ASSERT(!comp_freq.empty());
   auto most_frequent = std::max_element(
       comp_freq.begin(), comp_freq.end(),
       [](const pair_type& a, const pair_type& b) {
@@ -1035,7 +1035,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
           for (std::advance(beg, plan_.neighbor_sample_size());
                beg + plan_.edge_tile_size() < end;) {
             auto ne = beg + plan_.edge_tile_size();
-            assert(ne < end);
+            KATANA_LOG_DEBUG_ASSERT(ne < end);
             works.push_back(EdgeTile{src, beg, ne});
             beg = ne;
           }

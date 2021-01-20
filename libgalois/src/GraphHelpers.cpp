@@ -37,8 +37,8 @@ determine_block_division(
       scaleFactor.push_back(i + 1);
     }
   } else {
-    assert(scaleFactor.size() == numDivisions);
-    assert(numDivisions >= 1);
+    KATANA_LOG_DEBUG_ASSERT(scaleFactor.size() == numDivisions);
+    KATANA_LOG_DEBUG_ASSERT(numDivisions >= 1);
 
     // get numDivisions number of blocks we need + save a prefix sum of the
     // scale factor vector to scaleFactor
@@ -100,15 +100,16 @@ unitRangeSanity(
     [[maybe_unused]] std::vector<uint32_t>& returnRanges) {
 #ifndef NDEBUG
   // sanity checks
-  assert(
-      returnRanges[0] == beginNode && "return ranges begin not the begin node");
+  KATANA_LOG_DEBUG_VASSERT(
+      returnRanges[0] == beginNode, "return ranges begin not the begin node");
   assert(
       returnRanges[unitsToSplit] == endNode &&
       "return ranges end not end node");
 
   for (uint32_t i = 1; i < unitsToSplit; i++) {
-    assert(returnRanges[i] >= beginNode && returnRanges[i] <= endNode);
-    assert(returnRanges[i] >= returnRanges[i - 1]);
+    KATANA_LOG_DEBUG_ASSERT(
+        returnRanges[i] >= beginNode && returnRanges[i] <= endNode);
+    KATANA_LOG_DEBUG_ASSERT(returnRanges[i] >= returnRanges[i - 1]);
   }
 #endif
 }

@@ -321,7 +321,7 @@ struct PullAlgo {
       otherMatched.clear();
       std::swap(cur, next);
       rounds += 1;
-      assert(size >= numTaken.reduce());
+      KATANA_LOG_DEBUG_ASSERT(size >= numTaken.reduce());
       size -= numTaken.reduce();
     }
 
@@ -489,11 +489,11 @@ struct EdgeTiledPrioAlgo {
           uint8_t val = (res + res) | 0x03;
 
           src_flag = val;
-          assert(beg <= end);
+          KATANA_LOG_DEBUG_ASSERT(beg <= end);
           if ((end - beg) > EDGE_TILE_SIZE) {
             for (; beg + EDGE_TILE_SIZE < end;) {
               auto ne = beg + EDGE_TILE_SIZE;
-              assert(ne < end);
+              KATANA_LOG_DEBUG_ASSERT(ne < end);
               works.push_back(EdgeTile{src, beg, ne, false});
               beg = ne;
             }
@@ -713,7 +713,7 @@ run() {
 
   if (!skipVerify && !verify(&graph, algo)) {
     std::cerr << "verification failed\n";
-    assert(0 && "verification failed");
+    KATANA_LOG_DEBUG_VASSERT(0, "verification failed");
     abort();
   }
 

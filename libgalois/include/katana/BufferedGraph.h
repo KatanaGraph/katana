@@ -95,7 +95,7 @@ private:
     if (numNodesToLoad == 0) {
       return;
     }
-    assert(outIndexBuffer == nullptr);
+    KATANA_LOG_DEBUG_ASSERT(outIndexBuffer == nullptr);
     outIndexBuffer = (uint64_t*)malloc(sizeof(uint64_t) * numNodesToLoad);
 
     if (outIndexBuffer == nullptr) {
@@ -116,7 +116,7 @@ private:
       bytesRead += numRead;
     }
 
-    assert(numBytesToLoad == 0);
+    KATANA_LOG_DEBUG_ASSERT(numBytesToLoad == 0);
 
     nodeOffset = nodeStart;
   }
@@ -137,7 +137,7 @@ private:
       return;
     }
 
-    assert(edgeDestBuffer == nullptr);
+    KATANA_LOG_DEBUG_ASSERT(edgeDestBuffer == nullptr);
     edgeDestBuffer = (uint32_t*)malloc(sizeof(uint32_t) * numEdgesToLoad);
 
     if (edgeDestBuffer == nullptr) {
@@ -158,7 +158,7 @@ private:
       bytesRead += numRead;
     }
 
-    assert(numBytesToLoad == 0);
+    KATANA_LOG_DEBUG_ASSERT(numBytesToLoad == 0);
     // save edge offset of this graph for later use
     edgeOffset = edgeStart;
   }
@@ -187,7 +187,7 @@ private:
       return;
     }
 
-    assert(edgeDataBuffer == nullptr);
+    KATANA_LOG_DEBUG_ASSERT(edgeDataBuffer == nullptr);
     edgeDataBuffer =
         (EdgeDataType*)malloc(sizeof(EdgeDataType) * numEdgesToLoad);
 
@@ -218,7 +218,7 @@ private:
       bytesRead += numRead;
     }
 
-    assert(numBytesToLoad == 0);
+    KATANA_LOG_DEBUG_ASSERT(numBytesToLoad == 0);
   }
 
   /**
@@ -361,11 +361,11 @@ public:
     globalSize = numGlobalNodes;
     globalEdgeSize = numGlobalEdges;
 
-    assert(nodeEnd >= nodeStart);
+    KATANA_LOG_DEBUG_ASSERT(nodeEnd >= nodeStart);
     numLocalNodes = nodeEnd - nodeStart;
     loadOutIndex(graphFile, nodeStart, numLocalNodes);
 
-    assert(edgeEnd >= edgeStart);
+    KATANA_LOG_DEBUG_ASSERT(edgeEnd >= edgeStart);
     numLocalEdges = edgeEnd - edgeStart;
     loadEdgeDest(graphFile, edgeStart, numLocalEdges, numGlobalNodes);
 
@@ -393,8 +393,8 @@ public:
     if (numLocalNodes == 0) {
       return EdgeIterator(0);
     }
-    assert(nodeOffset <= globalNodeID);
-    assert(globalNodeID < (nodeOffset + numLocalNodes));
+    KATANA_LOG_DEBUG_ASSERT(nodeOffset <= globalNodeID);
+    KATANA_LOG_DEBUG_ASSERT(globalNodeID < (nodeOffset + numLocalNodes));
 
     uint64_t localNodeID = globalNodeID - nodeOffset;
 
@@ -421,8 +421,8 @@ public:
     if (numLocalNodes == 0) {
       return EdgeIterator(0);
     }
-    assert(nodeOffset <= globalNodeID);
-    assert(globalNodeID < (nodeOffset + numLocalNodes));
+    KATANA_LOG_DEBUG_ASSERT(nodeOffset <= globalNodeID);
+    KATANA_LOG_DEBUG_ASSERT(globalNodeID < (nodeOffset + numLocalNodes));
 
     numBytesReadOutIndex += sizeof(uint64_t);
 
@@ -444,8 +444,8 @@ public:
     if (numLocalEdges == 0) {
       return 0;
     }
-    assert(edgeOffset <= globalEdgeID);
-    assert(globalEdgeID < (edgeOffset + numLocalEdges));
+    KATANA_LOG_DEBUG_ASSERT(edgeOffset <= globalEdgeID);
+    KATANA_LOG_DEBUG_ASSERT(globalEdgeID < (edgeOffset + numLocalEdges));
 
     numBytesReadEdgeDest += sizeof(uint32_t);
 
@@ -474,8 +474,8 @@ public:
       return 0;
     }
 
-    assert(edgeOffset <= globalEdgeID);
-    assert(globalEdgeID < (edgeOffset + numLocalEdges));
+    KATANA_LOG_DEBUG_ASSERT(edgeOffset <= globalEdgeID);
+    KATANA_LOG_DEBUG_ASSERT(globalEdgeID < (edgeOffset + numLocalEdges));
 
     numBytesReadEdgeData += sizeof(EdgeDataType);
 

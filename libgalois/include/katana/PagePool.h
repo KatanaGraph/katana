@@ -67,7 +67,7 @@ class PageAllocState {
 
   void* allocFromOS() {
     void* ptr = katana::allocPages(1, true);
-    assert(ptr);
+    KATANA_LOG_DEBUG_ASSERT(ptr);
     auto tid = katana::ThreadPool::getTID();
     counts[tid] += 1;
     std::lock_guard<katana::SimpleLock> lg(mapLock);
@@ -104,9 +104,9 @@ public:
   }
 
   void pageFree(void* ptr) {
-    assert(ptr);
+    KATANA_LOG_DEBUG_ASSERT(ptr);
     mapLock.lock();
-    assert(ownerMap.count(ptr));
+    KATANA_LOG_DEBUG_ASSERT(ownerMap.count(ptr));
     int i = ownerMap[ptr];
     mapLock.unlock();
     HeadPtr& hp = pool[i].data;

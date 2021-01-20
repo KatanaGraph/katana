@@ -518,7 +518,7 @@ tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
     });
   }
 
-  assert(
+  KATANA_LOG_DEBUG_ASSERT(
       static_cast<size_t>(core_->node_table()->num_columns()) ==
       core_->part_header().node_prop_info_list().size());
 
@@ -539,7 +539,7 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
     });
   }
 
-  assert(
+  KATANA_LOG_DEBUG_ASSERT(
       static_cast<size_t>(core_->edge_table()->num_columns()) ==
       core_->part_header().edge_prop_info_list().size());
 

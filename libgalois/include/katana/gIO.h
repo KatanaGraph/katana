@@ -28,7 +28,7 @@
 
 #include "katana/config.h"
 
-// FIXME: move to Runtime
+// TODO(amp): Remove these functions and replace with Logging.h
 
 namespace katana {
 

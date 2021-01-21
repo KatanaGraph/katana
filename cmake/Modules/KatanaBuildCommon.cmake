@@ -259,6 +259,40 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   find_package(benchmark REQUIRED)
 endif ()
 
+###### Common Functions ######
+
+function(set_common_katana_library_options)
+  set(no_value_options ALWAYS_SHARED)
+  set(one_value_options)
+  set(multi_value_options)
+
+  cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
+
+  set(target ${X_UNPARSED_ARGUMENTS})
+  # Some careful defines and build directives to ensure things work on Windows
+  # (see config.h):
+  #
+  # 1. When we build our shared library, KATANA_EXPORT => dllexport
+  # 2. When someone uses our shared library, KATANA_EXPORT => dllimport
+  # 3. When we build a static library, KATANA_EXPORT => ""
+  #
+  # In the world of ELF, 1 and 2 can both be handled with visibility("default")
+  if (BUILD_SHARED_LIBS OR X_ALWAYS_SHARED)
+    target_compile_definitions(${target} PRIVATE KATANA_SHARED_LIB_BUILDING)
+  else ()
+    target_compile_definitions(${target} PRIVATE KATANA_STATIC_LIB)
+  endif()
+
+  # Having a single definition of a vtable has two benefits:
+  #
+  # 1. Reduces the size of intermediate object files
+  # 2. More importantly, gives canonical typeinfo pointers so that derived objects in
+  #    different libraries can resolve to the same base class typeinfo.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wweak-vtables>")
+  endif ()
+endfunction ()
+
 ###### Test Inputs ######
 
 if (KATANA_GRAPH_LOCATION)

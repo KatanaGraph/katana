@@ -2,6 +2,8 @@
 
 #include "FileStorage_internal.h"
 
+tsuba::FileStorage::~FileStorage() = default;
+
 std::vector<tsuba::FileStorage*>&
 tsuba::GetRegisteredFileStorages() {
   static std::vector<FileStorage*> fs;

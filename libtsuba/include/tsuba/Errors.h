@@ -37,6 +37,8 @@ namespace tsuba::internal {
 
 class KATANA_EXPORT ErrorCodeCategory : public std::error_category {
 public:
+  ~ErrorCodeCategory() override;
+
   const char* name() const noexcept final { return "TsubaError"; }
 
   std::string message(int c) const final {

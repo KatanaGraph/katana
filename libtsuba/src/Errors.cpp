@@ -2,6 +2,8 @@
 
 #include "katana/Logging.h"
 
+tsuba::internal::ErrorCodeCategory::~ErrorCodeCategory() = default;
+
 const tsuba::internal::ErrorCodeCategory&
 tsuba::internal::GetErrorCodeCategory() {
   static ErrorCodeCategory c;

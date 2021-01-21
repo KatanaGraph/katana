@@ -25,7 +25,7 @@ public:
   FileStorage(FileStorage&& no_move) = delete;
   FileStorage& operator=(const FileStorage& no_copy) = delete;
   FileStorage& operator=(FileStorage&& no_move) = delete;
-  virtual ~FileStorage() = default;
+  virtual ~FileStorage();
 
   std::string_view uri_scheme() const { return uri_scheme_; }
   virtual katana::Result<void> Init() = 0;

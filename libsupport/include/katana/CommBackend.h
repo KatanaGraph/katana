@@ -10,14 +10,14 @@
 
 namespace katana {
 
-class CommBackend {
+class KATANA_EXPORT CommBackend {
 public:
   CommBackend() = default;
   CommBackend(const CommBackend& other) = delete;
   CommBackend(CommBackend&& other) = delete;
   CommBackend& operator=(const CommBackend& other) = delete;
   CommBackend& operator=(CommBackend&& other) = delete;
-  virtual ~CommBackend() = default;
+  virtual ~CommBackend();
 
   /// Wait for all tasks to call Barrier
   virtual void Barrier() = 0;
@@ -39,10 +39,10 @@ public:
   uint32_t ID{0};
 };
 
-class NullCommBackend : public CommBackend {
+class KATANA_EXPORT NullCommBackend : public CommBackend {
 public:
   void Barrier() override {}
-  void NotifyFailure() override {}
+  void NotifyFailure() override;
   bool Broadcast([[maybe_unused]] uint32_t root, bool val) override {
     return val;
   };

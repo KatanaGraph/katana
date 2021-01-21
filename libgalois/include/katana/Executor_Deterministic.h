@@ -91,7 +91,7 @@ template <typename OptionsTy>
 using DItem =
     DItemBase<typename OptionsTy::value_type, OptionsTy::useLocalState>;
 
-class FirstPassBase : public SimpleRuntimeContext {
+class KATANA_EXPORT FirstPassBase : public SimpleRuntimeContext {
 protected:
   bool firstPassFlag;
 
@@ -99,15 +99,17 @@ public:
   explicit FirstPassBase(bool f = true)
       : SimpleRuntimeContext(true), firstPassFlag(f) {}
 
-  bool isFirstPass(void) const { return firstPassFlag; }
+  ~FirstPassBase() override;
 
-  void setFirstPass(void) { firstPassFlag = true; }
+  bool isFirstPass() const { return firstPassFlag; }
 
-  void resetFirstPass(void) { firstPassFlag = false; }
+  void setFirstPass() { firstPassFlag = true; }
+
+  void resetFirstPass() { firstPassFlag = false; }
 
   virtual void alwaysAcquire(Lockable*, katana::MethodFlag) = 0;
 
-  virtual void subAcquire(Lockable* lockable, katana::MethodFlag f) {
+  void subAcquire(Lockable* lockable, katana::MethodFlag f) override {
     if (isFirstPass()) {
       alwaysAcquire(lockable, f);
     }
@@ -131,7 +133,7 @@ public:
 
   bool isReady() { return !notReady; }
 
-  virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag) {
+  void alwaysAcquire(Lockable* lockable, katana::MethodFlag) override {
     if (this->tryLock(lockable))
       this->addToNhood(lockable);
 
@@ -160,11 +162,13 @@ public:
   static void initialize() {}
 };
 
-class HasIntentToReadContext : public FirstPassBase {
+class KATANA_EXPORT HasIntentToReadContext : public FirstPassBase {
 public:
   unsigned long id;
   bool notReady;
   bool isWriter;
+
+  ~HasIntentToReadContext() override;
 
   HasIntentToReadContext(unsigned long id, bool w)
       : FirstPassBase(true), id(id), notReady(false), isWriter(w) {}
@@ -172,8 +176,8 @@ public:
   bool isReady() { return !notReady; }
 };
 
-class ReaderContext : public katana::UnionFindNode<ReaderContext>,
-                      public HasIntentToReadContext {
+class KATANA_EXPORT ReaderContext : public katana::UnionFindNode<ReaderContext>,
+                                    public HasIntentToReadContext {
   template <typename, bool, bool>
   friend class DeterministicContextBase;
 
@@ -181,6 +185,8 @@ public:
   ReaderContext(unsigned long id)
       : katana::UnionFindNode<ReaderContext>(const_cast<ReaderContext*>(this)),
         HasIntentToReadContext(id, false) {}
+
+  ~ReaderContext() override;
 
   void build() {
     if (this->isReady())
@@ -192,8 +198,8 @@ public:
 
   bool propagate() { return this->find()->isReady(); }
 
-  virtual void alwaysAcquire(Lockable*, katana::MethodFlag) {
-    KATANA_DIE("unreachable");
+  void alwaysAcquire(Lockable*, katana::MethodFlag) override {
+    KATANA_LOG_FATAL("unreachable");
   }
 };
 
@@ -272,7 +278,7 @@ public:
       this->notReady = true;
   }
 
-  virtual void alwaysAcquire(Lockable* lockable, katana::MethodFlag m) {
+  void alwaysAcquire(Lockable* lockable, katana::MethodFlag m) override {
     KATANA_LOG_DEBUG_ASSERT(m == MethodFlag::READ || m == MethodFlag::WRITE);
 
     if (this->tryLock(lockable))
@@ -1610,7 +1616,7 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
     return false;
     break;
   default:
-    KATANA_DIE("unknown conflict flag");
+    KATANA_LOG_FATAL("unknown conflict flag");
     break;
   }
 
@@ -1622,7 +1628,7 @@ Executor<OptionsTy>::executeTask(ThreadLocalData& tld, Context* ctx) {
     for (auto& item : tld.facing.getPushBuffer()) {
       this->pushNew(item, parent, ++count);
       if (count == 0) {
-        KATANA_DIE("counter overflow");
+        KATANA_LOG_FATAL("counter overflow");
       }
     }
     if (count)

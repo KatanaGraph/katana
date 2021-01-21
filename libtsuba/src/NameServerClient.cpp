@@ -2,6 +2,8 @@
 
 #include "GlobalState.h"
 
+tsuba::NameServerClient::~NameServerClient() = default;
+
 void
 tsuba::SetMakeNameServerClientCB(
     std::function<katana::Result<std::unique_ptr<tsuba::NameServerClient>>()>

@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef LONESTAR_UTILS_H
-#define LONESTAR_UTILS_H
+#ifndef KATANA_LONESTAR_LIBLONESTAR_LONESTAR_UTILS_H_
+#define KATANA_LONESTAR_LIBLONESTAR_LONESTAR_UTILS_H_
 
 #include <vector>
 
@@ -32,8 +32,9 @@ MakeFileGraph(
     const std::string& rdg_name, const std::string& edge_property_name) {
   std::vector<std::string> edge_properties;
   std::vector<std::string> node_properties;
-  if (!edge_property_name.empty())
+  if (!edge_property_name.empty()) {
     edge_properties.emplace_back(edge_property_name);
+  }
 
   auto pfg_result = katana::PropertyFileGraph::Make(
       rdg_name, node_properties, edge_properties);
@@ -57,7 +58,7 @@ writeOutput(const std::string& outputDir, T* values, size_t length) {
   }
 
   for (size_t i = 0; i < length; i++) {
-    outputFile << i << " " << *(values++) << "\n";
+    outputFile << i << " " << std::to_string(*(values++)) << "\n";
   }
 
   if (!outputFile) {

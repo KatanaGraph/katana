@@ -27,6 +27,5 @@ RUN
 
 The following are a few example command lines.
 
+-`$ ./random-walk-cpu <path-to-graph> -algo Node2vec -numWalk 1  -walkLength 80 --symmetricGraph -t 4`
 
-PERFORMANCE
---------------------------------------------------------------------------------

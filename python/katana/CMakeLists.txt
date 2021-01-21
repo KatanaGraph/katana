@@ -37,54 +37,66 @@ function(generate_cython_source BASE)
   generate_cython_file(${BASE}.pyx DEPENDS ${_args_DEPENDS})
 endfunction()
 
-add_cython_target(galois galois.pyx CXX OUTPUT_VAR GALOIS_SOURCES)
-add_library(galois MODULE ${GALOIS_SOURCES})
-python_extension_module(galois)
-target_link_libraries(galois Katana::galois)
+set(KATANA_PYTHON_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_cython_target(numpy_structs numpy_structs.pyx CXX OUTPUT_VAR NUMPY_STRUCTS_SOURCES)
-add_library(numpy_structs MODULE ${NUMPY_STRUCTS_SOURCES})
-python_extension_module(numpy_structs)
+function(add_cython_module NAME)
+  set(options)
+  set(options1)
+  set(optionsmany DEPENDS LIBRARIES SOURCES)
+  cmake_parse_arguments(_args "${options}" "${options1}" "${optionsmany}" ${ARGN})
+
+  add_cython_target(${NAME} ${_args_SOURCES} CXX OUTPUT_VAR _${NAME}_SOURCES)
+  add_library(${NAME} MODULE ${_${NAME}_SOURCES})
+  python_extension_module(${NAME})
+  if (_args_DEPENDS)
+    add_dependencies(${NAME} ${_args_DEPENDS})
+  endif()
+  if (_args_LIBRARIES)
+    target_link_libraries(${NAME} ${_args_LIBRARIES})
+  endif()
+  file(RELATIVE_PATH current_relative_path ${KATANA_PYTHON_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
+  install(
+      TARGETS ${NAME}
+      LIBRARY DESTINATION python/katana/${current_relative_path}
+  )
+endfunction()
+
+add_cython_module(galois SOURCES galois.pyx LIBRARIES Katana::galois)
+add_cython_module(numpy_structs SOURCES numpy_structs.pyx)
 
 generate_cython_source(graphs DEPENDS graphs.instantiations.jinja)
-add_cython_target(graphs ${CMAKE_CURRENT_BINARY_DIR}/graphs.pyx CXX OUTPUT_VAR GRAPHS_SOURCES)
-add_library(graphs MODULE ${GRAPHS_SOURCES})
-python_extension_module(graphs)
-add_dependencies(graphs galois graphs_pxd)
-target_link_libraries(graphs Katana::galois)
+add_cython_module(graphs
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/graphs.pyx
+    DEPENDS galois graphs_pxd
+    LIBRARIES Katana::galois)
 
 generate_cython_source(atomic DEPENDS numba_wrapper_support.pyx.jinja)
-add_cython_target(atomic ${CMAKE_CURRENT_BINARY_DIR}/atomic.pyx CXX OUTPUT_VAR ATOMIC_SOURCES)
-add_library(atomic MODULE ${ATOMIC_SOURCES})
-python_extension_module(atomic)
-add_dependencies(atomic galois)
-target_link_libraries(atomic Katana::galois)
+add_cython_module(atomic
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/atomic.pyx
+    DEPENDS galois
+    LIBRARIES Katana::galois)
 
 generate_cython_source(datastructures DEPENDS numba_wrapper_support.pyx.jinja)
-add_cython_target(datastructures ${CMAKE_CURRENT_BINARY_DIR}/datastructures.pyx CXX OUTPUT_VAR DATASTRUCTURES_SOURCES)
-add_library(datastructures MODULE ${DATASTRUCTURES_SOURCES})
-python_extension_module(datastructures)
-add_dependencies(datastructures galois numpy_structs)
-target_link_libraries(datastructures Katana::galois)
+add_cython_module(datastructures
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/datastructures.pyx
+    DEPENDS galois numpy_structs
+    LIBRARIES Katana::galois)
 
 generate_cython_source(property_graph DEPENDS numba_wrapper_support.pyx.jinja)
-add_cython_target(property_graph ${CMAKE_CURRENT_BINARY_DIR}/property_graph.pyx CXX OUTPUT_VAR PROPERTYGRAPH_SOURCES)
-add_library(property_graph MODULE ${PROPERTYGRAPH_SOURCES})
-python_extension_module(property_graph)
-add_dependencies(property_graph graphs property_graph_pxd)
-target_link_libraries(property_graph Katana::galois)
+add_cython_module(property_graph
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/property_graph.pyx
+    DEPENDS graphs property_graph_pxd
+    LIBRARIES Katana::galois)
 
 generate_cython_source(_loops DEPENDS numba_wrapper_support.pyx.jinja)
-add_cython_target(_loops ${CMAKE_CURRENT_BINARY_DIR}/_loops.pyx CXX OUTPUT_VAR _LOOPS_SOURCES)
-add_library(_loops MODULE ${_LOOPS_SOURCES})
-python_extension_module(_loops)
-add_dependencies(_loops galois numpy_structs datastructures_pxd property_graph_pxd)
-target_link_libraries(_loops Katana::galois)
+add_cython_module(_loops
+    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/_loops.pyx
+    DEPENDS  galois numpy_structs datastructures_pxd property_graph_pxd
+    LIBRARIES Katana::galois)
 
-add_cython_target(timer timer.pyx CXX OUTPUT_VAR TIMER_SOURCES)
-add_library(timer MODULE ${TIMER_SOURCES})
-python_extension_module(timer)
-target_link_libraries(timer Katana::galois)
+add_cython_module(timer
+    SOURCES timer.pyx
+    LIBRARIES Katana::galois)
 
 # Symlink all python source file into binary directory so that documentation generation can load python modules correctly.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analytics)
@@ -99,11 +111,6 @@ endforeach()
 add_subdirectory(numba_support)
 add_subdirectory(lonestar/analytics)
 add_subdirectory(analytics)
-
-install(
-  TARGETS galois numpy_structs graphs timer atomic datastructures _loops property_graph
-  LIBRARY DESTINATION python/katana
-)
 
 if(BUILD_LIBGALOIS)
   install(

@@ -7,18 +7,22 @@ set -eu
 #  brew update
 #  brew upgrade
 
-brew install \
-  autoconf \
-  automake \
-  ccache \
-  conan \
-  libtool \
-  llvm \
-  openmpi
+function brew_install_if_missing {
+  if ! brew ls --versions "$1" >/dev/null; then
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install "$1"
+  fi
+}
+
+brew_install_if_missing autoconf
+brew_install_if_missing automake
+brew_install_if_missing ccache
+brew_install_if_missing conan
+brew_install_if_missing libtool
+brew_install_if_missing llvm
+brew_install_if_missing openmpi
 
 brew tap cleishm/neo4j
-brew install \
-  libcypher-parser
+brew_install_if_missing libcypher-parser
 
 # https://github.com/KatanaGraph/homebrew-dependencies
 #brew tap KatanaGraph/dependencies

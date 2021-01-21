@@ -83,19 +83,7 @@ target_link_libraries(katana_galois PUBLIC tsuba)
 target_link_libraries(katana_galois PRIVATE Threads::Threads)
 target_link_libraries(katana_galois PUBLIC katana_support)
 
-# Some careful defines and build directives to ensure things work on Windows
-# (see config.h):
-#
-# 1. When we build our shared library, KATANA_EXPORT => dllexport
-# 2. When someone uses our shared library, KATANA_EXPORT => dllimport
-# 3. When we build a static library, KATANA_EXPORT => ""
-#
-# In the world of ELF, 1 and 2 can both be handled with visibility("default")
-if(BUILD_SHARED_LIBS)
-  target_compile_definitions(katana_galois PRIVATE KATANA_SHARED_LIB_BUILDING)
-else()
-  target_compile_definitions(katana_galois PRIVATE KATANA_STATIC_LIB)
-endif()
+set_common_katana_library_options(katana_galois)
 
 if(SCHED_SETAFFINITY_FOUND)
   target_compile_definitions(katana_galois PRIVATE KATANA_USE_SCHED_SETAFFINITY)

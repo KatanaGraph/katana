@@ -15,7 +15,7 @@ public:
   NameServerClient& operator=(NameServerClient&& no_move) = delete;
   NameServerClient(const NameServerClient& no_copy) = delete;
   NameServerClient& operator=(const NameServerClient& no_copy) = delete;
-  virtual ~NameServerClient() = default;
+  virtual ~NameServerClient();
 
   virtual katana::Result<RDGMeta> Get(const katana::Uri& rdg_name) = 0;
 

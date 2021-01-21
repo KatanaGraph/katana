@@ -44,7 +44,7 @@ foreach(target tsuba tsuba-preload)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
-  target_compile_definitions(${target} PRIVATE KATANA_SHARED_LIB_BUILDING)
+  set_common_katana_library_options(${target} ALWAYS_SHARED)
 endforeach()
 
 target_link_libraries(tsuba-preload PUBLIC katana_support)

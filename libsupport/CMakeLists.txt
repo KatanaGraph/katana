@@ -11,6 +11,7 @@ configure_file(include/katana/config.h.in include/katana/config.h)
 
 set(sources
         src/Backtrace.cpp
+        src/CommBackend.cpp
         src/Env.cpp
         src/ErrorCode.cpp
         src/Http.cpp
@@ -29,11 +30,7 @@ target_include_directories(katana_support PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-if(BUILD_SHARED_LIBS)
-  target_compile_definitions(katana_support PRIVATE KATANA_SHARED_LIB_BUILDING)
-else()
-  target_compile_definitions(katana_support PRIVATE KATANA_STATIC_LIB)
-endif()
+set_common_katana_library_options(katana_support)
 
 find_package(nlohmann_json 3.7.3 REQUIRED)
 target_link_libraries(katana_support PUBLIC nlohmann_json::nlohmann_json)

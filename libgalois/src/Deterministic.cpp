@@ -20,3 +20,9 @@
 #include "katana/Executor_Deterministic.h"
 
 thread_local katana::SizedHeapFactory::SizedHeap* katana::internal::dagListHeap;
+
+katana::internal::FirstPassBase::~FirstPassBase() = default;
+
+katana::internal::HasIntentToReadContext::~HasIntentToReadContext() = default;
+
+katana::internal::ReaderContext::~ReaderContext() = default;

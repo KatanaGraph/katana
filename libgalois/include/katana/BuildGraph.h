@@ -234,9 +234,11 @@ KATANA_EXPORT void WritePropertyGraph(
 KATANA_EXPORT void WritePropertyGraph(
     PropertyFileGraph prop_graph, const std::string& dir);
 
-/// Convert an Arrow chunked array to a vector of ImportData
-KATANA_EXPORT std::vector<katana::ImportData> ArrowToImport(
-    std::shared_ptr<arrow::ChunkedArray> arr);
+/// Convert Arrow chunked array to/from a vector of ImportData
+KATANA_EXPORT std::vector<ImportData> ArrowToImport(
+    const std::shared_ptr<arrow::ChunkedArray>& arr);
+KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> ImportToArrow(
+    const std::vector<ImportData>& imp);
 
 }  // namespace katana
 

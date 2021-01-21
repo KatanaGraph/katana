@@ -1,41 +1,13 @@
-from pytest import raises, approx
-
-from pyarrow import Schema, table
-
 import numpy as np
+from pyarrow import Schema, table
+from pytest import approx, raises
 
+from katana import GaloisError
+from katana.analytics import *
 from katana.property_graph import PropertyGraph
-from katana.analytics import (
-    bfs,
-    bfs_assert_valid,
-    BfsStatistics,
-    sssp,
-    sssp_assert_valid,
-    SsspStatistics,
-    jaccard,
-    JaccardPlan,
-    sort_all_edges_by_dest,
-    find_edge_sorted_by_dest,
-    sort_nodes_by_degree,
-    jaccard_assert_valid,
-    JaccardStatistics,
-    pagerank,
-    pagerank_assert_valid,
-    PagerankStatistics,
-    betweenness_centrality,
-    BetweennessCentralityStatistics,
-    BetweennessCentralityPlan,
-    triangle_count,
-    TriangleCountPlan,
-    independent_set,
-    IndependentSetStatistics,
-    IndependentSetPlan,
-    independent_set_assert_valid,
-)
 from katana.example_utils import get_input
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
-
 
 NODES_TO_SAMPLE = 10
 
@@ -247,7 +219,7 @@ def test_triangle_count():
     assert n == 282617
 
 
-def test_triangle_count_presorted(property_graph: PropertyGraph):
+def test_triangle_count_presorted():
     property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
     sort_nodes_by_degree(property_graph)
     sort_all_edges_by_dest(property_graph)
@@ -271,4 +243,50 @@ def test_independent_set():
     independent_set_assert_valid(property_graph, "output2")
 
 
-# TODO: Add more tests.
+def test_connected_components():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    connected_components(property_graph, "output")
+
+    stats = ConnectedComponentsStatistics(property_graph, "output")
+
+    assert stats.total_components == 69
+    assert stats.total_non_trivial_components == 1
+    assert stats.largest_component_size == 957
+    assert stats.largest_component_ratio == approx(0.93457)
+
+    connected_components_assert_valid(property_graph, "output")
+
+
+def test_k_core():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    k_core(property_graph, 10, "output")
+
+    stats = KCoreStatistics(property_graph, 10, "output")
+
+    assert stats.number_of_nodes_in_kcore == 438
+
+    k_core_assert_valid(property_graph, 10, "output")
+
+
+def test_k_truss():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    k_truss(property_graph, 10, "output")
+
+    stats = KTrussStatistics(property_graph, 10, "output")
+
+    assert stats.number_of_edges_left == 13338
+
+    k_truss_assert_valid(property_graph, 10, "output")
+
+
+def test_k_truss_fail():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    with raises(GaloisError):
+        k_truss(property_graph, 2, "output")
+
+    with raises(GaloisError):
+        k_truss(property_graph, 1, "output2")

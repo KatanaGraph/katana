@@ -14,7 +14,7 @@ namespace katana::analytics {
 
 /// A computational plan to for k-core, specifying the algorithm and any
 /// parameters associated with it.
-class KCorePlan : Plan {
+class KCorePlan : public Plan {
 public:
   /// Algorithm selectors for KCore
   enum Algorithm { kSynchronous, kAsynchronous };
@@ -53,18 +53,15 @@ KATANA_EXPORT Result<void> KCore(
     const std::string& output_property_name, KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(
-    [[maybe_unused]] PropertyFileGraph* pfg,
-    [[maybe_unused]] uint32_t k_core_number,
-    [[maybe_unused]] const std::string& property_name);
+    PropertyFileGraph* pfg, uint32_t k_core_number,
+    const std::string& property_name);
 
 struct KATANA_EXPORT KCoreStatistics {
-  ///
-  uint32_t k_core_number;
   /// Total number of node left in the core.
   uint64_t number_of_nodes_in_kcore;
 
   /// Print the statistics in a human readable form.
-  void Print(std::ostream& os = std::cout);
+  void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KCoreStatistics> Compute(
       katana::PropertyFileGraph* pfg, uint32_t k_core_number,

@@ -75,7 +75,8 @@ SetupInitialWorklist(
   katana::do_all(
       katana::iterate(graph),
       [&](const GNode& node) {
-        auto& node_current_degree = graph.GetData<KCoreNodeCurrentDegree>(node);
+        const auto& node_current_degree =
+            graph.GetData<KCoreNodeCurrentDegree>(node);
         if (node_current_degree < k_core_number) {
           //! Dead node, add to initial_worklist for processing later.
           initial_worklist.emplace(node);
@@ -94,8 +95,8 @@ SetupInitialWorklist(
  */
 void
 SyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
-  katana::InsertBag<GNode>* current = new katana::InsertBag<GNode>;
-  katana::InsertBag<GNode>* next = new katana::InsertBag<GNode>;
+  auto current = std::make_unique<katana::InsertBag<GNode>>();
+  auto next = std::make_unique<katana::InsertBag<GNode>>();
 
   //! Setup worklist.
   SetupInitialWorklist(*graph, *next, k_core_number);
@@ -125,9 +126,6 @@ SyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
         katana::steal(), katana::chunk_size<KCorePlan::kChunkSize>(),
         katana::loopname("KCore Synchronous"));
   }
-
-  delete current;
-  delete next;
 }
 
 /**
@@ -263,6 +261,10 @@ katana::analytics::KCore(
   return KCoreMarkAliveNodes(&graph_final, k_core_number);
 }
 
+// Doxygen doesn't correctly handle implementation annotations that do not
+// appear in the declaration.
+/// \cond DO_NOT_DOCUMENT
+// TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KCoreAssertValid(
     [[maybe_unused]] katana::PropertyFileGraph* pfg,
@@ -273,7 +275,7 @@ katana::analytics::KCoreAssertValid(
 
 katana::Result<KCoreStatistics>
 katana::analytics::KCoreStatistics::Compute(
-    katana::PropertyFileGraph* pfg, uint32_t k_core_number,
+    katana::PropertyFileGraph* pfg, [[maybe_unused]] uint32_t k_core_number,
     const std::string& property_name) {
   auto pg_result =
       katana::PropertyGraph<std::tuple<KCoreNodeAlive>, std::tuple<>>::Make(
@@ -297,12 +299,12 @@ katana::analytics::KCoreStatistics::Compute(
       },
       katana::loopname("KCore sanity check"), katana::no_stats());
 
-  return KCoreStatistics{k_core_number, alive_nodes.reduce()};
+  return KCoreStatistics{alive_nodes.reduce()};
 }
+/// \endcond DO_NOT_DOCUMENT
 
 void
-katana::analytics::KCoreStatistics::Print(std::ostream& os) {
-  os << "K core number = " << k_core_number << std::endl;
+katana::analytics::KCoreStatistics::Print(std::ostream& os) const {
   os << "Number of nodes in the core = " << number_of_nodes_in_kcore
      << std::endl;
 }

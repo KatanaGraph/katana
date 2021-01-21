@@ -209,6 +209,10 @@ struct Node2VecAlgo {
         katana::steal(), katana::loopname("loop"));
 
     katana::gPrint("num: ", num.reduce(), "\n");
+
+    for (uint32_t i = 0; i < distribution.size(); i++) {
+      delete (*distribution.getRemote(i));
+    }
   }
 
   void RandomWalks(

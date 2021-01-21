@@ -146,12 +146,13 @@ struct PickUnsupportedEdges {
 /// 4. Go back to 1.
 katana::Result<void>
 BSPTrussJacobiAlgo(Graph* g, uint32_t k) {
-  if (k - 2 == 0) {
+  if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
   }
 
-  EdgeVec unsupported, work[2];
-  EdgeVec *cur = &work[0], *next = &work[1];
+  EdgeVec unsupported;
+  auto cur = std::make_unique<EdgeVec>();
+  auto next = std::make_unique<EdgeVec>();
 
   //! Symmetry breaking:
   //! Consider only edges (i, j) where i < j.
@@ -217,20 +218,19 @@ struct KeepSupportedEdges {
 /// 3. Go back to 3.
 katana::Result<void>
 BSPTrussAlgo(Graph* g, unsigned int k) {
-  if (k - 2 == 0) {
+  if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
-    ;
   }
 
-  EdgeVec work[2];
-  EdgeVec *cur = &work[0], *next = &work[1];
+  auto cur = std::make_unique<EdgeVec>();
+  auto next = std::make_unique<EdgeVec>();
   size_t curSize, nextSize;
 
   //! Symmetry breaking:
   //! Consider only edges (i, j) where i < j.
   katana::do_all(
       katana::iterate(*g),
-      [&g, cur](GNode n) {
+      [&g, &cur](GNode n) {
         for (auto e : g->edges(n)) {
           auto dest = g->GetEdgeDest(e);
           if (*dest > n) {
@@ -286,8 +286,8 @@ struct KeepValidNodes {
 /// 3. Go back to 1.
 katana::Result<void>
 BSPCoreAlgo(Graph* g, uint32_t k) {
-  NodeVec work[2];
-  NodeVec *cur = &work[0], *next = &work[1];
+  auto cur = std::make_unique<NodeVec>();
+  auto next = std::make_unique<NodeVec>();
   size_t curSize = g->num_nodes(), nextSize;
 
   katana::do_all(
@@ -311,7 +311,7 @@ BSPCoreAlgo(Graph* g, uint32_t k) {
 /// 2. Compute k-truss from k-1 core
 katana::Result<void>
 BSPCoreThenTrussAlgo(Graph* g, uint32_t k) {
-  if (k - 2 == 0) {
+  if (k <= 2) {
     return katana::ErrorCode::InvalidArgument;
   }
 
@@ -364,18 +364,18 @@ katana::analytics::KTruss(
   switch (plan.algorithm()) {
   case KTrussPlan::kBsp:
     return BSPTrussAlgo(&graph, k_truss_number);
-    break;
   case KTrussPlan::kBspJacobi:
     return BSPTrussJacobiAlgo(&graph, k_truss_number);
-    break;
   case KTrussPlan::kBspCoreThenTruss:
     return BSPCoreThenTrussAlgo(&graph, k_truss_number);
-    break;
   default:
     return katana::ErrorCode::InvalidArgument;
   }
 }
 
+// Doxygen doesn't correctly handle implementation annotations that do not
+// appear in the declaration.
+/// \cond DO_NOT_DOCUMENT
 // TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KTrussAssertValid(
@@ -387,7 +387,7 @@ katana::analytics::KTrussAssertValid(
 
 katana::Result<KTrussStatistics>
 katana::analytics::KTrussStatistics::Compute(
-    katana::PropertyFileGraph* pfg, uint32_t k_truss_number,
+    katana::PropertyFileGraph* pfg, [[maybe_unused]] uint32_t k_truss_number,
     const std::string& property_name) {
   auto pg_result = Graph::Make(pfg, {}, {property_name});
   if (!pg_result) {
@@ -412,11 +412,11 @@ katana::analytics::KTrussStatistics::Compute(
       },
       katana::loopname("KTruss sanity check"), katana::no_stats());
 
-  return KTrussStatistics{k_truss_number, alive_edges.reduce()};
+  return KTrussStatistics{alive_edges.reduce()};
 }
+/// \endcond DO_NOT_DOCUMENT
 
 void
-katana::analytics::KTrussStatistics::Print(std::ostream& os) {
-  os << "K core number = " << k_truss_number << std::endl;
+katana::analytics::KTrussStatistics::Print(std::ostream& os) const {
   os << "Number of nodes in the core = " << number_of_edges_left << std::endl;
 }

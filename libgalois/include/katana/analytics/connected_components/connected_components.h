@@ -13,7 +13,7 @@ namespace katana::analytics {
 
 /// A computational plan to for ConnectedComponents, specifying the algorithm and any
 /// parameters associated with it.
-class ConnectedComponentsPlan : Plan {
+class ConnectedComponentsPlan : public Plan {
 public:
   /// Algorithm selectors for Connected-components
   enum Algorithm {
@@ -28,6 +28,10 @@ public:
     kEdgeAfforest,
     kEdgeTiledAfforest
   };
+
+  static const ptrdiff_t kDefaultEdgeTileSize = 512;
+  static const uint32_t kDefaultNeighborSampleSize = 2;
+  static const uint32_t kDefaultComponentSampleFrequency = 1024;
 
   // Don't allow people to directly construct these, so as to have only one
   // consistent way to configure.
@@ -51,7 +55,9 @@ public:
   static const int kChunkSize;
 
   ConnectedComponentsPlan()
-      : ConnectedComponentsPlan{kCPU, kAfforest, 0, 2, 1024} {}
+      : ConnectedComponentsPlan{
+            kCPU, kAfforest, 0, kDefaultNeighborSampleSize,
+            kDefaultComponentSampleFrequency} {}
 
   Algorithm algorithm() const { return algorithm_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
@@ -94,7 +100,7 @@ public:
 
   /// Similar EdgeSynchronous with the work-item as block of edges.
   static ConnectedComponentsPlan EdgeTiledAsynchronous(
-      ptrdiff_t edge_tile_size = 512) {
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kEdgeTiledAsynchronous, edge_tile_size, 0, 0};
   }
 
@@ -110,8 +116,8 @@ public:
   /// Parallel and Distributed Processing Symposium (IPDPS), Vancouver, BC, 2018,
   /// pp. 12-21.
   static ConnectedComponentsPlan Afforest(
-      uint32_t neighbor_sample_size = 2,
-      uint32_t component_sample_frequency = 1024) {
+      uint32_t neighbor_sample_size = kDefaultNeighborSampleSize,
+      uint32_t component_sample_frequency = kDefaultComponentSampleFrequency) {
     return {
         kCPU, kAfforest, 0, neighbor_sample_size, component_sample_frequency};
   }
@@ -122,8 +128,8 @@ public:
   /// Parallel and Distributed Processing Symposium (IPDPS), Vancouver, BC, 2018,
   /// pp. 12-21.
   static ConnectedComponentsPlan EdgeAfforest(
-      uint32_t neighbor_sample_size = 2,
-      uint32_t component_sample_frequency = 1024) {
+      uint32_t neighbor_sample_size = kDefaultNeighborSampleSize,
+      uint32_t component_sample_frequency = kDefaultComponentSampleFrequency) {
     return {
         kCPU, kEdgeAfforest, 0, neighbor_sample_size,
         component_sample_frequency};
@@ -135,8 +141,9 @@ public:
   /// Parallel and Distributed Processing Symposium (IPDPS), Vancouver, BC, 2018,
   /// pp. 12-21.
   static ConnectedComponentsPlan EdgeTiledAfforest(
-      ptrdiff_t edge_tile_size = 512, uint32_t neighbor_sample_size = 2,
-      uint32_t component_sample_frequency = 1024) {
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize,
+      uint32_t neighbor_sample_size = kDefaultNeighborSampleSize,
+      uint32_t component_sample_frequency = kDefaultComponentSampleFrequency) {
     return {
         kCPU, kEdgeAfforest, edge_tile_size, neighbor_sample_size,
         component_sample_frequency};
@@ -165,10 +172,10 @@ struct KATANA_EXPORT ConnectedComponentsStatistics {
   /// The number of nodes present in the largest component.
   uint64_t largest_component_size;
   /// The ratio of nodes present in the largest component.
-  double ratio_largest_component;
+  double largest_component_ratio;
 
   /// Print the statistics in a human readable form.
-  void Print(std::ostream& os = std::cout);
+  void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<ConnectedComponentsStatistics> Compute(
       katana::PropertyFileGraph* pfg, const std::string& property_name);

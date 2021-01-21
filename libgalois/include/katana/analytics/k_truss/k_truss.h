@@ -13,7 +13,7 @@ namespace katana::analytics {
 
 /// A computational plan to for k-truss, specifying the algorithm and any
 /// parameters associated with it.
-class KTrussPlan : Plan {
+class KTrussPlan : public Plan {
 public:
   /// Algorithm selectors for KCore
   enum Algorithm { kBsp, kBspJacobi, kBspCoreThenTruss };
@@ -52,18 +52,15 @@ KATANA_EXPORT Result<void> KTruss(
     const std::string& output_property_name, KTrussPlan plan = KTrussPlan());
 
 KATANA_EXPORT Result<void> KTrussAssertValid(
-    [[maybe_unused]] PropertyFileGraph* pfg,
-    [[maybe_unused]] uint32_t k_truss_number,
-    [[maybe_unused]] const std::string& property_name);
+    PropertyFileGraph* pfg, uint32_t k_truss_number,
+    const std::string& property_name);
 
 struct KATANA_EXPORT KTrussStatistics {
-  /// k-truss number
-  uint32_t k_truss_number;
   /// Total number of edges left in the truss.
   uint64_t number_of_edges_left;
 
   /// Print the statistics in a human readable form.
-  void Print(std::ostream& os = std::cout);
+  void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KTrussStatistics> Compute(
       katana::PropertyFileGraph* pfg, uint32_t k_truss_number,

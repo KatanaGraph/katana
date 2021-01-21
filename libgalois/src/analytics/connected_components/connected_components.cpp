@@ -33,8 +33,7 @@ struct ConnectedComponentsNode
   using ComponentType = ConnectedComponentsNode*;
 
   ConnectedComponentsNode()
-      : katana::UnionFindNode<ConnectedComponentsNode>(
-            const_cast<ConnectedComponentsNode*>(this)) {}
+      : katana::UnionFindNode<ConnectedComponentsNode>(this) {}
   ConnectedComponentsNode(const ConnectedComponentsNode& o)
       : katana::UnionFindNode<ConnectedComponentsNode>(o.m_component) {}
 
@@ -60,8 +59,9 @@ struct ConnectedComponentsSerialAlgo {
   typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsSerialAlgo(ConnectedComponentsPlan& plan) : plan_(plan) {}
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsSerialAlgo(const ConnectedComponentsPlan& plan)
+      : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
@@ -634,10 +634,10 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
         return a.second < b.second;
       });
 
-  katana::gDebug(
-      "Approximate largest intermediate component: ", most_frequent->first,
-      " (hit rate ",
-      100.0 * (most_frequent->second) / component_sample_frequency, "%)");
+  //katana::gDebug(
+  //    "Approximate largest intermediate component: ", most_frequent->first,
+  //    " (hit rate ",
+  //    100.0 * (most_frequent->second) / component_sample_frequency, "%)");
 
   return most_frequent->first;
 }
@@ -646,9 +646,7 @@ struct ConnectedComponentsAfforestAlgo {
   struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
 
-    NodeAfforest()
-        : katana::UnionFindNode<NodeAfforest>(const_cast<NodeAfforest*>(this)) {
-    }
+    NodeAfforest() : katana::UnionFindNode<NodeAfforest>(this) {}
     NodeAfforest(const NodeAfforest& o)
         : katana::UnionFindNode<NodeAfforest>(o.m_component) {}
 
@@ -1117,46 +1115,36 @@ katana::analytics::ConnectedComponents(
   case ConnectedComponentsPlan::kSerial:
     return ConnectedComponentsWithWrap<ConnectedComponentsSerialAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kLabelProp:
     return ConnectedComponentsWithWrap<ConnectedComponentsLabelPropAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kSynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsSynchronousAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsAsynchronousAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kEdgeAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsynchronousAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAsynchronousAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kBlockedAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsBlockedAsynchronousAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsAfforestAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kEdgeAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAfforestAlgo>(
         pfg, output_property_name, plan);
-    break;
   case ConnectedComponentsPlan::kEdgeTiledAfforest:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAfforestAlgo>(
         pfg, output_property_name, plan);
-    break;
   default:
     return ErrorCode::InvalidArgument;
   }
@@ -1278,24 +1266,25 @@ katana::analytics::ConnectedComponentsStatistics::Compute(
   ComponentSizePair largest = maxComp.reduce();
 
   // Compensate for dropping representative node of components
-  double ratio_largest_component = graph.size() - reps + map.size();
   size_t largest_component_size = largest.second + 1;
-  if (ratio_largest_component) {
-    ratio_largest_component = largest_component_size / ratio_largest_component;
+  double largest_component_ratio = 0;
+  if (!graph.empty()) {
+    largest_component_ratio = double(largest_component_size) / graph.size();
   }
 
   return ConnectedComponentsStatistics{
       reps, non_trivial_components.reduce(), largest_component_size,
-      ratio_largest_component};
+      largest_component_ratio};
 }
 
 void
-katana::analytics::ConnectedComponentsStatistics::Print(std::ostream& os) {
+katana::analytics::ConnectedComponentsStatistics::Print(
+    std::ostream& os) const {
   os << "Total number of components = " << total_components << std::endl;
   os << "Total number of non trivial components = "
      << total_non_trivial_components << std::endl;
   os << "Number of nodes in the largest component = " << largest_component_size
      << std::endl;
-  os << "Ratio of nodes in the largest component = " << ratio_largest_component
+  os << "Ratio of nodes in the largest component = " << largest_component_ratio
      << std::endl;
 }

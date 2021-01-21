@@ -1,7 +1,7 @@
 function(add_test_unit name)
-  set(options NOT_QUICK)
-  set(multi_value_args REQUIRES)
-  cmake_parse_arguments(X "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+  set(no_value_options NOT_QUICK)
+  set(multi_value_options REQUIRES)
+  cmake_parse_arguments(X "${no_value_options}" "" "${multi_value_options}" ${ARGN})
 
   foreach(required ${X_REQUIRES})
     if(${${required}} MATCHES "TRUE")

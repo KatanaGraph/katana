@@ -1,45 +1,36 @@
 # The expected public names (without _) are provided using pure python modules.
 
-add_cython_module(plan
-    SOURCES plan.pyx
+add_cython_module(plan plan.pyx
     LIBRARIES Katana::galois)
 
-add_cython_module(_wrappers
-    SOURCES _wrappers.pyx
+add_cython_module(_wrappers _wrappers.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_pagerank
-    SOURCES _pagerank.pyx
+add_cython_module(_pagerank _pagerank.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_betweenness_centrality
-    SOURCES _betweenness_centrality.pyx
+add_cython_module(_betweenness_centrality _betweenness_centrality.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_triangle_count
-    SOURCES _triangle_count.pyx
+add_cython_module(_triangle_count _triangle_count.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_independent_set
-    SOURCES _independent_set.pyx
+add_cython_module(_independent_set _independent_set.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_connected_components
-    SOURCES _connected_components.pyx
+add_cython_module(_connected_components _connected_components.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_k_core
-    SOURCES _k_core.pyx
+add_cython_module(_k_core _k_core.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
 
-add_cython_module(_k_truss
-    SOURCES _k_truss.pyx
+add_cython_module(_k_truss _k_truss.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)

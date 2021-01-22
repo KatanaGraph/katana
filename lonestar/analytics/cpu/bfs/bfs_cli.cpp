@@ -22,7 +22,6 @@
 #include <katana/analytics/bfs/bfs.h>
 
 #include "Lonestar/BoilerPlate.h"
-#include "katana/analytics/bfs/bfs_internal.h"
 
 using namespace katana::analytics;
 
@@ -90,33 +89,43 @@ main(int argc, char** argv) {
 
   if (startNode >= pfg->topology().num_nodes() ||
       reportNode >= pfg->topology().num_nodes()) {
-    std::cerr << "failed to set report: " << reportNode
-              << " or failed to set source: " << startNode << "\n";
-    abort();
+    KATANA_LOG_FATAL(
+        "failed to set report: {} or failed to set source: {}", reportNode,
+        startNode);
   }
 
   katana::reportPageAlloc("MeminfoPre");
 
-  if (auto r = Bfs(pfg.get(), startNode, "level", BfsPlan::FromAlgorithm(algo));
-      !r) {
+  BfsPlan plan;
+  switch (algo.getValue()) {
+  case BfsPlan::kAsynchronous:
+    plan = BfsPlan::Asynchronous();
+    break;
+  case BfsPlan::kAsynchronousTile:
+    plan = BfsPlan::AsynchronousTile();
+    break;
+  case BfsPlan::kSynchronous:
+    plan = BfsPlan::Synchronous();
+    break;
+  case BfsPlan::kSynchronousTile:
+    plan = BfsPlan::SynchronousTile();
+    break;
+  }
+
+  if (auto r = Bfs(pfg.get(), startNode, "level", plan); !r) {
     KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
   }
 
-  auto pg_result = BfsImplementation::Graph::Make(pfg.get(), {"level"}, {});
-  if (!pg_result) {
-    KATANA_LOG_FATAL("Failed to create graph {}", pg_result.error());
-  }
-
-  BfsImplementation::Graph graph = pg_result.value();
-
-  auto it = graph.begin();
-  std::advance(it, reportNode.getValue());
-  BfsImplementation::Graph::Node report = *it;
-
   katana::reportPageAlloc("MeminfoPost");
 
+  auto r = pfg->GetNodePropertyTyped<uint32_t>("level");
+  if (!r) {
+    KATANA_LOG_FATAL("Failed to get node property {}", r.error());
+  }
+  auto results = r.value();
+
   std::cout << "Node " << reportNode << " has distance "
-            << graph.GetData<BfsNodeDistance>(report) << "\n";
+            << results->Value(reportNode) << "\n";
 
   auto stats_result = BfsStatistics::Compute(pfg.get(), "level");
   if (!stats_result) {
@@ -126,25 +135,21 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (stats.n_reached_nodes < graph.num_nodes()) {
-      std::cerr << (graph.num_nodes() - stats.n_reached_nodes)
-                << " unvisited nodes; this is an error if the graph is "
-                   "strongly connected\n";
+    if (stats.n_reached_nodes < pfg->num_nodes()) {
+      KATANA_LOG_WARN(
+          "{} unvisited nodes; this is an error if the graph is strongly "
+          "connected",
+          pfg->num_nodes() - stats.n_reached_nodes);
     }
     if (BfsAssertValid(pfg.get(), "level")) {
       std::cout << "Verification successful.\n";
     } else {
-      KATANA_DIE("verification failed");
+      KATANA_LOG_FATAL("verification failed");
     }
   }
 
   if (output) {
-    auto r = pfg->GetNodePropertyTyped<uint32_t>("level");
-    if (!r) {
-      KATANA_LOG_FATAL("Failed to get node property {}", r.error());
-    }
-    auto results = r.value();
-    KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == graph.size());
+    KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pfg->size());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

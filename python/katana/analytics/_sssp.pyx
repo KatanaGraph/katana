@@ -11,7 +11,7 @@ from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
 
 
-cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
+cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
     cppclass _SsspPlan "katana::analytics::SsspPlan" (_Plan):
         enum Algorithm:
             kDeltaTile "katana::analytics::SsspPlan::kDeltaTile"
@@ -38,21 +38,16 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
         _SsspPlan DeltaStep(unsigned delta)
         @staticmethod
         _SsspPlan DeltaStepBarrier(unsigned delta)
-
         @staticmethod
         _SsspPlan SerialDeltaTile(unsigned delta, ptrdiff_t edge_tile_size)
         @staticmethod
         _SsspPlan SerialDelta(unsigned delta)
-
         @staticmethod
         _SsspPlan DijkstraTile(ptrdiff_t edge_tile_size)
-
         @staticmethod
         _SsspPlan Dijkstra()
-
         @staticmethod
         _SsspPlan Topological()
-
         @staticmethod
         _SsspPlan TopologicalTile(ptrdiff_t edge_tile_size)
 
@@ -60,13 +55,10 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
     std_result[void] Sssp(PropertyFileGraph* pfg, size_t start_node,
-        string edge_weight_property_name, string output_property_name,
-        _SsspPlan plan)
+        const string& edge_weight_property_name, const string& output_property_name, _SsspPlan plan)
 
-    std_result[void] SsspAssertValid(
-        PropertyFileGraph* pfg, size_t start_node,
-        string edge_weight_property_name,
-        string output_property_name);
+    std_result[void] SsspAssertValid(PropertyFileGraph* pfg, size_t start_node,
+                                     const string& edge_weight_property_name, const string& output_property_name);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
         double max_distance
@@ -75,11 +67,11 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
 
         double average_distance()
 
-        void Print(ostream)
+        void Print(ostream os)
 
         @staticmethod
-        std_result[_SsspStatistics] Compute(
-            PropertyFileGraph* pfg, string output_property_name);
+        std_result[_SsspStatistics] Compute(PropertyFileGraph* pfg, string output_property_name);
+
 
 class _SsspAlgorithm(Enum):
     DeltaTile = _SsspPlan.Algorithm.kDeltaTile
@@ -92,7 +84,6 @@ class _SsspAlgorithm(Enum):
     Topological = _SsspPlan.Algorithm.kTopological
     TopologicalTile = _SsspPlan.Algorithm.kTopologicalTile
     Automatic = _SsspPlan.Algorithm.kAutomatic
-
 
 
 cdef class SsspPlan(Plan):
@@ -108,7 +99,6 @@ cdef class SsspPlan(Plan):
         f.underlying_ = u
         return f
 
-
     def __init__(self, graph = None):
         if graph is None:
             self.underlying_ = _SsspPlan()
@@ -122,11 +112,9 @@ cdef class SsspPlan(Plan):
     @property
     def algorithm(self) -> _SsspAlgorithm:
         return _SsspAlgorithm(self.underlying_.algorithm())
-
     @property
     def delta(self) -> int:
         return self.underlying_.delta()
-
     @property
     def edge_tile_size(self) -> int:
         return self.underlying_.edge_tile_size()
@@ -162,21 +150,18 @@ cdef class SsspPlan(Plan):
 
 def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
          SsspPlan plan = SsspPlan()):
-    edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
-    edge_weight_property_name_cstr = <string>edge_weight_property_name_bytes
-    output_property_name_bytes = bytes(output_property_name, "utf-8")
-    output_property_name_cstr = <string>output_property_name_bytes
+    cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
+    cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_cstr,
-                                output_property_name_cstr, plan.underlying_))
+        handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_str,
+                                output_property_name_str, plan.underlying_))
 
 def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
-    edge_weight_property_name_bytes = bytes(edge_weight_property_name, "utf-8")
-    edge_weight_property_name_cstr = <string>edge_weight_property_name_bytes
-    output_property_name_bytes = bytes(output_property_name, "utf-8")
-    output_property_name_cstr = <string>output_property_name_bytes
+    cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
+    cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(SsspAssertValid(pg.underlying.get(), start_node, edge_weight_property_name_cstr, output_property_name_cstr))
+        handle_result_assert(SsspAssertValid(pg.underlying.get(), start_node, edge_weight_property_name_str, output_property_name_str))
+
 
 cdef _SsspStatistics handle_result_SsspStatistics(std_result[_SsspStatistics] res) nogil except *:
     if not res.has_value():
@@ -184,15 +169,15 @@ cdef _SsspStatistics handle_result_SsspStatistics(std_result[_SsspStatistics] re
             raise_error_code(res.error())
     return res.value()
 
+
 cdef class SsspStatistics:
     cdef _SsspStatistics underlying
 
     def __init__(self, PropertyGraph pg, str output_property_name):
-        output_property_name_bytes = bytes(output_property_name, "utf-8")
-        output_property_name_cstr = <string> output_property_name_bytes
+        cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
             self.underlying = handle_result_SsspStatistics(_SsspStatistics.Compute(
-                pg.underlying.get(), output_property_name_cstr))
+                pg.underlying.get(), output_property_name_str))
 
     @property
     def max_distance(self):

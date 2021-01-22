@@ -25,26 +25,27 @@
 using namespace katana::analytics;
 
 namespace cll = llvm::cl;
+namespace {
 
-static const char* name = "Single Source Shortest Path";
-static const char* desc =
+const char* name = "Single Source Shortest Path";
+const char* desc =
     "Computes the shortest path from a source node to all nodes in a directed "
     "graph using a modified chaotic iteration algorithm";
-static const char* url = "single_source_shortest_path";
+const char* url = "single_source_shortest_path";
 
-static cll::opt<std::string> inputFile(
+cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int> startNode(
+cll::opt<unsigned int> startNode(
     "startNode", cll::desc("Node to start search from (default value 0)"),
     cll::init(0));
-static cll::opt<unsigned int> reportNode(
+cll::opt<unsigned int> reportNode(
     "reportNode", cll::desc("Node to report distance to(default value 1)"),
     cll::init(1));
-static cll::opt<unsigned int> stepShift(
+cll::opt<unsigned int> stepShift(
     "delta", cll::desc("Shift value for the deltastep (default value 13)"),
     cll::init(13));
 
-static cll::opt<SsspPlan::Algorithm> algo(
+cll::opt<SsspPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value auto):"),
     cll::values(
         clEnumValN(SsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
@@ -61,8 +62,8 @@ static cll::opt<SsspPlan::Algorithm> algo(
             SsspPlan::kDijkstraTile, "DijkstraTile",
             "Dijkstra's algorithm tiled"),
         clEnumValN(SsspPlan::kDijkstra, "Dijkstra", "Dijkstra's algorithm"),
-        clEnumValN(SsspPlan::kTopo, "Topo", "Topological"),
-        clEnumValN(SsspPlan::kTopoTile, "TopoTile", "Topological tiled"),
+        clEnumValN(SsspPlan::kTopological, "Topo", "Topological"),
+        clEnumValN(SsspPlan::kTopologicalTile, "TopoTile", "Topological tiled"),
         clEnumValN(
             SsspPlan::kAutomatic, "Automatic",
             "Automatic: choose among the algorithms automatically")),
@@ -89,10 +90,10 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
     return "DijkstraTile";
   case SsspPlan::kDijkstra:
     return "Dijkstra";
-  case SsspPlan::kTopo:
-    return "Topo";
-  case SsspPlan::kTopoTile:
-    return "TopoTile";
+  case SsspPlan::kTopological:
+    return "Topological";
+  case SsspPlan::kTopologicalTile:
+    return "TopologicalTile";
   case SsspPlan::kAutomatic:
     return "Automatic";
   default:
@@ -113,6 +114,8 @@ OutputResults(katana::PropertyFileGraph* pfg) {
 
   writeOutput(outputLocation, results->raw_values(), results->length());
 }
+
+}  // namespace
 
 int
 main(int argc, char** argv) {
@@ -171,11 +174,11 @@ main(int argc, char** argv) {
   case SsspPlan::kDijkstra:
     plan = SsspPlan::Dijkstra();
     break;
-  case SsspPlan::kTopo:
-    plan = SsspPlan::Topo();
+  case SsspPlan::kTopological:
+    plan = SsspPlan::Topological();
     break;
-  case SsspPlan::kTopoTile:
-    plan = SsspPlan::TopoTile();
+  case SsspPlan::kTopologicalTile:
+    plan = SsspPlan::TopologicalTile();
     break;
   case SsspPlan::kAutomatic:
     plan = SsspPlan();

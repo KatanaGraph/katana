@@ -34,3 +34,11 @@ add_cython_module(_k_core _k_core.pyx
 add_cython_module(_k_truss _k_truss.pyx
     DEPENDS plan
     LIBRARIES Katana::galois)
+
+add_cython_module(_sssp _sssp.pyx
+    DEPENDS plan
+    LIBRARIES Katana::galois)
+
+add_cython_module(_bfs _bfs.pyx
+    DEPENDS plan
+    LIBRARIES Katana::galois)

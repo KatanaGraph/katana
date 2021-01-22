@@ -19,13 +19,22 @@
 
 #include "katana/analytics/sssp/sssp.h"
 
-// Implementation
+using namespace katana::analytics;
 
-namespace katana::analytics {
+namespace {
+
+template <typename Weight>
+struct SsspNodeDistance {
+  using ArrowType = typename arrow::CTypeTraits<Weight>::ArrowType;
+  using ViewType = katana::PODPropertyView<std::atomic<Weight>>;
+};
+
+template <typename Weight>
+using SsspEdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
 struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
-                                PropertyGraph<
+                                katana::PropertyGraph<
                                     std::tuple<SsspNodeDistance<Weight>>,
                                     std::tuple<SsspEdgeWeight<Weight>>>,
                                 Weight, true> {
@@ -34,7 +43,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
 
   using NodeData = typename std::tuple<NodeDistance>;
   using EdgeData = typename std::tuple<EdgeWeight>;
-  using Graph = PropertyGraph<NodeData, EdgeData>;
+  using Graph = katana::PropertyGraph<NodeData, EdgeData>;
 
   using Base =
       katana::analytics::BfsSsspImplementationBase<Graph, Weight, true>;
@@ -78,8 +87,9 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
           const auto& sdata = graph->template GetData<NodeDistance>(item.src);
 
           if (sdata < item.dist) {
-            if (kTrackWork)
+            if (kTrackWork) {
               WLEmptyWork += 1;
+            }
             return;
           }
 
@@ -341,10 +351,10 @@ public:
       DijkstraAlgo<UpdateRequest>(
           &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph});
       break;
-    case SsspPlan::kTopo:
+    case SsspPlan::kTopological:
       TopoAlgo(&graph, source);
       break;
-    case SsspPlan::kTopoTile:
+    case SsspPlan::kTopologicalTile:
       TopoTileAlgo(&graph, source);
       break;
     case SsspPlan::kDeltaStepBarrier:
@@ -362,27 +372,23 @@ public:
 };
 
 template <typename Weight>
-Result<void>
+katana::Result<void>
 Sssp(
-    PropertyGraph<
+    katana::PropertyGraph<
         std::tuple<SsspNodeDistance<Weight>>,
         std::tuple<SsspEdgeWeight<Weight>>>& pg,
     size_t start_node, SsspPlan plan) {
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
-  katana::analytics::SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
+  SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
   return impl.SSSP(pg, start_node, plan);
 }
-
-}  // namespace katana::analytics
-
-using namespace katana::analytics;
 
 template <typename Weight>
 static katana::Result<void>
 SSSPWithWrap(
     katana::PropertyFileGraph* pfg, size_t start_node,
-    std::string edge_weight_property_name, std::string output_property_name,
-    SsspPlan plan) {
+    const std::string& edge_weight_property_name,
+    const std::string& output_property_name, SsspPlan plan) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
           pfg, {output_property_name});
       !r) {
@@ -404,8 +410,10 @@ SSSPWithWrap(
     return graph.error();
   }
 
-  return katana::analytics::Sssp(graph.value(), start_node, plan);
+  return Sssp(graph.value(), start_node, plan);
 }
+
+}  // namespace
 
 katana::Result<void>
 katana::analytics::Sssp(
@@ -435,6 +443,8 @@ katana::analytics::Sssp(
     return katana::ErrorCode::TypeError;
   }
 }
+
+namespace {
 
 template <typename Weight>
 static katana::Result<void>
@@ -468,6 +478,8 @@ SsspValidateImpl(
   return katana::ResultSuccess();
 }
 
+}  // namespace
+
 katana::Result<void>
 katana::analytics::SsspAssertValid(
     katana::PropertyFileGraph* pfg, size_t start_node,
@@ -496,6 +508,8 @@ katana::analytics::SsspAssertValid(
     return katana::ErrorCode::TypeError;
   }
 }
+
+namespace {
 
 template <typename Weight>
 static katana::Result<SsspStatistics>
@@ -536,6 +550,8 @@ ComputeStatistics(
       num_visited.reduce()};
 }
 
+}  // namespace
+
 katana::Result<SsspStatistics>
 SsspStatistics::Compute(
     PropertyFileGraph* pfg, const std::string& output_property_name) {
@@ -558,7 +574,7 @@ SsspStatistics::Compute(
 }
 
 void
-SsspStatistics::Print(std::ostream& os) {
+SsspStatistics::Print(std::ostream& os) const {
   os << "Number of reached nodes = " << n_reached_nodes << std::endl;
   os << "Maximum distance = " << max_distance << std::endl;
   os << "Sum of distances = " << total_distance << std::endl;

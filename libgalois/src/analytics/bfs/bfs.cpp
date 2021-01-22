@@ -17,23 +17,39 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "katana/analytics/bfs/bfs.h"
+
 #include <deque>
 #include <type_traits>
 
-#include "katana/analytics/bfs/bfs_internal.h"
+#include "katana/analytics/BfsSsspImplementationBase.h"
 
 using namespace katana::analytics;
 
+namespace {
+
+/// The tag for the output property of BFS in PropertyGraphs.
+using BfsNodeDistance = katana::PODProperty<uint32_t>;
+
+struct BfsImplementation
+    : BfsSsspImplementationBase<
+          katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>,
+          unsigned int, false> {
+  BfsImplementation(ptrdiff_t edge_tile_size)
+      : BfsSsspImplementationBase<
+            katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>,
+            unsigned int, false>{edge_tile_size} {}
+};
+
 using Graph = BfsImplementation::Graph;
 
-constexpr static unsigned kChunkSize = 256U;
+constexpr unsigned kChunkSize = 256U;
 
-constexpr static bool kTrackWork = BfsImplementation::kTrackWork;
+constexpr bool kTrackWork = BfsImplementation::kTrackWork;
 
 using UpdateRequest = BfsImplementation::UpdateRequest;
 using Dist = BfsImplementation::Dist;
 using SrcEdgeTile = BfsImplementation::SrcEdgeTile;
-using SrcEdgeTileMaker = BfsImplementation::SrcEdgeTileMaker;
 using SrcEdgeTilePushWrap = BfsImplementation::SrcEdgeTilePushWrap;
 using ReqPushWrap = BfsImplementation::ReqPushWrap;
 using OutEdgeRangeFn = BfsImplementation::OutEdgeRangeFn;
@@ -46,14 +62,15 @@ struct EdgeTile {
 
 struct EdgeTileMaker {
   EdgeTile operator()(
-      Graph::edge_iterator beg, Graph::edge_iterator end) const {
+      const Graph::edge_iterator& beg, const Graph::edge_iterator& end) const {
     return EdgeTile{beg, end};
   }
 };
 
 struct NodePushWrap {
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n, const char* const) const {
+  void operator()(
+      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
     (*this)(cont, n);
   }
 
@@ -68,7 +85,8 @@ struct EdgeTilePushWrap {
   BfsImplementation& impl;
 
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n, const char* const) const {
+  void operator()(
+      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
     impl.PushEdgeTilesParallel(cont, graph, n, EdgeTileMaker{});
   }
 
@@ -82,7 +100,8 @@ struct OneTilePushWrap {
   Graph* graph;
 
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n, const char* const) const {
+  void operator()(
+      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
     (*this)(cont, n);
   }
 
@@ -251,7 +270,7 @@ RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
   }
 }
 
-static katana::Result<void>
+katana::Result<void>
 BfsImpl(
     katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>& graph,
     size_t start_node, BfsPlan algo) {
@@ -279,6 +298,8 @@ BfsImpl(
 
   return katana::ResultSuccess();
 }
+
+}  // namespace
 
 katana::Result<void>
 katana::analytics::Bfs(
@@ -342,13 +363,10 @@ katana::analytics::BfsStatistics::Compute(
 
   BfsImplementation::Graph graph = pg_result.value();
 
-  uint32_t source_node;
+  uint32_t source_node = std::numeric_limits<uint32_t>::max();
   GReduceMax<uint32_t> max_dist;
   GAccumulator<uint64_t> sum_dist;
   GAccumulator<uint32_t> num_visited;
-  max_dist.reset();
-  sum_dist.reset();
-  num_visited.reset();
 
   auto max_possible_distance = graph.num_nodes();
 
@@ -368,12 +386,14 @@ katana::analytics::BfsStatistics::Compute(
       },
       loopname("BFS Sanity check"), no_stats());
 
+  KATANA_LOG_DEBUG_ASSERT(source_node != std::numeric_limits<uint32_t>::max());
+
   return BfsStatistics{
       source_node, max_dist.reduce(), sum_dist.reduce(), num_visited.reduce()};
 }
 
 void
-katana::analytics::BfsStatistics::Print(std::ostream& os) {
+katana::analytics::BfsStatistics::Print(std::ostream& os) const {
   os << "Source node = " << source_node << std::endl;
   os << "Number of reached nodes = " << n_reached_nodes << std::endl;
   os << "Maximum distance = " << max_distance << std::endl;

@@ -17,15 +17,12 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include <iostream>
 #include <map>
-
-#include <katana/analytics/bfs/bfs.h>
 
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/K_SSSP.h"
 #include "katana/AtomicHelpers.h"
-#include "katana/analytics/bfs/bfs_internal.h"
+#include "katana/analytics/BfsSsspImplementationBase.h"
 
 using namespace katana::analytics;
 

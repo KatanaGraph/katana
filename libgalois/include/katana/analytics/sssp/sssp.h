@@ -6,8 +6,6 @@
 #include "katana/analytics/Plan.h"
 #include "katana/analytics/Utils.h"
 
-// API
-
 namespace katana::analytics {
 
 /// A computational plan to for SSSP, specifying the algorithm and any
@@ -19,14 +17,18 @@ public:
     kDeltaTile,
     kDeltaStep,
     kDeltaStepBarrier,
-    kSerialDeltaTile,  // TODO: Do we want to expose these at all?
+    // TODO(gill): Do we want to expose serial implementations at all?
+    kSerialDeltaTile,
     kSerialDelta,
     kDijkstraTile,
     kDijkstra,
-    kTopo,
-    kTopoTile,
+    kTopological,
+    kTopologicalTile,
     kAutomatic,
   };
+
+  static const int kDefaultDelta = 13;
+  static const int kDefaultEdgeTileSize = 512;
 
   // Don't allow people to directly construct these, so as to have only one
   // consistent way to configure.
@@ -52,10 +54,7 @@ public:
   SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
 
   SsspPlan(const katana::PropertyFileGraph* pfg) : Plan(kCPU) {
-    katana::StatTimer autoAlgoTimer("SSSP_Automatic_Algorithm_Selection");
-    autoAlgoTimer.start();
     bool isPowerLaw = IsApproximateDegreeDistributionPowerLaw(*pfg);
-    autoAlgoTimer.stop();
     if (isPowerLaw) {
       *this = DeltaStep();
     } else {
@@ -68,49 +67,43 @@ public:
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
   static SsspPlan DeltaTile(
-      unsigned delta = 13, ptrdiff_t edge_tile_size = 512) {
+      unsigned delta = kDefaultDelta,
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kDeltaTile, delta, edge_tile_size};
   }
 
-  static SsspPlan DeltaStep(unsigned delta = 13) {
+  static SsspPlan DeltaStep(unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStep, delta, 0};
   }
 
-  static SsspPlan DeltaStepBarrier(unsigned delta = 13) {
+  static SsspPlan DeltaStepBarrier(unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStepBarrier, delta, 0};
   }
 
   static SsspPlan SerialDeltaTile(
-      unsigned delta = 13, ptrdiff_t edge_tile_size = 512) {
+      unsigned delta = kDefaultDelta,
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kSerialDeltaTile, delta, edge_tile_size};
   }
 
-  static SsspPlan SerialDelta(unsigned delta = 13) {
+  static SsspPlan SerialDelta(unsigned delta = kDefaultDelta) {
     return {kCPU, kSerialDelta, delta, 0};
   }
 
-  static SsspPlan DijkstraTile(ptrdiff_t edge_tile_size = 512) {
+  static SsspPlan DijkstraTile(
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kDijkstraTile, 0, edge_tile_size};
   }
 
   static SsspPlan Dijkstra() { return {kCPU, kDijkstra, 0, 0}; }
 
-  // TODO: Should this be "Topological"
-  static SsspPlan Topo() { return {kCPU, kTopo, 0, 0}; }
+  static SsspPlan Topological() { return {kCPU, kTopological, 0, 0}; }
 
-  static SsspPlan TopoTile(ptrdiff_t edge_tile_size = 512) {
-    return {kCPU, kTopoTile, 0, edge_tile_size};
+  static SsspPlan TopologicalTile(
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
+    return {kCPU, kTopologicalTile, 0, edge_tile_size};
   }
 };
-
-template <typename Weight>
-struct SsspNodeDistance {
-  using ArrowType = typename arrow::CTypeTraits<Weight>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<Weight>>;
-};
-
-template <typename Weight>
-using SsspEdgeWeight = katana::PODProperty<Weight>;
 
 /// Compute the Single-Source Shortest Path for pfg starting from start_node.
 /// The edge weights are taken from the property named
@@ -141,7 +134,7 @@ struct KATANA_EXPORT SsspStatistics {
   double average_distance() const { return total_distance / n_reached_nodes; }
 
   /// Print the statistics in a human readable form.
-  void Print(std::ostream& os = std::cout);
+  void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<SsspStatistics> Compute(
       PropertyFileGraph* pfg, const std::string& output_property_name);

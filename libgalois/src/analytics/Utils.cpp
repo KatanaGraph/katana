@@ -41,6 +41,8 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   if (averageDegree < 10) {
     return false;
   }
+  katana::StatTimer autoAlgoTimer("IsApproximateDegreeDistributionPowerLaw");
+  autoAlgoTimer.start();
   SourcePicker sp(graph);
   uint32_t num_samples = 1000;
   if (num_samples > graph.num_nodes()) {
@@ -56,5 +58,6 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   std::sort(samples.begin(), samples.end());
   double sample_average = static_cast<double>(sample_total) / num_samples;
   double sample_median = samples[num_samples / 2];
+  autoAlgoTimer.stop();
   return sample_average / 1.3 > sample_median;
 }

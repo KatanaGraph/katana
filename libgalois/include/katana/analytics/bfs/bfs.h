@@ -19,6 +19,8 @@ public:
     kSynchronous
   };
 
+  static const int kDefaultEdgeTileSize = 256;
+
 private:
   Algorithm algorithm_;
   ptrdiff_t edge_tile_size_;
@@ -30,41 +32,25 @@ private:
         edge_tile_size_(edge_tile_size) {}
 
 public:
-  BfsPlan() : BfsPlan{kCPU, kSynchronousTile, 256} {}
+  BfsPlan() : BfsPlan{kCPU, kSynchronousTile, kDefaultEdgeTileSize} {}
 
   Algorithm algorithm() const { return algorithm_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 
-  static BfsPlan AsynchronousTile(ptrdiff_t edge_tile_size = 256) {
+  static BfsPlan AsynchronousTile(
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kAsynchronousTile, edge_tile_size};
   }
 
   static BfsPlan Asynchronous() { return {kCPU, kAsynchronous, 0}; }
 
-  static BfsPlan SynchronousTile(ptrdiff_t edge_tile_size = 256) {
+  static BfsPlan SynchronousTile(
+      ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
     return {kCPU, kSynchronousTile, edge_tile_size};
   }
 
   static BfsPlan Synchronous() { return {kCPU, kSynchronous, 0}; }
-
-  static BfsPlan FromAlgorithm(Algorithm algo) {
-    switch (algo) {
-    case kAsynchronous:
-      return Asynchronous();
-    case kAsynchronousTile:
-      return AsynchronousTile();
-    case kSynchronous:
-      return Synchronous();
-    case kSynchronousTile:
-      return SynchronousTile();
-    default:
-      return {};
-    }
-  }
 };
-
-/// The tag for the output property of BFS in PropertyGraphs.
-using BfsNodeDistance = katana::PODProperty<uint32_t>;
 
 /// Compute BFS level of nodes in the graph pfg starting from start_node. The
 /// result is stored in a property named by output_property_name. The plan
@@ -94,10 +80,12 @@ struct KATANA_EXPORT BfsStatistics {
   /// The number of nodes reachable from the source node.
   uint32_t n_reached_nodes;
 
-  float average_distance() { return float(total_distance) / n_reached_nodes; }
+  float average_distance() const {
+    return float(total_distance) / n_reached_nodes;
+  }
 
   /// Print the statistics in a human readable form.
-  void Print(std::ostream& os = std::cout);
+  void Print(std::ostream& os = std::cout) const;
 
   /// Compute the statistics of BFS results stored in property_name.
   static katana::Result<BfsStatistics> Compute(

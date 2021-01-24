@@ -1114,6 +1114,26 @@ RearrangeTypeTable(
   return rearranged;
 }
 
+template <typename BuilderType, typename ValueType>
+std::shared_ptr<arrow::Array>
+BuildImportVec(
+    BuilderType&& builder, std::shared_ptr<arrow::Array> array,
+    const std::vector<katana::ImportData>& imp) {
+  if (auto st = builder.Resize(imp.size()); !st.ok()) {
+    KATANA_LOG_DEBUG(
+        "arrow builder failed resize: {} : {}", imp.size(), st.CodeAsString());
+    return nullptr;
+  }
+  for (auto i : imp) {
+    builder.UnsafeAppend(std::get<ValueType>(i.value));
+  }
+  if (auto st = builder.Finish(&array); !st.ok()) {
+    KATANA_LOG_DEBUG("arrow builder failed: {}", st.CodeAsString());
+    return nullptr;
+  }
+  return array;
+}
+
 }  // end of unnamed namespace
 
 katana::PropertyGraphBuilder::PropertyGraphBuilder(size_t chunk_size)
@@ -1789,6 +1809,7 @@ katana::MakeGraph(const katana::GraphComponents& graph_comps) {
   return graph;
 }
 
+// NB: is_list is always initialized
 void
 ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
   switch (scalar->type->id()) {
@@ -1876,128 +1897,85 @@ katana::WritePropertyGraph(
 }
 
 std::vector<katana::ImportData>
-katana::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
-  std::vector<katana::ImportData> ret;
-  if (arr->num_chunks() == 0) {
-    return ret;
-  }
-  if (arr->chunk(0)->length() == 0) {
-    return ret;
-  }
-  auto res = arr->chunk(0)->GetScalar(0);
-  if (!res.ok()) {
-    return ret;
-  }
-  auto id = res.ValueOrDie()->type->id();
-  auto num = arr->length();
-  ret.reserve(num);
-  switch (id) {
-  case arrow::Type::STRING: {
-    auto vec_res = katana::UnmarshalVector<std::string>(arr);
-    if (!vec_res) {
-      return ret;
+katana::ArrowToImport(const std::shared_ptr<arrow::ChunkedArray>& arr) {
+  std::vector<katana::ImportData> ret(
+      arr->length(),
+      katana::ImportData(katana::ImportDataType::kUnsupported, false));
+  int64_t index = 0;
+  for (int32_t chnum = 0; chnum < arr->num_chunks(); ++chnum) {
+    for (int64_t i = 0; i < arr->chunk(chnum)->length(); ++i) {
+      auto res = arr->chunk(chnum)->GetScalar(i);
+      if (!res.ok()) {
+        KATANA_LOG_DEBUG("ArrowToImport problem scalar: {}", index);
+      } else {
+        ret[index++].ValueFromArrowScalar(res.ValueOrDie());
+      }
     }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kString;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  }
+  return ret;
+}
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::ImportToArrow(const std::vector<katana::ImportData>& imp) {
+  std::shared_ptr<arrow::Array> array = nullptr;
+  // Don't call us with an empty array.
+  if (imp.empty()) {
+    return katana::ErrorCode::InvalidArgument;
+  }
+  auto datum = imp[0];
+  switch (datum.type) {
+  case katana::ImportDataType::kString: {
+    arrow::StringBuilder builder;
+    array = BuildImportVec<arrow::StringBuilder, std::string>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::INT64: {
-    auto vec_res = katana::UnmarshalVector<int64_t>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kInt64;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kInt64: {
+    arrow::Int64Builder builder;
+    array = BuildImportVec<arrow::Int64Builder, int64_t>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::INT32: {
-    auto vec_res = katana::UnmarshalVector<int32_t>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kInt32;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kInt32: {
+    arrow::Int32Builder builder;
+    array = BuildImportVec<arrow::Int32Builder, int32_t>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::DOUBLE: {
-    auto vec_res = katana::UnmarshalVector<double>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kDouble;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kDouble: {
+    arrow::DoubleBuilder builder;
+    array = BuildImportVec<arrow::DoubleBuilder, double>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::FLOAT: {
-    auto vec_res = katana::UnmarshalVector<float>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kFloat;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kFloat: {
+    arrow::FloatBuilder builder;
+    array = BuildImportVec<arrow::FloatBuilder, float>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::BOOL: {
-    auto vec_res = katana::UnmarshalVector<bool>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kBoolean;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kBoolean: {
+    arrow::BooleanBuilder builder;
+    array = BuildImportVec<arrow::BooleanBuilder, bool>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::TIMESTAMP: {
-    auto vec_res = katana::UnmarshalVector<std::int64_t>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kTimestampMilli;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+  case katana::ImportDataType::kTimestampMilli: {
+    auto* pool = arrow::default_memory_pool();
+    arrow::TimestampBuilder builder(
+        arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"), pool);
+    array = BuildImportVec<arrow::TimestampBuilder, bool>(
+        std::move(builder), array, imp);
     break;
   }
-  // for now uint8_t is an alias for a struct
-  case arrow::Type::UINT8: {
-    auto vec_res = katana::UnmarshalVector<std::uint8_t>(arr);
-    if (!vec_res) {
-      return ret;
-    }
-    auto vec = vec_res.value();
-    for (size_t i = 0; i < vec.size(); ++i) {
-      ret[i].type = katana::ImportDataType::kStruct;
-      ret[i].is_list = false;
-      ret[i].value = vec[i];
-    }
+    // for now uint8_t is an alias for a struct
+  case katana::ImportDataType::kStruct: {
+    arrow::UInt8Builder builder;
+    array = BuildImportVec<arrow::UInt8Builder, uint8_t>(
+        std::move(builder), array, imp);
     break;
   }
-  case arrow::Type::LIST: {
+  case katana::ImportDataType::kUnsupported: {
     KATANA_LOG_FATAL("not yet supported");
     break;
   }
@@ -2006,5 +1984,11 @@ katana::ArrowToImport(std::shared_ptr<arrow::ChunkedArray> arr) {
     break;
   }
   }
-  return ret;
+  if (array == nullptr) {
+    return katana::ErrorCode::ArrowError;
+  }
+
+  std::vector<std::shared_ptr<arrow::Array>> chunks;
+  chunks.push_back(std::move(array));
+  return std::make_shared<arrow::ChunkedArray>(chunks);
 }

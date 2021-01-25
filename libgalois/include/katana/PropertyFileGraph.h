@@ -193,21 +193,33 @@ public:
     rdg_.set_part_metadata(meta);
   }
 
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() {
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
     return rdg_.local_to_global_vector();
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
     rdg_.set_local_to_global_vector(std::move(a));
   }
 
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes() {
+  /// Per-host vector of master nodes
+  ///
+  /// master_nodes()[this_host].empty() is true
+  /// master_nodes()[host_i][x] contains LocalNodeID for my master and
+  ///   host_i has a mirror
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
+      const {
     return rdg_.master_nodes();
   }
   void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
     rdg_.set_master_nodes(std::move(a));
   }
 
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes() {
+  /// Per-host vector of mirror nodes
+  ///
+  /// mirror_nodes()[this_host].empty() is true
+  /// mirror_nodes()[host_i][x] contains LocalNodeID for my mirrors and
+  ///   host_i has the master
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
+      const {
     return rdg_.mirror_nodes();
   }
   void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
@@ -419,6 +431,7 @@ public:
 
   bool empty() const { return topology().empty(); }
 
+  // NB: num_nodes in repartitioner is of type LocalNodeID
   uint64_t num_nodes() const { return topology().num_nodes(); }
   uint64_t num_edges() const { return topology().num_edges(); }
 

@@ -63,8 +63,9 @@ FindLatestMetaFile(const katana::Uri& name) {
     }
   }
   if (found_meta.empty()) {
-    KATANA_LOG_DEBUG("failed: could not find meta file in {}", name);
-    return tsuba::ErrorCode::NotFound;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::NotFound, "failed: could not find meta file in {}",
+        name);
   }
   return name.Join(found_meta);
 }
@@ -74,8 +75,8 @@ FindLatestMetaFile(const katana::Uri& name) {
 katana::Result<tsuba::RDGHandle>
 tsuba::Open(const std::string& rdg_name, uint32_t flags) {
   if (!OpenFlagsValid(flags)) {
-    KATANA_LOG_ERROR("invalid value for flags ({:#x})", flags);
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "invalid value for flags ({:#x})", flags);
   }
 
   auto uri_res = katana::Uri::Make(rdg_name);
@@ -85,17 +86,16 @@ tsuba::Open(const std::string& rdg_name, uint32_t flags) {
   katana::Uri uri = std::move(uri_res.value());
 
   if (RDGMeta::IsMetaUri(uri)) {
-    KATANA_LOG_DEBUG(
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
         "failed: {} is probably a literal rdg file and not suited for open",
         uri);
-    return ErrorCode::InvalidArgument;
   }
 
   if (!RDGMeta::IsMetaUri(uri)) {
     // try to be helpful and look for RDGs that we don't know about
     if (auto res = RegisterIfAbsent(uri.string()); !res) {
-      KATANA_LOG_DEBUG("failed to auto-register: {}", res.error());
-      return res.error();
+      return res.error().WithContext("failed to auto-register");
     }
   }
 
@@ -129,25 +129,25 @@ tsuba::Create(const std::string& name) {
   katana::CommBackend* comm = Comm();
   if (comm->ID == 0) {
     if (ContainsValidMetaFile(name)) {
-      KATANA_LOG_ERROR(
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
           "unable to create {}: path already contains a valid meta file", name);
-      return ErrorCode::InvalidArgument;
     }
     std::string s = meta.ToJsonString();
     if (auto res = tsuba::FileStore(
             tsuba::RDGMeta::FileName(uri, meta.version()).string(),
             reinterpret_cast<const uint8_t*>(s.data()), s.size());
         !res) {
-      KATANA_LOG_ERROR("failed to store RDG file");
       comm->NotifyFailure();
-      return res.error();
+      return res.error().WithContext(
+          "failed to store RDG file: {}", uri.string());
     }
   }
 
   // NS handles MPI coordination
   if (auto res = tsuba::NS()->CreateIfAbsent(uri, meta); !res) {
-    KATANA_LOG_ERROR("failed to create RDG name");
-    return res.error();
+    return res.error().WithContext(
+        "failed to create RDG name: {}", uri.string());
   }
 
   return katana::ResultSuccess();
@@ -187,8 +187,9 @@ tsuba::Forget(const std::string& name) {
   katana::Uri uri = std::move(uri_res.value());
 
   if (RDGMeta::IsMetaUri(uri)) {
-    KATANA_LOG_DEBUG("uri does not look like a graph name (ends in meta)");
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "uri does not look like a graph name (ends in meta): {}", uri.string());
   }
 
   // NS ensures only host 0 creates
@@ -207,8 +208,7 @@ tsuba::Stat(const std::string& rdg_name) {
   if (!RDGMeta::IsMetaUri(uri)) {
     // try to be helpful and look for RDGs that we don't know about
     if (auto res = RegisterIfAbsent(uri.string()); !res) {
-      KATANA_LOG_DEBUG("failed to auto-register: {}", res.error());
-      return res.error();
+      return res.error().WithContext("failed to auto-register");
     }
   }
 

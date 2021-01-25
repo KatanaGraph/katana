@@ -6,6 +6,45 @@
 
 #include "katana/config.h"
 
+/// The STL provides a general mechanism for defining error codes that is
+/// intended to be portable across libraries:
+///
+/// - An std::error_code is an integer (called an error enum) plus a pointer to
+///   an std::error_category.
+/// - Various methods on error codes like getting the error message are
+///   implemented by calling a method on the std::error_category with the
+///   integer from the std::error_code
+///
+/// This particular representation of an integer plus a pointer allows an
+/// std::error_code to behave like a traditional error code (i.e., like an
+/// integer), maintains a compact and uniform representation and provides for
+/// namespaced error codes.
+///
+/// An std::error_code is intended to model a specific, possibly
+/// non-portable, error. An std::error_condition is intended to model a
+/// general class of errors that callers can portably compare against. E.g.,
+///
+///   if (error_code == error_condition) { .... }
+///
+/// The representation of both std::error_code and std::error_condition is the
+/// same: an integer plus a pointer to an std::error_category. You can think of
+/// std::error_code and std::error_condition as a two-level hierarchy where
+/// multiple std::error_codes are grouped into an std::error_condition.
+/// std::error_codes are mapped to an std::error_condition via
+/// std::error_category::default_error_condition and
+/// std::error_category::equivalent.
+///
+/// The way to create a new std::error_code is to:
+/// - Define an error enum
+/// - Define a new error category that is a subclass of std::error_category
+/// - Tell the STL about your enum by specializing std::is_error_code_enum
+///   to your enum if an enum class.
+/// - Tell the STL how to create a std::error_code from your enum by defining
+///   make_error_code for your enum. This function will be found by argument
+///   dependent lookup so must be in the same namespace as the error enum.
+///
+/// \file ErrorCode.h
+
 namespace katana {
 
 enum class ErrorCode {
@@ -100,7 +139,7 @@ KATANA_EXPORT const ErrorCodeCategory& GetErrorCodeCategory();
 
 namespace std {
 
-/// Tell STL about our error code.
+/// Tell STL about our error code enum.
 template <>
 struct is_error_code_enum<katana::ErrorCode> : true_type {};
 
@@ -108,8 +147,8 @@ struct is_error_code_enum<katana::ErrorCode> : true_type {};
 
 namespace katana {
 
-/// Overload free function make_error_code with our error code. This will be
-/// found with ADL if necessary.
+/// make_error_code converts ErrorCode into a standard error code. It is an STL
+/// and outcome extension point and will be found with ADL if necessary.
 inline std::error_code
 make_error_code(ErrorCode e) noexcept {
   return {static_cast<int>(e), internal::GetErrorCodeCategory()};

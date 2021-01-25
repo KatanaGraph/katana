@@ -24,18 +24,15 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
 
   CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {
-    KATANA_LOG_DEBUG(
-        "file get failed: {}: sz: {}: {}", t_path, sizeof(gr_header),
-        res.error());
-    return res.error();
+    return res.error().WithContext(
+        "file get failed: {}: sz: {}", t_path, sizeof(gr_header));
   }
   FileView fv;
   if (auto res = fv.Bind(
           t_path.string(),
           sizeof(gr_header) + (gr_header.num_nodes * sizeof(uint64_t)), true);
       !res) {
-    KATANA_LOG_DEBUG("FileView bind failed: {}: {}", t_path, res.error());
-    return res.error();
+    return res.error().WithContext("failed to bind {}", t_path);
   }
 
   return RDGPrefix(
@@ -46,8 +43,9 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::Make(RDGHandle handle) {
   if (handle.impl_->rdg_meta().num_hosts() != 1) {
-    KATANA_LOG_ERROR("cannot construct RDGPrefix for partitioned graph");
-    return ErrorCode::NotImplemented;
+    return KATANA_ERROR(
+        ErrorCode::NotImplemented,
+        "cannot construct RDGPrefix for partitioned graph");
   }
 
   return DoMakePrefix(handle.impl_->rdg_meta());

@@ -26,7 +26,7 @@ AddProperties(
 
     auto load_result = LoadProperties(properties.name, p_path);
     if (!load_result) {
-      return load_result.error();
+      return load_result.error().WithContext("error loading {}", p_path);
     }
 
     std::shared_ptr<arrow::Table> props = load_result.value();

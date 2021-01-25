@@ -123,16 +123,21 @@ tsuba::OneHostOnly(const std::function<katana::Result<void>()>& cb) {
   // execution of OneHostOnly
   Comm()->Barrier();
 
+  katana::Result<void> res = katana::ResultSuccess();
+
   bool failed = false;
   if (Comm()->ID == 0) {
-    auto res = cb();
+    res = cb();
     if (!res) {
-      KATANA_LOG_ERROR("OneHostOnly operation failed: {}", res.error());
       failed = true;
     }
   }
 
   if (Comm()->Broadcast(0, failed)) {
+    if (!res) {
+      return res.error().WithContext(
+          ErrorCode::MpiError, "failure in single host execution");
+    }
     return ErrorCode::MpiError;
   }
 

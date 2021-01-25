@@ -54,7 +54,7 @@ public:
     case ErrorCode::Exists:
       return "already exists";
     case ErrorCode::TODO:
-      return "TODO error yet to be classified";
+      return "TODO";
     case ErrorCode::S3Error:
       return "S3 error";
     case ErrorCode::AWSWrongRegion:

@@ -100,8 +100,7 @@ public:
       if (r.error() != katana::ErrorCode::PropertyNotFound) {
         // Log an error if something goes wrong other than the property not
         // existing.
-        KATANA_LOG_WARN(
-            "Failed to remove temporary property: {}", r.error().message());
+        KATANA_LOG_WARN("Failed to remove temporary property: {}", r.error());
       }
     }
   }

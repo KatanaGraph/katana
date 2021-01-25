@@ -100,8 +100,7 @@ FileFrame::Persist() {
     return tsuba::ErrorCode::InvalidArgument;
   }
   if (path_.empty()) {
-    KATANA_LOG_DEBUG("No path provided to FileFrame");
-    return tsuba::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(tsuba::ErrorCode::InvalidArgument, "no path provided");
   }
   if (auto res = tsuba::FileStore(path_, map_start_, cursor_); !res) {
     return res.error();
@@ -112,11 +111,15 @@ FileFrame::Persist() {
 std::future<katana::Result<void>>
 FileFrame::PersistAsync() {
   if (!valid_) {
-    return katana::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+    return std::async(std::launch::deferred, []() -> katana::Result<void> {
+      return tsuba::ErrorCode::InvalidArgument;
+    });
   }
   if (path_.empty()) {
-    KATANA_LOG_DEBUG("No path provided to FileFrame");
-    return katana::AsyncError<void>(tsuba::ErrorCode::InvalidArgument);
+    return std::async(std::launch::deferred, []() -> katana::Result<void> {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::InvalidArgument, "no path provided");
+    });
   }
   return tsuba::FileStoreAsync(path_, map_start_, cursor_);
 }

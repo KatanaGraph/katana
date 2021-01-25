@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <system_error>
 
 #include <boost/filesystem.hpp>
 
@@ -37,7 +38,7 @@ tsuba::LocalStorage::WriteFile(
   fs::path dir = m_path.parent_path();
   if (boost::system::error_code err; !fs::create_directories(dir, err)) {
     if (err) {
-      return err;
+      return std::error_code(err.value(), err.category());
     }
   }
 
@@ -61,15 +62,15 @@ tsuba::LocalStorage::RemoteCopyFile(
 
   std::ifstream ifile(source_uri, std::ios_base::binary);
   if (!ifile) {
-    KATANA_LOG_ERROR("failed to open source file");
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(
+        ErrorCode::LocalStorageError, "failed to open source file");
   }
   ifile.seekg(begin, std::ios_base::beg);
 
   std::ofstream ofile(dest_uri, std::ios_base::binary | std::ios_base::trunc);
   if (!ofile) {
-    KATANA_LOG_ERROR("failed to open dest file");
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(
+        ErrorCode::LocalStorageError, "failed to open dest file");
   }
 
   std::copy_n(
@@ -86,14 +87,12 @@ tsuba::LocalStorage::ReadFile(
 
   ifile.seekg(start);
   if (!ifile) {
-    KATANA_LOG_DEBUG("failed to seek");
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(ErrorCode::LocalStorageError, "failed to seek");
   }
 
   ifile.read(reinterpret_cast<char*>(data), size); /* NOLINT */
   if (!ifile) {
-    KATANA_LOG_DEBUG("failed to read");
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(ErrorCode::LocalStorageError, "failed to read");
   }
 
   // if the difference in what was read from what we wanted is less  than a
@@ -123,8 +122,8 @@ tsuba::LocalStorage::ListAsync(
     const std::string& uri, std::vector<std::string>* list,
     std::vector<uint64_t>* size) {
   // Implement with synchronous calls
-  DIR* dirp;
-  struct dirent* dp;
+  DIR* dirp{};
+  struct dirent* dp{};
   std::string dirname = uri;
   CleanUri(&dirname);
 
@@ -134,11 +133,14 @@ tsuba::LocalStorage::ListAsync(
       return std::async(
           []() -> katana::Result<void> { return katana::ResultSuccess(); });
     }
-    KATANA_LOG_DEBUG(
-        "\n  Open dir failed: {}: {}", dirname,
-        katana::ResultErrno().message());
-    return std::async(
-        []() -> katana::Result<void> { return ErrorCode::LocalStorageError; });
+
+    std::error_code ec = katana::ResultErrno();
+
+    return std::async([ec, dirname]() -> katana::Result<void> {
+      return KATANA_ERROR(
+          ErrorCode::LocalStorageError, "open dir failed: {}: {}", dirname,
+          ec.message());
+    });
   }
 
   int dfd = dirfd(dirp);
@@ -165,11 +167,15 @@ tsuba::LocalStorage::ListAsync(
   } while (dp != nullptr);
 
   if (errno != 0) {
-    KATANA_LOG_ERROR(
-        "\n  readdir failed: {}: {}", dirname, katana::ResultErrno().message());
-    return std::async(
-        []() -> katana::Result<void> { return ErrorCode::LocalStorageError; });
+    std::error_code ec = katana::ResultErrno();
+
+    return std::async([ec, dirname]() -> katana::Result<void> {
+      return KATANA_ERROR(
+          ErrorCode::LocalStorageError, "readdir failed: {}: {}", dirname,
+          ec.message());
+    });
   }
+
   (void)closedir(dirp);
 
   return std::async(

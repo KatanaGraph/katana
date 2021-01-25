@@ -124,7 +124,7 @@ OutputResults(
     std::string output_filename = "output") {
   auto r = pg->GetNodePropertyTyped<Weight>(node_distance_prop);
   if (!r) {
-    KATANA_LOG_FATAL("Error getting results: {}", r.error().message());
+    KATANA_LOG_FATAL("Error getting results: {}", r.error());
   }
   auto results = r.value();
   KATANA_LOG_DEBUG_ASSERT(
@@ -236,8 +236,7 @@ main(int argc, char** argv) {
 
     auto stats_result = SsspStatistics::Compute(pg.get(), node_distance_prop);
     if (!stats_result) {
-      KATANA_LOG_FATAL(
-          "Computing statistics: {}", stats_result.error().message());
+      KATANA_LOG_FATAL("Computing statistics: {}", stats_result.error());
     }
     auto stats = stats_result.value();
     stats.Print();
@@ -254,8 +253,7 @@ main(int argc, char** argv) {
           r) {
         std::cout << "Verification successful.\n";
       } else {
-        KATANA_LOG_FATAL(
-            "verification failed: ", r.has_error() ? r.error().message() : "");
+        KATANA_LOG_FATAL("verification failed: ", r.error());
       }
     }
 

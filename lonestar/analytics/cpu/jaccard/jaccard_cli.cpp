@@ -85,9 +85,7 @@ main(int argc, char** argv) {
           pg.get(), base_node, output_property_name,
           katana::analytics::JaccardPlan());
       !r) {
-    KATANA_LOG_FATAL(
-        "Jaccard failed: {} {}", r.error().category().name(),
-        r.error().message());
+    KATANA_LOG_FATAL("Jaccard failed: {}", r.error());
   }
 
   execTime.stop();

@@ -20,8 +20,8 @@ Result<uint64_t>
 Parse(const std::string& str) {
   uint64_t val = strtoul(str.c_str(), nullptr, 10);
   if (errno == ERANGE) {
-    KATANA_LOG_ERROR("meta file found with out of range version");
-    return katana::ResultErrno();
+    return KATANA_ERROR(
+        katana::ResultErrno(), "meta file found with out of range version");
   }
   return val;
 }
@@ -39,14 +39,12 @@ Result<tsuba::RDGMeta>
 RDGMeta::MakeFromStorage(const katana::Uri& uri) {
   tsuba::FileView fv;
   if (auto res = fv.Bind(uri.string(), true); !res) {
-    KATANA_LOG_DEBUG("RDGMeta::MakeFromStorage bind failed: {}", res.error());
     return res.error();
   }
   tsuba::RDGMeta meta(uri.DirName());
   auto meta_res = katana::JsonParse<tsuba::RDGMeta>(fv, &meta);
   if (!meta_res) {
-    KATANA_LOG_ERROR("cannot parse: {}", uri.string());
-    return meta_res.error();
+    return meta_res.error().WithContext("cannon parse {}", uri.string());
   }
   return meta;
 }
@@ -66,7 +64,6 @@ RDGMeta::Make(const katana::Uri& uri) {
   if (!IsMetaUri(uri)) {
     auto ns_res = NS()->Get(uri);
     if (!ns_res) {
-      KATANA_LOG_DEBUG("NS->Get failed: {}", ns_res.error());
       return ns_res.error();
     }
     if (ns_res) {
@@ -90,8 +87,8 @@ RDGMeta::PartitionFileName(
 }
 
 katana::Uri
-RDGMeta::PartitionFileName(uint32_t node_id) const {
-  return RDGMeta::PartitionFileName(dir_, node_id, version());
+RDGMeta::PartitionFileName(uint32_t host_id) const {
+  return RDGMeta::PartitionFileName(dir_, host_id, version());
 }
 
 std::string

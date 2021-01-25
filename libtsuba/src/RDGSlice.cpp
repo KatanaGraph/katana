@@ -48,17 +48,16 @@ tsuba::RDGSlice::Make(
     const std::vector<std::string>* edge_props) {
   const RDGMeta& meta = handle.impl_->rdg_meta();
   if (meta.num_hosts() != 1) {
-    KATANA_LOG_ERROR("cannot construct RDGSlice for partitioned graph");
-    return ErrorCode::NotImplemented;
+    return KATANA_ERROR(
+        ErrorCode::NotImplemented,
+        "cannot construct RDGSlice for partitioned graph");
   }
   katana::Uri partition_path(meta.PartitionFileName(0));
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
-    KATANA_LOG_DEBUG(
-        "failed: ReadMetaData (path: {}): {}", partition_path,
-        part_header_res.error());
-    return part_header_res.error();
+    return part_header_res.error().WithContext(
+        "error reading metadata from {}", partition_path);
   }
 
   RDGSlice rdg_slice(

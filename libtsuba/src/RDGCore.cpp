@@ -12,10 +12,9 @@ AddProperties(
   std::shared_ptr<arrow::Table> current = *to_update;
 
   if (current->num_columns() > 0 && current->num_rows() != props->num_rows()) {
-    KATANA_LOG_DEBUG(
-        "expected {} rows found {} instead", current->num_rows(),
-        props->num_rows());
-    return tsuba::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument, "expected {} rows found {} instead",
+        current->num_rows(), props->num_rows());
   }
 
   std::shared_ptr<arrow::Table> next = current;
@@ -30,8 +29,8 @@ AddProperties(
       auto result =
           next->AddColumn(last + i, schema->field(i), props->column(i));
       if (!result.ok()) {
-        KATANA_LOG_DEBUG("arrow error: {}", result.status());
-        return tsuba::ErrorCode::ArrowError;
+        return KATANA_ERROR(
+            tsuba::ErrorCode::ArrowError, "arrow error: {}", result.status());
       }
 
       next = result.ValueOrDie();
@@ -39,8 +38,8 @@ AddProperties(
   }
 
   if (!next->schema()->HasDistinctFieldNames()) {
-    KATANA_LOG_DEBUG("failed: column names are not distinct");
-    return tsuba::ErrorCode::Exists;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::Exists, "column names are not distinct");
   }
 
   *to_update = next;
@@ -85,8 +84,8 @@ katana::Result<void>
 RDGCore::RemoveNodeProperty(uint32_t i) {
   auto result = node_properties_->RemoveColumn(i);
   if (!result.ok()) {
-    KATANA_LOG_DEBUG("arrow error: {}", result.status());
-    return ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        ErrorCode::ArrowError, "arrow error: {}", result.status());
   }
 
   node_properties_ = std::move(result.ValueOrDie());
@@ -100,8 +99,8 @@ katana::Result<void>
 RDGCore::RemoveEdgeProperty(uint32_t i) {
   auto result = edge_properties_->RemoveColumn(i);
   if (!result.ok()) {
-    KATANA_LOG_DEBUG("arrow error: {}", result.status());
-    return ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        ErrorCode::ArrowError, "arrow error: {}", result.status());
   }
 
   edge_properties_ = std::move(result.ValueOrDie());

@@ -44,10 +44,9 @@ MemoryNameServerClient::CreateIfAbsent(
   if (server_state_.find(key) == server_state_.end()) {
     server_state_.emplace(key, meta);
   } else if (server_state_[key].version() != meta.version()) {
-    KATANA_LOG_DEBUG(
-        "mismatched versions {} != {}", server_state_[key].version(),
-        meta.version());
-    return ErrorCode::TODO;
+    return KATANA_ERROR(
+        ErrorCode::TODO, "mismatched versions {} != {}",
+        server_state_[key].version(), meta.version());
   }
 
   return katana::ResultSuccess();

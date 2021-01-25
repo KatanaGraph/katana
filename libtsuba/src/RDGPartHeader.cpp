@@ -4,12 +4,11 @@
 #include "GlobalState.h"
 #include "RDGHandleImpl.h"
 #include "katana/Logging.h"
+#include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/FileView.h"
 
-template <typename T>
-using Result = katana::Result<T>;
 using json = nlohmann::json;
 
 namespace {
@@ -41,8 +40,9 @@ MakeProperties(std::vector<std::string>&& values) {
   std::vector v = std::move(values);
 
   if ((v.size() % 2) != 0) {
-    KATANA_LOG_DEBUG("failed: number of values {} is not even", v.size());
-    return tsuba::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "failed: number of values {} is not even", v.size());
   }
 
   std::vector<tsuba::PropStorageInfo> prop_info_list;
@@ -80,9 +80,8 @@ katana::Result<RDGPartHeader>
 RDGPartHeader::MakeParquet(const katana::Uri& partition_path) {
   auto fv = std::make_shared<FileView>();
   if (auto res = fv->Bind(partition_path.string(), false); !res) {
-    KATANA_LOG_DEBUG(
+    return res.error().WithContext(
         "cannot open {}: {}", partition_path.string(), res.error());
-    return res.error();
   }
 
   if (fv->size() == 0) {
@@ -93,9 +92,9 @@ RDGPartHeader::MakeParquet(const katana::Uri& partition_path) {
   try {
     md = parquet::ReadMetaData(fv);
   } catch (const std::exception& exp) {
-    KATANA_LOG_DEBUG(
-        "arrow error reading {}: {}", partition_path.string(), exp.what());
-    return ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        ErrorCode::ArrowError, "arrow error reading {}: {}",
+        partition_path.string(), exp.what());
   }
 
   const std::shared_ptr<const arrow::KeyValueMetadata>& kv_metadata =
@@ -195,18 +194,18 @@ RDGPartHeader::Make(const katana::Uri& partition_path) {
     return res;
   }
 
-  KATANA_LOG_ERROR("failed to parse JSON RDGPartHeader: {}", res.error());
-  KATANA_LOG_ERROR("falling back on Parquet (deprecated)");
+  KATANA_LOG_WARN("failed to parse JSON RDGPartHeader: {}", res.error());
+  KATANA_LOG_WARN("falling back on Parquet (deprecated)");
 
   try {
     return MakeParquet(partition_path);
   } catch (const std::exception& exp) {
-    KATANA_LOG_DEBUG("arrow exception: {}", exp.what());
-    return ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        ErrorCode::ArrowError, "arrow exception: {}", exp.what());
   }
 }
 
-Result<void>
+katana::Result<void>
 RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
   auto serialized_res = katana::JsonDump(*this);
   if (!serialized_res) {
@@ -224,8 +223,7 @@ RDGPartHeader::Write(RDGHandle handle, WriteGroup* writes) const {
     return res.error();
   }
   if (auto res = ff->Write(serialized.data(), serialized.size()); !res.ok()) {
-    KATANA_LOG_DEBUG("arrow error: {}", res);
-    return ArrowToTsuba(res.code());
+    return KATANA_ERROR(ArrowToTsuba(res.code()), "arrow error: {}", res);
   }
 
   ff->Bind(RDGMeta::PartitionFileName(
@@ -253,8 +251,8 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *node_properties) {
       auto it = node_paths.find(s);
       if (it == node_paths.end()) {
-        KATANA_LOG_DEBUG("failed: node property `{}` not found", s);
-        return ErrorCode::PropertyNotFound;
+        return KATANA_ERROR(
+            ErrorCode::PropertyNotFound, "node property {} not found", s);
       }
 
       next_node_prop_info_list.emplace_back(it->second);
@@ -272,8 +270,9 @@ RDGPartHeader::PrunePropsTo(
     for (const std::string& s : *edge_properties) {
       auto it = edge_paths.find(s);
       if (it == edge_paths.end()) {
-        KATANA_LOG_DEBUG("failed: edge property `{}` not found", s);
-        return ErrorCode::PropertyNotFound;
+        return KATANA_ERROR(
+            ErrorCode::PropertyNotFound, "failed: edge property {} not found",
+            s);
       }
 
       next_edge_prop_info_list.emplace_back(it->second);
@@ -283,33 +282,29 @@ RDGPartHeader::PrunePropsTo(
   return katana::ResultSuccess();
 }
 
-Result<void>
+katana::Result<void>
 RDGPartHeader::Validate() const {
   for (const auto& md : node_prop_info_list_) {
     if (md.path.find('/') != std::string::npos) {
-      KATANA_LOG_DEBUG(
-          "failed: node_property path doesn't contain a slash: \"{}\"",
-          md.path);
-      return ErrorCode::InvalidArgument;
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
+          "node_property path doesn't contain a slash (/): {}", md.path);
     }
   }
   for (const auto& md : edge_prop_info_list_) {
     if (md.path.find('/') != std::string::npos) {
-      KATANA_LOG_DEBUG(
-          "failed: edge_property path doesn't contain a slash: \"{}\"",
-          md.path);
-      return ErrorCode::InvalidArgument;
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
+          "edge_property path doesn't contain a slash (/): {}", md.path);
     }
   }
   if (topology_path_.empty()) {
-    KATANA_LOG_DEBUG("failed: topology_path: \"{}\" is empty", topology_path_);
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "topology_path is empty");
   }
   if (topology_path_.find('/') != std::string::npos) {
-    KATANA_LOG_DEBUG(
-        "failed: topology_path doesn't contain a slash: \"{}\"",
-        topology_path_);
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "topology_path doesn't contain a slash (/): {}", topology_path_);
   }
   return katana::ResultSuccess();
 }
@@ -325,14 +320,14 @@ RDGPartHeader::MarkAllPropertiesPersistent() {
       [](auto& p) { return p.persist = true; });
 }
 
-Result<void>
+katana::Result<void>
 RDGPartHeader::MarkNodePropertiesPersistent(
     const std::vector<std::string>& persist_node_props) {
   if (persist_node_props.size() > node_prop_info_list_.size()) {
-    KATANA_LOG_DEBUG(
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
         "failed: persist props sz: {} names, rdg.node_prop_info_list_ sz: {}",
         persist_node_props.size(), node_prop_info_list_.size());
-    return ErrorCode::InvalidArgument;
   }
   for (uint32_t i = 0; i < persist_node_props.size(); ++i) {
     if (!persist_node_props[i].empty()) {
@@ -345,14 +340,14 @@ RDGPartHeader::MarkNodePropertiesPersistent(
   return katana::ResultSuccess();
 }
 
-Result<void>
+katana::Result<void>
 RDGPartHeader::MarkEdgePropertiesPersistent(
     const std::vector<std::string>& persist_edge_props) {
   if (persist_edge_props.size() > edge_prop_info_list_.size()) {
-    KATANA_LOG_DEBUG(
-        "failed: persist props sz: {} names, rdg.edge_prop_info_list_ sz: {}",
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "persist props sz: {} names, rdg.edge_prop_info_list_ sz: {}",
         persist_edge_props.size(), edge_prop_info_list_.size());
-    return ErrorCode::InvalidArgument;
   }
   for (uint32_t i = 0; i < persist_edge_props.size(); ++i) {
     if (!persist_edge_props[i].empty()) {

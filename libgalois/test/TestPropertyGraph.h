@@ -126,9 +126,9 @@ BaselineIterate(katana::PropertyFileGraph* g, int num_properties) {
 
   for (int prop = 0; prop < num_properties; ++prop) {
     auto node_property = std::dynamic_pointer_cast<NodeProperty>(
-        g->NodeProperty(prop)->chunk(0));
+        g->GetNodeProperty(prop)->chunk(0));
     auto edge_property = std::dynamic_pointer_cast<EdgeProperty>(
-        g->EdgeProperty(prop)->chunk(0));
+        g->GetEdgeProperty(prop)->chunk(0));
 
     KATANA_LOG_ASSERT(node_property);
     KATANA_LOG_ASSERT(edge_property);

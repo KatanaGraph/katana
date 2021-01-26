@@ -103,7 +103,7 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
 template <typename Weight>
 static void
 OutputResults(katana::PropertyFileGraph* pfg) {
-  auto r = pfg->NodePropertyTyped<Weight>("distance");
+  auto r = pfg->GetNodePropertyTyped<Weight>("distance");
   if (!r) {
     KATANA_LOG_FATAL("Error getting results: {}", r.error().message());
   }
@@ -216,7 +216,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    switch (pfg->NodeProperty("distance")->type()->id()) {
+    switch (pfg->GetNodeProperty("distance")->type()->id()) {
     case arrow::UInt32Type::type_id:
       OutputResults<uint32_t>(pfg.get());
       break;
@@ -237,7 +237,7 @@ main(int argc, char** argv) {
       break;
     default:
       KATANA_LOG_FATAL(
-          "Unsupported type: {}", pfg->NodeProperty("distance")->type());
+          "Unsupported type: {}", pfg->GetNodeProperty("distance")->type());
       break;
     }
   }

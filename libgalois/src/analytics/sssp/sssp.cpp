@@ -395,7 +395,7 @@ SSSPWithWrap(
   if (!graph && graph.error() == katana::ErrorCode::TypeError) {
     KATANA_LOG_DEBUG(
         "Incorrect edge property type: {}",
-        pfg->edge_table()
+        pfg->edge_properties()
             ->GetColumnByName(edge_weight_property_name)
             ->type()
             ->ToString());
@@ -412,7 +412,7 @@ katana::analytics::Sssp(
     PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
-  switch (pfg->EdgeProperty(edge_weight_property_name)->type()->id()) {
+  switch (pfg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return SSSPWithWrap<uint32_t>(
         pfg, start_node, edge_weight_property_name, output_property_name, plan);
@@ -473,7 +473,7 @@ katana::analytics::SsspAssertValid(
     katana::PropertyFileGraph* pfg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
-  switch (pfg->NodeProperty(output_property_name)->type()->id()) {
+  switch (pfg->GetNodeProperty(output_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return SsspValidateImpl<uint32_t>(
         pfg, start_node, edge_weight_property_name, output_property_name);
@@ -539,7 +539,7 @@ ComputeStatistics(
 katana::Result<SsspStatistics>
 SsspStatistics::Compute(
     PropertyFileGraph* pfg, const std::string& output_property_name) {
-  switch (pfg->NodeProperty(output_property_name)->type()->id()) {
+  switch (pfg->GetNodeProperty(output_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return ComputeStatistics<uint32_t>(pfg, output_property_name);
   case arrow::Int32Type::type_id:

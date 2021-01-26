@@ -7,28 +7,28 @@ namespace {
 
 katana::Result<void>
 AddProperties(
-    const std::shared_ptr<arrow::Table>& table,
+    const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update) {
   std::shared_ptr<arrow::Table> current = *to_update;
 
-  if (current->num_columns() > 0 && current->num_rows() != table->num_rows()) {
+  if (current->num_columns() > 0 && current->num_rows() != props->num_rows()) {
     KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", current->num_rows(),
-        table->num_rows());
+        props->num_rows());
     return tsuba::ErrorCode::InvalidArgument;
   }
 
   std::shared_ptr<arrow::Table> next = current;
 
   if (current->num_columns() == 0 && current->num_rows() == 0) {
-    next = table;
+    next = props;
   } else {
-    const auto& schema = table->schema();
+    const auto& schema = props->schema();
     int last = current->num_columns();
 
     for (int i = 0, n = schema->num_fields(); i < n; i++) {
       auto result =
-          next->AddColumn(last + i, schema->field(i), table->column(i));
+          next->AddColumn(last + i, schema->field(i), props->column(i));
       if (!result.ok()) {
         KATANA_LOG_DEBUG("arrow error: {}", result.status());
         return tsuba::ErrorCode::ArrowError;
@@ -53,20 +53,20 @@ AddProperties(
 namespace tsuba {
 
 katana::Result<void>
-RDGCore::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &node_table_);
+RDGCore::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
+  return AddProperties(props, &node_properties_);
 }
 
 katana::Result<void>
-RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
-  return AddProperties(table, &edge_table_);
+RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
+  return AddProperties(props, &edge_properties_);
 }
 
 void
-RDGCore::InitEmptyTables() {
+RDGCore::InitEmptyProperties() {
   std::vector<std::shared_ptr<arrow::Array>> empty;
-  node_table_ = arrow::Table::Make(arrow::schema({}), empty, 0);
-  edge_table_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+  node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+  edge_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
 }
 
 bool
@@ -77,19 +77,19 @@ RDGCore::Equals(const RDGCore& other) const {
              topology_file_storage_.ptr<uint8_t>(),
              other.topology_file_storage_.ptr<uint8_t>(),
              topology_file_storage_.size()) &&
-         node_table_->Equals(*other.node_table_, true) &&
-         edge_table_->Equals(*other.edge_table_, true);
+         node_properties_->Equals(*other.node_properties_, true) &&
+         edge_properties_->Equals(*other.edge_properties_, true);
 }
 
 katana::Result<void>
 RDGCore::RemoveNodeProperty(uint32_t i) {
-  auto result = node_table_->RemoveColumn(i);
+  auto result = node_properties_->RemoveColumn(i);
   if (!result.ok()) {
     KATANA_LOG_DEBUG("arrow error: {}", result.status());
     return ErrorCode::ArrowError;
   }
 
-  node_table_ = std::move(result.ValueOrDie());
+  node_properties_ = std::move(result.ValueOrDie());
 
   part_header_.RemoveNodeProperty(i);
 
@@ -98,13 +98,13 @@ RDGCore::RemoveNodeProperty(uint32_t i) {
 
 katana::Result<void>
 RDGCore::RemoveEdgeProperty(uint32_t i) {
-  auto result = edge_table_->RemoveColumn(i);
+  auto result = edge_properties_->RemoveColumn(i);
   if (!result.ok()) {
     KATANA_LOG_DEBUG("arrow error: {}", result.status());
     return ErrorCode::ArrowError;
   }
 
-  edge_table_ = std::move(result.ValueOrDie());
+  edge_properties_ = std::move(result.ValueOrDie());
 
   part_header_.RemoveEdgeProperty(i);
 

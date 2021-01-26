@@ -7,12 +7,14 @@
 #include "katana/SharedMemSys.h"
 #include "katana/Uri.h"
 
+namespace {
+
 namespace fs = boost::filesystem;
 std::string command_line;
 
 template <typename T>
 std::shared_ptr<arrow::Table>
-MakeTable(const std::string& name, size_t size) {
+MakeProps(const std::string& name, size_t size) {
   katana::TableBuilder builder{size};
 
   katana::ColumnOptions options;
@@ -31,33 +33,33 @@ TestRoundTrip() {
   auto g = std::make_unique<katana::PropertyFileGraph>();
 
   std::shared_ptr<arrow::Table> node_throw_away =
-      MakeTable<ThrowAwayType>("node-throw-away", test_length);
+      MakeProps<ThrowAwayType>("node-throw-away", test_length);
 
   auto add_throw_away_node_result = g->AddNodeProperties(node_throw_away);
   KATANA_LOG_ASSERT(add_throw_away_node_result);
 
-  std::shared_ptr<arrow::Table> edge_throw_away_table =
-      MakeTable<ThrowAwayType>("edge-throw-away", test_length);
+  std::shared_ptr<arrow::Table> edge_throw_away_props =
+      MakeProps<ThrowAwayType>("edge-throw-away", test_length);
 
-  auto add_edge_throw_away_result = g->AddEdgeProperties(edge_throw_away_table);
+  auto add_edge_throw_away_result = g->AddEdgeProperties(edge_throw_away_props);
   KATANA_LOG_ASSERT(add_edge_throw_away_result);
 
   // don't persist throwaway properties
 
-  std::shared_ptr<arrow::Table> node_table =
-      MakeTable<ValueType>("node-name", test_length);
+  std::shared_ptr<arrow::Table> node_props =
+      MakeProps<ValueType>("node-name", test_length);
 
-  auto add_node_result = g->AddNodeProperties(node_table);
+  auto add_node_result = g->AddNodeProperties(node_props);
   KATANA_LOG_ASSERT(add_node_result);
 
   auto mark_node_persistent =
       g->MarkNodePropertiesPersistent({"", "node-name"});
   KATANA_LOG_ASSERT(mark_node_persistent);
 
-  std::shared_ptr<arrow::Table> edge_table =
-      MakeTable<ValueType>("edge-name", test_length);
+  std::shared_ptr<arrow::Table> edge_props =
+      MakeProps<ValueType>("edge-name", test_length);
 
-  auto add_edge_result = g->AddEdgeProperties(edge_table);
+  auto add_edge_result = g->AddEdgeProperties(edge_props);
   KATANA_LOG_ASSERT(add_edge_result);
 
   auto mark_edge_persistent =
@@ -87,13 +89,11 @@ TestRoundTrip() {
   std::unique_ptr<katana::PropertyFileGraph> g2 =
       std::move(make_result.value());
 
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> node_properties =
-      g2->NodeProperties();
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> edge_properties =
-      g2->EdgeProperties();
+  std::shared_ptr<arrow::Table> node_properties = g2->node_properties();
+  std::shared_ptr<arrow::Table> edge_properties = g2->edge_properties();
 
-  KATANA_LOG_ASSERT(node_properties.size() == 1);
-  KATANA_LOG_ASSERT(edge_properties.size() == 1);
+  KATANA_LOG_ASSERT(node_properties->num_columns() == 1);
+  KATANA_LOG_ASSERT(edge_properties->num_columns() == 1);
 
   KATANA_LOG_ASSERT(g2->edge_schema()->field(0)->name() == "edge-name");
   KATANA_LOG_ASSERT(g2->node_schema()->field(0)->name() == "node-name");
@@ -104,8 +104,10 @@ TestRoundTrip() {
   KATANA_LOG_ASSERT(
       g2->node_schema()->field(0)->type()->Equals(arrow::int32()));
 
-  std::shared_ptr<arrow::ChunkedArray> node_property = node_properties[0];
-  std::shared_ptr<arrow::ChunkedArray> edge_property = edge_properties[0];
+  std::shared_ptr<arrow::ChunkedArray> node_property =
+      node_properties->column(0);
+  std::shared_ptr<arrow::ChunkedArray> edge_property =
+      edge_properties->column(0);
 
   KATANA_LOG_ASSERT(
       static_cast<size_t>(node_property->length()) == test_length);
@@ -158,15 +160,15 @@ MakePFGFile(const std::string& n1name) {
 
   auto g = std::make_unique<katana::PropertyFileGraph>();
 
-  std::shared_ptr<arrow::Table> node_table = MakeTable<V0>(n0name, test_length);
+  std::shared_ptr<arrow::Table> node_props = MakeProps<V0>(n0name, test_length);
 
-  auto add_node_result = g->AddNodeProperties(node_table);
+  auto add_node_result = g->AddNodeProperties(node_props);
   KATANA_LOG_ASSERT(add_node_result);
 
   auto mark_node_persistent = g->MarkNodePropertiesPersistent({n0name});
   KATANA_LOG_ASSERT(mark_node_persistent);
 
-  add_node_result = g->AddNodeProperties(MakeTable<V1>(n1name, test_length));
+  add_node_result = g->AddNodeProperties(MakeProps<V1>(n1name, test_length));
   if (!add_node_result) {
     return "";
   }
@@ -174,9 +176,9 @@ MakePFGFile(const std::string& n1name) {
   mark_node_persistent = g->MarkNodePropertiesPersistent({n1name});
   KATANA_LOG_ASSERT(mark_node_persistent);
 
-  std::shared_ptr<arrow::Table> edge_table = MakeTable<V0>(e0name, test_length);
+  std::shared_ptr<arrow::Table> edge_props = MakeProps<V0>(e0name, test_length);
 
-  auto add_edge_result = g->AddEdgeProperties(edge_table);
+  auto add_edge_result = g->AddEdgeProperties(edge_props);
   KATANA_LOG_ASSERT(add_edge_result);
 
   auto mark_edge_persistent = g->MarkEdgePropertiesPersistent({e0name});
@@ -227,17 +229,18 @@ TestTopologyAccess() {
   }
   int n_nodes = 0;
   for (katana::PropertyFileGraph::Node i : *g) {
-    auto _ignore = g->NodeProperty(0)->chunk(0)->GetScalar(i);
+    auto _ignore = g->GetNodeProperty(0)->chunk(0)->GetScalar(i);
     n_nodes++;
     int n_edges = 0;
     for (auto e : g->edges(i)) {
-      auto __ignore = g->EdgeProperty(0)->chunk(0)->GetScalar(e);
+      auto __ignore = g->GetEdgeProperty(0)->chunk(0)->GetScalar(e);
       n_edges++;
     }
     KATANA_LOG_ASSERT(n_edges == 3);
   }
   KATANA_LOG_ASSERT(n_nodes == 10);
 }
+}  // namespace
 
 int
 main(int argc, char** argv) {

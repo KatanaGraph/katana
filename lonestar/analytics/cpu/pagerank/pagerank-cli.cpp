@@ -107,7 +107,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->NodePropertyTyped<float>("rank");
+    auto r = pfg->GetNodePropertyTyped<float>("rank");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }

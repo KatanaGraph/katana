@@ -724,7 +724,7 @@ katana::analytics::IndependentSetStatistics::Print(std::ostream& os) const {
 katana::Result<IndependentSetStatistics>
 katana::analytics::IndependentSetStatistics::Compute(
     katana::PropertyFileGraph* pfg, const std::string& property_name) {
-  auto property_result = pfg->NodePropertyTyped<uint8_t>(property_name);
+  auto property_result = pfg->GetNodePropertyTyped<uint8_t>(property_name);
   if (!property_result) {
     return property_result.error();
   }

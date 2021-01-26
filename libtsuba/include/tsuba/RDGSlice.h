@@ -44,8 +44,8 @@ public:
       const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
-  const std::shared_ptr<arrow::Table>& node_table() const;
-  const std::shared_ptr<arrow::Table>& edge_table() const;
+  const std::shared_ptr<arrow::Table>& node_properties() const;
+  const std::shared_ptr<arrow::Table>& edge_properties() const;
   const FileView& topology_file_storage() const;
 
 private:

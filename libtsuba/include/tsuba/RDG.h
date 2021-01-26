@@ -50,10 +50,10 @@ public:
       std::unique_ptr<FileFrame> ff = nullptr);
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& table);
+      const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& table);
+      const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<void> RemoveNodeProperty(uint32_t i);
   katana::Result<void> RemoveEdgeProperty(uint32_t i);
@@ -95,11 +95,11 @@ public:
   const katana::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
 
-  /// The table of node properties
-  const std::shared_ptr<arrow::Table>& node_table() const;
+  /// The node properties
+  const std::shared_ptr<arrow::Table>& node_properties() const;
 
-  /// The table of edge properties
-  const std::shared_ptr<arrow::Table>& edge_table() const;
+  /// The edge properties
+  const std::shared_ptr<arrow::Table>& edge_properties() const;
 
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
@@ -141,7 +141,7 @@ private:
       const std::vector<std::string>* edge_props);
 
   katana::Result<void> AddPartitionMetadataArray(
-      const std::shared_ptr<arrow::Table>& table);
+      const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<std::vector<tsuba::PropStorageInfo>> WritePartArrays(
       const katana::Uri& dir, tsuba::WriteGroup* desc);

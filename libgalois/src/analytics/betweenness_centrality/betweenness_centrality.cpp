@@ -56,7 +56,7 @@ BetweennessCentralityStatistics::Print(std::ostream& os) {
 katana::Result<BetweennessCentralityStatistics>
 BetweennessCentralityStatistics::Compute(
     katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
-  auto values_result = pfg->NodePropertyTyped<float>(output_property_name);
+  auto values_result = pfg->GetNodePropertyTyped<float>(output_property_name);
   if (!values_result) {
     return values_result.error();
   }

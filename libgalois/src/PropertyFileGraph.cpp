@@ -293,28 +293,28 @@ katana::PropertyFileGraph::Write(
 
 katana::Result<void>
 katana::PropertyFileGraph::AddNodeProperties(
-    const std::shared_ptr<arrow::Table>& table) {
+    const std::shared_ptr<arrow::Table>& props) {
   if (topology_.out_indices &&
-      topology_.out_indices->length() != table->num_rows()) {
+      topology_.out_indices->length() != props->num_rows()) {
     KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", topology_.out_indices->length(),
-        table->num_rows());
+        props->num_rows());
     return ErrorCode::InvalidArgument;
   }
-  return rdg_.AddNodeProperties(table);
+  return rdg_.AddNodeProperties(props);
 }
 
 katana::Result<void>
 katana::PropertyFileGraph::AddEdgeProperties(
-    const std::shared_ptr<arrow::Table>& table) {
+    const std::shared_ptr<arrow::Table>& props) {
   if (topology_.out_dests &&
-      topology_.out_dests->length() != table->num_rows()) {
+      topology_.out_dests->length() != props->num_rows()) {
     KATANA_LOG_DEBUG(
         "expected {} rows found {} instead", topology_.out_dests->length(),
-        table->num_rows());
+        props->num_rows());
     return ErrorCode::InvalidArgument;
   }
-  return rdg_.AddEdgeProperties(table);
+  return rdg_.AddEdgeProperties(props);
 }
 
 katana::Result<void>

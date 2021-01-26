@@ -134,7 +134,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->EdgePropertyTyped<uint32_t>("edge-alive");
+    auto r = pfg->GetEdgePropertyTyped<uint32_t>("edge-alive");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get edge property {}", r.error());
     }

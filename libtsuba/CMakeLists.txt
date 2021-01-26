@@ -13,7 +13,7 @@ add_library(tsuba SHARED)
 add_dependencies(lib tsuba tsuba-preload)
 
 set(sources
-  src/AddTables.cpp
+  src/AddProperties.cpp
   src/Errors.cpp
   src/FaultTest.cpp
   src/file.cpp

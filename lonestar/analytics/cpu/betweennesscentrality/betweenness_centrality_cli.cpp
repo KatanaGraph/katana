@@ -118,7 +118,7 @@ main(int argc, char** argv) {
 
   if (output) {
     auto results_result =
-        pfg->NodePropertyTyped<float>("betweenness_centrality");
+        pfg->GetNodePropertyTyped<float>("betweenness_centrality");
     if (!results_result) {
       KATANA_LOG_FATAL("Failed to get results: {}", results_result.error());
     }

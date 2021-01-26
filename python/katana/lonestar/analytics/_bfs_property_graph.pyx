@@ -70,7 +70,7 @@ def verify_bfs(PropertyGraph graph, unsigned int source_i, unsigned int property
         shared_ptr[CUInt32Array] chunk
         uint64_t numNodes = graph.num_nodes()
         uint32_t start, end
-    chunk_array = graph.underlying.get().NodeProperty(0)
+    chunk_array = graph.underlying.get().GetNodeProperty(0)
 
     notVisited.store(0)
     ### Chunked arrays can have multiple chunks
@@ -143,8 +143,8 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
     #
     # Append new property
     #
-    cdef shared_ptr[CTable] node_table = MakeTable(propertyName, distance)
-    graph.underlying.get().AddNodeProperties(node_table)
+    cdef shared_ptr[CTable] node_props = MakeTable(propertyName, distance)
+    graph.underlying.get().AddNodeProperties(node_props)
 
 #
 # Main callsite for Bfs

@@ -122,11 +122,11 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CSchema] node_schema()
         shared_ptr[CSchema] edge_schema()
 
-        vector[shared_ptr[CChunkedArray]] NodeProperties()
-        vector[shared_ptr[CChunkedArray]] EdgeProperties()
+        shared_ptr[CTable] node_properties()
+        shared_ptr[CTable] edge_properties()
 
-        shared_ptr[CChunkedArray] NodeProperty(int i)
-        shared_ptr[CChunkedArray] EdgeProperty(int i)
+        shared_ptr[CChunkedArray] GetNodeProperty(int i)
+        shared_ptr[CChunkedArray] GetEdgeProperty(int i)
 
         std_result[void] AddNodeProperties(shared_ptr[CTable])
         std_result[void] AddEdgeProperties(shared_ptr[CTable])

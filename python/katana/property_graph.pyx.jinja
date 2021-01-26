@@ -188,7 +188,7 @@ cdef class PropertyGraph:
         `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying.get().NodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
+            self.underlying.get().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
         )
 
     def get_edge_property(self, prop):
@@ -210,7 +210,7 @@ cdef class PropertyGraph:
         `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying.get().EdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
+            self.underlying.get().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
         )
 
     def add_node_property(self, table):

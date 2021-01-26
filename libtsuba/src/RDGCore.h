@@ -13,19 +13,19 @@ namespace tsuba {
 
 class KATANA_EXPORT RDGCore {
 public:
-  RDGCore() { InitEmptyTables(); }
+  RDGCore() { InitEmptyProperties(); }
 
   RDGCore(RDGPartHeader&& part_header) : part_header_(std::move(part_header)) {
-    InitEmptyTables();
+    InitEmptyProperties();
   }
 
   bool Equals(const RDGCore& other) const;
 
   katana::Result<void> AddNodeProperties(
-      const std::shared_ptr<arrow::Table>& table);
+      const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<void> AddEdgeProperties(
-      const std::shared_ptr<arrow::Table>& table);
+      const std::shared_ptr<arrow::Table>& props);
 
   katana::Result<void> RemoveNodeProperty(uint32_t i);
 
@@ -35,18 +35,18 @@ public:
   // Accessors and Mutators
   //
 
-  const std::shared_ptr<arrow::Table>& node_table() const {
-    return node_table_;
+  const std::shared_ptr<arrow::Table>& node_properties() const {
+    return node_properties_;
   }
-  void set_node_table(std::shared_ptr<arrow::Table>&& node_table) {
-    node_table_ = std::move(node_table);
+  void set_node_properties(std::shared_ptr<arrow::Table>&& node_properties) {
+    node_properties_ = std::move(node_properties);
   }
 
-  const std::shared_ptr<arrow::Table>& edge_table() const {
-    return edge_table_;
+  const std::shared_ptr<arrow::Table>& edge_properties() const {
+    return edge_properties_;
   }
-  void set_edge_table(std::shared_ptr<arrow::Table>&& edge_table) {
-    edge_table_ = std::move(edge_table);
+  void set_edge_properties(std::shared_ptr<arrow::Table>&& edge_properties) {
+    edge_properties_ = std::move(edge_properties);
   }
 
   const FileView& topology_file_storage() const {
@@ -69,14 +69,14 @@ public:
   }
 
 private:
-  void InitEmptyTables();
+  void InitEmptyProperties();
 
   //
   // Data
   //
 
-  std::shared_ptr<arrow::Table> node_table_;
-  std::shared_ptr<arrow::Table> edge_table_;
+  std::shared_ptr<arrow::Table> node_properties_;
+  std::shared_ptr<arrow::Table> edge_properties_;
 
   FileView topology_file_storage_;
 

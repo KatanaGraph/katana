@@ -44,7 +44,7 @@ template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pfg->node_table().get(), properties);
+  return MakePropertyViews<PropTuple>(pfg->node_properties().get(), properties);
 }
 
 /// MakeNodePropertyViews asserts a typed view on top of runtime properties.
@@ -68,7 +68,7 @@ template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(
     const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pfg->edge_table().get(), properties);
+  return MakePropertyViews<PropTuple>(pfg->edge_properties().get(), properties);
 }
 
 /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.

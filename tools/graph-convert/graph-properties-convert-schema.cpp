@@ -400,26 +400,29 @@ katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
 
   // export nodes and edges here
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> node_props =
-      graph->NodeProperties();
+  std::shared_ptr<arrow::Table> node_props = graph->node_properties();
 
   std::vector<int64_t> chunk_indexes;
   std::vector<int64_t> sub_indexes;
-  for (uint64_t i = 0; i < node_props.size(); i++) {
+  for (int i = 0; i < node_props->num_columns(); i++) {
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
-  for (int64_t i = 0; i < node_props[0]->length(); i++) {
+
+  for (int64_t i = 0; i < node_props->column(0)->length(); i++) {
     // find labels
     std::string labels;
     for (auto j : node_label_indexes) {
-      if (sub_indexes[j] >= node_props[j]->chunk(chunk_indexes[j])->length()) {
+      if (sub_indexes[j] >=
+          node_props->column(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!node_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+      if (!node_props->column(j)
+               ->chunk(chunk_indexes[j])
+               ->IsNull(sub_indexes[j])) {
         auto node_labels = std::static_pointer_cast<arrow::UInt8Array>(
-            node_props[j]->chunk(chunk_indexes[j]));
+            node_props->column(j)->chunk(chunk_indexes[j]));
         if (node_labels->Value(sub_indexes[j]) > 0) {
           labels += ":" + node_schema->field(j)->name();
         }
@@ -431,14 +434,17 @@ katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
 
     // add properties
     for (auto j : node_property_indexes) {
-      if (sub_indexes[j] >= node_props[j]->chunk(chunk_indexes[j])->length()) {
+      if (sub_indexes[j] >=
+          node_props->column(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!node_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+      if (!node_props->column(j)
+               ->chunk(chunk_indexes[j])
+               ->IsNull(sub_indexes[j])) {
         auto name = node_schema->field(j)->name();
-        auto data =
-            ExtractData(node_props[j]->chunk(chunk_indexes[j]), sub_indexes[j]);
+        auto data = ExtractData(
+            node_props->column(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
         AddGraphmlProperty(writer, name, data);
       }
       sub_indexes[j]++;
@@ -446,28 +452,30 @@ katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
     FinishGraphmlNode(writer);
   }
 
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> edge_props =
-      graph->EdgeProperties();
+  std::shared_ptr<arrow::Table> edge_props = graph->edge_properties();
   katana::GraphTopology topology = graph->topology();
   uint32_t src_node = 0;
 
   chunk_indexes.clear();
   sub_indexes.clear();
-  for (uint64_t i = 0; i < edge_props.size(); i++) {
+  for (int i = 0; i < edge_props->num_columns(); i++) {
     chunk_indexes.emplace_back(0);
     sub_indexes.emplace_back(0);
   }
-  for (int64_t i = 0; i < edge_props[0]->length(); i++) {
+  for (int64_t i = 0; i < edge_props->column(0)->length(); i++) {
     // find labels
     std::string labels;
     for (auto j : edge_label_indexes) {
-      if (sub_indexes[j] >= edge_props[j]->chunk(chunk_indexes[j])->length()) {
+      if (sub_indexes[j] >=
+          edge_props->column(0)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!edge_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+      if (!edge_props->column(j)
+               ->chunk(chunk_indexes[j])
+               ->IsNull(sub_indexes[j])) {
         auto edge_labels = std::static_pointer_cast<arrow::UInt8Array>(
-            edge_props[j]->chunk(chunk_indexes[j]));
+            edge_props->column(j)->chunk(chunk_indexes[j]));
         if (edge_labels->Value(sub_indexes[j]) > 0) {
           // TODO(Patrick) when the parser is altered to handle multiple labels, use this line instead
           //labels += ":" + edge_schema->field(j)->name();
@@ -488,14 +496,17 @@ katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
 
     // add properties
     for (auto j : edge_property_indexes) {
-      if (sub_indexes[j] >= edge_props[j]->chunk(chunk_indexes[j])->length()) {
+      if (sub_indexes[j] >=
+          edge_props->column(j)->chunk(chunk_indexes[j])->length()) {
         sub_indexes[j] = 0;
         chunk_indexes[j]++;
       }
-      if (!edge_props[j]->chunk(chunk_indexes[j])->IsNull(sub_indexes[j])) {
+      if (!edge_props->column(j)
+               ->chunk(chunk_indexes[j])
+               ->IsNull(sub_indexes[j])) {
         std::string name = edge_schema->field(j)->name();
-        std::string data =
-            ExtractData(edge_props[j]->chunk(chunk_indexes[j]), sub_indexes[j]);
+        std::string data = ExtractData(
+            edge_props->column(j)->chunk(chunk_indexes[j]), sub_indexes[j]);
         AddGraphmlProperty(writer, name, data);
       }
       sub_indexes[j]++;
@@ -839,7 +850,7 @@ katana::ParseType(const std::string& in) {
 }
 
 ImportDataType
-katana::ParseType(std::shared_ptr<arrow::DataType> in) {
+katana::ParseType(const std::shared_ptr<arrow::DataType>& in) {
   arrow::Type::type type = in->id();
   if (type == arrow::Type::STRING) {
     return ImportDataType::kString;

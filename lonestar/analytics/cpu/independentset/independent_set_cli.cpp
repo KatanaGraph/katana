@@ -109,7 +109,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->NodePropertyTyped<uint8_t>("indicator");
+    auto r = pfg->GetNodePropertyTyped<uint8_t>("indicator");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }

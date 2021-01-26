@@ -15,7 +15,7 @@
 #include <parquet/platform.h>
 #include <parquet/properties.h>
 
-#include "AddTables.h"
+#include "AddProperties.h"
 #include "GlobalState.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
@@ -110,20 +110,20 @@ MasterPropName(unsigned i) {
 }
 
 katana::Result<std::vector<tsuba::PropStorageInfo>>
-WriteTable(
-    const arrow::Table& table,
-    const std::vector<tsuba::PropStorageInfo>& properties,
+WriteProperties(
+    const arrow::Table& props,
+    const std::vector<tsuba::PropStorageInfo>& prop_info,
     const katana::Uri& dir, tsuba::WriteGroup* desc) {
-  const auto& schema = table.schema();
+  const auto& schema = props.schema();
 
   std::vector<std::string> next_paths;
-  for (size_t i = 0, n = properties.size(); i < n; ++i) {
-    if (!properties[i].persist || !properties[i].path.empty()) {
+  for (size_t i = 0, n = prop_info.size(); i < n; ++i) {
+    if (!prop_info[i].persist || !prop_info[i].path.empty()) {
       continue;
     }
-    auto name = properties[i].name.empty() ? schema->field(i)->name()
-                                           : properties[i].name;
-    auto name_res = StoreArrowArrayAtName(table.column(i), dir, name, desc);
+    auto name = prop_info[i].name.empty() ? schema->field(i)->name()
+                                          : prop_info[i].name;
+    auto name_res = StoreArrowArrayAtName(props.column(i), dir, name, desc);
     if (!name_res) {
       return name_res.error();
     }
@@ -132,10 +132,10 @@ WriteTable(
   TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
 
   if (next_paths.empty()) {
-    return properties;
+    return prop_info;
   }
 
-  std::vector<tsuba::PropStorageInfo> next_properties = properties;
+  std::vector<tsuba::PropStorageInfo> next_properties = prop_info;
   auto it = next_paths.begin();
   for (auto& v : next_properties) {
     if (v.persist && v.path.empty()) {
@@ -203,10 +203,10 @@ CommitRDG(
 
 katana::Result<void>
 tsuba::RDG::AddPartitionMetadataArray(
-    const std::shared_ptr<arrow::Table>& table) {
-  auto field = table->schema()->field(0);
+    const std::shared_ptr<arrow::Table>& props) {
+  auto field = props->schema()->field(0);
   const std::string& name = field->name();
-  std::shared_ptr<arrow::ChunkedArray> col = table->column(0);
+  std::shared_ptr<arrow::ChunkedArray> col = props->column(0);
   if (name.find(kMirrorNodesPropName) == 0) {
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
@@ -301,8 +301,8 @@ tsuba::RDG::DoStore(
     core_->part_header().set_topology_path(t_path.BaseName());
   }
 
-  auto node_write_result = WriteTable(
-      *core_->node_table(), core_->part_header().node_prop_info_list(),
+  auto node_write_result = WriteProperties(
+      *core_->node_properties(), core_->part_header().node_prop_info_list(),
       handle.impl_->rdg_meta().dir(), write_group.get());
   if (!node_write_result) {
     KATANA_LOG_DEBUG("failed to write node properties");
@@ -313,8 +313,8 @@ tsuba::RDG::DoStore(
   core_->part_header().set_node_prop_info_list(
       std::move(node_write_result.value()));
 
-  auto edge_write_result = WriteTable(
-      *core_->edge_table(), core_->part_header().edge_prop_info_list(),
+  auto edge_write_result = WriteProperties(
+      *core_->edge_properties(), core_->part_header().edge_prop_info_list(),
       handle.impl_->rdg_meta().dir(), write_group.get());
   if (!edge_write_result) {
     KATANA_LOG_DEBUG("failed to write edge properties");
@@ -355,19 +355,19 @@ tsuba::RDG::DoStore(
 
 katana::Result<void>
 tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
-  auto node_result = AddTables(
+  auto node_result = AddProperties(
       metadata_dir, core_->part_header().node_prop_info_list(),
-      [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-        return rdg->core_->AddNodeProperties(table);
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->core_->AddNodeProperties(props);
       });
   if (!node_result) {
     return node_result.error();
   }
 
-  auto edge_result = AddTables(
+  auto edge_result = AddProperties(
       metadata_dir, core_->part_header().edge_prop_info_list(),
-      [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-        return rdg->core_->AddEdgeProperties(table);
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->core_->AddEdgeProperties(props);
       });
   if (!edge_result) {
     return edge_result.error();
@@ -376,10 +376,10 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
   const std::vector<PropStorageInfo>& part_prop_info_list =
       core_->part_header().part_prop_info_list();
   if (!part_prop_info_list.empty()) {
-    auto part_result = AddTables(
+    auto part_result = AddProperties(
         metadata_dir, part_prop_info_list,
-        [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-          return rdg->AddPartitionMetadataArray(table);
+        [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+          return rdg->AddPartitionMetadataArray(props);
         });
     if (!part_result) {
       return edge_result.error();
@@ -505,13 +505,13 @@ tsuba::RDG::Store(
 }
 
 katana::Result<void>
-tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
-  if (auto res = core_->AddNodeProperties(table); !res) {
+tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
+  if (auto res = core_->AddNodeProperties(props); !res) {
     return res.error();
   }
 
-  const auto& schema = table->schema();
-  for (int i = 0, end = table->num_columns(); i < end; ++i) {
+  const auto& schema = props->schema();
+  for (int i = 0, end = props->num_columns(); i < end; ++i) {
     core_->part_header().AppendNodePropStorageInfo(tsuba::PropStorageInfo{
         .name = schema->field(i)->name(),
         .path = "",
@@ -519,20 +519,20 @@ tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& table) {
   }
 
   KATANA_LOG_DEBUG_ASSERT(
-      static_cast<size_t>(core_->node_table()->num_columns()) ==
+      static_cast<size_t>(core_->node_properties()->num_columns()) ==
       core_->part_header().node_prop_info_list().size());
 
   return katana::ResultSuccess();
 }
 
 katana::Result<void>
-tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
-  if (auto res = core_->AddEdgeProperties(table); !res) {
+tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
+  if (auto res = core_->AddEdgeProperties(props); !res) {
     return res.error();
   }
 
-  const auto& schema = table->schema();
-  for (int i = 0, end = table->num_columns(); i < end; ++i) {
+  const auto& schema = props->schema();
+  for (int i = 0, end = props->num_columns(); i < end; ++i) {
     core_->part_header().AppendEdgePropStorageInfo(tsuba::PropStorageInfo{
         .name = schema->field(i)->name(),
         .path = "",
@@ -540,7 +540,7 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& table) {
   }
 
   KATANA_LOG_DEBUG_ASSERT(
-      static_cast<size_t>(core_->edge_table()->num_columns()) ==
+      static_cast<size_t>(core_->edge_properties()->num_columns()) ==
       core_->part_header().edge_prop_info_list().size());
 
   return katana::ResultSuccess();
@@ -584,13 +584,13 @@ tsuba::RDG::set_part_metadata(const tsuba::PartitionMetadata& metadata) {
 }
 
 const std::shared_ptr<arrow::Table>&
-tsuba::RDG::node_table() const {
-  return core_->node_table();
+tsuba::RDG::node_properties() const {
+  return core_->node_properties();
 }
 
 const std::shared_ptr<arrow::Table>&
-tsuba::RDG::edge_table() const {
-  return core_->edge_table();
+tsuba::RDG::edge_properties() const {
+  return core_->edge_properties();
 }
 
 const tsuba::FileView&

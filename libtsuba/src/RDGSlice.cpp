@@ -1,15 +1,14 @@
 #include "tsuba/RDGSlice.h"
 
-#include "AddTables.h"
+#include "AddProperties.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
 #include "katana/Logging.h"
 #include "tsuba/Errors.h"
 
-namespace tsuba {
-
 katana::Result<void>
-RDGSlice::DoMake(const katana::Uri& metadata_dir, const SliceArg& slice) {
+tsuba::RDGSlice::DoMake(
+    const katana::Uri& metadata_dir, const SliceArg& slice) {
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
 
   if (auto res = core_->topology_file_storage().Bind(
@@ -19,21 +18,21 @@ RDGSlice::DoMake(const katana::Uri& metadata_dir, const SliceArg& slice) {
     return res.error();
   }
 
-  auto node_result = AddTablesSlice(
+  auto node_result = AddPropertySlice(
       metadata_dir, core_->part_header().node_prop_info_list(),
       slice.node_range,
-      [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-        return rdg->core_->AddNodeProperties(table);
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->core_->AddNodeProperties(props);
       });
   if (!node_result) {
     return node_result.error();
   }
 
-  auto edge_result = AddTablesSlice(
+  auto edge_result = AddPropertySlice(
       metadata_dir, core_->part_header().edge_prop_info_list(),
       slice.edge_range,
-      [rdg = this](const std::shared_ptr<arrow::Table>& table) {
-        return rdg->core_->AddEdgeProperties(table);
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->core_->AddEdgeProperties(props);
       });
   if (!edge_result) {
     return edge_result.error();
@@ -42,8 +41,8 @@ RDGSlice::DoMake(const katana::Uri& metadata_dir, const SliceArg& slice) {
   return katana::ResultSuccess();
 }
 
-katana::Result<RDGSlice>
-RDGSlice::Make(
+katana::Result<tsuba::RDGSlice>
+tsuba::RDGSlice::Make(
     RDGHandle handle, const SliceArg& slice,
     const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
@@ -79,24 +78,24 @@ RDGSlice::Make(
 }
 
 const std::shared_ptr<arrow::Table>&
-RDGSlice::node_table() const {
-  return core_->node_table();
+tsuba::RDGSlice::node_properties() const {
+  return core_->node_properties();
 }
 
 const std::shared_ptr<arrow::Table>&
-RDGSlice::edge_table() const {
-  return core_->edge_table();
+tsuba::RDGSlice::edge_properties() const {
+  return core_->edge_properties();
 }
 
-const FileView&
-RDGSlice::topology_file_storage() const {
+const tsuba::FileView&
+tsuba::RDGSlice::topology_file_storage() const {
   return core_->topology_file_storage();
 }
 
-RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}
+tsuba::RDGSlice::RDGSlice(std::unique_ptr<RDGCore>&& core)
+    : core_(std::move(core)) {}
 
-RDGSlice::~RDGSlice() = default;
-RDGSlice::RDGSlice(RDGSlice&& other) noexcept = default;
-RDGSlice& RDGSlice::operator=(RDGSlice&& other) noexcept = default;
-
-}  // namespace tsuba
+tsuba::RDGSlice::~RDGSlice() = default;
+tsuba::RDGSlice::RDGSlice(RDGSlice&& other) noexcept = default;
+tsuba::RDGSlice& tsuba::RDGSlice::operator=(RDGSlice&& other) noexcept =
+    default;

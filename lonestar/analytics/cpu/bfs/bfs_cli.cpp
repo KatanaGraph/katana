@@ -139,7 +139,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->NodePropertyTyped<uint32_t>("level");
+    auto r = pfg->GetNodePropertyTyped<uint32_t>("level");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }

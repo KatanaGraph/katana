@@ -54,7 +54,7 @@ struct KATANA_EXPORT GraphTopology {
    * @param node an iterator pointing to the node to get the edge range of
    * @returns iterable edge range for node.
    */
-  edges_range edges(node_iterator node) const { return edges(*node); }
+  edges_range edges(const node_iterator& node) const { return edges(*node); }
   // TODO(amp): [[deprecated("use edges(Node node)")]]
 
   /**
@@ -118,10 +118,10 @@ public:
     std::shared_ptr<arrow::Schema> (PropertyFileGraph::*schema_fn)() const;
     std::shared_ptr<arrow::ChunkedArray> (PropertyFileGraph::*property_fn)(
         int i) const;
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> (
+    const std::shared_ptr<arrow::Table>& (
         PropertyFileGraph::*properties_fn)() const;
     Result<void> (PropertyFileGraph::*add_properties_fn)(
-        const std::shared_ptr<arrow::Table>& table);
+        const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyFileGraph::*remove_property_fn)(int i);
 
     std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
@@ -130,13 +130,13 @@ public:
       return (g->*property_fn)(i);
     }
 
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> Properties() const {
+    const std::shared_ptr<arrow::Table>& properties() const {
       return (g->*properties_fn)();
     }
 
     Result<void> AddProperties(
-        const std::shared_ptr<arrow::Table>& table) const {
-      return (g->*add_properties_fn)(table);
+        const std::shared_ptr<arrow::Table>& props) const {
+      return (g->*add_properties_fn)(props);
     }
 
     Result<void> RemoveProperty(int i) const {
@@ -242,24 +242,24 @@ public:
   /// Determine if two PropertyFileGraphss are Equal
   bool Equals(const PropertyFileGraph* other) const {
     return topology().Equals(other->topology()) &&
-           rdg_.node_table()->Equals(*other->node_table()) &&
-           rdg_.edge_table()->Equals(*other->edge_table());
+           rdg_.node_properties()->Equals(*other->node_properties()) &&
+           rdg_.edge_properties()->Equals(*other->edge_properties());
   }
 
   std::shared_ptr<arrow::Schema> node_schema() const {
-    return rdg_.node_table()->schema();
+    return rdg_.node_properties()->schema();
   }
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
-    return rdg_.edge_table()->schema();
+    return rdg_.edge_properties()->schema();
   }
 
-  std::shared_ptr<arrow::ChunkedArray> NodeProperty(int i) const {
-    return rdg_.node_table()->column(i);
+  std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
+    return rdg_.node_properties()->column(i);
   }
 
-  std::shared_ptr<arrow::ChunkedArray> EdgeProperty(int i) const {
-    return rdg_.edge_table()->column(i);
+  std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
+    return rdg_.edge_properties()->column(i);
   }
 
   /**
@@ -268,26 +268,27 @@ public:
    * @param name The name of the property to get.
    * @return The property data or NULL if the property is not found.
    */
-  std::shared_ptr<arrow::ChunkedArray> NodeProperty(
+  std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
       const std::string& name) const {
-    return rdg_.node_table()->GetColumnByName(name);
+    return rdg_.node_properties()->GetColumnByName(name);
   }
 
-  std::shared_ptr<arrow::ChunkedArray> EdgeProperty(
+  std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
       const std::string& name) const {
-    return rdg_.edge_table()->GetColumnByName(name);
+    return rdg_.edge_properties()->GetColumnByName(name);
   }
 
   /**
-   * Get a node property by name specifying it's type.
+   * Get a node property by name and cast it to a type.
+   *
    * @tparam T The type of the property.
    * @param name The name of the property.
    * @return The property array or an error if the property does not exist or has a different type.
    */
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
-  NodePropertyTyped(const std::string& name) {
-    auto chunked_array = NodeProperty(name);
+  GetNodePropertyTyped(const std::string& name) {
+    auto chunked_array = GetNodeProperty(name);
     if (!chunked_array) {
       return ErrorCode::PropertyNotFound;
     }
@@ -302,15 +303,16 @@ public:
   }
 
   /**
-    * Get an edge property by name specifying it's type.
+    * Get an edge property by name and cast it to a type.
+    *
     * @tparam T The type of the property.
     * @param name The name of the property.
     * @return The property array or an error if the property does not exist or has a different type.
     */
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
-  EdgePropertyTyped(const std::string& name) {
-    auto chunked_array = EdgeProperty(name);
+  GetEdgePropertyTyped(const std::string& name) {
+    auto chunked_array = GetEdgeProperty(name);
     if (!chunked_array) {
       return ErrorCode::PropertyNotFound;
     }
@@ -345,26 +347,12 @@ public:
 
   const GraphTopology& topology() const { return topology_; }
 
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> NodeProperties() const {
-    return rdg_.node_table()->columns();
-  }
-  std::vector<std::string> NodePropertyNames() const {
-    return rdg_.node_table()->ColumnNames();
-  }
-
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> EdgeProperties() const {
-    return rdg_.edge_table()->columns();
-  }
-  std::vector<std::string> EdgePropertyNames() const {
-    return rdg_.edge_table()->ColumnNames();
-  }
-
-  Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& table);
-  Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& table);
+  Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
+  Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
 
   Result<void> RemoveNodeProperty(int i) { return rdg_.RemoveNodeProperty(i); }
   Result<void> RemoveNodeProperty(const std::string& prop_name) {
-    auto col_names = NodePropertyNames();
+    auto col_names = node_properties()->ColumnNames();
     auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
     if (pos != col_names.cend()) {
       return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
@@ -373,7 +361,7 @@ public:
   }
   Result<void> RemoveEdgeProperty(int i) { return rdg_.RemoveEdgeProperty(i); }
   Result<void> RemoveEdgeProperty(const std::string& prop_name) {
-    auto col_names = EdgePropertyNames();
+    auto col_names = edge_properties()->ColumnNames();
     auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
     if (pos != col_names.cend()) {
       return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
@@ -385,8 +373,8 @@ public:
     return PropertyView{
         .g = this,
         .schema_fn = &PropertyFileGraph::node_schema,
-        .property_fn = &PropertyFileGraph::NodeProperty,
-        .properties_fn = &PropertyFileGraph::NodeProperties,
+        .property_fn = &PropertyFileGraph::GetNodeProperty,
+        .properties_fn = &PropertyFileGraph::node_properties,
         .add_properties_fn = &PropertyFileGraph::AddNodeProperties,
         .remove_property_fn = &PropertyFileGraph::RemoveNodeProperty,
     };
@@ -396,8 +384,8 @@ public:
     return PropertyView{
         .g = this,
         .schema_fn = &PropertyFileGraph::edge_schema,
-        .property_fn = &PropertyFileGraph::EdgeProperty,
-        .properties_fn = &PropertyFileGraph::EdgeProperties,
+        .property_fn = &PropertyFileGraph::GetEdgeProperty,
+        .properties_fn = &PropertyFileGraph::edge_properties,
         .add_properties_fn = &PropertyFileGraph::AddEdgeProperties,
         .remove_property_fn = &PropertyFileGraph::RemoveEdgeProperty,
     };
@@ -405,11 +393,11 @@ public:
 
   Result<void> SetTopology(const GraphTopology& topology);
 
-  const std::shared_ptr<arrow::Table>& node_table() const {
-    return rdg_.node_table();
+  const std::shared_ptr<arrow::Table>& node_properties() const {
+    return rdg_.node_properties();
   }
-  const std::shared_ptr<arrow::Table>& edge_table() const {
-    return rdg_.edge_table();
+  const std::shared_ptr<arrow::Table>& edge_properties() const {
+    return rdg_.edge_properties();
   }
 
   // Pass through topology API to match PropertyGraph API

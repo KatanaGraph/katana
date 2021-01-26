@@ -1,4 +1,4 @@
-#include "AddTables.h"
+#include "AddProperties.h"
 
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
@@ -9,7 +9,8 @@ using Result = katana::Result<T>;
 namespace {
 
 Result<std::shared_ptr<arrow::Table>>
-DoLoadTable(const std::string& expected_name, const katana::Uri& file_path) {
+DoLoadProperties(
+    const std::string& expected_name, const katana::Uri& file_path) {
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
   if (auto res = fv->Bind(file_path.string(), false); !res) {
     return res.error();
@@ -61,7 +62,7 @@ DoLoadTable(const std::string& expected_name, const katana::Uri& file_path) {
 }
 
 Result<std::shared_ptr<arrow::Table>>
-DoLoadTableSlice(
+DoLoadPropertySlice(
     const std::string& expected_name, const katana::Uri& file_path,
     int64_t offset, int64_t length) {
   if (offset < 0 || length < 0) {
@@ -140,10 +141,10 @@ DoLoadTableSlice(
 }  // namespace
 
 Result<std::shared_ptr<arrow::Table>>
-tsuba::LoadTable(
+tsuba::LoadProperties(
     const std::string& expected_name, const katana::Uri& file_path) {
   try {
-    return DoLoadTable(expected_name, file_path);
+    return DoLoadProperties(expected_name, file_path);
   } catch (const std::exception& exp) {
     KATANA_LOG_DEBUG("arrow exception: {}", exp.what());
     return tsuba::ErrorCode::ArrowError;
@@ -151,11 +152,11 @@ tsuba::LoadTable(
 }
 
 katana::Result<std::shared_ptr<arrow::Table>>
-tsuba::LoadTableSlice(
+tsuba::LoadPropertySlice(
     const std::string& expected_name, const katana::Uri& file_path,
     int64_t offset, int64_t length) {
   try {
-    return DoLoadTableSlice(expected_name, file_path, offset, length);
+    return DoLoadPropertySlice(expected_name, file_path, offset, length);
   } catch (const std::exception& exp) {
     KATANA_LOG_DEBUG("arrow exception: {}", exp.what());
     return ErrorCode::ArrowError;

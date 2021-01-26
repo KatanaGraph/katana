@@ -46,7 +46,7 @@ ProcessSchemaMapping(const std::string& mapping);
 
 std::string TypeName(ImportDataType type);
 ImportDataType ParseType(const std::string& in);
-ImportDataType ParseType(std::shared_ptr<arrow::DataType> in);
+ImportDataType ParseType(const std::shared_ptr<arrow::DataType>& in);
 
 }  // namespace katana
 

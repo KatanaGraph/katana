@@ -230,7 +230,7 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->NodePropertyTyped<uint64_t>("component");
+    auto r = pfg->GetNodePropertyTyped<uint64_t>("component");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }

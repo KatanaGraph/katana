@@ -24,6 +24,7 @@ struct KATANA_EXPORT GraphTopology {
   using Edge = uint64_t;
   using node_iterator = boost::counting_iterator<Node>;
   using edge_iterator = boost::counting_iterator<Edge>;
+  using nodes_range = StandardRange<node_iterator>;
   using edges_range = StandardRange<edge_iterator>;
   using iterator = node_iterator;
 
@@ -68,6 +69,10 @@ struct KATANA_EXPORT GraphTopology {
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
 
+  nodes_range nodes(Node begin, Node end) const {
+    return MakeStandardRange<node_iterator>(begin, end);
+  }
+
   // Standard container concepts
 
   node_iterator begin() const { return node_iterator(0); }
@@ -108,6 +113,42 @@ class KATANA_EXPORT PropertyFileGraph {
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
   GraphTopology topology_;
+
+  // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
+  // while allowing Distribution to read/write it for RDG
+  friend class Distribution;
+  const tsuba::PartitionMetadata& partition_metadata() const {
+    return rdg_.part_metadata();
+  }
+  void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
+    rdg_.set_part_metadata(meta);
+  }
+
+  /// Per-host vector of master nodes
+  ///
+  /// master_nodes()[this_host].empty() is true
+  /// master_nodes()[host_i][x] contains LocalNodeID for my master and
+  ///   host_i has a mirror
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
+      const {
+    return rdg_.master_nodes();
+  }
+  void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    rdg_.set_master_nodes(std::move(a));
+  }
+
+  /// Per-host vector of mirror nodes
+  ///
+  /// mirror_nodes()[this_host].empty() is true
+  /// mirror_nodes()[host_i][x] contains LocalNodeID for my mirrors and
+  ///   host_i has the master
+  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
+      const {
+    return rdg_.mirror_nodes();
+  }
+  void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
+    rdg_.set_mirror_nodes(std::move(a));
+  }
 
 public:
   /// PropertyView provides a uniform interface when you don't need to
@@ -186,44 +227,26 @@ public:
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
-  const tsuba::PartitionMetadata& partition_metadata() const {
-    return rdg_.part_metadata();
+  // Accessors for information in partition_metadata.
+  GraphTopology::nodes_range masters() const {
+    auto pm = rdg_.part_metadata();
+    return topology_.nodes(0, pm.num_owned_);
   }
-  void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
-    rdg_.set_part_metadata(meta);
+  GraphTopology::nodes_range outgoing_mirrors() const {
+    auto pm = rdg_.part_metadata();
+    return topology_.nodes(pm.num_owned_, pm.num_nodes_with_edges_);
+  }
+  GraphTopology::nodes_range incoming_mirrors() const {
+    auto pm = rdg_.part_metadata();
+    return topology_.nodes(pm.num_nodes_with_edges_, pm.num_nodes_);
   }
 
+  // ChunkedArray seems like a bad choice for a vector intended for random access
   const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
     return rdg_.local_to_global_vector();
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
     rdg_.set_local_to_global_vector(std::move(a));
-  }
-
-  /// Per-host vector of master nodes
-  ///
-  /// master_nodes()[this_host].empty() is true
-  /// master_nodes()[host_i][x] contains LocalNodeID for my master and
-  ///   host_i has a mirror
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
-      const {
-    return rdg_.master_nodes();
-  }
-  void set_master_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    rdg_.set_master_nodes(std::move(a));
-  }
-
-  /// Per-host vector of mirror nodes
-  ///
-  /// mirror_nodes()[this_host].empty() is true
-  /// mirror_nodes()[host_i][x] contains LocalNodeID for my mirrors and
-  ///   host_i has the master
-  const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
-      const {
-    return rdg_.mirror_nodes();
-  }
-  void set_mirror_nodes(std::vector<std::shared_ptr<arrow::ChunkedArray>>&& a) {
-    rdg_.set_mirror_nodes(std::move(a));
   }
 
   /// Write the property graph to the given RDG name.
@@ -266,12 +289,18 @@ public:
     return rdg_.edge_properties()->schema();
   }
 
+  // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    return rdg_.node_properties()->column(i);
+    if (i >= rdg_.node_table()->num_columns())
+      return nullptr;
+    return rdg_.node_table()->column(i);
   }
 
+  // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    return rdg_.edge_properties()->column(i);
+    if (i >= rdg_.edge_table()->num_columns())
+      return nullptr;
+    return rdg_.edge_table()->column(i);
   }
 
   /**
@@ -432,6 +461,7 @@ public:
   bool empty() const { return topology().empty(); }
 
   // NB: num_nodes in repartitioner is of type LocalNodeID
+  /// Return the number of local nodes and edges
   uint64_t num_nodes() const { return topology().num_nodes(); }
   uint64_t num_edges() const { return topology().num_edges(); }
 

@@ -1,5 +1,7 @@
 #include <cstdlib>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "katana/DistMemSys.h"
 #include "katana/Network.h"
 #include "katana/PropertyFileGraph.h"
@@ -12,6 +14,36 @@ namespace cll = llvm::cl;
 static cll::opt<std::string> src_uri(
     cll::Positional, cll::desc("<graph file>"), cll::Required);
 
+void
+PrintNames(std::vector<std::string> names) {
+  std::sort(
+      names.begin(), names.end(),
+      [](const std::string& a, const std::string& b) {
+        return boost::ilexicographical_compare<std::string, std::string>(a, b);
+      });
+  for (size_t i = 0, end = names.size(); i < end; i += 4) {
+    switch (end - i) {
+    case 1: {
+      fmt::print("{:16}\n", names[i]);
+      break;
+    }
+    case 2: {
+      fmt::print("{:16} {:16}\n", names[i], names[i + 1]);
+      break;
+    }
+    case 3: {
+      fmt::print("{:16} {:16} {:16}\n", names[i], names[i + 1], names[i + 2]);
+      break;
+    }
+    default: {
+      fmt::print(
+          "{:16} {:16} {:16} {:16}\n", names[i], names[i + 1], names[i + 2],
+          names[i + 3]);
+      break;
+    }
+    }
+  }
+}
 // We could find out this information without loading the graph,
 // but that would take more effort
 void
@@ -42,10 +74,12 @@ PrintDist(const std::string& src_uri, int this_host, int num_hosts) {
 
   if (this_host == (num_hosts - 1)) {
     fmt::print(
-        "{:16} : {:>5}\n", "Node Properties", g->NodePropertyNames().size());
+        "{:16} : {:>2}\n", "Node Properties", g->NodePropertyNames().size());
+    PrintNames(g->NodePropertyNames());
 
     fmt::print(
-        "{:16} : {:>5}\n", "Edge Properties", g->EdgePropertyNames().size());
+        "{:16} : {:>2}\n", "Edge Properties", g->EdgePropertyNames().size());
+    PrintNames(g->EdgePropertyNames());
   }
 }
 
@@ -67,7 +101,6 @@ main(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
   // build this after CLI parsing since it might cause MPI to fail
   auto dist_mem_sys = std::make_unique<katana::DistMemSys>();
-
   auto& net = katana::getSystemNetworkInterface();
   auto num_hosts = net.Num;
   auto this_host = net.ID;

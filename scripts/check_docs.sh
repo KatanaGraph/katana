@@ -13,4 +13,4 @@ fi
 
 # match lines like
 # a/path/filename.ext:123: warning: ....
-make doc 2>&1 | awk 'END { exit status } /^[^:]*:[0-9]+: .*/ {print; status = 1;} { print; }'
+make doc 2>&1 | awk 'END { exit status } /^[^:]*:[0-9]+: .*/ {status = 1;} { print; }'

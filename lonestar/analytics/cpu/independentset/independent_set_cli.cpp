@@ -81,19 +81,19 @@ main(int argc, char** argv) {
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pfg->num_nodes() << " nodes, " << pfg->num_edges()
+  std::cout << "Read " << pg->num_nodes() << " nodes, " << pg->num_edges()
             << " edges\n";
 
   IndependentSetPlan plan = IndependentSetPlan::FromAlgorithm(algo);
 
-  if (auto r = IndependentSet(pfg.get(), "indicator", plan); !r) {
+  if (auto r = IndependentSet(pg.get(), "indicator", plan); !r) {
     KATANA_LOG_FATAL("Failed to run algorithm: {}", r.error());
   }
 
-  auto stats_result = IndependentSetStatistics::Compute(pfg.get(), "indicator");
+  auto stats_result = IndependentSetStatistics::Compute(pg.get(), "indicator");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }
@@ -101,7 +101,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (IndependentSetAssertValid(pfg.get(), "indicator")) {
+    if (IndependentSetAssertValid(pg.get(), "indicator")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -109,12 +109,12 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->GetNodePropertyTyped<uint8_t>("indicator");
+    auto r = pg->GetNodePropertyTyped<uint8_t>("indicator");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
-    KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pfg->size());
+    KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pg->size());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

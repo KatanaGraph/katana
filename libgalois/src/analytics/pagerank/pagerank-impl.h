@@ -25,6 +25,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include "katana/Properties.h"
 #include "katana/PropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "katana/analytics/pagerank/pagerank.h"
@@ -33,19 +34,19 @@ typedef float PRTy;
 using NodeValue = katana::PODProperty<PRTy>;
 
 katana::Result<void> PagerankPullTopological(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan);
 
 katana::Result<void> PagerankPullResidual(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan);
 
 katana::Result<void> PagerankPushAsynchronous(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan);
 
 katana::Result<void> PagerankPushSynchronous(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan);
 
 #endif

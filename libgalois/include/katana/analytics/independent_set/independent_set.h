@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "katana/Properties.h"
-#include "katana/PropertyFileGraph.h"
 #include "katana/PropertyGraph.h"
 #include "katana/analytics/Plan.h"
 
@@ -58,11 +57,11 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call. The created property has type uint8_t.
 KATANA_EXPORT Result<void> IndependentSet(
-    PropertyFileGraph* pfg, const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
     IndependentSetPlan plan = {});
 
 KATANA_EXPORT Result<void> IndependentSetAssertValid(
-    PropertyFileGraph* pfg, const std::string& property_name);
+    PropertyGraph* pg, const std::string& property_name);
 
 struct KATANA_EXPORT IndependentSetStatistics {
   /// The number of nodes in the independent set.
@@ -72,7 +71,7 @@ struct KATANA_EXPORT IndependentSetStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<IndependentSetStatistics> Compute(
-      katana::PropertyFileGraph* pfg, const std::string& property_name);
+      katana::PropertyGraph* pg, const std::string& property_name);
 };
 
 }  // namespace katana::analytics

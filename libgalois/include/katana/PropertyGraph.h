@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYFILEGRAPH_H_
-#define KATANA_LIBGALOIS_KATANA_PROPERTYFILEGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 
 #include <string>
 #include <utility>
@@ -49,21 +49,17 @@ struct KATANA_EXPORT GraphTopology {
     return std::make_pair(edge_start, edge_end);
   }
 
-  /**
-   * Gets the edge range of some node.
-   *
-   * @param node an iterator pointing to the node to get the edge range of
-   * @returns iterable edge range for node.
-   */
+  /// Gets the edge range of some node.
+  ///
+  /// \param node an iterator pointing to the node to get the edge range of
+  /// \returns iterable edge range for node.
   edges_range edges(const node_iterator& node) const { return edges(*node); }
   // TODO(amp): [[deprecated("use edges(Node node)")]]
 
-  /**
-   * Gets the edge range of some node.
-   *
-   * @param node node to get the edge range of
-   * @returns iterable edge range for node.
-   */
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
   edges_range edges(Node node) const {
     auto [begin_edge, end_edge] = edge_range(node);
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
@@ -88,16 +84,16 @@ struct KATANA_EXPORT GraphTopology {
 /// and edges. A property has a name and value. Its value may be a primitive
 /// type, a list of values or a composition of properties.
 ///
-/// A PropertyFileGraph is a representation of a property graph that is backed
+/// A PropertyGraph is a representation of a property graph that is backed
 /// by persistent storage, and it may be a subgraph of a larger, global property
-/// graph. Another way to view a PropertyFileGraph is as a container for node
+/// graph. Another way to view a PropertyGraph is as a container for node
 /// and edge properties that can be serialized.
 ///
 /// The main way to load and store a property graph is via an RDG. An RDG
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
-class KATANA_EXPORT PropertyFileGraph {
-  PropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
+class KATANA_EXPORT PropertyGraph {
+  PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -154,16 +150,16 @@ public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
   struct PropertyView {
-    PropertyFileGraph* g;
+    PropertyGraph* g;
 
-    std::shared_ptr<arrow::Schema> (PropertyFileGraph::*schema_fn)() const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyFileGraph::*property_fn)(
+    std::shared_ptr<arrow::Schema> (PropertyGraph::*schema_fn)() const;
+    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn)(
         int i) const;
     const std::shared_ptr<arrow::Table>& (
-        PropertyFileGraph::*properties_fn)() const;
-    Result<void> (PropertyFileGraph::*add_properties_fn)(
+        PropertyGraph::*properties_fn)() const;
+    Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
-    Result<void> (PropertyFileGraph::*remove_property_fn)(int i);
+    Result<void> (PropertyGraph::*remove_property_fn)(int i);
 
     std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
 
@@ -185,15 +181,15 @@ public:
     }
   };
 
-  PropertyFileGraph();
+  PropertyGraph();
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
-  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+  static Result<std::unique_ptr<PropertyGraph>> Make(
       std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   /// Make a property graph from an RDG name.
-  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+  static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name);
 
   /// Make a property graph from an RDG but only load the named node and edge
@@ -204,24 +200,20 @@ public:
   ///
   /// \returns invalid_argument if any property is not found or if there
   /// are multiple properties with the same name
-  static Result<std::unique_ptr<PropertyFileGraph>> Make(
+  static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name,
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
-  /**
-   * @return A copy of this with the same set of properties. The copy shares no
-   *        state with this.
-   */
-  Result<std::unique_ptr<PropertyFileGraph>> Copy();
+  /// \return A copy of this with the same set of properties. The copy shares no
+  ///       state with this.
+  Result<std::unique_ptr<PropertyGraph>> Copy();
 
-  /**
-   * @param node_properties The node properties to copy.
-   * @param edge_properties The edge properties to copy.
-   * @return A copy of this with a subset of the properties. The copy shares no
-   *        state with this.
-   */
-  Result<std::unique_ptr<PropertyFileGraph>> Copy(
+  /// \param node_properties The node properties to copy.
+  /// \param edge_properties The edge properties to copy.
+  /// \return A copy of this with a subset of the properties. The copy shares no
+  ///        state with this.
+  Result<std::unique_ptr<PropertyGraph>> Copy(
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
 
@@ -275,8 +267,8 @@ public:
     return ResultSuccess();
   }
 
-  /// Determine if two PropertyFileGraphss are Equal
-  bool Equals(const PropertyFileGraph* other) const;
+  /// Determine if two PropertyGraphs are Equal
+  bool Equals(const PropertyGraph* other) const;
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_properties()->schema();
@@ -310,12 +302,10 @@ public:
     return rdg_.edge_properties()->column(i);
   }
 
-  /**
-   * Get a node property by name.
-   *
-   * @param name The name of the property to get.
-   * @return The property data or NULL if the property is not found.
-   */
+  /// Get a node property by name.
+  ///
+  /// \param name The name of the property to get.
+  /// \return The property data or NULL if the property is not found.
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
       const std::string& name) const {
     return rdg_.node_properties()->GetColumnByName(name);
@@ -332,13 +322,11 @@ public:
     return edge_properties()->ColumnNames();
   }
 
-  /**
-   * Get a node property by name and cast it to a type.
-   *
-   * @tparam T The type of the property.
-   * @param name The name of the property.
-   * @return The property array or an error if the property does not exist or has a different type.
-   */
+  /// Get a node property by name and cast it to a type.
+  ///
+  /// \tparam T The type of the property.
+  /// \param name The name of the property.
+  /// \return The property array or an error if the property does not exist or has a different type.
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetNodePropertyTyped(const std::string& name) {
@@ -356,13 +344,11 @@ public:
     return array;
   }
 
-  /**
-    * Get an edge property by name and cast it to a type.
-    *
-    * @tparam T The type of the property.
-    * @param name The name of the property.
-    * @return The property array or an error if the property does not exist or has a different type.
-    */
+  /// Get an edge property by name and cast it to a type.
+  ///
+  /// \tparam T The type of the property.
+  /// \param name The name of the property.
+  /// \return The property array or an error if the property does not exist or has a different type.
   template <typename T>
   Result<std::shared_ptr<typename arrow::CTypeTraits<T>::ArrayType>>
   GetEdgePropertyTyped(const std::string& name) {
@@ -426,22 +412,22 @@ public:
   PropertyView node_property_view() {
     return PropertyView{
         .g = this,
-        .schema_fn = &PropertyFileGraph::node_schema,
-        .property_fn = &PropertyFileGraph::GetNodeProperty,
-        .properties_fn = &PropertyFileGraph::node_properties,
-        .add_properties_fn = &PropertyFileGraph::AddNodeProperties,
-        .remove_property_fn = &PropertyFileGraph::RemoveNodeProperty,
+        .schema_fn = &PropertyGraph::node_schema,
+        .property_fn = &PropertyGraph::GetNodeProperty,
+        .properties_fn = &PropertyGraph::node_properties,
+        .add_properties_fn = &PropertyGraph::AddNodeProperties,
+        .remove_property_fn = &PropertyGraph::RemoveNodeProperty,
     };
   }
 
   PropertyView edge_property_view() {
     return PropertyView{
         .g = this,
-        .schema_fn = &PropertyFileGraph::edge_schema,
-        .property_fn = &PropertyFileGraph::GetEdgeProperty,
-        .properties_fn = &PropertyFileGraph::edge_properties,
-        .add_properties_fn = &PropertyFileGraph::AddEdgeProperties,
-        .remove_property_fn = &PropertyFileGraph::RemoveEdgeProperty,
+        .schema_fn = &PropertyGraph::edge_schema,
+        .property_fn = &PropertyGraph::GetEdgeProperty,
+        .properties_fn = &PropertyGraph::edge_properties,
+        .add_properties_fn = &PropertyGraph::AddEdgeProperties,
+        .remove_property_fn = &PropertyGraph::RemoveEdgeProperty,
     };
   }
 
@@ -456,7 +442,7 @@ public:
     return rdg_.edge_properties();
   }
 
-  // Pass through topology API to match PropertyGraph API
+  // Pass through topology API
 
   using node_iterator = GraphTopology::node_iterator;
   using edge_iterator = GraphTopology::edge_iterator;
@@ -482,12 +468,10 @@ public:
   /// Return the number of local edges
   uint64_t num_edges() const { return topology().num_edges(); }
 
-  /**
-   * Gets the edge range of some node.
-   *
-   * @param node node to get the edge range of
-   * @returns iterable edge range for node.
-   */
+  /// Gets the edge range of some node.
+  ///
+  /// \param node node to get the edge range of
+  /// \returns iterable edge range for node.
   edges_range edges(Node node) const { return topology().edges(node); }
 
   /**
@@ -505,13 +489,13 @@ public:
 /// SortAllEdgesByDest sorts edges for each node by destination
 /// ids (ascending order).
 ///
-/// This function modifies the PropertyFileGraph topology by doing
+/// This function modifies the PropertyGraph topology by doing
 /// in-place sorting of the edgelists of each nodes in the
 /// ascending order.
 /// This also returns the permutation vector (mapping from old
 /// indices to the new indices) which results due to the sorting.
 KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
-    PropertyFileGraph* pfg);
+    PropertyGraph* pg);
 
 /// FindEdgeSortedByDest finds the "node_to_find" id in the
 /// sorted edgelist of the "node" using binary search.
@@ -519,16 +503,16 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
 /// This returns the matched edge index if 'node_to_find' is present
 /// in the edgelist of 'node' else edge end if 'node_to_find' is not found.
 KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
-    const PropertyFileGraph* graph, GraphTopology::Node node,
+    const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find);
 
 /// SortNodesByDegree relables node ids by sorting in the descending
 /// order by node degree
 ///
-/// This function modifies the PropertyFileGraph topology by in-place
+/// This function modifies the PropertyGraph topology by in-place
 /// relabeling and sorting the node ids by their degree in the
 /// descending order.
-KATANA_EXPORT Result<void> SortNodesByDegree(PropertyFileGraph* pfg);
+KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);
 
 }  // namespace katana
 

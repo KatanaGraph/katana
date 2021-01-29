@@ -20,6 +20,7 @@
 #include "katana/analytics/connected_components/connected_components.h"
 
 #include "katana/ArrowRandomAccessBuilder.h"
+#include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
 
@@ -56,7 +57,7 @@ struct ConnectedComponentsSerialAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   const ConnectedComponentsPlan& plan_;
@@ -104,7 +105,7 @@ struct ConnectedComponentsLabelPropAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   katana::LargeArray<ComponentType> old_component_;
@@ -159,7 +160,7 @@ struct ConnectedComponentsSynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   struct Edge {
@@ -274,7 +275,7 @@ struct ConnectedComponentsAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -339,7 +340,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -416,7 +417,7 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -514,7 +515,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
@@ -679,7 +680,7 @@ struct ConnectedComponentsAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -809,7 +810,7 @@ struct ConnectedComponentsEdgeAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   using Edge = std::pair<GNode, GNode>;
@@ -957,7 +958,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
@@ -1075,15 +1076,15 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
-    katana::PropertyFileGraph* pfg, std::string output_property_name,
+    katana::PropertyGraph* pg, std::string output_property_name,
     ConnectedComponentsPlan plan) {
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(
-          pfg, {output_property_name});
+          pg, {output_property_name});
       !r) {
     return r.error();
   }
-  auto pg_result = Algorithm::Graph::Make(pfg, {output_property_name}, {});
+  auto pg_result = Algorithm::Graph::Make(pg, {output_property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -1109,42 +1110,42 @@ ConnectedComponentsWithWrap(
 
 katana::Result<void>
 katana::analytics::ConnectedComponents(
-    PropertyFileGraph* pfg, const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
     ConnectedComponentsPlan plan) {
   switch (plan.algorithm()) {
   case ConnectedComponentsPlan::kSerial:
     return ConnectedComponentsWithWrap<ConnectedComponentsSerialAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kLabelProp:
     return ConnectedComponentsWithWrap<ConnectedComponentsLabelPropAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kSynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsSynchronousAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsAsynchronousAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kEdgeAsynchronous:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAsynchronousAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kEdgeTiledAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAsynchronousAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kBlockedAsynchronous:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsBlockedAsynchronousAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsAfforestAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kEdgeAfforest:
     return ConnectedComponentsWithWrap<ConnectedComponentsEdgeAfforestAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   case ConnectedComponentsPlan::kEdgeTiledAfforest:
     return ConnectedComponentsWithWrap<
         ConnectedComponentsEdgeTiledAfforestAlgo>(
-        pfg, output_property_name, plan);
+        pg, output_property_name, plan);
   default:
     return ErrorCode::InvalidArgument;
   }
@@ -1152,16 +1153,16 @@ katana::analytics::ConnectedComponents(
 
 katana::Result<void>
 katana::analytics::ConnectedComponentsAssertValid(
-    PropertyFileGraph* pfg, const std::string& property_name) {
+    PropertyGraph* pg, const std::string& property_name) {
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  auto pg_result = Graph::Make(pfg, {property_name}, {});
+  auto pg_result = Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -1194,16 +1195,16 @@ katana::analytics::ConnectedComponentsAssertValid(
 
 katana::Result<ConnectedComponentsStatistics>
 katana::analytics::ConnectedComponentsStatistics::Compute(
-    katana::PropertyFileGraph* pfg, const std::string& property_name) {
+    katana::PropertyGraph* pg, const std::string& property_name) {
   using ComponentType = uint64_t;
   struct NodeComponent : public katana::PODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  auto pg_result = Graph::Make(pfg, {property_name}, {});
+  auto pg_result = Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }

@@ -23,8 +23,8 @@
 
 using namespace katana::analytics;
 
-using PropertyFileGraph = katana::PropertyFileGraph;
-using Node = katana::PropertyFileGraph::Node;
+using PropertyGraph = katana::PropertyGraph;
+using Node = katana::PropertyGraph::Node;
 
 constexpr static const unsigned kChunkSize = 64U;
 
@@ -133,29 +133,29 @@ struct IdLess {
  * Thesis. Universitat Karlsruhe. 2007.
  */
 size_t
-NodeIteratingAlgo(katana::PropertyFileGraph* graph) {
+NodeIteratingAlgo(katana::PropertyGraph* graph) {
   katana::GAccumulator<size_t> numTriangles;
 
   katana::do_all(
       katana::iterate(*graph),
-      [&](const PropertyFileGraph::Node& n) {
+      [&](const PropertyGraph::Node& n) {
         // Partition neighbors
         // [first, ea) [n] [bb, last)
-        PropertyFileGraph::edge_iterator first = graph->edges(n).begin();
-        PropertyFileGraph::edge_iterator last = graph->edges(n).end();
-        PropertyFileGraph::edge_iterator ea =
-            LowerBound(first, last, LessThan<PropertyFileGraph>(*graph, n));
-        PropertyFileGraph::edge_iterator bb = LowerBound(
-            first, last, GreaterThanOrEqual<PropertyFileGraph>(*graph, n));
+        PropertyGraph::edge_iterator first = graph->edges(n).begin();
+        PropertyGraph::edge_iterator last = graph->edges(n).end();
+        PropertyGraph::edge_iterator ea =
+            LowerBound(first, last, LessThan<PropertyGraph>(*graph, n));
+        PropertyGraph::edge_iterator bb = LowerBound(
+            first, last, GreaterThanOrEqual<PropertyGraph>(*graph, n));
 
         for (; bb != last; ++bb) {
           Node B = *graph->GetEdgeDest(bb);
           for (auto aa = first; aa != ea; ++aa) {
             Node A = *graph->GetEdgeDest(aa);
-            PropertyFileGraph::edge_iterator vv = graph->edges(A).begin();
-            PropertyFileGraph::edge_iterator ev = graph->edges(A).end();
-            PropertyFileGraph::edge_iterator it =
-                LowerBound(vv, ev, LessThan<PropertyFileGraph>(*graph, B));
+            PropertyGraph::edge_iterator vv = graph->edges(A).begin();
+            PropertyGraph::edge_iterator ev = graph->edges(A).end();
+            PropertyGraph::edge_iterator it =
+                LowerBound(vv, ev, LessThan<PropertyGraph>(*graph, B));
             if (it != ev && *graph->GetEdgeDest(it) == B) {
               numTriangles += 1;
             }
@@ -173,15 +173,14 @@ NodeIteratingAlgo(katana::PropertyFileGraph* graph) {
  */
 void
 OrderedCountFunc(
-    PropertyFileGraph* graph, Node n,
-    katana::GAccumulator<size_t>& numTriangles) {
+    PropertyGraph* graph, Node n, katana::GAccumulator<size_t>& numTriangles) {
   size_t numTriangles_local = 0;
   for (auto it_v : graph->edges(n)) {
     auto v = *graph->GetEdgeDest(it_v);
     if (v > n) {
       break;
     }
-    PropertyFileGraph::edge_iterator it_n = graph->edges(n).begin();
+    PropertyGraph::edge_iterator it_n = graph->edges(n).begin();
 
     for (auto it_vv : graph->edges(v)) {
       auto vv = *graph->GetEdgeDest(it_vv);
@@ -203,7 +202,7 @@ OrderedCountFunc(
  * Simple counting loop, instead of binary searching.
  */
 size_t
-OrderedCountAlgo(PropertyFileGraph* graph) {
+OrderedCountAlgo(PropertyGraph* graph) {
   katana::GAccumulator<size_t> numTriangles;
   katana::do_all(
       katana::iterate(*graph),
@@ -228,7 +227,7 @@ OrderedCountAlgo(PropertyFileGraph* graph) {
  * Thesis. Universitat Karlsruhe. 2007.
  */
 size_t
-EdgeIteratingAlgo(PropertyFileGraph* graph) {
+EdgeIteratingAlgo(PropertyGraph* graph) {
   struct WorkItem {
     Node src;
     Node dst;
@@ -255,19 +254,19 @@ EdgeIteratingAlgo(PropertyFileGraph* graph) {
       [&](const WorkItem& w) {
         // Compute intersection of range (w.src, w.dst) in neighbors of
         // w.src and w.dst
-        PropertyFileGraph::edge_iterator abegin = graph->edges(w.src).begin();
-        PropertyFileGraph::edge_iterator aend = graph->edges(w.src).end();
-        PropertyFileGraph::edge_iterator bbegin = graph->edges(w.dst).begin();
-        PropertyFileGraph::edge_iterator bend = graph->edges(w.dst).end();
+        PropertyGraph::edge_iterator abegin = graph->edges(w.src).begin();
+        PropertyGraph::edge_iterator aend = graph->edges(w.src).end();
+        PropertyGraph::edge_iterator bbegin = graph->edges(w.dst).begin();
+        PropertyGraph::edge_iterator bend = graph->edges(w.dst).end();
 
-        PropertyFileGraph::edge_iterator aa = LowerBound(
-            abegin, aend, GreaterThanOrEqual<PropertyFileGraph>(*graph, w.src));
-        PropertyFileGraph::edge_iterator ea = LowerBound(
-            abegin, aend, LessThan<PropertyFileGraph>(*graph, w.dst));
-        PropertyFileGraph::edge_iterator bb = LowerBound(
-            bbegin, bend, GreaterThanOrEqual<PropertyFileGraph>(*graph, w.src));
-        PropertyFileGraph::edge_iterator eb = LowerBound(
-            bbegin, bend, LessThan<PropertyFileGraph>(*graph, w.dst));
+        PropertyGraph::edge_iterator aa = LowerBound(
+            abegin, aend, GreaterThanOrEqual<PropertyGraph>(*graph, w.src));
+        PropertyGraph::edge_iterator ea =
+            LowerBound(abegin, aend, LessThan<PropertyGraph>(*graph, w.dst));
+        PropertyGraph::edge_iterator bb = LowerBound(
+            bbegin, bend, GreaterThanOrEqual<PropertyGraph>(*graph, w.src));
+        PropertyGraph::edge_iterator eb =
+            LowerBound(bbegin, bend, LessThan<PropertyGraph>(*graph, w.dst));
 
         numTriangles += CountEqual(*graph, aa, ea, bb, eb);
       },
@@ -279,7 +278,7 @@ EdgeIteratingAlgo(PropertyFileGraph* graph) {
 
 katana::Result<uint64_t>
 katana::analytics::TriangleCount(
-    katana::PropertyFileGraph* pfg, TriangleCountPlan plan) {
+    katana::PropertyGraph* pg, TriangleCountPlan plan) {
   katana::StatTimer timer_graph_read("GraphReadingTime", "TriangleCount");
   katana::StatTimer timer_auto_algo("AutoRelabel", "TriangleCount");
 
@@ -294,28 +293,28 @@ katana::analytics::TriangleCount(
     break;
   case TriangleCountPlan::kAutoRelabel:
     timer_auto_algo.start();
-    relabel = IsApproximateDegreeDistributionPowerLaw(*pfg);
+    relabel = IsApproximateDegreeDistributionPowerLaw(*pg);
     timer_auto_algo.stop();
     break;
   default:
     return katana::ErrorCode::AssertionFailed;
   }
 
-  std::unique_ptr<katana::PropertyFileGraph> mutable_pfg;
+  std::unique_ptr<katana::PropertyGraph> mutable_pfg;
   if (relabel || !plan.edges_sorted()) {
     // Copy the graph so we don't mutate the users graph.
-    auto mutable_pfg_result = pfg->Copy({}, {});
+    auto mutable_pfg_result = pg->Copy({}, {});
     if (!mutable_pfg_result) {
       return mutable_pfg_result.error();
     }
     mutable_pfg = std::move(mutable_pfg_result.value());
-    pfg = mutable_pfg.get();
+    pg = mutable_pfg.get();
   }
 
   if (relabel) {
     katana::StatTimer timer_relabel("GraphRelabelTimer", "TriangleCount");
     timer_relabel.start();
-    if (auto r = katana::SortNodesByDegree(pfg); !r) {
+    if (auto r = katana::SortNodesByDegree(pg); !r) {
       return r.error();
     }
     timer_relabel.stop();
@@ -323,14 +322,14 @@ katana::analytics::TriangleCount(
 
   // If we relabel we must also sort. Relabeling will break the sorting.
   if (relabel || !plan.edges_sorted()) {
-    if (auto r = katana::SortAllEdgesByDest(pfg); !r) {
+    if (auto r = katana::SortAllEdgesByDest(pg); !r) {
       return r.error();
     }
   }
 
   timer_graph_read.stop();
 
-  katana::Prealloc(1, 16 * (pfg->num_nodes() + pfg->num_edges()));
+  katana::Prealloc(1, 16 * (pg->num_nodes() + pg->num_edges()));
   katana::reportPageAlloc("TriangleCount_MeminfoPre");
 
   size_t total_count;
@@ -338,13 +337,13 @@ katana::analytics::TriangleCount(
   execTime.start();
   switch (plan.algorithm()) {
   case TriangleCountPlan::kNodeIteration:
-    total_count = NodeIteratingAlgo(pfg);
+    total_count = NodeIteratingAlgo(pg);
     break;
   case TriangleCountPlan::kEdgeIteration:
-    total_count = EdgeIteratingAlgo(pfg);
+    total_count = EdgeIteratingAlgo(pg);
     break;
   case TriangleCountPlan::kOrderedCount:
-    total_count = OrderedCountAlgo(pfg);
+    total_count = OrderedCountAlgo(pg);
     break;
   default:
     return katana::ErrorCode::InvalidArgument;

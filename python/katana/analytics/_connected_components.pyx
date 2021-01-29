@@ -3,7 +3,7 @@ from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
 from katana.analytics.plan cimport Plan, _Plan
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.property_graph cimport PropertyGraph
@@ -67,10 +67,10 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
     uint32_t kDefaultNeighborSampleSize "katana::analytics::ConnectedComponentsPlan::kDefaultNeighborSampleSize"
     uint32_t kDefaultComponentSampleFrequency "katana::analytics::ConnectedComponentsPlan::kDefaultComponentSampleFrequency"
 
-    std_result[void] ConnectedComponents(PropertyFileGraph*pfg, string output_property_name,
+    std_result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
                                          _ConnectedComponentsPlan plan)
 
-    std_result[void] ConnectedComponentsAssertValid(PropertyFileGraph*pfg, string output_property_name)
+    std_result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
 
     cppclass _ConnectedComponentsStatistics "katana::analytics::ConnectedComponentsStatistics":
         uint64_t total_components
@@ -81,7 +81,7 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
         void Print(ostream os)
 
         @staticmethod
-        std_result[_ConnectedComponentsStatistics] Compute(PropertyFileGraph*pfg, string output_property_name)
+        std_result[_ConnectedComponentsStatistics] Compute(_PropertyGraph*pg, string output_property_name)
 
 
 class _ConnectedComponentsPlanAlgorithm(Enum):

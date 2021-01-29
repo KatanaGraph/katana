@@ -20,6 +20,7 @@
 #include "katana/analytics/k_truss/k_truss.h"
 
 #include "katana/ArrowRandomAccessBuilder.h"
+#include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
 
@@ -28,7 +29,7 @@ using NodeData = std::tuple<>;
 struct EdgeFlag : public katana::PODProperty<uint32_t> {};
 using EdgeData = std::tuple<EdgeFlag>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 using Edge = std::pair<GNode, GNode>;
@@ -337,20 +338,20 @@ BSPCoreThenTrussAlgo(Graph* g, uint32_t k) {
 
 katana::Result<void>
 katana::analytics::KTruss(
-    katana::PropertyFileGraph* pfg, uint32_t k_truss_number,
+    katana::PropertyGraph* pg, uint32_t k_truss_number,
     const std::string& output_property_name, KTrussPlan plan) {
   if (auto result =
-          ConstructEdgeProperties<EdgeData>(pfg, {output_property_name});
+          ConstructEdgeProperties<EdgeData>(pg, {output_property_name});
       !result) {
     return result.error();
   }
 
-  auto result = katana::SortAllEdgesByDest(pfg);
+  auto result = katana::SortAllEdgesByDest(pg);
   if (!result) {
     return result.error();
   }
 
-  auto pg_result = Graph::Make(pfg, {}, {output_property_name});
+  auto pg_result = Graph::Make(pg, {}, {output_property_name});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -379,7 +380,7 @@ katana::analytics::KTruss(
 // TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KTrussAssertValid(
-    [[maybe_unused]] katana::PropertyFileGraph* pfg,
+    [[maybe_unused]] katana::PropertyGraph* pg,
     [[maybe_unused]] uint32_t k_truss_number,
     [[maybe_unused]] const std::string& property_name) {
   return katana::ResultSuccess();
@@ -387,9 +388,9 @@ katana::analytics::KTrussAssertValid(
 
 katana::Result<KTrussStatistics>
 katana::analytics::KTrussStatistics::Compute(
-    katana::PropertyFileGraph* pfg, [[maybe_unused]] uint32_t k_truss_number,
+    katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_truss_number,
     const std::string& property_name) {
-  auto pg_result = Graph::Make(pfg, {}, {property_name});
+  auto pg_result = Graph::Make(pg, {}, {property_name});
   if (!pg_result) {
     return pg_result.error();
   }

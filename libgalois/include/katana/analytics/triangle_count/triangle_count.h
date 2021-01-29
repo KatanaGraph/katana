@@ -1,7 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_TRIANGLECOUNT_TRIANGLECOUNT_H_
 #define KATANA_LIBGALOIS_KATANA_ANALYTICS_TRIANGLECOUNT_TRIANGLECOUNT_H_
 
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/analytics/Plan.h"
 
 // API
@@ -98,11 +98,11 @@ public:
  *
  * This algorithm copies the graph internally.
  *
- * @param pfg The graph to process.
+ * @param pg The graph to process.
  * @param plan
  */
 KATANA_EXPORT katana::Result<uint64_t> TriangleCount(
-    PropertyFileGraph* pfg, TriangleCountPlan plan = {});
+    PropertyGraph* pg, TriangleCountPlan plan = {});
 
 }  // namespace katana::analytics
 

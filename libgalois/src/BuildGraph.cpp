@@ -29,7 +29,7 @@
 #include "katana/Galois.h"
 #include "katana/Logging.h"
 #include "katana/ParallelSTL.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
 #include "katana/Threads.h"
 
@@ -1788,9 +1788,9 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
   return katana::GraphComponents{nodes_tables, edges_tables, topology};
 }
 
-std::unique_ptr<katana::PropertyFileGraph>
+std::unique_ptr<katana::PropertyGraph>
 katana::MakeGraph(const katana::GraphComponents& graph_comps) {
-  auto graph = std::make_unique<katana::PropertyFileGraph>();
+  auto graph = std::make_unique<katana::PropertyGraph>();
   auto result = graph->SetTopology(*graph_comps.topology);
   if (!result) {
     KATANA_LOG_FATAL("Error adding topology: {}", result.error());
@@ -1891,7 +1891,7 @@ katana::WritePropertyGraph(
 
 void
 katana::WritePropertyGraph(
-    katana::PropertyFileGraph prop_graph, const std::string& dir) {
+    katana::PropertyGraph prop_graph, const std::string& dir) {
   for (auto field : prop_graph.node_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());

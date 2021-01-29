@@ -6,7 +6,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
 
@@ -26,7 +26,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
             kAutomatic "katana::analytics::SsspPlan::kAutomatic"
 
         _SsspPlan()
-        _SsspPlan(const PropertyFileGraph * pfg)
+        _SsspPlan(const _PropertyGraph * pg)
 
         _SsspPlan.Algorithm algorithm() const
         unsigned delta() const
@@ -54,10 +54,10 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
-    std_result[void] Sssp(PropertyFileGraph* pfg, size_t start_node,
+    std_result[void] Sssp(_PropertyGraph* pg, size_t start_node,
         const string& edge_weight_property_name, const string& output_property_name, _SsspPlan plan)
 
-    std_result[void] SsspAssertValid(PropertyFileGraph* pfg, size_t start_node,
+    std_result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
                                      const string& edge_weight_property_name, const string& output_property_name);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
@@ -70,7 +70,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         void Print(ostream os)
 
         @staticmethod
-        std_result[_SsspStatistics] Compute(PropertyFileGraph* pfg, string output_property_name);
+        std_result[_SsspStatistics] Compute(_PropertyGraph* pg, string output_property_name);
 
 
 class _SsspAlgorithm(Enum):

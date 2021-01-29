@@ -3,7 +3,7 @@ from libc.stdint cimport uint32_t
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -36,9 +36,9 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         @staticmethod
         _IndependentSetPlan EdgeTiledPriority()
 
-    std_result[void] IndependentSet(PropertyFileGraph* pfg, string output_property_name, _IndependentSetPlan plan)
+    std_result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, _IndependentSetPlan plan)
 
-    std_result[void] IndependentSetAssertValid(PropertyFileGraph* pfg, string output_property_name)
+    std_result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
 
     cppclass _IndependentSetStatistics "katana::analytics::IndependentSetStatistics":
         uint32_t cardinality
@@ -46,7 +46,7 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         void Print(ostream os)
 
         @staticmethod
-        std_result[_IndependentSetStatistics] Compute(PropertyFileGraph* pfg, string output_property_name)
+        std_result[_IndependentSetStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 class _IndependentSetPlanAlgorithm(Enum):

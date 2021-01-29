@@ -98,7 +98,7 @@ It may be useful to put these commands in a script to run easily when restarting
 The `3.8` will need to be changed to the appropriate Python version number.
 If you want to build C++ applications or libraries against the `libgalois` built here, you will need to set a couple more environment variables:
 
-```
+```Shell
 export LIBRARY_PATH=$SRC_DIR/_skbuild/linux-x86_64-3.8/cmake-install/lib${LIBRARY_PATH:+:$LIBRARY_PATH}
 export CPLUS_INCLUDE_PATH=$SRC_DIR/_skbuild/linux-x86_64-3.8/cmake-install/include${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}
 ```
@@ -118,7 +118,7 @@ conda build -c local -c katanagraph -c conda-forge $SRC_DIR/python/conda_recipe/
 The `conda build` commands will run some simple tests on the packages and will fail if the tests fail. 
 After each package builds successfully, `conda build` will print the path to the package. You can install it using:
 
-```
+```Shell
 conda install <path/to/package>
 conda install -c conda-forge -c katanagraph <package-name>
 ```

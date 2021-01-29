@@ -22,22 +22,24 @@
 #include <deque>
 #include <type_traits>
 
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
 using namespace katana::analytics;
 
 namespace {
 
-/// The tag for the output property of BFS in PropertyGraphs.
+/// The tag for the output property of BFS in TypedPropertyGraphs.
 using BfsNodeDistance = katana::PODProperty<uint32_t>;
 
 struct BfsImplementation
     : BfsSsspImplementationBase<
-          katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>,
+          katana::TypedPropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>,
           unsigned int, false> {
   BfsImplementation(ptrdiff_t edge_tile_size)
       : BfsSsspImplementationBase<
-            katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>,
+            katana::TypedPropertyGraph<
+                std::tuple<BfsNodeDistance>, std::tuple<>>,
             unsigned int, false>{edge_tile_size} {}
 };
 
@@ -272,7 +274,8 @@ RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
 
 katana::Result<void>
 BfsImpl(
-    katana::PropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>& graph,
+    katana::TypedPropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>&
+        graph,
     size_t start_node, BfsPlan algo) {
   if (start_node >= graph.size()) {
     return katana::ErrorCode::InvalidArgument;
@@ -303,15 +306,15 @@ BfsImpl(
 
 katana::Result<void>
 katana::analytics::Bfs(
-    katana::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyGraph* pg, size_t start_node,
     const std::string& output_property_name, BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeDistance>>(
-          pfg, {output_property_name});
+          pg, {output_property_name});
       !result) {
     return result.error();
   }
 
-  auto pg_result = Graph::Make(pfg, {output_property_name}, {});
+  auto pg_result = Graph::Make(pg, {output_property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -321,8 +324,8 @@ katana::analytics::Bfs(
 
 katana::Result<void>
 katana::analytics::BfsAssertValid(
-    PropertyFileGraph* pfg, const std::string& property_name) {
-  auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
+    PropertyGraph* pg, const std::string& property_name) {
+  auto pg_result = BfsImplementation::Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -355,8 +358,8 @@ katana::analytics::BfsAssertValid(
 
 katana::Result<BfsStatistics>
 katana::analytics::BfsStatistics::Compute(
-    katana::PropertyFileGraph* pfg, const std::string& property_name) {
-  auto pg_result = BfsImplementation::Graph::Make(pfg, {property_name}, {});
+    katana::PropertyGraph* pg, const std::string& property_name) {
+  auto pg_result = BfsImplementation::Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }

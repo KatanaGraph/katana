@@ -31,11 +31,11 @@ namespace katana {
 ///
 /// The same underlying data, an array of 32-bit values, can represent a number
 /// of potential properties. It is up to users to impose a particular typed
-/// view on top of their raw data. A PropertyFileGraph manages raw, untyped
-/// data, and a PropertyGraph provides typed property views on top of a
-/// PropertyFileGraph.
+/// view on top of their raw data. A PropertyGraph manages raw, untyped
+/// data, and a TypedPropertyGraph provides typed property views on top of a
+/// PropertyGraph.
 ///
-/// There are two ways of configuring a property for a PropertyGraph.
+/// There are two ways of configuring a property for a TypedPropertyGraph.
 ///
 /// The most common way is to create a new type with two nested types:
 /// ArrowType and ViewType:
@@ -51,11 +51,11 @@ namespace katana {
 ///
 /// Once configured, properties can be used as follows:
 ///
-///   PropertyFileGraph raw_graph = PropertyFileGraph::Make(....);
+///   PropertyGraph raw_graph = PropertyGraph::Make(....);
 ///
 ///   using NodeData = std::tuple<Rank>;
 ///   using EdgeData = std::tuple<Distance>;
-///   using Graph = PropertyGraph<NodeData, EdgeData>;
+///   using Graph = TypedPropertyGraph<NodeData, EdgeData>;
 ///
 ///   Graph graph = Graph::Make(....);
 ///

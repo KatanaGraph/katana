@@ -1,7 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_BUILDGRAPH_H_
 #define KATANA_LIBGALOIS_KATANA_BUILDGRAPH_H_
 
-/// Construct a PropertyFileGraph in memory.
+/// Construct a PropertyGraph in memory.
 
 #include <functional>
 #include <iostream>
@@ -14,7 +14,7 @@
 #include <arrow/stl.h>
 #include <arrow/type.h>
 
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 
 namespace katana {
 
@@ -225,15 +225,15 @@ private:
   GraphComponent BuildFinalEdges(bool verbose);
 };
 
-KATANA_EXPORT katana::PropertyFileGraph ConvertKatana(
+KATANA_EXPORT katana::PropertyGraph ConvertKatana(
     const std::string& input_filename);
 
-KATANA_EXPORT std::unique_ptr<katana::PropertyFileGraph> MakeGraph(
+KATANA_EXPORT std::unique_ptr<katana::PropertyGraph> MakeGraph(
     const GraphComponents& graph_comps);
 KATANA_EXPORT void WritePropertyGraph(
     const GraphComponents& graph_comps, const std::string& dir);
 KATANA_EXPORT void WritePropertyGraph(
-    PropertyFileGraph prop_graph, const std::string& dir);
+    PropertyGraph prop_graph, const std::string& dir);
 
 /// Convert Arrow chunked array to/from a vector of ImportData
 KATANA_EXPORT std::vector<ImportData> ArrowToImport(

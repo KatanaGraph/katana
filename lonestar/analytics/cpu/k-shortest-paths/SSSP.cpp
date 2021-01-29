@@ -22,6 +22,7 @@
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/K_SSSP.h"
 #include "katana/AtomicHelpers.h"
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
 using namespace katana::analytics;
@@ -90,7 +91,7 @@ using EdgeWeight = katana::UInt32Property;
 using NodeData = std::tuple<NodeCount, NodeMax>;
 using EdgeData = std::tuple<EdgeWeight>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 constexpr static const bool kTrackWork = false;
@@ -321,15 +322,16 @@ main(int argc, char** argv) {
   totalTime.start();
 
   katana::gInfo("Reading from file: ", inputFile, "\n");
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  auto result = ConstructNodeProperties<NodeData>(pfg.get());
+  auto result = ConstructNodeProperties<NodeData>(pg.get());
   if (!result) {
     KATANA_LOG_FATAL("failed to construct node properties: {}", result.error());
   }
 
-  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result =
+      katana::TypedPropertyGraph<NodeData, EdgeData>::Make(pg.get());
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }

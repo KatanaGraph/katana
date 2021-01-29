@@ -8,7 +8,7 @@ namespace {
 
 void
 ApplyTransform(
-    katana::PropertyFileGraph::PropertyView view,
+    katana::PropertyGraph::PropertyView view,
     katana::ColumnTransformer* transform) {
   int cur_field = 0;
   int num_fields = view.schema()->num_fields();
@@ -153,7 +153,7 @@ katana::SparsifyBooleans::operator()(
 
 void
 katana::ApplyTransforms(
-    katana::PropertyFileGraph* graph,
+    katana::PropertyGraph* graph,
     const std::vector<std::unique_ptr<katana::ColumnTransformer>>&
         transformers) {
   for (const auto& t : transformers) {

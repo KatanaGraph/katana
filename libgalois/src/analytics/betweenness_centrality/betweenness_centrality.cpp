@@ -27,7 +27,7 @@ const BetweennessCentralitySources
 
 katana::Result<void>
 katana::analytics::BetweennessCentrality(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     const BetweennessCentralitySources& sources,
     BetweennessCentralityPlan plan) {
   switch (plan.algorithm()) {
@@ -38,9 +38,9 @@ katana::analytics::BetweennessCentrality(
     //     doAsyncBC();
     //     break;
   case BetweennessCentralityPlan::kLevel:
-    return BetweennessCentralityLevel(pfg, sources, output_property_name, plan);
+    return BetweennessCentralityLevel(pg, sources, output_property_name, plan);
   case BetweennessCentralityPlan::kOuter:
-    return BetweennessCentralityOuter(pfg, sources, output_property_name, plan);
+    return BetweennessCentralityOuter(pg, sources, output_property_name, plan);
   default:
     return katana::ErrorCode::InvalidArgument;
   }
@@ -55,8 +55,8 @@ BetweennessCentralityStatistics::Print(std::ostream& os) {
 
 katana::Result<BetweennessCentralityStatistics>
 BetweennessCentralityStatistics::Compute(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
-  auto values_result = pfg->GetNodePropertyTyped<float>(output_property_name);
+    katana::PropertyGraph* pg, const std::string& output_property_name) {
+  auto values_result = pg->GetNodePropertyTyped<float>(output_property_name);
   if (!values_result) {
     return values_result.error();
   }
@@ -68,7 +68,7 @@ BetweennessCentralityStatistics::Compute(
 
   // get max, min, sum of BC values using accumulators and reducers
   katana::do_all(
-      katana::iterate((uint64_t)0, pfg->num_nodes()),
+      katana::iterate((uint64_t)0, pg->num_nodes()),
       [&](uint32_t n) {
         accum_max.update(values->Value(n));
         accum_min.update(values->Value(n));
@@ -79,5 +79,5 @@ BetweennessCentralityStatistics::Compute(
 
   return BetweennessCentralityStatistics{
       accum_max.reduce(), accum_min.reduce(),
-      accum_sum.reduce() / pfg->num_nodes()};
+      accum_sum.reduce() / pg->num_nodes()};
 }

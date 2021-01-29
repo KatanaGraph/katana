@@ -25,6 +25,7 @@
 
 #include "Lonestar/BoilerPlate.h"
 #include "katana/Profile.h"
+#include "katana/TypedPropertyGraph.h"
 
 const char* name = "Triangles";
 const char* desc = "Counts the triangles in a graph";
@@ -46,7 +47,7 @@ static cll::opt<Algo> algo(
 using NodeData = std::tuple<>;
 using EdgeData = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 /**
@@ -267,10 +268,11 @@ main(int argc, char** argv) {
   timer_graph_read.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(pfg.get());
+  auto pg_result =
+      katana::TypedPropertyGraph<NodeData, EdgeData>::Make(pg.get());
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
@@ -278,21 +280,21 @@ main(int argc, char** argv) {
 
   timer_auto_algo.start();
   bool relabel =
-      katana::analytics::IsApproximateDegreeDistributionPowerLaw(*pfg);
+      katana::analytics::IsApproximateDegreeDistributionPowerLaw(*pg);
   timer_auto_algo.stop();
 
   if (relabel) {
     katana::gInfo("Relabeling and sorting graph...");
     katana::StatTimer timer_relabel("GraphRelabelTimer");
     timer_relabel.start();
-    if (auto r = katana::SortNodesByDegree(pfg.get()); !r) {
+    if (auto r = katana::SortNodesByDegree(pg.get()); !r) {
       KATANA_LOG_FATAL(
           "Relabeling and sorting by node degree failed: {}", r.error());
     }
     timer_relabel.stop();
   }
 
-  if (auto r = katana::SortAllEdgesByDest(pfg.get()); !r) {
+  if (auto r = katana::SortAllEdgesByDest(pg.get()); !r) {
     KATANA_LOG_FATAL("Sorting edge destination failed: {}", r.error());
   }
 

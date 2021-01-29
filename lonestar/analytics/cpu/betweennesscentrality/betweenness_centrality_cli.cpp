@@ -80,14 +80,14 @@ main(int argc, char** argv) {
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
   BetweennessCentralityPlan plan =
       BetweennessCentralityPlan::FromAlgorithm(algo);
 
   BetweennessCentralitySources sources = kBetweennessCentralityAllNodes;
-  uint32_t num_sources = pfg->num_nodes();
+  uint32_t num_sources = pg->num_nodes();
 
   if (!startNodesFile.getValue().empty()) {
     std::ifstream file(startNodesFile);
@@ -127,13 +127,13 @@ main(int argc, char** argv) {
   std::cout << "Running betweenness-centrality on " << num_sources
             << " sources\n";
   if (auto r = BetweennessCentrality(
-          pfg.get(), "betweenness_centrality", sources, plan);
+          pg.get(), "betweenness_centrality", sources, plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }
 
   auto stats_result = BetweennessCentralityStatistics::Compute(
-      pfg.get(), "betweenness_centrality");
+      pg.get(), "betweenness_centrality");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }
@@ -143,14 +143,14 @@ main(int argc, char** argv) {
 
   if (output) {
     auto results_result =
-        pfg->GetNodePropertyTyped<float>("betweenness_centrality");
+        pg->GetNodePropertyTyped<float>("betweenness_centrality");
     if (!results_result) {
       KATANA_LOG_FATAL("Failed to get results: {}", results_result.error());
     }
     auto results = results_result.value();
 
     KATANA_LOG_ASSERT(
-        (uint64_t)results->length() == pfg->topology().num_nodes());
+        (uint64_t)results->length() == pg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

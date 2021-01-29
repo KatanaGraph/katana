@@ -4,7 +4,7 @@ from cython.operator cimport dereference as deref
 from katana.cpp.libgalois.datastructures cimport InsertBag
 from katana.cpp.libgalois.Galois cimport do_all, iterate, no_pushes, steal, loopname
 from katana.cpp.libgalois.atomic cimport GReduceMax
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.atomic cimport atomic
 from katana.cpp.libstd cimport bind_leading
 from katana.property_graph cimport PropertyGraph
@@ -97,7 +97,7 @@ def verify_bfs(PropertyGraph graph, unsigned int source_i, unsigned int property
 #
 # BFS sync operator to be executed on each Graph node
 #
-cdef void bfs_sync_operator_pg(shared_ptr[PropertyFileGraph] g, InsertBag[uint32_t] *next, int nextLevel, vector[uint32_t] *distance, uint32_t n) nogil:
+cdef void bfs_sync_operator_pg(shared_ptr[_PropertyGraph] g, InsertBag[uint32_t] *next, int nextLevel, vector[uint32_t] *distance, uint32_t n) nogil:
     cdef:
         uint64_t numNodes = deref(g).topology().num_nodes()
         uint32_t dst
@@ -124,7 +124,7 @@ cdef void bfs_sync_pg(PropertyGraph graph, uint32_t source, string propertyName)
         ### Vector to calculate distance from source node
         # TODO: Replace with gstl::largeArray
         vector[uint32_t] distance
-        shared_ptr[PropertyFileGraph] pfgraph = graph.underlying
+        shared_ptr[_PropertyGraph] pfgraph = graph.underlying
 
     timer = StatTimer("BFS Property Graph Cython")
     timer.start()

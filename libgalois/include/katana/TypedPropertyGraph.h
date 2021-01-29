@@ -1,5 +1,5 @@
-#ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
-#define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
+#ifndef KATANA_LIBGALOIS_KATANA_TYPEDPROPERTYGRAPH_H_
+#define KATANA_LIBGALOIS_KATANA_TYPEDPROPERTYGRAPH_H_
 
 #include <tuple>
 
@@ -9,7 +9,7 @@
 #include "katana/Details.h"
 #include "katana/NoDerefIterator.h"
 #include "katana/Properties.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/PropertyViews.h"
 #include "katana/Result.h"
 #include "katana/Traits.h"
@@ -20,27 +20,27 @@ namespace katana {
 /// and edges. A property has a name and value. Its value may be a primitive
 /// type, a list of values or a composition of properties.
 ///
-/// A PropertyGraph is a representation of a property graph that imposes a
-/// typed view on top of an underlying \ref PropertyFileGraph. A
-/// PropertyFileGraph is appropriate for cases where the graph is largely
+/// A TypedPropertyGraph is a representation of a property graph that imposes a
+/// typed view on top of an underlying \ref PropertyGraph. A
+/// PropertyGraph is appropriate for cases where the graph is largely
 /// uninterpreted and can be manipulated as a collection of bits. A
-/// PropertyGraph is appropriate for cases where computation needs to be done
+/// TypedPropertyGraph is appropriate for cases where computation needs to be done
 /// on the properties themselves.
 ///
 /// \tparam NodeProps A tuple of property types (\ref Properties.h) for nodes
 /// \tparam EdgeProps A tuple of property types for edges
 template <typename NodeProps, typename EdgeProps>
-class PropertyGraph {
+class TypedPropertyGraph {
   using NodeView = PropertyViewTuple<NodeProps>;
   using EdgeView = PropertyViewTuple<EdgeProps>;
 
-  PropertyFileGraph* pfg_;
+  PropertyGraph* pfg_;
 
   NodeView node_view_;
   EdgeView edge_view_;
 
-  PropertyGraph(PropertyFileGraph* pfg, NodeView node_view, EdgeView edge_view)
-      : pfg_(pfg),
+  TypedPropertyGraph(PropertyGraph* pg, NodeView node_view, EdgeView edge_view)
+      : pfg_(pg),
         node_view_(std::move(node_view)),
         edge_view_(std::move(edge_view)) {}
 
@@ -176,18 +176,18 @@ public:
   // TODO(amp): [[deprecated("use edges(node)")]]
 
   /**
-   * Accessor for the underlying PropertyFileGraph.
+   * Accessor for the underlying PropertyGraph.
    *
-   * @returns pointer to the underlying PropertyFileGraph.
+   * @returns pointer to the underlying PropertyGraph.
    */
-  const PropertyFileGraph& GetPropertyFileGraph() const { return *pfg_; }
+  const PropertyGraph& GetPropertyGraph() const { return *pfg_; }
 
   // Graph constructors
-  static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
-      PropertyFileGraph* pfg, const std::vector<std::string>& node_properties,
+  static Result<TypedPropertyGraph<NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg, const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties);
-  static Result<PropertyGraph<NodeProps, EdgeProps>> Make(
-      PropertyFileGraph* pfg);
+  static Result<TypedPropertyGraph<NodeProps, EdgeProps>> Make(
+      PropertyGraph* pg);
 };
 
 /**
@@ -204,38 +204,37 @@ FindEdgeSortedByDest(
     const GraphTy& graph, typename GraphTy::Node node,
     typename GraphTy::Node node_to_find) {
   auto edge_matched = katana::FindEdgeSortedByDest(
-      &graph.GetPropertyFileGraph(), node, node_to_find);
+      &graph.GetPropertyGraph(), node, node_to_find);
   return typename GraphTy::edge_iterator(edge_matched);
 }
 
 template <typename NodeProps, typename EdgeProps>
-Result<PropertyGraph<NodeProps, EdgeProps>>
-PropertyGraph<NodeProps, EdgeProps>::Make(
-    PropertyFileGraph* pfg, const std::vector<std::string>& node_properties,
+Result<TypedPropertyGraph<NodeProps, EdgeProps>>
+TypedPropertyGraph<NodeProps, EdgeProps>::Make(
+    PropertyGraph* pg, const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
   auto node_view_result =
-      internal::MakeNodePropertyViews<NodeProps>(pfg, node_properties);
+      internal::MakeNodePropertyViews<NodeProps>(pg, node_properties);
   if (!node_view_result) {
     return node_view_result.error();
   }
 
   auto edge_view_result =
-      internal::MakeEdgePropertyViews<EdgeProps>(pfg, edge_properties);
+      internal::MakeEdgePropertyViews<EdgeProps>(pg, edge_properties);
   if (!edge_view_result) {
     return edge_view_result.error();
   }
 
-  return PropertyGraph(
-      pfg, std::move(node_view_result.value()),
+  return TypedPropertyGraph(
+      pg, std::move(node_view_result.value()),
       std::move(edge_view_result.value()));
 }
 
 template <typename NodeProps, typename EdgeProps>
-Result<PropertyGraph<NodeProps, EdgeProps>>
-PropertyGraph<NodeProps, EdgeProps>::Make(PropertyFileGraph* pfg) {
-  return PropertyGraph<NodeProps, EdgeProps>::Make(
-      pfg, pfg->node_schema()->field_names(),
-      pfg->edge_schema()->field_names());
+Result<TypedPropertyGraph<NodeProps, EdgeProps>>
+TypedPropertyGraph<NodeProps, EdgeProps>::Make(PropertyGraph* pg) {
+  return TypedPropertyGraph<NodeProps, EdgeProps>::Make(
+      pg, pg->node_schema()->field_names(), pg->edge_schema()->field_names());
 }
 
 }  // namespace katana

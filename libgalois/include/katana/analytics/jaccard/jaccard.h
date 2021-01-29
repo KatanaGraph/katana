@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "katana/Properties.h"
-#include "katana/PropertyFileGraph.h"
 #include "katana/PropertyGraph.h"
 #include "katana/analytics/Plan.h"
 
@@ -59,12 +58,11 @@ using JaccardSimilarity = katana::PODProperty<double>;
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Jaccard(
-    PropertyFileGraph* pfg, uint32_t compare_node,
+    PropertyGraph* pg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan = {});
 
 KATANA_EXPORT Result<void> JaccardAssertValid(
-    PropertyFileGraph* pfg, uint32_t compare_node,
-    const std::string& property_name);
+    PropertyGraph* pg, uint32_t compare_node, const std::string& property_name);
 
 struct KATANA_EXPORT JaccardStatistics {
   /// The maximum similarity excluding the comparison node.
@@ -78,7 +76,7 @@ struct KATANA_EXPORT JaccardStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<JaccardStatistics> Compute(
-      katana::PropertyFileGraph* pfg, uint32_t compare_node,
+      katana::PropertyGraph* pg, uint32_t compare_node,
       const std::string& property_name);
 };
 

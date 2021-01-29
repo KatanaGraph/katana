@@ -4,7 +4,7 @@
 #include <iostream>
 #include <variant>
 
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/analytics/Plan.h"
 
 // API
@@ -32,8 +32,7 @@ private:
 public:
   BetweennessCentralityPlan() : BetweennessCentralityPlan{kCPU, kLevel} {}
 
-  BetweennessCentralityPlan(const katana::PropertyFileGraph* pfg
-                            [[maybe_unused]])
+  BetweennessCentralityPlan(const katana::PropertyGraph* pg [[maybe_unused]])
       : BetweennessCentralityPlan() {
     // TODO(gill): Reinstate automation once we reinstate async
     // if (algo == AutoAlgo) {
@@ -75,7 +74,7 @@ extern KATANA_EXPORT const BetweennessCentralitySources
  * The property named output_property_name is created by this function and may
  * not exist before the call.
  *
- * @param pfg The graph to process.
+ * @param pg The graph to process.
  * @param output_property_name The parameter to create with the computed value.
  * @param sources Only process some sources, producing an approximate
  *          betweenness centrality. If this is a vector process those source
@@ -83,14 +82,14 @@ extern KATANA_EXPORT const BetweennessCentralitySources
  * @param plan
  */
 KATANA_EXPORT Result<void> BetweennessCentrality(
-    PropertyFileGraph* pfg, const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
     const BetweennessCentralitySources& sources =
         kBetweennessCentralityAllNodes,
     BetweennessCentralityPlan plan = {});
 
 // TODO(gill): It's not clear how to check these results.
 //KATANA_EXPORT Result<void> BetweennessCentralityAssertValid(
-//    PropertyFileGraph* pfg, const std::string& output_property_name);
+//    PropertyGraph* pg, const std::string& output_property_name);
 
 struct KATANA_EXPORT BetweennessCentralityStatistics {
   /// The maximum centrality across all nodes.
@@ -104,7 +103,7 @@ struct KATANA_EXPORT BetweennessCentralityStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<BetweennessCentralityStatistics> Compute(
-      PropertyFileGraph* pfg, const std::string& output_property_name);
+      PropertyGraph* pg, const std::string& output_property_name);
 };
 
 }  // namespace katana::analytics

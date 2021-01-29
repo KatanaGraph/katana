@@ -2,7 +2,7 @@ from libc.stdint cimport uint64_t
 from libcpp cimport bool
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -38,7 +38,7 @@ cdef extern from "katana/analytics/triangle_count/triangle_count.h" namespace "k
     _TriangleCountPlan.Relabeling kDefaultRelabeling "katana::analytics::TriangleCountPlan::kDefaultRelabeling"
     bool kDefaultEdgeSorted "katana::analytics::TriangleCountPlan::kDefaultEdgeSorted"
 
-    std_result[uint64_t] TriangleCount(PropertyFileGraph* pfg, _TriangleCountPlan plan)
+    std_result[uint64_t] TriangleCount(_PropertyGraph* pg, _TriangleCountPlan plan)
 
 
 class _TriangleCountPlanAlgorithm(Enum):

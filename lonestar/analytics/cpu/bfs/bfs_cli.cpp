@@ -97,15 +97,15 @@ main(int argc, char** argv) {
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
-            << pfg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
+            << pg->topology().num_edges() << " edges\n";
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  if (reportNode >= pfg->topology().num_nodes()) {
+  if (reportNode >= pg->topology().num_nodes()) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
@@ -146,18 +146,18 @@ main(int argc, char** argv) {
   }
 
   for (auto startNode : startNodes) {
-    if (startNode >= pfg->topology().num_nodes()) {
+    if (startNode >= pg->topology().num_nodes()) {
       KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
 
     std::string node_distance_prop = "level-" + std::to_string(startNode);
-    if (auto r = Bfs(pfg.get(), startNode, node_distance_prop, plan); !r) {
+    if (auto r = Bfs(pg.get(), startNode, node_distance_prop, plan); !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 
     katana::reportPageAlloc("MeminfoPost");
 
-    auto r = pfg->GetNodePropertyTyped<uint32_t>(node_distance_prop);
+    auto r = pg->GetNodePropertyTyped<uint32_t>(node_distance_prop);
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
@@ -166,7 +166,7 @@ main(int argc, char** argv) {
     std::cout << "Node " << reportNode << " has distance "
               << results->Value(reportNode) << "\n";
 
-    auto stats_result = BfsStatistics::Compute(pfg.get(), node_distance_prop);
+    auto stats_result = BfsStatistics::Compute(pg.get(), node_distance_prop);
     if (!stats_result) {
       KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
     }
@@ -174,13 +174,13 @@ main(int argc, char** argv) {
     stats.Print();
 
     if (!skipVerify) {
-      if (stats.n_reached_nodes < pfg->num_nodes()) {
+      if (stats.n_reached_nodes < pg->num_nodes()) {
         KATANA_LOG_WARN(
             "{} unvisited nodes; this is an error if the graph is strongly "
             "connected",
-            pfg->num_nodes() - stats.n_reached_nodes);
+            pg->num_nodes() - stats.n_reached_nodes);
       }
-      if (BfsAssertValid(pfg.get(), node_distance_prop)) {
+      if (BfsAssertValid(pg.get(), node_distance_prop)) {
         std::cout << "Verification successful.\n";
       } else {
         KATANA_LOG_FATAL("verification failed");
@@ -188,7 +188,7 @@ main(int argc, char** argv) {
     }
 
     if (output) {
-      KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pfg->size());
+      KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pg->size());
 
       std::string output_filename = "output-" + std::to_string(startNode);
       writeOutput(
@@ -197,7 +197,7 @@ main(int argc, char** argv) {
     }
     --num_sources;
     if (num_sources != 0 && !persistAllDistances) {
-      if (auto r = pfg->RemoveNodeProperty(node_distance_prop); !r) {
+      if (auto r = pg->RemoveNodeProperty(node_distance_prop); !r) {
         KATANA_LOG_FATAL(
             "Failed to remove the node distance property stats {}", r.error());
       }

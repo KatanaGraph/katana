@@ -1,4 +1,4 @@
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 
 #include <sys/mman.h>
 
@@ -133,8 +133,8 @@ WriteTopology(const katana::GraphTopology& topology) {
   return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-MakePropertyFileGraph(
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+MakePropertyGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
@@ -144,31 +144,31 @@ MakePropertyFileGraph(
     return rdg_result.error();
   }
 
-  return katana::PropertyFileGraph::Make(
+  return katana::PropertyGraph::Make(
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-MakePropertyFileGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+MakePropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
   auto rdg_result = tsuba::RDG::Make(*rdg_file);
   if (!rdg_result) {
     return rdg_result.error();
   }
 
-  return katana::PropertyFileGraph::Make(
+  return katana::PropertyGraph::Make(
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
 }  // namespace
 
-katana::PropertyFileGraph::PropertyFileGraph() = default;
+katana::PropertyGraph::PropertyGraph() = default;
 
-katana::PropertyFileGraph::PropertyFileGraph(
+katana::PropertyGraph::PropertyGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg)
     : rdg_(std::move(rdg)), file_(std::move(rdg_file)) {}
 
 katana::Result<void>
-katana::PropertyFileGraph::Validate() {
+katana::PropertyGraph::Validate() {
   // TODO (thunt) check that arrow table sizes match topology
   // if (topology_.out_dests &&
   //    topology_.out_dests->length() != table->num_rows()) {
@@ -182,7 +182,7 @@ katana::PropertyFileGraph::Validate() {
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::DoWrite(
+katana::PropertyGraph::DoWrite(
     tsuba::RDGHandle handle, const std::string& command_line) {
   if (!rdg_.topology_file_storage().Valid()) {
     auto result = WriteTopology(topology_);
@@ -195,11 +195,11 @@ katana::PropertyFileGraph::DoWrite(
   return rdg_.Store(handle, command_line);
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-katana::PropertyFileGraph::Make(
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-  auto g = std::unique_ptr<PropertyFileGraph>(
-      new PropertyFileGraph(std::move(rdg_file), std::move(rdg)));
+  auto g = std::unique_ptr<PropertyGraph>(
+      new PropertyGraph(std::move(rdg_file), std::move(rdg)));
 
   auto load_result =
       LoadTopology(&g->topology_, g->rdg_.topology_file_storage());
@@ -210,22 +210,21 @@ katana::PropertyFileGraph::Make(
   if (auto good = g->Validate(); !good) {
     return good.error();
   }
-  return std::unique_ptr<PropertyFileGraph>(std::move(g));
+  return std::unique_ptr<PropertyGraph>(std::move(g));
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-katana::PropertyFileGraph::Make(const std::string& rdg_name) {
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(const std::string& rdg_name) {
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
 
-  return MakePropertyFileGraph(
-      std::make_unique<tsuba::RDGFile>(handle.value()));
+  return MakePropertyGraph(std::make_unique<tsuba::RDGFile>(handle.value()));
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-katana::PropertyFileGraph::Make(
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
     const std::string& rdg_name,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
@@ -234,18 +233,18 @@ katana::PropertyFileGraph::Make(
     return handle.error();
   }
 
-  return MakePropertyFileGraph(
+  return MakePropertyGraph(
       std::make_unique<tsuba::RDGFile>(handle.value()), node_properties,
       edge_properties);
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-katana::PropertyFileGraph::Copy() {
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Copy() {
   return Copy(node_schema()->field_names(), edge_schema()->field_names());
 }
 
-katana::Result<std::unique_ptr<katana::PropertyFileGraph>>
-katana::PropertyFileGraph::Copy(
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Copy(
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
@@ -253,7 +252,7 @@ katana::PropertyFileGraph::Copy(
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::WriteGraph(
+katana::PropertyGraph::WriteGraph(
     const std::string& uri, const std::string& command_line) {
   auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
   if (!open_res) {
@@ -271,7 +270,7 @@ katana::PropertyFileGraph::WriteGraph(
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::Commit(const std::string& command_line) {
+katana::PropertyGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
     if (rdg_.rdg_dir().empty()) {
       KATANA_LOG_ERROR("RDG commit but rdg_dir_ is empty");
@@ -283,7 +282,7 @@ katana::PropertyFileGraph::Commit(const std::string& command_line) {
 }
 
 bool
-katana::PropertyFileGraph::Equals(const PropertyFileGraph* other) const {
+katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   if (!topology().Equals(other->topology())) {
     return false;
   }
@@ -311,7 +310,7 @@ katana::PropertyFileGraph::Equals(const PropertyFileGraph* other) const {
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::Write(
+katana::PropertyGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {
   if (auto res = tsuba::Create(rdg_name); !res) {
     return res.error();
@@ -320,7 +319,7 @@ katana::PropertyFileGraph::Write(
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::AddNodeProperties(
+katana::PropertyGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& props) {
   if (topology_.out_indices &&
       topology_.out_indices->length() != props->num_rows()) {
@@ -333,7 +332,7 @@ katana::PropertyFileGraph::AddNodeProperties(
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::AddEdgeProperties(
+katana::PropertyGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& props) {
   if (topology_.out_dests &&
       topology_.out_dests->length() != props->num_rows()) {
@@ -346,7 +345,7 @@ katana::PropertyFileGraph::AddEdgeProperties(
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::SetTopology(const katana::GraphTopology& topology) {
+katana::PropertyGraph::SetTopology(const katana::GraphTopology& topology) {
   if (auto res = rdg_.UnbindTopologyFileStorage(); !res) {
     return res.error();
   }
@@ -356,10 +355,10 @@ katana::PropertyFileGraph::SetTopology(const katana::GraphTopology& topology) {
 }
 
 katana::Result<std::shared_ptr<arrow::UInt64Array>>
-katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
+katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto view_result_dests =
       katana::ConstructPropertyView<katana::UInt32Property>(
-          pfg->topology().out_dests.get());
+          pg->topology().out_dests.get());
   if (!view_result_dests) {
     return view_result_dests.error();
   }
@@ -367,7 +366,7 @@ katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
   auto out_dests_view = std::move(view_result_dests.value());
 
   arrow::UInt64Builder permutation_vec_builder;
-  if (auto r = permutation_vec_builder.Resize(pfg->topology().num_edges());
+  if (auto r = permutation_vec_builder.Resize(pg->topology().num_edges());
       !r.ok()) {
     return ErrorCode::ArrowError;
   }
@@ -384,9 +383,9 @@ katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
   };
 
   katana::do_all(
-      katana::iterate(uint64_t{0}, pfg->topology().num_nodes()),
+      katana::iterate(uint64_t{0}, pg->topology().num_nodes()),
       [&](uint64_t n) {
-        auto edge_range = pfg->topology().edge_range(n);
+        auto edge_range = pg->topology().edge_range(n);
         std::sort(
             permutation_vec_data + edge_range.first,
             permutation_vec_data + edge_range.second, comparator);
@@ -396,7 +395,7 @@ katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
       },
       katana::steal());
 
-  if (auto r = permutation_vec_builder.Advance(pfg->topology().num_edges());
+  if (auto r = permutation_vec_builder.Advance(pg->topology().num_edges());
       !r.ok()) {
     return ErrorCode::ArrowError;
   }
@@ -411,7 +410,7 @@ katana::SortAllEdgesByDest(katana::PropertyFileGraph* pfg) {
 
 katana::GraphTopology::Edge
 katana::FindEdgeSortedByDest(
-    const PropertyFileGraph* graph, GraphTopology::Node node,
+    const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find) {
   auto view_result_dests =
       katana::ConstructPropertyView<katana::UInt32Property>(
@@ -437,14 +436,14 @@ katana::FindEdgeSortedByDest(
 }
 
 katana::Result<void>
-katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
-  uint64_t num_nodes = pfg->topology().num_nodes();
-  uint64_t num_edges = pfg->topology().num_edges();
+katana::SortNodesByDegree(katana::PropertyGraph* pg) {
+  uint64_t num_nodes = pg->topology().num_nodes();
+  uint64_t num_edges = pg->topology().num_edges();
 
   using DegreeNodePair = std::pair<uint64_t, uint32_t>;
   std::vector<DegreeNodePair> dn_pairs(num_nodes);
   katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](size_t node) {
-    size_t node_degree = pfg->edges(node).size();
+    size_t node_degree = pg->edges(node).size();
     dn_pairs[node] = DegreeNodePair(node_degree, node);
   });
 
@@ -470,7 +469,7 @@ katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
   new_out_dest.allocateBlocked(num_edges);
 
   auto view_result_indices =
-      ConstructPropertyView<UInt64Property>(pfg->topology().out_indices.get());
+      ConstructPropertyView<UInt64Property>(pg->topology().out_indices.get());
   if (!view_result_indices) {
     return view_result_indices.error();
   }
@@ -478,7 +477,7 @@ katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
   auto out_indices_view = std::move(view_result_indices.value());
 
   auto view_result_dests =
-      ConstructPropertyView<UInt32Property>(pfg->topology().out_dests.get());
+      ConstructPropertyView<UInt32Property>(pg->topology().out_dests.get());
   if (!view_result_dests) {
     return view_result_dests.error();
   }
@@ -495,7 +494,7 @@ katana::SortNodesByDegree(katana::PropertyFileGraph* pfg) {
             (new_node_id == 0) ? 0 : new_prefix_sum[new_node_id - 1];
 
         // construct the graph, reindexing as it goes along
-        auto node_edge_range = pfg->topology().edge_range(old_node_id);
+        auto node_edge_range = pg->topology().edge_range(old_node_id);
         for (auto e = node_edge_range.first; e != node_edge_range.second; ++e) {
           // get destination, reindex
           uint32_t old_edge_dest = out_dests_view[e];

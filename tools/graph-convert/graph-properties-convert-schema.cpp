@@ -369,11 +369,11 @@ InRange(uint32_t id, const std::pair<uint64_t, uint64_t>& interval) {
 
 void
 katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
-  auto result = katana::PropertyFileGraph::Make(rdg_file);
+  auto result = katana::PropertyGraph::Make(rdg_file);
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
-  std::unique_ptr<katana::PropertyFileGraph> graph = std::move(result.value());
+  std::unique_ptr<katana::PropertyGraph> graph = std::move(result.value());
 
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
 

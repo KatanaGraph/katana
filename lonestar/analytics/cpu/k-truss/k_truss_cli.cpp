@@ -87,11 +87,11 @@ main(int argc, char** argv) {
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
-            << pfg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
+            << pg->topology().num_edges() << " edges\n";
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
@@ -112,12 +112,12 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm");
   }
 
-  if (auto r = KTruss(pfg.get(), kTrussNumber, "edge-alive", plan); !r) {
+  if (auto r = KTruss(pg.get(), kTrussNumber, "edge-alive", plan); !r) {
     KATANA_LOG_FATAL("Failed to compute k-truss: {}", r.error());
   }
 
   auto stats_result =
-      KTrussStatistics::Compute(pfg.get(), kTrussNumber, "edge-alive");
+      KTrussStatistics::Compute(pg.get(), kTrussNumber, "edge-alive");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute KTruss statistics: {}", stats_result.error());
@@ -126,7 +126,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (KTrussAssertValid(pfg.get(), kTrussNumber, "edge-alive")) {
+    if (KTrussAssertValid(pg.get(), kTrussNumber, "edge-alive")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -134,13 +134,13 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->GetEdgePropertyTyped<uint32_t>("edge-alive");
+    auto r = pg->GetEdgePropertyTyped<uint32_t>("edge-alive");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get edge property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pfg->topology().num_nodes());
+        uint64_t(results->length()) == pg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

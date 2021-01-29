@@ -33,6 +33,7 @@
 #include "Lonestar/BoilerPlate.h"
 #include "katana/LargeArray.h"
 #include "katana/PerThreadStorage.h"
+#include "katana/TypedPropertyGraph.h"
 
 const char* name = "RandomWalks";
 const char* desc = "Find paths by random walks on the graph";
@@ -86,7 +87,7 @@ using EdgeData = std::tuple<EdgeWeight, EdgeType>;
 
 using EdgeDataToAdd = std::tuple<EdgeType>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 constexpr static unsigned kChunkSize = 1U;
@@ -95,7 +96,7 @@ struct Node2VecAlgo {
   using NodeData = std::tuple<>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void FindSampleNeighbor(
@@ -226,7 +227,7 @@ struct Edge2VecAlgo {
   using NodeData = std::tuple<>;
   using EdgeData = std::tuple<EdgeType>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   //transition matrix
@@ -537,17 +538,17 @@ run() {
   Algo algo;
 
   katana::gInfo("Reading from file: ", inputFile, "\n");
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  auto pg_result = katana::PropertyGraph<
-      typename Algo::NodeData, typename Algo::EdgeData>::Make(pfg.get());
+  auto pg_result = katana::TypedPropertyGraph<
+      typename Algo::NodeData, typename Algo::EdgeData>::Make(pg.get());
 
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
 
-  auto res = katana::SortAllEdgesByDest(pfg.get());
+  auto res = katana::SortAllEdgesByDest(pg.get());
   if (!res) {
     KATANA_LOG_FATAL("Sorting property file graph failed: {}", res.error());
   }

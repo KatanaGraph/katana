@@ -3,7 +3,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -28,9 +28,9 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         @staticmethod
         _KTrussPlan BspCoreThenTruss()
 
-    std_result[void] KTruss(PropertyFileGraph* pfg, uint32_t k_truss_number,string output_property_name, _KTrussPlan plan)
+    std_result[void] KTruss(_PropertyGraph* pg, uint32_t k_truss_number,string output_property_name, _KTrussPlan plan)
 
-    std_result[void] KTrussAssertValid(PropertyFileGraph* pfg, uint32_t k_truss_number,
+    std_result[void] KTrussAssertValid(_PropertyGraph* pg, uint32_t k_truss_number,
                                       string output_property_name)
 
     cppclass _KTrussStatistics "katana::analytics::KTrussStatistics":
@@ -39,7 +39,7 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         void Print(ostream os)
 
         @staticmethod
-        std_result[_KTrussStatistics] Compute(PropertyFileGraph* pfg, uint32_t k_truss_number,
+        std_result[_KTrussStatistics] Compute(_PropertyGraph* pg, uint32_t k_truss_number,
                                              string output_property_name)
 
 

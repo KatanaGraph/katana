@@ -33,9 +33,9 @@ These arguments affect output values and are passed as normal argument to the op
 The C++ API for operations contains 4 components:
 
 1. A `Plan` class that specifies the algorithm and any plan arguments associated with it.
-2. The operation function itself, taking a `PropertyFileGraph*`, functional arguments, and a `Plan`.
-3. Optionally, an `AssertValid`  function, taking a `PropertyFileGraph*`, functional arguments, but no `Plan`.
-4. Optionally, a `Statistics` struct that contains any notable graph wide statistics that can be computed from the result of the operation. It has a static `Compute` method taking a `PropertyFileGraph*`, functional arguments, but no `Plan`.
+2. The operation function itself, taking a `PropertyGraph*`, functional arguments, and a `Plan`.
+3. Optionally, an `AssertValid`  function, taking a `PropertyGraph*`, functional arguments, but no `Plan`.
+4. Optionally, a `Statistics` struct that contains any notable graph wide statistics that can be computed from the result of the operation. It has a static `Compute` method taking a `PropertyGraph*`, functional arguments, but no `Plan`.
 
 All functions return `katana::Result` objects to handle errors.
 In general, the operation will not return any value itself and so will have return type `katana::Results<void>`.
@@ -87,7 +87,7 @@ private:
 public:
   [Operation]Plan() : [Operation]Plan{kCPU, [default algo], kDefault[arg], ...} {}
 
-  [Operation]Plan(const katana::PropertyFileGraph* pfg) : Plan(kCPU) {
+  [Operation]Plan(const katana::PropertyGraph* pg) : Plan(kCPU) {
     ...
     if ([properties]) {
       *this = [Algo1]();
@@ -118,7 +118,7 @@ If the algorithm must change the graph (for instance, to sort nodes or edges), i
 
 ```c++
 KATANA_EXPORT Result<void> [Operation](
-    PropertyFileGraph* pfg, [... functional arguments ...], [Operation]Plan plan = {});
+    PropertyGraph* pg, [... functional arguments ...], [Operation]Plan plan = {});
 ```
 
 ### Validity checking function
@@ -132,7 +132,7 @@ It returns `katana::ErrorCode::AssertionFailed` if the output is not as expected
 
 ```c++
 KATANA_EXPORT Result<void> [Operation]AssertValid(
-    PropertyFileGraph* pfg, [... functional arguments ...]);
+    PropertyGraph* pg, [... functional arguments ...]);
 ```
 
 This function can be omitted if there is no good way to check the results of the algorithm quickly.
@@ -158,7 +158,7 @@ struct KATANA_EXPORT [Operation]Statistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<[Operation]Statistics> Compute(
-      PropertyFileGraph* pfg, [... functional arguments ...]);
+      PropertyGraph* pg, [... functional arguments ...]);
 };
 ```
 
@@ -210,7 +210,7 @@ cdef extern from "[operation header]" namespace "[namespace]" nogil:
             [...]
 
         _[Operation]Plan()
-        _[Operation]Plan(const PropertyFileGraph * pfg)
+        _[Operation]Plan(const _PropertyGraph * pg)
 
         _[Operation]Plan.Algorithm algorithm() const
         [... Other plan arguments ...]
@@ -222,9 +222,9 @@ cdef extern from "[operation header]" namespace "[namespace]" nogil:
     [type] kDefault[Arg] "[namespace]::[Operation]Plan::kDefault[Arg]"
     [...]
 
-    std_result[void] [Operation](PropertyFileGraph* pfg, [...], _[Operation]Plan plan)
+    std_result[void] [Operation](_PropertyGraph* pg, [...], _[Operation]Plan plan)
 
-    std_result[void] [Operation]AssertValid(PropertyFileGraph* pfg, [...])
+    std_result[void] [Operation]AssertValid(_PropertyGraph* pg, [...])
 
     cppclass _[Operation]Statistics  "[namespace]::[Operation]Statistics":
         [type] [statistic_name]
@@ -233,7 +233,7 @@ cdef extern from "[operation header]" namespace "[namespace]" nogil:
         void Print(ostream os)
 
         \@staticmethod
-        std_result[_[Operation]Statistics] Compute(PropertyFileGraph* pfg, [...])
+        std_result[_[Operation]Statistics] Compute(_PropertyGraph* pg, [...])
 ```
 
 ### Wrap the Plan
@@ -305,7 +305,7 @@ cdef class [Operation]Plan(Plan):
 ### Functions
 
 There are two top-level functions per operation: the operation itself, and the validity check function.
-The operation takes a Python `PropertyGraph` (which is a wrapper around `PropertyFileGraph`), the functional arguments, and a plan.
+The operation takes a Python `PropertyGraph` (which is a wrapper around `_PropertyGraph`), the functional arguments, and a plan.
 The plan should have a default value being the default plan (the plan from the zero argument constructor).
 The function will unwrap the `PropertyGraph` and plan, and perform any conversions required for functional arguments.
 The function should use `with nogil:` in Cython to allow unlock the Global Interpreter Lock to allow the Python program to do parallel work.

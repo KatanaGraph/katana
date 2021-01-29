@@ -17,21 +17,22 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "katana/TypedPropertyGraph.h"
 #include "pagerank-impl.h"
 
 katana::Result<void>
 katana::analytics::Pagerank(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   switch (plan.algorithm()) {
   case PagerankPlan::kPullResidual:
-    return PagerankPullResidual(pfg, output_property_name, plan);
+    return PagerankPullResidual(pg, output_property_name, plan);
   case PagerankPlan::kPullTopological:
-    return PagerankPullTopological(pfg, output_property_name, plan);
+    return PagerankPullTopological(pg, output_property_name, plan);
   case PagerankPlan::kPushAsynchronous:
-    return PagerankPushAsynchronous(pfg, output_property_name, plan);
+    return PagerankPushAsynchronous(pg, output_property_name, plan);
   case PagerankPlan::kPushSynchronous:
-    return PagerankPushSynchronous(pfg, output_property_name, plan);
+    return PagerankPushSynchronous(pg, output_property_name, plan);
   default:
     return katana::ErrorCode::InvalidArgument;
   }
@@ -40,7 +41,7 @@ katana::analytics::Pagerank(
 /// \cond DO_NOT_DOCUMENT
 katana::Result<void>
 katana::analytics::PagerankAssertValid(
-    [[maybe_unused]] katana::PropertyFileGraph* pfg,
+    [[maybe_unused]] katana::PropertyGraph* pg,
     [[maybe_unused]] const std::string& property_name) {
   // TODO(gill): This should have real checks. amp has no idea what to check.
   return katana::ResultSuccess();
@@ -56,9 +57,10 @@ katana::analytics::PagerankStatistics::Print(std::ostream& os) {
 
 katana::Result<katana::analytics::PagerankStatistics>
 katana::analytics::PagerankStatistics::Compute(
-    katana::PropertyFileGraph* pfg, const std::string& property_name) {
-  auto graph_result = PropertyGraph<std::tuple<NodeValue>, std::tuple<>>::Make(
-      pfg, {property_name}, {});
+    katana::PropertyGraph* pg, const std::string& property_name) {
+  auto graph_result =
+      TypedPropertyGraph<std::tuple<NodeValue>, std::tuple<>>::Make(
+          pg, {property_name}, {});
   if (!graph_result) {
     return graph_result.error();
   }

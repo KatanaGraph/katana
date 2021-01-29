@@ -19,6 +19,7 @@
 
 #include "katana/analytics/jaccard/jaccard.h"
 
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
 using namespace katana::analytics;
@@ -26,7 +27,7 @@ using namespace katana::analytics;
 using NodeData = std::tuple<JaccardSimilarity>;
 using EdgeData = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 namespace {
@@ -94,7 +95,8 @@ public:
 template <typename IntersectAlgorithm>
 katana::Result<void>
 JaccardImpl(
-    katana::PropertyGraph<std::tuple<JaccardSimilarity>, std::tuple<>>& graph,
+    katana::TypedPropertyGraph<std::tuple<JaccardSimilarity>, std::tuple<>>&
+        graph,
     size_t compare_node, JaccardPlan /*plan*/) {
   if (compare_node >= graph.size()) {
     return katana::ErrorCode::InvalidArgument;
@@ -133,15 +135,15 @@ JaccardImpl(
 
 katana::Result<void>
 katana::analytics::Jaccard(
-    PropertyFileGraph* pfg, uint32_t compare_node,
+    PropertyGraph* pg, uint32_t compare_node,
     const std::string& output_property_name, JaccardPlan plan) {
   if (auto result =
-          ConstructNodeProperties<NodeData>(pfg, {output_property_name});
+          ConstructNodeProperties<NodeData>(pg, {output_property_name});
       !result) {
     return result.error();
   }
 
-  auto pg_result = Graph::Make(pfg, {output_property_name}, {});
+  auto pg_result = Graph::Make(pg, {output_property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -168,10 +170,10 @@ constexpr static const double EPSILON = 1e-6;
 
 katana::Result<void>
 katana::analytics::JaccardAssertValid(
-    katana::PropertyFileGraph* pfg, uint32_t compare_node,
+    katana::PropertyGraph* pg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result =
-      katana::PropertyGraph<NodeData, EdgeData>::Make(pfg, {property_name}, {});
+  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
+      pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -199,10 +201,10 @@ katana::analytics::JaccardAssertValid(
 
 katana::Result<JaccardStatistics>
 katana::analytics::JaccardStatistics::Compute(
-    katana::PropertyFileGraph* pfg, uint32_t compare_node,
+    katana::PropertyGraph* pg, uint32_t compare_node,
     const std::string& property_name) {
-  auto pg_result =
-      katana::PropertyGraph<NodeData, EdgeData>::Make(pfg, {property_name}, {});
+  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
+      pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }

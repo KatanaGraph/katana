@@ -7,7 +7,7 @@ from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
 
 from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
 
@@ -26,14 +26,14 @@ cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(std_result[share
     return res.value()
 
 
-# "Algorithms" from PropertyFileGraph
+# "Algorithms" from PropertyGraph
 
-cdef extern from "katana/PropertyFileGraph.h" namespace "katana" nogil:
-    std_result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(PropertyFileGraph* pfg);
+cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
+    std_result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(_PropertyGraph* pg);
 
-    uint64_t FindEdgeSortedByDest(const PropertyFileGraph* graph, uint32_t node, uint32_t node_to_find);
+    uint64_t FindEdgeSortedByDest(const _PropertyGraph* graph, uint32_t node, uint32_t node_to_find);
 
-    std_result[void] SortNodesByDegree(PropertyFileGraph* pfg);
+    std_result[void] SortNodesByDegree(_PropertyGraph* pg);
 
 
 def sort_all_edges_by_dest(PropertyGraph pg):
@@ -75,10 +75,10 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         @staticmethod
         _JaccardPlan Unsorted()
 
-    std_result[void] Jaccard(PropertyFileGraph* pfg, size_t compare_node,
+    std_result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
         string output_property_name, _JaccardPlan plan)
 
-    std_result[void] JaccardAssertValid(PropertyFileGraph* pfg, size_t compare_node,
+    std_result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
         string output_property_name)
 
     cppclass _JaccardStatistics  "katana::analytics::JaccardStatistics":
@@ -88,7 +88,7 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         void Print(ostream)
 
         @staticmethod
-        std_result[_JaccardStatistics] Compute(PropertyFileGraph* pfg, size_t compare_node,
+        std_result[_JaccardStatistics] Compute(_PropertyGraph* pg, size_t compare_node,
             string output_property_name)
 
 

@@ -24,7 +24,7 @@
 
 #include <boost/iterator/counting_iterator.hpp>
 
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/config.h"
 #include "katana/gIO.h"
 
@@ -59,7 +59,7 @@ getEdgePrefixSum(Ty& p, size_t n) {
 }
 template <>
 inline size_t
-getEdgePrefixSum<PropertyFileGraph>(PropertyFileGraph& p, size_t n) {
+getEdgePrefixSum<PropertyGraph>(PropertyGraph& p, size_t n) {
   return *edge_end(p, n);
 }
 

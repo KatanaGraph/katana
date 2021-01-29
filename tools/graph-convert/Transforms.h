@@ -9,7 +9,7 @@
 #include <arrow/api.h>
 #include <arrow/type.h>
 
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 
 namespace katana {
 
@@ -81,7 +81,7 @@ struct ConvertDateTime : public ColumnTransformer {
 };
 
 void ApplyTransforms(
-    katana::PropertyFileGraph* graph,
+    katana::PropertyGraph* graph,
     const std::vector<std::unique_ptr<ColumnTransformer>>& transformers);
 
 }  // namespace katana

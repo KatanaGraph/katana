@@ -17,6 +17,7 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "pagerank-impl.h"
 
@@ -26,7 +27,7 @@ struct NodeNout : public katana::PODProperty<uint32_t> {};
 using NodeData = std::tuple<NodeValue, NodeNout>;
 using EdgeData = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 using DeltaArray = katana::LargeArray<PRTy>;
@@ -229,20 +230,20 @@ ComputePRTopological(Graph* graph, katana::analytics::PagerankPlan plan) {
 
 katana::Result<void>
 PagerankPullTopological(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(2, 3 * pfg->num_nodes() * sizeof(NodeData));
+  katana::Prealloc(2, 3 * pg->num_nodes() * sizeof(NodeData));
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pfg, {output_property_name, temporary_property.name()});
+          pg, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
 
   auto graph_result =
-      Graph::Make(pfg, {output_property_name, temporary_property.name()}, {});
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
   if (!graph_result) {
     return graph_result.error();
   }
@@ -261,29 +262,29 @@ PagerankPullTopological(
 
 katana::Result<void>
 PagerankPullResidual(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(2, 3 * pfg->num_nodes() * sizeof(NodeData));
+  katana::Prealloc(2, 3 * pg->num_nodes() * sizeof(NodeData));
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pfg, {output_property_name, temporary_property.name()});
+          pg, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
 
   auto graph_result =
-      Graph::Make(pfg, {output_property_name, temporary_property.name()}, {});
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
   if (!graph_result) {
     return graph_result.error();
   }
   Graph graph = graph_result.value();
 
   DeltaArray delta;
-  delta.allocateInterleaved(pfg->num_nodes());
+  delta.allocateInterleaved(pg->num_nodes());
   ResidualArray residual;
-  residual.allocateInterleaved(pfg->num_nodes());
+  residual.allocateInterleaved(pg->num_nodes());
 
   InitNodeDataResidual(&graph, delta, residual, plan);
   ComputeOutDeg(&graph);

@@ -21,10 +21,14 @@ for arg in "$@"; do
 done
 
 run_as_original_user() {
+  # The second "$@" is expanded in this script and becomes the arguments to a
+  # bash script `"$@"` that simply executes its command-line arguments. This
+  # protects characters like < from being interpreted as redirections if $@
+  # were expanded directly.
   if [[ -n "${ORIGINAL_USER}" ]]; then
-    su - "${ORIGINAL_USER}" bash -c "$*"
+    su - "${ORIGINAL_USER}" bash -c '"$@"' -- "$@"
   else
-    bash -c "$*"
+    bash -c '"$@"' -- "$@"
   fi
 }
 
@@ -33,19 +37,24 @@ run_as_original_user() {
 #
 apt install -yq curl software-properties-common
 
+NO_UPDATE=""
+if apt-add-repository  --help | grep -q -e "--no-update"; then
+  NO_UPDATE="--no-update"
+fi
+
 #
 # Add custom repositories
 #
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
-apt-add-repository -y --no-update "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
+apt-add-repository -y $NO_UPDATE "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
 
 curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository -y --no-update "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
+apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
 
-add-apt-repository -y --no-update ppa:git-core/ppa
+add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
 
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
-  apt-add-repository -y --no-update ppa:ubuntu-toolchain-r/test
+  apt-add-repository -y $NO_UPDATE ppa:ubuntu-toolchain-r/test
 fi
 
 #
@@ -57,7 +66,18 @@ apt update
 # Install pip3
 apt install -yq --allow-downgrades  python3-pip
 
-run_as_original_user pip3 install --upgrade pip setuptools
+# TODO(amp): Drop 3.6 support, this will require constant updates as other packages drop 3.6.
+# Check Python version
+if python3 -c 'import sys; sys.exit(not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6))'; then
+  PIP_VERSION=""
+  SETUPTOOLS_VERSION=""
+else
+  # If we have Python < 3.6 limit versions. Support for pre-3.6 was dropped in these packages.
+  PIP_VERSION="<=20.3.4"
+  SETUPTOOLS_VERSION="<=50.3.2"
+fi
+
+run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPTOOLS_VERSION"
 run_as_original_user pip3 install conan==1.31
 
 # Developer tools

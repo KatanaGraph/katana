@@ -127,8 +127,8 @@ class KATANA_EXPORT PropertyFileGraph {
   /// Per-host vector of master nodes
   ///
   /// master_nodes()[this_host].empty() is true
-  /// master_nodes()[host_i][x] contains LocalNodeID for my master and
-  ///   host_i has a mirror
+  /// master_nodes()[host_i][x] contains LocalNodeID of masters
+  //    for which host_i has a mirror
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
     return rdg_.master_nodes();
@@ -140,8 +140,8 @@ class KATANA_EXPORT PropertyFileGraph {
   /// Per-host vector of mirror nodes
   ///
   /// mirror_nodes()[this_host].empty() is true
-  /// mirror_nodes()[host_i][x] contains LocalNodeID for my mirrors and
-  ///   host_i has the master
+  /// mirror_nodes()[host_i][x] contains LocalNodeID of mirrors
+  ///   that have a master on host_i
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& mirror_nodes()
       const {
     return rdg_.mirror_nodes();
@@ -276,13 +276,7 @@ public:
   }
 
   /// Determine if two PropertyFileGraphss are Equal
-  // NB: It might be useful to have a version where property tables
-  // with permuted columns compare as equal
-  bool Equals(const PropertyFileGraph* other) const {
-    return topology().Equals(other->topology()) &&
-           rdg_.node_properties()->Equals(*other->node_properties()) &&
-           rdg_.edge_properties()->Equals(*other->edge_properties());
-  }
+  bool Equals(const PropertyFileGraph* other) const;
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_properties()->schema();
@@ -290,6 +284,14 @@ public:
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
     return rdg_.edge_properties()->schema();
+  }
+
+  // Return type dictated by arrow
+  int32_t GetNodePropertyNum() const {
+    return rdg_.node_properties()->num_columns();
+  }
+  int32_t GetEdgePropertyNum() const {
+    return rdg_.edge_properties()->num_columns();
   }
 
   // num_rows() == num_nodes() (all local nodes)
@@ -445,9 +447,11 @@ public:
 
   Result<void> SetTopology(const GraphTopology& topology);
 
+  /// Return the node property table for local nodes
   const std::shared_ptr<arrow::Table>& node_properties() const {
     return rdg_.node_properties();
   }
+  /// Return the edge property table for local edges
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return rdg_.edge_properties();
   }
@@ -467,13 +471,15 @@ public:
 
   node_iterator end() const { return topology().end(); }
 
+  /// Return the number of local nodes
   size_t size() const { return topology().size(); }
 
   bool empty() const { return topology().empty(); }
 
-  // NB: num_nodes in repartitioner is of type LocalNodeID
-  /// Return the number of local nodes and edges
+  /// Return the number of local nodes
+  ///  num_nodes in repartitioner is of type LocalNodeID
   uint64_t num_nodes() const { return topology().num_nodes(); }
+  /// Return the number of local edges
   uint64_t num_edges() const { return topology().num_edges(); }
 
   /**

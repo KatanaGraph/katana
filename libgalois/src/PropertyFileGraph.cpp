@@ -282,6 +282,34 @@ katana::PropertyFileGraph::Commit(const std::string& command_line) {
   return DoWrite(*file_, command_line);
 }
 
+bool
+katana::PropertyFileGraph::Equals(const PropertyFileGraph* other) const {
+  if (!topology().Equals(other->topology())) {
+    return false;
+  }
+  if (rdg_.node_properties()->num_columns() !=
+      other->node_properties()->num_columns()) {
+    return false;
+  }
+  if (rdg_.edge_properties()->num_columns() !=
+      other->edge_properties()->num_columns()) {
+    return false;
+  }
+  for (const auto& prop_name : GetNodePropertyNames()) {
+    if (!rdg_.node_properties()->GetColumnByName(prop_name)->Equals(
+            other->node_properties()->GetColumnByName(prop_name))) {
+      return false;
+    }
+  }
+  for (const auto& prop_name : GetEdgePropertyNames()) {
+    if (!rdg_.edge_properties()->GetColumnByName(prop_name)->Equals(
+            other->edge_properties()->GetColumnByName(prop_name))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 katana::Result<void>
 katana::PropertyFileGraph::Write(
     const std::string& rdg_name, const std::string& command_line) {

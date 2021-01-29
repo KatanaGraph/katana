@@ -1,5 +1,7 @@
 #include <cstdlib>
+#include <string>
 
+#include <arrow/type.h>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "katana/DistMemSys.h"
@@ -14,8 +16,15 @@ namespace cll = llvm::cl;
 static cll::opt<std::string> src_uri(
     cll::Positional, cll::desc("<graph file>"), cll::Required);
 
+std::string
+TypeAsString(
+    std::shared_ptr<arrow::Schema> schema, const std::string& prop_name) {
+  auto field = schema->GetFieldByName(prop_name);
+  return field->type()->name();
+}
 void
-PrintNames(std::vector<std::string> names) {
+PrintNames(
+    std::shared_ptr<arrow::Schema> schema, std::vector<std::string> names) {
   std::sort(
       names.begin(), names.end(),
       [](const std::string& a, const std::string& b) {
@@ -24,21 +33,30 @@ PrintNames(std::vector<std::string> names) {
   for (size_t i = 0, end = names.size(); i < end; i += 4) {
     switch (end - i) {
     case 1: {
-      fmt::print("{:16}\n", names[i]);
+      fmt::print("{:15}:{:8}\n", names[i], TypeAsString(schema, names[i]));
       break;
     }
     case 2: {
-      fmt::print("{:16} {:16}\n", names[i], names[i + 1]);
+      fmt::print(
+          "{:15}:{:8} {:15}:{:8}\n", names[i], TypeAsString(schema, names[i]),
+          names[i + 1], TypeAsString(schema, names[i + 1]));
       break;
     }
     case 3: {
-      fmt::print("{:16} {:16} {:16}\n", names[i], names[i + 1], names[i + 2]);
+      fmt::print(
+          "{:15}:{:8} {:15}:{:8} {:15}:{:8}\n", names[i],
+          TypeAsString(schema, names[i]), names[i + 1],
+          TypeAsString(schema, names[i + 1]), names[i + 2],
+          TypeAsString(schema, names[i + 2]));
       break;
     }
     default: {
       fmt::print(
-          "{:16} {:16} {:16} {:16}\n", names[i], names[i + 1], names[i + 2],
-          names[i + 3]);
+          "{:15}:{:8} {:15}:{:8} {:15}:{:8} {:15}:{:8}\n", names[i],
+          TypeAsString(schema, names[i]), names[i + 1],
+          TypeAsString(schema, names[i + 1]), names[i + 2],
+          TypeAsString(schema, names[i + 2]), names[i + 3],
+          TypeAsString(schema, names[i + 3]));
       break;
     }
     }
@@ -74,12 +92,12 @@ PrintDist(const std::string& src_uri, int this_host, int num_hosts) {
 
   if (this_host == (num_hosts - 1)) {
     fmt::print(
-        "{:16} : {:>2}\n", "Node Properties", g->NodePropertyNames().size());
-    PrintNames(g->NodePropertyNames());
+        "{:16} : {:>2}\n", "Node Properties", g->GetNodePropertyNames().size());
+    PrintNames(g->node_schema(), g->GetNodePropertyNames());
 
     fmt::print(
-        "{:16} : {:>2}\n", "Edge Properties", g->EdgePropertyNames().size());
-    PrintNames(g->EdgePropertyNames());
+        "{:16} : {:>2}\n", "Edge Properties", g->GetEdgePropertyNames().size());
+    PrintNames(g->edge_schema(), g->GetEdgePropertyNames());
   }
 }
 
@@ -120,10 +138,7 @@ main(int argc, char** argv) {
     PrintDist(src_uri, this_host, num_hosts);
   }
   // dist_mem_sys->Fini()  prints Stat output, so do our own shutdown
-  if (auto fini_good = tsuba::Fini(); !fini_good) {
-    KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
-  }
-  katana::internal::destroySystemNetworkInterface();
+  dist_mem_sys->Fini(false);
 
   return 0;
 }

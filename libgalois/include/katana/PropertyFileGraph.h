@@ -241,7 +241,8 @@ public:
     return topology_.nodes(pm.num_nodes_with_edges_, pm.num_nodes_);
   }
 
-  // ChunkedArray seems like a bad choice for a vector intended for random access
+  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
+  // really a ChunkedArray of one change, change to arrow::Array.
   const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
     return rdg_.local_to_global_vector();
   }
@@ -275,6 +276,8 @@ public:
   }
 
   /// Determine if two PropertyFileGraphss are Equal
+  // NB: It might be useful to have a version where property tables
+  // with permuted columns compare as equal
   bool Equals(const PropertyFileGraph* other) const {
     return topology().Equals(other->topology()) &&
            rdg_.node_properties()->Equals(*other->node_properties()) &&
@@ -291,16 +294,18 @@ public:
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= rdg_.node_table()->num_columns())
+    if (i >= rdg_.node_properties()->num_columns()) {
       return nullptr;
-    return rdg_.node_table()->column(i);
+    }
+    return rdg_.node_properties()->column(i);
   }
 
   // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    if (i >= rdg_.edge_table()->num_columns())
+    if (i >= rdg_.edge_properties()->num_columns()) {
       return nullptr;
-    return rdg_.edge_table()->column(i);
+    }
+    return rdg_.edge_properties()->column(i);
   }
 
   /**
@@ -313,10 +318,16 @@ public:
       const std::string& name) const {
     return rdg_.node_properties()->GetColumnByName(name);
   }
+  std::vector<std::string> GetNodePropertyNames() const {
+    return node_properties()->ColumnNames();
+  }
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
       const std::string& name) const {
     return rdg_.edge_properties()->GetColumnByName(name);
+  }
+  std::vector<std::string> GetEdgePropertyNames() const {
+    return edge_properties()->ColumnNames();
   }
 
   /**

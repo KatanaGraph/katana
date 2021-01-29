@@ -2830,8 +2830,7 @@ struct Gr2Neo4j : public Conversion {
 template <typename EdgeTy>
 katana::Result<void>
 AppendEdgeData(
-    katana::PropertyFileGraph* pfg,
-    const katana::LargeArray<EdgeTy>& edge_data) {
+    katana::PropertyGraph* pg, const katana::LargeArray<EdgeTy>& edge_data) {
   using Builder = typename arrow::CTypeTraits<EdgeTy>::BuilderType;
   using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
   Builder builder;
@@ -2851,7 +2850,7 @@ AppendEdgeData(
   fields.emplace_back(arrow::field(("value"), std::make_shared<ArrowType>()));
   columns.emplace_back(ret);
   auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
-  if (auto r = pfg->AddEdgeProperties(edge_data_table); !r) {
+  if (auto r = pg->AddEdgeProperties(edge_data_table); !r) {
     KATANA_LOG_DEBUG("could not add edge property: {}", r.error());
     return r;
   }
@@ -2860,8 +2859,7 @@ AppendEdgeData(
 
 template <>
 katana::Result<void>
-AppendEdgeData<void>(
-    katana::PropertyFileGraph*, const katana::LargeArray<void>&) {
+AppendEdgeData<void>(katana::PropertyGraph*, const katana::LargeArray<void>&) {
   return katana::ResultSuccess();
 }
 
@@ -2989,8 +2987,8 @@ struct Gr2Kg : public Conversion {
             static_cast<int64_t>(graph.sizeEdges()),
             arrow::MutableBuffer::Wrap(out_dests.data(), graph.sizeEdges()));
 
-    auto pfg = std::make_unique<katana::PropertyFileGraph>();
-    auto set_result = pfg->SetTopology(katana::GraphTopology{
+    auto pg = std::make_unique<katana::PropertyGraph>();
+    auto set_result = pg->SetTopology(katana::GraphTopology{
         .out_indices = std::move(numeric_array_out_indices),
         .out_dests = std::move(numeric_array_out_dests),
     });
@@ -3002,17 +3000,17 @@ struct Gr2Kg : public Conversion {
     }
 
     if (EdgeData::has_value) {
-      if (auto r = AppendEdgeData<EdgeTy>(pfg.get(), out_dests_data); !r) {
+      if (auto r = AppendEdgeData<EdgeTy>(pg.get(), out_dests_data); !r) {
         KATANA_LOG_FATAL("could not add edge property: {}", r.error());
       }
     }
 
-    pfg->MarkAllPropertiesPersistent();
+    pg->MarkAllPropertiesPersistent();
 
-    katana::gPrint("Edge Schema : ", pfg->edge_schema()->ToString(), "\n");
-    katana::gPrint("Node Schema : ", pfg->node_schema()->ToString(), "\n");
+    katana::gPrint("Edge Schema : ", pg->edge_schema()->ToString(), "\n");
+    katana::gPrint("Node Schema : ", pg->node_schema()->ToString(), "\n");
 
-    if (auto r = pfg->Write(out_file_name, "cmd"); !r) {
+    if (auto r = pg->Write(out_file_name, "cmd"); !r) {
       KATANA_LOG_FATAL("Failed to write property file graph: {}", r.error());
     }
     printStatus(graph.size(), graph.sizeEdges());

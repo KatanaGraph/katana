@@ -2,7 +2,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -36,9 +36,9 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         @staticmethod
         _PagerankPlan PushSynchronous(float tolerance, unsigned int max_iterations, float alpha)
 
-    std_result[void] Pagerank(PropertyFileGraph* pfg, string output_property_name, _PagerankPlan plan)
+    std_result[void] Pagerank(_PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
 
-    std_result[void] PagerankAssertValid(PropertyFileGraph* pfg, string output_property_name)
+    std_result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
 
     cppclass _PagerankStatistics "katana::analytics::PagerankStatistics":
         float max_rank
@@ -48,7 +48,7 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         void Print(ostream os)
 
         @staticmethod
-        std_result[_PagerankStatistics] Compute(PropertyFileGraph* pfg, string output_property_name)
+        std_result[_PagerankStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 class _PagerankPlanAlgorithm(Enum):

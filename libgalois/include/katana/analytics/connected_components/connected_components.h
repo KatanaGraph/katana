@@ -150,7 +150,7 @@ public:
   }
 };
 
-/// Compute the Connected-components for pfg. The pfg is expected to be
+/// Compute the Connected-components for pg. The pg is expected to be
 /// symmetric.
 /// The algorithm, neighbor sample size and component sample frequency and tile size
 /// parameters can be specified, but have reasonable defaults. Not all parameters
@@ -158,11 +158,11 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> ConnectedComponents(
-    PropertyFileGraph* pfg, const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
     ConnectedComponentsPlan plan = ConnectedComponentsPlan());
 
 KATANA_EXPORT Result<void> ConnectedComponentsAssertValid(
-    PropertyFileGraph* pfg, const std::string& property_name);
+    PropertyGraph* pg, const std::string& property_name);
 
 struct KATANA_EXPORT ConnectedComponentsStatistics {
   /// Total number of unique components in the graph.
@@ -178,7 +178,7 @@ struct KATANA_EXPORT ConnectedComponentsStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<ConnectedComponentsStatistics> Compute(
-      katana::PropertyFileGraph* pfg, const std::string& property_name);
+      katana::PropertyGraph* pg, const std::string& property_name);
 };
 
 }  // namespace katana::analytics

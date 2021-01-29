@@ -1,7 +1,7 @@
 #include <boost/iterator/filter_iterator.hpp>
 
 #include "betweenness_centrality_impl.h"
-#include "katana/PropertyGraph.h"
+#include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
 
@@ -10,7 +10,7 @@ namespace {
 using NodeDataOuter = std::tuple<>;
 using EdgeDataOuter = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeDataOuter, EdgeDataOuter> OuterGraph;
+typedef katana::TypedPropertyGraph<NodeDataOuter, EdgeDataOuter> OuterGraph;
 typedef typename OuterGraph::Node OuterGNode;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,11 +243,12 @@ struct HasOut {
 
 katana::Result<void>
 BetweennessCentralityOuter(
-    katana::PropertyFileGraph* pfg, BetweennessCentralitySources sources,
+    katana::PropertyGraph* pg, BetweennessCentralitySources sources,
     const std::string& output_property_name,
     BetweennessCentralityPlan plan [[maybe_unused]]) {
   auto pg_result =
-      katana::PropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(pfg, {}, {});
+      katana::TypedPropertyGraph<NodeDataOuter, EdgeDataOuter>::Make(
+          pg, {}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -288,7 +289,7 @@ BetweennessCentralityOuter(
   katana::StatTimer exec_time("Betweenness Centrality Outer");
   exec_time.start();
   if (sources == kBetweennessCentralityAllNodes) {
-    bc_outer.Run(katana::iterate(*pfg));
+    bc_outer.Run(katana::iterate(*pg));
   } else {
     bc_outer.Run(source_vector);
   }
@@ -302,7 +303,7 @@ BetweennessCentralityOuter(
   auto table = arrow::Table::Make(
       arrow::schema({arrow::field(output_property_name, arrow::float32())}),
       {data_result.value()});
-  if (auto r = pfg->AddNodeProperties(table); !r) {
+  if (auto r = pg->AddNodeProperties(table); !r) {
     return r.error();
   }
   katana::reportPageAlloc("MeminfoPost");

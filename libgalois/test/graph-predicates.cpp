@@ -1,8 +1,8 @@
 #include <llvm/Support/CommandLine.h>
 
-#include "TestPropertyGraph.h"
+#include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
 
@@ -24,7 +24,7 @@ TestIsApproximateDegreeDistributionPowerLaw() {
         !katana::analytics::IsApproximateDegreeDistributionPowerLaw(*g.get()));
   }
   {
-    auto g = katana::PropertyFileGraph::Make(rmat10InputFile);
+    auto g = katana::PropertyGraph::Make(rmat10InputFile);
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(
             *g.assume_value().get()));

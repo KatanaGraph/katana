@@ -27,7 +27,7 @@
 #include "katana/PropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
-inline std::unique_ptr<katana::PropertyFileGraph>
+inline std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(
     const std::string& rdg_name, const std::string& edge_property_name) {
   std::vector<std::string> edge_properties;
@@ -36,8 +36,8 @@ MakeFileGraph(
     edge_properties.emplace_back(edge_property_name);
   }
 
-  auto pfg_result = katana::PropertyFileGraph::Make(
-      rdg_name, node_properties, edge_properties);
+  auto pfg_result =
+      katana::PropertyGraph::Make(rdg_name, node_properties, edge_properties);
   if (!pfg_result) {
     KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());
   }

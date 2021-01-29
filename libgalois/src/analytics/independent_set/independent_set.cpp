@@ -28,9 +28,9 @@
 #include "katana/Galois.h"
 #include "katana/ParallelSTL.h"
 #include "katana/Properties.h"
-#include "katana/PropertyGraph.h"
 #include "katana/Reduction.h"
 #include "katana/Timer.h"
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
 namespace {
@@ -63,7 +63,7 @@ struct SerialAlgo {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -113,7 +113,7 @@ struct TransactionalAlgo {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -205,7 +205,7 @@ struct PullAlgo {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   using Bag = katana::InsertBag<GNode>;
@@ -340,7 +340,7 @@ struct PrioAlgo {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -431,7 +431,7 @@ struct EdgeTiledPrioAlgo {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
   void Initialize(Graph* graph) {
@@ -584,7 +584,7 @@ struct IsBad {
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
-  typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+  typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 
   using GNode = typename Graph::Node;
 
@@ -616,18 +616,18 @@ struct IsBad {
 
 template <typename Algo>
 katana::Result<void>
-Run(katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
+Run(katana::PropertyGraph* pg, const std::string& output_property_name) {
   using Graph = typename Algo::Graph;
   using GNode = typename Graph::Node;
   auto result = ConstructNodeProperties<typename Algo::NodeData>(
-      pfg, {output_property_name});
+      pg, {output_property_name});
   if (!result) {
     return result.error();
   }
 
-  auto pg_result =
-      katana::PropertyGraph<typename Algo::NodeData, typename Algo::EdgeData>::
-          Make(pfg, {output_property_name}, {});
+  auto pg_result = katana::TypedPropertyGraph<
+      typename Algo::NodeData,
+      typename Algo::EdgeData>::Make(pg, {output_property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -680,17 +680,17 @@ Run(katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
 
 katana::Result<void>
 katana::analytics::IndependentSet(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     IndependentSetPlan plan) {
   switch (plan.algorithm()) {
   case IndependentSetPlan::kSerial:
-    return Run<SerialAlgo>(pfg, output_property_name);
+    return Run<SerialAlgo>(pg, output_property_name);
   case IndependentSetPlan::kPull:
-    return Run<PullAlgo>(pfg, output_property_name);
+    return Run<PullAlgo>(pg, output_property_name);
   case IndependentSetPlan::kPriority:
-    return Run<PrioAlgo>(pfg, output_property_name);
+    return Run<PrioAlgo>(pg, output_property_name);
   case IndependentSetPlan::kEdgeTiledPriority:
-    return Run<EdgeTiledPrioAlgo>(pfg, output_property_name);
+    return Run<EdgeTiledPrioAlgo>(pg, output_property_name);
   default:
     return katana::ErrorCode::InvalidArgument;
   }
@@ -698,10 +698,10 @@ katana::analytics::IndependentSet(
 
 katana::Result<void>
 katana::analytics::IndependentSetAssertValid(
-    katana::PropertyFileGraph* pfg, const std::string& property_name) {
+    katana::PropertyGraph* pg, const std::string& property_name) {
   auto pg_result =
-      katana::PropertyGraph<IsBad::NodeData, IsBad::EdgeData>::Make(
-          pfg, {property_name}, {});
+      katana::TypedPropertyGraph<IsBad::NodeData, IsBad::EdgeData>::Make(
+          pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -723,8 +723,8 @@ katana::analytics::IndependentSetStatistics::Print(std::ostream& os) const {
 
 katana::Result<IndependentSetStatistics>
 katana::analytics::IndependentSetStatistics::Compute(
-    katana::PropertyFileGraph* pfg, const std::string& property_name) {
-  auto property_result = pfg->GetNodePropertyTyped<uint8_t>(property_name);
+    katana::PropertyGraph* pg, const std::string& property_name) {
+  auto property_result = pg->GetNodePropertyTyped<uint8_t>(property_name);
   if (!property_result) {
     return property_result.error();
   }

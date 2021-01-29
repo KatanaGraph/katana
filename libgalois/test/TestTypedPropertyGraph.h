@@ -1,18 +1,18 @@
-#ifndef KATANA_LIBGALOIS_TESTPROPERTYGRAPH_H_
-#define KATANA_LIBGALOIS_TESTPROPERTYGRAPH_H_
+#ifndef KATANA_LIBGALOIS_TESTTYPEDPROPERTYGRAPH_H_
+#define KATANA_LIBGALOIS_TESTTYPEDPROPERTYGRAPH_H_
 
 #include <arrow/api.h>
 #include <arrow/type_traits.h>
 
 #include "katana/ArrowInterchange.h"
 #include "katana/Logging.h"
-#include "katana/PropertyFileGraph.h"
 #include "katana/PropertyGraph.h"
 #include "katana/Random.h"
+#include "katana/TypedPropertyGraph.h"
 
 /// Generate property graphs for testing.
 ///
-/// \file TestPropertyGraph.h
+/// \file TestTypedPropertyGraph.h
 
 class Policy {
 public:
@@ -61,7 +61,7 @@ public:
 ///
 /// \tparam ValueType is the type of column data
 template <typename ValueType>
-std::unique_ptr<katana::PropertyFileGraph>
+std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
   std::vector<uint32_t> dests;
   std::vector<uint64_t> indices;
@@ -73,7 +73,7 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
     indices.push_back(dests.size());
   }
 
-  auto g = std::make_unique<katana::PropertyFileGraph>();
+  auto g = std::make_unique<katana::PropertyGraph>();
 
   auto set_result = g->SetTopology(katana::GraphTopology{
       .out_indices = std::static_pointer_cast<arrow::UInt64Array>(
@@ -108,7 +108,7 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
 /// a node property and edge property array.
 template <typename NodeType, typename EdgeType>
 size_t
-BaselineIterate(katana::PropertyFileGraph* g, int num_properties) {
+BaselineIterate(katana::PropertyGraph* g, int num_properties) {
   using NodeArrowType = typename katana::PropertyArrowType<NodeType>;
   using EdgeArrowType = typename katana::PropertyArrowType<EdgeType>;
 
@@ -227,7 +227,7 @@ SumEdgePropertyV(Graph g, typename Graph::edge_iterator edge, size_t limit) {
 
 template <typename NodeType, typename EdgeType>
 size_t
-Iterate(katana::PropertyGraph<NodeType, EdgeType> g, size_t limit) {
+Iterate(katana::TypedPropertyGraph<NodeType, EdgeType> g, size_t limit) {
   size_t result = 0;
   for (const auto& node : g) {
     result += SumNodePropertyV(g, node, limit);

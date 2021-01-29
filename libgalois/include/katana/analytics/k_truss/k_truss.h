@@ -41,18 +41,18 @@ public:
   static KTrussPlan BspCoreThenTruss() { return {kCPU, kBspCoreThenTruss}; }
 };
 
-/// Compute the k-truss for pfg. The pfg is expected to be
+/// Compute the k-truss for pg. The pg is expected to be
 /// symmetric.
 /// The algorithm parameters can be specified,
 /// but have reasonable defaults.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> KTruss(
-    PropertyFileGraph* pfg, uint32_t k_truss_number,
+    PropertyGraph* pg, uint32_t k_truss_number,
     const std::string& output_property_name, KTrussPlan plan = KTrussPlan());
 
 KATANA_EXPORT Result<void> KTrussAssertValid(
-    PropertyFileGraph* pfg, uint32_t k_truss_number,
+    PropertyGraph* pg, uint32_t k_truss_number,
     const std::string& property_name);
 
 struct KATANA_EXPORT KTrussStatistics {
@@ -63,7 +63,7 @@ struct KATANA_EXPORT KTrussStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KTrussStatistics> Compute(
-      katana::PropertyFileGraph* pfg, uint32_t k_truss_number,
+      katana::PropertyGraph* pg, uint32_t k_truss_number,
       const std::string& property_name);
 };
 

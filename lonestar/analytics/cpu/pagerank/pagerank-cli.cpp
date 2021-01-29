@@ -79,19 +79,19 @@ main(int argc, char** argv) {
             << "Reading graph: " << inputFile << "\n";
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
-            << pfg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
+            << pg->topology().num_edges() << " edges\n";
 
   PagerankPlan plan{kCPU, algo, tolerance, maxIterations, kAlpha};
 
-  if (auto r = Pagerank(pfg.get(), "rank", plan); !r) {
+  if (auto r = Pagerank(pg.get(), "rank", plan); !r) {
     KATANA_LOG_FATAL("Failed to run Pagerank {}", r.error());
   }
 
-  auto stats_result = PagerankStatistics::Compute(pfg.get(), "rank");
+  auto stats_result = PagerankStatistics::Compute(pg.get(), "rank");
   if (!stats_result) {
     KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
   }
@@ -99,7 +99,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (PagerankAssertValid(pfg.get(), "rank")) {
+    if (PagerankAssertValid(pg.get(), "rank")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -107,13 +107,13 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->GetNodePropertyTyped<float>("rank");
+    auto r = pg->GetNodePropertyTyped<float>("rank");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pfg->topology().num_nodes());
+        uint64_t(results->length()) == pg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

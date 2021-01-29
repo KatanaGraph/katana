@@ -30,7 +30,7 @@ set(sources
         src/ParaMeter.cpp
         src/PerThreadStorage.cpp
         src/Profile.cpp
-        src/PropertyFileGraph.cpp
+        src/PropertyGraph.cpp
         src/PropertyViews.cpp
         src/PtrLock.cpp
         src/SharedMem.cpp

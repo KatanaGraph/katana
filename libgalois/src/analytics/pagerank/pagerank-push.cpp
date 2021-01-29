@@ -18,6 +18,7 @@
  */
 
 #include "katana/AtomicHelpers.h"
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "pagerank-impl.h"
 
@@ -32,7 +33,7 @@ struct NodeResidual {
 
 using NodeData = std::tuple<NodeValue, NodeResidual>;
 using EdgeData = std::tuple<>;
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 void
@@ -50,20 +51,20 @@ InitializeNodeResidual(Graph& graph, katana::analytics::PagerankPlan plan) {
 
 katana::Result<void>
 PagerankPushAsynchronous(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(5, 5 * pfg->num_nodes() * sizeof(NodeData));
+  katana::Prealloc(5, 5 * pg->num_nodes() * sizeof(NodeData));
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pfg, {output_property_name, temporary_property.name()});
+          pg, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
 
   auto graph_result =
-      Graph::Make(pfg, {output_property_name, temporary_property.name()}, {});
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
   if (!graph_result) {
     return graph_result.error();
   }
@@ -108,20 +109,20 @@ PagerankPushAsynchronous(
 
 katana::Result<void>
 PagerankPushSynchronous(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
-  katana::Prealloc(5, 5 * pfg->num_nodes() * sizeof(NodeData));
+  katana::Prealloc(5, 5 * pg->num_nodes() * sizeof(NodeData));
 
-  katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
-          pfg, {output_property_name, temporary_property.name()});
+          pg, {output_property_name, temporary_property.name()});
       !result) {
     return result.error();
   }
 
   auto graph_result =
-      Graph::Make(pfg, {output_property_name, temporary_property.name()}, {});
+      Graph::Make(pg, {output_property_name, temporary_property.name()}, {});
   if (!graph_result) {
     return graph_result.error();
   }

@@ -42,18 +42,18 @@ public:
   static KCorePlan Asynchronous() { return {kCPU, kAsynchronous}; }
 };
 
-/// Compute the k-core for pfg. The pfg must be
+/// Compute the k-core for pg. The pg must be
 /// symmetric.
 /// The algorithm, and k_core_number parameters can be specified,
 /// but have reasonable defaults.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> KCore(
-    PropertyFileGraph* pfg, uint32_t k_core_number,
+    PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, KCorePlan plan = KCorePlan());
 
 KATANA_EXPORT Result<void> KCoreAssertValid(
-    PropertyFileGraph* pfg, uint32_t k_core_number,
+    PropertyGraph* pg, uint32_t k_core_number,
     const std::string& property_name);
 
 struct KATANA_EXPORT KCoreStatistics {
@@ -64,7 +64,7 @@ struct KATANA_EXPORT KCoreStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<KCoreStatistics> Compute(
-      katana::PropertyFileGraph* pfg, uint32_t k_core_number,
+      katana::PropertyGraph* pg, uint32_t k_core_number,
       const std::string& property_name);
 };
 

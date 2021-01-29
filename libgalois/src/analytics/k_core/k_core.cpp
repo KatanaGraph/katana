@@ -20,6 +20,7 @@
 #include "katana/analytics/k_core/k_core.h"
 
 #include "katana/ArrowRandomAccessBuilder.h"
+#include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
 
@@ -39,7 +40,7 @@ struct KCoreNodeAlive : public katana::PODProperty<uint32_t> {};
 
 using NodeData = std::tuple<KCoreNodeCurrentDegree>;
 using EdgeData = std::tuple<>;
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 /**
@@ -173,7 +174,7 @@ AsyncCascadeKCore(Graph* graph, uint32_t k_core_number) {
  */
 katana::Result<void>
 KCoreMarkAliveNodes(
-    katana::PropertyGraph<
+    katana::TypedPropertyGraph<
         std::tuple<KCoreNodeAlive, KCoreNodeCurrentDegree>, std::tuple<>>*
         graph,
     uint32_t k_core_number) {
@@ -194,8 +195,8 @@ KCoreMarkAliveNodes(
 
 static katana::Result<void>
 KCoreImpl(
-    katana::PropertyGraph<std::tuple<KCoreNodeCurrentDegree>, std::tuple<>>*
-        graph,
+    katana::TypedPropertyGraph<
+        std::tuple<KCoreNodeCurrentDegree>, std::tuple<>>* graph,
     KCorePlan algo, uint32_t k_core_number) {
   size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
   katana::Prealloc(8, approxNodeData);
@@ -225,16 +226,16 @@ KCoreImpl(
 
 katana::Result<void>
 katana::analytics::KCore(
-    katana::PropertyFileGraph* pfg, uint32_t k_core_number,
+    katana::PropertyGraph* pg, uint32_t k_core_number,
     const std::string& output_property_name, KCorePlan algo) {
-  katana::analytics::TemporaryPropertyGuard temporary_property{pfg};
+  katana::analytics::TemporaryPropertyGuard temporary_property{pg};
   if (auto result = ConstructNodeProperties<std::tuple<KCoreNodeCurrentDegree>>(
-          pfg, {temporary_property.name()});
+          pg, {temporary_property.name()});
       !result) {
     return result.error();
   }
 
-  auto pg_result = Graph::Make(pfg, {temporary_property.name()}, {});
+  auto pg_result = Graph::Make(pg, {temporary_property.name()}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -246,13 +247,13 @@ katana::analytics::KCore(
   }
   // Post processing. Mark alive nodes.
   if (auto result = ConstructNodeProperties<std::tuple<KCoreNodeAlive>>(
-          pfg, {output_property_name});
+          pg, {output_property_name});
       !result) {
     return result.error();
   }
-  auto pg_final_result = katana::PropertyGraph<
+  auto pg_final_result = katana::TypedPropertyGraph<
       std::tuple<KCoreNodeAlive, KCoreNodeCurrentDegree>, std::tuple<>>::
-      Make(pfg, {output_property_name, temporary_property.name()}, {});
+      Make(pg, {output_property_name, temporary_property.name()}, {});
   if (!pg_final_result) {
     return pg_final_result.error();
   }
@@ -267,7 +268,7 @@ katana::analytics::KCore(
 // TODO (gill) Add a validity routine.
 katana::Result<void>
 katana::analytics::KCoreAssertValid(
-    [[maybe_unused]] katana::PropertyFileGraph* pfg,
+    [[maybe_unused]] katana::PropertyGraph* pg,
     [[maybe_unused]] uint32_t k_core_number,
     [[maybe_unused]] const std::string& property_name) {
   return katana::ResultSuccess();
@@ -275,11 +276,10 @@ katana::analytics::KCoreAssertValid(
 
 katana::Result<KCoreStatistics>
 katana::analytics::KCoreStatistics::Compute(
-    katana::PropertyFileGraph* pfg, [[maybe_unused]] uint32_t k_core_number,
+    katana::PropertyGraph* pg, [[maybe_unused]] uint32_t k_core_number,
     const std::string& property_name) {
-  auto pg_result =
-      katana::PropertyGraph<std::tuple<KCoreNodeAlive>, std::tuple<>>::Make(
-          pfg, {property_name}, {});
+  auto pg_result = katana::TypedPropertyGraph<
+      std::tuple<KCoreNodeAlive>, std::tuple<>>::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }

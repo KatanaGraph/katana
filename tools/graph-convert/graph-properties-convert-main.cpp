@@ -89,14 +89,14 @@ cll::opt<bool> export_graphml(
               "The file is created at the output destination specified\n"),
     cll::init(false));
 
-katana::PropertyFileGraph
+katana::PropertyGraph
 ConvertKatana(const std::string& rdg_file) {
-  auto result = katana::PropertyFileGraph::Make(rdg_file);
+  auto result = katana::PropertyGraph::Make(rdg_file);
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }
 
-  std::unique_ptr<katana::PropertyFileGraph> graph = std::move(result.value());
+  std::unique_ptr<katana::PropertyGraph> graph = std::move(result.value());
 
   std::vector<std::unique_ptr<katana::ColumnTransformer>> transformers;
 
@@ -130,7 +130,7 @@ ConvertKatana(const std::string& rdg_file) {
 
   ApplyTransforms(graph.get(), transformers);
 
-  return katana::PropertyFileGraph(std::move(*graph));
+  return katana::PropertyGraph(std::move(*graph));
 }
 
 void

@@ -3,7 +3,7 @@
 # {{generated_banner()}}
 
 from libc.stdint cimport uint64_t
-from .cpp.libgalois.graphs.Graph cimport PropertyFileGraph, GraphTopology
+from .cpp.libgalois.graphs.Graph cimport _PropertyGraph, GraphTopology
 from libcpp.memory cimport shared_ptr
 from pyarrow.lib cimport Schema
 
@@ -12,7 +12,7 @@ from pyarrow.lib cimport Schema
 #
 cdef class PropertyGraph:
     cdef:
-        shared_ptr[PropertyFileGraph] underlying
+        shared_ptr[_PropertyGraph] underlying
 
     @staticmethod
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1

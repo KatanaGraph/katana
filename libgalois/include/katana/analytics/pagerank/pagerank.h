@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "katana/Properties.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/analytics/Plan.h"
 
 namespace katana::analytics {
@@ -99,11 +99,11 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Pagerank(
-    PropertyFileGraph* pfg, const std::string& output_property_name,
+    PropertyGraph* pg, const std::string& output_property_name,
     PagerankPlan plan = {});
 
 KATANA_EXPORT Result<void> PagerankAssertValid(
-    PropertyFileGraph* pfg, const std::string& property_name);
+    PropertyGraph* pg, const std::string& property_name);
 
 struct KATANA_EXPORT PagerankStatistics {
   /// The maximum similarity excluding the comparison node.
@@ -117,7 +117,7 @@ struct KATANA_EXPORT PagerankStatistics {
   void Print(std::ostream& os = std::cout);
 
   static katana::Result<PagerankStatistics> Compute(
-      katana::PropertyFileGraph* pfg, const std::string& property_name);
+      katana::PropertyGraph* pg, const std::string& property_name);
 };
 
 }  // namespace katana::analytics

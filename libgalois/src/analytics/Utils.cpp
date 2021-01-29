@@ -33,7 +33,7 @@ katana::analytics::SourcePicker::PickNext() {
 
 bool
 katana::analytics::IsApproximateDegreeDistributionPowerLaw(
-    const PropertyFileGraph& graph) {
+    const PropertyGraph& graph) {
   if (graph.num_nodes() < 10) {
     return false;
   }

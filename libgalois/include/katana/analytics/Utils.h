@@ -5,22 +5,23 @@
 #include <random>
 
 #include "katana/ErrorCode.h"
+#include "katana/Properties.h"
 #include "katana/PropertyGraph.h"
 #include "katana/Result.h"
 
 namespace katana::analytics {
 
-// TODO(amp): This file should be disbanded and it's functions moved to
-//  PropertyFileGraph.h or other more specific places.
+// TODO(amp): This file should be disbanded and its functions moved to
+// PropertyGraph.h or other more specific places.
 
 //! Used to pick random non-zero degree starting points for search algorithms
 //! This code has been copied from GAP benchmark suite
 //! (https://github.com/sbeamer/gapbs/blob/master/src/benchmark.h)
 class KATANA_EXPORT SourcePicker {
-  const PropertyFileGraph& graph;
+  const PropertyGraph& graph;
 
 public:
-  explicit SourcePicker(const PropertyFileGraph& g) : graph(g) {}
+  explicit SourcePicker(const PropertyGraph& g) : graph(g) {}
 
   uint32_t PickNext();
 };
@@ -30,7 +31,7 @@ public:
 //! This code has been copied from GAP benchmark suite
 //! (https://github.com/sbeamer/gapbs/blob/master/src/tc.cc WorthRelabelling())
 KATANA_EXPORT bool IsApproximateDegreeDistributionPowerLaw(
-    const PropertyFileGraph& graph);
+    const PropertyGraph& graph);
 
 template <typename Props>
 std::vector<std::string>
@@ -47,31 +48,31 @@ DefaultPropertyNames() {
 template <typename NodeProps>
 inline katana::Result<void>
 ConstructNodeProperties(
-    PropertyFileGraph* pfg,
+    PropertyGraph* pg,
     const std::vector<std::string>& names = DefaultPropertyNames<NodeProps>()) {
-  auto res_table = katana::AllocateTable<NodeProps>(pfg->num_nodes(), names);
+  auto res_table = katana::AllocateTable<NodeProps>(pg->num_nodes(), names);
   if (!res_table) {
     return res_table.error();
   }
 
-  return pfg->AddNodeProperties(res_table.value());
+  return pg->AddNodeProperties(res_table.value());
 }
 
 template <typename EdgeProps>
 inline katana::Result<void>
 ConstructEdgeProperties(
-    PropertyFileGraph* pfg,
+    PropertyGraph* pg,
     const std::vector<std::string>& names = DefaultPropertyNames<EdgeProps>()) {
-  auto res_table = katana::AllocateTable<EdgeProps>(pfg->num_edges(), names);
+  auto res_table = katana::AllocateTable<EdgeProps>(pg->num_edges(), names);
   if (!res_table) {
     return res_table.error();
   }
 
-  return pfg->AddEdgeProperties(res_table.value());
+  return pg->AddEdgeProperties(res_table.value());
 }
 
 class TemporaryPropertyGuard {
-  katana::PropertyFileGraph* pfg_;
+  katana::PropertyGraph* pfg_;
   std::string name_;
 
   std::string GetPropertyName() {
@@ -82,11 +83,11 @@ class TemporaryPropertyGuard {
   }
 
 public:
-  TemporaryPropertyGuard(PropertyFileGraph* pfg, std::string name)
-      : pfg_(pfg), name_(name) {}
+  TemporaryPropertyGuard(PropertyGraph* pg, std::string name)
+      : pfg_(pg), name_(name) {}
 
-  explicit TemporaryPropertyGuard(katana::PropertyFileGraph* pfg)
-      : TemporaryPropertyGuard(pfg, GetPropertyName()) {}
+  explicit TemporaryPropertyGuard(katana::PropertyGraph* pg)
+      : TemporaryPropertyGuard(pg, GetPropertyName()) {}
 
   const TemporaryPropertyGuard& operator=(const TemporaryPropertyGuard&) =
       delete;

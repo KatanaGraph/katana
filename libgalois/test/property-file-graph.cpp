@@ -1,9 +1,9 @@
 #include <arrow/api.h>
 #include <boost/filesystem.hpp>
 
-#include "TestPropertyGraph.h"
+#include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
 #include "katana/Uri.h"
 
@@ -30,7 +30,7 @@ TestRoundTrip() {
   using ValueType = int32_t;
   using ThrowAwayType = int64_t;
 
-  auto g = std::make_unique<katana::PropertyFileGraph>();
+  auto g = std::make_unique<katana::PropertyGraph>();
 
   std::shared_ptr<arrow::Table> node_throw_away =
       MakeProps<ThrowAwayType>("node-throw-away", test_length);
@@ -79,15 +79,14 @@ TestRoundTrip() {
     KATANA_LOG_FATAL("writing result: {}", write_result.error());
   }
 
-  katana::Result<std::unique_ptr<katana::PropertyFileGraph>> make_result =
-      katana::PropertyFileGraph::Make(rdg_dir);
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
+      katana::PropertyGraph::Make(rdg_dir);
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
   }
 
-  std::unique_ptr<katana::PropertyFileGraph> g2 =
-      std::move(make_result.value());
+  std::unique_ptr<katana::PropertyGraph> g2 = std::move(make_result.value());
 
   std::shared_ptr<arrow::Table> node_properties = g2->node_properties();
   std::shared_ptr<arrow::Table> edge_properties = g2->edge_properties();
@@ -144,7 +143,7 @@ TestGarbageMetadata() {
   out << "garbage to make the file non-empty";
   out.close();
 
-  auto no_dir_result = katana::PropertyFileGraph::Make(rdg_file);
+  auto no_dir_result = katana::PropertyGraph::Make(rdg_file);
   fs::remove_all(temp_dir);
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
@@ -158,7 +157,7 @@ MakePFGFile(const std::string& n1name) {
   const std::string e0name = "e0";
   const std::string e1name = "e1";
 
-  auto g = std::make_unique<katana::PropertyFileGraph>();
+  auto g = std::make_unique<katana::PropertyGraph>();
 
   std::shared_ptr<arrow::Table> node_props = MakeProps<V0>(n0name, test_length);
 
@@ -205,8 +204,8 @@ TestSimplePGs() {
   auto rdg_file = MakePFGFile("n0");
   KATANA_LOG_ASSERT(rdg_file.empty());
   rdg_file = MakePFGFile("n1");
-  katana::Result<std::unique_ptr<katana::PropertyFileGraph>> make_result =
-      katana::PropertyFileGraph::Make(rdg_file);
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
+      katana::PropertyGraph::Make(rdg_file);
   fs::remove_all(rdg_file);
   KATANA_LOG_ASSERT(make_result);
 }
@@ -228,7 +227,7 @@ TestTopologyAccess() {
     KATANA_LOG_ASSERT(!g->edges(i).empty());
   }
   int n_nodes = 0;
-  for (katana::PropertyFileGraph::Node i : *g) {
+  for (katana::PropertyGraph::Node i : *g) {
     auto _ignore = g->GetNodeProperty(0)->chunk(0)->GetScalar(i);
     n_nodes++;
     int n_edges = 0;

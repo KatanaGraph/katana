@@ -4,7 +4,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
 
@@ -35,12 +35,12 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
 
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::BfsPlan::kDefaultEdgeTileSize"
 
-    std_result[void] Bfs(PropertyFileGraph * pfg,
+    std_result[void] Bfs(_PropertyGraph * pg,
                          size_t start_node,
                          string output_property_name,
                          _BfsPlan algo)
 
-    std_result[void] BfsAssertValid(PropertyFileGraph* pfg,
+    std_result[void] BfsAssertValid(_PropertyGraph* pg,
                                  string property_name);
 
     cppclass _BfsStatistics "katana::analytics::BfsStatistics":
@@ -54,7 +54,7 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
         void Print(ostream os)
 
         @staticmethod
-        std_result[_BfsStatistics] Compute(PropertyFileGraph* pfg,
+        std_result[_BfsStatistics] Compute(_PropertyGraph* pg,
                                            string property_name);
 
 class _BfsAlgorithm(Enum):

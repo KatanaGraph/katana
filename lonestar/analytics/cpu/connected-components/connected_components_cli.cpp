@@ -135,13 +135,13 @@ main(int argc, char** argv) {
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
-  std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
-            << pfg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
+            << pg->topology().num_edges() << " edges\n";
 
-  if (reportNode >= pfg->topology().num_nodes()) {
+  if (reportNode >= pg->topology().num_nodes()) {
     std::cerr << "failed to set report: " << reportNode << "\n";
     abort();
   }
@@ -205,14 +205,14 @@ main(int argc, char** argv) {
     abort();
   }
 
-  auto pg_result = ConnectedComponents(pfg.get(), "component", plan);
+  auto pg_result = ConnectedComponents(pg.get(), "component", plan);
   if (!pg_result) {
     KATANA_LOG_FATAL(
         "Failed to run ConnectedComponents: {}", pg_result.error());
   }
 
   auto stats_result =
-      ConnectedComponentsStatistics::Compute(pfg.get(), "component");
+      ConnectedComponentsStatistics::Compute(pg.get(), "component");
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "Failed to compute ConnectedComponents statistics: {}",
@@ -222,7 +222,7 @@ main(int argc, char** argv) {
   stats.Print();
 
   if (!skipVerify) {
-    if (ConnectedComponentsAssertValid(pfg.get(), "component")) {
+    if (ConnectedComponentsAssertValid(pg.get(), "component")) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL("verification failed");
@@ -230,13 +230,13 @@ main(int argc, char** argv) {
   }
 
   if (output) {
-    auto r = pfg->GetNodePropertyTyped<uint64_t>("component");
+    auto r = pg->GetNodePropertyTyped<uint64_t>("component");
     if (!r) {
       KATANA_LOG_FATAL("Failed to get node property {}", r.error());
     }
     auto results = r.value();
     KATANA_LOG_DEBUG_ASSERT(
-        uint64_t(results->length()) == pfg->topology().num_nodes());
+        uint64_t(results->length()) == pg->topology().num_nodes());
 
     writeOutput(outputLocation, results->raw_values(), results->length());
   }

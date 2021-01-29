@@ -3,7 +3,7 @@ from libcpp.string cimport string
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -25,10 +25,10 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         @staticmethod
         _KCorePlan Asynchronous()
 
-    std_result[void] KCore(PropertyFileGraph* pfg, uint32_t k_core_number, string output_property_name, _KCorePlan plan)
+    std_result[void] KCore(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name, _KCorePlan plan)
 
 
-    std_result[void] KCoreAssertValid(PropertyFileGraph* pfg, uint32_t k_core_number, string output_property_name)
+    std_result[void] KCoreAssertValid(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
 
     cppclass _KCoreStatistics "katana::analytics::KCoreStatistics":
         uint64_t number_of_nodes_in_kcore
@@ -36,7 +36,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
         void Print(ostream os)
 
         @staticmethod
-        std_result[_KCoreStatistics] Compute(PropertyFileGraph* pfg, uint32_t k_core_number, string output_property_name)
+        std_result[_KCoreStatistics] Compute(_PropertyGraph* pg, uint32_t k_core_number, string output_property_name)
 
 
 class _KCorePlanAlgorithm(Enum):

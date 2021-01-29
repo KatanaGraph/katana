@@ -107,12 +107,12 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         uint64_t num_nodes()
         uint64_t num_edges()
 
-    cppclass PropertyFileGraph:
-        PropertyFileGraph()
+    cppclass _PropertyGraph "katana::PropertyGraph":
+        PropertyGraph()
         @staticmethod
-        std_result[unique_ptr[PropertyFileGraph]] Make(string filename)
+        std_result[unique_ptr[_PropertyGraph]] Make(string filename)
         @staticmethod
-        std_result[unique_ptr[PropertyFileGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
+        std_result[unique_ptr[_PropertyGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
 
         std_result[void] Write(string path, string command_line)
         std_result[void] Commit(string command_line)

@@ -22,7 +22,7 @@
 
 #include "katana/LCGraph.h"
 #include "katana/MorphGraph.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/ReadGraph.h"
 #include "katana/config.h"
 

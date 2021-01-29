@@ -1,7 +1,7 @@
 #include "betweenness_centrality_impl.h"
 #include "katana/AtomicHelpers.h"
 #include "katana/Properties.h"
-#include "katana/PropertyGraph.h"
+#include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
 
@@ -29,7 +29,7 @@ using NodeDataLevel =
     std::tuple<NodeBC, NodeCurrentDist, NodeNumShortestPaths, NodeDependency>;
 using EdgeDataLevel = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
+typedef katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
 typedef typename LevelGraph::Node LevelGNode;
 
 using LevelWorklistType = katana::InsertBag<LevelGNode, 4096>;
@@ -199,7 +199,7 @@ LevelBackwardBrandes(
 
 katana::Result<void>
 BetweennessCentralityLevel(
-    katana::PropertyFileGraph* pfg,
+    katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
     katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]]) {
@@ -212,22 +212,23 @@ BetweennessCentralityLevel(
       "TimerConstructGraph", "BetweennessCentrality");
   graph_construct_timer.start();
 
-  TemporaryPropertyGuard node_current_dist{pfg};
-  TemporaryPropertyGuard node_num_shortest_paths{pfg};
-  TemporaryPropertyGuard node_dependency{pfg};
+  TemporaryPropertyGuard node_current_dist{pg};
+  TemporaryPropertyGuard node_num_shortest_paths{pg};
+  TemporaryPropertyGuard node_dependency{pg};
 
   auto result = ConstructNodeProperties<NodeDataLevel>(
-      pfg, {output_property_name, node_current_dist.name(),
-            node_num_shortest_paths.name(), node_dependency.name()});
+      pg, {output_property_name, node_current_dist.name(),
+           node_num_shortest_paths.name(), node_dependency.name()});
   if (!result) {
     return result.error();
   }
 
-  auto pg_result = katana::PropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(
-      pfg,
-      {output_property_name, node_current_dist.name(),
-       node_num_shortest_paths.name(), node_dependency.name()},
-      {});
+  auto pg_result =
+      katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(
+          pg,
+          {output_property_name, node_current_dist.name(),
+           node_num_shortest_paths.name(), node_dependency.name()},
+          {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -254,7 +255,7 @@ BetweennessCentralityLevel(
 
   if (std::holds_alternative<uint32_t>(sources)) {
     if (sources == kBetweennessCentralityAllNodes) {
-      loop_end = pfg->num_nodes();
+      loop_end = pg->num_nodes();
     } else {
       loop_end = std::get<uint32_t>(sources);
     }

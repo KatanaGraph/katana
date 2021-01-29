@@ -64,7 +64,7 @@ main(int argc, char** argv) {
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
 
   TriangleCountPlan plan;
@@ -89,7 +89,7 @@ main(int argc, char** argv) {
     std::cerr << "Unknown algo: " << algo << "\n";
   }
 
-  auto num_triangles_result = TriangleCount(pfg.get(), plan);
+  auto num_triangles_result = TriangleCount(pg.get(), plan);
   if (!num_triangles_result) {
     KATANA_LOG_FATAL(
         "failed to run algorithm: {}", num_triangles_result.error());

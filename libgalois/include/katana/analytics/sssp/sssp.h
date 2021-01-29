@@ -54,8 +54,8 @@ private:
 public:
   SsspPlan() : SsspPlan{kCPU, kAutomatic, 0, 0} {}
 
-  SsspPlan(const katana::PropertyFileGraph* pfg) : Plan(kCPU) {
-    bool isPowerLaw = IsApproximateDegreeDistributionPowerLaw(*pfg);
+  SsspPlan(const katana::PropertyGraph* pg) : Plan(kCPU) {
+    bool isPowerLaw = IsApproximateDegreeDistributionPowerLaw(*pg);
     if (isPowerLaw) {
       *this = DeltaStep();
     } else {
@@ -106,7 +106,7 @@ public:
   }
 };
 
-/// Compute the Single-Source Shortest Path for pfg starting from start_node.
+/// Compute the Single-Source Shortest Path for pg starting from start_node.
 /// The edge weights are taken from the property named
 /// edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
 /// int), and the computed path lengths are stored in the property named
@@ -115,12 +115,12 @@ public:
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
 KATANA_EXPORT Result<void> Sssp(
-    PropertyFileGraph* pfg, size_t start_node,
+    PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan = {});
 
 KATANA_EXPORT Result<void> SsspAssertValid(
-    PropertyFileGraph* pfg, size_t start_node,
+    PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name);
 
@@ -138,7 +138,7 @@ struct KATANA_EXPORT SsspStatistics {
   void Print(std::ostream& os = std::cout) const;
 
   static katana::Result<SsspStatistics> Compute(
-      PropertyFileGraph* pfg, const std::string& output_property_name);
+      PropertyGraph* pg, const std::string& output_property_name);
 };
 
 }  // namespace katana::analytics

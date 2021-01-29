@@ -2,7 +2,7 @@
 #define KATANA_LIBGALOIS_KATANA_PROPERTYVIEWS_H_
 
 #include "katana/Properties.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 
 namespace katana::internal {
 
@@ -43,8 +43,8 @@ MakePropertyViews(
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeNodePropertyViews(
-    const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pfg->node_properties().get(), properties);
+    const PropertyGraph* pg, const std::vector<std::string>& properties) {
+  return MakePropertyViews<PropTuple>(pg->node_properties().get(), properties);
 }
 
 /// MakeNodePropertyViews asserts a typed view on top of runtime properties.
@@ -54,9 +54,8 @@ MakeNodePropertyViews(
 /// arrow::Array.
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
-MakeNodePropertyViews(const PropertyFileGraph* pfg) {
-  return MakeNodePropertyViews<PropTuple>(
-      pfg, pfg->node_schema()->field_names());
+MakeNodePropertyViews(const PropertyGraph* pg) {
+  return MakeNodePropertyViews<PropTuple>(pg, pg->node_schema()->field_names());
 }
 
 /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
@@ -67,8 +66,8 @@ MakeNodePropertyViews(const PropertyFileGraph* pfg) {
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
 MakeEdgePropertyViews(
-    const PropertyFileGraph* pfg, const std::vector<std::string>& properties) {
-  return MakePropertyViews<PropTuple>(pfg->edge_properties().get(), properties);
+    const PropertyGraph* pg, const std::vector<std::string>& properties) {
+  return MakePropertyViews<PropTuple>(pg->edge_properties().get(), properties);
 }
 
 /// MakeEdgePropertyViews asserts a typed view on top of runtime properties.
@@ -76,9 +75,8 @@ MakeEdgePropertyViews(
 /// \see MakeNodePropertyViews
 template <typename PropTuple>
 static Result<katana::PropertyViewTuple<PropTuple>>
-MakeEdgePropertyViews(const PropertyFileGraph* pfg) {
-  return MakeEdgePropertyViews<PropTuple>(
-      pfg, pfg->edge_schema()->field_names());
+MakeEdgePropertyViews(const PropertyGraph* pg) {
+  return MakeEdgePropertyViews<PropTuple>(pg, pg->edge_schema()->field_names());
 }
 
 }  // namespace katana::internal

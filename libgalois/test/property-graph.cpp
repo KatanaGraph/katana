@@ -2,11 +2,9 @@
 #include <arrow/type.h>
 #include <arrow/type_traits.h>
 
-#include "TestPropertyGraph.h"
+#include "TestTypedPropertyGraph.h"
 #include "katana/Logging.h"
 #include "katana/Properties.h"
-
-namespace gg = katana;
 
 using DataType = int64_t;
 
@@ -34,10 +32,10 @@ TestIterate1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  std::unique_ptr<gg::PropertyFileGraph> g =
+  std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy);
 
-  auto r = gg::PropertyGraph<NodeType, EdgeType>::Make(g.get());
+  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
@@ -63,10 +61,10 @@ TestIterate3(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  std::unique_ptr<gg::PropertyFileGraph> g =
+  std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, num_properties, &policy);
 
-  auto r = gg::PropertyGraph<NodeType, EdgeType>::Make(g.get());
+  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(g.get());
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
   }
@@ -78,7 +76,7 @@ TestIterate3(size_t num_nodes, size_t line_width) {
   KATANA_LOG_VASSERT(expected == r_iterate, "{} != {}", expected, r_iterate);
 }
 
-/// Test using only part off a PropertyFileGraph
+/// Test using only part off a PropertyGraph
 void
 TestIterate4(size_t num_nodes, size_t line_width) {
   using NodeType = std::tuple<Field0, Field1>;
@@ -88,10 +86,10 @@ TestIterate4(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  std::unique_ptr<gg::PropertyFileGraph> g =
+  std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy);
 
-  auto r = gg::PropertyGraph<NodeType, EdgeType>::Make(
+  auto r = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
       g.get(), {"1", "3"}, {"0", "4"});
   if (!r) {
     KATANA_LOG_FATAL("could not make property graph: {}", r.error());
@@ -112,16 +110,16 @@ TestError1(size_t num_nodes, size_t line_width) {
 
   LinePolicy policy{line_width};
 
-  std::unique_ptr<gg::PropertyFileGraph> g =
+  std::unique_ptr<katana::PropertyGraph> g =
       MakeFileGraph<DataType>(num_nodes, 5, &policy);
 
-  auto r1 = gg::PropertyGraph<NodeType, EdgeType>::Make(
+  auto r1 = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
       g.get(), {"1", "3"}, {"0", "noexist"});
   KATANA_LOG_VASSERT(
       r1.error() == katana::ErrorCode::PropertyNotFound,
       "Should return PropertyNotFound when edge property doesn't exist.");
 
-  auto r2 = gg::PropertyGraph<NodeType, EdgeType>::Make(
+  auto r2 = katana::TypedPropertyGraph<NodeType, EdgeType>::Make(
       g.get(), {"noexist", "3"}, {"0", "2"});
   KATANA_LOG_VASSERT(
       r2.error() == katana::ErrorCode::PropertyNotFound,

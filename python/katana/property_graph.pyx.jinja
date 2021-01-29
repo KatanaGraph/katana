@@ -17,7 +17,7 @@ cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
 
 
-cdef shared_ptr[PropertyFileGraph] handle_result_value(std_result[unique_ptr[PropertyFileGraph]] res) nogil except *:
+cdef shared_ptr[_PropertyGraph] handle_result_value(std_result[unique_ptr[_PropertyGraph]] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())
@@ -45,12 +45,12 @@ cdef class PropertyGraph:
             if node_properties is None or edge_properties is None:
                 raise ValueError("If either node_properties or edge_properties are provided, both must be provided.")
             self.underlying = handle_result_value(
-                PropertyFileGraph.MakeWithProperties(bytes(path, "utf-8"),
+                _PropertyGraph.MakeWithProperties(bytes(path, "utf-8"),
                                                      _convert_string_list(node_properties),
                                                      _convert_string_list(edge_properties)))
         else:
             self.underlying = handle_result_value(
-                PropertyFileGraph.Make(bytes(path, "utf-8")))
+                _PropertyGraph.Make(bytes(path, "utf-8")))
 
     def write(self, path, command_line) :
         """
@@ -58,7 +58,7 @@ cdef class PropertyGraph:
         """
         handle_result_void(self.underlying.get().Write(bytes(path, "utf-8"), bytes(command_line, "utf-8")))
 
-    cdef GraphTopology topology(self):
+    cdef GraphTopology topology(PropertyGraph self):
         return self.underlying.get().topology()
 
     cpdef uint64_t num_nodes(PropertyGraph self):
@@ -253,7 +253,7 @@ cdef class PropertyGraph:
     def address(self):
         return <uint64_t>self.underlying.get()
 
-{% call numba.class_("PropertyGraph", "PropertyFileGraph") %}
+{% call numba.class_("PropertyGraph", "_PropertyGraph") %}
 {% call numba.method_with_body("num_nodes", "uint64_t", []) %}
     return self.topology().num_nodes()
 {% endcall %}

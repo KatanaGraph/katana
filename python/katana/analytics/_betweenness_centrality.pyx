@@ -4,7 +4,7 @@ from libc.stdint cimport uint32_t
 
 from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport PropertyFileGraph
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.property_graph cimport PropertyGraph
 
@@ -33,9 +33,9 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     BetweennessCentralitySources kBetweennessCentralityAllNodes;
 
-    std_result[void] BetweennessCentrality(PropertyFileGraph* pfg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
+    std_result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
-    # std_result[void] BetweennessCentralityAssertValid(PropertyFileGraph* pfg, string output_property_name)
+    # std_result[void] BetweennessCentralityAssertValid(PropertyGraph* pg, string output_property_name)
 
     cppclass _BetweennessCentralityStatistics "katana::analytics::BetweennessCentralityStatistics":
         float max_centrality
@@ -45,7 +45,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
         void Print(ostream os)
 
         @staticmethod
-        std_result[_BetweennessCentralityStatistics] Compute(PropertyFileGraph* pfg, string output_property_name)
+        std_result[_BetweennessCentralityStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 cdef extern from * nogil:

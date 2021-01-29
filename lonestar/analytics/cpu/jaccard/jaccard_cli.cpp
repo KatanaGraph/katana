@@ -21,9 +21,9 @@
 #include <iostream>
 #include <unordered_set>
 
-#include <katana/analytics/jaccard/jaccard.h>
-
 #include "Lonestar/BoilerPlate.h"
+#include "katana/TypedPropertyGraph.h"
+#include "katana/analytics/jaccard/jaccard.h"
 
 namespace cll = llvm::cl;
 
@@ -50,7 +50,7 @@ using NodeValue = katana::PODProperty<double>;
 using NodeData = std::tuple<NodeValue>;
 using EdgeData = std::tuple<>;
 
-typedef katana::PropertyGraph<NodeData, EdgeData> Graph;
+typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
 int
@@ -62,15 +62,15 @@ main(int argc, char** argv) {
   totalTime.start();
 
   std::cout << "Reading from file: " << inputFile << "\n";
-  std::unique_ptr<katana::PropertyFileGraph> pfg =
+  std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
   std::string output_property_name = "jaccard_output_property";
 
-  std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
-            << pfg->topology().num_edges() << " edges\n";
+  std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
+            << pg->topology().num_edges() << " edges\n";
 
-  if (base_node >= pfg->topology().num_nodes() ||
-      report_node >= pfg->topology().num_nodes()) {
+  if (base_node >= pg->topology().num_nodes() ||
+      report_node >= pg->topology().num_nodes()) {
     std::cerr << "failed to set report: " << report_node
               << " or failed to set base: " << base_node << "\n";
     abort();
@@ -82,7 +82,7 @@ main(int argc, char** argv) {
   execTime.start();
 
   if (auto r = katana::analytics::Jaccard(
-          pfg.get(), base_node, output_property_name,
+          pg.get(), base_node, output_property_name,
           katana::analytics::JaccardPlan());
       !r) {
     KATANA_LOG_FATAL(
@@ -94,8 +94,8 @@ main(int argc, char** argv) {
 
   katana::reportPageAlloc("MeminfoPost");
 
-  auto pg_result = katana::PropertyGraph<NodeData, EdgeData>::Make(
-      pfg.get(), {output_property_name}, {});
+  auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
+      pg.get(), {output_property_name}, {});
   if (!pg_result) {
     KATANA_LOG_FATAL("could not make property graph: {}", pg_result.error());
   }
@@ -105,7 +105,7 @@ main(int argc, char** argv) {
             << graph.GetData<NodeValue>(report_node) << "\n";
 
   auto stats_result = katana::analytics::JaccardStatistics::Compute(
-      pfg.get(), base_node, output_property_name);
+      pg.get(), base_node, output_property_name);
   if (!stats_result) {
     KATANA_LOG_FATAL(
         "could not make compute statistics: {}", stats_result.error());
@@ -115,7 +115,7 @@ main(int argc, char** argv) {
 
   if (!skipVerify) {
     if (katana::analytics::JaccardAssertValid(
-            pfg.get(), base_node, output_property_name)) {
+            pg.get(), base_node, output_property_name)) {
       std::cout << "Verification successful.\n";
     } else {
       KATANA_LOG_FATAL(

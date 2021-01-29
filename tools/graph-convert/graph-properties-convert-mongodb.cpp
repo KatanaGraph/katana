@@ -22,7 +22,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/Galois.h"
 #include "katana/Logging.h"
-#include "katana/PropertyFileGraph.h"
+#include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
 #include "katana/Threads.h"
 

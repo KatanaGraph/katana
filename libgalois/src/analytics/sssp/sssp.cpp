@@ -19,6 +19,7 @@
 
 #include "katana/analytics/sssp/sssp.h"
 
+#include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
 using namespace katana::analytics;
@@ -36,7 +37,7 @@ using SsspEdgeWeight = katana::PODProperty<Weight>;
 
 template <typename Weight>
 struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
-                                katana::PropertyGraph<
+                                katana::TypedPropertyGraph<
                                     std::tuple<SsspNodeDistance<Weight>>,
                                     std::tuple<SsspEdgeWeight<Weight>>>,
                                 Weight, true> {
@@ -45,7 +46,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
 
   using NodeData = typename std::tuple<NodeDistance>;
   using EdgeData = typename std::tuple<EdgeWeight>;
-  using Graph = katana::PropertyGraph<NodeData, EdgeData>;
+  using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
 
   using Base =
       katana::analytics::BfsSsspImplementationBase<Graph, Weight, true>;
@@ -323,7 +324,7 @@ public:
     execTime.start();
 
     if (plan.algorithm() == SsspPlan::kAutomatic) {
-      plan = SsspPlan(&graph.GetPropertyFileGraph());
+      plan = SsspPlan(&graph.GetPropertyGraph());
     }
 
     switch (plan.algorithm()) {
@@ -376,7 +377,7 @@ public:
 template <typename Weight>
 katana::Result<void>
 Sssp(
-    katana::PropertyGraph<
+    katana::TypedPropertyGraph<
         std::tuple<SsspNodeDistance<Weight>>,
         std::tuple<SsspEdgeWeight<Weight>>>& pg,
     size_t start_node, SsspPlan plan) {
@@ -388,22 +389,22 @@ Sssp(
 template <typename Weight>
 static katana::Result<void>
 SSSPWithWrap(
-    katana::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
-          pfg, {output_property_name});
+          pg, {output_property_name});
       !r) {
     return r.error();
   }
-  auto graph = katana::PropertyGraph<
+  auto graph = katana::TypedPropertyGraph<
       std::tuple<SsspNodeDistance<Weight>>,
       std::tuple<SsspEdgeWeight<Weight>>>::
-      Make(pfg, {output_property_name}, {edge_weight_property_name});
+      Make(pg, {output_property_name}, {edge_weight_property_name});
   if (!graph && graph.error() == katana::ErrorCode::TypeError) {
     KATANA_LOG_DEBUG(
         "Incorrect edge property type: {}",
-        pfg->edge_properties()
+        pg->edge_properties()
             ->GetColumnByName(edge_weight_property_name)
             ->type()
             ->ToString());
@@ -419,28 +420,28 @@ SSSPWithWrap(
 
 katana::Result<void>
 katana::analytics::Sssp(
-    PropertyFileGraph* pfg, size_t start_node,
+    PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name, SsspPlan plan) {
-  switch (pfg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
+  switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return SSSPWithWrap<uint32_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::Int32Type::type_id:
     return SSSPWithWrap<int32_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::UInt64Type::type_id:
     return SSSPWithWrap<uint64_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::Int64Type::type_id:
     return SSSPWithWrap<int64_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::FloatType::type_id:
     return SSSPWithWrap<float>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::DoubleType::type_id:
     return SSSPWithWrap<double>(
-        pfg, start_node, edge_weight_property_name, output_property_name, plan);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   default:
     return katana::ErrorCode::TypeError;
   }
@@ -451,12 +452,12 @@ namespace {
 template <typename Weight>
 static katana::Result<void>
 SsspValidateImpl(
-    katana::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
   using Impl = SsspImplementation<Weight>;
   auto pg_result = Impl::Graph::Make(
-      pfg, {output_property_name}, {edge_weight_property_name});
+      pg, {output_property_name}, {edge_weight_property_name});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -484,28 +485,28 @@ SsspValidateImpl(
 
 katana::Result<void>
 katana::analytics::SsspAssertValid(
-    katana::PropertyFileGraph* pfg, size_t start_node,
+    katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
     const std::string& output_property_name) {
-  switch (pfg->GetNodeProperty(output_property_name)->type()->id()) {
+  switch (pg->GetNodeProperty(output_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return SsspValidateImpl<uint32_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   case arrow::Int32Type::type_id:
     return SsspValidateImpl<int32_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   case arrow::UInt64Type::type_id:
     return SsspValidateImpl<uint64_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   case arrow::Int64Type::type_id:
     return SsspValidateImpl<int64_t>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   case arrow::FloatType::type_id:
     return SsspValidateImpl<float>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   case arrow::DoubleType::type_id:
     return SsspValidateImpl<double>(
-        pfg, start_node, edge_weight_property_name, output_property_name);
+        pg, start_node, edge_weight_property_name, output_property_name);
   default:
     return katana::ErrorCode::TypeError;
   }
@@ -516,10 +517,10 @@ namespace {
 template <typename Weight>
 static katana::Result<SsspStatistics>
 ComputeStatistics(
-    katana::PropertyFileGraph* pfg, const std::string& output_property_name) {
-  auto pg_result = katana::PropertyGraph<
+    katana::PropertyGraph* pg, const std::string& output_property_name) {
+  auto pg_result = katana::TypedPropertyGraph<
       typename SsspImplementation<Weight>::NodeData,
-      std::tuple<>>::Make(pfg, {output_property_name}, {});
+      std::tuple<>>::Make(pg, {output_property_name}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -553,20 +554,20 @@ ComputeStatistics(
 
 katana::Result<SsspStatistics>
 SsspStatistics::Compute(
-    PropertyFileGraph* pfg, const std::string& output_property_name) {
-  switch (pfg->GetNodeProperty(output_property_name)->type()->id()) {
+    PropertyGraph* pg, const std::string& output_property_name) {
+  switch (pg->GetNodeProperty(output_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
-    return ComputeStatistics<uint32_t>(pfg, output_property_name);
+    return ComputeStatistics<uint32_t>(pg, output_property_name);
   case arrow::Int32Type::type_id:
-    return ComputeStatistics<int32_t>(pfg, output_property_name);
+    return ComputeStatistics<int32_t>(pg, output_property_name);
   case arrow::UInt64Type::type_id:
-    return ComputeStatistics<uint64_t>(pfg, output_property_name);
+    return ComputeStatistics<uint64_t>(pg, output_property_name);
   case arrow::Int64Type::type_id:
-    return ComputeStatistics<int64_t>(pfg, output_property_name);
+    return ComputeStatistics<int64_t>(pg, output_property_name);
   case arrow::FloatType::type_id:
-    return ComputeStatistics<float>(pfg, output_property_name);
+    return ComputeStatistics<float>(pg, output_property_name);
   case arrow::DoubleType::type_id:
-    return ComputeStatistics<double>(pfg, output_property_name);
+    return ComputeStatistics<double>(pg, output_property_name);
   default:
     return katana::ErrorCode::TypeError;
   }

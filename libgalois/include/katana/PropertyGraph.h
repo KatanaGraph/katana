@@ -159,7 +159,8 @@ public:
         PropertyGraph::*properties_fn)() const;
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
-    Result<void> (PropertyGraph::*remove_property_fn)(int i);
+    Result<void> (PropertyGraph::*remove_property_int)(int i);
+    Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
     std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
 
@@ -171,13 +172,20 @@ public:
       return (g->*properties_fn)();
     }
 
+    std::vector<std::string> property_names() const {
+      return properties()->ColumnNames();
+    }
+
     Result<void> AddProperties(
         const std::shared_ptr<arrow::Table>& props) const {
       return (g->*add_properties_fn)(props);
     }
 
     Result<void> RemoveProperty(int i) const {
-      return (g->*remove_property_fn)(i);
+      return (g->*remove_property_int)(i);
+    }
+    Result<void> RemoveProperty(const std::string& str) const {
+      return (g->*remove_property_str)(str);
     }
   };
 
@@ -390,24 +398,11 @@ public:
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
   Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
 
-  Result<void> RemoveNodeProperty(int i) { return rdg_.RemoveNodeProperty(i); }
-  Result<void> RemoveNodeProperty(const std::string& prop_name) {
-    auto col_names = node_properties()->ColumnNames();
-    auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
-    if (pos != col_names.cend()) {
-      return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
-    }
-    return katana::ErrorCode::PropertyNotFound;
-  }
-  Result<void> RemoveEdgeProperty(int i) { return rdg_.RemoveEdgeProperty(i); }
-  Result<void> RemoveEdgeProperty(const std::string& prop_name) {
-    auto col_names = edge_properties()->ColumnNames();
-    auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
-    if (pos != col_names.cend()) {
-      return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
-    }
-    return katana::ErrorCode::PropertyNotFound;
-  }
+  Result<void> RemoveNodeProperty(int i);
+  Result<void> RemoveNodeProperty(const std::string& prop_name);
+
+  Result<void> RemoveEdgeProperty(int i);
+  Result<void> RemoveEdgeProperty(const std::string& prop_name);
 
   PropertyView node_property_view() {
     return PropertyView{
@@ -416,7 +411,8 @@ public:
         .property_fn = &PropertyGraph::GetNodeProperty,
         .properties_fn = &PropertyGraph::node_properties,
         .add_properties_fn = &PropertyGraph::AddNodeProperties,
-        .remove_property_fn = &PropertyGraph::RemoveNodeProperty,
+        .remove_property_int = &PropertyGraph::RemoveNodeProperty,
+        .remove_property_str = &PropertyGraph::RemoveNodeProperty,
     };
   }
 
@@ -427,7 +423,8 @@ public:
         .property_fn = &PropertyGraph::GetEdgeProperty,
         .properties_fn = &PropertyGraph::edge_properties,
         .add_properties_fn = &PropertyGraph::AddEdgeProperties,
-        .remove_property_fn = &PropertyGraph::RemoveEdgeProperty,
+        .remove_property_int = &PropertyGraph::RemoveEdgeProperty,
+        .remove_property_str = &PropertyGraph::RemoveEdgeProperty,
     };
   }
 

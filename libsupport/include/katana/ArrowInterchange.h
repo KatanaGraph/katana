@@ -8,6 +8,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
+#include "katana/config.h"
 
 /// We have two strategies for Arrow conversion.  One uses
 /// arrow::stl::TableFromTupleRange, the other uses Builders. TableFromTupleRange is
@@ -274,6 +275,123 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 
   fields_.emplace_back(arrow::field(name, std::make_shared<ArrowType>()));
   columns_.emplace_back(std::make_shared<arrow::ChunkedArray>(chunks));
+}
+
+////////////////////////////////////////////
+// Arrow utilities
+
+// get a view for an array and cast it to the specific type
+template <typename ArrowArrayType>
+katana::Result<std::shared_ptr<ArrowArrayType>>
+ViewCast(const std::shared_ptr<arrow::Array>& gen_array) {
+  auto maybe_res = gen_array->View(
+      arrow::TypeTraits<typename ArrowArrayType::TypeClass>::type_singleton());
+  if (!maybe_res.ok()) {
+    return katana::ErrorCode::ArrowError;
+  }
+  return std::static_pointer_cast<ArrowArrayType>(
+      std::move(maybe_res.ValueOrDie()));
+}
+
+KATANA_EXPORT std::shared_ptr<arrow::Array> Unchunk(
+    const std::shared_ptr<arrow::ChunkedArray>& original);
+KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> Shuffle(
+    const std::shared_ptr<arrow::ChunkedArray>& original);
+
+template <typename ArrowArrayType>
+void
+PrintFirstNonzeroElts(
+    const std::string& header,
+    const std::shared_ptr<arrow::ChunkedArray>& chunked_array,
+    int32_t num_elts) {
+  auto cast_res = ViewCast<ArrowArrayType>(Unchunk(chunked_array));
+  if (!cast_res) {
+    KATANA_LOG_DEBUG("failed to cast array: {}", cast_res.error());
+    return;
+  }
+  auto base = cast_res.value();
+  for (int64_t i = 0; i < base->length(); ++i) {
+    if (base->Value(i) != 0) {
+      std::string tmp = header;
+      tmp.append(":");
+      int64_t end = std::min(i + num_elts, base->length());
+      for (int64_t j = i; j < end; j += 3) {
+        switch (end - j) {
+        case 1: {
+          fmt::print("{:8} {:7}: {:8}\n", tmp, j, base->Value(j));
+          break;
+        }
+        case 2: {
+          fmt::print(
+              "{:8} {:7}: {:8} {:7}: {:8}\n", tmp, j, base->Value(j), j + 1,
+              base->Value(j + 1));
+          break;
+        }
+        default: {
+          fmt::print(
+              "{:8} {:7}: {:8} {:7}: {:8} {:7}: {:8}\n", tmp, j, base->Value(j),
+              j + 1, base->Value(j + 1), j + 2, base->Value(j + 2));
+          break;
+        }
+        }
+      }
+      return;
+    }
+  }
+}
+
+template <typename ArrowArrayType>
+void
+PrintCmpElts(
+    const std::string& header, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    const std::shared_ptr<arrow::ChunkedArray>& a1, int32_t num_elts) {
+  auto cast_res = ViewCast<ArrowArrayType>(Unchunk(a0));
+  if (!cast_res) {
+    KATANA_LOG_DEBUG("failed to cast array: {}", cast_res.error());
+    return;
+  }
+  auto b0 = cast_res.value();
+  cast_res = ViewCast<ArrowArrayType>(Unchunk(a1));
+  if (!cast_res) {
+    KATANA_LOG_DEBUG("failed to cast array: {}", cast_res.error());
+    return;
+  }
+  auto b1 = cast_res.value();
+
+  for (int64_t i = 0; i < b0->length(); ++i) {
+    if (i >= b1->length()) {
+      return;
+    }
+    if (b0->Value(i) != b1->Value(i)) {
+      std::string tmp = header;
+      tmp.append(":");
+      int64_t end = std::min(i + num_elts, b0->length());
+      end = std::min(end, b1->length());
+      for (int64_t j = i; j < end; j += 3) {
+        switch (end - j) {
+        case 1: {
+          fmt::print(
+              "{:10} {:7}: {:8} {:8}\n", tmp, j, b0->Value(j), b1->Value(j));
+          break;
+        }
+        case 2: {
+          fmt::print(
+              "{:10} {:7}: {:8} {:8} {:7}: {:8} {:8}\n", tmp, i, b0->Value(j),
+              b1->Value(j), j + 1, b0->Value(j + 1), b1->Value(j + 1));
+          break;
+        }
+        default: {
+          fmt::print(
+              "{:10} {:7}: {:8} {:8} {:7}: {:8} {:8} {:7}: {:8} {:8}\n", tmp, i,
+              b0->Value(j), b1->Value(j), j + 1, b0->Value(j + 1),
+              b1->Value(j + 1), j + 2, b0->Value(j + 2), b1->Value(j + 2));
+          break;
+        }
+        }
+      }
+      return;
+    }
+  }
 }
 
 }  // namespace katana

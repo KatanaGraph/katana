@@ -10,6 +10,7 @@ add_dependencies(lib katana_support)
 configure_file(include/katana/config.h.in include/katana/config.h)
 
 set(sources
+        src/ArrowInterchange.cpp
         src/Backtrace.cpp
         src/CommBackend.cpp
         src/Env.cpp

@@ -295,14 +295,6 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   for (const auto& prop_name : node_props->ColumnNames()) {
     if (!node_props->GetColumnByName(prop_name)->Equals(
             other_node_props->GetColumnByName(prop_name))) {
-      fmt::print("Doh {}\n", prop_name);
-      if (node_props->GetColumnByName(prop_name)->null_count() !=
-          other_node_props->GetColumnByName(prop_name)->null_count()) {
-        KATANA_LOG_DEBUG(
-            "{} node null counts differ: {} {}\n", prop_name,
-            node_props->GetColumnByName(prop_name)->null_count(),
-            other_node_props->GetColumnByName(prop_name)->null_count());
-      }
       return false;
     }
   }
@@ -337,13 +329,13 @@ katana::PropertyGraph::AddNodeProperties(
   return rdg_.AddNodeProperties(props);
 }
 
-
-katana::PropertyFileGraph::RemoveNodeProperty(int i) {
+katana::Result<void>
+katana::PropertyGraph::RemoveNodeProperty(int i) {
   return rdg_.RemoveNodeProperty(i);
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::RemoveNodeProperty(const std::string& prop_name) {
+katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
   auto col_names = node_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
@@ -365,12 +357,13 @@ katana::PropertyGraph::AddEdgeProperties(
   return rdg_.AddEdgeProperties(props);
 }
 
-katana::PropertyFileGraph::RemoveEdgeProperty(int i) {
+katana::Result<void>
+katana::PropertyGraph::RemoveEdgeProperty(int i) {
   return rdg_.RemoveEdgeProperty(i);
 }
 
 katana::Result<void>
-katana::PropertyFileGraph::RemoveEdgeProperty(const std::string& prop_name) {
+katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
   auto col_names = edge_properties()->ColumnNames();
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
@@ -545,7 +538,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
       },
       katana::steal());
 
-  //Update the underlying propertyFileGraph topology
+  //Update the underlying PropertyGraph topology
   katana::do_all(
       katana::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
         out_indices_view[node_id] = new_prefix_sum[node_id];

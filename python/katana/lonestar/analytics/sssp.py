@@ -18,13 +18,19 @@ from katana.timer import StatTimer
 from katana.galois import setActiveThreads
 
 
-UpdateRequest = np.dtype([("src", np.uint64), ("dist", np.uint32),])
+def dtype_info(t):
+    t = np.dtype(t)
+    if t.kind == "f":
+        return np.finfo(t)
+    else:
+        return np.iinfo(t)
 
 
 def create_distance_array(g: PropertyGraph, source, length_property):
-    inf_distance = numba.types.uint64.maxval
     a = np.empty(len(g), dtype=dtype_of_pyarrow_array(g.get_edge_property(length_property)))
-    a[:] = inf_distance
+    # TODO(amp): Remove / 4
+    infinity = dtype_info(a.dtype).max / 4
+    a[:] = infinity
     a[source] = 0
     return a
 
@@ -55,6 +61,10 @@ def obim_indexer(shift, item):
 
 def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
     dists = create_distance_array(graph, source, length_property)
+
+    # Define the struct type here so it can depend on the type of the weight property
+    UpdateRequest = np.dtype([("src", np.uint32), ("dist", dists.dtype)])
+
     init_bag = InsertBag[UpdateRequest]()
     init_bag.push((source, 0))
 
@@ -74,28 +84,28 @@ def sssp(graph: PropertyGraph, source, length_property, shift, property_name):
 
 
 @do_all_operator()
-def not_visited_operator(num_nodes: int, not_visited: GAccumulator[int], data, nid):
+def not_visited_operator(infinity: int, not_visited: GAccumulator[int], data, nid):
     val = data[nid]
-    if val >= num_nodes:
+    if val == infinity:
         not_visited.update(1)
 
 
 @do_all_operator()
-def max_dist_operator(num_nodes: int, max_dist: GReduceMax[int], data, nid):
+def max_dist_operator(infinity: int, max_dist: GReduceMax[int], data, nid):
     val = data[nid]
-    if val < num_nodes:
+    if val != infinity:
         max_dist.update(val)
 
 
 def verify_sssp(graph: PropertyGraph, _source_i: int, property_id: int):
-    chunk_array = graph.get_node_property(property_id)
+    prop_array = graph.get_node_property(property_id)
     not_visited = GAccumulator[int](0)
     max_dist = GReduceMax[int]()
+    # TODO(amp): Remove / 4
+    infinity = dtype_info(dtype_of_pyarrow_array(prop_array)).max / 4
 
     do_all(
-        range(len(chunk_array)),
-        not_visited_operator(graph.num_nodes(), not_visited, chunk_array),
-        loop_name="not_visited_op",
+        range(len(prop_array)), not_visited_operator(infinity, not_visited, prop_array), loop_name="not_visited_op",
     )
 
     if not_visited.reduce() > 0:
@@ -104,8 +114,8 @@ def verify_sssp(graph: PropertyGraph, _source_i: int, property_id: int):
         )
 
     do_all(
-        range(len(chunk_array)),
-        max_dist_operator(graph.num_nodes(), max_dist, chunk_array),
+        range(len(prop_array)),
+        max_dist_operator(infinity, max_dist, prop_array),
         steal=True,
         loop_name="max_dist_operator",
     )

@@ -1124,8 +1124,22 @@ BuildImportVec(
         "arrow builder failed resize: {} : {}", imp.size(), st.CodeAsString());
     return nullptr;
   }
+
   for (auto i : imp) {
-    builder.UnsafeAppend(std::get<ValueType>(i.value));
+    if (i.type == ImportDataType::kUnsupported) {
+      if (auto res = builder.AppendNull(); !res.ok()) {
+        KATANA_LOG_DEBUG(
+            "arrow builder failed append null: {}", res.CodeAsString());
+        return nullptr;
+      }
+    } else {
+      if (auto res = builder.Append(std::get<ValueType>(i.value)); !res.ok()) {
+        KATANA_LOG_DEBUG(
+            "arrow builder failed append type: {} : {}", i.type,
+            res.CodeAsString());
+        return nullptr;
+      }
+    }
   }
   if (auto st = builder.Finish(&array); !st.ok()) {
     KATANA_LOG_DEBUG("arrow builder failed: {}", st.CodeAsString());
@@ -1852,7 +1866,7 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
   // for now uint8_t is an alias for a struct
   case arrow::Type::UINT8: {
     type = ImportDataType::kStruct;
-    value = std::static_pointer_cast<arrow::Int8Scalar>(scalar)->value;
+    value = std::static_pointer_cast<arrow::UInt8Scalar>(scalar)->value;
     break;
   }
   case arrow::Type::LIST: {
@@ -1904,79 +1918,74 @@ katana::ArrowToImport(const std::shared_ptr<arrow::ChunkedArray>& arr) {
   int64_t index = 0;
   for (int32_t chnum = 0; chnum < arr->num_chunks(); ++chnum) {
     for (int64_t i = 0; i < arr->chunk(chnum)->length(); ++i) {
-      auto res = arr->chunk(chnum)->GetScalar(i);
-      if (!res.ok()) {
-        KATANA_LOG_DEBUG("ArrowToImport problem scalar: {}", index);
-      } else {
-        ret[index++].ValueFromArrowScalar(res.ValueOrDie());
+      if (!arr->chunk(chnum)->IsNull(i)) {
+        auto res = arr->chunk(chnum)->GetScalar(i);
+        if (!res.ok()) {
+          KATANA_LOG_DEBUG("ArrowToImport problem scalar: {}", index);
+        } else {
+          ret[index].ValueFromArrowScalar(res.ValueOrDie());
+        }
       }
+      index++;
     }
   }
   return ret;
 }
 
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-katana::ImportToArrow(const std::vector<katana::ImportData>& imp) {
-  std::shared_ptr<arrow::Array> array = nullptr;
-  // Don't call us with an empty array.
-  if (imp.empty()) {
-    return katana::ErrorCode::InvalidArgument;
-  }
-  auto datum = imp[0];
-  switch (datum.type) {
-  case katana::ImportDataType::kString: {
+std::shared_ptr<arrow::Array>
+ToArrowArray(
+    arrow::Type::type arrow_type, std::shared_ptr<arrow::Array> arrow_dst,
+    const std::vector<katana::ImportData>& import_src) {
+  switch (arrow_type) {
+  case arrow::Type::STRING: {
     arrow::StringBuilder builder;
-    array = BuildImportVec<arrow::StringBuilder, std::string>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::StringBuilder, std::string>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kInt64: {
+  case arrow::Type::INT64: {
     arrow::Int64Builder builder;
-    array = BuildImportVec<arrow::Int64Builder, int64_t>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::Int64Builder, int64_t>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kInt32: {
+  case arrow::Type::INT32: {
     arrow::Int32Builder builder;
-    array = BuildImportVec<arrow::Int32Builder, int32_t>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::Int32Builder, int32_t>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kDouble: {
+  case arrow::Type::DOUBLE: {
     arrow::DoubleBuilder builder;
-    array = BuildImportVec<arrow::DoubleBuilder, double>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::DoubleBuilder, double>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kFloat: {
+  case arrow::Type::FLOAT: {
     arrow::FloatBuilder builder;
-    array = BuildImportVec<arrow::FloatBuilder, float>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::FloatBuilder, float>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kBoolean: {
+  case arrow::Type::BOOL: {
     arrow::BooleanBuilder builder;
-    array = BuildImportVec<arrow::BooleanBuilder, bool>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::BooleanBuilder, bool>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-  case katana::ImportDataType::kTimestampMilli: {
+  case arrow::Type::TIMESTAMP: {
     auto* pool = arrow::default_memory_pool();
     arrow::TimestampBuilder builder(
         arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"), pool);
-    array = BuildImportVec<arrow::TimestampBuilder, bool>(
-        std::move(builder), array, imp);
+    arrow_dst = BuildImportVec<arrow::TimestampBuilder, bool>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
-    // for now uint8_t is an alias for a struct
-  case katana::ImportDataType::kStruct: {
+  // for now uint8_t is an alias for a struct
+  case arrow::Type::UINT8: {
     arrow::UInt8Builder builder;
-    array = BuildImportVec<arrow::UInt8Builder, uint8_t>(
-        std::move(builder), array, imp);
-    break;
-  }
-  case katana::ImportDataType::kUnsupported: {
-    KATANA_LOG_FATAL("not yet supported");
+    arrow_dst = BuildImportVec<arrow::UInt8Builder, uint8_t>(
+        std::move(builder), arrow_dst, import_src);
     break;
   }
   default: {
@@ -1984,9 +1993,19 @@ katana::ImportToArrow(const std::vector<katana::ImportData>& imp) {
     break;
   }
   }
-  if (array == nullptr) {
+  return arrow_dst;
+}
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::ImportToArrow(
+    arrow::Type::type arrow_type,
+    const std::vector<katana::ImportData>& import_src) {
+  std::shared_ptr<arrow::Array> array = nullptr;
+
+  if (import_src.empty()) {
     return katana::ErrorCode::ArrowError;
   }
+  array = ToArrowArray(arrow_type, array, import_src);
 
   std::vector<std::shared_ptr<arrow::Array>> chunks;
   chunks.push_back(std::move(array));

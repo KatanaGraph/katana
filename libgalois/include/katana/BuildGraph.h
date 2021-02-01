@@ -12,6 +12,7 @@
 
 #include <arrow/api.h>
 #include <arrow/stl.h>
+#include <arrow/type.h>
 
 #include "katana/PropertyFileGraph.h"
 
@@ -238,7 +239,7 @@ KATANA_EXPORT void WritePropertyGraph(
 KATANA_EXPORT std::vector<ImportData> ArrowToImport(
     const std::shared_ptr<arrow::ChunkedArray>& arr);
 KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> ImportToArrow(
-    const std::vector<ImportData>& imp);
+    arrow::Type::type arrow_type, const std::vector<ImportData>& import_src);
 
 }  // namespace katana
 

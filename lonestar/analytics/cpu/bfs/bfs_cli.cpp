@@ -37,12 +37,30 @@ static const char* url = "breadth_first_search";
 
 static cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-static cll::opt<unsigned int> startNode(
-    "startNode", cll::desc("Node to start search from (default value 0)"),
-    cll::init(0));
+
+static cll::opt<std::string> startNodesFile(
+    "startNodesFile",
+    cll::desc("File containing whitespace separated list of source "
+              "nodes for computing breadth-first search; "
+              "if set, -startNodes is ignored"));
+static cll::opt<std::string> startNodesString(
+    "startNodes",
+    cll::desc("String containing whitespace separated list of source nodes for "
+              "computing betweenness centrality (default value '0'); ignore if "
+              "-startNodesFile is used"),
+    cll::init("0"));
+
 static cll::opt<unsigned int> reportNode(
     "reportNode", cll::desc("Node to report distance to (default value 1)"),
     cll::init(1));
+
+static cll::opt<bool> persistAllDistances(
+    "persistAllDistances",
+    cll::desc(
+        "Flag to indicate whether to persist the distances from all "
+        "sources in startNodeFile or startNodesString; By default only the "
+        "distances for the last source are persisted (default value false)"),
+    cll::init(false));
 
 static cll::opt<BfsPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value SyncTile):"),
@@ -87,14 +105,29 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  if (startNode >= pfg->topology().num_nodes() ||
-      reportNode >= pfg->topology().num_nodes()) {
-    KATANA_LOG_FATAL(
-        "failed to set report: {} or failed to set source: {}", reportNode,
-        startNode);
+  if (reportNode >= pfg->topology().num_nodes()) {
+    KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
   katana::reportPageAlloc("MeminfoPre");
+
+  std::vector<uint32_t> startNodes;
+  if (!startNodesFile.getValue().empty()) {
+    std::ifstream file(startNodesFile);
+    if (!file.good()) {
+      KATANA_LOG_FATAL("failed to open file: {}", startNodesFile);
+    }
+    startNodes.insert(
+        startNodes.end(), std::istream_iterator<uint32_t>{file},
+        std::istream_iterator<uint32_t>{});
+  } else {
+    std::istringstream str(startNodesString);
+    startNodes.insert(
+        startNodes.end(), std::istream_iterator<uint32_t>{str},
+        std::istream_iterator<uint32_t>{});
+  }
+  uint32_t num_sources = startNodes.size();
+  std::cout << "Running BFS for " << num_sources << " sources\n";
 
   BfsPlan plan;
   switch (algo.getValue()) {
@@ -112,46 +145,63 @@ main(int argc, char** argv) {
     break;
   }
 
-  if (auto r = Bfs(pfg.get(), startNode, "level", plan); !r) {
-    KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
-  }
-
-  katana::reportPageAlloc("MeminfoPost");
-
-  auto r = pfg->GetNodePropertyTyped<uint32_t>("level");
-  if (!r) {
-    KATANA_LOG_FATAL("Failed to get node property {}", r.error());
-  }
-  auto results = r.value();
-
-  std::cout << "Node " << reportNode << " has distance "
-            << results->Value(reportNode) << "\n";
-
-  auto stats_result = BfsStatistics::Compute(pfg.get(), "level");
-  if (!stats_result) {
-    KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
-  }
-  auto stats = stats_result.value();
-  stats.Print();
-
-  if (!skipVerify) {
-    if (stats.n_reached_nodes < pfg->num_nodes()) {
-      KATANA_LOG_WARN(
-          "{} unvisited nodes; this is an error if the graph is strongly "
-          "connected",
-          pfg->num_nodes() - stats.n_reached_nodes);
+  for (auto startNode : startNodes) {
+    if (startNode >= pfg->topology().num_nodes()) {
+      KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
-    if (BfsAssertValid(pfg.get(), "level")) {
-      std::cout << "Verification successful.\n";
-    } else {
-      KATANA_LOG_FATAL("verification failed");
+
+    std::string node_distance_prop = "level-" + std::to_string(startNode);
+    if (auto r = Bfs(pfg.get(), startNode, node_distance_prop, plan); !r) {
+      KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
-  }
 
-  if (output) {
-    KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pfg->size());
+    katana::reportPageAlloc("MeminfoPost");
 
-    writeOutput(outputLocation, results->raw_values(), results->length());
+    auto r = pfg->GetNodePropertyTyped<uint32_t>(node_distance_prop);
+    if (!r) {
+      KATANA_LOG_FATAL("Failed to get node property {}", r.error());
+    }
+    auto results = r.value();
+
+    std::cout << "Node " << reportNode << " has distance "
+              << results->Value(reportNode) << "\n";
+
+    auto stats_result = BfsStatistics::Compute(pfg.get(), node_distance_prop);
+    if (!stats_result) {
+      KATANA_LOG_FATAL("Failed to compute stats {}", stats_result.error());
+    }
+    auto stats = stats_result.value();
+    stats.Print();
+
+    if (!skipVerify) {
+      if (stats.n_reached_nodes < pfg->num_nodes()) {
+        KATANA_LOG_WARN(
+            "{} unvisited nodes; this is an error if the graph is strongly "
+            "connected",
+            pfg->num_nodes() - stats.n_reached_nodes);
+      }
+      if (BfsAssertValid(pfg.get(), node_distance_prop)) {
+        std::cout << "Verification successful.\n";
+      } else {
+        KATANA_LOG_FATAL("verification failed");
+      }
+    }
+
+    if (output) {
+      KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pfg->size());
+
+      std::string output_filename = "output-" + std::to_string(startNode);
+      writeOutput(
+          outputLocation, results->raw_values(), results->length(),
+          output_filename);
+    }
+    --num_sources;
+    if (num_sources != 0 && !persistAllDistances) {
+      if (auto r = pfg->RemoveNodeProperty(node_distance_prop); !r) {
+        KATANA_LOG_FATAL(
+            "Failed to remove the node distance property stats {}", r.error());
+      }
+    }
   }
 
   totalTime.stop();

@@ -35,9 +35,24 @@ const char* url = "single_source_shortest_path";
 
 cll::opt<std::string> inputFile(
     cll::Positional, cll::desc("<input file>"), cll::Required);
-cll::opt<unsigned int> startNode(
-    "startNode", cll::desc("Node to start search from (default value 0)"),
-    cll::init(0));
+static cll::opt<std::string> startNodesFile(
+    "startNodesFile",
+    cll::desc("File containing whitespace separated list of source "
+              "nodes for computing single-source-shortest path search; "
+              "if set, -startNodes is ignored"));
+static cll::opt<std::string> startNodesString(
+    "startNodes",
+    cll::desc("String containing whitespace separated list of source nodes for "
+              "computing betweenness centrality (default value '0'); ignore if "
+              "-startNodesFile is used"),
+    cll::init("0"));
+static cll::opt<bool> persistAllDistances(
+    "persistAllDistances",
+    cll::desc(
+        "Flag to indicate whether to persist the distances from all "
+        "sources in startNodeFile or startNodesString; By default only the "
+        "distances for the last source are persisted (default value false)"),
+    cll::init(false));
 cll::opt<unsigned int> reportNode(
     "reportNode", cll::desc("Node to report distance to(default value 1)"),
     cll::init(1));
@@ -103,8 +118,10 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
 
 template <typename Weight>
 static void
-OutputResults(katana::PropertyFileGraph* pfg) {
-  auto r = pfg->GetNodePropertyTyped<Weight>("distance");
+OutputResults(
+    katana::PropertyFileGraph* pfg, std::string node_distance_prop,
+    std::string output_filename = "output") {
+  auto r = pfg->GetNodePropertyTyped<Weight>(node_distance_prop);
   if (!r) {
     KATANA_LOG_FATAL("Error getting results: {}", r.error().message());
   }
@@ -112,7 +129,9 @@ OutputResults(katana::PropertyFileGraph* pfg) {
   KATANA_LOG_DEBUG_ASSERT(
       uint64_t(results->length()) == pfg->topology().num_nodes());
 
-  writeOutput(outputLocation, results->raw_values(), results->length());
+  writeOutput(
+      outputLocation, results->raw_values(), results->length(),
+      output_filename);
 }
 
 }  // namespace
@@ -132,14 +151,29 @@ main(int argc, char** argv) {
   std::cout << "Read " << pfg->topology().num_nodes() << " nodes, "
             << pfg->topology().num_edges() << " edges\n";
 
-  if (startNode >= pfg->topology().num_nodes() ||
-      reportNode >= pfg->topology().num_nodes()) {
-    KATANA_LOG_FATAL(
-        "failed to set report: {} or failed to set source: {}", reportNode,
-        startNode);
+  if (reportNode >= pfg->topology().num_nodes()) {
+    KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
   katana::reportPageAlloc("MeminfoPre");
+
+  std::vector<uint32_t> startNodes;
+  if (!startNodesFile.getValue().empty()) {
+    std::ifstream file(startNodesFile);
+    if (!file.good()) {
+      KATANA_LOG_FATAL("failed to open file: {}", startNodesFile);
+    }
+    startNodes.insert(
+        startNodes.end(), std::istream_iterator<uint64_t>{file},
+        std::istream_iterator<uint64_t>{});
+  } else {
+    std::istringstream str(startNodesString);
+    startNodes.insert(
+        startNodes.end(), std::istream_iterator<uint64_t>{str},
+        std::istream_iterator<uint64_t>{});
+  }
+  uint32_t num_sources = startNodes.size();
+  std::cout << "Running BFS for " << num_sources << " sources\n";
 
   if (algo == SsspPlan::kDeltaStep || algo == SsspPlan::kDeltaTile ||
       algo == SsspPlan::kSerialDelta || algo == SsspPlan::kSerialDeltaTile) {
@@ -187,61 +221,76 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Invalid algorithm selected");
   }
 
-  auto pg_result =
-      Sssp(pfg.get(), startNode, edge_property_name, "distance", plan);
-  if (!pg_result) {
-    KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
-  }
-
-  auto stats_result = SsspStatistics::Compute(pfg.get(), "distance");
-  if (!stats_result) {
-    KATANA_LOG_FATAL(
-        "Computing statistics: {}", stats_result.error().message());
-  }
-  auto stats = stats_result.value();
-  stats.Print();
-
-  if (!skipVerify) {
-    if (stats.n_reached_nodes < pfg->topology().num_nodes()) {
-      KATANA_LOG_WARN(
-          "{} unvisited nodes; this is an error if the graph is strongly "
-          "connected",
-          pfg->topology().num_nodes() - stats.n_reached_nodes);
+  for (auto startNode : startNodes) {
+    if (startNode >= pfg->topology().num_nodes()) {
+      KATANA_LOG_FATAL("failed to set source: {}", startNode);
     }
-    if (auto r = SsspAssertValid(
-            pfg.get(), startNode, edge_property_name, "distance");
-        r) {
-      std::cout << "Verification successful.\n";
-    } else {
-      KATANA_LOG_FATAL(
-          "verification failed: ", r.has_error() ? r.error().message() : "");
-    }
-  }
 
-  if (output) {
-    switch (pfg->GetNodeProperty("distance")->type()->id()) {
-    case arrow::UInt32Type::type_id:
-      OutputResults<uint32_t>(pfg.get());
-      break;
-    case arrow::Int32Type::type_id:
-      OutputResults<int32_t>(pfg.get());
-      break;
-    case arrow::UInt64Type::type_id:
-      OutputResults<uint64_t>(pfg.get());
-      break;
-    case arrow::Int64Type::type_id:
-      OutputResults<int64_t>(pfg.get());
-      break;
-    case arrow::FloatType::type_id:
-      OutputResults<float>(pfg.get());
-      break;
-    case arrow::DoubleType::type_id:
-      OutputResults<double>(pfg.get());
-      break;
-    default:
+    std::string node_distance_prop = "distance-" + std::to_string(startNode);
+    auto pg_result = Sssp(
+        pfg.get(), startNode, edge_property_name, node_distance_prop, plan);
+    if (!pg_result) {
+      KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
+    }
+
+    auto stats_result = SsspStatistics::Compute(pfg.get(), node_distance_prop);
+    if (!stats_result) {
       KATANA_LOG_FATAL(
-          "Unsupported type: {}", pfg->GetNodeProperty("distance")->type());
-      break;
+          "Computing statistics: {}", stats_result.error().message());
+    }
+    auto stats = stats_result.value();
+    stats.Print();
+
+    if (!skipVerify) {
+      if (stats.n_reached_nodes < pfg->topology().num_nodes()) {
+        KATANA_LOG_WARN(
+            "{} unvisited nodes; this is an error if the graph is strongly "
+            "connected",
+            pfg->topology().num_nodes() - stats.n_reached_nodes);
+      }
+      if (auto r = SsspAssertValid(
+              pfg.get(), startNode, edge_property_name, node_distance_prop);
+          r) {
+        std::cout << "Verification successful.\n";
+      } else {
+        KATANA_LOG_FATAL(
+            "verification failed: ", r.has_error() ? r.error().message() : "");
+      }
+    }
+
+    if (output) {
+      std::string output_filename = "output-" + std::to_string(startNode);
+      switch (pfg->GetNodeProperty(node_distance_prop)->type()->id()) {
+      case arrow::UInt32Type::type_id:
+        OutputResults<uint32_t>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      case arrow::Int32Type::type_id:
+        OutputResults<int32_t>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      case arrow::UInt64Type::type_id:
+        OutputResults<uint64_t>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      case arrow::Int64Type::type_id:
+        OutputResults<int64_t>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      case arrow::FloatType::type_id:
+        OutputResults<float>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      case arrow::DoubleType::type_id:
+        OutputResults<double>(pfg.get(), node_distance_prop, output_filename);
+        break;
+      default:
+        KATANA_LOG_FATAL(
+            "Unsupported type: {}", pfg->GetNodeProperty("distance")->type());
+        break;
+      }
+    }
+    --num_sources;
+    if (num_sources != 0 && !persistAllDistances) {
+      if (auto r = pfg->RemoveNodeProperty(node_distance_prop); !r) {
+        KATANA_LOG_FATAL(
+            "Failed to remove the node distance property stats {}", r.error());
+      }
     }
   }
 

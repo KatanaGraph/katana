@@ -46,10 +46,12 @@ MakeFileGraph(
 
 template <typename T>
 void
-writeOutput(const std::string& outputDir, T* values, size_t length) {
+writeOutput(
+    const std::string& output_dir, T* values, size_t length,
+    std::string output_filename = "output") {
   namespace fs = boost::filesystem;
-  fs::path filename{outputDir};
-  filename = filename.append("output");
+  fs::path filename{output_dir};
+  filename = filename.append(output_filename);
 
   std::ofstream outputFile(filename.string().c_str());
 

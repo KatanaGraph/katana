@@ -19,6 +19,8 @@
 
 #include "katana/analytics/sssp/sssp.h"
 
+#include "katana/analytics/BfsSsspImplementationBase.h"
+
 using namespace katana::analytics;
 
 namespace {
@@ -527,23 +529,20 @@ ComputeStatistics(
   katana::GReduceMax<Weight> max_dist;
   katana::GAccumulator<Weight> sum_dist;
   katana::GAccumulator<uint32_t> num_visited;
-  max_dist.reset();
-  sum_dist.reset();
-  num_visited.reset();
 
   do_all(
       katana::iterate(graph),
       [&](uint64_t i) {
-        uint32_t my_distance =
+        Weight my_distance =
             graph.template GetData<SsspNodeDistance<Weight>>(i);
 
-        if (my_distance != SsspImplementation<Weight>::kDistanceInfinity) {
+        if (my_distance < SsspImplementation<Weight>::kDistanceInfinity) {
           max_dist.update(my_distance);
           sum_dist += my_distance;
           num_visited += 1;
         }
       },
-      katana::loopname("Sanity check"), katana::no_stats());
+      katana::loopname("Compute Statistics"), katana::no_stats());
 
   return SsspStatistics{
       double(max_dist.reduce()), double(sum_dist.reduce()),

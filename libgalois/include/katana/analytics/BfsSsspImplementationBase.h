@@ -37,6 +37,7 @@ struct BfsSsspImplementationBase {
 
   constexpr static const bool kTrackWork = false;
 
+  // TODO(amp): Remove / 4
   constexpr static const Dist kDistanceInfinity =
       std::numeric_limits<Dist>::max() / 4;
 

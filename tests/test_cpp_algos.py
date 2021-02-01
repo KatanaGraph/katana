@@ -100,7 +100,8 @@ def test_sssp(property_graph: PropertyGraph):
 
     stats = SsspStatistics(property_graph, property_name)
 
-    assert stats.max_distance == 4294967295.0
+    print(stats)
+    assert stats.max_distance == 2011.0
 
     # Verify with numba implementation of verifier
     verify_sssp(property_graph, start_node, new_property_id)

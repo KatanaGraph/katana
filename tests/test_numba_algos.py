@@ -38,7 +38,8 @@ def test_sssp(property_graph):
 
     stats = SsspStatistics(property_graph, property_name)
 
-    assert stats.max_distance == 4294967295.0
+    print(stats)
+    assert stats.max_distance == 2011.0
 
 
 def test_jaccard(property_graph):

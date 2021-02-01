@@ -1,8 +1,9 @@
 #ifndef KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
 #define KATANA_LIBGALOIS_KATANA_ANALYTICS_SSSP_SSSP_H_
 
+#include <iostream>
+
 #include "katana/AtomicHelpers.h"
-#include "katana/analytics/BfsSsspImplementationBase.h"
 #include "katana/analytics/Plan.h"
 #include "katana/analytics/Utils.h"
 

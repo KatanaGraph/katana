@@ -66,6 +66,8 @@ public:
   katana::Result<void> Persist();
   std::future<katana::Result<void>> PersistAsync();
 
+  uint64_t map_size() const { return map_size_; }
+
   template <typename T>
   katana::Result<T*> ptr() const {
     return reinterpret_cast<T*>(map_start_); /* NOLINT */

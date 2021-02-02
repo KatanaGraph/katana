@@ -1,5 +1,7 @@
 #include "AddProperties.h"
 
+#include <arrow/chunked_array.h>
+
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 
@@ -7,6 +9,63 @@ template <typename T>
 using Result = katana::Result<T>;
 
 namespace {
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
+  arrow::LargeStringBuilder builder;
+
+  for (const auto& chunk : arr->chunks()) {
+    std::shared_ptr<arrow::StringArray> string_array =
+        std::static_pointer_cast<arrow::StringArray>(chunk);
+    for (uint64_t i = 0, size = string_array->length(); i < size; ++i) {
+      if (!string_array->IsValid(i)) {
+        auto status = builder.AppendNull();
+        if (!status.ok()) {
+          KATANA_LOG_ERROR("could not append null: {}", status);
+          return tsuba::ErrorCode::ArrowError;
+        }
+        continue;
+      }
+      auto status = builder.Append(string_array->GetView(i));
+      if (!status.ok()) {
+        KATANA_LOG_ERROR("could not add string to array builder: {}", status);
+        return tsuba::ErrorCode::ArrowError;
+      }
+    }
+  }
+
+  std::shared_ptr<arrow::Array> new_arr;
+  auto status = builder.Finish(&new_arr);
+  if (!status.ok()) {
+    KATANA_LOG_ERROR("could not finish building string array: {}", status);
+    return tsuba::ErrorCode::ArrowError;
+  }
+
+  auto maybe_res = arrow::ChunkedArray::Make({new_arr}, arrow::large_utf8());
+  if (!maybe_res.ok()) {
+    KATANA_LOG_ERROR(
+        "could not make arrow chunked array: {}", maybe_res.status());
+    return tsuba::ErrorCode::ArrowError;
+  }
+  return maybe_res.ValueOrDie();
+}
+
+// HandleBadParquetTypes here and HandleBadParquetTypes in RDG.cpp
+// workaround a libarrow2.0 limitation in reading and writing LargeStrings to
+// parquet files.
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
+  if (old_array->num_chunks() <= 1) {
+    return old_array;
+  }
+  switch (old_array->type()->id()) {
+  case arrow::Type::type::STRING: {
+    return ChunkedStringToLargeString(old_array);
+  }
+  default:
+    return old_array;
+  }
+}
 
 Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
@@ -31,6 +90,18 @@ DoLoadProperties(
     KATANA_LOG_DEBUG("arrow error: {}", read_result);
     return tsuba::ErrorCode::ArrowError;
   }
+
+  auto fixed_column_res = HandleBadParquetTypes(out->column(0));
+  if (!fixed_column_res) {
+    return fixed_column_res.error();
+  }
+  std::shared_ptr<arrow::ChunkedArray> fixed_column(
+      std::move(fixed_column_res.value()));
+
+  out = arrow::Table::Make(
+      arrow::schema(
+          {arrow::field(out->field(0)->name(), fixed_column->type())}),
+      {fixed_column});
 
   // Combine multiple chunks into one. Binary and string columns (c.f. large
   // binary and large string columns) are a special case. They may not be

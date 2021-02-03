@@ -104,21 +104,17 @@ std::vector<cpuinfo>
 parseCPUInfo() {
   std::vector<cpuinfo> vals;
 
-  const int len = 1024;
-  std::array<char, len> line;
+  std::string line;
 
-  std::ifstream procInfo("/proc/cpuinfo");
-  if (!procInfo)
+  std::ifstream cpu_info("/proc/cpuinfo");
+  if (!cpu_info) {
     KATANA_SYS_DIE("failed opening /proc/cpuinfo");
+  }
 
   int cur = -1;
 
-  while (true) {
-    procInfo.getline(line.data(), len);
-    if (!procInfo)
-      break;
-
-    int num;
+  while (std::getline(cpu_info, line)) {
+    int num{};
     if (sscanf(line.data(), "processor : %d", &num) == 1) {
       KATANA_LOG_DEBUG_ASSERT(cur < num);
       cur = num;
@@ -135,8 +131,9 @@ parseCPUInfo() {
     }
   }
 
-  for (auto& c : vals)
+  for (auto& c : vals) {
     c.numaNode = getNumaNode(c);
+  }
 
   return vals;
 }

@@ -19,6 +19,20 @@
 
 namespace katana {
 
+/// Perform a safe cast from \param gen_array to \tparam ArrowArrayType
+/// calls the array's `View()` member first to make sure cast is safe.
+template <typename ArrowArrayType>
+Result<std::shared_ptr<ArrowArrayType>>
+ViewCast(const std::shared_ptr<arrow::Array>& gen_array) {
+  auto maybe_res = gen_array->View(
+      arrow::TypeTraits<typename ArrowArrayType::TypeClass>::type_singleton());
+  if (!maybe_res.ok()) {
+    return katana::ErrorCode::ArrowError;
+  }
+  return std::static_pointer_cast<ArrowArrayType>(
+      std::move(maybe_res.ValueOrDie()));
+}
+
 template <typename T>
 std::vector<T>*
 SingleView(std::vector<std::tuple<T>>* v) {

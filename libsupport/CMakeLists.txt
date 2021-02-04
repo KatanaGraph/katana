@@ -33,6 +33,16 @@ target_include_directories(katana_support PUBLIC
 
 set_common_katana_library_options(katana_support)
 
+find_package(Arrow REQUIRED)
+if(TARGET arrow::arrow)
+  # Conan package
+  target_link_libraries(katana_support PUBLIC arrow::arrow)
+else()
+  # Libarrow project cmake
+  target_link_libraries(katana_support PUBLIC arrow_shared)
+endif()
+
+
 find_package(nlohmann_json 3.7.3 REQUIRED)
 target_link_libraries(katana_support PUBLIC nlohmann_json::nlohmann_json)
 

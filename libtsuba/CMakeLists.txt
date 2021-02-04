@@ -51,14 +51,14 @@ target_link_libraries(tsuba-preload PUBLIC katana_support)
 target_link_libraries(tsuba PUBLIC tsuba-preload katana_support)
 
 find_package(Arrow REQUIRED)
-if(TARGET arrow::arrow)
+if(TARGET arrow::parquet)
   # Conan package
-  target_link_libraries(tsuba PUBLIC arrow::arrow arrow::parquet)
+  target_link_libraries(tsuba PUBLIC arrow::parquet)
 else()
   # Libarrow project cmake
   get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
   find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
-  target_link_libraries(tsuba PUBLIC arrow_shared parquet_shared)
+  target_link_libraries(tsuba PUBLIC parquet_shared)
 endif()
 
 install(

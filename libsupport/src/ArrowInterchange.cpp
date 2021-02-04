@@ -43,7 +43,7 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   int64_t length = original->length();
   // Build indices array, reusable across properties
   std::vector<uint64_t> indices_vec(length);
-  // fills the vector from 1 to N
+  // fills the vector from 0 to indices_vec.size()-1
   std::iota(indices_vec.begin(), indices_vec.end(), 0);
   std::shuffle(indices_vec.begin(), indices_vec.end(), katana::GetGenerator());
   arrow::CTypeTraits<int64_t>::BuilderType builder;

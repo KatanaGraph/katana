@@ -11,7 +11,7 @@ class KatanaConan(ConanFile):
         "arrow/2.0.0",
         "backward-cpp/1.5",
         "benchmark/1.5.0",
-        "boost/1.71.0",
+        "boost/1.74.0",
         "date/2.4.1",
         "eigen/3.3.7",
         "fmt/6.2.1",

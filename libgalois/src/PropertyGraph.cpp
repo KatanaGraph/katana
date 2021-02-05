@@ -37,8 +37,8 @@ GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
 ///   uint32_t padding if num_edges is odd
 ///   void*[num_edges] edge_data: edge data
 ///
-/// Since property graphs store their edge data separately, we will consider
-/// any topology file with non-zero sizeof_edge_data invalid.
+/// Since property graphs store their edge data separately, we will
+/// ignore the size_of_edge_data (data[1]).
 katana::Result<katana::GraphTopology>
 MapTopology(const tsuba::FileView& file_view) {
   const auto* data = file_view.ptr<uint64_t>();
@@ -47,10 +47,6 @@ MapTopology(const tsuba::FileView& file_view) {
   }
 
   if (data[0] != 1) {
-    return katana::ErrorCode::InvalidArgument;
-  }
-
-  if (data[1] != 0) {
     return katana::ErrorCode::InvalidArgument;
   }
 

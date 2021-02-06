@@ -70,8 +70,8 @@ HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
 Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path) {
-  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(file_path.string(), false); !res) {
+  auto fv = std::make_shared<tsuba::FileView>();
+  if (auto res = fv->Bind(file_path.string(), true); !res) {
     return res.error();
   }
 
@@ -139,7 +139,7 @@ DoLoadPropertySlice(
   if (offset < 0 || length < 0) {
     return tsuba::ErrorCode::InvalidArgument;
   }
-  auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
+  auto fv = std::make_shared<tsuba::FileView>();
   if (auto res = fv->Bind(file_path.string(), 0, 0, false); !res) {
     return res.error();
   }

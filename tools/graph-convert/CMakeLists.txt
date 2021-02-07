@@ -1,9 +1,9 @@
 add_executable(graph-convert graph-convert.cpp)
 target_link_libraries(graph-convert katana_galois LLVMSupport)
 install(TARGETS graph-convert
-  EXPORT KatanaTargets
   COMPONENT tools
 )
+add_dependencies(tools graph-convert)
 
 function(compare_with_sample test_arg compare_arg input expected)
   set(suffix ${test_arg}${compare_arg}-${input})
@@ -51,9 +51,9 @@ else()
   target_link_libraries(graph-convert-huge Boost::iostreams)
 endif()
 install(TARGETS graph-convert-huge
-  EXPORT KatanaTargets
   COMPONENT tools
 )
+add_dependencies(tools graph-convert-huge)
 
 add_library(graph-properties-convert-common STATIC)
 add_executable(graph-properties-convert)
@@ -93,9 +93,9 @@ add_executable(oplog-rdg oplog-rdg.cpp)
 target_link_libraries(oplog-rdg graph-properties-convert-common katana_galois)
 
 install(TARGETS graph-properties-convert
-  EXPORT KatanaTargets
   COMPONENT tools
 )
+add_dependencies(tools graph-properties-convert)
 
 if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
   add_subdirectory(tests)

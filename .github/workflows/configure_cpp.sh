@@ -12,19 +12,11 @@ case $OS in
   *) ;;
 esac
 
-VER="${CXX/*-/}"
-if [[ "$VER" == "$CXX" ]]; then
-  VER=""
-else
-  VER="-$VER"
-fi
-
 case "$CXX" in
-  clang*) CC=clang ;;
-  g*)     CC=gcc   ;;
+  *clang++*)   CC=${CXX/clang++/clang} ;;
+  *g++*)       CC=${CXX/g++/gcc};;
+  *-gnu-c++*)  CC=${CXX/c++/cc};;
 esac
-
-CC="${CC}${VER}"
 
 case $CI_BUILD_TYPE in
   Release)
@@ -53,9 +45,14 @@ case $CI_BUILD_TYPE in
     ;;
 esac
 
+CMAKE_TOOLCHAIN_ARG=""
+if [ -f "$BUILD_DIR/conan_paths.cmake" ]; then
+  CMAKE_TOOLCHAIN_ARG="-DCMAKE_TOOLCHAIN_FILE=$BUILD_DIR/conan_paths.cmake"
+fi
+
 cmake -S . -B $BUILD_DIR \
   -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-  -DCMAKE_TOOLCHAIN_FILE=$BUILD_DIR/conan_paths.cmake \
+  $CMAKE_TOOLCHAIN_ARG \
   -DCMAKE_CXX_COMPILER="$CXX" \
   -DCMAKE_C_COMPILER="$CC" \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \

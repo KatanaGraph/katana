@@ -8,6 +8,6 @@ case $1 in
   *)        echo "Unknown OS"; exit 10 ;;
 esac
 
-INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-${PLAT}.sh"
+INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.9.2-${PLAT}.sh"
 mkdir -p "$(dirname $MINICONDA_FILE)"
 curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"

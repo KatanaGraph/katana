@@ -1,15 +1,5 @@
 {% set version %}{% include "version.txt" %}{% endset %}
 
-# Check environment variables to determine build context
-{% set ci_build = environ.get("CI", False) %}
-{% set dev_build = environ.get("KATANA_DEV_BUILD", ci_build) %}
-
-# For dev builds, add ".devN" to the version number, for N being the git commit count since the last tag.
-# This makes the build come BEFORE the plain version.
-{% set version %}{{ version }}{{ ".dev" + environ.get("GIT_DESCRIBE_NUMBER", "") if dev_build }}{% endset %}
-# The number is the github run number or if that is not set the git describe number (commit count since last tag).
-{% set build_number = environ.get("GITHUB_RUN_NUMBER", environ.get("GIT_DESCRIBE_NUMBER")) %}
-
 package:
   name: katana
   version: {{ version }}
@@ -18,64 +8,231 @@ source:
   path: ../
 
 build:
-  number: {{ build_number }}
-  # For dev builds, the build string includes the git hash and a tag stating where the build is happening.
-  {% if dev_build %}
-  string: {{ environ.get("GIT_DESCRIBE_HASH") }}_{{ "ci_" if ci_build }}{{ build_number }}
-  {% endif %}
+  number: 9
+  script_env:
+    - KATANA_DOCS_OUTPUT
+#    - CMAKE_BUILD_PARALLEL_LEVEL
 
 requirements:
   build:
-    - {{ compiler('cxx') }}    
+    - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
-    - cmake>=3.13
+    - cmake>=3.19
+    - cython>=0.29.12
     - make
+    - pyarrow {{ arrow_cpp }}
+    - python {{ python }}
+    # Workaround for upstream sphinx instability [1]
+    #
+    # [1] https://github.com/sphinx-doc/sphinx/issues/8880
+    #
+    # TODO(ddn): revisit (each instance of sphinx<3.5.0, there are 4)
+    - sphinx<3.5.0
   host:
-    - boost-cpp>=1.71
+    - jinja2
+    - cython>=0.29.12
+    - pyarrow {{ arrow_cpp }}
+    - numba>=0.50,<1.0a0
+    - python {{ python }}
+    - sphinx<3.5.0
+    - {{ compiler('cxx') }}
+    - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
     - aws-sdk-cpp>=1.7.164,<2.0a0
+    - backward-cpp>=1.4
+    - boost-cpp>=1.71
+    - elfutils
     - fmt>=6.2.1
-    - zlib>=1.2.11
-    - ncurses>=6.1
-    - llvm>=8
-    - {{ cdt('numactl-devel') }}
-    - libxml2>=2.9.10
-    - nlohmann_json>=3.7.3
-    - openblas>=0.3.12
     - howardhinnant_date>=3.0.0
     - libcurl>=7.66
-    - backward-cpp>=1.4
-    - elfutils
-# TODO(amp): These deps are needed for enterprise, add to enterprise conda build when it exists.
-#    - libcypher-parser>=0.6.2,<0.7a0
-#    - librdkafka
-  run:
-    - boost-cpp
-    - arrow-cpp
-    - aws-sdk-cpp
-    - fmt
-    - zlib
-    - ncurses
-    - libxml2
-    - nlohmann_json
-    - openblas
-    - howardhinnant_date
-    - libcurl
-    - backward-cpp
-    - elfutils
+    - libxml2>=2.9.10
+    - llvm>=8
+    - ncurses>=6.1
+    - nlohmann_json>=3.7.3
+    - openblas>=0.3.12
+    - zlib>=1.2.11
 
-test:
-  requires:
-    - {{ compiler('cxx') }}
-    - {{ cdt('numactl') }}
-    - cmake>=3.13
-    - make
-  files:
-    - test_app/CMakeLists.txt
-    - test_app/test_app.cpp
-  commands:
-    - graph-convert --help
-      
+outputs:
+  - name: katana-cpp
+    files:
+      - include/katana/**
+      - include/tsuba/**
+      - lib/libkatana_galois.so*
+      - lib/libkatana_support.a
+      - lib/libtsuba.so*
+      - lib/libtsuba-preload.so
+      - lib/cmake/Katana/**
+    requirements:
+      build:
+        - {{ compiler('cxx') }}
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+      host:
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+      run:
+        - boost-cpp
+        - arrow-cpp
+        - aws-sdk-cpp
+        - fmt
+        - nlohmann_json
+        - openblas
+        - howardhinnant_date
+        - libcurl
+        - backward-cpp
+        - elfutils
+    run_exports:
+      - {{ pin_subpackage('katana-cpp', max_pin='x.x.x') }}
+    test:
+      requires:
+        - {{ compiler('cxx') }}
+        - {{ cdt('numactl') }}
+        - cmake>=3.13
+        - make
+      files:
+        - test_app/CMakeLists.txt
+        - test_app/test_app.cpp
+      script: run_test_cpp.sh
+  - name: katana-python
+    files:
+      - lib/python*/site-packages/katana_python-*/**
+    requirements:
+      build:
+        - {{ compiler('cxx') }}
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+        - jinja2
+        - cython>=0.29.12
+        - pyarrow {{ arrow_cpp }}
+        - numba>=0.50,<1.0a0
+        - python {{ python }}
+        - sphinx<3.5.0
+      host:
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+        - {{ pin_subpackage('katana-cpp', exact=True) }}
+        - jinja2
+        - cython>=0.29.12
+        - pyarrow {{ arrow_cpp }}
+        - numba>=0.50,<1.0a0
+        - python {{ python }}
+        - sphinx<3.5.0
+      run:
+        - {{ pin_subpackage('katana-cpp', exact=True) }}
+        - {{ pin_compatible('numba') }}
+        - {{ pin_compatible('pyarrow') }}
+        - {{ pin_compatible('numpy') }}
+        - python {{ python }}
+    run_exports:
+      - {{ pin_subpackage('katana-python', max_pin='x.x.x') }}
+    test:
+      requires:
+        - jupyter
+        - pytest
+      source_files:
+        - python/tests
+        - python/examples/jupyter
+      script: run_test_python.sh
+  - name: katana-bin
+    files:
+      - bin/graph-convert
+      - bin/graph-convert-huge
+      - bin/graph-properties-convert
+    requirements:
+      build:
+        - {{ compiler('cxx') }}
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+      host:
+        - {{ cdt('numactl-devel') }}
+        - arrow-cpp {{ arrow_cpp }}
+        - aws-sdk-cpp>=1.7.164,<2.0a0
+        - backward-cpp>=1.4
+        - boost-cpp>=1.71
+        - elfutils
+        - fmt>=6.2.1
+        - howardhinnant_date>=3.0.0
+        - libcurl>=7.66
+        - libxml2>=2.9.10
+        - llvm>=8
+        - ncurses>=6.1
+        - nlohmann_json>=3.7.3
+        - openblas>=0.3.12
+        - zlib>=1.2.11
+        - {{ pin_subpackage('katana-cpp', exact=True) }}
+      run:
+        - {{ pin_subpackage('katana-cpp', exact=True) }}
+        #- {{ pin_subpackage('katana-python', exact=True) }} <- Add this if any Python scripts are added to bin/
+    test:
+      commands:
+        - graph-convert --help > /dev/null
+        - graph-properties-convert --help > /dev/null
+
 about:
   home: https://katanagraph.com/
   license: BSD
@@ -83,6 +240,7 @@ about:
   summary: Library for building parallel graph algorithms.
 
 extra:
+  repository: https://github.com/KatanaGraph/katana
   recipe-maintainers:
     - katanagraph
     - amp

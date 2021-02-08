@@ -17,6 +17,7 @@ jobs:
 #        access_token: ${{ github.token }}
 
   build_and_package:
+#    name: Build and Test Conda Packages
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -88,17 +89,12 @@ jobs:
     ###
     # Conda build process for two packages
     ###
-    - name: Build katana Package
+    - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
         ccache --zero-stats
-        conda build -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
-    - name: Build katana-python Package
-      run: |
-        . .github/workflows/activate_miniconda.sh
-        cd python
         export KATANA_DOCS_OUTPUT=$HOME/docs
-        conda build -c local -c katanagraph -c conda-forge --output-folder $HOME/build/ conda_recipe/
+        conda build -c conda-forge --output-folder $HOME/build/ conda_recipe/
         ccache --show-stats
         ccache --cleanup
 

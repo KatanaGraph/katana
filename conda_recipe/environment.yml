@@ -1,30 +1,30 @@
 # This file may be used to create an environment using:
-# $ conda env create --name <env> --file <this file>.yaml
-# (This file must be named <something>.yaml)
+# $ conda env create --name <env> --file conda_recipe/conda-dev-environment.yml
+# (This file must be named <something>.yml)
 channels:
- - katanagraph
  - conda-forge
 dependencies:
  - arrow-cpp<3.0.0a0
  - aws-sdk-cpp>=1.7.164,<2.0a0
  - awscli
  - backward-cpp>=1.4
+ - benchmark
  - boost-cpp>=1.71
  - black=19.10
- - cmake
+ - cmake>=3.19
  - conda-build
  - conda-verify
  - cxx-compiler
- - cython
+ - cython>=0.29.12
  - eigen
  - elfutils
  - fmt>=6.2.1
  - howardhinnant_date>=3.0.0
  - jinja2
  - libcurl>=7.66
- - libcypher-parser
  - libxml2>=2.9.10
  - llvmdev>=8
+ - make
  - ncurses>=6.1
  - nlohmann_json>=3.7.3
  - numba
@@ -33,6 +33,7 @@ dependencies:
  - parquet-cpp
  - pyarrow
  - pytest
+ - python>=3.8
  - scikit-build
 # Workaround for upstream sphinx instability [1]
 #
@@ -41,3 +42,5 @@ dependencies:
 # TODO(ddn): revisit
  - sphinx<3.5.0
  - zlib>=1.2.11
+ - setuptools
+ - conan

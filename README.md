@@ -150,6 +150,8 @@ ctest
 
 in the build directory.
 
+To build the Python API see [Python.md](Python.md).
+
 
 Running Galois Applications
 ===========================

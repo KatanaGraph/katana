@@ -1,25 +1,15 @@
 #! /usr/bin/env python3
 import sys
-from functools import partial
+from functools import partial, lru_cache
 from itertools import combinations
 
 import jinja2
 
 import generator_conf
 
-DIR = sys.argv[1]
-TEMPLATE_FILE = sys.argv[2]
-
-templateLoader = jinja2.FileSystemLoader(searchpath=DIR)
-templateEnv = jinja2.Environment(loader=templateLoader)
-
 
 def all_combinations(l):
     return [x for n in range(len(l) + 1) for x in combinations(l, n)]
-
-
-def generated_banner():
-    return "THIS FILE IS GENERATED FROM '{0}'. Make changes to that file instead of this one.".format(TEMPLATE_FILE)
 
 
 def indent(n, s):
@@ -38,14 +28,52 @@ def nested_statements(layers, *args, **kwargs):
     raise RuntimeError("The last layer must not call inner.")
 
 
-templateEnv.globals.update(
-    combinations=combinations,
-    all_combinations=all_combinations,
-    generated_banner=generated_banner,
-    nested_statements=nested_statements,
-    partial=partial,
-    indent=indent,
-    **generator_conf.exports
-)
-template = templateEnv.get_template(TEMPLATE_FILE)
-print(template.render())
+def run(root_dir, template_file, output_file):
+    def generated_banner():
+        return "THIS FILE IS GENERATED FROM '{0}'. Make changes to that file instead of this one.".format(template_file)
+
+    template_env = _get_jinja_environment(root_dir)
+
+    template_env.globals.update(
+        combinations=combinations,
+        all_combinations=all_combinations,
+        generated_banner=generated_banner,
+        nested_statements=nested_statements,
+        partial=partial,
+        indent=indent,
+        **generator_conf.exports
+    )
+    template = template_env.get_template(str(template_file))
+    output = template.render()
+    if output_file:
+        try:
+            with open(output_file, "rt", encoding="UTF-8") as f:
+                old_output = f.read()
+        except IOError:
+            old_output = None
+
+        if output == old_output:
+            # print(f"{output_file} does not need to be updated.")
+            return False
+
+        with open(output_file, "wt", encoding="UTF-8") as f:
+            # print(f"Writing {output_file}.")
+            print(template.render(), file=f, end="")
+            return True
+    else:
+        print(output, end="")
+        return None
+
+
+# Cache jinja environments to allow caching inside the environment. But don't cache many in case they get big.
+@lru_cache(2)
+def _get_jinja_environment(root_dir):
+    template_loader = jinja2.FileSystemLoader(searchpath=str(root_dir))
+    template_env = jinja2.Environment(loader=template_loader)
+    return template_env
+
+
+if __name__ == "__main__":
+    DIR = sys.argv[1]
+    TEMPLATE_FILE = sys.argv[2]
+    run(DIR, TEMPLATE_FILE, None)

@@ -35,7 +35,7 @@ static cll::opt<std::string> startNodesFile(
     "startNodesFile",
     cll::desc("File containing whitespace separated list of source "
               "nodes for computing betweenness-centrality; "
-              "if set, -startNodes and -numberOfSources is ignored"));
+              "if set, -startNodes is ignored"));
 static cll::opt<std::string> startNodesString(
     "startNodes",
     cll::desc("String containing whitespace separated list of source nodes for "
@@ -45,9 +45,15 @@ static cll::opt<std::string> startNodesString(
 static cll::opt<unsigned int> numberOfSources(
     "numberOfSources",
     cll::desc("Number of sources to compute betweenness-centrality on (default "
-              "all); pick first numberOfSources from -startNodesFile or "
+              "1); pick first numberOfSources from -startNodesFile or "
               "-startNodes if used or pick sources 0 to numberOfSources - 1"),
-    cll::init(-1u));
+    cll::init(1));
+static cll::opt<bool> allSources(
+    "allSources",
+    cll::desc(
+        "Flag to compute betweenness centrality on all the sources (default "
+        "false); if set -startNodesFile and -startNodes are ignored"),
+    cll::init(false));
 static cll::opt<BetweennessCentralityPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value AutoAlgo):"),
     cll::values(
@@ -89,28 +95,28 @@ main(int argc, char** argv) {
   BetweennessCentralitySources sources = kBetweennessCentralityAllNodes;
   uint32_t num_sources = pg->num_nodes();
 
-  if (!startNodesFile.getValue().empty()) {
-    std::ifstream file(startNodesFile);
-    if (!file.good()) {
-      KATANA_LOG_FATAL("failed to open file: {}", startNodesFile);
+  if (!allSources) {
+    if (!startNodesFile.getValue().empty()) {
+      std::ifstream file(startNodesFile);
+      if (!file.good()) {
+        KATANA_LOG_FATAL("failed to open file: {}", startNodesFile);
+      }
+      std::vector<uint32_t> startNodes;
+      startNodes.insert(
+          startNodes.end(), std::istream_iterator<uint32_t>{file},
+          std::istream_iterator<uint32_t>{});
+      sources = startNodes;
+      num_sources = startNodes.size();
+    } else if (!startNodesString.empty()) {
+      std::istringstream str(startNodesString);
+      std::vector<uint32_t> startNodes;
+      startNodes.insert(
+          startNodes.end(), std::istream_iterator<uint32_t>{str},
+          std::istream_iterator<uint32_t>{});
+      sources = startNodes;
+      num_sources = startNodes.size();
     }
-    std::vector<uint32_t> startNodes;
-    startNodes.insert(
-        startNodes.end(), std::istream_iterator<uint32_t>{file},
-        std::istream_iterator<uint32_t>{});
-    sources = startNodes;
-    num_sources = startNodes.size();
-  } else if (!startNodesString.empty()) {
-    std::istringstream str(startNodesString);
-    std::vector<uint32_t> startNodes;
-    startNodes.insert(
-        startNodes.end(), std::istream_iterator<uint32_t>{str},
-        std::istream_iterator<uint32_t>{});
-    sources = startNodes;
-    num_sources = startNodes.size();
-  }
 
-  if (numberOfSources != -1u) {
     if (sources == kBetweennessCentralityAllNodes) {
       sources = numberOfSources;
       num_sources = numberOfSources;
@@ -122,6 +128,8 @@ main(int argc, char** argv) {
       }
       num_sources = sources_vec.size();
     }
+  } else {
+    sources = num_sources;
   }
 
   std::cout << "Running betweenness-centrality on " << num_sources

@@ -43,7 +43,8 @@ static cll::opt<std::string> startNodesFile(
 static cll::opt<std::string> startNodesString(
     "startNodes",
     cll::desc("String containing whitespace separated list of source nodes for "
-              "computing betweenness centrality (default value '0'); ignore if "
+              "computing single-source-shortest path search (default value "
+              "'0'); ignore if "
               "-startNodesFile is used"),
     cll::init("0"));
 static cll::opt<bool> persistAllDistances(

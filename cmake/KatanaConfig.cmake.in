@@ -37,7 +37,6 @@ endif()
 
 find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
 find_dependency(nlohmann_json REQUIRED)
-find_dependency(date REQUIRED)
 find_dependency(CURL REQUIRED)
 
 find_dependency(Arrow REQUIRED)
@@ -59,7 +58,6 @@ endif()
 check_required_components(Boost)
 check_required_components(AWSSDK)
 check_required_components(nlohmann_json)
-check_required_components(date)
 check_required_components(Backward)
 
 @KATANA_ENTERPRISE_CMAKE_ADDITIONS@

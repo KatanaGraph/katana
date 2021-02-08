@@ -59,7 +59,6 @@ add_library(graph-properties-convert-common STATIC)
 add_executable(graph-properties-convert)
 
 find_package(LibXml2 2.9.1 REQUIRED)
-find_package(date REQUIRED)
 
 set(sources
   graph-properties-convert-schema.cpp
@@ -81,7 +80,6 @@ endif()
 target_sources(graph-properties-convert-common PRIVATE ${sources})
 target_include_directories(graph-properties-convert-common PUBLIC .)
 target_link_libraries(graph-properties-convert-common PUBLIC LibXml2::LibXml2)
-target_link_libraries(graph-properties-convert-common PUBLIC date::date)
 target_link_libraries(graph-properties-convert-common PUBLIC katana_galois)
 
 target_sources(graph-properties-convert PRIVATE graph-properties-convert-main.cpp)

@@ -7,9 +7,11 @@
 #include <sstream>
 
 #include <arrow/api.h>
-#include <date/date.h>
+#include <arrow/vendored/datetime/date.h>
 
 #include "katana/Logging.h"
+
+namespace date = arrow_vendored::date;
 
 namespace katana {
 
@@ -57,12 +59,17 @@ katana::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
       "%F",          // Date
   };
 
+  // Due to a bug in the date library these values should be initialized to 0.
+  // The parser does not check for the presence of specific "formats" (e.g., %z)
+  // in the format string before using the values they parse. This definitely
+  // affects tz_offset, but it might affect others.
+
   // Unix time (no leap seconds)
-  date::sys_time<Duration> tp;
+  date::sys_time<Duration> tp{};
   // Time zone abbrevation (if %Z in format string)
   std::string tz_abbrev;
   // Time zone offset (if %z in format string)
-  std::chrono::minutes tz_offset;
+  std::chrono::minutes tz_offset{0};
 
   int attempt = 0;
   constexpr int num_formats = formats.size();
@@ -95,8 +102,9 @@ katana::TimeParser<ArrowDateTimeType, Duration>::Parse(const std::string& str) {
       last_format_ = idx;
       return tp.time_since_epoch().count();
     } else {
-      KATANA_LOG_WARN(
-          "incomplete parsing of ({}) using ({})", str, formats.at(idx));
+      KATANA_LOG_DEBUG(
+          "incomplete parsing of ({}) using ({}), trying other formats", str,
+          formats.at(idx));
     }
   }
 

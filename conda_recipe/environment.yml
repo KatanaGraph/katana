@@ -14,12 +14,11 @@ dependencies:
  - cmake>=3.19
  - conda-build
  - conda-verify
- - cxx-compiler
+ - cxx-compiler>=1.1.3
  - cython>=0.29.12
  - eigen
  - elfutils
  - fmt>=6.2.1
- - howardhinnant_date>=3.0.0
  - jinja2
  - libcurl>=7.66
  - libxml2>=2.9.10

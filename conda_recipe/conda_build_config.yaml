@@ -1,3 +1,6 @@
+python:
+  - 3.8.* *_cpython
+
 numpy:
   - 1.19
 
@@ -14,8 +17,8 @@ pin_run_as_build:
   aws-sdk-cpp: x.x
   nlohmann_json: x.x
   libcurl: x.x
-  howardhinnant_date: x
   libxml2: x
   ncurses: x
   backward-cpp: x
   zlib: x
+  python: x.x

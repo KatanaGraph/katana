@@ -1,4 +1,3 @@
-# -*- mode: cython -*-
 """
 This module contains data structures designed for use with Galois' parallel loops.
 They are instantiated for several element types, but cannot support custom element types.
@@ -29,7 +28,7 @@ import cython
 
 __all__ = ["InsertBag", "LargeArray", "AllocationPolicy"]
 
-{% import "numba_wrapper_support.pyx.jinja" as numba %}
+{% import "numba_wrapper_support.jinja" as numba %}
 
 {{numba.header()}}
 
@@ -67,7 +66,7 @@ cdef class {{class_name}}:
         """
 {%- if inst.by_pointer %}
         arr = argument_to_ndarray_dtype(v, self.dtype)
-        self.underlying.push((<{{inst.element_c_type}}*>arr.data)[0])
+        self.underlying.push((<{{inst.element_c_type}}*>np.PyArray_DATA(arr))[0])
 {% else %}
         self.underlying.push(<{{inst.element_c_type}}>v)
 {% endif %}
@@ -189,7 +188,7 @@ cdef class {{class_name}}:
             raise IndexError(i)
 {%- if inst.by_pointer %}
         arr = argument_to_ndarray_dtype(v, self.dtype)
-        self.underlying.set(i, (<{{inst.element_c_type}}*>arr.data)[0])
+        self.underlying.set(i, (<{{inst.element_c_type}}*>np.PyArray_DATA(arr))[0])
 {% else %}
         self.underlying.set(i, <{{inst.element_c_type}}>v)
 {% endif %}

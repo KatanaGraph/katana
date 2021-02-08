@@ -3,6 +3,7 @@ include_guard(DIRECTORY)
 include(GNUInstallDirs)
 include(FetchContent)
 include(GitHeadSHA)
+include(KatanaPythonSetupSubdirectory)
 
 file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/../../config/version.txt KATANA_VERSION)
 string(REGEX REPLACE "[ \t\n]" "" KATANA_VERSION ${KATANA_VERSION})
@@ -27,7 +28,7 @@ set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fai
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
-set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to atttempt to optimize for; use the first valid configuration ('none' to disable)")
+set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to attempt to optimize for; use the first valid configuration ('none' to disable)")
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
@@ -41,6 +42,8 @@ set(BUILD_TESTING ON CACHE BOOL "Build tests")
 # "/usr/local/lib" is not a default search location for ld.so
 set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
 
+set(KATANA_LANG_BINDINGS "" CACHE STRING "Semi-colon separated list of language bindings to build (e.g., 'python'). Default: none")
+
 ###### Developer features ######
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
 set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
@@ -53,8 +56,10 @@ set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather
 set(KATANA_FORCE_NON_STATIC OFF CACHE BOOL "Allow libraries intended to be used statically to be built as shared if BUILD_SHARED_LIBS=ON")
 mark_as_advanced(KATANA_FORCE_NON_STATIC)
 
+cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
+
 if (NOT KATANA_NUM_TEST_THREADS)
-  cmake_host_system_information(RESULT KATANA_NUM_TEST_THREADS QUERY NUMBER_OF_PHYSICAL_CORES)
+  set(KATANA_NUM_TEST_THREADS ${KATANA_NUM_PHYSICAL_CORES})
 endif ()
 if (KATANA_NUM_TEST_THREADS LESS_EQUAL 0)
   set(KATANA_NUM_TEST_THREADS 1)
@@ -189,6 +194,27 @@ if (CXX_CLANG_TIDY)
   add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-warning-option>")
 endif ()
 
+# Setup for bindings
+
+message(STATUS "Building Katana language bindings: ${KATANA_LANG_BINDINGS}")
+
+if(python IN_LIST KATANA_LANG_BINDINGS)
+  include(FindPythonModule)
+  find_package (Python3 COMPONENTS Interpreter Development NumPy)
+
+  find_python_module(setuptools REQUIRED)
+  find_python_module(Cython REQUIRED)
+  find_python_module(numpy REQUIRED)
+  find_python_module(sphinx)
+
+  if(NOT BUILD_SHARED_LIBS)
+    message(ERROR "Cannot build Python binding without BUILD_SHARED_LIBS")
+  endif()
+
+  set(KATANA_LANG_BINDINGS_PYTHON TRUE)
+endif()
+
+
 ###### Configure features ######
 
 if (KATANA_ENABLE_VTUNE)
@@ -316,6 +342,7 @@ find_package(Doxygen)
 
 add_custom_target(lib)
 add_custom_target(apps)
+add_custom_target(tools)
 
 # Core libraries (lib)
 
@@ -325,7 +352,7 @@ list(PREPEND CMAKE_BUILD_RPATH ${PROJECT_BINARY_DIR})
 
 # Allow installed libraries and executables to pull in deployment specific
 # modifications like vendored runtime libraries (e.g., MPI).
-list(PREPEND CMAKE_INSTALL_RPATH /usr/local/katana/lib)
+list(PREPEND CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/katana/lib)
 
 ###### Installation ######
 

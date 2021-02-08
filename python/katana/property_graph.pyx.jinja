@@ -1,5 +1,3 @@
-# -*- mode: cython -*-
-
 # {{generated_banner()}}
 
 from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_array, pyarrow_unwrap_table
@@ -8,7 +6,7 @@ from .cpp.libstd.boost cimport std_result, handle_result_void, raise_error_code
 from .numba_support._pyarrow_wrappers import unchunked
 from libcpp.memory cimport shared_ptr, unique_ptr
 
-{% import "numba_wrapper_support.pyx.jinja" as numba %}
+{% import "numba_wrapper_support.jinja" as numba %}
 
 {{numba.header()}}
 
@@ -269,4 +267,3 @@ cdef class PropertyGraph:
 {% endcall %}
 
 {{numba.register_all_wrappers()}}
-

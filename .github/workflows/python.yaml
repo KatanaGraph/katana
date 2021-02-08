@@ -1,4 +1,4 @@
-name: Conda Package and Python Formatting
+name: Python CI
 
 on:
   push:
@@ -16,8 +16,7 @@ jobs:
 #      with:
 #        access_token: ${{ github.token }}
 
-  build_and_package:
-#    name: Build and Test Conda Packages
+  build_and_test_conda_package:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -29,7 +28,9 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+        # We need history so that we have tags to provide version information.
         fetch-depth: 0
+        # 0 fetches all history. See https://github.com/actions/checkout#checkout-v2
 
     ###
     # Caching between builds
@@ -37,7 +38,7 @@ jobs:
     - name: Cache conda packages
       uses: actions/cache@v2
       with:
-        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
+        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml', '**/environment.yml')}}
         path: |
             ~/miniconda/pkgs/*.tar.bz2
             !~/miniconda/pkgs/katana-*
@@ -120,8 +121,7 @@ jobs:
         path: /Users/runner/build
 
 
-  python_format:
-    name: Python formatting
+  lint:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -174,3 +174,127 @@ jobs:
 #      run: |
 #        . .github/workflows/activate_miniconda.sh
 #        ./scripts/check_python_lint.sh python
+
+  build_and_test:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-18.04
+        # - macOS-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      ###
+      # Caching between builds
+      ###
+      - name: Cache conda packages
+        uses: actions/cache@v2
+        with:
+          key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml', '**/environment.yml')}}
+          path: |
+            ~/miniconda/pkgs/*.tar.bz2
+            !~/miniconda/pkgs/katana-*
+      - name: Cache miniconda
+        id: cache-miniconda
+        uses: actions/cache@v2
+        with:
+          key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+          path: ~/.cache/miniconda
+      - name: Cache ccache objects
+        uses: actions/cache@v2
+        with:
+          key: ${{matrix.os}}-ccache-dev-${{github.sha}}
+          restore-keys: |
+            ${{matrix.os}}-ccache-dev-
+          path: ~/.ccache
+
+      ###
+      # Install platform-level dependencies (OS-specific)
+      ###
+      - name: Install dependencies
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          sudo apt install -yq ccache curl libz-dev bzip2 make libnuma1
+      - name: Install dependencies
+        if: startsWith(matrix.os, 'macOS-')
+        run: |
+          brew install ccache curl
+        # TODO(amp): Does brew install need bzip2, libz-dev, and make?
+
+      - name: Setup ccache
+        run: |
+          ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
+          ccache --max-files 400  # Roughly two builds worth of objects
+
+      ###
+      # Install Conda environment
+      ###
+      - name: Download miniconda
+        run: .github/workflows/download_miniconda.sh ${{matrix.os}}
+        if: steps.cache-miniconda.outputs.cache-hit != 'true'
+      - name: Create directories
+        run: mkdir -p $HOME/build
+      - name: Install Conda dependencies
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          conda config --add channels conda-forge
+          conda env update --file=conda_recipe/environment.yml
+
+      ###
+      # Standard CMake build process
+      ###
+      - name: Configure
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          export CMAKE_BUILD_PARALLEL_LEVEL=2
+          .github/workflows/configure_cpp.sh \
+            ${{matrix.os}} "$CXX" Shared "$HOME/build" -DKATANA_LANG_BINDINGS=python
+
+
+      - name: Build
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          ccache --zero-stats
+          export CMAKE_BUILD_PARALLEL_LEVEL=2
+          cmake --build $HOME/build --parallel 2
+          ccache --show-stats
+          ccache --cleanup
+
+      - name: Test python_env.sh
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          $HOME/build/python_env.sh python -c "import katana.loops; katana.loops.for_each;"
+          $HOME/build/python_env.sh python -c "import katana.analytics; katana.analytics.sssp;"
+          . $HOME/build/python_env.sh
+          python -c "import katana.loops; katana.loops.for_each;"
+          python -c "import katana.analytics; katana.analytics.sssp;"
+
+      - name: Install
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          DESTDIR=/tmp cmake --install $HOME/build
+
+      - name: Test
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          export AWS_EC2_METADATA_DISABLED=true
+          # Default timeout is 1500 seconds. Quick tests should not take more
+          # than a few seconds typically.
+          cd $HOME/build && ctest -V --label-regex quick --parallel 2 --timeout 350
+
+      # MacOS tests seem to run into CI host level failures that are hard to
+      # reproduce locally. Rerun them for now.
+      - name: Test
+        # Disable macOS tests because they take up to 10X longer than ubuntu
+        # tests due to a yet undiagnosed performance issue.
+        if: startsWith(matrix.os, 'macOS-') && false
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          export AWS_EC2_METADATA_DISABLED=true
+          cd $HOME/build && ctest -V --label-regex quick --parallel 1 --repeat until-pass:2 --timeout 350

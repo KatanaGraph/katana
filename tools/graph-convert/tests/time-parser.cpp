@@ -6,15 +6,15 @@ TestBasic() {
 
   {
     auto r = parser.Parse("1970-01-01T00:00:01Z");
-    KATANA_LOG_ASSERT(*r == 1);
+    KATANA_LOG_VASSERT(*r == 1, "*r == {}", *r);
   }
   {
     auto r = parser.Parse("1970-01-01 00:00:01Z");
-    KATANA_LOG_ASSERT(*r == 1);
+    KATANA_LOG_VASSERT(*r == 1, "*r == {}", *r);
   }
   {
     auto r = parser.Parse("1970-01-01 00:01Z");
-    KATANA_LOG_ASSERT(*r == 60);
+    KATANA_LOG_VASSERT(*r == 60, "*r == {}", *r);
   }
 }
 

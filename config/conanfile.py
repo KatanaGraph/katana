@@ -12,7 +12,6 @@ class KatanaConan(ConanFile):
         "backward-cpp/1.5",
         "benchmark/1.5.0",
         "boost/1.74.0",
-        "date/2.4.1",
         "eigen/3.3.7",
         "fmt/6.2.1",
         "libcurl/7.74.0",
@@ -39,7 +38,6 @@ class KatanaConan(ConanFile):
         # "arrow:with_bz2": True,
         # "arrow:with_lz4": True,
         # "arrow:with_zstd": True,
-        "date:header_only": True,
         "libcurl:shared": False,
     }
 

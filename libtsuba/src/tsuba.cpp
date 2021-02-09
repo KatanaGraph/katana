@@ -64,7 +64,7 @@ FindLatestMetaFile(const katana::Uri& name) {
   }
   if (found_meta.empty()) {
     KATANA_LOG_DEBUG("failed: could not find meta file in {}", name);
-    return tsuba::ErrorCode::InvalidArgument;
+    return tsuba::ErrorCode::NotFound;
   }
   return name.Join(found_meta);
 }

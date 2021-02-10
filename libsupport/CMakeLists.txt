@@ -36,10 +36,12 @@ set_common_katana_library_options(katana_support)
 find_package(Arrow REQUIRED)
 if(TARGET arrow::arrow)
   # Conan package
-  target_link_libraries(katana_support PUBLIC arrow::arrow)
+  target_link_libraries(katana_support PUBLIC arrow::arrow arrow::parquet)
 else()
   # Libarrow project cmake
-  target_link_libraries(katana_support PUBLIC arrow_shared)
+   get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
+   find_package(Parquet REQUIRED HINTS ${ARROW_CONFIG_DIR})
+   target_link_libraries(katana_support PUBLIC arrow_shared parquet_shared)
 endif()
 
 

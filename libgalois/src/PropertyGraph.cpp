@@ -155,6 +155,18 @@ MakePropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+MakePropertyGraph(
+    std::unique_ptr<tsuba::RDGFile> rdg_file, uint32_t host_to_load) {
+  auto rdg_result = tsuba::RDG::Make(*rdg_file, host_to_load);
+  if (!rdg_result) {
+    return rdg_result.error();
+  }
+
+  return katana::PropertyGraph::Make(
+      std::move(rdg_file), std::move(rdg_result.value()));
+}
+
 }  // namespace
 
 katana::PropertyGraph::PropertyGraph() = default;
@@ -217,6 +229,18 @@ katana::PropertyGraph::Make(const std::string& rdg_name) {
   }
 
   return MakePropertyGraph(std::make_unique<tsuba::RDGFile>(handle.value()));
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    const std::string& rdg_name, uint32_t host_to_load) {
+  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
+  if (!handle) {
+    return handle.error();
+  }
+
+  return MakePropertyGraph(
+      std::make_unique<tsuba::RDGFile>(handle.value()), host_to_load);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>

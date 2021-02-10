@@ -68,7 +68,18 @@ public:
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
 
-  /// Load the RDG described by the metadata in handle into memory
+  /// Full strength RDG::Make. Load the RDG described by the metadata in handle
+  /// into memory. Optionally specify a specific partition to load. Optionally
+  /// specify properties to load. If node_props is null, all node
+  /// properties will be loaded. Likewise for edge_props.
+  static katana::Result<RDG> Make(
+      RDGHandle handle, std::optional<uint32_t> host_to_load,
+      const std::vector<std::string>* node_props,
+      const std::vector<std::string>* edge_props);
+
+  /// Load the RDG described by the metadata in handle into memory. Optionally
+  /// specify properties to load. If node_props is null, all node
+  /// properties will be loaded. Likewise for edge_props.
   static katana::Result<RDG> Make(
       RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
@@ -94,6 +105,11 @@ public:
 
   const katana::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
+
+  uint32_t partition_number() const { return partition_number_; }
+  void set_partition_number(uint32_t partition_number) {
+    partition_number_ = partition_number;
+  }
 
   /// The node properties
   const std::shared_ptr<arrow::Table>& node_properties() const;
@@ -140,6 +156,11 @@ private:
       const RDGMeta& meta, const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props);
 
+  static katana::Result<RDG> Make(
+      const RDGMeta& meta, std::optional<uint32_t> host_to_load,
+      const std::vector<std::string>* node_props,
+      const std::vector<std::string>* edge_props);
+
   katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& props);
 
@@ -162,6 +183,8 @@ private:
 
   /// name of the graph that was used to load this RDG
   katana::Uri rdg_dir_;
+  /// which partition of the graph was loaded
+  uint32_t partition_number_{std::numeric_limits<uint32_t>::max()};
   // How this graph was derived from the previous version
   RDGLineage lineage_;
 };

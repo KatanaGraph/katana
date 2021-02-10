@@ -200,6 +200,14 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       const std::string& rdg_name);
 
+  /// Make a property graph from an RDG name and a particular partition to load.
+  ///
+  /// These are not the droids you are looking for...
+  /// This flavor of Make is used by the partitioner and is intended for use
+  /// only by system components that manipulate graph representation internals
+  static Result<std::unique_ptr<PropertyGraph>> Make(
+      const std::string& rdg_name, uint32_t host_to_load);
+
   /// Make a property graph from an RDG but only load the named node and edge
   /// properties.
   ///

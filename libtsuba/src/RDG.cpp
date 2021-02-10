@@ -488,25 +488,12 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
 
 katana::Result<tsuba::RDG>
 tsuba::RDG::Make(
-    const RDGMeta& meta, const std::vector<std::string>* node_props,
+    const RDGMeta& meta, std::optional<uint32_t> host_to_load,
+    const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
-  if (!meta.IsEmptyRDG() && meta.num_hosts() != Comm()->Num) {
-    KATANA_LOG_ERROR(
-        "number of hosts for partitioned graph does not current number of "
-        "hosts: {} vs {}",
-        meta.num_hosts(), Comm()->Num);
-    // Query depends on being able to load a graph this way
-    /*
-    if (meta.num_hosts() == 1) {
-      // TODO(thunt) eliminate this special case after query is updated not
-      // to depend on this behavior
-      return PartitionFileName(meta.dir(), 0, version());
-    }
-    */
-    return ErrorCode::InvalidArgument;
-  }
-
-  katana::Uri partition_path = meta.PartitionFileName(Comm()->ID);
+  uint32_t host_being_loaded =
+      host_to_load.has_value() ? host_to_load.value() : Comm()->ID;
+  katana::Uri partition_path = meta.PartitionFileName(host_being_loaded);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
@@ -527,7 +514,16 @@ tsuba::RDG::Make(
     return res.error();
   }
 
+  rdg.set_partition_number(host_being_loaded);
+
   return RDG(std::move(rdg));
+}
+
+katana::Result<tsuba::RDG>
+tsuba::RDG::Make(
+    const RDGMeta& meta, const std::vector<std::string>* node_props,
+    const std::vector<std::string>* edge_props) {
+  return Make(meta, std::nullopt, node_props, edge_props);
 }
 
 katana::Result<void>
@@ -545,13 +541,21 @@ tsuba::RDG::Equals(const RDG& other) const {
 
 katana::Result<tsuba::RDG>
 tsuba::RDG::Make(
-    RDGHandle handle, const std::vector<std::string>* node_props,
+    RDGHandle handle, std::optional<uint32_t> host_to_load,
+    const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
   if (!handle.impl_->AllowsRead()) {
     KATANA_LOG_DEBUG("failed: handle does not allow full read");
     return ErrorCode::InvalidArgument;
   }
-  return RDG::Make(handle.impl_->rdg_meta(), node_props, edge_props);
+  return Make(handle.impl_->rdg_meta(), host_to_load, node_props, edge_props);
+}
+
+katana::Result<tsuba::RDG>
+tsuba::RDG::Make(
+    RDGHandle handle, const std::vector<std::string>* node_props,
+    const std::vector<std::string>* edge_props) {
+  return Make(handle, std::nullopt, node_props, edge_props);
 }
 
 katana::Result<void>

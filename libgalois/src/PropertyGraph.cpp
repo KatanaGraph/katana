@@ -282,23 +282,25 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
   if (!topology().Equals(other->topology())) {
     return false;
   }
-  if (rdg_.node_properties()->num_columns() !=
-      other->node_properties()->num_columns()) {
+  const auto& node_props = rdg_.node_properties();
+  const auto& edge_props = rdg_.edge_properties();
+  const auto& other_node_props = other->node_properties();
+  const auto& other_edge_props = other->edge_properties();
+  if (node_props->num_columns() != other_node_props->num_columns()) {
     return false;
   }
-  if (rdg_.edge_properties()->num_columns() !=
-      other->edge_properties()->num_columns()) {
+  if (edge_props->num_columns() != other_edge_props->num_columns()) {
     return false;
   }
-  for (const auto& prop_name : GetNodePropertyNames()) {
-    if (!rdg_.node_properties()->GetColumnByName(prop_name)->Equals(
-            other->node_properties()->GetColumnByName(prop_name))) {
+  for (const auto& prop_name : node_props->ColumnNames()) {
+    if (!node_props->GetColumnByName(prop_name)->Equals(
+            other_node_props->GetColumnByName(prop_name))) {
       return false;
     }
   }
-  for (const auto& prop_name : GetEdgePropertyNames()) {
-    if (!rdg_.edge_properties()->GetColumnByName(prop_name)->Equals(
-            other->edge_properties()->GetColumnByName(prop_name))) {
+  for (const auto& prop_name : edge_props->ColumnNames()) {
+    if (!edge_props->GetColumnByName(prop_name)->Equals(
+            other_edge_props->GetColumnByName(prop_name))) {
       return false;
     }
   }
@@ -328,6 +330,21 @@ katana::PropertyGraph::AddNodeProperties(
 }
 
 katana::Result<void>
+katana::PropertyGraph::RemoveNodeProperty(int i) {
+  return rdg_.RemoveNodeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
+  auto col_names = node_properties()->ColumnNames();
+  auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+  if (pos != col_names.cend()) {
+    return rdg_.RemoveNodeProperty(std::distance(col_names.cbegin(), pos));
+  }
+  return katana::ErrorCode::PropertyNotFound;
+}
+
+katana::Result<void>
 katana::PropertyGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& props) {
   if (topology_.out_dests &&
@@ -338,6 +355,21 @@ katana::PropertyGraph::AddEdgeProperties(
     return ErrorCode::InvalidArgument;
   }
   return rdg_.AddEdgeProperties(props);
+}
+
+katana::Result<void>
+katana::PropertyGraph::RemoveEdgeProperty(int i) {
+  return rdg_.RemoveEdgeProperty(i);
+}
+
+katana::Result<void>
+katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
+  auto col_names = edge_properties()->ColumnNames();
+  auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+  if (pos != col_names.cend()) {
+    return rdg_.RemoveEdgeProperty(std::distance(col_names.cbegin(), pos));
+  }
+  return katana::ErrorCode::PropertyNotFound;
 }
 
 katana::Result<void>
@@ -506,7 +538,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
       },
       katana::steal());
 
-  //Update the underlying propertyFileGraph topology
+  //Update the underlying PropertyGraph topology
   katana::do_all(
       katana::iterate(uint64_t{0}, num_nodes), [&](uint32_t node_id) {
         out_indices_view[node_id] = new_prefix_sum[node_id];

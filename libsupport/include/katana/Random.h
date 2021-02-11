@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 #define KATANA_LIBSUPPORT_KATANA_RANDOM_H_
 
+#include <random>
 #include <string>
 
 #include "katana/config.h"
@@ -14,6 +15,8 @@ KATANA_EXPORT int64_t RandomUniformInt(int64_t len);
 KATANA_EXPORT int64_t RandomUniformInt(int64_t min, int64_t max);
 // Range 0.0f..max, inclusive
 KATANA_EXPORT float RandomUniformFloat(float max);
+
+KATANA_EXPORT std::mt19937& GetGenerator();
 
 }  // namespace katana
 

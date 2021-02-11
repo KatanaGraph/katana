@@ -1,13 +1,13 @@
 #ifndef KATANA_LIBSUPPORT_KATANA_ARROWINTERCHANGE_H_
 #define KATANA_LIBSUPPORT_KATANA_ARROWINTERCHANGE_H_
 
-#include <arrow/api.h>
 #include <arrow/stl.h>
 #include <arrow/type_traits.h>
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
+#include "katana/config.h"
 
 /// We have two strategies for Arrow conversion.  One uses
 /// arrow::stl::TableFromTupleRange, the other uses Builders. TableFromTupleRange is
@@ -275,6 +275,14 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
   fields_.emplace_back(arrow::field(name, std::make_shared<ArrowType>()));
   columns_.emplace_back(std::make_shared<arrow::ChunkedArray>(chunks));
 }
+
+////////////////////////////////////////////
+// Arrow utilities
+
+KATANA_EXPORT std::shared_ptr<arrow::Array> Unchunk(
+    const std::shared_ptr<arrow::ChunkedArray>& original);
+KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> Shuffle(
+    const std::shared_ptr<arrow::ChunkedArray>& original);
 
 }  // namespace katana
 

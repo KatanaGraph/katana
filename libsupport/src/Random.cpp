@@ -5,7 +5,6 @@
 #include <cstring>
 #include <functional>
 #include <mutex>
-#include <random>
 #include <string>
 #include <utility>
 
@@ -65,8 +64,10 @@ MakeSystemGenerator() {
 
 thread_local std::unique_ptr<std::mt19937> kRNG;
 
+}  // namespace
+
 std::mt19937&
-GetGenerator() {
+katana::GetGenerator() {
   if (kRNG) {
     return *kRNG;
   }
@@ -79,8 +80,6 @@ GetGenerator() {
 
   return *kRNG;
 }
-
-}  // namespace
 
 std::string
 katana::RandomAlphanumericString(uint64_t len) {

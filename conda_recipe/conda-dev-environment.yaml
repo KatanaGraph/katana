@@ -34,5 +34,10 @@ dependencies:
  - pyarrow
  - pytest
  - scikit-build
- - sphinx
+# Workaround for upstream sphinx instability [1]
+#
+# [1] https://github.com/sphinx-doc/sphinx/issues/8880
+#
+# TODO(ddn): revisit
+ - sphinx<3.5.0
  - zlib>=1.2.11

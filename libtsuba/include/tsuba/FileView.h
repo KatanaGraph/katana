@@ -68,7 +68,7 @@ public:
     return *this;
   }
 
-  ~FileView();
+  ~FileView() override;
 
   bool Equals(const FileView& other) const;
 
@@ -127,18 +127,18 @@ public:
   uint64_t size() const { return file_size_; }
 
   // support iterating through characters
-  const char* begin() { return ptr<char>(); }
-  const char* end() { return ptr<char>() + size(); }
+  const char* begin() const { return ptr<char>(); }
+  const char* end() const { return ptr<char>() + size(); }
 
   ///// Begin arrow::io::RandomAccessFile methods ///////
 
-  virtual arrow::Status Close();
-  virtual arrow::Result<int64_t> Tell() const;
-  virtual bool closed() const;
-  virtual arrow::Status Seek(int64_t);
-  virtual arrow::Result<int64_t> Read(int64_t, void*);
-  virtual arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t);
-  virtual arrow::Result<int64_t> GetSize();
+  arrow::Status Close() override;
+  arrow::Result<int64_t> Tell() const override;
+  bool closed() const override;
+  arrow::Status Seek(int64_t) override;
+  arrow::Result<int64_t> Read(int64_t, void*) override;
+  arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t) override;
+  arrow::Result<int64_t> GetSize() override;
 
   ///// End arrow::io::RandomAccessFile methods ///////
 

@@ -58,6 +58,7 @@ set(sources
         src/analytics/pagerank/pagerank.cpp
         src/analytics/sssp/sssp.cpp
         src/analytics/triangle_count/triangle_count.cpp
+        src/analytics/louvain_clustering/louvain_clustering.cpp
     )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

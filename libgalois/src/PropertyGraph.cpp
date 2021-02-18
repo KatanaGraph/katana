@@ -132,33 +132,11 @@ WriteTopology(const katana::GraphTopology& topology) {
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 MakePropertyGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file,
-    const std::vector<std::string>& node_properties,
-    const std::vector<std::string>& edge_properties) {
-  auto rdg_result =
-      tsuba::RDG::Make(*rdg_file, &node_properties, &edge_properties);
-  if (!rdg_result) {
-    return rdg_result.error();
-  }
-
-  return katana::PropertyGraph::Make(
-      std::move(rdg_file), std::move(rdg_result.value()));
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-MakePropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file) {
-  auto rdg_result = tsuba::RDG::Make(*rdg_file);
-  if (!rdg_result) {
-    return rdg_result.error();
-  }
-
-  return katana::PropertyGraph::Make(
-      std::move(rdg_file), std::move(rdg_result.value()));
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-MakePropertyGraph(
-    std::unique_ptr<tsuba::RDGFile> rdg_file, uint32_t host_to_load) {
-  auto rdg_result = tsuba::RDG::Make(*rdg_file, host_to_load);
+    std::optional<uint32_t> host_to_load,
+    const std::vector<std::string>* node_properties,
+    const std::vector<std::string>* edge_properties) {
+  auto rdg_result = tsuba::RDG::Make(
+      *rdg_file, host_to_load, node_properties, edge_properties);
   if (!rdg_result) {
     return rdg_result.error();
   }
@@ -223,24 +201,13 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(const std::string& rdg_name) {
-  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
-  if (!handle) {
-    return handle.error();
-  }
-
-  return MakePropertyGraph(std::make_unique<tsuba::RDGFile>(handle.value()));
+  return Make(rdg_name, std::nullopt, nullptr, nullptr);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     const std::string& rdg_name, uint32_t host_to_load) {
-  auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
-  if (!handle) {
-    return handle.error();
-  }
-
-  return MakePropertyGraph(
-      std::make_unique<tsuba::RDGFile>(handle.value()), host_to_load);
+  return Make(rdg_name, host_to_load, nullptr, nullptr);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -248,14 +215,22 @@ katana::PropertyGraph::Make(
     const std::string& rdg_name,
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
+  return Make(rdg_name, std::nullopt, &node_properties, &edge_properties);
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::PropertyGraph::Make(
+    const std::string& rdg_name, std::optional<uint32_t> host_to_load,
+    const std::vector<std::string>* node_properties,
+    const std::vector<std::string>* edge_properties) {
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();
   }
 
   return MakePropertyGraph(
-      std::make_unique<tsuba::RDGFile>(handle.value()), node_properties,
-      edge_properties);
+      std::make_unique<tsuba::RDGFile>(handle.value()), host_to_load,
+      node_properties, edge_properties);
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
@@ -268,7 +243,8 @@ katana::PropertyGraph::Copy(
     const std::vector<std::string>& node_properties,
     const std::vector<std::string>& edge_properties) {
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
-  return Make(rdg_dir(), node_properties, edge_properties);
+  return Make(
+      rdg_dir(), partition_number(), &node_properties, &edge_properties);
 }
 
 katana::Result<void>

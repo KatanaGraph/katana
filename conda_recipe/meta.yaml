@@ -40,7 +40,7 @@ requirements:
     - arrow-cpp {{ arrow_cpp }}
     - aws-sdk-cpp>=1.7.164,<2.0a0
     - backward-cpp>=1.4
-    - boost-cpp>=1.71
+    - boost-cpp>=1.74
     - elfutils
     - fmt>=6.2.1
     - libcurl>=7.66
@@ -68,7 +68,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
@@ -83,7 +83,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
@@ -125,7 +125,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
@@ -146,7 +146,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
@@ -191,7 +191,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
@@ -206,7 +206,7 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
-        - boost-cpp>=1.71
+        - boost-cpp>=1.74
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66

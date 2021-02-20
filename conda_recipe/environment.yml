@@ -9,7 +9,7 @@ dependencies:
  - awscli
  - backward-cpp>=1.4
  - benchmark
- - boost-cpp>=1.71
+ - boost-cpp>=1.74
  - black=19.10
  - cmake>=3.19
  - conda-build

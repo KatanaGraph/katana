@@ -64,7 +64,7 @@ KATANA_EXPORT std::vector<int> parseCPUList(const std::string& in);
 /**
  * bindThreadSelf binds a thread to an osContext as returned by getHWTopo.
  */
-KATANA_EXPORT bool bindThreadSelf(unsigned osContext);
+KATANA_EXPORT bool bindThreadSelf([[maybe_unused]] unsigned osContext);
 
 }  // namespace katana
 

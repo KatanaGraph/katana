@@ -289,7 +289,7 @@ katana::getHWTopo() {
 
 //! binds current thread to OS HW context "proc"
 bool
-katana::bindThreadSelf(unsigned osContext) {
+katana::bindThreadSelf([[maybe_unused]] unsigned osContext) {
 #ifdef KATANA_USE_SCHED_SETAFFINITY
   cpu_set_t mask;
   /* CPU_ZERO initializes all the bits in the mask to zero. */
@@ -307,7 +307,7 @@ katana::bindThreadSelf(unsigned osContext) {
   }
   return true;
 #else
-  katana::gWarn(
+  KATANA_WARN_ONCE(
       "Cannot set cpu affinity on this platform.  Performance will be bad.");
   return false;
 #endif

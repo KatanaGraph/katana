@@ -117,7 +117,7 @@ makeHWTopo() {
 
 //! binds current thread to OS HW context "proc"
 bool
-katana::bindThreadSelf(unsigned osContext) {
+katana::bindThreadSelf([[maybe_unused]] unsigned osContext) {
   pthread_t thread = pthread_self();
   thread_affinity_policy policy = {int(osContext)};
   thread_t machThread = pthread_mach_thread_np(thread);

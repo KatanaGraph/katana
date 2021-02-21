@@ -378,9 +378,15 @@ If the error is due to a transient external failure, you can re-run jobs in the
 GitHub UI.
 
 When debugging a CI failure, it is good to confirm that tests pass locally in
-your developer environment first. You can also run many of the source checks
-locally as well. Take a look at the GitHub workflow definitions under `.github`
-directory to see what script and build parameters are used.
+your developer environment first. The CI runs on the merge of your PR and the
+branch you want to merge with (usually master), so if you have issues
+reproducing locally make sure your PR branch is up to date as well.
+
+You can also run many of the source checks locally as well (usually
+`scripts/check_*`), and most of them accept a `-fix` option to automatically
+correct the errors they check for. Take a look at the GitHub workflow
+definitions under `.github` directory to see what script and build parameters
+are used.
 
 ## Caching
 

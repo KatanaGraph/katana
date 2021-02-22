@@ -26,6 +26,19 @@ class RDGMeta;
 class RDGCore;
 struct PropStorageInfo;
 
+struct KATANA_EXPORT RDGLoadOptions {
+  /// Which partition of the RDG on storage should be loaded
+  /// nullopt means the partition associated with the current host's ID will be
+  /// loaded
+  std::optional<uint32_t> partition_id_to_load;
+  /// List of node properties that should be loaded
+  /// nullptr means all node properties will be loaded
+  const std::vector<std::string>* node_properties{nullptr};
+  /// List of edge properties that should be loaded
+  /// nullptr means all edge properties will be loaded
+  const std::vector<std::string>* edge_properties{nullptr};
+};
+
 class KATANA_EXPORT RDG {
 public:
   RDG(const RDG& no_copy) = delete;
@@ -68,21 +81,9 @@ public:
   /// Explain to graph how it is derived from previous version
   void AddLineage(const std::string& command_line);
 
-  /// Full strength RDG::Make. Load the RDG described by the metadata in handle
-  /// into memory. Optionally specify a specific partition to load. Optionally
-  /// specify properties to load. If node_props is null, all node
-  /// properties will be loaded. Likewise for edge_props.
+  /// Load the RDG described by the metadata in handle into memory.
   static katana::Result<RDG> Make(
-      RDGHandle handle, std::optional<uint32_t> host_to_load,
-      const std::vector<std::string>* node_props,
-      const std::vector<std::string>* edge_props);
-
-  /// Load the RDG described by the metadata in handle into memory. Optionally
-  /// specify properties to load. If node_props is null, all node
-  /// properties will be loaded. Likewise for edge_props.
-  static katana::Result<RDG> Make(
-      RDGHandle handle, const std::vector<std::string>* node_props = nullptr,
-      const std::vector<std::string>* edge_props = nullptr);
+      RDGHandle handle, const struct RDGLoadOptions& opts);
 
   katana::Result<void> UnbindTopologyFileStorage();
 
@@ -106,10 +107,8 @@ public:
   const katana::Uri& rdg_dir() const { return rdg_dir_; }
   void set_rdg_dir(const katana::Uri& rdg_dir) { rdg_dir_ = rdg_dir; }
 
-  uint32_t partition_number() const { return partition_number_; }
-  void set_partition_number(uint32_t partition_number) {
-    partition_number_ = partition_number;
-  }
+  uint32_t partition_id() const { return partition_id_; }
+  void set_partition_id(uint32_t partition_id) { partition_id_ = partition_id; }
 
   /// The node properties
   const std::shared_ptr<arrow::Table>& node_properties() const;
@@ -153,13 +152,7 @@ private:
   katana::Result<void> DoMake(const katana::Uri& metadata_dir);
 
   static katana::Result<RDG> Make(
-      const RDGMeta& meta, const std::vector<std::string>* node_props,
-      const std::vector<std::string>* edge_props);
-
-  static katana::Result<RDG> Make(
-      const RDGMeta& meta, std::optional<uint32_t> host_to_load,
-      const std::vector<std::string>* node_props,
-      const std::vector<std::string>* edge_props);
+      const RDGMeta& meta, const struct RDGLoadOptions& opts);
 
   katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& props);
@@ -184,7 +177,7 @@ private:
   /// name of the graph that was used to load this RDG
   katana::Uri rdg_dir_;
   /// which partition of the graph was loaded
-  uint32_t partition_number_{std::numeric_limits<uint32_t>::max()};
+  uint32_t partition_id_{std::numeric_limits<uint32_t>::max()};
   // How this graph was derived from the previous version
   RDGLineage lineage_;
 };

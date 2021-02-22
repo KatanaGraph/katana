@@ -10,6 +10,7 @@
 #include "katana/Logging.h"
 #include "katana/Timer.h"
 #include "katana/config.h"
+#include "tsuba/RDG.h"
 
 #if defined(KATANA_MONGOC_FOUND)
 #include "graph-properties-convert-mongodb.h"
@@ -91,7 +92,7 @@ cll::opt<bool> export_graphml(
 
 katana::PropertyGraph
 ConvertKatana(const std::string& rdg_file) {
-  auto result = katana::PropertyGraph::Make(rdg_file);
+  auto result = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
   }

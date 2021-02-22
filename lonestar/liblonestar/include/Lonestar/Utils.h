@@ -26,6 +26,7 @@
 
 #include "katana/PropertyGraph.h"
 #include "katana/analytics/Utils.h"
+#include "tsuba/RDG.h"
 
 inline std::unique_ptr<katana::PropertyGraph>
 MakeFileGraph(
@@ -36,8 +37,10 @@ MakeFileGraph(
     edge_properties.emplace_back(edge_property_name);
   }
 
-  auto pfg_result =
-      katana::PropertyGraph::Make(rdg_name, node_properties, edge_properties);
+  tsuba::RDGLoadOptions opts;
+  opts.node_properties = &node_properties;
+  opts.edge_properties = &edge_properties;
+  auto pfg_result = katana::PropertyGraph::Make(rdg_name, opts);
   if (!pfg_result) {
     KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());
   }

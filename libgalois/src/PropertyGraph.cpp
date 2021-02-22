@@ -132,7 +132,7 @@ WriteTopology(const katana::GraphTopology& topology) {
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 MakePropertyGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file,
-    const struct tsuba::RDGLoadOptions& opts) {
+    const tsuba::RDGLoadOptions& opts) {
   auto rdg_result = tsuba::RDG::Make(*rdg_file, opts);
   if (!rdg_result) {
     return rdg_result.error();
@@ -198,7 +198,7 @@ katana::PropertyGraph::Make(
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
-    const std::string& rdg_name, const struct tsuba::RDGLoadOptions& opts) {
+    const std::string& rdg_name, const tsuba::RDGLoadOptions& opts) {
   auto handle = tsuba::Open(rdg_name, tsuba::kReadWrite);
   if (!handle) {
     return handle.error();

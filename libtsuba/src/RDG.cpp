@@ -538,7 +538,7 @@ tsuba::RDG::Equals(const RDG& other) const {
 }
 
 katana::Result<tsuba::RDG>
-tsuba::RDG::Make(RDGHandle handle, const struct RDGLoadOptions& opts) {
+tsuba::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
   if (!handle.impl_->AllowsRead()) {
     KATANA_LOG_DEBUG("failed: handle does not allow full read");
     return ErrorCode::InvalidArgument;

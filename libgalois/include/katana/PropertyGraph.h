@@ -202,7 +202,7 @@ public:
 
   /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, const struct tsuba::RDGLoadOptions& opts);
+      const std::string& rdg_name, const tsuba::RDGLoadOptions& opts);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.

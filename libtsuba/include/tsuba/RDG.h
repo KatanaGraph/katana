@@ -82,8 +82,7 @@ public:
   void AddLineage(const std::string& command_line);
 
   /// Load the RDG described by the metadata in handle into memory.
-  static katana::Result<RDG> Make(
-      RDGHandle handle, const struct RDGLoadOptions& opts);
+  static katana::Result<RDG> Make(RDGHandle handle, const RDGLoadOptions& opts);
 
   katana::Result<void> UnbindTopologyFileStorage();
 
@@ -152,7 +151,7 @@ private:
   katana::Result<void> DoMake(const katana::Uri& metadata_dir);
 
   static katana::Result<RDG> Make(
-      const RDGMeta& meta, const struct RDGLoadOptions& opts);
+      const RDGMeta& meta, const RDGLoadOptions& opts);
 
   katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& props);

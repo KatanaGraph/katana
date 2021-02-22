@@ -216,7 +216,7 @@ tsuba::Stat(const std::string& rdg_name) {
   if (!rdg_res) {
     if (rdg_res.error() == katana::ErrorCode::JsonParseFailed) {
       return RDGStat{
-          .num_hosts = 1,
+          .num_partitions = 1,
           .policy_id = 0,
           .transpose = false,
       };
@@ -226,7 +226,7 @@ tsuba::Stat(const std::string& rdg_name) {
 
   RDGMeta meta = rdg_res.value();
   return RDGStat{
-      .num_hosts = meta.num_hosts(),
+      .num_partitions = meta.num_hosts(),
       .policy_id = meta.policy_id(),
       .transpose = meta.transpose(),
   };

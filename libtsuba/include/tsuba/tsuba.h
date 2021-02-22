@@ -79,7 +79,7 @@ KATANA_EXPORT katana::Result<void> RegisterIfAbsent(const std::string& name);
 KATANA_EXPORT katana::Result<void> Forget(const std::string& name);
 
 struct KATANA_EXPORT RDGStat {
-  uint64_t num_hosts{0};
+  uint64_t num_partitions{0};
   uint32_t policy_id{0};
   bool transpose{false};
 };

@@ -200,39 +200,9 @@ public:
   static Result<std::unique_ptr<PropertyGraph>> Make(
       std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
-  /// Make a property graph from an RDG name. Load the default partition and all
-  /// properties.
+  /// Make a property graph from an RDG name.
   static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name);
-
-  /// Make a property graph from an RDG name. Load the requested partition and
-  /// all properties.
-  ///
-  /// This is probably not the Make you are looking for. This is used by the
-  /// partitioner, which makes its living manipulating graph representation
-  /// internals.
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, uint32_t host_to_load);
-
-  /// Make a property graph from an RDG name. Load the default partition and the
-  /// named node and edge properties.
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name,
-      const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties);
-
-  /// Full strength PropertyGraph::Make. Make a property graph from an RDG name.
-  /// Optionally specify a partition to load. Optionally specify properties to
-  /// load. If node_properties is null, all node properties will be
-  /// loaded. Likewise for edge_properties.
-  ///
-  /// This is probably not the Make you are looking for. This is used by the
-  /// partitioner, which makes its living manipulating graph representation
-  /// internals.
-  static Result<std::unique_ptr<PropertyGraph>> Make(
-      const std::string& rdg_name, std::optional<uint32_t> host_to_load,
-      const std::vector<std::string>* node_properties,
-      const std::vector<std::string>* edge_properties);
+      const std::string& rdg_name, const struct tsuba::RDGLoadOptions& opts);
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
@@ -248,7 +218,7 @@ public:
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
-  uint32_t partition_number() const { return rdg_.partition_number(); }
+  uint32_t partition_id() const { return rdg_.partition_id(); }
 
   // Accessors for information in partition_metadata.
   GraphTopology::nodes_range masters() const {

@@ -80,7 +80,7 @@ TestRoundTrip() {
   }
 
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_dir);
+      katana::PropertyGraph::Make(rdg_dir, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_dir);
   if (!make_result) {
     KATANA_LOG_FATAL("making result: {}", make_result.error());
@@ -143,7 +143,8 @@ TestGarbageMetadata() {
   out << "garbage to make the file non-empty";
   out.close();
 
-  auto no_dir_result = katana::PropertyGraph::Make(rdg_file);
+  auto no_dir_result =
+      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
   fs::remove_all(temp_dir);
   KATANA_LOG_ASSERT(!no_dir_result.has_value());
 }
@@ -205,7 +206,7 @@ TestSimplePGs() {
   KATANA_LOG_ASSERT(rdg_file.empty());
   rdg_file = MakePFGFile("n1");
   katana::Result<std::unique_ptr<katana::PropertyGraph>> make_result =
-      katana::PropertyGraph::Make(rdg_file);
+      katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
   fs::remove_all(rdg_file);
   KATANA_LOG_ASSERT(make_result);
 }

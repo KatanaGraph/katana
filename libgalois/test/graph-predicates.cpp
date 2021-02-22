@@ -5,6 +5,7 @@
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
 #include "katana/analytics/Utils.h"
+#include "tsuba/RDG.h"
 
 namespace cll = llvm::cl;
 
@@ -24,7 +25,8 @@ TestIsApproximateDegreeDistributionPowerLaw() {
         !katana::analytics::IsApproximateDegreeDistributionPowerLaw(*g.get()));
   }
   {
-    auto g = katana::PropertyGraph::Make(rmat10InputFile);
+    auto g =
+        katana::PropertyGraph::Make(rmat10InputFile, tsuba::RDGLoadOptions());
     KATANA_LOG_ASSERT(
         katana::analytics::IsApproximateDegreeDistributionPowerLaw(
             *g.assume_value().get()));

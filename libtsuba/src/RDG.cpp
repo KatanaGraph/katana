@@ -493,13 +493,11 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
 }
 
 katana::Result<tsuba::RDG>
-tsuba::RDG::Make(
-    const RDGMeta& meta, std::optional<uint32_t> host_to_load,
-    const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
-  uint32_t host_being_loaded =
-      host_to_load.has_value() ? host_to_load.value() : Comm()->ID;
-  katana::Uri partition_path = meta.PartitionFileName(host_being_loaded);
+tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
+  uint32_t partition_id_to_load =
+      opts.partition_id_to_load.value_or(Comm()->ID);
+
+  katana::Uri partition_path = meta.PartitionFileName(partition_id_to_load);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
@@ -511,7 +509,8 @@ tsuba::RDG::Make(
 
   RDG rdg(std::make_unique<RDGCore>(std::move(part_header_res.value())));
 
-  if (auto res = rdg.core_->part_header().PrunePropsTo(node_props, edge_props);
+  if (auto res = rdg.core_->part_header().PrunePropsTo(
+          opts.node_properties, opts.edge_properties);
       !res) {
     return res.error();
   }
@@ -520,16 +519,9 @@ tsuba::RDG::Make(
     return res.error();
   }
 
-  rdg.set_partition_number(host_being_loaded);
+  rdg.set_partition_id(partition_id_to_load);
 
   return RDG(std::move(rdg));
-}
-
-katana::Result<tsuba::RDG>
-tsuba::RDG::Make(
-    const RDGMeta& meta, const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
-  return Make(meta, std::nullopt, node_props, edge_props);
 }
 
 katana::Result<void>
@@ -546,22 +538,12 @@ tsuba::RDG::Equals(const RDG& other) const {
 }
 
 katana::Result<tsuba::RDG>
-tsuba::RDG::Make(
-    RDGHandle handle, std::optional<uint32_t> host_to_load,
-    const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
+tsuba::RDG::Make(RDGHandle handle, const struct RDGLoadOptions& opts) {
   if (!handle.impl_->AllowsRead()) {
     KATANA_LOG_DEBUG("failed: handle does not allow full read");
     return ErrorCode::InvalidArgument;
   }
-  return Make(handle.impl_->rdg_meta(), host_to_load, node_props, edge_props);
-}
-
-katana::Result<tsuba::RDG>
-tsuba::RDG::Make(
-    RDGHandle handle, const std::vector<std::string>* node_props,
-    const std::vector<std::string>* edge_props) {
-  return Make(handle, std::nullopt, node_props, edge_props);
+  return Make(handle.impl_->rdg_meta(), opts);
 }
 
 katana::Result<void>

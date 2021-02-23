@@ -3,8 +3,18 @@ from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 from libcpp.memory cimport unique_ptr, shared_ptr
 from libcpp.vector cimport vector
 from libc.stdint cimport uint64_t
+from libc.stdint cimport uint32_t
 from katana.cpp.libstd.boost cimport std_result
+from katana.cpp.libstd.optional cimport optional
 from pyarrow.lib cimport CSchema, CChunkedArray, CArray, CTable, CUInt32Array, CUInt64Array
+
+# This is very similar to the block below, but needs to be in the tsuba namespace
+cdef extern from "tsuba/RDG.h" namespace "tsuba" nogil:
+    cdef struct RDGLoadOptions:
+        optional[uint32_t] partition_id_to_load
+        const vector[string]* node_properties
+        const vector[string]* edge_properties
+
 
 # Omit the exception specifications here to
 # allow returning lvalues.
@@ -110,9 +120,7 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
     cppclass _PropertyGraph "katana::PropertyGraph":
         PropertyGraph()
         @staticmethod
-        std_result[unique_ptr[_PropertyGraph]] Make(string filename)
-        @staticmethod
-        std_result[unique_ptr[_PropertyGraph]] MakeWithProperties "Make" (string filename, vector[string] node_properties, vector[string] edge_properties)
+        std_result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
 
         std_result[void] Write(string path, string command_line)
         std_result[void] Commit(string command_line)

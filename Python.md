@@ -1,7 +1,7 @@
 Overview
 ========
 
-![Conda Package CI](https://github.com/KatanaGraph/katana/workflows/Conda%20Package%20CI/badge.svg)
+[![Python CI](https://github.com/KatanaGraph/katana/actions/workflows/python.yaml/badge.svg?branch=master)](https://github.com/KatanaGraph/katana/actions/workflows/python.yaml?query=branch%3Amaster)
 
 The Katana-Python interface allows Python programs to utilize Katana for high-performance parallelism.
 The parallel loops execute Python functions compiled with [Numba](https://numba.pydata.org/).

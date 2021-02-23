@@ -1,8 +1,8 @@
 Overview
 ========
 
-![C/C++ CI](https://github.com/KatanaGraph/katana/workflows/C/C++%20CI/badge.svg)
-![Conda Package CI](https://github.com/KatanaGraph/katana/workflows/Conda%20Package%20CI/badge.svg)
+[![C/C++ CI](https://github.com/KatanaGraph/katana/actions/workflows/cpp.yaml/badge.svg?branch=master)](https://github.com/KatanaGraph/katana/actions/workflows/cpp.yaml?query=branch%3Amaster)
+[![Python CI](https://github.com/KatanaGraph/katana/actions/workflows/python.yaml/badge.svg?branch=master)](https://github.com/KatanaGraph/katana/actions/workflows/python.yaml?query=branch%3Amaster)
 
 Galois is a C++ library designed to ease parallel programming, especially for
 applications with irregular parallelism (e.g., irregular amount of work in parallel

@@ -250,7 +250,7 @@ tsuba::Init(katana::CommBackend* comm) {
     return client_res.error();
   }
   default_ns_client = std::move(client_res.value());
-  katana::InitBacktrace(comm->ID);
+  katana::InitBacktrace();
   return GlobalState::Init(comm, default_ns_client.get());
 }
 

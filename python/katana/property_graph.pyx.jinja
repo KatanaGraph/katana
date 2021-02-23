@@ -5,6 +5,9 @@ from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_ar
 from .cpp.libstd.boost cimport std_result, handle_result_void, raise_error_code
 from .numba_support._pyarrow_wrappers import unchunked
 from libcpp.memory cimport shared_ptr, unique_ptr
+from libcpp.vector cimport vector
+from libcpp.string cimport string
+from libc.stdint cimport uint32_t
 
 {% import "numba_wrapper_support.jinja" as numba %}
 
@@ -28,27 +31,34 @@ cdef class PropertyGraph:
     """
     A property graph loaded into memory.
     """
-    def __init__(self, path, node_properties=None, edge_properties=None):
+    def __init__(self, path, partition_id_to_load=None, node_properties=None, edge_properties=None):
         """
-        __init__(self, path, node_properties=None, edge_properties=None)
+        __init__(self, path, partition_id_to_load=None, node_properties=None, edge_properties=None)
 
         Load a property graph.
 
         :param path: the path or URL from which to load the graph. This support local paths or s3 URLs.
         :type path: str
+        :param partition_id_to_load: An unsigned integer corresponding to a partition number in the graph being loaded. If this is None (default), then the partition corresponding to this host's network id will be loaded.
         :param node_properties: A list of node property names to load into memory. If this is None (default), then all properties are loaded.
         :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all properties are loaded.
         """
-        if node_properties is not None or edge_properties is not None:
-            if node_properties is None or edge_properties is None:
-                raise ValueError("If either node_properties or edge_properties are provided, both must be provided.")
-            self.underlying = handle_result_value(
-                _PropertyGraph.MakeWithProperties(bytes(path, "utf-8"),
-                                                     _convert_string_list(node_properties),
-                                                     _convert_string_list(edge_properties)))
-        else:
-            self.underlying = handle_result_value(
-                _PropertyGraph.Make(bytes(path, "utf-8")))
+        cdef RDGLoadOptions opts
+        cdef vector[string] node_props
+        cdef vector[string] edge_props
+        # we need to generate a reference to a uint32_t in order to construct an
+        # optional[uint32_t] in opts
+        cdef uint32_t part_to_load
+        if partition_id_to_load is not None:
+            part_to_load = partition_id_to_load
+            opts.partition_id_to_load = part_to_load
+        if node_properties is not None:
+            node_props = _convert_string_list(node_properties)
+            opts.node_properties = &node_props
+        if edge_properties is not None:
+            edge_props = _convert_string_list(edge_properties)
+            opts.edge_properties = &edge_props
+        self.underlying = handle_result_value(_PropertyGraph.Make(bytes(path, "utf-8"), opts))
 
     def write(self, path, command_line) :
         """

@@ -338,7 +338,7 @@ private:
 
   bool doPush(Chunk* c, const T& val) { return c->push_back(val); }
 
-  katana::optional<T> doPop(Chunk* c) {
+  std::optional<T> doPop(Chunk* c) {
     if (!IsLocallyLIFO)
       return c->extract_front();
     else
@@ -382,10 +382,10 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     std::pair<Chunk*, Chunk*>& tld = *data.getLocal();
     Chunk*& n = getPopChunk(tld);
-    katana::optional<value_type> retval;
+    std::optional<value_type> retval;
     // simple case, things in current chunk
     if (n && (retval = doPop(n)))
       return retval;

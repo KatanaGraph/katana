@@ -116,7 +116,7 @@ private:
   }
 
   // pop already failed, try again with stealing
-  katana::optional<value_type> pop_steal(state& data) {
+  std::optional<value_type> pop_steal(state& data) {
     // always try stealing self
     if (doSteal(data, data, true))
       return *data.localBegin++;
@@ -130,7 +130,7 @@ private:
     ++data.nextVictim;
     ++data.numStealFailures;
     data.nextVictim %= activeThreads;
-    return katana::optional<value_type>();
+    return std::nullopt;
   }
 
 public:
@@ -147,12 +147,12 @@ public:
   }
 
   //! pop a value from the queue.
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     state& data = *TLDS.getLocal();
     if (data.localBegin != data.localEnd)
       return *data.localBegin++;
 
-    katana::optional<value_type> item;
+    std::optional<value_type> item;
     if (Steal && 2 * data.numStealFailures > activeThreads)
       if ((item = pop_steal(data)))
         return item;

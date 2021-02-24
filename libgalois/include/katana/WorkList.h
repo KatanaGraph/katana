@@ -20,6 +20,8 @@
 #ifndef KATANA_LIBGALOIS_KATANA_WORKLIST_H_
 #define KATANA_LIBGALOIS_KATANA_WORKLIST_H_
 
+#include <optional>
+
 #include "katana/BulkSynchronous.h"
 #include "katana/Chunk.h"
 #include "katana/LocalQueue.h"
@@ -30,7 +32,6 @@
 #include "katana/Simple.h"
 #include "katana/StableIterator.h"
 #include "katana/config.h"
-#include "katana/optional.h"
 
 namespace katana {
 /**
@@ -87,7 +88,7 @@ public:
   void push_initial(const RangeTy&);
 
   //! Pops a value from the queue.
-  katana::optional<value_type> pop();
+  std::optional<value_type> pop();
 
   /**
    * (optional) Returns true if the worklist is empty. Called infrequently

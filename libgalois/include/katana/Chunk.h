@@ -233,9 +233,9 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     p& n = data.get();
-    katana::optional<value_type> retval;
+    std::optional<value_type> retval;
     if (IsStack) {
       if (n.next && (retval = n.next->extract_back()))
         return retval;
@@ -244,7 +244,7 @@ public:
       n.next = popChunk();
       if (n.next)
         return n.next->extract_back();
-      return katana::optional<value_type>();
+      return std::nullopt;
     } else {
       if (n.cur && (retval = n.cur->extract_front()))
         return retval;
@@ -257,7 +257,7 @@ public:
       }
       if (n.cur)
         return n.cur->extract_front();
-      return katana::optional<value_type>();
+      return std::nullopt;
     }
   }
 };

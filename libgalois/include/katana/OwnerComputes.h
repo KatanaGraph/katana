@@ -84,9 +84,9 @@ public:
       pushBuffer.getRemote(x)->flush();
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     cWL& wl = *items.getLocal();
-    katana::optional<value_type> retval = wl.pop();
+    std::optional<value_type> retval = wl.pop();
     if (retval)
       return retval;
     pWL& p = *pushBuffer.getLocal();

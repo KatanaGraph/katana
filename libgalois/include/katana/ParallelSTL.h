@@ -51,7 +51,7 @@ count_if(InputIterator first, InputIterator last, Predicate pred) {
 
 template <typename InputIterator, class Predicate>
 struct find_if_helper {
-  typedef katana::optional<InputIterator> ElementTy;
+  typedef std::optional<InputIterator> ElementTy;
   typedef PerThreadStorage<ElementTy> AccumulatorTy;
   AccumulatorTy& accum;
   Predicate& f;

@@ -78,12 +78,12 @@ private:
   }
 
   template <bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  katana::optional<T> popGlobal(typename std::enable_if<Enable>::type* = 0) {
-    return katana::optional<value_type>();
+  std::optional<T> popGlobal(typename std::enable_if<Enable>::type* = 0) {
+    return std::nullopt;
   }
 
   template <bool Enable = std::is_same<Global, NoGlobalQueue<T>>::value>
-  katana::optional<T> popGlobal(typename std::enable_if<!Enable>::type* = 0) {
+  std::optional<T> popGlobal(typename std::enable_if<!Enable>::type* = 0) {
     return global.pop();
   }
 
@@ -102,8 +102,8 @@ public:
     pushGlobal(range);
   }
 
-  katana::optional<value_type> pop() {
-    katana::optional<value_type> ret = local.getLocal()->pop();
+  std::optional<value_type> pop() {
+    std::optional<value_type> ret = local.getLocal()->pop();
     if (ret)
       return ret;
     return popGlobal();

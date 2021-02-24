@@ -687,10 +687,10 @@ struct PreflowPush {
 
   void checkSorting(void) {
     for (auto n : graph) {
-      katana::optional<GNode> prevDst;
+      std::optional<GNode> prevDst;
       for (auto e : graph.edges(n, katana::MethodFlag::UNPROTECTED)) {
         GNode dst = graph.getEdgeDst(e);
-        if (prevDst.is_initialized()) {
+        if (prevDst.has_value()) {
           Node& prevNode =
               graph.getData(*prevDst, katana::MethodFlag::UNPROTECTED);
           Node& currNode = graph.getData(dst, katana::MethodFlag::UNPROTECTED);

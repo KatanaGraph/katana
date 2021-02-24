@@ -420,23 +420,23 @@ struct FIFO {
   FIFO() : m_size(0) {}
 
   ~FIFO() {
-    katana::optional<T> p;
+    std::optional<T> p;
     while ((p = m_buffer.pop()))
       ;
     while ((p = m_data.pop()))
       ;
   }
 
-  katana::optional<T> pop() {
-    katana::optional<T> p;
+  std::optional<T> pop() {
+    std::optional<T> p;
     if ((p = m_buffer.pop()) || (p = m_data.pop())) {
       --m_size;
     }
     return p;
   }
 
-  katana::optional<T> peek() {
-    katana::optional<T> p;
+  std::optional<T> peek() {
+    std::optional<T> p;
     if ((p = m_buffer.pop())) {
       m_buffer.push(*p);
     } else if ((p = m_data.pop())) {
@@ -568,7 +568,7 @@ public:
 
   bool buildDAG() {
     ThreadLocalData& tld = *data.getLocal();
-    katana::optional<Context*> p;
+    std::optional<Context*> p;
     while ((p = taskList.pop())) {
       Context* ctx = *p;
       tld.sortBuf.clear();
@@ -598,7 +598,7 @@ public:
   template <typename Executor, typename ExecutorTLD>
   bool executeDAG(Executor& e, ExecutorTLD& etld) {
     auto& local = e.getLocalWindowManager();
-    katana::optional<Context*> p;
+    std::optional<Context*> p;
     Context* ctx;
 
     // Go through all tasks to find intial sources and
@@ -615,7 +615,7 @@ public:
     size_t oldCommitted = 0;
     size_t committed = 0;
     do {
-      katana::optional<Context*> p;
+      std::optional<Context*> p;
       while ((p = sourceList.pop())) {
         ctx = *p;
         KATANA_LOG_DEBUG_ASSERT(ctx->preds == 0);
@@ -1152,7 +1152,7 @@ class NewWorkManager : public IdManager<OptionsTy> {
     ThreadLocalData& local = *data.getLocal();
 
     local.newItems.clear();
-    katana::optional<NewItem> p;
+    std::optional<NewItem> p;
     while ((p = this->new_.pop())) {
       local.newItems.push_back(*p);
     }
@@ -1271,7 +1271,7 @@ public:
   template <typename WL>
   void pushNextWindow(WL* wl, size_t window) {
     ThreadLocalData& local = *data.getLocal();
-    katana::optional<Item> p;
+    std::optional<Item> p;
     while ((p = local.reserve.peek())) {
       if (p->id >= window)
         break;
@@ -1538,7 +1538,7 @@ bool
 Executor<OptionsTy>::pendingLoop(ThreadLocalData& tld) {
   auto& local = this->getLocalWindowManager();
   bool retval = false;
-  katana::optional<Item> p;
+  std::optional<Item> p;
   while ((p = tld.wlcur->pop())) {
     // Use a new context for each item because there is a race when reusing
     // between aborted iterations.

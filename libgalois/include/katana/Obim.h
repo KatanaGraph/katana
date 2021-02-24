@@ -40,7 +40,7 @@ class OrderedByIntegerMetricData {
 protected:
   struct ThreadData {};
   bool hasStored(ThreadData&, Index) { return false; }
-  katana::optional<T> popStored(ThreadData&, Index) { return {}; }
+  std::optional<T> popStored(ThreadData&, Index) { return {}; }
 };
 
 template <typename T, typename Index>
@@ -65,8 +65,8 @@ protected:
     return false;
   }
 
-  katana::optional<T> popStored(ThreadData& p, Index idx) {
-    katana::optional<T> item;
+  std::optional<T> popStored(ThreadData& p, Index idx) {
+    std::optional<T> item;
     for (auto ii = p.stored.begin(), ei = p.stored.end(); ii != ei; ++ii) {
       if (ii->first == idx) {
         item = ii->second;
@@ -274,7 +274,7 @@ private:
   }
 
   KATANA_ATTRIBUTE_NOINLINE
-  katana::optional<T> slowPop(ThreadData& p) {
+  std::optional<T> slowPop(ThreadData& p) {
     bool localLeader = ThreadPool::isLeader();
     Index msS = this->earliest;
 
@@ -297,7 +297,7 @@ private:
 
     for (auto ii = p.local.lower_bound(msS), ei = p.local.end(); ii != ei;
          ++ii) {
-      katana::optional<T> item;
+      std::optional<T> item;
       if ((item = ii->second->pop())) {
         p.current = ii->second;
         p.curIndex = ii->first;
@@ -306,7 +306,7 @@ private:
       }
     }
 
-    return katana::optional<value_type>();
+    return std::nullopt;
   }
 
   KATANA_ATTRIBUTE_NOINLINE
@@ -390,7 +390,7 @@ public:
     push(range.local_begin(), range.local_end());
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     // Find a successful pop
     ThreadData& p = *data.getLocal();
     CTy* C = p.current;
@@ -402,7 +402,7 @@ public:
         ((p.numPops++ & ((1 << BlockPeriod) - 1)) == 0))
       return slowPop(p);
 
-    katana::optional<value_type> item;
+    std::optional<value_type> item;
     if (C && (item = C->pop()))
       return item;
 
@@ -415,7 +415,7 @@ public:
 
   template <bool Barrier = UseBarrier>
   auto empty() -> typename std::enable_if<Barrier, bool>::type {
-    katana::optional<value_type> item;
+    std::optional<value_type> item;
     ThreadData& p = *data.getLocal();
 
     // try to pop from global worklist

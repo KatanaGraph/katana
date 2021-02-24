@@ -176,7 +176,7 @@ protected:
   template <typename WL>
   struct RunQueueState {
     unsigned int num = 0;
-    katana::optional<typename WL::value_type> item;
+    std::optional<typename WL::value_type> item;
   };
 
   // NB: Place dynamically growing wl after fixed-size PerThreadStorage
@@ -238,7 +238,7 @@ protected:
   }
 
   bool runQueueSimple(ThreadLocalData& tld) {
-    katana::optional<value_type> p;
+    std::optional<value_type> p;
     bool didWork = false;
     while ((p = wl.pop())) {
       didWork = true;

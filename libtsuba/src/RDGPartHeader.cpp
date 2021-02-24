@@ -31,7 +31,7 @@ const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
 //constexpr std::string_view  master_nodes_prop_name = "master_nodes";
-//constexpr std::string_view  local_to_global_prop_name = "local_to_global_vector";
+//constexpr std::string_view  local_to_global_prop_name = "local_to_global_id";
 
 // special partition property names
 

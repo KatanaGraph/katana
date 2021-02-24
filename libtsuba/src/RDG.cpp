@@ -43,7 +43,7 @@ namespace {
 // special partition property names
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
-const char* kLocalToTGlobalPropName = "local_to_global_vector";
+const char* kLocalToGlobalIDPropName = "local_to_global_id";
 
 std::shared_ptr<parquet::WriterProperties>
 StandardWriterProperties() {
@@ -301,7 +301,7 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
-  } else if (name == kLocalToTGlobalPropName) {
+  } else if (name == kLocalToGlobalIDPropName) {
     set_local_to_global_vector(std::move(col));
   } else {
     return tsuba::ErrorCode::InvalidArgument;
@@ -328,8 +328,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   KATANA_LOG_DEBUG(
       "WritePartArrays master sz: {} mirros sz: {} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
-      local_to_global_vector_ == nullptr ? 0
-                                         : local_to_global_vector_->length());
+      local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
   for (unsigned i = 0; i < mirror_nodes_.size(); ++i) {
     auto name = MirrorPropName(i);
@@ -357,14 +356,14 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     });
   }
 
-  if (local_to_global_vector_ != nullptr) {
+  if (local_to_global_id_ != nullptr) {
     auto l2g_res = StoreArrowArrayAtName(
-        local_to_global_vector_, dir, kLocalToTGlobalPropName, desc);
+        local_to_global_id_, dir, kLocalToGlobalIDPropName, desc);
     if (!l2g_res) {
       return l2g_res.error();
     }
     next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kLocalToTGlobalPropName,
+        .name = kLocalToGlobalIDPropName,
         .path = std::move(l2g_res.value()),
         .persist = true,
     });

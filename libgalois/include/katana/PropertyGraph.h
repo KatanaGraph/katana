@@ -262,8 +262,8 @@ public:
 
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
   // really a ChunkedArray of one change, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
-    return rdg_.local_to_global_vector();
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
+    return rdg_.local_to_global_id();
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
     rdg_.set_local_to_global_vector(std::move(a));

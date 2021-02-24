@@ -62,8 +62,8 @@ public:
       push(range.begin(), range.end());
   }
 
-  katana::optional<value_type> pop() {
-    katana::optional<value_type> retval;
+  std::optional<value_type> pop() {
+    std::optional<value_type> retval;
     std::lock_guard<PaddedLock<true>> lg(lock);
     if (!wl.empty()) {
       if (popBack) {

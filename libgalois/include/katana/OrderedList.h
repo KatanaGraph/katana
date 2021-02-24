@@ -69,15 +69,15 @@ public:
       push(range.begin(), range.end());
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     lock();
     if (map.empty()) {
       unlock();
-      return katana::optional<value_type>();
+      return std::nullopt;
     }
     auto ii = map.begin();
     std::deque<T>& list = ii->second;
-    katana::optional<value_type> v(list.front());
+    std::optional<value_type> v(list.front());
     list.pop_front();
     if (list.empty())
       map.erase(ii);

@@ -21,6 +21,7 @@
 #define KATANA_LIBGALOIS_KATANA_FIXEDSIZERING_H_
 
 #include <atomic>
+#include <optional>
 #include <utility>
 
 #include <boost/iterator/iterator_facade.hpp>
@@ -30,7 +31,6 @@
 #include "katana/LazyArray.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
-#include "katana/optional.h"
 
 namespace katana {
 
@@ -138,7 +138,7 @@ public:
 
   reference back() { return front(); }
   const_reference back() const { return front(); }
-  katana::optional<value_type> extract_back() { return extract_front(); }
+  std::optional<value_type> extract_back() { return extract_front(); }
 
   bool pop_back() { return pop_front(); }
 
@@ -152,13 +152,13 @@ public:
 
   template <bool C = Concurrent>
   auto extract_front() ->
-      typename std::enable_if<!C, katana::optional<value_type>>::type {
+      typename std::enable_if<!C, std::optional<value_type>>::type {
     if (!empty()) {
-      katana::optional<value_type> retval(back());
+      std::optional<value_type> retval(back());
       pop_back();
       return retval;
     }
-    return katana::optional<value_type>();
+    return std::nullopt;
   }
 
   //! returns true if something was popped
@@ -387,13 +387,13 @@ public:
     return *at(start);
   }
 
-  katana::optional<value_type> extract_front() {
+  std::optional<value_type> extract_front() {
     if (!empty()) {
-      katana::optional<value_type> retval(front());
+      std::optional<value_type> retval(front());
       pop_front();
       return retval;
     }
-    return katana::optional<value_type>();
+    return std::nullopt;
   }
 
   void pop_front() {
@@ -416,13 +416,13 @@ public:
     return *at((start + count - 1) % ChunkSize);
   }
 
-  katana::optional<value_type> extract_back() {
+  std::optional<value_type> extract_back() {
     if (!empty()) {
-      katana::optional<value_type> retval(back());
+      std::optional<value_type> retval(back());
       pop_back();
       return retval;
     }
-    return katana::optional<value_type>();
+    return std::nullopt;
   }
 
   void pop_back() {

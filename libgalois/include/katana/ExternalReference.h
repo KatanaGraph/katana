@@ -56,7 +56,7 @@ public:
   }
 
   //! pop a value from the queue.
-  katana::optional<value_type> pop() { return wl.pop(); }
+  std::optional<value_type> pop() { return wl.pop(); }
 };
 
 }  // namespace katana

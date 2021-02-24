@@ -20,6 +20,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_OCGRAPH_H_
 #define KATANA_LIBGALOIS_KATANA_OCGRAPH_H_
 
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -30,7 +31,6 @@
 #include "katana/LargeArray.h"
 #include "katana/LazyObject.h"
 #include "katana/config.h"
-#include "katana/optional.h"
 
 namespace katana {
 
@@ -356,7 +356,7 @@ public:
   };
 
 private:
-  katana::optional<segment_type> memorySegment;
+  std::optional<segment_type> memorySegment;
 
   segment_type computeSegment(size_t startNode, size_t numEdges) {
     typedef typename OCFileGraph::edge_offset_iterator edge_offset_iterator;
@@ -428,7 +428,7 @@ public:
   }
 
   void keepInMemory() {
-    memorySegment = katana::optional<segment_type>(computeSegment(0, numEdges));
+    memorySegment = computeSegment(0, numEdges);
     load(*memorySegment, LazyObject<EdgeTy>::size_of::value);
   }
 

@@ -86,9 +86,9 @@ public:
     some.get() = true;
   }
 
-  katana::optional<value_type> pop() {
+  std::optional<value_type> pop() {
     TLD& tld = *tlds.getLocal();
-    katana::optional<value_type> r;
+    std::optional<value_type> r;
 
     while (true) {
       if (isEmpty)

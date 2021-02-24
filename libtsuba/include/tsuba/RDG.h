@@ -133,11 +133,11 @@ public:
     mirror_nodes_ = std::move(a);
   }
 
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
-    return local_to_global_vector_;
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
+    return local_to_global_id_;
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    local_to_global_vector_ = std::move(a);
+    local_to_global_id_ = std::move(a);
   }
 
   const PartitionMetadata& part_metadata() const;
@@ -179,7 +179,7 @@ private:
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
-  std::shared_ptr<arrow::ChunkedArray> local_to_global_vector_;
+  std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;
 
   /// name of the graph that was used to load this RDG
   katana::Uri rdg_dir_;

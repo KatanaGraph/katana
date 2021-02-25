@@ -530,3 +530,203 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
 
   return katana::ResultSuccess();
 }
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
+  const GraphTopology& topology = pg->topology();
+  auto symmetric = std::make_unique<katana::PropertyGraph>();
+  if (topology.num_nodes() == 0) {
+    return std::unique_ptr<PropertyGraph>(std::move(symmetric));
+  }
+
+  // New symmetric graph topology
+  auto out_indices = std::make_unique<katana::LargeArray<uint64_t>>();
+  auto out_dests = std::make_unique<katana::LargeArray<uint32_t>>();
+
+  out_indices->allocateInterleaved(topology.num_nodes());
+  // Store the out-degree of nodes from original graph
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_nodes()), [&](uint64_t n) {
+        auto edges = topology.edges(n);
+        (*out_indices)[n] = (*edges.end() - *edges.begin());
+      });
+
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_nodes()),
+      [&](uint64_t n) {
+        auto edges = topology.edges(n);
+        // update the out_indices for the symmetric topology
+        for (auto e = edges.begin(); e != edges.end(); ++e) {
+          auto dest = topology.edge_dest(*e);
+          // Do not add reverse edge for self-loops
+          if (n != dest) {
+            __sync_fetch_and_add(&((*out_indices)[dest]), 1);
+          }
+        }
+      },
+      katana::steal());
+
+  // Compute prefix sum
+  for (uint64_t n = 1; n < topology.num_nodes(); ++n) {
+    (*out_indices)[n] += (*out_indices)[n - 1];
+  }
+
+  uint64_t num_nodes_symmetric = topology.num_nodes();
+  uint64_t num_edges_symmetric = (*out_indices)[num_nodes_symmetric - 1];
+
+  katana::LargeArray<uint64_t> out_dests_offset;
+  out_dests_offset.allocateInterleaved(topology.num_nodes());
+  // Temp LargeArray for computing new destination positions
+  out_dests_offset[0] = 0;
+  katana::do_all(
+      katana::iterate(uint64_t{1}, topology.num_nodes()),
+      [&](uint64_t n) { out_dests_offset[n] = (*out_indices)[n - 1]; },
+      katana::no_stats());
+
+  out_dests->allocateInterleaved(num_edges_symmetric);
+  // Update graph topology with the original edges + reverse edges
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_nodes()),
+      [&](uint64_t src) {
+        auto edges = topology.edges(src);
+        // e = start index into edge array for a particular node
+        auto e = edges.begin();
+
+        // get all outgoing edges (excluding self edges) of a particular
+        // node and add reverse edges.
+        while (e < edges.end()) {
+          // destination node
+          auto dest = topology.edge_dest(*e);
+
+          // Add original edge
+          auto e_new_src = __sync_fetch_and_add(&(out_dests_offset[src]), 1);
+          (*out_dests)[e_new_src] = dest;
+
+          // Do not add reverse edge for self-loops
+          if (dest != src) {
+            // Add reverse edge
+            auto e_new_dst = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
+            (*out_dests)[e_new_dst] = src;
+            // TODO(gill) copy edge data to "new" array
+          }
+          e++;
+        }
+      },
+      katana::no_stats());
+
+  auto numeric_array_out_indices =
+      std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
+          static_cast<int64_t>(num_nodes_symmetric),
+          arrow::MutableBuffer::Wrap(
+              out_indices.release()->data(), num_nodes_symmetric));
+
+  auto numeric_array_out_dests =
+      std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
+          static_cast<int64_t>(num_edges_symmetric),
+          arrow::MutableBuffer::Wrap(
+              out_dests.release()->data(), num_edges_symmetric));
+
+  if (auto r = symmetric->SetTopology(katana::GraphTopology{
+          .out_indices = std::move(numeric_array_out_indices),
+          .out_dests = std::move(numeric_array_out_dests),
+      });
+      !r) {
+    return r.error();
+  }
+
+  return std::unique_ptr<PropertyGraph>(std::move(symmetric));
+}
+
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::CreateTransposeGraph(katana::PropertyGraph* pg) {
+  const GraphTopology& topology = pg->topology();
+  auto transpose = std::make_unique<katana::PropertyGraph>();
+  if (topology.num_nodes() == 0) {
+    return std::unique_ptr<PropertyGraph>(std::move(transpose));
+  }
+
+  // New transpose graph topology
+  auto out_indices = std::make_unique<katana::LargeArray<uint64_t>>();
+  auto out_dests = std::make_unique<katana::LargeArray<uint32_t>>();
+
+  out_indices->allocateInterleaved(topology.num_nodes());
+
+  // Initialize the new topology indices
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_nodes()),
+      [&](uint64_t n) { (*out_indices)[n] = uint64_t{0}; }, katana::no_stats());
+
+  // Keep a copy of old destinaton ids and compute number of
+  // in-coming edges for the new prefix sum of out_indices.
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_edges()),
+      [&](uint64_t e) {
+        // Counting outgoing edges in the tranpose graph by
+        // counting incoming edges in the original graph
+        auto dest = topology.edge_dest(e);
+        __sync_add_and_fetch(&((*out_indices)[dest]), 1);
+      },
+      katana::no_stats());
+
+  // Prefix sum calculation of the edge index array
+  for (uint64_t n = 1; n < topology.num_nodes(); ++n) {
+    (*out_indices)[n] += (*out_indices)[n - 1];
+  }
+
+  katana::LargeArray<uint64_t> out_dests_offset;
+  out_dests_offset.allocateInterleaved(topology.num_nodes());
+  // Reuse out_indices_tmp for computing new destination positions
+  out_dests_offset[0] = 0;
+  katana::do_all(
+      katana::iterate(uint64_t{1}, topology.num_nodes()),
+      [&](uint64_t n) { out_dests_offset[n] = (*out_indices)[n - 1]; },
+      katana::no_stats());
+
+  out_dests->allocateInterleaved(topology.num_edges());
+  // Update large_array_out_dests_ with the new destination ids
+  // of the transposed graphs
+  katana::do_all(
+      katana::iterate(uint64_t{0}, topology.num_nodes()),
+      [&](uint64_t src) {
+        auto edges = topology.edges(src);
+        // e = start index into edge array for a particular node
+        auto e = edges.begin();
+
+        // get all outgoing edges of a particular
+        // node and reverse the edges.
+        while (e < edges.end()) {
+          // Destination node
+          auto dest = topology.edge_dest(*e);
+          // Location to save edge
+          auto e_new = __sync_fetch_and_add(&(out_dests_offset[dest]), 1);
+          // Save src as destination
+          (*out_dests)[e_new] = src;
+          // TODO (gill) copy edge data to the transposed graph
+          e++;
+        }
+      },
+      katana::no_stats());
+
+  // Set new topology
+  auto numeric_array_out_indices =
+      std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
+          static_cast<int64_t>(topology.num_nodes()),
+          arrow::MutableBuffer::Wrap(
+              out_indices.release()->data(), topology.num_nodes()));
+
+  auto numeric_array_out_dests =
+      std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
+          static_cast<int64_t>(topology.num_edges()),
+          arrow::MutableBuffer::Wrap(
+              out_dests.release()->data(), topology.num_edges()));
+
+  if (auto r = transpose->SetTopology(katana::GraphTopology{
+          .out_indices = std::move(numeric_array_out_indices),
+          .out_dests = std::move(numeric_array_out_dests),
+      });
+      !r) {
+    return r.error();
+  }
+
+  return std::unique_ptr<PropertyGraph>(std::move(transpose));
+}

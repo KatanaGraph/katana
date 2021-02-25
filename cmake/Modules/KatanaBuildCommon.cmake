@@ -252,19 +252,19 @@ if (NOT MySQL_FOUND)
   message(STATUS "Library MySQL not found, not building MySQL support")
 endif ()
 
-foreach (llvm_step RANGE 2)
-  # Range is [0, end]. Start version search from highest compatible version
-  # first.
-  math(EXPR llvm_ver "11 - ${llvm_step}")
+# Search for the highest compatible version of LLVM from the list of versions here.
+# LLVM minor versions are not ABI compatible, so we need to specifically say we support the 11.1 special release.
+message(CHECK_START "Looking for LLVM")
+foreach (llvm_ver IN ITEMS 11.1 11.0 10 9 8 7)
   find_package(LLVM ${llvm_ver} QUIET CONFIG)
   if (LLVM_FOUND)
     break()
   endif ()
 endforeach ()
 if (LLVM_FOUND)
-  message(STATUS "Library llvm found ${LLVM_DIR}")
+  message(CHECK_PASS "found version ${LLVM_VERSION} (${LLVM_DIR})")
 else ()
-  message(FATAL_ERROR "Searched for LLVM 7 through 11 but did not find any compatible version")
+  message(FATAL_ERROR "Searched for LLVM 9 through 11.1 but did not find any compatible version")
 endif ()
 if (NOT DEFINED LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Could not determine if LLVM has RTTI enabled.")

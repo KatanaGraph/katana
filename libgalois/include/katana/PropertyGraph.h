@@ -501,6 +501,35 @@ KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
 /// descending order.
 KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);
 
+/// Creates in-memory symmetric (or undirected) graph.
+///
+/// This function creates an symmetric or undirected version of the
+/// PropertyGraph topology by adding reverse edges in-memory.
+///
+/// For each edge (a, b) in the graph, this function will
+/// add an additional edge (b, a) except when a == b, in which
+/// case, no additional edge is added.
+/// The generated symmetric graph may have duplicate edges.
+/// \param pg The original property graph
+/// \return The new symmetric property graph by adding reverse edges
+// TODO(gill): Add edge properties for the new reversed edges.
+KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
+CreateSymmetricGraph(PropertyGraph* pg);
+
+/// Creates in-memory transpose graph.
+///
+/// This function creates transpose version of the
+/// PropertyGraph topology by reversing the edges in-memory.
+///
+/// For each edge (a, b) in the graph, this function will
+/// add edge (b, a) without retaining the original edge (a, b) unlike
+/// CreateSymmetricGraph.
+/// \param pg The original property graph
+/// \return The new transposed property graph by reversing the edges
+// TODO(gill): Add tranposed edge properties as well.
+KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
+CreateTransposeGraph(PropertyGraph* pg);
+
 }  // namespace katana
 
 #endif

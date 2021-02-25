@@ -251,13 +251,9 @@ public:
     auto pm = rdg_.part_metadata();
     return topology_.nodes(0, pm.num_owned_);
   }
-  GraphTopology::nodes_range outgoing_mirrors() const {
+  GraphTopology::nodes_range mirrors() const {
     auto pm = rdg_.part_metadata();
-    return topology_.nodes(pm.num_owned_, pm.num_nodes_with_edges_);
-  }
-  GraphTopology::nodes_range incoming_mirrors() const {
-    auto pm = rdg_.part_metadata();
-    return topology_.nodes(pm.num_nodes_with_edges_, pm.num_nodes_);
+    return topology_.nodes(pm.num_owned_, pm.num_nodes_);
   }
 
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is

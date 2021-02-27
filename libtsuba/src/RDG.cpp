@@ -44,6 +44,8 @@ namespace {
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
+// deprecated; only here to support backward compatibility
+const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
 
 std::shared_ptr<parquet::WriterProperties>
 StandardWriterProperties() {
@@ -302,6 +304,11 @@ tsuba::RDG::AddPartitionMetadataArray(
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
   } else if (name == kLocalToGlobalIDPropName) {
+    set_local_to_global_vector(std::move(col));
+  } else if (name == kDeprecatedLocalToGlobalIDPropName) {
+    KATANA_LOG_WARN(
+        "deprecated graph format; replace the existing graph by storing the "
+        "current graph");
     set_local_to_global_vector(std::move(col));
   } else {
     return tsuba::ErrorCode::InvalidArgument;

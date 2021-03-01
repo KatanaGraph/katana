@@ -478,7 +478,7 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
           return rdg->AddPartitionMetadataArray(props);
         });
     if (!part_result) {
-      return edge_result.error();
+      return part_result.error();
     }
   }
 

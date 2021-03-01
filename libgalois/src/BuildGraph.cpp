@@ -2002,9 +2002,6 @@ katana::ImportToArrow(
     const std::vector<katana::ImportData>& import_src) {
   std::shared_ptr<arrow::Array> array = nullptr;
 
-  if (import_src.empty()) {
-    return katana::ErrorCode::ArrowError;
-  }
   array = ToArrowArray(arrow_type, array, import_src);
 
   std::vector<std::shared_ptr<arrow::Array>> chunks;

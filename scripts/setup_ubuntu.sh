@@ -52,8 +52,7 @@ add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
 
 # Clang isn't present in the xenial repos so we need to add the repo
 VERSION=$(lsb_release --release --short | cut -d . -f 1)
-if [ "$VERSION" == "16" ]
-then
+if [ "$VERSION" == "16" ]; then
   curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
   apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
 fi
@@ -105,9 +104,7 @@ apt install -yq --allow-downgrades \
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt install -yq gcc-9 g++-9 clang-10
   # in newer versions of ubuntu clang++-10 is installed as a part of clang-10
-  if [ "$VERSION" == "16" ]
-  then
+  if [ "$VERSION" == "16" ]; then
     apt install clang++-10
   fi
-then
 fi

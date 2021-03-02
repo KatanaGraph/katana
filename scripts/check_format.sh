@@ -16,7 +16,7 @@ fi
 
 ROOTS="$@"
 FAILED=
-PRUNE_PATHS="'*/external/cub' '*/external/bliss'"
+PRUNE_PATHS=${PRUNE_PATHS:-}
 PRUNE_NAMES="build*"
 
 emit_prunes() {
@@ -34,7 +34,7 @@ while read -d '' filename; do
       FAILED=1
     fi
   fi
-done < <(find ${ROOTS} $(emit_prunes) -name '*.cpp' -print0 -o -name '*.h' -print0)
+done < <(find ${ROOTS} $(emit_prunes) -name '*.cpp' -print0 -o -name '*.h' -print0 -o -name '*.cu' -print0 -o -name '*.cuh' -print0)
 
 if [ -n "${FAILED}" ]; then
   exit 1

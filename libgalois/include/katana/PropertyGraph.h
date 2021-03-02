@@ -64,6 +64,10 @@ struct KATANA_EXPORT GraphTopology {
     auto [begin_edge, end_edge] = edge_range(node);
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
+  Node edge_dest(Edge eid) const {
+    KATANA_LOG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
+    return out_dests->Value(eid);
+  }
 
   nodes_range nodes(Node begin, Node end) const {
     return MakeStandardRange<node_iterator>(begin, end);
@@ -493,7 +497,7 @@ public:
    * @returns node iterator to the edge destination
    */
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = topology().out_dests->Value(*edge);
+    auto node_id = topology().edge_dest(*edge);
     return node_iterator(node_id);
   }
 };

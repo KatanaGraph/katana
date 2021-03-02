@@ -143,6 +143,11 @@ struct Node2VecAlgo {
         [&](uint32_t idx) {
           GNode n = idx % graph.size();
 
+          //check if n has no neighbor
+          if (degree[n] == 0) {
+            return;
+          }
+
           std::uniform_real_distribution<double>* dist =
               *distribution.getLocal();
 
@@ -284,6 +289,11 @@ struct Edge2VecAlgo {
         katana::iterate((uint32_t)0, total_walks),
         [&](uint32_t idx) {
           GNode n = idx % graph.size();
+
+          //check if n has no neighbor
+          if (degree[n] == 0) {
+            return;
+          }
 
           std::uniform_real_distribution<double>* dist =
               *distribution.getLocal();

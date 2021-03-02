@@ -64,6 +64,10 @@ struct KATANA_EXPORT GraphTopology {
     auto [begin_edge, end_edge] = edge_range(node);
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
+  Node edge_dest(Edge eid) const {
+    KATANA_LOG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
+    return out_dests->Value(eid);
+  }
 
   nodes_range nodes(Node begin, Node end) const {
     return MakeStandardRange<node_iterator>(begin, end);
@@ -251,19 +255,15 @@ public:
     auto pm = rdg_.part_metadata();
     return topology_.nodes(0, pm.num_owned_);
   }
-  GraphTopology::nodes_range outgoing_mirrors() const {
+  GraphTopology::nodes_range mirrors() const {
     auto pm = rdg_.part_metadata();
-    return topology_.nodes(pm.num_owned_, pm.num_nodes_with_edges_);
-  }
-  GraphTopology::nodes_range incoming_mirrors() const {
-    auto pm = rdg_.part_metadata();
-    return topology_.nodes(pm.num_nodes_with_edges_, pm.num_nodes_);
+    return topology_.nodes(pm.num_owned_, pm.num_nodes_);
   }
 
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
   // really a ChunkedArray of one change, change to arrow::Array.
-  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_vector() const {
-    return rdg_.local_to_global_vector();
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
+    return rdg_.local_to_global_id();
   }
   void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
     rdg_.set_local_to_global_vector(std::move(a));
@@ -497,7 +497,7 @@ public:
    * @returns node iterator to the edge destination
    */
   node_iterator GetEdgeDest(const edge_iterator& edge) const {
-    auto node_id = topology().out_dests->Value(*edge);
+    auto node_id = topology().edge_dest(*edge);
     return node_iterator(node_id);
   }
 };

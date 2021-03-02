@@ -16,7 +16,6 @@ struct PartitionMetadata {
   uint64_t num_edges_{0UL};
   uint32_t num_nodes_{0};
   uint32_t num_owned_{0};
-  uint32_t num_nodes_with_edges_{0};
   std::pair<uint32_t, uint32_t> cartesian_grid_{0, 0};
 };
 

@@ -31,7 +31,7 @@ const char* kPartProperyMetaKey = "kg.v1.part_property_meta";
 //
 //constexpr std::string_view  mirror_nodes_prop_name = "mirror_nodes";
 //constexpr std::string_view  master_nodes_prop_name = "master_nodes";
-//constexpr std::string_view  local_to_global_prop_name = "local_to_global_vector";
+//constexpr std::string_view  local_to_global_prop_name = "local_to_global_id";
 
 // special partition property names
 
@@ -425,7 +425,6 @@ tsuba::to_json(json& j, const tsuba::PartitionMetadata& pmd) {
       {"num_nodes", pmd.num_nodes_},
       {"num_edges", pmd.num_edges_},
       {"num_owned", pmd.num_owned_},
-      {"num_nodes_with_edges", pmd.num_nodes_with_edges_},
       {"cartesian_grid", pmd.cartesian_grid_}};
 }
 
@@ -442,7 +441,6 @@ tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
   j.at("num_nodes").get_to(pmd.num_nodes_);
   j.at("num_edges").get_to(pmd.num_edges_);
   j.at("num_owned").get_to(pmd.num_owned_);
-  j.at("num_nodes_with_edges").get_to(pmd.num_nodes_with_edges_);
   j.at("cartesian_grid").get_to(pmd.cartesian_grid_);
 
   if (magic != kPartitionMagicNo) {

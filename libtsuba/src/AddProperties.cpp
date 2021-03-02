@@ -72,6 +72,7 @@ DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path) {
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
   if (auto res = fv->Bind(file_path.string(), false); !res) {
+    KATANA_LOG_DEBUG("bind error: {}", res.error());
     return res.error();
   }
 

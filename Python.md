@@ -34,22 +34,27 @@ SRC_DIR=<repo/root>
 conda config --add channels conda-forge
 conda env create --name katana-dev --file $SRC_DIR/conda_recipe/environment.yml
 conda activate katana-dev
+conda install numactl-devel-cos6-x86_64 # For x86_64 builds
 ```
+
+*Do not use Conan*. Conan packages are incompatible with Conda.
+If you are building `katana-enterprise`, see `Python.md` in that repository and install additional conda packages.
 
 To build Katana-Python, use CMake as for the [C++ build](README.md) and add `-DKATANA_LANG_BINDINGS=python` to the `cmake` command. The steps are repeated below. See [README.md](README.md) for details.
 Let's assume that `SRC_DIR` is the directory where the source code for Katana
 resides, and you wish to build Katana in some `BUILD_DIR`.
 
 ```Shell
-SRC_DIR=`pwd` # Or top-level Katana source dir
 BUILD_DIR=<path-to-your-build-dir>
-
 mkdir -p $BUILD_DIR
-cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python
+cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python -DBUILD_SHARED_LIBS=ON
 ```
 
 This will build Katana-Python and place the artifacts in `$BUILD_DIR/katana_python_build/build/lib.*`.
 If you wish to use these artifacts directly, you can use a script that is also generated, `$BUILD_DIR/python_env.sh`. You can either use this script as a launcher, `$BUILD_DIR/python_env.sh python`, or source it into your shell, `. $BUILD_DIR/python_env.sh`, to enable all Python programs in that shell to access the `katana` package.
+
+The Katana Python interface only supports shared library builds.
+This is because Katana libraries (e.g., `libgalois`) must be shared between the Python extensions.
 
 
 Building Katana-Python Conda Packages

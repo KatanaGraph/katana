@@ -93,6 +93,19 @@ public:
   }
 
   /**
+   * Clears the bitset.
+   */
+  void clear() {
+    num_bits = 0;
+    bitvec.clear();
+  }
+
+  /**
+   * Shrinks the allocation for bitset to its current size.
+   */
+  void shrink_to_fit() { bitvec.shrink_to_fit(); }
+
+  /**
    * Gets the size of the bitset
    * @returns The number of bits held by the bitset
    */
@@ -296,17 +309,31 @@ public:
    * @returns vector with offsets into set bits
    */
   template <typename integer>
-  std::vector<integer> getOffsets() const;
+  std::vector<integer> GetOffsets() const;
+
+  /**
+   * Given a vector, appends the set bits in this bitset in order
+   * from left to right into the vector.
+   * Do NOT call in a parallel region as it uses katana::on_each.
+   */
+  template <typename integer>
+  void GetOffsetsInto(std::vector<integer>* vec) const;
 
   //! this is defined to
   using tt_is_copyable = int;
 };
 
 template <>
-std::vector<uint32_t> DynamicBitset::getOffsets() const;
+std::vector<uint32_t> DynamicBitset::GetOffsets() const;
 
 template <>
-std::vector<uint64_t> DynamicBitset::getOffsets() const;
+std::vector<uint64_t> DynamicBitset::GetOffsets() const;
+
+template <>
+void DynamicBitset::GetOffsetsInto(std::vector<uint32_t>* offsets) const;
+
+template <>
+void DynamicBitset::GetOffsetsInto(std::vector<uint64_t>* offsets) const;
 
 //! An empty bitset object; used mainly by InvalidBitsetFn
 extern katana::DynamicBitset EmptyBitset;

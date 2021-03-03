@@ -110,8 +110,9 @@ katana::DynamicBitset::count() const {
 
 namespace {
 template <typename Integer>
-std::vector<Integer>
-GetOffsets(const katana::DynamicBitset& bitset) {
+void
+ComputeOffsets(
+    const katana::DynamicBitset& bitset, std::vector<Integer>* offsets) {
   // TODO uint32_t is somewhat dangerous; change in the future
   uint32_t activeThreads = katana::getActiveThreads();
   std::vector<Integer> tPrefixBitCounts(activeThreads);
@@ -138,44 +139,55 @@ GetOffsets(const katana::DynamicBitset& bitset) {
 
   // total num of set bits
   Integer bitsetCount = tPrefixBitCounts[activeThreads - 1];
-  std::vector<Integer> offsets;
 
   // calculate the indices of the set bits and save them to the offset
   // vector
   if (bitsetCount > 0) {
-    offsets.resize(bitsetCount);
+    size_t cur_size = offsets->size();
+    offsets->resize(cur_size + bitsetCount);
     katana::on_each([&](unsigned tid, unsigned nthreads) {
       auto [start, end] =
           katana::block_range(size_t{0}, bitset.size(), tid, nthreads);
-      Integer count = 0;
-      Integer tPrefixBitCount;
-      if (tid == 0) {
-        tPrefixBitCount = 0;
-      } else {
-        tPrefixBitCount = tPrefixBitCounts[tid - 1];
+      Integer index = cur_size;
+      if (tid != 0) {
+        index += tPrefixBitCounts[tid - 1];
       }
 
       for (Integer i = start; i < end; ++i) {
         if (bitset.test(i)) {
-          offsets[tPrefixBitCount + count] = i;
-          ++count;
+          offsets->at(index) = i;
+          ++index;
         }
       }
     });
   }
-
-  return offsets;
 }
 }  //namespace
 
 template <>
 std::vector<uint32_t>
-katana::DynamicBitset::getOffsets<uint32_t>() const {
-  return GetOffsets<uint32_t>(*this);
+katana::DynamicBitset::GetOffsets<uint32_t>() const {
+  std::vector<uint32_t> offsets;
+  ComputeOffsets<uint32_t>(*this, &offsets);
+  return offsets;
 }
 
 template <>
 std::vector<uint64_t>
-katana::DynamicBitset::getOffsets<uint64_t>() const {
-  return GetOffsets<uint64_t>(*this);
+katana::DynamicBitset::GetOffsets<uint64_t>() const {
+  std::vector<uint64_t> offsets;
+  ComputeOffsets<uint64_t>(*this, &offsets);
+  return offsets;
+}
+
+template <>
+void
+katana::DynamicBitset::GetOffsetsInto(std::vector<uint32_t>* offsets) const {
+  ComputeOffsets<uint32_t>(*this, offsets);
+}
+
+template <>
+void
+katana::DynamicBitset::GetOffsetsInto(std::vector<uint64_t>* offsets) const {
+  ComputeOffsets<uint64_t>(*this, offsets);
 }

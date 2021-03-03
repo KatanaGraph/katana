@@ -26,7 +26,7 @@ run_as_original_user() {
   # protects characters like < from being interpreted as redirections if $@
   # were expanded directly.
   if [[ -n "${ORIGINAL_USER}" ]]; then
-    su - "${ORIGINAL_USER}" bash -c '"$@"' -- "$@"
+    su -s /bin/bash - "${ORIGINAL_USER}" bash -c '"$@"' -- "$@"
   else
     bash -c '"$@"' -- "$@"
   fi
@@ -48,10 +48,14 @@ fi
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
 apt-add-repository -y $NO_UPDATE "deb https://apt.kitware.com/ubuntu/ ${RELEASE} main"
 
-curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
-
 add-apt-repository -y $NO_UPDATE ppa:git-core/ppa
+
+# Clang isn't present in the xenial repos so we need to add the repo
+VERSION=$(lsb_release --release --short | cut -d . -f 1)
+if [ "$VERSION" == "16" ]; then
+  curl -fL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+  apt-add-repository -y $NO_UPDATE "deb http://apt.llvm.org/${RELEASE}/ llvm-toolchain-${RELEASE}-10 main"
+fi
 
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt-add-repository -y $NO_UPDATE ppa:ubuntu-toolchain-r/test
@@ -98,5 +102,9 @@ apt install -yq --allow-downgrades \
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
-  apt install -yq gcc-9 g++-9 clang-10 clang++-10
+  apt install -yq gcc-9 g++-9 clang-10
+  # in newer versions of ubuntu clang++-10 is installed as a part of clang-10
+  if [ "$VERSION" == "16" ]; then
+    apt install clang++-10
+  fi
 fi

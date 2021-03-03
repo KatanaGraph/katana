@@ -6,12 +6,17 @@
 set -xeuo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
-EXPECTED_RELEASE="bionic|focal"
-RELEASE=$(lsb_release --codename | awk '{print $2}')
+EXPECTED_RELEASE="20|18|16"
+EXPECTED_RELEASE_NAMES="focal|bionic|xenial"
+RELEASE_MAJOR=$(lsb_release --release --short | cut -d . -f 1)
+RELEASE_NAME=$(lsb_release --codename | awk '{print $2}')
 
 if echo "${RELEASE}" | grep -q -e "${EXPECTED_RELEASE}" > /dev/null;
 then
-  echo "This script was intended for ${EXPECTED_RELEASE} (you have ${RELEASE}) exiting!" >&2
+  {
+    echo -n "This script was intended for one of ${EXPECTED_RELEASE_NAMES}"
+    echo " (you have ${RELEASE_NAME}) exiting!"
+  } >&2
   exit 1
 fi
 

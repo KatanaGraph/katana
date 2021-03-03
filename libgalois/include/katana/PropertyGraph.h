@@ -236,7 +236,7 @@ public:
 
   /// \return A copy of this with the same set of properties. The copy shares no
   ///       state with this.
-  Result<std::unique_ptr<PropertyGraph>> Copy();
+  Result<std::unique_ptr<PropertyGraph>> Copy() const;
 
   /// \param node_properties The node properties to copy.
   /// \param edge_properties The edge properties to copy.
@@ -244,7 +244,7 @@ public:
   ///        state with this.
   Result<std::unique_ptr<PropertyGraph>> Copy(
       const std::vector<std::string>& node_properties,
-      const std::vector<std::string>& edge_properties);
+      const std::vector<std::string>& edge_properties) const;
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 

@@ -691,7 +691,7 @@ struct ClusteringImplementationBase {
     TimerConstructFrom.stop();
 
     TimerGraphBuild.stop();
-    return pfg_next;
+    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));
   }
 };
 }  // namespace katana::analytics

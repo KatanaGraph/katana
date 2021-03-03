@@ -234,14 +234,14 @@ katana::PropertyGraph::Make(
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::PropertyGraph::Copy() {
+katana::PropertyGraph::Copy() const {
   return Copy(node_schema()->field_names(), edge_schema()->field_names());
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Copy(
     const std::vector<std::string>& node_properties,
-    const std::vector<std::string>& edge_properties) {
+    const std::vector<std::string>& edge_properties) const {
   // TODO(gill): This should copy the RDG in memory without reloading from storage.
   return Make(
       rdg_dir(), partition_number(), &node_properties, &edge_properties);

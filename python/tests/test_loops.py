@@ -157,11 +157,11 @@ def test_for_each(modes):
     def f(out, i, ctx):
         out[i] += i + 1
         if i == 8:
-            ctx.push(1)
+            ctx.push(10)
 
-    out = np.zeros(10, dtype=int)
+    out = np.zeros(11, dtype=int)
     for_each(range(10), f(out), **modes)
-    assert np.allclose(out, np.array([1, 4, 3, 4, 5, 6, 7, 8, 9, 10]))
+    assert np.allclose(out, np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]))
 
 
 @pytest.mark.parametrize("modes", simple_modes)

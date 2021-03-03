@@ -131,17 +131,19 @@ public:
   size_type max_size() const { return capacity_; }
   bool empty() const { return size_ == 0; }
 
-  void trim() {
+  void shrink_to_fit() {
     if (size_ == 0) {
       if (data_ != NULL) {
         free(data_);
         data_ = NULL;
+        capacity_ = 0;
       }
     } else if (size_ < capacity_) {
       _Tp* new_data_ = static_cast<_Tp*>(
           realloc(reinterpret_cast<void*>(data_), size_ * sizeof(_Tp)));
       KATANA_LOG_DEBUG_ASSERT(new_data_);
       data_ = new_data_;
+      capacity_ = size_;
     }
   }
 
@@ -151,12 +153,11 @@ public:
     }
 
     // When reallocing, don't pay for elements greater than size_
-    trim();
+    shrink_to_fit();
 
+    // reset capacity_ because its previous value need not be a power-of-2
+    capacity_ = 1;
     // increase capacity in powers-of-2
-    if (capacity_ == 0) {
-      capacity_ = 1;
-    }
     while (capacity_ < n) {
       capacity_ <<= 1;
     }

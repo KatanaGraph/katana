@@ -317,7 +317,7 @@ public:
    * Do NOT call in a parallel region as it uses katana::on_each.
    */
   template <typename integer>
-  void GetOffsetsInto(std::vector<integer>* vec) const;
+  void AppendOffsets(std::vector<integer>* vec) const;
 
   //! this is defined to
   using tt_is_copyable = int;
@@ -330,10 +330,10 @@ template <>
 std::vector<uint64_t> DynamicBitset::GetOffsets() const;
 
 template <>
-void DynamicBitset::GetOffsetsInto(std::vector<uint32_t>* offsets) const;
+void DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const;
 
 template <>
-void DynamicBitset::GetOffsetsInto(std::vector<uint64_t>* offsets) const;
+void DynamicBitset::AppendOffsets(std::vector<uint64_t>* offsets) const;
 
 //! An empty bitset object; used mainly by InvalidBitsetFn
 extern katana::DynamicBitset EmptyBitset;

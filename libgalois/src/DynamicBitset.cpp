@@ -182,12 +182,12 @@ katana::DynamicBitset::GetOffsets<uint64_t>() const {
 
 template <>
 void
-katana::DynamicBitset::GetOffsetsInto(std::vector<uint32_t>* offsets) const {
+katana::DynamicBitset::AppendOffsets(std::vector<uint32_t>* offsets) const {
   ComputeOffsets<uint32_t>(*this, offsets);
 }
 
 template <>
 void
-katana::DynamicBitset::GetOffsetsInto(std::vector<uint64_t>* offsets) const {
+katana::DynamicBitset::AppendOffsets(std::vector<uint64_t>* offsets) const {
   ComputeOffsets<uint64_t>(*this, offsets);
 }

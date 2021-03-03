@@ -7,14 +7,6 @@ on:
   pull_request:
 
 jobs:
-# Canceling other workflows doesn't work on the open repo because it requires write permissions.
-#  cancel_previous:
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: styfle/cancel-workflow-action@0.6.0
-#      if: ${{ github.event_name == 'pull_request' }}
-#      with:
-#        access_token: ${{ github.token }}
 
   ###################################################################
   # lint
@@ -105,6 +97,7 @@ jobs:
           build_type: Release
             # Ubuntu ({g++-9,clang++-10} [most])
         - os: ubuntu-18.04
+          build_type: Sanitizer
           cxx: g++
         - os: ubuntu-18.04
           build_type: Sanitizer

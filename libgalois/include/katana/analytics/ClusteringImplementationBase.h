@@ -130,7 +130,7 @@ struct ClusteringImplementationBase {
       } else {
         if (degree == 1) {
           // Check if the destination has degree greater than one
-          auto dst = graph->GetEdgeDest(graph->edge_end(n));
+          auto dst = graph->GetEdgeDest(graph->edge_end(n) - 1);
           uint64_t dst_degree =
               std::distance(graph->edge_begin(*dst), graph->edge_end(*dst));
           if ((dst_degree > 1 || (n > *dst))) {

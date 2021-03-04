@@ -64,6 +64,7 @@ enum class ErrorCode {
   AlreadyExists = 10,
   TypeError = 11,
   AssertionFailed = 12,
+  GraphUpdateFailed = 13,
 };
 
 }  // namespace katana
@@ -102,6 +103,8 @@ public:
       return "type error";
     case ErrorCode::AssertionFailed:
       return "assertion failed";
+    case ErrorCode::GraphUpdateFailed:
+      return "graph update failed";
     default:
       return "unknown error";
     }
@@ -116,6 +119,7 @@ public:
     case ErrorCode::JsonDumpFailed:
     case ErrorCode::TypeError:
     case ErrorCode::AssertionFailed:
+    case ErrorCode::GraphUpdateFailed:
       return make_error_condition(std::errc::invalid_argument);
     case ErrorCode::AlreadyExists:
       return make_error_condition(std::errc::file_exists);

@@ -35,18 +35,11 @@ jobs:
     ###
     # Caching between builds
     ###
-    - name: Cache conda packages
-      uses: actions/cache@v2
-      with:
-        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml', '**/environment.yml')}}
-        path: |
-            ~/miniconda/pkgs/*.tar.bz2
-            !~/miniconda/pkgs/katana-*
     - name: Cache miniconda
       id: cache-miniconda
       uses: actions/cache@v2
       with:
-        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
         path: ~/.cache/miniconda
     - name: Cache ccache objects
       uses: actions/cache@v2
@@ -72,7 +65,8 @@ jobs:
     - name: Setup ccache
       run: |
         ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
-        ccache --max-files 400  # Roughly two builds worth of objects
+        ccache --max-files 350 --max-size=1.5G # Roughly two builds worth of objects, and limited in size as a safety net.
+        ccache --zero-stats
 
     ###
     # Install Conda environment
@@ -93,9 +87,11 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        ccache --zero-stats
         export KATANA_DOCS_OUTPUT=$HOME/docs
         conda build -c conda-forge --output-folder $HOME/build/ conda_recipe/
+
+    - name: Clean ccache
+      run: |
         ccache --show-stats
         ccache --cleanup
 
@@ -135,18 +131,11 @@ jobs:
     ###
     # Caching between builds
     ###
-    - name: Cache conda packages
-      uses: actions/cache@v2
-      with:
-        key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml')}}
-        path: |
-            ~/miniconda/pkgs/*.tar.bz2
-            !~/miniconda/pkgs/katana-*
     - name: Cache miniconda
       id: cache-miniconda
       uses: actions/cache@v2
       with:
-        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+        key: ${{matrix.os}}-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
         path: ~/.cache/miniconda
 
     ###
@@ -191,18 +180,11 @@ jobs:
       ###
       # Caching between builds
       ###
-      - name: Cache conda packages
-        uses: actions/cache@v2
-        with:
-          key: ${{matrix.os}}-conda-pkgs-${{hashFiles('**/conda_recipe/meta.yaml', '**/environment.yml')}}
-          path: |
-            ~/miniconda/pkgs/*.tar.bz2
-            !~/miniconda/pkgs/katana-*
       - name: Cache miniconda
         id: cache-miniconda
         uses: actions/cache@v2
         with:
-          key: ${{matrix.os}}-miniconda-${{hashFiles('.github/**')}}
+          key: ${{matrix.os}}-miniconda-${{hashFiles('.github/workflows/download_miniconda.sh')}}
           path: ~/.cache/miniconda
       - name: Cache ccache objects
         uses: actions/cache@v2
@@ -228,7 +210,8 @@ jobs:
       - name: Setup ccache
         run: |
           ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
-          ccache --max-files 400  # Roughly two builds worth of objects
+          ccache --max-files 350 --max-size=1.5G # Roughly two builds worth of objects, and limited in size as a safety net.
+          ccache --zero-stats
 
       ###
       # Install Conda environment
@@ -258,9 +241,11 @@ jobs:
       - name: Build
         run: |
           . .github/workflows/activate_miniconda.sh
-          ccache --zero-stats
           export CMAKE_BUILD_PARALLEL_LEVEL=2
           cmake --build $HOME/build --parallel 2
+
+      - name: Clean ccache
+        run: |
           ccache --show-stats
           ccache --cleanup
 

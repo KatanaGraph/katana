@@ -113,7 +113,161 @@ You can use `git rebase --interactive` to reorganize your commits and  `git
 push --force`  to update your branch. Depending on your IDE, there are various
 features or plugins to streamline this process (e.g.,
 [vim-fugitive](https://github.com/tpope/vim-fugitive),
-[magit](https://magit.vc/)).
+[magit](https://magit.vc/)). Git also provides `git commit --fixup` and
+`git rebase --autosquash` which can streamline this process.
+
+# Build and Release Versions
+
+Release versions of Katana are semantic versions with an release candidate tag
+(`rc#`) appended for release candidates.
+
+Build/development versions of Katana are of the form:
+`[release].dev+N.0.######`.
+
+* a release version
+* `.dev`
+* `+`
+* the number of commits on the nearest major branch (e.g., `master` or `release/v*`)
+* `0`
+* an abbreviated commit id
+
+The `0` is a placeholder for the enterprise commit count in enterprise builds
+(enterprise builds also add an enterprise commit hash). The commit hashes are
+replaced with `dirty` if the tree is dirty. For example,
+`0.1.10rc1.dev+40.0.04ac6f`.
+
+The version number of a commit is computed from the content of the repository.
+The process is:
+
+* If the commit has a tag in the form `v{version number}` (e.g., `v0.1.10rc1`)
+  then that is the version regardless of other information.
+* Otherwise, the content of `config/version.txt` specifies the upcoming release
+  and the version of the commit is computed based on the commit history and
+  branches.
+
+The main development branch `master` should build and pass tests, but may be
+unstable at times. Regressions may be introduced post-merge or a PR may be more
+clearly expressed with intermediate commits that do not pass all tests. We
+prefer a clear history over "atomic" commits. During our release process, we
+specifically address stability and regression issues.
+
+# Version Management Tool
+
+The tool `scripts/version` performs a number of tasks related to version
+management. Day to day uses are mentioned here and a full list of commands and
+options is available from: `scripts/version --help` (and `--help` on each
+subcommand).
+
+**To show the current version**, run `scripts/version show`. This will print out
+the version of the working tree. To see the version of a specific commit run
+`scripts/version show {commit}`. This will print out the version of a clean
+checkout of that commit.
+
+**To create a release branch**, run `scripts/version release_branch {next version}`
+and merge the PRs it creates as soon as possible (to limit the number of commits
+assigned incorrectly ordered version numbers). This will create a new release
+branch: `release/v{current version}`. The first commit on that branch suffixes
+the version number stored in `config/version.txt` with `rc1` (e.g.,
+`0.1.11rc1`). The commit on master immediately after the branch changes the
+version number to `{next version}`. The release branch should never be rebased
+as it represents a permanent history of the release process. We can stabilize
+the code as needed on the release branch before releasing the first release
+candidate (e.g., `0.1.11rc1`).
+
+**To create a release**, run `scripts/version release {next version}` and merge
+the PRs it creates as soon as possible. This tags the current `HEAD` commit
+with `v{current version}` (e.g., `v0.1.10rc1`) and creates commits to increase
+the version number to `{next version}`. The release tags should be annotated
+tags to store who created the tag and the date. The same commands are used
+regardless of the kind of release: final release (semantic version only),
+release candidate (`rc`), or post-release (`.post`).
+
+**To tag an existing version as a release** (e.g., to tag a release candidate as
+the final release), run `scripts/version tag {version}`. This tags the current
+`HEAD` commit with `v{version}` (e.g., `v0.1.10`) to mark it as the `{version}`
+release.
+
+**To begin work on a post-release** (a maintenance release for a previous final
+release), switch to the release branch (`release/v{version}`) and run
+`scripts/version bump {version}.post1` and merge the PRs it creates. This will
+update the version number to `release/v{version number}` in preparation for
+work on a post release. After development on the first post-release is
+complete, create and tag post-releases just like any other release.
+Post-release development is entirely on the original release branch.
+Post-releases should be avoided if possible. Master can be merged into the
+release branch if needed, or commits from master can be cherry picked into the
+release. Changes should not be developed on the release branch. The exception
+is for maintenance on code that has been removed permanently from master, but
+this should be avoided whenever possible.
+
+## Example
+
+Let us walk through a development example showing the steps and commands used.
+The following tables have alternating rows: the state of the repositories and
+the computed version, and the actions taken by the development team. Commit
+hashes are replaced with # for brevity.
+
+The steps leading up to branching for the 0.1.11 release:
+
+<table>
+  <tr>
+    <th>Computed version</th>
+    <th>Repository status</th>
+  </tr>
+  <tr>
+    <th colspan="2">Developer steps</th>
+  </tr>
+  <tr>
+    <td>0.1.11.dev+1.1.#.#</td>
+    <td>version.txt = 0.1.11</td>
+  </tr>
+  <tr>
+    <td colspan="2">10 commits in katana and 20 commits in katana-enterprise.</td>
+  </tr>
+  <tr>
+    <td>0.1.11.dev+11.21.#.#</td>
+    <td>version.txt = 0.1.11</td>
+  </tr>
+  <tr>
+    <td colspan="2">Run <code>scripts/version release_branch 0.1.12</code> and merge the created PRs on both master and the release branch release/v0.1.11.</td>
+  </tr>
+</table>
+
+The steps on the release branch release/v0.1.11 to release 0.1.11:
+
+<table>
+  <tr>
+    <td>0.1.11rc1.dev+1.1.#.#</td>
+    <td>version.txt = 0.1.11rc1</td>
+  </tr>
+  <tr>
+    <td colspan="2">1 commit in katana and 1 commit in katana-enterprise.</td>
+  </tr>
+  <tr>
+    <td>0.1.11rc1.dev+2.2.#.#</td>
+    <td>version.txt = 0.1.11rc1</td>
+  </tr>
+  <tr>
+    <td colspan="2">Run <code>scripts/version release 0.1.11rc2</code> and merge the created PR on the release branch release/v0.1.11. Once this commit is tagged v0.1.11rc1 it is also version 0.1.11rc1 and can be released.
+</td>
+  </tr>
+  <tr>
+    <td colspan="2">Once 0.1.11rc1 passes QC, run <code>scripts/version tag 0.1.11</code> to tag the same commit as the final release 0.1.11. Once this commit is tagged v0.1.11 it is also version 0.1.11 and can be released. At this point the commit will have 3 versions: 0.1.11rc1.dev+2.2.#.#, 0.1.11rc1, and 0.1.11.
+</td>
+  </tr>
+</table>
+
+The state of master after branching for 0.1.11:
+
+<table>
+  <tr>
+    <td>0.1.12.dev+1.1.#.#</td>
+    <td>version.txt = 0.1.12</td>
+  </tr>
+  <tr>
+    <td colspan="2">Continue development...</td>
+  </tr>
+</table>
 
 # Some Helpful Commands
 
@@ -170,7 +324,7 @@ bin/graph-properties-convert <infile> <out directory/s3>
 
 This converts property graphs into katana form
 
-# Some Helpful tools
+# Some Helpful Tools
 
 [ccmake](https://cmake.org/cmake/help/v3.0/manual/ccmake.1.html): a simple
 terminal UI for configuring cmake projects. This is helpful for setting

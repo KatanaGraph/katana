@@ -1,9 +1,14 @@
 function(katana_get_version_component COMPONENT)
-  set(no_value_options)
+  set(no_value_options DEBIAN)
   set(one_value_options)
   set(multi_value_options OUTPUT)
   cmake_parse_arguments(_args "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
-  execute_process(COMMAND ${CMAKE_CURRENT_LIST_DIR}/../../scripts/version show --${COMPONENT}
+  if(_args_DEBIAN)
+    set(kind_arg "--debian")
+  else()
+    set(kind_arg "--pep440")
+  endif()
+  execute_process(COMMAND ${CMAKE_CURRENT_LIST_DIR}/../../scripts/version show ${kind_arg} --${COMPONENT}
       OUTPUT_STRIP_TRAILING_WHITESPACE
       OUTPUT_VARIABLE version_output
       RESULT_VARIABLE result
@@ -28,6 +33,8 @@ katana_get_version_component(major OUTPUT KATANA_VERSION_MAJOR ${PROJECT_NAME}_V
 katana_get_version_component(minor OUTPUT KATANA_VERSION_MINOR ${PROJECT_NAME}_VERSION_MINOR)
 katana_get_version_component(patch OUTPUT KATANA_VERSION_PATCH ${PROJECT_NAME}_VERSION_PATCH)
 katana_get_version_component(local OUTPUT KATANA_VERSION_LOCAL ${PROJECT_NAME}_VERSION_LOCAL)
+
+katana_get_version_component(full DEBIAN OUTPUT KATANA_VERSION_DEBIAN ${PROJECT_NAME}_VERSION_DEBIAN)
 
 message(STATUS "${PROJECT_NAME} version: ${${PROJECT_NAME}_VERSION}")
 

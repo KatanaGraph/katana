@@ -2,4 +2,69 @@
 set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.."; pwd)"
 
-PYTHONPATH="$REPO_ROOT/external/katana/scripts:$REPO_ROOT/scripts:${PYTHONPATH:+:${PYTHONPATH}}" python3 -m katana_version "$@"
+if python3 -c "import sys; sys.exit(0 if sys.version_info.major > 3 or (sys.version_info.major == 3 and sys.version_info.minor >= 6) else 1)" 2> /dev/null; then
+  # If we have Python >= 3.6
+  # Use the script to get a good version.
+  # Using both enterprise and open paths here since the one that doesn't exist will be ignored and not harm anything.
+  PYTHONPATH="$REPO_ROOT/external/katana/scripts:$REPO_ROOT/scripts:${PYTHONPATH:+:${PYTHONPATH}}" python3 -m katana_version "$@"
+else
+  # If we have Python < 3.6
+  # The version script requires 3.6. If we have KATANA_VERSION use it, otherwise make up something simple.
+  # Also pretend the variant is py35, to make this issue obvious.
+  if [ -n "${KATANA_VERSION:-}" ]; then
+    VERSION="${KATANA_VERSION}"
+  else
+    if git --version > /dev/null 2> /dev/null; then
+      echo "WARNING: The environment variable KATANA_VERSION is not set and Python3.6 is not available. Version will be bad." 1>&2
+      OPEN_HASH="$(git -C "${REPO_ROOT}/external/katana" rev-parse --short=6 HEAD 2> /dev/null || echo b)"
+      if [ "$OPEN_HASH" = "b" ]; then
+        OPEN_HASH="$(git -C "${REPO_ROOT}" rev-parse --short=6 HEAD 2> /dev/null || echo b)"
+        ENTERPRISE_HASH="$(git -C "${REPO_ROOT}/../.." rev-parse --short=6 HEAD 2> /dev/null || echo b)"
+      else
+        ENTERPRISE_HASH="$(git -C "${REPO_ROOT}" rev-parse --short=6 HEAD 2> /dev/null || echo b)"
+      fi
+      VERSION="$(cat "${REPO_ROOT}/config/version.txt").dev+py35.b.b.${OPEN_HASH}.${ENTERPRISE_HASH}.unmerged"
+    else
+      echo "WARNING: The environment variable KATANA_VERSION is not set and Python3.6 is not available AND git is not available. Version will be REALLY bad." 1>&2
+      VERSION="$(cat "${REPO_ROOT}/config/version.txt").dev+py35.b.b.b.b.unmerged"
+    fi
+  fi
+  case "${1:-}" in
+  show)
+    FIX_VERSION="cat"
+    while [ $# -gt 1 ]; do
+      shift
+      case "${1}" in
+      --debian)
+        FIX_VERSION="sed s/\.dev/~dev/"
+        ;;
+      --pep440)
+        FIX_VERSION="cat"
+        ;;
+      --full)
+        ;;
+      --major)
+        FIX_VERSION="cut -d. -f1"
+        ;;
+      --minor)
+        FIX_VERSION="cut -d. -f2"
+        ;;
+      --micro|--patch)
+        FIX_VERSION="cut -d. -f3"
+        ;;
+      --local)
+        FIX_VERSION="cut -d+ -f2"
+        ;;
+      *)
+        echo "ERROR: Unsupported option: $1"
+        exit 129
+      esac
+    done
+    echo "$VERSION" | ${FIX_VERSION}
+    ;;
+  *)
+    echo "ERROR: Only show is supported without Python 3.6"
+    exit 129
+    ;;
+  esac
+fi

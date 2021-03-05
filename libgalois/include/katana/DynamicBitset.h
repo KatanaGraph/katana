@@ -43,11 +43,11 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec;
-  size_t num_bits{0};
+  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec_;
+  size_t num_bits_{0};
 
 public:
-  static constexpr uint32_t bits_uint64 = sizeof(uint64_t) * CHAR_BIT;
+  static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
   //! Constructor which initializes to an empty bitset.
   DynamicBitset() = default;
@@ -58,7 +58,7 @@ public:
    * @returns constant reference vector of copyable atomics that represents
    * the bitset
    */
-  const auto& get_vec() const { return bitvec; }
+  const auto& get_vec() const { return bitvec_; }
 
   /**
    * Returns the underlying bitset representation to the user
@@ -66,18 +66,18 @@ public:
    * @returns reference to vector of copyable atomics that represents the
    * bitset
    */
-  auto& get_vec() { return bitvec; }
+  auto& get_vec() { return bitvec_; }
 
   /**
    * Resizes the bitset.
    *
    * @param n Size to change the bitset to
    */
-  void resize(uint64_t n) {
+  void resize(size_t n) {
     KATANA_LOG_DEBUG_ASSERT(
-        bits_uint64 == 64);  // compatibility with other devices
-    num_bits = n;
-    bitvec.resize((n + bits_uint64 - 1) / bits_uint64);
+        kNumBitsInUint64 == 64);  // compatibility with other devices
+    num_bits_ = n;
+    bitvec_.resize((n + kNumBitsInUint64 - 1) / kNumBitsInUint64);
     reset();
   }
 
@@ -86,41 +86,35 @@ public:
    *
    * @param n Size to reserve the capacity of the bitset to
    */
-  void reserve(uint64_t n) {
+  void reserve(size_t n) {
     KATANA_LOG_DEBUG_ASSERT(
-        bits_uint64 == 64);  // compatibility with other devices
-    bitvec.reserve((n + bits_uint64 - 1) / bits_uint64);
+        kNumBitsInUint64 == 64);  // compatibility with other devices
+    bitvec_.reserve((n + kNumBitsInUint64 - 1) / kNumBitsInUint64);
   }
 
   /**
    * Clears the bitset.
    */
   void clear() {
-    num_bits = 0;
-    bitvec.clear();
+    num_bits_ = 0;
+    bitvec_.clear();
   }
 
   /**
    * Shrinks the allocation for bitset to its current size.
    */
-  void shrink_to_fit() { bitvec.shrink_to_fit(); }
+  void shrink_to_fit() { bitvec_.shrink_to_fit(); }
 
   /**
    * Gets the size of the bitset
    * @returns The number of bits held by the bitset
    */
-  size_t size() const { return num_bits; }
-
-  /**
-   * Gets the space taken by the bitset
-   * @returns the space in bytes taken by this bitset
-   */
-  // size_t alloc_size() const { return bitvec.size() * sizeof(uint64_t); }
+  size_t size() const { return num_bits_; }
 
   /**
    * Unset every bit in the bitset.
    */
-  void reset() { std::fill(bitvec.begin(), bitvec.end(), 0); }
+  void reset() { std::fill(bitvec_.begin(), bitvec_.end(), 0); }
 
   /**
    * Unset a range of bits given an inclusive range
@@ -129,37 +123,37 @@ public:
    * @param end last bit in range to reset
    */
   void reset(size_t begin, size_t end) {
-    if (num_bits == 0) {
+    if (num_bits_ == 0) {
       return;
     }
 
-    KATANA_LOG_DEBUG_ASSERT(begin <= (num_bits - 1));
-    KATANA_LOG_DEBUG_ASSERT(end <= (num_bits - 1));
+    KATANA_LOG_DEBUG_ASSERT(begin <= (num_bits_ - 1));
+    KATANA_LOG_DEBUG_ASSERT(end <= (num_bits_ - 1));
 
     // 100% safe implementation, but slow
     // for (unsigned long i = begin; i <= end; i++) {
-    //  size_t bit_index = i / bits_uint64;
+    //  size_t bit_index = i / kNumBitsInUint64;
     //  uint64_t bit_offset = 1;
-    //  bit_offset <<= (i % bits_uint64);
+    //  bit_offset <<= (i % kNumBitsInUint64);
     //  uint64_t mask = ~bit_offset;
-    //  bitvec[bit_index] &= mask;
+    //  bitvec_[bit_index] &= mask;
     //}
 
     // block which you are safe to clear
-    size_t vec_begin = (begin + bits_uint64 - 1) / bits_uint64;
+    size_t vec_begin = (begin + kNumBitsInUint64 - 1) / kNumBitsInUint64;
     size_t vec_end;
 
-    if (end == (num_bits - 1))
-      vec_end = bitvec.size();
+    if (end == (num_bits_ - 1))
+      vec_end = bitvec_.size();
     else
-      vec_end = (end + 1) / bits_uint64;  // floor
+      vec_end = (end + 1) / kNumBitsInUint64;  // floor
 
     if (vec_begin < vec_end) {
-      std::fill(bitvec.begin() + vec_begin, bitvec.begin() + vec_end, 0);
+      std::fill(bitvec_.begin() + vec_begin, bitvec_.begin() + vec_end, 0);
     }
 
-    vec_begin *= bits_uint64;
-    vec_end *= bits_uint64;
+    vec_begin *= kNumBitsInUint64;
+    vec_end *= kNumBitsInUint64;
 
     // at this point vec_begin -> vec_end-1 has been reset
 
@@ -174,23 +168,23 @@ public:
         uint64_t or_mask = (uint64_t{1} << end_diff) - 1;
         mask |= ~or_mask;
 
-        size_t bit_index = begin / bits_uint64;
-        bitvec[bit_index] &= mask;
+        size_t bit_index = begin / kNumBitsInUint64;
+        bitvec_[bit_index] &= mask;
       }
     } else {
       if (begin < vec_begin) {
         size_t diff = vec_begin - begin;
         KATANA_LOG_DEBUG_ASSERT(diff < 64);
         uint64_t mask = (uint64_t{1} << (64 - diff)) - 1;
-        size_t bit_index = begin / bits_uint64;
-        bitvec[bit_index] &= mask;
+        size_t bit_index = begin / kNumBitsInUint64;
+        bitvec_[bit_index] &= mask;
       }
       if (end >= vec_end) {
         size_t diff = end - vec_end + 1;
         KATANA_LOG_DEBUG_ASSERT(diff < 64);
         uint64_t mask = (uint64_t{1} << diff) - 1;
-        size_t bit_index = end / bits_uint64;
-        bitvec[bit_index] &= ~mask;
+        size_t bit_index = end / kNumBitsInUint64;
+        bitvec_[bit_index] &= ~mask;
       }
     }
   }
@@ -204,12 +198,12 @@ public:
    * @returns true if index is set
    */
   bool test(size_t index) const {
-    KATANA_LOG_DEBUG_ASSERT(index < num_bits);
-    size_t bit_index = index / bits_uint64;
+    KATANA_LOG_DEBUG_ASSERT(index < num_bits_);
+    size_t bit_index = index / kNumBitsInUint64;
     uint64_t bit_offset = 1;
-    bit_offset <<= (index % bits_uint64);
+    bit_offset <<= (index % kNumBitsInUint64);
     return (
-        (bitvec[bit_index].load(std::memory_order_relaxed) & bit_offset) != 0);
+        (bitvec_[bit_index].load(std::memory_order_relaxed) & bit_offset) != 0);
   }
 
   /**
@@ -219,14 +213,14 @@ public:
    * @returns the old value
    */
   bool set(size_t index) {
-    size_t bit_index = index / bits_uint64;
+    size_t bit_index = index / kNumBitsInUint64;
     uint64_t bit_offset = 1;
-    bit_offset <<= (index % bits_uint64);
-    uint64_t old_val = bitvec[bit_index];
+    bit_offset <<= (index % kNumBitsInUint64);
+    uint64_t old_val = bitvec_[bit_index];
     // test and set
     // if old_bit is 0, then atomically set it
     while (((old_val & bit_offset) == 0) &&
-           !bitvec[bit_index].compare_exchange_weak(
+           !bitvec_[bit_index].compare_exchange_weak(
                old_val, old_val | bit_offset, std::memory_order_relaxed)) {
       ;
     }
@@ -240,14 +234,14 @@ public:
    * @returns the old value
    */
   bool reset(size_t index) {
-    size_t bit_index = index / bits_uint64;
+    size_t bit_index = index / kNumBitsInUint64;
     uint64_t bit_offset = 1;
-    bit_offset <<= (index % bits_uint64);
-    uint64_t old_val = bitvec[bit_index];
+    bit_offset <<= (index % kNumBitsInUint64);
+    uint64_t old_val = bitvec_[bit_index];
     // test and reset
     // if old_bit is 1, then atomically reset it
     while (((old_val & bit_offset) != 0) &&
-           !bitvec[bit_index].compare_exchange_weak(
+           !bitvec_[bit_index].compare_exchange_weak(
                old_val, old_val & ~bit_offset, std::memory_order_relaxed)) {
       ;
     }
@@ -299,7 +293,7 @@ public:
    *
    * @returns number of set bits in the bitset
    */
-  uint64_t count() const;
+  size_t count() const;
 
   /**
    * Returns a vector containing the set bits in this bitset in order

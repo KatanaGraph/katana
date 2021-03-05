@@ -32,15 +32,15 @@ katana::DynamicBitset::bitwise_or(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] |= other_bitvec[i]; }, katana::no_stats());
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] |= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
 katana::DynamicBitset::bitwise_not() {
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] = ~bitvec[i]; }, katana::no_stats());
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] = ~bitvec_[i]; }, katana::no_stats());
 }
 
 void
@@ -48,8 +48,8 @@ katana::DynamicBitset::bitwise_and(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] &= other_bitvec[i]; }, katana::no_stats());
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] &= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
@@ -61,8 +61,8 @@ katana::DynamicBitset::bitwise_and(
   const auto& other_bitvec2 = other2.get_vec();
 
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] = other_bitvec1[i] & other_bitvec2[i]; },
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] = other_bitvec1[i] & other_bitvec2[i]; },
       katana::no_stats());
 }
 
@@ -71,8 +71,8 @@ katana::DynamicBitset::bitwise_xor(const DynamicBitset& other) {
   KATANA_LOG_DEBUG_ASSERT(size() == other.size());
   const auto& other_bitvec = other.get_vec();
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] ^= other_bitvec[i]; }, katana::no_stats());
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] ^= other_bitvec[i]; }, katana::no_stats());
 }
 
 void
@@ -84,16 +84,16 @@ katana::DynamicBitset::bitwise_xor(
   const auto& other_bitvec2 = other2.get_vec();
 
   katana::do_all(
-      katana::iterate(size_t{0}, bitvec.size()),
-      [&](size_t i) { bitvec[i] = other_bitvec1[i] ^ other_bitvec2[i]; },
+      katana::iterate(size_t{0}, bitvec_.size()),
+      [&](size_t i) { bitvec_[i] = other_bitvec1[i] ^ other_bitvec2[i]; },
       katana::no_stats());
 }
 
-uint64_t
+size_t
 katana::DynamicBitset::count() const {
-  katana::GAccumulator<uint64_t> ret;
+  katana::GAccumulator<size_t> ret;
   katana::do_all(
-      katana::iterate(bitvec.begin(), bitvec.end()),
+      katana::iterate(bitvec_.begin(), bitvec_.end()),
       [&](uint64_t n) {
 #ifdef __GNUC__
         ret += __builtin_popcountll(n);

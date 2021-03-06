@@ -25,6 +25,11 @@ emit_prunes() {
 
 FILES=$(find ${ROOTS} $(emit_prunes) -name '*.go' -print | xargs)
 
+if [ -z "$FILES" ]; then
+    echo "no files to fix!" >&2
+    exit 0
+fi
+
 if [ -n "${FIX}" ]; then
   ${GOFMT} -s -w ${FILES}
 else
@@ -33,6 +38,6 @@ fi
 
 if [ -n "${FAILED}" ]; then
   echo "The following files are NOT OK:"
-  echo ${FAILED}
+  echo "$FAILED"
   exit 1
 fi

@@ -24,14 +24,17 @@ output_on_fail(){
   return 0
 }
 
-echo -ne 'running:  check_format.sh\r'
-output_on_fail ${SCRIPT_DIR}/check_format.sh ${FIX} "${@}"
-echo -ne 'running:  check_go_format.sh\r'
-output_on_fail ${SCRIPT_DIR}/check_go_format.sh ${FIX} "${@}"
-echo -ne 'running: check_go_lint.sh\r'
+display_running() {
+    CLEAR_LINE="\e[2K"
+    echo -ne "${CLEAR_LINE}\rrunning: ${1}"
+}
+
+display_running "check_format.sh"
+output_on_fail ${SCRIPT_DIR}/check_format_cpp.sh ${FIX} "${@}"
+display_running "check_go_lint.sh"
 output_on_fail ${SCRIPT_DIR}/check_go_lint.sh "${@}"
-echo -ne 'running:  check_python_format.sh\r'
+display_running "check_python_format.sh"
 output_on_fail ${SCRIPT_DIR}/check_python_format.sh ${FIX} "${@}"
-#echo -ne 'running: check_python_lint.sh\r'
+#display_running "check_python_lint.sh"
 #output_on_fail pipenv run ${SCRIPT_DIR}/check_python_lint.sh "${@}"
-echo -ne 'Done!              \n'
+echo -e "${CLEAR_LINE}Done"

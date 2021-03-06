@@ -43,14 +43,23 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec_;
+  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec_{};
   size_t num_bits_{0};
 
 public:
   static constexpr uint32_t kNumBitsInUint64 = sizeof(uint64_t) * CHAR_BIT;
 
-  //! Constructor which initializes to an empty bitset.
   DynamicBitset() = default;
+
+  DynamicBitset(DynamicBitset&& bitset)
+      : bitvec_(std::move(bitset.bitvec_)), num_bits_(bitset.num_bits_) {}
+
+  DynamicBitset& operator=(DynamicBitset&& bitset) {
+    bitvec_ = std::move(bitset.bitvec_);
+    num_bits_ = bitset.num_bits_;
+    bitset.num_bits_ = 0;
+    return *this;
+  }
 
   /**
    * Returns the underlying bitset representation to the user

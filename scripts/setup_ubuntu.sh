@@ -85,7 +85,7 @@ run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPT
 run_as_original_user pip3 install conan==1.33
 
 # Developer tools
-DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake"
+DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck"
 # github actions require a more recent git
 GIT=git
 # Library dependencies

@@ -33,6 +33,7 @@ dependencies:
  - pyarrow
  - pytest
  - python>=3.8
+ - shellcheck
 # Workaround for upstream sphinx instability [1]
 #
 # [1] https://github.com/sphinx-doc/sphinx/issues/8880

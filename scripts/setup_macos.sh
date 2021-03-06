@@ -20,6 +20,7 @@ brew_install_if_missing conan
 brew_install_if_missing libtool
 brew_install_if_missing llvm
 brew_install_if_missing openmpi
+brew_install_if_missing shellcheck
 
 brew tap cleishm/neo4j
 brew_install_if_missing libcypher-parser

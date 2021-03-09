@@ -31,7 +31,7 @@ namespace {
 // [1] https://www.pcg-random.org/posts/cpp-seeding-surprises.html
 
 // https://stackoverflow.com/questions/440133
-template <typename S, typename T = std::mt19937>
+template <typename S, typename T = katana::RandGenerator>
 T
 MakeRandomGenerator(S& source) {
   auto constexpr seed_bits = T::word_size * T::state_size;
@@ -47,7 +47,7 @@ MakeRandomGenerator(S& source) {
   return T(seq);
 }
 
-std::mt19937
+katana::RandGenerator
 MakeSystemGenerator() {
   std::random_device dev;
   try {
@@ -59,61 +59,39 @@ MakeSystemGenerator() {
 
   auto now = std::chrono::system_clock::now();
   auto dur = now.time_since_epoch();
-  return std::mt19937(dur.count());
+  return katana::RandGenerator(dur.count());
 }
 
-thread_local std::unique_ptr<std::mt19937> kRNG;
+thread_local std::unique_ptr<katana::RandGenerator> kRNG;
 
 }  // namespace
 
-std::mt19937&
+katana::RandGenerator&
 katana::GetGenerator() {
   if (kRNG) {
     return *kRNG;
   }
 
   static std::mutex lock;
-  static std::mt19937 system_gen = MakeSystemGenerator();
+  static RandGenerator system_gen = MakeSystemGenerator();
   std::lock_guard guard(lock);
 
-  kRNG = std::make_unique<std::mt19937>(MakeRandomGenerator(system_gen));
+  kRNG = std::make_unique<RandGenerator>(MakeRandomGenerator(system_gen));
 
   return *kRNG;
 }
 
 std::string
-katana::RandomAlphanumericString(uint64_t len) {
+katana::RandomAlphanumericString(uint64_t len, RandGenerator* gen) {
+  if (gen == nullptr) {
+    gen = &GetGenerator();
+  }
   static constexpr auto chars =
       "0123456789"
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       "abcdefghijklmnopqrstuvwxyz";
   std::uniform_int_distribution dist({}, std::strlen(chars) - 1);
   std::string result(len, '\0');
-  std::generate_n(
-      std::begin(result), len, [&]() { return chars[dist(GetGenerator())]; });
+  std::generate_n(std::begin(result), len, [&]() { return chars[dist(*gen)]; });
   return result;
-}
-
-// Range 0..len-1, inclusive
-int64_t
-katana::RandomUniformInt(int64_t len) {
-  KATANA_LOG_ASSERT(len > 0);
-  std::uniform_int_distribution dist({}, len - 1);
-  return dist(GetGenerator());
-}
-
-// Range min+1..max-1, inclusive
-int64_t
-katana::RandomUniformInt(int64_t min, int64_t max) {
-  KATANA_LOG_ASSERT(min < max);
-  std::uniform_int_distribution dist(min + 1, max - 1);
-  return dist(GetGenerator());
-}
-
-// Range 0.0f..max, inclusive
-float
-katana::RandomUniformFloat(float max) {
-  std::uniform_real_distribution<float> dist(
-      0.0f, std::nextafter(max, std::numeric_limits<float>::max()));
-  return dist(GetGenerator());
 }

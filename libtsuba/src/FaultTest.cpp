@@ -45,9 +45,11 @@ tsuba::internal::FaultTestInit(
   } break;
   case tsuba::internal::FaultMode::UniformOverRun: {
     KATANA_LOG_VASSERT(
-        run_length > 0,
-        "For UniformOverRun, max run length must be larger than 0");
-    fault_run_length_ = katana::RandomUniformInt(1, run_length);
+        run_length > 2,
+        "For UniformOverRun, max run length must be larger than 2");
+
+    std::uniform_int_distribution<uint64_t> dist(2, run_length - 1);
+    fault_run_length_ = dist(katana::GetGenerator());
     fmt::print(
         "FaultTest UniformOverRun {:d} ({:d})\n", fault_run_length_,
         run_length_);
@@ -86,7 +88,9 @@ tsuba::internal::PtP(
       // Do nothing
       break;
     }
-    if (katana::RandomUniformFloat(1.0f) < threshold) {
+    std::uniform_real_distribution<float> dist(
+        0, std::nextafter(1.0F, std::numeric_limits<float>::max()));
+    if (dist(katana::GetGenerator()) < threshold) {
       fmt::print("  PtP count {:d}\n", ptp_count_);
       die_now(file, line);
     }

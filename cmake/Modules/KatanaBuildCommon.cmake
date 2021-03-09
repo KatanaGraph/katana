@@ -41,6 +41,12 @@ set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
 
 set(KATANA_LANG_BINDINGS "" CACHE STRING "Semi-colon separated list of language bindings to build (e.g., 'python'). Default: none")
 
+###### Packaging features ######
+set(KATANA_PACKAGE_TYPE "deb" CACHE STRING "Semi-colon separated list of package types to build with cpack. Supported values: deb rpm tgz.")
+set(KATANA_PACKAGE_DIRECTORY "${PROJECT_BINARY_DIR}/pkg" CACHE STRING "The output path for packages.")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of Debian package dependencies")
+set(CPACK_RPM_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of RPM package dependencies")
+
 ###### Developer features ######
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
 set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a single machine) for running the tests.")
@@ -410,3 +416,104 @@ function(add_katana_doxygen_target)
     add_dependencies(docs doxygen_docs)
   endif ()
 endfunction()
+
+###### Packaging ######
+
+include(CPackComponent)
+
+set(CPACK_PACKAGE_DIRECTORY "${KATANA_PACKAGE_DIRECTORY}")
+string(TOUPPER "${KATANA_PACKAGE_TYPE}" CPACK_GENERATOR)
+set(CPACK_PACKAGE_VENDOR "Katana Graph")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://katanagraph.com")
+set(CPACK_PACKAGE_VERSION_MAJOR ${KATANA_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${KATANA_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${KATANA_VERSION_PATCH})
+# The debian version sorts correctly for RPMs too
+set(CPACK_PACKAGE_VERSION ${KATANA_VERSION_DEBIAN})
+
+set(CPACK_PACKAGE_CONTACT "support@katanagraph.com")
+
+# Debian package specific options
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS TRUE)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS TRUE)
+set(CPACK_DEB_COMPONENT_INSTALL TRUE)
+
+#list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS)
+
+# Centos package specific options
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_PACKAGE_AUTOREQPROV FALSE)
+set(CPACK_RPM_COMPONENT_INSTALL TRUE)
+
+list(APPEND CPACK_RPM_PACKAGE_DEPENDS libatomic numactl-libs ncurses-libs)
+
+# Create a package for each component group.
+set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
+
+# Setup the cpack component groups: dev_pkg, shlib_pkg, tools_pkg, apps_pkg.
+# After calling this, call cpack_add_component to add components to the groups.
+macro(katana_setup_cpack_component_groups NAME SUFFIX)
+  # The groups are named *_pkg to distinguish them from the compenents themselves.
+  set(CPACK_DEBIAN_DEV_PKG_PACKAGE_NAME "lib${NAME}-dev${SUFFIX}")
+#  list(APPEND CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+  set(CPACK_RPM_DEV_PKG_PACKAGE_NAME "${NAME}-dev${SUFFIX}")
+#  list(APPEND CPACK_RPM_DEV_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  cpack_add_component_group(dev_pkg)
+  set(CPACK_COMPONENT_DEV_PKG_DESCRIPTION "Katana Graph development libraries and headers")
+  set(CPACK_COMPONENT_DEV_PKG_DEPENDS shlib_pkg)
+
+  set(CPACK_DEBIAN_SHLIB_PKG_PACKAGE_NAME "lib${NAME}${SUFFIX}")
+  list(APPEND CPACK_DEBIAN_SHLIB_PKG_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+  set(CPACK_RPM_SHLIB_PKG_PACKAGE_NAME "${NAME}${SUFFIX}")
+  list(APPEND CPACK_RPM_SHLIB_PKG_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  cpack_add_component_group(shlib_pkg)
+  set(CPACK_COMPONENT_SHLIB_PKG_DESCRIPTION "Katana Graph runtime libraries")
+
+  set(CPACK_DEBIAN_TOOLS_PKG_PACKAGE_NAME "${NAME}-tools${SUFFIX}")
+#  list(APPEND CPACK_DEBIAN_TOOLS_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+  set(CPACK_RPM_TOOLS_PKG_PACKAGE_NAME "${NAME}-tools${SUFFIX}")
+#  list(APPEND CPACK_RPM_TOOLS_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  cpack_add_component_group(tools_pkg)
+  set(CPACK_COMPONENT_TOOLS_PKG_DESCRIPTION "Katana Graph system management and data processing tools")
+  set(CPACK_COMPONENT_TOOLS_PKG_DEPENDS shlib_pkg)
+
+  set(CPACK_DEBIAN_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
+#  list(APPEND CPACK_DEBIAN_APPS_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+  set(CPACK_RPM_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
+#  list(APPEND CPACK_RPM_APPS_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  cpack_add_component_group(apps_pkg)
+  set(CPACK_COMPONENT_APPS_PKG_DESCRIPTION "Katana Graph applications and CLI algorithms")
+  set(CPACK_COMPONENT_APPS_PKG_DEPENDS shlib_pkg tools_pkg)
+
+  set(CPACK_DEBIAN_PYTHON_PKG_PACKAGE_NAME "python3-${NAME}${SUFFIX}")
+  list(APPEND CPACK_DEBIAN_PYTHON_PKG_PACKAGE_DEPENDS "python3-minimal")
+  set(CPACK_RPM_PYTHON_PKG_PACKAGE_NAME "python-${NAME}${SUFFIX}")
+#  list(APPEND CPACK_RPM_PYTHON_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  cpack_add_component_group(python_pkg)
+  set(CPACK_COMPONENT_PYTHON_PKG_DESCRIPTION "Katana Graph Python API")
+  set(CPACK_COMPONENT_PYTHON_PKG_DEPENDS shlib_pkg)
+endmacro()
+
+# Convert all `CPACK_.*_PACKAGE_DEPENDS` variables from cmake lists (;-separated) to valid dependency lists (,-separated).
+macro(katana_reformat_cpack_dependencies)
+  get_cmake_property(_variables VARIABLES)
+  foreach(var IN LISTS _variables)
+    string(REGEX MATCH "CPACK_.*_PACKAGE_DEPENDS" _match "${var}")
+    if (_match)
+      list(JOIN "${var}" ", " _out)
+      set("${var}" "${_out}")
+    endif()
+  endforeach()
+endmacro()
+
+# Dump all cpack variables. Useful for debugging.
+macro(katana_dump_cpack_config)
+  get_cmake_property(_variables VARIABLES)
+  foreach(var IN LISTS _variables)
+    string(REGEX MATCH "CPACK_.*" _match "${var}")
+    if (_match)
+      message("set(${var} \"${${var}}\")")
+    endif()
+  endforeach()
+endmacro()

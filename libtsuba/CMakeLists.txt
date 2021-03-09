@@ -63,7 +63,7 @@ install(TARGETS tsuba tsuba-preload
   EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT lib
+    COMPONENT shlib
   ARCHIVE
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT lib

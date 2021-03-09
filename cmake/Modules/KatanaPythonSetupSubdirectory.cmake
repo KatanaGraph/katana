@@ -142,7 +142,7 @@ endfunction()
 
 function(add_python_setuptools_target TARGET_NAME)
   set(no_value_options)
-  set(one_value_options SETUP_DIRECTORY)
+  set(one_value_options SETUP_DIRECTORY COMPONENT)
   set(multi_value_options DEPENDS)
 
   cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
@@ -150,6 +150,10 @@ function(add_python_setuptools_target TARGET_NAME)
   set(PYTHON_SETUP_DIR ${X_SETUP_DIRECTORY})
   if(NOT PYTHON_SETUP_DIR)
     set(PYTHON_SETUP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
+
+  if (NOT X_COMPONENT)
+    set(X_COMPONENT python)
   endif()
 
   set(PYTHON_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_build)
@@ -227,10 +231,10 @@ function(add_python_setuptools_target TARGET_NAME)
   install(
       CODE "execute_process(
                 COMMAND
-                  ${PYTHON_SETUP_COMMAND} install --skip-build --prefix=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}
+                  ${PYTHON_SETUP_COMMAND} install --prefix=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}
                 WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
                 COMMAND_ERROR_IS_FATAL ANY)"
-      COMPONENT python)
+      COMPONENT ${X_COMPONENT})
 
   set_target_properties(${TARGET_NAME} PROPERTIES
                         PYTHON_ENV_SCRIPT "${PYTHON_ENV_SCRIPT}"

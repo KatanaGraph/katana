@@ -40,26 +40,58 @@ endif()
 
 add_subdirectory(tools)
 
-###### Distribution ######
 
-set(CPACK_GENERATOR "TGZ")
-set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYRIGHT")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
-set(CPACK_PACKAGE_VERSION_MAJOR ${KATANA_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${KATANA_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${KATANA_VERSION_PATCH})
-# The debian version sorts correctly for RPMs too
-set(CPACK_PACKAGE_VERSION ${KATANA_VERSION_DEBIAN})
-include(CPack)
+####### Language Bindings #######
 
 if(KATANA_LANG_BINDINGS_PYTHON)
   add_python_setuptools_target(katana_python
-                               DEPENDS Katana::galois)
+                               DEPENDS Katana::galois
+                               COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/tests)
   endif()
   if(BUILD_DOCS)
     add_python_setuptools_docs(katana_python)
   endif()
+endif()
+
+###### Packaging ######
+
+set(CPACK_PACKAGE_NAME "katana")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYRIGHT")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+if(NOT BUILD_SHARED_LIBS)
+  set(PACKAGE_SUFFIX "${PACKAGE_SUFFIX}-static")
+endif()
+
+string(TOLOWER "${CMAKE_BUILD_TYPE}" build_type)
+
+if(build_type STREQUAL "debug")
+  set(PACKAGE_SUFFIX "${PACKAGE_SUFFIX}-dbg")
+endif()
+
+katana_setup_cpack_component_groups("${CPACK_PACKAGE_NAME}" "${PACKAGE_SUFFIX}")
+
+set(CPACK_PACKAGE_DESCRIPTION "Katana Graph system (Open-source)")
+
+macro(katana_cpack_open_components)
+  cpack_add_component(dev GROUP dev_pkg DEPENDS shlib)
+  cpack_add_component(lib GROUP dev_pkg DEPENDS shlib)
+
+  cpack_add_component(shlib GROUP shlib_pkg)
+
+  cpack_add_component(tools GROUP tools_pkg DEPENDS shlib)
+
+  cpack_add_component(apps GROUP apps_pkg DEPENDS shlib)
+
+  cpack_add_component(python GROUP python_pkg DEPENDS shlib)
+endmacro()
+
+# Use a macro here so it can be called in the enterprise build to setup components there (they are directory local)
+katana_cpack_open_components()
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  katana_reformat_cpack_dependencies()
+  include(CPack)
 endif()

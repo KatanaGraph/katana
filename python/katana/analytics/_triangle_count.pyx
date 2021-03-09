@@ -1,9 +1,9 @@
 from libc.stdint cimport uint64_t
 from libcpp cimport bool
 
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -38,7 +38,7 @@ cdef extern from "katana/analytics/triangle_count/triangle_count.h" namespace "k
     _TriangleCountPlan.Relabeling kDefaultRelabeling "katana::analytics::TriangleCountPlan::kDefaultRelabeling"
     bool kDefaultEdgeSorted "katana::analytics::TriangleCountPlan::kDefaultEdgeSorted"
 
-    std_result[uint64_t] TriangleCount(_PropertyGraph* pg, _TriangleCountPlan plan)
+    Result[uint64_t] TriangleCount(_PropertyGraph* pg, _TriangleCountPlan plan)
 
 
 class _TriangleCountPlanAlgorithm(Enum):
@@ -111,7 +111,7 @@ cdef class TriangleCountPlan(Plan):
             edges_sorted, _relabeling_from_python(relabeling)))
 
 
-cdef uint64_t handle_result_int(std_result[uint64_t] res) nogil except *:
+cdef uint64_t handle_result_int(Result[uint64_t] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

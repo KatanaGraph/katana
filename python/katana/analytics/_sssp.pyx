@@ -4,11 +4,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t
 from libcpp.string cimport string
 
-from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport Result, handle_result_void, handle_result_assert, raise_error_code
+from katana.property_graph cimport PropertyGraph
 
 
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
@@ -54,11 +54,11 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
     unsigned kDefaultDelta "katana::analytics::SsspPlan::kDefaultDelta"
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::SsspPlan::kDefaultEdgeTileSize"
 
-    std_result[void] Sssp(_PropertyGraph* pg, size_t start_node,
+    Result[void] Sssp(_PropertyGraph* pg, size_t start_node,
         const string& edge_weight_property_name, const string& output_property_name, _SsspPlan plan)
 
-    std_result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
-                                     const string& edge_weight_property_name, const string& output_property_name);
+    Result[void] SsspAssertValid(_PropertyGraph* pg, size_t start_node,
+                                 const string& edge_weight_property_name, const string& output_property_name);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
         double max_distance
@@ -70,7 +70,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         void Print(ostream os)
 
         @staticmethod
-        std_result[_SsspStatistics] Compute(_PropertyGraph* pg, string output_property_name);
+        Result[_SsspStatistics] Compute(_PropertyGraph* pg, string output_property_name);
 
 
 class _SsspAlgorithm(Enum):
@@ -163,7 +163,7 @@ def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_prope
         handle_result_assert(SsspAssertValid(pg.underlying.get(), start_node, edge_weight_property_name_str, output_property_name_str))
 
 
-cdef _SsspStatistics handle_result_SsspStatistics(std_result[_SsspStatistics] res) nogil except *:
+cdef _SsspStatistics handle_result_SsspStatistics(Result[_SsspStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

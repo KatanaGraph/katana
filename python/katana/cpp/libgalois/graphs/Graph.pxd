@@ -1,11 +1,11 @@
-from libcpp.string cimport string
 from ..Galois cimport MethodFlag, NoDerefIterator, StandardRange
 from libcpp.memory cimport unique_ptr, shared_ptr
+from libcpp.string cimport string
 from libcpp.vector cimport vector
-from libc.stdint cimport uint64_t
 from libc.stdint cimport uint32_t
-from katana.cpp.libstd.boost cimport std_result
+from libc.stdint cimport uint64_t
 from katana.cpp.libstd.optional cimport optional
+from katana.cpp.libsupport.result cimport Result
 from pyarrow.lib cimport CSchema, CChunkedArray, CArray, CTable, CUInt32Array, CUInt64Array
 
 # This is very similar to the block below, but needs to be in the tsuba namespace
@@ -120,10 +120,10 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
     cppclass _PropertyGraph "katana::PropertyGraph":
         PropertyGraph()
         @staticmethod
-        std_result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
+        Result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
 
-        std_result[void] Write(string path, string command_line)
-        std_result[void] Commit(string command_line)
+        Result[void] Write(string path, string command_line)
+        Result[void] Commit(string command_line)
 
         GraphTopology& topology()
 
@@ -136,8 +136,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CChunkedArray] GetNodeProperty(int i)
         shared_ptr[CChunkedArray] GetEdgeProperty(int i)
 
-        std_result[void] AddNodeProperties(shared_ptr[CTable])
-        std_result[void] AddEdgeProperties(shared_ptr[CTable])
+        Result[void] AddNodeProperties(shared_ptr[CTable])
+        Result[void] AddEdgeProperties(shared_ptr[CTable])
 
-        std_result[void] RemoveNodeProperty(int)
-        std_result[void] RemoveEdgeProperty(int)
+        Result[void] RemoveNodeProperty(int)
+        Result[void] RemoveEdgeProperty(int)

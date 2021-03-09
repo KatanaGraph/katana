@@ -4,8 +4,8 @@ from libcpp.string cimport string
 
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -67,10 +67,10 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
     uint32_t kDefaultNeighborSampleSize "katana::analytics::ConnectedComponentsPlan::kDefaultNeighborSampleSize"
     uint32_t kDefaultComponentSampleFrequency "katana::analytics::ConnectedComponentsPlan::kDefaultComponentSampleFrequency"
 
-    std_result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
-                                         _ConnectedComponentsPlan plan)
+    Result[void] ConnectedComponents(_PropertyGraph*pg, string output_property_name,
+                                     _ConnectedComponentsPlan plan)
 
-    std_result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
+    Result[void] ConnectedComponentsAssertValid(_PropertyGraph*pg, string output_property_name)
 
     cppclass _ConnectedComponentsStatistics "katana::analytics::ConnectedComponentsStatistics":
         uint64_t total_components
@@ -81,7 +81,7 @@ cdef extern from "katana/analytics/connected_components/connected_components.h" 
         void Print(ostream os)
 
         @staticmethod
-        std_result[_ConnectedComponentsStatistics] Compute(_PropertyGraph*pg, string output_property_name)
+        Result[_ConnectedComponentsStatistics] Compute(_PropertyGraph*pg, string output_property_name)
 
 
 class _ConnectedComponentsPlanAlgorithm(Enum):
@@ -179,7 +179,7 @@ def connected_components_assert_valid(PropertyGraph pg, str output_property_name
         handle_result_assert(ConnectedComponentsAssertValid(pg.underlying.get(), output_property_name_str))
 
 cdef _ConnectedComponentsStatistics handle_result_ConnectedComponentsStatistics(
-        std_result[_ConnectedComponentsStatistics] res) nogil except *:
+        Result[_ConnectedComponentsStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

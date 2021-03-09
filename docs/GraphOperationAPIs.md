@@ -222,9 +222,9 @@ cdef extern from "[operation header]" namespace "[namespace]" nogil:
     [type] kDefault[Arg] "[namespace]::[Operation]Plan::kDefault[Arg]"
     [...]
 
-    std_result[void] [Operation](_PropertyGraph* pg, [...], _[Operation]Plan plan)
+    Result[void] [Operation](_PropertyGraph* pg, [...], _[Operation]Plan plan)
 
-    std_result[void] [Operation]AssertValid(_PropertyGraph* pg, [...])
+    Result[void] [Operation]AssertValid(_PropertyGraph* pg, [...])
 
     cppclass _[Operation]Statistics  "[namespace]::[Operation]Statistics":
         [type] [statistic_name]
@@ -233,7 +233,7 @@ cdef extern from "[operation header]" namespace "[namespace]" nogil:
         void Print(ostream os)
 
         \@staticmethod
-        std_result[_[Operation]Statistics] Compute(_PropertyGraph* pg, [...])
+        Result[_[Operation]Statistics] Compute(_PropertyGraph* pg, [...])
 ```
 
 ### Wrap the Plan
@@ -331,7 +331,7 @@ Due to limitations of Cython we need to create a wrapper function that converts 
 In this case we call it `handle_result_[Operation]Statistics`.
 
 ```cython
-cdef _[Operation]Statistics handle_result_[Operation]Statistics(std_result[_[Operation]Statistics] res) nogil except *:
+cdef _[Operation]Statistics handle_result_[Operation]Statistics(Result[_[Operation]Statistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

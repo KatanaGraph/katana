@@ -1,10 +1,10 @@
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t
 
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostringstream, ostream
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -36,9 +36,9 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         @staticmethod
         _IndependentSetPlan EdgeTiledPriority()
 
-    std_result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, _IndependentSetPlan plan)
+    Result[void] IndependentSet(_PropertyGraph* pg, string output_property_name, _IndependentSetPlan plan)
 
-    std_result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
+    Result[void] IndependentSetAssertValid(_PropertyGraph* pg, string output_property_name)
 
     cppclass _IndependentSetStatistics "katana::analytics::IndependentSetStatistics":
         uint32_t cardinality
@@ -46,7 +46,7 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
         void Print(ostream os)
 
         @staticmethod
-        std_result[_IndependentSetStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_IndependentSetStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 class _IndependentSetPlanAlgorithm(Enum):
@@ -107,7 +107,7 @@ def independent_set_assert_valid(PropertyGraph pg, str output_property_name):
         handle_result_assert(IndependentSetAssertValid(pg.underlying.get(), output_property_name_cstr))
 
 
-cdef _IndependentSetStatistics handle_result_IndependentSetStatistics(std_result[_IndependentSetStatistics] res) nogil except *:
+cdef _IndependentSetStatistics handle_result_IndependentSetStatistics(Result[_IndependentSetStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

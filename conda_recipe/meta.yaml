@@ -72,6 +72,7 @@ outputs:
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
+        - libthrift
         - libxml2>=2.9.10
         - llvm>=8
         - ncurses>=6.1
@@ -87,6 +88,7 @@ outputs:
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
+        - libthrift
         - libxml2>=2.9.10
         - llvm>=8
         - ncurses>=6.1
@@ -101,6 +103,7 @@ outputs:
         - nlohmann_json
         - openblas
         - libcurl
+        - libthrift
         - backward-cpp
         - elfutils
     run_exports:

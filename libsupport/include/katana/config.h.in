@@ -73,11 +73,11 @@
 #endif
 #else
 // Not Windows
-#define KATANA_NO_EXPORT __attribute__((visibility("hidden")))
+#define KATANA_NO_EXPORT [[gnu::visibility("hidden")]]
 #if defined(KATANA_STATIC_LIB)
 #define KATANA_EXPORT
 #else
-#define KATANA_EXPORT __attribute__((visibility("default")))
+#define KATANA_EXPORT [[gnu::visibility("default")]]
 #endif
 #endif
 

@@ -65,7 +65,7 @@ using BetweennessCentralitySources =
     std::variant<std::vector<uint32_t>, uint32_t>;
 
 /// Use all sources instead of a subset.
-extern KATANA_EXPORT const BetweennessCentralitySources
+KATANA_EXPORT extern const BetweennessCentralitySources
     kBetweennessCentralityAllNodes;
 
 /**

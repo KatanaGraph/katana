@@ -221,7 +221,7 @@ katana::largeMallocBlocked(size_t bytes, unsigned numThreads) {
  * @returns The allocated memory along with a freer object
  */
 template <typename RangeArrayTy>
-LAptr
+KATANA_EXPORT LAptr
 katana::largeMallocSpecified(
     size_t bytes, uint32_t numThreads, RangeArrayTy& threadRanges,
     size_t elementSize) {
@@ -239,11 +239,9 @@ katana::largeMallocSpecified(
 }
 // Explicit template declarations since the template is defined in the .h
 // file
-template LAptr KATANA_EXPORT
-katana::largeMallocSpecified<std::vector<uint32_t>>(
+template LAptr katana::largeMallocSpecified<std::vector<uint32_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint32_t>& threadRanges,
     size_t elementSize);
-template LAptr KATANA_EXPORT
-katana::largeMallocSpecified<std::vector<uint64_t>>(
+template LAptr katana::largeMallocSpecified<std::vector<uint64_t>>(
     size_t bytes, uint32_t numThreads, std::vector<uint64_t>& threadRanges,
     size_t elementSize);

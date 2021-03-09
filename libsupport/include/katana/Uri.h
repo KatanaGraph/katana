@@ -52,11 +52,12 @@ public:
   /// XXXX is a random alpha numeric string
   Uri RandFile(std::string_view prefix) const;
 
-  KATANA_EXPORT friend Uri operator+(const Uri& lhs, char rhs);
+  friend Uri operator+(const Uri& lhs, char rhs);
 };
 
 KATANA_EXPORT bool operator==(const Uri& lhs, const Uri& rhs);
 KATANA_EXPORT bool operator!=(const Uri& lhs, const Uri& rhs);
+KATANA_EXPORT Uri operator+(const Uri& lhs, char rhs);
 
 }  // namespace katana
 

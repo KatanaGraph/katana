@@ -8,7 +8,7 @@ namespace katana::internal {
 
 /// ExtractArrays returns the array for each column of a table. It returns an
 /// error if there is more than one array for any column.
-Result<std::vector<arrow::Array*>> KATANA_EXPORT ExtractArrays(
+KATANA_EXPORT Result<std::vector<arrow::Array*>> ExtractArrays(
     const arrow::Table* table, const std::vector<std::string>& properties);
 
 template <typename PropTuple>

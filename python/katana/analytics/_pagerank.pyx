@@ -1,9 +1,9 @@
 from libcpp.string cimport string
 
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostringstream, ostream
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -36,9 +36,9 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         @staticmethod
         _PagerankPlan PushSynchronous(float tolerance, unsigned int max_iterations, float alpha)
 
-    std_result[void] Pagerank(_PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
+    Result[void] Pagerank(_PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
 
-    std_result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
+    Result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
 
     cppclass _PagerankStatistics "katana::analytics::PagerankStatistics":
         float max_rank
@@ -48,7 +48,7 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         void Print(ostream os)
 
         @staticmethod
-        std_result[_PagerankStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_PagerankStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 class _PagerankPlanAlgorithm(Enum):
@@ -125,7 +125,7 @@ def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
         handle_result_assert(PagerankAssertValid(pg.underlying.get(), output_property_name_cstr))
 
 
-cdef _PagerankStatistics handle_result_PagerankStatistics(std_result[_PagerankStatistics] res) nogil except *:
+cdef _PagerankStatistics handle_result_PagerankStatistics(Result[_PagerankStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

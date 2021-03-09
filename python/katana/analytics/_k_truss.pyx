@@ -1,10 +1,10 @@
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -28,10 +28,10 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         @staticmethod
         _KTrussPlan BspCoreThenTruss()
 
-    std_result[void] KTruss(_PropertyGraph* pg, uint32_t k_truss_number,string output_property_name, _KTrussPlan plan)
+    Result[void] KTruss(_PropertyGraph* pg, uint32_t k_truss_number,string output_property_name, _KTrussPlan plan)
 
-    std_result[void] KTrussAssertValid(_PropertyGraph* pg, uint32_t k_truss_number,
-                                      string output_property_name)
+    Result[void] KTrussAssertValid(_PropertyGraph* pg, uint32_t k_truss_number,
+                                   string output_property_name)
 
     cppclass _KTrussStatistics "katana::analytics::KTrussStatistics":
         uint64_t number_of_edges_left
@@ -39,8 +39,8 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
         void Print(ostream os)
 
         @staticmethod
-        std_result[_KTrussStatistics] Compute(_PropertyGraph* pg, uint32_t k_truss_number,
-                                             string output_property_name)
+        Result[_KTrussStatistics] Compute(_PropertyGraph* pg, uint32_t k_truss_number,
+                                          string output_property_name)
 
 
 class _KTrussPlanAlgorithm(Enum):
@@ -92,7 +92,7 @@ def k_truss_assert_valid(PropertyGraph pg, uint32_t k_truss_number, str output_p
         handle_result_assert(KTrussAssertValid(pg.underlying.get(), k_truss_number, output_property_name_str))
 
 
-cdef _KTrussStatistics handle_result_KTrussStatistics(std_result[_KTrussStatistics] res) nogil except *:
+cdef _KTrussStatistics handle_result_KTrussStatistics(Result[_KTrussStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

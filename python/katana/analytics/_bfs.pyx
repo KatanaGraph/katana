@@ -2,11 +2,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t, uint32_t
 from libcpp.string cimport string
 
-from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport Result, handle_result_void, handle_result_assert, raise_error_code
+from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -35,13 +35,13 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
 
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::BfsPlan::kDefaultEdgeTileSize"
 
-    std_result[void] Bfs(_PropertyGraph * pg,
-                         size_t start_node,
-                         string output_property_name,
-                         _BfsPlan algo)
+    Result[void] Bfs(_PropertyGraph * pg,
+                     size_t start_node,
+                     string output_property_name,
+                     _BfsPlan algo)
 
-    std_result[void] BfsAssertValid(_PropertyGraph* pg,
-                                 string property_name);
+    Result[void] BfsAssertValid(_PropertyGraph* pg,
+                                string property_name);
 
     cppclass _BfsStatistics "katana::analytics::BfsStatistics":
         uint32_t source_node;
@@ -54,8 +54,8 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
         void Print(ostream os)
 
         @staticmethod
-        std_result[_BfsStatistics] Compute(_PropertyGraph* pg,
-                                           string property_name);
+        Result[_BfsStatistics] Compute(_PropertyGraph* pg,
+                                       string property_name);
 
 class _BfsAlgorithm(Enum):
     AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
@@ -116,7 +116,7 @@ def bfs_assert_valid(PropertyGraph pg, str property_name):
     with nogil:
         handle_result_assert(BfsAssertValid(pg.underlying.get(), output_property_name_cstr))
 
-cdef _BfsStatistics handle_result_BfsStatistics(std_result[_BfsStatistics] res) nogil except *:
+cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

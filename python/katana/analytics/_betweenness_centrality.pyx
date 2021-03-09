@@ -1,11 +1,11 @@
-from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp.vector cimport vector
 from libc.stdint cimport uint32_t
 
-from katana.cpp.libstd.boost cimport handle_result_void, handle_result_assert, raise_error_code, std_result
-from katana.cpp.libstd.iostream cimport ostringstream, ostream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostringstream, ostream
+from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
@@ -33,7 +33,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
 
     BetweennessCentralitySources kBetweennessCentralityAllNodes;
 
-    std_result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
+    Result[void] BetweennessCentrality(_PropertyGraph* pg, string output_property_name, const BetweennessCentralitySources& sources, _BetweennessCentralityPlan plan)
 
     # std_result[void] BetweennessCentralityAssertValid(PropertyGraph* pg, string output_property_name)
 
@@ -45,7 +45,7 @@ cdef extern from "katana/analytics/betweenness_centrality/betweenness_centrality
         void Print(ostream os)
 
         @staticmethod
-        std_result[_BetweennessCentralityStatistics] Compute(_PropertyGraph* pg, string output_property_name)
+        Result[_BetweennessCentralityStatistics] Compute(_PropertyGraph* pg, string output_property_name)
 
 
 cdef extern from * nogil:
@@ -117,7 +117,7 @@ def betweenness_centrality(PropertyGraph pg, str output_property_name, sources =
 #         handle_result_assert(BetweennessCentralityAssertValid(pg.underlying.get(), output_property_name_cstr))
 
 
-cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(std_result[_BetweennessCentralityStatistics] res) nogil except *:
+cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

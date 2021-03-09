@@ -1,15 +1,15 @@
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t, uint32_t
-from libcpp.string cimport string
 from libcpp.memory cimport shared_ptr, static_pointer_cast
+from libcpp.string cimport string
 
 from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
 
-from katana.cpp.libstd.boost cimport std_result, handle_result_void, handle_result_assert, raise_error_code
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.property_graph cimport PropertyGraph
 from katana.analytics.plan cimport _Plan, Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport Result, handle_result_void, handle_result_assert, raise_error_code
+from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -18,7 +18,7 @@ cdef inline default_value(v, d):
         return d
     return v
 
-cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(std_result[shared_ptr[CUInt64Array]] res) \
+cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(Result[shared_ptr[CUInt64Array]] res) \
         nogil except *:
     if not res.has_value():
         with gil:
@@ -29,11 +29,11 @@ cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(std_result[share
 # "Algorithms" from PropertyGraph
 
 cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
-    std_result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(_PropertyGraph* pg);
+    Result[shared_ptr[CUInt64Array]] SortAllEdgesByDest(_PropertyGraph* pg);
 
     uint64_t FindEdgeSortedByDest(const _PropertyGraph* graph, uint32_t node, uint32_t node_to_find);
 
-    std_result[void] SortNodesByDegree(_PropertyGraph* pg);
+    Result[void] SortNodesByDegree(_PropertyGraph* pg);
 
 
 def sort_all_edges_by_dest(PropertyGraph pg):
@@ -75,10 +75,10 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         @staticmethod
         _JaccardPlan Unsorted()
 
-    std_result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
+    Result[void] Jaccard(_PropertyGraph* pg, size_t compare_node,
         string output_property_name, _JaccardPlan plan)
 
-    std_result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
+    Result[void] JaccardAssertValid(_PropertyGraph* pg, size_t compare_node,
         string output_property_name)
 
     cppclass _JaccardStatistics  "katana::analytics::JaccardStatistics":
@@ -88,7 +88,7 @@ cdef extern from "katana/analytics/jaccard/jaccard.h" namespace "katana::analyti
         void Print(ostream)
 
         @staticmethod
-        std_result[_JaccardStatistics] Compute(_PropertyGraph* pg, size_t compare_node,
+        Result[_JaccardStatistics] Compute(_PropertyGraph* pg, size_t compare_node,
             string output_property_name)
 
 
@@ -141,7 +141,7 @@ def jaccard_assert_valid(PropertyGraph pg, size_t compare_node, str output_prope
         handle_result_assert(JaccardAssertValid(pg.underlying.get(), compare_node, output_property_name_cstr))
 
 
-cdef _JaccardStatistics handle_result_JaccardStatistics(std_result[_JaccardStatistics] res) nogil except *:
+cdef _JaccardStatistics handle_result_JaccardStatistics(Result[_JaccardStatistics] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())

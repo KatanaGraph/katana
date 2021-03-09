@@ -29,8 +29,8 @@ display_running() {
     echo -ne "${CLEAR_LINE}\rrunning: ${1}"
 }
 
-display_running "check_format.sh"
-output_on_fail ${SCRIPT_DIR}/check_format_cpp.sh ${FIX} "${@}"
+display_running "check_cpp_format.sh"
+output_on_fail ${SCRIPT_DIR}/check_cpp_format.sh ${FIX} "${@}"
 display_running "check_go_lint.sh"
 output_on_fail ${SCRIPT_DIR}/check_go_lint.sh "${@}"
 display_running "check_python_format.sh"

@@ -48,8 +48,10 @@ public:
   std::vector<uint32_t> GenerateNeighbors(
       [[maybe_unused]] size_t node_id, size_t num_nodes) override {
     std::vector<uint32_t> r;
+    auto& gen = katana::GetGenerator();
+    std::uniform_int_distribution dist({}, num_nodes - 1);
     for (size_t i = 0; i < width_; ++i) {
-      size_t neighbor = katana::RandomUniformInt(num_nodes);
+      size_t neighbor = dist(gen);
       r.emplace_back(neighbor);
     }
     return r;

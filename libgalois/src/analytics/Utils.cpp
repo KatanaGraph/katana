@@ -24,8 +24,10 @@
 uint32_t
 katana::analytics::SourcePicker::PickNext() {
   uint32_t source;
+  auto& gen = GetGenerator();
+  std::uniform_int_distribution dist({}, graph.size() - 1);
   do {
-    source = RandomUniformInt(graph.size());
+    source = dist(gen);
   } while (graph.edges(source).empty());
   KATANA_LOG_DEBUG_ASSERT(graph.edges(source));
   return source;

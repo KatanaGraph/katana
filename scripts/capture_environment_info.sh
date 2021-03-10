@@ -9,12 +9,12 @@ mkdir -p "$TARGET_DIR"
 function dump() {
   NAME=$1
   echo -n "Captureing information: $NAME ..."
-  cat > $TMP_DIR/$NAME.sh
-  bash -x $TMP_DIR/$NAME.sh > "$TARGET_DIR/$NAME.log" 2>&1
+  cat > "$TMP_DIR"/"$NAME".sh
+  bash -x "$TMP_DIR"/"$NAME".sh > "$TARGET_DIR/$NAME.log" 2>&1
   echo "Done."
 }
 
-cp -a $0 "$TARGET_DIR"
+cp -a "$0" "$TARGET_DIR"
 
 dump provenance <<EOF
 uname -a
@@ -78,7 +78,7 @@ env
 EOF
 
 OUTPUT_FILENAME="$(hostname)_env_info.tar.gz"
-tar czf "$OUTPUT_FILENAME" -C $TMP_DIR "$(hostname)_logs"
+tar czf "$OUTPUT_FILENAME" -C "$TMP_DIR" "$(hostname)_logs"
 
 echo
 echo "Generated environment information archive: $OUTPUT_FILENAME"

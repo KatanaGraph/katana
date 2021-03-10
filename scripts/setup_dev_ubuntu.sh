@@ -19,7 +19,7 @@ done
 
 if ! $SUPPORTED_RELEASE; then
   {
-    echo -n "This script was intended for one of [${EXPECTED_RELEASES[@]}]."
+    echo -n "This script was intended for one of [${EXPECTED_RELEASES[*]}]."
     echo " You have ${RELEASE}. exiting!"
   } >&2
   exit 1

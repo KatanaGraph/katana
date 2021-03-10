@@ -9,5 +9,5 @@ case $1 in
 esac
 
 INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.9.2-${PLAT}.sh"
-mkdir -p "$(dirname $MINICONDA_FILE)"
+mkdir -p "$(dirname "$MINICONDA_FILE")"
 curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"

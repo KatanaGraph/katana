@@ -2,16 +2,17 @@
 
 set -eu
 
-GIT_ROOT=$(readlink -f $(dirname $0)/..)
+BASEDIR=$(dirname "$0")
+GIT_ROOT=$(readlink -f "$BASEDIR/..")
 
 if [ $# -eq 0 ]; then
-  echo "$(basename $0) <paths>" >&2
+  echo "$(basename "$0") <paths>" >&2
   exit 1
 fi
 
 LINT=${PYLINT:-pylint}
 ARGS="-j 0 --rcfile=${GIT_ROOT}/.pylintrc --suggestion-mode=n"
-ROOTS="$@"
+ROOTS=("$@")
 FAILED=
 PRUNE_LIST="external deploy docs build notebook-home .git"
 TEST_DIRS="${GIT_ROOT}/tests/ ${GIT_ROOT}/demosite/katanaclient/tests/"
@@ -29,7 +30,7 @@ emit_test_nolint() {
 
 is_test() {
   for d in ${TEST_DIRS}; do
-    if [[ "$(readlink -f $1)" =~ ^${d}.* ]]
+    if [[ "$(readlink -f "$1")" =~ ^${d}.* ]]
     then
       return 0
     fi
@@ -38,19 +39,22 @@ is_test() {
 }
 
 TEST_ARGS="${ARGS} $(emit_test_nolint)"
-while read -d '' filename; do
+while read -r -d '' filename; do
   if is_test "${filename}"
   then
     args="${TEST_ARGS}"
   else
     args="${ARGS}"
   fi
-  if ! ${LINT} ${args} "${filename}"
+  if ! ${LINT} "${args}" "${filename}"
   then
     echo "${filename} NOT OK"
     FAILED=1
   fi
-done < <(find ${ROOTS} $(emit_prunes) -name '*.py' -print0)
+done < <(
+  # shellcheck disable=SC2046
+  find "${ROOTS[@]}" $(emit_prunes) -name '*.py' -print0
+)
 
 if [ -n "${FAILED}" ]; then
   exit 1

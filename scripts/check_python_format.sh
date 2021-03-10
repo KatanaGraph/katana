@@ -4,7 +4,7 @@ PYFMT="${PYFMT:-black} --line-length 120"
 set -eu
 
 if [ $# -eq 0 ]; then
-  echo "$(basename $0) [-fix] <paths>" >&2
+  echo "$(basename "$0") [-fix] <paths>" >&2
   exit 1
 fi
 
@@ -14,17 +14,20 @@ if [ "$1" == "-fix" ]; then
   shift 1
 fi
 
-ROOTS="$@"
+ROOTS=("$@")
 PRUNE_LIST="deploy notebook-home .git build*"
 
 emit_prunes() {
   for p in $PRUNE_LIST; do echo "-name $p -prune -o"; done | xargs
 }
 
-FILES=$(find ${ROOTS} $(emit_prunes) -name '*.py' -print | xargs)
+# shellcheck disable=SC2046
+FILES=$(find "${ROOTS[@]}" $(emit_prunes) -name '*.py' -print0 | xargs -0)
 
 if [ -n "${FIX}" ]; then
-  ${PYFMT} ${FILES}
+  # shellcheck disable=SC2046
+  ${PYFMT} "$FILES"
 else
-  ${PYFMT} --check ${FILES}
+  # shellcheck disable=SC2046
+  ${PYFMT} --check "$FILES"
 fi

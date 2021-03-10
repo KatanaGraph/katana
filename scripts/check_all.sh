@@ -3,11 +3,11 @@
 set -eu
 
 if [ $# -eq 0 ]; then
-  echo "$(basename $0) [-fix] <paths>" >&2
+  echo "$(basename "$0") [-fix] <paths>" >&2
   exit 1
 fi
 
-SCRIPT_DIR=$(dirname $0)
+SCRIPT_DIR=$(dirname "$0")
 
 FIX=
 if [ "$1" == "-fix" ]; then
@@ -30,13 +30,13 @@ display_running() {
 }
 
 display_running "check_format.sh"
-output_on_fail ${SCRIPT_DIR}/check_format_cpp.sh ${FIX} "${@}"
+output_on_fail "${SCRIPT_DIR}"/check_format_cpp.sh ${FIX} "${@}"
 display_running "check_go_lint.sh"
-output_on_fail ${SCRIPT_DIR}/check_go_lint.sh "${@}"
+output_on_fail "${SCRIPT_DIR}"/check_go_lint.sh "${@}"
 display_running "check_python_format.sh"
-output_on_fail ${SCRIPT_DIR}/check_python_format.sh ${FIX} "${@}"
+output_on_fail "${SCRIPT_DIR}"/check_python_format.sh ${FIX} "${@}"
 #display_running "check_python_lint.sh"
 #output_on_fail pipenv run ${SCRIPT_DIR}/check_python_lint.sh "${@}"
 display_running "check_sh_format.sh"
-output_on_fail ${SCRIPT_DIR}/check_sh_format.sh ${FIX} "${@}"
+output_on_fail "${SCRIPT_DIR}"/check_sh_format.sh ${FIX} "${@}"
 echo -e "${CLEAR_LINE}Done"

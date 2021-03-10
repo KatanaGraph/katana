@@ -4,7 +4,7 @@ CLANG_FORMAT=${CLANG_FORMAT:-clang-format}
 set -e
 
 if [ $# -eq 0 ]; then
-  echo "$(basename $0) [-fix] <paths>" >&2
+  echo "$(basename "$0") [-fix] <paths>" >&2
   exit 1
 fi
 
@@ -14,7 +14,7 @@ if [ "$1" == "-fix" ]; then
   shift 1
 fi
 
-ROOTS="$@"
+ROOTS=("$@")
 FAILED=
 PRUNE_PATHS=${PRUNE_PATHS:-}
 PRUNE_NAMES="build*"
@@ -24,7 +24,7 @@ emit_prunes() {
     for p in ${PRUNE_NAMES}; do echo "-name ${p} -prune -o"; done; } | xargs
 }
 
-while read -d '' filename; do
+while read -r -d '' filename; do
   if [ -n "${FIX}" ]; then
     echo "fixing ${filename}"
     ${CLANG_FORMAT} -style=file -i "${filename}"
@@ -34,7 +34,14 @@ while read -d '' filename; do
       FAILED=1
     fi
   fi
-done < <(find ${ROOTS} $(emit_prunes) -name '*.cpp' -print0 -o -name '*.h' -print0 -o -name '*.cu' -print0 -o -name '*.cuh' -print0)
+done < <(
+# shellcheck disable=SC2046
+  find "${ROOTS[@]}" $(emit_prunes) \
+    -name '*.cpp' -print0 \
+    -o -name '*.h' -print0 \
+    -o -name '*.cu' -print0 \
+    -o -name '*.cuh' -print0
+)
 
 if [ -n "${FAILED}" ]; then
   exit 1

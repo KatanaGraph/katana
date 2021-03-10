@@ -4,7 +4,7 @@ GOFMT=${GOFMT:-gofmt}
 set -eu
 
 if [ $# -eq 0 ]; then
-  echo "$(basename $0) [-fix] <paths>" >&2
+  echo "$(basename "$0") [-fix] <paths>" >&2
   exit 1
 fi
 
@@ -14,7 +14,7 @@ if [ "$1" == "-fix" ]; then
   shift 1
 fi
 
-ROOTS="$@"
+ROOTS=("$@")
 PRUNE_LIST=".git"
 
 FAILED=
@@ -23,7 +23,8 @@ emit_prunes() {
   for p in ${PRUNE_LIST}; do echo "-name ${p} -prune -o"; done | xargs
 }
 
-FILES=$(find ${ROOTS} $(emit_prunes) -name '*.go' -print | xargs)
+# shellcheck disable=SC2046
+FILES=$(find "${ROOTS[@]}" $(emit_prunes) -name '*.go' -print0 | xargs -0)
 
 if [ -z "$FILES" ]; then
     echo "no files to fix!" >&2
@@ -31,9 +32,11 @@ if [ -z "$FILES" ]; then
 fi
 
 if [ -n "${FIX}" ]; then
-  ${GOFMT} -s -w ${FILES}
+  # shellcheck disable=SC2046
+  ${GOFMT} -s -w "$FILES"
 else
-  FAILED=$(${GOFMT} -s -l ${FILES})
+  # shellcheck disable=SC2046
+  FAILED=$($GOFMT -s -l "$FILES")
 fi
 
 if [ -n "${FAILED}" ]; then

@@ -4,7 +4,7 @@
 
 set -eu
 
-REPO_ROOT=$(cd "$(dirname $0)"/..; pwd)
+REPO_ROOT=$(cd "$(dirname "$0")"/..; pwd)
 
 bash -x "${REPO_ROOT}/scripts/setup_macos.sh"
 

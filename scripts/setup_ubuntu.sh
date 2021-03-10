@@ -96,9 +96,9 @@ GIT=git
 LIBRARIES="libxml2-dev llvm-10-dev"
 
 apt install -yq --allow-downgrades \
-  $DEVELOPER_TOOLS \
+  "$DEVELOPER_TOOLS" \
   $GIT \
-  $LIBRARIES
+  "$LIBRARIES"
 
 # Toolchain variants
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then

@@ -283,6 +283,8 @@ KATANA_EXPORT std::shared_ptr<arrow::Array> Unchunk(
     const std::shared_ptr<arrow::ChunkedArray>& original);
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
+KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> EmptyChunkedArray(
+    const std::shared_ptr<arrow::DataType>& type, int64_t length);
 
 }  // namespace katana
 

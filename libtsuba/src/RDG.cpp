@@ -7,9 +7,6 @@
 #include <regex>
 #include <unordered_set>
 
-#include <arrow/array/array_binary.h>
-#include <arrow/array/builder_binary.h>
-#include <arrow/builder.h>
 #include <arrow/chunked_array.h>
 #include <arrow/filesystem/api.h>
 #include <arrow/memory_pool.h>
@@ -26,6 +23,7 @@
 #include "GlobalState.h"
 #include "RDGCore.h"
 #include "RDGHandleImpl.h"
+#include "katana/ArrowInterchange.h"
 #include "katana/Backtrace.h"
 #include "katana/JSON.h"
 #include "katana/Logging.h"
@@ -689,9 +687,15 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   return core_->RegisterTopologyFile(new_top.BaseName());
 }
 
-tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {}
+tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
+  // Create an empty array, accessed by Distribution during loading
+  local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+}
 
-tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {}
+tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {
+  // Create an empty array, accessed by Distribution during loading
+  local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+}
 
 tsuba::RDG::~RDG() = default;
 tsuba::RDG::RDG(tsuba::RDG&& other) noexcept = default;

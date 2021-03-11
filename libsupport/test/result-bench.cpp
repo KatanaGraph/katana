@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 #include <random>
 #include <system_error>
 #include <thread>
@@ -29,7 +30,9 @@ MakeArguments(benchmark::internal::Benchmark* b) {
 
 struct Random {
   Random() {
-    int64_t max = katana::RandomUniformInt(std::numeric_limits<int64_t>::max());
+    std::uniform_int_distribution<int64_t> dist(
+        {}, std::numeric_limits<int64_t>::max());
+    int64_t max = dist(katana::GetGenerator());
     seed = max;
   }
 

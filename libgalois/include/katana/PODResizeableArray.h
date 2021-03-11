@@ -45,6 +45,8 @@ class PODResizeableArray {
   size_t capacity_;
   size_t size_;
 
+  constexpr static size_t kMinNonZeroCapacity = 8;
+
 public:
   typedef _Tp value_type;
   typedef size_t size_type;
@@ -139,11 +141,11 @@ public:
         capacity_ = 0;
       }
     } else if (size_ < capacity_) {
+      capacity_ = std::max(size_, kMinNonZeroCapacity);
       _Tp* new_data_ = static_cast<_Tp*>(
-          realloc(reinterpret_cast<void*>(data_), size_ * sizeof(_Tp)));
+          realloc(reinterpret_cast<void*>(data_), capacity_ * sizeof(_Tp)));
       KATANA_LOG_DEBUG_ASSERT(new_data_);
       data_ = new_data_;
-      capacity_ = size_;
     }
   }
 
@@ -156,7 +158,7 @@ public:
     shrink_to_fit();
 
     // reset capacity_ because its previous value need not be a power-of-2
-    capacity_ = 1;
+    capacity_ = kMinNonZeroCapacity;
     // increase capacity in powers-of-2
     while (capacity_ < n) {
       capacity_ <<= 1;

@@ -43,6 +43,20 @@ function(_symlink_tree TARGET_NAME SOURCE DEST)
       get_filename_component(parent ${SOURCE} DIRECTORY)
     endif()
 
+    get_filename_component(source_suffix ${SOURCE} NAME)
+    set(full_dest "${DEST}/${source_suffix}")
+    if (EXISTS ${full_dest})
+      file(GLOB_RECURSE symlinks
+           LIST_DIRECTORIES false
+           ${full_dest}/*)
+      foreach(f IN LISTS symlinks full_dest)
+        if (IS_SYMLINK ${f})
+          file(REMOVE ${f})
+        else()
+        endif()
+      endforeach()
+    endif()
+
     foreach(f IN LISTS files)
       get_filename_component(directory ${DEST}/${f} DIRECTORY)
       file(MAKE_DIRECTORY ${directory})
@@ -56,7 +70,7 @@ function(_symlink_tree TARGET_NAME SOURCE DEST)
       ${TARGET_NAME}
       COMMAND ${CMAKE_COMMAND} -DSOURCE="${SOURCE}" -DDEST="${DEST}" -P ${TARGET_NAME}.cmake
       BYPRODUCTS ${files_full}
-      COMMENT "Symlinking ${SOURCE} into ${DEST}"
+      COMMENT "Updating symlinks to ${SOURCE} from ${DEST}"
   )
 endfunction()
 
@@ -268,6 +282,7 @@ function(add_python_setuptools_docs TARGET_NAME)
         ${TARGET_NAME}_docs
         ALL
         COMMAND ${PYTHON_SETUP_COMMAND} build_sphinx
+        COMMAND echo "${TARGET_NAME} documentation in file://${PYTHON_BINARY_DIR}/build/sphinx/html/index.html"
         BYPRODUCTS ${PYTHON_BINARY_DIR}/build/sphinx
         COMMENT "Building ${TARGET_NAME} sphinx documentation in symlink tree ${PYTHON_BINARY_DIR}"
     )

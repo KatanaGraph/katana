@@ -1,3 +1,24 @@
+"""
+Independent Set
+---------------
+
+.. autoclass:: katana.analytics.IndependentSetPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._independent_set._IndependentSetPlanAlgorithm
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.independent_set
+
+.. autoclass:: katana.analytics.IndependentSetStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.independent_set_assert_valid
+"""
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t
 
@@ -57,6 +78,11 @@ class _IndependentSetPlanAlgorithm(Enum):
 
 
 cdef class IndependentSetPlan(Plan):
+    """
+    A computational :ref:`Plan` for Independent Set.
+
+    Static methods construct IndependentSetPlans.
+    """
     cdef:
         _IndependentSetPlan underlying_
 
@@ -94,6 +120,19 @@ cdef class IndependentSetPlan(Plan):
 
 def independent_set(PropertyGraph pg, str output_property_name,
              IndependentSetPlan plan = IndependentSetPlan()):
+    """
+    Find a maximal (not the maximum) independent set in the graph and create an indicator property that is true for
+    elements of the independent set. The graph must be symmetric. The property named output_property_name is created by
+    this function and may not exist before the call. The created property has type uint8_t.
+
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type output_property_name: str
+    :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :type plan: IndependentSetPlan
+    :param plan: The execution plan to use.
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -101,6 +140,12 @@ def independent_set(PropertyGraph pg, str output_property_name,
 
 
 def independent_set_assert_valid(PropertyGraph pg, str output_property_name):
+    """
+    Raise an exception if the Independent Set results in `pg` are invalid. This is not an exhaustive check, just a
+    sanity check.
+
+    :raises: AssertionError
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -115,6 +160,9 @@ cdef _IndependentSetStatistics handle_result_IndependentSetStatistics(Result[_In
 
 
 cdef class IndependentSetStatistics:
+    """
+    Compute the :ref:`statistics` of an Independent Set.
+    """
     cdef _IndependentSetStatistics underlying
 
     def __init__(self, PropertyGraph pg, str output_property_name):
@@ -126,6 +174,9 @@ cdef class IndependentSetStatistics:
 
     @property
     def cardinality(self) -> int:
+        """
+        The number of nodes in the independent set.
+        """
         return self.underlying.cardinality
 
     def __str__(self) -> str:

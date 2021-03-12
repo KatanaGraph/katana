@@ -10,3 +10,7 @@ cdef extern from "katana/analytics/Plan.h" namespace "katana::analytics" nogil:
 
 cdef class Plan:
     cdef _Plan* underlying(self) except NULL
+
+
+cdef class Statistics:
+    pass

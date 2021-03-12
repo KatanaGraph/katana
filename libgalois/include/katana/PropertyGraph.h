@@ -474,12 +474,9 @@ public:
 };
 
 /// SortAllEdgesByDest sorts edges for each node by destination
-/// ids (ascending order).
+/// IDs (ascending order).
 ///
-/// This function modifies the PropertyGraph topology by doing
-/// in-place sorting of the edgelists of each nodes in the
-/// ascending order.
-/// This also returns the permutation vector (mapping from old
+/// Returns the permutation vector (mapping from old
 /// indices to the new indices) which results due to the sorting.
 KATANA_EXPORT Result<std::shared_ptr<arrow::UInt64Array>> SortAllEdgesByDest(
     PropertyGraph* pg);
@@ -493,12 +490,8 @@ KATANA_EXPORT GraphTopology::Edge FindEdgeSortedByDest(
     const PropertyGraph* graph, GraphTopology::Node node,
     GraphTopology::Node node_to_find);
 
-/// SortNodesByDegree relables node ids by sorting in the descending
-/// order by node degree
-///
-/// This function modifies the PropertyGraph topology by in-place
-/// relabeling and sorting the node ids by their degree in the
-/// descending order.
+/// Relabel all nodes in the graph by sorting in the descending
+/// order by node degree.
 KATANA_EXPORT Result<void> SortNodesByDegree(PropertyGraph* pg);
 
 /// Creates in-memory symmetric (or undirected) graph.

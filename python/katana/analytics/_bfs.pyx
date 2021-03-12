@@ -1,3 +1,23 @@
+"""
+Breadth-first Search
+--------------------
+
+.. autoclass:: katana.analytics.BfsPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._bfs._BfsAlgorithm
+
+.. autofunction:: katana.analytics.bfs
+
+.. autoclass:: katana.analytics.BfsStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.bfs_assert_valid
+"""
+
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t, uint32_t
 from libcpp.string cimport string
@@ -58,13 +78,34 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
                                        string property_name);
 
 class _BfsAlgorithm(Enum):
-    AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
+    """
+    .. py:attribute:: Asynchronous
+
+    .. py:attribute:: AsynchronousTile
+        Asynchronous tiled
+
+    .. py:attribute:: Synchronous
+
+        Bulk-synchronous
+
+    .. py:attribute:: SynchronousTile
+
+        Bulk-synchronous tiled
+
+    """
     Asynchronous = _BfsPlan.Algorithm.kAsynchronous
-    SynchronousTile = _BfsPlan.Algorithm.kSynchronousTile
+    AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
     Synchronous = _BfsPlan.Algorithm.kSynchronous
+    SynchronousTile = _BfsPlan.Algorithm.kSynchronousTile
 
 
 cdef class BfsPlan(Plan):
+    """
+    A computational :ref:`Plan` for Breadth-First Search.
+
+    Static method construct BfsPlans using specific algorithms with their required parameters. All parameters are
+    optional and have reasonable defaults.
+    """
     cdef:
         _BfsPlan underlying_
 
@@ -85,6 +126,9 @@ cdef class BfsPlan(Plan):
 
     @property
     def edge_tile_size(self) -> int:
+        """
+        The size of tiles used for edge tiled algorithms.
+        """
         return self.underlying_.edge_tile_size()
 
     @staticmethod
@@ -105,12 +149,31 @@ cdef class BfsPlan(Plan):
 
 
 def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
+    """
+    Compute the Breadth-First Search levels on `pg` using `start_node` as the source. The computed levels are
+    written to the property `output_property_name`.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type start_node: Node ID
+    :param start_node: The source node.
+    :type output_property_name: str
+    :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :type plan: BfsPlan
+    :param plan: The execution plan to use.
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
         handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying_))
 
 def bfs_assert_valid(PropertyGraph pg, str property_name):
+    """
+    Raise an exception if the BFS results in `pg` appear to be incorrect. This is not an
+    exhaustive check, just a sanity check.
+
+    :raises: AssertionError
+    """
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -123,6 +186,9 @@ cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogi
     return res.value()
 
 cdef class BfsStatistics:
+    """
+    Compute the :ref:`statistics` of an BFS computation on a graph.
+    """
     cdef _BfsStatistics underlying
 
     def __init__(self, PropertyGraph pg, str property_name):
@@ -133,22 +199,45 @@ cdef class BfsStatistics:
 
     @property
     def source_node(self):
+        """
+        The source node ID. The only node with level 0.
+        """
         return self.underlying.source_node
 
     @property
     def max_distance(self):
+        """
+        The maximum level.
+
+        :rtype: int
+        """
         return self.underlying.max_distance
 
     @property
     def total_distance(self):
+        """
+        The sum of all levels.
+
+        :rtype: int
+        """
         return self.underlying.total_distance
 
     @property
     def n_reached_nodes(self):
+        """
+        The number of nodes reachable from the source.
+
+        :rtype: int
+        """
         return self.underlying.n_reached_nodes
 
     @property
     def average_distance(self):
+        """
+        The average level.
+
+        :rtype: float
+        """
         return self.underlying.average_distance()
 
     def __str__(self) -> str:

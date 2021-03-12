@@ -1,3 +1,24 @@
+"""
+k-Truss
+-------
+
+The k-Truss is a maximal connected subgraph in which all edges are part of at least (k-2) triangles.
+
+.. autoclass:: katana.analytics.KTrussPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._k_truss._KTrussPlanAlgorithm
+
+.. autofunction:: katana.analytics.k_truss
+
+.. autoclass:: katana.analytics.KTrussStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.k_truss_assert_valid
+"""
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
@@ -44,12 +65,31 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
 
 
 class _KTrussPlanAlgorithm(Enum):
+    """
+    .. py:attribute:: Bsp
+
+        Bulk-synchronous parallel algorithm.
+
+    .. py:attribute:: BspJacobi
+
+        Bulk-synchronous parallel with separated edge removal algorithm.
+
+    .. py:attribute:: BspCoreThenTruss
+
+        Compute k-1 core and then k-truss algorithm.
+
+    """
     Bsp = _KTrussPlan.Algorithm.kBsp
     BspJacobi = _KTrussPlan.Algorithm.kBspJacobi
     BspCoreThenTruss = _KTrussPlan.Algorithm.kBspCoreThenTruss
 
 
 cdef class KTrussPlan(Plan):
+    """
+    A computational :ref:`Plan` for k-truss.
+
+    Static methods construct KTrussPlans.
+    """
     cdef:
         _KTrussPlan underlying_
 
@@ -80,6 +120,18 @@ cdef class KTrussPlan(Plan):
 
 
 def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name, KTrussPlan plan = KTrussPlan()) -> int:
+    """
+    Compute the k-truss for pg. `pg` must be symmetric.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :param k_truss_number: k. The number of triangles that each edge must be part of.
+    :type output_property_name: str
+    :param output_property_name: The output edge property specifying if that edge is in the k-truss.
+        This property must not already exist.
+    :type plan: KTrussPlan
+    :param plan: The execution plan to use.
+    """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
         v = handle_result_void(KTruss(pg.underlying.get(),k_truss_number,output_property_name_str, plan.underlying_))
@@ -87,6 +139,11 @@ def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name,
 
 
 def k_truss_assert_valid(PropertyGraph pg, uint32_t k_truss_number, str output_property_name):
+    """
+    Raise an exception if the k-truss results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
+
+    :raises: AssertionError
+    """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
         handle_result_assert(KTrussAssertValid(pg.underlying.get(), k_truss_number, output_property_name_str))
@@ -100,6 +157,9 @@ cdef _KTrussStatistics handle_result_KTrussStatistics(Result[_KTrussStatistics] 
 
 
 cdef class KTrussStatistics:
+    """
+    Compute the :ref:`statistics` of a k-truss.
+    """
     cdef _KTrussStatistics underlying
 
     def __init__(self, PropertyGraph pg, uint32_t k_truss_number, str output_property_name):

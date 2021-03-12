@@ -7,6 +7,7 @@ Galois Parallel Programming System
 :Version: |release|
 
 .. toctree::
+   katana.analytics
    katana.atomic
    katana.datastructures
    katana.loops

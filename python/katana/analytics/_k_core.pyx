@@ -1,3 +1,22 @@
+"""
+k-Core
+---------------
+
+.. autoclass:: katana.analytics.KCorePlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._k_core._KCorePlanAlgorithm
+
+.. autofunction:: katana.analytics.k_core
+
+.. autoclass:: katana.analytics.KCoreStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.k_core_assert_valid
+"""
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
@@ -40,11 +59,22 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
 
 
 class _KCorePlanAlgorithm(Enum):
+    """
+    Synchronous
+        Bulk-synchronous
+    Asynchronous
+        Asynchronous
+    """
     Synchronous = _KCorePlan.Algorithm.kSynchronous
     Asynchronous = _KCorePlan.Algorithm.kAsynchronous
 
 
 cdef class KCorePlan(Plan):
+    """
+    A computational :ref:`Plan` for k-Core.
+
+    Static methods construct KCorePlans.
+    """
     cdef:
         _KCorePlan underlying_
 
@@ -72,6 +102,18 @@ cdef class KCorePlan(Plan):
 
 
 def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, KCorePlan plan = KCorePlan()) -> int:
+    """
+    Compute nodes which are in the k-core of pg. The pg must be symmetric.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :param k_core_number: k. The minimum degree of nodes in the resulting core.
+    :type output_property_name: str
+    :param output_property_name: The output property holding an indicator 1 if the node is in the k-core, 0 otherwise.
+        This property must not already exist.
+    :type plan: KCorePlan
+    :param plan: The execution plan to use.
+    """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
         v = handle_result_void(KCore(pg.underlying.get(), k_core_number, output_property_name_str, plan.underlying_))
@@ -79,6 +121,11 @@ def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, K
 
 
 def k_core_assert_valid(PropertyGraph pg, uint32_t k_core_number, str output_property_name):
+    """
+    Raise an exception if the k-core results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
+
+    :raises: AssertionError
+    """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
         handle_result_assert(KCoreAssertValid(pg.underlying.get(), k_core_number, output_property_name_str))
@@ -92,6 +139,9 @@ cdef _KCoreStatistics handle_result_KCoreStatistics(Result[_KCoreStatistics] res
 
 
 cdef class KCoreStatistics:
+    """
+    Compute the :ref:`statistics` of a k-Core result.
+    """
     cdef _KCoreStatistics underlying
 
     def __init__(self, PropertyGraph pg, uint32_t k_core_number, str output_property_name):

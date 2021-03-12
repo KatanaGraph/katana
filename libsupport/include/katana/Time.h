@@ -16,12 +16,13 @@ Now() {
   return Clock::now();
 }
 
-uint64_t
+inline uint64_t
 UsSince(const TimePoint& point) {
   using Us = std::chrono::microseconds;
   return std::chrono::duration_cast<Us>(Now() - point).count();
 }
-uint64_t
+
+inline uint64_t
 UsBetween(const TimePoint& before, const TimePoint& after) {
   using Us = std::chrono::microseconds;
   return std::chrono::duration_cast<Us>(after - before).count();

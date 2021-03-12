@@ -117,6 +117,13 @@ public:
   ErrorInfo(ErrorEnum && err)
       : ErrorInfo(make_error_code(std::forward<ErrorEnum>(err))) {}
 
+  /// Construct an ErrorInfo with a context message that overrides
+  /// ec.message()
+  ErrorInfo(const std::error_code& ec, const std::string& context)
+      : ErrorInfo(ec) {
+    Prepend(context.c_str(), context.c_str() + context.size());
+  }
+
   const std::error_code& error_code() const { return error_code_; }
 
   /// MakeWithSourceInfo makes an ErrorInfo from a root error with additional
@@ -134,7 +141,7 @@ public:
       base_name++;
     }
 
-    fmt::format_to(out, " at ({}:{})", base_name, line_no);
+    fmt::format_to(out, " ({}:{})", base_name, line_no);
 
     ErrorInfo ei(ec);
     ei.Prepend(out.begin(), out.end());
@@ -143,10 +150,10 @@ public:
   }
 
   template <typename F, typename... Args>
-  ErrorInfo WithContext(F fmt_string, Args && ... args) {
-    fmt::memory_buffer out;
-    fmt::format_to(out, fmt_string, std::forward<Args>(args)...);
-    Prepend(out.begin(), out.end());
+  ErrorInfo WithContext(F && fmt_string, Args && ... args) {
+    SpillMessage();
+
+    PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
 
     return *this;
   }
@@ -157,9 +164,13 @@ public:
           std::is_error_condition_enum_v<ErrorEnum>,
       ErrorInfo>
   WithContext(ErrorEnum err, F && fmt_string, Args && ... args) {
-    Reclassify(make_error_code(err));
-    return WithContext(
-        std::forward<F>(fmt_string), std::forward<Args>(args)...);
+    SpillMessage();
+
+    error_code_ = make_error_code(err);
+
+    PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
+
+    return *this;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const ErrorInfo& ei) {
@@ -169,11 +180,18 @@ public:
   std::ostream& Write(std::ostream & out) const;
 
 private:
+  template <typename F, typename... Args>
+  void PrependFmt(F fmt_string, Args && ... args) {
+    fmt::memory_buffer out;
+    fmt::format_to(out, fmt_string, std::forward<Args>(args)...);
+    Prepend(out.begin(), out.end());
+  }
+
   void Prepend(const char* begin, const char* end);
 
-  /// Reclassify updates the error code and the context to reflect an original
-  /// error being classified as another error.
-  void Reclassify(const std::error_code& ec);
+  /// SpillMessage writes the current error_code message to the error
+  /// context if the error context is empty
+  void SpillMessage();
 
   std::error_code error_code_;
   std::pair<Context*, int> context_{};

@@ -18,6 +18,13 @@ import generate_from_jinja
 __all__ = ["setup"]
 
 
+def in_build_call():
+    # This is a hack, but WOW setuptools is terrible.
+    # We need to check if we are building because otherwise every call to setup.py (even for metadata not build) will
+    # cause cython files to be processed. Often the processing happens in tree spewing build files all over the tree.
+    return any(a.startswith("build") or a.startswith("install") for a in sys.argv)
+
+
 def split_cmake_list(s):
     return list(filter(None, s.split(";")))
 
@@ -97,6 +104,10 @@ def collect_cython_files(source_root):
     pxd_files = find_files(source_root, "", ".pxd")
     pyx_files = find_files(source_root, "", ".pyx")
 
+    if not in_build_call():
+        print("WARNING: This is not a build call so we are not generating Cython files.", file=sys.stderr)
+        return [], []
+
     for f in pyx_jinja_files + pxd_jinja_files:
         output_file: Path = process_jinja_file(f, source_root.parent)
         if output_file.suffix == ".pyx":
@@ -165,10 +176,12 @@ def cythonize(module_list, *, source_root, **kwargs):
     kwargs["include_path"].append(str(source_root))
     kwargs["include_path"].append(numpy.get_include())
 
-    # with warnings.catch_warnings():
-    # warnings.filterwarnings("ignore", message="build_dir has no effect for absolute source paths")
     return Cython.Build.cythonize(
-        modules, nthreads=int(os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL", "0")), language_level="3", **kwargs
+        modules,
+        nthreads=int(os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL", "0")),
+        language_level="3",
+        compiler_directives={"binding": True},
+        **kwargs,
     )
 
 
@@ -195,10 +208,11 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
         command_options={
             "build_sphinx": {
                 "project": ("setup.py", doc_package_name),
-                "version": ("setup.py", get_katana_version()),
-                "release": ("setup.py", get_katana_version()),
-                "copyright": ("setup.py", get_katana_copyright_year()),
-                "source_dir": ("setup.py", str(source_dir / "docs")),
+                "version": ("katana_setup.py", get_katana_version()),
+                "release": ("katana_setup.py", get_katana_version()),
+                "copyright": ("katana_setup.py", get_katana_copyright_year()),
+                "source_dir": ("katana_setup.py", str(source_dir / "docs")),
+                "all_files": ("katana_setup.py", True),
             }
         },
     )

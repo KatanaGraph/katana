@@ -20,6 +20,10 @@ public:
     kPushAsynchronous,
   };
 
+  static constexpr double kDefaultTolerance = 1.0e-3;
+  static const int kDefaultMaxIterations = 1000;
+  static constexpr double kDefaultAlpha = 0.85;
+
 private:
   Algorithm algorithm_;
   float tolerance_;
@@ -39,7 +43,10 @@ public:
   constexpr static const unsigned kChunkSize = 16U;
 
   /// Automatically choose an algorithm.
-  PagerankPlan() : PagerankPlan(kCPU, kPushAsynchronous, 1.0e-3, 0, 0.85) {}
+  PagerankPlan()
+      : PagerankPlan(
+            kCPU, kPushAsynchronous, kDefaultTolerance, kDefaultMaxIterations,
+            kDefaultAlpha) {}
 
   PagerankPlan& operator=(const PagerankPlan&) = default;
 
@@ -53,8 +60,9 @@ public:
   ///
   /// The graph must be transposed to use this algorithm.
   static PagerankPlan PullTopological(
-      float tolerance = 1.0e-3, unsigned int max_iterations = 1000,
-      float alpha = 0.85) {
+      float tolerance = kDefaultTolerance,
+      unsigned int max_iterations = kDefaultMaxIterations,
+      float alpha = kDefaultAlpha) {
     return {kCPU, kPullTopological, tolerance, max_iterations, alpha};
   }
 
@@ -62,8 +70,9 @@ public:
   ///
   /// The graph must be transposed to use this algorithm.
   static PagerankPlan PullResidual(
-      float tolerance = 1.0e-3, unsigned int max_iterations = 1000,
-      float alpha = 0.85) {
+      float tolerance = kDefaultTolerance,
+      unsigned int max_iterations = kDefaultMaxIterations,
+      float alpha = kDefaultAlpha) {
     return {kCPU, kPullResidual, tolerance, max_iterations, alpha};
   }
 
@@ -76,7 +85,7 @@ public:
   /// system issues, and lessons learned. In: European Conference on Parallel
   /// Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.
   static PagerankPlan PushAsynchronous(
-      float tolerance = 1.0e-3, float alpha = 0.85) {
+      float tolerance = kDefaultTolerance, float alpha = kDefaultAlpha) {
     return {kCPU, kPushAsynchronous, tolerance, 0, alpha};
   }
 
@@ -89,8 +98,9 @@ public:
   /// system issues, and lessons learned. In: European Conference on Parallel
   /// Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.
   static PagerankPlan PushSynchronous(
-      float tolerance = 1.0e-3, unsigned int max_iterations = 1000,
-      float alpha = 0.85) {
+      float tolerance = kDefaultTolerance,
+      unsigned int max_iterations = kDefaultMaxIterations,
+      float alpha = kDefaultAlpha) {
     return {kCPU, kPushSynchronous, tolerance, max_iterations, alpha};
   }
 };

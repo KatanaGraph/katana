@@ -1,10 +1,29 @@
+"""
+Single-Source Shortest Path
+---------------------------
+
+.. autoclass:: katana.analytics.SsspPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._sssp._SsspAlgorithm
+
+.. autofunction:: katana.analytics.sssp
+
+.. autoclass:: katana.analytics.SsspStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.sssp_assert_valid
+"""
 from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t
 from libcpp.string cimport string
 
-from katana.analytics.plan cimport _Plan, Plan
+from katana.analytics.plan cimport _Plan, Plan, Statistics
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_void, handle_result_assert, raise_error_code
@@ -74,6 +93,30 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
 
 
 class _SsspAlgorithm(Enum):
+    """
+    The concrete algorithms available for SSSP.
+
+    DeltaTile
+        Delta stepping tiled
+    DeltaStep
+        Delta stepping
+    DeltaStepBarrier
+        Delta stepping with barrier
+    SerialDeltaTile
+        Serial delta stepping tiled
+    SerialDelta
+        Serial delta stepping
+    DijkstraTile
+        Dijkstra's algorithm tiled
+    Dijkstra
+        Dijkstra's algorithm
+    Topo
+        Topological
+    TopoTile
+        Topological tiled
+    Automatic
+        Choose an algorithm using heuristics
+    """
     DeltaTile = _SsspPlan.Algorithm.kDeltaTile
     DeltaStep = _SsspPlan.Algorithm.kDeltaStep
     DeltaStepBarrier = _SsspPlan.Algorithm.kDeltaStepBarrier
@@ -87,6 +130,13 @@ class _SsspAlgorithm(Enum):
 
 
 cdef class SsspPlan(Plan):
+    """
+    A computational :ref:`Plan` for Single-Source Shortest Path.
+
+    Static method construct SsspPlans using specific algorithms with their required parameters. All parameters are
+    optional and have reasonable defaults.
+    """
+
     cdef:
         _SsspPlan underlying_
 
@@ -99,7 +149,10 @@ cdef class SsspPlan(Plan):
         f.underlying_ = u
         return f
 
-    def __init__(self, graph = None):
+    def __init__(self, graph: PropertyGraph = None):
+        """
+        Construct a plan optimized for `graph` using heuristics, or using default parameter values.
+        """
         if graph is None:
             self.underlying_ = _SsspPlan()
         else:
@@ -111,12 +164,21 @@ cdef class SsspPlan(Plan):
 
     @property
     def algorithm(self) -> _SsspAlgorithm:
+        """
+        The selected algorithm.
+        """
         return _SsspAlgorithm(self.underlying_.algorithm())
     @property
     def delta(self) -> int:
+        """
+        The exponent of the delta step size (2 based). A delta of 4 will produce a real delta step size of 16.
+        """
         return self.underlying_.delta()
     @property
     def edge_tile_size(self) -> int:
+        """
+        The edge tile size.
+        """
         return self.underlying_.edge_tile_size()
 
     @staticmethod
@@ -150,6 +212,21 @@ cdef class SsspPlan(Plan):
 
 def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name,
          SsspPlan plan = SsspPlan()):
+    """
+    Compute the Single-Source Shortest Path on `pg` using `start_node` as the source. The computed path lengths are
+    written to the property `output_property_name`.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type start_node: Node ID
+    :param start_node: The source node.
+    :type edge_weight_property_name: str
+    :param edge_weight_property_name: The input property containing edge weights.
+    :type output_property_name: str
+    :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :type plan: SsspPlan
+    :param plan: The execution plan to use. Defaults to heuristically selecting the plan.
+    """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
@@ -157,6 +234,12 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
                                 output_property_name_str, plan.underlying_))
 
 def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
+    """
+    Raise an exception if the SSSP results in `pg` with the given parameters appear to be incorrect. This is not an
+    exhaustive check, just a sanity check.
+
+    :raises: AssertionError
+    """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
@@ -170,29 +253,56 @@ cdef _SsspStatistics handle_result_SsspStatistics(Result[_SsspStatistics] res) n
     return res.value()
 
 
-cdef class SsspStatistics:
+cdef class SsspStatistics(Statistics):
+    """
+    Compute the :ref:`statistics` of an SSSP computation on a graph.
+    """
     cdef _SsspStatistics underlying
 
     def __init__(self, PropertyGraph pg, str output_property_name):
+        """
+        :param pg: The graph on which `sssp` was called.
+        :param output_property_name: The output property name passed to `sssp`.
+        """
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
             self.underlying = handle_result_SsspStatistics(_SsspStatistics.Compute(
                 pg.underlying.get(), output_property_name_str))
 
     @property
-    def max_distance(self):
+    def max_distance(self) -> float:
+        """
+        The maximum path length.
+
+        :rtype: float
+        """
         return self.underlying.max_distance
 
     @property
-    def total_distance(self):
+    def total_distance(self) -> float:
+        """
+        The total combined length of all paths.
+
+        :rtype: float
+        """
         return self.underlying.total_distance
 
     @property
-    def n_reached_nodes(self):
+    def n_reached_nodes(self) -> int:
+        """
+        The number of nodes reachable from the source.
+
+        :rtype: int
+        """
         return self.underlying.n_reached_nodes
 
     @property
-    def average_distance(self):
+    def average_distance(self) -> float:
+        """
+        The average path length.
+
+        :rtype: float
+        """
         return self.underlying.average_distance()
 
     def __str__(self) -> str:

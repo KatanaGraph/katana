@@ -346,6 +346,7 @@ katana::analytics::KTruss(
     return result.error();
   }
 
+  // TODO(amp): Don't mutate the users topology!
   auto result = katana::SortAllEdgesByDest(pg);
   if (!result) {
     return result.error();

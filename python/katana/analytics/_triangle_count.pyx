@@ -1,3 +1,21 @@
+"""
+Triangle Counting
+-----------------
+
+.. autoclass:: katana.analytics.TriangleCountPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. [Schank] Thomas Schank. Algorithmic Aspects of Triangle-Based Network Analysis. PhD
+    Thesis. Universitat Karlsruhe. 2007.
+
+.. autoclass:: katana.analytics._triangle_count._TriangleCountPlanAlgorithm
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.triangle_count
+"""
 from libc.stdint cimport uint64_t
 from libcpp cimport bool
 
@@ -66,6 +84,11 @@ cdef _relabeling_from_python(v):
 
 
 cdef class TriangleCountPlan(Plan):
+    """
+    A computational :ref:`Plan` for Triangle Counting.
+
+    Static methods construct TriangleCountPlans.
+    """
     cdef:
         _TriangleCountPlan underlying_
 
@@ -86,29 +109,68 @@ cdef class TriangleCountPlan(Plan):
 
     @property
     def edges_sorted(self) -> bool:
+        """
+        Are the edges of the graph already sorted?
+
+        :rtype: bool
+        """
         return self.underlying_.edges_sorted()
 
     @property
     def relabeling(self):
+        """
+        Should the algorithm relabel the nodes? Or `None` to decide heuristically.
+
+        :rtype: Optional[bool]
+        """
         return _relabeling_to_python(self.underlying_.relabeling())
 
     @staticmethod
     def node_iteration(bool edges_sorted = kDefaultEdgeSorted,
                        relabeling = _relabeling_to_python(kDefaultRelabeling)):
+        """
+        The node-iterator algorithm due to Thomas Schank [Schank]_.
+
+        :type edges_sorted: bool
+        :param edges_sorted: Are the edges of the graph already sorted?
+        :type relabeling: Optional[bool]
+        :param relabeling: Should the algorithm relabel the nodes? Or `None` to decide heuristically.
+        """
         return TriangleCountPlan.make(_TriangleCountPlan.NodeIteration(
             edges_sorted, _relabeling_from_python(relabeling)))
 
     @staticmethod
     def edge_iteration(bool edges_sorted = kDefaultEdgeSorted,
                        relabeling = _relabeling_to_python(kDefaultRelabeling)):
+        """
+        The edge-iterator algorithm due to Thomas Schank [Schank]_.
+
+        :type edges_sorted: bool
+        :param edges_sorted: Are the edges of the graph already sorted?
+        :type relabeling: Optional[bool]
+        :param relabeling: Should the algorithm relabel the nodes? Or `None` to decide heuristically.
+        """
         return TriangleCountPlan.make(_TriangleCountPlan.EdgeIteration(
             edges_sorted, _relabeling_from_python(relabeling)))
 
     @staticmethod
     def ordered_count(bool edges_sorted = kDefaultEdgeSorted,
                       relabeling = _relabeling_to_python(kDefaultRelabeling)):
+        """
+        An ordered count algorithm that sorts the nodes by degree before
+        execution. This has been found to give good performance. We implement the
+        ordered count algorithm from: http://gap.cs.berkeley.edu/benchmark.html
+
+        :type edges_sorted: bool
+        :param edges_sorted: Are the edges of the graph already sorted?
+        :type relabeling: Optional[bool]
+        :param relabeling: Should the algorithm relabel the nodes? Or `None` to decide heuristically.
+        """
         return TriangleCountPlan.make(_TriangleCountPlan.OrderedCount(
             edges_sorted, _relabeling_from_python(relabeling)))
+
+    def __str__(self):
+        return "TriangleCountPlan({}, {}, {})".format(self.algorithm.name, self.edges_sorted, self.relabeling)
 
 
 cdef uint64_t handle_result_int(Result[uint64_t] res) nogil except *:
@@ -119,6 +181,15 @@ cdef uint64_t handle_result_int(Result[uint64_t] res) nogil except *:
 
 
 def triangle_count(PropertyGraph pg,  TriangleCountPlan plan = TriangleCountPlan()) -> int:
+    """
+    Count the triangles in `pg`.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type plan: TriangleCountPlan
+    :param plan: The execution plan to use.
+    :return: The number of triangles found.
+    """
     with nogil:
         v = handle_result_int(TriangleCount(pg.underlying.get(), plan.underlying_))
     return v

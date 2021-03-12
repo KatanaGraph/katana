@@ -1,3 +1,28 @@
+"""
+Page Rank
+---------
+
+.. autoclass:: katana.analytics.PagerankPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. [WHANG] WHANG, Joyce Jiyoung, et al. Scalable data-driven pagerank: Algorithms,
+    system issues, and lessons learned. In: European Conference on Parallel
+    Processing. Springer, Berlin, Heidelberg, 2015. p. 438-450.
+
+.. autoclass:: katana.analytics._pagerank._PagerankPlanAlgorithm
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.pagerank
+
+.. autoclass:: katana.analytics.PagerankStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.pagerank_assert_valid
+"""
 from libcpp.string cimport string
 
 from katana.analytics.plan cimport Plan, _Plan
@@ -36,6 +61,10 @@ cdef extern from "katana/analytics/pagerank/pagerank.h" namespace "katana::analy
         @staticmethod
         _PagerankPlan PushSynchronous(float tolerance, unsigned int max_iterations, float alpha)
 
+    double kDefaultTolerance "katana::analytics::PagerankPlan::kDefaultTolerance"
+    int kDefaultMaxIterations "katana::analytics::PagerankPlan::kDefaultMaxIterations"
+    double kDefaultAlpha "katana::analytics::PagerankPlan::kDefaultAlpha"
+
     Result[void] Pagerank(_PropertyGraph* pg, string output_property_name, _PagerankPlan plan)
 
     Result[void] PagerankAssertValid(_PropertyGraph* pg, string output_property_name)
@@ -59,6 +88,11 @@ class _PagerankPlanAlgorithm(Enum):
 
 
 cdef class PagerankPlan(Plan):
+    """
+    A computational :ref:`Plan` for Page Rank.
+
+    Static methods construct PagerankPlans.
+    """
     cdef:
         _PagerankPlan underlying_
 
@@ -94,24 +128,56 @@ cdef class PagerankPlan(Plan):
         return self.underlying_.initial_residual()
 
     @staticmethod
-    def pull_topological(float tolerance, unsigned int max_iterations, float alpha):
+    def pull_topological(float tolerance = kDefaultTolerance, unsigned int max_iterations = kDefaultMaxIterations, float alpha = kDefaultAlpha):
+        """
+        Topological pull algorithm
+
+        The graph must be transposed to use this algorithm.
+        """
         return PagerankPlan.make(_PagerankPlan.PullTopological(tolerance, max_iterations, alpha))
 
     @staticmethod
-    def pull_residual(float tolerance, unsigned int max_iterations, float alpha):
+    def pull_residual(float tolerance = kDefaultTolerance, unsigned int max_iterations = kDefaultMaxIterations, float alpha = kDefaultAlpha):
+        """
+        Delta-residual pull algorithm
+
+        The graph must be transposed to use this algorithm.
+        """
         return PagerankPlan.make(_PagerankPlan.PullResidual(tolerance, max_iterations, alpha))
 
     @staticmethod
-    def push_asynchronous(float tolerance, float alpha):
+    def push_asynchronous(float tolerance = kDefaultTolerance, float alpha = kDefaultAlpha):
+        """
+        Asynchronous push algorithm
+
+        This implementation is based on the Push-based PageRank computation
+        (Algorithm 4) as described in the PageRank Europar 2015 paper [WHANG]_.
+
+        """
         return PagerankPlan.make(_PagerankPlan.PushAsynchronous(tolerance, alpha))
 
     @staticmethod
-    def push_synchronous(float tolerance, unsigned int max_iterations, float alpha):
+    def push_synchronous(float tolerance = kDefaultTolerance, unsigned int max_iterations = kDefaultMaxIterations, float alpha = kDefaultAlpha):
+        """
+        Synchronous push algorithm
+
+        This implementation is based on the Push-based PageRank computation
+        (Algorithm 4) as described in the PageRank Europar 2015 paper [WHANG]_.
+        """
         return PagerankPlan.make(_PagerankPlan.PushSynchronous(tolerance, max_iterations, alpha))
 
 
-def pagerank(PropertyGraph pg, str output_property_name,
-             PagerankPlan plan = PagerankPlan()):
+def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = PagerankPlan()):
+    """
+    Compute the Page Rank of each node in the graph.
+
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type output_property_name: str
+    :param output_property_name: The output property to store the rank. This property must not already exist.
+    :type plan: PagerankPlan
+    :param plan: The execution plan to use.
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -119,6 +185,11 @@ def pagerank(PropertyGraph pg, str output_property_name,
 
 
 def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
+    """
+    Raise an exception if the pagerank results in `pg` are invalid. This is not an exhaustive check, just a sanity check.
+
+    :raises: AssertionError
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
@@ -133,6 +204,11 @@ cdef _PagerankStatistics handle_result_PagerankStatistics(Result[_PagerankStatis
 
 
 cdef class PagerankStatistics:
+    """
+    Compute the :ref:`statistics` of a Page Rank result.
+
+    All statistics are `float`.
+    """
     cdef _PagerankStatistics underlying
 
     def __init__(self, PropertyGraph pg, str output_property_name):

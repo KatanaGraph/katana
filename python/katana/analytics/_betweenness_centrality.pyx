@@ -1,3 +1,21 @@
+"""
+Betweenness Centrality
+----------------------
+
+.. autoclass:: katana.analytics.BetweennessCentralityPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._betweenness_centrality._BetweennessCentralityAlgorithm
+
+.. autofunction:: katana.analytics.betweenness_centrality
+
+.. autoclass:: katana.analytics.BetweennessCentralityStatistics
+    :members:
+    :undoc-members:
+"""
+
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libc.stdint cimport uint32_t
@@ -61,19 +79,32 @@ cdef extern from * nogil:
     BetweennessCentralitySources BetweennessCentralitySources_from_vector(vector[uint32_t] v);
 
 
-class _BetweennessCentralityPlanAlgorithm(Enum):
+class _BetweennessCentralityAlgorithm(Enum):
+    """
+    Concrete algorithms for Betweenness Centrality.
+
+    Outer
+        Parallelize outermost iteration
+    Level
+        Process levels in parallel
+    """
     Outer = _BetweennessCentralityPlan.Algorithm.kOuter
     Level = _BetweennessCentralityPlan.Algorithm.kLevel
 
 
 cdef class BetweennessCentralityPlan(Plan):
+    """
+    A computational :ref:`Plan` for Betweenness Centrality.
+
+    Static method construct BetweennessCentralityPlans using specific algorithms.
+    """
     cdef:
         _BetweennessCentralityPlan underlying_
 
     cdef _Plan* underlying(self) except NULL:
         return &self.underlying_
 
-    Algorithm = _BetweennessCentralityPlanAlgorithm
+    Algorithm = _BetweennessCentralityAlgorithm
 
     @staticmethod
     cdef BetweennessCentralityPlan make(_BetweennessCentralityPlan u):
@@ -82,8 +113,8 @@ cdef class BetweennessCentralityPlan(Plan):
         return f
 
     @property
-    def algorithm(self) -> _BetweennessCentralityPlanAlgorithm:
-        return _BetweennessCentralityPlanAlgorithm(self.underlying_.algorithm())
+    def algorithm(self) -> _BetweennessCentralityAlgorithm:
+        return _BetweennessCentralityAlgorithm(self.underlying_.algorithm())
 
     @staticmethod
     def outer():
@@ -96,6 +127,16 @@ cdef class BetweennessCentralityPlan(Plan):
 
 def betweenness_centrality(PropertyGraph pg, str output_property_name, sources = None,
              BetweennessCentralityPlan plan = BetweennessCentralityPlan()):
+    """
+    :type pg: PropertyGraph
+    :param pg: The graph to analyze.
+    :type output_property_name: str
+    :param output_property_name: The output property to write path lengths into. This property must not already exist.
+    :type sources: Union[List[int], int]
+    :param sources: Only process some sources, producing an approximate betweenness centrality. If this is a list of node IDs process those source nodes; if this is an int process that number of source nodes.
+    :type plan: BetweennessCentralityPlan
+    :param plan: The execution plan to use.
+    """
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     if sources is None:
@@ -125,6 +166,11 @@ cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatist
 
 
 cdef class BetweennessCentralityStatistics:
+    """
+    Compute the :ref:`statistics` of a Betweenness Centrality computation on a graph.
+
+    All statistics are floats.
+    """
     cdef _BetweennessCentralityStatistics underlying
 
     def __init__(self, PropertyGraph pg, str output_property_name):
@@ -150,4 +196,3 @@ cdef class BetweennessCentralityStatistics:
         cdef ostringstream ss
         self.underlying.Print(ss)
         return str(ss.str(), "ascii")
-

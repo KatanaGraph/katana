@@ -42,8 +42,7 @@ public:
   static KCorePlan Asynchronous() { return {kCPU, kAsynchronous}; }
 };
 
-/// Compute the k-core for pg. The pg must be
-/// symmetric.
+/// Compute the k-core for pg. The pg must be symmetric.
 /// The algorithm, and k_core_number parameters can be specified,
 /// but have reasonable defaults.
 /// The property named output_property_name is created by this function and may

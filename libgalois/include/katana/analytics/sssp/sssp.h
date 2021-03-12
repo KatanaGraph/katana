@@ -64,6 +64,8 @@ public:
   }
 
   Algorithm algorithm() const { return algorithm_; }
+
+  /// The exponent of the delta step size (2 based). A delta of 4 will produce a real delta step size of 16.
   unsigned delta() const { return delta_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
 

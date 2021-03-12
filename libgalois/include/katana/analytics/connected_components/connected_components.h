@@ -66,12 +66,12 @@ public:
     return component_sample_frequency_;
   }
 
-  /// Serial connected components algorithm. Uses union-find datastructure
+  /// Serial connected components algorithm. Uses the union-find datastructure.
   static ConnectedComponentsPlan Serial() { return {kCPU, kSerial, 0, 0, 0}; }
 
   /// Label propagation push-style algorithm. Initially, all nodes are in
-  /// their own component ids (same as their node ids). Then, the component
-  /// ids are set the minimum component id in one's neighborhood.
+  /// their own component IDs (same as their node IDs). Then, the component
+  /// IDs are set to the minimum component ID in their neighborhood.
   static ConnectedComponentsPlan LabelProp() {
     return {kCPU, kLabelProp, 0, 0, 0};
   }

@@ -55,6 +55,8 @@ public:
 
   int size() const { return header_.size; }
 
+  void reset() { header_.size = 0; }
+
 private:
   Header header_;
   std::array<char, kDataSize> data_;
@@ -73,7 +75,7 @@ static_assert(
     "libfmt buffer size is small relative to max ErrorInfo context size");
 
 void
-katana::ErrorInfo::Reclassify(const std::error_code& ec) {
+katana::ErrorInfo::SpillMessage() {
   KATANA_LOG_DEBUG_VASSERT(
       !context_.first || context_.first == &kContext,
       "ErrorInfo object does not match ErrorInfo data");
@@ -83,14 +85,10 @@ katana::ErrorInfo::Reclassify(const std::error_code& ec) {
       "ErrorInfo object does not match ErrorInfo data");
 
   if (!context_.first) {
-    // If there is no context besides the error code at least spill some
-    // context
     std::string msg = error_code_.message();
     const char* start = msg.c_str();
     Prepend(start, start + msg.size());
   }
-
-  error_code_ = ec;
 }
 
 void
@@ -108,6 +106,7 @@ katana::ErrorInfo::Prepend(const char* begin, const char* end) {
     context_.first->Prepend(kSep.begin(), kSep.end());
   } else {
     context_.first = &kContext;
+    context_.first->reset();
   }
 
   context_.first->Prepend(begin, end);

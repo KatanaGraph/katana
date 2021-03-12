@@ -40,21 +40,20 @@ FileView::~FileView() {
 
 katana::Result<void>
 FileView::Unbind() {
-  katana::Result<void> res = katana::ResultSuccess();
   if (valid_) {
     // Resolve all outstanding reads so they don't write to the memory we are
     // about to unmap
     if (auto res = Resolve(0, file_size_); !res) {
-      return res.error();
+      return res.error().WithContext("resolving for unmap");
     }
     if (map_start_ != nullptr) {
       if (int err = munmap(map_start_, file_size_); err) {
-        return katana::ResultErrno();
+        return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
       }
     }
     valid_ = false;
   }
-  return res;
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
@@ -63,11 +62,13 @@ FileView::Bind(
   StatBuf buf;
   filename_ = filename;
   if (auto res = FileStat(filename_, &buf); !res) {
-    return res.error();
+    return res.error().WithContext("getting file size");
   }
   uint64_t in_end = std::min<uint64_t>(end, static_cast<uint64_t>(buf.size));
   if (in_end < begin) {
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "begin is larger than end or the size of the file");
   }
 
   // SCB 2020-07-23: Given that page_shift_ is treated as a compile-time
@@ -81,12 +82,11 @@ FileView::Bind(
   // Map enough virtual memory to hold entire file, but do not populate it
   tmp = mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (tmp == MAP_FAILED) {
-    KATANA_LOG_ERROR("mmap: {}", std::strerror(errno));
-    return katana::ResultErrno();
+    return KATANA_ERROR(katana::ResultErrno(), "reserving contiguous range");
   }
 
   if (auto res = Unbind(); !res) {
-    return res.error();
+    return res.error().WithContext("resetting for new content");
   }
 
   map_start_ = static_cast<uint8_t*>(tmp);
@@ -95,7 +95,7 @@ FileView::Bind(
   file_size_ = buf.size;
   fetches_ = std::make_unique<std::vector<FillingRange>>();
   if (auto res = Fill(begin, in_end, resolve); !res) {
-    return res.error();
+    return res.error().WithContext("reading content");
   }
 
   cursor_ = 0;
@@ -115,7 +115,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
   // set valid_. fetches_ should be default constructed to
   // nullptr.
   if (!fetches_) {
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
   }
   // Gracefully handle the fill zero case here to simplify Bind
   if (in_end != in_begin) {
@@ -135,8 +135,7 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
       int err =
           mprotect(map_start_ + file_off, map_size, PROT_READ | PROT_WRITE);
       if (err == -1) {
-        KATANA_LOG_ERROR("mprotect: {}", std::strerror(errno));
-        return katana::ResultErrno();
+        return KATANA_ERROR(katana::ResultErrno(), "mprotecting buffer");
       }
 
       auto peek_fut =
@@ -145,11 +144,11 @@ FileView::Fill(uint64_t begin, uint64_t end, bool resolve) {
       FillingRange fetch = {first_page, last_page, std::move(peek_fut)};
       fetches_->push_back(std::move(fetch));
       if (auto res = MarkFilled(&filling_[0], first_page, last_page); !res) {
-        return res.error();
+        return res.error().WithContext("updating bookkeeping data");
       }
       if (resolve) {
         if (auto res = Resolve(file_off, map_size); !res) {
-          return res.error();
+          return res.error().WithContext("resolving fill");
         }
       }
       int64_t signed_begin = static_cast<int64_t>(in_begin);

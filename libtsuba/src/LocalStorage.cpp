@@ -38,17 +38,19 @@ tsuba::LocalStorage::WriteFile(
   fs::path dir = m_path.parent_path();
   if (boost::system::error_code err; !fs::create_directories(dir, err)) {
     if (err) {
-      return std::error_code(err.value(), err.category());
+      return KATANA_ERROR(
+          std::error_code(err.value(), err.category()),
+          "creating parent diretories");
     }
   }
 
   std::ofstream ofile(uri);
   if (!ofile.good()) {
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(ErrorCode::LocalStorageError, "opening file");
   }
   ofile.write(reinterpret_cast<const char*>(data), size); /* NOLINT */
   if (!ofile.good()) {
-    return ErrorCode::LocalStorageError;
+    return KATANA_ERROR(ErrorCode::LocalStorageError, "writing file");
   }
   return katana::ResultSuccess();
 }

@@ -75,7 +75,7 @@ DoStoreArrowArrayAtName(
 
   auto ff = std::make_shared<tsuba::FileFrame>();
   if (auto res = ff->Init(); !res) {
-    return res.error();
+    return res.error().WithContext("creating output buffer");
   }
 
   auto write_result = parquet::arrow::WriteTable(
@@ -130,8 +130,8 @@ LargeStringToChunkedString(
     if (!arr->IsValid(i)) {
       auto status = builder.AppendNull();
       if (!status.ok()) {
-        KATANA_LOG_ERROR("could not append null: {}", status);
-        return tsuba::ErrorCode::ArrowError;
+        return KATANA_ERROR(
+            tsuba::ErrorCode::ArrowError, "appending null: {}", status);
       }
       continue;
     }
@@ -142,8 +142,8 @@ LargeStringToChunkedString(
       std::shared_ptr<arrow::Array> new_arr;
       auto status = builder.Finish(&new_arr);
       if (!status.ok()) {
-        KATANA_LOG_ERROR("could not finish building string array: {}", status);
-        return tsuba::ErrorCode::ArrowError;
+        return KATANA_ERROR(
+            tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
       }
       chunks.emplace_back(new_arr);
       inserted = 0;
@@ -152,25 +152,25 @@ LargeStringToChunkedString(
     inserted += val_size;
     auto status = builder.Append(val);
     if (!status.ok()) {
-      KATANA_LOG_ERROR("could not add string to array builder: {}", status);
-      return tsuba::ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          tsuba::ErrorCode::ArrowError, "adding string to array: {}", status);
     }
   }
   if (inserted > 0) {
     std::shared_ptr<arrow::Array> new_arr;
     auto status = builder.Finish(&new_arr);
     if (!status.ok()) {
-      KATANA_LOG_ERROR("could finish building string array: {}", status);
-      return tsuba::ErrorCode::ArrowError;
+      return KATANA_ERROR(
+          tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
     }
     chunks.emplace_back(new_arr);
   }
 
   auto maybe_res = arrow::ChunkedArray::Make(chunks, arrow::utf8());
   if (!maybe_res.ok()) {
-    KATANA_LOG_ERROR(
-        "could not make arrow chunked array: {}", maybe_res.status());
-    return tsuba::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "building chunked array: {}",
+        maybe_res.status());
   }
   return maybe_res.ValueOrDie();
 }
@@ -210,12 +210,13 @@ WriteProperties(
                                           : prop_info[i].name;
     auto fixed_type_column = HandleBadParquetTypes(props.column(i));
     if (!fixed_type_column) {
-      return fixed_type_column.error();
+      return fixed_type_column.error().WithContext(
+          "handling arrow->parquet type mismatch");
     }
     auto name_res =
         StoreArrowArrayAtName(fixed_type_column.value(), dir, name, desc);
     if (!name_res) {
-      return name_res.error();
+      return name_res.error().WithContext("storing arrow array");
     }
     next_paths.emplace_back(name_res.value());
   }
@@ -306,7 +307,7 @@ tsuba::RDG::AddPartitionMetadataArray(
         "current graph");
     set_local_to_global_vector(std::move(col));
   } else {
-    return tsuba::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
   }
   return katana::ResultSuccess();
 }
@@ -336,7 +337,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     auto name = MirrorPropName(i);
     auto mirr_res = StoreArrowArrayAtName(mirror_nodes_[i], dir, name, desc);
     if (!mirr_res) {
-      return mirr_res.error();
+      return mirr_res.error().WithContext("storing mirrors[{}] arrow array", i);
     }
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = name,
@@ -349,7 +350,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     auto name = MasterPropName(i);
     auto mast_res = StoreArrowArrayAtName(master_nodes_[i], dir, name, desc);
     if (!mast_res) {
-      return mast_res.error();
+      return mast_res.error().WithContext("storing masters arrow array");
     }
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = name,
@@ -362,7 +363,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     auto l2g_res = StoreArrowArrayAtName(
         local_to_global_id_, dir, kLocalToGlobalIDPropName, desc);
     if (!l2g_res) {
-      return l2g_res.error();
+      return l2g_res.error().WithContext("storing l2g arrow array");
     }
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = kLocalToGlobalIDPropName,
@@ -437,7 +438,7 @@ tsuba::RDG::DoStore(
           core_->part_header().metadata().transposed_, lineage_,
           std::move(write_group));
       !res) {
-    return res.error();
+    return res.error().WithContext("failed to finalize RDG");
   }
   return katana::ResultSuccess();
 }

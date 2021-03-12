@@ -57,7 +57,7 @@ tsuba::GlobalState::Init(
 
   // quick ping to say hello and fail fast if something was misconfigured
   if (auto res = ns->CheckHealth(); !res) {
-    return res.error();
+    return res.error().WithContext("testing name server connection");
   }
 
   // new to access non-public constructor
@@ -77,7 +77,7 @@ tsuba::GlobalState::Init(
 
   for (FileStorage* fs : global_state->file_stores_) {
     if (auto res = fs->Init(); !res) {
-      return res.error();
+      return res.error().WithContext("initializing backends");
     }
   }
 

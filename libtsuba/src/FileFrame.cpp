@@ -22,7 +22,7 @@ FileFrame::Destroy() {
     int err = munmap(map_start_, map_size_);
     valid_ = false;
     if (err) {
-      return katana::ResultErrno();
+      return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
     }
   }
   return katana::ResultSuccess();
@@ -36,7 +36,7 @@ FileFrame::Init(uint64_t reserved_size) {
       nullptr, map_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
       -1, 0);
   if (ptr == MAP_FAILED) {
-    return katana::ResultErrno();
+    return KATANA_ERROR(katana::ResultErrno(), "mapping buffer");
   }
   if (auto res = Destroy(); !res) {
     KATANA_LOG_ERROR("Destroy: {}", res.error());
@@ -70,10 +70,11 @@ FileFrame::GrowBuffer(int64_t accomodate) {
       // Mapping succeeded, but not where we wanted it
       int err = munmap(ptr, new_size - map_size_);
       if (err) {
-        return katana::ResultErrno();
+        return KATANA_ERROR(katana::ResultErrno(), "unmapping buffer");
       }
     } else {
-      return katana::ResultErrno();
+      return KATANA_ERROR(
+          katana::ResultErrno(), "mapping new memory to extend buffer");
     }
     // Just allocate a brand new buffer :(
     ptr = nullptr;
@@ -81,12 +82,12 @@ FileFrame::GrowBuffer(int64_t accomodate) {
         nullptr, new_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
         -1, 0);
     if (ptr == MAP_FAILED) {
-      return katana::ResultErrno();
+      return KATANA_ERROR(katana::ResultErrno(), "mapping new buffer");
     }
     memcpy(ptr, map_start_, cursor_);
     int err = munmap(map_start_, map_size_);
     if (err) {
-      return katana::ResultErrno();
+      return KATANA_ERROR(katana::ResultErrno(), "unmapping old buffer");
     }
     map_start_ = static_cast<uint8_t*>(ptr);
   }
@@ -97,7 +98,7 @@ FileFrame::GrowBuffer(int64_t accomodate) {
 katana::Result<void>
 FileFrame::Persist() {
   if (!valid_) {
-    return tsuba::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
   }
   if (path_.empty()) {
     return KATANA_ERROR(tsuba::ErrorCode::InvalidArgument, "no path provided");
@@ -112,13 +113,12 @@ std::future<katana::Result<void>>
 FileFrame::PersistAsync() {
   if (!valid_) {
     return std::async(std::launch::deferred, []() -> katana::Result<void> {
-      return tsuba::ErrorCode::InvalidArgument;
+      return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
     });
   }
   if (path_.empty()) {
     return std::async(std::launch::deferred, []() -> katana::Result<void> {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::InvalidArgument, "no path provided");
+      return KATANA_ERROR(ErrorCode::InvalidArgument, "no path provided");
     });
   }
   return tsuba::FileStoreAsync(path_, map_start_, cursor_);

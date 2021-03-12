@@ -19,15 +19,17 @@ ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
       if (!string_array->IsValid(i)) {
         auto status = builder.AppendNull();
         if (!status.ok()) {
-          KATANA_LOG_ERROR("could not append null: {}", status);
-          return tsuba::ErrorCode::ArrowError;
+          return KATANA_ERROR(
+              tsuba::ErrorCode::ArrowError, "appending null to array: {}",
+              status);
         }
         continue;
       }
       auto status = builder.Append(string_array->GetView(i));
       if (!status.ok()) {
-        KATANA_LOG_ERROR("could not add string to array builder: {}", status);
-        return tsuba::ErrorCode::ArrowError;
+        return KATANA_ERROR(
+            tsuba::ErrorCode::ArrowError, "appending string to array: {}",
+            status);
       }
     }
   }
@@ -35,15 +37,15 @@ ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
   std::shared_ptr<arrow::Array> new_arr;
   auto status = builder.Finish(&new_arr);
   if (!status.ok()) {
-    KATANA_LOG_ERROR("could not finish building string array: {}", status);
-    return tsuba::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "finishing array: {}", status);
   }
 
   auto maybe_res = arrow::ChunkedArray::Make({new_arr}, arrow::large_utf8());
   if (!maybe_res.ok()) {
-    KATANA_LOG_ERROR(
-        "could not make arrow chunked array: {}", maybe_res.status());
-    return tsuba::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "building chunked array: {}",
+        maybe_res.status());
   }
   return maybe_res.ValueOrDie();
 }
@@ -70,8 +72,7 @@ DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path) {
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
   if (auto res = fv->Bind(file_path.string(), false); !res) {
-    KATANA_LOG_DEBUG("bind error: {}", res.error());
-    return res.error();
+    return res.error().WithContext("preparing read buffer");
   }
 
   std::unique_ptr<parquet::arrow::FileReader> reader;

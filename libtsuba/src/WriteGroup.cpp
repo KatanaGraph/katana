@@ -50,7 +50,7 @@ WriteGroup::Finish() {
   }
 
   if (errors_ > 0) {
-    KATANA_LOG_ERROR(
+    return last_error_.error().WithContext(
         "{} of {} async write ops returned errors", errors_, total_);
   }
 

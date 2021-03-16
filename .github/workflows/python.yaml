@@ -242,7 +242,7 @@ jobs:
           . .github/workflows/activate_miniconda.sh
           export CMAKE_BUILD_PARALLEL_LEVEL=2
           .github/workflows/configure_cpp.sh \
-            ${{matrix.os}} "$CXX" Shared "$HOME/build" -DKATANA_LANG_BINDINGS=python
+            ${{matrix.os}} "$CXX" Shared "$HOME/build" -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
 
 
       - name: Build
@@ -251,10 +251,24 @@ jobs:
           export CMAKE_BUILD_PARALLEL_LEVEL=2
           cmake --build $HOME/build --parallel 2
 
+      - name: Build documentation
+        run: |
+          . .github/workflows/activate_miniconda.sh
+          cmake --build $HOME/build --target doc
+
       - name: Clean ccache
         run: |
           ccache --show-stats
           ccache --cleanup
+
+      # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
+      # not seem to be expanded, so hard code HOME for now.
+      - name: Upload documentation (C++ and Python)
+        uses: actions/upload-artifact@v1
+        if: startsWith(matrix.os, 'ubuntu-')
+        with:
+          name: katana-docs-${{matrix.os}}
+          path: /home/runner/build/docs
 
       - name: Test python_env.sh
         if: startsWith(matrix.os, 'ubuntu-')

@@ -177,7 +177,6 @@ function(add_python_setuptools_target TARGET_NAME)
 
   # Command used to launch setup.py
   set(PYTHON_SETUP_COMMAND
-      ${CMAKE_COMMAND} -E chdir ${PYTHON_BINARY_DIR}
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=${PYTHONPATH}"
       # Reference generated ini files which contain compiler flags, etc.
@@ -195,6 +194,7 @@ function(add_python_setuptools_target TARGET_NAME)
       COMMAND ${PYTHON_SETUP_COMMAND} ${quiet} build "$<$<CONFIG:Debug>:--debug>" ${parallel}
       COMMAND install ${PYTHON_ENV_SCRIPT}.tmp ${PYTHON_ENV_SCRIPT}
       BYPRODUCTS ${PYTHON_BINARY_DIR} ${PYTHON_ENV_SCRIPT}.tmp ${PYTHON_ENV_SCRIPT}
+      WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
       COMMENT "Building ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
   )
 
@@ -210,7 +210,7 @@ function(add_python_setuptools_target TARGET_NAME)
       CODE "execute_process(
                 COMMAND
                   ${PYTHON_SETUP_COMMAND} install --skip-build --prefix=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}
-                WORKING_DIRECTORY ${PYTHON_SETUP_DIR}
+                WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
                 COMMAND_ERROR_IS_FATAL ANY)"
       COMPONENT python)
 
@@ -233,12 +233,12 @@ done
       #      string(APPEND ENV_SCRIPT_STR "\
       #export LD_LIBRARY_PATH=\"$<TARGET_LINKER_FILE_DIR:${dep}>\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}\"
       #")
+      #echo LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
     endif()
   endforeach()
 
   string(APPEND ENV_SCRIPT_STR "
 echo PYTHONPATH=\$PYTHONPATH
-#echo LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
 \"$@\"
 ")
   file(GENERATE OUTPUT ${PYTHON_ENV_SCRIPT}.tmp CONTENT "${ENV_SCRIPT_STR}")
@@ -267,6 +267,8 @@ function(add_python_setuptools_tests TARGET_NAME)
   endif()
 endfunction()
 
+add_custom_target(python_docs)
+
 function(add_python_setuptools_docs TARGET_NAME)
   set(no_value_options)
   set(one_value_options)
@@ -280,12 +282,15 @@ function(add_python_setuptools_docs TARGET_NAME)
   if (PY_SPHINX)
     add_custom_target(
         ${TARGET_NAME}_docs
-        ALL
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYTHON_BINARY_DIR}/build/sphinx
         COMMAND ${PYTHON_SETUP_COMMAND} build_sphinx
-        COMMAND echo "${TARGET_NAME} documentation in file://${PYTHON_BINARY_DIR}/build/sphinx/html/index.html"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${PYTHON_BINARY_DIR}/build/sphinx/html ${CMAKE_BINARY_DIR}/docs/${TARGET_NAME}
+        COMMAND ${CMAKE_COMMAND} -E echo "${TARGET_NAME} documentation at file://${CMAKE_BINARY_DIR}/docs/${TARGET_NAME}/index.html"
         BYPRODUCTS ${PYTHON_BINARY_DIR}/build/sphinx
+        WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
         COMMENT "Building ${TARGET_NAME} sphinx documentation in symlink tree ${PYTHON_BINARY_DIR}"
     )
     add_dependencies(${TARGET_NAME}_docs ${TARGET_NAME})
+    add_dependencies(python_docs ${TARGET_NAME}_docs)
   endif()
 endfunction()

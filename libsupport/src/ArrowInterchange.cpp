@@ -57,3 +57,16 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   KATANA_LOG_ASSERT(res.ok());
   return IndexedTake(original, indices);
 }
+
+std::shared_ptr<arrow::ChunkedArray>
+katana::EmptyChunkedArray(
+    const std::shared_ptr<arrow::DataType>& type, int64_t length) {
+  auto maybe_array = arrow::MakeArrayOfNull(type, length);
+  if (!maybe_array.ok()) {
+    KATANA_LOG_ERROR(
+        "cannot create an empty arrow array: {}", maybe_array.status());
+    return nullptr;
+  }
+  std::vector<std::shared_ptr<arrow::Array>> chunks{maybe_array.ValueOrDie()};
+  return std::make_shared<arrow::ChunkedArray>(chunks);
+}

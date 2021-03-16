@@ -43,7 +43,8 @@ make -j${CMAKE_BUILD_PARALLEL_LEVEL}
 make install
 
 if [ -n "$KATANA_DOCS_OUTPUT" ]; then
+  make doc
   echo "Exporting documentation to $KATANA_DOCS_OUTPUT"
   mkdir -p "$KATANA_DOCS_OUTPUT"
-  cp -a katana_python_build/build/sphinx/html "$KATANA_DOCS_OUTPUT"
+  cp -a docs "$KATANA_DOCS_OUTPUT"
 fi

@@ -380,22 +380,33 @@ install(
     COMPONENT dev
 )
 
+# Use both "doc" and "docs" to make people with different mental conventions happy
+add_custom_target(docs)
+add_custom_target(doc)
+add_dependencies(doc docs)
+add_dependencies(docs python_docs)
+
 set_property(GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
 # Invoke this after all the documentation directories have been added to KATANA_DOXYGEN_DIRECTORIES.
 function(add_katana_doxygen_target)
-  if (NOT TARGET doc AND DOXYGEN_FOUND)
+  if (NOT TARGET doxygen_docs AND DOXYGEN_FOUND)
     get_property(doc_dirs GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
     list(JOIN doc_dirs "\" \"" DOXYFILE_SOURCE_DIR)
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(doc
+    add_custom_target(doxygen_docs
                       # Delete the old html docs before rebuilding, because doxygen will find it's own build files
                       # during search and get confused if the build directory is a subdirectory of the source directory.
                       # amp looked several times and found no way to limit the doxygen search path involved.
-                      COMMAND rm -rf ${CMAKE_CURRENT_BINARY_DIR}/html
+                      COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/html
                       COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+                      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/html ${CMAKE_BINARY_DIR}/docs/cxx
+                      COMMAND ${CMAKE_COMMAND} -E echo "Doxygen documentation at file://${CMAKE_BINARY_DIR}/docs/cxx/index.html"
                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                       BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/html
-                      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+                      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+                      COMMENT "Building Doxygen docs from ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+                      )
+    add_dependencies(docs doxygen_docs)
   endif ()
 endfunction()

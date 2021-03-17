@@ -129,7 +129,7 @@ def get_version(
         dev=explicit_version.is_devrelease,
         pre=explicit_version.pre,
         post=explicit_version.post,
-        is_merged=is_merged,
+        is_merged=is_merged and ke_hash != "DIRTY" and k_hash != "DIRTY",
     )
     if config.version_from_environment_variable:
         env_version = config.version_from_environment_variable

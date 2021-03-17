@@ -44,7 +44,7 @@ RDGMeta::MakeFromStorage(const katana::Uri& uri) {
   tsuba::RDGMeta meta(uri.DirName());
   auto meta_res = katana::JsonParse<tsuba::RDGMeta>(fv, &meta);
   if (!meta_res) {
-    return meta_res.error().WithContext("cannon parse {}", uri.string());
+    return meta_res.error().WithContext("cannot parse {}", uri.string());
   }
   return meta;
 }

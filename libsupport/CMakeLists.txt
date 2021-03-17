@@ -1,8 +1,4 @@
-if(KATANA_FORCE_NON_STATIC)
-  add_library(katana_support)
-else()
-  add_library(katana_support STATIC)
-endif()
+add_library(katana_support SHARED)
 add_library(Katana::support ALIAS katana_support)
 set_target_properties(katana_support PROPERTIES EXPORT_NAME support)
 add_dependencies(lib katana_support)
@@ -32,7 +28,7 @@ target_include_directories(katana_support PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-set_common_katana_library_options(katana_support)
+set_common_katana_library_options(katana_support ALWAYS_SHARED)
 
 find_package(Arrow REQUIRED)
 if(TARGET arrow::arrow)

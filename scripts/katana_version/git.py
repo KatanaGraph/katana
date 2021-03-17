@@ -1,10 +1,75 @@
 import re
 from datetime import datetime
-from functools import cmp_to_key, lru_cache, partial
+from functools import cmp_to_key, lru_cache
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
-from .commands import capture_command, CommandError, predicate_command, action_command
+from .commands import action_command, capture_command, CommandError, predicate_command
+
+
+class GitURL(str):
+    protocol: str
+    username: str
+    hostname: str
+    repository: str
+
+    # LIMITATION: These are only a subset of the URL formats supported by git and they make assumptions about how
+    # Github uses the paths. If this module is to be used as a general git library this should be corrected.
+    URL_REGEXS = [
+        re.compile(
+            r"(?P<protocol>ssh)://git@(?P<hostname>[\w.-]+)/(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"
+        ),
+        re.compile(r"git@(?P<hostname>[\w.-]+):(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"),
+        re.compile(
+            r"(?P<protocol>https?)://(?P<hostname>[\w.-]+)/(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"
+        ),
+    ]
+
+    def __init__(self, s):
+        super().__init__()
+        for regex in self.URL_REGEXS:
+            m = regex.match(s)
+            if m:
+                self.__dict__.update(m.groupdict())
+                return
+        raise ValueError("Not a known git URL: " + s)
+
+
+class Repo:
+    dir: Path
+    origin_url: GitURL
+    origin_remote: str
+    upstream_url: GitURL
+    upstream_remote: str
+
+    def __init__(
+        self,
+        dir: Union[str, Path],
+        origin_remote: str,
+        origin_url: Union[GitURL, str],
+        upstream_remote: str,
+        upstream_url: Union[GitURL, str],
+    ):
+        self.dir = dir and Path(dir)
+        self.origin_url = GitURL(str(origin_url))
+        self.origin_remote = origin_remote
+        self.upstream_url = GitURL(str(upstream_url))
+        self.upstream_remote = upstream_remote
+
+    def __repr__(self):
+        return (
+            f"Repo({str(self.dir)!r}, {self.origin_remote!r}, {str(self.origin_url)!r}, "
+            f"{self.upstream_remote!r}, {str(self.upstream_url)!r})"
+        )
+
+
+def dir_arg(dir):
+    if hasattr(dir, "dir"):
+        dir = dir.dir
+    if dir is not None:
+        return "-C", str(dir)
+    else:
+        return ()
 
 
 def get_working_tree(dir):
@@ -34,13 +99,6 @@ def get_super_working_tree(dir):
     else:
         # An empty result means there is no super working tree
         return None
-
-
-def dir_arg(dir):
-    if dir is not None:
-        return "-C", str(dir)
-    else:
-        return ()
 
 
 def is_dirty(dir, exclude: Tuple[str] = ()):
@@ -139,34 +197,6 @@ def get_hash(commit, dir, *, exclude_dirty: Tuple[str] = (), pretend_clean=False
 
 def get_remotes(dir):
     return capture_command("git", *dir_arg(dir), "remote").splitlines(keepends=False)
-
-
-class GitURL(str):
-    protocol: str
-    username: str
-    hostname: str
-    repository: str
-
-    # LIMITATION: These are only a subset of the URL formats supported by git and they make assumptions about how
-    # Github uses the paths. If this module is to be used as a general git library this should be corrected.
-    URL_REGEXS = [
-        re.compile(
-            r"(?P<protocol>ssh)://git@(?P<hostname>[\w.-]+)/(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"
-        ),
-        re.compile(r"git@(?P<hostname>[\w.-]+):(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"),
-        re.compile(
-            r"(?P<protocol>https?)://(?P<hostname>[\w.-]+)/(?P<username>[\w.-]+)/(?P<repository>[\w-]+)(\.git)?"
-        ),
-    ]
-
-    def __init__(self, s):
-        super().__init__()
-        for regex in self.URL_REGEXS:
-            m = regex.match(s)
-            if m:
-                self.__dict__.update(m.groupdict())
-                return
-        raise ValueError("Not a known git URL: " + s)
 
 
 def get_remote_url(remote, dir) -> GitURL:

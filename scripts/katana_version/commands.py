@@ -7,8 +7,6 @@ import subprocess
 
 __all__ = ["capture_command", "predicate_command", "action_command", "CommandError"]
 
-from pprint import pprint
-
 logger = logging.getLogger(__name__)
 
 

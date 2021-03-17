@@ -6,16 +6,15 @@ import re
 import threading
 from enum import Enum
 from os import environ
-from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Iterable, Optional
 
 from packaging import version
 from packaging.version import InvalidVersion
 
-from .github import GithubFacade
-from . import CONFIG_VERSION_PATH, Configuration, git, GitURL, StateError, SUBMODULE_PATH
+from . import CONFIG_VERSION_PATH, Configuration, git, Repo, StateError, SUBMODULE_PATH
 from .commands import capture_command, CommandError
+from .github import GithubFacade
 from .version import (
     add_dev_to_version,
     format_version_debian,
@@ -160,21 +159,21 @@ def provenance_subcommand(args):
         if var in environ:
             values[var.lower()] = environ[var]
 
-    config = args.configuration
-    katana_repo_root = config.katana_repo_path
-    katana_enterprise_repo_path = config.katana_enterprise_repo_path
+    config: Configuration = args.configuration
+    katana_repo_root = config.open.dir
 
     values.update(katana_repo_root=katana_repo_root.absolute())
     values.update(katana_branch=git.get_branch_checked_out(katana_repo_root))
-    values.update(katana_upstream=config.upstream_url)
-    values.update(katana_origin=config.origin_url)
+    values.update(katana_upstream=config.open.upstream_url)
+    values.update(katana_origin=config.open.origin_url)
     values.update(katana_hash=git.get_hash(git.HEAD, katana_repo_root))
 
     if config.has_enterprise:
-        values.update(katana_repo_root=katana_enterprise_repo_path.absolute())
+        katana_enterprise_repo_path = config.enterprise.dir
+        values.update(katana_enterprise_repo_path=katana_enterprise_repo_path.absolute())
         values.update(katana_enterprise_branch=git.get_branch_checked_out(katana_enterprise_repo_path))
-        values.update(katana_enterprise_upstream=config.enterprise_upstream_url)
-        values.update(katana_enterprise_origin=config.enterprise_origin_url)
+        values.update(katana_enterprise_upstream=config.enterprise.upstream_url)
+        values.update(katana_enterprise_origin=config.enterprise.origin_url)
         values.update(
             katana_enterprise_hash=git.get_hash(git.HEAD, katana_enterprise_repo_path, exclude_dirty=(SUBMODULE_PATH,))
         )
@@ -214,20 +213,20 @@ def bump_checks(args):
 
     current_branch = get_current_branch_from_either_repository(config)
     kind = get_branch_kind(current_branch, (BranchKind.MASTER, BranchKind.RELEASE, BranchKind.VARIANT))
-    check_at_branch(f"{config.upstream_remote}/{current_branch}", config)
-    git.switch(current_branch, config.katana_enterprise_repo_path, config.dry_run)
-    git.switch(current_branch, config.katana_repo_path, config.dry_run)
+    check_at_branch(current_branch, config)
+    git.switch(current_branch, config.enterprise, config.dry_run)
+    git.switch(current_branch, config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(config, git.HEAD, True, config.katana_repo_path, no_dev=False)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=False)
     next_version = version.Version(args.next_version)
 
     check_branch_version(current_branch, kind, next_version, prev_version)
 
 
-def get_current_branch_from_either_repository(config):
-    current_branch = git.get_branch_checked_out(config.katana_repo_path, ref_only=True)
+def get_current_branch_from_either_repository(config: Configuration):
+    current_branch = git.get_branch_checked_out(config.open, ref_only=True)
     if config.has_enterprise:
-        current_branch = current_branch or git.get_branch_checked_out(config.katana_enterprise_repo_path, ref_only=True)
+        current_branch = current_branch or git.get_branch_checked_out(config.enterprise, ref_only=True)
     if not current_branch:
         raise StateError("Operation is not supported without a branch checked out (currently HEAD is detached).")
     return current_branch
@@ -271,12 +270,12 @@ def get_branch_kind(current_branch, kinds: Iterable[BranchKind]):
 
 
 def check_at_branch(branch, config):
-    if git.get_hash(branch, config.katana_repo_path) != git.get_hash(git.HEAD, config.katana_repo_path):
+    if git.get_hash(f"{config.open.upstream_remote}/{branch}", config.open) != git.get_hash(git.HEAD, config.open):
         raise StateError(f"{config.katana_repo_path} HEAD is up to date with {branch}")
 
-    if config.has_enterprise and git.get_hash(branch, config.katana_enterprise_repo_path) != git.get_hash(
-        git.HEAD, config.katana_enterprise_repo_path
-    ):
+    if config.has_enterprise and git.get_hash(
+        f"{config.enterprise.upstream_remote}/{branch}", config.enterprise
+    ) != git.get_hash(git.HEAD, config.enterprise):
         raise StateError(f"{config.katana_enterprise_repo_path} HEAD is up to date with {branch}")
 
 
@@ -287,27 +286,27 @@ def bump_subcommand(args):
 
     g = GithubFacade(config)
 
-    prev_version, variant = get_explicit_version(config, git.HEAD, True, config.katana_repo_path, no_dev=True)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=True)
     next_version = version.Version(args.next_version)
 
-    current_branch = git.get_branch_checked_out(config.katana_repo_path)
+    current_branch = git.get_branch_checked_out(config.open)
     return bump_both_repos(config, g, prev_version, next_version, current_branch)
 
 
 def check_branch_not_exist(config: Configuration, branch_name):
-    if git.ref_exists(branch_name, config.katana_repo_path):
-        raise StateError(f"Branch {branch_name} already exists in {config.katana_repo_path}")
-    if git.ref_exists(branch_name, config.katana_enterprise_repo_path):
-        raise StateError(f"Branch {branch_name} already exists in {config.katana_enterprise_repo_path}")
+    if git.ref_exists(branch_name, config.open):
+        raise StateError(f"Branch {branch_name} already exists in {config.open.dir.name}")
+    if git.ref_exists(branch_name, config.enterprise):
+        raise StateError(f"Branch {branch_name} already exists in {config.enterprise.dir.name}")
 
 
 def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_version, base):
     next_version_str = format_version_pep440(next_version)
-    current_branch = git.get_branch_checked_out(config.katana_repo_path)
+    current_branch = git.get_branch_checked_out(config.open)
     if config.dry_run:
         print(next_version_str)
     else:
-        with open(config.katana_repo_path / CONFIG_VERSION_PATH, "wt", encoding="utf-8") as fi:
+        with open(config.open.dir / CONFIG_VERSION_PATH, "wt", encoding="utf-8") as fi:
             fi.write(next_version_str)
             fi.write("\n")
     title = f"Bump version to {next_version} on {base}"
@@ -316,41 +315,31 @@ def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_v
 
     check_branch_not_exist(config, branch_name)
 
-    def bump_create_branch_and_pr(
-        repo_root: Path, upstream_url: GitURL, origin_url: GitURL, files, pr_body
-    ) -> "PullRequest":
+    def bump_create_branch_and_pr(repo: Repo, files, pr_body) -> "PullRequest":
         git.create_branch(
-            branch_name, dir=repo_root, dry_run=config.dry_run,
+            branch_name, dir=repo, dry_run=config.dry_run,
         )
         git.switch(
-            branch_name, dir=repo_root, dry_run=config.dry_run,
+            branch_name, dir=repo, dry_run=config.dry_run,
         )
         git.commit(
-            msg=f"{title}\n\n{main_body}", files=files, dir=repo_root, dry_run=config.dry_run,
+            msg=f"{title}\n\n{main_body}", files=files, dir=repo, dry_run=config.dry_run,
         )
-        git.push(config.origin_remote, branch_name, dir=repo_root, dry_run=config.dry_run)
+        git.push(repo.origin_remote, branch_name, dir=repo, dry_run=config.dry_run)
 
-        return g.create_pr(upstream_url, origin_url, branch_name, base, title, pr_body)
+        return g.create_pr(repo.upstream_url, repo.origin_url, branch_name, base, title, pr_body)
 
-    open_pr = bump_create_branch_and_pr(
-        config.katana_repo_path,
-        config.upstream_url,
-        config.origin_url,
-        files=[config.katana_repo_path / CONFIG_VERSION_PATH],
-        pr_body=main_body,
-    )
+    open_pr = bump_create_branch_and_pr(config.open, files=[config.open.dir / CONFIG_VERSION_PATH], pr_body=main_body,)
     enterprise_pr = None
     if config.has_enterprise:
         enterprise_pr = bump_create_branch_and_pr(
-            config.katana_enterprise_repo_path,
-            config.enterprise_upstream_url,
-            config.enterprise_origin_url,
-            files=[config.katana_enterprise_repo_path / SUBMODULE_PATH],
+            config.enterprise,
+            files=[config.enterprise.dir / SUBMODULE_PATH],
             pr_body=f"After: {open_pr.base.repo.full_name}#{open_pr.number}\n\n{main_body}",
         )
 
-    git.switch(current_branch, config.katana_enterprise_repo_path, dry_run=config.dry_run)
-    git.switch(current_branch, config.katana_repo_path, dry_run=config.dry_run)
+    git.switch(current_branch, config.enterprise, dry_run=config.dry_run)
+    git.switch(current_branch, config.open, dry_run=config.dry_run)
 
     todos = [f"TODO: Review and merge {open_pr.html_url} as soon as possible."]
     if enterprise_pr:
@@ -392,7 +381,7 @@ def update_dependent_pr_subcommand(args):
 
     g = GithubFacade(config)
 
-    enterprise_pr = g.get_pr(config.enterprise_upstream_url, number=args.number)
+    enterprise_pr = g.get_pr(config.enterprise.upstream_url, number=args.number)
     if enterprise_pr.commits > 1:
         raise NotImplementedError(
             "update_dependent_pr only supports single commit PRs. (It could be implemented if needed.)"
@@ -409,19 +398,17 @@ def update_dependent_pr_subcommand(args):
         if not open_pr.merged:
             raise StateError(f"The dependency {open_repo.full_name}#{open_pr.number} is not merged.")
 
-        enterprise_original_branch = git.get_branch_checked_out(config.katana_enterprise_repo_path)
-        open_original_branch = git.get_branch_checked_out(config.katana_enterprise_repo_path)
+        enterprise_original_branch = git.get_branch_checked_out(config.enterprise)
+        open_original_branch = git.get_branch_checked_out(config.open)
 
-        git.switch(enterprise_pr.head.ref, config.katana_enterprise_repo_path, config.dry_run)
-        git.switch(open_pr.merge_commit_sha, config.katana_repo_path, config.dry_run)
+        git.switch(enterprise_pr.head.ref, config.enterprise, config.dry_run)
+        git.switch(open_pr.merge_commit_sha, config.open, config.dry_run)
 
-        git.commit_amend([SUBMODULE_PATH], config.katana_enterprise_repo_path, config.dry_run)
-        git.push(
-            config.origin_remote, enterprise_pr.head.ref, config.katana_enterprise_repo_path, config.dry_run, force=True
-        )
+        git.commit_amend([SUBMODULE_PATH], config.enterprise, config.dry_run)
+        git.push(config.enterprise.origin_remote, enterprise_pr.head.ref, config.enterprise, config.dry_run, force=True)
 
-        git.switch(enterprise_original_branch, config.katana_enterprise_repo_path, config.dry_run)
-        git.switch(open_original_branch, config.katana_repo_path, config.dry_run)
+        git.switch(enterprise_original_branch, config.enterprise, config.dry_run)
+        git.switch(open_original_branch, config.open, config.dry_run)
 
         return [f"TODO: Merge {enterprise_pr.html_url} as soon as possible."]
     else:
@@ -454,14 +441,14 @@ def tag_subcommand(args):
     kind = get_branch_kind(current_branch, (BranchKind.RELEASE, BranchKind.VARIANT))
 
     if (
-        not git.is_ancestor_of(commit, f"{config.upstream_remote}/{current_branch}", config.katana_repo_path)
+        not git.is_ancestor_of(commit, f"{config.open.upstream_remote}/{current_branch}", config.open)
         and args.require_upstream
         and not args.pretend_upstream
     ):
         raise StateError(f"HEAD of {current_branch} is not upstream")
 
     if (
-        not git.is_ancestor_of(commit, f"{config.upstream_remote}/{current_branch}", config.katana_enterprise_repo_path)
+        not git.is_ancestor_of(commit, f"{config.enterprise.upstream_remote}/{current_branch}", config.enterprise)
         and args.require_upstream
         and not args.pretend_upstream
     ):
@@ -476,9 +463,9 @@ def tag_subcommand(args):
 
     g = GithubFacade(config)
 
-    def tag_repo(repo_path: Path, upstream_url: GitURL):
-        if git.is_ancestor_of(commit, f"{config.upstream_remote}/{current_branch}", repo_path) or args.pretend_upstream:
-            g.create_tag(upstream_url, git.get_hash(commit, repo_path, pretend_clean=True), tag_name, message=title)
+    def tag_repo(repo: Repo):
+        if git.is_ancestor_of(commit, f"{repo.upstream_remote}/{current_branch}", repo) or args.pretend_upstream:
+            g.create_tag(repo.upstream_url, git.get_hash(commit, repo, pretend_clean=True), tag_name, message=title)
         else:
             raise NotImplementedError("To tag a release commit, the commit must already be in the upstream branch")
             # TODO(amp): This is complex and requires additional support. It's not clear we need it, so just disable it
@@ -495,9 +482,9 @@ def tag_subcommand(args):
             # else:
             #     print(f"Create a PR for {repo_path.name}:{branch_name} and merge it as soon as possible.")
 
-    tag_repo(config.katana_repo_path, config.upstream_url)
+    tag_repo(config.open)
     if config.has_enterprise:
-        tag_repo(config.katana_enterprise_repo_path, config.enterprise_upstream_url)
+        tag_repo(config.enterprise)
     fetch_upstream(config)
 
 
@@ -522,10 +509,11 @@ def setup_tag_subcommand(subparsers):
 
 
 def release_subcommand(args):
+    config: Configuration = args.configuration
     # Perform the checks that bump will do first. That way we will fail before tagging if possible.
     bump_checks(args)
     # Set some arguments for tag. This is a bit of a hack, but not worth the engineering to fix.
-    ver, variant = get_explicit_version(git.HEAD, False, args.configuration.katana_repo_path, no_dev=True)
+    ver, variant = get_explicit_version(git.HEAD, False, config.open, no_dev=True)
     args.version = str(ver)
     args.require_upstream = True
     tag_subcommand(args)
@@ -554,11 +542,12 @@ def release_branch_subcommand(args):
     check_clean(args, config)
     current_branch = get_current_branch_from_either_repository(config)
     get_branch_kind(current_branch, [BranchKind.MASTER])
-    check_at_branch(f"{config.upstream_remote}/master", config)
-    git.switch("master", config.katana_enterprise_repo_path, config.dry_run)
-    git.switch("master", config.katana_repo_path, config.dry_run)
+    check_at_branch("master", config)
+    if config.has_enterprise:
+        git.switch("master", config.enterprise, config.dry_run)
+    git.switch("master", config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(config, git.HEAD, True, config.katana_repo_path, no_dev=True)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=True)
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
@@ -570,13 +559,14 @@ def release_branch_subcommand(args):
     release_branch_name = f"release/v{format_version_pep440(prev_version)}"
     check_branch_version(release_branch_name, BranchKind.RELEASE, rc_version, add_dev_to_version(prev_version))
     g.create_branch(
-        config.upstream_url, git.get_hash(git.HEAD, config.katana_repo_path, pretend_clean=True), release_branch_name,
+        config.open.upstream_url, git.get_hash(git.HEAD, config.open, pretend_clean=True), release_branch_name,
     )
-    g.create_branch(
-        config.enterprise_upstream_url,
-        git.get_hash(git.HEAD, config.katana_enterprise_repo_path, pretend_clean=True),
-        release_branch_name,
-    )
+    if config.has_enterprise:
+        g.create_branch(
+            config.enterprise.upstream_url,
+            git.get_hash(git.HEAD, config.enterprise, pretend_clean=True),
+            release_branch_name,
+        )
 
     # Create a PR on master which updates the version.txt to {next version}.
     todos = bump_both_repos(config, g, prev_version, next_version, "master")
@@ -586,9 +576,7 @@ def release_branch_subcommand(args):
 
 
 def check_clean(args, config):
-    is_dirty = git.is_dirty(config.katana_repo_path) or (
-        config.has_enterprise and git.is_dirty(config.katana_enterprise_repo_path)
-    )
+    is_dirty = git.is_dirty(config.open) or (config.has_enterprise and git.is_dirty(config.enterprise))
     if not args.clean and is_dirty:
         raise StateError("Action only supported in clean repositories. (Stash your changes.)")
 
@@ -719,7 +707,7 @@ Your "working" fork remote (the remove used to create PRs) is called 'origin' an
 
     args.configuration = Configuration(args)
 
-    if args.fetch:
+    if args.fetch or not args.dry_run:
         fetch_upstream(args.configuration)
 
     if hasattr(args, "subcommand_impl"):
@@ -735,7 +723,7 @@ Your "working" fork remote (the remove used to create PRs) is called 'origin' an
         parser.print_help()
 
 
-def fetch_upstream(config):
+def fetch_upstream(config: Configuration):
     if not config.has_git:
         return
     # Do fetches in parallel since they run at the start of many commands and are totally separate.
@@ -743,11 +731,11 @@ def fetch_upstream(config):
     if config.has_enterprise:
         thread = threading.Thread(
             target=lambda: git.fetch(
-                config.upstream_remote, dir=config.katana_enterprise_repo_path, tags=True, dry_run=False, log=False,
+                config.enterprise.upstream_remote, dir=config.enterprise, tags=True, dry_run=False, log=False,
             )
         )
         thread.start()
-    git.fetch(config.upstream_remote, dir=config.katana_repo_path, tags=True, dry_run=False, log=False)
+    git.fetch(config.open.upstream_remote, dir=config.open, tags=True, dry_run=False, log=False)
     if thread:
         thread.join()
 

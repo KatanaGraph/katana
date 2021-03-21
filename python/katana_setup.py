@@ -14,6 +14,7 @@ except ImportError:
     BuildDoc = None
 
 import generate_from_jinja
+import katana
 
 __all__ = ["setup"]
 
@@ -196,7 +197,7 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
     pxd_files, pyx_files = collect_cython_files(source_root=source_dir / package_name)
 
     options = dict(
-        version=get_katana_version(),
+        version=katana.__version__,
         name=package_name + "_python",
         packages=setuptools.find_packages(str(source_dir), exclude=("tests",)),
         package_data={"": [str(f) for f in pxd_files]},

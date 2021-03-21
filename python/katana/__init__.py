@@ -51,3 +51,13 @@ error_category_to_exception_class: Dict[str, Type[Exception]] = {
     "GaloisError": GaloisError,
     "QueryError": QueryError,
 }
+
+def get_katana_version():
+    import sys
+    from pathlib import Path
+    sys.path.append(str((Path(__file__).parent.parent / "scripts").absolute()))
+    import katana_version.version
+
+    return str(katana_version.version.get_version())
+
+__version__ = get_katana_version()

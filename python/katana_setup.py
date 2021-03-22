@@ -1,17 +1,13 @@
+import logging
+import subprocess
 import sys
 import os
-import warnings
+import tempfile
+from distutils.errors import CompileError
+from functools import lru_cache
 from pathlib import Path
-import numpy
 import setuptools
-import Cython.Build
 import configparser
-from packaging.version import Version
-
-try:
-    from sphinx.setup_command import BuildDoc
-except ImportError:
-    BuildDoc = None
 
 import generate_from_jinja
 
@@ -31,6 +27,114 @@ def split_cmake_list(s):
 
 def unique_list(l):
     return list(dict.fromkeys(l))
+
+
+class RequirementError(RuntimeError):
+    def __str__(self):
+        return (
+            super(RequirementError, self).__str__()
+            + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py "
+            "(cmake calls setup.py as needed). See Python.md or "
+            "https://github.com/KatanaGraph/katana/blob/master/Python.md#building-katana-python for Python build "
+            "instructions.)"
+        )
+
+
+@lru_cache(maxsize=None)
+def require_python_module(module_name, ge_version=None, lt_version=None):
+    v_str = ""
+    if ge_version:
+        v_str += f">={ge_version}"
+    if lt_version:
+        v_str += f"<{lt_version}"
+    if ge_version or lt_version:
+        v_str = f" ({v_str})"
+    print(f"Checking for Python package '{module_name}'{v_str}...", end="")
+    try:
+        try:
+            mod = __import__(module_name)
+        except ImportError:
+            raise RequirementError(
+                f"'{module_name}' must have version >={ge_version}<{lt_version}, but is not available."
+            )
+        if ge_version or lt_version:
+            import packaging.version
+
+            if hasattr(mod, "__version__"):
+                installed_version = packaging.version.parse(mod.__version__)
+            else:
+                raise RequirementError(
+                    f"'{module_name}' must have version >={ge_version}<{lt_version}, but has no __version__ attribute."
+                )
+            requested_min_version = ge_version and packaging.version.parse(ge_version)
+            requested_max_version = lt_version and packaging.version.parse(lt_version)
+            if (requested_min_version and requested_min_version > installed_version) or (
+                requested_max_version and installed_version >= requested_max_version
+            ):
+                raise RequirementError(
+                    f"'{module_name}' must have version >={ge_version}<{lt_version}, but have version {installed_version}."
+                )
+    except RequirementError as e:
+        print(str(e))
+        raise
+    else:
+        v = getattr(mod, "__version__", "")
+        if v:
+            v = " " + v
+        print(f"Found{v}.")
+
+
+def _get_build_extension():
+    from distutils.core import Distribution
+    from distutils.command.build_ext import build_ext
+
+    # Modified from Cython/Build/Inline.py, Apache License Version 2.0
+    dist = Distribution()
+    # Ensure the build respects distutils configuration by parsing
+    # the configuration files
+    config_files = dist.find_config_files()
+    dist.parse_config_files(config_files)
+    build_extension = build_ext(dist)
+    # build_extension.verbose = True
+    build_extension.finalize_options()
+    return build_extension
+
+
+def test_cython_module(name, cython_code, python_code="", extension_options=None):
+    extension_options = extension_options or {}
+    require_python_module("cython")
+    import Cython.Build
+    import Cython.Build.Inline
+
+    print(f"Checking for native {name}...", end="")
+    try:
+        module_name = f"_test_cython_module_{abs(hash(cython_code))}"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            pyx_file = tmpdir / f"{module_name}.pyx"
+            py_file = tmpdir / f"{module_name}_test.py"
+            # Modified from Cython/Build/Inline.py, Apache License Version 2.0
+            with open(pyx_file, "w") as fh:
+                fh.write(cython_code)
+            with open(py_file, "w") as fh:
+                fh.write(python_code)
+            extension = setuptools.Extension(name=module_name, sources=[str(pyx_file)], **extension_options)
+            build_extension = _get_build_extension()
+            build_extension.extensions = Cython.Build.cythonize(
+                [extension], language_level="3", compiler_directives={"binding": True}, quiet=True
+            )
+            build_extension.build_temp = os.path.dirname(pyx_file)
+            build_extension.build_lib = tmpdir
+            build_extension.run()
+
+            # module_path = tmpdir / build_extension.get_ext_filename(module_name)
+            # module = Cython.Build.Inline.load_dynamic(module_name, str(module_path))
+            subprocess.check_call([sys.executable, str(py_file)], cwd=tmpdir, env={"PYTHONPATH": str(tmpdir)})
+    except Exception as e:
+        print("Failed.")
+        raise RequirementError(f"Could not find native {name}.")
+    else:
+        print("Success.")
 
 
 def load_lang_config(lang):
@@ -131,6 +235,15 @@ def _build_cython_extensions(pyx_files, source_root_name, extension_options):
 
 
 def cythonize(module_list, *, source_root, **kwargs):
+    # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
+    require_python_module("packaging")
+    require_python_module("Cython", "0.29.12")
+    require_python_module("numpy", "1.10")
+    require_python_module("pyarrow", "1.0", "3.0.dev")
+
+    import Cython.Build
+    import numpy
+
     extension_options = load_lang_config("CXX")
     extension_options["include_dirs"].append(numpy.get_include())
 
@@ -149,8 +262,6 @@ def cythonize(module_list, *, source_root, **kwargs):
         os.environ["LDSHARED"] = linker
         os.environ["LDEXE"] = linker
 
-    is_clang = any("clang" in s for s in extension_options["compiler"])
-
     extension_options["extra_compile_args"].extend(
         [
             # Warnings are common in generated code and hard to fix. Don't make them errors.
@@ -164,6 +275,21 @@ def cythonize(module_list, *, source_root, **kwargs):
         ]
     )
     extension_options.pop("compiler")
+
+    test_extension_options = extension_options.copy()
+    test_extension_options.setdefault("extra_link_args", [])
+    if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
+        test_extension_options["extra_link_args"].append("-lkatana_galois")
+    test_cython_module(
+        "libkatana_galois",
+        """
+# distutils: language=c++
+from katana.cpp.libgalois.Galois cimport setActiveThreads, SharedMemSys
+cdef SharedMemSys _katana_runtime
+setActiveThreads(1)
+    """,
+        extension_options=test_extension_options,
+    )
 
     source_root = Path(source_root)
     source_root_name = source_root.name
@@ -186,10 +312,8 @@ def cythonize(module_list, *, source_root, **kwargs):
 
 
 def setup(*, source_dir, package_name, doc_package_name, **kwargs):
-    # Require pytest-runner only when running tests
-    pytest_runner = ["pytest-runner>=2.0,<3dev"] if any(arg in sys.argv for arg in ("pytest", "test")) else []
-
-    setup_requires = ["numpy"] + pytest_runner
+    # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
+    requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
 
     source_dir = Path(source_dir).absolute()
 
@@ -202,7 +326,9 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
         package_data={"": [str(f) for f in pxd_files]},
         package_dir={"": str(source_dir)},
         tests_require=["pytest"],
-        setup_requires=setup_requires,
+        # NOTE: Do not use setup_requires. It doesn't work properly for our needs because it doesn't install the
+        # packages in the overall build environment. (It installs them in .eggs in the source tree.)
+        requires=requires,
         ext_modules=cythonize(pyx_files, source_root=source_dir),
         zip_safe=False,
         command_options={
@@ -216,14 +342,19 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
             }
         },
     )
-    if BuildDoc:
+    try:
+        from sphinx.setup_command import BuildDoc
+
         options.update(cmdclass={"build_sphinx": BuildDoc})
+    except ImportError:
+        pass
     options.update(kwargs)
 
     setuptools.setup(**options)
 
 
 def get_katana_version():
+    require_python_module("packaging")
     sys.path.append(str((Path(__file__).parent.parent / "scripts").absolute()))
     import katana_version.version
 

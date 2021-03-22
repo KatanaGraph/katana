@@ -1,2 +1,2 @@
 [build-system]
-requires = ["setuptools", "wheel", "scikit-build", "cmake>=3.13", "cython", "jinja2", "pyarrow"]
+requires = ["setuptools", "wheel", "Cython (>=0.29.12)", "jinja2", "pyarrow (>=1.0,<3.0.dev)", "numpy", "packaging"]

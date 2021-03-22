@@ -24,6 +24,8 @@ set(sources
   src/LocalStorage.cpp
   src/MemoryNameServerClient.cpp
   src/NameServerClient.cpp
+  src/ParquetReader.cpp
+  src/ParquetWriter.cpp
   src/RDG.cpp
   src/RDGCore.cpp
   src/RDGHandleImpl.cpp

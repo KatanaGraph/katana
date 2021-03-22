@@ -31,6 +31,7 @@
 #include "katana/Uri.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
+#include "tsuba/ParquetWriter.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
 
@@ -45,67 +46,6 @@ const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
 const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
 
-std::shared_ptr<parquet::WriterProperties>
-StandardWriterProperties() {
-  // int64 timestamps with nanosecond resolution requires Parquet version 2.0.
-  // In Arrow to Parquet version 1.0, nanosecond timestamps will get truncated
-  // to milliseconds.
-  return parquet::WriterProperties::Builder()
-      .version(parquet::ParquetVersion::PARQUET_2_0)
-      ->data_page_version(parquet::ParquetDataPageVersion::V2)
-      ->build();
-}
-
-std::shared_ptr<parquet::ArrowWriterProperties>
-StandardArrowProperties() {
-  return parquet::ArrowWriterProperties::Builder().build();
-}
-
-/// Store the arrow array as a table in a unique file, return
-/// the final name of that file
-katana::Result<std::string>
-DoStoreArrowArrayAtName(
-    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
-    const std::string& name, tsuba::WriteGroup* desc) {
-  katana::Uri next_path = dir.RandFile(name);
-
-  // Metadata paths should relative to dir
-  std::shared_ptr<arrow::Table> column = arrow::Table::Make(
-      arrow::schema({arrow::field(name, array->type())}), {array});
-
-  auto ff = std::make_shared<tsuba::FileFrame>();
-  if (auto res = ff->Init(); !res) {
-    return res.error().WithContext("creating output buffer");
-  }
-
-  auto write_result = parquet::arrow::WriteTable(
-      *column, arrow::default_memory_pool(), ff,
-      std::numeric_limits<int64_t>::max(), StandardWriterProperties(),
-      StandardArrowProperties());
-
-  if (!write_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
-  }
-
-  ff->Bind(next_path.string());
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-  desc->StartStore(std::move(ff));
-  return next_path.BaseName();
-}
-
-katana::Result<std::string>
-StoreArrowArrayAtName(
-    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
-    const std::string& name, tsuba::WriteGroup* desc) {
-  try {
-    return DoStoreArrowArrayAtName(array, dir, name, desc);
-  } catch (const std::exception& exp) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
-  }
-}
-
 std::string
 MirrorPropName(unsigned i) {
   return std::string(kMirrorNodesPropName) + "_" + std::to_string(i);
@@ -116,82 +56,21 @@ MasterPropName(unsigned i) {
   return std::string(kMasterNodesPropName) + "_" + std::to_string(i);
 }
 
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-LargeStringToChunkedString(
-    const std::shared_ptr<arrow::LargeStringArray>& arr) {
-  std::vector<std::shared_ptr<arrow::Array>> chunks;
-
-  arrow::StringBuilder builder;
-
-  uint64_t inserted = 0;
-  constexpr uint64_t kMaxSize = 2147483646;
-
-  for (uint64_t i = 0, size = arr->length(); i < size; ++i) {
-    if (!arr->IsValid(i)) {
-      auto status = builder.AppendNull();
-      if (!status.ok()) {
-        return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "appending null: {}", status);
-      }
-      continue;
-    }
-    arrow::util::string_view val = arr->GetView(i);
-    uint64_t val_size = val.size();
-    KATANA_LOG_ASSERT(val_size < kMaxSize);
-    if (inserted + val_size >= kMaxSize) {
-      std::shared_ptr<arrow::Array> new_arr;
-      auto status = builder.Finish(&new_arr);
-      if (!status.ok()) {
-        return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-      }
-      chunks.emplace_back(new_arr);
-      inserted = 0;
-      builder.Reset();
-    }
-    inserted += val_size;
-    auto status = builder.Append(val);
-    if (!status.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "adding string to array: {}", status);
-    }
-  }
-  if (inserted > 0) {
-    std::shared_ptr<arrow::Array> new_arr;
-    auto status = builder.Finish(&new_arr);
-    if (!status.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-    }
-    chunks.emplace_back(new_arr);
+katana::Result<std::string>
+StoreArrowArrayAtName(
+    const std::shared_ptr<arrow::ChunkedArray>& array, const katana::Uri& dir,
+    const std::string& name, tsuba::WriteGroup* desc) {
+  auto writer_res = tsuba::ParquetWriter::Make(array, name);
+  if (!writer_res) {
+    return writer_res.error().WithContext("making property writer");
   }
 
-  auto maybe_res = arrow::ChunkedArray::Make(chunks, arrow::utf8());
-  if (!maybe_res.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "building chunked array: {}",
-        maybe_res.status());
+  katana::Uri new_path = dir.RandFile(name);
+  auto res = writer_res.value()->WriteToUri(new_path, desc);
+  if (!res) {
+    return res.error().WithContext("writing property writer");
   }
-  return maybe_res.ValueOrDie();
-}
-
-// HandleBadParquetTypes here and HandleBadParquetTypes in AddProperties.cpp
-// workaround a libarrow2.0 limitation in reading and writing LargeStrings to
-// parquet files.
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
-  if (old_array->num_chunks() > 1) {
-    return old_array;
-  }
-  switch (old_array->type()->id()) {
-  case arrow::Type::type::LARGE_STRING: {
-    std::shared_ptr<arrow::LargeStringArray> large_string_array =
-        std::static_pointer_cast<arrow::LargeStringArray>(old_array->chunk(0));
-    return LargeStringToChunkedString(large_string_array);
-  }
-  default:
-    return old_array;
-  }
+  return new_path.BaseName();
 }
 
 katana::Result<std::vector<tsuba::PropStorageInfo>>
@@ -208,13 +87,7 @@ WriteProperties(
     }
     auto name = prop_info[i].name.empty() ? schema->field(i)->name()
                                           : prop_info[i].name;
-    auto fixed_type_column = HandleBadParquetTypes(props.column(i));
-    if (!fixed_type_column) {
-      return fixed_type_column.error().WithContext(
-          "handling arrow->parquet type mismatch");
-    }
-    auto name_res =
-        StoreArrowArrayAtName(fixed_type_column.value(), dir, name, desc);
+    auto name_res = StoreArrowArrayAtName(props.column(i), dir, name, desc);
     if (!name_res) {
       return name_res.error().WithContext("storing arrow array");
     }

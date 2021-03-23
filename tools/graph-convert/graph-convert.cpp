@@ -31,6 +31,7 @@
 #include <vector>
 
 #include <boost/mpl/if.hpp>
+#include <fmt/core.h>
 #include <llvm/Support/CommandLine.h>
 
 #include "katana/ErrorCode.h"
@@ -3270,7 +3271,7 @@ struct Svmlight2Gr : public HasNoVoidSpecialization {
 
 int
 main(int argc, char** argv) {
-  kCommandLine = katana::Join(" ", argv, argv + argc);
+  kCommandLine = fmt::format("{}", fmt::join(argv, argv + argc, " "));
   katana::SharedMemSys G;
   llvm::cl::ParseCommandLineOptions(
       argc, argv,

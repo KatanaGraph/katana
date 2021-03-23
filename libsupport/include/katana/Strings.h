@@ -33,39 +33,6 @@ KATANA_EXPORT std::string TrimSuffix(
 
 KATANA_EXPORT bool HasSuffix(const std::string& s, const std::string& suffix);
 
-/// Join returns a string that is the concatenation of every object from
-/// \param begin to \param end  all separated by an instance of \param sep
-template <typename I>
-std::string
-Join(std::string_view sep, I begin, I end) {
-  if (begin == end) {
-    return "";
-  }
-  fmt::memory_buffer buf;
-  auto last = --end;
-  for (auto it = begin; it != last; ++it) {
-    fmt::format_to(buf, "{}{}", *it, sep);
-  }
-  fmt::format_to(buf, "{}", *last);
-  return to_string(buf);
-}
-
-/// Join returns a string that is the concatenation of every object in
-/// \param items all separated by an instance of \param sep
-template <typename C>
-std::string
-Join(std::string_view sep, const C& items) {
-  return Join(sep, items.begin(), items.end());
-}
-
-/// Join returns a string that is the concatenation of every object in
-/// \param items all separated by an instance of \param sep
-template <typename T>
-std::string
-Join(std::string_view sep, const std::initializer_list<T> items) {
-  return Join(sep, items.begin(), items.end());
-}
-
 }  // namespace katana
 
 #endif

@@ -500,7 +500,100 @@ it is acceptable to follow the convention in that module; though in general, it
 would be preferable to follow the motto of "leave the codebase in better shape
 than you found it."
 
-## katana::Result
+## Error Codes and Messages
+
+Code that needs to indicate an error to callers typically should use
+`katana::Result`. When a function returns `katana::Result<T>`, it means that
+the function either returns a `T` or an error. When a function returns
+`katana::Result<void>`, it means that either the function succeeds (i.e.,
+returns `void`) or returns an error.
+
+A common pattern for using a function that returns a `katana::Result<T>` is:
+```cpp
+auto r = ReturnsAResult();
+if (!r) {
+  // Some error happened. Either...
+
+  // ... we handle it
+  if (r.error() == ErrorCode::Foo) {
+    return DoAlternative();
+  }
+
+  // ... or we propagate it
+  return r.error();
+}
+
+// No error happened. Continue on.
+T value = std::move(r.value());
+```
+
+See
+[Result.h](https://github.com/KatanaGraph/katana/blob/master/libsupport/include/katana/Result.h)
+for more details.
+
+If you are looking to simplify error handling, if a function returns a
+`katana::Result<void>`, you can define the result and check it in a single if
+statement:
+
+```cpp
+if (auto r = ReturnsAResult(); !r) {
+  return r.error();
+}
+```
+
+Code should be exception-safe, but exceptions are rarely thrown in the
+codebase. Exceptions are reserved for situations where it is equally acceptable
+to terminate the current process, which is rare in library code, or as a safe
+implementation of `setjmp`/`longjmp`, which is even rarer.
+
+Errors are a part of the contract between a caller and callee in the same way
+parameters and return values are. When writing an error message or selecting an
+error code, consider the perspective of the caller and their natural first
+question: "how can I make this error go away?"
+
+Good messages should be to the point and in terms of the caller and not
+artifacts of an implementation detail in the callee.
+
+Compare
+
+```cpp
+Result<void> CheckNumber(int number) {
+  if (!number) {
+    int u = n / number;
+  } else {
+    return KATANA_ERROR(IllegalArgument, "cannot divide by zero");
+  }
+}
+```
+
+and
+
+```cpp
+Result<void> CheckNumber(int number) {
+  if (!number) {
+    int u = n / number;
+  } else {
+    return KATANA_ERROR(IllegalArgument, "number should be positive");
+  }
+}
+```
+
+As a matter of consistency and style, messages should begin with a lowercase
+letter to avoid switching between different case styles when errors are
+propagated.
+
+For example,
+
+```cpp
+Result<void> MakeList() {
+  ...
+  if (auto r = CheckNumber(n); !r) {
+    return r.error().WithContext("making number {}", n)
+  }
+}
+```
+
+will create error strings like `making number 0: number should be positive`.
 
 On older compilers, auto conversion to `katana::Result` will fail for types
 that can't be copied. One symptom is compiler errors on GCC 7 but not on GCC 9.
@@ -511,16 +604,6 @@ Result<Thing> MakeMoveOnlyThing() {
   Thing t;
   ....
   return Thing(std::move(t));
-}
-```
-
-If you are looking to simplify error handling, if a function returns a
-`katana::Result<void>`, you can define the result and check it in a single if
-statement:
-
-```cpp
-if (auto r = ReturnsAResult(); !r) {
-  return r.error();
 }
 ```
 

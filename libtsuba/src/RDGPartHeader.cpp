@@ -416,6 +416,7 @@ tsuba::to_json(json& j, const tsuba::PartitionMetadata& pmd) {
       {"is_outgoing_edge_cut", pmd.is_outgoing_edge_cut_},
       {"is_incoming_edge_cut", pmd.is_incoming_edge_cut_},
       {"num_global_nodes", pmd.num_global_nodes_},
+      {"max_global_node_id", pmd.max_global_node_id_},
       {"num_global_edges", pmd.num_global_edges_},
       {"num_nodes", pmd.num_nodes_},
       {"num_edges", pmd.num_edges_},
@@ -427,11 +428,17 @@ void
 tsuba::from_json(const json& j, tsuba::PartitionMetadata& pmd) {
   uint32_t magic;
   j.at("magic").get_to(magic);
+
   j.at("policy_id").get_to(pmd.policy_id_);
   j.at("transposed").get_to(pmd.transposed_);
   j.at("is_outgoing_edge_cut").get_to(pmd.is_outgoing_edge_cut_);
   j.at("is_incoming_edge_cut").get_to(pmd.is_incoming_edge_cut_);
   j.at("num_global_nodes").get_to(pmd.num_global_nodes_);
+  if (auto it = j.find("max_global_node_id"); it != j.end()) {
+    it->get_to(pmd.max_global_node_id_);
+  } else {
+    pmd.max_global_node_id_ = pmd.num_global_nodes_ - 1;
+  }
   j.at("num_global_edges").get_to(pmd.num_global_edges_);
   j.at("num_nodes").get_to(pmd.num_nodes_);
   j.at("num_edges").get_to(pmd.num_edges_);

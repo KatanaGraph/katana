@@ -12,6 +12,7 @@ struct PartitionMetadata {
   bool is_outgoing_edge_cut_{false};
   bool is_incoming_edge_cut_{false};
   uint64_t num_global_nodes_{0UL};
+  uint64_t max_global_node_id_{0UL};
   uint64_t num_global_edges_{0UL};
   uint64_t num_edges_{0UL};
   uint32_t num_nodes_{0};

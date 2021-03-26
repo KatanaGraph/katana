@@ -131,6 +131,13 @@ public:
     mirror_nodes_ = std::move(a);
   }
 
+  const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_ids() const {
+    return host_to_owned_global_ids_;
+  }
+  void set_host_to_owned_global_ids(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    host_to_owned_global_ids_ = std::move(a);
+  }
+
   const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
     return local_to_user_id_;
   }
@@ -178,6 +185,7 @@ private:
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
+  std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_ids_;
   std::shared_ptr<arrow::ChunkedArray> local_to_user_id_;
   std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;
 

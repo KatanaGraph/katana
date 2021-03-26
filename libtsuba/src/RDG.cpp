@@ -42,6 +42,7 @@ namespace {
 // special partition property names
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
+const char* kHostToOwnedGlobalIDsPropName = "host_to_owned_global_ids";
 const char* kLocalToUserIDPropName = "local_to_user_id";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
@@ -173,6 +174,8 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
+  } else if (name == kHostToOwnedGlobalIDsPropName) {
+    set_host_to_owned_global_ids(std::move(col));
   } else if (name == kLocalToUserIDPropName) {
     set_local_to_user_id(std::move(col));
   } else if (name == kLocalToGlobalIDPropName) {
@@ -205,8 +208,12 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
-      "WritePartArrays master sz: {} mirros sz: {} l2u sz: {} l2g sz: {}",
+      "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} l2u sz: {} "
+      "l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
+      host_to_owned_global_ids_ == nullptr
+          ? 0
+          : host_to_owned_global_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
@@ -232,6 +239,19 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = name,
         .path = std::move(mast_res.value()),
+        .persist = true,
+    });
+  }
+
+  if (host_to_owned_global_ids_ != nullptr) {
+    auto h2o_res = StoreArrowArrayAtName(
+        host_to_owned_global_ids_, dir, kHostToOwnedGlobalIDsPropName, desc);
+    if (!h2o_res) {
+      return h2o_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropStorageInfo{
+        .name = kHostToOwnedGlobalIDsPropName,
+        .path = std::move(h2o_res.value()),
         .persist = true,
     });
   }
@@ -380,8 +400,12 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
     }
 
     KATANA_LOG_DEBUG(
-        "ReadPartMetadata master sz: {} mirros sz: {} l2u sz: {} l2g sz: {}",
+        "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
+        "{} l2g sz: {}",
         master_nodes_.size(), mirror_nodes_.size(),
+        host_to_owned_global_ids_ == nullptr
+            ? 0
+            : host_to_owned_global_ids_->length(),
         local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
         local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
   }

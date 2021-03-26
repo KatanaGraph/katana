@@ -32,6 +32,7 @@ enum ImportDataType {
   kString,
   kInt64,
   kInt32,
+  kUInt32,
   kDouble,
   kFloat,
   kBoolean,
@@ -45,7 +46,7 @@ struct ImportData {
   ImportDataType type;
   bool is_list;
   std::variant<
-      uint8_t, std::string, int64_t, int32_t, double, float, bool,
+      uint8_t, std::string, int64_t, int32_t, uint32_t, double, float, bool,
       std::vector<std::string>, std::vector<int64_t>, std::vector<int32_t>,
       std::vector<double>, std::vector<float>, std::vector<bool>>
       value;

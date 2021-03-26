@@ -1842,6 +1842,11 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
     value = std::static_pointer_cast<arrow::Int32Scalar>(scalar)->value;
     break;
   }
+  case arrow::Type::UINT32: {
+    type = ImportDataType::kUInt32;
+    value = std::static_pointer_cast<arrow::UInt32Scalar>(scalar)->value;
+    break;
+  }
   case arrow::Type::DOUBLE: {
     type = ImportDataType::kDouble;
     value = std::static_pointer_cast<arrow::DoubleScalar>(scalar)->value;

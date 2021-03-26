@@ -1,149 +1,155 @@
-
-#include <iostream>
+#include <algorithm>
+#include <array>
 #include <fstream>
+#include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
-#include <set>
-#include <array> 
-#include <map>
-#include <algorithm>
+
 #include "Huffman/HuffmanCoding.h"
-//#include "NeuralNetwork/NeuralNetworkTrainer.h"
+#include "NeuralNetwork/NeuralNetworkTrainer.h"
 #include "NeuralNetwork/SkipGramModelTrainer.cpp"
 
-#include "galois/graphs/Util.h"
-#include "galois/Timer.h"
-#include "Lonestar/BoilerPlate.h"
-#include "galois/graphs/FileGraph.h"
-#include "galois/LargeArray.h"
+//#include "galois/graphs/Util.h"
+//#include "galois/Timer.h"
+//#include "Lonestar/BoilerPlate.h"
+//#include "galois/graphs/FileGraph.h"
+//#include "galois/LargeArray.h"
 
-#include "galois/AtomicHelpers.h"
-#include "galois/AtomicWrapper.h"
+//#include "galois/AtomicHelpers.h"
+//#include "galois/AtomicWrapper.h"
 
-using namespace std;
-
-//namespace cll = llvm::cl;
+namespace cll = llvm::cl;
 
 static const char* name = "Embeddings";
 static const char* desc =
     "Generate embeddings";
 static const char* url = "embeddings";
 
-int main(int argc, char** argv){
+static cll::opt<std::string> inputFile(
+    cll::Positional, cll::desc("<input file>"), cll::Required);
 
-	galois::SharedMemSys G;
-  LonestarStart(argc, argv, name, desc, url);
+static cll::opt<std::string> outputFile(
+    cll::Positional, cll::desc("<output file>"), cll::Required);
 
-	ifstream myfile("samples.csv");
-	
-	std::vector<std::pair<unsigned int,unsigned int>>* samples = new std::vector<std::pair<unsigned int,unsigned int>>; 
-	std::set<unsigned int>* vocab = new std::set<unsigned int>;
-	std::multiset<unsigned int>* vocabMultiset = new std::multiset<unsigned int>;
+static cll::opt<unsigned int> numIterations(
+    "numIterations", cll::desc("Number of Training Iterations (default value 50)"),
+    cll::init(50));
+
+void ReadRandomWalks(std::ifstream input_file, std::vector<std::vector<uint32_t>>* random_walks) {
 
 	std::string line;
 
-	unsigned int target;
- 	unsigned int sample;
+	while(std::getline(input_file, line)){
+		std::vector<uint32_t> walk;
+                std::stringstream ss(line);
+	
+		uint32_t val;
 
-	unsigned int maxId = 0;
-	//reading samples
-	while(getline(myfile, line)){
-		std::stringstream ss(line);
-		
-		ss >> target;
-		ss >> sample;
-		
-		samples->push_back(std::make_pair(target, sample));
-		
-		vocab->insert(target);
-		vocab->insert(sample);
-
-		vocabMultiset->insert(target);
-		vocabMultiset->insert(sample);
-		
-		if(target > maxId)	maxId = target;
-		if(sample > maxId) 	maxId = sample;
-
-	}
-	std::cout << "read all samples\n";
-
-	HuffmanCoding* huffmanCoding = new HuffmanCoding(vocab, vocabMultiset);
-	std::cout << "huffman Coding init done\n";
-
-	std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes = huffmanCoding->encode();
-
-	std::cout << "huffman encoding done \n";
-
-/*HuffmanCoding::HuffmanNode* node;
-  int l, i;
-
-	for(unsigned int id=1;id<=vocab->size();id++){
-
-		if(huffmanNodes->find(id) != huffmanNodes->end()){
-    node = huffmanNodes->find(id)->second;
-    l = node->idx;
-
-    std::cout << id <<" " << node->idx << std::endl;
+		while(ss >> val) {
+			walk.push_back(val);
 		}
-		else
-			std::cout << "broken: " << id << std::endl;
-	}*/
 
-	std::cout << "testing done\n";
-
-	SkipGramModelTrainer* skipGramModelTrainer = new SkipGramModelTrainer(vocabMultiset, huffmanNodes);
-
-	std::cout << "skip gram trainer init done \n";
-	
-	skipGramModelTrainer->initArray();
-
-	skipGramModelTrainer->initExpTable();	
-
-	std::cout << "skip gram init exp table \n";
-	galois::CopyableAtomic<double>**  syn0;
-
-	int num_iterations = 50;
-//	int num_iterations = 1;
-
-	for(int iter =0; iter<num_iterations;iter++){
-		//std::random_shuffle(samples.begin(), samples.end());
-		syn0 = skipGramModelTrainer->train(samples);		
+		random_walks->push_back(std::move(walk));
 	}
+}
 
-	ofstream of("embeddings.csv");
+void BuildVocab(std::vector<std::vector<uint32_t>>& random_walks, std::set<uint32_t>* vocab, 
+		std::map<uint32_t, uint32_t>* vocab_multiset) {
 
-	HuffmanCoding::HuffmanNode* node;
-  int l, i;
-	for(unsigned int id=1;id<=maxId;id++){
-	
-		if(huffmanNodes->find(id) != huffmanNodes->end()){
-			node = huffmanNodes->find(id)->second;
-			l = node->idx;
-
-			of << id;
-			for(i=0;i<NeuralNetworkTrainer::LAYER1_SIZE;i++)
-				of << " " << syn0[l][i];
-	
-			of << std::endl;
-		}
-		else
-		{
-			of << id;
-      for(i=0;i<NeuralNetworkTrainer::LAYER1_SIZE;i++)
-        of << " " << 0.0f;
-
-      of << std::endl;
+	for(auto walk: walks) {
+		for(auto val : walk) {
+			vocab->insert(val);
+			if(vocab_multiset->find(val) == vocab_multiset->end()){
+				vocab_multiset[val] = 1;
+			}
+			else{
+				vocab_multiset[val] = vocab_multiset[val] + 1;
+			}
 		}
 	}
+}
 
-	of.close();
+void PrintEmbeddings(std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes,
+	             std::vector<std::vector<katana::CopyableAtomic<double>>>& syn0, uint32_t max_id){
 
-/*	
-	std::cout <<"4,3:" << skipGramModelTrainer->counts[4][3] << std::endl;
-std::cout <<"4,5:" << skipGramModelTrainer->counts[4][5] << std::endl;
-std::cout <<"5,4:" << skipGramModelTrainer->counts[5][4] << std::endl;
-std::cout <<"5,6:" << skipGramModelTrainer->counts[5][6] << std::endl;
-*/	return 0;
+	std::ofstream of(outputFile.c_str());
+
+        HuffmanCoding::HuffmanNode* node;
+  	uint32_t node_idx;
+
+  	for(uint32_t id = 1; id <= max_id; id++){
+
+                if(huffman_nodes->find(id) != huffman_nodes->end()){
+                        node = huffman_nodes->find(id)->second;
+                        node_idx = node->idx;
+
+                        of << id;
+
+                        for(uint32_t i = 0 ; i < NeuralNetworkTrainer::kLayer1Size ; i++){
+                                of << " " << syn0[node_idx][i];
+			}
+                }
+                else
+                {
+                        of << id;
+
+      			for(uint32_t i = 0 ; i < NeuralNetworkTrainer::kLayer1Size ; i++){
+        			of << " " << 0.0f;
+			}
+                }
+		of << "\n";
+        }
+
+        of.close();
+}
+
+int main(int argc, char** argv){
+
+	std::unique_ptr<katana::SharedMemSys> G =
+  LonestarStart(argc, argv, name, desc, url);
+
+	std::ifstream input_file(inputFile.c_str());
+
+	std::vector<std::vector<uint32_t>> random_walks;
+
+	ReadRandomWalks(input_file, &random_walks);
+
+	std::set<uint32_t> vocab;
+	std::map<uint32_t, uint32_t> vocab_multiset;
+
+	BuildVocab(random_walks, &vocab, &vocab_multiset);
+
+	HuffmanCoding huffman_coding(&vocab, &vocab_multiset);
+	katana::gPrint("Huffman Coding init done");
+
+	std::vector<HuffmanCoding::HuffmanNode> huffman_nodes;
+	std::map<unsigned int, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
+       	huffman_coding->encode(&huffman_nodes_map, &huffman_nodes);
+
+	katana::gPrint("Huffman Encoding done");
+
+	SkipGramModelTrainer skip_gram_model_trainer(&vocab_multiset, &huffman_nodes_map);
+
+	katana::gPrint("Skip-Gram Trainer Init done");
+	
+	skip_gram_model_trainer->InitArray();
+	skip_gram_model_trainer->InitExpTable();	
+
+	katana::gPrint("Skip-Gram Init exp table \n";
+	std::vector<std::vector<katana::CopyableAtomic<double>>>  syn0;
+
+	for(uint32_t iter =0; iter<numIterations; iter++){
+		
+		skipGramModelTrainer->train(random_walks, &syn0);		
+	}
+
+	uint32_t max_id = *(vocab.crbegin());
+
+	PrintEmbeddings(huffman_nodes, syn0,max_id);
+
+	return 0;
 }
 

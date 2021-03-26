@@ -1,70 +1,59 @@
 #include <iostream>
-#include <string>
+#include <map>
 #include <set>
+#include <string>
 #include <vector>
 #include <map>
-#include "HuffmanCoding.h"
-
- HuffmanCoding::HuffmanNode::HuffmanNode(unsigned int* code, int* point, int idx, int count, int codeLen, int token) {
-			this->code = code;
-			this->point = point;
-			this->idx = idx;
-			this->count = count;
-			this->codeLen = codeLen;
-			this->token = token;
-		}
-	
-	
-  HuffmanCoding::HuffmanCoding(std::set<unsigned int>* vocab, std::multiset<unsigned int>* vocabMultiset) {
-		this->vocab = vocab;
-		this->vocabMultiset = vocabMultiset;
-	}
 	
 	/**
 	 * @return {@link Map} from each given token to a {@link HuffmanNode} 
 	 */
-	std::map<unsigned int,HuffmanCoding::HuffmanNode*>* HuffmanCoding::encode(){
+	void HuffmanCoding::Encode(std::map<uint32_t,HuffmanCoding::HuffmanNode*>* huffman_node_map){
 		
-		int numTokens = vocab->size();
+		num_tokens_ = vocab_->size();
 		
-		int* parentNode = new int[numTokens * 2 + 1];
-		int* binary = new int[numTokens * 2 + 1];
-		long* count = new long[numTokens * 2 + 1];
-		int i = 0;
-		for (auto e : *vocab) {
-			count[i] = vocabMultiset->count(e);
-			i++;
-		}
+		parent_node_->reserve(num_tokens * 2 + 1);
+		binary_->reserve(num_tokens * 2 + 1);
+		count_->allocateBlocked(num_tokens * 2 + 1);
 
-		for (i = numTokens; i < numTokens * 2 + 1; i++)
-			count[i] = (long)100000000000000;
+		katana::do_all(
+				katana::iterate((uint32_t) 0, (num_tokens * 2 + 1)),
+				[&](uint32_t idx){
+				
+					count_[idx] = (unsigned long) 100000000000000;
+				}, katana::steal());
+
+		uint32_t idx = 0;
+
+		for (auto item : *vocab) {
+			count[i] = vocab_multiset_[item];
+			idx++;
+		}
 		
-		createTree(numTokens, count, binary, parentNode);
+		CreateTree();
 		
-		return encode(binary, parentNode);
+		Encode(huffman_node_map);
 	}
 	
 	/** 
 	 * Populate the count, binary, and parentNode arrays with the Huffman tree
 	 * This uses the linear time method assuming that the count array is sorted 
 	 */
-	void HuffmanCoding::createTree(int numTokens, long* count, int* binary, int* parentNode) {
+	void HuffmanCoding::CreateTree() {
 	
-		int min1i;
-		int min2i;
-		int pos1 = numTokens - 1;
-		int pos2 = numTokens;
+		uint32_t min1i;
+		uint32_t min2i;
+		uint32_t pos1 = num_tokens_ - 1;
+		uint32_t pos2 = num_tokens_;
 	
-		int newNodeIdx;
+		uint32_t new_node_idx;
 	
 		// Construct the Huffman tree by adding one node at a time
-		for (int a = 0; a < numTokens - 1; a++) {
-	
-//			int newNodeIdx;	
+		for (uint32_t idx = 0; idx < (num_tokens_ - 1); idx++) {
 
 		// First, find two smallest nodes 'min1, min2'
 			if (pos1 >= 0) { 
-				if (count[pos1] < count[pos2]) {
+				if (count_[pos1] < count_[pos2]) {
 					min1i = pos1;
 					pos1--;
 				} else {
@@ -77,7 +66,7 @@
 			}
 			
 			if (pos1 >= 0) {
-				if (count[pos1] < count[pos2]) {
+				if (count_[pos1] < count_[pos2]) {
 					min2i = pos1;
 					pos1--;
 				} else {
@@ -89,23 +78,19 @@
 				pos2++;
 			}
 			
-			newNodeIdx = numTokens + a;
-			count[newNodeIdx] = count[min1i] + count[min2i];
-			parentNode[min1i] = newNodeIdx;
-			parentNode[min2i] = newNodeIdx;
-			binary[min2i] = 1;
+			new_node_idx = num_tokens_ + idx;
+			count_[new_node_idx] = count_[min1i] + count_[min2i];
+			parent_node_[min1i] = new_node_idx;
+			parent_node_[min2i] = new_node_idx;
+			binary_[min2i] = 1;
 		}
 	}
 	
 	/** @return Ordered map from each token to its {@link HuffmanNode}, ordered by frequency descending */
-	std::map<unsigned int, HuffmanCoding::HuffmanNode*>* HuffmanCoding::encode(int* binary, int* parentNode) {
-		int numTokens = vocab->size();
-		
-		// Now assign binary code to each unique token
-		std::map<unsigned int, HuffmanNode*>* result = new std::map<unsigned int, HuffmanNode*>;
-
-		int nodeIdx = 0;
-		int curNodeIdx;
+	void HuffmanCoding::Encode(std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffman_node_map) {
+	
+		uint32_t node_idx = 0;
+		uint32_t cur_node_idx;
 	
 		std::vector<unsigned int> code;	
 		std::vector<int> points;
@@ -150,12 +135,10 @@
 			}
 			
 			token = e;
-			result->insert(std::make_pair(token, new HuffmanNode(rawCode, rawPoints, nodeIdx, count,codeLen, token)));
+			huffman_node->insert(std::make_pair(token, new HuffmanNode(rawCode, rawPoints, nodeIdx, count,codeLen, token)));
 		
 			nodeIdx++;
 		
 		
 		}
-		
-		return result;
 	}

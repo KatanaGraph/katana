@@ -232,12 +232,21 @@ public:
   }
 
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
-  // really a ChunkedArray of one change, change to arrow::Array.
+  // really a ChunkedArray of one chunk, change to arrow::Array.
+  const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
+    return rdg_.local_to_user_id();
+  }
+  void set_local_to_user_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_local_to_user_id(std::move(a));
+  }
+
+  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
+  // really a ChunkedArray of one chunk, change to arrow::Array.
   const std::shared_ptr<arrow::ChunkedArray>& local_to_global_id() const {
     return rdg_.local_to_global_id();
   }
-  void set_local_to_global_vector(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    rdg_.set_local_to_global_vector(std::move(a));
+  void set_local_to_global_id(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_local_to_global_id(std::move(a));
   }
 
   /// Write the property graph to the given RDG name.

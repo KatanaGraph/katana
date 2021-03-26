@@ -79,7 +79,7 @@ jobs:
     - name: Install Conda dependencies
       run: |
         . .github/workflows/activate_miniconda.sh
-        conda install -y -q -c conda-forge conda-build conda-verify pygithub packaging
+        mamba install -y -q -c conda-forge conda-build boa conda-verify pygithub packaging
 
     ###
     # Conda build process for two packages
@@ -89,7 +89,7 @@ jobs:
         . .github/workflows/activate_miniconda.sh
         export KATANA_DOCS_OUTPUT=$HOME/docs
         export KATANA_VERSION=$(scripts/version show)
-        conda build -c conda-forge --output-folder $HOME/build/ conda_recipe/
+        conda mambabuild -c conda-forge --output-folder $HOME/build/ conda_recipe/
 
     - name: Clean ccache
       run: |
@@ -158,7 +158,7 @@ jobs:
     - name: Install dependencies
       run: |
         . .github/workflows/activate_miniconda.sh
-        conda install -y -q -c conda-forge black=19.10b0 pylint
+        mamba install -y -q -c conda-forge black=19.10b0 pylint
     - name: Check formating
       run: |
         . .github/workflows/activate_miniconda.sh
@@ -231,8 +231,7 @@ jobs:
       - name: Install Conda dependencies
         run: |
           . .github/workflows/activate_miniconda.sh
-          conda config --add channels conda-forge
-          conda env update --file=conda_recipe/environment.yml
+          mamba env update --file=conda_recipe/environment.yml
 
       ###
       # Standard CMake build process

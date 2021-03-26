@@ -1,13 +1,15 @@
 #!/bin/bash
 set -xeuo pipefail
 
-MINICONDA_FILE="$HOME/.cache/miniconda/miniconda.sh"
+MINICONDA_FILE="$HOME/.cache/miniconda/mambaforge.sh"
 case $1 in
   ubuntu-*) PLAT=Linux-x86_64 ;;
   macOS-*)  PLAT=MacOSX-x86_64 ;;
   *)        echo "Unknown OS"; exit 10 ;;
 esac
 
-INPUT_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.9.2-${PLAT}.sh"
+VER="4.9.2-7"
+
+INPUT_URL="https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-${VER}-${PLAT}.sh"
 mkdir -p "$(dirname $MINICONDA_FILE)"
 curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"

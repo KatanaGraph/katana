@@ -233,6 +233,15 @@ public:
 
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
   // really a ChunkedArray of one chunk, change to arrow::Array.
+  const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_ids() const {
+    return rdg_.host_to_owned_global_ids();
+  }
+  void set_host_to_owned_global_ids(std::shared_ptr<arrow::ChunkedArray>&& a) {
+    rdg_.set_host_to_owned_global_ids(std::move(a));
+  }
+
+  // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
+  // really a ChunkedArray of one chunk, change to arrow::Array.
   const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
     return rdg_.local_to_user_id();
   }

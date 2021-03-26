@@ -95,13 +95,13 @@ class Configuration:
         upstream_remote = None
         origin_remote = None
         for remote in remotes:
-            # if we find a remote with an obvious name, override anything we already found
+            # If we find a remote with an obvious name, override anything we already found
             if remote in {"upstream"}:
                 upstream_remote = remote
             elif remote in {"origin"}:
                 origin_remote = remote
             # If the remote URL has user "KatanaGraph" then it's our upstream (as long as we have not already found an
-            # upstream.
+            # upstream).
             try:
                 url = git.get_remote_url(remote, dir)
                 if not upstream_remote and url.username == UPSTREAM_USERNAME:
@@ -110,26 +110,40 @@ class Configuration:
                 logger.info(f"Unsupported URL for git remote '{remote}'. Assuming it's not the upstream. Error: {e}")
 
         if not origin_remote:
+            # If there is a single remote that is not the upstream, assume that is origin
             non_upstream_remotes = remotes - {upstream_remote}
             if len(non_upstream_remotes) == 1:
-                origin_remote = list
-            else:
-                raise ConfigurationError(f"{name}: Could not find an origin remote.")
+                origin_remote = list(non_upstream_remotes)[0]
+
+        # If we have no upstream, use origin.
         if not upstream_remote:
             upstream_remote = origin_remote
 
-        if upstream_remote != origin_remote:
+        # Post-conditions of the above code:
+        # If origin is set, so is upstream. Both may be None, or only upstream may be None.
+
+        if not origin_remote and not upstream_remote:
+            logger.warning(
+                f"{name}: Workflow could not be determined, because this script did not find any remotes it "
+                f"understands. Commit counts and merged flag may be wrong in versions."
+            )
+        elif not origin_remote:
+            logger.info(
+                f"{name}: Workflow could not be determined, because no origin remote was found, "
+                f"however we assume pulls are coming from upstream (remote: {upstream_remote})."
+            )
+        elif upstream_remote != origin_remote:
             logger.info(
                 f"{name}: Assuming a triangular workflow with pushes going to a personal fork "
                 f"(remote: {origin_remote}) and pulls coming from upstream (remote: {upstream_remote})."
             )
         else:
             logger.info(
-                f"{name}: Assuming an in-repo workflow with pushes going to personal branches in the main repo "
-                f"(remote: {origin_remote})."
+                f"{name}: Assuming an in-repository workflow with pushes going to personal branches in "
+                f"the main repository (remote: {origin_remote})."
             )
-        upstream_url = git.get_remote_url(upstream_remote, dir)
-        origin_url = git.get_remote_url(origin_remote, dir)
+        upstream_url = upstream_remote and git.get_remote_url(upstream_remote, dir)
+        origin_url = origin_remote and git.get_remote_url(origin_remote, dir)
         return Repo(dir, origin_remote, origin_url, upstream_remote, upstream_url)
 
     @staticmethod

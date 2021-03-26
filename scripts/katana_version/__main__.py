@@ -32,6 +32,17 @@ class BranchKind(Enum):
     VARIANT = "variant/.*"
 
 
+def check_remotes(config: Configuration):
+    def check_remote(repo, remote, remote_name):
+        if not remote:
+            raise StateError(f"{repo}: Repository must have an {remote_name} remote. Your work flow is not supported.")
+
+    check_remote(config.open, config.open.origin_remote, "origin")
+    check_remote(config.open, config.open.upstream_remote, "upstream")
+    check_remote(config.enterprise, config.enterprise.origin_remote, "origin")
+    check_remote(config.enterprise, config.enterprise.upstream_remote, "upstream")
+
+
 def show_subcommand(args):
     ver = get_version(
         args.configuration,
@@ -132,6 +143,7 @@ def setup_show_subcommand(subparsers):
         default=None,
     )
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
 
     parser.set_defaults(subcommand_impl=show_subcommand)
@@ -202,6 +214,7 @@ def setup_provenance_subcommand(subparsers):
         "--format", "-f", help="Provide a format string for each value. Use the source luck.", dest="format", type=str
     )
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
 
     parser.set_defaults(subcommand_impl=provenance_subcommand, format='{k}: "{v}"\n')
@@ -270,6 +283,7 @@ def get_branch_kind(current_branch, kinds: Iterable[BranchKind]):
 
 
 def check_at_branch(branch, config):
+    check_remotes(config)
     if git.get_hash(f"{config.open.upstream_remote}/{branch}", config.open) != git.get_hash(git.HEAD, config.open):
         raise StateError(f"{config.katana_repo_path} HEAD is up to date with {branch}")
 
@@ -294,6 +308,7 @@ def bump_subcommand(args):
 
 
 def check_branch_not_exist(config: Configuration, branch_name):
+    check_remotes(config)
     if git.ref_exists(branch_name, config.open):
         raise StateError(f"Branch {branch_name} already exists in {config.open.dir.name}")
     if git.ref_exists(branch_name, config.enterprise):
@@ -301,6 +316,7 @@ def check_branch_not_exist(config: Configuration, branch_name):
 
 
 def bump_both_repos(config: Configuration, g: GithubFacade, prev_version, next_version, base):
+    check_remotes(config)
     next_version_str = format_version_pep440(next_version)
     current_branch = git.get_branch_checked_out(config.open)
     if config.dry_run:
@@ -357,6 +373,7 @@ def setup_bump_subcommand(subparsers):
 
     parser.add_argument("next_version", type=str)
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
 
@@ -377,6 +394,7 @@ After:\s*(
 def update_dependent_pr_subcommand(args):
     config: Configuration = args.configuration
 
+    check_remotes(config)
     check_clean(args, config)
 
     g = GithubFacade(config)
@@ -425,6 +443,7 @@ def setup_update_dependent_pr_subcommand(subparsers):
 
     parser.add_argument("number", help="The PR number in Github.", type=int)
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
 
@@ -433,6 +452,8 @@ def setup_update_dependent_pr_subcommand(subparsers):
 
 def tag_subcommand(args):
     config: Configuration = args.configuration
+
+    check_remotes(config)
     check_clean(args, config)
 
     commit = git.HEAD
@@ -502,6 +523,7 @@ def setup_tag_subcommand(subparsers):
         "--require-upstream", help="Fail if the commit to be tagged isn't already upstream.", action="store_true"
     )
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
 
@@ -531,6 +553,7 @@ def setup_release_subcommand(subparsers):
         action="store_true",
     )
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
 
@@ -589,6 +612,7 @@ def setup_release_branch_subcommand(subparsers):
 
     parser.add_argument("next_version", type=str)
 
+    setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
     setup_global_action_arguments(parser)
 
@@ -677,17 +701,30 @@ def setup_global_action_arguments(parser, *, top_level=False):
     )
 
 
+def setup_global_log_arguments(parser, top_level=False):
+    parser.add_argument(
+        "--log",
+        help="Set the python log level." if top_level else argparse.SUPPRESS,
+        default="WARNING" if top_level else argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        help="Increase the logging verbosity." if top_level else argparse.SUPPRESS,
+        action="count",
+        default=0 if top_level else argparse.SUPPRESS,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="scripts/version",
         description="""
 Manage version numbers of Katana packages.
-This program assumes a number of things:
-Your checkouts have the same name as the github repository they are clones of;
-Your "working" fork remote (the remove used to create PRs) is called 'origin' and the upstream remote (if different from origin) is called 'upstream'.
+This program assumes that your checkouts have the same name as the github repository they are clones of.
 """,
     )
-    parser.add_argument("--log", help="Set the python log level.", default="WARNING")
+    setup_global_log_arguments(parser, top_level=True)
     setup_global_repo_arguments(parser, top_level=True)
     setup_global_action_arguments(parser, top_level=True)
 
@@ -703,7 +740,8 @@ Your "working" fork remote (the remove used to create PRs) is called 'origin' an
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=args.log)
+    logging.basicConfig(level=str(args.log).upper().strip())
+    logging.root.setLevel(logging.root.level - args.verbose * 10)
 
     args.configuration = Configuration(args)
 
@@ -712,15 +750,26 @@ Your "working" fork remote (the remove used to create PRs) is called 'origin' an
 
     if hasattr(args, "subcommand_impl"):
         try:
-            todos = args.subcommand_impl(args)
-            if todos:
-                print("=========== TODOS FOR THE DEVELOPER ===========")
-                print("\n".join(todos))
+            execute_subcommand(args)
         except (RuntimeError, ValueError, NotImplementedError, CommandError, InvalidVersion) as e:
+            # If at first we don't succeed, fetch the upstream remote and try again.
             logger.debug("Exception", exc_info=True)
-            print(f"ERROR({type(e).__name__}): {str(e)}")
+            logger.warning(f"Something failed. Reattempting after fetching the upstream remote.")
+            fetch_upstream(args.configuration)
+            try:
+                execute_subcommand(args)
+            except (RuntimeError, ValueError, NotImplementedError, CommandError, InvalidVersion):
+                logger.debug("Exception", exc_info=True)
+                print(f"ERROR({type(e).__name__}): {str(e)}")
     else:
         parser.print_help()
+
+
+def execute_subcommand(args):
+    todos = args.subcommand_impl(args)
+    if todos:
+        print("=========== TODOS FOR THE DEVELOPER ===========")
+        print("\n".join(todos))
 
 
 def fetch_upstream(config: Configuration):
@@ -728,14 +777,15 @@ def fetch_upstream(config: Configuration):
         return
     # Do fetches in parallel since they run at the start of many commands and are totally separate.
     thread = None
-    if config.has_enterprise:
+    if config.has_enterprise and config.enterprise.upstream_remote:
         thread = threading.Thread(
             target=lambda: git.fetch(
                 config.enterprise.upstream_remote, dir=config.enterprise, tags=True, dry_run=False, log=False,
             )
         )
         thread.start()
-    git.fetch(config.open.upstream_remote, dir=config.open, tags=True, dry_run=False, log=False)
+    if config.open.upstream_remote:
+        git.fetch(config.open.upstream_remote, dir=config.open, tags=True, dry_run=False, log=False)
     if thread:
         thread.join()
 

@@ -1,10 +1,13 @@
 import re
+import logging
 from datetime import datetime
 from functools import cmp_to_key, lru_cache
 from pathlib import Path
 from typing import Tuple, Union
 
 from .commands import action_command, capture_command, CommandError, predicate_command
+
+logger = logging.getLogger(__name__)
 
 
 class GitURL(str):
@@ -32,7 +35,11 @@ class GitURL(str):
             if m:
                 self.__dict__.update(m.groupdict())
                 return
-        raise ValueError("Not a known git URL: " + s)
+        self.protocol = "unsupported"
+        self.username = "unknown"
+        self.hostname = "unknown"
+        self.repository = s
+        logger.debug(f"Not a known git URL: {s} (Version management actions will probably not work.)")
 
 
 class Repo:
@@ -51,9 +58,9 @@ class Repo:
         upstream_url: Union[GitURL, str],
     ):
         self.dir = dir and Path(dir)
-        self.origin_url = GitURL(str(origin_url))
+        self.origin_url = origin_url and GitURL(str(origin_url))
         self.origin_remote = origin_remote
-        self.upstream_url = GitURL(str(upstream_url))
+        self.upstream_url = upstream_url and GitURL(str(upstream_url))
         self.upstream_remote = upstream_remote
 
     def __repr__(self):
@@ -61,6 +68,13 @@ class Repo:
             f"Repo({str(self.dir)!r}, {self.origin_remote!r}, {str(self.origin_url)!r}, "
             f"{self.upstream_remote!r}, {str(self.upstream_url)!r})"
         )
+
+    @staticmethod
+    def remote_branch(remote, branch):
+        if remote:
+            return f"{remote}/{branch}"
+        else:
+            return branch
 
 
 def dir_arg(dir):

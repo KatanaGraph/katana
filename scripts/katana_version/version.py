@@ -78,10 +78,10 @@ def get_version(
         pretend_clean = True
 
     if pretend_master:
-        core_branch = f"{config.open.upstream_remote}/master"
+        open_core_branch = Repo.remote_branch(config.open.upstream_remote, "master")
         enterprise_core_branch = None
         if config.has_enterprise:
-            enterprise_core_branch = f"{config.enterprise.upstream_remote}/master"
+            enterprise_core_branch = Repo.remote_branch(config.enterprise.upstream_remote, "master")
         is_merged = True
     else:
         is_enterprise_merged = True
@@ -91,8 +91,8 @@ def get_version(
             is_enterprise_merged = enterprise_core_branch and git.is_ancestor_of(
                 ke_commit, enterprise_core_branch, dir=config.enterprise
             )
-        core_branch = git_find_closest_core_branch(k_commit, config.open) or enterprise_core_branch
-        is_merged = core_branch and git.is_ancestor_of(k_commit, core_branch, dir=config.open)
+        open_core_branch = git_find_closest_core_branch(k_commit, config.open)
+        is_merged = open_core_branch and git.is_ancestor_of(k_commit, open_core_branch, dir=config.open)
         is_merged = is_enterprise_merged and is_merged
 
     k_count = None
@@ -101,7 +101,7 @@ def get_version(
     ke_hash = None
     if config.has_git:
         k_last_version_commit = git.find_change(config.open.dir / CONFIG_VERSION_PATH, k_commit, config.open)
-        k_count = compute_commit_count(k_commit, k_last_version_commit, config.open, pretend_master, core_branch)
+        k_count = compute_commit_count(k_commit, k_last_version_commit, config.open, pretend_master, open_core_branch)
         k_hash = git.get_hash(k_commit, config.open, pretend_clean=pretend_clean, abbrev=6)
 
         if config.has_enterprise:
@@ -148,19 +148,23 @@ def git_find_closest_core_branch(commit, repo: Repo):
         return None
 
     branch_patterns = [
-        f"{repo.upstream_remote}/master",
-        f"{repo.upstream_remote}/release/v*",
-        f"{repo.upstream_remote}/variant/*",
+        Repo.remote_branch(repo.upstream_remote, "master"),
+        Repo.remote_branch(repo.upstream_remote, "release/v*"),
+        Repo.remote_branch(repo.upstream_remote, "variant/*"),
     ]
     branches = [
-        b for pat in branch_patterns for b in git.find_branches(pat, repo, prefix="remotes", sort="-creatordate")
+        b
+        for pat in branch_patterns
+        for b in git.find_branches(
+            pat, dir=repo, prefix="remotes" if repo.upstream_remote else "heads", sort="-creatordate"
+        )
     ]
 
     if not branches:
         return None
 
     def branch_ahead_count(branch):
-        return git.get_commit_count(git.merge_base(commit, branch, repo), commit, repo)
+        return git.get_commit_count(git.merge_base(commit, branch, repo), commit, dir=repo)
 
     nearest_branch = min(branches, key=branch_ahead_count)
     return nearest_branch

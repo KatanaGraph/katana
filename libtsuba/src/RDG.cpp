@@ -42,6 +42,7 @@ namespace {
 // special partition property names
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
+const char* kLocalToUserIDPropName = "local_to_user_id";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
 const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
@@ -172,13 +173,15 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
+  } else if (name == kLocalToUserIDPropName) {
+    set_local_to_user_id(std::move(col));
   } else if (name == kLocalToGlobalIDPropName) {
-    set_local_to_global_vector(std::move(col));
+    set_local_to_global_id(std::move(col));
   } else if (name == kDeprecatedLocalToGlobalIDPropName) {
     KATANA_LOG_WARN(
         "deprecated graph format; replace the existing graph by storing the "
         "current graph");
-    set_local_to_global_vector(std::move(col));
+    set_local_to_global_id(std::move(col));
   } else {
     return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
   }
@@ -202,8 +205,9 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
-      "WritePartArrays master sz: {} mirros sz: {} l2g sz: {}",
+      "WritePartArrays master sz: {} mirros sz: {} l2u sz: {} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
+      local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
   for (unsigned i = 0; i < mirror_nodes_.size(); ++i) {
@@ -228,6 +232,19 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = name,
         .path = std::move(mast_res.value()),
+        .persist = true,
+    });
+  }
+
+  if (local_to_user_id_ != nullptr) {
+    auto l2u_res = StoreArrowArrayAtName(
+        local_to_user_id_, dir, kLocalToUserIDPropName, desc);
+    if (!l2u_res) {
+      return l2u_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropStorageInfo{
+        .name = kLocalToUserIDPropName,
+        .path = std::move(l2u_res.value()),
         .persist = true,
     });
   }
@@ -347,6 +364,26 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
     if (!part_result) {
       return part_result.error();
     }
+
+    if (local_to_global_id_ != nullptr) {
+      if (local_to_user_id_ == nullptr) {
+        // for backward compatibility
+        // NB: this is a zero-copy slice, so the underlying data is shared
+        set_local_to_user_id(local_to_global_id_->Slice(0));
+      } else if (local_to_user_id_->length() != local_to_global_id_->length()) {
+        KATANA_LOG_DEBUG(
+            "Number of User Node IDs {} do not match number of Global Node IDs "
+            "{}",
+            local_to_user_id_->length(), local_to_global_id_->length());
+        return tsuba::ErrorCode::InvalidArgument;
+      }
+    }
+
+    KATANA_LOG_DEBUG(
+        "ReadPartMetadata master sz: {} mirros sz: {} l2u sz: {} l2g sz: {}",
+        master_nodes_.size(), mirror_nodes_.size(),
+        local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
+        local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
   }
 
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());

@@ -424,6 +424,15 @@ katana::Result<tsuba::RDG>
 tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->ID);
+  if (opts.expected_num_hosts.has_value()) {
+    auto expected_num_hosts = opts.expected_num_hosts.value();
+    if (expected_num_hosts != meta.num_hosts()) {
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
+          "expected hosts: {} RDG expects {}, they should be equal",
+          expected_num_hosts, meta.num_hosts());
+    }
+  }
 
   katana::Uri partition_path = meta.PartitionFileName(partition_id_to_load);
 

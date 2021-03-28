@@ -91,8 +91,8 @@ UnmarshalVector(const std::shared_ptr<arrow::ChunkedArray>& source) {
   if (auto r =
           arrow::stl::TupleRangeFromTable(*table, cast_options, &ctx, &dest);
       !r.ok()) {
-    KATANA_LOG_DEBUG("UnmarshalVector arrow error: {}", r.ToString());
-    return katana::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "converting buffer to vector: {}", r);
   }
   return std::vector<T>(std::move(*SingleView(&dest)));
 }
@@ -110,8 +110,8 @@ MarshalVector(const std::vector<T>& source) {
   if (auto r = arrow::stl::TableFromTupleRange(
           pool, *source_view, {"column1"}, &table);
       !r.ok()) {
-    KATANA_LOG_DEBUG("MarshalVector arrow error: {}", r.ToString());
-    return katana::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "converting vector to arrow: {}", r);
   }
   return table->column(0);
 }
@@ -129,17 +129,17 @@ VectorToArrowTable(const std::string& name, const std::vector<T>& source) {
   if (auto r =
           arrow::stl::TableFromTupleRange(pool, *source_view, {name}, &table);
       !r.ok()) {
-    KATANA_LOG_DEBUG("VectorToArrowTable arrow error: {}", r.ToString());
-    return katana::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "converting to arrow: {}", r);
   }
   // Jump through hoops to make the type nullable even though we are not using
   // a builder and there are no null values.  Documented to be zero copy.
   auto nullable_field = table->schema()->field(0)->WithNullable(true);
   auto nullable_table = table->SetColumn(0, nullable_field, table->column(0));
   if (!nullable_table.ok()) {
-    KATANA_LOG_DEBUG(
-        "VectorToArrowTable set column error: {}", nullable_table.status());
-    return katana::ErrorCode::ArrowError;
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "setting arrow column attributes: {}",
+        nullable_table);
   }
   return nullable_table.ValueOrDie();
 }
@@ -149,13 +149,14 @@ katana::Result<void>
 UnmarshalVectorOfVectors(
     const std::vector<std::shared_ptr<arrow::ChunkedArray>>& source,
     std::vector<std::vector<T>>* dest) {
-  KATANA_LOG_DEBUG_ASSERT(source.size() == dest->size());
+  KATANA_LOG_VASSERT(
+      source.size() == dest->size(), "source: {} dest: {}", source.size(),
+      dest->size());
 
   for (size_t i = 0; i < source.size(); ++i) {
     auto res = UnmarshalVector<T>(source[i]);
     if (!res) {
-      KATANA_LOG_DEBUG("UnmarshalVectorOfVectors arrow error: {}", res.error());
-      return res.error();
+      return res.error().WithContext("converting chunk {}", i);
     }
     dest->at(i) = std::move(res.value());
   }
@@ -170,8 +171,7 @@ MarshalVectorOfVectors(const std::vector<std::vector<T>>& source) {
   for (const auto& vec : source) {
     auto res = MarshalVector(vec);
     if (!res) {
-      KATANA_LOG_DEBUG("MarshalVectorOfVectors arrow error: {}", res.error());
-      return res.error();
+      return res.error().WithContext("converting vector of vectors to array");
     }
     dest.emplace_back(res.value());
   }

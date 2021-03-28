@@ -31,6 +31,8 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// nullopt means the partition associated with the current host's ID will be
   /// loaded
   std::optional<uint32_t> partition_id_to_load;
+  /// Client is trying to load RDG into expected_num_hosts machines
+  std::optional<uint32_t> expected_num_hosts;
   /// List of node properties that should be loaded
   /// nullptr means all node properties will be loaded
   const std::vector<std::string>* node_properties{nullptr};

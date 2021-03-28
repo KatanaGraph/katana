@@ -1960,6 +1960,12 @@ ToArrowArray(
         std::move(builder), arrow_dst, import_src);
     break;
   }
+  case arrow::Type::UINT32: {
+    arrow::UInt32Builder builder;
+    arrow_dst = BuildImportVec<arrow::UInt32Builder, uint32_t>(
+        std::move(builder), arrow_dst, import_src);
+    break;
+  }
   case arrow::Type::DOUBLE: {
     arrow::DoubleBuilder builder;
     arrow_dst = BuildImportVec<arrow::DoubleBuilder, double>(

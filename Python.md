@@ -93,3 +93,23 @@ anaconda upload --label dev <path to package>
 
 To upload a non-development packages remove `--label dev`.
 The same commands can be used to upload to the `katanagraph` channel if you have the credentials.
+
+Conda Performance
+-----------------
+
+Conda is slow to install packages.
+This makes installing a new development take a few minutes.
+More importantly, it makes conda package building very slow (~40 minutes for this repository), because the build process installs at least 7 conda environments.
+This can be mitigated by using [Mamba](https://github.com/mamba-org/mamba#the-fast-cross-platform-package-manager).
+Mamba is a (mostly) drop-in replacement for the `conda` command that uses a native dependency solver and reduces installation time by 2x in many cases.
+However, Mamba is not as stable or well tested as Conda and does not have the same level of support.
+
+To use Mamba, install it in your conda environment with `conda install mamba`.
+Then you can use `mamba install` as a drop-in replacement for `conda install`, and similarly for `mamba env create` and `mamba env update`.
+To use Mamba during conda package builds, install [Boa](https://github.com/mamba-org/boa#the-fast-conda-and-mamba-package-builder) with `mamba install boa`.
+Then you can use `conda mambabuild` (*note:* the top level command is `conda`, *not* `mamba`) as a replacement for `conda build`.
+(We are not using Boa proper as the package builder.)
+
+To get a leaner, Mamba using environment in a fresh install, use [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge).
+It is an installer, similar to miniconda, which installs an environment with conda-forge packages and mamba pre-installed (boa must still be installed separately).
+The Python CI actions use Mambaforge, [mamba](https://github.com/KatanaGraph/katana/blob/master/.github/workflows/python.yaml#L234), and [conda mambabuild](https://github.com/KatanaGraph/katana/blob/master/.github/workflows/python.yaml#L92) to improve CI performance.

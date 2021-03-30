@@ -126,6 +126,8 @@ int main(int argc, char** argv){
 	katana::gPrint("Huffman Coding init done");
 
 	std::vector<HuffmanCoding::HuffmanNode> huffman_nodes;
+	huffman_nodes.reserve(vocab.size());
+
 	std::map<unsigned int, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
        	huffman_coding->encode(&huffman_nodes_map, &huffman_nodes);
 

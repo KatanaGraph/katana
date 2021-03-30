@@ -20,7 +20,9 @@ class HuffmanCoding {
 	
 		void InitCode(std::vector<uint32_t>& code);
 
-		void InitPoint(std::vector<int32_t>& point);
+		void InitPoints(std::vector<int32_t>& point, uint32_t num_tokens);
+
+		void InitVars(uint32_t idx, uint32_t count, uint32_t code_len, uint32_t token);
 	private	:
 		/** vector of 0's and 1's */
 		std::vector<uint32_t> code_;
@@ -43,7 +45,7 @@ class HuffmanCoding {
 	/**
          * @return {@link Map} from each given token to a {@link HuffmanNode}
          */
-        void Encode(std::map<uint32_t, HuffmanNode*>*);
+        void Encode(std::map<uint32_t, HuffmanNode*>*, std::vector<HuffmanCoding::HuffmanNode>* );
 
 	/**
          * Populate the count, binary, and parentNode arrays with the Huffman tree
@@ -52,7 +54,7 @@ class HuffmanCoding {
         void CreateTree();
 
 	/** @return Ordered map from each token to its {@link HuffmanNode}, ordered by frequency descending */
-        void Encode(std::map<uint32_t, HuffmanNode*>* huffman_nodes_map, std::vector<uint32_t>* binary, std::vector<uint32_t>* parent_node);
+        void EncodeTree(std::map<uint32_t, HuffmanNode*>* huffman_nodes_map, std::vector<HuffmanCoding::HuffmanNode>*);
 
 	private:
 	std::set<uint32_t>* vocab_;

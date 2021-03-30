@@ -1,63 +1,68 @@
-
-#include <math.h>
 #include <algorithm>
 
+#include <math.h>
+
 #include "../Huffman/HuffmanCoding.h"
-#include "galois/AtomicHelpers.h"
-#include "galois/AtomicWrapper.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/AtomicWrapper.h"
 
 /** Parent class for training word2vec's neural network */
 class NeuralNetworkTrainer {	
-public:
+private:
 	/** Boundary for maximum exponent allowed */
-	const static int MAX_EXP = 6;
+	const static uint32_t kMaxExp = 6;
 
-	const static int MAX_QW = 100000000;	
+	const static uint32_t kMaxQw = 100000000;	
 	/** Size of the pre-cached exponent table */
-	const  static int EXP_TABLE_SIZE = 1000;
+	const  static uint32_t kExpTableSize = 1000;
 
-	double EXP_TABLE[EXP_TABLE_SIZE];
+	std::vector<double> exp_table_(kExpTableSize);
 	
-	void initExpTable();
-	
-	const static int TABLE_SIZE = (int) 100000000;
-	
-	std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes;
-	int vocabSize;
-	const static int LAYER1_SIZE = 200;
-	
+	const static uint32_t kTableSize = 100000000;
+
+	uint32_t vocab_size_;
+
+	const static uint32_t kLayer1Size = 200;
+
+	/**
+         * In the C version, this includes the </s> token that replaces a newline character
+         */
+        uint32_t num_trained_tokens_;
+
 	/** 
-	 * In the C version, this includes the </s> token that replaces a newline character
-	 */
-	int numTrainedTokens;
+         * To be precise, this is the number of words in the training data that exist in the vocabulary
+         * which have been processed so far.  It includes words that are discarded from sampling.
+         * Note that each word is processed once per iteration.
+         */
+        long actual_word_count_;
 
-	//int counts[2000][2000];	
-	/* The following includes shared state that is updated per worker thread */
-	
-	/** 
-	 * To be precise, this is the number of words in the training data that exist in the vocabulary
-	 * which have been processed so far.  It includes words that are discarded from sampling.
-	 * Note that each word is processed once per iteration.
-	 */
-	long int actualWordCount;
+	double alpha_;
 
-	double alpha;
 	/** Learning rate, affects how fast values in the layers get updated */
-	constexpr static double initialLearningRate = 0.025f;
-	//constexpr static double initialLearningRate = 0.05f;
-	/** 
-	 * This contains the outer layers of the neural network
-	 * First dimension is the vocab, second is the layer
-	 */
-	galois::CopyableAtomic<double>** syn0;
-	/** This contains hidden layers of the neural network */
-	galois::CopyableAtomic<double>** syn1;
-	/** This is used for negative sampling */
-	double** syn1neg;
-	/** Used for negative sampling */
-	int table[TABLE_SIZE];
-	long startNano;
+        constexpr static double kInitialLearningRate = 0.025f;
 
+	/** 
+         * This contains the outer layers of the neural network
+         * First dimension is the vocab, second is the layer
+         */
+	std::vector<std::vector<katana::CopyableAtomic<double>>> syn0;
+
+	/** This contains hidden layers of the neural network */
+	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1;
+
+	/** This is used for negative sampling */
+	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1_neg_;
+
+	/** Used for negative sampling */
+	std::vector<int32_t> table_(kTableSize);
+
+	long start_nano_;
+
+
+public:
+	void InitExpTable();
+
+	
 	const static int negativeSamples = 0;
 	                
 //	double neu1[LAYER1_SIZE];

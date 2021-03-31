@@ -61,6 +61,7 @@ set(sources
         src/analytics/louvain_clustering/louvain_clustering.cpp
         src/analytics/random_walks/random_walks.cpp
         src/analytics/local_clustering_coefficient/local_clustering_coefficient.cpp
+        src/analytics/subgraph_extraction/subgraph_extraction.cpp
     )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

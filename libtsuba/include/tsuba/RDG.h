@@ -31,8 +31,6 @@ struct KATANA_EXPORT RDGLoadOptions {
   /// nullopt means the partition associated with the current host's ID will be
   /// loaded
   std::optional<uint32_t> partition_id_to_load;
-  /// Client is trying to load RDG into expected_num_hosts machines
-  std::optional<uint32_t> expected_num_hosts;
   /// List of node properties that should be loaded
   /// nullptr means all node properties will be loaded
   const std::vector<std::string>* node_properties{nullptr};
@@ -187,6 +185,8 @@ private:
 
   std::vector<std::shared_ptr<arrow::ChunkedArray>> mirror_nodes_;
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
+  // Called while constructing to put these arrays into a usable state for Distribution
+  void InitArrowVectors();
   std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_ids_;
   std::shared_ptr<arrow::ChunkedArray> local_to_user_id_;
   std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;

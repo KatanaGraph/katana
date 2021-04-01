@@ -385,14 +385,15 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
       return part_result.error();
     }
 
-    if (local_to_global_id_ != nullptr) {
-      if (local_to_user_id_ == nullptr) {
-        // for backward compatibility
-        // NB: this is a zero-copy slice, so the underlying data is shared
-        set_local_to_user_id(local_to_global_id_->Slice(0));
-      } else if (local_to_user_id_->length() != local_to_global_id_->length()) {
+    if (local_to_user_id_->length() == 0) {
+      // for backward compatibility
+      // NB: this is a zero-copy slice, so the underlying data is shared
+      set_local_to_user_id(local_to_global_id_->Slice(0));
+    } else if (local_to_user_id_->length() != local_to_global_id_->length()) {
+      if (local_to_user_id_->length() != local_to_global_id_->length()) {
         KATANA_LOG_DEBUG(
-            "Number of User Node IDs {} do not match number of Global Node IDs "
+            "Number of User Node IDs {} do not match number of Global Node "
+            "IDs "
             "{}",
             local_to_user_id_->length(), local_to_global_id_->length());
         return tsuba::ErrorCode::InvalidArgument;
@@ -424,16 +425,6 @@ katana::Result<tsuba::RDG>
 tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->ID);
-  if (opts.expected_num_hosts.has_value()) {
-    auto expected_num_hosts = opts.expected_num_hosts.value();
-    if (expected_num_hosts != meta.num_hosts()) {
-      return KATANA_ERROR(
-          ErrorCode::InvalidArgument,
-          "expected hosts: {} RDG expects {}, they should be equal",
-          expected_num_hosts, meta.num_hosts());
-    }
-  }
-
   katana::Uri partition_path = meta.PartitionFileName(partition_id_to_load);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
@@ -631,15 +622,19 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   return core_->RegisterTopologyFile(new_top.BaseName());
 }
 
-tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
+void
+tsuba::RDG::InitArrowVectors() {
   // Create an empty array, accessed by Distribution during loading
+  host_to_owned_global_ids_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+  local_to_user_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
   local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
 }
 
-tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {
-  // Create an empty array, accessed by Distribution during loading
-  local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
+  InitArrowVectors();
 }
+
+tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) { InitArrowVectors(); }
 
 tsuba::RDG::~RDG() = default;
 tsuba::RDG::RDG(tsuba::RDG&& other) noexcept = default;

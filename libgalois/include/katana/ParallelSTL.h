@@ -20,6 +20,8 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PARALLELSTL_H_
 #define KATANA_LIBGALOIS_KATANA_PARALLELSTL_H_
 
+#include <iterator>
+
 #include "katana/Chunk.h"
 #include "katana/LoopsDecl.h"
 #include "katana/NoDerefIterator.h"
@@ -389,6 +391,103 @@ partial_sum(InputIt first, InputIt last, OutputIt d_first) {
     // vector is small; do it serially using standard library
     return std::partial_sum(first, last, d_first);
   }
+}
+
+template <class InputIt, class OutputIt, class UnaryOperation>
+OutputIt
+transform(
+    InputIt first, InputIt last, OutputIt d_first, UnaryOperation unary_op) {
+  using input_category =
+      typename std::iterator_traits<InputIt>::iterator_category;
+  using output_category =
+      typename std::iterator_traits<OutputIt>::iterator_category;
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, input_category>,
+      "parallel transform is only supported for random access iterators");
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, output_category>,
+      "parallel transform is only supported for random access iterators");
+
+  using diff_type = typename std::iterator_traits<InputIt>::difference_type;
+
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+    diff_type offset = std::distance(first, begin);
+    std::transform(begin, end, d_first + offset, unary_op);
+  });
+
+  return d_first + std::distance(first, last);
+}
+
+template <class InputIt, class OutputIt>
+OutputIt
+copy(InputIt first, InputIt last, OutputIt d_first) {
+  using input_category =
+      typename std::iterator_traits<InputIt>::iterator_category;
+  using output_category =
+      typename std::iterator_traits<OutputIt>::iterator_category;
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, input_category>,
+      "parallel copy is only supported for random access iterators");
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, output_category>,
+      "parallel copy is only supported for random access iterators");
+
+  using diff_type = typename std::iterator_traits<InputIt>::difference_type;
+
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+    diff_type offset = std::distance(first, begin);
+    std::copy(begin, end, d_first + offset);
+  });
+
+  return d_first + std::distance(first, last);
+}
+
+template <class InputIt, class OutputIt, class UnaryPredicate>
+OutputIt
+copy_if(InputIt first, InputIt last, OutputIt d_first, UnaryPredicate pred) {
+  using input_category =
+      typename std::iterator_traits<InputIt>::iterator_category;
+  using output_category =
+      typename std::iterator_traits<OutputIt>::iterator_category;
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, input_category>,
+      "parallel copy_if is only supported for random access iterators");
+  static_assert(
+      std::is_base_of_v<std::random_access_iterator_tag, output_category>,
+      "parallel copy_if is only supported for random access iterators");
+
+  using diff_type = typename std::iterator_traits<InputIt>::difference_type;
+
+  // first on_each, set ranges
+  uint32_t num_threads = getActiveThreads();
+  std::vector<diff_type> prefix_sum(num_threads);
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+    diff_type count = 0;
+    for (; first != last; ++first) {
+      if (pred(first)) {
+        count++;
+      }
+    }
+    prefix_sum[tid] = count;
+  });
+
+  // calculate prefix sums
+  std::partial_sum(prefix_sum.begin(), prefix_sum.end(), prefix_sum.begin());
+
+  // second on_each, do copy_if
+  on_each([&](unsigned tid, unsigned total) {
+    auto [begin, end] = block_range(first, last, tid, total);
+
+    diff_type offset = tid == 0 ? 0 : prefix_sum[tid - 1];
+    OutputIt actual_end = std::copy_if(begin, end, d_first + offset, pred);
+
+    KATANA_LOG_DEBUG_ASSERT(actual_end == prefix_sum[tid]);
+  });
+
+  return d_first + prefix_sum.back();
 }
 
 }  // end namespace ParallelSTL

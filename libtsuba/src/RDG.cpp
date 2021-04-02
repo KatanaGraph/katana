@@ -390,14 +390,12 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
       // NB: this is a zero-copy slice, so the underlying data is shared
       set_local_to_user_id(local_to_global_id_->Slice(0));
     } else if (local_to_user_id_->length() != local_to_global_id_->length()) {
-      if (local_to_user_id_->length() != local_to_global_id_->length()) {
-        KATANA_LOG_DEBUG(
-            "Number of User Node IDs {} do not match number of Global Node "
-            "IDs "
-            "{}",
-            local_to_user_id_->length(), local_to_global_id_->length());
-        return tsuba::ErrorCode::InvalidArgument;
-      }
+      KATANA_LOG_DEBUG(
+          "Number of User Node IDs {} do not match number of Global Node "
+          "IDs "
+          "{}",
+          local_to_user_id_->length(), local_to_global_id_->length());
+      return tsuba::ErrorCode::InvalidArgument;
     }
 
     KATANA_LOG_DEBUG(

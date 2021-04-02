@@ -23,6 +23,30 @@ main() {
       katana::TrimSuffix("prefix.suffix", "none") == "prefix.suffix");
 
   KATANA_LOG_ASSERT(
+      katana::SplitView("separated by spaces", " ") ==
+      std::vector<std::string_view>({"separated", "by", "spaces"}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("no delimiter in string", ";") ==
+      std::vector<std::string_view>({"no delimiter in string"}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("", " ") == std::vector<std::string_view>({""}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView(",delim,corner,,cases,", ",") ==
+      std::vector<std::string_view>({"", "delim", "corner", "", "cases", ""}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("what if word delim word is a word word", " word ") ==
+      std::vector<std::string_view>({"what if", "delim", "is a", "word"}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("empty", "") ==
+      std::vector<std::string_view>({"e", "m", "p", "t", "y"}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("only\tsplit\tonce", "\t", 1) ==
+      std::vector<std::string_view>({"only", "split\tonce"}));
+  KATANA_LOG_ASSERT(
+      katana::SplitView("split\tthe\tright\tamount", "\t", 3) ==
+      std::vector<std::string_view>({"split", "the", "right", "amount"}));
+
+  KATANA_LOG_ASSERT(
       katana::Join(" ", {"list", "of", "strings"}) == "list of strings");
   KATANA_LOG_ASSERT(
       katana::Join("", {"list", "of", "strings"}) == "listofstrings");

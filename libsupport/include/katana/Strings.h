@@ -2,6 +2,7 @@
 #define KATANA_LIBSUPPORT_KATANA_STRINGS_H_
 
 #include <initializer_list>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -32,6 +33,13 @@ KATANA_EXPORT std::string TrimSuffix(
     const std::string& s, const std::string& suffix);
 
 KATANA_EXPORT bool HasSuffix(const std::string& s, const std::string& suffix);
+
+/// SplitView returns a list of words in \param s using \param sep as the
+/// delimiter string. Splits at most \param max times (so there will be at most
+/// max + 1 entries in the output)
+KATANA_EXPORT std::vector<std::string_view> SplitView(
+    std::string_view s, std::string_view sep,
+    uint64_t max = std::numeric_limits<uint64_t>::max());
 
 /// Join returns a string that is the concatenation of every object from
 /// \param begin to \param end  all separated by an instance of \param sep

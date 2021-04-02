@@ -10,6 +10,6 @@ esac
 
 VER="4.9.2-7"
 
-INPUT_URL="https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-${VER}-${PLAT}.sh"
+INPUT_URL="https://github.com/conda-forge/miniforge/releases/download/${VER}/Mambaforge-${VER}-${PLAT}.sh"
 mkdir -p "$(dirname $MINICONDA_FILE)"
 curl -fL --output "$MINICONDA_FILE" "$INPUT_URL"

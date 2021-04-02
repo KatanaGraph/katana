@@ -56,7 +56,9 @@ MapTopology(const tsuba::FileView& file_view) {
   uint64_t expected_size = GetGraphSize(num_nodes, num_edges);
 
   if (file_view.size() < expected_size) {
-    return katana::ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        katana::ErrorCode::InvalidArgument, "file_view size: {} expected {}",
+        file_view.size(), expected_size);
   }
 
   uint64_t* out_indices = const_cast<uint64_t*>(&data[4]);
@@ -248,8 +250,8 @@ katana::Result<void>
 katana::PropertyGraph::Commit(const std::string& command_line) {
   if (file_ == nullptr) {
     if (rdg_.rdg_dir().empty()) {
-      KATANA_LOG_ERROR("RDG commit but rdg_dir_ is empty");
-      return ErrorCode::InvalidArgument;
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument, "RDG commit but rdg_dir_ is empty");
     }
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
@@ -298,12 +300,15 @@ katana::PropertyGraph::Write(
 katana::Result<void>
 katana::PropertyGraph::AddNodeProperties(
     const std::shared_ptr<arrow::Table>& props) {
+  if (props->num_columns() == 0) {
+    KATANA_LOG_DEBUG("adding empty node prop table");
+    return ResultSuccess();
+  }
   if (topology_.out_indices &&
       topology_.out_indices->length() != props->num_rows()) {
-    KATANA_LOG_DEBUG(
-        "expected {} rows found {} instead", topology_.out_indices->length(),
-        props->num_rows());
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
+        topology_.out_indices->length(), props->num_rows());
   }
   return rdg_.AddNodeProperties(props);
 }
@@ -326,12 +331,15 @@ katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
 katana::Result<void>
 katana::PropertyGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& props) {
+  if (props->num_columns() == 0) {
+    KATANA_LOG_DEBUG("adding empty edge prop table");
+    return ResultSuccess();
+  }
   if (topology_.out_dests &&
       topology_.out_dests->length() != props->num_rows()) {
-    KATANA_LOG_DEBUG(
-        "expected {} rows found {} instead", topology_.out_dests->length(),
-        props->num_rows());
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument, "expected {} rows found {} instead",
+        topology_.out_dests->length(), props->num_rows());
   }
   return rdg_.AddEdgeProperties(props);
 }

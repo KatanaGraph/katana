@@ -5,10 +5,18 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <sstream>
 
 #include <fmt/format.h>
 
 #include "katana/config.h"
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/insert_linebreaks.hpp>
+#include <boost/archive/iterators/remove_whitespace.hpp>
+
+
 
 /// @file Strings.h
 ///
@@ -18,6 +26,12 @@
 /// C++20 will have string.starts_with and string.ends_with.
 
 namespace katana {
+
+/// FromBase64 decodes \param input into a Base64 encoded string
+KATANA_EXPORT std::string FromBase64(std::string input);
+
+/// ToBase64 encodes \param message string into a Base64 string
+KATANA_EXPORT std::string ToBase64(std::string message);
 
 /// TrimPrefix returns a string without the given prefix. If the string does
 /// not have the prefix, return the string unchanged.

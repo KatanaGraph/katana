@@ -41,3 +41,45 @@ katana::TrimSuffix(const std::string& s, const std::string& suffix) {
   }
   return s;
 }
+
+std::string
+katana::FromBase64(std::string input)
+{
+  using namespace boost::archive::iterators;
+  typedef transform_width<binary_from_base64<remove_whitespace
+      <std::string::const_iterator> >, 8, 6> ItBinaryT;
+
+  try
+  {
+    // If the input isn't a multiple of 4, pad with =
+    size_t num_pad_chars((4 - input.size() % 4) % 4);
+    input.append(num_pad_chars, '=');
+
+    size_t pad_chars(std::count(input.begin(), input.end(), '='));
+    std::replace(input.begin(), input.end(), '=', 'A');
+    std::string output(ItBinaryT(input.begin()), ItBinaryT(input.end()));
+    output.erase(output.end() - pad_chars, output.end());
+    return output;
+  }
+  catch (std::exception const&)
+  {
+    return std::string("");
+}
+}
+
+std::string
+katana::ToBase64(std::string message)
+{
+	using namespace boost::archive::iterators;
+
+	std::stringstream os;
+	using base64_text = insert_linebreaks<base64_from_binary<transform_width<const char *, 6, 8>>, 72>;
+
+	std::copy(
+			base64_text(message.c_str()),
+			base64_text(message.c_str() + message.size()),
+			std::ostream_iterator<char>(os)
+	);
+
+	return os.str();
+}

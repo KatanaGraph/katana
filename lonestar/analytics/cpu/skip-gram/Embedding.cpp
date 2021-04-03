@@ -57,7 +57,7 @@ void ReadRandomWalks(std::ifstream input_file, std::vector<std::vector<uint32_t>
 }
 
 void BuildVocab(std::vector<std::vector<uint32_t>>& random_walks, std::set<uint32_t>* vocab, 
-		std::map<uint32_t, uint32_t>* vocab_multiset) {
+		std::map<uint32_t, uint32_t>* vocab_multiset, uint32_t* num_trained_tokens) {
 
 	for(auto walk: walks) {
 		for(auto val : walk) {
@@ -68,6 +68,7 @@ void BuildVocab(std::vector<std::vector<uint32_t>>& random_walks, std::set<uint3
 			else{
 				vocab_multiset[val] = vocab_multiset[val] + 1;
 			}
+			(*num_trained_tokens)++;
 		}
 	}
 }
@@ -119,8 +120,10 @@ int main(int argc, char** argv){
 
 	std::set<uint32_t> vocab;
 	std::map<uint32_t, uint32_t> vocab_multiset;
-
-	BuildVocab(random_walks, &vocab, &vocab_multiset);
+	
+	uint32_t num_trained_tokens;
+       
+	BuildVocab(random_walks, &vocab, &vocab_multiset, &num_trained_tokens);
 
 	HuffmanCoding huffman_coding(&vocab, &vocab_multiset);
 	katana::gPrint("Huffman Coding init done");
@@ -128,24 +131,23 @@ int main(int argc, char** argv){
 	std::vector<HuffmanCoding::HuffmanNode> huffman_nodes;
 	huffman_nodes.reserve(vocab.size());
 
-	std::map<unsigned int, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
+	std::map<uint32_t, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
        	huffman_coding->encode(&huffman_nodes_map, &huffman_nodes);
 
 	katana::gPrint("Huffman Encoding done");
 
-	SkipGramModelTrainer skip_gram_model_trainer(&vocab_multiset, &huffman_nodes_map);
+	SkipGramModelTrainer skip_gram_model_trainer(vocab.size(), num_trained_tokens, huffman_nodes_map);
 
 	katana::gPrint("Skip-Gram Trainer Init done");
 	
 	skip_gram_model_trainer->InitArray();
 	skip_gram_model_trainer->InitExpTable();	
 
-	katana::gPrint("Skip-Gram Init exp table \n";
-	std::vector<std::vector<katana::CopyableAtomic<double>>>  syn0;
+	katana::gPrint("Skip-Gram Init exp table \n");
 
 	for(uint32_t iter =0; iter<numIterations; iter++){
 		
-		skipGramModelTrainer->train(random_walks, &syn0);		
+		skipGramModelTrainer->train(random_walks, vocab_multiset, huffman_nodes_map);		
 	}
 
 	uint32_t max_id = *(vocab.crbegin());

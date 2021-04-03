@@ -8,12 +8,7 @@
 class SkipGramModelTrainer : public NeuralNetworkTrainer {
 public:
 
-		HuffmanCoding::HuffmanNode* huffmanNode;
-int c, l1, d, l2, e;
-double f, g;
-	
-	SkipGramModelTrainer(std::multiset<unsigned int>* counts, std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes) : NeuralNetworkTrainer(counts, huffmanNodes) {}
-
+	SkipGramModelTrainer(uint32_t vocab_size, uint32_t num_trained_tokens, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) : NeuralNetworkTrainer(vocab_size, num_trained_tokens, huffman_nodes_map) {}
 		
 	void trainSample(unsigned int target, unsigned int sample) {
 				

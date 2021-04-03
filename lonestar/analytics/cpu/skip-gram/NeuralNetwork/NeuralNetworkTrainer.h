@@ -45,10 +45,10 @@ private:
          * This contains the outer layers of the neural network
          * First dimension is the vocab, second is the layer
          */
-	std::vector<std::vector<katana::CopyableAtomic<double>>> syn0;
+	std::vector<std::vector<katana::CopyableAtomic<double>>> syn0_;
 
 	/** This contains hidden layers of the neural network */
-	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1;
+	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1_;
 
 	/** This is used for negative sampling */
 	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1_neg_;
@@ -58,69 +58,55 @@ private:
 
 	long start_nano_;
 
+	const static uint32_t kNegativeSamples = 5;
+
+	std::vector<double> neu1_(kLayer1Size);
+	
+	std::vector<double> neu1e_(kLayer1Size);
+
+	/** 
+        ** The number of words observed in the training data for this worker that exist
+        ** in the vocabulary.  It includes words that are discarded from sampling.
+        **/
+        uint32_t word_count_;
+
+	/** Value of wordCount the last time alpha was updated */
+        uint32_t last_word_count_;
+
+	const static uint32_t kIterations = 5;
+
+	constexpr static double kDownSampleRate = 0.001f;
+
+	unsigned long long next_random_;
+
+	const static uint32_t kLearningRateUpdateFrequency = 100000;
+
+	uint32_t current_actual_;
+
 
 public:
+	NeuralNetworkTrainer(uint32_t vocab_size, uint32_t num_trained_tokens, std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
+
 	void InitExpTable();
-
 	
-	const static int negativeSamples = 0;
-	                
-//	double neu1[LAYER1_SIZE];
-// 	double neu1e[LAYER1_SIZE];
-	
-	/** 
- 	** The number of words observed in the training data for this worker that exist
- 	** in the vocabulary.  It includes words that are discarded from sampling.
- 	**/
-       	int wordCount;
-       	/** Value of wordCount the last time alpha was updated */
-        int lastWordCount;	
+	void InitializeUnigramTable(std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
 
-	const static int iterations = 0;
-
-	constexpr static double downSampleRate = -0.001f;
-
-	unsigned long long nextRandom;
-
-	const static int LEARNING_RATE_UPDATE_FREQUENCY = 100000;
-
-	int currentActual;
-
-	NeuralNetworkTrainer(std::multiset<unsigned int>* vocab, std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes);
-	
-	void initializeUnigramTable();
-
-	void initializeSyn0();
+	void InitializeSyn0();
 	
 	/** @return Next random value to use */
-	static unsigned long long incrementRandom(unsigned long long r);
+	static unsigned long long IncrementRandom(unsigned long long r);
 	
-	void trainSample (unsigned int target, unsigned int sample);
+	void TrainSample (uint32_t target, uint32_t sample);
 
 	/** @return Trained NN model */
-	std::array<double*, LAYER1_SIZE> train(std::vector<std::pair<unsigned int, unsigned int>>* samples);
+	void Train(std::vector<std::vector<uint32_t>>& random_walks, std::map<uint32_t, uint32_t>& vocab_multiset, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
 
-	/*void setDownSampleRate(double downSampleRate){
-		this.downSampleRate = downSampleRate;
-	}*/
+	/** 
+	  * Degrades the learning rate (alpha) steadily towards 0
+	  * @param iter Only used for debugging
+	  */
+	void UpdateAlpha(uint32_t iter);
 
-		
-		/*void setIterations(int iterations){
-			this.iterations = iterations;
-		}*/
-
-		/** 
-		 * Degrades the learning rate (alpha) steadily towards 0
-		 * @param iter Only used for debugging
-		 */
-		void updateAlpha(int iter);
-		
-
-		/*void setNegativeSamples(int negativeSamples){
-			this->negativeSamples = negativeSamples;
-		}*/
-
-		//generate random negative samples
-		void handleNegativeSampling(HuffmanCoding::HuffmanNode huffmanNode, int l1);
-		
+	//generate random negative samples
+	void HandleNegativeSampling(HuffmanNode& huffmanNode, uint32_t l1);
 };

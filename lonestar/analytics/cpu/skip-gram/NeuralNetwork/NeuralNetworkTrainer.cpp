@@ -1,198 +1,171 @@
 //#pragma once
 
 #include <math.h>
+
 #include <algorithm>
+
 #include "../Huffman/HuffmanCoding.h"
 #include "NeuralNetworkTrainer.h"
-#include "galois/AtomicWrapper.h"
+#include "katana/AtomicWrapper.h"
 
-	void NeuralNetworkTrainer::initExpTable(){
-		for (int i = 0; i < EXP_TABLE_SIZE; i++) {
+	NeuralNetworkTrainer(uint32_t vocab_size){
+		vocab_size_ = vocab_size;
+	}
+
+
+	void NeuralNetworkTrainer::InitExpTable(){
+		for (uint32_t i = 0; i < kExpTableSize; i++) {
 			// Precompute the exp() table
-			EXP_TABLE[i] = exp((i / (double)EXP_TABLE_SIZE * 2 - 1) * MAX_EXP);
+			exp_table_[i] = std::exp((i / (double)kExpTableSize * 2 - 1) * kMaxExp);
 			// Precompute f(x) = x / (x + 1)
-//			std::cout <<"exp table: " << EXP_TABLE[i] << std::endl;
-			EXP_TABLE[i] /= EXP_TABLE[i] + 1;
-//			std::cout <<"exp table: " << EXP_TABLE[i] << std::endl;
+			exp_table_[i] /= exp_table_[i] + 1;
 		}
 	}
 	
-	NeuralNetworkTrainer::NeuralNetworkTrainer(std::multiset<unsigned int>* vocab, std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes) {
+	NeuralNetworkTrainer(uint32_t vocab_size, uint32_t num_trained_tokens, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
+
+		vocab_size_ = vocab_size;
+		num_trained_tokens_ = num_trained_tokens;
 		
-		this->huffmanNodes = huffmanNodes;
-		this->vocabSize = huffmanNodes->size();
-		this->numTrainedTokens = vocab->size();
+		syn0_.resize(vocab_size_ + 1);
+		syn1_.resize(vocab_size_ + 1);
+		syn1_neg_.resize(vocab_size_ + 1);
+
+		katana::do_all(
+			katana::iterate((uint32_t)0, (uint32_t)(vocab_size_+1)),
+			[&](uint32_t idx) {
+			
+				syn0_[idx].resize(kLayer1Size, 0.0f);
+				syn1_[idx].resize(kLayer1Size, 0.0f);
+				syn1_neg_[idx].resize(kLayer1Size, 0.0f);
+
+			});
 		
-		this->syn0 = new galois::CopyableAtomic<double>*[vocabSize+1];
-		this->syn1 = new galois::CopyableAtomic<double>*[vocabSize+1];
-		this->syn1neg = new double*[vocabSize+1];
+		alpha_ = kInitialLearningRate;
 
-		for(int i=0;i<=vocabSize; i++){
-					
-			this->syn0[i] = new galois::CopyableAtomic<double>[LAYER1_SIZE];
-			this->syn1[i] = new galois::CopyableAtomic<double>[LAYER1_SIZE];
-			this->syn1neg[i] = new double[LAYER1_SIZE];
-
-			for(int j=0;j<LAYER1_SIZE;j++){
-				this->syn0[i][j] = (double) 0.0f;
-				this->syn1[i][j] = (double) 0.0f;
-				this->syn1neg[i][j] = (double) 0.0f;
-
-			}
-		}
-		
-		this->alpha = this->initialLearningRate;
-
-	/*	for(int i=0;i<LAYER1_SIZE;i++){
-			neu1[i] = (double) 0.0f;
-			neu1e[i] = (double) 0.0f;
-		}*/
-		initializeSyn0();
-		initializeUnigramTable();
-
-//		for(int i=0;i<2000;i++)
-//			for(int j=0;j<2000;j++)
-//				counts[i][j] = 0;
+		InitializeSyn0();
+		InitializeUnigramTable(huffman_nodes_map);
 	}
 	
-	void NeuralNetworkTrainer::initializeUnigramTable() {
-		long trainWordsPow = 0;
+	void NeuralNetworkTrainer::InitializeUnigramTable(std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
+		katana::GAccumulator<long> train_words_pow;
 		double power = 0.75f;
 
-		int count = 0;		
-		for(auto entry : *huffmanNodes){
-			if(entry.first > vocabSize)	
-				break;
-			HuffmanCoding::HuffmanNode node = *(entry.second);
-			trainWordsPow += pow(node.count, power);
-			count++;
-		}
+		katana::GAccumulator<uint32_t> count;
 
-		std::cout << count << " count \n";
+		katana::do_all(
+				katana::iterate(huffman_nodes_map),
+				[&](std::pair<uint32_t, HuffmanCoding::HuffmanNode*> pair) {
+					if(pair.first > vocab_size_) {
+						return;
+					}
+					HuffmanCoding::HuffmanNode* node = pair.second;
+					train_words_pow += std::pow(node->GetCount(), power);
+					count++;
+				});
 		
-		std::map<unsigned int, HuffmanCoding::HuffmanNode*>::iterator it = huffmanNodes->begin();
-		HuffmanCoding::HuffmanNode last = *((*it).second);
-		it++;
-		double d1 = pow(last.count, power)/((double) trainWordsPow);
-		int i = 0;
-		for (int a = 0; a < TABLE_SIZE; a++) {
-			table[a] = i;
-		//	std::cout << "d1: " << d1 << std::endl;
-			if (a / (double)TABLE_SIZE > d1) {
+		auto iter = huffman_nodes_map.begin();
+		HuffmanCoding::HuffmanNode* last_node = iter->second;
+		iter++;
+		double d1 = pow(last_node->GetCount(), power)/((double) train_words_pow.reduce());
+		uint32_t i = 0;
+
+		for (uint32_t a = 0; a < kTableSize; a++) {
+			table_[a] = i;
+	
+			if (a / (double)kTableSize > d1) {
 				i++;
-				HuffmanCoding::HuffmanNode next = last;
-				if(it != huffmanNodes->end()){
-					next = *((*it).second);
-					it++;
+				HuffmanCoding::HuffmanNode* next = last;
+				if(iter != huffman_nodes_map.end()){
+					next = iter->second;
+					iter++;
 				}
 				
-				d1 += pow(next.count, power)/((double) trainWordsPow);
-				
+				d1 += std::pow(next->GetCount(), power)/((double) train_words_pow.reduce());
 				last = next;
 			}
 	
-			if(i > vocabSize){ 
-				i = vocabSize ;
-				std::cout << "hello \n";
-
+			if(i > vocab_size_){ 
+				i = vocab_size_ ;
 			}
 		}
 	}
 
-	void NeuralNetworkTrainer::initializeSyn0() {
-		unsigned long long nextRandom = 1;
-		for (int a = 0; a < huffmanNodes->size(); a++) {
+	void NeuralNetworkTrainer::InitializeSyn0() {
+		unsigned long long next_random = 1;
+		for (uint32_t a = 0; a < vocab_size_; a++) {
 			// Consume a random for fun
 			// Actually we do this to use up the injected </s> token
-			nextRandom = incrementRandom(nextRandom);
-			for (int b = 0; b < LAYER1_SIZE; b++) {
-				nextRandom = incrementRandom(nextRandom);
-				syn0[a][b] = (((nextRandom & 0xFFFF) / (double)65536) - 0.5f)/LAYER1_SIZE;
-				//std::cout << syn0[a][b] <<std::endl; 
-				if(syn0[a][b] > 10)	std::cout << "hello \n";
-				if(a==3)
-					std::cout << syn0[a][b] <<  " ";
-				if(a == 4)	
-					std::cout << syn0[a][b] <<  " ";
-				//syn0[a][b] = (double) 0.0f;
+			next_random = IncrementRandom(next_random);
+			for (uint32_t b = 0; b < kLayer1Size; b++) {
+				next_random = IncrementRandom(next_random);
+				syn0_[a][b] = (((next_random & 0xFFFF) / (double)65536) - 0.5f)/kLayer1Size;
 			}
 		}
 	}
 	
 	/** @return Next random value to use */
-	unsigned long long NeuralNetworkTrainer::incrementRandom(unsigned long long r) {
+	unsigned long long NeuralNetworkTrainer::IncrementRandom(unsigned long long r) {
 		return r * (unsigned long long) 25214903917L + 11;
 	}
-	/*void setDownSampleRate(double downSampleRate){
-		this.downSampleRate = downSampleR*/
-
-		
-		/*void setIterations(int iterations){
-			this.iterations = iterations;
-		}*/
-
+	
 		/** 
 		 * Degrades the learning rate (alpha) steadily towards 0
 		 * @param iter Only used for debugging
 		 */
-		void NeuralNetworkTrainer::updateAlpha(int iter) {
-			currentActual = wordCount - lastWordCount;
-			lastWordCount = wordCount;
+		void NeuralNetworkTrainer::UpdateAlpha(int iter) {
+			current_actual_ = word_count_ - last_word_count_;
+			last_word_count_ = word_count_;
 			
 			// Degrade the learning rate linearly towards 0 but keep a minimum
-			alpha = initialLearningRate * std::max(
-					1 - currentActual / (double)(iterations * numTrainedTokens),
+			alpha_ = kInitialLearningRate * std::max(
+					1 - current_actual_/ (double)(kIterations * num_trained_tokens_),
 					(double) 0.0001f
 				);
 		}
-		
-
-		/*void setNegativeSamples(int negativeSamples){
-			this->negativeSamples = negativeSamples;
-		}*/
 
 		//generate random negative samples
-		void NeuralNetworkTrainer::handleNegativeSampling(HuffmanCoding::HuffmanNode huffmanNode, int l1) {
-			for (int d = 0; d <= negativeSamples; d++) {
-				int target;
-				int label;
+		void NeuralNetworkTrainer::HandleNegativeSampling(HuffmanCoding::HuffmanNode* huffman_node, uint32_t l1, std::vector<double>* neu1e) {
+			for (uint32_t d = 0; d <= kNegativeSamples; d++) {
+				uint32_t target;
+				uint32_t label;
 				if (d == 0) {
-					target = huffmanNode.idx;
+					target = huffman_node.GetIdx();
 					label = 1;
 				} else {
-					nextRandom = incrementRandom(nextRandom);
-					target = table[(int) (((nextRandom >> 16) % TABLE_SIZE) + TABLE_SIZE) % TABLE_SIZE];
-					std::cout << "target table: " << target << std::endl;
+					next_random = IncrementRandom(next_random);
+					target = table_[(uint32_t)((next_random >> 16) % kTableSize)];
+					
 					if (target == 0){
-						target = (int)(((nextRandom % (vocabSize - 1)) + vocabSize - 1) % (vocabSize - 1)) + 1;
-						std::cout << "target random: " << target << std::endl;
+						target = (uint32_t)(next_random % (vocab_size_ - 1)) + 1;
 					}
-					if (target == huffmanNode.idx)
+					if (target == huffman_node->GetIdx()){
 						continue;
+					}
 					label = 0;
 				}
-				int l2 = target;
-				//std::cout << "l2: " << l2  << std::endl;
+				uint32_t l2 = target;
 				long double f = 0;
-				for (int c = 0; c < LAYER1_SIZE; c++)
-					f += syn0[l1][c] * syn1neg[l2][c];
+				for (uint32_t c = 0; c < kLayer1Size; c++) {
+					f += syn0_[l1][c] * syn1_neg_[l2][c];
+				}
 				double g;
-				if (f > MAX_EXP)
-					g = (label - 1) * alpha;
-				else if (f < -MAX_EXP)
-					g = (label - 0) * alpha;
+				if (f > kMaxExp) {
+					g = ((double)(label - 1)) * alpha_;
+				}
+				else if (f < -kMaxEx) {
+					g = ((double)(label - 0)) * alpha_;
+				}
 				else{
-					//std::cout << "f: " << f << std::endl;
-					//std::cout << "inside else: " << (int)((f + (double) MAX_EXP) * ((double) EXP_TABLE_SIZE / ((double) MAX_EXP * 2))) << std::endl;
-					g = (label - EXP_TABLE[(int)((f + (double) MAX_EXP) * ((double) EXP_TABLE_SIZE / ((double) MAX_EXP * 2)))]) * alpha;
-					
+					g = ((double)label - exp_table_[(uint32_t)((f + (double) kMaxExp) * ((double) kExpTableSize / ((double) kMaxExp * 2)))]) * alpha_;
 				}
 
-				double neu1e[300];
-				for (int c = 0; c < LAYER1_SIZE; c++)
-					neu1e[c] += g * syn1neg[l2][c];
-				for (int c = 0; c < LAYER1_SIZE; c++)
-					syn1neg[l2][c] += g * syn0[l1][c];
+				for (uint32_t c = 0; c < kLayer1Size; c++) {
+					(*neu1e)[c] += g * syn1_neg_[l2][c];
+				}
+				for (uint32_t c = 0; c < kLayer1Size; c++) {
+					katana::atomicAdd(syn1_neg_[l2][c], g * syn0_[l1][c]);
+				}
 			}
 		}
 		

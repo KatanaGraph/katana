@@ -23,6 +23,10 @@ class HuffmanCoding {
 		void InitPoints(std::vector<int32_t>& point, uint32_t num_tokens);
 
 		void InitVars(uint32_t idx, uint32_t count, uint32_t code_len, uint32_t token);
+		uint32_t GetIdx() {return idx_;}
+
+		uint32_t GetCount(){ return count_;}
+
 	private	:
 		/** vector of 0's and 1's */
 		std::vector<uint32_t> code_;

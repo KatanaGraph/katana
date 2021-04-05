@@ -16,7 +16,7 @@ private:
 	/** Size of the pre-cached exponent table */
 	const  static uint32_t kExpTableSize = 1000;
 
-	std::vector<double> exp_table_(kExpTableSize);
+	std::vector<double> exp_table_;
 	
 	const static uint32_t kTableSize = 100000000;
 
@@ -54,16 +54,11 @@ private:
 	std::vector<std::vector<katana::CopyableAtomic<double>>> syn1_neg_;
 
 	/** Used for negative sampling */
-	std::vector<int32_t> table_(kTableSize);
+	std::vector<int32_t> table_;
 
 	long start_nano_;
 
 	const static uint32_t kNegativeSamples = 5;
-
-	std::vector<double> neu1_(kLayer1Size);
-	
-	std::vector<double> neu1e_(kLayer1Size);
-
 	/** 
         ** The number of words observed in the training data for this worker that exist
         ** in the vocabulary.  It includes words that are discarded from sampling.
@@ -108,5 +103,5 @@ public:
 	void UpdateAlpha(uint32_t iter);
 
 	//generate random negative samples
-	void HandleNegativeSampling(HuffmanNode& huffmanNode, uint32_t l1);
+	void HandleNegativeSampling(HuffmanCoding::HuffmanNode& huffmanNode, uint32_t l1, unsigned long long* next_random);
 };

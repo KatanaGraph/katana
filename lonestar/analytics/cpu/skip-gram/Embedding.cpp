@@ -10,7 +10,7 @@
 
 #include "Huffman/HuffmanCoding.h"
 #include "NeuralNetwork/NeuralNetworkTrainer.h"
-#include "NeuralNetwork/SkipGramModelTrainer.cpp"
+#include "NeuralNetwork/SkipGramModelTrainer.h"
 
 //#include "galois/graphs/Util.h"
 //#include "galois/Timer.h"
@@ -147,7 +147,7 @@ int main(int argc, char** argv){
 
 	for(uint32_t iter =0; iter<numIterations; iter++){
 		
-		skipGramModelTrainer->train(random_walks, vocab_multiset, huffman_nodes_map);		
+		skip_gram_model_trainer->train(random_walks, vocab_multiset, huffman_nodes_map);		
 	}
 
 	uint32_t max_id = *(vocab.crbegin());

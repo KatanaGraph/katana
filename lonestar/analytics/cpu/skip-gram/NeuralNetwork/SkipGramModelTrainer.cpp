@@ -2,180 +2,131 @@
 
 //#include "../Huffman/HuffmanCoding.h"
 #include "NeuralNetworkTrainer.h"
+#include "SkipGramModelTrainer.h"
 
-
-#include "galois/graphs/Util.h"
-#include "galois/Timer.h"
+//#include "katana/Util.h"
+#include "katana/Timer.h"
 #include "Lonestar/BoilerPlate.h"
-#include "galois/graphs/FileGraph.h"
-#include "galois/LargeArray.h"
+#include "katana/FileGraph.h"
+#include "katana/LargeArray.h"
 
-#include "galois/AtomicHelpers.h"
-#include "galois/AtomicWrapper.h"
+#include "katana/AtomicHelpers.h"
+#include "katana/AtomicWrapper.h"
 
-class SkipGramModelTrainer : public NeuralNetworkTrainer {
-public:
-
-	//	HuffmanCoding::HuffmanNode* huffmanNode;
-//int c, l1, d, l2, e;
-//double f, g;
-
-
-	galois::GAccumulator<double>** sum_syn0;
-	galois::GAccumulator<double>** sum_syn1;	
-	SkipGramModelTrainer(std::multiset<unsigned int>* counts, std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffmanNodes) : NeuralNetworkTrainer(counts, huffmanNodes) {
-
-	/*	this->sum_syn0 = new galois::GAccumulator<double>*[vocabSize+1];
-    this->sum_syn1 = new galois::GAccumulator<double>*[vocabSize+1];
-
-		for(int i=0;i<=vocabSize; i++){
-
-      this->sum_syn0[i] = new galois::GAccumulator<double>[LAYER1_SIZE];
-      this->sum_syn1[i] = new galois::GAccumulator<double>[LAYER1_SIZE];
-		}
-*/
-//		createAccumulator();
-	}
-
-	void createAccumulator(){
-
-		this->sum_syn0 = new galois::GAccumulator<double>*[vocabSize+1];
-    this->sum_syn1 = new galois::GAccumulator<double>*[vocabSize+1];
-
-    for(int i=0;i<=vocabSize; i++){
-
-      this->sum_syn0[i] = new galois::GAccumulator<double>[LAYER1_SIZE];
-      this->sum_syn1[i] = new galois::GAccumulator<double>[LAYER1_SIZE];
-    }
-	}
-
-	void freeAccumulator(){
-
-		for(int i=0;i<=vocabSize; i++){
-
-      free (this->sum_syn0[i]);
-			free (this->sum_syn1[i]);
-    }	
-
-		free (this->sum_syn0);
-		free (this->sum_syn1);
-	}
 		
-	std::array<unsigned int, LAYER1_SIZE> index;
+/*	std::array<unsigned int, LAYER1_SIZE> index;
 	
 	void initArray(){
 
 		for(int i=0;i<LAYER1_SIZE;i++)
 			index[i] = i;
 	}		
-
-	void trainSample(unsigned int target, unsigned int sample) {
+*/
+	void SkipGramModelTrainer::TrainSample(unsigned int target, unsigned int sample, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_mapi, unsigned long long* next_random) {
 				
-				HuffmanCoding::HuffmanNode*	huffmanNode =  huffmanNodes->find(target)->second;
+				HuffmanCoding::HuffmanNode*	huffman_node =  huffman_nodes_map->find(target)->second;
 
-				double neu1e[LAYER1_SIZE];
-		
-				for(int c=0;c<LAYER1_SIZE;c++)
-					neu1e[c] = 0;
+				std::vector<double> neu1e;
+				neu1e.resize(kLayer1Size, 0.0);
 					
-				int l1 = huffmanNodes->find(sample)->second->idx;
-	//			if(target == 4)
-//					std::cout << "size code: " << huffmanNode->codeLen << std::endl;					
-				for(int d = 0; d < huffmanNode->codeLen; d++) {
+				uint32_t l1 = huffman_nodes_map->find(sample)->second->idx;
+		
+				uint32_t huffman_node_code_len = huffman_node->GetCodeLen();
+
+				for(uint32_t d = 0; d < huffman_node_code_len; d++) {
 							
 					double f = 0.0f;
-					int l2 = huffmanNode->point[d];
+					uint32_t l2 = huffman_node->GetPoint(d);
 			
-					for(int e=0;e<LAYER1_SIZE;e++)
-						f += syn0[l1][e] * syn1[l2][e];
-					
-				
-					if (f <= -MAX_EXP || f >= MAX_EXP)
-						continue;
-					else{
-							f = EXP_TABLE[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
+					for(uint32_t e=0; e<kLayer1Size;e++) {
+						f += syn0_[l1][e] * syn1_[l2][e];
 					}
 					
-					double g = (1 - huffmanNode->code[d] - f) * alpha;
 				
-					for(int e=0;e<LAYER1_SIZE;e++)
-						neu1e[e] += g * syn1[l2][e];
+					if ((f <= -kMaxExp) || (f >= kMaxExp)) {
+						continue;
+					}
+					else{
+							f = exp_table_[(uint32_t)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
+					}
+					
+					double g = (1.0 - huffman_node->GetCode(d) - f) * alpha_;
+				
+					for(uint32_t e=0; e<kLayer1Size ; e++){
+						neu1e[e] += g * syn1_[l2][e];
+					}
 							
 					// Learn weights hidden -> output
 					
-					for(int e=0;e<LAYER1_SIZE;e++)
-						galois::atomicAdd(syn1[l2][e],g * syn0[l1][e]);		
+					for(uint32_t e=0 ; e<kLayer1Size ;e++){
+						katana::atomicAdd(syn1_[l2][e],g * syn0_[l1][e]);		
+					}
 				
 				}
 				
 					
-				//handleNegativeSampling(huffmanNode, l1);
+				HandleNegativeSampling(huffman_node, l1, next_random);
 					
 				// Learn weights input -> hidden
-				for(int d=0;d<LAYER1_SIZE;d++)
-					galois::atomicAdd(syn0[l1][d], neu1e[d]);
+				for(uint32_t d=0; d<kLayer1Size ;d++) {
+					katana::atomicAdd(syn0_[l1][d], neu1e[d]);
+				}
 		
 			
 		
 	}
 
-	/*void sync(){
-		
-		for(int i=0;i<=vocabSize;i++){
+	void SkipGramModelTrainer::Train(std::vector<std::vector<uint32_t>>& random_walks, std::map<uint32_t, uint32_t>& vocab_multiset, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
 
-			for(int j=0;j<LAYER1_SIZE;j++){
-				
-				syn0[i][j] += sum_syn0[i][j].reduce();
-				syn1[i][j] += sum_syn1[i][j].reduce();			
-			}
-		}		
-	}
-*/
-	/*void resetAccumulator(){
+             
+								katana::GAccumulator<uint64_t> accum;
+								katana::do_all(katana::iterate(random_walks),
+								[&] (std::vector<uint32_t>& walk){
 
-    //this->sum_syn0 = new galois::GAccumulator<double>*[vocabSize+1];
-    //this->sum_syn1 = new galois::GAccumulator<double>*[vocabSize+1];
+									uint32_t sentence_position = 0;
+									uint32_t walk_length = walk.size();
 
-    for(int i=0;i<=vocabSize; i++){
+									unsigned long long next_random = next_random_;
 
-			for(int j=0;j<LAYER1_SIZE; j++){
-      this->sum_syn0[i][j].reset();
-      this->sum_syn1[i][j].reset();
-			}
-    }
-  }
-	*/
-	galois::CopyableAtomic<double>** train(std::vector<std::pair<unsigned int, unsigned int>>* samples){
-
-								//createAccumulator();
-//								resetAccumulator();
-                int numSamples = samples->size();
-                numTrainedTokens += numSamples;
-
-								galois::GAccumulator<unsigned int> accum;
-								galois::do_all(galois::iterate(*samples),
-								[&] (std::pair<unsigned int, unsigned int> p){
-								
-										unsigned int target, sample;
-										target = p.first;
-                    sample = p.second;
-
+									while(sentence_position < walk_length) {
 										accum += 1;
-		
-										trainSample(target, sample);
-								}								
-								);
+										uint32_t target = walk[sentence_position];
+									next_random = 	IncrementRandom(next_random);
+
+									uint32_t b = next_random % kWindow;							
+									for (uint32_t a = b; a < (kWindow * 2 + 1 - b); a++) {
+									
+										if (a != kWindow) {
+											c = sentence_position - kWindow + a;
+											if (c < 0){
+										       		continue;
+												}
+											if (c >= walk_length) {
+												continue;
+											}
+											uint32_t sample = walk[c];
+											TrainSample(target, sample, huffman_nodes_map, &next_random);
+										}
+									}
+
+									sentence_position++;
+									}
+									
+										/* if(downSampleRate > 0){
+                                std::cout << "down sampling\n";
+                
+                                HuffmanCoding::HuffmanNode huffmanNode = *huffmanNodes[target];
+                                double random = (sqrt(huffmanNode.count/(downSampleRate * numTrainedTokens)) + 1) * (downSampleRate * numTrainedTokens)/huffmanNode.count;
+                                nextRandom = incrementRandom(nextRandom);
+                                if (random < (nextRandom & 0xFFFF) / (double)65536){
+                                    continue;
+                                }
+                        }*/
+								});
 								
 
-									wordCount += accum.reduce();
-								if (wordCount - lastWordCount > LEARNING_RATE_UPDATE_FREQUENCY) {
-                                updateAlpha(0);
+									word_count_ += accum.reduce();
+								if (word_count_ - last_word_count_ > kLearningRateUpdateFrequency) {
+                                					UpdateAlpha(0);
 								}
-	
-	//								sync();
-								
-							//	freeAccumulator();
-                return syn0;
         }
-
-};

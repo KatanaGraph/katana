@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 #include <map>
-	
+
+#include "HuffmanCoding.h"
+
 	/**
 	 * @return {@link Map} from each given token to a {@link HuffmanNode} 
 	 */
@@ -12,21 +14,14 @@
 		
 		num_tokens_ = vocab_->size();
 		
-		parent_node_->reserve(num_tokens * 2 + 1);
-		binary_->reserve(num_tokens * 2 + 1);
-		count_->allocateBlocked(num_tokens * 2 + 1);
-
-		katana::do_all(
-				katana::iterate((uint32_t) 0, (num_tokens * 2 + 1)),
-				[&](uint32_t idx){
-				
-					count_[idx] = (unsigned long) 100000000000000;
-				});
+		parent_node_.reserve(num_tokens_ * 2 + 1);
+		binary_.reserve(num_tokens_ * 2 + 1);
+		count_.resize(num_tokens_ * 2 + 1, (unsigned long) 100000000000000);
 
 		uint32_t idx = 0;
 
-		for (auto item: *vocab) {
-			count[i] = vocab_multiset_[item];
+		for (auto item: *vocab_) {
+			count_[idx] = (*vocab_multiset_)[item];
 			idx++;
 		}
 		
@@ -43,8 +38,8 @@
 	
 		uint32_t min1i;
 		uint32_t min2i;
-		uint32_t pos1 = num_tokens_ - 1;
-		uint32_t pos2 = num_tokens_;
+		int32_t pos1 = num_tokens_ - 1;
+		int32_t pos2 = num_tokens_;
 	
 		uint32_t new_node_idx;
 	
@@ -102,18 +97,18 @@
                 }
 	}
 
-	void HuffmanCoding::HuffmanNode::InitPoints(std::vector<int32_t>& points, uint32_t num_tokens) {
+	void HuffmanCoding::HuffmanNode::InitPoints(std::vector<int32_t>& points) {
 		
 		point_.resize(code_len_ + 1);
-		point_[0] = num_tokens - 2;
+		point_[0] = num_tokens_ - 2;
 
                 for (uint32_t i = 0; i < code_len_; i++) {
-                	point_[code_len_ - i] = points[i] - num_tokens;
+                	point_[code_len_ - i] = points[i] - num_tokens_;
                 }
 	}
 
 	/** @return Ordered map from each token to its {@link HuffmanNode}, ordered by frequency descending */
-	void HuffmanCoding::EncodeTree(std::map<unsigned int, HuffmanCoding::HuffmanNode*>* huffman_node_map, std::vector<HuffmanCoding::HuffmanNode>* huffman_nodes) {
+	void HuffmanCoding::EncodeTree(std::map<uint32_t, HuffmanCoding::HuffmanNode*>* huffman_node_map, std::vector<HuffmanCoding::HuffmanNode>* huffman_nodes) {
 	
 		uint32_t node_idx = 0;
 		uint32_t cur_node_idx;
@@ -124,7 +119,7 @@
 		uint32_t code_len;
 		uint32_t count;
 
-		for (auto e : *vocab) {
+		for (auto e : *vocab_) {
 			cur_node_idx = node_idx;
 			code.clear();
 			points.clear();
@@ -138,7 +133,7 @@
 				}
 			}
 			code_len = code.size();
-			count = vocab_multiset_[e];
+			count = (*vocab_multiset_)[e];
 			
 			HuffmanNode* huffman_node = &((*huffman_nodes)[cur_node_idx]);
 

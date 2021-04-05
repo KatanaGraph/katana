@@ -8,11 +8,6 @@
 #include "NeuralNetworkTrainer.h"
 #include "katana/AtomicWrapper.h"
 
-	NeuralNetworkTrainer(uint32_t vocab_size){
-		vocab_size_ = vocab_size;
-	}
-
-
 	void NeuralNetworkTrainer::InitExpTable(){
 		for (uint32_t i = 0; i < kExpTableSize; i++) {
 			// Precompute the exp() table
@@ -22,11 +17,14 @@
 		}
 	}
 	
-	NeuralNetworkTrainer(uint32_t vocab_size, uint32_t num_trained_tokens, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
+NeuralNetworkTrainer::NeuralNetworkTrainer(uint32_t vocab_size, uint32_t num_trained_tokens, std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
 
 		vocab_size_ = vocab_size;
 		num_trained_tokens_ = num_trained_tokens;
-		
+
+		exp_table_.reserve(kExpTableSize);
+                table_.reserve(kTableSize);
+
 		syn0_.resize(vocab_size_ + 1);
 		syn1_.resize(vocab_size_ + 1);
 		syn1_neg_.resize(vocab_size_ + 1);
@@ -92,13 +90,14 @@
 	}
 
 	void NeuralNetworkTrainer::InitializeSyn0() {
-		unsigned long long next_random = 1;
+		//unsigned long long next_random = 1;
+		next_random_ = 1;
 		for (uint32_t a = 0; a < vocab_size_; a++) {
 			// Consume a random for fun
 			// Actually we do this to use up the injected </s> token
-			next_random = IncrementRandom(next_random);
+			next_random_ = IncrementRandom(next_random_);
 			for (uint32_t b = 0; b < kLayer1Size; b++) {
-				next_random = IncrementRandom(next_random);
+				next_random_ = IncrementRandom(next_random_);
 				syn0_[a][b] = (((next_random & 0xFFFF) / (double)65536) - 0.5f)/kLayer1Size;
 			}
 		}
@@ -125,7 +124,7 @@
 		}
 
 		//generate random negative samples
-		void NeuralNetworkTrainer::HandleNegativeSampling(HuffmanCoding::HuffmanNode* huffman_node, uint32_t l1, std::vector<double>* neu1e) {
+		void NeuralNetworkTrainer::HandleNegativeSampling(HuffmanCoding::HuffmanNode* huffman_node, uint32_t l1, std::vector<double>* neu1e, unsigned long long* next_random) {
 			for (uint32_t d = 0; d <= kNegativeSamples; d++) {
 				uint32_t target;
 				uint32_t label;
@@ -133,11 +132,11 @@
 					target = huffman_node.GetIdx();
 					label = 1;
 				} else {
-					next_random = IncrementRandom(next_random);
-					target = table_[(uint32_t)((next_random >> 16) % kTableSize)];
+					(*next_random) = IncrementRandom(*next_random);
+					target = table_[(uint32_t)(((*next_random) >> 16) % kTableSize)];
 					
 					if (target == 0){
-						target = (uint32_t)(next_random % (vocab_size_ - 1)) + 1;
+						target = (uint32_t)((*next_random) % (vocab_size_ - 1)) + 1;
 					}
 					if (target == huffman_node->GetIdx()){
 						continue;

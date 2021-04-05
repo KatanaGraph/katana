@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "katana/LargeArray.h"
+
 class HuffmanCoding {
 	public:
 	/** Node */
@@ -20,13 +22,18 @@ class HuffmanCoding {
 	
 		void InitCode(std::vector<uint32_t>& code);
 
-		void InitPoints(std::vector<int32_t>& point, uint32_t num_tokens);
+		void InitPoints(std::vector<int32_t>& point);
 
 		void InitVars(uint32_t idx, uint32_t count, uint32_t code_len, uint32_t token);
 		uint32_t GetIdx() {return idx_;}
 
 		uint32_t GetCount(){ return count_;}
 
+		uint32_t GetCodeLen() { return code_len_;}
+
+		int32_t GetPoint(uint32_t idx) { return point_[idx];}
+
+		uint32_t GetCode(uint32_t idx) { return code_[idx]; }
 	private	:
 		/** vector of 0's and 1's */
 		std::vector<uint32_t> code_;
@@ -71,7 +78,7 @@ class HuffmanCoding {
         
 	std::vector<uint32_t> binary_;
        	
-	katana::LargeArray<unsigned long> count_; 
+	std::vector<unsigned long> count_; 
 };
 
 #endif

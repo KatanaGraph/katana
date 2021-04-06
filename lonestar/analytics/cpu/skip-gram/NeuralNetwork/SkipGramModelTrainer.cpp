@@ -24,6 +24,8 @@ SkipGramModelTrainer::SkipGramModelTrainer(
     std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
   vocab_size_ = vocab_size;
   num_trained_tokens_ = num_trained_tokens;
+  word_count_ = 0;
+  current_actual_ = 0;
 
   exp_table_.reserve(kExpTableSize);
   table_.reserve(kTableSize);
@@ -49,7 +51,7 @@ SkipGramModelTrainer::SkipGramModelTrainer(
 void
 SkipGramModelTrainer::InitializeUnigramTable(
     std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
-  katana::GAccumulator<long> train_words_pow;
+  katana::GAccumulator<long long> train_words_pow;
   double power = 0.75f;
 
   //katana::GAccumulator<uint32_t> count;
@@ -88,8 +90,8 @@ SkipGramModelTrainer::InitializeUnigramTable(
       last_node = next_node;
     }
 
-    if (i > vocab_size_) {
-      i = vocab_size_;
+    if (i >= vocab_size_) {
+      i = vocab_size_ - 1;
     }
   }
 }
@@ -122,7 +124,7 @@ SkipGramModelTrainer::IncrementRandom(unsigned long long r) {
 		 */
 void
 SkipGramModelTrainer::UpdateAlpha() {
-  current_actual_ = word_count_ - last_word_count_;
+  current_actual_ += word_count_ - last_word_count_;
   last_word_count_ = word_count_;
 
   // Degrade the learning rate linearly towards 0 but keep a minimum
@@ -131,6 +133,9 @@ SkipGramModelTrainer::UpdateAlpha() {
       std::max(
           1 - current_actual_ / (double)(kIterations * num_trained_tokens_),
           (double)0.0001f);
+
+  katana::gPrint("current:", current_actual_);
+  katana::gPrint("alpha:", alpha_);
 }
 
 //generate random negative samples
@@ -146,18 +151,26 @@ SkipGramModelTrainer::HandleNegativeSampling(
       label = 1;
     } else {
       (*next_random) = IncrementRandom(*next_random);
-      target = table_[(uint32_t)(((*next_random) >> 16) % kTableSize)];
+      target = table_[(uint32_t)(
+          ((((*next_random) >> 16) % kTableSize) + kTableSize) % kTableSize)];
 
       if (target == 0) {
-        target = (uint32_t)((*next_random) % (vocab_size_ - 1)) + 1;
+        target =
+            (uint32_t)(
+                (((*next_random) % (vocab_size_ - 1)) + (vocab_size_ - 1)) %
+                (vocab_size_ - 1)) +
+            1;
       }
       if (target == huffman_node.GetIdx()) {
         continue;
       }
       label = 0;
     }
+
+    KATANA_LOG_VASSERT(target < vocab_size_, "target exceeds vocab size");
+
     uint32_t l2 = target;
-    long double f = 0;
+    double f = 0.0;
     for (uint32_t c = 0; c < kLayer1Size; c++) {
       f += syn0_[l1][c] * syn1_neg_[l2][c];
     }
@@ -170,7 +183,7 @@ SkipGramModelTrainer::HandleNegativeSampling(
       g = ((double)label -
            exp_table_[(uint32_t)(
                (f + (double)kMaxExp) *
-               ((double)kExpTableSize / ((double)kMaxExp * 2)))]) *
+               ((double)kExpTableSize / ((double)kMaxExp) / 2))]) *
           alpha_;
     }
 
@@ -196,7 +209,7 @@ SkipGramModelTrainer::TrainSample(
 
   uint32_t l1 = huffman_nodes_map.find(sample)->second->GetIdx();
 
-  uint32_t huffman_node_code_len = huffman_node->GetCodeLen();
+  /*uint32_t huffman_node_code_len = huffman_node->GetCodeLen();
 
   for (uint32_t d = 0; d < huffman_node_code_len; d++) {
     double f = 0.0f;
@@ -209,7 +222,7 @@ SkipGramModelTrainer::TrainSample(
     if ((f <= -kMaxExp) || (f >= kMaxExp)) {
       continue;
     } else {
-      f = exp_table_[(uint32_t)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
+      f = exp_table_[(uint32_t)((f + (double)kMaxExp) * (((double)kExpTableSize) / ((double)kMaxExp) / 2))];
     }
 
     double g = (1.0 - huffman_node->GetCode(d) - f) * alpha_;
@@ -223,9 +236,11 @@ SkipGramModelTrainer::TrainSample(
     for (uint32_t e = 0; e < kLayer1Size; e++) {
       katana::atomicAdd(syn1_[l2][e], g * syn0_[l1][e]);
     }
-  }
+  }*/
 
   HandleNegativeSampling(*huffman_node, l1, &neu1e, next_random);
+
+  //katana::gPrint("next:", next_random);
 
   // Learn weights input -> hidden
   for (uint32_t d = 0; d < kLayer1Size; d++) {
@@ -278,6 +293,8 @@ SkipGramModelTrainer::Train(
                                     continue;
                                 }
                         }*/
+
+        next_random_ = next_random;
       });
 
   word_count_ += accum.reduce();

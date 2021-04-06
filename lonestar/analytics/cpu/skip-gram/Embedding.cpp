@@ -37,6 +37,8 @@ static cll::opt<unsigned int> numIterations(
     cll::desc("Number of Training Iterations (default value 50)"),
     cll::init(50));
 
+static cll::opt<uint32_t> minCount(
+    "minCount", cll::desc("Min-count (default 5)"), cll::init(5));
 void
 ReadRandomWalks(
     std::ifstream& input_file,
@@ -73,6 +75,26 @@ BuildVocab(
       (*num_trained_tokens)++;
     }
   }
+
+  std::vector<uint32_t> to_remove;
+  std::set<uint32_t>::iterator iter = vocab->begin();
+
+  //remove nodes occurring less than minCount times
+  while (iter != vocab->end()) {
+    uint32_t node = *iter;
+    if ((*vocab_multiset)[node] < minCount) {
+      //vocab->erase(node);
+      //vocab_multiset->erase(node);
+      to_remove.push_back(node);
+    }
+
+    iter++;
+  }
+
+  for (auto node : to_remove) {
+    vocab->erase(node);
+    vocab_multiset->erase(node);
+  }
 }
 
 void
@@ -94,17 +116,34 @@ PrintEmbeddings(
       for (uint32_t i = 0; i < SkipGramModelTrainer::GetLayer1Size(); i++) {
         of << " " << skip_gram_model_trainer.GetSyn0(node_idx, i);
       }
-    } else {
+      of << "\n";
+    } /* else {
       of << id;
 
       for (uint32_t i = 0; i < SkipGramModelTrainer::GetLayer1Size(); i++) {
         of << " " << 0.0f;
       }
-    }
-    of << "\n";
+    }*/
+    //  of << "\n";
   }
 
   of.close();
+}
+
+void
+RefineRandomWalks(
+    std::vector<std::vector<uint32_t>>& random_walks,
+    std::vector<std::vector<uint32_t>>* refined_random_walks,
+    std::set<uint32_t>& vocab) {
+  for (auto walk : random_walks) {
+    std::vector<uint32_t> w;
+    for (auto val : walk) {
+      if (vocab.find(val) != vocab.end()) {
+        w.push_back(val);
+      }
+    }
+    refined_random_walks->push_back(std::move(w));
+  }
 }
 
 int
@@ -125,11 +164,15 @@ main(int argc, char** argv) {
 
   BuildVocab(random_walks, &vocab, &vocab_multiset, &num_trained_tokens);
 
+  std::vector<std::vector<uint32_t>> refined_random_walks;
+
+  RefineRandomWalks(random_walks, &refined_random_walks, vocab);
+
   HuffmanCoding huffman_coding(&vocab, &vocab_multiset);
   katana::gPrint("Huffman Coding init done");
 
   std::vector<HuffmanCoding::HuffmanNode> huffman_nodes;
-  huffman_nodes.reserve(vocab.size());
+  huffman_nodes.resize(vocab.size());
 
   std::map<uint32_t, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
   huffman_coding.Encode(&huffman_nodes_map, &huffman_nodes);
@@ -141,12 +184,15 @@ main(int argc, char** argv) {
 
   katana::gPrint("Skip-Gram Trainer Init done");
 
+  katana::gPrint("szie: ", vocab.size());
+
   skip_gram_model_trainer.InitExpTable();
+  //  skip_gram_model_trainer.InitializeUnigramTable(huffman_nodes_map);
 
   katana::gPrint("Skip-Gram Init exp table \n");
 
   for (uint32_t iter = 0; iter < numIterations; iter++) {
-    skip_gram_model_trainer.Train(random_walks, huffman_nodes_map);
+    skip_gram_model_trainer.Train(refined_random_walks, huffman_nodes_map);
   }
 
   uint32_t max_id = *(vocab.crbegin());

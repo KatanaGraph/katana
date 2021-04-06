@@ -14,6 +14,8 @@ public:
   /** Node */
   class HuffmanNode {
   public:
+    HuffmanNode() : idx_(0), count_(0), code_len_(0), token_(0) {}
+
     HuffmanNode(uint32_t idx, uint32_t count, uint32_t code_len, uint32_t token)
         : idx_(idx), count_(count), code_len_(code_len), token_(token) {}
 

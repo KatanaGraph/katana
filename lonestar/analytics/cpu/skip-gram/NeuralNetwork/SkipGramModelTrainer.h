@@ -24,7 +24,7 @@ private:
 
   uint32_t vocab_size_;
 
-  const static uint32_t kLayer1Size = 200;
+  const static uint32_t kLayer1Size = 100;
 
   /**
          * In the C version, this includes the </s> token that replaces a newline character
@@ -60,7 +60,7 @@ private:
 
   long start_nano_;
 
-  const static uint32_t kNegativeSamples = 5;
+  const static uint32_t kNegativeSamples = 1;
   /** 
         ** The number of words observed in the training data for this worker that exist
         ** in the vocabulary.  It includes words that are discarded from sampling.
@@ -76,7 +76,7 @@ private:
 
   unsigned long long next_random_;
 
-  const static uint32_t kLearningRateUpdateFrequency = 100000;
+  const static uint32_t kLearningRateUpdateFrequency = 10000;
 
   uint32_t current_actual_;
 

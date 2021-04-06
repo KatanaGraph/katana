@@ -139,7 +139,7 @@ HuffmanCoding::EncodeTree(
     code_len = code.size();
     count = (*vocab_multiset_)[e];
 
-    HuffmanNode* huffman_node = &((*huffman_nodes)[cur_node_idx]);
+    HuffmanNode* huffman_node = &((*huffman_nodes)[node_idx]);
 
     huffman_node->InitVars(node_idx, count, code_len, e);
     huffman_node->InitCode(code);

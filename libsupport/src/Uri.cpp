@@ -17,7 +17,7 @@
 namespace {
 
 // get scheme and path, always drop trailing slash
-const std::regex kUriRegex("(?:([a-zA-Z0-9]+)://)?(.+)/?");
+const std::regex kUriRegex("^(?:([a-zA-Z0-9]+)://)?(.+?)/?$");
 
 // base64 based on https://web.stanford.edu/class/archive/cs/cs106b/cs106b.1186/lectures/08-Fractals/code/expressions/lib/StanfordCPPLib/io/base64.cpp
 const std::array<char, 64> kBase64Alphabet{
@@ -140,19 +140,17 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   if (dir[dir.size() - 1] != katana::Uri::kSepChar) {
     if (file[0] != katana::Uri::kSepChar) {
       return fmt::format("{}{}{}", dir, katana::Uri::kSepChar, file);
-    } else {
-      while (file[1] == katana::Uri::kSepChar) {
-        file.remove_prefix(1);
-      }
-      return fmt::format("{}{}", dir, file);
     }
-  } else {
-    while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
-      dir.remove_suffix(1);
-    }
-    while (file[0] == katana::Uri::kSepChar) {
+    while (file[1] == katana::Uri::kSepChar) {
       file.remove_prefix(1);
     }
+    return fmt::format("{}{}", dir, file);
+  }
+  while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
+    dir.remove_suffix(1);
+  }
+  while (file[0] == katana::Uri::kSepChar) {
+    file.remove_prefix(1);
   }
   KATANA_LOG_ASSERT(dir[dir.size() - 1] == katana::Uri::kSepChar);
   return fmt::format("{}{}", dir, file);
@@ -183,7 +181,7 @@ Result<Uri>
 Uri::Make(const std::string& str) {
   std::smatch sub_match;
   if (!std::regex_match(str, sub_match, kUriRegex)) {
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "could not parse URI");
   }
   std::string scheme(sub_match[1]);
   std::string path(sub_match[2]);

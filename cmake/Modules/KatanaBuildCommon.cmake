@@ -30,8 +30,7 @@ set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizer
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
 # Putting this here is mostly just a placeholder so people know it's an option.
-# Currently this is really only intended to change anything for the libkatana_galois target.
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
 set(BUILD_TESTING ON CACHE BOOL "Build tests")
@@ -211,7 +210,7 @@ if(python IN_LIST KATANA_LANG_BINDINGS)
   find_python_module(sphinx)
 
   if(NOT BUILD_SHARED_LIBS)
-    message(ERROR "Cannot build Python binding without BUILD_SHARED_LIBS")
+    message(FATAL_ERROR "Cannot build Python binding without BUILD_SHARED_LIBS")
   endif()
 
   set(KATANA_LANG_BINDINGS_PYTHON TRUE)

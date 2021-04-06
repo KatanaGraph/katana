@@ -11,7 +11,7 @@ dependencies:
  - benchmark
  - boost-cpp>=1.74
  - black=19.10
- - cmake>=3.19
+ - cmake>=3.17
  - conda-build
  - conda-verify
  - cxx-compiler>=1.1.3

@@ -35,7 +35,7 @@ function(add_test_scale type app)
     endif()
 
     add_test(NAME setup-clean${suffix}
-      COMMAND ${CMAKE_COMMAND} -E remove_directory ${output_location})
+      COMMAND ${CMAKE_COMMAND} -E rm -rf ${output_location})
     add_test(NAME setup-make${suffix}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${output_location})
 

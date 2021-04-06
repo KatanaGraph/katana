@@ -15,7 +15,7 @@ requirements:
   build:
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
-    - cmake>=3.19
+    - cmake>=3.17
     - cython>=0.29.12
     - make
     - pyarrow {{ arrow_cpp }}
@@ -109,7 +109,7 @@ outputs:
       requires:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl') }}
-        - cmake>=3.13
+        - cmake>=3.17
         - make
       files:
         - test_app/CMakeLists.txt

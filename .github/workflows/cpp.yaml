@@ -77,7 +77,6 @@ jobs:
         - Debug
         - Release
         - Sanitizer
-        - Shared
         cxx:
         - g++
         - g++-9
@@ -107,9 +106,6 @@ jobs:
           cxx: g++-9
         - os: ubuntu-18.04
           build_type: Debug
-          cxx: clang++-10
-        - os: ubuntu-18.04
-          build_type: Shared
           cxx: clang++-10
     steps:
     - uses: actions/checkout@v2

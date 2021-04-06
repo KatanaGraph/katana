@@ -265,7 +265,7 @@ jobs:
           . .github/workflows/activate_miniconda.sh
           export CMAKE_BUILD_PARALLEL_LEVEL=2
           .github/workflows/configure_cpp.sh \
-            ${{matrix.os}} "$CXX" Shared "$HOME/build" -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
+            ${{matrix.os}} "$CXX" Release "$HOME/build" -DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON
 
 
       - name: Build

@@ -1,4 +1,5 @@
 from ..libstd cimport CPPAuto
+from libcpp.string cimport string
 
 cdef extern from "katana/Galois.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)
@@ -54,3 +55,6 @@ cdef extern from "katana/NoDerefIterator.h" namespace "katana" nogil:
         NoDerefIterator[it] operator++()
         NoDerefIterator[it] operator--()
         it operator*()
+
+cdef extern from "katana/Version.h" namespace "katana" nogil:
+    string getVersion()

@@ -24,6 +24,8 @@ from typing import Type, Dict, Union
 # Initialize the galois runtime immediately.
 import katana.galois
 
+__version__ = katana.galois.get_version()
+
 
 def load_ipython_extension(ipython):
     import cython

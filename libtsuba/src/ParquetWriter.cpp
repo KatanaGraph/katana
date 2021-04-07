@@ -69,7 +69,6 @@ LargeStringToChunkedString(
   arrow::StringBuilder builder;
 
   uint64_t inserted = 0;
-
   for (uint64_t i = 0, size = arr->length(); i < size; ++i) {
     if (!arr->IsValid(i)) {
       auto status = builder.AppendNull();
@@ -100,13 +99,14 @@ LargeStringToChunkedString(
           tsuba::ErrorCode::ArrowError, "adding string to array: {}", status);
     }
   }
-  if (inserted > 0) {
-    std::shared_ptr<arrow::Array> new_arr;
-    auto status = builder.Finish(&new_arr);
-    if (!status.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-    }
+
+  std::shared_ptr<arrow::Array> new_arr;
+  auto status = builder.Finish(&new_arr);
+  if (!status.ok()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
+  }
+  if (new_arr->length() > 0) {
     chunks.emplace_back(new_arr);
   }
   return chunks;

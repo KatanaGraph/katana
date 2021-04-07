@@ -33,7 +33,8 @@ AddProperties(
 
     auto add_result = add_fn(props);
     if (!add_result) {
-      return add_result.error();
+      return add_result.error().WithContext(
+          "adding {}", std::quoted(properties.name));
     }
   }
 

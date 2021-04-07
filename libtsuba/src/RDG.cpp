@@ -361,7 +361,7 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
         return rdg->core_->AddNodeProperties(props);
       });
   if (!node_result) {
-    return node_result.error();
+    return node_result.error().WithContext("populating node properties");
   }
 
   auto edge_result = AddProperties(
@@ -370,7 +370,7 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
         return rdg->core_->AddEdgeProperties(props);
       });
   if (!edge_result) {
-    return edge_result.error();
+    return edge_result.error().WithContext("populating edge properties");
   }
 
   const std::vector<PropStorageInfo>& part_prop_info_list =

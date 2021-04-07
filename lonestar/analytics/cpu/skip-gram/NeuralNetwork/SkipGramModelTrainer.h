@@ -122,4 +122,9 @@ public:
   void HandleNegativeSampling(
       HuffmanCoding::HuffmanNode& huffman_node, uint32_t l1,
       std::vector<double>* neu1e, unsigned long long* next_random);
+
+  void RefineWalk(
+      std::vector<uint32_t>& walk, std::vector<uint32_t>* refined_walk,
+      std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+      unsigned long long* next_random);
 };

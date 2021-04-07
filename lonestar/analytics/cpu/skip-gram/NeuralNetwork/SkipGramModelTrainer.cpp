@@ -249,20 +249,48 @@ SkipGramModelTrainer::TrainSample(
 }
 
 void
+SkipGramModelTrainer::RefineWalk(
+    std::vector<uint32_t>& walk, std::vector<uint32_t>* refined_walk,
+    std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+    unsigned long long* next_random) {
+  for (auto val : walk) {
+    HuffmanCoding::HuffmanNode* huffman_node =
+        huffman_nodes_map.find(val)->second;
+    uint32_t count = huffman_node->GetCount();
+    if (kDownSampleRate > 0) {
+      double ran =
+          (std::sqrt(
+               count / (kDownSampleRate * ((double)num_trained_tokens_))) +
+           1) *
+          (kDownSampleRate * ((double)num_trained_tokens_)) / ((double)count);
+      (*next_random) = IncrementRandom(*next_random);
+      if (ran < ((*next_random) & 0xFFFF) / (double)65536) {
+        continue;
+      }
+    }
+    refined_walk->push_back(val);
+  }
+}
+
+void
 SkipGramModelTrainer::Train(
     std::vector<std::vector<uint32_t>>& random_walks,
     std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
   katana::GAccumulator<uint64_t> accum;
   katana::do_all(
       katana::iterate(random_walks), [&](std::vector<uint32_t>& walk) {
-        uint32_t sentence_position = 0;
-        uint32_t walk_length = walk.size();
-
         unsigned long long next_random = next_random_;
+        std::vector<uint32_t> refined_walk;
+        refined_walk.reserve(walk.size());
+        accum += walk.size();
+
+        RefineWalk(walk, &refined_walk, huffman_nodes_map, &next_random);
+
+        uint32_t sentence_position = 0;
+        uint32_t walk_length = refined_walk.size();
 
         while (sentence_position < walk_length) {
-          accum += 1;
-          uint32_t target = walk[sentence_position];
+          uint32_t target = refined_walk[sentence_position];
           next_random = IncrementRandom(next_random);
 
           uint32_t b = next_random % kWindow;
@@ -275,24 +303,13 @@ SkipGramModelTrainer::Train(
               if (c >= (int32_t)walk_length) {
                 continue;
               }
-              uint32_t sample = walk[c];
+              uint32_t sample = refined_walk[c];
               TrainSample(target, sample, huffman_nodes_map, &next_random);
             }
           }
 
           sentence_position++;
         }
-
-        /* if(downSampleRate > 0){
-                                std::cout << "down sampling\n";
-                
-                                HuffmanCoding::HuffmanNode huffmanNode = *huffmanNodes[target];
-                                double random = (sqrt(huffmanNode.count/(downSampleRate * numTrainedTokens)) + 1) * (downSampleRate * numTrainedTokens)/huffmanNode.count;
-                                nextRandom = incrementRandom(nextRandom);
-                                if (random < (nextRandom & 0xFFFF) / (double)65536){
-                                    continue;
-                                }
-                        }*/
 
         next_random_ = next_random;
       });

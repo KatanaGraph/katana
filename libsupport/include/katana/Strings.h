@@ -20,6 +20,16 @@
 
 namespace katana {
 
+/// FromBase64 converts from base64 string into a binary encoded string
+/// \param input base64 encoded input string
+KATANA_EXPORT std::string FromBase64(const std::string& input);
+
+/// ToBase64 encodes message string into a Base64 string.
+/// \param url_safe forces URL-safe encoding of result base64 result (replacing +/ with -_)
+/// \param message binary string input
+KATANA_EXPORT std::string ToBase64(
+    const std::string& message, bool url_safe = false);
+
 /// TrimPrefix returns a string without the given prefix. If the string does
 /// not have the prefix, return the string unchanged.
 KATANA_EXPORT std::string TrimPrefix(

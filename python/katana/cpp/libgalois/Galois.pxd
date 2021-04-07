@@ -54,3 +54,4 @@ cdef extern from "katana/NoDerefIterator.h" namespace "katana" nogil:
         NoDerefIterator[it] operator++()
         NoDerefIterator[it] operator--()
         it operator*()
+

@@ -1,6 +1,7 @@
 #include "katana/ArrowInterchange.h"
 
-#include <numeric>
+#include <arrow/array/array_binary.h>
+#include <arrow/type_fwd.h>
 
 #include "katana/Random.h"
 
@@ -49,6 +50,68 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
         original->type()->name(), res.CodeAsString());
   }
   return indices;
+}
+
+template <typename ArrowArrayType>
+void
+DoPrintFirstNonEqualElements(
+    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    const std::shared_ptr<arrow::ChunkedArray>& a1, int32_t num_elts_to_print) {
+  auto a0_arr = katana::Unchunk(a0);
+  if (!a0_arr) {
+    KATANA_LOG_DEBUG("failed to unchunk first array: {}", a0_arr.error());
+    return;
+  }
+  auto cast_res = katana::ViewCast<ArrowArrayType>(a0_arr.value());
+  if (!cast_res) {
+    KATANA_LOG_DEBUG("failed to cast array: {}", cast_res.error());
+    return;
+  }
+  auto b0 = cast_res.value();
+  auto a1_arr = katana::Unchunk(a1);
+  if (!a1_arr) {
+    KATANA_LOG_DEBUG("failed to unchunk second array: {}", a1_arr.error());
+    return;
+  }
+  cast_res = katana::ViewCast<ArrowArrayType>(a1_arr.value());
+  if (!cast_res) {
+    KATANA_LOG_DEBUG("failed to cast array: {}", cast_res.error());
+    return;
+  }
+  auto b1 = cast_res.value();
+
+  for (int64_t i = 0; i < b0->length(); ++i) {
+    if (i >= b1->length()) {
+      return;
+    }
+    if (b0->Value(i) != b1->Value(i)) {
+      int64_t end = std::min(i + num_elts_to_print, b0->length());
+      end = std::min(end, b1->length());
+      for (int64_t j = i; j < end; j += 3) {
+        switch (end - j) {
+        case 1: {
+          fmt::format_to(
+              *buf, "{:7}: {:8} {:8}\n", j, b0->Value(j), b1->Value(j));
+          break;
+        }
+        case 2: {
+          fmt::format_to(
+              *buf, "{:7}: {:8} {:8} {:7}: {:8} {:8}\n", j, b0->Value(j),
+              b1->Value(j), j + 1, b0->Value(j + 1), b1->Value(j + 1));
+          break;
+        }
+        default: {
+          fmt::format_to(
+              *buf, "{:7}: {:8} {:8} {:7}: {:8} {:8} {:7}: {:8} {:8}\n", j,
+              b0->Value(j), b1->Value(j), j + 1, b0->Value(j + 1),
+              b1->Value(j + 1), j + 2, b0->Value(j + 2), b1->Value(j + 2));
+          break;
+        }
+        }
+      }
+      return;
+    }
+  }
 }
 
 }  // anonymous namespace
@@ -300,4 +363,80 @@ katana::ScalarVecToArray(
   return KATANA_ERROR(
       katana::ErrorCode::ArrowError, "unsupported arrow type: {}",
       data_type->name());
+}
+
+void
+katana::PrintFirstNonEqualElements(
+    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    const std::shared_ptr<arrow::ChunkedArray>& a1, int32_t num_elts_to_print) {
+  if (a0->type() != a1->type()) {
+    fmt::format_to(
+        *buf, "Arrays are different types {}/{}\n", a0->type()->name(),
+        a1->type()->name());
+    return;
+  }
+  auto data_type = a0->type();
+  switch (data_type->id()) {
+    // We would require different code to print strings and other variable length data
+  case arrow::Type::INT64: {
+    return DoPrintFirstNonEqualElements<arrow::Int64Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::UINT64: {
+    return DoPrintFirstNonEqualElements<arrow::UInt64Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::INT32: {
+    return DoPrintFirstNonEqualElements<arrow::Int32Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::UINT32: {
+    return DoPrintFirstNonEqualElements<arrow::UInt32Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::INT16: {
+    return DoPrintFirstNonEqualElements<arrow::Int16Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::UINT16: {
+    return DoPrintFirstNonEqualElements<arrow::UInt16Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::INT8: {
+    return DoPrintFirstNonEqualElements<arrow::Int8Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::UINT8: {
+    return DoPrintFirstNonEqualElements<arrow::UInt8Array>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::DOUBLE: {
+    return DoPrintFirstNonEqualElements<arrow::DoubleArray>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  case arrow::Type::FLOAT: {
+    return DoPrintFirstNonEqualElements<arrow::FloatArray>(
+        buf, a0, a1, num_elts_to_print);
+
+    break;
+  }
+  case arrow::Type::BOOL: {
+    return DoPrintFirstNonEqualElements<arrow::BooleanArray>(
+        buf, a0, a1, num_elts_to_print);
+    break;
+  }
+  default: {
+    break;
+  }
+  }
+  fmt::format_to(*buf, "Arrays of unsupported type {}\n", data_type->name());
 }

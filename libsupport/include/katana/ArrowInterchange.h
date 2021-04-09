@@ -288,6 +288,9 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> EmptyChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
+KATANA_EXPORT void PrintFirstNonEqualElements(
+    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    const std::shared_ptr<arrow::ChunkedArray>& a1, int32_t num_elts_to_print);
 
 Result<std::shared_ptr<arrow::ChunkedArray>> UpdateChunkedArray(
     const std::shared_ptr<arrow::ChunkedArray>& chunka,

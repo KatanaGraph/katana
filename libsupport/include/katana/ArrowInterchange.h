@@ -286,7 +286,7 @@ KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ScalarVecToArray(
     const std::vector<std::shared_ptr<arrow::Scalar>>& data);
 KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
-KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> EmptyChunkedArray(
+KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
 KATANA_EXPORT void PrintFirstNonEqualElements(
     fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,

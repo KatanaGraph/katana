@@ -1,8 +1,5 @@
 #include "katana/ArrowInterchange.h"
 
-#include <arrow/array/array_binary.h>
-#include <arrow/type_fwd.h>
-
 #include "katana/Random.h"
 
 namespace {
@@ -123,7 +120,7 @@ katana::UpdateChunkedArray(
   auto before = chunka->Slice(0, position);
   std::shared_ptr<arrow::ChunkedArray> after;
   if (position == chunka->length()) {
-    after = EmptyChunkedArray(chunka->type(), 0);
+    after = NullChunkedArray(chunka->type(), 0);
   } else {
     after = chunka->Slice(position + 1, chunka->length() - position);
   }
@@ -188,7 +185,7 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
 }
 
 std::shared_ptr<arrow::ChunkedArray>
-katana::EmptyChunkedArray(
+katana::NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length) {
   auto maybe_array = arrow::MakeArrayOfNull(type, length);
   if (!maybe_array.ok()) {
@@ -235,7 +232,7 @@ BasicToArray(
   return array;
 }
 
-template <typename BuilderType>
+template <typename BuilderType, typename ScalarType>
 katana::Result<std::shared_ptr<arrow::Array>>
 StringLikeToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
@@ -245,15 +242,12 @@ StringLikeToArray(
   }
   auto* pool = arrow::default_memory_pool();
   auto builder = std::make_shared<BuilderType>(data_type, pool);
-  if (auto st = builder->Resize(data.size()); !st.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "arrow builder failed resize: {} type: {} reason: {}", data.size(),
-        data_type->name(), st);
-  }
   for (const auto& scalar : data) {
     if (scalar->is_valid) {
-      if (auto res = builder->Append(scalar->ToString()); !res.ok()) {
+      // ->value->ToString() works, scalar->ToString() yields "..."
+      if (auto res = builder->Append(
+              std::static_pointer_cast<ScalarType>(scalar)->value->ToString());
+          !res.ok()) {
         return KATANA_ERROR(
             katana::ErrorCode::ArrowError,
             "arrow builder failed append type: {} : {}", scalar->type->name(),
@@ -285,11 +279,13 @@ katana::ScalarVecToArray(
   std::shared_ptr<arrow::Array> array;
   switch (data_type->id()) {
   case arrow::Type::LARGE_STRING: {
-    return StringLikeToArray<arrow::LargeStringBuilder>(data_type, data);
+    return StringLikeToArray<
+        arrow::LargeStringBuilder, arrow::LargeStringScalar>(data_type, data);
     break;
   }
   case arrow::Type::STRING: {
-    return StringLikeToArray<arrow::StringBuilder>(data_type, data);
+    return StringLikeToArray<arrow::StringBuilder, arrow::StringScalar>(
+        data_type, data);
     break;
   }
   case arrow::Type::INT64: {

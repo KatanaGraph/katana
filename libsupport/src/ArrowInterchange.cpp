@@ -5,33 +5,49 @@
 #include "katana/Random.h"
 
 namespace {
-std::shared_ptr<arrow::ChunkedArray>
+
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 IndexedTake(
     const std::shared_ptr<arrow::ChunkedArray>& original,
     std::shared_ptr<arrow::Array> indices) {
   // Use Take to select those indices
   arrow::Result<arrow::Datum> take_result =
       arrow::compute::Take(original, indices);
-  KATANA_LOG_ASSERT(take_result.ok());
+  if (!take_result.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError,
+        "arrow builder reserve failed type: {} reason: {}",
+        original->type()->name(), take_result.status().CodeAsString());
+  }
   arrow::Datum take = std::move(take_result.ValueOrDie());
   std::shared_ptr<arrow::ChunkedArray> chunked = take.chunked_array();
   KATANA_LOG_ASSERT(chunked->num_chunks() == 1);
   return chunked;
 }
 
-std::shared_ptr<arrow::Array>
+katana::Result<std::shared_ptr<arrow::Array>>
 Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
   int64_t length = original->length();
   // Build indices array, reusable across properties
   arrow::CTypeTraits<int64_t>::BuilderType builder;
   auto res = builder.Reserve(length);
-  KATANA_LOG_ASSERT(res.ok());
+  if (!res.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError,
+        "arrow builder reserve failed type: {} reason: {}",
+        original->type()->name(), res.CodeAsString());
+  }
   for (int64_t i = 0; i < length; ++i) {
     builder.UnsafeAppend(i);
   }
   std::shared_ptr<arrow::Array> indices;
   res = builder.Finish(&indices);
-  KATANA_LOG_ASSERT(res.ok());
+  if (!res.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError,
+        "arrow shuffle builder failed type: {} reason: {}",
+        original->type()->name(), res.CodeAsString());
+  }
   return indices;
 }
 
@@ -55,8 +71,8 @@ katana::UpdateChunkedArray(
   auto maybe_array = arrow::MakeArrayFromScalar(*scalar, 1);
   if (!maybe_array.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "adding scalar {} at position {}",
-        scalar->ToString(), position);
+        katana::ErrorCode::ArrowError, "adding scalar {} at position {} : {}",
+        scalar->ToString(), position, maybe_array.status().CodeAsString());
   }
   chunks.push_back(maybe_array.ValueOrDie());
   for (int32_t i = 0; i < after->num_chunks(); ++i) {
@@ -65,20 +81,20 @@ katana::UpdateChunkedArray(
   return std::make_shared<arrow::ChunkedArray>(chunks);
 }
 
-std::shared_ptr<arrow::Array>
+katana::Result<std::shared_ptr<arrow::Array>>
 katana::Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  auto indices = Indices(original);
-  auto chunked = IndexedTake(original, indices);
-  return chunked->chunk(0);
+  auto maybe_indices = Indices(original);
+  if (!maybe_indices) {
+    return maybe_indices.error();
+  }
+  auto maybe_chunked = IndexedTake(original, maybe_indices.value());
+  if (!maybe_chunked) {
+    return maybe_chunked.error();
+  }
+  return maybe_chunked.value()->chunk(0);
 }
 
-std::shared_ptr<arrow::ChunkedArray>
-katana::Defragment(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  auto indices = Indices(original);
-  return IndexedTake(original, indices);
-}
-
-std::shared_ptr<arrow::ChunkedArray>
+katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   int64_t length = original->length();
   // Build indices array, reusable across properties
@@ -88,13 +104,23 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   std::shuffle(indices_vec.begin(), indices_vec.end(), katana::GetGenerator());
   arrow::CTypeTraits<int64_t>::BuilderType builder;
   auto res = builder.Reserve(length);
-  KATANA_LOG_ASSERT(res.ok());
+  if (!res.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError,
+        "arrow builder reserve failed type: {} reason: {}",
+        original->type()->name(), res);
+  }
   for (int64_t i = 0; i < length; ++i) {
     builder.UnsafeAppend(indices_vec[i]);
   }
   std::shared_ptr<arrow::Array> indices;
   res = builder.Finish(&indices);
-  KATANA_LOG_ASSERT(res.ok());
+  if (!res.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError,
+        "arrow shuffle builder failed type: {} reason: {}",
+        original->type()->name(), res);
+  }
   return IndexedTake(original, indices);
 }
 
@@ -115,7 +141,7 @@ template <typename BuilderType, typename ScalarType>
 katana::Result<std::shared_ptr<arrow::Array>>
 BasicToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<arrow::Scalar>& data) {
+    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
   if (data.empty()) {
     return katana::ResultSuccess();
   }
@@ -128,9 +154,10 @@ BasicToArray(
         data_type->name(), st);
   }
   for (const auto& scalar : data) {
-    if (scalar.is_valid) {
+    if (scalar->is_valid) {
       // Is there a better way?
-      builder->UnsafeAppend(static_cast<const ScalarType*>(&scalar)->value);
+      builder->UnsafeAppend(
+          std::static_pointer_cast<const ScalarType>(scalar)->value);
     } else {
       builder->UnsafeAppendNull();
     }
@@ -149,7 +176,7 @@ template <typename BuilderType>
 katana::Result<std::shared_ptr<arrow::Array>>
 StringLikeToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<arrow::Scalar>& data) {
+    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
   if (data.empty()) {
     return katana::ResultSuccess();
   }
@@ -162,25 +189,18 @@ StringLikeToArray(
         data_type->name(), st);
   }
   for (const auto& scalar : data) {
-    if (scalar.is_valid) {
-      auto workaround = scalar.ToString();
-      fmt::print(
-          "type {} {} {}\n", data_type->name(), scalar.type->name(),
-          workaround);
-      //auto ss = scalar.CastTo(data_type);
-      //KATANA_LOG_ASSERT(ss.ok());
-      //      if (auto res = builder->Append(ss.ValueOrDie()->ToString()); !res.ok()) {
-      if (auto res = builder->Append(workaround); !res.ok()) {
+    if (scalar->is_valid) {
+      if (auto res = builder->Append(scalar->ToString()); !res.ok()) {
         return KATANA_ERROR(
             katana::ErrorCode::ArrowError,
-            "arrow builder failed append type: {} : {}", scalar.type->name(),
+            "arrow builder failed append type: {} : {}", scalar->type->name(),
             res.CodeAsString());
       }
     } else {
       if (auto res = builder->AppendNull(); !res.ok()) {
         return KATANA_ERROR(
             katana::ErrorCode::ArrowError,
-            "arrow builder failed append null: {}", scalar.type->name(),
+            "arrow builder failed append null: {}", scalar->type->name(),
             res.CodeAsString());
       }
     }
@@ -198,7 +218,7 @@ StringLikeToArray(
 katana::Result<std::shared_ptr<arrow::Array>>
 katana::ScalarVecToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<arrow::Scalar>& data) {
+    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
   std::shared_ptr<arrow::Array> array;
   switch (data_type->id()) {
   case arrow::Type::LARGE_STRING: {

@@ -279,18 +279,16 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 ////////////////////////////////////////////
 // Arrow utilities
 
-KATANA_EXPORT std::shared_ptr<arrow::Array> Unchunk(
+KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> Unchunk(
     const std::shared_ptr<arrow::ChunkedArray>& original);
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ScalarVecToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<arrow::Scalar>& data);
-KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> Shuffle(
+    const std::vector<std::shared_ptr<arrow::Scalar>>& data);
+KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> EmptyChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
 
-std::shared_ptr<arrow::ChunkedArray> Defragment(
-    const std::shared_ptr<arrow::ChunkedArray>& original);
 Result<std::shared_ptr<arrow::ChunkedArray>> UpdateChunkedArray(
     const std::shared_ptr<arrow::ChunkedArray>& chunka,
     const std::shared_ptr<arrow::Scalar>& scalar, int64_t position);

@@ -16,6 +16,7 @@ SkipGramModelTrainer::InitExpTable() {
     exp_table_[i] = std::exp((i / (double)kExpTableSize * 2 - 1) * kMaxExp);
     // Precompute f(x) = x / (x + 1)
     exp_table_[i] /= exp_table_[i] + 1;
+    katana::gPrint("exp:", exp_table_[i]);
   }
 }
 
@@ -176,14 +177,27 @@ SkipGramModelTrainer::HandleNegativeSampling(
     }
     double g;
     if (f > kMaxExp) {
-      g = ((double)(label - 1)) * alpha_;
+	    if(label ==0) {
+		    g = -alpha_;
+	    }
+	    else{
+	    	g = 0.0;
+	    }
+     // g = ((double)(label - 1)) * alpha_;
+     
     } else if (f < -kMaxExp) {
-      g = ((double)(label - 0)) * alpha_;
+	    if(label == 0){
+		    g = 0.0;
+	    }
+	    else{
+		    g = alpha_;
+	    }
+      //g = ((double)(label - 0)) * alpha_;
     } else {
       g = ((double)label -
            exp_table_[(uint32_t)(
                (f + (double)kMaxExp) *
-               ((double)kExpTableSize / ((double)kMaxExp) / 2))]) *
+               ((double)kExpTableSize / ((double)kMaxExp * 2.0)))]) *
           alpha_;
     }
 

@@ -9,16 +9,8 @@
 #include <vector>
 
 #include "Huffman/HuffmanCoding.h"
-#include "NeuralNetwork/SkipGramModelTrainer.h"
-
-//#include "galois/graphs/Util.h"
-//#include "galois/Timer.h"
 #include "Lonestar/BoilerPlate.h"
-//#include "galois/graphs/FileGraph.h"
-//#include "galois/LargeArray.h"
-
-//#include "galois/AtomicHelpers.h"
-//#include "galois/AtomicWrapper.h"
+#include "NeuralNetwork/SkipGramModelTrainer.h"
 
 namespace cll = llvm::cl;
 
@@ -32,13 +24,37 @@ static cll::opt<std::string> inputFile(
 static cll::opt<std::string> outputFile(
     cll::Positional, cll::desc("<output file>"), cll::Required);
 
-static cll::opt<unsigned int> numIterations(
+static cll::opt<uint32_t> embeddingSize(
+    "embeddingSize",
+    cll::desc("Size of the embedding vector (default value 100)"),
+    cll::init(100));
+
+static cll::opt<double> alpha(
+    "alpha", cll::desc("alpha (default value 0.025)"), cll::init(0.025f));
+
+static cll::opt<uint32_t> window(
+    "window", cll::desc("window size (default value 5)"), cll::init(5));
+
+static cll::opt<double> downSampleRate(
+    "downSampleRate", cll::desc("down-sampling rate (default value 0.001)"),
+    cll::init(0.001f));
+
+static cll::opt<bool> hierarchicalSoftmax(
+    "hierarchicalSoftmax",
+    cll::desc("Enable/disable hierarchical softmax (default value false)"),
+    cll::init(false));
+
+static cll::opt<uint32_t> numNegSamples(
+    "numNegSamples", cll::desc("Number of negative samples (default value 5)"),
+    cll::init(5));
+
+static cll::opt<uint32_t> numIterations(
     "numIterations",
-    cll::desc("Number of Training Iterations (default value 50)"),
-    cll::init(50));
+    cll::desc("Number of Training Iterations (default value 5)"), cll::init(5));
 
 static cll::opt<uint32_t> minCount(
     "minCount", cll::desc("Min-count (default 5)"), cll::init(5));
+
 void
 ReadRandomWalks(
     std::ifstream& input_file,
@@ -113,7 +129,7 @@ PrintEmbeddings(
 
       of << id;
 
-      for (uint32_t i = 0; i < SkipGramModelTrainer::GetLayer1Size(); i++) {
+      for (uint32_t i = 0; i < embeddingSize; i++) {
         of << " " << skip_gram_model_trainer.GetSyn0(node_idx, i);
       }
       of << "\n";
@@ -180,7 +196,9 @@ main(int argc, char** argv) {
   katana::gPrint("Huffman Encoding done");
 
   SkipGramModelTrainer skip_gram_model_trainer(
-      vocab.size(), num_trained_tokens, huffman_nodes_map);
+      embeddingSize, alpha, window, downSampleRate, hierarchicalSoftmax,
+      numNegSamples, numIterations, vocab.size(), num_trained_tokens,
+      huffman_nodes_map);
 
   katana::gPrint("Skip-Gram Trainer Init done");
 

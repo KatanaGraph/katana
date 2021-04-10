@@ -24,7 +24,7 @@ private:
 
   uint32_t vocab_size_;
 
-  const static uint32_t kLayer1Size = 100;
+  uint32_t embedding_size_;
 
   /**
          * In the C version, this includes the </s> token that replaces a newline character
@@ -41,7 +41,7 @@ private:
   double alpha_;
 
   /** Learning rate, affects how fast values in the layers get updated */
-  constexpr static double kInitialLearningRate = 0.025f;
+  double initial_learning_rate_;
 
   /** 
          * This contains the outer layers of the neural network
@@ -60,7 +60,7 @@ private:
 
   long start_nano_;
 
-  const static uint32_t kNegativeSamples = 1;
+  uint32_t negative_samples_;
   /** 
         ** The number of words observed in the training data for this worker that exist
         ** in the vocabulary.  It includes words that are discarded from sampling.
@@ -70,9 +70,9 @@ private:
   /** Value of wordCount the last time alpha was updated */
   uint32_t last_word_count_;
 
-  const static uint32_t kIterations = 5;
+  uint32_t iterations_;
 
-  constexpr static double kDownSampleRate = 0.001f;
+  double down_sample_rate_;
 
   unsigned long long next_random_;
 
@@ -80,17 +80,21 @@ private:
 
   uint32_t current_actual_;
 
-  const static uint32_t kWindow = 5;
+  uint32_t window_;
+
+  bool hierarchical_softmax_;
 
 public:
   SkipGramModelTrainer(
-      uint32_t vocab_size, uint32_t num_trained_tokens,
-      std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
+      uint32_t embedding_size, double alpha, uint32_t window,
+      double down_sample_rate, bool hierarchical_softmax,
+      uint32_t num_neg_samples, uint32_t num_iterations, uint32_t vocab_size,
+      uint32_t num_trained_tokens,
+      std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
 
   double GetSyn0(uint32_t node_idx, uint32_t idx) {
     return syn0_[node_idx][idx];
   }
-  static uint32_t GetLayer1Size() { return kLayer1Size; }
   void InitExpTable();
 
   void InitializeUnigramTable(

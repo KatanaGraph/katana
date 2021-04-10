@@ -7,7 +7,7 @@ from distutils.errors import CompileError
 from functools import lru_cache
 from pathlib import Path
 import setuptools
-import configparser
+import json
 
 import generate_from_jinja
 
@@ -138,17 +138,72 @@ def test_cython_module(name, cython_code, python_code="", extension_options=None
 
 
 def load_lang_config(lang):
+    """
+    Load the compilation configuration provided by CMake.
+
+    KatanaPythonSetupSubdirectory.cmake generates a JSON file that contains build and link flags that we read.
+    They typically look like (more text elided with `[...]`):
+
+    .. code-block:: json
+
+        {
+        "COMPILER":"ccache;[conda environment]/bin/clang++",
+        "INCLUDE_DIRECTORIES":"[src dir]/libquery/include;[...]",
+        "COMPILE_DEFINITIONS":"JSON_USE_IMPLICIT_CONVERSIONS=1;[...]",
+        "LINK_OPTIONS":"-march=sandybridge;-mtune=generic;LINKER:-rpath=[build dir]/external/katana/libgalois;LINKER:-rpath=[build dir];LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]",
+        "COMPILE_OPTIONS":"-g;-Wall;-Wextra;-Wno-deprecated-copy;[...]",
+        "LINKER_WRAPPER_FLAG":"-Xlinker; ",
+        "LINKER_WRAPPER_FLAG_SEP":""
+        }
+
+    This is mostly semi-colon separated lists of command line parameters. However, CMake (3.17+) can generate arguments
+    with LINKER: and/or SHELL: prefixes. CMake internally desugars these with CMAKE_<lang>_LINKER_WRAPPER_FLAG and
+    CMAKE_<lang>_LINKER_WRAPPER_FLAG_SEP. We reimplement this in `process_linker_option`.
+    """
     filename = os.environ.get(f"KATANA_{lang}_CONFIG")
     if not filename:
         return dict(compiler=[], linker=[], extra_compile_args=[], extra_link_args=[], include_dirs=[])
-    parser = configparser.ConfigParser()
-    parser.read(filename, encoding="UTF-8")
+
+    with open(filename, "rt") as fi:
+        config = json.load(fi)
+    linker_wrapper_flag = split_cmake_list(config.get("LINKER_WRAPPER_FLAG", "-Wl,"))
+    linker_wrapper_flag_sep = config.get("LINKER_WRAPPER_FLAG_SEP", ",")
+
+    def process_shell_option(opt: str):
+        SHELL = "SHELL:"
+        if opt.startswith(SHELL):
+            opt = opt[len(SHELL) :]
+            return opt.split()
+        return [opt]
+
+    def process_linker_option(opt: str):
+        """
+        This is implemented based on: https://cmake.org/cmake/help/latest/command/target_link_options.html
+        :param opt: a linker option
+        :return: a list of strings that should be used as the real linker options.
+        """
+        LINKER = "LINKER:"
+        if opt.startswith(LINKER):
+            opt = opt[len(LINKER) :]
+            if linker_wrapper_flag_sep:
+                args = [linker_wrapper_flag_sep.join(process_shell_option(opt))]
+            else:
+                args = process_shell_option(opt)
+            if not linker_wrapper_flag:
+                return args
+            if linker_wrapper_flag[-1] == " ":
+                return [b for a in args for b in linker_wrapper_flag[:-1] + [a]]
+            else:
+                return [b for a in args for b in linker_wrapper_flag[:-1] + [linker_wrapper_flag[-1] + a]]
+        else:
+            return process_shell_option(opt)
+
     return dict(
-        compiler=split_cmake_list(parser.get("build", "COMPILER")),
-        extra_compile_args=[f"-D{p}" for p in unique_list(split_cmake_list(parser.get("build", "COMPILE_DEFINITIONS")))]
-        + split_cmake_list(parser.get("build", "COMPILE_OPTIONS")),
-        extra_link_args=split_cmake_list(parser.get("build", "LINK_OPTIONS")),
-        include_dirs=unique_list(split_cmake_list(parser.get("build", "INCLUDE_DIRECTORIES"))),
+        compiler=[a for opt in split_cmake_list(config.get("COMPILER")) for a in process_linker_option(opt)],
+        extra_compile_args=[f"-D{p}" for p in unique_list(split_cmake_list(config.get("COMPILE_DEFINITIONS")))]
+        + [a for opt in split_cmake_list(config.get("COMPILE_OPTIONS")) for a in process_linker_option(opt)],
+        extra_link_args=[a for opt in split_cmake_list(config.get("LINK_OPTIONS")) for a in process_linker_option(opt)],
+        include_dirs=unique_list(split_cmake_list(config.get("INCLUDE_DIRECTORIES"))),
     )
 
 

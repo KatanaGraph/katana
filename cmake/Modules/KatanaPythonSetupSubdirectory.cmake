@@ -74,7 +74,19 @@ function(_symlink_tree TARGET_NAME SOURCE DEST)
   )
 endfunction()
 
-function(_generate_build_configuration_ini)
+# Construct a JSON file containing the options used to build a library that
+# depends on DEPENDS. CMake only knows the full flag sets at generation time,
+# meaning that we must generate a file and cannot just place things in
+# variables.
+#
+# CMake (3.17+) can generate linker arguments with LINKER: and/or SHELL:
+# prefixes. CMake internally desugars these with
+# CMAKE_<lang>_LINKER_WRAPPER_FLAG and CMAKE_<lang>_LINKER_WRAPPER_FLAG_SEP.
+# However, there is no way to invoke that from a generator expression, so the
+# desugaring described in
+# https://cmake.org/cmake/help/latest/command/target_link_options.html is
+# reimplemented in katana_setup.py when the JSON file is read.
+function(_generate_build_configuration_json)
   set(no_value_options)
   set(one_value_options FILE_PREFIX)
   set(multi_value_options DEPENDS)
@@ -99,27 +111,33 @@ function(_generate_build_configuration_ini)
     if (X)
       continue()
     endif()
-    list(APPEND INCLUDE_DIRECTORIES "$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_INCLUDE_DIRECTORIES>")
-    list(APPEND COMPILE_DEFINITIONS "$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_DEFINITIONS>")
-    list(APPEND LINK_OPTIONS "$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_OPTIONS>")
-    list(APPEND LINK_OPTIONS "-Wl,-rpath=$<TARGET_LINKER_FILE_DIR:${TARGET_NAME}>")
-    list(APPEND LINK_OPTIONS "-Wl,-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},BUILD_RPATH>,;-Wl,-rpath=>")
-    list(APPEND LINK_OPTIONS "-Wl,-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},INSTALL_RPATH>,;-Wl,-rpath=>")
-    list(APPEND LINK_OPTIONS "$<TARGET_LINKER_FILE:${TARGET_NAME}>")
-    list(APPEND COMPILE_OPTIONS "$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_OPTIONS>")
+    list(APPEND INCLUDE_DIRECTORIES "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_INCLUDE_DIRECTORIES>>")
+    list(APPEND COMPILE_DEFINITIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_DEFINITIONS>>")
+    # TODO(amp): Including INTERFACE_LINK_OPTIONS causes an unavoidable cmake generation failure in cmake 3.20+ due to the use of $<HOST_LINK:...>.
+    #  INTERFACE_LINK_OPTIONS doesn't seem to be required for the dependencies we are using right now, so just skip it for the moment.
+    # list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_LINK_OPTIONS>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<TARGET_LINKER_FILE_DIR:${TARGET_NAME}>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},BUILD_RPATH>,;LINKER:-rpath=>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},LINKER:-rpath=$<JOIN:$<TARGET_PROPERTY:${TARGET_NAME},INSTALL_RPATH>,;LINKER:-rpath=>>")
+    list(APPEND LINK_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_LINKER_FILE:${TARGET_NAME}>>")
+    list(APPEND COMPILE_OPTIONS "$<TARGET_GENEX_EVAL:${TARGET_NAME},$<TARGET_PROPERTY:${TARGET_NAME},INTERFACE_COMPILE_OPTIONS>>")
   endforeach()
 
-  set(compiler
+  set(COMPILER
       "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_COMPILER_LAUNCHER};${CMAKE_CXX_COMPILER}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_COMPILER_LAUNCHER};${CMAKE_C_COMPILER}>")
-  #  $<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_COMPILER}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_COMPILER}>
-  file(GENERATE OUTPUT ${X_FILE_PREFIX}$<COMPILE_LANGUAGE>.ini
-       CONTENT "[build]
-COMPILER=${compiler}
-INCLUDE_DIRECTORIES=${INCLUDE_DIRECTORIES}
-COMPILE_DEFINITIONS=${COMPILE_DEFINITIONS}
-LINK_OPTIONS=${LINK_OPTIONS}
-COMPILE_OPTIONS=${COMPILE_OPTIONS}
-")
+
+  # TODO(amp): It might should be possible to use generator expressions to build actual JSON lists instead of string
+  #  containing cmake lists. However it's not clear this is actually better.
+  file(GENERATE OUTPUT ${X_FILE_PREFIX}$<COMPILE_LANGUAGE>.json
+       CONTENT "{
+\"COMPILER\":\"${COMPILER}\",
+\"INCLUDE_DIRECTORIES\":\"$<REMOVE_DUPLICATES:${INCLUDE_DIRECTORIES}>\",
+\"COMPILE_DEFINITIONS\":\"$<REMOVE_DUPLICATES:${COMPILE_DEFINITIONS}>\",
+\"LINK_OPTIONS\":\"${LINK_OPTIONS}\",
+\"COMPILE_OPTIONS\":\"${COMPILE_OPTIONS}\",
+\"LINKER_WRAPPER_FLAG\":\"$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG}>\",
+\"LINKER_WRAPPER_FLAG_SEP\":\"$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG_SEP}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG_SEP}>\"
+}")
 endfunction()
 
 function(add_python_setuptools_target TARGET_NAME)
@@ -150,8 +168,6 @@ function(add_python_setuptools_target TARGET_NAME)
   # Needed for scripts/katana_version
   _symlink_tree(${TARGET_NAME}_scripts_tree ${PYTHON_SETUP_DIR}/scripts ${PYTHON_BINARY_DIR})
 
-  _generate_build_configuration_ini(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
-
   # TODO(amp): this only supports the environment variable CMAKE_BUILD_PARALLEL_LEVEL as a way to do parallel builds.
   #  and CMAKE_BUILD_PARALLEL_LEVEL must be set for both cmake configure and build phases.
   #  -j will not propogate into python builds and if CMAKE_BUILD_PARALLEL_LEVEL varies then only some things will be
@@ -179,9 +195,9 @@ function(add_python_setuptools_target TARGET_NAME)
   set(PYTHON_SETUP_COMMAND
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=${PYTHONPATH}"
-      # Reference generated ini files which contain compiler flags, etc.
-      "KATANA_CXX_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_CXX.ini"
-      "KATANA_C_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_C.ini"
+      # Reference generated json files which contain compiler flags, etc.
+      "KATANA_CXX_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_CXX.json"
+      "KATANA_C_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_C.json"
       # Pass katana version
       "KATANA_VERSION=${KATANA_VERSION}"
       "KATANA_COPYRIGHT_YEAR=${KATANA_COPYRIGHT_YEAR}"
@@ -193,7 +209,7 @@ function(add_python_setuptools_target TARGET_NAME)
       ALL
       COMMAND ${PYTHON_SETUP_COMMAND} ${quiet} build "$<$<CONFIG:Debug>:--debug>" ${parallel}
       COMMAND install ${PYTHON_ENV_SCRIPT}.tmp ${PYTHON_ENV_SCRIPT}
-      BYPRODUCTS ${PYTHON_BINARY_DIR} ${PYTHON_ENV_SCRIPT}.tmp ${PYTHON_ENV_SCRIPT}
+      BYPRODUCTS ${PYTHON_BINARY_DIR} ${PYTHON_ENV_SCRIPT}
       WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
       COMMENT "Building ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
   )
@@ -202,6 +218,8 @@ function(add_python_setuptools_target TARGET_NAME)
   if(X_DEPENDS)
     add_dependencies(${TARGET_NAME} ${X_DEPENDS})
   endif()
+
+  _generate_build_configuration_json(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
 
   # TODO(amp): The RPATH of the installed python modules will contain a reference to the build
   #  directory. This is not ideal and could cause confusion, but without depending on an

@@ -162,6 +162,30 @@ CommitRDG(
   return ret;
 }
 
+void
+AddNodePropStorageInfo(
+    tsuba::RDGCore* core, const std::shared_ptr<arrow::Table>& props) {
+  const auto& schema = props->schema();
+  for (int i = 0, end = props->num_columns(); i < end; ++i) {
+    core->part_header().AddNodePropStorageInfo(tsuba::PropStorageInfo{
+        .name = schema->field(i)->name(),
+        .path = "",
+    });
+  }
+}
+
+void
+AddEdgePropStorageInfo(
+    tsuba::RDGCore* core, const std::shared_ptr<arrow::Table>& props) {
+  const auto& schema = props->schema();
+  for (int i = 0, end = props->num_columns(); i < end; ++i) {
+    core->part_header().AddEdgePropStorageInfo(tsuba::PropStorageInfo{
+        .name = schema->field(i)->name(),
+        .path = "",
+    });
+  }
+}
+
 }  // namespace
 
 katana::Result<void>
@@ -529,13 +553,7 @@ tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
     return res.error();
   }
 
-  const auto& schema = props->schema();
-  for (int i = 0, end = props->num_columns(); i < end; ++i) {
-    core_->part_header().AppendNodePropStorageInfo(tsuba::PropStorageInfo{
-        .name = schema->field(i)->name(),
-        .path = "",
-    });
-  }
+  AddNodePropStorageInfo(core_.get(), props);
 
   KATANA_LOG_DEBUG_ASSERT(
       static_cast<size_t>(core_->node_properties()->num_columns()) ==
@@ -550,13 +568,37 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
     return res.error();
   }
 
-  const auto& schema = props->schema();
-  for (int i = 0, end = props->num_columns(); i < end; ++i) {
-    core_->part_header().AppendEdgePropStorageInfo(tsuba::PropStorageInfo{
-        .name = schema->field(i)->name(),
-        .path = "",
-    });
+  AddEdgePropStorageInfo(core_.get(), props);
+
+  KATANA_LOG_DEBUG_ASSERT(
+      static_cast<size_t>(core_->edge_properties()->num_columns()) ==
+      core_->part_header().edge_prop_info_list().size());
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDG::UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props) {
+  if (auto res = core_->UpsertNodeProperties(props); !res) {
+    return res.error();
   }
+
+  AddNodePropStorageInfo(core_.get(), props);
+
+  KATANA_LOG_DEBUG_ASSERT(
+      static_cast<size_t>(core_->node_properties()->num_columns()) ==
+      core_->part_header().node_prop_info_list().size());
+
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDG::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
+  if (auto res = core_->UpsertEdgeProperties(props); !res) {
+    return res.error();
+  }
+
+  AddEdgePropStorageInfo(core_.get(), props);
 
   KATANA_LOG_DEBUG_ASSERT(
       static_cast<size_t>(core_->edge_properties()->num_columns()) ==

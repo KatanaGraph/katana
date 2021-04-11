@@ -68,6 +68,12 @@ public:
   katana::Result<void> AddEdgeProperties(
       const std::shared_ptr<arrow::Table>& props);
 
+  katana::Result<void> UpsertNodeProperties(
+      const std::shared_ptr<arrow::Table>& props);
+
+  katana::Result<void> UpsertEdgeProperties(
+      const std::shared_ptr<arrow::Table>& props);
+
   katana::Result<void> RemoveNodeProperty(uint32_t i);
   katana::Result<void> RemoveEdgeProperty(uint32_t i);
 

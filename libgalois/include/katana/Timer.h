@@ -104,6 +104,25 @@ public:
   uint64_t get_usec() const { return 0; }
 };
 
+//! Start and stop a TimeAccumulator in the scope of the guard.
+template <typename T>
+class [[nodiscard]] TimerGuard {
+  // The template parameter is required because TimeAccumulator::start and stop
+  // are not virtual. The template parameter is inferrable, so it's not a big
+  // deal, and there is no need to change the original class.
+  T& timer_;
+
+public:
+  TimerGuard(T & timer) : timer_(timer) { timer_.start(); }
+
+  TimerGuard(const TimerGuard&) = delete;
+  TimerGuard(TimerGuard &&) = delete;
+  TimerGuard& operator=(const TimerGuard&) = delete;
+  TimerGuard& operator=(TimerGuard&&) = delete;
+
+  ~TimerGuard() { timer_.stop(); }
+};
+
 template <typename F>
 void
 timeThis(const F& f, const char* const name) {

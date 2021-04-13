@@ -29,6 +29,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -59,16 +60,21 @@ template <typename T>
 using List = std::list<T, FixedSizeAlloc<T>>;
 
 template <typename T, typename C = std::less<T>>
-using Set = std::set<T, C, FixedSizeAlloc<T>>;
+using Set = std::set<T, C, Pow2Alloc<T>>;
+
+template <
+    typename T, typename Hash = std::hash<T>,
+    typename KeyEqual = std::equal_to<T>>
+using UnorderedSet = std::unordered_set<T, Hash, KeyEqual, Pow2Alloc<T>>;
 
 template <typename K, typename V, typename C = std::less<K>>
-using Map = std::map<K, V, C, FixedSizeAlloc<std::pair<const K, V>>>;
+using Map = std::map<K, V, C, Pow2Alloc<std::pair<const K, V>>>;
 
 template <
     typename K, typename V, typename Hash = std::hash<K>,
     typename KeyEqual = std::equal_to<K>>
-using UnorderedMap = std::unordered_map<
-    K, V, Hash, KeyEqual, FixedSizeAlloc<std::pair<const K, V>>>;
+using UnorderedMap =
+    std::unordered_map<K, V, Hash, KeyEqual, Pow2Alloc<std::pair<const K, V>>>;
 
 template <typename T, typename C = std::less<T>>
 using PQ = MinHeap<T, C, Vector<T>>;

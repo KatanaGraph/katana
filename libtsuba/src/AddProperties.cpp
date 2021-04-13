@@ -13,13 +13,15 @@ katana::Result<std::shared_ptr<arrow::Table>>
 DoLoadProperties(
     const std::string& expected_name, const katana::Uri& file_path,
     std::optional<tsuba::ParquetReader::Slice> slice = std::nullopt) {
-  auto reader_res = tsuba::ParquetReader::Make(slice);
+  auto read_opts = tsuba::ParquetReader::ReadOpts::Defaults();
+  read_opts.slice = slice;
+  auto reader_res = tsuba::ParquetReader::Make(read_opts);
   if (!reader_res) {
     return reader_res.error().WithContext("loading property");
   }
   std::unique_ptr<tsuba::ParquetReader> reader = std::move(reader_res.value());
 
-  auto out_res = reader->ReadFromUri(file_path);
+  auto out_res = reader->ReadTable(file_path);
   if (!out_res) {
     return out_res.error().WithContext("loading property");
   }

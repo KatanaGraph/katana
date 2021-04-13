@@ -1,10 +1,19 @@
 #include "tsuba/ParquetReader.h"
 
+#include <limits>
+#include <memory>
+#include <unordered_map>
+
+#include <arrow/chunked_array.h>
+#include <arrow/type.h>
+
 #include "tsuba/Errors.h"
 #include "tsuba/FileView.h"
 
 template <typename T>
 using Result = katana::Result<T>;
+
+using ErrorCode = tsuba::ErrorCode;
 
 namespace {
 
@@ -20,16 +29,14 @@ ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
         auto status = builder.AppendNull();
         if (!status.ok()) {
           return KATANA_ERROR(
-              tsuba::ErrorCode::ArrowError, "appending null to array: {}",
-              status);
+              ErrorCode::ArrowError, "appending null to array: {}", status);
         }
         continue;
       }
       auto status = builder.Append(string_array->GetView(i));
       if (!status.ok()) {
         return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "appending string to array: {}",
-            status);
+            ErrorCode::ArrowError, "appending string to array: {}", status);
       }
     }
   }
@@ -37,14 +44,13 @@ ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
   std::shared_ptr<arrow::Array> new_arr;
   auto status = builder.Finish(&new_arr);
   if (!status.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "finishing array: {}", status);
+    return KATANA_ERROR(ErrorCode::ArrowError, "finishing array: {}", status);
   }
 
   auto maybe_res = arrow::ChunkedArray::Make({new_arr}, arrow::large_utf8());
   if (!maybe_res.ok()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "building chunked array: {}",
+        ErrorCode::ArrowError, "building chunked array: {}",
         maybe_res.status());
   }
   return maybe_res.ValueOrDie();
@@ -64,24 +70,14 @@ HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
   }
 }
 
-}  // namespace
-
-Result<std::unique_ptr<tsuba::ParquetReader>>
-tsuba::ParquetReader::Make(std::optional<Slice> slice) {
-  return std::unique_ptr<ParquetReader>(new ParquetReader(slice));
-}
-
-// Internal use only, invoke iff slice_ has a value
-Result<std::shared_ptr<arrow::Table>>
-tsuba::ParquetReader::ReadFromUriSliced(const katana::Uri& uri) {
-  auto slice = slice_.value();
-  if (slice.offset < 0 || slice.length < 0) {
-    return tsuba::ErrorCode::InvalidArgument;
-  }
-
+Result<std::unique_ptr<parquet::arrow::FileReader>>
+MakeFileReader(
+    const katana::Uri& uri, uint64_t preload_start, uint64_t preload_end,
+    std::shared_ptr<tsuba::FileView>* fv_ptr = nullptr) {
   auto fv = std::make_shared<tsuba::FileView>(tsuba::FileView());
-  if (auto res = fv->Bind(uri.string(), 0, 0, false); !res) {
-    return res.error();
+  if (auto res = fv->Bind(uri.string(), preload_start, preload_end, false);
+      !res) {
+    return res.error().WithContext("opening {}", uri);
   }
 
   std::unique_ptr<parquet::arrow::FileReader> reader;
@@ -90,8 +86,40 @@ tsuba::ParquetReader::ReadFromUriSliced(const katana::Uri& uri) {
       parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
   if (!open_file_result.ok()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", open_file_result);
+        ErrorCode::ArrowError, "arrow error: {}", open_file_result);
   }
+
+  if (fv_ptr != nullptr) {
+    *fv_ptr = fv;
+  }
+  return std::unique_ptr<parquet::arrow::FileReader>(std::move(reader));
+}
+
+}  // namespace
+
+Result<std::unique_ptr<tsuba::ParquetReader>>
+tsuba::ParquetReader::Make(ReadOpts opts) {
+  return std::unique_ptr<ParquetReader>(
+      new ParquetReader(opts.slice, opts.make_cannonical));
+}
+
+// Internal use only, invoke iff slice_ has a value
+Result<std::shared_ptr<arrow::Table>>
+tsuba::ParquetReader::ReadFromUriSliced(const katana::Uri& uri) {
+  auto slice = slice_.value();
+  if (slice.offset < 0 || slice.length < 0) {
+    return KATANA_ERROR(
+        ErrorCode::InvalidArgument,
+        "slice offset and length must be non-negative");
+  }
+
+  std::shared_ptr<FileView> fv;
+  auto reader_res = MakeFileReader(uri, 0, 0, &fv);
+  if (!reader_res) {
+    return reader_res.error();
+  }
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
 
   std::vector<int> row_groups;
   int rg_count = reader->num_row_groups();
@@ -122,54 +150,145 @@ tsuba::ParquetReader::ReadFromUriSliced(const katana::Uri& uri) {
   std::shared_ptr<arrow::Table> out;
   auto read_result = reader->ReadRowGroups(row_groups, &out);
   if (!read_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", read_result);
+    return KATANA_ERROR(ErrorCode::ArrowError, "arrow error: {}", read_result);
   }
 
   out = out->Slice(row_offset, slice.length);
 
-  auto combine_result = out->CombineChunks(arrow::default_memory_pool());
-  if (!combine_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}",
-        combine_result.status());
-  }
-  return combine_result.ValueOrDie();
+  return FixTable(std::move(out));
 }
 
 Result<std::shared_ptr<arrow::Table>>
-tsuba::ParquetReader::ReadFromUri(const katana::Uri& uri) {
+tsuba::ParquetReader::ReadTable(const katana::Uri& uri) {
   if (slice_) {
     // logic for a sliced read is different enough not to bother trying
     // to DRY these out
     return ReadFromUriSliced(uri);
   }
 
-  auto fv = std::make_shared<tsuba::FileView>();
-  if (auto res = fv->Bind(uri.string(), false); !res) {
-    return res.error().WithContext("preparing read buffer");
+  auto reader_res =
+      MakeFileReader(uri, 0, std::numeric_limits<uint64_t>::max());
+  if (!reader_res) {
+    return reader_res.error();
   }
-
-  std::unique_ptr<parquet::arrow::FileReader> reader;
-
-  auto open_file_result =
-      parquet::arrow::OpenFile(fv, arrow::default_memory_pool(), &reader);
-  if (!open_file_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", open_file_result);
-  }
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
 
   std::shared_ptr<arrow::Table> out;
   auto read_result = reader->ReadTable(&out);
   if (!read_result.ok()) {
+    return KATANA_ERROR(ErrorCode::ArrowError, "arrow error: {}", read_result);
+  }
+  return FixTable(std::move(out));
+}
+
+Result<std::shared_ptr<arrow::Table>>
+tsuba::ParquetReader::DoFilteredTableRead(
+    parquet::arrow::FileReader* reader, const arrow::Schema& schema,
+    const std::vector<int32_t>& indexes) {
+  if (slice_) {
+    // TODO(thunt) implement this
     return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", read_result);
+        ErrorCode::NotImplemented,
+        "sorry! missing support for sliced read when choosing columns");
   }
 
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
+  std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>> read_arrays;
+  for (int32_t idx : indexes) {
+    if (idx < 0) {
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument, "column indexes must be positive");
+    }
+    if (idx >= schema.num_fields()) {
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
+          "column index {} should be less than the number of columns {}", idx,
+          schema.num_fields());
+    }
+    std::shared_ptr<arrow::ChunkedArray> column;
+    if (auto arr_it = read_arrays.find(idx); arr_it != read_arrays.end()) {
+      column = arr_it->second;
+    } else {
+      auto status = reader->ReadColumn(idx, &column);
+      if (!status.ok()) {
+        return KATANA_ERROR(
+            ErrorCode::ArrowError, "reading column {}: {}", idx, status);
+      }
+      read_arrays.emplace(idx, column);
+    }
+    fields.emplace_back(schema.field(idx));
+    columns.emplace_back(std::move(column));
+  }
+  return FixTable(arrow::Table::Make(arrow::schema(fields), columns));
+}
+
+Result<std::shared_ptr<arrow::Table>>
+tsuba::ParquetReader::ReadColumn(const katana::Uri& uri, int32_t column_idx) {
+  auto reader_res = MakeFileReader(uri, 0, 0);
+  if (!reader_res) {
+    return reader_res.error();
+  }
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
+
+  std::shared_ptr<arrow::Schema> schema;
+  auto status = reader->GetSchema(&schema);
+  if (!status.ok()) {
+    return KATANA_ERROR(ErrorCode::ArrowError, "reading schema: {}", status);
+  }
+
+  return DoFilteredTableRead(
+      reader.get(), *schema, std::vector<int32_t>{column_idx});
+}
+
+Result<std::shared_ptr<arrow::Table>>
+tsuba::ParquetReader::ReadTable(
+    const katana::Uri& uri, const std::vector<int32_t>& column_indexes) {
+  auto reader_res = MakeFileReader(uri, 0, 0);
+  if (!reader_res) {
+    return reader_res.error();
+  }
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
+
+  std::shared_ptr<arrow::Schema> schema;
+  auto status = reader->GetSchema(&schema);
+  if (!status.ok()) {
+    return KATANA_ERROR(ErrorCode::ArrowError, "reading schema: {}", status);
+  }
+
+  return DoFilteredTableRead(reader.get(), *schema, column_indexes);
+}
+
+Result<int32_t>
+tsuba::ParquetReader::NumColumns(const katana::Uri& uri) {
+  auto reader_res = MakeFileReader(uri, 0, 0);
+  if (!reader_res) {
+    return reader_res.error();
+  }
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
+
+  std::shared_ptr<arrow::Schema> schema;
+  auto status = reader->GetSchema(&schema);
+  if (!status.ok()) {
+    return KATANA_ERROR(ErrorCode::ArrowError, "reading schema: {}", status);
+  }
+  return schema->num_fields();
+}
+
+Result<std::shared_ptr<arrow::Table>>
+tsuba::ParquetReader::FixTable(std::shared_ptr<arrow::Table>&& _table) {
+  std::shared_ptr<arrow::Table> table(std::move(_table));
+  if (!make_cannonical_) {
+    return table;
+  }
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
   arrow::SchemaBuilder schema_builder;
-  for (int i = 0, size = out->num_columns(); i < size; ++i) {
-    auto fixed_column_res = HandleBadParquetTypes(out->column(i));
+  for (int i = 0, size = table->num_columns(); i < size; ++i) {
+    auto fixed_column_res = HandleBadParquetTypes(table->column(i));
     if (!fixed_column_res) {
       return fixed_column_res.error();
     }
@@ -177,10 +296,10 @@ tsuba::ParquetReader::ReadFromUri(const katana::Uri& uri) {
         std::move(fixed_column_res.value()));
     new_columns.emplace_back(fixed_column);
     auto new_field = std::make_shared<arrow::Field>(
-        out->field(i)->name(), fixed_column->type());
+        table->field(i)->name(), fixed_column->type());
     if (auto status = schema_builder.AddField(new_field); !status.ok()) {
       return KATANA_ERROR(
-          ErrorCode::ArrowError, "adding field to table schema: {}", status);
+          ErrorCode::ArrowError, "fixing string type: {}", status);
     }
   }
   auto maybe_schema = schema_builder.Finish();
@@ -191,18 +310,17 @@ tsuba::ParquetReader::ReadFromUri(const katana::Uri& uri) {
   }
   std::shared_ptr<arrow::Schema> final_schema = maybe_schema.ValueOrDie();
 
-  out = arrow::Table::Make(final_schema, new_columns);
+  table = arrow::Table::Make(final_schema, new_columns);
 
   // Combine multiple chunks into one. Binary and string columns (c.f. large
   // binary and large string columns) are a special case. They may not be
   // combined into a single chunk due to the fact the offset type for these
   // columns is int32_t and thus the maximum size of an arrow::Array for these
   // types is 2^31.
-  auto combine_result = out->CombineChunks(arrow::default_memory_pool());
+  auto combine_result = table->CombineChunks(arrow::default_memory_pool());
   if (!combine_result.ok()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}",
-        combine_result.status());
+        ErrorCode::ArrowError, "arrow error: {}", combine_result.status());
   }
 
   return combine_result.ValueOrDie();

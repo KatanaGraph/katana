@@ -1,4 +1,4 @@
-from .cpp.libgalois.Version cimport getVersion, getRevision, getVersionMajor, getVersionMinor, getVersionPatch, getCopyrightYear
+from .cpp.libgalois.Galois cimport getVersion, getRevision, getVersionMajor, getVersionMinor, getVersionPatch, getCopyrightYear
 
 def get_katana_version():
     return getVersion().decode()

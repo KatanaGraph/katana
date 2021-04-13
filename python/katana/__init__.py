@@ -23,8 +23,7 @@ from typing import Type, Dict, Union
 
 # Initialize the galois runtime immediately.
 import katana.galois
-
-from . import katana_version
+from katana.version import get_katana_version 
 
 def load_ipython_extension(ipython):
     import cython
@@ -53,4 +52,5 @@ error_category_to_exception_class: Dict[str, Type[Exception]] = {
     "QueryError": QueryError,
 }
 
-__version__ = katana_version.get_katana_version()
+__version__ = get_katana_version()
+

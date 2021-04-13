@@ -123,17 +123,5 @@ public:
   ~TimerGuard() { timer_.stop(); }
 };
 
-template <typename F>
-void
-timeThis(const F& f, const char* const name) {
-  StatTimer t("Time", name);
-
-  t.start();
-
-  f();
-
-  t.stop();
-}
-
 }  // end namespace katana
 #endif

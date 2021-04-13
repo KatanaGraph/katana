@@ -53,4 +53,3 @@ error_category_to_exception_class: Dict[str, Type[Exception]] = {
 }
 
 __version__ = get_katana_version()
-

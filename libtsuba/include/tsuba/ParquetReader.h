@@ -10,7 +10,7 @@
 
 namespace tsuba {
 
-class ParquetReader {
+class KATANA_EXPORT ParquetReader {
 public:
   struct Slice {
     int64_t offset;

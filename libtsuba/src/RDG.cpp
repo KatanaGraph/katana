@@ -42,6 +42,8 @@ namespace {
 // special partition property names
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
+const char* kHostToOwnedGlobalIDsPropName = "host_to_owned_global_ids";
+const char* kLocalToUserIDPropName = "local_to_user_id";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
 const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
@@ -172,13 +174,17 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
+  } else if (name == kHostToOwnedGlobalIDsPropName) {
+    set_host_to_owned_global_ids(std::move(col));
+  } else if (name == kLocalToUserIDPropName) {
+    set_local_to_user_id(std::move(col));
   } else if (name == kLocalToGlobalIDPropName) {
-    set_local_to_global_vector(std::move(col));
+    set_local_to_global_id(std::move(col));
   } else if (name == kDeprecatedLocalToGlobalIDPropName) {
     KATANA_LOG_WARN(
         "deprecated graph format; replace the existing graph by storing the "
         "current graph");
-    set_local_to_global_vector(std::move(col));
+    set_local_to_global_id(std::move(col));
   } else {
     return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
   }
@@ -202,8 +208,13 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
-      "WritePartArrays master sz: {} mirros sz: {} l2g sz: {}",
+      "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} l2u sz: {} "
+      "l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
+      host_to_owned_global_ids_ == nullptr
+          ? 0
+          : host_to_owned_global_ids_->length(),
+      local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
   for (unsigned i = 0; i < mirror_nodes_.size(); ++i) {
@@ -228,6 +239,32 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     next_properties.emplace_back(tsuba::PropStorageInfo{
         .name = name,
         .path = std::move(mast_res.value()),
+        .persist = true,
+    });
+  }
+
+  if (host_to_owned_global_ids_ != nullptr) {
+    auto h2o_res = StoreArrowArrayAtName(
+        host_to_owned_global_ids_, dir, kHostToOwnedGlobalIDsPropName, desc);
+    if (!h2o_res) {
+      return h2o_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropStorageInfo{
+        .name = kHostToOwnedGlobalIDsPropName,
+        .path = std::move(h2o_res.value()),
+        .persist = true,
+    });
+  }
+
+  if (local_to_user_id_ != nullptr) {
+    auto l2u_res = StoreArrowArrayAtName(
+        local_to_user_id_, dir, kLocalToUserIDPropName, desc);
+    if (!l2u_res) {
+      return l2u_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropStorageInfo{
+        .name = kLocalToUserIDPropName,
+        .path = std::move(l2u_res.value()),
         .persist = true,
     });
   }
@@ -324,7 +361,7 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
         return rdg->core_->AddNodeProperties(props);
       });
   if (!node_result) {
-    return node_result.error();
+    return node_result.error().WithContext("populating node properties");
   }
 
   auto edge_result = AddProperties(
@@ -333,7 +370,7 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
         return rdg->core_->AddEdgeProperties(props);
       });
   if (!edge_result) {
-    return edge_result.error();
+    return edge_result.error().WithContext("populating edge properties");
   }
 
   const std::vector<PropStorageInfo>& part_prop_info_list =
@@ -347,6 +384,42 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
     if (!part_result) {
       return part_result.error();
     }
+
+    if (local_to_user_id_->length() == 0) {
+      // for backward compatibility
+      if (local_to_global_id_->length() !=
+          core_->part_header().metadata().num_nodes_) {
+        return KATANA_ERROR(
+            tsuba::ErrorCode::InvalidArgument,
+            "regenerate partitions: number of Global Node IDs {} does not "
+            "match the number of master nodes {}",
+            local_to_global_id_->length(),
+            core_->part_header().metadata().num_nodes_);
+      }
+      // NB: this is a zero-copy slice, so the underlying data is shared
+      set_local_to_user_id(local_to_global_id_->Slice(0));
+    } else if (
+        local_to_user_id_->length() !=
+        (core_->part_header().metadata().num_owned_ +
+         local_to_global_id_->length())) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::InvalidArgument,
+          "regenerate partitions: number of User Node IDs {} do not match "
+          "number of masters nodes {} plus the number of Global Node IDs {}",
+          local_to_user_id_->length(),
+          core_->part_header().metadata().num_owned_,
+          local_to_global_id_->length());
+    }
+
+    KATANA_LOG_DEBUG(
+        "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
+        "{} l2g sz: {}",
+        master_nodes_.size(), mirror_nodes_.size(),
+        host_to_owned_global_ids_ == nullptr
+            ? 0
+            : host_to_owned_global_ids_->length(),
+        local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
+        local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
   }
 
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
@@ -363,7 +436,6 @@ katana::Result<tsuba::RDG>
 tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->ID);
-
   katana::Uri partition_path = meta.PartitionFileName(partition_id_to_load);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
@@ -561,15 +633,19 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
   return core_->RegisterTopologyFile(new_top.BaseName());
 }
 
-tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
+void
+tsuba::RDG::InitArrowVectors() {
   // Create an empty array, accessed by Distribution during loading
+  host_to_owned_global_ids_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+  local_to_user_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
   local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
 }
 
-tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) {
-  // Create an empty array, accessed by Distribution during loading
-  local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {
+  InitArrowVectors();
 }
+
+tsuba::RDG::RDG() : core_(std::make_unique<RDGCore>()) { InitArrowVectors(); }
 
 tsuba::RDG::~RDG() = default;
 tsuba::RDG::RDG(tsuba::RDG&& other) noexcept = default;

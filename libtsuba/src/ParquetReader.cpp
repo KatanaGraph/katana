@@ -55,9 +55,6 @@ ChunkedStringToLargeString(const std::shared_ptr<arrow::ChunkedArray>& arr) {
 // parquet files.
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
-  if (old_array->num_chunks() <= 1) {
-    return old_array;
-  }
   switch (old_array->type()->id()) {
   case arrow::Type::type::STRING: {
     return ChunkedStringToLargeString(old_array);

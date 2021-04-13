@@ -157,7 +157,7 @@ GetNullArrays(size_t elts) {
   AddNullArrays<arrow::UInt8Builder>(&null_map, &lists_null_map, elts);
   AddNullArrays(
       &null_map, &lists_null_map, elts,
-      arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"));
+      arrow::timestamp(arrow::TimeUnit::NANO, "UTC"));
 
   return NullMaps(std::move(null_map), std::move(lists_null_map));
 }
@@ -1960,6 +1960,12 @@ ToArrowArray(
         std::move(builder), arrow_dst, import_src);
     break;
   }
+  case arrow::Type::UINT32: {
+    arrow::UInt32Builder builder;
+    arrow_dst = BuildImportVec<arrow::UInt32Builder, uint32_t>(
+        std::move(builder), arrow_dst, import_src);
+    break;
+  }
   case arrow::Type::DOUBLE: {
     arrow::DoubleBuilder builder;
     arrow_dst = BuildImportVec<arrow::DoubleBuilder, double>(
@@ -1981,7 +1987,7 @@ ToArrowArray(
   case arrow::Type::TIMESTAMP: {
     auto* pool = arrow::default_memory_pool();
     arrow::TimestampBuilder builder(
-        arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"), pool);
+        arrow::timestamp(arrow::TimeUnit::NANO, "UTC"), pool);
     arrow_dst = BuildImportVec<arrow::TimestampBuilder, bool>(
         std::move(builder), arrow_dst, import_src);
     break;

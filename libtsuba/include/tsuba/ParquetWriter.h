@@ -9,13 +9,16 @@
 
 namespace tsuba {
 
-class ParquetWriter {
+class KATANA_EXPORT ParquetWriter {
 public:
   /// \returns a Writer that will write a table consisting of a single column
   /// \param array named \param name to a storage location
   static katana::Result<std::unique_ptr<ParquetWriter>> Make(
-      const std::shared_ptr<arrow::ChunkedArray>& array,
-      const std::string& name);
+      std::shared_ptr<arrow::ChunkedArray> array, const std::string& name);
+
+  /// \returns a Writer that will write \param table to a storage location
+  static katana::Result<std::unique_ptr<ParquetWriter>> Make(
+      std::shared_ptr<arrow::Table> table);
 
   /// write table out to a storage location \param uri If \param group is null,
   /// the write is synchronous, if not an asynchronous write is started to be

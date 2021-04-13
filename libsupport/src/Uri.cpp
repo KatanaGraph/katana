@@ -13,51 +13,12 @@
 #include "katana/Logging.h"
 #include "katana/Random.h"
 #include "katana/Result.h"
+#include "katana/Strings.h"
 
 namespace {
 
 // get scheme and path, always drop trailing slash
-const std::regex kUriRegex("(?:([a-zA-Z0-9]+)://)?(.+)/?");
-
-// base64 based on https://web.stanford.edu/class/archive/cs/cs106b/cs106b.1186/lectures/08-Fractals/code/expressions/lib/StanfordCPPLib/io/base64.cpp
-const std::array<char, 64> kBase64Alphabet{
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'};
-
-uint64_t
-Base64EncodeLen(uint64_t len) {
-  return ((len + 2) / 3 * 4);
-}
-
-std::string
-Base64Encode(std::string_view s) {
-  std::string res(Base64EncodeLen(s.length()), '=');
-  uint64_t j = 0;
-  uint64_t i;
-  for (i = 0; i < s.length() - 2; i += 3) {
-    res[j++] = kBase64Alphabet.at((s[i] >> 2) & 0x3F);
-    res[j++] =
-        kBase64Alphabet.at(((s[i] & 0x3) << 4) | ((s[i + 1] & 0xF0) >> 4));
-    res[j++] =
-        kBase64Alphabet.at(((s[i + 1] & 0xF) << 2) | ((s[i + 2] & 0xC0) >> 6));
-    res[j++] = kBase64Alphabet.at(s[i + 2] & 0x3F);
-  }
-  if (i < s.length()) {
-    res[j++] = kBase64Alphabet.at((s[i] >> 2) & 0x3F);
-    if (i == (s.length() - 1)) {
-      res[j++] = kBase64Alphabet.at(((s[i] & 0x3) << 4));
-    } else {
-      res[j++] =
-          kBase64Alphabet.at(((s[i] & 0x3) << 4) | ((s[i + 1] & 0xF0) >> 4));
-      res[j++] = kBase64Alphabet.at(((s[i + 1] & 0xF) << 2));
-    }
-    // array is initialized to pad character so no need to do that here
-  }
-  return res;
-}
+const std::regex kUriRegex("^(?:([a-zA-Z0-9]+)://)?(.+?)/?$");
 
 // This function does not recognize any path seperator other than kSepChar. This
 // could be a problem for Windows or "non-standard S3" paths.
@@ -140,19 +101,17 @@ DoJoinPath(std::string_view dir, std::string_view file) {
   if (dir[dir.size() - 1] != katana::Uri::kSepChar) {
     if (file[0] != katana::Uri::kSepChar) {
       return fmt::format("{}{}{}", dir, katana::Uri::kSepChar, file);
-    } else {
-      while (file[1] == katana::Uri::kSepChar) {
-        file.remove_prefix(1);
-      }
-      return fmt::format("{}{}", dir, file);
     }
-  } else {
-    while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
-      dir.remove_suffix(1);
-    }
-    while (file[0] == katana::Uri::kSepChar) {
+    while (file[1] == katana::Uri::kSepChar) {
       file.remove_prefix(1);
     }
+    return fmt::format("{}{}", dir, file);
+  }
+  while (dir[dir.size() - 2] == katana::Uri::kSepChar) {
+    dir.remove_suffix(1);
+  }
+  while (file[0] == katana::Uri::kSepChar) {
+    file.remove_prefix(1);
   }
   KATANA_LOG_ASSERT(dir[dir.size() - 1] == katana::Uri::kSepChar);
   return fmt::format("{}{}", dir, file);
@@ -183,7 +142,7 @@ Result<Uri>
 Uri::Make(const std::string& str) {
   std::smatch sub_match;
   if (!std::regex_match(str, sub_match, kUriRegex)) {
-    return ErrorCode::InvalidArgument;
+    return KATANA_ERROR(ErrorCode::InvalidArgument, "could not parse URI");
   }
   std::string scheme(sub_match[1]);
   std::string path(sub_match[2]);
@@ -218,7 +177,7 @@ Uri::empty() const {
 
 std::string
 Uri::Encode() const {
-  return Base64Encode(string());
+  return katana::ToBase64(string(), true);
 }
 
 std::string

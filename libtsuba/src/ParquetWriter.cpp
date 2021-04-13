@@ -1,5 +1,6 @@
 #include "tsuba/ParquetWriter.h"
 
+#include <arrow/array/array_binary.h>
 #include <arrow/chunked_array.h>
 
 #include "katana/Result.h"
@@ -60,7 +61,7 @@ StoreParquet(
   return katana::ResultSuccess();
 }
 
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
+katana::Result<std::vector<std::shared_ptr<arrow::Array>>>
 LargeStringToChunkedString(
     const std::shared_ptr<arrow::LargeStringArray>& arr) {
   std::vector<std::shared_ptr<arrow::Array>> chunks;
@@ -68,7 +69,6 @@ LargeStringToChunkedString(
   arrow::StringBuilder builder;
 
   uint64_t inserted = 0;
-
   for (uint64_t i = 0, size = arr->length(); i < size; ++i) {
     if (!arr->IsValid(i)) {
       auto status = builder.AppendNull();
@@ -99,23 +99,17 @@ LargeStringToChunkedString(
           tsuba::ErrorCode::ArrowError, "adding string to array: {}", status);
     }
   }
-  if (inserted > 0) {
-    std::shared_ptr<arrow::Array> new_arr;
-    auto status = builder.Finish(&new_arr);
-    if (!status.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-    }
+
+  std::shared_ptr<arrow::Array> new_arr;
+  auto status = builder.Finish(&new_arr);
+  if (!status.ok()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
+  }
+  if (new_arr->length() > 0) {
     chunks.emplace_back(new_arr);
   }
-
-  auto maybe_res = arrow::ChunkedArray::Make(chunks, arrow::utf8());
-  if (!maybe_res.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "building chunked array: {}",
-        maybe_res.status());
-  }
-  return maybe_res.ValueOrDie();
+  return chunks;
 }
 
 // HandleBadParquetTypes here and HandleBadParquetTypes in ParquetReader.cpp
@@ -123,35 +117,76 @@ LargeStringToChunkedString(
 // parquet files.
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
 HandleBadParquetTypes(std::shared_ptr<arrow::ChunkedArray> old_array) {
-  if (old_array->num_chunks() > 1) {
-    return old_array;
-  }
   switch (old_array->type()->id()) {
   case arrow::Type::type::LARGE_STRING: {
-    std::shared_ptr<arrow::LargeStringArray> large_string_array =
-        std::static_pointer_cast<arrow::LargeStringArray>(old_array->chunk(0));
-    return LargeStringToChunkedString(large_string_array);
+    std::vector<std::shared_ptr<arrow::Array>> new_chunks;
+    for (const auto& chunk : old_array->chunks()) {
+      auto arr = std::static_pointer_cast<arrow::LargeStringArray>(chunk);
+      auto new_chunk_res = LargeStringToChunkedString(arr);
+      if (!new_chunk_res) {
+        return new_chunk_res.error();
+      }
+      const auto& chunks = new_chunk_res.value();
+      new_chunks.insert(new_chunks.end(), chunks.begin(), chunks.end());
+    }
+
+    auto maybe_res = arrow::ChunkedArray::Make(new_chunks, arrow::utf8());
+    if (!maybe_res.ok()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::ArrowError, "building chunked array: {}",
+          maybe_res.status());
+    }
+    return maybe_res.ValueOrDie();
   }
   default:
     return old_array;
   }
 }
 
+katana::Result<std::shared_ptr<arrow::Table>>
+HandleBadParquetTypes(const std::shared_ptr<arrow::Table>& old_table) {
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> new_arrays;
+  std::vector<std::shared_ptr<arrow::Field>> new_fields;
+
+  for (int i = 0, size = old_table->num_columns(); i < size; ++i) {
+    auto new_array_res = HandleBadParquetTypes(old_table->column(i));
+    if (!new_array_res) {
+      return new_array_res.error();
+    }
+    std::shared_ptr<arrow::ChunkedArray> new_array =
+        std::move(new_array_res.value());
+    auto old_field = old_table->field(i);
+    new_fields.emplace_back(
+        std::make_shared<arrow::Field>(old_field->name(), new_array->type()));
+    new_arrays.emplace_back(new_array);
+  }
+  return arrow::Table::Make(arrow::schema(new_fields), new_arrays);
+}
+
 }  // namespace
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
-    const std::shared_ptr<arrow::ChunkedArray>& array,
-    const std::string& name) {
+    std::shared_ptr<arrow::ChunkedArray> array, const std::string& name) {
   auto res = HandleBadParquetTypes(array);
   if (!res) {
-    return res.error().WithContext("handling arrow->parquet type mismatch");
+    return res.error().WithContext("conversion from arrow to parquet mismatch");
   }
-  std::shared_ptr<arrow::ChunkedArray> new_array(std::move(res.value()));
+  array = std::move(res.value());
 
   std::shared_ptr<arrow::Table> column = arrow::Table::Make(
-      arrow::schema({arrow::field(name, new_array->type())}), {new_array});
+      arrow::schema({arrow::field(name, array->type())}), {array});
   return std::unique_ptr<ParquetWriter>(new ParquetWriter(column));
+}
+
+Result<std::unique_ptr<tsuba::ParquetWriter>>
+tsuba::ParquetWriter::Make(std::shared_ptr<arrow::Table> table) {
+  auto res = HandleBadParquetTypes(table);
+  if (!res) {
+    return res.error().WithContext("conversion from arrow to parquet mismatch");
+  }
+  table = std::move(res.value());
+  return std::unique_ptr<ParquetWriter>(new ParquetWriter(table));
 }
 
 katana::Result<void>

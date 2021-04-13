@@ -13,18 +13,11 @@ Str2Uri(const std::string& str) {
 
 int
 main() {
-  const std::vector<std::string> all_paths = {
-      "/some/long/path",
-      "/some/long/path/",
-      "/some/long/path//",
-      "/some/long/path///",
-  };
-  for (const auto& path : all_paths) {
-    auto uri = Str2Uri(path);
-    KATANA_LOG_ASSERT(uri.path() == path);
-    KATANA_LOG_ASSERT(uri.BaseName() == "path");
-    KATANA_LOG_ASSERT(uri.DirName().path() == "/some/long");
-  }
+  KATANA_LOG_ASSERT(Str2Uri("/some/path/").path() == "/some/path");
+  // We only eat one slash by default to support mangled (but valid) paths like
+  // this
+  KATANA_LOG_ASSERT(Str2Uri("s3:///some/path//").path() == "/some/path/");
+  KATANA_LOG_ASSERT(Str2Uri("s3://some/path").path() == "some/path");
 
   KATANA_LOG_ASSERT(Str2Uri("path").BaseName() == "path");
   KATANA_LOG_ASSERT(Str2Uri("path///////").StripSep().path() == "path");

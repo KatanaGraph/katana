@@ -53,7 +53,11 @@ profileVtune(const F& func, const char* region) {
 
   __itt_resume();
 
-  timeThis(func, region);
+  {
+    katana::StatTimer timer(region);
+    katana::TimerGuard timer_guard(timer);
+    func();
+  }
 
   __itt_pause();
 }
@@ -66,7 +70,9 @@ profileVtune(const F& func, const char* region) {
   region = region ? region : "(NULL)";
   katana::gWarn("Vtune not enabled or found");
 
-  timeThis(func, region);
+  katana::StatTimer timer(region);
+  katana::TimerGuard timer_guard(timer);
+  func();
 }
 
 #endif
@@ -193,7 +199,9 @@ profilePapi(const F& func, const char* region) {
       eventNamesCSV.empty()) {
     katana::gWarn(
         "No Events specified. Set environment variable KATANA_PAPI_EVENTS");
-    katana::timeThis(func, region);
+    katana::StatTimer timer(region);
+    katana::TimerGuard timer_guard(timer);
+    func();
     return;
   }
 
@@ -212,7 +220,11 @@ profilePapi(const F& func, const char* region) {
 
   internal::papiStart(eventSets, papiResults, papiEvents);
 
-  katana::timeThis(func, region);
+  {
+    katana::StatTimer timer(region);
+    katana::TimerGuard timer_guard(timer);
+    func();
+  }
 
   internal::papiStop(eventSets, papiResults, eventNames, region);
 }
@@ -225,7 +237,9 @@ profilePapi(const F& func, const char* region) {
   region = region ? region : "(NULL)";
   katana::gWarn("PAPI not enabled or found");
 
-  timeThis(func, region);
+  katana::StatTimer timer(region);
+  katana::TimerGuard timer_guard(timer);
+  func();
 }
 
 #endif

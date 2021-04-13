@@ -1,4 +1,4 @@
-set(INPUT_VERSION v17)
+set(INPUT_VERSION v18)
 
 set(INPUT_URL "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-${INPUT_VERSION}.tar.gz")
 

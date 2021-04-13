@@ -25,6 +25,7 @@ from typing import Type, Dict, Union
 import katana.galois
 from katana.version import get_katana_version
 
+
 def load_ipython_extension(ipython):
     import cython
 

@@ -31,13 +31,6 @@ private:
          */
   uint32_t num_trained_tokens_;
 
-  /** 
-         * To be precise, this is the number of words in the training data that exist in the vocabulary
-         * which have been processed so far.  It includes words that are discarded from sampling.
-         * Note that each word is processed once per iteration.
-         */
-  long actual_word_count_;
-
   double alpha_;
 
   /** Learning rate, affects how fast values in the layers get updated */
@@ -57,8 +50,6 @@ private:
 
   /** Used for negative sampling */
   std::vector<int32_t> table_;
-
-  long start_nano_;
 
   uint32_t negative_samples_;
   /** 

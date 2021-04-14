@@ -41,7 +41,7 @@ class KatanaConan(ConanFile):
         "libcurl:shared": False,
     }
 
-    generators = ("cmake_find_package", "cmake_paths")
+    generators = ("cmake_find_package", "cmake_paths", "pkg_config")
 
     def configure(self):
         if self.settings.os == "Macos":

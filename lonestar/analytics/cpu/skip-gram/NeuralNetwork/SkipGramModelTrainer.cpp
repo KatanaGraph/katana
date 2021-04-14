@@ -266,12 +266,10 @@ SkipGramModelTrainer::TrainSample(
 void
 SkipGramModelTrainer::RefineWalk(
     std::vector<uint32_t>& walk, std::vector<uint32_t>* refined_walk,
-    std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+    katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset,
     unsigned long long* next_random) {
   for (auto val : walk) {
-    HuffmanCoding::HuffmanNode* huffman_node =
-        huffman_nodes_map.find(val)->second;
-    uint32_t count = huffman_node->GetCount();
+    uint32_t count = vocab_multiset[val];
     if (down_sample_rate_ > 0) {
       double ran =
           (std::sqrt(
@@ -290,7 +288,8 @@ SkipGramModelTrainer::RefineWalk(
 void
 SkipGramModelTrainer::Train(
     std::vector<std::vector<uint32_t>>& random_walks,
-    std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
+    std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+    katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset) {
   katana::GAccumulator<uint64_t> accum;
   katana::do_all(
       katana::iterate(random_walks), [&](std::vector<uint32_t>& walk) {
@@ -299,7 +298,7 @@ SkipGramModelTrainer::Train(
         refined_walk.reserve(walk.size());
         accum += walk.size();
 
-        RefineWalk(walk, &refined_walk, huffman_nodes_map, &next_random);
+        RefineWalk(walk, &refined_walk, vocab_multiset, &next_random);
 
         uint32_t sentence_position = 0;
         uint32_t walk_length = refined_walk.size();

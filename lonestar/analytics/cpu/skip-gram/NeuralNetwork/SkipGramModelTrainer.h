@@ -95,17 +95,19 @@ public:
   double GetSyn0(uint32_t node_idx, uint32_t idx) {
     return syn0_[node_idx][idx];
   }
+
+  //initialize exp_table
   void InitExpTable();
 
+  //initialize table_
   void InitializeUnigramTable(
       std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
 
+  //randomly initializes the embeddings
   void InitializeSyn0();
 
   /** @return Next random value to use */
   static unsigned long long IncrementRandom(unsigned long long r);
-
-  void TrainSample(uint32_t target, uint32_t sample);
 
   /** 
 	  * Degrades the learning rate (alpha) steadily towards 0
@@ -113,22 +115,27 @@ public:
 	  */
   void UpdateAlpha();
 
+  //Train a pair of target and sample nodes
   void TrainSample(
       unsigned int target, unsigned int sample,
       std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
       unsigned long long* next_random);
 
+  //Train random walks
   void Train(
       std::vector<std::vector<uint32_t>>& random_walks,
-      std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map);
+      std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+      katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset);
 
   //generate random negative samples
   void HandleNegativeSampling(
       HuffmanCoding::HuffmanNode& huffman_node, uint32_t l1,
       std::vector<double>* neu1e, unsigned long long* next_random);
 
+  //construct a new walk/sentence by downsampling
+  //most frequently occurring nodes
   void RefineWalk(
       std::vector<uint32_t>& walk, std::vector<uint32_t>* refined_walk,
-      std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
+      katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset,
       unsigned long long* next_random);
 };

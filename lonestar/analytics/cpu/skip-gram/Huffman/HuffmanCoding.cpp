@@ -90,6 +90,7 @@ HuffmanCoding::HuffmanNode::InitVars(
   token_ = token;
 }
 
+//constructs code
 void
 HuffmanCoding::HuffmanNode::InitCode(std::vector<uint32_t>& code) {
   code_.resize(code_len_);
@@ -98,6 +99,7 @@ HuffmanCoding::HuffmanNode::InitCode(std::vector<uint32_t>& code) {
   }
 }
 
+//cosntructs points vector
 void
 HuffmanCoding::HuffmanNode::InitPoints(
     std::vector<int32_t>& points, uint32_t num_tokens) {

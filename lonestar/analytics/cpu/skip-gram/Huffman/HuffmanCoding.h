@@ -51,7 +51,8 @@ public:
   };
 
   HuffmanCoding(
-      std::set<uint32_t>* vocab, std::map<uint32_t, uint32_t>* vocab_multiset)
+      std::set<uint32_t>* vocab,
+      katana::gstl::Map<uint32_t, uint32_t>* vocab_multiset)
       : vocab_(vocab), vocab_multiset_(vocab_multiset) {}
 
   /**
@@ -75,7 +76,7 @@ public:
 private:
   std::set<uint32_t>* vocab_;
 
-  std::map<uint32_t, uint32_t>* vocab_multiset_;
+  katana::gstl::Map<uint32_t, uint32_t>* vocab_multiset_;
 
   uint32_t num_tokens_;
 

@@ -52,8 +52,9 @@ static cll::opt<uint32_t> numIterations(
     "numIterations",
     cll::desc("Number of Training Iterations (default value 5)"), cll::init(5));
 
-static cll::opt<uint32_t> minCount(
-    "minCount", cll::desc("Min-count (default 5)"), cll::init(5));
+static cll::opt<uint32_t> mininumFrequency(
+    "mininumFrequency", cll::desc("Mininum Frequency (default 5)"),
+    cll::init(5));
 
 void
 ReadRandomWalks(
@@ -75,22 +76,48 @@ ReadRandomWalks(
   }
 }
 
+//builds a vocabulary of nodes using the
+//provided random walks
 void
 BuildVocab(
     std::vector<std::vector<uint32_t>>& random_walks, std::set<uint32_t>* vocab,
-    std::map<uint32_t, uint32_t>* vocab_multiset,
+    katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset,
     uint32_t* num_trained_tokens) {
   for (auto walk : random_walks) {
     for (auto val : walk) {
       vocab->insert(val);
-      if (vocab_multiset->find(val) == vocab_multiset->end()) {
-        (*vocab_multiset)[val] = 1;
-      } else {
-        (*vocab_multiset)[val] = (*vocab_multiset)[val] + 1;
-      }
       (*num_trained_tokens)++;
     }
   }
+  using Map = katana::gstl::Map<uint32_t, uint32_t>;
+
+  auto reduce = [](Map& lhs, Map&& rhs) -> Map& {
+    Map v{std::move(rhs)};
+
+    for (auto& kv : v) {
+      if (lhs.count(kv.first) == 0) {
+        lhs[kv.first] = 0;
+      }
+      lhs[kv.first] += kv.second;
+    }
+
+    return lhs;
+  };
+
+  auto mapIdentity = []() { return Map(); };
+
+  auto accumMap = katana::make_reducible(reduce, mapIdentity);
+
+  katana::do_all(
+      katana::iterate(random_walks),
+      [&](const std::vector<uint32_t>& walk) {
+        for (auto val : walk) {
+          accumMap.update(Map{std::make_pair(val, 1)});
+        }
+      },
+      katana::loopname("countFrequency"));
+
+  vocab_multiset = accumMap.reduce();
 
   std::vector<uint32_t> to_remove;
   std::set<uint32_t>::iterator iter = vocab->begin();
@@ -98,9 +125,7 @@ BuildVocab(
   //remove nodes occurring less than minCount times
   while (iter != vocab->end()) {
     uint32_t node = *iter;
-    if ((*vocab_multiset)[node] < minCount) {
-      //vocab->erase(node);
-      //vocab_multiset->erase(node);
+    if (vocab_multiset[node] < mininumFrequency) {
       to_remove.push_back(node);
     }
 
@@ -109,10 +134,11 @@ BuildVocab(
 
   for (auto node : to_remove) {
     vocab->erase(node);
-    vocab_multiset->erase(node);
+    vocab_multiset.erase(node);
   }
 }
 
+//outputs the embedding to a file
 void
 PrintEmbeddings(
     std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes,
@@ -133,19 +159,15 @@ PrintEmbeddings(
         of << " " << skip_gram_model_trainer.GetSyn0(node_idx, i);
       }
       of << "\n";
-    } /* else {
-      of << id;
-
-      for (uint32_t i = 0; i < SkipGramModelTrainer::GetLayer1Size(); i++) {
-        of << " " << 0.0f;
-      }
-    }*/
-    //  of << "\n";
+    }
   }
 
   of.close();
 }
 
+//constructs a new set of random walks
+//by pruning nodes (from the walks)
+//that are not in the vocabulary
 void
 RefineRandomWalks(
     std::vector<std::vector<uint32_t>>& random_walks,
@@ -174,11 +196,11 @@ main(int argc, char** argv) {
   ReadRandomWalks(input_file, &random_walks);
 
   std::set<uint32_t> vocab;
-  std::map<uint32_t, uint32_t> vocab_multiset;
+  katana::gstl::Map<uint32_t, uint32_t> vocab_multiset;
 
   uint32_t num_trained_tokens;
 
-  BuildVocab(random_walks, &vocab, &vocab_multiset, &num_trained_tokens);
+  BuildVocab(random_walks, &vocab, vocab_multiset, &num_trained_tokens);
 
   std::vector<std::vector<uint32_t>> refined_random_walks;
 
@@ -202,15 +224,13 @@ main(int argc, char** argv) {
 
   katana::gPrint("Skip-Gram Trainer Init done");
 
-  katana::gPrint("szie: ", vocab.size());
-
   skip_gram_model_trainer.InitExpTable();
-  //  skip_gram_model_trainer.InitializeUnigramTable(huffman_nodes_map);
 
   katana::gPrint("Skip-Gram Init exp table \n");
 
   for (uint32_t iter = 0; iter < numIterations; iter++) {
-    skip_gram_model_trainer.Train(refined_random_walks, huffman_nodes_map);
+    skip_gram_model_trainer.Train(
+        refined_random_walks, huffman_nodes_map, vocab_multiset);
   }
 
   uint32_t max_id = *(vocab.crbegin());

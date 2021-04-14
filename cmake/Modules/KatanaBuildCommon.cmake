@@ -42,10 +42,10 @@ set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
 set(KATANA_LANG_BINDINGS "" CACHE STRING "Semi-colon separated list of language bindings to build (e.g., 'python'). Default: none")
 
 ###### Packaging features ######
-set(KATANA_PACKAGE_TYPE "deb" CACHE STRING "Semi-colon separated list of package types to build with cpack. Supported values: deb rpm tgz.")
+set(KATANA_PACKAGE_TYPE "deb" CACHE STRING "Semi-colon separated list of package types to build with cpack. Supported values: deb.")
 set(KATANA_PACKAGE_DIRECTORY "${PROJECT_BINARY_DIR}/pkg" CACHE STRING "The output path for packages.")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of Debian package dependencies")
-set(CPACK_RPM_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of RPM package dependencies")
+#set(CPACK_RPM_PACKAGE_DEPENDS "" CACHE STRING "Semi-colon separated list of RPM package dependencies")
 
 ###### Developer features ######
 set(KATANA_PER_ROUND_STATS OFF CACHE BOOL "Report statistics of each round of execution")
@@ -441,12 +441,20 @@ set(CPACK_DEB_COMPONENT_INSTALL TRUE)
 
 #list(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS)
 
-# Centos package specific options
+set(tmp "${CPACK_GENERATOR}")
+list(REMOVE_ITEM tmp "DEB")
+if(tmp)
+  message(WARNING "The requested package types, ${tmp}, are not supported and will almost certainly not be correct. You are on your own from here.")
+endif()
+
+# We don't support RPMs, but since these meta data was already written, include it for the future.
+# RPM specific options
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 set(CPACK_RPM_PACKAGE_AUTOREQPROV FALSE)
 set(CPACK_RPM_COMPONENT_INSTALL TRUE)
 
-list(APPEND CPACK_RPM_PACKAGE_DEPENDS libatomic numactl-libs ncurses-libs)
+# Commented out RPM dependencies. Better to have obviously no dependencies that subtly wrong ones. This will need updating if it is used again.
+#list(APPEND CPACK_RPM_PACKAGE_DEPENDS libatomic numactl-libs ncurses-libs)
 
 # Create a package for each component group.
 set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
@@ -454,34 +462,32 @@ set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
 # Setup the cpack component groups: dev_pkg, shlib_pkg, tools_pkg, apps_pkg.
 # After calling this, call cpack_add_component to add components to the groups.
 macro(katana_setup_cpack_component_groups NAME SUFFIX)
-  # The groups are named *_pkg to distinguish them from the compenents themselves.
+  # The groups are named *_pkg to distinguish them from the components themselves.
+
   set(CPACK_DEBIAN_DEV_PKG_PACKAGE_NAME "lib${NAME}-dev${SUFFIX}")
-#  list(APPEND CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
   set(CPACK_RPM_DEV_PKG_PACKAGE_NAME "${NAME}-dev${SUFFIX}")
-#  list(APPEND CPACK_RPM_DEV_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  # No addition dependencies on dev_pkg since it depends on shlib_pkg
   cpack_add_component_group(dev_pkg)
   set(CPACK_COMPONENT_DEV_PKG_DESCRIPTION "Katana Graph development libraries and headers")
   set(CPACK_COMPONENT_DEV_PKG_DEPENDS shlib_pkg)
 
   set(CPACK_DEBIAN_SHLIB_PKG_PACKAGE_NAME "lib${NAME}${SUFFIX}")
-  list(APPEND CPACK_DEBIAN_SHLIB_PKG_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
+  list(APPEND CPACK_DEBIAN_SHLIB_PKG_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
   set(CPACK_RPM_SHLIB_PKG_PACKAGE_NAME "${NAME}${SUFFIX}")
-  list(APPEND CPACK_RPM_SHLIB_PKG_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  list(APPEND CPACK_RPM_SHLIB_PKG_PACKAGE_DEPENDS ${CPACK_RPM_PACKAGE_DEPENDS})
   cpack_add_component_group(shlib_pkg)
   set(CPACK_COMPONENT_SHLIB_PKG_DESCRIPTION "Katana Graph runtime libraries")
 
   set(CPACK_DEBIAN_TOOLS_PKG_PACKAGE_NAME "${NAME}-tools${SUFFIX}")
-#  list(APPEND CPACK_DEBIAN_TOOLS_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
   set(CPACK_RPM_TOOLS_PKG_PACKAGE_NAME "${NAME}-tools${SUFFIX}")
-#  list(APPEND CPACK_RPM_TOOLS_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  # No addition dependencies on tools_pkg since it depends on shlib_pkg
   cpack_add_component_group(tools_pkg)
   set(CPACK_COMPONENT_TOOLS_PKG_DESCRIPTION "Katana Graph system management and data processing tools")
   set(CPACK_COMPONENT_TOOLS_PKG_DEPENDS shlib_pkg)
 
   set(CPACK_DEBIAN_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
-#  list(APPEND CPACK_DEBIAN_APPS_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}")
   set(CPACK_RPM_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
-#  list(APPEND CPACK_RPM_APPS_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+  # No addition dependencies on apps_pkg since it depends on shlib_pkg
   cpack_add_component_group(apps_pkg)
   set(CPACK_COMPONENT_APPS_PKG_DESCRIPTION "Katana Graph applications and CLI algorithms")
   set(CPACK_COMPONENT_APPS_PKG_DEPENDS shlib_pkg tools_pkg)
@@ -489,7 +495,8 @@ macro(katana_setup_cpack_component_groups NAME SUFFIX)
   set(CPACK_DEBIAN_PYTHON_PKG_PACKAGE_NAME "python3-${NAME}${SUFFIX}")
   list(APPEND CPACK_DEBIAN_PYTHON_PKG_PACKAGE_DEPENDS "python3-minimal")
   set(CPACK_RPM_PYTHON_PKG_PACKAGE_NAME "python-${NAME}${SUFFIX}")
-#  list(APPEND CPACK_RPM_PYTHON_PACKAGE_DEPENDS "${CPACK_RPM_PACKAGE_DEPENDS}")
+#  To add RPM python support we will need something like: list(APPEND CPACK_RPM_PYTHON_PACKAGE_DEPENDS "[the name of the python3 rpm]")
+  # No addition dependencies on apps_pkg since it depends on shlib_pkg
   cpack_add_component_group(python_pkg)
   set(CPACK_COMPONENT_PYTHON_PKG_DESCRIPTION "Katana Graph Python API")
   set(CPACK_COMPONENT_PYTHON_PKG_DEPENDS shlib_pkg)

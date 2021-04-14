@@ -327,7 +327,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
         fmt::format_to(
             buf, " size {}/{}\n", my_col->length(), other_col->length());
       } else {
-        PrintFirstNonEqualElements(&buf, my_col, other_col, 5);
+        DiffFormatTo(&buf, my_col, other_col);
       }
     } else {
       fmt::format_to(
@@ -343,13 +343,13 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
     } else if (!edge_props->GetColumnByName(prop_name)->Equals(
                    other_edge_props->GetColumnByName(prop_name))) {
       fmt::format_to(
-          buf, "Edge property {:13} {:11} differs.\n", prop_name,
+          buf, "Edge property {:13} {:11} differs\n", prop_name,
           fmt::format("({})", my_col->type()->name()));
       if (my_col->length() != other_col->length()) {
         fmt::format_to(
             buf, " size {}/{}\n", my_col->length(), other_col->length());
       } else {
-        PrintFirstNonEqualElements(&buf, my_col, other_col, 5);
+        DiffFormatTo(&buf, my_col, other_col);
       }
     } else {
       fmt::format_to(

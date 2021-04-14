@@ -279,22 +279,25 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 ////////////////////////////////////////////
 // Arrow utilities
 
+/// Combine chunks of ChunkedArray into a single Array
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> Unchunk(
     const std::shared_ptr<arrow::ChunkedArray>& original);
+/// Take a vector of scalars of type data_type and return an Array
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ScalarVecToArray(
     const std::shared_ptr<arrow::DataType>& data_type,
     const std::vector<std::shared_ptr<arrow::Scalar>>& data);
+/// Return a randomly shuffled version of a ChunkedArray
 KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
+/// Return a ChunkeArray of Nulls of the given type and length
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
-KATANA_EXPORT void PrintFirstNonEqualElements(
+/// Print the differences between two ChunkedArrays only using
+/// about approx_total_characters
+KATANA_EXPORT void DiffFormatTo(
     fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
-    const std::shared_ptr<arrow::ChunkedArray>& a1, int32_t num_elts_to_print);
-
-Result<std::shared_ptr<arrow::ChunkedArray>> UpdateChunkedArray(
-    const std::shared_ptr<arrow::ChunkedArray>& chunka,
-    const std::shared_ptr<arrow::Scalar>& scalar, int64_t position);
+    const std::shared_ptr<arrow::ChunkedArray>& a1,
+    size_t approx_total_characters = 150);
 
 }  // namespace katana
 

@@ -636,9 +636,9 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
 void
 tsuba::RDG::InitArrowVectors() {
   // Create an empty array, accessed by Distribution during loading
-  host_to_owned_global_ids_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
-  local_to_user_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
-  local_to_global_id_ = katana::EmptyChunkedArray(arrow::uint64(), 0);
+  host_to_owned_global_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
 }
 
 tsuba::RDG::RDG(std::unique_ptr<RDGCore>&& core) : core_(std::move(core)) {

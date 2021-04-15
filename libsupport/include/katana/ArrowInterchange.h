@@ -7,7 +7,6 @@
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "katana/config.h"
 
 /// We have two strategies for Arrow conversion.  One uses
 /// arrow::stl::TableFromTupleRange, the other uses Builders. TableFromTupleRange is
@@ -279,12 +278,21 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 ////////////////////////////////////////////
 // Arrow utilities
 
-KATANA_EXPORT std::shared_ptr<arrow::Array> Unchunk(
+/// Combine chunks of ChunkedArray into a single Array
+KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> Unchunk(
     const std::shared_ptr<arrow::ChunkedArray>& original);
-KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> Shuffle(
+/// Return a randomly shuffled version of a ChunkedArray
+KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);
-KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> EmptyChunkedArray(
+/// Return a ChunkeArray of Nulls of the given type and length
+KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
+/// Print the differences between two ChunkedArrays only using
+/// about approx_total_characters
+KATANA_EXPORT void DiffFormatTo(
+    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    const std::shared_ptr<arrow::ChunkedArray>& a1,
+    size_t approx_total_characters = 150);
 
 }  // namespace katana
 

@@ -2,6 +2,7 @@
 
 #include <sys/mman.h>
 
+#include "katana/ArrowInterchange.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
 #include "katana/Platform.h"
@@ -286,6 +287,77 @@ katana::PropertyGraph::Equals(const PropertyGraph* other) const {
     }
   }
   return true;
+}
+
+std::string
+katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
+  fmt::memory_buffer buf;
+  if (!topology().Equals(other->topology())) {
+    fmt::format_to(
+        buf, "Topologies differ nodes/edges {}/{} vs. {}/{}\n",
+        topology().num_nodes(), topology().num_edges(),
+        other->topology().num_nodes(), other->topology().num_edges());
+  } else {
+    fmt::format_to(buf, "Topologies match!\n");
+  }
+  const auto& node_props = rdg_.node_properties();
+  const auto& edge_props = rdg_.edge_properties();
+  const auto& other_node_props = other->node_properties();
+  const auto& other_edge_props = other->edge_properties();
+  if (node_props->num_columns() != other_node_props->num_columns()) {
+    fmt::format_to(
+        buf, "Number of node properties differ {} vs. {}\n",
+        node_props->num_columns(), other_node_props->num_columns());
+  }
+  if (edge_props->num_columns() != other_edge_props->num_columns()) {
+    fmt::format_to(
+        buf, "Number of edge properties differ {} vs. {}\n",
+        edge_props->num_columns(), other_edge_props->num_columns());
+  }
+  for (const auto& prop_name : node_props->ColumnNames()) {
+    auto other_col = other_node_props->GetColumnByName(prop_name);
+    auto my_col = node_props->GetColumnByName(prop_name);
+    if (other_col == nullptr) {
+      fmt::format_to(buf, "Only first has node property {}\n", prop_name);
+    } else if (!my_col->Equals(other_col)) {
+      fmt::format_to(
+          buf, "Node property {:13} {:11} differs\n", prop_name,
+          fmt::format("({})", my_col->type()->name()));
+      if (my_col->length() != other_col->length()) {
+        fmt::format_to(
+            buf, " size {}/{}\n", my_col->length(), other_col->length());
+      } else {
+        DiffFormatTo(&buf, my_col, other_col);
+      }
+    } else {
+      fmt::format_to(
+          buf, "Node property {:13} {:11} matches!\n", prop_name,
+          fmt::format("({})", my_col->type()->name()));
+    }
+  }
+  for (const auto& prop_name : edge_props->ColumnNames()) {
+    auto other_col = other_edge_props->GetColumnByName(prop_name);
+    auto my_col = edge_props->GetColumnByName(prop_name);
+    if (other_col == nullptr) {
+      fmt::format_to(buf, "Only first has edge property {}\n", prop_name);
+    } else if (!edge_props->GetColumnByName(prop_name)->Equals(
+                   other_edge_props->GetColumnByName(prop_name))) {
+      fmt::format_to(
+          buf, "Edge property {:13} {:11} differs\n", prop_name,
+          fmt::format("({})", my_col->type()->name()));
+      if (my_col->length() != other_col->length()) {
+        fmt::format_to(
+            buf, " size {}/{}\n", my_col->length(), other_col->length());
+      } else {
+        DiffFormatTo(&buf, my_col, other_col);
+      }
+    } else {
+      fmt::format_to(
+          buf, "Edge property {:13} {:11} matches!\n", prop_name,
+          fmt::format("({})", my_col->type()->name()));
+    }
+  }
+  return fmt::to_string(buf);
 }
 
 katana::Result<void>

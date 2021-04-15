@@ -285,6 +285,8 @@ public:
 
   /// Determine if two PropertyGraphs are Equal
   bool Equals(const PropertyGraph* other) const;
+  /// Report the differences between two graphs
+  std::string ReportDiff(const PropertyGraph* other) const;
 
   std::shared_ptr<arrow::Schema> node_schema() const {
     return rdg_.node_properties()->schema();

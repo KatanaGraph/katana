@@ -7,6 +7,7 @@ configure_file(include/katana/config.h.in include/katana/config.h)
 
 set(sources
         src/ArrowInterchange.cpp
+        src/ArrowVisitor.cpp
         src/Backtrace.cpp
         src/CommBackend.cpp
         src/Env.cpp

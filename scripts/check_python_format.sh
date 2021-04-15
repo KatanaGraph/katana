@@ -15,7 +15,7 @@ if [ "$1" == "-fix" ]; then
 fi
 
 ROOTS="$@"
-PRUNE_LIST="deploy notebook-home .git build*"
+PRUNE_LIST="notebook-home .git build*"
 
 emit_prunes() {
   for p in $PRUNE_LIST; do echo "-name $p -prune -o"; done | xargs

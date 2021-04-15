@@ -19,12 +19,7 @@ requirements:
     - make
     - pyarrow {{ arrow_cpp }}
     - python {{ python }}
-    # Workaround for upstream sphinx instability [1]
-    #
-    # [1] https://github.com/sphinx-doc/sphinx/issues/8880
-    #
-    # TODO(ddn): revisit (each instance of sphinx<3.5.0, there are 4)
-    - sphinx<3.5.0
+    - sphinx>=3.5.1
     - pygithub
     - packaging
   host:
@@ -33,7 +28,7 @@ requirements:
     - pyarrow {{ arrow_cpp }}
     - numba>=0.50,<1.0a0
     - python {{ python }}
-    - sphinx<3.5.0
+    - sphinx>=3.5.1
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
@@ -139,7 +134,7 @@ outputs:
         - pyarrow {{ arrow_cpp }}
         - numba>=0.50,<1.0a0
         - python {{ python }}
-        - sphinx<3.5.0
+        - sphinx>=3.5.1
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
@@ -161,7 +156,7 @@ outputs:
         - pyarrow {{ arrow_cpp }}
         - numba>=0.50,<1.0a0
         - python {{ python }}
-        - sphinx<3.5.0
+        - sphinx>=3.5.1
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - {{ pin_compatible('numba') }}

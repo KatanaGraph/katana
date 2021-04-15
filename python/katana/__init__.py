@@ -21,8 +21,17 @@ by Galois C++.
 
 from typing import Type, Dict, Union
 
-# Initialize the galois runtime immediately.
-import katana.galois
+try:
+    # Initialize the galois runtime immediately.
+    import katana.galois
+except ImportError as e:
+    if "libnuma" in str(e):
+        raise ImportError(
+            "katana requires libnuma to be installed. Install it with your native package manager. "
+            "E.g., `sudo apt install libnuma1`."
+        )
+
+__all__ = ["TsubaError", "GaloisError", "QueryError"]
 
 __version__ = katana.galois.get_version()
 

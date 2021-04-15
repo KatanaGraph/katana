@@ -95,9 +95,14 @@ def main():
         return 1
 
     try:
-        auth = HTTPBasicAuth(os.environ["GITHUB_USERNAME"], os.environ["GITHUB_PASSWORD"])
+        password = os.environ.get("GITHUB_PASSWORD", os.environ.get("GITHUB_TOKEN", None))
+        if not password:
+            raise KeyError()
+        auth = HTTPBasicAuth(os.environ["GITHUB_USERNAME"], password)
     except KeyError:
-        print("This script requires GITHUB_USERNAME and GITHUB_PASSWORD to be set to valid github credentials.")
+        print(
+            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or GITHUB_TOKEN to be set to valid Github credentials."
+        )
         return 2
     repo = "katanagraph/Katana"
 
@@ -122,7 +127,7 @@ def main():
             subprocess.check_call(pkgs_upload_cmd)
 
         if upload_docs:
-            # TODO: Add support for docs upload once we have a place to upload the docs.
+            # TODO(amp): Add support for docs upload once we have a place to upload the docs.
             raise NotImplementedError("Uploading documentation is not yet supported.")
     except Exception as e:
         leave = True
@@ -135,10 +140,10 @@ def main():
         print()
         print(" ".join(pkgs_upload_cmd))
         print()
-        # TODO: Add instructions for docs upload
+        # TODO(amp): Add instructions for docs upload
         print(f"This script leaves the downloaded katana-python documentation in: {docs_dir}")
         print(f"This script leaves the downloaded conda packages in: {pkgs_dir}")
-        print(f"To clean up after this script delete: {dir}")
+        print(f"To clean up after this script, delete: {dir}")
 
 
 if __name__ == "__main__":

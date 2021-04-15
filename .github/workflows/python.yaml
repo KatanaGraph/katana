@@ -87,8 +87,7 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        export KATANA_DOCS_OUTPUT=$HOME/docs
-        export KATANA_VERSION=$(scripts/version show)
+        export KATANA_VERSION="$(scripts/version show)"
         conda mambabuild -c conda-forge --output-folder $HOME/build/ conda_recipe/
 
     - name: Clean ccache
@@ -98,12 +97,6 @@ jobs:
 
     # Upload path is relative to work directory and "~" and "${{env.HOME}}" do
     # not seem to be expanded, so hard code HOME for now.
-    - name: Upload Python documentation
-      uses: actions/upload-artifact@v1
-      if: startsWith(matrix.os, 'ubuntu-')
-      with:
-        name: katana-python-docs-${{matrix.os}}
-        path: /home/runner/docs
     - name: Upload built packages
       uses: actions/upload-artifact@v1
       if: startsWith(matrix.os, 'ubuntu-')

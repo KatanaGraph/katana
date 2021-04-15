@@ -1,12 +1,6 @@
 #! /bin/sh
 set -ex
 
-#if echo "${HOST}" | grep -q "darwin"; then
-#  CMAKE_PLATFORM_FLAG="-DCMAKE_OSX_SYSROOT=${CONDA_BUILD_SYSROOT}"
-#else
-#  CMAKE_PLATFORM_FLAG="-DCMAKE_TOOLCHAIN_FILE=${RECIPE_DIR}/cross-linux.cmake"
-#fi
-
 CMAKE_CCACHE_OPTION=""
 if ccache -V >/dev/null 2>/dev/null; then
   export CCACHE_BASEDIR="$(dirname "$SRC_DIR")"
@@ -17,22 +11,15 @@ fi
 rm -rf build
 mkdir build
 cd build
-# Useful debugging addition to the below: -DCMAKE_VERBOSE_MAKEFILE=ON
 if [ -z "${CMAKE_BUILD_PARALLEL_LEVEL}" ]; then
   export CMAKE_BUILD_PARALLEL_LEVEL="$CPU_COUNT"
 fi
 echo "Building with parallelism: ${CMAKE_BUILD_PARALLEL_LEVEL}"
 
-CMAKE_DOCS_OPTION=""
-if [ -n "$KATANA_DOCS_OUTPUT" ]; then
-    CMAKE_DOCS_OPTION="-DBUILD_DOCS=ON"
-fi
-
+# Useful debugging addition to the below: -DCMAKE_VERBOSE_MAKEFILE=ON
 cmake \
   $CMAKE_CCACHE_OPTION \
   $CMAKE_ARGS \
-  $CMAKE_PLATFORM_FLAG \
-  $CMAKE_DOCS_OPTION \
   -DBUILD_SHARED_LIBS=ON \
   -DBUILD_TESTING=OFF \
   -DKATANA_LANG_BINDINGS=python \
@@ -41,10 +28,3 @@ cmake \
   -S "$SRC_DIR"
 make -j${CMAKE_BUILD_PARALLEL_LEVEL}
 make install
-
-if [ -n "$KATANA_DOCS_OUTPUT" ]; then
-  make doc
-  echo "Exporting documentation to $KATANA_DOCS_OUTPUT"
-  mkdir -p "$KATANA_DOCS_OUTPUT"
-  cp -a docs "$KATANA_DOCS_OUTPUT"
-fi

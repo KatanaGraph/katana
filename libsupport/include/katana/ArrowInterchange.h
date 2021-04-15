@@ -7,7 +7,6 @@
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "katana/config.h"
 
 /// We have two strategies for Arrow conversion.  One uses
 /// arrow::stl::TableFromTupleRange, the other uses Builders. TableFromTupleRange is
@@ -282,10 +281,6 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 /// Combine chunks of ChunkedArray into a single Array
 KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> Unchunk(
     const std::shared_ptr<arrow::ChunkedArray>& original);
-/// Take a vector of scalars of type data_type and return an Array
-KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> ScalarVecToArray(
-    const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<std::shared_ptr<arrow::Scalar>>& data);
 /// Return a randomly shuffled version of a ChunkedArray
 KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
     const std::shared_ptr<arrow::ChunkedArray>& original);

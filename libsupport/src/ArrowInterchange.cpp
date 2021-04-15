@@ -110,174 +110,6 @@ katana::NullChunkedArray(
   return std::make_shared<arrow::ChunkedArray>(chunks);
 }
 
-template <typename BuilderType, typename ScalarType>
-katana::Result<std::shared_ptr<arrow::Array>>
-BasicToArray(
-    const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
-  if (data.empty()) {
-    return katana::ResultSuccess();
-  }
-  auto* pool = arrow::default_memory_pool();
-  auto builder = std::make_shared<BuilderType>(data_type, pool);
-  if (auto st = builder->Resize(data.size()); !st.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "arrow builder failed resize: {} type: {} reason: {}", data.size(),
-        data_type->name(), st);
-  }
-  for (const auto& scalar : data) {
-    if (scalar->is_valid) {
-      // Is there a better way?
-      builder->UnsafeAppend(
-          std::static_pointer_cast<const ScalarType>(scalar)->value);
-    } else {
-      builder->UnsafeAppendNull();
-    }
-  }
-  std::shared_ptr<arrow::Array> array;
-  auto res = builder->Finish(&array);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "arrow builder finish type: {} : {}",
-        data_type->name(), res);
-  }
-  return array;
-}
-
-template <typename BuilderType, typename ScalarType>
-katana::Result<std::shared_ptr<arrow::Array>>
-StringLikeToArray(
-    const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
-  if (data.empty()) {
-    return katana::ResultSuccess();
-  }
-  auto* pool = arrow::default_memory_pool();
-  auto builder = std::make_shared<BuilderType>(data_type, pool);
-  for (const auto& scalar : data) {
-    if (scalar->is_valid) {
-      // ->value->ToString() works, scalar->ToString() yields "..."
-      if (auto res = builder->Append(
-              std::static_pointer_cast<ScalarType>(scalar)->value->ToString());
-          !res.ok()) {
-        return KATANA_ERROR(
-            katana::ErrorCode::ArrowError,
-            "arrow builder failed append type: {} : {}", scalar->type->name(),
-            res);
-      }
-    } else {
-      if (auto res = builder->AppendNull(); !res.ok()) {
-        return KATANA_ERROR(
-            katana::ErrorCode::ArrowError,
-            "arrow builder failed append null: {}", scalar->type->name(), res);
-      }
-    }
-  }
-  std::shared_ptr<arrow::Array> array;
-  auto res = builder->Finish(&array);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "arrow builder finish type: {} : {}",
-        data_type->name(), res);
-  }
-  return array;
-}
-
-katana::Result<std::shared_ptr<arrow::Array>>
-katana::ScalarVecToArray(
-    const std::shared_ptr<arrow::DataType>& data_type,
-    const std::vector<std::shared_ptr<arrow::Scalar>>& data) {
-  std::shared_ptr<arrow::Array> array;
-  switch (data_type->id()) {
-  case arrow::Type::LARGE_STRING: {
-    return StringLikeToArray<
-        arrow::LargeStringBuilder, arrow::LargeStringScalar>(data_type, data);
-    break;
-  }
-  case arrow::Type::STRING: {
-    return StringLikeToArray<arrow::StringBuilder, arrow::StringScalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::INT64: {
-    return BasicToArray<arrow::Int64Builder, arrow::Int64Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::UINT64: {
-    return BasicToArray<arrow::UInt64Builder, arrow::UInt64Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::INT32: {
-    return BasicToArray<arrow::Int32Builder, arrow::Int32Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::UINT32: {
-    return BasicToArray<arrow::UInt32Builder, arrow::UInt32Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::INT16: {
-    return BasicToArray<arrow::Int16Builder, arrow::Int16Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::UINT16: {
-    return BasicToArray<arrow::UInt16Builder, arrow::UInt16Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::INT8: {
-    return BasicToArray<arrow::Int8Builder, arrow::Int8Scalar>(data_type, data);
-    break;
-  }
-  case arrow::Type::UINT8: {
-    return BasicToArray<arrow::UInt8Builder, arrow::UInt8Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::DOUBLE: {
-    return BasicToArray<arrow::DoubleBuilder, arrow::DoubleScalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::FLOAT: {
-    return BasicToArray<arrow::FloatBuilder, arrow::FloatScalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::BOOL: {
-    return BasicToArray<arrow::BooleanBuilder, arrow::BooleanScalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::TIMESTAMP: {
-    return BasicToArray<arrow::TimestampBuilder, arrow::TimestampScalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::DATE32: {
-    return BasicToArray<arrow::Date32Builder, arrow::Date32Scalar>(
-        data_type, data);
-    break;
-  }
-  case arrow::Type::LIST: {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "list types not supported");
-    break;
-  }
-  default: {
-    break;
-  }
-  }
-  return KATANA_ERROR(
-      katana::ErrorCode::ArrowError, "unsupported arrow type: {}",
-      data_type->name());
-}
-
 void
 katana::DiffFormatTo(
     fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
@@ -289,8 +121,22 @@ katana::DiffFormatTo(
         a1->type()->name());
     return;
   }
-  auto b0 = Unchunk(a0).value();
-  auto b1 = Unchunk(a1).value();
+  auto maybe_b0 = Unchunk(a0);
+  if (!maybe_b0) {
+    fmt::format_to(
+        *buf, "failed conversion of chunked array to array type: {} reason: {}",
+        a0->type()->name(), maybe_b0.error());
+    return;
+  }
+  auto b0 = maybe_b0.value();
+  auto maybe_b1 = Unchunk(a1);
+  if (!maybe_b1) {
+    fmt::format_to(
+        *buf, "failed conversion of chunked array to array type: {} reason: {}",
+        a1->type()->name(), maybe_b1.error());
+  }
+  auto b1 = maybe_b1.value();
+
   arrow::EqualOptions equal_options;
   // TODO (witchel) create a bounded length streambuf so this won't waste memory when
   // the diff is large

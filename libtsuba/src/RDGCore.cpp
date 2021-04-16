@@ -6,7 +6,7 @@
 namespace {
 
 katana::Result<void>
-AddProperties(
+UpsertProperties(
     const std::shared_ptr<arrow::Table>& props,
     std::shared_ptr<arrow::Table>* to_update) {
   std::shared_ptr<arrow::Table> current = *to_update;
@@ -26,11 +26,29 @@ AddProperties(
     int last = current->num_columns();
 
     for (int i = 0, n = schema->num_fields(); i < n; i++) {
-      auto result =
-          next->AddColumn(last + i, schema->field(i), props->column(i));
+      auto name = schema->field(i)->name();
+      auto current_col = next->GetColumnByName(name);
+      arrow::Result<std::shared_ptr<arrow::Table>> result;
+      std::string error_context = "insert";
+      if (current_col == nullptr) {
+        // Insert the column, error_context == "insert"
+        result = next->AddColumn(last++, schema->field(i), props->column(i));
+      } else {
+        // Update the column
+        error_context = "update";
+        auto col_names = next->ColumnNames();
+        // Column names are not sorted, but assumed to be less than 100s
+        auto col_it = std::find(col_names.begin(), col_names.end(), name);
+        KATANA_LOG_ASSERT(
+            col_it != col_names.end());  // GetColumnByName != null
+        result = next->SetColumn(
+            std::distance(col_names.begin(), col_it), schema->field(i),
+            props->column(i));
+      }
       if (!result.ok()) {
         return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "arrow error: {}", result.status());
+            tsuba::ErrorCode::ArrowError, "arrow error {}: {}", error_context,
+            result.status());
       }
 
       next = result.ValueOrDie();
@@ -47,6 +65,25 @@ AddProperties(
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+AddProperties(
+    const std::shared_ptr<arrow::Table>& props,
+    std::shared_ptr<arrow::Table>* to_update) {
+  auto col_names = (*to_update)->ColumnNames();
+
+  const auto& schema = props->schema();
+  for (int i = 0, n = schema->num_fields(); i < n; i++) {
+    auto name = schema->field(i)->name();
+    // Column names are not sorted, but assumed to be less than 100s
+    auto col_it = std::find(col_names.begin(), col_names.end(), name);
+    if (col_it != col_names.end()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::Exists, "column names are not distinct");
+    }
+  }
+  return UpsertProperties(props, to_update);
+}
+
 }  // namespace
 
 namespace tsuba {
@@ -59,6 +96,16 @@ RDGCore::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
 katana::Result<void>
 RDGCore::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
   return AddProperties(props, &edge_properties_);
+}
+
+katana::Result<void>
+RDGCore::UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props) {
+  return UpsertProperties(props, &node_properties_);
+}
+
+katana::Result<void>
+RDGCore::UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
+  return UpsertProperties(props, &edge_properties_);
 }
 
 void

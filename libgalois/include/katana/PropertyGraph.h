@@ -163,6 +163,8 @@ public:
         PropertyGraph::*properties_fn)() const;
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
+    Result<void> (PropertyGraph::*upsert_properties_fn)(
+        const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
@@ -183,6 +185,11 @@ public:
     Result<void> AddProperties(
         const std::shared_ptr<arrow::Table>& props) const {
       return (g->*add_properties_fn)(props);
+    }
+
+    Result<void> UpsertProperties(
+        const std::shared_ptr<arrow::Table>& props) const {
+      return (g->*upsert_properties_fn)(props);
     }
 
     Result<void> RemoveProperty(int i) const {
@@ -405,8 +412,14 @@ public:
 
   const GraphTopology& topology() const { return topology_; }
 
+  /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
+  /// Add Edge properties that do not exist in the current graph
   Result<void> AddEdgeProperties(const std::shared_ptr<arrow::Table>& props);
+  /// If property name exists, replace it, otherwise insert it
+  Result<void> UpsertNodeProperties(const std::shared_ptr<arrow::Table>& props);
+  /// If property name exists, replace it, otherwise insert it
+  Result<void> UpsertEdgeProperties(const std::shared_ptr<arrow::Table>& props);
 
   Result<void> RemoveNodeProperty(int i);
   Result<void> RemoveNodeProperty(const std::string& prop_name);
@@ -421,6 +434,7 @@ public:
         .property_fn = &PropertyGraph::GetNodeProperty,
         .properties_fn = &PropertyGraph::node_properties,
         .add_properties_fn = &PropertyGraph::AddNodeProperties,
+        .upsert_properties_fn = &PropertyGraph::UpsertNodeProperties,
         .remove_property_int = &PropertyGraph::RemoveNodeProperty,
         .remove_property_str = &PropertyGraph::RemoveNodeProperty,
     };
@@ -433,6 +447,7 @@ public:
         .property_fn = &PropertyGraph::GetEdgeProperty,
         .properties_fn = &PropertyGraph::edge_properties,
         .add_properties_fn = &PropertyGraph::AddEdgeProperties,
+        .upsert_properties_fn = &PropertyGraph::UpsertEdgeProperties,
         .remove_property_int = &PropertyGraph::RemoveEdgeProperty,
         .remove_property_str = &PropertyGraph::RemoveEdgeProperty,
     };

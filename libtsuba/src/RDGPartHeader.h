@@ -39,12 +39,28 @@ public:
   // Property manipulation
   //
 
-  void AppendNodePropStorageInfo(PropStorageInfo&& pmd) {
-    node_prop_info_list_.emplace_back(std::move(pmd));
+  void AddNodePropStorageInfo(PropStorageInfo&& pmd) {
+    auto pmd_it = std::find_if(
+        node_prop_info_list_.begin(), node_prop_info_list_.end(),
+        [&](const PropStorageInfo& my_pmd) { return my_pmd.name == pmd.name; });
+    if (pmd_it == node_prop_info_list_.end()) {
+      node_prop_info_list_.emplace_back(std::move(pmd));
+    } else {
+      // If we already have a record, clear the path so we will rewrite it
+      pmd_it->path = "";
+    }
   }
 
-  void AppendEdgePropStorageInfo(PropStorageInfo&& pmd) {
-    edge_prop_info_list_.emplace_back(std::move(pmd));
+  void AddEdgePropStorageInfo(PropStorageInfo&& pmd) {
+    auto pmd_it = std::find_if(
+        edge_prop_info_list_.begin(), edge_prop_info_list_.end(),
+        [&](const PropStorageInfo& my_pmd) { return my_pmd.name == pmd.name; });
+    if (pmd_it == edge_prop_info_list_.end()) {
+      edge_prop_info_list_.emplace_back(std::move(pmd));
+    } else {
+      // If we already have a record, clear the path so we will rewrite it
+      pmd_it->path = "";
+    }
   }
 
   void RemoveNodeProperty(uint32_t i) {

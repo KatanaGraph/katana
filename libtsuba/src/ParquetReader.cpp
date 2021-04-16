@@ -272,13 +272,19 @@ tsuba::ParquetReader::NumColumns(const katana::Uri& uri) {
   }
   std::unique_ptr<parquet::arrow::FileReader> reader(
       std::move(reader_res.value()));
+  return reader->parquet_reader()->metadata()->num_columns();
+}
 
-  std::shared_ptr<arrow::Schema> schema;
-  auto status = reader->GetSchema(&schema);
-  if (!status.ok()) {
-    return KATANA_ERROR(ErrorCode::ArrowError, "reading schema: {}", status);
+Result<int64_t>
+tsuba::ParquetReader::NumRows(const katana::Uri& uri) {
+  auto reader_res = MakeFileReader(uri, 0, 0);
+  if (!reader_res) {
+    return reader_res.error();
   }
-  return schema->num_fields();
+  std::unique_ptr<parquet::arrow::FileReader> reader(
+      std::move(reader_res.value()));
+
+  return reader->parquet_reader()->metadata()->num_rows();
 }
 
 Result<std::shared_ptr<arrow::Table>>

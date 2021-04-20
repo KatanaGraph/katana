@@ -5,6 +5,7 @@
 #include <future>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_set>
 
 #include "katana/Result.h"
@@ -31,13 +32,25 @@ struct StatBuf {
   uint64_t size{UINT64_C(0)};
 };
 
-// Returns an error file filename does not exist
+// Returns an error file uri does not exist
 KATANA_EXPORT katana::Result<void> FileStat(
-    const std::string& filename, StatBuf* s_buf);
+    const std::string& uri, StatBuf* s_buf);
 
 // Take whatever is in @data and put it a file called @uri
 KATANA_EXPORT katana::Result<void> FileStore(
-    const std::string& uri, const uint8_t* data, uint64_t size);
+    const std::string& uri, const void* data, uint64_t size);
+
+template <
+    class ContigContainer,
+    std::enable_if_t<
+        std::is_standard_layout<typename ContigContainer::value_type>::value,
+        bool> = true>
+KATANA_EXPORT katana::Result<void>
+FileStore(const std::string& uri, const ContigContainer& container) {
+  return FileStore(
+      uri, container.data(),
+      container.size() * sizeof(typename ContigContainer::value_type));
+}
 
 /// Copy a slice of a file from source_uri into dest_uri
 /// using a remote operation (avoiding a roundt rip through memory) if possible.
@@ -54,25 +67,23 @@ KATANA_EXPORT katana::Result<void> FileRemoteCopy(
 
 // Take whatever is in @data and start putting it a the file called @uri
 KATANA_EXPORT std::future<katana::Result<void>> FileStoreAsync(
-    const std::string& uri, const uint8_t* data, uint64_t size);
+    const std::string& uri, const void* data, uint64_t size);
 
 // read a part of the file into a caller defined buffer
 KATANA_EXPORT katana::Result<void> FileGet(
-    const std::string& filename, uint8_t* result_buffer, uint64_t begin,
-    uint64_t size);
+    const std::string& uri, void* result_buffer, uint64_t begin, uint64_t size);
 
-template <typename StrType, typename T>
+template <
+    typename StrType, typename T,
+    std::enable_if_t<std::is_standard_layout<T>::value, bool> = true>
 static inline katana::Result<void>
-FileGet(const StrType& filename, T* obj) {
-  return FileGet(
-      filename, reinterpret_cast<uint8_t*>(obj), /* NOLINT */
-      0, sizeof(*obj));
+FileGet(const StrType& uri, T* obj) {
+  return FileGet(uri, obj, 0, sizeof(T));
 }
 
 // start reading a part of the file into a caller defined buffer
 KATANA_EXPORT std::future<katana::Result<void>> FileGetAsync(
-    const std::string& filename, uint8_t* result_buffer, uint64_t begin,
-    uint64_t size);
+    const std::string& uri, void* result_buffer, uint64_t begin, uint64_t size);
 
 /// List the set of files in a directory
 /// \param directory is URI whose contents are listed. It can be

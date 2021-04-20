@@ -21,28 +21,29 @@
 #include "tsuba/Errors.h"
 
 katana::Result<void>
-tsuba::FileStore(const std::string& uri, const uint8_t* data, uint64_t size) {
-  return FS(uri)->PutMultiSync(uri, data, size);
+tsuba::FileStore(const std::string& uri, const void* data, uint64_t size) {
+  return FS(uri)->PutMultiSync(uri, static_cast<const uint8_t*>(data), size);
 }
 
 std::future<katana::Result<void>>
-tsuba::FileStoreAsync(
-    const std::string& uri, const uint8_t* data, uint64_t size) {
-  return FS(uri)->PutAsync(uri, data, size);
+tsuba::FileStoreAsync(const std::string& uri, const void* data, uint64_t size) {
+  return FS(uri)->PutAsync(uri, static_cast<const uint8_t*>(data), size);
 }
 
 katana::Result<void>
 tsuba::FileGet(
-    const std::string& uri, uint8_t* result_buffer, uint64_t begin,
+    const std::string& uri, void* result_buffer, uint64_t begin,
     uint64_t size) {
-  return FS(uri)->GetMultiSync(uri, begin, size, result_buffer);
+  return FS(uri)->GetMultiSync(
+      uri, begin, size, static_cast<uint8_t*>(result_buffer));
 }
 
 std::future<katana::Result<void>>
 tsuba::FileGetAsync(
-    const std::string& uri, uint8_t* result_buffer, uint64_t begin,
+    const std::string& uri, void* result_buffer, uint64_t begin,
     uint64_t size) {
-  return FS(uri)->GetAsync(uri, begin, size, result_buffer);
+  return FS(uri)->GetAsync(
+      uri, begin, size, static_cast<uint8_t*>(result_buffer));
 }
 
 katana::Result<void>

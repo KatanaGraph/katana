@@ -24,11 +24,13 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "katana/Env.h"
 #include "katana/Executor_OnEach.h"
 #include "katana/Logging.h"
 #include "katana/PerThreadStorage.h"
+#include "tsuba/file.h"
 
 namespace {
 
@@ -250,14 +252,13 @@ katana::StatManager::Print() {
   if (impl_->outfile_.empty()) {
     return PrintStats(std::cout);
   }
-
-  std::ofstream out(impl_->outfile_.c_str());
-  if (!out) {
-    KATANA_LOG_ERROR("could not print stats to {} ", impl_->outfile_);
-    return PrintStats(std::cerr);
-  }
-
+  // n.b. Assumes that stats fit in memory
+  std::ostringstream out;
   PrintStats(out);
+
+  if (auto res = tsuba::FileStore(impl_->outfile_, out.str()); !res) {
+    KATANA_LOG_ERROR("printing stats: {}", res.error());
+  }
 }
 
 static katana::StatManager* stat_manager_singleton;

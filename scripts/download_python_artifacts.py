@@ -35,7 +35,8 @@ def find_artifacts(repo, auth):
                 conda_package_macos_artifact = artifact
             if artifact["name"].startswith("katana-python-docs") and not docs_artifact:
                 docs_artifact = artifact
-        if conda_package_ubuntu_artifact and docs_artifact:  # Don't require conda_package_macos_url for now
+        # TODO(amp): docs_artifact and conda_package_macos_artifact are broken.
+        if conda_package_ubuntu_artifact:
             print(f"Found artifacts at commit: {run['head_commit']['message']}")
             break
     return conda_package_ubuntu_artifact, conda_package_macos_artifact, docs_artifact

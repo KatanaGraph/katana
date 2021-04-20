@@ -155,9 +155,7 @@ tsuba::ParquetReader::ReadFromUriSliced(const katana::Uri& uri) {
 
   out = out->Slice(row_offset, slice.length);
 
-  // TODO(thunt) re-enable this when query is fixed
-  //return FixTable(std::move(out));
-  return out;
+  return FixTable(std::move(out));
 }
 
 Result<std::shared_ptr<arrow::Table>>

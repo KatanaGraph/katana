@@ -88,7 +88,7 @@ public:
       : vocab_(vocab), vocab_multiset_(vocab_multiset) {}
 
   /**
-         * @return {@link Map} from each given token to a {@link HuffmanNode}
+         * @return Map from each given token to a  HuffmanNode
          */
   void Encode(
       std::map<uint32_t, HuffmanNode*>* huffman_node_map,

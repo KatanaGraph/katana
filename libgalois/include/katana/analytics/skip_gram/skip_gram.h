@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 
 #include "katana/AtomicHelpers.h"
 #include "katana/AtomicWrapper.h"

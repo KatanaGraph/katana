@@ -404,7 +404,6 @@ public:
 
   /**
 	  * Degrades the learning rate (alpha) steadily towards 0
-	  * @param iter Only used for debugging
 	  */
   void UpdateAlpha() {
     current_actual_ += word_count_ - last_word_count_;

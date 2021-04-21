@@ -26,6 +26,14 @@ public:
 
   Algorithm algorithm() const { return algorithm_; }
 
+  // TODO(amp): This algorithm defines the semantics of the call. If there were
+  //  an algorithm that, for instance, took a list of edges, that would need to
+  //  be a different function, not just a different plan, since it takes
+  //  semantically different arguments. I do think this should have a plan, even
+  //  if there is only one concrete algorithm, but it should be defined and
+  //  documented in terms of the concrete algorithm, not the semantics of the
+  //  function (which is described well below).
+
   /**
    * The node-set algorithm:
    *    Given a set of node ids, this algorithm constructs a new sub-graph
@@ -41,12 +49,13 @@ public:
  * The new sub-graph is independent of the original graph.
  *
  * @param pg The graph to process.
- * @param node_vec Set of node ids
+ * @param node_vec Set of node IDs
  * @param plan
  */
 KATANA_EXPORT katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphExtraction(
-    katana::PropertyGraph* pg, const std::vector<uint32_t>& node_vec,
+    katana::PropertyGraph* pg,
+    const std::vector<katana::PropertyGraph::Node>& node_vec,
     SubGraphExtractionPlan plan = {});
 // const std::vector<std::string>& node_properties_to_copy, const std::vector<std::string>& edge_properties_to_copy);
 

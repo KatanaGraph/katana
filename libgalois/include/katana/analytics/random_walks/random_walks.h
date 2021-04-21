@@ -14,12 +14,18 @@ namespace katana::analytics {
 
 /// A computational plan to for random walks, specifying the algorithm and any
 /// parameters associated with it.
-class RandomWalksPlan : Plan {
-  enum Algo { node2vec, edge2vec };
-
+class RandomWalksPlan : public Plan {
 public:
-  /// Algorithm selectors for Connected-components
+  /// Algorithm selectors for random walks
   enum Algorithm { kNode2Vec, kEdge2Vec };
+
+  static const Algorithm kDefaultAlgorithm = kNode2Vec;
+  static const uint32_t kDefaultWalkLength = 1;
+  static const uint32_t kDefaultNumberOfWalks = 1;
+  constexpr static const double kDefaultBackwardProbability = 1.0;
+  constexpr static const double kDefaultForwardProbability = 1.0;
+  static const uint32_t kDefaultMaxIterations = 10;
+  static const uint32_t kDefaultNumberOfEdgeTypes = 1;
 
   // Don't allow people to directly construct these, so as to have only one
   // consistent way to configure.
@@ -50,23 +56,51 @@ private:
         number_of_edge_types_(number_of_edge_types) {}
 
 public:
-  // kChunkSize is a fixed const int (default value: 1)
+  // kChunkSize is fixed at 1
   static const int kChunkSize;
 
-  RandomWalksPlan() : RandomWalksPlan{kCPU, kNode2Vec, 1, 1, 1.0, 1.0, 10, 1} {}
+  RandomWalksPlan()
+      : RandomWalksPlan{
+            kCPU,
+            kDefaultAlgorithm,
+            kDefaultWalkLength,
+            kDefaultNumberOfWalks,
+            kDefaultBackwardProbability,
+            kDefaultForwardProbability,
+            kDefaultMaxIterations,
+            kDefaultNumberOfEdgeTypes} {}
 
   Algorithm algorithm() const { return algorithm_; }
+
+  // TODO(amp): The parameters walk_length, number_of_walks,
+  //  backward_probability, and forward_probability control the expected output,
+  //  not the algorithm used to compute the output. So they need to be parameters
+  //  on the algorithm function, not in the plan. The plan should be parameters
+  //  which do not change the expected output (though they may cause selecting a
+  //  different correct output).
+
+  /// Length of random walks.
   uint32_t walk_length() const { return walk_length_; }
+
+  /// Number of walks per node.
   uint32_t number_of_walks() const { return number_of_walks_; }
+
+  /// Probability of moving back to parent.
   double backward_probability() const { return backward_probability_; }
+
+  /// Probability of moving forward (2-hops).
   double forward_probability() const { return forward_probability_; }
+
   uint32_t max_iterations() const { return max_iterations_; }
+
   uint32_t number_of_edge_types() const { return number_of_edge_types_; }
 
   /// Node2Vec algorithm to generate random walks on the graph
   static RandomWalksPlan Node2Vec(
-      uint32_t walk_length, uint32_t number_of_walks,
-      double backward_probability, double forward_probability) {
+      uint32_t walk_length = kDefaultWalkLength,
+      uint32_t number_of_walks = kDefaultNumberOfWalks,
+      double backward_probability = kDefaultBackwardProbability,
+      double forward_probability = kDefaultBackwardProbability) {
     return {
         kCPU,
         kNode2Vec,
@@ -81,9 +115,12 @@ public:
   /// Edge2Vec algorithm to generate random walks on the graph.
   /// Takes the heterogeneity of the edges into account
   static RandomWalksPlan Edge2Vec(
-      uint32_t walk_length, uint32_t number_of_walks,
-      double backward_probability, double forward_probability,
-      uint32_t max_iterations, uint32_t number_of_edge_types) {
+      uint32_t walk_length = kDefaultWalkLength,
+      uint32_t number_of_walks = kDefaultNumberOfWalks,
+      double backward_probability = kDefaultBackwardProbability,
+      double forward_probability = kDefaultBackwardProbability,
+      uint32_t max_iterations = kDefaultMaxIterations,
+      uint32_t number_of_edge_types = kDefaultNumberOfEdgeTypes) {
     return {
         kCPU,
         kNode2Vec,
@@ -96,11 +133,10 @@ public:
   }
 };
 
-/// Compute the random-walks for pg. The pg is expected to be
-/// symmetric.
-/// The parameters can be specified, but have reasonable defaults. Not all parameters
-/// are used by the algorithms.
-/// The generated random-walks generated are return in Katana::InsertBag.
+/// Compute the random-walks for pg. The pg is expected to be symmetric. The
+/// parameters can be specified, but have reasonable defaults. Not all
+/// parameters are used by the algorithms. The generated random-walks generated
+/// are returned as a vector of vectors.
 KATANA_EXPORT Result<std::vector<std::vector<uint32_t>>> RandomWalks(
     PropertyGraph* pg, RandomWalksPlan plan = RandomWalksPlan());
 

@@ -13,7 +13,6 @@ namespace katana::analytics {
 /// parameters associated with it.
 class LouvainClusteringPlan : public Plan {
 public:
-  /// Algorithm selectors for Single-Source Shortest Path
   enum Algorithm {
     kDoAll,
   };
@@ -53,9 +52,17 @@ private:
 
 public:
   LouvainClusteringPlan()
-      : LouvainClusteringPlan{kCPU, kDoAll, false, 0.01, 0.01, 10, 100} {}
+      : LouvainClusteringPlan{
+            kCPU,
+            kDoAll,
+            kEnableVF,
+            kModularityThresholdPerRound,
+            kModularityThresholdTotal,
+            kMaxIterations,
+            kMinGraphSize} {}
 
   Algorithm algorithm() const { return algorithm_; }
+  // TODO(amp): These parameters should be documented.
   bool is_enable_vf() const { return enable_vf_; }
   double modularity_threshold_per_round() const {
     return modularity_threshold_per_round_;
@@ -86,7 +93,7 @@ public:
 /// Compute the Louvain Clustering for pg.
 /// The edge weights are taken from the property named
 /// edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
-/// int), and the computed cluster ids are stored in the property named
+/// int), and the computed cluster IDs are stored in the property named
 /// output_property_name (as uint32_t).
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.

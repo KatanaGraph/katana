@@ -45,6 +45,7 @@ public:
             kDefaultRelabeling} {}
 
   Algorithm algorithm() const { return algorithm_; }
+  // TODO(amp): These parameters should be documented.
   Relabeling relabeling() const { return relabeling_; }
   bool edges_sorted() const { return edges_sorted_; }
 
@@ -70,6 +71,7 @@ public:
   }
 };
 
+// TODO(amp): The doc string was not updated.
 /**
  * Count the total number of triangles in the graph. The graph must be
  * symmetric!

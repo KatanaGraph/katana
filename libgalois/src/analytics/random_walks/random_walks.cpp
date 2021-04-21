@@ -44,9 +44,8 @@ struct Node2VecAlgo {
       return graph.num_nodes();
     }
     double total_wt = degree[n];
-    prob = prob * total_wt;
 
-    uint32_t edge_index = std::floor(prob);
+    uint32_t edge_index = std::floor(prob * total_wt);
     auto edge = graph.edge_begin(n) + edge_index;
     return *graph.GetEdgeDest(edge);
   }
@@ -79,7 +78,7 @@ struct Node2VecAlgo {
     uint64_t total_walks = graph.size() * plan_.number_of_walks();
 
     katana::do_all(
-        katana::iterate((uint64_t)0, total_walks),
+        katana::iterate(uint64_t(0), total_walks),
         [&](uint64_t idx) {
           GNode n = idx % graph.size();
 
@@ -144,7 +143,7 @@ struct Node2VecAlgo {
                   alpha = prob_forward;
                 }
 
-                if (alpha >= y) {
+                if (y <= alpha) {
                   //accept y
                   walk.push_back(std::move(nbr));
                   break;
@@ -153,7 +152,7 @@ struct Node2VecAlgo {
             }
           }
 
-          (*walks).push(std::move(walk));
+          walks->push(std::move(walk));
         },
         katana::steal(), katana::chunk_size<RandomWalksPlan::kChunkSize>(),
         katana::loopname("Node2vec walks"), katana::no_stats());
@@ -234,7 +233,7 @@ struct Edge2VecAlgo {
     uint64_t total_walks = graph.size() * plan_.number_of_walks();
 
     katana::do_all(
-        katana::iterate((uint64_t)0, total_walks),
+        katana::iterate(uint64_t(0), total_walks),
         [&](uint64_t idx) {
           GNode n = idx % graph.size();
 
@@ -338,8 +337,8 @@ struct Edge2VecAlgo {
             num_edge_types[type]++;
           }
 
-          (*per_thread_num_edge_types_walks.getLocal())
-              .emplace_back(std::move(num_edge_types));
+          per_thread_num_edge_types_walks.getLocal()->emplace_back(
+              std::move(num_edge_types));
         });
 
     for (unsigned j = 0; j < katana::getActiveThreads(); ++j) {
@@ -359,7 +358,7 @@ struct Edge2VecAlgo {
     transformed_num_edge_types_walks.resize(plan_.number_of_edge_types() + 1);
 
     katana::do_all(
-        katana::iterate((uint32_t)0, plan_.number_of_edge_types() + 1),
+        katana::iterate(uint32_t(0), plan_.number_of_edge_types() + 1),
         [&](uint32_t j) {
           for (uint32_t i = 0; i < rows; i++) {
             transformed_num_edge_types_walks[j].push_back(
@@ -395,8 +394,8 @@ struct Edge2VecAlgo {
       const std::vector<std::vector<uint32_t>>&
           transformed_num_edge_types_walks,
       const std::vector<double>& means) {
-    std::vector<uint32_t> x = transformed_num_edge_types_walks[i];
-    std::vector<uint32_t> y = transformed_num_edge_types_walks[j];
+    const std::vector<uint32_t>& x = transformed_num_edge_types_walks[i];
+    const std::vector<uint32_t>& y = transformed_num_edge_types_walks[j];
 
     double sum = 0.0;
     double sig1 = 0.0;
@@ -425,7 +424,7 @@ struct Edge2VecAlgo {
           transformed_num_edge_types_walks,
       const std::vector<double>& means) {
     katana::do_all(
-        katana::iterate((uint32_t)1, plan_.number_of_edge_types() + 1),
+        katana::iterate(uint32_t(1), plan_.number_of_edge_types() + 1),
         [&](uint32_t i) {
           for (uint32_t j = 1; j <= plan_.number_of_edge_types(); j++) {
             double pearson_corr =
@@ -468,12 +467,11 @@ struct Edge2VecAlgo {
 template <typename Graph>
 void
 InitializeDegrees(const Graph& graph, katana::LargeArray<uint64_t>* degree) {
-  katana::do_all(
-      katana::iterate(graph),
-      [&](typename Graph::Node n) {
-        (*degree)[n] = std::distance(graph.edge_begin(n), graph.edge_end(n));
-      },
-      katana::steal());
+  katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
+    // Treat this as O(1) time because subtracting iterators is just pointer
+    // or number subtraction. So don't use steal().
+    (*degree)[n] = graph.edges(n).size();
+  });
 }
 
 }  //namespace
@@ -485,6 +483,12 @@ RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
     return res.error();
   }
 
+  // TODO(amp): This is incorrect. For Node2vec this needs to be:
+  //    Algorithm::Graph::Make(pg, {}, {}) // Ignoring all properties.
+  //  For Edge2vec this needs to be:
+  //    Algorithm::Graph::Make(pg, {}, {edge_type_property_name})
+  //  The current version requires the input to have exactly the properties
+  //  expected by the algorithm implementation.
   auto pg_result = Algorithm::Graph::Make(pg);
   if (!pg_result) {
     return pg_result.error();
@@ -510,11 +514,8 @@ RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
   degree.deallocate();
 
   std::vector<std::vector<uint32_t>> walks_in_vector;
-  walks_in_vector.reserve(pg->num_nodes() * plan.number_of_walks());
-  // Copy to vector of vectors.
-  for (auto walk : walks) {
-    walks_in_vector.push_back(walk);
-  }
+  walks_in_vector.reserve(plan.number_of_walks());
+  std::move(walks.begin(), walks.end(), std::back_inserter(walks_in_vector));
   return walks_in_vector;
 }
 

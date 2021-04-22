@@ -76,13 +76,13 @@ main(int argc, char** argv) {
   totalTime.start();
 
   SkipGramPlan plan = SkipGramPlan();
-  plan = SkipGramPlan::SkipGram(
-      embeddingSize, alpha, window, downSampleRate, hierarchicalSoftmax,
-      numNegSamples, numIterations, minimumFrequency);
 
   std::cout << "Reading from file: " << inputFile << "\n";
 
-  auto embeddings_result = SkipGram(inputFile, plan);
+  auto embeddings_result = SkipGram(
+      inputFile, plan, embeddingSize, alpha, window, downSampleRate,
+      hierarchicalSoftmax, numNegSamples, numIterations, minimumFrequency);
+
   if (!embeddings_result) {
     KATANA_LOG_FATAL("failed to run algorithm: {}", embeddings_result.error());
   }

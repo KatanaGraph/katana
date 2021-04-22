@@ -743,7 +743,14 @@ StoreEmbeddings(
 }
 
 katana::Result<std::vector<std::pair<uint32_t, std::vector<double>>>>
-katana::analytics::SkipGram(const std::string& input_file, SkipGramPlan plan) {
+katana::analytics::SkipGram(
+    const std::string& input_file, SkipGramPlan plan, uint32_t embedding_size,
+    double alpha, uint32_t window, double down_sample_rate,
+    bool hierarchical_softmax, uint32_t num_neg_samples,
+    uint32_t num_iterations, uint32_t minimum_frequency) {
+  if (plan.algorithm() != SkipGramPlan::kSkipGram) {
+    return katana::ErrorCode::InvalidArgument;
+  }
   std::ifstream input(input_file.c_str());
 
   std::vector<std::vector<uint32_t>> random_walks;
@@ -757,14 +764,13 @@ katana::analytics::SkipGram(const std::string& input_file, SkipGramPlan plan) {
 
   BuildVocab(
       random_walks, &vocab, vocab_multiset, &num_trained_tokens,
-      plan.minimum_frequency());
+      minimum_frequency);
 
   std::vector<std::vector<uint32_t>> refined_random_walks;
 
   RefineRandomWalks(random_walks, &refined_random_walks, vocab);
 
   HuffmanCoding huffman_coding(&vocab, &vocab_multiset);
-  katana::gPrint("Huffman Coding init done");
 
   std::vector<HuffmanCoding::HuffmanNode> huffman_nodes;
   huffman_nodes.resize(vocab.size());
@@ -772,21 +778,14 @@ katana::analytics::SkipGram(const std::string& input_file, SkipGramPlan plan) {
   std::map<uint32_t, HuffmanCoding::HuffmanNode*> huffman_nodes_map;
   huffman_coding.Encode(&huffman_nodes_map, &huffman_nodes);
 
-  katana::gPrint("Huffman Encoding done");
-
   SkipGramModelTrainer skip_gram_model_trainer(
-      plan.embedding_size(), plan.alpha(), plan.window(),
-      plan.down_sample_rate(), plan.hierarchical_softmax(),
-      plan.num_neg_samples(), plan.num_iterations(), vocab.size(),
-      num_trained_tokens, huffman_nodes_map);
-
-  katana::gPrint("Skip-Gram Trainer Init done");
+      embedding_size, alpha, window, down_sample_rate, hierarchical_softmax,
+      num_neg_samples, num_iterations, vocab.size(), num_trained_tokens,
+      huffman_nodes_map);
 
   skip_gram_model_trainer.InitExpTable();
 
-  katana::gPrint("Skip-Gram Init exp table \n");
-
-  for (uint32_t iter = 0; iter < plan.num_iterations(); iter++) {
+  for (uint32_t iter = 0; iter < num_iterations; iter++) {
     skip_gram_model_trainer.Train(
         refined_random_walks, huffman_nodes_map, vocab_multiset);
   }
@@ -794,6 +793,5 @@ katana::analytics::SkipGram(const std::string& input_file, SkipGramPlan plan) {
   uint32_t max_id = *(vocab.crbegin());
 
   return StoreEmbeddings(
-      huffman_nodes_map, skip_gram_model_trainer, max_id,
-      plan.embedding_size());
+      huffman_nodes_map, skip_gram_model_trainer, max_id, embedding_size);
 }

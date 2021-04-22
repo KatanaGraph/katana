@@ -230,7 +230,7 @@ def bump_checks(args):
     git.switch(current_branch, config.enterprise, config.dry_run)
     git.switch(current_branch, config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=False)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=False)
     next_version = version.Version(args.next_version)
 
     check_branch_version(current_branch, kind, next_version, prev_version)
@@ -300,7 +300,7 @@ def bump_subcommand(args):
 
     g = GithubFacade(config)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=True)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
 
     current_branch = git.get_branch_checked_out(config.open)
@@ -535,7 +535,7 @@ def release_subcommand(args):
     # Perform the checks that bump will do first. That way we will fail before tagging if possible.
     bump_checks(args)
     # Set some arguments for tag. This is a bit of a hack, but not worth the engineering to fix.
-    ver, variant = get_explicit_version(git.HEAD, False, config.open, no_dev=True)
+    ver, variant = get_explicit_version(git.HEAD, False, config.open, config.version_file, no_dev=True)
     args.version = str(ver)
     args.require_upstream = True
     tag_subcommand(args)
@@ -570,7 +570,7 @@ def release_branch_subcommand(args):
         git.switch("master", config.enterprise, config.dry_run)
     git.switch("master", config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, no_dev=True)
+    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
@@ -599,6 +599,9 @@ def release_branch_subcommand(args):
 
 
 def check_clean(args, config):
+    if not config.open:
+        raise StateError("Action cannot run in a source tree that is not a git clone.")
+
     is_dirty = git.is_dirty(config.open) or (config.has_enterprise and git.is_dirty(config.enterprise))
     if not args.clean and is_dirty:
         raise StateError("Action only supported in clean repositories. (Stash your changes.)")

@@ -39,6 +39,7 @@ class Configuration:
     github_access: Tuple[str, ...]
     enterprise: Optional[Repo]
     open: Optional[Repo]
+    version_file: Optional[Path]
     dry_run: bool
 
     def __init__(self, args=Namespace()):
@@ -66,6 +67,15 @@ class Configuration:
         except InvalidVersion:
             logger.warning(
                 f"Failed to parse version provided in environment variable KATANA_VERSION: {environ.get('KATANA_VERSION')}"
+            )
+
+        self.version_file = None
+        if (katana_repo_path / CONFIG_VERSION_PATH).is_file():
+            self.version_file = katana_repo_path / CONFIG_VERSION_PATH
+        else:
+            logger.error(
+                f"Version file does not exist in source: {katana_repo_path / CONFIG_VERSION_PATH}. "
+                "Your Katana source is incomplete. Using 0.0.0 as a stand-in for the missing version."
             )
 
         self.open = None

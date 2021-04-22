@@ -64,7 +64,9 @@ def get_version(
         if config.has_enterprise:
             ke_commit = git.simplify_merge_commit(ke_commit, config.enterprise)
 
-    k_explicit_version, variant = get_explicit_version(k_commit, use_working_copy, config.open, variant)
+    k_explicit_version, variant = get_explicit_version(
+        k_commit, use_working_copy, config.open, config.version_file, variant
+    )
     ke_tag_version = None
     if config.has_enterprise and not git.is_dirty(config.enterprise):
         ke_tag_version = get_tag_version(ke_commit or "HEAD", config.enterprise)
@@ -170,9 +172,11 @@ def git_find_closest_core_branch(commit, repo: Repo):
     return nearest_branch
 
 
-def get_explicit_version(k_commit: str, use_working_copy: bool, repo, variant=None, no_dev=False):
+def get_explicit_version(k_commit: str, use_working_copy: bool, repo, version_file, variant=None, no_dev=False):
     tag_version = get_tag_version(k_commit, repo)
-    explicit_version = tag_version or get_config_version(None if use_working_copy else k_commit, repo, no_dev=no_dev)
+    explicit_version = tag_version or get_config_version(
+        None if use_working_copy else k_commit, repo, version_file, no_dev=no_dev
+    )
     if explicit_version.local and variant and variant != explicit_version.local:
         logger.warning(
             f"You are overriding the repository variant {explicit_version.local} with build-time variant {variant}."
@@ -181,12 +185,20 @@ def get_explicit_version(k_commit: str, use_working_copy: bool, repo, variant=No
     return explicit_version, variant
 
 
-def get_config_version(k_commit, repo: Repo, no_dev=False) -> version.Version:
-    if k_commit:
-        version_str = capture_command("git", *git.dir_arg(repo), "show", "-p", f"{k_commit}:{CONFIG_VERSION_PATH}")
-    else:
-        with open(repo.dir / CONFIG_VERSION_PATH, "rt") as version_file:
+def get_config_version(k_commit, repo: Repo, version_file, no_dev=False) -> version.Version:
+    if repo:
+        if k_commit:
+            version_str = capture_command("git", *git.dir_arg(repo), "show", "-p", f"{k_commit}:{CONFIG_VERSION_PATH}")
+        else:
+            with open(repo.dir / CONFIG_VERSION_PATH, "rt") as version_file:
+                version_str = version_file.read()
+    elif version_file:
+        # We have no git information. Wing it.
+        with open(Path(__file__).parent.parent.parent / CONFIG_VERSION_PATH, "rt") as version_file:
             version_str = version_file.read()
+    else:
+        # We have no information. Something is really broken. Still don't crash to allow builds.
+        version_str = "0.0.0"
     ver = version.Version(version_str.strip())
 
     if no_dev:

@@ -102,7 +102,7 @@ def _get_build_extension():
 
 def test_cython_module(name, cython_code, python_code="", extension_options=None):
     extension_options = extension_options or {}
-    require_python_module("cython")
+    require_python_module("Cython")
     import Cython.Build
     import Cython.Build.Inline
 

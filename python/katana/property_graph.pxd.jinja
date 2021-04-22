@@ -14,6 +14,8 @@ cdef class PropertyGraph:
 
     @staticmethod
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1
+    @staticmethod
+    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u)
 
     cdef GraphTopology topology(PropertyGraph)
     cpdef uint64_t num_nodes(PropertyGraph)

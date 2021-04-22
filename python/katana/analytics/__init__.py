@@ -30,6 +30,12 @@ Algorithms
 
 .. automodule:: katana.analytics._independent_set
 
+.. automodule:: katana.analytics._louvain_clustering
+
+.. automodule:: katana.analytics._local_clustering_coefficient
+
+.. automodule:: katana.analytics._subgraph_extraction
+
 .. automodule:: katana.analytics._jaccard
 
 .. automodule:: katana.analytics._k_core
@@ -67,6 +73,14 @@ from katana.analytics._independent_set import (
     IndependentSetStatistics,
 )
 from katana.analytics._jaccard import jaccard, jaccard_assert_valid, JaccardPlan, JaccardStatistics
+from katana.analytics._louvain_clustering import (
+    louvain_clustering,
+    louvain_clustering_assert_valid,
+    LouvainClusteringPlan,
+    LouvainClusteringStatistics,
+)
+from katana.analytics._local_clustering_coefficient import local_clustering_coefficient, LocalClusteringCoefficientPlan
+from katana.analytics._subgraph_extraction import subgraph_extraction, SubGraphExtractionPlan
 from katana.analytics._k_core import k_core, k_core_assert_valid, KCorePlan, KCoreStatistics
 from katana.analytics._k_truss import k_truss, k_truss_assert_valid, KTrussPlan, KTrussStatistics
 from katana.analytics._pagerank import pagerank, pagerank_assert_valid, PagerankPlan, PagerankStatistics

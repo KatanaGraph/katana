@@ -60,6 +60,12 @@ cdef class PropertyGraph:
             opts.edge_properties = &edge_props
         self.underlying = handle_result_value(_PropertyGraph.Make(bytes(path, "utf-8"), opts))
 
+    @staticmethod
+    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u):
+        f = <PropertyGraph>PropertyGraph.__new__(PropertyGraph)
+        f.underlying = u
+        return f
+
     def write(self, path, command_line) :
         """
         Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided). Provide lineage information in the form of a command line.

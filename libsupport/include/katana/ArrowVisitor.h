@@ -151,10 +151,8 @@ VisitArrowInternal(
     TYPE_CASE(TIME32)     // since midnight in seconds or millis
     TYPE_CASE(TIME64)     // since midnight in micros or nanos
     TYPE_CASE(TIMESTAMP)  // since UNIX epoch in seconds or smaller
-    TYPE_CASE(STRING)
     TYPE_CASE(LARGE_STRING)
     TYPE_CASE(STRUCT)
-    TYPE_CASE(LIST)
     TYPE_CASE(LARGE_LIST)
 #undef TYPE_CASE
   default:

@@ -1,6 +1,7 @@
 import numpy as np
 from pyarrow import Schema, table
 from pytest import approx, raises
+import pytest
 
 from katana import GaloisError
 from katana.analytics import *
@@ -291,3 +292,54 @@ def test_k_truss_fail():
 
     with raises(GaloisError):
         k_truss(property_graph, 1, "output2")
+
+
+def test_louvain_clustering():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat10_symmetric"))
+
+    louvain_clustering(property_graph, "value", "output")
+
+    louvain_clustering_assert_valid(property_graph, "value", "output")
+
+    stats = LouvainClusteringStatistics(property_graph, "value", "output")
+
+    # TODO(amp): This is non-deterministic. Are there bounds on the results we could check?
+    # assert stats.n_clusters == 83
+    # assert stats.n_non_trivial_clusters == 13
+    # assert stats.largest_cluster_size == 297
+
+
+def test_local_clustering_coefficient():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+
+    local_clustering_coefficient(property_graph, "output")
+    property_graph: PropertyGraph
+    out = property_graph.get_node_property("output")
+
+    assert out[-1].as_py() == 0
+    assert not np.any(np.isnan(out))
+
+
+def test_subgraph_extraction():
+    property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
+    sort_all_edges_by_dest(property_graph)
+    nodes = [1, 3, 11, 120]
+
+    expected_edges = [
+        [
+            nodes.index(property_graph.get_edge_dst(e))
+            for e in property_graph.edges(i)
+            if property_graph.get_edge_dst(e) in nodes
+        ]
+        for i in nodes
+    ]
+
+    pg = subgraph_extraction(property_graph, nodes)
+
+    assert isinstance(pg, PropertyGraph)
+    assert len(pg) == len(nodes)
+    assert pg.num_edges() == 6
+
+    for i in range(len(expected_edges)):
+        assert len(pg.edges(i)) == len(expected_edges[i])
+        assert [pg.get_edge_dst(e) for e in pg.edges(i)] == expected_edges[i]

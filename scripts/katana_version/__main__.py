@@ -1,8 +1,10 @@
 import argparse
+import datetime
 import logging
 import os
 import platform
 import re
+import sys
 import threading
 from enum import Enum
 from os import environ
@@ -165,20 +167,58 @@ def provenance_subcommand(args):
     except CalledProcessError:
         pass
 
-    environment_to_capture = {"CONDA_PREFIX"}
+    try:
+        values.update(lsb_codename=capture_command("lsb_release", "-cs"))
+    except CalledProcessError:
+        pass
+
+    environment_to_capture = {
+        re.compile(r"CONDA_.*"),
+        "CXX",
+        "CC",
+        "LD",
+        "CXXFLAGS",
+        "CFLAGS",
+        "LDFLAGS",
+        "SHELL",
+        re.compile(r"CMAKE_.*"),
+        re.compile(r".*PATH"),
+    }
+
+    environment_to_exclude = re.compile(r"([^a-z0-9]|^)(key|token|password|secret)", re.IGNORECASE)
 
     for var in environment_to_capture:
-        if var in environ:
-            values[var.lower()] = environ[var]
+        if isinstance(var, re.Pattern):
+            vars = [k for k in environ.keys() if var.fullmatch(k)]
+        else:
+            vars = [var]
+        for var in vars:
+            if environment_to_exclude.search(var):
+                # Don't capture variables which might have secrets.
+                continue
+            values["ENV_" + var] = environ.get(var, "<unset>")
 
     config: Configuration = args.configuration
-    katana_repo_root = config.open.dir
 
-    values.update(katana_repo_root=katana_repo_root.absolute())
-    values.update(katana_branch=git.get_branch_checked_out(katana_repo_root))
-    values.update(katana_upstream=config.open.upstream_url)
-    values.update(katana_origin=config.open.origin_url)
-    values.update(katana_hash=git.get_hash(git.HEAD, katana_repo_root))
+    values.update(cwd=os.getcwd())
+    values.update(date=datetime.datetime.now().astimezone())
+    values.update(
+        python_exe=sys.executable,
+        python_version=sys.version,
+        python_api_version=sys.api_version,
+        python_path=":".join(sys.path),
+    )
+    values.update(katana_version_file=config.version_file)
+    values.update(katana_version=get_version(args.configuration))
+
+    if config.open:
+        katana_repo_root = config.open.dir
+        values.update(katana_repo_root=katana_repo_root.absolute())
+        values.update(katana_branch=git.get_branch_checked_out(katana_repo_root))
+        values.update(katana_upstream=config.open.upstream_url)
+        values.update(katana_origin=config.open.origin_url)
+        values.update(katana_hash=git.get_hash(git.HEAD, katana_repo_root))
+        values.update(katana_head=git.get_hash(git.HEAD, katana_repo_root, pretend_clean=True))
 
     if config.has_enterprise:
         katana_enterprise_repo_path = config.enterprise.dir
@@ -189,10 +229,39 @@ def provenance_subcommand(args):
         values.update(
             katana_enterprise_hash=git.get_hash(git.HEAD, katana_enterprise_repo_path, exclude_dirty=(SUBMODULE_PATH,))
         )
+        values.update(katana_enterprise_head=git.get_hash(git.HEAD, katana_enterprise_repo_path, pretend_clean=True))
+
+    # Sort by the key for easier reading later
+    values = dict(sorted(values.items(), key=lambda kv: kv[0]))
+
+    # Convert all values to strings and quote universally problematic characters
+    values = {k: str(v).replace("\n", "\\n") for k, v in values.items()}
+
+    def escape_double_quotes(s):
+        return s.replace('"', '\\"')
+
+    def escape_single_quotes(s):
+        return s.replace("'", "\\'")
 
     format_str = args.format
     format_str = format_str.replace("\\n", "\n").replace("\\t", "\t")
-    print("".join(format_str.format(k, v, k=k, K=k.upper(), v=v) for k, v in values.items()), end="")
+    print(
+        args.prefix
+        + args.separator.join(
+            format_str.format(
+                k,
+                v,
+                k=k,
+                K=k.upper(),
+                v=v,
+                v_double_quoted=f'"{escape_double_quotes(v)}"',
+                v_single_quoted=f"'{escape_single_quotes(v)}'",
+            )
+            for k, v in values.items()
+        )
+        + args.suffix,
+        end="",
+    )
 
 
 def setup_provenance_subcommand(subparsers):
@@ -200,24 +269,78 @@ def setup_provenance_subcommand(subparsers):
         "provenance", help="Prints a provenance description for inclusion in artifacts. This is not a version.",
     )
 
+    class SetFormatAction(argparse.Action):
+        def __init__(self, option_strings, dest=None, nargs=None, **kwargs):
+            assert not nargs
+            self.format = None
+            self.prefix = ""
+            self.suffix = ""
+            self.separator = ""
+            self.__dict__.update(kwargs)
+            super().__init__(option_strings, dest, nargs=0)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            assert not values
+            setattr(namespace, "format", self.format)
+            setattr(namespace, "prefix", self.prefix)
+            setattr(namespace, "suffix", self.suffix)
+            setattr(namespace, "separator", self.separator)
+
     group_format = parser.add_mutually_exclusive_group()
     group_format.add_argument(
-        "--define", help="Format as #defines.", dest="format", action="store_const", const='#define {K} "{v}" \n'
+        "--define", help="Format as #defines.", action=SetFormatAction, format="#define {K} {v_double_quoted}\n",
     )
     group_format.add_argument(
-        "--yaml", help="Format as YAML.", dest="format", action="store_const", const='{k}: "{v}"\n'
+        "--yaml", help="Format as YAML.", action=SetFormatAction, format="{k}: {v_double_quoted}\n"
     )
     group_format.add_argument(
-        "--python", help="Format as Python.", dest="format", action="store_const", const='{k} = "{v}"\n'
+        "--python", help="Format as Python.", action=SetFormatAction, format="{k} = {v_double_quoted}\n"
     )
     group_format.add_argument(
-        "--format", "-f", help="Provide a format string for each value. Use the source luck.", dest="format", type=str
+        "--json",
+        help="Format as JSON.",
+        action=SetFormatAction,
+        format='  "{k}": {v_double_quoted}',
+        prefix="{\n",
+        suffix="\n}\n",
+        separator=",\n",
+    )
+
+    group_format.add_argument(
+        "--format",
+        "-f",
+        help="Provide a format string for each key-value pair. Use the source, Luke.",
+        dest="format",
+        type=str,
+    )
+    parser.add_argument(
+        "--separator",
+        "-j",
+        help="The separator to print between key-value pairs. Use the source, Luke.",
+        dest="separator",
+        type=str,
+    )
+    parser.add_argument(
+        "--prefix",
+        "-p",
+        help="Prefix to print before the first key-value pair. Use the source, Luke.",
+        dest="prefix",
+        type=str,
+    )
+    parser.add_argument(
+        "--suffix",
+        "-s",
+        help="Suffix to print after the last key-value pair. Use the source, Luke.",
+        dest="suffix",
+        type=str,
     )
 
     setup_global_log_arguments(parser)
     setup_global_repo_arguments(parser)
 
-    parser.set_defaults(subcommand_impl=provenance_subcommand, format='{k}: "{v}"\n')
+    parser.set_defaults(
+        subcommand_impl=provenance_subcommand, format="{k}: {v_double_quoted}\n", prefix="", suffix="", separator=""
+    )
 
 
 def bump_checks(args):

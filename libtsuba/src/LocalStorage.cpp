@@ -36,11 +36,13 @@ tsuba::LocalStorage::WriteFile(
   CleanUri(&uri);
   fs::path m_path{uri};
   fs::path dir = m_path.parent_path();
-  if (boost::system::error_code err; !fs::create_directories(dir, err)) {
-    if (err) {
-      return KATANA_ERROR(
-          std::error_code(err.value(), err.category()),
-          "creating parent diretories");
+  if (!dir.empty()) {
+    if (boost::system::error_code err; !fs::create_directories(dir, err)) {
+      if (err) {
+        return KATANA_ERROR(
+            std::error_code(err.value(), err.category()),
+            "creating parent directories");
+      }
     }
   }
 

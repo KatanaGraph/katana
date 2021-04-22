@@ -47,6 +47,8 @@ public:
 /// but have reasonable defaults.
 /// The property named output_property_name is created by this function and may
 /// not exist before the call.
+///
+/// @warning This algorithm will reorder nodes and edges in the graph.
 KATANA_EXPORT Result<void> KTruss(
     PropertyGraph* pg, uint32_t k_truss_number,
     const std::string& output_property_name, KTrussPlan plan = KTrussPlan());

@@ -229,7 +229,7 @@ public:
     /*
     * Vertex following optimization
     */
-    if (plan.is_enable_vf()) {
+    if (plan.enable_vf()) {
       Base::VertexFollowing(&graph_curr);  // Find nodes that follow other nodes
 
       uint64_t num_unique_clusters =
@@ -314,7 +314,7 @@ public:
 
       if (iter < plan.max_iterations() &&
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
-        if (!plan.is_enable_vf() && phase == 1) {
+        if (!plan.enable_vf() && phase == 1) {
           KATANA_LOG_DEBUG_ASSERT(num_nodes_orig == graph_curr.num_nodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
             clusters_orig[n] =
@@ -361,12 +361,17 @@ LouvainClusteringWithWrap(
       std::is_integral_v<EdgeWeightType> ||
       std::is_floating_point_v<EdgeWeightType>);
 
-  //! The property name with prefixed with "_katana_temporary_property"
-  //! are reserved for internal use only.
-  std::vector<std::string> temp_node_property_names = {
-      "_katana_temporary_property_CurrentId",
-      "_katana_temporary_property_PreviousId",
-      "_katana_temporary_property_DegreeWt"};
+  std::vector<TemporaryPropertyGuard> temp_node_properties(3);
+  std::generate_n(
+      temp_node_properties.begin(), temp_node_properties.size(),
+      [&]() { return TemporaryPropertyGuard{pfg}; });
+  std::vector<std::string> temp_node_property_names(
+      temp_node_properties.size());
+  std::transform(
+      temp_node_properties.begin(), temp_node_properties.end(),
+      temp_node_property_names.begin(),
+      [](const TemporaryPropertyGuard& p) { return p.name(); });
+
   using Impl = LouvainClusteringImplementation<EdgeWeightType>;
   if (auto result = ConstructNodeProperties<typename Impl::NodeData>(
           pfg, temp_node_property_names);
@@ -387,16 +392,6 @@ LouvainClusteringWithWrap(
           clusters_orig, plan);
       !r) {
     return r.error();
-  }
-
-  // // Remove all the existing node/edge properties
-  // if (auto r = pfg->RemoveAllNodeProperties(); !r) {
-  //   return r.error();
-  // }
-  for (auto property : temp_node_property_names) {
-    if (auto r = pfg->RemoveNodeProperty(property); !r) {
-      return r.error();
-    }
   }
 
   if (auto r = ConstructNodeProperties<std::tuple<CurrentCommunityId>>(

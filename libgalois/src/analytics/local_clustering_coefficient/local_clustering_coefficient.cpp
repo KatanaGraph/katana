@@ -311,16 +311,18 @@ katana::analytics::LocalClusteringCoefficient(
     return katana::ErrorCode::AssertionFailed;
   }
 
-  std::unique_ptr<katana::PropertyGraph> mutable_pfg;
-  if (relabel || !plan.edges_sorted()) {
-    // Copy the graph so we don't mutate the users graph.
-    auto mutable_pfg_result = pg->Copy({}, {});
-    if (!mutable_pfg_result) {
-      return mutable_pfg_result.error();
-    }
-    mutable_pfg = std::move(mutable_pfg_result.value());
-    pg = mutable_pfg.get();
-  }
+  //  std::unique_ptr<katana::PropertyGraph> mutable_pfg;
+  //  if (relabel || !plan.edges_sorted()) {
+  //    // Copy the graph so we don't mutate the users graph.
+  //    auto mutable_pfg_result = pg->Copy({}, {});
+  //    if (!mutable_pfg_result) {
+  //      return mutable_pfg_result.error();
+  //    }
+  //    mutable_pfg = std::move(mutable_pfg_result.value());
+  //    pg = mutable_pfg.get();
+  //  }
+
+  // TODO(amp): Don't mutate the users topology!
 
   if (relabel) {
     katana::StatTimer timer_relabel(

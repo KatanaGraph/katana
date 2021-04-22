@@ -28,8 +28,8 @@ public:
   /// \param name will become the name of the column in the table
   /// \param opts controls things like output format
   static katana::Result<std::unique_ptr<ParquetWriter>> Make(
-      std::shared_ptr<arrow::ChunkedArray> array, const std::string& name,
-      WriteOpts opts = WriteOpts::Defaults());
+      const std::shared_ptr<arrow::ChunkedArray>& array,
+      const std::string& name, WriteOpts opts = WriteOpts::Defaults());
 
   /// \returns a Writer that will write a table to a storage location
   /// \param table the table to be written out
@@ -55,7 +55,7 @@ private:
   std::shared_ptr<parquet::ArrowWriterProperties> StandardArrowProperties();
 
   katana::Result<void> StoreParquet(
-      const arrow::Table& table, const katana::Uri& uri,
+      std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
       tsuba::WriteGroup* desc);
 
   std::shared_ptr<arrow::Table> table_;

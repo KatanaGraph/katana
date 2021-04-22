@@ -20,7 +20,10 @@ class KATANA_EXPORT FileFrame : public arrow::io::OutputStream {
   uint64_t cursor_;
   bool valid_ = false;
   bool synced_ = false;
+
   katana::Result<void> GrowBuffer(int64_t accommodate);
+
+  katana::Result<void> MapContguousExtension(uint64_t new_size);
 
 public:
   FileFrame() = default;

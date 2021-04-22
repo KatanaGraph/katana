@@ -56,12 +56,7 @@ FileFrame::Bind(std::string_view filename) {
 }
 
 katana::Result<void>
-FileFrame::GrowBuffer(int64_t accomodate) {
-  // We need a bigger buffer
-  auto new_size = map_size_ * 2;
-  while (cursor_ + accomodate > new_size) {
-    new_size *= 2;
-  }
+FileFrame::MapContguousExtension(uint64_t new_size) {
   void* ptr = katana::MmapPopulate(
       map_start_ + map_size_, new_size - map_size_, PROT_READ | PROT_WRITE,
       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -93,6 +88,22 @@ FileFrame::GrowBuffer(int64_t accomodate) {
   }
   map_size_ = new_size;
   return katana::ResultSuccess();
+}
+
+katana::Result<void>
+FileFrame::GrowBuffer(int64_t accommodate) {
+  // We need a bigger buffer
+  auto new_size = map_size_ * 2;
+  while (cursor_ + accommodate > new_size) {
+    new_size *= 2;
+  }
+  auto res = MapContguousExtension(new_size);
+  if (!res && cursor_ + accommodate < new_size) {
+    // our power of 2 alloc failed, but there's a chance a smaller ask
+    // would work
+    res = MapContguousExtension(cursor_ + accommodate);
+  }
+  return res;
 }
 
 katana::Result<void>

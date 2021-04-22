@@ -22,19 +22,12 @@ class WriteGroup {
 
   std::string tag_;
   std::list<AsyncOp> pending_ops_;
-  uint64_t outstanding_size_{0};
+  std::atomic<uint64_t> outstanding_size_{0};
   uint64_t errors_{0};
   uint64_t total_{0};
   katana::Result<void> last_error_{katana::ResultSuccess()};
 
   WriteGroup(std::string tag) : tag_(std::move(tag)){};
-
-  /// Add future to the list of futures this descriptor will wait for, note
-  /// the file name for debugging. If the operation is associated with a file
-  /// frame that we are responsible for, note the size
-  void AddOp(
-      std::future<katana::Result<void>> future, std::string file,
-      uint64_t accounted_size = 0);
 
   /// Wait for the next op if there is one, account errors. Returns true if
   /// there was a next op
@@ -60,6 +53,15 @@ public:
   void StartStore(const std::string& file, const uint8_t* buf, uint64_t size) {
     AddOp(FileStoreAsync(file, buf, size), file);
   }
+
+  void AddToOutstanding(uint64_t size) { outstanding_size_ += size; }
+
+  /// Add future to the list of futures this descriptor will wait for, note
+  /// the file name for debugging. If the operation is associated with a file
+  /// frame that we are responsible for, note the size
+  void AddOp(
+      std::future<katana::Result<void>> future, std::string file,
+      uint64_t accounted_size = 0);
 };
 
 }  // namespace tsuba

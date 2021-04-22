@@ -74,12 +74,11 @@ main(int argc, char** argv) {
 
   switch (algo) {
   case LocalClusteringCoefficientPlan::kOrderedCountAtomics:
-    plan = LocalClusteringCoefficientPlan::LocalClusteringCoefficientAtomics(
-        relabeling_flag);
+    plan = LocalClusteringCoefficientPlan::OrderedCountAtomics(relabeling_flag);
     break;
   case LocalClusteringCoefficientPlan::kOrderedCountPerThread:
-    plan = LocalClusteringCoefficientPlan::LocalClusteringCoefficientPerThread(
-        relabeling_flag);
+    plan =
+        LocalClusteringCoefficientPlan::OrderedCountPerThread(relabeling_flag);
     break;
   default:
     std::cerr << "Unknown algo: " << algo << "\n";

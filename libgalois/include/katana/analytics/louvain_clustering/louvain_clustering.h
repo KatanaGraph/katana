@@ -17,25 +17,20 @@ public:
     kDoAll,
   };
 
-  static const bool kEnableVF = false;
-  static constexpr double kModularityThresholdPerRound = 0.01;
-  static constexpr double kModularityThresholdTotal = 0.01;
-  static const uint32_t kMaxIterations = 10;
-  static const uint32_t kMinGraphSize = 100;
+  static const bool kDefaultEnableVF = false;
+  static constexpr double kDefaultModularityThresholdPerRound = 0.01;
+  static constexpr double kDefaultModularityThresholdTotal = 0.01;
+  static const uint32_t kDefaultMaxIterations = 10;
+  static const uint32_t kDefaultMinGraphSize = 100;
 
   // Don't allow people to directly construct these, so as to have only one
   // consistent way to configure.
 private:
   Algorithm algorithm_;
-  //Flag to enable vertex following optimization.
   bool enable_vf_;
-  //Threshold for modularity gain per round.
   double modularity_threshold_per_round_;
-  //Threshold for overall modularity gain.
   double modularity_threshold_total_;
-  //Maximum number of iterations to execute.
   uint32_t max_iterations_;
-  //Minimum coarsened graph size
   uint32_t min_graph_size_;
 
   LouvainClusteringPlan(
@@ -55,30 +50,35 @@ public:
       : LouvainClusteringPlan{
             kCPU,
             kDoAll,
-            kEnableVF,
-            kModularityThresholdPerRound,
-            kModularityThresholdTotal,
-            kMaxIterations,
-            kMinGraphSize} {}
+            kDefaultEnableVF,
+            kDefaultModularityThresholdPerRound,
+            kDefaultModularityThresholdTotal,
+            kDefaultMaxIterations,
+            kDefaultMinGraphSize} {}
 
   Algorithm algorithm() const { return algorithm_; }
-  // TODO(amp): These parameters should be documented.
-  bool is_enable_vf() const { return enable_vf_; }
+  /// Enable vertex following optimization
+  bool enable_vf() const { return enable_vf_; }
+  /// Threshold for modularity gain per round.
   double modularity_threshold_per_round() const {
     return modularity_threshold_per_round_;
   }
+  /// Threshold for overall modularity gain.
   double modularity_threshold_total() const {
     return modularity_threshold_total_;
   }
+  /// Maximum number of iterations to execute.
   uint32_t max_iterations() const { return max_iterations_; }
+  /// Minimum coarsened graph size
   uint32_t min_graph_size() const { return min_graph_size_; }
 
   static LouvainClusteringPlan DoAll(
-      bool enable_vf = kEnableVF,
-      double modularity_threshold_per_round = kModularityThresholdPerRound,
-      double modularity_threshold_total = kModularityThresholdTotal,
-      uint32_t max_iterations = kMaxIterations,
-      uint32_t min_graph_size = kMinGraphSize) {
+      bool enable_vf = kDefaultEnableVF,
+      double modularity_threshold_per_round =
+          kDefaultModularityThresholdPerRound,
+      double modularity_threshold_total = kDefaultModularityThresholdTotal,
+      uint32_t max_iterations = kDefaultMaxIterations,
+      uint32_t min_graph_size = kDefaultMinGraphSize) {
     return {
         kCPU,
         kDoAll,

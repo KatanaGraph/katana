@@ -122,14 +122,8 @@ HandleBadParquetTypes(const std::shared_ptr<arrow::Table>& old_table) {
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
-    std::shared_ptr<arrow::ChunkedArray> array, const std::string& name,
+    const std::shared_ptr<arrow::ChunkedArray>& array, const std::string& name,
     WriteOpts opts) {
-  auto res = HandleBadParquetTypes(array);
-  if (!res) {
-    return res.error().WithContext("conversion from arrow to parquet mismatch");
-  }
-  array = std::move(res.value());
-
   std::shared_ptr<arrow::Table> column = arrow::Table::Make(
       arrow::schema({arrow::field(name, array->type())}), {array});
   return std::unique_ptr<ParquetWriter>(new ParquetWriter(column, opts));
@@ -138,18 +132,14 @@ tsuba::ParquetWriter::Make(
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
     std::shared_ptr<arrow::Table> table, WriteOpts opts) {
-  auto res = HandleBadParquetTypes(table);
-  if (!res) {
-    return res.error().WithContext("conversion from arrow to parquet mismatch");
-  }
-  table = std::move(res.value());
-  return std::unique_ptr<ParquetWriter>(new ParquetWriter(table, opts));
+  return std::unique_ptr<ParquetWriter>(
+      new ParquetWriter(std::move(table), opts));
 }
 
 katana::Result<void>
 tsuba::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
   try {
-    return StoreParquet(*table_, uri, group);
+    return StoreParquet(table_, uri, group);
   } catch (const std::exception& exp) {
     return KATANA_ERROR(
         tsuba::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
@@ -172,29 +162,46 @@ tsuba::ParquetWriter::StandardArrowProperties() {
 /// Store the arrow table in a file
 katana::Result<void>
 tsuba::ParquetWriter::StoreParquet(
-    const arrow::Table& table, const katana::Uri& uri,
+    std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
     tsuba::WriteGroup* desc) {
   auto ff = std::make_shared<tsuba::FileFrame>();
   if (auto res = ff->Init(); !res) {
     return res.error().WithContext("creating output buffer");
   }
-
-  auto write_result = parquet::arrow::WriteTable(
-      table, arrow::default_memory_pool(), ff,
-      std::numeric_limits<int64_t>::max(), StandardWriterProperties(),
-      StandardArrowProperties());
-
-  if (!write_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
-  }
-
   ff->Bind(uri.string());
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+  auto future = std::async(
+      std::launch::async,
+      [table = std::move(table), ff = std::move(ff), desc,
+       writer_props = StandardWriterProperties(),
+       arrow_props =
+           StandardArrowProperties()]() mutable -> katana::Result<void> {
+        auto res = HandleBadParquetTypes(table);
+        if (!res) {
+          return res.error().WithContext(
+              "conversion from arrow to parquet mismatch");
+        }
+        table = std::move(res.value());
+        auto write_result = parquet::arrow::WriteTable(
+            *table, arrow::default_memory_pool(), ff,
+            std::numeric_limits<int64_t>::max(), writer_props, arrow_props);
+        table.reset();
+
+        if (!write_result.ok()) {
+          return KATANA_ERROR(
+              tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
+        }
+        if (desc) {
+          desc->AddToOutstanding(ff->map_size());
+        }
+
+        TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+        return ff->Persist();
+      });
+
   if (!desc) {
-    return ff->Persist();
+    return future.get();
   }
 
-  desc->StartStore(std::move(ff));
+  desc->AddOp(std::move(future), uri.string());
   return katana::ResultSuccess();
 }

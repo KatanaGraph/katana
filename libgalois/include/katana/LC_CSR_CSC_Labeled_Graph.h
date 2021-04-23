@@ -299,23 +299,47 @@ public:
 
   /**
    * Returns an edge iterator to an edge with some node and key with some label
-   * by searching for the key via the node's outgoing or incoming edges.
+   * by searching for the key via the node's outgoing or incoming edges. By
+   * supplying find_first or find_last we can find the first or last satisfying
+   * edge. If neither are provided we will return an arbitrary satisfying edge.
+   *
    * If not found, returns nothing.
    */
+
   template <bool in_edges>
-  std::optional<edge_iterator> FindEdgeWithLabel(
-      GraphNode node, GraphNode key, const EdgeTy& data) const {
+  std::optional<edge_iterator> FindFirstOrLastEdgeWithLabel(
+      bool find_first, bool find_last, GraphNode node, GraphNode key,
+      const EdgeTy& data) const {
+    KATANA_LOG_DEBUG_ASSERT(!(find_first && find_last));
+    bool find_any = !find_first && !find_last;
+
     edge_iterator begin =
         in_edges ? in_raw_begin(node, data) : raw_begin(node, data);
     edge_iterator end = in_edges ? in_raw_end(node, data) : raw_end(node, data);
     edge_iterator l = begin;
     edge_iterator r = end - 1;
+
+    // If we're searching for the first edge, we stop at the beginning and need
+    // to check the previous edge. The opposite is true for the last edge.
+    edge_iterator limit = find_first ? begin : end;
+    int direction = find_first ? -1 : 1;
+
     while (r >= l) {
       edge_iterator mid = l + (r - l) / 2;
       GraphNode value =
           in_edges ? this->getInEdgeDst(mid) : this->getEdgeDst(mid);
       if (value == key) {
-        return mid;
+        if (!find_any && mid != limit) {
+          // check that mid - 1 is not key.
+          GraphNode adjacent_value = in_edges
+                                         ? this->getInEdgeDst(mid + direction)
+                                         : this->getEdgeDst(mid + direction);
+          if (adjacent_value != key) {
+            return mid;
+          }
+        } else {
+          return mid;
+        }
       }
       if (value < key)
         l = mid + 1;
@@ -323,6 +347,39 @@ public:
         r = mid - 1;
     }
     return std::nullopt;
+  }
+
+  /**
+   * Returns an edge iterator to an edge with some node and key with some label
+   * by searching for the key via the node's outgoing or incoming edges.
+   * If not found, returns nothing.
+   */
+  template <bool in_edges>
+  std::optional<edge_iterator> FindEdgeWithLabel(
+      GraphNode node, GraphNode key, const EdgeTy& data) const {
+    return FindFirstOrLastEdgeWithLabel<in_edges>(
+        false, false, node, key, data);
+  }
+
+  /**
+   * Returns an edge iterator to an edge with some node and key with some label
+   * by searching for the key via the node's outgoing or incoming edges.
+   * If not found, returns nothing.
+   */
+  template <bool in_edges>
+  std::optional<edges_iterator> FindEdgesWithLabel(
+      GraphNode node, GraphNode key, const EdgeTy& data) const {
+    auto first =
+        FindFirstOrLastEdgeWithLabel<in_edges>(true, false, node, key, data);
+    if (!first) {
+      return std::nullopt;
+    }
+
+    auto last =
+        FindFirstOrLastEdgeWithLabel<in_edges>(false, true, node, key, data);
+    KATANA_LOG_DEBUG_ASSERT(last);
+
+    return internal::make_no_deref_range(*first, *last);
   }
 
   /**

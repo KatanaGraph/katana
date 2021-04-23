@@ -178,8 +178,8 @@ main() {
   KATANA_LOG_ASSERT(g1->Equals(g1.get()));
   std::string out1 =
       "Topologies match!\n"
-      "Node property n0            (int64)     matches!\n"
-      "Edge property rank          (int64)     matches!\n";
+      "Node property n0              (int64)      matches!\n"
+      "Edge property rank            (int64)      matches!\n";
   KATANA_LOG_VASSERT(
       g1->ReportDiff(g1.get()) == out1, "{}{}", g1->ReportDiff(g1.get()), out1);
 
@@ -187,11 +187,11 @@ main() {
   KATANA_LOG_ASSERT(!g1->Equals(g2.get()));
   std::string out2 =
       "Topologies match!\n"
-      "Node property n0            (int64)     differs\n"
+      "Node property n0              (int64)      differs\n"
       "@@ -99, +99 @@\n"
       "-99\n"
       "+0\n"
-      "Edge property rank          (int64)     differs\n"
+      "Edge property rank            (int64)      differs\n"
       "@@ -9907, +9907 @@\n"
       "-693\n"
       "+1386\n";
@@ -202,7 +202,7 @@ main() {
   KATANA_LOG_ASSERT(!g1->Equals(g3.get()));
   std::string out3 =
       "Topologies match!\n"
-      "Node property n0            (int64)     differs\n"
+      "Node property n0              (int64)      differs\n"
       "@@ -1, +1 @@\n"
       "-1\n"
       "+0\n"
@@ -226,7 +226,7 @@ main() {
       "+12\n"
       "@@ -15, +15 @@\n"
       "-...\n"
-      "Edge property rank          (int64)     differs\n"
+      "Edge property rank            (int64)      differs\n"
       "@@ -101, +101 @@\n"
       "-1\n"
       "+0\n"

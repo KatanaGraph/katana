@@ -321,7 +321,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
       fmt::format_to(buf, "Only first has node property {}\n", prop_name);
     } else if (!my_col->Equals(other_col)) {
       fmt::format_to(
-          buf, "Node property {:13} {:11} differs\n", prop_name,
+          buf, "Node property {:15} {:12} differs\n", prop_name,
           fmt::format("({})", my_col->type()->name()));
       if (my_col->length() != other_col->length()) {
         fmt::format_to(
@@ -331,7 +331,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
       }
     } else {
       fmt::format_to(
-          buf, "Node property {:13} {:11} matches!\n", prop_name,
+          buf, "Node property {:15} {:12} matches!\n", prop_name,
           fmt::format("({})", my_col->type()->name()));
     }
   }
@@ -343,7 +343,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
     } else if (!edge_props->GetColumnByName(prop_name)->Equals(
                    other_edge_props->GetColumnByName(prop_name))) {
       fmt::format_to(
-          buf, "Edge property {:13} {:11} differs\n", prop_name,
+          buf, "Edge property {:15} {:12} differs\n", prop_name,
           fmt::format("({})", my_col->type()->name()));
       if (my_col->length() != other_col->length()) {
         fmt::format_to(
@@ -353,7 +353,7 @@ katana::PropertyGraph::ReportDiff(const PropertyGraph* other) const {
       }
     } else {
       fmt::format_to(
-          buf, "Edge property {:13} {:11} matches!\n", prop_name,
+          buf, "Edge property {:15} {:12} matches!\n", prop_name,
           fmt::format("({})", my_col->type()->name()));
     }
   }

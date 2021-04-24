@@ -63,3 +63,6 @@ katana::analytics::IsApproximateDegreeDistributionPowerLaw(
   autoAlgoTimer.stop();
   return sample_average / 1.3 > sample_median;
 }
+
+thread_local int
+    katana::analytics::TemporaryPropertyGuard::temporary_property_counter = 0;

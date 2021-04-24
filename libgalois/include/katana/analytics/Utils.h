@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <random>
+#include <utility>
 
 #include "katana/ErrorCode.h"
 #include "katana/Properties.h"
@@ -72,38 +73,65 @@ ConstructEdgeProperties(
 }
 
 class TemporaryPropertyGuard {
-  katana::PropertyGraph* pfg_;
+  static thread_local int temporary_property_counter;
+
+  katana::PropertyGraph* pg_{nullptr};
   std::string name_;
 
   std::string GetPropertyName() {
-    // Use this as part of the property name since this will delete the property
-    // when it is deconstructed so this name should be unique at any given time.
+    // Use a thread local counter and the thread ID to get a unique name.
+    // `this` is not unique because we support moves.
     return fmt::format(
-        "__katana_temporary_property_{}", reinterpret_cast<uintptr_t>(this));
+        "__katana_temporary_property_{}_{}", std::this_thread::get_id(),
+        temporary_property_counter++);
   }
 
-public:
-  TemporaryPropertyGuard(PropertyGraph* pg, std::string name)
-      : pfg_(pg), name_(name) {}
+  void Deinit() {
+    if (!pg_) {
+      return;
+    }
 
-  explicit TemporaryPropertyGuard(katana::PropertyGraph* pg)
+    if (auto r = pg_->RemoveNodeProperty(name_); !r) {
+      if (r.error() != ErrorCode::PropertyNotFound) {
+        // Log an error if something goes wrong other than the property not
+        // existing.
+        KATANA_LOG_WARN("Failed to remove temporary property: {}", r.error());
+      }
+    }
+    Clear();
+  }
+
+  void Clear() { pg_ = nullptr; }
+
+public:
+  TemporaryPropertyGuard() = default;
+
+  TemporaryPropertyGuard(PropertyGraph* pg, std::string name)
+      : pg_(pg), name_(std::move(name)) {}
+
+  explicit TemporaryPropertyGuard(PropertyGraph* pg)
       : TemporaryPropertyGuard(pg, GetPropertyName()) {}
 
   const TemporaryPropertyGuard& operator=(const TemporaryPropertyGuard&) =
       delete;
   TemporaryPropertyGuard(const TemporaryPropertyGuard&) = delete;
 
+  TemporaryPropertyGuard(TemporaryPropertyGuard&& rhs) noexcept
+      : pg_(rhs.pg_), name_(std::move(rhs.name_)) {
+    rhs.Clear();
+  }
+
+  TemporaryPropertyGuard& operator=(TemporaryPropertyGuard&& rhs) noexcept {
+    Deinit();
+    pg_ = rhs.pg_;
+    name_ = std::move(rhs.name_);
+    rhs.Clear();
+    return *this;
+  }
+
   std::string name() const { return name_; }
 
-  ~TemporaryPropertyGuard() {
-    if (auto r = pfg_->RemoveNodeProperty(name_); !r) {
-      if (r.error() != katana::ErrorCode::PropertyNotFound) {
-        // Log an error if something goes wrong other than the property not
-        // existing.
-        KATANA_LOG_WARN("Failed to remove temporary property: {}", r.error());
-      }
-    }
-  }
+  ~TemporaryPropertyGuard() { Deinit(); }
 };
 
 }  // namespace katana::analytics

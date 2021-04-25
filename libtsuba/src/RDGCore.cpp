@@ -57,7 +57,8 @@ UpsertProperties(
 
   if (!next->schema()->HasDistinctFieldNames()) {
     return KATANA_ERROR(
-        tsuba::ErrorCode::Exists, "column names are not distinct");
+        tsuba::ErrorCode::Exists, "column names are not distinct: {}",
+        fmt::join(next->schema()->field_names(), ", "));
   }
 
   *to_update = next;

@@ -2,6 +2,7 @@
 
 #include <arrow/array/array_binary.h>
 #include <arrow/chunked_array.h>
+#include <parquet/properties.h>
 
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
@@ -14,52 +15,6 @@ namespace {
 
 // constant taken directly from the arrow docs
 constexpr uint64_t kMaxStringChunkSize = 0x7FFFFFFE;
-
-std::shared_ptr<parquet::WriterProperties>
-StandardWriterProperties() {
-  // int64 timestamps with nanosecond resolution requires Parquet version 2.0.
-  // In Arrow to Parquet version 1.0, nanosecond timestamps will get truncated
-  // to milliseconds.
-  return parquet::WriterProperties::Builder()
-      .version(parquet::ParquetVersion::PARQUET_2_0)
-      ->data_page_version(parquet::ParquetDataPageVersion::V2)
-      ->build();
-}
-
-std::shared_ptr<parquet::ArrowWriterProperties>
-StandardArrowProperties() {
-  return parquet::ArrowWriterProperties::Builder().build();
-}
-
-/// Store the arrow table in a file
-katana::Result<void>
-StoreParquet(
-    const arrow::Table& table, const katana::Uri& uri,
-    tsuba::WriteGroup* desc) {
-  auto ff = std::make_shared<tsuba::FileFrame>();
-  if (auto res = ff->Init(); !res) {
-    return res.error().WithContext("creating output buffer");
-  }
-
-  auto write_result = parquet::arrow::WriteTable(
-      table, arrow::default_memory_pool(), ff,
-      std::numeric_limits<int64_t>::max(), StandardWriterProperties(),
-      StandardArrowProperties());
-
-  if (!write_result.ok()) {
-    return KATANA_ERROR(
-        tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
-  }
-
-  ff->Bind(uri.string());
-  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-  if (!desc) {
-    return ff->Persist();
-  }
-
-  desc->StartStore(std::move(ff));
-  return katana::ResultSuccess();
-}
 
 katana::Result<std::vector<std::shared_ptr<arrow::Array>>>
 LargeStringToChunkedString(
@@ -167,7 +122,8 @@ HandleBadParquetTypes(const std::shared_ptr<arrow::Table>& old_table) {
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
-    std::shared_ptr<arrow::ChunkedArray> array, const std::string& name) {
+    std::shared_ptr<arrow::ChunkedArray> array, const std::string& name,
+    WriteOpts opts) {
   auto res = HandleBadParquetTypes(array);
   if (!res) {
     return res.error().WithContext("conversion from arrow to parquet mismatch");
@@ -176,17 +132,18 @@ tsuba::ParquetWriter::Make(
 
   std::shared_ptr<arrow::Table> column = arrow::Table::Make(
       arrow::schema({arrow::field(name, array->type())}), {array});
-  return std::unique_ptr<ParquetWriter>(new ParquetWriter(column));
+  return std::unique_ptr<ParquetWriter>(new ParquetWriter(column, opts));
 }
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
-tsuba::ParquetWriter::Make(std::shared_ptr<arrow::Table> table) {
+tsuba::ParquetWriter::Make(
+    std::shared_ptr<arrow::Table> table, WriteOpts opts) {
   auto res = HandleBadParquetTypes(table);
   if (!res) {
     return res.error().WithContext("conversion from arrow to parquet mismatch");
   }
   table = std::move(res.value());
-  return std::unique_ptr<ParquetWriter>(new ParquetWriter(table));
+  return std::unique_ptr<ParquetWriter>(new ParquetWriter(table, opts));
 }
 
 katana::Result<void>
@@ -197,4 +154,47 @@ tsuba::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
     return KATANA_ERROR(
         tsuba::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
   }
+}
+
+std::shared_ptr<parquet::WriterProperties>
+tsuba::ParquetWriter::StandardWriterProperties() {
+  return parquet::WriterProperties::Builder()
+      .version(opts_.parquet_version)
+      ->data_page_version(opts_.data_page_version)
+      ->build();
+}
+
+std::shared_ptr<parquet::ArrowWriterProperties>
+tsuba::ParquetWriter::StandardArrowProperties() {
+  return parquet::ArrowWriterProperties::Builder().build();
+}
+
+/// Store the arrow table in a file
+katana::Result<void>
+tsuba::ParquetWriter::StoreParquet(
+    const arrow::Table& table, const katana::Uri& uri,
+    tsuba::WriteGroup* desc) {
+  auto ff = std::make_shared<tsuba::FileFrame>();
+  if (auto res = ff->Init(); !res) {
+    return res.error().WithContext("creating output buffer");
+  }
+
+  auto write_result = parquet::arrow::WriteTable(
+      table, arrow::default_memory_pool(), ff,
+      std::numeric_limits<int64_t>::max(), StandardWriterProperties(),
+      StandardArrowProperties());
+
+  if (!write_result.ok()) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::ArrowError, "arrow error: {}", write_result);
+  }
+
+  ff->Bind(uri.string());
+  TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
+  if (!desc) {
+    return ff->Persist();
+  }
+
+  desc->StartStore(std::move(ff));
+  return katana::ResultSuccess();
 }

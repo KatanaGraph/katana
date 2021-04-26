@@ -21,6 +21,7 @@
 
 #include <iostream>
 
+#include "katana/PropertyGraph.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
@@ -49,16 +50,16 @@ SubGraphNodeSet(
       katana::iterate(uint32_t(0), uint32_t(num_nodes)),
       [&](const uint32_t& n) {
         uint32_t src = node_set[n];
-        auto edge_range = graph->topology().edge_range(src);
+
+        auto last = graph->edges(src).end();
         for (auto dest : node_set) {
           // Binary search on the edges sorted by destination id
-          auto edge_matched = std::lower_bound(
-              edge_iterator(edge_range.first), edge_iterator(edge_range.second),
-              dest);
-          if (*edge_matched != edge_range.second) {
-            while (*edge_matched == dest) {
+          auto lower_bound = katana::FindEdgeSortedByDest(graph, src, dest);
+          if (lower_bound != *last) {
+            while (lower_bound != *last &&
+                   *graph->GetEdgeDest(lower_bound) == dest) {
               subgraph_edges[n].push_back(dest);
-              edge_matched++;
+              lower_bound++;
             }
           }
           (*out_indices)[n] = subgraph_edges[n].size();

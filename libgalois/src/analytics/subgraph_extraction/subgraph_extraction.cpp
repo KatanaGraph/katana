@@ -29,6 +29,45 @@ namespace {
 using namespace katana::analytics;
 using edge_iterator = boost::counting_iterator<uint64_t>;
 
+/**
+ * Like std::lower_bound but doesn't dereference iterators. Returns the first
+ * element for which comp is not true.
+ */
+template <typename Iterator, typename Compare>
+Iterator
+LowerBound(Iterator first, Iterator last, Compare comp) {
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
+
+  Iterator it;
+  difference_type count;
+  difference_type half;
+
+  count = std::distance(first, last);
+  while (count > 0) {
+    it = first;
+    half = count / 2;
+    std::advance(it, half);
+    if (comp(it)) {
+      first = ++it;
+      count -= half + 1;
+    } else {
+      count = half;
+    }
+  }
+  return first;
+}
+
+template <typename G>
+struct LessThan {
+  const G& g;
+  typename G::Node n;
+  LessThan(const G& g, typename G::Node n) : g(g), n(n) {}
+  bool operator()(typename G::edge_iterator it) {
+    return *g.GetEdgeDest(it) < n;
+  }
+};
+
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphNodeSet(
     katana::PropertyGraph* graph, const std::vector<uint32_t>& node_set) {
@@ -49,16 +88,18 @@ SubGraphNodeSet(
       katana::iterate(uint32_t(0), uint32_t(num_nodes)),
       [&](const uint32_t& n) {
         uint32_t src = node_set[n];
-        auto edge_range = graph->topology().edge_range(src);
+
+        auto first = graph->edges(src).begin();
+        auto last = graph->edges(src).end();
         for (auto dest : node_set) {
           // Binary search on the edges sorted by destination id
-          auto edge_matched = std::lower_bound(
-              edge_iterator(edge_range.first), edge_iterator(edge_range.second),
-              dest);
-          if (*edge_matched != edge_range.second) {
-            while (*edge_matched == dest) {
+          auto lower_bound = LowerBound(
+              first, last, LessThan<katana::PropertyGraph>(*graph, dest));
+          if (lower_bound != last) {
+            while (lower_bound != last &&
+                   *graph->GetEdgeDest(lower_bound) == dest) {
               subgraph_edges[n].push_back(dest);
-              edge_matched++;
+              lower_bound++;
             }
           }
           (*out_indices)[n] = subgraph_edges[n].size();
@@ -66,6 +107,10 @@ SubGraphNodeSet(
       },
       katana::steal(), katana::no_stats(),
       katana::loopname("SubgraphExtraction"));
+
+  for (uint64_t i = 0; i < num_nodes; ++i) {
+    katana::gPrint("out", (*out_indices)[i]);
+  }
 
   // Prefix sum
   for (uint64_t i = 1; i < num_nodes; ++i) {

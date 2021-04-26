@@ -297,10 +297,10 @@ public:
     return (edgeLabelToIndexMap.find(data) != edgeLabelToIndexMap.end());
   }
 
-  enum FindEdgeWithLabelOptions {
-    FINDFIRST = 0,
-    FINDLAST,
-    FINDANY,
+  enum class FindEdgeWithLabelOptions {
+    FindFirst = 0,
+    FindLast,
+    FindAny,
   };
 
   /**
@@ -317,9 +317,9 @@ public:
    */
   template <bool in_edges, enum FindEdgeWithLabelOptions opt>
   std::optional<std::tuple<edge_iterator, edge_iterator, edge_iterator>>
-  FindFirstOrLastEdgeWithLabel(
-      const edge_iterator& begin, const edge_iterator& end, GraphNode node,
-      GraphNode key, const EdgeTy& data) const {
+  FindFirstOrLastEdge(
+      const edge_iterator& begin, const edge_iterator& end,
+      GraphNode key) const {
     KATANA_LOG_DEBUG_ASSERT(!(find_first && find_last));
 
     edge_iterator l = begin;
@@ -327,13 +327,12 @@ public:
 
     // If we're searching for the first edge, we stop at the beginning and need
     // to check the previous edge. The opposite is true for the last edge.
-    edge_iterator limit = opt == FINDFIRST ? begin : (end - 1);
-    int direction = opt == FINDFIRST ? -1 : 1;
+    bool finding_first = opt == FindEdgeWithLabelOptions::FindFirst;
+    edge_iterator limit = finding_first ? begin : (end - 1);
+    int direction = finding_first ? -1 : 1;
 
     // If we're finding the first element, we can narrow the search space for
     // finding the last element based off of what we've seen.
-    edge_iterator orig_end =
-        in_edges ? in_raw_end(node, data) : raw_end(node, data);
     edge_iterator last_begin_bound = begin;
     edge_iterator last_end_bound = end;
 
@@ -343,24 +342,24 @@ public:
           in_edges ? this->getInEdgeDst(mid) : this->getEdgeDst(mid);
       if (value == key) {
         // Update bounds for last only if we're searching for the first element.
-        if (opt == FINDFIRST) {
+        if (finding_first) {
           last_begin_bound = mid;
-          if (end != orig_end) {
-            GraphNode end_value =
-                in_edges ? this->getInEdgeDst(end) : this->getEdgeDst(end);
-            if (end_value != key) {
-              last_end_bound = end;
-            }
-          }
+          last_end_bound = r + 1;
         }
 
-        if (!(opt == FINDANY) && mid != limit) {
+        if (!(opt == FindEdgeWithLabelOptions::FindAny) && mid != limit) {
           // check that mid - 1 is not key.
           GraphNode adjacent_value = in_edges
                                          ? this->getInEdgeDst(mid + direction)
                                          : this->getEdgeDst(mid + direction);
           if (adjacent_value != key) {
             return std::make_tuple(mid, last_begin_bound, last_end_bound);
+          } else {
+            if (finding_first) {
+              r = mid - 1;
+            } else {
+              l = mid + 1;
+            }
           }
         } else {
           return std::make_tuple(mid, last_begin_bound, last_end_bound);
@@ -381,8 +380,7 @@ public:
     edge_iterator begin =
         in_edges ? in_raw_begin(node, data) : raw_begin(node, data);
     edge_iterator end = in_edges ? in_raw_end(node, data) : raw_end(node, data);
-    return FindFirstOrLastEdgeWithLabel<in_edges, opt>(
-        begin, end, node, key, data);
+    return FindFirstOrLastEdge<in_edges, opt>(begin, end, key);
   }
 
   /**
@@ -393,7 +391,8 @@ public:
   template <bool in_edges>
   std::optional<edge_iterator> FindEdgeWithLabel(
       GraphNode node, GraphNode key, const EdgeTy& data) const {
-    auto res = FindFirstOrLastEdgeWithLabel<in_edges, FINDANY>(node, key, data);
+    auto res = FindFirstOrLastEdgeWithLabel<
+        in_edges, FindEdgeWithLabelOptions::FindAny>(node, key, data);
     if (!res) {
       return std::nullopt;
     }
@@ -402,38 +401,38 @@ public:
   }
 
   /**
-   * Returns an edge iterator to an edge from src to dst with some label
-   * by searching for the key via the node's outgoing or incoming edges.
-   * If not found, returns nothing.
+   * Returns all edges from src to dst with some label by searching for the key
+   * via the node's outgoing or incoming edges.  If not found, returns nothing.
    */
-  std::optional<edges_iterator> FindEdgesWithLabel(
+  std::optional<edges_iterator> FindAllEdgesWithLabel(
       GraphNode src, GraphNode dst, const EdgeTy& data) const {
     // trivial check; can't be connected if degree is 0
     if (degrees_[src] == 0 || in_degrees_[dst] == 0) {
       return std::nullopt;
     }
     if (degrees_[src] < in_degrees_[dst]) {
-      return FindEdgesWithLabelImpl<false>(src, dst, data);
+      return FindAllEdgesWithLabelImpl<false>(src, dst, data);
     }
 
-    return FindEdgesWithLabelImpl<true>(dst, src, data);
+    return FindAllEdgesWithLabelImpl<true>(dst, src, data);
   }
 
   /**
-   * Returns an edge iterator to an edge with some node and key with some label
-   * by searching for the key via the node's outgoing or incoming edges.
-   * If not found, returns nothing.
+   * Returns all edges with some node and key with some label by searching for
+   * the key via the node's outgoing or incoming edges.  If not found, returns
+   * nothing.
    */
   template <bool in_edges>
-  std::optional<edges_iterator> FindEdgesWithLabelImpl(
+  std::optional<edges_iterator> FindAllEdgesWithLabelImpl(
       GraphNode node, GraphNode key, const EdgeTy& data) const {
-    auto first =
-        FindFirstOrLastEdgeWithLabel<in_edges, FINDFIRST>(node, key, data);
+    auto first = FindFirstOrLastEdgeWithLabel<
+        in_edges, FindEdgeWithLabelOptions::FindFirst>(node, key, data);
     if (!first) {
       return std::nullopt;
     }
 
-    auto last = FindFirstOrLastEdgeWithLabel<in_edges, FINDLAST>(
+    auto last = FindFirstOrLastEdgeWithLabel<
+        in_edges, FindEdgeWithLabelOptions::FindLast>(
         std::get<1>(*first), std::get<2>(*first), node, key, data);
     KATANA_LOG_DEBUG_ASSERT(last);
 

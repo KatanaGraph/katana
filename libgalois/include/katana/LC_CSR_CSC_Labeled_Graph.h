@@ -433,35 +433,20 @@ public:
    * nothing.
    */
   std::optional<edges_iterator> FindAllEdgesWithLabel(
-      GraphNode src, GraphNode dst, const EdgeTy& data) const {
+      GraphNode node, GraphNode key, const EdgeTy& data) const {
     // trivial check; can't be connected if degree is 0
-    if (degrees_[src] == 0 || in_degrees_[dst] == 0) {
+    if (degrees_[node] == 0 || in_degrees_[key] == 0) {
       return std::nullopt;
     }
-    if (degrees_[src] < in_degrees_[dst]) {
-      return FindAllEdgesWithLabel<false>(src, dst, data);
-    }
 
-    return FindAllEdgesWithLabel<true>(dst, src, data);
-  }
-
-  /**
-   * Returns all edges with some node and key with some label by searching for
-   * the key via the node's outgoing or incoming edges.  If not found, returns
-   * nothing.
-   */
-  template <bool in_edges>
-  std::optional<edges_iterator> FindAllEdgesWithLabel(
-      GraphNode node, GraphNode key, const EdgeTy& data) const {
     auto first = FindFirstOrLastEdgeWithLabel<
-        in_edges, FindEdgeWithLabelOptions::FindFirst>(node, key, data);
+        false, FindEdgeWithLabelOptions::FindFirst>(node, key, data);
     if (!first) {
       return std::nullopt;
     }
 
-    auto last =
-        FindFirstOrLastEdge<in_edges, FindEdgeWithLabelOptions::FindLast>(
-            std::get<1>(*first), std::get<2>(*first), key);
+    auto last = FindFirstOrLastEdge<false, FindEdgeWithLabelOptions::FindLast>(
+        std::get<1>(*first), std::get<2>(*first), key);
     KATANA_LOG_DEBUG_ASSERT(last);
 
     return internal::make_no_deref_range(

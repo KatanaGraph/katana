@@ -17,6 +17,7 @@
 #include "tsuba/FileView.h"
 #include "tsuba/PartitionMetadata.h"
 #include "tsuba/RDGLineage.h"
+#include "tsuba/ReadGroup.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
 

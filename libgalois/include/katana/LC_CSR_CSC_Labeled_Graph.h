@@ -402,12 +402,30 @@ public:
   }
 
   /**
+   * Returns an edge iterator to an edge from src to dst with some label
+   * by searching for the key via the node's outgoing or incoming edges.
+   * If not found, returns nothing.
+   */
+  std::optional<edges_iterator> FindEdgesWithLabel(
+      GraphNode src, GraphNode dst, const EdgeTy& data) const {
+    // trivial check; can't be connected if degree is 0
+    if (degrees_[src] == 0 || in_degrees_[dst] == 0) {
+      return std::nullopt;
+    }
+    if (degrees_[src] < in_degrees_[dst]) {
+      return FindEdgesWithLabelImpl<false>(src, dst, data);
+    }
+
+    return FindEdgesWithLabelImpl<true>(dst, src, data);
+  }
+
+  /**
    * Returns an edge iterator to an edge with some node and key with some label
    * by searching for the key via the node's outgoing or incoming edges.
    * If not found, returns nothing.
    */
   template <bool in_edges>
-  std::optional<edges_iterator> FindEdgesWithLabel(
+  std::optional<edges_iterator> FindEdgesWithLabelImpl(
       GraphNode node, GraphNode key, const EdgeTy& data) const {
     auto first =
         FindFirstOrLastEdgeWithLabel<in_edges, FINDFIRST>(node, key, data);

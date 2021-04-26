@@ -226,8 +226,12 @@ struct LocalClusteringCoefficientPerThread {
     katana::do_all(katana::iterate(*graph), [&](Node n) {
       auto degree =
           std::distance(graph->edges(n).begin(), graph->edges(n).end());
-      graph->template GetData<NodeClusteringCoefficient>(n) =
-          ((double)(2 * node_triangle_count_[n])) / (degree * (degree - 1));
+      if (degree > 1) {
+        graph->template GetData<NodeClusteringCoefficient>(n) =
+            ((double)(2 * node_triangle_count_[n])) / (degree * (degree - 1));
+      } else {
+        graph->template GetData<NodeClusteringCoefficient>(n) = 0.0;
+      }
     });
 
     return;

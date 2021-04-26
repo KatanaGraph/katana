@@ -9,6 +9,7 @@
 katana::Result<void>
 tsuba::RDGSlice::DoMake(
     const katana::Uri& metadata_dir, const SliceArg& slice) {
+  ReadGroup grp;
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
 
   if (auto res = core_->topology_file_storage().Bind(
@@ -20,7 +21,7 @@ tsuba::RDGSlice::DoMake(
 
   auto node_result = AddPropertySlice(
       metadata_dir, core_->part_header().node_prop_info_list(),
-      slice.node_range,
+      slice.node_range, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddNodeProperties(props);
       });
@@ -30,7 +31,7 @@ tsuba::RDGSlice::DoMake(
 
   auto edge_result = AddPropertySlice(
       metadata_dir, core_->part_header().edge_prop_info_list(),
-      slice.edge_range,
+      slice.edge_range, &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddEdgeProperties(props);
       });
@@ -38,7 +39,7 @@ tsuba::RDGSlice::DoMake(
     return edge_result.error();
   }
 
-  return katana::ResultSuccess();
+  return grp.Finish();
 }
 
 katana::Result<tsuba::RDGSlice>

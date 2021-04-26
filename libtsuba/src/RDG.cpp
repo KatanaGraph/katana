@@ -32,6 +32,7 @@
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
 #include "tsuba/ParquetWriter.h"
+#include "tsuba/ReadGroup.h"
 #include "tsuba/file.h"
 #include "tsuba/tsuba.h"
 
@@ -379,8 +380,9 @@ tsuba::RDG::DoStore(
 
 katana::Result<void>
 tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
+  ReadGroup grp;
   auto node_result = AddProperties(
-      metadata_dir, core_->part_header().node_prop_info_list(),
+      metadata_dir, core_->part_header().node_prop_info_list(), &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddNodeProperties(props);
       });
@@ -389,61 +391,12 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
   }
 
   auto edge_result = AddProperties(
-      metadata_dir, core_->part_header().edge_prop_info_list(),
+      metadata_dir, core_->part_header().edge_prop_info_list(), &grp,
       [rdg = this](const std::shared_ptr<arrow::Table>& props) {
         return rdg->core_->AddEdgeProperties(props);
       });
   if (!edge_result) {
     return edge_result.error().WithContext("populating edge properties");
-  }
-
-  const std::vector<PropStorageInfo>& part_prop_info_list =
-      core_->part_header().part_prop_info_list();
-  if (!part_prop_info_list.empty()) {
-    auto part_result = AddProperties(
-        metadata_dir, part_prop_info_list,
-        [rdg = this](const std::shared_ptr<arrow::Table>& props) {
-          return rdg->AddPartitionMetadataArray(props);
-        });
-    if (!part_result) {
-      return part_result.error();
-    }
-
-    if (local_to_user_id_->length() == 0) {
-      // for backward compatibility
-      if (local_to_global_id_->length() !=
-          core_->part_header().metadata().num_nodes_) {
-        return KATANA_ERROR(
-            tsuba::ErrorCode::InvalidArgument,
-            "regenerate partitions: number of Global Node IDs {} does not "
-            "match the number of master nodes {}",
-            local_to_global_id_->length(),
-            core_->part_header().metadata().num_nodes_);
-      }
-      // NB: this is a zero-copy slice, so the underlying data is shared
-      set_local_to_user_id(local_to_global_id_->Slice(0));
-    } else if (
-        local_to_user_id_->length() !=
-        (core_->part_header().metadata().num_owned_ +
-         local_to_global_id_->length())) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::InvalidArgument,
-          "regenerate partitions: number of User Node IDs {} do not match "
-          "number of masters nodes {} plus the number of Global Node IDs {}",
-          local_to_user_id_->length(),
-          core_->part_header().metadata().num_owned_,
-          local_to_global_id_->length());
-    }
-
-    KATANA_LOG_DEBUG(
-        "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
-        "{} l2g sz: {}",
-        master_nodes_.size(), mirror_nodes_.size(),
-        host_to_owned_global_ids_ == nullptr
-            ? 0
-            : host_to_owned_global_ids_->length(),
-        local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
-        local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
   }
 
   katana::Uri t_path = metadata_dir.Join(core_->part_header().topology_path());
@@ -453,6 +406,60 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
   }
 
   rdg_dir_ = metadata_dir;
+
+  const std::vector<PropStorageInfo>& part_prop_info_list =
+      core_->part_header().part_prop_info_list();
+  if (part_prop_info_list.empty()) {
+    return grp.Finish();
+  }
+
+  auto part_result = AddProperties(
+      metadata_dir, part_prop_info_list, &grp,
+      [rdg = this](const std::shared_ptr<arrow::Table>& props) {
+        return rdg->AddPartitionMetadataArray(props);
+      });
+  if (!part_result) {
+    return part_result.error();
+  }
+  if (auto res = grp.Finish(); !res) {
+    return res.error();
+  }
+
+  if (local_to_user_id_->length() == 0) {
+    // for backward compatibility
+    if (local_to_global_id_->length() !=
+        core_->part_header().metadata().num_nodes_) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::InvalidArgument,
+          "regenerate partitions: number of Global Node IDs {} does not "
+          "match the number of master nodes {}",
+          local_to_global_id_->length(),
+          core_->part_header().metadata().num_nodes_);
+    }
+    // NB: this is a zero-copy slice, so the underlying data is shared
+    set_local_to_user_id(local_to_global_id_->Slice(0));
+  } else if (
+      local_to_user_id_->length() !=
+      (core_->part_header().metadata().num_owned_ +
+       local_to_global_id_->length())) {
+    return KATANA_ERROR(
+        tsuba::ErrorCode::InvalidArgument,
+        "regenerate partitions: number of User Node IDs {} do not match "
+        "number of masters nodes {} plus the number of Global Node IDs {}",
+        local_to_user_id_->length(), core_->part_header().metadata().num_owned_,
+        local_to_global_id_->length());
+  }
+
+  KATANA_LOG_DEBUG(
+      "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
+      "{} l2g sz: {}",
+      master_nodes_.size(), mirror_nodes_.size(),
+      host_to_owned_global_ids_ == nullptr
+          ? 0
+          : host_to_owned_global_ids_->length(),
+      local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
+      local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
+
   return katana::ResultSuccess();
 }
 

@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "katana/Result.h"
+#include "tsuba/AsyncOpGroup.h"
 #include "tsuba/FileFrame.h"
 #include "tsuba/file.h"
 
@@ -21,17 +22,10 @@ class WriteGroup {
   };
 
   std::string tag_;
-  std::list<AsyncOp> pending_ops_;
   std::atomic<uint64_t> outstanding_size_{0};
-  uint64_t errors_{0};
-  uint64_t total_{0};
-  katana::Result<void> last_error_{katana::ResultSuccess()};
+  AsyncOpGroup async_op_group_;
 
   WriteGroup(std::string tag) : tag_(std::move(tag)){};
-
-  /// Wait for the next op if there is one, account errors. Returns true if
-  /// there was a next op
-  bool Drain();
 
 public:
   static constexpr uint64_t kMaxOutstandingSize = 10ULL << 30;  // 10 GB

@@ -2,6 +2,7 @@
 
 #include "GlobalState.h"
 #include "katana/Random.h"
+#include "katana/Result.h"
 
 template <typename T>
 using Result = katana::Result<T>;
@@ -25,36 +26,9 @@ WriteGroup::Make() {
   return std::unique_ptr<WriteGroup>(new WriteGroup(tag));
 }
 
-bool
-WriteGroup::Drain() {
-  auto op_it = pending_ops_.begin();
-  if (op_it == pending_ops_.end()) {
-    return false;
-  }
-  auto res = op_it->result.get();
-  if (!res) {
-    KATANA_LOG_DEBUG(
-        "async write op for {} returned {}", op_it->location, res.error());
-    errors_++;
-    last_error_ = res.error();
-  }
-  outstanding_size_ -= op_it->accounted_size;
-  pending_ops_.erase(op_it);
-  return true;
-}
-
 Result<void>
 WriteGroup::Finish() {
-  while (Drain()) {
-    // spin
-  }
-
-  if (errors_ > 0) {
-    return last_error_.error().WithContext(
-        "{} of {} async write ops returned errors", errors_, total_);
-  }
-
-  return last_error_;
+  return async_op_group_.Finish();
 }
 
 void
@@ -66,19 +40,19 @@ WriteGroup::AddOp(
   }
   if (accounted_size > 0) {
     while (outstanding_size_ + accounted_size > kMaxOutstandingSize) {
-      if (!Drain()) {
+      if (!async_op_group_.FinishOne()) {
         KATANA_LOG_ERROR(
             "outstanding_size should be zero if we couldn't drain");
         break;
       }
     }
   }
-  pending_ops_.emplace_back(AsyncOp{
-      .result = std::move(future),
-      .location = std::move(file),
-      .accounted_size = accounted_size,
-  });
-  total_ += 1;
+  async_op_group_.AddOp(
+      std::move(future), std::move(file),
+      [wg = this, accounted_size]() -> katana::Result<void> {
+        wg->outstanding_size_ -= accounted_size;
+        return katana::ResultSuccess();
+      });
 }
 
 // shared pointer because FileFrames are often held that way due do the way

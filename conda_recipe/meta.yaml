@@ -22,6 +22,7 @@ requirements:
     - sphinx>=3.5.1
     - pygithub
     - packaging
+    - libxml2>=2.9.10
   host:
     - jinja2
     - cython>=0.29.12
@@ -171,6 +172,7 @@ outputs:
         - jupyter
         - pytest
       source_files:
+        - tools/graph-convert/test-inputs
         - python/tests
         - python/examples/jupyter
       script: run_test_python.sh
@@ -205,8 +207,8 @@ outputs:
         - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
-        - libxml2>=2.9.10
         - llvm>=8
+        - libxml2>=2.9.10
         - ncurses>=6.1
         - nlohmann_json>=3.7.3
         - openblas>=0.3.12

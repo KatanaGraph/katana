@@ -21,9 +21,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "graph-properties-convert-schema.h"
 #include "katana/ErrorCode.h"
 #include "katana/Galois.h"
+#include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
@@ -395,10 +395,10 @@ GetUserInputForLabels(
       std::string existing_key;
       if (res.empty()) {
         LabelRule rule{name, for_node, !for_node, name};
-        katana::WriteGraphmlRule(writer, rule);
+        katana::graphml::WriteGraphmlRule(writer, rule);
       } else {
         LabelRule rule{name, for_node, !for_node, res};
-        katana::WriteGraphmlRule(writer, rule);
+        katana::graphml::WriteGraphmlRule(writer, rule);
       }
     }
   }
@@ -416,10 +416,10 @@ GetUserInputForLabels(
 
     std::string existing_key;
     if (res.empty()) {
-      katana::WriteGraphmlRule(writer, rule);
+      katana::graphml::WriteGraphmlRule(writer, rule);
     } else {
       rule.label = res;
-      katana::WriteGraphmlRule(writer, rule);
+      katana::graphml::WriteGraphmlRule(writer, rule);
     }
   }
 }
@@ -439,7 +439,7 @@ GetUserInputForFields(
     }
 
     bool done = false;
-    auto type_name = katana::TypeName(key.type);
+    auto type_name = katana::graphml::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
       if (key.is_list) {
@@ -453,7 +453,7 @@ GetUserInputForFields(
             std::istream_iterator<std::string>{iss},
             std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
-          auto new_type = katana::ParseType(tokens[0]);
+          auto new_type = katana::graphml::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
@@ -492,7 +492,7 @@ GetUserInputForFields(
         done = true;
       }
     }
-    katana::WriteGraphmlKey(writer, key);
+    katana::graphml::WriteGraphmlKey(writer, key);
   }
 }
 
@@ -829,10 +829,10 @@ GetMappingInput(
   }
 
   if (GetUserBool("Generate default mapping now")) {
-    katana::ExportSchemaMapping(outfile, rules, keys);
+    katana::graphml::ExportSchemaMapping(outfile, rules, keys);
     return;
   }
-  auto writer = katana::CreateGraphmlFile(outfile);
+  auto writer = katana::graphml::CreateGraphmlFile(outfile);
 
   // finalize labels for nodes and edges mappings
   std::cout << "Nodes: " << nodes << "\n";
@@ -851,7 +851,7 @@ GetMappingInput(
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
   xmlTextWriterEndElement(writer);
 
-  katana::FinishGraphmlFile(writer);
+  katana::graphml::FinishGraphmlFile(writer);
 }
 
 }  // end of unnamed namespace
@@ -876,7 +876,7 @@ katana::ConvertMysql(
   std::vector<std::string> table_names = FetchTableNames(con);
   std::unordered_map<std::string, TableData> table_data;
   if (!mapping.empty()) {
-    auto res = katana::ProcessSchemaMapping(mapping);
+    auto res = katana::graphml::ProcessSchemaMapping(mapping);
     std::vector<LabelRule> rules = res.first;
     std::vector<PropertyKey> keys = res.second;
     table_data = PreprocessTables(con, &builder, table_names, rules, keys);
@@ -892,7 +892,11 @@ katana::ConvertMysql(
     }
   }
   mysql_close(con);
-  auto out = builder.Finish();
+  auto out_result = builder.Finish();
+  if (!out_result) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", out_result.error());
+  }
+  auto out = out_result.value();
   out.Dump();
   return out;
 }

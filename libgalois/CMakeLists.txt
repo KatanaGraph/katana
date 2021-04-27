@@ -21,6 +21,8 @@ set(sources
         src/FileGraphParallel.cpp
         src/gIO.cpp
         src/GraphHelpers.cpp
+        src/GraphML.cpp
+        src/GraphMLSchema.cpp
         src/HWTopo.cpp
         src/Mem.cpp
         src/NumaMem.cpp
@@ -64,6 +66,8 @@ set(sources
         src/analytics/subgraph_extraction/subgraph_extraction.cpp
     )
 
+find_package(LibXml2 2.9.1 REQUIRED)
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND sources src/HWTopoDarwin.cpp)
 else()
@@ -86,6 +90,7 @@ target_include_directories(katana_galois PUBLIC
 target_link_libraries(katana_galois PUBLIC tsuba)
 target_link_libraries(katana_galois PRIVATE Threads::Threads)
 target_link_libraries(katana_galois PUBLIC katana_support)
+target_link_libraries(katana_galois PUBLIC LibXml2::LibXml2)
 
 set_common_katana_library_options(katana_galois)
 

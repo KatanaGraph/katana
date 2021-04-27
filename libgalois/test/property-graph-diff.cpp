@@ -56,7 +56,16 @@ CreateGraph1() {
       pgb.FinishEdge();
     }
   }
-  return katana::MakeGraph(pgb.Finish(false));
+  auto components_result = pgb.Finish(false);
+  if (!components_result) {
+    KATANA_LOG_FATAL(
+        "Failed to construct graph: {}", components_result.error());
+  }
+  auto graph_result = components_result.value().ToPropertyGraph();
+  if (!graph_result) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
+  }
+  return std::move(graph_result.value());
 }
 
 std::unique_ptr<katana::PropertyGraph>
@@ -116,7 +125,16 @@ CreateGraph2() {
       pgb.FinishEdge();
     }
   }
-  return katana::MakeGraph(pgb.Finish(false));
+  auto components_result = pgb.Finish(false);
+  if (!components_result) {
+    KATANA_LOG_FATAL(
+        "Failed to construct graph: {}", components_result.error());
+  }
+  auto graph_result = components_result.value().ToPropertyGraph();
+  if (!graph_result) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
+  }
+  return std::move(graph_result.value());
 }
 
 std::unique_ptr<katana::PropertyGraph>
@@ -168,7 +186,16 @@ CreateGraph3() {
       pgb.FinishEdge();
     }
   }
-  return katana::MakeGraph(pgb.Finish(false));
+  auto components_result = pgb.Finish(false);
+  if (!components_result) {
+    KATANA_LOG_FATAL(
+        "Failed to construct graph: {}", components_result.error());
+  }
+  auto graph_result = components_result.value().ToPropertyGraph();
+  if (!graph_result) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
+  }
+  return std::move(graph_result.value());
 }
 
 int

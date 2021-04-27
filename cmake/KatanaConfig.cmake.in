@@ -39,6 +39,7 @@ find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
 find_dependency(nlohmann_json REQUIRED)
 find_dependency(CURL REQUIRED)
 
+find_dependency(LibXml2 2.9.1 REQUIRED)
 find_dependency(Arrow REQUIRED)
 get_filename_component(ARROW_CONFIG_DIR ${Arrow_CONFIG} DIRECTORY)
 find_dependency(Parquet HINTS ${ARROW_CONFIG_DIR})

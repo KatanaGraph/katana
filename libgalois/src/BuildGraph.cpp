@@ -1701,7 +1701,7 @@ katana::PropertyGraphBuilder::BuildFinalEdges(bool verbose) {
       BuildTable(&final_type_builders, &edge_types_.schema)};
 }
 
-katana::GraphComponents
+katana::Result<GraphComponents>
 katana::PropertyGraphBuilder::Finish(bool verbose) {
   topology_builder_.out_dests.resize(
       edges_, std::numeric_limits<uint32_t>::max());
@@ -1755,22 +1755,26 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
       std::make_shared<arrow::UInt64Builder>();
   st = topology_indices_builder->AppendValues(topology_builder_.out_indices);
   if (!st.ok()) {
-    KATANA_LOG_FATAL("Error building topology");
+    return KATANA_ERROR(
+        ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
   std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
       std::make_shared<arrow::UInt32Builder>();
   st = topology_dests_builder->AppendValues(topology_builder_.out_dests);
   if (!st.ok()) {
-    KATANA_LOG_FATAL("Error building topology");
+    return KATANA_ERROR(
+        ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
 
   st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
-    KATANA_LOG_FATAL("Error building arrow array for topology");
+    return KATANA_ERROR(
+        ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
   st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
-    KATANA_LOG_FATAL("Error building arrow array for topology");
+    return KATANA_ERROR(
+        ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
 
   if (verbose) {
@@ -1788,39 +1792,39 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
   return katana::GraphComponents{nodes_tables, edges_tables, topology};
 }
 
-std::unique_ptr<katana::PropertyGraph>
-katana::MakeGraph(const katana::GraphComponents& graph_comps) {
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::GraphComponents::ToPropertyGraph() const {
   auto graph = std::make_unique<katana::PropertyGraph>();
-  auto result = graph->SetTopology(*graph_comps.topology);
+  auto result = graph->SetTopology(*topology);
   if (!result) {
-    KATANA_LOG_FATAL("Error adding topology: {}", result.error());
+    return result.error().WithContext("adding topology");
   }
 
-  if (graph_comps.nodes.properties->num_columns() > 0) {
-    result = graph->AddNodeProperties(graph_comps.nodes.properties);
+  if (nodes.properties->num_columns() > 0) {
+    result = graph->AddNodeProperties(nodes.properties);
     if (!result) {
-      KATANA_LOG_FATAL("Error adding node properties: {}", result.error());
+      return result.error().WithContext("adding node properties");
     }
   }
-  if (graph_comps.nodes.labels->num_columns() > 0) {
-    result = graph->AddNodeProperties(graph_comps.nodes.labels);
+  if (nodes.labels->num_columns() > 0) {
+    result = graph->AddNodeProperties(nodes.labels);
     if (!result) {
-      KATANA_LOG_FATAL("Error adding node labels: {}", result.error());
+      return result.error().WithContext("adding node labels");
     }
   }
-  if (graph_comps.edges.properties->num_columns() > 0) {
-    result = graph->AddEdgeProperties(graph_comps.edges.properties);
+  if (edges.properties->num_columns() > 0) {
+    result = graph->AddEdgeProperties(edges.properties);
     if (!result) {
-      KATANA_LOG_FATAL("Error adding edge properties: {}", result.error());
+      return result.error().WithContext("adding edge properties");
     }
   }
-  if (graph_comps.edges.labels->num_columns() > 0) {
-    result = graph->AddEdgeProperties(graph_comps.edges.labels);
+  if (edges.labels->num_columns() > 0) {
+    result = graph->AddEdgeProperties(edges.labels);
     if (!result) {
-      KATANA_LOG_FATAL("Error adding edge types: {}", result.error());
+      return result.error().WithContext("adding edge labels");
     }
   }
-  return graph;
+  return std::unique_ptr<katana::PropertyGraph>(std::move(graph));
 }
 
 // NB: is_list is always initialized
@@ -1887,32 +1891,35 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
 
 /// WritePropertyGraph writes an RDG from the provided \param graph_comps
 /// to the directory \param dir
-void
+katana::Result<void>
 katana::WritePropertyGraph(
     const katana::GraphComponents& graph_comps, const std::string& dir) {
-  auto graph_ptr = MakeGraph(graph_comps);
-  WritePropertyGraph(std::move(*graph_ptr), dir);
+  auto graph_ptr = graph_comps.ToPropertyGraph();
+  if (!graph_ptr) {
+    return graph_ptr.error();
+  }
+
+  return WritePropertyGraph(std::move(*graph_ptr.value()), dir);
 }
 
-void
+katana::Result<void>
 katana::WritePropertyGraph(
     katana::PropertyGraph prop_graph, const std::string& dir) {
-  for (auto field : prop_graph.node_schema()->fields()) {
+  for (const auto& field : prop_graph.node_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());
   }
-  for (auto field : prop_graph.edge_schema()->fields()) {
+  for (const auto& field : prop_graph.edge_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "edge prop: ({}) {}", field->type()->ToString(), field->name());
   }
 
-  std::string meta_file = dir;
-
   prop_graph.MarkAllPropertiesPersistent();
-  auto result = prop_graph.Write(meta_file, "graph-properties-convert");
+  auto result = prop_graph.Write(dir, "libkatana_galois");
   if (!result) {
-    KATANA_LOG_FATAL("Error writing to fs: {}", result.error());
+    return result.error().WithContext("writing to fs");
   }
+  return result;
 }
 
 std::vector<katana::ImportData>

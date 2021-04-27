@@ -61,8 +61,6 @@ add_executable(graph-properties-convert)
 find_package(LibXml2 2.9.1 REQUIRED)
 
 set(sources
-  graph-properties-convert-schema.cpp
-  graph-properties-convert-graphml.cpp
   Transforms.cpp
 )
 

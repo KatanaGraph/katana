@@ -3,8 +3,8 @@
 
 #include <llvm/Support/CommandLine.h>
 
-#include "graph-properties-convert-graphml.h"
 #include "katana/Galois.h"
+#include "katana/GraphML.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
 
@@ -1172,7 +1172,11 @@ GenerateAndConvertBson(size_t chunk_size) {
   katana::HandleEdgeDocumentMongoDB(&builder, friend_doc, "friend");
   bson_destroy(friend_doc);
 
-  return builder.Finish();
+  if (auto r = builder.Finish(); !r) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", r.error());
+  } else {
+    return r.value();
+  }
 }
 #endif
 
@@ -1268,7 +1272,11 @@ main(int argc, char** argv) {
 
   switch (fileType) {
   case katana::SourceDatabase::kNeo4j:
-    graph = katana::ConvertGraphML(input_filename, chunk_size);
+    if (auto r = katana::ConvertGraphML(input_filename, chunk_size, true); !r) {
+      KATANA_LOG_FATAL(": {}", r.error());
+    } else {
+      graph = std::move(r.value());
+    }
     break;
 #if defined(KATANA_MONGOC_FOUND)
   case katana::SourceDatabase::kMongodb:

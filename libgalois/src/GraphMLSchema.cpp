@@ -1,4 +1,4 @@
-#include "graph-properties-convert-schema.h"
+#include "katana/GraphMLSchema.h"
 
 #include <iostream>
 
@@ -60,7 +60,7 @@ struct GraphmlList {
 /***************************************/
 
 xmlTextWriterPtr
-katana::CreateGraphmlFile(const std::string& outfile) {
+katana::graphml::CreateGraphmlFile(const std::string& outfile) {
   xmlTextWriterPtr writer;
   writer = xmlNewTextWriterFilename(outfile.c_str(), 0);
   xmlTextWriterStartDocument(writer, "1.0", "UTF-8", NULL);
@@ -84,7 +84,8 @@ katana::CreateGraphmlFile(const std::string& outfile) {
 }
 
 void
-katana::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
+katana::graphml::WriteGraphmlRule(
+    xmlTextWriterPtr writer, const LabelRule& rule) {
   xmlTextWriterStartElement(writer, BAD_CAST "rule");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST rule.id.c_str());
   if (rule.for_node) {
@@ -99,7 +100,8 @@ katana::WriteGraphmlRule(xmlTextWriterPtr writer, const LabelRule& rule) {
 }
 
 void
-katana::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
+katana::graphml::WriteGraphmlKey(
+    xmlTextWriterPtr writer, const PropertyKey& key) {
   xmlTextWriterStartElement(writer, BAD_CAST "key");
   xmlTextWriterWriteAttribute(writer, BAD_CAST "id", BAD_CAST key.id.c_str());
   if (key.for_node) {
@@ -121,7 +123,7 @@ katana::WriteGraphmlKey(xmlTextWriterPtr writer, const PropertyKey& key) {
 }
 
 void
-katana::StartGraphmlNode(
+katana::graphml::StartGraphmlNode(
     xmlTextWriterPtr writer, const std::string& node_id,
     const std::string& labels) {
   xmlTextWriterStartElement(writer, BAD_CAST "node");
@@ -133,12 +135,12 @@ katana::StartGraphmlNode(
 }
 
 void
-katana::FinishGraphmlNode(xmlTextWriterPtr writer) {
+katana::graphml::FinishGraphmlNode(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);
 }
 
 void
-katana::StartGraphmlEdge(
+katana::graphml::StartGraphmlEdge(
     xmlTextWriterPtr writer, const std::string& edge_id,
     const std::string& src_node, const std::string& dest_node,
     const std::string& labels) {
@@ -155,12 +157,12 @@ katana::StartGraphmlEdge(
 }
 
 void
-katana::FinishGraphmlEdge(xmlTextWriterPtr writer) {
+katana::graphml::FinishGraphmlEdge(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);
 }
 
 void
-katana::AddGraphmlProperty(
+katana::graphml::AddGraphmlProperty(
     xmlTextWriterPtr writer, const std::string& property_name,
     const std::string& property_value) {
   xmlTextWriterStartElement(writer, BAD_CAST "data");
@@ -174,13 +176,13 @@ katana::AddGraphmlProperty(
 }
 
 void
-katana::FinishGraphmlFile(xmlTextWriterPtr writer) {
+katana::graphml::FinishGraphmlFile(xmlTextWriterPtr writer) {
   xmlTextWriterEndElement(writer);  // end graphml
   xmlTextWriterEndDocument(writer);
   xmlFreeTextWriter(writer);
 }
 void
-katana::ExportSchemaMapping(
+katana::graphml::ExportSchemaMapping(
     const std::string& outfile, const std::vector<LabelRule>& rules,
     const std::vector<PropertyKey>& keys) {
   xmlTextWriterPtr writer = CreateGraphmlFile(outfile);
@@ -198,6 +200,7 @@ katana::ExportSchemaMapping(
   FinishGraphmlFile(writer);
 }
 
+namespace {
 std::vector<PropertyKey>
 ExtractSchema(
     std::shared_ptr<arrow::Schema> schema, bool is_node,
@@ -213,7 +216,7 @@ ExtractSchema(
     // ignore boolean fields since for now we assume they are labels
     if (type->id() != arrow::Type::UINT8) {
       bool is_list = type->id() == arrow::Type::LIST;
-      ImportDataType import_type = katana::ParseType(type);
+      ImportDataType import_type = katana::graphml::ParseType(type);
       // TODO(Patrick) clean this up properly
       if (import_type == ImportDataType::kUnsupported) {
         import_type = ImportDataType::kString;
@@ -368,9 +371,11 @@ bool
 InRange(uint32_t id, const std::pair<uint64_t, uint64_t>& interval) {
   return interval.first <= id && id < interval.second;
 }
+}  // namespace
 
 void
-katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
+katana::graphml::ExportGraph(
+    const std::string& outfile, const std::string& rdg_file) {
   auto result = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
   if (!result) {
     KATANA_LOG_FATAL("failed to load {}: {}", rdg_file, result.error());
@@ -527,7 +532,7 @@ katana::ExportGraph(const std::string& outfile, const std::string& rdg_file) {
 
 // extract the type from an attr.type or attr.list attribute from a key element
 ImportDataType
-katana::ExtractTypeGraphML(xmlChar* value) {
+katana::graphml::ExtractTypeGraphML(xmlChar* value) {
   ImportDataType type = ImportDataType::kString;
   if (xmlStrEqual(value, BAD_CAST "string")) {
     type = ImportDataType::kString;
@@ -566,7 +571,7 @@ katana::ExtractTypeGraphML(xmlChar* value) {
  * extracts key attribute information for use later
  */
 PropertyKey
-katana::ProcessKey(xmlTextReaderPtr reader) {
+katana::graphml::ProcessKey(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -618,7 +623,7 @@ katana::ProcessKey(xmlTextReaderPtr reader) {
  * extracts key attribute information for use later
  */
 LabelRule
-katana::ProcessRule(xmlTextReaderPtr reader) {
+katana::graphml::ProcessRule(xmlTextReaderPtr reader) {
   int ret = xmlTextReaderMoveToNextAttribute(reader);
   xmlChar *name, *value;
 
@@ -662,7 +667,7 @@ katana::ProcessRule(xmlTextReaderPtr reader) {
 /**************************************************/
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
-katana::ProcessSchemaMapping(
+katana::graphml::ProcessSchemaMapping(
     katana::PropertyGraphBuilder* builder, const std::string& mapping,
     const std::vector<std::string>& coll_names) {
   xmlTextReaderPtr reader;
@@ -738,7 +743,7 @@ katana::ProcessSchemaMapping(
 }
 
 std::pair<std::vector<LabelRule>, std::vector<PropertyKey>>
-katana::ProcessSchemaMapping(const std::string& mapping) {
+katana::graphml::ProcessSchemaMapping(const std::string& mapping) {
   xmlTextReaderPtr reader;
   int ret = 0;
   bool finished_header = false;
@@ -800,7 +805,7 @@ katana::ProcessSchemaMapping(const std::string& mapping) {
 /**************************************************/
 
 std::string
-katana::TypeName(ImportDataType type) {
+katana::graphml::TypeName(ImportDataType type) {
   switch (type) {
   case ImportDataType::kString:
     return std::string("string");
@@ -822,7 +827,7 @@ katana::TypeName(ImportDataType type) {
 }
 
 ImportDataType
-katana::ParseType(const std::string& in) {
+katana::graphml::ParseType(const std::string& in) {
   std::string type = boost::to_lower_copy<std::string>(in);
   if (type == std::string("string")) {
     return ImportDataType::kString;
@@ -852,7 +857,7 @@ katana::ParseType(const std::string& in) {
 }
 
 ImportDataType
-katana::ParseType(const std::shared_ptr<arrow::DataType>& in) {
+katana::graphml::ParseType(const std::shared_ptr<arrow::DataType>& in) {
   arrow::Type::type type = in->id();
   if (type == arrow::Type::STRING) {
     return ImportDataType::kString;

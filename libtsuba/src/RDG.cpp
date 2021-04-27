@@ -43,7 +43,8 @@ namespace {
 // special partition property names
 const char* kMirrorNodesPropName = "mirror_nodes";
 const char* kMasterNodesPropName = "master_nodes";
-const char* kHostToOwnedGlobalIDsPropName = "host_to_owned_global_ids";
+const char* kHostToOwnedGlobalNodeIDsPropName = "host_to_owned_global_node_ids";
+const char* kHostToOwnedGlobalEdgeIDsPropName = "host_to_owned_global_edge_ids";
 const char* kLocalToUserIDPropName = "local_to_user_id";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
@@ -201,8 +202,10 @@ tsuba::RDG::AddPartitionMetadataArray(
     AddMirrorNodes(std::move(col));
   } else if (name.find(kMasterNodesPropName) == 0) {
     AddMasterNodes(std::move(col));
-  } else if (name == kHostToOwnedGlobalIDsPropName) {
-    set_host_to_owned_global_ids(std::move(col));
+  } else if (name == kHostToOwnedGlobalNodeIDsPropName) {
+    set_host_to_owned_global_node_ids(std::move(col));
+  } else if (name == kHostToOwnedGlobalEdgeIDsPropName) {
+    set_host_to_owned_global_edge_ids(std::move(col));
   } else if (name == kLocalToUserIDPropName) {
     set_local_to_user_id(std::move(col));
   } else if (name == kLocalToGlobalIDPropName) {
@@ -246,6 +249,9 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
       host_to_owned_global_node_ids_ == nullptr
           ? 0
           : host_to_owned_global_node_ids_->length(),
+      host_to_owned_global_edge_ids_ == nullptr
+          ? 0
+          : host_to_owned_global_edge_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
@@ -276,15 +282,29 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   }
 
   if (host_to_owned_global_node_ids_ != nullptr) {
-    auto h2o_res = StoreArrowArrayAtName(
-        host_to_owned_global_node_ids_, dir, kHostToOwnedGlobalIDsPropName,
+    auto h2nod_res = StoreArrowArrayAtName(
+        host_to_owned_global_node_ids_, dir, kHostToOwnedGlobalNodeIDsPropName,
         desc);
-    if (!h2o_res) {
-      return h2o_res.error();
+    if (!h2nod_res) {
+      return h2nod_res.error();
     }
     next_properties.emplace_back(tsuba::PropStorageInfo{
-        .name = kHostToOwnedGlobalIDsPropName,
-        .path = std::move(h2o_res.value()),
+        .name = kHostToOwnedGlobalNodeIDsPropName,
+        .path = std::move(h2nod_res.value()),
+        .persist = true,
+    });
+  }
+
+  if (host_to_owned_global_edge_ids_ != nullptr) {
+    auto h2edg_res = StoreArrowArrayAtName(
+        host_to_owned_global_edge_ids_, dir, kHostToOwnedGlobalEdgeIDsPropName,
+        desc);
+    if (!h2edg_res) {
+      return h2edg_res.error();
+    }
+    next_properties.emplace_back(tsuba::PropStorageInfo{
+        .name = kHostToOwnedGlobalEdgeIDsPropName,
+        .path = std::move(h2edg_res.value()),
         .persist = true,
     });
   }
@@ -459,12 +479,16 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
   }
 
   KATANA_LOG_DEBUG(
-      "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
+      "ReadPartMetadata master sz: {} mirrors sz: {} h2nod sz: {} h20e sz: {} "
+      "l2u sz: "
       "{} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
       host_to_owned_global_node_ids_ == nullptr
           ? 0
           : host_to_owned_global_node_ids_->length(),
+      host_to_owned_global_edge_ids_ == nullptr
+          ? 0
+          : host_to_owned_global_edge_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
@@ -694,6 +718,7 @@ void
 tsuba::RDG::InitArrowVectors() {
   // Create an empty array, accessed by Distribution during loading
   host_to_owned_global_node_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  host_to_owned_global_edge_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
   local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
   local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
 }

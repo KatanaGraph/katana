@@ -18,6 +18,14 @@
 
 namespace katana {
 
+KATANA_EXPORT ErrorCode ArrowToKatana(arrow::StatusCode code);
+
+inline ErrorCode
+ArrowToKatana(arrow::Status st) {
+  KATANA_LOG_DEBUG_ASSERT(!st.ok());
+  return ArrowToKatana(st.code());
+}
+
 /// Perform a safe cast from \param gen_array to \tparam ArrowArrayType
 /// calls the array's `View()` member first to make sure cast is safe.
 template <typename ArrowArrayType>

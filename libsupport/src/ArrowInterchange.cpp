@@ -16,7 +16,7 @@ IndexedTake(
       arrow::compute::Take(original, indices);
   if (!take_result.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
+        katana::ArrowToKatana(take_result.status()),
         "arrow builder reserve failed type: {} reason: {}",
         original->type()->name(), take_result.status());
   }
@@ -34,7 +34,7 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
   auto res = builder.Reserve(length);
   if (!res.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
+        katana::ArrowToKatana(res),
         "arrow builder reserve failed type: {} reason: {}",
         original->type()->name(), res);
   }
@@ -45,7 +45,7 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
   res = builder.Finish(&indices);
   if (!res.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
+        katana::ArrowToKatana(res),
         "arrow shuffle builder failed type: {} reason: {}",
         original->type()->name(), res);
   }
@@ -53,6 +53,25 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
 }
 
 }  // anonymous namespace
+
+katana::ErrorCode
+katana::ArrowToKatana(arrow::StatusCode code) {
+  KATANA_LOG_DEBUG_ASSERT(code != arrow::StatusCode::OK);
+
+  switch (code) {
+  case arrow::StatusCode::Invalid:
+    return ErrorCode::InvalidArgument;
+  case arrow::StatusCode::TypeError:
+    return ErrorCode::TypeError;
+  case arrow::StatusCode::AlreadyExists:
+    return ErrorCode::AlreadyExists;
+  case arrow::StatusCode::KeyError:
+  case arrow::StatusCode::IndexError:
+    return ErrorCode::NotFound;
+  default:
+    return ErrorCode::ArrowError;
+  }
+}
 
 katana::Result<std::shared_ptr<arrow::Array>>
 katana::Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
@@ -79,8 +98,7 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   auto res = builder.Reserve(length);
   if (!res.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "arrow builder reserve failed type: {} reason: {}",
+        ArrowToKatana(res), "arrow builder reserve failed type: {} reason: {}",
         original->type()->name(), res);
   }
   for (int64_t i = 0; i < length; ++i) {
@@ -90,8 +108,7 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   res = builder.Finish(&indices);
   if (!res.ok()) {
     return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "arrow shuffle builder failed type: {} reason: {}",
+        ArrowToKatana(res), "arrow shuffle builder failed type: {} reason: {}",
         original->type()->name(), res);
   }
   return IndexedTake(original, indices);

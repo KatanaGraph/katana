@@ -318,8 +318,6 @@ public:
   FindFirstOrLastEdge(
       const edge_iterator& begin, const edge_iterator& end,
       GraphNode key) const {
-    KATANA_LOG_DEBUG_ASSERT(!(find_first && find_last));
-
     edge_iterator l = begin;
     edge_iterator r = end - 1;
 

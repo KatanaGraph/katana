@@ -139,10 +139,10 @@ public:
   }
 
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_ids() const {
-    return host_to_owned_global_ids_;
+    return host_to_owned_global_node_ids_;
   }
   void set_host_to_owned_global_ids(std::shared_ptr<arrow::ChunkedArray>&& a) {
-    host_to_owned_global_ids_ = std::move(a);
+    host_to_owned_global_node_ids_ = std::move(a);
   }
 
   const std::shared_ptr<arrow::ChunkedArray>& local_to_user_id() const {
@@ -194,7 +194,7 @@ private:
   std::vector<std::shared_ptr<arrow::ChunkedArray>> master_nodes_;
   // Called while constructing to put these arrays into a usable state for Distribution
   void InitArrowVectors();
-  std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_ids_;
+  std::shared_ptr<arrow::ChunkedArray> host_to_owned_global_node_ids_;
   std::shared_ptr<arrow::ChunkedArray> local_to_user_id_;
   std::shared_ptr<arrow::ChunkedArray> local_to_global_id_;
 

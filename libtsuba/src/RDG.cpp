@@ -48,6 +48,8 @@ const char* kLocalToUserIDPropName = "local_to_user_id";
 const char* kLocalToGlobalIDPropName = "local_to_global_id";
 // deprecated; only here to support backward compatibility
 const char* kDeprecatedLocalToGlobalIDPropName = "local_to_global_vector";
+const char* kDeprecatedHostToOwnedGlobalNodeIDsPropName =
+    "host_to_owned_global_ids";
 
 std::string
 MirrorPropName(unsigned i) {
@@ -210,6 +212,11 @@ tsuba::RDG::AddPartitionMetadataArray(
         "deprecated graph format; replace the existing graph by storing the "
         "current graph");
     set_local_to_global_id(std::move(col));
+  } else if (name == kDeprecatedHostToOwnedGlobalNodeIDsPropName) {
+    KATANA_LOG_WARN(
+        "deprecated graph format; replace the existing graph by storing the "
+        "current graph");
+    set_host_to_owned_global_node_ids(std::move(col));
   } else {
     return KATANA_ERROR(ErrorCode::InvalidArgument, "checking metadata name");
   }
@@ -236,9 +243,9 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
       "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} l2u sz: {} "
       "l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
-      host_to_owned_global_ids_ == nullptr
+      host_to_owned_global_node_ids_ == nullptr
           ? 0
-          : host_to_owned_global_ids_->length(),
+          : host_to_owned_global_node_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
@@ -268,9 +275,10 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
     });
   }
 
-  if (host_to_owned_global_ids_ != nullptr) {
+  if (host_to_owned_global_node_ids_ != nullptr) {
     auto h2o_res = StoreArrowArrayAtName(
-        host_to_owned_global_ids_, dir, kHostToOwnedGlobalIDsPropName, desc);
+        host_to_owned_global_node_ids_, dir, kHostToOwnedGlobalIDsPropName,
+        desc);
     if (!h2o_res) {
       return h2o_res.error();
     }
@@ -454,9 +462,9 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
       "ReadPartMetadata master sz: {} mirrors sz: {} h2owned sz: {} l2u sz: "
       "{} l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
-      host_to_owned_global_ids_ == nullptr
+      host_to_owned_global_node_ids_ == nullptr
           ? 0
-          : host_to_owned_global_ids_->length(),
+          : host_to_owned_global_node_ids_->length(),
       local_to_user_id_ == nullptr ? 0 : local_to_user_id_->length(),
       local_to_global_id_ == nullptr ? 0 : local_to_global_id_->length());
 
@@ -685,7 +693,7 @@ tsuba::RDG::SetTopologyFile(const katana::Uri& new_top) {
 void
 tsuba::RDG::InitArrowVectors() {
   // Create an empty array, accessed by Distribution during loading
-  host_to_owned_global_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
+  host_to_owned_global_node_ids_ = katana::NullChunkedArray(arrow::uint64(), 0);
   local_to_user_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
   local_to_global_id_ = katana::NullChunkedArray(arrow::uint64(), 0);
 }

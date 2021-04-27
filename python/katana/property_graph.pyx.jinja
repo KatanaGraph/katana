@@ -3,6 +3,7 @@
 from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_array, pyarrow_unwrap_table
 
 from .cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
+from .cpp.libgalois.graphs cimport Graph as CGraph
 from .numba_support._pyarrow_wrappers import unchunked
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
@@ -18,11 +19,18 @@ cdef _convert_string_list(l):
     return [bytes(s, "utf-8") for s in l or []]
 
 
-cdef shared_ptr[_PropertyGraph] handle_result_value(Result[unique_ptr[_PropertyGraph]] res) nogil except *:
+cdef shared_ptr[_PropertyGraph] handle_result_PropertyGraph(Result[unique_ptr[_PropertyGraph]] res) nogil except *:
     if not res.has_value():
         with gil:
             raise_error_code(res.error())
     return to_shared(res.value())
+
+
+cdef CGraph.GraphComponents handle_result_GraphComponents(Result[CGraph.GraphComponents] res) nogil except *:
+    if not res.has_value():
+        with gil:
+            raise_error_code(res.error())
+    return res.value()
 
 #
 # Python Property Graph
@@ -31,15 +39,15 @@ cdef class PropertyGraph:
     """
     A property graph loaded into memory.
     """
-    def __init__(self, path, partition_id_to_load=None, node_properties=None, edge_properties=None):
+    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None):
         """
-        __init__(self, path, partition_id_to_load=None, node_properties=None, edge_properties=None)
+        __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)
 
         Load a property graph.
 
         :param path: the path or URL from which to load the graph. This support local paths or s3 URLs.
         :type path: str
-        :param partition_id_to_load: An unsigned integer corresponding to a partition number in the graph being loaded. If this is None (default), then the partition corresponding to this host's network id will be loaded.
+        :param partition_id_to_load: The partition number in the graph to load. If this is None (default), then the partition corresponding to this host's network id will be loaded.
         :param node_properties: A list of node property names to load into memory. If this is None (default), then all properties are loaded.
         :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all properties are loaded.
         """
@@ -58,13 +66,33 @@ cdef class PropertyGraph:
         if edge_properties is not None:
             edge_props = _convert_string_list(edge_properties)
             opts.edge_properties = &edge_props
-        self.underlying = handle_result_value(_PropertyGraph.Make(bytes(path, "utf-8"), opts))
+        path_str = <string>bytes(str(path), "utf-8")
+        with nogil:
+            self.underlying = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
+
+    @staticmethod
+    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u):
+        f = <PropertyGraph>PropertyGraph.__new__(PropertyGraph)
+        f.underlying = u
+        return f
+
+    @staticmethod
+    def from_graphml(path, uint64_t chunk_size=25000):
+        path_str = <string>bytes(str(path), "utf-8")
+        with nogil:
+            pg = handle_result_PropertyGraph(
+                handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False))
+                    .ToPropertyGraph())
+        return PropertyGraph.make(pg)
 
     def write(self, path, command_line) :
         """
         Write the property graph out the specified path or URL (or the original path it was loaded from if path is nor provided). Provide lineage information in the form of a command line.
         """
-        handle_result_void(self.underlying.get().Write(bytes(path, "utf-8"), bytes(command_line, "utf-8")))
+        path_str = <string>bytes(path, "utf-8")
+        command_line_str = <string>bytes(command_line, "utf-8")
+        with nogil:
+            handle_result_void(self.underlying.get().Write(path_str, command_line_str))
 
     cdef GraphTopology topology(PropertyGraph self):
         return self.underlying.get().topology()

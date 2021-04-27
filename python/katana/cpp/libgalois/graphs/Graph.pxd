@@ -141,3 +141,24 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
         Result[void] RemoveNodeProperty(int)
         Result[void] RemoveEdgeProperty(int)
+
+
+
+cdef extern from "katana/BuildGraph.h" namespace "katana" nogil:
+    cppclass GraphComponents:
+        # These exist in C++, but are not needed in Cython yet, so commented to avoid accidentally using untested code.
+
+        # GraphComponent nodes
+        # GraphComponent edges
+        # shared_ptr[GraphTopology] topology
+        #
+        # GraphComponents(GraphComponent nodes_, GraphComponent edges_, shared_ptr[GraphTopology] topology_)
+        # GraphComponents()
+
+        void Dump()
+
+        Result[unique_ptr[_PropertyGraph]] ToPropertyGraph()
+
+cdef extern from "katana/GraphML.h" namespace "katana" nogil:
+    Result[GraphComponents] ConvertGraphML(
+        string input_filename, size_t chunk_size, bint verbose)

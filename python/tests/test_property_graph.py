@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -121,6 +122,12 @@ def test_add_edge_property(property_graph):
         [range(property_graph.num_edges())]
     )
     assert property_graph.get_edge_property("new_prop") == pyarrow.array(range(property_graph.num_edges()))
+
+
+def test_load_graphml():
+    input_file = Path(__file__).parent.parent.parent / "tools" / "graph-convert" / "test-inputs" / "movies.graphml"
+    pg = PropertyGraph.from_graphml(input_file)
+    assert pg.get_node_property(0)[1].as_py() == "Keanu Reeves"
 
 
 def test_load_invalid_path():

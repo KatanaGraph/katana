@@ -396,22 +396,6 @@ public:
   }
 
   /**
-   * Returns an edge iterator to an edge from src to dst with some label. If not
-   * found, returns nothing.
-   */
-  std::optional<edge_iterator> FindEdgeWithLabel(
-      GraphNode src, GraphNode dst, const EdgeTy& data) const {
-    // trivial check; can't be connected if degree is 0
-    if (degrees_[src] == 0 || in_degrees_[dst] == 0) {
-      return std::nullopt;
-    }
-    if (degrees_[src] < in_degrees_[dst]) {
-      return FindEdgeWithLabel<false>(src, dst, data);
-    }
-    return FindEdgeWithLabel<true>(dst, src, data);
-  }
-
-  /**
    * Returns an edge iterator to an edge with some node and key with some label
    * by searching for the key via the node's outgoing or incoming edges.
    * If not found, returns nothing.
@@ -497,7 +481,14 @@ public:
    */
   bool IsConnectedWithEdgeLabel(
       GraphNode src, GraphNode dst, const EdgeTy& data) const {
-    return FindEdgeWithLabel(src, dst, data).has_value();
+    // trivial check; can't be connected if degree is 0
+    if (degrees_[src] == 0 || in_degrees_[dst] == 0) {
+      return false;
+    }
+    if (degrees_[src] < in_degrees_[dst]) {
+      return FindEdgeWithLabel<false>(src, dst, data).has_value();
+    }
+    return FindEdgeWithLabel<true>(dst, src, data).has_value();
   }
 
   /**

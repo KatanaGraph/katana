@@ -1,4 +1,4 @@
-#include "graph-properties-convert-graphml.h"
+#include "katana/GraphML.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -18,9 +18,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "graph-properties-convert-schema.h"
 #include "katana/ErrorCode.h"
 #include "katana/Galois.h"
+#include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
@@ -555,7 +555,9 @@ ProcessEdge(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
  * parses the graph structure from a GraphML file into Galois format
  */
 void
-ProcessGraph(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
+ProcessGraph(
+    xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder,
+    bool verbose) {
   auto minimum_depth = xmlTextReaderDepth(reader);
   int ret = xmlTextReaderRead(reader);
 
@@ -576,7 +578,9 @@ ProcessGraph(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
       } else if (xmlStrEqual(name, BAD_CAST "edge")) {
         if (!finished_nodes) {
           finished_nodes = true;
-          std::cout << "Finished processing nodes\n";
+          if (verbose) {
+            std::cout << "Finished processing nodes\n";
+          }
         }
         // if elt is an "egde" xml node read it in
         ProcessEdge(reader, builder);
@@ -590,26 +594,25 @@ ProcessGraph(xmlTextReaderPtr reader, katana::PropertyGraphBuilder* builder) {
     xmlFree(name);
     ret = xmlTextReaderRead(reader);
   }
-  std::cout << "Finished processing edges\n";
+  if (verbose) {
+    std::cout << "Finished processing edges\n";
+  }
 }
 
 }  // end of unnamed namespace
 
-/// ConvertGraphML converts a GraphML file into katana form
-///
-/// \param infilename path to source graphml file
-/// \returns arrow tables of node properties/labels, edge properties/types, and
-/// csr topology
-katana::GraphComponents
-katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
+katana::Result<katana::GraphComponents>
+katana::ConvertGraphML(
+    const std::string& infilename, size_t chunk_size, bool verbose) {
   xmlTextReaderPtr reader;
   int ret = 0;
 
   katana::PropertyGraphBuilder builder{chunk_size};
 
-  katana::setActiveThreads(1000);
   bool finishedGraph = false;
-  std::cout << "Start converting GraphML file: " << infilename << "\n";
+  if (verbose) {
+    std::cout << "Start converting GraphML file: " << infilename << "\n";
+  }
 
   reader = xmlNewTextReaderFilename(infilename.c_str());
   if (reader != NULL) {
@@ -629,7 +632,7 @@ katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
       if (xmlTextReaderNodeType(reader) == 1) {
         // if elt is a "key" xml node read it in
         if (xmlStrEqual(name, BAD_CAST "key")) {
-          PropertyKey key = katana::ProcessKey(reader);
+          PropertyKey key = katana::graphml::ProcessKey(reader);
           if (!key.id.empty() && key.id != std::string("label") &&
               key.id != std::string("IGNORE")) {
             if (key.for_node) {
@@ -639,8 +642,10 @@ katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
             }
           }
         } else if (xmlStrEqual(name, BAD_CAST "graph")) {
-          std::cout << "Finished processing property headers\n";
-          ProcessGraph(reader, &builder);
+          if (verbose) {
+            std::cout << "Finished processing property headers\n";
+          }
+          ProcessGraph(reader, &builder, false);
           finishedGraph = true;
         }
       }
@@ -650,7 +655,8 @@ katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
     }
     xmlFreeTextReader(reader);
     if (ret < 0) {
-      KATANA_LOG_FATAL(
+      return KATANA_ERROR(
+          ErrorCode::InvalidArgument,
           "Failed to parse {}, incorrect xml format\n"
           "Please verify there are no illegal characters in the GraphML file\n"
           "To remove invalid characters use: \"sed -i $'s/[^[:print:]\t]//g' "
@@ -658,7 +664,7 @@ katana::ConvertGraphML(const std::string& infilename, size_t chunk_size) {
           infilename, infilename);
     }
   } else {
-    KATANA_LOG_FATAL("Unable to open {}", infilename);
+    return KATANA_ERROR(ErrorCode::NotFound, "Unable to open {}", infilename);
   }
-  return builder.Finish();
+  return builder.Finish(verbose);
 }

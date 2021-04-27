@@ -97,6 +97,7 @@ outputs:
         - libcurl
         - backward-cpp
         - elfutils
+        - libxml2
     run_exports:
       - {{ pin_subpackage('katana-cpp', max_pin='x.x.x') }}
     test:

@@ -145,7 +145,7 @@ struct GraphComponent {
   GraphComponent() : properties(nullptr), labels(nullptr) {}
 };
 
-struct GraphComponents {
+struct KATANA_EXPORT GraphComponents {
   GraphComponent nodes;
   GraphComponent edges;
   std::shared_ptr<katana::GraphTopology> topology;
@@ -169,6 +169,8 @@ struct GraphComponents {
     std::cout << topology->out_indices->ToString() << "\n";
     std::cout << topology->out_dests->ToString() << "\n";
   }
+
+  Result<std::unique_ptr<katana::PropertyGraph>> ToPropertyGraph() const;
 };
 
 class KATANA_EXPORT PropertyGraphBuilder {
@@ -215,7 +217,7 @@ public:
       std::function<ImportData(ImportDataType, bool)> ResolveValue);
   void AddLabel(const std::string& name);
 
-  GraphComponents Finish(bool verbose = true);
+  Result<GraphComponents> Finish(bool verbose = true);
 
   size_t GetNodeIndex();
   size_t GetNodes();
@@ -226,14 +228,9 @@ private:
   GraphComponent BuildFinalEdges(bool verbose);
 };
 
-KATANA_EXPORT katana::PropertyGraph ConvertKatana(
-    const std::string& input_filename);
-
-KATANA_EXPORT std::unique_ptr<katana::PropertyGraph> MakeGraph(
-    const GraphComponents& graph_comps);
-KATANA_EXPORT void WritePropertyGraph(
+KATANA_EXPORT Result<void> WritePropertyGraph(
     const GraphComponents& graph_comps, const std::string& dir);
-KATANA_EXPORT void WritePropertyGraph(
+KATANA_EXPORT Result<void> WritePropertyGraph(
     PropertyGraph prop_graph, const std::string& dir);
 
 /// Convert Arrow chunked array to/from a vector of ImportData

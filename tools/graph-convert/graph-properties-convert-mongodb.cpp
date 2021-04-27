@@ -18,9 +18,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "graph-properties-convert-schema.h"
 #include "katana/ErrorCode.h"
 #include "katana/Galois.h"
+#include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
@@ -807,10 +807,10 @@ GetUserInputForLabels(
     std::string existing_key;
     if (res.empty()) {
       LabelRule rule{coll_name, for_node, !for_node, coll_name};
-      katana::WriteGraphmlRule(writer, rule);
+      katana::graphml::WriteGraphmlRule(writer, rule);
     } else {
       LabelRule rule{coll_name, for_node, !for_node, res};
-      katana::WriteGraphmlRule(writer, rule);
+      katana::graphml::WriteGraphmlRule(writer, rule);
     }
   }
 }
@@ -831,7 +831,7 @@ GetUserInputForFields(
     }
 
     bool done = false;
-    auto type_name = katana::TypeName(key.type);
+    auto type_name = katana::graphml::TypeName(key.type);
     while (!done) {
       std::cout << "Choose type for field " << name << " (" << type_name;
       if (key.is_list) {
@@ -845,7 +845,7 @@ GetUserInputForFields(
             std::istream_iterator<std::string>{iss},
             std::istream_iterator<std::string>{}};
         if (tokens.size() <= 2) {
-          auto new_type = katana::ParseType(tokens[0]);
+          auto new_type = katana::graphml::ParseType(tokens[0]);
           if (new_type != ImportDataType::kUnsupported) {
             if (tokens.size() == 2) {
               if (new_type == ImportDataType::kStruct) {
@@ -886,7 +886,7 @@ GetUserInputForFields(
     }
     key.for_node = for_node;
     key.for_edge = !for_node;
-    katana::WriteGraphmlKey(writer, key);
+    katana::graphml::WriteGraphmlKey(writer, key);
   }
 }
 
@@ -950,10 +950,10 @@ GetMappingInput(
   }
 
   if (GetUserBool("Generate default mapping now")) {
-    katana::ExportSchemaMapping(outfile, rules, keys);
+    katana::graphml::ExportSchemaMapping(outfile, rules, keys);
     return;
   }
-  auto writer = katana::CreateGraphmlFile(outfile);
+  auto writer = katana::graphml::CreateGraphmlFile(outfile);
 
   // finalize labels for nodes and edges mappings
   std::cout << "Nodes: " << nodes.size() << "\n";
@@ -975,7 +975,7 @@ GetMappingInput(
   xmlTextWriterStartElement(writer, BAD_CAST "graph");
   xmlTextWriterEndElement(writer);
 
-  katana::FinishGraphmlFile(writer);
+  katana::graphml::FinishGraphmlFile(writer);
 }
 
 std::pair<std::vector<std::string>, std::vector<std::string>>
@@ -1130,7 +1130,8 @@ katana::ConvertMongoDB(
   std::vector<std::string> nodes;
   std::vector<std::string> edges;
   if (!mapping.empty()) {
-    auto res = katana::ProcessSchemaMapping(&builder, mapping, coll_names);
+    auto res =
+        katana::graphml::ProcessSchemaMapping(&builder, mapping, coll_names);
     nodes = res.first;
     edges = res.second;
   } else {
@@ -1153,5 +1154,9 @@ katana::ConvertMongoDB(
   }
 
   mongoc_cleanup();
-  return builder.Finish();
+  if (auto r = builder.Finish(); !r) {
+    KATANA_LOG_FATAL("Failed to construct graph: {}", r.error());
+  } else {
+    return r.value();
+  }
 }

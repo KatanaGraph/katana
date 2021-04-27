@@ -25,7 +25,14 @@ public:
     auto uri_res = katana::Uri::MakeRand("/tmp/oplog");
     KATANA_LOG_ASSERT(uri_res);
     std::string dest_dir(uri_res.value().string());
-    WritePropertyGraph(pgb.Finish(), dest_dir);
+    auto components_result = pgb.Finish();
+    if (!components_result) {
+      KATANA_LOG_FATAL(
+          "Failed to construct graph: {}", components_result.error());
+    }
+    if (auto r = WritePropertyGraph(components_result.value(), dest_dir); !r) {
+      KATANA_LOG_FATAL("Failed to write graph: {}", r.error());
+    }
     fmt::print("RDG written to {}\n", dest_dir);
   }
 };

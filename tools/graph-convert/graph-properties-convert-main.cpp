@@ -3,10 +3,10 @@
 #include <llvm/Support/CommandLine.h>
 
 #include "Transforms.h"
-#include "graph-properties-convert-graphml.h"
-#include "graph-properties-convert-schema.h"
 #include "katana/ErrorCode.h"
 #include "katana/Galois.h"
+#include "katana/GraphML.h"
+#include "katana/GraphMLSchema.h"
 #include "katana/Logging.h"
 #include "katana/Timer.h"
 #include "katana/config.h"
@@ -137,12 +137,26 @@ ConvertKatana(const std::string& rdg_file) {
 void
 ParseWild() {
   switch (type) {
-  case katana::SourceType::kGraphml:
-    return katana::WritePropertyGraph(
-        katana::ConvertGraphML(input_filename, chunk_size), output_directory);
+  case katana::SourceType::kGraphml: {
+    auto components_result =
+        katana::ConvertGraphML(input_filename, chunk_size, true);
+    if (!components_result) {
+      KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
+    }
+    if (auto r = katana::WritePropertyGraph(
+            components_result.value(), output_directory);
+        !r) {
+      KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
+    }
+    return;
+  }
   case katana::SourceType::kKatana:
-    return katana::WritePropertyGraph(
-        ConvertKatana(input_filename), output_directory);
+    if (auto r = katana::WritePropertyGraph(
+            ConvertKatana(input_filename), output_directory);
+        !r) {
+      KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
+    }
+    return;
   default:
     KATANA_LOG_ERROR("Unsupported input type {}", type);
   }
@@ -151,9 +165,19 @@ ParseWild() {
 void
 ParseNeo4j() {
   switch (type) {
-  case katana::SourceType::kGraphml:
-    return katana::WritePropertyGraph(
-        katana::ConvertGraphML(input_filename, chunk_size), output_directory);
+  case katana::SourceType::kGraphml: {
+    auto components_result =
+        katana::ConvertGraphML(input_filename, chunk_size, true);
+    if (!components_result) {
+      KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
+    }
+    if (auto r = katana::WritePropertyGraph(
+            components_result.value(), output_directory);
+        !r) {
+      KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
+    }
+    return;
+  }
   default:
     KATANA_LOG_ERROR("Unsupported input type {}", type);
   }
@@ -165,9 +189,12 @@ ParseMongoDB() {
   if (generate_mapping) {
     katana::GenerateMappingMongoDB(input_filename, output_directory);
   } else {
-    katana::WritePropertyGraph(
-        katana::ConvertMongoDB(input_filename, mapping, chunk_size),
-        output_directory);
+    if (auto r = katana::WritePropertyGraph(
+            katana::ConvertMongoDB(input_filename, mapping, chunk_size),
+            output_directory);
+        !r) {
+      KATANA_LOG_FATAL("Failed to write property graph: {}", r.error());
+    }
   }
 #else
   KATANA_LOG_FATAL("Dependencies not present for MongoDB");
@@ -180,9 +207,13 @@ ParseMysql() {
   if (generate_mapping) {
     katana::GenerateMappingMysql(input_filename, output_directory, host, user);
   } else {
-    katana::WritePropertyGraph(
-        katana::ConvertMysql(input_filename, mapping, chunk_size, host, user),
-        output_directory);
+    if (auto r = katana::WritePropertyGraph(
+            katana::ConvertMysql(
+                input_filename, mapping, chunk_size, host, user),
+            output_directory);
+        !r) {
+      KATANA_LOG_FATAL("Failed to write property graph: {}", r.error());
+    }
   }
 #else
   KATANA_LOG_FATAL("Dependencies not present for MySQL");
@@ -203,7 +234,7 @@ main(int argc, char** argv) {
   }
 
   if (export_graphml) {
-    katana::ExportGraph(output_directory, input_filename);
+    katana::graphml::ExportGraph(output_directory, input_filename);
   } else {
     switch (database) {
     case katana::SourceDatabase::kNone:

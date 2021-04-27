@@ -52,18 +52,16 @@ SubGraphNodeSet(
         uint32_t src = node_set[n];
 
         auto last = graph->edges(src).end();
-        for (auto dest : node_set) {
+        for (uint32_t m = 0; m < num_nodes; ++m) {
+          auto dest = node_set[m];
           // Binary search on the edges sorted by destination id
-          auto lower_bound = katana::FindEdgeSortedByDest(graph, src, dest);
-          if (lower_bound != *last) {
-            while (lower_bound != *last &&
-                   *graph->GetEdgeDest(lower_bound) == dest) {
-              subgraph_edges[n].push_back(dest);
-              lower_bound++;
-            }
+          auto edge_id = katana::FindEdgeSortedByDest(graph, src, dest);
+          while (edge_id != *last && *graph->GetEdgeDest(edge_id) == dest) {
+            subgraph_edges[n].push_back(m);
+            edge_id++;
           }
-          (*out_indices)[n] = subgraph_edges[n].size();
         }
+        (*out_indices)[n] = subgraph_edges[n].size();
       },
       katana::steal(), katana::no_stats(),
       katana::loopname("SubgraphExtraction"));
@@ -73,6 +71,7 @@ SubGraphNodeSet(
     (*out_indices)[i] += (*out_indices)[i - 1];
   }
   uint64_t num_edges = (*out_indices)[num_nodes - 1];
+
   // Subgraph topology : out dests
   auto out_dests = std::make_unique<katana::LargeArray<uint32_t>>();
   out_dests->allocateInterleaved(num_edges);
@@ -80,13 +79,21 @@ SubGraphNodeSet(
   katana::do_all(
       katana::iterate(uint32_t(0), uint32_t(num_nodes)),
       [&](const uint32_t& n) {
-        uint64_t offset = (*out_indices)[n];
+        uint64_t offset = n == 0 ? 0 : (*out_indices)[n - 1];
         for (uint32_t dest : subgraph_edges[n]) {
           (*out_dests)[offset] = dest;
           offset++;
         }
       },
       katana::no_stats(), katana::loopname("ConstructTopology"));
+
+  // TODO(amp): The pattern out_indices.release()->data() is leaking both the
+  //  LargeBuffer instance (just a few bytes), AND the buffer itself. The
+  //  instance is leaking because of the call to release without passing
+  //  ownership of the instance to some other object. The buffer is leaking
+  //  because arrow::MutableBuffer does not own it's data, so it will never
+  //  deallocate the buffer passed to arrow::MutableBuffer::Wrap.
+  //  This pattern probably exists elsewhere in the code.
 
   // Set new topology
   auto numeric_array_out_indices =
@@ -122,10 +129,11 @@ katana::analytics::SubGraphExtraction(
   // Remove duplicates from the node vector
   std::unordered_set<uint32_t> set;
   std::vector<uint32_t> dedup_node_vec;
-  for (auto i : node_vec) {
-    set.insert(i);
+  for (auto n : node_vec) {
+    if (set.insert(n).second) {  // If n wasn't already present.
+      dedup_node_vec.push_back(n);
+    }
   }
-  dedup_node_vec.assign(set.begin(), set.end());
 
   katana::StatTimer execTime("SubGraph-Extraction");
   switch (plan.algorithm()) {

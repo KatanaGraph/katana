@@ -388,6 +388,17 @@ public:
     return BaseGraph::edgeData[inEdgeData[*ni]];
   }
 
+  // TODO(aneesh) make this method safer with differently typed iterators or
+  // find some other workaround.
+  /**
+   * Given an in edge_iterator return the corresponding out edge.
+   */
+  template <
+      bool A = EdgeDataByValue, typename std::enable_if<!A>::type* = nullptr>
+  edge_iterator getOutEdge(edge_iterator ni) const {
+    return inEdgeData[*ni];
+  }
+
   /**
    * @returns the prefix sum of in-edges
    */

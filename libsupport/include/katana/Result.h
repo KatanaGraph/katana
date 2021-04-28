@@ -249,7 +249,7 @@ operator!=(const ErrorInfo& a, const ErrorInfo& b) {
   return !(a == b);
 }
 
-inline auto
+inline Result<void>
 ResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();
 }

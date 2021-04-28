@@ -348,21 +348,6 @@ struct LouvainClusteringImplementation
 
     iter = num_iter;
 
-    c_info.destroy();
-    c_info.deallocate();
-
-    c_update_add.destroy();
-    c_update_add.deallocate();
-
-    c_update_subtract.destroy();
-    c_update_subtract.deallocate();
-
-    local_target.destroy();
-    local_target.deallocate();
-
-    in_bag.destroy();
-    in_bag.deallocate();
-
     TimerClusteringTotal.stop();
     return prev_mod;
   }

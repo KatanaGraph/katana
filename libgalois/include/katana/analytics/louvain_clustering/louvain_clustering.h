@@ -73,6 +73,8 @@ public:
   /// Minimum coarsened graph size
   uint32_t min_graph_size() const { return min_graph_size_; }
 
+  /// Nondeterministic algorithm for louvain clustering
+  /// usign katana do_all
   static LouvainClusteringPlan DoAll(
       bool enable_vf = kDefaultEnableVF,
       double modularity_threshold_per_round =
@@ -90,6 +92,8 @@ public:
         min_graph_size};
   }
 
+  /// Deterministic algorithm for louvain clustering
+  /// using delayed updates
   static LouvainClusteringPlan Deterministic(
       bool enable_vf = kEnableVF,
       double modularity_threshold_per_round = kModularityThresholdPerRound,

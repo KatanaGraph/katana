@@ -177,7 +177,7 @@ struct LouvainClusteringImplementation
       katana::PropertyGraph* pfg, double lower,
       double modularity_threshold_per_round, uint32_t& iter) {
     katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
-    TimerClusteringTotal.start();
+    katana::TimerGuard TimerClusteringGuard(TimerClusteringTotal);
 
     auto graph_result = Graph::Make(pfg);
     if (!graph_result) {
@@ -347,8 +347,6 @@ struct LouvainClusteringImplementation
     TimerClusteringWhile.stop();
 
     iter = num_iter;
-
-    TimerClusteringTotal.stop();
     return prev_mod;
   }
 

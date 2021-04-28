@@ -539,15 +539,13 @@ public:
                 // get edge data and destinations
                 EdgeTy data1 = this->getEdgeData(e1);
                 EdgeTy data2 = this->getEdgeData(e2);
-                if (data1 < data2) {
-                  return true;
-                } else if (data1 > data2) {
-                  return false;
-                } else {
-                  uint32_t dst1 = this->getEdgeDst(e1);
-                  uint32_t dst2 = this->getEdgeDst(e2);
-                  return dst1 < dst2;
+                if (data1 != data2) {
+                  return data1 < data2;
                 }
+
+                uint32_t dst1 = this->getEdgeDst(e1);
+                uint32_t dst2 = this->getEdgeDst(e2);
+                return dst1 < dst2;
               });
         },
         katana::steal(), katana::no_stats(),
@@ -561,6 +559,7 @@ public:
     // construct incoming edges
     // must occur after sorting outgoing edges if !EdgeDataByValue
     this->constructIncomingEdges();
+
     // sort incoming edges
     SortAllInEdgesByDataThenDst();
 

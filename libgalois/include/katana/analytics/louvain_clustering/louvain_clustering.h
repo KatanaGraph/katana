@@ -15,6 +15,7 @@ class LouvainClusteringPlan : public Plan {
 public:
   enum Algorithm {
     kDoAll,
+    kDeterministic,
   };
 
   static const bool kDefaultEnableVF = false;
@@ -82,6 +83,22 @@ public:
     return {
         kCPU,
         kDoAll,
+        enable_vf,
+        modularity_threshold_per_round,
+        modularity_threshold_total,
+        max_iterations,
+        min_graph_size};
+  }
+
+  static LouvainClusteringPlan Deterministic(
+      bool enable_vf = kEnableVF,
+      double modularity_threshold_per_round = kModularityThresholdPerRound,
+      double modularity_threshold_total = kModularityThresholdTotal,
+      uint32_t max_iterations = kMaxIterations,
+      uint32_t min_graph_size = kMinGraphSize) {
+    return {
+        kCPU,
+        kDeterministic,
         enable_vf,
         modularity_threshold_per_round,
         modularity_threshold_total,

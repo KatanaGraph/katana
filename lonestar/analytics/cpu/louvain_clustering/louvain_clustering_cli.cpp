@@ -61,9 +61,13 @@ static cll::opt<uint32_t> min_graph_size(
 
 static cll::opt<LouvainClusteringPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value DoAll):"),
-    cll::values(clEnumValN(
-        LouvainClusteringPlan::kDoAll, "DoAll",
-        "Use Katana do_all loop for conflict mitigation")),
+    cll::values(
+        clEnumValN(
+            LouvainClusteringPlan::kDoAll, "DoAll",
+            "Use Katana do_all loop for conflict mitigation"),
+        clEnumValN(
+            LouvainClusteringPlan::kDeterministic, "Deterministic",
+            "Use Deterministic implementation")),
     cll::init(LouvainClusteringPlan::kDoAll));
 
 std::string
@@ -71,6 +75,8 @@ AlgorithmName(LouvainClusteringPlan::Algorithm algorithm) {
   switch (algorithm) {
   case LouvainClusteringPlan::kDoAll:
     return "DoAll";
+  case LouvainClusteringPlan::kDeterministic:
+    return "Deterministic";
   default:
     return "Unknown";
   }
@@ -104,6 +110,11 @@ main(int argc, char** argv) {
   switch (algo) {
   case LouvainClusteringPlan::kDoAll:
     plan = LouvainClusteringPlan::DoAll(
+        enable_vf, modularity_threshold_per_round, modularity_threshold_total,
+        max_iterations, min_graph_size);
+    break;
+  case LouvainClusteringPlan::kDeterministic:
+    plan = LouvainClusteringPlan::Deterministic(
         enable_vf, modularity_threshold_per_round, modularity_threshold_total,
         max_iterations, min_graph_size);
     break;

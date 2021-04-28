@@ -173,6 +173,200 @@ struct LouvainClusteringImplementation
     return prev_mod;
   }
 
+  katana::Result<double> LouvainDeterministic(
+      katana::PropertyGraph* pfg, double lower,
+      double modularity_threshold_per_round, uint32_t& iter) {
+    katana::StatTimer TimerClusteringTotal("Timer_Clustering_Total");
+    TimerClusteringTotal.start();
+
+    auto graph_result = Graph::Make(pfg);
+    if (!graph_result) {
+      return graph_result.error();
+    }
+    Graph graph = graph_result.value();
+
+    CommunityArray c_info;        // Community info
+    CommunityArray c_update_add;  // Used for updating community
+    CommunityArray c_update_subtract;
+
+    /* Variables needed for Modularity calculation */
+    double constant_for_second_term;
+    double prev_mod = lower;
+    double curr_mod = -1;
+    uint32_t num_iter = iter;
+
+    /*** Initialization ***/
+    c_info.allocateBlocked(graph.num_nodes());
+    c_update_add.allocateBlocked(graph.num_nodes());
+    c_update_subtract.allocateBlocked(graph.num_nodes());
+
+    /* Initialization each node to its own cluster */
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
+      graph.template GetData<CurrentCommunityId>(n) = n;
+      graph.template GetData<PreviousCommunityId>(n) = n;
+    });
+
+    /* Calculate the weighted degree sum for each vertex */
+    Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, c_info);
+
+    /* Compute the total weight (2m) and 1/2m terms */
+    constant_for_second_term =
+        Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+
+    katana::LargeArray<uint64_t> local_target;
+    local_target.allocateBlocked(graph.num_nodes());
+
+    // partition nodes
+    std::vector<katana::InsertBag<GNode>> bag(16);
+
+    katana::InsertBag<GNode> to_process;
+    katana::LargeArray<bool> in_bag;
+    in_bag.allocateBlocked(graph.num_nodes());
+
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
+      uint64_t idx = n % 16;
+      bag[idx].push(n);
+      in_bag[n] = false;
+      local_target[n] = Base::UNASSIGNED;
+    });
+
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
+      c_update_add[n].degree_wt = 0;
+      c_update_add[n].size = 0;
+      c_update_subtract[n].degree_wt = 0;
+      c_update_subtract[n].size = 0;
+    });
+
+    katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
+    TimerClusteringWhile.start();
+
+    while (true) {
+      num_iter++;
+
+      for (uint64_t idx = 0; idx <= 15; idx++) {
+        katana::GAccumulator<uint32_t> sync_round;
+
+        katana::do_all(
+            katana::iterate(bag[idx]),
+            [&](GNode n) {
+              auto& n_data_curr_comm_id =
+                  graph.template GetData<CurrentCommunityId>(n);
+              auto& n_data_degree_wt =
+                  graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+
+              uint64_t degree =
+                  std::distance(graph.edge_begin(n), graph.edge_end(n));
+
+              std::map<uint64_t, uint64_t>
+                  cluster_local_map;  // Map each neighbor's cluster to local number:
+                                      // Community --> Index
+              std::vector<EdgeWeightType>
+                  counter;  // Number of edges to each unique cluster
+              EdgeWeightType self_loop_wt = 0;
+
+              if (degree > 0) {
+                Base::template FindNeighboringClusters<EdgeWeightType>(
+                    graph, n, cluster_local_map, counter, self_loop_wt);
+                // Find the max gain in modularity
+                local_target[n] = Base::MaxModularityWithoutSwaps(
+                    cluster_local_map, counter, self_loop_wt, c_info,
+                    n_data_degree_wt, n_data_curr_comm_id,
+                    constant_for_second_term);
+
+              } else {
+                local_target[n] = Base::UNASSIGNED;
+              }
+
+              /* Update cluster info */
+              if (local_target[n] != n_data_curr_comm_id &&
+                  local_target[n] != Base::UNASSIGNED) {
+                katana::atomicAdd(
+                    c_update_add[local_target[n]].degree_wt, n_data_degree_wt);
+                katana::atomicAdd(
+                    c_update_add[local_target[n]].size, (uint64_t)1);
+                katana::atomicAdd(
+                    c_update_subtract[n_data_curr_comm_id].degree_wt,
+                    n_data_degree_wt);
+                katana::atomicAdd(
+                    c_update_subtract[n_data_curr_comm_id].size, (uint64_t)1);
+
+                if (!in_bag[local_target[n]]) {
+                  to_process.push(local_target[n]);
+                  in_bag[local_target[n]] = true;
+                }
+
+                if (!in_bag[n_data_curr_comm_id]) {
+                  to_process.push(n_data_curr_comm_id);
+                  in_bag[n_data_curr_comm_id] = true;
+                }
+              }
+            },
+            katana::loopname("louvain algo: Phase 1"));
+
+        katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
+          graph.template GetData<CurrentCommunityId>(n) = local_target[n];
+        });
+
+        for (auto n : to_process) {
+          if (in_bag[n]) {
+            katana::atomicAdd(c_info[n].size, c_update_add[n].size.load());
+            katana::atomicAdd(
+                c_info[n].degree_wt, c_update_add[n].degree_wt.load());
+
+            katana::atomicSub(c_info[n].size, c_update_subtract[n].size.load());
+            katana::atomicSub(
+                c_info[n].degree_wt, c_update_subtract[n].degree_wt.load());
+            c_update_add[n].size = 0;
+            c_update_add[n].degree_wt = 0;
+            c_update_subtract[n].size = 0;
+            c_update_subtract[n].degree_wt = 0;
+            in_bag[n] = false;
+          }
+        }
+
+      }  // end for
+
+      /* Calculate the overall modularity */
+      double e_xx = 0;
+      double a2_x = 0;
+
+      curr_mod = Base::template CalModularity<EdgeWeightType>(
+          graph, c_info, e_xx, a2_x, constant_for_second_term);
+
+      if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
+        prev_mod = curr_mod;
+        break;
+      }
+
+      prev_mod = curr_mod;
+
+      if (prev_mod < lower)
+        prev_mod = lower;
+
+    }  // End while
+    TimerClusteringWhile.stop();
+
+    iter = num_iter;
+
+    c_info.destroy();
+    c_info.deallocate();
+
+    c_update_add.destroy();
+    c_update_add.deallocate();
+
+    c_update_subtract.destroy();
+    c_update_subtract.deallocate();
+
+    local_target.destroy();
+    local_target.deallocate();
+
+    in_bag.destroy();
+    in_bag.deallocate();
+
+    TimerClusteringTotal.stop();
+    return prev_mod;
+  }
+
 public:
   katana::Result<void> LouvainClustering(
       katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
@@ -296,6 +490,16 @@ public:
         switch (plan.algorithm()) {
         case LouvainClusteringPlan::kDoAll: {
           auto curr_mod_result = LouvainWithoutLockingDoAll(
+              pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
+              iter);
+          if (!curr_mod_result) {
+            return curr_mod_result.error();
+          }
+          curr_mod = curr_mod_result.value();
+          break;
+        }
+        case LouvainClusteringPlan::kDeterministic: {
+          auto curr_mod_result = LouvainDeterministic(
               pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
               iter);
           if (!curr_mod_result) {

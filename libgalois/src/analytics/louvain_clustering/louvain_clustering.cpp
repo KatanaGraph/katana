@@ -173,6 +173,9 @@ struct LouvainClusteringImplementation
     return prev_mod;
   }
 
+  // TODO The function arguments are  similar to
+  // the non-deterministic one. Need to figure how to
+  // do remove duplication
   katana::Result<double> LouvainDeterministic(
       katana::PropertyGraph* pfg, double lower,
       double modularity_threshold_per_round, uint32_t& iter) {

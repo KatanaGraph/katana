@@ -17,6 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
+#include <dlfcn.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -34,7 +36,6 @@
 
 #ifdef KATANA_USE_NUMA
 #include <numa.h>
-#include <numaif.h>
 #endif
 
 #ifdef KATANA_USE_SCHED_SETAFFINITY
@@ -66,6 +67,27 @@ operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
   return lhs.proc < rhs.proc;
 }
 
+#ifdef KATANA_USE_NUMA
+int (*dynamic_numa_available)() = nullptr;
+int (*dynamic_numa_num_configured_nodes)() = nullptr;
+int (*dynamic_numa_node_of_cpu)(int cpu) = nullptr;
+
+void
+LoadLibNuma() {
+  // KATANA_LIBNUMA_SO_NAME is defined in libgalois/CMakeLists.txt
+  auto* lib = dlopen(KATANA_LIBNUMA_SO_NAME, RTLD_LAZY);
+  if (!lib) {
+    return;
+  }
+#define LOAD_SYM(name)                                                         \
+  dynamic_##name = reinterpret_cast<decltype(&name)>(dlsym(lib, #name))
+  LOAD_SYM(numa_available);
+  LOAD_SYM(numa_num_configured_nodes);
+  LOAD_SYM(numa_node_of_cpu);
+#undef LOAD_SYM
+}
+#endif
+
 unsigned
 getNumaNode(cpuinfo& c) {
   static bool warnOnce = false;
@@ -74,8 +96,9 @@ getNumaNode(cpuinfo& c) {
 
   if (!warnOnce) {
     warnOnce = true;
-    numaAvail = numa_available() >= 0;
-    numaAvail = numaAvail && numa_num_configured_nodes() > 0;
+    LoadLibNuma();
+    numaAvail = dynamic_numa_available && dynamic_numa_available() >= 0;
+    numaAvail = numaAvail && dynamic_numa_num_configured_nodes() > 0;
     if (!numaAvail)
       katana::gWarn(
           "Numa support configured but not present at runtime.  "
@@ -84,7 +107,7 @@ getNumaNode(cpuinfo& c) {
 
   if (!numaAvail)
     return c.physid;
-  int i = numa_node_of_cpu(c.proc);
+  int i = dynamic_numa_node_of_cpu(c.proc);
   if (i < 0)
     KATANA_SYS_DIE("failed finding numa node for ", c.proc);
   return i;

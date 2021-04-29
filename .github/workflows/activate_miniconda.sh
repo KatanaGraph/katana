@@ -4,4 +4,4 @@ if [ '!' -d $HOME/miniconda/bin ]; then
   bash "$HOME/.cache/miniconda/mambaforge.sh" -f -b -p $HOME/miniconda
 fi
 export PATH=$HOME/miniconda/bin:$PATH
-source activate
+. activate

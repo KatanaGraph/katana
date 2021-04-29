@@ -104,7 +104,6 @@ outputs:
     test:
       requires:
         - {{ compiler('cxx') }}
-        - {{ cdt('numactl') }}
         - cmake>=3.17
         - make
       files:

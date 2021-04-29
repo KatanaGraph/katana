@@ -110,6 +110,28 @@ jobs:
         name: conda-pkgs-${{matrix.os}}
         path: /Users/runner/build
 
+  test_conda_package_install:
+    needs: build_and_test_conda_package
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        image:
+          - ubuntu:16.04
+          - ubuntu:latest
+          - centos:7
+          - centos:latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Download conda packages
+        uses: actions/download-artifact@v2
+        with:
+          name: conda-pkgs-ubuntu-18.04
+          path: pkgs
+      - name: Install in docker container
+        run: python3 tests/install_conda_packages_test.py pkgs ${{matrix.image}}
 
   lint:
     runs-on: ${{matrix.os}}

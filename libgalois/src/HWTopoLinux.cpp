@@ -58,12 +58,15 @@ struct cpuinfo {
 
 bool
 operator<(const cpuinfo& lhs, const cpuinfo& rhs) {
-  if (lhs.smt != rhs.smt)
+  if (lhs.smt != rhs.smt) {
     return lhs.smt < rhs.smt;
-  if (lhs.physid != rhs.physid)
+  }
+  if (lhs.physid != rhs.physid) {
     return lhs.physid < rhs.physid;
-  if (lhs.coreid != rhs.coreid)
+  }
+  if (lhs.coreid != rhs.coreid) {
     return lhs.coreid < rhs.coreid;
+  }
   return lhs.proc < rhs.proc;
 }
 
@@ -89,35 +92,34 @@ LoadLibNuma() {
 #endif
 
 unsigned
-getNumaNode(cpuinfo& c) {
-  static bool warnOnce = false;
+getNumaNode(const cpuinfo& c) {
 #ifdef KATANA_USE_NUMA
-  static bool numaAvail = false;
+  static std::once_flag load_numa_once;
+  static bool numa_avail = false;
 
-  if (!warnOnce) {
-    warnOnce = true;
+  std::call_once(load_numa_once, [&]() {
     LoadLibNuma();
-    numaAvail = dynamic_numa_available && dynamic_numa_available() >= 0;
-    numaAvail = numaAvail && dynamic_numa_num_configured_nodes() > 0;
-    if (!numaAvail)
-      katana::gWarn(
+    numa_avail = dynamic_numa_available && dynamic_numa_available() >= 0;
+    numa_avail = numa_avail && dynamic_numa_num_configured_nodes() > 0;
+    if (!numa_avail) {
+      KATANA_LOG_WARN(
           "Numa support configured but not present at runtime.  "
           "Assuming numa topology matches socket topology.");
-  }
+    }
+  });
 
-  if (!numaAvail)
+  if (!numa_avail) {
     return c.physid;
+  }
   int i = dynamic_numa_node_of_cpu(c.proc);
-  if (i < 0)
-    KATANA_SYS_DIE("failed finding numa node for ", c.proc);
+  if (i < 0) {
+    KATANA_LOG_FATAL("failed finding numa node for {}", c.proc);
+  }
   return i;
 #else
-  if (!warnOnce) {
-    warnOnce = true;
-    katana::gWarn(
-        "Numa Support Not configured (install libnuma-dev).  "
-        "Assuming numa topology matches socket topology.");
-  }
+  KATANA_WARN_ONCE(
+      "Numa Support Not configured (install libnuma-dev).  "
+      "Assuming numa topology matches socket topology.");
   return c.physid;
 #endif
 }
@@ -164,35 +166,40 @@ parseCPUInfo() {
 unsigned
 countSockets(const std::vector<cpuinfo>& info) {
   std::set<unsigned> pkgs;
-  for (auto& c : info)
+  for (auto& c : info) {
     pkgs.insert(c.physid);
+  }
   return pkgs.size();
 }
 
 unsigned
 countCores(const std::vector<cpuinfo>& info) {
   std::set<std::pair<int, int>> cores;
-  for (auto& c : info)
+  for (auto& c : info) {
     cores.insert(std::make_pair(c.physid, c.coreid));
+  }
   return cores.size();
 }
 
 unsigned
 countNumaNodes(const std::vector<cpuinfo>& info) {
   std::set<unsigned> nodes;
-  for (auto& c : info)
+  for (auto& c : info) {
     nodes.insert(c.numaNode);
+  }
   return nodes.size();
 }
 
 void
 markSMT(std::vector<cpuinfo>& info) {
-  for (unsigned int i = 1; i < info.size(); ++i)
+  for (unsigned int i = 1; i < info.size(); ++i) {
     if (info[i - 1].physid == info[i].physid &&
-        info[i - 1].coreid == info[i].coreid)
+        info[i - 1].coreid == info[i].coreid) {
       info[i].smt = true;
-    else
+    } else {
       info[i].smt = false;
+    }
+  }
 }
 
 std::vector<int>
@@ -233,12 +240,14 @@ void
 markValid(std::vector<cpuinfo>& info) {
   auto v = parseCPUSet();
   if (v.empty()) {
-    for (auto& c : info)
+    for (auto& c : info) {
       c.valid = true;
+    }
   } else {
     std::sort(v.begin(), v.end());
-    for (auto& c : info)
+    for (auto& c : info) {
       c.valid = std::binary_search(v.begin(), v.end(), c.proc);
+    }
   }
 }
 

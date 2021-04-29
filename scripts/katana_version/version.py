@@ -194,8 +194,8 @@ def get_config_version(k_commit, repo: Repo, version_file, no_dev=False) -> vers
                 version_str = version_file.read()
     elif version_file:
         # We have no git information. Wing it.
-        with open(Path(__file__).parent.parent.parent / CONFIG_VERSION_PATH, "rt") as version_file:
-            version_str = version_file.read()
+        with open(version_file, "rt") as version_fi:
+            version_str = version_fi.read()
     else:
         # We have no information. Something is really broken. Still don't crash to allow builds.
         version_str = "0.0.0"

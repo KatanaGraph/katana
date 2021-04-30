@@ -256,7 +256,11 @@ katana::StatManager::Print() {
   std::ostringstream out;
   PrintStats(out);
 
-  if (auto res = tsuba::FileStore(impl_->outfile_, out.str()); !res) {
+  std::string stats = out.str();
+  if (stats.empty()) {
+    return;
+  }
+  if (auto res = tsuba::FileStore(impl_->outfile_, stats); !res) {
     KATANA_LOG_ERROR("printing stats: {}", res.error());
   }
 }

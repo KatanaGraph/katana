@@ -395,7 +395,7 @@ public:
    */
   template <
       bool A = EdgeDataByValue, typename std::enable_if<!A>::type* = nullptr>
-  edge_iterator getOutEdge(edge_iterator ni) const {
+  EdgeIndData::value_type getOutEdge(edge_iterator ni) const {
     return inEdgeData[*ni];
   }
 

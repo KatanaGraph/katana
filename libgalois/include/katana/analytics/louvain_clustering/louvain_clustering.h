@@ -95,11 +95,12 @@ public:
   /// Deterministic algorithm for louvain clustering
   /// using delayed updates
   static LouvainClusteringPlan Deterministic(
-      bool enable_vf = kEnableVF,
-      double modularity_threshold_per_round = kModularityThresholdPerRound,
-      double modularity_threshold_total = kModularityThresholdTotal,
-      uint32_t max_iterations = kMaxIterations,
-      uint32_t min_graph_size = kMinGraphSize) {
+      bool enable_vf = kDefaultEnableVF,
+      double modularity_threshold_per_round =
+          kDefaultModularityThresholdPerRound,
+      double modularity_threshold_total = kDefaultModularityThresholdTotal,
+      uint32_t max_iterations = kDefaultMaxIterations,
+      uint32_t min_graph_size = kDefaultMinGraphSize) {
     return {
         kCPU,
         kDeterministic,

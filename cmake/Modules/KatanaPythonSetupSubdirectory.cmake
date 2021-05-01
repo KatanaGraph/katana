@@ -205,6 +205,7 @@ function(add_python_setuptools_target TARGET_NAME)
       # Pass katana version
       "KATANA_VERSION=${KATANA_VERSION}"
       "KATANA_COPYRIGHT_YEAR=${KATANA_COPYRIGHT_YEAR}"
+      "KATANA_SETUP_REQUIREMENTS_CACHE=${CMAKE_BINARY_DIR}/katana_setup_requirements_cache.txt"
       # Finally, launch setup.py
       ${Python3_EXECUTABLE} setup.py)
 
@@ -213,7 +214,7 @@ function(add_python_setuptools_target TARGET_NAME)
       ALL
       COMMAND ${PYTHON_SETUP_COMMAND} ${quiet} build "$<$<CONFIG:Debug>:--debug>" ${parallel}
       COMMAND install ${PYTHON_ENV_SCRIPT}.tmp ${PYTHON_ENV_SCRIPT}
-      BYPRODUCTS ${PYTHON_BINARY_DIR} ${PYTHON_ENV_SCRIPT}
+      BYPRODUCTS ${PYTHON_BINARY_DIR} ${PYTHON_ENV_SCRIPT} ${CMAKE_BINARY_DIR}/katana_setup_requirements_cache.txt
       WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
       COMMENT "Building ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
   )

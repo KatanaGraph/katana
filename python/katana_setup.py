@@ -6,6 +6,8 @@ import tempfile
 from distutils.errors import CompileError
 from functools import lru_cache
 from pathlib import Path
+from typing import Set, Any, Optional
+
 import setuptools
 import json
 
@@ -40,7 +42,46 @@ class RequirementError(RuntimeError):
         )
 
 
-@lru_cache(maxsize=None)
+class RequirementsCache:
+    """
+    A simple set of strings that is synced to disk. It is used to check if a requirement has already succeeded.
+    """
+
+    cache_file: Optional[Path]
+    cache: Set[str]
+
+    def __init__(self):
+        self.cache_file = os.environ.get("KATANA_SETUP_REQUIREMENTS_CACHE")
+        if self.cache_file:
+            self.cache_file = Path(self.cache_file)
+            try:
+                with open(self.cache_file, "rt", encoding="UTF-8") as fi:
+                    self.cache = set(fi.readlines())
+            except IOError:
+                self.cache = set()
+        else:
+            self.cache_file = None
+            self.cache = set()
+
+    def sync(self):
+        if self.cache_file:
+            with open(self.cache_file, "wt", encoding="UTF-8") as fi:
+                fi.writelines(l for l in self.cache)
+
+    def __contains__(self, item):
+        return self._make_key(item) in self.cache
+
+    def add(self, *item):
+        self.cache.add(self._make_key(item))
+
+    def _make_key(self, item):
+        key = ";".join(repr(v) for v in item) + "\n"
+        return key
+
+
+requirement_cache = RequirementsCache()
+
+
 def require_python_module(module_name, ge_version=None, lt_version=None):
     v_str = ""
     if ge_version:
@@ -50,6 +91,9 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
     if ge_version or lt_version:
         v_str = f" ({v_str})"
     print(f"Checking for Python package '{module_name}'{v_str}...", end="")
+    if (module_name, ge_version, lt_version) in requirement_cache:
+        print("Cached as found.")
+        return
     try:
         try:
             mod = __import__(module_name)
@@ -82,6 +126,7 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
         if v:
             v = " " + v
         print(f"Found{v}.")
+        requirement_cache.add(module_name, ge_version, lt_version)
 
 
 def _get_build_extension():
@@ -100,15 +145,17 @@ def _get_build_extension():
     return build_extension
 
 
-def test_cython_module(name, cython_code, python_code="", extension_options=None):
+def check_cython_module(name, cython_code, python_code="", extension_options=None):
     extension_options = extension_options or {}
     require_python_module("Cython")
-    import Cython.Build
     import Cython.Build.Inline
 
     print(f"Checking for native {name}...", end="")
+    if (cython_code, python_code, extension_options) in requirement_cache:
+        print("Cached as found.")
+        return
     try:
-        module_name = f"_test_cython_module_{abs(hash(cython_code))}"
+        module_name = f"_check_cython_module_{abs(hash(cython_code))}"
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             pyx_file = tmpdir / f"{module_name}.pyx"
@@ -135,6 +182,7 @@ def test_cython_module(name, cython_code, python_code="", extension_options=None
         raise RequirementError(f"Could not find native {name}.")
     else:
         print("Success.")
+        requirement_cache.add(cython_code, python_code, extension_options)
 
 
 def load_lang_config(lang):
@@ -335,7 +383,7 @@ def cythonize(module_list, *, source_root, **kwargs):
     test_extension_options.setdefault("extra_link_args", [])
     if not any(s.endswith("/libkatana_galois.so") for s in test_extension_options["extra_link_args"]):
         test_extension_options["extra_link_args"].append("-lkatana_galois")
-    test_cython_module(
+    check_cython_module(
         "libkatana_galois",
         """
 # distutils: language=c++
@@ -404,6 +452,8 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
     except ImportError:
         pass
     options.update(kwargs)
+
+    requirement_cache.sync()
 
     setuptools.setup(**options)
 

@@ -64,7 +64,7 @@ jobs:
 
     - name: Setup ccache
       run: |
-        ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
+        .github/workflows/configure_ccache.sh
         ccache --max-files 350 --max-size=1.5G # Roughly two builds worth of objects, and limited in size as a safety net.
         ccache --zero-stats
 
@@ -231,9 +231,8 @@ jobs:
 
       - name: Setup ccache
         run: |
-          ccache -o cache_dir=$HOME/.ccache  # Explicitly set location because macOS default is different.
+          .github/workflows/configure_ccache.sh
           ccache --max-files 350 --max-size=1.5G # Roughly two builds worth of objects, and limited in size as a safety net.
-          ccache --zero-stats
 
       ###
       # Install Conda environment

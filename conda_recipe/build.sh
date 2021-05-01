@@ -26,5 +26,5 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -Wno-dev \
   -S "$SRC_DIR"
-make -j${CMAKE_BUILD_PARALLEL_LEVEL}
-make install
+cmake --build . --parallel ${CMAKE_BUILD_PARALLEL_LEVEL}
+cmake --install .

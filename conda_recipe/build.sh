@@ -3,7 +3,9 @@ set -ex
 
 CMAKE_CCACHE_OPTION=""
 if ccache -V >/dev/null 2>/dev/null; then
-  export CCACHE_BASEDIR="$(dirname "$SRC_DIR")"
+  export CCACHE_COMPILERCHECK="%compiler% --version"
+  export CCACHE_NOHASHDIR="true"
+  export CCACHE_BASEDIR="$(dirname "$(realpath "$SRC_DIR")")"
   CMAKE_CCACHE_OPTION="-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
   echo "Enabling CCache with base: $CCACHE_BASEDIR"
 fi

@@ -286,7 +286,7 @@ BfsImpl(
   Graph::Node source = *it;
 
   size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
-  katana::Prealloc(8, approxNodeData);
+  katana::EnsurePreallocated(8, approxNodeData);
 
   katana::do_all(katana::iterate(graph.begin(), graph.end()), [&graph](auto n) {
     graph.GetData<BfsNodeDistance>(n) = BfsImplementation::kDistanceInfinity;

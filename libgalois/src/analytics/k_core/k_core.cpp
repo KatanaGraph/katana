@@ -199,7 +199,7 @@ KCoreImpl(
         std::tuple<KCoreNodeCurrentDegree>, std::tuple<>>* graph,
     KCorePlan algo, uint32_t k_core_number) {
   size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
-  katana::Prealloc(8, approxNodeData);
+  katana::EnsurePreallocated(8, approxNodeData);
 
   //! Intialization of degrees.
   DegreeCounting(graph);

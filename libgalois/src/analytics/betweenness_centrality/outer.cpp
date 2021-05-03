@@ -258,7 +258,8 @@ BetweennessCentralityOuter(
 
   // preallocate pages for use in algorithm
   katana::reportPageAlloc("MeminfoPre");
-  katana::Prealloc(katana::getActiveThreads() * graph.num_nodes() / 1650);
+  katana::EnsurePreallocated(
+      katana::getActiveThreads() * graph.num_nodes() / 1650);
   katana::reportPageAlloc("MeminfoMid");
 
   // vector of sources to process; initialized if doing outSources

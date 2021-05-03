@@ -39,6 +39,21 @@ void Prealloc(size_t pagesPerThread, size_t bytes);
 KATANA_EXPORT
 void Prealloc(size_t pages);
 
+/**
+ * Ensures an amount of memory be free on each thread. The allocation size is
+ * given in pages per thread and total bytes which will be divided amongst the
+ * threads.
+ */
+KATANA_EXPORT
+void EnsurePreallocated(size_t pagesPerThread, size_t bytes);
+
+/**
+ * Ensures an amount of memory be free on each thread. The allocation size is
+ * given in total pages which will be divided amongst the threads.
+ */
+KATANA_EXPORT
+void EnsurePreallocated(size_t pages);
+
 //! [PerIterAllocTy example]
 //! Base allocator for per-iteration allocator
 typedef katana::BumpWithMallocHeap<katana::FreeListHeap<katana::SystemHeap>>

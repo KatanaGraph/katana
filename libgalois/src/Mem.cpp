@@ -47,6 +47,28 @@ katana::Prealloc(size_t pages) {
   });
 }
 
+void
+katana::EnsurePreallocated(size_t pagesPerThread, size_t bytes) {
+  size_t size =
+      (pagesPerThread * katana::activeThreads) + (bytes / allocSize());
+  // If the user requested a non-zero allocation, at the very least
+  // allocate a page.
+  if (size == 0 && bytes > 0) {
+    size = 1;
+  }
+
+  katana::EnsurePreallocated(size);
+}
+
+void
+katana::EnsurePreallocated(size_t pages) {
+  unsigned pagesPerThread =
+      (pages + katana::activeThreads - 1) / katana::activeThreads;
+  katana::GetThreadPool().run(katana::activeThreads, [=]() {
+    katana::pagePoolEnsurePreallocated(pagesPerThread);
+  });
+}
+
 // Anchor the class
 katana::SystemHeap::SystemHeap() {
   KATANA_LOG_DEBUG_ASSERT(AllocSize == katana::allocSize());

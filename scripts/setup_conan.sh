@@ -14,4 +14,3 @@ case $(uname) in
   *) conan profile update settings.compiler.libcxx=libstdc++11 default
     ;;
 esac
-conan remote add --force kmaragon https://api.bintray.com/conan/kmaragon/conan

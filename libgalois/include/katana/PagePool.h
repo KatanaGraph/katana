@@ -41,6 +41,7 @@ namespace katana {
 KATANA_EXPORT void* pagePoolAlloc();
 KATANA_EXPORT void pagePoolFree(void*);
 KATANA_EXPORT void pagePoolPreAlloc(unsigned);
+KATANA_EXPORT void pagePoolEnsurePreallocated(unsigned num);
 
 //! Returns total large pages allocated by Galois memory management subsystem
 KATANA_EXPORT int numPagePoolAllocTotal();
@@ -61,6 +62,7 @@ typedef katana::CacheLineStorage<HeadPtr> HeadPtrStorage;
 template <typename _UNUSED = void>
 class PageAllocState {
   std::deque<std::atomic<int>> counts;
+  std::deque<std::atomic<int>> freeCounts;
   std::vector<HeadPtrStorage> pool;
   std::unordered_map<void*, int> ownerMap;
   katana::SimpleLock mapLock;
@@ -79,13 +81,23 @@ public:
   PageAllocState() {
     auto num = katana::GetThreadPool().getMaxThreads();
     counts.resize(num);
+    freeCounts.resize(num);
     pool.resize(num);
   }
 
   int count(unsigned tid) const { return counts[tid]; }
 
+  unsigned freeCount(unsigned tid) const {
+    KATANA_LOG_DEBUG_ASSERT(freeCounts[tid] >= 0);
+    return freeCounts[tid];
+  }
+
   int countAll() const {
     return std::accumulate(counts.begin(), counts.end(), 0);
+  }
+
+  unsigned freeCountAll() const {
+    return std::accumulate(freeCounts.begin(), freeCounts.end(), 0);
   }
 
   void* pageAlloc() {
@@ -96,6 +108,7 @@ public:
       FreeNode* h = hp.getValue();
       if (h) {
         hp.unlock_and_set(h->next);
+        freeCounts[tid] -= 1;
         return h;
       }
       hp.unlock();
@@ -108,6 +121,7 @@ public:
     mapLock.lock();
     KATANA_LOG_DEBUG_ASSERT(ownerMap.count(ptr));
     int i = ownerMap[ptr];
+    freeCounts[i] += 1;
     mapLock.unlock();
     HeadPtr& hp = pool[i].data;
     hp.lock();

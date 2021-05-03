@@ -637,7 +637,7 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name) {
 
   impl.Initialize(&graph);
 
-  katana::Prealloc(
+  katana::EnsurePreallocated(
       1, kChunkSize * (sizeof(GNode) + sizeof(typename Algo::NodeFlag)) *
              graph.size());
 

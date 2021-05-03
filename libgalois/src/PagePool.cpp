@@ -46,8 +46,17 @@ katana::pagePoolAlloc() {
 
 void
 katana::pagePoolPreAlloc(unsigned num) {
-  while (num--)
+  while (num--) {
     PA->pagePreAlloc();
+  }
+}
+
+void
+katana::pagePoolEnsurePreallocated(unsigned num) {
+  auto tid = katana::ThreadPool::getTID();
+  while (PA->freeCount(tid) < num) {
+    PA->pagePreAlloc();
+  }
 }
 
 void

@@ -239,7 +239,7 @@ BetweennessCentralityLevel(
   // preallocate pages in memory so allocation doesn't occur during compute
   katana::StatTimer prealloc_time("PreAllocTime", "BetweennessCentrality");
   prealloc_time.start();
-  katana::Prealloc(std::max(
+  katana::EnsurePreallocated(std::max(
       size_t{katana::getActiveThreads()} * (graph.size() / 2000000),
       std::max(10U, katana::getActiveThreads()) * size_t{10}));
   prealloc_time.stop();

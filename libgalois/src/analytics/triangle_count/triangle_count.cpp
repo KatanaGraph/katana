@@ -329,7 +329,7 @@ katana::analytics::TriangleCount(
 
   timer_graph_read.stop();
 
-  katana::Prealloc(1, 16 * (pg->num_nodes() + pg->num_edges()));
+  katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
   katana::reportPageAlloc("TriangleCount_MeminfoPre");
 
   size_t total_count;

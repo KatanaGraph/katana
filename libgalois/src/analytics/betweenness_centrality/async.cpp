@@ -413,7 +413,7 @@ BetweennessCentralityAsynchronous() {
 
   katana::reportPageAlloc("MemAllocPre");
   katana::gInfo("Going to pre-allocate pages");
-  katana::Prealloc(
+  katana::EnsurePreallocated(
       std::min(
           static_cast<uint64_t>(
               std::min(katana::getActiveThreads(), 100U) *

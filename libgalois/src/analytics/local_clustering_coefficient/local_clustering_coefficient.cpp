@@ -343,7 +343,7 @@ katana::analytics::LocalClusteringCoefficient(
 
   timer_graph_read.stop();
 
-  katana::Prealloc(1, 16 * (pg->num_nodes() + pg->num_edges()));
+  katana::EnsurePreallocated(1, 16 * (pg->num_nodes() + pg->num_edges()));
 
   switch (plan.algorithm()) {
   case LocalClusteringCoefficientPlan::kOrderedCountAtomics: {

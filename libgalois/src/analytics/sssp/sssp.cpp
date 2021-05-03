@@ -311,7 +311,7 @@ public:
     typename Graph::Node source = *it;
 
     size_t approxNodeData = graph.size() * 64;
-    katana::Prealloc(1, approxNodeData);
+    katana::EnsurePreallocated(1, approxNodeData);
 
     katana::do_all(
         katana::iterate(graph), [&graph](const typename Graph::Node& n) {

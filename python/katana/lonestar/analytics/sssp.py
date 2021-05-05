@@ -15,7 +15,7 @@ from katana.loops import (
 )
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
-from katana.galois import setActiveThreads
+from katana.galois import set_active_threads
 
 
 def dtype_info(t):
@@ -137,7 +137,7 @@ def main():
     parser.add_argument("input", type=str)
     args = parser.parse_args()
 
-    print("Using threads:", setActiveThreads(args.threads))
+    print("Using threads:", set_active_threads(args.threads))
 
     graph = PropertyGraph(args.input)
 

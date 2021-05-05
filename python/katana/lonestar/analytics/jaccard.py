@@ -4,7 +4,7 @@ import pyarrow
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
-from katana.galois import setActiveThreads
+from katana.galois import set_active_threads
 
 
 @do_all_operator()
@@ -49,7 +49,7 @@ def main():
     parser.add_argument("input", type=str)
     args = parser.parse_args()
 
-    print("Using threads:", setActiveThreads(args.threads))
+    print("Using threads:", set_active_threads(args.threads))
 
     g = PropertyGraph(args.input)
 

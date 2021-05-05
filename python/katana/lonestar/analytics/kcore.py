@@ -5,7 +5,7 @@ from katana.atomic import GAccumulator, atomic_sub
 from katana.datastructures import LargeArray, AllocationPolicy, InsertBag
 from katana.loops import do_all, do_all_operator, for_each, for_each_operator
 from katana.property_graph import PropertyGraph
-from katana.galois import setActiveThreads
+from katana.galois import set_active_threads
 from katana.timer import StatTimer
 
 
@@ -105,7 +105,7 @@ def main():
     parser.add_argument("input", type=str)
     args = parser.parse_args()
 
-    print("Using threads:", setActiveThreads(args.threads))
+    print("Using threads:", set_active_threads(args.threads))
 
     graph = PropertyGraph(args.input)
 

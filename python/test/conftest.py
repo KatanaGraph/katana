@@ -2,7 +2,7 @@ import pytest
 
 from katana.example_utils import get_input
 from katana.property_graph import PropertyGraph
-from katana.galois import setActiveThreads
+from katana.galois import set_active_threads
 
 
 @pytest.fixture
@@ -13,17 +13,17 @@ def property_graph():
 
 @pytest.fixture
 def threads_1():
-    setActiveThreads(1)
+    set_active_threads(1)
     return True
 
 
 @pytest.fixture(autouse=True)
 def threads_default():
-    setActiveThreads(4)
+    set_active_threads(4)
     return True
 
 
 @pytest.fixture
 def threads_many():
-    setActiveThreads(16)
+    set_active_threads(16)
     return True

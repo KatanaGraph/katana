@@ -4,9 +4,8 @@ from .cpp.libgalois.Galois cimport getVersion as c_getVersion
 
 _katana_runtime = _katana_runtime_wrapper()
 
-def setActiveThreads(int n):
+def set_active_threads(int n):
     return c_setActiveThreads(n)
 
 def get_version():
-    return c_getVersion()
-
+    return str(c_getVersion(), encoding="ASCII")

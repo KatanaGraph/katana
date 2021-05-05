@@ -98,7 +98,7 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 
 def main():
     import argparse
-    from katana.galois import setActiveThreads
+    from katana.galois import set_active_threads
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)
@@ -111,7 +111,7 @@ def main():
 
     args = parser.parse_args()
 
-    print("Using threads:", setActiveThreads(args.threads))
+    print("Using threads:", set_active_threads(args.threads))
 
     graph = PropertyGraph(args.input)
 

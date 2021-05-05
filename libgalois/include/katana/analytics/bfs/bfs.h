@@ -71,18 +71,12 @@ KATANA_EXPORT Result<void> BfsAssertValid(
 
 /// Statistics about a graph that can be extracted from the results of BFS.
 struct KATANA_EXPORT BfsStatistics {
-  /// The source node for the distances.
-  uint32_t source_node;
+  /// The number of nodes reachable from the source node.
+  uint64_t n_reached_nodes;
   /// The maximum distance across all nodes.
   uint32_t max_distance;
-  /// The sum of all node distances.
-  uint64_t total_distance;
-  /// The number of nodes reachable from the source node.
-  uint32_t n_reached_nodes;
-
-  float average_distance() const {
-    return float(total_distance) / n_reached_nodes;
-  }
+  /// The average distances on visited nodes from the source node.
+  double average_visited_distance;
 
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout) const;

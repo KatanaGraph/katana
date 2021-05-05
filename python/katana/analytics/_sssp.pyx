@@ -20,7 +20,7 @@ Single-Source Shortest Path
 from enum import Enum
 
 from libc.stddef cimport ptrdiff_t
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint64_t
 from libcpp.string cimport string
 
 from katana.analytics.plan cimport _Plan, Plan, Statistics
@@ -80,11 +80,9 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
                                  const string& edge_weight_property_name, const string& output_property_name);
 
     cppclass _SsspStatistics  "katana::analytics::SsspStatistics":
+        uint64_t n_reached_nodes
         double max_distance
-        double total_distance
-        uint32_t n_reached_nodes
-
-        double average_distance()
+        double average_visited_distance
 
         void Print(ostream os)
 
@@ -279,15 +277,6 @@ cdef class SsspStatistics(Statistics):
         return self.underlying.max_distance
 
     @property
-    def total_distance(self) -> float:
-        """
-        The total combined length of all paths.
-
-        :rtype: float
-        """
-        return self.underlying.total_distance
-
-    @property
     def n_reached_nodes(self) -> int:
         """
         The number of nodes reachable from the source.
@@ -297,13 +286,13 @@ cdef class SsspStatistics(Statistics):
         return self.underlying.n_reached_nodes
 
     @property
-    def average_distance(self) -> float:
+    def average_visited_distance(self) -> float:
         """
         The average path length.
 
         :rtype: float
         """
-        return self.underlying.average_distance()
+        return self.underlying.average_visited_distance
 
     def __str__(self) -> str:
         cdef ostringstream ss

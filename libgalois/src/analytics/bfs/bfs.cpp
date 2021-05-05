@@ -369,7 +369,7 @@ katana::analytics::BfsStatistics::Compute(
   uint32_t source_node = std::numeric_limits<uint32_t>::max();
   GReduceMax<uint32_t> max_dist;
   GAccumulator<uint64_t> sum_dist;
-  GAccumulator<uint32_t> num_visited;
+  GAccumulator<uint64_t> num_visited;
 
   auto max_possible_distance = graph.num_nodes();
 
@@ -390,16 +390,14 @@ katana::analytics::BfsStatistics::Compute(
       loopname("BFS Sanity check"), no_stats());
 
   KATANA_LOG_DEBUG_ASSERT(source_node != std::numeric_limits<uint32_t>::max());
-
-  return BfsStatistics{
-      source_node, max_dist.reduce(), sum_dist.reduce(), num_visited.reduce()};
+  uint64_t total_visited_nodes = num_visited.reduce();
+  double average_dist = double(sum_dist.reduce()) / total_visited_nodes;
+  return BfsStatistics{total_visited_nodes, max_dist.reduce(), average_dist};
 }
 
 void
 katana::analytics::BfsStatistics::Print(std::ostream& os) const {
-  os << "Source node = " << source_node << std::endl;
   os << "Number of reached nodes = " << n_reached_nodes << std::endl;
   os << "Maximum distance = " << max_distance << std::endl;
-  os << "Sum of distances = " << total_distance << std::endl;
-  os << "Average distance = " << average_distance() << std::endl;
+  os << "Average distance = " << average_visited_distance << std::endl;
 }

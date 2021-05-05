@@ -17,7 +17,6 @@ def test_bfs(property_graph: PropertyGraph):
 
     stats = BfsStatistics(property_graph, property_name)
 
-    assert stats.source_node == start_node
     assert stats.max_distance == 7
 
     bfs_assert_valid(property_graph, property_name)

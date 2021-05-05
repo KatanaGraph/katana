@@ -529,7 +529,7 @@ ComputeStatistics(
 
   katana::GReduceMax<Weight> max_dist;
   katana::GAccumulator<Weight> sum_dist;
-  katana::GAccumulator<uint32_t> num_visited;
+  katana::GAccumulator<uint64_t> num_visited;
 
   do_all(
       katana::iterate(graph),
@@ -545,9 +545,10 @@ ComputeStatistics(
       },
       katana::loopname("Compute Statistics"), katana::no_stats());
 
+  uint64_t total_visited_nodes = num_visited.reduce();
+  double average_dist = double(sum_dist.reduce()) / total_visited_nodes;
   return SsspStatistics{
-      double(max_dist.reduce()), double(sum_dist.reduce()),
-      num_visited.reduce()};
+      total_visited_nodes, double(max_dist.reduce()), average_dist};
 }
 
 }  // namespace
@@ -577,6 +578,5 @@ void
 SsspStatistics::Print(std::ostream& os) const {
   os << "Number of reached nodes = " << n_reached_nodes << std::endl;
   os << "Maximum distance = " << max_distance << std::endl;
-  os << "Sum of distances = " << total_distance << std::endl;
-  os << "Average distance = " << average_distance() << std::endl;
+  os << "Average distance = " << average_visited_distance << std::endl;
 }

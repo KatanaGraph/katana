@@ -64,12 +64,9 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
                                 string property_name);
 
     cppclass _BfsStatistics "katana::analytics::BfsStatistics":
-        uint32_t source_node;
+        uint64_t n_reached_nodes;
         uint32_t max_distance;
-        uint64_t total_distance;
-        uint32_t n_reached_nodes;
-
-        float average_distance()
+        double average_visited_distance;
 
         void Print(ostream os)
 
@@ -198,13 +195,6 @@ cdef class BfsStatistics:
             self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying.get(), output_property_name_cstr))
 
     @property
-    def source_node(self):
-        """
-        The source node ID. The only node with level 0.
-        """
-        return self.underlying.source_node
-
-    @property
     def max_distance(self):
         """
         The maximum level.
@@ -214,13 +204,13 @@ cdef class BfsStatistics:
         return self.underlying.max_distance
 
     @property
-    def total_distance(self):
+    def average_visited_distance(self):
         """
-        The sum of all levels.
+        The average level.
 
-        :rtype: int
+        :rtype: double
         """
-        return self.underlying.total_distance
+        return self.underlying.average_visited_distance
 
     @property
     def n_reached_nodes(self):
@@ -230,15 +220,6 @@ cdef class BfsStatistics:
         :rtype: int
         """
         return self.underlying.n_reached_nodes
-
-    @property
-    def average_distance(self):
-        """
-        The average level.
-
-        :rtype: float
-        """
-        return self.underlying.average_distance()
 
     def __str__(self) -> str:
         cdef ostringstream ss

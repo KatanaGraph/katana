@@ -127,14 +127,12 @@ KATANA_EXPORT Result<void> SsspAssertValid(
     const std::string& output_property_name);
 
 struct KATANA_EXPORT SsspStatistics {
+  /// The number of nodes reachable from the source node.
+  uint64_t n_reached_nodes;
   /// The maximum distance across all nodes.
   double max_distance;
-  /// The sum of all node distances.
-  double total_distance;
-  /// The number of nodes reachable from the source node.
-  uint32_t n_reached_nodes;
-
-  double average_distance() const { return total_distance / n_reached_nodes; }
+  /// The average distances on visited nodes from the source node.
+  double average_visited_distance;
 
   /// Print the statistics in a human readable form.
   void Print(std::ostream& os = std::cout) const;

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import os.path
 import shutil
@@ -62,37 +62,14 @@ def download_and_unpack(artifact, path, auth):
         print(f"Extracted artifact {artifact['name']} into {path}")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--upload-pkgs",
-        "-p",
-        action="store_true",
-        default=False,
-        help="Upload the packages in the artifacts to anaconda. " "Requires you to be logged into anaconda.",
-    )
-    parser.add_argument(
-        "--upload-docs",
-        "-d",
-        action="store_true",
-        default=False,
-        help="Upload the documentation in the artifacts to ???. This is not yet implemented.",
-    )
-    parser.add_argument(
-        "--leave",
-        "-l",
-        action="store_true",
-        default=False,
-        help="Leave the downloaded and unpacked artifacts in the temporary directory for other uses.",
-    )
-    args = parser.parse_args()
+def python_cmd(args):
     leave = args.leave
     upload_pkgs = args.upload_pkgs
     upload_docs = args.upload_docs
 
     if not leave and not upload_pkgs and not upload_docs:
         print("Aborting because the downloaded artifacts would not be uploaded or left for other uses.")
-        parser.print_help()
+        print()
         return 1
 
     try:
@@ -145,6 +122,50 @@ def main():
         print(f"This script leaves the downloaded katana-python documentation in: {docs_dir}")
         print(f"This script leaves the downloaded conda packages in: {pkgs_dir}")
         print(f"To clean up after this script, delete: {dir}")
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    sub_parsers = parser.add_subparsers()
+
+    python_parser = sub_parsers.add_parser(
+        "python", help="Download python artifacts and optionally upload them to anaconda"
+    )
+    python_parser.set_defaults(func=python_cmd)
+
+    python_parser.add_argument(
+        "--upload-pkgs",
+        "-p",
+        action="store_true",
+        default=False,
+        help="Upload the packages in the artifacts to anaconda. " "Requires you to be logged into anaconda.",
+    )
+    python_parser.add_argument(
+        "--upload-docs",
+        "-d",
+        action="store_true",
+        default=False,
+        help="Upload the documentation in the artifacts to ???. This is not yet implemented.",
+    )
+    python_parser.add_argument(
+        "--leave",
+        "-l",
+        action="store_true",
+        default=False,
+        help="Leave the downloaded and unpacked artifacts in the temporary directory for other uses.",
+    )
+
+    args = parser.parse_args()
+
+    if not hasattr(args, "func"):
+        parser.print_help()
+        sys.exit(1)
+
+    exit_code = args.func(args)
+    if exit_code == 1:
+        parser.print_help()
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 add_executable(pagerank-cpu pagerank-cli.cpp)
 add_dependencies(apps pagerank-cpu)
 target_link_libraries(pagerank-cpu PRIVATE Katana::galois lonestar)
-install(TARGETS pagerank-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
 add_test_scale(small pagerank-cpu INPUT rmat15 INPUT_URI "${BASEINPUT}/propertygraphs/rmat15" -maxIterations=100 -algo=PushAsync)
 

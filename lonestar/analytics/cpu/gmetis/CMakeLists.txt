@@ -1,7 +1,6 @@
 add_executable(gmetis-cpu Coarsening.cpp GMetis.cpp Metric.cpp Partitioning.cpp Refine.cpp)
 add_dependencies(apps gmetis-cpu)
 target_link_libraries(gmetis-cpu PRIVATE Katana::galois lonestar)
-install(TARGETS gmetis-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
 
 # Disable failing test (issue #116).
 add_test_scale(small1 gmetis-cpu "${BASEINPUT}/reference/structured/rome99.gr" "-numPartitions=4" NOT_QUICK NO_VERIFY)

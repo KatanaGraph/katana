@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import json
+
 from pathlib import Path
 from tempfile import TemporaryFile
 from zipfile import ZipFile
@@ -14,6 +16,7 @@ from requests.auth import HTTPBasicAuth
 
 
 def find_artifacts(repo, auth):
+    # TODO(ddn): Use the PyGithub package like the version script does.
     repo_prefix = f"https://api.github.com/repos/{repo}"
     response = requests.get(
         f"{repo_prefix}/actions/runs",
@@ -62,27 +65,78 @@ def download_and_unpack(artifact, path, auth):
         print(f"Extracted artifact {artifact['name']} into {path}")
 
 
+def get_auth():
+    try:
+        password = os.environ.get("GITHUB_PASSWORD", os.environ.get("GITHUB_TOKEN", None))
+        if not password:
+            raise KeyError()
+        return HTTPBasicAuth(os.environ["GITHUB_USERNAME"], password)
+    except KeyError:
+        return None
+
+
+def list_cmd(args):
+    repo = args.repo
+    if args.limit < 0:
+        limit = None
+    else:
+        limit = args.limit
+
+    auth = get_auth()
+    if not auth:
+        print(
+            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or GITHUB_TOKEN to be set to valid Github credentials."
+        )
+        return 2
+
+    repo_prefix = f"https://api.github.com/repos/{repo}"
+    page = 0
+    seen = 0
+    while True:
+        response = requests.get(
+            f"{repo_prefix}/actions/artifacts",
+            params={"page": page},
+            headers={"Accept": "application/vnd.github.v3+json"},
+            auth=auth,
+        )
+
+        data = response.json()["artifacts"]
+        data_len = len(data)
+
+        if data_len == 0:
+            break
+        if limit is not None:
+            if data_len > limit:
+                data_len = limit
+            limit -= data_len
+
+        json.dump(data[:data_len], sys.stdout, indent="  ")
+
+        if limit is not None and limit == 0:
+            break
+
+        page += 1
+
+    return 0
+
+
 def python_cmd(args):
     leave = args.leave
     upload_pkgs = args.upload_pkgs
     upload_docs = args.upload_docs
+    repo = args.repo
 
     if not leave and not upload_pkgs and not upload_docs:
         print("Aborting because the downloaded artifacts would not be uploaded or left for other uses.")
         print()
         return 1
 
-    try:
-        password = os.environ.get("GITHUB_PASSWORD", os.environ.get("GITHUB_TOKEN", None))
-        if not password:
-            raise KeyError()
-        auth = HTTPBasicAuth(os.environ["GITHUB_USERNAME"], password)
-    except KeyError:
+    auth = get_auth()
+    if not auth:
         print(
             "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or GITHUB_TOKEN to be set to valid Github credentials."
         )
         return 2
-    repo = "katanagraph/Katana"
 
     conda_package_ubuntu_artifact, conda_package_macos_artifact, docs_artifact = find_artifacts(repo, auth)
 
@@ -139,7 +193,7 @@ def main():
         "-p",
         action="store_true",
         default=False,
-        help="Upload the packages in the artifacts to anaconda. " "Requires you to be logged into anaconda.",
+        help="Upload the packages in the artifacts to anaconda. Requires you to be logged into anaconda.",
     )
     python_parser.add_argument(
         "--upload-docs",
@@ -154,6 +208,22 @@ def main():
         action="store_true",
         default=False,
         help="Leave the downloaded and unpacked artifacts in the temporary directory for other uses.",
+    )
+    python_parser.add_argument(
+        "--repo", default="katanagraph/katana", help="Repo to query",
+    )
+
+    list_parser = sub_parsers.add_parser("list", help="List artifacts in a repo")
+    list_parser.set_defaults(func=list_cmd)
+
+    list_parser.add_argument(
+        "--repo", default="katanagraph/katana", help="Repo to query",
+    )
+    list_parser.add_argument(
+        "--limit",
+        default=500,
+        type=int,
+        help="Limit output to a number of entries. Values less than zero mean no limit.",
     )
 
     args = parser.parse_args()

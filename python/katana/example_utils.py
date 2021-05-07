@@ -20,12 +20,13 @@ def get_inputs_directory(*, invalidate=False):
     # Otherwise use a cache directory
     if not inputs_dir:
         inputs_dir = Path(os.environ["HOME"]) / ".cache" / "katana" / "inputs"
-    if not invalidate and inputs_dir.is_dir() and (inputs_dir / "propertygraphs" / "ldbc_003").is_dir():
-        return inputs_dir
-    try:
-        shutil.rmtree(inputs_dir)
-    except OSError:
-        inputs_dir.unlink()
+    if inputs_dir.is_dir() and (inputs_dir / "propertygraphs" / "ldbc_003").is_dir():
+        if not invalidate:
+            return inputs_dir
+        try:
+            shutil.rmtree(inputs_dir)
+        except OSError:
+            inputs_dir.unlink()
     inputs_dir.mkdir(parents=True, exist_ok=True)
     fn, _headers = urllib.request.urlretrieve(
         "https://katana-ci-public.s3.us-east-1.amazonaws.com/inputs/katana-inputs-v19.tar.gz"

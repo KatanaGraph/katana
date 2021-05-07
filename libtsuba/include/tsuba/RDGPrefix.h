@@ -9,7 +9,7 @@
 
 namespace tsuba {
 
-class RDGMeta;
+class RDGManifest;
 
 /// An RDGPrefix loads the header information from the topology CSR, this is
 /// used by the partitioner to avoid downloading the whole RDG to make
@@ -49,7 +49,7 @@ private:
   uint64_t view_offset_;
   const CSRTopologyPrefix* prefix_{nullptr};
 
-  static katana::Result<RDGPrefix> DoMakePrefix(const RDGMeta& meta);
+  static katana::Result<RDGPrefix> DoMakePrefix(const RDGManifest& manifest);
 };
 
 }  // namespace tsuba

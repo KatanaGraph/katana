@@ -4,29 +4,11 @@
 #include <cassert>
 
 #include "FileStorage_internal.h"
-#include "MemoryNameServerClient.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 
-namespace {
-
-katana::Result<std::unique_ptr<tsuba::NameServerClient>>
-GetMemoryClient() {
-  return std::make_unique<tsuba::MemoryNameServerClient>();
-}
-
-}  // namespace
-
 std::unique_ptr<tsuba::GlobalState> tsuba::GlobalState::ref_ = nullptr;
-
-std::function<katana::Result<std::unique_ptr<tsuba::NameServerClient>>()>
-    tsuba::GlobalState::make_name_server_client_cb_ = GetMemoryClient;
-
-void
-tsuba::GlobalState::clear_make_name_server_client_cb() {
-  make_name_server_client_cb_ = GetMemoryClient;
-}
 
 katana::CommBackend*
 tsuba::GlobalState::Comm() const {
@@ -50,23 +32,12 @@ tsuba::GlobalState::FS(std::string_view uri) const {
   return GetDefaultFS();
 }
 
-tsuba::NameServerClient*
-tsuba::GlobalState::NS() const {
-  return name_server_client_;
-}
-
 katana::Result<void>
-tsuba::GlobalState::Init(
-    katana::CommBackend* comm, tsuba::NameServerClient* ns) {
+tsuba::GlobalState::Init(katana::CommBackend* comm) {
   KATANA_LOG_DEBUG_ASSERT(ref_ == nullptr);
 
-  // quick ping to say hello and fail fast if something was misconfigured
-  if (auto res = ns->CheckHealth(); !res) {
-    return res.error().WithContext("testing name server connection");
-  }
-
   // new to access non-public constructor
-  std::unique_ptr<GlobalState> global_state(new GlobalState(comm, ns));
+  std::unique_ptr<GlobalState> global_state(new GlobalState(comm));
 
   std::vector<FileStorage*>& registered = GetRegisteredFileStorages();
   for (FileStorage* fs : registered) {
@@ -118,11 +89,6 @@ tsuba::Comm() {
 tsuba::FileStorage*
 tsuba::FS(std::string_view uri) {
   return GlobalState::Get().FS(uri);
-}
-
-tsuba::NameServerClient*
-tsuba::NS() {
-  return GlobalState::Get().NS();
 }
 
 katana::Result<void>

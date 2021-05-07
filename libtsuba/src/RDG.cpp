@@ -119,10 +119,15 @@ WriteProperties(
 katana::Result<void>
 CommitRDG(
     tsuba::RDGHandle handle, uint32_t policy_id, bool transposed,
+    tsuba::RDG::RDGVersioningPolicy versioning_action,
     const tsuba::RDGLineage& lineage, std::unique_ptr<tsuba::WriteGroup> desc) {
   katana::CommBackend* comm = tsuba::Comm();
-  tsuba::RDGMeta new_meta = handle.impl_->rdg_meta().NextVersion(
-      comm->Num, policy_id, transposed, lineage);
+  tsuba::RDGManifest new_manifest =
+      (versioning_action == tsuba::RDG::RetainVersion)
+          ? handle.impl_->rdg_manifest().SameVersion(
+                comm->Num, policy_id, transposed, lineage)
+          : handle.impl_->rdg_manifest().NextVersion(
+                comm->Num, policy_id, transposed, lineage);
 
   // wait for all the work we queued to finish
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
@@ -132,36 +137,28 @@ CommitRDG(
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   comm->Barrier();
 
-  // NS handles MPI coordination
-  if (auto res = tsuba::NS()->Update(
-          handle.impl_->rdg_meta().dir(), handle.impl_->rdg_meta().version(),
-          new_meta);
-      !res) {
-    KATANA_LOG_ERROR(
-        "unable to update rdg at {}: {}", handle.impl_->rdg_meta().dir(),
-        res.error());
-  }
-
   TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
   katana::Result<void> ret = tsuba::OneHostOnly([&]() -> katana::Result<void> {
     TSUBA_PTP(tsuba::internal::FaultSensitivity::High);
 
-    std::string curr_s = new_meta.ToJsonString();
+    std::string curr_s = new_manifest.ToJsonString();
     auto res = tsuba::FileStore(
-        tsuba::RDGMeta::FileName(
-            handle.impl_->rdg_meta().dir(), new_meta.version())
+        tsuba::RDGManifest::FileName(
+            handle.impl_->rdg_manifest().dir(),
+            handle.impl_->rdg_manifest().viewtype(), new_manifest.version())
             .string(),
         reinterpret_cast<const uint8_t*>(curr_s.data()), curr_s.size());
     if (!res) {
       return res.error().WithContext(
           "CommitRDG future failed {}",
-          tsuba::RDGMeta::FileName(
-              handle.impl_->rdg_meta().dir(), new_meta.version()));
+          tsuba::RDGManifest::FileName(
+              handle.impl_->rdg_manifest().dir(),
+              handle.impl_->rdg_manifest().viewtype(), new_manifest.version()));
     }
     return katana::ResultSuccess();
   });
   if (ret) {
-    handle.impl_->set_rdg_meta(std::move(new_meta));
+    handle.impl_->set_rdg_manifest(std::move(new_manifest));
   }
   return ret;
 }
@@ -342,6 +339,7 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
 katana::Result<void>
 tsuba::RDG::DoStore(
     RDGHandle handle, const std::string& command_line,
+    RDGVersioningPolicy versioning_action,
     std::unique_ptr<WriteGroup> write_group) {
   if (core_->part_header().topology_path().empty()) {
     // No topology file; create one
@@ -359,7 +357,7 @@ tsuba::RDG::DoStore(
 
   auto node_write_result = WriteProperties(
       *core_->node_properties(), core_->part_header().node_prop_info_list(),
-      handle.impl_->rdg_meta().dir(), write_group.get());
+      handle.impl_->rdg_manifest().dir(), write_group.get());
   if (!node_write_result) {
     return node_write_result.error().WithContext(
         "failed to write node properties");
@@ -371,7 +369,7 @@ tsuba::RDG::DoStore(
 
   auto edge_write_result = WriteProperties(
       *core_->edge_properties(), core_->part_header().edge_prop_info_list(),
-      handle.impl_->rdg_meta().dir(), write_group.get());
+      handle.impl_->rdg_manifest().dir(), write_group.get());
   if (!edge_write_result) {
     return edge_write_result.error().WithContext(
         "failed to write edge properties");
@@ -382,7 +380,7 @@ tsuba::RDG::DoStore(
       std::move(edge_write_result.value()));
 
   auto part_write_result =
-      WritePartArrays(handle.impl_->rdg_meta().dir(), write_group.get());
+      WritePartArrays(handle.impl_->rdg_manifest().dir(), write_group.get());
 
   if (!part_write_result) {
     return part_write_result.error().WithContext("failed to write part arrays");
@@ -390,7 +388,15 @@ tsuba::RDG::DoStore(
   core_->part_header().set_part_properties(
       std::move(part_write_result.value()));
 
-  if (auto write_result = core_->part_header().Write(handle, write_group.get());
+  //If a view type has been set, use it otherwise pass in the default view type
+  if (view_type_.empty()) {
+    handle.impl_->set_viewtype(tsuba::kDefaultRDGViewType);
+  } else {
+    handle.impl_->set_viewtype(view_type_);
+  }
+
+  if (auto write_result = core_->part_header().Write(
+          handle, write_group.get(), versioning_action);
       !write_result) {
     return write_result.error().WithContext("failed to write metadata");
   }
@@ -399,8 +405,8 @@ tsuba::RDG::DoStore(
   lineage_.AddCommandLine(command_line);
   if (auto res = CommitRDG(
           handle, core_->part_header().metadata().policy_id_,
-          core_->part_header().metadata().transposed_, lineage_,
-          std::move(write_group));
+          core_->part_header().metadata().transposed_, versioning_action,
+          lineage_, std::move(write_group));
       !res) {
     return res.error().WithContext("failed to finalize RDG");
   }
@@ -497,10 +503,11 @@ tsuba::RDG::DoMake(const katana::Uri& metadata_dir) {
 }
 
 katana::Result<tsuba::RDG>
-tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
+tsuba::RDG::Make(const RDGManifest& manifest, const RDGLoadOptions& opts) {
   uint32_t partition_id_to_load =
       opts.partition_id_to_load.value_or(Comm()->ID);
-  katana::Uri partition_path = meta.PartitionFileName(partition_id_to_load);
+
+  katana::Uri partition_path = manifest.PartitionFileName(partition_id_to_load);
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
@@ -516,7 +523,7 @@ tsuba::RDG::Make(const RDGMeta& meta, const RDGLoadOptions& opts) {
     return res.error();
   }
 
-  if (auto res = rdg.DoMake(meta.dir()); !res) {
+  if (auto res = rdg.DoMake(manifest.dir()); !res) {
     return res.error();
   }
 
@@ -544,13 +551,13 @@ tsuba::RDG::Make(RDGHandle handle, const RDGLoadOptions& opts) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "handle does not allow full read");
   }
-  return Make(handle.impl_->rdg_meta(), opts);
+  return Make(handle.impl_->rdg_manifest(), opts);
 }
 
 katana::Result<void>
 tsuba::RDG::Store(
     RDGHandle handle, const std::string& command_line,
-    std::unique_ptr<FileFrame> ff) {
+    RDGVersioningPolicy versioning_action, std::unique_ptr<FileFrame> ff) {
   if (!handle.impl_->AllowsWrite()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "handle does not allow write");
@@ -558,12 +565,12 @@ tsuba::RDG::Store(
   // We trust the partitioner to give us a valid graph, but we
   // report our assumptions
   KATANA_LOG_DEBUG(
-      "RDG::Store meta.num_hosts: {} meta.policy_id: {} num_hosts: {} "
-      "policy_id: {}",
-      handle.impl_->rdg_meta().num_hosts(),
-      handle.impl_->rdg_meta().policy_id(), tsuba::Comm()->Num,
-      core_->part_header().metadata().policy_id_);
-  if (handle.impl_->rdg_meta().dir() != rdg_dir_) {
+      "RDG::Store manifest.num_hosts: {} manifest.policy_id: {} num_hosts: {} "
+      "policy_id: {} versioning_action{}",
+      handle.impl_->rdg_manifest().num_hosts(),
+      handle.impl_->rdg_manifest().policy_id(), tsuba::Comm()->Num,
+      core_->part_header().metadata().policy_id_, versioning_action);
+  if (handle.impl_->rdg_manifest().dir() != rdg_dir_) {
     core_->part_header().UnbindFromStorage();
   }
 
@@ -575,7 +582,8 @@ tsuba::RDG::Store(
   std::unique_ptr<WriteGroup> desc = std::move(desc_res.value());
 
   if (ff) {
-    katana::Uri t_path = handle.impl_->rdg_meta().dir().RandFile("topology");
+    katana::Uri t_path =
+        handle.impl_->rdg_manifest().dir().RandFile("topology");
 
     ff->Bind(t_path.string());
     TSUBA_PTP(internal::FaultSensitivity::Normal);
@@ -584,7 +592,7 @@ tsuba::RDG::Store(
     core_->part_header().set_topology_path(t_path.BaseName());
   }
 
-  return DoStore(handle, command_line, std::move(desc));
+  return DoStore(handle, command_line, versioning_action, std::move(desc));
 }
 
 katana::Result<void>

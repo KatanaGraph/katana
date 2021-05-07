@@ -193,8 +193,17 @@ private:
   Result<void> Validate();
 
   Result<void> DoWrite(
-      tsuba::RDGHandle handle, const std::string& command_line);
+      tsuba::RDGHandle handle, const std::string& command_line,
+      tsuba::RDG::RDGVersioningPolicy versioning_action);
+
+  katana::Result<void> ConductWriteOp(
+      const std::string& uri, const std::string& command_line,
+      tsuba::RDG::RDGVersioningPolicy versioning_action);
+
   Result<void> WriteGraph(
+      const std::string& uri, const std::string& command_line);
+
+  Result<void> WriteView(
       const std::string& uri, const std::string& command_line);
 
   tsuba::RDG rdg_;
@@ -229,8 +238,13 @@ private:
   const tsuba::PartitionMetadata& partition_metadata() const {
     return rdg_.part_metadata();
   }
+
   void set_partition_metadata(const tsuba::PartitionMetadata& meta) {
     rdg_.set_part_metadata(meta);
+  }
+
+  void update_rdg_metadata(const std::string& part_policy, uint32_t num_hosts) {
+    rdg_.set_view_name(fmt::format("rdg-{}-part{}", part_policy, num_hosts));
   }
 
   /// Per-host vector of master nodes
@@ -398,6 +412,7 @@ public:
   /// Like \ref Write(const std::string&, const std::string&) but can only update
   /// parts of the original read location of the graph.
   Result<void> Commit(const std::string& command_line);
+  Result<void> WriteView(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path);
 

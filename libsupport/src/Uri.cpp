@@ -226,8 +226,13 @@ operator!=(const Uri& lhs, const Uri& rhs) {
 }
 
 Uri
-operator+(const Uri& lhs, char rhs) {
-  return Uri(lhs.scheme_, lhs.path_ + rhs);
+Uri::operator+(char rhs) const {
+  return Uri(scheme_, path_ + rhs);
+}
+
+Uri
+Uri::operator+(const std::string& rhs) const {
+  return Uri(scheme_, path_ + rhs);
 }
 
 }  // namespace katana

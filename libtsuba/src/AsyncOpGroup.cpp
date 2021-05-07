@@ -8,14 +8,14 @@ tsuba::AsyncOpGroup::FinishOne() {
   }
   auto res = op_it->result.get();
   if (!res) {
-    KATANA_LOG_DEBUG(
+    KATANA_LOG_ERROR(
         "async op for {} returned {}", op_it->location, res.error());
     errors_++;
     last_error_ = res.error();
   } else {
     res = op_it->on_complete();
     if (!res) {
-      KATANA_LOG_DEBUG(
+      KATANA_LOG_ERROR(
           "complete cb for async op for {} returned {}", op_it->location,
           res.error());
     }

@@ -52,6 +52,42 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
   return indices;
 }
 
+uint64_t
+ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
+  uint64_t total_mem_use = 0;
+  const auto& buffers = data->buffers;
+  const auto& layout = data->type->layout();
+
+  KATANA_LOG_ASSERT(layout.buffers.size() == buffers.size());
+
+  for (int i = 0, num_buffers = buffers.size(); i < num_buffers; ++i) {
+    if (!buffers[i]) {
+      continue;
+    }
+    switch (layout.buffers[i].kind) {
+    case arrow::DataTypeLayout::FIXED_WIDTH:
+      total_mem_use += layout.buffers[i].byte_width * data->length;
+      break;
+
+    // TODO(thunt) get a better estimate for these types, based on my
+    // read of the arrow source they don't follow the rules use the whole
+    // buffer size as an over estimate
+    case arrow::DataTypeLayout::VARIABLE_WIDTH:
+    case arrow::DataTypeLayout::BITMAP:
+    case arrow::DataTypeLayout::ALWAYS_NULL:
+      total_mem_use += buffers[i]->size();
+    }
+  }
+  if (data->dictionary) {
+    total_mem_use += ApproxArrayDataMemUse(data->dictionary);
+  }
+  for (const auto& child_data : data->child_data) {
+    total_mem_use += ApproxArrayDataMemUse(child_data);
+  }
+
+  return total_mem_use;
+}
+
 }  // anonymous namespace
 
 katana::ErrorCode
@@ -175,4 +211,9 @@ katana::DiffFormatTo(
       fmt::format_to(*buf, "{}", str);
     }
   }
+}
+
+uint64_t
+katana::ApproxArrayMemUse(const std::shared_ptr<arrow::Array>& array) {
+  return ApproxArrayDataMemUse(array->data());
 }

@@ -302,6 +302,12 @@ KATANA_EXPORT void DiffFormatTo(
     const std::shared_ptr<arrow::ChunkedArray>& a1,
     size_t approx_total_characters = 150);
 
+/// Estimate the amount of memory this array is using
+/// n.b. Estimate is best effort when array is a slice or a variable type like
+///   large_string; it will be an upper bound in those cases
+KATANA_EXPORT uint64_t
+ApproxArrayMemUse(const std::shared_ptr<arrow::Array>& array);
+
 }  // namespace katana
 
 #endif

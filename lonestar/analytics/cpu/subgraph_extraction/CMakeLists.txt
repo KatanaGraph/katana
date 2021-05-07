@@ -1,5 +1,5 @@
 add_executable(subgraph-extraction-cpu subgraph_extraction_cli.cpp)
 add_dependencies(apps subgraph-extraction-cpu)
 target_link_libraries(subgraph-extraction-cpu PRIVATE Katana::galois lonestar)
-install(TARGETS subgraph-extraction-cpu DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT apps EXCLUDE_FROM_ALL)
+
 add_test_scale(small1 subgraph-extraction-cpu INPUT rmat10 INPUT_URI "${BASEINPUT}/propertygraphs/rmat10" --nodes="0 3 11 120" NO_VERIFY)

@@ -83,8 +83,6 @@ macro(katana_cpack_open_components)
 
   cpack_add_component(tools GROUP tools_pkg DEPENDS shlib)
 
-  cpack_add_component(apps GROUP apps_pkg DEPENDS shlib)
-
   cpack_add_component(python GROUP python_pkg DEPENDS shlib)
 endmacro()
 

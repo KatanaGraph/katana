@@ -459,7 +459,7 @@ set(CPACK_RPM_COMPONENT_INSTALL TRUE)
 # Create a package for each component group.
 set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
 
-# Setup the cpack component groups: dev_pkg, shlib_pkg, tools_pkg, apps_pkg.
+# Setup the cpack component groups: dev_pkg, shlib_pkg, tools_pkg.
 # After calling this, call cpack_add_component to add components to the groups.
 macro(katana_setup_cpack_component_groups NAME SUFFIX)
   # The groups are named *_pkg to distinguish them from the components themselves.
@@ -484,13 +484,6 @@ macro(katana_setup_cpack_component_groups NAME SUFFIX)
   cpack_add_component_group(tools_pkg)
   set(CPACK_COMPONENT_TOOLS_PKG_DESCRIPTION "Katana Graph system management and data processing tools")
   set(CPACK_COMPONENT_TOOLS_PKG_DEPENDS shlib_pkg)
-
-  set(CPACK_DEBIAN_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
-  set(CPACK_RPM_APPS_PKG_PACKAGE_NAME "${NAME}-apps${SUFFIX}")
-  # No addition dependencies on apps_pkg since it depends on shlib_pkg
-  cpack_add_component_group(apps_pkg)
-  set(CPACK_COMPONENT_APPS_PKG_DESCRIPTION "Katana Graph applications and CLI algorithms")
-  set(CPACK_COMPONENT_APPS_PKG_DEPENDS shlib_pkg tools_pkg)
 
   set(CPACK_DEBIAN_PYTHON_PKG_PACKAGE_NAME "python3-${NAME}${SUFFIX}")
   list(APPEND CPACK_DEBIAN_PYTHON_PKG_PACKAGE_DEPENDS "python3-minimal")

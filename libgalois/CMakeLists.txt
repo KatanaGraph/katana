@@ -101,8 +101,9 @@ endif()
 
 if(NUMA_FOUND)
   target_compile_definitions(katana_galois PRIVATE KATANA_USE_NUMA)
-  file(REAL_PATH ${NUMA_LIBRARY} NUMA_LIBRARY_RESOLVED)
-  cmake_path(GET NUMA_LIBRARY_RESOLVED FILENAME KATANA_LIBNUMA_SO_NAME)
+  get_filename_component(NUMA_LIBRARY_RESOLVED ${NUMA_LIBRARY} REALPATH)
+  get_filename_component(KATANA_LIBNUMA_SO_NAME ${NUMA_LIBRARY_RESOLVED} NAME)
+
   target_compile_definitions(katana_galois PRIVATE "KATANA_LIBNUMA_SO_NAME=\"${KATANA_LIBNUMA_SO_NAME}\"")
 else()
   message(WARNING "No NUMA Support.  Likely poor performance for multi-socket systems.")

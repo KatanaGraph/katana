@@ -1,6 +1,9 @@
 #ifndef KATANA_LIBTSUBA_TSUBA_PARQUETWRITER_H_
 #define KATANA_LIBTSUBA_TSUBA_PARQUETWRITER_H_
 
+#include <limits>
+#include <vector>
+
 #include <arrow/api.h>
 #include <parquet/properties.h>
 
@@ -20,6 +23,14 @@ public:
         parquet::ParquetVersion::PARQUET_2_0};
     parquet::ParquetDataPageVersion data_page_version{
         parquet::ParquetDataPageVersion::V2};
+
+    /// if true, write operations will produce multiple files (improves
+    /// available parallelism. Files will have the extension `.i` where i
+    /// represents the ith block of the table
+    bool write_blocked{false};
+
+    /// control the approximate size of blocked files when writing blocked
+    uint64_t mbs_per_block{256};
     static WriteOpts Defaults() { return WriteOpts{}; }
   };
 
@@ -47,18 +58,22 @@ public:
       const katana::Uri& uri, WriteGroup* group = nullptr);
 
 private:
-  ParquetWriter(std::shared_ptr<arrow::Table> table, WriteOpts opts)
-      : table_(std::move(table)), opts_(opts) {}
+  ParquetWriter(
+      std::vector<std::shared_ptr<arrow::Table>> tables, WriteOpts opts)
+      : tables_(std::move(tables)), opts_(opts) {}
 
   std::shared_ptr<parquet::WriterProperties> StandardWriterProperties();
 
   std::shared_ptr<parquet::ArrowWriterProperties> StandardArrowProperties();
 
   katana::Result<void> StoreParquet(
+      const katana::Uri& uri, tsuba::WriteGroup* desc);
+
+  katana::Result<void> StoreParquet(
       std::shared_ptr<arrow::Table> table, const katana::Uri& uri,
       tsuba::WriteGroup* desc);
 
-  std::shared_ptr<arrow::Table> table_;
+  std::vector<std::shared_ptr<arrow::Table>> tables_;
   WriteOpts opts_;
 };
 

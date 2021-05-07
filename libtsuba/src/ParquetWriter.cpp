@@ -1,9 +1,6 @@
 #include "tsuba/ParquetWriter.h"
 
-#include <arrow/array/array_binary.h>
-#include <arrow/chunked_array.h>
-#include <parquet/properties.h>
-
+#include "katana/ArrowInterchange.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FaultTest.h"
@@ -118,28 +115,77 @@ HandleBadParquetTypes(const std::shared_ptr<arrow::Table>& old_table) {
   return arrow::Table::Make(arrow::schema(new_fields), new_arrays);
 }
 
+uint64_t
+EstimateElementSize(const std::shared_ptr<arrow::ChunkedArray>& chunked_array) {
+  uint64_t cumulative_size = 0;
+  for (const auto& chunk : chunked_array->chunks()) {
+    cumulative_size += katana::ApproxArrayMemUse(chunk);
+  }
+  return cumulative_size / chunked_array->length();
+}
+
+uint64_t
+EstimateRowSize(const std::shared_ptr<arrow::Table>& table) {
+  uint64_t row_size = 0;
+  for (const auto& col : table->columns()) {
+    row_size += EstimateElementSize(col);
+  }
+  return row_size;
+}
+
+constexpr uint64_t kMB = 1UL << 20;
+
+std::vector<std::shared_ptr<arrow::Table>>
+BlockTable(std::shared_ptr<arrow::Table> table, uint64_t mbs_per_block) {
+  if (table->num_rows() <= 1) {
+    return {table};
+  }
+  uint64_t row_size = EstimateRowSize(table);
+  uint64_t block_size = mbs_per_block * kMB;
+
+  if (row_size * table->num_rows() < block_size) {
+    return {std::move(table)};
+  }
+  int64_t rows_per_block = (block_size + row_size - 1) / row_size;
+
+  std::vector<std::shared_ptr<arrow::Table>> blocks;
+  int64_t row_idx = 0;
+  int64_t num_rows = table->num_rows();
+  while (row_idx < table->num_rows()) {
+    blocks.emplace_back(
+        table->Slice(row_idx, std::min(num_rows - row_idx, rows_per_block)));
+    row_idx += rows_per_block;
+  }
+  return blocks;
+}
+
 }  // namespace
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
     const std::shared_ptr<arrow::ChunkedArray>& array, const std::string& name,
     WriteOpts opts) {
-  std::shared_ptr<arrow::Table> column = arrow::Table::Make(
-      arrow::schema({arrow::field(name, array->type())}), {array});
-  return std::unique_ptr<ParquetWriter>(new ParquetWriter(column, opts));
+  return Make(
+      arrow::Table::Make(
+          arrow::schema({arrow::field(name, array->type())}), {array}),
+      opts);
 }
 
 Result<std::unique_ptr<tsuba::ParquetWriter>>
 tsuba::ParquetWriter::Make(
     std::shared_ptr<arrow::Table> table, WriteOpts opts) {
-  return std::unique_ptr<ParquetWriter>(
-      new ParquetWriter(std::move(table), opts));
+  if (!opts.write_blocked) {
+    return std::unique_ptr<ParquetWriter>(
+        new ParquetWriter({std::move(table)}, opts));
+  }
+  return std::unique_ptr<ParquetWriter>(new ParquetWriter(
+      BlockTable(std::move(table), opts.mbs_per_block), opts));
 }
 
 katana::Result<void>
 tsuba::ParquetWriter::WriteToUri(const katana::Uri& uri, WriteGroup* group) {
   try {
-    return StoreParquet(table_, uri, group);
+    return StoreParquet(uri, group);
   } catch (const std::exception& exp) {
     return KATANA_ERROR(
         tsuba::ErrorCode::ArrowError, "arrow exception: {}", exp.what());
@@ -204,4 +250,41 @@ tsuba::ParquetWriter::StoreParquet(
 
   desc->AddOp(std::move(future), uri.string());
   return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::ParquetWriter::StoreParquet(
+    const katana::Uri& uri, tsuba::WriteGroup* desc) {
+  if (!opts_.write_blocked) {
+    KATANA_LOG_ASSERT(tables_.size() == 1);
+    return StoreParquet(tables_[0], uri, desc);
+  }
+
+  std::unique_ptr<tsuba::WriteGroup> our_desc;
+  if (!desc) {
+    auto desc_res = WriteGroup::Make();
+    if (!desc_res) {
+      return desc_res.error();
+    }
+    our_desc = std::move(desc_res.value());
+    desc = our_desc.get();
+  }
+
+  katana::Result<void> ret = katana::ResultSuccess();
+  for (uint64_t i = 0, num_tables = tables_.size(); i < num_tables; ++i) {
+    ret = StoreParquet(tables_[i], uri + fmt::format(".{:06}", i), desc);
+    if (!ret) {
+      break;
+    }
+  }
+
+  if (desc == our_desc.get()) {
+    auto final_ret = desc->Finish();
+    if (!final_ret && !ret) {
+      KATANA_LOG_ERROR("multiple errors, masking: {}", final_ret.error());
+      return ret;
+    }
+    ret = final_ret;
+  }
+  return ret;
 }

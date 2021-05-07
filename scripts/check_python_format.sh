@@ -15,16 +15,9 @@ if [ "$1" == "-fix" ]; then
 fi
 
 ROOTS="$@"
-PRUNE_LIST="notebook-home .git build*"
-
-emit_prunes() {
-  for p in $PRUNE_LIST; do echo "-name $p -prune -o"; done | xargs
-}
-
-FILES=$(find ${ROOTS} $(emit_prunes) -name '*.py' -print | xargs)
 
 if [ -n "${FIX}" ]; then
-  ${PYFMT} ${FILES}
+  ${PYFMT} "$@"
 else
-  ${PYFMT} --check ${FILES}
+  ${PYFMT} --check "$@"
 fi

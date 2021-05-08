@@ -14,7 +14,7 @@ ARGS="-j 0 --rcfile=${GIT_ROOT}/.pylintrc --suggestion-mode=n"
 ROOTS="$@"
 FAILED=
 PRUNE_LIST="external deploy docs build notebook-home .git"
-TEST_DIRS="${GIT_ROOT}/tests/ ${GIT_ROOT}/demosite/katanaclient/tests/"
+TEST_DIRS="${GIT_ROOT}/test/ ${GIT_ROOT}/demosite/katanaclient/test/"
 # lint warnings that are useless for tests since tests are run for ci anyway
 # eliminate unused-argument since it is triggered by pytest harnesses whose value is not needed.
 TEST_NOLINT="import-error no-name-in-module unused-argument"

@@ -172,7 +172,7 @@ outputs:
         - pytest
       source_files:
         - tools/graph-convert/test-inputs
-        - python/tests
+        - python/test
         - python/examples/jupyter
       script: run_test_python.sh
   - name: katana-tools

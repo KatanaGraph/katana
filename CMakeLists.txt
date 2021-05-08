@@ -48,7 +48,7 @@ if(KATANA_LANG_BINDINGS_PYTHON)
                                DEPENDS Katana::galois
                                COMPONENT python)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
-    add_python_setuptools_tests(katana_python PATH python/tests)
+    add_python_setuptools_tests(katana_python PATH python/test)
   endif()
   if(BUILD_DOCS)
     add_python_setuptools_docs(katana_python)

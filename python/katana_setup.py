@@ -425,7 +425,7 @@ def setup(*, source_dir, package_name, doc_package_name, **kwargs):
     options = dict(
         version=get_katana_version(),
         name=package_name + "_python",
-        packages=setuptools.find_packages(str(source_dir), exclude=("tests",)),
+        packages=setuptools.find_packages(str(source_dir), exclude=("test",)),
         package_data={"": [str(f) for f in pxd_files]},
         package_dir={"": str(source_dir)},
         tests_require=["pytest"],

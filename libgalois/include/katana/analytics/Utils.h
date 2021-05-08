@@ -72,7 +72,7 @@ ConstructEdgeProperties(
   return pg->AddEdgeProperties(res_table.value());
 }
 
-class TemporaryPropertyGuard {
+class KATANA_EXPORT TemporaryPropertyGuard {
   static thread_local int temporary_property_counter;
 
   katana::PropertyGraph* pg_{nullptr};

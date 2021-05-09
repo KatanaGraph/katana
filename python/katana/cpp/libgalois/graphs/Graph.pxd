@@ -122,6 +122,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         @staticmethod
         Result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
 
+        bint Equals(const _PropertyGraph*)
+
         Result[void] Write(string path, string command_line)
         Result[void] Commit(string command_line)
 
@@ -133,14 +135,29 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
         shared_ptr[CTable] node_properties()
         shared_ptr[CTable] edge_properties()
 
+        const string& rdg_dir()
+        Result[void]  InformPath(const string & input_path)
+
         shared_ptr[CChunkedArray] GetNodeProperty(int i)
+        shared_ptr[CChunkedArray] GetNodeProperty(const string&)
+
         shared_ptr[CChunkedArray] GetEdgeProperty(int i)
+        shared_ptr[CChunkedArray] GetEdgeProperty(const string&)
 
         Result[void] AddNodeProperties(shared_ptr[CTable])
         Result[void] AddEdgeProperties(shared_ptr[CTable])
+        Result[void] UpsertNodeProperties(shared_ptr[CTable])
+        Result[void] UpsertEdgeProperties(shared_ptr[CTable])
 
         Result[void] RemoveNodeProperty(int)
+        Result[void] RemoveNodeProperty(const string&)
+
         Result[void] RemoveEdgeProperty(int)
+        Result[void] RemoveEdgeProperty(const string&)
+
+        void MarkAllPropertiesPersistent()
+        Result[void] MarkNodePropertiesPersistent(const vector[string]& persist_node_props)
+        Result[void] MarkEdgePropertiesPersistent(const vector[string]& persist_edge_props)
 
 
 

@@ -482,7 +482,7 @@ in terms of feedback latency, to run these checks locally first.
  * `scripts/check_ifndef.py [-fix] lib*`: checks that header guards are well
  formed.
  * `scripts/check_cpp_format.sh [-fix] lib*`: applies `clang-format` to check style.
- * `scripts/check_go_format.sh [-fix] .`: applies `gofmt` to format go code.
+ * `scripts/check_go_format.sh [-fix] .`: applies `goimports` to format go code.
  * `scripts/check_go_lint.sh .`: applies `golangci-lint` to check check style.
  * `scripts/check_python_format.sh .`: applies `black` to format python code.
 

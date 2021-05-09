@@ -1,6 +1,6 @@
 #!/bin/bash
 
-GOFMT=${GOFMT:-gofmt}
+GOFMT=${GOFMT:-goimports -format-only}
 set -eu
 
 if [ $# -eq 0 ]; then
@@ -31,9 +31,9 @@ if [ -z "$FILES" ]; then
 fi
 
 if [ -n "${FIX}" ]; then
-  ${GOFMT} -s -w ${FILES}
+  ${GOFMT} -w ${FILES}
 else
-  FAILED=$(${GOFMT} -s -l ${FILES})
+  FAILED=$(${GOFMT} -l ${FILES})
 fi
 
 if [ -n "${FAILED}" ]; then

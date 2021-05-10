@@ -57,6 +57,26 @@ The Katana Python interface only supports shared library builds.
 This is because Katana libraries (e.g., `libgalois`) must be shared between the Python extensions.
 
 
+Building Documentation
+----------------------
+
+To build the C++ (Doxygen) and Python (Sphinx) documentation, add `-DKATANA_DOCS=ON` to the `cmake` command making the full command:
+
+```shell
+cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python -DBUILD_SHARED_LIBS=ON -DKATANA_DOCS=ON
+```
+
+Then make the documentation using:
+
+```shell
+cd $BUILD_DIR
+make docs
+```
+(This must build the Python packages to generate their documentation.
+You can regenerate the documentation in the same directory by rerunning `make docs` to avoid having to fully rebuild the library.)
+
+The C++ documentation will be in `$BUILD_DIR/docs/cxx`, and the documentation for the open-source Python package will be in `$BUILD_DIR/docs/katana_python`.
+
 Building Katana-Python Conda Packages
 -------------------------------------
 

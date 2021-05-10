@@ -36,10 +36,10 @@ class OperatorCompiler(GaloisCompiler):
     Operators are assumed not to leak references to any memory objects, like arrays.
     """
 
-    def __init__(self, typingctx, targetctx, library, args, return_type, flags, locals):
+    def __init__(self, typingctx, targetctx, library, args, return_type, flags, local_vars):
         if disable_nrt:
             flags.nrt = False
-        super().__init__(typingctx, targetctx, library, args, return_type, flags, locals)
+        super().__init__(typingctx, targetctx, library, args, return_type, flags, local_vars)
         targetctx.is_operator_context = True
 
 
@@ -60,7 +60,7 @@ def constant_function_pointer(context, builder: ir.IRBuilder, ty, pyval):
 
 
 # TODO: This is duplicated from numba to allow pipeline_class to be passed through. This should be merged upstream.
-def cfunc(sig, locals={}, cache=False, pipeline_class=compiler.Compiler, **options):
+def cfunc(sig, local_vars=None, cache=False, pipeline_class=compiler.Compiler, **options):
     """
     This decorator is used to compile a Python function into a C callback
     usable with foreign C libraries.
@@ -72,11 +72,12 @@ def cfunc(sig, locals={}, cache=False, pipeline_class=compiler.Compiler, **optio
 
     """
     sig = sigutils.normalize_signature(sig)
+    local_vars = local_vars or {}
 
     def wrapper(func):
         from numba.core.ccallback import CFunc
 
-        res = CFunc(func, sig, locals=locals, options=options, pipeline_class=pipeline_class)
+        res = CFunc(func, sig, locals=local_vars, options=options, pipeline_class=pipeline_class)
         if cache:
             res.enable_caching()
         res.compile()

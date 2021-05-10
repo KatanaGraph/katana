@@ -18,10 +18,12 @@ def overload_PropertyGraph_len(self):
             return self.num_nodes()
 
         return impl
+    return None
 
 
 @overload_method(katana.property_graph.PropertyGraph_numba_wrapper.Type, "nodes")
 def overload_PropertyGraph_nodes(self):
+    _ = self
     def impl(self):
         return range(self.num_nodes())
 
@@ -31,6 +33,7 @@ def overload_PropertyGraph_nodes(self):
 @overload_method(katana.property_graph.PropertyGraph_numba_wrapper.Type, "edges")
 def overload_PropertyGraph_edges(self, n):
     if isinstance(n, types.Integer) and not n.signed:
+        _ = self
 
         def impl(self, n):
             if n == 0:
@@ -40,3 +43,4 @@ def overload_PropertyGraph_edges(self, n):
             return range(prev, self.edge_index(n))
 
         return impl
+    return None

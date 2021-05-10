@@ -130,7 +130,7 @@ def test_upsert_node_property(property_graph):
 
 def test_get_edge_property(property_graph):
     prop1 = property_graph.get_edge_property(15)
-    assert prop1[10].as_py() == False
+    assert not prop1[10].as_py()
     prop2 = property_graph.get_edge_property("IS_SUBCLASS_OF")
     assert prop1 == prop2
 
@@ -206,14 +206,11 @@ def test_load_directory():
 
 
 def test_load_garbage_file():
-    fi = NamedTemporaryFile(delete=False)
-    try:
-        with fi:
-            fi.write(b"Test")
+    with NamedTemporaryFile(delete=True) as fi:
+        fi.write(b"Test")
+        fi.flush()
         with pytest.raises(TsubaError):
             PropertyGraph(fi.name)
-    finally:
-        os.unlink(fi.name)
 
 
 def test_simple_algorithm(property_graph):

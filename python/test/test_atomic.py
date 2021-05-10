@@ -50,6 +50,8 @@ def test_accumulator_simple(acc_type, res, typ):
 
 
 def test_GAccumulator_parallel(threads_many):
+    _ = threads_many
+
     T = GAccumulator[int]
     acc = T()
 
@@ -62,6 +64,8 @@ def test_GAccumulator_parallel(threads_many):
 
 
 def test_GReduceMax_parallel(threads_many):
+    _ = threads_many
+
     T = GReduceMax[int]
     acc = T()
 
@@ -74,6 +78,8 @@ def test_GReduceMax_parallel(threads_many):
 
 
 def test_GReduceMin_parallel(threads_many):
+    _ = threads_many
+
     T = GReduceMin[float]
     acc = T()
 
@@ -86,6 +92,8 @@ def test_GReduceMin_parallel(threads_many):
 
 
 def test_GReduceLogicalOr_parallel(threads_many):
+    _ = threads_many
+
     T = GReduceLogicalOr
     acc = T()
 
@@ -94,10 +102,12 @@ def test_GReduceLogicalOr_parallel(threads_many):
         acc.update(i % 3 == 0)
 
     do_all(range(1000), f(acc), steal=False)
-    assert acc.reduce() == True
+    assert acc.reduce() is True
 
 
 def test_GReduceLogicalAnd_parallel(threads_many):
+    _ = threads_many
+
     T = GReduceLogicalAnd
     acc = T()
 
@@ -106,7 +116,7 @@ def test_GReduceLogicalAnd_parallel(threads_many):
         acc.update(i % 3 == 0)
 
     do_all(range(1000), f(acc), steal=False)
-    assert acc.reduce() == False
+    assert acc.reduce() is False
 
 
 def test_GReduceLogicalOr_simple():
@@ -115,11 +125,11 @@ def test_GReduceLogicalOr_simple():
     acc.update(True)
     acc.update(False)
     acc.update(True)
-    assert acc.reduce() == True
+    assert acc.reduce() is True
     acc = T(True)
-    assert acc.reduce() == True
+    assert acc.reduce() is True
     acc = T(False)
-    assert acc.reduce() == False
+    assert acc.reduce() is False
 
 
 def test_GReduceLogicalAnd_simple():
@@ -128,15 +138,17 @@ def test_GReduceLogicalAnd_simple():
     acc.update(True)
     acc.update(False)
     acc.update(True)
-    assert acc.reduce() == False
+    assert acc.reduce() is False
     acc = T(True)
-    assert acc.reduce() == True
+    assert acc.reduce() is True
     acc = T(False)
-    assert acc.reduce() == False
+    assert acc.reduce() is False
 
 
 @pytest.mark.parametrize("dtype", dtypes)
 def test_atomic_add_parallel(dtype, threads_many):
+    _ = threads_many
+
     @do_all_operator()
     def f(out, i):
         atomic_add(out, 0, i)
@@ -147,6 +159,8 @@ def test_atomic_add_parallel(dtype, threads_many):
 
 
 def test_atomic_add_parallel_largearray(threads_many):
+    _ = threads_many
+
     @do_all_operator()
     def f(out, i):
         atomic_add(out, 0, i)
@@ -159,6 +173,8 @@ def test_atomic_add_parallel_largearray(threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes)
 def test_atomic_sub_parallel(dtype, threads_many):
+    _ = threads_many
+
     @do_all_operator()
     def f(out, i):
         atomic_sub(out, 0, i)
@@ -170,6 +186,8 @@ def test_atomic_sub_parallel(dtype, threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes_int)
 def test_atomic_max_parallel(dtype, threads_many):
+    _ = threads_many
+
     @do_all_operator()
     def f(out, i):
         atomic_max(out, 0, i)
@@ -181,6 +199,8 @@ def test_atomic_max_parallel(dtype, threads_many):
 
 @pytest.mark.parametrize("dtype", dtypes_int)
 def test_atomic_min_parallel(dtype, threads_many):
+    _ = threads_many
+
     @do_all_operator()
     def f(out, i):
         atomic_min(out, 0, i)

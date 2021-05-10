@@ -178,10 +178,10 @@ jobs:
       run: |
         . .github/workflows/activate_miniconda.sh
         ./scripts/check_python_format.sh python test
-#    - name: Check for lint
-#      run: |
-#        . .github/workflows/activate_miniconda.sh
-#        ./scripts/check_python_lint.sh python
+    - name: Check for lint
+      run: |
+        . .github/workflows/activate_miniconda.sh
+        ./scripts/check_python_lint.sh python test/*.py
 
   build_and_test:
     runs-on: ${{matrix.os}}

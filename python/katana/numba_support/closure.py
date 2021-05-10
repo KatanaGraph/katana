@@ -83,7 +83,8 @@ class _ClosureInstance:
         Construct a numba jitclass structure with elements named arg1 ... argn with types bound_args[1...n].
         """
         spec = [("arg" + str(i), t) for i, t in enumerate(bound_args)]
-        exec_glbls = locals()
+
+        exec_glbls = dict(spec=spec)
         exec_glbls["jitclass"] = jitclass
         assign_env = "; ".join(f"self.arg{i} = arg{i}" for i, t in enumerate(bound_args))
         env_args = ", ".join(f"arg{i}" for i, t in enumerate(bound_args))
@@ -101,7 +102,7 @@ class Environment():
         """
         The arguments are unpacked from the jitclass pointer passed as an int64.
         """
-        exec_glbls = locals()
+        exec_glbls = dict(func=func, load_struct=load_struct, return_type=return_type, unbound_args=unbound_args)
         exec_glbls["cfunc"] = cfunc
         exec_glbls["types"] = types
         exec_glbls["OperatorCompiler"] = OperatorCompiler
@@ -129,11 +130,15 @@ def wrapper({unbound_pass_args} userdata):
 
         @type_callable(load_struct)
         def type_load_struct(context):
+            _ = context
             def typer(t):
                 if isinstance(t, types.Integer):
                     return Environment.class_type.instance_type
+                return None
 
             return typer
+
+        _ = type_load_struct
 
         @lower_builtin(load_struct, types.int64)
         def impl_load_struct(context, builder: llvmlite.ir.IRBuilder, sig, args):
@@ -144,6 +149,8 @@ def wrapper({unbound_pass_args} userdata):
             if context.enable_nrt:
                 context.nrt.incref(builder, sig.return_type, struct)
             return struct
+
+        _ = impl_load_struct
 
         return load_struct
 
@@ -160,17 +167,23 @@ def wrapper({unbound_pass_args} userdata):
 
         @type_callable(store_struct)
         def type_store_struct(context):
+            _ = context
             def typer(s, t):
                 if s == Environment.class_type.instance_type and isinstance(t, types.Integer):
                     return types.void
+                return None
 
             return typer
+
+        _ = type_store_struct
 
         @lower_builtin(store_struct, Environment.class_type.instance_type, types.int64)
         def impl_store_struct(context, builder: llvmlite.ir.IRBuilder, sig, args):
             struct_ty = context.get_value_type(sig.args[0])
             ptr = builder.inttoptr(args[1], struct_ty.as_pointer())
             builder.store(args[0], ptr)
+
+        _ = impl_store_struct
 
         @njit
         def store_struct_py(s, t):

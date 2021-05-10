@@ -49,5 +49,4 @@ def get_input(rel_path):
     path = get_inputs_directory() / rel_path
     if path.exists():
         return path
-    else:
-        return get_inputs_directory(invalidate=True) / rel_path
+    return get_inputs_directory(invalidate=True) / rel_path

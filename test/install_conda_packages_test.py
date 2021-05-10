@@ -16,8 +16,9 @@ def main():
 
     args = parser.parse_args()
 
-    docker_proc = Popen(["docker", "build", "-", "--build-arg", f"BASE_IMAGE={args.docker_image}",], stdin=PIPE)
-    with docker_proc.stdin, tarfile.open(fileobj=docker_proc.stdin, mode="w:gz") as context_tar:
+    with Popen(
+        ["docker", "build", "-", "--build-arg", f"BASE_IMAGE={args.docker_image}",], stdin=PIPE
+    ) as docker_proc, tarfile.open(fileobj=docker_proc.stdin, mode="w:gz") as context_tar:
         context_tar.add(Path(args.package_dir).absolute(), arcname="packages")
         context_tar.add(Path(__file__).parent / "install_conda_packages_test.Dockerfile", arcname="Dockerfile")
         context_tar.add(

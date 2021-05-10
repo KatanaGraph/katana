@@ -29,7 +29,7 @@ except ImportError as e:
         raise ImportError(
             "katana requires libnuma to be installed. Install it with your native package manager. "
             "E.g., `sudo apt install libnuma1`."
-        )
+        ) from e
 
 __all__ = ["TsubaError", "GaloisError", "QueryError"]
 

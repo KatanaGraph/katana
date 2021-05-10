@@ -1,4 +1,3 @@
-import logging
 import subprocess
 import sys
 import os
@@ -34,7 +33,7 @@ def unique_list(l):
 class RequirementError(RuntimeError):
     def __str__(self):
         return (
-            super(RequirementError, self).__str__()
+            super().__str__()
             + " (Normal Katana builds should use cmake to start the build and NOT directly call setup.py "
             "(cmake calls setup.py as needed). See Python.md or "
             "https://github.com/KatanaGraph/katana/blob/master/Python.md#building-katana-python for Python build "
@@ -74,7 +73,8 @@ class RequirementsCache:
     def add(self, *item):
         self.cache.add(self._make_key(item))
 
-    def _make_key(self, item):
+    @classmethod
+    def _make_key(cls, item):
         key = ";".join(repr(v) for v in item) + "\n"
         return key
 
@@ -97,10 +97,10 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
     try:
         try:
             mod = __import__(module_name)
-        except ImportError:
+        except ImportError as e:
             raise RequirementError(
                 f"'{module_name}' must have version >={ge_version}<{lt_version}, but is not available."
-            )
+            ) from e
         if ge_version or lt_version:
             import packaging.version
 
@@ -108,7 +108,8 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
                 installed_version = packaging.version.parse(mod.__version__)
             else:
                 raise RequirementError(
-                    f"'{module_name}' must have version >={ge_version}<{lt_version}, but has no __version__ attribute."
+                    f"'{module_name}' must have version >={ge_version}<{lt_version},"
+                    " but has no __version__ attribute."
                 )
             requested_min_version = ge_version and packaging.version.parse(ge_version)
             requested_max_version = lt_version and packaging.version.parse(lt_version)
@@ -116,7 +117,8 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
                 requested_max_version and installed_version >= requested_max_version
             ):
                 raise RequirementError(
-                    f"'{module_name}' must have version >={ge_version}<{lt_version}, but have version {installed_version}."
+                    f"'{module_name}' must have version >={ge_version}<{lt_version},"
+                    f" but have version {installed_version}."
                 )
     except RequirementError as e:
         print(str(e))
@@ -179,7 +181,7 @@ def check_cython_module(name, cython_code, python_code="", extension_options=Non
             subprocess.check_call([sys.executable, str(py_file)], cwd=tmpdir, env={"PYTHONPATH": str(tmpdir)})
     except Exception as e:
         print("Failed.")
-        raise RequirementError(f"Could not find native {name}.")
+        raise RequirementError(f"Could not find native {name}.") from e
     else:
         print("Success.")
         requirement_cache.add(cython_code, python_code, extension_options)
@@ -190,7 +192,7 @@ def load_lang_config(lang):
     Load the compilation configuration provided by CMake.
 
     KatanaPythonSetupSubdirectory.cmake generates a JSON file that contains build and link flags that we read.
-    They typically look like (more text elided with `[...]`):
+    They typically look like (more text elided with `[...]`, newlines inserted for clarity):
 
     .. code-block:: json
 
@@ -198,7 +200,10 @@ def load_lang_config(lang):
         "COMPILER":"ccache;[conda environment]/bin/clang++",
         "INCLUDE_DIRECTORIES":"[src dir]/libquery/include;[...]",
         "COMPILE_DEFINITIONS":"JSON_USE_IMPLICIT_CONVERSIONS=1;[...]",
-        "LINK_OPTIONS":"-march=sandybridge;-mtune=generic;LINKER:-rpath=[build dir]/external/katana/libgalois;LINKER:-rpath=[build dir];LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]",
+        "LINK_OPTIONS":"-march=sandybridge;-mtune=generic;
+            LINKER:-rpath=[build dir]/external/katana/libgalois;
+            LINKER:-rpath=[build dir];
+            LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]",
         "COMPILE_OPTIONS":"-g;-Wall;-Wextra;-Wno-deprecated-copy;[...]",
         "LINKER_WRAPPER_FLAG":"-Xlinker; ",
         "LINKER_WRAPPER_FLAG_SEP":""
@@ -241,10 +246,8 @@ def load_lang_config(lang):
                 return args
             if linker_wrapper_flag[-1] == " ":
                 return [b for a in args for b in linker_wrapper_flag[:-1] + [a]]
-            else:
-                return [b for a in args for b in linker_wrapper_flag[:-1] + [linker_wrapper_flag[-1] + a]]
-        else:
-            return process_shell_option(opt)
+            return [b for a in args for b in linker_wrapper_flag[:-1] + [linker_wrapper_flag[-1] + a]]
+        return process_shell_option(opt)
 
     return dict(
         compiler=[a for opt in split_cmake_list(config.get("COMPILER")) for a in process_linker_option(opt)],

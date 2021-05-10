@@ -22,8 +22,7 @@ def dtype_info(t):
     t = np.dtype(t)
     if t.kind == "f":
         return np.finfo(t)
-    else:
-        return np.iinfo(t)
+    return np.iinfo(t)
 
 
 def create_distance_array(g: PropertyGraph, source, length_property):

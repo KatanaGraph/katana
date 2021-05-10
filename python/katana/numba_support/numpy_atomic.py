@@ -23,8 +23,11 @@ def declare_atomic_array_op(iop, uop, fop):
                     res = out.result
                     if context.can_convert(val, res):
                         return res
+                return None
 
             return typer
+
+        _ = func_type
 
         @lower_builtin(func, types.Buffer, types.Any, types.Any)
         def func_impl(context, builder, sig, args):
@@ -64,6 +67,8 @@ def declare_atomic_array_op(iop, uop, fop):
             if op is None:
                 raise TypeError("Atomic operation not supported on " + str(aryty))
             return atomic_rmw(context, builder, op, aryty, val, dataptr)
+
+        _ = func_impl
 
         return func
 

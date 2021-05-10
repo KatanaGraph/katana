@@ -63,6 +63,7 @@ def test_for_each_conflict_detection_unsupported():
     total = 0
 
     def f(i, ctx):
+        _ = ctx
         nonlocal total
         total += i
 
@@ -83,6 +84,7 @@ def test_for_each_wrong_closure():
 def test_do_all_wrong_closure():
     @for_each_operator()
     def f(out, i, ctx):
+        _ = ctx
         out[i] = i + 1
 
     out = np.zeros(10, dtype=int)
@@ -110,13 +112,13 @@ def test_do_all_opaque(modes):
         out[s.y] = s.x
 
     dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
-    input = InsertBag[dt]()
-    input.push((1.1, 0))
-    input.push((2.1, 1))
-    input.push((3.1, 3))
+    data = InsertBag[dt]()
+    data.push((1.1, 0))
+    data.push((2.1, 1))
+    data.push((3.1, 3))
 
     out = np.zeros(4, dtype=float)
-    do_all(input, f(out), **modes)
+    do_all(data, f(out), **modes)
     assert np.allclose(out, np.array([1.1, 2.1, 0, 3.1]))
 
 
@@ -129,12 +131,12 @@ def test_do_all_specific_type(modes, typ):
     def f(out, i):
         out[int(i)] = i
 
-    input = InsertBag[typ]()
+    data = InsertBag[typ]()
     for i in range(1000):
-        input.push(i)
+        data.push(i)
 
     out = np.zeros(1000, dtype=typ)
-    do_all(input, f(out), **modes)
+    do_all(data, f(out), **modes)
     assert np.allclose(out, np.array(range(1000)))
     # Check that the operator was actually compiled for the correct type
     assert list(f.inspect_llvm().keys())[0][1][0] == from_dtype(np.dtype(typ))
@@ -144,6 +146,8 @@ def test_do_all_specific_type(modes, typ):
 def test_for_each_no_push(modes):
     @for_each_operator()
     def f(out, i, ctx):
+        _ = i
+        _ = ctx
         out[i] += i + 1
 
     out = np.zeros(10, dtype=int)
@@ -175,15 +179,17 @@ def test_for_each_opaque(modes):
             ctx.push((s.x + 1, s.y + 1))
 
     dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
-    input = InsertBag[dt]()
-    input.push((1.1, 0))
+    data = InsertBag[dt]()
+    data.push((1.1, 0))
 
     out = np.zeros(10, dtype=float)
-    for_each(input, f(out), **modes)
+    for_each(data, f(out), **modes)
     assert np.allclose(out, np.array([1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1]))
 
 
 def test_obim_python(threads_1):
+    _ = threads_1
+
     order = []
 
     def metric(out, i):
@@ -205,6 +211,8 @@ def test_obim_python(threads_1):
 
 
 def test_obim(threads_1):
+    _ = threads_1
+
     order = []
 
     @obim_metric()
@@ -225,6 +233,8 @@ def test_obim(threads_1):
 
 
 def test_per_socket_chunk_fifo(threads_1):
+    _ = threads_1
+
     order = []
 
     def f(out, i, ctx):
@@ -243,7 +253,8 @@ def test_per_socket_chunk_fifo(threads_1):
 def test_closure_memory_management():
     @do_all_operator()
     def f(x, y):
-        pass
+        _ = x
+        _ = y
 
     a = np.zeros((100,))
     w = weakref.ref(a)

@@ -49,14 +49,14 @@ def compute_pagerank_pull_delta_operator(rank, nout, delta, residual, tolerance,
 
 @do_all_operator()
 def compute_pagerank_pull_residual_operator(graph: PropertyGraph, delta, residual, nid):
-    sum = 0
+    total = 0
     for ii in graph.edges(nid):
         dst = graph.get_edge_dest(ii)
         if delta[dst] > 0:
-            sum += delta[dst]
+            total += delta[dst]
 
-    if sum > 0:
-        residual[nid] = sum
+    if total > 0:
+        residual[nid] = total
 
 
 def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, property_name):

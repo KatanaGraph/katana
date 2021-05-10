@@ -40,26 +40,39 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                     return Array_length(v.ptr)
 
                 return impl_
+            return None
+
+        _ = overload_len
+
 
         addr = get_cython_function_address(self.override_module_name, "Array_is_valid")
         Array_is_valid = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_voidp, ctypes.c_uint64)(addr)
 
         @overload_method(self.Type, "is_valid")
         def overload_is_valid(v, i):
+            _ = v
+            _ = i
             def impl_(v, i):
                 return Array_is_valid(v.ptr, i)
 
             return impl_
 
+        _ = overload_is_valid
+
         @overload_method(self.Type, "is_null")
         def overload_is_null(v, i):
+            _ = v
+            _ = i
             def impl_(v, i):
                 return not Array_is_valid(v.ptr, i)
 
             return impl_
 
+        _ = overload_is_null
+
         @overload_method(self.Type, "indicies")
         def overload_indicies(v):
+            _ = v
             def impl_(v):
                 for i in range(Array_length(v.ptr)):
                     if v.is_valid(i):
@@ -67,26 +80,35 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
 
             return impl_
 
+        _ = overload_indicies
+
         addr = get_cython_function_address(self.override_module_name, "Array_" + element_type_name + "Array_Value")
         Array_xArray_Value = ctypes.CFUNCTYPE(element_type, ctypes.c_voidp, ctypes.c_uint64)(addr)
 
         @overload(operator.getitem)
         def overload_getitem(v, i):
+            _ = i
             if isinstance(v, self.Type):
 
                 def impl_(v, i):
                     return Array_xArray_Value(v.ptr, i)
 
                 return impl_
+            return None
+
+        _ = overload_getitem
 
         @overload_method(self.Type, "values")
         def overload_values(v):
+            _ = v
             def impl_(v):
                 for i in range(Array_length(v.ptr)):
                     if v.is_valid(i):
                         yield Array_xArray_Value(v.ptr, i)
 
             return impl_
+
+        _ = overload_values
 
         # # TODO: This doesn't actually work. There doesn't seem to be any way to overload iter or __iter__.
         # @overload(iter)
@@ -173,7 +195,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
 
         class Type(numba.types.Type):
             def __init__(self, chunk_type):
-                super(Type, self).__init__(name=orig_typ.__name__ + "[" + chunk_type.__name__ + "]")
+                super().__init__(name=orig_typ.__name__ + "[" + chunk_type.__name__ + "]")
                 self.chunk_type = chunk_type
 
             @property
@@ -184,7 +206,10 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
 
         @typeof_impl.register(orig_typ)
         def typeof_(val, c):
+            _ = c
             return typs[val.type]
+
+        _ = typeof_
 
         self._build_model(Type)
 
@@ -208,6 +233,9 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                     return ChunkedArray_length(v.ptr)
 
                 return impl_
+            return None
+
+        _ = overload_len
 
         addr = get_cython_function_address(self.override_module_name, "ChunkedArray_num_chunks")
         ChunkedArray_num_chunks = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_voidp)(addr)
@@ -221,6 +249,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                 if isinstance(i, numba.types.UniTuple) and i.types == (numba.types.uint64, numba.types.uint64,):
 
                     def impl_pair_index(v, i):
+                        _ = v
                         return i
 
                     return impl_pair_index
@@ -236,28 +265,40 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                     return (chunk, i)
 
                 return impl_single_index
+            return None
+
+        _ = overload_convert_index
 
         addr = get_cython_function_address(self.override_module_name, "ChunkedArray_Array_is_valid")
         ChunkedArray_is_valid = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_voidp, ctypes.c_uint64, ctypes.c_uint64)(addr)
 
         @overload_method(self.Type, "is_valid")
         def overload_is_valid(v, ind):
+            _ = v
+            _ = ind
             def impl_(v, ind):
                 c, i = v.convert_index(ind)
                 return ChunkedArray_is_valid(v.ptr, c, i)
 
             return impl_
 
+        _ = overload_is_valid
+
         @overload_method(self.Type, "is_null")
         def overload_is_null(v, ind):
+            _ = v
+            _ = ind
             def impl_(v, ind):
                 c, i = v.convert_index(ind)
                 return not ChunkedArray_is_valid(v.ptr, c, i)
 
             return impl_
 
+        _ = overload_is_null
+
         @overload_method(self.Type, "indicies")
         def overload_indicies(v):
+            _ = v
             def impl_(v):
                 for c in range(ChunkedArray_num_chunks(v.ptr)):
                     for i in range(ChunkedArray_Array_chunk_length(v.ptr, c)):
@@ -265,6 +306,8 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                             yield (c, i)
 
             return impl_
+
+        _ = overload_indicies
 
         def get_chunked_array_xarray_value(element_type, element_type_name):
             addr = get_cython_function_address(
@@ -304,6 +347,9 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                     return ChunkedArray_xArray_Value(v.ptr, chunk, i)
 
                 return impl_single_index
+            return None
+
+        _ = overload_getitem
 
         @overload_method(self.Type, "values")
         def overload_values(v):
@@ -316,6 +362,8 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
                             yield ChunkedArray_xArray_Value(v.ptr, c, i)
 
             return impl_
+
+        _ = overload_values
 
         # # TODO: This doesn't actually work. There doesn't seem to be any way to overload iter or __iter__.
         # @overload(iter)

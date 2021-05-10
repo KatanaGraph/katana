@@ -38,7 +38,7 @@ def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
     for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
         my_mapping = [mapping[e].as_py() for e in property_graph.edges(n)]
-        for i in range(len(my_mapping)):
+        for i, _ in enumerate(my_mapping):
             assert original_dests[n][i] == new_dests[n][my_mapping[i] - property_graph.edges(n)[0]]
         original_dests[n].sort()
 
@@ -235,13 +235,13 @@ def test_independent_set():
 
     independent_set(property_graph, "output")
 
-    stats = IndependentSetStatistics(property_graph, "output")
+    IndependentSetStatistics(property_graph, "output")
 
     independent_set_assert_valid(property_graph, "output")
 
     independent_set(property_graph, "output2", IndependentSetPlan.pull())
 
-    stats = IndependentSetStatistics(property_graph, "output2")
+    IndependentSetStatistics(property_graph, "output2")
 
     independent_set_assert_valid(property_graph, "output2")
 
@@ -302,7 +302,7 @@ def test_louvain_clustering():
 
     louvain_clustering_assert_valid(property_graph, "value", "output")
 
-    stats = LouvainClusteringStatistics(property_graph, "value", "output")
+    LouvainClusteringStatistics(property_graph, "value", "output")
 
     # TODO(amp): This is non-deterministic. Are there bounds on the results we could check?
     # assert stats.n_clusters == 83
@@ -341,6 +341,6 @@ def test_subgraph_extraction():
     assert len(pg) == len(nodes)
     assert pg.num_edges() == 6
 
-    for i in range(len(expected_edges)):
+    for i, _ in enumerate(expected_edges):
         assert len(pg.edges(i)) == len(expected_edges[i])
         assert [pg.get_edge_dest(e) for e in pg.edges(i)] == expected_edges[i]

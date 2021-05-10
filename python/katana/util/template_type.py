@@ -20,18 +20,18 @@ class DtypeDict(dict):
 
     def __init__(self):
         # Only allow empty constructor for simplicity.
-        super(DtypeDict, self).__init__()
+        super().__init__()
 
     def __setitem__(self, key, value):
-        super(DtypeDict, self).__setitem__(np.dtype(key), value)
+        super().__setitem__(np.dtype(key), value)
 
     def __getitem__(self, key):
-        return super(DtypeDict, self).__getitem__(np.dtype(key))
+        return super().__getitem__(np.dtype(key))
 
 
 class DtypeDictWithOpaque(dict):
     def __init__(self):
-        super(DtypeDictWithOpaque, self).__init__()
+        super().__init__()
         self._sizes_cache = None
 
     @property
@@ -44,27 +44,29 @@ class DtypeDictWithOpaque(dict):
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
-            super(DtypeDictWithOpaque, self).__setitem__(key, value)
+            super().__setitem__(key, value)
         else:
             key = np.dtype(key)
             if key.kind != "V":
-                super(DtypeDictWithOpaque, self).__setitem__(key, value)
+                super().__setitem__(key, value)
             else:
                 raise ValueError("Do not explicitly add struct types to DtypeDictWithOpaque")
 
     def __getitem__(self, key):
         key = np.dtype(key)
         if key in self:
-            return super(DtypeDictWithOpaque, self).__getitem__(key)(key)
+            return super().__getitem__(key)(key)
         if key.kind != "V":
             raise KeyError(key)
         # Handle struct types
-        v = super(DtypeDictWithOpaque, self).__getitem__(find_size_for_dtype(key, self._sizes))
+        v = super().__getitem__(find_size_for_dtype(key, self._sizes))
         return v(dtype=key)
 
 
 class TemplateType1(type):
     def __new__(cls, name, bases, attrs):
+        _ = bases
+
         instantiations = {(t if isinstance(t, int) else np.dtype(t)): v for t, v in attrs["instantiations"].items()}
         del attrs["instantiations"]
         representative_type = next(iter(instantiations.values()))
@@ -115,7 +117,7 @@ class TemplateType1WithOpaque(TemplateType1):
         @wraps_class(inst_cls, str(item))
         class SubClass(inst_cls):
             def __init__(self, *args, **kwargs):
-                super(SubClass, self).__init__(*args, dtype=item, **kwargs)
+                super().__init__(*args, dtype=item, **kwargs)
 
         return SubClass
 

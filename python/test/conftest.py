@@ -1,8 +1,8 @@
 import pytest
 
 from katana.example_utils import get_input
-from katana.property_graph import PropertyGraph
 from katana.galois import set_active_threads
+from katana.property_graph import PropertyGraph
 
 
 @pytest.fixture

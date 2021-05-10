@@ -1,11 +1,11 @@
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libsupport.result cimport handle_result_void, handle_result_assert, raise_error_code, Result
-from katana.analytics.plan cimport Plan, _Plan
-from katana.property_graph cimport PropertyGraph
-
-from libcpp.string cimport string
 from libcpp cimport bool
+from libcpp.string cimport string
+
+from katana.analytics.plan cimport Plan, _Plan
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
+from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
+from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 

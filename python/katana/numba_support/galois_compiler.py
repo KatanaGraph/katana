@@ -6,7 +6,7 @@ This pipeline is used from the `*_operator` decorators in loops.py.
 
 import numba.cpython.builtins
 from llvmlite import ir
-from numba.core import sigutils, compiler, types
+from numba.core import compiler, sigutils, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.imputils import lower_constant
 

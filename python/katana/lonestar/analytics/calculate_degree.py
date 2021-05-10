@@ -1,10 +1,10 @@
 import numpy as np
 import pyarrow
 
-from katana.property_graph import PropertyGraph
-from katana.datastructures import LargeArray, AllocationPolicy
-from katana.loops import do_all, do_all_operator
 from katana.atomic import atomic_add
+from katana.datastructures import AllocationPolicy, LargeArray
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
 
 
 @do_all_operator()

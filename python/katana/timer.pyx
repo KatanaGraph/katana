@@ -1,4 +1,6 @@
-from .cpp.libgalois.Timer cimport Timer as CTimer, StatTimer as CStatTimer
+from .cpp.libgalois.Timer cimport StatTimer as CStatTimer
+from .cpp.libgalois.Timer cimport Timer as CTimer
+
 
 cdef class Timer:
     """

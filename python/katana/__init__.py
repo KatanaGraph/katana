@@ -19,7 +19,7 @@ Galois Python also leverages numba to compile the "operators" which are run
 by Galois C++.
 """
 
-from typing import Type, Dict, Union
+from typing import Dict, Type, Union
 
 try:
     # Initialize the galois runtime immediately.

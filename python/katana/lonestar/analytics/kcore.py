@@ -2,10 +2,10 @@ import numpy as np
 import pyarrow
 
 from katana.atomic import GAccumulator, atomic_sub
-from katana.datastructures import LargeArray, AllocationPolicy, InsertBag
+from katana.datastructures import AllocationPolicy, InsertBag, LargeArray
+from katana.galois import set_active_threads
 from katana.loops import do_all, do_all_operator, for_each, for_each_operator
 from katana.property_graph import PropertyGraph
-from katana.galois import set_active_threads
 from katana.timer import StatTimer
 
 

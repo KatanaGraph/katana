@@ -1,17 +1,17 @@
-from pyarrow.lib cimport CTable, CUInt32Array, CArray
-
 from cython.operator cimport dereference as deref
-from katana.cpp.libgalois.datastructures cimport InsertBag
-from katana.cpp.libgalois.Galois cimport do_all, iterate, no_pushes, steal, loopname
-from katana.cpp.libgalois.atomic cimport GReduceMax
-from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libstd.atomic cimport atomic
-from katana.cpp.libstd cimport bind_leading
-from katana.property_graph cimport PropertyGraph
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.memory cimport shared_ptr, static_pointer_cast
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from pyarrow.lib cimport CArray, CTable, CUInt32Array
+
+from katana.cpp.libgalois.atomic cimport GReduceMax
+from katana.cpp.libgalois.datastructures cimport InsertBag
+from katana.cpp.libgalois.Galois cimport do_all, iterate, loopname, no_pushes, steal
+from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
+from katana.cpp.libstd cimport bind_leading
+from katana.cpp.libstd.atomic cimport atomic
+from katana.property_graph cimport PropertyGraph
 
 from katana.timer import StatTimer
 

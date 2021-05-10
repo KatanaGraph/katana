@@ -4,12 +4,7 @@ import operator
 import numba.core.ccallback
 import numba.types
 import pyarrow
-from numba.extending import (
-    get_cython_function_address,
-    typeof_impl,
-    overload,
-    overload_method,
-)
+from numba.extending import get_cython_function_address, overload, overload_method, typeof_impl
 
 from . import _pyarrow_wrappers
 from .wrappers import NativeNumbaPointerWrapper
@@ -44,7 +39,6 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
 
         _ = overload_len
 
-
         addr = get_cython_function_address(self.override_module_name, "Array_is_valid")
         Array_is_valid = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_voidp, ctypes.c_uint64)(addr)
 
@@ -52,6 +46,7 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         def overload_is_valid(v, i):
             _ = v
             _ = i
+
             def impl_(v, i):
                 return Array_is_valid(v.ptr, i)
 
@@ -63,6 +58,7 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         def overload_is_null(v, i):
             _ = v
             _ = i
+
             def impl_(v, i):
                 return not Array_is_valid(v.ptr, i)
 
@@ -73,6 +69,7 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         @overload_method(self.Type, "indicies")
         def overload_indicies(v):
             _ = v
+
             def impl_(v):
                 for i in range(Array_length(v.ptr)):
                     if v.is_valid(i):
@@ -101,6 +98,7 @@ class ArrowArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         @overload_method(self.Type, "values")
         def overload_values(v):
             _ = v
+
             def impl_(v):
                 for i in range(Array_length(v.ptr)):
                     if v.is_valid(i):
@@ -276,6 +274,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         def overload_is_valid(v, ind):
             _ = v
             _ = ind
+
             def impl_(v, ind):
                 c, i = v.convert_index(ind)
                 return ChunkedArray_is_valid(v.ptr, c, i)
@@ -288,6 +287,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         def overload_is_null(v, ind):
             _ = v
             _ = ind
+
             def impl_(v, ind):
                 c, i = v.convert_index(ind)
                 return not ChunkedArray_is_valid(v.ptr, c, i)
@@ -299,6 +299,7 @@ class ChunkedArrayNumbaPointerWrapper(NativeNumbaPointerWrapper):
         @overload_method(self.Type, "indicies")
         def overload_indicies(v):
             _ = v
+
             def impl_(v):
                 for c in range(ChunkedArray_num_chunks(v.ptr)):
                     for i in range(ChunkedArray_Array_chunk_length(v.ptr, c)):

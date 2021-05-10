@@ -2,6 +2,7 @@
 
 from libcpp.string cimport string
 
+
 cdef extern from "<iostream>" namespace "std":
     cdef cppclass ostream:
         pass

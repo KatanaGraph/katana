@@ -19,16 +19,17 @@ Breadth-first Search
 """
 
 from libc.stddef cimport ptrdiff_t
-from libc.stdint cimport uint64_t, uint32_t
+from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
-from katana.analytics.plan cimport _Plan, Plan
+from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libsupport.result cimport Result, handle_result_void, handle_result_assert, raise_error_code
+from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
 from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
+
 
 cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     cppclass _BfsPlan "katana::analytics::BfsPlan" (_Plan):

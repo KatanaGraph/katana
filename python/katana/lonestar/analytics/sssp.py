@@ -1,21 +1,21 @@
-import numpy as np
 import numba.types
+import numpy as np
 import pyarrow
 
-from katana.atomic import atomic_min, GAccumulator, GReduceMax
+from katana.atomic import GAccumulator, GReduceMax, atomic_min
 from katana.datastructures import InsertBag
+from katana.galois import set_active_threads
 from katana.loops import (
-    for_each_operator,
-    for_each,
-    UserContext,
-    obim_metric,
     OrderedByIntegerMetric,
-    do_all_operator,
+    UserContext,
     do_all,
+    do_all_operator,
+    for_each,
+    for_each_operator,
+    obim_metric,
 )
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
-from katana.galois import set_active_threads
 
 
 def dtype_info(t):

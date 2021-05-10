@@ -2,7 +2,7 @@ from numba import types
 from numba.core import cgutils
 from numba.core.typing.arraydecl import get_array_index_type
 from numba.extending import lower_builtin, type_callable
-from numba.np.arrayobj import make_array, normalize_indices, basic_indexing
+from numba.np.arrayobj import basic_indexing, make_array, normalize_indices
 
 __all__ = ["atomic_add", "atomic_sub", "atomic_max", "atomic_min"]
 

@@ -1,5 +1,6 @@
 from libc.stdint cimport uint64_t
 
+
 cdef extern from "katana/Timer.h" namespace "katana" nogil:
     cppclass Timer:
         Timer()

@@ -2,10 +2,10 @@ import ctypes
 from typing import Dict
 
 from numba import types
-from numba.extending import overload_method, overload
+from numba.extending import overload, overload_method
 
-import katana.property_graph
 import katana.datastructures
+import katana.property_graph
 
 # PropertyGraph
 
@@ -24,6 +24,7 @@ def overload_PropertyGraph_len(self):
 @overload_method(katana.property_graph.PropertyGraph_numba_wrapper.Type, "nodes")
 def overload_PropertyGraph_nodes(self):
     _ = self
+
     def impl(self):
         return range(self.num_nodes())
 

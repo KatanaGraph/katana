@@ -1,26 +1,26 @@
 import logging
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from functools import lru_cache
 from typing import Union
 
-import numpy as np
 import numba.core.ccallback
 import numba.types
+import numpy as np
 from llvmlite import ir
 from numba import from_dtype
 from numba.core import cgutils, imputils
 from numba.core.base import BaseContext
 from numba.extending import (
-    get_cython_function_address,
-    typeof_impl,
-    overload_method,
-    models,
-    register_model,
-    make_attribute_wrapper,
-    unbox,
     NativeValue,
-    type_callable,
+    get_cython_function_address,
     lower_builtin,
+    make_attribute_wrapper,
+    models,
+    overload_method,
+    register_model,
+    type_callable,
+    typeof_impl,
+    unbox,
 )
 
 from ..util import wraps_class
@@ -61,6 +61,7 @@ class NumbaPointerWrapper(metaclass=ABCMeta):
             def __init__(self, dmm, fe_type):
                 members = [("ptr", numba.types.voidptr)]
                 models.StructModel.__init__(self, dmm, fe_type, members)
+
         _ = Model
 
         make_attribute_wrapper(Type, "ptr", "ptr")
@@ -251,6 +252,7 @@ def construct_dtype_on_stack(self, values):
 @type_callable(construct_dtype_on_stack)
 def type_construct_dtype_on_stack(context):
     _ = context
+
     def typer(self, values):
         if isinstance(self, DtypeParametricType) and isinstance(values, numba.types.BaseTuple):
             return numba.types.voidptr

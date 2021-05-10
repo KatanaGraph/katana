@@ -6,9 +6,9 @@ import numpy as np
 import pyarrow
 import pytest
 
-from katana.loops import do_all_operator, do_all
-from katana.property_graph import PropertyGraph
 from katana import TsubaError
+from katana.loops import do_all, do_all_operator
+from katana.property_graph import PropertyGraph
 
 
 def test_load(property_graph):

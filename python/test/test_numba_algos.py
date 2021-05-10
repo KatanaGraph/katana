@@ -1,4 +1,4 @@
-from katana.analytics import bfs_assert_valid, sssp_assert_valid, SsspStatistics, BfsStatistics
+from katana.analytics import BfsStatistics, SsspStatistics, bfs_assert_valid, sssp_assert_valid
 from katana.lonestar.analytics.bfs import bfs_sync_pg, verify_bfs
 from katana.lonestar.analytics.jaccard import jaccard
 from katana.lonestar.analytics.sssp import sssp, verify_sssp

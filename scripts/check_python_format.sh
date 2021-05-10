@@ -1,6 +1,9 @@
 #!/bin/bash
 
-PYFMT="${PYFMT:-black} --line-length 120"
+# Duplicate config options in pyproject.toml until all repos use pyproject.toml
+PYFMT="${PYFMT:-black} --line-length=120"
+ISORT="${ISORT:-isort} --profile=black --line-length=120"
+
 set -eu
 
 if [ $# -eq 0 ]; then
@@ -16,8 +19,19 @@ fi
 
 ROOTS="$@"
 
+FAILED=
 if [ -n "${FIX}" ]; then
   ${PYFMT} "$@"
+  ${ISORT} "$@"
 else
-  ${PYFMT} --check "$@"
+  if ! ${PYFMT} --check "$@"; then
+    FAILED=1
+  fi
+  if ! ${ISORT} --check "$@"; then
+    FAILED=1
+  fi
+fi
+
+if [ -n "${FAILED}" ]; then
+  exit 1
 fi

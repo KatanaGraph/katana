@@ -9,6 +9,7 @@
 # to <support@katanagraph.com>
 from libcpp cimport bool
 
+
 cdef extern from "<optional>" namespace "std" nogil:
     cdef cppclass nullopt_t:
         nullopt_t()

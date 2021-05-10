@@ -1,10 +1,10 @@
 #! /bin/python
 
 import argparse
-from pathlib import Path
-from subprocess import Popen, PIPE
-from sys import stderr
 import tarfile
+from pathlib import Path
+from subprocess import PIPE, Popen
+from sys import stderr
 
 
 def main():

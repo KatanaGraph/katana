@@ -1,7 +1,9 @@
-from libcpp.string cimport string
 from libcpp cimport bool
+from libcpp.string cimport string
+
+from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libstd.system_error cimport error_category, error_code
-from katana.cpp.libstd.iostream cimport ostringstream, ostream
+
 
 cdef extern from "katana/Result.h" namespace "katana" nogil:
     cdef cppclass ErrorInfo:

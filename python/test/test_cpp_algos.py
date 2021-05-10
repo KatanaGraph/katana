@@ -1,14 +1,14 @@
 import numpy as np
+import pytest
 from pyarrow import Schema, table
 from pytest import approx, raises
-import pytest
 
 from katana import GaloisError
 from katana.analytics import *
-from katana.property_graph import PropertyGraph
 from katana.example_utils import get_input
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
+from katana.property_graph import PropertyGraph
 
 NODES_TO_SAMPLE = 10
 

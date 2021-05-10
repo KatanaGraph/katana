@@ -4,11 +4,12 @@ from numba import jit
 
 from katana.atomic import GAccumulator, GReduceMax
 from katana.datastructures import InsertBag
-from ._bfs_property_graph import bfs as cython_bfs, verify_bfs as cython_verify_bfs
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
+from ._bfs_property_graph import bfs as cython_bfs
+from ._bfs_property_graph import verify_bfs as cython_verify_bfs
 
 # Use the same infinity as C++ bfs
 distance_infinity = (2 ** 32) // 4
@@ -98,6 +99,7 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 
 def main():
     import argparse
+
     from katana.galois import set_active_threads
 
     parser = argparse.ArgumentParser()

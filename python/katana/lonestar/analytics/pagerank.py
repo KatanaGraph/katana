@@ -1,17 +1,11 @@
 import numpy as np
 import pyarrow
 
-from katana.atomic import (
-    GAccumulator,
-    GReduceLogicalOr,
-    atomic_add,
-    GReduceMin,
-    GReduceMax,
-)
-from katana.datastructures import LargeArray, AllocationPolicy
+from katana.atomic import GAccumulator, GReduceLogicalOr, GReduceMax, GReduceMin, atomic_add
+from katana.datastructures import AllocationPolicy, LargeArray
+from katana.galois import set_active_threads
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
-from katana.galois import set_active_threads
 from katana.timer import StatTimer
 
 # Constants for Pagerank

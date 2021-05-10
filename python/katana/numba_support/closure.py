@@ -3,10 +3,9 @@ import ctypes
 from functools import wraps
 
 import llvmlite.ir
-from numba import types, typeof, njit
+from numba import njit, typeof, types
 from numba.experimental import jitclass
-from numba.extending import lower_builtin
-from numba.extending import type_callable
+from numba.extending import lower_builtin, type_callable
 
 from katana.numba_support.galois_compiler import OperatorCompiler, cfunc
 from katana.timer import StatTimer
@@ -131,6 +130,7 @@ def wrapper({unbound_pass_args} userdata):
         @type_callable(load_struct)
         def type_load_struct(context):
             _ = context
+
             def typer(t):
                 if isinstance(t, types.Integer):
                     return Environment.class_type.instance_type
@@ -168,6 +168,7 @@ def wrapper({unbound_pass_args} userdata):
         @type_callable(store_struct)
         def type_store_struct(context):
             _ = context
+
             def typer(s, t):
                 if s == Environment.class_type.instance_type and isinstance(t, types.Integer):
                     return types.void

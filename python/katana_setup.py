@@ -1,16 +1,15 @@
+import json
+import os
 import subprocess
 import sys
-import os
 import tempfile
 from distutils.errors import CompileError
 from functools import lru_cache
 from pathlib import Path
-from typing import Set, Any, Optional
-
-import setuptools
-import json
+from typing import Any, Optional, Set
 
 import generate_from_jinja
+import setuptools
 
 __all__ = ["setup"]
 
@@ -132,8 +131,8 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
 
 
 def _get_build_extension():
-    from distutils.core import Distribution
     from distutils.command.build_ext import build_ext
+    from distutils.core import Distribution
 
     # Modified from Cython/Build/Inline.py, Apache License Version 2.0
     dist = Distribution()

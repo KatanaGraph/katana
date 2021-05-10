@@ -1,11 +1,10 @@
 #! /usr/bin/env python3
 import sys
-from functools import partial, lru_cache
+from functools import lru_cache, partial
 from itertools import combinations
 
-import jinja2
-
 import generator_conf
+import jinja2
 
 
 def all_combinations(l):

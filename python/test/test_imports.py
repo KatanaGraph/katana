@@ -1,9 +1,9 @@
 def test_import_applications_property_graph():
     import katana.lonestar.analytics.bfs
-    import katana.lonestar.analytics.jaccard
-    import katana.lonestar.analytics.pagerank
     import katana.lonestar.analytics.connected_components
+    import katana.lonestar.analytics.jaccard
     import katana.lonestar.analytics.kcore
+    import katana.lonestar.analytics.pagerank
 
 
 def test_import_loops():
@@ -27,5 +27,5 @@ def test_import_atomic():
 
 
 def test_import_numba():
-    import katana.numba_support.pyarrow
     import katana.numba_support.galois
+    import katana.numba_support.pyarrow

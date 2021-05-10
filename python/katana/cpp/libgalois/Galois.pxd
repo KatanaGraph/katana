@@ -1,5 +1,7 @@
-from ..libstd cimport CPPAuto
 from libcpp.string cimport string
+
+from ..libstd cimport CPPAuto
+
 
 cdef extern from "katana/Galois.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)

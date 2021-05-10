@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
+import pytest
 
-from katana.datastructures import InsertBag, LargeArray, AllocationPolicy
-from katana.loops import do_all_operator, do_all
+from katana.datastructures import AllocationPolicy, InsertBag, LargeArray
+from katana.loops import do_all, do_all_operator
 
 types = [
     pytest.param(int, id="int"),
@@ -224,6 +224,7 @@ def test_LargeArray_numpy_parallel_opaque():
 
 def test_InsertBag_numba_type():
     import numba.types
+
     from katana.datastructures import InsertBag_numba_type
 
     assert isinstance(InsertBag_numba_type[int], numba.types.Type)
@@ -234,6 +235,7 @@ def test_InsertBag_numba_type():
 
 def test_LargeArray_numba_type():
     import numba.types
+
     from katana.datastructures import LargeArray_numba_type
 
     assert isinstance(LargeArray_numba_type[int], numba.types.Type)

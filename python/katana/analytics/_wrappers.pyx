@@ -3,14 +3,14 @@ Trivial Algorithms
 ------------------
 
 """
-from libc.stdint cimport uint64_t, uint32_t
+from libc.stdint cimport uint32_t, uint64_t
 from libcpp.memory cimport shared_ptr, static_pointer_cast
-
 from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
 
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 from katana.property_graph cimport PropertyGraph
+
 
 cdef inline default_value(v, d):
     if v is None:

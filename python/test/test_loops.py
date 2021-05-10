@@ -6,13 +6,13 @@ import pytest
 from numba import from_dtype
 
 from katana.loops import (
-    do_all_operator,
-    do_all,
-    for_each_operator,
-    for_each,
-    obim_metric,
     OrderedByIntegerMetric,
     PerSocketChunkFIFO,
+    do_all,
+    do_all_operator,
+    for_each,
+    for_each_operator,
+    obim_metric,
 )
 
 simple_modes = [

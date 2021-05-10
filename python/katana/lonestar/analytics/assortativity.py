@@ -1,10 +1,12 @@
-import numpy as np
+from enum import Enum
 from math import sqrt
-from katana.atomic import atomic_add, GAccumulator
+
+import numpy as np
+
+from katana.atomic import GAccumulator, atomic_add
+from katana.lonestar.analytics.calculate_degree import calculate_degree
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
-from katana.lonestar.analytics.calculate_degree import calculate_degree
-from enum import Enum
 
 
 class DegreeType(Enum):

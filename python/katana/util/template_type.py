@@ -1,4 +1,4 @@
-from functools import wraps, partial, lru_cache
+from functools import lru_cache, partial, wraps
 
 import numpy as np
 

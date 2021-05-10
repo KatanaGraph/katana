@@ -3,17 +3,17 @@ import pytest
 
 from katana.atomic import (
     GAccumulator,
-    GReduceMax,
-    GReduceMin,
     GReduceLogicalAnd,
     GReduceLogicalOr,
+    GReduceMax,
+    GReduceMin,
     atomic_add,
-    atomic_sub,
     atomic_max,
     atomic_min,
+    atomic_sub,
 )
 from katana.datastructures import LargeArray
-from katana.loops import do_all_operator, do_all
+from katana.loops import do_all, do_all_operator
 
 dtypes_int = [
     pytest.param(np.int64, id="int64"),

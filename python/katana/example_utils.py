@@ -1,8 +1,8 @@
 import os
-from pathlib import Path
+import shutil
 import tarfile
 import urllib.request
-import shutil
+from pathlib import Path
 
 __all__ = ["get_input"]
 

@@ -1,5 +1,6 @@
 from ..libstd.atomic cimport atomic
 
+
 cdef extern from "katana/Reduction.h" namespace "katana" nogil:
     cppclass Reducible[T]:
         void update(T&&)

@@ -30,9 +30,11 @@ def test_assert_valid(property_graph: PropertyGraph):
 
 
 def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
-    original_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
+    original_dests = [
+        [property_graph.get_edge_dest(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)
+    ]
     mapping = sort_all_edges_by_dest(property_graph)
-    new_dests = [[property_graph.get_edge_dst(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
+    new_dests = [[property_graph.get_edge_dest(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
     for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
         my_mapping = [mapping[e].as_py() for e in property_graph.edges(n)]
@@ -203,7 +205,7 @@ def test_betweenness_centrality_level(property_graph: PropertyGraph):
 
 def test_triangle_count():
     property_graph = PropertyGraph(get_input("propertygraphs/rmat15_cleaned_symmetric"))
-    original_first_edge_list = [property_graph.get_edge_dst(e) for e in property_graph.edges(0)]
+    original_first_edge_list = [property_graph.get_edge_dest(e) for e in property_graph.edges(0)]
     n = triangle_count(property_graph)
     assert n == 282617
 
@@ -213,7 +215,7 @@ def test_triangle_count():
     n = triangle_count(property_graph, TriangleCountPlan.edge_iteration())
     assert n == 282617
 
-    assert [property_graph.get_edge_dst(e) for e in property_graph.edges(0)] == original_first_edge_list
+    assert [property_graph.get_edge_dest(e) for e in property_graph.edges(0)] == original_first_edge_list
 
     sort_all_edges_by_dest(property_graph)
     n = triangle_count(property_graph, TriangleCountPlan.ordered_count(edges_sorted=True))
@@ -326,9 +328,9 @@ def test_subgraph_extraction():
 
     expected_edges = [
         [
-            nodes.index(property_graph.get_edge_dst(e))
+            nodes.index(property_graph.get_edge_dest(e))
             for e in property_graph.edges(i)
-            if property_graph.get_edge_dst(e) in nodes
+            if property_graph.get_edge_dest(e) in nodes
         ]
         for i in nodes
     ]
@@ -341,4 +343,4 @@ def test_subgraph_extraction():
 
     for i in range(len(expected_edges)):
         assert len(pg.edges(i)) == len(expected_edges[i])
-        assert [pg.get_edge_dst(e) for e in pg.edges(i)] == expected_edges[i]
+        assert [pg.get_edge_dest(e) for e in pg.edges(i)] == expected_edges[i]

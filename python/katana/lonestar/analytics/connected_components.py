@@ -21,7 +21,7 @@ def initialize_cc_pull_operator(comp_current: np.ndarray, nid):
 @do_all_operator()
 def cc_pull_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarray, nid):
     for ii in graph.edges(nid):
-        dst = graph.get_edge_dst(ii)
+        dst = graph.get_edge_dest(ii)
         # Pull the minimum component from your neighbors
         if comp_current[nid] > comp_current[dst]:
             comp_current[nid] = comp_current[dst]
@@ -75,7 +75,7 @@ def cc_push_topo_operator(graph: PropertyGraph, changed, comp_current: np.ndarra
         # Indicates that update happened
         changed.update(True)
         for ii in graph.edges(nid):
-            dst = graph.get_edge_dst(ii)
+            dst = graph.get_edge_dest(ii)
             new_comp = comp_current[nid]
             # Push the minimum component to your neighbors
             atomic_min(comp_current, dst, new_comp)

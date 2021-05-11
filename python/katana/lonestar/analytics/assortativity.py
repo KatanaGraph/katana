@@ -23,7 +23,7 @@ def sum_degree_operator(
 ):
     for edge in graph.edges(nid):
         sum_source.update(source_degree[nid])
-        dst = graph.get_edge_dst(edge)
+        dst = graph.get_edge_dest(edge)
         sum_destination.update(destination_degree[dst])
 
 
@@ -57,7 +57,7 @@ def degree_assortativity_coefficient_operator(
     # deviation of source node from average
     source_dev = source_degree[nid] - source_average
     for edge in graph.edges(nid):
-        dst = graph.get_edge_dst(edge)
+        dst = graph.get_edge_dest(edge)
         destination_dev = destination_degree[dst] - destination_average
         product_of_dev.update(source_dev * destination_dev)
         square_of_source_dev.update(source_dev * source_dev)

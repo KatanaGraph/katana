@@ -64,7 +64,7 @@ def bfs_sync_operator_pg(
     graph: PropertyGraph, next_level: InsertBag[np.uint64], next_level_number: int, distance: np.ndarray, nid,
 ):
     for ii in graph.edges(nid):
-        dst = graph.get_edge_dst(ii)
+        dst = graph.get_edge_dest(ii)
         if distance[dst] == distance_infinity:
             distance[dst] = next_level_number
             next_level.push(dst)

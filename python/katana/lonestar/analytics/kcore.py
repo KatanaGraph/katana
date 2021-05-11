@@ -31,7 +31,7 @@ def setup_initial_worklist_operator(
 def compute_async_kcore_operator(graph: PropertyGraph, current_degree, k_core_num, nid, ctx):
     # Decrement degree of all the neighbors of dead node
     for ii in graph.edges(nid):
-        dst = graph.get_edge_dst(ii)
+        dst = graph.get_edge_dest(ii)
         old_degree = atomic_sub(current_degree, dst, 1)
         # Add new dead nodes to the worklist
         if old_degree == k_core_num:

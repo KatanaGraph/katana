@@ -12,7 +12,7 @@ def jaccard_operator(g, n1_neighbors, n1_size, output, n2):
     intersection_size = 0
     n2_size = len(g.edges(n2))
     for e_iter in g.edges(n2):
-        ne = g.get_edge_dst(e_iter)
+        ne = g.get_edge_dest(e_iter)
         if n1_neighbors[ne]:
             intersection_size += 1
     union_size = n1_size + n2_size - intersection_size
@@ -28,7 +28,7 @@ def jaccard(g, key_node, property_name):
     output = np.empty(len(g), dtype=float)
 
     for e in g.edges(key_node):
-        n = g.get_edge_dst(e)
+        n = g.get_edge_dest(e)
         key_neighbors[n] = True
 
     do_all(

@@ -46,7 +46,7 @@ def sssp_operator(g: PropertyGraph, dists: np.ndarray, edge_weights, item, ctx: 
     if dists[item.src] < item.dist:
         return
     for ii in g.edges(item.src):
-        dst = g.get_edge_dst(ii)
+        dst = g.get_edge_dest(ii)
         edge_length = edge_weights[ii]
         new_distance = edge_length + dists[item.src]
         old_distance = atomic_min(dists, dst, new_distance)

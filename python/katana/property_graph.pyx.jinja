@@ -210,7 +210,7 @@ cdef class PropertyGraph:
             prev = self.topology().out_indices.get().Value(n-1)
         return range(prev, self.topology().out_indices.get().Value(n))
 
-    cpdef uint64_t get_edge_dst(PropertyGraph self, uint64_t e):
+    cpdef uint64_t get_edge_dest(PropertyGraph self, uint64_t e):
         """
         Return the destination node ID of the edge `e`.
 
@@ -359,7 +359,7 @@ cdef class PropertyGraph:
 {% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
     return self.topology().out_indices.get().Value(arg1)
 {% endcall %}
-{% call numba.method_with_body("get_edge_dst", "uint64_t", ["uint64_t"]) %}
+{% call numba.method_with_body("get_edge_dest", "uint64_t", ["uint64_t"]) %}
     return self.topology().out_dests.get().Value(arg1)
 {% endcall %}
 {% endcall %}

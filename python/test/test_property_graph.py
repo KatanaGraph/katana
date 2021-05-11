@@ -50,15 +50,15 @@ def test_commit(property_graph):
     assert len(property_graph.edge_schema()) == 19
 
 
-def test_get_edge_dst(property_graph):
-    assert property_graph.get_edge_dst(0) == 1967
-    assert property_graph.get_edge_dst(1) == 1419
+def test_get_edge_dest(property_graph):
+    assert property_graph.get_edge_dest(0) == 1967
+    assert property_graph.get_edge_dest(1) == 1419
 
 
 def test_reachable_from_10(property_graph):
     reachable = []
     for eid in property_graph.edges(10):
-        reachable.append(property_graph.get_edge_dst(eid))
+        reachable.append(property_graph.get_edge_dest(eid))
     assert reachable == [2011, 1422, 1409, 4798, 9483]
 
 
@@ -221,7 +221,7 @@ def test_simple_algorithm(property_graph):
     def func_operator(g, prop, out, nid):
         t = 0
         for eid in g.edges(nid):
-            nid2 = g.get_edge_dst(eid)
+            nid2 = g.get_edge_dest(eid)
             if prop.is_valid(nid2):
                 t += prop[nid2]
         out[nid] = t

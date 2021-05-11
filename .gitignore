@@ -29,3 +29,6 @@ tags
 *.pyc
 galois.egg-info
 /_skbuild
+
+# no jupyter checkpoints
+.ipynb_checkpoints

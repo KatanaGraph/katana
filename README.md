@@ -27,17 +27,11 @@ Galois is released under the BSD-3-Clause license.
 Building Galois
 ===============
 
-You can checkout the latest release by typing (in a terminal):
-
-```Shell
-git clone -b release-5.0 https://github.com/IntelligentSoftwareSystems/Galois
-```
-
 The master branch will be regularly updated, so you may try out the latest
-development code as well by checking out master branch:
+development code by checking out master branch:
 
 ```Shell
-git clone https://github.com/IntelligentSoftwareSystems/Galois
+git clone https://github.com/KatanaGraph/katana.git
 ```
 
 Dependencies
@@ -151,6 +145,25 @@ in the build directory.
 
 To build the Python API see [Python.md](Python.md).
 
+Compiling in Docker
+-------------------
+
+Instead of setting up a development environment explicitly you can build Katana in docker.
+
+```Shell
+scripts/build_in_container.py -B $BUILD_DIR --type conda
+```
+where `$BUILD_DIR` is a path at which to place the resulting build directory.
+Build types other than `conda` may be supported in the future.
+You can also pass build targets to the command.
+
+For example,
+```Shell
+scripts/build_in_container.py -B ~/katana-build --type conda docs
+```
+will build the documentation (C++ and Python).
+The C++ documentation will be in `~/katana-build/docs/cxx` and the Python documentation will be in `~/katana-build/*_python/`.
+This command also works in the enterprise repository.
 
 Running Galois Applications
 ===========================

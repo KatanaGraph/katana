@@ -15,6 +15,7 @@ class LouvainClusteringPlan : public Plan {
 public:
   enum Algorithm {
     kDoAll,
+    kDeterministic,
   };
 
   static const bool kDefaultEnableVF = false;
@@ -72,6 +73,8 @@ public:
   /// Minimum coarsened graph size
   uint32_t min_graph_size() const { return min_graph_size_; }
 
+  /// Nondeterministic algorithm for louvain clustering
+  /// usign katana do_all
   static LouvainClusteringPlan DoAll(
       bool enable_vf = kDefaultEnableVF,
       double modularity_threshold_per_round =
@@ -82,6 +85,25 @@ public:
     return {
         kCPU,
         kDoAll,
+        enable_vf,
+        modularity_threshold_per_round,
+        modularity_threshold_total,
+        max_iterations,
+        min_graph_size};
+  }
+
+  /// Deterministic algorithm for louvain clustering
+  /// using delayed updates
+  static LouvainClusteringPlan Deterministic(
+      bool enable_vf = kDefaultEnableVF,
+      double modularity_threshold_per_round =
+          kDefaultModularityThresholdPerRound,
+      double modularity_threshold_total = kDefaultModularityThresholdTotal,
+      uint32_t max_iterations = kDefaultMaxIterations,
+      uint32_t min_graph_size = kDefaultMinGraphSize) {
+    return {
+        kCPU,
+        kDeterministic,
         enable_vf,
         modularity_threshold_per_round,
         modularity_threshold_total,

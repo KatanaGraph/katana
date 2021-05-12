@@ -82,7 +82,7 @@ jobs:
         mamba install -y -q -c conda-forge conda-build boa conda-verify pygithub packaging
 
     ###
-    # Conda build process for two packages
+    # Conda build process
     ###
     - name: Build conda Packages
       run: |
@@ -181,7 +181,7 @@ jobs:
     - name: Check for lint
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_lint.sh python test/*.py
+        ./scripts/check_python_lint.sh python test
 
   build_and_test:
     runs-on: ${{matrix.os}}

@@ -398,6 +398,7 @@ function(add_katana_doxygen_target)
   if (NOT TARGET doxygen_docs AND DOXYGEN_FOUND)
     get_property(doc_dirs GLOBAL PROPERTY KATANA_DOXYGEN_DIRECTORIES)
     list(JOIN doc_dirs "\" \"" DOXYFILE_SOURCE_DIR)
+    set(DOXYFILE_LATEX "NO")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
     add_custom_target(doxygen_docs

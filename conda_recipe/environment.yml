@@ -5,7 +5,6 @@ channels:
  - conda-forge
 dependencies:
  - arrow-cpp<3.0.0a0
- - aws-sdk-cpp>=1.7.164,<2.0a0
  - awscli
  - backward-cpp>=1.4
  - benchmark

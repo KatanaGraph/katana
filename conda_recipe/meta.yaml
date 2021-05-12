@@ -33,7 +33,6 @@ requirements:
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
-    - aws-sdk-cpp>=1.7.164,<2.0a0
     - backward-cpp>=1.4
     - boost-cpp>=1.74
     - elfutils
@@ -61,7 +60,6 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
@@ -76,7 +74,6 @@ outputs:
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
@@ -91,7 +88,6 @@ outputs:
       run:
         - boost-cpp
         - arrow-cpp
-        - aws-sdk-cpp
         - fmt
         - nlohmann_json
         - openblas
@@ -118,7 +114,6 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
@@ -139,7 +134,6 @@ outputs:
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
@@ -185,7 +179,6 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
@@ -200,7 +193,6 @@ outputs:
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
-        - aws-sdk-cpp>=1.7.164,<2.0a0
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils

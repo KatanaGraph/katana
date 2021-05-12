@@ -14,7 +14,6 @@ pin_run_as_build:
   arrow-cpp: x
   pyarrow: x
   fmt: x
-  aws-sdk-cpp: x.x
   nlohmann_json: x.x
   libcurl: x.x
   libxml2: x

@@ -12,7 +12,7 @@ import sys
 # Find the build directory relative to this file (this works because we are doing an in-tree build.
 build_dir = pathlib.Path(__file__).parent.parent.parent / "build"
 # Find the cython "lib" tree which ahs all the files we need.
-lib_dirs = list(build_dir.glob("lib.*"))
+lib_dirs = list(build_dir.glob("lib*"))
 if len(lib_dirs) > 1:
     print(f"WARNING: There are multiple lib directories in the python build tree. Picking {lib_dirs[0]}")
 elif not lib_dirs:

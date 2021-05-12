@@ -98,7 +98,7 @@ def require_python_module(module_name, ge_version=None, lt_version=None):
             mod = __import__(module_name)
         except ImportError as e:
             raise RequirementError(
-                f"'{module_name}' must have version >={ge_version}<{lt_version}, but is not available."
+                f"'{module_name}' must have version {v_str}, but is not available."
             ) from e
         if ge_version or lt_version:
             import packaging.version

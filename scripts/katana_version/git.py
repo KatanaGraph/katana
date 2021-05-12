@@ -1,11 +1,11 @@
-import re
 import logging
+import re
 from datetime import datetime
 from functools import cmp_to_key, lru_cache
 from pathlib import Path
 from typing import Tuple, Union
 
-from .commands import action_command, capture_command, CommandError, predicate_command
+from .commands import CommandError, action_command, capture_command, predicate_command
 
 logger = logging.getLogger(__name__)
 
@@ -183,9 +183,11 @@ def simplify_merge_commit(commit, dir):
     """
     parents = get_commit_parents(commit, dir)
     parents.sort(key=cmp_to_key(lambda a, b: is_ancestor_of(a, b, dir=dir)))
-    potential_simplification = parents[-1]
-    if is_same_tree(commit, potential_simplification, dir) and all(
-        is_ancestor_of(p, potential_simplification, dir) for p in parents
+    potential_simplification = parents[-1] if parents else None
+    if (
+        potential_simplification
+        and is_same_tree(commit, potential_simplification, dir)
+        and all(is_ancestor_of(p, potential_simplification, dir) for p in parents)
     ):
         return potential_simplification
     else:

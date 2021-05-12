@@ -247,7 +247,7 @@ function(add_python_setuptools_target TARGET_NAME)
     get_target_property(dir ${dep} PYTHON_BINARY_DIR)
     if (dir)
       string(APPEND ENV_SCRIPT_STR "\
-for f in ${dir}/build/lib.*; do
+for f in ${dir}/build/lib*; do
   export PYTHONPATH=$f\${PYTHONPATH:+:\$PYTHONPATH}
 done
 ")

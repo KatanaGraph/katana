@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <future>
+#include <optional>
 #include <string>
 
 #include <parquet/arrow/reader.h>

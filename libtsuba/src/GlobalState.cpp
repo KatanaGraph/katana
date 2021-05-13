@@ -89,7 +89,8 @@ katana::Result<void>
 tsuba::GlobalState::Fini() {
   for (FileStorage* fs : ref_->file_stores_) {
     if (auto res = fs->Fini(); !res) {
-      return res.error();
+      return res.error().WithContext(
+          "file storage shutdown ({})", fs->uri_scheme());
     }
   }
   ref_.reset(nullptr);

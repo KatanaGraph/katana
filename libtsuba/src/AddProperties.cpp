@@ -1,6 +1,7 @@
 #include "AddProperties.h"
 
 #include <memory>
+#include <optional>
 
 #include <arrow/chunked_array.h>
 

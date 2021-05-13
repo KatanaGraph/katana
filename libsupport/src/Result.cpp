@@ -74,15 +74,24 @@ static_assert(
     fmt::inline_buffer_size > katana::ErrorInfo::kContextSize / 2,
     "libfmt buffer size is small relative to max ErrorInfo context size");
 
+inline void
+katana::ErrorInfo::CheckContext() {
+  // This assert can fail for a few reasons:
+  // 1) an ErrorInfo or Result being passed from one thread to another,
+  // 2) two ErrorInfos or Results being used at the same time on a thread,
+  // 3) multiple copies of libsupport.
+  KATANA_LOG_DEBUG_VASSERT(
+      (!context_.first || context_.first == &kContext) &&
+          (!context_.first || context_.first->size() == context_.second),
+      "ErrorInfo object does not match thread-local ErrorInfo data. An "
+      "ErrorInfo or Result is probably being misused. Probable original error: "
+      "{}",
+      *this);
+}
+
 void
 katana::ErrorInfo::SpillMessage() {
-  KATANA_LOG_DEBUG_VASSERT(
-      !context_.first || context_.first == &kContext,
-      "ErrorInfo object does not match ErrorInfo data");
-
-  KATANA_LOG_VASSERT(
-      !context_.first || context_.first->size() == context_.second,
-      "ErrorInfo object does not match ErrorInfo data");
+  CheckContext();
 
   if (!context_.first) {
     std::string msg = error_code_.message();
@@ -93,13 +102,7 @@ katana::ErrorInfo::SpillMessage() {
 
 void
 katana::ErrorInfo::Prepend(const char* begin, const char* end) {
-  KATANA_LOG_DEBUG_VASSERT(
-      !context_.first || context_.first == &kContext,
-      "ErrorInfo object does not match ErrorInfo data");
-
-  KATANA_LOG_VASSERT(
-      !context_.first || context_.first->size() == context_.second,
-      "ErrorInfo object does not match ErrorInfo data");
+  CheckContext();
 
   if (context_.first) {
     constexpr std::array<char, 2> kSep = {':', ' '};
@@ -118,13 +121,12 @@ katana::ErrorInfo::Prepend(const char* begin, const char* end) {
 // TODO(ddn): Revisit
 std::ostream&
 katana::ErrorInfo::Write(std::ostream& out) const {
-  KATANA_LOG_DEBUG_VASSERT(
-      !context_.first || context_.first == &kContext,
-      "ErrorInfo object does not match ErrorInfo data");
-
-  KATANA_LOG_VASSERT(
-      !context_.first || context_.first->size() == context_.second,
-      "ErrorInfo object does not match ErrorInfo data");
+  if ((context_.first && context_.first != &kContext) ||
+      (context_.first && context_.first->size() != context_.second)) {
+    KATANA_LOG_WARN(
+        "ErrorInfo object does not match thread-local ErrorInfo data. Error "
+        "messages may be corrupted.");
+  }
 
   if (!context_.first) {
     out << error_code().message();

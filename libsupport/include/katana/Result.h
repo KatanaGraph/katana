@@ -193,6 +193,8 @@ private:
   /// context if the error context is empty
   void SpillMessage();
 
+  void CheckContext();
+
   std::error_code error_code_;
   std::pair<Context*, int> context_{};
 };
@@ -201,7 +203,7 @@ private:
 /// callsite (e.g., line number).
 #define KATANA_ERROR(ec, fmt_string, ...)                                      \
   ::katana::ErrorInfo::MakeWithSourceInfo(                                     \
-      __FILE__, __LINE__, (ec), FMT_STRING(fmt_string), ##__VA_ARGS__);
+      __FILE__, __LINE__, (ec), FMT_STRING(fmt_string), ##__VA_ARGS__)
 
 /// A CopyableErrorInfo is a variant of ErrorInfo that can be used
 /// outside a thread's error stack.

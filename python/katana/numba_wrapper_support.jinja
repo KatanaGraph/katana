@@ -95,7 +95,8 @@ __numba_wrapper_table_{{class_name}}.append(
 {# Emit code to actually register all the numba wrappers with numba. #}
 {% macro register_all_wrappers() -%}
 import katana.numba_support.wrappers
-katana.numba_support.wrappers.interpret_numba_wrapper_tables(_numba_wrapper_tables, globals())
+import sys
+katana.numba_support.wrappers.interpret_numba_wrapper_tables(_numba_wrapper_tables, globals(), __name__)
 {% endmacro -%}
 
 

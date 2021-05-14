@@ -2,11 +2,11 @@ from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -125,14 +125,14 @@ def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str outp
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_void(LouvainClustering(pg.underlying.get(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
+        handle_result_void(LouvainClustering(pg.underlying_property_graph(), edge_weight_property_name_str, output_property_name_str, plan.underlying_))
 
 
 def louvain_clustering_assert_valid(PropertyGraph pg, str edge_weight_property_name, str output_property_name ):
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(LouvainClusteringAssertValid(pg.underlying.get(),
+        handle_result_assert(LouvainClusteringAssertValid(pg.underlying_property_graph(),
                 edge_weight_property_name_str,
                 output_property_name_str
                 ))
@@ -156,7 +156,7 @@ cdef class LouvainClusteringStatistics:
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
             self.underlying = handle_result_LouvainClusteringStatistics(_LouvainClusteringStatistics.Compute(
-                pg.underlying.get(),
+                pg.underlying_property_graph(),
                 edge_weight_property_name_str,
                 output_property_name_str
                 ))

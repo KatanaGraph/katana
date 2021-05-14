@@ -1,4 +1,4 @@
-from ..libstd.atomic cimport atomic
+from katana.cpp.libstd.atomic cimport atomic
 
 
 cdef extern from "katana/Reduction.h" namespace "katana" nogil:

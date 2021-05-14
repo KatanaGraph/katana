@@ -1,18 +1,14 @@
-# {{generated_banner()}}
+from pyarrow.lib cimport pyarrow_unwrap_table, pyarrow_wrap_chunked_array, pyarrow_wrap_schema, to_shared
 
-from pyarrow.lib cimport to_shared, pyarrow_wrap_schema, pyarrow_wrap_chunked_array, pyarrow_unwrap_table
-
-from .cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 from .cpp.libgalois.graphs cimport Graph as CGraph
+from .cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
+
 from .numba_support._pyarrow_wrappers import unchunked
+
+from libc.stdint cimport uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-from libc.stdint cimport uint32_t
-
-{% import "numba_wrapper_support.jinja" as numba %}
-
-{{numba.header()}}
 
 
 cdef _convert_string_list(l):
@@ -34,71 +30,13 @@ cdef CGraph.GraphComponents handle_result_GraphComponents(Result[CGraph.GraphCom
 
 # TODO(amp): Wrap Copy
 
-#
-# Python Property Graph
-#
-cdef class PropertyGraph:
+cdef class PropertyGraphBase:
     """
     A property graph loaded into memory.
     """
-    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None):
-        """
-        __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)
-
-        Load a property graph.
-
-        :param path: the path or URL from which to load the graph. This support local paths or s3 URLs.
-        :type path: str
-        :param partition_id_to_load: The partition number in the graph to load. If this is None (default), then the
-            partition corresponding to this host's network id will be loaded.
-        :param node_properties: A list of node property names to load into memory. If this is None (default), then all
-            properties are loaded.
-        :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all
-            properties are loaded.
-        """
-        cdef RDGLoadOptions opts
-        cdef vector[string] node_props
-        cdef vector[string] edge_props
-        # we need to generate a reference to a uint32_t in order to construct an
-        # optional[uint32_t] in opts
-        cdef uint32_t part_to_load
-        if partition_id_to_load is not None:
-            part_to_load = partition_id_to_load
-            opts.partition_id_to_load = part_to_load
-        if node_properties is not None:
-            node_props = _convert_string_list(node_properties)
-            opts.node_properties = &node_props
-        if edge_properties is not None:
-            edge_props = _convert_string_list(edge_properties)
-            opts.edge_properties = &edge_props
-        path_str = <string>bytes(str(path), "utf-8")
-        with nogil:
-            self.underlying = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
-
-    @staticmethod
-    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u):
-        f = <PropertyGraph>PropertyGraph.__new__(PropertyGraph)
-        f.underlying = u
-        return f
-
-    @staticmethod
-    def from_graphml(path, uint64_t chunk_size=25000):
-        """
-        Load a GraphML file into katana form
-
-        :param path: Path to source GraphML file.
-        :type path: str or Path
-        :param chunk_size: Chunk size for in memory representations during conversion. Generally this term can be
-            ignored, but it can be decreased to reduce memory usage when converting large inputs.
-        :type chunk_size: int
-        :returns: the new :py:class:`~katana.property_graph.PropertyGraph`
-        """
-        path_str = <string>bytes(str(path), "utf-8")
-        with nogil:
-            pg = handle_result_PropertyGraph(
-                handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False))
-                    .ToPropertyGraph())
-        return PropertyGraph.make(pg)
+    cdef _PropertyGraph* underlying_property_graph(self) nogil except NULL:
+        with gil:
+            raise NotImplementedError()
 
     def write(self, path = None, str command_line = "katana.property_graph.PropertyGraph"):
         """
@@ -113,19 +51,19 @@ cdef class PropertyGraph:
         command_line_str = <string>bytes(command_line, "utf-8")
         if path is None:
             with nogil:
-                handle_result_void(self.underlying.get().Commit(command_line_str))
+                handle_result_void(self.underlying_property_graph().Commit(command_line_str))
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
-            handle_result_void(self.underlying.get().Write(path_str, command_line_str))
+            handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str))
 
     cdef GraphTopology topology(PropertyGraph self):
-        return self.underlying.get().topology()
+        return self.underlying_property_graph().topology()
 
     cpdef uint64_t num_nodes(PropertyGraph self):
         return self.topology().num_nodes()
 
     def __eq__(self, PropertyGraph other):
-        return self.underlying.get().Equals(other.underlying.get())
+        return self.underlying_property_graph().Equals(other.underlying_property_graph())
 
     def __len__(self):
         """
@@ -149,13 +87,13 @@ cdef class PropertyGraph:
         """
         Return the `pyarrow` schema for the node properties stored with this graph.
         """
-        return pyarrow_wrap_schema(self.underlying.get().node_schema())
+        return pyarrow_wrap_schema(self.underlying_property_graph().node_schema())
 
     def edge_schema(self):
         """
         Return the `pyarrow` schema for the edge properties stored with this graph.
         """
-        return pyarrow_wrap_schema(self.underlying.get().edge_schema())
+        return pyarrow_wrap_schema(self.underlying_property_graph().edge_schema())
 
     @staticmethod
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1:
@@ -235,7 +173,7 @@ cdef class PropertyGraph:
         `get_node_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying.get().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
+            self.underlying_property_graph().GetNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema()))
         )
 
     def get_edge_property(self, prop):
@@ -253,7 +191,7 @@ cdef class PropertyGraph:
         `get_edge_property` should be used unless a chunked array is explicitly needed as non-chunked arrays are much more efficient.
         """
         return pyarrow_wrap_chunked_array(
-            self.underlying.get().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
+            self.underlying_property_graph().GetEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema()))
         )
 
     def add_node_property(self, table):
@@ -262,7 +200,7 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `len(self)`.
         """
-        handle_result_void(self.underlying.get().AddNodeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().AddNodeProperties(pyarrow_unwrap_table(table)))
 
     def upsert_node_property(self, table):
         """
@@ -270,7 +208,7 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `len(self)`.
         """
-        handle_result_void(self.underlying.get().UpsertNodeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().UpsertNodeProperties(pyarrow_unwrap_table(table)))
 
     def add_edge_property(self, table):
         """
@@ -278,7 +216,7 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `self.num_edges()`.
         """
-        handle_result_void(self.underlying.get().AddEdgeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().AddEdgeProperties(pyarrow_unwrap_table(table)))
 
     def upsert_edge_property(self, table):
         """
@@ -286,19 +224,19 @@ cdef class PropertyGraph:
 
         :param table: A pyarrow Table containing the properties (the names are taken from the table). The table must have length `self.num_edges()`.
         """
-        handle_result_void(self.underlying.get().UpsertEdgeProperties(pyarrow_unwrap_table(table)))
+        handle_result_void(self.underlying_property_graph().UpsertEdgeProperties(pyarrow_unwrap_table(table)))
 
     def remove_node_property(self, prop):
         """
         Remove a node property from the graph by name or index.
         """
-        handle_result_void(self.underlying.get().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveNodeProperty(PropertyGraph._property_name_to_id(prop, self.node_schema())))
 
     def remove_edge_property(self, prop):
         """
         Remove an edge property from the graph by name or index.
         """
-        handle_result_void(self.underlying.get().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
+        handle_result_void(self.underlying_property_graph().RemoveEdgeProperty(PropertyGraph._property_name_to_id(prop, self.edge_schema())))
 
     def mark_all_properties_persistent(self):
         """
@@ -306,7 +244,7 @@ cdef class PropertyGraph:
 
         :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
         """
-        self.underlying.get().MarkAllPropertiesPersistent()
+        self.underlying_property_graph().MarkAllPropertiesPersistent()
 
     def mark_node_properties_persistent(self, *node_props):
         """
@@ -316,7 +254,7 @@ cdef class PropertyGraph:
 
         :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
         """
-        handle_result_void(self.underlying.get().MarkNodePropertiesPersistent([<str>s for s in node_props]))
+        handle_result_void(self.underlying_property_graph().MarkNodePropertiesPersistent([<str>s for s in node_props]))
 
     def mark_edge_properties_persistent(self, *edge_props):
         """
@@ -327,7 +265,7 @@ cdef class PropertyGraph:
 
         :see: :py:meth:`~katana.property_graph.PropertyGraph.write`
         """
-        handle_result_void(self.underlying.get().MarkEdgePropertiesPersistent([<str>s for s in edge_props]))
+        handle_result_void(self.underlying_property_graph().MarkEdgePropertiesPersistent([<str>s for s in edge_props]))
 
     @property
     def path(self):
@@ -336,32 +274,83 @@ cdef class PropertyGraph:
 
         :rtype: str
         """
-        return str(self.underlying.get().rdg_dir(), encoding="UTF-8")
+        return str(self.underlying_property_graph().rdg_dir(), encoding="UTF-8")
 
     @path.setter
     def path(self, path):
-        handle_result_void(self.underlying.get().InformPath(bytes(str(path), encoding="UTF-8")))
+        handle_result_void(self.underlying_property_graph().InformPath(bytes(str(path), encoding="UTF-8")))
 
     @property
     def address(self):
         """
         Internal.
         """
-        return <uint64_t>self.underlying.get()
+        return <uint64_t>self.underlying_property_graph()
 
-{% call numba.class_("PropertyGraph", "_PropertyGraph") %}
-{% call numba.method_with_body("num_nodes", "uint64_t", []) %}
-    return self.topology().num_nodes()
-{% endcall %}
-{% call numba.method_with_body("num_edges", "uint64_t", []) %}
-    return self.topology().num_edges()
-{% endcall %}
-{% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
-    return self.topology().out_indices.get().Value(arg1)
-{% endcall %}
-{% call numba.method_with_body("get_edge_dest", "uint64_t", ["uint64_t"]) %}
-    return self.topology().out_dests.get().Value(arg1)
-{% endcall %}
-{% endcall %}
 
-{{numba.register_all_wrappers()}}
+cdef class PropertyGraph(PropertyGraphBase):
+    """
+    A property graph loaded into memory.
+    """
+
+    cdef _PropertyGraph * underlying_property_graph(self) nogil except NULL:
+        return self._underlying_property_graph.get()
+
+    def __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None):
+        """
+        __init__(self, path, node_properties=None, edge_properties=None, partition_id_to_load=None)
+
+        Load a property graph.
+
+        :param path: the path or URL from which to load the graph. This support local paths or s3 URLs.
+        :type path: str
+        :param partition_id_to_load: The partition number in the graph to load. If this is None (default), then the
+            partition corresponding to this host's network id will be loaded.
+        :param node_properties: A list of node property names to load into memory. If this is None (default), then all
+            properties are loaded.
+        :param edge_properties: A list of edge property names to load into memory. If this is None (default), then all
+            properties are loaded.
+        """
+        cdef RDGLoadOptions opts
+        cdef vector[string] node_props
+        cdef vector[string] edge_props
+        # we need to generate a reference to a uint32_t in order to construct an
+        # optional[uint32_t] in opts
+        cdef uint32_t part_to_load
+        if partition_id_to_load is not None:
+            part_to_load = partition_id_to_load
+            opts.partition_id_to_load = part_to_load
+        if node_properties is not None:
+            node_props = _convert_string_list(node_properties)
+            opts.node_properties = &node_props
+        if edge_properties is not None:
+            edge_props = _convert_string_list(edge_properties)
+            opts.edge_properties = &edge_props
+        path_str = <string>bytes(str(path), "utf-8")
+        with nogil:
+            self._underlying_property_graph = handle_result_PropertyGraph(_PropertyGraph.Make(path_str, opts))
+
+    @staticmethod
+    cdef PropertyGraph make(shared_ptr[_PropertyGraph] u):
+        f = <PropertyGraph>PropertyGraph.__new__(PropertyGraph)
+        f._underlying_property_graph = u
+        return f
+
+    @staticmethod
+    def from_graphml(path, uint64_t chunk_size=25000):
+        """
+        Load a GraphML file into katana form
+
+        :param path: Path to source GraphML file.
+        :type path: str or Path
+        :param chunk_size: Chunk size for in memory representations during conversion. Generally this term can be
+            ignored, but it can be decreased to reduce memory usage when converting large inputs.
+        :type chunk_size: int
+        :returns: the new :py:class:`~katana.property_graph.PropertyGraph`
+        """
+        path_str = <string>bytes(str(path), "utf-8")
+        with nogil:
+            pg = handle_result_PropertyGraph(
+                handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False))
+                    .ToPropertyGraph())
+        return PropertyGraph.make(pg)

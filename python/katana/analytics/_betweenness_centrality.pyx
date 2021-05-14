@@ -20,11 +20,11 @@ from libc.stdint cimport uint32_t
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -147,7 +147,7 @@ def betweenness_centrality(PropertyGraph pg, str output_property_name, sources =
     else:
         c_sources = BetweennessCentralitySources_from_int(int(sources))
     with nogil:
-        handle_result_void(BetweennessCentrality(pg.underlying.get(), output_property_name_cstr,
+        handle_result_void(BetweennessCentrality(pg.underlying_property_graph(), output_property_name_cstr,
                                                  c_sources, plan.underlying_))
 
 
@@ -155,7 +155,7 @@ def betweenness_centrality(PropertyGraph pg, str output_property_name, sources =
 #     output_property_name_bytes = bytes(output_property_name, "utf-8")
 #     output_property_name_cstr = <string>output_property_name_bytes
 #     with nogil:
-#         handle_result_assert(BetweennessCentralityAssertValid(pg.underlying.get(), output_property_name_cstr))
+#         handle_result_assert(BetweennessCentralityAssertValid(pg.underlying_property_graph(), output_property_name_cstr))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:
@@ -178,7 +178,7 @@ cdef class BetweennessCentralityStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_BetweennessCentralityStatistics(_BetweennessCentralityStatistics.Compute(
-                pg.underlying.get(), output_property_name_cstr))
+                pg.underlying_property_graph(), output_property_name_cstr))
 
     @property
     def max_centrality(self) -> float:

@@ -20,11 +20,11 @@ k-Core
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -116,7 +116,7 @@ def k_core(PropertyGraph pg, uint32_t k_core_number, str output_property_name, K
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        v = handle_result_void(KCore(pg.underlying.get(), k_core_number, output_property_name_str, plan.underlying_))
+        v = handle_result_void(KCore(pg.underlying_property_graph(), k_core_number, output_property_name_str, plan.underlying_))
     return v
 
 
@@ -128,7 +128,7 @@ def k_core_assert_valid(PropertyGraph pg, uint32_t k_core_number, str output_pro
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KCoreAssertValid(pg.underlying.get(), k_core_number, output_property_name_str))
+        handle_result_assert(KCoreAssertValid(pg.underlying_property_graph(), k_core_number, output_property_name_str))
 
 
 cdef _KCoreStatistics handle_result_KCoreStatistics(Result[_KCoreStatistics] res) nogil except *:
@@ -148,7 +148,7 @@ cdef class KCoreStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KCoreStatistics(_KCoreStatistics.Compute(
-                pg.underlying.get(), k_core_number, output_property_name_str))
+                pg.underlying_property_graph(), k_core_number, output_property_name_str))
 
     @property
     def number_of_nodes_in_kcore(self) -> uint64_t:

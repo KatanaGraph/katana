@@ -23,11 +23,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint64_t
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, Statistics, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 
 cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" nogil:
@@ -156,7 +156,7 @@ cdef class SsspPlan(Plan):
         else:
             if not isinstance(graph, PropertyGraph):
                 raise TypeError(graph)
-            self.underlying_ = _SsspPlan((<PropertyGraph>graph).underlying.get())
+            self.underlying_ = _SsspPlan((<PropertyGraph>graph).underlying_property_graph())
 
     Algorithm = _SsspAlgorithm
 
@@ -228,7 +228,7 @@ def sssp(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_void(Sssp(pg.underlying.get(), start_node, edge_weight_property_name_str,
+        handle_result_void(Sssp(pg.underlying_property_graph(), start_node, edge_weight_property_name_str,
                                 output_property_name_str, plan.underlying_))
 
 def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_property_name, str output_property_name):
@@ -241,7 +241,7 @@ def sssp_assert_valid(PropertyGraph pg, size_t start_node, str edge_weight_prope
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:
-        handle_result_assert(SsspAssertValid(pg.underlying.get(), start_node, edge_weight_property_name_str, output_property_name_str))
+        handle_result_assert(SsspAssertValid(pg.underlying_property_graph(), start_node, edge_weight_property_name_str, output_property_name_str))
 
 
 cdef _SsspStatistics handle_result_SsspStatistics(Result[_SsspStatistics] res) nogil except *:
@@ -265,7 +265,7 @@ cdef class SsspStatistics(Statistics):
         cdef string output_property_name_str = bytes(output_property_name, "utf-8")
         with nogil:
             self.underlying = handle_result_SsspStatistics(_SsspStatistics.Compute(
-                pg.underlying.get(), output_property_name_str))
+                pg.underlying_property_graph(), output_property_name_str))
 
     @property
     def max_distance(self) -> float:

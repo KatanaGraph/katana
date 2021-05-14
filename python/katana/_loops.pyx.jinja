@@ -25,13 +25,13 @@ from .cpp.libgalois cimport Worklist
 from katana.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
 from katana.numpy_structs import StructInstance
 
-from .datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
+from katana.datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
 {% for inst in type_instantiations -%}
-from .datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
+from katana.datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
 {% endfor -%}
-from .datastructures import InsertBag_uint64_t, LargeArray_uint64_t, InsertBag_Opaque16, StructInstance
-from .property_graph cimport PropertyGraph
-from .property_graph import PropertyGraph
+from katana.datastructures import InsertBag_uint64_t, LargeArray_uint64_t, InsertBag_Opaque16, StructInstance
+from katana._property_graph cimport PropertyGraph
+from katana._property_graph import PropertyGraph
 
 from katana.util.template_type import make_template_type1_with_opaque
 

@@ -3,11 +3,11 @@ from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.vector cimport vector
 from pyarrow.lib cimport to_shared
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -68,5 +68,5 @@ cdef shared_ptr[_PropertyGraph] handle_result_property_graph(Result[unique_ptr[_
 def subgraph_extraction(PropertyGraph pg, node_vec, SubGraphExtractionPlan plan = SubGraphExtractionPlan()) -> PropertyGraph:
     cdef vector[uint32_t] vec = [<uint32_t>n for n in node_vec]
     with nogil:
-        v = handle_result_property_graph(SubGraphExtraction(pg.underlying.get(), vec, plan.underlying_))
+        v = handle_result_property_graph(SubGraphExtraction(pg.underlying_property_graph(), vec, plan.underlying_))
     return PropertyGraph.make(v)

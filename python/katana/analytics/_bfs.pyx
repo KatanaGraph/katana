@@ -22,11 +22,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -163,7 +163,7 @@ def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan p
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_void(Bfs(pg.underlying.get(), start_node, output_property_name_cstr, plan.underlying_))
+        handle_result_void(Bfs(pg.underlying_property_graph(), start_node, output_property_name_cstr, plan.underlying_))
 
 def bfs_assert_valid(PropertyGraph pg, str property_name):
     """
@@ -175,7 +175,7 @@ def bfs_assert_valid(PropertyGraph pg, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(BfsAssertValid(pg.underlying.get(), output_property_name_cstr))
+        handle_result_assert(BfsAssertValid(pg.underlying_property_graph(), output_property_name_cstr))
 
 cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
@@ -193,7 +193,7 @@ cdef class BfsStatistics:
         output_property_name_bytes = bytes(property_name, "utf-8")
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
-            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying.get(), output_property_name_cstr))
+            self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying_property_graph(), output_property_name_cstr))
 
     @property
     def max_distance(self):

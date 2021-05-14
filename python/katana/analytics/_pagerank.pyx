@@ -25,11 +25,11 @@ Page Rank
 """
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -181,7 +181,7 @@ def pagerank(PropertyGraph pg, str output_property_name, PagerankPlan plan = Pag
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_void(Pagerank(pg.underlying.get(), output_property_name_cstr, plan.underlying_))
+        handle_result_void(Pagerank(pg.underlying_property_graph(), output_property_name_cstr, plan.underlying_))
 
 
 def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
@@ -193,7 +193,7 @@ def pagerank_assert_valid(PropertyGraph pg, str output_property_name):
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(PagerankAssertValid(pg.underlying.get(), output_property_name_cstr))
+        handle_result_assert(PagerankAssertValid(pg.underlying_property_graph(), output_property_name_cstr))
 
 
 cdef _PagerankStatistics handle_result_PagerankStatistics(Result[_PagerankStatistics] res) nogil except *:
@@ -216,7 +216,7 @@ cdef class PagerankStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_PagerankStatistics(_PagerankStatistics.Compute(
-                pg.underlying.get(), output_property_name_cstr))
+                pg.underlying_property_graph(), output_property_name_cstr))
 
     @property
     def max_rank(self) -> float:

@@ -24,11 +24,11 @@ from libc.stddef cimport ptrdiff_t
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -255,7 +255,7 @@ def connected_components(PropertyGraph pg, str output_property_name,
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        v = handle_result_void(ConnectedComponents(pg.underlying.get(), output_property_name_str, plan.underlying_))
+        v = handle_result_void(ConnectedComponents(pg.underlying_property_graph(), output_property_name_str, plan.underlying_))
     return v
 
 def connected_components_assert_valid(PropertyGraph pg, str output_property_name):
@@ -267,7 +267,7 @@ def connected_components_assert_valid(PropertyGraph pg, str output_property_name
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(ConnectedComponentsAssertValid(pg.underlying.get(), output_property_name_str))
+        handle_result_assert(ConnectedComponentsAssertValid(pg.underlying_property_graph(), output_property_name_str))
 
 cdef _ConnectedComponentsStatistics handle_result_ConnectedComponentsStatistics(
         Result[_ConnectedComponentsStatistics] res) nogil except *:
@@ -286,7 +286,7 @@ cdef class ConnectedComponentsStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_ConnectedComponentsStatistics(_ConnectedComponentsStatistics.Compute(
-                pg.underlying.get(), output_property_name_str))
+                pg.underlying_property_graph(), output_property_name_str))
 
     @property
     def total_components(self) -> uint64_t:

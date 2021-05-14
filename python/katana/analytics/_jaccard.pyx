@@ -20,11 +20,11 @@ Jaccard Similarity
 
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -134,7 +134,7 @@ def jaccard(PropertyGraph pg, size_t compare_node, str output_property_name,
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_void(Jaccard(pg.underlying.get(), compare_node, output_property_name_cstr, plan.underlying_))
+        handle_result_void(Jaccard(pg.underlying_property_graph(), compare_node, output_property_name_cstr, plan.underlying_))
 
 
 def jaccard_assert_valid(PropertyGraph pg, size_t compare_node, str output_property_name):
@@ -147,7 +147,7 @@ def jaccard_assert_valid(PropertyGraph pg, size_t compare_node, str output_prope
     output_property_name_bytes = bytes(output_property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(JaccardAssertValid(pg.underlying.get(), compare_node, output_property_name_cstr))
+        handle_result_assert(JaccardAssertValid(pg.underlying_property_graph(), compare_node, output_property_name_cstr))
 
 
 cdef _JaccardStatistics handle_result_JaccardStatistics(Result[_JaccardStatistics] res) nogil except *:
@@ -170,7 +170,7 @@ cdef class JaccardStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_JaccardStatistics(_JaccardStatistics.Compute(
-                pg.underlying.get(), compare_node, output_property_name_cstr))
+                pg.underlying_property_graph(), compare_node, output_property_name_cstr))
 
     @property
     def max_similarity(self):
@@ -188,5 +188,3 @@ cdef class JaccardStatistics:
         cdef ostringstream ss
         self.underlying.Print(ss)
         return str(ss.str(), "ascii")
-
-

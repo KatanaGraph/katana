@@ -22,11 +22,11 @@ The k-Truss is a maximal connected subgraph in which all edges are part of at le
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.string cimport string
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd.iostream cimport ostream, ostringstream
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -134,7 +134,7 @@ def k_truss(PropertyGraph pg, uint32_t k_truss_number, str output_property_name,
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        v = handle_result_void(KTruss(pg.underlying.get(),k_truss_number,output_property_name_str, plan.underlying_))
+        v = handle_result_void(KTruss(pg.underlying_property_graph(),k_truss_number,output_property_name_str, plan.underlying_))
     return v
 
 
@@ -146,7 +146,7 @@ def k_truss_assert_valid(PropertyGraph pg, uint32_t k_truss_number, str output_p
     """
     cdef string output_property_name_str = output_property_name.encode("utf-8")
     with nogil:
-        handle_result_assert(KTrussAssertValid(pg.underlying.get(), k_truss_number, output_property_name_str))
+        handle_result_assert(KTrussAssertValid(pg.underlying_property_graph(), k_truss_number, output_property_name_str))
 
 
 cdef _KTrussStatistics handle_result_KTrussStatistics(Result[_KTrussStatistics] res) nogil except *:
@@ -166,7 +166,7 @@ cdef class KTrussStatistics:
         cdef string output_property_name_str = output_property_name.encode("utf-8")
         with nogil:
             self.underlying = handle_result_KTrussStatistics(_KTrussStatistics.Compute(
-                pg.underlying.get(), k_truss_number, output_property_name_str))
+                pg.underlying_property_graph(), k_truss_number, output_property_name_str))
 
     @property
     def number_of_edges_left(self) -> uint64_t:

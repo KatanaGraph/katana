@@ -285,12 +285,12 @@ def call_raw_function_pointer(func_ptr, function_type, args, builder: ir.IRBuild
     return builder.call(ptr, args)
 
 
-def interpret_numba_wrapper_tables(tables, global_vars=None):
+def interpret_numba_wrapper_tables(tables, global_vars=None, override_module_name=None):
     for typ, with_dtype, table in tables:
         if with_dtype:
-            Type = DtypeNumbaPointerWrapper(typ)
+            Type = DtypeNumbaPointerWrapper(typ, override_module_name=override_module_name)
         else:
-            Type = SimpleNumbaPointerWrapper(typ)
+            Type = SimpleNumbaPointerWrapper(typ, override_module_name=override_module_name)
         interpret_numba_wrapper_table(Type, table)
         if global_vars:
             global_vars[typ.__name__ + "_numba_wrapper"] = Type

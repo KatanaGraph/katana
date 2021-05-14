@@ -19,10 +19,10 @@ Triangle Counting
 from libc.stdint cimport uint64_t
 from libcpp cimport bool
 
+from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
-from katana.property_graph cimport PropertyGraph
 
 from enum import Enum
 
@@ -191,5 +191,5 @@ def triangle_count(PropertyGraph pg,  TriangleCountPlan plan = TriangleCountPlan
     :return: The number of triangles found.
     """
     with nogil:
-        v = handle_result_int(TriangleCount(pg.underlying.get(), plan.underlying_))
+        v = handle_result_int(TriangleCount(pg.underlying_property_graph(), plan.underlying_))
     return v

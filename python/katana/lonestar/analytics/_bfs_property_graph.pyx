@@ -11,7 +11,7 @@ from katana.cpp.libgalois.Galois cimport do_all, iterate, loopname, no_pushes, s
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libstd cimport bind_leading
 from katana.cpp.libstd.atomic cimport atomic
-from katana.property_graph cimport PropertyGraph
+from katana._property_graph cimport PropertyGraph
 
 from katana.timer import StatTimer
 
@@ -155,6 +155,3 @@ def bfs(PropertyGraph graph, unsigned int source, str propertyName):
     except ValueError:
         pass # Ignore non-existance of the property.
     bfs_sync_pg(graph, source, bytes(propertyName, "utf-8"))
-
-
-

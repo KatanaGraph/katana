@@ -39,9 +39,10 @@ COPY packages /packages
 FROM pre_install AS test_python
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
 ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages"
+ARG PYTHON_PACKAGE="katana-python"
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
-    ${MAMBA_INSTALL} katana-python; \
+    ${MAMBA_INSTALL} ${PYTHON_PACKAGE}; \
     ${CONDA_CLEAN}
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
@@ -50,10 +51,12 @@ RUN set -eu ; . /activate_miniconda.sh; set -x ; \
 FROM pre_install AS test_tools
 ARG CONDA_CLEAN="conda clean --quiet --yes --all"
 ARG MAMBA_INSTALL="mamba install --quiet --yes --channel /packages"
+ARG TOOLS_PACKAGE="katana-tools"
+ARG TOOLS_TEST_COMMAND="graph-convert --version"
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
-    ${MAMBA_INSTALL} katana-tools; \
+    ${MAMBA_INSTALL} ${TOOLS_PACKAGE}; \
     ${CONDA_CLEAN}
 
 RUN set -eu ; . /activate_miniconda.sh; set -x ; \
-    graph-convert --version
+    ${TOOLS_TEST_COMMAND}

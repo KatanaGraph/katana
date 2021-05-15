@@ -414,9 +414,11 @@ setActiveThreads(1)
     )
 
 
-def setup(*, source_dir, package_name, doc_package_name, **kwargs):
+def setup(*, source_dir, package_name, doc_package_name, additional_requires=None, **kwargs):
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
+    if additional_requires:
+        requires.extend(additional_requires)
 
     source_dir = Path(source_dir).absolute()
 

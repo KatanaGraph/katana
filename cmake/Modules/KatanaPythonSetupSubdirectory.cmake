@@ -227,20 +227,24 @@ function(add_python_setuptools_target TARGET_NAME)
   _generate_build_configuration_json(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
 
   # TODO(amp): The RPATH of the installed python modules will contain a reference to the build
-  #  directory. This is not ideal and could cause confusion, but without depending on an
-  #  additional command line tool there isn't any real way to fix it.
+  # directory. This is not ideal and could cause confusion, but without depending on an
+  # additional command line tool there isn't any real way to fix it.
   install(
       CODE "execute_process(
                 COMMAND
-                  ${PYTHON_SETUP_COMMAND} install --prefix=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}
+                    ${PYTHON_SETUP_COMMAND} install --prefix=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}
                 WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
-                COMMAND_ERROR_IS_FATAL ANY)"
+                RESULT_VARIABLE EXIT_CODE)
+            if(EXIT_CODE)
+              message(FATAL_ERROR \"python install failed: code \${EXIT_CODE}\")
+            endif()"
       COMPONENT ${X_COMPONENT})
 
-  set_target_properties(${TARGET_NAME} PROPERTIES
-                        PYTHON_ENV_SCRIPT "${PYTHON_ENV_SCRIPT}"
-                        PYTHON_BINARY_DIR "${PYTHON_BINARY_DIR}"
-                        PYTHON_SETUP_COMMAND "${PYTHON_SETUP_COMMAND}")
+  set_target_properties(
+      ${TARGET_NAME} PROPERTIES
+      PYTHON_ENV_SCRIPT "${PYTHON_ENV_SCRIPT}"
+      PYTHON_BINARY_DIR "${PYTHON_BINARY_DIR}"
+      PYTHON_SETUP_COMMAND "${PYTHON_SETUP_COMMAND}")
 
   set(ENV_SCRIPT_STR "#!/bin/sh\n")
   foreach(dep IN LISTS X_DEPENDS TARGET_NAME)

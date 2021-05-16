@@ -23,6 +23,7 @@ add_unit_test(random)
 add_unit_test(result)
 add_unit_test(strings)
 add_unit_test(uri)
+add_unit_test(opaque-id)
 
 add_executable(result-bench result-bench.cpp)
 target_link_libraries(result-bench katana_support benchmark::benchmark)

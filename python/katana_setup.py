@@ -346,9 +346,11 @@ def cythonize(module_list, *, source_root, **kwargs):
 
     import Cython.Build
     import numpy
+    import pyarrow
 
     extension_options = load_lang_config("CXX")
     extension_options["include_dirs"].append(numpy.get_include())
+    extension_options["include_dirs"].append(pyarrow.get_include())
 
     if not extension_options["extra_compile_args"]:
         extension_options["extra_compile_args"] = ["-std=c++17", "-Werror"]

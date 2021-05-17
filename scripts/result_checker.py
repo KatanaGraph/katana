@@ -18,21 +18,17 @@ import sys
 import tempfile
 
 mismatch_printed = 0
+
+
 def print_mismatch(line1, line2):
-  global mismatch_printed
-  if mismatch_printed < 20:
-    print("ERROR: NOT MATCHED:\n\tExpected ({})\n\tFound ({})".format(line1.strip(), line2.strip()))
-  mismatch_printed += 1
+    global mismatch_printed
+    if mismatch_printed < 20:
+        print("ERROR: NOT MATCHED:\n\tExpected ({})\n\tFound ({})".format(line1.strip(), line2.strip()))
+    mismatch_printed += 1
+
 
 def check_results(
-    master_file,
-    other_files,
-    tolerance,
-    offset,
-    errors,
-    mrows,
-    global_error_squared,
-    num_nodes,
+    master_file, other_files, tolerance, offset, errors, mrows, global_error_squared, num_nodes,
 ):
 
     with open(master_file) as mfile, open(other_files) as ofile:
@@ -73,9 +69,7 @@ def check_results(
                 # TODO (Loc) make more general: deals with 2 fields in output (should
                 # optimally deal with arbitrary # of fields
                 elif len(split_line1) == 3:
-                    field_difference2 = abs(
-                        float(split_line1[2]) - float(split_line2[2])
-                    )
+                    field_difference2 = abs(float(split_line1[2]) - float(split_line2[2]))
                     if field_difference2 > tolerance:
                         print_mismatch(line1, line2)
                         errors = errors + 1
@@ -87,14 +81,7 @@ def check_results(
 
 
 def check_results_string_column(
-    masterFile,
-    otherFiles,
-    tolerance,
-    offset,
-    errors,
-    mrows,
-    global_error_squared,
-    num_nodes,
+    masterFile, otherFiles, tolerance, offset, errors, mrows, global_error_squared, num_nodes,
 ):
     """
     Called if first column is a string (other version casts into a long which
@@ -126,13 +113,11 @@ def check_results_string_column(
                 numeric_col = 2
             else:
                 print("FIELD COUNT ISSUE:", split_line1)
-            
 
             # check to make sure row matches exactly between the files
-            if all([ split_line1[i] == split_line2[i] for i in exact_cols ]):
+            if all([split_line1[i] == split_line2[i] for i in exact_cols]):
                 # absolute value of difference in fields
-                field_difference = abs(float(split_line1[numeric_col]) -
-                                       float(split_line2[numeric_col]))
+                field_difference = abs(float(split_line1[numeric_col]) - float(split_line2[numeric_col]))
                 global_error_squared += field_difference ** 2
                 num_nodes += 1
 
@@ -157,32 +142,12 @@ def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
         print("Checking", f, "offset =", offset)
         if not stringcolumn:
             offset, errors, mrows, global_error_squared, num_nodes = check_results(
-                master_file,
-                f,
-                tolerance,
-                offset,
-                errors,
-                mrows,
-                global_error_squared,
-                num_nodes,
+                master_file, f, tolerance, offset, errors, mrows, global_error_squared, num_nodes,
             )
         else:
             # first column is a string
-            (
-                offset,
-                errors,
-                mrows,
-                global_error_squared,
-                num_nodes,
-            ) = check_results_string_column(
-                master_file,
-                f,
-                tolerance,
-                offset,
-                errors,
-                mrows,
-                global_error_squared,
-                num_nodes,
+            (offset, errors, mrows, global_error_squared, num_nodes,) = check_results_string_column(
+                master_file, f, tolerance, offset, errors, mrows, global_error_squared, num_nodes,
             )
 
         if offset == -1:
@@ -223,37 +188,19 @@ if __name__ == "__main__":
     parser.add_argument("files", type=str, nargs="+", help="input + output files")
 
     parser.add_argument(
-        "-tolerance",
-        "-t",
-        type=float,
-        default=0.0001,
-        help="tolerance for difference in fields (error)",
+        "-tolerance", "-t", type=float, default=0.0001, help="tolerance for difference in fields (error)",
     )
     parser.add_argument(
         "-sort", "-s", type=bool, default=False, help="sort the generated output files",
     )
     parser.add_argument(
-        "-delete",
-        "-d",
-        type=bool,
-        nargs=1,
-        default=False,
-        help="delete the generated output files",
+        "-delete", "-d", type=bool, nargs=1, default=False, help="delete the generated output files",
     )
     parser.add_argument(
-        "-mean_tolerance",
-        "-m",
-        type=float,
-        default=0.0001,
-        help="tolerance for root mean square error",
+        "-mean_tolerance", "-m", type=float, default=0.0001, help="tolerance for root mean square error",
     )
     parser.add_argument(
-        "-stringcolumn",
-        "-c",
-        type=bool,
-        nargs=1,
-        default=False,
-        help="true if first column is a string",
+        "-stringcolumn", "-c", type=bool, nargs=1, default=False, help="true if first column is a string",
     )
 
     parsed_arguments = parser.parse_args()

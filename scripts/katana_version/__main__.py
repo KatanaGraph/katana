@@ -14,16 +14,10 @@ from typing import Iterable, Optional
 from packaging import version
 from packaging.version import InvalidVersion
 
-from . import CONFIG_VERSION_PATH, Configuration, git, Repo, StateError, SUBMODULE_PATH
-from .commands import capture_command, CommandError
+from . import CONFIG_VERSION_PATH, SUBMODULE_PATH, Configuration, Repo, StateError, git
+from .commands import CommandError, capture_command
 from .github import GithubFacade
-from .version import (
-    add_dev_to_version,
-    format_version_debian,
-    format_version_pep440,
-    get_explicit_version,
-    get_version,
-)
+from .version import add_dev_to_version, format_version_debian, format_version_pep440, get_explicit_version, get_version
 
 logger = logging.getLogger(__name__)
 

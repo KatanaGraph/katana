@@ -10,9 +10,9 @@ from __future__ import print_function
 import argparse
 import os
 import re
+import shutil
 import sys
 import tempfile
-import shutil
 
 FILENAME_RE = re.compile(
     r"""

@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os.path
 import shutil
 import subprocess
 import sys
 import tempfile
-import json
-
 from pathlib import Path
 from tempfile import TemporaryFile
 from zipfile import ZipFile

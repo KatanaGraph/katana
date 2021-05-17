@@ -6,8 +6,8 @@ from typing import Optional, Tuple, Union
 from packaging import version
 from packaging.version import Version
 
-from . import CONFIG_VERSION_PATH, Configuration, git, Repo, SUBMODULE_PATH
-from .commands import capture_command, CommandError
+from . import CONFIG_VERSION_PATH, SUBMODULE_PATH, Configuration, Repo, git
+from .commands import CommandError, capture_command
 
 __all__ = ["get_version", "format_version_pep440", "format_version_debian"]
 

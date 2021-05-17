@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Duplicate config options in pyproject.toml until all repos use pyproject.toml
-PYFMT="${PYFMT:-black} --line-length=120"
-ISORT="${ISORT:-isort} --profile=black --line-length=120"
+PYFMT="${PYFMT:-black}"
+ISORT="${ISORT:-isort}"
 
 set -eu
+
+GIT_ROOT=$(readlink -f $(dirname $0)/..)
 
 if [ $# -eq 0 ]; then
   echo "$(basename $0) [-fix] <paths>" >&2
@@ -18,19 +19,27 @@ if [ "$1" == "-fix" ]; then
 fi
 
 ROOTS="$@"
+FORMAT_ARGS="--config=${GIT_ROOT}/pyproject.toml"
+ISORT_ARGS="--settings-file=${GIT_ROOT}/pyproject.toml"
 
 FAILED=
-if [ -n "${FIX}" ]; then
-  ${PYFMT} "$@"
-  ${ISORT} "$@"
-else
-  if ! ${PYFMT} --check "$@"; then
-    FAILED=1
+
+# Handle arguments individually because Black treats multiple arguments as
+# paths within the Python package, which will cause errors when mixing Python
+# script directories with Python modules.
+for root in "$@"; do
+  if [ -n "${FIX}" ]; then
+    ${PYFMT} ${FORMAT_ARGS} "${root}"
+    ${ISORT} ${ISORT_ARGS} "${root}"
+  else
+    if ! ${PYFMT} ${FORMAT_ARGS} --check "${root}"; then
+      FAILED=1
+    fi
+    if ! ${ISORT} ${ISORT_ARGS} --diff --check "${root}"; then
+      FAILED=1
+    fi
   fi
-  if ! ${ISORT} --check "$@"; then
-    FAILED=1
-  fi
-fi
+done
 
 if [ -n "${FAILED}" ]; then
   exit 1

@@ -21,6 +21,7 @@ mismatch_printed = 0
 
 
 def print_mismatch(line1, line2):
+    # pylint: disable=global-statement
     global mismatch_printed
     if mismatch_printed < 20:
         print("ERROR: NOT MATCHED:\n\tExpected ({})\n\tFound ({})".format(line1.strip(), line2.strip()))
@@ -99,7 +100,7 @@ def check_results_string_column(
 
             if split_line1[0] == "":
                 print("ERROR: output longer than input")
-                return (0, errors, mrows)
+                return (0, errors, mrows, global_error_squared, num_nodes)
 
             if len(split_line1) != len(split_line2):
                 print_mismatch(line1, line2)
@@ -115,7 +116,7 @@ def check_results_string_column(
                 print("FIELD COUNT ISSUE:", split_line1)
 
             # check to make sure row matches exactly between the files
-            if all([split_line1[i] == split_line2[i] for i in exact_cols]):
+            if all(split_line1[i] == split_line2[i] for i in exact_cols):
                 # absolute value of difference in fields
                 field_difference = abs(float(split_line1[numeric_col]) - float(split_line2[numeric_col]))
                 global_error_squared += field_difference ** 2
@@ -158,14 +159,14 @@ def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
         print("\nRoot mean square error (for first field): ", rmse)
 
     if offset != -1:
-        mfile = open(master_file)
-        mfile.seek(offset)
-        old_mrows = mrows
-        for line in mfile:
-            mrows = mrows + 1
-        if mrows > old_mrows:
-            mrows = mrows - old_mrows
-            print("\nNo of offsets/rows missing: ", mrows)
+        with open(master_file) as mfile:
+            mfile.seek(offset)
+            old_mrows = mrows
+            for _ in mfile:
+                mrows = mrows + 1
+            if mrows > old_mrows:
+                mrows = mrows - old_mrows
+                print("\nNo of offsets/rows missing: ", mrows)
 
     if offset == -1:
         print("\nOffset not correct")
@@ -176,9 +177,8 @@ def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
     if (errors > 0) or (offset == -1) or (mrows > 0) or (rmse > mean_tolerance):
         print("\nFAILED\n")
         return 1
-    else:
-        print("\nSUCCESS\n")
-        return 0
+    print("\nSUCCESS\n")
+    return 0
 
 
 if __name__ == "__main__":
@@ -219,6 +219,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if parsed_arguments.sort:
+        # pylint: disable=consider-using-with
         temp_file = tempfile.NamedTemporaryFile(delete=True)
         cmd = ["sort", "-nu", "-o", temp_file.name]
         cmd += all_files

@@ -141,8 +141,7 @@ def get_version(
                 f"{env_version} does not match {computed_version}"
             )
         return env_version
-    else:
-        return computed_version
+    return computed_version
 
 
 def git_find_closest_core_branch(commit, repo: Repo):
@@ -190,8 +189,8 @@ def get_config_version(k_commit, repo: Repo, version_file, no_dev=False) -> vers
         if k_commit:
             version_str = capture_command("git", *git.dir_arg(repo), "show", "-p", f"{k_commit}:{CONFIG_VERSION_PATH}")
         else:
-            with open(repo.dir / CONFIG_VERSION_PATH, "rt") as version_file:
-                version_str = version_file.read()
+            with open(repo.dir / CONFIG_VERSION_PATH, "rt") as version_fi:
+                version_str = version_fi.read()
     elif version_file:
         # We have no git information. Wing it.
         with open(version_file, "rt") as version_fi:
@@ -213,7 +212,7 @@ def get_tag_version(commit, repo: Repo):
     tag_version = None
     version_tags = [m for m in (VERSION_TAG_RE.match(t) for t in git.get_tags_of(commit, repo)) if m]
     if len(version_tags) > 1:
-        logger.warning(f"There is more than one version tag at the given commit. Picking one arbitrarily.")
+        logger.warning("There is more than one version tag at the given commit. Picking one arbitrarily.")
     if version_tags:
         tag_version = version.Version(version_tags[0].group("version"))
     return tag_version

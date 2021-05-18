@@ -46,12 +46,7 @@ def compare(resultfile, truthfile):
     except FileNotFoundError:
         logging.error("missing either %s or %s", resultfile, truthfile)
         correct = False
-    except Exception as e:
-        logging.error("exception: %s", str(e))
-        traceback.print_exc()
-        correct = False
-    finally:
-        return correct
+    return correct
 
 
 def main(querylist, resultprefix, truthdir, delete):
@@ -84,9 +79,8 @@ def main(querylist, resultprefix, truthdir, delete):
     if failures > 0:
         print("\nFAILED (", failures, "/", (successes + failures), ")\n")
         return 1
-    else:
-        print("\nSUCCESS (", successes, ")\n")
-        return 0
+    print("\nSUCCESS (", successes, ")\n")
+    return 0
 
 
 if __name__ == "__main__":

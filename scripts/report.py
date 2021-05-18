@@ -7,6 +7,7 @@ import sys
 def main():
     class Row:
         def __init__(self):
+            self.header = None
             self.reset()
 
         def reset(self):
@@ -50,7 +51,7 @@ def main():
                 row.header = stat_token
 
             # stat lines. ignore HOST for shared-memory version
-            elif row.header != None:
+            elif row.header is not None:
                 loop_name = row.get(stat_token, "LOOP")
                 instance = row.get(stat_token, "INSTANCE")
                 th = row.get(stat_token, "THREAD")
@@ -60,7 +61,7 @@ def main():
                 cols.add(key)
                 row.r[key] = row.get(stat_token, "VAL")
 
-        except:
+        except IndexError:
             sys.stderr.write("Error parsing line: %s" % line)
             raise
 

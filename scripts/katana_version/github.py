@@ -22,8 +22,9 @@ class GithubFacade:
             return self.github.get_repo(f"{url.username}/{url.repository}")
         except GithubException as e:
             raise RuntimeError(
-                f"Failed to access Github repository {url.username}/{url.repository} (Did you provide a correct Github token or username/password?): {e.data}"
-            )
+                f"Failed to access Github repository {url.username}/{url.repository} "
+                f"(Did you provide a correct Github token or username/password?): {e.data}"
+            ) from e
 
     def create_pr(
         self, upstream_url: GitURL, origin_url: GitURL, branch: str, base: str, title: str, body: str = ""
@@ -32,14 +33,16 @@ class GithubFacade:
 
         upstream_repo = self._get_repo(upstream_url)
         print(
-            f"GITHUB: Creating PR on {upstream_repo.full_name} to merge {origin_url.username}/{origin_url.repository}:{branch} into {base}: {title}\n{body}"
+            f"GITHUB: Creating PR on {upstream_repo.full_name} to merge "
+            f"{origin_url.username}/{origin_url.repository}:{branch} into {base}: {title}\n{body}"
         )
         if self.config.dry_run:
             return Namespace(html_url="[Github PR URL]", base=Namespace(repo=self._get_repo(upstream_url)), number="NN")
         try:
             return upstream_repo.create_pull(head=f"{origin_url.username}:{branch}", base=base, title=title, body=body)
         except GithubException as e:
-            raise RuntimeError(f"Failed to create PR: {e.data}")
+            raise RuntimeError(f"Failed to create PR: {e.data}") from e
+        # pylint: disable=inconsistent-return-statements
 
     def create_tag(self, upstream_url: GitURL, commit: str, tag_name: str, message: str) -> Optional["GitRef"]:
         from github import GithubException
@@ -52,7 +55,10 @@ class GithubFacade:
             ref = upstream_repo.create_git_tag(tag_name, message, object=commit, type="commit")
             return upstream_repo.create_git_ref(f"refs/tags/{tag_name}", ref.sha)
         except GithubException as e:
-            raise RuntimeError(f"Failed to create tag {tag_name} at {commit} on {upstream_repo.full_name}: {e.data}")
+            raise RuntimeError(
+                f"Failed to create tag {tag_name} at {commit} on {upstream_repo.full_name}: {e.data}"
+            ) from e
+        # pylint: disable=inconsistent-return-statements
 
     def create_branch(self, url: GitURL, commit, branch_name: str) -> Optional["GitRef"]:
         from github import GithubException
@@ -60,11 +66,13 @@ class GithubFacade:
         repo = self._get_repo(url)
         print(f"GITHUB: Creating branch {branch_name} at {commit} on {repo.full_name}")
         if self.config.dry_run:
-            return
+            return None
         try:
             return repo.create_git_ref(f"refs/heads/{branch_name}", commit)
         except GithubException as e:
-            raise RuntimeError(f"Failed to create branch {branch_name} at {commit} on {repo.full_name}: {e.data}")
+            raise RuntimeError(
+                f"Failed to create branch {branch_name} at {commit} on {repo.full_name}: {e.data}"
+            ) from e
 
     def get_pr(
         self, url: GitURL, *, branch: Optional[str] = None, number: Optional[int] = None
@@ -77,14 +85,13 @@ class GithubFacade:
             try:
                 pulls = upstream_repo.get_pulls(head=f"{username}:{branch}")
             except GithubException as e:
-                raise RuntimeError(f"Failed to get PR for {upstream_repo.full_name}:{branch}: {e.data}")
+                raise RuntimeError(f"Failed to get PR for {upstream_repo.full_name}:{branch}: {e.data}") from e
             if pulls.totalCount == 0:
                 return None
-            else:
-                return pulls[0]
-        elif number is not None:
+            return pulls[0]
+        if number is not None:
             try:
                 return upstream_repo.get_pull(number=number)
             except GithubException as e:
-                raise RuntimeError(f"Failed to get PR {upstream_repo.full_name}#{number}: {e.data}")
+                raise RuntimeError(f"Failed to get PR {upstream_repo.full_name}#{number}: {e.data}") from e
         raise TypeError("branch or number is required")

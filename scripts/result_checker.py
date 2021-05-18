@@ -12,6 +12,7 @@
 #   ...
 
 import argparse
+import contextlib
 import os
 import subprocess
 import sys
@@ -132,7 +133,7 @@ def check_results_string_column(
     return (offset, errors, mrows, global_error_squared, num_nodes)
 
 
-def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
+def check(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
     offset = 0
     errors = 0
     mrows = 0
@@ -181,7 +182,7 @@ def main(master_file, all_files, tolerance, mean_tolerance, stringcolumn):
     return 0
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Check graph output results")
 
     # parse files and an optional tolerance
@@ -216,32 +217,34 @@ if __name__ == "__main__":
 
     if not all_files:
         print("no files to verify")
-        sys.exit(1)
-
-    if parsed_arguments.sort:
-        # pylint: disable=consider-using-with
-        temp_file = tempfile.NamedTemporaryFile(delete=True)
-        cmd = ["sort", "-nu", "-o", temp_file.name]
-        cmd += all_files
-        subprocess.check_call(cmd)
-        all_files = [temp_file.name]
-
-        # only delete if sorted; else you delete the thing you were going to
-        # compare with
-        if parsed_arguments.delete:
-            for f in all_files:
-                os.remove(f)
+        return 1
 
     tolerance = parsed_arguments.tolerance
     mean_tolerance = parsed_arguments.mean_tolerance
     stringcolumn = parsed_arguments.stringcolumn
 
-    ret = main(master_file, all_files, tolerance, mean_tolerance, stringcolumn)
+    try:
+        with contextlib.ExitStack() as stack:
+            if parsed_arguments.sort:
+                temp_file = stack.enter_context(tempfile.NamedTemporaryFile(delete=True))
+                cmd = ["sort", "-nu", "-o", temp_file.name]
+                cmd += all_files
+                subprocess.check_call(cmd)
+                all_files = [temp_file.name]
 
-    if not parsed_arguments.sort:
-        if parsed_arguments.delete:
+                # only delete if sorted; else you delete the thing you were
+                # going to compare with
+                if parsed_arguments.delete:
+                    for f in all_files:
+                        os.remove(f)
+
+            return check(master_file, all_files, tolerance, mean_tolerance, stringcolumn)
+
+    finally:
+        if not parsed_arguments.sort and parsed_arguments.delete:
             for f in all_files:
                 os.remove(f)
 
-    if ret:
-        sys.exit(1)
+
+if __name__ == "__main__":
+    sys.exit(main())

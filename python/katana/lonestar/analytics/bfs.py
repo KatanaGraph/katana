@@ -8,9 +8,6 @@ from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
 
-from ._bfs_property_graph import bfs as cython_bfs
-from ._bfs_property_graph import verify_bfs as cython_verify_bfs
-
 # Use the same infinity as C++ bfs
 distance_infinity = (2 ** 32) // 4
 
@@ -107,7 +104,6 @@ def main():
     parser.add_argument("--propertyName", type=str, default="NewProperty")
     parser.add_argument("--reportNode", type=int, default=1)
     parser.add_argument("--noverify", action="store_true", default=False)
-    parser.add_argument("--cython", action="store_true", default=False)
     parser.add_argument("--threads", "-t", type=int, default=1)
     parser.add_argument("input", type=str)
 
@@ -117,20 +113,14 @@ def main():
 
     graph = PropertyGraph(args.input)
 
-    if args.cython:
-        cython_bfs(graph, args.startNode, args.propertyName)
-    else:
-        bfs_sync_pg(graph, args.startNode, args.propertyName)
+    bfs_sync_pg(graph, args.startNode, args.propertyName)
 
     print("Node {}: {}".format(args.reportNode, graph.get_node_property(args.propertyName)[args.reportNode]))
 
     if not args.noverify:
         numNodeProperties = len(graph.node_schema())
         newPropertyId = numNodeProperties - 1
-        if args.cython:
-            cython_verify_bfs(graph, args.startNode, newPropertyId)
-        else:
-            verify_bfs(graph, args.startNode, newPropertyId)
+        verify_bfs(graph, args.startNode, newPropertyId)
 
 
 if __name__ == "__main__":

@@ -183,7 +183,7 @@ def provenance_subcommand(args):
 
     for var in environment_to_capture:
         if isinstance(var, re.Pattern):
-            vars = [k for k in environ.keys() if var.fullmatch(k)]
+            vars = [k for k in environ if var.fullmatch(k)]
         else:
             vars = [var]
         for var in vars:
@@ -347,7 +347,7 @@ def bump_checks(args):
     git.switch(current_branch, config.enterprise, config.dry_run)
     git.switch(current_branch, config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=False)
+    prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=False)
     next_version = version.Version(args.next_version)
 
     check_branch_version(current_branch, kind, next_version, prev_version)
@@ -370,7 +370,8 @@ def check_branch_version(
     expected_release_branch_name = "release/v" + ".".join(str(i) for i in next_version.release)
     if kind == BranchKind.RELEASE and current_branch != expected_release_branch_name:
         raise StateError(
-            f"The semantic version does not match the release branch name: {expected_release_branch_name} != {current_branch}"
+            "The semantic version does not match the release branch name: "
+            f"{expected_release_branch_name} != {current_branch}"
         )
     if prev_version and kind != BranchKind.VARIANT and prev_version.local:
         raise StateError(
@@ -381,13 +382,15 @@ def check_branch_version(
     if kind == BranchKind.VARIANT and next_version.local != current_branch.split("/", maxsplit=1)[1]:
         branch_variant = current_branch.split("/", maxsplit=1)[1]
         raise StateError(
-            f"The variant in the version and the variant in the branch name must be the same: {next_version.local} != {branch_variant}"
+            "The variant in the version and the variant in the branch name must be the same: "
+            f"{next_version.local} != {branch_variant}"
         )
     if prev_version and next_version <= prev_version:
         raise ValueError(f"The next version ({next_version}) must be greater than the current one ({prev_version})")
     if prev_version and kind == BranchKind.VARIANT and next_version.release != prev_version.release:
         raise ValueError(
-            "To change the version of a variant branch, merge master into the variant branch. Bumping the version directly on the variant branch is not allowed."
+            "To change the version of a variant branch, merge master into the variant branch. "
+            "Bumping the version directly on the variant branch is not allowed."
         )
 
 
@@ -417,7 +420,7 @@ def bump_subcommand(args):
 
     g = GithubFacade(config)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
+    prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
 
     current_branch = git.get_branch_checked_out(config.open)
@@ -546,11 +549,10 @@ def update_dependent_pr_subcommand(args):
         git.switch(open_original_branch, config.open, config.dry_run)
 
         return [f"TODO: Merge {enterprise_pr.html_url} as soon as possible."]
-    else:
-        raise StateError(
-            "PR does not have an acceptable 'After:' annotation. Only external PR references are supported. "
-            f"(Was '{after_match.group(0)}')"
-        )
+    raise StateError(
+        "PR does not have an acceptable 'After:' annotation. Only external PR references are supported. "
+        f"(Was '{after_match.group(0)}')"
+    )
 
 
 def setup_update_dependent_pr_subcommand(subparsers):
@@ -652,7 +654,7 @@ def release_subcommand(args):
     # Perform the checks that bump will do first. That way we will fail before tagging if possible.
     bump_checks(args)
     # Set some arguments for tag. This is a bit of a hack, but not worth the engineering to fix.
-    ver, variant = get_explicit_version(git.HEAD, False, config.open, config.version_file, no_dev=True)
+    ver, _ = get_explicit_version(git.HEAD, False, config.open, config.version_file, no_dev=True)
     args.version = str(ver)
     args.require_upstream = True
     tag_subcommand(args)
@@ -687,7 +689,7 @@ def release_branch_subcommand(args):
         git.switch("master", config.enterprise, config.dry_run)
     git.switch("master", config.open, config.dry_run)
 
-    prev_version, variant = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
+    prev_version, _ = get_explicit_version(git.HEAD, True, config.open, config.version_file, no_dev=True)
     next_version = version.Version(args.next_version)
     rc_version = version.Version(f"{prev_version}rc1")
 
@@ -874,7 +876,7 @@ This program assumes that your checkouts have the same name as the github reposi
         except (RuntimeError, ValueError, NotImplementedError, CommandError, InvalidVersion) as e:
             # If at first we don't succeed, fetch the upstream remote and try again.
             logger.debug("Exception", exc_info=True)
-            logger.warning(f"Something failed. Reattempting after fetching the upstream remote.")
+            logger.warning("Something failed. Reattempting after fetching the upstream remote.")
             fetch_upstream(args.configuration)
             try:
                 execute_subcommand(args)

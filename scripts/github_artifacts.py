@@ -58,9 +58,8 @@ def download_and_unpack(artifact, path, auth):
         for chunk in response.iter_content(chunk_size=1024):
             tmp.write(chunk)
         tmp.seek(0)
-        unzipper = ZipFile(tmp)
-        unzipper.extractall(path)
-        unzipper.close()
+        with ZipFile(tmp) as unzipper:
+            unzipper.extractall(path)
         print(f"Extracted artifact {artifact['name']} into {path}")
 
 
@@ -84,13 +83,13 @@ def list_cmd(args):
     auth = get_auth()
     if not auth:
         print(
-            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or GITHUB_TOKEN to be set to valid Github credentials."
+            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD "
+            "or GITHUB_TOKEN to be set to valid Github credentials."
         )
         return 2
 
     repo_prefix = f"https://api.github.com/repos/{repo}"
     page = 0
-    seen = 0
     while True:
         response = requests.get(
             f"{repo_prefix}/actions/artifacts",
@@ -105,8 +104,7 @@ def list_cmd(args):
         if data_len == 0:
             break
         if limit is not None:
-            if data_len > limit:
-                data_len = limit
+            data_len = min(data_len, limit)
             limit -= data_len
 
         json.dump(data[:data_len], sys.stdout, indent="  ")
@@ -133,7 +131,8 @@ def python_cmd(args):
     auth = get_auth()
     if not auth:
         print(
-            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or GITHUB_TOKEN to be set to valid Github credentials."
+            "This script requires GITHUB_USERNAME and either GITHUB_PASSWORD or "
+            "GITHUB_TOKEN to be set to valid Github credentials."
         )
         return 2
 
@@ -160,7 +159,7 @@ def python_cmd(args):
         if upload_docs:
             # TODO(amp): Add support for docs upload once we have a place to upload the docs.
             raise NotImplementedError("Uploading documentation is not yet supported.")
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         leave = True
         print()
         print(f"An upload failed, leaving downloaded files: {e}")

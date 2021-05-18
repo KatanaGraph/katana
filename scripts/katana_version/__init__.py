@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 def _maybe_path(s: Optional[Union[str, Path]]):
     if s is None:
         return None
-    else:
-        return Path(s).absolute()
+    return Path(s).absolute()
 
 
 class ConfigurationError(RuntimeError):
@@ -66,7 +65,8 @@ class Configuration:
                 self.version_from_environment_variable = Version(environ["KATANA_VERSION"])
         except InvalidVersion:
             logger.warning(
-                f"Failed to parse version provided in environment variable KATANA_VERSION: {environ.get('KATANA_VERSION')}"
+                "Failed to parse version provided in environment variable "
+                f"KATANA_VERSION: {environ.get('KATANA_VERSION')}"
             )
 
         self.version_file = None

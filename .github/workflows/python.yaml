@@ -187,11 +187,11 @@ jobs:
     - name: Check formating
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_format.sh python test
+        ./scripts/check_python_format.sh python test scripts
     - name: Check for lint
       run: |
         . .github/workflows/activate_miniconda.sh
-        ./scripts/check_python_lint.sh python test
+        ./scripts/check_python_lint.sh python test scripts
 
   build_and_test:
     runs-on: ${{matrix.os}}

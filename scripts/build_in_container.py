@@ -60,16 +60,16 @@ def main():
         has_image = len(check_output(["docker", "image", "ls", "--quiet", image_tag])) > 0
 
     if not has_image or not args.reuse:
-        docker_proc = Popen(["docker", "build", "-t", image_tag, "-"], stdin=PIPE)
-        with docker_proc.stdin, tarfile.open(fileobj=docker_proc.stdin, mode="w:gz") as context_tar:
-            context_tar.add((Path(__file__).parent / build_config["dockerfile"]).resolve(), arcname="Dockerfile")
-            for target_file, source_file in build_config["context_files"]:
-                if (source / source_file).exists():
-                    context_tar.add(source / source_file, arcname=target_file)
-        err_code = docker_proc.wait()
-        if err_code != 0:
-            print(f"Failed to build docker container.", file=stderr)
-            return err_code
+        with Popen(["docker", "build", "-t", image_tag, "-"], stdin=PIPE) as docker_proc:
+            with docker_proc.stdin, tarfile.open(fileobj=docker_proc.stdin, mode="w:gz") as context_tar:
+                context_tar.add((Path(__file__).parent / build_config["dockerfile"]).resolve(), arcname="Dockerfile")
+                for target_file, source_file in build_config["context_files"]:
+                    if (source / source_file).exists():
+                        context_tar.add(source / source_file, arcname=target_file)
+            err_code = docker_proc.wait()
+            if err_code != 0:
+                print("Failed to build docker container.", file=stderr)
+                return err_code
 
     print(f"Docker image tag: {image_tag}")
 

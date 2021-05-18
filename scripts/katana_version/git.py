@@ -73,8 +73,7 @@ class Repo:
     def remote_branch(remote, branch):
         if remote:
             return f"{remote}/{branch}"
-        else:
-            return branch
+        return branch
 
 
 def dir_arg(dir):
@@ -82,8 +81,7 @@ def dir_arg(dir):
         dir = dir.dir
     if dir is not None:
         return "-C", str(dir)
-    else:
-        return ()
+    return ()
 
 
 def get_working_tree(dir):
@@ -93,8 +91,7 @@ def get_working_tree(dir):
         return None
     if p:
         return Path(p)
-    else:
-        return None
+    return None
 
 
 def is_working_tree(dir):
@@ -110,14 +107,13 @@ def get_super_working_tree(dir):
     p = capture_command("git", *dir_arg(dir), "rev-parse", "--show-superproject-working-tree")
     if p:
         return Path(p)
-    else:
-        # An empty result means there is no super working tree
-        return None
+    # An empty result means there is no super working tree
+    return None
 
 
 def is_dirty(dir, exclude: Tuple[str] = ()):
     changes = capture_command("git", *dir_arg(dir), "diff-index", "HEAD", "--").splitlines(keepends=False)
-    for i, l in enumerate(list(changes)):
+    for _, l in enumerate(list(changes)):
         if not any(bool(re.search(str(excl), l)) for excl in exclude):
             return True
     return False
@@ -152,10 +148,9 @@ def get_branch_checked_out(dir, ref_only=False):
     branch = capture_command("git", *dir_arg(dir), "branch", "--show-current")
     if not branch and ref_only:
         return None
-    elif not branch:
+    if not branch:
         return get_hash("HEAD", dir)
-    else:
-        return branch
+    return branch
 
 
 def get_commit_parents(commit, dir):
@@ -190,8 +185,7 @@ def simplify_merge_commit(commit, dir):
         and all(is_ancestor_of(p, potential_simplification, dir) for p in parents)
     ):
         return potential_simplification
-    else:
-        return commit
+    return commit
 
 
 def merge_base(a, b, dir):

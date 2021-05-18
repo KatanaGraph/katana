@@ -34,32 +34,37 @@ disable = "all"
 #   "missing-module-docstring",
 #   "unused-wildcard-import",
 #   "wildcard-import",
-# 
+#
 #   # Allow linting without all modules being present
 #   "import-error",
 #   "no-name-in-module",
 #   "no-member",
-# 
+#    "c-extension-no-member",
+#
 #   "useless-super-delegation",
-# 
+#
 #   # Disable warnings on advanced but required features
-#   "no-value-for-parameter",  # False positives on decorators
+#   "no-value-for-parameter",   # False positives on decorators
 #   "exec-used",  # It is used
 #   "class-variable-slots-conflict",
 #   "import-outside-toplevel",  # We need conditional imports
-#   "unused-import",  # Some imports have important side-effects
-# 
+#   "unused-import",            # Some imports have important side-effects
+#
 #   # Too proscriptive
+#   "bad-option-value",      # Tolerate different versions of pylint
+#   "fixme",
+#   "invalid-name",          # Rules out single letter names
+#   "logging-fstring-interpolation",
+#   "protected-access",
+#   "redefined-builtin",     # Rules out dir and file as names
+#   "redefined-outer-name",  # Rules out local variable shadowing a function name
 #   "too-few-public-methods",
 #   "too-many-ancestors",
 #   "too-many-arguments",
 #   "too-many-branches",
 #   "too-many-locals",
 #   "too-many-statements",
-#   "protected-access",
-#   "fixme",
-#   "invalid-name",  # Rules out single letter names
-# 
+#
 #   # Conflicts with isort
 #   "wrong-import-order",
 #   "wrong-import-position",
@@ -90,7 +95,6 @@ enable = [
   "bad-mcs-classmethod-argument",
   "bad-mcs-method-argument",
   "bad-open-mode",
-  "bad-option-value",
   "bad-reversed-sequence",
   "bad-staticmethod-argument",
   "bad-str-strip-call",
@@ -101,7 +105,6 @@ enable = [
   "binary-op-exception",
   "boolean-datetime",
   "broad-except",
-  "c-extension-no-member",
   "catching-non-exception",
   "cell-var-from-loop",
   "chained-comparison",
@@ -188,7 +191,6 @@ enable = [
   "literal-comparison",
   "logging-format-interpolation",
   "logging-format-truncated",
-  "logging-fstring-interpolation",
   "logging-not-lazy",
   "logging-too-few-args",
   "logging-too-many-args",
@@ -248,8 +250,6 @@ enable = [
   "redeclared-assigned-name",
   "redefine-in-handler",
   "redefined-argument-from-local",
-  "redefined-builtin",
-  "redefined-outer-name",
   "redundant-keyword-arg",
   "redundant-unittest-assert",
   "reimported",

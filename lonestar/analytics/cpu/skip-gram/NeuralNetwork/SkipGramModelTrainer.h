@@ -12,7 +12,7 @@
 class SkipGramModelTrainer {
 private:
   /** Boundary for maximum exponent allowed */
-  const static uint32_t kMaxExp = 6;
+  const static int32_t kMaxExp = 6;
 
   const static uint32_t kMaxQw = 100000000;
   /** Size of the pre-cached exponent table */

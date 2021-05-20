@@ -11,7 +11,8 @@ void
 SkipGramModelTrainer::InitExpTable() {
   for (uint32_t i = 0; i < kExpTableSize; i++) {
     // Precompute the exp() table
-    exp_table_[i] = std::exp((i / (double)kExpTableSize * 2 - 1) * kMaxExp);
+    exp_table_[i] = std::exp(
+        ((double)i / (double)kExpTableSize * 2 - 1) * ((double)kMaxExp));
     // Precompute f(x) = x / (x + 1)
     exp_table_[i] /= exp_table_[i] + 1;
   }
@@ -58,10 +59,8 @@ SkipGramModelTrainer::SkipGramModelTrainer(
 void
 SkipGramModelTrainer::InitializeUnigramTable(
     std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
-  katana::GAccumulator<long long> train_words_pow;
+  katana::GAccumulator<double> train_words_pow;
   double power = 0.75f;
-
-  //katana::GAccumulator<uint32_t> count;
 
   katana::do_all(
       katana::iterate(huffman_nodes_map),
@@ -71,14 +70,12 @@ SkipGramModelTrainer::InitializeUnigramTable(
         }
         HuffmanCoding::HuffmanNode* node = pair.second;
         train_words_pow += std::pow(node->GetCount(), power);
-        //count += 1;
       });
 
   auto iter = huffman_nodes_map.begin();
   HuffmanCoding::HuffmanNode* last_node = iter->second;
   iter++;
-  double d1 =
-      pow(last_node->GetCount(), power) / ((double)train_words_pow.reduce());
+  double d1 = pow(last_node->GetCount(), power) / (train_words_pow.reduce());
   uint32_t i = 0;
 
   for (uint32_t a = 0; a < kTableSize; a++) {
@@ -92,8 +89,7 @@ SkipGramModelTrainer::InitializeUnigramTable(
         iter++;
       }
 
-      d1 += std::pow(next_node->GetCount(), power) /
-            ((double)train_words_pow.reduce());
+      d1 += std::pow(next_node->GetCount(), power) / (train_words_pow.reduce());
       last_node = next_node;
     }
 
@@ -108,9 +104,6 @@ SkipGramModelTrainer::InitializeSyn0() {
   //unsigned long long next_random = 1;
   next_random_ = 1;
   for (uint32_t a = 0; a < vocab_size_; a++) {
-    // Consume a random for fun
-    // Actually we do this to use up the injected </s> token
-    next_random_ = IncrementRandom(next_random_);
     for (uint32_t b = 0; b < embedding_size_; b++) {
       next_random_ = IncrementRandom(next_random_);
       syn0_[a][b] =
@@ -155,15 +148,10 @@ SkipGramModelTrainer::HandleNegativeSampling(
       label = 1;
     } else {
       (*next_random) = IncrementRandom(*next_random);
-      target = table_[(uint32_t)(
-          ((((*next_random) >> 16) % kTableSize) + kTableSize) % kTableSize)];
+      target = table_[(uint32_t)((*next_random) >> 16) % kTableSize];
 
       if (target == 0) {
-        target =
-            (uint32_t)(
-                (((*next_random) % (vocab_size_ - 1)) + (vocab_size_ - 1)) %
-                (vocab_size_ - 1)) +
-            1;
+        target = (uint32_t)((*next_random) % (vocab_size_ - 1) + 1);
       }
       if (target == huffman_node.GetIdx()) {
         continue;
@@ -177,6 +165,7 @@ SkipGramModelTrainer::HandleNegativeSampling(
       f += syn0_[l1][c] * syn1_neg_[l2][c];
     }
     double g;
+
     if (f > kMaxExp) {
       if (label == 0) {
         g = -alpha_;
@@ -291,8 +280,15 @@ SkipGramModelTrainer::Train(
     std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
     katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset) {
   katana::GAccumulator<uint64_t> accum;
+  uint32_t word_count = word_count_;
   katana::do_all(
       katana::iterate(random_walks), [&](std::vector<uint32_t>& walk) {
+        if (katana::ThreadPool::getTID() == 0) {
+          word_count_ = word_count + accum.reduce();
+          if (word_count_ - last_word_count_ > kLearningRateUpdateFrequency) {
+            UpdateAlpha();
+          }
+        }
         unsigned long long next_random = next_random_;
         std::vector<uint32_t> refined_walk;
         refined_walk.reserve(walk.size());
@@ -328,8 +324,5 @@ SkipGramModelTrainer::Train(
         next_random_ = next_random;
       });
 
-  word_count_ += accum.reduce();
-  if (word_count_ - last_word_count_ > kLearningRateUpdateFrequency) {
-    UpdateAlpha();
-  }
+  word_count_ = word_count + accum.reduce();
 }

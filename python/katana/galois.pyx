@@ -1,7 +1,7 @@
 from .cpp.libgalois.Galois cimport getVersion as c_getVersion
 from .cpp.libgalois.Galois cimport setActiveThreads as c_setActiveThreads
 
-_katana_runtime = _katana_runtime_wrapper()
+__all__ = ["set_active_threads", "get_version"]
 
 def set_active_threads(int n):
     return c_setActiveThreads(n)

@@ -144,6 +144,10 @@ def verify_pr(graph: PropertyGraph, property_name: str, topn: int):
 def main():
     import argparse
 
+    import katana.local
+
+    katana.local.initialize()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--propertyName", type=str, default="NewProperty")
     parser.add_argument("--maxIterations", type=int, default=100)

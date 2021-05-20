@@ -19,10 +19,14 @@ Galois Python also leverages numba to compile the "operators" which are run
 by Galois C++.
 """
 
-from typing import Dict, Type, Union
+import atexit
+from typing import Dict, Type
+
+__all__ = ["TsubaError", "GaloisError", "QueryError"]
+
 
 try:
-    # Initialize the galois runtime immediately.
+    # Trigger the load of katana libraries
     import katana.galois
 except ImportError as e:
     if "libnuma" in str(e):
@@ -31,18 +35,43 @@ except ImportError as e:
             "E.g., `sudo apt install libnuma1`."
         ) from e
 
-__all__ = ["TsubaError", "GaloisError", "QueryError"]
+
+# A global variable to hold the Katana runtime "Sys". The type will vary and has no methods. None means no Katana
+# runtime is initializes. Otherwise, the type can be used to determine which runtime is in use.
+_runtime_sys = None
+
+
+def set_runtime_sys(cls):
+    """
+    Create and register a runtime sys. The runtime sys will be deallocated at python exit.
+
+    Once this is called with a given runtime type, it can be called repeatedly with that type idempotently.
+    However, a call with a different runtime type will raise an exception.
+
+    :param cls:  The type to use as the runtime sys.
+    """
+    # pylint: disable=global-statement
+    global _runtime_sys
+    if _runtime_sys is None:
+        _runtime_sys = cls()
+    elif isinstance(_runtime_sys, cls):
+        # The initialized runtime is already of the correct type.
+        pass
+    else:
+        raise RuntimeError(f"Katana runtime {type(_runtime_sys).__name__} is already initialized")
+
+
+@atexit.register
+def reset_runtime_sys():
+    """
+    At interpreter exit, clear the runtime reference to trigger deallocation and shutdown.
+    """
+    # pylint: disable=global-statement
+    global _runtime_sys
+    _runtime_sys = None
+
 
 __version__ = katana.galois.get_version()
-
-
-def load_ipython_extension(ipython):
-    import cython
-
-    cython.load_ipython_extension(ipython)
-    from .ipython import GaloisMagics
-
-    ipython.register_magics(GaloisMagics)
 
 
 class TsubaError(IOError):

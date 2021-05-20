@@ -125,6 +125,10 @@ def verify_sssp(graph: PropertyGraph, _source_i: int, property_id: int):
 def main():
     import argparse
 
+    import katana.local
+
+    katana.local.initialize()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)
     parser.add_argument("--propertyName", type=str, default="NewProperty")

@@ -12,9 +12,6 @@ from katana.timer import StatTimer
 
 PointerPair = ctypes.c_void_p * 2
 
-_compilation_timer = StatTimer("Compilation", "Katana-Python")
-atexit.register(_compilation_timer.finalize)
-
 
 class Closure:
     """
@@ -226,7 +223,7 @@ class ClosureBuilder:
 
     def bind(self, args, unbound_argument_types):
         arg_types = tuple(typeof(v) for v in args)
-        with _compilation_timer, StatTimer("Compilation", self.__qualname__):
+        with StatTimer("Compilation", self.__qualname__):
             inst = self._generate(arg_types, unbound_argument_types)
             env = PointerPair()
             env_ptr = ctypes.addressof(env)

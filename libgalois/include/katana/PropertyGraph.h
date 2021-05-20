@@ -228,16 +228,6 @@ public:
 
   uint32_t partition_id() const { return rdg_.partition_id(); }
 
-  // Accessors for information in partition_metadata.
-  GraphTopology::nodes_range masters() const {
-    auto pm = rdg_.part_metadata();
-    return topology_.nodes(0, pm.num_owned_);
-  }
-  GraphTopology::nodes_range mirrors() const {
-    auto pm = rdg_.part_metadata();
-    return topology_.nodes(pm.num_owned_, pm.num_nodes_);
-  }
-
   // TODO(witchel): ChunkedArray is inherited from arrow::Table interface but this is
   // really a ChunkedArray of one chunk, change to arrow::Array.
   const std::shared_ptr<arrow::ChunkedArray>& host_to_owned_global_node_ids()

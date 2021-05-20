@@ -47,6 +47,8 @@ requirements:
 
 outputs:
   - name: katana-cpp
+    about:
+      summary: C++ library for parallel and distributed graph analytics and processing. (Open-source)
     files:
       - include/katana/**
       - include/tsuba/**
@@ -107,6 +109,8 @@ outputs:
         - test_app/test_app.cpp
       script: run_test_cpp.sh
   - name: katana-python
+    about:
+      summary: Python library for parallel and distributed graph analytics and processing. (Open-source)
     files:
       - lib/python*/site-packages/katana_python-*/**
     requirements:
@@ -170,6 +174,8 @@ outputs:
         - python/examples/jupyter
       script: run_test_python.sh
   - name: katana-tools
+    about:
+      summary: Tools for converting Katana graphs. (Open-source)
     files:
       - bin/graph-convert
       - bin/graph-convert-huge
@@ -218,7 +224,6 @@ about:
   home: https://katanagraph.com/
   license: BSD
   license_file: LICENSE.txt
-  summary: Library for building parallel graph algorithms.
 
 extra:
   repository: https://github.com/KatanaGraph/katana

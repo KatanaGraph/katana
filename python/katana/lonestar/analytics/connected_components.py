@@ -141,6 +141,10 @@ def verify_cc(graph: PropertyGraph, property_id: int):
 def main():
     import argparse
 
+    import katana.local
+
+    katana.local.initialize()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--algoType", type=str, default="push")
     parser.add_argument("--propertyName", type=str, default="NewProperty")

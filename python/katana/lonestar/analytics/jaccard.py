@@ -41,6 +41,10 @@ def jaccard(g, key_node, property_name):
 def main():
     import argparse
 
+    import katana.local
+
+    katana.local.initialize()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseNode", type=int, default=0)
     parser.add_argument("--reportNode", type=int, default=1)

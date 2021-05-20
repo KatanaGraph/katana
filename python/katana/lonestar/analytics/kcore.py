@@ -96,6 +96,10 @@ def verify_kcore(graph: PropertyGraph, property_name: str, k_core_num: int):
 def main():
     import argparse
 
+    import katana.local
+
+    katana.local.initialize()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--propertyName", type=str, default="NewProperty")
     parser.add_argument("--noverify", action="store_true", default=False)

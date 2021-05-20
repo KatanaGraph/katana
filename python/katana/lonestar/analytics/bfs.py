@@ -97,7 +97,10 @@ def bfs_sync_pg(graph: PropertyGraph, source, property_name):
 def main():
     import argparse
 
+    import katana.local
     from katana.galois import set_active_threads
+
+    katana.local.initialize()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--startNode", type=int, default=0)

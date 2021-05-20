@@ -218,7 +218,7 @@ private:
 class SkipGramModelTrainer {
 private:
   /** Boundary for maximum exponent allowed */
-  const static uint32_t kMaxExp = 6;
+  const static int32_t kMaxExp = 6;
 
   const static uint32_t kMaxQw = 100000000;
   /** Size of the pre-cached exponent table */
@@ -337,7 +337,7 @@ public:
   //initialize table_
   void InitializeUnigramTable(
       std::map<unsigned int, HuffmanCoding::HuffmanNode*>& huffman_nodes_map) {
-    katana::GAccumulator<long long> train_words_pow;
+    katana::GAccumulator<double> train_words_pow;
     double power = 0.75f;
 
     //katana::GAccumulator<uint32_t> count;
@@ -356,8 +356,7 @@ public:
     auto iter = huffman_nodes_map.begin();
     HuffmanCoding::HuffmanNode* last_node = iter->second;
     iter++;
-    double d1 =
-        pow(last_node->GetCount(), power) / ((double)train_words_pow.reduce());
+    double d1 = pow(last_node->GetCount(), power) / train_words_pow.reduce();
     uint32_t i = 0;
 
     for (uint32_t a = 0; a < kTableSize; a++) {
@@ -371,8 +370,7 @@ public:
           iter++;
         }
 
-        d1 += std::pow(next_node->GetCount(), power) /
-              ((double)train_words_pow.reduce());
+        d1 += std::pow(next_node->GetCount(), power) / train_words_pow.reduce();
         last_node = next_node;
       }
 
@@ -386,9 +384,6 @@ public:
   void InitializeSyn0() {
     next_random_ = 1;
     for (uint32_t a = 0; a < vocab_size_; a++) {
-      // Consume a random for fun
-      // Actually we do this to use up the injected </s> token
-      next_random_ = IncrementRandom(next_random_);
       for (uint32_t b = 0; b < embedding_size_; b++) {
         next_random_ = IncrementRandom(next_random_);
         syn0_[a][b] = (((next_random_ & 0xFFFF) / (double)65536) - 0.5f) /
@@ -477,8 +472,16 @@ public:
       std::map<uint32_t, HuffmanCoding::HuffmanNode*>& huffman_nodes_map,
       katana::gstl::Map<uint32_t, uint32_t>& vocab_multiset) {
     katana::GAccumulator<uint64_t> accum;
+    uint32_t word_count = word_count_;
     katana::do_all(
         katana::iterate(random_walks), [&](std::vector<uint32_t>& walk) {
+          if (katana::ThreadPool::getTID() == 0) {
+            word_count_ = word_count + accum.reduce();
+            if (word_count_ - last_word_count_ > kLearningRateUpdateFrequency) {
+              UpdateAlpha();
+            }
+          }
+
           unsigned long long next_random = next_random_;
           std::vector<uint32_t> refined_walk;
           refined_walk.reserve(walk.size());
@@ -514,10 +517,7 @@ public:
           next_random_ = next_random;
         });
 
-    word_count_ += accum.reduce();
-    if (word_count_ - last_word_count_ > kLearningRateUpdateFrequency) {
-      UpdateAlpha();
-    }
+    word_count_ = word_count + accum.reduce();
   }
 
   //generate random negative samples

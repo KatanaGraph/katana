@@ -29,7 +29,6 @@ set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of pro
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.
-# Putting this here is mostly just a placeholder so people know it's an option.
 set(BUILD_SHARED_LIBS YES CACHE BOOL "Build shared libraries. Default: YES")
 # This option is added by include(CTest). We define it here to let people know
 # that this is a standard option.
@@ -52,11 +51,6 @@ set(KATANA_NUM_TEST_GPUS "" CACHE STRING "Number of test GPUs to use (on a singl
 set(KATANA_USE_LCI OFF CACHE BOOL "Use LCI network runtime instead of MPI")
 set(KATANA_NUM_TEST_THREADS "" CACHE STRING "Maximum number of threads to use when running tests (default: number of physical core)")
 set(KATANA_AUTO_CONAN OFF CACHE BOOL "Automatically call conan from cmake rather than manually (experimental)")
-# KATANA_FORCE_NON_STATIC is a transitional flag intended to turn symbol export
-# errors into linker errors while the codebase transitions to hidden visibility
-# by default.
-set(KATANA_FORCE_NON_STATIC OFF CACHE BOOL "Allow libraries intended to be used statically to be built as shared if BUILD_SHARED_LIBS=ON")
-mark_as_advanced(KATANA_FORCE_NON_STATIC)
 
 cmake_host_system_information(RESULT KATANA_NUM_PHYSICAL_CORES QUERY NUMBER_OF_PHYSICAL_CORES)
 

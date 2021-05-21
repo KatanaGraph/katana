@@ -2,7 +2,7 @@
 set -e
 
 rm -rf build
-cmake -B build -S test_app -DBUILD_SHARED_LIBS=ON
+cmake -B build -S test_app
 cd build
 make
 ./test_app

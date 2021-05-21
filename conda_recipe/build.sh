@@ -22,7 +22,6 @@ echo "Building with parallelism: ${CMAKE_BUILD_PARALLEL_LEVEL}"
 cmake \
   $CMAKE_CCACHE_OPTION \
   $CMAKE_ARGS \
-  -DBUILD_SHARED_LIBS=ON \
   -DBUILD_TESTING=OFF \
   -DKATANA_LANG_BINDINGS=python \
   -DCMAKE_BUILD_TYPE=Release \

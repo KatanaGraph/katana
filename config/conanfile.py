@@ -24,9 +24,6 @@ class KatanaConan(ConanFile):
         "arrow:filesystem_layer": True,
         "arrow:parquet": True,
         "arrow:shared": False,
-        "arrow:with_brotli": True,
-        "arrow:with_snappy": True,
-        "arrow:with_zlib": True,
         # In general, we prefer to support as many compression algorithms as
         # possible to tolerate files created by others. bz2, lz4 and zstd cause
         # some issues with arrow/2.0.0 because arrow's cmake package doesn't
@@ -39,6 +36,19 @@ class KatanaConan(ConanFile):
         # "arrow:with_bz2": True,
         # "arrow:with_lz4": True,
         # "arrow:with_zstd": True,
+        "arrow:with_brotli": True,
+        "arrow:with_snappy": True,
+        "arrow:with_zlib": True,
+        # A recent change [1] to the conan boost/1.74 package adds CMake
+        # COMPILE_OPTIONS with quotes, which breaks the CMake function
+        # _generate_build_configuration_json(). Until this function is fixed,
+        # disable the proximate cause in the conan boost package.
+        #
+        # [1] https://github.com/conan-io/conan-center-index/pull/5420
+        #
+        # TODO(ddn): Fix _generate_build_configuration_json to handle values
+        # with quotes
+        "boost:without_stacktrace": True,
         "libcurl:shared": False,
     }
 

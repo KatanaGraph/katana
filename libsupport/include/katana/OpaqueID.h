@@ -181,6 +181,16 @@ public:
 
   using DifferenceType = std::make_signed_t<_Value>;
 
+  // iterator traits
+  using difference_type = DifferenceType;
+  using value_type = _IDType;
+  using pointer = _IDType*;
+  using reference = _IDType&;
+  using iterator_category = std::random_access_iterator_tag;
+
+  // must provide a dereference to be an iterator
+  reference operator*() { return *static_cast<_IDType*>(this); }
+
   _IDType& operator++() {
     ++this->value_;
     return *static_cast<_IDType*>(this);
@@ -201,6 +211,16 @@ public:
     _IDType ret{*static_cast<_IDType*>(this)};
     this->value_--;
     return ret;
+  }
+
+  _IDType& operator+=(const DifferenceType& rhs) {
+    this->value_ += rhs;
+    return *static_cast<_IDType*>(this);
+  }
+
+  _IDType& operator-=(const DifferenceType& rhs) {
+    this->value_ -= rhs;
+    return *static_cast<_IDType*>(this);
   }
 
   _IDType operator+(DifferenceType v) const {

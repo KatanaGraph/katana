@@ -15,7 +15,7 @@ Building Katana-Python
 ----------------------
 
 Install [libnuma](https://github.com/numactl/numactl) development files as required in your distribution
-(`sudo apt install libnuma-dev` for Ubuntu or Debian, `sudo yum install numactl-devel` for CentOS or RHEL).
+(`sudo apt install libnuma-dev`) for Ubuntu or Debian, `sudo yum install numactl-devel` for CentOS or RHEL).
 
 The easiest way to setup a Katana-Python build and development environment is Conda.
 [Install conda](https://docs.conda.io/en/latest/miniconda.html) if needed.

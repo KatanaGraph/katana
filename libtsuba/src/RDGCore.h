@@ -55,6 +55,15 @@ public:
     edge_properties_ = std::move(edge_properties);
   }
 
+  void drop_node_properties() {
+    std::vector<std::shared_ptr<arrow::Array>> empty;
+    node_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+  }
+  void drop_edge_properties() {
+    std::vector<std::shared_ptr<arrow::Array>> empty;
+    edge_properties_ = arrow::Table::Make(arrow::schema({}), empty, 0);
+  }
+
   const FileView& topology_file_storage() const {
     return topology_file_storage_;
   }

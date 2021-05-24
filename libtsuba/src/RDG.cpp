@@ -693,6 +693,16 @@ tsuba::RDG::edge_properties() const {
   return core_->edge_properties();
 }
 
+void
+tsuba::RDG::DropNodeProperties() {
+  core_->drop_node_properties();
+}
+
+void
+tsuba::RDG::DropEdgeProperties() {
+  core_->drop_edge_properties();
+}
+
 const tsuba::FileView&
 tsuba::RDG::topology_file_storage() const {
   return core_->topology_file_storage();

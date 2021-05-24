@@ -32,11 +32,11 @@ C++17 standard. See [README.md](README.md) for specific tested versions.
 
 ## Repository History
 
-This repository began life as a fork the [Galois project](https://github.com/IntelligentSoftwareSystems/Galois).
+This repository began life as a fork of the [Galois project](https://github.com/IntelligentSoftwareSystems/Galois).
 As part of the commercialization process, this repository was combined with proprietary parts of the Katana system and later disentangled.
 Disentangling the open-source and proprietary components required rewriting the git history of this repository.
 Because of this, commits from 2020-06-30 until 2020-10-29 (marked with `[REWRITTEN COMMIT: incomplete subtree]`) are unbuildable and inconsistent; they are included to provide context only.
-Commits from 2020-10-29 until 2020-01-01 are consistent (marked with `[REWRITTEN COMMIT: self-contained subtree]`), but may have removed changes mentioned in the commit messages.
+Commits from 2020-10-29 until 2021-01-01 are consistent (marked with `[REWRITTEN COMMIT: self-contained subtree]`), but may have removed changes mentioned in the commit messages.
 
 ## Specifying and Resolving C++ Dependencies
 
@@ -117,7 +117,7 @@ features or plugins to streamline this process (e.g.,
 
 # Build and Release Versions
 
-Release versions of Katana are semantic versions with an release candidate tag
+Release versions of Katana are semantic versions with a release candidate tag
 (`rc#`) appended for release candidates.
 
 Build/development versions of Katana are of the form:
@@ -436,7 +436,7 @@ If you need to update the inputs, they are referenced as
 in `.github/workflows`, `inputs/CMakeLists.txt` and
 `external/katana/python/katana/exmaple_utils.py`.  `vN` is a monotonically
 increasing version number. You can use a command `inputs/update_inputs.sh` to
-create create a new input collection. After creating the tar file, you will
+create a new input collection. After creating the tar file, you will
 need to upload the file to the public S3 bucket.
 
 Tests are just executables created by the CMake `add_test` command.  A test
@@ -483,7 +483,7 @@ in terms of feedback latency, to run these checks locally first.
  formed.
  * `scripts/check_cpp_format.sh [-fix] lib*`: applies `clang-format` to check style.
  * `scripts/check_go_format.sh [-fix] .`: applies `gofmt` to format go code.
- * `scripts/check_go_lint.sh .`: applies `golangci-lint` to check check style.
+ * `scripts/check_go_lint.sh .`: applies `golangci-lint` to check style.
  * `scripts/check_python_format.sh .`: applies `black` to format python code.
 
 We also have a `clang-tidy` and `pylint` configuration. Both these are useful

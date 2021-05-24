@@ -122,6 +122,12 @@ public:
   /// The edge properties
   const std::shared_ptr<arrow::Table>& edge_properties() const;
 
+  /// Remove all node properties
+  void DropNodeProperties();
+
+  /// Remove all edge properties
+  void DropEdgeProperties();
+
   const std::vector<std::shared_ptr<arrow::ChunkedArray>>& master_nodes()
       const {
     return master_nodes_;

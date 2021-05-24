@@ -559,6 +559,11 @@ public:
   Result<void> RemoveEdgeProperty(int i);
   Result<void> RemoveEdgeProperty(const std::string& prop_name);
 
+  /// Remove all node properties
+  void DropNodeProperties() { rdg_.DropNodeProperties(); }
+  /// Remove all edge properties
+  void DropEdgeProperties() { rdg_.DropEdgeProperties(); }
+
   PropertyView node_property_view() {
     return PropertyView{
         .g = this,

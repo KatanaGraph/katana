@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <iostream>
 
+#include <boost/math/tools/precision.hpp>
+
 namespace katana {
 
 /// Base class for opaque ID types.
@@ -174,6 +176,7 @@ struct OpaqueIDOrderedWithValue : public OpaqueIDOrdered<_IDType, _Value> {
 ///   ValueType)
 /// - Increment and decrement
 /// - Subtraction of two IDs to get a DifferenceType
+/// - Dereference
 template <typename _IDType, typename _Value>
 struct OpaqueIDLinear : public OpaqueIDOrderedWithValue<_IDType, _Value> {
 public:
@@ -235,6 +238,14 @@ public:
   /// ValueType.
   DifferenceType operator-(_IDType v) const {
     return DifferenceType(this->value()) - DifferenceType(v.value());
+  }
+
+  /// If your _Value is not a language-provided numeric type
+  /// you should specialize std::numeric_limits<_Value>, specialize this
+  /// sentinel function, or specialize boost::math::tools::max_value.
+  /// Otherwise this won't compile.
+  static constexpr _IDType sentinel() {
+    _IDType(boost::math::tools::max_value<_Value>());
   }
 };
 

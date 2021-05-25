@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 import sys
@@ -184,27 +183,38 @@ def check_cython_module(name, cython_code, python_code="", extension_options=Non
         requirement_cache.add(cython_code, python_code, extension_options)
 
 
+def parse_text(fi):
+    result = {}
+    for line in fi:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            key, value = line.split("=", maxsplit=1)
+        except ValueError as e:
+            raise ValueError("invalid language config file") from e
+        result[key] = value
+    return result
+
+
 def load_lang_config(lang):
     """
     Load the compilation configuration provided by CMake.
 
-    KatanaPythonSetupSubdirectory.cmake generates a JSON file that contains build and link flags that we read.
+    KatanaPythonSetupSubdirectory.cmake generates a text file that contains build and link flags that we read.
     They typically look like (more text elided with `[...]`, newlines inserted for clarity):
+    ::
 
-    .. code-block:: json
-
-        {
-        "COMPILER":"ccache;[conda environment]/bin/clang++",
-        "INCLUDE_DIRECTORIES":"[src dir]/libquery/include;[...]",
-        "COMPILE_DEFINITIONS":"JSON_USE_IMPLICIT_CONVERSIONS=1;[...]",
-        "LINK_OPTIONS":"-march=sandybridge;-mtune=generic;
+        COMPILER=ccache;[conda environment]/bin/clang++
+        INCLUDE_DIRECTORIES=[src dir]/libquery/include;[...]
+        COMPILE_DEFINITIONS=JSON_USE_IMPLICIT_CONVERSIONS=1;[...]
+        LINK_OPTIONS=-march=sandybridge;-mtune=generic;
             LINKER:-rpath=[build dir]/external/katana/libgalois;
             LINKER:-rpath=[build dir];
-            LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]",
-        "COMPILE_OPTIONS":"-g;-Wall;-Wextra;-Wno-deprecated-copy;[...]",
-        "LINKER_WRAPPER_FLAG":"-Xlinker; ",
-        "LINKER_WRAPPER_FLAG_SEP":""
-        }
+            LINKER:-rpath=/usr/local/katana/lib;[build dir]/external/katana/libgalois/libkatana_galois.so;[...]
+        COMPILE_OPTIONS=-g;-Wall;-Wextra;-Wno-deprecated-copy;[...]
+        LINKER_WRAPPER_FLAG=-Xlinker,
+        LINKER_WRAPPER_FLAG_SEP=,
 
     This is mostly semi-colon separated lists of command line parameters. However, CMake (3.17+) can generate arguments
     with LINKER: and/or SHELL: prefixes. CMake internally desugars these with CMAKE_<lang>_LINKER_WRAPPER_FLAG and
@@ -215,7 +225,7 @@ def load_lang_config(lang):
         return dict(compiler=[], linker=[], extra_compile_args=[], extra_link_args=[], include_dirs=[])
 
     with open(filename, "rt") as fi:
-        config = json.load(fi)
+        config = parse_text(fi)
     linker_wrapper_flag = split_cmake_list(config.get("LINKER_WRAPPER_FLAG", "-Wl,"))
     linker_wrapper_flag_sep = config.get("LINKER_WRAPPER_FLAG_SEP", ",")
 

@@ -1,15 +1,15 @@
 include_guard(DIRECTORY)
 
 function(_symlink_tree TARGET_NAME SOURCE DEST)
-  if (NOT IS_ABSOLUTE ${SOURCE})
+  if(NOT IS_ABSOLUTE ${SOURCE})
     set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE})
   endif()
 
-  if (NOT IS_ABSOLUTE ${DEST})
+  if(NOT IS_ABSOLUTE ${DEST})
     set(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/${DEST})
   endif()
 
-  if (IS_DIRECTORY ${SOURCE})
+  if(IS_DIRECTORY ${SOURCE})
     get_filename_component(dir_name ${SOURCE} NAME)
     string(APPEND dir_name "/")
     get_filename_component(parent ${SOURCE} DIRECTORY)
@@ -74,10 +74,13 @@ function(_symlink_tree TARGET_NAME SOURCE DEST)
   )
 endfunction()
 
-# Construct a JSON file containing the options used to build a library that
+# Construct a text file containing the options used to build a library that
 # depends on DEPENDS. CMake only knows the full flag sets at generation time,
 # meaning that we must generate a file and cannot just place things in
 # variables.
+#
+# The format of the text file is simply lines of KEY=VALUE with lines of
+# whitespace skipped.
 #
 # CMake (3.17+) can generate linker arguments with LINKER: and/or SHELL:
 # prefixes. CMake internally desugars these with
@@ -86,7 +89,7 @@ endfunction()
 # desugaring described in
 # https://cmake.org/cmake/help/latest/command/target_link_options.html is
 # reimplemented in katana_setup.py when the JSON file is read.
-function(_generate_build_configuration_json)
+function(_generate_build_configuration_txt)
   set(no_value_options)
   set(one_value_options FILE_PREFIX)
   set(multi_value_options DEPENDS)
@@ -128,16 +131,16 @@ function(_generate_build_configuration_json)
 
   # TODO(amp): It might should be possible to use generator expressions to build actual JSON lists instead of string
   #  containing cmake lists. However it's not clear this is actually better.
-  file(GENERATE OUTPUT ${X_FILE_PREFIX}$<COMPILE_LANGUAGE>.json
-       CONTENT "{
-\"COMPILER\":\"${COMPILER}\",
-\"INCLUDE_DIRECTORIES\":\"$<REMOVE_DUPLICATES:${INCLUDE_DIRECTORIES}>\",
-\"COMPILE_DEFINITIONS\":\"$<REMOVE_DUPLICATES:${COMPILE_DEFINITIONS}>\",
-\"LINK_OPTIONS\":\"${LINK_OPTIONS}\",
-\"COMPILE_OPTIONS\":\"${COMPILE_OPTIONS}\",
-\"LINKER_WRAPPER_FLAG\":\"$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG}>\",
-\"LINKER_WRAPPER_FLAG_SEP\":\"$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG_SEP}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG_SEP}>\"
-}")
+  file(GENERATE OUTPUT ${X_FILE_PREFIX}$<COMPILE_LANGUAGE>.txt
+       CONTENT "
+COMPILER=${COMPILER}
+INCLUDE_DIRECTORIES=$<REMOVE_DUPLICATES:${INCLUDE_DIRECTORIES}>
+COMPILE_DEFINITIONS=$<REMOVE_DUPLICATES:${COMPILE_DEFINITIONS}>
+LINK_OPTIONS=${LINK_OPTIONS}
+COMPILE_OPTIONS=${COMPILE_OPTIONS}
+LINKER_WRAPPER_FLAG=$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG}>
+LINKER_WRAPPER_FLAG_SEP=$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_LINKER_WRAPPER_FLAG_SEP}>$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_LINKER_WRAPPER_FLAG_SEP}>
+")
 endfunction()
 
 function(add_python_setuptools_target TARGET_NAME)
@@ -152,7 +155,7 @@ function(add_python_setuptools_target TARGET_NAME)
     set(PYTHON_SETUP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
 
-  if (NOT X_COMPONENT)
+  if(NOT X_COMPONENT)
     set(X_COMPONENT python)
   endif()
 
@@ -174,10 +177,10 @@ function(add_python_setuptools_target TARGET_NAME)
 
   # TODO(amp): this only supports the environment variable CMAKE_BUILD_PARALLEL_LEVEL as a way to do parallel builds.
   #  and CMAKE_BUILD_PARALLEL_LEVEL must be set for both cmake configure and build phases.
-  #  -j will not propogate into python builds and if CMAKE_BUILD_PARALLEL_LEVEL varies then only some things will be
+  #  -j will not propagate into python builds and if CMAKE_BUILD_PARALLEL_LEVEL varies then only some things will be
   #  in parallel. Parallel or not will not affect correctness however.
 
-  if (ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+  if(ENV{CMAKE_BUILD_PARALLEL_LEVEL})
     set(parallel --parallel $ENV{CMAKE_BUILD_PARALLEL_LEVEL})
   endif()
   set(quiet "")
@@ -190,7 +193,7 @@ function(add_python_setuptools_target TARGET_NAME)
 
   foreach(dep IN LISTS X_DEPENDS)
     get_target_property(dir ${dep} PYTHON_BINARY_DIR)
-    if (dir)
+    if(dir)
       string(APPEND PYTHONPATH ":${dir}/python")
     endif()
   endforeach()
@@ -200,8 +203,8 @@ function(add_python_setuptools_target TARGET_NAME)
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=${PYTHONPATH}"
       # Reference generated json files which contain compiler flags, etc.
-      "KATANA_CXX_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_CXX.json"
-      "KATANA_C_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_C.json"
+      "KATANA_CXX_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_CXX.txt"
+      "KATANA_C_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_C.txt"
       # Pass katana version
       "KATANA_VERSION=${KATANA_VERSION}"
       "KATANA_COPYRIGHT_YEAR=${KATANA_COPYRIGHT_YEAR}"
@@ -224,7 +227,7 @@ function(add_python_setuptools_target TARGET_NAME)
     add_dependencies(${TARGET_NAME} ${X_DEPENDS})
   endif()
 
-  _generate_build_configuration_json(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
+  _generate_build_configuration_txt(FILE_PREFIX ${TARGET_NAME}_ DEPENDS ${X_DEPENDS})
 
   # TODO(amp): The RPATH of the installed python modules will contain a reference to the build
   # directory. This is not ideal and could cause confusion, but without depending on an
@@ -249,7 +252,7 @@ function(add_python_setuptools_target TARGET_NAME)
   set(ENV_SCRIPT_STR "#!/bin/sh\n")
   foreach(dep IN LISTS X_DEPENDS TARGET_NAME)
     get_target_property(dir ${dep} PYTHON_BINARY_DIR)
-    if (dir)
+    if(dir)
       string(APPEND ENV_SCRIPT_STR "\
 for f in ${dir}/build/lib*; do
   export PYTHONPATH=$f\${PYTHONPATH:+:\$PYTHONPATH}
@@ -306,7 +309,7 @@ function(add_python_setuptools_docs TARGET_NAME)
   get_target_property(PYTHON_SETUP_COMMAND ${TARGET_NAME} PYTHON_SETUP_COMMAND)
   get_target_property(PYTHON_BINARY_DIR ${TARGET_NAME} PYTHON_BINARY_DIR)
 
-  if (PY_SPHINX)
+  if(PY_SPHINX)
     add_custom_target(
         ${TARGET_NAME}_docs
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYTHON_BINARY_DIR}/build/sphinx

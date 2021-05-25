@@ -35,7 +35,6 @@ requirements:
     - arrow-cpp {{ arrow_cpp }}
     - backward-cpp>=1.4
     - boost-cpp>=1.74
-    - elfutils
     - fmt>=6.2.1
     - libcurl>=7.66
     - libxml2>=2.9.10
@@ -64,7 +63,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
@@ -78,7 +76,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
@@ -95,7 +92,6 @@ outputs:
         - openblas
         - libcurl
         - backward-cpp
-        - elfutils
         - libxml2
     run_exports:
       - {{ pin_subpackage('katana-cpp', max_pin='x.x.x') }}
@@ -120,7 +116,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
@@ -140,7 +135,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
@@ -187,7 +181,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
@@ -201,7 +194,6 @@ outputs:
         - arrow-cpp {{ arrow_cpp }}
         - backward-cpp>=1.4
         - boost-cpp>=1.74
-        - elfutils
         - fmt>=6.2.1
         - libcurl>=7.66
         - llvm>=8

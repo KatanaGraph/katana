@@ -18,7 +18,6 @@ dependencies:
  - cython>=0.29.12
  - doxygen
  - eigen
- - elfutils
  - fmt>=6.2.1
  - isort
  - jinja2

@@ -245,7 +245,7 @@ public:
   /// sentinel function, or specialize boost::math::tools::max_value.
   /// Otherwise this won't compile.
   static constexpr _IDType sentinel() {
-    _IDType(boost::math::tools::max_value<_Value>());
+    return _IDType(boost::math::tools::max_value<_Value>());
   }
 };
 

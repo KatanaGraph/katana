@@ -27,6 +27,12 @@ struct TestLongOrdered : public katana::OpaqueIDLinear<TestLongOrdered, long> {
 static_assert(sizeof(TestLongOrdered) == sizeof(long));
 static_assert(alignof(TestLongOrdered) == alignof(long));
 
+// Make sure sentinel is okay
+static_assert(
+    std::is_same_v<decltype(TestCharOrdered::sentinel()), TestCharOrdered>);
+static_assert(
+    std::is_same_v<decltype(TestLongOrdered::sentinel()), TestLongOrdered>);
+
 int
 main() {
   return 0;

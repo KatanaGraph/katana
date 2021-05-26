@@ -13,6 +13,16 @@ struct ToArrayVisitor {
   using ReturnType = std::shared_ptr<arrow::Array>;
   using ResultType = katana::Result<ReturnType>;
   template <typename ArrowType, typename BuilderType>
+  arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
+    std::shared_ptr<arrow::Array> array;
+    auto res = builder->Finish(&array);
+    if (!res.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "arrow builder finish: {}", res);
+    }
+    return array;
+  }
+  template <typename ArrowType, typename BuilderType>
   arrow::enable_if_t<
       arrow::is_number_type<ArrowType>::value ||
           arrow::is_boolean_type<ArrowType>::value ||

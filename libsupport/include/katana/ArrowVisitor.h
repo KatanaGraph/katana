@@ -154,6 +154,7 @@ VisitArrowInternal(
     TYPE_CASE(LARGE_STRING)
     TYPE_CASE(STRUCT)
     TYPE_CASE(LARGE_LIST)
+    TYPE_CASE(NA)
 #undef TYPE_CASE
   default:
     return KATANA_ERROR(
@@ -219,7 +220,6 @@ public:
 
   AppendScalarToBuilder(arrow::ArrayBuilder* builder) : builder_(builder) {
     KATANA_LOG_DEBUG_ASSERT(builder_);
-    KATANA_LOG_DEBUG_ASSERT(builder_->type()->id() != arrow::Type::NA);
   }
 
   Result<void> AppendNull() {
@@ -228,6 +228,11 @@ public:
           katana::ErrorCode::ArrowError, "failed to allocate table: {}", st);
     }
     return ResultSuccess();
+  }
+
+  template <typename ArrowType, typename ScalarType>
+  arrow::enable_if_null<ArrowType, ResultType> Call(const ScalarType&) {
+    return AppendNull();
   }
 
   template <typename ArrowType, typename ScalarType>

@@ -280,18 +280,7 @@ public:
   /// parts of the original read location of the graph.
   Result<void> Commit(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
-  Result<void> InformPath(const std::string& input_path) {
-    if (!rdg_.rdg_dir().empty()) {
-      KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
-    }
-    auto uri_res = katana::Uri::Make(input_path);
-    if (!uri_res) {
-      return uri_res.error();
-    }
-
-    rdg_.set_rdg_dir(uri_res.value());
-    return ResultSuccess();
-  }
+  Result<void> InformPath(const std::string& input_path);
 
   /// Determine if two PropertyGraphs are Equal
   bool Equals(const PropertyGraph* other) const;

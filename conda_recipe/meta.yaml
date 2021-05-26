@@ -6,7 +6,7 @@ source:
   path: ../
 
 build:
-  number: 10
+  number: 0
   script_env:
     - KATANA_VERSION
 
@@ -61,18 +61,6 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
-        - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - libxml2>=2.9.10
-        - llvm>=8
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
       host:
         - {{ cdt('numactl-devel') }}
         - arrow-cpp {{ arrow_cpp }}
@@ -92,7 +80,6 @@ outputs:
         - arrow-cpp
         - fmt
         - nlohmann_json
-        - openblas
         - libcurl
         - backward-cpp
         - elfutils
@@ -117,38 +104,7 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
-        - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - libxml2>=2.9.10
-        - llvm>=8
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
-        - jinja2
-        - cython>=0.29.12
-        - pyarrow {{ arrow_cpp }}
-        - numba>=0.50,<1.0a0
-        - python {{ python }}
-        - sphinx>=3.5.1
       host:
-        - {{ cdt('numactl-devel') }}
-        - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - libxml2>=2.9.10
-        - llvm>=8
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - jinja2
         - cython>=0.29.12
@@ -158,10 +114,9 @@ outputs:
         - sphinx>=3.5.1
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
-        - {{ pin_compatible('numba') }}
-        - {{ pin_compatible('pyarrow') }}
-        - {{ pin_compatible('numpy') }}
-        - python {{ python }}
+        - numba
+        - numpy
+        - pyarrow
     run_exports:
       - {{ pin_subpackage('katana-python', max_pin='x.x.x') }}
     test:
@@ -184,32 +139,7 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
-        - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - libxml2>=2.9.10
-        - llvm>=8
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
       host:
-        - {{ cdt('numactl-devel') }}
-        - arrow-cpp {{ arrow_cpp }}
-        - backward-cpp>=1.4
-        - boost-cpp>=1.74
-        - elfutils
-        - fmt>=6.2.1
-        - libcurl>=7.66
-        - llvm>=8
-        - libxml2>=2.9.10
-        - ncurses>=6.1
-        - nlohmann_json>=3.7.3
-        - openblas>=0.3.12
-        - zlib>=1.2.11
         - {{ pin_subpackage('katana-cpp', exact=True) }}
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
@@ -218,7 +148,6 @@ outputs:
       commands:
         - graph-convert --help > /dev/null
         - graph-properties-convert --help > /dev/null
-  # TODO(amp): We could have a katana-apps package here, but I don't think it's worth the time to setup and build.
 
 about:
   home: https://katanagraph.com/

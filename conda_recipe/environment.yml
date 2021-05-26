@@ -5,7 +5,6 @@ channels:
  - conda-forge
 dependencies:
  - arrow-cpp<3.0.0a0
- - awscli
  - backward-cpp>=1.4
  - benchmark
  - black=19.10

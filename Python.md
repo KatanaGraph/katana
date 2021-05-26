@@ -47,7 +47,7 @@ resides, and you wish to build Katana in some `BUILD_DIR`.
 ```Shell
 BUILD_DIR=<path-to-your-build-dir>
 mkdir -p $BUILD_DIR
-cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python -DBUILD_SHARED_LIBS=ON
+cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python
 ```
 
 This will build Katana-Python and place the artifacts in `$BUILD_DIR/katana_python_build/build/lib.*`.
@@ -63,7 +63,7 @@ Building Documentation
 To build the C++ (Doxygen) and Python (Sphinx) documentation, add `-DKATANA_DOCS=ON` to the `cmake` command making the full command:
 
 ```shell
-cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python -DBUILD_SHARED_LIBS=ON -DKATANA_DOCS=ON
+cmake -S $SRC_DIR -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DKATANA_LANG_BINDINGS=python -DKATANA_DOCS=ON
 ```
 
 Then make the documentation using:

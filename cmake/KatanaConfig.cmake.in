@@ -35,7 +35,6 @@ if (@NUMA_FOUND@)
   include("${KATANA_CMAKE_DIR}/FindNUMA.cmake")
 endif()
 
-find_dependency(AWSSDK REQUIRED COMPONENTS transfer)
 find_dependency(nlohmann_json REQUIRED)
 find_dependency(CURL REQUIRED)
 
@@ -57,7 +56,6 @@ if (NOT Katana::galois)
 endif()
 
 check_required_components(Boost)
-check_required_components(AWSSDK)
 check_required_components(nlohmann_json)
 check_required_components(Backward)
 

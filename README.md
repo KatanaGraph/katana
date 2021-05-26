@@ -111,8 +111,6 @@ cmake --build $BUILD_DIR <app-executable-name> --parallel
 You can also build everything by running `make -j` in the top-level of build directory, but that may
 take a lot of time.
 
-Setting the `BUILD_SHARED_LIBS` to `ON` when calling CMake will make the core runtime library be built as a shared object instead of a static library.
-
 The tests for the core runtime will be built by default when you run `make`
 with no target specified. They can be also built explicitly with:
 

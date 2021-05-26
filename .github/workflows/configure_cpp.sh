@@ -22,22 +22,14 @@ case $CI_BUILD_TYPE in
   Release)
     BUILD_TYPE=Release
     SANITIZER=""
-    SHARED=""
     ;;
   Sanitizer)
     BUILD_TYPE=Release
     SANITIZER="Address;Undefined"
-    SHARED=""
     ;;
   Debug)
     BUILD_TYPE=Debug
     SANITIZER=""
-    SHARED=""
-    ;;
-  Shared)
-    BUILD_TYPE=Release
-    SANITIZER=""
-    SHARED="ON"
     ;;
   *)
     echo Unknown build type: $CI_BUILD_TYPE
@@ -57,6 +49,4 @@ cmake -S . -B $BUILD_DIR \
   -DCMAKE_C_COMPILER="$CC" \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
   -DKATANA_USE_SANITIZER="$SANITIZER" \
-  -DBUILD_SHARED_LIBS="$SHARED" \
-  -DKATANA_FORCE_NON_STATIC="$SHARED" \
   "$@"

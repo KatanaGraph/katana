@@ -293,6 +293,12 @@ public:
     return ResultSuccess();
   }
 
+  /// Get the URI for the underlying RDG
+  const katana::Uri& GetRDGUri() { return rdg_.rdg_dir(); }
+
+  /// Set the URI for the underlying RDG
+  void SetRDGUri(const katana::Uri& uri) { return rdg_.set_rdg_dir(uri); }
+
   /// Determine if two PropertyGraphs are Equal
   bool Equals(const PropertyGraph* other) const;
   /// Report the differences between two graphs

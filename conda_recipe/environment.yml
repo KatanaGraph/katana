@@ -21,6 +21,7 @@ dependencies:
  - fmt>=6.2.1
  - isort
  - jinja2
+ - jupyter
  - libcurl>=7.66
  - libxml2>=2.9.10
  - llvmdev>=8
@@ -35,6 +36,13 @@ dependencies:
  - pyarrow
  - pygithub
  - pytest
+
+# The dependencies for pytest-notebook are incomplete, add them manually
+ - pytest-notebook
+ - attrs<21,>=19
+ - nbconvert<6
+ - pexpect
+
  - python=3.8.* *_cpython
  - setuptools
  - shellcheck

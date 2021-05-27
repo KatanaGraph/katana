@@ -109,6 +109,7 @@ public:
    */
   void clear() {
     num_bits_ = 0;
+    // TODO(roshan) parallelize this.
     std::fill(bitvec_.begin(), bitvec_.end(), 0);
     bitvec_.clear();
   }

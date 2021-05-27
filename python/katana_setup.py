@@ -432,7 +432,6 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
         packages=setuptools.find_packages(str(source_dir), exclude=("test",)),
         package_data={"": [str(f) for f in pxd_files]},
         package_dir={"": str(source_dir)},
-        tests_require=["pytest"],
         # NOTE: Do not use setup_requires. It doesn't work properly for our needs because it doesn't install the
         # packages in the overall build environment. (It installs them in .eggs in the source tree.)
         requires=requires,

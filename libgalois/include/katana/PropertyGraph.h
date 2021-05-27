@@ -268,16 +268,16 @@ public:
     rdg_.set_local_to_global_id(std::move(a));
   }
 
-  /// Write the property graph to the given RDG name.
+  /// Create a new storage location for a graph and write everything into it.
   ///
   /// \returns io_error if, for instance, a file already exists
   Result<void> Write(
       const std::string& rdg_name, const std::string& command_line);
 
-  /// Write updates to the property graph
+  /// Commit updates modified state and re-uses graph components already in storage.
   ///
-  /// Like \ref Write(const std::string&, const std::string&) but update
-  /// the original read location of the graph
+  /// Like \ref Write(const std::string&, const std::string&) but can only update
+  /// parts of the original read location of the graph.
   Result<void> Commit(const std::string& command_line);
   /// Tell the RDG where it's data is coming from
   Result<void> InformPath(const std::string& input_path) {

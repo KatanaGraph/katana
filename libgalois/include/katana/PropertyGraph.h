@@ -288,19 +288,19 @@ public:
   std::string ReportDiff(const PropertyGraph* other) const;
 
   std::shared_ptr<arrow::Schema> node_schema() const {
-    return rdg_.node_properties()->schema();
+    return node_properties()->schema();
   }
 
   std::shared_ptr<arrow::Schema> edge_schema() const {
-    return rdg_.edge_properties()->schema();
+    return edge_properties()->schema();
   }
 
   // Return type dictated by arrow
   int32_t GetNodePropertyNum() const {
-    return rdg_.node_properties()->num_columns();
+    return node_properties()->num_columns();
   }
   int32_t GetEdgePropertyNum() const {
-    return rdg_.edge_properties()->num_columns();
+    return edge_properties()->num_columns();
   }
 
   // num_rows() == num_nodes() (all local nodes)
@@ -308,15 +308,15 @@ public:
     if (i >= rdg_.node_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.node_properties()->column(i);
+    return node_properties()->column(i);
   }
 
   // num_rows() == num_edges() (all local edges)
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(int i) const {
-    if (i >= rdg_.edge_properties()->num_columns()) {
+    if (i >= edge_properties()->num_columns()) {
       return nullptr;
     }
-    return rdg_.edge_properties()->column(i);
+    return edge_properties()->column(i);
   }
 
   /// Get a node property by name.
@@ -325,7 +325,7 @@ public:
   /// \return The property data or NULL if the property is not found.
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(
       const std::string& name) const {
-    return rdg_.node_properties()->GetColumnByName(name);
+    return node_properties()->GetColumnByName(name);
   }
   std::vector<std::string> GetNodePropertyNames() const {
     return node_properties()->ColumnNames();
@@ -333,7 +333,7 @@ public:
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
       const std::string& name) const {
-    return rdg_.edge_properties()->GetColumnByName(name);
+    return edge_properties()->GetColumnByName(name);
   }
   std::vector<std::string> GetEdgePropertyNames() const {
     return edge_properties()->ColumnNames();

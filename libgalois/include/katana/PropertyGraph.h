@@ -110,6 +110,10 @@ class KATANA_EXPORT PropertyGraph {
   tsuba::RDG rdg_;
   std::unique_ptr<tsuba::RDGFile> file_;
 
+  const katana::Uri& GetRDGUri() { return rdg_.rdg_dir(); }
+
+  void SetRDGUri(const katana::Uri& uri) { return rdg_.set_rdg_dir(uri); }
+
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
   GraphTopology topology_;

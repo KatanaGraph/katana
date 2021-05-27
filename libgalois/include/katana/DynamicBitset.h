@@ -86,8 +86,11 @@ public:
     KATANA_LOG_DEBUG_ASSERT(
         kNumBitsInUint64 == 64);  // compatibility with other devices
     num_bits_ = n;
+    size_t old_size = bitvec_.size();
     bitvec_.resize((n + kNumBitsInUint64 - 1) / kNumBitsInUint64);
-    reset();
+    if (bitvec_.size() > old_size) {
+      std::fill(bitvec_.begin() + old_size, bitvec_.end(), 0);
+    }
   }
 
   /**
@@ -106,6 +109,7 @@ public:
    */
   void clear() {
     num_bits_ = 0;
+    std::fill(bitvec_.begin(), bitvec_.end(), 0);
     bitvec_.clear();
   }
 

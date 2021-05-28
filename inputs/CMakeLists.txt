@@ -30,7 +30,7 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT ${INPUTS_DIR}/current/current-${INPUT_VERSION}
+  OUTPUT ${INPUTS_DIR}/${INPUT_VERSION}/current-${INPUT_VERSION}
   DEPENDS ${INPUTS_DIR}/${INPUT_VERSION}/extracted
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${INPUT_VERSION} current
   COMMAND ${CMAKE_COMMAND} -E touch ${INPUT_VERSION}/current-${INPUT_VERSION}
@@ -39,4 +39,4 @@ add_custom_command(
   VERBATIM
 )
 
-add_custom_target(input ALL DEPENDS ${INPUTS_DIR}/current/current-${INPUT_VERSION})
+add_custom_target(input ALL DEPENDS ${INPUTS_DIR}/${INPUT_VERSION}/current-${INPUT_VERSION})

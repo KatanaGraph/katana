@@ -5,6 +5,7 @@
 #include "katana/ArrowInterchange.h"
 #include "katana/Logging.h"
 #include "katana/Loops.h"
+#include "katana/PerThreadStorage.h"
 #include "katana/Platform.h"
 #include "katana/Properties.h"
 #include "katana/Result.h"
@@ -145,6 +146,184 @@ MakePropertyGraph(
       std::move(rdg_file), std::move(rdg_result.value()));
 }
 
+/// Assumes all boolean or uint8 properties are types
+katana::Result<std::shared_ptr<arrow::NumericArray<arrow::UInt8Type>>>
+GetTypeIDsFromProperties(
+    const std::shared_ptr<arrow::Table>& properties,
+    katana::PropertyGraph::TypeNameToTypeIDMap* type_name_to_type_ids,
+    katana::PropertyGraph::TypeIDToTypeNamesMap* type_id_to_type_names) {
+  // throw an error if each column/property has more than 1 chunk
+  for (int i = 0, n = properties->num_columns(); i < n; i++) {
+    std::shared_ptr<arrow::ChunkedArray> property = properties->column(i);
+    if (property->num_chunks() != 1) {
+      return KATANA_ERROR(
+          katana::ErrorCode::NotImplemented,
+          "property {} has {} chunks (1 chunk expected)",
+          properties->schema()->field(i)->name(), property->num_chunks());
+    }
+  }
+
+  // collect the list of types
+  std::vector<int> type_field_indices;
+  const std::shared_ptr<arrow::Schema>& schema = properties->schema();
+  KATANA_LOG_DEBUG_ASSERT(schema->num_fields() == properties->num_columns());
+  for (int i = 0, n = schema->num_fields(); i < n; i++) {
+    const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+
+    // a bool or uint8 property is (always) considered a type
+    // TODO(roshan) make this customizable by the user
+    if (current_field->type()->Equals(arrow::boolean()) ||
+        current_field->type()->Equals(arrow::uint8())) {
+      type_field_indices.push_back(i);
+    }
+  }
+
+  // assign a new ID to each type
+  // NB: cannot use unordered_map without defining a hash function for vectors;
+  // performance is not affected here because the map is very small (<=256)
+  std::map<std::vector<int>, katana::PropertyGraph::TypeID>
+      type_field_indices_to_id;
+  for (int i : type_field_indices) {
+    katana::PropertyGraph::TypeID new_type_id = type_id_to_type_names->size();
+    std::vector<int> field_indices = {i};
+    type_field_indices_to_id.emplace(
+        std::make_pair(field_indices, new_type_id));
+
+    const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+    const std::string& field_name = current_field->name();
+    KATANA_LOG_DEBUG_ASSERT(
+        type_name_to_type_ids->find(field_name) ==
+        type_name_to_type_ids->end());
+
+    std::unordered_set<katana::PropertyGraph::TypeID> type_ids{new_type_id};
+    type_name_to_type_ids->emplace(std::make_pair(field_name, type_ids));
+    type_id_to_type_names->push_back({field_name});
+  }
+
+  // collect the list of unique combination of types
+  // NB: cannot use unordered_set without defining a hash function for vectors;
+  // performance is not affected here because the set is very small (<=256)
+  std::set<std::vector<int>> type_combinations;
+  katana::PerThreadStorage<std::set<std::vector<int>>> type_combinations_pts;
+  katana::do_all(
+      katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
+        std::vector<int> field_indices;
+        for (int i : type_field_indices) {
+          std::shared_ptr<arrow::Array> property =
+              properties->column(i)->chunk(0);
+          if (property->type()->Equals(arrow::boolean())) {
+            auto bool_property =
+                std::static_pointer_cast<arrow::BooleanArray>(property);
+            if (bool_property->Value(row)) {
+              field_indices.emplace_back(i);
+            }
+          } else if (property->type()->Equals(arrow::uint8())) {
+            auto uint8_property =
+                std::static_pointer_cast<arrow::UInt8Array>(property);
+            if (uint8_property->Value(row)) {
+              field_indices.emplace_back(i);
+            }
+          }
+        }
+        if (field_indices.size() > 1) {
+          std::set<std::vector<int>>& local_type_combinations =
+              *type_combinations_pts.getLocal();
+          local_type_combinations.emplace(field_indices);
+        }
+      });
+  for (unsigned t = 0, n = katana::activeThreads; t < n; t++) {
+    std::set<std::vector<int>>& remote_type_combinations =
+        *type_combinations_pts.getRemote(t);
+    for (auto& type_combination : remote_type_combinations) {
+      type_combinations.emplace(type_combination);
+    }
+  }
+
+  // assign a new ID to each unique combination of types
+  for (const std::vector<int>& field_indices : type_combinations) {
+    katana::PropertyGraph::TypeID new_type_id = type_id_to_type_names->size();
+    type_field_indices_to_id.emplace(
+        std::make_pair(field_indices, new_type_id));
+
+    type_id_to_type_names->push_back({});
+    for (int i : field_indices) {
+      const std::shared_ptr<arrow::Field>& current_field = schema->field(i);
+      const std::string& field_name = current_field->name();
+      KATANA_LOG_DEBUG_ASSERT(
+          type_name_to_type_ids->find(field_name) !=
+          type_name_to_type_ids->end());
+
+      type_name_to_type_ids->at(field_name).emplace(new_type_id);
+      type_id_to_type_names->at(new_type_id).emplace(field_name);
+    }
+  }
+
+  // assert that all type IDs and 2 special type IDs (unknown and invalid)
+  // can be stored in 8 bits
+  if (type_id_to_type_names->size() >
+      (std::numeric_limits<katana::PropertyGraph::TypeID>::max() - size_t{2})) {
+    return KATANA_ERROR(
+        katana::ErrorCode::NotImplemented,
+        "number of unique combination of types is {} "
+        "but only up to {} is supported currently",
+        type_id_to_type_names->size(),
+        // exclude kUnknownType and kInvalidType
+        std::numeric_limits<katana::PropertyGraph::TypeID>::max() - 2);
+  }
+
+  // allocate type IDs array
+  auto type_ids =
+      std::make_unique<katana::LargeArray<katana::PropertyGraph::TypeID>>();
+  int64_t num_rows = properties->num_rows();
+  type_ids->allocateInterleaved(num_rows);
+
+  // assign the type ID for each row
+  katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
+    std::vector<int> field_indices;
+    for (int i : type_field_indices) {
+      std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
+
+      if (property->type()->Equals(arrow::boolean())) {
+        auto bool_property =
+            std::static_pointer_cast<arrow::BooleanArray>(property);
+        if (bool_property->Value(row)) {
+          field_indices.emplace_back(i);
+        }
+      } else if (property->type()->Equals(arrow::uint8())) {
+        auto uint8_property =
+            std::static_pointer_cast<arrow::UInt8Array>(property);
+        if (uint8_property->Value(row)) {
+          field_indices.emplace_back(i);
+        }
+      }
+    }
+    if (!field_indices.empty()) {
+      katana::PropertyGraph::TypeID type_id =
+          type_field_indices_to_id.at(field_indices);
+      (*type_ids)[row] = type_id;
+    } else {
+      (*type_ids)[row] = katana::PropertyGraph::kUnknownType;
+    }
+  });
+
+  return std::make_shared<arrow::NumericArray<arrow::UInt8Type>>(
+      static_cast<int64_t>(num_rows),
+      arrow::MutableBuffer::Wrap(type_ids.release()->data(), num_rows));
+}
+
+std::shared_ptr<arrow::NumericArray<arrow::UInt8Type>>
+GetUnknownTypeIDs(uint64_t num_rows) {
+  auto type_ids =
+      std::make_unique<katana::LargeArray<katana::PropertyGraph::TypeID>>();
+  type_ids->allocateInterleaved(num_rows);
+  katana::do_all(katana::iterate(uint64_t{0}, num_rows), [&](uint64_t row) {
+    (*type_ids)[row] = katana::PropertyGraph::kUnknownType;
+  });
+  return std::make_shared<arrow::NumericArray<arrow::UInt8Type>>(
+      static_cast<int64_t>(num_rows),
+      arrow::MutableBuffer::Wrap(type_ids.release()->data(), num_rows));
+}
+
 }  // namespace
 
 katana::PropertyGraph::PropertyGraph() = default;
@@ -164,6 +343,41 @@ katana::PropertyGraph::Validate() {
   //    topology_.out_indices->length() != table->num_rows()) {
   //  return ErrorCode::InvalidArgument;
   //}
+
+  uint64_t num_node_rows = static_cast<uint64_t>(node_properties()->num_rows());
+  if (num_node_rows == 0) {
+    if ((node_properties()->num_columns() != 0) && (num_nodes() != 0)) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed,
+          "number of rows in node properties is 0 but "
+          "the number of node properties is {} and the number of nodes is {}",
+          node_properties()->num_columns(), num_nodes());
+    }
+  } else if (num_node_rows != num_nodes()) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "number of rows in node properties {} differs "
+        "from the number of nodes {}",
+        node_properties()->num_rows(), num_nodes());
+  }
+
+  uint64_t num_edge_rows = static_cast<uint64_t>(edge_properties()->num_rows());
+  if (num_edge_rows == 0) {
+    if ((edge_properties()->num_columns() != 0) && (num_edges() != 0)) {
+      return KATANA_ERROR(
+          ErrorCode::AssertionFailed,
+          "number of rows in edge properties is 0 but "
+          "the number of edge properties is {} and the number of edges is {}",
+          edge_properties()->num_columns(), num_edges());
+    }
+  } else if (num_edge_rows != num_edges()) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "number of rows in edge properties {} differs "
+        "from the number of edges {}",
+        edge_properties()->num_rows(), num_edges());
+  }
+
   return katana::ResultSuccess();
 }
 
@@ -227,6 +441,52 @@ katana::PropertyGraph::Copy(
   opts.edge_properties = &edge_properties;
 
   return Make(rdg_dir(), opts);
+}
+
+katana::Result<void>
+katana::PropertyGraph::ConstructTypeIDs() {
+  if ((!node_type_name_to_type_ids_.empty()) ||
+      (!node_type_id_to_type_names_.empty()) ||
+      (!edge_type_name_to_type_ids_.empty()) ||
+      (!edge_type_id_to_type_names_.empty())) {
+    return KATANA_ERROR(
+        ErrorCode::AssertionFailed,
+        "ConstructTypeIDs() should not called more than once");
+  }
+
+  static_assert(kUnknownType == 0);
+  node_type_id_to_type_names_.push_back(
+      {});  // for kUnknownType: assumes it is 0
+  uint64_t num_node_rows = static_cast<uint64_t>(node_properties()->num_rows());
+  if (num_node_rows == 0) {
+    node_type_id_ = GetUnknownTypeIDs(num_nodes());
+  } else {
+    auto node_types_res = GetTypeIDsFromProperties(
+        node_properties(), &node_type_name_to_type_ids_,
+        &node_type_id_to_type_names_);
+    if (!node_types_res) {
+      return node_types_res.error().WithContext("node properties");
+    }
+    node_type_id_ = std::move(node_types_res.value());
+  }
+
+  static_assert(kUnknownType == 0);
+  edge_type_id_to_type_names_.push_back(
+      {});  // for kUnknownType: assumes it is 0
+  uint64_t num_edge_rows = static_cast<uint64_t>(edge_properties()->num_rows());
+  if (num_edge_rows == 0) {
+    edge_type_id_ = GetUnknownTypeIDs(num_edges());
+  } else {
+    auto edge_types_res = GetTypeIDsFromProperties(
+        edge_properties(), &edge_type_name_to_type_ids_,
+        &edge_type_id_to_type_names_);
+    if (!edge_types_res) {
+      return edge_types_res.error().WithContext("edge properties");
+    }
+    edge_type_id_ = std::move(edge_types_res.value());
+  }
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>

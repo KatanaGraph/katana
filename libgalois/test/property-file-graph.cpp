@@ -30,7 +30,8 @@ TestRoundTrip() {
   using ValueType = int32_t;
   using ThrowAwayType = int64_t;
 
-  auto g = std::make_unique<katana::PropertyGraph>();
+  RandomPolicy policy{1};
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
 
   std::shared_ptr<arrow::Table> node_throw_away =
       MakeProps<ThrowAwayType>("node-throw-away", test_length);
@@ -158,7 +159,8 @@ MakePFGFile(const std::string& n1name) {
   const std::string e0name = "e0";
   const std::string e1name = "e1";
 
-  auto g = std::make_unique<katana::PropertyGraph>();
+  RandomPolicy policy{1};
+  auto g = MakeFileGraph<uint32_t>(test_length, 0, &policy);
 
   std::shared_ptr<arrow::Table> node_props = MakeProps<V0>(n0name, test_length);
 

@@ -97,6 +97,29 @@ struct KATANA_EXPORT GraphTopology {
 /// manages the serialization of the various partitions and properties that
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
+public:
+  /// TypeID uniquely identifies/contains a combination/set of types
+  /// TypeID is represented using 8 bits
+  /// TypeID for nodes is distinct from TypeID for edges
+  using TypeID = uint8_t;
+  using ArrowTypeID = arrow::UInt8Type;
+  static constexpr TypeID kUnknownType = TypeID{0};
+  static constexpr TypeID kInvalidType = std::numeric_limits<TypeID>::max();
+  /// A map from TypeID to the set of the type names it contains
+  using TypeIDToTypeNamesMap = std::vector<std::unordered_set<std::string>>;
+  /// A map from the type name to the set of the TypeIDs that contain it
+  using TypeNameToTypeIDMap =
+      std::unordered_map<std::string, std::unordered_set<TypeID>>;
+
+  // Pass through topology API
+  using node_iterator = GraphTopology::node_iterator;
+  using edge_iterator = GraphTopology::edge_iterator;
+  using edges_range = GraphTopology::edges_range;
+  using iterator = GraphTopology::iterator;
+  using Node = GraphTopology::Node;
+  using Edge = GraphTopology::Edge;
+
+private:
   PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
 
   /// Validate performs a sanity check on the the graph after loading
@@ -113,6 +136,25 @@ class KATANA_EXPORT PropertyGraph {
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
   GraphTopology topology_;
+
+  /// A map from the node TypeID to
+  /// the set of the node type names it contains
+  TypeIDToTypeNamesMap node_type_id_to_type_names_;
+  /// A map from the edge TypeID to
+  /// the set of the edge type names it contains
+  TypeIDToTypeNamesMap edge_type_id_to_type_names_;
+
+  /// A map from the node type name
+  /// to the set of the node TypeIDs that contain it
+  TypeNameToTypeIDMap node_type_name_to_type_ids_;
+  /// A map from the edge type name
+  /// to the set of the edge TypeIDs that contain it
+  TypeNameToTypeIDMap edge_type_name_to_type_ids_;
+
+  /// The node TypeID for each node in the graph
+  std::shared_ptr<arrow::NumericArray<ArrowTypeID>> node_type_id_;
+  /// The edge TypeID for each edge in the graph
+  std::shared_ptr<arrow::NumericArray<ArrowTypeID>> edge_type_id_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -224,6 +266,12 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) const;
 
+  /// Construct node & edge TypeIDs from node & edge properties
+  /// Also constructs metadata to convert between types and TypeIDs
+  /// Assumes all boolean or uint8 properties are types
+  /// TODO(roshan) move this to be a part of Make()
+  Result<void> ConstructTypeIDs();
+
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
   uint32_t partition_id() const { return rdg_.partition_id(); }
@@ -295,6 +343,74 @@ public:
     return edge_properties()->schema();
   }
 
+  /// \returns the number of node types
+  size_t GetNodeTypesNum() const { return node_type_name_to_type_ids_.size(); }
+
+  /// \returns the number of edge types
+  size_t GetEdgeTypesNum() const { return edge_type_name_to_type_ids_.size(); }
+
+  /// \returns true if a node type with @param name exists
+  /// NB: no node may have this type
+  /// TODO(roshan) build an index for the number of nodes with the type
+  bool HasNodeType(const std::string& name) const {
+    return node_type_name_to_type_ids_.count(name) == 1;
+  }
+
+  /// \returns true if an edge type with @param name exists
+  /// NB: no edge may have this type
+  /// TODO(roshan) build an index for the number of edges with the type
+  bool HasEdgeType(const std::string& name) const {
+    return edge_type_name_to_type_ids_.count(name) == 1;
+  }
+
+  /// \returns the set of node TypeIDs that contain
+  /// the node type with @param name
+  /// (assumes that the node type exists)
+  const std::unordered_set<TypeID>& NodeTypeNameToTypeIDs(
+      const std::string& name) const {
+    return node_type_name_to_type_ids_.at(name);
+  }
+
+  /// \returns the set of edge TypeIDs that contain
+  /// the edge type with @param name
+  /// (assumes that the edge type exists)
+  const std::unordered_set<TypeID>& EdgeTypeNameToTypeIDs(
+      const std::string& name) const {
+    return edge_type_name_to_type_ids_.at(name);
+  }
+
+  /// \returns the number of node TypeIDs (including kUnknownType)
+  size_t GetNodeTypeIDsNum() const {
+    return node_type_id_to_type_names_.size();
+  }
+
+  /// \returns the number of edge TypeIDs (including kUnknownType)
+  size_t GetEdgeTypeIDsNum() const {
+    return edge_type_id_to_type_names_.size();
+  }
+
+  /// \returns the set of node type names that contain
+  /// the node TypeID @param node_type_id
+  /// (assumes that the node TypeID exists)
+  const std::unordered_set<std::string>& NodeTypeIDToTypeNames(
+      TypeID node_type_id) const {
+    return node_type_id_to_type_names_.at(node_type_id);
+  }
+
+  /// \returns the set of edge type names that contain
+  /// the edge TypeID @param edge_type_id
+  /// (assumes that the edge TypeID exists)
+  const std::unordered_set<std::string>& EdgeTypeIDToTypeNames(
+      TypeID edge_type_id) const {
+    return edge_type_id_to_type_names_.at(edge_type_id);
+  }
+
+  /// \return returns the node TypeID for @param node
+  TypeID GetNodeTypeID(Node node) const { return node_type_id_->Value(node); }
+
+  /// \return returns the edge TypeID for @param edge
+  TypeID GetEdgeTypeID(Edge edge) const { return edge_type_id_->Value(edge); }
+
   // Return type dictated by arrow
   int32_t GetNodePropertyNum() const {
     return node_properties()->num_columns();
@@ -317,6 +433,16 @@ public:
       return nullptr;
     }
     return edge_properties()->column(i);
+  }
+
+  /// \returns true if a node property/type with @param name exists
+  bool HasNodeProperty(const std::string& name) const {
+    return node_properties()->schema()->GetFieldIndex(name) != -1;
+  }
+
+  /// \returns true if an edge property/type with @param name exists
+  bool HasEdgeProperty(const std::string& name) const {
+    return edge_properties()->schema()->GetFieldIndex(name) != -1;
   }
 
   /// Get a node property by name.
@@ -455,15 +581,6 @@ public:
   const std::shared_ptr<arrow::Table>& edge_properties() const {
     return rdg_.edge_properties();
   }
-
-  // Pass through topology API
-
-  using node_iterator = GraphTopology::node_iterator;
-  using edge_iterator = GraphTopology::edge_iterator;
-  using edges_range = GraphTopology::edges_range;
-  using iterator = GraphTopology::iterator;
-  using Node = GraphTopology::Node;
-  using Edge = GraphTopology::Edge;
 
   // Standard container concepts
 

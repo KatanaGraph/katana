@@ -180,7 +180,7 @@ function(add_python_setuptools_target TARGET_NAME)
   #  -j will not propagate into python builds and if CMAKE_BUILD_PARALLEL_LEVEL varies then only some things will be
   #  in parallel. Parallel or not will not affect correctness however.
 
-  if(ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+  if (DEFINED ENV{CMAKE_BUILD_PARALLEL_LEVEL})
     set(parallel --parallel $ENV{CMAKE_BUILD_PARALLEL_LEVEL})
   endif()
   set(quiet "")

@@ -43,7 +43,8 @@ ENTRYPOINT ["bash", "-l", "-c", "\"$@\"", "\"$0\""]
 
 ENV CMAKE_SETTINGS="-DKATANA_LANG_BINDINGS=python -DBUILD_DOCS=ON"
 ENV CMAKE_BUILD_TYPE="Release"
+ENV CMAKE_GENERATOR="Unix Makefiles"
 
 CMD set -eux; \
-    cmake -B /build -S /source -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ${CMAKE_SETTINGS}; \
+    cmake -G "${CMAKE_GENERATOR}" -B /build -S /source -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ${CMAKE_SETTINGS}; \
     cmake --build /build --parallel $(nproc) ${TARGETS:+--target ${TARGETS}}

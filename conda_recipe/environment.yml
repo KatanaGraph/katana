@@ -26,6 +26,7 @@ dependencies:
  - libxml2>=2.9.10
  - llvmdev>=8
  - make
+ - ninja
  - ncurses>=6.1
  - nlohmann_json>=3.7.3
  - numba

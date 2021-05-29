@@ -32,6 +32,7 @@ def main():
         "--source", "-S", type=Path, help="The root of the source tree to use. Defaults to auto detect.", default=None
     )
     parser.add_argument("--type", "-t", type=str, help="The type of build to perform.", default="conda")
+    parser.add_argument("--cmake-generator", "-G", type=str, help="CMake generator to use", default="Unix Makefiles")
     parser.add_argument("targets", nargs="*", help="The targets to build")
     parser.add_argument(
         "--reuse", help="Rebuild the build image even if it already exists.", default=False, action="store_true"
@@ -89,6 +90,8 @@ def main():
             f"KATANA_VERSION={katana_version}",
             "--env",
             f"TARGETS={targets_str}",
+            "--env",
+            f"CMAKE_GENERATOR={args.cmake_generator}",
             "--mount",
             f"type=bind,src={build},dst=/build",
             "--mount",

@@ -1,4 +1,5 @@
 import pytest
+
 from katana.dynamic_bitset import DynamicBitset
 
 __all__ = []

@@ -211,6 +211,8 @@ function(add_python_setuptools_target TARGET_NAME)
       "KATANA_SETUP_REQUIREMENTS_CACHE=${CMAKE_BINARY_DIR}/katana_setup_requirements_cache.txt"
       # Finally, launch setup.py
       ${Python3_EXECUTABLE} setup.py)
+  # Write the python setup.py command to a file similar to link.txt to aid in build debugging
+  file(GENERATE OUTPUT ${PYTHON_BINARY_DIR}/python_setup.txt CONTENT "$<JOIN:${PYTHON_SETUP_COMMAND}, >")
 
   add_custom_target(
       ${TARGET_NAME}
@@ -221,6 +223,14 @@ function(add_python_setuptools_target TARGET_NAME)
       WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
       COMMENT "Building ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
   )
+
+  add_custom_target(
+      ${TARGET_NAME}_wheel
+      COMMAND ${PYTHON_SETUP_COMMAND} ${quiet} bdist_wheel --dist-dir ${CMAKE_BINARY_DIR}/pkg
+      WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
+      COMMENT "bdist ${TARGET_NAME} in symlink tree ${PYTHON_BINARY_DIR}"
+  )
+  add_dependencies(${TARGET_NAME}_wheel ${TARGET_NAME})
 
   add_dependencies(${TARGET_NAME} ${TARGET_NAME}_python_tree ${TARGET_NAME}_setup_tree ${TARGET_NAME}_scripts_tree)
   if(X_DEPENDS)

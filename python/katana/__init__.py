@@ -29,11 +29,12 @@ try:
     # Trigger the load of katana libraries
     import katana.galois
 except ImportError as e:
-    if "libnuma" in str(e):
+    if "libkatana" in str(e):
         raise ImportError(
-            "katana requires libnuma to be installed. Install it with your native package manager. "
-            "E.g., `sudo apt install libnuma1`."
+            "The native libraries required by katana are missing or incorrectly installed. NOTE: The native libraries "
+            "are not included in pip packages and must be installed separately (e.g., with `conda install katana-cpp`)."
         ) from e
+    raise
 
 
 # A global variable to hold the Katana runtime "Sys". The type will vary and has no methods. None means no Katana

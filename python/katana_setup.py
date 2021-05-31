@@ -18,7 +18,7 @@ def in_build_call():
     # This is a hack, but WOW setuptools is terrible.
     # We need to check if we are building because otherwise every call to setup.py (even for metadata not build) will
     # cause cython files to be processed. Often the processing happens in tree spewing build files all over the tree.
-    return any(a.startswith("build") or a.startswith("install") for a in sys.argv)
+    return any(a.startswith("build") or a.startswith("install") or "dist" in a for a in sys.argv)
 
 
 def split_cmake_list(s):
@@ -422,7 +422,7 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
     if additional_requires:
         requires.extend(additional_requires)
 
-    source_dir = Path(source_dir).absolute()
+    source_dir = Path(source_dir)
 
     pxd_files, pyx_files = collect_cython_files(source_root=source_dir / package_name)
 
@@ -436,6 +436,7 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
         # packages in the overall build environment. (It installs them in .eggs in the source tree.)
         requires=requires,
         ext_modules=cythonize(pyx_files, source_root=source_dir),
+        include_package_data=True,
         zip_safe=False,
         command_options={
             "build_sphinx": {

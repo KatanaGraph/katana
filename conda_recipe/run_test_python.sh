@@ -2,4 +2,4 @@
 set -e
 
 echo "Testing with pytest..."
-pytest -v python/test
+pytest -s -v python/test

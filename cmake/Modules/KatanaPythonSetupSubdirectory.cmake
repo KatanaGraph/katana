@@ -288,7 +288,7 @@ function(add_python_setuptools_tests TARGET_NAME)
 
   get_target_property(script ${TARGET_NAME} PYTHON_ENV_SCRIPT)
   add_test(NAME ${TARGET_NAME}
-           COMMAND ${script} pytest -v ${X_PATH}
+           COMMAND ${script} pytest -s -v ${X_PATH}
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   if(NOT X_NOT_QUICK)
     set_tests_properties(${TARGET_NAME} PROPERTIES LABELS "quick;python")

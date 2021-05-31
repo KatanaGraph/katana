@@ -1,5 +1,4 @@
 import pytest
-
 from katana.dynamic_bitset import DynamicBitset
 
 __all__ = []
@@ -9,22 +8,12 @@ SIZE = 50
 
 @pytest.fixture
 def dbs():
-    bs = DynamicBitset()
-    bs.resize(SIZE)
-    return bs
+    return DynamicBitset(SIZE)
 
 
 def test_set(dbs):
     dbs[10] = 1
     assert dbs[10]
-
-
-def test_set_invalid_value(dbs):
-    try:
-        dbs[10] = 111
-        assert False
-    except AttributeError:
-        pass
 
 
 def test_set_invalid_type(dbs):
@@ -76,7 +65,7 @@ def test_reset_begin_end_invalid_step(dbs):
     try:
         dbs[12:17:22] = 0
         assert False
-    except AttributeError:
+    except ValueError:
         pass
 
 

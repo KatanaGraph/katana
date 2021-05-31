@@ -87,8 +87,7 @@ jobs:
     - name: Build conda Packages
       run: |
         . .github/workflows/activate_miniconda.sh
-        export KATANA_VERSION="$(scripts/version show)"
-        conda mambabuild -c conda-forge --output-folder $HOME/build/ conda_recipe/
+        scripts/conda_build.sh --output-folder $HOME/build/
 
     - name: Clean ccache
       run: |

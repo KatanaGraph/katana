@@ -123,10 +123,16 @@ outputs:
       requires:
         - jupyter
         - pytest
+
+        # The dependencies for pytest-notebook are incomplete, add them manually
+        - pytest-notebook
+        - attrs<21,>=19
+        - nbconvert<6
+        - pexpect
       source_files:
         - tools/graph-convert/test-inputs
         - python/test
-        - python/examples/jupyter
+        - python/examples/notebooks
       script: run_test_python.sh
   - name: katana-tools
     about:

@@ -133,3 +133,49 @@ Then you can use `conda mambabuild` (*note:* the top level command is `conda`, *
 To get a leaner, Mamba using environment in a fresh install, use [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge).
 It is an installer, similar to miniconda, which installs an environment with conda-forge packages and mamba pre-installed (boa must still be installed separately).
 The Python CI actions use Mambaforge, [mamba](https://github.com/KatanaGraph/katana/blob/master/.github/workflows/python.yaml#L234), and [conda mambabuild](https://github.com/KatanaGraph/katana/blob/master/.github/workflows/python.yaml#L92) to improve CI performance.
+
+Testing
+-------
+
+```bash
+# Running tests
+$BUILD_DIR/python_env.sh pytest python/test
+
+# Run pytest verbosely (-v), do not capture output (-s) and select tests
+# matching the filter (-k)
+$BUILD_DIR/python_env.sh pytest -v -s -k my_test python/test
+```
+
+Some of the tests run a notebook and check to see if the computed output matches the output saved in the notebook.
+
+If you want to automatically update the saved output of a notebook to match the computed output, you can pass the `--nb-force-regen` flag to update the notebook output:
+
+```bash
+$BUILD_DIR/python_env.sh pytest -k my_test --nb-force-regen python/test
+```
+
+In some cases, the output of the notebook can vary from run to run. To skip checking the output of a particular cell, you can add `nbreg` metadata to a cell in the notebook file:
+
+```json
+{
+ "cell_type": "code",
+ "metadata": {
+   "nbreg": {
+     "diff_ignore": ["/outputs/0/data/text/plain"]
+   }
+ },
+ "outputs": [
+  {
+   "data": {
+    "text/plain": [
+     "<output to ignore>"
+    ]
+   }
+  }
+ ]
+}
+```
+
+See the [pytest-notebook
+documentation](https://pytest-notebook.readthedocs.io/en/latest/user_guide/tutorial_config.html)
+for more options.

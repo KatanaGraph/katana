@@ -112,10 +112,10 @@ MakeLocalTwoLevelRange(T& obj) {
  *
  * Implements std::ranges::sized_range (C++20).
  */
-template <typename IterTy>
+template <typename Iterator>
 class StandardRange {
 public:
-  typedef IterTy iterator;
+  typedef Iterator iterator;
   typedef iterator local_iterator;
   typedef typename std::iterator_traits<iterator>::value_type value_type;
   typedef
@@ -124,7 +124,7 @@ public:
 
   StandardRange() = default;
 
-  StandardRange(IterTy begin, IterTy end) : begin_(begin), end_(end) {}
+  StandardRange(Iterator begin, Iterator end) : begin_(begin), end_(end) {}
 
   constexpr size_type size() { return std::distance(begin(), end()); }
   constexpr bool empty() { return begin() == end(); }
@@ -142,29 +142,29 @@ private:
         begin_, end_, ThreadPool::getTID(), katana::activeThreads);
   }
 
-  IterTy begin_;
-  IterTy end_;
+  Iterator begin_;
+  Iterator end_;
 };
 
-template <typename IterTy>
-StandardRange<IterTy>
-MakeStandardRange(IterTy begin, IterTy end) {
-  return StandardRange<IterTy>(begin, end);
+template <typename Iterator>
+StandardRange<Iterator>
+MakeStandardRange(Iterator begin, Iterator end) {
+  return StandardRange<Iterator>(begin, end);
 }
 
 /**
  * SpecificRange is a range type where a threads range is specified by an int
  * array that gives where each thread should begin its iteration
  */
-template <typename IterTy>
+template <typename Iterator>
 class SpecificRange {
   // TODO(ddn): This range is not generalizable to all iterators; probably
   // move into libcusp or provide a specific numeric range class to allow
   // easy construction of local iteration spaces.
 public:
-  typedef IterTy iterator;
+  typedef Iterator iterator;
   typedef iterator local_iterator;
-  typedef typename std::iterator_traits<IterTy>::value_type value_type;
+  typedef typename std::iterator_traits<Iterator>::value_type value_type;
 
 private:
   /**
@@ -227,12 +227,13 @@ private:
     return std::make_pair(left, right);
   }
 
-  IterTy global_begin_;
-  IterTy global_end_;
+  Iterator global_begin_;
+  Iterator global_end_;
   std::vector<uint32_t> thread_beginnings_;
 
 public:
-  SpecificRange(IterTy begin, IterTy end, std::vector<uint32_t> thread_ranges)
+  SpecificRange(
+      Iterator begin, Iterator end, std::vector<uint32_t> thread_ranges)
       : global_begin_(begin),
         global_end_(end),
         thread_beginnings_(std::move(thread_ranges)) {}
@@ -247,18 +248,18 @@ public:
 /**
  * Creates a SpecificRange object.
  *
- * @tparam IterTy The iterator type used by the range object
+ * @tparam Iterator The iterator type used by the range object
  * @param begin The global beginning of the range
  * @param end The global end of the range
  * @param thread_ranges An array of iterators that specifies where each
  * thread's range begins
  * @returns A SpecificRange object
  */
-template <typename IterTy>
-SpecificRange<IterTy>
+template <typename Iterator>
+SpecificRange<Iterator>
 MakeSpecificRange(
-    IterTy begin, IterTy end, const std::vector<uint32_t>& thread_ranges) {
-  return SpecificRange<IterTy>(begin, end, thread_ranges);
+    Iterator begin, Iterator end, const std::vector<uint32_t>& thread_ranges) {
+  return SpecificRange<Iterator>(begin, end, thread_ranges);
 }
 
 template <typename T>
@@ -284,10 +285,11 @@ constexpr bool has_local_iterator_v = has_local_iterator<T>::value;
  * objects:
  *
  * - A standard range: iterate(begin, end)
- * - A standard container: iterator(container)
- * - A container with local iterators: iterator(container)
- * - An initializer list: iterator({1, 2})
- * - A numeric range: iterator(1, 2)
+ * - A katana::StandardRange object: iterate(StandardRange<T>)
+ * - A standard container: iterate(container)
+ * - A container with local iterators: iterate(container)
+ * - An initializer list: iterate({1, 2})
+ * - A numeric range: iterate(1, 2)
  */
 
 template <
@@ -324,6 +326,26 @@ auto
 iterate(const T& begin, const T& end) {
   return MakeStandardRange(begin, end);
 }
+
+// pass through
+// Needs SFINAE trick for Python bindings to pick the right overload
+#if defined(__GNUC__) && __GNUC__ < 8
+template <typename Iterator>
+auto
+iterate(
+    const StandardRange<Iterator>& range,
+    typename std::iterator_traits<Iterator>::iterator_category* = nullptr) {
+  return range;
+}
+#else
+template <
+    typename Iterator,
+    typename std::iterator_traits<Iterator>::iterator_category* = nullptr>
+auto
+iterate(const StandardRange<Iterator>& range) noexcept {
+  return range;
+}
+#endif
 
 }  // end namespace katana
 #endif

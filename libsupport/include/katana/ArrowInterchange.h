@@ -148,7 +148,8 @@ VectorToArrowTable(const std::string& name, const std::vector<T>& source) {
         katana::ErrorCode::ArrowError, "setting arrow column attributes: {}",
         nullable_table);
   }
-  return katana::Result<std::shared_ptr<arrow::Table>>(nullable_table.ValueOrDie());
+  return katana::Result<std::shared_ptr<arrow::Table>>(
+      nullable_table.ValueOrDie());
 }
 
 template <typename T>
@@ -183,7 +184,7 @@ MarshalVectorOfVectors(const std::vector<std::vector<T>>& source) {
     dest.emplace_back(res.value());
   }
   return katana::Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>>(
-    std::vector<std::shared_ptr<arrow::ChunkedArray>>(std::move(dest)));
+      std::vector<std::shared_ptr<arrow::ChunkedArray>>(std::move(dest)));
 }
 
 //////////////////////////////////////////////////////////

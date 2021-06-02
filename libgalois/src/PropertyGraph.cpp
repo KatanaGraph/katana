@@ -473,7 +473,8 @@ katana::PropertyGraph::SetTopology(const katana::GraphTopology& topology) {
   return katana::ResultSuccess();
 }
 
-katana::Result<void> katana::PropertyGraph::InformPath(const std::string& input_path) {
+katana::Result<void>
+katana::PropertyGraph::InformPath(const std::string& input_path) {
   if (!rdg_.rdg_dir().empty()) {
     KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
   }

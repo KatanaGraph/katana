@@ -39,6 +39,8 @@ set(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "install prefix")
 
 set(KATANA_LANG_BINDINGS "" CACHE STRING "Semi-colon separated list of language bindings to build (e.g., 'python'). Default: none")
 
+set(KATANA_COMPONENTS "" CACHE STRING "Semi-colon separated list of optional components to build")
+
 ###### Packaging features ######
 set(KATANA_PACKAGE_TYPE "deb" CACHE STRING "Semi-colon separated list of package types to build with cpack. Supported values: deb.")
 set(KATANA_PACKAGE_DIRECTORY "${PROJECT_BINARY_DIR}/pkg" CACHE STRING "The output path for packages.")
@@ -83,6 +85,17 @@ endif ()
 if (KATANA_IS_MAIN_PROJECT)
   include(CTest)
 endif ()
+
+set(supported_components)
+if (KATANA_SUPPORTED_COMPONENTS)
+  set(supported_components "${KATANA_SUPPORTED_COMPONENTS}")
+endif ()
+
+foreach (comp ${KATANA_COMPONENTS})
+  if (NOT "${comp}" IN_LIST supported_components)
+    message(FATAL_ERROR "Invalid value for KATANA_COMPONENTS: ${comp}. Accepted values: ${supported_components}")
+  endif ()
+endforeach ()
 
 ###### Install dependencies ######
 

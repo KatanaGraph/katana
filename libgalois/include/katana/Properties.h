@@ -290,7 +290,7 @@ private:
 
 /// BooleanPropertyReadOnlyView provides a read-only property view over
 /// arrow::Arrays of boolean elements.
-class BooleanPropertyReadOnlyView {
+class KATANA_EXPORT BooleanPropertyReadOnlyView {
 public:
   // use uint8_t instead of bool for value_type to avoid std::vector<bool>
   // (std::vector<bool> specialization leads to issues in concurrent writes

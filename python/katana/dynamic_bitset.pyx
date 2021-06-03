@@ -5,11 +5,12 @@ cdef class DynamicBitset:
     cdef CDynamicBitset underlying
 
     def __init__(self, num_bits):
+        """Initializes the bitset and sets its size to the given number of bits."""
         self.resize(num_bits)
 
-    def resize(self, n):
+    def resize(self, num_bits):
         """Resizes the bitset."""
-        self.underlying.resize(n)
+        self.underlying.resize(num_bits)
 
     def clear(self):
         """Resets all bits and sets the size of the set to 0."""
@@ -27,18 +28,18 @@ cdef class DynamicBitset:
         """Unsets every bit in the bitset."""
         self.underlying.reset()
 
-    def __getitem__(self, index):
+    def __getitem__(self, key):
         """Checks a bit to see if it is currently set.
 
         This is not thread-safe if concurrent with setting bits."""
-        if not isinstance(index, int):
-            raise TypeError('index has to be an integer')
+        if not isinstance(key, int):
+            raise TypeError('key has to be an integer')
 
         # TODO: support slices
-        if index < 0 or index >= len(self):
-            raise IndexError(index)
+        if key < 0 or key >= len(self):
+            raise IndexError(key)
 
-        return self.underlying.test(index)
+        return self.underlying.test(key)
 
     def __setitem__(self, key, value):
         """Sets or resets a bit in the bitset."""

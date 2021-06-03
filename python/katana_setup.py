@@ -186,8 +186,8 @@ def check_cython_module(name, cython_code, python_code="", extension_options=Non
 def parse_text(fi):
     result = {}
     for line in fi:
-        line = line.strip()
-        if not line:
+        line = line.rstrip("\n")
+        if not line.strip():
             continue
         try:
             key, value = line.split("=", maxsplit=1)

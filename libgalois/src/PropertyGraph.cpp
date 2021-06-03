@@ -473,6 +473,20 @@ katana::PropertyGraph::SetTopology(const katana::GraphTopology& topology) {
   return katana::ResultSuccess();
 }
 
+katana::Result<void>
+katana::PropertyGraph::InformPath(const std::string& input_path) {
+  if (!rdg_.rdg_dir().empty()) {
+    KATANA_LOG_DEBUG("rdg dir from {} to {}", rdg_.rdg_dir(), input_path);
+  }
+  auto uri_res = katana::Uri::Make(input_path);
+  if (!uri_res) {
+    return uri_res.error();
+  }
+
+  rdg_.set_rdg_dir(uri_res.value());
+  return ResultSuccess();
+}
+
 katana::Result<std::shared_ptr<arrow::UInt64Array>>
 katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto view_result_dests =

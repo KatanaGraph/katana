@@ -16,3 +16,18 @@ def package_setup():
 
 if __name__ == "__main__":
     package_setup()
+
+
+# This project can generate a pip package, but it's bad and is missing dependencies. If you must generate it, run
+# `make katana_python_wheel` in your build directory. To install it:
+#
+#     Install Katana native library
+# conda install -c katanagraph/label/dev katana-cpp
+#     Make sure we are the correct Python version
+# conda install python==3.8
+#     Install Katana Python Conda dependencies (due to problems in the pip pyarrow package we must use the conda pkg)
+# conda install pyarrow==2
+#     Install Katana Python pip dependencies (using what we can from pip)
+# pip install numba
+#     Install Katana Python pip package
+# pip install <katana_python package .whl>

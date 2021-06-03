@@ -18,6 +18,11 @@ if [ -z "${CMAKE_BUILD_PARALLEL_LEVEL}" ]; then
 fi
 echo "Building with parallelism: ${CMAKE_BUILD_PARALLEL_LEVEL}"
 
+if [ -z "${KATANA_COMPONENTS}" ]; then
+  KATANA_COMPONENTS=""
+fi
+echo "Building with components: ${KATANA_COMPONENTS}"
+
 # Useful debugging addition to the below: -DCMAKE_VERBOSE_MAKEFILE=ON
 cmake \
   $CMAKE_CCACHE_OPTION \
@@ -25,6 +30,7 @@ cmake \
   -DBUILD_TESTING=OFF \
   -DKATANA_LANG_BINDINGS=python \
   -DCMAKE_BUILD_TYPE=Release \
+  -DKATANA_COMPONENTS="${KATANA_COMPONENTS}" \
   -Wno-dev \
   -S "$SRC_DIR"
 cmake --build . --parallel ${CMAKE_BUILD_PARALLEL_LEVEL}

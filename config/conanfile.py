@@ -39,16 +39,6 @@ class KatanaConan(ConanFile):
         "arrow:with_brotli": True,
         "arrow:with_snappy": True,
         "arrow:with_zlib": True,
-        # A recent change [1] to the conan boost/1.74 package adds CMake
-        # COMPILE_OPTIONS with quotes, which breaks the CMake function
-        # _generate_build_configuration_json(). Until this function is fixed,
-        # disable the proximate cause in the conan boost package.
-        #
-        # [1] https://github.com/conan-io/conan-center-index/pull/5420
-        #
-        # TODO(ddn): Fix _generate_build_configuration_json to handle values
-        # with quotes
-        "boost:without_stacktrace": True,
         "libcurl:shared": False,
     }
 

@@ -149,7 +149,7 @@ template <typename PropTuple>
 Result<std::tuple<>>
 ConstructPropertyViews(
     const std::vector<arrow::Array*>&, std::index_sequence<>) {
-  return std::tuple<>();
+  return Result<std::tuple<>>(std::tuple<>());
 }
 
 template <typename PropTuple, size_t head, size_t... tail>
@@ -290,7 +290,7 @@ private:
 
 /// BooleanPropertyReadOnlyView provides a read-only property view over
 /// arrow::Arrays of boolean elements.
-class BooleanPropertyReadOnlyView {
+class KATANA_EXPORT BooleanPropertyReadOnlyView {
 public:
   // use uint8_t instead of bool for value_type to avoid std::vector<bool>
   // (std::vector<bool> specialization leads to issues in concurrent writes
@@ -298,9 +298,7 @@ public:
   using value_type = uint8_t;
 
   static Result<BooleanPropertyReadOnlyView> Make(
-      const arrow::BooleanArray& array) {
-    return BooleanPropertyReadOnlyView(array);
-  }
+      const arrow::BooleanArray& array);
 
   bool IsValid(size_t i) const {
     KATANA_LOG_DEBUG_ASSERT(i < (size_t)array_.length());
@@ -400,9 +398,9 @@ AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
           arrow::default_memory_pool(), std::move(rows), names, &table);
       !r.ok()) {
     KATANA_LOG_DEBUG("arrow error: {}", r);
-    return katana::ErrorCode::ArrowError;
+    return Result<std::shared_ptr<arrow::Table>>(katana::ErrorCode::ArrowError);
   }
-  return table;
+  return Result<std::shared_ptr<arrow::Table>>(table);
 }
 
 }  // namespace katana

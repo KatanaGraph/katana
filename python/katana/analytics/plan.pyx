@@ -11,7 +11,7 @@ class Architecture(Enum):
 
     DistributedCPU
         Distributed CPU.
-    
+
     DistributedGPU
         Distributed GPU.
     """

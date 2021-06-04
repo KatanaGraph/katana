@@ -107,7 +107,7 @@ public:
     case ErrorCode::GraphUpdateFailed:
       return "graph update failed";
     case ErrorCode::NotBuiltWith:
-      return "the software is not built with this feature";
+      return "Katana is not built with this feature";
     default:
       return "unknown error";
     }

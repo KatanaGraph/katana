@@ -8,8 +8,10 @@ enum Architecture {
   kCPU,
   /// Local execution using mostly GPUs
   kGPU,
-  /// Distributed execution using both CPUs and GPUs
-  kDistributed
+  /// Distributed execution using CPUs
+  kDistributedCPU,
+  /// Distributed execution using GPUs
+  kDistributedGPU
 };
 
 /// The base class for abstract algorithm execution plans.

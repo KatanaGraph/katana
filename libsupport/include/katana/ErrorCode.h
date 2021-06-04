@@ -106,6 +106,8 @@ public:
       return "assertion failed";
     case ErrorCode::GraphUpdateFailed:
       return "graph update failed";
+    case ErrorCode::NotBuiltWith:
+      return "the software is not built with this feature";
     default:
       return "unknown error";
     }
@@ -125,6 +127,7 @@ public:
     case ErrorCode::AlreadyExists:
       return make_error_condition(std::errc::file_exists);
     case ErrorCode::NotImplemented:
+    case ErrorCode::NotBuiltWith:
       return make_error_condition(std::errc::function_not_supported);
     case ErrorCode::NotFound:
     case ErrorCode::PropertyNotFound:

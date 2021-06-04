@@ -195,7 +195,8 @@ GetTypeIDsFromProperties(
         type_name_to_type_ids->find(field_name) ==
         type_name_to_type_ids->end());
 
-    std::unordered_set<katana::PropertyGraph::TypeID> type_ids{new_type_id};
+    katana::PropertyGraph::TypeIDsSet type_ids;
+    type_ids.set(new_type_id);
     type_name_to_type_ids->emplace(std::make_pair(field_name, type_ids));
     type_id_to_type_names->push_back({field_name});
   }
@@ -254,7 +255,7 @@ GetTypeIDsFromProperties(
           type_name_to_type_ids->find(field_name) !=
           type_name_to_type_ids->end());
 
-      type_name_to_type_ids->at(field_name).emplace(new_type_id);
+      type_name_to_type_ids->at(field_name).set(new_type_id);
       type_id_to_type_names->at(new_type_id).emplace(field_name);
     }
   }

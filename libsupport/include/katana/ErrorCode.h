@@ -65,6 +65,7 @@ enum class ErrorCode {
   TypeError = 11,
   AssertionFailed = 12,
   GraphUpdateFailed = 13,
+  NotBuiltWith = 14,
 };
 
 }  // namespace katana

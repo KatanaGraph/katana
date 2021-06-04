@@ -1,6 +1,7 @@
 #ifndef KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 #define KATANA_LIBGALOIS_KATANA_PROPERTYGRAPH_H_
 
+#include <bitset>
 #include <string>
 #include <utility>
 #include <vector>
@@ -105,11 +106,12 @@ public:
   using ArrowTypeID = arrow::UInt8Type;
   static constexpr TypeID kUnknownType = TypeID{0};
   static constexpr TypeID kInvalidType = std::numeric_limits<TypeID>::max();
+  /// A set of TypeIDs
+  using TypeIDsSet = std::bitset<std::numeric_limits<TypeID>::max() + 1>;
   /// A map from TypeID to the set of the type names it contains
   using TypeIDToTypeNamesMap = std::vector<std::unordered_set<std::string>>;
   /// A map from the type name to the set of the TypeIDs that contain it
-  using TypeNameToTypeIDsMap =
-      std::unordered_map<std::string, std::unordered_set<TypeID>>;
+  using TypeNameToTypeIDsMap = std::unordered_map<std::string, TypeIDsSet>;
 
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
@@ -366,16 +368,14 @@ public:
   /// \returns the set of node TypeIDs that contain
   /// the node type with @param name
   /// (assumes that the node type exists)
-  const std::unordered_set<TypeID>& NodeTypeNameToTypeIDs(
-      const std::string& name) const {
+  const TypeIDsSet& NodeTypeNameToTypeIDs(const std::string& name) const {
     return node_type_name_to_type_ids_.at(name);
   }
 
   /// \returns the set of edge TypeIDs that contain
   /// the edge type with @param name
   /// (assumes that the edge type exists)
-  const std::unordered_set<TypeID>& EdgeTypeNameToTypeIDs(
-      const std::string& name) const {
+  const TypeIDsSet& EdgeTypeNameToTypeIDs(const std::string& name) const {
     return edge_type_name_to_type_ids_.at(name);
   }
 

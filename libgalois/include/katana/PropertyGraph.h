@@ -108,7 +108,7 @@ public:
   /// A map from TypeID to the set of the type names it contains
   using TypeIDToTypeNamesMap = std::vector<std::unordered_set<std::string>>;
   /// A map from the type name to the set of the TypeIDs that contain it
-  using TypeNameToTypeIDMap =
+  using TypeNameToTypeIDsMap =
       std::unordered_map<std::string, std::unordered_set<TypeID>>;
 
   // Pass through topology API
@@ -146,10 +146,10 @@ private:
 
   /// A map from the node type name
   /// to the set of the node TypeIDs that contain it
-  TypeNameToTypeIDMap node_type_name_to_type_ids_;
+  TypeNameToTypeIDsMap node_type_name_to_type_ids_;
   /// A map from the edge type name
   /// to the set of the edge TypeIDs that contain it
-  TypeNameToTypeIDMap edge_type_name_to_type_ids_;
+  TypeNameToTypeIDsMap edge_type_name_to_type_ids_;
 
   /// The node TypeID for each node in the graph
   std::shared_ptr<arrow::NumericArray<ArrowTypeID>> node_type_id_;

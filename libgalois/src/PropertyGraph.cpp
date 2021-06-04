@@ -150,7 +150,7 @@ MakePropertyGraph(
 katana::Result<std::shared_ptr<arrow::NumericArray<arrow::UInt8Type>>>
 GetTypeIDsFromProperties(
     const std::shared_ptr<arrow::Table>& properties,
-    katana::PropertyGraph::TypeNameToTypeIDMap* type_name_to_type_ids,
+    katana::PropertyGraph::TypeNameToTypeIDsMap* type_name_to_type_ids,
     katana::PropertyGraph::TypeIDToTypeNamesMap* type_id_to_type_names) {
   // throw an error if each column/property has more than 1 chunk
   for (int i = 0, n = properties->num_columns(); i < n; i++) {
@@ -181,11 +181,11 @@ GetTypeIDsFromProperties(
   // assign a new ID to each type
   // NB: cannot use unordered_map without defining a hash function for vectors;
   // performance is not affected here because the map is very small (<=256)
-  std::map<std::vector<int>, katana::PropertyGraph::TypeID>
+  std::map<katana::gstl::Vector<int>, katana::PropertyGraph::TypeID>
       type_field_indices_to_id;
   for (int i : type_field_indices) {
     katana::PropertyGraph::TypeID new_type_id = type_id_to_type_names->size();
-    std::vector<int> field_indices = {i};
+    katana::gstl::Vector<int> field_indices = {i};
     type_field_indices_to_id.emplace(
         std::make_pair(field_indices, new_type_id));
 
@@ -203,11 +203,12 @@ GetTypeIDsFromProperties(
   // collect the list of unique combination of types
   // NB: cannot use unordered_set without defining a hash function for vectors;
   // performance is not affected here because the set is very small (<=256)
-  std::set<std::vector<int>> type_combinations;
-  katana::PerThreadStorage<std::set<std::vector<int>>> type_combinations_pts;
+  katana::gstl::Set<katana::gstl::Vector<int>> type_combinations;
+  katana::PerThreadStorage<katana::gstl::Set<katana::gstl::Vector<int>>>
+      type_combinations_pts;
   katana::do_all(
       katana::iterate(int64_t{0}, properties->num_rows()), [&](int64_t row) {
-        std::vector<int> field_indices;
+        katana::gstl::Vector<int> field_indices;
         for (int i : type_field_indices) {
           std::shared_ptr<arrow::Array> property =
               properties->column(i)->chunk(0);
@@ -226,13 +227,13 @@ GetTypeIDsFromProperties(
           }
         }
         if (field_indices.size() > 1) {
-          std::set<std::vector<int>>& local_type_combinations =
-              *type_combinations_pts.getLocal();
+          katana::gstl::Set<katana::gstl::Vector<int>>&
+              local_type_combinations = *type_combinations_pts.getLocal();
           local_type_combinations.emplace(field_indices);
         }
       });
   for (unsigned t = 0, n = katana::activeThreads; t < n; t++) {
-    std::set<std::vector<int>>& remote_type_combinations =
+    katana::gstl::Set<katana::gstl::Vector<int>>& remote_type_combinations =
         *type_combinations_pts.getRemote(t);
     for (auto& type_combination : remote_type_combinations) {
       type_combinations.emplace(type_combination);
@@ -240,7 +241,7 @@ GetTypeIDsFromProperties(
   }
 
   // assign a new ID to each unique combination of types
-  for (const std::vector<int>& field_indices : type_combinations) {
+  for (const katana::gstl::Vector<int>& field_indices : type_combinations) {
     katana::PropertyGraph::TypeID new_type_id = type_id_to_type_names->size();
     type_field_indices_to_id.emplace(
         std::make_pair(field_indices, new_type_id));
@@ -279,7 +280,7 @@ GetTypeIDsFromProperties(
 
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
-    std::vector<int> field_indices;
+    katana::gstl::Vector<int> field_indices;
     for (int i : type_field_indices) {
       std::shared_ptr<arrow::Array> property = properties->column(i)->chunk(0);
 
@@ -297,12 +298,12 @@ GetTypeIDsFromProperties(
         }
       }
     }
-    if (!field_indices.empty()) {
+    if (field_indices.empty()) {
+      (*type_ids)[row] = katana::PropertyGraph::kUnknownType;
+    } else {
       katana::PropertyGraph::TypeID type_id =
           type_field_indices_to_id.at(field_indices);
       (*type_ids)[row] = type_id;
-    } else {
-      (*type_ids)[row] = katana::PropertyGraph::kUnknownType;
     }
   });
 

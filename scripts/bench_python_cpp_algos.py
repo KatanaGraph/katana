@@ -127,7 +127,7 @@ def run_pagerank(property_graph: PropertyGraph, _input_args):
     max_iteration = 1000
     alpha = 0.85
 
-    pagerank_plan = analytics.PagerankPlan.pull_residual(tolerance, max_iteration, alpha)
+    pagerank_plan = analytics.PagerankPlan.pull_topological(tolerance, max_iteration, alpha)
 
     with time_block("pagerank"):
         analytics.pagerank(property_graph, property_name, pagerank_plan)

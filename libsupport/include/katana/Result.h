@@ -251,10 +251,8 @@ operator!=(const ErrorInfo& a, const ErrorInfo& b) {
   return !(a == b);
 }
 
-inline Result<void>
-ResultSuccess() {
-  return BOOST_OUTCOME_V2_NAMESPACE::success();
-}
+//TODO (serge): make this function back inline after the issue in nvcc is fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
+KATANA_EXPORT Result<void> ResultSuccess();
 
 inline std::error_code
 ResultErrno() {

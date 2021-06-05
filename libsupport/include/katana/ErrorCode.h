@@ -65,7 +65,7 @@ enum class ErrorCode {
   TypeError = 11,
   AssertionFailed = 12,
   GraphUpdateFailed = 13,
-  NotBuiltWith = 14,
+  FeatureNotEnabled = 14,
 };
 
 }  // namespace katana
@@ -106,7 +106,7 @@ public:
       return "assertion failed";
     case ErrorCode::GraphUpdateFailed:
       return "graph update failed";
-    case ErrorCode::NotBuiltWith:
+    case ErrorCode::FeatureNotEnabled:
       return "Katana is not built with this feature";
     default:
       return "unknown error";
@@ -127,7 +127,7 @@ public:
     case ErrorCode::AlreadyExists:
       return make_error_condition(std::errc::file_exists);
     case ErrorCode::NotImplemented:
-    case ErrorCode::NotBuiltWith:
+    case ErrorCode::FeatureNotEnabled:
       return make_error_condition(std::errc::function_not_supported);
     case ErrorCode::NotFound:
     case ErrorCode::PropertyNotFound:

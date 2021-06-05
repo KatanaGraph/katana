@@ -155,3 +155,8 @@ katana::CopyableErrorInfo::Write(std::ostream& out) const {
   }
   return out;
 }
+
+katana::Result<void>
+katana::ResultSuccess() {
+  return BOOST_OUTCOME_V2_NAMESPACE::success();
+}

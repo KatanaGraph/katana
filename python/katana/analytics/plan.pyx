@@ -9,12 +9,16 @@ class Architecture(Enum):
         Parallel NUMA-aware CPU. Not distributed.
     GPU
 
-    Distributed
-        Distributed CPU and GPU.
+    DistributedCPU
+        Distributed CPU.
+
+    DistributedGPU
+        Distributed GPU.
     """
     CPU = _Architecture.kCPU
     GPU = _Architecture.kGPU
-    Distributed = _Architecture.kDistributed
+    DistributedCPU = _Architecture.kDistributedCPU
+    DistributedGPU = _Architecture.kDistributedGPU
 
 
 cdef class Plan:

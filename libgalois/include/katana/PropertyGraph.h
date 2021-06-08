@@ -99,19 +99,24 @@ struct KATANA_EXPORT GraphTopology {
 /// comprise the physical representation of the logical property graph.
 class KATANA_EXPORT PropertyGraph {
 public:
-  /// TypeID uniquely identifies/contains a combination/set of types
-  /// TypeID is represented using 8 bits
-  /// TypeID for nodes is distinct from TypeID for edges
-  using TypeID = uint8_t;
-  using ArrowTypeID = arrow::UInt8Type;
-  static constexpr TypeID kUnknownType = TypeID{0};
-  static constexpr TypeID kInvalidType = std::numeric_limits<TypeID>::max();
-  /// A set of TypeIDs
-  using TypeIDsSet = std::bitset<std::numeric_limits<TypeID>::max() + 1>;
-  /// A map from TypeID to the set of the type names it contains
-  using TypeIDToTypeNamesMap = std::vector<std::unordered_set<std::string>>;
-  /// A map from the type name to the set of the TypeIDs that contain it
-  using TypeNameToTypeIDsMap = std::unordered_map<std::string, TypeIDsSet>;
+  /// TypeSetID uniquely identifies/contains a combination/set of types
+  /// TypeSetID is represented using 8 bits
+  /// TypeSetID for nodes is distinct from TypeSetID for edges
+  using TypeSetID = uint8_t;
+  using ArrowTypeSetID = arrow::UInt8Type;
+  static constexpr TypeSetID kUnknownType = TypeSetID{0};
+  static constexpr TypeSetID kInvalidType =
+      std::numeric_limits<TypeSetID>::max();
+  /// A set of TypeSetIDs
+  using SetOfTypeSetIDs =
+      std::bitset<std::numeric_limits<TypeSetID>::max() + 1>;
+  /// A set of type names
+  using SetOfTypeNames = std::unordered_set<std::string>;
+  /// A map from TypeSetID to the set of the type names it contains
+  using TypeSetIDToSetOfTypeNamesMap = std::vector<SetOfTypeNames>;
+  /// A map from the type name to the set of the TypeSetIDs that contain it
+  using TypeNameToSetOfTypeSetIDsMap =
+      std::unordered_map<std::string, SetOfTypeSetIDs>;
 
   // Pass through topology API
   using node_iterator = GraphTopology::node_iterator;
@@ -139,24 +144,24 @@ private:
   // caller of SetTopology.
   GraphTopology topology_;
 
-  /// A map from the node TypeID to
+  /// A map from the node TypeSetID to
   /// the set of the node type names it contains
-  TypeIDToTypeNamesMap node_type_id_to_type_names_;
-  /// A map from the edge TypeID to
+  TypeSetIDToSetOfTypeNamesMap node_type_set_id_to_type_names_;
+  /// A map from the edge TypeSetID to
   /// the set of the edge type names it contains
-  TypeIDToTypeNamesMap edge_type_id_to_type_names_;
+  TypeSetIDToSetOfTypeNamesMap edge_type_set_id_to_type_names_;
 
   /// A map from the node type name
-  /// to the set of the node TypeIDs that contain it
-  TypeNameToTypeIDsMap node_type_name_to_type_ids_;
+  /// to the set of the node TypeSetIDs that contain it
+  TypeNameToSetOfTypeSetIDsMap node_type_name_to_type_set_ids_;
   /// A map from the edge type name
-  /// to the set of the edge TypeIDs that contain it
-  TypeNameToTypeIDsMap edge_type_name_to_type_ids_;
+  /// to the set of the edge TypeSetIDs that contain it
+  TypeNameToSetOfTypeSetIDsMap edge_type_name_to_type_set_ids_;
 
-  /// The node TypeID for each node in the graph
-  std::shared_ptr<arrow::NumericArray<ArrowTypeID>> node_type_id_;
-  /// The edge TypeID for each edge in the graph
-  std::shared_ptr<arrow::NumericArray<ArrowTypeID>> edge_type_id_;
+  /// The node TypeSetID for each node in the graph
+  std::shared_ptr<arrow::NumericArray<ArrowTypeSetID>> node_type_set_id_;
+  /// The edge TypeSetID for each edge in the graph
+  std::shared_ptr<arrow::NumericArray<ArrowTypeSetID>> edge_type_set_id_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -268,11 +273,11 @@ public:
       const std::vector<std::string>& node_properties,
       const std::vector<std::string>& edge_properties) const;
 
-  /// Construct node & edge TypeIDs from node & edge properties
-  /// Also constructs metadata to convert between types and TypeIDs
+  /// Construct node & edge TypeSetIDs from node & edge properties
+  /// Also constructs metadata to convert between types and TypeSetIDs
   /// Assumes all boolean or uint8 properties are types
   /// TODO(roshan) move this to be a part of Make()
-  Result<void> ConstructTypeIDs();
+  Result<void> ConstructTypeSetIDs();
 
   const std::string& rdg_dir() const { return rdg_.rdg_dir().string(); }
 
@@ -346,70 +351,80 @@ public:
   }
 
   /// \returns the number of node types
-  size_t GetNodeTypesNum() const { return node_type_name_to_type_ids_.size(); }
+  size_t GetNodeTypesNum() const {
+    return node_type_name_to_type_set_ids_.size();
+  }
 
   /// \returns the number of edge types
-  size_t GetEdgeTypesNum() const { return edge_type_name_to_type_ids_.size(); }
+  size_t GetEdgeTypesNum() const {
+    return edge_type_name_to_type_set_ids_.size();
+  }
 
   /// \returns true if a node type with @param name exists
   /// NB: no node may have this type
   /// TODO(roshan) build an index for the number of nodes with the type
   bool HasNodeType(const std::string& name) const {
-    return node_type_name_to_type_ids_.count(name) == 1;
+    return node_type_name_to_type_set_ids_.count(name) == 1;
   }
 
   /// \returns true if an edge type with @param name exists
   /// NB: no edge may have this type
   /// TODO(roshan) build an index for the number of edges with the type
   bool HasEdgeType(const std::string& name) const {
-    return edge_type_name_to_type_ids_.count(name) == 1;
+    return edge_type_name_to_type_set_ids_.count(name) == 1;
   }
 
-  /// \returns the set of node TypeIDs that contain
+  /// \returns the set of node TypeSetIDs that contain
   /// the node type with @param name
   /// (assumes that the node type exists)
-  const TypeIDsSet& NodeTypeNameToTypeIDs(const std::string& name) const {
-    return node_type_name_to_type_ids_.at(name);
+  const SetOfTypeSetIDs& NodeTypeNameToTypeSetIDs(
+      const std::string& name) const {
+    return node_type_name_to_type_set_ids_.at(name);
   }
 
-  /// \returns the set of edge TypeIDs that contain
+  /// \returns the set of edge TypeSetIDs that contain
   /// the edge type with @param name
   /// (assumes that the edge type exists)
-  const TypeIDsSet& EdgeTypeNameToTypeIDs(const std::string& name) const {
-    return edge_type_name_to_type_ids_.at(name);
+  const SetOfTypeSetIDs& EdgeTypeNameToTypeSetIDs(
+      const std::string& name) const {
+    return edge_type_name_to_type_set_ids_.at(name);
   }
 
-  /// \returns the number of node TypeIDs (including kUnknownType)
-  size_t GetNodeTypeIDsNum() const {
-    return node_type_id_to_type_names_.size();
+  /// \returns the number of node TypeSetIDs (including kUnknownType)
+  size_t GetNodeTypeSetIDsNum() const {
+    return node_type_set_id_to_type_names_.size();
   }
 
-  /// \returns the number of edge TypeIDs (including kUnknownType)
-  size_t GetEdgeTypeIDsNum() const {
-    return edge_type_id_to_type_names_.size();
+  /// \returns the number of edge TypeSetIDs (including kUnknownType)
+  size_t GetEdgeTypeSetIDsNum() const {
+    return edge_type_set_id_to_type_names_.size();
   }
 
   /// \returns the set of node type names that contain
-  /// the node TypeID @param node_type_id
-  /// (assumes that the node TypeID exists)
-  const std::unordered_set<std::string>& NodeTypeIDToTypeNames(
-      TypeID node_type_id) const {
-    return node_type_id_to_type_names_.at(node_type_id);
+  /// the node TypeSetID @param node_type_set_id
+  /// (assumes that the node TypeSetID exists)
+  const SetOfTypeNames& NodeTypeSetIDToTypeNames(
+      TypeSetID node_type_set_id) const {
+    return node_type_set_id_to_type_names_.at(node_type_set_id);
   }
 
   /// \returns the set of edge type names that contain
-  /// the edge TypeID @param edge_type_id
-  /// (assumes that the edge TypeID exists)
-  const std::unordered_set<std::string>& EdgeTypeIDToTypeNames(
-      TypeID edge_type_id) const {
-    return edge_type_id_to_type_names_.at(edge_type_id);
+  /// the edge TypeSetID @param edge_type_set_id
+  /// (assumes that the edge TypeSetID exists)
+  const SetOfTypeNames& EdgeTypeSetIDToTypeNames(
+      TypeSetID edge_type_set_id) const {
+    return edge_type_set_id_to_type_names_.at(edge_type_set_id);
   }
 
-  /// \return returns the node TypeID for @param node
-  TypeID GetNodeTypeID(Node node) const { return node_type_id_->Value(node); }
+  /// \return returns the node TypeSetID for @param node
+  TypeSetID GetNodeTypeSetID(Node node) const {
+    return node_type_set_id_->Value(node);
+  }
 
-  /// \return returns the edge TypeID for @param edge
-  TypeID GetEdgeTypeID(Edge edge) const { return edge_type_id_->Value(edge); }
+  /// \return returns the edge TypeSetID for @param edge
+  TypeSetID GetEdgeTypeSetID(Edge edge) const {
+    return edge_type_set_id_->Value(edge);
+  }
 
   // Return type dictated by arrow
   int32_t GetNodePropertyNum() const {

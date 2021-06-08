@@ -147,7 +147,7 @@ MakePropertyGraph(
 }
 
 /// Assumes all boolean or uint8 properties are types
-katana::Result<std::shared_ptr<arrow::NumericArray<arrow::UInt8Type>>>
+katana::Result<katana::LargeArray<katana::PropertyGraph::TypeSetID>>
 GetTypeSetIDsFromProperties(
     const std::shared_ptr<arrow::Table>& properties,
     katana::PropertyGraph::TypeNameToSetOfTypeSetIDsMap*
@@ -280,10 +280,9 @@ GetTypeSetIDsFromProperties(
   }
 
   // allocate type IDs array
-  auto type_set_ids =
-      std::make_unique<katana::LargeArray<katana::PropertyGraph::TypeSetID>>();
+  katana::LargeArray<katana::PropertyGraph::TypeSetID> type_set_ids;
   int64_t num_rows = properties->num_rows();
-  type_set_ids->allocateInterleaved(num_rows);
+  type_set_ids.allocateInterleaved(num_rows);
 
   // assign the type ID for each row
   katana::do_all(katana::iterate(int64_t{0}, num_rows), [&](int64_t row) {
@@ -306,30 +305,26 @@ GetTypeSetIDsFromProperties(
       }
     }
     if (field_indices.empty()) {
-      (*type_set_ids)[row] = katana::PropertyGraph::kUnknownType;
+      type_set_ids[row] = katana::PropertyGraph::kUnknownType;
     } else {
       katana::PropertyGraph::TypeSetID type_set_id =
           type_field_indices_to_id.at(field_indices);
-      (*type_set_ids)[row] = type_set_id;
+      type_set_ids[row] = type_set_id;
     }
   });
 
-  return std::make_shared<arrow::NumericArray<arrow::UInt8Type>>(
-      static_cast<int64_t>(num_rows),
-      arrow::MutableBuffer::Wrap(type_set_ids.release()->data(), num_rows));
+  return katana::Result<katana::LargeArray<katana::PropertyGraph::TypeSetID>>(
+      std::move(type_set_ids));
 }
 
-std::shared_ptr<arrow::NumericArray<arrow::UInt8Type>>
+katana::LargeArray<katana::PropertyGraph::TypeSetID>
 GetUnknownTypeSetIDs(uint64_t num_rows) {
-  auto type_set_ids =
-      std::make_unique<katana::LargeArray<katana::PropertyGraph::TypeSetID>>();
-  type_set_ids->allocateInterleaved(num_rows);
+  katana::LargeArray<katana::PropertyGraph::TypeSetID> type_set_ids;
+  type_set_ids.allocateInterleaved(num_rows);
   katana::do_all(katana::iterate(uint64_t{0}, num_rows), [&](uint64_t row) {
-    (*type_set_ids)[row] = katana::PropertyGraph::kUnknownType;
+    type_set_ids[row] = katana::PropertyGraph::kUnknownType;
   });
-  return std::make_shared<arrow::NumericArray<arrow::UInt8Type>>(
-      static_cast<int64_t>(num_rows),
-      arrow::MutableBuffer::Wrap(type_set_ids.release()->data(), num_rows));
+  return type_set_ids;
 }
 
 }  // namespace

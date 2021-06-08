@@ -103,7 +103,6 @@ public:
   /// TypeSetID is represented using 8 bits
   /// TypeSetID for nodes is distinct from TypeSetID for edges
   using TypeSetID = uint8_t;
-  using ArrowTypeSetID = arrow::UInt8Type;
   static constexpr TypeSetID kUnknownType = TypeSetID{0};
   static constexpr TypeSetID kInvalidType =
       std::numeric_limits<TypeSetID>::max();
@@ -159,9 +158,9 @@ private:
   TypeNameToSetOfTypeSetIDsMap edge_type_name_to_type_set_ids_;
 
   /// The node TypeSetID for each node in the graph
-  std::shared_ptr<arrow::NumericArray<ArrowTypeSetID>> node_type_set_id_;
+  katana::LargeArray<TypeSetID> node_type_set_id_;
   /// The edge TypeSetID for each edge in the graph
-  std::shared_ptr<arrow::NumericArray<ArrowTypeSetID>> edge_type_set_id_;
+  katana::LargeArray<TypeSetID> edge_type_set_id_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG
@@ -418,12 +417,12 @@ public:
 
   /// \return returns the node TypeSetID for @param node
   TypeSetID GetNodeTypeSetID(Node node) const {
-    return node_type_set_id_->Value(node);
+    return node_type_set_id_[node];
   }
 
   /// \return returns the edge TypeSetID for @param edge
   TypeSetID GetEdgeTypeSetID(Edge edge) const {
-    return edge_type_set_id_->Value(edge);
+    return edge_type_set_id_[edge];
   }
 
   // Return type dictated by arrow

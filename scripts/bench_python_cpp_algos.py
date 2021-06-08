@@ -274,6 +274,15 @@ def run_all_gap(args):
             "edge_wt": "value",
             "sssp_delta": 1,
         },
+        {
+            "name": "GAP-urand",
+            "symmetric_input": "GAP-urand",
+            "symmetric_clean_input": "GAP-urand",
+            "transpose_input": "GAP-urand",
+            "source_node": 27691419,
+            "edge_wt": "value",
+            "sssp_delta": 1,
+        },
     ]
 
     def load_graph(graph_path):
@@ -368,7 +377,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--graph",
         default="GAP-road",
-        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web"],
+        choices=["GAP-road", "GAP-kron", "GAP-twitter", "GAP-web", "GAP-urand"],
         help="Graph name (default: %(default)s)",
     )
     parser.add_argument(

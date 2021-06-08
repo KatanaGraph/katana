@@ -1,11 +1,25 @@
+"""
+Local Clustering Coefficient
+----------------------------
+
+.. autoclass:: katana.analytics.LocalClusteringCoefficientPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._local_clustering_coefficient._LocalClusteringCoefficientPlanAlgorithm
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.local_clustering_coefficient
+"""
 from libcpp cimport bool
 from libcpp.string cimport string
 
 from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
+from katana.cpp.libsupport.result cimport Result, handle_result_void
 
 from enum import Enum
 
@@ -47,6 +61,9 @@ cdef extern from "katana/analytics/local_clustering_coefficient/local_clustering
 
 
 class _LocalClusteringCoefficientPlanAlgorithm(Enum):
+    """
+    :see: :py:class:`~katana.analytics.LocalClusteringCoefficientPlan` constructors for algorithm documentation.
+    """
     OrderedCountAtomics = _LocalClusteringCoefficientPlan.Algorithm.kOrderedCountAtomics
     OrderedCountPerThread = _LocalClusteringCoefficientPlan.Algorithm.kOrderedCountPerThread
 
@@ -101,6 +118,17 @@ cdef class LocalClusteringCoefficientPlan(Plan):
                 relabeling = _relabeling_to_python(kDefaultRelabeling),
                 bool edges_sorted = kDefaultEdgesSorted
             ):
+        """
+        An ordered count algorithm that sorts the nodes by degree before
+        execution. This has been found to give good performance. We implement the
+        ordered count algorithm from the following:
+        http://gap.cs.berkeley.edu/benchmark.html
+
+        This algorithm uses atomic instructions to update counts.
+
+        :param relabeling: Should the algorithm relabel the nodes.
+        :param edges_sorted: Are the edges of the graph already sorted.
+        """
         return LocalClusteringCoefficientPlan.make(_LocalClusteringCoefficientPlan.OrderedCountAtomics(
              edges_sorted, _relabeling_from_python(relabeling)))
 
@@ -109,6 +137,17 @@ cdef class LocalClusteringCoefficientPlan(Plan):
                 relabeling = _relabeling_to_python(kDefaultRelabeling),
                 bool edges_sorted = kDefaultEdgesSorted
             ):
+        """
+        An ordered count algorithm that sorts the nodes by degree before
+        execution. This has been found to give good performance. We implement the
+        ordered count algorithm from the following:
+        http://gap.cs.berkeley.edu/benchmark.html
+
+        This algorithm uses thread-local counters for parallel counting.
+
+        :param relabeling: Should the algorithm relabel the nodes.
+        :param edges_sorted: Are the edges of the graph already sorted.
+        """
         return LocalClusteringCoefficientPlan.make(_LocalClusteringCoefficientPlan.OrderedCountPerThread(
              edges_sorted, _relabeling_from_python(relabeling)))
 

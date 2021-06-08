@@ -8,6 +8,8 @@ Betweenness Centrality
     :undoc-members:
 
 .. autoclass:: katana.analytics._betweenness_centrality._BetweennessCentralityAlgorithm
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.betweenness_centrality
 
@@ -81,12 +83,7 @@ cdef extern from * nogil:
 
 class _BetweennessCentralityAlgorithm(Enum):
     """
-    Concrete algorithms for Betweenness Centrality.
-
-    Outer
-        Parallelize outermost iteration
-    Level
-        Process levels in parallel
+    :see: :py:class:`~katana.analytics.BetweennessCentralityPlan` constructors for algorithm documentation.
     """
     Outer = _BetweennessCentralityPlan.Algorithm.kOuter
     Level = _BetweennessCentralityPlan.Algorithm.kLevel
@@ -118,10 +115,16 @@ cdef class BetweennessCentralityPlan(Plan):
 
     @staticmethod
     def outer():
+        """
+        Parallelize outer-most iteration.
+        """
         return BetweennessCentralityPlan.make(_BetweennessCentralityPlan.Outer())
 
     @staticmethod
     def level():
+        """
+        Process levels in parallel.
+        """
         return BetweennessCentralityPlan.make(_BetweennessCentralityPlan.Level())
 
 
@@ -149,13 +152,6 @@ def betweenness_centrality(PropertyGraph pg, str output_property_name, sources =
     with nogil:
         handle_result_void(BetweennessCentrality(pg.underlying_property_graph(), output_property_name_cstr,
                                                  c_sources, plan.underlying_))
-
-
-# def betweenness_centrality_assert_valid(PropertyGraph pg, str output_property_name):
-#     output_property_name_bytes = bytes(output_property_name, "utf-8")
-#     output_property_name_cstr = <string>output_property_name_bytes
-#     with nogil:
-#         handle_result_assert(BetweennessCentralityAssertValid(pg.underlying_property_graph(), output_property_name_cstr))
 
 
 cdef _BetweennessCentralityStatistics handle_result_BetweennessCentralityStatistics(Result[_BetweennessCentralityStatistics] res) nogil except *:

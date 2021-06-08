@@ -8,6 +8,8 @@ k-Core
     :undoc-members:
 
 .. autoclass:: katana.analytics._k_core._KCorePlanAlgorithm
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.k_core
 
@@ -60,10 +62,7 @@ cdef extern from "katana/analytics/k_core/k_core.h" namespace "katana::analytics
 
 class _KCorePlanAlgorithm(Enum):
     """
-    Synchronous
-        Bulk-synchronous
-    Asynchronous
-        Asynchronous
+    :see: :py:class:`~katana.analytics.KCorePlan` constructors for algorithm documentation.
     """
     Synchronous = _KCorePlan.Algorithm.kSynchronous
     Asynchronous = _KCorePlan.Algorithm.kAsynchronous
@@ -95,9 +94,15 @@ cdef class KCorePlan(Plan):
 
     @staticmethod
     def synchronous() -> KCorePlan:
+        """
+        Bulk-synchronous
+        """
         return KCorePlan.make(_KCorePlan.Synchronous())
     @staticmethod
     def asynchronous() -> KCorePlan:
+        """
+        Asynchronous
+        """
         return KCorePlan.make(_KCorePlan.Asynchronous())
 
 

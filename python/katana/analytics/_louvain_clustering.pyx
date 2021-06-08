@@ -1,3 +1,24 @@
+"""
+Louvain Clustering
+------------------
+
+.. autoclass:: katana.analytics.LouvainClusteringPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autoclass:: katana.analytics._louvain_clustering._LouvainClusteringPlanAlgorithm
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.louvain_clustering
+
+.. autoclass:: katana.analytics.LouvainClusteringStatistics
+    :members:
+    :undoc-members:
+
+.. autofunction:: katana.analytics.louvain_clustering_assert_valid
+"""
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp cimport bool
 from libcpp.string cimport string
@@ -17,6 +38,7 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
     cppclass _LouvainClusteringPlan "katana::analytics::LouvainClusteringPlan" (_Plan):
         enum Algorithm:
             kDoAll "katana::analytics::LouvainClusteringPlan::kDoAll"
+            kDeterministic "katana::analytics::LouvainClusteringPlan::kDeterministic"
 
         _LouvainClusteringPlan.Algorithm algorithm() const
         bool enable_vf() const
@@ -35,6 +57,14 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
                 uint32_t max_iterations,
                 uint32_t min_graph_size
             )
+
+        @staticmethod
+        _LouvainClusteringPlan Deterministic(
+            bool enable_vf,
+            double modularity_threshold_per_round,
+            double modularity_threshold_total,
+            uint32_t max_iterations,
+            uint32_t min_graph_size)
 
     bool kDefaultEnableVF "katana::analytics::LouvainClusteringPlan::kDefaultEnableVF"
     double kDefaultModularityThresholdPerRound "katana::analytics::LouvainClusteringPlan::kDefaultModularityThresholdPerRound"
@@ -66,7 +96,11 @@ cdef extern from "katana/analytics/louvain_clustering/louvain_clustering.h" name
 
 
 class _LouvainClusteringPlanAlgorithm(Enum):
+    """
+    :see: :py:class:`~katana.analytics.LouvainClusteringPlan` constructors for algorithm documentation.
+    """
     DoAll = _LouvainClusteringPlan.Algorithm.kDoAll
+    Deterministic = _LouvainClusteringPlan.Algorithm.kDeterministic
 
 
 cdef class LouvainClusteringPlan(Plan):
@@ -117,11 +151,36 @@ cdef class LouvainClusteringPlan(Plan):
                 uint32_t max_iterations = kDefaultMaxIterations,
                 uint32_t min_graph_size = kDefaultMinGraphSize
             ) -> LouvainClusteringPlan:
+        """
+        Nondeterministic algorithm.
+        """
         return LouvainClusteringPlan.make(_LouvainClusteringPlan.DoAll(
              enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
 
+    @staticmethod
+    def deterministic(
+            bool enable_vf = kDefaultEnableVF,
+            double modularity_threshold_per_round = kDefaultModularityThresholdPerRound,
+            double modularity_threshold_total = kDefaultModularityThresholdTotal,
+            uint32_t max_iterations = kDefaultMaxIterations,
+            uint32_t min_graph_size = kDefaultMinGraphSize
+    ) -> LouvainClusteringPlan:
+        """
+         Deterministic algorithm using delayed updates
+        """
+        return LouvainClusteringPlan.make(_LouvainClusteringPlan.Deterministic(
+            enable_vf, modularity_threshold_per_round, modularity_threshold_total, max_iterations, min_graph_size))
 
 def louvain_clustering(PropertyGraph pg, str edge_weight_property_name, str output_property_name, LouvainClusteringPlan plan = LouvainClusteringPlan()):
+    """
+    Compute the Louvain Clustering for pg.
+    The edge weights are taken from the property named
+    edge_weight_property_name (which may be a 32- or 64-bit sign or unsigned
+    int), and the computed cluster IDs are stored in the property named
+    output_property_name (as uint32_t).
+    The property named output_property_name is created by this function and may
+    not exist before the call.
+    """
     cdef string edge_weight_property_name_str = bytes(edge_weight_property_name, "utf-8")
     cdef string output_property_name_str = bytes(output_property_name, "utf-8")
     with nogil:

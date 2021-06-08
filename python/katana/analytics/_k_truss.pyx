@@ -10,6 +10,8 @@ The k-Truss is a maximal connected subgraph in which all edges are part of at le
     :undoc-members:
 
 .. autoclass:: katana.analytics._k_truss._KTrussPlanAlgorithm
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.k_truss
 
@@ -66,18 +68,7 @@ cdef extern from "katana/analytics/k_truss/k_truss.h" namespace "katana::analyti
 
 class _KTrussPlanAlgorithm(Enum):
     """
-    .. py:attribute:: Bsp
-
-        Bulk-synchronous parallel algorithm.
-
-    .. py:attribute:: BspJacobi
-
-        Bulk-synchronous parallel with separated edge removal algorithm.
-
-    .. py:attribute:: BspCoreThenTruss
-
-        Compute k-1 core and then k-truss algorithm.
-
+    :see: :py:class:`~katana.analytics.KTrussPlan` constructors for algorithm documentation.
     """
     Bsp = _KTrussPlan.Algorithm.kBsp
     BspJacobi = _KTrussPlan.Algorithm.kBspJacobi
@@ -88,7 +79,7 @@ cdef class KTrussPlan(Plan):
     """
     A computational :ref:`Plan` for k-truss.
 
-    Static methods construct KTrussPlans.
+    Static methods construct KTrussPlans. The constructor will select a reasonable default plan.
     """
     cdef:
         _KTrussPlan underlying_
@@ -110,12 +101,23 @@ cdef class KTrussPlan(Plan):
 
     @staticmethod
     def bsp() -> KTrussPlan:
+        """
+        Bulk-synchronous parallel algorithm.
+        """
         return KTrussPlan.make(_KTrussPlan.Bsp())
+
     @staticmethod
     def bsp_jacobi() -> KTrussPlan:
+        """
+        Bulk-synchronous parallel with separated edge removal algorithm.
+        """
         return KTrussPlan.make(_KTrussPlan.BspJacobi())
+
     @staticmethod
     def bsp_core_then_truss() -> KTrussPlan:
+        """
+        Compute k-1 core and then k-truss algorithm.
+        """
         return KTrussPlan.make(_KTrussPlan.BspCoreThenTruss())
 
 

@@ -1,3 +1,14 @@
+"""
+Subgraph Extraction
+-------------------
+
+.. autoclass:: katana.analytics.SubGraphExtractionPlan
+    :members:
+    :special-members: __init__
+    :undoc-members:
+
+.. autofunction:: katana.analytics.subgraph_extraction
+"""
 from libc.stdint cimport uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.vector cimport vector
@@ -6,12 +17,9 @@ from pyarrow.lib cimport to_shared
 from katana._property_graph cimport PropertyGraph
 from katana.analytics.plan cimport Plan, _Plan
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
-from katana.cpp.libstd.iostream cimport ostream, ostringstream
-from katana.cpp.libsupport.result cimport Result, handle_result_assert, handle_result_void, raise_error_code
+from katana.cpp.libsupport.result cimport Result, raise_error_code
 
 from enum import Enum
-
-# TODO(amp): Module needs documenting.
 
 
 cdef extern from "katana/analytics/subgraph_extraction/subgraph_extraction.h" namespace "katana::analytics" nogil:
@@ -35,6 +43,11 @@ class _SubGraphExtractionPlanAlgorithm(Enum):
 
 
 cdef class SubGraphExtractionPlan(Plan):
+    """
+    A computational :ref:`Plan` for subgraph extraction.
+
+    Static methods construct SubGraphExtractionPlan. The constructor will select a reasonable default plan.
+    """
     cdef:
         _SubGraphExtractionPlan underlying_
 
@@ -55,6 +68,9 @@ cdef class SubGraphExtractionPlan(Plan):
 
     @staticmethod
     def node_set() -> SubGraphExtractionPlan:
+        """
+        The node-set algorithm.
+        """
         return SubGraphExtractionPlan.make(_SubGraphExtractionPlan.NodeSet())
 
 
@@ -66,6 +82,10 @@ cdef shared_ptr[_PropertyGraph] handle_result_property_graph(Result[unique_ptr[_
 
 
 def subgraph_extraction(PropertyGraph pg, node_vec, SubGraphExtractionPlan plan = SubGraphExtractionPlan()) -> PropertyGraph:
+    """
+    Given a set of node ids, this algorithm constructs a new sub-graph which contains all nodes in the set and edges
+    between them.
+    """
     cdef vector[uint32_t] vec = [<uint32_t>n for n in node_vec]
     with nogil:
         v = handle_result_property_graph(SubGraphExtraction(pg.underlying_property_graph(), vec, plan.underlying_))

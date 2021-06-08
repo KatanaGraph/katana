@@ -230,13 +230,6 @@ struct LouvainClusteringImplementation
     // partition nodes
     std::vector<katana::InsertBag<GNode>> bag(16);
 
-    katana::InsertBag<GNode> to_process;
-    katana::DynamicBitset is_community_updated;
-    is_community_updated.resize(graph.num_nodes());
-    is_community_updated.reset();
-    //katana::LargeArray<bool> in_bag;
-    //in_bag.allocateBlocked(graph.num_nodes());
-
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       uint64_t idx = n % 16;
       bag[idx].push(n);
@@ -244,17 +237,6 @@ struct LouvainClusteringImplementation
       //  = Base::UNASSIGNED;
       local_target[n] = Base::UNASSIGNED;
     });
-
-    std::cout << "Deterministic start-2\n";
-
-    /*
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      c_update_add[n].degree_wt = 0;
-      c_update_add[n].size = 0;
-      c_update_subtract[n].degree_wt = 0;
-      c_update_subtract[n].size = 0;
-    });
-    */
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
@@ -270,8 +252,8 @@ struct LouvainClusteringImplementation
             [&](GNode n) {
               auto& n_curr_comm_id =
                   graph.template GetData<CurrentCommunityId>(n);
-              //auto& n_candidate_comm_id =
-              //    local_target[n];
+              auto& n_candidate_comm_id =
+                  local_target[n];
               //    graph.template GetData<CandidateCommunityId>(n);
               auto& n_data_degree_wt =
                   graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
@@ -295,57 +277,10 @@ struct LouvainClusteringImplementation
                 Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
                     n_data_degree_wt, &max_modularity_gain,
-                    &local_target[n], n_curr_comm_id,
-                    //&n_candidate_comm_id, n_curr_comm_id,
+                    &n_candidate_comm_id, n_curr_comm_id,
                     constant_for_second_term);
               } else {
-                local_target[n] = Base::UNASSIGNED;
-                //n_candidate_comm_id = Base::UNASSIGNED;
-              }
-
-              /* Update cluster info */
-                /*
-              if (local_target[n] != n_curr_comm_id &&
-                  local_target[n] != Base::UNASSIGNED) {
-                katana::atomicAdd(
-                    c_update_add[local_target[n]].degree_wt, n_data_degree_wt);
-                katana::atomicAdd(
-                    c_update_add[local_target[n]].size, (uint64_t)1);
-                katana::atomicAdd(
-                    c_update_subtract[n_curr_comm_id].degree_wt,
-                    n_data_degree_wt);
-                katana::atomicAdd(
-                    c_update_subtract[n_curr_comm_id].size, (uint64_t)1);
-
-                if (!is_community_updated.test(local_target[n])) {
-                  is_community_updated.set(local_target[n]);
-                }
-                */
-
-              /*
-              if (n_candidate_comm_id != n_curr_comm_id &&
-                  n_candidate_comm_id != Base::UNASSIGNED) {
-                  */
-              if (local_target[n] != n_curr_comm_id &&
-                  local_target[n] != Base::UNASSIGNED) {
-                if (!is_community_updated.test(n_curr_comm_id)) {
-                  is_community_updated.set(n_curr_comm_id);
-                }
-
-                /*
-                if (!is_community_updated.test(n_candidate_comm_id)) {
-                  is_community_updated.set(n_candidate_comm_id);
-                }
-                if (!in_bag[local_target[n]]) {
-                  to_process.push(local_target[n]);
-                  in_bag[local_target[n]] = true;
-                }
-
-                if (!in_bag[n_curr_comm_id]) {
-                  to_process.push(n_curr_comm_id);
-                  in_bag[n_curr_comm_id] = true;
-                }
-                */
+                n_candidate_comm_id = Base::UNASSIGNED;
               }
             },
             katana::loopname("louvain algo: Phase 1"));
@@ -360,8 +295,8 @@ struct LouvainClusteringImplementation
           //const uint64_t target_comm_id =
           //        graph.template GetData<CandidateCommunityId>(n);
 
-          //if (is_community_updated.test(curr_comm_id)) {
-          if (is_community_updated.test(curr_comm_id)) {
+          if (target_comm_id != curr_comm_id &&
+              target_comm_id != Base::UNASSIGNED) {
             auto& target_comm_info = c_info[target_comm_id];
             auto& curr_comm_info = c_info[curr_comm_id];
             auto& n_degree_wt =
@@ -373,41 +308,9 @@ struct LouvainClusteringImplementation
             katana::atomicSub(curr_comm_info.degree_wt, n_degree_wt);
             katana::atomicSub(curr_comm_info.size,
                               static_cast<uint64_t>(1));
-            //is_community_updated.reset(curr_comm_id);
-            is_community_updated.reset(curr_comm_id);
-          }
-          curr_comm_id = target_comm_id;
-        });
-
-/*
-        katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          uint64_t& curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
-          if (is_community_updated.test(curr_comm_id)) {
-            curr_comm_id = local_target[n];
-            is_community_updated.reset(curr_comm_id);
+            curr_comm_id = target_comm_id;
           }
         });
-        */
-
-        /*
-        for (auto n : to_process) {
-          if (in_bag[n]) {
-            katana::atomicAdd(c_info[n].size, c_update_add[n].size.load());
-            katana::atomicAdd(
-                c_info[n].degree_wt, c_update_add[n].degree_wt.load());
-
-            katana::atomicSub(c_info[n].size, c_update_subtract[n].size.load());
-            katana::atomicSub(
-                c_info[n].degree_wt, c_update_subtract[n].degree_wt.load());
-            c_update_add[n].size = 0;
-            c_update_add[n].degree_wt = 0;
-            c_update_subtract[n].size = 0;
-            c_update_subtract[n].degree_wt = 0;
-            in_bag[n] = false;
-          }
-        }
-        */
-
       }  // end for
 
       /* Calculate the overall modularity */
@@ -428,7 +331,6 @@ struct LouvainClusteringImplementation
         prev_mod = lower;
 
     }  // End while
-    std::cout << "Deterministic start-5\n";
     TimerClusteringWhile.stop();
 
     iter = num_iter;

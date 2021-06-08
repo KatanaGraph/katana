@@ -7,12 +7,15 @@ Connected Components
     :special-members: __init__
     :undoc-members:
 
-.. autoclass:: katana.analytics._connected_components._ConnectedComponentsPlanAlgorithm
-
 .. [Sutton] M. Sutton, T. Ben-Nun and A. Barak, "Optimizing Parallel Graph
     Connectivity Computation via Subgraph Sampling," 2018 IEEE International
     Parallel and Distributed Processing Symposium (IPDPS), Vancouver, BC, 2018,
     pp. 12-21.
+
+.. autoclass:: katana.analytics._connected_components._ConnectedComponentsPlanAlgorithm
+    :members:
+    :undoc-members:
+
 
 .. autofunction:: katana.analytics.connected_components
 

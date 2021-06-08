@@ -8,6 +8,8 @@ Single-Source Shortest Path
     :undoc-members:
 
 .. autoclass:: katana.analytics._sssp._SsspAlgorithm
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.sssp
 
@@ -94,26 +96,7 @@ class _SsspAlgorithm(Enum):
     """
     The concrete algorithms available for SSSP.
 
-    DeltaTile
-        Delta stepping tiled
-    DeltaStep
-        Delta stepping
-    DeltaStepBarrier
-        Delta stepping with barrier
-    SerialDeltaTile
-        Serial delta stepping tiled
-    SerialDelta
-        Serial delta stepping
-    DijkstraTile
-        Dijkstra's algorithm tiled
-    Dijkstra
-        Dijkstra's algorithm
-    Topo
-        Topological
-    TopoTile
-        Topological tiled
-    Automatic
-        Choose an algorithm using heuristics
+    :see: :py:class:`~katana.analytics.SsspPlan` constructors for algorithm documentation.
     """
     DeltaTile = _SsspPlan.Algorithm.kDeltaTile
     DeltaStep = _SsspPlan.Algorithm.kDeltaStep
@@ -179,32 +162,73 @@ cdef class SsspPlan(Plan):
         """
         return self.underlying_.edge_tile_size()
 
+    def __init__(self):
+        """
+        Choose an algorithm using heuristics
+        """
+        super(SsspPlan, self).__init__()
+
     @staticmethod
     def delta_tile(unsigned delta = kDefaultDelta, ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> SsspPlan:
+        """
+        Delta stepping tiled
+        """
         return SsspPlan.make(_SsspPlan.DeltaTile(delta, edge_tile_size))
+
     @staticmethod
     def delta_step(unsigned delta = kDefaultDelta) -> SsspPlan:
+        """
+        Delta stepping (non-tiled)
+        """
         return SsspPlan.make(_SsspPlan.DeltaStep(delta))
+
     @staticmethod
     def delta_step_barrier(unsigned delta = kDefaultDelta) -> SsspPlan:
+        """
+        Delta stepping with barrier
+        """
         return SsspPlan.make(_SsspPlan.DeltaStepBarrier(delta))
+
     @staticmethod
     def serial_delta_tile(unsigned delta = kDefaultDelta, ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> SsspPlan:
+        """
+        Serial delta stepping tiled
+        """
         return SsspPlan.make(_SsspPlan.SerialDeltaTile(delta, edge_tile_size))
+
     @staticmethod
     def serial_delta(unsigned delta = kDefaultDelta) -> SsspPlan:
+        """
+        Serial delta stepping
+        """
         return SsspPlan.make(_SsspPlan.SerialDelta(delta))
+
     @staticmethod
     def dijkstra_tile(ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> SsspPlan:
+        """
+        Dijkstra's algorithm tiled
+        """
         return SsspPlan.make(_SsspPlan.DijkstraTile(edge_tile_size))
+
     @staticmethod
     def dijkstra() -> SsspPlan:
+        """
+        Dijkstra's algorithm (non-tiled)
+        """
         return SsspPlan.make(_SsspPlan.Dijkstra())
+
     @staticmethod
     def topological() -> SsspPlan:
+        """
+        Topological
+        """
         return SsspPlan.make(_SsspPlan.Topological())
+
     @staticmethod
     def topological_tile(ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> SsspPlan:
+        """
+        Topological tiled
+        """
         return SsspPlan.make(_SsspPlan.TopologicalTile(edge_tile_size))
 
 

@@ -71,6 +71,9 @@ cdef extern from "katana/analytics/independent_set/independent_set.h" namespace 
 
 
 class _IndependentSetPlanAlgorithm(Enum):
+    """
+    :see: :py:class:`~katana.analytics.IndependentSetPlan` constructors for algorithm documentation.
+    """
     Serial = _IndependentSetPlan.Algorithm.kSerial
     Pull = _IndependentSetPlan.Algorithm.kPull
     Priority = _IndependentSetPlan.Algorithm.kPriority

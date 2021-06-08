@@ -8,6 +8,8 @@ Breadth-first Search
     :undoc-members:
 
 .. autoclass:: katana.analytics._bfs._BfsAlgorithm
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.bfs
 
@@ -77,19 +79,7 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
 
 class _BfsAlgorithm(Enum):
     """
-    .. py:attribute:: Asynchronous
-
-    .. py:attribute:: AsynchronousTile
-        Asynchronous tiled
-
-    .. py:attribute:: Synchronous
-
-        Bulk-synchronous
-
-    .. py:attribute:: SynchronousTile
-
-        Bulk-synchronous tiled
-
+    :see: :py:class:`~katana.analytics.BfsPlan` constructors for algorithm documentation.
     """
     Asynchronous = _BfsPlan.Algorithm.kAsynchronous
     AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
@@ -131,6 +121,9 @@ cdef class BfsPlan(Plan):
 
     @staticmethod
     def asynchronous_tile(edge_tile_size=kDefaultEdgeTileSize):
+        """
+        Asynchronous tiled
+        """
         return BfsPlan.make(_BfsPlan.AsynchronousTile(edge_tile_size))
 
     @staticmethod
@@ -139,10 +132,16 @@ cdef class BfsPlan(Plan):
 
     @staticmethod
     def synchronous_tile(edge_tile_size=kDefaultEdgeTileSize):
+        """
+        Bulk-synchronous tiled
+        """
         return BfsPlan.make(_BfsPlan.SynchronousTile(edge_tile_size))
 
     @staticmethod
     def synchronous():
+        """
+        Bulk-synchronous
+        """
         return BfsPlan.make(_BfsPlan.Synchronous())
 
 

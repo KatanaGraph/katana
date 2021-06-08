@@ -8,6 +8,8 @@ Jaccard Similarity
     :undoc-members:
 
 .. autoclass:: katana.analytics._jaccard._JaccardEdgeSorting
+    :members:
+    :undoc-members:
 
 .. autofunction:: katana.analytics.jaccard
 
@@ -67,12 +69,7 @@ class _JaccardEdgeSorting(Enum):
     """
     The ordering of edges in the input graph.
 
-    Sorted
-        The edges are ordered by target node ID. A sorted-list intersection algorithm is used.
-    Unsorted
-        The edges are not ordered. An exhaustive intersection algorithm is used.
-    Unknown
-        The edge ordering is not known. May attempt sorted intersections, but will fall back on exhaustive intersections.
+    :see: :py:class:`~katana.analytics.JaccardPlan` constructors for algorithm documentation.
     """
     Sorted = _JaccardPlan.EdgeSorting.kSorted
     Unsorted = _JaccardPlan.EdgeSorting.kUnsorted
@@ -108,12 +105,30 @@ cdef class JaccardPlan(Plan):
         """
         return _JaccardEdgeSorting(self.underlying_.edge_sorting())
 
+    def __init__(self):
+        """
+        May attempt sorted intersections, but will fall back on exhaustive intersections.
+
+        The edge ordering is not known.
+        """
+        super(JaccardPlan, self).__init__()
+
     @staticmethod
     def sorted():
+        """
+        Use the sorted-list intersection algorithm .
+
+        The edges of the graph must be ordered by target node ID.
+        """
         return JaccardPlan.make(_JaccardPlan.Sorted())
 
     @staticmethod
     def unsorted():
+        """
+        Use the exhaustive intersection algorithm.
+
+        The edges need not be ordered.
+        """
         return JaccardPlan.make(_JaccardPlan.Unsorted())
 
 

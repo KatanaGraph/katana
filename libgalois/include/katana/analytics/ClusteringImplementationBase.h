@@ -48,6 +48,9 @@ using DegreeWeight = katana::PODProperty<EdgeWeightType>;
 template <typename EdgeWeightType>
 using EdgeWeight = katana::PODProperty<EdgeWeightType>;
 
+using GainTy = double;
+using ModularityGain = katana::PODProperty<GainTy>;
+
 template <typename _Graph, typename _EdgeType, typename _CommunityType>
 struct ClusteringImplementationBase {
   using Graph = _Graph;
@@ -206,35 +209,42 @@ struct ClusteringImplementationBase {
    * Computes the modularity gain of the current cluster assignment
    * without swapping the cluster assignment.
    */
-  uint64_t MaxModularityWithoutSwaps(
+  void MaxModularityWithoutSwaps(
       std::map<uint64_t, uint64_t>& cluster_local_map,
       std::vector<EdgeTy>& counter, uint64_t self_loop_wt,
-      CommunityArray& c_info, EdgeTy degree_wt, uint64_t sc, double constant) {
-    uint64_t max_index = sc;  // Assign the intial value as self community
+      CommunityArray& c_info, EdgeTy node_n_degree_wt,
+      GainTy* max_modularity_gain, uint64_t* next_candidate_community,
+      uint64_t curr_comm_id, double constant) {
+    uint64_t max_index = curr_comm_id;  // Assign the intial value as self community
     double cur_gain = 0;
     double max_gain = 0;
-    double eix = counter[0] - self_loop_wt;
-    double ax = c_info[sc].degree_wt - degree_wt;
-    double eiy = 0;
+    //TODO(lhc) edge weight of non-self edges
+    double outgoing_edge_wt = counter[0] - self_loop_wt;
+    double ax = c_info[curr_comm_id].degree_wt - node_n_degree_wt;
+    double neigh_comm_edge_wt = 0;
     double ay = 0;
 
     auto stored_already = cluster_local_map.begin();
     do {
-      if (sc != stored_already->first) {
+      if (curr_comm_id != stored_already->first) {
         ay = c_info[stored_already->first].degree_wt;  // Degree wt of cluster y
 
-        if (ay < (ax + degree_wt)) {
+        if (ay < (c_info[curr_comm_id].degree_wt)) {
           stored_already++;
           continue;
-        } else if (ay == (ax + degree_wt) && stored_already->first > sc) {
+        } else if (ay == c_info[curr_comm_id].degree_wt &&
+                    stored_already->first > curr_comm_id) {
+          // if degree weights are the same, then the big community becomes
+          // a leader
           stored_already++;
           continue;
         }
 
-        eiy = counter[stored_already
-                          ->second];  // Total edges incident on cluster y
-        cur_gain = 2 * constant * (eiy - eix) +
-                   2 * degree_wt * ((ax - ay) * constant * constant);
+        neigh_comm_edge_wt = counter[stored_already
+                                     ->second];  // Total edge weights incident
+                                                 // on cluster y
+        cur_gain = 2 * constant * (neigh_comm_edge_wt - outgoing_edge_wt) +
+                   2 * node_n_degree_wt * ((ax - ay) * constant * constant);
 
         if ((cur_gain > max_gain) ||
             ((cur_gain == max_gain) && (cur_gain != 0) &&
@@ -246,13 +256,15 @@ struct ClusteringImplementationBase {
       stored_already++;  // Explore next cluster
     } while (stored_already != cluster_local_map.end());
 
-    if ((c_info[max_index].size == 1 && c_info[sc].size == 1 &&
-         max_index > sc)) {
-      max_index = sc;
+    if ((c_info[max_index].size == 1 && c_info[curr_comm_id].size == 1 &&
+         max_index > curr_comm_id)) {
+      max_index = curr_comm_id;
     }
 
     KATANA_LOG_DEBUG_ASSERT(max_gain >= 0);
-    return max_index;
+
+    *next_candidate_community = max_index;
+    *max_modularity_gain = max_gain;
   }
 
   /**

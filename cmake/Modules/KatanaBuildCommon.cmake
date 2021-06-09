@@ -524,3 +524,65 @@ macro(katana_dump_cpack_config)
     endif()
   endforeach()
 endmacro()
+
+# Build support for plugins
+
+set(KATANA_BUILD_PLUGINS_DIR ${PROJECT_BINARY_DIR}/plugins)
+set(KATANA_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/katana/plugins)
+
+file(MAKE_DIRECTORY ${KATANA_BUILD_PLUGINS_DIR})
+
+# Install a katana plugin.
+#
+# This does not install any headers associated with the target. This is a plugin
+# it should generally not have headers. However, a separate install call for
+# headers will work.
+function(install_katana_plugin)
+  set(no_value_options INSTALL_AS_LIBRARY)
+  set(one_value_options TARGET COMPONENT)
+  set(multi_value_options )
+
+  cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
+
+  # Put a link to the plugin in the build plugin directory
+  add_custom_command(
+      TARGET ${X_TARGET}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:${X_TARGET}>
+        ${KATANA_BUILD_PLUGINS_DIR}/$<TARGET_FILE_NAME:${X_TARGET}>
+  )
+
+  set_target_properties(${X_TARGET} PROPERTIES ADDITIONAL_CLEAN_FILES
+                        ${KATANA_BUILD_PLUGINS_DIR}/$<TARGET_FILE_NAME:${X_TARGET}>)
+
+  if (X_INSTALL_AS_LIBRARY)
+    # TODO(amp): This is deprecated! It makes plugins visitable as libraries. If more than one plugin is used as a
+    # library in the same application it WILL fail to link.
+
+    # Install the plugin as a normal library.
+    install(
+        TARGETS ${X_TARGET}
+        LIBRARY
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          COMPONENT ${X_COMPONENT}
+    )
+    # Create a link from the plugins directory to the installed library.
+    install(CODE "
+file(MAKE_DIRECTORY \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${KATANA_INSTALL_PLUGINS_DIR})
+file(CREATE_LINK
+  ../../$<TARGET_FILE_NAME:${X_TARGET}>
+  \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${KATANA_INSTALL_PLUGINS_DIR}/$<TARGET_FILE_NAME:${X_TARGET}>
+  SYMBOLIC)"
+      COMPONENT ${X_COMPONENT}
+    )
+  else()
+    # Install the plugin only as a plugin and not as a library.
+    install(
+        TARGETS ${X_TARGET}
+        EXPORT ${X_EXPORT}
+        LIBRARY
+        DESTINATION "${KATANA_INSTALL_PLUGINS_DIR}"
+        COMPONENT ${X_COMPONENT}
+    )
+  endif()
+endfunction()

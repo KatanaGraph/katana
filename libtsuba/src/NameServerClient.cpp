@@ -10,3 +10,8 @@ tsuba::SetMakeNameServerClientCB(
         cb) {
   GlobalState::set_make_name_server_client_cb(cb);
 }
+
+void
+tsuba::ClearMakeNameServerClientCB() {
+  GlobalState::clear_make_name_server_client_cb();
+}

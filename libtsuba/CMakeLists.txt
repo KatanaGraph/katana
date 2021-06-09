@@ -1,16 +1,6 @@
-# Link-time reconfiguration via tsuba::Preload and tsuba::RegisterFileStorage
-# is easiest to maintain if tsuba and its related libraries are always shared.
-#
-# Runtime customization of tsuba can be achieved in the standard ways, e.g.,
-# - LD_PRELOAD=<my-lib>
-#   where my-lib implements tsuba::Preload/tsuba::PreloadFini
-# - Symbolically link libtsuba-preload.so to my-lib
-# - Adjust LD_LIBRARY_PATH to include a directory, which has
-#   libtsuba-preload.so that points to my-lib
-add_library(tsuba-preload SHARED)
 add_library(tsuba SHARED)
 
-add_dependencies(lib tsuba tsuba-preload)
+add_dependencies(lib tsuba)
 
 set(sources
   src/AddProperties.cpp
@@ -41,18 +31,14 @@ set(sources
 )
 
 target_sources(tsuba PRIVATE ${sources})
-target_sources(tsuba-preload PRIVATE src/Preload.cpp)
 
-foreach(target tsuba tsuba-preload)
-  target_include_directories(${target} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_common_katana_library_options(${target} ALWAYS_SHARED)
-endforeach()
+target_include_directories(tsuba PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+set_common_katana_library_options(tsuba ALWAYS_SHARED)
 
-target_link_libraries(tsuba-preload PUBLIC katana_support)
-target_link_libraries(tsuba PUBLIC tsuba-preload katana_support)
+target_link_libraries(tsuba PUBLIC katana_support)
 
 install(
   DIRECTORY include/
@@ -61,7 +47,7 @@ install(
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(TARGETS tsuba tsuba-preload
+install(TARGETS tsuba
   EXPORT KatanaTargets
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"

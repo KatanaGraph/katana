@@ -39,9 +39,9 @@ struct CommunityType {
   EdgeWeightType internal_edge_wt;
 };
 
-using PreviousCommunityId = katana::PODProperty<uint64_t>;
-using CurrentCommunityId = katana::PODProperty<uint64_t>;
-// using ColorId = katana::PODProperty<int64_t>;
+struct PreviousCommunityId : public katana::PODProperty<uint64_t> {};
+struct CurrentCommunityId : public katana::PODProperty<uint64_t> {};
+
 template <typename EdgeWeightType>
 using DegreeWeight = katana::PODProperty<EdgeWeightType>;
 
@@ -304,7 +304,7 @@ struct ClusteringImplementationBase {
     return mod;
   }
 
-  template <typename EdgeWeightType>
+  template <typename EdgeWeightType, typename NodePropType>
   static void SumClusterWeight(
       Graph& graph, CommunityArray& c_info,
       katana::LargeArray<EdgeWeightType>& degree_weight_array) {
@@ -321,7 +321,7 @@ struct ClusteringImplementationBase {
     });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      auto& n_data_comm_id = graph.template GetData<CurrentCommunityId>(n);
+      auto& n_data_comm_id = graph.template GetData<NodePropType>(n);
       if (n_data_comm_id != UNASSIGNED)
         katana::atomicAdd(
             c_info[n_data_comm_id].degree_wt, degree_weight_array[n]);
@@ -332,7 +332,7 @@ struct ClusteringImplementationBase {
  * Computes the final modularity using prev cluster
  * assignments.
  */
-  template <typename GraphTy, typename EdgeWeightType>
+  template <typename GraphTy, typename EdgeWeightType, typename NodePropType>
   static double CalModularityFinal(GraphTy& graph) {
     CommunityArray c_info;    // Community info
     CommunityArray c_update;  // Used for updating community
@@ -352,7 +352,8 @@ struct ClusteringImplementationBase {
     degree_weight_array.allocateBlocked(graph.num_nodes());
 
     /* Calculate the weighted degree sum for each vertex */
-    SumClusterWeight<EdgeWeightType>(graph, c_info, degree_weight_array);
+    SumClusterWeight<EdgeWeightType, NodePropType>(
+        graph, c_info, degree_weight_array);
 
     /* Compute the total weight (2m) and 1/2m terms */
     constant_for_second_term =
@@ -368,9 +369,9 @@ struct ClusteringImplementationBase {
         katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      auto n_data_current_comm = graph.template GetData<CurrentCommunityId>(n);
+      auto n_data_current_comm = graph.template GetData<NodePropType>(n);
       for (auto ii = graph.edge_begin(n); ii != graph.edge_end(n); ++ii) {
-        if (graph.template GetData<CurrentCommunityId>(graph.GetEdgeDest(ii)) ==
+        if (graph.template GetData<NodePropType>(graph.GetEdgeDest(ii)) ==
             n_data_current_comm) {
           // if(graph.getData(graph.getEdgeDst(ii)).prev_comm_ass ==
           // n_data.prev_comm_ass) {
@@ -431,7 +432,8 @@ struct ClusteringImplementationBase {
 
     [[maybe_unused]] uint64_t num_unique_clusters =
         RenumberClustersContiguously(graph);
-    auto mod = CalModularityFinal<Graph, EdgeWeightType>(graph);
+    auto mod =
+        CalModularityFinal<Graph, EdgeWeightType, CurrentCommunityId>(graph);
   }
 
   /**

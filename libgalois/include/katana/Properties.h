@@ -12,6 +12,7 @@
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
+#include "katana/PODResizeableArray.h"
 #include "katana/Result.h"
 #include "katana/Traits.h"
 
@@ -82,6 +83,9 @@ template <typename Prop>
 using PropertyReferenceType = typename PropertyViewType<Prop>::reference;
 
 template <typename Prop>
+using PropertyValueType = typename PropertyViewType<Prop>::value_type;
+
+template <typename Prop>
 using PropertyConstReferenceType =
     typename PropertyViewType<Prop>::const_reference;
 
@@ -95,25 +99,11 @@ struct PropertyViewTuple<std::tuple<Args...>> {
   using type = std::tuple<katana::PropertyViewType<Args>...>;
 };
 
-template <typename>
-struct PropertyArrowTuple;
-
-template <typename... Args>
-struct PropertyArrowTuple<std::tuple<Args...>> {
-  using type = std::tuple<
-      typename arrow::TypeTraits<katana::PropertyArrowType<Args>>::CType...>;
-};
-
 }  // namespace internal
 
 /// PropertyViewTuple applies PropertyViewType to a tuple of properties.
 template <typename T>
 using PropertyViewTuple = typename internal::PropertyViewTuple<T>::type;
-
-/// PropertyArrowTuple applies arrow::TypeTraits<T::ArrowType>::CType
-/// to a tuple of properties
-template <typename T>
-using PropertyArrowTuple = typename internal::PropertyArrowTuple<T>::type;
 
 /// TupleElements selects the tuple elements at the given indices
 template <typename Tuple, size_t... indices>
@@ -201,6 +191,110 @@ GetMutableValuesWorkAround(
     return data->template GetMutableValues<T>(i, absolute_offset);
   }
 }
+
+template <typename T>
+struct HasAllocate {
+  template <typename U>
+  constexpr static int test(decltype(&U::Allocate)) {
+    return true;
+  }
+
+  template <typename>
+  constexpr static bool test(...) {
+    return false;
+  }
+
+  constexpr static bool value = sizeof(test<T>(nullptr)) == sizeof(int);
+};
+
+template <typename Prop>
+std::enable_if_t<
+    !HasAllocate<Prop>::value, Result<std::shared_ptr<arrow::Table>>>
+Allocate(size_t num_rows, const std::string& name) {
+  using ArrowType = typename PropertyTraits<Prop>::ArrowType;
+  using Builder = typename arrow::TypeTraits<ArrowType>::BuilderType;
+  using CType = typename arrow::TypeTraits<ArrowType>::CType;
+  Builder builder;
+
+  // TODO(lhc): replace this with AppendEmptyValues() on Arrow > 3.0.
+  katana::PODResizeableArray<CType> rows(num_rows);
+  if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "failed to append values {}", r);
+  }
+
+  std::shared_ptr<arrow::Array> array;
+  if (auto r = builder.Finish(&array); !r.ok()) {
+    return KATANA_ERROR(
+        katana::ErrorCode::ArrowError, "failed to construct arrow array {}", r);
+  }
+
+  return arrow::Table::Make(
+      arrow::schema(
+          {arrow::field(name, arrow::TypeTraits<ArrowType>::type_singleton())}),
+      {array});
+}
+
+template <typename Prop>
+std::enable_if_t<
+    HasAllocate<Prop>::value, Result<std::shared_ptr<arrow::Table>>>
+Allocate(size_t num_rows, const std::string& name) {
+  return Prop::Allocate(num_rows, name);
+}
+
+template <typename PropTuple>
+Result<std::shared_ptr<arrow::Table>>
+AllocateTable(
+    uint64_t, const std::vector<std::string>&, std::index_sequence<>) {
+  return nullptr;
+}
+
+template <typename PropTuple, size_t head, size_t... tail>
+Result<std::shared_ptr<arrow::Table>>
+AllocateTable(
+    uint64_t num_rows, const std::vector<std::string>& names,
+    std::index_sequence<head, tail...>) {
+  using Prop = std::tuple_element_t<head, PropTuple>;
+
+  auto res = Allocate<Prop>(num_rows, names[head]);
+  if (!res) {
+    return res.error();
+  }
+  auto table = std::move(res.value());
+
+  auto rest =
+      AllocateTable<PropTuple>(num_rows, names, std::index_sequence<tail...>());
+  if (!rest) {
+    return rest.error();
+  }
+
+  auto rest_table = std::move(rest.value());
+
+  // TODO(ddn): tail recursion
+  // TODO(ddn): metadata
+  auto fields = table->fields();
+  auto columns = table->columns();
+
+  if (rest_table) {
+    for (const auto& field : rest_table->fields()) {
+      fields.emplace_back(field);
+    }
+    for (const auto& col : rest_table->columns()) {
+      columns.emplace_back(col);
+    }
+  }
+
+  return arrow::Table::Make(arrow::schema(fields), columns);
+}
+
+template <typename PropTuple>
+Result<std::shared_ptr<arrow::Table>>
+AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
+  return AllocateTable<PropTuple>(
+      num_rows, names,
+      std::make_index_sequence<std::tuple_size_v<PropTuple>>());
+}
+
 }  // namespace
 
 /// PODPropertyView provides a property view over arrow::Arrays of elements
@@ -385,23 +479,40 @@ struct LargeStringReadOnlyProperty {
   using ViewType = StringPropertyReadOnlyView<arrow::LargeStringArray>;
 };
 
-template <typename Props>
-Result<std::shared_ptr<arrow::Table>>
-AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
-  constexpr auto num_tuple_elem = std::tuple_size<Props>::value;
-  static_assert(num_tuple_elem != 0);
-  std::shared_ptr<arrow::Table> table;
-  std::vector<katana::PropertyArrowTuple<Props>> rows(num_rows);
-  KATANA_LOG_ASSERT(names.size() == num_tuple_elem);
-  // TODO(gill): Replace this with NUMA allocated buffers.
-  if (auto r = arrow::stl::TableFromTupleRange(
-          arrow::default_memory_pool(), std::move(rows), names, &table);
-      !r.ok()) {
-    KATANA_LOG_DEBUG("arrow error: {}", r);
-    return Result<std::shared_ptr<arrow::Table>>(katana::ErrorCode::ArrowError);
+template <typename T>
+struct StructProperty {
+  using ArrowType = arrow::FixedSizeBinaryType;
+  using ViewType = katana::PODPropertyView<T>;
+
+  static katana::Result<std::shared_ptr<arrow::Table>> Allocate(
+      size_t num_rows, const std::string& name) {
+    auto res = arrow::FixedSizeBinaryType::Make(sizeof(T));
+    if (!res.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to make fixed size type: {}",
+          res.status());
+    }
+
+    auto type = res.ValueOrDie();
+    arrow::FixedSizeBinaryBuilder builder(type);
+    // TODO(lhc): replace this with AppendEmptyValues() on Arrow > 3.0.
+    katana::PODResizeableArray<uint8_t> data(sizeof(T) * num_rows);
+
+    if (auto res = builder.AppendValues(data.data(), num_rows); !res.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to append values {}", res);
+    }
+    std::shared_ptr<arrow::Array> array;
+    if (auto res = builder.Finish(&array); !res.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to construct arrow array {}",
+          res);
+    }
+
+    return arrow::Table::Make(
+        arrow::schema({arrow::field(name, type)}), {array});
   }
-  return Result<std::shared_ptr<arrow::Table>>(table);
-}
+};
 
 }  // namespace katana
 #endif

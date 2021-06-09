@@ -1102,9 +1102,6 @@ ConnectedComponentsWithWrap(
   execTime.stop();
 
   algo.Deallocate(&graph);
-
-  execTime.stop();
-
   return katana::ResultSuccess();
 }
 

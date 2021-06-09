@@ -217,3 +217,14 @@ uint64_t
 katana::ApproxArrayMemUse(const std::shared_ptr<arrow::Array>& array) {
   return ApproxArrayDataMemUse(array->data());
 }
+
+uint64_t
+katana::ApproxTableMemUse(const std::shared_ptr<arrow::Table>& table) {
+  uint64_t total_mem_use = 0;
+  for (const auto& chunked_array : table->columns()) {
+    for (const auto& array : chunked_array->chunks()) {
+      total_mem_use += ApproxArrayDataMemUse(array->data());
+    }
+  }
+  return total_mem_use;
+}

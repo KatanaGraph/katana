@@ -48,6 +48,11 @@ KATANA_EXPORT void SetMakeNameServerClientCB(
     std::function<katana::Result<std::unique_ptr<tsuba::NameServerClient>>()>
         cb);
 
+/// ClearMakeNameServerClientCB clears the callback back to the default.
+/// This must be called if the previously registere callback is being unloaded
+/// during plugin finalization.
+KATANA_EXPORT void ClearMakeNameServerClientCB();
+
 }  // namespace tsuba
 
 #endif

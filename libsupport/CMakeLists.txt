@@ -17,6 +17,7 @@ set(sources
         src/Logging.cpp
         src/Random.cpp
         src/Result.cpp
+        src/Plugin.cpp
         src/Strings.cpp
         src/Uri.cpp
 )

@@ -21,6 +21,7 @@
 
 #include "katana/CommBackend.h"
 #include "katana/Logging.h"
+#include "katana/Plugin.h"
 #include "katana/SharedMem.h"
 #include "katana/Statistics.h"
 #include "tsuba/FileStorage.h"
@@ -38,6 +39,7 @@ struct katana::SharedMemSys::Impl {
 };
 
 katana::SharedMemSys::SharedMemSys() : impl_(std::make_unique<Impl>()) {
+  LoadPlugins();
   if (auto init_good = tsuba::Init(&comm_backend); !init_good) {
     KATANA_LOG_FATAL("tsuba::Init: {}", init_good.error());
   }
@@ -52,4 +54,6 @@ katana::SharedMemSys::~SharedMemSys() {
   if (auto fini_good = tsuba::Fini(); !fini_good) {
     KATANA_LOG_ERROR("tsuba::Fini: {}", fini_good.error());
   }
+  // This will finalize plugins irreversibly, reinitialization may not work.
+  FinalizePlugins();
 }

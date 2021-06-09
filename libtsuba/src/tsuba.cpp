@@ -5,9 +5,9 @@
 #include "katana/Backtrace.h"
 #include "katana/CommBackend.h"
 #include "katana/Env.h"
+#include "katana/Plugin.h"
 #include "tsuba/Errors.h"
 #include "tsuba/NameServerClient.h"
-#include "tsuba/Preload.h"
 #include "tsuba/file.h"
 
 namespace {
@@ -244,7 +244,6 @@ tsuba::GetRDGDir(tsuba::RDGHandle handle) {
 
 katana::Result<void>
 tsuba::Init(katana::CommBackend* comm) {
-  tsuba::Preload();
   auto client_res = GlobalState::MakeNameServerClient();
   if (!client_res) {
     return client_res.error();
@@ -262,6 +261,5 @@ tsuba::Init() {
 katana::Result<void>
 tsuba::Fini() {
   auto r = GlobalState::Fini();
-  tsuba::PreloadFini();
   return r;
 }

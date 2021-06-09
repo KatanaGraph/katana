@@ -63,6 +63,7 @@ public:
           cb) {
     make_name_server_client_cb_ = cb;
   }
+  static void clear_make_name_server_client_cb();
   static katana::Result<std::unique_ptr<tsuba::NameServerClient>>
   MakeNameServerClient() {
     return make_name_server_client_cb_();

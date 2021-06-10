@@ -220,13 +220,13 @@ GetTypeSetIDsFromProperties(
           if (property->type()->Equals(arrow::boolean())) {
             auto bool_property =
                 std::static_pointer_cast<arrow::BooleanArray>(property);
-            if (bool_property->Value(row)) {
+            if (bool_property->IsValid(row) && bool_property->Value(row)) {
               field_indices.emplace_back(i);
             }
           } else if (property->type()->Equals(arrow::uint8())) {
             auto uint8_property =
                 std::static_pointer_cast<arrow::UInt8Array>(property);
-            if (uint8_property->Value(row)) {
+            if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
               field_indices.emplace_back(i);
             }
           }
@@ -293,13 +293,13 @@ GetTypeSetIDsFromProperties(
       if (property->type()->Equals(arrow::boolean())) {
         auto bool_property =
             std::static_pointer_cast<arrow::BooleanArray>(property);
-        if (bool_property->Value(row)) {
+        if (bool_property->IsValid(row) && bool_property->Value(row)) {
           field_indices.emplace_back(i);
         }
       } else if (property->type()->Equals(arrow::uint8())) {
         auto uint8_property =
             std::static_pointer_cast<arrow::UInt8Array>(property);
-        if (uint8_property->Value(row)) {
+        if (uint8_property->IsValid(row) && uint8_property->Value(row)) {
           field_indices.emplace_back(i);
         }
       }

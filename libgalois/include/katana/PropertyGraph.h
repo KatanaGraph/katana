@@ -680,11 +680,16 @@ CreateSymmetricGraph(PropertyGraph* pg);
 /// For each edge (a, b) in the graph, this function will
 /// add edge (b, a) without retaining the original edge (a, b) unlike
 /// CreateSymmetricGraph.
-/// \param pg The original property graph
+/// \param topology The original property graph topology
+/// \param out_indices The out edge index array for the transposed graph
+/// \param out_dests The out edge destination array for the transposed graph
 /// \return The new transposed property graph by reversing the edges
+// TODO(lhc): hack for bfs-direct-opt
 // TODO(gill): Add tranposed edge properties as well.
-KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
-CreateTransposeGraph(PropertyGraph* pg);
+KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
+CreateTransposeGraphTopology(
+    const GraphTopology& topology, LargeArray<uint64_t>* out_indices,
+    LargeArray<uint32_t>* out_dests);
 
 }  // namespace katana
 

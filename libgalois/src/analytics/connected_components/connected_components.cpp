@@ -613,10 +613,7 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
 template <typename ComponentType, typename Graph, typename NodeIndex>
 ComponentType
 approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
-  using map_type = std::unordered_map<
-      ComponentType, int, std::hash<ComponentType>,
-      std::equal_to<ComponentType>,
-      katana::gstl::Pow2Alloc<std::pair<const ComponentType, int>>>;
+  using map_type = katana::gstl::UnorderedMap<ComponentType, int>;
   using pair_type = std::pair<ComponentType, int>;
 
   map_type comp_freq(component_sample_frequency);
@@ -643,6 +640,40 @@ approxLargestComponent(Graph* graph, uint32_t component_sample_frequency) {
   return most_frequent->first;
 }
 
+template <
+    typename ComponentType, typename Graph, typename NodeIndex,
+    typename ParentArray>
+ComponentType
+approxLargestComponent(
+    Graph* graph, ParentArray& parent_array_,
+    uint32_t component_sample_frequency) {
+  using map_type = katana::gstl::UnorderedMap<ComponentType, int>;
+  using pair_type = std::pair<ComponentType, int>;
+
+  map_type comp_freq(component_sample_frequency);
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::uniform_int_distribution<uint32_t> dist(0, graph->size() - 1);
+  for (uint32_t i = 0; i < component_sample_frequency; i++) {
+    const auto& ndata = parent_array_[dist(rng)];
+    comp_freq[ndata.component()]++;
+  }
+
+  KATANA_LOG_DEBUG_ASSERT(!comp_freq.empty());
+  auto most_frequent = std::max_element(
+      comp_freq.cbegin(), comp_freq.cend(),
+      [](const pair_type& a, const pair_type& b) {
+        return a.second < b.second;
+      });
+
+  //katana::gDebug(
+  //    "Approximate largest intermediate component: ", most_frequent->first,
+  //    " (hit rate ",
+  //    100.0 * (most_frequent->second) / component_sample_frequency, "%)");
+
+  return most_frequent->first;
+}
+
 struct ConnectedComponentsAfforestAlgo {
   struct NodeAfforest : public katana::UnionFindNode<NodeAfforest> {
     using ComponentType = NodeAfforest*;
@@ -652,6 +683,7 @@ struct ConnectedComponentsAfforestAlgo {
         : katana::UnionFindNode<NodeAfforest>(o.m_component) {}
 
     ComponentType component() { return this->get(); }
+    ComponentType component() const { return this->get(); }
     bool isRepComp(unsigned int) { return false; }  // verify
 
   public:
@@ -684,20 +716,29 @@ struct ConnectedComponentsAfforestAlgo {
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
+  katana::LargeArray<NodeAfforest> parent_array_;
+
   ConnectedComponentsAfforestAlgo(ConnectedComponentsPlan& plan)
-      : plan_(plan) {}
+      : plan_(plan), parent_array_() {}
 
   void Initialize(Graph* graph) {
+    parent_array_.allocateBlocked(graph->size());
+    // parent_array_.allocateInterleaved(graph->size());
+
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+      auto& snode = graph->GetData<NodeComponent>(node);
+      new (&snode) NodeAfforest();
+      new (&parent_array_[node]) NodeAfforest();
+      //snode = reinterpret_cast<ComponentType>(&snode);
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto& dataFromArr = parent_array_[node];
+      // auto component_ptr = sdata->component();
+      auto component_ptr = dataFromArr.component();
       sdata = component_ptr;
     });
   }
@@ -712,11 +753,15 @@ struct ConnectedComponentsAfforestAlgo {
           [&](const GNode& src) {
             Graph::edge_iterator ii = graph->edge_begin(src);
             Graph::edge_iterator ei = graph->edge_end(src);
+
             for (std::advance(ii, r); ii < ei; ii++) {
               auto dest = graph->GetEdgeDest(ii);
-              auto& sdata = graph->GetData<NodeComponent>(src);
-              ComponentType ddata = graph->GetData<NodeComponent>(dest);
-              sdata->link(ddata);
+              // auto& sdata = graph->GetData<NodeComponent>(src);
+              // ComponentType ddata = graph->GetData<NodeComponent>(dest);
+              // sdata->link(ddata);
+              auto& sdata = parent_array_[src];
+              auto& ddata = parent_array_[*dest];
+              sdata.link(&ddata);
               break;
             }
           },
@@ -725,8 +770,9 @@ struct ConnectedComponentsAfforestAlgo {
       katana::do_all(
           katana::iterate(*graph),
           [&](const GNode& src) {
-            auto& sdata = graph->GetData<NodeComponent>(src);
-            sdata->compress();
+            // auto& sdata = graph->GetData<NodeComponent>(src);
+            auto& sdata = parent_array_[src];
+            sdata.compress();
           },
           katana::steal(), katana::loopname("Afforest-VNS-Compress"));
     }
@@ -735,21 +781,24 @@ struct ConnectedComponentsAfforestAlgo {
     StatTimer_Sampling.start();
     const ComponentType c =
         approxLargestComponent<ComponentType, Graph, NodeComponent>(
-            graph, plan_.component_sample_frequency());
+            graph, parent_array_, plan_.component_sample_frequency());
     StatTimer_Sampling.stop();
 
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
-          if (sdata->component() == c)
+          // auto& sdata = graph->GetData<NodeComponent>(src);
+          auto& sdata = parent_array_[src];
+          if (sdata.component() == c)
             return;
           Graph::edge_iterator ii = graph->edge_begin(src);
           Graph::edge_iterator ei = graph->edge_end(src);
           for (std::advance(ii, plan_.neighbor_sample_size()); ii < ei; ++ii) {
             auto dest = graph->GetEdgeDest(ii);
-            auto& ddata = graph->GetData<NodeComponent>(dest);
-            sdata->link(ddata);
+            // auto& ddata = graph->GetData<NodeComponent>(dest);
+            auto& ddata = parent_array_[*dest];
+            // sdata->link(ddata);
+            sdata.link(&ddata);
           }
         },
         katana::steal(), katana::loopname("Afforest-LCS-Link"));
@@ -757,8 +806,10 @@ struct ConnectedComponentsAfforestAlgo {
     katana::do_all(
         katana::iterate(*graph),
         [&](const GNode& src) {
-          auto& sdata = graph->GetData<NodeComponent>(src);
-          sdata->compress();
+          // auto& sdata = graph->GetData<NodeComponent>(src);
+          // sdata->compress();
+          auto& sdata = parent_array_[src];
+          sdata.compress();
         },
         katana::steal(), katana::loopname("Afforest-LCS-Compress"));
   }

@@ -497,6 +497,8 @@ public:
         default:
           return katana::ErrorCode::InvalidArgument;
         }
+      } else {
+        break;
       }
 
       uint64_t num_unique_clusters =
@@ -678,7 +680,8 @@ CalModularityWrap(
     return graph_result.error();
   }
   auto graph = graph_result.value();
-  return ClusterBase::template CalModularityFinal<Graph, EdgeWeightType>(graph);
+  return ClusterBase::template CalModularityFinal<
+      Graph, EdgeWeightType, PreviousCommunityId>(graph);
 }
 
 katana::Result<katana::analytics::LouvainClusteringStatistics>

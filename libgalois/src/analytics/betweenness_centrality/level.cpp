@@ -14,19 +14,16 @@ constexpr static uint32_t kInfinity = std::numeric_limits<uint32_t>::max();
 
 // NOTE: types assume that these values will not reach uint64_t: it may
 // need to be changed for very large graphs
-struct NodeCurrentDist {
-  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
+struct BCLevelNodeDataTy {
+  std::atomic<uint32_t> current_dist;
+  std::atomic<LevelShortPathType> num_shortest_paths;
+  float dependency;
+  float bc;
 };
-struct NodeNumShortestPaths {
-  using ArrowType = arrow::CTypeTraits<LevelShortPathType>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<LevelShortPathType>>;
-};
-struct NodeDependency : public katana::PODProperty<float> {};
 struct NodeBC : public katana::PODProperty<float> {};
 
-using NodeDataLevel =
-    std::tuple<NodeBC, NodeCurrentDist, NodeNumShortestPaths, NodeDependency>;
+using BCLevelNodeData = katana::StructProperty<BCLevelNodeDataTy>;
+using NodeDataLevel = std::tuple<BCLevelNodeData>;
 using EdgeDataLevel = std::tuple<>;
 
 typedef katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel> LevelGraph;
@@ -48,10 +45,11 @@ LevelInitializeGraph(LevelGraph* graph) {
   katana::do_all(
       katana::iterate(*graph),
       [&](LevelGNode n) {
-        graph->GetData<NodeCurrentDist>(n) = 0;
-        graph->GetData<NodeNumShortestPaths>(n) = 0;
-        graph->GetData<NodeDependency>(n) = 0;
-        graph->GetData<NodeBC>(n) = 0;
+        auto& node_data = graph->GetData<BCLevelNodeData>(n);
+        node_data.current_dist = 0;
+        node_data.num_shortest_paths = 0;
+        node_data.dependency = 0;
+        node_data.bc = 0;
       },
       katana::no_stats(), katana::loopname("InitializeGraph"));
 }
@@ -67,17 +65,18 @@ LevelInitializeIteration(LevelGraph* graph, LevelGNode src_node) {
       katana::iterate(*graph),
       [&](LevelGNode n) {
         bool is_source = (n == src_node);
+        auto& node_data = graph->GetData<BCLevelNodeData>(n);
         // source nodes have distance 0 and initialize short paths to 1, else
         // distance is kInfinity with 0 short paths
         if (!is_source) {
-          graph->GetData<NodeCurrentDist>(n) = kInfinity;
-          graph->GetData<NodeNumShortestPaths>(n) = 0;
+          node_data.current_dist = kInfinity;
+          node_data.num_shortest_paths = 0;
         } else {
-          graph->GetData<NodeCurrentDist>(n) = 0;
-          graph->GetData<NodeNumShortestPaths>(n) = 1;
+          node_data.current_dist = 0;
+          node_data.num_shortest_paths = 1;
         }
         // dependency reset for new source
-        graph->GetData<NodeDependency>(n) = 0;
+        node_data.dependency = 0;
       },
       katana::no_stats(), katana::loopname("InitializeIteration"));
 }
@@ -106,29 +105,30 @@ LevelSSSP(LevelGraph* graph, LevelGNode src_node) {
     katana::do_all(
         katana::iterate(vector_of_worklists[current_level]),
         [&](LevelGNode n) {
-          KATANA_LOG_ASSERT(
-              graph->GetData<NodeCurrentDist>(n) == current_level);
+          auto& src_data = graph->GetData<BCLevelNodeData>(n);
+          KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
           for (auto e : graph->edges(n)) {
             auto dest = graph->GetEdgeDest(e);
+            auto& dst_data = graph->GetData<BCLevelNodeData>(dest);
 
-            if (graph->GetData<NodeCurrentDist>(dest) == kInfinity) {
+            if (dst_data.current_dist == kInfinity) {
               auto expected = kInfinity;
+              // only 1 thread adds to worklist
               bool performed_set =
-                  graph->GetData<NodeCurrentDist>(dest).compare_exchange_strong(
+                  dst_data.current_dist.compare_exchange_strong(
                       expected, next_level);
-              // only 1 thread should add to worklist
               if (performed_set) {
                 vector_of_worklists[next_level].emplace(*dest);
               }
 
               katana::atomicAdd(
-                  graph->GetData<NodeNumShortestPaths>(dest),
-                  graph->GetData<NodeNumShortestPaths>(n).load());
-            } else if (graph->GetData<NodeCurrentDist>(dest) == next_level) {
+                  dst_data.num_shortest_paths,
+                  src_data.num_shortest_paths.load());
+            } else if (dst_data.current_dist == next_level) {
               katana::atomicAdd(
-                  graph->GetData<NodeNumShortestPaths>(dest),
-                  graph->GetData<NodeNumShortestPaths>(n).load());
+                  dst_data.num_shortest_paths,
+                  src_data.num_shortest_paths.load());
             }
           }
         },
@@ -165,26 +165,25 @@ LevelBackwardBrandes(
       katana::do_all(
           katana::iterate(current_worklist),
           [&](LevelGNode n) {
-            KATANA_LOG_ASSERT(
-                graph->GetData<NodeCurrentDist>(n) == current_level);
+            auto& src_data = graph->GetData<BCLevelNodeData>(n);
+            KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
             for (auto e : graph->edges(n)) {
               auto dest = graph->GetEdgeDest(e);
+              auto& dst_data = graph->GetData<BCLevelNodeData>(dest);
 
-              if (graph->GetData<NodeCurrentDist>(dest) == successor_Level) {
+              if (dst_data.current_dist == successor_Level) {
                 // grab dependency, add to self
-                float contrib =
-                    ((float)1 + graph->GetData<NodeDependency>(dest)) /
-                    graph->GetData<NodeNumShortestPaths>(dest);
-                graph->GetData<NodeDependency>(n) += contrib;
+                float contrib = ((float)1 + dst_data.dependency) /
+                                dst_data.num_shortest_paths;
+                src_data.dependency += contrib;
               }
             }
 
             // multiply at end to get final dependency value
-            graph->GetData<NodeDependency>(n) *=
-                graph->GetData<NodeNumShortestPaths>(n);
+            src_data.dependency *= src_data.num_shortest_paths;
             // accumulate dependency into bc
-            graph->GetData<NodeBC>(n) += graph->GetData<NodeDependency>(n);
+            src_data.bc += src_data.dependency;
           },
           katana::steal(), katana::chunk_size<kLevelChunkSize>(),
           katana::no_stats(), katana::loopname("Brandes"));
@@ -193,6 +192,39 @@ LevelBackwardBrandes(
       current_level--;
     }
   }
+}
+
+//! Gets the BC value from the AoS node data in the graph and adds it to the
+//! property graph for use by stats/output verification
+katana::Result<void>
+ExtractBC(
+    katana::PropertyGraph* pg, const LevelGraph& array_of_struct_graph,
+    const std::string& output_property_name) {
+  // construct the new property
+  if (auto result =
+          katana::analytics::ConstructNodeProperties<std::tuple<NodeBC>>(
+              pg, {output_property_name});
+      !result) {
+    return result.error();
+  }
+  auto graph_result =
+      katana::TypedPropertyGraph<std::tuple<NodeBC>, std::tuple<>>::Make(
+          pg, {output_property_name}, {});
+  if (!graph_result) {
+    return graph_result.error();
+  }
+  auto new_graph = graph_result.value();
+
+  // extract bc to property
+  katana::do_all(
+      katana::iterate(array_of_struct_graph),
+      [&](LevelGNode node_id) {
+        float bc_value =
+            array_of_struct_graph.GetData<BCLevelNodeData>(node_id).bc;
+        new_graph.GetData<NodeBC>(node_id) = bc_value;
+      },
+      katana::loopname("ExtractBC"), katana::no_stats());
+  return katana::ResultSuccess();
 }
 
 }  // namespace
@@ -212,23 +244,17 @@ BetweennessCentralityLevel(
       "TimerConstructGraph", "BetweennessCentrality");
   graph_construct_timer.start();
 
-  TemporaryPropertyGuard node_current_dist{pg};
-  TemporaryPropertyGuard node_num_shortest_paths{pg};
-  TemporaryPropertyGuard node_dependency{pg};
+  katana::analytics::TemporaryPropertyGuard all_props{pg};
 
-  auto result = ConstructNodeProperties<NodeDataLevel>(
-      pg, {output_property_name, node_current_dist.name(),
-           node_num_shortest_paths.name(), node_dependency.name()});
+  auto result = ConstructNodeProperties<NodeDataLevel>(pg, {all_props.name()});
+
   if (!result) {
     return result.error();
   }
 
   auto pg_result =
       katana::TypedPropertyGraph<NodeDataLevel, EdgeDataLevel>::Make(
-          pg,
-          {output_property_name, node_current_dist.name(),
-           node_num_shortest_paths.name(), node_dependency.name()},
-          {});
+          pg, {all_props.name()}, {});
   if (!pg_result) {
     return pg_result.error();
   }
@@ -292,5 +318,6 @@ BetweennessCentralityLevel(
 
   katana::reportPageAlloc("MemAllocPost");
 
-  return katana::ResultSuccess();
+  // Get the BC proporty into the property graph by extracting from AoS
+  return ExtractBC(pg, graph, output_property_name);
 }

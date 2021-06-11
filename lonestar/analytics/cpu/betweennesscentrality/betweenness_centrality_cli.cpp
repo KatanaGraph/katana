@@ -146,7 +146,6 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("Failed to compute statistics: {}", stats_result.error());
   }
   auto stats = stats_result.value();
-
   stats.Print();
 
   if (output) {

@@ -688,16 +688,33 @@ struct ConnectedComponentsAfforestAlgo {
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
+    //katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
+    //  graph->GetData<NodeComponent>(node) = new NodeAfforest();
+    //});
+    // XXX
+    //int sum = 0;
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+      auto& snode = graph->GetData<NodeComponent>(node);
+      new (&snode) NodeAfforest();
+      //snode = reinterpret_cast<ComponentType>(&snode);
+
+      //Graph::edge_iterator ii = graph->edge_begin(node);
+      //Graph::edge_iterator ei = graph->edge_end(node);
+      //for (; ii < ei; ii++) {
+      //  auto dest = graph->GetEdgeDest(ii);
+      //  if (graph->GetData<NodeComponent>(dest) == 0) {
+      //    sum++;
+      //  }
+      //}
     });
+    //std::cout << sum << "\n";
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto component_ptr = sdata->component();
-      delete sdata;
+      //delete sdata;
       sdata = component_ptr;
     });
   }

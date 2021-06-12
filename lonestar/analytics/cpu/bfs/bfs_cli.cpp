@@ -69,8 +69,19 @@ static cll::opt<BfsPlan::Algorithm> algo(
             BfsPlan::kAsynchronousTile, "AsyncTile", "Asynchronous tiled"),
         clEnumValN(BfsPlan::kAsynchronous, "Async", "Asynchronous"),
         clEnumValN(BfsPlan::kSynchronousTile, "SyncTile", "Synchronous tiled"),
-        clEnumValN(BfsPlan::kSynchronous, "Sync", "Synchronous")),
-    cll::init(BfsPlan::kSynchronousTile));
+        clEnumValN(BfsPlan::kSynchronous, "Sync", "Synchronous"),
+        clEnumValN(
+            BfsPlan::kSynchronousDirectOpt, "SyncDO",
+            "Synchronous direction optimization")),
+    cll::init(BfsPlan::kSynchronousDirectOpt));
+
+static cll::opt<unsigned int> alpha(
+    "alpha", cll::desc("Alpha for direction optimization (default value: 15)"),
+    cll::init(15));
+
+static cll::opt<unsigned int> beta(
+    "beta", cll::desc("Beta for direction optimization (default value: 18)"),
+    cll::init(18));
 
 std::string
 AlgorithmName(BfsPlan::Algorithm algorithm) {
@@ -83,6 +94,8 @@ AlgorithmName(BfsPlan::Algorithm algorithm) {
     return "SyncTile";
   case BfsPlan::kSynchronous:
     return "Sync";
+  case BfsPlan::kSynchronousDirectOpt:
+    return "SyncDO";
   default:
     return "Unknown";
   }
@@ -142,6 +155,9 @@ main(int argc, char** argv) {
     break;
   case BfsPlan::kSynchronousTile:
     plan = BfsPlan::SynchronousTile();
+    break;
+  case BfsPlan::kSynchronousDirectOpt:
+    plan = BfsPlan::SynchronousDirectOpt(alpha, beta);
     break;
   }
 

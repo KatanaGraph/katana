@@ -22,6 +22,7 @@
 #include <deque>
 #include <type_traits>
 
+#include "katana/DynamicBitset.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
@@ -114,6 +115,28 @@ struct OneTilePushWrap {
     cont.push(t);
   }
 };
+
+template <typename WL>
+void
+WlToBitset(WL& wl, katana::DynamicBitset& bitset) {
+  katana::do_all(
+      katana::iterate(wl), [&](const Graph::Node& src) { bitset.set(src); },
+      katana::chunk_size<kChunkSize>(), katana::loopname("WlToBitset"));
+}
+
+template <typename WL>
+void
+BitsetToWl(const Graph& graph, const katana::DynamicBitset& bitset, WL& wl) {
+  wl.clear();
+  katana::do_all(
+      katana::iterate(graph),
+      [&](const Graph::Node& src) {
+        if (bitset.test(src)) {
+          wl.push(src);
+        }
+      },
+      katana::chunk_size<kChunkSize>(), katana::loopname("BitsetToWl"));
+}
 
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
@@ -246,9 +269,130 @@ SynchronousAlgo(
   }
 }
 
+template <bool CONCURRENT, typename P>
+void
+SynchronousDirectOpt(
+    Graph* graph, katana::PropertyGraph* transpose_graph, Graph::Node source,
+    const P& pushWrap, const uint32_t alpha, const uint32_t beta) {
+  using Cont = typename std::conditional<
+      CONCURRENT, katana::InsertBag<Graph::Node>,
+      katana::SerStack<Graph::Node>>::type;
+  using Loop = typename std::conditional<
+      CONCURRENT, katana::DoAll, katana::StdForEach>::type;
+
+  katana::GAccumulator<uint32_t> work_items;
+  katana::StatTimer bitset_to_wl_timer("Bitset_To_WL_Timer");
+  katana::StatTimer wl_to_bitset_timer("WL_To_Bitset_Timer");
+
+  Loop loop;
+
+  katana::DynamicBitset front_bitset, next_bitset;
+  front_bitset.resize(graph->size());
+  next_bitset.resize(graph->size());
+
+  front_bitset.reset();
+  next_bitset.reset();
+
+  Cont* frontier = new Cont();
+  Cont* next_frontier = new Cont();
+
+  Dist next_level{0};
+  graph->GetData<BfsNodeDistance>(source) = 0U;
+
+  if (CONCURRENT) {
+    pushWrap(*next_frontier, source, "parallel");
+  } else {
+    pushWrap(*next_frontier, source);
+  }
+
+  work_items += 1;
+
+  int64_t edges_to_check = graph->num_edges();
+  int64_t scout_count = graph->edges(source).size();
+  uint32_t num_nodes = graph->num_nodes();
+  uint64_t old_num_work_items{0};
+
+  katana::GAccumulator<uint64_t> writes_pull, writes_push;
+  writes_pull.reset();
+  writes_push.reset();
+
+  while (!next_frontier->empty()) {
+    std::swap(frontier, next_frontier);
+    next_frontier->clear();
+    if (scout_count > edges_to_check / alpha) {
+      wl_to_bitset_timer.start();
+      WlToBitset(*frontier, front_bitset);
+      wl_to_bitset_timer.stop();
+      do {
+        ++next_level;
+        old_num_work_items = work_items.reduce();
+        work_items.reset();
+
+        loop(
+            katana::iterate(*transpose_graph),
+            [&](const typename Graph::Node& dst) {
+              auto& ddata = graph->GetData<BfsNodeDistance>(dst);
+              if (ddata == BfsImplementation::kDistanceInfinity) {
+                for (auto e : transpose_graph->edges(dst)) {
+                  auto src = transpose_graph->GetEdgeDest(e);
+
+                  if (front_bitset.test(*src)) {
+                    // assign parents on the bfs path.
+                    ddata = *src;
+                    next_bitset.set(dst);
+                    work_items += 1;
+                    break;
+                  }
+                }
+              }
+            },
+            katana::steal(), katana::chunk_size<kChunkSize>(),
+            katana::loopname(std::string("SyncDO-pull").c_str()));
+        std::swap(front_bitset, next_bitset);
+        next_bitset.reset();
+      } while (work_items.reduce() >= old_num_work_items ||
+               (work_items.reduce() > num_nodes / beta));
+
+      bitset_to_wl_timer.start();
+      BitsetToWl(*graph, front_bitset, *next_frontier);
+      bitset_to_wl_timer.stop();
+      scout_count = 1;
+    } else {
+      ++next_level;
+      edges_to_check -= scout_count;
+      work_items.reset();
+
+      loop(
+          katana::iterate(*frontier),
+          [&](const typename Graph::Node& src) {
+            for (auto e : graph->edges(src)) {
+              auto dst = graph->GetEdgeDest(e);
+              Dist& ddata = graph->GetData<BfsNodeDistance>(*dst);
+              if (ddata == BfsImplementation::kDistanceInfinity) {
+                Dist old_dist = ddata;
+                if (__sync_bool_compare_and_swap(&ddata, old_dist, src)) {
+                  next_frontier->push(*dst);
+                  work_items += std::distance(
+                      graph->edge_begin(*dst), graph->edge_end(*dst));
+                }
+              }
+            }
+          },
+          katana::steal(), katana::chunk_size<kChunkSize>(),
+          katana::loopname(std::string("SyncDO-push").c_str()));
+      scout_count = work_items.reduce();
+    }
+  }
+
+  delete frontier;
+  delete next_frontier;
+}
+
 template <bool CONCURRENT>
 void
-RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
+RunAlgo(
+    BfsPlan algo, Graph* graph, katana::PropertyGraph* transpose_graph,
+    const Graph::Node& source) {
   BfsImplementation impl{algo.edge_tile_size()};
   switch (algo.algorithm()) {
   case BfsPlan::kAsynchronousTile:
@@ -267,6 +411,11 @@ RunAlgo(BfsPlan algo, Graph* graph, const Graph::Node& source) {
     SynchronousAlgo<CONCURRENT, Graph::Node>(
         graph, source, NodePushWrap(), OutEdgeRangeFn{graph});
     break;
+  case BfsPlan::kSynchronousDirectOpt:
+    SynchronousDirectOpt<CONCURRENT>(
+        graph, transpose_graph, source, NodePushWrap(), algo.alpha(),
+        algo.beta());
+    break;
   default:
     std::cerr << "ERROR: unkown algo type\n";
   }
@@ -276,7 +425,7 @@ katana::Result<void>
 BfsImpl(
     katana::TypedPropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>&
         graph,
-    size_t start_node, BfsPlan algo) {
+    katana::PropertyGraph* pg, size_t start_node, BfsPlan algo) {
   if (start_node >= graph.size()) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -292,12 +441,31 @@ BfsImpl(
     graph.GetData<BfsNodeDistance>(n) = BfsImplementation::kDistanceInfinity;
   });
 
+  // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
+  const katana::GraphTopology& topology = pg->topology();
+  katana::LargeArray<uint64_t> out_indices;
+  katana::LargeArray<uint32_t> out_dests;
+
+  out_indices.allocateInterleaved(topology.num_nodes());
+  out_dests.allocateInterleaved(topology.num_edges());
+  auto transpose_graph =
+      katana::CreateTransposeGraphTopology(topology, &out_indices, &out_dests);
+
   katana::StatTimer execTime("BFS");
   execTime.start();
 
-  RunAlgo<true>(algo, &graph, source);
+  RunAlgo<true>(algo, &graph, transpose_graph.value().get(), source);
 
   execTime.stop();
+
+  // TODO(lhc) this is temporary verification code for direct-optimization.
+  // it is different from other algos b/c it stores parent ids, instead of distance.
+  if (algo.algorithm() == BfsPlan::kSynchronousDirectOpt) {
+    for (Graph::Node n = 0; n < 10; n++) {
+      std::cout << "parent[" << n << "] : " << graph.GetData<BfsNodeDistance>(n)
+                << "\n";
+    }
+  }
 
   return katana::ResultSuccess();
 }
@@ -319,7 +487,7 @@ katana::analytics::Bfs(
     return pg_result.error();
   }
 
-  return BfsImpl(pg_result.value(), start_node, algo);
+  return BfsImpl(pg_result.value(), pg, start_node, algo);
 }
 
 katana::Result<void>

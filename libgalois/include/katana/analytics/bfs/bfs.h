@@ -16,7 +16,8 @@ public:
     kAsynchronousTile = 0,
     kAsynchronous,
     kSynchronousTile,
-    kSynchronous
+    kSynchronous,
+    kSynchronousDirectOpt
   };
 
   static const int kDefaultEdgeTileSize = 256;
@@ -24,6 +25,8 @@ public:
 private:
   Algorithm algorithm_;
   ptrdiff_t edge_tile_size_;
+  uint32_t alpha_;
+  uint32_t beta_;
 
   BfsPlan(
       Architecture architecture, Algorithm algorithm, ptrdiff_t edge_tile_size)
@@ -31,11 +34,22 @@ private:
         algorithm_(algorithm),
         edge_tile_size_(edge_tile_size) {}
 
+  BfsPlan(
+      Architecture architecture, Algorithm algorithm, ptrdiff_t edge_tile_size,
+      uint32_t alpha, uint32_t beta)
+      : Plan(architecture),
+        algorithm_(algorithm),
+        edge_tile_size_(edge_tile_size),
+        alpha_(alpha),
+        beta_(beta) {}
+
 public:
   BfsPlan() : BfsPlan{kCPU, kSynchronousTile, kDefaultEdgeTileSize} {}
 
   Algorithm algorithm() const { return algorithm_; }
   ptrdiff_t edge_tile_size() const { return edge_tile_size_; }
+  uint32_t alpha() const { return alpha_; }
+  uint32_t beta() const { return beta_; }
 
   static BfsPlan AsynchronousTile(
       ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) {
@@ -50,6 +64,10 @@ public:
   }
 
   static BfsPlan Synchronous() { return {kCPU, kSynchronous, 0}; }
+
+  static BfsPlan SynchronousDirectOpt(uint32_t alpha, uint32_t beta) {
+    return {kCPU, kSynchronousDirectOpt, 0, alpha, beta};
+  }
 };
 
 /// Compute BFS level of nodes in the graph pg starting from start_node. The

@@ -1027,18 +1027,13 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
 }
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::CreateTransposeGraph(katana::PropertyGraph* pg) {
-  const GraphTopology& topology = pg->topology();
+katana::CreateTransposeGraphTopology(
+    const GraphTopology& topology, katana::LargeArray<uint64_t>* out_indices,
+    katana::LargeArray<uint32_t>* out_dests) {
   auto transpose = std::make_unique<katana::PropertyGraph>();
   if (topology.num_nodes() == 0) {
     return std::unique_ptr<PropertyGraph>(std::move(transpose));
   }
-
-  // New transpose graph topology
-  auto out_indices = std::make_unique<katana::LargeArray<uint64_t>>();
-  auto out_dests = std::make_unique<katana::LargeArray<uint32_t>>();
-
-  out_indices->allocateInterleaved(topology.num_nodes());
 
   // Initialize the new topology indices
   katana::do_all(
@@ -1071,7 +1066,6 @@ katana::CreateTransposeGraph(katana::PropertyGraph* pg) {
       [&](uint64_t n) { out_dests_offset[n] = (*out_indices)[n - 1]; },
       katana::no_stats());
 
-  out_dests->allocateInterleaved(topology.num_edges());
   // Update large_array_out_dests_ with the new destination ids
   // of the transposed graphs
   katana::do_all(
@@ -1101,13 +1095,12 @@ katana::CreateTransposeGraph(katana::PropertyGraph* pg) {
       std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
           static_cast<int64_t>(topology.num_nodes()),
           arrow::MutableBuffer::Wrap(
-              out_indices.release()->data(), topology.num_nodes()));
+              out_indices->data(), topology.num_nodes()));
 
   auto numeric_array_out_dests =
       std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
           static_cast<int64_t>(topology.num_edges()),
-          arrow::MutableBuffer::Wrap(
-              out_dests.release()->data(), topology.num_edges()));
+          arrow::MutableBuffer::Wrap(out_dests->data(), topology.num_edges()));
 
   if (auto r = transpose->SetTopology(katana::GraphTopology{
           .out_indices = std::move(numeric_array_out_indices),

@@ -20,6 +20,7 @@
 #include <iostream>
 
 #include "Lonestar/BoilerPlate.h"
+#include "katana/Mem.h"
 #include "katana/analytics/connected_components/connected_components.h"
 
 using namespace katana::analytics;
@@ -146,6 +147,7 @@ main(int argc, char** argv) {
     abort();
   }
 
+  katana::Prealloc(pg->topology().num_nodes() * 80ul / (1ul << 20));
   katana::reportPageAlloc("MeminfoPre");
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
@@ -220,6 +222,7 @@ main(int argc, char** argv) {
   }
   auto stats = stats_result.value();
   stats.Print();
+  katana::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify) {
     if (ConnectedComponentsAssertValid(pg.get(), "component")) {

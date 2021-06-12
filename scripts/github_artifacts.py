@@ -150,7 +150,7 @@ def python_cmd(args):
     package_names = [str(f.name) for f in packages]
     print("Downloaded packages: " + ", ".join(package_names))
 
-    pkgs_upload_cmd = ["anaconda", "upload", "--label", "dev"] + [str(f) for f in packages]
+    pkgs_upload_cmd = ["anaconda", "upload", "-u", "KatanaGraph", "--label", "dev"] + [str(f) for f in packages]
 
     try:
         if upload_pkgs:

@@ -1,9 +1,4 @@
-from .cpp.libgalois.DynamicBitset cimport DynamicBitset as CDynamicBitset
-
-
 cdef class DynamicBitset:
-    cdef CDynamicBitset underlying
-
     def __init__(self, num_bits):
         """Initializes the bitset and sets its size to the given number of bits."""
         self.resize(num_bits)

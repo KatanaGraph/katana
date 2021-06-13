@@ -25,7 +25,13 @@ set(KATANA_STRICT_CONFIG OFF CACHE BOOL "Instead of falling back gracefully, fai
 set(KATANA_GRAPH_LOCATION "" CACHE PATH "Location of inputs for tests if downloaded/stored separately.")
 set(CXX_CLANG_TIDY "" CACHE STRING "Semi-colon separated list of clang-tidy command and arguments")
 set(CMAKE_CXX_COMPILER_LAUNCHER "" CACHE STRING "Semi-colon separated list of command and arguments to wrap compiler invocations (e.g., ccache)")
-set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to attempt to optimize for; use the first valid configuration ('none' to disable)")
+set(KATANA_USE_ARCH "sandybridge" CACHE STRING "Semi-colon separated list of processor architectures to use features of;
+  Any older/incompatible processors will be unable to run resulting binaries.
+  Use the first valid configuration ('none' to disable). Default: 'sandybridge'")
+set(KATANA_USE_TUNE "intel;generic;auto" CACHE STRING "Semi-colon separated list of processor architectures to attempt to optimize for.
+  Use the first valid configuration (the 'auto' is replaced with KATANA_USE_ARCH, 'none' to disable).
+  Default: 'intel;generic;auto' which tries to optimize for the most recent Intel processors, then falls back to
+  optimizing for the most common processors and then to optimizing for the processor selected by KATANA_USE_ARCH")
 set(KATANA_USE_SANITIZER "" CACHE STRING "Semi-colon separated list of sanitizers to use (Memory, MemoryWithOrigins, Address, Undefined, Thread)")
 # This option is automatically handled by CMake.
 # It makes add_library build a shared lib unless STATIC is explicitly specified.

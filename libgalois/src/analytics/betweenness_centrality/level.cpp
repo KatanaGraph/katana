@@ -1,5 +1,6 @@
 #include "betweenness_centrality_impl.h"
 #include "katana/AtomicHelpers.h"
+#include "katana/DynamicBitset.h"
 #include "katana/Properties.h"
 #include "katana/TypedPropertyGraph.h"
 
@@ -41,7 +42,7 @@ constexpr static const unsigned kLevelChunkSize = 256u;
  * @param graph LevelGraph to initialize
  */
 void
-LevelInitializeGraph(LevelGraph* graph) {
+LevelInitializeGraph(LevelGraph* graph, katana::DynamicBitset* active_edges) {
   katana::do_all(
       katana::iterate(*graph),
       [&](LevelGNode n) {
@@ -52,6 +53,7 @@ LevelInitializeGraph(LevelGraph* graph) {
         node_data.bc = 0;
       },
       katana::no_stats(), katana::loopname("InitializeGraph"));
+  active_edges->resize(graph->num_edges());
 }
 
 /**
@@ -60,7 +62,9 @@ LevelInitializeGraph(LevelGraph* graph) {
  * @param graph LevelGraph to reset iteration data
  */
 void
-LevelInitializeIteration(LevelGraph* graph, LevelGNode src_node) {
+LevelInitializeIteration(
+    LevelGraph* graph, LevelGNode src_node,
+    katana::DynamicBitset* active_edges) {
   katana::do_all(
       katana::iterate(*graph),
       [&](LevelGNode n) {
@@ -79,6 +83,7 @@ LevelInitializeIteration(LevelGraph* graph, LevelGNode src_node) {
         node_data.dependency = 0;
       },
       katana::no_stats(), katana::loopname("InitializeIteration"));
+  active_edges->reset();
 }
 
 /**
@@ -88,7 +93,9 @@ LevelInitializeIteration(LevelGraph* graph, LevelGNode src_node) {
  * Brandes dependency propagation.
  */
 katana::gstl::Vector<LevelWorklistType>
-LevelSSSP(LevelGraph* graph, LevelGNode src_node) {
+LevelSSSP(
+    LevelGraph* graph, LevelGNode src_node,
+    katana::DynamicBitset* active_edges) {
   katana::gstl::Vector<LevelWorklistType> vector_of_worklists;
   uint32_t current_level = 0;
 
@@ -122,10 +129,12 @@ LevelSSSP(LevelGraph* graph, LevelGNode src_node) {
                 vector_of_worklists[next_level].emplace(*dest);
               }
 
+              active_edges->set(e);
               katana::atomicAdd(
                   dst_data.num_shortest_paths,
                   src_data.num_shortest_paths.load());
             } else if (dst_data.current_dist == next_level) {
+              active_edges->set(e);
               katana::atomicAdd(
                   dst_data.num_shortest_paths,
                   src_data.num_shortest_paths.load());
@@ -150,7 +159,8 @@ LevelSSSP(LevelGraph* graph, LevelGNode src_node) {
 void
 LevelBackwardBrandes(
     LevelGraph* graph,
-    katana::gstl::Vector<LevelWorklistType>* vector_of_worklists) {
+    katana::gstl::Vector<LevelWorklistType>* vector_of_worklists,
+    katana::DynamicBitset* active_edges) {
   // minus 3 because last one is empty, one after is leaf nodes, and one
   // to correct indexing to 0 index
   if (vector_of_worklists->size() >= 3) {
@@ -160,7 +170,6 @@ LevelBackwardBrandes(
     while (current_level > 0) {
       LevelWorklistType& current_worklist =
           (*vector_of_worklists)[current_level];
-      uint32_t successor_Level = current_level + 1;
 
       katana::do_all(
           katana::iterate(current_worklist),
@@ -169,10 +178,13 @@ LevelBackwardBrandes(
             KATANA_LOG_ASSERT(src_data.current_dist == current_level);
 
             for (auto e : graph->edges(n)) {
-              auto dest = graph->GetEdgeDest(e);
-              auto& dst_data = graph->GetData<BCLevelNodeData>(dest);
+              if (active_edges->test(e)) {
+                // note: distance check not required because an edge
+                // will never be revisited in a BFS DAG, meaning it
+                // will only ever be activated once
+                auto dest = graph->GetEdgeDest(e);
+                auto& dst_data = graph->GetData<BCLevelNodeData>(dest);
 
-              if (dst_data.current_dist == successor_Level) {
                 // grab dependency, add to self
                 float contrib = ((float)1 + dst_data.dependency) /
                                 dst_data.num_shortest_paths;
@@ -289,8 +301,10 @@ BetweennessCentralityLevel(
     loop_end = source_vector.size();
   }
 
+  katana::DynamicBitset active_edges;
   // graph initialization, then main loop
-  LevelInitializeGraph(&graph);
+  LevelInitializeGraph(&graph, &active_edges);
+
   katana::StatTimer exec_time("Level", "BetweennessCentrality");
 
   // loop over all specified sources for SSSP/Brandes calculation
@@ -308,11 +322,11 @@ BetweennessCentralityLevel(
 
     // here begins main computation
     exec_time.start();
-    LevelInitializeIteration(&graph, src_node);
+    LevelInitializeIteration(&graph, src_node, &active_edges);
     // worklist; last one will be empty
     katana::gstl::Vector<LevelWorklistType> worklists =
-        LevelSSSP(&graph, src_node);
-    LevelBackwardBrandes(&graph, &worklists);
+        LevelSSSP(&graph, src_node, &active_edges);
+    LevelBackwardBrandes(&graph, &worklists, &active_edges);
     exec_time.stop();
   }
 

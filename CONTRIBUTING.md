@@ -557,7 +557,7 @@ Compare
 
 ```cpp
 Result<void> CheckNumber(int number) {
-  if (!number) {
+  if (number) {
     int u = n / number;
   } else {
     return KATANA_ERROR(IllegalArgument, "cannot divide by zero");
@@ -569,13 +569,17 @@ and
 
 ```cpp
 Result<void> CheckNumber(int number) {
-  if (!number) {
+  if (number) {
     int u = n / number;
   } else {
     return KATANA_ERROR(IllegalArgument, "number should be positive");
   }
 }
 ```
+
+We consider the second code snippet better because it provides a hint on what
+the user can do, rather than just mentioning the error happening in the
+library.
 
 As a matter of consistency and style, messages should begin with a lowercase
 letter to avoid switching between different case styles when errors are

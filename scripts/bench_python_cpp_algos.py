@@ -128,7 +128,7 @@ def run_jaccard(property_graph: PropertyGraph, input_args):
 def run_pagerank(property_graph: PropertyGraph, _input_args):
     property_name = "NewProp"
 
-    tolerance = 0.000001
+    tolerance = 0.0001
     max_iteration = 1000
     alpha = 0.85
 

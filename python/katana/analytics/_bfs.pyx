@@ -40,9 +40,12 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
             kAsynchronous "katana::analytics::BfsPlan::kAsynchronous"
             kSynchronousTile "katana::analytics::BfsPlan::kSynchronousTile"
             kSynchronous "katana::analytics::BfsPlan::kSynchronous"
+            kSynchronousDirectOpt "katana::analytics::BfsPlan::kSynchronousDirectOpt"
 
         _BfsPlan.Algorithm algorithm() const
         ptrdiff_t edge_tile_size() const
+        uint32_t alpha() const
+        uint32_t beta() const
 
         @staticmethod
         _BfsPlan AsynchronousTile(ptrdiff_t edge_tile_size)
@@ -56,7 +59,12 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
         @staticmethod
         _BfsPlan Synchronous()
 
+        @staticmethod
+        _BfsPlan SynchronousDirectOpt(uint32_t, uint32_t)
+
     ptrdiff_t kDefaultEdgeTileSize "katana::analytics::BfsPlan::kDefaultEdgeTileSize"
+    uint32_t kDefaultAlpha "katana::analytics::BfsPlan::kDefaultAlpha"
+    uint32_t kDefaultBeta "katana::analytics::BfsPlan::kDefaultBeta"
 
     Result[void] Bfs(_PropertyGraph * pg,
                      size_t start_node,
@@ -84,6 +92,7 @@ class _BfsAlgorithm(Enum):
     Asynchronous = _BfsPlan.Algorithm.kAsynchronous
     AsynchronousTile = _BfsPlan.Algorithm.kAsynchronousTile
     Synchronous = _BfsPlan.Algorithm.kSynchronous
+    SynchronousDirectOpt = _BfsPlan.Algorithm.kSynchronousDirectOpt
     SynchronousTile = _BfsPlan.Algorithm.kSynchronousTile
 
 
@@ -143,6 +152,13 @@ cdef class BfsPlan(Plan):
         Bulk-synchronous
         """
         return BfsPlan.make(_BfsPlan.Synchronous())
+
+    @staticmethod
+    def synchronous_direction_opt(int alpha=kDefaultAlpha, int beta=kDefaultBeta):
+        """
+        Bulk-synchronous using edge direction optimizations
+        """
+        return BfsPlan.make(_BfsPlan.SynchronousDirectOpt(alpha, beta))
 
 
 def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):

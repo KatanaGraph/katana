@@ -42,7 +42,12 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
 
         for source in sources:
             with time_block(f"bfs on {source}"):
-                analytics.bfs(property_graph, int(source), property_name)
+                analytics.bfs(
+                    property_graph,
+                    int(source),
+                    property_name,
+                    plan=analytics.BfsPlan.SynchronousDirectOpt(alpha=15, beta=18),
+                )
             check_schema(property_graph, property_name)
 
             analytics.bfs_assert_valid(property_graph, property_name)

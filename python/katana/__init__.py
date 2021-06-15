@@ -44,7 +44,8 @@ _runtime_sys = None
 
 def set_runtime_sys(cls):
     """
-    Create and register a runtime sys. The runtime sys will be deallocated at python exit.
+    Create and register a runtime sys. The runtime sys will be deallocated at python exit. It can be explicitly
+    deallocated by calling :py:func:`reset_runtime_sys`.
 
     Once this is called with a given runtime type, it can be called repeatedly with that type idempotently.
     However, a call with a different runtime type will raise an exception.
@@ -65,7 +66,9 @@ def set_runtime_sys(cls):
 @atexit.register
 def reset_runtime_sys():
     """
-    At interpreter exit, clear the runtime reference to trigger deallocation and shutdown.
+    Clear the runtime reference to trigger deallocation and shutdown. This is called automatically at interpreter exit.
+
+    This function is idempotent.
     """
     # pylint: disable=global-statement
     global _runtime_sys

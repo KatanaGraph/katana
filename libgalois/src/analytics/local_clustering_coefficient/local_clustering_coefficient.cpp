@@ -27,10 +27,7 @@ namespace {
 constexpr static const unsigned kChunkSize = 64U;
 
 struct LocalClusteringCoefficientAtomics {
-  struct NodeTriangleCount {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<std::atomic<uint64_t>>;
-  };
+  struct NodeTriangleCount : public katana::AtomicPODProperty<uint64_t> {};
 
   struct NodeClusteringCoefficient : public katana::PODProperty<double> {};
 

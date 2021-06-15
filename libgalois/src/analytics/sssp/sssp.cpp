@@ -30,10 +30,7 @@ using namespace katana::analytics;
 namespace {
 
 template <typename Weight>
-struct SsspNodeDistance {
-  using ArrowType = typename arrow::CTypeTraits<Weight>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<Weight>>;
-};
+struct SsspNodeDistance : public katana::AtomicPODProperty<Weight> {};
 
 template <typename Weight>
 using SsspEdgeWeight = katana::PODProperty<Weight>;

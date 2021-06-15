@@ -76,15 +76,9 @@ struct Path {
   const Path* last{nullptr};
 };
 
-struct NodeCount {
-  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
-};
+struct NodeCount : public katana::AtomicPODProperty<uint32_t> {};
 
-struct NodeMax {
-  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
-};
+struct NodeMax : public katana::AtomicPODProperty<uint32_t> {};
 
 using EdgeWeight = katana::UInt32Property;
 

@@ -50,10 +50,7 @@ struct ConnectedComponentsNode
 
 struct ConnectedComponentsSerialAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -98,10 +95,7 @@ struct ConnectedComponentsSerialAlgo {
 
 struct ConnectedComponentsLabelPropAlgo {
   using ComponentType = uint64_t;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<ComponentType>::ArrowType;
-    using ViewType = katana::PODPropertyView<std::atomic<ComponentType>>;
-  };
+  struct NodeComponent : public katana::AtomicPODProperty<ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -153,10 +147,7 @@ struct ConnectedComponentsLabelPropAlgo {
 
 struct ConnectedComponentsSynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -268,10 +259,7 @@ struct ConnectedComponentsSynchronousAlgo {
 
 struct ConnectedComponentsAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -333,10 +321,7 @@ struct ConnectedComponentsAsynchronousAlgo {
 
 struct ConnectedComponentsEdgeAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -410,10 +395,7 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
 
 struct ConnectedComponentsBlockedAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -508,10 +490,7 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
 
 struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
   using ComponentType = ConnectedComponentsNode*;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<ComponentType>;
-  };
+  struct NodeComponent : public katana::PODProperty<uint64_t, ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -705,10 +684,8 @@ struct ConnectedComponentsAfforestAlgo {
     }
   };
 
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<NodeAfforest::ComponentType>;
-  };
+  struct NodeComponent
+      : public katana::PODProperty<uint64_t, NodeAfforest::ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;
@@ -854,9 +831,8 @@ struct ConnectedComponentsEdgeAfforestAlgo {
   };
 
   using ComponentType = NodeAfforestEdge::ComponentType;
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<NodeAfforestEdge::ComponentType>;
+  struct NodeComponent
+      : public katana::PODProperty<uint64_t, NodeAfforestEdge::ComponentType> {
   };
 
   using NodeData = std::tuple<NodeComponent>;
@@ -1002,10 +978,8 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
     }
   };
 
-  struct NodeComponent {
-    using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<NodeAfforest::ComponentType>;
-  };
+  struct NodeComponent
+      : public katana::PODProperty<uint64_t, NodeAfforest::ComponentType> {};
 
   using NodeData = std::tuple<NodeComponent>;
   using EdgeData = std::tuple<>;

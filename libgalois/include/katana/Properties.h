@@ -36,19 +36,23 @@ namespace katana {
 /// data, and a TypedPropertyGraph provides typed property views on top of a
 /// PropertyGraph.
 ///
-/// There are two ways of configuring a property for a TypedPropertyGraph.
+/// The way to create a new property is to define a new type that inherits from
+/// Property:
 ///
-/// The most common way is to create a new type with two nested types:
-/// ArrowType and ViewType:
+///   struct Rank: public Property<
+///       // type of data as Arrow data type
+///       arrow::Int32,
+///       // type of view which converts Arrow data to a convenient C type
+///       katana::PODPropertyView<int32_t>
+///   > { };
 ///
-///   struct Rank {
-///     using ArrowType = arrow::Int32;
-///     using ViewType = katana::PODPropertyView<int32_t>;
-///   };
+/// There are convenience classes for common property types:
 ///
-/// The other way would be to partially specialize PropertyArrowType,
-/// PropertyViewType, PropertyArrowArrayType and PropertyReferenceType for your
-/// specific property type.
+///   struct Rank: public PODProperty<int32_t> {};
+///
+/// or
+///
+///   struct Distance: public UInt32Property {};
 ///
 /// Once configured, properties can be used as follows:
 ///
@@ -90,6 +94,23 @@ using PropertyConstReferenceType =
     typename PropertyViewType<Prop>::const_reference;
 
 namespace internal {
+/// Get the mutable values pointer of a mutable ArrayData.
+/// This function works around a bug in NumPyBuffer (arrow's wrapper around numpy
+/// arrays) which claims to be mutable but returns null from mutable_data().
+template <typename T>
+T*
+GetMutableValuesWorkAround(
+    const std::shared_ptr<arrow::ArrayData>& data, int i,
+    int64_t absolute_offset) {
+  if (data->buffers.size() > static_cast<size_t>(i) &&
+      data->buffers[i]->is_mutable()) {
+    if (auto r = data->template GetMutableValues<T>(i, absolute_offset); r) {
+      return r;
+    }
+    return const_cast<T*>(data->template GetValues<T>(i, absolute_offset));
+  }
+  return data->template GetMutableValues<T>(i, absolute_offset);
+}
 
 template <typename>
 struct PropertyViewTuple;
@@ -172,76 +193,6 @@ ConstructPropertyViews(const std::vector<arrow::Array*>& arrays) {
       arrays, std::make_index_sequence<std::tuple_size_v<PropTuple>>());
 }
 
-namespace {
-/// Get the mutable values pointer of a mutable ArrayData.
-/// This function works around a bug in NumPyBuffer (arrow's wrapper around numpy
-/// arrays) which claims to be mutable but returns null from mutable_data().
-template <typename T>
-T*
-GetMutableValuesWorkAround(
-    const std::shared_ptr<arrow::ArrayData>& data, int i,
-    int64_t absolute_offset) {
-  if (data->buffers.size() > (size_t)i && data->buffers[i]->is_mutable()) {
-    if (auto r = data->template GetMutableValues<T>(i, absolute_offset); r) {
-      return r;
-    } else {
-      return const_cast<T*>(data->template GetValues<T>(i, absolute_offset));
-    }
-  } else {
-    return data->template GetMutableValues<T>(i, absolute_offset);
-  }
-}
-
-template <typename T>
-struct HasAllocate {
-  template <typename U>
-  constexpr static int test(decltype(&U::Allocate)) {
-    return true;
-  }
-
-  template <typename>
-  constexpr static bool test(...) {
-    return false;
-  }
-
-  constexpr static bool value = sizeof(test<T>(nullptr)) == sizeof(int);
-};
-
-template <typename Prop>
-std::enable_if_t<
-    !HasAllocate<Prop>::value, Result<std::shared_ptr<arrow::Table>>>
-Allocate(size_t num_rows, const std::string& name) {
-  using ArrowType = typename PropertyTraits<Prop>::ArrowType;
-  using Builder = typename arrow::TypeTraits<ArrowType>::BuilderType;
-  using CType = typename arrow::TypeTraits<ArrowType>::CType;
-  Builder builder;
-
-  // TODO(lhc): replace this with AppendEmptyValues() on Arrow > 3.0.
-  katana::PODResizeableArray<CType> rows(num_rows);
-  if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "failed to append values {}", r);
-  }
-
-  std::shared_ptr<arrow::Array> array;
-  if (auto r = builder.Finish(&array); !r.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError, "failed to construct arrow array {}", r);
-  }
-
-  return arrow::Table::Make(
-      arrow::schema(
-          {arrow::field(name, arrow::TypeTraits<ArrowType>::type_singleton())}),
-      {array});
-}
-
-template <typename Prop>
-std::enable_if_t<
-    HasAllocate<Prop>::value, Result<std::shared_ptr<arrow::Table>>>
-Allocate(size_t num_rows, const std::string& name) {
-  return Prop::Allocate(num_rows, name);
-}
-
 template <typename PropTuple>
 Result<std::shared_ptr<arrow::Table>>
 AllocateTable(
@@ -256,7 +207,7 @@ AllocateTable(
     std::index_sequence<head, tail...>) {
   using Prop = std::tuple_element_t<head, PropTuple>;
 
-  auto res = Allocate<Prop>(num_rows, names[head]);
+  auto res = Prop::Allocate(num_rows, names[head]);
   if (!res) {
     return res.error();
   }
@@ -295,8 +246,6 @@ AllocateTable(uint64_t num_rows, const std::vector<std::string>& names) {
       std::make_index_sequence<std::tuple_size_v<PropTuple>>());
 }
 
-}  // namespace
-
 /// PODPropertyView provides a property view over arrow::Arrays of elements
 /// with trivial constructors (std::is_trivial) and standard layout
 /// (std::is_standard_layout).
@@ -327,7 +276,7 @@ public:
       return ErrorCode::ArrowError;
     }
     return PODPropertyView(
-        GetMutableValuesWorkAround<T>(array.data(), 1, 0),
+        internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
         array.offset());
   }
@@ -350,7 +299,7 @@ public:
       return ErrorCode::ArrowError;
     }
     return PODPropertyView(
-        GetMutableValuesWorkAround<T>(array.data(), 1, 0),
+        internal::GetMutableValuesWorkAround<T>(array.data(), 1, 0),
         array.data()->template GetValues<uint8_t>(0, 0), array.length(),
         array.offset());
   }
@@ -450,11 +399,47 @@ private:
   const ArrowArrayType& array_;
 };
 
-template <typename T>
-struct PODProperty {
-  using ArrowType = typename arrow::CTypeTraits<T>::ArrowType;
-  using ViewType = PODPropertyView<T>;
+template <typename ArrowT, typename ViewT>
+struct Property {
+  using ArrowType = ArrowT;
+  using ViewType = ViewT;
+
+  static Result<std::shared_ptr<arrow::Table>> Allocate(
+      size_t num_rows, const std::string& name) {
+    using Builder = typename arrow::TypeTraits<ArrowType>::BuilderType;
+    using CType = typename arrow::TypeTraits<ArrowType>::CType;
+    Builder builder;
+
+    // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
+    katana::PODResizeableArray<CType> rows(num_rows);
+    if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to append values {}", r);
+    }
+
+    std::shared_ptr<arrow::Array> array;
+    if (auto r = builder.Finish(&array); !r.ok()) {
+      return KATANA_ERROR(
+          katana::ErrorCode::ArrowError, "failed to construct arrow array {}",
+          r);
+    }
+
+    return arrow::Table::Make(
+        arrow::schema({arrow::field(
+            name, arrow::TypeTraits<ArrowType>::type_singleton())}),
+        {array});
+  }
 };
+
+/// A PODProperty is a property that has no constructor/destructor, can be
+/// copied with memcpy, etc. (i.e., a plain-old data type).
+///
+/// \tparam T the C type of the backing Arrow property
+/// \tparam U (optional) the C type of the viewed value
+template <typename T, typename U = T>
+struct PODProperty
+    : public Property<
+          typename arrow::CTypeTraits<T>::ArrowType, PODPropertyView<U>> {};
 
 struct UInt8Property : public PODProperty<uint8_t> {};
 
@@ -464,26 +449,28 @@ struct UInt32Property : public PODProperty<uint32_t> {};
 
 struct UInt64Property : public PODProperty<uint64_t> {};
 
-struct BooleanReadOnlyProperty {
-  using ArrowType = typename arrow::CTypeTraits<bool>::ArrowType;
-  using ViewType = BooleanPropertyReadOnlyView;
-};
+template <typename T, typename U = T>
+struct AtomicPODProperty : public Property<
+                               typename arrow::CTypeTraits<T>::ArrowType,
+                               PODPropertyView<std::atomic<U>>> {};
 
-struct StringReadOnlyProperty {
-  using ArrowType = arrow::StringType;
-  using ViewType = StringPropertyReadOnlyView<arrow::StringArray>;
-};
+struct BooleanReadOnlyProperty
+    : public Property<
+          typename arrow::CTypeTraits<bool>::ArrowType,
+          BooleanPropertyReadOnlyView> {};
 
-struct LargeStringReadOnlyProperty {
-  using ArrowType = arrow::LargeStringType;
-  using ViewType = StringPropertyReadOnlyView<arrow::LargeStringArray>;
-};
+struct StringReadOnlyProperty
+    : public Property<
+          arrow::StringType, StringPropertyReadOnlyView<arrow::StringArray>> {};
+
+struct LargeStringReadOnlyProperty
+    : public Property<
+          arrow::LargeStringType,
+          StringPropertyReadOnlyView<arrow::LargeStringArray>> {};
 
 template <typename T>
-struct StructProperty {
-  using ArrowType = arrow::FixedSizeBinaryType;
-  using ViewType = katana::PODPropertyView<T>;
-
+struct StructProperty
+    : public Property<arrow::FixedSizeBinaryType, katana::PODPropertyView<T>> {
   static katana::Result<std::shared_ptr<arrow::Table>> Allocate(
       size_t num_rows, const std::string& name) {
     auto res = arrow::FixedSizeBinaryType::Make(sizeof(T));
@@ -495,7 +482,7 @@ struct StructProperty {
 
     auto type = res.ValueOrDie();
     arrow::FixedSizeBinaryBuilder builder(type);
-    // TODO(lhc): replace this with AppendEmptyValues() on Arrow > 3.0.
+    // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
     katana::PODResizeableArray<uint8_t> data(sizeof(T) * num_rows);
 
     if (auto res = builder.AppendValues(data.data(), num_rows); !res.ok()) {

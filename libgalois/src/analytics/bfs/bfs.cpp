@@ -23,6 +23,8 @@
 #include <type_traits>
 
 #include "katana/DynamicBitset.h"
+#include "katana/ErrorCode.h"
+#include "katana/Result.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
@@ -284,18 +286,18 @@ SynchronousDirectOpt(
   katana::StatTimer wl_to_bitset_timer("WL_To_Bitset_Timer");
 
   Loop loop;
-  katana::DynamicBitset front_bitset, next_bitset;
+
+  katana::DynamicBitset front_bitset;
+  katana::DynamicBitset next_bitset;
 
   uint32_t num_nodes = graph.size();
   uint64_t num_edges = graph.num_edges();
 
   front_bitset.resize(num_nodes);
   next_bitset.resize(num_nodes);
-  front_bitset.reset();
-  next_bitset.reset();
 
-  Cont* frontier = new Cont();
-  Cont* next_frontier = new Cont();
+  auto frontier = std::make_unique<Cont>();
+  auto next_frontier = std::make_unique<Cont>();
 
   (*node_data)[source] = source;
 
@@ -311,9 +313,8 @@ SynchronousDirectOpt(
   int64_t scout_count = graph.edges(source).size();
   uint64_t old_num_work_items{0};
 
-  katana::GAccumulator<uint64_t> writes_pull, writes_push;
-  writes_pull.reset();
-  writes_push.reset();
+  katana::GAccumulator<uint64_t> writes_pull;
+  katana::GAccumulator<uint64_t> writes_push;
 
   while (!next_frontier->empty()) {
     std::swap(frontier, next_frontier);
@@ -351,7 +352,7 @@ SynchronousDirectOpt(
       } while (work_items.reduce() >= old_num_work_items ||
                (work_items.reduce() > num_nodes / beta));
       bitset_to_wl_timer.start();
-      BitsetToWl(graph, front_bitset, next_frontier);
+      BitsetToWl(graph, front_bitset, next_frontier.get());
       bitset_to_wl_timer.stop();
       scout_count = 1;
     } else {
@@ -380,9 +381,6 @@ SynchronousDirectOpt(
       scout_count = work_items.reduce();
     }
   }
-
-  delete frontier;
-  delete next_frontier;
 }
 
 template <typename NDType, typename ValueTy>
@@ -442,7 +440,7 @@ ComputeParentFromDistance(
 }
 
 template <bool CONCURRENT>
-void
+katana::Result<void>
 RunAlgo(
     BfsPlan algo, Graph* graph, katana::PropertyGraph* pg,
     katana::PropertyGraph& transpose_graph, const GNode& source) {
@@ -484,8 +482,12 @@ RunAlgo(
     break;
   }
   default:
-    KATANA_LOG_FATAL("Error: unknown algorithm type: {}", algo.algorithm());
+    return KATANA_ERROR(
+        katana::ErrorCode::InvalidArgument, "unknown algorithm {}",
+        algo.algorithm());
   }
+
+  return katana::ResultSuccess();
 }
 
 katana::Result<void>
@@ -514,7 +516,11 @@ BfsImpl(
   const katana::GraphTopology& topology = pg->topology();
   auto transpose_graph = katana::CreateTransposeGraphTopology(topology);
 
-  RunAlgo<true>(algo, &graph, pg, *(transpose_graph.value().get()), source);
+  if (auto res = RunAlgo<true>(
+          algo, &graph, pg, *(transpose_graph.value().get()), source);
+      !res) {
+    return res.error();
+  }
 
   return katana::ResultSuccess();
 }

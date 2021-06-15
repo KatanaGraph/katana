@@ -73,6 +73,9 @@ cll::opt<SsspPlan::Algorithm> algo(
             SsspPlan::kSerialDeltaTile, "SerialDeltaTile",
             "Serial delta stepping tiled"),
         clEnumValN(
+            SsspPlan::kDeltaStepFusion, "DeltaStepFusion",
+            "Delta stepping with barrier and fused buckets"),
+        clEnumValN(
             SsspPlan::kSerialDelta, "SerialDelta", "Serial delta stepping"),
         clEnumValN(
             SsspPlan::kDijkstraTile, "DijkstraTile",
@@ -98,6 +101,8 @@ AlgorithmName(SsspPlan::Algorithm algorithm) {
     return "DeltaStep";
   case SsspPlan::kDeltaStepBarrier:
     return "DeltaStepBarrier";
+  case SsspPlan::kDeltaStepFusion:
+    return "DeltaStepFusion";
   case SsspPlan::kSerialDeltaTile:
     return "SerialDeltaTile";
   case SsspPlan::kSerialDelta:
@@ -174,7 +179,7 @@ main(int argc, char** argv) {
         std::istream_iterator<uint64_t>{});
   }
   uint32_t num_sources = startNodes.size();
-  std::cout << "Running BFS for " << num_sources << " sources\n";
+  std::cout << "Running SSSP for " << num_sources << " sources\n";
 
   if (algo == SsspPlan::kDeltaStep || algo == SsspPlan::kDeltaTile ||
       algo == SsspPlan::kSerialDelta || algo == SsspPlan::kSerialDeltaTile) {
@@ -196,6 +201,9 @@ main(int argc, char** argv) {
     break;
   case SsspPlan::kDeltaStepBarrier:
     plan = SsspPlan::DeltaStepBarrier(stepShift);
+    break;
+  case SsspPlan::kDeltaStepFusion:
+    plan = SsspPlan::DeltaStepFusion(stepShift);
     break;
   case SsspPlan::kSerialDeltaTile:
     plan = SsspPlan::SerialDeltaTile(stepShift);

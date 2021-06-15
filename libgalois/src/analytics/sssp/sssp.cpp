@@ -19,8 +19,10 @@
 
 #include "katana/analytics/sssp/sssp.h"
 
+#include "katana/Reduction.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
+#include "katana/gstl.h"
 
 using namespace katana::analytics;
 
@@ -100,7 +102,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
             auto dest = graph->GetEdgeDest(ii);
             auto& ddist = graph->template GetData<NodeDistance>(dest);
             Dist ew = graph->template GetEdgeData<EdgeWeight>(ii);
-            const Dist new_dist = sdata + ew;
+            Dist new_dist = sdata + ew;
             Dist old_dist = katana::atomicMin(ddist, new_dist);
             if (new_dist < old_dist) {
               if (kTrackWork) {
@@ -122,6 +124,106 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
       katana::ReportStatSingle("SSSP", "BadWork", BadWork.reduce());
       //! [report self-defined stats]
       katana::ReportStatSingle("SSSP", "WLEmptyWork", WLEmptyWork.reduce());
+    }
+  }
+
+  static void DeltaStepFusionAlgo(
+      Graph* graph, const typename Graph::Node& source, unsigned stepShift) {
+    constexpr size_t kMaxFusion = 1000;
+
+    using Node = typename Graph::Node;
+    using Bucket = katana::gstl::Vector<Node>;
+    using Buckets = katana::gstl::Vector<Bucket>;
+
+    katana::PerThreadStorage<Buckets> buckets;
+
+    auto relax = [&](Node n, Dist sdist, Buckets& b) {
+      for (auto ii : graph->edges(n)) {
+        auto dest = graph->GetEdgeDest(ii);
+        auto& ddist = graph->template GetData<NodeDistance>(dest);
+        Dist ew = graph->template GetEdgeData<EdgeWeight>(ii);
+        const Dist new_dist = sdist + ew;
+
+        Dist old_dist = katana::atomicMin(ddist, new_dist);
+        if (new_dist < old_dist) {
+          size_t idx = new_dist / (1 << stepShift);
+          if (idx >= b.size()) {
+            b.resize(idx + 1);
+          }
+          b[idx].push_back(*dest);
+        }
+      }
+    };
+
+    katana::GAccumulator<size_t> fused_rounds;
+
+    katana::InsertBag<Node> wl;
+    wl.push_back(source);
+
+    graph->template GetData<NodeDistance>(source) = 0;
+
+    size_t cur_bucket = 0;
+
+    for (size_t rounds = 1; true; ++rounds) {
+      Dist cur_dist = cur_bucket * (1 << stepShift);
+      katana::do_all(
+          katana::iterate(wl),
+          [&](const Node& n) {
+            Dist sdist = graph->template GetData<NodeDistance>(n);
+            if (sdist >= cur_dist) {
+              relax(n, sdist, *buckets.getLocal());
+            }
+          },
+          katana::wl<PSchunk>, katana::steal());
+
+      katana::GReduceMin<size_t> least_bucket;
+
+      katana::on_each([&](unsigned, unsigned) {
+        Buckets& b = *buckets.getLocal();
+
+        while (cur_bucket < b.size() && !b[cur_bucket].empty() &&
+               b[cur_bucket].size() < kMaxFusion) {
+          fused_rounds.update(1);
+          Bucket cur;
+          std::swap(b[cur_bucket], cur);
+          for (Node n : cur) {
+            Dist sdist = graph->template GetData<NodeDistance>(n);
+            relax(n, sdist, b);
+          }
+        }
+
+        for (size_t idx = cur_bucket; idx < b.size(); ++idx) {
+          if (b[idx].empty()) {
+            continue;
+          }
+          least_bucket.update(idx);
+          break;
+        }
+      });
+
+      wl.clear();
+
+      cur_bucket = least_bucket.reduce();
+      if (cur_bucket == std::numeric_limits<size_t>::max()) {
+        katana::ReportStatSingle("SSSP", "rounds", rounds);
+        katana::ReportStatSingle("SSSP", "fused rounds", fused_rounds.reduce());
+        break;
+      }
+
+      katana::on_each([&](unsigned, unsigned) {
+        Buckets& b = *buckets.getLocal();
+        if (cur_bucket >= b.size()) {
+          return;
+        }
+        if (b[cur_bucket].empty()) {
+          return;
+        }
+        for (Node n : b[cur_bucket]) {
+          wl.push(n);
+        }
+        b[cur_bucket].clear();
+        b[cur_bucket].shrink_to_fit();
+      });
     }
   }
 
@@ -337,6 +439,13 @@ public:
       DeltaStepAlgo<UpdateRequest>(
           &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, plan.delta());
       break;
+    case SsspPlan::kDeltaStepBarrier:
+      DeltaStepAlgo<UpdateRequest, OBIMBarrier>(
+          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, plan.delta());
+      break;
+    case SsspPlan::kDeltaStepFusion:
+      DeltaStepFusionAlgo(&graph, source, plan.delta());
+      break;
     case SsspPlan::kSerialDeltaTile:
       SerDeltaAlgo<SrcEdgeTile>(
           &graph, source, SrcEdgeTilePushWrap{&graph, *this}, TileRangeFn(),
@@ -359,10 +468,6 @@ public:
       break;
     case SsspPlan::kTopologicalTile:
       TopoTileAlgo(&graph, source);
-      break;
-    case SsspPlan::kDeltaStepBarrier:
-      DeltaStepAlgo<UpdateRequest, OBIMBarrier>(
-          &graph, source, ReqPushWrap(), OutEdgeRangeFn{&graph}, plan.delta());
       break;
     default:
       return katana::ErrorCode::InvalidArgument;

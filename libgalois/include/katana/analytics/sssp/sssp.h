@@ -18,6 +18,7 @@ public:
     kDeltaTile,
     kDeltaStep,
     kDeltaStepBarrier,
+    kDeltaStepFusion,
     // TODO(gill): Do we want to expose serial implementations at all?
     kSerialDeltaTile,
     kSerialDelta,
@@ -81,6 +82,10 @@ public:
 
   static SsspPlan DeltaStepBarrier(unsigned delta = kDefaultDelta) {
     return {kCPU, kDeltaStepBarrier, delta, 0};
+  }
+
+  static SsspPlan DeltaStepFusion(unsigned delta = kDefaultDelta) {
+    return {kCPU, kDeltaStepFusion, delta, 0};
   }
 
   static SsspPlan SerialDeltaTile(

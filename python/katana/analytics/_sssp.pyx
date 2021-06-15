@@ -38,6 +38,7 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
             kDeltaTile "katana::analytics::SsspPlan::kDeltaTile"
             kDeltaStep "katana::analytics::SsspPlan::kDeltaStep"
             kDeltaStepBarrier "katana::analytics::SsspPlan::kDeltaStepBarrier"
+            kDeltaStepFusion "katana::analytics::SsspPlan::kDeltaStepFusion"
             kSerialDeltaTile "katana::analytics::SsspPlan::kSerialDeltaTile"
             kSerialDelta "katana::analytics::SsspPlan::kSerialDelta"
             kDijkstraTile "katana::analytics::SsspPlan::kDijkstraTile"
@@ -59,6 +60,8 @@ cdef extern from "katana/analytics/sssp/sssp.h" namespace "katana::analytics" no
         _SsspPlan DeltaStep(unsigned delta)
         @staticmethod
         _SsspPlan DeltaStepBarrier(unsigned delta)
+        @staticmethod
+        _SsspPlan DeltaStepFusion(unsigned delta)
         @staticmethod
         _SsspPlan SerialDeltaTile(unsigned delta, ptrdiff_t edge_tile_size)
         @staticmethod
@@ -188,6 +191,13 @@ cdef class SsspPlan(Plan):
         Delta stepping with barrier
         """
         return SsspPlan.make(_SsspPlan.DeltaStepBarrier(delta))
+
+    @staticmethod
+    def delta_step_barrier(unsigned delta = kDefaultDelta) -> SsspPlan:
+        """
+        Delta stepping with barrier and fused buckets
+        """
+        return SsspPlan.make(_SsspPlan.DeltaStepFusion(delta))
 
     @staticmethod
     def serial_delta_tile(unsigned delta = kDefaultDelta, ptrdiff_t edge_tile_size = kDefaultEdgeTileSize) -> SsspPlan:

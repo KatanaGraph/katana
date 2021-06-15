@@ -70,6 +70,7 @@ class RequirementsCache:
 
     def add(self, *item):
         self.cache.add(self._make_key(item))
+        self.sync()
 
     @classmethod
     def _make_key(cls, item):
@@ -466,8 +467,6 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
     except ImportError:
         pass
     options.update(kwargs)
-
-    requirement_cache.sync()
 
     setuptools.setup(**options)
 

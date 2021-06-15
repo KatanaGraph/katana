@@ -70,8 +70,11 @@ MapTopology(const tsuba::FileView& file_view) {
   auto adj_arr = std::make_unique<katana::LargeArray<uint64_t> >();
   auto dst_arr = std::make_unique<katana::LargeArray<uint32_t> >();
 
-  adj_arr->allocateBlocked(num_nodes);
-  dst_arr->allocateBlocked(num_edges);
+  // adj_arr->allocateBlocked(num_nodes);
+  // dst_arr->allocateBlocked(num_edges);
+
+  adj_arr->allocateInterleaved(num_nodes);
+  dst_arr->allocateInterleaved(num_edges);
 
   katana::ParallelSTL::copy(out_indices, out_indices + num_nodes, adj_arr->begin());
   katana::ParallelSTL::copy(out_dests, out_dests + num_edges, dst_arr->begin());

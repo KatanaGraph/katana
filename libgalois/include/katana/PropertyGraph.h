@@ -66,10 +66,7 @@ struct KATANA_EXPORT GraphTopology {
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
   Node edge_dest(Edge eid) const {
-    if (eid >= Edge(out_dests->length())) {
-      KATANA_LOG_WARN("eid = {}, out_dests length = {}", eid, out_dests->length());
-    }
-    KATANA_LOG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
+    KATANA_LOG_DEBUG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
     return out_dests->Value(eid);
   }
 

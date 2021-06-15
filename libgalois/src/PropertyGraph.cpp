@@ -79,23 +79,20 @@ MapTopology(const tsuba::FileView& file_view) {
   katana::ParallelSTL::copy(out_indices, out_indices + num_nodes, adj_arr->begin());
   katana::ParallelSTL::copy(out_dests, out_dests + num_edges, dst_arr->begin());
 
-  for (const auto& n: *dst_arr) {
-    KATANA_LOG_ASSERT(n < num_nodes);
-  }
+  // Some sanity checks on topology
+  katana::do_all (katana::iterate(*dst_arr), [&] (auto n) {
+    (void)n; // to suppress unused var warning in release builds
+    KATANA_LOG_DEBUG_ASSERT(n < num_nodes);
+  }, katana::no_stats());
 
-  for (const auto& e: *adj_arr) {
-    KATANA_LOG_ASSERT(e <= num_edges);
-  }
+  katana::do_all (katana::iterate(*adj_arr), [&] (auto e) {
+    (void)e; // to suppress unused var warning in release builds
+    KATANA_LOG_DEBUG_ASSERT(e <= num_edges);
+  }, katana::no_stats());
 
   auto indices_buffer = arrow::MutableBuffer::Wrap(adj_arr.release()->data(), num_nodes);
   auto dests_buffer = arrow::MutableBuffer::Wrap(dst_arr.release()->data(), num_edges);
 
-  // auto indices_buffer = std::make_shared<arrow::MutableBuffer>(
-      // reinterpret_cast<uint8_t*>(out_indices), num_nodes);
-// 
-  // auto dests_buffer = std::make_shared<arrow::MutableBuffer>(
-      // reinterpret_cast<uint8_t*>(out_dests), num_edges);
- 
   return katana::GraphTopology{
       .out_indices = std::make_shared<arrow::UInt64Array>(
           num_nodes, indices_buffer),

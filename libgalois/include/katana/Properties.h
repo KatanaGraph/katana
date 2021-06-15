@@ -246,7 +246,7 @@ template <typename PropTuple>
 Result<std::shared_ptr<arrow::Table>>
 AllocateTable(
     uint64_t, const std::vector<std::string>&, std::index_sequence<>) {
-  return nullptr;
+  return Result<std::shared_ptr<arrow::Table>>(nullptr);
 }
 
 template <typename PropTuple, size_t head, size_t... tail>
@@ -509,8 +509,8 @@ struct StructProperty {
           res);
     }
 
-    return arrow::Table::Make(
-        arrow::schema({arrow::field(name, type)}), {array});
+    return katana::Result<std::shared_ptr<arrow::Table>>(
+        arrow::Table::Make(arrow::schema({arrow::field(name, type)}), {array}));
   }
 };
 

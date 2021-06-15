@@ -537,6 +537,13 @@ set(KATANA_BUILD_PLUGINS_DIR ${PROJECT_BINARY_DIR}/plugins)
 set(KATANA_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/katana/plugins)
 
 file(MAKE_DIRECTORY ${KATANA_BUILD_PLUGINS_DIR})
+file(WRITE ${KATANA_BUILD_PLUGINS_DIR}/.placeholder
+     "This directory contains dynamically loaded plugins for the Katana system.")
+install(
+    FILES ${KATANA_BUILD_PLUGINS_DIR}/.placeholder
+    DESTINATION "${KATANA_INSTALL_PLUGINS_DIR}"
+    COMPONENT shlib
+)
 
 # Install a katana plugin.
 #

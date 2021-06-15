@@ -55,8 +55,8 @@ outputs:
       - lib/libkatana_galois.so*
       - lib/libkatana_support.so*
       - lib/libtsuba.so*
-      - lib/libtsuba-preload.so
       - lib/cmake/Katana/**
+      - lib/katana/plugins/.placeholder
     requirements:
       build:
         - {{ compiler('cxx') }}

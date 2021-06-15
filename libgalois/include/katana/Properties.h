@@ -509,8 +509,8 @@ struct StructProperty {
           res);
     }
 
-    return katana::Result<std::shared_ptr<arrow::Table>>(arrow::Table::Make(
-        arrow::schema({arrow::field(name, type)}), {array}));
+    return katana::Result<std::shared_ptr<arrow::Table>>(
+        arrow::Table::Make(arrow::schema({arrow::field(name, type)}), {array}));
   }
 };
 

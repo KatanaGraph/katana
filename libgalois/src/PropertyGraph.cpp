@@ -95,9 +95,9 @@ MapTopology(const tsuba::FileView& file_view) {
  
   return katana::GraphTopology{
       .out_indices = std::make_shared<arrow::UInt64Array>(
-          indices_buffer->size(), indices_buffer),
+          num_nodes, indices_buffer),
       .out_dests = std::make_shared<arrow::UInt32Array>(
-          dests_buffer->size(), dests_buffer),
+          num_edges, dests_buffer),
   };
 }
 

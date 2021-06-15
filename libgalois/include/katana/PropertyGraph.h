@@ -29,24 +29,74 @@ struct KATANA_EXPORT GraphTopology {
   using edges_range = StandardRange<edge_iterator>;
   using iterator = node_iterator;
 
-  std::shared_ptr<arrow::UInt64Array> out_indices;
-  std::shared_ptr<arrow::UInt32Array> out_dests;
+private:
 
-  uint64_t num_nodes() const { return out_indices ? out_indices->length() : 0; }
+  LargeArray<Edge> adj_indices_;
+  LargeArray<Node> dests_;
 
-  uint64_t num_edges() const { return out_dests ? out_dests->length() : 0; }
+  arrow::UInt64Array adj_indices_arrow_;
+  arrow::UInt32Array dests_arrow_;
+
+  // TODO: generalize to typename T
+  static arrow::UInt64Array largeToArrowArray(LargeArray<uint64_t>& lgArr) noexcept {
+    return arrow::UInt64Array(lgArr.size(), 
+        arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
+  }
+
+  static arrow::UInt32Array largeToArrowArray(LargeArray<uint32_t>& lgArr) noexcept {
+    return arrow::UInt32Array(lgArr.size(),
+        arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
+  }
+
+  GraphTopology(const GraphTopology&) = delete;
+  GraphTopology& operator (const GraphTopology&) = delete;
+  
+public:
+
+  GraphTopology() = default;
+
+  GraphTopology(Edge* adjIndices, size_t numNodes, Node* dests, size_t numEdges);
+
+  GraphTopology(GraphTopology&& that):
+    adj_indices_(std::move(that.adj_indices_)),
+    dests_(std::move(that.dests)),
+    adj_indices_arrow_(largeToArrowArray(adj_indices_)),
+    dests_arrow_(largeToArrowArray(dests_))
+  {}
+
+  GraphTopology& operator (GraphTopology&& that) {
+    adj_indices_ = std::move(that.adj_indices_);
+    dests_ = std::move(that.dests_);
+    adj_indices_arrow_ = largeToArrowArray(adj_indices_);
+    dests_arrow_ = largeToArrowArray(dests_);
+    return *this;
+  }
+
+  uint64_t num_nodes() const { return adj_indices_.size(); }
+
+  uint64_t num_edges() const { return dests_.size(); }
+
+
+  const arrow::UInt64Array& adj_indices_arrow() const noexcept {
+    return adj_indices_arrow_.get();
+  }
+
+
+  const arrow::UInt32Array& dests_arrow() const noexcept {
+    return dests_arrow_;
+  }
 
   bool Equals(const GraphTopology& other) const {
-    return out_indices->Equals(*other.out_indices) &&
-           out_dests->Equals(*other.out_dests);
+    return adj_indices_arrow_->Equals(*other.adj_indices_arrow_) &&
+           dests_arrow_->Equals(*other.dests_arrow_);
   }
 
   // Edge accessors
 
   // TODO(amp): [[deprecated("use edges(node)")]]
   std::pair<Edge, Edge> edge_range(Node node_id) const {
-    auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
-    auto edge_end = out_indices->Value(node_id);
+    auto edge_start = node_id > 0 ? adj_indices_[node_id - 1] : 0;
+    auto edge_end = adj_indices_[node_id];
     return std::make_pair(edge_start, edge_end);
   }
 
@@ -66,8 +116,8 @@ struct KATANA_EXPORT GraphTopology {
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
   Node edge_dest(Edge eid) const {
-    KATANA_LOG_DEBUG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
-    return out_dests->Value(eid);
+    KATANA_LOG_DEBUG_ASSERT(eid < dests_.size());
+    return dests_[eid];
   }
 
   nodes_range nodes(Node begin, Node end) const {
@@ -126,7 +176,7 @@ public:
   using Edge = GraphTopology::Edge;
 
 private:
-  PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
+  PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg, GraphTopology&& topoToAssume);
 
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -249,6 +299,12 @@ public:
   };
 
   PropertyGraph();
+
+  PropertyGraph(std::unique_ptr<GraphTopology> topoToAssume) noexcept:
+    rdg_(),
+    file_(),
+    topology_(std::move(topoToAssume))
+  {}
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
@@ -590,7 +646,9 @@ public:
     };
   }
 
+  /*
   Result<void> SetTopology(const GraphTopology& topology);
+  */
 
   /// Return the node property table for local nodes
   const std::shared_ptr<arrow::Table>& node_properties() const {

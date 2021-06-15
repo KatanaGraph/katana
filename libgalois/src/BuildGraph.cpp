@@ -1766,12 +1766,12 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
         ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
 
-  st = topology_indices_builder->Finish(&topology->out_indices);
+  st = topology_indices_builder->Finish(&topology->adj_indices_arrow());
   if (!st.ok()) {
     return KATANA_ERROR(
         ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
-  st = topology_dests_builder->Finish(&topology->out_dests);
+  st = topology_dests_builder->Finish(&topology->dests_arrow());
   if (!st.ok()) {
     return KATANA_ERROR(
         ArrowToKatana(st.code()), "Error building topology: {}", st);
@@ -1779,11 +1779,11 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";
-    std::cout << "Nodes: " << topology->out_indices->length() << "\n";
+    std::cout << "Nodes: " << topology->adj_indices_arrow()->length() << "\n";
     std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
               << "\n";
     std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
-    std::cout << "Edges: " << topology->out_dests->length() << "\n";
+    std::cout << "Edges: " << topology->dests_arrow()->length() << "\n";
     std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
               << "\n";
     std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
@@ -1899,12 +1899,14 @@ katana::WritePropertyGraph(
     return graph_ptr.error();
   }
 
-  return WritePropertyGraph(std::move(*graph_ptr.value()), dir);
+  // return WritePropertyGraph(std::move(*graph_ptr.value()), dir);
+  // TODO(amber): figure out whether move semantics are the way to go
+  return WritePropertyGraph(*graph_ptr.value(), dir);
 }
 
 katana::Result<void>
 katana::WritePropertyGraph(
-    katana::PropertyGraph prop_graph, const std::string& dir) {
+    katana::PropertyGraph& prop_graph, const std::string& dir) {
   for (const auto& field : prop_graph.node_schema()->fields()) {
     KATANA_LOG_VERBOSE(
         "node prop: ({}) {}", field->type()->ToString(), field->name());

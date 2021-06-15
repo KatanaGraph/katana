@@ -166,8 +166,8 @@ struct KATANA_EXPORT GraphComponents {
     std::cout << edges.properties->ToString() << "\n";
     std::cout << edges.labels->ToString() << "\n";
 
-    std::cout << topology->out_indices->ToString() << "\n";
-    std::cout << topology->out_dests->ToString() << "\n";
+    std::cout << topology->adj_indices_arrow()->ToString() << "\n";
+    std::cout << topology->dests_arrow()->ToString() << "\n";
   }
 
   Result<std::unique_ptr<katana::PropertyGraph>> ToPropertyGraph() const;
@@ -230,8 +230,10 @@ private:
 
 KATANA_EXPORT Result<void> WritePropertyGraph(
     const GraphComponents& graph_comps, const std::string& dir);
+
+// TODO(amber): Take PropertyGraph by const ref
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    PropertyGraph prop_graph, const std::string& dir);
+    PropertyGraph& prop_graph, const std::string& dir);
 
 /// Convert Arrow chunked array to/from a vector of ImportData
 KATANA_EXPORT std::vector<ImportData> ArrowToImport(

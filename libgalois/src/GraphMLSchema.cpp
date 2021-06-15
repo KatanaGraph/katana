@@ -460,7 +460,7 @@ katana::graphml::ExportGraph(
   }
 
   std::shared_ptr<arrow::Table> edge_props = graph->edge_properties();
-  katana::GraphTopology topology = graph->topology();
+  katana::GraphTopology& topology = graph->topology();
   uint32_t src_node = 0;
 
   chunk_indexes.clear();

@@ -49,7 +49,7 @@ edge_begin(GraphTy& graph, uint32_t N) {
 template <typename GraphTy>
 inline edge_iterator
 edge_end(GraphTy& graph, uint32_t N) {
-  return graph.topology().out_indices->Value(N);
+  return graph.topology().adj_indices_arrow()->Value(N);
 }
 
 template <typename Ty>

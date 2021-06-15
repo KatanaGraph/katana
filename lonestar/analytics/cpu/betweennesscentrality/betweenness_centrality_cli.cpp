@@ -68,6 +68,12 @@ static cll::opt<BetweennessCentralityPlan::Algorithm> algo(
         ),
     cll::init(BetweennessCentralityPlan::kLevel));
 
+static cll::opt<bool> thread_spin(
+    "threadSpin",
+    cll::desc("If enabled, threads busy-wait for work rather than use "
+              "condition variable (default false)"),
+    cll::init(false));
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static const char* name = "Betweenness Centrality";
@@ -135,7 +141,7 @@ main(int argc, char** argv) {
   std::cout << "Running betweenness-centrality on " << num_sources
             << " sources\n";
   if (auto r = BetweennessCentrality(
-          pg.get(), "betweenness_centrality", sources, plan);
+          pg.get(), "betweenness_centrality", sources, plan, thread_spin);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }

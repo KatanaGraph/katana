@@ -80,12 +80,15 @@ KATANA_EXPORT extern const BetweennessCentralitySources
  *          betweenness centrality. If this is a vector process those source
  *          nodes; if this is an int process that number of source nodes.
  * @param plan
+ * @param thread_spin If true, then for BC-level, turns on busy wait
+ * for the threads: useful for inputs that have very small parallel
+ * sections so that more work is done.
  */
 KATANA_EXPORT Result<void> BetweennessCentrality(
     PropertyGraph* pg, const std::string& output_property_name,
     const BetweennessCentralitySources& sources =
         kBetweennessCentralityAllNodes,
-    BetweennessCentralityPlan plan = {});
+    BetweennessCentralityPlan plan = {}, bool thread_spin = false);
 
 // TODO(gill): It's not clear how to check these results.
 //KATANA_EXPORT Result<void> BetweennessCentralityAssertValid(

@@ -14,6 +14,6 @@ katana::Result<void> BetweennessCentralityLevel(
     katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    katana::analytics::BetweennessCentralityPlan plan);
+    katana::analytics::BetweennessCentralityPlan plan, bool thread_spin);
 
 #endif

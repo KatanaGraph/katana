@@ -105,6 +105,26 @@ function(_generate_build_configuration_txt)
   get_directory_property(COMPILE_OPTIONS COMPILE_OPTIONS)
   list(APPEND COMPILE_OPTIONS "${COMPILE_OPTIONS}")
 
+  # Add global variables which contribute to build for each potential build config
+  foreach (CONFIG_NAME "" "DEBUG" "RELEASE" "MINSIZEREL" "RELWITHDEBINFO")
+    if (CONFIG_NAME)
+      set(CONFIG_SUFFIX "_${CONFIG_NAME}")
+      set(CONFIG_PRED "$<CONFIG:${CONFIG_NAME}>")
+    else()
+      set(CONFIG_SUFFIX "")
+      set(CONFIG_PRED "1")
+    endif()
+
+    # The variables contain space separated arguments, so convert them into ;-separated lists.
+    string(REPLACE " " ";" CMAKE_CXX_FLAGS${CONFIG_SUFFIX}_LIST "${CMAKE_CXX_FLAGS${CONFIG_SUFFIX}}")
+    string(REPLACE " " ";" CMAKE_C_FLAGS${CONFIG_SUFFIX}_LIST "${CMAKE_C_FLAGS${CONFIG_SUFFIX}}")
+    list(APPEND COMPILE_OPTIONS "$<${CONFIG_PRED}:$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_FLAGS${CONFIG_SUFFIX}_LIST}>>")
+    list(APPEND COMPILE_OPTIONS "$<${CONFIG_PRED}:$<$<COMPILE_LANGUAGE:C>:${CMAKE_C_FLAGS${CONFIG_SUFFIX}_LIST}>>")
+
+    string(REPLACE " " ";" CMAKE_LINK_FLAGS${CONFIG_SUFFIX}_LIST "${CMAKE_LINK_FLAGS${CONFIG_SUFFIX}}")
+    list(APPEND LINK_OPTIONS "$<${CONFIG_PRED}:${CMAKE_LINK_FLAGS${CONFIG_SUFFIX}_LIST}>")
+  endforeach ()
+
   if (CMAKE_CXX_STANDARD)
     list(APPEND COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CXX>:-std=c++${CMAKE_CXX_STANDARD}>")
   endif ()

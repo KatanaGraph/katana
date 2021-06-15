@@ -21,6 +21,8 @@ public:
   };
 
   static const int kDefaultEdgeTileSize = 256;
+  static const uint32_t kDefaultAlpha = 15;
+  static const uint32_t kDefaultBeta = 18;
 
 private:
   Algorithm algorithm_;
@@ -65,7 +67,8 @@ public:
 
   static BfsPlan Synchronous() { return {kCPU, kSynchronous, 0}; }
 
-  static BfsPlan SynchronousDirectOpt(uint32_t alpha, uint32_t beta) {
+  static BfsPlan SynchronousDirectOpt(
+      uint32_t alpha = kDefaultAlpha, uint32_t beta = kDefaultBeta) {
     return {kCPU, kSynchronousDirectOpt, 0, alpha, beta};
   }
 };

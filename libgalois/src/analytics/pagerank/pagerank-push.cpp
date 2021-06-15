@@ -18,6 +18,7 @@
  */
 
 #include "katana/AtomicHelpers.h"
+#include "katana/Properties.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 #include "pagerank-impl.h"
@@ -26,10 +27,7 @@ using katana::atomicAdd;
 
 namespace {
 
-struct NodeResidual {
-  using ArrowType = arrow::CTypeTraits<PRTy>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<PRTy>>;
-};
+struct NodeResidual : katana::AtomicPODProperty<PRTy> {};
 
 using NodeData = std::tuple<NodeValue, NodeResidual>;
 using EdgeData = std::tuple<>;

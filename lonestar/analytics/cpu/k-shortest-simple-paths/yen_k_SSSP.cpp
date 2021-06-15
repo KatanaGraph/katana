@@ -23,6 +23,7 @@
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/K_SSSP.h"
 #include "katana/AtomicHelpers.h"
+#include "katana/Properties.h"
 #include "katana/TypedPropertyGraph.h"
 
 namespace cll = llvm::cl;
@@ -68,15 +69,9 @@ struct Path {
   const Path* last;
 };
 
-struct NodeDist {
-  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
-};
+struct NodeDist : public katana::AtomicPODProperty<uint32_t> {};
 
-struct NodeAlive {
-  using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<uint8_t>;
-};
+struct NodeAlive : public katana::PODProperty<uint8_t> {};
 
 struct EdgeWeight : public katana::PODProperty<uint32_t> {};
 

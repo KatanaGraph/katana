@@ -56,10 +56,7 @@ enum MatchFlag : char {
 static_assert(sizeof(MatchFlag) == sizeof(uint8_t));
 
 struct SerialAlgo {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<MatchFlag>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t, MatchFlag> {};
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
@@ -106,10 +103,7 @@ struct SerialAlgo {
 
 template <IndependentSetPlan::Algorithm algo>
 struct TransactionalAlgo {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<MatchFlag>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t, MatchFlag> {};
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
@@ -198,10 +192,7 @@ struct TransactionalAlgo {
 };
 
 struct PullAlgo {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<MatchFlag>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t, MatchFlag> {};
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 
@@ -332,10 +323,7 @@ const auto kTemporaryYes = uint8_t{0x02};
 const auto kPermanentNo = uint8_t{0x00};
 
 struct PrioAlgo {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<uint8_t>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t> {};
 
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
@@ -423,10 +411,7 @@ struct PrioAlgo {
 };
 
 struct EdgeTiledPrioAlgo {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<uint8_t>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t> {};
 
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
@@ -577,10 +562,7 @@ struct EdgeTiledPrioAlgo {
 };
 
 struct IsBad {
-  struct NodeFlag {
-    using ArrowType = arrow::CTypeTraits<uint8_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<uint8_t>;
-  };
+  struct NodeFlag : public katana::PODProperty<uint8_t> {};
   using NodeData = std::tuple<NodeFlag>;
   using EdgeData = std::tuple<>;
 

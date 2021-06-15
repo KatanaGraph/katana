@@ -31,10 +31,7 @@ const int KCorePlan::kChunkSize = 64;
  ******************************************************************************/
 //! Node deadness can be derived from current degree and k value, so no field
 //! necessary.
-struct KCoreNodeCurrentDegree {
-  using ArrowType = arrow::CTypeTraits<uint32_t>::ArrowType;
-  using ViewType = katana::PODPropertyView<std::atomic<uint32_t>>;
-};
+struct KCoreNodeCurrentDegree : public katana::AtomicPODProperty<uint32_t> {};
 
 struct KCoreNodeAlive : public katana::PODProperty<uint32_t> {};
 

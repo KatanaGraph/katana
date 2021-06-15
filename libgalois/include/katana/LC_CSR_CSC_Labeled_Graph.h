@@ -343,7 +343,8 @@ public:
           last_end_bound = r + 1;
         }
 
-        if (!(opt == FindEdgeWithLabelOptions::FindAny) && mid != limit) {
+        bool mid_within_limit = finding_first ? mid > limit : mid < limit;
+        if (!(opt == FindEdgeWithLabelOptions::FindAny) && mid_within_limit) {
           // check that mid - 1 is not key.
           GraphNode adjacent_value = in_edges
                                          ? this->getInEdgeDst(mid + direction)

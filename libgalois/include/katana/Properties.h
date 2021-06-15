@@ -99,11 +99,25 @@ struct PropertyViewTuple<std::tuple<Args...>> {
   using type = std::tuple<katana::PropertyViewType<Args>...>;
 };
 
+template <typename>
+struct PropertyArrowTuple;
+
+template <typename... Args>
+struct PropertyArrowTuple<std::tuple<Args...>> {
+  using type = std::tuple<
+      typename arrow::TypeTraits<katana::PropertyArrowType<Args>>::CType...>;
+};
+
 }  // namespace internal
 
 /// PropertyViewTuple applies PropertyViewType to a tuple of properties.
 template <typename T>
 using PropertyViewTuple = typename internal::PropertyViewTuple<T>::type;
+
+/// PropertyArrowTuple applies arrow::TypeTraits<T::ArrowType>::CType
+/// to a tuple of properties
+template <typename T>
+using PropertyArrowTuple = typename internal::PropertyArrowTuple<T>::type;
 
 /// TupleElements selects the tuple elements at the given indices
 template <typename Tuple, size_t... indices>

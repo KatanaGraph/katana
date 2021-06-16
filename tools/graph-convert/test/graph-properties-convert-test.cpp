@@ -66,8 +66,8 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->adj_indices_arrow()->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->dests_arrow()->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -308,7 +308,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices = graph.topology->out_indices;
+  auto indices = graph.topology->adj_indices_arrow();
   std::string indices_expected = std::string(
       "[\n\
   0,\n\
@@ -323,7 +323,7 @@ VerifyMovieSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests = graph.topology->out_dests;
+  auto dests = graph.topology->dests_arrow();
   std::string dests_expected = std::string(
       "[\n\
   0,\n\
@@ -350,8 +350,8 @@ VerifyTypesSet(katana::GraphComponents graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->adj_indices_arrow()->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->dests_arrow()->length() == 8);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -668,7 +668,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
   KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices = graph.topology->out_indices;
+  auto indices = graph.topology->adj_indices_arrow();
   std::string indices_expected = std::string(
       "[\n\
   0,\n\
@@ -683,7 +683,7 @@ VerifyTypesSet(katana::GraphComponents graph) {
 ]");
   KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests = graph.topology->out_dests;
+  auto dests = graph.topology->dests_arrow();
   std::string dests_expected = std::string(
       "[\n\
   0,\n\
@@ -710,8 +710,8 @@ VerifyChunksSet(katana::GraphComponents graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 8);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 8);
 
-  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 9);
-  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 8);
+  KATANA_LOG_ASSERT(graph.topology->adj_indices_arrow()->length() == 9);
+  KATANA_LOG_ASSERT(graph.topology->dests_arrow()->length() == 8);
 
   // test node properties
   auto names = graph.nodes.properties->GetColumnByName("name");
@@ -1113,7 +1113,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
   KATANA_LOG_ASSERT(partners->ToString() == partners_expected);
 
   // test topology
-  auto indices = graph.topology->out_indices;
+  auto indices = graph.topology->adj_indices_arrow();
   std::string indices_expected = std::string(
       "[\n\
   0,\n\
@@ -1128,7 +1128,7 @@ VerifyChunksSet(katana::GraphComponents graph) {
 ]");
   KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests = graph.topology->out_dests;
+  auto dests = graph.topology->dests_arrow();
   std::string dests_expected = std::string(
       "[\n\
   0,\n\
@@ -1193,8 +1193,8 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(graph.edges.properties->num_rows() == 1);
   KATANA_LOG_ASSERT(graph.edges.labels->num_rows() == 1);
 
-  KATANA_LOG_ASSERT(graph.topology->out_indices->length() == 2);
-  KATANA_LOG_ASSERT(graph.topology->out_dests->length() == 1);
+  KATANA_LOG_ASSERT(graph.topology->adj_indices_arrow()->length() == 2);
+  KATANA_LOG_ASSERT(graph.topology->dests_arrow()->length() == 1);
 
   // test node properties
   auto names = safe_cast<arrow::StringArray>(
@@ -1244,7 +1244,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
   KATANA_LOG_ASSERT(friends->ToString() == friends_expected);
 
   // test topology
-  auto indices = graph.topology->out_indices;
+  auto indices = graph.topology->adj_indices_arrow();
   std::string indices_expected = std::string(
       "[\n\
   1,\n\
@@ -1252,7 +1252,7 @@ VerifyMongodbSet(const katana::GraphComponents& graph) {
 ]");
   KATANA_LOG_ASSERT(indices->ToString() == indices_expected);
 
-  auto dests = graph.topology->out_dests;
+  auto dests = graph.topology->dests_arrow();
   std::string dests_expected = std::string(
       "[\n\
   1\n\

@@ -147,7 +147,6 @@ main(int argc, char** argv) {
     abort();
   }
 
-  katana::Prealloc(pg->topology().num_nodes() * 80ul / (1ul << 20));
   katana::reportPageAlloc("MeminfoPre");
 
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";

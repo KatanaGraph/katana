@@ -1129,6 +1129,10 @@ static katana::Result<void>
 ConnectedComponentsWithWrap(
     katana::PropertyGraph* pg, std::string output_property_name,
     ConnectedComponentsPlan plan) {
+  katana::EnsurePreallocated(
+      2,
+      pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
+
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(
           pg, {output_property_name});

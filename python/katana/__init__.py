@@ -22,8 +22,10 @@ by Galois C++.
 import atexit
 from typing import Dict, Type
 
-__all__ = ["TsubaError", "GaloisError", "QueryError"]
+import katana.plugin
+from katana.plugin import installed_plugins
 
+__all__ = ["TsubaError", "GaloisError", "QueryError", "installed_plugins"]
 
 try:
     # Trigger the load of katana libraries

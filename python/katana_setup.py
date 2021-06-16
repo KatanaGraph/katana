@@ -427,7 +427,8 @@ setActiveThreads(1)
     )
 
 
-def setup(*, source_dir, package_name, doc_package_name, additional_requires=None, **kwargs):
+def setup(*, source_dir, package_name, doc_package_name, additional_requires=None, package_data=None, **kwargs):
+    package_data = package_data or {}
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
     if additional_requires:
@@ -460,6 +461,7 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
             }
         },
     )
+    options["package_data"].update(package_data)
     try:
         from sphinx.setup_command import BuildDoc
 

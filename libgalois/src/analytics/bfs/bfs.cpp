@@ -447,22 +447,14 @@ BfsImpl(
 
   // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
   const katana::GraphTopology& topology = pg->topology();
-  katana::LargeArray<uint64_t> out_indices;
-  katana::LargeArray<uint32_t> out_dests;
   katana::LargeArray<Dist> node_data;
   bool use_block = false;
-
   if (use_block) {
-    out_indices.allocateBlocked(topology.num_nodes());
-    out_dests.allocateBlocked(topology.num_edges());
     node_data.allocateBlocked(topology.num_nodes());
   } else {
-    out_indices.allocateInterleaved(topology.num_nodes());
-    out_dests.allocateInterleaved(topology.num_edges());
     node_data.allocateInterleaved(topology.num_nodes());
   }
-  auto transpose_graph =
-      katana::CreateTransposeGraphTopology(topology, &out_indices, &out_dests);
+  auto transpose_graph = katana::CreateTransposeGraphTopology(topology);
 
   katana::do_all(katana::iterate(graph.begin(), graph.end()), [&](auto n) {
     graph.GetData<BfsNodeDistance>(n) = BfsImplementation::kDistanceInfinity;

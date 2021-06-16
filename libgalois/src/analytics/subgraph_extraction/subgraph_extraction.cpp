@@ -40,8 +40,8 @@ SubGraphNodeSet(
 
   uint64_t num_nodes = node_set.size();
   // Subgraph topology : out indices
-  auto out_indices = std::make_unique<katana::LargeArray<uint64_t>>();
-  out_indices->allocateInterleaved(num_nodes);
+  katana::LargeArray<uint64_t> out_indices;
+  out_indices.allocateInterleaved(num_nodes);
 
   katana::gstl::Vector<katana::gstl::Vector<uint32_t>> subgraph_edges;
   subgraph_edges.resize(num_nodes);
@@ -61,27 +61,27 @@ SubGraphNodeSet(
             edge_id++;
           }
         }
-        (*out_indices)[n] = subgraph_edges[n].size();
+        out_indices[n] = subgraph_edges[n].size();
       },
       katana::steal(), katana::no_stats(),
       katana::loopname("SubgraphExtraction"));
 
   // Prefix sum
   for (uint64_t i = 1; i < num_nodes; ++i) {
-    (*out_indices)[i] += (*out_indices)[i - 1];
+    out_indices[i] += out_indices[i - 1];
   }
-  uint64_t num_edges = (*out_indices)[num_nodes - 1];
+  uint64_t num_edges = out_indices[num_nodes - 1];
 
   // Subgraph topology : out dests
-  auto out_dests = std::make_unique<katana::LargeArray<uint32_t>>();
-  out_dests->allocateInterleaved(num_edges);
+  katana::LargeArray<uint32_t> out_dests;
+  out_dests.allocateInterleaved(num_edges);
 
   katana::do_all(
       katana::iterate(uint32_t(0), uint32_t(num_nodes)),
       [&](const uint32_t& n) {
-        uint64_t offset = n == 0 ? 0 : (*out_indices)[n - 1];
+        uint64_t offset = n == 0 ? 0 : out_indices[n - 1];
         for (uint32_t dest : subgraph_edges[n]) {
-          (*out_dests)[offset] = dest;
+          out_dests[offset] = dest;
           offset++;
         }
       },
@@ -96,21 +96,10 @@ SubGraphNodeSet(
   //  This pattern probably exists elsewhere in the code.
 
   // Set new topology
-  auto numeric_array_out_indices =
-      std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
-          static_cast<int64_t>(num_nodes),
-          arrow::MutableBuffer::Wrap(out_indices.release()->data(), num_nodes));
 
-  auto numeric_array_out_dests =
-      std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
-          static_cast<int64_t>(num_edges),
-          arrow::MutableBuffer::Wrap(out_dests.release()->data(), num_edges));
-
-  if (auto r = subgraph->SetTopology(katana::GraphTopology{
-          .out_indices = std::move(numeric_array_out_indices),
-          .out_dests = std::move(numeric_array_out_dests),
-      });
-      !r) {
+  auto newTopo = std::make_unique<katana::GraphTopology>(
+      std::move(out_indices), std::move(out_dests));
+  if (auto r = subgraph->SetTopology(std::move(newTopo)); !r) {
     return r.error();
   }
 

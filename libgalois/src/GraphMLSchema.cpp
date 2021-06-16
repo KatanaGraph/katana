@@ -460,7 +460,7 @@ katana::graphml::ExportGraph(
   }
 
   std::shared_ptr<arrow::Table> edge_props = graph->edge_properties();
-  katana::GraphTopology& topology = graph->topology();
+  const katana::GraphTopology& topology = graph->topology();
   uint32_t src_node = 0;
 
   chunk_indexes.clear();
@@ -497,7 +497,7 @@ katana::graphml::ExportGraph(
     }
     std::string src = boost::lexical_cast<std::string>(src_node);
     std::string dest =
-        boost::lexical_cast<std::string>(topology.out_dests->Value(i));
+        boost::lexical_cast<std::string>(topology.dests_arrow()->Value(i));
     StartGraphmlEdge(
         writer, boost::lexical_cast<std::string>(i), src, dest, labels);
 

@@ -455,7 +455,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_from_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_from.out_indices.get());
+            topology_from.adj_indices_arrow().get());
     if (!out_indices_view_from_result) {
       return out_indices_view_from_result.error();
     }
@@ -464,7 +464,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_from_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_from.out_dests.get());
+            topology_from.dests_arrow().get());
     if (!out_dests_view_from_result) {
       return out_dests_view_from_result.error();
     }
@@ -472,7 +472,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_to_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_to.out_indices.get());
+            topology_to.adj_indices_arrow().get());
     if (!out_indices_view_to_result) {
       return out_indices_view_to_result.error();
     }
@@ -480,7 +480,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_to_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_to.out_dests.get());
+            topology_to.dests_arrow().get());
     if (!out_dests_view_to_result) {
       return out_dests_view_to_result.error();
     }
@@ -618,26 +618,31 @@ struct ClusteringImplementationBase {
     }
 
     const katana::GraphTopology& topology = pfg_mutable->topology();
-    auto out_indices_next =
-        (topology.out_indices.get())
-            ->Slice(0, static_cast<int64_t>(num_nodes_next));
-    std::shared_ptr<arrow::Array> out_dests_next =
-        (topology.out_dests.get())
-            ->Slice(0, static_cast<int64_t>(num_edges_next));
 
-    auto numeric_array_out_indices =
-        std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
-            out_indices_next->data());
-    auto numeric_array_out_dests =
-        std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
-            out_dests_next->data());
+    katana::LargeArray<katana::GraphTopology::Edge> out_indices_next;
+    out_indices_next.allocateInterleaved(num_nodes_next);
+    katana::LargeArray<katana::GraphTopology::Node> out_dests_next;
+    out_dests_next.allocateInterleaved(num_edges_next);
+
+    katana::do_all(
+        katana::iterate(0ul, num_nodes_next),
+        [&](uint64_t i) {
+          out_indices_next[i] = topology.adj_indices_arrow()->Value(i);
+        },
+        katana::no_stats());
+
+    katana::do_all(
+        katana::iterate(0ul, num_edges_next),
+        [&](uint64_t i) {
+          out_dests_next[i] = topology.dests_arrow()->Value(i);
+        },
+        katana::no_stats());
+
+    auto topo_next = std::make_unique<katana::GraphTopology>(
+        std::move(out_indices_next), std::move(out_dests_next));
 
     auto pfg_next = std::make_unique<katana::PropertyGraph>();
-    if (auto r = pfg_next->SetTopology(katana::GraphTopology{
-            .out_indices = std::move(numeric_array_out_indices),
-            .out_dests = std::move(numeric_array_out_dests),
-        });
-        !r) {
+    if (auto r = pfg_next->SetTopology(std::move(topo_next)); !r) {
       return r.error();
     }
 
@@ -645,7 +650,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_next.out_indices.get());
+            topology_next.adj_indices_arrow().get());
     if (!out_indices_view_result) {
       return out_indices_view_result.error();
     }
@@ -653,7 +658,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_next.out_dests.get());
+            topology_next.dests_arrow().get());
     if (!out_dests_view_result) {
       return out_dests_view_result.error();
     }

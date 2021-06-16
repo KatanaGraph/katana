@@ -34,29 +34,44 @@ private:
   LargeArray<Edge> adj_indices_;
   LargeArray<Node> dests_;
 
-  arrow::UInt64Array adj_indices_arrow_;
-  arrow::UInt32Array dests_arrow_;
+  std::shared_ptr<arrow::UInt64Array> adj_indices_arrow_;
+  std::shared_ptr<arrow::UInt32Array> dests_arrow_;
 
   // TODO: generalize to typename T
-  static arrow::UInt64Array largeToArrowArray(LargeArray<uint64_t>& lgArr) noexcept {
-    return arrow::UInt64Array(lgArr.size(), 
-        arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
+  static std::shared_ptr<arrow::UInt64Array> largeToArrowArray(
+      LargeArray<uint64_t>& lgArr) noexcept {
+    return std::make_shared<arrow::UInt64Array>(
+        lgArr.size(), arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
   }
 
-  static arrow::UInt32Array largeToArrowArray(LargeArray<uint32_t>& lgArr) noexcept {
-    return arrow::UInt32Array(lgArr.size(),
-        arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
+  static std::shared_ptr<arrow::UInt32Array> largeToArrowArray(
+      LargeArray<uint32_t>& lgArr) noexcept {
+    return std::make_shared<arrow::UInt32Array>(
+        lgArr.size(), arrow::MutableBuffer::Wrap(lgArr.data(), lgArr.size()));
   }
 
   GraphTopology(const GraphTopology&) = delete;
-  GraphTopology& operator (const GraphTopology&) = delete;
-  
+  GraphTopology& operator=(const GraphTopology&) = delete;
+
 public:
 
   GraphTopology() = default;
 
-  GraphTopology(Edge* adjIndices, size_t numNodes, Node* dests, size_t numEdges);
+  GraphTopology(
+      const Edge* adjIndices, size_t numNodes, const Node* dests,
+      size_t numEdges);
 
+  GraphTopology(
+      LargeArray<Edge>&& adjIndices, LargeArray<Node>&& dests) noexcept
+      : adj_indices_(std::move(adjIndices)),
+        dests_(std::move(dests)),
+        adj_indices_arrow_(largeToArrowArray(adj_indices_)),
+        dests_arrow_(largeToArrowArray(dests_)) {}
+
+  static std::unique_ptr<GraphTopology> Copy(
+      const GraphTopology& that) noexcept;
+
+  /*
   GraphTopology(GraphTopology&& that):
     adj_indices_(std::move(that.adj_indices_)),
     dests_(std::move(that.dests)),
@@ -64,27 +79,26 @@ public:
     dests_arrow_(largeToArrowArray(dests_))
   {}
 
-  GraphTopology& operator (GraphTopology&& that) {
+  GraphTopology& operator = (GraphTopology&& that) {
     adj_indices_ = std::move(that.adj_indices_);
     dests_ = std::move(that.dests_);
     adj_indices_arrow_ = largeToArrowArray(adj_indices_);
     dests_arrow_ = largeToArrowArray(dests_);
     return *this;
   }
+  */
 
   uint64_t num_nodes() const { return adj_indices_.size(); }
 
   uint64_t num_edges() const { return dests_.size(); }
 
+  const auto& adj_indices_arrow() const noexcept { return adj_indices_arrow_; }
 
-  const arrow::UInt64Array& adj_indices_arrow() const noexcept {
-    return adj_indices_arrow_.get();
-  }
+  auto& adj_indices_arrow() noexcept { return adj_indices_arrow_; }
 
+  const auto& dests_arrow() const noexcept { return dests_arrow_; }
 
-  const arrow::UInt32Array& dests_arrow() const noexcept {
-    return dests_arrow_;
-  }
+  auto& dests_arrow() noexcept { return dests_arrow_; }
 
   bool Equals(const GraphTopology& other) const {
     return adj_indices_arrow_->Equals(*other.adj_indices_arrow_) &&
@@ -176,7 +190,8 @@ public:
   using Edge = GraphTopology::Edge;
 
 private:
-  PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg, GraphTopology&& topoToAssume);
+  PropertyGraph(std::unique_ptr<GraphTopology> topoToAssume) noexcept
+      : rdg_(), file_(), topology_(std::move(topoToAssume)) {}
 
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
@@ -191,7 +206,7 @@ private:
 
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
-  GraphTopology topology_;
+  std::unique_ptr<GraphTopology> topology_;
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
@@ -300,11 +315,9 @@ public:
 
   PropertyGraph();
 
-  PropertyGraph(std::unique_ptr<GraphTopology> topoToAssume) noexcept:
-    rdg_(),
-    file_(),
-    topology_(std::move(topoToAssume))
-  {}
+  PropertyGraph(
+      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
+      std::unique_ptr<GraphTopology> topoToAssume);
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
@@ -598,7 +611,10 @@ public:
     return rdg_.MarkEdgePropertiesPersistent(persist_edge_props);
   }
 
-  const GraphTopology& topology() const { return topology_; }
+  const GraphTopology& topology() const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(topology_);
+    return *topology_;
+  }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
@@ -646,9 +662,13 @@ public:
     };
   }
 
-  /*
   Result<void> SetTopology(const GraphTopology& topology);
-  */
+
+  Result<void> SetTopology(
+      std::unique_ptr<GraphTopology> topoToAssume) noexcept {
+    topology_ = std::move(topoToAssume);
+    return katana::ResultSuccess();
+  }
 
   /// Return the node property table for local nodes
   const std::shared_ptr<arrow::Table>& node_properties() const {
@@ -745,9 +765,7 @@ CreateSymmetricGraph(PropertyGraph* pg);
 // TODO(lhc): hack for bfs-direct-opt
 // TODO(gill): Add tranposed edge properties as well.
 KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
-CreateTransposeGraphTopology(
-    const GraphTopology& topology, LargeArray<uint64_t>* out_indices,
-    LargeArray<uint32_t>* out_dests);
+CreateTransposeGraphTopology(const GraphTopology& topologyi);
 
 }  // namespace katana
 

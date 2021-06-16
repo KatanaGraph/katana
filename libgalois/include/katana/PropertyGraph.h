@@ -30,7 +30,6 @@ struct KATANA_EXPORT GraphTopology {
   using iterator = node_iterator;
 
 private:
-
   LargeArray<Edge> adj_indices_;
   LargeArray<Node> dests_;
 
@@ -58,7 +57,6 @@ private:
   GraphTopology& operator=(const GraphTopology&) = delete;
 
 public:
-
   GraphTopology() = default;
 
   GraphTopology(

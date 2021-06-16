@@ -14,7 +14,6 @@
 #include "tsuba/RDG.h"
 #include "tsuba/tsuba.h"
 
-
 namespace {
 
 constexpr uint64_t
@@ -32,18 +31,24 @@ checkTopology(
     uint64_t num_edges) {
   bool hasBadAdj = false;
 
-  katana::do_all (katana::iterate(0ul, num_nodes), [&] (auto n) {
-    if (out_indices[n] > num_edges) {
-      hasBadAdj = true;
-    }
-  }, katana::no_stats());
+  katana::do_all(
+      katana::iterate(0ul, num_nodes),
+      [&](auto n) {
+        if (out_indices[n] > num_edges) {
+          hasBadAdj = true;
+        }
+      },
+      katana::no_stats());
 
   bool hasBadDest = false;
-  katana::do_all (katana::iterate(0ul, num_edges), [&] (auto e) {
-    if (out_dests[e] >= num_nodes) {
-      hasBadDest = true;
-    }
-  }, katana::no_stats());
+  katana::do_all(
+      katana::iterate(0ul, num_edges),
+      [&](auto e) {
+        if (out_dests[e] >= num_nodes) {
+          hasBadDest = true;
+        }
+      },
+      katana::no_stats());
 
   return !hasBadAdj && !hasBadDest;
 }
@@ -64,7 +69,7 @@ checkTopology(
 ///
 /// Since property graphs store their edge data separately, we will
 /// ignore the size_of_edge_data (data[1]).
-katana::Result<std::unique_ptr<katana::GraphTopology> >
+katana::Result<std::unique_ptr<katana::GraphTopology>>
 MapTopology(const tsuba::FileView& file_view) {
   const auto* data = file_view.ptr<uint64_t>();
   if (file_view.size() < 4) {
@@ -148,7 +153,6 @@ WriteTopology(const katana::GraphTopology& topology) {
   }
   return std::unique_ptr<tsuba::FileFrame>(std::move(ff));
 }
-
 
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 MakePropertyGraph(
@@ -370,11 +374,11 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
 katana::PropertyGraph::PropertyGraph() = default;
 
 katana::PropertyGraph::PropertyGraph(
-    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg, std::unique_ptr<GraphTopology> topo)
-    : rdg_(std::move(rdg)), 
-    file_(std::move(rdg_file)),
-    topology_(std::move(topo))
-{}
+    std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
+    std::unique_ptr<GraphTopology> topo)
+    : rdg_(std::move(rdg)),
+      file_(std::move(rdg_file)),
+      topology_(std::move(topo)) {}
 
 katana::Result<void>
 katana::PropertyGraph::Validate() {
@@ -442,7 +446,6 @@ katana::PropertyGraph::DoWrite(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-
   auto topoRes = MapTopology(rdg.topology_file_storage());
   if (!topoRes) {
     return topoRes.error();

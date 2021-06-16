@@ -77,7 +77,8 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
 
   auto g = std::make_unique<katana::PropertyGraph>();
 
-  auto topo = std::make_unique<katana::GraphTopology>(indices.data(), indices.size(), dests.data(), dests.size());
+  auto topo = std::make_unique<katana::GraphTopology>(
+      indices.data(), indices.size(), dests.data(), dests.size());
   auto set_result = g->SetTopology(std::move(topo));
   KATANA_LOG_ASSERT(set_result);
 

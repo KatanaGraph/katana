@@ -2977,9 +2977,9 @@ struct Gr2Kg : public Conversion {
       }
     }
 
-
     auto pg = std::make_unique<katana::PropertyGraph>();
-    auto topo = std::make_unique<katana::GraphTopology>(std::move(out_indices), std::move(out_dests));
+    auto topo = std::make_unique<katana::GraphTopology>(
+        std::move(out_indices), std::move(out_dests));
     auto set_result = pg->SetTopology(std::move(topo));
     if (!set_result) {
       KATANA_LOG_FATAL(

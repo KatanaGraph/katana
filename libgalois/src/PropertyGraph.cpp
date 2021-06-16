@@ -32,7 +32,7 @@ checkTopology(
   bool hasBadAdj = false;
 
   katana::do_all(
-      katana::iterate(0ul, num_nodes),
+      katana::iterate(uint64_t{0}, num_nodes),
       [&](auto n) {
         if (out_indices[n] > num_edges) {
           hasBadAdj = true;
@@ -42,7 +42,7 @@ checkTopology(
 
   bool hasBadDest = false;
   katana::do_all(
-      katana::iterate(0ul, num_edges),
+      katana::iterate(uint64_t{0}, num_edges),
       [&](auto e) {
         if (out_dests[e] >= num_nodes) {
           hasBadDest = true;

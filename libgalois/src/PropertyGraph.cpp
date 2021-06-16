@@ -126,7 +126,7 @@ WriteTopology(const katana::GraphTopology& topology) {
   }
 
   if (num_nodes) {
-    const auto* raw = topology.adj_indices_arrow()->raw_values();
+    const auto* raw = topology.out_indices->raw_values();
     static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint64_t>);
     auto buf = std::make_shared<arrow::Buffer>(
         reinterpret_cast<const uint8_t*>(raw), num_nodes * sizeof(uint64_t));
@@ -137,7 +137,7 @@ WriteTopology(const katana::GraphTopology& topology) {
   }
 
   if (num_edges) {
-    const auto* raw = topology.dests_arrow()->raw_values();
+    const auto* raw = topology.out_dests->raw_values();
     static_assert(std::is_same_v<std::decay_t<decltype(*raw)>, uint32_t>);
     auto buf = std::make_shared<arrow::Buffer>(
         reinterpret_cast<const uint8_t*>(raw), num_edges * sizeof(uint32_t));
@@ -356,8 +356,8 @@ katana::GraphTopology::GraphTopology(
       &adjIndices[0], &adjIndices[numNodes], adj_indices_.begin());
   katana::ParallelSTL::copy(&dests[0], &dests[numEdges], dests_.begin());
 
-  adj_indices_arrow_ = GraphTopology::largeToArrowArray(adj_indices_);
-  dests_arrow_ = GraphTopology::largeToArrowArray(dests_);
+  out_indices = GraphTopology::largeToArrowArray(adj_indices_);
+  out_dests = GraphTopology::largeToArrowArray(dests_);
 }
 
 std::unique_ptr<katana::GraphTopology>
@@ -678,11 +678,11 @@ katana::PropertyGraph::AddNodeProperties(
     KATANA_LOG_DEBUG("adding empty node prop table");
     return ResultSuccess();
   }
-  if (topology_ && topology_->adj_indices_arrow() &&
-      topology_->adj_indices_arrow()->length() != props->num_rows()) {
+  if (topology_ && topology_->out_indices &&
+      topology_->out_indices->length() != props->num_rows()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology_->adj_indices_arrow()->length(), props->num_rows());
+        topology_->out_indices->length(), props->num_rows());
   }
   return rdg_.AddNodeProperties(props);
 }
@@ -694,11 +694,11 @@ katana::PropertyGraph::UpsertNodeProperties(
     KATANA_LOG_DEBUG("upsert empty node prop table");
     return ResultSuccess();
   }
-  if (topology_ && topology_->adj_indices_arrow() &&
-      topology_->adj_indices_arrow()->length() != props->num_rows()) {
+  if (topology_ && topology_->out_indices &&
+      topology_->out_indices->length() != props->num_rows()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology_->adj_indices_arrow()->length(), props->num_rows());
+        topology_->out_indices->length(), props->num_rows());
   }
   return rdg_.UpsertNodeProperties(props);
 }
@@ -725,11 +725,11 @@ katana::PropertyGraph::AddEdgeProperties(
     KATANA_LOG_DEBUG("adding empty edge prop table");
     return ResultSuccess();
   }
-  if (topology_ && topology_->dests_arrow() &&
-      topology_->dests_arrow()->length() != props->num_rows()) {
+  if (topology_ && topology_->out_dests &&
+      topology_->out_dests->length() != props->num_rows()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology_->dests_arrow()->length(), props->num_rows());
+        topology_->out_dests->length(), props->num_rows());
   }
   return rdg_.AddEdgeProperties(props);
 }
@@ -741,11 +741,11 @@ katana::PropertyGraph::UpsertEdgeProperties(
     KATANA_LOG_DEBUG("upsert empty edge prop table");
     return ResultSuccess();
   }
-  if (topology_ && topology_->dests_arrow() &&
-      topology_->dests_arrow()->length() != props->num_rows()) {
+  if (topology_ && topology_->out_dests &&
+      topology_->out_dests->length() != props->num_rows()) {
     return KATANA_ERROR(
         ErrorCode::InvalidArgument, "expected {} rows found {} instead",
-        topology_->dests_arrow()->length(), props->num_rows());
+        topology_->out_dests->length(), props->num_rows());
   }
   return rdg_.UpsertEdgeProperties(props);
 }
@@ -794,7 +794,7 @@ katana::Result<std::shared_ptr<arrow::UInt64Array>>
 katana::SortAllEdgesByDest(katana::PropertyGraph* pg) {
   auto view_result_dests =
       katana::ConstructPropertyView<katana::UInt32Property>(
-          pg->topology().dests_arrow().get());
+          pg->topology().out_dests.get());
   if (!view_result_dests) {
     return view_result_dests.error();
   }
@@ -850,7 +850,7 @@ katana::FindEdgeSortedByDest(
     GraphTopology::Node node_to_find) {
   auto view_result_dests =
       katana::ConstructPropertyView<katana::UInt32Property>(
-          graph->topology().dests_arrow().get());
+          graph->topology().out_dests.get());
   if (!view_result_dests) {
     KATANA_LOG_FATAL(
         "Unable to construct property view on topology destinations : {}",
@@ -904,8 +904,8 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   katana::LargeArray<uint32_t> new_out_dest;
   new_out_dest.allocateBlocked(num_edges);
 
-  auto view_result_indices = ConstructPropertyView<UInt64Property>(
-      pg->topology().adj_indices_arrow().get());
+  auto view_result_indices =
+      ConstructPropertyView<UInt64Property>(pg->topology().out_indices.get());
   if (!view_result_indices) {
     return view_result_indices.error();
   }
@@ -913,7 +913,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   auto out_indices_view = std::move(view_result_indices.value());
 
   auto view_result_dests =
-      ConstructPropertyView<UInt32Property>(pg->topology().dests_arrow().get());
+      ConstructPropertyView<UInt32Property>(pg->topology().out_dests.get());
   if (!view_result_dests) {
     return view_result_dests.error();
   }

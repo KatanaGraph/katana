@@ -116,8 +116,8 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
   using NodePointer = typename arrow::TypeTraits<NodeArrowType>::CType*;
   using EdgePointer = typename arrow::TypeTraits<EdgeArrowType>::CType*;
 
-  const auto* indices = g->topology().adj_indices_arrow()->raw_values();
-  const auto* dests = g->topology().dests_arrow()->raw_values();
+  const auto* indices = g->topology().out_indices->raw_values();
+  const auto* dests = g->topology().out_dests->raw_values();
 
   std::vector<NodePointer> node_data;
   std::vector<EdgePointer> edge_data;

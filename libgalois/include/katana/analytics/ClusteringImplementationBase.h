@@ -455,7 +455,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_from_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_from.adj_indices_arrow().get());
+            topology_from.out_indices.get());
     if (!out_indices_view_from_result) {
       return out_indices_view_from_result.error();
     }
@@ -464,7 +464,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_from_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_from.dests_arrow().get());
+            topology_from.out_dests.get());
     if (!out_dests_view_from_result) {
       return out_dests_view_from_result.error();
     }
@@ -472,7 +472,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_to_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_to.adj_indices_arrow().get());
+            topology_to.out_indices.get());
     if (!out_indices_view_to_result) {
       return out_indices_view_to_result.error();
     }
@@ -480,7 +480,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_to_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_to.dests_arrow().get());
+            topology_to.out_dests.get());
     if (!out_dests_view_to_result) {
       return out_dests_view_to_result.error();
     }
@@ -627,15 +627,13 @@ struct ClusteringImplementationBase {
     katana::do_all(
         katana::iterate(0ul, num_nodes_next),
         [&](uint64_t i) {
-          out_indices_next[i] = topology.adj_indices_arrow()->Value(i);
+          out_indices_next[i] = topology.out_indices->Value(i);
         },
         katana::no_stats());
 
     katana::do_all(
         katana::iterate(0ul, num_edges_next),
-        [&](uint64_t i) {
-          out_dests_next[i] = topology.dests_arrow()->Value(i);
-        },
+        [&](uint64_t i) { out_dests_next[i] = topology.out_dests->Value(i); },
         katana::no_stats());
 
     auto topo_next = std::make_unique<katana::GraphTopology>(
@@ -650,7 +648,7 @@ struct ClusteringImplementationBase {
 
     auto out_indices_view_result =
         katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_next.adj_indices_arrow().get());
+            topology_next.out_indices.get());
     if (!out_indices_view_result) {
       return out_indices_view_result.error();
     }
@@ -658,7 +656,7 @@ struct ClusteringImplementationBase {
 
     auto out_dests_view_result =
         katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_next.dests_arrow().get());
+            topology_next.out_dests.get());
     if (!out_dests_view_result) {
       return out_dests_view_result.error();
     }

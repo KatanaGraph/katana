@@ -497,7 +497,7 @@ katana::graphml::ExportGraph(
     }
     std::string src = boost::lexical_cast<std::string>(src_node);
     std::string dest =
-        boost::lexical_cast<std::string>(topology.dests_arrow()->Value(i));
+        boost::lexical_cast<std::string>(topology.out_dests->Value(i));
     StartGraphmlEdge(
         writer, boost::lexical_cast<std::string>(i), src, dest, labels);
 

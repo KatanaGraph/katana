@@ -166,8 +166,8 @@ struct KATANA_EXPORT GraphComponents {
     std::cout << edges.properties->ToString() << "\n";
     std::cout << edges.labels->ToString() << "\n";
 
-    std::cout << topology->adj_indices_arrow()->ToString() << "\n";
-    std::cout << topology->dests_arrow()->ToString() << "\n";
+    std::cout << topology->out_indices->ToString() << "\n";
+    std::cout << topology->out_dests->ToString() << "\n";
   }
 
   Result<std::unique_ptr<katana::PropertyGraph>> ToPropertyGraph() const;

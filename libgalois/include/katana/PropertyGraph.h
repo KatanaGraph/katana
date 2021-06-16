@@ -34,9 +34,13 @@ private:
   LargeArray<Edge> adj_indices_;
   LargeArray<Node> dests_;
 
-  std::shared_ptr<arrow::UInt64Array> adj_indices_arrow_;
-  std::shared_ptr<arrow::UInt32Array> dests_arrow_;
+  // TODO(amber): make these private in the near future. No other class should
+  // access these directly. Instead provide access methods
+public:
+  std::shared_ptr<arrow::UInt64Array> out_indices;
+  std::shared_ptr<arrow::UInt32Array> out_dests;
 
+private:
   // TODO: generalize to typename T
   static std::shared_ptr<arrow::UInt64Array> largeToArrowArray(
       LargeArray<uint64_t>& lgArr) noexcept {
@@ -65,8 +69,8 @@ public:
       LargeArray<Edge>&& adjIndices, LargeArray<Node>&& dests) noexcept
       : adj_indices_(std::move(adjIndices)),
         dests_(std::move(dests)),
-        adj_indices_arrow_(largeToArrowArray(adj_indices_)),
-        dests_arrow_(largeToArrowArray(dests_)) {}
+        out_indices(largeToArrowArray(adj_indices_)),
+        out_dests(largeToArrowArray(dests_)) {}
 
   static std::unique_ptr<GraphTopology> Copy(
       const GraphTopology& that) noexcept;
@@ -75,15 +79,15 @@ public:
   GraphTopology(GraphTopology&& that):
     adj_indices_(std::move(that.adj_indices_)),
     dests_(std::move(that.dests)),
-    adj_indices_arrow_(largeToArrowArray(adj_indices_)),
-    dests_arrow_(largeToArrowArray(dests_))
+    out_indices(largeToArrowArray(adj_indices_)),
+    out_dests(largeToArrowArray(dests_))
   {}
 
   GraphTopology& operator = (GraphTopology&& that) {
     adj_indices_ = std::move(that.adj_indices_);
     dests_ = std::move(that.dests_);
-    adj_indices_arrow_ = largeToArrowArray(adj_indices_);
-    dests_arrow_ = largeToArrowArray(dests_);
+    out_indices = largeToArrowArray(adj_indices_);
+    out_dests = largeToArrowArray(dests_);
     return *this;
   }
   */
@@ -92,17 +96,20 @@ public:
 
   uint64_t num_edges() const { return dests_.size(); }
 
-  const auto& adj_indices_arrow() const noexcept { return adj_indices_arrow_; }
+  // TODO(amber): re-enable these in the near future with better names
+  /*
+  const auto& adj_indices_arrow() const noexcept { return out_indices; }
 
-  auto& adj_indices_arrow() noexcept { return adj_indices_arrow_; }
+  auto& adj_indices_arrow() noexcept { return out_indices; }
 
-  const auto& dests_arrow() const noexcept { return dests_arrow_; }
+  const auto& dests_arrow() const noexcept { return out_dests; }
 
-  auto& dests_arrow() noexcept { return dests_arrow_; }
+  auto& dests_arrow() noexcept { return out_dests; }
+  */
 
   bool Equals(const GraphTopology& other) const {
-    return adj_indices_arrow_->Equals(*other.adj_indices_arrow_) &&
-           dests_arrow_->Equals(*other.dests_arrow_);
+    return out_indices->Equals(*other.out_indices) &&
+           out_dests->Equals(*other.out_dests);
   }
 
   // Edge accessors
@@ -759,8 +766,6 @@ CreateSymmetricGraph(PropertyGraph* pg);
 /// add edge (b, a) without retaining the original edge (a, b) unlike
 /// CreateSymmetricGraph.
 /// \param topology The original property graph topology
-/// \param out_indices The out edge index array for the transposed graph
-/// \param out_dests The out edge destination array for the transposed graph
 /// \return The new transposed property graph by reversing the edges
 // TODO(lhc): hack for bfs-direct-opt
 // TODO(gill): Add tranposed edge properties as well.

@@ -1766,12 +1766,12 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
         ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
 
-  st = topology_indices_builder->Finish(&topology->adj_indices_arrow());
+  st = topology_indices_builder->Finish(&topology->out_indices);
   if (!st.ok()) {
     return KATANA_ERROR(
         ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
-  st = topology_dests_builder->Finish(&topology->dests_arrow());
+  st = topology_dests_builder->Finish(&topology->out_dests);
   if (!st.ok()) {
     return KATANA_ERROR(
         ArrowToKatana(st.code()), "Error building topology: {}", st);
@@ -1779,11 +1779,11 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";
-    std::cout << "Nodes: " << topology->adj_indices_arrow()->length() << "\n";
+    std::cout << "Nodes: " << topology->out_indices->length() << "\n";
     std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
               << "\n";
     std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
-    std::cout << "Edges: " << topology->dests_arrow()->length() << "\n";
+    std::cout << "Edges: " << topology->out_dests->length() << "\n";
     std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
               << "\n";
     std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";

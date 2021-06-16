@@ -340,7 +340,6 @@ public:
         // Update bounds for last only if we're searching for the first element.
         if (finding_first) {
           last_begin_bound = mid;
-          last_end_bound = r + 1;
         }
 
         bool mid_within_limit = finding_first ? mid > limit : mid < limit;
@@ -364,8 +363,12 @@ public:
       }
       if (value < key)
         l = mid + 1;
-      else
+      else {
+        if (finding_first && value > key) {
+          last_end_bound = r + 1;
+        }
         r = mid - 1;
+      }
     }
     return std::nullopt;
   }

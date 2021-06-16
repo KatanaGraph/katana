@@ -117,8 +117,6 @@ main(int argc, char** argv) {
   std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
             << pg->topology().num_edges() << " edges\n";
 
-  katana::reportPageAlloc("MeminfoPre");
-
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
   RandomWalksPlan plan = RandomWalksPlan();

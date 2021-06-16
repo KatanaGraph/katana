@@ -257,10 +257,9 @@ BetweennessCentralityOuter(
   BCOuter bc_outer(graph);
 
   // preallocate pages for use in algorithm
-  katana::reportPageAlloc("MeminfoPre");
   katana::EnsurePreallocated(
       katana::getActiveThreads() * graph.num_nodes() / 1650);
-  katana::reportPageAlloc("MeminfoMid");
+  katana::ReportPageAllocGuard page_alloc;
 
   // vector of sources to process; initialized if doing outSources
   std::vector<uint32_t> source_vector;
@@ -307,7 +306,6 @@ BetweennessCentralityOuter(
   if (auto r = pg->AddNodeProperties(table); !r) {
     return r.error();
   }
-  katana::reportPageAlloc("MeminfoPost");
 
   return katana::ResultSuccess();
 }

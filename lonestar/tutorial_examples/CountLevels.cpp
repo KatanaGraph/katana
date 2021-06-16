@@ -23,6 +23,7 @@
 #include "katana/Galois.h"
 #include "katana/LCGraph.h"
 #include "katana/Reduction.h"
+#include "katana/Statistics.h"
 #include "katana/Timer.h"
 
 static const char* name = "Count levels";
@@ -135,7 +136,7 @@ main(int argc, char** argv) {
 
   katana::Prealloc(
       5, 2 * graph.size() * sizeof(typename Graph::node_data_type));
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   katana::do_all(
       katana::iterate(graph),
@@ -163,7 +164,7 @@ main(int argc, char** argv) {
   const auto& counts = countLevels(graph);
   T.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
 #if DEBUG
   for (auto n : graph) {

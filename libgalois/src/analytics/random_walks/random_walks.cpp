@@ -479,6 +479,8 @@ InitializeDegrees(const Graph& graph, katana::LargeArray<uint64_t>* degree) {
 template <typename Algorithm>
 static katana::Result<std::vector<std::vector<uint32_t>>>
 RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
+  katana::ReportPageAllocGuard page_alloc;
+
   if (auto res = katana::SortAllEdgesByDest(pg); !res) {
     return res.error();
   }
@@ -506,8 +508,6 @@ RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
   execTime.start();
   katana::InsertBag<std::vector<uint32_t>> walks;
   algo(graph, &walks, degree);
-  execTime.stop();
-
   execTime.stop();
 
   degree.destroy();

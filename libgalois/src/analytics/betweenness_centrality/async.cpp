@@ -411,8 +411,6 @@ BetweennessCentralityAsynchronous() {
   katana::ReportStatSingle(
       "BetweennessCentralityAsynchronous", "ChunkSize", ASYNC_CHUNK_SIZE);
 
-  katana::reportPageAlloc("MemAllocPre");
-  katana::gInfo("Going to pre-allocate pages");
   katana::EnsurePreallocated(
       std::min(
           static_cast<uint64_t>(
@@ -421,8 +419,7 @@ BetweennessCentralityAsynchronous() {
               std::max((nedges / 30000000), uint64_t{5}) * 2.5),
           uint64_t{1500}) +
       5);
-  katana::gInfo("Pre-allocation complete");
-  katana::reportPageAlloc("MemAllocMid");
+  katana::ReportPageAllocGuard page_alloc;
 
   // reset everything in preparation for run
   katana::do_all(
@@ -510,7 +507,7 @@ BetweennessCentralityAsynchronous() {
 
   katana::gInfo("Number of sources with outgoing edges was ", goodSource);
 
-  katana::reportPageAlloc("MemAllocPost");
+  page_alloc.Report();
 
   // sanity
   AsynchronousSanity(bcGraph);

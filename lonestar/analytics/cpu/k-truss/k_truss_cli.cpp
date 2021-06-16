@@ -95,8 +95,6 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  katana::reportPageAlloc("MeminfoPre");
-
   KTrussPlan plan = KTrussPlan();
   switch (algo) {
   case KTrussPlan::kBsp:

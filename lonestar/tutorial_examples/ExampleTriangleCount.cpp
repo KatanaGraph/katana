@@ -304,13 +304,13 @@ main(int argc, char** argv) {
   timer_graph_read.stop();
 
   katana::Prealloc(1, 16 * (graph.num_nodes() + graph.num_edges()));
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   katana::gInfo("Starting triangle counting...");
 
   katana::StatTimer execTime("Timer_0");
   execTime.start();
-  // case by case preAlloc to avoid allocating unnecessarily
+
   switch (algo) {
   case nodeiterator:
     NodeIteratingAlgo(graph);
@@ -325,7 +325,7 @@ main(int argc, char** argv) {
   }
   execTime.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   totalTime.stop();
 

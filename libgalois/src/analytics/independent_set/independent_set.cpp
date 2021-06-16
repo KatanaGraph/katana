@@ -641,14 +641,13 @@ Run(katana::PropertyGraph* pg, const std::string& output_property_name) {
       1, kChunkSize * (sizeof(GNode) + sizeof(typename Algo::NodeFlag)) *
              graph.size());
 
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
   katana::StatTimer exec_time("IndependentSet");
 
   exec_time.start();
   impl(&graph);
   exec_time.stop();
-
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   if (std::is_same<Algo, PrioAlgo>::value ||
       std::is_same<Algo, EdgeTiledPrioAlgo>::value) {

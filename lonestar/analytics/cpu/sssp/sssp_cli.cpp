@@ -171,8 +171,6 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
-  katana::reportPageAlloc("MeminfoPre");
-
   std::vector<uint32_t> startNodes;
   if (!startNodesFile.getValue().empty()) {
     std::ifstream file(startNodesFile);

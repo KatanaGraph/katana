@@ -142,8 +142,6 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("failed to set report: {}", reportNode);
   }
 
-  katana::reportPageAlloc("MeminfoPre");
-
   std::vector<uint32_t> startNodes;
   if (!startNodesFile.getValue().empty()) {
     std::ifstream file(startNodesFile);
@@ -171,8 +169,6 @@ main(int argc, char** argv) {
     if (auto r = Bfs(pg.get(), start_node, node_distance_prop, plan); !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
-
-    katana::reportPageAlloc("MeminfoPost");
 
     auto r = pg->GetNodePropertyTyped<uint32_t>(node_distance_prop);
     if (!r) {

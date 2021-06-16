@@ -510,7 +510,7 @@ main(int argc, char** argv) {
 
   size_t approxNodeData = graph.size() * 64;
   katana::Prealloc(1, approxNodeData);
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   if (algo == deltaStep || algo == deltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
@@ -526,16 +526,16 @@ main(int argc, char** argv) {
 
   katana::gInfo("Running ", ALGO_NAMES[algo], " algorithm\n");
 
-  katana::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("SSSP");
   execTime.start();
 
   std::vector<std::vector<std::pair<GNode, uint32_t>>> k_paths;
   YenKSP(&graph, source, report, k_paths);
 
   execTime.stop();
+  page_alloc.Report();
 
   PrintKPaths(k_paths);
-  katana::reportPageAlloc("MeminfoPost");
 
   totalTime.stop();
 

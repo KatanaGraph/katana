@@ -25,6 +25,7 @@
 #include "katana/DynamicBitset.h"
 #include "katana/ErrorCode.h"
 #include "katana/Result.h"
+#include "katana/Statistics.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 
@@ -511,6 +512,7 @@ BfsImpl(
 
   size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
   katana::EnsurePreallocated(8, approxNodeData);
+  katana::ReportPageAllocGuard page_alloc;
 
   // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
   const katana::GraphTopology& topology = pg->topology();

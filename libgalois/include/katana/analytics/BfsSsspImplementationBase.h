@@ -119,10 +119,42 @@ struct BfsSsspImplementationBase {
   }
 
   template <typename WL, typename TileMaker>
+  void PushEdgeTiles(
+      WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
+    auto beg = graph->edges(src).first;
+    const auto end = graph->edges(src).second;
+
+    PushEdgeTiles(wl, beg, end, f);
+  }
+
+  template <typename WL, typename TileMaker>
   void PushEdgeTilesParallel(
       WL& wl, Graph* graph, GNode src, const TileMaker& f) {
     auto beg = graph->edge_begin(src);
     const auto end = graph->edge_end(src);
+
+    if ((end - beg) > edge_tile_size) {
+      katana::on_each(
+          [&](const unsigned tid, const unsigned numT) {
+            auto p = katana::block_range(beg, end, tid, numT);
+
+            auto b = p.first;
+            const auto e = p.second;
+
+            PushEdgeTiles(wl, b, e, f);
+          },
+          katana::loopname("Init-Tiling"));
+
+    } else if ((end - beg) > 0) {
+      wl.push(f(beg, end));
+    }
+  }
+
+  template <typename WL, typename TileMaker>
+  void PushEdgeTilesParallel(
+      WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
+    auto beg = graph->edges(src).first;
+    const auto end = graph->edges(src).second;
 
     if ((end - beg) > edge_tile_size) {
       katana::on_each(
@@ -170,8 +202,35 @@ struct BfsSsspImplementationBase {
     }
   };
 
+  // TODO(lhc) this struct has duplicated codes and will be removed
+  struct SrcEdgeTilePushWrapUsingPG {
+    katana::PropertyGraph* graph;
+    BfsSsspImplementationBase& impl;
+
+    template <typename C>
+    void operator()(
+        C& cont, const GNode& n, const Dist& dist, const char* const) const {
+      impl.PushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
+    }
+
+    template <typename C>
+    void operator()(C& cont, const GNode& n, const Dist& dist) const {
+      impl.PushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, dist});
+    }
+  };
+
   struct OutEdgeRangeFn {
     Graph* graph;
+    auto operator()(const GNode& n) const { return graph->edges(n); }
+
+    auto operator()(const UpdateRequest& req) const {
+      return graph->edges(req.src);
+    }
+  };
+
+  // TODO(lhc) this struct has duplicated codes and will be removed
+  struct OutEdgeRangeFnUsingPG {
+    katana::PropertyGraph* graph;
     auto operator()(const GNode& n) const { return graph->edges(n); }
 
     auto operator()(const UpdateRequest& req) const {

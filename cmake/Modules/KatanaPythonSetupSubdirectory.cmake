@@ -291,10 +291,21 @@ function(add_python_setuptools_target TARGET_NAME)
   foreach(dep IN LISTS X_DEPENDS TARGET_NAME)
     get_target_property(dir ${dep} PYTHON_BINARY_DIR)
     if(dir)
+      # ${dir}/build/lib* is the main build and library directory and contains
+      # all the executable extensions and python code. ${dir}/python is the
+      # temporary "source" for setuptools that is polluted with setuptools
+      # output files. ${dir}/build/lib* is used for loading modules and MUST be
+      # before the matching "source" directory to make sure extensions are
+      # found. ${dir}/python is included for the setuptools generate `.egg-info`
+      # directory which enables Python package metadata which is used for Python
+      # Katana plugins.
       string(APPEND ENV_SCRIPT_STR "\
-for f in ${dir}/build/lib*; do
-  export PYTHONPATH=$f\${PYTHONPATH:+:\$PYTHONPATH}
+for f in ${dir}/build/lib* ${dir}/python; do
+  python_path_additions=\${python_path_additions:+\$python_path_additions:}$f
 done
+if [ "$python_path_additions" ]; then
+  export PYTHONPATH=\$python_path_additions\${PYTHONPATH:+:\$PYTHONPATH}
+fi
 ")
     else()
       # No need to set LD_LIBRARY_PATH under the assumption that rpaths are set correctly.

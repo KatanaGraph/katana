@@ -104,6 +104,7 @@ class _SsspAlgorithm(Enum):
     DeltaTile = _SsspPlan.Algorithm.kDeltaTile
     DeltaStep = _SsspPlan.Algorithm.kDeltaStep
     DeltaStepBarrier = _SsspPlan.Algorithm.kDeltaStepBarrier
+    DeltaStepFusion = _SsspPlan.Algorithm.kDeltaStepFusion
     SerialDeltaTile = _SsspPlan.Algorithm.kSerialDeltaTile
     SerialDelta = _SsspPlan.Algorithm.kSerialDelta
     DijkstraTile = _SsspPlan.Algorithm.kDijkstraTile
@@ -193,7 +194,7 @@ cdef class SsspPlan(Plan):
         return SsspPlan.make(_SsspPlan.DeltaStepBarrier(delta))
 
     @staticmethod
-    def delta_step_barrier(unsigned delta = kDefaultDelta) -> SsspPlan:
+    def delta_step_fusion(unsigned delta = kDefaultDelta) -> SsspPlan:
         """
         Delta stepping with barrier and fused buckets
         """

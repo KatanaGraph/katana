@@ -34,6 +34,11 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
+    bfs_plan = analytics.BfsPlan.synchronous_direction_opt(15, 18)
+
+    if "road" in input_args["name"]:
+        bfs_plan = analytics.BfsPlan.asynchronous()
+
     if not source_node_file == "":
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
@@ -42,12 +47,7 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
 
         for source in sources:
             with time_block(f"bfs on {source}"):
-                analytics.bfs(
-                    property_graph,
-                    int(source),
-                    property_name,
-                    plan=analytics.BfsPlan.SynchronousDirectOpt(alpha=15, beta=18),
-                )
+                analytics.bfs(property_graph, int(source), property_name, plan=bfs_plan)
             check_schema(property_graph, property_name)
 
             analytics.bfs_assert_valid(property_graph, property_name)
@@ -57,7 +57,7 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
             property_graph.remove_node_property(property_name)
     else:
         with time_block("bfs"):
-            analytics.bfs(property_graph, start_node, property_name)
+            analytics.bfs(property_graph, start_node, property_name, plan=bfs_plan)
 
         check_schema(property_graph, property_name)
 
@@ -74,6 +74,8 @@ def run_sssp(property_graph: PropertyGraph, input_args, source_node_file):
     edge_prop_name = input_args["edge_wt"]
 
     sssp_plan = analytics.SsspPlan.delta_step(input_args["sssp_delta"])
+    if "kron" in input_args["name"] or "urand" in input_args["name"]:
+        sssp_plan = analytics.SsspPlan.delta_step_fusion(input_args["sssp_delta"])
 
     if not source_node_file == "":
         if not os.path.exists(source_node_file):

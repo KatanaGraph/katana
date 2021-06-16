@@ -31,6 +31,7 @@
 
 #include "Metis.h"
 #include "katana/ReadGraph.h"
+#include "katana/Statistics.h"
 #include "katana/Timer.h"
 //#include "GraphReader.h"
 #include "Lonestar/BoilerPlate.h"
@@ -201,14 +202,14 @@ main(int argc, char** argv) {
   std::cout << "\n";
 
   katana::Prealloc(katana::numPagePoolAllocTotal() * 5);
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   katana::StatTimer execTime("Timer_0");
   execTime.start();
   Partition(&metisGraph, numPartitions);
   execTime.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   std::cout << "Total edge cut: " << computeCut(graph) << "\n";
 

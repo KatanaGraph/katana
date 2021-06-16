@@ -302,6 +302,7 @@ PagerankPullTopological(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
+  katana::ReportPageAllocGuard page_alloc;
 
   // NUMA-awere temporary node data
   katana::LargeArray<PagerankValueAndOutDegreeTy> node_data;
@@ -323,6 +324,7 @@ PagerankPullResidual(
     katana::PropertyGraph* pg, const std::string& output_property_name,
     katana::analytics::PagerankPlan plan) {
   katana::EnsurePreallocated(2, 3 * pg->num_nodes() * sizeof(NodeData));
+  katana::ReportPageAllocGuard page_alloc;
 
   if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
           pg, {output_property_name});

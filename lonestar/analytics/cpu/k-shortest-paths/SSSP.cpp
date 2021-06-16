@@ -357,7 +357,7 @@ main(int argc, char** argv) {
 
   size_t approxNodeData = graph.size() * 64;
   katana::Prealloc(1, approxNodeData);
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   if (algoSSSP == deltaStep || algoSSSP == deltaTile) {
     katana::gInfo("Using delta-step of ", (1 << stepShift), "\n");
@@ -370,7 +370,7 @@ main(int argc, char** argv) {
 
   katana::gInfo("Running ", ALGO_NAMES_SSSP[algoSSSP], " algorithm\n");
 
-  katana::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("SSSP");
   execTime.start();
 
   katana::InsertBag<std::pair<uint32_t, Path*>> paths;
@@ -417,6 +417,7 @@ main(int argc, char** argv) {
   }
 
   execTime.stop();
+  page_alloc.Report();
 
   if (reachable) {
     std::multimap<uint32_t, Path*> paths_map;
@@ -424,8 +425,6 @@ main(int argc, char** argv) {
     for (auto pair : paths) {
       paths_map.insert(std::make_pair(pair.first, pair.second));
     }
-
-    katana::reportPageAlloc("MeminfoPost");
 
     katana::gPrint("Node ", report, " has these k paths:\n");
 

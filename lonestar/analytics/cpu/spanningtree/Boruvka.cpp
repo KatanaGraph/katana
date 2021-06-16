@@ -391,14 +391,14 @@ run() {
   Tinitial.stop();
 
   katana::Prealloc(8, 16 * (algo.graph.size() + algo.graph.sizeEdges()));
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
-  katana::StatTimer execTime("Timer_0");
+  katana::StatTimer execTime("Boruvka");
   execTime.start();
   katana::profileVtune([&](void) { algo(); }, "boruvka");
   execTime.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   auto get_weight = [](const Edge& e) { return *e.weight; };
 

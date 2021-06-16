@@ -75,7 +75,7 @@ run(Graph& g, katana::StatTimer& timer, std::string prompt) {
       120 * f.sizeEdges() *
       sizeof(typename Graph::edge_data_type);  // 120*|E|*sizeof(E)
   katana::Prealloc(1, approxGraphSize);
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   timer.start();
   katana::profileVtune(
@@ -84,8 +84,6 @@ run(Graph& g, katana::StatTimer& timer, std::string prompt) {
       },
       "Construct MorphGraph");
   timer.stop();
-
-  katana::reportPageAlloc("MeminfoPost");
 
   initGraph(g);
   traverseGraph(g);

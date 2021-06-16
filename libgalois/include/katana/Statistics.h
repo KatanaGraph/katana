@@ -434,8 +434,29 @@ ReportStatAvg(
 //! @param id Identifier to prefix stat with in statistics output
 KATANA_EXPORT void reportRUsage(const std::string& id);
 
-//! Reports Galois system memory stats for all threads
+//! Reports system memory stats for all threads
 KATANA_EXPORT void reportPageAlloc(const char* category);
+
+class [[nodiscard]] ReportPageAllocGuard {
+public:
+  ReportPageAllocGuard() { reportPageAlloc("MeminfoPre"); }
+  ~ReportPageAllocGuard() { Report(); }
+  ReportPageAllocGuard(const ReportPageAllocGuard&) = delete;
+  ReportPageAllocGuard(ReportPageAllocGuard &&) = delete;
+  ReportPageAllocGuard& operator=(const ReportPageAllocGuard&) = delete;
+  ReportPageAllocGuard& operator=(ReportPageAllocGuard&&) = delete;
+
+  void Report() {
+    if (reported_) {
+      return;
+    }
+    reportPageAlloc("MeminfoPost");
+    reported_ = true;
+  }
+
+private:
+  bool reported_{false};
+};
 
 /// Prints statistics out to standard out or to the file indicated by
 /// SetStatFile

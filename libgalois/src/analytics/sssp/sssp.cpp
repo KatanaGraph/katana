@@ -20,6 +20,7 @@
 #include "katana/analytics/sssp/sssp.h"
 
 #include "katana/Reduction.h"
+#include "katana/Statistics.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/BfsSsspImplementationBase.h"
 #include "katana/gstl.h"
@@ -414,6 +415,7 @@ public:
 
     size_t approxNodeData = graph.size() * 64;
     katana::EnsurePreallocated(1, approxNodeData);
+    katana::ReportPageAllocGuard page_alloc;
 
     katana::LargeArray<std::atomic<Weight>> node_data;
     katana::LargeArray<Weight> edge_data;

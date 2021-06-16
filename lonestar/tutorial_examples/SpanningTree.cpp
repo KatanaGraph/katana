@@ -120,7 +120,7 @@ main(int argc, char** argv) {
     sdata.setComponent(sdata.findAndCompress());
   };
 
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
   katana::StatTimer T;
   T.start();
   switch (algo) {
@@ -211,7 +211,7 @@ main(int argc, char** argv) {
     std::cerr << "Unknown algo: " << algo << "\n";
   }
   T.stop();
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   /* Verification Routines */
   auto is_bad_graph = [&](const GNode& n) {

@@ -255,8 +255,6 @@ BetweennessCentralityLevel(
     katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]]) {
   katana::ReportStatSingle(
       "BetweennessCentrality", "ChunkSize", kLevelChunkSize);
-  katana::reportPageAlloc("MemAllocPre");
-
   // LevelGraph construction
   katana::StatTimer graph_construct_timer(
       "TimerConstructGraph", "BetweennessCentrality");
@@ -279,7 +277,7 @@ BetweennessCentralityLevel(
       size_t{katana::getActiveThreads()} * (graph.size() / 1350000),
       std::max(10U, katana::getActiveThreads()) * size_t{10}));
   prealloc_time.stop();
-  katana::reportPageAlloc("MemAllocMid");
+  katana::ReportPageAllocGuard page_alloc;
 
   // If particular set of sources was specified, use them
   std::vector<uint32_t> source_vector;
@@ -328,8 +326,6 @@ BetweennessCentralityLevel(
     LevelBackwardBrandes(&graph, &worklists, &graph_data, &active_edges);
     exec_time.stop();
   }
-
-  katana::reportPageAlloc("MemAllocPost");
 
   // Get the BC proporty into the property graph by extracting from AoS
   return ExtractBC(pg, graph, graph_data, output_property_name);

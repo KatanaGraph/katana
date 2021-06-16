@@ -594,13 +594,13 @@ main(int argc, char** argv) {
   GraphStat(*graph);
 
   katana::Prealloc(katana::numPagePoolAllocTotal() * 20);
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   create_partition_time.start();
   CreateKPartitions(&metis_graph);
   create_partition_time.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
   total_time.stop();
 
   if (!output_file_name.empty()) {

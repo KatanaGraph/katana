@@ -19,6 +19,7 @@
 
 #include "katana/analytics/jaccard/jaccard.h"
 
+#include "katana/Statistics.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/Utils.h"
 
@@ -102,6 +103,11 @@ JaccardImpl(
     return katana::ErrorCode::InvalidArgument;
   }
 
+  katana::ReportPageAllocGuard page_alloc;
+
+  katana::StatTimer exec_time("Jaccard");
+  exec_time.start();
+
   auto it = graph.begin();
   std::advance(it, compare_node);
   Graph::Node base = *it;
@@ -111,22 +117,21 @@ JaccardImpl(
   IntersectAlgorithm intersect_with_base{graph, base};
 
   // Compute the similarity for each node
-  katana::do_all(
-      katana::iterate(graph),
-      [&](const GNode& n2) {
-        double& n2_data = graph.GetData<JaccardSimilarity>(n2);
-        uint32_t n2_size = graph.edges(n2).size();
-        // Count the number of neighbors of n2 and the number that are shared
-        // with base
-        uint32_t intersection_size = intersect_with_base(n2);
-        // Compute the similarity
-        uint32_t union_size = base_size + n2_size - intersection_size;
-        double similarity =
-            union_size > 0 ? (double)intersection_size / union_size : 1;
-        // Store the similarity back into the graph.
-        n2_data = similarity;
-      },
-      katana::loopname("Jaccard"));
+  katana::do_all(katana::iterate(graph), [&](const GNode& n2) {
+    double& n2_data = graph.GetData<JaccardSimilarity>(n2);
+    uint32_t n2_size = graph.edges(n2).size();
+    // Count the number of neighbors of n2 and the number that are shared
+    // with base
+    uint32_t intersection_size = intersect_with_base(n2);
+    // Compute the similarity
+    uint32_t union_size = base_size + n2_size - intersection_size;
+    double similarity =
+        union_size > 0 ? (double)intersection_size / union_size : 1;
+    // Store the similarity back into the graph.
+    n2_data = similarity;
+  });
+
+  exec_time.stop();
 
   return katana::ResultSuccess();
 }

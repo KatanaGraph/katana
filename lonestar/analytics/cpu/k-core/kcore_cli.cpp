@@ -94,8 +94,6 @@ main(int argc, char** argv) {
 
   std::cout << "Running " << AlgorithmName(algo) << "\n";
 
-  katana::reportPageAlloc("MeminfoPre");
-
   KCorePlan plan = KCorePlan();
   switch (algo) {
   case KCorePlan::kSynchronous:

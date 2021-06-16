@@ -836,14 +836,14 @@ main(int argc, char** argv) {
             << "\n";
 
   katana::Prealloc(1, app.graph.size());
-  katana::reportPageAlloc("MeminfoPre");
+  katana::ReportPageAllocGuard page_alloc;
 
   katana::StatTimer execTime("Timer_0");
   execTime.start();
   app.run();
   execTime.stop();
 
-  katana::reportPageAlloc("MeminfoPost");
+  page_alloc.Report();
 
   std::cout << "Flow is " << app.graph.getData(app.sink).excess << "\n";
 

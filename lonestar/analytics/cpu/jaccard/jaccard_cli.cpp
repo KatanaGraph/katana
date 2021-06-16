@@ -76,21 +76,12 @@ main(int argc, char** argv) {
     abort();
   }
 
-  katana::reportPageAlloc("MeminfoPre");
-
-  katana::StatTimer execTime("Timer_0");
-  execTime.start();
-
   if (auto r = katana::analytics::Jaccard(
           pg.get(), base_node, output_property_name,
           katana::analytics::JaccardPlan());
       !r) {
     KATANA_LOG_FATAL("Jaccard failed: {}", r.error());
   }
-
-  execTime.stop();
-
-  katana::reportPageAlloc("MeminfoPost");
 
   auto pg_result = katana::TypedPropertyGraph<NodeData, EdgeData>::Make(
       pg.get(), {output_property_name}, {});

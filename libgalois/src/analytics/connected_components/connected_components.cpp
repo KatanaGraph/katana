@@ -1132,6 +1132,7 @@ ConnectedComponentsWithWrap(
   katana::EnsurePreallocated(
       2,
       pg->topology().num_nodes() * sizeof(typename Algorithm::NodeComponent));
+  katana::ReportPageAllocGuard page_alloc;
 
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(

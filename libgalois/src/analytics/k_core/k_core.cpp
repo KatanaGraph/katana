@@ -20,6 +20,7 @@
 #include "katana/analytics/k_core/k_core.h"
 
 #include "katana/ArrowRandomAccessBuilder.h"
+#include "katana/Statistics.h"
 #include "katana/TypedPropertyGraph.h"
 
 using namespace katana::analytics;
@@ -200,6 +201,7 @@ KCoreImpl(
     KCorePlan algo, uint32_t k_core_number) {
   size_t approxNodeData = 4 * (graph->num_nodes() + graph->num_edges());
   katana::EnsurePreallocated(8, approxNodeData);
+  katana::ReportPageAllocGuard page_alloc;
 
   //! Intialization of degrees.
   DegreeCounting(graph);

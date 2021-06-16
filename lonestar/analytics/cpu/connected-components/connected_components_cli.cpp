@@ -147,8 +147,6 @@ main(int argc, char** argv) {
     abort();
   }
 
-  katana::reportPageAlloc("MeminfoPre");
-
   std::cout << "Running " << AlgorithmName(algo) << " algorithm\n";
 
   ConnectedComponentsPlan plan = ConnectedComponentsPlan();
@@ -221,7 +219,6 @@ main(int argc, char** argv) {
   }
   auto stats = stats_result.value();
   stats.Print();
-  katana::reportPageAlloc("MeminfoPost");
 
   if (!skipVerify) {
     if (ConnectedComponentsAssertValid(pg.get(), "component")) {

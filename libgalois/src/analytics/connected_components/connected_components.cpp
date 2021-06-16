@@ -29,6 +29,7 @@ const int ConnectedComponentsPlan::kChunkSize = 1;
 namespace {
 
 const unsigned int kInfinity = std::numeric_limits<unsigned int>::max();
+
 struct ConnectedComponentsNode
     : public katana::UnionFindNode<ConnectedComponentsNode> {
   using ComponentType = ConnectedComponentsNode*;
@@ -66,15 +67,16 @@ struct ConnectedComponentsSerialAlgo {
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -109,8 +111,8 @@ struct ConnectedComponentsLabelPropAlgo {
   typedef typename Graph::Node GNode;
 
   katana::LargeArray<ComponentType> old_component_;
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsLabelPropAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsLabelPropAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
@@ -171,21 +173,22 @@ struct ConnectedComponentsSynchronousAlgo {
         : src(src), ddata(ddata), count(count) {}
   };
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsSynchronousAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsSynchronousAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -194,18 +197,16 @@ struct ConnectedComponentsSynchronousAlgo {
     size_t rounds = 0;
     katana::GAccumulator<size_t> empty_merges;
 
-    katana::InsertBag<Edge> wls[2];
-    katana::InsertBag<Edge>* next_bag;
-    katana::InsertBag<Edge>* current_bag;
-
-    current_bag = &wls[0];
-    next_bag = &wls[1];
+    std::array<katana::InsertBag<Edge>, 2> wls;
+    katana::InsertBag<Edge>* next_bag = &wls[0];
+    katana::InsertBag<Edge>* current_bag = &wls[1];
 
     katana::do_all(katana::iterate(*graph), [&](const GNode& src) {
       for (auto ii : graph->edges(src)) {
         auto dest = graph->GetEdgeDest(ii);
-        if (src >= *dest)
+        if (src >= *dest) {
           continue;
+        }
         auto& ddata = graph->GetData<NodeComponent>(dest);
         current_bag->push(Edge(src, ddata, 0));
         break;
@@ -217,8 +218,9 @@ struct ConnectedComponentsSynchronousAlgo {
           katana::iterate(*current_bag),
           [&](const Edge& edge) {
             auto& sdata = graph->GetData<NodeComponent>(edge.src);
-            if (!sdata->merge(edge.ddata))
+            if (!sdata->merge(edge.ddata)) {
               empty_merges += 1;
+            }
           },
           katana::loopname("Merge"));
 
@@ -234,8 +236,9 @@ struct ConnectedComponentsSynchronousAlgo {
             std::advance(ii, count);
             for (; ii != ei; ++ii, ++count) {
               auto dest = graph->GetEdgeDest(ii);
-              if (src >= *dest)
+              if (src >= *dest) {
                 continue;
+              }
               auto& ddata = graph->GetData<NodeComponent>(dest);
               ConnectedComponentsNode* dest_component =
                   ddata->findAndCompress();
@@ -278,21 +281,22 @@ struct ConnectedComponentsAsynchronousAlgo {
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsAsynchronousAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsAsynchronousAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -309,11 +313,13 @@ struct ConnectedComponentsAsynchronousAlgo {
             auto dest = graph->GetEdgeDest(ii);
             auto& ddata = graph->GetData<NodeComponent>(dest);
 
-            if (src >= *dest)
+            if (src >= *dest) {
               continue;
+            }
 
-            if (!sdata->merge(ddata))
+            if (!sdata->merge(ddata)) {
               empty_merges += 1;
+            }
           }
         },
         katana::loopname("CC-Asynchronous"));
@@ -344,21 +350,22 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeAsynchronousAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsEdgeAsynchronousAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -386,10 +393,9 @@ struct ConnectedComponentsEdgeAsynchronousAlgo {
           auto dest = graph->GetEdgeDest(e.second);
           auto& ddata = graph->GetData<NodeComponent>(dest);
 
-          if (e.first > *dest)
-            // continue;
+          if (e.first > *dest) {
             ;
-          else if (!sdata->merge(ddata)) {
+          } else if (!sdata->merge(ddata)) {
             empty_merges += 1;
           }
         },
@@ -421,21 +427,23 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsBlockedAsynchronousAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsBlockedAsynchronousAlgo(
+      const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -457,12 +465,14 @@ struct ConnectedComponentsBlockedAsynchronousAlgo {
       auto dest = graph->GetEdgeDest(ii);
       auto& ddata = graph->GetData<NodeComponent>(dest);
 
-      if (src >= *dest)
+      if (src >= *dest) {
         continue;
+      }
 
       if (sdata->merge(ddata)) {
-        if (Limit == 0 || count != Limit)
+        if (Limit == 0 || count != Limit) {
           continue;
+        }
       }
 
       if (MakeContinuation || (Limit != 0 && count == Limit)) {
@@ -519,21 +529,23 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
   typedef typename Graph::Node GNode;
   using Edge = std::pair<GNode, typename Graph::edge_iterator>;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeTiledAsynchronousAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsEdgeTiledAsynchronousAlgo(
+      const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new ConnectedComponentsNode();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(ConnectedComponentsNode) == sizeof(uint64_t));
+      new (&sdata) ConnectedComponentsNode();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -585,12 +597,14 @@ struct ConnectedComponentsEdgeTiledAsynchronousAlgo {
 
           for (auto ii = tile.beg; ii != tile.end; ++ii) {
             auto dest = graph->GetEdgeDest(ii);
-            if (src >= *dest)
+            if (src >= *dest) {
               continue;
+            }
 
             auto& ddata = graph->GetData<NodeComponent>(dest);
-            if (!sdata->merge(ddata))
+            if (!sdata->merge(ddata)) {
               empty_merges += 1;
+            }
           }
         },
         katana::loopname("CC-edgetiledAsynchronous"), katana::steal(),
@@ -691,13 +705,15 @@ struct ConnectedComponentsAfforestAlgo {
       NodeAfforest* a = m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
-        if (a < b)
+        if (a < b) {
           std::swap(a, b);
+        }
         // Now a > b
         NodeAfforest* ac = a->m_component.load(std::memory_order_relaxed);
         if ((ac == a && a->m_component.compare_exchange_strong(a, b)) ||
-            (b == ac))
+            (b == ac)) {
           break;
+        }
         a = (a->m_component.load(std::memory_order_relaxed))
                 ->m_component.load(std::memory_order_relaxed);
         b = b->m_component.load(std::memory_order_relaxed);
@@ -715,10 +731,10 @@ struct ConnectedComponentsAfforestAlgo {
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  ConnectedComponentsPlan& plan_;
+  const ConnectedComponentsPlan& plan_;
   katana::LargeArray<NodeAfforest> parent_array_;
 
-  ConnectedComponentsAfforestAlgo(ConnectedComponentsPlan& plan)
+  ConnectedComponentsAfforestAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan), parent_array_() {}
 
   void Initialize(Graph* graph) {
@@ -727,6 +743,7 @@ struct ConnectedComponentsAfforestAlgo {
 
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& snode = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(NodeAfforest) == sizeof(uint64_t));
       new (&snode) NodeAfforest();
       new (&parent_array_[node]) NodeAfforest();
       //snode = reinterpret_cast<ComponentType>(&snode);
@@ -738,14 +755,14 @@ struct ConnectedComponentsAfforestAlgo {
       auto& sdata = graph->GetData<NodeComponent>(node);
       auto& dataFromArr = parent_array_[node];
       // auto component_ptr = sdata->component();
-      auto component_ptr = dataFromArr.component();
+      auto* component_ptr = dataFromArr.component();
       sdata = component_ptr;
     });
   }
   using ComponentType = NodeAfforest::ComponentType;
 
   void operator()(Graph* graph) {
-    // (bozhi) should NOT go through single direction in sampling step: nodes
+    // TODO(bozhi) should NOT go through single direction in sampling step: nodes
     // with edges less than NEIGHBOR_SAMPLES will fail
     for (uint32_t r = 0; r < plan_.neighbor_sample_size(); ++r) {
       katana::do_all(
@@ -789,8 +806,9 @@ struct ConnectedComponentsAfforestAlgo {
         [&](const GNode& src) {
           // auto& sdata = graph->GetData<NodeComponent>(src);
           auto& sdata = parent_array_[src];
-          if (sdata.component() == c)
+          if (sdata.component() == c) {
             return;
+          }
           Graph::edge_iterator ii = graph->edge_begin(src);
           Graph::edge_iterator ei = graph->edge_end(src);
           for (std::advance(ii, plan_.neighbor_sample_size()); ii < ei; ++ii) {
@@ -829,34 +847,37 @@ struct ConnectedComponentsEdgeAfforestAlgo {
     bool isRepComp(unsigned int) { return false; }  // verify
 
   public:
-    NodeAfforestEdge* hook_min(NodeAfforestEdge* b, NodeAfforestEdge* c = 0) {
+    NodeAfforestEdge* hook_min(
+        NodeAfforestEdge* b, NodeAfforestEdge* c = nullptr) {
       NodeAfforestEdge* a = m_component.load(std::memory_order_relaxed);
       b = b->m_component.load(std::memory_order_relaxed);
       while (a != b) {
-        if (a < b)
+        if (a < b) {
           std::swap(a, b);
+        }
         // Now a > b
         NodeAfforestEdge* ac = a->m_component.load(std::memory_order_relaxed);
         if (ac == a && a->m_component.compare_exchange_strong(a, b)) {
-          if (b == c)
-            return a;  //! return victim
-          return 0;
+          if (b == c) {
+            return a;
+          }
+          return nullptr;
         }
         if (b == ac) {
-          return 0;
+          return nullptr;
         }
         a = (a->m_component.load(std::memory_order_relaxed))
                 ->m_component.load(std::memory_order_relaxed);
         b = b->m_component.load(std::memory_order_relaxed);
       }
-      return 0;
+      return nullptr;
     }
   };
 
   using ComponentType = NodeAfforestEdge::ComponentType;
   struct NodeComponent {
     using ArrowType = arrow::CTypeTraits<uint64_t>::ArrowType;
-    using ViewType = katana::PODPropertyView<NodeAfforestEdge::ComponentType>;
+    using ViewType = katana::PODPropertyView<ComponentType>;
   };
 
   using NodeData = std::tuple<NodeComponent>;
@@ -866,21 +887,22 @@ struct ConnectedComponentsEdgeAfforestAlgo {
 
   using Edge = std::pair<GNode, GNode>;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeAfforestAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsEdgeAfforestAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforestEdge();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(NodeAfforestEdge) == sizeof(uint64_t));
+      new (&sdata) NodeAfforestEdge();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -925,8 +947,9 @@ struct ConnectedComponentsEdgeAfforestAlgo {
         katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
-          if (sdata->component() == c)
+          if (sdata->component() == c) {
             return;
+          }
           auto beg = graph->edge_begin(src);
           const auto end = graph->edge_end(src);
 
@@ -945,8 +968,9 @@ struct ConnectedComponentsEdgeAfforestAlgo {
         katana::iterate(works),
         [&](const Edge& e, auto& ctx) {
           auto& sdata = graph->GetData<NodeComponent>(e.first);
-          if (sdata->component() == c)
+          if (sdata->component() == c) {
             return;
+          }
           auto& ddata = graph->GetData<NodeComponent>(e.second);
           ComponentType victim = sdata->hook_min(ddata, c);
           if (victim) {
@@ -1012,21 +1036,22 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  ConnectedComponentsPlan& plan_;
-  ConnectedComponentsEdgeTiledAfforestAlgo(ConnectedComponentsPlan& plan)
+  const ConnectedComponentsPlan& plan_;
+  ConnectedComponentsEdgeTiledAfforestAlgo(const ConnectedComponentsPlan& plan)
       : plan_(plan) {}
 
   void Initialize(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
-      graph->GetData<NodeComponent>(node) = new NodeAfforest();
+      auto& sdata = graph->GetData<NodeComponent>(node);
+      static_assert(sizeof(NodeAfforest) == sizeof(uint64_t));
+      new (&sdata) NodeAfforest();
     });
   }
 
   void Deallocate(Graph* graph) {
     katana::do_all(katana::iterate(*graph), [&](const GNode& node) {
       auto& sdata = graph->GetData<NodeComponent>(node);
-      auto component_ptr = sdata->component();
-      delete sdata;
+      auto* component_ptr = sdata->component();
       sdata = component_ptr;
     });
   }
@@ -1077,8 +1102,9 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
         katana::iterate(*graph),
         [&](const GNode& src) {
           auto& sdata = graph->GetData<NodeComponent>(src);
-          if (sdata->component() == c)
+          if (sdata->component() == c) {
             return;
+          }
           auto beg = graph->edge_begin(src);
           const auto end = graph->edge_end(src);
 
@@ -1100,8 +1126,9 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
         katana::iterate(works),
         [&](const EdgeTile& tile) {
           auto& sdata = graph->GetData<NodeComponent>(tile.src);
-          if (sdata->component() == c)
+          if (sdata->component() == c) {
             return;
+          }
           for (auto ii = tile.beg; ii < tile.end; ++ii) {
             auto dest = graph->GetEdgeDest(ii);
             auto& ddata = graph->GetData<NodeComponent>(dest);
@@ -1127,7 +1154,7 @@ struct ConnectedComponentsEdgeTiledAfforestAlgo {
 template <typename Algorithm>
 static katana::Result<void>
 ConnectedComponentsWithWrap(
-    katana::PropertyGraph* pg, std::string output_property_name,
+    katana::PropertyGraph* pg, const std::string& output_property_name,
     ConnectedComponentsPlan plan) {
   if (auto r = ConstructNodeProperties<
           std::tuple<typename Algorithm::NodeComponent>>(

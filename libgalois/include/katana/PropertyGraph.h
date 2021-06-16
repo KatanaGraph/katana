@@ -768,7 +768,7 @@ CreateSymmetricGraph(PropertyGraph* pg);
 // TODO(lhc): hack for bfs-direct-opt
 // TODO(gill): Add tranposed edge properties as well.
 KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
-CreateTransposeGraphTopology(const GraphTopology& topologyi);
+CreateTransposeGraphTopology(const GraphTopology& topology);
 
 }  // namespace katana
 

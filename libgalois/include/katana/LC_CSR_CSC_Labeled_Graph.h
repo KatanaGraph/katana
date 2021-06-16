@@ -337,35 +337,44 @@ public:
       GraphNode value =
           in_edges ? this->getInEdgeDst(mid) : this->getEdgeDst(mid);
       if (value == key) {
-        // Update bounds for last only if we're searching for the first element.
         if (finding_first) {
+          // Update bounds for last only if we're searching for the first
+          // element. We know mid has value == key, so the last element has to
+          // be at or after mid. The begin bound is inclusive so we inlude mid
+          // here.
           last_begin_bound = mid;
         }
 
-        bool mid_within_limit = finding_first ? mid > limit : mid < limit;
-        if (!(opt == FindEdgeWithLabelOptions::FindAny) && mid_within_limit) {
+        // If we're just searching for any valid edge, then we don't need to
+        // worry about finding the first or last edge.
+        if (opt != FindEdgeWithLabelOptions::FindAny && mid != limit) {
           // check that mid - 1 is not key.
           GraphNode adjacent_value = in_edges
                                          ? this->getInEdgeDst(mid + direction)
                                          : this->getEdgeDst(mid + direction);
-          if (adjacent_value != key) {
-            return std::make_tuple(mid, last_begin_bound, last_end_bound);
-          } else {
+          if (adjacent_value == key) {
             if (finding_first) {
+              // We can't update the last_bounds here because mid - 1 might have
+              // value key as well.
               r = mid - 1;
             } else {
               l = mid + 1;
             }
+            continue;
           }
-        } else {
-          return std::make_tuple(mid, last_begin_bound, last_end_bound);
         }
+
+        return std::make_tuple(mid, last_begin_bound, last_end_bound);
       }
-      if (value < key)
+
+      if (value < key) {
         l = mid + 1;
-      else {
-        if (finding_first && value > key) {
-          last_end_bound = r + 1;
+      } else {
+        if (finding_first) {
+          // Update bounds for last only if we're searching for the first
+          // element. We know mid has value != key, so the last element has to
+          // before mid. The end bound is exclusive so we just use mid here.
+          last_end_bound = mid;
         }
         r = mid - 1;
       }

@@ -133,4 +133,8 @@ BENCHMARK(IterateProperty)->Apply(MakeArguments);
 
 }  // namespace
 
-BENCHMARK_MAIN();
+int main(int argc, char** argv) {
+  ::benchmark::Initialize(&argc, argv);
+  katana::SharedMemSys G;
+  ::benchmark::RunSpecifiedBenchmarks();
+}

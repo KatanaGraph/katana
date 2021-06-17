@@ -99,6 +99,7 @@ SubGraphNodeSet(
 
   auto newTopo = std::make_unique<katana::GraphTopology>(
       std::move(out_indices), std::move(out_dests));
+
   if (auto r = subgraph->SetTopology(std::move(newTopo)); !r) {
     return r.error();
   }

@@ -19,7 +19,7 @@ cdef class PropertyGraphBase:
     cdef uint64_t _property_name_to_id(object prop, Schema schema) except -1
 
     @final
-    cdef GraphTopology topology(PropertyGraphInterface)
+    cdef const GraphTopology* topology(PropertyGraphInterface)
 
     cpdef uint64_t num_nodes(PropertyGraphInterface)
 

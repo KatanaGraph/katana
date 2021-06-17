@@ -46,6 +46,7 @@ from katana.analytics import (
     triangle_count,
 )
 from katana.example_utils import get_input
+from katana.galois import set_busy_wait
 from katana.lonestar.analytics.bfs import verify_bfs
 from katana.lonestar.analytics.sssp import verify_sssp
 from katana.property_graph import PropertyGraph
@@ -384,3 +385,28 @@ def test_subgraph_extraction():
     for i, _ in enumerate(expected_edges):
         assert len(pg.edges(i)) == len(expected_edges[i])
         assert [pg.get_edge_dest(e) for e in pg.edges(i)] == expected_edges[i]
+
+
+def test_busy_wait(property_graph: PropertyGraph):
+    set_busy_wait()
+    property_name = "NewProp"
+    start_node = 0
+
+    bfs(property_graph, start_node, property_name)
+
+    node_schema: Schema = property_graph.node_schema()
+    num_node_properties = len(node_schema)
+    new_property_id = num_node_properties - 1
+    assert node_schema.names[new_property_id] == property_name
+
+    assert property_graph.get_node_property(property_name)[start_node].as_py() == 0
+
+    bfs_assert_valid(property_graph, property_name)
+
+    stats = BfsStatistics(property_graph, property_name)
+
+    assert stats.max_distance == 7
+
+    # Verify with numba implementation of verifier as well
+    verify_bfs(property_graph, start_node, new_property_id)
+    set_busy_wait(0)

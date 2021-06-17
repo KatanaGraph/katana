@@ -211,7 +211,7 @@ private:
 
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
-  std::unique_ptr<GraphTopology> topology_;
+  std::unique_ptr<GraphTopology> topology_ = std::make_unique<GraphTopology>();
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains

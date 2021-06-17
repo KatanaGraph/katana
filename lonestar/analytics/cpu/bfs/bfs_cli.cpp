@@ -83,6 +83,12 @@ static cll::opt<unsigned int> beta(
     "beta", cll::desc("Beta for direction optimization (default value: 18)"),
     cll::init(18));
 
+static cll::opt<bool> thread_spin(
+    "threadSpin",
+    cll::desc("If enabled, threads busy-wait for rather than use "
+              "condition variable (default false)"),
+    cll::init(false));
+
 std::string
 AlgorithmName(BfsPlan::Algorithm algorithm) {
   switch (algorithm) {
@@ -167,7 +173,9 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "level-" + std::to_string(startNode);
-    if (auto r = Bfs(pg.get(), startNode, node_distance_prop, plan); !r) {
+    if (auto r =
+            Bfs(pg.get(), startNode, node_distance_prop, plan, thread_spin);
+        !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 

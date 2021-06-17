@@ -54,14 +54,14 @@ static cll::opt<bool> persistAllDistances(
         "sources in startNodeFile or startNodesString; By default only the "
         "distances for the last source are persisted (default value false)"),
     cll::init(false));
-cll::opt<unsigned int> reportNode(
+static cll::opt<unsigned int> reportNode(
     "reportNode", cll::desc("Node to report distance to(default value 1)"),
     cll::init(1));
-cll::opt<unsigned int> stepShift(
+static cll::opt<unsigned int> stepShift(
     "delta", cll::desc("Shift value for the deltastep (default value 13)"),
     cll::init(13));
 
-cll::opt<SsspPlan::Algorithm> algo(
+static cll::opt<SsspPlan::Algorithm> algo(
     "algo", cll::desc("Choose an algorithm (default value auto):"),
     cll::values(
         clEnumValN(SsspPlan::kDeltaTile, "DeltaTile", "Delta stepping tiled"),
@@ -87,6 +87,12 @@ cll::opt<SsspPlan::Algorithm> algo(
             SsspPlan::kAutomatic, "Automatic",
             "Automatic: choose among the algorithms automatically")),
     cll::init(SsspPlan::kAutomatic));
+
+static cll::opt<bool> thread_spin(
+    "threadSpin",
+    cll::desc("If enabled, threads busy-wait for work rather than use "
+              "condition variable (default false)"),
+    cll::init(false));
 
 //TODO (gill) Remove snippets from documentation
 //! [withnumaalloc]
@@ -236,8 +242,9 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
-    auto pg_result =
-        Sssp(pg.get(), startNode, edge_property_name, node_distance_prop, plan);
+    auto pg_result = Sssp(
+        pg.get(), startNode, edge_property_name, node_distance_prop, plan,
+        thread_spin);
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }

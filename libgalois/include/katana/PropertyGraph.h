@@ -670,7 +670,7 @@ public:
   Result<void> SetTopology(const GraphTopology& topology);
 
   Result<void> SetTopology(
-      std::unique_ptr<GraphTopology> topoToAssume) noexcept {
+      std::unique_ptr<GraphTopology>&& topoToAssume) noexcept {
     topology_ = std::move(topoToAssume);
     return katana::ResultSuccess();
   }

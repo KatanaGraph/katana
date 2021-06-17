@@ -1749,7 +1749,12 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
   }
 
   // build topology
-  auto topology = std::make_shared<katana::GraphTopology>();
+  auto topology = std::make_shared<katana::GraphTopology>(
+      topology_builder_.out_indices.data(), 
+      topology_builder_.out_indices.size(),
+      topology_builder_.out_dests.data(),
+      topology_builder_.out_dests.size());
+  /*
   arrow::Status st;
   std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
       std::make_shared<arrow::UInt64Builder>();
@@ -1776,6 +1781,7 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
     return KATANA_ERROR(
         ArrowToKatana(st.code()), "Error building topology: {}", st);
   }
+  */
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";

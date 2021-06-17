@@ -102,6 +102,7 @@ SubGraphNodeSet(
   if (auto r = subgraph->SetTopology(std::move(newTopo)); !r) {
     return r.error();
   }
+  KATANA_LOG_DEBUG_ASSERT(&subgraph->topology());
 
   return std::unique_ptr<katana::PropertyGraph>(std::move(subgraph));
 }
@@ -130,6 +131,7 @@ katana::analytics::SubGraphExtraction(
     execTime.start();
     auto subgraph = SubGraphNodeSet(pg, dedup_node_vec);
     execTime.stop();
+    KATANA_LOG_DEBUG_ASSERT(subgraph);
     return std::move(subgraph.value());
   }
   default:

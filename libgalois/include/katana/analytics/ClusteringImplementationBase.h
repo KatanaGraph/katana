@@ -488,10 +488,10 @@ struct ClusteringImplementationBase {
 
     // First pass to find the number of edges
     katana::do_all(
-        katana::iterate((uint64_t)0, topology_from.num_nodes()),
+        katana::iterate(uint64_t{0}, topology_from.num_nodes()),
         [&](uint64_t n) { out_indices_view_to[n] = out_indices_view_from[n]; });
     katana::do_all(
-        katana::iterate((uint64_t)0, topology_from.num_edges()),
+        katana::iterate(uint64_t{0}, topology_from.num_edges()),
         [&](uint64_t e) { out_dests_view_to[e] = out_dests_view_from[e]; });
 
     // Remove the existing edge property
@@ -553,7 +553,7 @@ struct ClusteringImplementationBase {
 
     /* First pass to find the number of edges */
     katana::do_all(
-        katana::iterate((uint64_t)0, num_unique_clusters),
+        katana::iterate(uint64_t{0}, num_unique_clusters),
         [&](uint64_t c) {
           std::map<uint64_t, uint64_t> cluster_local_map;
           uint64_t num_unique_clusters = 0;
@@ -590,7 +590,7 @@ struct ClusteringImplementationBase {
     std::vector<uint64_t> prefix_edges_count(num_unique_clusters);
     katana::GAccumulator<uint64_t> num_edges_acc;
     katana::do_all(
-        katana::iterate((uint64_t)0, num_nodes_next), [&](uint64_t c) {
+        katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t c) {
           prefix_edges_count[c] = edges_id[c].size();
           num_edges_acc += prefix_edges_count[c];
         });
@@ -619,20 +619,23 @@ struct ClusteringImplementationBase {
 
     const katana::GraphTopology& topology = pfg_mutable->topology();
 
-    katana::LargeArray<katana::GraphTopology::Edge> out_indices_next;
+    using Node = katana::GraphTopology::Node;
+    using Edge = katana::GraphTopology::Edge;
+
+    katana::LargeArray<Edge> out_indices_next;
     out_indices_next.allocateInterleaved(num_nodes_next);
-    katana::LargeArray<katana::GraphTopology::Node> out_dests_next;
+    katana::LargeArray<Node> out_dests_next;
     out_dests_next.allocateInterleaved(num_edges_next);
 
     katana::do_all(
-        katana::iterate(0ul, num_nodes_next),
+        katana::iterate(uint64_t{0}, num_nodes_next),
         [&](uint64_t i) {
           out_indices_next[i] = topology.out_indices->Value(i);
         },
         katana::no_stats());
 
     katana::do_all(
-        katana::iterate(0ul, num_edges_next),
+        katana::iterate(uint64_t{0}, num_edges_next),
         [&](uint64_t i) { out_dests_next[i] = topology.out_dests->Value(i); },
         katana::no_stats());
 
@@ -680,7 +683,7 @@ struct ClusteringImplementationBase {
     }
     Graph graph_curr = graph_result.value();
     katana::do_all(
-        katana::iterate((uint64_t)0, num_nodes_next), [&](uint64_t n) {
+        katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t n) {
           out_indices_view[n] = prefix_edges_count[n];
           uint64_t number_of_edges =
               (n == 0) ? prefix_edges_count[0]

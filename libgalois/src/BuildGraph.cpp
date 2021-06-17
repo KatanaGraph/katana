@@ -1753,34 +1753,6 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
       topology_builder_.out_indices.data(),
       topology_builder_.out_indices.size(), topology_builder_.out_dests.data(),
       topology_builder_.out_dests.size());
-  /*
-  arrow::Status st;
-  std::shared_ptr<arrow::UInt64Builder> topology_indices_builder =
-      std::make_shared<arrow::UInt64Builder>();
-  st = topology_indices_builder->AppendValues(topology_builder_.out_indices);
-  if (!st.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(st.code()), "Error building topology: {}", st);
-  }
-  std::shared_ptr<arrow::UInt32Builder> topology_dests_builder =
-      std::make_shared<arrow::UInt32Builder>();
-  st = topology_dests_builder->AppendValues(topology_builder_.out_dests);
-  if (!st.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(st.code()), "Error building topology: {}", st);
-  }
-
-  st = topology_indices_builder->Finish(&topology->out_indices);
-  if (!st.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(st.code()), "Error building topology: {}", st);
-  }
-  st = topology_dests_builder->Finish(&topology->out_dests);
-  if (!st.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(st.code()), "Error building topology: {}", st);
-  }
-  */
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";

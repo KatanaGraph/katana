@@ -26,31 +26,31 @@ GetGraphSize(uint64_t num_nodes, uint64_t num_edges) {
 }
 
 [[maybe_unused]] bool
-checkTopology(
+CheckTopology(
     uint64_t* out_indices, uint64_t num_nodes, uint32_t* out_dests,
     uint64_t num_edges) {
-  bool hasBadAdj = false;
+  bool has_bad_adj = false;
 
   katana::do_all(
       katana::iterate(uint64_t{0}, num_nodes),
       [&](auto n) {
         if (out_indices[n] > num_edges) {
-          hasBadAdj = true;
+          has_bad_adj = true;
         }
       },
       katana::no_stats());
 
-  bool hasBadDest = false;
+  bool has_bad_dest = false;
   katana::do_all(
       katana::iterate(uint64_t{0}, num_edges),
       [&](auto e) {
         if (out_dests[e] >= num_nodes) {
-          hasBadDest = true;
+          has_bad_dest = true;
         }
       },
       katana::no_stats());
 
-  return !hasBadAdj && !hasBadDest;
+  return !has_bad_adj && !has_bad_dest;
 }
 
 /// MapTopology takes a file buffer of a topology file and extracts the
@@ -95,25 +95,10 @@ MapTopology(const tsuba::FileView& file_view) {
   uint32_t* out_dests = reinterpret_cast<uint32_t*>(out_indices + num_nodes);
 
   KATANA_LOG_DEBUG_ASSERT(
-      checkTopology(out_indices, num_nodes, out_dests, num_edges));
+      CheckTopology(out_indices, num_nodes, out_dests, num_edges));
   return std::make_unique<katana::GraphTopology>(
       out_indices, num_nodes, out_dests, num_edges);
 }
-
-/*
-katana::Result<void>
-LoadTopology(
-    katana::GraphTopology* topology,
-    const tsuba::FileView& topology_file_storage) {
-  auto map_result = MapTopology(topology_file_storage);
-  if (!map_result) {
-    return map_result.error();
-  }
-  *topology = std::move(map_result.value());
-
-  return katana::ResultSuccess();
-}
-*/
 
 katana::Result<std::unique_ptr<tsuba::FileFrame>>
 WriteTopology(const katana::GraphTopology& topology) {
@@ -351,17 +336,17 @@ GetUnknownTypeSetIDs(uint64_t num_rows) {
 }  // namespace
 
 katana::GraphTopology::GraphTopology(
-    const Edge* adjIndices, size_t numNodes, const Node* dests,
-    size_t numEdges) {
-  adj_indices_.allocateInterleaved(numNodes);
-  dests_.allocateInterleaved(numEdges);
+    const Edge* adj_indices, size_t num_nodes, const Node* dests,
+    size_t num_edges) {
+  adj_indices_.allocateInterleaved(num_nodes);
+  dests_.allocateInterleaved(num_edges);
 
   katana::ParallelSTL::copy(
-      &adjIndices[0], &adjIndices[numNodes], adj_indices_.begin());
-  katana::ParallelSTL::copy(&dests[0], &dests[numEdges], dests_.begin());
+      &adj_indices[0], &adj_indices[num_nodes], adj_indices_.begin());
+  katana::ParallelSTL::copy(&dests[0], &dests[num_edges], dests_.begin());
 
-  out_indices = GraphTopology::largeToArrowArray(adj_indices_);
-  out_dests = GraphTopology::largeToArrowArray(dests_);
+  out_indices = GraphTopology::LargeToArrowArray(adj_indices_);
+  out_dests = GraphTopology::LargeToArrowArray(dests_);
 }
 
 std::unique_ptr<katana::GraphTopology>
@@ -370,8 +355,6 @@ katana::GraphTopology::Copy(const GraphTopology& that) noexcept {
       that.adj_indices_.data(), that.adj_indices_.size(), that.dests_.data(),
       that.dests_.size());
 }
-
-katana::PropertyGraph::PropertyGraph() = default;
 
 katana::PropertyGraph::PropertyGraph(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
@@ -446,13 +429,13 @@ katana::PropertyGraph::DoWrite(
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
-  auto topoRes = MapTopology(rdg.topology_file_storage());
-  if (!topoRes) {
-    return topoRes.error();
+  auto topo_result = MapTopology(rdg.topology_file_storage());
+  if (!topo_result) {
+    return topo_result.error();
   }
 
   auto topo =
-      std::unique_ptr<katana::GraphTopology>(std::move(topoRes.value()));
+      std::unique_ptr<katana::GraphTopology>(std::move(topo_result.value()));
 
   return std::make_unique<PropertyGraph>(
       std::move(rdg_file), std::move(rdg), std::move(topo));
@@ -773,9 +756,7 @@ katana::PropertyGraph::SetTopology(const katana::GraphTopology& topology) {
   if (auto res = rdg_.UnbindTopologyFileStorage(); !res) {
     return res.error();
   }
-  // topology_ = std::move(GraphTopology::Copy(topology));
   topology_ = GraphTopology::Copy(topology);
-
   return katana::ResultSuccess();
 }
 
@@ -1046,10 +1027,10 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
       },
       katana::no_stats());
 
-  auto symTopo = std::make_unique<GraphTopology>(
+  auto sym_topo = std::make_unique<GraphTopology>(
       std::move(out_indices), std::move(out_dests));
 
-  auto r = symmetric->SetTopology(std::move(symTopo));
+  auto r = symmetric->SetTopology(std::move(sym_topo));
   if (!r) {
     return r.error();
   }
@@ -1125,9 +1106,9 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
       },
       katana::no_stats());
 
-  auto transposeTopo = std::make_unique<GraphTopology>(
+  auto transpose_topo = std::make_unique<GraphTopology>(
       std::move(out_indices), std::move(out_dests));
-  if (auto r = transpose->SetTopology(std::move(transposeTopo)); !r) {
+  if (auto r = transpose->SetTopology(std::move(transpose_topo)); !r) {
     return r.error();
   }
 

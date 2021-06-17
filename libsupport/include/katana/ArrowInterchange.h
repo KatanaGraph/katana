@@ -18,14 +18,6 @@
 
 namespace katana {
 
-KATANA_EXPORT ErrorCode ArrowToKatana(arrow::StatusCode code);
-
-inline ErrorCode
-ArrowToKatana(arrow::Status st) {
-  KATANA_LOG_DEBUG_ASSERT(!st.ok());
-  return ArrowToKatana(st.code());
-}
-
 /// Perform a safe cast from \param gen_array to \tparam ArrowArrayType
 /// calls the array's `View()` member first to make sure cast is safe.
 template <typename ArrowArrayType>
@@ -288,15 +280,10 @@ TableBuilder::AddColumn(const ColumnOptions& options) {
 ////////////////////////////////////////////
 // Arrow utilities
 
-/// Combine chunks of ChunkedArray into a single Array
-KATANA_EXPORT Result<std::shared_ptr<arrow::Array>> Unchunk(
-    const std::shared_ptr<arrow::ChunkedArray>& original);
-/// Return a randomly shuffled version of a ChunkedArray
-KATANA_EXPORT Result<std::shared_ptr<arrow::ChunkedArray>> Shuffle(
-    const std::shared_ptr<arrow::ChunkedArray>& original);
 /// Return a ChunkeArray of Nulls of the given type and length
 KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
     const std::shared_ptr<arrow::DataType>& type, int64_t length);
+
 /// Print the differences between two ChunkedArrays only using
 /// about approx_total_characters
 KATANA_EXPORT void DiffFormatTo(

@@ -1750,9 +1750,8 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
 
   // build topology
   auto topology = std::make_shared<katana::GraphTopology>(
-      topology_builder_.out_indices.data(), 
-      topology_builder_.out_indices.size(),
-      topology_builder_.out_dests.data(),
+      topology_builder_.out_indices.data(),
+      topology_builder_.out_indices.size(), topology_builder_.out_dests.data(),
       topology_builder_.out_dests.size());
   /*
   arrow::Status st;

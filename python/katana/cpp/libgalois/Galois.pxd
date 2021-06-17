@@ -3,8 +3,17 @@ from libcpp.string cimport string
 from ..libstd cimport CPPAuto
 
 
+cdef extern from "katana/ThreadPool.h" namespace "katana" nogil:
+    cppclass ThreadPool:
+        void burnPower(unsigned num)
+        void beKind()
+
+    ThreadPool& GetThreadPool()
+
+
 cdef extern from "katana/Galois.h" namespace "katana" nogil:
     unsigned int setActiveThreads(unsigned int)
+    unsigned int getActiveThreads()
 
     cppclass UserContext[T]:
         void push(...)
@@ -35,6 +44,7 @@ cdef extern from "katana/Galois.h" namespace "katana" nogil:
     cppclass disable_conflict_detection:
         disable_conflict_detection()
 
+
 cdef extern from "katana/MethodFlags.h" namespace "katana" nogil:
     cppclass MethodFlag:
         bint operator==(MethodFlag)
@@ -45,10 +55,12 @@ cdef extern from "katana/MethodFlags.h" namespace "katana" nogil:
     MethodFlag FLAG_INTERNAL_MASK "katana::MethodFlag::INTERNAL_MASK"
     MethodFlag PREVIOUS "katana::MethodFlag::PREVIOUS"
 
+
 cdef extern from "katana/Range.h" namespace "katana" nogil:
     cppclass StandardRange[it]:
         it begin()
         it end()
+
 
 cdef extern from "katana/NoDerefIterator.h" namespace "katana" nogil:
     cppclass NoDerefIterator[it]:
@@ -57,6 +69,7 @@ cdef extern from "katana/NoDerefIterator.h" namespace "katana" nogil:
         NoDerefIterator[it] operator++()
         NoDerefIterator[it] operator--()
         it operator*()
+
 
 cdef extern from "katana/Version.h" namespace "katana" nogil:
     string getVersion()

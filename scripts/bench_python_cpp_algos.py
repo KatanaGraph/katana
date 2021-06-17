@@ -244,6 +244,9 @@ def run_louvain(property_graph: PropertyGraph, input_args):
 def run_all_gap(args):
     katana.local.initialize()
     print("Using threads:", katana.galois.set_active_threads(args.threads))
+    if parsed_args.thread_spin:
+        katana.galois.set_busy_wait()
+
     inputs = [
         {
             "name": "GAP-road",
@@ -380,6 +383,9 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="Number of threads to use (default: query sinfo). Should match max threads.",
+    )
+    parser.add_argument(
+        "--thread-spin", default=False, action="store_true", help="Busy wait for work in thread pool.",
     )
     parser.add_argument(
         "--graph",

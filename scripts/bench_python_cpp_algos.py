@@ -292,10 +292,10 @@ def run_all_gap(args):
         },
     ]
 
-    def load_graph(graph_path):
+    def load_graph(graph_path, edge_properties=None):
         print(f"Running {args.application} on graph: {graph_path}")
         with time_block("read propertyGraph"):
-            graph = PropertyGraph(graph_path)
+            graph = PropertyGraph(graph_path, edge_properties=edge_properties, node_properties=[])
         print(f"#Nodes: {len(graph)}, #Edges: {graph.num_edges()}")
         return graph
 
@@ -329,7 +329,7 @@ def run_all_gap(args):
         if not os.path.exists(graph_path):
             print(f"Symmetric clean Graph doesn't exist: {graph_path}")
 
-        graph = load_graph(graph_path)
+        graph = load_graph(graph_path, [])
 
         if args.application == "tc":
             for _ in range(args.trials):
@@ -340,7 +340,7 @@ def run_all_gap(args):
         if not os.path.exists(graph_path):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-        graph = load_graph(graph_path)
+        graph = load_graph(graph_path, [])
 
         if args.application == "cc":
             for _ in range(args.trials):
@@ -361,7 +361,7 @@ def run_all_gap(args):
         if not os.path.exists(graph_path):
             print(f"Symmetric Graph doesn't exist: {graph_path}")
 
-        graph = load_graph(graph_path)
+        graph = load_graph(graph_path, [])
 
         if args.application == "pagerank":
             for _ in range(args.trials):

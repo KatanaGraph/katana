@@ -22,6 +22,7 @@
 #include "Lonestar/BoilerPlate.h"
 #include "Lonestar/Utils.h"
 #include "katana/SharedMemSys.h"
+#include "katana/ThreadPool.h"
 #include "katana/analytics/betweenness_centrality/betweenness_centrality.h"
 
 using namespace katana::analytics;
@@ -87,6 +88,10 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, nullptr, &inputFile);
 
+  if (thread_spin) {
+    katana::GetThreadPool().burnPower(katana::getActiveThreads());
+  }
+
   katana::StatTimer autoAlgoTimer("AutoAlgo_0");
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
@@ -141,7 +146,7 @@ main(int argc, char** argv) {
   std::cout << "Running betweenness-centrality on " << num_sources
             << " sources\n";
   if (auto r = BetweennessCentrality(
-          pg.get(), "betweenness_centrality", sources, plan, thread_spin);
+          pg.get(), "betweenness_centrality", sources, plan);
       !r) {
     KATANA_LOG_FATAL("Couldn't run algorithm: {}", r.error());
   }

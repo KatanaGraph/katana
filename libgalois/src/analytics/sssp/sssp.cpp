@@ -403,8 +403,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
   }
 
 public:
-  katana::Result<void> SSSP(
-      Graph& graph, size_t start_node, SsspPlan plan, bool thread_spin) {
+  katana::Result<void> SSSP(Graph& graph, size_t start_node, SsspPlan plan) {
     if (start_node >= graph.size()) {
       return katana::ErrorCode::InvalidArgument;
     }
@@ -437,10 +436,6 @@ public:
 
     graph.template GetData<NodeDistance>(source) = 0;
     node_data[source] = 0;
-
-    if (thread_spin) {
-      katana::GetThreadPool().burnPower(katana::getActiveThreads());
-    }
 
     katana::StatTimer execTime("SSSP");
     execTime.start();
@@ -511,10 +506,10 @@ Sssp(
     katana::TypedPropertyGraph<
         std::tuple<SsspNodeDistance<Weight>>,
         std::tuple<SsspEdgeWeight<Weight>>>& pg,
-    size_t start_node, SsspPlan plan, bool thread_spin) {
+    size_t start_node, SsspPlan plan) {
   static_assert(std::is_integral_v<Weight> || std::is_floating_point_v<Weight>);
   SsspImplementation<Weight> impl{{plan.edge_tile_size()}};
-  return impl.SSSP(pg, start_node, plan, thread_spin);
+  return impl.SSSP(pg, start_node, plan);
 }
 
 template <typename Weight>
@@ -522,7 +517,7 @@ static katana::Result<void>
 SSSPWithWrap(
     katana::PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name, SsspPlan plan, bool thread_spin) {
+    const std::string& output_property_name, SsspPlan plan) {
   if (auto r = ConstructNodeProperties<std::tuple<SsspNodeDistance<Weight>>>(
           pg, {output_property_name});
       !r) {
@@ -544,7 +539,7 @@ SSSPWithWrap(
     return graph.error();
   }
 
-  return Sssp(graph.value(), start_node, plan, thread_spin);
+  return Sssp(graph.value(), start_node, plan);
 }
 
 }  // namespace
@@ -553,32 +548,26 @@ katana::Result<void>
 katana::analytics::Sssp(
     PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name, SsspPlan plan, bool thread_spin) {
+    const std::string& output_property_name, SsspPlan plan) {
   switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return SSSPWithWrap<uint32_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::Int32Type::type_id:
     return SSSPWithWrap<int32_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::UInt64Type::type_id:
     return SSSPWithWrap<uint64_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::Int64Type::type_id:
     return SSSPWithWrap<int64_t>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::FloatType::type_id:
     return SSSPWithWrap<float>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   case arrow::DoubleType::type_id:
     return SSSPWithWrap<double>(
-        pg, start_node, edge_weight_property_name, output_property_name, plan,
-        thread_spin);
+        pg, start_node, edge_weight_property_name, output_property_name, plan);
   default:
     return katana::ErrorCode::TypeError;
   }

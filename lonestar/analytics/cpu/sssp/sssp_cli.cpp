@@ -153,6 +153,10 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
+  if (thread_spin) {
+    katana::GetThreadPool().burnPower(katana::getActiveThreads());
+  }
+
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
@@ -242,9 +246,8 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "distance-" + std::to_string(startNode);
-    auto pg_result = Sssp(
-        pg.get(), startNode, edge_property_name, node_distance_prop, plan,
-        thread_spin);
+    auto pg_result =
+        Sssp(pg.get(), startNode, edge_property_name, node_distance_prop, plan);
     if (!pg_result) {
       KATANA_LOG_FATAL("Failed to run SSSP: {}", pg_result.error());
     }

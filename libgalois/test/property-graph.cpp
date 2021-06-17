@@ -128,6 +128,8 @@ TestError1(size_t num_nodes, size_t line_width) {
 
 int
 main() {
+  katana::SharedMemSys S;
+
   TestIterate1(10, 3);
   TestIterate3(10, 3);
   TestIterate4(10, 3);

@@ -20,7 +20,8 @@ namespace katana {
 
 /// A graph topology represents the adjacency information for a graph in CSR
 /// format.
-struct KATANA_EXPORT GraphTopology {
+class KATANA_EXPORT GraphTopology {
+public:
   using Node = uint32_t;
   using Edge = uint64_t;
   using node_iterator = boost::counting_iterator<Node>;
@@ -29,12 +30,46 @@ struct KATANA_EXPORT GraphTopology {
   using edges_range = StandardRange<edge_iterator>;
   using iterator = node_iterator;
 
-  std::shared_ptr<arrow::UInt64Array> out_indices;
-  std::shared_ptr<arrow::UInt32Array> out_dests;
+  GraphTopology() = default;
 
-  uint64_t num_nodes() const { return out_indices ? out_indices->length() : 0; }
+  GraphTopology(const GraphTopology&) = delete;
+  GraphTopology& operator=(const GraphTopology&) = delete;
 
-  uint64_t num_edges() const { return out_dests ? out_dests->length() : 0; }
+  GraphTopology(
+      const Edge* adj_indices, size_t numNodes, const Node* dests,
+      size_t numEdges);
+
+  GraphTopology(
+      LargeArray<Edge>&& adj_indices, LargeArray<Node>&& dests) noexcept
+      : adj_indices_(std::move(adj_indices)),
+        dests_(std::move(dests)),
+        out_indices(LargeToArrowArray(adj_indices_)),
+        out_dests(LargeToArrowArray(dests_)) {}
+
+  static std::unique_ptr<GraphTopology> Copy(
+      const GraphTopology& that) noexcept;
+
+  /*
+   * TODO(amber): consider re-enabling these in the near future
+  GraphTopology(GraphTopology&& that):
+    adj_indices_(std::move(that.adj_indices_)),
+    dests_(std::move(that.dests)),
+    out_indices(LargeToArrowArray(adj_indices_)),
+    out_dests(LargeToArrowArray(dests_))
+  {}
+
+  GraphTopology& operator = (GraphTopology&& that) {
+    adj_indices_ = std::move(that.adj_indices_);
+    dests_ = std::move(that.dests_);
+    out_indices = LargeToArrowArray(adj_indices_);
+    out_dests = LargeToArrowArray(dests_);
+    return *this;
+  }
+  */
+
+  uint64_t num_nodes() const { return adj_indices_.size(); }
+
+  uint64_t num_edges() const { return dests_.size(); }
 
   bool Equals(const GraphTopology& other) const {
     return out_indices->Equals(*other.out_indices) &&
@@ -45,8 +80,9 @@ struct KATANA_EXPORT GraphTopology {
 
   // TODO(amp): [[deprecated("use edges(node)")]]
   std::pair<Edge, Edge> edge_range(Node node_id) const {
-    auto edge_start = node_id > 0 ? out_indices->Value(node_id - 1) : 0;
-    auto edge_end = out_indices->Value(node_id);
+    KATANA_LOG_DEBUG_ASSERT(node_id < adj_indices_.size());
+    auto edge_start = node_id > 0 ? adj_indices_[node_id - 1] : 0;
+    auto edge_end = adj_indices_[node_id];
     return std::make_pair(edge_start, edge_end);
   }
 
@@ -65,9 +101,10 @@ struct KATANA_EXPORT GraphTopology {
     auto [begin_edge, end_edge] = edge_range(node);
     return MakeStandardRange<edge_iterator>(begin_edge, end_edge);
   }
-  Node edge_dest(Edge eid) const {
-    KATANA_LOG_ASSERT(eid < static_cast<Edge>(out_dests->length()));
-    return out_dests->Value(eid);
+
+  Node edge_dest(Edge edge_id) const {
+    KATANA_LOG_DEBUG_ASSERT(edge_id < dests_.size());
+    return dests_[edge_id];
   }
 
   nodes_range nodes(Node begin, Node end) const {
@@ -83,6 +120,32 @@ struct KATANA_EXPORT GraphTopology {
   size_t size() const { return num_nodes(); }
 
   bool empty() const { return num_nodes() == 0; }
+
+private:
+  // TODO: generalize to typename T
+  static std::shared_ptr<arrow::UInt64Array> LargeToArrowArray(
+      LargeArray<uint64_t>& lg_arr) noexcept {
+    return std::make_shared<arrow::UInt64Array>(
+        lg_arr.size(),
+        arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
+  }
+
+  static std::shared_ptr<arrow::UInt32Array> LargeToArrowArray(
+      LargeArray<uint32_t>& lg_arr) noexcept {
+    return std::make_shared<arrow::UInt32Array>(
+        lg_arr.size(),
+        arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
+  }
+
+  LargeArray<Edge> adj_indices_;
+  LargeArray<Node> dests_;
+
+public:
+  // TODO(amber): make these private in the near future. No other class should
+  // access these directly. Instead provide access methods. Also, can't move these
+  // up due to member declaration & initialization order. out_indices depends on adj_indices_
+  std::shared_ptr<arrow::UInt64Array> out_indices;
+  std::shared_ptr<arrow::UInt32Array> out_dests;
 };
 
 /// A property graph is a graph that has properties associated with its nodes
@@ -126,8 +189,6 @@ public:
   using Edge = GraphTopology::Edge;
 
 private:
-  PropertyGraph(std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg);
-
   /// Validate performs a sanity check on the the graph after loading
   Result<void> Validate();
 
@@ -141,7 +202,7 @@ private:
 
   // The topology is either backed by rdg_ or shared with the
   // caller of SetTopology.
-  GraphTopology topology_;
+  std::unique_ptr<GraphTopology> topology_ = std::make_unique<GraphTopology>();
 
   /// A map from the node TypeSetID to
   /// the set of the node type names it contains
@@ -248,7 +309,11 @@ public:
     }
   };
 
-  PropertyGraph();
+  PropertyGraph() = default;
+
+  PropertyGraph(
+      std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg,
+      std::unique_ptr<GraphTopology> topo_to_assign);
 
   /// Make a property graph from a constructed RDG. Take ownership of the RDG
   /// and its underlying resources.
@@ -542,7 +607,10 @@ public:
     return rdg_.MarkEdgePropertiesPersistent(persist_edge_props);
   }
 
-  const GraphTopology& topology() const { return topology_; }
+  const GraphTopology& topology() const noexcept {
+    KATANA_LOG_DEBUG_ASSERT(topology_);
+    return *topology_;
+  }
 
   /// Add Node properties that do not exist in the current graph
   Result<void> AddNodeProperties(const std::shared_ptr<arrow::Table>& props);
@@ -590,7 +658,15 @@ public:
     };
   }
 
+  // This one copies the topology
   Result<void> SetTopology(const GraphTopology& topology);
+
+  // This one takes over an existing topology through move operation
+  Result<void> SetTopology(
+      std::unique_ptr<GraphTopology>&& topo_to_assign) noexcept {
+    topology_ = std::move(topo_to_assign);
+    return katana::ResultSuccess();
+  }
 
   /// Return the node property table for local nodes
   const std::shared_ptr<arrow::Table>& node_properties() const {
@@ -681,15 +757,11 @@ CreateSymmetricGraph(PropertyGraph* pg);
 /// add edge (b, a) without retaining the original edge (a, b) unlike
 /// CreateSymmetricGraph.
 /// \param topology The original property graph topology
-/// \param out_indices The out edge index array for the transposed graph
-/// \param out_dests The out edge destination array for the transposed graph
 /// \return The new transposed property graph by reversing the edges
 // TODO(lhc): hack for bfs-direct-opt
 // TODO(gill): Add tranposed edge properties as well.
 KATANA_EXPORT Result<std::unique_ptr<PropertyGraph>>
-CreateTransposeGraphTopology(
-    const GraphTopology& topology, LargeArray<uint64_t>* out_indices,
-    LargeArray<uint32_t>* out_dests);
+CreateTransposeGraphTopology(const GraphTopology& topology);
 
 }  // namespace katana
 

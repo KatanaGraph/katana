@@ -74,6 +74,7 @@ main(int argc, char** argv) {
         node_vec.end(), std::istream_iterator<uint64_t>{file},
         std::istream_iterator<uint64_t>{});
   } else {
+    std::cout << "nodes list arg = " << nodesString << std::endl;
     std::istringstream str(nodesString);
     node_vec.insert(
         node_vec.end(), std::istream_iterator<uint64_t>{str},

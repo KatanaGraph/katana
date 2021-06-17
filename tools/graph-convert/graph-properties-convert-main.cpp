@@ -90,7 +90,7 @@ cll::opt<bool> export_graphml(
               "The file is created at the output destination specified\n"),
     cll::init(false));
 
-katana::PropertyGraph
+std::unique_ptr<katana::PropertyGraph>
 ConvertKatana(const std::string& rdg_file) {
   auto result = katana::PropertyGraph::Make(rdg_file, tsuba::RDGLoadOptions());
   if (!result) {
@@ -131,7 +131,7 @@ ConvertKatana(const std::string& rdg_file) {
 
   ApplyTransforms(graph.get(), transformers);
 
-  return katana::PropertyGraph(std::move(*graph));
+  return graph;
 }
 
 void
@@ -152,7 +152,7 @@ ParseWild() {
   }
   case katana::SourceType::kKatana:
     if (auto r = katana::WritePropertyGraph(
-            ConvertKatana(input_filename), output_directory);
+            *ConvertKatana(input_filename), output_directory);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }

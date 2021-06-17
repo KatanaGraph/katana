@@ -56,8 +56,8 @@ cdef class PropertyGraphBase:
         with nogil:
             handle_result_void(self.underlying_property_graph().Write(path_str, command_line_str))
 
-    cdef GraphTopology topology(PropertyGraph self):
-        return self.underlying_property_graph().topology()
+    cdef const GraphTopology* topology(PropertyGraph self):
+        return &self.underlying_property_graph().topology()
 
     cpdef uint64_t num_nodes(PropertyGraph self):
         return self.topology().num_nodes()

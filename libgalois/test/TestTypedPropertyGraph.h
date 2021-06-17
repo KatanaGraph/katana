@@ -77,12 +77,9 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
 
   auto g = std::make_unique<katana::PropertyGraph>();
 
-  auto set_result = g->SetTopology(katana::GraphTopology{
-      .out_indices = std::static_pointer_cast<arrow::UInt64Array>(
-          katana::BuildArray(indices)),
-      .out_dests = std::static_pointer_cast<arrow::UInt32Array>(
-          katana::BuildArray(dests)),
-  });
+  auto topo = std::make_unique<katana::GraphTopology>(
+      indices.data(), indices.size(), dests.data(), dests.size());
+  auto set_result = g->SetTopology(std::move(topo));
   KATANA_LOG_ASSERT(set_result);
 
   size_t num_edges = dests.size();

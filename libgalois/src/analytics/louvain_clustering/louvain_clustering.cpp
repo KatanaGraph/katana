@@ -369,22 +369,10 @@ public:
     out_indices_next.allocateInterleaved(pfg->topology().num_nodes());
     out_dests_next.allocateInterleaved(pfg->topology().num_edges());
 
-    auto numeric_array_out_indices =
-        std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
-            static_cast<int64_t>(pfg->topology().num_nodes()),
-            arrow::MutableBuffer::Wrap(
-                out_indices_next.data(), pfg->topology().num_nodes()));
-    auto numeric_array_out_dests =
-        std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
-            static_cast<int64_t>(pfg->topology().num_edges()),
-            arrow::MutableBuffer::Wrap(
-                out_dests_next.data(), pfg->topology().num_edges()));
+    auto topo = std::make_unique<katana::GraphTopology>(
+        std::move(out_indices_next), std::move(out_dests_next));
 
-    if (auto r = pfg_mutable->SetTopology(katana::GraphTopology{
-            .out_indices = std::move(numeric_array_out_indices),
-            .out_dests = std::move(numeric_array_out_dests),
-        });
-        !r) {
+    if (auto r = pfg_mutable->SetTopology(std::move(topo)); !r) {
       return r.error();
     }
     if (auto result = ConstructNodeProperties<NodeData>(

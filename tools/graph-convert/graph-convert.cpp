@@ -2977,22 +2977,10 @@ struct Gr2Kg : public Conversion {
       }
     }
 
-    auto numeric_array_out_indices =
-        std::make_shared<arrow::NumericArray<arrow::UInt64Type>>(
-            static_cast<int64_t>(graph.size()),
-            arrow::MutableBuffer::Wrap(out_indices.data(), graph.size()));
-
-    auto numeric_array_out_dests =
-        std::make_shared<arrow::NumericArray<arrow::UInt32Type>>(
-            static_cast<int64_t>(graph.sizeEdges()),
-            arrow::MutableBuffer::Wrap(out_dests.data(), graph.sizeEdges()));
-
     auto pg = std::make_unique<katana::PropertyGraph>();
-    auto set_result = pg->SetTopology(katana::GraphTopology{
-        .out_indices = std::move(numeric_array_out_indices),
-        .out_dests = std::move(numeric_array_out_dests),
-    });
-
+    auto topo = std::make_unique<katana::GraphTopology>(
+        std::move(out_indices), std::move(out_dests));
+    auto set_result = pg->SetTopology(std::move(topo));
     if (!set_result) {
       KATANA_LOG_FATAL(
           "Failed to set topology for property file graph: {}",

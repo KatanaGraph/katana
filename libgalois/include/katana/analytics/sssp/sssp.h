@@ -124,8 +124,7 @@ public:
 KATANA_EXPORT Result<void> Sssp(
     PropertyGraph* pg, size_t start_node,
     const std::string& edge_weight_property_name,
-    const std::string& output_property_name, SsspPlan plan = {},
-    bool thread_spin = false);
+    const std::string& output_property_name, SsspPlan plan = {});
 
 KATANA_EXPORT Result<void> SsspAssertValid(
     PropertyGraph* pg, size_t start_node,

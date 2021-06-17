@@ -433,8 +433,7 @@ katana::Result<void>
 BfsImpl(
     katana::TypedPropertyGraph<std::tuple<BfsNodeDistance>, std::tuple<>>&
         graph,
-    katana::PropertyGraph* pg, size_t start_node, BfsPlan algo,
-    bool thread_spin) {
+    katana::PropertyGraph* pg, size_t start_node, BfsPlan algo) {
   if (start_node >= graph.size()) {
     return katana::ErrorCode::InvalidArgument;
   }
@@ -470,10 +469,6 @@ BfsImpl(
     node_data[n] = BfsImplementation::kDistanceInfinity;
   });
 
-  if (thread_spin) {
-    katana::GetThreadPool().burnPower(katana::getActiveThreads());
-  }
-
   katana::StatTimer execTime("BFS");
   execTime.start();
   RunAlgo<true>(
@@ -496,7 +491,7 @@ BfsImpl(
 katana::Result<void>
 katana::analytics::Bfs(
     katana::PropertyGraph* pg, size_t start_node,
-    const std::string& output_property_name, BfsPlan algo, bool thread_spin) {
+    const std::string& output_property_name, BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeDistance>>(
           pg, {output_property_name});
       !result) {
@@ -508,7 +503,7 @@ katana::analytics::Bfs(
     return pg_result.error();
   }
 
-  return BfsImpl(pg_result.value(), pg, start_node, algo, thread_spin);
+  return BfsImpl(pg_result.value(), pg, start_node, algo);
 }
 
 katana::Result<void>

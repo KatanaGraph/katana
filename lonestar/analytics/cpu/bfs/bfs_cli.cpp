@@ -112,6 +112,10 @@ main(int argc, char** argv) {
   std::unique_ptr<katana::SharedMemSys> G =
       LonestarStart(argc, argv, name, desc, url, &inputFile);
 
+  if (thread_spin) {
+    katana::GetThreadPool().burnPower(katana::getActiveThreads());
+  }
+
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
@@ -173,9 +177,7 @@ main(int argc, char** argv) {
     }
 
     std::string node_distance_prop = "level-" + std::to_string(startNode);
-    if (auto r =
-            Bfs(pg.get(), startNode, node_distance_prop, plan, thread_spin);
-        !r) {
+    if (auto r = Bfs(pg.get(), startNode, node_distance_prop, plan); !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 

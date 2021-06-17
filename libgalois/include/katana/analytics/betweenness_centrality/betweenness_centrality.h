@@ -68,27 +68,22 @@ using BetweennessCentralitySources =
 KATANA_EXPORT extern const BetweennessCentralitySources
     kBetweennessCentralityAllNodes;
 
-/**
- * Compute the betweenness centrality of each node in the graph.
- *
- * The property named output_property_name is created by this function and may
- * not exist before the call.
- *
- * @param pg The graph to process.
- * @param output_property_name The parameter to create with the computed value.
- * @param sources Only process some sources, producing an approximate
- *          betweenness centrality. If this is a vector process those source
- *          nodes; if this is an int process that number of source nodes.
- * @param plan
- * @param thread_spin If true, then for BC-level, turns on busy wait
- * for the threads: useful for inputs that have very small parallel
- * sections so that more work is done.
- */
+/// Compute the betweenness centrality of each node in the graph.
+///
+/// The property named output_property_name is created by this function and may
+/// not exist before the call.
+///
+/// @param pg The graph to process.
+/// @param output_property_name The parameter to create with the computed value.
+/// @param sources Only process some sources, producing an approximate
+///          betweenness centrality. If this is a vector process those source
+///          nodes; if this is an int process that number of source nodes.
+/// @param plan
 KATANA_EXPORT Result<void> BetweennessCentrality(
     PropertyGraph* pg, const std::string& output_property_name,
     const BetweennessCentralitySources& sources =
         kBetweennessCentralityAllNodes,
-    BetweennessCentralityPlan plan = {}, bool thread_spin = false);
+    BetweennessCentralityPlan plan = {});
 
 // TODO(gill): It's not clear how to check these results.
 //KATANA_EXPORT Result<void> BetweennessCentralityAssertValid(

@@ -80,8 +80,7 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> Bfs(
     PropertyGraph* pg, size_t start_node,
-    const std::string& output_property_name, BfsPlan algo = {},
-    bool thread_spin = false);
+    const std::string& output_property_name, BfsPlan algo = {});
 
 /// Do a quick validation of the results of a BFS computation where the results
 /// are stored in property_name. This function does not do an exhaustive check.

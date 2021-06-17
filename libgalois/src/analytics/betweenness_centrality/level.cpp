@@ -252,8 +252,7 @@ BetweennessCentralityLevel(
     katana::PropertyGraph* pg,
     katana::analytics::BetweennessCentralitySources sources,
     const std::string& output_property_name,
-    katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]],
-    bool thread_spin) {
+    katana::analytics::BetweennessCentralityPlan plan [[maybe_unused]]) {
   katana::ReportStatSingle(
       "BetweennessCentrality", "ChunkSize", kLevelChunkSize);
   katana::reportPageAlloc("MemAllocPre");
@@ -304,11 +303,6 @@ BetweennessCentralityLevel(
   katana::DynamicBitset active_edges;
   // graph initialization, then main loop
   LevelInitializeGraph(&graph, &graph_data, &active_edges);
-
-  // Thread active wait
-  if (thread_spin) {
-    katana::GetThreadPool().burnPower(katana::getActiveThreads());
-  }
 
   katana::StatTimer exec_time("Level", "BetweennessCentrality");
 

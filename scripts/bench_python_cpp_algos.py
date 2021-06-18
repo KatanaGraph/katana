@@ -145,31 +145,36 @@ def run_pagerank(property_graph: PropertyGraph, _input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_bc(property_graph: PropertyGraph, input_args, source_node_file):
+def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sources, trial):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
     bc_plan = analytics.BetweennessCentralityPlan.level()
 
-    n = 4
     if not source_node_file == "":
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
-        sources = open(source_node_file, "r").readlines()
+        with open(source_node_file, "r") as fi:
+            sources = [int(l) for l in fi.readlines()]
 
-        for i in range(0, len(sources), n):
-            sources_to_use = [int(i) for i in sources[i : i + n]]
-            print(f"Using source: {sources_to_use}")
-            with time_block("betweenness centrality"):
-                analytics.betweenness_centrality(property_graph, property_name, sources_to_use, bc_plan)
+        assert num_sources <= len(sources)
 
-            check_schema(property_graph, property_name)
+        start_idx = (num_sources * trial) % len(sources)
+        rotated_sources = sources[start_idx:] + sources[:start_idx]
+        sources = rotated_sources[:num_sources]
 
-            stats = analytics.BetweennessCentralityStatistics(property_graph, property_name)
-            print(f"STATS:\n{stats}")
-            property_graph.remove_node_property(property_name)
+        print(f"Using sources: {sources}")
+        with time_block("betweenness centrality"):
+            analytics.betweenness_centrality(property_graph, property_name, sources, bc_plan)
+
+        check_schema(property_graph, property_name)
+
+        stats = analytics.BetweennessCentralityStatistics(property_graph, property_name)
+        print(f"STATS:\n{stats}")
+        property_graph.remove_node_property(property_name)
     else:
         sources = [start_node]
+        print(f"Using sources: {sources}")
         with time_block("betweenness centrality"):
             analytics.betweenness_centrality(property_graph, property_name, sources, bc_plan)
 
@@ -321,8 +326,8 @@ def run_all_gap(args):
                 run_jaccard(graph, input)
 
         if args.application == "bc":
-            for _ in range(args.trials):
-                run_bc(graph, input, args.source_nodes)
+            for trial in range(args.trials):
+                run_bc(graph, input, args.source_nodes, 4, trial)
 
     elif args.application in ["tc"]:
         graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"

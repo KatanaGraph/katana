@@ -237,7 +237,6 @@ SynchronousAlgo(
   auto curr = std::make_unique<Cont>();
   auto next = std::make_unique<Cont>();
 
-  Dist next_level = 0U;
   graph->GetData<BfsNodeDistance>(source) = 0U;
 
   if (CONCURRENT) {
@@ -251,17 +250,16 @@ SynchronousAlgo(
   while (!next->empty()) {
     std::swap(curr, next);
     next->clear();
-    ++next_level;
 
     loop(
         katana::iterate(*curr),
         [&](const T& item) {
           for (auto e : edgeRange(item)) {
             auto dest = graph->GetEdgeDest(e);
-            auto& dest_data = graph->GetData<BfsNodeDistance>(dest);
+            auto& parent = graph->GetData<BfsNodeDistance>(dest);
 
-            if (dest_data == BfsImplementation::kDistanceInfinity) {
-              dest_data = next_level;
+            if (parent == BfsImplementation::kDistanceInfinity) {
+              parent = item.src;
               pushWrap(*next, *dest);
             }
           }

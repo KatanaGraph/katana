@@ -45,17 +45,19 @@ struct BfsImplementation
 };
 
 using Graph = BfsImplementation::Graph;
+using GNode = Graph::Node;
+using EI = typename Graph::edge_iterator;
 
 constexpr unsigned kChunkSize = 256U;
 
 constexpr bool kTrackWork = BfsImplementation::kTrackWork;
 
-using UpdateRequest = BfsImplementation::UpdateRequest;
+using UpdateRequest = BfsImplementation::BfsUpdateRequest;
 using Dist = BfsImplementation::Dist;
-using SrcEdgeTile = BfsImplementation::SrcEdgeTile;
-using SrcEdgeTilePushWrap = BfsImplementation::SrcEdgeTilePushWrap;
-using ReqPushWrap = BfsImplementation::ReqPushWrap;
-using OutEdgeRangeFn = BfsImplementation::OutEdgeRangeFn;
+using SrcEdgeTile = BfsImplementation::BfsSrcEdgeTile;
+using SrcEdgeTilePushWrap = BfsImplementation::BfsSrcEdgeTilePushWrap;
+using ReqPushWrap = BfsImplementation::BfsReqPushWrap;
+using OutEdgeRangeFn = BfsImplementation::BfsOutEdgeRangeFn;
 using TileRangeFn = BfsImplementation::TileRangeFn;
 
 struct EdgeTile {
@@ -167,48 +169,46 @@ AsynchronousAlgo(
   katana::InsertBag<T> init_bag;
 
   if (CONCURRENT) {
-    pushWrap(init_bag, source, 1, "parallel");
+    pushWrap(init_bag, source, source, "parallel");
   } else {
-    pushWrap(init_bag, source, 1);
+    pushWrap(init_bag, source, source);
   }
 
   loop(
       katana::iterate(init_bag),
       [&](const T& item, auto& ctx) {
-        const Dist& sdist = (*node_data)[item.src];
+        const GNode& parent_candidate = item.src;
 
         if (kTrackWork) {
-          if (item.dist != sdist) {
+          if (item.parent != parent_candidate) {
             WL_empty_work += 1;
             return;
           }
         }
 
-        const Dist new_dist = item.dist;
-
         for (auto ii : edgeRange(item)) {
           auto dest = graph.GetEdgeDest(ii);
-          Dist& ddata = (*node_data)[*dest];
+          GNode& ddata = (*node_data)[*dest];
 
           while (true) {
-            Dist old_dist = ddata;
-            if (old_dist <= new_dist) {
+            GNode parent = ddata;
+            if (parent <= parent_candidate) {
               break;
             }
 
-            if (!use_CAS ||
-                __sync_bool_compare_and_swap(&ddata, old_dist, new_dist)) {
+            if (!use_CAS || __sync_bool_compare_and_swap(
+                                &ddata, parent, parent_candidate)) {
               if (!use_CAS) {
-                ddata = new_dist;
+                ddata = parent_candidate;
               }
 
               if (kTrackWork) {
-                if (old_dist != BfsImplementation::kDistanceInfinity) {
+                if (parent != BfsImplementation::kDistanceInfinity) {
                   bad_work += 1;
                 }
               }
 
-              pushWrap(ctx, *dest, new_dist + 1);
+              pushWrap(ctx, *dest, parent_candidate);
               break;
             }
           }
@@ -408,8 +408,7 @@ RunAlgo(
     break;
   case BfsPlan::kAsynchronous:
     AsynchronousAlgo<CONCURRENT, UpdateRequest>(
-        *pg, source, node_data, ReqPushWrap(),
-        BfsImplementation::OutEdgeRangeFnUsingPG{pg});
+        *pg, source, node_data, ReqPushWrap(), OutEdgeRangeFn{graph});
     break;
   case BfsPlan::kSynchronousTile:
     SynchronousAlgo<CONCURRENT, EdgeTile>(

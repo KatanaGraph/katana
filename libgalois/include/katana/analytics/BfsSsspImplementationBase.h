@@ -336,6 +336,78 @@ struct BfsSsspImplementationBase {
 
     return true;
   }
+
+  struct BfsSrcEdgeTile {
+    GNode src;
+    GNode parent;
+    EI beg;
+    EI end;
+
+    friend bool operator<(
+        const BfsSrcEdgeTile& left, const BfsSrcEdgeTile& right) {
+      return left.parent < right.src;
+    }
+  };
+
+  struct BfsSrcEdgeTileMaker {
+    GNode src;
+    GNode parent;
+
+    BfsSrcEdgeTile operator()(const EI& beg, const EI& end) const {
+      return BfsSrcEdgeTile{src, parent, beg, end};
+    }
+  };
+
+  struct BfsSrcEdgeTilePushWrap {
+    Graph* graph;
+    BfsSsspImplementationBase& impl;
+
+    template <typename C>
+    void operator()(
+        C& cont, const GNode& n, const GNode& parent, const char* const) const {
+      impl.PushEdgeTilesParallel(
+          cont, graph, n, BfsSrcEdgeTileMaker{n, parent});
+    }
+
+    template <typename C>
+    void operator()(C& cont, const GNode& n, const GNode& parent) const {
+      impl.PushEdgeTiles(cont, graph, n, BfsSrcEdgeTileMaker{n, parent});
+    }
+  };
+
+  struct BfsUpdateRequest {
+    GNode src;
+    GNode parent;
+    BfsUpdateRequest(const GNode& s, GNode p) : src(s), parent(p) {}
+    BfsUpdateRequest() : src(), parent(0) {}
+
+    friend bool operator<(
+        const BfsUpdateRequest& left, const BfsUpdateRequest& right) {
+      return left.parent < right.src;
+    }
+  };
+
+  struct BfsReqPushWrap {
+    template <typename C>
+    void operator()(
+        C& cont, const GNode& n, const GNode& parent, const char* const) const {
+      (*this)(cont, n, parent);
+    }
+
+    template <typename C>
+    void operator()(C& cont, const GNode& n, const GNode& parent) const {
+      cont.push(BfsUpdateRequest(n, parent));
+    }
+  };
+
+  struct BfsOutEdgeRangeFn {
+    Graph* graph;
+    auto operator()(const GNode& n) const { return graph->edges(n); }
+
+    auto operator()(const BfsUpdateRequest& req) const {
+      return graph->edges(req.src);
+    }
+  };
 };
 
 template <typename T, typename BucketFunc, size_t MAX_BUCKETS = 543210ul>

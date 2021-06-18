@@ -46,7 +46,6 @@ struct BfsImplementation
 
 using Graph = BfsImplementation::Graph;
 using GNode = Graph::Node;
-using EI = typename Graph::edge_iterator;
 
 constexpr unsigned kChunkSize = 256U;
 
@@ -60,18 +59,6 @@ using ReqPushWrap = BfsImplementation::BfsReqPushWrap;
 using OutEdgeRangeFn = BfsImplementation::BfsOutEdgeRangeFn;
 using TileRangeFn = BfsImplementation::TileRangeFn;
 
-struct EdgeTile {
-  Graph::edge_iterator beg;
-  Graph::edge_iterator end;
-};
-
-struct EdgeTileMaker {
-  EdgeTile operator()(
-      const Graph::edge_iterator& beg, const Graph::edge_iterator& end) const {
-    return EdgeTile{beg, end};
-  }
-};
-
 struct NodePushWrap {
   template <typename C>
   void operator()(
@@ -82,39 +69,6 @@ struct NodePushWrap {
   template <typename C>
   void operator()(C& cont, const Graph::Node& n) const {
     cont.push(n);
-  }
-};
-
-struct EdgeTilePushWrap {
-  Graph* graph;
-  BfsImplementation& impl;
-
-  template <typename C>
-  void operator()(
-      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
-    impl.PushEdgeTilesParallel(cont, graph, n, EdgeTileMaker{});
-  }
-
-  template <typename C>
-  void operator()(C& cont, const Graph::Node& n) const {
-    impl.PushEdgeTiles(cont, graph, n, EdgeTileMaker{});
-  }
-};
-
-struct OneTilePushWrap {
-  Graph* graph;
-
-  template <typename C>
-  void operator()(
-      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
-    (*this)(cont, n);
-  }
-
-  template <typename C>
-  void operator()(C& cont, const Graph::Node& n) const {
-    EdgeTile t{graph->edge_begin(n), graph->edge_end(n)};
-
-    cont.push(t);
   }
 };
 
@@ -149,66 +103,60 @@ AsynchronousAlgo(
     katana::LargeArray<Dist>* node_data, const P& pushWrap,
     const R& edgeRange) {
   namespace gwl = katana;
+
+  using Loop = typename std::conditional<
+      CONCURRENT, katana::ForEach, katana::StdForEach>::type;
   using FIFO = gwl::PerSocketChunkFIFO<kChunkSize>;
   using BSWL = gwl::BulkSynchronous<gwl::PerSocketChunkLIFO<kChunkSize>>;
   using WL = FIFO;
-
-  using Loop = typename std::conditional<
-      CONCURRENT, katana::ForEach, katana::WhileQ<katana::SerFIFO<T>>>::type;
 
   KATANA_GCC7_IGNORE_UNUSED_BUT_SET
   constexpr bool use_CAS = CONCURRENT && !std::is_same<WL, BSWL>::value;
   KATANA_END_GCC7_IGNORE_UNUSED_BUT_SET
 
-  Loop loop;
-
+  // TODO(lhc): How about `failed_work`?
   katana::GAccumulator<size_t> bad_work;
   katana::GAccumulator<size_t> WL_empty_work;
 
-  (*node_data)[source] = 0;
+  (*node_data)[source] = source;
   katana::InsertBag<T> init_bag;
 
   if (CONCURRENT) {
-    pushWrap(init_bag, source, source, "parallel");
+    pushWrap(init_bag, source, "parallel");
   } else {
-    pushWrap(init_bag, source, source);
+    pushWrap(init_bag, source);
   }
+
+  Loop loop;
 
   loop(
       katana::iterate(init_bag),
       [&](const T& item, auto& ctx) {
-        const GNode& parent_candidate = item.src;
-
-        if (kTrackWork) {
-          if (item.parent != parent_candidate) {
-            WL_empty_work += 1;
-            return;
-          }
-        }
+        const GNode parent_candidate = item.src;
 
         for (auto ii : edgeRange(item)) {
           auto dest = graph.GetEdgeDest(ii);
-          GNode& ddata = (*node_data)[*dest];
+          GNode& parent = (*node_data)[*dest];
 
           while (true) {
-            GNode parent = ddata;
-            if (parent <= parent_candidate) {
+            GNode current_parent = parent;
+            if (current_parent != BfsImplementation::kDistanceInfinity) {
               break;
             }
 
             if (!use_CAS || __sync_bool_compare_and_swap(
-                                &ddata, parent, parent_candidate)) {
+                                &parent, current_parent, parent_candidate)) {
               if (!use_CAS) {
-                ddata = parent_candidate;
+                parent = parent_candidate;
               }
 
               if (kTrackWork) {
-                if (parent != BfsImplementation::kDistanceInfinity) {
+                if (parent == BfsImplementation::kDistanceInfinity) {
                   bad_work += 1;
                 }
               }
 
-              pushWrap(ctx, *dest, parent_candidate);
+              pushWrap(ctx, *dest);
               break;
             }
           }
@@ -226,7 +174,9 @@ AsynchronousAlgo(
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
 SynchronousAlgo(
-    Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
+    const katana::PropertyGraph& graph, Graph::Node source,
+    katana::LargeArray<Dist>* node_data, const P& pushWrap,
+    const R& edgeRange) {
   using Cont = typename std::conditional<
       CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
   using Loop = typename std::conditional<
@@ -237,7 +187,7 @@ SynchronousAlgo(
   auto curr = std::make_unique<Cont>();
   auto next = std::make_unique<Cont>();
 
-  graph->GetData<BfsNodeDistance>(source) = 0U;
+  (*node_data)[source] = source;
 
   if (CONCURRENT) {
     pushWrap(*next, source, "parallel");
@@ -255,11 +205,11 @@ SynchronousAlgo(
         katana::iterate(*curr),
         [&](const T& item) {
           for (auto e : edgeRange(item)) {
-            auto dest = graph->GetEdgeDest(e);
-            auto& parent = graph->GetData<BfsNodeDistance>(dest);
+            auto dest = graph.GetEdgeDest(e);
+            GNode& old_parent = (*node_data)[*dest];
 
-            if (parent == BfsImplementation::kDistanceInfinity) {
-              parent = item.src;
+            if (old_parent == BfsImplementation::kDistanceInfinity) {
+              old_parent = item.src;
               pushWrap(*next, *dest);
             }
           }
@@ -394,31 +344,30 @@ SynchronousDirectOpt(
 template <bool CONCURRENT>
 void
 RunAlgo(
-    BfsPlan algo, Graph* graph, katana::PropertyGraph* pg,
+    BfsPlan algo, katana::PropertyGraph& pg,
     const katana::PropertyGraph& transpose_graph,
     katana::LargeArray<Dist>* node_data, const Graph::Node& source) {
   BfsImplementation impl{algo.edge_tile_size()};
   switch (algo.algorithm()) {
   case BfsPlan::kAsynchronousTile:
     AsynchronousAlgo<CONCURRENT, SrcEdgeTile>(
-        *pg, source, node_data, SrcEdgeTilePushWrap{graph, impl},
-        TileRangeFn());
+        pg, source, node_data, SrcEdgeTilePushWrap{&pg, impl}, TileRangeFn());
     break;
   case BfsPlan::kAsynchronous:
     AsynchronousAlgo<CONCURRENT, UpdateRequest>(
-        *pg, source, node_data, ReqPushWrap(), OutEdgeRangeFn{graph});
+        pg, source, node_data, ReqPushWrap(), OutEdgeRangeFn{&pg});
     break;
   case BfsPlan::kSynchronousTile:
-    SynchronousAlgo<CONCURRENT, EdgeTile>(
-        graph, source, EdgeTilePushWrap{graph, impl}, TileRangeFn());
+    SynchronousAlgo<CONCURRENT, SrcEdgeTile>(
+        pg, source, node_data, SrcEdgeTilePushWrap{&pg, impl}, TileRangeFn());
     break;
   case BfsPlan::kSynchronous:
-    SynchronousAlgo<CONCURRENT, Graph::Node>(
-        graph, source, NodePushWrap(), OutEdgeRangeFn{graph});
+    SynchronousAlgo<CONCURRENT, UpdateRequest>(
+        pg, source, node_data, ReqPushWrap(), OutEdgeRangeFn{&pg});
     break;
   case BfsPlan::kSynchronousDirectOpt:
     SynchronousDirectOpt<CONCURRENT>(
-        *pg, transpose_graph, node_data, source, NodePushWrap(), algo.alpha(),
+        pg, transpose_graph, node_data, source, NodePushWrap(), algo.alpha(),
         algo.beta());
     break;
   default:
@@ -461,16 +410,12 @@ BfsImpl(
   katana::StatTimer execTime("BFS");
   execTime.start();
   RunAlgo<true>(
-      algo, &graph, pg, *(transpose_graph.value().get()), &node_data, source);
+      algo, *pg, *(transpose_graph.value().get()), &node_data, source);
   execTime.stop();
 
-  if (algo.algorithm() == BfsPlan::kAsynchronous ||
-      algo.algorithm() == BfsPlan::kSynchronousDirectOpt) {
-    katana::do_all(
-        katana::iterate(graph.begin(), graph.end()), [&](auto& node) {
-          graph.GetData<BfsNodeDistance>(node) = node_data[node];
-        });
-  }
+  katana::do_all(katana::iterate(graph.begin(), graph.end()), [&](auto& node) {
+    graph.GetData<BfsNodeDistance>(node) = node_data[node];
+  });
 
   return katana::ResultSuccess();
 }
@@ -503,9 +448,9 @@ katana::analytics::BfsAssertValid(
     return pg_result.error();
   }
 
+  /*
   BfsImplementation::Graph graph = pg_result.value();
 
-  /*
   TODO(lhc): Multiple nodes could have 0 node as a parent.
              It looks good to remove this, but let me keep this.
   GAccumulator<uint64_t> n_zeros;

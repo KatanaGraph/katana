@@ -121,8 +121,9 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTiles(
       WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edges(src).first;
-    const auto end = graph->edges(src).second;
+    auto edge_range = graph->topology().edge_range(src);
+    auto beg = edge_range.first;
+    const auto end = edge_range.second;
 
     PushEdgeTiles(wl, beg, end, f);
   }
@@ -153,10 +154,11 @@ struct BfsSsspImplementationBase {
   template <typename WL, typename TileMaker>
   void PushEdgeTilesParallel(
       WL& wl, katana::PropertyGraph* graph, GNode src, const TileMaker& f) {
-    auto beg = graph->edges(src).first;
-    const auto end = graph->edges(src).second;
+    auto edge_range = graph->topology().edge_range(src);
+    auto beg = edge_range.first;
+    const auto end = edge_range.second;
 
-    if ((end - beg) > edge_tile_size) {
+    if (static_cast<ptrdiff_t>(end - beg) > edge_tile_size) {
       katana::on_each(
           [&](const unsigned tid, const unsigned numT) {
             auto p = katana::block_range(beg, end, tid, numT);
@@ -202,35 +204,8 @@ struct BfsSsspImplementationBase {
     }
   };
 
-  // TODO(lhc) this struct has duplicated codes and will be removed
-  struct SrcEdgeTilePushWrapUsingPG {
-    katana::PropertyGraph* graph;
-    BfsSsspImplementationBase& impl;
-
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Dist& dist, const char* const) const {
-      impl.PushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
-    }
-
-    template <typename C>
-    void operator()(C& cont, const GNode& n, const Dist& dist) const {
-      impl.PushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, dist});
-    }
-  };
-
   struct OutEdgeRangeFn {
     Graph* graph;
-    auto operator()(const GNode& n) const { return graph->edges(n); }
-
-    auto operator()(const UpdateRequest& req) const {
-      return graph->edges(req.src);
-    }
-  };
-
-  // TODO(lhc) this struct has duplicated codes and will be removed
-  struct OutEdgeRangeFnUsingPG {
-    katana::PropertyGraph* graph;
     auto operator()(const GNode& n) const { return graph->edges(n); }
 
     auto operator()(const UpdateRequest& req) const {
@@ -342,69 +317,53 @@ struct BfsSsspImplementationBase {
   //            wrappers. For consistency, we could put `sssp` prefix later.
   struct BfsSrcEdgeTile {
     GNode src;
-    GNode parent;
     EI beg;
     EI end;
-
-    friend bool operator<(
-        const BfsSrcEdgeTile& left, const BfsSrcEdgeTile& right) {
-      return left.parent < right.src;
-    }
   };
 
   struct BfsSrcEdgeTileMaker {
     GNode src;
-    GNode parent;
 
     BfsSrcEdgeTile operator()(const EI& beg, const EI& end) const {
-      return BfsSrcEdgeTile{src, parent, beg, end};
+      return BfsSrcEdgeTile{src, beg, end};
     }
   };
 
   struct BfsSrcEdgeTilePushWrap {
-    Graph* graph;
+    katana::PropertyGraph* graph;
     BfsSsspImplementationBase& impl;
 
     template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const GNode& parent, const char* const) const {
-      impl.PushEdgeTilesParallel(
-          cont, graph, n, BfsSrcEdgeTileMaker{n, parent});
+    void operator()(C& cont, const GNode& n, const char* const) const {
+      impl.PushEdgeTilesParallel(cont, graph, n, BfsSrcEdgeTileMaker{n});
     }
 
     template <typename C>
-    void operator()(C& cont, const GNode& n, const GNode& parent) const {
-      impl.PushEdgeTiles(cont, graph, n, BfsSrcEdgeTileMaker{n, parent});
+    void operator()(C& cont, const GNode& n) const {
+      impl.PushEdgeTiles(cont, graph, n, BfsSrcEdgeTileMaker{n});
     }
   };
 
   struct BfsUpdateRequest {
     GNode src;
-    GNode parent;
-    BfsUpdateRequest(const GNode& s, GNode p) : src(s), parent(p) {}
-    BfsUpdateRequest() : src(), parent(0) {}
-
-    friend bool operator<(
-        const BfsUpdateRequest& left, const BfsUpdateRequest& right) {
-      return left.parent < right.src;
-    }
+    BfsUpdateRequest(const GNode& s) : src(s) {}
+    BfsUpdateRequest() : src() {}
   };
 
   struct BfsReqPushWrap {
     template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const GNode& parent, const char* const) const {
-      (*this)(cont, n, parent);
+    void operator()(C& cont, const GNode& n, const char* const) const {
+      (*this)(cont, n);
     }
 
     template <typename C>
-    void operator()(C& cont, const GNode& n, const GNode& parent) const {
-      cont.push(BfsUpdateRequest(n, parent));
+    void operator()(C& cont, const GNode& n) const {
+      cont.push(BfsUpdateRequest(n));
     }
   };
 
   struct BfsOutEdgeRangeFn {
-    Graph* graph;
+    katana::PropertyGraph* graph;
     auto operator()(const GNode& n) const { return graph->edges(n); }
 
     auto operator()(const BfsUpdateRequest& req) const {

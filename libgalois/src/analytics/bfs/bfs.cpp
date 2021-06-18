@@ -505,6 +505,9 @@ katana::analytics::BfsAssertValid(
 
   BfsImplementation::Graph graph = pg_result.value();
 
+  /*
+  TODO(lhc): Multiple nodes could have 0 node as a parent.
+             It looks good to remove this, but let me keep this.
   GAccumulator<uint64_t> n_zeros;
   do_all(iterate(graph), [&](uint32_t node) {
     if (graph.GetData<BfsNodeDistance>(node) == 0) {
@@ -516,6 +519,8 @@ katana::analytics::BfsAssertValid(
     return katana::ErrorCode::AssertionFailed;
   }
 
+  TODO(lhc): This check is also deprecated. We could check if
+             the current label is one of the in-neighbors.
   std::atomic<bool> not_consistent(false);
   do_all(
       iterate(graph),
@@ -525,6 +530,8 @@ katana::analytics::BfsAssertValid(
   if (not_consistent) {
     return katana::ErrorCode::AssertionFailed;
   }
+
+  */
 
   return katana::ResultSuccess();
 }
@@ -540,6 +547,9 @@ katana::analytics::BfsStatistics::Compute(
   BfsImplementation::Graph graph = pg_result.value();
 
   uint32_t source_node = std::numeric_limits<uint32_t>::max();
+  // TODO(lhc) max dist should be the last node
+  //           for now, keep it since it requires python modification.
+  //           The number of visited nodes is enough for verification.
   GReduceMax<uint32_t> max_dist;
   GAccumulator<uint64_t> sum_dist;
   GAccumulator<uint64_t> num_visited;

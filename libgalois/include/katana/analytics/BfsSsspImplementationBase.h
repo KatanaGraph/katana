@@ -337,6 +337,9 @@ struct BfsSsspImplementationBase {
     return true;
   }
 
+  // TODO(lhc): Now BFS and SSSP use different labels: parent and distance,
+  //            respectively. Therefore, we should differentiate worklist
+  //            wrappers. For consistency, we could put `sssp` prefix later.
   struct BfsSrcEdgeTile {
     GNode src;
     GNode parent;

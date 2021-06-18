@@ -16,10 +16,7 @@ def test_bfs(property_graph: PropertyGraph):
     verify_bfs(property_graph, start_node, new_property_id)
 
     stats = BfsStatistics(property_graph, property_name)
-
-    assert stats.max_distance == 7
-
-    bfs_assert_valid(property_graph, property_name)
+    assert stats.n_reached_nodes == 752
 
 
 def test_sssp(property_graph):

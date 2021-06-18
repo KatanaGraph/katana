@@ -36,9 +36,6 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
 
     bfs_plan = analytics.BfsPlan.synchronous_direction_opt(15, 18)
 
-    if "road" in input_args["name"]:
-        bfs_plan = analytics.BfsPlan.asynchronous()
-
     if not source_node_file == "":
         if not os.path.exists(source_node_file):
             print(f"Source node file doesn't exist: {source_node_file}")
@@ -50,7 +47,7 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
                 analytics.bfs(property_graph, int(source), property_name, plan=bfs_plan)
             check_schema(property_graph, property_name)
 
-            analytics.bfs_assert_valid(property_graph, property_name)
+            analytics.bfs_assert_valid(property_graph, int(source), property_name)
 
             stats = analytics.BfsStatistics(property_graph, property_name)
             print(f"STATS:\n{stats}")
@@ -61,7 +58,7 @@ def run_bfs(property_graph: PropertyGraph, input_args, source_node_file):
 
         check_schema(property_graph, property_name)
 
-        analytics.bfs_assert_valid(property_graph, property_name)
+        analytics.bfs_assert_valid(property_graph, start_node, property_name)
 
         stats = analytics.BfsStatistics(property_graph, property_name)
         print(f"STATS:\n{stats}")

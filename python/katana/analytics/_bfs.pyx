@@ -67,17 +67,15 @@ cdef extern from "katana/Analytics.h" namespace "katana::analytics" nogil:
     uint32_t kDefaultBeta "katana::analytics::BfsPlan::kDefaultBeta"
 
     Result[void] Bfs(_PropertyGraph * pg,
-                     size_t start_node,
+                     uint32_t start_node,
                      string output_property_name,
                      _BfsPlan algo)
 
-    Result[void] BfsAssertValid(_PropertyGraph* pg,
+    Result[void] BfsAssertValid(_PropertyGraph* pg, uint32_t start_node,
                                 string property_name);
 
     cppclass _BfsStatistics "katana::analytics::BfsStatistics":
-        uint64_t n_reached_nodes;
-        uint32_t max_distance;
-        double average_visited_distance;
+        uint64_t n_reached_nodes
 
         void Print(ostream os)
 
@@ -161,9 +159,9 @@ cdef class BfsPlan(Plan):
         return BfsPlan.make(_BfsPlan.SynchronousDirectOpt(alpha, beta))
 
 
-def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
+def bfs(PropertyGraph pg, uint32_t start_node, str output_property_name, BfsPlan plan = BfsPlan()):
     """
-    Compute the Breadth-First Search levels on `pg` using `start_node` as the source. The computed levels are
+    Compute the Breadth-First Search parents on `pg` using `start_node` as the source. The computed parents are
     written to the property `output_property_name`.
 
     :type pg: PropertyGraph
@@ -180,7 +178,7 @@ def bfs(PropertyGraph pg, size_t start_node, str output_property_name, BfsPlan p
     with nogil:
         handle_result_void(Bfs(pg.underlying_property_graph(), start_node, output_property_name_cstr, plan.underlying_))
 
-def bfs_assert_valid(PropertyGraph pg, str property_name):
+def bfs_assert_valid(PropertyGraph pg, uint32_t start_node, str property_name):
     """
     Raise an exception if the BFS results in `pg` appear to be incorrect. This is not an
     exhaustive check, just a sanity check.
@@ -190,7 +188,7 @@ def bfs_assert_valid(PropertyGraph pg, str property_name):
     output_property_name_bytes = bytes(property_name, "utf-8")
     output_property_name_cstr = <string>output_property_name_bytes
     with nogil:
-        handle_result_assert(BfsAssertValid(pg.underlying_property_graph(), output_property_name_cstr))
+        handle_result_assert(BfsAssertValid(pg.underlying_property_graph(), start_node, output_property_name_cstr))
 
 cdef _BfsStatistics handle_result_BfsStatistics(Result[_BfsStatistics] res) nogil except *:
     if not res.has_value():
@@ -209,24 +207,6 @@ cdef class BfsStatistics:
         output_property_name_cstr = <string> output_property_name_bytes
         with nogil:
             self.underlying = handle_result_BfsStatistics(_BfsStatistics.Compute(pg.underlying_property_graph(), output_property_name_cstr))
-
-    @property
-    def max_distance(self):
-        """
-        The maximum level.
-
-        :rtype: int
-        """
-        return self.underlying.max_distance
-
-    @property
-    def average_visited_distance(self):
-        """
-        The average level.
-
-        :rtype: double
-        """
-        return self.underlying.average_visited_distance
 
     @property
     def n_reached_nodes(self):

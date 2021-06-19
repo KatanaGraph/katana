@@ -14,7 +14,7 @@ def get_inputs_directory(*, invalidate=False):
     for path in paths_to_check:
         # TODO(amp): If we can abstract the input version info a shared file, this should look for
         #  specifically that version.
-        ci_inputs_path = path / "inputs" / "current"
+        ci_inputs_path = (path / "inputs" / "current").resolve()
         if ci_inputs_path.is_dir():
             inputs_dir = ci_inputs_path
     # Otherwise use a cache directory

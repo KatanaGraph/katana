@@ -45,18 +45,16 @@ struct BfsImplementation
 };
 
 using Graph = BfsImplementation::Graph;
+using GNode = Graph::Node;
+using Dist = BfsImplementation::Dist;
 
 constexpr unsigned kChunkSize = 256U;
 
 constexpr bool kTrackWork = BfsImplementation::kTrackWork;
 
 using UpdateRequest = BfsImplementation::UpdateRequest;
-using Dist = BfsImplementation::Dist;
-using SrcEdgeTile = BfsImplementation::SrcEdgeTile;
-using SrcEdgeTilePushWrap = BfsImplementation::SrcEdgeTilePushWrap;
 using ReqPushWrap = BfsImplementation::ReqPushWrap;
 using OutEdgeRangeFn = BfsImplementation::OutEdgeRangeFn;
-using TileRangeFn = BfsImplementation::TileRangeFn;
 
 struct EdgeTile {
   Graph::edge_iterator beg;
@@ -72,13 +70,12 @@ struct EdgeTileMaker {
 
 struct NodePushWrap {
   template <typename C>
-  void operator()(
-      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
+  void operator()(C& cont, const GNode& n, const char* const /*tag*/) const {
     (*this)(cont, n);
   }
 
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n) const {
+  void operator()(C& cont, const GNode& n) const {
     cont.push(n);
   }
 };
@@ -88,13 +85,12 @@ struct EdgeTilePushWrap {
   BfsImplementation& impl;
 
   template <typename C>
-  void operator()(
-      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
+  void operator()(C& cont, const GNode& n, const char* const /*tag*/) const {
     impl.PushEdgeTilesParallel(cont, graph, n, EdgeTileMaker{});
   }
 
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n) const {
+  void operator()(C& cont, const GNode& n) const {
     impl.PushEdgeTiles(cont, graph, n, EdgeTileMaker{});
   }
 };
@@ -103,13 +99,12 @@ struct OneTilePushWrap {
   Graph* graph;
 
   template <typename C>
-  void operator()(
-      C& cont, const Graph::Node& n, const char* const /*tag*/) const {
+  void operator()(C& cont, const GNode& n, const char* const /*tag*/) const {
     (*this)(cont, n);
   }
 
   template <typename C>
-  void operator()(C& cont, const Graph::Node& n) const {
+  void operator()(C& cont, const GNode& n) const {
     EdgeTile t{graph->edge_begin(n), graph->edge_end(n)};
 
     cont.push(t);
@@ -120,7 +115,7 @@ template <typename WL>
 void
 WlToBitset(const WL& wl, katana::DynamicBitset* bitset) {
   katana::do_all(
-      katana::iterate(wl), [&](const Graph::Node& src) { bitset->set(src); },
+      katana::iterate(wl), [&](const GNode& src) { bitset->set(src); },
       katana::chunk_size<kChunkSize>(), katana::loopname("WlToBitset"));
 }
 
@@ -132,7 +127,7 @@ BitsetToWl(
   wl->clear();
   katana::do_all(
       katana::iterate(graph),
-      [&](const Graph::Node& src) {
+      [&](const GNode& src) {
         if (bitset.test(src)) {
           wl->push(src);
         }
@@ -143,7 +138,7 @@ BitsetToWl(
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
 AsynchronousAlgo(
-    const katana::PropertyGraph& graph, const Graph::Node source,
+    const katana::PropertyGraph& graph, const GNode source,
     katana::LargeArray<Dist>* node_data, const P& pushWrap,
     const R& edgeRange) {
   namespace gwl = katana;
@@ -164,6 +159,7 @@ AsynchronousAlgo(
   katana::GAccumulator<size_t> WL_empty_work;
 
   (*node_data)[source] = 0;
+
   katana::InsertBag<T> init_bag;
 
   if (CONCURRENT) {
@@ -226,7 +222,7 @@ AsynchronousAlgo(
 template <bool CONCURRENT, typename T, typename P, typename R>
 void
 SynchronousAlgo(
-    Graph* graph, Graph::Node source, const P& pushWrap, const R& edgeRange) {
+    Graph* graph, const GNode source, const P& pushWrap, const R& edgeRange) {
   using Cont = typename std::conditional<
       CONCURRENT, katana::InsertBag<T>, katana::SerStack<T>>::type;
   using Loop = typename std::conditional<
@@ -276,11 +272,10 @@ void
 SynchronousDirectOpt(
     const katana::PropertyGraph& graph,
     const katana::PropertyGraph& transpose_graph,
-    katana::LargeArray<uint32_t>* node_data, const Graph::Node source,
-    const P& pushWrap, const uint32_t alpha, const uint32_t beta) {
+    katana::LargeArray<GNode>* node_data, const GNode source, const P& pushWrap,
+    const uint32_t alpha, const uint32_t beta) {
   using Cont = typename std::conditional<
-      CONCURRENT, katana::InsertBag<Graph::Node>,
-      katana::SerStack<Graph::Node>>::type;
+      CONCURRENT, katana::InsertBag<GNode>, katana::SerStack<GNode>>::type;
   using Loop = typename std::conditional<
       CONCURRENT, katana::DoAll, katana::StdForEach>::type;
 
@@ -333,8 +328,8 @@ SynchronousDirectOpt(
 
         loop(
             katana::iterate(transpose_graph),
-            [&](const typename Graph::Node& dst) {
-              uint32_t& ddata = (*node_data)[dst];
+            [&](const GNode& dst) {
+              GNode& ddata = (*node_data)[dst];
               if (ddata == BfsImplementation::kDistanceInfinity) {
                 for (auto e : transpose_graph.edges(dst)) {
                   auto src = transpose_graph.GetEdgeDest(e);
@@ -365,12 +360,12 @@ SynchronousDirectOpt(
 
       loop(
           katana::iterate(*frontier),
-          [&](const typename Graph::Node& src) {
+          [&](const GNode& src) {
             for (auto e : graph.edges(src)) {
               auto dst = graph.GetEdgeDest(e);
-              uint32_t& ddata = (*node_data)[*dst];
+              GNode& ddata = (*node_data)[*dst];
               if (ddata == BfsImplementation::kDistanceInfinity) {
-                uint32_t old_parent = ddata;
+                GNode old_parent = ddata;
                 if (__sync_bool_compare_and_swap(&ddata, old_parent, src)) {
                   next_frontier->push(*dst);
                   auto [begin_edge, end_edge] =
@@ -390,21 +385,106 @@ SynchronousDirectOpt(
   delete next_frontier;
 }
 
+template <typename NDType, typename ValueTy>
+void
+InitializeNodeData(const ValueTy value, katana::LargeArray<NDType>* node_data) {
+  katana::do_all(katana::iterate(0ul, node_data->size()), [&](auto n) {
+    (*node_data)[n] = value;
+  });
+}
+
+template <typename NDType, typename ValueTy, typename... Args>
+void
+InitializeNodeData(
+    const ValueTy value, katana::LargeArray<NDType>* node_data, Args... args) {
+  InitializeNodeData(value, node_data);
+  InitializeNodeData(value, args...);
+}
+
+template <typename NDType>
+void
+InitializeGraphNodeData(
+    Graph* graph, const katana::LargeArray<NDType>& node_data) {
+  katana::do_all(katana::iterate(*graph), [&](auto& node) {
+    graph->GetData<BfsNodeParent>(node) = node_data[node];
+  });
+}
+
+void
+ComputeParentFromDistance(
+    katana::PropertyGraph& transpose_graph,
+    katana::LargeArray<GNode>* node_parent,
+    const katana::LargeArray<Dist>& node_dist, const GNode source) {
+  (*node_parent)[source] = source;
+  katana::do_all(
+      katana::iterate(transpose_graph),
+      [&](const GNode v) {
+        GNode& v_parent = (*node_parent)[v];
+        Dist v_dist = node_dist[v];
+
+        if (v_dist == BfsImplementation::kDistanceInfinity) {
+          return;
+        } else if (v_dist == 1) {
+          v_parent = source;
+          return;
+        }
+
+        for (auto e : transpose_graph.edges(v)) {
+          GNode u = *(transpose_graph.GetEdgeDest(e));
+          if (node_dist[v] == node_dist[u] + 1) {
+            v_parent = u;
+            break;
+          }
+        }
+      },
+      katana::steal(),
+      katana::loopname(std::string("ComputeParentFromDistance").c_str()));
+}
+
 template <bool CONCURRENT>
 void
 RunAlgo(
-    BfsPlan algo, [[maybe_unused]] Graph* graph, katana::PropertyGraph* pg,
-    const katana::PropertyGraph& transpose_graph,
-    katana::LargeArray<uint32_t>* node_data, const Graph::Node& source) {
+    BfsPlan algo, Graph* graph, katana::PropertyGraph* pg,
+    katana::PropertyGraph& transpose_graph, const GNode& source) {
   BfsImplementation impl{algo.edge_tile_size()};
+  katana::StatTimer exec_time("BFS");
+
   switch (algo.algorithm()) {
-  case BfsPlan::kSynchronousDirectOpt:
+  case BfsPlan::kSynchronousDirectOpt: {
+    // Set up node data
+    katana::LargeArray<GNode> node_data;
+    node_data.allocateInterleaved(graph->num_nodes());
+    InitializeNodeData(BfsImplementation::kDistanceInfinity, &node_data);
+
+    exec_time.start();
     SynchronousDirectOpt<CONCURRENT>(
-        *pg, transpose_graph, node_data, source, NodePushWrap(), algo.alpha(),
+        *pg, transpose_graph, &node_data, source, NodePushWrap(), algo.alpha(),
         algo.beta());
+    exec_time.stop();
+
+    InitializeGraphNodeData(graph, node_data);
     break;
+  }
+  case BfsPlan::kAsynchronous: {
+    katana::LargeArray<GNode> node_parent;
+    katana::LargeArray<Dist> node_dist;
+    node_parent.allocateInterleaved(graph->num_nodes());
+    node_dist.allocateInterleaved(graph->num_nodes());
+
+    InitializeNodeData(
+        BfsImplementation::kDistanceInfinity, &node_parent, &node_dist);
+
+    exec_time.start();
+    AsynchronousAlgo<CONCURRENT, UpdateRequest>(
+        *pg, source, &node_dist, ReqPushWrap(), OutEdgeRangeFn{graph});
+    ComputeParentFromDistance(transpose_graph, &node_parent, node_dist, source);
+    exec_time.stop();
+
+    InitializeGraphNodeData(graph, node_parent);
+    break;
+  }
   default:
-    std::cerr << "ERROR: unkown algo type\n";
+    KATANA_LOG_FATAL("Error: unknown algorithm type: {}", algo.algorithm());
   }
 }
 
@@ -416,7 +496,8 @@ BfsImpl(
     return katana::ErrorCode::InvalidArgument;
   }
 
-  if (algo.algorithm() != BfsPlan::kSynchronousDirectOpt) {
+  if (algo.algorithm() != BfsPlan::kSynchronousDirectOpt &&
+      algo.algorithm() != BfsPlan::kAsynchronous) {
     return KATANA_ERROR(
         katana::ErrorCode::NotImplemented, "Unsupported algorithm: {}",
         algo.algorithm());
@@ -424,40 +505,16 @@ BfsImpl(
 
   auto it = graph.begin();
   std::advance(it, start_node);
-  Graph::Node source = *it;
+  GNode source = *it;
 
   size_t approxNodeData = 4 * (graph.num_nodes() + graph.num_edges());
   katana::EnsurePreallocated(8, approxNodeData);
 
   // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
   const katana::GraphTopology& topology = pg->topology();
-  katana::LargeArray<uint32_t> node_data;
-  bool use_block = false;
-  if (use_block) {
-    node_data.allocateBlocked(topology.num_nodes());
-  } else {
-    node_data.allocateInterleaved(topology.num_nodes());
-  }
   auto transpose_graph = katana::CreateTransposeGraphTopology(topology);
 
-  katana::do_all(katana::iterate(graph.begin(), graph.end()), [&](auto n) {
-    graph.GetData<BfsNodeParent>(n) = BfsImplementation::kDistanceInfinity;
-    node_data[n] = BfsImplementation::kDistanceInfinity;
-  });
-
-  katana::StatTimer execTime("BFS");
-  execTime.start();
-  RunAlgo<true>(
-      algo, &graph, pg, *(transpose_graph.value().get()), &node_data, source);
-  execTime.stop();
-
-  if (algo.algorithm() == BfsPlan::kAsynchronous ||
-      algo.algorithm() == BfsPlan::kSynchronousDirectOpt) {
-    katana::do_all(
-        katana::iterate(graph.begin(), graph.end()), [&](auto& node) {
-          graph.GetData<BfsNodeParent>(node) = node_data[node];
-        });
-  }
+  RunAlgo<true>(algo, &graph, pg, *(transpose_graph.value().get()), source);
 
   return katana::ResultSuccess();
 }
@@ -466,7 +523,7 @@ BfsImpl(
 
 katana::Result<void>
 katana::analytics::Bfs(
-    PropertyGraph* pg, uint32_t start_node,
+    PropertyGraph* pg, GNode start_node,
     const std::string& output_property_name, BfsPlan algo) {
   if (auto result = ConstructNodeProperties<std::tuple<BfsNodeParent>>(
           pg, {output_property_name});
@@ -484,8 +541,7 @@ katana::analytics::Bfs(
 
 katana::Result<void>
 katana::analytics::BfsAssertValid(
-    PropertyGraph* pg, const uint32_t source,
-    const std::string& property_name) {
+    PropertyGraph* pg, const GNode source, const std::string& property_name) {
   auto pg_result = BfsImplementation::Graph::Make(pg, {property_name}, {});
   if (!pg_result) {
     return pg_result.error();
@@ -495,7 +551,7 @@ katana::analytics::BfsAssertValid(
 
   // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
   const katana::GraphTopology& topology = pg->topology();
-  katana::LargeArray<uint32_t> node_data;
+  katana::LargeArray<GNode> node_data;
   node_data.allocateInterleaved(topology.num_nodes());
   auto transpose_graph_topo = katana::CreateTransposeGraphTopology(topology);
   const auto& transpose_graph = *(transpose_graph_topo.value().get());
@@ -515,9 +571,9 @@ katana::analytics::BfsAssertValid(
 
   // First, visit all reachable nodes and calculate level for each node sequentially
   for (auto it = visited_nodes.begin(); it != visited_nodes.end(); it++) {
-    uint32_t u = *it;
+    GNode u = *it;
     for (auto e : graph.edges(u)) {
-      uint32_t v = *(graph.GetEdgeDest(e));
+      GNode v = *(graph.GetEdgeDest(e));
       if (levels[v] == BfsImplementation::kDistanceInfinity) {
         levels[v] = levels[u] + 1;
         visited_nodes.push_back(v);
@@ -525,8 +581,8 @@ katana::analytics::BfsAssertValid(
     }
   }
 
-  for (uint32_t u : graph) {
-    uint32_t u_parent = graph.GetData<BfsNodeParent>(u);
+  for (GNode u : graph) {
+    GNode u_parent = graph.GetData<BfsNodeParent>(u);
     if ((levels[u] != BfsImplementation::kDistanceInfinity) &&
         (u_parent != BfsImplementation::kDistanceInfinity)) {
       if (u == source) {
@@ -539,7 +595,7 @@ katana::analytics::BfsAssertValid(
       bool parent_found = false;
 
       for (auto e : transpose_graph.edges(u)) {
-        uint32_t v = *(transpose_graph.GetEdgeDest(e));
+        GNode v = *(transpose_graph.GetEdgeDest(e));
         if (v == u_parent) {
           if (levels[v] != levels[u] - 1) {
             return KATANA_ERROR(
@@ -554,7 +610,7 @@ katana::analytics::BfsAssertValid(
         return KATANA_ERROR(
             katana::ErrorCode::AssertionFailed, "parent must exist");
       }
-    } else if (levels[u] != u_parent) {
+    } else if (u_parent != BfsImplementation::kDistanceInfinity) {
       return KATANA_ERROR(katana::ErrorCode::AssertionFailed, "unvisited node");
     }
   }
@@ -572,15 +628,15 @@ katana::analytics::BfsStatistics::Compute(
 
   BfsImplementation::Graph graph = pg_result.value();
 
-  uint32_t source_node = std::numeric_limits<uint32_t>::max();
+  GNode source_node = std::numeric_limits<GNode>::max();
   GAccumulator<uint64_t> num_visited;
 
   auto max_possible_parent = graph.num_nodes();
 
   do_all(
       iterate(graph),
-      [&](uint64_t i) {
-        uint32_t my_parent = graph.GetData<BfsNodeParent>(i);
+      [&](GNode i) {
+        GNode my_parent = graph.GetData<BfsNodeParent>(i);
 
         if (my_parent == i) {
           source_node = i;
@@ -591,7 +647,7 @@ katana::analytics::BfsStatistics::Compute(
       },
       loopname("BFS Sanity check"), no_stats());
 
-  KATANA_LOG_DEBUG_ASSERT(source_node != std::numeric_limits<uint32_t>::max());
+  KATANA_LOG_DEBUG_ASSERT(source_node != std::numeric_limits<GNode>::max());
   uint64_t total_visited_nodes = num_visited.reduce();
   return BfsStatistics{total_visited_nodes};
 }

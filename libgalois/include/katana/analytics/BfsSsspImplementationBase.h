@@ -202,35 +202,8 @@ struct BfsSsspImplementationBase {
     }
   };
 
-  // TODO(lhc) this struct has duplicated codes and will be removed
-  struct SrcEdgeTilePushWrapUsingPG {
-    katana::PropertyGraph* graph;
-    BfsSsspImplementationBase& impl;
-
-    template <typename C>
-    void operator()(
-        C& cont, const GNode& n, const Dist& dist, const char* const) const {
-      impl.PushEdgeTilesParallel(cont, graph, n, SrcEdgeTileMaker{n, dist});
-    }
-
-    template <typename C>
-    void operator()(C& cont, const GNode& n, const Dist& dist) const {
-      impl.PushEdgeTiles(cont, graph, n, SrcEdgeTileMaker{n, dist});
-    }
-  };
-
   struct OutEdgeRangeFn {
     Graph* graph;
-    auto operator()(const GNode& n) const { return graph->edges(n); }
-
-    auto operator()(const UpdateRequest& req) const {
-      return graph->edges(req.src);
-    }
-  };
-
-  // TODO(lhc) this struct has duplicated codes and will be removed
-  struct OutEdgeRangeFnUsingPG {
-    katana::PropertyGraph* graph;
     auto operator()(const GNode& n) const { return graph->edges(n); }
 
     auto operator()(const UpdateRequest& req) const {

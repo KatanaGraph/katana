@@ -134,17 +134,19 @@ tsuba::LocalStorage::ListAsync(
   if ((dirp = opendir(dirname.c_str())) == nullptr) {
     if (errno == ENOENT) {
       // other storage backends are flat and so return an empty list here
-      return std::async(
-          []() -> katana::Result<void> { return katana::ResultSuccess(); });
+      return std::async(std::launch::deferred, []() -> katana::Result<void> {
+        return katana::ResultSuccess();
+      });
     }
 
     std::error_code ec = katana::ResultErrno();
 
-    return std::async([ec, dirname]() -> katana::Result<void> {
-      return KATANA_ERROR(
-          ErrorCode::LocalStorageError, "open dir failed: {}: {}", dirname,
-          ec.message());
-    });
+    return std::async(
+        std::launch::deferred, [ec, dirname]() -> katana::Result<void> {
+          return KATANA_ERROR(
+              ErrorCode::LocalStorageError, "open dir failed: {}: {}", dirname,
+              ec.message());
+        });
   }
 
   int dfd = dirfd(dirp);
@@ -173,17 +175,19 @@ tsuba::LocalStorage::ListAsync(
   if (errno != 0) {
     std::error_code ec = katana::ResultErrno();
 
-    return std::async([ec, dirname]() -> katana::Result<void> {
-      return KATANA_ERROR(
-          ErrorCode::LocalStorageError, "readdir failed: {}: {}", dirname,
-          ec.message());
-    });
+    return std::async(
+        std::launch::deferred, [ec, dirname]() -> katana::Result<void> {
+          return KATANA_ERROR(
+              ErrorCode::LocalStorageError, "readdir failed: {}: {}", dirname,
+              ec.message());
+        });
   }
 
   (void)closedir(dirp);
 
-  return std::async(
-      []() -> katana::Result<void> { return katana::ResultSuccess(); });
+  return std::async(std::launch::deferred, []() -> katana::Result<void> {
+    return katana::ResultSuccess();
+  });
 }
 
 katana::Result<void>

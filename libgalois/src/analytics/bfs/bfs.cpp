@@ -302,7 +302,7 @@ SynchronousDirectOpt(
   Cont* frontier = new Cont();
   Cont* next_frontier = new Cont();
 
-  (*node_data)[source] = 0;
+  (*node_data)[source] = source;
 
   if (CONCURRENT) {
     pushWrap(*next_frontier, source, "parallel");

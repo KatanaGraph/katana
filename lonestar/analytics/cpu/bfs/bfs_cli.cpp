@@ -62,19 +62,6 @@ static cll::opt<bool> persistAllDistances(
         "distances for the last source are persisted (default value false)"),
     cll::init(false));
 
-static cll::opt<BfsPlan::Algorithm> algo(
-    "algo", cll::desc("Choose an algorithm (default value SyncTile):"),
-    cll::values(
-        clEnumValN(
-            BfsPlan::kAsynchronousTile, "AsyncTile", "Asynchronous tiled"),
-        clEnumValN(BfsPlan::kAsynchronous, "Async", "Asynchronous"),
-        clEnumValN(BfsPlan::kSynchronousTile, "SyncTile", "Synchronous tiled"),
-        clEnumValN(BfsPlan::kSynchronous, "Sync", "Synchronous"),
-        clEnumValN(
-            BfsPlan::kSynchronousDirectOpt, "SyncDO",
-            "Synchronous direction optimization")),
-    cll::init(BfsPlan::kSynchronousDirectOpt));
-
 static cll::opt<unsigned int> alpha(
     "alpha", cll::desc("Alpha for direction optimization (default value: 15)"),
     cll::init(15));
@@ -119,6 +106,8 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
+  BfsPlan::Algorithm algo = BfsPlan::kSynchronousDirectOpt;
+
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
       MakeFileGraph(inputFile, edge_property_name);
@@ -152,32 +141,15 @@ main(int argc, char** argv) {
   uint32_t num_sources = startNodes.size();
   std::cout << "Running BFS for " << num_sources << " sources\n";
 
-  BfsPlan plan;
-  switch (algo.getValue()) {
-  case BfsPlan::kAsynchronous:
-    plan = BfsPlan::Asynchronous();
-    break;
-  case BfsPlan::kAsynchronousTile:
-    plan = BfsPlan::AsynchronousTile();
-    break;
-  case BfsPlan::kSynchronous:
-    plan = BfsPlan::Synchronous();
-    break;
-  case BfsPlan::kSynchronousTile:
-    plan = BfsPlan::SynchronousTile();
-    break;
-  case BfsPlan::kSynchronousDirectOpt:
-    plan = BfsPlan::SynchronousDirectOpt(alpha, beta);
-    break;
-  }
+  BfsPlan plan = BfsPlan::SynchronousDirectOpt(alpha, beta);
 
-  for (auto startNode : startNodes) {
-    if (startNode >= pg->topology().num_nodes()) {
-      KATANA_LOG_FATAL("failed to set source: {}", startNode);
+  for (auto start_node : startNodes) {
+    if (start_node >= pg->topology().num_nodes()) {
+      KATANA_LOG_FATAL("failed to set source: {}", start_node);
     }
 
-    std::string node_distance_prop = "level-" + std::to_string(startNode);
-    if (auto r = Bfs(pg.get(), startNode, node_distance_prop, plan); !r) {
+    std::string node_distance_prop = "level-" + std::to_string(start_node);
+    if (auto r = Bfs(pg.get(), start_node, node_distance_prop, plan); !r) {
       KATANA_LOG_FATAL("Failed to run bfs {}", r.error());
     }
 
@@ -206,7 +178,7 @@ main(int argc, char** argv) {
             "connected",
             pg->num_nodes() - stats.n_reached_nodes);
       }
-      if (BfsAssertValid(pg.get(), node_distance_prop)) {
+      if (BfsAssertValid(pg.get(), start_node, node_distance_prop)) {
         std::cout << "Verification successful.\n";
       } else {
         KATANA_LOG_FATAL("verification failed");
@@ -216,7 +188,7 @@ main(int argc, char** argv) {
     if (output) {
       KATANA_LOG_DEBUG_ASSERT(uint64_t(results->length()) == pg->size());
 
-      std::string output_filename = "output-" + std::to_string(startNode);
+      std::string output_filename = "output-" + std::to_string(start_node);
       writeOutput(
           outputLocation, results->raw_values(), results->length(),
           output_filename);

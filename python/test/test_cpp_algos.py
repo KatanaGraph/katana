@@ -55,10 +55,11 @@ NODES_TO_SAMPLE = 10
 
 
 def test_assert_valid(property_graph: PropertyGraph):
-    with raises(AssertionError):
-        bfs_assert_valid(property_graph, "workFrom")
     property_name = "NewProp"
     start_node = 0
+
+    with raises(AssertionError):
+        bfs_assert_valid(property_graph, start_node, "workFrom")
 
     bfs(property_graph, start_node, property_name)
 
@@ -67,7 +68,7 @@ def test_assert_valid(property_graph: PropertyGraph):
     property_graph.add_node_property(table({"Prop2": v}))
 
     with raises(AssertionError):
-        bfs_assert_valid(property_graph, "Prop2")
+        bfs_assert_valid(property_graph, start_node, "Prop2")
 
 
 def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
@@ -115,11 +116,11 @@ def test_bfs(property_graph: PropertyGraph):
 
     assert property_graph.get_node_property(property_name)[start_node].as_py() == 0
 
-    bfs_assert_valid(property_graph, property_name)
+    bfs_assert_valid(property_graph, start_node, property_name)
 
     stats = BfsStatistics(property_graph, property_name)
 
-    assert stats.max_distance == 7
+    assert stats.n_reached_nodes == 752
 
     # Verify with numba implementation of verifier as well
     verify_bfs(property_graph, start_node, new_property_id)
@@ -401,11 +402,9 @@ def test_busy_wait(property_graph: PropertyGraph):
 
     assert property_graph.get_node_property(property_name)[start_node].as_py() == 0
 
-    bfs_assert_valid(property_graph, property_name)
+    bfs_assert_valid(property_graph, start_node, property_name)
 
-    stats = BfsStatistics(property_graph, property_name)
-
-    assert stats.max_distance == 7
+    BfsStatistics(property_graph, property_name)
 
     # Verify with numba implementation of verifier as well
     verify_bfs(property_graph, start_node, new_property_id)

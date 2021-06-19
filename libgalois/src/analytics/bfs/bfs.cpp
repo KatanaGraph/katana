@@ -531,8 +531,8 @@ katana::analytics::BfsAssertValid(
         (u_parent != BfsImplementation::kDistanceInfinity)) {
       if (u == source) {
         if (!(u_parent == u && levels[u] == 0)) {
-          // Incorrect source
-          return katana::ErrorCode::AssertionFailed;
+          return KATANA_ERROR(
+              katana::ErrorCode::AssertionFailed, "incorrect source");
         }
         continue;
       }
@@ -542,8 +542,8 @@ katana::analytics::BfsAssertValid(
         uint32_t v = *(transpose_graph.GetEdgeDest(e));
         if (v == u_parent) {
           if (levels[v] != levels[u] - 1) {
-            // Incorrect depth
-            return katana::ErrorCode::AssertionFailed;
+            return KATANA_ERROR(
+                katana::ErrorCode::AssertionFailed, "incorrect depth");
           }
           parent_found = true;
           break;
@@ -551,12 +551,11 @@ katana::analytics::BfsAssertValid(
       }
 
       if (!parent_found) {
-        // Parent must exist
-        return katana::ErrorCode::AssertionFailed;
+        return KATANA_ERROR(
+            katana::ErrorCode::AssertionFailed, "parent must exist");
       }
     } else if (levels[u] != u_parent) {
-      // Unvisited node check
-      return katana::ErrorCode::AssertionFailed;
+      return KATANA_ERROR(katana::ErrorCode::AssertionFailed, "unvisited node");
     }
   }
 

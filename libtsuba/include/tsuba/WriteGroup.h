@@ -16,7 +16,7 @@ namespace tsuba {
 /// that they have all completed
 class WriteGroup {
   struct AsyncOp {
-    std::future<katana::Result<void>> result;
+    std::future<katana::CopyableResult<void>> result;
     std::string location;
     uint64_t accounted_size;
   };
@@ -54,7 +54,7 @@ public:
   /// the file name for debugging. If the operation is associated with a file
   /// frame that we are responsible for, note the size
   void AddOp(
-      std::future<katana::Result<void>> future, std::string file,
+      std::future<katana::CopyableResult<void>> future, std::string file,
       uint64_t accounted_size = 0);
 };
 

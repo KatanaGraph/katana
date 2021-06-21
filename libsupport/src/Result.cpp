@@ -70,6 +70,9 @@ thread_local katana::ErrorInfo::Context kContext;
 
 }  // namespace
 
+katana::ErrorInfo::ErrorInfo(const CopyableErrorInfo& cei)
+    : ErrorInfo(cei.error_code(), cei.message()) {}
+
 static_assert(
     fmt::inline_buffer_size > katana::ErrorInfo::kContextSize / 2,
     "libfmt buffer size is small relative to max ErrorInfo context size");
@@ -100,6 +103,9 @@ katana::ErrorInfo::SpillMessage() {
   }
 }
 
+/// Doxygen cannot match this definition with its declaration in Result.h
+/// \cond DO_NOT_DOCUMENT
+// TODO(ddn): Revisit
 void
 katana::ErrorInfo::Prepend(const char* begin, const char* end) {
   CheckContext();
@@ -116,9 +122,6 @@ katana::ErrorInfo::Prepend(const char* begin, const char* end) {
   context_.second = context_.first->size();
 }
 
-/// Doxygen cannot match this definition with its declaration in Result.h
-/// \cond DO_NOT_DOCUMENT
-// TODO(ddn): Revisit
 std::ostream&
 katana::ErrorInfo::Write(std::ostream& out) const {
   if ((context_.first && context_.first != &kContext) ||
@@ -158,5 +161,10 @@ katana::CopyableErrorInfo::Write(std::ostream& out) const {
 
 katana::Result<void>
 katana::ResultSuccess() {
+  return BOOST_OUTCOME_V2_NAMESPACE::success();
+}
+
+katana::CopyableResult<void>
+katana::CopyableResultSuccess() {
   return BOOST_OUTCOME_V2_NAMESPACE::success();
 }

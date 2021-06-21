@@ -82,10 +82,11 @@ tsuba::AddProperties(
   for (const tsuba::PropStorageInfo& prop : properties) {
     const std::string& name = prop.name;
     const katana::Uri& path = uri.Join(prop.path);
-    std::future<katana::Result<std::shared_ptr<arrow::Table>>> future =
+    std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,
-            [name, path]() -> katana::Result<std::shared_ptr<arrow::Table>> {
+            [name,
+             path]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
               auto load_result = LoadProperties(name, path);
               if (!load_result) {
                 return load_result.error().WithContext(
@@ -95,12 +96,12 @@ tsuba::AddProperties(
             });
     auto on_complete = [add_fn,
                         name](const std::shared_ptr<arrow::Table>& props)
-        -> katana::Result<void> {
+        -> katana::CopyableResult<void> {
       auto add_result = add_fn(props);
       if (!add_result) {
         return add_result.error().WithContext("adding {}", std::quoted(name));
       }
-      return katana::ResultSuccess();
+      return katana::CopyableResultSuccess();
     };
     if (grp) {
       grp->AddReturnsOp<std::shared_ptr<arrow::Table>>(
@@ -132,11 +133,11 @@ tsuba::AddPropertySlice(
   for (const tsuba::PropStorageInfo& prop : properties) {
     const std::string& name = prop.name;
     const katana::Uri& path = dir.Join(prop.path);
-    std::future<katana::Result<std::shared_ptr<arrow::Table>>> future =
+    std::future<katana::CopyableResult<std::shared_ptr<arrow::Table>>> future =
         std::async(
             std::launch::async,
             [name, path, begin,
-             size]() -> katana::Result<std::shared_ptr<arrow::Table>> {
+             size]() -> katana::CopyableResult<std::shared_ptr<arrow::Table>> {
               auto load_result = LoadPropertySlice(name, path, begin, size);
               if (!load_result) {
                 return load_result.error().WithContext(
@@ -146,12 +147,12 @@ tsuba::AddPropertySlice(
             });
     auto on_complete = [add_fn,
                         name](const std::shared_ptr<arrow::Table>& props)
-        -> katana::Result<void> {
+        -> katana::CopyableResult<void> {
       auto add_result = add_fn(props);
       if (!add_result) {
         return add_result.error().WithContext("adding {}", std::quoted(name));
       }
-      return katana::ResultSuccess();
+      return katana::CopyableResultSuccess();
     };
     if (grp) {
       grp->AddReturnsOp<std::shared_ptr<arrow::Table>>(

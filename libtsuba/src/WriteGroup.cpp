@@ -33,7 +33,7 @@ WriteGroup::Finish() {
 
 void
 WriteGroup::AddOp(
-    std::future<katana::Result<void>> future, std::string file,
+    std::future<katana::CopyableResult<void>> future, std::string file,
     uint64_t accounted_size) {
   if (accounted_size > kMaxOutstandingSize) {
     accounted_size = kMaxOutstandingSize;
@@ -49,9 +49,9 @@ WriteGroup::AddOp(
   }
   async_op_group_.AddOp(
       std::move(future), std::move(file),
-      [wg = this, accounted_size]() -> katana::Result<void> {
+      [wg = this, accounted_size]() -> katana::CopyableResult<void> {
         wg->outstanding_size_ -= accounted_size;
-        return katana::ResultSuccess();
+        return katana::CopyableResultSuccess();
       });
 }
 

@@ -219,8 +219,8 @@ tsuba::ParquetWriter::StoreParquet(
       std::launch::async,
       [table = std::move(table), ff = std::move(ff), desc,
        writer_props = StandardWriterProperties(),
-       arrow_props =
-           StandardArrowProperties()]() mutable -> katana::Result<void> {
+       arrow_props = StandardArrowProperties()]() mutable
+      -> katana::CopyableResult<void> {
         auto res = HandleBadParquetTypes(table);
         if (!res) {
           return res.error().WithContext(
@@ -241,11 +241,18 @@ tsuba::ParquetWriter::StoreParquet(
         }
 
         TSUBA_PTP(tsuba::internal::FaultSensitivity::Normal);
-        return ff->Persist();
+        if (auto res = ff->Persist(); !res) {
+          return res.error();
+        }
+        return katana::CopyableResultSuccess();
       });
 
   if (!desc) {
-    return future.get();
+    auto res = future.get();
+    if (!res) {
+      return res.error();
+    }
+    return katana::ResultSuccess();
   }
 
   desc->AddOp(std::move(future), uri.string());

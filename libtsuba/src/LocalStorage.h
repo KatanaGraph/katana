@@ -52,28 +52,36 @@ public:
   }
 
   // get on future can potentially block (bulk synchronous parallel)
-  std::future<katana::Result<void>> PutAsync(
+  std::future<katana::CopyableResult<void>> PutAsync(
       const std::string& uri, const uint8_t* data, uint64_t size) override {
     // No need for AsyncPut to local storage right now
     if (auto write_res = WriteFile(uri, data, size); !write_res) {
+      katana::CopyableErrorInfo cei{write_res.error()};
       return std::async(
-          [=]() -> katana::Result<void> { return write_res.error(); });
+          std::launch::deferred,
+          [=]() -> katana::CopyableResult<void> { return cei; });
     }
     return std::async(
-        []() -> katana::Result<void> { return katana::ResultSuccess(); });
+        std::launch::deferred, []() -> katana::CopyableResult<void> {
+          return katana::CopyableResultSuccess();
+        });
   }
-  std::future<katana::Result<void>> GetAsync(
+  std::future<katana::CopyableResult<void>> GetAsync(
       const std::string& uri, uint64_t start, uint64_t size,
       uint8_t* result_buf) override {
     // I suppose there is no need for AsyncGet to local storage either
     if (auto read_res = ReadFile(uri, start, size, result_buf); !read_res) {
+      katana::CopyableErrorInfo cei{read_res.error()};
       return std::async(
-          [=]() -> katana::Result<void> { return read_res.error(); });
+          std::launch::deferred,
+          [=]() -> katana::CopyableResult<void> { return cei; });
     }
     return std::async(
-        []() -> katana::Result<void> { return katana::ResultSuccess(); });
+        std::launch::deferred, []() -> katana::CopyableResult<void> {
+          return katana::CopyableResultSuccess();
+        });
   }
-  std::future<katana::Result<void>> ListAsync(
+  std::future<katana::CopyableResult<void>> ListAsync(
       const std::string& uri, std::vector<std::string>* list,
       std::vector<uint64_t>* size) override;
 

@@ -31,17 +31,17 @@ tsuba::AsyncOpGroup::Finish() {
   }
 
   if (errors_ > 0) {
-    return last_error_.error().WithContext(
+    return last_error_.WithContext(
         "{} of {} async write ops returned errors", errors_, total_);
   }
 
-  return last_error_;
+  return katana::ResultSuccess();
 }
 
 void
 tsuba::AsyncOpGroup::AddOp(
-    std::future<katana::Result<void>> future, std::string file,
-    const std::function<katana::Result<void>()>& on_complete) {
+    std::future<katana::CopyableResult<void>> future, std::string file,
+    const std::function<katana::CopyableResult<void>()>& on_complete) {
   pending_ops_.emplace_back(AsyncOp{
       .result = std::move(future),
       .location = std::move(file),

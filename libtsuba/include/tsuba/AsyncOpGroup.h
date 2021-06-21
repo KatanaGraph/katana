@@ -11,16 +11,16 @@ namespace tsuba {
 class AsyncOpGroup {
 public:
   struct AsyncOp {
-    std::future<katana::Result<void>> result;
+    std::future<katana::CopyableResult<void>> result;
     std::string location;
-    std::function<katana::Result<void>()> on_complete;
+    std::function<katana::CopyableResult<void>()> on_complete;
   };
 
   /// Add future to the list of futures this descriptor will wait for, note
   /// the file name for debugging.
   void AddOp(
-      std::future<katana::Result<void>> future, std::string file,
-      const std::function<katana::Result<void>()>& on_complete);
+      std::future<katana::CopyableResult<void>> future, std::string file,
+      const std::function<katana::CopyableResult<void>()>& on_complete);
 
   /// Wait until all operations this descriptor knows about have completed
   katana::Result<void> Finish();
@@ -31,7 +31,7 @@ private:
   std::list<AsyncOp> pending_ops_;
   uint64_t errors_{0};
   uint64_t total_{0};
-  katana::Result<void> last_error_{katana::ResultSuccess()};
+  katana::CopyableErrorInfo last_error_;
 };
 
 }  // namespace tsuba

@@ -23,32 +23,33 @@ public:
   /// the file name for debugging. `on_complete` is guaranteed to be called
   /// in FIFO order
   void AddOp(
-      std::future<katana::Result<void>> future, std::string file,
-      const std::function<katana::Result<void>()>& on_complete);
+      std::future<katana::CopyableResult<void>> future, std::string file,
+      const std::function<katana::CopyableResult<void>()>& on_complete);
 
   /// same as AddOp, but the future may return a data type which can then be
   /// consumed by on_complete
   template <typename RetType>
   void AddReturnsOp(
-      std::future<katana::Result<RetType>> future, const std::string& file,
-      const std::function<katana::Result<void>(RetType)>& on_complete) {
+      std::future<katana::CopyableResult<RetType>> future,
+      const std::string& file,
+      const std::function<katana::CopyableResult<void>(RetType)>& on_complete) {
     // n.b., make shared instead of unique because move capture below prevents
     // passing generic_complete_fn as a std::function
     auto ret_val = std::make_shared<RetType>();
     auto new_future = std::async(
         std::launch::deferred,
-        [future = std::move(future),
-         &ret_val_storage = *ret_val]() mutable -> katana::Result<void> {
+        [future = std::move(future), &ret_val_storage = *ret_val]() mutable
+        -> katana::CopyableResult<void> {
           auto res = future.get();
           if (!res) {
             return res.error();
           }
           ret_val_storage = res.value();
-          return katana::ResultSuccess();
+          return katana::CopyableResultSuccess();
         });
 
-    std::function<katana::Result<void>()> generic_complete_fn =
-        [ret_val, on_complete]() -> katana::Result<void> {
+    std::function<katana::CopyableResult<void>()> generic_complete_fn =
+        [ret_val, on_complete]() -> katana::CopyableResult<void> {
       return on_complete(std::move(*ret_val));
     };
     AddOp(std::move(new_future), file, generic_complete_fn);

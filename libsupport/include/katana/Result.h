@@ -45,6 +45,8 @@ struct abort_policy : BOOST_OUTCOME_V2_NAMESPACE::policy::base {
 
 }  // namespace internal
 
+class CopyableErrorInfo;
+
 /// An ErrorInfo contains additional context about an error in addition to an
 /// error code. It works together with Result and user-defined error codes.
 ///
@@ -126,6 +128,8 @@ public:
       : ErrorInfo(ec) {
     Prepend(context.c_str(), context.c_str() + context.size());
   }
+
+  ErrorInfo(const CopyableErrorInfo& cei);
 
   const std::error_code& error_code() const { return error_code_; }
 
@@ -218,9 +222,35 @@ private:
 /// to store errors, e.g., collecting results across threads.
 class KATANA_EXPORT CopyableErrorInfo {
 public:
+  CopyableErrorInfo(const std::error_code& ec) : error_code_(ec) {}
+
+  CopyableErrorInfo() : CopyableErrorInfo(std::error_code()) {}
+
   CopyableErrorInfo(const ErrorInfo& ei);
 
+  template <typename F, typename... Args>
+  CopyableErrorInfo WithContext(F&& fmt_string, Args&&... args) {
+    PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
+
+    return *this;
+  }
+
+  template <typename ErrorEnum, typename F, typename... Args>
+  std::enable_if_t<
+      std::is_error_code_enum_v<ErrorEnum> ||
+          std::is_error_condition_enum_v<ErrorEnum>,
+      CopyableErrorInfo>
+  WithContext(ErrorEnum err, F&& fmt_string, Args&&... args) {
+    error_code_ = make_error_code(err);
+
+    PrependFmt(std::forward<F>(fmt_string), std::forward<Args>(args)...);
+
+    return *this;
+  }
+
   const std::error_code& error_code() const { return error_code_; }
+
+  const std::string& message() const { return message_; }
 
   friend std::ostream& operator<<(
       std::ostream& out, const CopyableErrorInfo& ei) {
@@ -230,6 +260,21 @@ public:
   std::ostream& Write(std::ostream& out) const;
 
 private:
+  template <typename F, typename... Args>
+  void PrependFmt(F fmt_string, Args&&... args) {
+    std::vector<char> out;
+    fmt::format_to(
+        std::back_inserter(out), fmt_string, std::forward<Args>(args)...);
+    Prepend(out.data(), out.data() + out.size());
+  }
+
+  void Prepend(const char* begin, const char* end) {
+    if (!message_.empty()) {
+      message_.insert(0, std::string(": "));
+    }
+    message_.insert(message_.begin(), begin, end);
+  }
+
   std::error_code error_code_;
   std::string message_;
 };
@@ -241,10 +286,23 @@ make_error_code(ErrorInfo e) noexcept {
   return e.error_code();
 }
 
+/// make_error_code converts CopyableErrorInfo into a standard error code. It is
+/// an STL and boost::outcome extension point and will be found with ADL if
+/// necessary.
+inline std::error_code
+make_error_code(CopyableErrorInfo e) noexcept {
+  return e.error_code();
+}
+
 /// A Result is a T or an ErrorInfo.
 template <class T>
 using Result = BOOST_OUTCOME_V2_NAMESPACE::std_result<
     T, ErrorInfo, internal::abort_policy>;
+
+/// A Result is a T or an CopyableErrorInfo.
+template <class T>
+using CopyableResult = BOOST_OUTCOME_V2_NAMESPACE::std_result<
+    T, CopyableErrorInfo, internal::abort_policy>;
 
 inline bool
 operator==(const ErrorInfo& a, const ErrorInfo& b) {
@@ -256,8 +314,19 @@ operator!=(const ErrorInfo& a, const ErrorInfo& b) {
   return !(a == b);
 }
 
-//TODO (serge): make this function back inline after the issue in nvcc is fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
+inline bool
+operator==(const CopyableErrorInfo& a, const CopyableErrorInfo& b) {
+  return make_error_code(a) == make_error_code(b);
+}
+
+inline bool
+operator!=(const CopyableErrorInfo& a, const CopyableErrorInfo& b) {
+  return !(a == b);
+}
+
+//TODO (serge): make these functions back inline after the issue in nvcc is fixed. Currently nvcc fails in CI if this is inline and leaks to .cu files.
 KATANA_EXPORT Result<void> ResultSuccess();
+KATANA_EXPORT CopyableResult<void> CopyableResultSuccess();
 
 inline std::error_code
 ResultErrno() {
@@ -268,6 +337,11 @@ ResultErrno() {
 namespace internal {
 
 /// Support functions for KATANA_CHECKED
+template <class T>
+bool
+CheckedExpressionFailed(const CopyableResult<T>& result) {
+  return !result;
+}
 
 template <class T>
 bool
@@ -289,6 +363,12 @@ CheckedExpressionFailed(const arrow::Result<T>& result) {
 template <class T>
 ErrorInfo
 CheckedExpressionToError(const Result<T>& result) {
+  return result.error();
+}
+
+template <class T>
+CopyableErrorInfo
+CheckedExpressionToError(const CopyableResult<T>& result) {
   return result.error();
 }
 
@@ -329,6 +409,17 @@ CheckedExpressionToValue(Result<T>&& result) {
 
 inline int
 CheckedExpressionToValue(Result<void>&&) {
+  return 0;
+}
+
+template <class T>
+std::enable_if_t<!std::is_same<T, void>::value, T&&>
+CheckedExpressionToValue(CopyableResult<T>&& result) {
+  return std::move(result.value());
+}
+
+inline int
+CheckedExpressionToValue(CopyableResult<void>&&) {
   return 0;
 }
 

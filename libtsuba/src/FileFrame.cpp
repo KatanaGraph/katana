@@ -120,17 +120,19 @@ FileFrame::Persist() {
   return katana::ResultSuccess();
 }
 
-std::future<katana::Result<void>>
+std::future<katana::CopyableResult<void>>
 FileFrame::PersistAsync() {
   if (!valid_) {
-    return std::async(std::launch::deferred, []() -> katana::Result<void> {
-      return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
-    });
+    return std::async(
+        std::launch::deferred, []() -> katana::CopyableResult<void> {
+          return KATANA_ERROR(ErrorCode::InvalidArgument, "not bound");
+        });
   }
   if (path_.empty()) {
-    return std::async(std::launch::deferred, []() -> katana::Result<void> {
-      return KATANA_ERROR(ErrorCode::InvalidArgument, "no path provided");
-    });
+    return std::async(
+        std::launch::deferred, []() -> katana::CopyableResult<void> {
+          return KATANA_ERROR(ErrorCode::InvalidArgument, "no path provided");
+        });
   }
   return tsuba::FileStoreAsync(path_, map_start_, cursor_);
 }

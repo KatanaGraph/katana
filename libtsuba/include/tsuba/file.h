@@ -36,7 +36,11 @@ struct StatBuf {
 KATANA_EXPORT katana::Result<void> FileStat(
     const std::string& uri, StatBuf* s_buf);
 
-// Take whatever is in @data and put it a file called @uri
+/// Take whatever is in a buffer and put it in the file
+///
+/// \param uri the destination file to fill with data
+/// \param data a pointer to the buffer containing data
+/// \param size the length of the buffer
 KATANA_EXPORT katana::Result<void> FileStore(
     const std::string& uri, const void* data, uint64_t size);
 
@@ -65,8 +69,12 @@ KATANA_EXPORT katana::Result<void> FileRemoteCopy(
     const std::string& source_uri, const std::string& dest_uri, uint64_t begin,
     uint64_t size);
 
-// Take whatever is in @data and start putting it a the file called @uri
-KATANA_EXPORT std::future<katana::Result<void>> FileStoreAsync(
+/// Take whatever is in a buffer and put it in the file
+///
+/// \param uri the destination file to fill with data
+/// \param data a pointer to the buffer containing data
+/// \param size the length of the buffer
+KATANA_EXPORT std::future<katana::CopyableResult<void>> FileStoreAsync(
     const std::string& uri, const void* data, uint64_t size);
 
 // read a part of the file into a caller defined buffer
@@ -82,7 +90,7 @@ FileGet(const StrType& uri, T* obj) {
 }
 
 // start reading a part of the file into a caller defined buffer
-KATANA_EXPORT std::future<katana::Result<void>> FileGetAsync(
+KATANA_EXPORT std::future<katana::CopyableResult<void>> FileGetAsync(
     const std::string& uri, void* result_buffer, uint64_t begin, uint64_t size);
 
 /// List the set of files in a directory
@@ -94,7 +102,7 @@ KATANA_EXPORT std::future<katana::Result<void>> FileGetAsync(
 ///
 /// \return future; files will be in `list` after this object
 /// reports its return value
-KATANA_EXPORT std::future<katana::Result<void>> FileListAsync(
+KATANA_EXPORT std::future<katana::CopyableResult<void>> FileListAsync(
     const std::string& directory, std::vector<std::string>* list,
     std::vector<uint64_t>* size = nullptr);
 

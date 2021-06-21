@@ -5,6 +5,8 @@ channels:
  - conda-forge
 dependencies:
  - arrow-cpp<3.0.0a0
+ # TODO(amp): Remove as soon as libthrift/arrow-cpp are fixed. https://github.com/conda-forge/arrow-cpp-feedstock/issues/461
+ - libthrift 0.14.1
  - backward-cpp>=1.4
  - benchmark
  - black=19.10

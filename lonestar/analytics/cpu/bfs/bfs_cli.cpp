@@ -76,6 +76,15 @@ static cll::opt<bool> thread_spin(
               "condition variable (default false)"),
     cll::init(false));
 
+static cll::opt<BfsPlan::Algorithm> algo(
+    "algo", cll::desc("Choose an algorithm (default value SyncDO):"),
+    cll::values(
+        clEnumValN(BfsPlan::kAsynchronous, "Async", "Asynchronous"),
+        clEnumValN(
+            BfsPlan::kSynchronousDirectOpt, "SyncDO",
+            "Synchronous direction optimization")),
+    cll::init(BfsPlan::kSynchronousDirectOpt));
+
 std::string
 AlgorithmName(BfsPlan::Algorithm algorithm) {
   switch (algorithm) {
@@ -106,7 +115,19 @@ main(int argc, char** argv) {
   katana::StatTimer totalTime("TimerTotal");
   totalTime.start();
 
-  BfsPlan::Algorithm algo = BfsPlan::kSynchronousDirectOpt;
+  BfsPlan plan;
+  switch (algo.getValue()) {
+  case BfsPlan::kAsynchronous: {
+    plan = BfsPlan::Asynchronous();
+    break;
+  }
+  case BfsPlan::kSynchronousDirectOpt: {
+    plan = BfsPlan::SynchronousDirectOpt(alpha, beta);
+    break;
+  }
+  default:
+    KATANA_LOG_FATAL("Unsupported algorithm: {}", algo.getValue());
+  }
 
   std::cout << "Reading from file: " << inputFile << "\n";
   std::unique_ptr<katana::PropertyGraph> pg =
@@ -140,8 +161,6 @@ main(int argc, char** argv) {
   }
   uint32_t num_sources = startNodes.size();
   std::cout << "Running BFS for " << num_sources << " sources\n";
-
-  BfsPlan plan = BfsPlan::SynchronousDirectOpt(alpha, beta);
 
   for (auto start_node : startNodes) {
     if (start_node >= pg->topology().num_nodes()) {

@@ -48,6 +48,8 @@ using DegreeWeight = katana::PODProperty<EdgeWeightType>;
 template <typename EdgeWeightType>
 using EdgeWeight = katana::PODProperty<EdgeWeightType>;
 
+using EdgeType = katana::PODProperty<uint8_t>;
+
 template <typename _Graph, typename _EdgeType, typename _CommunityType>
 struct ClusteringImplementationBase {
   using Graph = _Graph;
@@ -516,6 +518,153 @@ struct ClusteringImplementationBase {
       return r;
     }
     return katana::ResultSuccess();
+  }
+
+  template <typename NodeData, typename EdgeData, typename EdgeWeightType>
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> GraphFiltering(
+      const Graph& graph, katana::PropertyGraph* pfg_mutable,
+      const std::vector<std::string>& temp_node_property_names,
+      const std::vector<std::string>& temp_edge_property_names) {
+    //	  using GNode = typename Graph::Node;
+
+    std::vector<std::vector<uint32_t>> edges_id(graph.num_nodes());
+    std::vector<std::vector<std::tuple<EdgeWeightType, uint8_t>>> edges_data(
+        graph.num_nodes());
+
+    katana::do_all(
+        katana::iterate(uint64_t{0}, graph.num_nodes()),
+        [&](uint32_t c) {
+          for (auto ii = graph.edge_begin(c); ii != graph.edge_end(c); ++ii) {
+            auto dst = graph.GetEdgeDest(ii);
+
+            if (graph.template GetEdgeData<EdgeType>(ii) == (uint8_t)1) {
+              edges_id[c].push_back(
+                  graph.template GetData<CurrentCommunityId>(dst));
+              edges_data[c].push_back(std::make_tuple(
+                  graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii),
+                  (uint8_t)1));
+            }
+          }
+        },
+        katana::steal());
+
+    uint64_t num_nodes_next = graph.num_nodes();
+
+    /* Serial loop to reduce all the edge counts */
+    std::vector<uint64_t> prefix_edges_count(graph.num_nodes());
+    katana::GAccumulator<uint64_t> num_edges_acc;
+    katana::do_all(
+        katana::iterate(uint64_t{0}, graph.num_nodes()), [&](uint64_t c) {
+          prefix_edges_count[c] = edges_id[c].size();
+          num_edges_acc += prefix_edges_count[c];
+        });
+
+    uint64_t num_edges_next = num_edges_acc.reduce();
+    for (uint64_t c = 1; c < graph.num_nodes(); ++c) {
+      prefix_edges_count[c] += prefix_edges_count[c - 1];
+    }
+
+    KATANA_LOG_DEBUG_ASSERT(
+        prefix_edges_count[graph.num_nodes() - 1] == num_edges_next);
+
+    // Remove all the existing node/edge properties
+    for (auto property : temp_node_property_names) {
+      if (auto r = pfg_mutable->RemoveNodeProperty(property); !r) {
+        return r.error();
+      }
+    }
+    for (auto property : temp_edge_property_names) {
+      if (auto r = pfg_mutable->RemoveEdgeProperty(property); !r) {
+        return r.error();
+      }
+    }
+
+    const katana::GraphTopology& topology = pfg_mutable->topology();
+
+    using Node = katana::GraphTopology::Node;
+    using Edge = katana::GraphTopology::Edge;
+
+    katana::LargeArray<Edge> out_indices_next;
+    out_indices_next.allocateInterleaved(num_nodes_next);
+    katana::LargeArray<Node> out_dests_next;
+    out_dests_next.allocateInterleaved(num_edges_next);
+
+    katana::do_all(
+        katana::iterate(uint64_t{0}, num_nodes_next),
+        [&](uint64_t i) {
+          out_indices_next[i] = topology.out_indices->Value(i);
+        },
+        katana::no_stats());
+
+    katana::do_all(
+        katana::iterate(uint64_t{0}, num_edges_next),
+        [&](uint64_t i) { out_dests_next[i] = topology.out_dests->Value(i); },
+        katana::no_stats());
+
+    auto topo_next = std::make_unique<katana::GraphTopology>(
+        std::move(out_indices_next), std::move(out_dests_next));
+
+    auto pfg_next = std::make_unique<katana::PropertyGraph>();
+    if (auto r = pfg_next->SetTopology(std::move(topo_next)); !r) {
+      return r.error();
+    }
+
+    const katana::GraphTopology& topology_next = pfg_next->topology();
+
+    auto out_indices_view_result =
+        katana::ConstructPropertyView<katana::UInt64Property>(
+            topology_next.out_indices.get());
+    if (!out_indices_view_result) {
+      return out_indices_view_result.error();
+    }
+    auto out_indices_view = std::move(out_indices_view_result.value());
+
+    auto out_dests_view_result =
+        katana::ConstructPropertyView<katana::UInt32Property>(
+            topology_next.out_dests.get());
+    if (!out_dests_view_result) {
+      return out_dests_view_result.error();
+    }
+    auto out_dests_view = std::move(out_dests_view_result.value());
+
+    if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
+            pfg_next.get(), temp_node_property_names);
+        !result) {
+      return result.error();
+    }
+
+    if (auto result = katana::analytics::ConstructEdgeProperties<EdgeData>(
+            pfg_next.get(), temp_edge_property_names);
+        !result) {
+      return result.error();
+    }
+
+    auto graph_result = Graph::Make(pfg_next.get());
+    if (!graph_result) {
+      return graph_result.error();
+    }
+
+    Graph graph_curr = graph_result.value();
+    katana::do_all(
+        katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t n) {
+          out_indices_view[n] = prefix_edges_count[n];
+          uint64_t number_of_edges =
+              (n == 0) ? prefix_edges_count[0]
+                       : (prefix_edges_count[n] - prefix_edges_count[n - 1]);
+          uint64_t start_index = (n == 0) ? 0 : prefix_edges_count[n - 1];
+          for (uint32_t k = 0; k < number_of_edges; ++k) {
+            out_dests_view[start_index + k] = edges_id[n][k];
+            graph_curr.template GetEdgeData<EdgeWeight<EdgeWeightType>>(
+                start_index + k) = std::get<0>(edges_data[n][k]);
+            graph_curr.template GetEdgeData<EdgeType>(start_index + k) =
+                std::get<1>(edges_data[n][k]);
+          }
+        });
+
+    //TimerConstructFrom.stop();
+
+    ///TimerGraphBuild.stop();
+    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));
   }
 
   /**

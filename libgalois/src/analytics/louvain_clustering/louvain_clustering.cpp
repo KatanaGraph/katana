@@ -35,11 +35,11 @@ struct LouvainClusteringImplementation
               std::tuple<
                   PreviousCommunityId, CurrentCommunityId,
                   DegreeWeight<EdgeWeightType>>,
-              std::tuple<EdgeWeight<EdgeWeightType>>>,
+              std::tuple<EdgeWeight<EdgeWeightType>, EdgeType>>,
           EdgeWeightType, CommunityType<EdgeWeightType>> {
   using NodeData = std::tuple<
       PreviousCommunityId, CurrentCommunityId, DegreeWeight<EdgeWeightType>>;
-  using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
+  using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>, EdgeType>;
   using CommTy = CommunityType<EdgeWeightType>;
   using CommunityArray = katana::NUMAArray<CommTy>;
 
@@ -356,6 +356,7 @@ struct LouvainClusteringImplementation
 public:
   katana::Result<void> LouvainClustering(
       katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
+      const std::string& edge_type_property_name,
       const std::vector<std::string>& temp_node_property_names,
       katana::NUMAArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
     /*
@@ -382,17 +383,51 @@ public:
     }
     std::vector<std::string> temp_edge_property_names = {
         "_katana_temporary_property_" + edge_weight_property_name};
+
+    katana::gPrint("before temp edger \n");
+    temp_edge_property_names.push_back(
+        "_katana_temporary_property_" + edge_type_property_name);
     if (auto result = ConstructEdgeProperties<EdgeData>(
             pfg_mutable.get(), temp_edge_property_names);
         !result) {
       return result.error();
     }
 
+    katana::gPrint("after edge result\n");
+
+    //add here
     auto graph_result = Graph::Make(pfg);
     if (!graph_result) {
       return graph_result.error();
     }
+    katana::gPrint("make graph\n");
     Graph graph_curr = graph_result.value();
+
+    if (!edge_type_property_name.empty()) {
+      katana::gPrint("inside \n");
+      katana::gPrint("inside \n");
+      katana::do_all(
+          katana::iterate((uint64_t)0, graph_curr.num_nodes()),
+          [&](uint64_t n) {
+            graph_curr.template GetData<CurrentCommunityId>(n) = n;
+          });
+
+      auto filtered_graph_result =
+          Base::template GraphFiltering<NodeData, EdgeData, EdgeWeightType>(
+              graph_curr, pfg_mutable.get(), temp_node_property_names,
+              temp_edge_property_names);
+      if (!filtered_graph_result) {
+        return filtered_graph_result.error();
+      }
+
+      pfg_mutable = std::move(filtered_graph_result.value());
+
+      graph_result = Graph::Make(pfg);
+      if (!graph_result) {
+        return graph_result.error();
+      }
+      graph_curr = graph_result.value();
+    }
 
     /*
     * Vertex following optimization
@@ -536,6 +571,7 @@ template <typename EdgeWeightType>
 static katana::Result<void>
 LouvainClusteringWithWrap(
     katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
+    const std::string& edge_type_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan) {
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
@@ -568,8 +604,8 @@ LouvainClusteringWithWrap(
 
   LouvainClusteringImplementation<EdgeWeightType> impl{};
   if (auto r = impl.LouvainClustering(
-          pfg, edge_weight_property_name, temp_node_property_names,
-          clusters_orig, plan);
+          pfg, edge_weight_property_name, edge_type_property_name,
+          temp_node_property_names, clusters_orig, plan);
       !r) {
     return r.error();
   }
@@ -603,26 +639,33 @@ LouvainClusteringWithWrap(
 katana::Result<void>
 katana::analytics::LouvainClustering(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::string& edge_type_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan) {
   switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id:
     return LouvainClusteringWithWrap<uint32_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   case arrow::Int32Type::type_id:
     return LouvainClusteringWithWrap<int32_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   case arrow::UInt64Type::type_id:
     return LouvainClusteringWithWrap<uint64_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   case arrow::Int64Type::type_id:
     return LouvainClusteringWithWrap<int64_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   case arrow::FloatType::type_id:
     return LouvainClusteringWithWrap<float>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   case arrow::DoubleType::type_id:
     return LouvainClusteringWithWrap<double>(
-        pg, edge_weight_property_name, output_property_name, plan);
+        pg, edge_weight_property_name, edge_type_property_name,
+        output_property_name, plan);
   default:
     return katana::ErrorCode::TypeError;
   }

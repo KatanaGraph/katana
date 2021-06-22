@@ -70,6 +70,10 @@ static cll::opt<LouvainClusteringPlan::Algorithm> algo(
             "Use Deterministic implementation")),
     cll::init(LouvainClusteringPlan::kDoAll));
 
+static cll::opt<std::string> edge_type_property_name(
+    "edge_type_property_name", cll::desc("Name of the edge type property"),
+    cll::init(""));
+
 std::string
 AlgorithmName(LouvainClusteringPlan::Algorithm algorithm) {
   switch (algorithm) {
@@ -122,8 +126,8 @@ main(int argc, char** argv) {
     KATANA_LOG_FATAL("invalid algorithm");
   }
 
-  auto pg_result =
-      LouvainClustering(pg.get(), edge_property_name, "clusterId", plan);
+  auto pg_result = LouvainClustering(
+      pg.get(), edge_property_name, edge_type_property_name, "clusterId", plan);
   if (!pg_result) {
     KATANA_LOG_FATAL("Failed to run LouvainClustering: {}", pg_result.error());
   }

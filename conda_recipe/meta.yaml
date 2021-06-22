@@ -23,7 +23,6 @@ requirements:
     - pygithub
     - packaging
     - libxml2>=2.9.10
-    - bliss>=0.73
   host:
     - jinja2
     - cython>=0.29.12
@@ -47,7 +46,6 @@ requirements:
     - nlohmann_json>=3.7.3
     - openblas>=0.3.12
     - zlib>=1.2.11
-    - bliss>=0.73
 
 outputs:
   - name: katana-cpp

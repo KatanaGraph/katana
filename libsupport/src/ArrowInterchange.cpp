@@ -1,6 +1,7 @@
 #include "katana/ArrowInterchange.h"
 
 #include <iostream>
+#include <iterator>
 #include <sstream>
 
 #include "katana/Random.h"
@@ -165,19 +166,20 @@ katana::NullChunkedArray(
 
 void
 katana::DiffFormatTo(
-    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    fmt::memory_buffer& buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
     const std::shared_ptr<arrow::ChunkedArray>& a1,
     size_t approx_total_characters) {
   if (a0->type() != a1->type()) {
     fmt::format_to(
-        *buf, "Arrays are different types {}/{}\n", a0->type()->name(),
-        a1->type()->name());
+        std::back_inserter(buf), "Arrays are different types {}/{}\n",
+        a0->type()->name(), a1->type()->name());
     return;
   }
   auto maybe_b0 = Unchunk(a0);
   if (!maybe_b0) {
     fmt::format_to(
-        *buf, "failed conversion of chunked array to array type: {} reason: {}",
+        std::back_inserter(buf),
+        "failed conversion of chunked array to array type: {} reason: {}",
         a0->type()->name(), maybe_b0.error());
     return;
   }
@@ -185,7 +187,8 @@ katana::DiffFormatTo(
   auto maybe_b1 = Unchunk(a1);
   if (!maybe_b1) {
     fmt::format_to(
-        *buf, "failed conversion of chunked array to array type: {} reason: {}",
+        std::back_inserter(buf),
+        "failed conversion of chunked array to array type: {} reason: {}",
         a1->type()->name(), maybe_b1.error());
   }
   auto b1 = maybe_b1.value();
@@ -201,14 +204,14 @@ katana::DiffFormatTo(
     const auto after = str.find_first_not_of('\n');
     auto orig_len = str.size() - after;
     if (orig_len <= approx_total_characters) {
-      fmt::format_to(*buf, "{}", str.substr(after));
+      fmt::format_to(std::back_inserter(buf), "{}", str.substr(after));
     } else {
       // Cut it off at next newline, but +1 to keep that newline
       str = str.substr(
           after, str.find_first_of('\n', approx_total_characters + after) + 1);
       // Indicator that we have truncated the output
       str += "...\n";
-      fmt::format_to(*buf, "{}", str);
+      fmt::format_to(std::back_inserter(buf), "{}", str);
     }
   }
 }

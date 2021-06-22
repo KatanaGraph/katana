@@ -93,7 +93,7 @@ TestFmt() {
   std::string found = ToString(err);
 
   fmt::memory_buffer fbuf;
-  fmt::format_to(fbuf, "{}", err);
+  fmt::format_to(std::back_inserter(fbuf), "{}", err);
   std::string fstr(fbuf.begin(), fbuf.end());
   KATANA_LOG_VASSERT(
       fstr == found,

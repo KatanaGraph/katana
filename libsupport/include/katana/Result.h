@@ -3,6 +3,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <iterator>
 #include <ostream>
 #include <system_error>
 
@@ -133,7 +134,8 @@ public:
       const char* file_name, int line_no, const std::error_code& ec,
       F fmt_string, Args&&... args) {
     fmt::memory_buffer out;
-    fmt::format_to(out, fmt_string, std::forward<Args>(args)...);
+    fmt::format_to(
+        std::back_inserter(out), fmt_string, std::forward<Args>(args)...);
     const char* base_name = std::strrchr(file_name, '/');
     if (!base_name) {
       base_name = file_name;
@@ -141,10 +143,10 @@ public:
       base_name++;
     }
 
-    fmt::format_to(out, " ({}:{})", base_name, line_no);
+    fmt::format_to(std::back_inserter(out), " ({}:{})", base_name, line_no);
 
     ErrorInfo ei(ec);
-    ei.Prepend(out.begin(), out.end());
+    ei.Prepend(out.data(), out.data() + out.size());
 
     return ei;
   }
@@ -182,9 +184,10 @@ public:
 private:
   template <typename F, typename... Args>
   void PrependFmt(F fmt_string, Args && ... args) {
-    fmt::memory_buffer out;
-    fmt::format_to(out, fmt_string, std::forward<Args>(args)...);
-    Prepend(out.begin(), out.end());
+    std::vector<char> out;
+    fmt::format_to(
+        std::back_inserter(out), fmt_string, std::forward<Args>(args)...);
+    Prepend(out.data(), out.data() + out.size());
   }
 
   void Prepend(const char* begin, const char* end);

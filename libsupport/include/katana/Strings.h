@@ -62,10 +62,10 @@ Join(std::string_view sep, I begin, I end) {
   fmt::memory_buffer buf;
   auto last = --end;
   for (auto it = begin; it != last; ++it) {
-    fmt::format_to(buf, "{}{}", *it, sep);
+    fmt::format_to(std::back_inserter(buf), "{}{}", *it, sep);
   }
-  fmt::format_to(buf, "{}", *last);
-  return to_string(buf);
+  fmt::format_to(std::back_inserter(buf), "{}", *last);
+  return std::string(buf.begin(), buf.end());
 }
 
 /// Join returns a string that is the concatenation of every object in

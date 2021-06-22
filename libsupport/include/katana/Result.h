@@ -266,6 +266,17 @@ struct is_result : std::false_type {};
 template <class T>
 struct is_result<Result<T>> : std::true_type {};
 
+template <class T>
+std::enable_if_t<!std::is_same<T, void>::value, T&&>
+extract_value(Result<T>&& result) {
+  return std::move(result.value());
+}
+
+inline int
+extract_value(Result<void>&&) {
+  return 0;
+}
+
 #define KATANA_CHECK_NAME(x, y) x##y
 
 #define KATANA_CHECK_IMPL(result_name, expression)                             \
@@ -277,7 +288,7 @@ struct is_result<Result<T>> : std::true_type {};
     if (!result_name) {                                                        \
       return result_name.error().WithContext("here");                          \
     }                                                                          \
-    std::move(result_name);                                                    \
+    std::move(::katana::extract_value(std::move(result_name)));                \
   })
 
 #define KATANA_CHECK(expression)                                               \

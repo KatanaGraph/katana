@@ -36,7 +36,7 @@ requirements:
     - backward-cpp>=1.4
     - boost-cpp>=1.74
     - elfutils
-    - fmt>=6.2.1,<8.0a0
+    - fmt>=6.2.1
     - libcurl>=7.66
     - libxml2>=2.9.10
     - llvm>=8
@@ -67,7 +67,7 @@ outputs:
         - backward-cpp>=1.4
         - boost-cpp>=1.74
         - elfutils
-        - fmt>=6.2.1,<8.0a0
+        - fmt>=6.2.1
         - libcurl>=7.66
         - libxml2>=2.9.10
         - llvm>=8

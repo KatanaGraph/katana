@@ -260,6 +260,29 @@ ResultErrno() {
   return std::error_code(errno, std::system_category());
 }
 
+template <class>
+struct is_result : std::false_type {};
+
+template <class T>
+struct is_result<Result<T>> : std::true_type {};
+
+#define KATANA_CHECK_NAME(x, y) x##y
+
+#define KATANA_CHECK_IMPL(result_name, expression)                             \
+  ({                                                                           \
+    auto result_name = (expression);                                           \
+    static_assert(                                                             \
+        ::katana::is_result<decltype(result_name)>::value,                     \
+        "KATANA_CHECK requires a katana::Result");                             \
+    if (!result_name) {                                                        \
+      return result_name.error().WithContext("here");                          \
+    }                                                                          \
+    std::move(result_name);                                                    \
+  })
+
+#define KATANA_CHECK(expression)                                               \
+  KATANA_CHECK_IMPL(KATANA_CHECK_NAME(_error_or_value, __COUNTER__), expression)
+
 }  // namespace katana
 
 #endif

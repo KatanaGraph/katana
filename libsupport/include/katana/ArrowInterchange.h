@@ -300,7 +300,7 @@ KATANA_EXPORT std::shared_ptr<arrow::ChunkedArray> NullChunkedArray(
 /// Print the differences between two ChunkedArrays only using
 /// about approx_total_characters
 KATANA_EXPORT void DiffFormatTo(
-    fmt::memory_buffer* buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
+    fmt::memory_buffer& buf, const std::shared_ptr<arrow::ChunkedArray>& a0,
     const std::shared_ptr<arrow::ChunkedArray>& a1,
     size_t approx_total_characters = 150);
 

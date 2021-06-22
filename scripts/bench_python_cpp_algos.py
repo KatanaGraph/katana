@@ -148,7 +148,7 @@ def run_pagerank(property_graph: PropertyGraph, _input_args):
     property_graph.remove_node_property(property_name)
 
 
-def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sources, trial):
+def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sources):
     property_name = "NewProp"
     start_node = input_args["source_node"]
 
@@ -161,20 +161,22 @@ def run_bc(property_graph: PropertyGraph, input_args, source_node_file, num_sour
             sources = [int(l) for l in fi.readlines()]
 
         assert num_sources <= len(sources)
+        runs = (len(sources) + num_sources - 1) // num_sources
 
-        start_idx = (num_sources * trial) % len(sources)
-        rotated_sources = sources[start_idx:] + sources[:start_idx]
-        sources = rotated_sources[:num_sources]
+        for run in range(0, runs):
+            start_idx = (num_sources * run) % len(sources)
+            rotated_sources = sources[start_idx:] + sources[:start_idx]
+            sources = rotated_sources[:num_sources]
 
-        print(f"Using sources: {sources}")
-        with time_block("betweenness centrality"):
-            analytics.betweenness_centrality(property_graph, property_name, sources, bc_plan)
+            print(f"Using sources: {sources}")
+            with time_block("betweenness centrality"):
+                analytics.betweenness_centrality(property_graph, property_name, sources, bc_plan)
 
-        check_schema(property_graph, property_name)
+            check_schema(property_graph, property_name)
 
-        stats = analytics.BetweennessCentralityStatistics(property_graph, property_name)
-        print(f"STATS:\n{stats}")
-        property_graph.remove_node_property(property_name)
+            stats = analytics.BetweennessCentralityStatistics(property_graph, property_name)
+            print(f"STATS:\n{stats}")
+            property_graph.remove_node_property(property_name)
     else:
         sources = [start_node]
         print(f"Using sources: {sources}")
@@ -329,8 +331,8 @@ def run_all_gap(args):
                 run_jaccard(graph, input)
 
         if args.application == "bc":
-            for trial in range(args.trials):
-                run_bc(graph, input, args.source_nodes, 4, trial)
+            for _ in range(args.trials):
+                run_bc(graph, input, args.source_nodes, 4)
 
     elif args.application in ["tc"]:
         graph_path = f"{args.input_dir}/{input['symmetric_clean_input']}"

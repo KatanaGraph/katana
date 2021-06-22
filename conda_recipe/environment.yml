@@ -20,7 +20,7 @@ dependencies:
  - doxygen
  - eigen
  - elfutils
- - fmt>=6.2.1
+ - fmt>=6.2.1,<8.0a0
  - isort
  - jinja2
  - jupyter

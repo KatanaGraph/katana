@@ -66,8 +66,9 @@ public:
   template <typename T>
   katana::Result<void> SetOpt(CURLoption option, T param) {
     if (auto err = curl_easy_setopt(handle_, option, param); err != CURLE_OK) {
-      KATANA_LOG_ERROR("CURL error: {}", curl_easy_strerror(err));
-      return katana::ErrorCode::InvalidArgument;
+      return KATANA_ERROR(
+          katana::ErrorCode::InvalidArgument, "CURL error: {}",
+          curl_easy_strerror(err));
     }
     return katana::ResultSuccess();
   }
@@ -78,8 +79,9 @@ public:
     }
     CURLcode request_res = curl_easy_perform(handle_);
     if (request_res != CURLE_OK) {
-      KATANA_LOG_ERROR("CURL error: {}", curl_easy_strerror(request_res));
-      return katana::ErrorCode::HttpError;
+      return KATANA_ERROR(
+          katana::ErrorCode::HttpError, "CURL error: {}",
+          curl_easy_strerror(request_res));
     }
 
     int64_t response_code;
@@ -94,9 +96,9 @@ public:
     case 409:
       return katana::ErrorCode::AlreadyExists;
     default:
-      KATANA_LOG_ERROR(
+      return KATANA_ERROR(
+          katana::ErrorCode::HttpError,
           "HTTP request returned unhandled code: {}", response_code);
-      return katana::ErrorCode::HttpError;
     }
   }
 };
@@ -116,10 +118,7 @@ katana::Result<void>
 katana::HttpGet(const std::string& url, std::vector<char>* response) {
   CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
   KATANA_CHECK(curl.SetOpt(CURLOPT_HTTPGET, 1L));
-  if (auto res = curl.Perform(); !res) {
-    KATANA_LOG_DEBUG("GET failed for url: {}", url);
-    return res;
-  }
+  KATANA_CHECK_CONTEXT(curl.Perform(), "GET failed for url: {}", url);
   return katana::ResultSuccess();
 }
 
@@ -127,16 +126,11 @@ katana::Result<void>
 katana::HttpPost(
     const std::string& url, const std::string& data,
     std::vector<char>* response) {
-  auto handle_res = CurlHandle::Make(url, response);
-  if (!handle_res) {
-    KATANA_LOG_ERROR("POST failed for url: {}", url);
-    return handle_res.error();
-  }
-
-  if (auto res = HttpUploadCommon(std::move(handle_res.value()), data); !res) {
-    KATANA_LOG_DEBUG("POST failed for url: {}", url);
-    return res.error();
-  }
+  CurlHandle handle = KATANA_CHECK_CONTEXT(
+      CurlHandle::Make(url, response), "POST failed for url: {}", url);
+  KATANA_CHECK_CONTEXT(
+      HttpUploadCommon(std::move(handle), data), "POST failed for url: {}",
+      url);
   return katana::ResultSuccess();
 }
 
@@ -144,11 +138,7 @@ katana::Result<void>
 katana::HttpDelete(const std::string& url, std::vector<char>* response) {
   CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
   KATANA_CHECK(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "DELETE"));
-
-  if (auto res = curl.Perform(); !res) {
-    KATANA_LOG_DEBUG("DELETE failed for url: {}", url);
-    return res;
-  }
+  KATANA_CHECK_CONTEXT(curl.Perform(), "DELETE failed for url: {}", url);
   return katana::ResultSuccess();
 }
 
@@ -158,11 +148,8 @@ katana::HttpPut(
     std::vector<char>* response) {
   CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
   KATANA_CHECK(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "PUT"));
-
-  if (auto res = HttpUploadCommon(std::move(curl), data); !res) {
-    KATANA_LOG_DEBUG("PUT failed for url: {}", url);
-    return res.error();
-  }
+  KATANA_CHECK_CONTEXT(
+      HttpUploadCommon(std::move(curl), data), "PUT failed for url: {}", url);
   return katana::ResultSuccess();
 }
 
@@ -170,9 +157,9 @@ katana::Result<void>
 katana::HttpInit() {
   auto init_ret = curl_global_init(CURL_GLOBAL_ALL);
   if (init_ret != CURLE_OK) {
-    KATANA_LOG_ERROR(
-        "libcurl initialization failed: {}", curl_easy_strerror(init_ret));
-    return ErrorCode::HttpError;
+    return KATANA_ERROR(
+        ErrorCode::HttpError, "libcurl initialization failed: {}",
+        curl_easy_strerror(init_ret));
   }
   return katana::ResultSuccess();
 }

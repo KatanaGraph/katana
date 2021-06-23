@@ -260,39 +260,39 @@ ResultErrno() {
   return std::error_code(errno, std::system_category());
 }
 
-template <class>
-struct is_result : std::false_type {};
-
-template <class T>
-struct is_result<Result<T>> : std::true_type {};
+namespace internal {
 
 template <class T>
 std::enable_if_t<!std::is_same<T, void>::value, T&&>
-extract_value(Result<T>&& result) {
+extract_result_value(Result<T>&& result) {
   return std::move(result.value());
 }
 
 inline int
-extract_value(Result<void>&&) {
+extract_result_value(Result<void>&&) {
   return 0;
 }
 
+}  // namespace internal
+
 #define KATANA_CHECK_NAME(x, y) x##y
 
-#define KATANA_CHECK_IMPL(result_name, expression)                             \
+#define KATANA_CHECK_IMPL(result_name, expression, ...)                        \
   ({                                                                           \
     auto result_name = (expression);                                           \
-    static_assert(                                                             \
-        ::katana::is_result<decltype(result_name)>::value,                     \
-        "KATANA_CHECK requires a katana::Result");                             \
     if (!result_name) {                                                        \
-      return result_name.error().WithContext("here");                          \
+      return result_name.error().WithContext(__VA_ARGS__);                     \
     }                                                                          \
-    std::move(::katana::extract_value(std::move(result_name)));                \
+    std::move(                                                                 \
+        ::katana::internal::extract_result_value(std::move(result_name)));     \
   })
 
-#define KATANA_CHECK(expression)                                               \
-  KATANA_CHECK_IMPL(KATANA_CHECK_NAME(_error_or_value, __COUNTER__), expression)
+#define KATANA_CHECK_CONTEXT(expression, ...)                                  \
+  KATANA_CHECK_IMPL(                                                           \
+      KATANA_CHECK_NAME(_error_or_value, __COUNTER__), expression,             \
+      __VA_ARGS__)
+
+#define KATANA_CHECK(expression) KATANA_CHECK_CONTEXT(expression, "backtrace")
 
 }  // namespace katana
 

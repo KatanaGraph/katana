@@ -303,8 +303,8 @@ function(add_python_setuptools_target TARGET_NAME)
 for f in ${dir}/build/lib* ${dir}/python; do
   python_path_additions=\${python_path_additions:+\$python_path_additions:}$f
 done
-if [ "$python_path_additions" ]; then
-  export PYTHONPATH=\$python_path_additions\${PYTHONPATH:+:\$PYTHONPATH}
+if [ \"$python_path_additions\" ]; then
+  export PYTHONPATH=$python_path_additions\${PYTHONPATH:+:\$PYTHONPATH}
 fi
 ")
     else()

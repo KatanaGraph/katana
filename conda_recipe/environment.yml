@@ -8,6 +8,7 @@ dependencies:
  - backward-cpp>=1.4
  - benchmark
  - black=19.10
+ - breathe>=4.30
  - boost-cpp>=1.74
  - cmake>=3.17
  - conan
@@ -35,6 +36,7 @@ dependencies:
  - packaging
  - parquet-cpp
  - pyarrow
+ - pydata-sphinx-theme>=0.6.3
  - pygithub
  - pytest
  - pylint=2.8.3

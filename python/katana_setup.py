@@ -2,10 +2,8 @@ import os
 import subprocess
 import sys
 import tempfile
-from distutils.errors import CompileError
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional, Set
+from typing import Optional, Set
 
 import generate_from_jinja
 import setuptools
@@ -427,7 +425,7 @@ setActiveThreads(1)
     )
 
 
-def setup(*, source_dir, package_name, doc_package_name, additional_requires=None, package_data=None, **kwargs):
+def setup(*, source_dir, package_name, additional_requires=None, package_data=None, **kwargs):
     package_data = package_data or {}
     # TODO(amp): Dependencies are yet again repeated here. This needs to come from a central deps list.
     requires = ["pyarrow (<3.0)", "numpy", "numba (>=0.50,<1.0a0)"]
@@ -450,24 +448,8 @@ def setup(*, source_dir, package_name, doc_package_name, additional_requires=Non
         ext_modules=cythonize(pyx_files, source_root=source_dir),
         include_package_data=True,
         zip_safe=False,
-        command_options={
-            "build_sphinx": {
-                "project": ("setup.py", doc_package_name),
-                "version": ("katana_setup.py", get_katana_version()),
-                "release": ("katana_setup.py", get_katana_version()),
-                "copyright": ("katana_setup.py", get_katana_copyright_year()),
-                "source_dir": ("katana_setup.py", str(source_dir / "docs")),
-                "all_files": ("katana_setup.py", True),
-            }
-        },
     )
     options["package_data"].update(package_data)
-    try:
-        from sphinx.setup_command import BuildDoc
-
-        options.update(cmdclass={"build_sphinx": BuildDoc})
-    except ImportError:
-        pass
     options.update(kwargs)
 
     setuptools.setup(**options)
@@ -479,10 +461,3 @@ def get_katana_version():
     import katana_version.version
 
     return str(katana_version.version.get_version())
-
-
-def get_katana_copyright_year():
-    year = os.environ.get("KATANA_COPYRIGHT_YEAR")
-    if not year:
-        year = "2021"
-    return year

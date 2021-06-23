@@ -345,31 +345,3 @@ function(add_python_setuptools_tests TARGET_NAME)
     set_tests_properties(${TARGET_NAME} PROPERTIES LABELS python)
   endif()
 endfunction()
-
-add_custom_target(python_docs)
-
-function(add_python_setuptools_docs TARGET_NAME)
-  set(no_value_options)
-  set(one_value_options)
-  set(multi_value_options)
-
-  cmake_parse_arguments(X "${no_value_options}" "${one_value_options}" "${multi_value_options}" ${ARGN})
-
-  get_target_property(PYTHON_SETUP_COMMAND ${TARGET_NAME} PYTHON_SETUP_COMMAND)
-  get_target_property(PYTHON_BINARY_DIR ${TARGET_NAME} PYTHON_BINARY_DIR)
-
-  if(PY_SPHINX)
-    add_custom_target(
-        ${TARGET_NAME}_docs
-        COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYTHON_BINARY_DIR}/build/sphinx
-        COMMAND ${PYTHON_SETUP_COMMAND} build_sphinx
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${PYTHON_BINARY_DIR}/build/sphinx/html ${CMAKE_BINARY_DIR}/docs/${TARGET_NAME}
-        COMMAND ${CMAKE_COMMAND} -E echo "${TARGET_NAME} documentation at file://${CMAKE_BINARY_DIR}/docs/${TARGET_NAME}/index.html"
-        BYPRODUCTS ${PYTHON_BINARY_DIR}/build/sphinx
-        WORKING_DIRECTORY ${PYTHON_BINARY_DIR}
-        COMMENT "Building ${TARGET_NAME} sphinx documentation in symlink tree ${PYTHON_BINARY_DIR}"
-    )
-    add_dependencies(${TARGET_NAME}_docs ${TARGET_NAME})
-    add_dependencies(python_docs ${TARGET_NAME}_docs)
-  endif()
-endfunction()

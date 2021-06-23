@@ -1,5 +1,6 @@
-Property Graphs (katana.property_graph)
-=======================================
+===============
+Property Graphs
+===============
 
 .. automodule:: katana.property_graph
    :members:

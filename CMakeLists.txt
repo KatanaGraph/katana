@@ -9,7 +9,7 @@ include(KatanaBuildCommon)
 ###### Documentation ######
 
 set_property(GLOBAL APPEND PROPERTY KATANA_DOXYGEN_DIRECTORIES
-        ${CMAKE_CURRENT_SOURCE_DIR}/docs
+        ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen
         ${CMAKE_CURRENT_SOURCE_DIR}/libgalois
         ${CMAKE_CURRENT_SOURCE_DIR}/libsupport
         ${CMAKE_CURRENT_SOURCE_DIR}/libtsuba)
@@ -50,9 +50,7 @@ if(KATANA_LANG_BINDINGS_PYTHON)
   if(KATANA_IS_MAIN_PROJECT AND BUILD_TESTING)
     add_python_setuptools_tests(katana_python PATH python/test)
   endif()
-  if(BUILD_DOCS)
-    add_python_setuptools_docs(katana_python)
-  endif()
+  add_katana_sphinx_target(katana_python)
 endif()
 
 ###### Packaging ######

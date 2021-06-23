@@ -14,22 +14,23 @@ requirements:
   build:
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
+    - breathe>=4.30
     - cmake>=3.17
     - cython>=0.29.12
+    - doxygen
     - make
+    - packaging
     - pyarrow {{ arrow_cpp }}
+    - pydata-sphinx-theme>=0.6.3
+    - pygithub
     - python {{ python }}
     - sphinx>=3.5.1
-    - pygithub
-    - packaging
-    - libxml2>=2.9.10
   host:
     - jinja2
     - cython>=0.29.12
     - pyarrow {{ arrow_cpp }}
     - numba>=0.50,<1.0a0
     - python {{ python }}
-    - sphinx>=3.5.1
     - {{ compiler('cxx') }}
     - {{ cdt('numactl-devel') }}
     - arrow-cpp {{ arrow_cpp }}
@@ -104,6 +105,10 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - {{ cdt('numactl-devel') }}
+        - breathe>=4.30
+        - doxygen
+        - pydata-sphinx-theme>=0.6.3
+        - sphinx>=3.5.1
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - jinja2
@@ -111,7 +116,6 @@ outputs:
         - pyarrow {{ arrow_cpp }}
         - numba>=0.50,<1.0a0
         - python {{ python }}
-        - sphinx>=3.5.1
       run:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - numba

@@ -1,5 +1,6 @@
-Performance Timers (katana.timer)
-=================================
+==================
+Performance Timers
+==================
 
 .. automodule:: katana.timer
    :members:

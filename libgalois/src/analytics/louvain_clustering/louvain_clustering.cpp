@@ -198,6 +198,7 @@ struct LouvainClusteringImplementation
     });
   }
 
+  /// Deterministic louvain algorithm
   // TODO The function arguments are  similar to
   // the non-deterministic one. Need to figure how to
   // do remove duplication
@@ -245,6 +246,7 @@ struct LouvainClusteringImplementation
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
 
+    // Main loop
     while (true) {
       num_iter++;
 
@@ -289,7 +291,7 @@ struct LouvainClusteringImplementation
 
       UpdateClusterInformation(&graph, &c_info);
 
-      /* Calculate the overall modularity */
+      // Calculate the total modularity of each community
       ModularityTy e_xx = 0;
       ModularityTy a2_x = 0;
 
@@ -312,6 +314,7 @@ struct LouvainClusteringImplementation
     return prev_mod;
   }
 
+  /// Cache the current community ids for the next phase
   void UpdatePrevClusterIdsFromCurrIds(
       katana::LargeArray<CommunityIdTy>* previous_cluster_ids,
       const Graph& graph_curr, const CommunityIdTy num_prev_clusters,
@@ -337,6 +340,7 @@ struct LouvainClusteringImplementation
     }
   }
 
+  /// Choose and run louvain algorithm
   katana::Result<void> RunAlgorithm(
       LouvainClusteringPlan plan, katana::PropertyGraph* pfg_curr,
       ModularityTy* curr_mod, uint32_t iter) {

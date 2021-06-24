@@ -2,6 +2,7 @@
 *~
 *.backup
 /.dir-locals.el
+.DS_Store
 *.orig
 /.project
 .settings
@@ -9,6 +10,7 @@
 .vscode
 \#*\#
 .\#*
+.idea/
 
 # no tool generated files
 .clang-complete
@@ -25,10 +27,14 @@ tags
 # no build files
 /build*
 
-# no python build artifacts
-__pycache__/
-galois.egg-info
-/_skbuild
+# no nfs temp files
+.nfs*
 
-# no jupyter checkpoints
-.ipynb_checkpoints
+# no python build artifacts
+*.pyc
+__pycache__/
+
+# no Jupyter server state files
+.ipynb_checkpoints/
+.local/
+.ipython/

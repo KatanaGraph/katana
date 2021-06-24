@@ -176,26 +176,27 @@ struct LouvainClusteringImplementation
   }
 
   /// Update cluster's size and degree information
-  void UpdateClusterInformation(Graph* graph, CommunityArray* c_info,
-                                CommunityArray* c_update_add,
-                                CommunityArray* c_update_subtract) {
-    katana::do_all(katana::iterate(*graph), [&](GNode n) {
-      uint64_t& curr_comm_id = graph->template GetData<CurrentCommunityId>(n);
-      const uint64_t target_comm_id =
+  void UpdateClusterInformation(
+      Graph* graph, const katana::InsertBag<GNode>& to_process,
+      const katana::InsertBag<GNode>& bag, katana::LargeArray<bool>* in_bag,
+      CommunityArray* c_info, CommunityArray* c_update_add,
+      CommunityArray* c_update_subtract) {
+    katana::do_all(katana::iterate(bag), [&](GNode n) {
+      graph->template GetData<CurrentCommunityId>(n) =
           graph->template GetData<CandidateCommunityId>(n);
-    }
+    });
 
-    for (auto n : to_progress) {
-      if (in_bag[n]) {
+    for (auto n : to_process) {
+      if ((*in_bag)[n]) {
         (*c_info)[n].degree_wt += (*c_update_add)[n].degree_wt;
         (*c_info)[n].size += (*c_update_add)[n].size;
-        (*c_info)[n].degree_wt -= (*c_update_subtract)[n].degree_wt; 
+        (*c_info)[n].degree_wt -= (*c_update_subtract)[n].degree_wt;
         (*c_info)[n].size -= (*c_update_subtract)[n].size;
-        c_update_add[n].size = 0;
-        c_update_add[n].degree_wt = 0;
-        c_update_subtract[n].size = 0;
-        c_update_subtract[n].degree_wt = 0;
-        in_bag[n] = false;
+        (*c_update_add)[n].size = 0;
+        (*c_update_add)[n].degree_wt = 0;
+        (*c_update_subtract)[n].size = 0;
+        (*c_update_subtract)[n].degree_wt = 0;
+        (*in_bag)[n] = false;
       }
     }
   }
@@ -302,8 +303,9 @@ struct LouvainClusteringImplementation
                 // Find the max gain in modularity
                 Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
-                    n_data_degree_wt, &max_modularity_gain, &n_candidate_comm_id,
-                    n_curr_comm_id, constant_for_second_term);
+                    n_data_degree_wt, &max_modularity_gain,
+                    &n_candidate_comm_id, n_curr_comm_id,
+                    constant_for_second_term);
               } else {
                 n_candidate_comm_id = Base::UNASSIGNED;
               }
@@ -312,7 +314,8 @@ struct LouvainClusteringImplementation
               if (n_candidate_comm_id != n_curr_comm_id &&
                   n_candidate_comm_id != Base::UNASSIGNED) {
                 katana::atomicAdd(
-                    c_update_add[n_candidate_comm_id].degree_wt, n_data_degree_wt);
+                    c_update_add[n_candidate_comm_id].degree_wt,
+                    n_data_degree_wt);
                 katana::atomicAdd(
                     c_update_add[n_candidate_comm_id].size, uint64_t{1});
                 katana::atomicAdd(
@@ -333,11 +336,9 @@ struct LouvainClusteringImplementation
               }
             },
             katana::loopname("louvain algo: Phase 1"));
-
-        // TODO(lhc): reduce-max of max_modularity_gain + n_candidate_comm_id
-        // sync<max-reduce>()
-
-        UpdateClusterInformation(&graph, &c_info, &c_update_add, &c_update_subtract);
+        UpdateClusterInformation(
+            &graph, to_process, bag[idx], &in_bag, &c_info, &c_update_add,
+            &c_update_subtract);
       }
 
       // Calculate the total modularity of each community
@@ -605,6 +606,8 @@ LouvainClusteringWithWrap(
 
   // To keep track of communites for nodes before coarsening.
   // Community for isolated nodes will be set to Base::UNASSIGNED.
+  // TODO(lhc) We don't need to keep PreviousCommunityId since we have this.
+  //           Remove that later
   katana::LargeArray<CommunityIdTy> previous_cluster_ids;
   // TODO(lhc) blocked allocation is faster than interleaved?
   previous_cluster_ids.allocateBlocked(pfg->num_nodes());
@@ -657,12 +660,6 @@ katana::analytics::LouvainClustering(
         pg, edge_weight_property_name, output_property_name, plan);
   case arrow::Int64Type::type_id:
     return LouvainClusteringWithWrap<int64_t>(
-        pg, edge_weight_property_name, output_property_name, plan);
-  case arrow::FloatType::type_id:
-    return LouvainClusteringWithWrap<float>(
-        pg, edge_weight_property_name, output_property_name, plan);
-  case arrow::DoubleType::type_id:
-    return LouvainClusteringWithWrap<double>(
         pg, edge_weight_property_name, output_property_name, plan);
   default:
     return katana::ErrorCode::TypeError;

@@ -55,6 +55,9 @@ cdef class {{class_name}}:
     cdef {{underlying_type}} underlying
     cdef readonly object dtype
 
+    @staticmethod
+    cdef {{class_name}} make_move({{underlying_type}}&& u, dtype=*)
+
     # Stored here so we can pass out pointers to them.
     cdef Py_ssize_t shape
     cdef Py_ssize_t stride

@@ -1,6 +1,7 @@
 from katana.property_graph import *
 from .cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from libc.stdint cimport uint32_t, uint64_t
+from cython.operator cimport dereference as deref
 
 {% import "numba_wrapper_support.jinja" as numba %}
 
@@ -14,10 +15,10 @@ from libc.stdint cimport uint32_t, uint64_t
     return self.topology().num_edges()
 {% endcall %}
 {% call numba.method_with_body("edge_index", "uint64_t", ["uint64_t"]) %}
-    return self.topology().out_indices.get().Value(arg1)
+    return deref(self.topology().edges(arg1).end())
 {% endcall %}
 {% call numba.method_with_body("get_edge_dest", "uint64_t", ["uint64_t"]) %}
-    return self.topology().out_dests.get().Value(arg1)
+    return self.topology().edge_dest(arg1)
 {% endcall %}
 {% endcall %}
 

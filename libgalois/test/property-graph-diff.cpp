@@ -61,7 +61,8 @@ CreateGraph1() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  auto graph_result = components_result.value().ToPropertyGraph();
+  auto graph_result =
+      katana::ConvertToPropertyGraph(std::move(components_result.value()));
   if (!graph_result) {
     KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
   }
@@ -130,7 +131,8 @@ CreateGraph2() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  auto graph_result = components_result.value().ToPropertyGraph();
+  auto graph_result =
+      katana::ConvertToPropertyGraph(std::move(components_result.value()));
   if (!graph_result) {
     KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
   }
@@ -191,7 +193,8 @@ CreateGraph3() {
     KATANA_LOG_FATAL(
         "Failed to construct graph: {}", components_result.error());
   }
-  auto graph_result = components_result.value().ToPropertyGraph();
+  auto graph_result =
+      katana::ConvertToPropertyGraph(std::move(components_result.value()));
   if (!graph_result) {
     KATANA_LOG_FATAL("Failed to construct graph: {}", graph_result.error());
   }

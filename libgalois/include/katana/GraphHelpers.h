@@ -32,11 +32,10 @@ namespace katana {
 
 namespace internal {
 
-using edge_iterator = boost::counting_iterator<uint32_t>;
 template <typename GraphTy>
-inline edge_iterator
+inline GraphTopology::edge_iterator
 edge_begin(GraphTy& graph, uint32_t N) {
-  return (N > 0) ? graph.topology().out_indices->Value(N - 1) : 0;
+  return graph.topology().edge_begin(N);
 }
 
 /**
@@ -47,9 +46,9 @@ edge_begin(GraphTy& graph, uint32_t N) {
  * of the next node (or an "end" iterator if there is no next node)
  */
 template <typename GraphTy>
-inline edge_iterator
+inline GraphTopology::edge_iterator
 edge_end(GraphTy& graph, uint32_t N) {
-  return graph.topology().out_indices->Value(N);
+  return graph.topology().edge_end(N);
 }
 
 template <typename Ty>

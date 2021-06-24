@@ -23,6 +23,7 @@ from katana.numpy_structs import StructInstance
 from katana.util.template_type import make_template_type1, make_template_type1_with_opaque
 from .cpp.libgalois cimport datastructures
 from libc.stdint cimport uintptr_t
+from libcpp.utility cimport move
 from cython.operator cimport preincrement, dereference as deref
 import cython
 
@@ -155,6 +156,16 @@ cdef class {{class_name}}:
     """
     An array of elements of the same type that are allocated using NUMA aware policies.
     """
+
+    @staticmethod
+    cdef {{class_name}} make_move({{underlying_type}}&& u, dtype=None):
+        self = <{{class_name}}>{{class_name}}.__new__({{class_name}})
+        self.dtype = {{inst.dtype("dtype")}}
+        self.shape = -1
+        self.stride = sizeof({{inst.element_c_type}})
+        self.underlying = move(u)
+        return self
+
     def __init__(self, size=None, policy=None, dtype=None):
         """
         __init__(self, size=None, policy=None)

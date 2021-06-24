@@ -175,6 +175,29 @@ struct LouvainClusteringImplementation
     return prev_mod;
   }
 
+  /// Update cluster's size and degree information
+  void UpdateClusterInformation(Graph* graph, CommunityArray* c_info) {
+    katana::do_all(katana::iterate(*graph), [&](GNode n) {
+      uint64_t& curr_comm_id = graph->template GetData<CurrentCommunityId>(n);
+      const uint64_t target_comm_id =
+          graph->template GetData<CandidateCommunityId>(n);
+
+      if (target_comm_id != curr_comm_id &&
+          target_comm_id != Base::UNASSIGNED) {
+        auto& target_comm_info = (*c_info)[target_comm_id];
+        auto& curr_comm_info = (*c_info)[curr_comm_id];
+        auto& n_degree_wt =
+            graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
+
+        katana::atomicAdd(target_comm_info.size, static_cast<uint64_t>(1));
+        katana::atomicAdd(target_comm_info.degree_wt, n_degree_wt);
+        katana::atomicSub(curr_comm_info.degree_wt, n_degree_wt);
+        katana::atomicSub(curr_comm_info.size, static_cast<uint64_t>(1));
+        curr_comm_id = target_comm_id;
+      }
+    });
+  }
+
   // TODO The function arguments are  similar to
   // the non-deterministic one. Need to figure how to
   // do remove duplication
@@ -264,27 +287,7 @@ struct LouvainClusteringImplementation
       // TODO(lhc): reduce-max of max_modularity_gain + n_candidate_comm_id
       // sync<max-reduce>()
 
-      // TODO(lhc): extract this to separate function
-      // Update community IDs
-      katana::do_all(katana::iterate(graph), [&](GNode n) {
-        uint64_t& curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
-        const uint64_t target_comm_id =
-            graph.template GetData<CandidateCommunityId>(n);
-
-        if (target_comm_id != curr_comm_id &&
-            target_comm_id != Base::UNASSIGNED) {
-          auto& target_comm_info = c_info[target_comm_id];
-          auto& curr_comm_info = c_info[curr_comm_id];
-          auto& n_degree_wt =
-              graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
-
-          katana::atomicAdd(target_comm_info.size, static_cast<uint64_t>(1));
-          katana::atomicAdd(target_comm_info.degree_wt, n_degree_wt);
-          katana::atomicSub(curr_comm_info.degree_wt, n_degree_wt);
-          katana::atomicSub(curr_comm_info.size, static_cast<uint64_t>(1));
-          curr_comm_id = target_comm_id;
-        }
-      });
+      UpdateClusterInformation(&graph, &c_info);
 
       /* Calculate the overall modularity */
       ModularityTy e_xx = 0;
@@ -309,11 +312,65 @@ struct LouvainClusteringImplementation
     return prev_mod;
   }
 
+  void UpdatePrevClusterIdsFromCurrIds(
+      katana::LargeArray<CommunityIdTy>* previous_cluster_ids,
+      const Graph& graph_curr, const CommunityIdTy num_prev_clusters,
+      bool is_first_iter, bool is_vf_enabled) {
+    if (!is_vf_enabled && is_first_iter) {
+      KATANA_LOG_DEBUG_ASSERT(num_prev_clusters == graph_curr.num_nodes());
+      katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+        (*previous_cluster_ids)[n] =
+            graph_curr.template GetData<CurrentCommunityId>(n);
+      });
+    } else {
+      katana::do_all(
+          katana::iterate(CommunityIdTy{0}, num_prev_clusters), [&](GNode n) {
+            CommunityIdTy& n_previous_cluster = (*previous_cluster_ids)[n];
+            if (n_previous_cluster != Base::UNASSIGNED) {
+              KATANA_LOG_DEBUG_ASSERT(
+                  n_previous_cluster < graph_curr.num_nodes());
+              n_previous_cluster =
+                  graph_curr.template GetData<CurrentCommunityId>(
+                      n_previous_cluster);
+            }
+          });
+    }
+  }
+
+  katana::Result<void> RunAlgorithm(
+      LouvainClusteringPlan plan, katana::PropertyGraph* pfg_curr,
+      ModularityTy* curr_mod, uint32_t iter) {
+    switch (plan.algorithm()) {
+    case LouvainClusteringPlan::kDoAll: {
+      auto curr_mod_result = LouvainWithoutLockingDoAll(
+          pfg_curr, *curr_mod, plan.modularity_threshold_per_round(), &iter);
+      if (!curr_mod_result) {
+        return curr_mod_result.error();
+      }
+      *curr_mod = curr_mod_result.value();
+      break;
+    }
+    case LouvainClusteringPlan::kDeterministic: {
+      auto curr_mod_result = LouvainDeterministic(
+          pfg_curr, *curr_mod, plan.modularity_threshold_per_round(), &iter);
+      if (!curr_mod_result) {
+        return curr_mod_result.error();
+      }
+      *curr_mod = curr_mod_result.value();
+      break;
+    }
+    default:
+      return katana::ErrorCode::InvalidArgument;
+    }
+    return katana::ResultSuccess();
+  }
+
 public:
   katana::Result<void> LouvainClustering(
       katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
-      katana::LargeArray<uint64_t>* clusters_orig, LouvainClusteringPlan plan) {
+      katana::LargeArray<CommunityIdTy>* previous_cluster_ids,
+      LouvainClusteringPlan plan) {
     /*
      * Construct temp property graph. This graph gets coarsened as the
      * computation proceeds.
@@ -325,6 +382,7 @@ public:
     out_indices_next.allocateInterleaved(pfg->topology().num_nodes());
     out_dests_next.allocateInterleaved(pfg->topology().num_edges());
 
+    // TODO(lhc): is there any way to make this code clean?
     auto topo = std::make_unique<katana::GraphTopology>(
         std::move(out_indices_next), std::move(out_dests_next));
 
@@ -350,20 +408,16 @@ public:
     }
     Graph graph_curr = graph_result.value();
 
-    /*
-    * Vertex following optimization
-    */
+    // Vertex following optimization
     if (plan.enable_vf()) {
       Base::VertexFollowing(&graph_curr);  // Find nodes that follow other nodes
 
       uint64_t num_unique_clusters =
           Base::RenumberClustersContiguously(&graph_curr);
 
-      /*
-     * Initialize node cluster id.
-     */
+      // Initialize node cluster id.
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        (*clusters_orig)[n] =
+        (*previous_cluster_ids)[n] =
             graph_curr.template GetData<CurrentCommunityId>(n);
       });
 
@@ -378,13 +432,10 @@ public:
 
       auto pfg_next = std::move(coarsened_graph_result.value());
       pfg_mutable = std::move(pfg_next);
-
     } else {
-      /*
-       * Initialize node cluster id.
-       */
+      // Initialize node cluster id.
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        (*clusters_orig)[n] = Base::UNASSIGNED;
+        (*previous_cluster_ids)[n] = Base::UNASSIGNED;
       });
 
       // Copy pfg to pfg_mutable
@@ -403,16 +454,15 @@ public:
 
     ModularityTy prev_mod = -1;  // Previous modularity
     ModularityTy curr_mod = -1;  // Current modularity
-    uint32_t phase = 0;
+    bool is_first_iter = true;
 
     std::unique_ptr<katana::PropertyGraph> pfg_curr =
         std::make_unique<katana::PropertyGraph>();
     pfg_curr = std::move(pfg_mutable);
     uint32_t iter = 0;
-    CommunityIdTy orig_cluster_num_nodes = clusters_orig->size();
+    CommunityIdTy num_prev_clusters = pfg_curr->num_nodes();
     while (true) {
       iter++;
-      phase++;
 
       auto graph_result = Graph::Make(pfg_curr.get());
       if (!graph_result) {
@@ -422,61 +472,23 @@ public:
       // Check if the current coarsened graph is smaller than
       // minimum graph size threshold.
       if (graph_curr.num_nodes() > plan.min_graph_size()) {
-        switch (plan.algorithm()) {
-        case LouvainClusteringPlan::kDoAll: {
-          auto curr_mod_result = LouvainWithoutLockingDoAll(
-              pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
-              &iter);
-          if (!curr_mod_result) {
-            return curr_mod_result.error();
-          }
-          curr_mod = curr_mod_result.value();
-          break;
-        }
-        case LouvainClusteringPlan::kDeterministic: {
-          auto curr_mod_result = LouvainDeterministic(
-              pfg_curr.get(), curr_mod, plan.modularity_threshold_per_round(),
-              &iter);
-          if (!curr_mod_result) {
-            return curr_mod_result.error();
-          }
-          curr_mod = curr_mod_result.value();
-          break;
-        }
-        default:
-          return katana::ErrorCode::InvalidArgument;
+        auto algo_result = RunAlgorithm(plan, pfg_curr.get(), &curr_mod, iter);
+        if (!algo_result) {
+          return algo_result.error();
         }
       } else {
+        // The current graph is smaller than graph size threshold
         break;
       }
 
       uint64_t num_unique_clusters =
           Base::RenumberClustersContiguously(&graph_curr);
 
-      // TODO(lhc): extract these to separate function
       if (iter < plan.max_iterations() &&
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
-        if (!plan.enable_vf() && phase == 1) {
-          KATANA_LOG_DEBUG_ASSERT(
-              orig_cluster_num_nodes == graph_curr.num_nodes());
-          katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-            (*clusters_orig)[n] =
-                graph_curr.template GetData<CurrentCommunityId>(n);
-          });
-        } else {
-          katana::do_all(
-              katana::iterate(uint64_t{0}, orig_cluster_num_nodes),
-              [&](GNode n) {
-                if ((*clusters_orig)[n] != Base::UNASSIGNED) {
-                  KATANA_LOG_DEBUG_ASSERT(
-                      (*clusters_orig)[n] < graph_curr.num_nodes());
-                  (*clusters_orig)[n] =
-                      graph_curr.template GetData<CurrentCommunityId>(
-                          (*clusters_orig)[n]);
-                }
-              });
-        }
-
+        UpdatePrevClusterIdsFromCurrIds(
+            previous_cluster_ids, graph_curr, num_prev_clusters, is_first_iter,
+            plan.enable_vf());
         auto coarsened_graph_result =
             Base::template GraphCoarsening<NodeData, EdgeData, EdgeWeightType>(
                 graph_curr, pfg_curr.get(), num_unique_clusters,
@@ -492,10 +504,25 @@ public:
       } else {
         break;
       }
+
+      is_first_iter = false;
     }
     return katana::ResultSuccess();
   }
 };
+
+template <typename TargetPropTy, typename GraphTy, typename ValueTy>
+void
+SetGraphPropValues(
+    GraphTy* graph, const katana::LargeArray<ValueTy>& value_arr,
+    const char* loopname) {
+  katana::do_all(
+      katana::iterate(*graph),
+      [&](uint32_t i) {
+        graph->template GetData<TargetPropTy>(i) = value_arr[i];
+      },
+      katana::loopname(loopname), katana::no_stats());
+}
 
 template <typename EdgeWeightType>
 static katana::Result<void>
@@ -523,18 +550,17 @@ LouvainClusteringWithWrap(
     return result.error();
   }
 
-  /*
-   * To keep track of communities for nodes in the original graph.
-   * Community will be set to -1 for isolated nodes
-   */
-  katana::LargeArray<uint64_t> clusters_orig;
-  clusters_orig.allocateBlocked(pfg->num_nodes());
+  // To keep track of communites for nodes before coarsening.
+  // Community for isolated nodes will be set to Base::UNASSIGNED.
+  katana::LargeArray<CommunityIdTy> previous_cluster_ids;
+  // TODO(lhc) blocked allocation is faster than interleaved?
+  previous_cluster_ids.allocateBlocked(pfg->num_nodes());
 
   // Computation
   ImplTy impl{};
   if (auto r = impl.LouvainClustering(
           pfg, edge_weight_property_name, temp_node_property_names,
-          &clusters_orig, plan);
+          &previous_cluster_ids, plan);
       !r) {
     return r.error();
   }
@@ -554,13 +580,8 @@ LouvainClusteringWithWrap(
     return graph_result.error();
   }
   auto graph = graph_result.value();
-
-  katana::do_all(
-      katana::iterate(graph),
-      [&](uint32_t i) {
-        graph.template GetData<CurrentCommunityId>(i) = clusters_orig[i];
-      },
-      katana::loopname("Add clusterIds"), katana::no_stats());
+  SetGraphPropValues<CurrentCommunityId>(
+      &graph, previous_cluster_ids, "Update-Final-Community-Ids");
 
   return katana::ResultSuccess();
 }

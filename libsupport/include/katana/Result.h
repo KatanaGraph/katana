@@ -275,9 +275,9 @@ extract_result_value(Result<void>&&) {
 
 }  // namespace internal
 
-#define KATANA_CHECK_NAME(x, y) x##y
+#define KATANA_CHECKED_NAME(x, y) x##y
 
-#define KATANA_CHECK_IMPL(result_name, expression, ...)                        \
+#define KATANA_CHECKED_IMPL(result_name, expression, ...)                      \
   ({                                                                           \
     auto result_name = (expression);                                           \
     if (!result_name) {                                                        \
@@ -287,12 +287,13 @@ extract_result_value(Result<void>&&) {
         ::katana::internal::extract_result_value(std::move(result_name)));     \
   })
 
-#define KATANA_CHECK_CONTEXT(expression, ...)                                  \
-  KATANA_CHECK_IMPL(                                                           \
-      KATANA_CHECK_NAME(_error_or_value, __COUNTER__), expression,             \
+#define KATANA_CHECKED_CONTEXT(expression, ...)                                \
+  KATANA_CHECKED_IMPL(                                                         \
+      KATANA_CHECKED_NAME(_error_or_value, __COUNTER__), expression,           \
       __VA_ARGS__)
 
-#define KATANA_CHECK(expression) KATANA_CHECK_CONTEXT(expression, "backtrace")
+#define KATANA_CHECKED(expression)                                             \
+  KATANA_CHECKED_CONTEXT(expression, "backtrace")
 
 }  // namespace katana
 

@@ -43,9 +43,9 @@ public:
       return katana::ErrorCode::HttpError;
     }
     CurlHandle handle(curl);
-    KATANA_CHECK(handle.SetOpt(CURLOPT_URL, url.c_str()));
-    KATANA_CHECK(handle.SetOpt(CURLOPT_WRITEDATA, response));
-    KATANA_CHECK(handle.SetOpt(CURLOPT_WRITEFUNCTION, WriteDataToVectorCB));
+    KATANA_CHECKED(handle.SetOpt(CURLOPT_URL, url.c_str()));
+    KATANA_CHECKED(handle.SetOpt(CURLOPT_WRITEDATA, response));
+    KATANA_CHECKED(handle.SetOpt(CURLOPT_WRITEFUNCTION, WriteDataToVectorCB));
     return CurlHandle(std::move(handle));
   }
 
@@ -75,7 +75,7 @@ public:
 
   katana::Result<void> Perform() {
     if (headers_ != nullptr) {
-      KATANA_CHECK(SetOpt(CURLOPT_HTTPHEADER, headers_));
+      KATANA_CHECKED(SetOpt(CURLOPT_HTTPHEADER, headers_));
     }
     CURLcode request_res = curl_easy_perform(handle_);
     if (request_res != CURLE_OK) {
@@ -105,8 +105,8 @@ public:
 
 katana::Result<void>
 HttpUploadCommon(CurlHandle&& holder, const std::string& data) {
-  KATANA_CHECK(holder.SetOpt(CURLOPT_POSTFIELDS, data.c_str()));
-  KATANA_CHECK(holder.SetOpt(CURLOPT_POSTFIELDSIZE, data.size()));
+  KATANA_CHECKED(holder.SetOpt(CURLOPT_POSTFIELDS, data.c_str()));
+  KATANA_CHECKED(holder.SetOpt(CURLOPT_POSTFIELDSIZE, data.size()));
   holder.SetHeader("Content-Type: application/json");
   holder.SetHeader("Accept: application/json");
   return holder.Perform();
@@ -116,9 +116,9 @@ HttpUploadCommon(CurlHandle&& holder, const std::string& data) {
 
 katana::Result<void>
 katana::HttpGet(const std::string& url, std::vector<char>* response) {
-  CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
-  KATANA_CHECK(curl.SetOpt(CURLOPT_HTTPGET, 1L));
-  KATANA_CHECK_CONTEXT(curl.Perform(), "GET failed for url: {}", url);
+  CurlHandle curl = KATANA_CHECKED(CurlHandle::Make(url, response));
+  KATANA_CHECKED(curl.SetOpt(CURLOPT_HTTPGET, 1L));
+  KATANA_CHECKED_CONTEXT(curl.Perform(), "GET failed for url: {}", url);
   return katana::ResultSuccess();
 }
 
@@ -126,9 +126,9 @@ katana::Result<void>
 katana::HttpPost(
     const std::string& url, const std::string& data,
     std::vector<char>* response) {
-  CurlHandle handle = KATANA_CHECK_CONTEXT(
+  CurlHandle handle = KATANA_CHECKED_CONTEXT(
       CurlHandle::Make(url, response), "POST failed for url: {}", url);
-  KATANA_CHECK_CONTEXT(
+  KATANA_CHECKED_CONTEXT(
       HttpUploadCommon(std::move(handle), data), "POST failed for url: {}",
       url);
   return katana::ResultSuccess();
@@ -136,9 +136,9 @@ katana::HttpPost(
 
 katana::Result<void>
 katana::HttpDelete(const std::string& url, std::vector<char>* response) {
-  CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
-  KATANA_CHECK(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "DELETE"));
-  KATANA_CHECK_CONTEXT(curl.Perform(), "DELETE failed for url: {}", url);
+  CurlHandle curl = KATANA_CHECKED(CurlHandle::Make(url, response));
+  KATANA_CHECKED(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "DELETE"));
+  KATANA_CHECKED_CONTEXT(curl.Perform(), "DELETE failed for url: {}", url);
   return katana::ResultSuccess();
 }
 
@@ -146,9 +146,9 @@ katana::Result<void>
 katana::HttpPut(
     const std::string& url, const std::string& data,
     std::vector<char>* response) {
-  CurlHandle curl = KATANA_CHECK(CurlHandle::Make(url, response));
-  KATANA_CHECK(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "PUT"));
-  KATANA_CHECK_CONTEXT(
+  CurlHandle curl = KATANA_CHECKED(CurlHandle::Make(url, response));
+  KATANA_CHECKED(curl.SetOpt(CURLOPT_CUSTOMREQUEST, "PUT"));
+  KATANA_CHECKED_CONTEXT(
       HttpUploadCommon(std::move(curl), data), "PUT failed for url: {}", url);
   return katana::ResultSuccess();
 }

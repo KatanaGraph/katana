@@ -243,7 +243,8 @@ tsuba::RDG::WritePartArrays(const katana::Uri& dir, tsuba::WriteGroup* desc) {
   std::vector<tsuba::PropStorageInfo> next_properties;
 
   KATANA_LOG_DEBUG(
-      "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} l2u sz: {} "
+      "WritePartArrays master sz: {} mirrors sz: {} h2owned sz : {} "
+      "h2owned_edges sz: {} l2u sz: {} "
       "l2g sz: {}",
       master_nodes_.size(), mirror_nodes_.size(),
       host_to_owned_global_node_ids_ == nullptr

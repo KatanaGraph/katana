@@ -34,16 +34,13 @@ struct LouvainClusteringImplementation
     : public katana::analytics::ClusteringImplementationBase<
           katana::TypedPropertyGraph<
               std::tuple<
-                  PreviousCommunityId, CurrentCommunityId,
-                  DegreeWeight<EdgeWeightType>,
-                  //CandidateCommunityId,
-                  ModularityGain>,
+                  PreviousCommunityId, CurrentCommunityId, CandidateCommunityId,
+                  DegreeWeight<EdgeWeightType>, ModularityGain>,
               std::tuple<EdgeWeight<EdgeWeightType>>>,
           EdgeWeightType, CommunityInfoTy<EdgeWeightType>> {
   using NodeData = std::tuple<
-      PreviousCommunityId, CurrentCommunityId, DegreeWeight<EdgeWeightType>,
-      //CandidateCommunityId,
-      ModularityGain>;
+      PreviousCommunityId, CurrentCommunityId, CandidateCommunityId,
+      DegreeWeight<EdgeWeightType>, ModularityGain>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
   using CommunityArray = katana::LargeArray<CommunityInfoTy<EdgeWeightType>>;
 
@@ -212,6 +209,7 @@ struct LouvainClusteringImplementation
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       graph.template GetData<CurrentCommunityId>(n) = n;
       graph.template GetData<PreviousCommunityId>(n) = n;
+      graph.template GetData<CandidateCommunityId>(n) = Base::UNASSIGNED;
     });
 
     // Calculate teh weighted degree sum for each node
@@ -220,17 +218,6 @@ struct LouvainClusteringImplementation
     // Compute the total weight (2m) and 1/2m terms
     constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
-
-    //TODO(lhc) due to the problem from the same type node data fields,
-    //          for now, just use this.
-    katana::LargeArray<uint64_t> local_target;
-    local_target.allocateBlocked(num_nodes);
-
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      //graph.template GetData<CandidateCommunityId>(n)
-      //  = Base::UNASSIGNED;
-      local_target[n] = Base::UNASSIGNED;
-    });
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
@@ -243,8 +230,8 @@ struct LouvainClusteringImplementation
           [&](GNode n) {
             auto& n_curr_comm_id =
                 graph.template GetData<CurrentCommunityId>(n);
-            auto& n_candidate_comm_id = local_target[n];
-            //    graph.template GetData<CandidateCommunityId>(n);
+            auto& n_candidate_comm_id =
+                graph.template GetData<CandidateCommunityId>(n);
             auto& n_data_degree_wt =
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
             auto& max_modularity_gain =
@@ -277,12 +264,12 @@ struct LouvainClusteringImplementation
       // TODO(lhc): reduce-max of max_modularity_gain + n_candidate_comm_id
       // sync<max-reduce>()
 
+      // TODO(lhc): extract this to separate function
       // Update community IDs
       katana::do_all(katana::iterate(graph), [&](GNode n) {
-        const uint64_t target_comm_id = local_target[n];
         uint64_t& curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
-        //const uint64_t target_comm_id =
-        //        graph.template GetData<CandidateCommunityId>(n);
+        const uint64_t target_comm_id =
+            graph.template GetData<CandidateCommunityId>(n);
 
         if (target_comm_id != curr_comm_id &&
             target_comm_id != Base::UNASSIGNED) {
@@ -312,10 +299,9 @@ struct LouvainClusteringImplementation
       }
 
       prev_mod = curr_mod;
-
-      if (prev_mod < lower)
+      if (prev_mod < lower) {
         prev_mod = lower;
-
+      }
     }  // End while
     TimerClusteringWhile.stop();
 
@@ -467,6 +453,7 @@ public:
       uint64_t num_unique_clusters =
           Base::RenumberClustersContiguously(&graph_curr);
 
+      // TODO(lhc): extract these to separate function
       if (iter < plan.max_iterations() &&
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
         if (!plan.enable_vf() && phase == 1) {
@@ -518,8 +505,7 @@ LouvainClusteringWithWrap(
   static_assert(
       std::is_integral_v<EdgeWeightType> ||
       std::is_floating_point_v<EdgeWeightType>);
-
-  constexpr size_t num_node_properties = 4;
+  constexpr size_t num_node_properties = 5;
   std::vector<TemporaryPropertyGuard> temp_node_properties(num_node_properties);
   std::generate_n(temp_node_properties.begin(), num_node_properties, [&]() {
     return TemporaryPropertyGuard{pfg};

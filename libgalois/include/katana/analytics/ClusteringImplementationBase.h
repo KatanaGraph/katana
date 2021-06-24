@@ -43,6 +43,7 @@ using CommunityIdTy = uint64_t;
 using ModularityTy = double;
 struct PreviousCommunityId : public katana::PODProperty<CommunityIdTy> {};
 struct CurrentCommunityId : public katana::PODProperty<CommunityIdTy> {};
+struct CandidateCommunityId : public katana::PODProperty<CommunityIdTy> {};
 
 template <typename EdgeWeightType>
 using DegreeWeight = katana::PODProperty<EdgeWeightType>;
@@ -214,20 +215,20 @@ struct ClusteringImplementationBase {
    * without swapping the cluster assignment.
    */
   void MaxModularityWithoutSwaps(
-      std::map<uint64_t, uint64_t>& cluster_local_map,
+      std::map<CommunityIdTy, CommunityIdTy>& cluster_local_map,
       std::vector<EdgeTy>& counter, uint64_t self_loop_wt,
       CommunityArray& c_info, EdgeTy node_n_degree_wt,
-      GainTy* max_modularity_gain, uint64_t* next_candidate_community,
-      uint64_t curr_comm_id, double constant) {
-    uint64_t max_index =
-        curr_comm_id;  // Assign the intial value as self community
-    double cur_gain = 0;
-    double max_gain = 0;
+      GainTy* max_modularity_gain, CommunityIdTy* next_candidate_community,
+      CommunityIdTy curr_comm_id, GainTy constant) {
+    CommunityIdTy max_index = curr_comm_id;
+    GainTy cur_gain = 0;
+    GainTy max_gain = 0;
+
     //TODO(lhc) edge weight of non-self edges
-    double outgoing_edge_wt = counter[0] - self_loop_wt;
-    double ax = c_info[curr_comm_id].degree_wt - node_n_degree_wt;
-    double neigh_comm_edge_wt = 0;
-    double ay = 0;
+    GainTy outgoing_edge_wt = counter[0] - self_loop_wt;
+    GainTy ax = c_info[curr_comm_id].degree_wt - node_n_degree_wt;
+    GainTy neigh_comm_edge_wt = 0;
+    GainTy ay = 0;
 
     auto stored_already = cluster_local_map.begin();
     do {

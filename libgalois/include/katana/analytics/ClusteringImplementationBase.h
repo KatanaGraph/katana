@@ -83,9 +83,9 @@ struct ClusteringImplementationBase {
     // Add the node's current cluster to be considered
     // for movement as well
     (*cluster_local_map)[graph.template GetData<CurrentCommunityId>(n)] =
-        0;                 // Add n's current cluster
-    counter->push_back(0); // Initialize the counter to zero (no edges incident
-                           // yet)
+        0;                  // Add n's current cluster
+    counter->push_back(0);  // Initialize the counter to zero (no edges incident
+                            // yet)
     num_unique_clusters++;
 
     // Assuming we have grabbed lock on all the neighbors
@@ -219,7 +219,8 @@ struct ClusteringImplementationBase {
       CommunityArray& c_info, EdgeTy node_n_degree_wt,
       GainTy* max_modularity_gain, uint64_t* next_candidate_community,
       uint64_t curr_comm_id, double constant) {
-    uint64_t max_index = curr_comm_id;  // Assign the intial value as self community
+    uint64_t max_index =
+        curr_comm_id;  // Assign the intial value as self community
     double cur_gain = 0;
     double max_gain = 0;
     //TODO(lhc) edge weight of non-self edges
@@ -236,17 +237,18 @@ struct ClusteringImplementationBase {
         if (ay < (c_info[curr_comm_id].degree_wt)) {
           stored_already++;
           continue;
-        } else if (ay == c_info[curr_comm_id].degree_wt &&
-                    stored_already->first > curr_comm_id) {
+        } else if (
+            ay == c_info[curr_comm_id].degree_wt &&
+            stored_already->first > curr_comm_id) {
           // if degree weights are the same, then the big community becomes
           // a leader
           stored_already++;
           continue;
         }
 
-        neigh_comm_edge_wt = counter[stored_already
-                                     ->second];  // Total edge weights incident
-                                                 // on cluster y
+        neigh_comm_edge_wt =
+            counter[stored_already->second];  // Total edge weights incident
+                                              // on cluster y
         cur_gain = 2 * constant * (neigh_comm_edge_wt - outgoing_edge_wt) +
                    2 * node_n_degree_wt * ((ax - ay) * constant * constant);
 
@@ -422,8 +424,7 @@ struct ClusteringImplementationBase {
 
     // TODO(lhc) map vs bitset?
     for (GNode n = 0; n < graph->num_nodes(); ++n) {
-      auto& n_curr_comm_id =
-          graph->template GetData<CurrentCommunityId>(n);
+      auto& n_curr_comm_id = graph->template GetData<CurrentCommunityId>(n);
       if (n_curr_comm_id != UNASSIGNED) {
         KATANA_LOG_DEBUG_ASSERT(n_curr_comm_id < graph->num_nodes());
         auto stored_already = cluster_local_map.find(n_curr_comm_id);

@@ -22,9 +22,9 @@
 #include <deque>
 #include <type_traits>
 
+#include "katana/DynamicBitset.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/ClusteringImplementationBase.h"
-#include "katana/DynamicBitset.h"
 
 using namespace katana::analytics;
 namespace {
@@ -126,9 +126,9 @@ struct LouvainClusteringImplementation
                   graph, n, &cluster_local_map, &counter, &self_loop_wt);
               // Find the max gain in modularity
               Base::MaxModularityWithoutSwaps(
-                cluster_local_map, counter, self_loop_wt, c_info,
-                n_data_degree_wt, &max_modularity_gain, &local_target,
-                n_data_curr_comm_id, constant_for_second_term);
+                  cluster_local_map, counter, self_loop_wt, c_info,
+                  n_data_degree_wt, &max_modularity_gain, &local_target,
+                  n_data_curr_comm_id, constant_for_second_term);
             } else {
               local_target = Base::UNASSIGNED;
             }
@@ -226,12 +226,7 @@ struct LouvainClusteringImplementation
     katana::LargeArray<uint64_t> local_target;
     local_target.allocateBlocked(num_nodes);
 
-    // partition nodes
-    std::vector<katana::InsertBag<GNode>> bag(16);
-
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      uint64_t idx = n % 16;
-      bag[idx].push(n);
       //graph.template GetData<CandidateCommunityId>(n)
       //  = Base::UNASSIGNED;
       local_target[n] = Base::UNASSIGNED;
@@ -243,73 +238,66 @@ struct LouvainClusteringImplementation
     while (true) {
       num_iter++;
 
-      for (uint64_t idx = 0; idx <= 15; idx++) { // TODO(lhc) remove this loop
-        katana::do_all(
-            katana::iterate(bag[idx]),
-            [&](GNode n) {
-              auto& n_curr_comm_id =
-                  graph.template GetData<CurrentCommunityId>(n);
-              auto& n_candidate_comm_id =
-                  local_target[n];
-              //    graph.template GetData<CandidateCommunityId>(n);
-              auto& n_data_degree_wt =
-                  graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
-              auto& max_modularity_gain =
-                  graph.template GetData<ModularityGain>(n);
-
-              uint64_t degree =
-                  std::distance(graph.edge_begin(n), graph.edge_end(n));
-
-              std::map<CommunityIdTy, CommunityIdTy>
-                  cluster_local_map;  // Map each neighbor's cluster to local number:
-                                      // Community --> Index
-              std::vector<EdgeWeightType>
-                  counter;  // Number of edges to each unique cluster
-              EdgeWeightType self_loop_wt = 0;
-
-              if (degree > 0) {
-                Base::template FindNeighboringClusters<EdgeWeightType>(
-                    graph, n, &cluster_local_map, &counter, &self_loop_wt);
-                // Find the max gain in modularity
-                Base::MaxModularityWithoutSwaps(
-                    cluster_local_map, counter, self_loop_wt, c_info,
-                    n_data_degree_wt, &max_modularity_gain,
-                    &n_candidate_comm_id, n_curr_comm_id,
-                    constant_for_second_term);
-              } else {
-                n_candidate_comm_id = Base::UNASSIGNED;
-              }
-            },
-            katana::loopname("louvain algo: Phase 1"));
-
-        // TODO(lhc): reduce-max of max_modularity_gain + n_candidate_comm_id
-        // sync<max-reduce>()
-
-        // Update community IDs
-        katana::do_all(katana::iterate(bag[idx]), [&](GNode n) {
-          const uint64_t target_comm_id = local_target[n];
-          uint64_t& curr_comm_id =
-                  graph.template GetData<CurrentCommunityId>(n);
-          //const uint64_t target_comm_id =
-          //        graph.template GetData<CandidateCommunityId>(n);
-
-          if (target_comm_id != curr_comm_id &&
-              target_comm_id != Base::UNASSIGNED) {
-            auto& target_comm_info = c_info[target_comm_id];
-            auto& curr_comm_info = c_info[curr_comm_id];
-            auto& n_degree_wt =
+      katana::do_all(
+          katana::iterate(graph),
+          [&](GNode n) {
+            auto& n_curr_comm_id =
+                graph.template GetData<CurrentCommunityId>(n);
+            auto& n_candidate_comm_id = local_target[n];
+            //    graph.template GetData<CandidateCommunityId>(n);
+            auto& n_data_degree_wt =
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+            auto& max_modularity_gain =
+                graph.template GetData<ModularityGain>(n);
 
-            katana::atomicAdd(target_comm_info.size,
-                              static_cast<uint64_t>(1));
-            katana::atomicAdd(target_comm_info.degree_wt, n_degree_wt);
-            katana::atomicSub(curr_comm_info.degree_wt, n_degree_wt);
-            katana::atomicSub(curr_comm_info.size,
-                              static_cast<uint64_t>(1));
-            curr_comm_id = target_comm_id;
-          }
-        });
-      }  // end for
+            uint64_t degree =
+                std::distance(graph.edge_begin(n), graph.edge_end(n));
+
+            std::map<CommunityIdTy, CommunityIdTy>
+                cluster_local_map;  // Map each neighbor's cluster to local number:
+                                    // Community --> Index
+            std::vector<EdgeWeightType>
+                counter;  // Number of edges to each unique cluster
+            EdgeWeightType self_loop_wt = 0;
+
+            if (degree > 0) {
+              Base::template FindNeighboringClusters<EdgeWeightType>(
+                  graph, n, &cluster_local_map, &counter, &self_loop_wt);
+              // Find the max gain in modularity
+              Base::MaxModularityWithoutSwaps(
+                  cluster_local_map, counter, self_loop_wt, c_info,
+                  n_data_degree_wt, &max_modularity_gain, &n_candidate_comm_id,
+                  n_curr_comm_id, constant_for_second_term);
+            } else {
+              n_candidate_comm_id = Base::UNASSIGNED;
+            }
+          },
+          katana::loopname("louvain algo: Phase 1"));
+
+      // TODO(lhc): reduce-max of max_modularity_gain + n_candidate_comm_id
+      // sync<max-reduce>()
+
+      // Update community IDs
+      katana::do_all(katana::iterate(graph), [&](GNode n) {
+        const uint64_t target_comm_id = local_target[n];
+        uint64_t& curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
+        //const uint64_t target_comm_id =
+        //        graph.template GetData<CandidateCommunityId>(n);
+
+        if (target_comm_id != curr_comm_id &&
+            target_comm_id != Base::UNASSIGNED) {
+          auto& target_comm_info = c_info[target_comm_id];
+          auto& curr_comm_info = c_info[curr_comm_id];
+          auto& n_degree_wt =
+              graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
+
+          katana::atomicAdd(target_comm_info.size, static_cast<uint64_t>(1));
+          katana::atomicAdd(target_comm_info.degree_wt, n_degree_wt);
+          katana::atomicSub(curr_comm_info.degree_wt, n_degree_wt);
+          katana::atomicSub(curr_comm_info.size, static_cast<uint64_t>(1));
+          curr_comm_id = target_comm_id;
+        }
+      });
 
       /* Calculate the overall modularity */
       ModularityTy e_xx = 0;
@@ -389,7 +377,8 @@ public:
      * Initialize node cluster id.
      */
       katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
-        (*clusters_orig)[n] = graph_curr.template GetData<CurrentCommunityId>(n);
+        (*clusters_orig)[n] =
+            graph_curr.template GetData<CurrentCommunityId>(n);
       });
 
       // Build new graph to remove the isolated nodes
@@ -408,10 +397,9 @@ public:
       /*
        * Initialize node cluster id.
        */
-      katana::do_all(
-          katana::iterate(graph_curr), [&](GNode n) {
-            (*clusters_orig)[n] = Base::UNASSIGNED;
-          });
+      katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
+        (*clusters_orig)[n] = Base::UNASSIGNED;
+      });
 
       // Copy pfg to pfg_mutable
       if (auto r = Base::CreateDuplicateGraph(
@@ -482,14 +470,16 @@ public:
       if (iter < plan.max_iterations() &&
           (curr_mod - prev_mod) > plan.modularity_threshold_total()) {
         if (!plan.enable_vf() && phase == 1) {
-          KATANA_LOG_DEBUG_ASSERT(orig_cluster_num_nodes == graph_curr.num_nodes());
+          KATANA_LOG_DEBUG_ASSERT(
+              orig_cluster_num_nodes == graph_curr.num_nodes());
           katana::do_all(katana::iterate(graph_curr), [&](GNode n) {
             (*clusters_orig)[n] =
                 graph_curr.template GetData<CurrentCommunityId>(n);
           });
         } else {
           katana::do_all(
-              katana::iterate(uint64_t{0}, orig_cluster_num_nodes), [&](GNode n) {
+              katana::iterate(uint64_t{0}, orig_cluster_num_nodes),
+              [&](GNode n) {
                 if ((*clusters_orig)[n] != Base::UNASSIGNED) {
                   KATANA_LOG_DEBUG_ASSERT(
                       (*clusters_orig)[n] < graph_curr.num_nodes());
@@ -531,11 +521,10 @@ LouvainClusteringWithWrap(
 
   constexpr size_t num_node_properties = 4;
   std::vector<TemporaryPropertyGuard> temp_node_properties(num_node_properties);
-  std::generate_n(
-      temp_node_properties.begin(), num_node_properties,
-      [&]() { return TemporaryPropertyGuard{pfg}; });
-  std::vector<std::string> temp_node_property_names(
-      num_node_properties);
+  std::generate_n(temp_node_properties.begin(), num_node_properties, [&]() {
+    return TemporaryPropertyGuard{pfg};
+  });
+  std::vector<std::string> temp_node_property_names(num_node_properties);
   std::transform(
       temp_node_properties.begin(), temp_node_properties.end(),
       temp_node_property_names.begin(),
@@ -734,7 +723,8 @@ katana::analytics::LouvainClusteringStatistics::Compute(
   size_t largest_cluster_size = largest.second + 1;
   ModularityTy largest_cluster_proportion = 0;
   if (!graph.empty()) {
-    largest_cluster_proportion = ModularityTy(largest_cluster_size) / graph.size();
+    largest_cluster_proportion =
+        ModularityTy(largest_cluster_size) / graph.size();
   }
 
   ModularityTy modularity = 0.0;

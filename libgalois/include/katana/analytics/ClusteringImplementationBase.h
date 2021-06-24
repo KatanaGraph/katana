@@ -33,14 +33,16 @@ namespace katana::analytics {
 
 // Maintain community information
 template <typename EdgeWeightType>
-struct CommunityType {
+struct CommunityInfoTy {
   std::atomic<uint64_t> size;
   std::atomic<EdgeWeightType> degree_wt;
   EdgeWeightType internal_edge_wt;
 };
 
-struct PreviousCommunityId : public katana::PODProperty<uint64_t> {};
-struct CurrentCommunityId : public katana::PODProperty<uint64_t> {};
+using CommunityIdTy = uint64_t;
+using ModularityTy = double;
+struct PreviousCommunityId : public katana::PODProperty<CommunityIdTy> {};
+struct CurrentCommunityId : public katana::PODProperty<CommunityIdTy> {};
 
 template <typename EdgeWeightType>
 using DegreeWeight = katana::PODProperty<EdgeWeightType>;
@@ -51,17 +53,17 @@ using EdgeWeight = katana::PODProperty<EdgeWeightType>;
 using GainTy = double;
 using ModularityGain = katana::PODProperty<GainTy>;
 
-template <typename _Graph, typename _EdgeType, typename _CommunityType>
+template <typename _Graph, typename _EdgeType, typename _CommunityInfoTy>
 struct ClusteringImplementationBase {
   using Graph = _Graph;
   using GNode = typename Graph::Node;
   using EdgeTy = _EdgeType;
-  using CommunityType = _CommunityType;
+  using CommunityInfoTy = _CommunityInfoTy;
 
-  constexpr static const uint64_t UNASSIGNED =
-      std::numeric_limits<uint64_t>::max();
+  constexpr static const CommunityIdTy UNASSIGNED =
+      std::numeric_limits<CommunityIdTy>::max();
 
-  using CommunityArray = katana::LargeArray<CommunityType>;
+  using CommunityArray = katana::LargeArray<CommunityInfoTy>;
 
   /**
    * Algorithm to find the best cluster for the node
@@ -74,15 +76,15 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType>
   void FindNeighboringClusters(
       const Graph& graph, GNode& n,
-      std::map<uint64_t, uint64_t>& cluster_local_map,
-      std::vector<EdgeTy>& counter, EdgeTy& self_loop_wt) {
-    uint64_t num_unique_clusters = 0;
+      std::map<CommunityIdTy, CommunityIdTy>* cluster_local_map,
+      std::vector<EdgeTy>* counter, EdgeTy* self_loop_wt) {
+    CommunityIdTy num_unique_clusters = 0;
 
     // Add the node's current cluster to be considered
     // for movement as well
-    cluster_local_map[graph.template GetData<CurrentCommunityId>(n)] =
+    (*cluster_local_map)[graph.template GetData<CurrentCommunityId>(n)] =
         0;                 // Add n's current cluster
-    counter.push_back(0);  // Initialize the counter to zero (no edges incident
+    counter->push_back(0); // Initialize the counter to zero (no edges incident
                            // yet)
     num_unique_clusters++;
 
@@ -92,17 +94,17 @@ struct ClusteringImplementationBase {
       auto edge_wt = graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(
           ii);  // Self loop weights is recorded
       if (*dst == n) {
-        self_loop_wt += edge_wt;  // Self loop weights is recorded
+        (*self_loop_wt) += edge_wt;  // Self loop weights is recorded
       }
       auto stored_already =
-          cluster_local_map.find(graph.template GetData<CurrentCommunityId>(
+          cluster_local_map->find(graph.template GetData<CurrentCommunityId>(
               dst));  // Check if it already exists
-      if (stored_already != cluster_local_map.end()) {
-        counter[stored_already->second] += edge_wt;
+      if (stored_already != cluster_local_map->end()) {
+        (*counter)[stored_already->second] += edge_wt;
       } else {
-        cluster_local_map[graph.template GetData<CurrentCommunityId>(dst)] =
+        (*cluster_local_map)[graph.template GetData<CurrentCommunityId>(dst)] =
             num_unique_clusters;
-        counter.push_back(edge_wt);
+        counter->push_back(edge_wt);
         num_unique_clusters++;
       }
     }  // End edge loop
@@ -153,34 +155,36 @@ struct ClusteringImplementationBase {
    * the unique clusters.
    */
   template <typename EdgeWeightType>
-  void SumVertexDegreeWeight(Graph* graph, CommunityArray& c_info) {
+  void SumVertexDegreeWeight(Graph* graph, CommunityArray* c_info) {
     katana::do_all(katana::iterate(*graph), [&](GNode n) {
       EdgeTy total_weight = 0;
-      auto& n_degree_wt =
-          graph->template GetData<DegreeWeight<EdgeWeightType>>(n);
+      // Calculate all out-edge weight
       for (auto ii = graph->edge_begin(n); ii != graph->edge_end(n); ++ii) {
         total_weight +=
             graph->template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii);
       }
-      n_degree_wt = total_weight;
-      c_info[n].degree_wt = total_weight;
-      c_info[n].size = 1;
+      graph->template GetData<DegreeWeight<EdgeWeightType>>(n) = total_weight;
+      // All community have the single node
+      (*c_info)[n].degree_wt = total_weight;
+      (*c_info)[n].size = 1;
     });
     return;
   }
 
   /**
-   * Computes the constant term 1/(2 * total internal edge weight)
+   * Computes the constant term
+   * 1/(2 * total edge weight of the current partitioned graph)
    * of the current coarsened graph.
    */
   template <typename EdgeWeightType>
   double CalConstantForSecondTerm(const Graph& graph) {
-    //Using double to avoid overflow
+    // Using double to avoid overflow
     katana::GAccumulator<double> local_weight;
     katana::do_all(katana::iterate(graph), [&graph, &local_weight](GNode n) {
       local_weight += graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
     });
-    //This is twice since graph is symmetric
+
+    // This is twice since graph is symmetric
     double total_edge_weight_twice = local_weight.reduce();
     return 1 / total_edge_weight_twice;
   }
@@ -409,24 +413,25 @@ struct ClusteringImplementationBase {
   }
 
   /**
- * Renumbers the cluster to contiguous cluster ids
- * to fill the holes in the cluster id assignments.
- */
+   * Renumbers the cluster to contiguous cluster ids
+   * to fill the holes in the cluster id assignments.
+   */
   uint64_t RenumberClustersContiguously(Graph* graph) {
-    std::map<uint64_t, uint64_t> cluster_local_map;
-    uint64_t num_unique_clusters = 0;
+    std::map<CommunityIdTy, CommunityIdTy> cluster_local_map;
+    CommunityIdTy num_unique_clusters{0};
 
+    // TODO(lhc) map vs bitset?
     for (GNode n = 0; n < graph->num_nodes(); ++n) {
-      auto& n_data_curr_comm_id =
+      auto& n_curr_comm_id =
           graph->template GetData<CurrentCommunityId>(n);
-      if (n_data_curr_comm_id != UNASSIGNED) {
-        KATANA_LOG_DEBUG_ASSERT(n_data_curr_comm_id < graph->num_nodes());
-        auto stored_already = cluster_local_map.find(n_data_curr_comm_id);
+      if (n_curr_comm_id != UNASSIGNED) {
+        KATANA_LOG_DEBUG_ASSERT(n_curr_comm_id < graph->num_nodes());
+        auto stored_already = cluster_local_map.find(n_curr_comm_id);
         if (stored_already != cluster_local_map.end()) {
-          n_data_curr_comm_id = stored_already->second;
+          n_curr_comm_id = stored_already->second;
         } else {
-          cluster_local_map[n_data_curr_comm_id] = num_unique_clusters;
-          n_data_curr_comm_id = num_unique_clusters;
+          cluster_local_map[n_curr_comm_id] = num_unique_clusters;
+          n_curr_comm_id = num_unique_clusters;
           num_unique_clusters++;
         }
       }
@@ -443,17 +448,17 @@ struct ClusteringImplementationBase {
     });
 
     [[maybe_unused]] uint64_t num_unique_clusters =
-        RenumberClustersContiguously(graph);
+        RenumberClustersContiguously(&graph);
     auto mod =
         CalModularityFinal<Graph, EdgeWeightType, CurrentCommunityId>(graph);
   }
 
   /**
- * Creates a duplicate of the graph by copying the
- * graph (pfg_from) topology as well as edge property
- * (read from the underlying RDG) to the in-memory
- * temporary graph (pfg_to).
- */
+   * Creates a duplicate of the graph by copying the
+   * graph (pfg_from) topology as well as edge property
+   * (read from the underlying RDG) to the in-memory
+   * temporary graph (pfg_to).
+   */
   katana::Result<void> CreateDuplicateGraph(
       katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
       const std::string& edge_property_name,

@@ -22,7 +22,6 @@
 #include <deque>
 #include <type_traits>
 
-#include "katana/DynamicBitset.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/ClusteringImplementationBase.h"
 

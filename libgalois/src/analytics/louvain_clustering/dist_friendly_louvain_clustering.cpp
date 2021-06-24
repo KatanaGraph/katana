@@ -17,14 +17,13 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#include "katana/analytics/louvain_clustering/louvain_clustering.h"
-
 #include <deque>
 #include <type_traits>
 
 #include "katana/DynamicBitset.h"
 #include "katana/TypedPropertyGraph.h"
 #include "katana/analytics/ClusteringImplementationBase.h"
+#include "katana/analytics/louvain_clustering/louvain_clustering.h"
 
 using namespace katana::analytics;
 namespace {

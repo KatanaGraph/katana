@@ -263,6 +263,41 @@ ResultErrno() {
   return std::error_code(errno, std::system_category());
 }
 
+namespace internal {
+
+template <class T>
+std::enable_if_t<!std::is_same<T, void>::value, T&&>
+extract_result_value(Result<T>&& result) {
+  return std::move(result.value());
+}
+
+inline int
+extract_result_value(Result<void>&&) {
+  return 0;
+}
+
+}  // namespace internal
+
+#define KATANA_CHECKED_NAME(x, y) x##y
+
+#define KATANA_CHECKED_IMPL(result_name, expression, ...)                      \
+  ({                                                                           \
+    auto result_name = (expression);                                           \
+    if (!result_name) {                                                        \
+      return result_name.error().WithContext(__VA_ARGS__);                     \
+    }                                                                          \
+    std::move(                                                                 \
+        ::katana::internal::extract_result_value(std::move(result_name)));     \
+  })
+
+#define KATANA_CHECKED_CONTEXT(expression, ...)                                \
+  KATANA_CHECKED_IMPL(                                                         \
+      KATANA_CHECKED_NAME(_error_or_value, __COUNTER__), expression,           \
+      __VA_ARGS__)
+
+#define KATANA_CHECKED(expression)                                             \
+  KATANA_CHECKED_CONTEXT(expression, "backtrace")
+
 }  // namespace katana
 
 #endif

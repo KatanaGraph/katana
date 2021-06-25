@@ -239,7 +239,7 @@ struct LouvainClusteringImplementation
       graph.template GetData<CandidateCommunityId>(n) = Base::UNASSIGNED;
     });
 
-    // Calculate teh weighted degree sum for each node
+    // Calculate the weighted degree sum for each node
     Base::template SumVertexDegreeWeight<EdgeWeightType>(&graph, &c_info);
 
     // Compute the total weight (2m) and 1/2m terms

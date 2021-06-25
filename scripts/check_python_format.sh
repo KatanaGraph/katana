@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PYFMT="${PYFMT:-black}"
+BLACK="${BLACK:-black}"
 ISORT="${ISORT:-isort}"
 
 set -eu
@@ -24,16 +24,26 @@ ISORT_ARGS="--settings-file=${GIT_ROOT}/pyproject.toml"
 
 FAILED=
 
+BLACK_UNSUPPORTED_FILES='.*\.pyx|.*\.pxd'
+
 # Handle arguments individually because Black treats multiple arguments as
 # paths within the Python package, which will cause errors when mixing Python
 # script directories with Python modules.
 for root in "$@"; do
   if [ -n "${FIX}" ]; then
-    ${PYFMT} ${FORMAT_ARGS} "${root}"
+    if [[ "${root}" =~ $BLACK_UNSUPPORTED_FILES ]]; then
+      true
+    else
+      ${BLACK} ${FORMAT_ARGS} "${root}"
+    fi
     ${ISORT} ${ISORT_ARGS} "${root}"
   else
-    if ! ${PYFMT} ${FORMAT_ARGS} --check "${root}"; then
-      FAILED=1
+    if [[ "${root}" =~ $BLACK_UNSUPPORTED_FILES ]]; then
+      true
+    else
+      if ! ${BLACK} ${FORMAT_ARGS} --check "${root}"; then
+        FAILED=1
+      fi
     fi
     if ! ${ISORT} ${ISORT_ARGS} --diff --check "${root}"; then
       FAILED=1

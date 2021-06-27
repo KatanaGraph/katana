@@ -324,7 +324,7 @@ jobs:
           export AWS_EC2_METADATA_DISABLED=true
           # Default timeout is 1500 seconds. Quick tests should not take more
           # than a few seconds typically.
-          cd $HOME/build && ctest -V --label-regex quick --parallel 2 --timeout 350
+          cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 2 --timeout 350
 
       # MacOS tests seem to run into CI host level failures that are hard to
       # reproduce locally. Rerun them for now.
@@ -335,4 +335,4 @@ jobs:
         run: |
           . .github/workflows/activate_miniconda.sh
           export AWS_EC2_METADATA_DISABLED=true
-          cd $HOME/build && ctest -V --label-regex quick --parallel 1 --repeat until-pass:2 --timeout 350
+          cd $HOME/build && ctest --output-on-failure --label-regex quick --parallel 1 --repeat until-pass:2 --timeout 350

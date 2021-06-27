@@ -56,13 +56,15 @@ class KatanaPluginLoader(MetaPathFinder):
 
         assert fullname in self._insert_table
 
-        # This will get the module from sys.modules if it is already loaded.
-        module = importlib.import_module(self._insert_table[fullname])
-        if fullname in sys.modules:
-            raise ImportError(
-                f"module {fullname} already exists while trying to insert "
-                f"{self._insert_table[fullname]} at that name."
-            )
+        aliased_name = self._insert_table[fullname]
+        if aliased_name in sys.modules:
+            module = sys.modules[aliased_name]
+        else:
+            module = importlib.import_module(aliased_name)
+            if fullname in sys.modules:
+                raise ImportError(
+                    f"module {fullname} already exists while trying to insert {aliased_name} at that name."
+                )
         module.__name__ = fullname
         module.__package__ = fullname
         sys.modules[fullname] = module

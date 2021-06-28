@@ -7,10 +7,12 @@
 #include <ostream>
 #include <system_error>
 
+#include <arrow/result.h>
 #include <boost/outcome/outcome.hpp>
 #include <boost/outcome/utils.hpp>
 #include <fmt/format.h>
 
+#include "katana/ErrorCode.h"
 #include "katana/Logging.h"
 #include "katana/config.h"
 
@@ -265,14 +267,79 @@ ResultErrno() {
 
 namespace internal {
 
+/// Support functions for KATANA_CHECKED
+
+template <class T>
+bool
+CheckedExpressionFailed(const Result<T>& result) {
+  return !result;
+}
+
+inline bool
+CheckedExpressionFailed(const arrow::Status& status) {
+  return !status.ok();
+}
+
+template <class T>
+bool
+CheckedExpressionFailed(const arrow::Result<T>& result) {
+  return CheckedExpressionFailed(result.status());
+}
+
+template <class T>
+ErrorInfo
+CheckedExpressionToError(const Result<T>& result) {
+  return result.error();
+}
+
+inline ErrorCode
+ArrowStatusCodeToKatana(arrow::StatusCode code) {
+  switch (code) {
+  case arrow::StatusCode::Invalid:
+    return ErrorCode::InvalidArgument;
+  case arrow::StatusCode::TypeError:
+    return ErrorCode::TypeError;
+  case arrow::StatusCode::AlreadyExists:
+    return ErrorCode::AlreadyExists;
+  case arrow::StatusCode::KeyError:
+  case arrow::StatusCode::IndexError:
+    return ErrorCode::NotFound;
+  default:
+    return ErrorCode::ArrowError;
+  }
+}
+
+inline ErrorInfo
+CheckedExpressionToError(const arrow::Status& status) {
+  ErrorCode code = ArrowStatusCodeToKatana(status.code());
+  return ErrorInfo(code).WithContext("{}", status.message());
+}
+
+template <class T>
+ErrorInfo
+CheckedExpressionToError(const arrow::Result<T>& result) {
+  return CheckedExpressionToError(result.status());
+}
+
 template <class T>
 std::enable_if_t<!std::is_same<T, void>::value, T&&>
-extract_result_value(Result<T>&& result) {
+CheckedExpressionToValue(Result<T>&& result) {
   return std::move(result.value());
 }
 
 inline int
-extract_result_value(Result<void>&&) {
+CheckedExpressionToValue(Result<void>&&) {
+  return 0;
+}
+
+template <class T>
+T&&
+CheckedExpressionToValue(arrow::Result<T>&& result) {
+  return std::move(result.ValueUnsafe());
+}
+
+inline int
+CheckedExpressionToValue(arrow::Status&&) {
   return 0;
 }
 
@@ -283,11 +350,13 @@ extract_result_value(Result<void>&&) {
 #define KATANA_CHECKED_IMPL(result_name, expression, ...)                      \
   ({                                                                           \
     auto result_name = (expression);                                           \
-    if (!result_name) {                                                        \
-      return result_name.error().WithContext(__VA_ARGS__);                     \
+    if (::katana::internal::CheckedExpressionFailed(result_name)) {            \
+      return ::katana::internal::CheckedExpressionToError(result_name)         \
+          .WithContext(__VA_ARGS__)                                            \
+          .WithContext("({}:{})", __FILE__, __LINE__);                         \
     }                                                                          \
     std::move(                                                                 \
-        ::katana::internal::extract_result_value(std::move(result_name)));     \
+        ::katana::internal::CheckedExpressionToValue(std::move(result_name))); \
   })
 
 #define KATANA_CHECKED_CONTEXT(expression, ...)                                \

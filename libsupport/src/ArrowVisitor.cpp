@@ -13,27 +13,12 @@ struct ToArrayVisitor {
   using ReturnType = std::shared_ptr<arrow::Array>;
   using ResultType = katana::Result<ReturnType>;
 
-  template <typename BuilderType>
-  ResultType Finish(BuilderType* builder) {
-    std::shared_ptr<arrow::Array> array;
-    auto res = builder->Finish(&array);
-    if (!res.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "arrow builder finish: {}", res);
-    }
-    return array;
-  }
-
   template <typename ArrowType, typename BuilderType>
   arrow::enable_if_null<ArrowType, ResultType> Call(BuilderType* builder) {
-    std::shared_ptr<arrow::Array> array;
-    auto res = builder->Finish(&array);
-    if (!res.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError, "arrow builder finish: {}", res);
-    }
-    return array;
+    return KATANA_CHECKED(builder->Finish());
+    ;
   }
+
   template <typename ArrowType, typename BuilderType>
   arrow::enable_if_t<
       arrow::is_number_type<ArrowType>::value ||
@@ -43,11 +28,7 @@ struct ToArrayVisitor {
   Call(BuilderType* builder) {
     using ScalarType = typename arrow::TypeTraits<ArrowType>::ScalarType;
 
-    if (auto st = builder->Reserve(scalars.size()); !st.ok()) {
-      return KATANA_ERROR(
-          katana::ErrorCode::ArrowError,
-          "arrow builder failed resize: {} reason: {}", scalars.size(), st);
-    }
+    KATANA_CHECKED(builder->Reserve(scalars.size()));
     for (const auto& scalar : scalars) {
       if (scalar->is_valid) {
         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
@@ -56,7 +37,7 @@ struct ToArrayVisitor {
         builder->UnsafeAppendNull();
       }
     }
-    return Finish(builder);
+    return KATANA_CHECKED(builder->Finish());
   }
 
   template <typename ArrowType, typename BuilderType>
@@ -83,7 +64,7 @@ struct ToArrayVisitor {
         }
       }
     }
-    return Finish(builder);
+    return KATANA_CHECKED(builder->Finish());
   }
 
   template <typename ArrowType, typename BuilderType>
@@ -98,18 +79,12 @@ struct ToArrayVisitor {
     for (const auto& scalar : scalars) {
       if (scalar->is_valid) {
         const ScalarType* typed_scalar = static_cast<ScalarType*>(scalar.get());
-        if (auto res = visitor.Call<ArrowType>(*typed_scalar); !res) {
-          return res.error();
-        }
+        KATANA_CHECKED(visitor.Call<ArrowType>(*typed_scalar));
       } else {
-        if (auto res = builder->AppendNull(); !res.ok()) {
-          return KATANA_ERROR(
-              katana::ErrorCode::ArrowError,
-              "arrow builder failed append null: {}", res);
-        }
+        KATANA_CHECKED(builder->AppendNull());
       }
     }
-    return Finish(builder);
+    return KATANA_CHECKED(builder->Finish());
   }
 };
 
@@ -118,14 +93,8 @@ katana::ArrayFromScalars(
     const std::vector<std::shared_ptr<arrow::Scalar>>& scalars,
     const std::shared_ptr<arrow::DataType>& type) {
   std::unique_ptr<arrow::ArrayBuilder> builder;
-  if (auto st =
-          arrow::MakeBuilder(arrow::default_memory_pool(), type, &builder);
-      !st.ok()) {
-    return KATANA_ERROR(
-        katana::ErrorCode::ArrowError,
-        "arrow builder failed type: {} length {} : {}", type->name(),
-        scalars.size(), st);
-  }
+  KATANA_CHECKED(
+      arrow::MakeBuilder(arrow::default_memory_pool(), type, &builder));
   ToArrayVisitor visitor(scalars);
 
   return katana::VisitArrow(builder, visitor);

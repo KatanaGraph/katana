@@ -13,15 +13,7 @@ IndexedTake(
     const std::shared_ptr<arrow::ChunkedArray>& original,
     std::shared_ptr<arrow::Array> indices) {
   // Use Take to select those indices
-  arrow::Result<arrow::Datum> take_result =
-      arrow::compute::Take(original, indices);
-  if (!take_result.ok()) {
-    return KATANA_ERROR(
-        katana::ArrowToKatana(take_result.status()),
-        "arrow builder reserve failed type: {} reason: {}",
-        original->type()->name(), take_result.status());
-  }
-  arrow::Datum take = std::move(take_result.ValueOrDie());
+  arrow::Datum take = KATANA_CHECKED(arrow::compute::Take(original, indices));
   std::shared_ptr<arrow::ChunkedArray> chunked = take.chunked_array();
   KATANA_LOG_ASSERT(chunked->num_chunks() == 1);
   return chunked;
@@ -32,24 +24,13 @@ Indices(const std::shared_ptr<arrow::ChunkedArray>& original) {
   int64_t length = original->length();
   // Build indices array, reusable across properties
   arrow::CTypeTraits<int64_t>::BuilderType builder;
-  auto res = builder.Reserve(length);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        katana::ArrowToKatana(res),
-        "arrow builder reserve failed type: {} reason: {}",
-        original->type()->name(), res);
-  }
+  KATANA_CHECKED_CONTEXT(
+      builder.Reserve(length), "arrow builder reserve failed type: {}",
+      original->type()->name());
   for (int64_t i = 0; i < length; ++i) {
     builder.UnsafeAppend(i);
   }
-  std::shared_ptr<arrow::Array> indices;
-  res = builder.Finish(&indices);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        katana::ArrowToKatana(res),
-        "arrow shuffle builder failed type: {} reason: {}",
-        original->type()->name(), res);
-  }
+  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(builder.Finish());
   return indices;
 }
 
@@ -91,36 +72,12 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
 
 }  // anonymous namespace
 
-katana::ErrorCode
-katana::ArrowToKatana(arrow::StatusCode code) {
-  KATANA_LOG_DEBUG_ASSERT(code != arrow::StatusCode::OK);
-
-  switch (code) {
-  case arrow::StatusCode::Invalid:
-    return ErrorCode::InvalidArgument;
-  case arrow::StatusCode::TypeError:
-    return ErrorCode::TypeError;
-  case arrow::StatusCode::AlreadyExists:
-    return ErrorCode::AlreadyExists;
-  case arrow::StatusCode::KeyError:
-  case arrow::StatusCode::IndexError:
-    return ErrorCode::NotFound;
-  default:
-    return ErrorCode::ArrowError;
-  }
-}
-
 katana::Result<std::shared_ptr<arrow::Array>>
 katana::Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  auto maybe_indices = Indices(original);
-  if (!maybe_indices) {
-    return maybe_indices.error();
-  }
-  auto maybe_chunked = IndexedTake(original, maybe_indices.value());
-  if (!maybe_chunked) {
-    return maybe_chunked.error();
-  }
-  return maybe_chunked.value()->chunk(0);
+  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(Indices(original));
+  std::shared_ptr<arrow::ChunkedArray> chunked =
+      KATANA_CHECKED(IndexedTake(original, indices));
+  return chunked->chunk(0);
 }
 
 katana::Result<std::shared_ptr<arrow::ChunkedArray>>
@@ -132,22 +89,11 @@ katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
   std::iota(indices_vec.begin(), indices_vec.end(), 0);
   std::shuffle(indices_vec.begin(), indices_vec.end(), katana::GetGenerator());
   arrow::CTypeTraits<int64_t>::BuilderType builder;
-  auto res = builder.Reserve(length);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(res), "arrow builder reserve failed type: {} reason: {}",
-        original->type()->name(), res);
-  }
+  KATANA_CHECKED(builder.Reserve(length));
   for (int64_t i = 0; i < length; ++i) {
     builder.UnsafeAppend(indices_vec[i]);
   }
-  std::shared_ptr<arrow::Array> indices;
-  res = builder.Finish(&indices);
-  if (!res.ok()) {
-    return KATANA_ERROR(
-        ArrowToKatana(res), "arrow shuffle builder failed type: {} reason: {}",
-        original->type()->name(), res);
-  }
+  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(builder.Finish());
   return IndexedTake(original, indices);
 }
 

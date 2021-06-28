@@ -22,10 +22,11 @@ by Galois C++.
 import atexit
 from typing import Dict, Type
 
+import katana.barrier
 import katana.plugin
 from katana.plugin import installed_plugins
 
-__all__ = ["TsubaError", "GaloisError", "QueryError", "installed_plugins"]
+__all__ = ["TsubaError", "GaloisError", "QueryError", "installed_plugins", "Barrier"]
 
 try:
     # Trigger the load of katana libraries
@@ -97,3 +98,5 @@ error_category_to_exception_class: Dict[str, Type[Exception]] = {
     "GaloisError": GaloisError,
     "QueryError": QueryError,
 }
+
+Barrier = katana.barrier.Barrier

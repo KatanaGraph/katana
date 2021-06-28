@@ -89,6 +89,42 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
   return total_mem_use;
 }
 
+uint64_t
+ApproxArrayDataCapacity(const std::shared_ptr<arrow::ArrayData>& data) {
+  uint64_t total_mem_use = 0;
+  const auto& buffers = data->buffers;
+  const auto& layout = data->type->layout();
+
+  KATANA_LOG_ASSERT(layout.buffers.size() == buffers.size());
+
+  for (int i = 0, num_buffers = buffers.size(); i < num_buffers; ++i) {
+    if (!buffers[i]) {
+      continue;
+    }
+    switch (layout.buffers[i].kind) {
+    case arrow::DataTypeLayout::FIXED_WIDTH:
+      total_mem_use += layout.buffers[i].byte_width * data->length;
+      break;
+
+    // TODO(thunt) get a better estimate for these types, based on my
+    // read of the arrow source they don't follow the rules use the whole
+    // buffer capacity as an over estimate
+    case arrow::DataTypeLayout::VARIABLE_WIDTH:
+    case arrow::DataTypeLayout::BITMAP:
+    case arrow::DataTypeLayout::ALWAYS_NULL:
+      total_mem_use += buffers[i]->capacity();
+    }
+  }
+  if (data->dictionary) {
+    total_mem_use += ApproxArrayDataCapacity(data->dictionary);
+  }
+  for (const auto& child_data : data->child_data) {
+    total_mem_use += ApproxArrayDataCapacity(child_data);
+  }
+
+  return total_mem_use;
+}
+
 }  // anonymous namespace
 
 katana::ErrorCode
@@ -227,6 +263,22 @@ katana::ApproxTableMemUse(const std::shared_ptr<arrow::Table>& table) {
   for (const auto& chunked_array : table->columns()) {
     for (const auto& array : chunked_array->chunks()) {
       total_mem_use += ApproxArrayDataMemUse(array->data());
+    }
+  }
+  return total_mem_use;
+}
+
+uint64_t
+katana::ApproxArrayCapacityMemUse(const std::shared_ptr<arrow::Array>& array) {
+  return ApproxArrayDataCapacity(array->data());
+}
+
+uint64_t
+katana::ApproxTableCapacityMemUse(const std::shared_ptr<arrow::Table>& table) {
+  uint64_t total_mem_use = 0;
+  for (const auto& chunked_array : table->columns()) {
+    for (const auto& array : chunked_array->chunks()) {
+      total_mem_use += ApproxArrayDataCapacity(array->data());
     }
   }
   return total_mem_use;

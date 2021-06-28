@@ -316,6 +316,18 @@ ApproxArrayMemUse(const std::shared_ptr<arrow::Array>& array);
 KATANA_EXPORT uint64_t
 ApproxTableMemUse(const std::shared_ptr<arrow::Table>& table);
 
+/// Estimate the amount of memory this array is using including extra capacity
+/// n.b. Estimate is best effort when array is a slice or a variable type like
+///   large_string; it will be an upper bound in those cases
+KATANA_EXPORT uint64_t
+ApproxArrayCapacityMemUse(const std::shared_ptr<arrow::Array>& array);
+
+/// Estimate the amount of memory this table is using including extra capacity
+/// n.b. Estimate is best effort when an array is a slice or a variable type like
+///   large_string; it will be an upper bound in those cases
+KATANA_EXPORT uint64_t
+ApproxTableCapacityMemUse(const std::shared_ptr<arrow::Table>& table);
+
 }  // namespace katana
 
 #endif

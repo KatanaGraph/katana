@@ -102,8 +102,11 @@ main(int argc, char** argv) {
   }
 
   std::cout << "Reading from file: " << inputFile << "\n";
+  std::vector<std::string> edge_property_names;
+  edge_property_names.push_back(edge_property_name);
+  edge_property_names.push_back(edge_type_property_name);
   std::unique_ptr<katana::PropertyGraph> pg =
-      MakeFileGraph(inputFile, edge_property_name);
+      MakeFileGraph(inputFile, edge_property_names);
 
   std::cout << "Read " << pg->topology().num_nodes() << " nodes, "
             << pg->topology().num_edges() << " edges\n";

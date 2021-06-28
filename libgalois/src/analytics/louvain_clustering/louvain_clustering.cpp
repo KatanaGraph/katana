@@ -384,7 +384,6 @@ public:
     std::vector<std::string> temp_edge_property_names = {
         "_katana_temporary_property_" + edge_weight_property_name};
 
-    katana::gPrint("before temp edger \n");
     temp_edge_property_names.push_back(
         "_katana_temporary_property_" + edge_type_property_name);
     if (auto result = ConstructEdgeProperties<EdgeData>(
@@ -393,19 +392,14 @@ public:
       return result.error();
     }
 
-    katana::gPrint("after edge result\n");
-
     //add here
     auto graph_result = Graph::Make(pfg);
     if (!graph_result) {
       return graph_result.error();
     }
-    katana::gPrint("make graph\n");
     Graph graph_curr = graph_result.value();
 
     if (!edge_type_property_name.empty()) {
-      katana::gPrint("inside \n");
-      katana::gPrint("inside \n");
       katana::do_all(
           katana::iterate((uint64_t)0, graph_curr.num_nodes()),
           [&](uint64_t n) {
@@ -463,18 +457,6 @@ public:
        */
       katana::do_all(
           katana::iterate(graph_curr), [&](GNode n) { clusters_orig[n] = -1; });
-
-      if (auto r = Base::CreateDuplicateGraph(
-              pfg, pfg_mutable.get(), edge_weight_property_name,
-              temp_edge_property_names[0]);
-          !r) {
-        return r.error();
-      }
-
-      if (auto result = ConstructNodeProperties<NodeData>(pfg_mutable.get());
-          !result) {
-        return result.error();
-      }
     }
 
     double prev_mod = -1;  // Previous modularity

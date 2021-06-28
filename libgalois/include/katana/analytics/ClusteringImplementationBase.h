@@ -48,7 +48,7 @@ using DegreeWeight = katana::PODProperty<EdgeWeightType>;
 template <typename EdgeWeightType>
 using EdgeWeight = katana::PODProperty<EdgeWeightType>;
 
-using EdgeType = katana::PODProperty<uint8_t>;
+struct EdgeType : public katana::PODProperty<uint32_t> {};
 
 template <typename _Graph, typename _EdgeType, typename _CommunityType>
 struct ClusteringImplementationBase {
@@ -537,12 +537,12 @@ struct ClusteringImplementationBase {
           for (auto ii = graph.edge_begin(c); ii != graph.edge_end(c); ++ii) {
             auto dst = graph.GetEdgeDest(ii);
 
-            if (graph.template GetEdgeData<EdgeType>(ii) == (uint8_t)1) {
+            if (graph.template GetEdgeData<EdgeType>(ii) == 1) {
               edges_id[c].push_back(
                   graph.template GetData<CurrentCommunityId>(dst));
               edges_data[c].push_back(std::make_tuple(
                   graph.template GetEdgeData<EdgeWeight<EdgeWeightType>>(ii),
-                  (uint8_t)1));
+                  1));
             }
           }
         },
@@ -661,9 +661,6 @@ struct ClusteringImplementationBase {
           }
         });
 
-    //TimerConstructFrom.stop();
-
-    ///TimerGraphBuild.stop();
     return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));
   }
 

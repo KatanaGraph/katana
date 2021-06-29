@@ -49,6 +49,69 @@ struct LouvainClusteringImplementation
   using Base = katana::analytics::ClusteringImplementationBase<
       Graph, EdgeWeightType, CommunityInfoTy<EdgeWeightType>>;
 
+  void InitializeLocalClusterInfo(
+      CommunityArray* c_update_add, CommunityArray* c_update_subtract) {
+    katana::do_all(
+        katana::iterate(uint64_t{0}, c_update_add->size()), [&](GNode n) {
+          (*c_update_add)[n].degree_wt = 0;
+          (*c_update_add)[n].size = 0;
+          (*c_update_subtract)[n].degree_wt = 0;
+          (*c_update_subtract)[n].size = 0;
+        });
+  }
+
+  /// Update global cluster's size and degree information
+  void UpdateGlobalClusterInformation(
+      Graph* graph, const katana::InsertBag<GNode>& to_process,
+      const katana::InsertBag<GNode>& bag, katana::LargeArray<bool>* in_bag,
+      CommunityArray* c_info, CommunityArray* c_update_add,
+      CommunityArray* c_update_subtract) {
+    katana::do_all(katana::iterate(bag), [&](GNode n) {
+      graph->template GetData<CurrentCommunityId>(n) =
+          graph->template GetData<CandidateCommunityId>(n);
+    });
+
+    for (auto n : to_process) {
+      if ((*in_bag)[n]) {
+        (*c_info)[n].degree_wt += (*c_update_add)[n].degree_wt;
+        (*c_info)[n].size += (*c_update_add)[n].size;
+        (*c_info)[n].degree_wt -= (*c_update_subtract)[n].degree_wt;
+        (*c_info)[n].size -= (*c_update_subtract)[n].size;
+        (*c_update_add)[n].degree_wt = 0;
+        (*c_update_add)[n].size = 0;
+        (*c_update_subtract)[n].degree_wt = 0;
+        (*c_update_subtract)[n].size = 0;
+        (*in_bag)[n] = false;
+      }
+    }
+  }
+
+  void UpdateLocalClusterInformation(
+      CommunityArray* c_update_add, CommunityArray* c_update_subtract,
+      const CommunityIdTy n_candidate_comm_id,
+      const CommunityIdTy n_curr_comm_id, const EdgeWeightType n_degree_wt,
+      katana::InsertBag<GNode>* to_process, katana::LargeArray<bool>* in_bag) {
+    if (n_candidate_comm_id != n_curr_comm_id &&
+        n_candidate_comm_id != Base::UNASSIGNED) {
+      katana::atomicAdd(
+          (*c_update_add)[n_candidate_comm_id].degree_wt, n_degree_wt);
+      katana::atomicAdd((*c_update_add)[n_candidate_comm_id].size, uint64_t{1});
+      katana::atomicAdd(
+          (*c_update_subtract)[n_curr_comm_id].degree_wt, n_degree_wt);
+      katana::atomicAdd((*c_update_subtract)[n_curr_comm_id].size, uint64_t{1});
+
+      if (!((*in_bag)[n_candidate_comm_id])) {
+        to_process->push(n_candidate_comm_id);
+        (*in_bag)[n_candidate_comm_id] = true;
+      }
+
+      if (!((*in_bag)[n_curr_comm_id])) {
+        to_process->push(n_curr_comm_id);
+        (*in_bag)[n_curr_comm_id] = true;
+      }
+    }
+  }
+
   katana::Result<ModularityTy> LouvainWithoutLockingDoAll(
       katana::PropertyGraph* pfg, ModularityTy lower,
       ModularityTy modularity_threshold_per_round, uint32_t* iter) {
@@ -85,7 +148,7 @@ struct LouvainClusteringImplementation
 
     /* Compute the total weight (2m) and 1/2m terms */
     constant_for_second_term =
-        Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+        Base::template CalcConstantForSecondTerm<EdgeWeightType>(graph);
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
@@ -102,7 +165,7 @@ struct LouvainClusteringImplementation
           [&](GNode n) {
             auto& n_data_curr_comm_id =
                 graph.template GetData<CurrentCommunityId>(n);
-            auto& n_data_degree_wt =
+            auto& n_degree_wt =
                 graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
             auto& max_modularity_gain =
                 graph.template GetData<ModularityGain>(n);
@@ -122,9 +185,9 @@ struct LouvainClusteringImplementation
                   graph, n, &cluster_local_map, &counter, &self_loop_wt);
               // Find the max gain in modularity
               Base::MaxModularityWithoutSwaps(
-                  cluster_local_map, counter, self_loop_wt, c_info,
-                  n_data_degree_wt, &max_modularity_gain, &local_target,
-                  n_data_curr_comm_id, constant_for_second_term);
+                  cluster_local_map, counter, self_loop_wt, c_info, n_degree_wt,
+                  &max_modularity_gain, &local_target, n_data_curr_comm_id,
+                  constant_for_second_term);
             } else {
               local_target = Base::UNASSIGNED;
             }
@@ -132,11 +195,10 @@ struct LouvainClusteringImplementation
             /* Update cluster info */
             if (local_target != n_data_curr_comm_id &&
                 local_target != Base::UNASSIGNED) {
-              katana::atomicAdd(
-                  c_info[local_target].degree_wt, n_data_degree_wt);
+              katana::atomicAdd(c_info[local_target].degree_wt, n_degree_wt);
               katana::atomicAdd(c_info[local_target].size, (uint64_t)1);
               katana::atomicSub(
-                  c_info[n_data_curr_comm_id].degree_wt, n_data_degree_wt);
+                  c_info[n_data_curr_comm_id].degree_wt, n_degree_wt);
               katana::atomicSub(c_info[n_data_curr_comm_id].size, (uint64_t)1);
 
               /* Set the new cluster id */
@@ -146,11 +208,8 @@ struct LouvainClusteringImplementation
           katana::loopname("louvain algo: Phase 1"));
 
       /* Calculate the overall modularity */
-      ModularityTy e_xx = 0;
-      ModularityTy a2_x = 0;
-
-      curr_mod = Base::template CalModularity<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term);
+      curr_mod = Base::template CalcModularity<EdgeWeightType>(
+          graph, c_info, constant_for_second_term);
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
@@ -172,32 +231,6 @@ struct LouvainClusteringImplementation
 
     TimerClusteringTotal.stop();
     return prev_mod;
-  }
-
-  /// Update cluster's size and degree information
-  void UpdateClusterInformation(
-      Graph* graph, const katana::InsertBag<GNode>& to_process,
-      const katana::InsertBag<GNode>& bag, katana::LargeArray<bool>* in_bag,
-      CommunityArray* c_info, CommunityArray* c_update_add,
-      CommunityArray* c_update_subtract) {
-    katana::do_all(katana::iterate(bag), [&](GNode n) {
-      graph->template GetData<CurrentCommunityId>(n) =
-          graph->template GetData<CandidateCommunityId>(n);
-    });
-
-    for (auto n : to_process) {
-      if ((*in_bag)[n]) {
-        (*c_info)[n].degree_wt += (*c_update_add)[n].degree_wt;
-        (*c_info)[n].size += (*c_update_add)[n].size;
-        (*c_info)[n].degree_wt -= (*c_update_subtract)[n].degree_wt;
-        (*c_info)[n].size -= (*c_update_subtract)[n].size;
-        (*c_update_add)[n].size = 0;
-        (*c_update_add)[n].degree_wt = 0;
-        (*c_update_subtract)[n].size = 0;
-        (*c_update_subtract)[n].degree_wt = 0;
-        (*in_bag)[n] = false;
-      }
-    }
   }
 
   /// Deterministic louvain algorithm
@@ -244,27 +277,23 @@ struct LouvainClusteringImplementation
 
     // Compute the total weight (2m) and 1/2m terms
     constant_for_second_term =
-        Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
+        Base::template CalcConstantForSecondTerm<EdgeWeightType>(graph);
 
     // partition nodes
-    std::vector<katana::InsertBag<GNode>> bag(16);
+    constexpr static size_t num_bags = 16;
+    std::vector<katana::InsertBag<GNode>> bag(num_bags);
 
     katana::InsertBag<GNode> to_process;
     katana::LargeArray<bool> in_bag;
     in_bag.allocateBlocked(graph.num_nodes());
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
-      uint64_t idx = n % 16;
+      uint64_t idx = n % num_bags;
       bag[idx].push(n);
       in_bag[n] = false;
     });
 
-    katana::do_all(katana::iterate(graph), [&](GNode n) {
-      c_update_add[n].degree_wt = 0;
-      c_update_add[n].size = 0;
-      c_update_subtract[n].degree_wt = 0;
-      c_update_subtract[n].size = 0;
-    });
+    InitializeLocalClusterInfo(&c_update_add, &c_update_subtract);
 
     katana::StatTimer TimerClusteringWhile("Timer_Clustering_While");
     TimerClusteringWhile.start();
@@ -273,7 +302,7 @@ struct LouvainClusteringImplementation
     while (true) {
       num_iter++;
 
-      for (uint64_t idx = 0; idx <= 15; idx++) {
+      for (uint64_t idx = 0; idx < num_bags; idx++) {
         katana::do_all(
             katana::iterate(bag[idx]),
             [&](GNode n) {
@@ -281,7 +310,7 @@ struct LouvainClusteringImplementation
                   graph.template GetData<CurrentCommunityId>(n);
               auto& n_candidate_comm_id =
                   graph.template GetData<CandidateCommunityId>(n);
-              auto& n_data_degree_wt =
+              auto& n_degree_wt =
                   graph.template GetData<DegreeWeight<EdgeWeightType>>(n);
               auto& max_modularity_gain =
                   graph.template GetData<ModularityGain>(n);
@@ -289,73 +318,45 @@ struct LouvainClusteringImplementation
               uint64_t degree =
                   std::distance(graph.edge_begin(n), graph.edge_end(n));
 
-              std::map<CommunityIdTy, CommunityIdTy>
-                  cluster_local_map;  // Map each neighbor's cluster to local number:
-                                      // Community --> Index
-              std::vector<EdgeWeightType>
-                  counter;  // Number of edges to each unique cluster
-              EdgeWeightType self_loop_wt = 0;
+              // Map each neighbor's cluster to local number
+              std::map<CommunityIdTy, CommunityIdTy> cluster_local_map;
+              // Number of edges to each unique cluster
+              std::vector<EdgeWeightType> counter;
+              EdgeWeightType self_loop_wt{0};
 
               if (degree > 0) {
+                // Iterate all neighbors and find neighbors having
+                // different community id
                 Base::template FindNeighboringClusters<EdgeWeightType>(
                     graph, n, &cluster_local_map, &counter, &self_loop_wt);
                 // Find the max gain in modularity
                 Base::MaxModularityWithoutSwaps(
                     cluster_local_map, counter, self_loop_wt, c_info,
-                    n_data_degree_wt, &max_modularity_gain,
-                    &n_candidate_comm_id, n_curr_comm_id,
-                    constant_for_second_term);
+                    n_degree_wt, &max_modularity_gain, &n_candidate_comm_id,
+                    n_curr_comm_id, constant_for_second_term);
               } else {
                 n_candidate_comm_id = Base::UNASSIGNED;
               }
 
-              /* Update cluster info */
-              if (n_candidate_comm_id != n_curr_comm_id &&
-                  n_candidate_comm_id != Base::UNASSIGNED) {
-                katana::atomicAdd(
-                    c_update_add[n_candidate_comm_id].degree_wt,
-                    n_data_degree_wt);
-                katana::atomicAdd(
-                    c_update_add[n_candidate_comm_id].size, uint64_t{1});
-                katana::atomicAdd(
-                    c_update_subtract[n_curr_comm_id].degree_wt,
-                    n_data_degree_wt);
-                katana::atomicAdd(
-                    c_update_subtract[n_curr_comm_id].size, uint64_t{1});
-
-                if (!in_bag[n_candidate_comm_id]) {
-                  to_process.push(n_candidate_comm_id);
-                  in_bag[n_candidate_comm_id] = true;
-                }
-
-                if (!in_bag[n_curr_comm_id]) {
-                  to_process.push(n_curr_comm_id);
-                  in_bag[n_curr_comm_id] = true;
-                }
-              }
+              UpdateLocalClusterInformation(
+                  &c_update_add, &c_update_subtract, n_candidate_comm_id,
+                  n_curr_comm_id, n_degree_wt, &to_process, &in_bag);
             },
             katana::loopname("louvain algo: Phase 1"));
-        UpdateClusterInformation(
+        UpdateGlobalClusterInformation(
             &graph, to_process, bag[idx], &in_bag, &c_info, &c_update_add,
             &c_update_subtract);
       }
 
       // Calculate the total modularity of each community
-      ModularityTy e_xx = 0;
-      ModularityTy a2_x = 0;
-
-      curr_mod = Base::template CalModularity<EdgeWeightType>(
-          graph, c_info, e_xx, a2_x, constant_for_second_term);
+      curr_mod = Base::template CalcModularity<EdgeWeightType>(
+          graph, c_info, constant_for_second_term);
 
       if ((curr_mod - prev_mod) < modularity_threshold_per_round) {
         prev_mod = curr_mod;
         break;
       }
-
-      prev_mod = curr_mod;
-      if (prev_mod < lower) {
-        prev_mod = lower;
-      }
+      prev_mod = (curr_mod < lower) ? lower : curr_mod;
     }  // End while
     TimerClusteringWhile.stop();
 
@@ -505,14 +506,14 @@ public:
       }
     }
 
-    ModularityTy prev_mod = -1;  // Previous modularity
-    ModularityTy curr_mod = -1;  // Current modularity
-    bool is_first_iter = true;
+    ModularityTy prev_mod{-1};  // Previous modularity
+    ModularityTy curr_mod{-1};  // Current modularity
+    bool is_first_iter{true};
+    uint32_t iter{0};
 
     std::unique_ptr<katana::PropertyGraph> pfg_curr =
         std::make_unique<katana::PropertyGraph>();
     pfg_curr = std::move(pfg_mutable);
-    uint32_t iter = 0;
     CommunityIdTy num_prev_clusters = pfg_curr->num_nodes();
     while (true) {
       iter++;
@@ -690,7 +691,7 @@ katana::analytics::LouvainClusteringStatistics::Print(std::ostream& os) const {
 
 template <typename EdgeWeightType>
 katana::Result<ModularityTy>
-CalModularityWrap(
+CalcModularityWrap(
     katana::PropertyGraph* pg, const std::string& edge_weight_property_name,
     const std::string& property_name) {
   using NodeData = std::tuple<PreviousCommunityId>;
@@ -704,7 +705,7 @@ CalModularityWrap(
     return graph_result.error();
   }
   auto graph = graph_result.value();
-  return ClusterBase::template CalModularityFinal<
+  return ClusterBase::template CalcModularityFinal<
       Graph, EdgeWeightType, PreviousCommunityId>(graph);
 }
 
@@ -787,7 +788,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
 
   switch (pg->GetEdgeProperty(edge_weight_property_name)->type()->id()) {
   case arrow::UInt32Type::type_id: {
-    auto modularity_result = CalModularityWrap<uint32_t>(
+    auto modularity_result = CalcModularityWrap<uint32_t>(
         pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
@@ -796,7 +797,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
     break;
   }
   case arrow::Int32Type::type_id: {
-    auto modularity_result = CalModularityWrap<int32_t>(
+    auto modularity_result = CalcModularityWrap<int32_t>(
         pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
@@ -805,7 +806,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
     break;
   }
   case arrow::UInt64Type::type_id: {
-    auto modularity_result = CalModularityWrap<uint64_t>(
+    auto modularity_result = CalcModularityWrap<uint64_t>(
         pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
@@ -814,7 +815,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
     break;
   }
   case arrow::Int64Type::type_id: {
-    auto modularity_result = CalModularityWrap<int64_t>(
+    auto modularity_result = CalcModularityWrap<int64_t>(
         pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
@@ -824,7 +825,7 @@ katana::analytics::LouvainClusteringStatistics::Compute(
   }
   case arrow::FloatType::type_id: {
     auto modularity_result =
-        CalModularityWrap<float>(pg, edge_weight_property_name, property_name);
+        CalcModularityWrap<float>(pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
     }
@@ -832,8 +833,8 @@ katana::analytics::LouvainClusteringStatistics::Compute(
     break;
   }
   case arrow::DoubleType::type_id: {
-    auto modularity_result =
-        CalModularityWrap<double>(pg, edge_weight_property_name, property_name);
+    auto modularity_result = CalcModularityWrap<double>(
+        pg, edge_weight_property_name, property_name);
     if (!modularity_result) {
       return modularity_result.error();
     }

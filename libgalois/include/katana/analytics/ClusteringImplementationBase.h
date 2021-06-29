@@ -178,7 +178,7 @@ struct ClusteringImplementationBase {
    * of the current coarsened graph.
    */
   template <typename EdgeWeightType>
-  double CalConstantForSecondTerm(const Graph& graph) {
+  double CalcConstantForSecondTerm(const Graph& graph) {
     // Using double to avoid overflow
     katana::GAccumulator<double> local_weight;
     katana::do_all(katana::iterate(graph), [&graph, &local_weight](GNode n) {
@@ -197,7 +197,7 @@ struct ClusteringImplementationBase {
    * property graph.
    */
   template <typename EdgeWeightType>
-  static double CalConstantForSecondTerm(
+  static double CalcConstantForSecondTerm(
       const Graph& graph,
       katana::LargeArray<EdgeWeightType>& degree_weight_array) {
     // Using double to avoid overflow
@@ -274,24 +274,23 @@ struct ClusteringImplementationBase {
     *max_modularity_gain = max_gain;
   }
 
-  /**
-   * Computes the modularity gain of the current cluster assignment.
-   */
+  /// Computes the modularity gain of the current cluster assignment.
   template <typename EdgeWeightType>
-  double CalModularity(
-      const Graph& graph, CommunityArray& c_info, double& e_xx, double& a2_x,
-      double& constant_for_second_term) {
-    /* Variables needed for Modularity calculation */
-    double mod = -1;
+  GainTy CalcModularity(
+      const Graph& graph, const CommunityArray& c_info,
+      const GainTy& constant_for_second_term) {
+    ModularityTy e_xx{0};
+    ModularityTy a2_x{0};
+
+    // Variables needed for Modularity calculation
+    ModularityTy mod{-1};
 
     katana::LargeArray<EdgeTy> cluster_wt_internal;
-
-    /*** Initialization ***/
     cluster_wt_internal.allocateBlocked(graph.num_nodes());
 
-    /* Calculate the overall modularity */
-    katana::GAccumulator<double> acc_e_xx;
-    katana::GAccumulator<double> acc_a2_x;
+    // Calculate the overall modularity
+    katana::GAccumulator<GainTy> acc_e_xx;
+    katana::GAccumulator<GainTy> acc_a2_x;
 
     katana::do_all(
         katana::iterate(graph), [&](GNode n) { cluster_wt_internal[n] = 0; });
@@ -309,17 +308,15 @@ struct ClusteringImplementationBase {
     });
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
+      GainTy n_degree_wt = static_cast<GainTy>(c_info[n].degree_wt);
       acc_e_xx += cluster_wt_internal[n];
-      acc_a2_x +=
-          (double)(c_info[n].degree_wt) *
-          ((double)(c_info[n].degree_wt) * (double)constant_for_second_term);
+      acc_a2_x += n_degree_wt * (n_degree_wt * constant_for_second_term);
     });
 
     e_xx = acc_e_xx.reduce();
     a2_x = acc_a2_x.reduce();
 
-    mod = e_xx * (double)constant_for_second_term -
-          a2_x * (double)constant_for_second_term;
+    mod = (e_xx * constant_for_second_term) - (a2_x * constant_for_second_term);
     return mod;
   }
 
@@ -352,7 +349,7 @@ struct ClusteringImplementationBase {
  * assignments.
  */
   template <typename GraphTy, typename EdgeWeightType, typename NodePropType>
-  static double CalModularityFinal(GraphTy& graph) {
+  static double CalcModularityFinal(GraphTy& graph) {
     CommunityArray c_info;    // Community info
     CommunityArray c_update;  // Used for updating community
 
@@ -376,7 +373,7 @@ struct ClusteringImplementationBase {
 
     /* Compute the total weight (2m) and 1/2m terms */
     constant_for_second_term =
-        CalConstantForSecondTerm<EdgeWeightType>(graph, degree_weight_array);
+        CalcConstantForSecondTerm<EdgeWeightType>(graph, degree_weight_array);
 
     /* Calculate the overall modularity */
     double e_xx = 0;
@@ -452,7 +449,7 @@ struct ClusteringImplementationBase {
     [[maybe_unused]] uint64_t num_unique_clusters =
         RenumberClustersContiguously(&graph);
     auto mod =
-        CalModularityFinal<Graph, EdgeWeightType, CurrentCommunityId>(graph);
+        CalcModularityFinal<Graph, EdgeWeightType, CurrentCommunityId>(graph);
   }
 
   /**

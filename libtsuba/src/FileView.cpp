@@ -82,7 +82,8 @@ FileView::Bind(
   // Map enough virtual memory to hold entire file, but do not populate it
   tmp = mmap(nullptr, buf.size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (tmp == MAP_FAILED) {
-    return KATANA_ERROR(katana::ResultErrno(), "reserving contiguous range");
+    return KATANA_ERROR(
+        katana::ResultErrno(), "reserving contiguous range {}", buf.size);
   }
 
   if (auto res = Unbind(); !res) {

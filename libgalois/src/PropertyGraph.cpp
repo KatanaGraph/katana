@@ -411,21 +411,6 @@ katana::PropertyGraph::Validate() {
 
   return katana::ResultSuccess();
 }
-
-katana::Result<void>
-katana::PropertyGraph::DoWrite(
-    tsuba::RDGHandle handle, const std::string& command_line) {
-  if (!rdg_.topology_file_storage().Valid()) {
-    auto result = WriteTopology(*topology_);
-    if (!result) {
-      return result.error();
-    }
-    return rdg_.Store(handle, command_line, std::move(result.value()));
-  }
-
-  return rdg_.Store(handle, command_line);
-}
-
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 katana::PropertyGraph::Make(
     std::unique_ptr<tsuba::RDGFile> rdg_file, tsuba::RDG&& rdg) {
@@ -518,21 +503,52 @@ katana::PropertyGraph::ConstructTypeSetIDs() {
 }
 
 katana::Result<void>
-katana::PropertyGraph::WriteGraph(
-    const std::string& uri, const std::string& command_line) {
+katana::PropertyGraph::DoWrite(
+    tsuba::RDGHandle handle, const std::string& command_line,
+    tsuba::RDG::RDGVersioningPolicy versioning_action) {
+  if (!rdg_.topology_file_storage().Valid()) {
+    auto result = WriteTopology(*topology_);
+    if (!result) {
+      return result.error();
+    }
+    return rdg_.Store(
+        handle, command_line, versioning_action, std::move(result.value()));
+  }
+
+  return rdg_.Store(handle, command_line, versioning_action);
+}
+
+katana::Result<void>
+katana::PropertyGraph::ConductWriteOp(
+    const std::string& uri, const std::string& command_line,
+    tsuba::RDG::RDGVersioningPolicy versioning_action) {
   auto open_res = tsuba::Open(uri, tsuba::kReadWrite);
   if (!open_res) {
     return open_res.error();
   }
   auto new_file = std::make_unique<tsuba::RDGFile>(open_res.value());
 
-  if (auto res = DoWrite(*new_file, command_line); !res) {
+  if (auto res = DoWrite(*new_file, command_line, versioning_action); !res) {
     return res.error();
   }
 
   file_ = std::move(new_file);
 
   return katana::ResultSuccess();
+}
+
+katana::Result<void>
+katana::PropertyGraph::WriteView(
+    const std::string& uri, const std::string& command_line) {
+  return ConductWriteOp(
+      uri, command_line, tsuba::RDG::RDGVersioningPolicy::RetainVersion);
+}
+
+katana::Result<void>
+katana::PropertyGraph::WriteGraph(
+    const std::string& uri, const std::string& command_line) {
+  return ConductWriteOp(
+      uri, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
 }
 
 katana::Result<void>
@@ -544,7 +560,15 @@ katana::PropertyGraph::Commit(const std::string& command_line) {
     }
     return WriteGraph(rdg_.rdg_dir().string(), command_line);
   }
-  return DoWrite(*file_, command_line);
+  return DoWrite(
+      *file_, command_line, tsuba::RDG::RDGVersioningPolicy::IncrementVersion);
+}
+
+katana::Result<void>
+katana::PropertyGraph::WriteView(const std::string& command_line) {
+  // WriteView occurs once, and only before any Commit/Write operation
+  KATANA_LOG_DEBUG_ASSERT(file_ == nullptr);
+  return WriteView(rdg_.rdg_dir().string(), command_line);
 }
 
 bool

@@ -10,6 +10,7 @@
 #include "katana/Result.h"
 #include "katana/Uri.h"
 #include "tsuba/PartitionMetadata.h"
+#include "tsuba/RDG.h"
 #include "tsuba/WriteGroup.h"
 #include "tsuba/tsuba.h"
 
@@ -31,7 +32,9 @@ public:
       const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props);
 
-  katana::Result<void> Write(RDGHandle handle, WriteGroup* writes) const;
+  katana::Result<void> Write(
+      RDGHandle handle, WriteGroup* writes,
+      RDG::RDGVersioningPolicy retain_version) const;
 
   void UnbindFromStorage();
 
@@ -125,8 +128,6 @@ public:
 
 private:
   static katana::Result<RDGPartHeader> MakeJson(
-      const katana::Uri& partition_path);
-  static katana::Result<RDGPartHeader> MakeParquet(
       const katana::Uri& partition_path);
 
   std::vector<PropStorageInfo> part_prop_info_list_;

@@ -9,8 +9,8 @@ namespace tsuba {
 
 Result<void>
 RDGHandleImpl::Validate() const {
-  if (rdg_meta_.dir().empty()) {
-    KATANA_LOG_DEBUG("rdg_meta_.dir() is empty");
+  if (rdg_manifest_.dir().empty()) {
+    KATANA_LOG_DEBUG("rdg_manifest_.dir() is empty");
     return ErrorCode::InvalidArgument;
   }
   return katana::ResultSuccess();

@@ -23,7 +23,7 @@
 
 namespace tsuba {
 
-class RDGMeta;
+class RDGManifest;
 class RDGCore;
 struct PropStorageInfo;
 
@@ -42,6 +42,7 @@ struct KATANA_EXPORT RDGLoadOptions {
 
 class KATANA_EXPORT RDG {
 public:
+  enum RDGVersioningPolicy { RetainVersion = 0, IncrementVersion };
   RDG(const RDG& no_copy) = delete;
   RDG& operator=(const RDG& no_dopy) = delete;
 
@@ -53,15 +54,50 @@ public:
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;
 
-  /// Determine if two RDGs are Equal
+  /// Determine if two RDGs are Equal //TODO (yasser): verify that this now works with
+  //views
   bool Equals(const RDG& other) const;
 
-  /// Store this RDG at \param handle; if \param ff is not null, it is persisted
-  /// as the topology for this RDG. Add \param command_line to metadata to aid
-  /// in tracking lineage
+  /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
+  /// @param handle :: handle indicating where to store RDG
+  /// @param command_line :: added to metadata to track lineage of RDG
+  /// @param versioning_action :: can be set to 'RDG::RDGVersioningPolicy::IncrementVersion' or
+  /// @param ff :: if ff is not nullptr, it is persisted as the topology for this RDG.
+  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is
   katana::Result<void> Store(
       RDGHandle handle, const std::string& command_line,
-      std::unique_ptr<FileFrame> ff = nullptr);
+      RDGVersioningPolicy versioning_action, std::unique_ptr<FileFrame> ff);
+
+  /// @brief Store new version of the RDG with lineage based on command line.
+  /// @param handle :: handle indicating where to store RDG
+  /// @param command_line :: added to metadata to track lineage of RDG
+  /// @param ff :: FileFrame for topology information, can be nullptr. If set, topology
+  /// information will be persisted to ff.
+  katana::Result<void> Store(
+      RDGHandle handle, const std::string& command_line,
+      std::unique_ptr<FileFrame> ff) {
+    return Store(handle, command_line, IncrementVersion, std::move(ff));
+  }
+
+  /// @brief Store new version of RDG with lineage based on command line.
+  /// @param handle :: handle indicating where to store RDG
+  /// @param command_line :: added to metadata to track lineage of RDG
+  katana::Result<void> Store(
+      RDGHandle handle, const std::string& command_line) {
+    return Store(handle, command_line, IncrementVersion, nullptr);
+  }
+
+  /// @brief Store RDG with lineage based on command line and update version based on the versioning policy.
+  /// @param handle :: handle indicating where to store RDG
+  /// @param command_line :: added to metadata to track lineage of RDG
+  /// @param versioning_action :: can be set to 'RDG::RDGVersioningPolicy::IncrementVersion' or
+  /// 'RDG::RDGVersioningPolicy::RetainVersion' to indicate whether RDG version is
+  /// changing with this store.
+  katana::Result<void> Store(
+      RDGHandle handle, const std::string& command_line,
+      RDGVersioningPolicy versioning_action) {
+    return Store(handle, command_line, versioning_action, nullptr);
+  }
 
   katana::Result<void> AddNodeProperties(
       const std::shared_ptr<arrow::Table>& props);
@@ -181,7 +217,10 @@ public:
 
   const FileView& topology_file_storage() const;
 
+  void set_view_name(const std::string& v) { view_type_ = v; }
+
 private:
+  std::string view_type_;
   RDG(std::unique_ptr<RDGCore>&& core);
 
   void InitEmptyTables();
@@ -189,7 +228,7 @@ private:
   katana::Result<void> DoMake(const katana::Uri& metadata_dir);
 
   static katana::Result<RDG> Make(
-      const RDGMeta& meta, const RDGLoadOptions& opts);
+      const RDGManifest& manifest, const RDGLoadOptions& opts);
 
   katana::Result<void> AddPartitionMetadataArray(
       const std::shared_ptr<arrow::Table>& props);
@@ -199,7 +238,7 @@ private:
 
   katana::Result<void> DoStore(
       RDGHandle handle, const std::string& command_line,
-      std::unique_ptr<WriteGroup> desc);
+      RDGVersioningPolicy versioning_action, std::unique_ptr<WriteGroup> desc);
 
   //
   // Data

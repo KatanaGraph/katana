@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "RDGMeta.h"
+#include "RDGManifest.h"
 #include "katana/Uri.h"
 #include "tsuba/tsuba.h"
 
@@ -11,8 +11,8 @@ namespace tsuba {
 
 class RDGHandleImpl {
 public:
-  RDGHandleImpl(uint32_t flags, RDGMeta&& rdg_meta)
-      : flags_(flags), rdg_meta_(std::move(rdg_meta)) {}
+  RDGHandleImpl(uint32_t flags, RDGManifest&& rdg_manifest)
+      : flags_(flags), rdg_manifest_(std::move(rdg_manifest)) {}
 
   /// Perform some checks on assumed invariants
   katana::Result<void> Validate() const;
@@ -22,12 +22,15 @@ public:
   //
   // Accessors and Mutators
   //
-  const RDGMeta& rdg_meta() const { return rdg_meta_; }
-  void set_rdg_meta(RDGMeta&& rdg_meta) { rdg_meta_ = std::move(rdg_meta); }
+  const RDGManifest& rdg_manifest() const { return rdg_manifest_; }
+  void set_rdg_manifest(RDGManifest&& rdg_manifest) {
+    rdg_manifest_ = std::move(rdg_manifest);
+  }
+  void set_viewtype(const std::string v) { rdg_manifest_.set_viewtype(v); }
 
 private:
   uint32_t flags_;
-  RDGMeta rdg_meta_;
+  RDGManifest rdg_manifest_;
 };
 
 }  // namespace tsuba

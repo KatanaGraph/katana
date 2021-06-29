@@ -14,7 +14,7 @@
 
 namespace tsuba {
 
-class RDGMeta;
+class RDGManifest;
 class RDGCore;
 
 /// A contiguous piece of an RDG
@@ -40,7 +40,7 @@ public:
       const std::vector<std::string>* edge_props = nullptr);
 
   static katana::Result<RDGSlice> Make(
-      const std::string& rdg_meta_path, const SliceArg& slice,
+      const std::string& rdg_manifest_path, const SliceArg& slice,
       const std::vector<std::string>* node_props = nullptr,
       const std::vector<std::string>* edge_props = nullptr);
 
@@ -50,7 +50,7 @@ public:
 
 private:
   static katana::Result<RDGSlice> Make(
-      const RDGMeta& meta, const std::vector<std::string>* node_props,
+      const RDGManifest& manifest, const std::vector<std::string>* node_props,
       const std::vector<std::string>* edge_props, const SliceArg& slice);
 
   RDGSlice(std::unique_ptr<RDGCore>&& core);

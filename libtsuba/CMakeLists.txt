@@ -13,15 +13,13 @@ set(sources
   src/FileView.cpp
   src/GlobalState.cpp
   src/LocalStorage.cpp
-  src/MemoryNameServerClient.cpp
-  src/NameServerClient.cpp
   src/ParquetReader.cpp
   src/ParquetWriter.cpp
   src/RDG.cpp
   src/RDGCore.cpp
   src/RDGHandleImpl.cpp
   src/RDGLineage.cpp
-  src/RDGMeta.cpp
+  src/RDGManifest.cpp
   src/RDGPartHeader.cpp
   src/RDGPrefix.cpp
   src/RDGSlice.cpp

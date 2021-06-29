@@ -47,13 +47,13 @@ tsuba::RDGSlice::Make(
     RDGHandle handle, const SliceArg& slice,
     const std::vector<std::string>* node_props,
     const std::vector<std::string>* edge_props) {
-  const RDGMeta& meta = handle.impl_->rdg_meta();
-  if (meta.num_hosts() != 1) {
+  const RDGManifest& manifest = handle.impl_->rdg_manifest();
+  if (manifest.num_hosts() != 1) {
     return KATANA_ERROR(
         ErrorCode::NotImplemented,
         "cannot construct RDGSlice for partitioned graph");
   }
-  katana::Uri partition_path(meta.PartitionFileName(0));
+  katana::Uri partition_path(manifest.PartitionFileName(0));
 
   auto part_header_res = RDGPartHeader::Make(partition_path);
   if (!part_header_res) {
@@ -70,7 +70,7 @@ tsuba::RDGSlice::Make(
     return res.error();
   }
 
-  if (auto res = rdg_slice.DoMake(meta.dir(), slice); !res) {
+  if (auto res = rdg_slice.DoMake(manifest.dir(), slice); !res) {
     return res.error();
   }
 

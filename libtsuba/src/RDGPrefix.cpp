@@ -1,6 +1,7 @@
 #include "tsuba/RDGPrefix.h"
 
 #include "RDGHandleImpl.h"
+#include "RDGManifest.h"
 #include "RDGPartHeader.h"
 #include "katana/Result.h"
 #include "tsuba/Errors.h"
@@ -9,8 +10,8 @@
 namespace tsuba {
 
 katana::Result<tsuba::RDGPrefix>
-RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
-  auto meta_res = RDGPartHeader::Make(meta.PartitionFileName(0));
+RDGPrefix::DoMakePrefix(const tsuba::RDGManifest& manifest) {
+  auto meta_res = RDGPartHeader::Make(manifest.PartitionFileName(0));
   if (!meta_res) {
     return meta_res.error();
   }
@@ -20,7 +21,7 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
     return RDGPrefix{};
   }
 
-  katana::Uri t_path = meta.dir().Join(part_header.topology_path());
+  katana::Uri t_path = manifest.dir().Join(part_header.topology_path());
 
   CSRTopologyHeader gr_header;
   if (auto res = FileGet(t_path.string(), &gr_header); !res) {
@@ -42,13 +43,13 @@ RDGPrefix::DoMakePrefix(const tsuba::RDGMeta& meta) {
 
 katana::Result<tsuba::RDGPrefix>
 RDGPrefix::Make(RDGHandle handle) {
-  if (handle.impl_->rdg_meta().num_hosts() != 1) {
+  if (handle.impl_->rdg_manifest().num_hosts() != 1) {
     return KATANA_ERROR(
         ErrorCode::NotImplemented,
         "cannot construct RDGPrefix for partitioned graph");
   }
 
-  return DoMakePrefix(handle.impl_->rdg_meta());
+  return DoMakePrefix(handle.impl_->rdg_manifest());
 }
 
 }  // namespace tsuba

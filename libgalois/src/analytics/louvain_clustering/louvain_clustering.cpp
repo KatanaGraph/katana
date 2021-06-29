@@ -52,7 +52,7 @@ struct LouvainClusteringImplementation
   void InitializeLocalClusterInfo(
       CommunityArray* c_update_add, CommunityArray* c_update_subtract) {
     katana::do_all(
-        katana::iterate(uint64_t{0}, c_update_add->size()), [&](GNode n) {
+        katana::iterate(uint64_t{0}, c_update_add->size()), [&](uint64_t n) {
           (*c_update_add)[n].degree_wt = 0;
           (*c_update_add)[n].size = 0;
           (*c_update_subtract)[n].degree_wt = 0;

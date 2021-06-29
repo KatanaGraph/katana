@@ -28,8 +28,8 @@
 #include <boost/utility.hpp>
 
 #include "katana/Details.h"
-#include "katana/LargeArray.h"
 #include "katana/LazyObject.h"
+#include "katana/NUMAArray.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -309,7 +309,7 @@ private:
   typedef internal::NodeInfoBase<
       NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfo;
-  typedef LargeArray<NodeInfo> NodeData;
+  typedef NUMAArray<NodeInfo> NodeData;
 
   NodeData nodeData;
   OCFileGraph outGraph;

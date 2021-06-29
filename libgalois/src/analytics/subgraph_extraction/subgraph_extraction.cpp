@@ -40,7 +40,7 @@ SubGraphNodeSet(
 
   uint64_t num_nodes = node_set.size();
   // Subgraph topology : out indices
-  katana::LargeArray<uint64_t> out_indices;
+  katana::NUMAArray<uint64_t> out_indices;
   out_indices.allocateInterleaved(num_nodes);
 
   katana::gstl::Vector<katana::gstl::Vector<uint32_t>> subgraph_edges;
@@ -73,7 +73,7 @@ SubGraphNodeSet(
   uint64_t num_edges = out_indices[num_nodes - 1];
 
   // Subgraph topology : out dests
-  katana::LargeArray<uint32_t> out_dests;
+  katana::NUMAArray<uint32_t> out_dests;
   out_dests.allocateInterleaved(num_edges);
 
   katana::do_all(

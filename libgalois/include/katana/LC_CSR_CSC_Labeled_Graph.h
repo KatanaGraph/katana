@@ -39,11 +39,11 @@ public:
 protected:
   // retypedefs of base class
   //! large array for edge data
-  using EdgeData = LargeArray<EdgeTy>;
+  using EdgeData = NUMAArray<EdgeTy>;
   //! large array for edge destinations
-  using EdgeDst = LargeArray<uint32_t>;
+  using EdgeDst = NUMAArray<uint32_t>;
   //! large array for edge index data
-  using EdgeIndData = LargeArray<uint64_t>;
+  using EdgeIndData = NUMAArray<uint64_t>;
 
 public:
   //! iterator for edges
@@ -70,7 +70,7 @@ protected:
   std::unordered_map<EdgeTy, uint32_t> edgeLabelToIndexMap;
 
   //! out degrees of the data graph
-  katana::gstl::Vector<uint32_t> degrees_;  // TODO: change these to LargeArray
+  katana::gstl::Vector<uint32_t> degrees_;  // TODO: change these to NUMAArray
   //! in degrees of the data graph
   katana::gstl::Vector<uint32_t> in_degrees_;
 

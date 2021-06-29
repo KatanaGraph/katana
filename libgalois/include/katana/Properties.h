@@ -12,7 +12,7 @@
 
 #include "katana/ErrorCode.h"
 #include "katana/Logging.h"
-#include "katana/PODResizeableArray.h"
+#include "katana/PODVector.h"
 #include "katana/Result.h"
 #include "katana/Traits.h"
 
@@ -411,7 +411,7 @@ struct Property {
     Builder builder;
 
     // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODResizeableArray<CType> rows(num_rows);
+    katana::PODVector<CType> rows(num_rows);
     if (auto r = builder.AppendValues(rows.data(), num_rows); !r.ok()) {
       return KATANA_ERROR(
           katana::ErrorCode::ArrowError, "failed to append values {}", r);
@@ -483,7 +483,7 @@ struct StructProperty
     auto type = res.ValueOrDie();
     arrow::FixedSizeBinaryBuilder builder(type);
     // TODO(lhc): replace this with AppendEmptyValues() on Arrow >= 3.0.
-    katana::PODResizeableArray<uint8_t> data(sizeof(T) * num_rows);
+    katana::PODVector<uint8_t> data(sizeof(T) * num_rows);
 
     if (auto res = builder.AppendValues(data.data(), num_rows); !res.ok()) {
       return KATANA_ERROR(

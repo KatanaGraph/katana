@@ -26,7 +26,7 @@
 
 #include "katana/AtomicHelpers.h"
 #include "katana/Galois.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/analytics/Utils.h"
 
 namespace katana::analytics {
@@ -58,7 +58,7 @@ struct ClusteringImplementationBase {
   constexpr static const uint64_t UNASSIGNED =
       std::numeric_limits<uint64_t>::max();
 
-  using CommunityArray = katana::LargeArray<CommunityType>;
+  using CommunityArray = katana::NUMAArray<CommunityType>;
 
   /**
    * Algorithm to find the best cluster for the node
@@ -184,14 +184,14 @@ struct ClusteringImplementationBase {
 
   /**
    * Computes the constant term 1/(2 * total internal edge weight)
-   * of the current coarsened graph. Takes the optional LargeArray
+   * of the current coarsened graph. Takes the optional NUMAArray
    * with edge weight. To be used if edge weight is missing in the
    * property graph.
    */
   template <typename EdgeWeightType>
   static double CalConstantForSecondTerm(
       const Graph& graph,
-      katana::LargeArray<EdgeWeightType>& degree_weight_array) {
+      katana::NUMAArray<EdgeWeightType>& degree_weight_array) {
     // Using double to avoid overflow
     katana::GAccumulator<double> local_weight;
     katana::do_all(katana::iterate(graph), [&](GNode n) {
@@ -265,7 +265,7 @@ struct ClusteringImplementationBase {
     /* Variables needed for Modularity calculation */
     double mod = -1;
 
-    katana::LargeArray<EdgeTy> cluster_wt_internal;
+    katana::NUMAArray<EdgeTy> cluster_wt_internal;
 
     /*** Initialization ***/
     cluster_wt_internal.allocateBlocked(graph.num_nodes());
@@ -307,7 +307,7 @@ struct ClusteringImplementationBase {
   template <typename EdgeWeightType, typename NodePropType>
   static void SumClusterWeight(
       Graph& graph, CommunityArray& c_info,
-      katana::LargeArray<EdgeWeightType>& degree_weight_array) {
+      katana::NUMAArray<EdgeWeightType>& degree_weight_array) {
     using GNode = typename Graph::Node;
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
@@ -341,14 +341,14 @@ struct ClusteringImplementationBase {
     double constant_for_second_term;
     double mod = -1;
 
-    katana::LargeArray<EdgeTy> cluster_wt_internal;
+    katana::NUMAArray<EdgeTy> cluster_wt_internal;
 
     /*** Initialization ***/
     c_info.allocateBlocked(graph.num_nodes());
     c_update.allocateBlocked(graph.num_nodes());
     cluster_wt_internal.allocateBlocked(graph.num_nodes());
 
-    katana::LargeArray<EdgeWeightType> degree_weight_array;
+    katana::NUMAArray<EdgeWeightType> degree_weight_array;
     degree_weight_array.allocateBlocked(graph.num_nodes());
 
     /* Calculate the weighted degree sum for each vertex */
@@ -424,7 +424,7 @@ struct ClusteringImplementationBase {
 
   template <typename EdgeWeightType>
   void CheckModularity(
-      Graph& graph, katana::LargeArray<uint64_t>& clusters_orig) {
+      Graph& graph, katana::NUMAArray<uint64_t>& clusters_orig) {
     katana::do_all(katana::iterate(graph), [&](GNode n) {
       graph.template GetData<CurrentCommunityId>(n).curr_comm_ass =
           clusters_orig[n];
@@ -622,9 +622,9 @@ struct ClusteringImplementationBase {
     using Node = katana::GraphTopology::Node;
     using Edge = katana::GraphTopology::Edge;
 
-    katana::LargeArray<Edge> out_indices_next;
+    katana::NUMAArray<Edge> out_indices_next;
     out_indices_next.allocateInterleaved(num_nodes_next);
-    katana::LargeArray<Node> out_dests_next;
+    katana::NUMAArray<Node> out_dests_next;
     out_dests_next.allocateInterleaved(num_edges_next);
 
     katana::do_all(

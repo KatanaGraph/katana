@@ -517,7 +517,7 @@ public:
 
   constexpr static const bool DirectedNotInOut = (Directional && !InOut);
   using ReadGraphAuxData = typename std::conditional<
-      DirectedNotInOut, LargeArray<GraphNode>, LargeArray<AuxNodePadded>>::type;
+      DirectedNotInOut, NUMAArray<GraphNode>, NUMAArray<AuxNodePadded>>::type;
 
 private:
   template <typename... Args>
@@ -609,13 +609,13 @@ private:
   }
 
   template <
-      bool _A1 = LargeArray<EdgeTy>::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A1 = NUMAArray<EdgeTy>::has_value,
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   EdgeTy* constructOutEdgeValue(
       FileGraph& graph, typename FileGraph::edge_iterator nn, GraphNode src,
       GraphNode dst, typename std::enable_if<!_A1 || _A2>::type* = 0) {
-    typedef typename LargeArray<FileEdgeTy>::value_type FEDV;
-    typedef LargeArray<EdgeTy> ED;
+    typedef typename NUMAArray<FileEdgeTy>::value_type FEDV;
+    typedef NUMAArray<EdgeTy> ED;
     if (ED::has_value) {
       return createOutEdge(
           src, dst, katana::MethodFlag::UNPROTECTED,
@@ -626,8 +626,8 @@ private:
   }
 
   template <
-      bool _A1 = LargeArray<EdgeTy>::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A1 = NUMAArray<EdgeTy>::has_value,
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   EdgeTy* constructOutEdgeValue(
       FileGraph&, typename FileGraph::edge_iterator, GraphNode src,
       GraphNode dst, typename std::enable_if<_A1 && !_A2>::type* = 0) {

@@ -27,8 +27,8 @@ constexpr static const uint32_t kChunkSize = 512u;
 constexpr static const uint32_t kInfPartition =
     std::numeric_limits<uint32_t>::max();
 
-using EdgeDstVecTy = katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>;
-using LargeArrayUint64Ty = katana::LargeArray<uint64_t>;
+using EdgeDstVecTy = katana::gstl::Vector<katana::PODVector<uint32_t>>;
+using NUMAArrayUint64Ty = katana::NUMAArray<uint64_t>;
 using GainTy = MetisNode::GainTy;
 using NetvalTy = MetisNode::NetvalTy;
 using NetnumTy = MetisNode::NetnumTy;

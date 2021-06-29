@@ -42,8 +42,8 @@
 #include "katana/Details.h"
 #include "katana/Endian.h"
 #include "katana/GraphHelpers.h"
-#include "katana/LargeArray.h"
 #include "katana/MethodFlags.h"
+#include "katana/NUMAArray.h"
 #include "katana/NumaMem.h"
 #include "katana/Reduction.h"
 #include "katana/config.h"
@@ -99,7 +99,7 @@ private:
 
   //! If initialized, this array stores node degrees in memory for fast access
   //! via the getDegree function
-  LargeArray<uint64_t> node_degrees;
+  NUMAArray<uint64_t> node_degrees;
 
   // graph reading speed variables
   katana::GAccumulator<uint64_t> numBytesReadIndex, numBytesReadEdgeDst,
@@ -291,8 +291,8 @@ public:
   void sortEdgesByEdgeData(
       GraphNode N, const CompTy& comp = std::less<EdgeTy>()) {
     if (graphVersion == 1) {
-      typedef LargeArray<uint32_t> EdgeDst;
-      typedef LargeArray<EdgeTy> EdgeData;
+      typedef NUMAArray<uint32_t> EdgeDst;
+      typedef NUMAArray<EdgeTy> EdgeData;
 
       typedef internal::EdgeSortIterator<
           GraphNode, uint64_t, EdgeDst, EdgeData, Convert32>
@@ -312,8 +312,8 @@ public:
           internal::EdgeSortCompWrapper<
               EdgeSortValue<GraphNode, EdgeTy>, CompTy>(comp));
     } else if (graphVersion == 2) {
-      typedef LargeArray<uint64_t> EdgeDst;
-      typedef LargeArray<EdgeTy> EdgeData;
+      typedef NUMAArray<uint64_t> EdgeDst;
+      typedef NUMAArray<EdgeTy> EdgeData;
 
       typedef internal::EdgeSortIterator<
           GraphNode, uint64_t, EdgeDst, EdgeData, Convert64>
@@ -344,8 +344,8 @@ public:
   template <typename EdgeTy, typename CompTy>
   void sortEdges(GraphNode N, const CompTy& comp) {
     if (graphVersion == 1) {
-      typedef LargeArray<uint32_t> EdgeDst;
-      typedef LargeArray<EdgeTy> EdgeData;
+      typedef NUMAArray<uint32_t> EdgeDst;
+      typedef NUMAArray<EdgeTy> EdgeData;
       typedef internal::EdgeSortIterator<
           GraphNode, uint64_t, EdgeDst, EdgeData, Convert32>
           edge_sort_iterator;
@@ -361,8 +361,8 @@ public:
           &edgeDst, &ed);
       std::sort(begin, end, comp);
     } else if (graphVersion == 2) {
-      typedef LargeArray<uint64_t> EdgeDst;
-      typedef LargeArray<EdgeTy> EdgeData;
+      typedef NUMAArray<uint64_t> EdgeDst;
+      typedef NUMAArray<EdgeTy> EdgeData;
       typedef internal::EdgeSortIterator<
           GraphNode, uint64_t, EdgeDst, EdgeData, Convert64>
           edge_sort_iterator;
@@ -790,7 +790,7 @@ template <typename EdgeTy>
 void
 makeSymmetric(FileGraph& in_graph, FileGraph& out) {
   typedef FileGraph::GraphNode GNode;
-  typedef LargeArray<EdgeTy> EdgeData;
+  typedef NUMAArray<EdgeTy> EdgeData;
   typedef typename EdgeData::value_type edge_value_type;
 
   FileGraphWriter g;
@@ -875,7 +875,7 @@ template <typename EdgeTy, typename PTy>
 void
 permute(FileGraph& in_graph, const PTy& p, FileGraph& out) {
   typedef FileGraph::GraphNode GNode;
-  typedef LargeArray<EdgeTy> EdgeData;
+  typedef NUMAArray<EdgeTy> EdgeData;
   typedef typename EdgeData::value_type edge_value_type;
 
   FileGraphWriter g;

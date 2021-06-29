@@ -19,8 +19,8 @@
 
 #include "katana/Bag.h"
 #include "katana/FlatMap.h"
-#include "katana/LargeArray.h"
 #include "katana/Mem.h"
+#include "katana/NUMAArray.h"
 #include "katana/PerThreadStorage.h"
 #include "katana/gdeque.h"
 #include "katana/gslist.h"
@@ -99,7 +99,7 @@ main() {
   test(katana::gslist<MoveOnly>());
   test(katana::concurrent_gslist<MoveOnly>());
   test(katana::InsertBag<MoveOnly>());
-  test(katana::LargeArray<MoveOnly>());
+  test(katana::NUMAArray<MoveOnly>());
   test(katana::PerSocketStorage<MoveOnly>());
   test(katana::PerThreadStorage<MoveOnly>());
 

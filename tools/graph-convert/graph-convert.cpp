@@ -36,7 +36,7 @@
 #include "katana/ErrorCode.h"
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/Strings.h"
 #include "tsuba/CSRTopology.h"
 #include "tsuba/Errors.h"
@@ -392,7 +392,7 @@ convertEdgelist(
     const std::string& infilename, const std::string& outfilename,
     const bool skipFirstLine, std::optional<char> delim) {
   typedef katana::FileGraphWriter Writer;
-  typedef katana::LargeArray<EdgeTy> EdgeData;
+  typedef katana::NUMAArray<EdgeTy> EdgeData;
   typedef typename EdgeData::value_type edge_value_type;
 
   Writer p;
@@ -686,7 +686,7 @@ struct Mtx2Gr : public HasNoVoidSpecialization {
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;
@@ -926,7 +926,7 @@ struct Gr2Edgelist : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -962,7 +962,7 @@ struct Gr2Edgelist1Ind : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     using Graph = katana::FileGraph;
     using GNode = Graph::GraphNode;
-    using EdgeData = katana::LargeArray<EdgeTy>;
+    using EdgeData = katana::NUMAArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
 
     Graph graph;
@@ -1117,7 +1117,7 @@ struct RandomizeNodes : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
 
     Graph graph;
     graph.fromFile(infilename);
@@ -1145,7 +1145,7 @@ struct SortByBFS : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
 
     Graph graph;
     graph.fromFile(infilename);
@@ -1156,7 +1156,7 @@ struct SortByBFS : public Conversion {
 
     // perform a BFS traversal
     std::vector<GNode> curr, next;
-    katana::LargeArray<bool> visited;
+    katana::NUMAArray<bool> visited;
     visited.create(graph.size());
     for (Graph::iterator ii = graph.begin(), ei = graph.end(); ii != ei; ++ii) {
       GNode node = *ii;
@@ -1260,7 +1260,7 @@ struct AddRing : public Conversion {
     typedef katana::FileGraph Graph;
     typedef katana::FileGraphWriter Writer;
     typedef typename Graph::GraphNode GNode;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -1336,7 +1336,7 @@ struct AddTree : public Conversion {
     typedef katana::FileGraph Graph;
     typedef katana::FileGraphWriter Writer;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -1459,7 +1459,7 @@ struct BipartiteSortByDegree : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
 
     Graph ingraph, outgraph, transposegraph;
     ingraph.fromFile(infilename);
@@ -1507,7 +1507,7 @@ struct SortByDegree : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
 
     Graph ingraph, outgraph;
     ingraph.fromFile(infilename);
@@ -1559,7 +1559,7 @@ struct SortByHighDegreeParent : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
 
     Graph graph;
     // get file graph
@@ -1670,7 +1670,7 @@ struct RemoveHighDegree : public Conversion {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -1761,7 +1761,7 @@ struct PartitionBySource : public Conversion {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -1862,8 +1862,8 @@ struct PartitionByDestination : public Conversion {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
-    typedef katana::LargeArray<size_t> InDegree;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<size_t> InDegree;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -1950,7 +1950,7 @@ struct Transpose : public Conversion {
     typedef katana::FileGraph Graph;
     typedef Graph::GraphNode GNode;
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -2067,7 +2067,7 @@ struct Cleanup : public Conversion {
     }
 
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;
@@ -2192,7 +2192,7 @@ struct MakeUnsymmetric : public Conversion {
     }
 
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;
@@ -2257,7 +2257,7 @@ struct Dimacs2Gr : public HasNoVoidSpecialization {
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;
@@ -2482,7 +2482,7 @@ struct Gr2Pbbs : public Conversion {
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Graph graph;
@@ -2762,7 +2762,7 @@ struct Gr2Neo4j : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     using Graph = katana::FileGraph;
     using GNode = Graph::GraphNode;
-    using EdgeData = katana::LargeArray<EdgeTy>;
+    using EdgeData = katana::NUMAArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
 
     Graph graph;
@@ -2830,7 +2830,7 @@ struct Gr2Neo4j : public Conversion {
 template <typename EdgeTy>
 katana::Result<void>
 AppendEdgeData(
-    katana::PropertyGraph* pg, const katana::LargeArray<EdgeTy>& edge_data) {
+    katana::PropertyGraph* pg, const katana::NUMAArray<EdgeTy>& edge_data) {
   using Builder = typename arrow::CTypeTraits<EdgeTy>::BuilderType;
   using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
   Builder builder;
@@ -2859,7 +2859,7 @@ AppendEdgeData(
 
 template <>
 katana::Result<void>
-AppendEdgeData<void>(katana::PropertyGraph*, const katana::LargeArray<void>&) {
+AppendEdgeData<void>(katana::PropertyGraph*, const katana::NUMAArray<void>&) {
   return katana::ResultSuccess();
 }
 
@@ -2929,7 +2929,7 @@ struct Gr2Kg : public Conversion {
       const std::string& in_file_name, const std::string& out_file_name) {
     using Graph = katana::FileGraph;
     using GNode = Graph::GraphNode;
-    using EdgeData = katana::LargeArray<EdgeTy>;
+    using EdgeData = katana::NUMAArray<EdgeTy>;
     using edge_value_type = typename EdgeData::value_type;
 
     if constexpr (std::is_same<EdgeTy, void>::value) {
@@ -2951,13 +2951,13 @@ struct Gr2Kg : public Conversion {
     Graph graph;
     graph.fromFile(in_file_name);
 
-    katana::LargeArray<uint64_t> out_indices;
+    katana::NUMAArray<uint64_t> out_indices;
     out_indices.allocateBlocked(graph.size());
 
-    katana::LargeArray<uint32_t> out_dests;
+    katana::NUMAArray<uint32_t> out_dests;
     out_dests.allocateBlocked(graph.sizeEdges());
 
-    katana::LargeArray<EdgeTy> out_dests_data;
+    katana::NUMAArray<EdgeTy> out_dests_data;
     if (EdgeData::has_value) {
       out_dests_data.allocateBlocked(graph.sizeEdges());
     }
@@ -3074,7 +3074,7 @@ struct Gr2Bsml : public Conversion {
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraph Graph;
     typedef typename Graph::GraphNode GNode;
-    typedef typename katana::LargeArray<EdgeTy> EdgeData;
+    typedef typename katana::NUMAArray<EdgeTy> EdgeData;
 
     Graph graph;
     graph.fromFile(infilename);
@@ -3145,7 +3145,7 @@ struct Svmlight2Gr : public HasNoVoidSpecialization {
   template <typename EdgeTy>
   void convert(const std::string& infilename, const std::string& outfilename) {
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;

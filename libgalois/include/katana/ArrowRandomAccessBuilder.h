@@ -1,8 +1,8 @@
 #include <arrow/api.h>
 
 #include "katana/ErrorCode.h"
-#include "katana/LargeArray.h"
 #include "katana/Logging.h"
+#include "katana/NUMAArray.h"
 #include "katana/Properties.h"
 #include "katana/Result.h"
 

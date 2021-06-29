@@ -37,7 +37,7 @@
 #include <boost/mpl/if.hpp>
 
 #include "katana/FileGraph.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/OfflineGraph.h"
 #include "llvm/Support/CommandLine.h"
 

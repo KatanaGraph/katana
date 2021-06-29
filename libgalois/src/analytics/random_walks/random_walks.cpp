@@ -39,7 +39,7 @@ struct Node2VecAlgo {
 
   GNode FindSampleNeighbor(
       const Graph& graph, const GNode& n,
-      const katana::LargeArray<uint64_t>& degree, double prob) {
+      const katana::NUMAArray<uint64_t>& degree, double prob) {
     if (degree[n] == 0) {
       return graph.num_nodes();
     }
@@ -52,7 +52,7 @@ struct Node2VecAlgo {
 
   void GraphRandomWalk(
       const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::LargeArray<uint64_t>& degree) {
+      const katana::NUMAArray<uint64_t>& degree) {
     katana::PerThreadStorage<std::mt19937> generator;
     katana::PerThreadStorage<std::uniform_real_distribution<double>*>
         distribution;
@@ -164,7 +164,7 @@ struct Node2VecAlgo {
 
   void operator()(
       const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::LargeArray<uint64_t>& degree) {
+      const katana::NUMAArray<uint64_t>& degree) {
     GraphRandomWalk(graph, walks, degree);
   }
 };
@@ -196,7 +196,7 @@ struct Edge2VecAlgo {
 
   std::pair<GNode, EdgeType::ViewType::value_type> FindSampleNeighbor(
       const Graph& graph, const GNode& n,
-      const katana::LargeArray<uint64_t>& degree, double prob) {
+      const katana::NUMAArray<uint64_t>& degree, double prob) {
     if (degree[n] == 0) {
       return std::make_pair(graph.num_nodes(), 1);
     }
@@ -212,7 +212,7 @@ struct Edge2VecAlgo {
   void GraphRandomWalk(
       const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
       katana::InsertBag<std::vector<uint32_t>>* types_walks,
-      const katana::LargeArray<uint64_t>& degree) {
+      const katana::NUMAArray<uint64_t>& degree) {
     katana::PerThreadStorage<std::mt19937> generator;
     katana::PerThreadStorage<std::uniform_real_distribution<double>*>
         distribution;
@@ -438,7 +438,7 @@ struct Edge2VecAlgo {
 
   void operator()(
       const Graph& graph, katana::InsertBag<std::vector<uint32_t>>* walks,
-      const katana::LargeArray<uint64_t>& degree) {
+      const katana::NUMAArray<uint64_t>& degree) {
     uint32_t iterations = plan_.max_iterations();
 
     Initialize();
@@ -466,7 +466,7 @@ struct Edge2VecAlgo {
 
 template <typename Graph>
 void
-InitializeDegrees(const Graph& graph, katana::LargeArray<uint64_t>* degree) {
+InitializeDegrees(const Graph& graph, katana::NUMAArray<uint64_t>* degree) {
   katana::do_all(katana::iterate(graph), [&](typename Graph::Node n) {
     // Treat this as O(1) time because subtracting iterators is just pointer
     // or number subtraction. So don't use steal().
@@ -500,7 +500,7 @@ RandomWalksWithWrap(katana::PropertyGraph* pg, RandomWalksPlan plan) {
 
   Algorithm algo(plan);
 
-  katana::LargeArray<uint64_t> degree;
+  katana::NUMAArray<uint64_t> degree;
   degree.allocateBlocked(graph.size());
   InitializeDegrees<typename Algorithm::Graph>(graph, &degree);
 

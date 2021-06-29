@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef KATANA_LIBGALOIS_KATANA_LARGEARRAY_H_
-#define KATANA_LIBGALOIS_KATANA_LARGEARRAY_H_
+#ifndef KATANA_LIBGALOIS_KATANA_NUMAARRAY_H_
+#define KATANA_LIBGALOIS_KATANA_NUMAARRAY_H_
 
 #include <utility>
 
@@ -30,13 +30,23 @@
 namespace katana {
 
 /**
- * Large array of objects with proper specialization for void type and
- * supporting various allocation and construction policies.
+ * An array of objects that is distributed among NUMA sockets/regions but
+ * cannot be resized. Different NUMA-aware allocation policies are supported.
+ * The allocation is uninitialized but objects of any type can be constructed
+ * after allocation using member functions. Allocations and deallocations are
+ * parallel operations because threads are used to allocate pages in each
+ * thread's NUMA region and destroy objects in parallel respectively.
  *
- * @tparam T value type of container
+ * Use this when the allocation size is large (in the order of nodes/edges).
+ * Allocation size must be known at runtime (allocation cannot grow dynamically).
+ * Allocations and deallocations must occur on the main thread.
+ *
+ * If the allocation can be concurrent, check katana::gstl::Vector.
+ * If the allocation must be uninitialized and resized, check katana::PODVector.
+ * Read CONTRIBUTING.md for a more detailed comparison between these types.
  */
 template <typename T>
-class LargeArray {
+class NUMAArray {
   enum class AllocType { Blocked, Local, Interleaved, Floating };
 
   LAptr real_data_;
@@ -85,19 +95,19 @@ public:
   };
 
   /**
-   * Wraps existing buffer in LargeArray interface.
+   * Wraps existing buffer in NUMAArray interface.
    */
-  LargeArray(void* d, size_t s) : data_(reinterpret_cast<T*>(d)), size_(s) {}
+  NUMAArray(void* d, size_t s) : data_(reinterpret_cast<T*>(d)), size_(s) {}
 
-  LargeArray() = default;
+  NUMAArray() = default;
 
-  LargeArray(LargeArray&& o) noexcept
+  NUMAArray(NUMAArray&& o) noexcept
       : real_data_(std::move(o.real_data_)), data_(o.data_), size_(o.size_) {
     o.data_ = nullptr;
     o.size_ = 0;
   }
 
-  LargeArray& operator=(LargeArray&& o) {
+  NUMAArray& operator=(NUMAArray&& o) {
     auto tmp = std::move(o);
     std::swap(real_data_, tmp.real_data_);
     std::swap(data_, tmp.data_);
@@ -105,10 +115,10 @@ public:
     return *this;
   }
 
-  LargeArray(const LargeArray&) = delete;
-  LargeArray& operator=(const LargeArray&) = delete;
+  NUMAArray(const NUMAArray&) = delete;
+  NUMAArray& operator=(const NUMAArray&) = delete;
 
-  ~LargeArray() {
+  ~NUMAArray() {
     destroy();
     deallocate();
   }
@@ -210,16 +220,16 @@ public:
 
 //! Void specialization
 template <>
-class LargeArray<void> {
+class NUMAArray<void> {
 public:
-  LargeArray(void*, size_t) {}
-  LargeArray() = default;
-  ~LargeArray() = default;
+  NUMAArray(void*, size_t) {}
+  NUMAArray() = default;
+  ~NUMAArray() = default;
 
-  LargeArray(const LargeArray&) = delete;
-  LargeArray& operator=(const LargeArray&) = delete;
-  LargeArray(LargeArray&&) = delete;
-  LargeArray& operator=(LargeArray&&) = delete;
+  NUMAArray(const NUMAArray&) = delete;
+  NUMAArray& operator=(const NUMAArray&) = delete;
+  NUMAArray(NUMAArray&&) = delete;
+  NUMAArray& operator=(NUMAArray&&) = delete;
 
   typedef void raw_value_type;
   typedef void* value_type;

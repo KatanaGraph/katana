@@ -21,7 +21,7 @@
 #define KATANA_LIBGALOIS_KATANA_TILEDEXECUTOR_H_
 
 #include "katana/Galois.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/NoDerefIterator.h"
 #include "katana/config.h"
 
@@ -77,8 +77,8 @@ class Fixed2DGraphTiledExecutor {
       boost::transform_iterator<GetDst, no_deref_iterator>;
 
   Graph& g;
-  // std::array<katana::LargeArray<SpinLock>, numDims> locks;
-  // katana::LargeArray<Task> tasks;
+  // std::array<katana::NUMAArray<SpinLock>, numDims> locks;
+  // katana::NUMAArray<Task> tasks;
   std::array<std::vector<SpinLock>, numDims> locks;
   std::vector<Task> tasks;
   size_t numTasks;

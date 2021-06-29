@@ -12,7 +12,7 @@ from katana.atomic import (
     atomic_min,
     atomic_sub,
 )
-from katana.datastructures import LargeArray
+from katana.datastructures import NUMAArray
 from katana.loops import do_all, do_all_operator
 
 dtypes_int = [
@@ -158,14 +158,14 @@ def test_atomic_add_parallel(dtype, threads_many):
     assert out[0] == 499500
 
 
-def test_atomic_add_parallel_largearray(threads_many):
+def test_atomic_add_parallel_numaarray(threads_many):
     _ = threads_many
 
     @do_all_operator()
     def f(out, i):
         atomic_add(out, 0, i)
 
-    out = LargeArray[int]()
+    out = NUMAArray[int]()
     out.allocateBlocked(1000)
     do_all(range(1000), f(out.as_numpy()), steal=False)
     assert out[0] == 499500

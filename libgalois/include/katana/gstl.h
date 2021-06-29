@@ -40,51 +40,152 @@ namespace katana {
 
 namespace gstl {
 
-//! [define Pow2VarSizeAlloc]
+//! [STL vector using katana Pow2BlockAllocator]
+//! specializes std::vector to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into a power-of-2 size blocks. Each per-thread allocator maintains a pool
+//! of free blocks of different power-of-2 sizes. When an object is allocated,
+//! it gets a block from the pool of the thread that allocated it. When an
+//! object is deallocated, its block of memory is added to the pool of the
+//! thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
+//!
+//! If the allocation is large and of known size, then check katana::NUMAArray.
+//! If the allocation needs to be uninitialized, then check katana::PODVector.
+//! Read CONTRIBUTING.md for a more detailed comparison between these types.
 template <typename T>
-using Pow2Alloc = Pow2BlockAllocator<T>;
-//! [define Pow2VarSizeAlloc]
+using Vector = std::vector<T, Pow2BlockAllocator<T>>;
 
+//! [STL deque using katana Pow2BlockAllocator]
+//! specializes std::deque to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into a power-of-2 size blocks. Each per-thread allocator maintains a pool
+//! of free blocks of different power-of-2 sizes. When an object is allocated,
+//! it gets a block from the pool of the thread that allocated it. When an
+//! object is deallocated, its block of memory is added to the pool of the
+//! thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <typename T>
-using FixedSizeAlloc = FixedSizeAllocator<T>;
+using Deque = std::deque<T, Pow2BlockAllocator<T>>;
 
-//! [STL vector using Pow2VarSizeAlloc]
+//! [STL list using katana FixedSizeAllocator]
+//! specializes std::list to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into fixed size blocks. Each per-thread allocator maintains a pool of free
+//! blocks. When an object is allocated, it gets a block from the pool of the
+//! thread that allocated it. When an object is deallocated, its block of
+//! memory is added to the pool of the thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <typename T>
-using Vector = std::vector<T, Pow2Alloc<T>>;
-//! [STL vector using Pow2VarSizeAlloc]
+using List = std::list<T, FixedSizeAllocator<T>>;
 
-template <typename T>
-using Deque = std::deque<T, Pow2Alloc<T>>;
-
-template <typename T>
-using List = std::list<T, FixedSizeAlloc<T>>;
-
+//! [STL set using katana FixedSizeAllocator]
+//! specializes std::set to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into fixed size blocks. Each per-thread allocator maintains a pool of free
+//! blocks. When an object is allocated, it gets a block from the pool of the
+//! thread that allocated it. When an object is deallocated, its block of
+//! memory is added to the pool of the thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <typename T, typename C = std::less<T>>
-using Set = std::set<T, C, Pow2Alloc<T>>;
+using Set = std::set<T, C, FixedSizeAllocator<T>>;
 
+//! [STL unordered_set using katana Pow2BlockAllocator]
+//! specializes std::unordered_set to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into a power-of-2 size blocks. Each per-thread allocator maintains a pool
+//! of free blocks of different power-of-2 sizes. When an object is allocated,
+//! it gets a block from the pool of the thread that allocated it. When an
+//! object is deallocated, its block of memory is added to the pool of the
+//! thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <
     typename T, typename Hash = std::hash<T>,
     typename KeyEqual = std::equal_to<T>>
-using UnorderedSet = std::unordered_set<T, Hash, KeyEqual, Pow2Alloc<T>>;
+using UnorderedSet =
+    std::unordered_set<T, Hash, KeyEqual, Pow2BlockAllocator<T>>;
 
+//! [STL map using katana FixedSizeAllocator]
+//! specializes std::map to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into fixed size blocks. Each per-thread allocator maintains a pool of free
+//! blocks. When an object is allocated, it gets a block from the pool of the
+//! thread that allocated it. When an object is deallocated, its block of
+//! memory is added to the pool of the thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <typename K, typename V, typename C = std::less<K>>
-using Map = std::map<K, V, C, Pow2Alloc<std::pair<const K, V>>>;
+using Map = std::map<K, V, C, FixedSizeAllocator<std::pair<const K, V>>>;
 
+//! [STL unordered_map using katana Pow2BlockAllocator]
+//! specializes std::unordered_map to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators that allocate in
+//! multiples of (huge) pages by acquiring a global lock, and divide the pages
+//! into a power-of-2 size blocks. Each per-thread allocator maintains a pool
+//! of free blocks of different power-of-2 sizes. When an object is allocated,
+//! it gets a block from the pool of the thread that allocated it. When an
+//! object is deallocated, its block of memory is added to the pool of the
+//! thread that deallocated it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
 template <
     typename K, typename V, typename Hash = std::hash<K>,
     typename KeyEqual = std::equal_to<K>>
-using UnorderedMap =
-    std::unordered_map<K, V, Hash, KeyEqual, Pow2Alloc<std::pair<const K, V>>>;
+using UnorderedMap = std::unordered_map<
+    K, V, Hash, KeyEqual, Pow2BlockAllocator<std::pair<const K, V>>>;
 
-template <typename T, typename C = std::less<T>>
-using PQ = MinHeap<T, C, Vector<T>>;
-
-using Str = std::basic_string<char, std::char_traits<char>, Pow2Alloc<char>>;
+//! [STL basic_string using katana Pow2BlockAllocator]
+//! specializes std::basic_string to use katana concurrent, scaleable allocator:
+//! the allocator is composed of thread-local allocators
+//! that manage thread-local pages and only use a global lock to
+//! get allocation in chunks of (huge) pages.
+//! When destroyed, its memory is reclaimed by the thread that destroys it.
+//!
+//! Use this when allocations and deallocations can occur in a parallel region.
+//! As the memory allocated can be reused for another allocation only by the
+//! thread that deallocated it, this is not suitable for use cases where the
+//! main thread always does the deallocation (after the parallel region).
+using Str =
+    std::basic_string<char, std::char_traits<char>, Pow2BlockAllocator<char>>;
 
 template <typename T>
 struct StrMaker {
   Str operator()(const T& x) const {
-    std::basic_ostringstream<char, std::char_traits<char>, Pow2Alloc<char>> os;
+    std::basic_ostringstream<
+        char, std::char_traits<char>, Pow2BlockAllocator<char>>
+        os;
     os << x;
     return Str(os.str());
   }

@@ -21,14 +21,14 @@
 // 1. how to bulid a conflict-aware data structure w/ Locakable
 // 2. how to implement conflict detection in your data structure's APIs
 // 3. how to define iterators for STL compliance
-// 4. how to leverage LargeArray to do NUMA-aware allocation
+// 4. how to leverage NUMAArray to do NUMA-aware allocation
 // 5. how to turn-off conflict-detection when you do not want it
 #include <iostream>
 
 #include <boost/iterator/counting_iterator.hpp>
 
 #include "katana/Galois.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 
 template <typename T>
 class Torus2D {
@@ -51,9 +51,9 @@ class Torus2D {
   //! [Array of internal type]
   size_t numRows, numCols;
 
-  // use katana::LargeArray for NUMA-aware allocation
+  // use katana::NUMAArray for NUMA-aware allocation
   // will allocate numRows*numCols elements in constructors
-  katana::LargeArray<NodeData> data;
+  katana::NUMAArray<NodeData> data;
   //! [Array of internal type]
 
   //! [Types for STL]

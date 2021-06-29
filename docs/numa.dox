@@ -32,7 +32,7 @@ Each thread will get an even contiguous chunk of pages from the allocated memory
 
 @subsection numa-malloc-interleaved Interleaved
 
-Distribute pages among threads (and as a result, NUMA sockets) in a round-robin 
+Distribute pages among threads (and as a result, NUMA sockets) in a round-robin
 fashion: for N threads, thread 0 gets page 0, thread 1 gets page 1, ..., thread N gets page N, thread 0 gets page (N + 1)...
 
 @image html numa_interleaved.png "Example of Interleaved Allocation: Each chunk gets assigned in round-robin manner"
@@ -45,20 +45,20 @@ Specify exactly how pages are to be distributed among threads in contiguous chun
 
 @section numa-large-array NUMA and Large Arrays
 
-Currently, Galois supports NUMA-aware allocation for katana::LargeArray objects. After we construct a LargeArray object, we can specify the type of NUMA allocation by calling the following appropriate function:
+Currently, Galois supports NUMA-aware allocation for katana::NUMAArray objects. After we construct a NUMAArray object, we can specify the type of NUMA allocation by calling the following appropriate function:
 
-@snippet LargeArray.h allocatefunctions
+@snippet NUMAArray.h allocatefunctions
 
-More details can be found in LargeArray.h.
+More details can be found in NUMAArray.h.
 
-Here is an example of blocked allocation of LargeArrays for storing the data of nodes and edges in a graph.
+Here is an example of blocked allocation of NUMAArrays for storing the data of nodes and edges in a graph.
 
 @snippet LC_CSR_Graph.h numaallocex
 
 
 @section numa-galois-graphs NUMA Allocation in Galois Graphs
 
-Galois also supports NUMA-aware allocation for graph data structures. Graph data structures have a template parameter called UseNumaAlloc. If it is set to true, then the graph will use Blocked NUMA allocation 
+Galois also supports NUMA-aware allocation for graph data structures. Graph data structures have a template parameter called UseNumaAlloc. If it is set to true, then the graph will use Blocked NUMA allocation
 (katana::LC_Linear_Graph and katana::LC_Morph_Graph will use Local allocation if UseNumaAlloc is true). Otherwise, it will use Interleaved NUMA allocation.
 
 The following code snippet shows the template argument for LC_CSR_Graph from LC_CSR_Graph.h:

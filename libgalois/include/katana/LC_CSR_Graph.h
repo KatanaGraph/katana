@@ -27,7 +27,7 @@
 #include "katana/FileGraph.h"
 #include "katana/Galois.h"
 #include "katana/GraphHelpers.h"
-#include "katana/PODResizeableArray.h"
+#include "katana/PODVector.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -131,16 +131,16 @@ public:
   typedef read_default_graph_tag read_tag;
 
 protected:
-  typedef LargeArray<EdgeTy> EdgeData;
-  typedef LargeArray<uint32_t> EdgeDst;
+  typedef NUMAArray<EdgeTy> EdgeData;
+  typedef NUMAArray<uint32_t> EdgeDst;
   typedef internal::NodeInfoBaseTypes<
       NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfoTypes;
   typedef internal::NodeInfoBase<
       NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfo;
-  typedef LargeArray<uint64_t> EdgeIndData;
-  typedef LargeArray<NodeInfo> NodeData;
+  typedef NUMAArray<uint64_t> EdgeIndData;
+  typedef NUMAArray<NodeInfo> NodeData;
 
 public:
   typedef uint32_t GraphNode;
@@ -206,18 +206,18 @@ protected:
 
   template <
       bool _A1 = EdgeData::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph& graph, typename FileGraph::edge_iterator nn,
       typename std::enable_if<!_A1 || _A2>::type* = 0) {
-    typedef LargeArray<FileEdgeTy> FED;
+    typedef NUMAArray<FileEdgeTy> FED;
     if (EdgeData::has_value)
       edgeData.set(*nn, graph.getEdgeData<typename FED::value_type>(nn));
   }
 
   template <
       bool _A1 = EdgeData::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph&, typename FileGraph::edge_iterator nn,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {
@@ -701,10 +701,10 @@ public:
   }
 
   /**
-   * Returns the reference to the edgeIndData LargeArray
+   * Returns the reference to the edgeIndData NUMAArray
    * (a prefix sum of edges)
    *
-   * @returns reference to LargeArray edgeIndData
+   * @returns reference to NUMAArray edgeIndData
    */
   const EdgeIndData& getEdgePrefixSum() const { return edgeIndData; }
 
@@ -762,7 +762,7 @@ public:
   }
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges, std::vector<uint64_t>& prefix_sum,
-      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id,
+      katana::gstl::Vector<katana::PODVector<uint32_t>>& edges_id,
       std::vector<std::vector<EdgeTy>>& edges_data) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
@@ -798,8 +798,8 @@ public:
       std::enable_if_t<!std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
-      katana::LargeArray<uint64_t>&& prefix_sum,
-      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id,
+      katana::NUMAArray<uint64_t>&& prefix_sum,
+      katana::gstl::Vector<katana::PODVector<uint32_t>>& edges_id,
       std::vector<std::vector<EdgeTy>>& edges_data) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
@@ -833,8 +833,8 @@ public:
       std::enable_if_t<std::is_same<E, void>::value, int>* = nullptr>
   void constructFrom(
       uint32_t numNodes, uint64_t numEdges,
-      katana::LargeArray<uint64_t>&& prefix_sum,
-      katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>& edges_id) {
+      katana::NUMAArray<uint64_t>&& prefix_sum,
+      katana::gstl::Vector<katana::PODVector<uint32_t>>& edges_id) {
     allocateFrom(numNodes, numEdges);
     constructNodes();
 

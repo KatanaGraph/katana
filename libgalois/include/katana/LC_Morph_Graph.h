@@ -33,7 +33,7 @@
 #include "katana/Bag.h"
 #include "katana/Details.h"
 #include "katana/FileGraph.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -228,7 +228,7 @@ public:
   //! Const local iterator is just an const_iterator
   using const_local_iterator = const_iterator;
   //! @todo doxygen this
-  using ReadGraphAuxData = LargeArray<GraphNode>;
+  using ReadGraphAuxData = NUMAArray<GraphNode>;
 
 protected:
   //! Nodes in this graph
@@ -271,13 +271,13 @@ protected:
    */
   template <
       bool _A1 = EdgeInfo::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph& graph, typename FileGraph::edge_iterator nn, GraphNode src,
       GraphNode dst, typename std::enable_if<!_A1 || _A2>::type* = 0) {
     if (EdgeInfo::has_value) {
       // type of edge data in file graph
-      using FEDV = typename LargeArray<FileEdgeTy>::value_type;
+      using FEDV = typename NUMAArray<FileEdgeTy>::value_type;
       // add an edge with edge data
       addMultiEdge(
           src, dst, katana::MethodFlag::UNPROTECTED,
@@ -294,7 +294,7 @@ protected:
    */
   template <
       bool _A1 = EdgeInfo::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph&, typename FileGraph::edge_iterator, GraphNode src,
       GraphNode dst, typename std::enable_if<_A1 && !_A2>::type* = 0) {

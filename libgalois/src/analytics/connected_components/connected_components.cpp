@@ -102,7 +102,7 @@ struct ConnectedComponentsLabelPropAlgo {
   typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
   typedef typename Graph::Node GNode;
 
-  katana::LargeArray<ComponentType> old_component_;
+  katana::NUMAArray<ComponentType> old_component_;
   ConnectedComponentsPlan& plan_;
   ConnectedComponentsLabelPropAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan) {}
@@ -693,7 +693,7 @@ struct ConnectedComponentsAfforestAlgo {
   typedef typename Graph::Node GNode;
 
   ConnectedComponentsPlan& plan_;
-  katana::LargeArray<NodeAfforest> parent_array_;
+  katana::NUMAArray<NodeAfforest> parent_array_;
 
   ConnectedComponentsAfforestAlgo(ConnectedComponentsPlan& plan)
       : plan_(plan), parent_array_() {}

@@ -2,7 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana.atomic import GAccumulator, GReduceLogicalOr, GReduceMax, GReduceMin, atomic_add
-from katana.datastructures import AllocationPolicy, LargeArray
+from katana.datastructures import AllocationPolicy, NUMAArray
 from katana.galois import set_active_threads
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
@@ -56,10 +56,10 @@ def compute_pagerank_pull_residual_operator(graph: PropertyGraph, delta, residua
 def pagerank_pull_sync_residual(graph: PropertyGraph, maxIterations, tolerance, property_name):
     num_nodes = graph.num_nodes()
 
-    rank = LargeArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
-    nout = LargeArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
-    delta = LargeArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
-    residual = LargeArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
+    rank = NUMAArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
+    nout = NUMAArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
+    delta = NUMAArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
+    residual = NUMAArray[float](num_nodes, AllocationPolicy.INTERLEAVED)
 
     # Initialize
     do_all(

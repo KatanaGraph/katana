@@ -17,8 +17,8 @@
  * Documentation, or loss or inaccuracy of data of any kind.
  */
 
-#ifndef KATANA_LIBGALOIS_KATANA_PODRESIZEABLEARRAY_H_
-#define KATANA_LIBGALOIS_KATANA_PODRESIZEABLEARRAY_H_
+#ifndef KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
+#define KATANA_LIBGALOIS_KATANA_PODVECTOR_H_
 
 #include <algorithm>
 #include <cassert>
@@ -35,12 +35,23 @@
 namespace katana {
 
 /**
- * This is a container that encapsulates a resizeable array
- * of plain-old-datatype (POD) elements.
- * There is no initialization or destruction of elements.
+ * A specialization of std::vector of plain-old-datatype (POD) objects that
+ * does not initialize/construct or destruct the objects.
+ * (grows allocation in powers of 2 similar to std::vector)
+ * Does not support concurrent/scalable or NUMA-aware allocation.
+ *
+ * Use this when the object type is a POD and when the allocation
+ * is done in a serial region but the assignment/construction is done in
+ * a parallel region. In other words, when resize() is done on the main thread
+ * and values are assigned in parallel (instead of the typical reserve() and
+ * emplace_back() on the main thread).
+ *
+ * If the allocation can be concurrent, check katana::gstl::Vector.
+ * If the allocation is large and of known size, then check katana::NUMAArray.
+ * Read CONTRIBUTING.md for a more detailed comparison between these types.
  */
 template <typename _Tp>
-class PODResizeableArray {
+class PODVector {
   _Tp* data_;
   size_t capacity_;
   size_t size_;
@@ -60,25 +71,23 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-  PODResizeableArray() : data_(NULL), capacity_(0), size_(0) {}
+  PODVector() : data_(NULL), capacity_(0), size_(0) {}
 
   template <class InputIterator>
-  PODResizeableArray(InputIterator first, InputIterator last)
+  PODVector(InputIterator first, InputIterator last)
       : data_(NULL), capacity_(0), size_(0) {
     size_t to_add = last - first;
     resize(to_add);
     std::copy_n(first, to_add, begin());
   }
 
-  PODResizeableArray(size_t n) : data_(NULL), capacity_(0), size_(0) {
-    resize(n);
-  }
+  PODVector(size_t n) : data_(NULL), capacity_(0), size_(0) { resize(n); }
 
   //! disabled (shallow) copy constructor
-  PODResizeableArray(const PODResizeableArray&) = delete;
+  PODVector(const PODVector&) = delete;
 
   //! move constructor
-  PODResizeableArray(PODResizeableArray&& v)
+  PODVector(PODVector&& v)
       : data_(v.data_), capacity_(v.capacity_), size_(v.size_) {
     v.data_ = NULL;
     v.capacity_ = 0;
@@ -86,10 +95,10 @@ public:
   }
 
   //! disabled (shallow) copy assignment operator
-  PODResizeableArray& operator=(const PODResizeableArray&) = delete;
+  PODVector& operator=(const PODVector&) = delete;
 
   //! move assignment operator
-  PODResizeableArray& operator=(PODResizeableArray&& v) {
+  PODVector& operator=(PODVector&& v) {
     if (data_ != NULL) {
       free(data_);
     }
@@ -102,7 +111,7 @@ public:
     return *this;
   }
 
-  ~PODResizeableArray() {
+  ~PODVector() {
     if (data_ != NULL) {
       free(data_);
     }
@@ -182,12 +191,12 @@ public:
   const_reference operator[](size_type __n) const { return data_[__n]; }
   reference at(size_type __n) {
     if (__n >= size_)
-      throw std::out_of_range("PODResizeableArray::at");
+      throw std::out_of_range("PODVector::at");
     return data_[__n];
   }
   const_reference at(size_type __n) const {
     if (__n >= size_)
-      throw std::out_of_range("PODResizeableArray::at");
+      throw std::out_of_range("PODVector::at");
     return data_[__n];
   }
 
@@ -223,7 +232,7 @@ public:
     }
   }
 
-  void swap(PODResizeableArray& v) {
+  void swap(PODVector& v) {
     std::swap(data_, v.data_);
     std::swap(size_, v.size_);
     std::swap(capacity_, v.capacity_);

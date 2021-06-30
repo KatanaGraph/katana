@@ -509,7 +509,7 @@ returns `void`) or returns an error.
 
 A common pattern for using a function that returns a `katana::Result<T>` is:
 ```cpp
-auto r = ReturnsAResult();
+auto r = ReturnsAResultWithValue();
 if (!r) {
   // Some error happened. Either...
 
@@ -530,14 +530,28 @@ See
 [Result.h](https://github.com/KatanaGraph/katana/blob/master/libsupport/include/katana/Result.h)
 for more details.
 
-If you are looking to simplify error handling, if a function returns a
-`katana::Result<void>`, you can define the result and check it in a single if
-statement:
+If you are looking to simplify error handling, there is a macro
+`KATANA_CHECKED` which simplifies the pattern of:
 
 ```cpp
-if (auto r = ReturnsAResult(); !r) {
-  return r.error();
+auto r1 = ReturnsAResultWithValue();
+if (!r1) {
+  return r1.error();
 }
+T value = std::move(r1.value());
+
+auto r2 = ReturnsAResult();
+if (!r2) {
+  return r2.error();
+}
+```
+
+to
+
+```cpp
+T value = KATANA_CHECKED(ReturnsAResultWithValue());
+
+KATANA_CHECKED(ReturnsAResult());
 ```
 
 Code should be exception-safe, but exceptions are rarely thrown in the
@@ -557,11 +571,10 @@ Compare
 
 ```cpp
 Result<void> CheckNumber(int number) {
-  if (number) {
-    int u = n / number;
-  } else {
+  if (number == 0) {
     return KATANA_ERROR(IllegalArgument, "cannot divide by zero");
   }
+  int u = n / number;
 }
 ```
 
@@ -569,11 +582,10 @@ and
 
 ```cpp
 Result<void> CheckNumber(int number) {
-  if (number) {
-    int u = n / number;
-  } else {
+  if (number == 0) {
     return KATANA_ERROR(IllegalArgument, "number should be positive");
   }
+  int u = n / number;
 }
 ```
 
@@ -593,6 +605,13 @@ Result<void> MakeList() {
   if (auto r = CheckNumber(n); !r) {
     return r.error().WithContext("making number {}", n)
   }
+}
+
+// or more concisely...
+
+Result<void> MakeList() {
+  ...
+  KATANA_CHECKED_CONTEXT(CheckNumber(n), "making number", n);
 }
 ```
 

@@ -6,16 +6,46 @@ import subprocess
 import sys
 
 import boto3
+from google.cloud import storage
 
 s3_bucket_re_str = r"^(?:s3://)?(?:/)?(?P<bucket_name>[\-a-zA-Z0-9_]+)(?:\/)?(?P<prefix>[\/\-a-zA-Z0-9_\.]+)?(?:/)?$"
-meta_re_str = r"meta_(?P<version>(?:\d+))$"
-part_re_str = r"meta_(?P<node_id>(?:\d+))_(?P<version>(?:\d+))$"
+gs_bucket_re_str = r"^(?:gs://)?(?:/)?(?P<bucket_name>[\-a-zA-Z0-9_]+)(?:\/)?(?P<prefix>[\/\-a-zA-Z0-9_\.]+)?(?:/)?$"
+meta_re_str = r"(?:(?P<prefix>.*)/)?meta_(?P<version>(?:\d+))$"
+part_re_str = r"(?:(?P<prefix>.*)/)?meta_(?P<node_id>(?:\d+))_(?P<version>(?:\d+))$"
 meta_re = re.compile(meta_re_str)  # r"meta_(\d+)")
 part_re = re.compile(part_re_str)
 s3_bucket_re = re.compile(s3_bucket_re_str)
+gs_bucket_re = re.compile(gs_bucket_re_str)
 
 
-def get_bucket_info(dst):
+def list_blobs(bucket_name, prefix):
+    """Lists all the blobs in the bucket."""
+    # bucket_name = "your-bucket-name"
+
+    storage_client = storage.Client()
+
+    # Note: Client.list_blobs requires at least package version 1.17.0.
+    blobs = storage_client.list_blobs(bucket_name, prefix=prefix)
+
+    part_match_count = 0
+    meta_match_count = 0
+    for blob in blobs:
+        try:
+            file_name = blob.name.split("/")[-1]
+            if part_re.match(file_name):
+                part_match_count += 1
+                yield file_name
+                continue
+            if meta_re.match(file_name):
+                meta_match_count += 1
+                yield file_name
+                continue
+        except IndexError:
+            continue
+    print(f"# found {meta_match_count} meta files and {part_match_count} partition files")
+
+
+def get_s3_bucket_info(dst):
     match = s3_bucket_re.match(dst)
     try:
         bucket_name = match.group("bucket_name")
@@ -26,8 +56,19 @@ def get_bucket_info(dst):
     return bucket_name, prefix
 
 
+def get_gs_bucket_info(dst):
+    match = gs_bucket_re.match(dst)
+    try:
+        bucket_name = match.group("bucket_name")
+        prefix = match.group("prefix")
+    except AttributeError:
+        bucket_name = None
+        prefix = None
+    return bucket_name, prefix
+
+
 def get_s3_file_list(dst):
-    bucket, prefix = get_bucket_info(dst)
+    bucket, prefix = get_s3_bucket_info(dst)
     from boto3 import client
 
     bucket_name = bucket
@@ -53,6 +94,14 @@ def get_s3_file_list(dst):
             file_list.append(file_name)
     meta_or_part_files = [x for x in file_list if meta_re.match(x) or part_re.match(x)]
     return meta_or_part_files
+
+
+def get_gs_file_list(dst):
+    bucket, prefix = get_gs_bucket_info(dst)
+    if not bucket or not prefix or prefix[-1] != "/":
+        print("#form must be: '--gs gs://${BUCKET_NAME}/${PATH_TO_RDG_DIR}/'")
+        return []
+    return list(list_blobs(bucket, prefix))
 
 
 parser = argparse.ArgumentParser(description="Transform property graphs from old metadata format to new.")
@@ -102,6 +151,8 @@ def gen_files(dst, cmd_prefix):
         return os.listdir(dst)
     if cmd_prefix == "aws s3":
         return get_s3_file_list(dst)
+    if cmd_prefix == "gsutil":
+        return get_gs_file_list(dst)
     # TODO(yasser) support google storage
     return []
 
@@ -146,5 +197,10 @@ for i in inputs:
     else:
         commands.append(res)
 
+
+ideal_cmd_line = " ".join(sys.argv)
+print("# the intended usage of this script is to generate RDG migration scripts eg:")
+print(f"# {ideal_cmd_line} > migration_script.sh")
+print("# inspect the migration script then source it to perform the migration")
 for cmd in commands:
     print(cmd)

@@ -37,6 +37,7 @@ dependencies:
  - pyarrow
  - pygithub
  - pytest
+ - pylint=2.8.3
 
 # The dependencies for pytest-notebook are incomplete, add them manually
  - pytest-notebook

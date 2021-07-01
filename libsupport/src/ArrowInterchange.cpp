@@ -70,32 +70,15 @@ ApproxArrayDataMemUse(const std::shared_ptr<arrow::ArrayData>& data) {
   return total_mem_use;
 }
 
-}  // anonymous namespace
-
 katana::Result<std::shared_ptr<arrow::Array>>
-katana::Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
+Unchunk(const std::shared_ptr<arrow::ChunkedArray>& original) {
   std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(Indices(original));
   std::shared_ptr<arrow::ChunkedArray> chunked =
       KATANA_CHECKED(IndexedTake(original, indices));
   return chunked->chunk(0);
 }
 
-katana::Result<std::shared_ptr<arrow::ChunkedArray>>
-katana::Shuffle(const std::shared_ptr<arrow::ChunkedArray>& original) {
-  int64_t length = original->length();
-  // Build indices array, reusable across properties
-  std::vector<uint64_t> indices_vec(length);
-  // fills the vector from 0 to indices_vec.size()-1
-  std::iota(indices_vec.begin(), indices_vec.end(), 0);
-  std::shuffle(indices_vec.begin(), indices_vec.end(), katana::GetGenerator());
-  arrow::CTypeTraits<int64_t>::BuilderType builder;
-  KATANA_CHECKED(builder.Reserve(length));
-  for (int64_t i = 0; i < length; ++i) {
-    builder.UnsafeAppend(indices_vec[i]);
-  }
-  std::shared_ptr<arrow::Array> indices = KATANA_CHECKED(builder.Finish());
-  return IndexedTake(original, indices);
-}
+}  // anonymous namespace
 
 std::shared_ptr<arrow::ChunkedArray>
 katana::NullChunkedArray(

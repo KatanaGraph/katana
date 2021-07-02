@@ -28,10 +28,13 @@ enum Architecture {
 /// efficient. This may be useful, for instance, to use a sampled subgraph to compute a plan for use on a the original
 /// larger graph.
 class Plan {
-protected:
   Architecture architecture_;
 
-  Plan(Architecture architecture) : architecture_(architecture) {}
+protected:
+  explicit Plan(Architecture architecture) : architecture_(architecture) {}
+  void SetArchitecture(const Architecture architecture) {
+    architecture_ = architecture;
+  }
 
 public:
   /// The architecture on which the algorithm will run.

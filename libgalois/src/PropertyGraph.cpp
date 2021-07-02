@@ -458,14 +458,10 @@ katana::PropertyGraph::Copy(
 
 katana::Result<void>
 katana::PropertyGraph::ConstructTypeSetIDs() {
-  if ((!node_type_name_to_type_set_ids_.empty()) ||
-      (!node_type_set_id_to_type_names_.empty()) ||
-      (!edge_type_name_to_type_set_ids_.empty()) ||
-      (!edge_type_set_id_to_type_names_.empty())) {
-    return KATANA_ERROR(
-        ErrorCode::AssertionFailed,
-        "ConstructTypeSetIDs() should not called more than once");
-  }
+  node_type_name_to_type_set_ids_.clear();
+  node_type_set_id_to_type_names_.clear();
+  edge_type_name_to_type_set_ids_.clear();
+  edge_type_set_id_to_type_names_.clear();
 
   static_assert(kUnknownType == 0);
   node_type_set_id_to_type_names_.push_back(

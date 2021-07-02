@@ -75,6 +75,11 @@ public:
     return reinterpret_cast<ValueType*>(data_.data())[index];
   }
 
+  void UnsetValue(size_t index) {
+    KATANA_LOG_DEBUG_ASSERT(index < size());
+    valid_[index] = false;
+  }
+
   bool IsValid(size_t index) { return valid_[index]; }
 
   size_t size() const { return data_.size(); }
@@ -161,6 +166,8 @@ public:
   void SetValue(size_t index, value_type value) {
     builder_.SetValue(index, value);
   }
+
+  void UnsetValue(size_t index) { builder_.UnsetValue(index); }
 
   value_type& operator[](size_t index) { return builder_[index]; }
 

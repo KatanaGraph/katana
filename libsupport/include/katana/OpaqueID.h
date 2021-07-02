@@ -7,6 +7,19 @@
 
 namespace katana {
 
+// The count_traits are here to support the Count type within OpaqueIDs
+// Default count type is size_t
+template <class T, class = void>
+struct count_traits {
+  using Count = size_t;
+};
+
+// If value type is integral, use the unsigned version of it for Count
+template <class T>
+struct count_traits<T, typename std::enable_if_t<std::is_integral_v<T>>> {
+  using Count = std::make_unsigned_t<T>;
+};
+
 /// Base class for opaque ID types.
 ///
 /// Opaque ID types are:
@@ -45,6 +58,8 @@ struct OpaqueID {
   // TODO(amp): We need some check that _IDType is a subtype of
   //  OpaqueID<_IDType, _Value>. There doesn't seem to be any way to do that.
   using ValueType = _Value;
+
+  using Count = typename count_traits<_Value>::Count;
 
 protected:
   ValueType value_;

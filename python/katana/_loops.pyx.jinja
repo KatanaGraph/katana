@@ -25,11 +25,11 @@ from .cpp.libgalois cimport Worklist
 from katana.numpy_structs cimport argument_to_ndarray_dtype, as_struct_instance
 from katana.numpy_structs import StructInstance
 
-from katana.datastructures cimport InsertBag_uint64_t, LargeArray_uint64_t
+from katana.datastructures cimport InsertBag_uint64_t, NUMAArray_uint64_t
 {% for inst in type_instantiations -%}
 from katana.datastructures cimport InsertBag_{{inst.type_scab}}{% if inst.by_pointer %}, {{inst.element_c_type}}{% endif %}
 {% endfor -%}
-from katana.datastructures import InsertBag_uint64_t, LargeArray_uint64_t, InsertBag_Opaque16, StructInstance
+from katana.datastructures import InsertBag_uint64_t, NUMAArray_uint64_t, InsertBag_Opaque16, StructInstance
 from katana._property_graph cimport PropertyGraph
 from katana._property_graph import PropertyGraph
 
@@ -288,8 +288,8 @@ elif isinstance(iterable, InsertBag_{{inst.type_scab}}):
     dtype = {{inst.dtype("iterable.dtype")}}
     {{inner(1, "Galois.iterate(" + variable_name + "[0])", args, inst.element_c_type)}}
 {% endfor %}
-elif isinstance(iterable, LargeArray_uint64_t):
-    large_array = &(<LargeArray_uint64_t>iterable).underlying
+elif isinstance(iterable, NUMAArray_uint64_t):
+    large_array = &(<NUMAArray_uint64_t>iterable).underlying
     dtype = np.uint64
     {{inner(1, "Galois.iterate(large_array[0])", args, "uint64_t")}}
 else:

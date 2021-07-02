@@ -110,7 +110,7 @@ struct PreflowPush {
   GNode source;
   int global_relabel_interval;
   bool should_global_relabel = false;
-  katana::LargeArray<Graph::edge_iterator>
+  katana::NUMAArray<Graph::edge_iterator>
       reverseDirectionEdgeIterator;  // ideally should be on the graph as
                                      // graph.getReverseEdgeIterator()
 
@@ -551,7 +551,7 @@ struct PreflowPush {
     reader.fromFile(inputFile);
 
     typedef katana::FileGraphWriter Writer;
-    typedef katana::LargeArray<EdgeTy> EdgeData;
+    typedef katana::NUMAArray<EdgeTy> EdgeData;
     typedef typename EdgeData::value_type edge_value_type;
 
     Writer p;

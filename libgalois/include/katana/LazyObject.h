@@ -96,7 +96,7 @@ public:
   typedef const T& const_reference;
   const static bool has_value = true;
   // Can't support incomplete T's but provide same interface as
-  // {@link katana::LargeArray} for consistency
+  // {@link katana::NUMAArray} for consistency
   struct size_of {
     const static size_t value = sizeof(T);
   };

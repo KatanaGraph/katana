@@ -41,7 +41,7 @@ struct LouvainClusteringImplementation
       PreviousCommunityId, CurrentCommunityId, DegreeWeight<EdgeWeightType>>;
   using EdgeData = std::tuple<EdgeWeight<EdgeWeightType>>;
   using CommTy = CommunityType<EdgeWeightType>;
-  using CommunityArray = katana::LargeArray<CommTy>;
+  using CommunityArray = katana::NUMAArray<CommTy>;
 
   using Graph = katana::TypedPropertyGraph<NodeData, EdgeData>;
   using GNode = typename Graph::Node;
@@ -216,14 +216,14 @@ struct LouvainClusteringImplementation
     constant_for_second_term =
         Base::template CalConstantForSecondTerm<EdgeWeightType>(graph);
 
-    katana::LargeArray<uint64_t> local_target;
+    katana::NUMAArray<uint64_t> local_target;
     local_target.allocateBlocked(graph.num_nodes());
 
     // partition nodes
     std::vector<katana::InsertBag<GNode>> bag(16);
 
     katana::InsertBag<GNode> to_process;
-    katana::LargeArray<bool> in_bag;
+    katana::NUMAArray<bool> in_bag;
     in_bag.allocateBlocked(graph.num_nodes());
 
     katana::do_all(katana::iterate(graph), [&](GNode n) {
@@ -357,14 +357,14 @@ public:
   katana::Result<void> LouvainClustering(
       katana::PropertyGraph* pfg, const std::string& edge_weight_property_name,
       const std::vector<std::string>& temp_node_property_names,
-      katana::LargeArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
+      katana::NUMAArray<uint64_t>& clusters_orig, LouvainClusteringPlan plan) {
     /*
      * Construct temp property graph. This graph gets coarsened as the
      * computation proceeds.
      */
     auto pfg_mutable = std::make_unique<katana::PropertyGraph>();
-    katana::LargeArray<uint64_t> out_indices_next;
-    katana::LargeArray<uint32_t> out_dests_next;
+    katana::NUMAArray<uint64_t> out_indices_next;
+    katana::NUMAArray<uint32_t> out_dests_next;
 
     out_indices_next.allocateInterleaved(pfg->topology().num_nodes());
     out_dests_next.allocateInterleaved(pfg->topology().num_edges());
@@ -563,7 +563,7 @@ LouvainClusteringWithWrap(
    * To keep track of communities for nodes in the original graph.
    * Community will be set to -1 for isolated nodes
    */
-  katana::LargeArray<uint64_t> clusters_orig;
+  katana::NUMAArray<uint64_t> clusters_orig;
   clusters_orig.allocateBlocked(pfg->num_nodes());
 
   LouvainClusteringImplementation<EdgeWeightType> impl{};

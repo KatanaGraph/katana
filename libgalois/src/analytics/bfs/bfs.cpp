@@ -142,8 +142,7 @@ template <bool CONCURRENT, typename T, typename P, typename R>
 void
 AsynchronousAlgo(
     const katana::PropertyGraph& graph, const GNode source,
-    katana::LargeArray<Dist>* node_data, const P& pushWrap,
-    const R& edgeRange) {
+    katana::NUMAArray<Dist>* node_data, const P& pushWrap, const R& edgeRange) {
   namespace gwl = katana;
   using FIFO = gwl::PerSocketChunkFIFO<kChunkSize>;
   using BSWL = gwl::BulkSynchronous<gwl::PerSocketChunkLIFO<kChunkSize>>;
@@ -275,7 +274,7 @@ void
 SynchronousDirectOpt(
     const katana::PropertyGraph& graph,
     const katana::PropertyGraph& transpose_graph,
-    katana::LargeArray<GNode>* node_data, const GNode source, const P& pushWrap,
+    katana::NUMAArray<GNode>* node_data, const GNode source, const P& pushWrap,
     const uint32_t alpha, const uint32_t beta) {
   using Cont = typename std::conditional<
       CONCURRENT, katana::InsertBag<GNode>, katana::SerStack<GNode>>::type;
@@ -386,7 +385,7 @@ SynchronousDirectOpt(
 
 template <typename NDType, typename ValueTy>
 void
-InitializeNodeData(const ValueTy value, katana::LargeArray<NDType>* node_data) {
+InitializeNodeData(const ValueTy value, katana::NUMAArray<NDType>* node_data) {
   katana::do_all(katana::iterate(0ul, node_data->size()), [&](auto n) {
     (*node_data)[n] = value;
   });
@@ -395,7 +394,7 @@ InitializeNodeData(const ValueTy value, katana::LargeArray<NDType>* node_data) {
 template <typename NDType, typename ValueTy, typename... Args>
 void
 InitializeNodeData(
-    const ValueTy value, katana::LargeArray<NDType>* node_data, Args... args) {
+    const ValueTy value, katana::NUMAArray<NDType>* node_data, Args... args) {
   InitializeNodeData(value, node_data);
   InitializeNodeData(value, args...);
 }
@@ -403,7 +402,7 @@ InitializeNodeData(
 template <typename NDType>
 void
 InitializeGraphNodeData(
-    Graph* graph, const katana::LargeArray<NDType>& node_data) {
+    Graph* graph, const katana::NUMAArray<NDType>& node_data) {
   katana::do_all(katana::iterate(*graph), [&](auto& node) {
     graph->GetData<BfsNodeParent>(node) = node_data[node];
   });
@@ -412,8 +411,8 @@ InitializeGraphNodeData(
 void
 ComputeParentFromDistance(
     katana::PropertyGraph& transpose_graph,
-    katana::LargeArray<GNode>* node_parent,
-    const katana::LargeArray<Dist>& node_dist, const GNode source) {
+    katana::NUMAArray<GNode>* node_parent,
+    const katana::NUMAArray<Dist>& node_dist, const GNode source) {
   (*node_parent)[source] = source;
   katana::do_all(
       katana::iterate(transpose_graph),
@@ -451,7 +450,7 @@ RunAlgo(
   switch (algo.algorithm()) {
   case BfsPlan::kSynchronousDirectOpt: {
     // Set up node data
-    katana::LargeArray<GNode> node_data;
+    katana::NUMAArray<GNode> node_data;
     node_data.allocateInterleaved(graph->num_nodes());
     InitializeNodeData(BfsImplementation::kDistanceInfinity, &node_data);
 
@@ -465,8 +464,8 @@ RunAlgo(
     break;
   }
   case BfsPlan::kAsynchronous: {
-    katana::LargeArray<GNode> node_parent;
-    katana::LargeArray<Dist> node_dist;
+    katana::NUMAArray<GNode> node_parent;
+    katana::NUMAArray<Dist> node_dist;
     node_parent.allocateInterleaved(graph->num_nodes());
     node_dist.allocateInterleaved(graph->num_nodes());
 
@@ -559,13 +558,13 @@ katana::analytics::BfsAssertValid(
 
   // TODO(lhc): due to lack of in-edge iteration, manually creates a transposed graph
   const katana::GraphTopology& topology = pg->topology();
-  katana::LargeArray<GNode> node_data;
+  katana::NUMAArray<GNode> node_data;
   node_data.allocateInterleaved(topology.num_nodes());
   auto transpose_graph_topo = katana::CreateTransposeGraphTopology(topology);
   const auto& transpose_graph = *(transpose_graph_topo.value().get());
 
   uint32_t num_nodes = graph.num_nodes();
-  LargeArray<Dist> levels;
+  NUMAArray<Dist> levels;
   gstl::Vector<uint32_t> visited_nodes;
   levels.allocateInterleaved(num_nodes);
   visited_nodes.reserve(num_nodes);

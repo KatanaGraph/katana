@@ -39,14 +39,14 @@ using EdgeData = std::tuple<>;
 typedef katana::TypedPropertyGraph<NodeData, EdgeData> Graph;
 typedef typename Graph::Node GNode;
 
-using DeltaArray = katana::LargeArray<PRTy>;
-using ResidualArray = katana::LargeArray<PRTy>;
+using DeltaArray = katana::NUMAArray<PRTy>;
+using ResidualArray = katana::NUMAArray<PRTy>;
 
 //! Initialize nodes for the topological algorithm.
 void
 InitNodeDataTopological(
     const katana::PropertyGraph& graph,
-    katana::LargeArray<PagerankValueAndOutDegreeTy>* node_data) {
+    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
   PRTy init_value = 1.0f / graph.size();
   katana::do_all(
       katana::iterate(graph),
@@ -79,11 +79,11 @@ InitNodeDataResidual(
 void
 ComputeOutDeg(
     const katana::PropertyGraph& graph,
-    katana::LargeArray<PagerankValueAndOutDegreeTy>* node_data) {
+    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
   katana::StatTimer out_degree_timer("computeOutDegFunc");
   out_degree_timer.start();
 
-  katana::LargeArray<std::atomic<size_t>> vec;
+  katana::NUMAArray<std::atomic<size_t>> vec;
   vec.allocateInterleaved(graph.size());
 
   katana::do_all(
@@ -115,7 +115,7 @@ ComputeOutDeg(Graph* graph) {
   katana::StatTimer out_degree_timer("computeOutDegFunc");
   out_degree_timer.start();
 
-  katana::LargeArray<std::atomic<size_t>> vec;
+  katana::NUMAArray<std::atomic<size_t>> vec;
   vec.allocateInterleaved(graph->size());
 
   katana::do_all(
@@ -219,7 +219,7 @@ ComputePRResidual(
 void
 ComputePRTopological(
     const katana::PropertyGraph& graph, katana::analytics::PagerankPlan plan,
-    katana::LargeArray<PagerankValueAndOutDegreeTy>* node_data) {
+    katana::NUMAArray<PagerankValueAndOutDegreeTy>* node_data) {
   unsigned int iteration = 0;
   katana::GAccumulator<float> accum;
 
@@ -271,7 +271,7 @@ ComputePRTopological(
 katana::Result<void>
 ExtractValueFromTopoGraph(
     katana::PropertyGraph* pg, const std::string& output_property_name,
-    const katana::LargeArray<PagerankValueAndOutDegreeTy>& node_data) {
+    const katana::NUMAArray<PagerankValueAndOutDegreeTy>& node_data) {
   if (auto result =
           katana::analytics::ConstructNodeProperties<std::tuple<NodeValue>>(
               pg, {output_property_name});
@@ -305,7 +305,7 @@ PagerankPullTopological(
   katana::ReportPageAllocGuard page_alloc;
 
   // NUMA-awere temporary node data
-  katana::LargeArray<PagerankValueAndOutDegreeTy> node_data;
+  katana::NUMAArray<PagerankValueAndOutDegreeTy> node_data;
   node_data.allocateInterleaved(pg->num_nodes());
 
   InitNodeDataTopological(*pg, &node_data);

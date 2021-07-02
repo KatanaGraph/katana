@@ -1019,7 +1019,7 @@ generateRandomInput(
   katana::FileGraphWriter p;
   p.setNumNodes(numA + numB);
   p.setNumEdges(numEdges);
-  p.setSizeofEdgeData(katana::LargeArray<edge_data_type>::size_of::value);
+  p.setSizeofEdgeData(katana::NUMAArray<edge_data_type>::size_of::value);
 
   for (int phase = 0; phase < 2; ++phase) {
     if (phase == 0)

@@ -145,7 +145,7 @@ struct LocalClusteringCoefficientPerThread {
 
   typedef typename Graph::Node Node;
 
-  katana::LargeArray<uint64_t> node_triangle_count_;
+  katana::NUMAArray<uint64_t> node_triangle_count_;
 
   /**
  * Counts the number of triangles for each node

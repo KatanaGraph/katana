@@ -25,8 +25,8 @@
 #include <boost/mpl/if.hpp>
 
 #include "katana/Context.h"
-#include "katana/LargeArray.h"
 #include "katana/LazyObject.h"
+#include "katana/NUMAArray.h"
 #include "katana/NoDerefIterator.h"
 #include "katana/PerThreadStorage.h"
 #include "katana/Range.h"
@@ -189,8 +189,8 @@ struct Identity {
  *
  * @tparam GraphNode Graph node pointer
  * @tparam EdgeIndex Integer-like value that is passed to EdgeDst and EdgeData
- * @tparam EdgeDst {@link LargeArray}-like container of edge destinations
- * @tparam EdgeData {@link LargeArray}-like container of edge data
+ * @tparam EdgeDst {@link NUMAArray}-like container of edge destinations
+ * @tparam EdgeData {@link NUMAArray}-like container of edge data
  * @tparam GraphNodeConverter A functor to apply when returning values of
  *   EdgeDst when dereferencing this iterator; assignment uses untransformed
  *   EdgeDst values
@@ -293,7 +293,7 @@ struct NodeInfoBase<void, HasLockable>
 template <bool Enable>
 class OutOfLineLockableFeature {
   typedef NodeInfoBase<void, true> OutOfLineLock;
-  LargeArray<OutOfLineLock> outOfLineLocks;
+  NUMAArray<OutOfLineLock> outOfLineLocks;
 
 public:
   struct size_of_out_of_line {

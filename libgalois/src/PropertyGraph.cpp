@@ -153,7 +153,7 @@ MakePropertyGraph(
 }
 
 /// Assumes all boolean or uint8 properties are types
-katana::Result<katana::LargeArray<katana::PropertyGraph::TypeSetID>>
+katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>
 GetTypeSetIDsFromProperties(
     const std::shared_ptr<arrow::Table>& properties,
     katana::PropertyGraph::TypeNameToSetOfTypeSetIDsMap*
@@ -286,7 +286,7 @@ GetTypeSetIDsFromProperties(
   }
 
   // allocate type IDs array
-  katana::LargeArray<katana::PropertyGraph::TypeSetID> type_set_ids;
+  katana::NUMAArray<katana::PropertyGraph::TypeSetID> type_set_ids;
   int64_t num_rows = properties->num_rows();
   type_set_ids.allocateInterleaved(num_rows);
 
@@ -319,13 +319,13 @@ GetTypeSetIDsFromProperties(
     }
   });
 
-  return katana::Result<katana::LargeArray<katana::PropertyGraph::TypeSetID>>(
+  return katana::Result<katana::NUMAArray<katana::PropertyGraph::TypeSetID>>(
       std::move(type_set_ids));
 }
 
-katana::LargeArray<katana::PropertyGraph::TypeSetID>
+katana::NUMAArray<katana::PropertyGraph::TypeSetID>
 GetUnknownTypeSetIDs(uint64_t num_rows) {
-  katana::LargeArray<katana::PropertyGraph::TypeSetID> type_set_ids;
+  katana::NUMAArray<katana::PropertyGraph::TypeSetID> type_set_ids;
   type_set_ids.allocateInterleaved(num_rows);
   katana::do_all(katana::iterate(uint64_t{0}, num_rows), [&](uint64_t row) {
     type_set_ids[row] = katana::PropertyGraph::kUnknownType;
@@ -904,7 +904,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
 
   // create mapping, get degrees out to another vector to get prefix sum
   std::vector<uint32_t> old_to_new_mapping(num_nodes);
-  katana::LargeArray<uint64_t> new_prefix_sum;
+  katana::NUMAArray<uint64_t> new_prefix_sum;
   new_prefix_sum.allocateBlocked(num_nodes);
   katana::do_all(katana::iterate(uint64_t{0}, num_nodes), [&](uint64_t index) {
     // save degree, which is pair.first
@@ -916,7 +916,7 @@ katana::SortNodesByDegree(katana::PropertyGraph* pg) {
   katana::ParallelSTL::partial_sum(
       new_prefix_sum.begin(), new_prefix_sum.end(), new_prefix_sum.begin());
 
-  katana::LargeArray<uint32_t> new_out_dest;
+  katana::NUMAArray<uint32_t> new_out_dest;
   new_out_dest.allocateBlocked(num_edges);
 
   auto view_result_indices =
@@ -984,8 +984,8 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   }
 
   // New symmetric graph topology
-  katana::LargeArray<uint64_t> out_indices;
-  katana::LargeArray<uint32_t> out_dests;
+  katana::NUMAArray<uint64_t> out_indices;
+  katana::NUMAArray<uint32_t> out_dests;
 
   out_indices.allocateInterleaved(topology.num_nodes());
   // Store the out-degree of nodes from original graph
@@ -1018,9 +1018,9 @@ katana::CreateSymmetricGraph(katana::PropertyGraph* pg) {
   uint64_t num_nodes_symmetric = topology.num_nodes();
   uint64_t num_edges_symmetric = out_indices[num_nodes_symmetric - 1];
 
-  katana::LargeArray<uint64_t> out_dests_offset;
+  katana::NUMAArray<uint64_t> out_dests_offset;
   out_dests_offset.allocateInterleaved(topology.num_nodes());
-  // Temp LargeArray for computing new destination positions
+  // Temp NUMAArray for computing new destination positions
   out_dests_offset[0] = 0;
   katana::do_all(
       katana::iterate(uint64_t{1}, topology.num_nodes()),
@@ -1076,8 +1076,8 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
     return std::unique_ptr<PropertyGraph>(std::move(transpose));
   }
 
-  katana::LargeArray<GraphTopology::Edge> out_indices;
-  katana::LargeArray<GraphTopology::Node> out_dests;
+  katana::NUMAArray<GraphTopology::Edge> out_indices;
+  katana::NUMAArray<GraphTopology::Node> out_dests;
 
   out_indices.allocateInterleaved(topology.num_nodes());
   out_dests.allocateInterleaved(topology.num_edges());
@@ -1104,7 +1104,7 @@ katana::CreateTransposeGraphTopology(const GraphTopology& topology) {
     out_indices[n] += out_indices[n - 1];
   }
 
-  katana::LargeArray<uint64_t> out_dests_offset;
+  katana::NUMAArray<uint64_t> out_dests_offset;
   out_dests_offset.allocateInterleaved(topology.num_nodes());
   // Reuse out_indices_tmp for computing new destination positions
   out_dests_offset[0] = 0;

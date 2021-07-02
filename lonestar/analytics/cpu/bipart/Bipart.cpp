@@ -277,9 +277,9 @@ ConstructNewGraph(
     const std::vector<uint32_t>& num_hedges_per_partition,
     const uint32_t num_hedges, HyperGraph* graph,
     const std::vector<HyperGraph*>& gr) {
-  std::vector<katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>>
-      edges_ids(num_partitions);
-  std::vector<LargeArrayUint64Ty> edges_prefixsum(num_partitions);
+  std::vector<katana::gstl::Vector<katana::PODVector<uint32_t>>> edges_ids(
+      num_partitions);
+  std::vector<NUMAArrayUint64Ty> edges_prefixsum(num_partitions);
 
   for (uint32_t i : current_level_indices) {
     uint32_t index = pgraph_index[i];

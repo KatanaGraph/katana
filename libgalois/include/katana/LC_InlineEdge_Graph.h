@@ -24,7 +24,7 @@
 
 #include "katana/Details.h"
 #include "katana/FileGraph.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -124,8 +124,8 @@ protected:
           HasCompressedNodePtr, uint32_t, NodeInfo*>::type,
       EdgeTy>
       EdgeInfo;
-  typedef LargeArray<EdgeInfo> EdgeData;
-  typedef LargeArray<NodeInfo> NodeData;
+  typedef NUMAArray<EdgeInfo> EdgeData;
+  typedef NUMAArray<NodeInfo> NodeData;
   typedef internal::NodeInfoBaseTypes<
       NodeTy, !HasNoLockable && !HasOutOfLineLockable>
       NodeInfoTypes;
@@ -212,18 +212,18 @@ protected:
 
   template <
       bool _A1 = EdgeInfo::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph& graph, typename FileGraph::edge_iterator nn, EdgeInfo* edge,
       typename std::enable_if<!_A1 || _A2>::type* = 0) {
-    typedef LargeArray<FileEdgeTy> FED;
+    typedef NUMAArray<FileEdgeTy> FED;
     if (EdgeInfo::has_value)
       edge->construct(graph.getEdgeData<typename FED::value_type>(nn));
   }
 
   template <
       bool _A1 = EdgeInfo::has_value,
-      bool _A2 = LargeArray<FileEdgeTy>::has_value>
+      bool _A2 = NUMAArray<FileEdgeTy>::has_value>
   void constructEdgeValue(
       FileGraph&, typename FileGraph::edge_iterator, EdgeInfo* edge,
       typename std::enable_if<_A1 && !_A2>::type* = 0) {

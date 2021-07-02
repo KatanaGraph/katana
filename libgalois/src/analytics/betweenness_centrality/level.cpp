@@ -1,7 +1,7 @@
 #include "betweenness_centrality_impl.h"
 #include "katana/AtomicHelpers.h"
 #include "katana/DynamicBitset.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/Properties.h"
 #include "katana/TypedPropertyGraph.h"
 
@@ -42,7 +42,7 @@ constexpr static const unsigned kLevelChunkSize = 256u;
  */
 void
 LevelInitializeGraph(
-    LevelGraph* graph, katana::LargeArray<BCLevelNodeDataTy>* graph_data,
+    LevelGraph* graph, katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
     katana::DynamicBitset* active_edges) {
   graph_data->allocateBlocked(graph->size());
   katana::do_all(
@@ -66,7 +66,7 @@ LevelInitializeGraph(
 void
 LevelInitializeIteration(
     LevelGraph* graph, LevelGNode src_node,
-    katana::LargeArray<BCLevelNodeDataTy>* graph_data,
+    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
     katana::DynamicBitset* active_edges) {
   katana::do_all(
       katana::iterate(*graph),
@@ -99,7 +99,7 @@ LevelInitializeIteration(
 katana::gstl::Vector<LevelWorklistType>
 LevelSSSP(
     LevelGraph* graph, LevelGNode src_node,
-    katana::LargeArray<BCLevelNodeDataTy>* graph_data,
+    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
     katana::DynamicBitset* active_edges) {
   katana::gstl::Vector<LevelWorklistType> vector_of_worklists;
   uint32_t current_level = 0;
@@ -165,7 +165,7 @@ void
 LevelBackwardBrandes(
     LevelGraph* graph,
     katana::gstl::Vector<LevelWorklistType>* vector_of_worklists,
-    katana::LargeArray<BCLevelNodeDataTy>* graph_data,
+    katana::NUMAArray<BCLevelNodeDataTy>* graph_data,
     katana::DynamicBitset* active_edges) {
   // minus 3 because last one is empty, one after is leaf nodes, and one
   // to correct indexing to 0 index
@@ -217,7 +217,7 @@ LevelBackwardBrandes(
 katana::Result<void>
 ExtractBC(
     katana::PropertyGraph* pg, const LevelGraph& array_of_struct_graph,
-    const katana::LargeArray<BCLevelNodeDataTy>& graph_data,
+    const katana::NUMAArray<BCLevelNodeDataTy>& graph_data,
     const std::string& output_property_name) {
   // construct the new property
   if (auto result =
@@ -297,7 +297,7 @@ BetweennessCentralityLevel(
     loop_end = source_vector.size();
   }
 
-  katana::LargeArray<BCLevelNodeDataTy> graph_data;
+  katana::NUMAArray<BCLevelNodeDataTy> graph_data;
   katana::DynamicBitset active_edges;
   // graph initialization, then main loop
   LevelInitializeGraph(&graph, &graph_data, &active_edges);

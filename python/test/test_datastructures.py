@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from katana.datastructures import AllocationPolicy, InsertBag, LargeArray
+from katana.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.loops import do_all, do_all_operator
 
 types = [
@@ -79,11 +79,11 @@ def test_InsertBag_parallel_opaque():
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_simple(typ):
-    T = LargeArray[typ]
-    assert issubclass(T, LargeArray)
+def test_NUMAArray_simple(typ):
+    T = NUMAArray[typ]
+    assert issubclass(T, NUMAArray)
     arr = T()
-    assert isinstance(arr, LargeArray)
+    assert isinstance(arr, NUMAArray)
     assert isinstance(arr, T)
     arr.allocateInterleaved(5)
     arr[0] = 10
@@ -94,12 +94,12 @@ def test_LargeArray_simple(typ):
     assert list(arr) == [10, 1, 0, 0, 10]
 
 
-def test_LargeArray_opaque():
+def test_NUMAArray_opaque():
     dt = np.dtype([("x", np.float32), ("y", np.int16),], align=True)
-    T = LargeArray[dt]
-    assert issubclass(T, LargeArray)
+    T = NUMAArray[dt]
+    assert issubclass(T, NUMAArray)
     arr = T()
-    assert isinstance(arr, LargeArray)
+    assert isinstance(arr, NUMAArray)
     assert isinstance(arr, T)
     arr.allocateInterleaved(5)
     arr[0] = (1.1, 2)
@@ -117,9 +117,9 @@ def test_LargeArray_opaque():
     assert nparr[3]["y"] == 2
 
 
-def test_LargeArray_opaque_extra_space():
+def test_NUMAArray_opaque_extra_space():
     dt = np.dtype([("x", np.int8), ("y", np.int8),], align=True)
-    arr = LargeArray[dt]()
+    arr = NUMAArray[dt]()
     arr.allocateInterleaved(5)
     arr[0] = (1, 2)
     arr[2] = (2, 5)
@@ -135,15 +135,15 @@ def test_LargeArray_opaque_extra_space():
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_constructor(typ):
-    T = LargeArray[typ]
+def test_NUMAArray_constructor(typ):
+    T = NUMAArray[typ]
     arr = T(8, AllocationPolicy.BLOCKED)
     assert len(arr) == 8
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_realloc(typ):
-    T = LargeArray[typ]
+def test_NUMAArray_realloc(typ):
+    T = NUMAArray[typ]
     arr = T()
     arr.allocateInterleaved(10)
     with pytest.raises(ValueError):
@@ -151,8 +151,8 @@ def test_LargeArray_realloc(typ):
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_parallel(typ):
-    T = LargeArray[typ]
+def test_NUMAArray_parallel(typ):
+    T = NUMAArray[typ]
     arr = T()
     arr.allocateInterleaved(1000)
 
@@ -167,8 +167,8 @@ def test_LargeArray_parallel(typ):
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_numpy(typ):
-    T = LargeArray[typ]
+def test_NUMAArray_numpy(typ):
+    T = NUMAArray[typ]
     larr = T()
     with pytest.raises(ValueError):
         larr.as_numpy()
@@ -187,8 +187,8 @@ def test_LargeArray_numpy(typ):
 
 
 @pytest.mark.parametrize("typ", types)
-def test_LargeArray_numpy_parallel(typ):
-    T = LargeArray[typ]
+def test_NUMAArray_numpy_parallel(typ):
+    T = NUMAArray[typ]
     arr = T()
     arr.allocateInterleaved(1000)
 
@@ -201,9 +201,9 @@ def test_LargeArray_numpy_parallel(typ):
     assert list(arr) == list(range(1, 1001))
 
 
-def test_LargeArray_numpy_parallel_opaque():
+def test_NUMAArray_numpy_parallel_opaque():
     dt = np.dtype([("x", np.float32), ("y", np.int16),], align=True)
-    T = LargeArray[dt]
+    T = NUMAArray[dt]
     arr = T()
     arr.allocateInterleaved(1000)
 
@@ -233,12 +233,12 @@ def test_InsertBag_numba_type():
     assert isinstance(InsertBag_numba_type[dt], numba.types.Type)
 
 
-def test_LargeArray_numba_type():
+def test_NUMAArray_numba_type():
     import numba.types
 
-    from katana.datastructures import LargeArray_numba_type
+    from katana.datastructures import NUMAArray_numba_type
 
-    assert isinstance(LargeArray_numba_type[int], numba.types.Type)
+    assert isinstance(NUMAArray_numba_type[int], numba.types.Type)
 
     dt = np.dtype([("x", np.float32), ("y", np.int8),], align=True)
-    assert isinstance(LargeArray_numba_type[dt], numba.types.Type)
+    assert isinstance(NUMAArray_numba_type[dt], numba.types.Type)

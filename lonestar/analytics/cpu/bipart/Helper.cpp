@@ -79,7 +79,7 @@ ConstructGraph(
 
   // Execution phase: construct hyper graph.
   EdgeDstVecTy edges_id(total_num_nodes);
-  LargeArrayUint64Ty prefix_edges;
+  NUMAArrayUint64Ty prefix_edges;
   prefix_edges.allocateInterleaved(total_num_nodes);
   num_read_hedges = 0;
   while (std::getline(f, line)) {

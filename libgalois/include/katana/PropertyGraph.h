@@ -12,7 +12,7 @@
 
 #include "katana/Details.h"
 #include "katana/ErrorCode.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 #include "katana/config.h"
 #include "tsuba/RDG.h"
 
@@ -39,8 +39,7 @@ public:
       const Edge* adj_indices, size_t numNodes, const Node* dests,
       size_t numEdges);
 
-  GraphTopology(
-      LargeArray<Edge>&& adj_indices, LargeArray<Node>&& dests) noexcept
+  GraphTopology(NUMAArray<Edge>&& adj_indices, NUMAArray<Node>&& dests) noexcept
       : adj_indices_(std::move(adj_indices)),
         dests_(std::move(dests)),
         out_indices(LargeToArrowArray(adj_indices_)),
@@ -124,21 +123,21 @@ public:
 private:
   // TODO: generalize to typename T
   static std::shared_ptr<arrow::UInt64Array> LargeToArrowArray(
-      LargeArray<uint64_t>& lg_arr) noexcept {
+      NUMAArray<uint64_t>& lg_arr) noexcept {
     return std::make_shared<arrow::UInt64Array>(
         lg_arr.size(),
         arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
   }
 
   static std::shared_ptr<arrow::UInt32Array> LargeToArrowArray(
-      LargeArray<uint32_t>& lg_arr) noexcept {
+      NUMAArray<uint32_t>& lg_arr) noexcept {
     return std::make_shared<arrow::UInt32Array>(
         lg_arr.size(),
         arrow::MutableBuffer::Wrap(lg_arr.data(), lg_arr.size()));
   }
 
-  LargeArray<Edge> adj_indices_;
-  LargeArray<Node> dests_;
+  NUMAArray<Edge> adj_indices_;
+  NUMAArray<Node> dests_;
 
 public:
   // TODO(amber): make these private in the near future. No other class should
@@ -228,9 +227,9 @@ private:
   TypeNameToSetOfTypeSetIDsMap edge_type_name_to_type_set_ids_;
 
   /// The node TypeSetID for each node in the graph
-  katana::LargeArray<TypeSetID> node_type_set_id_;
+  katana::NUMAArray<TypeSetID> node_type_set_id_;
   /// The edge TypeSetID for each edge in the graph
-  katana::LargeArray<TypeSetID> edge_type_set_id_;
+  katana::NUMAArray<TypeSetID> edge_type_set_id_;
 
   // Keep partition_metadata, master_nodes, mirror_nodes out of the public interface,
   // while allowing Distribution to read/write it for RDG

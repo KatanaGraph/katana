@@ -72,8 +72,8 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
 
   template <typename T, typename OBIMTy = OBIM, typename P, typename R>
   static void DeltaStepAlgo(
-      katana::LargeArray<std::atomic<Weight>>* node_data,
-      katana::LargeArray<Weight>* edge_data, Graph* graph,
+      katana::NUMAArray<std::atomic<Weight>>* node_data,
+      katana::NUMAArray<Weight>* edge_data, Graph* graph,
       const typename Graph::Node& source, const P& pushWrap, const R& edgeRange,
       unsigned stepShift) {
     //! [reducible for self-defined stats]
@@ -126,8 +126,8 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
   }
 
   static void DeltaStepFusionAlgo(
-      katana::LargeArray<std::atomic<Weight>>* node_data,
-      katana::LargeArray<Weight>* edge_data, Graph* graph,
+      katana::NUMAArray<std::atomic<Weight>>* node_data,
+      katana::NUMAArray<Weight>* edge_data, Graph* graph,
       const typename Graph::Node& source, unsigned stepShift) {
     constexpr size_t kMaxFusion = 1000;
 
@@ -313,7 +313,7 @@ struct SsspImplementation : public katana::analytics::BfsSsspImplementationBase<
   }
 
   static void TopoAlgo(Graph* graph, const typename Graph::Node& source) {
-    katana::LargeArray<Dist> old_dist;
+    katana::NUMAArray<Dist> old_dist;
     old_dist.allocateInterleaved(graph->size());
 
     katana::do_all(
@@ -414,8 +414,8 @@ public:
     katana::EnsurePreallocated(1, approxNodeData);
     katana::ReportPageAllocGuard page_alloc;
 
-    katana::LargeArray<std::atomic<Weight>> node_data;
-    katana::LargeArray<Weight> edge_data;
+    katana::NUMAArray<std::atomic<Weight>> node_data;
+    katana::NUMAArray<Weight> edge_data;
     bool use_block = false;
     if (use_block) {
       node_data.allocateBlocked(graph.size());

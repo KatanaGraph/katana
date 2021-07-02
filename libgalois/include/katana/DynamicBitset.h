@@ -35,7 +35,7 @@
 
 #include "katana/AtomicWrapper.h"
 #include "katana/Galois.h"
-#include "katana/PODResizeableArray.h"
+#include "katana/PODVector.h"
 #include "katana/config.h"
 
 namespace katana {
@@ -43,7 +43,7 @@ namespace katana {
  * Concurrent dynamically allocated bitset
  **/
 class KATANA_EXPORT DynamicBitset {
-  katana::PODResizeableArray<katana::CopyableAtomic<uint64_t>> bitvec_{};
+  katana::PODVector<katana::CopyableAtomic<uint64_t>> bitvec_{};
   size_t num_bits_{0};
 
 public:

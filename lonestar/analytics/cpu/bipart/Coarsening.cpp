@@ -752,8 +752,8 @@ ParallelCreateEdges(
       },
       katana::loopname("Coarsening-Update-Parents"));
 
-  std::vector<katana::gstl::Vector<katana::PODResizeableArray<uint32_t>>>
-      edges_id(num_partitions);
+  std::vector<katana::gstl::Vector<katana::PODVector<uint32_t>>> edges_id(
+      num_partitions);
   std::vector<std::vector<NetnumTy>> old_id(num_partitions);
   std::vector<uint32_t> num_nodes_next(num_partitions);
 
@@ -814,7 +814,7 @@ ParallelCreateEdges(
       katana::steal(), katana::chunk_size<kChunkSize>(),
       katana::loopname("Coarsening-Build-EdgeIds"));
 
-  std::vector<katana::LargeArray<uint64_t>> edges_prefixsum(num_partitions);
+  std::vector<katana::NUMAArray<uint64_t>> edges_prefixsum(num_partitions);
   std::vector<katana::GAccumulator<uint64_t>> num_edges_acc(num_partitions);
 
   for (uint32_t i = 0; i < num_partitions; ++i) {

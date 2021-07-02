@@ -2,7 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana.atomic import GAccumulator, atomic_sub
-from katana.datastructures import AllocationPolicy, InsertBag, LargeArray
+from katana.datastructures import AllocationPolicy, InsertBag, NUMAArray
 from katana.galois import set_active_threads
 from katana.loops import do_all, do_all_operator, for_each, for_each_operator
 from katana.property_graph import PropertyGraph
@@ -41,7 +41,7 @@ def compute_async_kcore_operator(graph: PropertyGraph, current_degree, k_core_nu
 def kcore_async(graph: PropertyGraph, k_core_num, property_name):
     num_nodes = graph.num_nodes()
     initial_worklist = InsertBag[np.uint64]()
-    current_degree = LargeArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
+    current_degree = NUMAArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
 
     timer = StatTimer("Kcore: Property Graph Numba: " + property_name)
     timer.start()

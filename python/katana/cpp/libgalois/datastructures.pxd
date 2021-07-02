@@ -15,8 +15,8 @@ cdef extern from "katana/Bag.h" namespace "katana" nogil:
         iterator begin()
         iterator end()
 
-cdef extern from "katana/LargeArray.h" namespace "katana" nogil:
-    cppclass LargeArray[T]:
+cdef extern from "katana/NUMAArray.h" namespace "katana" nogil:
+    cppclass NUMAArray[T]:
         cppclass iterator:
             T& operator*()
             iterator operator++()

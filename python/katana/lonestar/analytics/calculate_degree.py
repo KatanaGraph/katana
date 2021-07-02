@@ -2,7 +2,7 @@ import numpy as np
 import pyarrow
 
 from katana.atomic import atomic_add
-from katana.datastructures import AllocationPolicy, LargeArray
+from katana.datastructures import AllocationPolicy, NUMAArray
 from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 
@@ -45,8 +45,8 @@ def calculate_degree(graph: PropertyGraph, in_degree_property, out_degree_proper
         weight_property: an edge property to use in calculating the weighted degree
     """
     num_nodes = graph.num_nodes()
-    nout = LargeArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
-    nin = LargeArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
+    nout = NUMAArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
+    nin = NUMAArray[np.uint64](num_nodes, AllocationPolicy.INTERLEAVED)
 
     do_all(range(num_nodes), initialize_in_degree(nin.as_numpy()), steal=False)
 

@@ -36,7 +36,7 @@
 //#include "GraphReader.h"
 #include "Lonestar/BoilerPlate.h"
 #include "katana/FileGraph.h"
-#include "katana/LargeArray.h"
+#include "katana/NUMAArray.h"
 
 namespace cll = llvm::cl;
 
@@ -227,7 +227,7 @@ main(int argc, char** argv) {
   if (orderedfile != "" || permutationfile != "") {
     katana::FileGraph g;
     g.fromFile(inputFile);
-    typedef katana::LargeArray<GNode> Permutation;
+    typedef katana::NUMAArray<GNode> Permutation;
     Permutation perm;
     perm.create(g.size());
     std::copy(graph.begin(), graph.end(), perm.begin());
@@ -292,7 +292,7 @@ main(int argc, char** argv) {
     }
     // compute inverse
     std::stable_sort(perm.begin(), perm.end(), fn);
-    katana::LargeArray<uint64_t> perm2;
+    katana::NUMAArray<uint64_t> perm2;
     perm2.create(g.size());
     // compute permutation
     id = 0;
@@ -307,7 +307,7 @@ main(int argc, char** argv) {
       out.toFile(orderedfile);
     if (permutationfile != "") {
       std::ofstream file(permutationfile.c_str());
-      katana::LargeArray<uint64_t> transpose;
+      katana::NUMAArray<uint64_t> transpose;
       transpose.create(g.size());
       uint64_t id = 0;
       for (auto& ii : perm2) {

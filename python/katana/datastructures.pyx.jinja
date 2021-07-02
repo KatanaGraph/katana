@@ -8,7 +8,7 @@ The instantiations are:
 * `{{inst.element_py_type}}` (with C element type {{inst.element_c_type}})
 {% endfor %}
 
-The instantiation is selected by indexing the type, for example `InsertBag[int]` or `LargeArray[np.uint64]`.
+The instantiation is selected by indexing the type, for example `InsertBag[int]` or `NUMAArray[np.uint64]`.
 """
 
 # {{generated_banner()}}
@@ -26,7 +26,7 @@ from libc.stdint cimport uintptr_t
 from cython.operator cimport preincrement, dereference as deref
 import cython
 
-__all__ = ["InsertBag", "LargeArray", "AllocationPolicy"]
+__all__ = ["InsertBag", "NUMAArray", "AllocationPolicy"]
 
 {% import "numba_wrapper_support.jinja" as numba %}
 
@@ -135,8 +135,8 @@ class AllocationPolicy(Enum):
 
 {% macro wrap_large_array(inst) %}
 # inst.element_c_type, inst.element_py_type, inst.element_format_code
-{% set underlying_type %}datastructures.LargeArray[{{inst.element_c_type}}]{% endset -%}
-{% set class_name %}LargeArray_{{inst.element_c_type}}{% endset -%}
+{% set underlying_type %}datastructures.NUMAArray[{{inst.element_c_type}}]{% endset -%}
+{% set class_name %}NUMAArray_{{inst.element_c_type}}{% endset -%}
 @cython.freelist(2)
 cdef class {{class_name}}_Iterator:
     def __next__(self):
@@ -219,12 +219,12 @@ cdef class {{class_name}}:
 
     cdef bint _check_not_allocated(self) except False:
         if self.shape >= 0:
-            raise ValueError("LargeArray is already allocated.")
+            raise ValueError("NUMAArray is already allocated.")
         return True
 
     cdef bint _check_allocated(self) except False:
         if self.shape < 0:
-            raise ValueError("LargeArray is not yet allocated.")
+            raise ValueError("NUMAArray is not yet allocated.")
         return True
 
     cdef bint _mark_allocated(self) except False:
@@ -304,8 +304,8 @@ cdef class {{class_name}}:
 {% endcall %}
 {% endmacro %}
 
-{{numba.wrap_all_instances("LargeArray", wrap_large_array, True)}}
+{{numba.wrap_all_instances("NUMAArray", wrap_large_array, True)}}
 
 {{numba.register_all_wrappers()}}
 {{numba.build_numba_type_dict("InsertBag", True)}}
-{{numba.build_numba_type_dict("LargeArray", True)}}
+{{numba.build_numba_type_dict("NUMAArray", True)}}

@@ -10,6 +10,7 @@
 #include <arrow/chunked_array.h>
 #include <arrow/type_traits.h>
 
+#include "katana/ArrowInterchange.h"
 #include "katana/Details.h"
 #include "katana/ErrorCode.h"
 #include "katana/NUMAArray.h"
@@ -262,17 +263,60 @@ private:
     rdg_.set_mirror_nodes(std::move(a));
   }
 
+  /// Return the node property table for local nodes
+  const std::shared_ptr<arrow::Table>& node_properties() const {
+    return rdg_.node_properties();
+  }
+
+  /// Return the edge property table for local edges
+  const std::shared_ptr<arrow::Table>& edge_properties() const {
+    return rdg_.edge_properties();
+  }
+
 public:
   /// PropertyView provides a uniform interface when you don't need to
   /// distinguish operating on edge or node properties
-  struct PropertyView {
-    PropertyGraph* g;
+  struct ReadOnlyPropertyView {
+    const PropertyGraph* const_g;
 
     std::shared_ptr<arrow::Schema> (PropertyGraph::*schema_fn)() const;
-    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn)(
+    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_int)(
         int i) const;
-    const std::shared_ptr<arrow::Table>& (
-        PropertyGraph::*properties_fn)() const;
+    std::shared_ptr<arrow::ChunkedArray> (PropertyGraph::*property_fn_str)(
+        const std::string& str) const;
+    int32_t (PropertyGraph::*property_num_fn)() const;
+
+    std::shared_ptr<arrow::Schema> schema() const {
+      return (const_g->*schema_fn)();
+    }
+
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
+      return (const_g->*property_fn_int)(i);
+    }
+
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+        const std::string& str) const {
+      return (const_g->*property_fn_str)(str);
+    }
+
+    int32_t GetNumProperties() const { return (const_g->*property_num_fn)(); }
+
+    uint64_t ApproxMemUse() const {
+      uint64_t total_mem_use = 0;
+      for (int32_t i = 0; i < GetNumProperties(); ++i) {
+        const auto& chunked_array = GetProperty(i);
+        for (const auto& array : chunked_array->chunks()) {
+          total_mem_use += katana::ApproxArrayMemUse(array);
+        }
+      }
+      return total_mem_use;
+    }
+  };
+
+  struct MutablePropertyView {
+    ReadOnlyPropertyView ropv;
+    PropertyGraph* g;
+
     Result<void> (PropertyGraph::*add_properties_fn)(
         const std::shared_ptr<arrow::Table>& props);
     Result<void> (PropertyGraph::*upsert_properties_fn)(
@@ -280,19 +324,20 @@ public:
     Result<void> (PropertyGraph::*remove_property_int)(int i);
     Result<void> (PropertyGraph::*remove_property_str)(const std::string& str);
 
-    std::shared_ptr<arrow::Schema> schema() const { return (g->*schema_fn)(); }
+    std::shared_ptr<arrow::Schema> schema() const { return ropv.schema(); }
 
-    std::shared_ptr<arrow::ChunkedArray> Property(int i) const {
-      return (g->*property_fn)(i);
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(int i) const {
+      return ropv.GetProperty(i);
     }
 
-    const std::shared_ptr<arrow::Table>& properties() const {
-      return (g->*properties_fn)();
+    std::shared_ptr<arrow::ChunkedArray> GetProperty(
+        const std::string& str) const {
+      return ropv.GetProperty(str);
     }
 
-    std::vector<std::string> property_names() const {
-      return properties()->ColumnNames();
-    }
+    int32_t GetNumProperties() const { return ropv.GetNumProperties(); }
+
+    uint64_t ApproxMemUse() const { return ropv.ApproxMemUse(); }
 
     Result<void> AddProperties(
         const std::shared_ptr<arrow::Table>& props) const {
@@ -505,16 +550,15 @@ public:
   }
 
   // Return type dictated by arrow
-  int32_t GetNodePropertyNum() const {
-    return node_properties()->num_columns();
-  }
-  int32_t GetEdgePropertyNum() const {
-    return edge_properties()->num_columns();
-  }
+  /// Returns the number of node properties
+  int32_t GetNumNodeProperties() const { return node_schema()->num_fields(); }
+
+  /// Returns the number of edge properties
+  int32_t GetNumEdgeProperties() const { return edge_schema()->num_fields(); }
 
   // num_rows() == num_nodes() (all local nodes)
   std::shared_ptr<arrow::ChunkedArray> GetNodeProperty(int i) const {
-    if (i >= rdg_.node_properties()->num_columns()) {
+    if (i >= node_properties()->num_columns()) {
       return nullptr;
     }
     return node_properties()->column(i);
@@ -530,12 +574,12 @@ public:
 
   /// \returns true if a node property/type with @param name exists
   bool HasNodeProperty(const std::string& name) const {
-    return node_properties()->schema()->GetFieldIndex(name) != -1;
+    return node_schema()->GetFieldIndex(name) != -1;
   }
 
   /// \returns true if an edge property/type with @param name exists
   bool HasEdgeProperty(const std::string& name) const {
-    return edge_properties()->schema()->GetFieldIndex(name) != -1;
+    return edge_schema()->GetFieldIndex(name) != -1;
   }
 
   /// Get a node property by name.
@@ -546,16 +590,18 @@ public:
       const std::string& name) const {
     return node_properties()->GetColumnByName(name);
   }
-  std::vector<std::string> GetNodePropertyNames() const {
-    return node_properties()->ColumnNames();
+
+  std::string GetNodePropertyName(int32_t i) const {
+    return node_schema()->field(i)->name();
   }
 
   std::shared_ptr<arrow::ChunkedArray> GetEdgeProperty(
       const std::string& name) const {
     return edge_properties()->GetColumnByName(name);
   }
-  std::vector<std::string> GetEdgePropertyNames() const {
-    return edge_properties()->ColumnNames();
+
+  std::string GetEdgePropertyName(int32_t i) const {
+    return edge_schema()->field(i)->name();
   }
 
   /// Get a node property by name and cast it to a type.
@@ -643,39 +689,58 @@ public:
   /// Remove all edge properties
   void DropEdgeProperties() { rdg_.DropEdgeProperties(); }
 
-  PropertyView node_property_view() {
-    return PropertyView{
+  MutablePropertyView NodeMutablePropertyView() {
+    return MutablePropertyView{
+        .ropv =
+            {
+                .const_g = this,
+                .schema_fn = &PropertyGraph::node_schema,
+                .property_fn_int = &PropertyGraph::GetNodeProperty,
+                .property_fn_str = &PropertyGraph::GetNodeProperty,
+                .property_num_fn = &PropertyGraph::GetNumNodeProperties,
+            },
         .g = this,
-        .schema_fn = &PropertyGraph::node_schema,
-        .property_fn = &PropertyGraph::GetNodeProperty,
-        .properties_fn = &PropertyGraph::node_properties,
         .add_properties_fn = &PropertyGraph::AddNodeProperties,
         .upsert_properties_fn = &PropertyGraph::UpsertNodeProperties,
         .remove_property_int = &PropertyGraph::RemoveNodeProperty,
         .remove_property_str = &PropertyGraph::RemoveNodeProperty,
     };
   }
+  ReadOnlyPropertyView NodeReadOnlyPropertyView() const {
+    return ReadOnlyPropertyView{
+        .const_g = this,
+        .schema_fn = &PropertyGraph::node_schema,
+        .property_fn_int = &PropertyGraph::GetNodeProperty,
+        .property_fn_str = &PropertyGraph::GetNodeProperty,
+        .property_num_fn = &PropertyGraph::GetNumNodeProperties,
+    };
+  }
 
-  PropertyView edge_property_view() {
-    return PropertyView{
+  MutablePropertyView EdgeMutablePropertyView() {
+    return MutablePropertyView{
+        .ropv =
+            {
+                .const_g = this,
+                .schema_fn = &PropertyGraph::edge_schema,
+                .property_fn_int = &PropertyGraph::GetEdgeProperty,
+                .property_fn_str = &PropertyGraph::GetEdgeProperty,
+                .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
+            },
         .g = this,
-        .schema_fn = &PropertyGraph::edge_schema,
-        .property_fn = &PropertyGraph::GetEdgeProperty,
-        .properties_fn = &PropertyGraph::edge_properties,
         .add_properties_fn = &PropertyGraph::AddEdgeProperties,
         .upsert_properties_fn = &PropertyGraph::UpsertEdgeProperties,
         .remove_property_int = &PropertyGraph::RemoveEdgeProperty,
         .remove_property_str = &PropertyGraph::RemoveEdgeProperty,
     };
   }
-
-  /// Return the node property table for local nodes
-  const std::shared_ptr<arrow::Table>& node_properties() const {
-    return rdg_.node_properties();
-  }
-  /// Return the edge property table for local edges
-  const std::shared_ptr<arrow::Table>& edge_properties() const {
-    return rdg_.edge_properties();
+  ReadOnlyPropertyView EdgeReadOnlyPropertyView() const {
+    return ReadOnlyPropertyView{
+        .const_g = this,
+        .schema_fn = &PropertyGraph::edge_schema,
+        .property_fn_int = &PropertyGraph::GetEdgeProperty,
+        .property_fn_str = &PropertyGraph::GetEdgeProperty,
+        .property_num_fn = &PropertyGraph::GetNumEdgeProperties,
+    };
   }
 
   // Standard container concepts

@@ -47,6 +47,26 @@ MakeFileGraph(
   return std::move(pfg_result.value());
 }
 
+inline std::unique_ptr<katana::PropertyGraph>
+MakeFileGraph(
+    const std::string& rdg_name,
+    const std::vector<std::string>& edge_property_names) {
+  std::vector<std::string> edge_properties;
+  std::vector<std::string> node_properties;
+  for (auto edge_property_name : edge_property_names) {
+    edge_properties.emplace_back(edge_property_name);
+  }
+
+  tsuba::RDGLoadOptions opts;
+  opts.node_properties = &node_properties;
+  opts.edge_properties = &edge_properties;
+  auto pfg_result = katana::PropertyGraph::Make(rdg_name, opts);
+  if (!pfg_result) {
+    KATANA_LOG_FATAL("cannot make graph: {}", pfg_result.error());
+  }
+  return std::move(pfg_result.value());
+}
+
 template <typename T>
 void
 writeOutput(

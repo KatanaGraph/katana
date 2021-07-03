@@ -121,6 +121,7 @@ public:
 /// not exist before the call.
 KATANA_EXPORT Result<void> LouvainClustering(
     PropertyGraph* pg, const std::string& edge_weight_property_name,
+    const std::string& edge_type_property_name,
     const std::string& output_property_name, LouvainClusteringPlan plan = {});
 
 KATANA_EXPORT Result<void> LouvainClusteringAssertValid(

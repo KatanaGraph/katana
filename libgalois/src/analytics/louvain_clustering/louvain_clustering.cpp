@@ -400,12 +400,12 @@ public:
     Graph graph_curr = graph_result.value();
 
     if (!edge_type_property_name.empty()) {
-      auto filtered_graph_result =
+      auto projected_graph_result =
           Base::template ProjectGraph<NodeData, EdgeData, EdgeWeightType>(
               graph_curr, pfg_mutable.get(), temp_node_property_names,
               temp_edge_property_names);
-      if (!filtered_graph_result) {
-        return filtered_graph_result.error();
+      if (!projected_graph_result) {
+        return projected_graph_result.error();
       }
 
       pfg_mutable = std::move(filtered_graph_result.value());
@@ -415,20 +415,8 @@ public:
         return graph_result.error();
       }
       graph_curr = graph_result.value();
-
-      /*katana::do_all(
-          katana::iterate((uint64_t)0, graph_curr.num_nodes()),
-          [&](uint64_t n) {
-            graph_curr.template GetData<CurrentCommunityId>(n) = n;
-          });*/
     }
 
-    /*    katana::do_all(
-          katana::iterate((uint64_t)0, graph_curr.num_nodes()),
-          [&](uint64_t n) {
-            graph_curr.template GetData<CurrentCommunityId>(n) = n;
-          });
-*/
     /*
     * Vertex following optimization
     */
@@ -483,14 +471,6 @@ public:
         return graph_result.error();
       }
       Graph graph_curr = graph_result.value();
-      /*if(iter == 1) {
-      
-	 katana::do_all(
-          katana::iterate((uint64_t)0, graph_curr.num_nodes()),
-          [&](uint64_t n) {
-            graph_curr.template GetData<CurrentCommunityId>(n) = n;
-          });
-      }*/
       if (graph_curr.num_nodes() > plan.min_graph_size()) {
         switch (plan.algorithm()) {
         case LouvainClusteringPlan::kDoAll: {

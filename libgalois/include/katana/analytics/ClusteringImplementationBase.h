@@ -525,14 +525,13 @@ struct ClusteringImplementationBase {
       const Graph& graph, katana::PropertyGraph* pfg_mutable,
       const std::vector<std::string>& temp_node_property_names,
       const std::vector<std::string>& temp_edge_property_names) {
-    katana::LargeArray<katana::gstl::Vector<uint32_t>> edges_id;
-    katana::LargeArray<
-        katana::gstl::Vector<std::tuple<EdgeWeightType, uint8_t>>>
+    katana::NUMAArray<katana::gstl::Vector<uint32_t>> edges_id;
+    katana::NUMAArray<katana::gstl::Vector<std::tuple<EdgeWeightType, uint8_t>>>
         edges_data;
     edges_id.create(graph.num_nodes());
     edges_data.create(graph.num_nodes());
 
-    katana::LargeArray<uint64_t> prefix_edges_count;
+    katana::NUMAArray<uint64_t> prefix_edges_count;
     prefix_edges_count.allocateBlocked(graph.num_nodes());
     katana::GAccumulator<uint64_t> num_edges_acc;
 
@@ -572,26 +571,14 @@ struct ClusteringImplementationBase {
     KATANA_LOG_DEBUG_ASSERT(
         prefix_edges_count[graph.num_nodes() - 1] == num_edges_next);
 
-    // Remove all the existing node/edge properties
-    /*    for (auto property : temp_node_property_names) {
-      if (auto r = pfg_mutable->RemoveNodeProperty(property); !r) {
-        return r.error();
-      }
-    }
-    for (auto property : temp_edge_property_names) {
-      if (auto r = pfg_mutable->RemoveEdgeProperty(property); !r) {
-        return r.error();
-      }
-    }
-*/
     const katana::GraphTopology& topology = pfg_mutable->topology();
 
     using Node = katana::GraphTopology::Node;
     using Edge = katana::GraphTopology::Edge;
 
-    katana::LargeArray<Edge> out_indices_next;
+    katana::NUMAArray<Edge> out_indices_next;
     out_indices_next.allocateInterleaved(num_nodes_next);
-    katana::LargeArray<Node> out_dests_next;
+    katana::NUMAArray<Node> out_dests_next;
     out_dests_next.allocateInterleaved(num_edges_next);
 
     katana::do_all(

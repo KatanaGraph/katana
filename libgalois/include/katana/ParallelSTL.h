@@ -434,7 +434,9 @@ iota(const ForwardIt& first, const ForwardIt& last, const T& start_val) {
   on_each([&](unsigned tid, unsigned total) {
     auto [begin, end] = block_range(first, last, tid, total);
     diff_type offset = std::distance(first, begin);
-    std::iota(begin, end, start_val + static_cast<T>(offset));
+    std::iota(
+        begin, end,
+        static_cast<value_type>(start_val) + static_cast<value_type>(offset));
   });
 }
 

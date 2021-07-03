@@ -10,10 +10,10 @@ from libcpp.utility cimport move
 from pyarrow.lib cimport CArray, CUInt64Array, pyarrow_wrap_array
 
 from katana._property_graph cimport PropertyGraph
-from katana.cpp.libgalois.datastructures cimport LargeArray
+from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libgalois.graphs.Graph cimport _PropertyGraph
 from katana.cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
-from katana.datastructures cimport LargeArray_uint64_t
+from katana.datastructures cimport NUMAArray_uint64_t
 
 
 cdef inline default_value(v, d):
@@ -28,7 +28,7 @@ cdef shared_ptr[CUInt64Array] handle_result_shared_cuint64array(Result[shared_pt
             raise_error_code(res.error())
     return res.value()
 
-cdef unique_ptr[LargeArray[uint64_t]] handle_result_unique_largearray_uint64(Result[unique_ptr[LargeArray[uint64_t]]] res) \
+cdef unique_ptr[NUMAArray[uint64_t]] handle_result_unique_numaarray_uint64(Result[unique_ptr[NUMAArray[uint64_t]]] res) \
         nogil except *:
     if not res.has_value():
         with gil:
@@ -39,7 +39,7 @@ cdef unique_ptr[LargeArray[uint64_t]] handle_result_unique_largearray_uint64(Res
 # "Algorithms" from PropertyGraph
 
 cdef extern from "katana/PropertyGraph.h" namespace "katana" nogil:
-    Result[unique_ptr[LargeArray[uint64_t]]] SortAllEdgesByDest(_PropertyGraph* pg);
+    Result[unique_ptr[NUMAArray[uint64_t]]] SortAllEdgesByDest(_PropertyGraph* pg);
 
     uint64_t FindEdgeSortedByDest(const _PropertyGraph* graph, uint32_t node, uint32_t node_to_find);
 
@@ -52,11 +52,11 @@ def sort_all_edges_by_dest(PropertyGraph pg):
     :py:func:`find_edge_sorted_by_dest`.
 
     :return: The permutation vector (mapping from old indices to the new indices) which results due to the sorting.
-    :rtype: LargeArray[np.uint64]
+    :rtype: NUMAArray[np.uint64]
     """
     with nogil:
-        res = move(handle_result_unique_largearray_uint64(SortAllEdgesByDest(pg.underlying_property_graph())))
-    return LargeArray_uint64_t.make_move(move(deref(res.get())))
+        res = move(handle_result_unique_numaarray_uint64(SortAllEdgesByDest(pg.underlying_property_graph())))
+    return NUMAArray_uint64_t.make_move(move(deref(res.get())))
 
 
 def find_edge_sorted_by_dest(PropertyGraph pg, uint32_t node, uint32_t node_to_find):

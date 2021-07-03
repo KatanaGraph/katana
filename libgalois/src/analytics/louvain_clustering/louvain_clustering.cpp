@@ -408,7 +408,7 @@ public:
         return projected_graph_result.error();
       }
 
-      pfg_mutable = std::move(filtered_graph_result.value());
+      pfg_mutable = std::move(projected_graph_result.value());
 
       graph_result = Graph::Make(pfg);
       if (!graph_result) {

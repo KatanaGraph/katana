@@ -61,9 +61,9 @@ public:
 
   uint64_t num_edges() const noexcept { return dests_.size(); }
 
-  const Edge* adj_data() const noexcept { return &adj_indices_[0]; }
+  const Edge* adj_data() const noexcept { return adj_indices_.data(); }
 
-  const Node* dest_data() const noexcept { return &dests_[0]; }
+  const Node* dest_data() const noexcept { return dests_.data(); }
 
   /**
    * Checks equality against another instance of GraphTopology.
@@ -717,7 +717,7 @@ public:
 /// IDs (ascending order).
 ///
 /// Returns the permutation vector (mapping from old
-/// indices to the new indices) which results due to the sorting.
+/// indices to the new indices) which results due to  sorting.
 KATANA_EXPORT Result<std::unique_ptr<katana::NUMAArray<uint64_t>>>
 SortAllEdgesByDest(PropertyGraph* pg);
 

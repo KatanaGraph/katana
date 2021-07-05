@@ -366,10 +366,6 @@ add_custom_target(tools)
 
 # Core libraries (lib)
 
-# Allow build tree libraries and executables to see preload customizations like
-# in libtsuba-fs without having to set LD_PRELOAD or similar explicitly.
-list(PREPEND CMAKE_BUILD_RPATH ${PROJECT_BINARY_DIR})
-
 # Allow installed libraries and executables to pull in deployment specific
 # modifications like vendored runtime libraries (e.g., MPI).
 list(PREPEND CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/katana/lib)

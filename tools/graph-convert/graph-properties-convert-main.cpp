@@ -144,7 +144,7 @@ ParseWild() {
       KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
     }
     if (auto r = katana::WritePropertyGraph(
-            components_result.value(), output_directory);
+            std::move(components_result.value()), output_directory);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }
@@ -172,7 +172,7 @@ ParseNeo4j() {
       KATANA_LOG_FATAL("Error converting graph: {}", components_result.error());
     }
     if (auto r = katana::WritePropertyGraph(
-            components_result.value(), output_directory);
+            std::move(components_result.value()), output_directory);
         !r) {
       KATANA_LOG_FATAL("Failed to convert property graph: {}", r.error());
     }

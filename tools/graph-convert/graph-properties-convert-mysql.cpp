@@ -896,7 +896,7 @@ katana::ConvertMysql(
   if (!out_result) {
     KATANA_LOG_FATAL("Failed to construct graph: {}", out_result.error());
   }
-  auto out = out_result.value();
+  katana::GraphComponents out = std::move(out_result.value());
   out.Dump();
   return out;
 }

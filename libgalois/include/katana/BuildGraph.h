@@ -148,17 +148,15 @@ struct GraphComponent {
 struct KATANA_EXPORT GraphComponents {
   GraphComponent nodes;
   GraphComponent edges;
-  std::shared_ptr<katana::GraphTopology> topology;
+  GraphTopology topology;
 
   GraphComponents(
-      GraphComponent nodes_, GraphComponent edges_,
-      std::shared_ptr<katana::GraphTopology> topology_)
+      GraphComponent nodes_, GraphComponent edges_, GraphTopology&& topology_)
       : nodes(std::move(nodes_)),
         edges(std::move(edges_)),
         topology(std::move(topology_)) {}
 
-  GraphComponents()
-      : GraphComponents(GraphComponent{}, GraphComponent{}, nullptr) {}
+  GraphComponents() = default;
 
   void Dump() const {
     std::cout << nodes.properties->ToString() << "\n";
@@ -166,11 +164,14 @@ struct KATANA_EXPORT GraphComponents {
     std::cout << edges.properties->ToString() << "\n";
     std::cout << edges.labels->ToString() << "\n";
 
-    std::cout << topology->out_indices->ToString() << "\n";
-    std::cout << topology->out_dests->ToString() << "\n";
-  }
+    auto indices_array =
+        katana::ProjectAsArrowArray(topology.adj_data(), topology.num_nodes());
+    auto dests_array =
+        katana::ProjectAsArrowArray(topology.dest_data(), topology.num_edges());
 
-  Result<std::unique_ptr<katana::PropertyGraph>> ToPropertyGraph() const;
+    std::cout << indices_array->ToString() << "\n";
+    std::cout << dests_array->ToString() << "\n";
+  }
 };
 
 class KATANA_EXPORT PropertyGraphBuilder {
@@ -228,8 +229,11 @@ private:
   GraphComponent BuildFinalEdges(bool verbose);
 };
 
+KATANA_EXPORT Result<std::unique_ptr<katana::PropertyGraph>>
+ConvertToPropertyGraph(GraphComponents&& graph_comps);
+
 KATANA_EXPORT Result<void> WritePropertyGraph(
-    const GraphComponents& graph_comps, const std::string& dir);
+    GraphComponents&& graph_comps, const std::string& dir);
 
 // TODO(amber): Take PropertyGraph by const ref
 KATANA_EXPORT Result<void> WritePropertyGraph(

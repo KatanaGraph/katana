@@ -442,61 +442,27 @@ struct ClusteringImplementationBase {
  * (read from the underlying RDG) to the in-memory
  * temporary graph (pfg_to).
  */
-  katana::Result<void> CreateDuplicateGraph(
-      katana::PropertyGraph* pfg_from, katana::PropertyGraph* pfg_to,
-      const std::string& edge_property_name,
+  template <typename NodeData>
+  katana::Result<std::unique_ptr<katana::PropertyGraph>> DuplicateGraph(
+      katana::PropertyGraph* pfg_from, const std::string& edge_property_name,
       const std::string& new_edge_property_name) {
     const katana::GraphTopology& topology_from = pfg_from->topology();
-    const katana::GraphTopology& topology_to = pfg_to->topology();
 
-    KATANA_ASSERT(
-        (topology_from.num_nodes() == topology_to.num_nodes()),
-        "num nodes of both property graph must be same");
+    katana::GraphTopology topo_copy = GraphTopology::Copy(topology_from);
 
-    auto out_indices_view_from_result =
-        katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_from.out_indices.get());
-    if (!out_indices_view_from_result) {
-      return out_indices_view_from_result.error();
+    auto pfg_to_res = katana::PropertyGraph::Make(std::move(topo_copy));
+    if (!pfg_to_res) {
+      return pfg_to_res.error();
     }
-    auto out_indices_view_from =
-        std::move(out_indices_view_from_result.value());
 
-    auto out_dests_view_from_result =
-        katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_from.out_dests.get());
-    if (!out_dests_view_from_result) {
-      return out_dests_view_from_result.error();
-    }
-    auto out_dests_view_from = std::move(out_dests_view_from_result.value());
-
-    auto out_indices_view_to_result =
-        katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_to.out_indices.get());
-    if (!out_indices_view_to_result) {
-      return out_indices_view_to_result.error();
-    }
-    auto out_indices_view_to = std::move(out_indices_view_to_result.value());
-
-    auto out_dests_view_to_result =
-        katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_to.out_dests.get());
-    if (!out_dests_view_to_result) {
-      return out_dests_view_to_result.error();
-    }
-    auto out_dests_view_to = std::move(out_dests_view_to_result.value());
-
-    // First pass to find the number of edges
-    katana::do_all(
-        katana::iterate(uint64_t{0}, topology_from.num_nodes()),
-        [&](uint64_t n) { out_indices_view_to[n] = out_indices_view_from[n]; });
-    katana::do_all(
-        katana::iterate(uint64_t{0}, topology_from.num_edges()),
-        [&](uint64_t e) { out_dests_view_to[e] = out_dests_view_from[e]; });
+    std::unique_ptr<katana::PropertyGraph> pfg_to =
+        std::move(pfg_to_res.value());
 
     // Remove the existing edge property
-    if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name); !r) {
-      return r.error();
+    if (pfg_to->HasEdgeProperty(new_edge_property_name)) {
+      if (auto r = pfg_to->RemoveEdgeProperty(new_edge_property_name); !r) {
+        return r.error();
+      }
     }
     // Copy edge properties
     using ArrowType = typename arrow::CTypeTraits<EdgeTy>::ArrowType;
@@ -513,9 +479,15 @@ struct ClusteringImplementationBase {
     columns.emplace_back(edge_property);
     auto edge_data_table = arrow::Table::Make(arrow::schema(fields), columns);
     if (auto r = pfg_to->AddEdgeProperties(edge_data_table); !r) {
-      return r;
+      return r.error();
     }
-    return katana::ResultSuccess();
+
+    if (auto result = ConstructNodeProperties<NodeData>(pfg_to.get());
+        !result) {
+      return result.error();
+    }
+
+    return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_to));
   }
 
   /**
@@ -537,34 +509,34 @@ struct ClusteringImplementationBase {
 
     katana::StatTimer TimerGraphBuild("Timer_Graph_build");
     TimerGraphBuild.start();
-    uint64_t num_nodes_next = num_unique_clusters;
-    uint64_t num_edges_next = 0;  // Unknown right now
 
-    std::vector<std::vector<GNode>> cluster_bags(num_unique_clusters);
-    // Comment: Serial separation is better than do_all due to contention
-    for (GNode n = 0; n < graph.num_nodes(); ++n) {
+    const uint64_t num_nodes_next = num_unique_clusters;
+
+    std::vector<katana::InsertBag<GNode>> cluster_bags(num_unique_clusters);
+
+    katana::do_all(katana::iterate(graph), [&](GNode n) {
       auto n_data_curr_comm_id = graph.template GetData<CurrentCommunityId>(n);
-      if (n_data_curr_comm_id != UNASSIGNED)
+      if (n_data_curr_comm_id != UNASSIGNED) {
         cluster_bags[n_data_curr_comm_id].push_back(n);
-    }
+      }
+    });
 
-    std::vector<std::vector<uint32_t>> edges_id(num_unique_clusters);
-    std::vector<std::vector<EdgeTy>> edges_data(num_unique_clusters);
+    std::vector<katana::gstl::Vector<uint32_t>> edges_id(num_unique_clusters);
+    std::vector<katana::gstl::Vector<EdgeTy>> edges_data(num_unique_clusters);
 
     /* First pass to find the number of edges */
     katana::do_all(
         katana::iterate(uint64_t{0}, num_unique_clusters),
         [&](uint64_t c) {
-          std::map<uint64_t, uint64_t> cluster_local_map;
+          katana::gstl::Map<uint64_t, uint64_t> cluster_local_map;
           uint64_t num_unique_clusters = 0;
-          for (auto cb_ii = cluster_bags[c].begin();
-               cb_ii != cluster_bags[c].end(); ++cb_ii) {
+          for (auto node : cluster_bags[c]) {
             KATANA_LOG_DEBUG_ASSERT(
-                graph.template GetData<CurrentCommunityId>(*cb_ii) ==
+                graph.template GetData<CurrentCommunityId>(node) ==
                 c);  // All nodes in this bag must have same cluster id
 
-            for (auto ii = graph.edge_begin(*cb_ii);
-                 ii != graph.edge_end(*cb_ii); ++ii) {
+            for (auto ii = graph.edge_begin(node); ii != graph.edge_end(node);
+                 ++ii) {
               auto dst = graph.GetEdgeDest(ii);
               auto dst_data_curr_comm_id =
                   graph.template GetData<CurrentCommunityId>(dst);
@@ -587,7 +559,9 @@ struct ClusteringImplementationBase {
         katana::steal(), katana::loopname("BuildGraph: Find edges"));
 
     /* Serial loop to reduce all the edge counts */
-    std::vector<uint64_t> prefix_edges_count(num_unique_clusters);
+    katana::NUMAArray<uint64_t> prefix_edges_count;
+    prefix_edges_count.allocateInterleaved(num_unique_clusters);
+
     katana::GAccumulator<uint64_t> num_edges_acc;
     katana::do_all(
         katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t c) {
@@ -595,10 +569,11 @@ struct ClusteringImplementationBase {
           num_edges_acc += prefix_edges_count[c];
         });
 
-    num_edges_next = num_edges_acc.reduce();
-    for (uint64_t c = 1; c < num_nodes_next; ++c) {
-      prefix_edges_count[c] += prefix_edges_count[c - 1];
-    }
+    const uint64_t num_edges_next = num_edges_acc.reduce();
+
+    katana::ParallelSTL::partial_sum(
+        prefix_edges_count.begin(), prefix_edges_count.end(),
+        prefix_edges_count.begin());
 
     KATANA_LOG_DEBUG_ASSERT(
         prefix_edges_count[num_unique_clusters - 1] == num_edges_next);
@@ -607,63 +582,52 @@ struct ClusteringImplementationBase {
 
     // Remove all the existing node/edge properties
     for (auto property : temp_node_property_names) {
-      if (auto r = pfg_mutable->RemoveNodeProperty(property); !r) {
-        return r.error();
+      if (pfg_mutable->HasNodeProperty(property)) {
+        if (auto r = pfg_mutable->RemoveNodeProperty(property); !r) {
+          return r.error();
+        }
       }
     }
     for (auto property : temp_edge_property_names) {
-      if (auto r = pfg_mutable->RemoveEdgeProperty(property); !r) {
-        return r.error();
+      if (pfg_mutable->HasEdgeProperty(property)) {
+        if (auto r = pfg_mutable->RemoveEdgeProperty(property); !r) {
+          return r.error();
+        }
       }
     }
-
-    const katana::GraphTopology& topology = pfg_mutable->topology();
 
     using Node = katana::GraphTopology::Node;
     using Edge = katana::GraphTopology::Edge;
 
-    katana::NUMAArray<Edge> out_indices_next;
-    out_indices_next.allocateInterleaved(num_nodes_next);
     katana::NUMAArray<Node> out_dests_next;
     out_dests_next.allocateInterleaved(num_edges_next);
 
-    katana::do_all(
-        katana::iterate(uint64_t{0}, num_nodes_next),
-        [&](uint64_t i) {
-          out_indices_next[i] = topology.out_indices->Value(i);
-        },
-        katana::no_stats());
+    katana::NUMAArray<EdgeWeightType> edge_data_next;
+    edge_data_next.allocateInterleaved(num_edges_next);
 
     katana::do_all(
-        katana::iterate(uint64_t{0}, num_edges_next),
-        [&](uint64_t i) { out_dests_next[i] = topology.out_dests->Value(i); },
-        katana::no_stats());
+        katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t n) {
+          uint64_t number_of_edges =
+              (n == 0) ? prefix_edges_count[0]
+                       : (prefix_edges_count[n] - prefix_edges_count[n - 1]);
+          uint64_t start_index = (n == 0) ? 0 : prefix_edges_count[n - 1];
+          for (uint64_t k = 0; k < number_of_edges; ++k) {
+            out_dests_next[start_index + k] = edges_id[n][k];
+            edge_data_next[start_index + k] = edges_data[n][k];
+          }
+        });
 
-    auto topo_next = std::make_unique<katana::GraphTopology>(
-        std::move(out_indices_next), std::move(out_dests_next));
+    TimerConstructFrom.stop();
 
-    auto pfg_next = std::make_unique<katana::PropertyGraph>();
-    if (auto r = pfg_next->SetTopology(std::move(topo_next)); !r) {
-      return r.error();
+    GraphTopology topo_next{
+        std::move(prefix_edges_count), std::move(out_dests_next)};
+    auto pfg_next_res = katana::PropertyGraph::Make(std::move(topo_next));
+
+    if (!pfg_next_res) {
+      return pfg_next_res.error();
     }
-
-    const katana::GraphTopology& topology_next = pfg_next->topology();
-
-    auto out_indices_view_result =
-        katana::ConstructPropertyView<katana::UInt64Property>(
-            topology_next.out_indices.get());
-    if (!out_indices_view_result) {
-      return out_indices_view_result.error();
-    }
-    auto out_indices_view = std::move(out_indices_view_result.value());
-
-    auto out_dests_view_result =
-        katana::ConstructPropertyView<katana::UInt32Property>(
-            topology_next.out_dests.get());
-    if (!out_dests_view_result) {
-      return out_dests_view_result.error();
-    }
-    auto out_dests_view = std::move(out_dests_view_result.value());
+    std::unique_ptr<katana::PropertyGraph> pfg_next =
+        std::move(pfg_next_res.value());
 
     if (auto result = katana::analytics::ConstructNodeProperties<NodeData>(
             pfg_next.get(), temp_node_property_names);
@@ -682,21 +646,14 @@ struct ClusteringImplementationBase {
       return graph_result.error();
     }
     Graph graph_curr = graph_result.value();
+    // TODO(amber): figure out a better way to add/update the edge property
     katana::do_all(
-        katana::iterate(uint64_t{0}, num_nodes_next), [&](uint64_t n) {
-          out_indices_view[n] = prefix_edges_count[n];
-          uint64_t number_of_edges =
-              (n == 0) ? prefix_edges_count[0]
-                       : (prefix_edges_count[n] - prefix_edges_count[n - 1]);
-          uint64_t start_index = (n == 0) ? 0 : prefix_edges_count[n - 1];
-          for (uint32_t k = 0; k < number_of_edges; ++k) {
-            out_dests_view[start_index + k] = edges_id[n][k];
-            graph_curr.template GetEdgeData<EdgeWeight<EdgeWeightType>>(
-                start_index + k) = edges_data[n][k];
-          }
-        });
-
-    TimerConstructFrom.stop();
+        katana::iterate(Edge{0}, num_edges_next),
+        [&](Edge e) {
+          graph_curr.template GetEdgeData<EdgeWeight<EdgeWeightType>>(e) =
+              edge_data_next[e];
+        },
+        katana::no_stats());
 
     TimerGraphBuild.stop();
     return std::unique_ptr<katana::PropertyGraph>(std::move(pfg_next));

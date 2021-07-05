@@ -79,7 +79,7 @@ def test_sort_all_edges_by_dest(property_graph: PropertyGraph):
     new_dests = [[property_graph.get_edge_dest(e) for e in property_graph.edges(n)] for n in range(NODES_TO_SAMPLE)]
     for n in range(NODES_TO_SAMPLE):
         assert len(original_dests[n]) == len(new_dests[n])
-        my_mapping = [mapping[e].as_py() for e in property_graph.edges(n)]
+        my_mapping = [mapping[e] for e in property_graph.edges(n)]
         for i, _ in enumerate(my_mapping):
             assert original_dests[n][i] == new_dests[n][my_mapping[i] - property_graph.edges(n)[0]]
         original_dests[n].sort()

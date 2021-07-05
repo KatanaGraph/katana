@@ -30,7 +30,9 @@ public:
       KATANA_LOG_FATAL(
           "Failed to construct graph: {}", components_result.error());
     }
-    if (auto r = WritePropertyGraph(components_result.value(), dest_dir); !r) {
+    if (auto r =
+            WritePropertyGraph(std::move(components_result.value()), dest_dir);
+        !r) {
       KATANA_LOG_FATAL("Failed to write graph: {}", r.error());
     }
     fmt::print("RDG written to {}\n", dest_dir);

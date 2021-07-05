@@ -75,12 +75,13 @@ MakeFileGraph(size_t num_nodes, size_t num_properties, Policy* policy) {
     indices.push_back(dests.size());
   }
 
-  auto g = std::make_unique<katana::PropertyGraph>();
+  katana::GraphTopology topo{
+      indices.data(), indices.size(), dests.data(), dests.size()};
 
-  auto topo = std::make_unique<katana::GraphTopology>(
-      indices.data(), indices.size(), dests.data(), dests.size());
-  auto set_result = g->SetTopology(std::move(topo));
-  KATANA_LOG_ASSERT(set_result);
+  auto g_res = katana::PropertyGraph::Make(std::move(topo));
+  KATANA_LOG_ASSERT(g_res);
+
+  std::unique_ptr<katana::PropertyGraph> g = std::move(g_res.value());
 
   size_t num_edges = dests.size();
 
@@ -117,8 +118,8 @@ BaselineIterate(katana::PropertyGraph* g, int num_properties) {
   using NodePointer = typename arrow::TypeTraits<NodeArrowType>::CType*;
   using EdgePointer = typename arrow::TypeTraits<EdgeArrowType>::CType*;
 
-  const auto* indices = g->topology().out_indices->raw_values();
-  const auto* dests = g->topology().out_dests->raw_values();
+  const auto* indices = g->topology().adj_data();
+  const auto* dests = g->topology().dest_data();
 
   std::vector<NodePointer> node_data;
   std::vector<EdgePointer> edge_data;

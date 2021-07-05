@@ -216,6 +216,34 @@ public:
   // The following methods are not shared with void specialization
   const_pointer data() const { return data_; }
   pointer data() { return data_; }
+
+  /**
+   * equal_to operator. WARNING: Expensive, O(n) cost of checking two arrays
+   * element by element
+   * @param left: first array
+   * @param right: second array
+   * @returns true if arrays are element-wise equal
+   */
+  friend bool operator==(const NUMAArray& left, const NUMAArray& right) {
+    if (&left == &right) {
+      return true;
+    }
+    if (left.size() != right.size()) {
+      return false;
+    }
+    // if sizes are equal and data pointers are same then arrays are equal
+    if (left.data() == right.data()) {
+      return true;
+    }
+
+    for (size_t i = 0, sz = left.size(); i < sz; ++i) {
+      if (left[i] != right[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 };
 
 //! Void specialization

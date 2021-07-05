@@ -1749,59 +1749,25 @@ katana::PropertyGraphBuilder::Finish(bool verbose) {
   }
 
   // build topology
-  auto topology = std::make_shared<katana::GraphTopology>(
+  katana::GraphTopology pg_topo(
       topology_builder_.out_indices.data(),
       topology_builder_.out_indices.size(), topology_builder_.out_dests.data(),
       topology_builder_.out_dests.size());
 
   if (verbose) {
     std::cout << "Finished mongodb conversion to arrow\n";
-    std::cout << "Nodes: " << topology->out_indices->length() << "\n";
+    std::cout << "Nodes: " << pg_topo.num_nodes() << "\n";
     std::cout << "Node Properties: " << nodes_tables.properties->num_columns()
               << "\n";
     std::cout << "Node Labels: " << nodes_tables.labels->num_columns() << "\n";
-    std::cout << "Edges: " << topology->out_dests->length() << "\n";
+    std::cout << "Edges: " << pg_topo.num_edges() << "\n";
     std::cout << "Edge Properties: " << edges_tables.properties->num_columns()
               << "\n";
     std::cout << "Edge Types: " << edges_tables.labels->num_columns() << "\n";
   }
 
-  return katana::GraphComponents{nodes_tables, edges_tables, topology};
-}
-
-katana::Result<std::unique_ptr<katana::PropertyGraph>>
-katana::GraphComponents::ToPropertyGraph() const {
-  auto graph = std::make_unique<katana::PropertyGraph>();
-  auto result = graph->SetTopology(*topology);
-  if (!result) {
-    return result.error().WithContext("adding topology");
-  }
-
-  if (nodes.properties->num_columns() > 0) {
-    result = graph->AddNodeProperties(nodes.properties);
-    if (!result) {
-      return result.error().WithContext("adding node properties");
-    }
-  }
-  if (nodes.labels->num_columns() > 0) {
-    result = graph->AddNodeProperties(nodes.labels);
-    if (!result) {
-      return result.error().WithContext("adding node labels");
-    }
-  }
-  if (edges.properties->num_columns() > 0) {
-    result = graph->AddEdgeProperties(edges.properties);
-    if (!result) {
-      return result.error().WithContext("adding edge properties");
-    }
-  }
-  if (edges.labels->num_columns() > 0) {
-    result = graph->AddEdgeProperties(edges.labels);
-    if (!result) {
-      return result.error().WithContext("adding edge labels");
-    }
-  }
-  return std::unique_ptr<katana::PropertyGraph>(std::move(graph));
+  return katana::GraphComponents{
+      nodes_tables, edges_tables, std::move(pg_topo)};
 }
 
 // NB: is_list is always initialized
@@ -1866,18 +1832,51 @@ ImportData::ValueFromArrowScalar(std::shared_ptr<arrow::Scalar> scalar) {
   }
 }
 
+katana::Result<std::unique_ptr<katana::PropertyGraph>>
+katana::ConvertToPropertyGraph(katana::GraphComponents&& graph_comps) {
+  auto pg_result = katana::PropertyGraph::Make(std::move(graph_comps.topology));
+  if (!pg_result) {
+    return pg_result.error().WithContext("adding topology");
+  }
+  std::unique_ptr<katana::PropertyGraph> graph = std::move(pg_result.value());
+
+  if (graph_comps.nodes.properties->num_columns() > 0) {
+    auto result = graph->AddNodeProperties(graph_comps.nodes.properties);
+    if (!result) {
+      return result.error().WithContext("adding node properties");
+    }
+  }
+  if (graph_comps.nodes.labels->num_columns() > 0) {
+    auto result = graph->AddNodeProperties(graph_comps.nodes.labels);
+    if (!result) {
+      return result.error().WithContext("adding node labels");
+    }
+  }
+  if (graph_comps.edges.properties->num_columns() > 0) {
+    auto result = graph->AddEdgeProperties(graph_comps.edges.properties);
+    if (!result) {
+      return result.error().WithContext("adding edge properties");
+    }
+  }
+  if (graph_comps.edges.labels->num_columns() > 0) {
+    auto result = graph->AddEdgeProperties(graph_comps.edges.labels);
+    if (!result) {
+      return result.error().WithContext("adding edge labels");
+    }
+  }
+  return std::unique_ptr<katana::PropertyGraph>(std::move(graph));
+}
+
 /// WritePropertyGraph writes an RDG from the provided \param graph_comps
 /// to the directory \param dir
 katana::Result<void>
 katana::WritePropertyGraph(
-    const katana::GraphComponents& graph_comps, const std::string& dir) {
-  auto graph_ptr = graph_comps.ToPropertyGraph();
+    katana::GraphComponents&& graph_comps, const std::string& dir) {
+  auto graph_ptr = ConvertToPropertyGraph(std::move(graph_comps));
   if (!graph_ptr) {
     return graph_ptr.error();
   }
 
-  // return WritePropertyGraph(std::move(*graph_ptr.value()), dir);
-  // TODO(amber): figure out whether move semantics are the way to go
   return WritePropertyGraph(*graph_ptr.value(), dir);
 }
 

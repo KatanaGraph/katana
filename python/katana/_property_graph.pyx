@@ -5,9 +5,11 @@ from .cpp.libsupport.result cimport Result, handle_result_void, raise_error_code
 
 from .numba_support._pyarrow_wrappers import unchunked
 
+from cython.operator cimport dereference as deref
 from libc.stdint cimport uint32_t
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.string cimport string
+from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 
@@ -26,7 +28,7 @@ cdef CGraph.GraphComponents handle_result_GraphComponents(Result[CGraph.GraphCom
     if not res.has_value():
         with gil:
             raise_error_code(res.error())
-    return res.value()
+    return move(res.value())
 
 # TODO(amp): Wrap Copy
 
@@ -139,14 +141,11 @@ cdef class PropertyGraphBase:
 
         Can be called from numba compiled code.
         """
-        cdef uint64_t prev
         if n > self.num_nodes():
             raise IndexError(n)
-        if n == 0:
-            prev = 0
-        else:
-            prev = self.topology().out_indices.get().Value(n-1)
-        return range(prev, self.topology().out_indices.get().Value(n))
+
+        edge_range = self.topology().edges(n)
+        return range(deref(edge_range.begin()), deref(edge_range.end()))
 
     cpdef uint64_t get_edge_dest(PropertyGraph self, uint64_t e):
         """
@@ -156,7 +155,7 @@ cdef class PropertyGraphBase:
         """
         if e > self.num_edges():
             raise IndexError(e)
-        return self.topology().out_dests.get().Value(e)
+        return self.topology().edge_dest(e)
 
     def get_node_property(self, prop):
         """
@@ -351,6 +350,7 @@ cdef class PropertyGraph(PropertyGraphBase):
         path_str = <string>bytes(str(path), "utf-8")
         with nogil:
             pg = handle_result_PropertyGraph(
-                handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False))
-                    .ToPropertyGraph())
+                CGraph.ConvertToPropertyGraph(
+                move(handle_result_GraphComponents(CGraph.ConvertGraphML(path_str, chunk_size, False)))
+                ))
         return PropertyGraph.make(pg)

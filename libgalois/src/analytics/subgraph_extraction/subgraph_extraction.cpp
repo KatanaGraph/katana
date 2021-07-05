@@ -33,9 +33,8 @@ using edge_iterator = boost::counting_iterator<uint64_t>;
 katana::Result<std::unique_ptr<katana::PropertyGraph>>
 SubGraphNodeSet(
     katana::PropertyGraph* graph, const std::vector<uint32_t>& node_set) {
-  auto subgraph = std::make_unique<katana::PropertyGraph>();
   if (node_set.empty()) {
-    return std::unique_ptr<katana::PropertyGraph>(std::move(subgraph));
+    return std::make_unique<katana::PropertyGraph>();
   }
 
   uint64_t num_nodes = node_set.size();
@@ -87,25 +86,15 @@ SubGraphNodeSet(
       },
       katana::no_stats(), katana::loopname("ConstructTopology"));
 
-  // TODO(amp): The pattern out_indices.release()->data() is leaking both the
-  //  LargeBuffer instance (just a few bytes), AND the buffer itself. The
-  //  instance is leaking because of the call to release without passing
-  //  ownership of the instance to some other object. The buffer is leaking
-  //  because arrow::MutableBuffer does not own it's data, so it will never
-  //  deallocate the buffer passed to arrow::MutableBuffer::Wrap.
-  //  This pattern probably exists elsewhere in the code.
+  katana::GraphTopology sub_g_topo{
+      std::move(out_indices), std::move(out_dests)};
+  auto sub_g_res = katana::PropertyGraph::Make(std::move(sub_g_topo));
 
-  // Set new topology
-
-  auto newTopo = std::make_unique<katana::GraphTopology>(
-      std::move(out_indices), std::move(out_dests));
-
-  if (auto r = subgraph->SetTopology(std::move(newTopo)); !r) {
-    return r.error();
+  if (!sub_g_res) {
+    return sub_g_res.error();
   }
-  KATANA_LOG_DEBUG_ASSERT(&subgraph->topology());
 
-  return std::unique_ptr<katana::PropertyGraph>(std::move(subgraph));
+  return std::unique_ptr<katana::PropertyGraph>(std::move(sub_g_res.value()));
 }
 }  // namespace
 

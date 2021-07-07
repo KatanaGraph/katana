@@ -51,4 +51,5 @@ dependencies:
  - setuptools
  - shellcheck
  - sphinx>=3.5.1
+ - sphinx-tabs>=2.1.0
  - zlib>=1.2.11

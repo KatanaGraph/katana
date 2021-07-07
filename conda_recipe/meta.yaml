@@ -25,6 +25,7 @@ requirements:
     - pygithub
     - python {{ python }}
     - sphinx>=3.5.1
+    - sphinx-tabs>=2.1.0
   host:
     - jinja2
     - cython>=0.29.12
@@ -109,6 +110,7 @@ outputs:
         - doxygen
         - pydata-sphinx-theme>=0.6.3
         - sphinx>=3.5.1
+        - sphinx-tabs>=2.1.0
       host:
         - {{ pin_subpackage('katana-cpp', exact=True) }}
         - jinja2

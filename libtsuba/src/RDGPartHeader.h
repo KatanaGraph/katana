@@ -129,6 +129,8 @@ public:
 private:
   static katana::Result<RDGPartHeader> MakeJson(
       const katana::Uri& partition_path);
+  static katana::Result<RDGPartHeader> MakeParquet(
+      const katana::Uri& partition_path);
 
   std::vector<PropStorageInfo> part_prop_info_list_;
   std::vector<PropStorageInfo> node_prop_info_list_;

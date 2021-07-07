@@ -5,6 +5,7 @@ from libcpp.vector cimport vector
 from pyarrow.lib cimport CArray, CChunkedArray, CSchema, CTable, CUInt32Array, CUInt64Array
 
 from katana.cpp.boost cimport counting_iterator
+from katana.cpp.libgalois.datastructures cimport NUMAArray
 from katana.cpp.libstd.optional cimport optional
 from katana.cpp.libsupport.result cimport Result
 
@@ -118,6 +119,12 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
     ctypedef uint64_t Edge "katana::GraphTopology::Edge"
 
     cppclass GraphTopology:
+        GraphTopology(
+                const Edge * adj_indices, size_t numNodes, const Node * dests,
+                size_t numEdges)
+        GraphTopology(
+                NUMAArray[uint64_t] &&adj_indices, NUMAArray[uint32_t] &&dests)
+
         StandardRange[counting_iterator[Edge]] edges(Node node) const
         Node edge_dest(Edge edge_id) const
         uint64_t num_nodes() const
@@ -125,6 +132,8 @@ cdef extern from "katana/Graph.h" namespace "katana" nogil:
 
     cppclass _PropertyGraph "katana::PropertyGraph":
         PropertyGraph()
+        PropertyGraph(GraphTopology&&)
+
         @staticmethod
         Result[unique_ptr[_PropertyGraph]] Make(string filename, RDGLoadOptions opts)
 
@@ -179,8 +188,6 @@ cdef extern from "katana/BuildGraph.h" namespace "katana" nogil:
         # GraphComponents()
 
         void Dump()
-
-        Result[unique_ptr[_PropertyGraph]] ToPropertyGraph()
 
 cdef extern from "katana/GraphML.h" namespace "katana" nogil:
     Result[unique_ptr[_PropertyGraph]] ConvertToPropertyGraph(GraphComponents&& graph_comps);

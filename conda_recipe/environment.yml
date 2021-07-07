@@ -4,7 +4,7 @@
 channels:
  - conda-forge
 dependencies:
- - arrow-cpp>=2.0,<3.0.0a0
+ - arrow-cpp>=4.0,<5.0.0a0
  - backward-cpp>=1.4
  - benchmark
  - black=19.10

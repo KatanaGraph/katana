@@ -351,7 +351,7 @@ def cythonize(module_list, *, source_root, **kwargs):
     require_python_module("packaging")
     require_python_module("Cython", "0.29.12")
     require_python_module("numpy", "1.10")
-    require_python_module("pyarrow", "1.0", "3.0.dev")
+    require_python_module("pyarrow", "4.0", "5.0.dev")
 
     import Cython.Build
     import numpy

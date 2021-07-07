@@ -8,7 +8,7 @@ class KatanaConan(ConanFile):
     settings = ("os", "compiler", "build_type", "arch")
 
     requires = (
-        "arrow/2.0.0",
+        "arrow/4.0.0",
         "backward-cpp/1.5",
         "benchmark/1.5.0",
         "boost/1.74.0",

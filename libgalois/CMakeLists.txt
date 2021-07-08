@@ -65,7 +65,8 @@ set(sources
         src/analytics/random_walks/random_walks.cpp
         src/analytics/local_clustering_coefficient/local_clustering_coefficient.cpp
         src/analytics/subgraph_extraction/subgraph_extraction.cpp
-    )
+	src/analytics/skip_gram/skip_gram.cpp
+   )
 
 find_package(LibXml2 2.9.1 REQUIRED)
 

@@ -7,8 +7,10 @@ from conans.model.version import Version
 class KatanaConan(ConanFile):
     settings = ("os", "compiler", "build_type", "arch")
 
+    # Several packages are installed via APT:
+    #  - arrow
+    #  - llvm
     requires = (
-        "arrow/4.0.0",
         "backward-cpp/1.5",
         "benchmark/1.5.0",
         "boost/1.74.0",
@@ -22,24 +24,6 @@ class KatanaConan(ConanFile):
     )
 
     default_options = {
-        "arrow:filesystem_layer": True,
-        "arrow:parquet": True,
-        "arrow:shared": False,
-        # In general, we prefer to support as many compression algorithms as
-        # possible to tolerate files created by others. bz2, lz4 and zstd cause
-        # some issues with arrow/2.0.0 because arrow's cmake package doesn't
-        # find conan's libraries.
-        #
-        # According to [1], only snappy and gzip are expected to be present.
-        #
-        # [1] https://arrow.apache.org/docs/r/reference/write_parquet.html
-        #
-        # "arrow:with_bz2": True,
-        # "arrow:with_lz4": True,
-        # "arrow:with_zstd": True,
-        "arrow:with_brotli": True,
-        "arrow:with_snappy": True,
-        "arrow:with_zlib": True,
         "libcurl:shared": False,
     }
 

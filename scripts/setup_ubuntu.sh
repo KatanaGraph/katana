@@ -2,6 +2,19 @@
 
 set -xeuo pipefail
 
+#
+# Install bootstrap requirements
+#
+
+apt update --quiet
+apt install -yq lsb-release curl software-properties-common
+
+NO_UPDATE=""
+if apt-add-repository --help | grep -q -e "--no-update"; then
+  NO_UPDATE="--no-update"
+fi
+
+
 RELEASE=$(lsb_release --codename | awk '{print $2}')
 
 SETUP_TOOLCHAIN_VARIANTS=${SETUP_TOOLCHAIN_VARIANTS:-yes}
@@ -33,16 +46,6 @@ run_as_original_user() {
 }
 
 #
-# Install bootstrap requirements
-#
-apt install -yq curl software-properties-common
-
-NO_UPDATE=""
-if apt-add-repository  --help | grep -q -e "--no-update"; then
-  NO_UPDATE="--no-update"
-fi
-
-#
 # Add custom repositories
 #
 curl -fL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
@@ -60,6 +63,12 @@ fi
 if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
   apt-add-repository -y $NO_UPDATE ppa:ubuntu-toolchain-r/test
 fi
+
+RELEASE_ID="$(lsb_release --id --short | tr 'A-Z' 'a-z')"
+RELEASE_CODENAME="$(lsb_release --codename --short)"
+curl "https://apache.jfrog.io/artifactory/arrow/$RELEASE_ID/apache-arrow-apt-source-latest-$RELEASE_CODENAME.deb" \
+  --output /tmp/apache-arrow-apt-source-latest.deb
+apt install -yq /tmp/apache-arrow-apt-source-latest.deb && rm /tmp/apache-arrow-apt-source-latest.deb
 
 #
 # Install dependencies
@@ -85,7 +94,9 @@ run_as_original_user pip3 install --upgrade "pip$PIP_VERSION" "setuptools$SETUPT
 run_as_original_user pip3 install conan==1.36 PyGithub packaging
 
 # Developer tools
-DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck"
+#
+# pkg-config is required to build pyarrow correctly (seems to be a bug)
+DEVELOPER_TOOLS="clang-format-10 clang-tidy-10 doxygen graphviz ccache cmake shellcheck pkg-config"
 # github actions require a more recent git
 GIT=git
 # Library dependencies
@@ -93,7 +104,8 @@ GIT=git
 # Install llvm via apt instead of as a conan package because existing
 # conan packages do yet enable RTTI, which is required for boost
 # serialization.
-LIBRARIES="libxml2-dev llvm-10-dev"
+LIBRARIES="libxml2-dev llvm-10-dev libarrow-dev=4.0.1-1 libarrow-python-dev=4.0.1-1 libparquet-dev=4.0.1-1
+  python3-numpy"
 
 apt install -yq --allow-downgrades \
   $DEVELOPER_TOOLS \
@@ -108,3 +120,9 @@ if [[ -n "${SETUP_TOOLCHAIN_VARIANTS}" ]]; then
     apt install clang++-10
   fi
 fi
+
+# Install pip libraries that depend on debian packages
+
+# --no-binary is required to cause the pip package to use the debian package's native binaries.
+# https://lists.apache.org/thread.html/r4d2e768c330b6545649e066a1d9d1846ca7a3ea1d97e265205211166%40%3Cdev.arrow.apache.org%3E
+PYARROW_WITH_PARQUET=1 run_as_original_user pip3 install --no-binary pyarrow 'pyarrow>=4.0<5'

@@ -519,7 +519,7 @@ macro(katana_setup_cpack_component_groups NAME SUFFIX)
   set(CPACK_COMPONENT_TOOLS_PKG_DEPENDS shlib_pkg)
 
   set(CPACK_DEBIAN_PYTHON_PKG_PACKAGE_NAME "python3-${NAME}${SUFFIX}")
-  list(APPEND CPACK_DEBIAN_PYTHON_PKG_PACKAGE_DEPENDS "python3-minimal")
+  list(APPEND CPACK_DEBIAN_PYTHON_PKG_PACKAGE_DEPENDS "python3-minimal" "python3-numpy")
   set(CPACK_RPM_PYTHON_PKG_PACKAGE_NAME "python-${NAME}${SUFFIX}")
 #  To add RPM python support we will need something like: list(APPEND CPACK_RPM_PYTHON_PACKAGE_DEPENDS "[the name of the python3 rpm]")
   # No addition dependencies on apps_pkg since it depends on shlib_pkg

@@ -684,6 +684,16 @@ public:
   Result<void> RemoveEdgeProperty(int i);
   Result<void> RemoveEdgeProperty(const std::string& prop_name);
 
+  /// Write a node property column out to storage and de-allocate the memory
+  /// it was using
+  Result<void> UnloadNodeProperty(int i);
+  Result<void> UnloadNodeProperty(const std::string& prop_name);
+
+  /// Write an edge property column out to storage and de-allocate the
+  /// memory it was using
+  Result<void> UnloadEdgeProperty(int i);
+  Result<void> UnloadEdgeProperty(const std::string& prop_name);
+
   /// Remove all node properties
   void DropNodeProperties() { rdg_.DropNodeProperties(); }
   /// Remove all edge properties

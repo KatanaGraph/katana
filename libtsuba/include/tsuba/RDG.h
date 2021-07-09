@@ -114,6 +114,9 @@ public:
   katana::Result<void> RemoveNodeProperty(uint32_t i);
   katana::Result<void> RemoveEdgeProperty(uint32_t i);
 
+  katana::Result<void> UnloadNodeProperty(uint32_t i);
+  katana::Result<void> UnloadEdgeProperty(uint32_t i);
+
   void MarkAllPropertiesPersistent();
 
   katana::Result<void> MarkNodePropertiesPersistent(

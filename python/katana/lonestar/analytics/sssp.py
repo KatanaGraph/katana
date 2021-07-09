@@ -2,10 +2,7 @@ import numba.types
 import numpy as np
 import pyarrow
 
-from katana.atomic import GAccumulator, GReduceMax, atomic_min
-from katana.datastructures import InsertBag
-from katana.galois import set_active_threads
-from katana.loops import (
+from katana import (
     OrderedByIntegerMetric,
     UserContext,
     do_all,
@@ -14,6 +11,9 @@ from katana.loops import (
     for_each_operator,
     obim_metric,
 )
+from katana.atomic import GAccumulator, GReduceMax, atomic_min
+from katana.datastructures import InsertBag
+from katana.galois import set_active_threads
 from katana.property_graph import PropertyGraph
 from katana.timer import StatTimer
 

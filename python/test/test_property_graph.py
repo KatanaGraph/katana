@@ -6,8 +6,7 @@ import numpy as np
 import pyarrow
 import pytest
 
-from katana import TsubaError
-from katana.loops import do_all, do_all_operator
+from katana import TsubaError, do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 
 

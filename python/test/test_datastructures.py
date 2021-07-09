@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
+from katana import do_all, do_all_operator
 from katana.datastructures import AllocationPolicy, InsertBag, NUMAArray
-from katana.loops import do_all, do_all_operator
 
 types = [
     pytest.param(int, id="int"),

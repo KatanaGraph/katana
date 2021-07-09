@@ -20,6 +20,7 @@ struct PropStorageInfo {
   std::string name;
   std::string path;
   bool persist{false};
+  bool written_out{false};
 };
 
 class KATANA_EXPORT RDGPartHeader {
@@ -100,12 +101,18 @@ public:
   const std::vector<PropStorageInfo>& node_prop_info_list() const {
     return node_prop_info_list_;
   }
+  std::vector<PropStorageInfo>& node_prop_info_list() {
+    return node_prop_info_list_;
+  }
   void set_node_prop_info_list(
       std::vector<PropStorageInfo>&& node_prop_info_list) {
     node_prop_info_list_ = std::move(node_prop_info_list);
   }
 
   const std::vector<PropStorageInfo>& edge_prop_info_list() const {
+    return edge_prop_info_list_;
+  }
+  std::vector<PropStorageInfo>& edge_prop_info_list() {
     return edge_prop_info_list_;
   }
   void set_edge_prop_info_list(

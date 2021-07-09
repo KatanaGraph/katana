@@ -721,6 +721,21 @@ katana::PropertyGraph::RemoveNodeProperty(const std::string& prop_name) {
 }
 
 katana::Result<void>
+katana::PropertyGraph::UnloadNodeProperty(int prop_idx) {
+  return rdg_.UnloadNodeProperty(prop_idx);
+}
+
+katana::Result<void>
+katana::PropertyGraph::UnloadNodeProperty(const std::string& prop_name) {
+  auto col_names = node_properties()->ColumnNames();
+  auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+  if (pos != col_names.cend()) {
+    return rdg_.UnloadNodeProperty(std::distance(col_names.cbegin(), pos));
+  }
+  return katana::ErrorCode::PropertyNotFound;
+}
+
+katana::Result<void>
 katana::PropertyGraph::AddEdgeProperties(
     const std::shared_ptr<arrow::Table>& props) {
   if (props->num_columns() == 0) {
@@ -761,6 +776,21 @@ katana::PropertyGraph::RemoveEdgeProperty(const std::string& prop_name) {
   auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
   if (pos != col_names.cend()) {
     return rdg_.RemoveEdgeProperty(std::distance(col_names.cbegin(), pos));
+  }
+  return katana::ErrorCode::PropertyNotFound;
+}
+
+katana::Result<void>
+katana::PropertyGraph::UnloadEdgeProperty(int prop_idx) {
+  return rdg_.UnloadEdgeProperty(prop_idx);
+}
+
+katana::Result<void>
+katana::PropertyGraph::UnloadEdgeProperty(const std::string& prop_name) {
+  auto col_names = edge_properties()->ColumnNames();
+  auto pos = std::find(col_names.cbegin(), col_names.cend(), prop_name);
+  if (pos != col_names.cend()) {
+    return rdg_.UnloadEdgeProperty(std::distance(col_names.cbegin(), pos));
   }
   return katana::ErrorCode::PropertyNotFound;
 }

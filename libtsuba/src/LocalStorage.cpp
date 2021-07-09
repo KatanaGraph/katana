@@ -16,7 +16,7 @@
 #include "GlobalState.h"
 #include "katana/Logging.h"
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/Errors.h"
 #include "tsuba/file.h"
 

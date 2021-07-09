@@ -154,7 +154,7 @@ tsuba::Stat(const std::string& rdg_name) {
 
   auto rdg_res = RDGManifest::Make(uri);
   if (!rdg_res) {
-    if (rdg_res.error() == katana::ErrorCode::JsonParseFailed) {
+    if (rdg_res.error() == katana::ErrorCode::JSONParseFailed) {
       return RDGStat{
           .num_partitions = 1,
           .policy_id = 0,

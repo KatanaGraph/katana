@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "katana/Result.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/Errors.h"
 #include "tsuba/FileFrame.h"

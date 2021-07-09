@@ -7,5 +7,5 @@ katana::JsonDump(const nlohmann::json& obj) {
   } catch (const std::exception& exp) {
     KATANA_LOG_DEBUG("nlohmann::json::dump exception: {}", exp.what());
   }
-  return katana::ErrorCode::JsonDumpFailed;
+  return katana::ErrorCode::JSONDumpFailed;
 }

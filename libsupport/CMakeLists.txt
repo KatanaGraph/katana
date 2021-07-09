@@ -12,14 +12,14 @@ set(sources
         src/CommBackend.cpp
         src/Env.cpp
         src/ErrorCode.cpp
-        src/Http.cpp
+        src/HTTP.cpp
         src/JSON.cpp
         src/Logging.cpp
         src/Random.cpp
         src/Result.cpp
         src/Plugin.cpp
         src/Strings.cpp
-        src/Uri.cpp
+        src/URI.cpp
 )
 
 target_sources(katana_support PRIVATE ${sources})

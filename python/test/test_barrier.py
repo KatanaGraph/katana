@@ -1,8 +1,8 @@
 import pytest
 
+from katana import do_all, do_all_operator
 from katana.galois import get_active_threads, set_active_threads
 from katana.local import SimpleBarrier, get_fast_barrier
-from katana.loops import do_all, do_all_operator
 
 
 def test_fast_barrier_invalidate():

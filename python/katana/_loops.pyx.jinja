@@ -14,7 +14,7 @@ import numpy as np
 {{type_instantiation_imports}}
 
 import katana
-import katana.loops
+import katana.loop_operators
 import katana.numba_support.closure
 from numba import from_dtype
 
@@ -240,12 +240,12 @@ elif isinstance(worklist, OrderedByIntegerMetric):
         obim_func = obim_func.instantiate(from_dtype(dtype))
 
     if isinstance(obim_func, numba.core.ccallback.CFunc):
-        if not katana.loops.is_obim_metric_cfunc(obim_func):
+        if not katana.loop_operators.is_obim_metric_cfunc(obim_func):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.address)
         obim_userdata = NULL
     elif isinstance(obim_func, katana.numba_support.closure.Closure):
-        if not katana.loops.is_obim_metric_closure(obim_func):
+        if not katana.loop_operators.is_obim_metric_closure(obim_func):
             raise TypeError("Function has incorrect signature")
         obim_cb_{{loop_variable_type}} = <obim_metric_type_{{loop_variable_type}}><unsigned long int>(obim_func.__function_address__)
         obim_userdata = <void*><unsigned long int>(obim_func.__userdata_address__)
@@ -317,12 +317,12 @@ if isinstance(func, katana.numba_support.closure.UninstantiatedClosure):
     {% endif %}
 
 if isinstance(func, numba.core.ccallback.CFunc):
-    if not katana.loops.is_{{loop_type}}_operator_cfunc(func):
+    if not katana.loop_operators.is_{{loop_type}}_operator_cfunc(func):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.address)
     userdata = NULL
 elif isinstance(func, katana.numba_support.closure.Closure):
-    if not katana.loops.is_{{loop_type}}_operator_closure(func):
+    if not katana.loop_operators.is_{{loop_type}}_operator_closure(func):
         raise TypeError("Function has incorrect signature")
     cb_{{loop_variable_type}} = <{{loop_type}}_operator_type_{{loop_variable_type}}><unsigned long int>(func.__function_address__)
     userdata = <void*><unsigned long int>(func.__userdata_address__)

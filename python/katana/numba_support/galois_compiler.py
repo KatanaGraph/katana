@@ -1,7 +1,7 @@
 """
 A customized numba compiler pipeline for use with Galois.
 
-This pipeline is used from the `*_operator` decorators in loops.py.
+This pipeline is used from the `*_operator` decorators in loop_operators.py.
 """
 
 import numba.cpython.builtins

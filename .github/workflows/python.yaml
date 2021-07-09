@@ -306,10 +306,10 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
           . .github/workflows/activate_miniconda.sh
-          $HOME/build/python_env.sh python -c "import katana.loops; katana.loops.for_each;"
+          $HOME/build/python_env.sh python -c "import katana; katana.for_each;"
           $HOME/build/python_env.sh python -c "import katana.analytics; katana.analytics.sssp;"
           . $HOME/build/python_env.sh
-          python -c "import katana.loops; katana.loops.for_each;"
+          python -c "import katana; katana.for_each;"
           python -c "import katana.analytics; katana.analytics.sssp;"
 
       - name: Install

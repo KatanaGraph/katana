@@ -3,9 +3,9 @@ from math import sqrt
 
 import numpy as np
 
+from katana import do_all, do_all_operator
 from katana.atomic import GAccumulator, atomic_add
 from katana.lonestar.analytics.calculate_degree import calculate_degree
-from katana.loops import do_all, do_all_operator
 from katana.property_graph import PropertyGraph
 
 

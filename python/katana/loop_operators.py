@@ -4,19 +4,13 @@ import numba
 import numba.core.ccallback
 import numba.types
 
-from ._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
 from .numba_support.closure import Closure, ClosureBuilder
 from .numba_support.galois_compiler import OperatorCompiler
 
 __all__ = [
-    "do_all",
     "do_all_operator",
-    "for_each",
     "for_each_operator",
     "obim_metric",
-    "OrderedByIntegerMetric",
-    "UserContext",
-    "PerSocketChunkFIFO",
 ]
 
 

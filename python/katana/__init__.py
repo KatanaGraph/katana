@@ -22,11 +22,27 @@ by Galois C++.
 import atexit
 from typing import Dict, Type
 
-import katana.barrier
 import katana.plugin
+from katana._loops import OrderedByIntegerMetric, PerSocketChunkFIFO, UserContext, do_all, for_each
+from katana.barrier import Barrier
+from katana.loop_operators import do_all_operator, for_each_operator, obim_metric
 from katana.plugin import installed_plugins
 
-__all__ = ["TsubaError", "GaloisError", "QueryError", "installed_plugins", "Barrier"]
+__all__ = [
+    "Barrier",
+    "GaloisError",
+    "OrderedByIntegerMetric",
+    "PerSocketChunkFIFO",
+    "QueryError",
+    "TsubaError",
+    "UserContext",
+    "do_all",
+    "do_all_operator",
+    "for_each",
+    "for_each_operator",
+    "installed_plugins",
+    "obim_metric",
+]
 
 try:
     # Trigger the load of katana libraries
@@ -98,5 +114,3 @@ error_category_to_exception_class: Dict[str, Type[Exception]] = {
     "GaloisError": GaloisError,
     "QueryError": QueryError,
 }
-
-Barrier = katana.barrier.Barrier

@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "RDGManifest.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "tsuba/tsuba.h"
 
 namespace tsuba {

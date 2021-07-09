@@ -1,4 +1,4 @@
-#include "katana/Uri.h"
+#include "katana/URI.h"
 
 #include <vector>
 

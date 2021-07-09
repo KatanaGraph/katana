@@ -7,7 +7,7 @@
 
 #include "katana/JSON.h"
 #include "katana/Logging.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 #include "katana/config.h"
 #include "tsuba/RDGLineage.h"
 #include "tsuba/tsuba.h"

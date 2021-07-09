@@ -5,7 +5,7 @@
 #include "katana/Logging.h"
 #include "katana/PropertyGraph.h"
 #include "katana/SharedMemSys.h"
-#include "katana/Uri.h"
+#include "katana/URI.h"
 
 namespace {
 

@@ -87,13 +87,19 @@ WriteProperties(
   const auto& schema = props.schema();
 
   std::vector<std::string> next_paths;
+  int in_memory_idx = 0;
   for (size_t i = 0, n = prop_info.size(); i < n; ++i) {
+    if (prop_info[i].written_out) {
+      continue;
+    }
+    int col_idx = in_memory_idx++;
     if (!prop_info[i].persist || !prop_info[i].path.empty()) {
       continue;
     }
-    auto name = prop_info[i].name.empty() ? schema->field(i)->name()
+    auto name = prop_info[i].name.empty() ? schema->field(col_idx)->name()
                                           : prop_info[i].name;
-    auto name_res = StoreArrowArrayAtName(props.column(i), dir, name, desc);
+    auto name_res =
+        StoreArrowArrayAtName(props.column(col_idx), dir, name, desc);
     if (!name_res) {
       return name_res.error().WithContext("storing arrow array");
     }
@@ -603,10 +609,6 @@ tsuba::RDG::AddNodeProperties(const std::shared_ptr<arrow::Table>& props) {
 
   AddNodePropStorageInfo(core_.get(), props);
 
-  KATANA_LOG_DEBUG_ASSERT(
-      static_cast<size_t>(core_->node_properties()->num_columns()) ==
-      core_->part_header().node_prop_info_list().size());
-
   return katana::ResultSuccess();
 }
 
@@ -617,10 +619,6 @@ tsuba::RDG::AddEdgeProperties(const std::shared_ptr<arrow::Table>& props) {
   }
 
   AddEdgePropStorageInfo(core_.get(), props);
-
-  KATANA_LOG_DEBUG_ASSERT(
-      static_cast<size_t>(core_->edge_properties()->num_columns()) ==
-      core_->part_header().edge_prop_info_list().size());
 
   return katana::ResultSuccess();
 }
@@ -663,6 +661,54 @@ tsuba::RDG::RemoveNodeProperty(uint32_t i) {
 katana::Result<void>
 tsuba::RDG::RemoveEdgeProperty(uint32_t i) {
   return core_->RemoveEdgeProperty(i);
+}
+
+namespace {
+katana::Result<std::shared_ptr<arrow::Table>>
+UnloadProperty(
+    const std::shared_ptr<arrow::Table>& props, uint32_t i,
+    std::vector<tsuba::PropStorageInfo>* prop_info_list,
+    const katana::Uri& dir) {
+  if (i > static_cast<uint32_t>(props->num_columns())) {
+    return KATANA_ERROR(
+        katana::ErrorCode::InvalidArgument, "property index out of bounds");
+  }
+  const std::string& name = props->field(i)->name();
+
+  auto psi_it = std::find_if(
+      prop_info_list->begin(), prop_info_list->end(),
+      [&](const tsuba::PropStorageInfo& psi) { return psi.name == name; });
+
+  KATANA_LOG_ASSERT(psi_it != prop_info_list->end());
+
+  tsuba::PropStorageInfo& prop_info = *psi_it;
+
+  prop_info.path = KATANA_CHECKED(
+      StoreArrowArrayAtName(props->column(i), dir, name, nullptr));
+  prop_info.persist = true;
+  prop_info.written_out = true;
+
+  return KATANA_CHECKED(props->RemoveColumn(i));
+}
+
+}  // namespace
+
+katana::Result<void>
+tsuba::RDG::UnloadNodeProperty(uint32_t i) {
+  std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
+      node_properties(), i, &core_->part_header().node_prop_info_list(),
+      rdg_dir()));
+  core_->set_node_properties(std::move(new_props));
+  return katana::ResultSuccess();
+}
+
+katana::Result<void>
+tsuba::RDG::UnloadEdgeProperty(uint32_t i) {
+  std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
+      edge_properties(), i, &core_->part_header().edge_prop_info_list(),
+      rdg_dir()));
+  core_->set_edge_properties(std::move(new_props));
+  return katana::ResultSuccess();
 }
 
 void

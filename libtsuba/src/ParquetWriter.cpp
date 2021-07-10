@@ -11,7 +11,111 @@ using Result = katana::Result<T>;
 namespace {
 
 // constant taken directly from the arrow docs
-constexpr uint64_t kMaxStringChunkSize = 0x7FFFFFFE;
+constexpr uint64_t kMax32ChunkSize = 0x7FFFFFFE;
+
+/*struct LargeTypeChunker {
+  using ReturnType = std::vector<std::shared_ptr<arrow::Array>>;
+  using ResultType = katana::Result<ReturnType>;
+
+  // divide an array exceeding max size in half
+  template <typename ArrayType>
+  ResultType Divide(const ArrayType& array) {
+    auto slice0 = array.Slice(0, array.length() / 2);
+    auto res0 = VisitArrow(slice0, *this);
+    if (!res0) {
+      return res0.error();
+    }
+    auto slice1 = array.Slice(array.length() / 2);
+    auto res1 = VisitArrow(slice1, *this);
+    if (!res1) {
+      return res1.error();
+    }
+    std::vector<std::shared_ptr<arrow::Array>> chunks;
+    chunks.insert(res0.value().begin(), res0.value().end(), chunks.end());
+    chunks.insert(res1.value().begin(), res1.value().end(), chunks.end());
+    return chunks;
+  }
+};*/
+
+struct LargeTypeRemover {
+  using ReturnType = std::shared_ptr<arrow::Array>;
+  using ResultType = katana::Result<ReturnType>;
+
+  template <typename ArrayType>
+  katana::Result<std::shared_ptr<arrow::Buffer>> MakeNewOffsets(
+      const ArrayType& array) {
+    arrow::TypedBufferBuilder<int32_t> builder(arrow::default_memory_pool());
+    if (auto st = builder.Reserve(array.length() + 1); !st.ok()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::ArrowError, "reserving space for indices: {}", st);
+    }
+    int64_t base_offset = array.value_offset(0);
+    for (int64_t i = 0; i < array.length(); ++i) {
+      builder.UnsafeAppend(array.value_offset(i) - base_offset);
+    }
+    builder.UnsafeAppend(array.value_offset(array.length()) - base_offset);
+    std::shared_ptr<arrow::Buffer> offset_buffer;
+    if (auto st = builder.Finish(&offset_buffer); !st.ok()) {
+      return KATANA_ERROR(
+          tsuba::ErrorCode::ArrowError, "finalizing indices: {}", st);
+    }
+    return offset_buffer;
+  }
+
+  template <typename ArrowType, typename ArrayType>
+  ResultType Call(const ArrayType& array) {
+    return array.Slice(0);
+  }
+
+  template <>
+  ResultType Call<arrow::LargeStringType>(
+      const arrow::LargeStringArray& array) {
+    if (array.total_values_length() > kMax32ChunkSize) {
+      return Divide(array);
+    }
+
+    auto offset_res = MakeNewOffsets(array);
+    if (!offset_res) {
+      return offset_res.error();
+    }
+
+    auto data_buffer_after_offset = arrow::SliceBuffer(
+        array.value_data(), array.value_offset(0),
+        array.value_offset(array.length()));
+
+    auto modified_array = std::make_shared<arrow::StringArray>(
+        array.length(), offset_res.value(), data_buffer_after_offset,
+        array.null_bitmap(), arrow::kUnknownNullCount, array.offset());
+
+    KATANA_LOG_DEBUG_ASSERT(modified_array.Validate().ok());
+    KATANA_LOG_DEBUG_ASSERT(modified_array.ValidateFull().ok());
+    return modified_array;
+  }
+
+  template <>
+  ResultType Call<arrow::LargeListType>(const arrow::LargeListArray& array) {
+    if (array.values()->length() > kMax32ChunkSize) {
+      return Divide(array);
+    }
+
+    auto offset_res = MakeNewOffsets(array);
+    if (!offset_res) {
+      return offset_res.error();
+    }
+
+    auto values_array_after_offset = array.values()->Slice(
+        array.value_offset(0), array.value_offset(array.length()));
+
+    auto modified_array = std::make_shared<arrow::ListArray>(
+        arrow::list(array.value_type()), array.length(), offset_res.value(),
+        values_array_after_offset, array.null_bitmap(),
+        arrow::kUnknownNullCount, array.offset());
+
+    KATANA_LOG_DEBUG_ASSERT(modified_array.Validate().ok());
+    KATANA_LOG_DEBUG_ASSERT(modified_array.ValidateFull().ok());
+    return modified_array;
+  }
+};
 
 katana::Result<std::vector<std::shared_ptr<arrow::Array>>>
 LargeStringToChunkedString(
@@ -32,8 +136,8 @@ LargeStringToChunkedString(
     }
     arrow::util::string_view val = arr->GetView(i);
     uint64_t val_size = val.size();
-    KATANA_LOG_ASSERT(val_size < kMaxStringChunkSize);
-    if (inserted + val_size >= kMaxStringChunkSize) {
+    KATANA_LOG_ASSERT(val_size < kMax32ChunkSize);
+    if (inserted + val_size >= kMax32ChunkSize) {
       std::shared_ptr<arrow::Array> new_arr;
       auto status = builder.Finish(&new_arr);
       if (!status.ok()) {

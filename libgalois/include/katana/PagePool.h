@@ -117,6 +117,9 @@ public:
   }
 
   void pageFree(void* ptr) {
+#ifdef KATANA_USE_JEMALLOC
+    freePages(ptr, 1);
+#else
     KATANA_LOG_DEBUG_ASSERT(ptr);
     mapLock.lock();
     KATANA_LOG_DEBUG_ASSERT(ownerMap.count(ptr));
@@ -128,6 +131,7 @@ public:
     FreeNode* nh = reinterpret_cast<FreeNode*>(ptr);
     nh->next = hp.getValue();
     hp.unlock_and_set(nh);
+#endif
   }
 
   void pagePreAlloc() { pageFree(allocFromOS()); }

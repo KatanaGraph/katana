@@ -8,6 +8,8 @@
 #error Exactly one of KATANA_USE_LONGJMP_ABORT or KATANA_USE_EXCEPTION_ABORT must be defined.
 #endif
 
+#cmakedefine KATANA_USE_JEMALLOC
+
 #if defined(__GNUC__)
 #define KATANA_IGNORE_UNUSED_PARAMETERS                                        \
   _Pragma("GCC diagnostic push")                                               \

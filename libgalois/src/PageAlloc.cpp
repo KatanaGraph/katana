@@ -34,17 +34,6 @@ const size_t hugePageSize = 2 * 1024 * 1024;
 // protect mmap, munmap since linux has issues
 static katana::SimpleLock allocLock;
 
-static void*
-trymmap(size_t size, int flag) {
-  std::lock_guard<katana::SimpleLock> lg(allocLock);
-  const int _PROT = PROT_READ | PROT_WRITE;
-  void* ptr = mmap(0, size, _PROT, flag, -1, 0);
-  if (ptr == MAP_FAILED) {
-    ptr = nullptr;
-  }
-  return ptr;
-}
-
 // mmap flags
 #if defined(MAP_ANONYMOUS)
 static const int _MAP_ANON = MAP_ANONYMOUS;
@@ -73,6 +62,32 @@ static const int _MAP_HUGE = _MAP;
 size_t
 katana::allocSize() {
   return hugePageSize;
+}
+
+#ifdef KATANA_USE_JEMALLOC
+void*
+katana::allocPages(unsigned num, [[maybe_unused]] bool preFault) {
+  if (num == 0) {
+    return nullptr;
+  }
+  return malloc(num * hugePageSize);
+}
+
+void
+katana::freePages(void* ptr, [[maybe_unused]] unsigned num) {
+  free(ptr);
+}
+
+#else
+static void*
+trymmap(size_t size, int flag) {
+  std::lock_guard<katana::SimpleLock> lg(allocLock);
+  const int _PROT = PROT_READ | PROT_WRITE;
+  void* ptr = mmap(0, size, _PROT, flag, -1, 0);
+  if (ptr == MAP_FAILED) {
+    ptr = nullptr;
+  }
+  return ptr;
 }
 
 void*
@@ -108,3 +123,4 @@ katana::freePages(void* ptr, unsigned num) {
     KATANA_LOG_FATAL("munmap failed: {}", errno);
   }
 }
+#endif

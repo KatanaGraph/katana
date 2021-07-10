@@ -706,7 +706,7 @@ tsuba::RDG::UnloadNodeProperty(uint32_t i) {
   std::shared_ptr<arrow::Table> new_props = KATANA_CHECKED(UnloadProperty(
       node_properties(), i, &core_->part_header().node_prop_info_list(),
       rdg_dir()));
-  core_->set_edge_properties(std::move(new_props));
+  core_->set_node_properties(std::move(new_props));
   return katana::ResultSuccess();
 }
 

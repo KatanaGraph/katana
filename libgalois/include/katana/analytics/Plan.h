@@ -32,9 +32,6 @@ class Plan {
 
 protected:
   explicit Plan(Architecture architecture) : architecture_(architecture) {}
-  void SetArchitecture(const Architecture architecture) {
-    architecture_ = architecture;
-  }
 
 public:
   /// The architecture on which the algorithm will run.

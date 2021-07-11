@@ -7,10 +7,14 @@ from pathlib import Path
 __all__ = ["get_input"]
 
 
-def get_inputs_directory(*, invalidate=False):
+def get_inputs_directory(*, invalidate=False) -> Path:
     inputs_dir = None
     # Use the build paths if they exist.
-    paths_to_check = list(Path(__file__).parents) + list(Path.cwd().parents)
+    if "KATANA_BUILD_DIR" in os.environ:
+        # If KATANA_BUILD_DIR environment is set, just use it
+        paths_to_check = [Path(os.environ["KATANA_BUILD_DIR"])]
+    else:
+        paths_to_check = list(Path(__file__).parents) + list(Path.cwd().parents)
     for path in paths_to_check:
         # TODO(amp): If we can abstract the input version info a shared file, this should look for
         #  specifically that version.
@@ -39,7 +43,7 @@ def get_inputs_directory(*, invalidate=False):
     return inputs_dir
 
 
-def get_input(rel_path):
+def get_input(rel_path) -> Path:
     """
     Download the standard Galois inputs (with local caching on disk) and return a path to a file in that archive.
 
@@ -50,3 +54,8 @@ def get_input(rel_path):
     if path.exists():
         return path
     return get_inputs_directory(invalidate=True) / rel_path
+
+
+def get_input_as_url(rel_path) -> str:
+    path = get_input(rel_path).resolve()
+    return f"file://{path}"

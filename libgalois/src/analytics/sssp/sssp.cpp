@@ -529,10 +529,7 @@ SSSPWithWrap(
   if (!graph && graph.error() == katana::ErrorCode::TypeError) {
     KATANA_LOG_DEBUG(
         "Incorrect edge property type: {}",
-        pg->edge_properties()
-            ->GetColumnByName(edge_weight_property_name)
-            ->type()
-            ->ToString());
+        pg->GetEdgeProperty(edge_weight_property_name)->type()->ToString());
   }
   if (!graph) {
     return graph.error();

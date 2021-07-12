@@ -19,8 +19,6 @@ class KatanaConan(ConanFile):
         "libcurl/7.74.0",
         "nlohmann_json/3.7.3",
         "openssl/1.1.1h",
-        "mongo-c-driver/1.17.2",
-        "snappy/1.1.8",
     )
 
     default_options = {

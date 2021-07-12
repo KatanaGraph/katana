@@ -50,6 +50,6 @@ dependencies:
  - python=3.8.* *_cpython
  - setuptools
  - shellcheck
- - sphinx>=3.5.1
+ - sphinx>=3.5.1,<4
  - sphinx-tabs>=2.1.0
  - zlib>=1.2.11

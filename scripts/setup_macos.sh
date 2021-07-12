@@ -13,6 +13,7 @@ function brew_install_if_missing {
   fi
 }
 
+brew_install_if_missing apache-arrow
 brew_install_if_missing autoconf
 brew_install_if_missing automake
 brew_install_if_missing ccache
@@ -24,9 +25,5 @@ brew_install_if_missing shellcheck
 
 brew tap cleishm/neo4j
 brew_install_if_missing libcypher-parser
-
-# https://github.com/KatanaGraph/homebrew-dependencies
-#brew tap KatanaGraph/dependencies
-brew uninstall apache-arrow || true
 
 pip3 install PyGithub packaging

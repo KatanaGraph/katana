@@ -15,10 +15,12 @@ set(sources
         src/HostAllocator.cpp
         src/HTTP.cpp
         src/JSON.cpp
+        src/JSONTracer.cpp
         src/Logging.cpp
         src/Random.cpp
         src/Result.cpp
         src/Plugin.cpp
+        src/ProgressTracer.cpp
         src/Signals.cpp
         src/Strings.cpp
         src/URI.cpp

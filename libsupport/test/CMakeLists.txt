@@ -16,6 +16,7 @@ function(add_unit_test name)
     )
 endfunction()
 
+add_unit_test(tracing)
 add_unit_test(bitmath)
 add_unit_test(env)
 add_unit_test(logging)

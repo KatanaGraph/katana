@@ -10,6 +10,14 @@ using Result = katana::Result<T>;
 
 namespace {
 
+template <class Builder>
+Result<std::shared_ptr<arrow::Array>>
+ResetBuilder(Builder* builder) {
+  std::shared_ptr<arrow::Array> array;
+  KATANA_CHECKED(builder->Finish(&array));
+  return array;
+}
+
 // constant taken directly from the arrow docs
 constexpr uint64_t kMaxStringChunkSize = 0x7FFFFFFE;
 
@@ -22,34 +30,24 @@ LargeStringToChunkedString(
 
   uint64_t inserted = 0;
   for (uint64_t i = 0, size = arr->length(); i < size; ++i) {
+    if (inserted >= kMaxStringChunkSize) {
+      chunks.emplace_back(KATANA_CHECKED(ResetBuilder(&builder)));
+      inserted = 0;
+    }
+    ++inserted;
     if (!arr->IsValid(i)) {
-      auto status = builder.AppendNull();
-      if (!status.ok()) {
-        return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "appending null: {}", status);
-      }
+      KATANA_CHECKED(builder.AppendNull());
       continue;
     }
     arrow::util::string_view val = arr->GetView(i);
     uint64_t val_size = val.size();
     KATANA_LOG_ASSERT(val_size < kMaxStringChunkSize);
     if (inserted + val_size >= kMaxStringChunkSize) {
-      std::shared_ptr<arrow::Array> new_arr;
-      auto status = builder.Finish(&new_arr);
-      if (!status.ok()) {
-        return KATANA_ERROR(
-            tsuba::ErrorCode::ArrowError, "finishing string array: {}", status);
-      }
-      chunks.emplace_back(new_arr);
+      chunks.emplace_back(KATANA_CHECKED(ResetBuilder(&builder)));
       inserted = 0;
-      builder.Reset();
     }
+    KATANA_CHECKED(builder.Append(val));
     inserted += val_size;
-    auto status = builder.Append(val);
-    if (!status.ok()) {
-      return KATANA_ERROR(
-          tsuba::ErrorCode::ArrowError, "adding string to array: {}", status);
-    }
   }
 
   std::shared_ptr<arrow::Array> new_arr;

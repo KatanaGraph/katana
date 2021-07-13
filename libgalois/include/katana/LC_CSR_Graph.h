@@ -300,8 +300,8 @@ public:
 
   GraphNode getEdgeDst(edge_iterator ni) const { return edgeDst[*ni]; }
 
-  size_t size() const { return numNodes; }
-  size_t sizeEdges() const { return numEdges; }
+  uint64_t size() const { return numNodes; }
+  uint64_t sizeEdges() const { return numEdges; }
 
   uint64_t num_nodes() const { return numNodes; }
   uint64_t num_edges() const { return numEdges; }

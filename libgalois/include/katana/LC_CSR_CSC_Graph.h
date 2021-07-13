@@ -431,7 +431,7 @@ public:
    */
   void sortAllInEdgesByDst(MethodFlag mflag = MethodFlag::WRITE) {
     katana::do_all(
-        katana::iterate((size_t)0, this->size()),
+        katana::iterate(uint64_t{0}, this->size()),
         [=](GraphNode N) { this->sortInEdgesByDst(N, mflag); },
         katana::no_stats(), katana::steal());
   }
